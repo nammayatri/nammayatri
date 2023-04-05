@@ -573,7 +573,6 @@ type SelectLanguageScreenState = {
 }
 
 type SelectLanguageScreenData =  {
-  languages :: Array Language,
   isSelected :: Boolean
  }
 
@@ -670,6 +669,7 @@ type DriverInfoCard =
   , driverArrived :: Boolean
   , estimatedDistance :: String
   , driverArrivalTime :: Int
+  , createdAt :: String
   }
 
 type RatingCard = 

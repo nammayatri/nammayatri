@@ -15,30 +15,32 @@
 
 module Screens.AddVehicleDetailsScreen.Views where
 
+import Common.Types.App
+import Data.Maybe
+import Screens.AddVehicleDetailsScreen.ComponentConfig
+
+import Animation as Anim
+import Components.GenericMessageModal.View as GenericMessageModal
+import Components.PrimaryButton as PrimaryButton
+import Components.ReferralMobileNumber.View as ReferralMobileNumber
+import Components.TutorialModal.View as TutorialModal
+import Data.String as DS
+import Effect (Effect)
+import Effect.Class (liftEffect)
+import Engineering.Helpers.Commons as EHC
+import Font.Size as FontSize
+import Font.Style as FontStyle
+import JBridge as JB
+import Language.Strings (getString)
+import Language.Types (STR(..))
+import MerchantConfigs.Utils (getValueFromMerchant)
 import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (<>), (==), not, (>=), (&&), (/=))
 import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), editText, frameLayout, imageView, linearLayout, onBackPressed, onChange, onClick, scrollView, textView, afterRender, alignParentRight, relativeLayout, alignParentBottom, maxLines, ellipsize, layoutGravity, inputTypeI, alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, hint, id, imageUrl, margin, orientation, padding, pattern, stroke, text, textSize, visibility, weight, width, textFromHtml, imageWithFallback)
-import Effect (Effect)
+import PrestoDOM.Properties as PP
+import PrestoDOM.Types.DomAttributes as PTD
 import Screens.AddVehicleDetailsScreen.Controller (Action(..), eval, ScreenOutput)
 import Screens.Types (AddVehicleDetailsScreenState)
 import Styles.Colors as Color
-import Font.Style as FontStyle
-import Font.Size as FontSize
-import Engineering.Helpers.Commons as EHC
-import JBridge as JB
-import PrestoDOM.Properties as PP
-import PrestoDOM.Types.DomAttributes as PTD
-import Components.PrimaryButton as PrimaryButton
-import Components.TutorialModal.View as TutorialModal
-import Components.ReferralMobileNumber.View as ReferralMobileNumber
-import Components.GenericMessageModal.View as GenericMessageModal
-import Animation as Anim
-import Language.Strings (getString)
-import Language.Types (STR(..))
-import Effect.Class(liftEffect)
-import Data.String as DS
-import Data.Maybe
-import Common.Types.App
-import Screens.AddVehicleDetailsScreen.ComponentConfig
 
 screen :: AddVehicleDetailsScreenState -> Screen Action AddVehicleDetailsScreenState ScreenOutput
 screen initialState =
@@ -270,7 +272,7 @@ vehicleRegistrationNumber state push =
           [ width MATCH_PARENT
           , height WRAP_CONTENT
           , orientation HORIZONTAL
-          , stroke ("1," <> if ((DS.length state.data.vehicle_registration_number >= 2) && (DS.take 2 state.data.vehicle_registration_number /= "KA")) then Color.warningRed else Color.borderColorLight) 
+          , stroke ("1," <> if ((DS.length state.data.vehicle_registration_number >= 2) && (DS.take 2 state.data.vehicle_registration_number /= (getValueFromMerchant "RC_VALIDATION_TEXT"))) then Color.warningRed else Color.borderColorLight) 
           , cornerRadius 4.0
           ][  textView
               [ width $ V 20
@@ -301,7 +303,7 @@ vehicleRegistrationNumber state push =
             , color Color.warningRed
             , fontStyle $ FontStyle.regular LanguageStyle
             , margin (MarginTop 10)
-            , visibility if ((DS.length state.data.vehicle_registration_number >= 2) && (DS.take 2 state.data.vehicle_registration_number /= "KA")) then VISIBLE else GONE
+            , visibility if ((DS.length state.data.vehicle_registration_number >= 2) && (DS.take 2 state.data.vehicle_registration_number /= (getValueFromMerchant "RC_VALIDATION_TEXT"))) then VISIBLE else GONE
             ]
           , linearLayout
           [ width MATCH_PARENT
