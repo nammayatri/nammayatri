@@ -17,7 +17,7 @@ module Helpers.Utils where
 
 import Components.LocationListItem.Controller (dummyLocationListState)
 import Control.Monad.Except (runExcept)
-import Data.Array (length, filter, cons, deleteAt, sortWith, drop, head, tail, (!!))
+import Data.Array (length, filter, cons, deleteAt, sortWith, drop, head, tail, (!!), null)
 import Data.Array.NonEmpty (fromArray)
 import Data.Date (Date)
 import Data.Either (Either(..), hush)
@@ -45,7 +45,7 @@ import Juspay.OTP.Reader.Flow as Reader
 import Math (pi, sin, cos, sqrt, asin)
 import Prelude (class Show, class Ord, Unit, bind, discard, pure, unit, void, identity, not, (<*>), (<#>), (<<<), (>>>), ($), (<>), (>), show, (==), (/=), (/), (*), (-), (+), map, compare, (<), (=<<), (<=), ($))
 import Presto.Core.Flow (Flow, doAff)
-import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts)
+import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent)
 import Types.App (GlobalState)
 
 -- shuffle' :: forall a. Array a -> Effect (Array a)
@@ -336,3 +336,6 @@ rotateArray arr times =
     Nothing -> arr
   else
     arr
+
+isHaveFare :: String -> Array FareComponent -> Boolean
+isHaveFare fare = not null <<< filter (\item -> item.fareType == fare)

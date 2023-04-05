@@ -3332,10 +3332,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         String userName =  sharedPref.getString("USER_NAME","__failed");
         JSONObject selectedItem = data.getJSONObject("selectedItem");
-        JSONObject fares = selectedItem.optJSONObject("fareBreakUpList");
-        if (fares == null) {
-            fares = getFaresJson(selectedItem);
-        }
+        JSONArray fares = selectedItem.getJSONArray("faresList");
         if (invoiceType.equals("OLD")){
             int pageHeight = 1555;
             int pagewidth = 960;
@@ -3528,7 +3525,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
 
     }
 
-    private static View getInvoiceLayout(JSONObject data, JSONObject selectedRide, JSONObject fares, String user, Context context) throws JSONException {
+    private static View getInvoiceLayout(JSONObject data, JSONObject selectedRide, JSONArray fares, String user, Context context) throws JSONException {
         View invoiceLayout = LayoutInflater.from(context).inflate(R.layout.invoice_template, null, false);
         TextView textView = invoiceLayout.findViewById(R.id.rideDate);
         textView.setText(selectedRide.getString("date"));
@@ -3536,20 +3533,54 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         textView.setText(user.trim());
         textView = invoiceLayout.findViewById(R.id.paymentDetail);
         textView.setText(selectedRide.getString("totalAmount"));
-        textView = invoiceLayout.findViewById(R.id.baseDistance);
+
+        LinearLayout fareBreakupElements = (LinearLayout) invoiceLayout.findViewById(R.id.fareBreakupElements);
+        fareBreakupElements.setOrientation(LinearLayout.VERTICAL);
+
         try {
-            textView.setText(selectedRide.getString("baseDistance"));
+            for (int i = 0; i < fares.length(); i++) {
+
+                LinearLayout.LayoutParams linearParams = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT);
+                LinearLayout linearLayout = new LinearLayout(context);
+                linearLayout.setLayoutParams(linearParams);
+
+                LinearLayout.LayoutParams linearParamsChild = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT);
+                LinearLayout linearLayoutChild = new LinearLayout(context);
+                linearLayoutChild.setLayoutParams(linearParamsChild);
+                linearParamsChild.weight = 1.0f;
+
+                JSONObject fare = fares.getJSONObject(i);
+                String value = fare.getString("price");
+                String fareTypes = fare.getString("title");
+                TextView textViewText = new TextView(context);
+                textViewText.setTextSize(5);
+                textViewText.setTextColor(Color.parseColor("#454545"));
+                textViewText.setPadding(0, 0, 0, 10);
+                Typeface typeface = Typeface.createFromAsset(context.getAssets(), "fonts/PlusJakartaSans-Regular.ttf");
+                textViewText.setTypeface(typeface);
+                textViewText.setText(fareTypes);
+                linearLayout.addView(textViewText);
+                linearLayout.addView(linearLayoutChild);
+
+                TextView textViewPrice = new TextView(context);
+                textViewPrice.setTextSize(5);
+                textViewPrice.setPadding(0, 0, 0, 10);
+                Typeface font = Typeface.createFromAsset(context.getAssets(), "fonts/PlusJakartaSans-Regular.ttf");
+                textViewPrice.setTypeface(font);
+                textViewPrice.setTextColor(Color.parseColor("#454545"));
+                textViewPrice.setText("₹ " + value);
+                linearLayout.addView(textViewPrice);
+
+                fareBreakupElements.addView(linearLayout);
+
+            }
         } catch (JSONException e) {
-            textView.setText("");
+            e.printStackTrace();
         }
-        textView = invoiceLayout.findViewById(R.id.baseFare);
-        textView.setText(fares.getString("baseFare"));
-        textView = invoiceLayout.findViewById(R.id.pickUpCharge);
-        textView.setText(fares.getString("pickupCharges"));
-        textView = invoiceLayout.findViewById(R.id.nominalFare);
-        textView.setText(fares.getString("nominalFare"));
-        textView = invoiceLayout.findViewById(R.id.waitingCharge);
-        textView.setText(fares.getString("waitingCharges"));
         textView = invoiceLayout.findViewById(R.id.finalAmount);
         textView.setText(selectedRide.getString("totalAmount"));
         textView = invoiceLayout.findViewById(R.id.rideId);
@@ -3566,6 +3597,8 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         textView.setText(selectedRide.getString("rideEndTime"));
         textView = invoiceLayout.findViewById(R.id.destination);
         textView.setText(selectedRide.getString("destination"));
+        textView = invoiceLayout.findViewById(R.id.referenceText);
+        textView.setText(selectedRide.getString("referenceString"));
         return invoiceLayout;
     }
 

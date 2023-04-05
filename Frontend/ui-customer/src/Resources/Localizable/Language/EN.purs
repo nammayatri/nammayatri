@@ -355,7 +355,7 @@ getEN script = case script of
   PICKUP_CHARGE -> "Driver Pickup Charges"
   TOTAL_PAID -> "Total Paid"
   WAITING_CHARGE -> "Waiting Charges**"
-  NOMINAL_FARE -> "Optional Driver Request*"
+  NOMINAL_FARE -> "Drivers Additions*"
   DRIVERS_CAN_CHARGE_AN_ADDITIONAL_FARE_UPTO -> "* Drivers may optionally request 10% of base fare (rounded to nearest Rs.10) to cover other factors like traffic, chances of return trip etc."
   WAITING_CHARGE_DESCRIPTION -> "** Waiting charges : ₹1 / min - after 3 mins of drivers arrival"
   SUCCESSFUL_ONBOARD -> "You have successfully signed on to \nNamma Yatri"

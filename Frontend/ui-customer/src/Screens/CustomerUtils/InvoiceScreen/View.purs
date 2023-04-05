@@ -31,6 +31,7 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(
 import Screens.InvoiceScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
+import Helpers.Utils (isHaveFare)
 
 screen :: ST.InvoiceScreenState -> Screen Action ST.InvoiceScreenState ScreenOutput
 screen initialState =
@@ -102,11 +103,11 @@ view push state =
 referenceList :: ST.InvoiceScreenState -> Array String
 referenceList state =
   [ "1.5" <> (getString DAYTIME_CHARGES_APPLICABLE_AT_NIGHT) ]
-    <> if (isHaveFare ST.DRIVER_SELECTED_FARE state.data.selectedItem.faresList) then
+    <> if (isHaveFare "DRIVER_SELECTED_FARE" state.data.selectedItem.faresList) then
         [ (getString DRIVERS_CAN_CHARGE_AN_ADDITIONAL_FARE_UPTO) ]
       else
         []
-          <> if (isHaveFare ST.WAITING_CHARGES state.data.selectedItem.faresList) then [ (getString WAITING_CHARGE_DESCRIPTION) ] else []
+          <> if (isHaveFare "WAITING_CHARGES" state.data.selectedItem.faresList) then [ (getString WAITING_CHARGE_DESCRIPTION) ] else []
 
 ---------------------- amountBreakupView -------------------
 amountBreakupView :: forall w. ST.InvoiceScreenState -> PrestoDOM (Effect Unit) w
@@ -127,13 +128,14 @@ amountBreakupView state =
               ]
               [ textView
                   [ text case item.fareType of
-                      ST.BASE_FARE -> ((getString BASE_FARES) <> " (" <> state.data.selectedItem.baseDistance <> ")")
-                      ST.EXTRA_DISTANCE_FARE -> (getString NOMINAL_FARE)
-                      ST.DRIVER_SELECTED_FARE -> (getString NOMINAL_FARE)
-                      ST.TOTAL_FARE -> (getString TOTAL_PAID)
-                      ST.DEAD_KILOMETER_FARE -> (getString PICKUP_CHARGE)
-                      ST.PICKUP_CHARGES -> (getString PICKUP_CHARGE)
-                      ST.WAITING_CHARGES -> (getString WAITING_CHARGE)
+                      "BASE_FARE" -> ((getString BASE_FARES) <> " (" <> state.data.selectedItem.baseDistance <> ")")
+                      "EXTRA_DISTANCE_FARE" -> (getString NOMINAL_FARE)
+                      "DRIVER_SELECTED_FARE" -> (getString NOMINAL_FARE)
+                      "TOTAL_FARE" -> (getString TOTAL_PAID)
+                      "DEAD_KILOMETER_FARE" -> (getString PICKUP_CHARGE)
+                      "PICKUP_CHARGES" -> (getString PICKUP_CHARGE)
+                      "WAITING_CHARGES" -> (getString WAITING_CHARGE)
+                      _ -> "BASE_FARE"
                   , textSize FontSize.a_14
                   , color Color.black800
                   , layoutGravity "bottom"
@@ -226,5 +228,3 @@ localTextView textValue colorValue =
     , lineHeight "16"
     ]
 
-isHaveFare :: ST.FareTypes -> Array ST.FareComponent -> Boolean
-isHaveFare fare = not DA.null <<< DA.filter (\item -> item.fareType == fare)
