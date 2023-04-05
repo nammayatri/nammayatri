@@ -376,6 +376,7 @@ type IndividualRideCardState =
   , waitingCharges :: String
   , baseDistance :: String
   , extraDistance :: String
+  , referenceString :: String
   }
 
 type ItemState =
@@ -903,15 +904,10 @@ type Fares = {
 }
 
 type FareComponent = {
-  fareType :: FareTypes
+  fareType :: String
 , price :: Number
+, title :: String
 }
-
-data FareTypes = BASE_FARE | EXTRA_DISTANCE_FARE | DRIVER_SELECTED_FARE | TOTAL_FARE | PICKUP_CHARGES | WAITING_CHARGES | DEAD_KILOMETER_FARE
-
-derive instance genericFareTypes :: Generic FareTypes _
-instance eqFareTypes :: Eq FareTypes where eq = genericEq
-instance showFareTypes :: Show FareTypes where show = genericShow
 
 type SuccessScreenState = {
     title :: String

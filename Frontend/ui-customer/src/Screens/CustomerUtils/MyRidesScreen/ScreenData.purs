@@ -93,4 +93,5 @@ dummyIndividualCard = {
   , waitingCharges : "₹ 0"
   , baseDistance : "0 km"
   , extraDistance : "0 km"
+  , referenceString : ""
 }
