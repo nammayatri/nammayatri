@@ -126,6 +126,8 @@ messageLiked :: Id SP.Person -> Id Domain.Message -> Flow APISuccess
 messageLiked driverId messageId = do
   _ <- Esq.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   messageDetails <- Esq.runInReplica $ MRQ.findByMessageIdAndDriverId messageId (cast driverId) >>= fromMaybeM (InvalidRequest "Message not found")
+  unless (messageDetails.readStatus) $
+    throwError $ InvalidRequest "Message is not seen"
   let val = if messageDetails.likeStatus then (-1) else 1
   Esq.runTransaction $ do
     when messageDetails.readStatus $ MQ.updateMessageLikeCount messageId val
