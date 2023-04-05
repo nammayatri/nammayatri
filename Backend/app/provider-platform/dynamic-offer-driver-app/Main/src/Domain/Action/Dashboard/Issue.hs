@@ -136,10 +136,10 @@ issueUpdate :: ShortId DM.Merchant -> Id DIR.IssueReport -> Common.IssueUpdateBy
 issueUpdate _merchantShortId issueReportId req = do
   unless (isJust req.status || isJust req.assignee) $
     throwError $ InvalidRequest "Empty request, no fields to update."
-  void $ CQIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
+  issueReport <- CQIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
   Esq.runTransaction $ QIR.updateStatusAssignee issueReportId (toDomainIssueStatus <$> req.status) req.assignee
   whenJust req.assignee mkIssueAssigneeUpdateComment
-  CQIR.invalidateIssueReportCache (Just issueReportId) Nothing
+  CQIR.invalidateIssueReportCache (Just issueReportId) (Just issueReport.driverId)
   pure Success
   where
     mkIssueAssigneeUpdateComment assignee = do
@@ -151,7 +151,7 @@ issueUpdate _merchantShortId issueReportId req = do
             { id,
               issueReportId,
               authorId = cast req.userId,
-              comment = "Assignee Updated : " <> show assignee,
+              comment = "Assignee Updated : " <> assignee,
               createdAt = now
             }
 
