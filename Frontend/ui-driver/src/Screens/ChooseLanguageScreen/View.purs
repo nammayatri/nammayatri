@@ -145,4 +145,5 @@ menuButtonDriver state push =
       ] $ MenuButton.view
           (push <<< (MenuButtonAction))
           { text: {name: language.name, value: language.value, subtitle: language.subtitle}, isSelected: (state.props.selectedLanguage == language.value), index : index }) (getLanguage Language)
+          
   )
