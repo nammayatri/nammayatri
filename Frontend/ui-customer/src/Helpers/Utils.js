@@ -300,6 +300,7 @@ exports["zoneOtpExpiryTimer"] = function (startingTime) {
 };
 
 exports["clearWaitingTimer"] = function (id){
+  console.log("clearWaitingTimer" + id);
   if(__OS == "IOS" && id=="countUpTimerId") {
     if (JBridge.clearCountUpTimer) {
       JBridge.clearCountUpTimer();

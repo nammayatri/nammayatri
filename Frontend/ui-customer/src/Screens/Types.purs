@@ -16,6 +16,7 @@
 module Screens.Types where
 
 import Common.Types.App (CancellationReasons)
+import Components.ChooseVehicle.Controller as ChooseVehicle
 import Components.QuoteListItem.Controller (QuoteListItemState)
 import Components.SettingSideBar.Controller (SettingSideBarState)
 import Data.Generic.Rep (class Generic)
@@ -365,6 +366,7 @@ type IndividualRideCardState =
   , waitingCharges :: String
   , baseDistance :: String
   , extraDistance :: String
+  , isSpecialZone :: Boolean
   }
 
 type ItemState = 
@@ -467,6 +469,10 @@ type HomeScreenStateData =
   , rideDuration :: String
   , showPreferences :: Boolean
   , previousCurrentLocations:: PreviousCurrentLocations
+  , nearByPickUpPoints :: Array Location
+  , polygonCoordinates :: String
+  , specialZoneQuoteList :: Array ChooseVehicle.Config
+  , specialZoneSelectedQuote :: Maybe String
   }
 
 type HomeScreenStateProps =
@@ -512,7 +518,7 @@ type HomeScreenStateProps =
   , showRateCardIcon :: Boolean
   , emergencyHelpModal :: Boolean
   , estimatedDistance :: Maybe Int
-  , waitingTimeTimerId :: String
+  , waitingTimeTimerIds :: Array String
   , tagType :: Maybe CardType
   , isSaveFavourite :: Boolean
   , showShareAppPopUp :: Boolean
@@ -522,6 +528,8 @@ type HomeScreenStateProps =
   , storeCurrentLocs :: Boolean
   , emergencyHelpModelState :: EmergencyHelpModelState
   , showLiveDashboard :: Boolean
+  , defaultPickUpPoint :: String
+  , isSpecialZone :: Boolean
   }
 
 type Contact = {
@@ -869,7 +877,7 @@ type FareComponent = {
 , price :: Number
 }
 
-data FareTypes = BASE_FARE | EXTRA_DISTANCE_FARE | DRIVER_SELECTED_FARE | TOTAL_FARE | PICKUP_CHARGES | WAITING_CHARGES | DEAD_KILOMETER_FARE
+data FareTypes = BASE_FARE | EXTRA_DISTANCE_FARE | DRIVER_SELECTED_FARE | TOTAL_FARE | PICKUP_CHARGES | WAITING_CHARGES | DEAD_KILOMETER_FARE | WAITING_OR_PICKUP_CHARGES | SERVICE_CHARGE | FIXED_GOVERNMENT_RATE
 
 derive instance genericFareTypes :: Generic FareTypes _
 instance eqFareTypes :: Eq FareTypes where eq = genericEq

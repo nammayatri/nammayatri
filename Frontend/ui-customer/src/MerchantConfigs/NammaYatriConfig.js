@@ -14,8 +14,12 @@ export function isMerchantString(key) {
   return config.StringKeys.includes(key);
 }
 
-export function isMerchantConfig(key) {
-  return key in config;
+export function getMerchantConfig(key){
+  if (key in config){
+      return config[key];
+  }
+  console.error("no value found for key "+ key);
+  return "";
 }
 
 export function getStringENValue(key) {
@@ -42,6 +46,12 @@ export function getStringKNValue(key) {
 
 const config = {
   "StringKeys": [],
+  "isReferralEnabled" : "true",
+  "showBookingPreference" : "true",
+  "showRateCard" : "true",
+  "showDashboard" : "true",
+  "shareAppTitle" : "Share Namma Yatri!",
+  "shareAppContent" : "Hey there!\n\nCheck India's first Zero Commission auto booking app.\n100% Open source | 100% Open Data\n\nDownload Namma Yatri now! \nhttps://nammayatri.in/link/rider/SJ8D \n\n #beOpen #chooseOpen"
 }
 
 const kannadaStrings = {
