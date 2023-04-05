@@ -134,6 +134,9 @@ amountBreakupView state =
                       ST.DEAD_KILOMETER_FARE -> (getString PICKUP_CHARGE)
                       ST.PICKUP_CHARGES -> (getString PICKUP_CHARGE)
                       ST.WAITING_CHARGES -> (getString WAITING_CHARGE)
+                      ST.WAITING_OR_PICKUP_CHARGES  -> (getString PICKUP_CHARGE)
+                      ST.SERVICE_CHARGE -> (getString SERVICE_CHARGES)
+                      ST.FIXED_GOVERNMENT_RATE -> (getString GOVERNMENT_CHAGRES)
                   , textSize FontSize.a_14
                   , color Color.black800
                   , layoutGravity "bottom"

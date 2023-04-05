@@ -370,5 +370,14 @@ const kannadaStrings = {
   "NO_CONTACTS_FOUND_ON_DEVICE_TO_ADD": "ಸೇರಿಸಲು ಯಾವುದೇ ಸಂಪರ್ಕಗಳು ಯಾವ ಸಾಧನದಲ್ಲಿ ಕಂಡುಬಂದಿಲ್ಲ",
   "NO_CONTACTS_LEFT_ON_DEVICE_TO_ADD": "ಸೇರಿಸಲು ಯಾವುದೇ ಸಂಪರ್ಕಗಳು ಯಾವ ಸಾಧನದಲ್ಲಿ ಕಂಡುಬಂದಿಲ್ಲ",
   "PERMISSION_DENIED": "ಅನುಮತಿ ನಿರಾಕರಿಸಲಾಗಿದೆ",
-  "PERCENTAGE_OF_NOMINAL_FARE": "~ ಮೂಲ ದರದ 10%"
+  "PERCENTAGE_OF_NOMINAL_FARE": "~ ಮೂಲ ದರದ 10%",
+  "CHOOSE_YOUR_RIDE" : "ನಿಮ್ಮ ಸವಾರಿಯನ್ನು ಆರಿಸಿ",
+  "BOARD_THE_FIRST_TAXI" : "ಜಾತ್ರಿ ಸತಿ \nವಲಯದಿಂದ ಮೊದಲ ಟ್ಯಾಕ್ಸಿ ಹತ್ತಿ",
+  "PAY_VIA_CASH_OR_UPI" : "ನಗದು / UPI ಮೂಲಕ ಪಾವತಿಸಿ",
+  "ECONOMICAL" : "ಆರ್ಥಿಕ",
+  "COMFY" : "ಆರಾಮದಾಯಕ",
+  "NAVIGATE" : "ನ್ಯಾವಿಗೇಟ್",
+  "GOVERNMENT_CHAGRES" : "ಸರ್ಕಾರದ ಶುಲ್ಕಗಳು",
+  "SERVICE_CHARGES" : "ಸೇವೆಯ ಶುಲ್ಕ",
+  "CONFIRM_AND_BOOK" : "ದೃಢೀಕರಿಸಿ ಮತ್ತು ಬುಕ್ ಮಾಡಿ"
 }

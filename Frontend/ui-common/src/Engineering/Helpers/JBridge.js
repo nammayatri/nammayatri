@@ -1046,13 +1046,21 @@ exports["requestKeyboardShow"] = function(id) {
   JBridge.requestKeyboardShow(id);
 }
 
-exports["locateOnMap"] = function(str){
-  return function (lat){
-    return function (lon){
-      JBridge.locateOnMap(str, lat, lon);
-    }
-  }
-}
+exports["locateOnMap"] = function (str) {
+  return function (lat) {
+    return function (lon) {
+      return function (geoJson) {
+        return function (coodinates) {
+          try {
+            return JBridge.locateOnMap(str, lat, lon, geoJson, JSON.stringify(coodinates));
+          } catch (err) {
+            return JBridge.locateOnMap(str, lat, lon);
+          }s
+        };
+      };
+    };
+  };
+};
 
 exports["exitLocateOnMap"] = function(str){
   JBridge.exitLocateOnMap(str);

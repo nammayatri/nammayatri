@@ -15,18 +15,18 @@
 
 module Screens.MyRidesScreen.Controller where
 
-import Accessor (_amount, _computedPrice, _contents, _description, _driverName, _estimatedDistance, _id, _list, _rideRating, _toLocation, _vehicleNumber)
+import Accessor (_amount, _computedPrice, _contents, _description, _driverName, _estimatedDistance, _id, _list, _rideRating, _toLocation, _vehicleNumber, _otpCode)
 import Components.ErrorModal as ErrorModal
 import Components.GenericHeader as GenericHeader
 import Components.IndividualRideCard.Controller as IndividualRideCardController
 import Components.PrimaryButton as PrimaryButton
-import Data.Array (union, (!!), length, filter, unionBy, head)
-import Data.Int (fromString, round, toNumber)
+import Data.Array (filter, head, length, null, union, unionBy, (!!))
+import Data.Int (fromString, toNumber)
 import Data.Lens ((^.))
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String (Pattern(..), split)
 import Engineering.Helpers.Commons (strToBool)
-import Helpers.Utils (convertUTCtoISC, parseFloat, rotateArray, setEnabled, setRefreshing, toString)
+import Helpers.Utils (convertUTCtoISC, parseFloat, setEnabled, setRefreshing, toString)
 import JBridge (firebaseLogEvent)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
 import Prelude (class Show, pure, unit, bind, map, discard, show, ($), (==), (&&), (+), (/=), (<>), (||), (-), (<), (/), negate)
@@ -227,6 +227,7 @@ myRideListTransformer listRes = filter (\item -> (item.status == "COMPLETED" || 
   , waitingCharges : fares.waitingCharges
   , baseDistance : getKmMeter (fromMaybe 0.0 (rideDetails.chargeableRideDistance))
   , extraDistance : getKmMeter $  (\a -> if a < 0.0 then - a else a) ((fromMaybe 0.0 (rideDetails.chargeableRideDistance)) - toNumber (fromMaybe 0 (((ride.bookingDetails)^._contents)^._estimatedDistance)))
+  , isSpecialZone : (null ride.rideList || isJust (ride.bookingDetails ^._contents^._otpCode))
 }) (listRes))
 
 
@@ -255,6 +256,9 @@ getFareFromFareEntity fareType = case fareType of
   "PICKUP_CHARGES" -> PICKUP_CHARGES 
   "WAITING_CHARGES" -> WAITING_CHARGES
   "DEAD_KILOMETER_FARE" -> DEAD_KILOMETER_FARE
+  "WAITING_OR_PICKUP_CHARGES" -> WAITING_OR_PICKUP_CHARGES 
+  "SERVICE_CHARGE" -> SERVICE_CHARGE 
+  "FIXED_GOVERNMENT_RATE" -> FIXED_GOVERNMENT_RATE
   _ -> BASE_FARE
 
 getKmMeter :: Number -> String

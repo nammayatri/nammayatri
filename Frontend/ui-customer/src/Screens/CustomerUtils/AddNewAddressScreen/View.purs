@@ -70,7 +70,7 @@ view push state =
           _ <- (JB.showMap (EHC.getNewIDWithTag "AddNewAddressHomeScreenMap") true "satellite" (19.0) push MAPREADY)
           _ <- HU.setText' (EHC.getNewIDWithTag "SavedLocationEditText") (state.data.address)
           _ <- HU.setText' (EHC.getNewIDWithTag "SaveAsEditText") (state.data.addressSavedAs)
-          _ <- pure $ JB.locateOnMap true 0.0 0.0
+          _ <- pure $ JB.locateOnMap true 0.0 0.0 "" []
           _ <- if (state.data.activeIndex == Just 2 && state.props.showSavePlaceView) then JB.requestKeyboardShow (EHC.getNewIDWithTag ("SaveAsEditText")) else pure unit
           pure unit 
           ) (const AfterRender)
