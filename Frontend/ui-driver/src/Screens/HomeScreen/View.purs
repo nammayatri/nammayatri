@@ -98,7 +98,7 @@ screen initialState =
                                 _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "8.0"
                                 if (not initialState.props.routeVisible) && initialState.props.mapRendered then do 
                                   _ <- JB.getCurrentPosition push $ ModifyRoute
-                                  _ <- JB.removeMarker "ny_ic_auto" -- TODO : remove if we dont require "ic_auto" icon on homescreen
+                                  _ <- JB.removeMarker "ic_vehicle_side" -- TODO : remove if we dont require "ic_auto" icon on homescreen
                                   pure unit 
                                   else pure unit 
                                 if (getValueToLocalStore RIDE_STATUS_POLLING) == "False" then do
@@ -112,13 +112,12 @@ screen initialState =
                                 _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "25.0"
                                 if (not initialState.props.routeVisible) && initialState.props.mapRendered then do 
                                   _ <- JB.getCurrentPosition push $ ModifyRoute
-                                  _ <- JB.removeMarker "ny_ic_auto" -- TODO : remove if we dont require "ic_auto" icon on homescreen
+                                  _ <- JB.removeMarker "ic_vehicle_side" -- TODO : remove if we dont require "ic_auto" icon on homescreen
                                   pure unit 
                                   else pure unit 
             _                -> do 
                                 _ <- pure $ setValueToLocalStore RIDE_G_FREQUENCY "50000"
                                 _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "25.0"
-                                _ <- JB.reallocateMapFragment (EHC.getNewIDWithTag "DriverTrackingHomeScreenMap")
                                 _ <- checkPermissionAndUpdateDriverMarker initialState
                                 _ <- launchAff_ $ EHC.flowRunner $ checkCurrentRide push Notification
                                 pure unit 
@@ -173,6 +172,7 @@ view push state =
                 ][  googleMap state
                   , if not state.props.statusOnline then showOfflineStatus push state else dummyTextView
                   , if not state.props.rideActionModal && state.props.statusOnline then statsModel push state else dummyTextView
+                  , if (HU.getMerchant unit) == HU.JATRISAATHIDRIVER then otpButtonView state push else dummyTextView
                   ]
               ]
         , bottomNavBar push state 
@@ -184,6 +184,44 @@ view push state =
       ] <> if state.props.cancelRideModalShow then [cancelRidePopUpView push state] else [] 
         <>  if state.props.cancelConfirmationPopup then [cancelConfirmation push state] else []
         )
+
+otpButtonView :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
+otpButtonView state push = 
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  , background Color.transparent
+  , visibility if state.props.statusOnline then VISIBLE else GONE
+  , padding (Padding 0 0 20 20)
+  , gravity BOTTOM
+  ][ linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , gravity RIGHT
+      ][ linearLayout
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , stroke $ "1," <> Color.blue900
+          , cornerRadius 32.0
+          , background Color.blue600
+          , padding (Padding 16 12 16 12)
+          , onClick push $ const $ ZoneOtpAction
+          ][ imageView 
+              [ imageWithFallback "ic_mode_standby,https://assets.juspay.in/nammayatri/images/user/ic_mode_standby.png"
+              , width $ V 20
+              , height $ V 20
+              ]
+            , textView $ 
+              [ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , color Color.blue900
+              , padding (PaddingLeft 8)
+              , text (getString OTP)
+              ] <> FontStyle.subHeading2 TypoGraphy
+          ]
+      ]
+  ]
 
 cancelConfirmation :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 cancelConfirmation push state = 
@@ -418,7 +456,7 @@ goOfflineModal push state =
           ][ imageView
              [ width (V 55)
              , height (V 55)
-             , imageWithFallback "ny_ic_auto_side_active,https://assets.juspay.in/nammayatri/images/driver/ny_ic_auto_side_active.png"
+             , imageWithFallback "ic_vehicle_side_active,https://assets.juspay.in/nammayatri/images/driver/ny_ic_auto_side_active.png"
              ]
            , imageView
              [ width (V 35)
@@ -429,7 +467,7 @@ goOfflineModal push state =
            , imageView
              [ width (V 55)
              , height (V 55)
-             , imageWithFallback "ny_ic_auto_side_inactive,https://assets.juspay.in/nammayatri/images/driver/ny_ic_auto_side_inactive.png"
+             , imageWithFallback "ic_vehicle_side_inactive,https://assets.juspay.in/nammayatri/images/driver/ny_ic_auto_side_inactive.png"
              ]
           ]
         , linearLayout

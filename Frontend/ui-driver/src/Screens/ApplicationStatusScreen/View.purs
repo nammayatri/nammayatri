@@ -26,7 +26,7 @@ import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
-import Language.Types (STR(..), LOGOUT)
+import Language.Types (STR(..))
 import Prelude (Unit, ($), const, (<>), (/=), (==), (||), (&&), discard, bind, pure, unit)
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, visibility, afterRender, lineHeight, stroke, cornerRadius, alignParentRight, onBackPressed, imageWithFallback)

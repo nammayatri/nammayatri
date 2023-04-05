@@ -591,7 +591,7 @@ public class LocationUpdateService extends Service {
                 new NotificationCompat.Builder(this, LOCATION_UPDATES)
                         .setContentTitle("Updating")
                         .setContentText(getString(R.string.your_location_is_being_updated))
-                        .setSmallIcon(R.drawable.ny_ic_launcher)
+                        .setSmallIcon(R.drawable.ic_launcher)
                         .setPriority(NotificationCompat.PRIORITY_MIN)
                         .setOngoing(true)
                         .setContentIntent(pendingIntent);
@@ -605,9 +605,9 @@ public class LocationUpdateService extends Service {
         Intent notificationIntent = new Intent(this, MainActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(this, alertNotificationId, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
         NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(context,"General") ;
-        mBuilder.setLargeIcon(BitmapFactory.decodeResource(context.getResources(), R.drawable.ny_ic_launcher));
+        mBuilder.setLargeIcon(BitmapFactory.decodeResource(context.getResources(), R.drawable.ic_launcher));
         mBuilder.setContentTitle(getString(R.string.we_made_you_offline))
-                .setSmallIcon((R.drawable.ny_ic_launcher))
+                .setSmallIcon((R.drawable.ic_launcher))
                 .setContentText(getString(R.string.location_is_turned_off_permission_is_disabled))
                 .setAutoCancel(true)
                 .setPriority(NotificationCompat.PRIORITY_MAX);
