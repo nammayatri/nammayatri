@@ -53,7 +53,7 @@ toCommonIssueStatus = \case
 
 issueList :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Common.IssueStatus -> Maybe (Id DIC.IssueCategory) -> Maybe Text -> Flow Common.IssueReportListResponse
 issueList _merchantShortId mbLimit mbOffset mbStatus mbCategoryId mbAssignee = do
-  issueReports <- Esq.runInReplica $ QIR.findAllWithLimitOffsetStatus mbLimit mbOffset (toDomainIssueStatus <$> mbStatus) mbCategoryId mbAssignee
+  issueReports <- Esq.runInReplica $ QIR.findAllWithOptions mbLimit mbOffset (toDomainIssueStatus <$> mbStatus) mbCategoryId mbAssignee
   let count = length issueReports
   let summary = Common.Summary {totalCount = count, count}
   issues <- mapM mkIssueReport issueReports
@@ -67,6 +67,7 @@ issueList _merchantShortId mbLimit mbOffset mbStatus mbCategoryId mbAssignee = d
           { issueReportId = cast issueReport.id,
             driverId = cast issueReport.driverId,
             rideId = cast <$> issueReport.rideId,
+            deleted = issueReport.deleted,
             category = category.category,
             assignee = issueReport.assignee,
             status = toCommonIssueStatus issueReport.status,

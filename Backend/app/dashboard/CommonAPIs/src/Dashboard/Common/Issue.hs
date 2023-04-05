@@ -70,6 +70,7 @@ data IssueReportListItem = IssueReportListItem
   { issueReportId :: Id IssueReport,
     driverId :: Id Driver,
     rideId :: Maybe (Id Ride),
+    deleted :: Bool,
     category :: Text,
     assignee :: Maybe Text,
     status :: IssueStatus,

@@ -13,9 +13,20 @@ import Storage.Tabular.Issue.IssueReport
 create :: IssueReport -> SqlDB ()
 create = Esq.create
 
-findAll :: Transactionable m => m [IssueReport]
-findAll = Esq.findAll $ do
-  from $ table @IssueReportT
+findAllWithOptions :: Transactionable m => Maybe Int -> Maybe Int -> Maybe IssueStatus -> Maybe (Id IssueCategory) -> Maybe Text -> m [IssueReport]
+findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee = Esq.findAll $ do
+  issueReport <- from $ table @IssueReportT
+  where_ $
+    whenJust_ mbStatus (\statusVal -> issueReport ^. IssueReportStatus ==. val statusVal)
+      &&. whenJust_ mbAssignee (\assignee -> issueReport ^. IssueReportAssignee ==. just (val assignee))
+      &&. whenJust_ mbCategoryId (\categoryId -> issueReport ^. IssueReportCategoryId ==. val (toKey categoryId))
+  orderBy [desc $ issueReport ^. IssueReportCreatedAt]
+  limit limitVal
+  offset offsetVal
+  return issueReport
+  where
+    limitVal = min (maybe 10 fromIntegral mbLimit) 10
+    offsetVal = maybe 0 fromIntegral mbOffset
 
 findById :: Transactionable m => Id IssueReport -> m (Maybe IssueReport)
 findById issueReportId = Esq.findOne $ do
@@ -32,22 +43,6 @@ findAllByDriver driverId = Esq.findAll $ do
     issueReport ^. IssueReportDriverId ==. val (toKey driverId)
       &&. issueReport ^. IssueReportDeleted ==. val False
   pure issueReport
-
-findAllWithLimitOffsetStatus :: Transactionable m => Maybe Int -> Maybe Int -> Maybe IssueStatus -> Maybe (Id IssueCategory) -> Maybe Text -> m [IssueReport]
-findAllWithLimitOffsetStatus mbLimit mbOffset mbStatus mbCategoryId mbAssignee = Esq.findAll $ do
-  issueReport <- from $ table @IssueReportT
-  where_ $
-    whenJust_ mbStatus (\statusVal -> issueReport ^. IssueReportStatus ==. val statusVal)
-      &&. issueReport ^. IssueReportDeleted ==. val False
-      &&. whenJust_ mbAssignee (\assignee -> issueReport ^. IssueReportAssignee ==. just (val assignee))
-      &&. whenJust_ mbCategoryId (\categoryId -> issueReport ^. IssueReportCategoryId ==. val (toKey categoryId))
-  orderBy [desc $ issueReport ^. IssueReportCreatedAt]
-  limit limitVal
-  offset offsetVal
-  return issueReport
-  where
-    limitVal = min (maybe 10 fromIntegral mbLimit) 10
-    offsetVal = maybe 0 fromIntegral mbOffset
 
 safeToDelete :: Transactionable m => Id IssueReport -> Id SP.Person -> m (Maybe IssueReport)
 safeToDelete issueReportId driverId = Esq.findOne $ do
@@ -87,6 +82,7 @@ updateStatusAssignee issueReportId status assignee = do
       )
     where_ $
       tbl ^. IssueReportTId ==. val (toKey issueReportId)
+        &&. tbl ^. IssueReportDeleted ==. val False
 
 updateOption :: Id IssueReport -> Id IssueOption -> SqlDB ()
 updateOption issueReportId optionId = do
@@ -99,3 +95,4 @@ updateOption issueReportId optionId = do
       ]
     where_ $
       tbl ^. IssueReportTId ==. val (toKey issueReportId)
+        &&. tbl ^. IssueReportDeleted ==. val False
