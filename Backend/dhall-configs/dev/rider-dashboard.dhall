@@ -32,6 +32,8 @@ let rcfg =
 
 let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
 
+let shareRideApiRateLimitOptions = { limit = +20, limitResetTimeInSec = +60 }
+
 let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
 let appBackend =
@@ -53,6 +55,7 @@ in  { esqDBCfg
         common.loggerConfig // { logFilePath = "/tmp/rider-dashboard.log" }
     , graceTerminationPeriod = +90
     , apiRateLimitOptions
+    , shareRideApiRateLimitOptions
     , httpClientOptions = common.httpClientOptions
     , shortDurationRetryCfg = common.shortDurationRetryCfg
     , longDurationRetryCfg = common.longDurationRetryCfg
