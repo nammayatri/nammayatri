@@ -235,7 +235,9 @@
         "check-flake": "check-flake_2",
         "flake-parts": "flake-parts_3",
         "flake-root": "flake-root_2",
-        "haskell-flake": "haskell-flake_3",
+        "haskell-flake": [
+          "haskell-flake"
+        ],
         "nixpkgs-140774-workaround": "nixpkgs-140774-workaround_2",
         "nixpkgs-21_11": "nixpkgs-21_11_2",
         "nixpkgs-osrm": "nixpkgs-osrm",
@@ -580,15 +582,16 @@
     },
     "haskell-flake_3": {
       "locked": {
-        "lastModified": 1680209587,
-        "narHash": "sha256-pkoi6erX5sSrSOIqkbiWP3x5BdvMZuQ9BsrXJB4HxW8=",
-        "owner": "srid",
+        "lastModified": 1680600305,
+        "narHash": "sha256-scApYHRen0m7yWzwVpHUj/ylXygSmbvlf6gPcAzqAMc=",
+        "owner": "sbh69840",
         "repo": "haskell-flake",
-        "rev": "2fde5d0cab1dd517b71c232053a15dc7cc09017c",
+        "rev": "d44a4d638cc8a4b85060f2d7cac6974a711426a0",
         "type": "github"
       },
       "original": {
-        "owner": "srid",
+        "owner": "sbh69840",
+        "ref": "poc-localapps",
         "repo": "haskell-flake",
         "type": "github"
       }
@@ -1107,6 +1110,7 @@
           "common",
           "flake-parts"
         ],
+        "haskell-flake": "haskell-flake_3",
         "mission-control": "mission-control",
         "nixpkgs": "nixpkgs_5",
         "pre-commit-hooks-nix": "pre-commit-hooks-nix",

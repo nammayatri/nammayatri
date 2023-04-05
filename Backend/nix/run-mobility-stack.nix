@@ -27,14 +27,13 @@
               cabalExe = null;
             };
 
-            # TODO: haskell-flake does not have a way to parse executables, so we must specify them manually.
-            # See https://github.com/srid/haskell-flake/issues/36
+            # TODO: Refactor this after https://github.com/srid/haskell-flake/pull/137
             scheduler-example-app-exe = {
-              nixExe = "${config.localPackagesStatic.scheduler-example}/bin/scheduler-example-app-exe";
+              nixExe = config.haskellProjects.default.outputs.localApps.scheduler-example-app-exe.program;
               cabalExe = "scheduler-example:exe:scheduler-example-app-exe";
             };
             scheduler-example-scheduler-exe = {
-              nixExe = "${config.localPackagesStatic.scheduler-example}/bin/scheduler-example-scheduler-exe";
+              nixExe = config.haskellProjects.default.outputs.localApps.scheduler-example-scheduler-exe.program;
               cabalExe = "scheduler-example:exe:scheduler-example-scheduler-exe";
             };
 
