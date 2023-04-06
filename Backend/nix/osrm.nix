@@ -30,7 +30,7 @@ in
           text = ''
             set -x
             osrm-routed --algorithm mld \
-               ${osrm-data}/southern-zone-latest.osrm
+               ${osrm-data}/${openStreetDataFileName}.osrm
           '';
         };
       };
