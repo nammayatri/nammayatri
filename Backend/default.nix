@@ -1,7 +1,6 @@
 { inputs, ... }:
 {
   imports = [
-    ./nix/exe.nix
     ./nix/docker.nix
     ./nix/scripts.nix
     ./nix/run-mobility-stack.nix
@@ -34,7 +33,10 @@
       # The final nammayatri package containing the various executables.
       nammayatri = pkgs.symlinkJoin {
         name = "nammayatri-exes";
-        paths = lib.attrValues config.localPackagesStatic;
+        paths =
+          builtins.map
+            (p: pkgs.haskell.lib.justStaticExecutables p.package)
+            (lib.attrValues config.haskellProjects.default.outputs.packages);
       };
     };
   };
