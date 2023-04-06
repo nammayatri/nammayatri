@@ -7,8 +7,8 @@
         type = lib.types.attrsOf lib.types.package;
         readOnly = true;
         default = lib.mapAttrs
-          (_: p: pkgs.haskell.lib.justStaticExecutables p)
-          (config.haskellProjects.default.outputs.localPackages);
+          (_: p: pkgs.haskell.lib.justStaticExecutables p.package)
+          (config.haskellProjects.default.outputs.packages);
         description = ''
           Local Haskell packages, containing only static executables (no libraries)
 
