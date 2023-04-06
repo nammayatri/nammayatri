@@ -256,8 +256,16 @@ type RideRouteAPI =
     :> "route"
     :> Post '[JSON] RideRouteRes
 
+data ActualRoute = ActualRoute
+  { lat :: Double,
+    lon :: Double,
+    timestamp :: UTCTime
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 newtype RideRouteRes = RideRouteRes
-  { actualRoute :: [LatLong]
+  { actualRoute :: [ActualRoute]
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
