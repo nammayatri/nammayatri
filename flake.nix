@@ -33,6 +33,8 @@
       perSystem = { config, self', pkgs, ... }: {
         packages.default = self'.packages.nammayatri;
 
+        cachix-push.packages = [ "default" "osrm-server" ];
+
         # TODO: Move these to common repo.
         pre-commit = {
           check.enable = true;
