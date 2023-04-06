@@ -8,7 +8,7 @@
 
     # TODO: Move to common repo?
     mission-control.url = "github:Platonic-Systems/mission-control";
-    process-compose-flake.url = "github:Platonic-Systems/process-compose-flake";
+    process-compose-flake.url = "github:Platonic-Systems/process-compose-flake/srid/remove-apps";
     # Pending merge of these PRs
     # - https://github.com/cachix/pre-commit-hooks.nix/pull/266
     # - https://github.com/cachix/pre-commit-hooks.nix/pull/268
