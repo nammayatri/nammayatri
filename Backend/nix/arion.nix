@@ -12,7 +12,7 @@ let
       db-primary.service = {
         image = "bitnami/postgresql:12.3.0";
         container_name = "atlas-db-primary";
-        ports = [ "5432:5432" ];
+        ports = [ "5434:5432" ];
         volumes = [
           "${../dev/sql-seed/pre-init.sql}:/docker-entrypoint-initdb.d/0-pre-init.sql:Z"
           "${../dev/sql-seed/rider-app-seed.sql}:/docker-entrypoint-initdb.d/1-rider-app-seed.sql:Z"
