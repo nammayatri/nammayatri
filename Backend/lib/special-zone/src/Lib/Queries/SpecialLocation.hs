@@ -28,9 +28,11 @@ create = Esq.create
 findById :: Transactionable m => Id D.SpecialLocation -> m (Maybe D.SpecialLocation)
 findById = Esq.findById
 
-findSpecialLocationByLatLong :: Transactionable m => LatLong -> m (Maybe (D.SpecialLocation, Text))
-findSpecialLocationByLatLong point = do
+findSpecialLocationByLatLong :: Transactionable m => LatLong -> Text -> m (Maybe (D.SpecialLocation, Text))
+findSpecialLocationByLatLong point merchantId = do
   Esq.findOne $ do
     specialLocation <- from $ table @SpecialLocationT
-    where_ $ containsPoint (point.lon, point.lat)
+    where_ $
+      containsPoint (point.lon, point.lat)
+        &&. specialLocation ^. SpecialLocationMerchantId ==. val merchantId
     return (specialLocation, F.getGeomGeoJSON)

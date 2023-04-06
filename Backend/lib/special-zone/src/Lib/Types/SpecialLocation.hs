@@ -36,7 +36,8 @@ data SpecialLocation = SpecialLocation
     locationName :: Text,
     category :: Category,
     gates :: [GatesInfo],
-    createdAt :: UTCTime
+    createdAt :: UTCTime,
+    merchantId :: Text
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 

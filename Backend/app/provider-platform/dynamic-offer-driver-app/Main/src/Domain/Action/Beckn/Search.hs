@@ -115,7 +115,7 @@ handler merchantId sReq = do
   result <- getDistanceAndDuration merchantId fromLocationLatLong toLocationLatLong sReq.routeInfo
   CD.cacheDistance sReq.transactionId (result.distance, result.duration)
   logDebug $ "distance: " <> show result.distance
-  mbSpecialLocation <- QSpecialLocation.findSpecialLocationByLatLong fromLocationLatLong
+  mbSpecialLocation <- QSpecialLocation.findSpecialLocationByLatLong fromLocationLatLong (getId merchantId)
 
   (quotes :: Maybe [SpecialZoneQuoteInfo], estimates' :: Maybe [EstimateItem]) <-
     if isJust mbSpecialLocation

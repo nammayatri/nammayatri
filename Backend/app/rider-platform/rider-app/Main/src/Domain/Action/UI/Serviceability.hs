@@ -59,12 +59,12 @@ checkServiceability settingAccessor personId location = do
   case geoRestriction of
     Unrestricted -> do
       let serviceable = True
-      specialLocationBody <- QSpecialLocation.findSpecialLocationByLatLong location
+      specialLocationBody <- QSpecialLocation.findSpecialLocationByLatLong location (getId merchId)
       pure ServiceabilityRes {serviceable = serviceable, specialLocation = fst <$> specialLocationBody, geoJson = snd <$> specialLocationBody}
     Regions regions -> do
       serviceable <- someGeometriesContain location regions
       if serviceable
         then do
-          specialLocationBody <- QSpecialLocation.findSpecialLocationByLatLong location
+          specialLocationBody <- QSpecialLocation.findSpecialLocationByLatLong location (getId merchId)
           pure ServiceabilityRes {serviceable = serviceable, specialLocation = fst <$> specialLocationBody, geoJson = snd <$> specialLocationBody}
         else pure ServiceabilityRes {serviceable = serviceable, specialLocation = Nothing, geoJson = Nothing}

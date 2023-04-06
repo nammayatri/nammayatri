@@ -43,6 +43,7 @@ mkPersist
       category Domain.Category
       gates (PostgresList Domain.GatesInfo)
       createdAt UTCTime
+      merchantId Text
       Primary id
       deriving Generic
     |]
