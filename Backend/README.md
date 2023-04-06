@@ -1,47 +1,45 @@
-This is the sub-project containing backend code written in [haskell] powering nammayatri servers.
+This is the sub-project containing backend code written in [haskell] powering [nammayatri] servers.
 
-[haskell]: https://www.haskell.org/
 ## Getting Started
-
-Getting Started with building and running the project.
 
 ### Pre-requisites
 
-#### Nix
-We manage dependencies and development environment using Nix. Before proceeding, you need to install Nix.
+To build or develop the project, you need to install the following.
 
-1. Install **Nix**: https://haskell.flake.page/nix.
-    - Then run `nix run github:srid/nix-health` to check that everything is green.
+#### Nix
+
+Nix is central to building and developing the Namamayatri project. Install and setup Nix as follows:
+
+1. [Install **Nix**](https://github.com/DeterminateSystems/nix-installer#the-determinate-nix-installer)
+    - Then, run `nix run github:srid/nix-health` to check that everything is green.
 1. Setup the **binary cache** (to avoid compiling locally):
     ```sh
     nix run nixpkgs#cachix use nammayatri
     ```
-1. If you are also developing the backend, install **nix-direnv** (and, optionally, starship). See [explanation here](https://haskell.flake.page/direnv); we provide a [home-manager template](https://github.com/juspay/nix-dev-home) that you can use to get started easily.
+    - For this command to succed, you must have added yourself to the `trusted-users` list of `nix.conf`
+1. If you are also developing the backend, we recommend that you install **nix-direnv** and **starship**. See the [explanation](https://haskell.flake.page/direnv)[ here](https://haskell.flake.page/direnv); here is a [home-manager template](https://github.com/juspay/nix-dev-home) that you can use to get started easily.
     - While this is not strictly required, it is recommended for better IDE integration in VSCode and other editors.
 
-#### Tools
+#### Other tools
 
-These tools are required when working with the mobility repository:-
+Aside from Nix, you also need:
 
-1. Install [Docker](https://www.docker.com/products/docker-desktop/) - we use docker and docker-compose for containers.
-    - If you are on macOS, open Docker -> Preferences... -> Resources -> File Sharing in Docker Desktop and add `/nix/store` to the list of shared folders.
-
-For Mac users, some additional tools may be required:-
-
-1. Install [Xcode](https://developer.apple.com/xcode/)
+1. Install [Docker](https://www.docker.com/products/docker-desktop/) (we use docker-compose for running external services dependencies).
+    - If you are on macOS, open *Docker -> Preferences... -> Resources -> File Sharing* in Docker Desktop and add `/nix/store` to the list of shared folders.
+1. Install [Xcode](https://developer.apple.com/xcode/), if you are on macOS.
 
 
 ### Building
 
-After you've all the pre-requisite tools & dependencies installed, we can build the project for development.
+Once you have installed all the necessary tools and dependencies, we can proceed with building the project for development.
 
-To build the project for development, we should compile the project with the command
+To compile the backend, use the following command:
 
 ```sh
 nix build .#nammayatri
 ```
 
-This should produce a `./result` symlink locally containing all backend binaries under `./result/bin`.
+This should produce a `./result` symlink in the current directory, containing all backend binaries under `./result/bin`.
 
 #### Building the docker image
 
@@ -51,26 +49,27 @@ docker load -i $(nix build .#dockerImage --print-out-paths)
 
 ### Development
 
-The `dev/` folder at the project top-level contains all the relevant files and configs, should you need to change or inspect them.
+NOTE: The `Backend/dev/` folder contains all the relevant files and configs for local development, should you need to change or inspect them.
 
-#### Setting up development environment
+#### Setting up a development environment
 
-To set up your development environment, you should run `direnv allow` from the project root. If you do not have nix-direnv setup, run
+To set up your development environment, you should run `direnv allow` from the project root. If you do not have nix-direnv setup (as per the pre-requisites above), run instead:
 
 ```sh
-nix develop
+nix develop # If you cannot do `direnv allow`.
 ```
 
-This will drop you in a shell environment containing all project dependencies.
+This will drop you into a shell environment containing all project dependencies. In side the nix shell, run `,` to see the available commands specific to nammayatri development.
 
 
 #### Running the services
-To run the project, we'd first need to run some services. These are provided via docker images.
 
+To run the project, we'd first need to run some services. These are provided via docker images (built in Nix).
 
-For running the database, redis, passetto and kafka run this command
+For running the database, redis, passetto and kafka run this command:
+
 ```sh
-# Make sure you are in 'nix develop' shell first!
+# NOTE: You must run this from inside nix shell.
 , backend-run-svc
 ```
 
@@ -85,6 +84,7 @@ For running pgadmin run this command:
 ```
 
 For running monitoring services like prometheus and grafana use this command:
+
 ```sh
 , backend-run-monitoring
 ```
@@ -95,7 +95,7 @@ For running monitoring services like prometheus and grafana use this command:
 , backend-run-mobility-stack
 ```
 
-This will run nammayatri components using `cabal run`. If you wish to run using Nix, run:
+This will run nammayatri components using `cabal run`. If you wish to run it using Nix instead, run:
 
 ```sh
 nix run .#run-mobility-stack
@@ -103,21 +103,21 @@ nix run .#run-mobility-stack
 
 #### Updating flake inputs
 
-Nix dependencies specified in `inputs` of `flake.nix`. They point to the Git repos. The specific revision is pinned in the `flake.lock` file. To update the `shared-kernel` input, for instance, run:
+Nix dependencies specified in `inputs` of the `flake.nix` file. They usually point to external Git repos. The specific revisions of these Git repos are pinned in the `flake.lock` file. To update the `shared-kernel` input, for instance, run:
 
 ```sh
 nix flake lock --update-input shared-kernel
 ```
 
-If you update the `inputs` section of `flake.nix` file, be sure to run `nix flake lock` so also update the `flake.lock` file.
+If you update the `inputs` section of `flake.nix` file, be sure to run `nix flake lock` so as to also update the `flake.lock` file.
 
 ### Testing
 
-The project comes with a range of tests in it's test-suites. These tests should pass for each correct build.
+The project comes with a range of tests in its test-suites. These tests should pass for each correct build.
 
 To run the test-suite for the project, first ensure you have the services running (see [running servcies section](#running-the-services)).
 
-Run the following command in the project root folder after the services are up and running:-
+Run the following command in `./Backend` folder after the services are up and running:
 
 ```sh
 cabal test all
@@ -188,3 +188,6 @@ Each package has clear separation of focuses w.r.t the functionality it provides
     Please refer to the [Project Structure Section](#project-structure)
 
 2. TBD...
+
+[nammayatri]: https://www.nammayatri.in/
+[haskell]: https://www.haskell.org/
