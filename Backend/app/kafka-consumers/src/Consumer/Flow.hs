@@ -33,7 +33,9 @@ import Kernel.Types.Flow
 import Kernel.Utils.Common (generateGUID, withLogTag)
 import qualified Streamly.Internal.Data.Fold as SF
 import Streamly.Internal.Data.Stream.Serial (SerialT)
-import qualified Streamly.Internal.Prelude as S
+import qualified Streamly.Prelude as S
+
+import Consumer.AvailabilityTime.Types (LocationUpdates)
 
 runConsumer :: L.FlowRuntime -> AppEnv -> ConsumerType -> Consumer.KafkaConsumer -> IO ()
 runConsumer flowRt appEnv consumerType kafkaConsumer = do
@@ -98,12 +100,17 @@ availabilityConsumer flowRt appEnv kafkaConsumer =
     offset' = Consumer.unOffset . Consumer.crOffset
     partition' = Consumer.unPartitionId . Consumer.crPartition
 
+    -- buildTimeSeries :: MonadIO m =>
+    --   SF.Fold
+    --   m
+    --   (LocationUpdates, ConsumerRecordD)
+    --   ([UTCTime], Maybe ConsumerRecordD)
     buildTimeSeries = SF.mkFold step start extract
       where
-        step (!acc, Nothing) (val, cr) = pure (fromMaybe val.ts val.st : acc, Just $ HM.singleton (partition' cr) cr) -- TODO: remove fromMaybe default ts once old data is processed.
-        step (!acc, Just latestCrMap) (val, cr) = pure (fromMaybe val.ts val.st : acc, Just $ keepMax latestCrMap cr) -- TODO: remove fromMaybe default ts once old data is processed.
-        start = pure ([], Nothing)
-        extract = pure
+        step (!acc, Nothing) (val, cr) = SF.Partial (fromMaybe val.ts val.st : acc, Just $ HM.singleton (partition' cr) cr) -- TODO: remove fromMaybe default ts once old data is processed.
+        step (!acc, Just latestCrMap) (val, cr) = SF.Partial (fromMaybe val.ts val.st : acc, Just $ keepMax latestCrMap cr) -- TODO: remove fromMaybe default ts once old data is processed.
+        start = SF.Partial ([], Nothing)
+        extract = id
 
 readMessages ::
   (FromJSON a, ConvertUtf8 aKey ByteString) =>
