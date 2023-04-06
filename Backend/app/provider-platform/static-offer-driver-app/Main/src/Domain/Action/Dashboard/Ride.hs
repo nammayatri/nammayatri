@@ -24,6 +24,7 @@ where
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Ride as Common
 import Data.Coerce (coerce)
 import qualified Data.Text as T
+import qualified Data.Time as Time
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Booking.BookingLocation as DBLoc
 import qualified Domain.Types.BookingCancellationReason as DBCReason
@@ -34,7 +35,6 @@ import qualified Domain.Types.Ride as DRide
 import Environment
 import Kernel.External.Encryption (decrypt, getDbHash)
 import Kernel.External.Maps.HasCoordinates
-import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Storage.Clickhouse.Operators
 import qualified Kernel.Storage.Clickhouse.Queries as CH
@@ -213,13 +213,15 @@ mkBookingStatus ride now = do
 
 ---------------------------------------------------------------------
 
-getLatLong :: MonadFlow m => Common.DriverEdaKafka -> m LatLong
-getLatLong Common.DriverEdaKafka {..} =
-  case (lat, lon) of
-    (Just lat_, Just lon_) -> do
+getActualRoute :: MonadFlow m => Common.DriverEdaKafka -> m Common.ActualRoute
+getActualRoute Common.DriverEdaKafka {..} =
+  case (lat, lon, ts) of
+    (Just lat_, Just lon_, ts_) -> do
       lat' <- readMaybe lat_ & fromMaybeM (InvalidRequest "Couldn't find driver's location.")
       lon' <- readMaybe lon_ & fromMaybeM (InvalidRequest "Couldn't find driver's location.")
-      pure $ LatLong lat' lon'
+      logInfo $ "driver's hearbeat's timestamp received from clickhouse " <> show ts_ -- can be removed after running once in prod
+      ts' <- Time.parseTimeM True Time.defaultTimeLocale "%Y-%m-%d %H:%M:%S%Q" ts_ & fromMaybeM (InvalidRequest "Couldn't find driver's timestamp.")
+      pure $ Common.ActualRoute lat' lon' ts'
     _ -> throwError $ InvalidRequest "Couldn't find driver's location."
 
 rideRoute :: ShortId DM.Merchant -> Id Common.Ride -> Flow Common.RideRouteRes
@@ -237,7 +239,7 @@ rideRoute merchantShortId reqRideId = do
   ckhTbl <- CH.findAll (Proxy @Common.DriverEdaKafka) ((("partition_date" =.= rQStart) |.| ("partition_date" =.= rQEnd)) &.& ("driver_id" =.= driverQId) &.& ("rid" =.= rideQId)) Nothing Nothing (Just $ CH.Desc "created_at")
   actualRoute <- case ckhTbl of
     Left _ -> pure []
-    Right y -> mapM getLatLong y
+    Right y -> mapM getActualRoute y
   when (null actualRoute) $ throwError $ InvalidRequest "No route found for this ride."
   pure
     Common.RideRouteRes
