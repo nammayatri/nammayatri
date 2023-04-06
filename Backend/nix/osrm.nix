@@ -10,7 +10,7 @@ let
   };
 in
 {
-  perSystem = { config, pkgs, lib, system, ... }: {
+  perSystem = { pkgs, lib, ... }: {
     packages =
       rec {
         osrm-data =

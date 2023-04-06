@@ -115,7 +115,10 @@ If you update the `inputs` section of `flake.nix` file, be sure to run `nix flak
 
 The project comes with a range of tests in its test-suites. These tests should pass for each correct build.
 
-To run the test-suite for the project, first ensure you have the services running (see [running servcies section](#running-the-services)).
+To run the test-suite for the project,
+
+- first ensure you have the services running (see [running servcies section](#running-the-services)).
+- Then, run the osrm-server using `nix run .#osrm-server`
 
 Run the following command in `./Backend` folder after the services are up and running:
 

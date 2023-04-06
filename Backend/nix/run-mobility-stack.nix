@@ -43,8 +43,6 @@
                   p.exes))
                 backendExecutablePackages);
           externalComponents = {
-            # TODO: This should normally be run from docker-compose
-            osrm-server.exec = lib.getExe self'.packages.osrm-server;
             beckn-gateway.exec = lib.getExe config.haskellProjects.default.outputs.finalPackages.beckn-gateway;
             mock-registry.exec = lib.getExe config.haskellProjects.default.outputs.finalPackages.mock-registry;
           };
