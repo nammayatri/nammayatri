@@ -11,23 +11,24 @@ Getting Started with building and running the project.
 We manage dependencies and development environment using Nix. Before proceeding, you need to install Nix.
 
 1. Install **Nix**: https://haskell.flake.page/nix.
+    - Then run `nix run github:srid/nix-health` to check that everything is green.
 1. Setup the **binary cache** (to avoid compiling locally):
     ```sh
     nix run nixpkgs#cachix use nammayatri
     ```
-1. If you are also developing the backend, install **nix-direnv** (and, optionally, starship): https://haskell.flake.page/direnv
-    - While this is not strictly required, it is recommended for better IDE integration in VSCode.
+1. If you are also developing the backend, install **nix-direnv** (and, optionally, starship). See [explanation here](https://haskell.flake.page/direnv); we provide a [home-manager template](https://github.com/juspay/nix-dev-home) that you can use to get started easily.
+    - While this is not strictly required, it is recommended for better IDE integration in VSCode and other editors.
 
 #### Tools
 
 These tools are required when working with the mobility repository:-
 
-1. [Docker](https://www.docker.com/products/docker-desktop/) - we use docker and docker-compose for containers.
+1. Install [Docker](https://www.docker.com/products/docker-desktop/) - we use docker and docker-compose for containers.
     - If you are on macOS, open Docker -> Preferences... -> Resources -> File Sharing in Docker Desktop and add `/nix/store` to the list of shared folders.
 
 For Mac users, some additional tools may be required:-
 
-1. [Xcode](https://developer.apple.com/xcode/)
+1. Install [Xcode](https://developer.apple.com/xcode/)
 
 
 ### Building
