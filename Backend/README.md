@@ -61,6 +61,16 @@ nix develop # If you cannot do `direnv allow`.
 
 This will drop you into a shell environment containing all project dependencies. In side the nix shell, run `,` to see the available commands specific to nammayatri development.
 
+To compile the project, use [cabal]:
+
+```sh
+# In nix develop shell:
+cd ./Backend
+# Build all packages
+cabal build all
+# Run a cabal package (by path to the directory containing .cabal file)
+cabal run lib/location-updates
+```
 
 #### Running the services
 
@@ -87,6 +97,12 @@ For running monitoring services like prometheus and grafana use this command:
 
 ```sh
 , backend-run-monitoring
+```
+
+To run osrm-server, run:
+
+```sh
+nix run .#osrm-server
 ```
 
 #### Running backend
