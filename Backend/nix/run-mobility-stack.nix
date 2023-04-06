@@ -11,48 +11,46 @@
       port = 7812; # process-compose Swagger API is served here.
       configs =
         let
-          components = {
-            osrm-server = {
-              nixExe = lib.getExe self'.packages.osrm-server;
-            };
+          backendExecutablePackages =
+            with config.haskellProjects.default.outputs.packages; [
+              driver-offer-allocator
+              driver-tracking-healthcheck
+              dynamic-offer-driver-app
+              image-api-helper
+              kafka-consumers
+              mock-fcm
+              mock-idfy
+              mock-sms
+              provider-dashboard
+              public-transport-rider-platform
+              public-transport-search-consumer
+              rider-app
+              rider-dashboard
+              scheduler-example
+              search-result-aggregator
+              static-offer-driver-app
+              static-offer-driver-app-allocator
+              static-offer-driver-app-scheduler
+            ];
+          backendComponents =
+            lib.listToAttrs
+              (lib.concatMap
+                (p: lib.attrValues (lib.mapAttrs
+                  (name: exe: lib.nameValuePair name {
+                    exec = exe.program;
+                    cabalExe = "${p.package.pname}:exe:${name}";
+                  })
+                  p.exes))
+                backendExecutablePackages);
+          externalComponents = {
+            # TODO: This should normally be run from docker-compose
+            osrm-server.exec = lib.getExe self'.packages.osrm-server;
+            beckn-gateway.exec = lib.getExe config.haskellProjects.default.outputs.finalPackages.beckn-gateway;
+            mock-registry.exec = lib.getExe config.haskellProjects.default.outputs.finalPackages.mock-registry;
+          };
+          components = externalComponents // backendComponents;
 
-            # External Haskell packages cannot be run via `cabal run`.
-            beckn-gateway = {
-              nixExe = lib.getExe config.haskellProjects.default.outputs.finalPackages.beckn-gateway;
-            };
-            mock-registry = {
-              nixExe = lib.getExe config.haskellProjects.default.outputs.finalPackages.mock-registry;
-            };
-          } // lib.listToAttrs
-            (lib.concatMap
-              (p: lib.attrValues (lib.mapAttrs
-                (name: exe: lib.nameValuePair name {
-                  nixExe = exe.program;
-                  cabalExe = "${p.package.pname}:exe:${name}";
-                })
-                p.exes))
-              (with config.haskellProjects.default.outputs.packages; [
-                driver-offer-allocator
-                driver-tracking-healthcheck
-                dynamic-offer-driver-app
-                image-api-helper
-                kafka-consumers
-                mock-fcm
-                mock-idfy
-                mock-sms
-                provider-dashboard
-                public-transport-rider-platform
-                public-transport-search-consumer
-                rider-app
-                rider-dashboard
-                scheduler-example
-                search-result-aggregator
-                static-offer-driver-app
-                static-offer-driver-app-allocator
-                static-offer-driver-app-scheduler
-              ]));
-
-          getNixExe = _: v: { command = "set -x; ${v.nixExe}"; };
+          getNixExe = _: v: { command = "set -x; ${v.exec}"; };
           # Like getNixExe, but use `cabal run` for fast iteration. But fall
           # back to nix build if it is a non-local package.
           getDevExe = n: v: if v.cabalExe or null == null then getNixExe n v else { command = "set -x; cabal run ${v.cabalExe}"; };
