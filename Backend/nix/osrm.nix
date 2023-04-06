@@ -14,7 +14,7 @@ in
     packages =
       rec {
         osrm-data =
-          pkgs.runCommandNoCC "osrm"
+          pkgs.runCommandNoCC "osrm-data"
             { buildInputs = [ pkgs.osrm-backend ]; }
             ''
               mkdir $out && cd $out
