@@ -67,11 +67,20 @@
         {
           run-mobility-stack.processes =
             lib.mapAttrs getNixExe components;
-          # FIXME: Cabal for individual components fails with conflicts under
-          # dist-newstyle; should we `cabal build all` first?
           run-mobility-stack-dev.processes =
             lib.mapAttrs getDevExe components;
         };
+    };
+
+    apps.run-mobility-stack-dev.program = pkgs.writeShellApplication {
+      name = "run-mobility-stack-dev";
+      text = ''
+        set -x
+        cd "''${FLAKE_ROOT}"/Backend
+        # Build the entire stack first, before we launch the executables using 'cabal run'
+        cabal build all
+        ${lib.getExe self'.packages.run-mobility-stack-dev}
+      '';
     };
   };
 }

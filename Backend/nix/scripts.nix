@@ -48,11 +48,7 @@
           description = ''
             Run the nammayatri backend components via "cabal run".
           '';
-          exec = ''
-            set -x
-            cd ./Backend
-            nix run .#run-mobility-stack-dev
-          '';
+          exec = self'.apps.run-mobility-stack-dev.program;
         };
 
         run-svc = dockerComposeScript {
