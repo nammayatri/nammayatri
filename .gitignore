@@ -1,11 +1,15 @@
 .vscode/tasks.json
 
-# Backend ignores
+# Nix
+result
+result-*
 .direnv
-/result
 /.pre-commit-config.yaml
+
+# Backend ignores
 dist-newstyle
 
+# Frontend ignores
 Frontend/.DS_Store
 Frontend/package-lock.json
 Frontend/android-native/app/driverProd/debug/output-metadata.json
