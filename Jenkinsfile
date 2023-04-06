@@ -13,6 +13,11 @@ pipeline {
                 sh 'nix build -L .#run-mobility-stack'
             }
         }
+        stage ('Cabal build') {
+            steps {
+                sh 'cd ./Backend && nix develop -c cabal build all'
+            }
+        }
         stage ('Flake check') {
             steps {
                 sh 'nix build -L .#check'
