@@ -238,17 +238,19 @@
         "haskell-flake": [
           "haskell-flake"
         ],
+        "mission-control": "mission-control",
         "nixpkgs-140774-workaround": "nixpkgs-140774-workaround_2",
         "nixpkgs-21_11": "nixpkgs-21_11_2",
         "nixpkgs-osrm": "nixpkgs-osrm",
+        "process-compose-flake": "process-compose-flake",
         "treefmt-nix": "treefmt-nix_2"
       },
       "locked": {
-        "lastModified": 1680789632,
-        "narHash": "sha256-n1XTiACVdO4hpretnbaSw1Zs1aR4xYF8/pjher07Xu4=",
+        "lastModified": 1680812220,
+        "narHash": "sha256-B2+uJvOwHcrKQK+fzVlSnkn4Kay4TkNZv7/SdDvfUAA=",
         "owner": "nammayatri",
         "repo": "common",
-        "rev": "4a8973ab73540e352140a6b0aa90f856131167a3",
+        "rev": "60c72785847e346b8a6e3a83859dd4eb8a0699d1",
         "type": "github"
       },
       "original": {
@@ -1089,16 +1091,15 @@
     },
     "process-compose-flake": {
       "locked": {
-        "lastModified": 1680792324,
+        "lastModified": 1680797953,
         "narHash": "sha256-lFYbfId1IX6jh/wUf+gt3LyvE9HblS4hcBQcougSzX0=",
         "owner": "Platonic-Systems",
         "repo": "process-compose-flake",
-        "rev": "6b35457aa1c9df91bd8ec846bd61a48300f9d7a8",
+        "rev": "aee1b8d126a5efe5945513eb2fb343f3d68dca4b",
         "type": "github"
       },
       "original": {
         "owner": "Platonic-Systems",
-        "ref": "srid/remove-apps",
         "repo": "process-compose-flake",
         "type": "github"
       }
@@ -1112,10 +1113,8 @@
           "flake-parts"
         ],
         "haskell-flake": "haskell-flake_3",
-        "mission-control": "mission-control",
         "nixpkgs": "nixpkgs_5",
         "pre-commit-hooks-nix": "pre-commit-hooks-nix",
-        "process-compose-flake": "process-compose-flake",
         "shared-kernel": "shared-kernel"
       }
     },
