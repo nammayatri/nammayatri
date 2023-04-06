@@ -7,10 +7,7 @@
     common.inputs.haskell-flake.follows = "haskell-flake";
 
     # TODO: Move to common repo?
-    mission-control.url = "github:Platonic-Systems/mission-control";
-    process-compose-flake.url = "github:Platonic-Systems/process-compose-flake/srid/remove-apps";
     # Pending merge of these PRs
-    # - https://github.com/cachix/pre-commit-hooks.nix/pull/266
     # - https://github.com/cachix/pre-commit-hooks.nix/pull/268
     pre-commit-hooks-nix.url = "github:juspay/pre-commit-hooks.nix/nammayatri";
 
@@ -24,8 +21,6 @@
       systems = nixpkgs.lib.systems.flakeExposed;
       imports = [
         inputs.common.flakeModules.default
-        inputs.mission-control.flakeModule
-        inputs.process-compose-flake.flakeModule
         inputs.pre-commit-hooks-nix.flakeModule
         ./Backend/default.nix
         ./Frontend/default.nix
