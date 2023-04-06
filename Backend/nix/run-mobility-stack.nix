@@ -14,17 +14,14 @@
           components = {
             osrm-server = {
               nixExe = lib.getExe self'.packages.osrm-server;
-              cabalExe = null;
             };
 
             # External Haskell packages cannot be run via `cabal run`.
             beckn-gateway = {
               nixExe = lib.getExe config.haskellProjects.default.outputs.finalPackages.beckn-gateway;
-              cabalExe = null;
             };
             mock-registry = {
               nixExe = lib.getExe config.haskellProjects.default.outputs.finalPackages.mock-registry;
-              cabalExe = null;
             };
 
             # TODO: Refactor this after https://github.com/srid/haskell-flake/pull/137
@@ -65,11 +62,13 @@
           getNixExe = _: v: { command = "set -x; ${v.nixExe}"; };
           # Like getNixExe, but use `cabal run` for fast iteration. But fall
           # back to nix build if it is a non-local package.
-          getDevExe = n: v: if v.cabalExe == null then getNixExe n v else { command = "set -x; cabal run ${v.cabalExe}"; };
+          getDevExe = n: v: if v.cabalExe or null == null then getNixExe n v else { command = "set -x; cabal run ${v.cabalExe}"; };
         in
         {
           run-mobility-stack.processes =
             lib.mapAttrs getNixExe components;
+          # FIXME: Cabal for individual components fails with conflicts under
+          # dist-newstyle; should we `cabal build all` first?
           run-mobility-stack-dev.processes =
             lib.mapAttrs getDevExe components;
         };
