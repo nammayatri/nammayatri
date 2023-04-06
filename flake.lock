@@ -1076,16 +1076,16 @@
         "nixpkgs-stable": "nixpkgs-stable"
       },
       "locked": {
-        "lastModified": 1680369672,
-        "narHash": "sha256-lA6PRY01x02boZwB1vdAGti00ifZHPlt9n5cFHopO3M=",
+        "lastModified": 1680812764,
+        "narHash": "sha256-Us1sz6nGNkExaMAS/1889nDvRBX1F9B8mpP3xJISIhw=",
         "owner": "juspay",
         "repo": "pre-commit-hooks.nix",
-        "rev": "b48bbac35f392f9200f389f4099ec9612668cb74",
+        "rev": "76582768d899793f44527cb5efea90e694e9bc1e",
         "type": "github"
       },
       "original": {
         "owner": "juspay",
-        "ref": "nammayatri",
+        "ref": "find-gitdir",
         "repo": "pre-commit-hooks.nix",
         "type": "github"
       }
