@@ -86,10 +86,10 @@ processWaypoints ::
   NonEmpty LatLong ->
   m ()
 processWaypoints ih@RideInterpolationHandler {..} driverId ending waypoints = do
-  calculationFailed <- ih.isDistanceCalculationFailed driverId
+  calculationFailed <- isDistanceCalculationFailed driverId
   if calculationFailed
     then logWarning "Failed to calculate actual distance for this ride, ignoring"
-    else ih.wrapDistanceCalculation driverId $ do
+    else wrapDistanceCalculation driverId $ do
       addPoints driverId waypoints
       recalcDistanceBatches ih ending driverId
 
