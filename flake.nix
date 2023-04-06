@@ -8,8 +8,8 @@
 
     # TODO: Move to common repo?
     # Pending merge of these PRs
-    # - https://github.com/cachix/pre-commit-hooks.nix/pull/268
-    pre-commit-hooks-nix.url = "github:juspay/pre-commit-hooks.nix/nammayatri";
+    # - https://github.com/cachix/pre-commit-hooks.nix/pull/271
+    pre-commit-hooks-nix.url = "github:juspay/pre-commit-hooks.nix/find-gitdir";
 
     shared-kernel.url = "github:nammayatri/shared-kernel";
     shared-kernel.inputs.nixpkgs.follows = "nixpkgs";
