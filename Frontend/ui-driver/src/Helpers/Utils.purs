@@ -20,15 +20,13 @@ module Helpers.Utils where
 import Math
 
 import Control.Monad.Except (runExcept)
-import Data.Array ((!!)) as DA
 import Data.Array.NonEmpty (fromArray)
 import Data.Either (hush)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Eq (genericEq)
 import Data.Generic.Rep.Show (genericShow)
 import Data.Maybe (Maybe(..))
-import Data.Maybe (Maybe(..), fromMaybe)
-import Data.String (Pattern(..), split) as DS
+import Data.String as DS
 import Data.Traversable (traverse)
 import Effect (Effect)
 import Effect.Aff (error, killFiber, launchAff, launchAff_)
@@ -38,9 +36,9 @@ import Foreign.Class (class Decode, class Encode, decode)
 import Juspay.OTP.Reader (initiateSMSRetriever)
 import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
-import Prelude ((/), (*), (-))
 import Prelude (Unit, bind, pure, discard, unit, void, ($), identity, (<*>), (<#>), (+), (<>))
 import Prelude (class Eq, class Show, (<<<))
+import Prelude (map, (*), (-), (/))
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import Screens.Types (AllocationData, YoutubeData)
 
@@ -443,9 +441,21 @@ instance decodeMerchant:: Decode Merchant where decode = defaultEnumDecode
 
 getMerchant :: Unit -> Merchant
 getMerchant unit = case (decodeMerchantId (getMerchantId "")) of
-  Nothing -> NAMMAYATRIPARTNER
   Just merchant -> merchant
+  Nothing -> NAMMAYATRIPARTNER
 
 
 decodeMerchantId :: Foreign -> Maybe Merchant
 decodeMerchantId = hush <<< runExcept <<< decode
+
+capitalizeFirstChar :: String -> String
+capitalizeFirstChar inputStr = 
+  let splitedArray = DS.split (DS.Pattern " ") (inputStr)
+      output = map (\item -> (DS.toUpper (DS.take 1 item)) <> (DS.toLower (DS.drop 1 item))) splitedArray
+    in DS.joinWith " " output
+
+getDowngradeOptions :: String -> Array String
+getDowngradeOptions vehicleType = case vehicleType of 
+  "SEDAN" -> ["HATCHBACK"]
+  "SUV" -> ["HATCHBACK", "SEDAN"]
+  _ -> []

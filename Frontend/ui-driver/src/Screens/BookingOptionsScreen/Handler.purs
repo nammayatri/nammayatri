@@ -7,12 +7,15 @@ import Prelude (bind, pure, ($), (<$>))
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.BookingOptionsScreen.Controller (ScreenOutput(..))
 import Screens.BookingOptionsScreen.View as BookingOptionsScreen
-import Types.App (FlowBT, GlobalState(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..))
+import Types.App (BOOKING_OPTIONS_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), ScreenType(..))
+import Types.ModifyScreenState (modifyScreenState)
 
 bookingOptions :: FlowBT String BOOKING_OPTIONS_SCREEN_OUTPUT
 bookingOptions = do
-    (GlobalState state) <- getState
-    action <- lift $ lift $ runScreen $ BookingOptionsScreen.screen state.bookingOptionsScreen
-    case action of
-        SelectCab state -> App.BackT $ App.BackPoint <$> (pure $ SELECT_CAB state)
-        GoBack -> App.BackT $ pure App.GoBack
+  (GlobalState state) <- getState
+  action <- lift $ lift $ runScreen $ BookingOptionsScreen.screen state.bookingOptionsScreen
+  case action of
+    SelectCab updatedState -> do
+      _ <- modifyScreenState $ BookingOptionsScreenType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ SELECT_CAB updatedState)
+    GoBack -> App.BackT $ pure App.GoBack

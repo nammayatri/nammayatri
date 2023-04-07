@@ -35,7 +35,7 @@ view push config =
         , stroke config.stroke
         , onClick push  (const (OnClick config))
         , clickable true
-        ][  if config.leftsidebutton then buttonLayout config else linearLayout[][],
+        ][  if config.leftsidebutton then buttonLayout config else linearLayout[width $ V 0][],
             linearLayout
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
@@ -43,7 +43,7 @@ view push config =
             ][  titleView config
                 ,subTitleView config
               ]
-              , if not config.leftsidebutton then buttonLayout config else linearLayout[][]
+              , if not config.leftsidebutton then buttonLayout config else linearLayout[width $ V 0][]
             ]
 titleView :: forall w . Config -> PrestoDOM (Effect Unit) w
 titleView config = 

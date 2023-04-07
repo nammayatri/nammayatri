@@ -381,5 +381,6 @@ const bengaliStrings = {
   "NAVIGATE" : "নেভিগেট করুন",
   "GOVERNMENT_CHAGRES" : "সরকারী চার্জ",
   "SERVICE_CHARGES" : "সেবা মূল্য",
-  "CONFIRM_AND_BOOK" : "নিশ্চিত করুন এবং বুক করুন"
+  "CONFIRM_AND_BOOK" : "নিশ্চিত করুন এবং বুক করুন",
+  "PEOPLE" : "মানুষ"
 }

@@ -115,7 +115,7 @@ view push state =
     , if state.props.isCallConfirmation 
         then PopUpModal.view (push <<< PopupModelActionController) (callConfirmationPopup state)
         else 
-          linearLayout [][]
+          textView[]
   ] 
 
 ------------------------------- recentRide --------------------------
