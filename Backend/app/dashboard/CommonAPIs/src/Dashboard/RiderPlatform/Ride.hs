@@ -25,6 +25,7 @@ import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Types.Centesimal
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import Servant
 
 ---------------------------------------------------------
@@ -45,6 +46,7 @@ data ShareRideInfoRes = ShareRideInfoRes
     vehicleModel :: Text,
     vehicleColor :: Text,
     trackingUrl :: Maybe BaseUrl,
+    estimatedDistance :: Maybe HighPrecMeters,
     rideStartTime :: Maybe UTCTime,
     rideEndTime :: Maybe UTCTime,
     userFirstName :: Maybe Text,
