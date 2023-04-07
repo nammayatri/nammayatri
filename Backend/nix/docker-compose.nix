@@ -2,7 +2,7 @@
 { ... }:
 
 let
-  dockerCompose = { pkgs, ... }: {
+  dockerComposeConfiguration = { pkgs, ... }: {
     project.name = "nammayatri-svc";
     docker-compose.raw.volumes = {
       prometheus-volume = null;
@@ -175,35 +175,38 @@ in
   perSystem = { inputs', pkgs, lib, ... }: {
     mission-control.scripts =
       let
-        dockerComposeScript = { description, args }: {
+        arionScript = { description, args }: {
           inherit description;
           category = "Backend - Docker";
-          exec = "set -x; nix run .#run-docker-compose -- ${args}";
+          exec = ''
+            set -x
+            nix run .#arion -- ${args} "$@"
+          '';
         };
       in
       {
-        run-svc = dockerComposeScript {
+        run-svc = arionScript {
           description = ''
             Setup and run DB, redis and passetto instances in docker containers
           '';
-          args = "up -d --remove-orphans";
+          args = "up --remove-orphans";
         };
 
-        run-monitoring = dockerComposeScript {
+        run-monitoring = arionScript {
           description = ''
             Run monitoring stack - Prometheus and grafana in docker containers
           '';
-          args = "--profile monitoring up -d";
+          args = "--profile monitoring up";
         };
 
-        run-pgadmin = dockerComposeScript {
+        run-pgadmin = arionScript {
           description = ''
             Run pgadmin stack - Pgadmin in a docker container
           '';
-          args = "--profile pgadmin up -d";
+          args = "--profile pgadmin up";
         };
 
-        stop-all-containers = dockerComposeScript {
+        stop-all-containers = arionScript {
           description = ''
             Stop all docker containers
           '';
@@ -212,23 +215,21 @@ in
       };
 
     packages = {
-      run-docker-compose =
+      arion =
         let
           dcYaml = pkgs.arion.passthru.build {
             modules = [
-              dockerCompose
+              dockerComposeConfiguration
             ];
           };
         in
         pkgs.writeShellApplication {
-          name = "run-docker-compose";
+          name = "arion";
           text = ''
-            ARG1="''${1:-up}"
-            shift 1 || true
             set -x
             ${lib.getExe pkgs.arion} \
               --prebuilt-file ${dcYaml} \
-              "$ARG1" "$@"
+              "$@"
           '';
         };
     };

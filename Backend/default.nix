@@ -16,7 +16,7 @@
       autoWire = false;
       devShell.tools = _: {
         inherit (self'.packages)
-          run-docker-compose;
+          arion;
       };
       # Some tests fail under Nix. We shoud probably run them in CI directly.
       overrides = self: super:

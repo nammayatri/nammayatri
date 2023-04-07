@@ -24,7 +24,7 @@ Nix is central to building and developing the Namamayatri project. Install and s
 
 Aside from Nix, you also need:
 
-1. Install [Docker](https://www.docker.com/products/docker-desktop/) (we use docker-compose for running external services dependencies).
+1. Install [Docker](https://www.docker.com/products/docker-desktop/) (we use docker-compose, via [arion], for running external services dependencies).
     - If you are on macOS, open *Docker -> Preferences... -> Resources -> File Sharing* in Docker Desktop and add `/nix/store` to the list of shared folders.
 1. Install [Xcode](https://developer.apple.com/xcode/), if you are on macOS.
 
@@ -76,7 +76,7 @@ cabal run lib/location-updates
 
 #### Running the services
 
-To run the project, we'd first need to run some services. These are provided via docker images (built in Nix).
+To run the project, we'd first need to run some services. These are provided via docker images, that are built in Nix and run via [arion].
 
 For running the database, redis, passetto and kafka run this command:
 
@@ -212,3 +212,4 @@ Each package has clear separation of focuses w.r.t the functionality it provides
 
 [nammayatri]: https://www.nammayatri.in/
 [haskell]: https://www.haskell.org/
+[arion]: https://github.com/hercules-ci/arion
