@@ -20,6 +20,9 @@ import EulerHS.Prelude
 import Kernel.Types.Error as Tools.Error hiding (PersonError)
 import Kernel.Types.Error.BaseError.HTTPError
 import Kernel.Utils.Common (Meters)
+import Kernel.Types.Error.BaseError.HTTPError.FromResponse
+import Network.HTTP.Types (Status (statusCode))
+import Servant.Client (ResponseF (responseStatusCode))
 
 data FarePolicyError
   = NoFarePolicy
@@ -413,3 +416,29 @@ instance IsHTTPError DriverPoolConfigError where
     DriverPoolConfigAlreadyExists {} -> E400
 
 instance IsAPIError DriverPoolConfigError
+
+data AutoAssignError = BookingAlreadyExist | AutoAssignFailed
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''AutoAssignError
+
+instance FromResponse AutoAssignError where
+  fromResponse resp = case statusCode $ responseStatusCode resp of
+    400 -> Just BookingAlreadyExist
+    _ -> Just AutoAssignFailed
+
+instance IsBaseError AutoAssignError where
+  toMessage = \case
+    BookingAlreadyExist -> Just "Booking is already created"
+    AutoAssignFailed -> Just "Can't call on select"
+
+instance IsHTTPError AutoAssignError where
+  toErrorCode = \case
+    BookingAlreadyExist -> "BOOKING_ALREADY_EXIST"
+    AutoAssignFailed -> "AUTO_ASSIGN_FAILED"
+
+  toHttpCode = \case
+    BookingAlreadyExist -> E400
+    AutoAssignFailed -> E400
+
+instance IsAPIError AutoAssignError

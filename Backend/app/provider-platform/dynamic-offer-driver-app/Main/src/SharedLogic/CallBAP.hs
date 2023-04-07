@@ -12,6 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE TypeApplications #-}
 
 module SharedLogic.CallBAP
   ( sendRideAssignedUpdateToBAP,
@@ -43,11 +44,13 @@ import qualified Domain.Types.FareParameters as Fare
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchRequest as DSR
+import qualified EulerHS.Types as Euler
 import Kernel.Prelude
 import Kernel.Storage.Hedis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Common
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError as Beckn
@@ -79,7 +82,7 @@ callOnSelect transporter searchRequest content = do
   let msgId = searchRequest.messageId
   context <- buildTaxiContext Context.ON_SELECT msgId (Just searchRequest.transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) transporter.city
   logDebug $ "on_select request bpp: " <> show content
-  void $ withShortRetry $ Beckn.callBecknAPI (Just authKey) Nothing (show Context.ON_SELECT) API.onSelectAPI bapUri . BecknCallbackReq context $ Right content
+  void $ withShortRetry $ callApiUnwrappingApiError (identity @AutoAssignError) (Just authKey) (Just "AUTO_ASSIGN_ERROR") bapUri (Euler.client API.onSelectAPI (BecknCallbackReq context $ Right content)) "some desc"
 
 callOnUpdate ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
