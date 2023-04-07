@@ -1,102 +1,65 @@
-# Scripts available in nix develop shell. Type `,` in nix develop shell to run
-# these.
+# Common backend scripts available in devshell.
 #
 # We use https://github.com/Platonic-Systems/mission-control
 { ... }:
 {
   perSystem = { self', pkgs, lib, ... }: {
-    mission-control.scripts =
-      let
-        dockerComposeScript = { description, args }: {
-          inherit description;
-          category = "Backend - Docker";
-          exec = "set -x; nix run .#run-docker-compose -- ${args}";
-        };
-      in
-      {
-        ghcid = {
-          category = "Backend";
-          description = "Compile the given local package using ghcid.";
-          cdToProjectRoot = false;
-          exec = ''
-            if [[ "$(pwd)" != "''${FLAKE_ROOT}/Backend" ]]; then
-              echo "Please run this script from ./Backend directory"
-              exit 1
-            fi
-            set -x
-            ghcid -c "cabal repl $1"
-          '';
-        };
-
-        hoogle = {
-          category = "Backend";
-          description = "Run Hoogle server for Haskell packages.";
-          exec = ''
-            echo "#### Hoogle running at: http://localhost:8090"
-            hoogle serve --local --port 8090
-          '';
-        };
-
-        hpack = {
-          category = "Backend";
-          description = "Run hpack to generate cabal files.";
-          exec = ''
-            set -x
-            time ${pkgs.findutils}/bin/find ./Backend -name package.yaml -exec hpack {} \;
-          '';
-        };
-
-        run-mobility-stack = {
-          category = "Backend";
-          description = ''
-            Run the nammayatri backend components via "cabal run".
-          '';
-          exec = self'.apps.run-mobility-stack-dev.program;
-        };
-
-        run-svc = dockerComposeScript {
-          description = ''
-            Setup and run DB, redis and passetto instances in docker containers
-          '';
-          args = "up -d --remove-orphans";
-        };
-
-        run-monitoring = dockerComposeScript {
-          description = ''
-            Run monitoring stack - Prometheus and grafana in docker containers
-          '';
-          args = "--profile monitoring up -d";
-        };
-
-        run-pgadmin = dockerComposeScript {
-          description = ''
-            Run pgadmin stack - Pgadmin in a docker container
-          '';
-          args = "--profile pgadmin up -d";
-        };
-
-        stop-all-containers = dockerComposeScript {
-          description = ''
-            Stop all docker containers
-          '';
-          args = "down --remove-orphans";
-        };
-
-        backend-new-service = {
-          category = "Backend";
-          description = ''
-            Create a new Haskell package locally
-          '';
-          exec = ''
-            cd ./Backend
-            echo 'Enter the name of a new service (in kebab case):'
-            read -r name
-            cp -r ./app/example-service ./app/"''${name}"
-            echo "''${name}" | sed -i "s/example-service/''${name}/g" ./app/"''${name}"/package.yaml
-            rm ./app/"''${name}"/example-service.cabal
-            ${lib.getExe pkgs.tree} ./app/"''${name}"
-          '';
-        };
+    mission-control.scripts = {
+      ghcid = {
+        category = "Backend";
+        description = "Compile the given local package using ghcid.";
+        cdToProjectRoot = false;
+        exec = ''
+          if [[ "$(pwd)" != "''${FLAKE_ROOT}/Backend" ]]; then
+            echo "Please run this script from ./Backend directory"
+            exit 1
+          fi
+          set -x
+          ghcid -c "cabal repl $1"
+        '';
       };
+
+      hoogle = {
+        category = "Backend";
+        description = "Run Hoogle server for Haskell packages.";
+        exec = ''
+          echo "#### Hoogle running at: http://localhost:8090"
+          hoogle serve --local --port 8090
+        '';
+      };
+
+      hpack = {
+        category = "Backend";
+        description = "Run hpack to generate cabal files.";
+        exec = ''
+          set -x
+          time ${pkgs.findutils}/bin/find ./Backend -name package.yaml -exec hpack {} \;
+        '';
+      };
+
+      run-mobility-stack = {
+        category = "Backend";
+        description = ''
+          Run the nammayatri backend components via "cabal run".
+        '';
+        exec = self'.apps.run-mobility-stack-dev.program;
+      };
+
+      backend-new-service = {
+        category = "Backend";
+        description = ''
+          Create a new Haskell package locally
+        '';
+        exec = ''
+          cd ./Backend
+          echo 'Enter the name of a new service (in kebab case):'
+          read -r name
+          cp -r ./app/example-service ./app/"''${name}"
+          echo "''${name}" | sed -i "s/example-service/''${name}/g" ./app/"''${name}"/package.yaml
+          rm ./app/"''${name}"/example-service.cabal
+          ${lib.getExe pkgs.tree} ./app/"''${name}"
+        '';
+      };
+    };
   };
 }

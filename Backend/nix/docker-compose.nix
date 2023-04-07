@@ -173,6 +173,44 @@ let
 in
 {
   perSystem = { inputs', pkgs, lib, ... }: {
+    mission-control.scripts =
+      let
+        dockerComposeScript = { description, args }: {
+          inherit description;
+          category = "Backend - Docker";
+          exec = "set -x; nix run .#run-docker-compose -- ${args}";
+        };
+      in
+      {
+        run-svc = dockerComposeScript {
+          description = ''
+            Setup and run DB, redis and passetto instances in docker containers
+          '';
+          args = "up -d --remove-orphans";
+        };
+
+        run-monitoring = dockerComposeScript {
+          description = ''
+            Run monitoring stack - Prometheus and grafana in docker containers
+          '';
+          args = "--profile monitoring up -d";
+        };
+
+        run-pgadmin = dockerComposeScript {
+          description = ''
+            Run pgadmin stack - Pgadmin in a docker container
+          '';
+          args = "--profile pgadmin up -d";
+        };
+
+        stop-all-containers = dockerComposeScript {
+          description = ''
+            Stop all docker containers
+          '';
+          args = "down --remove-orphans";
+        };
+      };
+
     packages = {
       run-docker-compose =
         let
