@@ -3,7 +3,7 @@
 # - .run-mobility-stack (Uses full nix build)
 # - .run-mobility-stack-dev (Uses `cabal run`)
 #
-# The latter is called from `script.nix`
+# The latter is called from `scripts.nix`
 { ... }:
 {
   perSystem = { config, self', pkgs, lib, ... }: {

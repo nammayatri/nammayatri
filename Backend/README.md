@@ -70,6 +70,8 @@ cd ./Backend
 cabal build all
 # Run a cabal package (by path to the directory containing .cabal file)
 cabal run lib/location-updates
+# Run ghcid
+, backend-ghcid lib/location-updates
 ```
 
 #### Running the services
