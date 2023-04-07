@@ -1182,6 +1182,8 @@ exports["getExtendedPath"] = function (path) {
   if (JBridge.getExtendedPath) {
     var extendedPath = JBridge.getExtendedPath(JSON.stringify(path));
     return JSON.parse(extendedPath);
+  }else {
+    return path;
   }
 };
 
