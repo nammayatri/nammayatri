@@ -57,6 +57,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.TimeZone;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -470,7 +471,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                         DecimalFormat df = new DecimalFormat();
                         df.setMaximumFractionDigits(2);
 
-                        final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+                        final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",new Locale("en","US"));
                         f.setTimeZone(TimeZone.getTimeZone("UTC"));
                         String getCurrTime = f.format(new Date());
                         int calculatedTime = calculateExpireTimer(searchRequestValidTill,getCurrTime);
@@ -549,9 +550,11 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         params.screenOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT;
         LayoutInflater inflater = ((LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE));
         floatyView = inflater.inflate(R.layout.viewpager_layout_view,null);
+        TextView merchantLogo = (TextView) floatyView.findViewById(R.id.merchantLogo);
         if (key != null && key.equals("jatrisaathidriver")){
-            TextView merchantLogo = (TextView) floatyView.findViewById(R.id.merchantLogo);
             merchantLogo.setText("Jatri Saathi");
+        } else if (key != null && key.equals("yatripartner")){
+            merchantLogo.setText("Yatri Partner");
         }
         progressDialog = inflater.inflate(R.layout.loading_screen_overlay, null);
         apiLoader = inflater.inflate(R.layout.api_loader, null);
@@ -935,7 +938,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         Context context = getApplicationContext();
         SharedPreferences sharedPreferences = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         sharedPreferences.edit().putString(getString(R.string.LOCAL_STAGE),getString(R.string.RideRequested));
-        SimpleDateFormat formatter = new SimpleDateFormat("EE MMM d y H:m:s ZZZ");
+        SimpleDateFormat formatter = new SimpleDateFormat("EE MMM d y H:m:s ZZZ", new Locale("en","US"));
         String dateString = formatter.format(new Date());
         sharedPref.edit().putString(getString(R.string.RIDE_REQUEST_TIME), dateString).apply();
     }

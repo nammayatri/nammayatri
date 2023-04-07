@@ -377,6 +377,8 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , verified              :: Boolean
     , language              :: Maybe String
     , referralCode          :: Maybe String
+    , canDowngradeToHatchback :: Boolean
+    , canDowngradeToSedan :: Boolean
     }
 
 newtype  OrganizationInfo = OrganizationInfo

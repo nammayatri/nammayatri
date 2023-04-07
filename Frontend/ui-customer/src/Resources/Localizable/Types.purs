@@ -391,6 +391,7 @@ data STR
   | SERVICE_CHARGES
   | GOVERNMENT_CHAGRES
   | CONFIRM_AND_BOOK
+  | PEOPLE
 
 getKeyString :: STR -> String
 getKeyString key = case key of
@@ -770,3 +771,4 @@ getKeyString key = case key of
   SERVICE_CHARGES -> "SERVICE_CHARGES"
   GOVERNMENT_CHAGRES -> "GOVERNMENT_CHAGRES"
   CONFIRM_AND_BOOK -> "CONFIRM_AND_BOOK"
+  PEOPLE -> "PEOPLE"

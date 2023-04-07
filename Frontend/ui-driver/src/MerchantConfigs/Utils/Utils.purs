@@ -27,4 +27,7 @@ getLanguage language = do
         {name:"हिंदी",value:"HI_IN", subtitle: "Hindi"}
         ]
     YATRIPARTNER  ->
-        []
+        [
+        {name:"English",value:"EN_US", subtitle: ""}, 
+        {name:"മലയാളം",value:"ML_IN", subtitle: "Malayalam"}
+        ]

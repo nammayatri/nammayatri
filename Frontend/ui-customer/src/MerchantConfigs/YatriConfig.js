@@ -36,7 +36,7 @@ export function getStringMLValue(key){
 
 
 const config = {
-    "StringKeys" : ["WELCOME_TEXT", "ABOUT_TEXT"],
+    "StringKeys": ["ABOUT_APP_DESCRIPTION", "WELCOME_TEXT", "REQUEST_AUTO_RIDE", "CURRENTLY_WE_ARE_LIVE_IN_", "DRIVER_PICKUP_CHARGES", "SUCCESSFUL_ONBOARD", "ABOUT_REFERRAL_PROGRAM_DISCRIPTION", "YOU_CAN_GET_REFERRAL_CODE_FROM_DRIVER"],
     "isReferralEnabled" : "false",
     "showBookingPreference" : "false",
     "showRateCard" : "false",
@@ -49,7 +49,13 @@ const malayalamStrings = {
     "WELCOME_TEXT" : "യാത്രയിലേക്ക് സ്വാഗതം",
 }
 
-
 const englishStrings = {
-    "WELCOME_TEXT" : "Welcome to the Yatri",
-}
+    "ABOUT_APP_DESCRIPTION": "Yatri is an open platform to connect commuters with transport providers. The app makes it convenient for travellers to find available means of transport, and avail these options by connecting them with service providers ",
+    "WELCOME_TEXT": "Welcome to Yatri",
+    "REQUEST_AUTO_RIDE": "Request Ride",
+    "CURRENTLY_WE_ARE_LIVE_IN_": "Currently we're live in Kochi, you can enjoy our services there",
+    "DRIVER_PICKUP_CHARGES": "Service Charges",
+    "SUCCESSFUL_ONBOARD": "You have successfully signed on to \n Yatri",
+    "ABOUT_REFERRAL_PROGRAM_DISCRIPTION": "The referral program incentivises drivers to accept more rides, cancel less and serve you better by recognising and rewarding worthy drivers. \n\n You can help out by entering the driver’s referral code  and improve the quality of rides for the Yatri Community!",
+    "YOU_CAN_GET_REFERRAL_CODE_FROM_DRIVER": "\nYou can get a referral code by asking your Yatri Driver."
+  }

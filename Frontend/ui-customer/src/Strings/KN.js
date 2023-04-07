@@ -380,5 +380,6 @@ const kannadaStrings = {
   "NAVIGATE" : "ನ್ಯಾವಿಗೇಟ್",
   "GOVERNMENT_CHAGRES" : "ಸರ್ಕಾರದ ಶುಲ್ಕಗಳು",
   "SERVICE_CHARGES" : "ಸೇವೆಯ ಶುಲ್ಕ",
-  "CONFIRM_AND_BOOK" : "ದೃಢೀಕರಿಸಿ ಮತ್ತು ಬುಕ್ ಮಾಡಿ"
+  "CONFIRM_AND_BOOK" : "ದೃಢೀಕರಿಸಿ ಮತ್ತು ಬುಕ್ ಮಾಡಿ",
+  "PEOPLE" : "ಜನರು"
 }
