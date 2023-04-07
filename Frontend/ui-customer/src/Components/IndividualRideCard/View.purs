@@ -25,7 +25,7 @@ import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..), VIEW_DETAILS)
 import Prelude (Unit, ($), (<>), (<<<), (==))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, background, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, maxLines, orientation, padding, relativeLayout, shimmerFrameLayout, text, textSize, textView, weight, width, stroke, lineHeight, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, background, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, maxLines, orientation, padding, relativeLayout, shimmerFrameLayout, text, textSize, textView, weight, width, stroke, lineHeight, imageWithFallback, alpha)
 import PrestoDOM.List as PrestoList
 import Screens.MyRidesScreen.Controller (Action(..)) as Screen
 import Screens.Types (IndividualRideCardState, Stage(..))
@@ -369,6 +369,7 @@ viewDetailsAndRepeatRide push state =
       , textSize FontSize.a_14
       , fontStyle $ FontStyle.medium LanguageStyle
       , PrestoList.alphaHolder "alpha"
+      , alpha $ if (isLocalStageOn HomeScreen) then 1.0 else 0.5
       , PrestoList.onClickHolder push $ (if (isLocalStageOn HomeScreen) then Screen.IndividualRideCardActionController <<< RepeatRide else Screen.IndividualRideCardActionController <<< NoAction)
       , padding $ Padding 10 3 10 3
       ]
