@@ -23,6 +23,7 @@
               mock-fcm
               mock-idfy
               mock-sms
+              mock-google
               provider-dashboard
               public-transport-rider-platform
               public-transport-search-consumer
