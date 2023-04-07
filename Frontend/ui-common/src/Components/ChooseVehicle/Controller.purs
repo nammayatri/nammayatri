@@ -21,7 +21,7 @@ type Config
 
 config :: Config
 config =
-  { vehicleImage: "ny_ic_Sedan_Yellow.png,https://assets.juspay.in/nammayatri/images/user/ny_ic_sedan_yellow.png"
+  { vehicleImage: "ic_sedan_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_ac.png"
   , isSelected: false
   , vehicleVariant: "Non AC Taxi"
   , vehicleType: "Economical"
@@ -29,7 +29,7 @@ config =
   , price: "246"
   , isCheckBox: false
   , isEnabled: true
-  , activeIndex : 0
-  , index : 0
-  , id : ""
+  , activeIndex: 0
+  , index: 0
+  , id: ""
   }

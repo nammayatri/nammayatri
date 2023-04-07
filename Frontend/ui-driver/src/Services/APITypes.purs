@@ -384,6 +384,8 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , language              :: Maybe String
     , referralCode          :: Maybe String
     , alternateNumber       :: Maybe String
+    , canDowngradeToHatchback :: Boolean
+    , canDowngradeToSedan :: Boolean
     }
 
 newtype  OrganizationInfo = OrganizationInfo

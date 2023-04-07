@@ -1,11 +1,12 @@
 module Components.ChooseVehicle.View where
 
 import Common.Types.App
+
 import Components.ChooseVehicle.Controller (Action(..), Config)
 import Effect (Effect)
 import Font.Style as FontStyle
-import Prelude (Unit, const, ($), (<>), (==))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), PrestoDOM, Visibility(..), Padding(..), background, clickable, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, stroke, text, textView, visibility, weight, width, padding)
+import Prelude (Unit, const, ($), (<>), (==), (&&), not)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, relativeLayout, stroke, text, textView, visibility, weight, width)
 import Styles.Colors as Color
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -13,13 +14,16 @@ view push config =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , background if config.index == config.activeIndex then Color.blue600 else Color.white900
+    , background if config.index == config.activeIndex && (not config.isCheckBox) then Color.blue600 else Color.white900
     , orientation HORIZONTAL
     , gravity CENTER
     , cornerRadius 6.0
-    , stroke $ if config.index == config.activeIndex then "1," <> Color.blue800 else "1," <> Color.white900
+    , stroke
+        $ case config.isCheckBox of
+            false -> if config.index == config.activeIndex then "1," <> Color.blue800 else "1," <> Color.white900
+            true -> "1," <> Color.grey900
     , margin $ MarginHorizontal 16 16
-    , padding $ Padding 8 5 8 5
+    , padding $ Padding 8 16 12 16
     , clickable config.isEnabled
     , onClick push $ const $ OnSelect config
     ]
@@ -27,7 +31,6 @@ view push config =
         [ imageWithFallback config.vehicleImage
         , height $ V 48
         , width $ V 60
-        , margin $ Margin 8 12 8 12
         ]
     , vehicleDetailsView push config
     , linearLayout
@@ -44,18 +47,20 @@ vehicleDetailsView push config =
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
     , orientation VERTICAL
+    , padding $ PaddingLeft 8
     ]
     [ textView
         $ [ width WRAP_CONTENT
           , height WRAP_CONTENT
-          , text $ case config.vehicleVariant of
-              "AUTO_RICKSHAW" -> "Auto Rickshaw"
-              "TAXI" -> "Non AC Taxi"
-              "TAXI_PLUS" -> "AC Taxi"
-              "SEDAN" -> "Sedan"
-              "SUV" -> "Suv"
-              "HATCHBACK" -> "Hatch Back"
-              _ -> "Non AC Taxi"
+          , text
+              $ case config.vehicleVariant of
+                  "AUTO_RICKSHAW" -> "Auto Rickshaw"
+                  "TAXI" -> "Non AC Taxi"
+                  "TAXI_PLUS" -> "AC Taxi"
+                  "SEDAN" -> "Sedan"
+                  "SUV" -> "Suv"
+                  "HATCHBACK" -> "Hatch Back"
+                  _ -> "Non AC Taxi"
           , color Color.black800
           ]
         <> FontStyle.subHeading1 TypoGraphy
@@ -67,21 +72,6 @@ vehicleDetailsView push config =
         [ textView
             $ [ width WRAP_CONTENT
               , height WRAP_CONTENT
-              , text config.vehicleType
-              , color Color.black700
-              ]
-            <> FontStyle.body3 TypoGraphy
-        , linearLayout
-            [ height $ V 4
-            , width $ V 4
-            , cornerRadius 2.0
-            , background Color.black600
-            , margin (Margin 6 6 6 0)
-            ]
-            []
-        , textView
-            $ [ width WRAP_CONTENT
-              , height WRAP_CONTENT
               , text config.capacity
               , color Color.black700
               ]
@@ -91,10 +81,11 @@ vehicleDetailsView push config =
 
 priceDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 priceDetailsView push config =
-  linearLayout
-    [ height WRAP_CONTENT
+  relativeLayout
+    [ height MATCH_PARENT
     , width WRAP_CONTENT
     , orientation HORIZONTAL
+    , gravity TOP_VERTICAL
     ]
     [ textView
         $ [ width WRAP_CONTENT
@@ -104,19 +95,24 @@ priceDetailsView push config =
           , visibility if config.isCheckBox then GONE else VISIBLE
           ]
         <> FontStyle.subHeading1 TypoGraphy
-    -- , linearLayout
-    --     [ height config.imageLayoutHeight
-    --     , width  config.imageLayoutWidth
-    --     , stroke $ fromMaybe ("0," <> Color.greySmoke) config.imageStroke
-    --     , clickable config.secondaryImage.clickable
-    --     , onClick push (const $ OnImageClick)
-    --     , padding config.secondaryImage.padding
-    --     , margin config.secondaryImage.margin
-    --     ][  imageView
-    --       [ imageWithFallback config.secondaryImage.imageUrl
-    --       , height config.secondaryImage.height
-    --       , width config.secondaryImage.width
-    --       , visibility config.secondaryImage.visibility
-    --       ]  
-    --     ]
+    , relativeLayout
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , margin $ MarginTop 8
+        , visibility if config.isCheckBox then VISIBLE else GONE
+        ]
+        [ linearLayout
+            [ height (V 18)
+            , width (V 18)
+            , stroke ("1," <> Color.black)
+            , cornerRadius 2.0
+            ]
+            []
+        , imageView
+            [ width (V 18)
+            , height (V 18)
+            , imageWithFallback "ny_ic_check_box,https://assets.juspay.in/nammayatri/images/driver/ny_ic_check_box.png"
+            , visibility if config.isSelected then VISIBLE else GONE
+            ]
+        ]
     ]

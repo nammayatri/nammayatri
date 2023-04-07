@@ -153,7 +153,7 @@ cancelConfirmationConfig state = let
     backgroundClickable = false,
     cornerRadius = (PTD.Corners 15.0 true true true true),
     coverImageConfig {
-      imageUrl = "ny_ic_cancel_prevention,https://assets.juspay.in/nammayatri/images/driver/ny_ic_cancel_prevention.png"
+      imageUrl = "ic_cancel_prevention,https://assets.juspay.in/nammayatri/images/driver/ny_ic_cancel_prevention.png"
     , visibility = VISIBLE
     , margin = Margin 16 20 16 0
     , height = V 178

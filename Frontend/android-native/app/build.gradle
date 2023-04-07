@@ -119,21 +119,37 @@ android {
         ny_ {
             applicationId  "in.juspay.nammayatri"
             buildConfigField "String", "MERCHANT_TYPE", "\"USER\""
+            buildConfigField "String", "MERCHANT", "\"KA\""
             dimension "app"
         }
         ny_p_ {
             applicationId "in.juspay.nammayatripartner"
             buildConfigField "String", "MERCHANT_TYPE", "\"DRIVER\""
+            buildConfigField "String", "MERCHANT", "\"KA\""
             dimension "app"
         }
         js_kl_ {
             applicationId  "in.juspay.jatrisaathi"
             buildConfigField "String", "MERCHANT_TYPE", "\"USER\""
+            buildConfigField "String", "MERCHANT", "\"WB\""
             dimension "app"
         }
         js_d_kl_ {
             applicationId "in.juspay.jatrisaathidriver"
             buildConfigField "String", "MERCHANT_TYPE", "\"DRIVER\""
+            buildConfigField "String", "MERCHANT", "\"WB\""
+            dimension "app"
+        }
+        yatri {
+            applicationId  "net.openkochi.yatri"
+            buildConfigField "String", "MERCHANT_TYPE", "\"USER\""
+            buildConfigField "String", "MERCHANT", "\"KL\""
+            dimension "app"
+        }
+        yp_ {
+            applicationId "net.openkochi.yatripartner"
+            buildConfigField "String", "MERCHANT_TYPE", "\"DRIVER\""
+            buildConfigField "String", "MERCHANT", "\"KL\""
             dimension "app"
         }
     }
@@ -145,6 +161,8 @@ android {
         ny_p_.setRoot('src/driver/nammaYatriPartner')
         js_kl_.setRoot('src/user/jatriSaathi')
         js_d_kl_.setRoot('src/driver/jatriSaathiDriver')
+        yatri.setRoot('src/user/yatri')
+        yp_.setRoot('src/driver/yatriPartner')
     }
     sourceSets {
         dev.res.srcDir 'src/dev/res'

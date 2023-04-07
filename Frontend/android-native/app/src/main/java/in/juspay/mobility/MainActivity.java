@@ -500,7 +500,9 @@ public class MainActivity extends AppCompatActivity {
         try {
             System.out.println("Calling function triggerPopUP1 from main to main try");
 //            CommonJsInterface.callingStoreCall(juspayServicesGlobal.getDuiCallback()());
-                hyperServices.process(new JSONObject().put("service", "in.juspay." + getResources().getString(R.string.service)).put("requestId", UUID.randomUUID()).put("payload", new JSONObject().put("action", "showPopup").put("id", id).put("popType", type)));
+            JSONObject payload = new JSONObject().put("service", getService()).put("requestId", UUID.randomUUID()).put("payload", new JSONObject().put("action", "showPopup").put("id", id).put("popType", type));
+            System.out.println("payload internet " + payload);
+                hyperServices.process(payload);
             System.out.println("Calling function triggerPopUP1 from main to main try after");
         } catch (Exception e) {
             System.out.println("Calling function triggerPopUP1 from main to main catch : " + e);
@@ -521,7 +523,7 @@ public class MainActivity extends AppCompatActivity {
             {
                 CommonJsInterface.callingStoreCallBackPopUp(juspayServicesGlobal.getDuiCallback(), entity_payload);
             }else {
-                hyperServices.process(new JSONObject().put("service", "in.juspay." + getResources().getString(R.string.service)).put("requestId", UUID.randomUUID()).put("payload", new JSONObject().put("action", "showPopup").put("id", id).put("popType", type).put("entityPayload", entity_payload)));
+                hyperServices.process(new JSONObject().put("service", getService()).put("requestId", UUID.randomUUID()).put("payload", new JSONObject().put("action", "showPopup").put("id", id).put("popType", type).put("entityPayload", entity_payload)));
                 System.out.println("Calling function triggerAllocationPopUpMain from main to main try after");
             }
         } catch (Exception e) {
@@ -618,13 +620,13 @@ public class MainActivity extends AppCompatActivity {
         JSONObject payload = new JSONObject();
 
         try {
-            String key = "in.juspay." + getResources().getString(R.string.service);
+
             json.put("requestId", "123");
-            json.put("service", key);
+            json.put("service", getService());
             json.put("betaAssets", false);
             payload.put("clientId", getResources().getString(R.string.client_id));
             payload.put("action", "initiate");
-            payload.put("service", key);
+            payload.put("service", getService());
             payload.put(PaymentConstants.ENV, "prod");
 
             json.put(PaymentConstants.PAYLOAD, payload);
@@ -797,7 +799,7 @@ public class MainActivity extends AppCompatActivity {
                     String id = jsonData.getString("entity_ids");
                     String type = jsonData.getString("notification_type");
                     if (type.equals("NEW_MESSAGE")) {
-                        hyperServices.process(new JSONObject().put("service", "in.juspay." + getResources().getString(R.string.service)).put("requestId", UUID.randomUUID()).put("payload", new JSONObject().put("action", "callDriverAlert").put("id", id).put("popType", type)));
+                        hyperServices.process(new JSONObject().put("service", getService()).put("requestId", UUID.randomUUID()).put("payload", new JSONObject().put("action", "callDriverAlert").put("id", id).put("popType", type)));
                     }
                 }
             } catch (Exception e) {
@@ -841,8 +843,7 @@ public class MainActivity extends AppCompatActivity {
             new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    String key = "in.juspay." + getResources().getString(R.string.service);
-                    sdkTracker.trackLifecycle(PaymentConstants.SubCategory.LifeCycle.ANDROID, PaymentConstants.LogLevel.INFO, Labels.Android.ON_RESUME, "class", key);
+                    sdkTracker.trackLifecycle(PaymentConstants.SubCategory.LifeCycle.ANDROID, PaymentConstants.LogLevel.INFO, Labels.Android.ON_RESUME, "class", getService());
                 }
             }).start();
             stateMonitor.enable(this);
@@ -870,8 +871,7 @@ public class MainActivity extends AppCompatActivity {
             new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    String key = "in.juspay." + getResources().getString(R.string.service);
-                    sdkTracker.trackLifecycle(PaymentConstants.SubCategory.LifeCycle.ANDROID, PaymentConstants.LogLevel.INFO, Labels.Android.ON_PAUSE, "class", key);
+                    sdkTracker.trackLifecycle(PaymentConstants.SubCategory.LifeCycle.ANDROID, PaymentConstants.LogLevel.INFO, Labels.Android.ON_PAUSE, "class", getService());
                 }
             }).start();
             stateMonitor.disable(this);
@@ -904,8 +904,7 @@ public class MainActivity extends AppCompatActivity {
             new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    String key = "in.juspay." + getResources().getString(R.string.service);
-                    sdkTracker.trackLifecycle(PaymentConstants.SubCategory.LifeCycle.ANDROID, PaymentConstants.LogLevel.INFO, Labels.Android.ON_DESTROY, "class", key);
+                    sdkTracker.trackLifecycle(PaymentConstants.SubCategory.LifeCycle.ANDROID, PaymentConstants.LogLevel.INFO, Labels.Android.ON_DESTROY, "class", getService());
                 }
             }).start();
             }
@@ -964,7 +963,7 @@ public class MainActivity extends AppCompatActivity {
           case IMAGE_PERMISSION_REQ_CODE :
               if ((ActivityCompat.checkSelfPermission(this, WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) && (ActivityCompat.checkSelfPermission(this, CAMERA) == PackageManager.PERMISSION_GRANTED) && (ActivityCompat.checkSelfPermission(this, READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)){
                   Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                  String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
+                  String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", new Locale("en","US")).format(new Date());
                   sharedPref.edit().putString(getResources().getString(R.string.TIME_STAMP_FILE_UPLOAD), timeStamp).apply();
                   Uri photoFile = FileProvider.getUriForFile(this.getApplicationContext(), getApplicationInfo().packageName + ".fileProvider", new File(this.getApplicationContext().getFilesDir(), "IMG_" + timeStamp+".jpg"));
                   takePicture.putExtra(MediaStore.EXTRA_OUTPUT, photoFile);
@@ -1199,7 +1198,7 @@ public class MainActivity extends AppCompatActivity {
 
             Log.d(TAG, "encoded image size camera : " + String.valueOf((Math.ceil(encImage.length() / 4) * 3) / 1000));
             if (juspayServicesGlobal.getDynamicUI() != null) {
-                String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
+                String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", new Locale("en","US")).format(new Date());
                 CommonJsInterface.callingStoreCallImageUpload(juspayServicesGlobal.getDuiCallback(), encImage, "IMG_" + timeStamp +".jpg");
             }
         }
@@ -1285,5 +1284,15 @@ public class MainActivity extends AppCompatActivity {
         }catch (Exception e){
             Log.e(TAG, "Exception in checkRideRequest");
         }
+    }
+    public String getService () {
+        StringBuilder key = new StringBuilder();
+        if (in.juspay.mobility.BuildConfig.MERCHANT.equals("KL")) {
+            key.append("net.openkochi.");
+        } else {
+            key.append("in.juspay.");
+        }
+        key.append(getResources().getString(R.string.service));
+        return key.toString();
     }
 }

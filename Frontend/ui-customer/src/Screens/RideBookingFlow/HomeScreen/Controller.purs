@@ -682,7 +682,7 @@ eval BackPressed state = do
     ConfirmingLocation -> do
                       _ <- pure $ exitLocateOnMap ""
                       _ <- pure $ updateLocalStage SearchLocationModel
-                      continue state{props{rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation}}
+                      continue state{props{rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation},data{polygonCoordinates = "", nearByPickUpPoints = []}}
     FindingEstimate -> do
                       _ <- pure $ updateLocalStage SearchLocationModel
                       continue state{props{rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation}}
@@ -1164,7 +1164,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SetCurr
   continue state{props{ sourceSelectedOnMap = if (state.props.isSource == Just true) then false else state.props.sourceSelectedOnMap}}
 
 eval (SearchLocationModelActionController (SearchLocationModelController.SetLocationOnMap)) state = do
-  _ <- pure $ locateOnMap true 0.0 0.0 state.data.polygonCoordinates state.data.nearByPickUpPoints
+  _ <- pure $ locateOnMap true 0.0 0.0 "" []
   _ <- pure $ removeAllPolylines ""
   _ <- pure $ hideKeyboardOnNavigation true
   _ <- pure $ firebaseLogEvent "ny_user_clic k_set_location_on_map"

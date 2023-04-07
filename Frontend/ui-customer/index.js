@@ -94,7 +94,6 @@ window.onMerchantEvent = function (event, payload) {
   console = top.console;
   console.log(payload);
   var clientPaylod = JSON.parse(payload);
-  window.merchantID = clientPaylod.payload.clientId.toUpperCase();
   if (event == "initiate") {
     let payload = {
       event: "initiate_result"
@@ -104,6 +103,7 @@ window.onMerchantEvent = function (event, payload) {
       , errorMessage: ""
       , errorCode: ""
     }
+    window.merchantID = clientPaylod.payload.clientId.toUpperCase();
     JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), null)
   } else if (event == "process") {
     console.warn("Process called");
