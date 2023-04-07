@@ -160,6 +160,14 @@ type EnterMobileNumberScreenStateData = {
 }
 -- ################################################ AccountSetUpScreenState ##################################################
 
+data Gender = MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY 
+
+derive instance genericGender :: Generic Gender _
+instance showGender :: Show Gender where show = genericShow
+instance eqGender :: Eq Gender where eq = genericEq
+instance encodeGender :: Encode Gender where encode = defaultEnumEncode
+instance decodeGender :: Decode Gender where decode = defaultEnumDecode
+
 type AccountSetUpScreenState = 
   { props :: AccountSetUpScreenStateProps ,
     data :: AccountSetUpScreenStateData
@@ -169,11 +177,15 @@ type AccountSetUpScreenState =
 type AccountSetUpScreenStateProps =
   {   btnActive :: Boolean
     , backPressed :: Boolean
+    , genderSelected :: Maybe String
+    , genderOptionExpanded :: Boolean
+    , expandEnabled :: Boolean
   }
 
 type AccountSetUpScreenStateData = 
-  {  name :: String
+  {   name :: String
     , email :: String
+    , gender :: Maybe Gender
   }
 
  -- ######################################  TripDetailsScreenState   ######################################
@@ -630,15 +642,39 @@ instance decodeDeleteStatus :: Decode DeleteStatus where decode = defaultEnumDec
 
 type MyProfileScreenProps = {
   updateProfile :: Boolean,
-  accountStatus :: DeleteStatus
+  accountStatus :: DeleteStatus,
+  genderOptionExpanded :: Boolean,
+  expandEnabled :: Boolean,
+  isEmailValid :: Boolean,
+  isBtnEnabled :: Boolean
 }
 
+data FieldType = NAME | EMAILID_ | GENDER_ | MOBILE
+
+derive instance genericFieldType :: Generic FieldType _
+instance showFieldType :: Show FieldType where show = genericShow
+instance eqFieldType :: Eq FieldType where eq = genericEq
+instance encodeFieldType :: Encode FieldType where encode = defaultEnumEncode
+instance decodeFieldType :: Decode FieldType where decode = defaultEnumDecode
 
 type MyProfileScreenData = {
   name :: String,
   mobileNumber :: String,
-  editedName :: String
+  editedName :: String,
+  emailId :: Maybe String,
+  gender :: Maybe Gender,
+  editedEmailId :: Maybe String,
+  editedGender :: Maybe Gender,
+  errorMessage :: Maybe EmailErrorType
 }
+
+data EmailErrorType = INVALID_EMAIL | EMAIL_EXISTS
+
+derive instance genericEmailErrorType :: Generic EmailErrorType _
+instance showEmailErrorType :: Show EmailErrorType where show = genericShow
+instance eqEmailErrorType :: Eq EmailErrorType where eq = genericEq
+instance encodeEmailErrorType :: Encode EmailErrorType where encode = defaultEnumEncode
+instance decodeEmailErrorType :: Decode EmailErrorType where decode = defaultEnumDecode
 
 type Location = {
   place :: String,

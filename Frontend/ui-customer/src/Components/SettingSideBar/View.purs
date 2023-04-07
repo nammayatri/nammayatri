@@ -176,6 +176,39 @@ profileView state push =
           , color Color.profilePhoneNumber
           , fontStyle $ FontStyle.regular LanguageStyle
           ]
+        , linearLayout[
+          height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , orientation HORIZONTAL
+        , gravity BOTTOM
+        , margin $ MarginTop 4
+        , visibility case profileCompleteValue " " of 
+            "100" -> GONE 
+            _ -> VISIBLE
+        ][textView
+          [ text $ (getString PROFILE_COMPLETION) <> ":"
+          , textSize FontSize.a_12
+          , fontStyle $ FontStyle.regular LanguageStyle
+          , width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , color Color.yellow900
+          ]
+        , imageView 
+          [ imageWithFallback if profileCompleteValue " " == "75" then "ic_75_percent,https://assets.juspay.in/nammayatri/images/user/ic_75_percent.png" else if profileCompleteValue "" == "50" then "ic_50_percent,https://assets.juspay.in/nammayatri/images/user/ic_50_percent.png" else ""
+          , height $ V 10 
+          , width $ V 10
+          , margin $ Margin 4 0 4 2
+          ]
+        , textView 
+          [ textSize FontSize.a_12
+          , fontStyle $ FontStyle.regular LanguageStyle
+          , width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , color Color.yellow900
+          , text $ if profileCompleteValue " " == "75" then "75 %" else if profileCompleteValue " " == "50" then "50 %" else "100 %"
+
+          ]
+        ]
       ]]
 
 ------------------------------ settingsMenuView --------------------------------
@@ -221,3 +254,11 @@ settingsMenuView item push  =
     ]
 
             
+profileCompleteValue :: String -> String 
+profileCompleteValue _ = let 
+  email = getValueToLocalStore EMAILID 
+  gender = getValueToLocalStore GENDER 
+  in 
+    if (email == "__failed" || email == "(null)") && (gender == "__failed" || gender == "(null)") then "50"
+      else if (email == "__failed" || email == "(null)") || (gender == "__failed" || gender == "(null)") then "75" 
+      else "100"

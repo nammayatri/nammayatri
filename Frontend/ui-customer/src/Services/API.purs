@@ -1131,10 +1131,11 @@ newtype GetProfileRes = GetProfileRes
   , firstName :: Maybe String
   , id :: String
   , maskedMobileNumber :: Maybe String
-  , maskedEmail :: Maybe String
+  , email :: Maybe String
   , hasTakenRide :: Boolean
   , referralCode :: Maybe String
   , language :: Maybe String
+  , gender :: Maybe String
   }
 
 
@@ -1148,6 +1149,7 @@ newtype UpdateProfileReq = UpdateProfileReq
   , email :: Maybe String
   , referralCode :: Maybe String
   , language :: Maybe String
+  , gender :: Maybe String
   }
 
 newtype UpdateProfileRes = UpdateProfileRes

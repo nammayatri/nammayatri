@@ -58,16 +58,17 @@ primaryEditTextConfigName state =
         { editText
           { color = Color.black800
           , placeholder = (getString ENTER_YOUR_NAME)
+          , placeholderColor = Color.black600
           , singleLine = true
-          , fontStyle = if state.data.name /= "" then FontStyle.medium LanguageStyle else FontStyle.regular LanguageStyle
-          , textSize = FontSize.a_14
+          , textSize = FontSize.a_16
+          , fontStyle = if state.data.name /= "" then FontStyle.bold LanguageStyle else FontStyle.semiBold LanguageStyle
           , pattern = Just "[a-zA-Z ]*,30"
           }
-        , background = Color.white900
+        , background = "#EEEEEE"
         , margin = (Margin 0 30 0 0)
         , topLabel
           { textSize = FontSize.a_12
-          , text = (getString FULL_NAME)
+          , text = (getString HOW_SHOULD_WE_ADDRESS_YOU)
           , color = Color.greyTextColor
           , fontStyle = FontStyle.regular LanguageStyle
           , alpha = 0.8
@@ -90,6 +91,7 @@ genericHeaderConfig =
           , imageUrl = "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
           , margin = (Margin 12 12 12 12)
           }
+        , background = "#EEEEEE"
         }
   in
     genericHeaderConfig'

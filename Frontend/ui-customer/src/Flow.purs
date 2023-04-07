@@ -58,7 +58,9 @@ import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import Screens.ReferralScreen.ScreenData as ReferralScreen
 import Screens.SavedLocationScreen.Controller (getSavedLocationForAddNewAddressScreen)
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
-import Screens.Types (CardType(..), AddNewAddressScreenState(..),CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..))
+import Screens.MyProfileScreen.ScreenData as MyProfileScreenData
+import Screens.Types (CardType(..), AddNewAddressScreenState(..),CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), EmailErrorType(..))
+import Screens.Types (Gender(..)) as Gender
 import Services.API (AddressGeometry(..), BookingLocationAPIEntity(..), ConfirmRes(..), DeleteSavedLocationReq(..), Geometry(..), GetDriverLocationResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), TriggerOTPResp(..), VerifyTokenResp(..), UserSosRes(..),  GetEmergContactsReq(..), GetEmergContactsResp(..), ContactDetails(..), FlowStatusRes(..), FlowStatus(..), CancelEstimateRes(..))
 import Services.Backend as Remote
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore, updateLocalStage)
@@ -263,6 +265,8 @@ currentFlowStatus = do
       else do
           modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{data{settingSideBar{name =fromMaybe "" response.firstName}}})
           setValueToLocalStore USER_NAME ((fromMaybe "" response.firstName) <> " " <> (fromMaybe "" response.middleName) <> " " <> (fromMaybe "" response.lastName))
+      if isJust response.gender then setValueToLocalStore GENDER (fromMaybe "" response.gender)
+        else pure unit
 
     goToFindingQuotesStage :: String -> Boolean -> FlowBT String Unit
     goToFindingQuotesStage estimateId driverOfferedQuote = do
@@ -375,10 +379,14 @@ accountSetUpScreenFlow = do
   case flow of 
     GO_HOME state -> do
       void $ lift $ lift $ toggleLoader false
-      resp <- lift $ lift $ Remote.updateProfile (Remote.makeUpdateProfileRequest (Just state.data.name) Nothing)
+      let gender = getGenderValue state.data.gender 
+      resp <- lift $ lift $ Remote.updateProfile (Remote.makeUpdateProfileRequest (Just state.data.name) gender Nothing)
       case resp of 
         Right response -> do
           setValueToLocalStore USER_NAME state.data.name
+          case gender of 
+            Just value ->  setValueToLocalStore GENDER value
+            _ -> pure unit
           _ <- pure $ firebaseLogEvent "ny_user_onboarded"
           pure unit
         Left err -> do
@@ -421,6 +429,7 @@ homeScreenFlow = do
     GO_TO_ABOUT -> aboutUsScreenFlow
     GO_TO_MY_PROFILE -> do
         _ <- pure $ firebaseLogEvent "ny_user_profile_click"
+        modifyScreenState $ MyProfileScreenStateType (\myProfileScreenState ->  MyProfileScreenData.initData)
         myProfileScreenFlow
     GO_TO_FIND_ESTIMATES state-> do
       -- _ <- lift $ lift $ liftFlow $ firebaseLogEventWithTwoParams "ny_user_source_and_destination" "ny_user_enter_source" (state.data.source) "ny_user_enter_destination" (state.data.destination) --TODO (if required)
@@ -665,6 +674,8 @@ homeScreenFlow = do
       _ <- pure $ deleteValueFromLocalStore CUSTOMER_ID
       _ <- pure $ deleteValueFromLocalStore LANGUAGE_KEY
       _ <- pure $ deleteValueFromLocalStore CONTACTS
+      _ <- pure $ deleteValueFromLocalStore EMAILID
+      _ <- pure $ deleteValueFromLocalStore GENDER
       _ <- pure $ factoryResetApp ""
       _ <- pure $ firebaseLogEvent "ny_user_logout"
       modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData)
@@ -1181,26 +1192,38 @@ myProfileScreenFlow = do
     UPDATE_USER_PROFILE state -> do 
       _ <- pure $ toggleBtnLoader "" false
       _ <- pure $ spy "profile_updated_state" state
-      let stringName = seperateByWhiteSpaces(state.data.name)
-      let name = split (Pattern " ") stringName
-      let nameLength = length name
+      let stringName = seperateByWhiteSpaces(state.data.editedName)
+          name = split (Pattern " ") stringName
+          nameLength = length name
+          gender = getGenderValue state.data.editedGender 
+          email = if state.data.editedEmailId == state.data.emailId || (state.data.editedEmailId == Just "") then Nothing else state.data.editedEmailId
       resp <- if nameLength > 2 then 
-                lift $ lift $ Remote.updateProfile (Remote.editProfileRequest (name !! 0) (name !! 1) (name !! (nameLength - 1)))
+                lift $ lift $ Remote.updateProfile (Remote.editProfileRequest (name !! 0) (name !! 1) (name !! (nameLength - 1)) (email) gender)
                 else if nameLength == 2 then 
-                  lift $ lift $ Remote.updateProfile (Remote.editProfileRequest (name !! 0) (Just "") (name !! 1))
+                  lift $ lift $ Remote.updateProfile (Remote.editProfileRequest (name !! 0) (Just "") (name !! 1) (email) gender)
                   else if nameLength == 1 then 
-                    lift $ lift $ Remote.updateProfile (Remote.editProfileRequest (name !! 0) (Just "") (Just ""))
+                    lift $ lift $ Remote.updateProfile (Remote.editProfileRequest (name !! 0) (Just "") (Just "") (email) gender)
                     else 
-                      lift $ lift $ Remote.updateProfile (Remote.editProfileRequest (Just "") (Just "") (Just ""))
+                      lift $ lift $ Remote.updateProfile (Remote.editProfileRequest (Just "") (Just "") (Just "") (email) gender)
       case resp of 
         Right response -> do 
           setValueToLocalStore USER_NAME stringName
-          modifyScreenState $ MyProfileScreenStateType (\myProfileScreenState ->  myProfileScreenState { props { updateProfile = false } })
+          case gender of 
+            Just gender -> setValueToLocalStore GENDER gender
+            _ -> pure unit 
+          case email of  
+            Just email -> setValueToLocalStore EMAILID email
+            _ -> pure unit
+          modifyScreenState $ MyProfileScreenStateType (\myProfileScreenState ->  MyProfileScreenData.initData)
           myProfileScreenFlow
         Left err -> do
           let errResponse = err.response
           let codeMessage = decodeErrorCode errResponse.errorMessage
-          _ <- pure $ toast (getString ERROR_OCCURED)
+          case codeMessage of 
+            "PERSON_EMAIL_ALREADY_EXISTS" -> do 
+              _ <- lift $ lift $ liftFlow (setText' (getNewIDWithTag "EmailEditText") "" )
+              modifyScreenState $ MyProfileScreenStateType (\myProfileScreenState -> myProfileScreenState{props{isEmailValid = false, updateProfile = true}, data{errorMessage = Just EMAIL_EXISTS, name = state.data.name, editedName = state.data.editedName, emailId = state.data.emailId, gender = state.data.gender, editedGender = state.data.editedGender}})
+            _ -> pure $ toast (getString ERROR_OCCURED)
           myProfileScreenFlow
       myProfileScreenFlow
     DELETE_ACCOUNT updatedState -> do 
@@ -1482,7 +1505,7 @@ referralScreenFlow = do
   flow <- UI.referralScreen
   case flow of
     UPDATE_REFERRAL referralCode -> do
-      res <- lift $ lift $ Remote.updateProfile (Remote.makeUpdateProfileRequest Nothing (Just referralCode))
+      res <- lift $ lift $ Remote.updateProfile (Remote.makeUpdateProfileRequest Nothing Nothing (Just referralCode))
       case res of
         Right response -> do
           modifyScreenState $ ReferralScreenStateType (\referralScreen -> referralScreen { showThanks = true })
@@ -1678,3 +1701,13 @@ cancelEstimate bookingId = do
         void $ pure $ toast "CANCEL FAILED"
         _ <- pure $ firebaseLogEvent "ny_fs_cancel_estimate_failed_left"
         homeScreenFlow
+
+getGenderValue :: Maybe Gender.Gender -> Maybe String 
+getGenderValue gender = 
+  case gender of 
+    Just value -> case value of 
+      Gender.MALE -> Just "MALE"
+      Gender.FEMALE -> Just "FEMALE"
+      Gender.OTHER -> Just "OTHER"
+      _ -> Just "PREFER_NOT_TO_SAY"
+    Nothing -> Nothing

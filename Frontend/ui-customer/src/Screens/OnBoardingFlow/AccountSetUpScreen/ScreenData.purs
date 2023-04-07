@@ -16,15 +16,20 @@
 module Screens.AccountSetUpScreen.ScreenData where
 
 import Screens.Types (AccountSetUpScreenState)
+import Data.Maybe (Maybe(..))
 
 initData :: AccountSetUpScreenState
 initData =
   { data:
       { name: ""
       , email: ""
+      , gender: Nothing
       }
   , props:
       { btnActive: false
       , backPressed: false
+      , genderSelected: Nothing
+      , genderOptionExpanded: false
+      , expandEnabled : false
       }
   }

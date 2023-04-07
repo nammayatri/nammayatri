@@ -19,15 +19,19 @@ import Components.GenericHeader as GenericHeader
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
-import Data.Maybe (fromMaybe)
-import JBridge (hideKeyboardOnNavigation)
+import Data.Maybe (Maybe(..), fromMaybe)
+import JBridge (hideKeyboardOnNavigation, requestKeyboardShow)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
-import Prelude (class Show, pure, unit, ($), discard, bind, (<>), (==))
+import Prelude (class Show, pure, unit, ($), discard, bind, not, (<>), (==), (&&), (/=), (||))
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
-import Screens.Types (MyProfileScreenState, DeleteStatus(..))
+import Screens.Types (MyProfileScreenState, DeleteStatus(..), FieldType(..), EmailErrorType(..), Gender(..))
 import Services.API (GetProfileRes(..))
+import Helpers.Utils (validateEmail)
+import Data.String(length)
+import Storage(KeyStore(..), getValueToLocalStore)
+import Engineering.Helpers.Commons(getNewIDWithTag)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -46,7 +50,7 @@ instance loggableAction :: Loggable Action where
         trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "generic_header_action" "back_icon"
         trackAppEndScreen appId (getScreen MY_PROFILE_SCREEN)
       GenericHeader.SuffixImgOnClick -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "generic_header_action" "forward_icon"
-    EditProfile -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "primary_button" "edit"
+    EditProfile fieldType -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "primary_button" "edit"
     NameEditTextAction (PrimaryEditText.TextChanged id value) -> trackAppTextInput appId (getScreen MY_PROFILE_SCREEN) "edit_name_text_changed" "primary_edit_text"
     UpdateButtonAction act -> case act of
       PrimaryButton.OnClick -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "primary_button" "update"
@@ -71,17 +75,25 @@ instance loggableAction :: Loggable Action where
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "primary_edit_text"
       PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "countdown_updated"
     ReqDelAccount -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "in_screen" "delete_account_request"
+    ShowOptions -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "in_screen" "open_gender_options_drop_down"
+    GenderSelected value -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "in_screen" "gender_selected"
+    EmailIDEditTextAction (PrimaryEditText.TextChanged id value) -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "edit_email_text_changed" "primary_edit_text"
+    NoAction -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "in_screen" "no_action"
     
 data Action = GenericHeaderActionController GenericHeader.Action
             | BackPressed MyProfileScreenState
             | AfterRender
-            | EditProfile
+            | EditProfile (Maybe FieldType)
             | NameEditTextAction PrimaryEditText.Action
+            | EmailIDEditTextAction PrimaryEditText.Action
             | UpdateButtonAction PrimaryButton.Action
             | UserProfile GetProfileRes
             | PopUpModalAction PopUpModal.Action
             | AccountDeletedModalAction PopUpModal.Action
             | ReqDelAccount
+            | ShowOptions
+            | GenderSelected Gender
+            | NoAction
 
 data ScreenOutput = GoToHomeScreen | UpdateProfile MyProfileScreenState | DeleteAccount MyProfileScreenState | GoToHome
 eval :: Action -> MyProfileScreenState -> Eval Action ScreenOutput MyProfileScreenState
@@ -89,25 +101,49 @@ eval :: Action -> MyProfileScreenState -> Eval Action ScreenOutput MyProfileScre
 eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick)) state = continueWithCmd state [do pure $ BackPressed state]
 
 eval (BackPressed backpressState) state = do 
-  if state.props.updateProfile then 
-    continue state { props { updateProfile = false } }
+  if state.props.updateProfile then do 
+    _ <- pure $ hideKeyboardOnNavigation true
+    continue state { props { updateProfile = false, genderOptionExpanded = false , expandEnabled = false, isEmailValid = true} }
     else if state.props.accountStatus == CONFIRM_REQ then
       continue state{props{accountStatus = ACTIVE}}
       else if state.props.accountStatus == DEL_REQUESTED then
       continue state
       else exit $ GoToHomeScreen
 
-eval EditProfile state = continue state { props { updateProfile = true }, data { editedName = state.data.name} }
+eval (EditProfile fieldType) state = do 
+  case fieldType of 
+    Just EMAILID_ -> do 
+      _ <- pure $ requestKeyboardShow (getNewIDWithTag "EmailEditText")
+      pure unit
+    _ -> pure unit 
+  continue state { props { updateProfile = true , isEmailValid = true}, data { editedName = state.data.name, editedEmailId = state.data.emailId, editedGender = state.data.gender} }
+
+eval ShowOptions state = do 
+  _ <- pure $ hideKeyboardOnNavigation true 
+  continue state{props{genderOptionExpanded = not state.props.genderOptionExpanded, expandEnabled = true}}
+
+eval (GenderSelected value) state = continue state{data{editedGender = Just value}, props{genderOptionExpanded = false}}
 
 eval (UserProfile (GetProfileRes profile)) state = do 
   let name = (fromMaybe "" profile.firstName) <> " " <> (fromMaybe "" profile.middleName) <> " " <> (fromMaybe "" profile.lastName)
-  continue state { data { name = name } }
+      gender = case (profile.gender) of 
+        Just "MALE" -> Just MALE 
+        Just "FEMALE" -> Just FEMALE 
+        Just "OTHER" -> Just OTHER 
+        Just "PREFER_NOT_TO_SAY" -> Just PREFER_NOT_TO_SAY
+        _ -> Nothing 
 
-eval (NameEditTextAction (PrimaryEditText.TextChanged id value)) state = continue state { data { editedName = value } }
+  continue state { data { name = name, editedName = name, gender = gender, emailId = profile.email } }
+
+eval (NameEditTextAction (PrimaryEditText.TextChanged id value)) state = continue state { data { editedName = value }, props{genderOptionExpanded = false, expandEnabled = false} }
+
+eval (EmailIDEditTextAction (PrimaryEditText.TextChanged id value)) state = do 
+  if (value == "" && state.data.errorMessage == Just EMAIL_EXISTS) then continue state {props{ isEmailValid = false, isBtnEnabled = false, genderOptionExpanded = false, expandEnabled = false}}
+    else continue state {data {editedEmailId = Just value , errorMessage = if (length value == 0) then Nothing else if ( validateEmail value) then Nothing else Just INVALID_EMAIL },props{ isEmailValid = if (length value == 0) then true else validateEmail value, isBtnEnabled = if (length value == 0) then true else validateEmail value, genderOptionExpanded = false}}
 
 eval (UpdateButtonAction (PrimaryButton.OnClick)) state = do 
   _ <- pure $ hideKeyboardOnNavigation true
-  updateAndExit state $ UpdateProfile state{data{name = state.data.editedName}}
+  updateAndExit state $ UpdateProfile state
 
 eval ReqDelAccount state = continue state{props{accountStatus = CONFIRM_REQ}}
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state {props{ accountStatus= ACTIVE}}
