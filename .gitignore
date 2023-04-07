@@ -3,6 +3,7 @@
 # Nix files
 .direnv
 /result
+Backend/app/notification-service/target
 Frontend/.DS_Store
 Frontend/package-lock.json
 Frontend/android-native/app/driverProd/debug/output-metadata.json

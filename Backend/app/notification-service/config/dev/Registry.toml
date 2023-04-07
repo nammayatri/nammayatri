@@ -1,0 +1,4 @@
+port = "50051"
+
+[redis]
+connectHost = "redis://127.0.0.1/"

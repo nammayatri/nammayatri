@@ -1,0 +1,20 @@
+syntax = "proto3";
+package notification;
+
+service NotificationStream {
+    rpc ReceiveNotification (Driver) returns (stream Notification);
+    rpc SendNotification (Notification) returns (AckResponse);
+}
+
+message Notification {
+    string deviceToken = 1;
+    string notificationType = 2;
+    string data = 3;
+    int32 ttl = 4;
+}
+
+message Driver {
+    string deviceToken = 1;
+}
+
+message AckResponse {}
