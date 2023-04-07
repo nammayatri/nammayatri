@@ -19,8 +19,10 @@ import Data.Array (filter, length, null, reverse, (!!))
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String (Pattern(..), Replacement(..), contains, joinWith, replaceAll, split, trim)
 import Prelude (map, (&&), (-), (<>), (==), (>), ($))
-import Screens.Types (Address)
+import Screens.Types as ST 
 import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), SavedReqLocationAPIEntity(..))
+import Language.Strings (getString)
+import Language.Types (STR(..))
 
 type Language
   = { name :: String
@@ -63,7 +65,7 @@ decodeAddress addressWithCons =
     else
       ((fromMaybe "" address.door) <> ", " <> (fromMaybe "" address.building) <> ", " <> (fromMaybe "" address.street) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
 
-encodeAddress :: String -> Array AddressComponents -> Maybe String -> Address
+encodeAddress :: String -> Array AddressComponents -> Maybe String -> ST.Address
 encodeAddress fullAddress addressComponents placeId =
   let
     totalAddressComponents = length $ split (Pattern ", ") fullAddress
@@ -118,7 +120,7 @@ getBookingEntity (SavedReqLocationAPIEntity savedLocation) =
     , "placeId": savedLocation.placeId
     }
 
-getAddressFromSaved :: SavedReqLocationAPIEntity -> Address
+getAddressFromSaved :: SavedReqLocationAPIEntity -> ST.Address
 getAddressFromSaved (SavedReqLocationAPIEntity savedLocation) =
   { "area": savedLocation.area
   , "state": savedLocation.state
@@ -132,7 +134,7 @@ getAddressFromSaved (SavedReqLocationAPIEntity savedLocation) =
   , "placeId": savedLocation.placeId
   }
 
-getAddressFromBooking :: BookingLocationAPIEntity -> Address
+getAddressFromBooking :: BookingLocationAPIEntity -> ST.Address
 getAddressFromBooking (BookingLocationAPIEntity address) =
   { "area": address.area
   , "state": address.state
@@ -167,3 +169,13 @@ getKeyByLanguage language = case language of
   "MALAYALAM" -> "ML_IN" 
   "TAMIL"   ->"TA_IN"
   _ -> "EN_US" 
+
+getGender :: Maybe ST.Gender -> String -> String 
+getGender gender placeHolderText = 
+  case gender of 
+    Just value -> case value of 
+      ST.MALE -> (getString MALE)
+      ST.FEMALE -> (getString FEMALE)
+      ST.OTHER ->  (getString OTHER)
+      _ -> (getString PREFER_NOT_TO_SAY)
+    Nothing -> placeHolderText

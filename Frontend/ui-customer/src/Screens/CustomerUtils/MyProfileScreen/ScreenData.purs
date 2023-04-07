@@ -16,16 +16,26 @@
 module Screens.MyProfileScreen.ScreenData where
 
 import Screens.Types (MyProfileScreenState, DeleteStatus(..))
+import Data.Maybe(Maybe(..))
 
 initData :: MyProfileScreenState
 initData = {
     props : {
         updateProfile : false,
-        accountStatus : ACTIVE
+        accountStatus : ACTIVE,
+        genderOptionExpanded : false,
+        expandEnabled : false,
+        isEmailValid : true,
+        isBtnEnabled : true
     },
     data : {
         name : "",
         mobileNumber : "",
-        editedName : ""
+        editedName : "",
+        emailId : Nothing ,
+        gender : Nothing,
+        editedGender : Nothing,
+        editedEmailId  : Nothing,
+        errorMessage : Nothing
     }
 }

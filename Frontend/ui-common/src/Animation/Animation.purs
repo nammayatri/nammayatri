@@ -95,7 +95,7 @@ screenAnimation screen =
 listExpandingAnimation :: AnimConfig -> PrestoAnim.Animation
 listExpandingAnimation config = 
    PrestoAnim.Animation
-   [ PrestoAnim.duration 1000
+   [ PrestoAnim.duration 200
     , PrestoAnim.fromScaleY config.fromScaleY
     , PrestoAnim.toScaleY config.toScaleY
     , PrestoAnim.fromY config.fromY

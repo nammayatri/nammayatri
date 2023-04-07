@@ -394,6 +394,18 @@ data STR =  DOWNLOAD_INVOICE
         | PERMISSION_DENIED
         | PERCENTAGE_OF_NOMINAL_FARE
         | REQUEST_CALLBACK
+        | MOBILE
+        | HOW_DO_YOU_IDENTIFY_YOURSELF
+        | SELECT_YOUR_GENDER
+        | FEMALE
+        | MALE
+        | PREFER_NOT_TO_SAY
+        | EMAIL_ID
+        | SET_NOW 
+        | ADD_NOW
+        | HOW_SHOULD_WE_ADDRESS_YOU
+        | GENDER_STR
+        | PROFILE_COMPLETION
 
 type PLEASE_TELL_US_WHY_YOU_WANT_TO_CANCEL = String
 
@@ -981,3 +993,15 @@ type NO_CONTACTS_FOUND_ON_DEVICE_TO_ADD = String
 type NO_CONTACTS_LEFT_ON_DEVICE_TO_ADD = String
 type PERMISSION_DENIED = String
 type REQUEST_CALLBACK = String
+type MOBILE = String
+type HOW_DO_YOU_IDENTIFY_YOURSELF = String
+type SELECT_YOUR_GENDER = String
+type FEMALE = String 
+type MALE = String
+type PREFER_NOT_TO_SAY = String
+type EMAIL_ID = String
+type SET_NOW = String
+type ADD_NOW = String
+type HOW_SHOULD_WE_ADDRESS_YOU = String
+type GENDER_STR = String
+type PROFILE_COMPLETION = String

@@ -18,15 +18,18 @@ module Screens.AccountSetUpScreen.Controller where
 import Components.GenericHeader as GenericHeaderController
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButtonController
+import Components.MenuButton as MenuButtonController
 import Components.PrimaryEditText as PrimaryEditTextController
 import Data.String (length, trim)
 import JBridge (hideKeyboardOnNavigation)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
-import Prelude (class Show, bind, discard, pure, unit, ($), (/=), (&&), (>=))
+import Prelude (class Show, bind, discard, pure, unit, not, ($), (/=), (&&), (>=))
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
-import Screens.Types (AccountSetUpScreenState)
+import Screens.Types (AccountSetUpScreenState, Gender(..))
+import Engineering.Helpers.Commons(getNewIDWithTag)
+import Data.Maybe(Maybe(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -56,6 +59,11 @@ instance loggableAction :: Loggable Action where
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "popup_modal_action" "image"
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen ACCOUNT_SET_UP_SCREEN) "popup_modal_action" "primary_edit_text"
       PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen ACCOUNT_SET_UP_SCREEN) "popup_modal_action" "countdown_updated"
+    MenuButtonAC (MenuButtonController.OnClick config) -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "menu_button_action" config.id
+    ShowOptions -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "in_screen" "show_options"
+    EditTextFocusChanged -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "name_edit_text_focus_changed" "edit_text"
+    TextChanged value -> trackAppTextInput appId (getScreen ACCOUNT_SET_UP_SCREEN) "name_text_changed" "edit_text"
+    GenderSelected value -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "gender_selected" "edit_text"
 
 data ScreenOutput
   = GoHome AccountSetUpScreenState
@@ -67,6 +75,11 @@ data Action
   | NameEditTextActionController PrimaryEditTextController.Action
   | GenericHeaderActionController GenericHeaderController.Action
   | PopUpModalAction PopUpModal.Action
+  | MenuButtonAC MenuButtonController.Action 
+  | ShowOptions 
+  | EditTextFocusChanged
+  | TextChanged String
+  | GenderSelected Gender 
   | AfterRender
 
 eval :: Action -> AccountSetUpScreenState -> Eval Action ScreenOutput AccountSetUpScreenState
@@ -80,10 +93,18 @@ eval (GenericHeaderActionController (GenericHeaderController.PrefixImgOnClick)) 
         pure $ BackPressed
     ]
 
-eval (NameEditTextActionController (PrimaryEditTextController.TextChanged id value)) state = do
+eval EditTextFocusChanged state = continue state {props{genderOptionExpanded = false}}
+
+eval (GenderSelected value) state = continue state{data{gender = Just value}, props{genderOptionExpanded = false, btnActive = (state.data.name /= "") && (length state.data.name >= 3) }}
+
+eval (TextChanged value) state = do
   let
     newState = state { data { name = trim value } }
-  continue newState { props { btnActive = (newState.data.name /= "") && (length newState.data.name >= 3)} }
+  continue newState { props { expandEnabled = false, genderOptionExpanded = false, btnActive = (newState.data.name /= "") && (length newState.data.name >= 3) && (newState.data.gender /= Nothing)} }
+
+eval (ShowOptions) state = do 
+  _ <- pure $ hideKeyboardOnNavigation true
+  continue state{props{genderOptionExpanded = not state.props.genderOptionExpanded, expandEnabled = true}}
 
 eval BackPressed state = do
   _ <- pure $ hideKeyboardOnNavigation true

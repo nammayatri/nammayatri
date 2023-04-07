@@ -429,8 +429,8 @@ updateProfile (UpdateProfileReq payload) = do
     where
         unwrapResponse (x) = x
 
-makeUpdateProfileRequest :: Maybe String -> Maybe String -> UpdateProfileReq
-makeUpdateProfileRequest name referralCode = 
+makeUpdateProfileRequest :: Maybe String -> Maybe String -> Maybe String -> UpdateProfileReq
+makeUpdateProfileRequest name gender referralCode = 
     UpdateProfileReq{
           middleName : Nothing
         , lastName : Nothing
@@ -438,6 +438,7 @@ makeUpdateProfileRequest name referralCode =
         , firstName : name
         , email : Nothing
         , referralCode : referralCode
+        , gender : gender
         , language : Just case getValueToLocalNativeStore LANGUAGE_KEY of
             "EN_US" -> "ENGLISH"
             "KN_IN" -> "KANNADA"
@@ -447,15 +448,16 @@ makeUpdateProfileRequest name referralCode =
             _       -> "ENGLISH"
     }
 
-editProfileRequest :: Maybe String -> Maybe String -> Maybe String -> UpdateProfileReq
-editProfileRequest firstName middleName lastName = 
+editProfileRequest :: Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe String -> UpdateProfileReq
+editProfileRequest firstName middleName lastName emailID gender = 
     UpdateProfileReq{
           middleName : middleName
         , lastName : lastName
         , deviceToken : Just (getValueToLocalNativeStore FCM_TOKEN)
         , firstName : firstName
-        , email : Nothing
+        , email : emailID
         , referralCode : Nothing
+        , gender : gender
         , language : Just case getValueToLocalNativeStore LANGUAGE_KEY of
             "EN_US" -> "ENGLISH"
             "KN_IN" -> "KANNADA"
@@ -473,6 +475,7 @@ makeUpdateLanguageRequest _ = UpdateProfileReq{
         , firstName : Nothing
         , email : Nothing
         , referralCode : Nothing
+        , gender : if (getValueToLocalNativeStore GENDER == "__failed" || getValueToLocalNativeStore GENDER == "(null)") then Nothing else Just (getValueToLocalNativeStore GENDER)
         , language : Just case getValueToLocalNativeStore LANGUAGE_KEY of
             "EN_US" -> "ENGLISH"
             "KN_IN" -> "KANNADA"
