@@ -241,20 +241,20 @@
         "mission-control": "mission-control",
         "nixpkgs-140774-workaround": "nixpkgs-140774-workaround_2",
         "nixpkgs-21_11": "nixpkgs-21_11_2",
-        "nixpkgs-osrm": "nixpkgs-osrm",
         "process-compose-flake": "process-compose-flake",
         "treefmt-nix": "treefmt-nix_2"
       },
       "locked": {
-        "lastModified": 1680812220,
-        "narHash": "sha256-B2+uJvOwHcrKQK+fzVlSnkn4Kay4TkNZv7/SdDvfUAA=",
+        "lastModified": 1680874232,
+        "narHash": "sha256-m6GjPanWZDLH6wpAYi47haX1T0C3oh0e9ECln7gA3KY=",
         "owner": "nammayatri",
         "repo": "common",
-        "rev": "60c72785847e346b8a6e3a83859dd4eb8a0699d1",
+        "rev": "65c5751526771335c6049047d50a4a4c72deae42",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
+        "ref": "osrm-musl64",
         "repo": "common",
         "type": "github"
       }
@@ -889,22 +889,6 @@
         "type": "github"
       }
     },
-    "nixpkgs-osrm": {
-      "locked": {
-        "lastModified": 1680727908,
-        "narHash": "sha256-ox2WeuC3uOF3V7W/SBXmxECBhq4bqItalEJqRm+wiHc=",
-        "owner": "juspay",
-        "repo": "nixpkgs",
-        "rev": "21752064fd72298d3df883cf718548ef4983ceb4",
-        "type": "github"
-      },
-      "original": {
-        "owner": "juspay",
-        "ref": "osrm-backend",
-        "repo": "nixpkgs",
-        "type": "github"
-      }
-    },
     "nixpkgs-stable": {
       "locked": {
         "lastModified": 1678872516,
@@ -971,16 +955,16 @@
     },
     "nixpkgs_5": {
       "locked": {
-        "lastModified": 1675940568,
-        "narHash": "sha256-epG6pOT9V0kS+FUqd7R6/CWkgnZx2DMT5Veqo+y6G3c=",
-        "owner": "nixos",
+        "lastModified": 1680792567,
+        "narHash": "sha256-VB+cnAwtEQ0mYkOhcyjRrTwCGHW0bf9NgqOpj5dJPZQ=",
+        "owner": "juspay",
         "repo": "nixpkgs",
-        "rev": "6ccc4a59c3f1b56d039d93da52696633e641bc71",
+        "rev": "c79e7d069f054fc8df1cf33cf208c36b2f2d4195",
         "type": "github"
       },
       "original": {
-        "owner": "nixos",
-        "ref": "nixpkgs-unstable",
+        "owner": "juspay",
+        "ref": "osrm-backend",
         "repo": "nixpkgs",
         "type": "github"
       }

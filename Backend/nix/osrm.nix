@@ -26,7 +26,7 @@ in
 
         osrm-server = pkgs.writeShellApplication {
           name = "osrm-server";
-          runtimeInputs = [ pkgs.osrm-backend ];
+          runtimeInputs = [ pkgs.pkgsCross.musl64.osrm-backend ];
           text = ''
             set -x
             osrm-routed --algorithm mld \

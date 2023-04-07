@@ -9,6 +9,15 @@ pipeline {
         stage ('Nix Build') {
             steps {
                 sh 'nix build -L .#nammayatri'
+            }
+        }
+        stage ('Nix Build - osrm') {
+            steps {
+                sh 'nix build -L .#osrm-server'
+            }
+        }
+        stage ('Nix Build - runners') {
+            steps {
                 sh 'nix build -L .#run-docker-compose'
                 sh 'nix build -L .#run-mobility-stack'
             }

@@ -1,7 +1,8 @@
 {
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
-    common.url = "github:nammayatri/common";
+    # nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
+    nixpkgs.url = "github:juspay/nixpkgs/osrm-backend";
+    common.url = "github:nammayatri/common/osrm-musl64";
     flake-parts.follows = "common/flake-parts";
     haskell-flake.url = "github:sbh69840/haskell-flake/poc-localapps";
     common.inputs.haskell-flake.follows = "haskell-flake";
