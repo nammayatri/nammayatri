@@ -44,6 +44,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.Locale;
 import java.util.Random;
 
 import in.juspay.hypersdk.core.JuspayServices;
@@ -234,7 +235,7 @@ public class NotificationUtils extends AppCompatActivity {
                     Log.e(TAG,"Exception" + e);
 
                 }
-                final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+                final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",new Locale("en","US"));
                 f.setTimeZone(TimeZone.getTimeZone("IST"));
                 String currTime = f.format(new Date());
                 boolean rideReqExpired = (calculateTimeDifference(expiryTime, currTime))<=1;

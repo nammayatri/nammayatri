@@ -16,6 +16,7 @@
 module Screens.Types where
 
 import Common.Types.App (CancellationReasons)
+import Components.ChooseVehicle.Controller (Config) as ChooseVehicle
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Eq (genericEq)
 import Data.Generic.Rep.Show (genericShow)
@@ -245,8 +246,16 @@ type DriverProfileScreenData = {
   driverMobile :: Maybe String,
   vehicleRegNumber :: String,
   vehicleModelName :: String,
-  vehicleColor :: String
+  vehicleColor :: String,
+  capacity :: Int,
+  downgradeOptions :: Array String,
+  vehicleSelected :: Array VehicleP
 }
+
+type VehicleP = {
+  vehicleName :: String,
+  isSelected :: Boolean
+} 
 
 type DriverProfileScreenProps = {
   logoutModalView :: Boolean
@@ -1020,9 +1029,10 @@ type BookingOptionsScreenData = {
   vehicleType :: String,
   vehicleNumber :: String,
   vehicleName :: String,
-  vehicleCapacity :: String
+  vehicleCapacity :: Int,
+  downgradeOptions :: Array ChooseVehicle.Config
 }
 
 type BookingOptionsScreenProps = {
-  
+  isBtnActive :: Boolean
 }

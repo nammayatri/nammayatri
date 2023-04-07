@@ -28,7 +28,7 @@ import PrestoDOM.Types.Core (class Loggable)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Screens (ScreenName(..), getScreen)
 import Screens.DriverProfileScreen.ScreenData (MenuOptions(..))
-import Screens.Types (DriverProfileScreenState)
+import Screens.Types (DriverProfileScreenState,VehicleP)
 import Services.APITypes (GetDriverInfoResp(..), Vehicle(..))
 import Services.Backend (dummyVehicleObject)
 import Storage (setValueToLocalNativeStore, KeyStore(..))
@@ -128,7 +128,8 @@ eval (GetDriverInfoResponse (GetDriverInfoResp driverProfileResp)) state = do
                                       vehicleRegNumber = linkedVehicle.registrationNo,
                                       drivingLicenseNo = "",
                                       vehicleModelName = linkedVehicle.model,
-                                      vehicleColor = linkedVehicle.color
+                                      vehicleColor = linkedVehicle.color,
+                                      vehicleSelected = getDowngradeOptionsSelected  (GetDriverInfoResp driverProfileResp)
                                       }})
 
 eval _ state = continue state
@@ -145,3 +146,10 @@ getTitle menuOption =
     REFER -> getString ADD_YOUR_FRIEND
     DRIVER_LOGOUT -> getString LOGOUT
     APP_INFO_SETTINGS -> getString APP_INFO
+
+getDowngradeOptionsSelected :: GetDriverInfoResp -> Array VehicleP
+getDowngradeOptionsSelected (GetDriverInfoResp driverInfoResponse) =
+  [
+    {vehicleName: "HATCHBACK", isSelected: driverInfoResponse.canDowngradeToHatchback}
+  , {vehicleName: "SEDAN", isSelected: driverInfoResponse.canDowngradeToSedan}
+  ]

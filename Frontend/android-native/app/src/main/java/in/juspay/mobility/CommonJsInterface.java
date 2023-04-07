@@ -2354,7 +2354,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
             JSONObject geo = new JSONObject(geoJson);
             layer = new GeoJsonLayer(googleMap, geo);
             GeoJsonPolygonStyle polyStyle = layer.getDefaultPolygonStyle();
-            polyStyle.setFillColor(Color.argb(10,0, 102, 255));
+            polyStyle.setFillColor(Color.argb(25,0, 102, 255));
             polyStyle.setStrokeWidth(0);
             layer.addLayerToMap();
         } catch (JSONException e) {
@@ -3448,7 +3448,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
             public void run() {
                 if ((ActivityCompat.checkSelfPermission(activity, WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) && (ActivityCompat.checkSelfPermission(activity, CAMERA) == PackageManager.PERMISSION_GRANTED) && (ActivityCompat.checkSelfPermission(activity, READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)){
                     Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                    String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
+                    String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", new Locale("en","US")).format(new Date());
                     SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
                     sharedPref.edit().putString(context.getResources().getString(R.string.TIME_STAMP_FILE_UPLOAD), timeStamp).apply();
                     Uri photoFile = FileProvider.getUriForFile(context.getApplicationContext(),context.getApplicationInfo().packageName + ".fileProvider", new File(context.getApplicationContext().getFilesDir(), "IMG_" + timeStamp+".jpg"));

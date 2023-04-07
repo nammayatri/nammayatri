@@ -137,7 +137,7 @@ emptyContactsView push state =
     [ imageView
         [ height $ V 150
         , width $ V 150
-        , imageWithFallback "ny_ic_emergency_contact_empty,https://assets.juspay.in/nammayatri/images/user/ny_ic_emergency_contact_empty.png"
+        , imageWithFallback "ic_emergency_contact_empty,https://assets.juspay.in/nammayatri/images/user/ny_ic_emergency_contact_empty.png"
         ]
     , textView
         [ height $ WRAP_CONTENT

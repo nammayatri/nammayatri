@@ -58,5 +58,5 @@ driverProfileScreen = do
     GoToSelectLanguageScreen -> App.BackT $ App.BackPoint <$> pure SELECT_LANGUAGE_SCREEN
     OnBoardingFlow -> App.BackT $ App.BackPoint <$> pure ON_BOARDING_FLOW
     GoToNotifications -> App.BackT $ App.BackPoint <$> pure NOTIFICATIONS_SCREEN
-    GoToBookingOptions state -> App.BackT $ App.BackPoint <$> pure (GO_TO_BOOKING_OPTIONS_SCREEN state)
+    GoToBookingOptions state -> App.BackT $ App.NoBack <$> pure (GO_TO_BOOKING_OPTIONS_SCREEN state)
     GoBack -> App.BackT $ pure App.GoBack

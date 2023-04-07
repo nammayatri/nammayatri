@@ -5,6 +5,7 @@ const HindiStrings = require("./../../src/Strings/HI.js");
 const KannadaStrings = require("./../../src/Strings/KN.js");
 const EnglishStrings = require("./../../src/Strings/EN.js");
 const BengaliStrings = require("./../../src/Strings/BN.js");
+const MalayalamStrings = require("./../../src/Strings/ML.js");
 
 
 exports["getString'"] = function (key) {
@@ -54,6 +55,8 @@ function getStringFromCommon(key) {
       return KannadaStrings.getStringValue(key);
     case "BN_IN":
       return BengaliStrings.getStringValue(key);
+    case "ML_IN":
+      return MalayalamStrings.getStringValue(key);
     default:
       return EnglishStrings.getStringValue(key);
   }

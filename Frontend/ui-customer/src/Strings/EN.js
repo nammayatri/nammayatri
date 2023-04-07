@@ -379,5 +379,6 @@ const englishStrings = {
   "NAVIGATE" : "Navigate",
   "GOVERNMENT_CHAGRES" : "Government Charges",
   "SERVICE_CHARGES" : "Service Charges",
-  "CONFIRM_AND_BOOK" : "Confirm & Book"
+  "CONFIRM_AND_BOOK" : "Confirm & Book",
+  "PEOPLE" : "people"
 }

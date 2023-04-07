@@ -379,5 +379,6 @@ const hindiStrings = {
   "NAVIGATE" : "नेविगेट",
   "GOVERNMENT_CHAGRES" : "सरकारी शुल्क",
   "SERVICE_CHARGES" : "सेवा शुल्क",
-  "CONFIRM_AND_BOOK" : "पुष्टि करें और बुक करें"
+  "CONFIRM_AND_BOOK" : "पुष्टि करें और बुक करें",
+  "PEOPLE" : "लोग"
 }

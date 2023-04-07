@@ -301,7 +301,7 @@ driverDetail push state =
         , textView (
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
-          , text "Auto"--state.data.vehicleType
+          , text state.data.vehicleType
           ] <> FontStyle.body3 TypoGraphy
           )
       ]
