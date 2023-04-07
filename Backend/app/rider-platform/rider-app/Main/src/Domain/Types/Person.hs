@@ -61,7 +61,7 @@ instance ToHttpApiData IdentifierType where
   toHeader = BSL.toStrict . encode
 
 --------------------------------------------------------------------------------------------------
-data Gender = MALE | FEMALE | OTHER | UNKNOWN
+data Gender = MALE | FEMALE | OTHER | UNKNOWN | PREFER_NOT_TO_SAY
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance FromHttpApiData Gender where
@@ -128,22 +128,22 @@ data PersonAPIEntity = PersonAPIEntity
     firstName :: Maybe Text,
     middleName :: Maybe Text,
     lastName :: Maybe Text,
-    maskedEmail :: Maybe Text,
+    email :: Maybe Text,
     maskedMobileNumber :: Maybe Text,
     maskedDeviceToken :: Maybe FCM.FCMRecipientToken,
     hasTakenRide :: Bool,
     hasTakenValidRide :: Bool,
     referralCode :: Maybe Text,
     whatsappNotificationEnrollStatus :: Maybe Whatsapp.OptApiMethods,
-    language :: Maybe Maps.Language
+    language :: Maybe Maps.Language,
+    gender :: Gender
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 makePersonAPIEntity :: DecryptedPerson -> PersonAPIEntity
 makePersonAPIEntity Person {..} =
   PersonAPIEntity
-    { maskedEmail = maskText <$> email,
-      maskedMobileNumber = maskText <$> mobileNumber,
+    { maskedMobileNumber = maskText <$> mobileNumber,
       maskedDeviceToken = FCM.FCMRecipientToken . maskText . (.getFCMRecipientToken) <$> deviceToken,
       hasTakenRide = hasTakenValidRide,
       ..
