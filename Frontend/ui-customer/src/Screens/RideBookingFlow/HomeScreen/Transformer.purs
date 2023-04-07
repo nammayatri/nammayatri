@@ -307,14 +307,17 @@ getEstimates (EstimateAPIEntity estimate) index = ChooseVehicle.config {
         vehicleImage = case estimate.vehicleVariant of 
           "TAXI" -> "ic_sedan_non_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_non_ac.png"
           "TAXI_PLUS" -> "ic_sedan_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_ac.png"
+          "SEDAN" -> "ic_sedan,https://assets.juspay.in/nammayatri/images/user/ic_sedan.png"
+          "SUV" -> "ic_suv,https://assets.juspay.in/nammayatri/images/user/ic_suv.png"
+          "HATCHBACK" -> "ic_hatchback,https://assets.juspay.in/nammayatri/images/user/ic_hatchback.png"
           _ -> "ic_sedan_non_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_non_ac.png"
       , vehicleVariant = estimate.vehicleVariant
       , price = show estimate.estimatedTotalFare
       , activeIndex = 0
       , index = index
       , id = trim estimate.id
-      , vehicleType = case estimate.vehicleVariant of
-          "TAXI" -> getString ECONOMICAL
-          "TAXI_PLUS" -> getString COMFY
-          _ -> getString ECONOMICAL
+      , capacity = case estimate.vehicleVariant of
+          "TAXI" -> (getString ECONOMICAL) <> ", 4 " <> (getString PEOPLE)
+          "TAXI_PLUS" -> (getString COMFY) <> ", 4 " <> (getString PEOPLE)
+          _ -> (getString ECONOMICAL) <> ", 4 " <> (getString PEOPLE)
       }

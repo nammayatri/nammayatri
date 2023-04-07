@@ -402,6 +402,17 @@ makeUpdateDriverInfoReq deviceToken = UpdateDriverInfoReq {
        "language" : Nothing
     }
 
+makeUpdateBookingOptions :: Boolean -> Boolean -> UpdateDriverInfoReq
+makeUpdateBookingOptions toSedan toHatchBack = UpdateDriverInfoReq {
+       "middleName": Nothing,
+       "firstName" : Nothing,
+       "lastName"  : Nothing,
+       "deviceToken" : Nothing,
+       "canDowngradeToSedan" : Just toSedan,
+       "canDowngradeToHatchback" : Just toHatchBack,
+       "language" : Nothing
+    }
+
 makeUpdateDriverLangChange :: String -> UpdateDriverInfoReq
 makeUpdateDriverLangChange deviceToken = UpdateDriverInfoReq {
         "middleName": Nothing,
@@ -415,6 +426,7 @@ makeUpdateDriverLangChange deviceToken = UpdateDriverInfoReq {
             "KN_IN" -> "KANNADA"
             "HI_IN" -> "HINDI"
             "ML_IN" -> "MALAYALAM"
+            "BN_IN" -> "BENGALI"
             "TA_IN" -> "TAMIL"
             _       -> "ENGLISH"
     }

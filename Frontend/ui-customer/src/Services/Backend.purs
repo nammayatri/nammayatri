@@ -445,6 +445,7 @@ makeUpdateProfileRequest name gender referralCode =
             "KN_IN" -> "KANNADA"
             "HI_IN" -> "HINDI"
             "ML_IN" -> "MALAYALAM"
+            "BN_IN" -> "BENGALI"
             "TA_IN" -> "TAMIL"
             _       -> "ENGLISH"
     }
@@ -464,6 +465,7 @@ editProfileRequest firstName middleName lastName emailID gender =
             "KN_IN" -> "KANNADA"
             "HI_IN" -> "HINDI"
             "ML_IN" -> "MALAYALAM"
+            "BN_IN" -> "BENGALI"
             "TA_IN" -> "TAMIL"
             _       -> "ENGLISH"
     }
@@ -482,6 +484,7 @@ makeUpdateLanguageRequest _ = UpdateProfileReq{
             "KN_IN" -> "KANNADA"
             "HI_IN" -> "HINDI"
             "ML_IN" -> "MALAYALAM"
+            "BN_IN" -> "BENGALI"
             "TA_IN" -> "TAMIL"
             _       -> "ENGLISH"
     }

@@ -19,8 +19,8 @@ import Data.Maybe
 
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Eq (genericEq)
-import Helpers.Utils (getMerchant, Merchant(..))
-import Prelude (class Eq, (<>), (==), (||))
+import Helpers.Utils (Merchant(..), getMerchant)
+import Prelude (class Eq, unit, (/=), (<>), (==))
 import Screens.Types (DriverProfileScreenState)
 
 initData :: DriverProfileScreenState
@@ -37,6 +37,9 @@ initData = {
     vehicleColor : "",
     driverAlternateNumber : Nothing
 
+    capacity : 0,
+    vehicleSelected: [],
+    downgradeOptions : []
     },
 
   props: {
@@ -59,7 +62,7 @@ optionList dummy =
     [
       {menuOptions: DRIVER_PRESONAL_DETAILS , icon:"ny_ic_profile,https://assets.juspay.in/nammayatri/images/driver/ny_ic_profile.png"},
       {menuOptions: DRIVER_VEHICLE_DETAILS , icon:"ny_ic_car_profile,https://assets.juspay.in/nammayatri/images/driver/ny_ic_car_profile.png"}
-    ] <> [] <> --TODO:once API is ready --(if (getMerchant unit == Just YATRIPARTNER || getMerchant unit == Just JATRISAATHIDRIVER)  then [{menuOptions: DRIVER_BOOKING_OPTIONS , icon:"ic_booking_options,https://assets.juspay.in/nammayatri/images/driver/ic_booking_options.png"}] else []) <>
+    ] <> (if (getMerchant unit /= NAMMAYATRIPARTNER)  then [{menuOptions: DRIVER_BOOKING_OPTIONS , icon:"ic_booking_options,https://assets.juspay.in/nammayatri/images/driver/ic_booking_options.png"}] else []) <>
     [
       {menuOptions: APP_INFO_SETTINGS , icon:"ny_ic_app_info,https://assets.juspay.in/nammayatri/images/driver/ny_ic_app_info.png"},
       {menuOptions: MULTI_LANGUAGE , icon:"ny_ic_language,https://assets.juspay.in/nammayatri/images/driver/ny_ic_language.png"},

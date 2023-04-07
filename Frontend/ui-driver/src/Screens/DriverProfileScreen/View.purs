@@ -26,7 +26,7 @@ import Components.PopUpModal as PopUpModal
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array (length, mapWithIndex)
+import Data.Array (length, mapWithIndex, null)
 import Data.Maybe (fromMaybe)
 import Effect (Effect)
 import Effect.Aff (launchAff_)
@@ -37,7 +37,7 @@ import Font.Style as FontStyle
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, ($), const, map, (==), (||), (/), unit, bind, (-), (<>), (<<<), pure, discard, show)
+import Prelude (Unit, ($), const, map, (==), (||), (/), unit, bind, (-), (<>), (<<<), pure, discard, show, (&&))
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url)
 import Screens.DriverProfileScreen.Controller (Action(..), ScreenOutput, eval, getTitle)
@@ -81,6 +81,7 @@ view push state =
       , background Color.white900
       , onBackPressed push (const BackPressed state)
       , afterRender push (const AfterRender)
+      , background Color.white900
       ][ Anim.screenAnimationFadeInOut $
           linearLayout
           [ width MATCH_PARENT
@@ -177,12 +178,13 @@ profileOptionsLayout state push =
     ] (mapWithIndex
         (\index optionItem ->
             linearLayout
-            [ width MATCH_PARENT
+            ([ width MATCH_PARENT
             , height WRAP_CONTENT
             , orientation VERTICAL
             , gravity CENTER_VERTICAL
             , onClick push $ const $ OptionClick optionItem.menuOptions
-            ][ linearLayout
+            ] <> if (optionItem.menuOptions == DRIVER_BOOKING_OPTIONS) && (null state.data.downgradeOptions) then [alpha 0.5
+            ,clickable false] else [])[ linearLayout
               [ width MATCH_PARENT
               , height WRAP_CONTENT
               , orientation HORIZONTAL
