@@ -11,6 +11,8 @@
       port = 7812; # process-compose Swagger API is served here.
       configs =
         let
+          # Haskell packages that provide executables that are part of the
+          # backend mobility stack.
           backendExecutablePackages =
             with config.haskellProjects.default.outputs.packages; [
               driver-offer-allocator

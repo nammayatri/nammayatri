@@ -7,17 +7,15 @@
   perSystem = { self', pkgs, lib, ... }: {
     mission-control.scripts =
       let
-        # TODO: DRY overkill here?
-        withBackendPrefix = lib.mapAttrs' (n: v:
-          lib.nameValuePair "backend-${n}" (v // { category = "Backend"; }));
-        # TODO: DRY overkill here.
         dockerComposeScript = { description, args }: {
           inherit description;
+          category = "Backend - Docker";
           exec = "set -x; nix run .#run-docker-compose -- ${args}";
         };
       in
-      withBackendPrefix {
+      {
         ghcid = {
+          category = "Backend";
           description = "Compile the given local package using ghcid.";
           cdToProjectRoot = false;
           exec = ''
@@ -31,6 +29,7 @@
         };
 
         hoogle = {
+          category = "Backend";
           description = "Run Hoogle server for Haskell packages.";
           exec = ''
             echo "#### Hoogle running at: http://localhost:8090"
@@ -39,6 +38,7 @@
         };
 
         hpack = {
+          category = "Backend";
           description = "Run hpack to generate cabal files.";
           exec = ''
             set -x
@@ -47,6 +47,7 @@
         };
 
         run-mobility-stack = {
+          category = "Backend";
           description = ''
             Run the nammayatri backend components via "cabal run".
           '';
@@ -81,7 +82,8 @@
           args = "down --remove-orphans";
         };
 
-        new-service = {
+        backend-new-service = {
+          category = "Backend";
           description = ''
             Create a new Haskell package locally
           '';
