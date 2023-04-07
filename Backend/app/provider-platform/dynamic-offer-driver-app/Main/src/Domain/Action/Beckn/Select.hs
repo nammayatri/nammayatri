@@ -17,8 +17,9 @@
 module Domain.Action.Beckn.Select where
 
 import qualified Beckn.Types.Core.Taxi.Common.Address as BA
+import qualified Data.List.Extra as List
 import qualified Data.Map as M
-import qualified Data.Text as T
+import qualified Data.Text as DT
 import Data.Time.Clock (addUTCTime)
 import qualified Domain.Types.FareParameters as DFareParams (FarePolicyType (..))
 import qualified Domain.Types.FarePolicy as DFarePolicy (ExtraFee (..))
@@ -171,21 +172,27 @@ buildSearchRequest from to merchantId sReq distance duration customerExtraFee = 
 
 buildSearchReqLocation :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DM.Merchant -> Text -> Maybe BA.Address -> Maybe Maps.Language -> LatLong -> m DLoc.SearchReqLocation
 buildSearchReqLocation merchantId sessionToken address customerLanguage latLong@Maps.LatLong {..} = do
-  Address {..} <- case address of
+  (Address {..}, isNearBySearchAPIUsed) <- case address of
     Just loc
       | customerLanguage == Just Maps.ENGLISH && isJust loc.ward ->
-        pure $
-          Address
-            { areaCode = loc.area_code,
-              street = loc.street,
-              city = loc.city,
-              state = loc.state,
-              country = loc.country,
-              building = loc.building,
-              area = loc.ward,
-              full_address = decodeAddress loc
-            }
-    _ -> getAddressByGetPlaceName merchantId sessionToken latLong
+        pure
+          ( Address
+              { areaCode = loc.area_code,
+                street = loc.street,
+                city = loc.city,
+                state = loc.state,
+                country = loc.country,
+                building = loc.building,
+                area = loc.ward,
+                full_address = decodeAddress loc
+              },
+            False
+          )
+    _ -> do
+      add <- getAddressByGetPlaceName merchantId sessionToken latLong
+      if (DT.length <$> add.area) == Just 0
+        then (,True) <$> getAddressByNearBySearch merchantId add latLong
+        else pure ((,False) add)
   id <- Id <$> generateGUID
   now <- getCurrentTime
   let createdAt = now
@@ -203,12 +210,42 @@ getAddressByGetPlaceName merchantId sessionToken latLong = do
         }
   mkLocation pickupRes
 
+getAddressByNearBySearch :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DM.Merchant -> Address -> LatLong -> m Address
+getAddressByNearBySearch merchantId add latLong = do
+  getNearBySearchResp <-
+    Maps.getNearBySearch merchantId $
+      Maps.GetNearBySearchReq
+        { location = getLocation latLong,
+          rankby = "distance"
+        }
+  let results = listToMaybe getNearBySearchResp.results
+  let area = case results of
+        Just result -> DT.intercalate "," $ List.takeEnd 2 $ List.dropEnd 1 (DT.split (== ',') result.vicinity)
+        Nothing -> ""
+  pure
+    Address
+      { street = add.street,
+        city = add.city,
+        state = add.state,
+        country = add.country,
+        areaCode = add.areaCode,
+        building = add.building,
+        area = Just area,
+        full_address = getfullAddress (Just area) add.city add.state add.country
+      }
+
 decodeAddress :: BA.Address -> Maybe Text
 decodeAddress BA.Address {..} = do
   let strictFields = catMaybes $ filter (not . isEmpty) [door, building, street, locality, city, state, area_code, country]
   if null strictFields
     then Nothing
-    else Just $ T.intercalate ", " strictFields
+    else Just $ DT.intercalate ", " strictFields
 
 isEmpty :: Maybe Text -> Bool
-isEmpty = maybe True (T.null . T.replace " " "")
+isEmpty = maybe True (DT.null . DT.replace " " "")
+
+getLocation :: LatLong -> Text
+getLocation latlong = show latlong.lat <> "," <> show latlong.lon
+
+getfullAddress :: Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text
+getfullAddress area city state country = Just $ DT.intercalate ", " $ catMaybes [area, city, state, country]

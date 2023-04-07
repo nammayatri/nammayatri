@@ -31,6 +31,7 @@ data SearchReqLocation = SearchReqLocation
     areaCode :: Maybe Text,
     area :: Maybe Text,
     full_address :: Maybe Text,
+    isNearBySearchAPIUsed :: Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

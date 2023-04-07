@@ -4,7 +4,7 @@
     common.url = "github:nammayatri/common";
     flake-parts.follows = "common/flake-parts";
 
-    shared-kernel.url = "github:nammayatri/shared-kernel";
+    shared-kernel.url = "github:nammayatri/shared-kernel/5b2e22593b7e808c0674c444b9cbb30ab0de2922";
     shared-kernel.inputs.nixpkgs.follows = "nixpkgs";
     beckn-gateway.url = "github:nammayatri/beckn-gateway/ca94cd38adbc4e8e6e65f0d83610edadca5a279b";
     beckn-gateway.inputs.shared-kernel.follows = "shared-kernel";

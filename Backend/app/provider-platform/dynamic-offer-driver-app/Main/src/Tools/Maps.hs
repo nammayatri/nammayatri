@@ -18,6 +18,7 @@ module Tools.Maps
     getDistance,
     getEstimatedPickupDistances,
     getDistances,
+    getNearBySearch,
     getPlaceDetails,
     getPlaceName,
     getRoutes,
@@ -34,12 +35,14 @@ import Kernel.External.Maps as Reexport hiding
   ( autoComplete,
     getDistance,
     getDistances,
+    getNearBySearch,
     getPlaceDetails,
     getPlaceName,
     getRoutes,
     snapToRoad,
   )
 import qualified Kernel.External.Maps as Maps
+import Kernel.External.Maps.Google.MapsClient (NearBySearchResp)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -117,6 +120,9 @@ getPlaceName = runWithServiceConfig Maps.getPlaceName (.getPlaceName)
 
 getPlaceDetails :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id Merchant -> GetPlaceDetailsReq -> m GetPlaceDetailsResp
 getPlaceDetails = runWithServiceConfig Maps.getPlaceDetails (.getPlaceDetails)
+
+getNearBySearch :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id Merchant -> GetNearBySearchReq -> m NearBySearchResp
+getNearBySearch = runWithServiceConfig Maps.getNearBySearch (.getNearBySearch)
 
 runWithServiceConfig ::
   (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) =>

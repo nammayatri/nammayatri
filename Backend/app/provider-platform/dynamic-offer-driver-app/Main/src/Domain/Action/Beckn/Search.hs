@@ -210,6 +210,7 @@ handler merchantId sReq = do
             areaCode = Nothing,
             area = Nothing,
             full_address = Nothing,
+            isNearBySearchAPIUsed = False,
             ..
           }
 

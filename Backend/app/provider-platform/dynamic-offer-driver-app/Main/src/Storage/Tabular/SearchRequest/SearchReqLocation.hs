@@ -40,6 +40,7 @@ mkPersist
       full_address Text Maybe
       areaCode Text Maybe
       area Text Maybe
+      isNearBySearchAPIUsed Bool
       createdAt UTCTime
       updatedAt UTCTime
       Primary id
