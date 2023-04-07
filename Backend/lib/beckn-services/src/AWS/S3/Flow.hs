@@ -135,7 +135,7 @@ put'' bucketName path img = withLogTag "S3" $ do
       Posix.closeFd fd
 
 getTmpPath :: String -> String
-getTmpPath = (<>) "/tmp/" . T.unpack . last . T.split (== '/') . T.pack
+getTmpPath = (<>) "/tmp/" . T.unpack . DL.last . T.split (== '/') . T.pack
 
 mockPut ::
   (MonadIO m, Log m) =>
