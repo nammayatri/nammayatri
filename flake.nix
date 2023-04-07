@@ -28,7 +28,7 @@
       perSystem = { config, self', pkgs, ... }: {
         packages.default = self'.packages.nammayatri;
 
-        cachix-push.packages = [ "default" "osrm-server" ];
+        cachix-push.packages = [ "default" "osrm-server" "run-mobility-stack" ];
 
         # TODO: Move these to common repo.
         pre-commit = {
