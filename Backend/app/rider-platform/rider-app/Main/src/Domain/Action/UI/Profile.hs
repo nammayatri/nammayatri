@@ -62,7 +62,8 @@ data UpdateProfileReq = UpdateProfileReq
     email :: Maybe Text,
     deviceToken :: Maybe FCM.FCMRecipientToken,
     referralCode :: Maybe Text,
-    language :: Maybe Maps.Language
+    language :: Maybe Maps.Language,
+    gender :: Maybe Person.Gender
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -117,13 +118,14 @@ updatePerson personId req = do
   runTransaction $
     QPerson.updatePersonalInfo
       personId
-      (req.firstName)
-      (req.middleName)
-      (req.lastName)
+      req.firstName
+      req.middleName
+      req.lastName
       refCode
       mbEncEmail
-      (req.deviceToken)
-      (req.language)
+      req.deviceToken
+      req.language
+      req.gender
   pure APISuccess.Success
 
 validateRefferalCode :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasBapInfo r m, CoreMetrics m) => Id Person.Person -> Text -> m (Maybe Text)
