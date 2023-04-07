@@ -29,7 +29,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (isNothing)
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Error
+import Kernel.Utils.Common
 import Storage.CachedQueries.Merchant (findByShortId)
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Person as QP
@@ -73,6 +73,11 @@ shareRideInfo merchantId rideId = do
         DB.OneWayDetails locationDetail -> Just $ mkCommonBookingLocation locationDetail.toLocation
         DB.DriverOfferDetails driverOfferDetail -> Just $ mkCommonBookingLocation driverOfferDetail.toLocation
         _ -> Nothing
+  let mbDistance = case booking.bookingDetails of
+        DB.OneWayDetails locationDetail -> Just $ locationDetail.distance
+        DB.DriverOfferDetails driverOfferDetail -> Just $ driverOfferDetail.distance
+        DB.OneWaySpecialZoneDetails oneWaySpecialZoneDetail -> Just $ oneWaySpecialZoneDetail.distance
+        _ -> Nothing
   return $
     Common.ShareRideInfoRes
       { id = cast ride.id,
@@ -84,6 +89,7 @@ shareRideInfo merchantId rideId = do
         vehicleModel = ride.vehicleModel,
         vehicleColor = ride.vehicleColor,
         trackingUrl = ride.trackingUrl,
+        estimatedDistance = mbDistance,
         rideStartTime = ride.rideStartTime,
         rideEndTime = ride.rideEndTime,
         userFirstName = person.firstName,
