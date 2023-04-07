@@ -1,4 +1,4 @@
-# NOTE: This is a candidate for a flake-parts module.
+# TODO: Simplify this via upstreaming: https://github.com/hercules-ci/arion/issues/193
 { ... }:
 
 let

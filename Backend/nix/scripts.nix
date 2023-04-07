@@ -4,17 +4,19 @@
 # We use https://github.com/Platonic-Systems/mission-control
 { ... }:
 {
-  perSystem = { config, self', pkgs, lib, ... }: {
+  perSystem = { self', pkgs, lib, ... }: {
     mission-control.scripts =
       let
-        backendScripts = lib.mapAttrs' (n: v:
+        # TODO: DRY overkill here?
+        withBackendPrefix = lib.mapAttrs' (n: v:
           lib.nameValuePair "backend-${n}" (v // { category = "Backend"; }));
+        # TODO: DRY overkill here.
         dockerComposeScript = { description, args }: {
           inherit description;
           exec = "set -x; nix run .#run-docker-compose -- ${args}";
         };
       in
-      backendScripts {
+      withBackendPrefix {
         ghcid = {
           description = "Compile the given local package using ghcid.";
           cdToProjectRoot = false;
