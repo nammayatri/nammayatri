@@ -289,6 +289,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
     public static ArrayList<MediaPlayerView> audioPlayers = new ArrayList<>();
     public static String webViewCallBack = null;
+    public static int debounceAnimateCamera = 0;
 
     public CommonJsInterface(){
         super();
@@ -2618,7 +2619,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                                 polylines.remove();
                                 polylines = null;
                                 currMarker.setAnchor(0.5f,0);
-                                animateCamera(destMarker.getPosition().latitude,destMarker.getPosition().longitude,20.0f);
+                                animateCamera(destMarker.getPosition().latitude,destMarker.getPosition().longitude,17.0f);
                             }
                             else
                             {
@@ -2632,7 +2633,12 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                                 List<PatternItem> PATTERN_POLYLINE_DOTTED_DASHED = Arrays.asList(DASH);
                                 polylines.setPattern(PATTERN_POLYLINE_DOTTED_DASHED);
                                 polylines.setPoints(path);
-                                moveCamera(sourceLat, sourceLong, destinationLat, destinationLon, coordinates);
+                                if(debounceAnimateCamera!=0) {
+                                    debounceAnimateCamera--;
+                                } else{
+                                    moveCamera(sourceLat, sourceLong, destinationLat, destinationLon, coordinates);
+                                    debounceAnimateCamera = 10;
+                                }
                             }
                         }
                     } catch (JSONException e) {
@@ -2707,7 +2713,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
             LatLng tempPoints = new LatLng(lat, lng);
             path.add(tempPoints);
         }
-        int index = PolyUtil.locationIndexOnEdgeOrPath(currPoint,path,PolyUtil.isClosedPolygon(path),true,50.0);
+        int index = PolyUtil.locationIndexOnEdgeOrPath(currPoint,path,PolyUtil.isClosedPolygon(path),true,20.0);
         if (index == 0)
         {
             path.clear();
@@ -2779,7 +2785,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
             result.put("isInPath",false);
             return result.toString();
         }
-        resultIndex = PolyUtil.locationIndexOnEdgeOrPath(currPoint, path, PolyUtil.isClosedPolygon(path), true, 30.0);
+        resultIndex = PolyUtil.locationIndexOnEdgeOrPath(currPoint, path, PolyUtil.isClosedPolygon(path), true, 20.0);
         if (resultIndex == -1) {
             result.put("points",coordinates);
             result.put("eta",0);
@@ -2881,7 +2887,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
 //                                .zoom(15.5f)
 //                                .build()
 //                                ));
-                        float rotation = (float) SphericalUtil.computeHeading(startPosition,endPosition);
+                        float rotation = bearingBetweenLocations(startPosition, endPosition);
                         if (rotation > 1.0)
                             marker.setRotation(rotation);
                         marker.setPosition(newPosition);
@@ -2946,6 +2952,10 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         JSONObject jsonObject = new JSONObject(json);
         JSONArray coordinates = jsonObject.getJSONArray("points");
         if (coordinates.length() <= 1) return json;
+        SharedPreferences sharedPref = context.getSharedPreferences(
+                activity.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        int pointsFactor = Integer.parseInt(sharedPref.getString("POINTS_FACTOR","3"));
+
         for (int i = coordinates.length() -1 ; i >= 0   ; i--) {
             JSONObject coordinate = (JSONObject) coordinates.get(i);
             double lng = coordinate.getDouble("lng");
@@ -2958,9 +2968,6 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
             LatLng point2 = path.get(j);
             extendedPath.add(point1);
             double distanceBtw = SphericalUtil.computeDistanceBetween(point1,point2);
-            SharedPreferences sharedPref = context.getSharedPreferences(
-                    activity.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-            int pointsFactor = Integer.parseInt(sharedPref.getString("POINTS_FACTOR","50"));
             int noOfPoints = (int)Math.ceil(distanceBtw/pointsFactor);
             float fraction = 1.0f/(noOfPoints+1);
             for (int k = 1; k<= noOfPoints;k++) {
@@ -3242,12 +3249,20 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                         LatLng pickupLatLng = new LatLng(source_lat, source_lng);
                         LatLng destinationLatLng = new LatLng(destination_lat, destination_lng);
                         LatLngBounds bounds = LatLngBounds.builder().include(pickupLatLng).include(destinationLatLng).build();
-                        googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 200));
+                        if(json_coordinates.length() < 5 ){
+                            googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 400));
+                        }else {
+                            googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 150));
+                        }
                     } catch (IllegalArgumentException e) {
                         LatLng pickupLatLng = new LatLng(source_lat, source_lng);
                         LatLng destinationLatLng = new LatLng(destination_lat, destination_lng);
                         LatLngBounds bounds = LatLngBounds.builder().include(destinationLatLng).include(pickupLatLng).build();
-                        googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 200));
+                        if(json_coordinates.length() < 5 ){
+                            googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 400));
+                        }else {
+                            googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 150));
+                        }
                     }
                     catch(Exception e){
                         System.out.println("In mmove camera in catch exception" + e);

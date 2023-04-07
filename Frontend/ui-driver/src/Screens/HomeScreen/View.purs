@@ -95,7 +95,7 @@ screen initialState =
                                   else pure unit  
             "RideAccepted"   -> do 
                                 _ <- pure $ setValueToLocalStore RIDE_G_FREQUENCY "2000"
-                                _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "8.0"
+                                _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "5.0"
                                 if (not initialState.props.routeVisible) && initialState.props.mapRendered then do 
                                   _ <- JB.getCurrentPosition push $ ModifyRoute
                                   _ <- JB.removeMarker "ny_ic_auto" -- TODO : remove if we dont require "ic_auto" icon on homescreen
