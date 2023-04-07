@@ -113,9 +113,9 @@ availabilityConsumer flowRt appEnv kafkaConsumer =
         extract = id
 
 readMessages ::
-  (FromJSON a, ConvertUtf8 aKey ByteString) =>
+  (FromJSON message, ConvertUtf8 messageKey ByteString) =>
   Consumer.KafkaConsumer ->
-  SerialT IO (a, aKey, ConsumerRecordD)
+  SerialT IO (message, messageKey, ConsumerRecordD)
 readMessages kafkaConsumer = do
   let eitherRecords = S.bracket (pure kafkaConsumer) Consumer.closeConsumer pollMessageR
   let records = S.mapMaybe hush eitherRecords
