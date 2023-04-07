@@ -138,7 +138,7 @@ selectResult :: (EsqDBReplicaFlow m r) => Id DEstimate.Estimate -> m QuotesResul
 selectResult estimateId = do
   res <- runMaybeT $ do
     estimate <- MaybeT . runInReplica $ QEstimate.findById estimateId
-    quoteId <- MaybeT $ pure estimate.autoAssignQuoteId
+    quoteId <- hoistMaybe estimate.autoAssignQuoteId
     _ <- MaybeT (Just <$> checkIfEstimateCancelled estimate.id estimate.status)
     booking <- MaybeT . runInReplica $ QBooking.findAssignedByQuoteId (Id quoteId)
     return $ QuotesResultResponse {bookingId = Just booking.id, selectedQuotes = Nothing}

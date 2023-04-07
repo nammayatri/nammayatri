@@ -49,7 +49,7 @@ getLanguage driverId mbLanguage = do
       then return mbLanguage
       else runMaybeT $ do
         driverDetail <- MaybeT . Esq.runInReplica $ QP.findById driverId
-        MaybeT $ pure driverDetail.language
+        hoistMaybe driverDetail.language
   return $ fromMaybe ENGLISH extractLanguage
 
 getIssueCategory :: Id SP.Person -> Maybe Language -> Flow Common.IssueCategoryListRes

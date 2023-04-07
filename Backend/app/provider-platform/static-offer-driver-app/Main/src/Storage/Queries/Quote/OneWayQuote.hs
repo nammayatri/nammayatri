@@ -22,9 +22,11 @@ import Kernel.Types.Id
 import Storage.Tabular.Quote ()
 import Storage.Tabular.Quote.OneWayQuote
 
-findByQuoteId' :: Transactionable m => Id Quote -> DTypeBuilder m (Maybe OneWayQuoteT)
-findByQuoteId' quoteId =
+-- internal queries for building domain types
+
+findByQuoteIdT :: Transactionable m => QuoteTId -> MaybeT DTypeBuilder m OneWayQuoteT
+findByQuoteIdT quoteTId =
   Esq.findOne' $ do
     oneWayQuote <- from $ table @OneWayQuoteT
-    where_ $ oneWayQuote ^. OneWayQuoteQuoteId ==. val (toKey quoteId)
+    where_ $ oneWayQuote ^. OneWayQuoteQuoteId ==. val quoteTId
     return oneWayQuote

@@ -81,9 +81,9 @@ buildFullBooking ::
   BookingT ->
   DTypeBuilder m (Maybe (SolidType FullBookingT))
 buildFullBooking bookingT@BookingT {..} = runMaybeT $ do
-  fromLocationT <- MaybeT $ Esq.findById' @BookingLocationT (fromKey fromLocationId)
-  toLocationT <- MaybeT $ Esq.findById' @BookingLocationT (fromKey toLocationId)
-  fareParamsT <- MaybeT $ Esq.findById' @Fare.FareParametersT (fromKey fareParametersId)
+  fromLocationT <- Esq.findByIdT @BookingLocationT fromLocationId
+  toLocationT <- Esq.findByIdT @BookingLocationT toLocationId
+  fareParamsT <- Esq.findByIdT @Fare.FareParametersT fareParametersId
   return $ extractSolidType @Booking (bookingT, fromLocationT, toLocationT, fareParamsT)
 
 updateStatus :: Id Booking -> BookingStatus -> SqlDB ()
