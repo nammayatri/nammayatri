@@ -21,7 +21,6 @@ import Domain.Types.FarePolicy.FareProductType
 import Domain.Types.Quote as Quote
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
-import Kernel.Types.Id
 import Storage.Queries.EstimateBreakup as QEB
 import Storage.Tabular.Booking as Booking
 import Storage.Tabular.Booking.BookingLocation
@@ -41,9 +40,9 @@ buildFullQuote ::
 buildFullQuote (quoteT@QuoteT {..}, mbTripTermsT, mbRentalSlab, mbDriverOffer, mbspecialZoneQuote) = runMaybeT $ do
   quoteDetailsT <- case fareProductType of
     ONE_WAY -> pure Quote.OneWayDetailsT
-    RENTAL -> MaybeT $ pure (Quote.RentalDetailsT <$> mbRentalSlab)
-    DRIVER_OFFER -> MaybeT $ pure (Quote.DriverOfferDetailsT <$> mbDriverOffer)
-    ONE_WAY_SPECIAL_ZONE -> MaybeT $ pure (Quote.OneWaySpecialZoneDetailsT <$> mbspecialZoneQuote)
+    RENTAL -> hoistMaybe (Quote.RentalDetailsT <$> mbRentalSlab)
+    DRIVER_OFFER -> hoistMaybe (Quote.DriverOfferDetailsT <$> mbDriverOffer)
+    ONE_WAY_SPECIAL_ZONE -> hoistMaybe (Quote.OneWaySpecialZoneDetailsT <$> mbspecialZoneQuote)
   return $ extractSolidType @Quote (quoteT, mbTripTermsT, quoteDetailsT)
 
 buildFullBooking ::
@@ -52,10 +51,10 @@ buildFullBooking ::
   DTypeBuilder m (Maybe (SolidType FullBookingT))
 buildFullBooking (bookingT@BookingT {..}, fromLocT, mbToLocT, mbTripTermsT, mbRentalSlab) = runMaybeT $ do
   bookingDetails <- case fareProductType of
-    ONE_WAY -> MaybeT $ pure (Booking.OneWayDetailsT <$> mbToLocT)
-    RENTAL -> MaybeT $ pure (Booking.RentalDetailsT <$> mbRentalSlab)
-    DRIVER_OFFER -> MaybeT $ pure (Booking.DriverOfferDetailsT <$> mbToLocT)
-    ONE_WAY_SPECIAL_ZONE -> MaybeT $ pure (Booking.OneWaySpecialZoneDetailsT <$> mbToLocT)
+    ONE_WAY -> hoistMaybe (Booking.OneWayDetailsT <$> mbToLocT)
+    RENTAL -> hoistMaybe (Booking.RentalDetailsT <$> mbRentalSlab)
+    DRIVER_OFFER -> hoistMaybe (Booking.DriverOfferDetailsT <$> mbToLocT)
+    ONE_WAY_SPECIAL_ZONE -> hoistMaybe (Booking.OneWaySpecialZoneDetailsT <$> mbToLocT)
   return $ extractSolidType @Booking (bookingT, fromLocT, mbTripTermsT, bookingDetails)
 
 buildFullEstimate ::
@@ -63,5 +62,5 @@ buildFullEstimate ::
   (EstimateT, Maybe TripTermsT) ->
   DTypeBuilder m (SolidType FullEstimateT)
 buildFullEstimate (estimateT@EstimateT {..}, tripTermsT) = do
-  estimateBreakupT <- QEB.findAllByEstimateId (Id id)
+  estimateBreakupT <- QEB.findAllByEstimateId' (EstimateTKey id)
   return $ extractSolidType @Estimate (estimateT, estimateBreakupT, tripTermsT)

@@ -23,9 +23,11 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id (Id (getId))
+import qualified Storage.Queries.EstimateBreakup as QEB
 import Storage.Queries.FullEntityBuilders (buildFullEstimate)
-import Storage.Tabular.Estimate
-import Storage.Tabular.TripTerms
+import Storage.Tabular.Estimate as TEstimate
+import Storage.Tabular.SearchRequest as TSearchRequest
+import Storage.Tabular.TripTerms as TTripTerms
 
 -- order of creating entites make sense!
 create :: Estimate -> SqlDB ()
@@ -56,14 +58,6 @@ fullEstimateTable =
       `Esq.on` ( \(estimate :& mbTripTerms) ->
                    estimate ^. EstimateTripTermsId ==. mbTripTerms ?. TripTermsTId
                )
-
-findById :: Transactionable m => Id Estimate -> m (Maybe Estimate)
-findById estimateId = Esq.buildDType $ do
-  mbFullEstimateT <- Esq.findOne' $ do
-    (estimate :& mbTripTerms) <- from fullEstimateTable
-    where_ $ estimate ^. EstimateTId ==. val (toKey estimateId)
-    pure (estimate, mbTripTerms)
-  mapM buildFullEstimate mbFullEstimateT
 
 findAllByRequestId :: Transactionable m => Id SearchRequest -> m [Estimate]
 findAllByRequestId searchRequestId = Esq.buildDType $ do
@@ -140,11 +134,32 @@ updateStatusbyRequestId searchId status_ = do
       ]
     where_ $ tbl ^. EstimateRequestId ==. val (toKey searchId)
 
+-- queries fetching only one entity should not use join for performance reason
+
+findById :: Transactionable m => Id Estimate -> m (Maybe Estimate)
+findById estimateId = Esq.buildDType . runMaybeT $ do
+  let estimateTId = toKey estimateId
+  estimate <- findByIdT @EstimateT estimateTId
+  let mbTripTermsTId = estimate & TEstimate.tripTermsId
+  mbTripTerms <- forM mbTripTermsTId $ findByIdT @TripTermsT
+  estimateBreakup <- QEB.findAllByEstimateIdT estimateTId
+  return $ extractSolidType @Estimate (estimate, estimateBreakup, mbTripTerms)
+
 findOneEstimateByRequestId :: Transactionable m => Id SearchRequest -> m (Maybe Estimate)
-findOneEstimateByRequestId searchId = Esq.buildDType $ do
-  mbFullEstimateT <- Esq.findOne' $ do
-    (estimate :& mbTripTerms) <- from fullEstimateTable
-    where_ $ estimate ^. EstimateRequestId ==. val (toKey searchId)
-    limit 1
-    pure (estimate, mbTripTerms)
-  mapM buildFullEstimate mbFullEstimateT
+findOneEstimateByRequestId searchId = Esq.buildDType . runMaybeT $ do
+  let searchTId = toKey searchId
+  estimate <- findEstimateByRequestIdT searchTId
+  let mbTripTermsTId = estimate & TEstimate.tripTermsId
+  mbTripTerms <- forM mbTripTermsTId $ findByIdT @TripTermsT
+  let estimateTId = EstimateTKey $ estimate & TEstimate.id
+  estimateBreakup <- QEB.findAllByEstimateIdT estimateTId
+  return $ extractSolidType @Estimate (estimate, estimateBreakup, mbTripTerms)
+
+-- internal queries for building domain types
+
+findEstimateByRequestIdT :: Transactionable m => SearchRequestTId -> MaybeT (DTypeBuilder m) EstimateT
+findEstimateByRequestIdT searchTId = MaybeT . Esq.findOne' $ do
+  estimate <- from $ table @EstimateT
+  where_ $ estimate ^. EstimateRequestId ==. val searchTId
+  limit 1
+  pure estimate

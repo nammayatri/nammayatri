@@ -58,7 +58,7 @@ findAllByMerchantId merchantId =
 findById :: Transactionable m => Id OneWayFarePolicy -> m (Maybe OneWayFarePolicy)
 findById fpId =
   Esq.buildDType $ do
-    mbfarePolicy <- Esq.findById' fpId
+    mbfarePolicy <- Esq.findById' $ toKey fpId
     mapM buildFullOneWayFarePolicy mbfarePolicy
 
 update :: OneWayFarePolicy -> SqlDB ()

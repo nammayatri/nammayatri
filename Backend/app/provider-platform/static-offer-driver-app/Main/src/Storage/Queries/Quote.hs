@@ -40,5 +40,5 @@ findAllByRequestId requestId = Esq.buildDType $ do
 
 findById :: Transactionable m => Id Quote -> m (Maybe Quote)
 findById quoteId = Esq.buildDType $ do
-  quoteT <- Esq.findById' quoteId
+  quoteT <- Esq.findById' $ toKey quoteId
   join <$> mapM buildFullQuote quoteT
