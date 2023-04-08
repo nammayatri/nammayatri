@@ -87,24 +87,6 @@ fullQuoteTable =
                    quote ^. QuoteSpecialZoneQuoteId ==. mbspecialZoneQuote ?. SpecialZoneQuoteTId
                )
 
-findById :: Transactionable m => Id Quote -> m (Maybe Quote)
-findById quoteId = Esq.buildDType $ do
-  mbFullQuoteT <- Esq.findOne' $ do
-    (quote :& mbTripTerms :& mbRentalSlab :& mbDriverOffer :& mbspecialZoneQuote) <- from fullQuoteTable
-    where_ $ quote ^. QuoteTId ==. val (toKey quoteId)
-    pure (quote, mbTripTerms, mbRentalSlab, mbDriverOffer, mbspecialZoneQuote)
-  join <$> mapM buildFullQuote mbFullQuoteT
-
-findByBppIdAndBPPQuoteId :: Transactionable m => Text -> Id BPPQuote -> m (Maybe Quote)
-findByBppIdAndBPPQuoteId bppId bppQuoteId = buildDType $ do
-  mbFullQuoteT <- Esq.findOne' $ do
-    (quote :& mbTripTerms :& mbRentalSlab :& mbDriverOffer :& mbspecialZoneQuote) <- from fullQuoteTable
-    where_ $
-      quote ^. QuoteProviderId ==. val bppId
-        &&. mbDriverOffer ?. DriverOfferBppQuoteId ==. just (val bppQuoteId.getId)
-    pure (quote, mbTripTerms, mbRentalSlab, mbDriverOffer, mbspecialZoneQuote)
-  join <$> mapM buildFullQuote mbFullQuoteT
-
 findAllByRequestId :: Transactionable m => Id SearchRequest -> m [Quote]
 findAllByRequestId searchRequestId = Esq.buildDType $ do
   fullQuoteTs <- Esq.findAll' $ do
@@ -150,3 +132,39 @@ buildFullQuote' driverOfferT = runMaybeT $ do
   mbTripTermsT <- forM (fromKey <$> tripTermsId quoteT) $ \tripTermsId -> do
     MaybeT $ Esq.findById' @TripTermsT tripTermsId
   return $ extractSolidType @Quote (quoteT, mbTripTermsT, quoteDetailsT)
+
+-- queries fetching only one entity should avoid join for performance reason
+
+findById :: Transactionable m => Id Quote -> m (Maybe Quote)
+findById quoteId = Esq.buildDType . runMaybeT $ do
+  quote <- findByIdT @QuoteT (toKey quoteId)
+  quoteDetails <- case fareProductType quote of
+    ONE_WAY -> pure OneWayDetailsT
+    RENTAL -> do
+      rentalSlabTId <- hoistMaybe (quote & rentalSlabId)
+      rentalSlab <- Esq.findByIdT @RentalSlabT rentalSlabTId
+      pure $ RentalDetailsT rentalSlab
+    DRIVER_OFFER -> do
+      driverOfferTId <- hoistMaybe (quote & driverOfferId)
+      driverOffer <- Esq.findByIdT @DriverOfferT driverOfferTId
+      pure (DriverOfferDetailsT driverOffer)
+    ONE_WAY_SPECIAL_ZONE -> do
+      specialZoneQuoteTId <- hoistMaybe (quote & specialZoneQuoteId)
+      specialZoneQuoteT <- Esq.findByIdT @SpecialZoneQuoteT specialZoneQuoteTId
+      pure (OneWaySpecialZoneDetailsT specialZoneQuoteT)
+  mbTripTerms <- forM (quote & tripTermsId) $ Esq.findByIdT @TripTermsT
+  return $ extractSolidType @Quote (quote, mbTripTerms, quoteDetails)
+
+findByBppIdAndBPPQuoteId :: Transactionable m => Text -> Id BPPQuote -> m (Maybe (Id Quote))
+findByBppIdAndBPPQuoteId bppId bppQuoteId = Esq.findOne $ do
+  quote :& driverOffer <-
+    from $
+      table @QuoteT
+        `innerJoin` table @DriverOfferT
+          `Esq.on` ( \(quote :& driverOffer) ->
+                       quote ^. QuoteDriverOfferId ==. just (driverOffer ^. DriverOfferTId)
+                   )
+  where_ $
+    quote ^. QuoteProviderId ==. val bppId
+      &&. driverOffer ^. DriverOfferBppQuoteId ==. (val bppQuoteId.getId)
+  pure $ quote ^. QuoteTId
