@@ -129,6 +129,7 @@ createSupportRegToken entityId = do
         info = Nothing
       }
 
+-- do we still need customer support since we have dahsboard?
 listOrder :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Id SP.Person -> Maybe Text -> Maybe Text -> Maybe Integer -> Maybe Integer -> m [OrderResp]
 listOrder personId mRequestId mMobile mlimit moffset = do
   supportP <- runInReplica $ Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
