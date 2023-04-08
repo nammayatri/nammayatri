@@ -16,7 +16,9 @@
 module Domain.Action.UI.Ride.EndRide
   ( ServiceHandle (..),
     DriverEndRideReq (..),
+    CallBasedEndRideReq (..),
     DashboardEndRideReq (..),
+    callBasedEndRide,
     buildEndRideHandle,
     driverEndRide,
     dashboardEndRide,
@@ -56,7 +58,7 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 
-data EndRideReq = DriverReq DriverEndRideReq | DashboardReq DashboardEndRideReq
+data EndRideReq = DriverReq DriverEndRideReq | DashboardReq DashboardEndRideReq | CallBasedReq CallBasedEndRideReq
 
 data DriverEndRideReq = DriverEndRideReq
   { point :: LatLong,
@@ -66,6 +68,10 @@ data DriverEndRideReq = DriverEndRideReq
 data DashboardEndRideReq = DashboardEndRideReq
   { point :: Maybe LatLong,
     merchantId :: Id DM.Merchant
+  }
+
+newtype CallBasedEndRideReq = CallBasedEndRideReq
+  { requestor :: DP.Person
   }
 
 data ServiceHandle m = ServiceHandle
@@ -134,6 +140,14 @@ driverEndRide handle rideId req =
     . endRide handle rideId
     $ DriverReq req
 
+callBasedEndRide ::
+  (MonadThrow m, Log m, MonadTime m, MonadGuid m) =>
+  ServiceHandle m ->
+  Id DRide.Ride ->
+  CallBasedEndRideReq ->
+  m APISuccess.APISuccess
+callBasedEndRide handle rideId = endRide handle rideId . CallBasedReq
+
 dashboardEndRide ::
   (MonadThrow m, Log m, MonadTime m, MonadGuid m) =>
   ServiceHandle m ->
@@ -163,6 +177,11 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
         _ -> throwError AccessDenied
     DashboardReq dashboardReq -> do
       unless (booking.providerId == dashboardReq.merchantId) $ throwError (RideDoesNotExist rideOld.id.getId)
+    CallBasedReq callBasedEndRideReq -> do
+      let requestor = callBasedEndRideReq.requestor
+      case requestor.role of
+        DP.DRIVER -> unless (requestor.id == driverId) $ throwError NotAnExecutor
+        _ -> throwError AccessDenied
 
   unless (rideOld.status == DRide.INPROGRESS) $ throwError $ RideInvalidStatus "This ride cannot be ended"
 
@@ -177,6 +196,8 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
         Nothing -> do
           driverLocation <- findDriverLoc driverId >>= fromMaybeM LocationNotFound
           pure $ getCoordinates driverLocation
+    CallBasedReq _ -> do
+      pure $ getCoordinates booking.toLocation
 
   whenWithLocationUpdatesLock driverId $ do
     -- here we update the current ride, so below we fetch the updated version

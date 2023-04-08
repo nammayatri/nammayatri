@@ -22,6 +22,7 @@ import qualified API.Dashboard.Issue as Issue
 import qualified API.Dashboard.Merchant as Merchant
 import qualified API.Dashboard.Message as Message
 import qualified API.Dashboard.Ride as Ride
+import qualified API.Dashboard.Volunteer as Volunteer
 import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Types.Id
@@ -43,6 +44,7 @@ type API' =
            :<|> Merchant.API
            :<|> Message.API
            :<|> DriverReferral.API
+           :<|> Volunteer.API
            :<|> Issue.API
        )
 
@@ -55,6 +57,7 @@ handler =
         :<|> Merchant.handler merchantId
         :<|> Message.handler merchantId
         :<|> DriverReferral.handler merchantId
+        :<|> Volunteer.handler merchantId
         :<|> Issue.handler merchantId
   )
     :<|> exotelHandler

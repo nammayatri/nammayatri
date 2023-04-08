@@ -76,8 +76,9 @@ listDrivers ::
   Maybe Bool ->
   Maybe Bool ->
   Maybe Text ->
+  Maybe Text ->
   Flow Common.DriverListRes
-listDrivers merchantShortId mbLimit mbOffset mbVerified mbEnabled mbBlocked mbSearchPhone = do
+listDrivers merchantShortId mbLimit mbOffset mbVerified mbEnabled mbBlocked mbSearchPhone mbVehicleNumberSearchString = do
   merchant <- findMerchantByShortId merchantShortId
   -- all drivers are considered as verified, because driverInfo.verified is not implemented for this bpp
   mbSearchPhoneDBHash <- getDbHash `traverse` mbSearchPhone
@@ -86,7 +87,7 @@ listDrivers merchantShortId mbLimit mbOffset mbVerified mbEnabled mbBlocked mbSe
       then do
         let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit
             offset = fromMaybe 0 mbOffset
-        Esq.runInReplica $ QPerson.findAllDriversWithInfoAndVehicle merchant.id limit offset mbEnabled mbBlocked mbSearchPhoneDBHash
+        Esq.runInReplica $ QPerson.findAllDriversWithInfoAndVehicle merchant.id limit offset mbEnabled mbBlocked mbSearchPhoneDBHash mbVehicleNumberSearchString
       else pure []
   items <- mapM buildDriverListItem driversWithInfo
   let count = length items

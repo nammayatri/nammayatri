@@ -196,19 +196,17 @@ otpRideCreate ::
     HasPrettyLogger m r
   ) =>
   DP.Person ->
-  OTPRideReq ->
+  Text ->
+  DRB.Booking ->
   m DriverRideRes
-otpRideCreate driver req = do
-  now <- getCurrentTime
-  booking <- runInReplica $ QBooking.findBookingBySpecialZoneOTP driver.merchantId req.specialZoneOtpCode now >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp req.specialZoneOtpCode)
+otpRideCreate driver otpCode booking = do
   transporter <-
     QM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
 
   driverInfo <- QDriverInformation.findById (cast driver.id) >>= fromMaybeM DriverInfoNotFound
   when driverInfo.onRide $ throwError DriverOnRide
-  let otpCode = req.specialZoneOtpCode
-  ride <- buildRide booking otpCode driver.id
+  ride <- buildRide otpCode driver.id
   rideDetails <- buildRideDetails ride
   Esq.runTransaction $ do
     QBooking.updateStatus booking.id DRB.TRIP_ASSIGNED
@@ -227,14 +225,14 @@ otpRideCreate driver req = do
   where
     notificationType = FCM.DRIVER_ASSIGNMENT
     notificationTitle = "Driver has been assigned the ride!"
-    message booking =
+    message uBooking =
       cs $
         unwords
           [ "You have been assigned a ride for",
-            cs (showTimeIst booking.startTime) <> ".",
+            cs (showTimeIst uBooking.startTime) <> ".",
             "Check the app for more details."
           ]
-    buildRide booking otp driverId = do
+    buildRide otp driverId = do
       guid <- Id <$> generateGUID
       shortId <- generateShortId
       now <- getCurrentTime

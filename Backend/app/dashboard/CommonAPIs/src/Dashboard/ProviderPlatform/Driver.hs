@@ -65,6 +65,7 @@ type DriverListAPI =
     :> QueryParam "enabled" Bool
     :> QueryParam "blocked" Bool
     :> QueryParam "phone" Text
+    :> QueryParam "vehicleNumberSearchString" Text
     :> Get '[JSON] DriverListRes
 
 data DriverListRes = DriverListRes

@@ -40,6 +40,7 @@ library
       API.Dashboard.Merchant
       API.Dashboard.Message
       API.Dashboard.Ride
+      API.Dashboard.Volunteer
       API.Internal
       API.Internal.DriverReferee
       API.UI
@@ -48,6 +49,7 @@ library
       API.UI.Driver
       API.UI.DriverOnboarding
       API.UI.DriverReferral
+      API.UI.ExotelEndRide
       API.UI.FarePolicy
       API.UI.Frontend
       API.UI.Issue
@@ -94,6 +96,7 @@ library
       Domain.Action.Dashboard.Merchant
       Domain.Action.Dashboard.Message
       Domain.Action.Dashboard.Ride
+      Domain.Action.Dashboard.Volunteer
       Domain.Action.Internal.DriverReferee
       Domain.Action.UI.Call
       Domain.Action.UI.CancellationReason
@@ -105,6 +108,7 @@ library
       Domain.Action.UI.DriverOnboarding.Status
       Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
       Domain.Action.UI.DriverReferral
+      Domain.Action.UI.ExotelEndRide
       Domain.Action.UI.FarePolicy
       Domain.Action.UI.Frontend
       Domain.Action.UI.Issue
