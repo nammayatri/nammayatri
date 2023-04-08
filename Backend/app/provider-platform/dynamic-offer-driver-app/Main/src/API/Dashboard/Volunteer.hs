@@ -14,7 +14,6 @@
 
 module API.Dashboard.Volunteer where
 
-import API.Dashboard.Driver (listDrivers)
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Volunteer as Common
 import qualified Domain.Action.Dashboard.Volunteer as DVolunteer
 import qualified Domain.Types.Merchant as DM
@@ -27,15 +26,13 @@ import Servant hiding (throwError)
 
 type API =
   "volunteer"
-    :> ( Common.DriverListAPI
-           :<|> Common.BookingInfoAPI
+    :> ( Common.BookingInfoAPI
            :<|> Common.AssignCreateAndStartOtpRideAPI
        )
 
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
-  listDrivers merchantId
-    :<|> bookingInfo merchantId
+  bookingInfo merchantId
     :<|> assignCreateAndStartOtpRide merchantId
 
 bookingInfo :: ShortId DM.Merchant -> Text -> FlowHandler Common.BookingInfoResponse

@@ -11,10 +11,89 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Dashboard.ProviderPlatform.Volunteer
-  ( module Reexport,
+  ( module Dashboard.ProviderPlatform.Volunteer,
+    module Reexport,
   )
 where
 
-import Dashboard.Common.Volunteer as Reexport
+import Dashboard.Common as Reexport
+import Data.Aeson
+import Data.OpenApi hiding (description, name, password, summary, title, url)
+import Data.Text as T
+import Kernel.External.Maps.Types
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto (derivePersistField)
+import Kernel.Types.APISuccess (APISuccess)
+import Kernel.Types.Common
+import Kernel.Types.Id
+import Servant hiding (Summary)
+
+data VolunteerEndpoint
+  = AssignCreateAndStartOtpRideEndpoint
+  deriving (Show, Read)
+
+derivePersistField "VolunteerEndpoint"
+
+-- Booking Info
+--
+type BookingInfoAPI =
+  Capture "bookingOtp" Text
+    :> "booking"
+    :> Get '[JSON] BookingInfoResponse
+
+data BookingInfoResponse = BookingInfoResponse
+  { bookingId :: Id Booking,
+    fromLocation :: BookingLocation,
+    toLocation :: BookingLocation,
+    estimatedDistance :: Meters,
+    estimatedFare :: Money,
+    estimatedDuration :: Seconds,
+    riderName :: Maybe Text
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data BookingLocation = BookingLocation
+  { id :: Id BookingLocation,
+    lat :: Double,
+    lon :: Double,
+    address :: LocationAddress,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data LocationAddress = LocationAddress
+  { street :: Maybe Text,
+    city :: Maybe Text,
+    state :: Maybe Text,
+    country :: Maybe Text,
+    building :: Maybe Text,
+    areaCode :: Maybe Text,
+    area :: Maybe Text
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+-- AssignCreateAndStartOtpRideAPI
+type AssignCreateAndStartOtpRideAPI =
+  "assign"
+    :> "start"
+    :> ReqBody '[JSON] AssignCreateAndStartOtpRideAPIReq
+    :> Post '[JSON] APISuccess
+
+data AssignCreateAndStartOtpRideAPIReq = AssignCreateAndStartOtpRideAPIReq
+  { bookingId :: Id Booking,
+    driverId :: Id Driver,
+    point :: LatLong
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets AssignCreateAndStartOtpRideAPIReq where
+  hideSecrets = identity

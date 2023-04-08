@@ -125,8 +125,7 @@ data MessageAPIs = MessageAPIs
   }
 
 data VolunteerAPIs = VolunteerAPIs
-  { listDrivers' :: Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Text -> Euler.EulerClient Driver.DriverListRes,
-    bookingInfo :: Text -> Euler.EulerClient Volunteer.BookingInfoResponse,
+  { bookingInfo :: Text -> Euler.EulerClient Volunteer.BookingInfoResponse,
     assignCreateAndStartOtpRide :: Volunteer.AssignCreateAndStartOtpRideAPIReq -> Euler.EulerClient APISuccess
   }
 
@@ -218,8 +217,7 @@ mkDriverOfferAPIs merchantId token = do
       :<|> messageDeliveryInfo
       :<|> messageReceiverList = messageClient
 
-    listDrivers'
-      :<|> bookingInfo
+    bookingInfo
       :<|> assignCreateAndStartOtpRide = volunteerClient
 
     issueCategoryList

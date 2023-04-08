@@ -25,6 +25,7 @@ import qualified API.ProviderPlatform.DynamicOfferDriver.Issue as Issue
 import qualified API.ProviderPlatform.DynamicOfferDriver.Merchant as Merchant
 import qualified API.ProviderPlatform.DynamicOfferDriver.Message as Message
 import qualified API.ProviderPlatform.DynamicOfferDriver.Ride as Ride
+import qualified API.ProviderPlatform.DynamicOfferDriver.Volunteer as Volunteer
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import "lib-dashboard" Environment
 import Kernel.Types.Id
@@ -40,6 +41,7 @@ type API =
            :<|> Message.API
            :<|> DriverReferral.API
            :<|> Issue.API
+           :<|> Volunteer.API
        )
 
 handler :: FlowServer API
@@ -51,3 +53,4 @@ handler merchantId =
     :<|> Message.handler merchantId
     :<|> DriverReferral.handler merchantId
     :<|> Issue.handler merchantId
+    :<|> Volunteer.handler merchantId
