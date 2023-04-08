@@ -18,17 +18,14 @@ module API.ProviderPlatform.DynamicOfferDriver.Volunteer
   )
 where
 
-import qualified API.ProviderPlatform.DynamicOfferDriver.Driver as Driver (listDriver)
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Volunteer as Common
-import qualified Data.Text as DT
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
-import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (MonadFlow, throwError, withFlowHandlerAPI)
+import Kernel.Utils.Common (MonadFlow, withFlowHandlerAPI)
 import qualified ProviderPlatformClient.DynamicOfferDriver as Client
 import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
@@ -37,14 +34,9 @@ import "lib-dashboard" Tools.Auth.Merchant
 
 type API =
   "volunteer"
-    :> ( DriverListAPI
-           :<|> BookingInfoAPI
+    :> ( BookingInfoAPI
            :<|> AssignCreateAndStartOtpRideAPI
        )
-
-type DriverListAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'READ_ACCESS 'VOLUNTEER
-    :> Common.DriverListAPI
 
 type BookingInfoAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'READ_ACCESS 'VOLUNTEER
@@ -56,8 +48,7 @@ type AssignCreateAndStartOtpRideAPI =
 
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
-  Driver.listDriver merchantId
-    :<|> bookingInfo merchantId
+  bookingInfo merchantId
     :<|> assignCreateAndStartOtpRide merchantId
 
 buildTransaction ::
@@ -74,9 +65,11 @@ buildTransaction endpoint apiTokenInfo =
 bookingInfo :: ShortId DM.Merchant -> ApiTokenInfo -> Text -> FlowHandler Common.BookingInfoResponse
 bookingInfo merchantShortId apiTokenInfo otpCode = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-  Client.callDriverOfferBPP checkedMerchantId (.message.bookingInfo) otpCode
+  Client.callDriverOfferBPP checkedMerchantId (.volunteer.bookingInfo) otpCode
 
 assignCreateAndStartOtpRide :: ShortId DM.Merchant -> ApiTokenInfo -> Common.AssignCreateAndStartOtpRideAPIReq -> FlowHandler APISuccess
 assignCreateAndStartOtpRide merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-  Client.callDriverOfferBPP checkedMerchantId (.message.assignCreateAndStartOtpRide) req
+  transaction <- buildTransaction Common.AssignCreateAndStartOtpRideEndpoint apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $
+    Client.callDriverOfferBPP checkedMerchantId (.volunteer.assignCreateAndStartOtpRide) req

@@ -28,7 +28,6 @@ library
       Dashboard.Common.Issue
       Dashboard.Common.Merchant
       Dashboard.Common.Message
-      Dashboard.Common.Volunteer
       Dashboard.ProviderPlatform.Driver
       Dashboard.ProviderPlatform.Driver.Registration
       Dashboard.ProviderPlatform.DriverReferral

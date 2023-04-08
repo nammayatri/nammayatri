@@ -23,6 +23,7 @@ import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Com
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Registration as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.DriverReferral as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Ride as Common
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Volunteer as Common
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Customer as Common
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
@@ -56,4 +57,5 @@ data Endpoint
   | MessageAPI Common.MessageEndpoint
   | ExotelAPI Common.ExotelEndpoint
   | IssueAPI Common.IssueEndpoint
+  | VolunteerAPI Common.VolunteerEndpoint
   deriving (Show, Read)

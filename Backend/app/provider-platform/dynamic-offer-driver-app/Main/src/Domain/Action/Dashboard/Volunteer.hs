@@ -14,7 +14,6 @@
 
 module Domain.Action.Dashboard.Volunteer where
 
-import Dashboard.Common.Volunteer
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Volunteer as Common
 import qualified Domain.Action.UI.Ride as DRide
 import qualified Domain.Action.UI.Ride.StartRide as RideStart

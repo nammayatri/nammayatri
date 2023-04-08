@@ -33,6 +33,7 @@ library
       API.ProviderPlatform.DynamicOfferDriver.Merchant
       API.ProviderPlatform.DynamicOfferDriver.Message
       API.ProviderPlatform.DynamicOfferDriver.Ride
+      API.ProviderPlatform.DynamicOfferDriver.Volunteer
       API.ProviderPlatform.StaticOfferDriver
       API.ProviderPlatform.StaticOfferDriver.Booking
       API.ProviderPlatform.StaticOfferDriver.Driver
