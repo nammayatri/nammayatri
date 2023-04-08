@@ -377,7 +377,7 @@ getDriverAverageSpeed ::
   ) =>
   Id DM.Merchant ->
   Id DP.Person ->
-  m (Double)
+  m Double
 getDriverAverageSpeed merchantId driverId = Redis.withCrossAppRedis $ do
   intelligentPoolConfig <- DIP.findByMerchantId merchantId
   let minLocationUpdates = maybe 3 (.minLocationUpdates) intelligentPoolConfig

@@ -89,8 +89,9 @@ findAllDriversWithInfoAndVehicle ::
   Maybe Bool ->
   Maybe Bool ->
   Maybe DbHash ->
+  Maybe Text ->
   m [(Person, DriverInformation, Maybe Vehicle)]
-findAllDriversWithInfoAndVehicle merchantId limitVal offsetVal mbEnabled mbBlocked mbSearchPhoneDBHash = do
+findAllDriversWithInfoAndVehicle merchantId limitVal offsetVal mbEnabled mbBlocked mbSearchPhoneDBHash mbVehicleNumberSearchString = do
   Esq.findAll $ do
     person :& info :& mbVeh <-
       from $
@@ -107,6 +108,7 @@ findAllDriversWithInfoAndVehicle merchantId limitVal offsetVal mbEnabled mbBlock
       person ^. PersonMerchantId ==. (val . toKey $ merchantId)
         &&. person ^. PersonRole ==. val Person.DRIVER
         &&. maybe (val True) (\enabled -> info ^. DriverInformationEnabled ==. val enabled) mbEnabled
+        &&. maybe (val True) (\vehicleNumber -> mbVeh ?. VehicleRegistrationNo `Esq.like` just (val vehicleNumber)) mbVehicleNumberSearchString
         &&. maybe (val True) (\blocked -> info ^. DriverInformationBlocked ==. val blocked) mbBlocked
         &&. maybe (val True) (\searchStrDBHash -> person ^. PersonMobileNumberHash ==. val (Just searchStrDBHash)) mbSearchPhoneDBHash
     orderBy [asc (person ^. PersonFirstName)]

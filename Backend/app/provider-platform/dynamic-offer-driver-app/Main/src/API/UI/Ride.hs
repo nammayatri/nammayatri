@@ -35,12 +35,15 @@ import qualified Domain.Types.Ride as Ride
 import Environment
 import Kernel.External.Maps.Types
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import SharedLogic.Person (findPerson)
+import qualified Storage.Queries.Booking as QBooking
 import Tools.Auth
+import Tools.Error
 
 type API =
   "driver"
@@ -119,9 +122,11 @@ startRide requestorId rideId StartRideReq {rideOtp, point} = withFlowHandlerAPI 
 otpRideCreateAndStart :: Id SP.Person -> DRide.OTPRideReq -> FlowHandler DRide.DriverRideRes
 otpRideCreateAndStart requestorId req@DRide.OTPRideReq {..} = withFlowHandlerAPI $ do
   requestor <- findPerson requestorId
-  ride <- DRide.otpRideCreate requestor req
+  now <- getCurrentTime
   let rideOtp = req.specialZoneOtpCode
-      driverReq = RideStart.DriverStartRideReq {rideOtp, point, requestor}
+  booking <- runInReplica $ QBooking.findBookingBySpecialZoneOTP requestor.merchantId rideOtp now >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp rideOtp)
+  ride <- DRide.otpRideCreate requestor rideOtp booking
+  let driverReq = RideStart.DriverStartRideReq {rideOtp, point, requestor}
   shandle <- RideStart.buildStartRideHandle requestor.merchantId
   void $ RideStart.driverStartRide shandle ride.id driverReq
   return ride

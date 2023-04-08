@@ -131,10 +131,10 @@ buildTransaction ::
 buildTransaction endpoint apiTokenInfo driverId =
   T.buildTransaction (DT.DriverAPI endpoint) (Just BECKN_TRANSPORT) (Just apiTokenInfo) (Just driverId) Nothing
 
-listDriver :: ShortId DM.Merchant -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> FlowHandler Common.DriverListRes
-listDriver merchantShortId apiTokenInfo mbLimit mbOffset verified enabled blocked phone = withFlowHandlerAPI $ do
+listDriver :: ShortId DM.Merchant -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Text -> FlowHandler Common.DriverListRes
+listDriver merchantShortId apiTokenInfo mbLimit mbOffset verified enabled blocked phone mbVehicleNumberSearchString = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-  Client.callBecknTransportBPP checkedMerchantId (.drivers.listDrivers) mbLimit mbOffset verified enabled blocked phone
+  Client.callBecknTransportBPP checkedMerchantId (.drivers.listDrivers) mbLimit mbOffset verified enabled blocked phone mbVehicleNumberSearchString
 
 driverActivity :: ShortId DM.Merchant -> ApiTokenInfo -> FlowHandler Common.DriverActivityRes
 driverActivity merchantShortId apiTokenInfo = withFlowHandlerAPI $ do

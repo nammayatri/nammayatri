@@ -69,9 +69,9 @@ handler merchantId =
 driverDocumentsInfo :: ShortId DM.Merchant -> FlowHandler Common.DriverDocumentsInfoRes
 driverDocumentsInfo = withFlowHandlerAPI . DDriver.driverDocumentsInfo
 
-listDrivers :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> FlowHandler Common.DriverListRes
-listDrivers merchantShortId mbLimit mbOffset verified enabled blocked =
-  withFlowHandlerAPI . DDriver.listDrivers merchantShortId mbLimit mbOffset verified enabled blocked
+listDrivers :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Text -> FlowHandler Common.DriverListRes
+listDrivers merchantShortId mbLimit mbOffset verified enabled blocked vechicleNumberSearchString =
+  withFlowHandlerAPI . DDriver.listDrivers merchantShortId mbLimit mbOffset verified enabled blocked vechicleNumberSearchString
 
 driverActivity :: ShortId DM.Merchant -> FlowHandler Common.DriverActivityRes
 driverActivity = withFlowHandlerAPI . DDriver.driverActivity

@@ -30,6 +30,7 @@ import qualified Dashboard.ProviderPlatform.Issue as Issue
 import qualified Dashboard.ProviderPlatform.Merchant as Merchant
 import qualified Dashboard.ProviderPlatform.Message as Message
 import qualified Dashboard.ProviderPlatform.Ride as Ride
+import qualified Dashboard.ProviderPlatform.Volunteer as Volunteer
 import qualified Data.ByteString.Lazy as LBS
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import Domain.Types.ServerName
@@ -49,13 +50,14 @@ data DriverOfferAPIs = DriverOfferAPIs
     bookings :: BookingsAPIs,
     merchant :: MerchantAPIs,
     message :: MessageAPIs,
+    volunteer :: VolunteerAPIs,
     driverReferral :: DriverReferralAPIs,
     issue :: IssueAPIs
   }
 
 data DriversAPIs = DriversAPIs
   { driverDocumentsInfo :: Euler.EulerClient Driver.DriverDocumentsInfoRes,
-    listDrivers :: Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Euler.EulerClient Driver.DriverListRes,
+    listDrivers :: Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Text -> Euler.EulerClient Driver.DriverListRes,
     driverActivity :: Euler.EulerClient Driver.DriverActivityRes,
     enableDriver :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     disableDriver :: Id Driver.Driver -> Euler.EulerClient APISuccess,
@@ -122,6 +124,12 @@ data MessageAPIs = MessageAPIs
     messageReceiverList :: Id Message.Message -> Maybe Text -> Maybe Message.MessageDeliveryStatus -> Maybe Int -> Maybe Int -> Euler.EulerClient Message.MessageReceiverListResponse
   }
 
+data VolunteerAPIs = VolunteerAPIs
+  { listDrivers' :: Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Text -> Euler.EulerClient Driver.DriverListRes,
+    bookingInfo :: Text -> Euler.EulerClient Volunteer.BookingInfoResponse,
+    assignCreateAndStartOtpRide :: Volunteer.AssignCreateAndStartOtpRideAPIReq -> Euler.EulerClient APISuccess
+  }
+
 data IssueAPIs = IssueAPIs
   { issueCategoryList :: Euler.EulerClient Issue.IssueCategoryListRes,
     issueList :: Maybe Int -> Maybe Int -> Maybe Issue.IssueStatus -> Maybe (Id Issue.IssueCategory) -> Maybe Text -> Euler.EulerClient Issue.IssueReportListResponse,
@@ -138,6 +146,7 @@ mkDriverOfferAPIs merchantId token = do
   let bookings = BookingsAPIs {..}
   let merchant = MerchantAPIs {..}
   let message = MessageAPIs {..}
+  let volunteer = VolunteerAPIs {..}
   let issue = IssueAPIs {..}
   DriverOfferAPIs {..}
   where
@@ -147,6 +156,7 @@ mkDriverOfferAPIs merchantId token = do
       :<|> merchantClient
       :<|> messageClient
       :<|> driverReferralClient
+      :<|> volunteerClient
       :<|> issueClient = clientWithMerchant (Proxy :: Proxy BPP.API') merchantId token
 
     driverDocumentsInfo
@@ -207,6 +217,10 @@ mkDriverOfferAPIs merchantId token = do
       :<|> messageInfo
       :<|> messageDeliveryInfo
       :<|> messageReceiverList = messageClient
+
+    listDrivers'
+      :<|> bookingInfo
+      :<|> assignCreateAndStartOtpRide = volunteerClient
 
     issueCategoryList
       :<|> issueList
