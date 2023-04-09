@@ -6,11 +6,16 @@ pipeline {
                 cachixUse 'nammayatri'
             }
         }
-        stage ('Nix Build') {
+        stage ('Nix Build All') {
             steps {
-                sh 'nix build -L .#nammayatri'
-                sh 'nix build -L .#arion'
-                sh 'nix build -L .#run-mobility-stack'
+                // TODO: Upstream to jenkins-nix-ci
+                sh '''
+                  set -x
+                  for DRV in $(nix run --refresh github:srid/flake-outputs)
+                  do
+                    nix build .#"$DRV"
+                  done
+                '''
             }
         }
         stage ('Cabal build') {
