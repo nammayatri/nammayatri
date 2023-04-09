@@ -20,7 +20,7 @@ pipeline {
         }
         stage ('Flake check') {
             steps {
-                sh 'nix build --no-link --no-update-lock-file -L .#check'
+                sh 'nix flake check --allow-import-from-derivation --override-input systems github:nix-systems/x86_64-linux'
             }
         }
         stage ('Docker image') {

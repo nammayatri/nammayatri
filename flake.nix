@@ -1,6 +1,7 @@
 {
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
+    systems.url = "github:nix-systems/default";
     common.url = "github:nammayatri/common";
     flake-parts.follows = "common/flake-parts";
     haskell-flake.url = "github:sbh69840/haskell-flake/poc-localapps";
@@ -18,7 +19,7 @@
   };
   outputs = inputs@{ nixpkgs, flake-parts, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
-      systems = nixpkgs.lib.systems.flakeExposed;
+      systems = import inputs.systems;
       imports = [
         inputs.common.flakeModules.default
         inputs.pre-commit-hooks-nix.flakeModule

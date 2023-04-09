@@ -173,21 +173,6 @@
         "type": "github"
       }
     },
-    "check-flake_3": {
-      "locked": {
-        "lastModified": 1662502605,
-        "narHash": "sha256-jAT55UhabAxLAVGanxjnNdzH2/oX2ZjLsL4i2jPIP+g=",
-        "owner": "srid",
-        "repo": "check-flake",
-        "rev": "48a17393ed4fcd523399d6602c283775b5127295",
-        "type": "github"
-      },
-      "original": {
-        "owner": "srid",
-        "repo": "check-flake",
-        "type": "github"
-      }
-    },
     "clickhouse-haskell": {
       "flake": false,
       "locked": {
@@ -233,7 +218,6 @@
       "inputs": {
         "arion": "arion",
         "cachix-push": "cachix-push_2",
-        "check-flake": "check-flake_2",
         "flake-parts": "flake-parts_3",
         "flake-root": "flake-root_2",
         "haskell-flake": [
@@ -247,11 +231,11 @@
         "treefmt-nix": "treefmt-nix_2"
       },
       "locked": {
-        "lastModified": 1680812220,
-        "narHash": "sha256-B2+uJvOwHcrKQK+fzVlSnkn4Kay4TkNZv7/SdDvfUAA=",
+        "lastModified": 1681052140,
+        "narHash": "sha256-Uk8hFqwsO6AdiBKAsYWZHRbyXu9rafekXHOBMUZGu/s=",
         "owner": "nammayatri",
         "repo": "common",
-        "rev": "60c72785847e346b8a6e3a83859dd4eb8a0699d1",
+        "rev": "a24ec6efddc24a13f075d7c45bea0a77039f9221",
         "type": "github"
       },
       "original": {
@@ -263,7 +247,7 @@
     "common_3": {
       "inputs": {
         "cachix-push": "cachix-push_3",
-        "check-flake": "check-flake_3",
+        "check-flake": "check-flake_2",
         "flake-parts": "flake-parts_4",
         "flake-root": "flake-root_3",
         "haskell-flake": "haskell-flake_4",
@@ -1116,7 +1100,8 @@
         "haskell-flake": "haskell-flake_3",
         "nixpkgs": "nixpkgs_5",
         "pre-commit-hooks-nix": "pre-commit-hooks-nix",
-        "shared-kernel": "shared-kernel"
+        "shared-kernel": "shared-kernel",
+        "systems": "systems"
       }
     },
     "sequelize": {
@@ -1162,6 +1147,21 @@
       "original": {
         "owner": "nammayatri",
         "repo": "shared-kernel",
+        "type": "github"
+      }
+    },
+    "systems": {
+      "locked": {
+        "lastModified": 1681028828,
+        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
+        "owner": "nix-systems",
+        "repo": "default",
+        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-systems",
+        "repo": "default",
         "type": "github"
       }
     },
