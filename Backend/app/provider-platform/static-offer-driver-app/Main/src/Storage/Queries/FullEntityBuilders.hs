@@ -48,7 +48,7 @@ buildFullQuote quoteT@QuoteT {..} = runMaybeT $ do
   quoteDetails <- case fareProductType of
     Domain.RENTAL -> do
       rentalQuoteT@RentalQuoteT {..} <- QRentalQuote.findByQuoteIdT (QuoteTKey id)
-      rentalFarePolicyT <- Esq.findByIdT rentalFarePolicyId
+      rentalFarePolicyT <- Esq.findByIdM rentalFarePolicyId
       return $ Quote.RentalDetailsT (rentalQuoteT, rentalFarePolicyT)
     Domain.ONE_WAY -> do
       oneWayQuoteT <- QOneWayQuote.findByQuoteIdT (QuoteTKey id)

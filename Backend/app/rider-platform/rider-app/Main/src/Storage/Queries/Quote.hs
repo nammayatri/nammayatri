@@ -137,22 +137,22 @@ buildFullQuote' driverOfferT = runMaybeT $ do
 
 findById :: Transactionable m => Id Quote -> m (Maybe Quote)
 findById quoteId = Esq.buildDType . runMaybeT $ do
-  quote <- findByIdT @QuoteT (toKey quoteId)
+  quote <- findByIdM @QuoteT (toKey quoteId)
   quoteDetails <- case fareProductType quote of
     ONE_WAY -> pure OneWayDetailsT
     RENTAL -> do
       rentalSlabTId <- hoistMaybe (quote & rentalSlabId)
-      rentalSlab <- Esq.findByIdT @RentalSlabT rentalSlabTId
+      rentalSlab <- Esq.findByIdM @RentalSlabT rentalSlabTId
       pure $ RentalDetailsT rentalSlab
     DRIVER_OFFER -> do
       driverOfferTId <- hoistMaybe (quote & driverOfferId)
-      driverOffer <- Esq.findByIdT @DriverOfferT driverOfferTId
+      driverOffer <- Esq.findByIdM @DriverOfferT driverOfferTId
       pure (DriverOfferDetailsT driverOffer)
     ONE_WAY_SPECIAL_ZONE -> do
       specialZoneQuoteTId <- hoistMaybe (quote & specialZoneQuoteId)
-      specialZoneQuoteT <- Esq.findByIdT @SpecialZoneQuoteT specialZoneQuoteTId
+      specialZoneQuoteT <- Esq.findByIdM @SpecialZoneQuoteT specialZoneQuoteTId
       pure (OneWaySpecialZoneDetailsT specialZoneQuoteT)
-  mbTripTerms <- forM (quote & tripTermsId) $ Esq.findByIdT @TripTermsT
+  mbTripTerms <- forM (quote & tripTermsId) $ Esq.findByIdM @TripTermsT
   return $ extractSolidType @Quote (quote, mbTripTerms, quoteDetails)
 
 findByBppIdAndBPPQuoteId :: Transactionable m => Text -> Id BPPQuote -> m (Maybe (Id Quote))

@@ -100,9 +100,3 @@ deleteByDriverId personId =
   Esq.delete $ do
     driverQuotes <- from $ table @DriverQuoteT
     where_ $ driverQuotes ^. DriverQuoteDriverId ==. val (toKey personId)
-
-findDriverQuoteBySearchId :: Transactionable m => Id DSReq.SearchRequest -> DTypeBuilder m (Maybe DriverQuoteT)
-findDriverQuoteBySearchId searchReqId = Esq.findOne' $ do
-  driverQuote <- from $ table @DriverQuoteT
-  where_ $ driverQuote ^. DriverQuoteSearchRequestId ==. val (toKey searchReqId)
-  pure driverQuote

@@ -23,7 +23,7 @@ import Storage.Tabular.Quote.RentalQuote
 -- internal queries for building domain types
 
 findByQuoteIdT :: Transactionable m => QuoteTId -> MaybeT (DTypeBuilder m) RentalQuoteT
-findByQuoteIdT quoteTId = MaybeT . Esq.findOne' $ do
+findByQuoteIdT quoteTId = Esq.findOneM $ do
   rentalQuote <- from $ table @RentalQuoteT
   where_ $ rentalQuote ^. RentalQuoteQuoteId ==. val quoteTId
   return rentalQuote

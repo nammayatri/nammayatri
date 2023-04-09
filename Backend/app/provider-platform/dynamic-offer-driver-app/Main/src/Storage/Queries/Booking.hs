@@ -23,7 +23,6 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq hiding (findById, isNothing)
 import Kernel.Types.Id
 import Kernel.Types.Time
-import qualified Storage.Queries.DriverQuote as QDQuote
 import Storage.Tabular.Booking
 import Storage.Tabular.Booking.BookingLocation
 import Storage.Tabular.DriverQuote as DriverQuote
@@ -52,39 +51,6 @@ baseBookingTable =
       `Esq.on` ( \(rb :& _ :& _ :& farePars) ->
                    rb ^. BookingFareParametersId ==. farePars ^. Fare.FareParametersTId
                )
-
-findById :: Transactionable m => Id Booking -> m (Maybe Booking)
-findById bookingId = buildDType $
-  fmap (fmap $ extractSolidType @Booking) $
-    Esq.findOne' $ do
-      (rb :& bFromLoc :& bToLoc :& farePars) <-
-        from baseBookingTable
-      where_ $ rb ^. BookingTId ==. val (toKey bookingId)
-      pure (rb, bFromLoc, bToLoc, farePars)
-
-findBySearchReq :: (Transactionable m) => Id DSR.SearchRequest -> m (Maybe Booking)
-findBySearchReq searchReqId = buildDType $ do
-  mbDriverQuoteT <- QDQuote.findDriverQuoteBySearchId searchReqId
-  let mbDriverQuoteId = Id . DriverQuote.id <$> mbDriverQuoteT
-  mbBookingT <- (join <$>) $ mapM (findBookingByDriverQuoteId . getId) mbDriverQuoteId
-
-  join <$> mapM buildFullBooking mbBookingT
-
-findBookingByDriverQuoteId :: Transactionable m => Text -> DTypeBuilder m (Maybe BookingT)
-findBookingByDriverQuoteId driverQuoteId = Esq.findOne' $ do
-  booking <- from $ table @BookingT
-  where_ $ booking ^. BookingQuoteId ==. val driverQuoteId
-  pure booking
-
-buildFullBooking ::
-  Transactionable m =>
-  BookingT ->
-  DTypeBuilder m (Maybe (SolidType FullBookingT))
-buildFullBooking bookingT@BookingT {..} = runMaybeT $ do
-  fromLocationT <- Esq.findByIdT @BookingLocationT fromLocationId
-  toLocationT <- Esq.findByIdT @BookingLocationT toLocationId
-  fareParamsT <- Esq.findByIdT @Fare.FareParametersT fareParametersId
-  return $ extractSolidType @Booking (bookingT, fromLocationT, toLocationT, fareParamsT)
 
 updateStatus :: Id Booking -> BookingStatus -> SqlDB ()
 updateStatus rbId rbStatus = do
@@ -142,26 +108,6 @@ findStuckBookings merchantId bookingIds now = do
         &&. (booking ^. BookingStatus ==. val NEW &&. upcoming6HrsCond)
     pure $ booking ^. BookingTId
 
-findBookingBySpecialZoneOTP :: Transactionable m => Id Merchant -> Text -> UTCTime -> m (Maybe Booking)
-findBookingBySpecialZoneOTP merchantId otpCode now = do
-  bookingId <- findBookingIdBySpecialZoneOTP merchantId otpCode now
-  maybe
-    (return Nothing)
-    findById
-    bookingId
-
-findBookingIdBySpecialZoneOTP :: Transactionable m => Id Merchant -> Text -> UTCTime -> m (Maybe (Id Booking))
-findBookingIdBySpecialZoneOTP merchantId otpCode now = do
-  Esq.findOne $ do
-    booking <- from $ table @BookingT
-    let otpExpiryCondition =
-          booking ^. BookingCreatedAt +. Esq.interval [Esq.MINUTE 30] >=. val now
-    where_ $
-      booking ^. BookingSpecialZoneOtpCode ==. val (Just otpCode)
-        &&. (booking ^. BookingStatus ==. val NEW &&. otpExpiryCondition)
-        &&. booking ^. BookingProviderId ==. val (toKey merchantId)
-    pure $ booking ^. BookingTId
-
 cancelBookings :: [Id Booking] -> UTCTime -> SqlDB ()
 cancelBookings bookingIds now = do
   Esq.update $ \tbl -> do
@@ -171,3 +117,47 @@ cancelBookings bookingIds now = do
         BookingUpdatedAt =. val now
       ]
     where_ $ tbl ^. BookingTId `in_` valList (toKey <$> bookingIds)
+
+-- queries fetching only one entity should avoid join for performance reason
+
+findById :: Transactionable m => Id Booking -> m (Maybe Booking)
+findById bookingId = Esq.buildDType . runMaybeT $ do
+  booking <- findByIdM @BookingT (toKey bookingId)
+  fetchFullBookingM booking
+
+findBookingBySpecialZoneOTP :: Transactionable m => Id Merchant -> Text -> UTCTime -> m (Maybe Booking)
+findBookingBySpecialZoneOTP merchantId otpCode now = Esq.buildDType . runMaybeT $ do
+  booking <- Esq.findOneM $ do
+    booking <- from $ table @BookingT
+    let otpExpiryCondition =
+          booking ^. BookingCreatedAt +. Esq.interval [Esq.MINUTE 30] >=. val now
+    where_ $
+      booking ^. BookingSpecialZoneOtpCode ==. val (Just otpCode)
+        &&. (booking ^. BookingStatus ==. val NEW &&. otpExpiryCondition)
+        &&. booking ^. BookingProviderId ==. val (toKey merchantId)
+    pure booking
+  fetchFullBookingM booking
+
+findBySearchReq :: (Transactionable m) => Id DSR.SearchRequest -> m (Maybe Booking)
+findBySearchReq searchReqId = Esq.buildDType . runMaybeT $ do
+  driverQuote <- Esq.findOneM $ do
+    driverQuote <- from $ table @DriverQuoteT
+    where_ $ driverQuote ^. DriverQuoteSearchRequestId ==. val (toKey searchReqId)
+    pure driverQuote
+  booking <- Esq.findOneM $ do
+    booking <- from $ table @BookingT
+    where_ $ booking ^. BookingQuoteId ==. val (driverQuote & DriverQuote.id)
+    pure booking
+  fetchFullBookingM booking
+
+-- internal queries for building domain types
+
+fetchFullBookingM ::
+  Transactionable m =>
+  BookingT ->
+  MaybeT (DTypeBuilder m) (SolidType FullBookingT)
+fetchFullBookingM booking@BookingT {..} = do
+  fromLocation <- Esq.findByIdM @BookingLocationT fromLocationId
+  toLocation <- Esq.findByIdM @BookingLocationT toLocationId
+  fareParams <- Esq.findByIdM @Fare.FareParametersT fareParametersId
+  return $ extractSolidType @Booking (booking, fromLocation, toLocation, fareParams)

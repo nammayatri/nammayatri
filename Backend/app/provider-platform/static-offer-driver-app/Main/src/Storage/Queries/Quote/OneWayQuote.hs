@@ -23,7 +23,7 @@ import Storage.Tabular.Quote.OneWayQuote
 -- internal queries for building domain types
 
 findByQuoteIdT :: Transactionable m => QuoteTId -> MaybeT (DTypeBuilder m) OneWayQuoteT
-findByQuoteIdT quoteTId = MaybeT . Esq.findOne' $ do
+findByQuoteIdT quoteTId = Esq.findOneM $ do
   oneWayQuote <- from $ table @OneWayQuoteT
   where_ $ oneWayQuote ^. OneWayQuoteQuoteId ==. val quoteTId
   return oneWayQuote

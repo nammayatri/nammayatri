@@ -217,84 +217,71 @@ cancelBookings bookingIds now = do
 
 findById :: Transactionable m => Id Booking -> m (Maybe Booking)
 findById bookingId = Esq.buildDType . runMaybeT $ do
-  booking <- findByIdT @BookingT (toKey bookingId)
-  (fromLocation, bookingDetails, mbTripTerms) <- findBookingEntitiesT booking
-  return $ extractSolidType @Booking (booking, fromLocation, mbTripTerms, bookingDetails)
+  booking <- findByIdM @BookingT (toKey bookingId)
+  fetchFullBookingM booking
 
 findByBPPBookingId :: Transactionable m => Id BPPBooking -> m (Maybe Booking)
 findByBPPBookingId bppRbId = Esq.buildDType . runMaybeT $ do
-  booking <- findByBPPBookingIdT
-  (fromLocation, bookingDetails, mbTripTerms) <- findBookingEntitiesT booking
-  return $ extractSolidType @Booking (booking, fromLocation, mbTripTerms, bookingDetails)
-  where
-    findByBPPBookingIdT = MaybeT . Esq.findOne' $ do
-      booking <- from $ table @BookingT
-      where_ $ booking ^. TB.BookingBppBookingId ==. val (Just $ getId bppRbId)
-      pure booking
+  booking <- Esq.findOneM $ do
+    booking <- from $ table @BookingT
+    where_ $ booking ^. TB.BookingBppBookingId ==. val (Just $ getId bppRbId)
+    pure booking
+  fetchFullBookingM booking
 
 findByIdAndMerchantId :: Transactionable m => Id Booking -> Id Merchant -> m (Maybe Booking)
 findByIdAndMerchantId bookingId merchantId = Esq.buildDType . runMaybeT $ do
-  booking <- findByIdAndMerchantIdT
-  (fromLocation, bookingDetails, mbTripTerms) <- findBookingEntitiesT booking
-  return $ extractSolidType @Booking (booking, fromLocation, mbTripTerms, bookingDetails)
-  where
-    findByIdAndMerchantIdT = MaybeT . Esq.findOne' $ do
-      booking <- from $ table @BookingT
-      where_ $
-        booking ^. TB.BookingId ==. val bookingId.getId
-          &&. booking ^. TB.BookingMerchantId ==. val (toKey merchantId)
-      pure booking
+  booking <- Esq.findOneM $ do
+    booking <- from $ table @BookingT
+    where_ $
+      booking ^. TB.BookingId ==. val bookingId.getId
+        &&. booking ^. TB.BookingMerchantId ==. val (toKey merchantId)
+    pure booking
+  fetchFullBookingM booking
 
 findAssignedByRiderId :: Transactionable m => Id Person -> m (Maybe Booking)
 findAssignedByRiderId personId = Esq.buildDType . runMaybeT $ do
-  booking <- findAssignedByRiderIdT
-  (fromLocation, bookingDetails, mbTripTerms) <- findBookingEntitiesT booking
-  return $ extractSolidType @Booking (booking, fromLocation, mbTripTerms, bookingDetails)
-  where
-    findAssignedByRiderIdT = MaybeT . Esq.findOne' $ do
-      booking <- from $ table @BookingT
-      where_ $
-        booking ^. TB.BookingRiderId ==. val (toKey personId)
-          &&. booking ^. TB.BookingStatus ==. val TRIP_ASSIGNED
-      pure booking
+  booking <- Esq.findOneM $ do
+    booking <- from $ table @BookingT
+    where_ $
+      booking ^. TB.BookingRiderId ==. val (toKey personId)
+        &&. booking ^. TB.BookingStatus ==. val TRIP_ASSIGNED
+    pure booking
+  fetchFullBookingM booking
 
 findAssignedByQuoteId :: Transactionable m => Id Quote -> m (Maybe Booking)
 findAssignedByQuoteId quoteId = Esq.buildDType . runMaybeT $ do
-  booking <- findAssignedByQuoteIdT
-  (fromLocation, bookingDetails, mbTripTerms) <- findBookingEntitiesT booking
-  return $ extractSolidType @Booking (booking, fromLocation, mbTripTerms, bookingDetails)
-  where
-    findAssignedByQuoteIdT = MaybeT . Esq.findOne' $ do
-      booking <- from $ table @BookingT
-      where_ $
-        booking ^. TB.BookingQuoteId ==. val (Just $ toKey quoteId)
-          &&. booking ^. TB.BookingStatus ==. val TRIP_ASSIGNED
-      pure booking
+  booking <- Esq.findOneM $ do
+    booking <- from $ table @BookingT
+    where_ $
+      booking ^. TB.BookingQuoteId ==. val (Just $ toKey quoteId)
+        &&. booking ^. TB.BookingStatus ==. val TRIP_ASSIGNED
+    pure booking
+  fetchFullBookingM booking
 
 -- internal queries for building domain types
 
-findBookingEntitiesT ::
+fetchFullBookingM ::
   Transactionable m =>
   BookingT ->
-  MaybeT (DTypeBuilder m) (Loc.BookingLocationT, BookingDetailsT, Maybe TripTerms.TripTermsT)
-findBookingEntitiesT booking = do
-  fromLocation <- findByIdT @Loc.BookingLocationT (booking & TB.fromLocationId)
-  bookingDetails <- case booking & TB.fareProductType of
+  MaybeT (DTypeBuilder m) (SolidType FullBookingT)
+fetchFullBookingM booking@BookingT {..} = do
+  fromLocation <- findByIdM @Loc.BookingLocationT fromLocationId
+  bookingDetails <- case fareProductType of
     ONE_WAY -> do
-      toLocationTId <- hoistMaybe (booking & TB.toLocationId)
-      toLocation <- Esq.findByIdT @Loc.BookingLocationT toLocationTId
+      toLocationTId <- hoistMaybe toLocationId
+      toLocation <- Esq.findByIdM @Loc.BookingLocationT toLocationTId
       pure $ OneWayDetailsT toLocation
     RENTAL -> do
-      rentalSlabTId <- hoistMaybe (booking & TB.rentalSlabId)
-      rentalSlab <- Esq.findByIdT @RentalSlab.RentalSlabT rentalSlabTId
+      rentalSlabTId <- hoistMaybe rentalSlabId
+      rentalSlab <- Esq.findByIdM @RentalSlab.RentalSlabT rentalSlabTId
       pure $ RentalDetailsT rentalSlab
     DRIVER_OFFER -> do
-      toLocationTId <- hoistMaybe (booking & TB.toLocationId)
-      toLocation <- Esq.findByIdT @Loc.BookingLocationT toLocationTId
+      toLocationTId <- hoistMaybe toLocationId
+      toLocation <- Esq.findByIdM @Loc.BookingLocationT toLocationTId
       pure $ DriverOfferDetailsT toLocation
     ONE_WAY_SPECIAL_ZONE -> do
-      toLocationTId <- hoistMaybe (booking & TB.toLocationId)
-      toLocation <- Esq.findByIdT @Loc.BookingLocationT toLocationTId
+      toLocationTId <- hoistMaybe toLocationId
+      toLocation <- Esq.findByIdM @Loc.BookingLocationT toLocationTId
       pure $ OneWaySpecialZoneDetailsT toLocation
-  mbTripTerms <- forM (booking & TB.tripTermsId) $ Esq.findByIdT @TripTerms.TripTermsT
-  return (fromLocation, bookingDetails, mbTripTerms)
+  mbTripTerms <- forM tripTermsId $ Esq.findByIdM @TripTerms.TripTermsT
+  return $ extractSolidType @Booking (booking, fromLocation, mbTripTerms, bookingDetails)

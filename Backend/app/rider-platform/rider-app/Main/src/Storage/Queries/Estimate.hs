@@ -26,7 +26,6 @@ import Kernel.Types.Id (Id (getId))
 import qualified Storage.Queries.EstimateBreakup as QEB
 import Storage.Queries.FullEntityBuilders (buildFullEstimate)
 import Storage.Tabular.Estimate as TEstimate
-import Storage.Tabular.SearchRequest as TSearchRequest
 import Storage.Tabular.TripTerms as TTripTerms
 
 -- order of creating entites make sense!
@@ -134,32 +133,26 @@ updateStatusbyRequestId searchId status_ = do
       ]
     where_ $ tbl ^. EstimateRequestId ==. val (toKey searchId)
 
--- queries fetching only one entity should not use join for performance reason
+-- queries fetching only one entity should avoid join for performance reason
 
 findById :: Transactionable m => Id Estimate -> m (Maybe Estimate)
 findById estimateId = Esq.buildDType . runMaybeT $ do
   let estimateTId = toKey estimateId
-  estimate <- findByIdT @EstimateT estimateTId
+  estimate <- findByIdM @EstimateT estimateTId
   let mbTripTermsTId = estimate & TEstimate.tripTermsId
-  mbTripTerms <- forM mbTripTermsTId $ findByIdT @TripTermsT
+  mbTripTerms <- forM mbTripTermsTId $ findByIdM @TripTermsT
   estimateBreakup <- QEB.findAllByEstimateIdT estimateTId
   return $ extractSolidType @Estimate (estimate, estimateBreakup, mbTripTerms)
 
 findOneEstimateByRequestId :: Transactionable m => Id SearchRequest -> m (Maybe Estimate)
 findOneEstimateByRequestId searchId = Esq.buildDType . runMaybeT $ do
-  let searchTId = toKey searchId
-  estimate <- findEstimateByRequestIdT searchTId
+  estimate <- Esq.findOneM $ do
+    estimate <- from $ table @EstimateT
+    where_ $ estimate ^. EstimateRequestId ==. val (toKey searchId)
+    limit 1
+    pure estimate
   let mbTripTermsTId = estimate & TEstimate.tripTermsId
-  mbTripTerms <- forM mbTripTermsTId $ findByIdT @TripTermsT
+  mbTripTerms <- forM mbTripTermsTId $ findByIdM @TripTermsT
   let estimateTId = EstimateTKey $ estimate & TEstimate.id
   estimateBreakup <- QEB.findAllByEstimateIdT estimateTId
   return $ extractSolidType @Estimate (estimate, estimateBreakup, mbTripTerms)
-
--- internal queries for building domain types
-
-findEstimateByRequestIdT :: Transactionable m => SearchRequestTId -> MaybeT (DTypeBuilder m) EstimateT
-findEstimateByRequestIdT searchTId = MaybeT . Esq.findOne' $ do
-  estimate <- from $ table @EstimateT
-  where_ $ estimate ^. EstimateRequestId ==. val searchTId
-  limit 1
-  pure estimate
