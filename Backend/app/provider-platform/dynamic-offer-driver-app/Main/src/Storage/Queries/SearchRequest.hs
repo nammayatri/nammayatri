@@ -29,19 +29,6 @@ create dsReq = Esq.runTransaction $
     Esq.create' toLoc
     Esq.create' sReq
 
-findById :: Transactionable m => Id SearchRequest -> m (Maybe SearchRequest)
-findById searchRequestId = buildDType $
-  fmap (fmap $ extractSolidType @Domain.SearchRequest) $
-    Esq.findOne' $ do
-      (sReq :& sFromLoc :& sToLoc) <-
-        from
-          ( table @SearchRequestT
-              `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& loc1) -> s ^. SearchRequestFromLocationId ==. loc1 ^. SearchReqLocationTId)
-              `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& _ :& loc2) -> s ^. SearchRequestToLocationId ==. loc2 ^. SearchReqLocationTId)
-          )
-      where_ $ sReq ^. SearchRequestTId ==. val (toKey searchRequestId)
-      pure (sReq, sFromLoc, sToLoc)
-
 updateStatus ::
   Id SearchRequest ->
   SearchRequestStatus ->
@@ -88,3 +75,21 @@ getValidTill searchRequestId = do
     where_ $
       searchT ^. SearchRequestTId ==. val (toKey searchRequestId)
     return $ searchT ^. SearchRequestValidTill
+
+-- queries fetching only one entity should avoid join for performance reason
+
+findById :: Transactionable m => Id SearchRequest -> m (Maybe SearchRequest)
+findById searchRequestId = Esq.buildDType . runMaybeT $ do
+  searchRequest <- Esq.findByIdM @SearchRequestT $ toKey searchRequestId
+  fetchFullSearchRequestM searchRequest
+
+-- internal queries for building domain types
+
+fetchFullSearchRequestM ::
+  Transactionable m =>
+  SearchRequestT ->
+  MaybeT (DTypeBuilder m) (SolidType FullSearchRequestT)
+fetchFullSearchRequestM searchRequest@SearchRequestT {..} = do
+  fromLocation <- Esq.findByIdM @SearchReqLocationT fromLocationId
+  toLocation <- Esq.findByIdM @SearchReqLocationT toLocationId
+  pure $ extractSolidType @SearchRequest (searchRequest, fromLocation, toLocation)
