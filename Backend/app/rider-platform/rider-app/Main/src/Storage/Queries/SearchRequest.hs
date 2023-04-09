@@ -47,24 +47,6 @@ fullSearchRequestTable =
                    s ^. SearchRequestToLocationId ==. mbLoc2 ?. SearchReqLocationTId
                )
 
-findById :: Transactionable m => Id SearchRequest -> m (Maybe SearchRequest)
-findById searchRequestId = Esq.buildDType $ do
-  mbFullSearchReqT <- Esq.findOne' $ do
-    (sReq :& sFromLoc :& mbSToLoc) <- from fullSearchRequestTable
-    where_ $ sReq ^. SearchRequestTId ==. val (toKey searchRequestId)
-    pure (sReq, sFromLoc, mbSToLoc)
-  pure $ extractSolidType @SearchRequest <$> mbFullSearchReqT
-
-findByPersonId :: Transactionable m => Id Person -> Id SearchRequest -> m (Maybe SearchRequest)
-findByPersonId personId searchRequestId = Esq.buildDType $ do
-  mbFullSearchReqT <- Esq.findOne' $ do
-    (searchRequest :& sFromLoc :& mbSToLoc) <- from fullSearchRequestTable
-    where_ $
-      searchRequest ^. SearchRequestRiderId ==. val (toKey personId)
-        &&. searchRequest ^. SearchRequestId ==. val (getId searchRequestId)
-    return (searchRequest, sFromLoc, mbSToLoc)
-  pure $ extractSolidType @SearchRequest <$> mbFullSearchReqT
-
 findAllByPerson :: Transactionable m => Id Person -> m [SearchRequest]
 findAllByPerson perId = Esq.buildDType $ do
   fullSearchRequestsT <- Esq.findAll' $ do
@@ -73,3 +55,31 @@ findAllByPerson perId = Esq.buildDType $ do
       searchRequest ^. SearchRequestRiderId ==. val (toKey perId)
     return (searchRequest, sFromLoc, mbSToLoc)
   pure $ extractSolidType @SearchRequest <$> fullSearchRequestsT
+
+-- queries fetching only one entity should avoid join for performance reason
+
+findById :: Transactionable m => Id SearchRequest -> m (Maybe SearchRequest)
+findById searchRequestId = Esq.buildDType . runMaybeT $ do
+  searchRequest <- Esq.findByIdM @SearchRequestT $ toKey searchRequestId
+  fetchFullSearchRequestM searchRequest
+
+findByPersonId :: Transactionable m => Id Person -> Id SearchRequest -> m (Maybe SearchRequest)
+findByPersonId personId searchRequestId = Esq.buildDType . runMaybeT $ do
+  searchRequest <- Esq.findOneM $ do
+    searchRequest <- from $ table @SearchRequestT
+    where_ $
+      searchRequest ^. SearchRequestRiderId ==. val (toKey personId)
+        &&. searchRequest ^. SearchRequestId ==. val (getId searchRequestId)
+    return searchRequest
+  fetchFullSearchRequestM searchRequest
+
+-- internal queries for building domain types
+
+fetchFullSearchRequestM ::
+  Transactionable m =>
+  SearchRequestT ->
+  MaybeT (DTypeBuilder m) (SolidType FullSearchRequestT)
+fetchFullSearchRequestM searchRequest@SearchRequestT {..} = do
+  fromLocation <- Esq.findByIdM @SearchReqLocationT fromLocationId
+  mbToLocation <- forM toLocationId $ Esq.findByIdM @SearchReqLocationT
+  pure $ extractSolidType @SearchRequest (searchRequest, fromLocation, mbToLocation)
