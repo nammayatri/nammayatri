@@ -457,16 +457,6 @@ makeGetRouteReq slat slng dlat dlng = GetRouteReq {
 
 walkCoordinate :: Number -> Number -> Number -> Number -> Locations
 walkCoordinate fromLong fromLat driverLong driverLat = {
-    "journeyCoordinates": [
-      {
-        "lat": fromLat,
-        "lng": fromLong
-      },
-      {
-        "lat": driverLat,
-        "lng": driverLong
-      }
-    ],
     "points": [
       {
         "lat": fromLat,
@@ -479,14 +469,10 @@ walkCoordinate fromLong fromLat driverLong driverLat = {
     ]
 }
 
-walkCoordinates :: Snapped -> Snapped -> Locations
-walkCoordinates (Snapped points) (Snapped snappedWaypoints) = {
-    "journeyCoordinates": map (\(LatLong item) -> {"lat": item.lat, "lng": item.lon})snappedWaypoints,
-    "points": map (\(LatLong item) -> {"lat": item.lat, "lng": item.lon})points
-}
-
-dummySnapped :: Snapped
-dummySnapped = Snapped[LatLong{"lat": 0.0, "lon": 0.0}]
+walkCoordinates :: Snapped -> Locations
+walkCoordinates (Snapped points) =
+  { "points": map (\(LatLong item) -> { "lat": item.lat, "lng": item.lon }) points
+  }
 
 --------------------------------- onBoardingFlow  ---------------------------------------------------------------------------------------------------------------------------------
 
