@@ -11,8 +11,8 @@
     beckn-gateway.url = "github:nammayatri/beckn-gateway/ca94cd38adbc4e8e6e65f0d83610edadca5a279b";
     beckn-gateway.inputs.shared-kernel.follows = "shared-kernel";
   };
-  outputs = inputs@{ nixpkgs, flake-parts, ... }:
-    flake-parts.lib.mkFlake { inherit inputs; } {
+  outputs = inputs:
+    inputs.flake-parts.lib.mkFlake { inherit inputs; } {
       systems = import inputs.systems;
       imports = [
         inputs.common.flakeModules.default

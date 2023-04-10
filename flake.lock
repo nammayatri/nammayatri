@@ -233,11 +233,11 @@
         "treefmt-nix": "treefmt-nix_2"
       },
       "locked": {
-        "lastModified": 1681161394,
-        "narHash": "sha256-Ai/gdemE+MIRpUgAyl9n++etkN64aOf8ZbU42F0QGOE=",
+        "lastModified": 1681171057,
+        "narHash": "sha256-6jt4g3HnXJqNawZxeSmAV2nnLGZI3Prcq2FZq/77Kik=",
         "owner": "nammayatri",
         "repo": "common",
-        "rev": "5ac2e0a7951431ee3925c0171b34187bda4ac760",
+        "rev": "b42e07345d4c1ff72fdceae86b504a58d484a34d",
         "type": "github"
       },
       "original": {
@@ -1199,15 +1199,16 @@
     },
     "process-compose-flake": {
       "locked": {
-        "lastModified": 1680797953,
-        "narHash": "sha256-lFYbfId1IX6jh/wUf+gt3LyvE9HblS4hcBQcougSzX0=",
+        "lastModified": 1681162184,
+        "narHash": "sha256-M96LZRojyFr6g5OB/jXiC6JniJTHsf0sK3iBv6Msatw=",
         "owner": "Platonic-Systems",
         "repo": "process-compose-flake",
-        "rev": "aee1b8d126a5efe5945513eb2fb343f3d68dca4b",
+        "rev": "bfb97e2203a3040f92c467ce1aeadf90673fb260",
         "type": "github"
       },
       "original": {
         "owner": "Platonic-Systems",
+        "ref": "srid/import-without-use",
         "repo": "process-compose-flake",
         "type": "github"
       }
