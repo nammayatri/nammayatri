@@ -41,7 +41,7 @@ type CallBasedEndRideAPI =
     :> ( "end"
            :> MandatoryQueryParam "CallFrom" Text
            :> MandatoryQueryParam "CallTo" Text
-           :> Post '[JSON] DExotelEndRide.AckResp
+           :> Get '[JSON] DExotelEndRide.AckResp
        )
 
 callBasedEndRidelHandler :: FlowServer CallBasedEndRideAPI
