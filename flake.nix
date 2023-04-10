@@ -4,6 +4,7 @@
     systems.url = "github:nix-systems/default";
     common.url = "github:nammayatri/common";
     flake-parts.follows = "common/flake-parts";
+
     haskell-flake.url = "github:sbh69840/haskell-flake/poc-localapps";
     common.inputs.haskell-flake.follows = "haskell-flake";
 
@@ -28,8 +29,6 @@
       ];
       perSystem = { config, self', pkgs, ... }: {
         packages.default = self'.packages.nammayatri;
-
-        cachix-push.packages = [ "default" "osrm-server" "run-mobility-stack" ];
 
         # TODO: Move these to common repo.
         pre-commit = {
