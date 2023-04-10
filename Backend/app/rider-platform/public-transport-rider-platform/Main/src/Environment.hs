@@ -22,7 +22,7 @@ import Kernel.Types.Cache
 import Kernel.Types.Common
 import Kernel.Types.Flow
 import Kernel.Types.Registry
-import Kernel.Utils.App (getPodName)
+import Kernel.Utils.App (getPodName, lookupDeploymentVersion)
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import qualified Kernel.Utils.Registry as Registry
@@ -78,13 +78,15 @@ data AppEnv = AppEnv
     loggerEnv :: LoggerEnv,
     coreMetrics :: CoreMetricsContainer,
     kafkaProducerTools :: KafkaProducerTools,
-    kafkaEnvs :: BAPKafkaEnvs
+    kafkaEnvs :: BAPKafkaEnvs,
+    version :: DeploymentVersion
   }
   deriving (Generic)
 
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv AppCfg {..} = do
   podName <- getPodName
+  version <- lookupDeploymentVersion
   loggerEnv <- prepareLoggerEnv loggerConfig podName
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv

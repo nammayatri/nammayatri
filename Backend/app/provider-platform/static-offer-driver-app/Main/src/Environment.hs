@@ -42,6 +42,7 @@ import Kernel.Types.Credentials (PrivateKey)
 import Kernel.Types.Flow
 import Kernel.Types.Registry
 import Kernel.Types.SlidingWindowLimiter
+import Kernel.Utils.App (lookupDeploymentVersion)
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import qualified Kernel.Utils.Registry as Registry
@@ -142,13 +143,15 @@ data AppEnv = AppEnv
     driverReachedDistance :: HighPrecMeters,
     driverPoolCfg :: DriverPoolConfig,
     driverLocationUpdateTopic :: Text,
-    snapToRoadSnippetThreshold :: HighPrecMeters
+    snapToRoadSnippetThreshold :: HighPrecMeters,
+    version :: DeploymentVersion
   }
   deriving (Generic)
 
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv AppCfg {..} = do
   hostname <- map T.pack <$> lookupEnv "POD_NAME"
+  version <- lookupDeploymentVersion
   bppMetrics <- registerBPPMetricsContainer metricsSearchDurationTimeout
   coreMetrics <- registerCoreMetricsContainer
   isShuttingDown <- newEmptyTMVarIO

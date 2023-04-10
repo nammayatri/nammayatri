@@ -25,9 +25,9 @@ import Kernel.Tools.Metrics.CoreMetrics as CoreMetrics
 import Kernel.Utils.Common
 import Prometheus as P
 
-type HasBPPMetrics m r = (HasFlowEnv m r '["bppMetrics" ::: BPPMetricsContainer])
+type HasBPPMetrics m r = (HasFlowEnv m r ["bppMetrics" ::: BPPMetricsContainer, "version" ::: DeploymentVersion])
 
-type SearchDurationMetric = (P.Vector P.Label1 P.Histogram, P.Vector P.Label1 P.Counter)
+type SearchDurationMetric = (P.Vector P.Label2 P.Histogram, P.Vector P.Label2 P.Counter)
 
 data BPPMetricsContainer = BPPMetricsContainer
   { searchDurationTimeout :: Seconds,
@@ -36,8 +36,8 @@ data BPPMetricsContainer = BPPMetricsContainer
   }
 
 data CountingDeviationMetric = CountingDeviationMetric
-  { realFareDeviation :: P.Vector P.Label1 P.Histogram,
-    realDistanceDeviation :: P.Vector P.Label1 P.Histogram
+  { realFareDeviation :: P.Vector P.Label2 P.Histogram,
+    realDistanceDeviation :: P.Vector P.Label2 P.Histogram
   }
 
 registerBPPMetricsContainer :: Seconds -> IO BPPMetricsContainer
@@ -49,8 +49,8 @@ registerBPPMetricsContainer searchDurationTimeout = do
 registerCountingDeviationMetric :: IO CountingDeviationMetric
 registerCountingDeviationMetric =
   CountingDeviationMetric
-    <$> (P.register . P.vector "agency_name" $ P.histogram fareDeviation $ aroundZero 10 5)
-    <*> (P.register . P.vector "agency_name" $ P.histogram distanceDeviation $ aroundZero 10 6)
+    <$> (P.register . P.vector ("agency_name", "version") $ P.histogram fareDeviation $ aroundZero 10 5)
+    <*> (P.register . P.vector ("agency_name", "version") $ P.histogram distanceDeviation $ aroundZero 10 6)
   where
     aroundZero factor b =
       let l = P.exponentialBuckets 1 factor b
@@ -68,13 +68,13 @@ registerSearchDurationMetric :: Seconds -> IO SearchDurationMetric
 registerSearchDurationMetric searchDurationTimeout = do
   searchDurationHistogram <-
     P.register $
-      P.vector "agency_name" $
+      P.vector ("agency_name", "version") $
         P.histogram
           infoSearchDuration
           buckets
   failureCounter <-
     P.register $
-      P.vector "agency_name" $
+      P.vector ("agency_name", "version") $
         P.counter $ P.Info "BPP_search_failure_counter" ""
 
   pure (searchDurationHistogram, failureCounter)

@@ -45,7 +45,7 @@ import Kernel.Types.Flow
 import Kernel.Types.Id (ShortId (..))
 import Kernel.Types.Registry
 import Kernel.Types.SlidingWindowLimiter
-import Kernel.Utils.App (getPodName)
+import Kernel.Utils.App (getPodName, lookupDeploymentVersion)
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import qualified Kernel.Utils.Registry as Registry
@@ -145,13 +145,15 @@ data AppEnv = AppEnv
     cacheTranslationConfig :: CacheTranslationConfig,
     maxEmergencyNumberCount :: Int,
     minTripDistanceForReferralCfg :: Maybe HighPrecMeters,
-    registryMap :: M.Map Text BaseUrl
+    registryMap :: M.Map Text BaseUrl,
+    version :: DeploymentVersion
   }
   deriving (Generic)
 
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv AppCfg {..} = do
   hostname <- getPodName
+  version <- lookupDeploymentVersion
   isShuttingDown <- newEmptyTMVarIO
   bapMetrics <- registerBAPMetricsContainer metricsSearchDurationTimeout
   coreMetrics <- registerCoreMetricsContainer

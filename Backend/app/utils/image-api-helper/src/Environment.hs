@@ -18,6 +18,7 @@ module Environment where
 import Control.Monad.Catch (bracket)
 import Kernel.Tools.Metrics.CoreMetrics.Types
 import Kernel.Types.Common
+import Kernel.Utils.App (lookupDeploymentVersion)
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import Relude
@@ -31,12 +32,14 @@ data AppCfg = AppCfg
 data AppEnv = AppEnv
   { loggerConfig :: LoggerConfig,
     loggerEnv :: LoggerEnv,
-    coreMetrics :: CoreMetricsContainer
+    coreMetrics :: CoreMetricsContainer,
+    version :: DeploymentVersion
   }
   deriving (Generic)
 
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv AppCfg {..} = do
+  version <- lookupDeploymentVersion
   loggerEnv <- prepareLoggerEnv loggerConfig Nothing
   coreMetrics <- registerCoreMetricsContainer
   return $ AppEnv {..}

@@ -21,7 +21,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.IOLogging (LoggerEnv)
 import Servant (Get, JSON)
 import Tools.Error
-import Tools.Metrics (CoreMetricsContainer)
+import Tools.Metrics (HasCoreMetrics)
 
 type HealthCheckAPI = Get '[JSON] Text
 
@@ -29,7 +29,7 @@ healthCheckAPI :: Proxy HealthCheckAPI
 healthCheckAPI = Proxy
 
 healthCheck ::
-  ( HasField "coreMetrics" r CoreMetricsContainer,
+  ( HasCoreMetrics r,
     HasField "isShuttingDown" r Shutdown,
     HasField "loggerEnv" r LoggerEnv,
     HasField "hedisEnv" r Redis.HedisEnv

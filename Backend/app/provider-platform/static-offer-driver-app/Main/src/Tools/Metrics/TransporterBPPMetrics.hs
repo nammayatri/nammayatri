@@ -29,31 +29,34 @@ import Tools.Metrics.TransporterBPPMetrics.Types as Reexport
 putFareAndDistanceDeviations :: (MonadIO m, HasBPPMetrics m r) => Text -> Money -> Meters -> m ()
 putFareAndDistanceDeviations agencyName fareDiff distanceDiff = do
   countingDeviationMetric <- asks (.bppMetrics.countingDeviation)
-  liftIO $ P.withLabel countingDeviationMetric.realFareDeviation agencyName (`P.observe` fromIntegral fareDiff)
-  liftIO $ P.withLabel countingDeviationMetric.realDistanceDeviation agencyName (`P.observe` fromIntegral distanceDiff)
+  version <- asks (.version)
+  liftIO $ P.withLabel countingDeviationMetric.realFareDeviation (agencyName, version.getDeploymentVersion) (`P.observe` fromIntegral fareDiff)
+  liftIO $ P.withLabel countingDeviationMetric.realDistanceDeviation (agencyName, version.getDeploymentVersion) (`P.observe` fromIntegral distanceDiff)
 
 type SearchMetricsMVar = MVar Milliseconds
 
 startSearchMetrics :: HasBPPMetrics m r => Text -> m SearchMetricsMVar
 startSearchMetrics agencyName = do
   bmContainer <- asks (.bppMetrics)
-  startSearchMetrics' agencyName bmContainer
+  version <- asks (.version)
+  startSearchMetrics' agencyName version bmContainer
 
 finishSearchMetrics :: HasBPPMetrics m r => Text -> SearchMetricsMVar -> m ()
 finishSearchMetrics agencyName searchMetricsMVar = do
   bmContainer <- asks (.bppMetrics)
-  finishSearchMetrics' agencyName bmContainer searchMetricsMVar
+  version <- asks (.version)
+  finishSearchMetrics' agencyName version bmContainer searchMetricsMVar
 
-putSearchDuration :: L.MonadFlow m => Text -> P.Vector P.Label1 P.Histogram -> Double -> m ()
-putSearchDuration agencyName searchDurationHistogram duration =
+putSearchDuration :: L.MonadFlow m => Text -> DeploymentVersion -> P.Vector P.Label2 P.Histogram -> Double -> m ()
+putSearchDuration agencyName version searchDurationHistogram duration =
   L.runIO $
     P.withLabel
       searchDurationHistogram
-      agencyName
+      (agencyName, version.getDeploymentVersion)
       (`P.observe` duration)
 
-startSearchMetrics' :: MonadFlow m => Text -> BPPMetricsContainer -> m SearchMetricsMVar
-startSearchMetrics' agencyName bmContainer = do
+startSearchMetrics' :: MonadFlow m => Text -> DeploymentVersion -> BPPMetricsContainer -> m SearchMetricsMVar
+startSearchMetrics' agencyName version bmContainer = do
   let (_, failureCounter) = bmContainer.searchDuration
       searchDurationTimeout = getSeconds bmContainer.searchDurationTimeout
   startTime <- getClockTimeInMs
@@ -61,17 +64,18 @@ startSearchMetrics' agencyName bmContainer = do
   fork "BPP Search Metrics" $ do
     liftIO $ threadDelay $ searchDurationTimeout * 1000000
     whenJustM (liftIO $ tryTakeMVar searchMetricsMVar) $ \_ -> do
-      liftIO $ P.withLabel failureCounter agencyName P.incCounter
+      liftIO $ P.withLabel failureCounter (agencyName, version.getDeploymentVersion) P.incCounter
   return searchMetricsMVar
 
 finishSearchMetrics' ::
   MonadFlow m =>
   Text ->
+  DeploymentVersion ->
   BPPMetricsContainer ->
   SearchMetricsMVar ->
   m ()
-finishSearchMetrics' agencyName bmContainer searchMetricsMVar = do
+finishSearchMetrics' agencyName version bmContainer searchMetricsMVar = do
   let (searchDurationHistogram, _) = bmContainer.searchDuration
   whenJustM (liftIO $ tryTakeMVar searchMetricsMVar) $ \startTime -> do
     endTime <- getClockTimeInMs
-    putSearchDuration agencyName searchDurationHistogram $ fromIntegral $ endTime - startTime
+    putSearchDuration agencyName version searchDurationHistogram $ fromIntegral $ endTime - startTime
