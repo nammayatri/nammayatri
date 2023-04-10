@@ -778,7 +778,7 @@ homeScreenFlow = do
             Just (Route route) -> do
               case (route.snappedWaypoints !! 0) of
                 Just snappedWaypoints -> do
-                  let coor = (walkCoordinates route.points snappedWaypoints)
+                  let coor = walkCoordinates route.points
                   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { routeVisible = true } })
                   _ <- pure $ removeMarker "ny_ic_auto"
                   _ <- pure $ removeAllPolylines ""
@@ -797,7 +797,7 @@ homeScreenFlow = do
                 let coordinates = route.points
                 case (route.snappedWaypoints !! 0) of
                   Just snappedWaypoints -> do
-                    let coor = (walkCoordinates route.points snappedWaypoints)
+                    let coor = walkCoordinates route.points
                     modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { activeRide { actualRideDistance = if state.props.currentStage == RideStarted then (toNumber route.distance) else state.data.activeRide.actualRideDistance , duration = route.duration } , route = routeApiResponse}, props { routeVisible = true } })
                     _ <- lift $ lift $ doAff do liftEffect $ removeMarker "ny_ic_auto"
                     _ <- pure $ removeAllPolylines ""
