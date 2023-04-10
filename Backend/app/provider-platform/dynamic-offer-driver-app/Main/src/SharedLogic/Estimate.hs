@@ -40,7 +40,7 @@ buildEstimate ::
   FarePolicy ->
   m DEst.Estimate
 buildEstimate merchant transactionId startTime dist farePolicy = do
-  fareParams <- calculateFare merchant.id (Left farePolicy) dist startTime Nothing Nothing
+  fareParams <- calculateFare merchant.id (Left farePolicy) dist startTime Nothing Nothing Nothing
   let baseFare = fareSum fareParams
       estimateBreakups = mkBreakupListItems farePolicy
   logDebug $ "baseFare: " <> show baseFare
@@ -108,7 +108,7 @@ buildEstimateFromSlabFarePolicy ::
   SlabFarePolicy ->
   m DEst.Estimate
 buildEstimateFromSlabFarePolicy merchant transactionId startTime dist slabFarePolicy = do
-  fareParams <- calculateFare merchant.id (Right slabFarePolicy) dist startTime Nothing Nothing
+  fareParams <- calculateFare merchant.id (Right slabFarePolicy) dist startTime Nothing Nothing Nothing
   let baseFare = fareSum fareParams
       estimateBreakups = mkBreakupSlabListItems slabFarePolicy fareParams.baseFare fareParams.waitingOrPickupCharges
   logDebug $ "baseFare: " <> show baseFare

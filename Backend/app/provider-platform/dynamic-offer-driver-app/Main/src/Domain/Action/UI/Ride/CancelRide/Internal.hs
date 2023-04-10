@@ -169,8 +169,7 @@ repeatSearch merchant eitherFarePolicy searchReq booking ride cancellationSource
         Left normalFarePolicy -> normalFarePolicy.driverExtraFee
         Right _ -> DFP.ExtraFee {minFee = 0, maxFee = 0}
 
-  fareParams <- calculateFare searchReq.providerId eitherFarePolicy searchReq.estimatedDistance now Nothing newSearchReq.customerExtraFee
-
+  fareParams <- calculateFare searchReq.providerId eitherFarePolicy searchReq.estimatedDistance now Nothing newSearchReq.customerExtraFee Nothing
   let baseFare = fareSum fareParams
   Esq.runTransaction $ do
     QSR.create newSearchReq
