@@ -35,21 +35,21 @@ exports["getTimer"] = function (valType) {
       return function (action) {
           return function(){
               var callback = callbackMapper.map(function () {
-                    
+
                 console.log(valType+"<===>"+startTime+"<===>"+inputVal)
-                
+
                 var t = new Date().getTime()
-                
+
                 console.log("ttt-->>"+t)
                 var countDownDate = (new Date(inputVal).getTime())-5000;
 
                 console.log("countDownDate-->>"+countDownDate)
-                
+
                 if((Math.floor(((countDownDate - t) % (1000 * 60)) / 1000)) > 25000)
                 {
                   countDownDate = (new Date().getTime())+ 20000;
                 }
-                
+
                 instantGetTimer (function() {
 
                   // Get today's date and time
@@ -77,7 +77,7 @@ exports["getTimer"] = function (valType) {
 
                   if (distance <= 0) {
                     clearInterval(window.timerId);
-                    
+
                     console.log("EXPIRED");
                     cb(action("EXPIRED"))();
                     // return "EXPIRED";
@@ -158,7 +158,7 @@ exports["get15sTimer"] = function (cb){
                     clearInterval(window.timerId);
                     console.log("EXPIRED");
                     cb(action("EXPIRED"))();
-                  }else{ 
+                  }else{
                     var timer = seconds + "s "
                     console.log(timer);
                     cb(action(timer))();
@@ -178,7 +178,7 @@ exports["get5sTimer"] = function (cb){
               var callback = callbackMapper.map(function () {
                 var time = 5;
                 sayLetter(time);
-                             
+
                 function sayLetter(seconds){
                  if (seconds >= 0)
                 {
@@ -188,13 +188,13 @@ exports["get5sTimer"] = function (cb){
                        clearInterval(window.timerId);
                       console.log("EXPIRED");
                          cb(action("EXPIRED"))();
-                     }else{ 
+                     }else{
                          var timer = seconds + "s "
                        console.log(timer);
                          cb(action(timer))();
                          sayLetter(seconds-1);
                        }
-                     }, 1000); 
+                     }, 1000);
                 }
                 }
                 console.log("timerId",window.timerId);
@@ -233,7 +233,7 @@ exports["get10sTimer"] = function (cb){
           var callback = callbackMapper.map(function () {
             var time = 10;
             sayLetter(time);
-                         
+
             function sayLetter(seconds){
              if (seconds >= 0)
             {
@@ -243,13 +243,13 @@ exports["get10sTimer"] = function (cb){
                    clearInterval(window.timerId);
                   console.log("EXPIRED");
                      cb(action("EXPIRED"))();
-                 }else{ 
+                 }else{
                      var timer = seconds + "s "
                    console.log(timer);
                      cb(action(timer))();
                      sayLetter(seconds-1);
                    }
-                 }, 1000); 
+                 }, 1000);
             }
             }
             console.log("timerId",window.timerId);
@@ -259,7 +259,7 @@ exports["get10sTimer"] = function (cb){
   }
 }
 
-exports["startTimer"] = function(input){  
+exports["startTimer"] = function(input){
   return function(cb){
     return function (action){
       return function(){
@@ -409,7 +409,7 @@ exports["decodeErrorMessage"] = function (a) {
     if(errorMessagee == null)
     {
       return "";
-    }  
+    }
     return  errorMessagee;
   } catch (e) {
     console.log(e);
@@ -444,7 +444,7 @@ exports["decodeAgencyName"] = function (a) {
 exports["decodeAgencyPhoneNo"] = function (a) {
   try {
     var agencyNumbers = JSON.parse(a).provider.phones;
-    var agencyNumber = agencyNumbers[0];    
+    var agencyNumber = agencyNumbers[0];
     return agencyNumber;
   } catch (e) {
     console.log(e);
@@ -461,7 +461,7 @@ exports["completedRides"] = function (a) {
     if(rides == null)
     {
       return 0;
-    }  
+    }
     return rides;
   } catch (e) {
     console.log(e);
@@ -475,7 +475,7 @@ exports["totalAgencies"] = function (a) {
     if(rides == null)
     {
       return 0;
-    }   
+    }
     return rides;
   } catch (e) {
     console.log(e);
@@ -489,7 +489,7 @@ exports["declinedAgencies"] = function (a) {
     if(rides == null)
     {
       return 0;
-    }  
+    }
     return rides;
   } catch (e) {
     console.log(e);
@@ -499,7 +499,7 @@ exports["declinedAgencies"] = function (a) {
 
 exports["acceptedAgencies"] = function (a) {
   try {
-    var rides = JSON.parse(a).accepted;  
+    var rides = JSON.parse(a).accepted;
     if(rides == null)
     {
       return 0;
@@ -517,7 +517,7 @@ exports["hasDriver"] = function (a) {
     if (info.tracker.trip.driver == null)
       {
         return false;
-      }  
+      }
     return true;
   } catch (e) {
     console.log(e);
@@ -547,7 +547,7 @@ exports["driverRating"] = function (a) {
     if (info.tracker.trip.driver.rating == null)
       {
         return "__";
-      }  
+      }
     return JSON.parse(a).tracker.trip.driver.rating.value;
   } catch (e) {
     console.log(e);
@@ -820,12 +820,12 @@ exports["convertUTCtoISC"] = function (str) {
     localTime1 = moment(localTime1).format(format);
     return localTime1;
   };
-}; 
+};
 
 exports["isUTCTimeValid"] = function (str1) {
   return function (str2) {
     var curr1 = new Date(str1);
-    var departure = new Date(str2); 
+    var departure = new Date(str2);
     console.log(departure + " , " + curr1 + "STR");
     var diff =(curr1.getTime() - departure.getTime())/ 1000;
     diff /= 60;
@@ -841,7 +841,7 @@ exports["isUTCTimeValid"] = function (str1) {
 exports["differenceBetweenTwoUTC"] = function (str1) {
   return function (str2) {
     var curr1 = new Date(str1);
-    var departure = new Date(str2); 
+    var departure = new Date(str2);
     console.log(departure + " , " + curr1 + "STR");
     var diff =(curr1.getTime() - departure.getTime())/ 1000;
     diff = (Math.round(diff));
@@ -971,7 +971,7 @@ exports["storeCallBackForNotification"] = function (cb) {
             cb(action(notificationType))();
           });
           JBridge.storeCallBackForNotification(callback);
-      }    
+      }
   }}
   catch (error){
       console.log("Error occurred in storeCallBackForNotification ------", error);
@@ -1088,7 +1088,7 @@ exports["getuuid"] = function (dummy) {
 //       };
 //   }
 //   catch(e)
-//   { 
+//   {
 //     console.log(e);
 //     console.log("error in removeMarker----------------------------------");
 //   }
@@ -1097,16 +1097,16 @@ exports["getuuid"] = function (dummy) {
 exports["convertKmToM"] = function (dist) {
   try{
     var distance = parseInt(dist);
-    if (distance<1000) 
+    if (distance<1000)
     {
       return ((distance.toString()) + "m");
     }
-    else 
+    else
     {
       var disKm = distance/1000;
       return (((disKm.toFixed(1)).toString()) + "km");
     }
-  }catch(e){ 
+  }catch(e){
     console.log(e);
     console.log("error in convertKmToM----------------------------------");
   }
@@ -1115,16 +1115,16 @@ exports["convertKmToM"] = function (dist) {
 exports["convertMToKm"] = function (dist) {
   try{
     var distance = parseInt(dist);
-    if (distance<1000) 
+    if (distance<1000)
     {
       return ((distance.toString()) + "m");
     }
-    else 
+    else
     {
       var disKm = distance/1000;
       return (((disKm.toFixed(1)).toString()) + "km");
     }
-  }catch(e){ 
+  }catch(e){
     console.log(e);
     console.log("error in convertKmToM----------------------------------");
   }
@@ -1135,16 +1135,16 @@ exports["calculateETA"] = function (dist) {
     var distance = parseInt(dist);
     distance = distance/1000;
     var hours =  distance / 25;
-    var minutes = hours*60; 
-    if ( minutes < 1) 
+    var minutes = hours*60;
+    if ( minutes < 1)
     {
       return ("1 min");
     }
-    else 
+    else
     {
       return (((minutes.toFixed(0)).toString()) + " mins");
     }
-  }catch(e){ 
+  }catch(e){
     console.log(e);
     console.log("error in calculateETA----------------------------------");
   }
@@ -1195,7 +1195,7 @@ exports["calculateETA"] = function (dist) {
 // catch(e)
 //   {
 //     console.log(e);
-//     console.log("error ----------------------------------"); 
+//     console.log("error ----------------------------------");
 //   }
 // };
 
@@ -1224,7 +1224,7 @@ exports["calculateETA"] = function (dist) {
 //   catch(e)
 //   {
 //     console.log(e);
-//     console.log("error ----------------------------------"); 
+//     console.log("error ----------------------------------");
 //   }
 
 // };
@@ -1739,15 +1739,15 @@ exports["calculateDist"] = function(lat1)
           const φ2 = lat2 * Math.PI/180;
           const Δφ = (lat2-lat1) * Math.PI/180;
           const Δλ = (long2-long1) * Math.PI/180;
-          
+
           const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
                     Math.cos(φ1) * Math.cos(φ2) *
                     Math.sin(Δλ/2) * Math.sin(Δλ/2);
           const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-          
+
           const d = R * c; // in metres
           if(d<=100) return true;
-          else return false; 
+          else return false;
         };
       };
   };
@@ -2333,7 +2333,7 @@ exports["getTimeStampString"] = function (utcTime){
   var currentDate = new Date(result);
   var diff = (currentDate.getTime() - createdDate.getTime())/ 1000;
   seconds = (Math.round(diff));
-  if (seconds <0) return ""; 
+  if (seconds <0) return "";
   var d = Math.floor(seconds / (3600*24));
   var h = Math.floor(seconds % (3600*24) / 3600);
   var m = Math.floor(seconds % 3600 / 60);
@@ -2391,3 +2391,16 @@ exports["getImageUrl"] = function (url) {
     console.log("error in getImageUrl " + e);
   }
 };
+
+exports["getVideoType"] = function (url) {
+  try {
+    let isShorts = url.includes("shorts");
+    if (isShorts){
+      return "SHORTS";
+    } else {
+      return "VIDEO";
+    }
+  }catch (e){
+
+  }
+}

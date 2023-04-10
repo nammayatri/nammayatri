@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -30,7 +30,7 @@ import Effect.Aff (launchAff_)
 import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (addMediaPlayer, getVideoID, setYoutubePlayer)
+import Helpers.Utils (addMediaPlayer, getVideoID, setYoutubePlayer, getVideoType)
 import JBridge (renderBase64Image, openUrlInApp)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -73,7 +73,7 @@ view push state =
               , scrollView
                   [ height MATCH_PARENT
                   , width MATCH_PARENT
-                  , scrollBarY false   
+                  , scrollBarY false
                   ]
                   [ linearLayout
                       [ height WRAP_CONTENT
@@ -144,23 +144,23 @@ addCommentModel state push =
     [ PopUpModal.view (push <<< AddCommentModelAction) (addCommentModelConfig state) ]
 
 descriptionText :: (Action -> Effect Unit) -> NotificationDetailModelState -> forall w. PrestoDOM (Effect Unit) w
-descriptionText push state = 
+descriptionText push state =
   linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
-    ] (Array.mapWithIndex 
+    ] (Array.mapWithIndex
             (\index item ->
-             let 
+             let
               desLength = length item
               in
                if desLength == 0
                 then
                 linearLayout[][]
-                else 
-                  if charAt 0 item == Just '*' && charAt (desLength - 1) item == Just '*' 
+                else
+                  if charAt 0 item == Just '*' && charAt (desLength - 1) item == Just '*'
                     then
-                      let 
+                      let
                       titleAndUrl = fetchTitleAndUrl desLength item
                       linkTitle = trim $ fromMaybe "" (titleAndUrl Array.!! 0)
                       linkUrl = trim $ fromMaybe "" (titleAndUrl Array.!! 1)
@@ -278,7 +278,7 @@ titleAndTimeLabel state push =
         , weight 1.0
         ]
         []
-    , customTextView state.timeLabel FontSize.a_12 Color.black800 (Margin 0 0 0 0) $ FontStyle.medium LanguageStyle 
+    , customTextView state.timeLabel FontSize.a_12 Color.black800 (Margin 0 0 0 0) $ FontStyle.medium LanguageStyle
     ]
 
 customTextView :: String -> Int -> String -> Margin -> FontStyle -> forall w. PrestoDOM (Effect Unit) w
@@ -333,4 +333,5 @@ youtubeData state =
   , showDuration: true
   , showSeekBar: true
   , videoId: getVideoID state.mediaUrl
+  , videoType : (getVideoType state.mediaUrl)
   }

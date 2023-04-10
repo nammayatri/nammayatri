@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -76,7 +76,7 @@ import Math
 -- foreign import getISOTime     :: Effect String
 -- foreign import _getTime       :: Effect String
 foreign import shuffle :: forall a. Array a -> Array a
-foreign import generateUniqueId :: Unit -> String 
+foreign import generateUniqueId :: Unit -> String
 foreign import storeCallBackTime :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action)  -> Effect Unit
 foreign import getTime :: Unit -> Int
 foreign import countDown :: forall action. Int -> String -> (action -> Effect Unit) -> (Int -> String -> String -> String-> action)  -> Effect Unit
@@ -190,8 +190,8 @@ foreign import differenceBetweenTwoUTC :: String -> String -> Int
 -- -- foreign import showSnackBar :: forall action. String -> String -> (action -> Effect Unit) -> action -> Effect Unit
 -- foreign import getAge :: String -> String
 foreign import clearTimer :: String -> Unit
-foreign import clearPopUpTimer :: String -> Unit 
-foreign import clearAllTimer :: String -> Unit 
+foreign import clearPopUpTimer :: String -> Unit
+foreign import clearAllTimer :: String -> Unit
 foreign import toString :: forall a. a-> String
 foreign import toInt :: forall a. a -> String
 foreign import setRefreshing :: String -> Boolean -> Unit
@@ -210,6 +210,7 @@ foreign import addMediaPlayer :: String -> String -> Effect Unit
 foreign import removeMediaPlayer :: String -> Effect Unit
 foreign import getVideoID :: String -> String
 foreign import getImageUrl :: String -> String
+foreign import getVideoType :: String -> String
 -- foreign import decodeErrorPayload :: String -> String
 -- foreign import debounceFunction :: forall action. Int -> (action -> Effect Unit) -> (String -> action) -> Effect Unit
 -- foreign import updateInputString :: String -> Unit
@@ -273,7 +274,7 @@ foreign import currentPosition  :: String -> Effect Unit
 -- -- hideLoader :: String -> Flow GlobalState Unit
 -- -- hideLoader _ = liftFlow hideLoader'
 
--- -- setKeyInSharedPrefKeys :: String -> String -> Flow GlobalState Unit 
+-- -- setKeyInSharedPrefKeys :: String -> String -> Flow GlobalState Unit
 -- -- setKeyInSharedPrefKeys key val = liftFlow (setKeyInSharedPrefKeys' key val)
 
 
@@ -357,7 +358,7 @@ otpRule = Reader.OtpRule {
 startOtpReciever :: forall action. (String -> action) -> (action -> Effect Unit) -> Effect (Effect Unit)
 startOtpReciever action push = do
   fiber <- launchAff $ do
-    otpListener <- traverse Readers.getOtpListener $ fromArray [ Readers.smsRetriever ] 
+    otpListener <- traverse Readers.getOtpListener $ fromArray [ Readers.smsRetriever ]
     _ <- traverse identity $ (otpListener <#> _.setOtpRules) <*> Just [otpRule]
     message <- traverse identity $ (otpListener <#> _.getNextOtp)
     case message of
