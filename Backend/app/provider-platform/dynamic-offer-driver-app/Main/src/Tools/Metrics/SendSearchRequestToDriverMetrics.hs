@@ -28,29 +28,32 @@ import Tools.Metrics.SendSearchRequestToDriverMetrics.Types as Reexport
 incrementTaskCounter :: HasSendSearchRequestToDriverMetrics m r => Text -> m ()
 incrementTaskCounter agencyName = do
   bmContainer <- asks (.ssrMetrics)
-  incrementTaskCounter' bmContainer agencyName
+  version <- asks (.version)
+  incrementTaskCounter' bmContainer agencyName version
 
 incrementFailedTaskCounter :: HasSendSearchRequestToDriverMetrics m r => Text -> m ()
 incrementFailedTaskCounter agencyName = do
   bmContainer <- asks (.ssrMetrics)
-  incrementFailedTaskCounter' bmContainer agencyName
+  version <- asks (.version)
+  incrementFailedTaskCounter' bmContainer agencyName version
 
 putTaskDuration :: HasSendSearchRequestToDriverMetrics m r => Text -> Milliseconds -> m ()
 putTaskDuration agencyName duration = do
   bmContainer <- asks (.ssrMetrics)
-  putTaskDuration' bmContainer agencyName duration
+  version <- asks (.version)
+  putTaskDuration' bmContainer agencyName version duration
 
-incrementTaskCounter' :: L.MonadFlow m => SendSearchRequestToDriverMetricsContainer -> Text -> m ()
-incrementTaskCounter' bmContainer agencyName = do
+incrementTaskCounter' :: L.MonadFlow m => SendSearchRequestToDriverMetricsContainer -> Text -> DeploymentVersion -> m ()
+incrementTaskCounter' bmContainer agencyName version = do
   let taskCounter = bmContainer.taskCounter
-  L.runIO $ P.withLabel taskCounter agencyName P.incCounter
+  L.runIO $ P.withLabel taskCounter (agencyName, version.getDeploymentVersion) P.incCounter
 
-incrementFailedTaskCounter' :: L.MonadFlow m => SendSearchRequestToDriverMetricsContainer -> Text -> m ()
-incrementFailedTaskCounter' bmContainer agencyName = do
+incrementFailedTaskCounter' :: L.MonadFlow m => SendSearchRequestToDriverMetricsContainer -> Text -> DeploymentVersion -> m ()
+incrementFailedTaskCounter' bmContainer agencyName version = do
   let failedTaskCounter = bmContainer.failedTaskCounter
-  L.runIO $ P.withLabel failedTaskCounter agencyName P.incCounter
+  L.runIO $ P.withLabel failedTaskCounter (agencyName, version.getDeploymentVersion) P.incCounter
 
-putTaskDuration' :: L.MonadFlow m => SendSearchRequestToDriverMetricsContainer -> Text -> Milliseconds -> m ()
-putTaskDuration' bmContainer agencyName duration = do
+putTaskDuration' :: L.MonadFlow m => SendSearchRequestToDriverMetricsContainer -> Text -> DeploymentVersion -> Milliseconds -> m ()
+putTaskDuration' bmContainer agencyName version duration = do
   let taskDuration = bmContainer.taskDuration
-  L.runIO $ P.withLabel taskDuration agencyName (`P.observe` ((/ 1000) . fromIntegral $ duration))
+  L.runIO $ P.withLabel taskDuration (agencyName, version.getDeploymentVersion) (`P.observe` ((/ 1000) . fromIntegral $ duration))

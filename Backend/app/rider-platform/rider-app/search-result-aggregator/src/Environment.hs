@@ -18,7 +18,7 @@ import Kernel.Prelude
 import Kernel.Storage.Hedis (HedisCfg, HedisEnv, connectHedis)
 import Kernel.Storage.Hedis.AppPrefixes (riderAppPrefix)
 import Kernel.Types.Common
-import Kernel.Utils.App (getPodName)
+import Kernel.Utils.App (getPodName, lookupDeploymentVersion)
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Shutdown
@@ -42,13 +42,15 @@ data AppEnv = AppEnv
     loggerEnv :: LoggerEnv,
     coreMetrics :: CoreMetricsContainer,
     kafkaConsumerEnv :: KafkaConsumerEnv,
-    hedisEnv :: HedisEnv
+    hedisEnv :: HedisEnv,
+    version :: DeploymentVersion
   }
   deriving (Generic)
 
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv AppCfg {..} = do
   podName <- getPodName
+  version <- lookupDeploymentVersion
   loggerEnv <- prepareLoggerEnv loggerConfig podName
   coreMetrics <- registerCoreMetricsContainer
   isShuttingDown <- mkShutdown

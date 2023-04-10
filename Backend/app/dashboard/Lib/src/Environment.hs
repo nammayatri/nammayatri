@@ -22,7 +22,7 @@ import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Common
 import Kernel.Types.Flow
 import Kernel.Types.SlidingWindowLimiter
-import Kernel.Utils.App (getPodName)
+import Kernel.Utils.App (getPodName, lookupDeploymentVersion)
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.Client
@@ -72,13 +72,15 @@ data AppEnv = AppEnv
     isShuttingDown :: Shutdown,
     authTokenCacheKeyPrefix :: Text,
     exotelToken :: Text,
-    dataServers :: [DataServer]
+    dataServers :: [DataServer],
+    version :: DeploymentVersion
   }
   deriving (Generic)
 
 buildAppEnv :: Text -> AppCfg -> IO AppEnv
 buildAppEnv authTokenCacheKeyPrefix AppCfg {..} = do
   podName <- getPodName
+  version <- lookupDeploymentVersion
   loggerEnv <- prepareLoggerEnv loggerConfig podName
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv

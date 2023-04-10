@@ -31,6 +31,7 @@ import Kernel.Storage.Hedis (HedisEnv, connectHedis, disconnectHedis)
 import Kernel.Types.Base64 (Base64)
 import Kernel.Types.Common
 import Kernel.Types.Flow
+import Kernel.Utils.App (lookupDeploymentVersion)
 import Kernel.Utils.Common
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
@@ -64,7 +65,8 @@ data HandlerEnv = HandlerEnv
     googleTranslateKey :: Text,
     coreMetrics :: CoreMetricsContainer,
     ssrMetrics :: SendSearchRequestToDriverMetricsContainer,
-    maxShards :: Int
+    maxShards :: Int,
+    version :: DeploymentVersion
   }
   deriving (Generic)
 
@@ -72,6 +74,7 @@ buildHandlerEnv :: HandlerCfg -> IO HandlerEnv
 buildHandlerEnv HandlerCfg {..} = do
   let AppCfg {..} = appCfg
   hostname <- fmap cs <$> lookupEnv "POD_NAME" :: IO (Maybe Text)
+  version <- lookupDeploymentVersion
   loggerEnv <- prepareLoggerEnv appCfg.loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv appCfg.esqDBCfg loggerEnv
   esqDBReplicaEnv <- prepareEsqDBEnv appCfg.esqDBReplicaCfg loggerEnv

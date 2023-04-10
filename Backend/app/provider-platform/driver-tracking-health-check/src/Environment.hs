@@ -21,7 +21,7 @@ import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
 import Kernel.Types.Flow (FlowR)
-import Kernel.Utils.App (getPodName)
+import Kernel.Utils.App (getPodName, lookupDeploymentVersion)
 import Kernel.Utils.Dhall
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.Client (HttpClientOptions, RetryCfg)
@@ -72,7 +72,8 @@ data AppEnv = AppEnv
     isShuttingDown :: Shutdown,
     coreMetrics :: CoreMetricsContainer,
     loggerEnv :: LoggerEnv,
-    cacheConfig :: CacheConfig
+    cacheConfig :: CacheConfig,
+    version :: DeploymentVersion
   }
   deriving (Generic)
 
@@ -80,6 +81,7 @@ buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv AppCfg {..} = do
   isShuttingDown <- mkShutdown
   hostname <- getPodName
+  version <- lookupDeploymentVersion
   coreMetrics <- registerCoreMetricsContainer
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv

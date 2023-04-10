@@ -34,6 +34,7 @@ import Kernel.Types.Credentials (PrivateKey)
 import Kernel.Types.Flow (FlowR)
 import Kernel.Types.Registry
 import Kernel.Types.SlidingWindowLimiter
+import Kernel.Utils.App (lookupDeploymentVersion)
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import qualified Kernel.Utils.Registry as Registry
@@ -141,7 +142,8 @@ data AppEnv = AppEnv
     broadcastMessageTopic :: Text,
     snapToRoadSnippetThreshold :: HighPrecMeters,
     minTripDistanceForReferralCfg :: Maybe HighPrecMeters,
-    maxShards :: Int
+    maxShards :: Int,
+    version :: Metrics.DeploymentVersion
   }
   deriving (Generic)
 
@@ -152,6 +154,7 @@ instance AuthenticatingEntity AppEnv where
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv cfg@AppCfg {..} = do
   hostname <- map T.pack <$> lookupEnv "POD_NAME"
+  version <- lookupDeploymentVersion
   isShuttingDown <- newEmptyTMVarIO
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv

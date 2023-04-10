@@ -26,7 +26,7 @@ import qualified Kernel.Storage.Hedis.AppPrefixes as Redis
 import Kernel.Types.Common
 import Kernel.Types.Flow (FlowR)
 import Kernel.Types.Id (ShortId)
-import Kernel.Utils.App (getPodName)
+import Kernel.Utils.App (getPodName, lookupDeploymentVersion)
 import Kernel.Utils.Common
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
@@ -95,7 +95,8 @@ data AppEnv = AppEnv
     selfUIUrl :: BaseUrl,
     cacheConfig :: CacheConfig,
     driverPoolCfg :: DriverPoolConfig,
-    driverPoolBatchesCfg :: DriverPoolBatchesConfig
+    driverPoolBatchesCfg :: DriverPoolBatchesConfig,
+    version :: DeploymentVersion
   }
   deriving (Generic)
 
@@ -104,6 +105,7 @@ buildAppEnv AppCfg {..} = do
   isShuttingDown <- mkShutdown
   btmMetrics <- registerAllocatorMetricsContainer
   hostname <- getPodName
+  version <- lookupDeploymentVersion
   coreMetrics <- registerCoreMetricsContainer
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg

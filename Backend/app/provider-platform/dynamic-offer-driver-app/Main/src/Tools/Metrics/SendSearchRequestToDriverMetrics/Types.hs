@@ -25,13 +25,13 @@ import Kernel.Tools.Metrics.CoreMetrics as CoreMetrics
 import Kernel.Utils.Common
 import Prometheus as P
 
-type HasSendSearchRequestToDriverMetrics m r = (HasFlowEnv m r '["ssrMetrics" ::: SendSearchRequestToDriverMetricsContainer])
+type HasSendSearchRequestToDriverMetrics m r = HasFlowEnv m r ["ssrMetrics" ::: SendSearchRequestToDriverMetricsContainer, "version" ::: DeploymentVersion]
 
-type TaskCounterMetric = P.Vector P.Label1 P.Counter
+type TaskCounterMetric = P.Vector P.Label2 P.Counter
 
-type TaskDurationMetric = P.Vector P.Label1 P.Histogram
+type TaskDurationMetric = P.Vector P.Label2 P.Histogram
 
-type FailedTaskCounterMetric = P.Vector P.Label1 P.Counter
+type FailedTaskCounterMetric = P.Vector P.Label2 P.Counter
 
 data SendSearchRequestToDriverMetricsContainer = SendSearchRequestToDriverMetricsContainer
   { taskCounter :: TaskCounterMetric,
@@ -47,10 +47,10 @@ registerSendSearchRequestToDriverMetricsContainer = do
   return $ SendSearchRequestToDriverMetricsContainer {..}
 
 registerTaskCounter :: IO TaskCounterMetric
-registerTaskCounter = P.register . P.vector "agency_name" . P.counter $ P.Info "BTM_task_count" ""
+registerTaskCounter = P.register . P.vector ("agency_name", "version") . P.counter $ P.Info "BTM_task_count" ""
 
 registerFailedTaskCounter :: IO FailedTaskCounterMetric
-registerFailedTaskCounter = P.register . P.vector "agency_name" . P.counter $ P.Info "BTM_failed_task_count" ""
+registerFailedTaskCounter = P.register . P.vector ("agency_name", "version") . P.counter $ P.Info "BTM_failed_task_count" ""
 
 registerTaskDurationMetric :: IO TaskDurationMetric
-registerTaskDurationMetric = P.register . P.vector "agency_name" . P.histogram (P.Info "BTM_task_duration" "") $ P.linearBuckets 0 0.1 20
+registerTaskDurationMetric = P.register . P.vector ("agency_name", "version") . P.histogram (P.Info "BTM_task_duration" "") $ P.linearBuckets 0 0.1 20

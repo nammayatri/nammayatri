@@ -23,6 +23,7 @@ import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Flow (FlowR)
 import Kernel.Types.SlidingWindowCounters
 import qualified Kernel.Types.SlidingWindowCounters as SWC
+import Kernel.Utils.App (lookupDeploymentVersion)
 import Kernel.Utils.Dhall
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.Client
@@ -100,13 +101,15 @@ data AppEnv = AppEnv
     esqDBEnv :: EsqDBEnv,
     esqDBReplicaEnv :: EsqDBEnv,
     cacheConfig :: CacheConfig,
-    coreMetrics :: Metrics.CoreMetricsContainer
+    coreMetrics :: Metrics.CoreMetricsContainer,
+    version :: Metrics.DeploymentVersion
   }
   deriving (Generic)
 
 buildAppEnv :: AppCfg -> ConsumerType -> IO AppEnv
 buildAppEnv AppCfg {..} consumerType = do
   hostname <- map T.pack <$> lookupEnv "POD_NAME"
+  version <- lookupDeploymentVersion
   hedisEnv <- connectHedis hedisCfg id
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   coreMetrics <- Metrics.registerCoreMetricsContainer

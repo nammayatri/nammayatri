@@ -20,6 +20,7 @@ import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.App
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Flow
+import Kernel.Utils.App (lookupDeploymentVersion)
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.Client (HttpClientOptions, RetryCfg)
 import Kernel.Utils.Shutdown
@@ -55,13 +56,15 @@ data AppEnv = AppEnv
     shortDurationRetryCfg :: RetryCfg,
     longDurationRetryCfg :: RetryCfg,
     accountId :: AccountId,
-    apiKey :: ApiKey
+    apiKey :: ApiKey,
+    version :: DeploymentVersion
   }
   deriving (Generic)
 
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv AppCfg {..} = do
   hostname <- map T.pack <$> lookupEnv "POD_NAME"
+  version <- lookupDeploymentVersion
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   coreMetrics <- registerCoreMetricsContainer
   isShuttingDown <- mkShutdown

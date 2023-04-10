@@ -17,7 +17,7 @@ module Environment where
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Flow
-import Kernel.Utils.App (getPodName)
+import Kernel.Utils.App (getPodName, lookupDeploymentVersion)
 import Kernel.Utils.Common
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
@@ -42,7 +42,8 @@ data AppEnv = AppEnv
     loggerEnv :: LoggerEnv,
     coreMetrics :: CoreMetricsContainer,
     mockDataPath :: FilePath,
-    googleCfg :: Maybe GoogleCfgUnencrypted
+    googleCfg :: Maybe GoogleCfgUnencrypted,
+    version :: DeploymentVersion
   }
   deriving (Generic)
 
@@ -51,6 +52,7 @@ type MockDataFlow m r = HasFlowEnv m r '["mockDataPath" ::: FilePath]
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv AppCfg {..} = do
   podName <- getPodName
+  version <- lookupDeploymentVersion
   loggerEnv <- prepareLoggerEnv loggerConfig podName
   coreMetrics <- registerCoreMetricsContainer
   isShuttingDown <- mkShutdown
