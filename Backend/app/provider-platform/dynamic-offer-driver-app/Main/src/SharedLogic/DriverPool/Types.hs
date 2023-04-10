@@ -20,6 +20,7 @@ module SharedLogic.DriverPool.Types
   )
 where
 
+import Domain.Types.Merchant.DriverIntelligentPoolConfig (IntelligentScores)
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.Prelude hiding (id)
@@ -49,10 +50,7 @@ data DriverPoolWithActualDistResult = DriverPoolWithActualDistResult
   { driverPoolResult :: DriverPoolResult,
     actualDistanceToPickup :: Meters,
     actualDurationToPickup :: Seconds,
-    rideRequestPopupDelayDuration :: Seconds,
-    cancellationRatio :: Maybe Double,
-    acceptanceRatio :: Maybe Double,
-    driverAvailableTime :: Maybe Double,
+    intelligentScores :: IntelligentScores,
     isPartOfIntelligentPool :: Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON)

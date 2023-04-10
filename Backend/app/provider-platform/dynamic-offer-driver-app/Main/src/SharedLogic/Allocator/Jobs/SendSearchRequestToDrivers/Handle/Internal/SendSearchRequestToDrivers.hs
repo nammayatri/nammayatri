@@ -82,7 +82,7 @@ sendSearchRequestToDrivers searchReq baseFare driverMinExtraFee driverMaxExtraFe
   forM_ driverPoolZipSearchRequests $ \(dPoolRes, sReqFD) -> do
     let language = fromMaybe Maps.ENGLISH dPoolRes.driverPoolResult.language
     let translatedSearchReq = fromMaybe searchReq $ M.lookup language languageDictionary
-    let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq dPoolRes.rideRequestPopupDelayDuration
+    let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq dPoolRes.intelligentScores.rideRequestPopupDelayDuration
     Notify.notifyOnNewSearchRequestAvailable searchReq.providerId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData
   where
     getSearchRequestValidTill = do
@@ -126,11 +126,12 @@ sendSearchRequestToDrivers searchReq baseFare driverMinExtraFee driverMaxExtraFe
                 response = Nothing,
                 driverMinExtraFee = driverMinExtraCharge,
                 driverMaxExtraFee = driverMaxExtraCharge,
-                rideRequestPopupDelayDuration = dpwRes.rideRequestPopupDelayDuration,
+                rideRequestPopupDelayDuration = dpwRes.intelligentScores.rideRequestPopupDelayDuration,
                 isPartOfIntelligentPool = dpwRes.isPartOfIntelligentPool,
-                acceptanceRatio = dpwRes.acceptanceRatio,
-                cancellationRatio = dpwRes.cancellationRatio,
-                driverAvailableTime = dpwRes.driverAvailableTime,
+                acceptanceRatio = dpwRes.intelligentScores.acceptanceRatio,
+                cancellationRatio = dpwRes.intelligentScores.cancellationRatio,
+                driverAvailableTime = dpwRes.intelligentScores.availableTime,
+                driverSpeed = dpwRes.intelligentScores.driverSpeed,
                 ..
               }
       pure searchRequestForDriver

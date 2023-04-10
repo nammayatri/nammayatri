@@ -62,6 +62,7 @@ mkPersist
       acceptanceRatio Double Maybe
       driverAvailableTime Double Maybe
       parallelSearchRequestCount Int Maybe
+      driverSpeed Double Maybe
       Primary id
       deriving Generic
     |]

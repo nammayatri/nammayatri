@@ -61,7 +61,8 @@ data SearchRequestForDriver = SearchRequestForDriver
     cancellationRatio :: Maybe Double,
     acceptanceRatio :: Maybe Double,
     driverAvailableTime :: Maybe Double,
-    parallelSearchRequestCount :: Maybe Int
+    parallelSearchRequestCount :: Maybe Int,
+    driverSpeed :: Maybe Double
   }
   deriving (Generic, Show, PrettyShow)
 
