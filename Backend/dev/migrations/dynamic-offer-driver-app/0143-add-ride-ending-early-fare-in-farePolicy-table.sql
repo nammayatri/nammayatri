@@ -1,0 +1,1 @@
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN early_end_ride_penalty double precision;

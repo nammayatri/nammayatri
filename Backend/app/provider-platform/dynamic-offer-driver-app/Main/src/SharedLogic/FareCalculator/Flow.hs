@@ -47,12 +47,13 @@ calculateFare ::
   UTCTime ->
   Maybe Money ->
   Maybe Money ->
+  Maybe Money ->
   m FareParameters
-calculateFare merchantId policy distance time driverSelectedFare customerExtraFee = do
+calculateFare merchantId policy distance time driverSelectedFare customerExtraFee earlyEndRidePenalty = do
   fareParams <- case policy of
     Left farePolicy -> do
       logFareCalculatorInfo farePolicy.vehicleVariant
-      calculateFareParameters farePolicy distance time driverSelectedFare customerExtraFee
+      calculateFareParameters farePolicy distance time driverSelectedFare customerExtraFee earlyEndRidePenalty
     Right slabFarePolicy -> do
       logFareCalculatorInfo slabFarePolicy.vehicleVariant
       calculateSlabFareParameters slabFarePolicy distance time driverSelectedFare customerExtraFee
