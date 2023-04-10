@@ -5,14 +5,7 @@
     common.url = "github:nammayatri/common";
     flake-parts.follows = "common/flake-parts";
 
-    haskell-flake.url = "github:sbh69840/haskell-flake/poc-localapps";
-    common.inputs.haskell-flake.follows = "haskell-flake";
-
-    # TODO: Move to common repo?
-    # Pending merge of these PRs
-    # - https://github.com/cachix/pre-commit-hooks.nix/pull/271
-    pre-commit-hooks-nix.url = "github:juspay/pre-commit-hooks.nix/find-gitdir";
-
+    # Backend inputs
     shared-kernel.url = "github:nammayatri/shared-kernel";
     shared-kernel.inputs.nixpkgs.follows = "nixpkgs";
     beckn-gateway.url = "github:nammayatri/beckn-gateway/ca94cd38adbc4e8e6e65f0d83610edadca5a279b";
@@ -23,31 +16,11 @@
       systems = import inputs.systems;
       imports = [
         inputs.common.flakeModules.default
-        inputs.pre-commit-hooks-nix.flakeModule
         ./Backend/default.nix
         ./Frontend/default.nix
       ];
       perSystem = { config, self', pkgs, ... }: {
         packages.default = self'.packages.nammayatri;
-
-        # TODO: Move these to common repo.
-        pre-commit = {
-          check.enable = true;
-          settings = {
-            imports = [
-              ./Backend/nix/pre-commit.nix
-            ];
-            hooks = {
-              treefmt.enable = true;
-              nil.enable = true;
-              hpack.enable = true;
-            };
-          };
-        };
-
-        treefmt.config = {
-          programs.dhall.enable = true;
-        };
 
         devShells.default = pkgs.mkShell {
           inputsFrom = [

@@ -8,6 +8,14 @@
     ./nix/osrm.nix
   ];
   perSystem = { config, self', pkgs, lib, ... }: {
+    pre-commit.settings.imports = [
+      ./nix/pre-commit.nix
+    ];
+
+    treefmt.config = {
+      programs.dhall.enable = true;
+    };
+
     haskellProjects.default = {
       projectRoot = ./.;
       imports = [
