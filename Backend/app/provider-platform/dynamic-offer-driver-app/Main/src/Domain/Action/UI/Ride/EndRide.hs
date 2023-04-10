@@ -210,12 +210,10 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
     when distanceCalculationFailed $ logWarning $ "Failed to calculate distance for this ride: " <> ride.id.getId
 
     pickupDropOutsideOfThreshold <- isPickupDropOutsideOfThreshold handle booking ride tripEndPoint
-
-    (chargeableDistance, finalFare, mbUpdatedFareParams) <- 
+    (chargeableDistance, finalFare, mbUpdatedFareParams) <-
       if distanceCalculationFailed
         then calculateFinalValuesForFailedDistanceCalculations handle booking ride tripEndPoint now pickupDropOutsideOfThreshold
-        else calculateFinalValuesForCorrectDistanceCalculations handle booking ride now pickupDropOutsideOfThreshold
-
+        else calculateFinalValuesForCorrectDistanceCalculations handle booking ride now booking.maxEstimatedDistance pickupDropOutsideOfThreshold
     let newFareParams = fromMaybe booking.fareParams mbUpdatedFareParams
     let updRide =
           ride{tripEndTime = Just now,
@@ -315,65 +313,70 @@ isTimeOutsideOfThreshold ServiceHandle {..} booking ride now = do
       pure timeOutsideOfThreshold
 
 calculateFinalValuesForCorrectDistanceCalculations ::
-  (MonadThrow m, Log m, MonadTime m, MonadGuid m) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> UTCTime -> m Bool -> m (Meters, Money, Maybe FareParameters)
-calculateFinalValuesForCorrectDistanceCalculations handle booking ride now isPickupDropOutsideOfThreshold = do
+  (MonadThrow m, Log m, MonadTime m, MonadGuid m) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> UTCTime -> Maybe HighPrecMeters -> Bool -> m (Meters, Money, Maybe FareParameters)
+calculateFinalValuesForCorrectDistanceCalculations handle booking ride now mbMaxDistance pickupDropOutsideOfThreshold = do
   distanceDiff <- getDistanceDiff booking (highPrecMetersToMeters ride.traveledDistance)
-
-  if not isPickupDropOutsideOfThreshold 
-    then if distanceDiff > 1200
-      then recalculateFareForDistance handle booking ride (roundToIntegral ride.traveledDistance)
-      else returnEstimatesAsFinalValues handle booking ride
-    else if distanceDiff < 0
-      then do
-        fare1@(_, money1, _) <- recalculateFareForDistance handle booking ride (roundToIntegral $ ride.traveledDistance + abs (distanceDiff * 0.5))
-        (dist2, money2', fp2) <- recalculateFareForDistance handle booking ride $ roundToIntegral ride.traveledDistance
-        let money2 = money2' + 50 - (fromMaybe 0 booking.fareParams.driverSelectedFare)
-        let fare2 = (dist2, money2, fp2)
-        return $
-          if money1 < money2
-            then fare1
-            else fare2
-      else
-        if distanceDiff < 1200
-          then do
-            timeOutsideOfThreshold <- isTimeOutsideOfThreshold handle booking ride now
-            if timeOutsideOfThreshold
-              then recalculateFareForDistance handle booking ride (booking.estimatedDistance)
-              else returnEstimatesAsFinalValues handle booking ride
-          else recalculateFareForDistance handle booking ride (roundToIntegral ride.traveledDistance)
+  thresholdConfig <- handle.findConfig >>= fromMaybeM (InternalError "TransportConfigNotFound")
+  let maxDistance = fromMaybe ride.traveledDistance mbMaxDistance + thresholdConfig.upwardsRecomputeBuffer
+  if not pickupDropOutsideOfThreshold
+    then
+      if distanceDiff > thresholdConfig.actualRideDistanceDiffThreshold
+        then recalculateFareForDistance handle booking ride (roundToIntegral $ min ride.traveledDistance maxDistance)
+        else returnEstimatesAsFinalValues handle booking ride
+    else
+      if distanceDiff < 0
+        then do
+          fare1@(_, money1, _) <- recalculateFareForDistance handle booking ride (roundToIntegral $ ride.traveledDistance + abs (distanceDiff * 0.5))
+          (dist2, money2', fp2) <- recalculateFareForDistance handle booking ride $ roundToIntegral ride.traveledDistance
+          let money2 = money2' + 50 - (fromMaybe 0 booking.fareParams.driverSelectedFare)
+          let fare2 = (dist2, money2, fp2)
+          return $
+            if money1 < money2
+              then fare1
+              else fare2
+        else
+          if distanceDiff < thresholdConfig.actualRideDistanceDiffThreshold
+            then do
+              timeOutsideOfThreshold <- isTimeOutsideOfThreshold handle booking ride now
+              if timeOutsideOfThreshold
+                then recalculateFareForDistance handle booking ride (booking.estimatedDistance)
+                else returnEstimatesAsFinalValues handle booking ride
+            else recalculateFareForDistance handle booking ride (roundToIntegral ride.traveledDistance)
 
 calculateFinalValuesForFailedDistanceCalculations ::
-  (MonadThrow m, Log m, MonadTime m, MonadGuid m) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> LatLong -> UTCTime -> m Bool -> m (Meters, Money, Maybe FareParameters)
-calculateFinalValuesForFailedDistanceCalculations handle@ServiceHandle {..} booking ride tripEndPoint now isPickupDropOutsideOfThreshold = do
+  (MonadThrow m, Log m, MonadTime m, MonadGuid m) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> LatLong -> UTCTime -> Bool -> m (Meters, Money, Maybe FareParameters)
+calculateFinalValuesForFailedDistanceCalculations handle@ServiceHandle {..} booking ride tripEndPoint now pickupDropOutsideOfThreshold = do
   let tripStartPoint = case ride.tripStartPos of
         Nothing -> getCoordinates booking.fromLocation
         Just tripStartPos -> tripStartPos
   approxTraveledDistance <- getDistanceBetweenPoints tripStartPoint tripEndPoint
   distanceDiff <- getDistanceDiff booking approxTraveledDistance
+  thresholdConfig <- findConfig >>= fromMaybeM (InternalError "TransportConfigNotFound")
 
-if not isPickupDropOutsideOfThreshold
-  then returnEstimatesAsFinalValues handle booking ride
-  else if distanceDiff < 0
-    then do
-      fare1@(_, money1, _) <- recalculateFareForDistance handle booking ride (approxTraveledDistance + roundToIntegral (abs (distanceDiff * 0.5)))
-      (dist2, money2', fp2) <- recalculateFareForDistance handle booking ride approxTraveledDistance
-      let money2 = money2' + 50 - (fromMaybe 0 booking.fareParams.driverSelectedFare)
-      let fare2 = (dist2, money2, fp2)
-      return $
-        if money1 < money2
-          then fare1
-          else fare2
+  if not pickupDropOutsideOfThreshold
+    then returnEstimatesAsFinalValues handle booking ride
     else
-      if distanceDiff < 1200
+      if distanceDiff < 0
         then do
-          timeOutsideOfThreshold <- isTimeOutsideOfThreshold handle booking ride now
-          if timeOutsideOfThreshold
-            then recalculateFareForDistance handle booking ride (booking.estimatedDistance)
-            else returnEstimatesAsFinalValues handle booking ride
-        else do
-          if distanceDiff < 2000
-            then recalculateFareForDistance handle booking ride approxTraveledDistance
-            else recalculateFareForDistance handle booking ride (booking.estimatedDistance + 2000)
+          fare1@(_, money1, _) <- recalculateFareForDistance handle booking ride (approxTraveledDistance + roundToIntegral (abs (distanceDiff * 0.5)))
+          (dist2, money2', fp2) <- recalculateFareForDistance handle booking ride approxTraveledDistance
+          let money2 = money2' + 50 - (fromMaybe 0 booking.fareParams.driverSelectedFare)
+          let fare2 = (dist2, money2, fp2)
+          return $
+            if money1 < money2
+              then fare1
+              else fare2
+        else
+          if distanceDiff < thresholdConfig.actualRideDistanceDiffThreshold
+            then do
+              timeOutsideOfThreshold <- isTimeOutsideOfThreshold handle booking ride now
+              if timeOutsideOfThreshold
+                then recalculateFareForDistance handle booking ride (booking.estimatedDistance)
+                else returnEstimatesAsFinalValues handle booking ride
+            else do
+              if distanceDiff < thresholdConfig.approxRideDistanceDiffThreshold
+                then recalculateFareForDistance handle booking ride approxTraveledDistance
+                else recalculateFareForDistance handle booking ride (booking.estimatedDistance + highPrecMetersToMeters thresholdConfig.approxRideDistanceDiffThreshold)
 
 returnEstimatesAsFinalValues :: (MonadThrow m, Log m, MonadTime m, MonadGuid m) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> m (Meters, Money, Maybe FareParameters)
 returnEstimatesAsFinalValues handle booking ride = do

@@ -25,9 +25,8 @@ import qualified Domain.Types.Merchant.TransporterConfig as Domain
 import qualified Kernel.External.FCM.Types as FCM
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
-import Kernel.Types.Common (Meters)
+import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Time
 import Storage.Tabular.Merchant (MerchantTId)
 
 mkPersist
@@ -53,6 +52,10 @@ mkPersist
       onboardingRetryTimeInHours Int
       checkImageExtractionForDashboard Bool
       searchRepeatLimit Int
+      actualRideDistanceDiffThreshold Centesimal
+      upwardsRecomputeBuffer Centesimal
+      approxRideDistanceDiffThreshold Centesimal
+
       createdAt UTCTime
       updatedAt UTCTime
 
@@ -71,6 +74,9 @@ instance FromTType TransporterConfigT Domain.TransporterConfig where
     return $
       Domain.TransporterConfig
         { merchantId = fromKey merchantId,
+          actualRideDistanceDiffThreshold = HighPrecMeters actualRideDistanceDiffThreshold,
+          upwardsRecomputeBuffer = HighPrecMeters upwardsRecomputeBuffer,
+          approxRideDistanceDiffThreshold = HighPrecMeters approxRideDistanceDiffThreshold,
           fcmConfig =
             FCM.FCMConfig
               { fcmUrl = fcmUrl',
@@ -86,5 +92,8 @@ instance ToTType TransporterConfigT Domain.TransporterConfig where
         fcmUrl = showBaseUrl fcmConfig.fcmUrl,
         fcmServiceAccount = fcmConfig.fcmServiceAccount,
         fcmTokenKeyPrefix = fcmConfig.fcmTokenKeyPrefix,
+        actualRideDistanceDiffThreshold = getHighPrecMeters actualRideDistanceDiffThreshold,
+        upwardsRecomputeBuffer = getHighPrecMeters upwardsRecomputeBuffer,
+        approxRideDistanceDiffThreshold = getHighPrecMeters approxRideDistanceDiffThreshold,
         ..
       }

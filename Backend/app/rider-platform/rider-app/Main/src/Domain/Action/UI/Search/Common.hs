@@ -39,11 +39,12 @@ buildSearchRequest ::
   Location.SearchReqLocation ->
   Maybe Location.SearchReqLocation ->
   Maybe HighPrecMeters ->
+  Maybe HighPrecMeters ->
   UTCTime ->
   Maybe Version ->
   Maybe Version ->
   m SearchRequest.SearchRequest
-buildSearchRequest person pickup mbDrop mbDistance now bundleVersion clientVersion = do
+buildSearchRequest person pickup mbDrop mbMaxDistance mbDistance now bundleVersion clientVersion = do
   searchRequestId <- generateGUID
   validTill <- getSearchRequestExpiry now
   return
@@ -55,6 +56,7 @@ buildSearchRequest person pickup mbDrop mbDistance now bundleVersion clientVersi
         fromLocation = pickup,
         toLocation = mbDrop,
         distance = mbDistance,
+        maxDistance = mbMaxDistance,
         merchantId = person.merchantId,
         createdAt = now,
         bundleVersion = bundleVersion,

@@ -35,6 +35,7 @@ data SearchRequest = SearchRequest
     fromLocation :: DLoc.SearchReqLocation,
     toLocation :: Maybe DLoc.SearchReqLocation,
     distance :: Maybe HighPrecMeters,
+    maxDistance :: Maybe HighPrecMeters,
     merchantId :: Id DMerchant.Merchant, -- remove when searchRequest will not be used in CustomerSupport
     createdAt :: UTCTime,
     bundleVersion :: Maybe Version,

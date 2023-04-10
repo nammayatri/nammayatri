@@ -42,7 +42,10 @@ data TransporterConfigD u = TransporterConfig
     checkImageExtractionForDashboard :: Bool,
     searchRepeatLimit :: Int,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    actualRideDistanceDiffThreshold :: HighPrecMeters,
+    upwardsRecomputeBuffer :: HighPrecMeters,
+    approxRideDistanceDiffThreshold :: HighPrecMeters
   }
   deriving (Generic, Show)
 
