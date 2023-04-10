@@ -68,6 +68,8 @@ buildInitMessage res = do
       VehVar.SUV -> Init.SUV
       VehVar.HATCHBACK -> Init.HATCHBACK
       VehVar.AUTO_RICKSHAW -> Init.AUTO_RICKSHAW
+      VehVar.TAXI -> Init.TAXI
+      VehVar.TAXI_PLUS -> Init.TAXI_PLUS
 
 mkOrderItem :: Maybe Text -> Init.ItemCode -> Init.OrderItem
 mkOrderItem mbBppItemId code =

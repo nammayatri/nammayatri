@@ -70,3 +70,5 @@ castVariant OS.AUTO_RICKSHAW = AUTO_RICKSHAW
 castVariant OS.SEDAN = SEDAN
 castVariant OS.HATCHBACK = HATCHBACK
 castVariant OS.SUV = SUV
+castVariant OS.TAXI = TAXI
+castVariant OS.TAXI_PLUS = TAXI_PLUS

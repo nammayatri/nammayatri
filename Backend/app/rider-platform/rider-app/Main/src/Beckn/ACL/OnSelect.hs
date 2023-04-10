@@ -98,6 +98,8 @@ buildQuoteInfo item = do
       OnSelect.SUV -> SUV
       OnSelect.HATCHBACK -> HATCHBACK
       OnSelect.AUTO_RICKSHAW -> AUTO_RICKSHAW
+      OnSelect.TAXI -> TAXI
+      OnSelect.TAXI_PLUS -> TAXI_PLUS
 
 buildDriverOfferQuoteDetails ::
   (MonadThrow m, Log m) =>

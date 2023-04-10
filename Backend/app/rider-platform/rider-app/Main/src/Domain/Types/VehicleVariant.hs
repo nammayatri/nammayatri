@@ -20,7 +20,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Utils.GenericPretty
 
-data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW
+data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS
   deriving
     ( Show,
       Eq,

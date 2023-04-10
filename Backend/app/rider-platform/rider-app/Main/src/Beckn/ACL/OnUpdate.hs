@@ -158,6 +158,8 @@ buildEstimateInfo item = do
       EstRepUpd.SUV -> VehVar.SUV
       EstRepUpd.HATCHBACK -> VehVar.HATCHBACK
       EstRepUpd.AUTO_RICKSHAW -> VehVar.AUTO_RICKSHAW
+      EstRepUpd.TAXI -> VehVar.TAXI
+      EstRepUpd.TAXI_PLUS -> VehVar.TAXI_PLUS
 
     validateFareRange totalFare DEstimate.FareRange {..} = do
       when (minFare < 0) $ throwError $ InvalidRequest "Minimum discounted price is less than zero"

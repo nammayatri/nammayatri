@@ -505,6 +505,8 @@ buildVehicle merchantId personId req = do
       Common.HATCHBACK -> DVeh.HATCHBACK
       Common.SEDAN -> DVeh.SEDAN
       Common.AUTO_RICKSHAW -> DVeh.AUTO_RICKSHAW
+      Common.TAXI -> DVeh.TAXI
+      Common.TAXI_PLUS -> DVeh.TAXI_PLUS
 
 ---------------------------------------------------------------------
 updateDriverName :: ShortId DM.Merchant -> Id Common.Driver -> Common.UpdateDriverNameReq -> Flow APISuccess

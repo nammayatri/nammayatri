@@ -16,7 +16,7 @@ module Beckn.Types.Core.Taxi.Common.VehicleVariant where
 
 import Kernel.Prelude
 
-data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW
+data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS
   deriving
     ( Show,
       Eq,

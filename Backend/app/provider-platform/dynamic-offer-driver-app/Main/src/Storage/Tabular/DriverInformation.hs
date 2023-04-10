@@ -41,9 +41,12 @@ mkPersist
       blocked Bool
       verified Bool
       lastEnabledOn UTCTime Maybe
+      referralCode Text Maybe
+      canDowngradeToSedan Bool
+      canDowngradeToHatchback Bool
+      canDowngradeToTaxi Bool
       createdAt UTCTime
       updatedAt UTCTime
-      referralCode Text Maybe
       Primary driverId
       deriving Generic
     |]

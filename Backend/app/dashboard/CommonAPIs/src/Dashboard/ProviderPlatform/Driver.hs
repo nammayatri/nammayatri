@@ -438,7 +438,7 @@ data AddVehicleReq = AddVehicleReq
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data Variant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW
+data Variant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
