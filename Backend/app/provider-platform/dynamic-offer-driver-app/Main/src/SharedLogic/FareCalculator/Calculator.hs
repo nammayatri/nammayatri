@@ -82,6 +82,11 @@ mkNormalBreakupList mkPrice mkBreakupItem fareParams = do
         mbExtraKmFareRounded <&> \extraKmFareRounded ->
           mkBreakupItem extraDistanceFareCaption (mkPrice extraKmFareRounded)
 
+      mbEarlyEndRidePenaltyCaption = "EARLY_END_RIDE_PENALTY"
+      mbEarlyEndRidePenaltyFareItem =
+        fareParams.earlyEndRidePenalty <&> \earlyEndRidePenalty ->
+          mkBreakupItem mbEarlyEndRidePenaltyCaption (mkPrice earlyEndRidePenalty)
+
       mkSelectedFareCaption = "DRIVER_SELECTED_FARE"
       mbSelectedFareItem =
         fareParams.driverSelectedFare <&> \selFare ->
@@ -95,7 +100,7 @@ mkNormalBreakupList mkPrice mkBreakupItem fareParams = do
       totalFareFinalRounded = fareSum fareParams
       totalFareCaption = "TOTAL_FARE"
       totalFareItem = mkBreakupItem totalFareCaption $ mkPrice totalFareFinalRounded
-  catMaybes [Just totalFareItem, Just baseFareItem, deadKmFareItem, extraDistanceFareItem, mbSelectedFareItem, mkCustomerExtraFareItem]
+  catMaybes [Just totalFareItem, Just baseFareItem, deadKmFareItem, extraDistanceFareItem, mbSelectedFareItem, mbEarlyEndRidePenaltyFareItem, mkCustomerExtraFareItem]
 
 -- TODO: make some tests for it
 
@@ -147,8 +152,9 @@ calculateFareParameters ::
   UTCTime ->
   Maybe Money ->
   Maybe Money ->
+  Maybe Money ->
   m FareParameters
-calculateFareParameters fp distance time mbExtraFare mbCustomerExtraFee = do
+calculateFareParameters fp distance time mbExtraFare mbCustomerExtraFee mbEarlyEndRidePenalty = do
   let baseDistanceFare = roundToIntegral $ fp.baseDistanceFare
       mbExtraDistance =
         distance - fp.baseDistanceMeters
@@ -171,7 +177,8 @@ calculateFareParameters fp distance time mbExtraFare mbCustomerExtraFee = do
         waitingOrPickupCharges = Nothing,
         serviceCharge = Nothing,
         farePolicyType = NORMAL,
-        govtChargesPerc = Nothing
+        govtChargesPerc = Nothing,
+        earlyEndRidePenalty = mbEarlyEndRidePenalty
       }
 
 calculateSlabFareParameters ::
@@ -206,7 +213,8 @@ calculateSlabFareParameters fp distance time mbExtraFare customerExtraFee = do
         waitingOrPickupCharges = Just waitingOrPickupCharges,
         waitingChargePerMin = Nothing,
         farePolicyType = SLAB,
-        govtChargesPerc = fp.govtChargesPerc
+        govtChargesPerc = fp.govtChargesPerc,
+        earlyEndRidePenalty = Nothing
       }
 
 selectSlab :: Meters -> Slab -> Bool

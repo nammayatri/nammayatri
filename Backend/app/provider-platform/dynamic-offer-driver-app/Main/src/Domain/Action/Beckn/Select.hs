@@ -91,11 +91,11 @@ handler merchantId sReq = do
     DFareParams.SLAB -> do
       slabFarePolicy <- SFarePolicyS.findByMerchantIdAndVariant org.id sReq.variant >>= fromMaybeM (InternalError "Slab fare policy not found")
       let driverExtraFare = DFarePolicy.ExtraFee {minFee = 0, maxFee = 0}
-      fareParams <- calculateFare merchantId (Right slabFarePolicy) distance sReq.pickupTime Nothing sReq.customerExtraFee
+      fareParams <- calculateFare merchantId (Right slabFarePolicy) distance sReq.pickupTime Nothing sReq.customerExtraFee Nothing
       pure (fareParams, driverExtraFare)
     DFareParams.NORMAL -> do
       farePolicy <- FarePolicyS.findByMerchantIdAndVariant org.id sReq.variant (Just distance) >>= fromMaybeM NoFarePolicy
-      fareParams <- calculateFare merchantId (Left farePolicy) distance sReq.pickupTime Nothing sReq.customerExtraFee
+      fareParams <- calculateFare merchantId (Left farePolicy) distance sReq.pickupTime Nothing sReq.customerExtraFee Nothing
       pure (fareParams, farePolicy.driverExtraFee)
   searchReq <- buildSearchRequest fromLocation toLocation merchantId sReq distance duration sReq.customerExtraFee
   let estimateFare = fareSum fareParams
