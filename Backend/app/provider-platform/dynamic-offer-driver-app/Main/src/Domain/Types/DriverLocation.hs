@@ -26,6 +26,7 @@ data DriverLocation = DriverLocation
     lon :: Double,
     coordinatesCalculatedAt :: UTCTime,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    accuracy :: Maybe Double
   }
   deriving (Generic, Show, Eq, HasCoordinates, FromJSON, ToJSON)

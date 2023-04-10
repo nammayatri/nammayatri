@@ -34,6 +34,7 @@ mkPersist
       driverId PersonTId
       lat Double
       lon Double
+      accuracy Double Maybe
       point Point
       coordinatesCalculatedAt UTCTime
       createdAt UTCTime

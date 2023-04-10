@@ -39,6 +39,7 @@ data Status = PreRide | ActualRide
 
 data GetLocationRes = GetLocationRes
   { currPoint :: LatLong,
+    accuracy :: Maybe Double,
     totalDistance :: Double,
     status :: Status,
     lastUpdate :: UTCTime
@@ -61,4 +62,5 @@ getLocation rideId = do
   let lastUpdate = currLocation.updatedAt
   let totalDistance = realToFrac ride.traveledDistance.getHighPrecMeters
       currPoint = GoogleMaps.getCoordinates currLocation
+      accuracy = currLocation.accuracy
   return $ GetLocationRes {..}

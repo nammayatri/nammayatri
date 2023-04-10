@@ -13,7 +13,7 @@
 -}
 
 module Domain.Action.UI.Ride
-  ( GetDriverLocResp,
+  ( GetDriverLocResp (..),
     GetRideStatusResp (..),
     getDriverLoc,
     getRideStatus,
@@ -44,7 +44,7 @@ import qualified Tools.Maps as MapSearch
 import Tools.Metrics
 import qualified Tools.Notifications as Notify
 
-type GetDriverLocResp = MapSearch.LatLong
+data GetDriverLocResp = GetDriverLocResp { latlong :: MapSearch.LatLong, accuracy :: Maybe Double} deriving (Generic, FromJSON, ToJSON, ToSchema)
 
 data GetRideStatusResp = GetRideStatusResp
   { fromLocation :: BookingLocationAPIEntity,
@@ -91,7 +91,7 @@ getDriverLoc rideId personId = do
         when (isNothing mbHasReachedNotified && distance <= driverReachedDistance) $ do
           Notify.notifyDriverHasReached personId ride
           Redis.setExp driverHasReached () 1500
-  return res.currPoint
+  return GetDriverLocResp { latlong = res.currPoint, accuracy = res.accuracy}
   where
     distanceUpdates = "Ride:GetDriverLoc:DriverDistance " <> rideId.getId
     driverOnTheWay = "Ride:GetDriverLoc:DriverIsOnTheWay " <> rideId.getId

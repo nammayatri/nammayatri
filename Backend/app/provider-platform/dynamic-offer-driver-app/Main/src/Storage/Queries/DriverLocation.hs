@@ -25,8 +25,8 @@ import Kernel.Types.Common (MonadTime (getCurrentTime))
 import Kernel.Types.Id
 import Storage.Tabular.DriverLocation
 
-create :: Id Person -> LatLong -> UTCTime -> SqlDB ()
-create drLocationId latLong updateTime = do
+create :: Id Person -> LatLong -> UTCTime -> Maybe Double -> SqlDB ()
+create drLocationId latLong updateTime accuracy = do
   -- Tricky query to be able to insert meaningful Point
   now <- getCurrentTime
   Esq.insertSelect $
@@ -35,6 +35,7 @@ create drLocationId latLong updateTime = do
         <# val (toKey drLocationId)
         <#> val latLong.lat
         <#> val latLong.lon
+        <#> val accuracy
         <#> Esq.getPoint (val latLong.lat, val latLong.lon)
         <#> val updateTime
         <#> val now
@@ -46,26 +47,27 @@ findById ::
   m (Maybe DriverLocation)
 findById = Esq.findById
 
-upsertGpsCoord :: Id Person -> LatLong -> UTCTime -> SqlDB DriverLocation
-upsertGpsCoord drLocationId latLong calculationTime = do
+upsertGpsCoord :: Id Person -> LatLong -> UTCTime -> Maybe Double -> SqlDB DriverLocation
+upsertGpsCoord drLocationId latLong calculationTime accuracy = do
   mbDrLoc <- Esq.findById @DriverLocation @DriverLocationT drLocationId
   now <- getCurrentTime
   case mbDrLoc of
     Nothing -> do
-      Storage.Queries.DriverLocation.create drLocationId latLong calculationTime
-      return $ DriverLocation drLocationId latLong.lat latLong.lon calculationTime now now
+      Storage.Queries.DriverLocation.create drLocationId latLong calculationTime accuracy
+      return $ DriverLocation drLocationId latLong.lat latLong.lon calculationTime now now accuracy
     Just oldLocation -> do
       Esq.update $ \tbl -> do
         set
           tbl
           [ DriverLocationLat =. val latLong.lat,
+            DriverLocationAccuracy =. val accuracy,
             DriverLocationLon =. val latLong.lon,
             DriverLocationCoordinatesCalculatedAt =. val calculationTime,
             DriverLocationPoint =. Esq.getPoint (val latLong.lat, val latLong.lon),
             DriverLocationUpdatedAt =. val now
           ]
         where_ $ tbl ^. DriverLocationTId ==. val (toKey $ cast drLocationId)
-      return $ oldLocation{lat = latLong.lat, lon = latLong.lon, coordinatesCalculatedAt = calculationTime, updatedAt = now}
+      return $ oldLocation{lat = latLong.lat, lon = latLong.lon, coordinatesCalculatedAt = calculationTime, updatedAt = now, accuracy = accuracy} 
 
 deleteById :: Id Person -> SqlDB ()
 deleteById = deleteByKey @DriverLocationT

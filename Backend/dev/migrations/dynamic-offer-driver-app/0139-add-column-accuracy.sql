@@ -1,0 +1,1 @@
+ALTER TABLE atlas_driver_offer_bpp.driver_location ADD COLUMN accuracy double precision;

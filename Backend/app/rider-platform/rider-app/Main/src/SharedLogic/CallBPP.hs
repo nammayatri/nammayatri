@@ -134,6 +134,7 @@ data GetLocationRes = GetLocationRes
   { currPoint :: MapSearch.LatLong,
     totalDistance :: Double,
     status :: Status,
+    accuracy :: Maybe Double,
     lastUpdate :: UTCTime
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
