@@ -73,13 +73,14 @@ oneWaySearch ::
   Maybe Version ->
   Maybe Version ->
   Maybe Meters ->
+  Maybe Meters ->
   m OneWaySearchRes
-oneWaySearch person merchant req bundleVersion clientVersion distance = do
+oneWaySearch person merchant req bundleVersion clientVersion longestRouteDistance distance = do
   validateServiceability merchant.geofencingConfig
   fromLocation <- DSearch.buildSearchReqLoc req.origin
   toLocation <- DSearch.buildSearchReqLoc req.destination
   now <- getCurrentTime
-  searchRequest <- DSearch.buildSearchRequest person fromLocation (Just toLocation) (metersToHighPrecMeters <$> distance) now bundleVersion clientVersion
+  searchRequest <- DSearch.buildSearchRequest person fromLocation (Just toLocation) (metersToHighPrecMeters <$> longestRouteDistance) (metersToHighPrecMeters <$> distance) now bundleVersion clientVersion
   Metrics.incrementSearchRequestCount merchant.name
   let txnId = getId (searchRequest.id)
   Metrics.startSearchMetrics merchant.name txnId

@@ -55,6 +55,7 @@ mkPersist
       toLocationId BookingLocationTId
       vehicleVariant Veh.Variant
       estimatedDistance Meters
+      maxEstimatedDistance Centesimal Maybe
       estimatedFare Money
       estimatedDuration Seconds
       fareParametersId Fare.FareParametersTId
@@ -86,6 +87,7 @@ instance FromTType FullBookingT Domain.Booking where
           fromLocation = fromLoc_,
           toLocation = toLoc_,
           bapUri = pUrl,
+          maxEstimatedDistance = HighPrecMeters <$> maxEstimatedDistance,
           riderId = fromKey <$> riderId,
           ..
         }
@@ -99,6 +101,7 @@ instance ToTType FullBookingT Domain.Booking where
           toLocationId = toKey toLocation.id,
           bapUri = showBaseUrl bapUri,
           riderId = toKey <$> riderId,
+          maxEstimatedDistance = getHighPrecMeters <$> maxEstimatedDistance,
           fareParametersId = toKey fareParams.id,
           ..
         },

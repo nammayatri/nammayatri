@@ -42,6 +42,7 @@ mkPersist
       fromLocationId SLoc.SearchReqLocationTId
       toLocationId SLoc.SearchReqLocationTId Maybe
       distance Centesimal Maybe
+      maxDistance Centesimal Maybe
       merchantId SMerchant.MerchantTId
       createdAt UTCTime
       bundleVersion Text Maybe
@@ -70,6 +71,7 @@ instance FromTType FullSearchRequestT Domain.SearchRequest where
         { id = Id id,
           riderId = fromKey riderId,
           distance = HighPrecMeters <$> distance,
+          maxDistance = HighPrecMeters <$> distance,
           merchantId = fromKey merchantId,
           bundleVersion = bundleVersion',
           clientVersion = clientVersion',
@@ -87,6 +89,7 @@ instance ToTType FullSearchRequestT Domain.SearchRequest where
               fromLocationId = toKey fromLocation.id,
               toLocationId = toKey <$> (toLocation <&> (.id)),
               distance = getHighPrecMeters <$> distance,
+              maxDistance = getHighPrecMeters <$> distance,
               merchantId = toKey merchantId,
               bundleVersion = versionToText <$> bundleVersion,
               clientVersion = versionToText <$> clientVersion,

@@ -46,7 +46,8 @@ data InitReq = InitReq
   { driverQuoteId :: Text,
     bapId :: Text,
     bapUri :: BaseUrl,
-    initTypeReq :: InitTypeReq
+    initTypeReq :: InitTypeReq,
+    maxEstimatedDistance :: Maybe HighPrecMeters
   }
 
 data InitTypeReq = InitSpecialZoneReq | InitNormalReq
@@ -164,6 +165,7 @@ handler merchantId req = do
             riderId = Nothing,
             vehicleVariant = driverQuote.vehicleVariant,
             estimatedDistance = driverQuote.distance,
+            maxEstimatedDistance = req.maxEstimatedDistance,
             createdAt = now,
             updatedAt = now,
             fromLocation,

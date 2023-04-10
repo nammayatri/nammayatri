@@ -154,7 +154,8 @@ oneWaySearch personId bundleVersion clientVersion req = do
           }
   routeResponse <- Maps.getRoutes person.merchantId request
   let shortestRouteInfo = getRouteInfoWithShortestDuration routeResponse
-  dSearchRes <- DOneWaySearch.oneWaySearch person merchant req bundleVersion clientVersion ((.distance) =<< shortestRouteInfo)
+  let longestRouteDistance = (.distance) =<< getLongestRouteDistance routeResponse
+  dSearchRes <- DOneWaySearch.oneWaySearch person merchant req bundleVersion clientVersion longestRouteDistance ((.distance) =<< shortestRouteInfo)
   fork "search cabs" . withShortRetry $ do
     becknTaxiReq <- TaxiACL.buildOneWaySearchReq dSearchRes shortestRouteInfo
     void $ CallBPP.search dSearchRes.gatewayUrl becknTaxiReq
@@ -163,6 +164,20 @@ oneWaySearch personId bundleVersion clientVersion req = do
     CallBPP.searchMetro dSearchRes.gatewayUrl becknMetroReq
   fork "search public-transport" $ PublicTransport.sendPublicTransportSearchRequest personId dSearchRes
   return (dSearchRes.searchId, dSearchRes.searchRequestExpiry, shortestRouteInfo)
+
+getLongestRouteDistance :: [Maps.RouteInfo] -> Maybe Maps.RouteInfo
+getLongestRouteDistance [] = Nothing
+getLongestRouteDistance (routeInfo : routeInfoArray) =
+  if null routeInfoArray
+    then Just routeInfo
+    else do
+      restRouteresult <- getLongestRouteDistance routeInfoArray
+      Just $ comparator' routeInfo restRouteresult
+  where
+    comparator' route1 route2 =
+      if route1.distance > route2.distance
+        then route1
+        else route2
 
 getRouteInfoWithShortestDuration :: [Maps.RouteInfo] -> Maybe Maps.RouteInfo
 getRouteInfoWithShortestDuration (routeInfo : routeInfoArray) =

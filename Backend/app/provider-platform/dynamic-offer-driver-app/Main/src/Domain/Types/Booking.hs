@@ -64,6 +64,7 @@ data Booking = Booking
     toLocation :: DLoc.BookingLocation,
     vehicleVariant :: DVeh.Variant,
     estimatedDistance :: Meters,
+    maxEstimatedDistance :: Maybe HighPrecMeters,
     estimatedFare :: Money,
     estimatedDuration :: Seconds,
     fareParams :: FareParameters,

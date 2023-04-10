@@ -23,6 +23,7 @@ import Kernel.Types.App
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Logging
+import Kernel.Utils.Common (HighPrecMeters)
 import Kernel.Utils.Context (buildTaxiContext)
 import qualified SharedLogic.Confirm as SConfirm
 
@@ -58,7 +59,7 @@ buildInitMessage res = do
       { order =
           Init.Order
             { items = [mkOrderItem mbBppItemId itemCode],
-              fulfillment = mkFulfillmentInfo res.fromLoc res.toLoc res.startTime,
+              fulfillment = mkFulfillmentInfo res.fromLoc res.toLoc res.startTime res.maxEstimatedDistance,
               payment = mkPayment
             }
       }
@@ -81,10 +82,14 @@ mkOrderItem mbBppItemId code =
           }
     }
 
-mkFulfillmentInfo :: LatLong -> Maybe LatLong -> UTCTime -> Init.FulfillmentInfo
-mkFulfillmentInfo fromLoc mbToLoc startTime =
+mkFulfillmentInfo :: LatLong -> Maybe LatLong -> UTCTime -> Maybe HighPrecMeters -> Init.FulfillmentInfo
+mkFulfillmentInfo fromLoc mbToLoc startTime maxDistance =
   Init.FulfillmentInfo
-    { start =
+    { tags =
+        Init.Tags
+          { max_estimated_distance = maxDistance
+          },
+      start =
         Init.StartInfo
           { location =
               Init.Location

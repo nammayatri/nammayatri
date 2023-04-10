@@ -42,7 +42,8 @@ data DConfirmRes = DConfirmRes
     booking :: DRB.Booking,
     searchRequestId :: Id DSReq.SearchRequest,
     merchantExoPhone :: Text,
-    city :: Text
+    city :: Text,
+    maxEstimatedDistance :: Maybe HighPrecMeters
   }
   deriving (Show, Generic)
 
@@ -96,7 +97,8 @@ confirm personId quoteId = do
         startTime = searchRequest.startTime,
         searchRequestId = searchRequest.id,
         merchantExoPhone = if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone,
-        city = merchant.city
+        city = merchant.city,
+        maxEstimatedDistance = searchRequest.maxDistance
       }
   where
     mkConfirmQuoteDetails :: DQuote.QuoteDetails -> ConfirmQuoteDetails
