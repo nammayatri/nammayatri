@@ -48,3 +48,14 @@ type DriverIntelligentPoolConfig = DriverIntelligentPoolConfigD 'Safe
 instance FromJSON (DriverIntelligentPoolConfigD 'Unsafe)
 
 instance ToJSON (DriverIntelligentPoolConfigD 'Unsafe)
+
+data IntelligentFactors = AcceptanceRatio | CancellationRatio | AvailableTime | DriverSpeed
+
+data IntelligentScores = IntelligentScores
+  { acceptanceRatio :: Maybe Double,
+    cancellationRatio :: Maybe Double,
+    availableTime :: Maybe Double,
+    driverSpeed :: Maybe Double,
+    rideRequestPopupDelayDuration :: Seconds
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)

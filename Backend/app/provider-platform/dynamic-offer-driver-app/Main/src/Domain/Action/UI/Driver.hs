@@ -624,15 +624,14 @@ getNearbySearchRequests ::
 getNearbySearchRequests driverId = do
   person <- runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   nearbyReqs <- runInReplica $ QSRD.findByDriver driverId
-  cancellationRatio <- DP.getLatestCancellationRatio person.merchantId (cast driverId)
-  searchRequestForDriverAPIEntity <- mapM (buildSearchRequestForDriverAPIEntity person.merchantId cancellationRatio) nearbyReqs
+  transporterConfig <- CQTC.findByMerchantId person.merchantId >>= fromMaybeM (TransporterConfigNotFound person.merchantId.getId)
+  let cancellationScoreRelatedConfig = mkCancellationScoreRelatedConfig transporterConfig
+  cancellationRatio <- DP.getLatestCancellationRatio cancellationScoreRelatedConfig person.merchantId (cast driverId)
+  searchRequestForDriverAPIEntity <- mapM (buildSearchRequestForDriverAPIEntity cancellationRatio cancellationScoreRelatedConfig transporterConfig) nearbyReqs
   return $ GetNearbySearchRequestsRes searchRequestForDriverAPIEntity
   where
-    buildSearchRequestForDriverAPIEntity merchantId cancellationRatio nearbyReq = do
-      let sId = nearbyReq.searchRequestId
-      searchRequest <- runInReplica $ QSReq.findById sId >>= fromMaybeM (SearchRequestNotFound sId.getId)
-      transporterConfig <- CQTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
-      let cancellationScoreRelatedConfig = mkCancellationScoreRelatedConfig transporterConfig
+    buildSearchRequestForDriverAPIEntity cancellationRatio cancellationScoreRelatedConfig transporterConfig nearbyReq = do
+      searchRequest <- runInReplica $ QSReq.findById nearbyReq.searchRequestId >>= fromMaybeM (SearchRequestNotFound nearbyReq.searchRequestId.getId)
       popupDelaySeconds <- DP.getPopupDelay searchRequest.providerId (cast driverId) cancellationRatio cancellationScoreRelatedConfig transporterConfig.defaultPopupDelay
       return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest popupDelaySeconds
 

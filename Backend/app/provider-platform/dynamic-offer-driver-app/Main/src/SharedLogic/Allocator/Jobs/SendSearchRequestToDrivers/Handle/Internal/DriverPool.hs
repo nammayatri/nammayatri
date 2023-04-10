@@ -23,7 +23,6 @@ module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.Dri
 where
 
 import qualified Control.Monad as CM
-import Control.Monad.Extra (maybeM)
 import qualified Data.HashMap as HM
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.DriverIntelligentPoolConfig
@@ -122,8 +121,9 @@ prepareDriverPoolBatch driverPoolCfg searchReq batchNum = withLogTag ("BatchNum-
 
         makeIntelligentDriverPool batchSize merchantId onlyNewDrivers intelligentPoolConfig = do
           transporterConfig <- TC.findByMerchantId merchantId
+          let sortWithDriverScore' = sortWithDriverScore merchantId transporterConfig intelligentPoolConfig
           (sortedDriverPool, randomizedDriverPool) <-
-            bimapM (sortWithDriverScore merchantId transporterConfig intelligentPoolConfig) randomizeAndLimitSelection
+            bimapM (sortWithDriverScore' [AcceptanceRatio, CancellationRatio, AvailableTime, DriverSpeed] True) (sortWithDriverScore' [AvailableTime, DriverSpeed] False)
               =<< splitDriverPoolForSorting merchantId intelligentPoolConfig.minQuotesToQualifyForIntelligentPool onlyNewDrivers
           takeDriversUsingPoolPercentage (sortedDriverPool, randomizedDriverPool) batchSize intelligentPoolConfig
 
@@ -151,16 +151,17 @@ prepareDriverPoolBatch driverPoolCfg searchReq batchNum = withLogTag ("BatchNum-
       let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
       calculateDriverPoolWithActualDist DriverSelection driverPoolCfg (Just vehicleVariant) pickupLatLong merchantId True (Just radiusStep)
     fillBatch merchantId sortingType batchSize allNearbyDrivers batch intelligentPoolConfig = do
-      transporterConfig <- TC.findByMerchantId merchantId
       let batchDriverIds = batch <&> (.driverPoolResult.driverId)
       let driversNotInBatch = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` batchDriverIds) allNearbyDrivers
       driversWithValidReqAmount <- filterM (\dpr -> checkRequestCount searchReq.id dpr.driverPoolResult.driverId driverPoolCfg) driversNotInBatch
       let fillSize = batchSize - length batch
+      transporterConfig <- TC.findByMerchantId merchantId
       (batch <>)
         <$> case sortingType of
           Intelligent -> do
+            let sortWithDriverScore' = sortWithDriverScore merchantId transporterConfig intelligentPoolConfig
             (sortedDriverPool, randomizedDriverPool) <-
-              bimapM (sortWithDriverScore merchantId transporterConfig intelligentPoolConfig) randomizeAndLimitSelection
+              bimapM (sortWithDriverScore' [AcceptanceRatio, CancellationRatio, AvailableTime, DriverSpeed] True) (sortWithDriverScore' [AvailableTime, DriverSpeed] False)
                 =<< splitDriverPoolForSorting merchantId intelligentPoolConfig.minQuotesToQualifyForIntelligentPool driversWithValidReqAmount -- snd means taking drivers who recieved less then X(config- minQuotesToQualifyForIntelligentPool) quotes
             takeDriversUsingPoolPercentage (sortedDriverPool, randomizedDriverPool) fillSize intelligentPoolConfig
           Random -> pure $ take fillSize driversWithValidReqAmount
@@ -221,39 +222,50 @@ sortWithDriverScore ::
   Id Merchant ->
   Maybe TransporterConfig ->
   DriverIntelligentPoolConfig ->
+  [IntelligentFactors] ->
+  Bool ->
   [DriverPoolWithActualDistResult] ->
   m [DriverPoolWithActualDistResult]
-sortWithDriverScore _ Nothing _ dp = logInfo "Weightages not available in DB, going with random selection" *> randomizeAndLimitSelection dp
-sortWithDriverScore merchantId (Just transporterConfig) intelligentPoolConfig dp = do
+sortWithDriverScore _ Nothing _ _ _ dp = logInfo "Weightages not available in DB, going with random selection" *> randomizeAndLimitSelection dp
+sortWithDriverScore merchantId (Just transporterConfig) intelligentPoolConfig factorsToCalculate isPartOfIntelligentPool dp = do
   logTagInfo "Weightage config for intelligent driver pool" $ show transporterConfig
   let driverIds = map (.driverPoolResult.driverId) dp
   let cancellationScoreRelatedConfig = CancellationScoreRelatedConfig transporterConfig.popupDelayToAddAsPenalty transporterConfig.thresholdCancellationScore transporterConfig.minRidesForCancellationScore
-  cancellationRatios <-
-    getRatios
-      ( \dId -> do
-          isThresholdRidesDone <- isThresholdRidesCompleted dId merchantId cancellationScoreRelatedConfig
-          if isThresholdRidesDone
-            then getLatestCancellationRatio merchantId dId
-            else pure 0
-      )
-      driverIds
-  acceptanceRatios <- getRatios (getLatestAcceptanceRatio merchantId) driverIds
-  driversAvailableTime <- map (second (sum . catMaybes)) <$> getRatios (getCurrentWindowAvailability merchantId) driverIds
-  averageSpeeds <- getRatios (getDriverAverageSpeed merchantId . cast) driverIds
-  let driverSpeedScore = getSpeedScore (intelligentPoolConfig.driverSpeedWeightage) averageSpeeds
-  let driverCancellationScore = getScoreWithWeight (intelligentPoolConfig.cancellationRatioWeightage) cancellationRatios
-  let driverAcceptanceScore = getScoreWithWeight (intelligentPoolConfig.acceptanceRatioWeightage) acceptanceRatios
-  let driverAvailabilityScore = getScoreWithWeight (intelligentPoolConfig.availabilityTimeWeightage) driversAvailableTime
-  let overallScore = calculateOverallScore [driverAcceptanceScore, driverAvailabilityScore, driverCancellationScore, driverSpeedScore]
+  calculatedScores <- mapM (fetchScore merchantId driverIds intelligentPoolConfig cancellationScoreRelatedConfig) factorsToCalculate
+  let overallScore = calculateOverallScore calculatedScores
   driverPoolWithoutTie <- breakSameScoreTies $ groupByScore overallScore
   let sortedDriverPool = concatMap snd . sortOn (Down . fst) $ HM.toList driverPoolWithoutTie
-  logTagInfo "Driver Acceptance Score" $ show driverAcceptanceScore
-  logTagInfo "Driver Cancellation Score" $ show driverCancellationScore
-  logTagInfo "Driver Availability Score" $ show driverAvailabilityScore
   logTagInfo "Overall Score" $ show (map (second getDriverId) overallScore)
-  mapM (updateDriverPoolResult cancellationScoreRelatedConfig (HM.fromList cancellationRatios) (HM.fromList acceptanceRatios) (HM.fromList driversAvailableTime)) sortedDriverPool
+  mapM (updateDriverPoolResult cancellationScoreRelatedConfig $ zip calculatedScores factorsToCalculate) sortedDriverPool
   where
-    -- if two drivers have same score in the end then the driver who has less number of ride requests till now will be preffered.
+    updateDriverPoolResult cancellationScoreRelatedConfig factorOverallScore dObj = do
+      let intelligentScores =
+            foldl
+              ( \accIntelligentScores (scoreMap, factor) -> do
+                  let res :: Maybe Double = HM.lookup (getDriverId dObj) scoreMap
+                  case factor of
+                    AcceptanceRatio -> accIntelligentScores {acceptanceRatio = res} :: IntelligentScores
+                    CancellationRatio -> accIntelligentScores {cancellationRatio = res} :: IntelligentScores
+                    AvailableTime -> accIntelligentScores {availableTime = res} :: IntelligentScores
+                    DriverSpeed -> accIntelligentScores {driverSpeed = res} :: IntelligentScores
+              )
+              (IntelligentScores Nothing Nothing Nothing Nothing 0)
+              factorOverallScore
+      addIntelligentPoolInfo cancellationScoreRelatedConfig dObj intelligentScores
+    addIntelligentPoolInfo cancellationScoreRelatedConfig dObj is@IntelligentScores {..} = do
+      popupDelay <-
+        maybe
+          (pure transporterConfig.defaultPopupDelay)
+          (\cr -> getPopupDelay merchantId dObj.driverPoolResult.driverId cr cancellationScoreRelatedConfig transporterConfig.defaultPopupDelay)
+          cancellationRatio
+      pure $
+        dObj
+          { isPartOfIntelligentPool = isPartOfIntelligentPool,
+            intelligentScores = is {rideRequestPopupDelayDuration = popupDelay}
+          }
+
+    getDriverId = getId . (.driverPoolResult.driverId)
+    calculateOverallScore scoresList = map (\dObj -> (,dObj) . (/ (fromIntegral $ length scoresList)) . sum $ mapMaybe (HM.lookup (getDriverId dObj)) scoresList) dp
     breakSameScoreTies scoreMap = do
       mapM
         ( \dObjArr ->
@@ -277,26 +289,39 @@ sortWithDriverScore merchantId (Just transporterConfig) intelligentPoolConfig dp
               Nothing -> HM.insert score [dObj] scoreMap
         )
         HM.empty
-    updateDriverPoolResult cancellationScoreRelatedConfig cancellationRatioMap acceptanceRatioMap driversAvailableTimeMap dObj =
-      maybeM
-        (pure dObj)
-        (addIntelligentPoolInfo cancellationScoreRelatedConfig dObj)
-        (pure $ (,,) <$> HM.lookup (getDriverId dObj) cancellationRatioMap <*> HM.lookup (getDriverId dObj) acceptanceRatioMap <*> HM.lookup (getDriverId dObj) driversAvailableTimeMap)
-    addIntelligentPoolInfo cancellationScoreRelatedConfig dObj (cancellationRatio, acceptanceRatio, driverAvailableTime) = do
-      popupDelay <- getPopupDelay merchantId dObj.driverPoolResult.driverId cancellationRatio cancellationScoreRelatedConfig transporterConfig.defaultPopupDelay
-      pure $
-        dObj
-          { rideRequestPopupDelayDuration = popupDelay,
-            isPartOfIntelligentPool = True,
-            cancellationRatio = Just cancellationRatio,
-            acceptanceRatio = Just acceptanceRatio,
-            driverAvailableTime = Just driverAvailableTime
-          }
-    calculateOverallScore scoresList = map (\dObj -> (,dObj) . sum $ mapMaybe (HM.lookup (getDriverId dObj)) scoresList) dp
+
+fetchScore ::
+  ( Redis.HedisFlow m r,
+    HasCacheConfig r,
+    EsqDBFlow m r,
+    MonadFlow m
+  ) =>
+  Id Merchant ->
+  [Id Driver] ->
+  DriverIntelligentPoolConfig ->
+  CancellationScoreRelatedConfig ->
+  IntelligentFactors ->
+  m (HM.Map Text Double)
+fetchScore merchantId driverIds intelligentPoolConfig cancellationScoreRelatedConfig factor =
+  HM.fromList <$> case factor of
+    AcceptanceRatio | intelligentPoolConfig.acceptanceRatioWeightage /= 0 -> do
+      acceptanceRatios <- getRatios (getLatestAcceptanceRatio merchantId) driverIds
+      getScoreWithWeight (intelligentPoolConfig.acceptanceRatioWeightage) acceptanceRatios
+    CancellationRatio | intelligentPoolConfig.cancellationRatioWeightage /= 0 -> do
+      cancellationRatios <-
+        getRatios (getLatestCancellationRatio cancellationScoreRelatedConfig merchantId) driverIds
+      getScoreWithWeight (intelligentPoolConfig.cancellationRatioWeightage) cancellationRatios
+    AvailableTime | intelligentPoolConfig.availabilityTimeWeightage /= 0 -> do
+      driversAvailableTime <- map (second (sum . catMaybes)) <$> getRatios (getCurrentWindowAvailability merchantId) driverIds
+      getScoreWithWeight (intelligentPoolConfig.availabilityTimeWeightage) driversAvailableTime
+    DriverSpeed | intelligentPoolConfig.driverSpeedWeightage /= 0 -> do
+      averageSpeeds <- getRatios (getDriverAverageSpeed merchantId . cast) driverIds
+      getSpeedScore (intelligentPoolConfig.driverSpeedWeightage) averageSpeeds
+    _ -> pure []
+  where
+    getSpeedScore weight driverSpeeds = pure $ map (\(driverId, driverSpeed) -> (driverId, (1 - driverSpeed / intelligentPoolConfig.speedNormalizer) * fromIntegral weight)) driverSpeeds
     getRatios fn arr = mapM (\dId -> (dId.getId,) <$> fn dId) arr
-    getDriverId = getId . (.driverPoolResult.driverId)
-    getScoreWithWeight weight driverParamsValue = HM.fromList $ map (second (fromIntegral weight *)) driverParamsValue
-    getSpeedScore weight driverSpeeds = HM.fromList $ map (\(driverId, driverSpeed) -> (driverId, (1 - driverSpeed / intelligentPoolConfig.speedNormalizer) * fromIntegral weight)) driverSpeeds
+    getScoreWithWeight weight driverParamsValue = pure $ map (second (fromIntegral weight *)) driverParamsValue
 
 randomizeAndLimitSelection ::
   (MonadFlow m) =>

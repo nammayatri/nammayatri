@@ -42,6 +42,7 @@ import Data.List (partition)
 import Data.List.Extra (notNull)
 import qualified Data.List.NonEmpty as NE
 import qualified Domain.Types.Merchant as DM
+import Domain.Types.Merchant.DriverIntelligentPoolConfig (IntelligentScores (IntelligentScores))
 import qualified Domain.Types.Merchant.DriverIntelligentPoolConfig as DIPC
 import Domain.Types.Merchant.DriverPoolConfig
 import qualified Domain.Types.Person as DP
@@ -274,7 +275,7 @@ incrementCancellationCount ::
   m ()
 incrementCancellationCount merchantId driverId = Redis.withCrossAppRedis . withCancellationRatioWindowOption merchantId $ SWC.incrementWindowCount (mkRideCancelledKey driverId.getId)
 
-getLatestCancellationRatio ::
+getLatestCancellationRatio' ::
   ( EsqDBFlow m r,
     CacheFlow m r,
     Redis.HedisFlow m r
@@ -282,7 +283,22 @@ getLatestCancellationRatio ::
   Id DM.Merchant ->
   Id DP.Driver ->
   m Double
-getLatestCancellationRatio merchantId driverId = Redis.withCrossAppRedis . withCancellationRatioWindowOption merchantId $ SWC.getLatestRatio driverId.getId mkRideCancelledKey mkTotalRidesKey
+getLatestCancellationRatio' merchantId driverId = Redis.withCrossAppRedis . withCancellationRatioWindowOption merchantId $ SWC.getLatestRatio driverId.getId mkRideCancelledKey mkTotalRidesKey
+
+getLatestCancellationRatio ::
+  ( EsqDBFlow m r,
+    CacheFlow m r,
+    Redis.HedisFlow m r
+  ) =>
+  CancellationScoreRelatedConfig ->
+  Id DM.Merchant ->
+  Id DP.Driver ->
+  m Double
+getLatestCancellationRatio cancellationScoreRelatedConfig merchantId driverId = do
+  isThresholdRidesDone <- isThresholdRidesCompleted driverId merchantId cancellationScoreRelatedConfig
+  if isThresholdRidesDone
+    then getLatestCancellationRatio' merchantId driverId
+    else pure 0
 
 getCurrentWindowAvailability ::
   ( Redis.HedisFlow m r,
@@ -511,9 +527,6 @@ computeActualDistance orgId pickup driverPoolResults = do
         { driverPoolResult = distDur.origin,
           actualDistanceToPickup = distDur.distance,
           actualDurationToPickup = distDur.duration,
-          rideRequestPopupDelayDuration = defaultPopupDelay,
-          cancellationRatio = Nothing,
-          acceptanceRatio = Nothing,
-          driverAvailableTime = Nothing,
+          intelligentScores = IntelligentScores Nothing Nothing Nothing Nothing defaultPopupDelay,
           isPartOfIntelligentPool = False
         }
