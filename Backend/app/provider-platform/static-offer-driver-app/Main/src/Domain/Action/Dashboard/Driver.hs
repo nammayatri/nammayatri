@@ -435,6 +435,8 @@ buildVehicle merchantId personId req = do
       Common.SUV -> Right DVeh.SUV
       Common.HATCHBACK -> Right DVeh.HATCHBACK
       Common.SEDAN -> Right DVeh.SEDAN
+      Common.TAXI -> Left "Taxi vehicles are not supported by this BPP"
+      Common.TAXI_PLUS -> Left "Taxi-plus vehicles are not supported by this BPP"
       Common.AUTO_RICKSHAW -> Left "Auto-rickshaw vehicles are not supported by this BPP"
 
     castEnergyType :: Text -> Either Text DVeh.EnergyType

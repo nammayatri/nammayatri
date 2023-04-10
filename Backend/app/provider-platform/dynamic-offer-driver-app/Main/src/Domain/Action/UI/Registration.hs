@@ -175,6 +175,9 @@ createDriverDetails personId = do
             verified = False,
             referralCode = Nothing,
             lastEnabledOn = Nothing,
+            canDowngradeToSedan = False,
+            canDowngradeToHatchback = False,
+            canDowngradeToTaxi = False,
             createdAt = now,
             updatedAt = now
           }

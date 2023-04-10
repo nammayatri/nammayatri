@@ -235,6 +235,8 @@ mkQuoteEntities it = do
     castVariant Variant.HATCHBACK = EstimateRepetitionOU.HATCHBACK
     castVariant Variant.SUV = EstimateRepetitionOU.SUV
     castVariant Variant.AUTO_RICKSHAW = EstimateRepetitionOU.AUTO_RICKSHAW
+    castVariant Variant.TAXI = EstimateRepetitionOU.TAXI
+    castVariant Variant.TAXI_PLUS = EstimateRepetitionOU.TAXI_PLUS
 
 castCancellationSource :: SBCR.CancellationSource -> BookingCancelledOU.CancellationSource
 castCancellationSource = \case

@@ -31,6 +31,9 @@ data DriverInformationE e = DriverInformation
     verified :: Bool,
     referralCode :: Maybe (EncryptedHashedField e Text),
     lastEnabledOn :: Maybe UTCTime,
+    canDowngradeToSedan :: Bool,
+    canDowngradeToHatchback :: Bool,
+    canDowngradeToTaxi :: Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

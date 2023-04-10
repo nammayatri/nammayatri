@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE TypeApplications #-}
 
 module Storage.Queries.Person where
 
@@ -507,7 +508,20 @@ getNearestDrivers mbVariant LatLong {..} radiusMeters merchantId onlyNotOnRide m
         &&. ( val (Mb.isNothing mbDriverPositionInfoExpiry)
                 ||. (location ^. DriverLocationCoordinatesCalculatedAt +. Esq.interval [Esq.SECOND $ maybe 0 getSeconds mbDriverPositionInfoExpiry] >=. val now)
             )
-        &&. whenJust_ mbVariant (\var -> vehicle ^. VehicleVariant ==. val var)
+        &&. ( Esq.isNothing (val mbVariant) ||. just (vehicle ^. VehicleVariant) ==. val mbVariant -- when mbVariant = Nothing, we use all variants, is it correct?
+                ||. ( case mbVariant of
+                        Just SEDAN ->
+                          driverInfo ^. DriverInformationCanDowngradeToSedan ==. val True
+                            &&. vehicle ^. VehicleVariant ==. val SUV
+                        Just HATCHBACK ->
+                          driverInfo ^. DriverInformationCanDowngradeToHatchback ==. val True
+                            &&. (vehicle ^. VehicleVariant ==. val SUV ||. vehicle ^. VehicleVariant ==. val SEDAN)
+                        Just TAXI ->
+                          driverInfo ^. DriverInformationCanDowngradeToTaxi ==. val True
+                            &&. vehicle ^. VehicleVariant ==. val TAXI_PLUS
+                        _ -> val False
+                    )
+            )
         &&. buildRadiusWithin (location ^. DriverLocationPoint) (lat, lon) (val radiusMeters)
     orderBy [asc (location ^. DriverLocationPoint <->. Esq.getPoint (val lat, val lon))]
     return
@@ -515,15 +529,30 @@ getNearestDrivers mbVariant LatLong {..} radiusMeters merchantId onlyNotOnRide m
         person ^. PersonDeviceToken,
         person ^. PersonLanguage,
         driverInfo ^. DriverInformationOnRide,
+        driverInfo ^. DriverInformationCanDowngradeToSedan,
+        driverInfo ^. DriverInformationCanDowngradeToHatchback,
+        driverInfo ^. DriverInformationCanDowngradeToTaxi,
         location ^. DriverLocationPoint <->. Esq.getPoint (val lat, val lon),
         location ^. DriverLocationLat,
         location ^. DriverLocationLon,
         vehicle ^. VehicleVariant
       )
-  return $ makeNearestDriversResult <$> res
+  return (makeNearestDriversResult =<< res)
   where
-    makeNearestDriversResult (personId, mbDeviceToken, mblang, onRide, dist :: Double, dlat, dlon, variant) =
-      NearestDriversResult (cast personId) mbDeviceToken mblang onRide (roundToIntegral dist) variant dlat dlon
+    makeNearestDriversResult :: (Id Person, Maybe FCM.FCMRecipientToken, Maybe Maps.Language, Bool, Bool, Bool, Bool, Double, Double, Double, Variant) -> [NearestDriversResult]
+    makeNearestDriversResult (personId, mbDeviceToken, mblang, onRide, canDowngradeToSedan, canDowngradeToHatchback, canDowngradeToTaxi, dist, dlat, dlon, variant) = do
+      case mbVariant of
+        Nothing -> do
+          let autoResult = getResult AUTO_RICKSHAW $ variant == AUTO_RICKSHAW
+              suvResult = getResult SUV $ variant == SUV
+              sedanResult = getResult SEDAN $ variant == SEDAN || (variant == SUV && canDowngradeToSedan)
+              hatchbackResult = getResult HATCHBACK $ variant == HATCHBACK || ((variant == SUV || variant == SEDAN) && canDowngradeToHatchback)
+              taxiPlusResult = getResult TAXI_PLUS $ variant == TAXI_PLUS
+              taxiResult = getResult TAXI $ variant == TAXI || (variant == TAXI_PLUS && canDowngradeToTaxi)
+          autoResult <> suvResult <> sedanResult <> hatchbackResult <> taxiResult <> taxiPlusResult
+        Just poolVariant -> getResult poolVariant True
+      where
+        getResult var cond = [NearestDriversResult (cast personId) mbDeviceToken mblang onRide (roundToIntegral dist) var dlat dlon | cond]
 
 updateAlternateMobileNumberAndCode :: Person -> SqlDB ()
 updateAlternateMobileNumberAndCode person = do

@@ -63,6 +63,8 @@ buildInitReq subscriber req = do
       Init.HATCHBACK -> Right Veh.HATCHBACK
       Init.SEDAN -> Right Veh.SEDAN
       Init.AUTO_RICKSHAW -> Left "Auto-rickshaw vehicles are not supported by this BPP"
+      Init.TAXI -> Left "Taxi vehicles are not supported by this BPP"
+      Init.TAXI_PLUS -> Left "Taxi-plus vehicles are not supported by this BPP"
     buildInitTypeReq item = do
       let itemCode = item.descriptor.code
       case itemCode.fareProductType of

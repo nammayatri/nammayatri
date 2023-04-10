@@ -46,6 +46,8 @@ castVariant AUTO_RICKSHAW = Common.AUTO_RICKSHAW
 castVariant HATCHBACK = Common.HATCHBACK
 castVariant SEDAN = Common.SEDAN
 castVariant SUV = Common.SUV
+castVariant TAXI = Common.TAXI
+castVariant TAXI_PLUS = Common.TAXI_PLUS
 
 mkOrder :: DSelect.DSelectRes -> Bool -> Maybe Maps.Language -> Select.Order
 mkOrder req autoAssignEnabled customerLanguage = do

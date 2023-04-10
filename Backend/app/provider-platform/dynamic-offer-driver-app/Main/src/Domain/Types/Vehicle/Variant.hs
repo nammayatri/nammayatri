@@ -24,7 +24,7 @@ import Kernel.Prelude hiding (first)
 import Kernel.Utils.GenericPretty
 import Servant.API
 
-data Variant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW
+data Variant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS
   deriving
     ( Show,
       Eq,

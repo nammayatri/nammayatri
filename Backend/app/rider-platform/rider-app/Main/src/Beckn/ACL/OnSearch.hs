@@ -129,6 +129,8 @@ buildEstimateOrQuoteInfo item = do
       OnSearch.SUV -> VehVar.SUV
       OnSearch.HATCHBACK -> VehVar.HATCHBACK
       OnSearch.AUTO_RICKSHAW -> VehVar.AUTO_RICKSHAW
+      OnSearch.TAXI -> VehVar.TAXI
+      OnSearch.TAXI_PLUS -> VehVar.TAXI_PLUS
 
 buildOneWayQuoteDetails ::
   (MonadThrow m, Log m) =>
