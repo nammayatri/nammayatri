@@ -141,7 +141,7 @@ validateMerchantCommonConfigUpdateReq MerchantCommonConfigUpdateReq {..} =
       validateField "waitingTimeEstimatedThreshold" waitingTimeEstimatedThreshold $ InMaybe $ Min @Seconds 0,
       validateField "onboardingTryLimit" onboardingTryLimit $ InMaybe $ Min @Int 0,
       validateField "onboardingRetryTimeInHours" onboardingRetryTimeInHours $ InMaybe $ Min @Int 0,
-      validateField "searchRepeatLimit" searchRepeatLimit $ InMaybe $ Min @Int 1
+      validateField "searchRepeatLimit" searchRepeatLimit $ InMaybe $ Min @Int 0
     ]
 
 ---------------------------------------------------------
@@ -276,13 +276,13 @@ instance HideSecrets DriverIntelligentPoolConfigUpdateReq where
 validateDriverIntelligentPoolConfigUpdateReq :: Validate DriverIntelligentPoolConfigUpdateReq
 validateDriverIntelligentPoolConfigUpdateReq DriverIntelligentPoolConfigUpdateReq {..} =
   sequenceA_
-    [ validateField "availabilityTimeWeightage" availabilityTimeWeightage $ InMaybe $ Min @Int 0,
+    [ validateField "availabilityTimeWeightage" availabilityTimeWeightage $ InMaybe $ InRange @Int (-100) 100,
       whenJust availabilityTimeWindowOption $ \obj ->
         validateObject "availabilityTimeWindowOption" obj validateSlidingWindowOptions,
-      validateField "acceptanceRatioWeightage" acceptanceRatioWeightage $ InMaybe $ Min @Int 0,
+      validateField "acceptanceRatioWeightage" acceptanceRatioWeightage $ InMaybe $ InRange @Int (-100) 100,
       whenJust acceptanceRatioWindowOption $ \obj ->
         validateObject "acceptanceRatioWindowOption" obj validateSlidingWindowOptions,
-      validateField "cancellationRatioWeightage" cancellationRatioWeightage $ InMaybe $ Min @Int 0,
+      validateField "cancellationRatioWeightage" cancellationRatioWeightage $ InMaybe $ InRange @Int (-100) 100,
       whenJust cancellationRatioWindowOption $ \obj ->
         validateObject "cancellationRatioWindowOption" obj validateSlidingWindowOptions,
       validateField "minQuotesToQualifyForIntelligentPool" minQuotesToQualifyForIntelligentPool $ InMaybe $ Min @Int 1,
