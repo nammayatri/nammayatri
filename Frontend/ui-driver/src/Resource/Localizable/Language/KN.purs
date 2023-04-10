@@ -353,3 +353,5 @@ getKN script = case script of
   FOR_UPDATES_SEE_ALERTS -> "ನವೀಕರಣಗಳಿಗಾಗಿ ಘೋಷಣೆಗಳನ್ನು ನೋಡಿ"
   SHARE_OPTIONS -> "ಹಂಚಿಕೆ ಆಯ್ಕೆಗಳು"
   ENTER_PASSWORD -> "ಪಾಸ್ವರ್ಡ್ ನಮೂದಿಸಿ"
+  MOBILE_NUMBER_VERIFIED -> "ನಿಮ್ಮ ಮೊಬೈಲ್ ಸಂಖ್ಯೆಯನ್ನು ಪರಿಶೀಲಿಸಲಾಗಿದೆ!"
+  YOU_ARE_ONE_STEP_CLOSER -> "ಕಮಿಷನ್ ಇಲ್ಲದ ರೈಡ್‌ಗಳಿಗೆ ನೀವು ಒಂದು ಹೆಜ್ಜೆ ಹತ್ತಿರವಾಗಿದ್ದೀರಿ!"

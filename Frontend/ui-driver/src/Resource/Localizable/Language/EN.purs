@@ -353,3 +353,5 @@ getEN script = case script of
   FOR_UPDATES_SEE_ALERTS -> "For updates, see Alerts"
   SHARE_OPTIONS -> "Share Options"
   ENTER_PASSWORD -> "Enter Password"
+  MOBILE_NUMBER_VERIFIED -> "Your Mobile Number is Verified!"
+  YOU_ARE_ONE_STEP_CLOSER -> "You're one step closer to no-commission \nrides!"

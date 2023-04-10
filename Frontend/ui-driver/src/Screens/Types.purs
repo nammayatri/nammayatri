@@ -189,15 +189,8 @@ type UploadDrivingLicenseStateProps = {
   , openGenericMessageModal :: Boolean
   , errorVisibility :: Boolean
   , openDateOfIssueManual :: Boolean
+  , isNewUser :: Boolean
 }
-
- -- ############################################################# RegistrationScreen ################################################################################
-type RegistrationScreenState = {
-  data :: RegistrationScreenData,
-  props :: RegistrationScreenProps
-}
-type RegistrationScreenData = {}
-type RegistrationScreenProps = {}
 
  -- ############################################################# UploadAdhaarScreen ################################################################################
 
@@ -458,7 +451,22 @@ type DriverDetailsScreenStateData =  {
 type DriverDetailsScreenStateProps =  {
   
 }
+---------------------------------------- CompletionStatusOverlayScreen ---------------
+type CompletionStatusOverlayState = {
+  data :: CompletionStatusOverlayStateData,
+  props :: CompletionStatusOverlayStateProps
+  }
 
+type CompletionStatusOverlayStateData = {
+    mainText :: String,
+    subText :: String,
+    lottieUrl :: String,
+    time :: Number
+}
+
+type  CompletionStatusOverlayStateProps = {
+ 
+}
 
 ----------------------------------------------- VehicleDetailsScreen -------------------
 

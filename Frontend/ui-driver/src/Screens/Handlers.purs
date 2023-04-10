@@ -33,7 +33,6 @@ import Screens.HomeScreen.Handler (homeScreen) as UI
 import Screens.NoInternetScreen.Handler (noInternetScreen) as UI
 import Screens.PermissionsScreen.Handler (permissions) as UI
 import Screens.PopUpScreen.Handler (popUpScreen) as UI
-import Screens.RegistrationScreen.Handler (registration) as UI
 import Screens.RideDetailScreen.Handler (rideDetail) as UI
 import Screens.RideHistoryScreen.Handler (rideHistory) as UI
 import Screens.ReferralScreen.Handler (referralScreen) as UI
@@ -45,3 +44,4 @@ import Screens.UploadDrivingLicenseScreen.Handler (uploadDrivingLicense) as UI
 import Screens.VehicleDetailsScreen.Handler (vehicleDetailsScreen) as UI
 import Screens.WriteToUsScreen.Handler (writeToUsScreen) as UI
 import Screens.NotificationsScreen.Handler (notifications) as UI
+import Screens.CompletionStatusOverlayScreen.Handler (completionStatus) as UI 

@@ -19,13 +19,12 @@ import Control.Transformers.Back.Trans (BackT)
 import Control.Monad.Except.Trans (ExceptT)
 import Control.Monad.Free (Free)
 import Presto.Core.Types.Language.Flow (FlowWrapper)
-import Screens.Types (SplashScreenState, ChooseLanguageScreenState, UploadDrivingLicenseState, RegistrationScreenState, EnterMobileNumberScreenState, UploadAdhaarScreenState, EnterOTPScreenState, ApplicationStatusScreenState, AddVehicleDetailsScreenState, DriverDetailsScreenState, VehicleDetailsScreenState, DriverProfileScreenState, AboutUsScreenState, SelectLanguageScreenState, HelpAndSupportScreenState, WriteToUsScreenState, BankDetailScreenState, RideHistoryScreenState, HomeScreenState, RideDetailScreenState, TripDetailsScreenState, PermissionsScreenState, EditBankDetailsScreenState, EditAadhaarDetailsScreenState, IndividualRideCardState, ActiveRide, NoInternetScreenState, PopUpScreenState, DriverRideRatingScreenState, AppUpdatePopUpScreenState , ReferralScreenState, NotificationsScreenState)
+import Screens.Types (SplashScreenState, ChooseLanguageScreenState, UploadDrivingLicenseState, EnterMobileNumberScreenState, UploadAdhaarScreenState, EnterOTPScreenState, ApplicationStatusScreenState, AddVehicleDetailsScreenState, DriverDetailsScreenState, VehicleDetailsScreenState, DriverProfileScreenState, AboutUsScreenState, SelectLanguageScreenState, HelpAndSupportScreenState, WriteToUsScreenState, BankDetailScreenState, RideHistoryScreenState, HomeScreenState, RideDetailScreenState, TripDetailsScreenState, PermissionsScreenState, EditBankDetailsScreenState, EditAadhaarDetailsScreenState, IndividualRideCardState, ActiveRide, NoInternetScreenState, PopUpScreenState, DriverRideRatingScreenState, AppUpdatePopUpScreenState , ReferralScreenState, NotificationsScreenState,CompletionStatusOverlayState)
 import Screens.ChooseLanguageScreen.ScreenData as ChooseLanguageScreenData
 import Screens.EnterMobileNumberScreen.ScreenData as EnterMobileNumberScreenData
 import Screens.EnterOTPScreen.ScreenData as  EnterOTPScreenData
 import Screens.AddVehicleDetailsScreen.ScreenData as AddVehicleDetailsScreenData
 import Screens.UploadDrivingLicenseScreen.ScreenData as UploadDrivingLicenseScreenData
-import Screens.RegistrationScreen.ScreenData as RegistrationScreenData
 import Screens.UploadAdhaarScreen.ScreenData as UploadAdhaarScreenData
 import Screens.ApplicationStatusScreen.ScreenData as ApplicationStatusScreenData
 import Screens.TripDetailsScreen.ScreenData as TripDetailsScreenData
@@ -47,6 +46,7 @@ import Screens.PopUpScreen.ScreenData as PopUpScreenData
 import Screens.DriverRideRatingScreen.ScreenData as DriverRideRatingScreenData
 import Screens.NotificationsScreen.ScreenData as NotificationsScreenData
 import Screens.ReferralScreen.ScreenData as ReferralScreenData
+import Screens.CompletionStatusOverlayScreen.ScreenData as CompletionStatusOverlayScreenData
 import Screens.Types (HomeScreenStage(..))
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
@@ -59,7 +59,6 @@ newtype GlobalState = GlobalState {
   , mobileNumberScreen :: EnterMobileNumberScreenState
   , enterOTPScreen :: EnterOTPScreenState
   , uploadDrivingLicenseScreen :: UploadDrivingLicenseState
-  , registrationScreen :: RegistrationScreenState
   , uploadAdhaarScreen :: UploadAdhaarScreenState
   , addVehicleDetailsScreen :: AddVehicleDetailsScreenState
   , tripDetailsScreen :: TripDetailsScreenState
@@ -79,6 +78,7 @@ newtype GlobalState = GlobalState {
   , noInternetScreen :: NoInternetScreenState
   , popUpScreen :: PopUpScreenState
   , driverRideRatingScreen :: DriverRideRatingScreenState
+  , completionStatusOverlayScreen :: CompletionStatusOverlayState
   , appUpdatePopUpScreen :: AppUpdatePopUpScreenState
   , notificationScreen :: NotificationsScreenState
   , referralScreen :: ReferralScreenState
@@ -93,7 +93,6 @@ defaultGlobalState = GlobalState{
 , mobileNumberScreen : EnterMobileNumberScreenData.initData
 , enterOTPScreen : EnterOTPScreenData.initData
 , uploadDrivingLicenseScreen : UploadDrivingLicenseScreenData.initData
-, registrationScreen: RegistrationScreenData.initData
 , uploadAdhaarScreen : UploadAdhaarScreenData.initData
 , addVehicleDetailsScreen : AddVehicleDetailsScreenData.initData
 , tripDetailsScreen : TripDetailsScreenData.initData
@@ -113,6 +112,7 @@ defaultGlobalState = GlobalState{
 , noInternetScreen : {}
 , popUpScreen : PopUpScreenData.initData
 , driverRideRatingScreen : DriverRideRatingScreenData.initData
+, completionStatusOverlayScreen : CompletionStatusOverlayScreenData.initData
 , appUpdatePopUpScreen : {version : 1}
 , notificationScreen : NotificationsScreenData.initData
 , referralScreen : ReferralScreenData.initData
@@ -126,7 +126,6 @@ data ScreenType =
   | EnterMobileNumberScreenType (EnterMobileNumberScreenState -> EnterMobileNumberScreenState)
   | EnterOTPScreenType (EnterOTPScreenState -> EnterOTPScreenState)
   | UploadDrivingLicenseScreenStateType (UploadDrivingLicenseState -> UploadDrivingLicenseState)
-  | RegisterScreenStateType (RegistrationScreenState -> RegistrationScreenState)
   | UploadAdhaarScreenStateType (UploadAdhaarScreenState -> UploadAdhaarScreenState)
   | AddVehicleDetailsScreenStateType (AddVehicleDetailsScreenState -> AddVehicleDetailsScreenState)
   | DriverDetailsScreenStateType (DriverDetailsScreenState -> DriverDetailsScreenState)
@@ -188,7 +187,6 @@ data HELP_AND_SUPPORT_SCREEN_OUTPUT = REPORT_ISSUE
                                     | TRIP_DETAILS_SCREEN HelpAndSupportScreenState 
                                     | MY_RIDES_SCREEN
 data WRITE_TO_US_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FLOW
-data REGISTRATION_SCREENOUTPUT = UPLOAD_DRIVER_LICENSE
 
 data UPLOAD_DRIVER_LICENSE_SCREENOUTPUT = ADD_VEHICLE_DETAILS_SCREEN UploadDrivingLicenseState | VALIDATE_IMAGE_API UploadDrivingLicenseState | GOTO_VEHICLE_DETAILS_SCREEN | LOGOUT_ACCOUNT | GOTO_ONBOARDING_FLOW
 

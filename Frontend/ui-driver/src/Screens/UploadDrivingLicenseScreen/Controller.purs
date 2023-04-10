@@ -31,6 +31,11 @@ import Effect.Class (liftEffect)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Screens (ScreenName(..), getScreen)
 import Data.Maybe
+import Screens.CompletionStatusOverlayScreen.Handler as UI
+import Effect.Aff (launchAff_)
+import Engineering.Helpers.Commons (flowRunner, liftFlow)
+import Control.Monad.Except.Trans (runExceptT)
+import Control.Transformers.Back.Trans (runBackT)
 
 
 instance showAction :: Show Action where
@@ -81,7 +86,7 @@ instance loggableAction :: Loggable Action where
     SelectDateOfBirthAction -> trackAppActionClick appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "in_screen" "select_date_of_birth"
     SelectDateOfIssueAction -> trackAppActionClick appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "in_screen" "select_date_of_issue"
     NoAction -> trackAppScreenEvent appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "in_screen" "no_action"
-
+    ShowOverlayScreen -> trackAppScreenRender appId "screen" (getScreen UPLOAD_DRIVING_LICENSE_SCREEN)
 data ScreenOutput = GoBack UploadDrivingLicenseState
                     | GoToAddVehicleDetailsScreen UploadDrivingLicenseState 
                     | ValidateImageAPICall UploadDrivingLicenseState 
@@ -108,6 +113,7 @@ data Action = BackPressed Boolean
             | PreviewAction
             | SelectDateOfBirthAction
             | SelectDateOfIssueAction
+            | ShowOverlayScreen
 
 eval :: Action -> UploadDrivingLicenseState -> Eval Action ScreenOutput UploadDrivingLicenseState
 eval AfterRender state = continue state
@@ -158,6 +164,12 @@ eval (DatePicker (label) year month date) state = do
     "DATE_OF_ISSUE" -> continue state {data = state.data { dateOfIssue = Just $ (dateFormat year) <> "-" <> (dateFormat (month+1)) <> "-" <> (dateFormat date) <> " 00:00:00.233691+00" , dateOfIssueView = (show date) <> "/" <> (show (month+1)) <> "/" <> (show year), imageFront = "null"}} -- imageFront made null to handle fallback
     _ -> continue state
 
+eval ShowOverlayScreen state = continueWithCmd state [ do 
+  _ <- launchAff_ $ flowRunner $ runExceptT $ runBackT $ do
+    _ <- UI.completionStatus
+    pure unit
+  pure NoAction
+] 
 eval _ state = continue state
 
 dateFormat :: Int -> String

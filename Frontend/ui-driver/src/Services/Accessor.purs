@@ -71,3 +71,7 @@ _lat = lens (unwrap >>> _.lat) (\oldRec newVal -> wrap ((unwrap oldRec) {lat = n
 _lon :: forall a b c. Newtype a { lon :: b | c} => Lens' a b
 _lon = lens (unwrap >>> _.lon) (\oldRec newVal -> wrap ((unwrap oldRec) {lon = newVal}))
 
+_linkedVehicle :: forall a b c. Newtype a { linkedVehicle :: b | c} => Lens' a b
+_linkedVehicle = lens (unwrap >>> _.linkedVehicle) (\oldRec newVal -> wrap ((unwrap oldRec) {linkedVehicle = newVal}))
+
+

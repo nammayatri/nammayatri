@@ -72,6 +72,7 @@ linearLayout
     , onBackPressed push (const BackPressed state.props.openLicenseManual)
     , afterRender  (\action -> do
                       _<- push action
+                      _<- if state.props.isNewUser then push ShowOverlayScreen else pure unit
                       pure unit
                       ) $ const (AfterRender)
     ][ headerLayout state push

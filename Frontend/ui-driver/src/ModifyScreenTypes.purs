@@ -35,7 +35,6 @@ modifyScreenState st =
     EnterMobileNumberScreenType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { mobileNumberScreen = a state.mobileNumberScreen})
     EnterOTPScreenType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { enterOTPScreen = a state.enterOTPScreen})
     UploadDrivingLicenseScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { uploadDrivingLicenseScreen = a state.uploadDrivingLicenseScreen})
-    RegisterScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { registrationScreen = a state.registrationScreen})
     UploadAdhaarScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { uploadAdhaarScreen = a state.uploadAdhaarScreen})
     AddVehicleDetailsScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { addVehicleDetailsScreen = a state.addVehicleDetailsScreen})
     RideHistoryScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { rideHistoryScreen = a state.rideHistoryScreen})

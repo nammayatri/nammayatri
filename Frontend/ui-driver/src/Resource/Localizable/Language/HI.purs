@@ -353,3 +353,5 @@ getHI script = case script of
   FOR_UPDATES_SEE_ALERTS -> "अपडेट के लिए, अलर्ट देखें"
   SHARE_OPTIONS -> "विकल्प साझा करें"
   ENTER_PASSWORD -> "पास वर्ड दर्ज करें"
+  MOBILE_NUMBER_VERIFIED -> "आपका मोबाइल नंबर सत्यापित है!"
+  YOU_ARE_ONE_STEP_CLOSER -> "आप नो-कमीशन राइड के एक कदम और करीब हैं!"

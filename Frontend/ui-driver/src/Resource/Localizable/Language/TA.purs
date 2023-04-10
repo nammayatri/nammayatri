@@ -354,3 +354,5 @@ getTA script = case script of
   SHARE_OPTIONS -> "பகிர்வு விருப்பங்கள்"
   ENTER_PASSWORD -> "கடவுச்சொல்லை உள்ளிடவும்"
 
+  MOBILE_NUMBER_VERIFIED -> "உங்கள் மொபைல் எண் சரிபார்க்கப்பட்டது!"
+  YOU_ARE_ONE_STEP_CLOSER -> "கமிஷன் இல்லாத சவாரிகளுக்கு நீங்கள் ஒரு படி நெருக்கமாகிவிட்டீர்கள்!"
