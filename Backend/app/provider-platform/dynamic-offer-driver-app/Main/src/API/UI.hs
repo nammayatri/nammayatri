@@ -23,6 +23,7 @@ import qualified API.UI.CancellationReason as CancellationReason
 import qualified API.UI.Driver as Driver
 import qualified API.UI.DriverOnboarding as DriverOnboarding
 import qualified API.UI.DriverReferral as DriverReferral
+import qualified API.UI.ExotelEndRide as ExotelEndRide
 import qualified API.UI.FarePolicy as FarePolicy
 import qualified API.UI.Frontend as Frontend
 import qualified API.UI.Issue as Issue
@@ -63,6 +64,7 @@ type API =
            :<|> Performance.API
            :<|> DriverReferral.API
            :<|> Issue.API
+           :<|> ExotelEndRide.API
        )
 
 handler :: FlowServer API
@@ -86,3 +88,4 @@ handler =
     :<|> Performance.handler
     :<|> DriverReferral.handler
     :<|> Issue.handler
+    :<|> ExotelEndRide.handler
