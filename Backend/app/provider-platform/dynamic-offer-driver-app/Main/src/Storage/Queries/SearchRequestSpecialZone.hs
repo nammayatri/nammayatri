@@ -30,19 +30,6 @@ create dsReq = Esq.runTransaction $
     Esq.create' toLoc
     Esq.create' sReq
 
-findById :: Transactionable m => Id SearchRequestSpecialZone -> m (Maybe SearchRequestSpecialZone)
-findById searchRequestSpecialZoneId = buildDType $
-  fmap (fmap $ extractSolidType @Domain.SearchRequestSpecialZone) $
-    Esq.findOne' $ do
-      (sReq :& sFromLoc :& sToLoc) <-
-        from
-          ( table @SearchRequestSpecialZoneT
-              `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& loc1) -> s ^. SearchRequestSpecialZoneFromLocationId ==. loc1 ^. SearchReqLocationTId)
-              `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& _ :& loc2) -> s ^. SearchRequestSpecialZoneToLocationId ==. loc2 ^. SearchReqLocationTId)
-          )
-      where_ $ sReq ^. SearchRequestSpecialZoneTId ==. val (toKey searchRequestSpecialZoneId)
-      pure (sReq, sFromLoc, sToLoc)
-
 fullSearchRequestTable ::
   From
     ( Table SearchRequestSpecialZoneT
@@ -65,17 +52,6 @@ getRequestIdfromTransactionId tId = do
       searchT ^. SearchRequestSpecialZoneTransactionId ==. val (getId tId)
     return $ searchT ^. SearchRequestSpecialZoneTId
 
-findByMsgIdAndBapIdAndBppId :: Transactionable m => Text -> Text -> Id Merchant -> m (Maybe SearchRequestSpecialZone)
-findByMsgIdAndBapIdAndBppId txnId bapId merchantId = Esq.buildDType $ do
-  mbFullSearchReqT <- Esq.findOne' $ do
-    (sReq :& sFromLoc :& mbSToLoc) <- from fullSearchRequestTable
-    where_ $
-      sReq ^. SearchRequestSpecialZoneMessageId ==. val txnId
-        &&. sReq ^. SearchRequestSpecialZoneProviderId ==. val (toKey merchantId)
-        &&. sReq ^. SearchRequestSpecialZoneBapId ==. val bapId
-    pure (sReq, sFromLoc, mbSToLoc)
-  pure $ extractSolidType @SearchRequestSpecialZone <$> mbFullSearchReqT
-
 getValidTill ::
   (Transactionable m) =>
   Id SearchRequestSpecialZone ->
@@ -86,3 +62,32 @@ getValidTill searchRequestId = do
     where_ $
       searchT ^. SearchRequestSpecialZoneTId ==. val (toKey searchRequestId)
     return $ searchT ^. SearchRequestSpecialZoneValidTill
+
+-- queries fetching only one entity should avoid join for performance reason
+
+findById :: Transactionable m => Id SearchRequestSpecialZone -> m (Maybe SearchRequestSpecialZone)
+findById searchRequestId = Esq.buildDType . runMaybeT $ do
+  searchRequest <- Esq.findByIdM @SearchRequestSpecialZoneT $ toKey searchRequestId
+  fetchFullSearchRequestSpecialZoneM searchRequest
+
+findByMsgIdAndBapIdAndBppId :: Transactionable m => Text -> Text -> Id Merchant -> m (Maybe SearchRequestSpecialZone)
+findByMsgIdAndBapIdAndBppId txnId bapId merchantId = Esq.buildDType . runMaybeT $ do
+  searchRequest <- Esq.findOneM $ do
+    sReq <- from $ table @SearchRequestSpecialZoneT
+    where_ $
+      sReq ^. SearchRequestSpecialZoneMessageId ==. val txnId
+        &&. sReq ^. SearchRequestSpecialZoneProviderId ==. val (toKey merchantId)
+        &&. sReq ^. SearchRequestSpecialZoneBapId ==. val bapId
+    pure sReq
+  fetchFullSearchRequestSpecialZoneM searchRequest
+
+-- internal queries for building domain types
+
+fetchFullSearchRequestSpecialZoneM ::
+  Transactionable m =>
+  SearchRequestSpecialZoneT ->
+  MaybeT (DTypeBuilder m) (SolidType FullSearchRequestSpecialZoneT)
+fetchFullSearchRequestSpecialZoneM searchRequest@SearchRequestSpecialZoneT {..} = do
+  fromLocation <- Esq.findByIdM @SearchReqLocationT fromLocationId
+  toLocation <- Esq.findByIdM @SearchReqLocationT toLocationId
+  pure $ extractSolidType @SearchRequestSpecialZone (searchRequest, fromLocation, toLocation)
