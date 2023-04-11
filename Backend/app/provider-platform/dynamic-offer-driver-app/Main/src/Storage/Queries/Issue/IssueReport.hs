@@ -58,6 +58,12 @@ isSafeToDelete issueReportId driverId = do
   findSafeToDelete <- safeToDelete issueReportId driverId
   return $ isJust findSafeToDelete
 
+deleteByPersonId :: Id SP.Person -> SqlDB ()
+deleteByPersonId driverId =
+  Esq.delete $ do
+    issueReport <- from $ table @IssueReportT
+    where_ $ issueReport ^. IssueReportDriverId ==. val (toKey driverId)
+
 updateAsDeleted :: Id IssueReport -> SqlDB ()
 updateAsDeleted issueReportId = do
   now <- getCurrentTime
