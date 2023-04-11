@@ -96,6 +96,9 @@ addReferralCode personId code = do
 countDrivers :: Esq.Transactionable m => Id Merchant -> m (Int, Int)
 countDrivers = Queries.countDrivers
 
+updateDowngradingOptions :: Id Person -> Bool -> Bool -> Bool -> Esq.SqlDB ()
+updateDowngradingOptions = Queries.updateDowngradingOptions
+
 --------- Caching logic -------------------
 
 clearDriverInfoCache :: (CacheFlow m r) => Id Person.Driver -> m ()

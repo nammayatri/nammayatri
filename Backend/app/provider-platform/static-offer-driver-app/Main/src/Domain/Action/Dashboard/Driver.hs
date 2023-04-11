@@ -280,6 +280,9 @@ driverInfo merchantShortId mbMobileNumber mbMobileCountryCode mbVehicleNumber mb
             mobileCountryCode = person.mobileCountryCode,
             enabled = info.enabled,
             blocked = info.blocked,
+            canDowngradeToSedan = info.canDowngradeToSedan,
+            canDowngradeToHatchback = info.canDowngradeToHatchback,
+            canDowngradeToTaxi = False,
             verified = True, -- not implemented for this bpp
             vehicleNumber = vehicle <&> (.registrationNo),
             driverLicenseDetails = Nothing, -- not implemented for this bpp

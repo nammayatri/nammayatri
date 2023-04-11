@@ -254,3 +254,16 @@ countDrivers merchantId =
 
     func (active, inactive) (activity, counter) =
       if activity then (active + counter, inactive) else (active, inactive + counter)
+
+updateDowngradingOptions :: Id Person -> Bool -> Bool -> Bool -> SqlDB ()
+updateDowngradingOptions personId canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ DriverInformationCanDowngradeToSedan =. val canDowngradeToSedan,
+        DriverInformationCanDowngradeToHatchback =. val canDowngradeToHatchback,
+        DriverInformationCanDowngradeToTaxi =. val canDowngradeToTaxi,
+        DriverInformationUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. DriverInformationDriverId ==. val (toKey personId)
