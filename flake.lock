@@ -233,11 +233,11 @@
         "treefmt-nix": "treefmt-nix_2"
       },
       "locked": {
-        "lastModified": 1681171057,
-        "narHash": "sha256-6jt4g3HnXJqNawZxeSmAV2nnLGZI3Prcq2FZq/77Kik=",
+        "lastModified": 1681220920,
+        "narHash": "sha256-QAdFDZRhZ/EVAMFndWrXrw3I+XAbAOy9TRp4RUp6dh4=",
         "owner": "nammayatri",
         "repo": "common",
-        "rev": "b42e07345d4c1ff72fdceae86b504a58d484a34d",
+        "rev": "bf6a0b22a40ba9fe0487b250897c32e2ee360a8a",
         "type": "github"
       },
       "original": {
@@ -1183,32 +1183,30 @@
         "nixpkgs-stable": "nixpkgs-stable"
       },
       "locked": {
-        "lastModified": 1680812764,
-        "narHash": "sha256-Us1sz6nGNkExaMAS/1889nDvRBX1F9B8mpP3xJISIhw=",
-        "owner": "juspay",
+        "lastModified": 1681206676,
+        "narHash": "sha256-6hQR0fSJ22BSV1XpjyxYur/MPab6gn3aI/l8qEpwNHk=",
+        "owner": "cachix",
         "repo": "pre-commit-hooks.nix",
-        "rev": "76582768d899793f44527cb5efea90e694e9bc1e",
+        "rev": "a0e9703a95342d1dba4ba0d989b2e0b429d42516",
         "type": "github"
       },
       "original": {
-        "owner": "juspay",
-        "ref": "find-gitdir",
+        "owner": "cachix",
         "repo": "pre-commit-hooks.nix",
         "type": "github"
       }
     },
     "process-compose-flake": {
       "locked": {
-        "lastModified": 1681162184,
-        "narHash": "sha256-M96LZRojyFr6g5OB/jXiC6JniJTHsf0sK3iBv6Msatw=",
+        "lastModified": 1680797953,
+        "narHash": "sha256-lFYbfId1IX6jh/wUf+gt3LyvE9HblS4hcBQcougSzX0=",
         "owner": "Platonic-Systems",
         "repo": "process-compose-flake",
-        "rev": "bfb97e2203a3040f92c467ce1aeadf90673fb260",
+        "rev": "aee1b8d126a5efe5945513eb2fb343f3d68dca4b",
         "type": "github"
       },
       "original": {
         "owner": "Platonic-Systems",
-        "ref": "srid/import-without-use",
         "repo": "process-compose-flake",
         "type": "github"
       }
