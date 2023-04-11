@@ -70,7 +70,8 @@ data ProviderInfo = ProviderInfo
   }
 
 data EstimateInfo = EstimateInfo
-  { vehicleVariant :: VehicleVariant,
+  { bppEstimateId :: Id DEstimate.BPPEstimate,
+    vehicleVariant :: VehicleVariant,
     estimatedFare :: Money,
     discount :: Maybe Money,
     estimatedTotalFare :: Money,

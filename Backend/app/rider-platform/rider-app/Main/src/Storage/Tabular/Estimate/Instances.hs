@@ -39,6 +39,7 @@ instance FromTType FullEstimateT Domain.Estimate where
       Domain.Estimate
         { id = Id id,
           requestId = fromKey requestId,
+          bppEstimateId = Id bppEstimateId,
           providerUrl = pUrl,
           estimatedFare = roundToIntegral estimatedFare,
           discount = roundToIntegral <$> discount,
@@ -63,6 +64,7 @@ instance ToTType FullEstimateT Domain.Estimate where
           SEstimate.EstimateT
             { id = estimateId,
               requestId = toKey requestId,
+              bppEstimateId = getId bppEstimateId,
               providerUrl = showBaseUrl providerUrl,
               tripTermsId = toKey <$> (tripTerms <&> (.id)),
               estimatedFare = realToFrac estimatedFare,

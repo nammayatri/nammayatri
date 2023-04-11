@@ -809,11 +809,12 @@ respondQuote driverId req = do
       pure
         DDrQuote.DriverQuote
           { id = guid,
-            status = DDrQuote.Active,
+            transactionId = s.transactionId,
             searchRequestId = s.id,
             driverId,
             driverName = driver.firstName,
             driverRating = driver.rating,
+            status = DDrQuote.Active,
             vehicleVariant = sd.vehicleVariant,
             searchRequestForDriverId = Just sd.id,
             distance = s.estimatedDistance,

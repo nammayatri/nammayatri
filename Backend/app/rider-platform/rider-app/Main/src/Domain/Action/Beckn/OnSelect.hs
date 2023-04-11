@@ -46,7 +46,7 @@ import Tools.Error
 import qualified Tools.Notifications as Notify
 
 data DOnSelectReq = DOnSelectReq
-  { estimateId :: Id DEstimate.Estimate,
+  { bppEstimateId :: Id DEstimate.BPPEstimate,
     providerInfo :: ProviderInfo,
     quotesInfo :: [QuoteInfo]
   }
@@ -82,7 +82,7 @@ onSelect ::
   DOnSelectReq ->
   Flow ()
 onSelect DOnSelectReq {..} = do
-  estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
+  estimate <- QEstimate.findByBPPEstimateId bppEstimateId >>= fromMaybeM (EstimateDoesNotExist $ "bppEstimateId-" <> bppEstimateId.getId)
   searchRequest <-
     QSR.findById estimate.requestId
       >>= fromMaybeM (SearchRequestDoesNotExist estimate.requestId.getId)
@@ -96,20 +96,20 @@ onSelect DOnSelectReq {..} = do
   DB.runTransaction $ do
     QQuote.createMany quotes
     QPFS.updateStatus searchRequest.riderId DPFS.DRIVER_OFFERED_QUOTE {estimateId = estimate.id, validTill = searchRequest.validTill}
-    QEstimate.updateStatus estimateId DEstimate.GOT_DRIVER_QUOTE
+    QEstimate.updateStatus estimate.id DEstimate.GOT_DRIVER_QUOTE
 
   if estimate.autoAssignEnabledV2
     then do
       let lowestFareQuote = selectLowestFareQuote quotes
       case lowestFareQuote of
         Just autoAssignQuote -> do
-          DB.runTransaction $ QEstimate.updateQuote estimateId autoAssignQuote.id
+          DB.runTransaction $ QEstimate.updateQuote estimate.id autoAssignQuote.id
           dConfirmRes <- SConfirm.confirm personId autoAssignQuote.id
           becknInitReq <- ACL.buildInitReq dConfirmRes
           handle (errHandler dConfirmRes.booking) $ void $ withShortRetry $ CallBPP.init dConfirmRes.providerUrl becknInitReq
-        Nothing -> Notify.notifyOnDriverOfferIncoming estimateId quotes person
+        Nothing -> Notify.notifyOnDriverOfferIncoming estimate.id quotes person
     else do
-      Notify.notifyOnDriverOfferIncoming estimateId quotes person
+      Notify.notifyOnDriverOfferIncoming estimate.id quotes person
   where
     duplicateCheckCond :: EsqDBFlow m r => [Id DDriverOffer.BPPQuote] -> Text -> m Bool
     duplicateCheckCond [] _ = return False

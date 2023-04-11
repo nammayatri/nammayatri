@@ -40,6 +40,7 @@ data SearchRequestForDriverResponse
 
 data SearchRequestForDriver = SearchRequestForDriver
   { id :: Id SearchRequestForDriver,
+    transactionId :: Text,
     searchRequestId :: Id SearchRequest,
     startTime :: UTCTime,
     searchRequestValidTill :: UTCTime,

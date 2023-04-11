@@ -20,12 +20,12 @@ import qualified Beckn.Types.Core.Taxi.Common.Address as BA
 import qualified Data.Map as M
 import qualified Data.Text as T
 import Data.Time.Clock (addUTCTime)
+import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FareParameters as DFareParams (FarePolicyType (..))
 import qualified Domain.Types.FarePolicy as DFarePolicy (ExtraFee (..))
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
-import Domain.Types.Vehicle.Variant (Variant)
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -46,13 +46,15 @@ import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.FarePolicy as FarePolicyS
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.CachedQueries.SlabFarePolicy as SFarePolicyS
+import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.SearchRequest as QSReq
-import Tools.Error (FarePolicyError (NoFarePolicy), GenericError (InternalError), MerchantError (MerchantNotFound))
+import Tools.Error
 import Tools.Maps as Maps
 
 data DSelectReq = DSelectReq
   { messageId :: Text,
     transactionId :: Text,
+    estimateId :: Id DEst.Estimate,
     bapId :: Text,
     bapUri :: BaseUrl,
     pickupLocation :: LatLong,
@@ -60,7 +62,6 @@ data DSelectReq = DSelectReq
     dropLocation :: LatLong,
     pickupAddress :: Maybe BA.Address,
     dropAddrress :: Maybe BA.Address,
-    variant :: Variant,
     autoAssignEnabled :: Bool,
     customerLanguage :: Maybe Maps.Language,
     customerExtraFee :: Maybe Money
@@ -71,10 +72,11 @@ type LanguageDictionary = M.Map Maps.Language DSearchReq.SearchRequest
 handler :: Id DM.Merchant -> DSelectReq -> Flow ()
 handler merchantId sReq = do
   sessiontoken <- generateGUIDText
-  org <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   fromLocation <- buildSearchReqLocation merchantId sessiontoken sReq.pickupAddress sReq.customerLanguage sReq.pickupLocation
   toLocation <- buildSearchReqLocation merchantId sessiontoken sReq.dropAddrress sReq.customerLanguage sReq.dropLocation
   mbDistRes <- CD.getCacheDistance sReq.transactionId
+  estimate <- QEst.findById sReq.estimateId >>= fromMaybeM (EstimateDoesNotExist sReq.estimateId.getId)
   logInfo $ "Fetching cached distance and duration" <> show mbDistRes
   (distance, duration) <-
     case mbDistRes of
@@ -88,18 +90,18 @@ handler merchantId sReq = do
               }
         pure (res.distance, res.duration)
       Just distRes -> pure distRes
-  (fareParams, driverExtraFare) <- case org.farePolicyType of
+  (fareParams, driverExtraFare) <- case merchant.farePolicyType of
     DFareParams.SLAB -> do
-      slabFarePolicy <- SFarePolicyS.findByMerchantIdAndVariant org.id sReq.variant >>= fromMaybeM (InternalError "Slab fare policy not found")
+      slabFarePolicy <- SFarePolicyS.findByMerchantIdAndVariant merchant.id estimate.vehicleVariant >>= fromMaybeM (InternalError "Slab fare policy not found")
       let driverExtraFare = DFarePolicy.ExtraFee {minFee = 0, maxFee = 0}
       fareParams <- calculateFare merchantId (Right slabFarePolicy) distance sReq.pickupTime Nothing sReq.customerExtraFee
       pure (fareParams, driverExtraFare)
     DFareParams.NORMAL -> do
-      farePolicy <- FarePolicyS.findByMerchantIdAndVariant org.id sReq.variant (Just distance) >>= fromMaybeM NoFarePolicy
+      farePolicy <- FarePolicyS.findByMerchantIdAndVariant merchantId estimate.vehicleVariant (Just distance) >>= fromMaybeM NoFarePolicy
       fareParams <- calculateFare merchantId (Left farePolicy) distance sReq.pickupTime Nothing sReq.customerExtraFee
       pure (fareParams, farePolicy.driverExtraFee)
   device <- Redis.get (CD.deviceKey sReq.transactionId)
-  searchReq <- buildSearchRequest fromLocation toLocation merchantId sReq distance duration sReq.customerExtraFee device
+  searchReq <- buildSearchRequest fromLocation toLocation merchantId estimate sReq distance duration sReq.customerExtraFee device
   let estimateFare = fareSum fareParams
   logDebug $
     "search request id=" <> show searchReq.id
@@ -107,7 +109,6 @@ handler merchantId sReq = do
       <> show distance
       <> "; estimated base fare:"
       <> show estimateFare
-  merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   driverPoolConfig <- getDriverPoolConfig merchantId distance
   let inTime = fromIntegral driverPoolConfig.singleBatchProcessTime
   Esq.runTransaction $ do
@@ -138,13 +139,14 @@ buildSearchRequest ::
   DLoc.SearchReqLocation ->
   DLoc.SearchReqLocation ->
   Id DM.Merchant ->
+  DEst.Estimate ->
   DSelectReq ->
   Meters ->
   Seconds ->
   Maybe Money ->
   Maybe Text ->
   m DSearchReq.SearchRequest
-buildSearchRequest from to merchantId sReq distance duration customerExtraFee device = do
+buildSearchRequest from to merchantId estimate sReq distance duration customerExtraFee device = do
   now <- getCurrentTime
   id_ <- Id <$> generateGUID
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
@@ -152,6 +154,7 @@ buildSearchRequest from to merchantId sReq distance duration customerExtraFee de
   pure
     DSearchReq.SearchRequest
       { id = id_,
+        estimateId = estimate.id,
         transactionId = sReq.transactionId,
         messageId = sReq.messageId,
         startTime = sReq.pickupTime,
@@ -166,7 +169,7 @@ buildSearchRequest from to merchantId sReq distance duration customerExtraFee de
         customerExtraFee,
         device = device,
         createdAt = now,
-        vehicleVariant = sReq.variant,
+        vehicleVariant = estimate.vehicleVariant,
         status = DSearchReq.ACTIVE,
         autoAssignEnabled = sReq.autoAssignEnabled,
         searchRepeatCounter = 0,

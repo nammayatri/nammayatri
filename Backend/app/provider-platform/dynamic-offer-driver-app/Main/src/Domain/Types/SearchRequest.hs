@@ -19,6 +19,7 @@ import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
+import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import qualified Domain.Types.Vehicle.Variant as Variant
@@ -30,6 +31,7 @@ import Servant hiding (throwError)
 
 data SearchRequest = SearchRequest
   { id :: Id SearchRequest,
+    estimateId :: Id DEst.Estimate,
     transactionId :: Text,
     messageId :: Text,
     startTime :: UTCTime,
@@ -52,7 +54,7 @@ data SearchRequest = SearchRequest
   }
   deriving (Generic, PrettyShow, Show)
 
-data SearchRequestStatus = ACTIVE | CANCELLED
+data SearchRequestStatus = ACTIVE | CANCELLED | REPEATITION
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
   deriving (PrettyShow) via Showable SearchRequestStatus
 

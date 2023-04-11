@@ -35,6 +35,7 @@ import Servant.API
 data Estimate = Estimate
   { id :: Id Estimate,
     requestId :: Id DSearchRequest.SearchRequest,
+    bppEstimateId :: Id BPPEstimate,
     estimatedFare :: Money,
     autoAssignEnabled :: Bool,
     autoAssignEnabledV2 :: Bool,
@@ -52,15 +53,17 @@ data Estimate = Estimate
     providerCompletedRidesCount :: Int,
     vehicleVariant :: VehicleVariant,
     tripTerms :: Maybe DTripTerms.TripTerms,
-    createdAt :: UTCTime,
     estimateBreakupList :: [EstimateBreakup],
     nightShiftRate :: Maybe NightShiftRate,
     status :: EstimateStatus,
-    updatedAt :: UTCTime,
     waitingCharges :: WaitingCharges,
-    driversLocation :: [LatLong]
+    driversLocation :: [LatLong],
+    updatedAt :: UTCTime,
+    createdAt :: UTCTime
   }
   deriving (Generic, Show)
+
+data BPPEstimate
 
 deriving instance Read LatLong
 

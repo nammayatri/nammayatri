@@ -413,3 +413,29 @@ instance IsHTTPError DriverPoolConfigError where
     DriverPoolConfigAlreadyExists {} -> E400
 
 instance IsAPIError DriverPoolConfigError
+
+data EstimateError
+  = EstimateNotFound Text
+  | EstimateDoesNotExist Text
+  | EstimateCancelled Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''EstimateError
+
+instance IsBaseError EstimateError where
+  toMessage = \case
+    EstimateNotFound estimateId -> Just $ "Estimate with estimateId \"" <> show estimateId <> "\"not found. "
+    EstimateDoesNotExist estimateId -> Just $ "No estimate matches passed data \"<>" <> show estimateId <> "\"."
+    EstimateCancelled estimateId -> Just $ "Estimate with estimateId \"<>" <> show estimateId <> "\" was cancelled. "
+
+instance IsHTTPError EstimateError where
+  toErrorCode = \case
+    EstimateNotFound _ -> "ESTIMATE_NOT_FOUND"
+    EstimateDoesNotExist _ -> "ESTIMATE_DOES_NOT_EXIST"
+    EstimateCancelled _ -> "ESTIMATE_CANCELLED"
+  toHttpCode = \case
+    EstimateNotFound _ -> E500
+    EstimateDoesNotExist _ -> E400
+    EstimateCancelled _ -> E403
+
+instance IsAPIError EstimateError

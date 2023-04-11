@@ -88,3 +88,15 @@ getValidTill searchRequestId = do
     where_ $
       searchT ^. SearchRequestTId ==. val (toKey searchRequestId)
     return $ searchT ^. SearchRequestValidTill
+
+findActiveByTransactionId ::
+  (Transactionable m) =>
+  Text ->
+  m (Maybe (Id SearchRequest))
+findActiveByTransactionId transactionId = do
+  findOne $ do
+    searchT <- from $ table @SearchRequestT
+    where_ $
+      searchT ^. SearchRequestTransactionId ==. val transactionId
+        &&. searchT ^. SearchRequestStatus ==. val Domain.ACTIVE
+    return $ searchT ^. SearchRequestTId

@@ -39,6 +39,7 @@ import qualified Data.Text as T
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SRBCR
 import qualified Domain.Types.DriverQuote as DDQ
+import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FareParameters as Fare
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as SRide
@@ -52,7 +53,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError as Beckn
 import Kernel.Utils.Servant.SignatureAuth
-import qualified SharedLogic.Estimate as DEstimate
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Person as QPerson
@@ -303,14 +303,14 @@ sendEstimateRepetitionUpdateToBAP ::
   ) =>
   DRB.Booking ->
   SRide.Ride ->
-  DEstimate.EstimateItem ->
+  Id DEst.Estimate ->
   SRBCR.CancellationSource ->
   m ()
-sendEstimateRepetitionUpdateToBAP booking ride estimateItem cancellationSource = do
+sendEstimateRepetitionUpdateToBAP booking ride estimateId cancellationSource = do
   transporter <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
-  let estimateRepetitionBuildReq = ACL.EstimateRepetitionBuildReq {cancellationSource, booking, estimateItem, ride}
+  let estimateRepetitionBuildReq = ACL.EstimateRepetitionBuildReq {cancellationSource, booking, estimateId, ride}
   estimateRepMsg <- ACL.buildOnUpdateMessage estimateRepetitionBuildReq
   retryConfig <- asks (.shortDurationRetryCfg)
   void $ callOnUpdate transporter booking.bapId booking.bapUri booking.transactionId estimateRepMsg retryConfig

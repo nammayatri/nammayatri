@@ -76,11 +76,10 @@ sendSearchRequestToDrivers' driverPoolConfig searchReq merchant baseFare driverM
   where
     handle =
       Handle
-        { isBatchNumExceedLimit = I.isBatchNumExceedLimit driverPoolConfig searchReq.id,
+        { isBatchNumExceedLimit = I.isBatchNumExceedLimit driverPoolConfig searchReq.transactionId,
           isRideAlreadyAssigned = I.isRideAlreadyAssigned searchReq.id,
           isReceivedMaxDriverQuotes = I.isReceivedMaxDriverQuotes driverPoolConfig searchReq.id,
           getNextDriverPoolBatch = I.getNextDriverPoolBatch driverPoolConfig searchReq,
-          cleanupDriverPoolBatches = I.cleanupDriverPoolBatches searchReq.id,
           sendSearchRequestToDrivers = I.sendSearchRequestToDrivers searchReq baseFare driverMinExtraCharge driverMaxExtraCharge driverPoolConfig,
           getRescheduleTime = I.getRescheduleTime driverPoolConfig.singleBatchProcessTime,
           setBatchDurationLock = I.setBatchDurationLock searchReq.id driverPoolConfig.singleBatchProcessTime,
