@@ -291,6 +291,9 @@ data DriverInfoRes = DriverInfoRes
     enabled :: Bool,
     blocked :: Bool,
     verified :: Bool,
+    canDowngradeToSedan :: Bool,
+    canDowngradeToHatchback :: Bool,
+    canDowngradeToTaxi :: Bool,
     vehicleNumber :: Maybe Text,
     driverLicenseDetails :: Maybe DriverLicenseAPIEntity,
     vehicleRegistrationDetails :: [DriverRCAssociationAPIEntity]

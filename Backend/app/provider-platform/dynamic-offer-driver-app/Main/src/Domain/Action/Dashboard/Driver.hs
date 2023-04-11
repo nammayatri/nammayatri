@@ -349,6 +349,9 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         enabled = info.enabled,
         blocked = info.blocked,
         verified = info.verified,
+        canDowngradeToSedan = info.canDowngradeToSedan,
+        canDowngradeToHatchback = info.canDowngradeToHatchback,
+        canDowngradeToTaxi = info.canDowngradeToTaxi,
         vehicleNumber = vehicle <&> (.registrationNo),
         driverLicenseDetails,
         vehicleRegistrationDetails

@@ -142,7 +142,10 @@ data DriverInformationRes = DriverInformationRes
     referralCode :: Maybe Text,
     organization :: DM.MerchantAPIEntity,
     language :: Maybe Maps.Language,
-    alternateNumber :: Maybe Text
+    alternateNumber :: Maybe Text,
+    canDowngradeToSedan :: Bool,
+    canDowngradeToHatchback :: Bool,
+    canDowngradeToTaxi :: Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -165,7 +168,10 @@ data DriverEntityRes = DriverEntityRes
     verified :: Bool,
     registeredAt :: UTCTime,
     language :: Maybe Maps.Language,
-    alternateNumber :: Maybe Text
+    alternateNumber :: Maybe Text,
+    canDowngradeToSedan :: Bool,
+    canDowngradeToHatchback :: Bool,
+    canDowngradeToTaxi :: Bool
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -233,7 +239,8 @@ data UpdateDriverReq = UpdateDriverReq
     deviceToken :: Maybe FCMRecipientToken,
     language :: Maybe Maps.Language,
     canDowngradeToSedan :: Maybe Bool,
-    canDowngradeToHatchback :: Maybe Bool
+    canDowngradeToHatchback :: Maybe Bool,
+    canDowngradeToTaxi :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -444,7 +451,10 @@ buildDriverEntityRes (person, driverInfo) = do
         verified = driverInfo.verified,
         registeredAt = person.createdAt,
         language = person.language,
-        alternateNumber = decaltMobNum
+        alternateNumber = decaltMobNum,
+        canDowngradeToSedan = driverInfo.canDowngradeToSedan,
+        canDowngradeToHatchback = driverInfo.canDowngradeToHatchback,
+        canDowngradeToTaxi = driverInfo.canDowngradeToTaxi
       }
 
 changeDriverEnableState ::
@@ -513,9 +523,19 @@ updateDriver personId req = do
                language = req.language <|> person.language
               }
 
+  vehicle <- QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
+  checkIfCanDowngrade vehicle
   driverInfo <- QDriverInformation.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
-  Esq.runTransaction $
+  let updDriverInfo =
+        driverInfo{canDowngradeToSedan = fromMaybe driverInfo.canDowngradeToSedan req.canDowngradeToSedan,
+                   canDowngradeToHatchback = fromMaybe driverInfo.canDowngradeToHatchback req.canDowngradeToHatchback,
+                   canDowngradeToTaxi = fromMaybe driverInfo.canDowngradeToTaxi req.canDowngradeToTaxi
+                  }
+
+  Esq.runTransaction $ do
     QPerson.updatePersonRec personId updPerson
+    QDriverInformation.updateDowngradingOptions person.id updDriverInfo.canDowngradeToSedan updDriverInfo.canDowngradeToHatchback updDriverInfo.canDowngradeToTaxi
+  QDriverInformation.clearDriverInfoCache (cast personId)
   driverEntity <- buildDriverEntityRes (updPerson, driverInfo)
   driverReferralCode <- fmap (.referralCode) <$> QDR.findById personId
   let merchantId = person.merchantId
@@ -523,6 +543,21 @@ updateDriver personId req = do
     CQM.findById merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
   return $ makeDriverInformationRes driverEntity org driverReferralCode
+  where
+    checkIfCanDowngrade vehicle = do
+      when
+        ( (vehicle.variant == SV.AUTO_RICKSHAW || vehicle.variant == SV.TAXI || vehicle.variant == SV.HATCHBACK)
+            && (req.canDowngradeToSedan == Just True || req.canDowngradeToHatchback == Just True || req.canDowngradeToTaxi == Just True)
+        )
+        $ throwError $ InvalidRequest $ "Can't downgrade from " <> (show vehicle.variant)
+      when (vehicle.variant == SV.SEDAN && (req.canDowngradeToSedan == Just True)) $
+        throwError $ InvalidRequest "Driver with sedan can't downgrade to sedan"
+      when (vehicle.variant == SV.SEDAN && (req.canDowngradeToTaxi == Just True)) $
+        throwError $ InvalidRequest "Driver with sedan can't downgrade to Taxi"
+      when (vehicle.variant == SV.SUV && (req.canDowngradeToTaxi == Just True)) $
+        throwError $ InvalidRequest "Driver with SUV can't downgrade to Taxi"
+      when (vehicle.variant == SV.TAXI_PLUS && (req.canDowngradeToSedan == Just True || req.canDowngradeToHatchback == Just True)) $
+        throwError $ InvalidRequest "Driver with TAXI_PLUS can't downgrade to either sedan or hatchback"
 
 sendInviteSms ::
   ( MonadFlow m,
