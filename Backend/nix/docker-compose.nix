@@ -1,4 +1,3 @@
-# TODO: Simplify this via upstreaming: https://github.com/hercules-ci/arion/issues/193
 { ... }:
 
 let
@@ -173,6 +172,8 @@ let
 in
 {
   perSystem = { inputs', pkgs, lib, ... }: {
+    inherit dockerComposeConfiguration;
+
     mission-control.scripts =
       let
         arionScript = { description, args }: {
@@ -214,25 +215,6 @@ in
         };
       };
 
-    packages = {
-      arion =
-        let
-          dcYaml = pkgs.arion.passthru.build {
-            modules = [
-              dockerComposeConfiguration
-            ];
-          };
-        in
-        pkgs.writeShellApplication {
-          name = "arion";
-          text = ''
-            set -x
-            ${lib.getExe pkgs.arion} \
-              --prebuilt-file ${dcYaml} \
-              "$@"
-          '';
-        };
-    };
   };
 }
 
