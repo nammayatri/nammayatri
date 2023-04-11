@@ -75,7 +75,7 @@ nameEditTextConfig state = let
                 fontStyle = FontStyle.semiBold LanguageStyle,
                 pattern = Just "[a-zA-Z ]*,30"
             },
-            id = (EHC.getNewIDWithTag "NameEditText")
+            id = (EHC.getNewIDWithTag "UserNameEditText")
         }
     in primaryEditTextConfig'
 

@@ -268,9 +268,9 @@ currentFlowStatus = do
           modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{data{settingSideBar{name =fromMaybe "" response.firstName}}})
           setValueToLocalStore USER_NAME ((fromMaybe "" response.firstName) <> " " <> (fromMaybe "" response.middleName) <> " " <> (fromMaybe "" response.lastName))
       if (fromMaybe "UNKNOWN" (response.gender) /= "UNKNOWN") then do 
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{settingSideBar{gender = Just (fromMaybe "" response.gender)}}})
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{settingSideBar{gender = Just (fromMaybe "" response.gender)}} , props {isbanner = false}})
         else pure unit
-      if isJust response.email then do 
+      if isJust response.email then do
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{settingSideBar{email = Just (fromMaybe "" response.email)}}})
         else pure unit
 
@@ -394,7 +394,7 @@ accountSetUpScreenFlow = do
         Right response -> do
           setValueToLocalStore USER_NAME state.data.name
           case gender of 
-            Just value -> modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{settingSideBar{gender = Just value}}})
+            Just value -> modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{settingSideBar{gender = Just value}}, props{isbanner = false}})
             Nothing    -> pure unit
           _ <- pure $ firebaseLogEvent "ny_user_onboarded"
           pure unit
@@ -436,9 +436,9 @@ homeScreenFlow = do
     CHANGE_LANGUAGE ->  selectLanguageScreenFlow
     GO_TO_EMERGENCY_CONTACTS -> emergencyScreenFlow
     GO_TO_ABOUT -> aboutUsScreenFlow
-    GO_TO_MY_PROFILE -> do
-        _ <- pure $ firebaseLogEvent "ny_user_profile_click"
-        modifyScreenState $ MyProfileScreenStateType (\myProfileScreenState ->  MyProfileScreenData.initData)
+    GO_TO_MY_PROFILE  updateProfile -> do
+        _ <- pure $ firebaseLogEvent if updateProfile then "safety_banner_clicked" else "ny_user_profile_click"
+        modifyScreenState $ MyProfileScreenStateType (\myProfileScreenState ->  myProfileScreenState{props{updateProfile = updateProfile , fromHomeScreen = updateProfile}})
         myProfileScreenFlow
     GO_TO_FIND_ESTIMATES state-> do
       _ <- lift $ lift $ liftFlow $ firebaseLogEventWithTwoParams "ny_user_source_and_destination" "ny_user_enter_source" (take 99 (state.data.source)) "ny_user_enter_destination" (take 99 (state.data.destination))
@@ -605,7 +605,7 @@ homeScreenFlow = do
             _ <- pure $ removeAllPolylines ""
             _ <- pure $ spy "INSIDE ELSE IF OF ONGOING" state.props.currentStage
             _ <- updateLocalStage HomeScreen
-            modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData)
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{settingSideBar{gender = state.data.settingSideBar.gender , email = state.data.settingSideBar.email}},props { isbanner = state.props.isbanner}})
             homeScreenFlow
           else homeScreenFlow
     CANCEL_RIDE_REQUEST state -> do 
@@ -616,7 +616,7 @@ homeScreenFlow = do
       _ <- pure $ clearWaitingTimer state.props.waitingTimeTimerId
       removeChatService ""
       _ <- pure $ firebaseLogEvent "ny_user_ride_cancelled_by_user"
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData)
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{settingSideBar{gender = state.data.settingSideBar.gender , email = state.data.settingSideBar.email}},props { isbanner = state.props.isbanner}})
       homeScreenFlow
     FCM_NOTIFICATION notification state-> do
         let rideID = state.data.driverInfoCardState.rideId
@@ -673,7 +673,7 @@ homeScreenFlow = do
                                       _ <- pure $ enableMyLocation true
                                       _ <- updateLocalStage HomeScreen
                                       removeChatService ""
-                                      modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData)
+                                      modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{settingSideBar{gender = state.data.settingSideBar.gender , email = state.data.settingSideBar.email}},props { isbanner = state.props.isbanner}})
                                       _ <- pure $ clearWaitingTimer state.props.waitingTimeTimerId
                                       homeScreenFlow
             "DRIVER_ASSIGNMENT"   -> if (not (isLocalStageOn RideAccepted || isLocalStageOn RideStarted )) then do
@@ -698,7 +698,7 @@ homeScreenFlow = do
     SUBMIT_RATING state -> do
       _ <- Remote.rideFeedbackBT (Remote.makeFeedBackReq (state.data.previousRideRatingState.rating) (state.data.previousRideRatingState.rideId) (state.data.previousRideRatingState.feedback))
       _ <- updateLocalStage HomeScreen
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData)
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{settingSideBar{gender = state.data.settingSideBar.gender , email = state.data.settingSideBar.email}},props { isbanner = state.props.isbanner}})
       if state.data.previousRideRatingState.rating == 5 then do
         _ <- pure $ launchInAppRatingPopup unit
         pure unit 
@@ -734,24 +734,24 @@ homeScreenFlow = do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> updatedState{props{sourceLat = sourceLat, sourceLong = sourceLong, isSrcServiceable =sourceServiceabilityResp.serviceable , showlocUnserviceablePopUp = (not sourceServiceabilityResp.serviceable)}})
       homeScreenFlow
     HOME_SCREEN -> do
+        (GlobalState state) <- getState
         when (isLocalStageOn FindingQuotes) $ do
-          (GlobalState state) <- getState
           cancelEstimate state.homeScreen.props.estimateId
         _ <- pure $ removeAllPolylines ""
         _ <- lift $ lift $ liftFlow $ addMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)) 9.9 9.9 160 0.5 0.9
         _ <- pure $ currentPosition ""
         _ <- updateLocalStage HomeScreen
-        modifyScreenState $ HomeScreenStateType (\homeScreen ->  HomeScreenData.initData)
+        modifyScreenState $ HomeScreenStateType (\homeScreen ->  HomeScreenData.initData{data{settingSideBar{gender = state.homeScreen.data.settingSideBar.gender , email = state.homeScreen.data.settingSideBar.email}},props { isbanner = state.homeScreen.props.isbanner}})
         homeScreenFlow
     CHECK_CURRENT_STATUS -> do
+      (GlobalState state) <- getState
       when (isLocalStageOn FindingQuotes) $ do
-        (GlobalState state) <- getState
         cancelEstimate state.homeScreen.props.estimateId
       _ <- pure $ removeAllPolylines ""
       _ <- lift $ lift $ liftFlow $ addMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)) 9.9 9.9 160 0.5 0.9
       _ <- pure $ currentPosition ""
       _ <- updateLocalStage HomeScreen
-      modifyScreenState $ HomeScreenStateType (\homeScreen ->  HomeScreenData.initData)
+      modifyScreenState $ HomeScreenStateType (\homeScreen ->  HomeScreenData.initData{data{settingSideBar{gender = state.homeScreen.data.settingSideBar.gender , email = state.homeScreen.data.settingSideBar.email}},props { isbanner = state.homeScreen.props.isbanner}})
       currentFlowStatus
     UPDATE_LOCATION_NAME state lat lon -> do
       (GetPlaceNameResp locationName) <- Remote.placeNameBT (Remote.makePlaceNameReq lat lon (case (getValueToLocalStore LANGUAGE_KEY) of  
@@ -1226,8 +1226,8 @@ myProfileScreenFlow = do
       case resp of 
         Right response -> do 
           setValueToLocalStore USER_NAME stringName
-          case gender of 
-            Just gender -> modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{settingSideBar{gender = Just gender}}})
+          case gender of
+            Just gender -> modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{settingSideBar{gender = Just gender}}, props{isbanner = false}})
             _ -> pure unit 
           case email of  
             Just email -> modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{settingSideBar{email = Just email}}})
