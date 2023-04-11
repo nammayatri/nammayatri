@@ -814,6 +814,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onResume() {
+        String key = getResources().getString(R.string.service);
         super.onResume();
         sharedPref.edit().putString(getResources().getString(R.string.ACTIVITY_STATUS),"onResume").apply();
         appUpdateManager.getAppUpdateInfo().addOnSuccessListener(appUpdateInfo -> {
@@ -831,9 +832,11 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
-        MainActivity.this.callingDriverLocationPermission();
-        MainActivity.this.callingOverlayPermission();
-        MainActivity.this.callingCheckBatteryOptimization();
+        if (key != null && key.equals("nammayatripartner")) {
+            MainActivity.this.callingDriverLocationPermission();
+            MainActivity.this.callingOverlayPermission();
+            MainActivity.this.callingCheckBatteryOptimization();
+        }
         try {
             if ( juspayServicesGlobal != null && juspayServicesGlobal.getDynamicUI() != null){
                 CommonJsInterface.callOnResumeUpdateCallback(juspayServicesGlobal.getDuiCallback());

@@ -141,54 +141,36 @@ android {
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation 'in.juspay:hypersdk:2.1.12-nammayatri-02'
-    // implementation ('in.juspay:hypersdk:2.0.4-rc.78') {
-    //     exclude group:'in.juspay', module: 'mystique'
-    // }
-//    implementation 'com.google.android.flexbox:flexbox:3.0.0'
-//    implementation 'in.juspay:mystique:0.2.45'
-//    implementation project (path:':mystique')
-    // api (project(':mystique')) -- to link mystique
-//    implementation ( project(path: ':hyper-sdk'))
-    // implementation 'in.juspay:mystique:0.2.49'
-    // Import the BoM for the Firebase platform
     implementation platform('com.google.firebase:firebase-bom:31.1.1')
-
     implementation 'com.google.firebase:firebase-dynamic-links'
     implementation 'com.google.firebase:firebase-analytics'
-
     implementation 'com.google.firebase:firebase-crashlytics:18.2.13'
     implementation 'com.google.firebase:firebase-messaging'
-    // userImplementation 'com.google.firebase:firebase-messaging:21.0.1'
-    // transporterImplementation 'com.google.firebase:firebase-messaging:21.0.1'
     implementation 'com.google.firebase:firebase-installations:17.0.3'
     implementation 'com.google.firebase:firebase-perf'
     implementation 'com.google.firebase:firebase-inappmessaging-display'
-
-    implementation 'com.google.android.libraries.places:places:2.6.0'
-    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-    implementation('com.journeyapps:zxing-android-embedded:4.3.0') { transitive = false }
-    implementation 'com.google.zxing:core:3.5.0'
+//    implementation 'com.google.android.libraries.places:places:2.6.0'
+//    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+//    implementation('com.journeyapps:zxing-android-embedded:4.3.0') { transitive = false }
+//    implementation 'com.google.zxing:core:3.5.0'
 
 
     implementation 'com.google.android.material:material:1.6.0'
 
-    implementation 'androidx.appcompat:appcompat:1.1.0'
+//    implementation 'androidx.appcompat:appcompat:1.1.0'
     implementation 'com.google.maps.android:android-maps-utils:2.4.0'
     implementation 'androidx.work:work-runtime:2.7.1'
-    testImplementation 'junit:junit:4.13.2'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.4-alpha07'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
-    implementation 'com.google.android.gms:play-services-maps:18.1.0'
+   testImplementation 'junit:junit:4.13.2'
+//   androidTestImplementation 'androidx.test.ext:junit:1.1.4-alpha07'
+//    androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
+//    implementation 'com.google.android.gms:play-services-maps:18.1.0'
     implementation 'com.google.android.gms:play-services-location:21.0.1'
     implementation 'com.google.android.libraries.places:places:2.6.0'
-    implementation 'com.google.android.gms:play-services-auth:20.3.0'
-    implementation 'com.google.android.gms:play-services-auth-api-phone:18.0.1'
+//    implementation 'com.google.android.gms:play-services-auth:20.3.0'
+//    implementation 'com.google.android.gms:play-services-auth-api-phone:18.0.1'
     userImplementation 'com.appeaser.sublimepickerlibrary:sublimepickerlibrary:2.1.2'
-    implementation "androidx.coordinatorlayout:coordinatorlayout:1.2.0"
-    // implementation "androidx.swiperefreshlayout:swiperefreshlayout:1.1.0" -- new feature
+//    implementation "androidx.coordinatorlayout:coordinatorlayout:1.2.0"
     implementation 'com.facebook.shimmer:shimmer:0.5.0'
-//    implementation 'org.codehaus.groovy:groovy-all:2.4.12'
-//    implementation 'com.facebook.android:facebook-android-sdk:[5,6)'
     implementation 'com.google.android.play:app-update:2.0.0'
     implementation 'com.airbnb.android:lottie:5.2.0'
     implementation 'com.google.android.play:review:2.0.1'
