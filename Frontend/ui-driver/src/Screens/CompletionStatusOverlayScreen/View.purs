@@ -1,23 +1,18 @@
  module Screens.CompletionStatusOverlayScreen.View where
 
-import Prelude
+import Prelude(Unit,(/),unit,(<>),($),bind,pure,const,discard,void)
 import Effect (Effect)
 import Components.ReferralMobileNumber.Controller (Config(..))
 import PrestoDOM (Gravity(..), Length(..), PrestoDOM(..), Margin(..), Orientation(..), Padding(..), Visibility(..), ScopedScreen, linearLayout, textView, editText, onBackPressed, onClick, imageView,afterRender)
-import PrestoDOM.Properties(alpha, background, clickable, color, cornerRadii, fontStyle, gravity, height, hint, id, imageUrl, margin, orientation, padding, pattern, sheetState, stroke, text, textSize, visibility, weight, width, cornerRadius)
-import PrestoDOM.Types.DomAttributes (Corners(..))
+import PrestoDOM.Properties(background,color,gravity, height, id, imageUrl, margin, orientation, padding,  text, textSize, width)
 import Styles.Colors as Color
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Engineering.Helpers.Commons (getNewIDWithTag, screenHeight)
 import Font.Style as FontStyle
 import Font.Size as FontSize
-import Components.PrimaryEditText as PrimaryEditText
-import Components.PrimaryButton as PrimaryButton
-import Data.String.CodeUnits (charAt)
-import Data.String (length)
-import Data.Maybe
 import Helpers.Utils (countDown)
+import Data.Maybe
 import Common.Types.App
 import Screens.Types(CompletionStatusOverlayState)
 import Screens.CompletionStatusOverlayScreen.Controller (Action(..), ScreenOutput(..),eval)
@@ -28,13 +23,9 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (flowRunner)
 import Control.Monad.Except.Trans (lift, runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
-import Types.App (GlobalState)
 import PrestoDOM (lottieAnimationView)
 import JBridge (startLottieProcess)
-import PrestoDOM.Animation as PrestoAnim
 import Animation (scaleAnim, fadeIn)
-import Animation.Config as AnimConfig
-import Font.Size as FontSize
 
 screen :: CompletionStatusOverlayState -> ScopedScreen Action CompletionStatusOverlayState ScreenOutput
 screen initialState =

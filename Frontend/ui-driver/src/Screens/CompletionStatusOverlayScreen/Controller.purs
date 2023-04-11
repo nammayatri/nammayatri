@@ -1,10 +1,9 @@
 module Screens.CompletionStatusOverlayScreen.Controller where
 
 import Screens.Types(CompletionStatusOverlayState)
-import PrestoDOM (Eval, continue, exit,continueWithCmd)
+import PrestoDOM (Eval, exit)
 import PrestoDOM.Types.Core (class Loggable)
-import Prelude (class Show, pure, unit, bind)
-import Prelude (($), (==))
+import Prelude (class Show, pure, unit, bind,($))
 
 
 instance showAction :: Show Action where
