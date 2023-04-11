@@ -35,6 +35,7 @@ import qualified Storage.Queries.DriverOnboarding.IdfyVerification as QIV
 import qualified Storage.Queries.DriverOnboarding.Image as QImage
 import qualified Storage.Queries.DriverQuote as QDriverQuote
 import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.Issue.IssueReport as QIssueReport
 import qualified Storage.Queries.Message.MessageReport as QMessage
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RegistrationToken as QR
@@ -71,6 +72,7 @@ deleteDriver merchantShortId reqDriverId = do
     QDriverFlowStatus.deleteById reqDriverId
     QMessage.deleteByPersonId reqDriverId
     QPerson.deleteById reqDriverId
+    QIssueReport.deleteByPersonId reqDriverId
   CQDriverInfo.clearDriverInfoCache (cast reqDriverId)
   logTagInfo "deleteDriver : " (show reqDriverId)
   return Success
