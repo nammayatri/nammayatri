@@ -61,7 +61,7 @@ import JBridge (enableMyLocation, drawRoute, firebaseLogEvent, getCurrentPositio
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
-import Prelude (Unit, bind, const, discard, map, negate, not, pure, show, unit, void, when, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<>), (==), (>), (||))
+import Prelude (Unit, bind, const, discard, map, negate, not, pure, show, unit, void, when, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<>), (==), (>), (||), (<=))
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
 import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width)
@@ -229,7 +229,7 @@ view push state =
                 , clickable true
                 ]
                 [ linearLayout
-                    [ height if any (_ == state.props.currentStage) [RideAccepted, RideStarted] then (V (((screenHeight unit)/ 15)*10)) else MATCH_PARENT
+                    [ height if any (_ == state.props.currentStage) [RideAccepted, RideStarted] && os /= "IOS" then (V (((screenHeight unit)/ 15)*10)) else MATCH_PARENT
                     , width MATCH_PARENT
                     , id (getNewIDWithTag "CustomerHomeScreenMap")
                     ]
@@ -1671,7 +1671,7 @@ cancelRidePopUpView push state =
 
 metersToKm :: Int -> HomeScreenState -> String
 metersToKm distance state =
-  if (distance == 0) then
+  if (distance <= 10) then
     (if (state.props.currentStage == RideAccepted) then (getString AT_PICKUP) else (getString AT_DROP))
   else if (distance < 1000) then (toString distance <> " m " <> (getString AWAY_C)) else (parseFloat ((toNumber distance) / 1000.0)) 2 <> " km " <> (getString AWAY_C)
       
