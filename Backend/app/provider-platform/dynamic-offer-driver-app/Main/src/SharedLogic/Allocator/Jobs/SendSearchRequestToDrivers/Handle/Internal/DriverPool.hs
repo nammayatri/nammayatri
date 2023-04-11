@@ -201,7 +201,7 @@ getDriverPoolBatch ::
   m [DriverPoolWithActualDistResult]
 getDriverPoolBatch searchReqId batchNum = do
   Redis.withCrossAppRedis $
-    Redis.get (driverPoolBatchKey searchReqId batchNum)
+    Redis.safeGet (driverPoolBatchKey searchReqId batchNum)
       >>= maybe whenFoundNothing whenFoundSomething
   where
     whenFoundNothing = do
