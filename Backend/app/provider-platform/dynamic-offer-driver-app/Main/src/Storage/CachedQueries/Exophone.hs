@@ -83,8 +83,8 @@ cacheExophones merchantId exophones = do
   let merchantIdKey = makeMerchantIdKey merchantId
   Hedis.setExp merchantIdKey exophones expTime
   forM_ exophones $ \exophone -> do
-    Hedis.setExp (makePhoneKey exophone.primaryPhone) merchantIdKey expTime
-    Hedis.setExp (makePhoneKey exophone.backupPhone) merchantIdKey expTime
+    Hedis.setExp (makePhoneKey exophone.primaryPhone) merchantId expTime
+    Hedis.setExp (makePhoneKey exophone.backupPhone) merchantId expTime
 
 makeMerchantIdKey :: Id DM.Merchant -> Text
 makeMerchantIdKey merchantId = "CachedQueries:Exophones:MerchantId-" <> merchantId.getId
