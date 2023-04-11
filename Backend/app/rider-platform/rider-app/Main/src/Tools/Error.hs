@@ -57,6 +57,7 @@ instance IsAPIError EstimateError
 data TrackUrlError
   = InvalidRideRequest
   | TrackingUrlFailed
+  | BPPServerUnavailable
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''TrackUrlError
@@ -64,20 +65,24 @@ instanceExceptionWithParent 'HTTPException ''TrackUrlError
 instance FromResponse TrackUrlError where
   fromResponse resp = case statusCode $ responseStatusCode resp of
     400 -> Just InvalidRideRequest
+    503 -> Just BPPServerUnavailable
     _ -> Just TrackingUrlFailed
 
 instance IsBaseError TrackUrlError where
   toMessage = \case
     InvalidRideRequest -> Just "Tracking not available for provided ride."
     TrackingUrlFailed -> Just "Can't call tracking url"
+    BPPServerUnavailable -> Just "BPP server is not available to fetch the driver location"
 
 instance IsHTTPError TrackUrlError where
   toErrorCode = \case
     InvalidRideRequest -> "INVALID_RIDE_REQUEST"
     TrackingUrlFailed -> "TRACKING_URL_FAILED"
+    BPPServerUnavailable -> "BPP_SERVER_UNAVAILABLE"
 
   toHttpCode = \case
     InvalidRideRequest -> E412
     TrackingUrlFailed -> E500
+    BPPServerUnavailable -> E503
 
 instance IsAPIError TrackUrlError
