@@ -33,7 +33,7 @@ driverScoreEventHandler payload = fork "DRIVER_SCORE_EVENT_HANDLER" do
 
 eventPayloadHandler :: (Redis.HedisFlow m r, EsqDBFlow m r, CacheFlow m r) => DST.DriverRideRequeset -> m ()
 eventPayloadHandler DST.OnDriverAcceptingSearchRequest {..} = do
-  DP.decrementTotalQuotesCount merchantId (cast driverId) searchReqId
+  DP.removeSearchReqIdFromMap merchantId driverId searchReqId
   case response of
     SRD.Accept -> do
       DP.incrementQuoteAcceptedCount merchantId driverId
