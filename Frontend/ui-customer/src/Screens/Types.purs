@@ -483,6 +483,7 @@ type HomeScreenStateData =
   , messages :: Array ChatComponent
   , suggestionsList :: Array String
   , messageToBeSent :: String
+  , bannerViewState :: BannerViewState
   }
 
 type HomeScreenStateProps =
@@ -542,6 +543,7 @@ type HomeScreenStateProps =
   , unReadMessages :: Boolean
   , emergencyHelpModelState :: EmergencyHelpModelState
   , showLiveDashboard :: Boolean
+  , isbanner :: Boolean
   }
 
 type CustomerTipProps = {
@@ -549,6 +551,15 @@ type CustomerTipProps = {
   , tipActiveIndex :: Int
   , tipForDriver :: Int
   , isTipSelected :: Boolean
+}
+
+type BannerViewState = {
+  backgroundColor :: String,
+  title :: String,
+  titleColor :: String,
+  actionText :: String,
+  actionTextColor :: String,
+  imageUrl :: String
 }
 
 type Contact = {
@@ -662,7 +673,8 @@ type MyProfileScreenProps = {
   expandEnabled :: Boolean,
   isEmailValid :: Boolean,
   isBtnEnabled :: Boolean,
-  showOptions :: Boolean
+  showOptions :: Boolean,
+  fromHomeScreen :: Boolean
 }
 
 data FieldType = NAME | EMAILID_ | GENDER_ | MOBILE

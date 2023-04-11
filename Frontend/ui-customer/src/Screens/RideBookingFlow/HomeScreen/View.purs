@@ -65,7 +65,7 @@ import Log (printLog)
 import Prelude (Unit, bind, const, discard, map, negate, not, pure, show, unit, void, when, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<>), (==), (>), (||), (<=))
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
-import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, adjustViewWithKeyboard)
+import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Gradient(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width ,gradient , adjustViewWithKeyboard)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import PrestoDOM.Properties (cornerRadii, sheetState)
@@ -499,20 +499,15 @@ buttonLayout state push =
           , recenterButtonView push state
           ]
         , linearLayout
-            [ height $ V 1
-            , width MATCH_PARENT
-            , background if (((state.data.savedLocations == []) && state.data.recentSearchs.predictionArray == []) || state.props.isSearchLocation == LocateOnMap) then Color.transparent else Color.grey900
-            ]
-            []
-        , linearLayout
             [ height WRAP_CONTENT
             , width MATCH_PARENT
             , background if (((state.data.savedLocations == []) && state.data.recentSearchs.predictionArray == []) || state.props.isSearchLocation == LocateOnMap) then Color.transparent else Color.white900
+            , gradient if os == "IOS" then (Linear 90.0 ["#FFFFFF" , "#FFFFFF" , "#FFFFFF", Color.transparent]) else (Linear 0.0 ["#FFFFFF" , "#FFFFFF" , "#FFFFFF", Color.transparent])
             , orientation VERTICAL
             , padding (PaddingTop 16)
             ]
             [ PrimaryButton.view (push <<< PrimaryButtonActionController) (whereToButtonConfig state)
-            , if (((state.data.savedLocations == []) && state.data.recentSearchs.predictionArray == []) || state.props.isSearchLocation == LocateOnMap) then emptyLayout state else recentSearchesAndFavourites state push
+            , if (((state.data.savedLocations == []) && state.data.recentSearchs.predictionArray == [] && state.props.isbanner == false) || state.props.isSearchLocation == LocateOnMap) then emptyLayout state else recentSearchesAndFavourites state push
             ]
         ]
 
@@ -524,10 +519,81 @@ recentSearchesAndFavourites state push =
   , orientation VERTICAL
   , padding $ Padding 16 0 16 (16+safeMarginBottom)
   , cornerRadii $ Corners (4.0) true true false false 
-  , background Color.white900
   ][ savedLocationsView state push
    , recentSearchesView state push
+   , bannerView state push
   ]
+
+bannerView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+bannerView state push = 
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , cornerRadius 12.0
+    , margin $ MarginTop 15 
+    , background state.data.bannerViewState.backgroundColor
+    , visibility if (state.props.isbanner) then VISIBLE else GONE
+    , onClick push $ const GoToEditProfile
+    ]
+    [  linearLayout
+        [ width WRAP_CONTENT
+        , height MATCH_PARENT
+        , weight 1.0
+        , padding $ Padding 20 13 0 0
+        , orientation VERTICAL
+        ]
+        [ textView
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , gravity LEFT
+          , text state.data.bannerViewState.title
+          , color state.data.bannerViewState.titleColor
+          , textSize FontSize.a_14
+          , fontStyle $ FontStyle.bold LanguageStyle
+          ]
+        , linearLayout
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , gravity CENTER_VERTICAL
+          ]
+          [ 
+            textView
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , gravity LEFT
+            , text state.data.bannerViewState.actionText
+            , color state.data.bannerViewState.actionTextColor
+            , textSize $ FontSize.a_12
+            , fontStyle  $ FontStyle.regular LanguageStyle
+            ]
+          , textView
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , gravity LEFT
+            , text "→"
+            , color state.data.bannerViewState.actionTextColor
+            , textSize $ FontSize.a_14
+            , fontStyle  $ FontStyle.regular LanguageStyle
+            , padding $ PaddingBottom 3
+            , margin  $ MarginLeft 5 
+            ]
+          -- , imageView
+          --   [
+          --     height $ V 8
+          --   , width $ V 10
+          --   , margin $ MarginLeft 5
+          --   , imageWithFallback "ny_ic_right_arrow_green,https://assets.juspay.in/nammayatri/images/user/ny_ic_banner_gender_feat.png"
+          --   ]
+          ]
+        ]
+    ,   imageView
+        [
+          height $ V 80
+        , width $ V 118
+        , margin $ MarginRight 5
+        , imageWithFallback state.data.bannerViewState.imageUrl
+        ]
+    ]
 
 savedLocationsView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 savedLocationsView state push =
@@ -566,13 +632,14 @@ recentSearchesView state push =
                   [ width MATCH_PARENT
                   , height WRAP_CONTENT
                   , orientation VERTICAL
+                  , visibility if (state.props.isbanner && index >0) then GONE else VISIBLE
                   ]
                   [ LocationListItem.view (push <<< PredictionClickedAction) item
                   , linearLayout
                       [ height $ V 1
                       , width MATCH_PARENT
                       , background Color.lightGreyShade
-                      , visibility if index == (length state.data.recentSearchs.predictionArray) - 1 then GONE else VISIBLE
+                      , visibility if (index == (length state.data.recentSearchs.predictionArray) - 1) || (state.props.isbanner) then GONE else VISIBLE
                       ]
                       []
                   ]

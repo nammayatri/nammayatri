@@ -423,6 +423,7 @@ instance loggableAction :: Loggable Action where
       ChatView.NoAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_app_messaging" "no_action"
     OnResumeCallback -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "on_resume_callback"
     CheckFlowStatusAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "check_flow_status"
+    GoToEditProfile -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "go_to_my_profile"
 
 data ScreenOutput = LogoutUser
                   | Cancel HomeScreenState
@@ -430,7 +431,7 @@ data ScreenOutput = LogoutUser
                   | ConfirmRide HomeScreenState
                   | GoToAbout HomeScreenState
                   | PastRides HomeScreenState
-                  | GoToMyProfile HomeScreenState
+                  | GoToMyProfile HomeScreenState Boolean
                   | ChangeLanguage HomeScreenState
                   | GoToEmergencyContacts HomeScreenState
                   | Retry HomeScreenState
@@ -548,6 +549,7 @@ data Action = NoAction
             | LiveDashboardAction
             | OnResumeCallback
             | CheckFlowStatusAction
+            | GoToEditProfile
 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
@@ -704,7 +706,6 @@ eval GoBackToSearchLocationModal state = do
   continue state { props { rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSearchLocation = SearchLocation, isSource = Just true, isSrcServiceable = true, isRideServiceable = true } }
 
 eval HandleCallback state = do
-  _ <- pure $ printLog "storeCallBackCustomer inside HandleCallback" "."
   continue state { props { callbackInitiated = true } }
 
 eval (UpdateSource lat lng name) state = do
@@ -789,7 +790,7 @@ eval (SettingSideBarActionController (SettingSideBarController.ShareAppLink)) st
     _ <- pure $ shareTextMessage "Share Namma Yatri!" "Hey there!\n\nCheck India's first Zero Commission auto booking app.\n100% Open source | 100% Open Data\n\nDownload Namma Yatri now! \nhttps://nammayatri.in/link/rider/SJ8D \n\n #beOpen #chooseOpen"
     continue state
 
-eval (SettingSideBarActionController (SettingSideBarController.EditProfile)) state = exit $ GoToMyProfile state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
+eval (SettingSideBarActionController (SettingSideBarController.EditProfile)) state = exit $ GoToMyProfile state { data { settingSideBar { opened = SettingSideBarController.OPEN } } } false
 
 eval (SettingSideBarActionController (SettingSideBarController.OnClosed)) state = continue state{ data{settingSideBar {opened = SettingSideBarController.CLOSED}}}
 
@@ -813,7 +814,7 @@ eval (SettingSideBarActionController (SettingSideBarController.OnLogout)) state 
 
 eval (SettingSideBarActionController (SettingSideBarController.GoToFavourites)) state = exit $ GoToFavourites state {data{settingSideBar{opened = SettingSideBarController.OPEN}}}
 
-eval (SettingSideBarActionController (SettingSideBarController.GoToMyProfile)) state = exit $ GoToMyProfile state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
+eval (SettingSideBarActionController (SettingSideBarController.GoToMyProfile)) state = exit $ GoToMyProfile state { data { settingSideBar { opened = SettingSideBarController.OPEN } } } false
 
 eval (SettingSideBarActionController (SettingSideBarController.LiveStatsDashboard)) state = do
   _ <- pure $ setValueToLocalStore LIVE_DASHBOARD "LIVE_DASHBOARD_SELECTED"
@@ -1492,6 +1493,9 @@ eval (UpdateLocAndLatLong lat lng) state = do
       else pure unit
     pure NoAction
   ]
+
+eval GoToEditProfile state = do
+  exit $ GoToMyProfile state true
 
 eval _ state = continue state
 

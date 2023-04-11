@@ -109,7 +109,7 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | GO_TO_MY_RIDES 
                         | CHANGE_LANGUAGE 
                         | GO_TO_EMERGENCY_CONTACTS
-                        | GO_TO_MY_PROFILE 
+                        | GO_TO_MY_PROFILE Boolean
                         | LOCATION_SELECTED LocationListItemState Boolean
                         | HOME_SCREEN
                         | GET_QUOTES HomeScreenState
