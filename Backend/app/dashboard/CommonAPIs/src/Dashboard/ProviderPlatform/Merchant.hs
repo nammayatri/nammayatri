@@ -30,6 +30,7 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Common
 import Kernel.Types.Predicate
 import qualified Kernel.Types.SlidingWindowCounters as SWC
+import Kernel.Types.Value
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import Servant
@@ -110,18 +111,18 @@ type MerchantCommonConfigUpdateAPI =
     :> Post '[JSON] APISuccess
 
 data MerchantCommonConfigUpdateReq = MerchantCommonConfigUpdateReq
-  { pickupLocThreshold :: Maybe Meters,
-    dropLocThreshold :: Maybe Meters,
-    rideTimeEstimatedThreshold :: Maybe Seconds,
-    defaultPopupDelay :: Maybe Seconds,
-    popupDelayToAddAsPenalty :: Maybe Seconds,
-    thresholdCancellationScore :: Maybe Int,
-    minRidesForCancellationScore :: Maybe Int,
-    waitingTimeEstimatedThreshold :: Maybe Seconds,
-    onboardingTryLimit :: Maybe Int,
-    onboardingRetryTimeInHours :: Maybe Int,
-    checkImageExtractionForDashboard :: Maybe Bool,
-    searchRepeatLimit :: Maybe Int
+  { pickupLocThreshold :: Maybe (MandatoryValue Meters),
+    dropLocThreshold :: Maybe (MandatoryValue Meters),
+    rideTimeEstimatedThreshold :: Maybe (MandatoryValue Seconds),
+    defaultPopupDelay :: Maybe (MandatoryValue Seconds),
+    popupDelayToAddAsPenalty :: Maybe (OptionalValue Seconds),
+    thresholdCancellationScore :: Maybe (OptionalValue Int),
+    minRidesForCancellationScore :: Maybe (OptionalValue Int),
+    waitingTimeEstimatedThreshold :: Maybe (MandatoryValue Seconds),
+    onboardingTryLimit :: Maybe (MandatoryValue Int),
+    onboardingRetryTimeInHours :: Maybe (MandatoryValue Int),
+    checkImageExtractionForDashboard :: Maybe (MandatoryValue Bool),
+    searchRepeatLimit :: Maybe (MandatoryValue Int)
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -132,16 +133,16 @@ instance HideSecrets MerchantCommonConfigUpdateReq where
 validateMerchantCommonConfigUpdateReq :: Validate MerchantCommonConfigUpdateReq
 validateMerchantCommonConfigUpdateReq MerchantCommonConfigUpdateReq {..} =
   sequenceA_
-    [ validateField "pickupLocThreshold" pickupLocThreshold $ InMaybe $ Min @Meters 0,
-      validateField "dropLocThreshold" dropLocThreshold $ InMaybe $ Min @Meters 0,
-      validateField "defaultPopupDelay" defaultPopupDelay $ InMaybe $ Min @Seconds 0,
-      validateField "popupDelayToAddAsPenalty" popupDelayToAddAsPenalty $ InMaybe $ Min @Seconds 0,
-      validateField "thresholdCancellationScore" thresholdCancellationScore $ InMaybe $ InRange @Int 0 100,
-      validateField "minRidesForCancellationScore" minRidesForCancellationScore $ InMaybe $ Min @Int 0,
-      validateField "waitingTimeEstimatedThreshold" waitingTimeEstimatedThreshold $ InMaybe $ Min @Seconds 0,
-      validateField "onboardingTryLimit" onboardingTryLimit $ InMaybe $ Min @Int 0,
-      validateField "onboardingRetryTimeInHours" onboardingRetryTimeInHours $ InMaybe $ Min @Int 0,
-      validateField "searchRepeatLimit" searchRepeatLimit $ InMaybe $ Min @Int 0
+    [ validateField "pickupLocThreshold" pickupLocThreshold $ InMaybe $ InValue $ Min @Meters 0,
+      validateField "dropLocThreshold" dropLocThreshold $ InMaybe $ InValue $ Min @Meters 0,
+      validateField "defaultPopupDelay" defaultPopupDelay $ InMaybe $ InValue $ Min @Seconds 0,
+      validateField "popupDelayToAddAsPenalty" popupDelayToAddAsPenalty $ InMaybe $ InValue $ Min @Seconds 0,
+      validateField "thresholdCancellationScore" thresholdCancellationScore $ InMaybe $ InValue $ InRange @Int 0 100,
+      validateField "minRidesForCancellationScore" minRidesForCancellationScore $ InMaybe $ InValue $ Min @Int 0,
+      validateField "waitingTimeEstimatedThreshold" waitingTimeEstimatedThreshold $ InMaybe $ InValue $ Min @Seconds 0,
+      validateField "onboardingTryLimit" onboardingTryLimit $ InMaybe $ InValue $ Min @Int 0,
+      validateField "onboardingRetryTimeInHours" onboardingRetryTimeInHours $ InMaybe $ InValue $ Min @Int 0,
+      validateField "searchRepeatLimit" searchRepeatLimit $ InMaybe $ InValue $ Min @Int 0
     ]
 
 ---------------------------------------------------------
@@ -156,19 +157,19 @@ type DriverPoolConfigUpdateAPI =
     :> Post '[JSON] APISuccess
 
 data DriverPoolConfigUpdateReq = DriverPoolConfigUpdateReq
-  { minRadiusOfSearch :: Maybe Meters,
-    maxRadiusOfSearch :: Maybe Meters,
-    radiusStepSize :: Maybe Meters,
-    driverPositionInfoExpiry :: Maybe Seconds,
-    actualDistanceThreshold :: Maybe Meters,
-    maxDriverQuotesRequired :: Maybe Int,
-    driverQuoteLimit :: Maybe Int,
-    driverRequestCountLimit :: Maybe Int,
-    driverBatchSize :: Maybe Int,
-    maxNumberOfBatches :: Maybe Int,
-    maxParallelSearchRequests :: Maybe Int,
-    poolSortingType :: Maybe PoolSortingType,
-    singleBatchProcessTime :: Maybe Seconds
+  { minRadiusOfSearch :: Maybe (MandatoryValue Meters),
+    maxRadiusOfSearch :: Maybe (MandatoryValue Meters),
+    radiusStepSize :: Maybe (MandatoryValue Meters),
+    driverPositionInfoExpiry :: Maybe (OptionalValue Seconds),
+    actualDistanceThreshold :: Maybe (OptionalValue Meters),
+    maxDriverQuotesRequired :: Maybe (MandatoryValue Int),
+    driverQuoteLimit :: Maybe (MandatoryValue Int),
+    driverRequestCountLimit :: Maybe (MandatoryValue Int),
+    driverBatchSize :: Maybe (MandatoryValue Int),
+    maxNumberOfBatches :: Maybe (MandatoryValue Int),
+    maxParallelSearchRequests :: Maybe (MandatoryValue Int),
+    poolSortingType :: Maybe (MandatoryValue PoolSortingType),
+    singleBatchProcessTime :: Maybe (MandatoryValue Seconds)
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -183,18 +184,18 @@ data PoolSortingType = Intelligent | Random
 validateDriverPoolConfigUpdateReq :: Validate DriverPoolConfigUpdateReq
 validateDriverPoolConfigUpdateReq DriverPoolConfigUpdateReq {..} =
   sequenceA_
-    [ validateField "minRadiusOfSearch" minRadiusOfSearch $ InMaybe $ Min @Meters 1,
-      validateField "maxRadiusOfSearch" maxRadiusOfSearch $ InMaybe $ Min @Meters (fromMaybe 1 minRadiusOfSearch),
-      validateField "radiusStepSize" radiusStepSize $ InMaybe $ Min @Meters 1,
-      validateField "driverPositionInfoExpiry" driverPositionInfoExpiry $ InMaybe $ Min @Seconds 1,
-      validateField "actualDistanceThreshold" actualDistanceThreshold $ InMaybe $ Min @Meters 0,
-      validateField "maxDriverQuotesRequired" maxDriverQuotesRequired $ InMaybe $ Min @Int 1,
-      validateField "driverQuoteLimit" driverQuoteLimit $ InMaybe $ Min @Int 1,
-      validateField "driverRequestCountLimit" driverRequestCountLimit $ InMaybe $ Min @Int 1,
-      validateField "driverBatchSize" driverBatchSize $ InMaybe $ Min @Int 1,
-      validateField "maxNumberOfBatches" maxNumberOfBatches $ InMaybe $ Min @Int 1,
-      validateField "maxParallelSearchRequests" maxParallelSearchRequests $ InMaybe $ Min @Int 1,
-      validateField "singleBatchProcessTime" singleBatchProcessTime $ InMaybe $ Min @Seconds 1
+    [ validateField "minRadiusOfSearch" minRadiusOfSearch $ InMaybe $ InValue $ Min @Meters 1,
+      validateField "maxRadiusOfSearch" maxRadiusOfSearch $ InMaybe $ InValue $ Min @Meters (maybe 1 (.value) minRadiusOfSearch),
+      validateField "radiusStepSize" radiusStepSize $ InMaybe $ InValue $ Min @Meters 1,
+      validateField "driverPositionInfoExpiry" driverPositionInfoExpiry $ InMaybe $ InValue $ Min @Seconds 1,
+      validateField "actualDistanceThreshold" actualDistanceThreshold $ InMaybe $ InValue $ Min @Meters 0,
+      validateField "maxDriverQuotesRequired" maxDriverQuotesRequired $ InMaybe $ InValue $ Min @Int 1,
+      validateField "driverQuoteLimit" driverQuoteLimit $ InMaybe $ InValue $ Min @Int 1,
+      validateField "driverRequestCountLimit" driverRequestCountLimit $ InMaybe $ InValue $ Min @Int 1,
+      validateField "driverBatchSize" driverBatchSize $ InMaybe $ InValue $ Min @Int 1,
+      validateField "maxNumberOfBatches" maxNumberOfBatches $ InMaybe $ InValue $ Min @Int 1,
+      validateField "maxParallelSearchRequests" maxParallelSearchRequests $ InMaybe $ InValue $ Min @Int 1,
+      validateField "singleBatchProcessTime" singleBatchProcessTime $ InMaybe $ InValue $ Min @Seconds 1
     ]
 
 ---------------------------------------------------------
@@ -262,16 +263,17 @@ type DriverIntelligentPoolConfigUpdateAPI =
     :> ReqBody '[JSON] DriverIntelligentPoolConfigUpdateReq
     :> Post '[JSON] APISuccess
 
+-- FIXME check for new fields added (for all configs)
 data DriverIntelligentPoolConfigUpdateReq = DriverIntelligentPoolConfigUpdateReq
-  { availabilityTimeWeightage :: Maybe Int,
-    availabilityTimeWindowOption :: Maybe SWC.SlidingWindowOptions,
-    acceptanceRatioWeightage :: Maybe Int,
+  { availabilityTimeWeightage :: Maybe (MandatoryValue Int),
+    availabilityTimeWindowOption :: Maybe SWC.SlidingWindowOptions, -- value wrapper make no sense for lists and objects
+    acceptanceRatioWeightage :: Maybe (MandatoryValue Int),
     acceptanceRatioWindowOption :: Maybe SWC.SlidingWindowOptions,
-    cancellationRatioWeightage :: Maybe Int,
+    cancellationRatioWeightage :: Maybe (MandatoryValue Int),
     cancellationRatioWindowOption :: Maybe SWC.SlidingWindowOptions,
-    minQuotesToQualifyForIntelligentPool :: Maybe Int,
+    minQuotesToQualifyForIntelligentPool :: Maybe (MandatoryValue Int),
     minQuotesToQualifyForIntelligentPoolWindowOption :: Maybe SWC.SlidingWindowOptions,
-    intelligentPoolPercentage :: Maybe Int
+    intelligentPoolPercentage :: Maybe (OptionalValue Int)
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -282,19 +284,19 @@ instance HideSecrets DriverIntelligentPoolConfigUpdateReq where
 validateDriverIntelligentPoolConfigUpdateReq :: Validate DriverIntelligentPoolConfigUpdateReq
 validateDriverIntelligentPoolConfigUpdateReq DriverIntelligentPoolConfigUpdateReq {..} =
   sequenceA_
-    [ validateField "availabilityTimeWeightage" availabilityTimeWeightage $ InMaybe $ InRange @Int (-100) 100,
+    [ validateField "availabilityTimeWeightage" availabilityTimeWeightage $ InMaybe $ InValue $ InRange @Int (-100) 100,
       whenJust availabilityTimeWindowOption $ \obj ->
         validateObject "availabilityTimeWindowOption" obj validateSlidingWindowOptions,
-      validateField "acceptanceRatioWeightage" acceptanceRatioWeightage $ InMaybe $ InRange @Int (-100) 100,
+      validateField "acceptanceRatioWeightage" acceptanceRatioWeightage $ InMaybe $ InValue $ InRange @Int (-100) 100,
       whenJust acceptanceRatioWindowOption $ \obj ->
         validateObject "acceptanceRatioWindowOption" obj validateSlidingWindowOptions,
-      validateField "cancellationRatioWeightage" cancellationRatioWeightage $ InMaybe $ InRange @Int (-100) 100,
+      validateField "cancellationRatioWeightage" cancellationRatioWeightage $ InMaybe $ InValue $ InRange @Int (-100) 100,
       whenJust cancellationRatioWindowOption $ \obj ->
         validateObject "cancellationRatioWindowOption" obj validateSlidingWindowOptions,
-      validateField "minQuotesToQualifyForIntelligentPool" minQuotesToQualifyForIntelligentPool $ InMaybe $ Min @Int 1,
+      validateField "minQuotesToQualifyForIntelligentPool" minQuotesToQualifyForIntelligentPool $ InMaybe $ InValue $ Min @Int 1,
       whenJust minQuotesToQualifyForIntelligentPoolWindowOption $ \obj ->
         validateObject "minQuotesToQualifyForIntelligentPoolWindowOption" obj validateSlidingWindowOptions,
-      validateField "intelligentPoolPercentage" intelligentPoolPercentage $ InMaybe $ InRange @Int 0 100
+      validateField "intelligentPoolPercentage" intelligentPoolPercentage $ InMaybe $ InValue $ InRange @Int 0 100
     ]
 
 validateSlidingWindowOptions :: Validate SWC.SlidingWindowOptions
@@ -313,10 +315,10 @@ type OnboardingDocumentConfigUpdateAPI =
     :> Post '[JSON] APISuccess
 
 data OnboardingDocumentConfigUpdateReq = OnboardingDocumentConfigUpdateReq
-  { checkExtraction :: Maybe Bool,
-    checkExpiry :: Maybe Bool,
-    validVehicleClasses :: Maybe [Text],
-    vehicleClassCheckType :: Maybe VehicleClassCheckType
+  { checkExtraction :: Maybe (MandatoryValue Bool),
+    checkExpiry :: Maybe (MandatoryValue Bool),
+    validVehicleClasses :: Maybe [Text], -- value wrapper make no sense for lists and objects
+    vehicleClassCheckType :: Maybe (MandatoryValue VehicleClassCheckType)
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

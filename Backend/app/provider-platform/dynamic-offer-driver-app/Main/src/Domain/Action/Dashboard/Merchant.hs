@@ -134,18 +134,18 @@ merchantCommonConfigUpdate merchantShortId req = do
   merchant <- findMerchantByShortId merchantShortId
   config <- CQTC.findByMerchantId merchant.id >>= fromMaybeM (TransporterConfigNotFound merchant.id.getId)
   let updConfig =
-        config{pickupLocThreshold = fromMaybe config.pickupLocThreshold req.pickupLocThreshold,
-               dropLocThreshold = fromMaybe config.dropLocThreshold req.dropLocThreshold,
-               rideTimeEstimatedThreshold = fromMaybe config.rideTimeEstimatedThreshold req.rideTimeEstimatedThreshold,
-               defaultPopupDelay = fromMaybe config.defaultPopupDelay req.defaultPopupDelay,
-               popupDelayToAddAsPenalty = req.popupDelayToAddAsPenalty <|> config.popupDelayToAddAsPenalty, -- FIXME we can't update optional field to Nothing
-               thresholdCancellationScore = req.thresholdCancellationScore <|> config.thresholdCancellationScore,
-               minRidesForCancellationScore = req.minRidesForCancellationScore <|> config.minRidesForCancellationScore,
-               waitingTimeEstimatedThreshold = fromMaybe config.waitingTimeEstimatedThreshold req.waitingTimeEstimatedThreshold,
-               onboardingTryLimit = fromMaybe config.onboardingTryLimit req.onboardingTryLimit,
-               onboardingRetryTimeInHours = fromMaybe config.onboardingRetryTimeInHours req.onboardingRetryTimeInHours,
-               checkImageExtractionForDashboard = fromMaybe config.checkImageExtractionForDashboard req.checkImageExtractionForDashboard,
-               searchRepeatLimit = fromMaybe config.searchRepeatLimit req.searchRepeatLimit
+        config{pickupLocThreshold = maybe config.pickupLocThreshold (.value) req.pickupLocThreshold,
+               dropLocThreshold = maybe config.dropLocThreshold (.value) req.dropLocThreshold,
+               rideTimeEstimatedThreshold = maybe config.rideTimeEstimatedThreshold (.value) req.rideTimeEstimatedThreshold,
+               defaultPopupDelay = maybe config.defaultPopupDelay (.value) req.defaultPopupDelay,
+               popupDelayToAddAsPenalty = maybe config.popupDelayToAddAsPenalty (.value) req.popupDelayToAddAsPenalty,
+               thresholdCancellationScore = maybe config.thresholdCancellationScore (.value) req.thresholdCancellationScore,
+               minRidesForCancellationScore = maybe config.minRidesForCancellationScore (.value) req.minRidesForCancellationScore,
+               waitingTimeEstimatedThreshold = maybe config.waitingTimeEstimatedThreshold (.value) req.waitingTimeEstimatedThreshold,
+               onboardingTryLimit = maybe config.onboardingTryLimit (.value) req.onboardingTryLimit,
+               onboardingRetryTimeInHours = maybe config.onboardingRetryTimeInHours (.value) req.onboardingRetryTimeInHours,
+               checkImageExtractionForDashboard = maybe config.checkImageExtractionForDashboard (.value) req.checkImageExtractionForDashboard,
+               searchRepeatLimit = maybe config.searchRepeatLimit (.value) req.searchRepeatLimit
               }
   Esq.runTransaction $ do
     CQTC.update updConfig
@@ -164,19 +164,19 @@ driverPoolConfigUpdate merchantShortId tripDistance req = do
   merchant <- findMerchantByShortId merchantShortId
   config <- CQDPC.findByMerchantIdAndTripDistance merchant.id tripDistance >>= fromMaybeM (DriverPoolConfigDoesNotExist merchant.id.getId tripDistance)
   let updConfig =
-        config{minRadiusOfSearch = fromMaybe config.minRadiusOfSearch req.minRadiusOfSearch,
-               maxRadiusOfSearch = fromMaybe config.maxRadiusOfSearch req.maxRadiusOfSearch,
-               radiusStepSize = fromMaybe config.radiusStepSize req.radiusStepSize,
-               driverPositionInfoExpiry = req.driverPositionInfoExpiry <|> config.driverPositionInfoExpiry,
-               actualDistanceThreshold = req.actualDistanceThreshold <|> config.actualDistanceThreshold,
-               maxDriverQuotesRequired = fromMaybe config.maxDriverQuotesRequired req.maxDriverQuotesRequired,
-               driverQuoteLimit = fromMaybe config.driverQuoteLimit req.driverQuoteLimit,
-               driverRequestCountLimit = fromMaybe config.driverRequestCountLimit req.driverRequestCountLimit,
-               driverBatchSize = fromMaybe config.driverBatchSize req.driverBatchSize,
-               maxNumberOfBatches = fromMaybe config.maxNumberOfBatches req.maxNumberOfBatches,
-               maxParallelSearchRequests = fromMaybe config.maxParallelSearchRequests req.maxParallelSearchRequests,
-               poolSortingType = maybe config.poolSortingType castPoolSortingType req.poolSortingType,
-               singleBatchProcessTime = fromMaybe config.singleBatchProcessTime req.singleBatchProcessTime
+        config{minRadiusOfSearch = maybe config.minRadiusOfSearch (.value) req.minRadiusOfSearch,
+               maxRadiusOfSearch = maybe config.maxRadiusOfSearch (.value) req.maxRadiusOfSearch,
+               radiusStepSize = maybe config.radiusStepSize (.value) req.radiusStepSize,
+               driverPositionInfoExpiry = maybe config.driverPositionInfoExpiry (.value) req.driverPositionInfoExpiry,
+               actualDistanceThreshold = maybe config.actualDistanceThreshold (.value) req.actualDistanceThreshold,
+               maxDriverQuotesRequired = maybe config.maxDriverQuotesRequired (.value) req.maxDriverQuotesRequired,
+               driverQuoteLimit = maybe config.driverQuoteLimit (.value) req.driverQuoteLimit,
+               driverRequestCountLimit = maybe config.driverRequestCountLimit (.value) req.driverRequestCountLimit,
+               driverBatchSize = maybe config.driverBatchSize (.value) req.driverBatchSize,
+               maxNumberOfBatches = maybe config.maxNumberOfBatches (.value) req.maxNumberOfBatches,
+               maxParallelSearchRequests = maybe config.maxParallelSearchRequests (.value) req.maxParallelSearchRequests,
+               poolSortingType = maybe config.poolSortingType (castPoolSortingType . (.value)) req.poolSortingType,
+               singleBatchProcessTime = maybe config.singleBatchProcessTime (.value) req.singleBatchProcessTime
               }
   Esq.runTransaction $ do
     CQDPC.update updConfig
@@ -235,15 +235,15 @@ driverIntelligentPoolConfigUpdate merchantShortId req = do
   merchant <- findMerchantByShortId merchantShortId
   config <- CQDIPC.findByMerchantId merchant.id >>= fromMaybeM (DriverIntelligentPoolConfigNotFound merchant.id.getId)
   let updConfig =
-        config{availabilityTimeWeightage = fromMaybe config.availabilityTimeWeightage req.availabilityTimeWeightage,
+        config{availabilityTimeWeightage = maybe config.availabilityTimeWeightage (.value) req.availabilityTimeWeightage,
                availabilityTimeWindowOption = fromMaybe config.availabilityTimeWindowOption req.availabilityTimeWindowOption,
-               acceptanceRatioWeightage = fromMaybe config.acceptanceRatioWeightage req.acceptanceRatioWeightage,
+               acceptanceRatioWeightage = maybe config.acceptanceRatioWeightage (.value) req.acceptanceRatioWeightage,
                acceptanceRatioWindowOption = fromMaybe config.acceptanceRatioWindowOption req.acceptanceRatioWindowOption,
-               cancellationRatioWeightage = fromMaybe config.cancellationRatioWeightage req.cancellationRatioWeightage,
+               cancellationRatioWeightage = maybe config.cancellationRatioWeightage (.value) req.cancellationRatioWeightage,
                cancellationRatioWindowOption = fromMaybe config.cancellationRatioWindowOption req.cancellationRatioWindowOption,
-               minQuotesToQualifyForIntelligentPool = fromMaybe config.minQuotesToQualifyForIntelligentPool req.minQuotesToQualifyForIntelligentPool,
+               minQuotesToQualifyForIntelligentPool = maybe config.minQuotesToQualifyForIntelligentPool (.value) req.minQuotesToQualifyForIntelligentPool,
                minQuotesToQualifyForIntelligentPoolWindowOption = fromMaybe config.minQuotesToQualifyForIntelligentPoolWindowOption req.minQuotesToQualifyForIntelligentPoolWindowOption,
-               intelligentPoolPercentage = req.intelligentPoolPercentage <|> config.intelligentPoolPercentage
+               intelligentPoolPercentage = maybe config.intelligentPoolPercentage (.value) req.intelligentPoolPercentage
               }
   Esq.runTransaction $ do
     CQDIPC.update updConfig
@@ -263,10 +263,10 @@ onboardingDocumentConfigUpdate merchantShortId reqDocumentType req = do
   let documentType = castDocumentType reqDocumentType
   config <- CQODC.findByMerchantIdAndDocumentType merchant.id documentType >>= fromMaybeM (OnboardingDocumentConfigDoesNotExist merchant.id.getId $ show documentType)
   let updConfig =
-        config{checkExtraction = fromMaybe config.checkExtraction req.checkExtraction,
-               checkExpiry = fromMaybe config.checkExpiry req.checkExpiry,
+        config{checkExtraction = maybe config.checkExtraction (.value) req.checkExtraction,
+               checkExpiry = maybe config.checkExpiry (.value) req.checkExpiry,
                validVehicleClasses = fromMaybe config.validVehicleClasses req.validVehicleClasses,
-               vehicleClassCheckType = maybe config.vehicleClassCheckType castVehicleClassCheckType req.vehicleClassCheckType
+               vehicleClassCheckType = maybe config.vehicleClassCheckType (castVehicleClassCheckType . (.value)) req.vehicleClassCheckType
               }
   Esq.runTransaction $ do
     CQODC.update updConfig
