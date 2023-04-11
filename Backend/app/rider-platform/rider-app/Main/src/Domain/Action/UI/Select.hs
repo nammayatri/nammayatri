@@ -71,7 +71,7 @@ validateDSelectReq DEstimateSelectReq {..} =
 
 data DSelectRes = DSelectRes
   { searchRequest :: DSearchReq.SearchRequest,
-    estimateId :: Id DEstimate.Estimate,
+    estimate :: DEstimate.Estimate,
     providerId :: Text,
     providerUrl :: BaseUrl,
     variant :: VehicleVariant,

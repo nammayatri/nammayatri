@@ -19,7 +19,6 @@ module Beckn.Types.Core.Taxi.Select
 where
 
 import Beckn.Types.Core.Taxi.Select.BreakupItem as Reexport
-import Beckn.Types.Core.Taxi.Select.Descriptor as Reexport
 import Beckn.Types.Core.Taxi.Select.Fulfillment as Reexport
 import Beckn.Types.Core.Taxi.Select.Location as Reexport
 import Beckn.Types.Core.Taxi.Select.Order as Reexport

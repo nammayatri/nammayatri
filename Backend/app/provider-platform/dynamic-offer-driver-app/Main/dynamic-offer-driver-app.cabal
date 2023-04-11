@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.35.2.
+-- This file has been generated from package.yaml by hpack version 0.35.1.
 --
 -- see: https://github.com/sol/hpack
 
@@ -149,6 +149,7 @@ library
       Domain.Types.DriverQuote
       Domain.Types.DriverReferral
       Domain.Types.DriverStats
+      Domain.Types.Estimate
       Domain.Types.Exophone
       Domain.Types.FareParameters
       Domain.Types.FarePolicy
@@ -253,6 +254,7 @@ library
       Storage.Queries.DriverQuote
       Storage.Queries.DriverReferral
       Storage.Queries.DriverStats
+      Storage.Queries.Estimate
       Storage.Queries.Exophone
       Storage.Queries.FareParameters
       Storage.Queries.FarePolicy
@@ -304,6 +306,7 @@ library
       Storage.Tabular.DriverQuote
       Storage.Tabular.DriverReferral
       Storage.Tabular.DriverStats
+      Storage.Tabular.Estimate
       Storage.Tabular.Exophone
       Storage.Tabular.FareParameters
       Storage.Tabular.FarePolicy

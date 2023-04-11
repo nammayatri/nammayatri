@@ -118,7 +118,7 @@ buildEstimateOrQuoteInfo item = do
     OnSearch.RENTAL_TRIP -> do
       quoteDetails <- DOnSearch.RentalDetails <$> buildRentalQuoteDetails item
       pure $ Right DOnSearch.QuoteInfo {..}
-    OnSearch.DRIVER_OFFER_ESTIMATE -> pure $ Left DOnSearch.EstimateInfo {..}
+    OnSearch.DRIVER_OFFER_ESTIMATE -> pure $ Left DOnSearch.EstimateInfo {bppEstimateId = Id item.id, ..}
     OnSearch.DRIVER_OFFER -> throwError $ InvalidRequest "DRIVER_OFFER supported in on_select, use DRIVER_OFFER_ESTIMATE"
     OnSearch.ONE_WAY_SPECIAL_ZONE -> do
       quoteDetails <- DOnSearch.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneQuoteDetails item

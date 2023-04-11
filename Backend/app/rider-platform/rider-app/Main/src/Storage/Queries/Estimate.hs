@@ -65,13 +65,21 @@ findById estimateId = Esq.buildDType $ do
     pure (estimate, mbTripTerms)
   mapM buildFullEstimate mbFullEstimateT
 
-findAllByRequestId :: Transactionable m => Id SearchRequest -> m [Estimate]
-findAllByRequestId searchRequestId = Esq.buildDType $ do
+findAllBySRId :: Transactionable m => Id SearchRequest -> m [Estimate]
+findAllBySRId searchRequestId = Esq.buildDType $ do
   fullEstimateTs <- Esq.findAll' $ do
     (estimate :& mbTripTerms) <- from fullEstimateTable
     where_ $ estimate ^. EstimateRequestId ==. val (toKey searchRequestId)
     pure (estimate, mbTripTerms)
   mapM buildFullEstimate fullEstimateTs
+
+findByBPPEstimateId :: Transactionable m => Id BPPEstimate -> m (Maybe Estimate)
+findByBPPEstimateId bppEstimateId_ = Esq.buildDType $ do
+  mbFullEstimateT <- Esq.findOne' $ do
+    (estimate :& mbTripTerms) <- from fullEstimateTable
+    where_ $ estimate ^. EstimateBppEstimateId ==. val (getId bppEstimateId_)
+    pure (estimate, mbTripTerms)
+  mapM buildFullEstimate mbFullEstimateT
 
 updateQuote ::
   Id Estimate ->

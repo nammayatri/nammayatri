@@ -19,7 +19,6 @@ module Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.EstimateRepetitionEvent
 where
 
 import Beckn.Types.Core.Taxi.Common.CancellationSource as Reexport
-import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.EstimateRepetitionEvent.Item as Reexport
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType (OnUpdateEventType (ESTIMATE_REPETITION))
 import qualified Control.Lens as L
 import Data.Aeson as A
@@ -96,4 +95,12 @@ newtype FulfillmentInfo = FulfillmentInfo
   deriving (Generic, Show, ToJSON, FromJSON)
 
 instance ToSchema FulfillmentInfo where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+newtype Item = Item
+  { id :: Text
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+instance ToSchema Item where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

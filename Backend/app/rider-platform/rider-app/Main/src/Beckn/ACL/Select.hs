@@ -15,10 +15,8 @@
 
 module Beckn.ACL.Select (buildSelectReq) where
 
-import qualified Beckn.Types.Core.Taxi.Common.ItemCode as Common
 import qualified Beckn.Types.Core.Taxi.Select as Select
 import qualified Domain.Action.UI.Select as DSelect
-import Domain.Types.VehicleVariant
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
@@ -30,42 +28,24 @@ buildSelectReq ::
   (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
   DSelect.DSelectRes ->
   m (BecknReq Select.SelectMessage)
-buildSelectReq dSelectReq = do
-  let messageId = dSelectReq.estimateId.getId
-  let transactionId = dSelectReq.searchRequest.id.getId
+buildSelectReq dSelectRes = do
+  let messageId = dSelectRes.estimate.bppEstimateId.getId
+  let transactionId = dSelectRes.searchRequest.id.getId
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
-  context <- buildTaxiContext Context.SELECT messageId (Just transactionId) bapIDs.cabs bapURIs.cabs (Just dSelectReq.providerId) (Just dSelectReq.providerUrl) dSelectReq.city
-  let order = mkOrder dSelectReq
+  context <- buildTaxiContext Context.SELECT messageId (Just transactionId) bapIDs.cabs bapURIs.cabs (Just dSelectRes.providerId) (Just dSelectRes.providerUrl) dSelectRes.city
+  let order = mkOrder dSelectRes
   pure $ BecknReq context $ Select.SelectMessage order
 
-castVariant :: VehicleVariant -> Common.VehicleVariant
-castVariant AUTO_RICKSHAW = Common.AUTO_RICKSHAW
-castVariant HATCHBACK = Common.HATCHBACK
-castVariant SEDAN = Common.SEDAN
-castVariant SUV = Common.SUV
-castVariant TAXI = Common.TAXI
-castVariant TAXI_PLUS = Common.TAXI_PLUS
-
 mkOrder :: DSelect.DSelectRes -> Select.Order
-mkOrder req = do
-  let from = req.searchRequest.fromLocation
-      mbTo = req.searchRequest.toLocation
-      autoAssignEnabled = req.autoAssignEnabled
+mkOrder dSelectRes = do
+  let from = dSelectRes.searchRequest.fromLocation
+      mbTo = dSelectRes.searchRequest.toLocation
+      autoAssignEnabled = dSelectRes.autoAssignEnabled
       items =
         (: []) $
           Select.OrderItem
-            { id = Nothing,
-              descriptor =
-                Select.Descriptor
-                  { code =
-                      Select.ItemCode
-                        { fareProductType = Common.DRIVER_OFFER_ESTIMATE,
-                          vehicleVariant = castVariant req.variant,
-                          distance = Nothing,
-                          duration = Nothing
-                        }
-                  }
+            { id = dSelectRes.estimate.bppEstimateId.getId
             }
       breakups =
         catMaybes
@@ -79,7 +59,7 @@ mkOrder req = do
                         }
                   }
             )
-              <$> req.customerExtraFee
+              <$> dSelectRes.customerExtraFee
           ]
   Select.Order
     { items,
@@ -88,7 +68,7 @@ mkOrder req = do
           { tags =
               Select.Tags
                 { auto_assign_enabled = autoAssignEnabled,
-                  customer_language = req.customerLanguage
+                  customer_language = dSelectRes.customerLanguage
                 },
             start =
               Select.StartInfo
@@ -109,7 +89,7 @@ mkOrder req = do
                                 ward = from.address.ward
                               }
                       },
-                  time = Select.TimeTimestamp req.searchRequest.startTime
+                  time = Select.TimeTimestamp dSelectRes.searchRequest.startTime
                 },
             end =
               mbTo <&> \to ->
