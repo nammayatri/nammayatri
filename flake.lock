@@ -288,10 +288,14 @@
         "beam-mysql": "beam-mysql",
         "common": "common_4",
         "flake-parts": [
+          "shared-kernel",
+          "euler-hs",
           "common",
           "flake-parts"
         ],
         "haskell-flake": [
+          "shared-kernel",
+          "euler-hs",
           "common",
           "haskell-flake"
         ],
@@ -901,6 +905,7 @@
         "common": "common_3",
         "euler-hs": "euler-hs",
         "flake-parts": [
+          "shared-kernel",
           "common",
           "flake-parts"
         ],
