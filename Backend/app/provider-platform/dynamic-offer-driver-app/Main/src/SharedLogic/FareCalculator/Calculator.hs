@@ -87,9 +87,9 @@ mkNormalBreakupList mkPrice mkBreakupItem fareParams = do
         fareParams.driverSelectedFare <&> \selFare ->
           mkBreakupItem mkSelectedFareCaption (mkPrice selFare)
 
+      customerExtraFareCaption = "CUSTOMER_SELECTED_FARE"
       mkCustomerExtraFareItem =
         fareParams.customerExtraFee <&> \ceFare -> do
-          let customerExtraFareCaption = mconcat ["Extra fare selected by customer: ", show ceFare, " INR"]
           mkBreakupItem customerExtraFareCaption (mkPrice ceFare)
 
       totalFareFinalRounded = fareSum fareParams

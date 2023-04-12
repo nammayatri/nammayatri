@@ -14,8 +14,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 
 module Domain.Action.UI.Select
-  ( DSelectReq (..),
-    DEstimateSelectReq (..),
+  ( DEstimateSelectReq (..),
     DSelectRes (..),
     SelectListRes (..),
     QuotesResultResponse (..),
@@ -56,11 +55,6 @@ import qualified Storage.Queries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
-
-newtype DSelectReq = DSelectReq
-  { customerExtraFee :: Maybe Money
-  }
-  deriving (Generic, FromJSON, ToJSON, ToSchema)
 
 data DEstimateSelectReq = DEstimateSelectReq
   { customerExtraFee :: Maybe Money,
