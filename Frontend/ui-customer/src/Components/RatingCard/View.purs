@@ -39,7 +39,9 @@ import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import Screens.Types(Stage(..))
 import Common.Types.App
-
+import Constant.Test as Id
+import Helpers.Utils (toString)
+import EN
 
 view :: forall w. (Action -> Effect Unit) -> RatingCardState -> PrestoDOM ( Effect Unit ) w
 view push state = 
@@ -165,6 +167,7 @@ editTextView state push =
       , pattern "[^\n]*,255"
       , singleLine false 
       , onChange push FeedbackChanged 
+      , Id.testId $ Id.TextField Id.feedback
       ]
 
   ]
@@ -205,6 +208,7 @@ rideRatingButtonConfig state = let
       , background = Color.black900 
       , id = "RideRatingButton"
       , enableLoader = (getBtnLoader "RightRatingButton")
+      , testIdText = (getEN SUBMIT_FEEDBACK)
       }
   in primaryButtonConfig'
 
@@ -226,6 +230,7 @@ skipButtonConfig state = let
     , margin = (MarginRight 12)
     , id = "SkipCurrentRatingButton"
     , enableLoader = (getBtnLoader "SkipCurrentRatingButton")
+    , testIdText = (getEN SKIP)
     }
   in skipButtonConfig'
   
@@ -264,6 +269,7 @@ starRatingView state push =
                           , width WRAP_CONTENT
                           , margin (MarginHorizontal 5 5)
                           , onClick push $ const (Rating item)
+                          , Id.testId $ Id.Select (Id.rideStarRating <> Id.underScore <> toString(index))
                           ][imageView
                               [ height $ V 30
                               , width $ V 30

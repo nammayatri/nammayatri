@@ -39,6 +39,7 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Array (mapWithIndex)
 import PrestoDOM.Animation as PrestoAnim
 import Resources.Constants as RSRC
+import Constant.Test as Id
 
 
 screen :: ST.AccountSetUpScreenState -> Screen Action ST.AccountSetUpScreenState ScreenOutput
@@ -61,6 +62,7 @@ view push state =
         , background Color.white900
         , onBackPressed push (const BackPressed)
         , afterRender push (const AfterRender)
+        , Id.testId $ Id.Screen Id.accountSetUpScreen
         ]
         [ linearLayout
             [ height MATCH_PARENT

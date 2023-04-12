@@ -30,7 +30,8 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import JBridge as JB
+import Helpers.Utils (toString)
+import JBridge as JB 
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, map, pure, unit, ($), (-), (/=), (<<<), (<=), (<>), (==), (||))
@@ -46,6 +47,8 @@ import Styles.Colors as Color
 import Types.App (GlobalState)
 import Common.Types.App
 import Screens.CustomerUtils.HelpAndSupportScreen.ComponentConfig
+import Constant.Test as Id
+import EN
 
 screen :: ST.HelpAndSupportScreenState -> Screen Action ST.HelpAndSupportScreenState ScreenOutput
 screen initialState =
@@ -82,6 +85,7 @@ view push state =
     , padding $ Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom
     , onBackPressed push $ const BackPressed state.props.isCallConfirmation
     , afterRender push (const AfterRender)
+    , Id.testId $ Id.Screen Id.helpAndSupportScreen
     ][  GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
       , linearLayout
         [ height WRAP_CONTENT
@@ -107,6 +111,7 @@ view push state =
             , fontStyle $ FontStyle.medium LanguageStyle
             , color Color.blue900
             , onClick push $ const ViewRides
+            , Id.testId $ Id.Text (getEN VIEW_ALL_RIDES)
             ]
           ]
       , recentRideView state push
@@ -167,7 +172,8 @@ recentRideView state push=
     , padding (Padding 10 10 10 10)
     , orientation HORIZONTAL
     , onClick push $ const ReportIssue
-    ][
+    , Id.testId $ Id.Container (getEN REPORT_AN_ISSUE_WITH_THIS_TRIP)
+    ][  
     textView
         [ text (getString REPORT_AN_ISSUE_WITH_THIS_TRIP)
         , textSize FontSize.a_13
@@ -272,6 +278,7 @@ allTopicsView state push =
         , width MATCH_PARENT
         , padding (Padding 20 0 20 0)
         , onClick push (const item.action)
+        , Id.testId $ Id.List (Id.contactUsScreen <> Id.underScore <> toString(index))
         , orientation VERTICAL
         ][  linearLayout
             [ height WRAP_CONTENT

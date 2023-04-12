@@ -33,6 +33,8 @@ import Styles.Colors as Color
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Common.Types.App
+import Constant.Test as Id
+import EN
 
 screen :: AppUpdatePopUpState -> ScopedScreen Action AppUpdatePopUpState ScreenOutput
 screen initialState =
@@ -54,6 +56,7 @@ view push state =
     , background "#99000000"
     , gravity CENTER_VERTICAL
     , afterRender push (const AfterRender)
+    , Id.testId $ Id.Screen Id.appUpdatePopUpScreen
   ][
    PrestoAnim.animationSet [
       Anim.translateYAnim $ translateYAnimConfigUpdate
@@ -129,6 +132,7 @@ view push state =
                                 _<- push action
                                 pure unit
                                 ) (const OnCloseClick)
+                    , Id.testId $ Id.Text (getEN NOT_NOW)
                     ]
                 ]
             , linearLayout
@@ -150,6 +154,7 @@ view push state =
                               _ <- JB.openUrlInApp if EHC.os  == "ANDROID" then "https://play.google.com/store/apps/details?id=in.juspay.nammayatri" else "https://apps.apple.com/in/app/namma-yatri/id1637429831"
                               pure unit
                               ) (const OnAccept)
+                  , Id.testId $ Id.Text (getEN UPDATE)
               ] 
             ]
           ]

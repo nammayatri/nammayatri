@@ -45,6 +45,7 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Screens.CustomerUtils.MyProfileScreen.ComponentConfig
 import PrestoDOM.Animation as PrestoAnim
 import Resources.Constants as RSRC
+import Constant.Test as Id
 
 screen :: ST.MyProfileScreenState -> Screen Action ST.MyProfileScreenState ScreenOutput
 screen initialState =
@@ -81,6 +82,7 @@ view push state =
             , padding $ PaddingBottom 24
             , visibility if state.props.updateProfile then VISIBLE else GONE
             , background Color.white900
+            , Id.testId $ Id.Screen Id.myProfileScreen
             ][ linearLayout
                 [ orientation VERTICAL
                 , height WRAP_CONTENT
@@ -491,6 +493,7 @@ deleteAccountView state push =
             , gravity CENTER_VERTICAL
             , padding (Padding 15 21 15 21)
             , onClick push (const $ ReqDelAccount)
+            , Id.testId $ Id.Container (getEN REQUEST_TO_DELETE_ACCOUNT)
             ][  imageView
                 [ width $ V 20
                 , height $ V 20

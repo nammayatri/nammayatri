@@ -16,6 +16,7 @@ import Prelude ((<>), (==))
 import PrestoDOM (Length(..), Margin(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, height, margin, padding, text, textSize, width, imageUrl, visibility, stroke)
 import Screens.Types (EmergencyContactsScreenState)
 import Styles.Colors as Color
+import EN
 
 --------------------------------------------------- genericHeaderConfig -----------------------------------------------------
 genericHeaderConfig :: EmergencyContactsScreenState -> GenericHeader.Config
@@ -79,12 +80,14 @@ removeContactPopUpModelConfig state =
         , option1
           { text = (getString CANCEL_)
           , strokeColor = Color.black700
+          , testIdText = (getEN CANCEL_)
           }
         , option2
           { text = (getString YES_REMOVE)
           , background = Color.red
           , color = Color.white900
           , strokeColor = Color.red
+          , testIdText = (getEN YES_REMOVE)
           }
         }
   in

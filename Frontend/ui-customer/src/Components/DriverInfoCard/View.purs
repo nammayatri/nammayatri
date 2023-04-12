@@ -26,7 +26,7 @@ import Effect (Effect)
 import Engineering.Helpers.Commons (screenWidth, safeMarginBottom, os, flowRunner)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (secondsToHms)
+import Helpers.Utils (secondsToHms, toString)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>),(-),(*), bind, pure, discard, (&&), (||))
@@ -46,6 +46,8 @@ import Presto.Core.Types.Language.Flow (doAff)
 import Animation (fadeIn)
 import PrestoDOM.Animation as PrestoAnim
 import Data.String.CodeUnits (fromCharArray, toCharArray)
+import Constant.Test as Id
+import EN
 
 view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit ) w
 view push state =
@@ -54,6 +56,7 @@ view push state =
   , width MATCH_PARENT
   , background Color.transparent
   , orientation VERTICAL
+  , Id.testId $ Id.Component Id.driverInfoCard
   ][  mapOptionsView push state
     , driverInfoView push state
     ]
@@ -114,6 +117,7 @@ supportButton push state =
       , width $ V 18
       , margin $ Margin 10 4 10 10
       , onClick push $ const Support
+      , Id.testId $ Id.Object Id.supportview
       ]
   ]
 
@@ -131,6 +135,7 @@ locationTrackButton push state =
   , cornerRadius 20.0
   , onClick push (const $ LocationTracking)
   , margin $ MarginTop 8
+  , Id.testId $ Id.Object Id.trackLocation
   ][  imageView
       [ imageWithFallback "ny_ic_location_track,https://assets.juspay.in/nammayatri/images/common/ny_ic_location_track.png"
       , height $ V 18
@@ -148,6 +153,7 @@ sosView push state =
     , orientation VERTICAL
     , gravity if os == "IOS" then CENTER_VERTICAL else BOTTOM
     , onClick push $ const OpenEmergencyHelp
+    , Id.testId $ Id.Object (Id.sos)
     ][ imageView
         [ imageWithFallback "ny_ic_sos,https://assets.juspay.in/nammayatri/images/user/ny_ic_sos.png"
         , height $ V 50
@@ -202,6 +208,7 @@ otpAndWaitView push state =
                         , textSize FontSize.a_18
                         , color Color.white900
                         , fontStyle $ FontStyle.bold LanguageStyle
+                        , Id.testId $ Id.Text (getEN OTP <> Id.underScore <> toString(index))
                         ]
                     ]) $ split (Pattern "")  state.data.otp)
           ]
@@ -307,6 +314,7 @@ cancelRideLayout push state =
   , padding $ Padding 5 5 5 5
   , margin $ MarginBottom if os == "IOS" then 24 else 0
   , onClick push $ const $ CancelRide state
+  , Id.testId $ Id.Button $ Id.BtnConfig (getEN CANCEL_RIDE)
   ][ textView
      [ width WRAP_CONTENT
      , height WRAP_CONTENT
@@ -624,6 +632,7 @@ primaryButtonConfig = let
         , imageUrl = "ny_ic_call,https://assets.juspay.in/nammayatri/images/common/ny_ic_call.png"
         , margin = Margin 20 10 20 10
         }
+      , testIdText = Id.call
       }
   in primaryButtonConfig'
 

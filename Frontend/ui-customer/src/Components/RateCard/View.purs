@@ -30,6 +30,9 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Styles.Colors as Color
+import Common.Types.App
+import Constant.Test as Id
+import EN
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 view push config = 
@@ -41,6 +44,7 @@ view push config =
   , gravity CENTER
   , background Color.black9000
   , onClick push $ const BackPressed
+  , Id.testId $ Id.Component (Id.rateCard <> Id.underScore <> Id.back)
   ][ linearLayout
      [ width MATCH_PARENT
      , height WRAP_CONTENT
@@ -221,6 +225,7 @@ view push config =
         , textSize FontSize.a_18
         , padding (Padding 0 8 0 25)
         , onClick push $ const Close
+        , Id.testId $ Id.Button $ Id.BtnConfig (getEN GOT_IT)
         ]
       ]
    ]

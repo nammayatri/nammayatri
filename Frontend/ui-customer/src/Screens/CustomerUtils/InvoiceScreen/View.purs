@@ -32,6 +32,7 @@ import Screens.InvoiceScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
 import Helpers.Utils (isHaveFare)
+import Constant.Test as Id
 
 screen :: ST.InvoiceScreenState -> Screen Action ST.InvoiceScreenState ScreenOutput
 screen initialState =
@@ -55,6 +56,7 @@ view push state =
         , padding $ Padding 0 EHC.safeMarginTop 0 (if EHC.safeMarginBottom == 0 then 24 else EHC.safeMarginBottom)
         , onBackPressed push (const BackPressed)
         , afterRender push (const AfterRender)
+        , Id.testId $ Id.Screen Id.invoiceScreen
         ]
         [ GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
         , linearLayout

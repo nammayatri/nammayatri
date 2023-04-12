@@ -32,6 +32,7 @@ import Screens.Types as ST
 import Styles.Colors as Color
 import Common.Types.App
 import Screens.CustomerUtils.ContactUsScreen.ComponentConfig 
+import Constant.Test as Id
 
 screen :: ST.ContactUsScreenState -> Screen Action ST.ContactUsScreenState ScreenOutput
 screen initialState =
@@ -54,6 +55,7 @@ view push state =
   , padding $ Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom
   , onBackPressed push $ const BackPressed
   , afterRender push (const AfterRender)
+  , Id.testId $ Id.Screen Id.contactUsScreen
   ][  linearLayout[height WRAP_CONTENT
   , width WRAP_CONTENT
   , visibility if state.props.isSubmitted then GONE else VISIBLE][GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)]

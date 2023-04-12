@@ -33,6 +33,7 @@ import Styles.Colors as Color
 import Animation.Config (AnimConfig, animConfig)
 import PrestoDOM.Animation as PrestoAnim
 import Common.Types.App
+import EN
 
 genericHeaderConfig :: ST.MyProfileScreenState -> GenericHeader.Config 
 genericHeaderConfig state = let 
@@ -75,7 +76,8 @@ nameEditTextConfig state = let
                 fontStyle = FontStyle.semiBold LanguageStyle,
                 pattern = Just "[a-zA-Z ]*,30"
             },
-            id = (EHC.getNewIDWithTag "UserNameEditText")
+            id = (EHC.getNewIDWithTag "UserNameEditText"),
+            testIdText = (getEN NAME)
         }
     in primaryEditTextConfig'
 
@@ -123,6 +125,7 @@ updateButtonConfig state = let
         , enableLoader = (JB.getBtnLoader "PrimaryButtonUpdate")
         , isClickable = state.props.isBtnEnabled
         , alpha = if state.props.isBtnEnabled then 1.0 else 0.5
+        , testIdText = (getEN UPDATE)
         }
     in updateButtonConfig'
 
@@ -137,13 +140,14 @@ requestDeletePopUp state = let
       option1 {
         text = (getString CANCEL_STR)
       , fontSize = FontSize.a_16
+      , testIdText = (getEN CANCEL_STR)
       },
       option2 {text = (getString YES_DELETE_IT)
       , background = Color.red
       , color = Color.white900
       , strokeColor = Color.red
-      , fontSize = FontSize.a_16 }
-     
+      , fontSize = FontSize.a_16 
+      , testIdText = (getEN YES_DELETE_IT)}
     }
   in popUpConfig'
 

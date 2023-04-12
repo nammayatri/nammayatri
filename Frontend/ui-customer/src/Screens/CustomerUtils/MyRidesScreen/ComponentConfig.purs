@@ -26,6 +26,7 @@ import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..))
 import Screens.Types as ST
 import Styles.Colors as Color
 import Storage as Storage
+import EN
 
 apiErrorModalConfig :: ErrorModal.Config 
 apiErrorModalConfig = let 
@@ -59,6 +60,7 @@ apiErrorModalConfig = let
       , fontStyle = FontStyle.medium LanguageStyle
       , textSize = FontSize.a_16
       }
+    , testIdText = (getEN NOTIFY_ME)
     }
   in errorModalConfig' 
 
@@ -94,6 +96,7 @@ errorModalConfig state = let
       , textSize = FontSize.a_16
       , visibility = if (Storage.isLocalStageOn ST.HomeScreen) then VISIBLE else GONE
       }
+    , testIdText = (getEN BOOK_NOW)
     }
   in errorModalConfig' 
 

@@ -27,6 +27,7 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(
 import Styles.Colors as Color
 import Debug (spy)
 import Common.Types.App
+import Constant.Test as Id
 
 view :: forall w .  (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
 view push =
@@ -37,6 +38,7 @@ view push =
       , clickable true
       , background Color.white900
       , padding $ Padding 16 16 16 16
+      , Id.testId $ Id.Component Id.pricingtutorial
       ][  closeBtnView push
         , textView
             [ height WRAP_CONTENT
@@ -62,6 +64,7 @@ closeBtnView push =
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
         , onClick push $ const Close
+        , Id.testId $ Id.Object Id.close
         ][  imageView
             [ height $ V 25
             , width $ V 25
