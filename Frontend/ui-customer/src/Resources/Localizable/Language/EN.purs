@@ -249,7 +249,7 @@ getEN script = case script of
   NOT_NOW -> "Not now"
   OF -> "of"
   LOST_SOMETHING -> "Lost Something?"
-  TRY_CONNECTING_WITH_THE_DRIVER -> "Try connecting with the driver"
+  TRY_CONNECTING_WITH_THE_DRIVER -> "You can request a callback to connect with the driver directly"
   CALL_DRIVER -> "Call Driver"
   NO_MORE_RIDES -> "No more rides"
   CONTACT_SUPPORT -> "Contact Support"
