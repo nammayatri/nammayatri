@@ -42,6 +42,7 @@ view push config =
     , height WRAP_CONTENT
     , orientation VERTICAL
     , clickable true
+    , Id.testId $ Id.Component Id.rideActionModal
     ][linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -114,6 +115,7 @@ callButton push config =
   , cornerRadius 30.0
   , visibility if (config.currentStage == RideAccepted) then VISIBLE else GONE
   , onClick push (const $ CallCustomer)
+  , Id.testId $ Id.Object Id.call
   ][  imageView
       [ imageWithFallback "ic_phone,https://assets.juspay.in/nammayatri/images/common/ic_phone.png"
       , height $ V 20
@@ -138,6 +140,7 @@ openGoogleMap push config =
       , gravity CENTER
       , orientation HORIZONTAL
       , onClick push (const OnNavigate)
+      , Id.testId $ Id.Button $ Id.BtnConfig (getEN MAPS)
       ][  imageView
           [ width $ V 20
           , height $ V 20
@@ -232,6 +235,7 @@ startRide push config =
   , margin $ Margin 16 16 16 0
   , gravity CENTER
   , onClick push (const $ StartRide)
+  , Id.testId $ Id.Button $ Id.BtnConfig (getEN START_RIDE)
   ][  textView (
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
@@ -252,6 +256,7 @@ endRide push config =
   , margin $ Margin 16 16 16 24
   , gravity CENTER
   , onClick push (const $ EndRide)
+  , Id.testId $ Id.Button $ Id.BtnConfig (getEN END_RIDE)
   ][  textView (
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
@@ -277,6 +282,7 @@ cancelRide push config =
       , text (getString CANCEL_RIDE)
       , color Color.red
       , onClick push (const CancelRide)
+      , Id.testId $ Id.Button $ Id.BtnConfig (getEN CANCEL_RIDE)
       ] <> FontStyle.body1 TypoGraphy
       )
   ]
@@ -421,6 +427,7 @@ arrivedButtonView push config =
         else do
           _ <- countDown config.buttonTimeOut config.id push ButtonTimer
           push action) (const NotifyCustomer)
+  , Id.testId $ Id.Container if config.notifiedCustomer then (getEN CUSTOMER_NOTIFIED) else (getEN I_ARRIVED)
   , visibility if config.isDriverArrived then VISIBLE else GONE
   ][  imageView
       [ width $ V 20

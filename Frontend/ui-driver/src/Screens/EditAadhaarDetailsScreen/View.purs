@@ -28,6 +28,7 @@ import Styles.Colors as Color
 import Font.Size as FontSize
 import Effect (Effect)
 import Common.Types.App
+import Constant.Test as Id
 
 screen :: ST.EditAadhaarDetailsScreenState -> Screen Action ST.EditAadhaarDetailsScreenState ScreenOutput
 screen initialState =
@@ -48,6 +49,7 @@ view push state =
     , onBackPressed push (const BackPressed)
     , background Color.white900
     , afterRender push (const AfterRender)
+    , Id.testId $ Id.Screen Id.editAadhaarDetailsScreen
     ][  linearLayout
         [ width MATCH_PARENT
         , height MATCH_PARENT
@@ -91,6 +93,7 @@ headerLayout state push heading =
         , padding (Padding 2 2 2 2)
         , margin (MarginLeft 5)
         , onClick push (const BackPressed)
+        , Id.testId $ Id.ToolBar Id.backIcon
         ],
         textView
         [ width WRAP_CONTENT
@@ -112,6 +115,7 @@ headerLayout state push heading =
         , fontStyle $ FontStyle.semiBold LanguageStyle
         , visibility if state.props.isInEditAadharDetailsScreen then GONE else VISIBLE
         , onClick push (const ToggleScreenMode)
+        , Id.testId $ Id.Object Id.toggle
         ]
     ],
     linearLayout

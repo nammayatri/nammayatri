@@ -227,8 +227,9 @@ type PrimaryEditTextState = {
   error :: Maybe String,
   text :: String,
   fontSize :: FontSize,
-  letterSpacing :: LetterSpacing,
-  id :: String
+  letterSpacing :: Number,
+  id :: String,
+  testIdText :: String
 }
 
 ----------------------------------------------------- DriverProfileScreen ------------------------------------------------

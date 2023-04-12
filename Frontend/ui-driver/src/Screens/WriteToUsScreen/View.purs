@@ -33,6 +33,7 @@ import Components.PrimaryEditText as PrimaryEditText
 import PrestoDOM.Animation as PrestoAnim
 import Common.Types.App
 import Screens.WriteToUsScreen.ComponentConfig
+import Constant.Test as Id
 
 
 screen :: ST.WriteToUsScreenState -> Screen Action ST.WriteToUsScreenState ScreenOutput
@@ -57,6 +58,7 @@ view push state =
     , orientation VERTICAL
     , onBackPressed push (const BackPressed)
     , afterRender push (const AfterRender)
+    , Id.testId $ Id.Screen Id.writeToUsScreen
     ][ frameLayout
         [ width MATCH_PARENT
         , height MATCH_PARENT
@@ -106,6 +108,7 @@ headerLayout state push=
         , imageWithFallback "ny_ic_back,https://assets.juspay.in/nammayatri/images/driver/ny_ic_back.png"
         , gravity CENTER_VERTICAL
         , onClick push (const BackPressed)
+        , Id.testId $ Id.ToolBar Id.backIcon
         , padding (Padding 2 2 2 2)
         , margin (MarginLeft 5)
         ]

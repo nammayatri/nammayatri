@@ -29,6 +29,7 @@ import Screens.Types as ST
 import Styles.Colors as Color
 import Prelude
 import PrestoDOM
+import EN
 
 ------------------------------ primaryButtonConfig --------------------------------
 primaryButtonConfig :: ST.UploadDrivingLicenseState -> PrimaryButton.Config
@@ -43,6 +44,7 @@ primaryButtonConfig state = let
       , height = (V 60)
       , isClickable = state.data.imageFront /= "" && state.data.dob /= "" && DS.length state.data.driver_license_number >= 9 && (DS.toLower(state.data.driver_license_number) == DS.toLower(state.data.reEnterDriverLicenseNumber)) && (state.data.dateOfIssue /= Just "")
       , alpha = if (state.data.imageFront /= "" && state.data.dob /= "" && DS.length state.data.driver_license_number >= 9) && (DS.toLower(state.data.driver_license_number) == DS.toLower(state.data.reEnterDriverLicenseNumber)) && (state.data.dateOfIssue /= Just "") then 1.0 else 0.8
+      , testIdText = (getEN NEXT)
       }
   in primaryButtonConfig'
 
@@ -67,6 +69,7 @@ primaryEditTextConfig state = let
       , margin = (MarginBottom 15)
       , background = Color.white900
       , id = (EHC.getNewIDWithTag "EnterDrivingLicenseEditText")
+      , testIdText = (getEN ENTER_DL_NUMBER)
       }
     in primaryEditTextConfig'
 
@@ -93,5 +96,6 @@ primaryEditTextConfigReEnterDl state = let
       , margin = (MarginBottom 15)
       , background = Color.white900
       , id = (EHC.getNewIDWithTag "ReEnterDrivingLicenseEditText")
+      , testIdText = (getEN RE_ENTER_DRIVING_LICENSE_NUMBER)
       }
     in primaryEditTextConfig'

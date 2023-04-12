@@ -29,6 +29,8 @@ import Language.Types (STR(..))
 import Language.Strings (getString)
 import Font.Style as FontStyle
 import Common.Types.App
+import Constant.Test as Id
+import EN
 
 view :: forall w. (Action -> Effect Unit) -> State -> PrestoDOM (Effect Unit) w
 view push state =
@@ -40,6 +42,7 @@ view push state =
     , background Color.black9000
     , onBackPressed push (const OnCloseClick)
     , clickable true
+    , Id.testId $ Id.Component Id.tutorialModal
     ][  PrestoAnim.animationSet [
             translateYAnim translateYAnimConfig
         ] $ 
@@ -61,6 +64,7 @@ view push state =
                 , imageWithFallback "ny_ic_close,https://assets.juspay.in/nammayatri/images/common/ny_ic_close.png"
                 , clickable true
                 , onClick push (const OnCloseClick)
+                , Id.testId $ Id.ToolBar Id.closeIcon
                 ]
             ]
         ,   imageView
@@ -88,6 +92,7 @@ view push state =
                 , gravity LEFT
                 , orientation HORIZONTAL
                 , onClick push (const CallSupport)
+                , Id.testId $ Id.Container (getEN CALL_SUPPORT_CENTER)
                 ][ imageView
                 [ imageWithFallback "ny_ic_support,https://assets.juspay.in/nammayatri/images/driver/ny_ic_support.png"
                 , height $ V 17
@@ -105,6 +110,7 @@ view push state =
                 , gravity LEFT
                 , orientation HORIZONTAL
                 , onClick push (const Logout)
+                , Id.testId $ Id.Container Id.logout
                 ][ imageView
                 [ imageWithFallback "ny_ic_logout_grey,https://assets.juspay.in/nammayatri/images/driver/ny_ic_logout_grey.png"
                 , height $ V 17

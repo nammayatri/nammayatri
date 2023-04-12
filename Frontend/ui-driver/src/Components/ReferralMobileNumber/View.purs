@@ -32,7 +32,8 @@ import Components.PrimaryButton as PrimaryButton
 import Data.String.CodeUnits (charAt)
 import Data.String (length)
 import Common.Types.App
-
+import Constant.Test as Id
+import EN
 
 view :: forall w .(Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push state = 
@@ -44,6 +45,7 @@ view push state =
     , background Color.black9000
     , onBackPressed push (const OnBackClick)
     , clickable true
+    , Id.testId $ Id.Component Id.referralMobileNumber
     ][  linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -63,6 +65,7 @@ view push state =
                 , imageWithFallback "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
                 , margin (MarginLeft 14)
                 , onClick push (const OnBackClick)
+                , Id.testId $ Id.ToolBar Id.backIcon
                 ]
               , textView (
                 [ width WRAP_CONTENT
@@ -134,7 +137,9 @@ primaryEditTextConfig state = let
             }
             , type = "number"
             , id = (getNewIDWithTag "Referalnumber")
-            , margin = (Margin 16 0 16 24)}
+            , margin = (Margin 16 0 16 24)
+            , testIdText = Id.referralScreen
+            }
     in primaryEditTextConfig'
 
 primaryButtonConfig :: Config -> PrimaryButton.Config 
@@ -151,5 +156,6 @@ primaryButtonConfig state = let
       , height = (V 60)
       , alpha = if (state.isApplyButtonActive) then 1.0 else 0.7
       , isClickable = state.isApplyButtonActive
+      , testIdText = (getEN APPLY)
       }
   in primaryButtonConfig'

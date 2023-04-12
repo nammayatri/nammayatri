@@ -27,6 +27,7 @@ import Styles.Colors as Color
 import Font.Size as FontSize
 import Screens.Types (VehicalTypes(..))
 import Common.Types.App
+import Constant.Test as Id
 
 view :: forall w .  (Action  -> Effect Unit) -> SelectVehicleTypeModalState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -38,6 +39,7 @@ view push state =
   , background Color.black9000
   , gravity BOTTOM
   , onClick push (const OnCloseClick)
+  , Id.testId $ Id.Component Id.selectVehicleTypeModal
   ][  PrestoAnim.animationSet 
       [ translateYAnim translateYAnimConfig] $ 
       linearLayout
@@ -65,6 +67,7 @@ view push state =
                 , height MATCH_PARENT
                 , imageWithFallback "ny_ic_close,https://assets.juspay.in/nammayatri/images/common/ny_ic_close.png"
                 , onClick push (const OnCloseClick)
+                , Id.testId $ Id.Object Id.closeIcon
                 ]
             ]
           , scrollView
@@ -83,6 +86,11 @@ view push state =
                     , onClick push (const (OnSelect item))
                     , padding (PaddingLeft 8)
                     , gravity CENTER_VERTICAL
+                    , Id.testId $ Id.List case item of
+                                          Sedan     -> "Sedan"
+                                          SUV       -> "SUV"
+                                          Hatchback -> "Hatchback"
+                                          Auto      -> "Auto"
                     ][ imageSection item
                      , textList item
                      ]

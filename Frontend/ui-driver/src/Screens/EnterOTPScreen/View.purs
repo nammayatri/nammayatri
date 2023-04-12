@@ -36,6 +36,8 @@ import Animation as Anim
 import Animation.Config as AnimConfig
 import Common.Types.App
 import Screens.EnterOTPScreen.ComponentConfig
+import Constant.Test as Id
+import EN
 
 screen :: ST.EnterOTPScreenState -> Screen Action ST.EnterOTPScreenState ScreenOutput
 screen initialState =
@@ -66,6 +68,7 @@ view push state =
         pure unit
         ) (const AfterRender)
   , onBackPressed push (const BackPressed)
+  , Id.testId $ Id.Screen Id.enterOTPScreen
   ][  linearLayout
       [ width MATCH_PARENT
       , weight 1.0
@@ -103,6 +106,7 @@ backArrow state push =
       , margin (MarginTop 20)
       , imageWithFallback "ny_ic_back,https://assets.juspay.in/nammayatri/images/driver/ny_ic_back.png"
       , onClick push (const BackPressed)
+      , Id.testId $ Id.ToolBar Id.backIcon
       ]
   ]
 
@@ -143,7 +147,8 @@ primaryEditTextView state push =
         pattern : Just "[0-9]*,4",
         fontSize : FontSize.a_18,
         letterSpacing : PX if state.data.otp == "" then 0.0 else 5.0,
-        id : (EHC.getNewIDWithTag "EnterOTPScreenEditText")
+        id : (EHC.getNewIDWithTag "EnterOTPScreenEditText"),
+        testIdText : (getEN AUTO_READING_OTP)
       })
     , PrestoAnim.animationSet
       [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig
@@ -159,6 +164,7 @@ underlinedTextView state push =
   , margin (MarginTop 18)
   , orientation VERTICAL
   , onClick push (const ResendOTP)
+  , Id.testId $ Id.Text (getEN RESEND_OTP)
   ][  textView
       [ height WRAP_CONTENT
       , width WRAP_CONTENT

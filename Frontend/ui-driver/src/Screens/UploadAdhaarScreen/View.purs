@@ -32,6 +32,7 @@ import JBridge as JB
 import Effect.Class (liftEffect)
 import Common.Types.App
 import Screens.UploadAdhaarScreen.ComponentConfig
+import Constant.Test as Id
 
 screen :: ST.UploadAdhaarScreenState -> Screen Action ST.UploadAdhaarScreenState ScreenOutput
 screen initialState =
@@ -66,6 +67,7 @@ linearLayout
                       _<- push action
                       pure unit
                       ) $ const (AfterRender)
+    , Id.testId $ Id.Screen Id.uploadAdhaarScreen
     ][  onboardingHeaderView state push
       , linearLayout
         [ width MATCH_PARENT
@@ -124,6 +126,7 @@ frontUploadSection state push =
     , orientation VERTICAL
     , margin (MarginTop 20)
     , onClick push (const( UploadFileAction "front"))
+    , Id.testId $ Id.Container (Id.upload <> Id.underScore <> Id.front)
   ][
     textView
     ([ text (getString FRONT_SIDE)
@@ -160,6 +163,7 @@ backUploadSection state push =
   , margin (MarginTop 20)
   , orientation VERTICAL
   , onClick push (const (UploadFileAction "back"))
+  , Id.testId $ Id.Container (Id.upload <> Id.underScore <> Id.back)
   ][
     textView
     ([ text (getString BACK_SIDE)
@@ -257,6 +261,7 @@ previewIcon state push previewType =
         , onClick (\action-> do
                       _ <- liftEffect $ JB.previewImage $ if(previewType == "front") then state.data.imageFront else state.data.imageBack
                       pure unit)(const PreviewImageAction)
+        , Id.testId $ Id.Container Id.preview
         ] 
       , imageView
           [ height (V 20)
@@ -264,5 +269,6 @@ previewIcon state push previewType =
           , margin (Margin 10 0 0 0)
           , imageWithFallback "ny_ic_cancel,https://assets.juspay.in/nammayatri/images/driver/ny_ic_cancel.png"
           , onClick push (const(RemoveUploadedFile previewType))
+          , Id.testId $ Id.Container (Id.preview <> Id.underScore <> Id.clear)
           ]
     ]

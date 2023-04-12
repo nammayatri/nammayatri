@@ -25,6 +25,7 @@ import Language.Types (STR(..))
 import PrestoDOM
 import Styles.Colors as Color
 import Screens.Types as ST
+import EN
 
 errorModalConfig :: ST.RideHistoryScreenState -> ErrorModal.Config 
 errorModalConfig state = let 
@@ -58,5 +59,6 @@ errorModalConfig state = let
       , textSize = FontSize.a_16
       , visibility  = GONE
       }
+    , testIdText = (getEN BOOK_NOW)
     }
   in errorModalConfig' 

@@ -32,6 +32,8 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Visibili
 import Screens.Types (BottomNavBarState)
 import Storage (getValueToLocalNativeStore, KeyStore(..))
 import Styles.Colors as Color
+import Constant.Test as Id
+import EN
 
 view :: forall w . (Action -> Effect Unit) -> BottomNavBarState -> PrestoDOM (Effect Unit) w
 view push state = 
@@ -41,6 +43,7 @@ view push state =
     , alignParentBottom "true,-1"
     , gravity CENTER
     , stroke ("1,"<> Color.borderColorLight)
+    , Id.testId $ Id.Component Id.bottomNavBar
     ][ linearLayout
        [ width MATCH_PARENT
        , height MATCH_PARENT
@@ -54,6 +57,13 @@ view push state =
           , orientation VERTICAL
           , gravity CENTER
           , onClick push (const (OnNavigate item.text))
+          , Id.testId $ Id.Bar case item.text of 
+                      "Home"          -> getEN HOME
+                      "Rides"         -> getEN RIDES
+                      "Contest"       -> getEN CONTEST
+                      "Profile"       -> getEN PROFILE
+                      "Alert"         -> getEN ALERTS
+                      _               -> Id.noAction
           ][ linearLayout
               [ width (V 24)
               , height (V 24)

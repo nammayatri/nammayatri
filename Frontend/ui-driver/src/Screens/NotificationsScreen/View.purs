@@ -48,7 +48,8 @@ import Styles.Colors as Color
 import Debug (spy)
 import Components.BottomNavBar.View as BottomNavBar
 import Components.BottomNavBar.Controller (navData)
-
+import Constant.Test as Id
+import EN
 
 screen :: NotificationsScreenState -> PrestoList.ListItem -> Screen Action NotificationsScreenState ScreenOutput
 screen initialState notificationListItem =
@@ -83,6 +84,7 @@ view notificationListItem push state =
     , background Color.white900
     , orientation VERTICAL
     , onBackPressed push $ const BackPressed
+    , Id.testId $ Id.Screen $ Id.notificationsScreen
     ] $ [ screenAnimationFadeInOut
           $ linearLayout
               [ height MATCH_PARENT
@@ -115,6 +117,7 @@ loadMoreView push state =
     , orientation VERTICAL
     , background Color.white900
     , onClick push (const LoadMore)
+    , Id.testId $ Id.Container (getEN LOAD_OLDER_ALERTS)
     , gravity CENTER
     , alignParentBottom "true,-1"
     , padding (PaddingBottom 5)
@@ -254,6 +257,7 @@ headerLayout state push =
             , imageUrl "ny_ic_chevron_left"
             , gravity CENTER_VERTICAL
             , onClick push $ const BackPressed
+            , Id.testId $ Id.ToolBar Id.backIcon
             , padding $ Padding 2 2 2 2
             , margin $ MarginLeft 5
             ]

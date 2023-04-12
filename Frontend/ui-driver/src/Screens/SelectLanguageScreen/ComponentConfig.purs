@@ -22,6 +22,7 @@ import Language.Types (STR(..))
 import PrestoDOM
 import Styles.Colors as Color
 import Screens.Types as ST
+import EN
 
 primaryButtonConfig :: ST.SelectLanguageScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
@@ -35,5 +36,6 @@ primaryButtonConfig state = let
       , cornerRadius = 0.0
       , background = Color.black900
       , height = (V 60)
+      , testIdText = (getEN UPDATE)
       }
   in primaryButtonConfig'

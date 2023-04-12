@@ -33,6 +33,7 @@ import Prelude
 import PrestoDOM
 import Screens.Types as ST
 import Styles.Colors as Color
+import EN
 
 
 
@@ -50,7 +51,8 @@ passwordPopUpConfig state = let
     secondaryText {visibility = GONE},
     option1 {visibility = false},
     option2 {text = (getString CONFIRM_PASSWORD), background = Color.white900, color=Color.blue800, strokeColor = Color.white900, padding = (PaddingHorizontal 16 16), fontSize = FontSize.a_16
-    ,  isClickable = state.props.confirmBtnActive},
+    ,  isClickable = state.props.confirmBtnActive
+    , testIdText = (getEN CONFIRM_PASSWORD)},
     cornerRadius = (Corners 15.0 true true true true)
   }
   in popUpConfig'
@@ -67,11 +69,14 @@ contactSupportConfig state  =
     , option1 {
       text = (getString CANCEL)
     , fontSize = FontSize.a_16
-    , margin = (MarginHorizontal 16 16) }
+    , margin = (MarginHorizontal 16 16) 
+    , testIdText = (getEN CANCEL)
+    }
     , option2 {
       text = (getString CALL_SUPPORT)
     , fontSize = FontSize.a_16
-    , margin = (MarginHorizontal 12 0) }
+    , margin = (MarginHorizontal 12 0) 
+    , testIdText = (getEN CALL_SUPPORT)}
     , backgroundClickable = true
     , secondaryText {
       text = (getString YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT)
@@ -124,5 +129,6 @@ primaryButtonViewConfig state = let
       , height = (V 60)
       , cornerRadius = 8.0
       , margin = (Margin 0 0 0 0)
+      , testIdText = (getEN LINK_REFERRAL_CODE)
       }
   in primaryButtonConfig'

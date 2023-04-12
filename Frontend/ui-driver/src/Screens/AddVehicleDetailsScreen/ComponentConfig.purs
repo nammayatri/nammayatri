@@ -27,6 +27,7 @@ import PrestoDOM
 import Screens.Types as ST
 import Styles.Colors as Color
 import Components.ReferralMobileNumber as ReferralMobileNumber
+import EN
 
 primaryButtonConfig :: ST.AddVehicleDetailsScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
@@ -40,6 +41,7 @@ primaryButtonConfig state = let
       , alpha = if ((state.props.isValidState) && (toLower(state.data.vehicle_registration_number) == toLower(state.data.reEnterVehicleRegistrationNumber)) && (state.data.dateOfRegistration /= Just "") )  then 1.0 else 0.8
       , isClickable = ((state.props.isValidState) && (toLower(state.data.vehicle_registration_number) == toLower(state.data.reEnterVehicleRegistrationNumber)) && (state.data.dateOfRegistration /= Just "") )
       , margin = (Margin 0 0 0 0)
+      , testIdText = (getEN NEXT)
       }
   in primaryButtonConfig'
 
