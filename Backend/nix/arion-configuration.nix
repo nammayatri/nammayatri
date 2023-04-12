@@ -1,7 +1,7 @@
 { ... }:
 
 let
-  dockerComposeConfiguration = { pkgs, ... }: {
+  arionProjectConfiguration = { pkgs, ... }: {
     project.name = "nammayatri-svc";
     docker-compose.raw.volumes = {
       prometheus-volume = null;
@@ -172,7 +172,7 @@ let
 in
 {
   perSystem = { inputs', pkgs, lib, ... }: {
-    inherit dockerComposeConfiguration;
+    inherit arionProjectConfiguration;
 
     mission-control.scripts =
       let

@@ -4,7 +4,7 @@
     ./nix/docker.nix
     ./nix/scripts.nix
     ./nix/run-mobility-stack.nix
-    ./nix/docker-compose.nix
+    ./nix/arion-configuration.nix
     ./nix/osrm.nix
   ];
   perSystem = { config, self', pkgs, lib, ... }: {
