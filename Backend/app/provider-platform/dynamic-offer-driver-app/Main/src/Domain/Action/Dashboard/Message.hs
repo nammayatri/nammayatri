@@ -272,7 +272,7 @@ messageReceiverList :: ShortId DM.Merchant -> Id Domain.Message -> Maybe Text ->
 messageReceiverList merchantShortId msgId _ mbStatus mbLimit mbOffset = do
   _ <- findMerchantByShortId merchantShortId
   messageReportsTemp <- Esq.runInReplica $ MRQuery.findByMessageIdAndStatusWithLimitAndOffset mbLimit mbOffset msgId $ toDomainDeliveryStatusType <$> mbStatus
-  maybePersons <- mapM (\ messageReport -> QP.findById $ cast messageReport.driverId) messageReportsTemp
+  maybePersons <- mapM (\messageReport -> QP.findById $ cast messageReport.driverId) messageReportsTemp
   let encMessageReports = zip messageReportsTemp $ catMaybes maybePersons
   messageReports <- mapM (secondM decrypt) encMessageReports
   let count = length messageReports
