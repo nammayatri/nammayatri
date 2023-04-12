@@ -17,7 +17,12 @@ pipeline {
             }
         }
         stage ('Docker image') {
-            when { branch 'main' }
+            when {
+                anyOf {
+                    branch 'main';
+                    branch 'prod-hot-push-b'
+                }
+            }
             steps {
                 dockerPush "dockerImage", "ghcr.io"
             }

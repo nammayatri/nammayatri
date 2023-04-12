@@ -523,8 +523,8 @@ updateDriver personId req = do
                language = req.language <|> person.language
               }
 
-  vehicle <- QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
-  checkIfCanDowngrade vehicle
+  mVehicle <- QVehicle.findById personId
+  checkIfCanDowngrade mVehicle
   driverInfo <- QDriverInformation.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
   let updDriverInfo =
         driverInfo{canDowngradeToSedan = fromMaybe driverInfo.canDowngradeToSedan req.canDowngradeToSedan,
@@ -544,20 +544,23 @@ updateDriver personId req = do
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
   return $ makeDriverInformationRes driverEntity org driverReferralCode
   where
-    checkIfCanDowngrade vehicle = do
-      when
-        ( (vehicle.variant == SV.AUTO_RICKSHAW || vehicle.variant == SV.TAXI || vehicle.variant == SV.HATCHBACK)
-            && (req.canDowngradeToSedan == Just True || req.canDowngradeToHatchback == Just True || req.canDowngradeToTaxi == Just True)
-        )
-        $ throwError $ InvalidRequest $ "Can't downgrade from " <> (show vehicle.variant)
-      when (vehicle.variant == SV.SEDAN && (req.canDowngradeToSedan == Just True)) $
-        throwError $ InvalidRequest "Driver with sedan can't downgrade to sedan"
-      when (vehicle.variant == SV.SEDAN && (req.canDowngradeToTaxi == Just True)) $
-        throwError $ InvalidRequest "Driver with sedan can't downgrade to Taxi"
-      when (vehicle.variant == SV.SUV && (req.canDowngradeToTaxi == Just True)) $
-        throwError $ InvalidRequest "Driver with SUV can't downgrade to Taxi"
-      when (vehicle.variant == SV.TAXI_PLUS && (req.canDowngradeToSedan == Just True || req.canDowngradeToHatchback == Just True)) $
-        throwError $ InvalidRequest "Driver with TAXI_PLUS can't downgrade to either sedan or hatchback"
+    checkIfCanDowngrade mVehicle = do
+      case mVehicle of
+        Just vehicle -> do
+          when
+            ( (vehicle.variant == SV.AUTO_RICKSHAW || vehicle.variant == SV.TAXI || vehicle.variant == SV.HATCHBACK)
+                && (req.canDowngradeToSedan == Just True || req.canDowngradeToHatchback == Just True || req.canDowngradeToTaxi == Just True)
+            )
+            $ throwError $ InvalidRequest $ "Can't downgrade from " <> (show vehicle.variant)
+          when (vehicle.variant == SV.SEDAN && (req.canDowngradeToSedan == Just True)) $
+            throwError $ InvalidRequest "Driver with sedan can't downgrade to sedan"
+          when (vehicle.variant == SV.SEDAN && (req.canDowngradeToTaxi == Just True)) $
+            throwError $ InvalidRequest "Driver with sedan can't downgrade to Taxi"
+          when (vehicle.variant == SV.SUV && (req.canDowngradeToTaxi == Just True)) $
+            throwError $ InvalidRequest "Driver with SUV can't downgrade to Taxi"
+          when (vehicle.variant == SV.TAXI_PLUS && (req.canDowngradeToSedan == Just True || req.canDowngradeToHatchback == Just True)) $
+            throwError $ InvalidRequest "Driver with TAXI_PLUS can't downgrade to either sedan or hatchback"
+        Nothing -> return ()
 
 sendInviteSms ::
   ( MonadFlow m,
