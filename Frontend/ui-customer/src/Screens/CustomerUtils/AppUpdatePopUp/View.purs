@@ -34,6 +34,8 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Common.Types.App
 import Merchant.Utils(getValueFromConfig)
+import Constant.Test as Id
+import EN
 
 screen :: AppUpdatePopUpState -> ScopedScreen Action AppUpdatePopUpState ScreenOutput
 screen initialState =
@@ -55,6 +57,7 @@ view push state =
     , background "#99000000"
     , gravity CENTER_VERTICAL
     , afterRender push (const AfterRender)
+    , Id.testId $ Id.Screen Id.appUpdatePopUpScreen
   ][
    PrestoAnim.animationSet [
       Anim.translateYAnim $ translateYAnimConfigUpdate
@@ -130,6 +133,7 @@ view push state =
                                 _<- push action
                                 pure unit
                                 ) (const OnCloseClick)
+                    , Id.testId $ Id.Text (getEN NOT_NOW)
                     ]
                 ]
             , linearLayout
@@ -151,6 +155,7 @@ view push state =
                               _ <- JB.openUrlInApp $ getValueFromConfig "APP_LINK"
                               pure unit
                               ) (const OnAccept)
+                  , Id.testId $ Id.Text (getEN UPDATE)
               ] 
             ]
           ]

@@ -35,6 +35,8 @@ import Styles.Colors as Color
 import Debug.Trace (spy)
 import Common.Types.App
 import Screens.CustomerUtils.TripDetailsScreen.ComponentConfig
+import Constant.Test as Id
+import EN
 
 screen :: ST.TripDetailsScreenState -> Screen Action ST.TripDetailsScreenState ScreenOutput 
 screen initialState = 
@@ -60,6 +62,7 @@ view push state =
   , padding $ Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom
   , onBackPressed push (const BackPressed)
   , afterRender push (const AfterRender)
+  , Id.testId $ Id.Screen Id.tripDetailsScreen
   ][  linearLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT
@@ -141,6 +144,7 @@ lostAndFoundView push state =
   , disableClickFeedback false 
   , visibility if (state.data.selectedItem.status /= "CANCELLED" && state.props.canConnectWithDriver) then VISIBLE else GONE
   , onClick push $ (const ShowPopUp)
+  , Id.testId $ Id.Container (getEN LOST_SOMETHING)
   ][  textView  
       [ text (getString LOST_SOMETHING)
       , textSize FontSize.a_14 
@@ -179,6 +183,7 @@ tripIdView push state =
       , width WRAP_CONTENT
       , orientation HORIZONTAL
       , onClick push (const Copy)
+      , Id.testId $ Id.Object Id.copy
       , gravity CENTER_VERTICAL
       ][ textView
           [ text state.data.tripId
@@ -340,6 +345,7 @@ ratingAndInvoiceView state push =
     --   , width MATCH_PARENT
     --   , gravity RIGHT
     --   , onClick push $ (const DownloadInvoice)
+    --   , Id.testId $ Id.Text (getEN DOWNLOAD_INVOICE)
     --   ][  textView
     --       [ text (getString DOWNLOAD_INVOICE)
     --       , textSize FontSize.a_12
@@ -360,6 +366,7 @@ invoiceView state push =
     , padding (Padding 0 16 0 16)
     , disableClickFeedback false
     , onClick push $ (const ViewInvoice)
+    , Id.testId $ Id.Text (getEN VIEW_INVOICE)
     , visibility if state.data.selectedItem.status == "CANCELLED" then GONE else VISIBLE
     ][  textView
         [ text (getString VIEW_INVOICE)
@@ -389,6 +396,7 @@ reportIssueView state push =
     , padding (Padding 0 16 0 16)
     , disableClickFeedback true
     , onClick push $ const ReportIssue 
+    , Id.testId $ Id.Container (getEN REPORT_AN_ISSUE)
     ][  linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -444,6 +452,7 @@ reportIssueView state push =
                       , hint $ getString YOU_CAN_DESCRIBE_THE_ISSUE_YOU_FACED_HERE
                       , pattern "[^\n]*,255"
                       , onChange push $ MessageTextChanged
+                      , Id.testId $ Id.TextField (getEN YOU_CAN_DESCRIBE_THE_ISSUE_YOU_FACED_HERE)
                       ]
 
                  ]  

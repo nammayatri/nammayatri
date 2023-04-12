@@ -34,6 +34,8 @@ import Screens.Types as ST
 import Styles.Colors as Color
 import Screens.ReferralScreen.ComponentConfig
 import Storage (KeyStore(..), getValueToLocalStore)
+import Constant.Test as Id
+import EN
 
 screen :: ST.ReferralScreenState -> Screen Action ST.ReferralScreenState ScreenOutput
 screen initialState =
@@ -59,6 +61,7 @@ view push state =
             push action
         )
         (const AfterRender)
+    , Id.testId $ Id.Screen Id.referralScreen
     ]
     [ GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
     , linearLayout
@@ -155,6 +158,7 @@ referenceView push state =
         , orientation HORIZONTAL
         , onClick push (const $ ExpandReference)
         , gravity CENTER_VERTICAL
+        , Id.testId $ Id.Container (getEN ABOUT_REFERRAL_PROGRAM)
         ]
         [ textView
             $ [ width WRAP_CONTENT

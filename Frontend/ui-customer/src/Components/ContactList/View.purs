@@ -5,7 +5,7 @@ import Components.MenuButton.Controller as MenuButtonConfig
 import Components.MenuButton.View as MenuButton
 import Components.GenericHeader.Controller as GenericHeaderConfig
 import Components.GenericHeader.View as GenericHeader
-import Helpers.Utils (storeCallBackContacts, contactPermission)
+import Helpers.Utils (storeCallBackContacts, contactPermission, toString)
 import Prelude
 import Effect (Effect)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Gradient(..), background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, relativeLayout, frameLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, weight, width, textFromHtml, onBackPressed, scrollView, afterRender, stroke, alignParentBottom, gradient, editText, id, hint, pattern, onChange, imageWithFallback)
@@ -31,6 +31,8 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Engineering.Helpers.Commons (safeMarginTop, safeMarginBottom, os, getNewIDWithTag)
+import Constant.Test as Id
+import EN
 
 view :: forall w. (Action -> Effect Unit) -> ContactsState -> PrestoDOM (Effect Unit) w
 view push config =
@@ -39,6 +41,7 @@ view push config =
     , width MATCH_PARENT
     , orientation VERTICAL
     , background Color.white900
+    , Id.testId $ Id.Component Id.contactList
     ]
     [ linearLayout
         [ height WRAP_CONTENT
@@ -74,6 +77,7 @@ view push config =
             , hint $ getString SEARCH_CONTACTS
             , pattern "[^\n]*,255"
             , onChange push $ ContactTextChanged
+            , Id.testId $ Id.TextField (getEN SEARCH_CONTACTS)
             ]
         , imageView
             [ height $ V 17
@@ -82,6 +86,7 @@ view push config =
             , gravity RIGHT
             , margin (Margin 0 10 18 10)
             , onClick push $ const ClearText
+            , Id.testId $ Id.Object Id.clear
             ]
         ]
     , showEmergencyContact push config
@@ -205,6 +210,7 @@ showEmergencyContactData push config =
                             , weight 1.0
                             , if item.isSelected then background Color.grey900 else background Color.white900
                             , onClick push $ (const (ContactSelected item))
+                            , Id.testId $ Id.Container (Id.contactList <> Id.underScore <> toString ind2)
                             ]
                             [ linearLayout
                                 [ height WRAP_CONTENT

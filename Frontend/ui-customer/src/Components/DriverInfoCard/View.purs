@@ -24,7 +24,7 @@ import Components.SourceToDestination as SourceToDestination
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array ((!!))
+import Data.Array ((!!), mapWithIndex)
 import Data.Maybe (fromMaybe)
 import Data.String (Pattern(..), split, length)
 import Debug.Trace (spy)
@@ -34,7 +34,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (flowRunner, os, safeMarginBottom, screenWidth, getExpiryTime)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (secondsToHms, zoneOtpExpiryTimer, Merchant(..), getMerchant)
+import Helpers.Utils (secondsToHms, zoneOtpExpiryTimer, Merchant(..), getMerchant, toString)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>), (-), (*), bind, pure, discard, (&&), (||), (/=))
@@ -45,6 +45,8 @@ import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (Stage(..))
 import Styles.Colors as Color
+import Constant.Test as Id
+import EN
 
 view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit ) w
 view push state = 
@@ -53,6 +55,7 @@ view push state =
   , width MATCH_PARENT
   , background Color.transparent
   , orientation VERTICAL 
+  , Id.testId $ Id.Component Id.driverInfoCard
   ][  mapOptionsView push state 
     , if state.data.isSpecialZone then driverInfoViewSpecialZone push state else driverInfoView push state
     ]
@@ -180,7 +183,7 @@ otpView push state =
   linearLayout
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
-  ] (map(\item -> 
+  ] (mapWithIndex(\index item -> 
       linearLayout
         [ height $ V 32
         , width $ V 32
@@ -195,6 +198,7 @@ otpView push state =
             , textSize FontSize.a_18
             , color Color.white900
             , fontStyle $ FontStyle.bold LanguageStyle
+            , Id.testId $ Id.Text (getEN OTP <> Id.underScore <> toString(index))
             ]
         ]) $ split (Pattern "")  state.data.otp)
 
@@ -272,6 +276,7 @@ supportButton push state =
       , width $ V 18
       , margin $ Margin 10 10 10 10
       , onClick push $ const Support
+      , Id.testId $ Id.Object Id.supportview
       ]
   ]
 
@@ -289,6 +294,7 @@ locationTrackButton push state =
   , cornerRadius 20.0
   , onClick push (const $ LocationTracking)
   , margin $ MarginTop 8
+  , Id.testId $ Id.Object Id.trackLocation
   ][  imageView
       [ imageWithFallback "ny_ic_location_track,https://assets.juspay.in/nammayatri/images/common/ny_ic_location_track.png"
       , height $ V 18
@@ -306,6 +312,7 @@ sosView push state =
     , orientation VERTICAL
     , gravity if os == "IOS" then CENTER_VERTICAL else BOTTOM
     , onClick push $ const OpenEmergencyHelp
+    , Id.testId $ Id.Object (Id.sos)
     ][ imageView
         [ imageWithFallback "ny_ic_sos,https://assets.juspay.in/nammayatri/images/user/ny_ic_sos.png"
         , height $ V 50
@@ -453,6 +460,7 @@ cancelRideLayout push state =
    , width WRAP_CONTENT
    , padding $ Padding 5 5 5 5
    , onClick push $ const $ CancelRide state
+   , Id.testId $ Id.Button $ Id.BtnConfig (getEN CANCEL_RIDE)
  ] 
       [textView
         [ width WRAP_CONTENT
@@ -745,6 +753,7 @@ primaryButtonConfig = let
         , imageUrl = "ny_ic_call,https://assets.juspay.in/nammayatri/images/common/ny_ic_call.png"
         , margin = Margin 20 10 20 10
         }
+      , testIdText = Id.call
       }
   in primaryButtonConfig'
 

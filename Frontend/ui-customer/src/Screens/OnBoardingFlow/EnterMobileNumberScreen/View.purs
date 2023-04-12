@@ -47,6 +47,8 @@ import Screens.Types as ST
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import Merchant.Utils( getValueFromConfig )
+import Constant.Test as Id
+import EN
 
 screen :: ST.EnterMobileNumberScreenState -> Screen Action ST.EnterMobileNumberScreenState ScreenOutput
 screen initialState =
@@ -120,6 +122,7 @@ enterMobileNumberView  state lang push =
     , visibility  if state.props.enterOTP then GONE else VISIBLE 
     , alpha if state.props.enterOTP then 0.0 else 1.0
     , orientation VERTICAL
+    , Id.testId $ Id.Screen Id.enterMobileNumberScreen
     ][
       PrestoAnim.animationSet 
       [ Anim.translateYAnimFromTopWithAlpha translateYAnimConfig -- 300 10 0 0 true PrestoAnim.Linear
@@ -176,6 +179,7 @@ commonTextView state textValue isLink link push =
                 when isLink $ JB.openUrlInApp (fromMaybe "www.nammayatri.in" link)--"https://drive.google.com/file/d/1qYXbQUF4DVo2xNOawkHNTR_VVe46nggc/view?usp=sharing"
                 pure unit
               ) (const TermsAndConditions)
+    , Id.testId $ Id.Text (Id.link <> Id.underScore <> (getEN TERMS_AND_CONDITIONS))
     ]
 
 ------------------------------------- enterOTPView --------------------------------------------
@@ -187,6 +191,7 @@ enterOTPView state lang push=
     , visibility  if state.props.enterOTP then VISIBLE else GONE 
     , alpha if state.props.enterOTP then 1.0 else 0.0
     , orientation VERTICAL
+    , Id.testId $ Id.Screen Id.enterOTPScreen
     ][PrestoAnim.animationSet 
       [ Anim.translateYAnimFromTopWithAlpha translateYAnimConfig{ifAnim = state.props.enterOTP} -- 400 15 0 0 state.props.enterOTP PrestoAnim.Linear  
       ] $ textView $
@@ -221,6 +226,7 @@ enterOTPView state lang push=
         , fontStyle $ FontStyle.semiBold LanguageStyle
         , color Color.blue900
         , onClick push (const Resend)
+        , Id.testId $ Id.Text (getEN RESEND)
         ]
         , linearLayout
           [ width MATCH_PARENT

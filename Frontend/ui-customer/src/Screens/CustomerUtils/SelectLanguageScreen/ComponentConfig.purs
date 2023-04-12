@@ -28,6 +28,7 @@ import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..))
 import Screens.Types as ST 
 import Styles.Colors as Color
 import Common.Types.App
+import EN
 
 primaryButtonConfig :: ST.SelectLanguageScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
@@ -42,6 +43,7 @@ primaryButtonConfig state = let
         , margin = (Margin 0 0 0 0)
         , id = "UpdateLanguageButton"
         , enableLoader = (JB.getBtnLoader "UpdateLanguageButton")
+        , testIdText = (getEN UPDATE)
       }
   in primaryButtonConfig'
 
@@ -58,6 +60,7 @@ menuButtonConfig state language = let
       }
       , id = language.value
       , isSelected = (language.value == state.props.selectedLanguage)
+      , testIdText = if (language.value == "EN_US") then language.name else language.subTitle
     }
     in menuButtonConfig'
 

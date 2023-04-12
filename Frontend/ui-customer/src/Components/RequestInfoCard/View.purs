@@ -16,7 +16,7 @@
 module Components.RequestInfoCard.View where
 
 import Components.RequestInfoCard.Controller (Action(..))
-import Prelude ((*), Unit, ($), const, (/), unit, (-))
+import Prelude ((*), Unit, ($), const, (/), unit, (-), (<>))
 import Effect (Effect)
 import PrestoDOM (PrestoDOM, Orientation(..), Gravity(..), Padding(..), Margin(..), Length(..), margin, padding, orientation, height, width, linearLayout, imageView, imageUrl, text, textView, textSize, fontStyle, gravity, onClick, color, background, lineHeight, cornerRadius, weight, onBackPressed, imageWithFallback)
 import Styles.Colors as Color
@@ -26,6 +26,8 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Common.Types.App
 import Engineering.Helpers.Commons (screenWidth)
+import Constant.Test as Id
+import EN
 
 view :: forall w. (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
 view push = 
@@ -37,6 +39,7 @@ view push =
   , gravity CENTER
   , background Color.black9000
   , onClick push $ const BackPressed
+  , Id.testId $ Id.Component (Id.requestInfoCard <> Id.underScore <> Id.back)
   ][ linearLayout
      [ width MATCH_PARENT
      , height WRAP_CONTENT
@@ -92,6 +95,7 @@ view push =
             , textSize FontSize.a_16
             , padding (Padding 0 28 0 20)
             , onClick push $ const Close
+            , Id.testId $ Id.Object (getEN GOT_IT)
             ]
      ]
 

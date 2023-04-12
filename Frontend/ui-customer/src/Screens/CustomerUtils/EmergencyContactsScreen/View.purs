@@ -18,7 +18,7 @@ import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
 import Styles.Colors as Color
 import Debug.Trace (spy)
 import Common.Types.App
-import Helpers.Utils (storeCallBackContacts, contactPermission)
+import Helpers.Utils (storeCallBackContacts, contactPermission, toString)
 import Components.ContactList as ContactList
 import Data.Array (take, (!!), mapWithIndex, null, length)
 import Data.String as DS
@@ -26,6 +26,8 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (split, Pattern(..))
 import Components.PopUpModal as PopUpModal
 import Screens.CustomerUtils.EmergencyContactsScreen.ComponentConfig
+import Constant.Test as Id
+import EN
 
 screen :: EmergencyContactsScreenState -> Screen Action EmergencyContactsScreenState ScreenOutput
 screen initialState =
@@ -60,6 +62,7 @@ view push state =
                 pure unit
             )
             (const NoAction)
+        , Id.testId $ Id.Screen Id.emergencyContactsScreen
         ]
         [ linearLayout
             [ height MATCH_PARENT
@@ -229,6 +232,7 @@ contactCardView push state contact index =
         , color Color.blue900
         , textSize 14
         , onClick push (const (RemoveButtonClicked contact))
+        , Id.testId $ Id.Text (getEN REMOVE <> Id.underScore <> toString index)
         ]
     ]
 
