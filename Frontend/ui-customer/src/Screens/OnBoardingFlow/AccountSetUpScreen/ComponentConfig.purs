@@ -64,7 +64,7 @@ primaryEditTextConfigName state =
           , fontStyle = if state.data.name /= "" then FontStyle.bold LanguageStyle else FontStyle.semiBold LanguageStyle
           , pattern = Just "[a-zA-Z ]*,30"
           }
-        , background = "#EEEEEE"
+        , background = Color.grey700
         , margin = (Margin 0 30 0 0)
         , topLabel
           { textSize = FontSize.a_12
@@ -91,7 +91,7 @@ genericHeaderConfig =
           , imageUrl = "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
           , margin = (Margin 12 12 12 12)
           }
-        , background = "#EEEEEE"
+        , background = Color.grey700
         }
   in
     genericHeaderConfig'

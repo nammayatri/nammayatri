@@ -265,7 +265,9 @@ currentFlowStatus = do
       else do
           modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{data{settingSideBar{name =fromMaybe "" response.firstName}}})
           setValueToLocalStore USER_NAME ((fromMaybe "" response.firstName) <> " " <> (fromMaybe "" response.middleName) <> " " <> (fromMaybe "" response.lastName))
-      if isJust response.gender then setValueToLocalStore GENDER (fromMaybe "" response.gender)
+      if (isJust response.gender && (fromMaybe "UNKNOWN" response.gender) /= "UNKNOWN") then setValueToLocalStore GENDER (fromMaybe "" response.gender)
+        else pure unit
+      if isJust response.email then setValueToLocalStore EMAILID (fromMaybe "" response.email)
         else pure unit
 
     goToFindingQuotesStage :: String -> Boolean -> FlowBT String Unit

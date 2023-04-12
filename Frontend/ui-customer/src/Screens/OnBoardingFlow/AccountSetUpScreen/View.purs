@@ -1,33 +1,33 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
 module Screens.AccountSetUpScreen.View where
 
-import Animation as Anim 
+import Animation as Anim
 import Components.GenericHeader as GenericHeader
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
 import Components.MenuButton as MenuButton
 import Effect (Effect)
-import Engineering.Helpers.Commons as EHC 
+import Engineering.Helpers.Commons as EHC
 import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, const, negate, unit, not, ($), (<<<), (<>), (==), (/=))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, Screen, afterRender, alignParentBottom, background, color, gravity, height, linearLayout, margin, onBackPressed, orientation, padding, relativeLayout, scrollView, singleLine, text, textView, weight, width, fontStyle, textSize, stroke, cornerRadius, imageView, imageWithFallback, visibility, onClick, editText, hint, id, pattern, hintColor, onChange, onFocus)
+import Prelude (Unit, const, negate, unit, not, ($), (<<<), (<>), (==), (/=), (||))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, Screen, afterRender, alignParentBottom, background, color, gravity, height, linearLayout, margin, onBackPressed, orientation, padding, relativeLayout, scrollView, singleLine, text, textView, weight, width, fontStyle, textSize, stroke, cornerRadius, imageView, imageWithFallback, visibility, onClick, editText, hint, id, pattern, hintColor, onChange, onFocus, onAnimationEnd)
 import Screens.AccountSetUpScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
@@ -40,7 +40,7 @@ import Data.Array (mapWithIndex)
 import PrestoDOM.Animation as PrestoAnim
 import Animation.Config (AnimConfig, animConfig)
 import Resources.Constants as RSRC
- 
+
 
 screen :: ST.AccountSetUpScreenState -> Screen Action ST.AccountSetUpScreenState ScreenOutput
 screen initialState =
@@ -59,7 +59,7 @@ view push state =
     $ relativeLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
-        , background "#EEEEEE"
+        , background Color.grey700
         , onBackPressed push (const BackPressed)
         , afterRender push (const AfterRender)
         ]
@@ -69,7 +69,7 @@ view push state =
             , orientation VERTICAL
             , margin (Margin 0 16 0 24)
             , padding (Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom)
-            , background "#EEEEEE"
+            , background Color.grey700
             , onBackPressed push (const BackPressed)
             ]
             [ GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig)
@@ -92,8 +92,8 @@ view push state =
                           , singleLine true
                           ]
                         <> FontStyle.h1 TypoGraphy
-                    , nameEditTextView state push 
-                    , genderCaptureView state push 
+                    , nameEditTextView state push
+                    , genderCaptureView state push
                     , linearLayout
                         [ height WRAP_CONTENT
                         , width MATCH_PARENT
@@ -108,7 +108,7 @@ view push state =
             [ height WRAP_CONTENT
             , width MATCH_PARENT
             , alignParentBottom "true,-1"
-            , background "#EEEEEE"
+            , background Color.grey700
             , padding (Padding 16 0 16 26)
             ]
             [ PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state) ]
@@ -129,7 +129,7 @@ emptyTextView :: forall w. PrestoDOM (Effect Unit) w
 emptyTextView = textView []
 
 nameEditTextView :: forall w. ST.AccountSetUpScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-nameEditTextView state push = 
+nameEditTextView state push =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -141,7 +141,7 @@ nameEditTextView state push =
       , width MATCH_PARENT
       , text (getString HOW_SHOULD_WE_ADDRESS_YOU)
       , textSize FontSize.a_12
-      , singleLine true 
+      , singleLine true
       , color Color.greyTextColor
       , gravity LEFT
       , fontStyle $ FontStyle.regular LanguageStyle
@@ -153,7 +153,7 @@ nameEditTextView state push =
         , cornerRadius 8.0
         , gravity CENTER_VERTICAL
         , stroke $ "1,"<> Color.borderColorLight
-        ] 
+        ]
         [ editText
           [ height MATCH_PARENT
           , width WRAP_CONTENT
@@ -165,7 +165,7 @@ nameEditTextView state push =
           , onFocus push $ const $ EditTextFocusChanged
           , gravity LEFT
           , cornerRadius 8.0
-          , fontStyle $ if state.data.name /= "" then FontStyle.bold LanguageStyle else FontStyle.semiBold LanguageStyle
+          , fontStyle $ FontStyle.semiBold LanguageStyle
           , hint $ getString ENTER_YOUR_NAME
           , hintColor Color.black600
           , pattern "[a-zA-Z ]*,30"
@@ -178,13 +178,13 @@ nameEditTextView state push =
 ------------------------ genderCaptureView ---------------------------
 
 genderCaptureView :: forall w. ST.AccountSetUpScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-genderCaptureView state push = 
-  linearLayout 
+genderCaptureView state push =
+  linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , margin $ MarginTop 32
     , orientation VERTICAL
-    ] $ 
+    ] $
     [ textView
       [ height WRAP_CONTENT
       , width MATCH_PARENT
@@ -202,21 +202,21 @@ genderCaptureView state push =
         , padding $ Padding 20 15 20 15
         , cornerRadius 8.0
         , onClick push (const ShowOptions)
-        , stroke $ "1,"<> if state.props.genderOptionExpanded then Color.blue800  else Color.borderColorLight
+        , stroke $ "1,"<> Color.borderColorLight
         , gravity CENTER_VERTICAL
         ]
         [ textView
           [ text $ RSRC.getGender state.data.gender (getString SELECT_YOUR_GENDER)
           , textSize FontSize.a_16
-          , fontStyle $ if state.data.gender /= Nothing then FontStyle.bold LanguageStyle else FontStyle.semiBold LanguageStyle
+          , fontStyle $ FontStyle.semiBold LanguageStyle
           , height WRAP_CONTENT
           , width WRAP_CONTENT
-          , color if state.data.gender == Nothing then Color.black500 else Color.black800
+          , color if state.data.gender == Nothing then Color.black600 else Color.black800
           ]
         , linearLayout
             [ height WRAP_CONTENT
             , weight 1.0
-            , gravity RIGHT 
+            , gravity RIGHT
             ]
             [ imageView
               [ imageWithFallback if state.props.genderOptionExpanded then "ny_ic_chevron_up,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_up.png" else "ny_ic_chevron_down,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_down.png"
@@ -226,7 +226,7 @@ genderCaptureView state push =
             ]
 
         ]
-      
+
     ] <> (if state.props.expandEnabled then [ genderOptionsView state push] else [])
 
 
@@ -236,19 +236,19 @@ translateFullYAnimWithDurationConfigs state = animConfig {
   fromScaleY = if state.props.genderOptionExpanded then 0.0 else 1.0
 , toScaleY =if state.props.genderOptionExpanded then 1.0 else 0.0
 , fromY = if state.props.genderOptionExpanded then -100 else  0
-, toY = if state.props.genderOptionExpanded then 0 else -100 
+, toY = if state.props.genderOptionExpanded then 0 else -100
 , repeatCount = (PrestoAnim.Repeat 0)
 , ifAnim = state.props.expandEnabled
 , duration = 200
-} 
+}
 
-genderOptionsView :: forall w. ST.AccountSetUpScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
+genderOptionsView :: forall w. ST.AccountSetUpScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 genderOptionsView state push =
-  PrestoAnim.animationSet 
-  ([] <> if EHC.os == "IOS" then 
+  PrestoAnim.animationSet
+  ([] <> if EHC.os == "IOS" then
         [Anim.fadeIn state.props.genderOptionExpanded
-        , Anim.fadeOut  (not state.props.genderOptionExpanded)] 
-        else 
+        , Anim.fadeOut  (not state.props.genderOptionExpanded)]
+        else
           [Anim.listExpandingAnimation $  translateFullYAnimWithDurationConfigs state] )
             $
   linearLayout
@@ -257,7 +257,9 @@ genderOptionsView state push =
     , margin $ MarginTop 8
     , background Color.white900
     , orientation VERTICAL
-    , stroke $ "1,"<>Color.grey900 
+    , visibility $ if (state.props.genderOptionExpanded || state.props.showOptions) then VISIBLE else GONE
+    , onAnimationEnd push AnimationEnd
+    , stroke $ "1,"<>Color.grey900
     , cornerRadius 8.0
     ]
     (mapWithIndex(\index item ->
@@ -267,9 +269,9 @@ genderOptionsView state push =
         , onClick push $ const $ GenderSelected item.value
         , orientation VERTICAL
         ]
-        [ textView 
-          [ text item.text 
-          , textSize FontSize.a_14 
+        [ textView
+          [ text item.text
+          , textSize FontSize.a_14
           , fontStyle $ FontStyle.regular LanguageStyle
           , color Color.black900
           , margin $ Margin 16 15 16 15
@@ -282,12 +284,12 @@ genderOptionsView state push =
           , margin $ MarginHorizontal 16 16
           ][]
         ]
-       )(genderOptionsArray)
+       )(genderOptionsArray state)
 
     )
 
-genderOptionsArray :: Array {text :: String , value :: ST.Gender}
-genderOptionsArray = 
+genderOptionsArray :: ST.AccountSetUpScreenState ->  Array {text :: String , value :: ST.Gender}
+genderOptionsArray _ =
   [ {text : (getString FEMALE) , value : ST.FEMALE}
   , {text : (getString MALE) , value : ST.MALE}
   , {text : (getString OTHER) , value : ST.OTHER}

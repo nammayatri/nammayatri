@@ -95,7 +95,7 @@ emailEditTextConfig state = let
             editText {
                 text = fromMaybe "" state.data.emailId,
                 placeholder = "example@xyz.com",
-                placeholderColor = Color.black500,
+                placeholderColor = Color.black600,
                 textSize = FontSize.a_16,
                 fontStyle = FontStyle.semiBold LanguageStyle
             },

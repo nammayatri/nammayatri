@@ -388,7 +388,7 @@ getEN script = case script of
   REQUEST_CALLBACK -> "Request Callback"
   MOBILE -> "Mobile"
   HOW_DO_YOU_IDENTIFY_YOURSELF -> "How do you identify yourself as?"
-  SELECT_YOUR_GENDER -> "Select your gender"
+  SELECT_YOUR_GENDER -> "Select Your Gender"
   FEMALE -> "Female"
   MALE -> "Male"
   PREFER_NOT_TO_SAY -> "Prefer not to say"

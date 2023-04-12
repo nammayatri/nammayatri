@@ -180,7 +180,7 @@ profileView state push =
           height WRAP_CONTENT
         , width WRAP_CONTENT
         , orientation HORIZONTAL
-        , gravity BOTTOM
+        , gravity CENTER_VERTICAL
         , margin $ MarginTop 4
         , visibility case profileCompleteValue " " of 
             "100" -> GONE 
@@ -197,7 +197,7 @@ profileView state push =
           [ imageWithFallback if profileCompleteValue " " == "75" then "ic_75_percent,https://assets.juspay.in/nammayatri/images/user/ic_75_percent.png" else if profileCompleteValue "" == "50" then "ic_50_percent,https://assets.juspay.in/nammayatri/images/user/ic_50_percent.png" else ""
           , height $ V 10 
           , width $ V 10
-          , margin $ Margin 4 0 4 2
+          , margin $ Margin 4 4 4 2
           ]
         , textView 
           [ textSize FontSize.a_12
@@ -260,5 +260,5 @@ profileCompleteValue _ = let
   gender = getValueToLocalStore GENDER 
   in 
     if (email == "__failed" || email == "(null)") && (gender == "__failed" || gender == "(null)") then "50"
-      else if (email == "__failed" || email == "(null)") || (gender == "__failed" || gender == "(null)") then "75" 
+      else if (email == "__failed" || email == "(null)" || gender == "__failed" || gender == "(null)") then "75" 
       else "100"

@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -40,7 +40,7 @@ instance loggableAction :: Loggable Action where
     BackPressed -> do
       trackAppBackPress appId (getScreen ACCOUNT_SET_UP_SCREEN)
       trackAppEndScreen appId (getScreen ACCOUNT_SET_UP_SCREEN)
-    PrimaryButtonActionController act -> case act of 
+    PrimaryButtonActionController act -> case act of
       PrimaryButtonController.OnClick -> do
         trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "primary_button_action" "continue"
       PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "primary_button" "no_action"
@@ -64,6 +64,7 @@ instance loggableAction :: Loggable Action where
     EditTextFocusChanged -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "name_edit_text_focus_changed" "edit_text"
     TextChanged value -> trackAppTextInput appId (getScreen ACCOUNT_SET_UP_SCREEN) "name_text_changed" "edit_text"
     GenderSelected value -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "gender_selected" "edit_text"
+    AnimationEnd _ -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "show_options" "animation_end"
 
 data ScreenOutput
   = GoHome AccountSetUpScreenState
@@ -75,12 +76,13 @@ data Action
   | NameEditTextActionController PrimaryEditTextController.Action
   | GenericHeaderActionController GenericHeaderController.Action
   | PopUpModalAction PopUpModal.Action
-  | MenuButtonAC MenuButtonController.Action 
-  | ShowOptions 
+  | MenuButtonAC MenuButtonController.Action
+  | ShowOptions
   | EditTextFocusChanged
   | TextChanged String
-  | GenderSelected Gender 
+  | GenderSelected Gender
   | AfterRender
+  | AnimationEnd String
 
 eval :: Action -> AccountSetUpScreenState -> Eval Action ScreenOutput AccountSetUpScreenState
 eval (PrimaryButtonActionController PrimaryButtonController.OnClick) state = do
@@ -102,9 +104,11 @@ eval (TextChanged value) state = do
     newState = state { data { name = trim value } }
   continue newState { props { expandEnabled = false, genderOptionExpanded = false, btnActive = (newState.data.name /= "") && (length newState.data.name >= 3) && (newState.data.gender /= Nothing)} }
 
-eval (ShowOptions) state = do 
+eval (ShowOptions) state = do
   _ <- pure $ hideKeyboardOnNavigation true
   continue state{props{genderOptionExpanded = not state.props.genderOptionExpanded, expandEnabled = true}}
+
+eval (AnimationEnd _)  state = continue state{props{showOptions = false}}
 
 eval BackPressed state = do
   _ <- pure $ hideKeyboardOnNavigation true
