@@ -13,8 +13,7 @@
 -}
 
 module API.UI.Select
-  ( DSelect.DSelectReq (..),
-    DSelect.DEstimateSelectReq (..),
+  ( DSelect.DEstimateSelectReq (..),
     DSelect.DSelectRes (..),
     DSelect.SelectListRes (..),
     DSelect.QuotesResultResponse (..),
@@ -87,7 +86,7 @@ select personId estimateId = withFlowHandlerAPI . withPersonIdLogTag personId $ 
 select2 :: Id DPerson.Person -> Id DEstimate.Estimate -> DSelect.DEstimateSelectReq -> FlowHandler APISuccess
 select2 personId estimateId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   dSelectReq <- DSelect.select personId estimateId req
-  becknReq <- ACL.buildSelectReq dSelectReq 
+  becknReq <- ACL.buildSelectReq dSelectReq
   void $ withShortRetry $ CallBPP.select dSelectReq.providerUrl becknReq
   pure Success
 

@@ -64,12 +64,12 @@ INSERT INTO atlas_driver_offer_bpp.driver_stats (driver_id, idle_since) VALUES
 	('ND-hatchback-driver-0000000000000000', '2022-04-12 15:15:42.283174+00');
 
 INSERT INTO atlas_driver_offer_bpp.registration_token (id, auth_medium, auth_type, auth_value_hash, token, verified, auth_expiry, token_expiry, attempts, entity_id, entity_type, info, created_at, updated_at) VALUES
-	('favorit-admin-0000000000000000000000', 'SMS', 'OTP', '3249', 'favorit-admin-0000000000000000-token', true, 3, 365, 3, 'favorit-admin-0000000000000000000000', 'USER                                ', NULL, '2022-04-12 15:15:42.231116+00', '2022-04-12 15:15:42.231116+00'),
-	('favorit-suv-000000000000000000000000', 'SMS', 'OTP', '3249', 'favorit-suv-000000000000000000-token', true, 3, 365, 3, 'favorit-suv-000000000000000000000000', 'USER                                ', NULL, '2022-04-12 15:15:42.232189+00', '2022-04-12 15:15:42.232189+00'),
-	('favorit-sedan-0000000000000000000000', 'SMS', 'OTP', '3249', 'favorit-sedan-0000000000000000-token', true, 3, 365, 3, 'favorit-sedan-0000000000000000000000', 'USER                                ', NULL, '2022-04-12 15:15:42.232189+00', '2022-04-12 15:15:42.232189+00'),
-	('favorit-hatchback-000000000000000000', 'SMS', 'OTP', '3249', 'favorit-hatchback-000000000000-token', true, 3, 365, 3, 'favorit-hatchback-000000000000000000', 'USER                                ', NULL, '2022-04-12 15:15:42.232974+00', '2022-04-12 15:15:42.232974+00'),
-	('favorit-auto1-0000000000000000000000', 'SMS', 'OTP', '1233', 'favorit-auto1-0000000000000000-token', true, 3, 365, 3, 'favorit-auto1-0000000000000000000000', 'USER                                ', NULL, '2022-04-12 15:15:42.292899+00', '2022-04-12 15:15:42.292899+00'),
-	('favorit-auto2-0000000000000000000000', 'SMS', 'OTP', '1234', 'favorit-auto2-0000000000000000-token', true, 3, 365, 3, 'favorit-auto2-0000000000000000000000', 'USER                                ', NULL, '2022-04-12 15:15:42.296488+00', '2022-04-12 15:15:42.296488+00');
+	('favorit-admin-0000000000000000000000', 'SMS', 'OTP', '3249', 'favorit-admin-0000000000000000-token', true, 3, 365, 3, 'favorit-admin-0000000000000000000000', 'USER                                ', NULL, now (), now ()),
+	('favorit-suv-000000000000000000000000', 'SMS', 'OTP', '3249', 'favorit-suv-000000000000000000-token', true, 3, 365, 3, 'favorit-suv-000000000000000000000000', 'USER                                ', NULL, now (), now ()),
+	('favorit-sedan-0000000000000000000000', 'SMS', 'OTP', '3249', 'favorit-sedan-0000000000000000-token', true, 3, 365, 3, 'favorit-sedan-0000000000000000000000', 'USER                                ', NULL, now (), now ()),
+	('favorit-hatchback-000000000000000000', 'SMS', 'OTP', '3249', 'favorit-hatchback-000000000000-token', true, 3, 365, 3, 'favorit-hatchback-000000000000000000', 'USER                                ', NULL, now (), now ()),
+	('favorit-auto1-0000000000000000000000', 'SMS', 'OTP', '1233', 'favorit-auto1-0000000000000000-token', true, 3, 365, 3, 'favorit-auto1-0000000000000000000000', 'USER                                ', NULL, now (), now ()),
+	('favorit-auto2-0000000000000000000000', 'SMS', 'OTP', '1234', 'favorit-auto2-0000000000000000-token', true, 3, 365, 3, 'favorit-auto2-0000000000000000000000', 'USER                                ', NULL, now (), now ());
 
 INSERT INTO atlas_driver_offer_bpp.fare_policy
   (id, organization_id, base_fare, night_shift_start, night_shift_end,
