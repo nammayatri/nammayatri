@@ -34,6 +34,8 @@ import Data.Array ((!!), mapWithIndex)
 import Data.Maybe (fromMaybe)
 import Control.Monad.Trans.Class (lift)
 import JBridge (startTimerWithTime)
+import Constant.Test as Id
+
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push state =
@@ -65,6 +67,7 @@ view push state =
             pure unit
         )
         if (state.backgroundClickable && state.dismissPopup) then (const DismissPopup) else if state.backgroundClickable then (const OnButton1Click) else (const NoAction)
+    , Id.testId $ Id.Component (if state.backgroundClickable then Id.back else Id.popUpModal)
     , gravity state.gravity
     ]
     [ linearLayout
@@ -120,6 +123,7 @@ view push state =
                     , width WRAP_CONTENT
                     , margin state.dismissPopupConfig.margin
                     , onClick push $ const OnImageClick
+                    , Id.testId $ Id.Object Id.close
                     , padding state.dismissPopupConfig.padding
                     ]
                     [ imageView
@@ -182,6 +186,7 @@ view push state =
                             pure unit
                         )
                         (const OnButton1Click)
+                    , Id.testId $ Id.Button $ Id.BtnConfig state.option1.testIdText
                     ]
                     [ textView
                         [ width WRAP_CONTENT
@@ -209,6 +214,7 @@ view push state =
                             pure unit
                         )
                         (const OnButton2Click)
+                    , Id.testId $ Id.Button $ Id.BtnConfig state.option2.testIdText
                     , padding state.option2.padding
                     , orientation VERTICAL
                     , clickable state.option2.isClickable

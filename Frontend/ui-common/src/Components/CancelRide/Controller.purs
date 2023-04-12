@@ -52,6 +52,8 @@ type PrimaryButtonTextConfig =
   {
       firstText :: String
     , secondText :: String
+    , testIdFirstText :: String
+    , testIdSecondText :: String
   }
 
 config :: Config
@@ -63,6 +65,8 @@ config =
         {
             firstText : "Go Back"
           , secondText : "Cancel Ride"
+          , testIdFirstText : ""
+          , testIdSecondText : ""
         }
     , activeIndex : Nothing  
     , activeReasonCode : Nothing

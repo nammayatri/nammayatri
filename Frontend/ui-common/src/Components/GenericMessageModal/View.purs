@@ -28,6 +28,7 @@ import Font.Size as FontSize
 import PrestoDOM.Properties(cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Common.Types.App
+import Constant.Test as Id
 
 view :: forall w. (Action -> Effect Unit) -> Config ->  PrestoDOM (Effect Unit) w
 view push state =
@@ -37,6 +38,7 @@ view push state =
     , gravity BOTTOM
     , orientation VERTICAL
     , background Color.black9000
+    , Id.testId $ Id.Component Id.genericMessage
     ][  linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -83,5 +85,6 @@ primaryButtonConfig state = let
       , background = Color.black900
       , cornerRadius = 0.0
       , height = (V 50)
+      , testIdText = state.testIdText
       }
   in primaryButtonConfig'
