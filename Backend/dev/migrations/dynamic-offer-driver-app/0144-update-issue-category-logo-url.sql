@@ -1,4 +1,4 @@
 UPDATE atlas_driver_offer_bpp.issue_category SET logo_url = 'https://assets.juspay.in/nammayatri/images/common/ic_lost_and_found.png' WHERE id = '02d3fbe2-d5ad-4057-94e1-e84fde1ef3f6';
 UPDATE atlas_driver_offer_bpp.issue_category SET logo_url = 'https://assets.juspay.in/nammayatri/images/common/ic_fare_related.png' WHERE id = '5ca814d9-66e2-4ccc-b236-40b73b705e88';
-UPDATE atlas_driver_offer_bpp.issue_category SET logo_url = 'https://assets.juspay.in/nammayatri/images/common/ic_ride_related.png' WHERE id = 'a8ff40fb-88a0-440b-9763-e6c58929e5036';
+UPDATE atlas_driver_offer_bpp.issue_category SET logo_url = 'https://assets.juspay.in/nammayatri/images/common/ic_ride_related.png' WHERE id = 'a8ff40fb-88a0-440b-9763-e6c58929e503';
 UPDATE atlas_driver_offer_bpp.issue_category SET logo_url = 'https://assets.juspay.in/nammayatri/images/common/ic_app_related.png' WHERE id = '3c2970e3-f01a-4dc3-8a21-3b77f01497ea';

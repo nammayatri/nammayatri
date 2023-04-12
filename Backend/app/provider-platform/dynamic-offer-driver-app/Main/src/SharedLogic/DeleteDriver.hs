@@ -71,8 +71,8 @@ deleteDriver merchantShortId reqDriverId = do
     QDriverInfo.deleteById (cast reqDriverId)
     QDriverFlowStatus.deleteById reqDriverId
     QMessage.deleteByPersonId reqDriverId
-    QPerson.deleteById reqDriverId
     QIssueReport.deleteByPersonId reqDriverId
+    QPerson.deleteById reqDriverId
   CQDriverInfo.clearDriverInfoCache (cast reqDriverId)
   logTagInfo "deleteDriver : " (show reqDriverId)
   return Success
