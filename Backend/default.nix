@@ -33,15 +33,17 @@
         };
     };
 
-    packages = {
-      # The final nammayatri package containing the various executables.
-      nammayatri = pkgs.symlinkJoin {
-        name = "nammayatri-exes";
-        paths =
-          builtins.map
-            (p: pkgs.haskell.lib.justStaticExecutables p.package)
-            (lib.attrValues config.haskellProjects.default.outputs.packages);
+    packages =
+      let
+        localCabalPackages = lib.mapAttrs (_: p: p.package) config.haskellProjects.default.outputs.packages;
+      in
+      localCabalPackages // {
+        # The final nammayatri package containing the various executables.
+        nammayatri = pkgs.symlinkJoin {
+          name = "nammayatri-exes";
+          paths =
+            builtins.map pkgs.haskell.lib.justStaticExecutables (lib.attrValues localCabalPackages);
+        };
       };
-    };
   };
 }
