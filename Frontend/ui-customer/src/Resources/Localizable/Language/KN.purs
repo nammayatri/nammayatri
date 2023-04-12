@@ -247,7 +247,7 @@ getKN script = case script of
   NOT_NOW -> "ಈಗಲ್ಲ"
   OF -> "ರಲ್ಲಿ"
   LOST_SOMETHING -> "ಏನನ್ನಾದರೂ ಕಳೆದುಕೊಂಡಿದ್ದೀರಾ?"
-  TRY_CONNECTING_WITH_THE_DRIVER -> "ಚಾಲಕನೊಂದಿಗೆ ಸಂಪರ್ಕವನ್ನು ಪ್ರಯತ್ನಿಸಿ"
+  TRY_CONNECTING_WITH_THE_DRIVER -> "ಡ್ರೈವರ್‌ನೊಂದಿಗೆ ನೇರವಾಗಿ ಸಂಪರ್ಕಿಸಲು ನೀವು ಕಾಲ್‌ಬ್ಯಾಕ್ ಅನ್ನು ವಿನಂತಿಸಬಹುದು"
   CALL_DRIVER -> "ಚಾಲಕನೊಂದಿಗೆ ಸಂಪರ್ಕಪಡಿಸಿ"
   NO_MORE_RIDES -> "ಇನ್ನು ರೈಡ್‌ಗಳಿಲ್ಲ"
   CONTACT_SUPPORT -> "ಬೆಂಬಲವನ್ನು ಸಂಪರ್ಕಿಸಿ"

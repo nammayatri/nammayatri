@@ -247,7 +247,7 @@ getHI script = case script of
   NOT_NOW -> "अभी नहीं"
   OF -> "में से"
   LOST_SOMETHING -> "क्या आपने कुछ खोया है?"
-  TRY_CONNECTING_WITH_THE_DRIVER -> "ड्राइवर से संपर्क करने की कोशिश करें"
+  TRY_CONNECTING_WITH_THE_DRIVER -> "आप सीधे ड्राइवर पार्टनर से जुड़ने के लिए कॉलबैक का अनुरोध कर सकते हैं"
   CALL_DRIVER -> "ड्राइवर से संपर्क करें"
   NO_MORE_RIDES -> "कोई और सवारी नहीं"
   CONTACT_SUPPORT -> "सहयोग टीम से संपर्क करें"
