@@ -17,7 +17,7 @@
       imports = [
         inputs.beckn-gateway.haskellFlakeProjectModules.output
       ];
-      autoWire = false;
+      autoWire = [ "packages" "checks" "apps" ];
       devShell.tools = _: {
         inherit (self'.packages)
           arion;
@@ -33,17 +33,16 @@
         };
     };
 
-    packages =
+    # The final nammayatri package containing the various executables.
+    packages.nammayatri =
       let
-        localCabalPackages = lib.mapAttrs (_: p: p.package) config.haskellProjects.default.outputs.packages;
+        localCabalPackages = builtins.map
+          (p: pkgs.haskell.lib.justStaticExecutables p.package)
+          (lib.attrValues config.haskellProjects.default.outputs.packages);
       in
-      localCabalPackages // {
-        # The final nammayatri package containing the various executables.
-        nammayatri = pkgs.symlinkJoin {
-          name = "nammayatri-exes";
-          paths =
-            builtins.map pkgs.haskell.lib.justStaticExecutables (lib.attrValues localCabalPackages);
-        };
+      pkgs.symlinkJoin {
+        name = "nammayatri-exes";
+        paths = localCabalPackages;
       };
   };
 }
