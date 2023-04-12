@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -133,7 +133,7 @@ type Language =  {
 
 
 -- ################################################ EnterMobileNumberScreenState #############################################
-type EnterMobileNumberScreenState = 
+type EnterMobileNumberScreenState =
   {
     props :: EnterMobileNumberScreenStateProps,
     data :: EnterMobileNumberScreenStateData
@@ -161,7 +161,7 @@ type EnterMobileNumberScreenStateData = {
 }
 -- ################################################ AccountSetUpScreenState ##################################################
 
-data Gender = MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY 
+data Gender = MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY
 
 derive instance genericGender :: Generic Gender _
 instance showGender :: Show Gender where show = genericShow
@@ -169,7 +169,7 @@ instance eqGender :: Eq Gender where eq = genericEq
 instance encodeGender :: Encode Gender where encode = defaultEnumEncode
 instance decodeGender :: Decode Gender where decode = defaultEnumDecode
 
-type AccountSetUpScreenState = 
+type AccountSetUpScreenState =
   { props :: AccountSetUpScreenStateProps ,
     data :: AccountSetUpScreenStateData
   }
@@ -181,16 +181,17 @@ type AccountSetUpScreenStateProps =
     , genderSelected :: Maybe String
     , genderOptionExpanded :: Boolean
     , expandEnabled :: Boolean
+    , showOptions :: Boolean
   }
 
-type AccountSetUpScreenStateData = 
+type AccountSetUpScreenStateData =
   {   name :: String
     , email :: String
     , gender :: Maybe Gender
   }
 
  -- ######################################  TripDetailsScreenState   ######################################
-type TripDetailsScreenState = 
+type TripDetailsScreenState =
   {
     data :: TripDetailsScreenData,
     props :: TripDetailsScreenProps
@@ -204,7 +205,7 @@ instance eqPaymentMode :: Eq PaymentMode where eq = genericEq
 instance encodePaymentMode :: Encode PaymentMode where encode = defaultEnumEncode
 instance decodePaymentMode :: Decode PaymentMode where decode = defaultEnumDecode
 
-type TripDetailsScreenData = 
+type TripDetailsScreenData =
   {
     message :: String,
     driverName :: String,
@@ -232,13 +233,13 @@ type TripDetailsScreenProps =
 
 -- ######################################  InvoiceScreenState   ######################################
 
-type InvoiceScreenState = 
+type InvoiceScreenState =
   {
     data :: InvoiceScreenData,
     props :: InvoiceScreenProps
   }
 
-type InvoiceScreenData = 
+type InvoiceScreenData =
   {
     tripCharges :: String,
     promotion :: Number,
@@ -270,7 +271,7 @@ type ContactUsScreenData =
     bookingId :: String
   }
 
-type ContactUsScreenProps = 
+type ContactUsScreenProps =
   {
     btnActive :: Boolean,
     isSubmitted :: Boolean
@@ -278,13 +279,13 @@ type ContactUsScreenProps =
 
 -- ################################################  HelpAndSuportScreenState   ################################################
 
-type HelpAndSupportScreenState = 
+type HelpAndSupportScreenState =
   {
     data :: HelpAndSupportScreenData,
     props :: HelpAndSuportScreenProps
   }
 
-type HelpAndSupportScreenData = 
+type HelpAndSupportScreenData =
   {
     date :: String,
     time :: String,
@@ -303,7 +304,7 @@ type HelpAndSupportScreenData =
     bookingId :: String
   }
 
-type HelpAndSuportScreenProps = 
+type HelpAndSuportScreenProps =
   {
     apiFailure :: Boolean
   , isCallConfirmation :: Boolean
@@ -321,15 +322,15 @@ instance eqAnimationState :: Eq AnimationState where eq = genericEq
 instance encodeAnimationState :: Encode AnimationState where encode = defaultEnumEncode
 instance decodeAnimationState :: Decode AnimationState where decode = defaultEnumDecode
 
-type MyRidesScreenState = 
+type MyRidesScreenState =
   {
     shimmerLoader :: AnimationState,
     prestoListArrayItems :: Array ItemState,
     itemsRides :: Array IndividualRideCardState,
     props :: MyRideScreenProps,
-    data :: MyRideScreenData 
+    data :: MyRideScreenData
   }
-  
+
 type MyRideScreenData = {
     selectedItem :: IndividualRideCardState,
     offsetValue :: Int,
@@ -345,8 +346,8 @@ type MyRideScreenProps = {
 }
 -- ################################################ IndividualRideCardState ##################################################
 
-type IndividualRideCardState = 
-  {  
+type IndividualRideCardState =
+  {
     date :: String,
     time :: String,
     source :: String,
@@ -370,7 +371,7 @@ type IndividualRideCardState =
     sourceLocation :: BookingLocationAPIEntity,
     destinationLocation :: BookingLocationAPIEntity,
     alpha :: String,
-    fareBreakUpList :: Fares, -- Added only For Backward Compatibility 
+    fareBreakUpList :: Fares, -- Added only For Backward Compatibility
     faresList :: Array FareComponent ,
     baseFare :: String -- Added only For Backward Compatibility
   , pickupCharges :: String
@@ -380,7 +381,7 @@ type IndividualRideCardState =
   , extraDistance :: String
   }
 
-type ItemState = 
+type ItemState =
   {
     date :: PropValue,
     time :: PropValue,
@@ -405,21 +406,21 @@ type ItemState =
 
 -- ################################################ PermissionScreenState ##################################################
 
-type PermissionScreenState = 
+type PermissionScreenState =
   {}
 -- ######################################  HomeScreenState   ######################################
 
-data Stage = HomeScreen 
-           | SettingPrice 
-           | FindingEstimate 
-           | ConfirmingRide 
-           | RideAccepted 
-           | RideStarted 
-           | RideCompleted 
-           | PricingTutorial 
+data Stage = HomeScreen
+           | SettingPrice
+           | FindingEstimate
+           | ConfirmingRide
+           | RideAccepted
+           | RideStarted
+           | RideCompleted
+           | PricingTutorial
            | SearchLocationModel
-           | FindingQuotes 
-           | QuoteList 
+           | FindingQuotes
+           | QuoteList
            | PreviousRating
            | ConfirmingLocation
            | DistanceOutsideLimits
@@ -443,19 +444,19 @@ instance eqPopupType :: Eq PopupType where eq = genericEq
 derive instance genericSearchLocationModelType :: Generic SearchLocationModelType _
 instance eqSearchLocationModelType :: Eq SearchLocationModelType where eq = genericEq
 
-type HomeScreenState = 
+type HomeScreenState =
   {
     data :: HomeScreenStateData,
     props :: HomeScreenStateProps
   }
 
-type HomeScreenStateData = 
+type HomeScreenStateData =
   {
     suggestedAmount :: Int
   , finalAmount :: Int
   , startedAt :: String
   , endedAt :: String
-  , source :: String 
+  , source :: String
   , destination :: String
   , eta :: String
   , vehicleDetails :: String
@@ -490,7 +491,7 @@ type HomeScreenStateProps =
   {
     currentStage :: Stage
   , rideRequestFlow :: Boolean
-  , isSearchLocation :: SearchLocationModelType 
+  , isSearchLocation :: SearchLocationModelType
   , isSource :: Maybe Boolean
   , sourceLat :: Number
   , sourceLong :: Number
@@ -549,13 +550,13 @@ type Contact = {
      phoneNo :: String
 }
 
-type RateCard = 
+type RateCard =
   {
     baseFare :: Int,
     extraFare :: Int,
     pickUpCharges :: Int,
     additionalFare :: Int,
-    nightShiftMultiplier :: Number, 
+    nightShiftMultiplier :: Number,
     nightCharges :: Boolean
   }
 
@@ -571,12 +572,12 @@ type EmergencyHelpModelState = {
    emergencyContactData :: Array Contact
 }
 
-type RecentlySearchedObject = 
+type RecentlySearchedObject =
   {
     predictionArray :: Array LocationListItemState
   }
 
-type ReferralScreenState = 
+type ReferralScreenState =
   {
       referralCode :: String
     , btnActive :: Boolean
@@ -654,7 +655,8 @@ type MyProfileScreenProps = {
   genderOptionExpanded :: Boolean,
   expandEnabled :: Boolean,
   isEmailValid :: Boolean,
-  isBtnEnabled :: Boolean
+  isBtnEnabled :: Boolean,
+  showOptions :: Boolean
 }
 
 data FieldType = NAME | EMAILID_ | GENDER_ | MOBILE
@@ -694,12 +696,12 @@ type DriverInfoCard =
   { otp :: String
   , driverName :: String
   , eta :: Int
-  , vehicleDetails :: String 
-  , registrationNumber :: String 
+  , vehicleDetails :: String
+  , registrationNumber :: String
   , rating :: Number
-  , startedAt :: String 
+  , startedAt :: String
   , endedAt :: String
-  , source :: String 
+  , source :: String
   , destination :: String
   , rideId :: String
   , price :: Int
@@ -717,29 +719,29 @@ type DriverInfoCard =
   , bppRideId :: String 
   }
 
-type RatingCard = 
+type RatingCard =
   {
     rideId :: String
   , rating :: Int
   , driverName :: String
   , finalAmount :: Int
-  , rideStartTime :: String 
-  , rideEndTime :: String 
-  , source :: String 
+  , rideStartTime :: String
+  , rideEndTime :: String
+  , source :: String
   , destination :: String
   , rideStartDate :: String
-  , vehicleNumber :: String 
-  , status :: String 
-  , shortRideId :: String 
-  , bookingId :: String 
-  , rideEndTimeUTC :: String 
+  , vehicleNumber :: String
+  , status :: String
+  , shortRideId :: String
+  , bookingId :: String
+  , rideEndTimeUTC :: String
   , dateDDMMYY :: String
   , offeredFare :: Int
   , distanceDifference :: Int
   , feedback :: String
   }
 
-type Address = 
+type Address =
   { area :: Maybe String
   , state :: Maybe String
   , country :: Maybe String
@@ -753,34 +755,34 @@ type Address =
   }
 
 
-type SavedLocationScreenState = 
+type SavedLocationScreenState =
   {
       data :: SavedLocationScreenData
     , props :: SavedLocationScreenProps
   }
 
-type SavedLocationScreenProps = 
+type SavedLocationScreenProps =
   {
     showDeleteLocationModel :: Boolean
   , apiRespReceived :: Boolean
   }
 
-type SavedLocationScreenData = 
+type SavedLocationScreenData =
   {
-    savedLocations :: Array LocationListItemState 
+    savedLocations :: Array LocationListItemState
   , deleteTag :: Maybe String
   }
 
-type DistInfo = 
-  { locationName :: String 
+type DistInfo =
+  { locationName :: String
   , distanceDiff :: Number
   }
 
-type SavedLocationData = 
+type SavedLocationData =
   {
     address :: String
   , lat :: Number
-  , lon :: Number 
+  , lon :: Number
   , tag :: String
   , placeName :: String
   , placeId :: Maybe String
@@ -795,38 +797,38 @@ instance showCardType :: Show CardType where show = genericShow
 instance encodeCardType :: Encode CardType where encode = defaultEnumEncode
 instance decodeCardType :: Decode CardType where decode = defaultEnumDecode
 
-type AddNewAddressScreenState = 
+type AddNewAddressScreenState =
   {
     data :: AddNewAddressScreenData
   , props :: AddNewAddressScreenProps
   }
 
-type AddNewAddressScreenData = 
+type AddNewAddressScreenData =
   {
     locationList :: Array LocationListItemState
-  , savedLocations :: Array LocationListItemState 
+  , savedLocations :: Array LocationListItemState
   , selectedItem :: LocationListItemState
   , activeIndex :: Maybe Int
   , selectedTag :: Maybe CardType
   , savedTags :: Array String
   , addressSavedAs :: String
   , placeName :: String
-  , lat :: Number 
+  , lat :: Number
   , lon :: Number
   , editTag :: String
   , existsAs :: String
   , currentLocation :: String
-  , currLat :: Maybe Number 
+  , currLat :: Maybe Number
   , currLon :: Maybe Number
   , address :: String
   , recentSearchs :: RecentlySearchedObject
   , locSelectedFromMap :: String
-  , latSelectedFromMap :: Number 
+  , latSelectedFromMap :: Number
   , lonSelectedFromMap :: Number
   , addressComponents :: Array AddressComponents
   }
 
-type AddNewAddressScreenProps = 
+type AddNewAddressScreenProps =
   {
     showSavePlaceView :: Boolean
   , isBtnActive :: Boolean
@@ -841,7 +843,7 @@ type AddNewAddressScreenProps =
   , editSavedLocation :: Boolean
   }
 
-type AppUpdatePopUpState = 
+type AppUpdatePopUpState =
  { version :: Int }
 
 
@@ -857,7 +859,7 @@ instance showLocItemType :: Show LocItemType where show = genericShow
 instance encodeLocItemType :: Encode LocItemType where encode = defaultEnumEncode
 instance decodeLocItemType:: Decode LocItemType where decode = defaultEnumDecode
 
-type LocationTagBarState = 
+type LocationTagBarState =
   { savedLocations :: Array LocationListItemState }
 
 type LocationListItemState = {
@@ -884,7 +886,7 @@ type LocationListItemState = {
   , locationItemType :: Maybe LocationItemType
 }
 
-data LocationItemType = RECENTS | PREDICTION | SAVED_LOCATION 
+data LocationItemType = RECENTS | PREDICTION | SAVED_LOCATION
 
 derive instance genericLocationItemType :: Generic LocationItemType _
 instance eqLocationItemType :: Eq LocationItemType where eq = genericEq
@@ -892,8 +894,8 @@ instance showLocationItemType :: Show LocationItemType where show = genericShow
 instance encodeLocationItemType :: Encode LocationItemType where encode = defaultEnumEncode
 instance decodeLocationItemType:: Decode LocationItemType where decode = defaultEnumDecode
 
-type SaveFavouriteCardState = 
-  { 
+type SaveFavouriteCardState =
+  {
     address :: String
   , tag :: String
   , tagExists :: Boolean
@@ -923,7 +925,7 @@ instance showFareTypes :: Show FareTypes where show = genericShow
 type SuccessScreenState = {
     title :: String
   , subTitle :: String
-}          
+}
 type CurrentLocationDetails =  {
     lat :: Number
   , lon :: Number

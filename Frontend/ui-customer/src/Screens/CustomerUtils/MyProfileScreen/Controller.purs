@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -79,7 +79,8 @@ instance loggableAction :: Loggable Action where
     GenderSelected value -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "in_screen" "gender_selected"
     EmailIDEditTextAction (PrimaryEditText.TextChanged id value) -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "edit_email_text_changed" "primary_edit_text"
     NoAction -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "in_screen" "no_action"
-    
+    AnimationEnd _ -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "show_options" "animation_end"
+
 data Action = GenericHeaderActionController GenericHeader.Action
             | BackPressed MyProfileScreenState
             | AfterRender
@@ -94,14 +95,15 @@ data Action = GenericHeaderActionController GenericHeader.Action
             | ShowOptions
             | GenderSelected Gender
             | NoAction
+            | AnimationEnd String
 
 data ScreenOutput = GoToHomeScreen | UpdateProfile MyProfileScreenState | DeleteAccount MyProfileScreenState | GoToHome
 eval :: Action -> MyProfileScreenState -> Eval Action ScreenOutput MyProfileScreenState
 
 eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick)) state = continueWithCmd state [do pure $ BackPressed state]
 
-eval (BackPressed backpressState) state = do 
-  if state.props.updateProfile then do 
+eval (BackPressed backpressState) state = do
+  if state.props.updateProfile then do
     _ <- pure $ hideKeyboardOnNavigation true
     continue state { props { updateProfile = false, genderOptionExpanded = false , expandEnabled = false, isEmailValid = true} }
     else if state.props.accountStatus == CONFIRM_REQ then
@@ -110,44 +112,46 @@ eval (BackPressed backpressState) state = do
       continue state
       else exit $ GoToHomeScreen
 
-eval (EditProfile fieldType) state = do 
-  case fieldType of 
-    Just EMAILID_ -> do 
+eval (EditProfile fieldType) state = do
+  case fieldType of
+    Just EMAILID_ -> do
       _ <- pure $ requestKeyboardShow (getNewIDWithTag "EmailEditText")
       pure unit
-    _ -> pure unit 
+    _ -> pure unit
   continue state { props { updateProfile = true , isEmailValid = true}, data { editedName = state.data.name, editedEmailId = state.data.emailId, editedGender = state.data.gender} }
 
-eval ShowOptions state = do 
-  _ <- pure $ hideKeyboardOnNavigation true 
-  continue state{props{genderOptionExpanded = not state.props.genderOptionExpanded, expandEnabled = true}}
+eval ShowOptions state = do
+  _ <- pure $ hideKeyboardOnNavigation true
+  continue state{props{genderOptionExpanded = not state.props.genderOptionExpanded, showOptions = true, expandEnabled = true}}
+
+eval ( AnimationEnd _ )state = continue state{props{showOptions = false}}
 
 eval (GenderSelected value) state = continue state{data{editedGender = Just value}, props{genderOptionExpanded = false}}
 
-eval (UserProfile (GetProfileRes profile)) state = do 
+eval (UserProfile (GetProfileRes profile)) state = do
   let name = (fromMaybe "" profile.firstName) <> " " <> (fromMaybe "" profile.middleName) <> " " <> (fromMaybe "" profile.lastName)
-      gender = case (profile.gender) of 
-        Just "MALE" -> Just MALE 
-        Just "FEMALE" -> Just FEMALE 
-        Just "OTHER" -> Just OTHER 
+      gender = case (profile.gender) of
+        Just "MALE" -> Just MALE
+        Just "FEMALE" -> Just FEMALE
+        Just "OTHER" -> Just OTHER
         Just "PREFER_NOT_TO_SAY" -> Just PREFER_NOT_TO_SAY
-        _ -> Nothing 
+        _ -> Nothing
 
   continue state { data { name = name, editedName = name, gender = gender, emailId = profile.email } }
 
 eval (NameEditTextAction (PrimaryEditText.TextChanged id value)) state = continue state { data { editedName = value }, props{genderOptionExpanded = false, expandEnabled = false} }
 
-eval (EmailIDEditTextAction (PrimaryEditText.TextChanged id value)) state = do 
+eval (EmailIDEditTextAction (PrimaryEditText.TextChanged id value)) state = do
   if (value == "" && state.data.errorMessage == Just EMAIL_EXISTS) then continue state {props{ isEmailValid = false, isBtnEnabled = false, genderOptionExpanded = false, expandEnabled = false}}
     else continue state {data {editedEmailId = Just value , errorMessage = if (length value == 0) then Nothing else if ( validateEmail value) then Nothing else Just INVALID_EMAIL },props{ isEmailValid = if (length value == 0) then true else validateEmail value, isBtnEnabled = if (length value == 0) then true else validateEmail value, genderOptionExpanded = false}}
 
-eval (UpdateButtonAction (PrimaryButton.OnClick)) state = do 
+eval (UpdateButtonAction (PrimaryButton.OnClick)) state = do
   _ <- pure $ hideKeyboardOnNavigation true
   updateAndExit state $ UpdateProfile state
 
 eval ReqDelAccount state = continue state{props{accountStatus = CONFIRM_REQ}}
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state {props{ accountStatus= ACTIVE}}
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = exit $ DeleteAccount state
-eval (AccountDeletedModalAction (PopUpModal.OnButton1Click)) state =  updateAndExit (state {props{accountStatus = ACTIVE}} ) $ GoToHome 
+eval (AccountDeletedModalAction (PopUpModal.OnButton1Click)) state =  updateAndExit (state {props{accountStatus = ACTIVE}} ) $ GoToHome
 
 eval _ state = continue state
