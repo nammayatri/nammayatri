@@ -12,10 +12,6 @@
       ./nix/pre-commit.nix
     ];
 
-    treefmt.config = {
-      programs.dhall.enable = true;
-    };
-
     haskellProjects.default = {
       projectRoot = ./.;
       imports = [
