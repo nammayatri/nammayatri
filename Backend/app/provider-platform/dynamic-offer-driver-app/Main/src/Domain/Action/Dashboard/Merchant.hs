@@ -141,6 +141,8 @@ merchantCommonConfigUpdate merchantShortId req = do
                popupDelayToAddAsPenalty = maybe config.popupDelayToAddAsPenalty (.value) req.popupDelayToAddAsPenalty,
                thresholdCancellationScore = maybe config.thresholdCancellationScore (.value) req.thresholdCancellationScore,
                minRidesForCancellationScore = maybe config.minRidesForCancellationScore (.value) req.minRidesForCancellationScore,
+               mediaFileUrlPattern = maybe config.mediaFileUrlPattern (.value) req.mediaFileUrlPattern,
+               mediaFileSizeUpperLimit = maybe config.mediaFileSizeUpperLimit (.value) req.mediaFileSizeUpperLimit,
                waitingTimeEstimatedThreshold = maybe config.waitingTimeEstimatedThreshold (.value) req.waitingTimeEstimatedThreshold,
                onboardingTryLimit = maybe config.onboardingTryLimit (.value) req.onboardingTryLimit,
                onboardingRetryTimeInHours = maybe config.onboardingRetryTimeInHours (.value) req.onboardingRetryTimeInHours,
@@ -243,7 +245,12 @@ driverIntelligentPoolConfigUpdate merchantShortId req = do
                cancellationRatioWindowOption = fromMaybe config.cancellationRatioWindowOption req.cancellationRatioWindowOption,
                minQuotesToQualifyForIntelligentPool = maybe config.minQuotesToQualifyForIntelligentPool (.value) req.minQuotesToQualifyForIntelligentPool,
                minQuotesToQualifyForIntelligentPoolWindowOption = fromMaybe config.minQuotesToQualifyForIntelligentPoolWindowOption req.minQuotesToQualifyForIntelligentPoolWindowOption,
-               intelligentPoolPercentage = maybe config.intelligentPoolPercentage (.value) req.intelligentPoolPercentage
+               intelligentPoolPercentage = maybe config.intelligentPoolPercentage (.value) req.intelligentPoolPercentage,
+               speedNormalizer = maybe config.speedNormalizer (.value) req.speedNormalizer,
+               driverSpeedWeightage = maybe config.driverSpeedWeightage (.value) req.driverSpeedWeightage,
+               minLocationUpdates = maybe config.minLocationUpdates (.value) req.minLocationUpdates,
+               locationUpdateSampleTime = maybe config.locationUpdateSampleTime (.value) req.locationUpdateSampleTime,
+               defaultDriverSpeed = maybe config.defaultDriverSpeed (.value) req.defaultDriverSpeed
               }
   Esq.runTransaction $ do
     CQDIPC.update updConfig
