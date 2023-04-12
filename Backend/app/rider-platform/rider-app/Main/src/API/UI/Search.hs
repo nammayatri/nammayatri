@@ -150,7 +150,8 @@ oneWaySearch personId bundleVersion clientVersion req = do
         Maps.GetRoutesReq
           { waypoints = [sourceLatlong, destinationLatLong],
             calcPoints = True,
-            mode = Just Maps.CAR
+            mode = Just Maps.CAR,
+            isWaypointNeeded = Nothing
           }
   routeResponse <- Maps.getRoutes person.merchantId request
   let shortestRouteInfo = getRouteInfoWithShortestDuration routeResponse
