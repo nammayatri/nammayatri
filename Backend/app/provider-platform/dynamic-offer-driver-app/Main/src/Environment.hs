@@ -1,3 +1,4 @@
+{-# LANGUAGE InstanceSigs #-}
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -185,6 +186,7 @@ type FlowServer api = FlowServerR AppEnv api
 type Flow = FlowR AppEnv
 
 instance Registry Flow where
+  registryLookup :: SimpleLookupRequest -> Flow (Maybe Subscriber)
   registryLookup sReq = do
     registryUrl <- asks (.registryUrl)
     Registry.withSubscriberCache (Registry.registryLookup registryUrl) sReq

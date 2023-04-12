@@ -17,9 +17,10 @@ module Domain.Types.Message.MessageReport where
 import qualified Data.Map as M
 import Data.OpenApi
 import qualified Domain.Types.Message.Message as Msg
-import Domain.Types.Person (Driver)
 import Kernel.Prelude
 import Kernel.Types.Id
+
+data Driver
 
 type MessageDynamicFieldsType = M.Map Text Text
 

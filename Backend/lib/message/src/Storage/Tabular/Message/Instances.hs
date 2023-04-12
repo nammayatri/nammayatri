@@ -29,7 +29,7 @@ instance FromTType MessageT Domain.RawMessage where
       Domain.RawMessage
         { id = Id id,
           mediaFiles = map fromKey (unPostgresList mediaFiles),
-          merchantId = fromKey merchantId,
+          merchantId = Id merchantId,
           _type = messageType,
           ..
         }
@@ -40,7 +40,7 @@ instance ToTType MessageT Domain.RawMessage where
       { id = getId id,
         messageType = _type,
         mediaFiles = PostgresList (map toKey mediaFiles),
-        merchantId = toKey merchantId,
+        merchantId = merchantId.getId,
         ..
       }
 
@@ -53,7 +53,7 @@ instance FromTType FullMessageT Domain.Message where
       Domain.Message
         { id = Id id,
           mediaFiles = map fromKey (unPostgresList mediaFiles),
-          merchantId = fromKey merchantId,
+          merchantId = Id merchantId,
           _type = messageType,
           ..
         }
@@ -65,7 +65,7 @@ instance ToTType FullMessageT Domain.Message where
             { id = getId id,
               messageType = _type,
               mediaFiles = PostgresList (map toKey mediaFiles),
-              merchantId = toKey merchantId,
+              merchantId = merchantId.getId,
               ..
             }
     let messageTranslationsT = mkMessageTranslationsT id <$> messageTranslations

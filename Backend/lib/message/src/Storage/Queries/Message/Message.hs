@@ -15,14 +15,15 @@
 
 module Storage.Queries.Message.Message where
 
-import Domain.Types.Merchant (Merchant)
-import Domain.Types.Message.Message
+import Domain.Types.Message.Message hiding (Merchant)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Storage.Tabular.Message.Instances ()
 import Storage.Tabular.Message.Message
+
+data Merchant
 
 create :: Message -> SqlDB ()
 create msg = Esq.runTransaction $
@@ -45,7 +46,7 @@ findAllWithLimitOffset mbLimit mbOffset merchantId = do
       from $
         table @MessageT
     where_ $
-      message ^. MessageMerchantId ==. val (toKey merchantId)
+      message ^. MessageMerchantId ==. val merchantId.getId
     orderBy [desc $ message ^. MessageCreatedAt]
     limit limitVal
     offset offsetVal

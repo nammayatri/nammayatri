@@ -16,11 +16,14 @@ module Domain.Types.Message.Message where
 
 import Data.Map as HM
 import Data.OpenApi hiding (description, title)
-import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Message.MediaFile as MF
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Types.Id
+
+data Merchant
+
+data Person
 
 data MessageType = Action Text | Read deriving (Generic, ToJSON, FromJSON, ToSchema, Read, Show)
 

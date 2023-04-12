@@ -231,6 +231,9 @@ cradle:
       - path: "lib/scheduler/src"
         component: "scheduler:lib"
 
+      - path: "lib/message/src"
+        component: "message:lib"
+
       - path: "lib/scheduler/test/src"
         component: "scheduler:test:scheduler-tests"
 

@@ -14,8 +14,9 @@
 
 module API.UI.Message where
 
-import qualified Domain.Action.UI.Message as DMessage
-import qualified Domain.Types.Message.Message as Message
+import qualified "message" API.UI.MessageLib as MS
+import qualified "message" Domain.Action.UI.Message as DMessage
+import qualified "message" Domain.Types.Message.Message as Message
 import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id)
@@ -23,52 +24,34 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import qualified Storage.Queries.Person as Person
 import Tools.Auth
 
 type API =
-  "message"
-    :> ( "list"
-           :> TokenAuth
-           :> QueryParam "limit" Int
-           :> QueryParam "offset" Int
-           :> Get '[JSON] [DMessage.MessageAPIEntityResponse]
-           :<|> Capture "messageId" (Id Message.Message)
-             :> "seen"
-             :> TokenAuth
-             :> Put '[JSON] APISuccess
-           :<|> Capture "messageId" (Id Message.Message)
-             :> "response"
-             :> TokenAuth
-             :> ReqBody '[JSON] DMessage.MessageReplyReq
-             :> Put '[JSON] APISuccess
-           :<|> "media" -- TODO : need to remove this apis once S3 is done.
-             :> MandatoryQueryParam "filePath" Text
-             :> TokenAuth
-             :> Get '[JSON] Text
-           :<|> Capture "messageId" (Id Message.Message)
-             :> TokenAuth
-             :> Get '[JSON] DMessage.MessageAPIEntityResponse
-       )
+  TokenAuth
+    :> MS.CommonAPI
 
 handler :: FlowServer API
-handler =
-  messageList
-    :<|> messageSeen
-    :<|> messageResponse
-    :<|> fetchMedia
-    :<|> getMessage
+handler = h
+  where
+    h dId =
+      messageList dId
+        :<|> messageSeen dId
+        :<|> messageResponse dId
+        :<|> fetchMedia dId
+        :<|> getMessage dId
 
 messageList :: Id SP.Person -> Maybe Int -> Maybe Int -> FlowHandler [DMessage.MessageAPIEntityResponse]
-messageList driverId mbLimit = withFlowHandlerAPI . DMessage.messageList driverId mbLimit
+messageList driverId mbLimit mbOffset = withFlowHandlerAPI $ DMessage.messageList (cast driverId) mbLimit mbOffset (Person.findById driverId)
 
-getMessage :: Id Message.Message -> Id SP.Person -> FlowHandler DMessage.MessageAPIEntityResponse
-getMessage msgId driverId = withFlowHandlerAPI $ DMessage.getMessage driverId msgId
+getMessage :: Id SP.Person -> Id Message.Message -> FlowHandler DMessage.MessageAPIEntityResponse
+getMessage driverId msgId = withFlowHandlerAPI $ DMessage.getMessage (cast driverId) msgId (Person.findById driverId)
 
-messageSeen :: Id Message.Message -> Id SP.Person -> FlowHandler APISuccess
-messageSeen msgId driverId = withFlowHandlerAPI $ DMessage.messageSeen driverId msgId
+messageSeen :: Id SP.Person -> Id Message.Message -> FlowHandler APISuccess
+messageSeen driverId msgId = withFlowHandlerAPI $ DMessage.messageSeen (cast driverId) msgId (Person.findById driverId)
 
-messageResponse :: Id Message.Message -> Id SP.Person -> DMessage.MessageReplyReq -> FlowHandler APISuccess
-messageResponse msgId driverId = withFlowHandlerAPI . DMessage.messageResponse driverId msgId
+messageResponse :: Id SP.Person -> Id Message.Message -> DMessage.MessageReplyReq -> FlowHandler APISuccess
+messageResponse driverId msgId messageReplyReq = withFlowHandlerAPI $ DMessage.messageResponse (cast driverId) msgId messageReplyReq (Person.findById driverId)
 
-fetchMedia :: Text -> Id SP.Person -> FlowHandler Text
-fetchMedia filePath driverId = withFlowHandlerAPI $ DMessage.fetchMedia driverId filePath
+fetchMedia :: Id SP.Person -> Text -> FlowHandler Text
+fetchMedia driverId filePath = withFlowHandlerAPI $ DMessage.fetchMedia (cast driverId) filePath (Person.findById driverId)

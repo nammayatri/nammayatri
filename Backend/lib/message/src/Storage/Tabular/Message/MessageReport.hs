@@ -18,47 +18,53 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.Message.MessageTranslation where
+module Storage.Tabular.Message.MessageReport where
 
 import qualified Domain.Types.Message.Message as Msg
-import qualified Domain.Types.Message.MessageTranslation as Domain
-import Kernel.External.Types (Language)
+import qualified Domain.Types.Message.MessageReport as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import qualified Storage.Tabular.Message.Message as Msg
-import Storage.Tabular.Person ()
+
+data Driver
+
+derivePersistField "Domain.DeliveryStatus"
 
 mkPersist
   defaultSqlSettings
   [defaultQQ|
-    MessageTranslationT sql=message_translation
+    MessageReportT sql=message_report
       messageId Msg.MessageTId
-      language Language
-      title Text
-      description Text
-      label Text Maybe
+      driverId Text
+      deliveryStatus Domain.DeliveryStatus
+      readStatus Bool
+      reply Text Maybe
+      messageDynamicFields Domain.MessageDynamicFieldsType
+      updatedAt UTCTime
       createdAt UTCTime
-      Primary messageId language
+      Primary messageId driverId
       deriving Generic
     |]
 
-instance TEntityKey MessageTranslationT where
-  type DomainKey MessageTranslationT = (Id Msg.Message, Language)
-  fromKey (MessageTranslationTKey _messageId language) = (fromKey _messageId, language)
-  toKey (messageId, language) = MessageTranslationTKey (toKey messageId) language
+instance TEntityKey MessageReportT where
+  type DomainKey MessageReportT = (Id Msg.Message, Text)
+  fromKey (MessageReportTKey _messageId _driverId) = (fromKey _messageId, _driverId)
+  toKey (messageId, driverId) = MessageReportTKey (toKey messageId) driverId
 
-instance FromTType MessageTranslationT Domain.MessageTranslation where
-  fromTType MessageTranslationT {..} = do
+instance FromTType MessageReportT Domain.MessageReport where
+  fromTType MessageReportT {..} = do
     return $
-      Domain.MessageTranslation
+      Domain.MessageReport
         { messageId = fromKey messageId,
+          driverId = Id driverId,
           ..
         }
 
-instance ToTType MessageTranslationT Domain.MessageTranslation where
-  toTType Domain.MessageTranslation {..} =
-    MessageTranslationT
+instance ToTType MessageReportT Domain.MessageReport where
+  toTType Domain.MessageReport {..} =
+    MessageReportT
       { messageId = toKey messageId,
+        driverId = driverId.getId,
         ..
       }

@@ -18,7 +18,7 @@ import qualified Data.Text as T
 import Domain.Types.Booking (Booking)
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import Domain.Types.Merchant
-import Domain.Types.Message.Message as Message
+import Domain.Types.Message.Message as Message hiding (Merchant, Person)
 import Domain.Types.Person as Person
 import Domain.Types.RegistrationToken as RegToken
 import Domain.Types.SearchRequest

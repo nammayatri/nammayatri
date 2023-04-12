@@ -26,9 +26,9 @@ import Data.Time.Format.ISO8601 (iso8601Show)
 import Data.Tuple.Extra (secondM)
 import qualified Data.Vector as V
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Message.MediaFile as Domain
-import qualified Domain.Types.Message.Message as Domain
-import qualified Domain.Types.Message.MessageReport as Domain
+import qualified "message" Domain.Types.Message.MediaFile as Domain
+import qualified "message" Domain.Types.Message.Message as Domain
+import qualified "message" Domain.Types.Message.MessageReport as Domain
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Types (base64Encode)
@@ -46,6 +46,7 @@ import qualified Storage.Queries.Message.MediaFile as MFQuery
 import qualified Storage.Queries.Message.Message as MQuery
 import qualified Storage.Queries.Message.MessageReport as MRQuery
 import qualified Storage.Queries.Message.MessageTranslation as MTQuery
+import qualified Storage.Queries.Person as QP
 
 createFilePath ::
   (MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m)) =>
@@ -166,7 +167,7 @@ addMessage merchantShortId Common.AddMessageRequest {..} = do
       return $
         Domain.Message
           { id,
-            merchantId = merchant.id,
+            merchantId = cast merchant.id,
             _type = toDomainType _type,
             title,
             label,
@@ -228,7 +229,7 @@ sendMessage merchantShortId Common.SendMessageRequest {..} = do
 messageList :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Flow Common.MessageListResponse
 messageList merchantShortId mbLimit mbOffset = do
   merchant <- findMerchantByShortId merchantShortId
-  messages <- MQuery.findAllWithLimitOffset mbLimit mbOffset merchant.id
+  messages <- MQuery.findAllWithLimitOffset mbLimit mbOffset (cast merchant.id)
   let count = length messages
   let summary = Common.Summary {totalCount = count, count}
   return $ Common.MessageListResponse {messages = buildMessage <$> messages, summary}
@@ -270,8 +271,10 @@ messageDeliveryInfo merchantShortId messageId = do
 messageReceiverList :: ShortId DM.Merchant -> Id Domain.Message -> Maybe Text -> Maybe Common.MessageDeliveryStatus -> Maybe Int -> Maybe Int -> Flow Common.MessageReceiverListResponse
 messageReceiverList merchantShortId msgId _ mbStatus mbLimit mbOffset = do
   _ <- findMerchantByShortId merchantShortId
-  encMesageReports <- Esq.runInReplica $ MRQuery.findByMessageIdAndStatusWithLimitAndOffset mbLimit mbOffset msgId $ toDomainDeliveryStatusType <$> mbStatus
-  messageReports <- mapM (secondM decrypt) encMesageReports
+  messageReportsTemp <- Esq.runInReplica $ MRQuery.findByMessageIdAndStatusWithLimitAndOffset mbLimit mbOffset msgId $ toDomainDeliveryStatusType <$> mbStatus
+  maybePersons <- mapM (\ messageReport -> QP.findById $ cast messageReport.driverId) messageReportsTemp
+  let encMessageReports = zip messageReportsTemp $ catMaybes maybePersons
+  messageReports <- mapM (secondM decrypt) encMessageReports
   let count = length messageReports
   let summary = Common.Summary {totalCount = count, count}
 

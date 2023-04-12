@@ -162,10 +162,6 @@ library
       Domain.Types.Merchant.MerchantServiceConfig
       Domain.Types.Merchant.MerchantServiceUsageConfig
       Domain.Types.Merchant.TransporterConfig
-      Domain.Types.Message.MediaFile
-      Domain.Types.Message.Message
-      Domain.Types.Message.MessageReport
-      Domain.Types.Message.MessageTranslation
       Domain.Types.OnboardingDocumentConfig
       Domain.Types.Person
       Domain.Types.QuoteSpecialZone
@@ -257,10 +253,6 @@ library
       Storage.Queries.Merchant.MerchantServiceConfig
       Storage.Queries.Merchant.MerchantServiceUsageConfig
       Storage.Queries.Merchant.TransporterConfig
-      Storage.Queries.Message.MediaFile
-      Storage.Queries.Message.Message
-      Storage.Queries.Message.MessageReport
-      Storage.Queries.Message.MessageTranslation
       Storage.Queries.OnboardingDocumentConfig
       Storage.Queries.Person
       Storage.Queries.QuoteSpecialZone
@@ -308,11 +300,6 @@ library
       Storage.Tabular.Merchant.MerchantServiceConfig
       Storage.Tabular.Merchant.MerchantServiceUsageConfig
       Storage.Tabular.Merchant.TransporterConfig
-      Storage.Tabular.Message.Instances
-      Storage.Tabular.Message.MediaFile
-      Storage.Tabular.Message.Message
-      Storage.Tabular.Message.MessageReport
-      Storage.Tabular.Message.MessageTranslation
       Storage.Tabular.OnboardingDocumentConfig
       Storage.Tabular.Person
       Storage.Tabular.QuoteSpecialZone
@@ -400,6 +387,7 @@ library
     , http-client
     , lens
     , location-updates
+    , message
     , mobility-core
     , openapi3
     , persistent
@@ -489,6 +477,7 @@ executable dynamic-offer-driver-app-exe
     , hspec
     , http-client
     , lens
+    , message
     , mobility-core
     , openapi3
     , persistent
