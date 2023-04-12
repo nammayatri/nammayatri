@@ -20,6 +20,7 @@ module Dashboard.Common.Booking
   )
 where
 
+import Beckn.Types.Core.Taxi.CancellationReasons.Types
 import Dashboard.Common as Reexport
 import Data.Aeson
 import Kernel.Prelude
@@ -62,10 +63,6 @@ data StuckBookingItem = StuckBookingItem
   { bookingId :: Id Booking,
     rideId :: Maybe (Id Ride)
   }
-  deriving stock (Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-newtype CancellationReasonCode = CancellationReasonCode Text
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

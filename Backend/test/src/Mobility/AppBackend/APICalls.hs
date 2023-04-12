@@ -21,6 +21,7 @@ import qualified "rider-app" API.UI.Feedback as AppFeedback
 import qualified "rider-app" API.UI.Registration as Reg
 import qualified "rider-app" API.UI.Select as AppSelect
 import qualified "rider-app" API.UI.Serviceability as AppServ
+import qualified Beckn.Types.Core.Taxi.CancellationReasons.Types as SRC
 import qualified "rider-app" Domain.Action.UI.Cancel as CancelAPI
 import qualified "rider-app" Domain.Types.Booking as AbeBooking
 import qualified "rider-app" Domain.Types.Booking as BRB
@@ -51,7 +52,7 @@ cancelRide = client (Proxy :: Proxy CancelAPI.API)
 
 mkAppCancelReq :: AbeCRC.CancellationStage -> CancelAPI.CancelReq
 mkAppCancelReq stage =
-  CancelAPI.CancelReq (AbeCRC.CancellationReasonCode "OTHER") stage Nothing
+  CancelAPI.CancelReq (SRC.CancellationReasonCode "OTHER") stage Nothing
 
 appConfirmRide :: Text -> Id AbeQuote.Quote -> Maybe (Id AppMPM.MerchantPaymentMethod) -> ClientM ConfirmAPI.ConfirmRes
 appConfirmRide = client (Proxy :: Proxy ConfirmAPI.API)

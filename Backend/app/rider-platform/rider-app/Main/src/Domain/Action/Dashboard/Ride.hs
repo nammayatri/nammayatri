@@ -24,6 +24,7 @@ module Domain.Action.Dashboard.Ride
 where
 
 import Beckn.ACL.Status
+import Beckn.Types.Core.Taxi.CancellationReasons.Types (CancellationReasonCode (..))
 import qualified "dashboard-helper-api" Dashboard.Common as Common
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
 import Data.Coerce (coerce)

@@ -12,16 +12,20 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Storage.Queries.CancellationReason where
+module Beckn.Types.Core.Taxi.CancellationReasons.Types where
 
-import Beckn.Types.Core.Taxi.CancellationReasons.Types hiding (priority)
-import Kernel.Prelude hiding (isNothing)
-import Kernel.Storage.Esqueleto as Esq
-import Storage.Tabular.CancellationReason
+import Data.OpenApi (ToSchema)
+import EulerHS.Prelude
 
-findAll :: Transactionable m => m [CancellationReason]
-findAll = Esq.findAll $ do
-  cancellationReason <- from $ table @CancellationReasonT
-  where_ $ cancellationReason ^. CancellationReasonEnabled
-  orderBy [desc $ cancellationReason ^. CancellationReasonPriority]
-  return cancellationReason
+newtype CancellationReasonCode = CancellationReasonCode Text
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data CancellationReason = CancellationReason
+  { reasonCode :: CancellationReasonCode,
+    description :: Text,
+    enabled :: Bool,
+    priority :: Int
+  }
+  deriving (Generic, ToJSON, ToSchema, Show)
+
+type CancellationReasons = [CancellationReason]

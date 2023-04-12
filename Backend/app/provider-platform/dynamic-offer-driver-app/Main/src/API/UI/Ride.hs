@@ -25,12 +25,12 @@ module API.UI.Ride
   )
 where
 
+import Beckn.Types.Core.Taxi.CancellationReasons.Types (CancellationReasonCode (..))
 import Data.Time (Day)
 import qualified Domain.Action.UI.Ride as DRide
 import qualified Domain.Action.UI.Ride.CancelRide as RideCancel
 import qualified Domain.Action.UI.Ride.EndRide as RideEnd
 import qualified Domain.Action.UI.Ride.StartRide as RideStart
-import Domain.Types.CancellationReason (CancellationReasonCode (..))
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as Ride

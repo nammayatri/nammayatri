@@ -15,10 +15,11 @@
 
 module Domain.Types.CancellationReason where
 
+import Beckn.Types.Core.Taxi.CancellationReasons.Types
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (id)
 
-newtype CancellationReasonCode = CancellationReasonCode Text
+{-newtype CancellationReasonCode = CancellationReasonCode Text
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data CancellationReason = CancellationReason
@@ -27,7 +28,7 @@ data CancellationReason = CancellationReason
     enabled :: Bool,
     priority :: Int
   }
-  deriving (Generic)
+  deriving (Generic, ToJSON, ToSchema, Show)-}
 
 data CancellationReasonAPIEntity = CancellationReasonAPIEntity
   { reasonCode :: CancellationReasonCode,

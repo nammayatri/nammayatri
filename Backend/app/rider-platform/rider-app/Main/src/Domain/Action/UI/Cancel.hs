@@ -21,6 +21,7 @@ module Domain.Action.UI.Cancel
   )
 where
 
+import Beckn.Types.Core.Taxi.CancellationReasons.Types (CancellationReasonCode)
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.CancellationReason as SCR
@@ -54,7 +55,7 @@ import qualified Tools.Maps as Maps
 import qualified Tools.Metrics as Metrics
 
 data CancelReq = CancelReq
-  { reasonCode :: SCR.CancellationReasonCode,
+  { reasonCode :: CancellationReasonCode,
     reasonStage :: SCR.CancellationStage,
     additionalInfo :: Maybe Text
   }

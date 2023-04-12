@@ -79,6 +79,7 @@ wrapTests func = do
     withLoggerEnv loggerConfig Nothing $ \loggerEnv -> do
       coreMetrics <- Metrics.registerCoreMetricsContainer
       -- fetch google configs for using mock-google or real google
+      version <- lookupDeploymentVersion
       appCfg <- Environment.readConfig "../"
       version <- lookupDeploymentVersion
       let appEnv =

@@ -96,6 +96,7 @@ library
     , async
     , base >=4.7 && <5
     , beckn-gateway
+    , beckn-spec
     , bytestring
     , dashboard-helper-api
     , data-default-class
@@ -186,6 +187,7 @@ test-suite beckn-integ-test
     , async
     , base >=4.7 && <5
     , beckn-gateway
+    , beckn-spec
     , beckn-test
     , bytestring
     , dashboard-helper-api

@@ -20,7 +20,7 @@
 
 module Storage.Tabular.CancellationReason where
 
-import qualified Domain.Types.CancellationReason as Domain
+import qualified Beckn.Types.Core.Taxi.CancellationReasons.Types as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 

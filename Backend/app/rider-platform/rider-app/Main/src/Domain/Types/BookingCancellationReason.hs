@@ -15,8 +15,9 @@
 
 module Domain.Types.BookingCancellationReason where
 
+import Beckn.Types.Core.Taxi.CancellationReasons.Types (CancellationReasonCode)
 import Domain.Types.Booking (Booking)
-import Domain.Types.CancellationReason (CancellationReasonCode, CancellationStage)
+import Domain.Types.CancellationReason (CancellationStage)
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Ride (Ride)
 import Kernel.External.Maps

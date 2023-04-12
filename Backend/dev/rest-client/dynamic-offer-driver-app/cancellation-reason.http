@@ -1,0 +1,6 @@
+@token = favorit-suv-000000000000000000-token
+@driver-offer-bpp-host = http://localhost:8016
+# @name cancellationReason
+GET {{driver-offer-bpp-host}}/ui/cancellationReason/list
+token: {{token}}
+###

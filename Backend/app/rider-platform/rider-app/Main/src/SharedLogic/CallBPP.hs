@@ -110,6 +110,16 @@ update ::
   m UpdateRes
 update providerUrl req = callBecknAPIWithSignature req.context.bap_id "update" API.updateAPI providerUrl req
 
+cancellationReasons ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasBapInfo r m
+  ) =>
+  BaseUrl ->
+  CancelReq ->
+  m CancelRes
+cancellationReasons = callBecknAPIWithSignature "cancel" API.cancelAPI
+
 callTrack ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     MonadFlow m,

@@ -18,6 +18,7 @@ import qualified Beckn.ACL.Cancel as CancelACL
 import qualified Beckn.ACL.Confirm as ACL
 import qualified Beckn.ACL.OnInit as TaxiACL
 import qualified Beckn.Types.Core.Taxi.API.OnInit as OnInit
+import Beckn.Types.Core.Taxi.CancellationReasons.Types (CancellationReasonCode (..))
 import qualified Domain.Action.Beckn.OnInit as DOnInit
 import qualified Domain.Action.UI.Cancel as DCancel
 import Domain.Types.CancellationReason
