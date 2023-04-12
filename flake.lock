@@ -233,11 +233,11 @@
         "treefmt-nix": "treefmt-nix_2"
       },
       "locked": {
-        "lastModified": 1681245804,
-        "narHash": "sha256-8Q8vlPnPze86lMgRmzxijHCCnid2d1fugWoOcKggtqo=",
+        "lastModified": 1681334042,
+        "narHash": "sha256-MZC2XurgMefcCNsjwEz3Y3nFTQXOQyVQ4JXIdVOwI08=",
         "owner": "nammayatri",
         "repo": "common",
-        "rev": "77fbb94fd5ec5f7a31293e86e18335fef19e6990",
+        "rev": "d35bf66041a5919bf541afedaa147396cd702e22",
         "type": "github"
       },
       "original": {
@@ -950,11 +950,11 @@
     },
     "nixpkgs-osrm": {
       "locked": {
-        "lastModified": 1680727908,
-        "narHash": "sha256-ox2WeuC3uOF3V7W/SBXmxECBhq4bqItalEJqRm+wiHc=",
+        "lastModified": 1681310105,
+        "narHash": "sha256-s76qhYeRHQXaaDd+9Qb4Frs6YXFPKZw7nudlZrRMh4E=",
         "owner": "juspay",
         "repo": "nixpkgs",
-        "rev": "21752064fd72298d3df883cf718548ef4983ceb4",
+        "rev": "62618152d22963c5b6ad3439b70049c4b01e1b98",
         "type": "github"
       },
       "original": {
