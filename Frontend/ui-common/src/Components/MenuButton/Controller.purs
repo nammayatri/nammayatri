@@ -43,6 +43,7 @@ type Config =
     , leftsidebutton :: Boolean
     , lat :: Number
     , lng :: Number
+    , testIdText :: String
   }
 
 type TextConfig = 
@@ -123,5 +124,6 @@ config =
     , leftsidebutton : false
     , lat : 0.0
     , lng : 0.0
+    , testIdText : ""
   }
 

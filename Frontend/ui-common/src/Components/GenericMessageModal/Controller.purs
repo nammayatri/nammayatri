@@ -24,6 +24,7 @@ type Config = {
         text :: String
         , buttonText :: String
         , openGenericMessageModal :: Boolean
+        , testIdText :: String
 }
 
 config :: Config
@@ -31,4 +32,5 @@ config = {
     text : ""
     , buttonText : ""
     , openGenericMessageModal : false
+    , testIdText : ""
 }

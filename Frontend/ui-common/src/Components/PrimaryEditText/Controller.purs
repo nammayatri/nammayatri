@@ -42,6 +42,7 @@ type Config =
   , margin :: Margin
   , type :: String
   , warningStroke :: String
+  , testIdText :: String
   }
 
 
@@ -139,5 +140,6 @@ config = {
     , margin : (Margin 0 0 0 0)
     , padding : (Padding 0 0 0 0)
   }
+  , testIdText : ""
 
 }

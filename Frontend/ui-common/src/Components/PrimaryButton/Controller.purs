@@ -44,6 +44,7 @@ type Config =
     , prefixImageConfig :: ImageConfig
     , id :: String
     , enableLoader :: Boolean
+    , testIdText :: String
   }
 
 type TextConfig = 
@@ -111,4 +112,5 @@ config =   {
     }
   , id : ""
   , enableLoader : false
+  , testIdText : ""
   }
