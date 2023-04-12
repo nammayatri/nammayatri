@@ -22,6 +22,27 @@ public class NetworkBroadcastReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
+
+        String action = intent.getAction();
+        // String type = intent.getStringExtra("Type");
+        int notificationId = intent.getIntExtra("NotifId", -1);
+        switch("NAVIGATE_LINK")
+        {
+            case "OPINION_POLL":
+              System.out.println(action);
+              NotificationUtils.clearNotification(context, notificationId);
+              break;
+            
+            case "NAVIGATE_LINK":
+              System.out.println(action);
+              NotificationUtils.openNotificationLink(context, intent);
+              NotificationUtils.clearNotification(context, notificationId);
+              break;
+
+            default:
+              break;
+            
+        }
         this.context = context;
         if (context!=null){
             if(!isNetworkAvailable()){

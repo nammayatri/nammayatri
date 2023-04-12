@@ -72,7 +72,6 @@ import javax.net.ssl.HttpsURLConnection;
 public class NotificationUtils extends AppCompatActivity {
 
     private static final String TAG = "NotificationUtils";
-    
     public static String CHANNEL_ID = "General";
     public static String FLOATING_NOTIFICATION = "FLOATING_NOTIFICATION";
     public static String DRIVER_HAS_REACHED = "DRIVER_HAS_REACHED";
@@ -483,6 +482,176 @@ public class NotificationUtils extends AppCompatActivity {
                 }
             }
     }
+
+    // public static void createNotificationWithButton(Context context, String title, String msg, JSONObject data, String imageUrl ) throws JSONException{
+    //     // Create an intent to open the URL when the button is clicked
+    //     Intent intent = new Intent(Intent.ACTION_VIEW);
+    //     String url = "www.google.com";
+    //     intent.setData(Uri.parse(url));
+
+    //     // Create the PendingIntent for the button
+    //     PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, 0);
+
+    //     // Create the notification builder
+    //     NotificationCompat.Builder builder = new NotificationCompat.Builder(context, "default")
+    //             .setSmallIcon(smallIcon)
+    //             .setContentTitle(title)
+    //             .setContentText(msg)
+    //             .setPriority(NotificationCompat.PRIORITY_HIGH)
+    //             .setAutoCancel(true)
+    //             .addAction(smallIcon, "Open URL", pendingIntent);
+
+    //     // Add the image if one is specified
+    //     if (imageUrl != null && !imageUrl.isEmpty()) {
+    //         try {
+    //             Bitmap bitmap = BitmapFactory.decodeStream((InputStream) new URL(imageUrl).getContent());
+    //             builder.setStyle(new NotificationCompat.BigPictureStyle()
+    //                     .bigPicture(bitmap)
+    //                     .bigLargeIcon(null));
+    //         } catch (Exception e) {
+    //             e.printStackTrace();
+    //         }
+    //     }
+    
+    //     // Show the notification
+    //     NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
+    //     notificationManager.notify(0, builder.build());
+    // }
+
+
+    public static void clearNotification(Context context, int notifId){
+        NotificationManager notificationManager = (NotificationManager) context.getSystemService(NOTIFICATION_SERVICE);
+        notificationManager.cancel(notifId);
+    }
+    public static void openNotificationLink(Context context, Intent intent)
+    {
+        System.out.println("In Function..................");
+        Intent webIntent = new Intent(Intent.ACTION_VIEW);
+        webIntent.setData(intent.getData())
+                .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        context.startActivity(webIntent);
+    }
+    public static void showNotificationActionWithPoll(Context context, String title, String msg, JSONObject data, String imageUrl, String type, String uri){
+        System.out.println("Testing Utils..........");
+        try{
+            // Bitmap bigIcon = BitmapFactory.decodeResource(context.getResources(), R.mipmap.ic_launcher);
+            // Bitmap bitmap = null;
+            // if (imageUrl != null)
+            // {
+            //     bitmap = getBitmapfromUrl(imageUrl);
+            // }
+            Intent yesIntent = new Intent(context, NetworkBroadcastReceiver.class);
+            yesIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            yesIntent.setAction("YES_ACTION");
+            yesIntent.putExtra("NotifId", notificationId);
+            yesIntent.putExtra("Type",type);
+
+            Intent noIntent = new Intent(context, NetworkBroadcastReceiver.class);
+            noIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            noIntent.setAction("NO_ACTION");
+            noIntent.putExtra("NotifId", notificationId);
+            noIntent.putExtra("Type",type);
+
+            // if(type.equals("NAVIGATE_LINK"))
+            // {
+            //     yesIntent.setData(Uri.parse(uri));
+            // }
+
+            System.out.println("Notificationn Utils Data"+ data.toString());
+            System.out.println("Notificationn111"+data.getString("notification_type"));
+            System.out.println("Notificationn222"+(data.getString("entity_ids")));
+            System.out.println("imageUrl"+imageUrl);
+
+            PendingIntent pendingIntentYes = PendingIntent.getBroadcast(context, notificationId, yesIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+            PendingIntent pendingIntentNo = PendingIntent.getBroadcast(context, notificationId, noIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+            String notificationType = new String(data.getString("notification_type"));
+
+            String channelId;
+            System.out.println("showNotification:- "+ notificationType);
+
+            channelId = FLOATING_NOTIFICATION;
+
+            NotificationCompat.Builder mBuilder=new NotificationCompat.Builder(context,channelId);
+            mBuilder.setSmallIcon(smallIcon)
+                    .setContentTitle(title)
+                    .setContentText(msg)
+                    .setChannelId(channelId)
+                    .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                    .setAutoCancel(false)
+                    .setStyle(new NotificationCompat.BigTextStyle().bigText(msg));
+            
+            
+            mBuilder.addAction(1,"Yes", pendingIntentYes);
+            mBuilder.addAction(2,"No", pendingIntentNo);
+            //Sending
+            NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
+            
+            notificationManager.notify(notificationId, mBuilder.build());
+            notificationId++;
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
+   }
+   public static void showNotificationActionWithLink(Context context, String title, String msg, JSONObject data, String imageUrl, String uri){
+    System.out.println("Testing Utils..........");
+    try{
+        // Bitmap bigIcon = BitmapFactory.decodeResource(context.getResources(), R.mipmap.ic_launcher);
+        // Bitmap bitmap = null;
+        // if (imageUrl != null)
+        // {
+        //     bitmap = getBitmapfromUrl(imageUrl);
+        // }
+        System.out.println("url "+ uri);
+        Intent yesIntent = new Intent("YES_ACTION",Uri.parse(uri),context, NetworkBroadcastReceiver.class);
+        yesIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        yesIntent.putExtra("NotifId", notificationId);
+        yesIntent.putExtra("Type","NAVIGATE_LINK");
+
+        Intent noIntent = new Intent(context, NetworkBroadcastReceiver.class);
+        noIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        noIntent.setAction("NO_ACTION");
+        noIntent.putExtra("NotifId", notificationId);
+        noIntent.putExtra("Type","NAVIGATE_LINK");
+
+        System.out.println("Notificationn Utils Data"+ data.toString());
+        System.out.println("Notificationn111"+data.getString("notification_type"));
+        System.out.println("Notificationn222"+(data.getString("entity_ids")));
+        System.out.println("imageUrl"+imageUrl);
+
+        PendingIntent pendingIntentYes = PendingIntent.getBroadcast(context, notificationId, yesIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+        PendingIntent pendingIntentNo = PendingIntent.getBroadcast(context, notificationId, noIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+        String notificationType = new String(data.getString("notification_type"));
+
+        String channelId;
+        System.out.println("showNotification:- "+ notificationType);
+
+        channelId = FLOATING_NOTIFICATION;
+
+        NotificationCompat.Builder mBuilder=new NotificationCompat.Builder(context,channelId);
+        mBuilder.setSmallIcon(smallIcon)
+                .setContentTitle(title)
+                .setContentText(msg)
+                .setChannelId(channelId)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setAutoCancel(false)
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(msg));
+        
+        
+        mBuilder.addAction(1,"Open", pendingIntentYes);
+        mBuilder.addAction(2,"Dismiss", pendingIntentNo);
+        //Sending
+        NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
+        
+        notificationManager.notify(notificationId, mBuilder.build());
+        notificationId++;
+    }
+    catch (Exception e){
+        e.printStackTrace();
+    }
+}
 
     private static Bitmap getBitmapfromUrl(String imageUrl) {
         try {

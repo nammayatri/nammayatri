@@ -78,6 +78,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             String body;
             String icon;
             String imageUrl;
+            String uri="";
 
             if (remoteMessage.getData().containsKey("notification_json")) {
                 notification_payload = new JSONObject(remoteMessage.getData().get("notification_json"));
@@ -96,6 +97,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 title = notification_payload.get("title").toString();
                 body = notification_payload.get("body").toString();
                 icon = notification_payload.get("icon").toString();
+                uri = notification_payload.get("uri").toString();
                 if (notification_payload.has("imageUrl")) {
                     imageUrl = notification_payload.get("imageUrl").toString();
                 } else {
@@ -183,7 +185,23 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                     case NotificationTypes.REFERRAL_ACTIVATED :
                         sharedPref.edit().putString("REFERRAL_ACTIVATED", "true").apply();
                         break;
-                        
+                    
+                    case NotificationTypes.OPINION_POLL :
+                        System.out.println("OPENING_POLL_________________________________");
+                        sharedPref.edit().putString("OPINION_POLL", "true").apply();
+//                        NotificationUtils.showNotificationActionWithPoll(this, title, body, payload, imageUrl, "ABC");
+                        break;
+                    
+                    case NotificationTypes.NAVIGATE_LINK :
+                        sharedPref.edit().putString("NAVIGATE_LINK", "true").apply();
+//                        NotificationUtils.showNotificationActionWithPoll(this, title, body, payload, imageUrl, uri, "XYZ");
+                        break;
+                    
+                    case NotificationTypes.REMOTE_API_INVOKE :
+                        sharedPref.edit().putString("REMOTE_API_INVOKE", "true").apply();
+//                        NotificationUtils.createNotificationWithButton(this, title, body, payload, imageUrl);
+                        break;
+
                     default:
                         if (payload.get("show_notification").equals("true")) {
                             NotificationUtils.showNotification(this, title, body, payload, imageUrl);
@@ -321,5 +339,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         private static final String NEW_MESSAGE = "NEW_MESSAGE";
         private static final String REGISTRATION_APPROVED = "REGISTRATION_APPROVED";
         private static final String REFERRAL_ACTIVATED = "REFERRAL_ACTIVATED";
+        private static final String OPINION_POLL = "OPINION_POLL";
+        private static final String NAVIGATE_LINK = "NAVIGATE_LINK";
+        private static final String REMOTE_API_INVOKE = "REMOTE_API_INVOKE";
     }
 }
