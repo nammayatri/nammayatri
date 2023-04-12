@@ -64,7 +64,7 @@ confirmLostAndFoundConfig state = let
         text = (getString TRY_CONNECTING_WITH_THE_DRIVER)
       , margin = (Margin 0 4 0 20)},
       option1 {text = (getString CANCEL_)},
-      option2 {text = (getString CALL_DRIVER),margin = (Margin 12 0 0 0)}
+      option2 {text = (getString REQUEST_CALLBACK),margin = (Margin 12 0 0 0)}
     }
     in popUpConfig'
 

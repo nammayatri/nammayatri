@@ -385,3 +385,4 @@ getEN script = case script of
   NO_CONTACTS_LEFT_ON_DEVICE_TO_ADD -> "No contacts left on device to add"
   PERMISSION_DENIED -> "Permission Denied"
   PERCENTAGE_OF_NOMINAL_FARE -> "~10% of base fare"
+  REQUEST_CALLBACK -> "Request Callback"
