@@ -1754,17 +1754,17 @@
         "systems": "systems"
       },
       "locked": {
-        "lastModified": 1682726201,
-        "narHash": "sha256-ZW+a0YGsveC/opuhG3vBzzP5v3bmddO1VfDuJCIEdEM=",
+        "lastModified": 1682730729,
+        "narHash": "sha256-NaVvT5ZX2yFi2ayBZTzqycPitayoCOvbfxOHl3HIbXc=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "8b378e892f0b89e35e7a1889513475330b2c3c09",
+        "rev": "23a3882f8e687af73c3c3785c30f30ea556c747d",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "8b378e892f0b89e35e7a1889513475330b2c3c09",
+        "rev": "23a3882f8e687af73c3c3785c30f30ea556c747d",
         "type": "github"
       }
     },
