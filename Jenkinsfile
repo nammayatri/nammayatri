@@ -8,12 +8,12 @@ pipeline {
         }
         stage ('Nix Build') {
             steps {
-                sh 'nix build -L .#nammayatri'
+                sh 'nix build --no-link --no-update-lock-file -L .#nammayatri'
             }
         }
         stage ('Flake check') {
             steps {
-                sh 'nix build -L .#check'
+                sh 'nix build --no-link --no-update-lock-file -L .#check'
             }
         }
         stage ('Docker image') {
