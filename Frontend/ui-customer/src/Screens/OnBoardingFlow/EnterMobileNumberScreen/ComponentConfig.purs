@@ -37,8 +37,8 @@ mobileNumberButtonConfig state = let
     primaryButtonConfig' = config 
       { textConfig{ text = (getString CONTINUE) }
       , id = "PrimaryButtonMobileNumber"
-      , isClickable = state.props.btnActiveMobileNuber
-      , alpha = if state.props.btnActiveMobileNuber then 1.0 else 0.4
+      , isClickable = state.props.btnActiveMobileNumber
+      , alpha = if state.props.btnActiveMobileNumber then 1.0 else 0.4
       , margin = (Margin 0 0 0 0 )
       , enableLoader = (JB.getBtnLoader "PrimaryButtonMobileNumber")
       }

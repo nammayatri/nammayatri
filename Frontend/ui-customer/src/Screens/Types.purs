@@ -141,7 +141,7 @@ type EnterMobileNumberScreenState =
 
 type EnterMobileNumberScreenStateProps = {
   enterOTP :: Boolean,
-  btnActiveMobileNuber :: Boolean,
+  btnActiveMobileNumber :: Boolean,
   btnActiveOTP :: Boolean,
   isValidMobileNumber :: Boolean,
   wrongOTP :: Boolean,
