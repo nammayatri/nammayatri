@@ -29,7 +29,7 @@ initData = {
     },
     props: {
         enterOTP : false,
-        btnActiveMobileNuber : false,
+        btnActiveMobileNumber : false,
         btnActiveOTP :false,
         isValidMobileNumber : true,
         wrongOTP : false,

@@ -78,11 +78,13 @@ eval (TIMERACTION time) state = do
       continue state { data = state.data {timer = "10s"}, props = state.props{resendEnabled = true}}
       else continue $ state {  data = state.data {timer = time }, props = state.props{resendEnabled = false}}
 eval (PrimaryEditTextAction (PrimaryEditText.TextChanged valId newVal)) state = do
-  _ <- if length newVal >= 4 then do
-            pure $ hideKeyboardOnNavigation true 
-            else pure unit
-  continue state { props = state.props { btnActive = if length newVal == 4 then true else false, isValid = false}
+  let newState = state { props = state.props { btnActive = if length newVal == 4 then true else false, isValid = false}
                   , data = state.data { otp = if length newVal <= 4 then newVal else state.data.otp }}
+  if length newVal >= 4 then do
+      _ <- pure $ hideKeyboardOnNavigation true
+      exit (GoToHome newState)
+      else continue newState
+  
 
 eval (AutoFill otpReceived) state = do 
   updateAndExit (state { data {capturedOtp = otpReceived, otp = if (length otpReceived) == 4 then otpReceived else state.data.otp } }) $ GoToHome (state { data {capturedOtp = otpReceived, otp = if (length otpReceived) == 4 then otpReceived else state.data.otp } })

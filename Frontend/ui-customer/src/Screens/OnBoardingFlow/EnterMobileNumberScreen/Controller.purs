@@ -124,18 +124,17 @@ eval (MobileNumberEditTextAction (PrimaryEditTextController.TextChanged id value
         pure unit
         else pure unit
     let newState = state { props = state.props { isValidMobileNumber = isValidMobileNumber
-                                        , btnActiveMobileNuber = if (length value == 10 && isValidMobileNumber) then true else false}
+                                        , btnActiveMobileNumber = if (length value == 10 && isValidMobileNumber) then true else false}
                                         , data = state.data { mobileNumber = if length value <= 10 then value else state.data.mobileNumber}}  
     continue newState
 
 eval (OTPEditTextAction (PrimaryEditTextController.TextChanged id value)) state = do 
-    _ <- if length value == 4 then do
-            pure $ hideKeyboardOnNavigation true 
-            else pure unit
     let newState = state { props = state.props { btnActiveOTP = if length value == 4 then true else false, letterSpacing = if value == "" then 1.0 else 6.0, wrongOTP = if state.props.wrongOTP && value == "" then true else false}
                   , data = state.data { otp = if length value <= 4 then value else state.data.otp }}
-    _ <- pure $ spy "entermobile number " state.props.letterSpacing
-    continue newState
+    if length value == 4 then do
+        _ <- pure $ hideKeyboardOnNavigation true
+        updateAndExit newState $ GoToAccountSetUp newState 
+        else continue newState
 
 eval (GenericHeaderActionController (GenericHeaderController.PrefixImgOnClick )) state = continueWithCmd state [ do pure $ BackPressed state.props.enterOTP]
 
