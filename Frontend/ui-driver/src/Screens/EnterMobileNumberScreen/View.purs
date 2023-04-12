@@ -36,6 +36,8 @@ import Animation.Config as AnimConfig
 import Common.Types.App
 import Screens.EnterMobileNumberScreen.ComponentConfig
 import MerchantConfigs.Utils (getValueFromMerchant)
+import Constant.Test as Id
+import EN
 
 screen :: ST.EnterMobileNumberScreenState -> Screen Action ST.EnterMobileNumberScreenState ScreenOutput
 screen initialState =
@@ -64,6 +66,7 @@ view push state =
         pure unit
         ) (const AfterRender)
     , onBackPressed push (const BackPressed)
+    , Id.testId $ Id.Screen Id.enterMobileNumberScreen
     ][    PrestoAnim.animationSet 
           [ Anim.fadeIn true
           ] $ backArrow state push
@@ -99,6 +102,7 @@ backArrow state push =
       , margin (MarginTop 20)
       , imageWithFallback "ny_ic_back,https://assets.juspay.in/nammayatri/images/driver/ny_ic_back.png"
       , onClick push (const BackPressed)
+      , Id.testId $ Id.ToolBar Id.backIcon
       ]
   ]
 
@@ -138,7 +142,8 @@ primaryEditTextView state push =
           text: "",
           letterSpacing: 0.0,
           id: (EHC.getNewIDWithTag "EnterMobileNumberEditText"),
-          fontSize : FontSize.a_18
+          fontSize : FontSize.a_18,
+          testIdText : (getEN ENTER_MOBILE_NUMBER)
         })
       ]
   ]
@@ -166,6 +171,7 @@ underlinedTextView state push =
                   _ <- JB.openUrlInApp $ getValueFromMerchant "DOCUMENT_LINK" 
                   pure unit
                   ) (const NonDisclosureAgreementAction)
+      , Id.testId $ Id.Text (Id.link <> Id.underScore <> (getEN NON_DISCLOUSER_AGREEMENT))
       ][ textView (
         [ width WRAP_CONTENT
         , height WRAP_CONTENT

@@ -228,7 +228,8 @@ type PrimaryEditTextState = {
   text :: String,
   fontSize :: FontSize,
   letterSpacing :: Number,
-  id :: String
+  id :: String,
+  testIdText :: String
 }
 
 ----------------------------------------------------- DriverProfileScreen ------------------------------------------------

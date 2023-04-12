@@ -34,6 +34,7 @@ import PrestoDOM.Animation as PrestoAnim
 import Screens.ChooseLanguageScreen.Controller (Action(..), eval, ScreenOutput)
 import Screens.Types as ST
 import Styles.Colors as Color
+import Constant.Test as Id
 
 screen :: ST.ChooseLanguageScreenState -> Screen Action ST.ChooseLanguageScreenState ScreenOutput
 screen initialState =
@@ -59,6 +60,7 @@ view push state =
     , gravity BOTTOM
     , onBackPressed push (const BackPressed)
     , afterRender push (const AfterRender)
+    , Id.testId $ Id.Screen Id.chooseLanguageScreen
     ][ linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT

@@ -18,6 +18,7 @@ module Screens.ChooseLanguageScreen.ComponentConfig where
 import Components.PrimaryButton as PrimaryButton
 import PrestoDOM
 import Screens.Types as ST
+import Constant.Test as Id
 
 primaryButtonViewConfig :: ST.ChooseLanguageScreenState -> PrimaryButton.Config
 primaryButtonViewConfig state = let
@@ -29,5 +30,6 @@ primaryButtonViewConfig state = let
       , height = (V 60)
       , cornerRadius = 0.0
       , margin = (Margin 0 0 0 0)
+      , testIdText = Id.next
       }
   in primaryButtonConfig'

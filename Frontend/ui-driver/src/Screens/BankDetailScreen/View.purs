@@ -33,6 +33,8 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Common.Types.App
 import Screens.BankDetailScreen.ComponentConfig
+import Constant.Test as Id
+import EN
 
 screen :: ST.BankDetailScreenState -> Screen Action ST.BankDetailScreenState ScreenOutput
 screen initialState =
@@ -54,6 +56,7 @@ view push state =
   [ height MATCH_PARENT
   , width MATCH_PARENT
   , afterRender push (const AfterRender)
+  , Id.testId $ Id.Screen Id.bankDetailsScreen
   ][
     linearLayout
         [ height MATCH_PARENT
@@ -163,6 +166,7 @@ enterBeneficiaryNumber state push =
                   , stroke ("1,#FFFFFF")
                   , id (EHC.getNewIDWithTag "beneficiaryNumber")
                   , onChange push (const BeneficiaryNumber state.props.inputData)
+                  , Id.testId $ Id.TextField (getEN ENTER_ACCOUNT_NUMBER)
                   ] <> FontStyle.subHeading1 TypoGraphy)
               ]
         ]
@@ -228,6 +232,7 @@ reEnterBeneficiaryNumber state push =
                   , stroke ("1,#FFFFFF")
                   , id (EHC.getNewIDWithTag "verifybeneficiary")
                   , onChange push (const ReEnterBeneficiaryNumber state.props.inputData)
+                  , Id.testId $ Id.TextField (getEN RE_ENTER_BENIFICIARY_NUMBER)
                   ] <> FontStyle.subHeading1 TypoGraphy)
               ]
         ]
@@ -294,6 +299,7 @@ enterIfsc state push =
                 , stroke ("1,#FFFFFF")
                 , id (EHC.getNewIDWithTag "ifscCode")
                 , onChange push (const IFSCNumber state.props.inputData)
+                , Id.testId $ Id.TextField (getEN ENTER_IFSC_CODE)
                 ] <> FontStyle.subHeading1 TypoGraphy)
               ]
         ]

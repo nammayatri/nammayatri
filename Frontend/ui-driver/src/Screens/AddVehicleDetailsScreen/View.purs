@@ -41,6 +41,8 @@ import PrestoDOM.Types.DomAttributes as PTD
 import Screens.AddVehicleDetailsScreen.Controller (Action(..), eval, ScreenOutput)
 import Screens.Types (AddVehicleDetailsScreenState)
 import Styles.Colors as Color
+import Constant.Test as Id
+import EN
 
 screen :: AddVehicleDetailsScreenState -> Screen Action AddVehicleDetailsScreenState ScreenOutput
 screen initialState =
@@ -73,6 +75,7 @@ view push state =
       , onBackPressed push (const BackPressed state.props.openRCManual)
       , onClick push (const ScreenClick)
       , afterRender push (const AfterRender)
+      , Id.testId $ Id.Screen Id.addVehicleDetailsScreen
       ][  headerLayout state push
         , linearLayout
           [ width MATCH_PARENT
@@ -137,7 +140,7 @@ view push state =
         linearLayout
         [ width MATCH_PARENT
         , height MATCH_PARENT
-        ] [GenericMessageModal.view (push <<< GenericMessageModalAction) {text : (getString ISSUE_WITH_RC_IMAGE), openGenericMessageModal : state.props.limitExceedModal, buttonText : (getString NEXT) }] else linearLayout [][]
+        ] [GenericMessageModal.view (push <<< GenericMessageModalAction) {text : (getString ISSUE_WITH_RC_IMAGE), openGenericMessageModal : state.props.limitExceedModal, buttonText : (getString NEXT) , testIdText : (getEN NEXT)}] else linearLayout [][]
 
     , if state.props.openReferralMobileNumber then
         linearLayout
@@ -171,6 +174,7 @@ applyReferralView state push =
       , textSize FontSize.a_14
       , onClick push (const ReferralMobileNumber)
       , fontStyle $ FontStyle.medium LanguageStyle
+      , Id.testId $ Id.Text (getEN ADD_HERE)
       ]]
 
 referralAppliedView :: AddVehicleDetailsScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w 
@@ -225,6 +229,7 @@ referralAppliedView state push =
               , textSize FontSize.a_14
               , fontStyle $ FontStyle.medium LanguageStyle
               , onClick push (const ReferralMobileNumber)
+              , Id.testId $ Id.Text (getEN SMALLEDIT)
               ]
             ]
         ]
@@ -292,6 +297,7 @@ vehicleRegistrationNumber state push =
               , stroke ("1," <> Color.white900)
               , id (EHC.getNewIDWithTag "VehicleRegistrationNumber")
               , onChange push (const VehicleRegistrationNumber state.props.input_data)
+              , Id.testId $ Id.TextField (getEN VEHICLE_REGISTRATION_NUMBER)
               , inputTypeI 4097
               ] <> FontStyle.subHeading1 TypoGraphy)
             ]
@@ -357,6 +363,7 @@ vehicleRegistrationNumber state push =
                     , stroke ("1," <> Color.white900)
                     , id (EHC.getNewIDWithTag "VehicleRegistrationNumber")
                     , onChange push (const ReEnterVehicleRegistrationNumber state.props.input_data)
+                    , Id.testId $ Id.TextField (getEN RE_ENTER_VEHICLE_REGISTRATION_NUMBER)
                     , inputTypeI 4097
                     ] <> FontStyle.subHeading1 TypoGraphy)
                   ]
@@ -386,6 +393,7 @@ uploadRC state push =
   , onClick push (const UploadFile)
   , clickable $ not state.props.rcAvailable
   , visibility if state.data.dateOfRegistration /= Nothing then GONE else VISIBLE
+  , Id.testId $ Id.Container Id.upload
   ][  linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -504,6 +512,7 @@ previewIcon state push =
         , onClick (\action-> do
                       _ <- liftEffect $ JB.previewImage state.data.rc_base64
                       pure unit)(const PreviewImageAction)
+        , Id.testId $ Id.Element if state.props.rcAvailable then Id.preview else Id.noAction
         ] 
       , imageView
         [ height (V 10)
@@ -511,6 +520,7 @@ previewIcon state push =
         , margin (Margin 10 0 0 0)
         , imageWithFallback "ny_ic_close,https://assets.juspay.in/nammayatri/images/common/ny_ic_close.png"
         , onClick push (const RemoveUploadedFile)
+        , Id.testId $ Id.Element Id.clear
         ]
     ]
 
@@ -538,6 +548,7 @@ referralView state push =
         , color Color.blue900
         , margin (MarginRight 10)
         , onClick push (const ReferralMobileNumber)
+        , Id.testId $ Id.Text (getEN ADD_HERE)
         ] <> FontStyle.subHeading2 TypoGraphy)
   ]
   
@@ -570,6 +581,7 @@ dateOfRCRegistrationView push state =
                         _ <- JB.datePicker "MAXIMUM_PRESENT_DATE" push $ DatePicker 
                         pure unit
                       ) $ const DatePickerAction
+        , Id.testId $ Id.Container Id.calendar
       ][ textView $
         [ text if state.data.dateOfRegistration == Just "" then (getString SELECT_DATE_OF_REGISTRATION) else state.data.dateOfRegistrationView
         , color if state.data.dateOfRegistration == Just "" then Color.darkGrey else Color.greyTextColor
@@ -588,6 +600,7 @@ dateOfRCRegistrationView push state =
       , height WRAP_CONTENT
       , orientation HORIZONTAL
       , onClick push (const $ TutorialModal "REGISTERATION_DATE")
+      , Id.testId $ Id.Select (getEN WHERE_IS_MY_REGISTRATION_DATE)
       ][ textView $
         [ text (getString WHERE_IS_MY_REGISTRATION_DATE)
         , weight 1.0
@@ -615,6 +628,7 @@ headerLayout state push =
       , padding $ PaddingHorizontal 2 2
       , margin $ MarginLeft 5
       , onClick push $ const $ BackPressed state.props.openRCManual
+      , Id.testId $ Id.ToolBar Id.backIcon
       ]
     , textView
       [ width WRAP_CONTENT
@@ -638,6 +652,7 @@ headerLayout state push =
           , fontStyle $ FontStyle.semiBold LanguageStyle
           , clickable true
           , onClick push $ const $ TutorialModal "RC"
+          , Id.testId $ Id.Text (getEN HELP)
           ]
       ]
     ]

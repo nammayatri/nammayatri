@@ -20,6 +20,7 @@ import Language.Strings
 import Language.Types (STR(..))
 import PrestoDOM
 import Screens.Types as ST
+import EN
 
 logoutPopUp :: ST.DriverProfileScreenState -> PopUpModal.Config
 logoutPopUp  state = let 
@@ -27,7 +28,7 @@ logoutPopUp  state = let
   popUpConfig' = config' {
     primaryText {text = (getString LOGOUT)},
     secondaryText {text = (getString ARE_YOU_SURE_YOU_WANT_TO_LOGOUT)},
-    option1 {text = (getString GO_BACK)},
-    option2 {text = (getString LOGOUT)}
+    option1 {text = (getString GO_BACK), testIdText = (getEN GO_BACK)},
+    option2 {text = (getString LOGOUT), testIdText = (getEN LOGOUT)}
   }
   in popUpConfig'

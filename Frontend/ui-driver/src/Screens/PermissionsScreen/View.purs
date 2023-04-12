@@ -30,6 +30,8 @@ import Screens.PermissionsScreen.ScreenData (Permissions(..), permissionsList, L
 import JBridge as JB
 import Common.Types.App
 import Screens.PermissionsScreen.ComponentConfig
+import Constant.Test as Id
+import EN
 
 screen :: ST.PermissionsScreenState -> Screen Action ST.PermissionsScreenState ScreenOutput
 screen initialState =
@@ -51,6 +53,7 @@ view push state =
     , width MATCH_PARENT
     , orientation VERTICAL
     , afterRender push (const AfterRender)
+    , Id.testId $ Id.Screen Id.permissionsScreen
     ][  linearLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
@@ -111,6 +114,11 @@ permissionsListView state push =
             , orientation HORIZONTAL
             , margin (MarginTop 50)
             , onClick push (const (ItemClick item.permission))
+            , Id.testId $ Id.List case item.permission of
+                                    Overlay -> (getEN OVERLAY_TO_DRAW_OVER_APPLICATIONS)
+                                    Battery -> (getEN BATTERY_OPTIMIZATIONS)
+                                    AutoStart -> (getEN AUTO_START_APPLICATION_IN_BACKGROUND)
+                                    Location -> (getEN LOCATION_ACCESS)
             ][  titleImage item,
                 titleAndDescriptionList item,
                 checkBox item state
@@ -167,6 +175,11 @@ checkBox item state =
             Overlay -> if state.props.isOverlayPermissionChecked then VISIBLE else GONE
             AutoStart -> if state.props.isAutoStartPermissionChecked then VISIBLE else GONE
             Battery -> if state.props.isBatteryOptimizationChecked then VISIBLE else GONE
+        , Id.testId $ Id.List case item.permission of
+            Location -> if state.props.isLocationPermissionChecked then Id.enabled else Id.disabled
+            Overlay -> if state.props.isOverlayPermissionChecked then Id.enabled else Id.disabled
+            AutoStart -> if state.props.isAutoStartPermissionChecked then Id.enabled else Id.disabled
+            Battery -> if state.props.isBatteryOptimizationChecked then Id.enabled else Id.disabled
         ]
       ]
     ]

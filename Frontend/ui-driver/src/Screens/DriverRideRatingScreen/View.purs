@@ -22,6 +22,7 @@ import Screens.Types as ST
 import Screens.DriverRideRatingScreen.ScreenData(feedbackSuggestionArray)
 import Components.PrimaryButton as PrimaryButton
 import Engineering.Helpers.Commons as EHC
+import Helpers.Utils (toString)
 import Language.Strings (getString)
 import Animation as Anim
 import Data.Array as DA 
@@ -34,7 +35,8 @@ import Effect (Effect)
 import Data.Maybe
 import Common.Types.App
 import Screens.DriverRideRatingScreen.ComponentConfig
-
+import Constant.Test as Id
+import EN
 
 screen :: ST.DriverRideRatingScreenState -> Screen Action ST.DriverRideRatingScreenState ScreenOutput
 screen initialState =
@@ -58,6 +60,7 @@ view push state =
             _ <- push action
             pure unit
             ) $ const AfterRender
+        , Id.testId $ Id.Screen Id.driverRideRatingScreen
         ][  scrollView
             [ width MATCH_PARENT
             , orientation VERTICAL
@@ -91,6 +94,7 @@ topCloseButtonView state push =
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
         , onClick push $ const BackPressed
+        , Id.testId $ Id.ToolBar Id.backIcon
         ][  imageView
             [ height $ V 25
             , width $ V 25
@@ -145,6 +149,7 @@ starRatingView state push =
                           , width WRAP_CONTENT
                           , margin (MarginHorizontal 5 5)
                           , onClick push $ const (Rating index)
+                          , Id.testId $ Id.Select (Id.rideStarRating <> Id.underScore <> toString(index))
                           ][imageView
                               [ height $ V 30
                               , width $ V 30
@@ -188,6 +193,7 @@ writeCommentView state push =
         , singleLine false
         , margin (MarginTop 12)
         , onChange push FeedbackChanged
+        , Id.testId $ Id.TextField (getEN WRITE_A_COMMENT)
         ]
       ]
 
@@ -227,6 +233,7 @@ suggestionButtonView state push =
                       , gravity CENTER
                       , margin (MarginRight 10)
                       , onClick push (const $ FeedBackClick item)
+                      , Id.testId $ Id.Object (Id.feedback <> Id.underScore <> toString(index))
                       , cornerRadius 7.0
                       ][textView
                           [ height WRAP_CONTENT

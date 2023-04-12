@@ -63,6 +63,8 @@ import Control.Transformers.Back.Trans (runBackT)
 import Services.APITypes (Status(..))
 import Components.BottomNavBar.Controller (navData)
 import Screens.HomeScreen.ComponentConfig
+import Constant.Test as Id
+import EN
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -153,6 +155,7 @@ view push state =
           pure unit
         ) (const AfterRender)
       , onBackPressed push (const BackPressed)
+      , Id.testId $ Id.Screen Id.homeScreen
       ][ Anim.screenAnimationFadeInOut $
           linearLayout
             [ width MATCH_PARENT
@@ -266,6 +269,7 @@ recenterBtnView state push =
             _ <- JB.getCurrentPosition push CurrentLocation
             pure unit
           ) (const RecenterButtonAction)
+    , Id.testId $ Id.Object Id.recenter
     ]
   ]
 
@@ -329,11 +333,13 @@ driverStatus push state =
         , margin (MarginTop 10)
         , onClick push (const (ChangeStatus if state.props.statusOnline then false else true))
         , clickable if state.props.rideActionModal then false else true
+        , Id.testId $ Id.Toggle Id.driverStatus
         ]
       , textView (
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , text if (getValueToLocalStore IS_DEMOMODE_ENABLED == "true") then (getString ONLINE_VIA_DEMO_MODE) else if state.props.statusOnline then (getString ONLINE_) else (getString OFFLINE)
+        , Id.testId $ Id.Status (if (getValueToLocalStore IS_DEMOMODE_ENABLED == "true") then (getEN ONLINE_VIA_DEMO_MODE) else if state.props.statusOnline then (getEN ONLINE_) else (getEN OFFLINE))
         , color Color.greyTextColor
         ]  <> FontStyle.tags TypoGraphy
         )
@@ -499,6 +505,7 @@ goOfflineModal push state =
              , gravity CENTER
              , margin (MarginRight 10)
              , onClick push (const CancelGoOffline)
+           , Id.testId $ Id.Button $ Id.BtnConfig (getEN CANCEL)
              ][ textView (
                 [ width WRAP_CONTENT
                 , height WRAP_CONTENT
@@ -516,6 +523,7 @@ goOfflineModal push state =
              , margin (MarginRight 10)
              , background Color.black900
              , onClick push (const $ GoOffline if state.props.statusOnline then false else true)
+             , Id.testId $ Id.Button $ Id.BtnConfig (getEN GO_OFFLINE)
              ][ textView  (
                 [ width WRAP_CONTENT
                 , height WRAP_CONTENT
@@ -563,6 +571,7 @@ updateButtonIconAndText push state =
         _<- push action
         pure unit
         ) (const RetryTimeUpdate)
+  , Id.testId $ Id.Object Id.update
   , gravity RIGHT
   ][ PrestoAnim.animationSet [Anim.rotateAnim (AnimConfig.rotateAnimConfig state.props.refreshAnimation)] 
     $ imageView

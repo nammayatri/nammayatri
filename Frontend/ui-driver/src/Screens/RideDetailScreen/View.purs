@@ -37,6 +37,8 @@ import Services.APITypes(Route(..))
 import Services.Backend as Remote
 import Services.Backend (walkCoordinate)
 import Common.Types.App
+import Constant.Test as Id
+import EN
 
 screen :: ST.RideDetailScreenState -> Screen Action ST.RideDetailScreenState ScreenOutput
 screen initialState =
@@ -61,6 +63,7 @@ view push state =
                   pure unit 
                 pure unit 
                 ) (const AfterRender)
+  , Id.testId $ Id.Screen Id.rideDetailScreen
   ][  linearLayout
       [ width MATCH_PARENT
       , height MATCH_PARENT
@@ -252,6 +255,7 @@ cashCollected state push =
   , gravity CENTER
   -- , clickable state.props.cashCollectedButton  // require this to enable button only when our map snap shot (base64) is ready 
   , onClick push (const GoToHome)
+  , Id.testId $ Id.Button $ Id.BtnConfig (getEN CASH_COLLECTED)
   ][  textView (
       [ width WRAP_CONTENT
       , height WRAP_CONTENT

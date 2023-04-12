@@ -27,6 +27,7 @@ import Language.Types (STR(..))
 import Screens.Types (RideHistoryScreenState)
 import Screens.Types as ST
 import Styles.Colors as Color
+import EN
 
 errorModalConfig :: RideHistoryScreenState -> ErrorModal.Config 
 errorModalConfig state = let 
@@ -60,5 +61,6 @@ errorModalConfig state = let
       , textSize = FontSize.a_16
       , visibility  = GONE
       }
+    , testIdText = (getEN BOOK_NOW)
     }
   in errorModalConfig' 

@@ -31,6 +31,7 @@ import Language.Types(STR(..))
 import JBridge as JB
 import Effect.Class (liftEffect)
 import Common.Types.App
+import Constant.Test as Id
 
 screen :: ST.DriverDetailsScreenState -> Screen Action ST.DriverDetailsScreenState ScreenOutput
 screen initialState =
@@ -56,6 +57,7 @@ view push state =
     , orientation VERTICAL
     , onBackPressed push (const BackPressed)
     , afterRender push (const AfterRender)
+    , Id.testId $ Id.Screen Id.driverDetailsScreen
     ][ headerLayout state push
      , profilePictureLayout state push
      , driverDetailsView state
@@ -137,6 +139,7 @@ headerLayout state push =
         , onClick push (const BackPressed)
         , padding (Padding 2 2 2 2)
         , margin (MarginLeft 5)
+        , Id.testId $ Id.ToolBar Id.backIcon
         ]
       , textView
         [ width WRAP_CONTENT

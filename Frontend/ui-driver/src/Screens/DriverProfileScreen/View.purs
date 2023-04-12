@@ -17,6 +17,8 @@ module Screens.DriverProfileScreen.View where
 
 import Common.Types.App
 import Screens.DriverProfileScreen.ComponentConfig
+import Constant.Test as Id
+import EN
 
 import Animation as Anim
 import Components.BottomNavBar.Controller (navData)
@@ -81,6 +83,7 @@ view push state =
       , onBackPressed push (const BackPressed state)
       , afterRender push (const AfterRender)
       , background Color.white900
+      , Id.testId $ Id.Screen Id.driverProfileScreen
       ][ Anim.screenAnimationFadeInOut $
           linearLayout
           [ width MATCH_PARENT
@@ -163,6 +166,16 @@ profileOptionsLayout state push =
             , orientation VERTICAL
             , gravity CENTER_VERTICAL
             , onClick push $ const $ OptionClick optionItem.menuOptions
+            , Id.testId $ Id.List case (optionItem.menuOptions) of
+                                    DRIVER_PRESONAL_DETAILS -> (getEN PERSONAL_DETAILS)
+                                    DRIVER_VEHICLE_DETAILS -> (getEN VEHICLE_DETAILS)
+                                    DRIVER_BANK_DETAILS -> (getEN BANK_DETAILS)
+                                    MULTI_LANGUAGE -> (getEN LANGUAGES)
+                                    HELP_AND_FAQS -> (getEN HELP_AND_FAQ)
+                                    ABOUT_APP -> (getEN ABOUT)
+                                    REFER -> (getEN ADD_YOUR_FRIEND)
+                                    DRIVER_LOGOUT -> (getEN LOGOUT)
+                                    APP_INFO_SETTINGS -> (getEN APP_INFO)
             ] <> if (optionItem.menuOptions == DRIVER_BOOKING_OPTIONS) && (null state.data.downgradeOptions) then [alpha 0.5
             ,clickable false] else [])[ linearLayout
               [ width MATCH_PARENT

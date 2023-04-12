@@ -24,6 +24,7 @@ import Data.Array (mapWithIndex)
 import Data.String (take, drop, length)
 import Effect (Effect)
 import Engineering.Helpers.Commons (screenWidth)
+import Helpers.Utils (toString)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
@@ -34,6 +35,7 @@ import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (background, backgroundDrawable, clickable, color, cornerRadii, cornerRadius, fontStyle, gravity, height, imageUrl, margin, orientation, padding, stroke, text, textSize, weight, width, visibility)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Styles.Colors as Color
+import Constant.Test as Id
 
 view :: forall w . (Action -> Effect Unit) -> InAppOtpModalState -> PrestoDOM (Effect Unit) w
 view push state = 
@@ -45,6 +47,7 @@ view push state =
     , background Color.black9000
     , gravity BOTTOM
     -- , onBackPressed push (const BackPressed)
+    , Id.testId $ Id.Component Id.inAppOtpModal
     ][
      PrestoAnim.animationSet [
         translateYAnim translateYAnimConfig
@@ -73,6 +76,7 @@ view push state =
                     , height (V 30)
                     , imageWithFallback "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
                     , onClick push (const BackPressed)
+                    , Id.testId $ Id.ToolBar Id.backIcon
                     , padding (Padding 5 5 5 5)
                     ]
                   , textView (
@@ -135,6 +139,7 @@ textBoxes push state =
       , stroke ("1," <> if (state.otpIncorrect || state.otpAttemptsExceeded ) then Color.textDanger else if state.focusIndex == index then Color.highlightBorderColor else Color.borderColorLight )
       , margin (Margin ((screenWidth unit)/30) 0 ((screenWidth unit)/30) 0)
       , onClick push (const (OnclickTextBox index))
+      , Id.testId $ Id.TextField (toString(index))
       ]) [1,2,3,4]
   )
 
@@ -172,6 +177,7 @@ keyboard push state =
            , cornerRadii $ if key == "back" then Corners 30.0 false false false true else Corners 30.0 false false true false
            , onClick push if key == "back" then (const (OnClickBack state.text)) else (const (OnClickDone state.text))
            , clickable if key == "back" then true else if (length state.text) == 4 then true else false 
+           , Id.testId $ Id.Object if key == "back" then Id.backSpace else Id.done
            ][ if key == "back" then 
                 textView
                 [ width WRAP_CONTENT
@@ -199,6 +205,7 @@ keyboard push state =
            , background Color.white900
            , cornerRadius 4.0
            , onClick push (const (OnSelection key state.focusIndex))
+          , Id.testId $ Id.Element (toString(index))
            ][  textView
                [ width WRAP_CONTENT
                , height MATCH_PARENT
