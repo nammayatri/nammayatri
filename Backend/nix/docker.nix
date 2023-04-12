@@ -9,7 +9,7 @@ in
 {
   config = {
     perSystem = { self', pkgs, lib, ... }: {
-      packages = lib.optionalAttrs pkgs.stdenv.isLinux {
+      packages = {
         dockerImage =
           let
             # Wrap the nammayaatri package so that its binaries are in /opt/app.
