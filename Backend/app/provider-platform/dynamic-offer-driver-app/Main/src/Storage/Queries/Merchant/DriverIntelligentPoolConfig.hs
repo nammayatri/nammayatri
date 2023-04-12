@@ -51,6 +51,11 @@ update config = do
         DriverIntelligentPoolConfigMinQuotesToQualifyForIntelligentPool =. val config.minQuotesToQualifyForIntelligentPool,
         DriverIntelligentPoolConfigMinQuotesToQualifyForIntelligentPoolWindowOption =. val config.minQuotesToQualifyForIntelligentPoolWindowOption,
         DriverIntelligentPoolConfigIntelligentPoolPercentage =. val config.intelligentPoolPercentage,
+        DriverIntelligentPoolConfigSpeedNormalizer =. val config.speedNormalizer,
+        DriverIntelligentPoolConfigDriverSpeedWeightage =. val config.driverSpeedWeightage,
+        DriverIntelligentPoolConfigMinLocationUpdates =. val config.minLocationUpdates,
+        DriverIntelligentPoolConfigLocationUpdateSampleTime =. val config.locationUpdateSampleTime,
+        DriverIntelligentPoolConfigDefaultDriverSpeed =. val config.defaultDriverSpeed,
         DriverIntelligentPoolConfigUpdatedAt =. val now
       ]
     where_ $ tbl ^. DriverIntelligentPoolConfigMerchantId ==. val (toKey config.merchantId)

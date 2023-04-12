@@ -48,18 +48,20 @@ POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/merchant/config
 token: {{juspay_admin}}
 content-type: application/json
 
-  { "pickupLocThreshold" : 1,
-    "dropLocThreshold" : 2,
-    "rideTimeEstimatedThreshold" : 3,
-    "defaultPopupDelay" : 4,
-    "popupDelayToAddAsPenalty" : 5,
-    "thresholdCancellationScore" : 6,
-    "minRidesForCancellationScore" : 7,
-    "waitingTimeEstimatedThreshold" : 8,
-    "onboardingTryLimit" : 9,
-    "onboardingRetryTimeInHours" : 10,
-    "checkImageExtractionForDashboard" : false,
-    "searchRepeatLimit" : 11
+  { "pickupLocThreshold" : {"value" : 1},
+    "dropLocThreshold" : {"value" : 2},
+    "rideTimeEstimatedThreshold" : {"value" : 3},
+    "defaultPopupDelay" : {"value" : 4},
+    "popupDelayToAddAsPenalty" : {"value" : 5},
+    "thresholdCancellationScore" : {"value" : 6},
+    "minRidesForCancellationScore" : {"value" : 7},
+    "mediaFileUrlPattern" : {"value" : "mediaFileUrlPattern"},
+    "mediaFileSizeUpperLimit" : {"value" : 8},
+    "waitingTimeEstimatedThreshold" : {"value" : 9},
+    "onboardingTryLimit" : {"value" : 10},
+    "onboardingRetryTimeInHours" : {"value" : 11},
+    "checkImageExtractionForDashboard" : {"value" : false},
+    "searchRepeatLimit" : {"value" : 12}
   }
 
 ###
@@ -70,19 +72,19 @@ POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/merchant/config
 token: {{juspay_admin}}
 content-type: application/json
 
-  { "minRadiusOfSearch" : 21,
-    "maxRadiusOfSearch" : 22,
-    "radiusStepSize" : 23,
-    "driverPositionInfoExpiry" : 24,
-    "actualDistanceThreshold" : 25,
-    "maxDriverQuotesRequired" : 26,
-    "driverQuoteLimit" : 27,
-    "driverRequestCountLimit" : 28,
-    "driverBatchSize" : 29,
-    "maxNumberOfBatches" : 30,
-    "maxParallelSearchRequests" : 31,
-    "poolSortingType" : "Random",
-    "singleBatchProcessTime" : 32
+  { "minRadiusOfSearch" : {"value" : 21},
+    "maxRadiusOfSearch" : {"value" : 22},
+    "radiusStepSize" : {"value" : 23},
+    "driverPositionInfoExpiry" : {"value" : 24},
+    "actualDistanceThreshold" : {"value" : 25},
+    "maxDriverQuotesRequired" : {"value" : 26},
+    "driverQuoteLimit" : {"value" : 27},
+    "driverRequestCountLimit" : {"value" : 28},
+    "driverBatchSize" : {"value" : 29},
+    "maxNumberOfBatches" : {"value" : 30},
+    "maxParallelSearchRequests" : {"value" : 31},
+    "poolSortingType" : {"value" : "Random"},
+    "singleBatchProcessTime" : {"value" : 32}
   }
 
 ###
@@ -116,27 +118,32 @@ POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/merchant/config
 token: {{juspay_admin}}
 content-type: application/json
 
-  { "availabilityTimeWeightage" : 61,
+  { "availabilityTimeWeightage" : {"value" : 61},
     "availabilityTimeWindowOption" :
       { "period": 62,
         "periodType" : "Minutes"
       },
-    "acceptanceRatioWeightage": 63,
+    "acceptanceRatioWeightage": {"value" : 63},
     "acceptanceRatioWindowOption" :
       { "period": 64,
         "periodType" : "Hours"
       },
-    "cancellationRatioWeightage": 65,
+    "cancellationRatioWeightage":{"value" :  65},
     "cancellationRatioWindowOption" :
       { "period": 66,
         "periodType" : "Days"
       },
-    "minQuotesToQualifyForIntelligentPool": 67,
+    "minQuotesToQualifyForIntelligentPool": {"value" : 67},
     "minQuotesToQualifyForIntelligentPoolWindowOption" :
       { "period": 68,
         "periodType" : "Years"
       },
-    "intelligentPoolPercentage": 69
+    "intelligentPoolPercentage": {"value" : 69},
+    "speedNormalizer": {"value" : 70},
+    "driverSpeedWeightage": {"value" : 71},
+    "minLocationUpdates": {"value" : 72},
+    "locationUpdateSampleTime": {"value" : 73},
+    "defaultDriverSpeed": {"value" : 74}
   }
 
 ###
@@ -147,10 +154,10 @@ POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/merchant/config
 token: {{juspay_admin}}
 content-type: application/json
 
-  { "checkExtraction" : false,
-    "checkExpiry" : true,
+  { "checkExtraction" : {"value" : false},
+    "checkExpiry" : {"value" : true},
     "validVehicleClasses" : ["vehicleClass1", "vehicleClass2"],
-    "vehicleClassCheckType" : "Prefix"
+    "vehicleClassCheckType" : {"value" : "Prefix"}
   }
 
 ###

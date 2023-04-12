@@ -118,6 +118,8 @@ data MerchantCommonConfigUpdateReq = MerchantCommonConfigUpdateReq
     popupDelayToAddAsPenalty :: Maybe (OptionalValue Seconds),
     thresholdCancellationScore :: Maybe (OptionalValue Int),
     minRidesForCancellationScore :: Maybe (OptionalValue Int),
+    mediaFileUrlPattern :: Maybe (MandatoryValue Text),
+    mediaFileSizeUpperLimit :: Maybe (MandatoryValue Int),
     waitingTimeEstimatedThreshold :: Maybe (MandatoryValue Seconds),
     onboardingTryLimit :: Maybe (MandatoryValue Int),
     onboardingRetryTimeInHours :: Maybe (MandatoryValue Int),
@@ -138,6 +140,8 @@ validateMerchantCommonConfigUpdateReq MerchantCommonConfigUpdateReq {..} =
       validateField "defaultPopupDelay" defaultPopupDelay $ InMaybe $ InValue $ Min @Seconds 0,
       validateField "popupDelayToAddAsPenalty" popupDelayToAddAsPenalty $ InMaybe $ InValue $ Min @Seconds 0,
       validateField "thresholdCancellationScore" thresholdCancellationScore $ InMaybe $ InValue $ InRange @Int 0 100,
+      validateField "mediaFileUrlPattern" mediaFileUrlPattern $ InMaybe $ InValue $ MinLength 1,
+      validateField "mediaFileSizeUpperLimit" mediaFileSizeUpperLimit $ InMaybe $ InValue $ Min @Int 1,
       validateField "minRidesForCancellationScore" minRidesForCancellationScore $ InMaybe $ InValue $ Min @Int 0,
       validateField "waitingTimeEstimatedThreshold" waitingTimeEstimatedThreshold $ InMaybe $ InValue $ Min @Seconds 0,
       validateField "onboardingTryLimit" onboardingTryLimit $ InMaybe $ InValue $ Min @Int 0,
@@ -263,7 +267,6 @@ type DriverIntelligentPoolConfigUpdateAPI =
     :> ReqBody '[JSON] DriverIntelligentPoolConfigUpdateReq
     :> Post '[JSON] APISuccess
 
--- FIXME check for new fields added (for all configs)
 data DriverIntelligentPoolConfigUpdateReq = DriverIntelligentPoolConfigUpdateReq
   { availabilityTimeWeightage :: Maybe (MandatoryValue Int),
     availabilityTimeWindowOption :: Maybe SWC.SlidingWindowOptions, -- value wrapper make no sense for lists and objects
@@ -273,7 +276,12 @@ data DriverIntelligentPoolConfigUpdateReq = DriverIntelligentPoolConfigUpdateReq
     cancellationRatioWindowOption :: Maybe SWC.SlidingWindowOptions,
     minQuotesToQualifyForIntelligentPool :: Maybe (MandatoryValue Int),
     minQuotesToQualifyForIntelligentPoolWindowOption :: Maybe SWC.SlidingWindowOptions,
-    intelligentPoolPercentage :: Maybe (OptionalValue Int)
+    intelligentPoolPercentage :: Maybe (OptionalValue Int),
+    speedNormalizer :: Maybe (MandatoryValue Double),
+    driverSpeedWeightage :: Maybe (MandatoryValue Int),
+    minLocationUpdates :: Maybe (MandatoryValue Int),
+    locationUpdateSampleTime :: Maybe (MandatoryValue Minutes),
+    defaultDriverSpeed :: Maybe (MandatoryValue Double)
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -296,7 +304,12 @@ validateDriverIntelligentPoolConfigUpdateReq DriverIntelligentPoolConfigUpdateRe
       validateField "minQuotesToQualifyForIntelligentPool" minQuotesToQualifyForIntelligentPool $ InMaybe $ InValue $ Min @Int 1,
       whenJust minQuotesToQualifyForIntelligentPoolWindowOption $ \obj ->
         validateObject "minQuotesToQualifyForIntelligentPoolWindowOption" obj validateSlidingWindowOptions,
-      validateField "intelligentPoolPercentage" intelligentPoolPercentage $ InMaybe $ InValue $ InRange @Int 0 100
+      validateField "intelligentPoolPercentage" intelligentPoolPercentage $ InMaybe $ InValue $ InRange @Int 0 100,
+      validateField "speedNormalizer" speedNormalizer $ InMaybe $ InValue $ Min @Double 0.0,
+      validateField "driverSpeedWeightage" driverSpeedWeightage $ InMaybe $ InValue $ InRange @Int (-100) 100,
+      validateField "minLocationUpdates" minLocationUpdates $ InMaybe $ InValue $ Min @Int 0,
+      validateField "locationUpdateSampleTime" locationUpdateSampleTime $ InMaybe $ InValue $ Min @Minutes 0,
+      validateField "defaultDriverSpeed" defaultDriverSpeed $ InMaybe $ InValue $ Min @Double 0.0
     ]
 
 validateSlidingWindowOptions :: Validate SWC.SlidingWindowOptions
