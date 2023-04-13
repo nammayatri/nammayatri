@@ -36,6 +36,7 @@ import Kernel.Storage.Esqueleto
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.Queries.Booking as QRB
 import Storage.Queries.Person as Person
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
@@ -128,7 +129,7 @@ createSupportRegToken entityId = do
         info = Nothing
       }
 
-listOrder :: (EsqDBReplicaFlow m r, EncFlow m r) => Id SP.Person -> Maybe Text -> Maybe Text -> Maybe Integer -> Maybe Integer -> m [OrderResp]
+listOrder :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Id SP.Person -> Maybe Text -> Maybe Text -> Maybe Integer -> Maybe Integer -> m [OrderResp]
 listOrder personId mRequestId mMobile mlimit moffset = do
   supportP <- runInReplica $ Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   unless (supportP.role == SP.CUSTOMER_SUPPORT) $
@@ -161,7 +162,7 @@ listOrder personId mRequestId mMobile mlimit moffset = do
             >>= fromMaybeM (PersonDoesNotExist requestorId.getId)
       return $ OrderInfo person [booking]
 
-buildBookingToOrder :: (EsqDBReplicaFlow m r, EncFlow m r) => SP.Person -> DRB.Booking -> m OrderResp
+buildBookingToOrder :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => SP.Person -> DRB.Booking -> m OrderResp
 buildBookingToOrder SP.Person {firstName, lastName, mobileNumber} booking = do
   let mbToLocation = case booking.bookingDetails of
         DRB.RentalDetails _ -> Nothing
