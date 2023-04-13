@@ -30,7 +30,8 @@ import Kernel.External.Maps (RouteInfo)
 
 data SearchMessage = SearchMessage
   { intent :: Intent,
-    routeInfo :: Maybe RouteInfo
+    routeInfo :: Maybe RouteInfo,
+    device :: Maybe Text
   }
   deriving (Generic, Show, ToSchema)
 

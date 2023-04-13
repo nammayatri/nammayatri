@@ -104,6 +104,7 @@ generateSearchRequest = do
                         end = Nothing
                       }
                 },
-            routeInfo = Nothing
+            routeInfo = Nothing,
+            device = Nothing
           }
   pure $ API.BecknReq context intent

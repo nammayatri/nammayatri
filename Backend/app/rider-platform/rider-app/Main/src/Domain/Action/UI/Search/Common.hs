@@ -43,8 +43,10 @@ buildSearchRequest ::
   UTCTime ->
   Maybe Version ->
   Maybe Version ->
+  Maybe Text ->
+  Maybe Seconds ->
   m SearchRequest.SearchRequest
-buildSearchRequest person pickup mbDrop mbMaxDistance mbDistance now bundleVersion clientVersion = do
+buildSearchRequest person pickup mbDrop mbMaxDistance mbDistance now bundleVersion clientVersion device duration = do
   searchRequestId <- generateGUID
   validTill <- getSearchRequestExpiry now
   return
@@ -59,6 +61,8 @@ buildSearchRequest person pickup mbDrop mbMaxDistance mbDistance now bundleVersi
         maxDistance = mbMaxDistance,
         merchantId = person.merchantId,
         createdAt = now,
+        estimatedRideDuration = duration,
+        device = device,
         bundleVersion = bundleVersion,
         clientVersion = clientVersion,
         language = person.language

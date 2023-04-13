@@ -20,7 +20,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
-import Kernel.Types.Common (HighPrecMeters)
+import Kernel.Types.Common (HighPrecMeters, Seconds)
 import Kernel.Types.Id
 import Kernel.Types.Version
 
@@ -36,6 +36,8 @@ data SearchRequest = SearchRequest
     toLocation :: Maybe DLoc.SearchReqLocation,
     distance :: Maybe HighPrecMeters,
     maxDistance :: Maybe HighPrecMeters,
+    estimatedRideDuration :: Maybe Seconds,
+    device :: Maybe Text,
     merchantId :: Id DMerchant.Merchant, -- remove when searchRequest will not be used in CustomerSupport
     createdAt :: UTCTime,
     bundleVersion :: Maybe Version,

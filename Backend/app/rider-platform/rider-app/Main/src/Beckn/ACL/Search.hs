@@ -32,6 +32,7 @@ buildOneWaySearchReq ::
   (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
   DOneWaySearch.OneWaySearchRes ->
   Maybe Maps.RouteInfo ->
+  Maybe Text ->
   m (BecknReq Search.SearchMessage)
 buildOneWaySearchReq DOneWaySearch.OneWaySearchRes {..} routeInto = buildSearchReq origin (Just destination) searchId now routeInto city
 
@@ -39,7 +40,7 @@ buildRentalSearchReq ::
   (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
   DRentalSearch.RentalSearchRes ->
   m (BecknReq Search.SearchMessage)
-buildRentalSearchReq DRentalSearch.RentalSearchRes {..} = buildSearchReq origin Nothing searchId startTime Nothing city
+buildRentalSearchReq DRentalSearch.RentalSearchRes {..} = buildSearchReq origin Nothing searchId startTime Nothing city Nothing
 
 buildSearchReq ::
   (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
@@ -49,15 +50,16 @@ buildSearchReq ::
   UTCTime ->
   Maybe Maps.RouteInfo ->
   Text ->
+  Maybe Text ->
   m (BecknReq Search.SearchMessage)
-buildSearchReq origin mbDestination searchId startTime mbRouteInfo city = do
+buildSearchReq origin mbDestination searchId startTime mbRouteInfo city device = do
   let transactionId = getId searchId
       messageId = transactionId
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
   context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) bapIDs.cabs bapURIs.cabs Nothing Nothing city
   let intent = mkIntent origin mbDestination startTime
-  let searchMessage = Search.SearchMessage intent mbRouteInfo
+  let searchMessage = Search.SearchMessage intent mbRouteInfo device
   pure $ BecknReq context searchMessage
 
 mkIntent ::

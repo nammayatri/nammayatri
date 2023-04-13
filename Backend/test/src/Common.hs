@@ -52,6 +52,7 @@ searchServices ::
   AppBESearch.SearchReq ->
   Maybe Version ->
   Maybe Version ->
+  Maybe Text ->
   ClientM AppBESearch.SearchRes
 searchServices = client (Proxy :: Proxy AppBESearch.API)
 

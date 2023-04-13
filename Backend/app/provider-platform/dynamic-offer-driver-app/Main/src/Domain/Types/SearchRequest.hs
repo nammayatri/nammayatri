@@ -42,6 +42,7 @@ data SearchRequest = SearchRequest
     estimatedDistance :: Meters,
     estimatedDuration :: Seconds,
     customerExtraFee :: Maybe Money,
+    device :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     vehicleVariant :: Variant.Variant,

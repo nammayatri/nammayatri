@@ -286,7 +286,7 @@ onUpdate EstimateRepetitionReq {..} = do
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
   bookingCancellationReason <- buildBookingCancellationReason booking.id (Just ride.id) cancellationSource
 
-  newEstimate <- buildEstimate searchReq.id booking estimateInfo
+  newEstimate <- buildEstimate searchReq.id booking searchReq.estimatedRideDuration searchReq.distance searchReq.device estimateInfo
 
   DB.runTransaction $ do
     QRB.updateStatus booking.id SRB.REALLOCATED
@@ -301,9 +301,12 @@ onUpdate EstimateRepetitionReq {..} = do
       MonadFlow m =>
       Id DSR.SearchRequest ->
       SRB.Booking ->
+      Maybe Seconds ->
+      Maybe HighPrecMeters ->
+      Maybe Text ->
       EstimateRepetitionEstimateInfo ->
       m DEstimate.Estimate
-    buildEstimate requestId booking EstimateRepetitionEstimateInfo {..} = do
+    buildEstimate requestId booking duration distance device EstimateRepetitionEstimateInfo {..} = do
       now <- getCurrentTime
       uid <- generateGUID
       tripTerms <- buildTripTerms descriptions
@@ -321,6 +324,9 @@ onUpdate EstimateRepetitionReq {..} = do
             providerUrl = booking.providerUrl,
             createdAt = now,
             updatedAt = now,
+            estimatedDuration = duration,
+            estimatedDistance = distance,
+            device = device,
             status = Just DEstimate.NEW,
             estimateBreakupList = estimateBreakupList',
             driversLocation = driversLocation,
