@@ -22,6 +22,7 @@ module Storage.CachedQueries.Exophone
     deleteByMerchantId,
     clearCache,
     clearAllCache,
+    findByPrimaryPhone,
   )
 where
 
@@ -43,6 +44,9 @@ findAllByMerchantId merchantId =
 
 findByPhone :: (CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Exophone)
 findByPhone phone = find (\exophone -> exophone.primaryPhone == phone || exophone.backupPhone == phone) <$> findAllByPhone phone
+
+findByPrimaryPhone :: (CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Exophone)
+findByPrimaryPhone phone = find (\exophone -> exophone.primaryPhone == phone) <$> findAllByPhone phone
 
 findAllByPhone :: (CacheFlow m r, EsqDBFlow m r) => Text -> m [Exophone]
 findAllByPhone phone =
