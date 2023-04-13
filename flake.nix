@@ -1,9 +1,9 @@
 {
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
-    systems.url = "github:nix-systems/default";
     common.url = "github:nammayatri/common";
+    nixpkgs.follows = "common/nixpkgs";
     flake-parts.follows = "common/flake-parts";
+    systems.url = "github:nix-systems/default";
 
     # Backend inputs
     shared-kernel.url = "github:nammayatri/shared-kernel";
