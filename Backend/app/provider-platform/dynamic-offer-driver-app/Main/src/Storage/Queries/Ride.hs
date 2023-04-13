@@ -197,6 +197,7 @@ updateAll rideId ride = do
         RideTripEndLat =. val (ride.tripEndPos <&> (.lat)),
         RideTripEndLon =. val (ride.tripEndPos <&> (.lon)),
         RideFareParametersId =. val (toKey <$> ride.fareParametersId),
+        RideDistanceCalculationFailed =. val ride.distanceCalculationFailed,
         RideUpdatedAt =. val now
       ]
     where_ $ tbl ^. RideTId ==. val (toKey rideId)
