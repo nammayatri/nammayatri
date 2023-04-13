@@ -31,6 +31,7 @@ import qualified Kernel.Types.Common as C hiding (Offset)
 import qualified Kernel.Types.SlidingWindowCounters as SWT
 import Kernel.Utils.Logging (logInfo)
 import qualified Kernel.Utils.SlidingWindowCounters as SW
+import qualified SharedLogic.DriverPool as DP
 
 getTimeDiffInteger :: SWT.TimePair -> Integer
 getTimeDiffInteger (startTime, endTime) = floor $ diffUTCTime endTime startTime
@@ -103,12 +104,9 @@ processData T.LocationUpdates {..} driverId = do
     mapM_
       ( \(startTime, endTime) -> do
           let valueToAdd = getTimeDiffInteger (startTime, endTime)
-          SW.incrementByValueInTimeBucket startTime valueToAdd (mkAvailableTimeKey driverId) availabilityTimeWindowOption
+          SW.incrementByValueInTimeBucket startTime valueToAdd (DP.mkAvailableTimeKey driverId) availabilityTimeWindowOption
       )
       activeTimePairs
   where
-    mkAvailableTimeKey :: T.DriverId -> Text
-    mkAvailableTimeKey = (<> (mId <> "-available-time"))
-
     mkLastTimeStampKey :: T.DriverId -> Text
     mkLastTimeStampKey = (<> (mId <> "-last-location-update-at"))
