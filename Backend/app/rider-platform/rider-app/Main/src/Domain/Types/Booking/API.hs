@@ -18,6 +18,7 @@ import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import Domain.Types.Booking.BookingLocation (BookingLocationAPIEntity)
 import qualified Domain.Types.Booking.BookingLocation as SLoc
 import Domain.Types.Booking.Type
+import qualified Domain.Types.Exophone as DExophone
 import Domain.Types.FarePolicy.FareBreakup
 import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
 import qualified Domain.Types.RentalSlab as DRentalSlab
@@ -28,6 +29,8 @@ import Kernel.Storage.Esqueleto (runInReplica)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Storage.CachedQueries.CacheConfig (CacheFlow)
+import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Ride as QRide
 import qualified Tools.JSON as J
@@ -49,6 +52,7 @@ data BookingAPIEntity = BookingAPIEntity
     rideStartTime :: Maybe UTCTime,
     rideEndTime :: Maybe UTCTime,
     duration :: Maybe Seconds,
+    merchantExoPhone :: Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -84,8 +88,8 @@ data OneWaySpecialZoneBookingAPIDetails = OneWaySpecialZoneBookingAPIDetails
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
-makeBookingAPIEntity :: Booking -> Maybe Ride -> [Ride] -> [FareBreakup] -> BookingAPIEntity
-makeBookingAPIEntity booking activeRide allRides fareBreakups = do
+makeBookingAPIEntity :: Booking -> Maybe Ride -> [Ride] -> [FareBreakup] -> Maybe DExophone.Exophone -> BookingAPIEntity
+makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone = do
   let bookingDetails = mkBookingAPIDetails booking.bookingDetails
   BookingAPIEntity
     { id = booking.id,
@@ -103,6 +107,7 @@ makeBookingAPIEntity booking activeRide allRides fareBreakups = do
       rideStartTime = activeRide >>= (.rideStartTime),
       rideEndTime = activeRide >>= (.rideEndTime),
       duration = getRideDuration activeRide,
+      merchantExoPhone = maybe booking.primaryExophone (\exophone -> if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone) mbExophone,
       createdAt = booking.createdAt,
       updatedAt = booking.updatedAt
     }
@@ -133,9 +138,10 @@ makeBookingAPIEntity booking activeRide allRides fareBreakups = do
               ..
             }
 
-buildBookingAPIEntity :: EsqDBReplicaFlow m r => Booking -> m BookingAPIEntity
+buildBookingAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Booking -> m BookingAPIEntity
 buildBookingAPIEntity booking = do
   mbRide <- runInReplica $ QRide.findActiveByRBId booking.id
   rideList <- runInReplica $ QRide.findAllByRBId booking.id
   fareBreakups <- runInReplica $ QFareBreakup.findAllByBookingId booking.id
-  return $ makeBookingAPIEntity booking mbRide rideList fareBreakups
+  mbExoPhone <- CQExophone.findByPrimaryPhone booking.primaryExophone
+  return $ makeBookingAPIEntity booking mbRide rideList fareBreakups mbExoPhone
