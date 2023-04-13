@@ -71,7 +71,7 @@ cabal build all
 # Run a cabal package (by path to the directory containing .cabal file)
 cabal run lib/location-updates
 # Run ghcid
-, backend-ghcid lib/location-updates
+, ghcid lib/location-updates
 ```
 
 #### Running the services
@@ -82,7 +82,7 @@ For running the database, redis, passetto and kafka run this command:
 
 ```sh
 # NOTE: You must run this from inside nix shell.
-, backend-run-svc
+, run-svc
 ```
 
 That should run most of the services required.
@@ -92,13 +92,13 @@ More services, if needed, can be run with the following commands.
 For running pgadmin run this command:
 
 ```sh
-, backend-run-pgadmin
+, run-pgadmin
 ```
 
 For running monitoring services like prometheus and grafana use this command:
 
 ```sh
-, backend-run-monitoring
+, run-monitoring
 ```
 
 To run osrm-server, run:
@@ -109,11 +109,14 @@ nix run .#osrm-server
 
 #### Running backend
 
+To run the backend either use:
+
 ```sh
-, backend-run-mobility-stack
+# From dev shell
+, run-mobility-stack
 ```
 
-This will run nammayatri components using `cabal run`. If you wish to run it using Nix instead, run:
+or (if not in devshell):
 
 ```sh
 nix run .#run-mobility-stack
