@@ -48,6 +48,9 @@ mkPersist
       estimatedTotalFare HighPrecMoney
       minTotalFare HighPrecMoney
       maxTotalFare HighPrecMoney
+      estimatedDuration Seconds Maybe
+      estimatedDistance HighPrecMeters Maybe
+      device Text Maybe
       providerId Text
       providerUrl Text
       providerName Text

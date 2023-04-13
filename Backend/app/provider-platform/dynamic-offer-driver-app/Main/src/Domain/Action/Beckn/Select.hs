@@ -29,6 +29,7 @@ import Domain.Types.Vehicle.Variant (Variant)
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -97,7 +98,8 @@ handler merchantId sReq = do
       farePolicy <- FarePolicyS.findByMerchantIdAndVariant org.id sReq.variant (Just distance) >>= fromMaybeM NoFarePolicy
       fareParams <- calculateFare merchantId (Left farePolicy) distance sReq.pickupTime Nothing sReq.customerExtraFee
       pure (fareParams, farePolicy.driverExtraFee)
-  searchReq <- buildSearchRequest fromLocation toLocation merchantId sReq distance duration sReq.customerExtraFee
+  device <- Redis.get (CD.deviceKey sReq.transactionId)
+  searchReq <- buildSearchRequest fromLocation toLocation merchantId sReq distance duration sReq.customerExtraFee device
   let estimateFare = fareSum fareParams
   logDebug $
     "search request id=" <> show searchReq.id
@@ -140,8 +142,9 @@ buildSearchRequest ::
   Meters ->
   Seconds ->
   Maybe Money ->
+  Maybe Text ->
   m DSearchReq.SearchRequest
-buildSearchRequest from to merchantId sReq distance duration customerExtraFee = do
+buildSearchRequest from to merchantId sReq distance duration customerExtraFee device = do
   now <- getCurrentTime
   id_ <- Id <$> generateGUID
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
@@ -161,6 +164,7 @@ buildSearchRequest from to merchantId sReq distance duration customerExtraFee = 
         estimatedDistance = distance,
         estimatedDuration = duration,
         customerExtraFee,
+        device = device,
         createdAt = now,
         vehicleVariant = sReq.variant,
         status = DSearchReq.ACTIVE,

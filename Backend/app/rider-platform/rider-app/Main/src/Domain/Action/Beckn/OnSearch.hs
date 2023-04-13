@@ -34,6 +34,7 @@ import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.RentalSlab as DRentalSlab
+import Domain.Types.SearchRequest
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SpecialZoneQuote as DSpecialZoneQuote
 import qualified Domain.Types.TripTerms as DTripTerms
@@ -145,7 +146,7 @@ onSearchService transactionId DOnSearchReq {..} = do
   merchant <- QMerch.findById _searchRequest.merchantId >>= fromMaybeM (MerchantNotFound _searchRequest.merchantId.getId)
   Metrics.finishSearchMetrics merchant.name transactionId
   now <- getCurrentTime
-  estimates <- traverse (buildEstimate requestId providerInfo now) estimatesInfo
+  estimates <- traverse (buildEstimate requestId providerInfo now _searchRequest) estimatesInfo
   quotes <- traverse (buildQuote requestId providerInfo now _searchRequest.merchantId) quotesInfo
   DB.runTransaction do
     QEstimate.createMany estimates
@@ -157,9 +158,10 @@ buildEstimate ::
   Id DSearchReq.SearchRequest ->
   ProviderInfo ->
   UTCTime ->
+  SearchRequest ->
   EstimateInfo ->
   m DEstimate.Estimate
-buildEstimate requestId providerInfo now EstimateInfo {..} = do
+buildEstimate requestId providerInfo now _searchRequest EstimateInfo {..} = do
   uid <- generateGUID
   tripTerms <- buildTripTerms descriptions
   estimateBreakupList' <- buildEstimateBreakUp estimateBreakupList uid
@@ -174,6 +176,9 @@ buildEstimate requestId providerInfo now EstimateInfo {..} = do
         providerCompletedRidesCount = providerInfo.ridesCompleted,
         providerId = providerInfo.providerId,
         providerUrl = providerInfo.url,
+        estimatedDistance = _searchRequest.distance,
+        estimatedDuration = _searchRequest.estimatedRideDuration,
+        device = _searchRequest.device,
         createdAt = now,
         updatedAt = now,
         status = Just DEstimate.NEW,
