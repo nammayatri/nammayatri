@@ -32,6 +32,7 @@ module SharedLogic.DriverPool
     removeSearchReqIdFromMap,
     updateDriverSpeedInRedis,
     getDriverAverageSpeed,
+    mkAvailableTimeKey,
     PoolCalculationStage (..),
     module Reexport,
   )
@@ -83,7 +84,7 @@ mkRideCancelledKey :: Text -> Text
 mkRideCancelledKey driverId = "driver-offer:DriverPool:Ride-cancelled:DriverId-" <> driverId
 
 mkAvailableTimeKey :: Text -> Text
-mkAvailableTimeKey driverId = "driver-offer:DriverPool:Available-time:DriverId-" <> driverId
+mkAvailableTimeKey driverId = "driver-offer:DriverPool:Available-Time:DriverId-" <> driverId
 
 windowFromIntelligentPoolConfig :: (L.MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> (DIPC.DriverIntelligentPoolConfig -> SWC.SlidingWindowOptions) -> m SWC.SlidingWindowOptions
 windowFromIntelligentPoolConfig merchantId windowKey = maybe defaultWindow windowKey <$> DIP.findByMerchantId merchantId
