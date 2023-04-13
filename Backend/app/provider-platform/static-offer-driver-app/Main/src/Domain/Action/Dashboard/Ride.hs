@@ -179,7 +179,8 @@ rideInfo merchantShortId reqRideId = do
         cancelledBy,
         cancellationReason,
         driverInitiatedCallCount,
-        bookingToRideStartDuration = timeDiffInMinutes <$> ride.tripStartTime <*> (Just booking.createdAt)
+        bookingToRideStartDuration = timeDiffInMinutes <$> ride.tripStartTime <*> (Just booking.createdAt),
+        distanceCalculationFailed = Nothing
       }
 
 mkLocationAPIEntity :: DBLoc.BookingLocation -> Common.LocationAPIEntity

@@ -221,7 +221,8 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
                chargeableDistance = Just chargeableDistance,
                fare = Just finalFare,
                tripEndPos = Just tripEndPoint,
-               fareParametersId = Just newFareParams.id
+               fareParametersId = Just newFareParams.id,
+               distanceCalculationFailed = Just distanceCalculationFailed
               }
     -- we need to store fareParams only when they changed
     endRideTransaction (cast @DP.Person @DP.Driver driverId) booking.id updRide mbUpdatedFareParams booking.riderId

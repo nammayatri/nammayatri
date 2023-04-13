@@ -224,6 +224,7 @@ handler subscriber transporterId req = do
             tripStartPos = Nothing,
             tripEndPos = Nothing,
             fareParametersId = Nothing,
+            distanceCalculationFailed = Nothing,
             createdAt = now,
             updatedAt = now
           }

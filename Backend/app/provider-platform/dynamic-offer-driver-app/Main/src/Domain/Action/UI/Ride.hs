@@ -88,13 +88,13 @@ data DriverRideRes = DriverRideRes
     driverSelectedFare :: Money,
     actualRideDistance :: HighPrecMeters,
     rideRating :: Maybe Int,
-    createdAt :: UTCTime,
-    updatedAt :: UTCTime,
     riderName :: Maybe Text,
     tripStartTime :: Maybe UTCTime,
     tripEndTime :: Maybe UTCTime,
     chargeableDistance :: Maybe Meters,
-    exoPhone :: Text
+    exoPhone :: Text,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -255,6 +255,7 @@ otpRideCreate driver otpCode booking = do
             tripStartPos = Nothing,
             tripEndPos = Nothing,
             fareParametersId = Nothing,
+            distanceCalculationFailed = Nothing,
             createdAt = now,
             updatedAt = now
           }

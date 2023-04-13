@@ -64,6 +64,7 @@ data Ride = Ride
     tripStartPos :: Maybe LatLong,
     tripEndPos :: Maybe LatLong,
     fareParametersId :: Maybe (Id DFare.FareParameters),
+    distanceCalculationFailed :: Maybe Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

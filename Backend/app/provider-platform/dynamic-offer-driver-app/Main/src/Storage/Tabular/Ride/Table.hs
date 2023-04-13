@@ -53,6 +53,7 @@ mkPersist
       tripEndLat Double Maybe
       tripEndLon Double Maybe
       fareParametersId Fare.FareParametersTId Maybe
+      distanceCalculationFailed Bool Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary id
