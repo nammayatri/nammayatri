@@ -106,7 +106,7 @@ fareSum fareParams = case fareParams.farePolicyType of
 
 normalFareSum :: FareParameters -> Money
 normalFareSum fareParams = do
-  baseFareSum fareParams + (fromMaybe 0 fareParams.deadKmFare) + fromMaybe 0 fareParams.driverSelectedFare + fromMaybe 0 fareParams.customerExtraFee
+  baseFareSum fareParams + (fromMaybe 0 fareParams.deadKmFare) + fromMaybe 0 fareParams.driverSelectedFare
 
 slabFareSum :: FareParameters -> Money
 slabFareSum = baseFareSum
@@ -130,13 +130,8 @@ baseFareSum fareParams =
 
     baseNormalFareSum = roundToIntegral $ do
       let dayPartCoef = calculateDayPartRate fareParams
-      dayPartCoef
-        * sum
-          ( catMaybes
-              [ Just $ fromIntegral fareParams.baseFare,
-                fmap fromIntegral fareParams.extraKmFare
-              ]
-          )
+      dayPartCoef * (fromIntegral fareParams.baseFare + maybe 0 fromIntegral fareParams.extraKmFare)
+        + maybe 0 fromIntegral fareParams.customerExtraFee
 
 calculateDayPartRate :: FareParameters -> Centesimal
 calculateDayPartRate fareParams = do
