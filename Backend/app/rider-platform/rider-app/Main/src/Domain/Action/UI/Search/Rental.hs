@@ -67,9 +67,10 @@ rentalSearch ::
   Id Person.Person ->
   Maybe Version ->
   Maybe Version ->
+  Maybe Text ->
   RentalSearchReq ->
   m RentalSearchRes
-rentalSearch personId bundleVersion clientVersion req = do
+rentalSearch personId bundleVersion clientVersion device req = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   merchant <-
     QMerchant.findById person.merchantId
@@ -77,7 +78,7 @@ rentalSearch personId bundleVersion clientVersion req = do
   validateServiceability merchant.geofencingConfig
   fromLocation <- DSearch.buildSearchReqLoc req.origin
   now <- getCurrentTime
-  searchRequest <- DSearch.buildSearchRequest person fromLocation Nothing Nothing Nothing now bundleVersion clientVersion
+  searchRequest <- DSearch.buildSearchRequest person fromLocation Nothing Nothing Nothing now bundleVersion clientVersion device Nothing
   Metrics.incrementSearchRequestCount merchant.name
   let txnId = getId (searchRequest.id)
   Metrics.startSearchMetrics merchant.name txnId

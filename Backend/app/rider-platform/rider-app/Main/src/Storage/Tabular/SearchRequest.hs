@@ -43,6 +43,8 @@ mkPersist
       toLocationId SLoc.SearchReqLocationTId Maybe
       distance Centesimal Maybe
       maxDistance Centesimal Maybe
+      estimatedRideDuration Seconds Maybe
+      device Text Maybe
       merchantId SMerchant.MerchantTId
       createdAt UTCTime
       bundleVersion Text Maybe

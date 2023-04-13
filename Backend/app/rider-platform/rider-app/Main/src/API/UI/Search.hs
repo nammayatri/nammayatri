@@ -27,8 +27,8 @@ where
 import qualified Beckn.ACL.Metro.Search as MetroACL
 import qualified Beckn.ACL.Search as TaxiACL
 import Data.Aeson
-import Data.OpenApi
-import qualified Data.OpenApi as OpenApi
+import Data.OpenApi hiding (Header)
+import qualified Data.OpenApi as OpenApi hiding (Header)
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Search.Common as DSearchCommon
 import qualified Domain.Action.UI.Search.OneWay as DOneWaySearch
@@ -36,6 +36,7 @@ import qualified Domain.Action.UI.Search.Rental as DRentalSearch
 import qualified Domain.Types.Person as Person
 import Domain.Types.SearchRequest (SearchRequest)
 import Environment
+import Kernel.External.Maps
 import qualified Kernel.External.Slack.Flow as SF
 import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Prelude
@@ -70,6 +71,7 @@ type API =
     :> ReqBody '[JSON] SearchReq
     :> Servant.Header "x-bundle-version" Version
     :> Servant.Header "x-client-version" Version
+    :> Header "device" Text
     :> Post '[JSON] SearchRes
 
 handler :: FlowServer API
@@ -114,13 +116,13 @@ fareProductConstructorModifier = \case
   "RentalSearch" -> "RENTAL"
   x -> x
 
-search :: Id Person.Person -> SearchReq -> Maybe Version -> Maybe Version -> FlowHandler SearchRes
-search personId req mbBundleVersion mbClientVersion = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+search :: Id Person.Person -> SearchReq -> Maybe Version -> Maybe Version -> Maybe Text -> FlowHandler SearchRes
+search personId req mbBundleVersion mbClientVersion device = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   checkSearchRateLimit personId
   updateVersions personId mbBundleVersion mbClientVersion
   (searchId, searchExpiry, routeInfo) <- case req of
-    OneWaySearch oneWay -> oneWaySearch personId mbBundleVersion mbClientVersion oneWay
-    RentalSearch rental -> rentalSearch personId mbBundleVersion mbClientVersion rental
+    OneWaySearch oneWay -> oneWaySearch personId mbBundleVersion mbClientVersion device oneWay
+    RentalSearch rental -> rentalSearch personId mbBundleVersion mbClientVersion device rental
   return $ SearchRes searchId searchExpiry routeInfo
 
 oneWaySearch ::
@@ -139,9 +141,10 @@ oneWaySearch ::
   Id Person.Person ->
   Maybe Version ->
   Maybe Version ->
+  Maybe Text ->
   DOneWaySearch.OneWaySearchReq ->
   m (Id SearchRequest, UTCTime, Maybe Maps.RouteInfo)
-oneWaySearch personId bundleVersion clientVersion req = do
+oneWaySearch personId bundleVersion clientVersion device req = do
   person <- Person.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   merchant <- QMerchant.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
   let sourceLatlong = req.origin.gps
@@ -155,9 +158,9 @@ oneWaySearch personId bundleVersion clientVersion req = do
   routeResponse <- Maps.getRoutes person.merchantId request
   let shortestRouteInfo = getRouteInfoWithShortestDuration routeResponse
   let longestRouteDistance = (.distance) =<< getLongestRouteDistance routeResponse
-  dSearchRes <- DOneWaySearch.oneWaySearch person merchant req bundleVersion clientVersion longestRouteDistance ((.distance) =<< shortestRouteInfo)
+  dSearchRes <- DOneWaySearch.oneWaySearch person merchant req bundleVersion clientVersion longestRouteDistance device ((.distance) =<< shortestRouteInfo) ((.duration) =<< shortestRouteInfo)
   fork "search cabs" . withShortRetry $ do
-    becknTaxiReq <- TaxiACL.buildOneWaySearchReq dSearchRes shortestRouteInfo
+    becknTaxiReq <- TaxiACL.buildOneWaySearchReq dSearchRes shortestRouteInfo device
     void $ CallBPP.search dSearchRes.gatewayUrl becknTaxiReq
   fork "search metro" . withShortRetry $ do
     becknMetroReq <- MetroACL.buildSearchReq dSearchRes
@@ -208,10 +211,11 @@ rentalSearch ::
   Id Person.Person ->
   Maybe Version ->
   Maybe Version ->
+  Maybe Text ->
   DRentalSearch.RentalSearchReq ->
   m (Id SearchRequest, UTCTime, Maybe Maps.RouteInfo)
-rentalSearch personId bundleVersion clientVersion req = do
-  dSearchRes <- DRentalSearch.rentalSearch personId bundleVersion clientVersion req
+rentalSearch personId bundleVersion clientVersion device req = do
+  dSearchRes <- DRentalSearch.rentalSearch personId bundleVersion clientVersion device req
   fork "search rental" . withShortRetry $ do
     -- do we need fork here?
     becknReq <- TaxiACL.buildRentalSearchReq dSearchRes

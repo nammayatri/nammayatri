@@ -36,6 +36,7 @@ import Kernel.Prelude
 import Kernel.Serviceability
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis (HedisFlow)
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -65,7 +66,8 @@ data DSearchReq = DSearchReq
     pickupLocation :: LatLong,
     pickupTime :: UTCTime,
     dropLocation :: LatLong,
-    routeInfo :: Maybe Maps.RouteInfo
+    routeInfo :: Maybe Maps.RouteInfo,
+    device :: Maybe Text
   }
 
 data SpecialZoneQuoteInfo = SpecialZoneQuoteInfo
@@ -120,6 +122,7 @@ handler merchantId sReq = do
     throwError RideNotServiceable
   result <- getDistanceAndDuration merchantId fromLocationLatLong toLocationLatLong sReq.routeInfo
   CD.cacheDistance sReq.transactionId (result.distance, result.duration)
+  Redis.setExp (CD.deviceKey sReq.transactionId) sReq.device 120
   logDebug $ "distance: " <> show result.distance
   mbSpecialLocation <- QSpecialLocation.findSpecialLocationByLatLong fromLocationLatLong
 

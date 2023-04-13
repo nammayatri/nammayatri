@@ -49,6 +49,7 @@ mkPersist
       estimatedDistance Meters
       estimatedDuration Seconds
       customerExtraFee Money Maybe
+      device Text Maybe
       status Domain.SearchRequestStatus
       vehicleVariant Variant.Variant
       searchRepeatCounter Int

@@ -35,3 +35,6 @@ getCacheDistance transactionId = Redis.get @(Meters, Seconds) (distanceKey trans
 
 distanceKey :: Text -> Text
 distanceKey = ("distanceKey:" <>)
+
+deviceKey :: Text -> Text
+deviceKey = ("deviceKey:" <>)
