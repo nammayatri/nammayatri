@@ -42,7 +42,10 @@
         description = ''
           Run the nammayatri backend components via "cabal run".
         '';
-        exec = self'.apps.run-mobility-stack-dev.program;
+        exec = ''
+          set -x
+          nix run .#run-mobility-stack
+        '';
       };
 
       backend-new-service = {
