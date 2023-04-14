@@ -166,7 +166,7 @@ ridesView listItemm push state =
           , width MATCH_PARENT
           , background Color.white900
           , visibility $ if (DA.length state.itemsRides) == 0  then VISIBLE else GONE
-          ][  ErrorModal.view (push <<< ErrorModalActionController) (errorModalConfig)]
+          ][  ErrorModal.view (push <<< ErrorModalActionController) (errorModalConfig state)]
       , Tuple "APIFailure"
         $ linearLayout
           [ height MATCH_PARENT

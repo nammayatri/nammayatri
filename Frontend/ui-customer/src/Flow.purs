@@ -243,6 +243,7 @@ currentFlowStatus = do
   else if ( permissionConditionA && os == "IOS") then pure unit
   else if ( not (permissionConditionA && permissionConditionB)) then permissionScreenFlow "LOCATION_DISABLED" 
   else pure unit
+  _ <- pure $ hideKeyboardOnNavigation true
   homeScreenFlow
   where
     verifyProfile :: String -> FlowBT String Unit

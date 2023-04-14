@@ -25,6 +25,7 @@ import Language.Types (STR(..))
 import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..))
 import Screens.Types as ST
 import Styles.Colors as Color
+import Storage as Storage
 
 apiErrorModalConfig :: ErrorModal.Config 
 apiErrorModalConfig = let 
@@ -61,8 +62,8 @@ apiErrorModalConfig = let
     }
   in errorModalConfig' 
 
-errorModalConfig :: ErrorModal.Config 
-errorModalConfig = let 
+errorModalConfig :: ST.MyRidesScreenState -> ErrorModal.Config 
+errorModalConfig state = let 
   config = ErrorModal.config 
   errorModalConfig' = config 
     { imageConfig {
@@ -91,6 +92,7 @@ errorModalConfig = let
       , color = Color.yellow900
       , fontStyle = FontStyle.medium LanguageStyle
       , textSize = FontSize.a_16
+      , visibility = if (Storage.isLocalStageOn ST.HomeScreen) then VISIBLE else GONE
       }
     }
   in errorModalConfig' 
