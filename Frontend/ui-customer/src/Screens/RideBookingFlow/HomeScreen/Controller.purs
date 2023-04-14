@@ -762,6 +762,7 @@ eval BackPressed state = do
                             ]
                           else if state.props.emergencyHelpModal then continue state {props {emergencyHelpModal = false}}
                           else if state.props.callSupportPopUp then continue state {props {callSupportPopUp = false}}
+                          else if state.props.isCancelRide then continue state {props {isCancelRide = false}}
                           else do
                             _ <- pure $ minimizeApp ""
                             continue state
@@ -1093,8 +1094,8 @@ eval (CancelRidePopUpAction (CancelRidePopUp.ClearOptions)) state = do
 
 eval (CancelRidePopUpAction (CancelRidePopUp.Button2 PrimaryButtonController.OnClick)) state = do
     _ <- pure $ performHapticFeedback unit
-    let newState = state{props{isCancelRide = false,currentStage = HomeScreen, rideRequestFlow = false, isSearchLocation = NoView }}
-    case state.props.cancelRideActiveIndex of
+    let newState = state{props{isCancelRide = false}}
+    case state.props.cancelRideActiveIndex of 
       Just index -> if ( (fromMaybe dummyCancelReason (state.props.cancellationReasons !! index)).reasonCode == "OTHER" || (fromMaybe dummyCancelReason (state.props.cancellationReasons !! index)).reasonCode == "TECHNICAL_GLITCH" ) then exit $ CancelRide newState{props{cancelDescription = if (newState.props.cancelDescription == "") then (fromMaybe dummyCancelReason (state.props.cancellationReasons !!index)).description else newState.props.cancelDescription }}
                       else exit $ CancelRide newState{props{cancelDescription = (fromMaybe dummyCancelReason (state.props.cancellationReasons !!index)).description , cancelReasonCode = (fromMaybe dummyCancelReason (state.props.cancellationReasons !! index)).reasonCode }}
       Nothing    -> continue state

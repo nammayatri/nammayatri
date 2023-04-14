@@ -294,14 +294,11 @@ makeStartRideReq otp lat lon = StartRideReq {
 }
 --------------------------------- endRide ---------------------------------------------------------------------------------------------------------------------------------
 
-endRide :: String -> EndRideReq -> FlowBT String EndRideResponse
 endRide productId payload = do
-        headers <-getHeaders' ""
-        withAPIResultBT (EP.endRide productId) (\x → x) errorHandler (lift $ lift $ callAPI headers (EndRideRequest productId payload))
+        headers <- getHeaders ""
+        withAPIResult (EP.endRide productId) unwrapResponse $ callAPI headers ((EndRideRequest productId payload))
     where
-      errorHandler (ErrorPayload errorPayload) =  do
-            void $ lift $ lift $ toggleLoader false
-            BackT $ pure GoBack
+        unwrapResponse (x) = x
 
 makeEndRideReq :: Number -> Number -> EndRideReq
 makeEndRideReq lat lon = EndRideReq {
@@ -320,6 +317,7 @@ cancelRide productId payload = do
         withAPIResultBT (EP.cancelRide productId) (\x → x) errorHandler (lift $ lift $ callAPI headers (DriverCancelRideRequest productId payload))
     where
       errorHandler (ErrorPayload errorPayload) =  do
+            pure $ toast (getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER)
             void $ lift $ lift $ toggleLoader false
             BackT $ pure GoBack
 

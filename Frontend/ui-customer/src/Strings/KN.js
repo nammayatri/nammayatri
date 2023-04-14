@@ -493,5 +493,6 @@ const kannadaStrings = {
   "IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL" : "ಇದು ಸಾಮಾನ್ಯಕ್ಕಿಂತ ಹೆಚ್ಚು ಸಮಯ ತೆಗೆದುಕೊಳ್ಳುತ್ತಿರುವಂತೆ ತೋರುತ್ತಿದೆ.",
   "CONTINUE_SEARCH_WITH" : "ಇದರೊಂದಿಗೆ ಹುಡುಕಾಟವನ್ನು ಮುಂದುವರಿಸಿ",
   "CONTINUING_SEARCH_WITH" : "ಇದರೊಂದಿಗೆ ಹುಡುಕಾಟವನ್ನು ಮುಂದುವರಿಸಲಾಗುತ್ತಿದೆ",
-  "SEARCHING_WITH" : "ಇದರೊಂದಿಗೆ ಹುಡುಕಲಾಗುತ್ತಿದೆ"
+  "SEARCHING_WITH" : "ಇದರೊಂದಿಗೆ ಹುಡುಕಲಾಗುತ್ತಿದೆ",
+  "ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER" : "ದೋಷ ಸಂಭವಿಸಿದೆ ದಯವಿಟ್ಟು ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ"
 }

@@ -51,7 +51,7 @@ import Screens.HomeScreen.View (rideRequestPollingData)
 import Screens.PopUpScreen.Controller (transformAllocationData)
 import Screens.Types (ActiveRide, AllocationData, HomeScreenStage(..), Location, KeyboardModalType(..), ReferralType(..), DriverStatus(..))
 import Screens.Types as ST
-import Services.APITypes (AlternateNumberResendOTPResp(..), Category(Category), DriverActiveInactiveResp(..), DriverAlternateNumberOtpResp(..), DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GetCategoriesRes(GetCategoriesRes), GetDriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), LogOutRes(..), OfferRideResp(..), Option(Option), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes), ReferDriverResp(..), RemoveAlternateNumberRequest(..), RemoveAlternateNumberResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), TriggerOTPResp(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyTokenResp(..), UpdateDriverInfoReq(..), OnCallRes(..))
+import Services.APITypes (AlternateNumberResendOTPResp(..), Category(Category), DriverActiveInactiveResp(..), DriverAlternateNumberOtpResp(..), DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GetCategoriesRes(GetCategoriesRes), GetDriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), LogOutRes(..), OfferRideResp(..), Option(Option), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes), ReferDriverResp(..), RemoveAlternateNumberRequest(..), RemoveAlternateNumberResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), TriggerOTPResp(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyTokenResp(..), UpdateDriverInfoReq(..), OnCallRes(..), EndRideResponse(..))
 import Services.Accessor (_lat, _lon, _id)
 import Services.Backend (makeTriggerOTPReq, makeGetRouteReq, walkCoordinates, walkCoordinate, makeVerifyOTPReq, mkUpdateDriverInfoReq, makeOfferRideReq, makeDriverRCReq, makeDriverDLReq, makeValidateImageReq, makeReferDriverReq, dummyVehicleObject, driverRegistrationStatusBT, makeValidateAlternateNumberRequest, makeResendAlternateNumberOtpRequest, makeVerifyAlternateNumberOtpRequest, makeLinkReferralCodeReq)
 import Services.Backend as Remote
@@ -1221,48 +1221,56 @@ homeScreenFlow = do
       _ <- pure $ printLog "HOME_SCREEN_FLOW GO_TO_END_RIDE" "."
       void $ lift $ lift $ loaderText (getString END_RIDE) ""
       void $ lift $ lift $ toggleLoader true
-      endRideResp <- Remote.endRide id (Remote.makeEndRideReq (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon)))-- driver's  lat long during ending ride
-      _ <- pure $ removeAllPolylines ""
-      _ <- pure $ setValueToLocalNativeStore IS_RIDE_ACTIVE  "false"
-      _ <- pure $ setValueToLocalStore DRIVER_STATUS_N "Online"
-      _ <- pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
-      (DriverActiveInactiveResp resp) <- Remote.driverActiveInactiveBT "true" $ toUpper $ show Online
-      _ <- pure $ firebaseLogEvent "ny_user_ride_completed"
+      endRideResp <- lift $ lift $ Remote.endRide id (Remote.makeEndRideReq (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon)))-- driver's  lat long during ending ride
+      case endRideResp of
+        Right (EndRideResponse resp) -> do
+          _ <- pure $ removeAllPolylines ""
+          _ <- pure $ setValueToLocalNativeStore IS_RIDE_ACTIVE  "false"
+          _ <- pure $ setValueToLocalStore DRIVER_STATUS_N "Online"
+          _ <- pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
+          (DriverActiveInactiveResp resp) <- Remote.driverActiveInactiveBT "true" $ toUpper $ show Online
+          _ <- pure $ firebaseLogEvent "ny_user_ride_completed"
 
-      if getValueToLocalStore HAS_TAKEN_FIRST_RIDE == "true" then do
-        getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
-        let (GetDriverInfoResp getDriverInfoResp) = getDriverInfoResp
-        if (isJust getDriverInfoResp.numberOfRides && (fromMaybe 0 getDriverInfoResp.numberOfRides == 1))
-          then pure $ firebaseLogEvent "ny_driver_first_ride_completed"
-          else pure unit
-        setValueToLocalStore HAS_TAKEN_FIRST_RIDE "false"
-        else pure unit
+          if getValueToLocalStore HAS_TAKEN_FIRST_RIDE == "true" then do
+            getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
+            let (GetDriverInfoResp getDriverInfoResp) = getDriverInfoResp
+            if (isJust getDriverInfoResp.numberOfRides && (fromMaybe 0 getDriverInfoResp.numberOfRides == 1))
+              then pure $ firebaseLogEvent "ny_driver_first_ride_completed"
+              else pure unit
+            setValueToLocalStore HAS_TAKEN_FIRST_RIDE "false"
+            else pure unit
 
-      (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "1" "0" "false" "null"
-      case (head rideHistoryResponse.list) of
-        Nothing -> pure unit
-        Just (RidesInfo response) -> do
-          _ <- pure $ printLog "ride history response" response
-          _ <- pure $ printLog "fromLocation lat" (response.fromLocation ^._lat)
-          modifyScreenState $ RideDetailScreenStateType (\rideDetailScreen -> rideDetailScreen { data {customerName = fromMaybe "" (response.riderName),
-            sourceAddress {
-              place = (decodeAddress response.fromLocation false),
-              lat = (response.fromLocation ^._lat),
-              lon = (response.fromLocation ^._lon)
-            },
-            destAddress {
-              place = (decodeAddress response.toLocation false),
-              lat = (response.toLocation ^._lat),
-              lon = (response.toLocation ^._lon)
-            },
-            rideStartTime = convertUTCtoISC (fromMaybe " " response.tripStartTime) "h:mm a",
-            rideEndTime = convertUTCtoISC (fromMaybe " " response.tripEndTime) "h:mm a",
-            bookingDateAndTime = convertUTCtoISC response.createdAt  "DD/MM/YYYY  hh:mm a",
-            totalAmount = fromMaybe response.estimatedBaseFare response.computedFare}})
-      void $ lift $ lift $ toggleLoader false
-      _ <- updateStage $ HomeScreenStage RideCompleted
-      rideDetailFlow
-    GO_TO_CANCEL_RIDE {id, info , reason} -> do
+          (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "1" "0" "false" "null"
+          case (head rideHistoryResponse.list) of
+            Nothing -> pure unit
+            Just (RidesInfo response) -> do
+              _ <- pure $ printLog "ride history response" response
+              _ <- pure $ printLog "fromLocation lat" (response.fromLocation ^._lat)
+              modifyScreenState $ RideDetailScreenStateType (\rideDetailScreen -> rideDetailScreen { data {customerName = fromMaybe "" (response.riderName),
+                sourceAddress {
+                  place = (decodeAddress response.fromLocation false),
+                  lat = (response.fromLocation ^._lat),
+                  lon = (response.fromLocation ^._lon)
+                },
+                destAddress {
+                  place = (decodeAddress response.toLocation false),
+                  lat = (response.toLocation ^._lat),
+                  lon = (response.toLocation ^._lon)
+                },
+                rideStartTime = convertUTCtoISC (fromMaybe " " response.tripStartTime) "h:mm a",
+                rideEndTime = convertUTCtoISC (fromMaybe " " response.tripEndTime) "h:mm a",
+                bookingDateAndTime = convertUTCtoISC response.createdAt  "DD/MM/YYYY  hh:mm a",
+                totalAmount = fromMaybe response.estimatedBaseFare response.computedFare}})
+          void $ lift $ lift $ toggleLoader false
+          _ <- updateStage $ HomeScreenStage RideCompleted
+          rideDetailFlow
+        Left errorPayload -> do
+          _ <- pure $ toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { endRidePopUp = false } })
+          void $ lift $ lift $ toggleLoader false
+          homeScreenFlow
+      
+    GO_TO_CANCEL_RIDE {id, info , reason} -> do 
       _ <- pure $ printLog "HOME_SCREEN_FLOW GO_TO_CANCEL_RIDE" "."
       cancelRideResp <- Remote.cancelRide id (Remote.makeCancelRideReq info reason)
       _ <- pure $ removeAllPolylines ""

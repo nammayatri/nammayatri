@@ -475,5 +475,6 @@ const malayalamStrings = {
   "IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL" : "ഇതിന് പതിവിലും കൂടുതൽ സമയമെടുക്കുന്നതായി തോന്നുന്നു.",
   "CONTINUE_SEARCH_WITH" : "ഉപയോഗിച്ച് തിരയൽ തുടരുക",
   "CONTINUING_SEARCH_WITH" : "ഉപയോഗിച്ച് തിരയൽ തുടരുന്നു",
-  "SEARCHING_WITH" : "ഉപയോഗിച്ച് തിരയുന്നു"
+  "SEARCHING_WITH" : "ഉപയോഗിച്ച് തിരയുന്നു",
+  "ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER" : "പിശക് സംഭവിച്ചു ദയവായി പിന്നീട് വീണ്ടും ശ്രമിക്കുക"
 }

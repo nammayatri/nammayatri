@@ -63,7 +63,7 @@ import Screens.ReferralScreen.ScreenData as ReferralScreen
 import Screens.SavedLocationScreen.Controller (getSavedLocationForAddNewAddressScreen)
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
 import Screens.Types (CardType(..), AddNewAddressScreenState(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), EmailErrorType(..), ZoneType(..), TipViewData(..))
-import Services.API (AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..), SelectEstimateRes(..),UpdateProfileReq(..), OnCallRes(..))
+import Services.API (AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..), SelectEstimateRes(..),UpdateProfileReq(..), OnCallRes(..), CancelRes(..), FeedbackRes(..))
 import Services.Backend as Remote
 import Screens.Types (Gender(..)) as Gender
 import Screens.MyProfileScreen.ScreenData as MyProfileScreenData
@@ -787,10 +787,16 @@ homeScreenFlow = do
     CANCEL_RIDE_REQUEST state -> do
       _ <- pure $ currentPosition ""
       _ <- updateLocalStage HomeScreen
-      _ <- Remote.cancelRideBT (Remote.makeCancelRequest state) (state.props.bookingId)
-      _ <- pure $ clearWaitingTimer <$> state.props.waitingTimeTimerIds
-      _ <- pure $ firebaseLogEvent "ny_user_ride_cancelled_by_user"
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{settingSideBar{gender = state.data.settingSideBar.gender , email = state.data.settingSideBar.email}},props { isBanner = state.props.isBanner}})
+      response <- lift $ lift $ Remote.cancelRideBT (Remote.makeCancelRequest state) (state.props.bookingId)
+      case response of 
+        Right (CancelRes resp) -> do 
+          _ <- pure $ clearWaitingTimer <$> state.props.waitingTimeTimerIds
+          pure $ firebaseLogEvent "ny_user_ride_cancelled_by_user"
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{settingSideBar{gender = state.data.settingSideBar.gender , email = state.data.settingSideBar.email}},props { isBanner = state.props.isBanner}})
+        Left err  -> do 
+          _ <- pure $ toast (getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER)
+          let newState = state{props{isCancelRide = false}}
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> newState)
       homeScreenFlow
     FCM_NOTIFICATION notification state-> do
         let rideID = state.data.driverInfoCardState.rideId
@@ -876,13 +882,18 @@ homeScreenFlow = do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData)
       enterMobileNumberScreenFlow -- Removed choose langauge screen
     SUBMIT_RATING state -> do
-      _ <- Remote.rideFeedbackBT (Remote.makeFeedBackReq (state.data.previousRideRatingState.rating) (state.data.previousRideRatingState.rideId) (state.data.previousRideRatingState.feedback))
+      response <- lift $ lift $ Remote.rideFeedbackBT (Remote.makeFeedBackReq (state.data.previousRideRatingState.rating) (state.data.previousRideRatingState.rideId) (state.data.previousRideRatingState.feedback))
       _ <- updateLocalStage HomeScreen
       modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{settingSideBar{gender = state.data.settingSideBar.gender , email = state.data.settingSideBar.email}},props { isBanner = state.props.isBanner}})
-      if state.data.previousRideRatingState.rating == 5 then do
-        _ <- pure $ launchInAppRatingPopup unit
-        pure unit
-        else pure unit
+      case response of
+        Right (FeedbackRes res) -> do
+          if state.data.previousRideRatingState.rating == 5 then do
+            _ <- pure $ launchInAppRatingPopup unit
+            pure unit 
+            else pure unit
+        Left err -> do
+            _ <-  pure $ toast (getString ERROR_OCCURED)
+            pure unit
       homeScreenFlow
     CANCEL -> homeScreenFlow
     RELOAD saveToCurrLocs -> do

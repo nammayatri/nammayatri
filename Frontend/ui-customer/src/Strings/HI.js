@@ -501,5 +501,6 @@ const hindiStrings = {
   "IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL" : "ऐसा लगता है कि इसमें सामान्य से ज़्यादा समय लग रहा है।",
   "CONTINUE_SEARCH_WITH" : "के साथ खोज जारी रखें",
   "CONTINUING_SEARCH_WITH" : "से तलाश जारी है",
-  "SEARCHING_WITH" : "से खोज रहे हैं"
+  "SEARCHING_WITH" : "से खोज रहे हैं",
+  "ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER" : "त्रुटि हुई कृपया बाद में पुन: प्रयास करें"
 }

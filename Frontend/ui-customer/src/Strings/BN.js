@@ -475,5 +475,6 @@ const bengaliStrings = {
   "IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL" : "এটি স্বাভাবিকের চেয়ে বেশি সময় নিচ্ছে বলে মনে হচ্ছে।",
   "CONTINUE_SEARCH_WITH" : "এর সাথে অনুসন্ধান চালিয়ে যান",
   "CONTINUING_SEARCH_WITH" : "সঙ্গে অনুসন্ধান অব্যাহত",
-  "SEARCHING_WITH" : "সঙ্গে অনুসন্ধান"
+  "SEARCHING_WITH" : "সঙ্গে অনুসন্ধান",
+  "ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER" : "ত্রুটি ঘটেছে অনুগ্রহ করে পরে আবার চেষ্টা করুন"
 }
