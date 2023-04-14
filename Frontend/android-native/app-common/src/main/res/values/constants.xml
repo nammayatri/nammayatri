@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <integer name="LOCATION_RESOLUTION_REQUEST_CODE">21345</integer>
+    <integer name="SCAN_QR_REQUEST_CODE">181</integer>
+    <integer name="AUTOCOMPLETE_REQUEST_CODE">545</integer>
+    <integer name="REQUEST_CODE_UPDATE_APP">587</integer>
+    <integer name="WIDGET_MESSAGE_ANIMATION_DURATION">1000</integer>
+    <integer name="WIDGET_CORNER_ANIMATION_DURATION">200</integer>
+    <integer name="DURATION_OF_SHOWING_MESSAGE">700</integer>
+    <integer name="LOADER_WAITING_TIME">15000</integer>
+    <string name="DRIVER_STATUS" translatable="false">DRIVER_STATUS</string>
+    <string name="WIDGET_MESSAGE" translatable="false">widgetMessage</string>
+    <string name="IS_RIDE_ACTIVE" translatable="false">IS_RIDE_ACTIVE</string>
+    <string name="ACTIVITY_STATUS" translatable="false">ACTIVITY_STATUS</string>
+    <string name="REGISTERATION_TOKEN" translatable="false">REGISTERATION_TOKEN</string>
+    <string name="ERROR_MESSAGE" translatable="false">errorMessage</string>
+    <string name="ERROR_OCCURRED" translatable="false">Error occurred please try again later</string>
+    <string name="SEARCH_REQUEST_ID" translatable="false">searchRequestId</string>
+    <string name="SEARCH_REQ_VALID_TILL" translatable="false">searchRequestValidTill</string>
+    <string name="BASE_FARE" translatable="false">baseFare</string>
+    <string name="DISTANCE_TO_PICKUP" translatable="false">distanceToPickup</string>
+    <string name="DISTANCE_TO_BE_COVERED" translatable="false">distanceTobeCovered</string>
+    <string name="DURATION_TO_PICKUP" translatable="false">durationToPickup</string>
+    <string name="ADDRESS_PICKUP" translatable="false">addressPickUp</string>
+    <string name="ADDRESS_DROP" translatable="false">addressDrop</string>
+    <string name="OFFERED_FARE" translatable="false">offeredFare</string>
+    <string name="AREA" translatable="false">area</string>
+    <string name="TIME_STAMP_FILE_UPLOAD" translatable="false">TIME_STAMP_FILE_UPLOAD</string>
+    <string name="RIDE_STATUS" translatable="false">RIDE_STATUS</string>
+    <string name="DRIVER_ASSIGNMENT" translatable="false">DRIVER_ASSIGNMENT</string>
+    <string name="nammayatripartner" translatable="false">nammayatripartner</string>
+    <string name="LANGUAGE_KEY" translatable="false" >LANGUAGE_KEY</string>
+    <string name="preference_file_key" translatable="false">namma_yatri_app_local_keys</string>
+    <string name="location_update" translatable="false">LocationUpdate</string>
+    <string name="CLEARED_FARE" translatable="false">CLEARED_FARE</string>
+    <string name="entity_ids" translatable="false">entity_ids</string>
+    <string name="notification_type" translatable="false">notification_type</string>
+    <string name="NEW_RIDE_AVAILABLE" translatable="false">NEW_RIDE_AVAILABLE</string>
+    <string name="show_notification" translatable="false">show_notification</string>
+    <string name="CANCELLED_PRODUCT" translatable="false">CANCELLED_PRODUCT</string>
+    <string name="DRIVER_QUOTE_INCOMING" translatable="false">DRIVER_QUOTE_INCOMING</string>
+    <string name="CANCELLED_SEARCH_REQUEST" translatable="false">CANCELLED_SEARCH_REQUEST</string>
+    <string name="CLEAR_FARE" translatable="false">CLEAR_FARE</string>
+    <string name="LOCAL_STAGE" translatable="false">LOCAL_STAGE</string>
+    <string name="RideRequested" translatable="false">RideRequested</string>
+    <string name="RIDE_REQUEST_TIME" translatable="false">RIDE_REQUEST_TIME</string>
+    <string name="REGISTRATION_APPROVED" translatable="false">REGISTRATION_APPROVED</string>
+</resources>
