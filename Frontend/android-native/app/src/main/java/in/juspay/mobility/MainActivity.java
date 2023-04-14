@@ -624,7 +624,7 @@ public class MainActivity extends AppCompatActivity {
             json.put("requestId", "123");
             json.put("service", getService());
             json.put("betaAssets", false);
-            payload.put("clientId", getResources().getString(R.string.client_id));
+            payload.put("clientId",getResources().getString(R.string.client_id));
             payload.put("action", "initiate");
             payload.put("service", getService());
             payload.put(PaymentConstants.ENV, "prod");

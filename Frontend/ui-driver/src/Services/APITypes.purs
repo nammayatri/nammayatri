@@ -1335,10 +1335,10 @@ newtype OTPRideReq = OTPRideReq
       point :: LatLong
     }
 
-data OTPRideRequest = OTPRideRequest String OTPRideReq
+data OTPRideRequest = OTPRideRequest OTPRideReq
 
 instance makeOTPRideReq :: RestEndpoint OTPRideRequest RidesInfo where
-    makeRequest reqBody@(OTPRideRequest dummyRideOtp (OTPRideReq rqBody)) headers = defaultMakeRequest POST (EP.otpRide dummyRideOtp) headers reqBody
+    makeRequest reqBody@(OTPRideRequest (OTPRideReq rqBody)) headers = defaultMakeRequest POST (EP.otpRide "") headers reqBody
     decodeResponse = decodeJSON
     encodeRequest req = standardEncode req
 
@@ -1350,7 +1350,7 @@ instance encodeOTPRideReq :: Encode OTPRideReq where encode = defaultEncode
 
 
 derive instance genericOTPRideRequest :: Generic OTPRideRequest _
-instance standardEncodeOTPRideRequest :: StandardEncode OTPRideRequest where standardEncode (OTPRideRequest dummyRideOtp req) = standardEncode req
+instance standardEncodeOTPRideRequest :: StandardEncode OTPRideRequest where standardEncode (OTPRideRequest req) = standardEncode req
 instance showOTPRideRequest :: Show OTPRideRequest where show = genericShow
 instance decodeOTPRideRequest :: Decode OTPRideRequest where decode = defaultDecode
 instance encodeOTPRideRequest :: Encode OTPRideRequest where encode = defaultEncode

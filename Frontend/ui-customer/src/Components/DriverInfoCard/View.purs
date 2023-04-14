@@ -71,7 +71,7 @@ driverInfoViewSpecialZone push state =
           , height WRAP_CONTENT
           , width MATCH_PARENT
           , padding $ PaddingBottom 30
-          , margin $ MarginVertical 14 0
+          , margin $ MarginTop 14
           , background Color.white900
           , gravity CENTER
           , cornerRadii $ Corners 24.0 true true false false
