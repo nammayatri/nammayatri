@@ -1,21 +1,21 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
 module Screens.TripDetailsScreen.View where
 
-import Animation as Anim 
+import Animation as Anim
 import Components.PrimaryButton as PrimaryButton
 import Components.PopUpModal as PopUpModal
 import Effect (Effect)
@@ -23,21 +23,21 @@ import Language.Types (STR(..))
 import Language.Strings (getString)
 import Prelude (Unit, const, map, ($), (&&), (/=), (<<<), (<=), (<>), (==))
 import PrestoDOM (Length(..), Margin(..), Orientation(..), Padding(..), Gravity(..), Visibility(..), PrestoDOM, Screen, linearLayout, frameLayout, gravity, orientation, height, width, imageView, imageUrl, text, textSize, textView, padding, color, margin, fontStyle, background, cornerRadius, stroke, editText, weight, hint, onClick, visibility, pattern, onChange, scrollView, relativeLayout, alignParentBottom, onBackPressed, afterRender, multiLineEditText, disableClickFeedback, imageWithFallback)
-import Screens.Types as ST 
+import Screens.Types as ST
 import Screens.Types (PaymentMode(..))
 import Screens.TripDetailsScreen.Controller (Action(..), ScreenOutput, eval)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Components.GenericHeader as GenericHeader
 import Components.SourceToDestination as SourceToDestination
-import Engineering.Helpers.Commons as EHC 
+import Engineering.Helpers.Commons as EHC
 import Styles.Colors as Color
-import Debug.Trace (spy)
+import Debug (spy)
 import Common.Types.App
 import Screens.CustomerUtils.TripDetailsScreen.ComponentConfig
 
-screen :: ST.TripDetailsScreenState -> Screen Action ST.TripDetailsScreenState ScreenOutput 
-screen initialState = 
+screen :: ST.TripDetailsScreenState -> Screen Action ST.TripDetailsScreenState ScreenOutput
+screen initialState =
   { initialState
   , view
   , name : "TripDetailsScreen"
@@ -49,8 +49,8 @@ screen initialState =
   }
 
 view
-  :: forall w 
-  . (Action -> Effect Unit) -> ST.TripDetailsScreenState -> PrestoDOM (Effect Unit) w 
+  :: forall w
+  . (Action -> Effect Unit) -> ST.TripDetailsScreenState -> PrestoDOM (Effect Unit) w
 view push state =
   Anim.screenAnimation $ relativeLayout
   [ height MATCH_PARENT
@@ -69,7 +69,7 @@ view push state =
       [ width MATCH_PARENT
       , height MATCH_PARENT
       , visibility if state.props.issueReported then GONE else VISIBLE
-      ][  tripDetailsLayout state push 
+      ][  tripDetailsLayout state push
         , linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
@@ -77,12 +77,12 @@ view push state =
           , background Color.white900
           , visibility if state.props.reportIssue then VISIBLE else GONE
           ][PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)]
-        
+
         ]]
     , issueReportedView state push
-    , lostAndFoundPopUpView push state 
+    , lostAndFoundPopUpView push state
     ]
-  
+
 tripDetailsLayout :: forall w. ST.TripDetailsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 tripDetailsLayout state push =
   scrollView
@@ -100,7 +100,7 @@ tripDetailsLayout state push =
           , visibility if state.props.issueReported then GONE else VISIBLE
           , padding (Padding 16 16 16 10)
           ][ tripDetailsView state
-           , separatorView 
+           , separatorView
            , tripIdView push state
            , SourceToDestination.view (push <<< SourceToDestinationActionController) (sourceToDestinationConfig state)
            , ratingAndInvoiceView state push
@@ -130,20 +130,20 @@ tripDetailsLayout state push =
            ]
         ]]
 
-lostAndFoundView :: forall w . (Action -> Effect Unit) -> ST.TripDetailsScreenState -> PrestoDOM (Effect Unit) w 
-lostAndFoundView push state = 
+lostAndFoundView :: forall w . (Action -> Effect Unit) -> ST.TripDetailsScreenState -> PrestoDOM (Effect Unit) w
+lostAndFoundView push state =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
-  , gravity CENTER_VERTICAL 
+  , gravity CENTER_VERTICAL
   , orientation HORIZONTAL
   , padding (Padding 0 16 0 16)
-  , disableClickFeedback false 
+  , disableClickFeedback false
   , visibility if (state.data.selectedItem.status /= "CANCELLED" && state.props.canConnectWithDriver) then VISIBLE else GONE
   , onClick push $ (const ShowPopUp)
-  ][  textView  
+  ][  textView
       [ text (getString LOST_SOMETHING)
-      , textSize FontSize.a_14 
+      , textSize FontSize.a_14
       , color Color.darkDescriptionText
       , fontStyle $ FontStyle.medium LanguageStyle
       ]
@@ -156,21 +156,21 @@ lostAndFoundView push state =
           , height (V 15)
           , width (V 15)
           ]
-        ] 
+        ]
   ]
 
 ---------------------- tripIdView ---------------------------
-tripIdView :: forall w . (Action -> Effect Unit) -> ST.TripDetailsScreenState -> PrestoDOM (Effect Unit) w 
-tripIdView push state = 
+tripIdView :: forall w . (Action -> Effect Unit) -> ST.TripDetailsScreenState -> PrestoDOM (Effect Unit) w
+tripIdView push state =
   linearLayout
   [ orientation VERTICAL
   , height WRAP_CONTENT
   , width WRAP_CONTENT
   , margin (MarginBottom 16)
   , gravity LEFT
-  ][  textView  
+  ][  textView
       [ text (getString RIDE_ID)
-      , textSize FontSize.a_14 
+      , textSize FontSize.a_14
       , color Color.black700
       , fontStyle $ FontStyle.medium LanguageStyle
       ]
@@ -196,8 +196,8 @@ tripIdView push state =
 
   ]
 
-lostAndFoundPopUpView :: forall w . (Action -> Effect Unit) -> ST.TripDetailsScreenState -> PrestoDOM (Effect Unit) w 
-lostAndFoundPopUpView push state = 
+lostAndFoundPopUpView :: forall w . (Action -> Effect Unit) -> ST.TripDetailsScreenState -> PrestoDOM (Effect Unit) w
+lostAndFoundPopUpView push state =
   linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
@@ -230,8 +230,8 @@ tripDetailsView state =
               , height (V 36)
               ]
             ]
-        
-    , linearLayout 
+
+    , linearLayout
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
       , orientation VERTICAL
@@ -306,7 +306,7 @@ separatorView =
 
 -------------------- ratingAndInvoice ----------------
 ratingAndInvoiceView ::  forall w . ST.TripDetailsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-ratingAndInvoiceView state push = 
+ratingAndInvoiceView state push =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -332,7 +332,7 @@ ratingAndInvoiceView state push =
                           ][imageView
                               [ height $ V 14
                               , width $ V 14
-                              , imageWithFallback if item <= state.data.rating then "ny_ic_star_active,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_active.png" else "ny_ic_star_inactive,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_inactive.png" 
+                              , imageWithFallback if item <= state.data.rating then "ny_ic_star_active,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_active.png" else "ny_ic_star_inactive,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_inactive.png"
                               ]
                             ]) [1 ,2 ,3 ,4 ,5])
     -- , linearLayout
@@ -351,7 +351,7 @@ ratingAndInvoiceView state push =
 
 -------- invoice --------
 invoiceView ::  forall w . ST.TripDetailsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-invoiceView state push = 
+invoiceView state push =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -376,19 +376,19 @@ invoiceView state push =
             , height (V 15)
             , width (V 15)
             ]
-          ] 
+          ]
       ]
 
 ----------------- report Isssue ----------------
 reportIssueView ::  forall w . ST.TripDetailsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-reportIssueView state push = 
+reportIssueView state push =
   linearLayout
     [ orientation VERTICAL
     , width MATCH_PARENT
     , height WRAP_CONTENT
     , padding (Padding 0 16 0 16)
     , disableClickFeedback true
-    , onClick push $ const ReportIssue 
+    , onClick push $ const ReportIssue
     ][  linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -410,10 +410,10 @@ reportIssueView state push =
                 , height $ if state.props.reportIssue then V 6 else V 15
                 , width $ if state.props.reportIssue then V 12 else V 15
                 ]
-              ] 
+              ]
           ]
           -- TODO add animations
-          -- , PrestoAnim.animationSet[      
+          -- , PrestoAnim.animationSet[
           --   fadeIn state.props.reportIssue
           -- , fadeOut $ not state.props.reportIssue
           -- ] $
@@ -422,7 +422,7 @@ reportIssueView state push =
             , height WRAP_CONTENT
             , orientation VERTICAL
             , visibility if state.props.reportIssue then VISIBLE else GONE
-            ][ linearLayout 
+            ][ linearLayout
                [ width MATCH_PARENT
                , height $ V 120
                , orientation HORIZONTAL
@@ -446,14 +446,14 @@ reportIssueView state push =
                       , onChange push $ MessageTextChanged
                       ]
 
-                 ]  
+                 ]
               ]
-           
-        ]   
+
+        ]
 
 -------------------------- issueReportedView -----------------------
 issueReportedView ::  forall w . ST.TripDetailsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-issueReportedView state push = 
+issueReportedView state push =
   relativeLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
@@ -497,4 +497,4 @@ issueReportedView state push =
           , margin (MarginBottom 16)
           ][  PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)]
       ]
-  
+

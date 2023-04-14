@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -22,14 +22,14 @@ import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Maybe (Maybe(..))
 import Effect (Effect)
-import Effect.Aff (launchAff_)
+import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (flowRunner, os, countDown)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Math (ceil)
+import Data.Number (ceil)
 import JBridge(startTimerWithTime)
 import Prelude (Unit, bind, const, discard, pure, show, unit, ($), (/=), (<>), (==))
 import Presto.Core.Types.Language.Flow (doAff)
@@ -40,9 +40,9 @@ import Styles.Colors as Color
 import Common.Types.App
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListItemState -> PrestoDOM (Effect Unit) w
-view push state = 
-  PrestoAnim.animationSet 
-    [ translateInXForwardAnim (state.timer /= "0") , translateInXForwardAnim (state.timer == "0")]  $ 
+view push state =
+  PrestoAnim.animationSet
+    [ translateInXForwardAnim (state.timer /= "0") , translateInXForwardAnim (state.timer == "0")]  $
       linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
@@ -51,12 +51,12 @@ view push state =
           , margin (Margin 16 20 16 4)
           , background if state.selectedQuote == Just state.id then Color.blue600' else Color.white900
           , stroke if state.selectedQuote == Just state.id then ("1,"<>Color.blue700') else ("1," <> Color.grey)
-          , afterRender (\action -> do 
+          , afterRender (\action -> do
                           _ <- push action
-                          launchAff_ $ flowRunner $ runExceptT $ runBackT $ lift $ lift $ doAff do 
+                          _ <- launchAff $ flowRunner $ runExceptT $ runBackT $ lift $ lift $ doAff do
                             if (os == "IOS") then liftEffect $ startTimerWithTime (show state.seconds) state.id "1" push CountDown
                               else liftEffect $ countDown state.seconds state.id push CountDown
-                          pure unit 
+                          pure unit
                         ) (const NoAction)
           , onClick push (const $ Click state)
           , disableClickFeedback true
@@ -65,10 +65,10 @@ view push state =
             orientation HORIZONTAL
           , width MATCH_PARENT
           , height WRAP_CONTENT
-          ][  driverImageView state 
+          ][  driverImageView state
             , linearLayout
               [ height WRAP_CONTENT
-              , weight 1.0 
+              , weight 1.0
               , padding (PaddingLeft 12)
               , orientation VERTICAL
               ][ nameAndPrice state push
@@ -78,7 +78,7 @@ view push state =
               ]
 
 nameAndPrice :: forall w . QuoteListItemState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
-nameAndPrice state push = 
+nameAndPrice state push =
  linearLayout
  [ width MATCH_PARENT
  , height WRAP_CONTENT
@@ -97,7 +97,7 @@ ratingAndExpiryTime state push =
  ]
 
 driverImageView :: forall w . QuoteListItemState -> PrestoDOM (Effect Unit) w
-driverImageView state = 
+driverImageView state =
  linearLayout
  [ width WRAP_CONTENT
  , height WRAP_CONTENT
@@ -107,7 +107,7 @@ driverImageView state =
     , width WRAP_CONTENT
     , gravity CENTER
     , margin (Margin 0 7 0 0)
-    ][ 
+    ][
       imageView
         [ margin (MarginLeft 27)
       , cornerRadius 18.0
@@ -117,7 +117,7 @@ driverImageView state =
       , imageWithFallback ""
 
         ]
-      , imageView 
+      , imageView
         [ height $ V 37
         , width $ V 40
         , cornerRadius 20.0
@@ -154,12 +154,12 @@ driverRatingView state  =
 
 
 priceView :: forall w . QuoteListItemState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
-priceView state push = 
+priceView state push =
   linearLayout
     [ height MATCH_PARENT
     , width WRAP_CONTENT
-    , orientation VERTICAL 
-    , gravity CENTER_HORIZONTAL 
+    , orientation VERTICAL
+    , gravity CENTER_HORIZONTAL
     ][  textView
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
@@ -172,13 +172,13 @@ priceView state push =
     ]
 
 timerView :: forall w . QuoteListItemState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
-timerView state push = 
- linearLayout 
+timerView state push =
+ linearLayout
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
   , gravity RIGHT
   , weight 1.0
-  ][  textView 
+  ][  textView
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
       , textSize FontSize.a_12
@@ -189,10 +189,10 @@ timerView state push =
       , fontStyle $ FontStyle.regular LanguageStyle
       , gravity CENTER
       ]
-  ]  
+  ]
 
 driverNameAndTimeView :: forall w . QuoteListItemState -> PrestoDOM (Effect Unit) w
-driverNameAndTimeView state = 
+driverNameAndTimeView state =
   linearLayout
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
@@ -220,7 +220,7 @@ driverNameAndTimeView state =
     ]
 
 primaryButtonView :: QuoteListItemState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-primaryButtonView state push = 
+primaryButtonView state push =
  linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -242,7 +242,7 @@ primaryButtonView state push =
   ]
 
 autoAcceptingView :: forall w . QuoteListItemState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
-autoAcceptingView state push = 
+autoAcceptingView state push =
  linearLayout
  [ height WRAP_CONTENT
  , width MATCH_PARENT
@@ -265,7 +265,7 @@ autoAcceptingView state push =
             [ width MATCH_PARENT
             , height $ V 18
             ][]
-        ] 
+        ]
     , linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -298,7 +298,7 @@ autoAcceptingView state push =
 
 
 horizontalLine :: forall w . QuoteListItemState -> PrestoDOM (Effect Unit) w
-horizontalLine state = 
+horizontalLine state =
  linearLayout
  [ width MATCH_PARENT
  , height WRAP_CONTENT

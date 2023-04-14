@@ -20,11 +20,12 @@ import Components.QuoteListItem.Controller (QuoteListItemState)
 import Components.SettingSideBar.Controller (SettingSideBarState)
 import Components.ChatView.Controller (ChatComponent)
 import Data.Generic.Rep (class Generic)
-import Data.Generic.Rep.Eq (genericEq)
-import Data.Generic.Rep.Show (genericShow)
+import Data.Eq.Generic (genericEq)
+import Data.Show.Generic (genericShow)
 import Data.Maybe (Maybe)
 import Foreign.Class (class Decode, class Encode)
 import Halogen.VDom.DOM.Prop (PropValue)
+import PrestoDOM (LetterSpacing)
 import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import Services.API (AddressComponents, BookingLocationAPIEntity, QuoteAPIEntity, Route)
@@ -148,7 +149,7 @@ type EnterMobileNumberScreenStateProps = {
   resendEnable :: Boolean,
   isReadingOTP :: Boolean,
   capturedOtp :: String,
-  letterSpacing :: Number
+  letterSpacing :: LetterSpacing
 }
 
 type EnterMobileNumberScreenStateData = {
@@ -728,7 +729,7 @@ type DriverInfoCard =
   , driverArrived :: Boolean
   , estimatedDistance :: String
   , driverArrivalTime :: Int
-  , bppRideId :: String 
+  , bppRideId :: String
   }
 
 type RatingCard =

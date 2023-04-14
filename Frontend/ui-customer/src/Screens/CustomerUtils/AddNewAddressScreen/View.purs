@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -40,26 +40,26 @@ import Screens.AddNewAddressScreen.Controller (Action(..), ScreenOutput, eval, v
 import Screens.Types as ST
 import Styles.Colors as Color
 import Common.Types.App
-import Screens.CustomerUtils.AddNewAddressScreen.ComponentConfig 
+import Screens.CustomerUtils.AddNewAddressScreen.ComponentConfig
 import Storage (KeyStore(..), getValueToLocalStore)
 
 screen :: ST.AddNewAddressScreenState -> Screen Action ST.AddNewAddressScreenState ScreenOutput
-screen initialState = 
+screen initialState =
   { initialState
   , view
   , name : "AddNewAddressScreen"
-  , globalEvents : [(\push -> do 
-                      if initialState.props.isLocateOnMap then do 
-                        pure (pure unit) 
+  , globalEvents : [(\push -> do
+                      if initialState.props.isLocateOnMap then do
+                        pure (pure unit)
                         else do
-                        _ <- HU.storeCallBackLocateOnMap push UpdateLocation 
+                        _ <- HU.storeCallBackLocateOnMap push UpdateLocation
                         pure unit
                         pure (pure unit))]
-  , eval 
+  , eval
   }
 
 view :: forall w . (Action  -> Effect Unit) -> ST.AddNewAddressScreenState -> PrestoDOM (Effect Unit) w
-view push state = 
+view push state =
   Anim.screenAnimation $
   relativeLayout[
     width MATCH_PARENT
@@ -72,14 +72,14 @@ view push state =
           _ <- HU.setText' (EHC.getNewIDWithTag "SaveAsEditText") (state.data.addressSavedAs)
           _ <- pure $ JB.locateOnMap true 0.0 0.0
           _ <- if (state.data.activeIndex == Just 2 && state.props.showSavePlaceView) then JB.requestKeyboardShow (EHC.getNewIDWithTag ("SaveAsEditText")) else pure unit
-          pure unit 
+          pure unit
           ) (const AfterRender)
   ][
    frameLayout[
      width MATCH_PARENT
     , height MATCH_PARENT
     , clickable true
-   ][ 
+   ][
       linearLayout
       [  height MATCH_PARENT
       , width MATCH_PARENT
@@ -94,11 +94,11 @@ view push state =
       , gravity CENTER
       ][ imageView
          [ width $ V 60
-         , height $ V 60 
+         , height $ V 60
          , imageWithFallback $ (HU.getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)) <> ",https://assets.juspay.in/nammayatri/images/user/ny_ic_customer_current_location.png"
          ]
        ]
-    , relativeLayout 
+    , relativeLayout
       [ background (if state.props.isLocateOnMap then Color.transparent else "#F5F5F5")
       , height MATCH_PARENT
       , width MATCH_PARENT
@@ -108,21 +108,21 @@ view push state =
         [ height $ V ((EHC.screenHeight unit) / 7)
         , width MATCH_PARENT
         , clickable true
-        , background Color.black900 
+        , background Color.black900
         , padding (Padding 0 EHC.safeMarginTop 0 0)
         ][]
       , GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
       , addNewScreenView state push
       , savePlaceView state push
-      , confirmLocationView state push 
+      , confirmLocationView state push
       , bottomBtnsView state push
 
       ])]
-  
+
   ]
 
-confirmLocationView :: forall w . ST.AddNewAddressScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
-confirmLocationView state push = 
+confirmLocationView :: forall w . ST.AddNewAddressScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+confirmLocationView state push =
   linearLayout[
     height WRAP_CONTENT
   , width MATCH_PARENT
@@ -130,33 +130,33 @@ confirmLocationView state push =
   , orientation VERTICAL
   , padding (Padding 16 0 16 EHC.safeMarginBottom)
   , visibility if state.props.isLocateOnMap then VISIBLE else GONE
-  ][  recenterButtonView state push 
+  ][  recenterButtonView state push
     , PrimaryButton.view (push <<< PrimaryButtonConfirmLocAC) (primaryButtonConfigConfirmLoc state)]
 
-recenterButtonView :: forall w . ST.AddNewAddressScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
-recenterButtonView state push = 
+recenterButtonView :: forall w . ST.AddNewAddressScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+recenterButtonView state push =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , gravity RIGHT
   ][  imageView
       [ imageWithFallback "ny_ic_recenter_btn,https://assets.juspay.in/nammayatri/images/common/ny_ic_recenter_btn.png"
-      , height $ V 40 
-      , width $ V 40 
+      , height $ V 40
+      , width $ V 40
       , onClick (\action -> do
         _ <- push action
         _ <- JB.getCurrentPosition push UpdateCurrentLocation
-        pure unit 
+        pure unit
        ) (const $ RecenterCurrentLocation)
       ]
 
   ]
 
-bottomBtnsView :: forall w . ST.AddNewAddressScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
-bottomBtnsView state push = 
+bottomBtnsView :: forall w . ST.AddNewAddressScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+bottomBtnsView state push =
   linearLayout
     [ height WRAP_CONTENT
-    , width MATCH_PARENT  
+    , width MATCH_PARENT
     , orientation VERTICAL
     , alignParentBottom "true,-1"
     , visibility if (state.props.isLocateOnMap || state.props.showSavePlaceView || (DA.null state.data.locationList)) then GONE else VISIBLE
@@ -170,7 +170,7 @@ bottomBtnsView state push =
       , linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
-        , background Color.white900 
+        , background Color.white900
         ](DA.mapWithIndex (\idx item -> linearLayout
         [ height WRAP_CONTENT
         , width $ V ((EHC.screenWidth unit/2))
@@ -185,28 +185,28 @@ bottomBtnsView state push =
                 [height MATCH_PARENT
                 , width WRAP_CONTENT
                 , padding (Padding 0 16 0 16)
-                , gravity CENTER 
+                , gravity CENTER
                 ][  imageView
                     [ height $ V 16
                     , width $ V 16
                     , imageWithFallback item.imageUrl
                     ]
                   ]
-            , textView $ 
+            , textView $
               [ height WRAP_CONTENT
               , width WRAP_CONTENT
               , text item.text
               , gravity CENTER
               , color Color.black800
               , padding (Padding 10 16 16 16)
-              , onClick (\action -> if item.tag == "CURRENT_LOCATION" then do  
+              , onClick (\action -> if item.tag == "CURRENT_LOCATION" then do
                                 _ <- push action
-                                HU.getLocationName push "9.9" "9.9" "Current Location" SelectedCurrentLocation
-                                else do 
+                                HU.getLocationName push 9.9 9.9 "Current Location" SelectedCurrentLocation
+                                else do
                                   _ <- push action
                                   pure unit) (const item.action)
               ] <> FontStyle.body1 TypoGraphy
-            ] 
+            ]
           , linearLayout
             [ width $ V 1
             , height $ V 20
@@ -220,8 +220,8 @@ btnData :: ST.AddNewAddressScreenState ->  Array {text :: String, imageUrl :: St
 btnData state = [ {text : (getString SELECT_ON_MAP), imageUrl : "ny_ic_locate_on_map,https://assets.juspay.in/nammayatri/images/user/ny_ic_locate_on_map.png", action : SetLocationOnMap, tag : "LOCATE_ON_MAP"},
                   {text : (getString CURRENT_LOCATION), imageUrl : "ny_ic_current_location,https://assets.juspay.in/nammayatri/images/user/ny_ic_current_location.png", action : CurrentLocationAction, tag : "CURRENT_LOCATION"}]
 
-addNewScreenView :: forall w. ST.AddNewAddressScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
-addNewScreenView state push = 
+addNewScreenView :: forall w. ST.AddNewAddressScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+addNewScreenView state push =
   linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
@@ -272,14 +272,14 @@ addNewScreenView state push =
           , width WRAP_CONTENT
           , gravity CENTER
           , padding (Padding 0 27 16 27)
-          , onClick 
-            (\action -> do 
-                  _ <- push action 
+          , onClick
+            (\action -> do
+                  _ <- push action
                   _ <- HU.setText' (EHC.getNewIDWithTag "SavedLocationEditText") ("")
-                  pure unit 
+                  pure unit
                   ) (const $ ClearEditText)
           , visibility if state.data.address /= ""  then VISIBLE else GONE
-          ][imageView 
+          ][imageView
             [ height $ V 16
             , width $ V 16
             , imageWithFallback "ny_ic_clear,https://assets.juspay.in/nammayatri/images/user/ny_ic_clear.png"
@@ -315,12 +315,12 @@ addNewScreenView state push =
         , textSize FontSize.a_16
         , lineHeight "24"
         ]]
-    , bottomLayout state push 
-      
+    , bottomLayout state push
+
   ]  ) ]
 
-textViews :: forall w. ST.AddNewAddressScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
-textViews state push = 
+textViews :: forall w. ST.AddNewAddressScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+textViews state push =
   linearLayout
   [ orientation HORIZONTAL
   , width MATCH_PARENT
@@ -348,19 +348,19 @@ textViews state push =
   ]]
 
 bottomLayout :: forall w. ST.AddNewAddressScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-bottomLayout state push = 
-  linearLayout 
+bottomLayout state push =
+  linearLayout
   [ width MATCH_PARENT
   , height $ V (2 * (EHC.screenHeight unit /3))
   , margin (Margin 0 12 0 0)
   , visibility if state.props.isLocateOnMap then GONE else VISIBLE
   , orientation VERTICAL
   ][searchResultsView state push
-  , locationUnserviceableView state push 
+  , locationUnserviceableView state push
   ]
 
-searchResultsView :: forall w. ST.AddNewAddressScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
-searchResultsView state push = 
+searchResultsView :: forall w. ST.AddNewAddressScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+searchResultsView state push =
   scrollView
   [ height MATCH_PARENT
   , width MATCH_PARENT
@@ -369,14 +369,14 @@ searchResultsView state push =
   , stroke "1,#E5E7EB"
   , visibility if state.props.isSearchedLocationServiceable then VISIBLE else GONE
   , background Color.white900
-  , scrollBarY false 
+  , scrollBarY false
   ][ linearLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
         , cornerRadius 20.0
         , orientation VERTICAL
         , padding (PaddingBottom 10)
-        ](DA.mapWithIndex (\index item -> 
+        ](DA.mapWithIndex (\index item ->
               linearLayout[
                 width MATCH_PARENT
               , height WRAP_CONTENT
@@ -388,15 +388,15 @@ searchResultsView state push =
                     , background Color.lightGreyShade
                     ][]
               ]
-              )  (if (DA.null state.data.locationList) then (if state.props.selectFromCurrentOrMap then bottomBtnsData else []) else state.data.locationList )) 
+              )  (if (DA.null state.data.locationList) then (if state.props.selectFromCurrentOrMap then bottomBtnsData else []) else state.data.locationList ))
   ]
 
-bottomBtnsData :: Array ST.LocationListItemState 
-bottomBtnsData = 
+bottomBtnsData :: Array ST.LocationListItemState
+bottomBtnsData =
   [ { prefixImageUrl : "ny_ic_locate_on_map,https://assets.juspay.in/nammayatri/images/user/ny_ic_locate_on_map.png"
-    , title : (getString CHOOSE_ON_MAP) 
+    , title : (getString CHOOSE_ON_MAP)
     , subTitle :  (getString DRAG_THE_MAP )
-    , placeId : Nothing 
+    , placeId : Nothing
     , lat : Nothing
     , lon : Nothing
     , description : ""
@@ -404,13 +404,13 @@ bottomBtnsData =
     , postfixImageUrl : ""
     , postfixImageVisibility : false
     , tagType : Just $ show ST.LOCATE_ON_MAP
-    , cardType : Nothing 
+    , cardType : Nothing
     , address : ""
     , tagName : ""
     , isEditEnabled : true
     , savedLocation : ""
     , placeName : ""
-    , isClickable : true 
+    , isClickable : true
     , alpha : 1.0
     , fullAddress : dummyAddress
     , locationItemType : Nothing
@@ -418,7 +418,7 @@ bottomBtnsData =
   , { prefixImageUrl : "ny_ic_current_location,https://assets.juspay.in/nammayatri/images/user/ny_ic_current_location.png"
     , title :  (getString USE_CURRENT_LOCATION)
     , subTitle : (getString FAVOURITE_YOUR_CURRENT_LOCATION)
-    , placeId : Nothing 
+    , placeId : Nothing
     , lat : Nothing
     , lon : Nothing
     , description : ""
@@ -426,13 +426,13 @@ bottomBtnsData =
     , postfixImageUrl : ""
     , postfixImageVisibility : false
     , tagType : Just $ show ST.CURR_LOC
-    , cardType : Nothing 
+    , cardType : Nothing
     , address : ""
     , tagName : ""
     , isEditEnabled : true
     , savedLocation : ""
     , placeName : ""
-    , isClickable : true 
+    , isClickable : true
     , alpha : 1.0
     , fullAddress : dummyAddress
     , locationItemType : Nothing
@@ -440,8 +440,8 @@ bottomBtnsData =
 
   ]
 
-savePlaceView :: forall w. ST.AddNewAddressScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
-savePlaceView state push = 
+savePlaceView :: forall w. ST.AddNewAddressScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+savePlaceView state push =
   relativeLayout[
     height MATCH_PARENT
   , visibility if state.props.showSavePlaceView then VISIBLE else GONE
@@ -462,7 +462,7 @@ savePlaceView state push =
       ][  textView
           [ text (getString LOCATION)
           , color Color.black600
-          , textSize FontSize.a_12 
+          , textSize FontSize.a_12
           , lineHeight "15"
           , fontStyle $ FontStyle.medium LanguageStyle
           , width MATCH_PARENT
@@ -477,13 +477,13 @@ savePlaceView state push =
           , cornerRadius 4.0
           , padding (Padding 16 16 16 16)
           , gravity CENTER_VERTICAL
-          , onClick (\action -> do 
-                          _ <- push action 
+          , onClick (\action -> do
+                          _ <- push action
                           _ <- HU.setText' (EHC.getNewIDWithTag "SavedLocationEditText") state.data.address
                           pure unit)
               $ const ChangeAddress
           ][  textView
-              [ text (state.data.selectedItem).description 
+              [ text (state.data.selectedItem).description
               , textSize FontSize.a_14
               , fontStyle $ FontStyle.medium LanguageStyle
               , color Color.black600
@@ -492,16 +492,16 @@ savePlaceView state push =
               , padding (PaddingRight 8)
               , width $ V (4 * (EHC.screenWidth unit / 5) - 60)
               , maxLines 1
-              , ellipsize true 
+              , ellipsize true
               ]
             , linearLayout[
               height WRAP_CONTENT
             , width MATCH_PARENT
-            , gravity RIGHT 
+            , gravity RIGHT
             ][  textView
                 [ text (getString EDIT)
                 , color Color.blue900
-                , onFocus push $ const $ EditTextFocusChanged 
+                , onFocus push $ const $ EditTextFocusChanged
                 , gravity CENTER_VERTICAL
                 , textSize FontSize.a_14
                 , fontStyle $ FontStyle.medium LanguageStyle
@@ -510,14 +510,14 @@ savePlaceView state push =
           ]
          , textView
           [ text if state.props.isLocationServiceable then (getText state) else (getString LOCATION_UNSERVICEABLE)
-          , textSize FontSize.a_12 
-          , gravity LEFT 
+          , textSize FontSize.a_12
+          , gravity LEFT
           , margin (MarginTop 4)
-          , visibility if ((state.props.tagExists && state.data.existsAs /= "") || (not state.props.isLocationServiceable)) then VISIBLE else GONE 
+          , visibility if ((state.props.tagExists && state.data.existsAs /= "") || (not state.props.isLocationServiceable)) then VISIBLE else GONE
           , fontStyle $ FontStyle.medium LanguageStyle
           , color Color.red
           ]
-        , tagView state push 
+        , tagView state push
         , linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
@@ -533,11 +533,11 @@ savePlaceView state push =
       , orientation VERTICAL
       , background Color.grey800
       , adjustViewWithKeyboard "true"
-      ][  PrimaryButton.view (push <<< PrimaryButtonAC ) (primaryButtonConfig state)]  
+      ][  PrimaryButton.view (push <<< PrimaryButtonAC ) (primaryButtonConfig state)]
       ]
 
-tagView :: forall w. ST.AddNewAddressScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
-tagView state push = 
+tagView :: forall w. ST.AddNewAddressScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+tagView state push =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -551,27 +551,27 @@ tagView state push =
       , fontStyle $ FontStyle.medium LanguageStyle
       , width MATCH_PARENT
       , margin (MarginBottom 8)
-      , gravity LEFT 
+      , gravity LEFT
       ]
     , linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation HORIZONTAL
-      ](DA.mapWithIndex (\index item -> 
+      ](DA.mapWithIndex (\index item ->
           linearLayout
           [ height $ V 36
           , width WRAP_CONTENT
           , orientation HORIZONTAL
-          , gravity CENTER 
+          , gravity CENTER
           , padding (Padding 10 10 10 10)
           , background if (Just index) == state.data.activeIndex then Color.catskillWhite else Color.grey800
           , onClick push $ const (TagSelected index)
           , margin (MarginRight 12)
           , cornerRadius 6.0
-          , alpha case item.tag of 
+          , alpha case item.tag of
                       "FAVOURITE"     -> 1.0
-                      _               -> if (validTag state.data.savedTags item.tag state.data.placeName) || (Just index == state.data.activeIndex) then 1.0 else 0.5 
-          , stroke if (Just index) == state.data.activeIndex then "1,#0066FF" else "1," <> Color.catskillWhite 
+                      _               -> if (validTag state.data.savedTags item.tag state.data.placeName) || (Just index == state.data.activeIndex) then 1.0 else 0.5
+          , stroke if (Just index) == state.data.activeIndex then "1,#0066FF" else "1," <> Color.catskillWhite
           ][  imageView
               [ imageWithFallback if (Just index) == state.data.activeIndex then item.activeImageUrl else item.inActiveImageUrl
               , width $ V 15
@@ -594,16 +594,16 @@ tagView state push =
   ]
 
 locationUnserviceableView :: forall w. ST.AddNewAddressScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-locationUnserviceableView state push = 
+locationUnserviceableView state push =
   linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
-  , orientation VERTICAL 
+  , orientation VERTICAL
   , clickable true
   , visibility if state.props.isSearchedLocationServiceable then GONE else VISIBLE
   , background "#F5F5F5"
   , gravity CENTER
-  ][  imageView 
+  ][  imageView
       [ imageWithFallback "ny_ic_location_unserviceable,https://assets.juspay.in/nammayatri/images/user/ny_ic_location_unserviceable.png"
       , height $ V 99
       , width $ V 133
@@ -618,7 +618,7 @@ locationUnserviceableView state push =
           [ text (getString LOCATION_UNSERVICEABLE)
           , textSize FontSize.a_18
           , color Color.black800
-          , gravity CENTER  
+          , gravity CENTER
           , fontStyle $ FontStyle.bold LanguageStyle
           ]
         ]
@@ -626,7 +626,7 @@ locationUnserviceableView state push =
       [ width (V (EHC.screenWidth unit - 40 ))
       , height WRAP_CONTENT
       , gravity CENTER
-      ][  textView 
+      ][  textView
           [ text (getString  CURRENTLY_WE_ARE_LIVE_IN_)
           , textSize FontSize.a_14
           , gravity CENTER

@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -25,11 +25,11 @@ import Language.Types (STR(..))
 import Prelude (Unit, const, map, ($), (/=), (<>), (==))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, weight, width, textFromHtml, imageWithFallback)
 import Styles.Colors as Color
-import Debug.Trace (spy)
+import Debug (spy)
 import Common.Types.App
 
 view :: forall w .  (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
-view push = 
+view push =
     linearLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT
@@ -53,7 +53,7 @@ view push =
 
 
 closeBtnView :: forall w .  (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
-closeBtnView push = 
+closeBtnView push =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -73,13 +73,13 @@ closeBtnView push =
 
 
 listComponentView :: forall w . String -> PrestoDOM (Effect Unit) w
-listComponentView dummy = 
+listComponentView dummy =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
     , margin (Margin 0 0 0 10)
-    ](map (\item -> 
+    ](map (\item ->
         linearLayout
           [ width MATCH_PARENT
           , height if (item.image == "ic_mask_3") then (V 146) else WRAP_CONTENT
@@ -97,15 +97,15 @@ listComponentView dummy =
                 [ height WRAP_CONTENT
                 , width $ V 0
                 , weight 1.0
-                , orientation VERTICAL 
-                , margin (Margin 16 20 10 9) 
-                ][textView 
+                , orientation VERTICAL
+                , margin (Margin 16 20 10 9)
+                ][textView
                   [ height WRAP_CONTENT
                   , width WRAP_CONTENT
                   , textSize FontSize.a_16
                   , text item.heading
                   , color Color.black800
-                  , fontStyle $ FontStyle.semiBold LanguageStyle 
+                  , fontStyle $ FontStyle.semiBold LanguageStyle
                   , margin (Margin 0 0 0 9)
                   ]
                 , textView $
@@ -114,7 +114,7 @@ listComponentView dummy =
                   , textFromHtml item.subHeading
                   , color Color.black700
                   ]<> FontStyle.paragraphText TypoGraphy
-                , textView 
+                , textView
                   [ height WRAP_CONTENT
                   , width WRAP_CONTENT
                   , textSize FontSize.a_12
@@ -128,15 +128,15 @@ listComponentView dummy =
                 ]
                 , imageView
                       [height $ V 110
-                      , width $ V 110 
-                      , imageWithFallback item.image 
+                      , width $ V 110
+                      , imageWithFallback item.image
                       ]
-                ]  
-            ]) (cardData ""))  
+                ]
+            ]) (cardData ""))
 
 
 cardData :: String -> Array CardData
-cardData dummy = 
+cardData dummy =
   [
     { heading : (getString GET_ESTIMATE_FARE),
       subHeading : (getString ASK_FOR_PRICE_INFO),
@@ -153,7 +153,7 @@ cardData dummy =
       note : Just (getString PAY_THE_DRIVER_NOTE),
       image : "ny_ic_pay_driver,https://assets.juspay.in/nammayatri/images/user/ny_ic_pay_driver.png"
     }
-  ] 
+  ]
 
 type CardData =
   { heading :: String
