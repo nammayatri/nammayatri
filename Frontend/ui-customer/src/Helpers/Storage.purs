@@ -64,6 +64,7 @@ data KeyStore
   | RATING_SKIPPED
   | POINTS_FACTOR
   | SESSION_ID
+  | HAS_TAKEN_FIRST_RIDE
 
 derive instance genericKeyStore :: Generic KeyStore _
 
