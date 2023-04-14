@@ -125,6 +125,7 @@ import in.juspay.mobility.utils.ConnectionStateMonitor;
 import in.juspay.mobility.utils.LocationUpdateService;
 import in.juspay.mobility.utils.MediaPlayerView;
 import in.juspay.mobility.utils.MyFirebaseMessagingService;
+import in.juspay.mobility.utils.AudioRecorder;
 import in.juspay.mobility.utils.NetworkBroadcastReceiver;
 import in.juspay.mobility.utils.NotificationUtils;
 import in.juspay.mobility.utils.RideRequestActivity;
@@ -945,9 +946,12 @@ public class MainActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
         switch (requestCode) {
             case IMAGE_CAPTURE_REQ_CODE:
+                CommonJsInterface.isUploadPopupOpen = false;
                 if (resultCode == RESULT_OK) {
+                    CommonJsInterface.isUploadPopupOpen = false;
                     captureImage (data);
                 }
+                CommonJsInterface.isUploadPopupOpen = false;
                 break;
             case REQUEST_CODE_UPDATE_APP:
                 if (resultCode != RESULT_OK) {
@@ -1017,6 +1021,13 @@ public class MainActivity extends AppCompatActivity {
                       e.printStackTrace();
                   }
               }else {
+                  Toast.makeText(this, "Permission Denied", Toast.LENGTH_SHORT).show();
+              }
+              break;
+          case AudioRecorder.REQUEST_RECORD_AUDIO_PERMISSION:
+              if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                  AudioRecorder.recordPermissionAccepted();
+              } else {
                   Toast.makeText(this, "Permission Denied", Toast.LENGTH_SHORT).show();
               }
               break;
@@ -1217,7 +1228,7 @@ public class MainActivity extends AppCompatActivity {
             Log.d(TAG, "encoded image size camera : " + String.valueOf((Math.ceil(encImage.length() / 4) * 3) / 1000));
             if (juspayServicesGlobal.getDynamicUI() != null) {
                 String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
-                CommonJsInterface.callingStoreCallImageUpload(juspayServicesGlobal.getDuiCallback(), encImage, "IMG_" + timeStamp +".jpg");
+                CommonJsInterface.callingStoreCallImageUpload(juspayServicesGlobal.getDuiCallback(), encImage, "IMG_" + timeStamp +".jpg", result.getUri().getPath());
             }
         }
         catch (Exception e){

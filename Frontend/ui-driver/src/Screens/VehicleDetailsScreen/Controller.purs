@@ -51,7 +51,7 @@ instance loggableAction :: Loggable Action where
     UploadImage -> trackAppActionClick appId (getScreen VEHICLE_DETAILS_SCREEN) "in_screen" "upload_image_click"
     PreviewImage -> trackAppActionClick appId (getScreen VEHICLE_DETAILS_SCREEN) "in_screen" "preview_image_clicked"
     SelectVehicleTypeModalAction action -> trackAppScreenEvent appId (getScreen VEHICLE_DETAILS_SCREEN) "in_screen" "select_vehicle_type"
-    CallBackImageUpload str imageName -> trackAppScreenEvent appId (getScreen VEHICLE_DETAILS_SCREEN) "in_screen" "call_back_image_upload"
+    CallBackImageUpload str imageName imagePath -> trackAppScreenEvent appId (getScreen VEHICLE_DETAILS_SCREEN) "in_screen" "call_back_image_upload"
     NoAction -> trackAppScreenEvent appId (getScreen VEHICLE_DETAILS_SCREEN) "in_screen" "no_action"
 
 data ScreenOutput = GoBack | UpdateVehicleDetails VehicleDetailsScreenState
@@ -66,7 +66,7 @@ data Action = NoAction
               | PreviewImage
               | RemoveImageClick
               | UploadImage
-              | CallBackImageUpload String String
+              | CallBackImageUpload String String String
               | AfterRender
 
 eval :: Action -> VehicleDetailsScreenState -> Eval Action ScreenOutput VehicleDetailsScreenState
@@ -90,7 +90,7 @@ eval (UploadImage) state = continueWithCmd state [do
   _ <- liftEffect $ uploadFile unit
   pure NoAction]
 
-eval (CallBackImageUpload base_64 imageName) state = do
+eval (CallBackImageUpload base_64 imageName imagePath) state = do
   if base_64 /= "" then continue $ state { props { deleteButtonVisibility = true}, data {imageName = "image.jpeg" , base64Image = base_64}} else continue state
 
 eval SelectVehicleType state = continue state

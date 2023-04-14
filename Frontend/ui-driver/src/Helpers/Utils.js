@@ -230,35 +230,37 @@ export const get10sTimer = function (cb){
   }
 }
 
-export const startTimer = function(input){
-  return function(cb){
-    return function (action){
-      return function(){
-        var callback = callbackMapper.map(function(){
-          var time = input;
-          time = time-1;
-          startCountDown(time);
-          console.log("inside startTimer");
-          function startCountDown(seconds){
-            if (seconds >= 0){
-              timerIdForTimeout = setTimeout(()=> {
-                if(seconds <=0){
-                  clearTimeout(timerIdForTimeout);
-                  console.log("EXPIRED");
-                  console.log(seconds + "seconds");
-                  cb(action("EXPIRED"))();
-                }else{
-                  var timer = seconds + "s ";
-                  console.log(timer + "seconds") ;
-                  cb(action(timer))();
-                  startCountDown(seconds-1);
-                }
-              },1000);
+export const startTimer = function(input) {
+  return function (isCountDown) {
+    return function (cb) {
+      return function (action) {
+        return function () {
+          var callback = callbackMapper.map(function () {
+            var time = input;
+            time = time + (isCountDown ? -1 : 1);
+            startCountDown(time);
+            console.log("inside startTimer");
+            function startCountDown(seconds) {
+              if (seconds >= 0) {
+                timerIdForTimeout = setTimeout(() => {
+                  if (seconds <= 0) {
+                    clearTimeout(timerIdForTimeout);
+                    console.log("EXPIRED");
+                    console.log(seconds + "seconds");
+                    cb(action("EXPIRED"))();
+                  } else {
+                    var timer = seconds + "s ";
+                    console.log(timer + "seconds");
+                    cb(action(timer))();
+                    startCountDown(seconds + (isCountDown ? -1 : 1));
+                  }
+                }, 1000);
+              }
             }
-          }
-          console.log("timerId : " + timerIdForTimeout);
-        });
-        window.callUICallback(callback);
+            console.log("timerId : " + timerIdForTimeout);
+          });
+          window.callUICallback(callback);
+        }
       }
     }
   }
@@ -492,6 +494,10 @@ export const getTimeStampString = function (utcTime){
   else            return s + (s == 1 ? " second" : " seconds")
 }
 
+export const clearFocus = function (id) {
+    return JBridge.clearFocus(id)
+}
+
 export const addMediaPlayer = function (id) {
   return function(source) {
     return function () {
@@ -499,6 +505,60 @@ export const addMediaPlayer = function (id) {
     }
   };
 };
+
+export const saveAudioFile = function (source) {
+    return function() {
+        return JBridge.saveAudioFile(source);
+    }
+}
+
+export const addMediaFile = function (viewID) {
+    return function (source) {
+        return function (actionButtonID) {
+            return function (playIcon) {
+                return function (pauseIcon) {
+                    return function (timerID) {
+                        return function () {
+                            JBridge.addMediaFile(viewID, source, actionButtonID, playIcon, pauseIcon, timerID);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+export const uploadMultiPartData = function (path) {
+    return function (url) {
+        return function(fileType) {
+            return function() {
+                return JBridge.uploadMultiPartData(path, url, fileType);
+            }
+        }
+    }
+}
+
+export const startAudioRecording = function (id) {
+    return function() {
+        return JBridge.startAudioRecording();
+    }
+};
+
+export const stopAudioRecording = function (id) {
+    return function() {
+        return JBridge.stopAudioRecording();
+    }
+}
+
+export const renderBase64ImageFile = function (base64Image) {
+    return function(id) {
+        return function (fitCenter) {
+            return function () {
+                return JBridge.renderBase64ImageFile(base64Image, id, fitCenter);
+            }
+        }
+    }
+}
 
 export const removeMediaPlayer = function (id) {
   return function () {

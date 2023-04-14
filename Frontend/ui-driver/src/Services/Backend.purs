@@ -701,5 +701,61 @@ removeAlternateNumber payload = do
         unwrapResponse (x) = x
 
 
+--------------------------------------------- Driver Report Issue ---------------------------------------------
+getCategoriesBT :: String -> FlowBT String GetCategoriesRes
+getCategoriesBT language = do
+  headers <- getHeaders' ""
+  withAPIResultBT (EP.getCategories language) (\x → x) errorHandler (lift $ lift $ callAPI headers (GetCategoriesReq language))
+  where
+    errorHandler (ErrorPayload errorPayload) = BackT $ pure GoBack
+
+getOptionsBT :: String -> String -> FlowBT String GetOptionsRes
+getOptionsBT categoryId language = do
+  headers <- getHeaders' ""
+  withAPIResultBT (EP.getOptions categoryId language) (\x → x) errorHandler (lift $ lift $ callAPI headers (GetOptionsReq categoryId language))
+    where
+      errorHandler (ErrorPayload errorPayload) = BackT $ pure GoBack
+
+postIssueBT :: PostIssueReq -> FlowBT String PostIssueRes
+postIssueBT payload = do
+  headers <- getHeaders' ""
+  withAPIResultBT (EP.postIssue "") (\x -> x) errorHandler (lift $ lift $ callAPI headers payload)
+    where
+      errorHandler (ErrorPayload errorPayload) = BackT $ pure GoBack
+
+issueInfoBT :: String -> FlowBT String IssueInfoRes
+issueInfoBT issueId = do
+  headers <- getHeaders' ""
+  withAPIResultBT (EP.issueInfo issueId) (\x -> x) errorHandler (lift $ lift $ callAPI headers (IssueInfoReq issueId))
+    where
+      errorHandler (ErrorPayload errorPayload) = BackT $ pure GoBack
+
+callCustomerBT :: String -> FlowBT String CallCustomerRes
+callCustomerBT rideId = do
+    headers <- getHeaders' ""
+    withAPIResultBT (EP.callDriverToCustomer rideId) (\x → x) errorHandler (lift $ lift $ callAPI headers (CallCustomerReq rideId))
+    where
+      errorHandler errorPayload = do
+            BackT $ pure GoBack
+      
+----------------------------------- fetchIssueList ----------------------------------------
+
+fetchIssueListBT :: FetchIssueListReq -> FlowBT String FetchIssueListResp
+fetchIssueListBT payload = do
+     headers <- getHeaders' ""
+     withAPIResultBT (EP.fetchIssueList "") (\x → x) errorHandler (lift $ lift $ callAPI headers payload)
+    where
+        errorHandler (ErrorPayload errorPayload) =  do
+            BackT $ pure GoBack
+
+
+----------------------------------- deleteIssue -------------------------------------
+deleteIssueBT :: String -> FlowBT String DeleteIssueResp
+deleteIssueBT issueId = do
+     headers <- getHeaders' ""
+     withAPIResultBT (EP.deleteIssue issueId) (\x → x) errorHandler (lift $ lift $ callAPI headers (DeleteIssueReq issueId))
+    where
+        errorHandler (ErrorPayload errorPayload) =  do
+            BackT $ pure GoBack
 
 

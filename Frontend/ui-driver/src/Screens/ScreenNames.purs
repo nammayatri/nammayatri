@@ -28,8 +28,10 @@ data ScreenName = SPLASH_SCREEN
                 | NEED_ACCESS_SCREEN
                 | HOME_SCREEN
                 | DRIVER_PROFILE_SCREEN
+                | REPORT_ISSUE_CHAT_SCREEN
                 | DRIVER_DETAILS_SCREEN
                 | RIDE_HISTORY_SCREEN
+                | RIDE_SELECTION_SCREEN
                 | SELECT_LANGUAGE_SCREEN
                 | HELP_AND_SUPPORT_SCREEN
                 | VEHICLE_DETAILS_SCREEN
@@ -60,8 +62,10 @@ getScreen str = case str of
     NEED_ACCESS_SCREEN              -> "need_access_screen"
     HOME_SCREEN                     -> "home_screen"
     DRIVER_PROFILE_SCREEN           -> "driver_profile_screen"
+    REPORT_ISSUE_CHAT_SCREEN        -> "report_issue_chat_screen"
     DRIVER_DETAILS_SCREEN           -> "driver_details_screen"
     RIDE_HISTORY_SCREEN             -> "ride_history_screen"
+    RIDE_SELECTION_SCREEN           -> "ride_selection_screen"
     SELECT_LANGUAGE_SCREEN          -> "select_langauge_screen"
     HELP_AND_SUPPORT_SCREEN         -> "help_and_support_screen"
     VEHICLE_DETAILS_SCREEN          -> "vehicle_details_screen"

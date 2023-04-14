@@ -27,6 +27,7 @@ import Components.StatsModel as StatsModel
 import Components.ChatView as ChatView
 import Data.Array as DA
 import Data.Either (Either(..))
+import Data.Int (ceil, toNumber)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String as DS
 import Data.Time.Duration (Milliseconds(..))
@@ -49,7 +50,7 @@ import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (coordinatorLayout)
 import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes as PTD
-import Screens.HomeScreen.Controller (Action(..), ScreenOutput, checkPermissionAndUpdateDriverMarker, eval, RideRequestPollingData)
+import Screens.HomeScreen.Controller (Action(..), RideRequestPollingData, ScreenOutput, ScreenOutput(GoToHelpAndSupportScreen), checkPermissionAndUpdateDriverMarker, eval)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.Types (HomeScreenStage(..), HomeScreenState, KeyboardModalType(..),DriverStatus(..), DriverStatusResult(..), PillButtonState(..))
 import Screens.Types as ST
@@ -66,7 +67,7 @@ import Services.APITypes (Status(..))
 import Components.BottomNavBar.Controller (navData)
 import Screens.HomeScreen.ComponentConfig
 import EN (getEN)
-
+import PrestoDOM.Properties (orientation, visibility)
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -256,7 +257,6 @@ googleMap state =
   [ width MATCH_PARENT
   , height MATCH_PARENT
   , background Color.white900
-  -- , stroke $ "1," <> Color.black900
   , id (EHC.getNewIDWithTag "DriverTrackingHomeScreenMap")
   ][]
 
@@ -269,12 +269,27 @@ driverActivityStatus state =
   , background Color.grey900
   ][]
 
+helpAndSupportBtnView :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
+helpAndSupportBtnView state push =
+  linearLayout
+  [ width WRAP_CONTENT
+  , height WRAP_CONTENT
+  , margin (Margin 0 0 0 10)
+  , cornerRadius 24.0
+  ][ imageView
+   [ width ( V 42 )
+   , height ( V 42 )
+   , imageWithFallback "ic_report_help,https://assets.juspay.in/nammayatri/images/common/ic_report_help.png"
+   , onClick push (const HelpAndSupportScreen)
+   ]
+  ]
+
 recenterBtnView :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
 recenterBtnView state push =
   linearLayout
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
-  -- , stroke $ "1," <> Color.black500
+  , stroke $ "1," <> Color.black500
   , cornerRadius 24.0
   ][ imageView
     [ width ( V 40 )
@@ -523,6 +538,7 @@ updateLocationAndLastUpdatedView2 state push =
   , background Color.white900
   ][ locationLastUpdatedTextAndTimeView push state
     , updateButtonIconAndText push state
+--    , helpAndSupportBtnView state push
     -- , recenterBtnView state push
   ]
 
@@ -609,6 +625,7 @@ viewRecenterAndSupport state push =
     -- --       ) (const RecenterButtonAction)
     -- ]
     -- ,
+    helpAndSupportBtnView state push,
     recenterBtnView state push
   ]
 driverStatus :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -923,14 +940,22 @@ statsModel push state =
   PrestoAnim.animationSet
   [ Anim.translateYAnimFromTop $ AnimConfig.translateYAnimHomeConfig AnimConfig.TOP_BOTTOM ] $
   linearLayout
-    [ width MATCH_PARENT
-    , height MATCH_PARENT
-    , orientation VERTICAL
-    , gravity RIGHT
-    , margin (Margin 16 10 16 0)
-    ][  StatsModel.view (push <<< StatsModelAction) (statsModelConfig state)
-      , recenterBtnView state push
-      ]
+  [ orientation VERTICAL
+  , width MATCH_PARENT
+  , height MATCH_PARENT
+  , gravity RIGHT
+  , margin (Margin 16 10 16 0)
+  ][ linearLayout
+   [ orientation VERTICAL
+   , width MATCH_PARENT
+   , gravity RIGHT
+   , visibility if not state.props.rideActionModal && state.props.statusOnline then VISIBLE else GONE
+   ][ StatsModel.view (push <<< StatsModelAction) (statsModelConfig state)
+    , helpAndSupportBtnView state push
+    , recenterBtnView state push
+   ]
+   , if state.props.rideActionModal && state.props.statusOnline then helpAndSupportBtnView state push else dummyTextView
+  ]
 
 bottomNavBar :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 bottomNavBar push state =

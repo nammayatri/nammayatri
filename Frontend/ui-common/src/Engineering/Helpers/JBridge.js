@@ -294,6 +294,10 @@ export const isLocationPermissionEnabled = function (unit) {
   };
 };
 
+export const isMicrophonePermissionEnabled = function (unit) {
+    return window.JBridge.isMicrophonePermissionEnabled();
+};
+
 export const getPackageName = function () {
   if (window.__OS == "IOS") {
     var sessionDetails = JSON.parse(window.JBridge.getSessionDetails())
@@ -1003,8 +1007,8 @@ export const storeCallBackImageUpload = function (cb) {
   try {
   return function (action) {
       return function () {
-          var callback = callbackMapper.map(function (imgStr, imageName) {
-              cb(action (imgStr)(imageName))();
+          var callback = callbackMapper.map(function (imgStr, imageName, imagePath) {
+              cb(action (imgStr)(imageName)(imagePath))();
           });
           window.JBridge.storeCallBackImageUpload(callback);
       }
@@ -1085,7 +1089,9 @@ export const previewImage = function (base64Image) {
 
 export const renderBase64Image = function (image) {
   return function (id) {
-      return JBridge.renderBase64Image(image, id);
+    return function (fitCenter) {
+      return JBridge.renderBase64Image(image, id, fitCenter);
+    }
   };
 };
 

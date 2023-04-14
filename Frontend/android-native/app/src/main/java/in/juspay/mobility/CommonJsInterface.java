@@ -293,7 +293,9 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
     public static ArrayList<MediaPlayerView> audioPlayers = new ArrayList<>();
     public static String webViewCallBack = null;
+    private AudioRecorder audioRecorder = null;
     public static int debounceAnimateCamera = 0;
+    public static boolean isUploadPopupOpen = false;
     Toast toast = null;
 
 
@@ -1186,15 +1188,15 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         }
     }
 
-    public static void callingStoreCallImageUpload(DuiCallback dynamicUII, String stringImage, String imageName) {
+    public static void callingStoreCallImageUpload(DuiCallback dynamicUII, String stringImage, String imageName, String imagePath) {
         System.out.println("zxc callingStoreCallImageUpload");
         if (dynamicUII != null) {
             if (storeCallBackImageUpload == "imageUpload") {
                 System.out.println("zxc callback not setted");
             }
             System.out.println("zxc stringImage" + stringImage);
-            String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s');",
-                    storeCallBackImageUpload, stringImage, imageName);
+            String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s','%s');",
+                    storeCallBackImageUpload, stringImage, imageName, imagePath);
             dynamicUII.addJsToWebView(javascript);
         }
     }
@@ -1946,24 +1948,37 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     @JavascriptInterface
-    public void renderBase64Image(String url, String id) {
-        String base64Image = getAPIResponse(url);
-        activity.runOnUiThread(() -> {
-            try {
-                if (!base64Image.equals("") && base64Image != null && id != null) {
-                    LinearLayout layout = activity.findViewById(Integer.parseInt(id));
-                    byte[] decodedString = Base64.decode(base64Image, Base64.DEFAULT);
-                    Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
-                    ImageView imageView = new ImageView(context);
-                    imageView.setImageBitmap(decodedByte);
-                    imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
-                    imageView.setAdjustViewBounds(true);
-                    imageView.setClipToOutline(true);
-                    layout.removeAllViews();
-                    layout.addView(imageView);
+    public void renderBase64Image(String url, String id, boolean fitCenter) {
+        if (url.contains("http"))
+            url = getAPIResponse(url);
+        renderBase64ImageFile(url, id, fitCenter);
+    }
+
+    @JavascriptInterface
+    public void renderBase64ImageFile(String base64Image, String id, boolean fitCenter) {
+        activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    if (!base64Image.equals("") && base64Image!=null && id!=null){
+                        LinearLayout layout = activity.findViewById(Integer.parseInt(id));
+                        byte[] decodedString = Base64.decode(base64Image, Base64.DEFAULT);
+                        Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
+                        ImageView imageView = new ImageView(context);
+                        imageView.setImageBitmap(decodedByte);
+                        if (fitCenter) {
+                            imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                        } else {
+                            imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                        }
+                        imageView.setAdjustViewBounds(true);
+                        imageView.setClipToOutline(true);
+                        layout.removeAllViews();
+                        layout.addView(imageView);
+                    }
+                } catch (Exception e){
+                    e.printStackTrace();
                 }
-            } catch (Exception e) {
-                e.printStackTrace();
             }
         });
     }
@@ -2536,6 +2551,44 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     @JavascriptInterface
+    public void clearFocus(String id) {
+        activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                activity.findViewById(Integer.parseInt(id)).clearFocus();
+            }
+        });
+    }
+
+    @JavascriptInterface
+    public String stopAudioRecording() {
+        if (audioRecorder != null) {
+            String res = audioRecorder.stopRecording();
+            Log.d(LOG_TAG, "stopAudioRecording: " + res);
+            audioRecorder = null;
+            return res;
+        }
+        return null;
+    }
+
+    public boolean isMicrophonePermissionEnabled() {
+        System.out.println("micPerm: " + (ActivityCompat.checkSelfPermission(activity.getApplicationContext(), Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED));
+        return ActivityCompat.checkSelfPermission(activity.getApplicationContext(), Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED;
+    }
+    @JavascriptInterface
+    public boolean startAudioRecording() {
+        if (isMicrophonePermissionEnabled()){
+            audioRecorder = new AudioRecorder();
+            audioRecorder.startRecording();
+            return true;
+        } else {
+            String [] permissions = {Manifest.permission.RECORD_AUDIO};
+            ActivityCompat.requestPermissions(activity, permissions, AudioRecorder.REQUEST_RECORD_AUDIO_PERMISSION);
+            return false;
+        }
+    }
+
+    @JavascriptInterface
     public void addMediaPlayer(String viewID, String source) {
         activity.runOnUiThread(() -> {
             MediaPlayerView audioPlayer = new MediaPlayerView(context, activity);
@@ -2566,6 +2619,147 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                 e.printStackTrace();
             }
         });
+    }
+
+    @JavascriptInterface
+    public String saveAudioFile(String source) throws IOException {
+        File sourceFile = new File(source);
+        FileInputStream fis = new FileInputStream(sourceFile);
+        File destFile = new File(MainActivity.getInstance().getFilesDir().getAbsolutePath() + "final_audio_record.mp3");
+        FileOutputStream fos = new FileOutputStream(destFile);
+        int n;
+        while ((n = fis.read()) != -1) {
+            fos.write(n);
+        }
+        fis.close();
+        fos.close();
+        return destFile.getAbsolutePath();
+    }
+
+    @JavascriptInterface
+    public void addMediaFile(String viewID, String source, String actionPlayerID, String playIcon, String pauseIcon, String timerID) throws IOException {
+        Log.d(LOG_TAG, "addMediaFile: " + source);
+        activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                MediaPlayerView audioPlayer;
+                if (Integer.parseInt(actionPlayerID) != -1) {
+                    if (Integer.parseInt(timerID) != -1) {
+                        audioPlayer = new MediaPlayerView(context, activity, Integer.parseInt(actionPlayerID), playIcon, pauseIcon, Integer.parseInt(timerID));
+                        audioPlayer.setTimerId(Integer.parseInt(timerID));
+                        audioPlayer.setTimerColorAndSize(Color.WHITE, 14);
+                        audioPlayer.setVisualizerBarPlayedColor(Color.WHITE);
+                    } else {
+                        audioPlayer = new MediaPlayerView(context, activity, Integer.parseInt(actionPlayerID), playIcon, pauseIcon);
+                        audioPlayer.setTimerColorAndSize(Color.GRAY, 14);
+                    }
+                } else {
+                    audioPlayer = new MediaPlayerView(context, activity);
+                }
+                try {
+                    audioPlayer.inflateView(Integer.parseInt(viewID));
+                    if (source.startsWith("http")) {
+                        Thread thread = new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    String base64 = getAPIResponse(source);
+                                    byte decodedAudio[] = Base64.decode(base64, Base64.DEFAULT);
+                                    File tempMp3 = File.createTempFile("audio_cache", "mp3", context.getCacheDir());
+                                    tempMp3.deleteOnExit();
+                                    FileOutputStream fos = new FileOutputStream(tempMp3);
+                                    fos.write(decodedAudio);
+                                    fos.close();
+                                    FileInputStream fis = new FileInputStream(tempMp3);
+                                    audioPlayer.addAudioFileInput(fis);
+                                } catch (Exception e) {
+
+                                }
+                            }
+                        });
+                        thread.start();
+                    } else {
+                        File file = new File(source);
+                        FileInputStream fis = new FileInputStream(file);
+                        audioPlayer.addAudioFileInput(fis);
+                    }
+                    audioPlayers.add(audioPlayer);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+    }
+
+    @JavascriptInterface
+    public String uploadMultiPartData(String filePath, String uploadUrl, String fileType) throws IOException {
+        String boundary = UUID.randomUUID().toString();
+
+        URL url = new URL(uploadUrl);
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod("POST");
+        connection.setDoOutput(true);
+        connection.setUseCaches(false);
+        connection.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
+        connection.setRequestProperty("token", getKeyInNativeSharedPrefKeys("REGISTERATION_TOKEN"));
+
+        File file = new File(filePath);
+        String fileName = file.getName();
+        DataOutputStream outputStream = new DataOutputStream(connection.getOutputStream());
+
+        outputStream.writeBytes("--" + boundary + "\r\n");
+        outputStream.writeBytes(("Content-Disposition: form-data; name=\"file\"; filename=\"" + fileName + "\"" + "\r\n"));
+        if (fileType.equals("Image"))
+            outputStream.writeBytes("Content-Type: image/jpeg\r\n");
+        else if (fileType.equals("Audio"))
+            outputStream.writeBytes("Content-Type: audio/mpeg\r\n");
+        outputStream.writeBytes("\r\n");
+
+        FileInputStream fileInputStream = new FileInputStream(filePath);
+        int bytesAvailable = fileInputStream.available();
+        int maxBufferSize = 1024 * 1024;
+        int bufferSize = Math.min(bytesAvailable, maxBufferSize);
+
+        byte[] buffer = new byte[bufferSize];
+        int bytesRead = fileInputStream.read(buffer, 0, bufferSize);
+        while (bytesRead > 0) {
+            outputStream.write(buffer, 0, bufferSize);
+            bytesAvailable = fileInputStream.available();
+            bufferSize = Math.min(bytesAvailable, maxBufferSize);
+            bytesRead = fileInputStream.read(buffer, 0, bufferSize);
+        }
+        outputStream.writeBytes("\r\n");
+        outputStream.writeBytes("--" + boundary + "\r\n");
+
+        outputStream.writeBytes("Content-Disposition: form-data; name=\"fileType\"" + "\r\n");
+        outputStream.writeBytes("Content-Type: application/json" + "\r\n");
+        outputStream.writeBytes("\r\n");
+        outputStream.writeBytes(fileType);
+        outputStream.writeBytes("\r\n");
+        outputStream.writeBytes("--" + boundary + "\r\n" + "--");
+
+        int responseCode = connection.getResponseCode();
+        String res = "";
+        if (responseCode == 200) {
+            StringBuilder s_buffer = new StringBuilder();
+            InputStream is = new BufferedInputStream(connection.getInputStream());
+            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(is));
+            String inputLine;
+            while ((inputLine = bufferedReader.readLine()) != null) {
+                s_buffer.append(inputLine);
+            }
+            res = s_buffer.toString();
+            JsonObject jsonObject = JsonParser.parseString(res).getAsJsonObject();
+            res = jsonObject.get("fileId").getAsString();
+        } else {
+            BufferedReader br = new BufferedReader(new InputStreamReader(connection.getErrorStream()));
+            String strCurrentLine;
+            while ((strCurrentLine = br.readLine()) != null) {
+                System.out.println(strCurrentLine);
+            }
+            Toast.makeText(MainActivity.getInstance(), "Unable to upload image", Toast.LENGTH_SHORT).show();
+        }
+        return res;
     }
 
     @JavascriptInterface
@@ -3317,23 +3511,28 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
 
     @JavascriptInterface
     public void uploadFile (){
-        activity.runOnUiThread(() -> {
-            if ((ActivityCompat.checkSelfPermission(activity, WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) && (ActivityCompat.checkSelfPermission(activity, CAMERA) == PackageManager.PERMISSION_GRANTED) && (ActivityCompat.checkSelfPermission(activity, READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)){
-                Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
-                SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-                sharedPref.edit().putString(context.getResources().getString(R.string.TIME_STAMP_FILE_UPLOAD), timeStamp).apply();
-                Uri photoFile = FileProvider.getUriForFile(context.getApplicationContext(),context.getResources().getString(R.string.fileProviderPath), new File(context.getApplicationContext().getFilesDir(), "IMG_" + timeStamp+".jpg"));
-                takePicture.putExtra(MediaStore.EXTRA_OUTPUT, photoFile);
-                Intent chooseFromFile = new Intent(Intent.ACTION_GET_CONTENT);
-                chooseFromFile.setType("image/*");
-                Intent chooser = Intent.createChooser(takePicture, "Upload Image");
-                chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[] { chooseFromFile });
-                startActivityForResult(activity, chooser, IMAGE_CAPTURE_REQ_CODE, null);
-            } else {
-                ActivityCompat.requestPermissions(activity, new String[]{CAMERA, WRITE_EXTERNAL_STORAGE, READ_EXTERNAL_STORAGE}, IMAGE_PERMISSION_REQ_CODE);
-            }
-        });
+        if (!isUploadPopupOpen)
+            activity.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    if ((ActivityCompat.checkSelfPermission(activity, WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) && (ActivityCompat.checkSelfPermission(activity, CAMERA) == PackageManager.PERMISSION_GRANTED) && (ActivityCompat.checkSelfPermission(activity, READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)){
+                        Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
+                        SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+                        sharedPref.edit().putString(context.getResources().getString(R.string.TIME_STAMP_FILE_UPLOAD), timeStamp).apply();
+                        Uri photoFile = FileProvider.getUriForFile(context.getApplicationContext(),context.getResources().getString(R.string.fileProviderPath), new File(context.getApplicationContext().getFilesDir(), "IMG_" + timeStamp+".jpg"));
+                        takePicture.putExtra(MediaStore.EXTRA_OUTPUT, photoFile);
+                        Intent chooseFromFile = new Intent(Intent.ACTION_GET_CONTENT);
+                        chooseFromFile.setType("image/*");
+                        Intent chooser = Intent.createChooser(takePicture, "Upload Image");
+                        chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[] { chooseFromFile });
+                        isUploadPopupOpen = true;
+                        startActivityForResult(activity, chooser, IMAGE_CAPTURE_REQ_CODE, null);
+                    } else {
+                        ActivityCompat.requestPermissions(activity, new String[]{CAMERA, WRITE_EXTERNAL_STORAGE, READ_EXTERNAL_STORAGE}, IMAGE_PERMISSION_REQ_CODE);
+                    }
+                }
+            });
     }
     @JavascriptInterface
     public void copyToClipboard (String inputText){

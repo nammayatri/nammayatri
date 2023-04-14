@@ -29,12 +29,13 @@ import PrestoDOM (Eval, continue, exit, continueWithCmd)
 import PrestoDOM.Types.Core (class Loggable)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Screens (ScreenName(..), getScreen)
-import Screens.DriverProfileScreen.ScreenData (MenuOptions(..))
+import Screens.DriverProfileScreen.ScreenData (MenuOptions(..), MenuOptions(LIVE_STATS_DASHBOARD)) as Data
 import Screens.Types (DriverProfileScreenState)
 import Services.APITypes (GetDriverInfoResp(..), Vehicle(..))
 import Services.Backend (dummyVehicleObject)
 import Storage (setValueToLocalNativeStore, KeyStore(..))
 import Engineering.Helpers.Commons (getNewIDWithTag)
+import Screens.DriverProfileScreen.ScreenData (MenuOptions(LIVE_STATS_DASHBOARD))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -82,7 +83,7 @@ data ScreenOutput = GoToDriverDetailsScreen DriverProfileScreenState
 
 data Action = BackPressed Boolean
             | NoAction 
-            | OptionClick MenuOptions 
+            | OptionClick Data.MenuOptions 
             | BottomNavBarAction BottomNavBar.Action 
             | GetDriverInfoResponse GetDriverInfoResp
             | PopUpModalAction PopUpModal.Action
@@ -116,15 +117,15 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
 
 eval (OptionClick optionIndex) state = do
   case optionIndex of
-    DRIVER_PRESONAL_DETAILS -> exit $ GoToDriverDetailsScreen state
-    DRIVER_VEHICLE_DETAILS -> exit $ GoToVehicleDetailsScreen state
-    DRIVER_BANK_DETAILS -> continue state
-    MULTI_LANGUAGE -> exit $ GoToSelectLanguageScreen
-    HELP_AND_FAQS -> exit $ GoToHelpAndSupportScreen
-    ABOUT_APP -> exit $ GoToAboutUsScreen
-    DRIVER_LOGOUT -> continue $ (state {props = state.props {logoutModalView = true}})
-    REFER -> exit $ OnBoardingFlow 
-    APP_INFO_SETTINGS -> do
+    Data.DRIVER_PRESONAL_DETAILS -> exit $ GoToDriverDetailsScreen state
+    Data.DRIVER_VEHICLE_DETAILS -> exit $ GoToVehicleDetailsScreen state
+    Data.DRIVER_BANK_DETAILS -> continue state
+    Data.MULTI_LANGUAGE -> exit $ GoToSelectLanguageScreen
+    Data.HELP_AND_SUPPORT -> exit $ GoToHelpAndSupportScreen
+    Data.ABOUT_APP -> exit $ GoToAboutUsScreen
+    Data.DRIVER_LOGOUT -> continue $ (state {props = state.props {logoutModalView = true}})
+    Data.REFER -> exit $ OnBoardingFlow 
+    Data.APP_INFO_SETTINGS -> do
       _ <- pure $ launchAppSettings unit
       continue state
     LIVE_STATS_DASHBOARD -> continue state {props {showLiveDashboard = true}}
@@ -149,16 +150,16 @@ eval (GetDriverInfoResponse (GetDriverInfoResp driverProfileResp)) state = do
 
 eval _ state = continue state
 
-getTitle :: MenuOptions -> String
+getTitle :: Data.MenuOptions -> String
 getTitle menuOption = 
   case menuOption of
-    DRIVER_PRESONAL_DETAILS -> (getString PERSONAL_DETAILS)
-    DRIVER_VEHICLE_DETAILS -> (getString VEHICLE_DETAILS)
-    DRIVER_BANK_DETAILS -> (getString BANK_DETAILS)
-    MULTI_LANGUAGE -> (getString LANGUAGES)
-    HELP_AND_FAQS -> (getString HELP_AND_FAQ)
-    ABOUT_APP -> (getString ABOUT)
-    REFER -> (getString ADD_YOUR_FRIEND)
-    DRIVER_LOGOUT -> (getString LOGOUT)
-    APP_INFO_SETTINGS -> (getString APP_INFO)
-    LIVE_STATS_DASHBOARD -> (getString LIVE_DASHBOARD)
+    Data.DRIVER_PRESONAL_DETAILS -> (getString PERSONAL_DETAILS)
+    Data.DRIVER_VEHICLE_DETAILS -> (getString VEHICLE_DETAILS)
+    Data.DRIVER_BANK_DETAILS -> (getString BANK_DETAILS)
+    Data.MULTI_LANGUAGE -> (getString LANGUAGES)
+    Data.HELP_AND_SUPPORT -> (getString HELP_AND_SUPPORT)
+    Data.ABOUT_APP -> (getString ABOUT)
+    Data.REFER -> (getString ADD_YOUR_FRIEND)
+    Data.DRIVER_LOGOUT -> (getString LOGOUT)
+    Data.APP_INFO_SETTINGS -> (getString APP_INFO)
+    Data.LIVE_STATS_DASHBOARD -> (getString LIVE_DASHBOARD)

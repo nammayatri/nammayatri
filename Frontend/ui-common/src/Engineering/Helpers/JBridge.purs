@@ -66,6 +66,7 @@ foreign import shareImageMessage :: String -> String -> Unit
 
 foreign import enableMyLocation :: Boolean -> Unit
 foreign import isLocationPermissionEnabled :: Unit -> Effect Boolean
+foreign import isMicrophonePermissionEnabled :: Unit -> Effect Boolean
 -- foreign import getPackageName   :: Effect String
 foreign import getVersionCode   :: Effect Int
 foreign import getVersionName   :: Effect String
@@ -87,8 +88,8 @@ foreign import removeMarker :: String -> Effect Unit
 foreign import disableActionEditText :: String -> Unit
 foreign import uploadFile :: Unit -> Effect Unit
 foreign import previewImage :: String -> Effect Unit
-foreign import storeCallBackImageUpload :: forall action. (action -> Effect Unit) -> (String -> String -> action) -> Effect Unit
-foreign import renderBase64Image :: String -> String -> Effect Unit
+foreign import storeCallBackImageUpload :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action) -> Effect Unit
+foreign import renderBase64Image :: String -> String -> Boolean -> Effect Unit
 foreign import copyToClipboard :: String -> Unit
 foreign import drawRoute :: Locations -> String -> String -> Boolean -> String -> String -> Int -> String -> String -> String -> Effect Unit
 foreign import isCoordOnPath :: Locations -> Number -> Number -> Int -> Effect IsLocationOnPath
