@@ -281,6 +281,22 @@
         "type": "github"
       }
     },
+    "easy-purescript-nix": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1679861376,
+        "narHash": "sha256-LLqaLPJNiap2U8I77K5XVPGJA/Be30Z8lyGOyYXmBlc=",
+        "owner": "justinwoo",
+        "repo": "easy-purescript-nix",
+        "rev": "0c10ff170461aed0c336f5c21ed0f430c2c3574b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "justinwoo",
+        "repo": "easy-purescript-nix",
+        "type": "github"
+      }
+    },
     "euler-hs": {
       "inputs": {
         "beam": "beam",
@@ -873,6 +889,7 @@
       "inputs": {
         "beckn-gateway": "beckn-gateway",
         "common": "common_2",
+        "easy-purescript-nix": "easy-purescript-nix",
         "flake-parts": [
           "common",
           "flake-parts"

@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -42,10 +42,10 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import EN (getEN) 
 
-instance showAction :: Show Action where 
+instance showAction :: Show Action where
   show _ = ""
 
-instance loggableAction :: Loggable Action where 
+instance loggableAction :: Loggable Action where
   performLog action appId = case action of
     AfterRender -> trackAppScreenRender appId "screen" (getScreen MY_RIDES_SCREEN)
     BackPressed -> do
@@ -80,19 +80,19 @@ instance loggableAction :: Loggable Action where
     RideBookingListAPIResponseAction rideList status -> trackAppScreenEvent appId (getScreen MY_RIDES_SCREEN) "in_screen" "ride_booking_list"
     NoAction -> trackAppScreenEvent appId (getScreen MY_RIDES_SCREEN) "in_screen" "no_action"
 
-data ScreenOutput = GoBack MyRidesScreenState 
-  | MyRidesScreen MyRidesScreenState 
-  | GoToTripDetails MyRidesScreenState 
-  | LoaderOutput MyRidesScreenState 
+data ScreenOutput = GoBack MyRidesScreenState
+  | MyRidesScreen MyRidesScreenState
+  | GoToTripDetails MyRidesScreenState
+  | LoaderOutput MyRidesScreenState
   | BookRide
   | RepeatRide MyRidesScreenState
 
-data Action = NoAction 
-            | OnFadeComplete String 
-            | Refresh  
+data Action = NoAction
+            | OnFadeComplete String
+            | Refresh
             | Loader
-            | BackPressed 
-            | GenericHeaderActionController GenericHeader.Action 
+            | BackPressed
+            | GenericHeaderActionController GenericHeader.Action
             | RideBookingListAPIResponseAction RideBookingListRes String
             | IndividualRideCardActionController IndividualRideCardController.Action
             | ErrorModalActionController ErrorModal.Action
@@ -106,8 +106,9 @@ eval :: Action -> MyRidesScreenState -> Eval Action ScreenOutput MyRidesScreenSt
 eval BackPressed state = exit $ GoBack state
 
 eval (ScrollStateChanged scrollState) state = do
-  _ <- if scrollState == (SCROLL_STATE_FLING ) then (pure $ setEnabled "2000031" false)
-          else pure unit
+  _ <- case scrollState of
+           SCROLL_STATE_FLING -> pure $ setEnabled "2000031" false
+           _ -> pure unit
   continue state
 eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick )) state = continueWithCmd state [do pure BackPressed]
 
@@ -117,12 +118,12 @@ eval (OnFadeComplete _ ) state = do
                                 shimmerLoader = case state.shimmerLoader of
                                                   AnimatedIn ->AnimatedOut
                                                   AnimatingOut -> AnimatedOut
-                                                  a -> a 
+                                                  a -> a
                                       }
 
 
 eval (Loader) state = updateAndExit state{shimmerLoader = AnimatedIn, props{loaderButtonVisibility = false}} $ LoaderOutput state
-                                      
+
 eval (Scroll value) state = do
   let firstIndex = fromMaybe 0 (fromString (fromMaybe "0"((split (Pattern ",")(value))!!0)))
   let visibleItems = fromMaybe 0 (fromString (fromMaybe "0"((split (Pattern ",")(value))!!1)))
@@ -134,24 +135,24 @@ eval (Scroll value) state = do
 
 eval (IndividualRideCardActionController (IndividualRideCardController.OnClick index)) state = do
   let selectedCard = state.itemsRides !! index
-  case selectedCard of 
-    Just selectedRide -> do 
+  case selectedCard of
+    Just selectedRide -> do
       exit $ GoToTripDetails state { data { selectedItem = selectedRide}}
     Nothing -> continue state
 
 eval (IndividualRideCardActionController (IndividualRideCardController.RepeatRide index)) state = do
   _ <- pure $ firebaseLogEvent "ny_user_repeat_ride_btn_click"
   let selectedCard = state.itemsRides !! index
-  case selectedCard of 
-    Just selectedRide -> do 
+  case selectedCard of
+    Just selectedRide -> do
       exit $ RepeatRide state { data { selectedItem = selectedRide}}
     Nothing -> continue state
 
 
 eval (RideBookingListAPIResponseAction rideList status) state = do
   _ <- pure $ setRefreshing "2000031" false
-  case status of 
-    "success" -> do 
+  case status of
+    "success" -> do
                   let bufferCardDataPrestoList = ((myRideListTransformerProp (rideList ^. _list)))
                   let bufferCardData = myRideListTransformer state (rideList  ^. _list)
                   _ <- pure $ setRefreshing "2000031" false
@@ -211,7 +212,7 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
     isCancelled :  (if ride.status == "CANCELLED" then "visible" else "gone"),
     isSuccessfull :  (if ride.status == "COMPLETED" then "visible" else "gone"),
     rating : (fromMaybe 0 rideDetails.rideRating),
-    driverName : (rideDetails.driverName), 
+    driverName : (rideDetails.driverName),
     rideStartTime : (convertUTCtoISC (fromMaybe "" ride.rideStartTime) "h:mm A"),
     rideEndTime : (convertUTCtoISC (fromMaybe "" ride.rideEndTime) "h:mm A"),
     vehicleNumber : (rideDetails.vehicleNumber),

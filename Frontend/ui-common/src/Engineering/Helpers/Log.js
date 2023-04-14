@@ -1,4 +1,4 @@
-exports["log"] = function (a) {
+export const log = function (a) {
   return function (b) {
     console.log(a, " : ", b);
   };

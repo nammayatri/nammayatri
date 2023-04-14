@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -26,7 +26,7 @@ import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (split, Pattern(..), drop, indexOf, length, trim)
 import Helpers.Utils (convertUTCtoISC, getExpiryTime, parseFloat)
-import Math (ceil)
+import Data.Number (ceil)
 import PrestoDOM (Visibility(..))
 import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard)
 import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact)
@@ -35,7 +35,7 @@ import Services.Backend as Remote
 import Services.API (DriverOfferAPIEntity(..), Prediction, QuoteAPIEntity(..), RideAPIEntity(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), AddressComponents(..), GetPlaceNameResp(..), PlaceName(..), LatLong(..), DeleteSavedLocationReq(..))
 import Types.App(FlowBT)
 import Storage ( setValueToLocalStore, getValueToLocalStore, KeyStore(..))
-import Debug.Trace(spy)
+import Debug(spy)
 
 
 getLocationList :: Array Prediction -> Array LocationListItemState
@@ -54,7 +54,7 @@ getLocation predcition = {
   , description : predcition ^. _description
   , tag : ""
   , tagType : Just $ show LOC_LIST
-  , cardType : Nothing 
+  , cardType : Nothing
   , address : ""
   , tagName : ""
   , isEditEnabled : true
@@ -68,20 +68,20 @@ getLocation predcition = {
 
 getQuoteList :: Array QuoteAPIEntity -> Array QuoteListItemState
 getQuoteList quotesEntity = (map (\x -> (getQuote x)) quotesEntity)
-  
+
 getQuote :: QuoteAPIEntity -> QuoteListItemState
 getQuote (QuoteAPIEntity quoteEntity) =
   let (DriverOfferAPIEntity quoteDetails) = (quoteEntity.quoteDetails)^._contents
   in {
     seconds : (getExpiryTime quoteDetails.validTill "" isForLostAndFound) -4
-  , id : quoteEntity.id 
+  , id : quoteEntity.id
   , timer : show $ (getExpiryTime quoteDetails.validTill "" isForLostAndFound) -4
   , timeLeft : if (quoteDetails.durationToPickup<60) then (quoteDetails.durationToPickup/60) else (quoteDetails.durationToPickup/60)
   , driverRating : fromMaybe 0.0 quoteDetails.rating
   , profile : ""
   , price :  show quoteEntity.estimatedTotalFare
   , vehicleType : "auto"
-  , driverName : quoteDetails.driverName 
+  , driverName : quoteDetails.driverName
   , selectedQuote : Nothing
   }
 
@@ -90,12 +90,12 @@ getDriverInfo (RideBookingRes resp) =
   let (RideAPIEntity rideList) = fromMaybe  dummyRideAPIEntity ((resp.rideList) DA.!! 0)
   in  {
         otp :  rideList.rideOtp
-      , driverName : if length (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0)) < 4 then 
-                        (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0)) <> " " <> (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 1)) else 
+      , driverName : if length (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0)) < 4 then
+                        (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0)) <> " " <> (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 1)) else
                           (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0))
       , eta : 0
       , vehicleDetails : rideList.vehicleModel
-      , registrationNumber : rideList.vehicleNumber 
+      , registrationNumber : rideList.vehicleNumber
       , rating : ceil (fromMaybe 0.0 rideList.driverRatings)
       , startedAt : (convertUTCtoISC resp.createdAt "h:mm A")
       , endedAt : (convertUTCtoISC resp.updatedAt "h:mm A")
@@ -117,7 +117,7 @@ getDriverInfo (RideBookingRes resp) =
       , bppRideId : rideList.bppRideId
         }
 encodeAddressDescription :: String -> String -> Maybe String -> Maybe Number -> Maybe Number -> Array AddressComponents -> SavedReqLocationAPIEntity
-encodeAddressDescription address tag placeId lat lon addressComponents = do 
+encodeAddressDescription address tag placeId lat lon addressComponents = do
     let totalAddressComponents = DA.length $ split (Pattern ", ") address
         splitedAddress = split (Pattern ", ") address
 
@@ -144,7 +144,7 @@ dummyQuoteList :: Array QuoteListItemState
 dummyQuoteList = [
   {
    seconds : 3
-  , id : "1"  
+  , id : "1"
   , timer : "0"
   , timeLeft : 0
   , driverRating : 4.0
@@ -157,7 +157,7 @@ dummyQuoteList = [
   },
   {
    seconds : 3
-  , id : "2"  
+  , id : "2"
   , timer : "0"
   , timeLeft : 0
   , driverRating : 4.0
@@ -171,7 +171,7 @@ dummyQuoteList = [
 
 
 dummyRideAPIEntity :: RideAPIEntity
-dummyRideAPIEntity = RideAPIEntity{ 
+dummyRideAPIEntity = RideAPIEntity{
   computedPrice : Nothing,
   status : "NEW",
   vehicleModel : "",
@@ -200,24 +200,24 @@ isForLostAndFound = false
 
 getPlaceNameResp :: Maybe String -> Number -> Number -> LocationListItemState -> FlowBT String GetPlaceNameResp
 getPlaceNameResp placeId lat lon item = do
-    case item.locationItemType of 
-      Just PREDICTION -> 
-          case placeId of 
-            Just placeID  -> Remote.placeNameBT (Remote.makePlaceNameReqByPlaceId placeID (case (getValueToLocalStore LANGUAGE_KEY) of 
+    case item.locationItemType of
+      Just PREDICTION ->
+          case placeId of
+            Just placeID  -> Remote.placeNameBT (Remote.makePlaceNameReqByPlaceId placeID (case (getValueToLocalStore LANGUAGE_KEY) of
                                                                                             "HI_IN" -> "HINDI"
                                                                                             "KN_IN" -> "KANNADA"
                                                                                             _       -> "ENGLISH"))
             Nothing       ->  pure $ makePlaceNameResp lat lon
-      _ ->  do 
-        case item.lat, item.lon of 
-          Nothing, Nothing -> case placeId of 
-            Just placeID  -> Remote.placeNameBT (Remote.makePlaceNameReqByPlaceId placeID (case (getValueToLocalStore LANGUAGE_KEY) of 
+      _ ->  do
+        case item.lat, item.lon of
+          Nothing, Nothing -> case placeId of
+            Just placeID  -> Remote.placeNameBT (Remote.makePlaceNameReqByPlaceId placeID (case (getValueToLocalStore LANGUAGE_KEY) of
                                                                                             "HI_IN" -> "HINDI"
                                                                                             "KN_IN" -> "KANNADA"
                                                                                             _       -> "ENGLISH"))
             Nothing       ->  pure $ makePlaceNameResp lat lon
-          Just 0.0, Just 0.0 -> case placeId of 
-            Just placeID  -> Remote.placeNameBT (Remote.makePlaceNameReqByPlaceId placeID (case (getValueToLocalStore LANGUAGE_KEY) of 
+          Just 0.0, Just 0.0 -> case placeId of
+            Just placeID  -> Remote.placeNameBT (Remote.makePlaceNameReqByPlaceId placeID (case (getValueToLocalStore LANGUAGE_KEY) of
                                                                                             "HI_IN" -> "HINDI"
                                                                                             "KN_IN" -> "KANNADA"
                                                                                             _       -> "ENGLISH"))
@@ -226,9 +226,9 @@ getPlaceNameResp placeId lat lon item = do
 
 
 makePlaceNameResp :: Number ->  Number -> GetPlaceNameResp
-makePlaceNameResp lat lon = 
-  GetPlaceNameResp 
-  ([  PlaceName { 
+makePlaceNameResp lat lon =
+  GetPlaceNameResp
+  ([  PlaceName {
           formattedAddress : "",
           location : LatLong {
             lat : lat,
@@ -238,31 +238,31 @@ makePlaceNameResp lat lon =
           addressComponents : []
         }
         ])
-                                      
+
 getUpdatedLocationList :: Array LocationListItemState -> Maybe String -> Array LocationListItemState
-getUpdatedLocationList locationList placeId = (map 
-                            (\item -> 
+getUpdatedLocationList locationList placeId = (map
+                            (\item ->
                                 ( item  {postfixImageUrl = if (item.placeId == placeId || item.postfixImageUrl == "ic_fav_red") then "ic_fav_red" else "ic_fav" } )
                             ) (locationList))
 
-transformSavedLocations :: Array LocationListItemState -> FlowBT String Unit 
-transformSavedLocations array = case DA.head array of 
+transformSavedLocations :: Array LocationListItemState -> FlowBT String Unit
+transformSavedLocations array = case DA.head array of
             Just item -> do
-              case item.lat , item.lon , item.fullAddress.ward of 
+              case item.lat , item.lon , item.fullAddress.ward of
                 Just 0.0 , Just 0.0 , Nothing ->
                   updateSavedLocation item 0.0 0.0
-                Just 0.0 , Just 0.0 , Just _ -> 
-                  updateSavedLocation item 0.0 0.0 
-                Just lat , Just lon , Nothing -> 
+                Just 0.0 , Just 0.0 , Just _ ->
+                  updateSavedLocation item 0.0 0.0
+                Just lat , Just lon , Nothing ->
                   updateSavedLocation item lat lon
-                Nothing, Nothing, Nothing -> 
+                Nothing, Nothing, Nothing ->
                   updateSavedLocation item 0.0 0.0
                 _ , _ , _-> pure unit
               transformSavedLocations (DA.drop 1 array)
             Nothing -> pure unit
 
 updateSavedLocation :: LocationListItemState -> Number -> Number -> FlowBT String Unit
-updateSavedLocation item lat lon = do 
+updateSavedLocation item lat lon = do
   let placeId = item.placeId
       address = item.description
       tag = item.tag
@@ -270,10 +270,10 @@ updateSavedLocation item lat lon = do
   (GetPlaceNameResp placeNameResp) <- getPlaceNameResp item.placeId lat lon item
   let (PlaceName placeName) = (fromMaybe dummyLocationName (placeNameResp DA.!! 0))
   let (LatLong placeLatLong) = (placeName.location)
-  _ <- Remote.addSavedLocationBT (encodeAddressDescription address tag (item.placeId) (Just placeLatLong.lat) (Just placeLatLong.lon) placeName.addressComponents) 
+  _ <- Remote.addSavedLocationBT (encodeAddressDescription address tag (item.placeId) (Just placeLatLong.lat) (Just placeLatLong.lon) placeName.addressComponents)
   _ <- pure $ setValueToLocalStore RELOAD_SAVED_LOCATION "true"
   pure unit
-  
+
 transformContactList :: Array NewContacts -> Array Contact
 transformContactList contacts = map (\x -> getContact x) contacts
 

@@ -1,8 +1,10 @@
-const axios = require("axios");
-const moment = require("moment");
-const callbackMapper = require('presto-ui').callbackMapper;
+import axios from "axios";
+import moment from "moment";
+import { callbackMapper } from 'presto-ui');
 
-exports.getOs = function () {
+const { JBridge, Android } = window;
+
+export const getOs = function () {
   if (window.__OS) {
     return window.__OS;
   }
@@ -61,7 +63,7 @@ const makeRequest = function (headersRaw, method, url, payload, success) {
       var responseHeaders = JSON.parse(atob(arguments[4]) || "{}");
       successResponse = {
         status: status_value , //arguments[0],
-        responseHeaders: responseHeaders, 
+        responseHeaders: responseHeaders,
         response: Object.assign(JSON.parse(decodeURIComponent(escape(window.atob(arguments[1]))) || "{}"), { "headers" : JSON.parse(atob(arguments[4]) || "{}")}),
         code: parseInt(arguments[2])
       };}
@@ -69,10 +71,10 @@ const makeRequest = function (headersRaw, method, url, payload, success) {
       {
         successResponse = {
           status: arguments[0],
-          responseHeaders: {}, 
+          responseHeaders: {},
           response : Object.assign(({ response : {errorMessage : decodeURIComponent(escape(window.atob(arguments[1]))) ,error:true, userMessage: "" }} || "{}"), { "headers" : JSON.parse(atob(arguments[4]) || "{}")}),
           code: parseInt(arguments[2])
-        
+
         };
       }
       trackAPICalls(successResponse.code, url, apiStartTIme);
@@ -105,7 +107,7 @@ const makeRequest = function (headersRaw, method, url, payload, success) {
       // success(JSON.stringify({
       var dummyErrorResp = {
         status: "ssl handshake failure",
-        responseHeaders: {}, 
+        responseHeaders: {},
         response: {
           error: true,
           errorMessage: "Monitored Network",
@@ -121,7 +123,7 @@ const makeRequest = function (headersRaw, method, url, payload, success) {
       // success(JSON.stringify({
       var dummyErrorResp = {
         status: "failure",
-        responseHeaders: {}, 
+        responseHeaders: {},
         response: {
           error: true,
           errorMessage: arguments[2].toString(),
@@ -139,7 +141,7 @@ const makeRequest = function (headersRaw, method, url, payload, success) {
   JBridge.callAPI(method, url, getEncodedData(payload), getEncodedData(JSON.stringify(headers)), false, isSSLPinnedURL, callback);
 }
 
-exports["showUI'"] = function (sc, screen) {
+export const showUIImpl = function (sc, screen) {
   return function () {
     var screenJSON = JSON.parse(screen);
     var screenName = screenJSON.tag;
@@ -151,13 +153,13 @@ exports["showUI'"] = function (sc, screen) {
   };
 };
 
-exports["getNewIDWithTag"] = function(tag){
+export const getNewIDWithTag = function(tag){
   window.__usedIDS = window.__usedIDS || []
   window.__usedIDS[tag] = window.__usedIDS[tag] || "" + window.createPrestoElement().__id;
   return window.__usedIDS[tag];
 }
 
-exports["callAPI'"] = function () {
+export const callAPIImpl = function () {
   return function (success) {
     return function (request) {
       return function () {
@@ -167,7 +169,7 @@ exports["callAPI'"] = function () {
   };
 }
 
-exports["window'"] = function(key) {
+export const getWindowVariable = function(key) {
   return function(just) {
     return function(nothing) {
       return function() {
@@ -181,7 +183,7 @@ exports["window'"] = function(key) {
   }
 }
 
-exports["setWindowVariable'"] = function(key) {
+export const setWindowVariableImpl = function(key) {
     return function(value) {
       return function() {
         if(typeof window !== "undefined") {
@@ -192,7 +194,7 @@ exports["setWindowVariable'"] = function(key) {
     }
 }
 
-exports ["callSahay"] = function (request) {
+export const callSahay = function (request) {
     return function (_error, success) {
       window.__HANDLERLSP = function (response) {
         var reqJson = JSON.parse(request);
@@ -207,13 +209,13 @@ exports ["callSahay"] = function (request) {
       }
 
       console.warn("callSahay", "Sending payload", request);
-      JBridge.processWithSdk(request);
+      window.JBridge.processWithSdk(request);
 
       // return function() {};
     };
   };
 
-exports["setScreen'"] = function(screen) {
+export const setScreenImpl = function(screen) {
   return function() {
     setTimeout(function() {
       if(window.idToBeRemoved) {
@@ -230,15 +232,15 @@ exports["setScreen'"] = function(screen) {
   }
 }
 
-exports["screenWidth"] = function(){
+export const screenWidth = function(){
   return screen.width;
 }
 
-exports["screenHeight"] = function(){
+export const screenHeight = function(){
   return screen.height;
 }
 
-exports["safeMarginTop'"] = function () {
+export const safeMarginTopImpl = function () {
   try {
     if (parent.__DEVICE_DETAILS && parent.__DEVICE_DETAILS.safe_area_frame) {
       return parent.__DEVICE_DETAILS.safe_area_frame.y
@@ -250,7 +252,7 @@ exports["safeMarginTop'"] = function () {
   return 0;
 }
 
-exports["safeMarginBottom'"] = function () {
+export const safeMarginBottomImpl = function () {
   try{
     var d = parent.__DEVICE_DETAILS;
     if (!d || !d.safe_area_frame) {
@@ -262,17 +264,17 @@ exports["safeMarginBottom'"] = function () {
   }
 }
 
-exports["bundleVersion"] = function(){
+export const bundleVersion = function(){
   return window.version;
 }
 
-exports ["setText'"] = function (id) {
+export const setTextImpl = function (id) {
   return function (text) {
       return function (){
           setText(id, text, text.length);
       }
   }
-} 
+}
 
 function setText(id, text, pos) {
   if (__OS === "ANDROID") {
@@ -286,7 +288,7 @@ function setText(id, text, pos) {
   }
 }
 
-exports["countDown"] = function (countDownTime) {
+export const countDown = function (countDownTime) {
   return function (id) {
     return function (cb) {
       return function (action) {
@@ -315,12 +317,12 @@ function instantGetTimer (fn , delay) {
   return window.timerId;
 }
 
-exports ["clearTimer"] = function (a)
+export const clearTimer = function (a)
 {
   clearInterval(parseInt(a));
 };
 
-exports["getExpiryTime"] = function (str1) {
+export const getExpiryTime = function (str1) {
     return function (reverse) {
       try {
       var expiry = new Date(str1);

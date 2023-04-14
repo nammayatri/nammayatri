@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -22,7 +22,7 @@ import Control.Transformers.Back.Trans (runBackT)
 import Data.Maybe (Maybe(..))
 import Data.Time.Duration (Milliseconds(..))
 import Effect (Effect)
-import Effect.Aff (launchAff_)
+import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons as EHC
 import Font.Style as FontStyle
@@ -44,7 +44,7 @@ screen initialState =
   , parent: Just "SuccessScreen"
   , globalEvents:
       [ ( \push -> do
-            launchAff_ $ EHC.flowRunner $ runExceptT $ runBackT
+            _ <- launchAff $ EHC.flowRunner $ runExceptT $ runBackT
               $ do
                   lift $ lift $ void $ delay $ Milliseconds 3500.0
                   lift $ lift $ doAff do liftEffect $ push CountDown
@@ -75,11 +75,11 @@ view push state =
         , cornerRadii $ Corners 16.0 true true true true
         , padding (Padding 16 24 16 24)
         ]
-        [ if EHC.os == "IOS" && (getValueToLocalStore VERSION_NAME == "1.2.4" ) then 
+        [ if EHC.os == "IOS" && (getValueToLocalStore VERSION_NAME == "1.2.4" ) then
             imageView
             [ height $ V 160
             , width $ V 280
-            , imageUrl "https://assets.juspay.in/nammayatri/images/user/ny_ic_success_lottie_placeholder.png"] 
+            , imageUrl "https://assets.juspay.in/nammayatri/images/user/ny_ic_success_lottie_placeholder.png"]
             else lottieLoaderView state push
         , textView
             $ [ width MATCH_PARENT
