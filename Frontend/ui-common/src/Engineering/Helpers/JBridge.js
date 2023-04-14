@@ -1,4 +1,4 @@
-const callbackMapper = require('presto-ui').callbackMapper;
+import { callbackMapper } from 'presto-ui');
 const btnLoaderState = new Map();
 
 // exports._keyStoreEntryPresent = function(alias) {
@@ -218,25 +218,25 @@ const btnLoaderState = new Map();
 //   }
 // }
 
-exports["requestLocationPermissionDriver"] = function (cb){
+export const requestLocationPermissionDriver = function (cb){
   return function (action) {
     return function () {
       var callback = callbackMapper.map(function (isLocationPermissionEnabled) {
         cb(action(isLocationPermissionEnabled))();
       });
-      return JBridge.requestLocationPermissionDriver(callback);
+      return window.JBridge.requestLocationPermissionDriver(callback);
     };
   };
 };
 
-exports._addCertificates = function(str) {
+export const _addCertificates = function(str) {
   return function() {
-    JBridge.addCertificates(str);
+    window.JBridge.addCertificates(str);
   }
 }
 
-exports._isPlayStoreInstalled = function () {
-  return JBridge.isPlayStoreInstalled();
+export const _isPlayStoreInstalled = function () {
+  return window.JBridge.isPlayStoreInstalled();
 }
 
 // exports._safefyNetShutdownSafeBrowsing = function(cb) {
@@ -253,102 +253,102 @@ exports._isPlayStoreInstalled = function () {
 //   }
 // }
 
-exports._isNetworkAvailable = function () {
+export const _isNetworkAvailable = function () {
   return function () {
-    return JBridge.isNetworkAvailable();
+    return window.JBridge.isNetworkAvailable();
   }
 }
 
-exports._renewFile = function (file) {
+export const _renewFile = function (file) {
   return function () {
     console.log("renew files")
-    return JBridge.renewFile(file)
+    return window.JBridge.renewFile(file)
   }
 }
 
-exports["closeApp"] = function (str) {
-  JBridge.closeApp();
+export const closeApp = function (str) {
+  window.JBridge.closeApp();
 };
 
-exports["readFile'"] = function (filePath) {
+export const readFileImpl = function (filePath) {
   return function () {
-    return JBridge.loadFileInDUI(filePath);
+    return window.JBridge.loadFileInDUI(filePath);
   };
 };
 
-exports["showLoader'"] = function (str) {
-  return JBridge.showLoader(str);
+export const showLoaderImpl = function (str) {
+  return window.JBridge.showLoader(str);
 };
 
-exports["isLocationPermissionEnabled"] = function (unit) {
+export const isLocationPermissionEnabled = function (unit) {
   return function () {
     if (window.__OS == "IOS")
     {
-      if (JBridge.isLocationAuthenticationStatusDetermined() == "1") 
-      {return true} 
+      if (window.JBridge.isLocationAuthenticationStatusDetermined() == "1")
+      {return true}
       else {return false };
     }
-    return JBridge.isLocationPermissionEnabled();
-    
+    return window.JBridge.isLocationPermissionEnabled();
+
   };
 };
 
-exports["getPackageName"] = function () {
+export const getPackageName = function () {
   if (window.__OS == "IOS") {
-    var sessionDetails = JSON.parse(JBridge.getSessionDetails())
+    var sessionDetails = JSON.parse(window.JBridge.getSessionDetails())
     if (sessionDetails && sessionDetails.packageName) {
       return sessionDetails.packageName;
-    } 
+    }
     return "";
   } else {
-    return JBridge.getPackageName();
+    return window.JBridge.getPackageName();
   }
 };
 
-exports["getVersionCode"] = function () {
+export const getVersionCode = function () {
   if (window.__OS == "IOS") {
-    var sessionDetails = JSON.parse(JBridge.getSessionDetails())
+    var sessionDetails = JSON.parse(window.JBridge.getSessionDetails())
     if (sessionDetails && sessionDetails.appVersion) {
       return parseInt(sessionDetails.appVersion);
-    } 
+    }
     return 0;
   } else {
-    return JBridge.getVersionCode();
+    return window.JBridge.getVersionCode();
   }
 };
 
-exports["getVersionName"] = function () {
+export const getVersionName = function () {
   if (window.__OS == "IOS") {
-    var sessionDetails = JSON.parse(JBridge.getSessionDetails())
+    var sessionDetails = JSON.parse(window.JBridge.getSessionDetails())
     if (sessionDetails && sessionDetails.app_version) {
       return sessionDetails.app_version;
-    } 
+    }
     return "0";
   } else {
-    return JBridge.getVersionName();
+    return window.JBridge.getVersionName();
   }
 };
 
-exports["getManufacturerName"] = function (unit) {
-  return JBridge.getManufacturerName();
+export const getManufacturerName = function (unit) {
+  return window.JBridge.getManufacturerName();
 };
 
-exports["getAndroidVersion"] = function(unit){
+export const getAndroidVersion = function(unit){
   if(window.__OS == "IOS")
   {return 0;}
-  else{ 
-  return JBridge.getAndroidVersion();}
+  else{
+  return window.JBridge.getAndroidVersion();}
 };
 
-exports["showQrCode'"] = function (id) {
+export const showQrCodeImpl = function (id) {
   return function (str) {
     return function (cb) {
-      JBridge.showQrCode(id, str);
+      window.JBridge.showQrCode(id, str);
     };
   };
 };
 
-exports["scanQrCode"] = function (requestCode) {
+export const scanQrCode = function (requestCode) {
   return function (cb) {
     return function (action) {
       return function () {
@@ -371,58 +371,58 @@ exports["scanQrCode"] = function (requestCode) {
   };
 };
 
-exports["timePicker"] = function (cb) {
+export const timePicker = function (cb) {
   return function (action) {
     return function () {
       var callback = callbackMapper.map(function (hour, min) {
         cb(action(hour)(min))();
       });
-      return JBridge.timePicker(callback);
+      return window.JBridge.timePicker(callback);
     };
   };
 };
 
-exports["datePicker"] = function (label)
-{return function (cb) 
+export const datePicker = function (label)
+{return function (cb)
   {return function (action)
     {return function () {
       var callback = callbackMapper.map(function (year, month, date) {
         cb(action(year)(month)(date))();
       });
-      return JBridge.datePicker(callback,label);
+      return window.JBridge.datePicker(callback,label);
       };
     };
   };
 };
 
-exports["setFCMToken"] = function (cb) {
+export const setFCMToken = function (cb) {
   return function (action) {
     return function () {
       var callback = callbackMapper.map(function (id) {
         cb(action(id))();
       });
-      return JBridge.setFCMToken(callback);
+      return window.JBridge.setFCMToken(callback);
     };
   };
   // JBridge.setFCMToken();
 };
 
-exports["dateTimePicker"] = function (cb) {
+export const dateTimePicker = function (cb) {
   return function (action) {
     return function () {
       var callback = callbackMapper.map(function (epochTime) {
         cb(action(epochTime))();
       });
-      return JBridge.dateTimePicker(callback);
+      return window.JBridge.dateTimePicker(callback);
     };
   };
 };
 
-exports ["disableActionEditText"] = function (str) {
-  return JBridge.disableActionEditText(str);
+export const disableActionEditText = function (str) {
+  return window.JBridge.disableActionEditText(str);
 };
 
-exports["getNearbyPlaces"] = function (cb) {
+export const getNearbyPlaces = function (cb) {
   return function (action) {
     return function () {
       window.activityResultListeners["545"] = function (resultCode, bundle) {
@@ -430,12 +430,12 @@ exports["getNearbyPlaces"] = function (cb) {
         var place = JSON.parse(bundle);
         cb(action(place))();
       };
-      JBridge.getNearbyPlaces();
+      window.JBridge.getNearbyPlaces();
     };
   };
 };
 
-exports["getNearbyPlaces'"] = function (cb) {
+export const getNearbyPlaces2 = function (cb) {
   return function (action) {
     return function (just) {
       return function (nothing) {
@@ -458,23 +458,23 @@ exports["getNearbyPlaces'"] = function (cb) {
 };
 
 
-exports["isNetworkAvailable"] = function (unit) {
-  return JBridge.isNetworkAvailable();
+export const isNetworkAvailable = function (unit) {
+  return window.JBridge.isNetworkAvailable();
 };
 
-exports["openUrlInApp"] = function (str) {
+export const openUrlInApp = function (str) {
   return function (unit) {
-    return JBridge.openUrlInApp(str);
+    return window.JBridge.openUrlInApp(str);
   };
 };
 
-exports["openUrlInMailApp"] = function (str) {
+export const openUrlInMailApp = function (str) {
   return function (unit) {
-    return JBridge.openUrlInMailApp(str);
+    return window.JBridge.openUrlInMailApp(str);
   };
 };
 
-exports["addMarker'"] = function (title) {
+export const addMarkerImpl = function (title) {
   return function (lat) {
     return function (lng) {
       return function (markerSize) {
@@ -482,7 +482,7 @@ exports["addMarker'"] = function (title) {
           return function (anchorV1) {
             return function () {
               console.log("I AM HERE ------------------");
-              JBridge.upsertMarker(title, lat, lng, markerSize, anchorV, anchorV1);
+              window.JBridge.upsertMarker(title, lat, lng, markerSize, anchorV, anchorV1);
               return true;
             };
           }
@@ -493,26 +493,26 @@ exports["addMarker'"] = function (title) {
 };
 
 
-exports["removeMarker"] = function (title) {
+export const removeMarker = function (title) {
     try{
       return function () {
         console.log("I AM HERE to remove marker------------------");
-        JBridge.removeMarker(title);
+        window.JBridge.removeMarker(title);
         return true;
       };
   }
   catch(e)
-  { 
+  {
     console.log(e);
     console.log("error in removeMarker----------------------------------");
   }
 };
 
-exports["parseAddress"] = function (json) {
+export const parseAddress = function (json) {
   return JSON.parse(json);
 };
 
-exports["drawRoute"] = function (data) {
+export const drawRoute = function (data) {
   return function (style) {
     return function (trackColor) {
       return function (isActual) {
@@ -524,7 +524,7 @@ exports["drawRoute"] = function (data) {
                   return function (destinationName){
                     return function () {
                       console.log("I AM HERE ------------------ IN DRAW ROUTE");
-                      return JBridge.drawRoute(JSON.stringify(data), style, trackColor, isActual, sourceMarker, destMarker, polylineWidth,type, sourceName, destinationName);
+                      return window.JBridge.drawRoute(JSON.stringify(data), style, trackColor, isActual, sourceMarker, destMarker, polylineWidth,type, sourceName, destinationName);
                       };
                   }
                 }
@@ -537,23 +537,23 @@ exports["drawRoute"] = function (data) {
   };
 };
 
-exports["updateRoute"] = function (data) {
+export const updateRoute = function (data) {
   return function (destMarker) {
     return function (eta) {
       return function (){
-          if (JBridge.updateRoute) {
+          if (window.JBridge.updateRoute) {
             var json = JSON.stringify(data);
             try {
               console.log("I AM HERE ------------------ IN UPDATE ROUTE");
               var extension = "";
-              return JBridge.updateRoute(json,destMarker,eta,extension);
+              return window.JBridge.updateRoute(json,destMarker,eta,extension);
             } catch (err) {
                 console.log("Catch error" + err);
                 /*
-                * This Function is deprecated on 12 Jan - 2023 
+                * This Function is deprecated on 12 Jan - 2023
                 * Remove this function once it is not begin used.
                 */
-                return JBridge.updateRoute(json,destMarker,eta);
+                return window.JBridge.updateRoute(json,destMarker,eta);
             }
           }
         };
@@ -577,7 +577,7 @@ exports["storeCallBackMessageUpdated"] = function (cb) {
           };
         };
       };
-  
+
 exports["startChatListenerService"] = function() {
   if (JBridge.startChatListenerService) {
     JBridge.startChatListenerService();
@@ -589,7 +589,7 @@ exports["stopChatListenerService"] = function () {
     JBridge.stopChatListenerService();
   }
 }
-      
+
 exports["sendMessage"] = function (message) {
   console.log("Send Message Called");
   if (JBridge.sendMessage) {
@@ -603,24 +603,24 @@ exports["scrollToBottom"] = function(id) {
   }
 }
 
-exports["isCoordOnPath"] = function (data) {
+export const isCoordOnPath = function (data) {
   return function (lat) {
     return function (lon) {
       return function (speed) {
         return function () {
-            if (JBridge.isCoordOnPath) {
+            if (window.JBridge.isCoordOnPath) {
               var json = JSON.stringify(data);
               try {
                 console.log("I AM HERE ------------------ IN CHECK ROUTE");
-                var res = JBridge.isCoordOnPath(json,lat,lon, speed);
+                var res = window.JBridge.isCoordOnPath(json,lat,lon, speed);
                 return JSON.parse(res);
               } catch (err) {
                 console.log("Catch error" + err);
                 /*
-                * This Function is deprecated on 12 Jan - 2023 
+                * This Function is deprecated on 12 Jan - 2023
                 * Remove this function once it is not begin used.
                 */
-                return JBridge.isCoordOnPath(json,lat,lon);
+                return window.JBridge.isCoordOnPath(json,lat,lon);
               }
             }
           };
@@ -630,45 +630,45 @@ exports["isCoordOnPath"] = function (data) {
   };
 
 
-exports["addMarkers"] = function (data) {
-  JBridge.addMarkers(JSON.stringify(data));
+export const addMarkers = function (data) {
+  window.JBridge.addMarkers(JSON.stringify(data));
 };
 
-exports["removePolyLine"] = function (str) {
-  JBridge.removePolyLine(str);
+export const removePolyLine = function (str) {
+  window.JBridge.removePolyLine(str);
 };
 
-exports["requestLocation"] = function (str) {
-  JBridge.requestLocation();
+export const requestLocation = (unit) => () => {
+  window.JBridge.requestLocation();
 };
 
-exports["initiateLocationServiceClient"] = function (){
+export const initiateLocationServiceClient = function (){
   if (window.__OS == "IOS"){
     return true;
   }else{
-    JBridge.initiateLocationServiceClient();
+    window.JBridge.initiateLocationServiceClient();
   }
 }
 
-exports["checkOverlayPermission"] = function (str) {
+export const checkOverlayPermission = function (str) {
   return function () {
-    JBridge.checkOverlayPermission();
+    window.JBridge.checkOverlayPermission();
   };
 };
 
-exports["reallocateMapFragment"] = function (str) {
+export const reallocateMapFragment = function (str) {
   return function () {
-    JBridge.reallocateMapFragment(str);
+    window.JBridge.reallocateMapFragment(str);
   };
 };
 
-exports["requestAutoStartPermission"] = function (str) {
+export const requestAutoStartPermission = function (str) {
   return function () {
-    JBridge.requestAutoStartPermission();
+    window.JBridge.requestAutoStartPermission();
   };
 };
 
-exports["showMap'"] = function (id) {
+export const showMapImpl = function (id) {
   return function (isEnableCurrentLocation) {
     return function (type) {
       return function (zoom) {
@@ -681,7 +681,7 @@ exports["showMap'"] = function (id) {
                 window.y = action;
                 cb(action (key) (lat) (lon))();
               });
-              JBridge.showMap(id, isEnableCurrentLocation, type, zoom, callback);
+              window.JBridge.showMap(id, isEnableCurrentLocation, type, zoom, callback);
               return true;
             };
           };
@@ -691,9 +691,9 @@ exports["showMap'"] = function (id) {
   };
 };
 
-exports["getCurrentLatLong"] = function () {
-  if (JBridge.getCurrentLatLong) {
-      var parsedData = JSON.parse(JBridge.getCurrentLatLong());
+export const getCurrentLatLong = function () {
+  if (window.JBridge.getCurrentLatLong) {
+      var parsedData = JSON.parse(window.JBridge.getCurrentLatLong());
       if (parsedData.lat && parsedData.lng) {
         return parsedData;
       } else { // fallBack for previous release
@@ -705,56 +705,56 @@ exports["getCurrentLatLong"] = function () {
   }
 };
 
-exports["isLocationEnabled"] = function (unit) {
+export const isLocationEnabled = function (unit) {
   return function () {
     if (window.__OS == "IOS")
     {
-      if(JBridge.isLocationEnabled() == "1")
+      if(window.JBridge.isLocationEnabled() == "1")
       return true;
       else return false;
     }
-    return JBridge.isLocationEnabled();
+    return window.JBridge.isLocationEnabled();
   };
 };
 
-exports["getCurrentPosition"] = function (cb) {
+export const getCurrentPosition = function (cb) {
   return function (action) {
     return function () {
       var callback = callbackMapper.map(function (lat, lng) {
         cb(action(lat)(lng))();
       });
-      return JBridge.getCurrentPosition(callback);
+      return window.JBridge.getCurrentPosition(callback);
     };
   };
 };
 
-exports["openNavigation"] = function (slat) {
+export const openNavigation = function (slat) {
   return function (slong) {
     return function (dlat) {
       return function (dlong) {
-        return JBridge.openNavigation(slat, slong, dlat, dlong);
+        return window.JBridge.openNavigation(slat, slong, dlat, dlong);
       };
     };
   };
 };
 
-exports["animateCamera"] = function (lat) {
+export const animateCamera = function (lat) {
   return function (lng) {
     return function (zoom) {
       return function () {
-        JBridge.animateCamera(lat, lng, zoom);
+        window.JBridge.animateCamera(lat, lng, zoom);
       };
     };
   };
 };
 
 
-exports["moveCamera"] = function (lat1) {
+export const moveCamera = function (lat1) {
   return function (lng1) {
     return function (lat2) {
       return function (lng2){
         return function () {
-          JBridge.moveCamera(lat1, lng1, lat2,lng2);
+          window.JBridge.moveCamera(lat1, lng1, lat2,lng2);
         };
       };
     };
@@ -765,33 +765,33 @@ exports["moveCamera"] = function (lat1) {
 //   return JBridge.hideLoader();
 // };
 
-exports["minimizeApp"] = function (str) {
-  JBridge.minimizeApp();
+export const minimizeApp = function (str) {
+  window.JBridge.minimizeApp();
 };
-exports["toast"] = function (str) {
-  JBridge.toast(str);
+export const toast = function (str) {
+  window.JBridge.toast(str);
 };
 
-exports["firebaseLogEventWithParams"] = function (event) {
+export const firebaseLogEventWithParams = function (event) {
   return function (paramKey) {
     return function (paramValue) {
       return function () {
-        if(JBridge.firebaseLogEventWithParams){
-            JBridge.firebaseLogEventWithParams(event, paramKey,paramValue);
+        if(window.JBridge.firebaseLogEventWithParams){
+            window.JBridge.firebaseLogEventWithParams(event, paramKey,paramValue);
         }
     };
   };
  };
 };
 
-exports["firebaseLogEventWithTwoParams"] = function (event) {
+export const firebaseLogEventWithTwoParams = function (event) {
   return function (paramKey1) {
     return function (paramValue1) {
       return function (paramKey2) {
         return function (paramValue2) {
           return function () {
-            if (JBridge.firebaseLogEventWithTwoParams) {
-                JBridge.firebaseLogEventWithTwoParams(event, paramKey1,paramValue1,paramKey2,paramValue2);
+            if (window.JBridge.firebaseLogEventWithTwoParams) {
+                window.JBridge.firebaseLogEventWithTwoParams(event, paramKey1,paramValue1,paramKey2,paramValue2);
             }
           };
         };
@@ -800,24 +800,24 @@ exports["firebaseLogEventWithTwoParams"] = function (event) {
   };
 };
 
-exports["firebaseLogEvent"] = function (str) {
-  if (JBridge.firebaseLogEvent){
-      JBridge.firebaseLogEvent(str);
+export const firebaseLogEvent = function (str) {
+  if (window.JBridge.firebaseLogEvent){
+      window.JBridge.firebaseLogEvent(str);
   }
 };
 
-exports["hideKeyboardOnNavigation"] = function (permission) {
-  JBridge.hideKeyboardOnNavigation(permission);
+export const hideKeyboardOnNavigation = function (permission) {
+  window.JBridge.hideKeyboardOnNavigation(permission);
 };
 
-exports.onEvent = function (payload) {
+export const onEvent = function (payload) {
   return function () {
     window.temp = payload;
-    JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), "");
+    window.JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), "");
   };
 };
 
-exports._onEventWithCB = function (payload) {
+export const _onEventWithCB = function (payload) {
   return function (succ) {
     return function (err) {
       return function () {
@@ -834,7 +834,7 @@ exports._onEventWithCB = function (payload) {
             succ(res)();
           }
         });
-        JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), cb);
+        window.JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), cb);
       };
     };
   };
@@ -842,30 +842,30 @@ exports._onEventWithCB = function (payload) {
 
 // exports.getSessionInfo = JSON.parse(JBridge.getDeviceInfo());
 
-exports.getKeyInSharedPrefKeys = function (key) {
-  return JBridge.getKeysInSharedPrefs(key);
+export const getKeyInSharedPrefKeys = function (key) {
+  return window.JBridge.getKeysInSharedPrefs(key);
 };
 
-exports.getKeyInNativeSharedPrefKeys = function (key) {
+export const getKeyInNativeSharedPrefKeys = function (key) {
   if (window.__OS == "IOS") {
-    return JBridge.getKeysInSharedPrefs(key);
-  } else { 
-    return JBridge.getKeyInNativeSharedPrefKeys(key);
+    return window.JBridge.getKeysInSharedPrefs(key);
+  } else {
+    return window.JBridge.getKeyInNativeSharedPrefKeys(key);
   }
 };
 
-exports["setKeyInSharedPrefKeys'"] = function (key) {
+export const setKeyInSharedPrefKeysImpl = function (key) {
   return function (value) {
-    JBridge.setKeysInSharedPrefs(key, value);
+    window.JBridge.setKeysInSharedPrefs(key, value);
   };
 };
 
-exports["setEnvInNativeSharedPrefKeys'"] = function (key) {
+export const setEnvInNativeSharedPrefKeysImpl = function (key) {
   return function (value) {
     if (window.__OS == "IOS") {
-      JBridge.setKeysInSharedPrefs(key, value);
-    } else { 
-      JBridge.setEnvInNativeSharedPrefKeys(key, value);
+      window.JBridge.setKeysInSharedPrefs(key, value);
+    } else {
+      window.JBridge.setEnvInNativeSharedPrefKeys(key, value);
     }
   };
 };
@@ -876,77 +876,77 @@ exports["setEnvInNativeSharedPrefKeys'"] = function (key) {
 //   };
 // };
 
-exports.removeKeysInSharedPrefs = function (key) {
+export const removeKeysInSharedPrefs = function (key) {
   if (window.__OS == "IOS") {
-    return JBridge.removeFromSharedPrefs(key);
-  } else { 
-    return JBridge.removeKeysInSharedPrefs(key);
+    return window.JBridge.removeFromSharedPrefs(key);
+  } else {
+    return window.JBridge.removeKeysInSharedPrefs(key);
   }
 };
 
-exports.removeKeysInNativeSharedPrefs = function (key) {
+export const removeKeysInNativeSharedPrefs = function (key) {
   if (window.__OS == "IOS") {
-    JBridge.removeFromSharedPrefs(key);
-  } else { 
-    JBridge.removeKeysInNativeSharedPrefs(key);
+    window.JBridge.removeFromSharedPrefs(key);
+  } else {
+    window.JBridge.removeKeysInNativeSharedPrefs(key);
   }
 };
 
-exports["toggleLoader'"] = function (showLoader) {
+export const toggleLoaderImpl = function (showLoader) {
   return function () {
-    return JBridge.toggleLoader(showLoader);
+    return window.JBridge.toggleLoader(showLoader);
   };
 };
 
-exports["loaderText'"] = function (mainTxt) {
+export const loaderTextImpl = function (mainTxt) {
   return function (subTxt) {
     return function () {
-      return JBridge.loaderText(mainTxt, subTxt);
+      return window.JBridge.loaderText(mainTxt, subTxt);
     };
   };
 };
 
 
-exports["showDialer"] = function (str) {
-  JBridge.showDialer(str);
+export const showDialer = function (str) {
+  window.JBridge.showDialer(str);
 };
 
-exports["startLocationPollingAPI"] = function () {
-                  return JBridge.startLocationPollingAPI();
+export const startLocationPollingAPI = function () {
+  return window.JBridge.startLocationPollingAPI();
 }
 
-exports["generatePDF"] = function (state) {
+export const generatePDF = function (state) {
   return function (type) {
     var data = JSON.stringify(state)
-    JBridge.generatePDF(data, type);
+    window.JBridge.generatePDF(data, type);
     return true;
   };
 };
 
-exports["stopLocationPollingAPI"] = function () {
-  JBridge.stopLocationPollingAPI()
+export const stopLocationPollingAPI = function () {
+  window.JBridge.stopLocationPollingAPI()
 }
 
-exports["removeAllPolylines"] = function(str){
-  JBridge.removeAllPolylines(str);
+export const removeAllPolylines = function(str){
+  window.JBridge.removeAllPolylines(str);
 }
 
-exports["currentPosition"] = function (str) {
-    JBridge.currentPosition(str);
+export const currentPosition = function (str) {
+    window.JBridge.currentPosition(str);
 }
 
-exports["firebaseScreenNameLog"] = function (str) {
-  if(JBridge.firebaseScreenNameLog){
-      JBridge.firebaseScreenNameLog(str);
+export const firebaseScreenNameLog = function (str) {
+  if(window.JBridge.firebaseScreenNameLog){
+      window.JBridge.firebaseScreenNameLog(str);
   }
 };
-exports["firebaseUserID"] = function (str) {
-  if(JBridge.firebaseUserID) {
-      JBridge.firebaseUserID(str);
+export const firebaseUserID = function (str) {
+  if(window.JBridge.firebaseUserID) {
+      window.JBridge.firebaseUserID(str);
   }
 };
 
-exports["storeCallBackDriverLocationPermission"] = function (cb) {
+export const storeCallBackDriverLocationPermission = function (cb) {
   try {
   return function (action) {
       return function () {
@@ -954,15 +954,15 @@ exports["storeCallBackDriverLocationPermission"] = function (cb) {
               cb(action (isLocationPermissionGranted))();
           });
           console.log("In storeCallBackDriverLocationPermission ---------- + " + action);
-          JBridge.storeCallBackDriverLocationPermission(callback);
-      }    
+          window.JBridge.storeCallBackDriverLocationPermission(callback);
+      }
   }}
   catch (error){
       console.log("Error occurred in storeCallBackDriverLocationPermission ------", error);
   }
 }
 
-exports["storeCallBackInternetAction"] = function (cb) {
+export const storeCallBackInternetAction = function (cb) {
   try {
   return function (action) {
       return function () {
@@ -970,30 +970,30 @@ exports["storeCallBackInternetAction"] = function (cb) {
               cb(action (isNetworkOn))();
           });
           console.log("In storeCallBackInternetAction ---------- + " + action);
-          JBridge.storeCallBackInternetAction(callback);
-      }    
+          window.JBridge.storeCallBackInternetAction(callback);
+      }
   }}
   catch (error){
       console.log("Error occurred in storeCallBackInternetAction ------", error);
   }
 }
 
-exports["storeCallBackImageUpload"] = function (cb) {
+export const storeCallBackImageUpload = function (cb) {
   try {
   return function (action) {
       return function () {
           var callback = callbackMapper.map(function (imgStr, imageName) {
               cb(action (imgStr)(imageName))();
           });
-          JBridge.storeCallBackImageUpload(callback);
-      }    
+          window.JBridge.storeCallBackImageUpload(callback);
+      }
   }}
   catch (error){
       console.log("Error occurred in storeCallBackImageUpload ------", error);
   }
 }
 
-exports["storeCallBackOverlayPermission"] = function (cb) {
+export const storeCallBackOverlayPermission = function (cb) {
   try {
   return function (action) {
       return function () {
@@ -1001,15 +1001,15 @@ exports["storeCallBackOverlayPermission"] = function (cb) {
               cb(action (isOverlayPermission))();
           });
           console.log("In storeCallBackOverlapPermission ---------- + " + action);
-          JBridge.storeCallBackOverlayPermission(callback);
-      }    
+          window.JBridge.storeCallBackOverlayPermission(callback);
+      }
   }}
   catch (error){
       console.log("Error occurred in storeCallBackOverlapPermission ------", error);
   }
 }
 
-exports["storeCallBackBatteryUsagePermission"] = function (cb) {
+export const storeCallBackBatteryUsagePermission = function (cb) {
   try {
   return function (action) {
       return function () {
@@ -1017,29 +1017,29 @@ exports["storeCallBackBatteryUsagePermission"] = function (cb) {
               cb(action (isPermissionEnabled))();
           });
           console.log("In storeCallBackBatteryUsagePermission ---------- + " + action);
-          JBridge.storeCallBackBatteryUsagePermission(callback);
-      }    
+          window.JBridge.storeCallBackBatteryUsagePermission(callback);
+      }
   }}
   catch (error){
       console.log("Error occurred in storeCallBackBatteryUsagePermission ------", error);
   }
 }
 
-exports["isBatteryPermissionEnabled"] = function (unit) {
+export const isBatteryPermissionEnabled = function (unit) {
   return function () {
-    return JBridge.isBatteryPermissionEnabled();
+    return window.JBridge.isBatteryPermissionEnabled();
   };
 };
 
-exports["getAAID"] = function (str) {
+export const getAAID = function (str) {
   console.log("HERE IN getAAID ===--->>")
-  return JBridge.getAAID();
+  return window.JBridge.getAAID();
 }
 
-exports["isInternetAvailable"] = function (unit) {
+export const isInternetAvailable = function (unit) {
   return function () {
     if (window.__OS == "IOS")
-      {if (JBridge.isNetworkAvailable() == "1") return true;
+      {if (window.JBridge.isNetworkAvailable() == "1") return true;
     else return false;}
     else return JBridge.isInternetAvailable();
   };
@@ -1154,7 +1154,7 @@ exports["setStoreCallBackPopUp"] = function (cb) {
               cb(action (stringifyPayload))();
           });
           JBridge.setStoreCallBackPopUp(callback);
-      }    
+      }
   }}
   catch (error){
       console.log("Error occurred in setStoreCallBackPopUp", error);
@@ -1177,7 +1177,7 @@ exports ["startLottieProcess"] = function (rawJson) {
               return JBridge.startLottieProcess(rawJson,lottieId, loop, speed, scaleType);
             } catch (err) {
               /*
-              * This Function is deprecated on 12 Jan - 2023 
+              * This Function is deprecated on 12 Jan - 2023
               * Remove this function once it is not begin used.
               */
               return JBridge.startLottieProcess(rawJson,lottieId, loop, speed);
@@ -1258,7 +1258,7 @@ exports["generateSessionId"] = function () {
     console.log("generateSessionId error " + err);
   }
 }
-exports["initialWebViewSetUp"] = function (cb) {
+export const initialWebViewSetUp = function (cb) {
   return function (id) {
       return function (action) {
         return function () {
@@ -1276,7 +1276,7 @@ exports["initialWebViewSetUp"] = function (cb) {
   };
 };
 
-exports["goBackPrevWebPage"] = function (id) {
+export const goBackPrevWebPage = function (id) {
   try {
     if (JBridge.goBackPrevWebPage){
       return JBridge.goBackPrevWebPage(id);

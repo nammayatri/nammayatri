@@ -24,7 +24,7 @@ import Helpers.Utils (validateEmail)
 import Data.String(length)
 import Storage(KeyStore(..), getValueToLocalStore)
 import Engineering.Helpers.Commons(getNewIDWithTag)
-import Debug.Trace(spy)
+import Debug (spy)
 instance showAction :: Show Action where
   show _ = ""
 instance loggableAction :: Loggable Action where
@@ -126,8 +126,8 @@ eval (UserProfile (GetProfileRes profile)) state = do
         Just "PREFER_NOT_TO_SAY" -> Just PREFER_NOT_TO_SAY
         _ -> Nothing
   continue state { data { name = name, editedName = name, gender = gender, emailId = profile.email } }
-eval (NameEditTextAction (PrimaryEditText.TextChanged id value)) state = do 
-  _ <- pure $ spy "Value changed"  value 
+eval (NameEditTextAction (PrimaryEditText.TextChanged id value)) state = do
+  _ <- pure $ spy "Value changed"  value
   continue state { data { editedName = value }, props{genderOptionExpanded = false, expandEnabled = false, isBtnEnabled = ((length value >=3) && state.props.isEmailValid )} }
 eval (EmailIDEditTextAction (PrimaryEditText.TextChanged id value)) state = do
   if (value == "" && state.data.errorMessage == Just EMAIL_EXISTS) then continue state {props{ isEmailValid = false, isBtnEnabled = false, genderOptionExpanded = false, expandEnabled = false}}

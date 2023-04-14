@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -21,7 +21,7 @@ import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Data.Maybe (Maybe(..))
 import Data.String (length)
 import Data.String.CodeUnits (charAt)
-import Debug.Trace (spy)
+import Debug (spy)
 import Engineering.Helpers.Commons (getNewIDWithTag, os, clearTimer)
 import Helpers.Utils (setText')
 import JBridge (hideKeyboardOnNavigation, toast, toggleBtnLoader,minimizeApp, firebaseLogEvent)
@@ -29,7 +29,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Prelude (class Show, bind, pure, unit, show, ($), (&&), (-), (<=), (==), (>), (||), discard)
-import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
+import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit, LetterSpacing(..))
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (EnterMobileNumberScreenState)
@@ -41,7 +41,7 @@ instance showAction :: Show Action where
 instance loggableAction :: Loggable Action where
     performLog action appId = case action of
         AfterRender -> trackAppScreenRender appId "screen" (getScreen ENTER_MOBILE_NUMBER_SCREEN)
-        BackPressed flag -> do 
+        BackPressed flag -> do
             if flag then do
                 trackAppBackPress appId (getScreen ENTER_OTP_NUMBER_SCREEN)
                 trackAppEndScreen appId (getScreen ENTER_OTP_NUMBER_SCREEN)
@@ -52,7 +52,7 @@ instance loggableAction :: Loggable Action where
             PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "primary_button" "continue_mobilenumber"
             PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "primary_button" "no_action"
         VerifyOTPButtonAction act -> case act of
-            PrimaryButtonController.OnClick -> do 
+            PrimaryButtonController.OnClick -> do
                 trackAppActionClick appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "primary_button" "continue_otp"
                 trackAppEndScreen appId (getScreen ENTER_MOBILE_NUMBER_SCREEN)
             PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "primary_button" "no_action"
@@ -78,16 +78,16 @@ data ScreenOutput = GoToAccountSetUp EnterMobileNumberScreenState
                   | ResendOTP EnterMobileNumberScreenState
                   | GoToChooseLanguage EnterMobileNumberScreenState
 
-data Action = EnterOTP 
+data Action = EnterOTP
             | BackPressed Boolean
             | AutoFill String
-            | MobileNumberButtonAction PrimaryButtonController.Action 
-            | VerifyOTPButtonAction PrimaryButtonController.Action 
+            | MobileNumberButtonAction PrimaryButtonController.Action
+            | VerifyOTPButtonAction PrimaryButtonController.Action
             | MobileNumberEditTextAction PrimaryEditTextController.Action
             | OTPEditTextAction PrimaryEditTextController.Action
             | GenericHeaderActionController GenericHeaderController.Action
             | Resend
-            | CountDown Int String String String 
+            | CountDown Int String String String
             | NoAction
             | SetToken String
             | ContinueCommand
@@ -102,39 +102,40 @@ eval (MobileNumberButtonAction PrimaryButtonController.OnClick) state = continue
             _ <- pure $ hideKeyboardOnNavigation true
             let value = (if os == "IOS" then "" else " ")
             _ <- (setText' (getNewIDWithTag "EnterOTPNumberEditText") value )
-            pure $ ContinueCommand 
+            pure $ ContinueCommand
 ]
 
-eval (VerifyOTPButtonAction PrimaryButtonController.OnClick) state = do 
+eval (VerifyOTPButtonAction PrimaryButtonController.OnClick) state = do
     _ <- pure $ hideKeyboardOnNavigation true
     updateAndExit state $ GoToAccountSetUp state
 
-eval (MobileNumberEditTextAction (PrimaryEditTextController.TextChanged id value)) state = do 
+eval (MobileNumberEditTextAction (PrimaryEditTextController.TextChanged id value)) state = do
     _ <- if length value == 10 then do
-            pure $ hideKeyboardOnNavigation true 
+            pure $ hideKeyboardOnNavigation true
             else pure unit
-    let isValidMobileNumber = case (charAt 0 value) of 
-                                    Just a -> if a=='0' || a=='1' || a=='2' || a=='3' || a=='4' then false 
+    let isValidMobileNumber = case (charAt 0 value) of
+                                    Just a -> if a=='0' || a=='1' || a=='2' || a=='3' || a=='4' then false
                                                 else if a=='5' then
-                                                    if value=="5000500050" then true else false 
-                                                        else true 
-                                    Nothing -> true 
+                                                    if value=="5000500050" then true else false
+                                                        else true
+                                    Nothing -> true
     if (length value == 10 && isValidMobileNumber) then do
         _ <- pure $ firebaseLogEvent "ny_user_mobnum_entry"
         pure unit
         else pure unit
     let newState = state { props = state.props { isValidMobileNumber = isValidMobileNumber
                                         , btnActiveMobileNumber = if (length value == 10 && isValidMobileNumber) then true else false}
-                                        , data = state.data { mobileNumber = if length value <= 10 then value else state.data.mobileNumber}}  
+                                        , data = state.data { mobileNumber = if length value <= 10 then value else state.data.mobileNumber}}
     continue newState
 
-eval (OTPEditTextAction (PrimaryEditTextController.TextChanged id value)) state = do 
-    let newState = state { props = state.props { btnActiveOTP = if length value == 4 then true else false, letterSpacing = if value == "" then 1.0 else 6.0, wrongOTP = if state.props.wrongOTP && value == "" then true else false}
+eval (OTPEditTextAction (PrimaryEditTextController.TextChanged id value)) state = do
+    let newState = state { props = state.props { btnActiveOTP = if length value == 4 then true else false, letterSpacing = PX if value == "" then 1.0 else 6.0, wrongOTP = if state.props.wrongOTP && value == "" then true else false}
                   , data = state.data { otp = if length value <= 4 then value else state.data.otp }}
     if length value == 4 then do
-        _ <- pure $ hideKeyboardOnNavigation true
-        updateAndExit newState $ GoToAccountSetUp newState 
-        else continue newState
+        pure $ hideKeyboardOnNavigation true
+        updateAndExit newState $ GoToAccountSetUp newState
+    else
+        continue newState
 
 eval (GenericHeaderActionController (GenericHeaderController.PrefixImgOnClick )) state = continueWithCmd state [ do pure $ BackPressed state.props.enterOTP]
 
@@ -151,26 +152,26 @@ eval (AutoFill otp) state = updateAndExit
     capturedOtp = otp}, data = state.data { otp = if (length otp <= 4) then otp else state.data.otp}})
    (GoToAccountSetUp (state {props = state.props {isReadingOTP = if length otp == 4 then false else true ,capturedOtp = otp}, data = state.data { otp = if (length otp <= 4) then otp else state.data.otp}}))
 
-eval (BackPressed flag) state = do 
+eval (BackPressed flag) state = do
       _ <- pure $ printLog "state" state
       _ <- pure $ toggleBtnLoader "" false
-      let newState = state {props{enterOTP =  false,letterSpacing = 1.0},data{otp = ""}}
+      let newState = state {props{enterOTP =  false,letterSpacing = PX 1.0},data{otp = ""}}
       _ <- pure $ hideKeyboardOnNavigation true
-      if state.props.enterOTP then exit $ GoBack newState 
+      if state.props.enterOTP then exit $ GoBack newState
         else do
             _ <- pure $ minimizeApp ""
             continue state --exit $ GoToChooseLanguage newState{data{mobileNumber = ""}}-- Removed choose langauge screen
 
-eval (CountDown seconds id status timerID) state = do 
+eval (CountDown seconds id status timerID) state = do
         _ <- pure $ printLog "timer" seconds
-        if status == "EXPIRED" then do 
+        if status == "EXPIRED" then do
             _ <- pure $ clearTimer timerID
             let newState = state{data{timer = "", timerID = ""},props = state.props{resendEnable = true}}
             continue newState
-        else 
+        else
             continue $ state{data{timer = show seconds, timerID=timerID},props = state.props{resendEnable = false}}
-eval (SetToken id )state = do 
-  _ <- pure $ spy "SetTokenSetToken" id  
+eval (SetToken id )state = do
+  _ <- pure $ spy "SetTokenSetToken" id
   _ <- pure $ setValueToLocalNativeStore FCM_TOKEN  id
   continue state
 

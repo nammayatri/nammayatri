@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -35,8 +35,8 @@ import Presto.Core.Types.Language.Flow (Flow, checkPermissions, takePermissions)
 import Presto.Core.Types.Permission (Permission(..), PermissionResponse, PermissionStatus(..))
 import Types.App (GlobalState)
 
-foreign import getPermissionStatus' :: Array String -> (Effect String)
-foreign import requestPermission' :: Fn3 (Error -> Effect Unit) (String -> Effect Unit) String (Effect Unit)
+foreign import getPermissionStatusImpl :: Array String -> (Effect String)
+foreign import requestPermissionImpl :: Fn3 (Error -> Effect Unit) (String -> Effect Unit) String (Effect Unit)
 
 toAndroidPermission :: Permission -> String
 -- toAndroidPermission PermissionSendSms = "android.permission.READ_SMS"
@@ -70,7 +70,7 @@ storagePermissionGranted = do
 
 getPermissionStatus :: Permission -> Aff Boolean
 getPermissionStatus permission = do
-  value <- liftEffect $ getPermissionStatus' $ singleton $ toAndroidPermission permission
+  value <- liftEffect $ getPermissionStatusImpl $ singleton $ toAndroidPermission permission
   pure $ contains (Pattern "true") value
 
 checkIfPermissionsGranted :: Array Permission -> Aff PermissionStatus
@@ -82,7 +82,7 @@ checkIfPermissionsGranted permissions = do
 
 _requestPermissions :: (Either Error String -> Effect Unit) -> String -> Effect Canceler
 _requestPermissions cb str = do
-  runFn3 requestPermission' (Left >>> cb) (Right >>> cb) str
+  runFn3 requestPermissionImpl (Left >>> cb) (Right >>> cb) str
   pure $ nonCanceler
 
 requestPermissions :: Array Permission -> Aff (Array PermissionResponse)

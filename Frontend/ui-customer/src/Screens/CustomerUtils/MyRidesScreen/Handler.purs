@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -25,7 +25,7 @@ import Engineering.Helpers.Commons (liftFlow)
 import ModifyScreenState (modifyScreenState)
 import Prelude (bind, ($), (<$>), discard, pure)
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
-import PrestoDOM.Core2 (getPushFn)
+import PrestoDOM.Core (getPushFn)
 import PrestoDOM.List as PrestoList
 import Screens.MyRidesScreen.Controller (ScreenOutput(..))
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
@@ -40,10 +40,10 @@ myRidesScreen = do
   push <- lift $ lift $ liftFlow $ getPushFn Nothing "MyRidesScreen"
   listItemm <- lift $ lift $ PrestoList.preComputeListItem $ IndividualRideCard.view push listItem1
   act <- lift $ lift $ runScreen $ MyRidesScreen.screen state.myRidesScreen{shimmerLoader = AnimatedIn} listItemm
-  case act of 
+  case act of
     GoBack updatedState -> do
-      if  (updatedState.props.fromNavBar) then do 
-        modifyScreenState $ HomeScreenStateType (\homeScreenState -> homeScreenState{data{settingSideBar{opened = SettingSideBarController.OPEN}}})  
+      if  (updatedState.props.fromNavBar) then do
+        modifyScreenState $ HomeScreenStateType (\homeScreenState -> homeScreenState{data{settingSideBar{opened = SettingSideBarController.OPEN}}})
         App.BackT $ App.BackPoint <$> (pure $ GO_TO_NAV_BAR)
         else App.BackT $ App.BackPoint <$> (pure $ GO_TO_HELP_SCREEN)
     MyRidesScreen updatedState -> App.BackT $ App.BackPoint <$> (pure $ REFRESH updatedState)

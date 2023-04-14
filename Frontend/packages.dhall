@@ -99,91 +99,20 @@ in  upstream
 -------------------------------
 -}
 let upstream =
-      https://github.com/purescript/package-sets/releases/download/psc-0.13.8-20210226/packages.dhall
-        sha256:7e973070e323137f27e12af93bc2c2f600d53ce4ae73bb51f34eb7d7ce0a43ea
+      https://github.com/purescript/package-sets/releases/download/psc-0.15.4/packages.dhall
+        sha256:a6d66723b6109f1e3eaf6575910f1c51aa545965ce313024ba329360e2f009ac
 
 in  upstream
-  with presto = 
-    { dependencies =
-        [ "aff"
-        , "avar"
-        , "console"
-        , "control"
-        , "datetime"
-        , "debug"
-        , "exceptions"
-        , "exists"
-        , "foreign-generic"
-        , "foreign-object"
-        , "free"
-        , "generics-rep"
-        , "prelude"
-        , "record"
-        , "transformers"
-        , "tuples"
-        , "typelevel-prelude"
-        ]
-    , repo = "https://github.com/juspay/purescript-presto.git"
-    , version = "master"
-    }
-  with backtrack = 
-    { dependencies =
-        [ "prelude"
-        , "console"
-        , "transformers"
-        , "tailrec"
-        ]
-    , repo = "https://github.com/juspay/purescript-backtrack.git"
-    , version = "master"
-    }
+  with presto = /home/ben/code/juspay/purescript-presto/spago.dhall as Location
+  with backtrack = /home/ben/code/juspay/purescript-backtrack/spago.dhall as Location
   with presto-dom =
-    { dependencies = 
-        [ "behaviors"
-        , "console"
-        , "effect"
-        , "event"
-        , "prelude"
-        , "psci-support"
-        , "halogen-vdom"
-        , "tracker"
-        ]
-    , repo = "https://github.com/juspay/purescript-presto-dom.git"
-    , version = "main"
-    }
+      /home/ben/code/juspay/purescript-presto-dom/spago.dhall as Location
   with halogen-vdom =
-    { dependencies = 
-        [ "behaviors"
-        , "bifunctors"
-        , "effect"
-        , "foreign"
-        , "foreign-object"
-        , "maybe"
-        , "prelude"
-        , "refs"
-        , "tuples"
-        , "unsafe-coerce"
-        , "web-html"
-        ]
-    , repo = "https://github.com/juspay/purescript-halogen-vdom.git"
-    , version = "master"
-    }
-  with tracker = 
-    { dependencies = 
-        [ "prelude"
-        , "effect"
-        , "foreign-generic"
-        ]
-    , repo = "https://github.com/juspay/purescript-tracker.git"
-    , version = "master"
-    }
+      /home/ben/code/juspay/purescript-halogen-vdom/spago.dhall as Location
+  with foreign-generic =
+      /home/ben/code/juspay/purescript-foreign-generic/spago.dhall as Location
+  with tracker =
+      /home/ben/code/juspay/purescript-tracker/spago.dhall as Location
   with otp-reader =
-    { dependencies = 
-        [ "numbers"
-        , "tracker"
-        , "presto"
-        ]
-    , repo = "https://github.com/juspay/purescript-otp-reader.git"
-    , version = "master"
-    }
+      /home/ben/code/juspay/purescript-otp-reader/spago.dhall as Location
   with beckn-common = ./ui-common/spago.dhall as Location
- 
