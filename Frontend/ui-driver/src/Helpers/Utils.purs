@@ -70,7 +70,7 @@ foreign import storeCallBackTime :: forall action. (action -> Effect Unit) -> (S
 foreign import getTime :: Unit -> Int
 foreign import countDown :: forall action. Int -> String -> (action -> Effect Unit) -> (Int -> String -> String -> String-> action)  -> Effect Unit
 foreign import hideSplash :: Effect Unit
-foreign import startTimer :: forall action. Int -> (action -> Effect Unit) -> (String -> action) -> Effect Unit
+foreign import startTimer :: forall action. Int -> Boolean -> (action -> Effect Unit) -> (String -> action) -> Effect Unit
 foreign import convertKmToM :: String -> String
 foreign import convertUTCtoISC :: String -> String -> String
 foreign import differenceBetweenTwoUTC :: String -> String -> Int
@@ -91,6 +91,13 @@ foreign import launchAppSettings :: Unit -> Effect Unit
 foreign import setYoutubePlayer :: YoutubeData -> String -> String -> Unit
 foreign import getTimeStampString :: String -> String
 foreign import addMediaPlayer :: String -> String -> Effect Unit
+foreign import saveAudioFile :: String -> Effect String
+foreign import addMediaFile :: String -> String -> String -> String -> String -> String -> Effect Unit
+foreign import clearFocus :: String -> Effect Unit
+foreign import uploadMultiPartData :: String -> String -> String -> Effect String
+foreign import startAudioRecording :: String -> Effect Boolean
+foreign import stopAudioRecording :: String -> Effect String
+foreign import renderBase64ImageFile :: String -> String -> Boolean -> Effect Unit
 foreign import removeMediaPlayer :: String -> Effect Unit
 foreign import getVideoID :: String -> String
 foreign import getImageUrl :: String -> String

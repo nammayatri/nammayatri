@@ -19,7 +19,7 @@ import Control.Transformers.Back.Trans (BackT)
 import Control.Monad.Except.Trans (ExceptT)
 import Control.Monad.Free (Free)
 import Presto.Core.Types.Language.Flow (FlowWrapper)
-import Screens.Types (SplashScreenState, ChooseLanguageScreenState, UploadDrivingLicenseState, RegistrationScreenState, EnterMobileNumberScreenState, UploadAdhaarScreenState, EnterOTPScreenState, ApplicationStatusScreenState, AddVehicleDetailsScreenState, DriverDetailsScreenState, VehicleDetailsScreenState, DriverProfileScreenState, AboutUsScreenState, SelectLanguageScreenState, HelpAndSupportScreenState, WriteToUsScreenState, BankDetailScreenState, RideHistoryScreenState, HomeScreenState, RideDetailScreenState, TripDetailsScreenState, PermissionsScreenState, EditBankDetailsScreenState, EditAadhaarDetailsScreenState, IndividualRideCardState, ActiveRide, NoInternetScreenState, PopUpScreenState, DriverRideRatingScreenState, AppUpdatePopUpScreenState , ReferralScreenState, NotificationsScreenState, DriverStatus)
+import Screens.Types (AboutUsScreenState, ActiveRide, AddVehicleDetailsScreenState, AppUpdatePopUpScreenState, ApplicationStatusScreenState, BankDetailScreenState, CategoryListType, ChooseLanguageScreenState, DriverDetailsScreenState, DriverProfileScreenState, DriverRideRatingScreenState, DriverStatus, EditAadhaarDetailsScreenState, EditBankDetailsScreenState, EnterMobileNumberScreenState, EnterOTPScreenState, HelpAndSupportScreenState, HomeScreenState, IndividualRideCardState, NoInternetScreenState, NotificationsScreenState, PermissionsScreenState, PopUpScreenState, ReferralScreenState, RegistrationScreenState, ReportIssueChatScreenState, RideDetailScreenState, RideHistoryScreenState, RideSelectionScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, UploadAdhaarScreenState, UploadDrivingLicenseState, VehicleDetailsScreenState, WriteToUsScreenState)
 import Screens.ChooseLanguageScreen.ScreenData as ChooseLanguageScreenData
 import Screens.EnterMobileNumberScreen.ScreenData as EnterMobileNumberScreenData
 import Screens.EnterOTPScreen.ScreenData as  EnterOTPScreenData
@@ -30,6 +30,7 @@ import Screens.UploadAdhaarScreen.ScreenData as UploadAdhaarScreenData
 import Screens.ApplicationStatusScreen.ScreenData as ApplicationStatusScreenData
 import Screens.TripDetailsScreen.ScreenData as TripDetailsScreenData
 import Screens.RideHistoryScreen.ScreenData as RideHistoryScreenData
+import Screens.RideSelectionScreen.ScreenData as RideSelectionScreenData
 import Screens.BankDetailScreen.ScreenData as BankDetailScreenData
 import Screens.DriverProfileScreen.ScreenData as DriverProfileScreenData
 import Screens.DriverDetailsScreen.ScreenData as DriverDetailsScreenData
@@ -41,6 +42,7 @@ import Screens.WriteToUsScreen.ScreenData as WriteToUsScreenData
 import Screens.PermissionsScreen.ScreenData as PermissionsScreenData
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.RideDetailScreen.ScreenData as RideDetailScreenData
+import Screens.ReportIssueChatScreen.ScreenData as ReportIssueChatScreenData
 import Screens.EditBankDetailsScreen.ScreenData as EditBankDetailsScreenData
 import Screens.EditAadhaarDetailsScreen.ScreenData as EditAadhaarDetailsScreenData
 import Screens.PopUpScreen.ScreenData as PopUpScreenData
@@ -64,6 +66,8 @@ newtype GlobalState = GlobalState {
   , addVehicleDetailsScreen :: AddVehicleDetailsScreenState
   , tripDetailsScreen :: TripDetailsScreenState
   , rideHistoryScreen :: RideHistoryScreenState
+  , rideSelectionScreen :: RideSelectionScreenState
+  , reportIssueChatScreen :: ReportIssueChatScreenState
   , bankDetailsScreen :: BankDetailScreenState
   , driverDetailsScreen :: DriverDetailsScreenState
   , vehicleDetailsScreen :: VehicleDetailsScreenState
@@ -98,6 +102,8 @@ defaultGlobalState = GlobalState{
 , addVehicleDetailsScreen : AddVehicleDetailsScreenData.initData
 , tripDetailsScreen : TripDetailsScreenData.initData
 , rideHistoryScreen : RideHistoryScreenData.initData
+, rideSelectionScreen : RideSelectionScreenData.initData
+, reportIssueChatScreen : ReportIssueChatScreenData.initData
 , bankDetailsScreen : BankDetailScreenData.initData
 , driverDetailsScreen : DriverDetailsScreenData.initData
 , vehicleDetailsScreen : VehicleDetailsScreenData.initData
@@ -139,6 +145,8 @@ data ScreenType =
   | HomeScreenStateType (HomeScreenState -> HomeScreenState)
   | RideDetailScreenStateType (RideDetailScreenState -> RideDetailScreenState)
   | RideHistoryScreenStateType (RideHistoryScreenState -> RideHistoryScreenState)
+  | RideSelectionScreenStateType (RideSelectionScreenState -> RideSelectionScreenState)
+  | ReportIssueChatScreenStateType (ReportIssueChatScreenState -> ReportIssueChatScreenState)
   | PermissionsScreenStateType (PermissionsScreenState -> PermissionsScreenState)
   | EditBankDetailsScreenStateType (EditBankDetailsScreenState -> EditBankDetailsScreenState)
   | EditAadhaarDetailsScreenStateType (EditAadhaarDetailsScreenState -> EditAadhaarDetailsScreenState)
@@ -166,6 +174,10 @@ data REFERRAL_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_REFERRAL_SCREEN
                             | GO_TO_NOTIFICATION_SCREEN_FROM_REFERRAL_SCREEN
                             | GO_TO_FLOW_AND_COME_BACK ReferralScreenState
 
+data RIDES_SELECTION_SCREEN_OUTPUT = REFRESH_RIDES RideSelectionScreenState
+                                   | LOADER_RIDES_OUTPUT RideSelectionScreenState
+                                   | SELECT_RIDE RideSelectionScreenState
+
 data DRIVER_PROFILE_SCREEN_OUTPUT = DRIVER_DETAILS_SCREEN 
                                     | VEHICLE_DETAILS_SCREEN 
                                     | ABOUT_US_SCREEN 
@@ -190,10 +202,15 @@ data DRIVER_DETAILS_SCREEN_OUTPUT = VERIFY_OTP DriverDetailsScreenState
 data VEHICLE_DETAILS_SCREEN_OUTPUT = UPDATE_VEHICLE_INFO VehicleDetailsScreenState
 data ABOUT_US_SCREEN_OUTPUT = GO_TO_DRIVER_HOME_SCREEN
 data SELECT_LANGUAGE_SCREEN_OUTPUT = CHANGE_LANGUAGE
-data HELP_AND_SUPPORT_SCREEN_OUTPUT = REPORT_ISSUE 
-                                    | WRITE_TO_US_SCREEN 
-                                    | TRIP_DETAILS_SCREEN HelpAndSupportScreenState 
-                                    | MY_RIDES_SCREEN
+data HELP_AND_SUPPORT_SCREEN_OUTPUT = WRITE_TO_US_SCREEN 
+                                    | REPORT_ISSUE_CHAT_SCREEN CategoryListType
+                                    | RIDE_SELECTION_SCREEN CategoryListType
+                                    | REMOVE_ISSUE_SCREEN String HelpAndSupportScreenState 
+                                    | RESOLVED_ISSUE_SCREEN HelpAndSupportScreenState 
+                                    | ON_GOING_ISSUE_SCREEN HelpAndSupportScreenState 
+                                    | ISSUE_LIST_GO_BACK_SCREEN HelpAndSupportScreenState 
+                                 
+
 data WRITE_TO_US_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FLOW
 data REGISTRATION_SCREENOUTPUT = UPLOAD_DRIVER_LICENSE
 
@@ -205,14 +222,15 @@ data BANK_DETAILS_SCREENOUTPUT = GO_TO_ADD_VEHICLE_DETAILS
 
 data ADD_VEHICLE_DETAILS_SCREENOUTPUT = GO_TO_APPLICATION_SCREEN AddVehicleDetailsScreenState | VALIDATE_IMAGE_API_CALL AddVehicleDetailsScreenState | REFER_API_CALL AddVehicleDetailsScreenState | APPLICATION_STATUS_SCREEN | LOGOUT_USER | ONBOARDING_FLOW
 
-data TRIP_DETAILS_SCREEN_OUTPUT = ON_SUBMIT | GO_TO_HOME_SCREEN 
+data TRIP_DETAILS_SCREEN_OUTPUT = ON_SUBMIT | GO_TO_HOME_SCREEN | OPEN_HELP_AND_SUPPORT
 
 data PERMISSIONS_SCREEN_OUTPUT = DRIVER_HOME_SCREEN
 
 data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN
                           | GO_TO_RIDES_SCREEN 
                           | GO_TO_REFERRAL_SCREEN_FROM_HOME_SCREEN
-                          | GO_TO_START_RIDE {id :: String, otp :: String, lat :: String, lon :: String} 
+                          | GO_TO_HELP_AND_SUPPORT_SCREEN
+                          | GO_TO_START_RIDE {id :: String, otp :: String, lat :: String, lon :: String}
                           | GO_TO_CANCEL_RIDE {id :: String, info :: String , reason :: String} 
                           | GO_TO_END_RIDE {id :: String, lat :: String , lon :: String } 
                           | DRIVER_AVAILABILITY_STATUS DriverStatus
@@ -225,6 +243,8 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN
                           | GO_TO_NOTIFICATIONS
                           | ADD_ALTERNATE_HOME 
                           
+data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_CUSTOMER ReportIssueChatScreenState
+
 data RIDE_DETAIL_SCREENOUTPUT = GO_TO_HOME_FROM_RIDE_DETAIL | SHOW_ROUTE_IN_RIDE_DETAIL
 data APPLICATION_STATUS_SCREENOUTPUT = GO_TO_HOME_FROM_APPLICATION_STATUS
                                       | LOGOUT_ACCOUT

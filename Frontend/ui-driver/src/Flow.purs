@@ -18,7 +18,7 @@ module Flow where
 import Log
 
 import Control.Monad.Except.Trans (lift)
-import Data.Array (head, length, null, (!!), any)
+import Data.Array (concat, cons, elemIndex, head, length, mapWithIndex, null, snoc, sortBy, (!!), any)
 import Data.Either (Either(..))
 import Data.Int (round, toNumber, ceil)
 import Data.Lens ((^.))
@@ -46,15 +46,25 @@ import Screens.HomeScreen.View (rideRequestPollingData)
 import Screens.PopUpScreen.Controller (transformAllocationData)
 import Screens.Types (ActiveRide, AllocationData, HomeScreenStage(..), Location, KeyboardModalType(..), ReferralType(..), DriverStatus(..))
 import Screens.Types as ST
-import Services.APITypes (DriverActiveInactiveResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GetDriverInfoReq(..), GetDriverInfoResp(..), GetRidesHistoryResp(..), GetRouteResp(..), LogOutReq(..), LogOutRes(..), OfferRideResp(..), ReferDriverResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), TriggerOTPResp(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyTokenResp(..), DriverAlternateNumberResp(..), RemoveAlternateNumberRequest(..), RemoveAlternateNumberResp(..), AlternateNumberResendOTPResp(..), DriverAlternateNumberOtpResp(..), GetPerformanceReq(..), GetPerformanceRes(..))
+import Services.APITypes (AlternateNumberResendOTPResp(..), Category(Category), DriverActiveInactiveResp(..), DriverAlternateNumberOtpResp(..), DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GetCategoriesRes(GetCategoriesRes), GetDriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), LogOutRes(..), OfferRideResp(..), Option(Option), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes), ReferDriverResp(..), RemoveAlternateNumberRequest(..), RemoveAlternateNumberResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), TriggerOTPResp(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyTokenResp(..))
 import Services.Accessor (_lat, _lon, _id)
 import Services.Backend (makeGetRouteReq, walkCoordinates, walkCoordinate)
 import Services.Backend (makeTriggerOTPReq, makeVerifyOTPReq, makeUpdateDriverInfoReq, makeOfferRideReq, makeDriverRCReq, makeDriverDLReq, makeValidateImageReq, makeReferDriverReq, dummyVehicleObject, driverRegistrationStatusBT, makeUpdateDriverLangChange, makeValidateAlternateNumberRequest, makeResendAlternateNumberOtpRequest, makeVerifyAlternateNumberOtpRequest, makeLinkReferralCodeReq)
 import Services.Backend as Remote
 import Services.Config (getBaseUrl)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore)
-import Types.App (ABOUT_US_SCREEN_OUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREENOUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), defaultGlobalState)
+import Types.App (ABOUT_US_SCREEN_OUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), REGISTRATION_SCREENOUTPUT(..), REPORT_ISSUE_CHAT_SCREEN_OUTPUT(GO_TO_HELP_AND_SUPPORT), REPORT_ISSUE_CHAT_SCREEN_OUTPUT(SUBMIT_ISSUE), REPORT_ISSUE_CHAT_SCREEN_OUTPUT(CALL_CUSTOMER), RIDES_SELECTION_SCREEN_OUTPUT(REFRESH_RIDES), RIDES_SELECTION_SCREEN_OUTPUT(LOADER_RIDES_OUTPUT), RIDES_SELECTION_SCREEN_OUTPUT(SELECT_RIDE), RIDE_DETAIL_SCREENOUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), defaultGlobalState)
 import Types.ModifyScreenState (modifyScreenState, updateStage)
+import Screens.RideSelectionScreen.Handler (rideSelection) as UI
+import Screens.ReportIssueChatScreen.Handler (reportIssueChatScreen) as UI
+import Data.Functor (map)
+import Data.String.Common (joinWith, split, toUpper, trim)
+import Data.String (length) as STR
+import Data.String.CodeUnits (splitAt)
+import Data.Semigroup ((<>))
+import Components.ChatView.Controller (makeChatComponent')
+import Screens.ReportIssueChatScreen.ScreenData (initData) as ReportIssueScreenData
+import Data.Ord (compare)
 
 baseAppFlow :: FlowBT String Unit
 baseAppFlow = do
@@ -484,21 +494,6 @@ driverProfileFlow :: FlowBT String Unit
 driverProfileFlow = do
   _ <- pure $ delay $ Milliseconds 1.0
   _ <- pure $ printLog "Registration token" (getValueToLocalStore REGISTERATION_TOKEN)
-  (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "1" "0" "false"
-  case (head rideHistoryResponse.list) of
-    Nothing -> do
-      modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { props {isNoRides = true}})
-    Just (RidesInfo response) -> do
-      modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data {customerName = fromMaybe "" (response.riderName),
-        source = (decodeAddress response.fromLocation false),
-        destination = (decodeAddress response.toLocation false),
-        date = (convertUTCtoISC (response.createdAt) "D MMM"),
-        time = (convertUTCtoISC (response.createdAt )"h:mm A"),
-        tripId = response.shortRideId,
-        coveredDistance = (parseFloat (toNumber (fromMaybe 0 response.chargeableDistance) / 1000.0) 2 ),
-        durationOfTrip = "",  -- TODO:: {once beckend send durationOfTrip} response.durationOfTrip
-        rating = fromMaybe 0 response.rideRating,
-        fare = fromMaybe response.estimatedBaseFare response.computedFare}})
   action <- UI.driverProfileScreen
   case action of
     GO_TO_HOME_FROM_PROFILE -> homeScreenFlow
@@ -525,7 +520,32 @@ driverProfileFlow = do
       pure $ factoryResetApp ""
       _ <- pure $ firebaseLogEvent "logout"
       loginFlow
-    HELP_AND_SUPPORT_SCREEN -> helpAndSupportFlow
+    HELP_AND_SUPPORT_SCREEN -> do
+      let language = ( case getValueToLocalStore LANGUAGE_KEY of
+                         "HI_IN" -> "hi"
+                         "KN_IN" -> "kn"
+                         "TA_IN" -> "ta"
+                         _       -> "en"
+                     )
+      let categoryOrder = ["LOST_AND_FOUND", "RIDE_RELATED", "APP_RELATED", "FARE_RELATED"]
+      let compareByOrder a b = compare (fromMaybe (length categoryOrder) $ elemIndex a.categoryAction categoryOrder) (fromMaybe (length categoryOrder) $ elemIndex b.categoryAction categoryOrder)
+      (GetCategoriesRes response) <- Remote.getCategoriesBT language
+      let temp = (map (\(Category x) ->
+                          { categoryName :
+                              if (language == "en")
+                              then
+                                joinWith " " (map (\catName ->
+                                  let { before, after } = splitAt 1 catName
+                                  in (toUpper before <> after)
+                                ) (split (Pattern " ") x.category))
+                              else x.category
+                          , categoryId       : x.issueCategoryId
+                          , categoryAction   : x.label
+                          , categoryImageUrl : x.logoUrl
+                          }) response.categories)
+      let categories' = sortBy compareByOrder temp
+      modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories' } } )
+      helpAndSupportFlow
     GO_TO_DRIVER_HISTORY_SCREEN -> do
       modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> rideHistoryScreen{offsetValue = 0, currentTab = "COMPLETED"})
       myRidesScreenFlow
@@ -657,21 +677,55 @@ helpAndSupportFlow = do
   action <- UI.helpAndSupportScreen
   case action of
     WRITE_TO_US_SCREEN -> writeToUsFlow
-    TRIP_DETAILS_SCREEN updatedState -> do
-      modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen { data {rider = updatedState.data.customerName,
-        source = updatedState.data.source,
-        destination = updatedState.data.destination,
-        date = updatedState.data.date,
-        time = updatedState.data.time,
-        tripId = updatedState.data.tripId,
-        distance = updatedState.data.coveredDistance,
-        timeTaken = updatedState.data.durationOfTrip,
-        totalAmount = (updatedState.data.fare)}})
-      tripDetailsScreenFlow
-    MY_RIDES_SCREEN -> do
-      modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> rideHistoryScreen{offsetValue = 0, currentTab = "COMPLETED"})
-      myRidesScreenFlow
-    REPORT_ISSUE -> writeToUsFlow
+    RIDE_SELECTION_SCREEN selectedCategory -> do
+      modifyScreenState $ RideSelectionScreenStateType (\rideHistoryScreen -> rideHistoryScreen { offsetValue = 0, selectedCategory = selectedCategory } )
+      rideSelectionScreenFlow
+    REPORT_ISSUE_CHAT_SCREEN selectedCategory -> do
+      let language = ( case getValueToLocalStore LANGUAGE_KEY of
+                       "HI_IN" -> "hi"
+                       "KN_IN" -> "kn"
+                       "TA_IN" -> "ta"
+                       _       -> "en"
+                     )
+      (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT selectedCategory.categoryId language
+      let getOptionsRes' = (mapWithIndex (\index (Option x) ->
+        { option : (show (index + 1)) <> ". " <> 
+                   if (language == "en")
+                   then
+                     joinWith " " (map (\optName ->
+                       let {before, after} = splitAt 1 optName
+                       in (toUpper before <> after)
+                     ) (split (Pattern " ") x.option))
+                   else x.option
+        , issueOptionId : x.issueOptionId
+        , label : x.label
+        }
+      ) getOptionsRes.options)
+      let categoryName = if language == "en" then do
+                           case selectedCategory.categoryName of 
+                             "Lost And Found" -> "Report Lost Item"
+                             name             -> name <> " Issue"
+                         else 
+                           selectedCategory.categoryName
+      modifyScreenState $ ReportIssueChatScreenStateType (\_ -> ReportIssueScreenData.initData { data { categoryName = categoryName, categoryAction = selectedCategory.categoryAction, categoryId = selectedCategory.categoryId, options = getOptionsRes' }, props { isReversedFlow = selectedCategory.categoryAction == "LOST_AND_FOUND" } })
+      issueReportChatScreenFlow
+    ISSUE_LIST_GO_BACK_SCREEN updatedState -> do 
+       modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> updatedState)
+       helpAndSupportFlow
+       
+    ON_GOING_ISSUE_SCREEN updatedState -> do 
+       modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> updatedState)
+       helpAndSupportFlow
+    RESOLVED_ISSUE_SCREEN updatedState -> do 
+       modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> updatedState)
+       helpAndSupportFlow
+    REMOVE_ISSUE_SCREEN issueId updatedState -> do 
+       resp <- Remote.deleteIssueBT issueId
+       pure $ toast (getString ISSUE_REMOVED)
+       modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> updatedState)
+       helpAndSupportFlow
+
+
 
 writeToUsFlow :: FlowBT String Unit
 writeToUsFlow = do
@@ -721,6 +775,129 @@ myRidesScreenFlow = do
       tripDetailsScreenFlow
     NOTIFICATION_FLOW -> notificationFlow
 
+rideSelectionScreenFlow :: FlowBT String Unit
+rideSelectionScreenFlow = do
+  flow <- UI.rideSelection
+  case flow of
+    REFRESH_RIDES state -> do
+      modifyScreenState $ RideSelectionScreenStateType (\rideHistoryScreen -> state{offsetValue = 0})
+      rideSelectionScreenFlow
+    LOADER_RIDES_OUTPUT state -> do
+      modifyScreenState $ RideSelectionScreenStateType (\rideHistoryScreen -> state{offsetValue = state.offsetValue + 8})
+      rideSelectionScreenFlow
+    SELECT_RIDE state -> do
+      let language = ( case getValueToLocalStore LANGUAGE_KEY of
+                         "HI_IN" -> "hi"
+                         "KN_IN" -> "kn"
+                         "TA_IN" -> "ta"
+                         _       -> "en"
+                     )
+      (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT state.selectedCategory.categoryId language
+      let getOptionsRes' = (mapWithIndex (\index (Option x) ->
+        { option : (show (index + 1)) <> ". " <> 
+                   if (language == "en")
+                   then
+                     joinWith " " (map (\optName ->
+                       let {before, after} = splitAt 1 optName
+                       in (toUpper before <> after)
+                     ) (split (Pattern " ") x.option))
+                   else x.option
+          , issueOptionId : x.issueOptionId
+          , label : x.label
+        }
+      ) getOptionsRes.options)
+      let tripId' = case state.selectedItem of
+                      Just item -> Just item.id
+                      _         -> Nothing
+      let categoryName = if language == "en" then do
+                           case state.selectedCategory.categoryName of 
+                             "Lost And Found" -> "Report Lost Item"
+                             name             -> name <> " Issue"
+                         else 
+                           state.selectedCategory.categoryName
+      modifyScreenState $ ReportIssueChatScreenStateType (\_ -> ReportIssueScreenData.initData { data { tripId = tripId', categoryName = categoryName, categoryId = state.selectedCategory.categoryId, categoryAction = state.selectedCategory.categoryAction, options = getOptionsRes' }, props { isReversedFlow = (state.selectedCategory.categoryAction == "LOST_AND_FOUND") } } )
+      issueReportChatScreenFlow
+
+issueReportChatScreenFlow :: FlowBT String Unit
+issueReportChatScreenFlow = do
+  flow <- UI.reportIssueChatScreen
+  case flow of
+    GO_TO_HELP_AND_SUPPORT -> do
+      let language = ( case getValueToLocalStore LANGUAGE_KEY of
+                         "HI_IN" -> "hi"
+                         "KN_IN" -> "kn"
+                         "TA_IN" -> "ta"
+                         _       -> "en"
+                     )
+      let categoryOrder = ["LOST_AND_FOUND", "RIDE_RELATED", "APP_RELATED", "FARE_RELATED"]
+      let compareByOrder a b = compare (fromMaybe (length categoryOrder) $ elemIndex a.categoryAction categoryOrder) (fromMaybe (length categoryOrder) $ elemIndex b.categoryAction categoryOrder)
+      (GetCategoriesRes response) <- Remote.getCategoriesBT language
+      let temp = (map (\(Category x) ->
+                          { categoryName :
+                              if (language == "en")
+                              then
+                                joinWith " " (map (\catName ->
+                                  let { before, after } = splitAt 1 catName
+                                  in (toUpper before <> after)
+                                ) (split (Pattern " ") x.category))
+                              else x.category
+                          , categoryId       : x.issueCategoryId
+                          , categoryAction   : x.label
+                          , categoryImageUrl : x.logoUrl
+                          }) response.categories)
+      let categories' = sortBy compareByOrder temp
+      modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories' } } )
+      helpAndSupportFlow 
+    SUBMIT_ISSUE state -> do
+      let mediaFiles' = case state.data.uploadedAudioId of
+                          Just audioId -> cons audioId state.data.uploadedImagesIds
+                          _            -> state.data.uploadedImagesIds
+      let postIssueReq = PostIssueReq ({ mediaFiles  : mediaFiles'
+                                       , categoryId  : state.data.categoryId
+                                       , optionId    : state.data.selectedOptionId
+                                       , description : trim state.data.messageToBeSent
+                                       , rideId      : state.data.tripId
+                                       })
+      (PostIssueRes postIssueRes) <- Remote.postIssueBT postIssueReq
+      (IssueInfoRes issueInfoRes) <- Remote.issueInfoBT postIssueRes.issueReportId
+      _ <- pure $ hideKeyboardOnNavigation true
+      let showDescription = STR.length (trim issueInfoRes.description) > 0
+      let descMessages = if showDescription then snoc state.data.chatConfig.messages (makeChatComponent' issueInfoRes.description "Driver" (if (length issueInfoRes.mediaFiles) == 0 then (convertUTCtoISC (getCurrentUTC "") "hh:mm A") else "") "Text" 500) else state.data.chatConfig.messages
+      let mediaMessages' = mapWithIndex (\index media -> do
+                        if index == length issueInfoRes.mediaFiles - 1
+                        then
+                          makeChatComponent' media.url "Driver" (convertUTCtoISC (getCurrentUTC "") "hh:mm A") media._type ((index + if showDescription then 2 else 1) * 500)
+                        else
+                          makeChatComponent' media.url "Driver" "" media._type ((index + if showDescription then 2 else 1) * 500)
+                    ) (issueInfoRes.mediaFiles)
+      if state.props.isReversedFlow
+      then do
+        let options'  = map (\x -> x.option) state.data.options
+        let message = (getString SELECT_OPTION_REVERSED) <> "\n"
+                      <> joinWith "\n" options'
+        let messages' = concat [ descMessages, mediaMessages', [ (makeChatComponent' message "Bot" (convertUTCtoISC (getCurrentUTC "") "hh:mm A") "Text" (500 * (length mediaMessages' + 2))) ] ]
+        modifyScreenState $ ReportIssueChatScreenStateType (\reportIssueScreen -> state { data { issueId = Just postIssueRes.issueReportId, chatConfig { enableSuggestionClick = false, messages = messages', suggestionsList = options', suggestionDelay = 500 * (length mediaMessages' + 3) } }, props { showSubmitComp = false } })
+        issueReportChatScreenFlow
+      else do
+        let message = makeChatComponent' (getString ISSUE_SUBMITTED_MESSAGE) "Bot" (convertUTCtoISC (getCurrentUTC "") "hh:mm A") "Text" (500 * (length mediaMessages' + 2))
+        let messages' = concat [descMessages, mediaMessages', [message]]
+        modifyScreenState $ ReportIssueChatScreenStateType (\reportIssueScreen -> state { data { issueId = Just postIssueRes.issueReportId, chatConfig { messages = messages' } }, props { showSubmitComp = false } })
+        issueReportChatScreenFlow
+    CALL_CUSTOMER state -> do
+      case state.data.tripId of
+        Just tripId -> do
+                       void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
+                       void $ lift $ lift $ toggleLoader true
+                       resp <- Remote.callCustomerBT tripId
+                       void $ lift $ lift $ toggleLoader false
+                       let message = makeChatComponent' (getString ISSUE_SUBMITTED_MESSAGE) "Bot" (convertUTCtoISC (getCurrentUTC "") "hh:mm A") "Text" 500
+                       let messages' = snoc state.data.chatConfig.messages message
+                       modifyScreenState $ ReportIssueChatScreenStateType (\reportIssueScreen -> state { data  { chatConfig { messages = messages' } } })
+                       issueReportChatScreenFlow
+        _           -> do
+                       pure $ toast ("Select different category or ride")
+                       helpAndSupportFlow
+
 referralScreenFlow :: FlowBT String Unit
 referralScreenFlow = do
   (GlobalState state) <- getState
@@ -754,6 +931,32 @@ tripDetailsScreenFlow = do
     GO_TO_HOME_SCREEN -> do
       modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> rideHistoryScreen{offsetValue = 0, currentTab = "COMPLETED"})
       myRidesScreenFlow
+    OPEN_HELP_AND_SUPPORT -> do
+      let language = ( case getValueToLocalStore LANGUAGE_KEY of
+                         "HI_IN" -> "hi"
+                         "KN_IN" -> "kn"
+                         "TA_IN" -> "ta"
+                         _       -> "en"
+                     )
+      let categoryOrder = ["LOST_AND_FOUND", "RIDE_RELATED", "APP_RELATED", "FARE_RELATED"]
+      let compareByOrder a b = compare (fromMaybe (length categoryOrder) $ elemIndex a.categoryAction categoryOrder) (fromMaybe (length categoryOrder) $ elemIndex b.categoryAction categoryOrder)
+      (GetCategoriesRes response) <- Remote.getCategoriesBT language
+      let temp = (map (\(Category x) ->
+                          { categoryName :
+                              if (language == "en")
+                              then
+                                joinWith " " (map (\catName ->
+                                  let { before, after } = splitAt 1 catName
+                                  in (toUpper before <> after)
+                                ) (split (Pattern " ") x.category))
+                              else x.category
+                          , categoryId       : x.issueCategoryId
+                          , categoryAction   : x.label
+                          , categoryImageUrl : x.logoUrl
+                          }) response.categories)
+      let categories' = sortBy compareByOrder temp
+      modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories' } } )
+      helpAndSupportFlow 
 
 currentRideFlow :: FlowBT String Unit
 currentRideFlow = do
@@ -880,7 +1083,32 @@ homeScreenFlow = do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {statusOnline = (if any( _ == status)[Online, Silent] then true else false), driverStatusSet = status}})
       _ <- pure $ spy "zxc updateActivity " status
       homeScreenFlow
-
+    GO_TO_HELP_AND_SUPPORT_SCREEN -> do
+      let language = ( case getValueToLocalStore LANGUAGE_KEY of
+                         "HI_IN" -> "hi"
+                         "KN_IN" -> "kn"
+                         "TA_IN" -> "ta"
+                         _       -> "en"
+                     )
+      let categoryOrder = ["LOST_AND_FOUND", "RIDE_RELATED", "APP_RELATED", "FARE_RELATED"]
+      let compareByOrder a b = compare (fromMaybe (length categoryOrder) $ elemIndex a.categoryAction categoryOrder) (fromMaybe (length categoryOrder) $ elemIndex b.categoryAction categoryOrder)
+      (GetCategoriesRes response) <- Remote.getCategoriesBT language
+      let temp = (map (\(Category x) ->
+                          { categoryName :
+                              if (language == "en")
+                              then
+                                joinWith " " (map (\catName ->
+                                  let { before, after } = splitAt 1 catName
+                                  in (toUpper before <> after)
+                                ) (split (Pattern " ") x.category))
+                              else x.category
+                          , categoryId       : x.issueCategoryId
+                          , categoryAction   : x.label
+                          , categoryImageUrl : x.logoUrl
+                          }) response.categories)
+      let categories' = sortBy compareByOrder temp
+      modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories' } } )
+      helpAndSupportFlow 
     GO_TO_START_RIDE {id, otp , lat, lon} -> do
       _ <- pure $ printLog "HOME_SCREEN_FLOW GO_TO_START_RIDE" "."
       _ <- pure $ printLog "Lat in Floww: " lat

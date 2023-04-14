@@ -25,7 +25,7 @@ import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM (Length(..), Margin(..), Orientation(..), Padding(..), Gravity(..), Visibility(..), PrestoDOM, Screen, linearLayout, frameLayout, gravity, orientation, height, width, imageView, imageUrl, text, textSize, textView, padding, color, margin, fontStyle, background, cornerRadius, stroke, editText, weight, hint, onClick, visibility, pattern, onChange, scrollView, alignParentBottom, relativeLayout, afterRender, onBackPressed, imageWithFallback)
 import Screens.Types as ST
 import Engineering.Helpers.Commons as EHC
-import Screens.TripDetailsScreen.Controller (Action(..), ScreenOutput, eval)
+import Screens.TripDetailsScreen.Controller (Action(..), Action(HelpAndSupport), ScreenOutput, eval)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Styles.Colors as Color
@@ -102,31 +102,31 @@ view push state =
                     , width MATCH_PARENT
                     , orientation VERTICAL
                     , padding $ PaddingVertical 10 10
-                    ][ textView
-                        ([ height WRAP_CONTENT
-                          , width MATCH_PARENT
-                          , text (getString STILL_NOT_RESOLVED)
-                          , color Color.black700
-                          , margin $ MarginBottom 12
-                        ] <> FontStyle.body3 TypoGraphy)
-                      , linearLayout
-                         [ height WRAP_CONTENT
-                         , width MATCH_PARENT
-                         , orientation HORIZONTAL
-                         , onClick push (const CallSupport)
-                          ][ imageView
-                            [ imageWithFallback "ny_ic_support,https://assets.juspay.in/nammayatri/images/driver/ny_ic_support.png"
-                            , height $ V 17
-                            , width $ V 20
-                            , margin $ MarginRight 7
-                            ]
-                            , textView
-                                ([ text (getString CALL_SUPPORT_CENTER)
-                                , color Color.black800
-                                ] <> FontStyle.body1 TypoGraphy)
+                    ][ linearLayout
+                       [ height WRAP_CONTENT
+                       , width MATCH_PARENT
+                       , orientation HORIZONTAL
+                       , onClick push (const HelpAndSupport)
+                        ][ imageView
+                          [ imageWithFallback "ny_ic_support,https://assets.juspay.in/nammayatri/images/driver/ny_ic_support.png"
+                          , height $ V 17
+                          , width $ V 20
+                          , margin $ MarginRight 7
+                          ]
+                          , textView
+                          ([ text (getString HELP_AND_SUPPORT)
+                           , color Color.black800
+                           , weight 1.0
+                           ] <> FontStyle.body1 TypoGraphy
+                          )
+                          , imageView
+                          [ width $ V 18
+                          , height $ V 18
+                          , imageWithFallback "ny_ic_chevron_right_grey,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevron_right_grey.png"
+                          ]
                         ]
-                  ]
-                     ]
+                      ]
+                    ]
                   ]
                 , issueReportedView state push
               ]

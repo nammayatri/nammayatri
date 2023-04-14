@@ -40,6 +40,7 @@ homeScreen = do
   action <- lift $ lift $ runScreen $ HomeScreen.screen state.homeScreen
   case action of
     GoToProfileScreen -> App.BackT $ App.BackPoint <$> pure GO_TO_PROFILE_SCREEN
+    GoToHelpAndSupportScreen -> App.BackT $ App.BackPoint <$> pure GO_TO_HELP_AND_SUPPORT_SCREEN
     GoToRidesScreen -> App.BackT $ App.BackPoint <$> pure GO_TO_RIDES_SCREEN
     GoToReferralScreen -> App.BackT $ App.BackPoint <$> pure GO_TO_REFERRAL_SCREEN_FROM_HOME_SCREEN
     DriverAvailabilityStatus state status -> do

@@ -16,20 +16,28 @@
 module Screens.HelpAndSupportScreen.Handler where
 
 import Engineering.Helpers.BackTrack (getState)
-import Prelude (bind, pure, ($), (<$>))
+import Prelude (bind, pure, ($), (<$>), discard)
 import Screens.HelpAndSupportScreen.Controller (ScreenOutput(..))
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.HelpAndSupportScreen.View as HelpAndSupportScreen
-import Types.App (FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..))
+import Types.App (FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), ScreenType(..))
+import Types.ModifyScreenState (modifyScreenState)
 
 helpAndSupportScreen :: FlowBT String HELP_AND_SUPPORT_SCREEN_OUTPUT
 helpAndSupportScreen = do
   (GlobalState state) <- getState
   action <- lift $ lift $ runScreen $ HelpAndSupportScreen.screen state.helpAndSupportScreen
   case action of
-    GoBack -> App.BackT $ pure App.GoBack
+    GoBack updatedState -> do
+     modifyScreenState $ HelpAndSupportScreenStateType (\_ -> updatedState)
+     App.BackT $ pure App.GoBack
     GoToWriteToUsScreen -> App.BackT $ App.BackPoint <$> pure WRITE_TO_US_SCREEN
-    GoToTripDetailsScreen updatedState -> App.BackT $ App.BackPoint <$> pure (TRIP_DETAILS_SCREEN updatedState)
-    GoToMyRidesScreen -> App.BackT $ App.BackPoint <$> pure MY_RIDES_SCREEN
+    GoToMyRidesScreen selectedCategory -> App.BackT $ App.BackPoint <$> pure (RIDE_SELECTION_SCREEN selectedCategory)
+    GoToReportIssueChatScreen selectedCategory -> App.BackT $ App.BackPoint <$> pure (REPORT_ISSUE_CHAT_SCREEN selectedCategory)
+    IssueListBackPressed updatedState -> App.BackT $ App.BackPoint <$> pure (ISSUE_LIST_GO_BACK_SCREEN updatedState)
+    RemoveIssue issueId updatedState  -> App.BackT $ App.BackPoint <$> pure (REMOVE_ISSUE_SCREEN issueId updatedState)
+    OngoingIssuesScreen updatedState -> App.BackT $ App.BackPoint <$> pure (ON_GOING_ISSUE_SCREEN updatedState)
+    ResolvedIssuesScreen updatedState -> App.BackT $ App.BackPoint <$> pure (RESOLVED_ISSUE_SCREEN updatedState)
+    
