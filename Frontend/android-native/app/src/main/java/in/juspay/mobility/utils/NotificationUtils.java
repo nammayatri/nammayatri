@@ -434,25 +434,19 @@ public class NotificationUtils extends AppCompatActivity {
             if (TRIP_CHANNEL_ID.equals(notificationType) ) {
                 Bundle params = new Bundle();
                 mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
-                if (key.equals("nammayatri"))
-                    mFirebaseAnalytics.logEvent("ny_user_ride_started",params);
-                else
+                if (key.equals("nammayatripartner"))
                     mFirebaseAnalytics.logEvent("ride_started",params);
             }
             if (TRIP_FINISHED.equals(notificationType) ) {
                 Bundle params = new Bundle();
                 mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
-                if (key.equals("nammayatri"))
-                    mFirebaseAnalytics.logEvent("ny_user_ride_completed",params);
-                else
+                if (key.equals("nammayatripartner"))
                     mFirebaseAnalytics.logEvent("ride_completed",params);
             }
             if (CANCELLED_PRODUCT.equals(notificationType) ) {
                 Bundle params = new Bundle();
                 mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
-                if (key.equals("nammayatri"))
-                    mFirebaseAnalytics.logEvent("ny_user_ride_cancelled",params);
-                else
+                if (key.equals("nammayatripartner"))
                     mFirebaseAnalytics.logEvent("ride_cancelled",params);
                 if (key.equals("nammayatripartner") && msg.contains("Customer had to cancel your ride")){
                     startMediaPlayer(context, R.raw.ride_cancelled_media);
@@ -463,11 +457,8 @@ public class NotificationUtils extends AppCompatActivity {
             if (DRIVER_ASSIGNMENT.equals(notificationType) ) {
                 Bundle params = new Bundle();
                 mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
-                if (key.equals("nammayatri"))
-                    mFirebaseAnalytics.logEvent("ny_user_ride_assigned",params);
-                else
-                    mFirebaseAnalytics.logEvent("driver_assigned",params);
                 if (key.equals("nammayatripartner")) {
+                    mFirebaseAnalytics.logEvent("driver_assigned",params);
                     startMediaPlayer(context, R.raw.ride_assigned);
                 }
             }

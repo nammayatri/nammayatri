@@ -256,6 +256,7 @@ currentFlowStatus = do
         resp <- lift $ lift $ Remote.updateProfile (Remote.makeUpdateLanguageRequest "")
         pure unit
       setValueToLocalStore REFERRAL_STATUS  $ if response.hasTakenRide then "HAS_TAKEN_RIDE" else if (response.referralCode /= Nothing && not response.hasTakenRide) then "REFERRED_NOT_TAKEN_RIDE" else "NOT_REFERRED_NOT_TAKEN_RIDE"
+      setValueToLocalStore HAS_TAKEN_FIRST_RIDE if response.hasTakenRide then "true" else "false"
       if (((fromMaybe "" response.firstName) == "" ) && not (isJust response.firstName)) then do 
         _ <- updateLocalStage HomeScreen
         lift $ lift $ doAff do liftEffect hideSplash
@@ -629,6 +630,11 @@ homeScreenFlow = do
                                       _ <- pure $ clearWaitingTimer state.props.waitingTimeTimerId
                                       homeScreenFlow
             "TRIP_FINISHED"       -> do -- TRIP FINISHED
+                                      if (getValueToLocalStore HAS_TAKEN_FIRST_RIDE == "false") then do
+                                        pure $ firebaseLogEvent "ny_user_first_ride_completed"
+                                        (GetProfileRes response) <- Remote.getProfileBT ""
+                                        setValueToLocalStore HAS_TAKEN_FIRST_RIDE ( show response.hasTakenRide)
+                                        else pure unit
                                       _ <- pure $ firebaseLogEvent "ny_user_ride_completed"
                                       _ <- Remote.drawMapRoute srcLat srcLon dstLat dstLon (Remote.normalRoute "") "NORMAL" "" "" Nothing "pickup"
                                       _ <- pure $ enableMyLocation true
