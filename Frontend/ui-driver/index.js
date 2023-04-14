@@ -101,7 +101,11 @@ window.onMerchantEvent = function (event, payload) {
       , errorMessage: ""
       , errorCode: ""
     }
-    window.merchantID = clientPaylod.payload.clientId.toUpperCase();
+    if (clientPaylod.payload.clientId == "open-kochi") {
+      window.merchantID = "YATRIPARTNER"
+    } else {
+      window.merchantID = clientPaylod.payload.clientId.toUpperCase();
+    }
     console.log(window.merchantID);
     JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), null)
   } else if (event == "process") {

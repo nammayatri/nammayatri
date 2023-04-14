@@ -103,7 +103,17 @@ window.onMerchantEvent = function (event, payload) {
       , errorMessage: ""
       , errorCode: ""
     }
-    window.merchantID = clientPaylod.payload.clientId.toUpperCase();
+    var clientId = clientPaylod.payload.clientId;
+    if (clientId.includes("_ios"))
+    {
+      clientId = clientId.replace("_ios","");
+    }
+    if (clientId == "open-kochi") {
+      window.merchantID = "YATRI"
+    } else {
+      window.merchantID = clientId.toUpperCase();
+    }
+    console.log(window.merchantID);
     JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), null)
   } else if (event == "process") {
     console.warn("Process called");

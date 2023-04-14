@@ -78,7 +78,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="45dp"
                 android:background="@android:color/transparent"
-                android:src="@drawable/ny_ic_namma_yatri_text_with_logo"/>
+                android:src="@drawable/ic_logo_name" />
 
         </RelativeLayout>
     </LinearLayout>
