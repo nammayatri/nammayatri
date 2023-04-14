@@ -344,5 +344,6 @@ const mlStrings = {
   "DRIVER_DETAILS": "ഡ്രൈവർ വിശദാംശങ്ങൾ",
   "FOR_UPDATES_SEE_ALERTS": "അപ്ഡേറ്റുകൾക്കായി, അലേർട്ടുകൾ കാണുക",
   "SHARE_OPTIONS": "ഷെയർ ചെയ്യുന്നതിനുള്ള ഓപ്ഷൻസ്",
-  "ENTER_PASSWORD": "പാസ്സ്‌വേർഡ് നൽകുക"
+  "ENTER_PASSWORD": "പാസ്സ്‌വേർഡ് നൽകുക",
+  "BOOKING_OPTIONS": "ബുക്കിംഗ് ഓപ്ഷനുകൾ",
 }

@@ -371,5 +371,9 @@ const malayalamStrings = {
   "NO_CONTACTS_FOUND_ON_DEVICE_TO_ADD": "ചേർക്കാൻ ഉപകരണത്തിൽ കോൺടാക്റ്റുകളൊന്നും കണ്ടെത്തിയില്ല",
   "NO_CONTACTS_LEFT_ON_DEVICE_TO_ADD": "ചേർക്കാൻ ഉപകരണത്തിൽ കോൺടാക്‌റ്റുകളൊന്നും അവശേഷിക്കുന്നില്ല",
   "PERMISSION_DENIED": "അനുമതി നിഷേധിച്ചു",
-  "PERCENTAGE_OF_NOMINAL_FARE": "അടിസ്ഥാന നിരക്കിന്റെ ~10%"
+  "PERCENTAGE_OF_NOMINAL_FARE": "അടിസ്ഥാന നിരക്കിന്റെ ~10%",
+  "CHOOSE_YOUR_RIDE" : "നിങ്ങളുടെ റൈഡ് തിരഞ്ഞെടുക്കുക",
+  "ECONOMICAL" : "സാമ്പത്തിക",
+  "PEOPLE" : "ആളുകൾ",
+  "CONFIRM_AND_BOOK" : "സ്ഥിരീകരിച്ച് ബുക്ക് ചെയ്യുക",
 }
