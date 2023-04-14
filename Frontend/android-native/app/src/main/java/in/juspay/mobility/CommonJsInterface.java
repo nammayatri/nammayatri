@@ -365,6 +365,9 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
             case "BN_IN" :
                 locale = new Locale("bn");
                 break;
+            case "ML_IN" : 
+                locale = new Locale("ml");
+                break;
             default:
                 return;
         }
@@ -3674,7 +3677,17 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
             content.draw(page.getCanvas());
             pdfDocument.finishPage(page);
 
-            String fileNameformat = context.getResources().getString(R.string.service).equals("jatrisaathi") ? "JS_Ride_" : "NY_Ride_";
+            String fileNameformat = "";
+            String serviceName = context.getResources().getString(R.string.service);
+            if (serviceName.equals("jatrisaathi"))
+            {
+                fileNameformat = "JS_RIDE_";
+            } else if (serviceName.equals("nammayatri"))
+            {
+                fileNameformat = "NY_RIDE_";
+            }else{
+                fileNameformat = "YATRI_RIDE_";
+            }
             fileNameformat = fileNameformat + selectedItem.getString("date") + selectedItem.getString("rideStartTime") + ".pdf";
             String fileName = fileNameformat.replaceAll(":",".");
             File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), fileName);

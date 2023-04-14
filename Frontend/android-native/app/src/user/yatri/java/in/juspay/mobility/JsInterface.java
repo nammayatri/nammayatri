@@ -59,7 +59,7 @@ public class JsInterface extends CommonJsInterface implements in.juspay.hypersdk
         super(activity, juspayServices, fragment);
         try {
             JSONObject headerObj = new JSONObject();
-            headerObj.put("x-client-id", "jatrisaathi");
+            headerObj.put("x-client-id", "yatri");
             boolean b = setAnalyticsHeader(headerObj.toString());
         } catch (Exception e) {
             e.printStackTrace();
@@ -87,7 +87,7 @@ public class JsInterface extends CommonJsInterface implements in.juspay.hypersdk
         this.juspayServices = juspayServices;
         try {
             JSONObject headerObj = new JSONObject();
-            headerObj.put("x-client-id", "jatrisaathi");
+            headerObj.put("x-client-id", "yatri");
             boolean b = setAnalyticsHeader(headerObj.toString());
             } catch (Exception e) {
                 e.printStackTrace();

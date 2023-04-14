@@ -679,7 +679,7 @@ getPerformanceBT payload = do
 
 otpRide dummyRideOtp payload = do
         headers <- getHeaders ""
-        withAPIResult (EP.otpRide dummyRideOtp) unwrapResponse $ callAPI headers ((OTPRideRequest dummyRideOtp payload))
+        withAPIResult (EP.otpRide dummyRideOtp) unwrapResponse $ callAPI headers ((OTPRideRequest payload))
     where
         unwrapResponse (x) = x
 
