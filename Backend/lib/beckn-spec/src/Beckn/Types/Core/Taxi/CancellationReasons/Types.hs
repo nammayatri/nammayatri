@@ -26,6 +26,12 @@ data CancellationReason = CancellationReason
     enabled :: Bool,
     priority :: Int
   }
-  deriving (Generic, ToJSON, ToSchema, Show)
+  deriving (Generic, ToJSON, ToSchema, Show, FromJSON)
 
 type CancellationReasons = [CancellationReason]
+
+data CancellationReasonsReq = CancellationReasonsReq
+  { order_id :: Text,
+    item_id :: Text
+  }
+  deriving (Generic, ToJSON, ToSchema, Show, FromJSON)

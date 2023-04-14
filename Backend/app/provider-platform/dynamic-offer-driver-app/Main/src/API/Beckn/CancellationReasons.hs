@@ -37,7 +37,8 @@ handler = sendCancellationReasons
 sendCancellationReasons ::
   Id DM.Merchant ->
   SignatureAuthResult ->
+  API.CancellationReasonsReq ->
   FlowHandler API.CancellationReasons
-sendCancellationReasons _ _ =
+sendCancellationReasons _ _ _ =
   withFlowHandlerAPI $ do
     Q.getCancellationReasons

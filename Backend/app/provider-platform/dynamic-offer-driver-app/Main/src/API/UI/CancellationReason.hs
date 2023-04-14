@@ -19,6 +19,8 @@ module API.UI.CancellationReason
   )
 where
 
+import qualified Beckn.Types.Core.Taxi.API.CancellationReasons as CR
+import Beckn.Types.Core.Taxi.CancellationReasons.Types (CancellationReasonsReq)
 import qualified Beckn.Types.Core.Taxi.CancellationReasons.Types as SCR
 import qualified Domain.Action.UI.CancellationReason as DCancellationReason
 import qualified Domain.Types.CancellationReason as SCR
@@ -31,7 +33,7 @@ import Servant
 import Tools.Auth
 
 type API =
-  "get_cancellation_reason" :> (TokenAuth :> Get '[JSON] SCR.CancellationReasons)
+  CR.CancellationReasonsAPI
     :<|> "cancellationReason"
       :> ( "list"
              :> TokenAuth
@@ -46,5 +48,5 @@ type CancellationReasonListRes = [SCR.CancellationReasonAPIEntity]
 list :: (Id Person.Person, Id DM.Merchant) -> FlowHandler CancellationReasonListRes
 list _ = withFlowHandlerAPI DCancellationReason.list
 
-getCancellationReasons :: (Id Person.Person, Id DM.Merchant) -> FlowHandler SCR.CancellationReasons
+getCancellationReasons :: CancellationReasonsReq -> FlowHandler SCR.CancellationReasons
 getCancellationReasons _ = withFlowHandlerAPI DCancellationReason.getCancellationReasons

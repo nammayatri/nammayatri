@@ -16,9 +16,11 @@ module API.UI.CancellationReason
   ( API,
     handler,
     ListRes,
+    getCancellationReasons,
   )
 where
 
+import Beckn.Types.Core.Taxi.CancellationReasons.Types
 import qualified Domain.Action.UI.CancellationReason as DCancellationReason
 import qualified Domain.Types.CancellationReason as DCR
 import qualified Domain.Types.Merchant as Merchant
@@ -28,10 +30,14 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import Servant.Client
+import qualified SharedLogic.CallBPP as CallBPP
 import Tools.Auth
 
 type API =
-  "cancellationReason"
+  "get_cancellation_reason"
+    :> Get '[JSON] CancellationReasons
+      :<|> "cancellationReason"
     :> ( "list"
            :> TokenAuth
            :> MandatoryQueryParam "cancellationStage" DCR.CancellationStage
@@ -41,7 +47,15 @@ type API =
 type ListRes = [DCR.CancellationReasonAPIEntity]
 
 handler :: FlowServer API
-handler = list
+handler = getCancellationReasons :<|> list
 
 list :: (Id Person.Person, Id Merchant.Merchant) -> DCR.CancellationStage -> FlowHandler ListRes
 list _ = withFlowHandlerAPI . DCancellationReason.list
+
+getCancellationReasons :: FlowHandler CancellationReasons
+getCancellationReasons =
+  withFlowHandlerAPI $
+    CallBPP.cancellationReasons bppUrl req
+  where
+    bppUrl = BaseUrl Http "localhost" 8016 "/ui"
+    req = CancellationReasonsReq "" ""
