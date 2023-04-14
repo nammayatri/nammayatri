@@ -26,8 +26,8 @@ import PrestoDOM
 import Styles.Colors as Color
 import Screens.Types as ST
 
-errorModalConfig :: ErrorModal.Config 
-errorModalConfig = let 
+errorModalConfig :: ST.RideHistoryScreenState -> ErrorModal.Config 
+errorModalConfig state = let 
   config = ErrorModal.config 
   errorModalConfig' = config 
     { imageConfig {
