@@ -67,7 +67,7 @@ mkNormalBreakupList :: (Money -> breakupItemPrice) -> (Text -> breakupItemPrice 
 mkNormalBreakupList mkPrice mkBreakupItem fareParams = do
   -- TODO: what should be here?
   let dayPartRate = calculateDayPartRate fareParams
-      baseFareFinalRounded = roundToIntegral $ fromIntegral fareParams.baseFare * dayPartRate + (maybe 0.0 fromIntegral fareParams.deadKmFare) -- TODO: Remove later part once UI start consuming DEAD_KILOMETER_FARE
+      baseFareFinalRounded = roundToIntegral $ fromIntegral fareParams.baseFare * dayPartRate
       baseFareCaption = "BASE_FARE"
       baseFareItem = mkBreakupItem baseFareCaption (mkPrice baseFareFinalRounded)
 
