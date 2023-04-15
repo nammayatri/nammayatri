@@ -238,7 +238,9 @@ dummySettingBar = {
     name : ""
   , number : ""
   , opened : CLOSED
-}
+  , email : Nothing
+  , gender : Nothing
+  }
 
 dummyAddress :: Address
 dummyAddress = {

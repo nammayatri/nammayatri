@@ -31,6 +31,7 @@ import Styles.Colors as Color
 import Debug.Trace (spy)
 import Common.Types.App
 import Helpers.Utils (isPreviousVersion, getPreviousVersion)
+import Data.Maybe (Maybe(..))
 
 view :: forall w .  (Action  -> Effect Unit) -> SettingSideBarState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -182,7 +183,7 @@ profileView state push =
         , orientation HORIZONTAL
         , gravity CENTER_VERTICAL
         , margin $ MarginTop 4
-        , visibility case profileCompleteValue " " of 
+        , visibility case profileCompleteValue state of 
             "100" -> GONE 
             _ -> VISIBLE
         ][textView
@@ -194,7 +195,10 @@ profileView state push =
           , color Color.yellow900
           ]
         , imageView 
-          [ imageWithFallback if profileCompleteValue " " == "75" then "ic_75_percent,https://assets.juspay.in/nammayatri/images/user/ic_75_percent.png" else if profileCompleteValue "" == "50" then "ic_50_percent,https://assets.juspay.in/nammayatri/images/user/ic_50_percent.png" else ""
+          [ imageWithFallback case profileCompleteValue state of 
+              "50" -> "ic_50_percent,https://assets.juspay.in/nammayatri/images/user/ic_50_percent.png"
+              "75" -> "ic_75_percent,https://assets.juspay.in/nammayatri/images/user/ic_75_percent.png"
+              _    -> ""
           , height $ V 10 
           , width $ V 10
           , margin $ Margin 4 4 4 2
@@ -205,7 +209,7 @@ profileView state push =
           , width WRAP_CONTENT
           , height WRAP_CONTENT
           , color Color.yellow900
-          , text $ if profileCompleteValue " " == "75" then "75 %" else if profileCompleteValue " " == "50" then "50 %" else "100 %"
+          , text $ (profileCompleteValue state) <> " %"
 
           ]
         ]
@@ -254,11 +258,10 @@ settingsMenuView item push  =
     ]
 
             
-profileCompleteValue :: String -> String 
-profileCompleteValue _ = let 
-  email = getValueToLocalStore EMAILID 
-  gender = getValueToLocalStore GENDER 
-  in 
-    if (email == "__failed" || email == "(null)") && (gender == "__failed" || gender == "(null)") then "50"
-      else if (email == "__failed" || email == "(null)" || gender == "__failed" || gender == "(null)") then "75" 
-      else "100"
+profileCompleteValue :: SettingSideBarState -> String 
+profileCompleteValue state =
+    case state.email , state.gender of 
+      Nothing, Nothing  -> "50"
+      Nothing, Just _   -> "75"
+      Just _ , Nothing  -> "75"
+      Just _ , Just _   -> "100"

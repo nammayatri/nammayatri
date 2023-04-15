@@ -25,11 +25,13 @@ import Font.Style as FontStyle
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude ((/=))
+import Prelude ((/=), negate)
 import PrestoDOM (Length(..), Margin(..))
 import Screens.Types as ST
 import Styles.Colors as Color
 import Common.Types.App
+import Animation.Config (AnimConfig, animConfig)
+import PrestoDOM.Animation as PrestoAnim
 
 primaryButtonConfig :: ST.AccountSetUpScreenState -> PrimaryButton.Config
 primaryButtonConfig state =
@@ -110,3 +112,14 @@ goBackPopUpModelConfig =
         }
   in
     popUpConfig
+
+translateFullYAnimWithDurationConfigs :: ST.AccountSetUpScreenState -> AnimConfig
+translateFullYAnimWithDurationConfigs state = animConfig {
+  fromScaleY = if state.props.genderOptionExpanded then 0.0 else 1.0
+, toScaleY =if state.props.genderOptionExpanded then 1.0 else 0.0
+, fromY = if state.props.genderOptionExpanded then -100 else  0
+, toY = if state.props.genderOptionExpanded then 0 else -100
+, repeatCount = (PrestoAnim.Repeat 0)
+, ifAnim = state.props.expandEnabled
+, duration = 200
+}

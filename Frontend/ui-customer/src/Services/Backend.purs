@@ -473,7 +473,7 @@ makeUpdateLanguageRequest _ = UpdateProfileReq{
         , firstName : Nothing
         , email : Nothing
         , referralCode : Nothing
-        , gender : if (getValueToLocalNativeStore GENDER == "__failed" || getValueToLocalNativeStore GENDER == "(null)") then Nothing else Just (getValueToLocalNativeStore GENDER)
+        , gender : Nothing 
         , language : Just case getValueToLocalNativeStore LANGUAGE_KEY of
             "EN_US" -> "ENGLISH"
             "KN_IN" -> "KANNADA"

@@ -26,7 +26,7 @@ import Engineering.Helpers.Commons as EHC
 import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, const, negate, unit, not, ($), (<<<), (<>), (==), (/=), (||))
+import Prelude (Unit, const, unit, not, ($), (<<<), (<>), (==), (/=), (||))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, Screen, afterRender, alignParentBottom, background, color, gravity, height, linearLayout, margin, onBackPressed, orientation, padding, relativeLayout, scrollView, singleLine, text, textView, weight, width, fontStyle, textSize, stroke, cornerRadius, imageView, imageWithFallback, visibility, onClick, editText, hint, id, pattern, hintColor, onChange, onFocus, onAnimationEnd)
 import Screens.AccountSetUpScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
@@ -38,7 +38,6 @@ import Font.Style as FontStyle
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Array (mapWithIndex)
 import PrestoDOM.Animation as PrestoAnim
-import Animation.Config (AnimConfig, animConfig)
 import Resources.Constants as RSRC
 
 
@@ -230,17 +229,6 @@ genderCaptureView state push =
     ] <> (if state.props.expandEnabled then [ genderOptionsView state push] else [])
 
 
-
-translateFullYAnimWithDurationConfigs :: ST.AccountSetUpScreenState -> AnimConfig
-translateFullYAnimWithDurationConfigs state = animConfig {
-  fromScaleY = if state.props.genderOptionExpanded then 0.0 else 1.0
-, toScaleY =if state.props.genderOptionExpanded then 1.0 else 0.0
-, fromY = if state.props.genderOptionExpanded then -100 else  0
-, toY = if state.props.genderOptionExpanded then 0 else -100
-, repeatCount = (PrestoAnim.Repeat 0)
-, ifAnim = state.props.expandEnabled
-, duration = 200
-}
 
 genderOptionsView :: forall w. ST.AccountSetUpScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 genderOptionsView state push =

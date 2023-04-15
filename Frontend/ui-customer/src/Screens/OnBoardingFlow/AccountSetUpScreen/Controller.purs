@@ -59,7 +59,6 @@ instance loggableAction :: Loggable Action where
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "popup_modal_action" "image"
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen ACCOUNT_SET_UP_SCREEN) "popup_modal_action" "primary_edit_text"
       PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen ACCOUNT_SET_UP_SCREEN) "popup_modal_action" "countdown_updated"
-    MenuButtonAC (MenuButtonController.OnClick config) -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "menu_button_action" config.id
     ShowOptions -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "in_screen" "show_options"
     EditTextFocusChanged -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "name_edit_text_focus_changed" "edit_text"
     TextChanged value -> trackAppTextInput appId (getScreen ACCOUNT_SET_UP_SCREEN) "name_text_changed" "edit_text"
@@ -76,7 +75,6 @@ data Action
   | NameEditTextActionController PrimaryEditTextController.Action
   | GenericHeaderActionController GenericHeaderController.Action
   | PopUpModalAction PopUpModal.Action
-  | MenuButtonAC MenuButtonController.Action
   | ShowOptions
   | EditTextFocusChanged
   | TextChanged String
