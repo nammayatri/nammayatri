@@ -615,7 +615,16 @@ type HomeScreenProps =  {
   sendMessageActive :: Boolean,
   unReadMessages :: Boolean,
   updatedArrivalInChat :: Boolean
+  driverStatusSet :: DriverStatus
  }
+
+data DriverStatus = Online | Offline | Silent
+
+derive instance genericDriverStatus :: Generic DriverStatus _
+instance showDriverStatus :: Show DriverStatus where show = genericShow
+instance eqDriverStatus :: Eq DriverStatus where eq = genericEq
+instance encodeDriverStatus :: Encode DriverStatus where encode = defaultEnumEncode
+instance decodeDriverStatus :: Decode DriverStatus where decode = defaultEnumDecode
 
 type Location = {
   place :: String,

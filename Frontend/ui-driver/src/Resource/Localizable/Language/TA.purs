@@ -366,3 +366,5 @@ getTA script = case script of
   PLEASE_COME_FAST_I_AM_WAITING -> "சீக்கிரம் வாருங்கள்"
   PLEASE_WAIT_I_WILL_BE_THERE -> "வந்துகொண்டிருக்கிறேன்"
   LOOKING_FOR_YOU_AT_PICKUP -> "பிக்-அப்பில் உள்ளேன்"
+  SILENT -> "Silent"
+
