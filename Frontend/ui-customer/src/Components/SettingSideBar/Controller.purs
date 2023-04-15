@@ -18,6 +18,7 @@ module Components.SettingSideBar.Controller where
 import Prelude (class Eq)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Eq (genericEq)
+import Data.Maybe(Maybe(..))
 
 data Action = ChangeLanguage
             | EditProfile
@@ -48,6 +49,8 @@ type SettingSideBarState =
   { opened :: Status
   , name :: String 
   , number :: String
+  , email :: Maybe String 
+  , gender :: Maybe String
   }
 
 type Item =

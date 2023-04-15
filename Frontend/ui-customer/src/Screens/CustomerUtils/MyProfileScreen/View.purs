@@ -78,7 +78,7 @@ view push state =
             , width MATCH_PARENT
             , gravity BOTTOM
             , alignParentBottom "true,-1"
-            , padding (PaddingBottom 24)
+            , padding $ PaddingBottom 24
             , visibility if state.props.updateProfile then VISIBLE else GONE
             , background Color.white900
             ][ linearLayout
@@ -89,7 +89,7 @@ view push state =
                 [ linearLayout
                   [ background Color.borderColorLight
                   , height $ V 1
-                  , margin $ MarginBottom 12
+                  , margin $ MarginBottom if EHC.os == "IOS" then 12 else 2
                   , width MATCH_PARENT
                   ][]
                 , PrimaryButton.view (push <<< UpdateButtonAction) (updateButtonConfig state)
@@ -232,7 +232,7 @@ updatePersonalDetails state push =
   linearLayout
   [ height  if EHC.os == "IOS" then V (EHC.screenHeight unit) else MATCH_PARENT
   , width MATCH_PARENT
-  , padding $ PaddingBottom if EHC.os == "IOS" then 75 else 15
+  , padding $ PaddingBottom if EHC.os == "IOS" then 75 else 0
   , background Color.white900
   , orientation VERTICAL
   , visibility if state.props.updateProfile then VISIBLE else GONE

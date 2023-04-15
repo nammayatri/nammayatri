@@ -30,7 +30,7 @@ import Math (ceil)
 import PrestoDOM (Visibility(..))
 import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard)
 import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact)
-import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName)
+import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySettingBar)
 import Services.Backend as Remote
 import Services.API (DriverOfferAPIEntity(..), Prediction, QuoteAPIEntity(..), RideAPIEntity(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), AddressComponents(..), GetPlaceNameResp(..), PlaceName(..), LatLong(..), DeleteSavedLocationReq(..))
 import Types.App(FlowBT)
@@ -168,16 +168,6 @@ dummyQuoteList = [
   ,selectedQuote : Nothing
   }
 ]
-
-
-
-dummySettingBar :: SettingSideBarState
-dummySettingBar = {
-    name : ""
-  , number : ""
-  , opened : CLOSED
-  
-}
 
 
 dummyRideAPIEntity :: RideAPIEntity

@@ -164,10 +164,7 @@ type EnterMobileNumberScreenStateData = {
 data Gender = MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY
 
 derive instance genericGender :: Generic Gender _
-instance showGender :: Show Gender where show = genericShow
 instance eqGender :: Eq Gender where eq = genericEq
-instance encodeGender :: Encode Gender where encode = defaultEnumEncode
-instance decodeGender :: Decode Gender where decode = defaultEnumDecode
 
 type AccountSetUpScreenState =
   { props :: AccountSetUpScreenStateProps ,
@@ -662,10 +659,7 @@ type MyProfileScreenProps = {
 data FieldType = NAME | EMAILID_ | GENDER_ | MOBILE
 
 derive instance genericFieldType :: Generic FieldType _
-instance showFieldType :: Show FieldType where show = genericShow
 instance eqFieldType :: Eq FieldType where eq = genericEq
-instance encodeFieldType :: Encode FieldType where encode = defaultEnumEncode
-instance decodeFieldType :: Decode FieldType where decode = defaultEnumDecode
 
 type MyProfileScreenData = {
   name :: String,
@@ -681,10 +675,7 @@ type MyProfileScreenData = {
 data EmailErrorType = INVALID_EMAIL | EMAIL_EXISTS
 
 derive instance genericEmailErrorType :: Generic EmailErrorType _
-instance showEmailErrorType :: Show EmailErrorType where show = genericShow
 instance eqEmailErrorType :: Eq EmailErrorType where eq = genericEq
-instance encodeEmailErrorType :: Encode EmailErrorType where encode = defaultEnumEncode
-instance decodeEmailErrorType :: Decode EmailErrorType where decode = defaultEnumDecode
 
 type Location = {
   place :: String,

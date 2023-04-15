@@ -266,9 +266,11 @@ currentFlowStatus = do
       else do
           modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{data{settingSideBar{name =fromMaybe "" response.firstName}}})
           setValueToLocalStore USER_NAME ((fromMaybe "" response.firstName) <> " " <> (fromMaybe "" response.middleName) <> " " <> (fromMaybe "" response.lastName))
-      if (isJust response.gender && (fromMaybe "UNKNOWN" response.gender) /= "UNKNOWN") then setValueToLocalStore GENDER (fromMaybe "" response.gender)
+      if (fromMaybe "UNKNOWN" (response.gender) /= "UNKNOWN") then do 
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{settingSideBar{gender = Just (fromMaybe "" response.gender)}}})
         else pure unit
-      if isJust response.email then setValueToLocalStore EMAILID (fromMaybe "" response.email)
+      if isJust response.email then do 
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{settingSideBar{email = Just (fromMaybe "" response.email)}}})
         else pure unit
 
     goToFindingQuotesStage :: String -> Boolean -> FlowBT String Unit
@@ -388,8 +390,8 @@ accountSetUpScreenFlow = do
         Right response -> do
           setValueToLocalStore USER_NAME state.data.name
           case gender of 
-            Just value ->  setValueToLocalStore GENDER value
-            _ -> pure unit
+            Just value -> modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{settingSideBar{gender = Just value}}})
+            Nothing    -> pure unit
           _ <- pure $ firebaseLogEvent "ny_user_onboarded"
           pure unit
         Left err -> do
@@ -685,8 +687,6 @@ homeScreenFlow = do
       _ <- pure $ deleteValueFromLocalStore CUSTOMER_ID
       _ <- pure $ deleteValueFromLocalStore LANGUAGE_KEY
       _ <- pure $ deleteValueFromLocalStore CONTACTS
-      _ <- pure $ deleteValueFromLocalStore EMAILID
-      _ <- pure $ deleteValueFromLocalStore GENDER
       _ <- pure $ factoryResetApp ""
       _ <- pure $ firebaseLogEvent "ny_user_logout"
       modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData)
@@ -1220,10 +1220,10 @@ myProfileScreenFlow = do
         Right response -> do 
           setValueToLocalStore USER_NAME stringName
           case gender of 
-            Just gender -> setValueToLocalStore GENDER gender
+            Just gender -> modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{settingSideBar{gender = Just gender}}})
             _ -> pure unit 
           case email of  
-            Just email -> setValueToLocalStore EMAILID email
+            Just email -> modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{settingSideBar{email = Just email}}})
             _ -> pure unit
           modifyScreenState $ MyProfileScreenStateType (\myProfileScreenState ->  MyProfileScreenData.initData)
           myProfileScreenFlow
