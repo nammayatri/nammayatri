@@ -367,3 +367,4 @@ getHI script = case script of
   PLEASE_COME_FAST_I_AM_WAITING -> "जल्दी आइए, मैं इंतजार कर रहा हूं।"
   PLEASE_WAIT_I_WILL_BE_THERE -> "कृपया प्रतीक्षा करें, मैं आ रहा हूँ|"
   LOOKING_FOR_YOU_AT_PICKUP -> "मैं पिकअप पर हूँ|"
+  SILENT -> "Silent"

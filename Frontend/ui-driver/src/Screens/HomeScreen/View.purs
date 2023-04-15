@@ -51,7 +51,7 @@ import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes as PTD
 import Screens.HomeScreen.Controller (Action(..), ScreenOutput, checkPermissionAndUpdateDriverMarker, eval, RideRequestPollingData)
 import Screens.HomeScreen.ScreenData as HomeScreenData
-import Screens.Types (HomeScreenStage(..), HomeScreenState)
+import Screens.Types (HomeScreenStage(..), HomeScreenState, DriverStatus(..))
 import Services.APITypes (GetRidesHistoryResp(..))
 import Services.Backend as Remote
 import Storage (getValueToLocalStore, KeyStore(..), setValueToLocalStore, getValueToLocalNativeStore, isLocalStageOn)
@@ -159,6 +159,7 @@ view push state =
       , orientation VERTICAL
       , PP.sheetState EXPANDED
       , background Color.white900
+      , weight 1.0
       , afterRender
         (\action -> do
           _ <- push action
@@ -174,9 +175,22 @@ view push state =
             , height WRAP_CONTENT
             , weight 1.0
             , orientation VERTICAL
-            ][  driverDetail push state
-              , driverActivityStatus state
-              , updateLocationAndLastUpdatedView state push
+            , background Color.white900
+            ,cornerRadius 50.0
+            ][ linearLayout
+                [
+                  width MATCH_PARENT
+                , height WRAP_CONTENT  
+                , orientation VERTICAL
+                , PP.cornerRadii $ PTD.Corners 24.0  false false true true
+                , background $ Color.white900
+                , stroke $ "1," <> "#E5E7EB"
+                ][
+                  driverDetail2 push state
+                  , driverActivityStatus state
+                  -- , updateLocationAndLastUpdatedView2 state push
+                  , statsModel2 push state      
+                ]
               , linearLayout
                 [ width MATCH_PARENT
                 , height $ V 2
@@ -187,9 +201,24 @@ view push state =
                 [ width MATCH_PARENT
                 , height MATCH_PARENT
                 ][  googleMap state
+                  -- , linearLayout
+                  --   [ height MATCH_PARENT
+                  --   , width MATCH_PARENT
+                  --   , background Color.blackLessTrans
+                  --   ][]
                   , if not state.props.statusOnline then showOfflineStatus push state else dummyTextView
-                  , if not state.props.rideActionModal && state.props.statusOnline then statsModel push state else dummyTextView
+                  , linearLayout[
+                    width MATCH_PARENT
+                    , height WRAP_CONTENT
+                    , gravity RIGHT
+                    , orientation VERTICAL
+                    , weight 1.0
+                    ][
+                      if not state.props.rideActionModal && (state.props.driverStatusSet == Online || state.props.driverStatusSet == Silent)  then updateLocationAndLastUpdatedView2 state push else dummyTextView
+                      , viewRecenterAndSupport state push
+                    ]
                   ]
+              
               ]
         , bottomNavBar push state 
         ]
@@ -216,6 +245,7 @@ googleMap state =
   [ width MATCH_PARENT
   , height MATCH_PARENT
   , background Color.white900
+  -- , stroke $ "1," <> Color.black900
   , id (EHC.getNewIDWithTag "DriverTrackingHomeScreenMap")
   ][]
 
@@ -223,8 +253,9 @@ driverActivityStatus :: forall w . HomeScreenState -> PrestoDOM (Effect Unit) w
 driverActivityStatus state = 
   linearLayout
   [ width MATCH_PARENT
-  , height $ V 4
-  , background if (getValueToLocalStore IS_DEMOMODE_ENABLED == "true") then Color.yellow900 else if state.props.statusOnline then Color.lightGreen else Color.red
+  , margin (Margin 10 0 10 0)
+  , height $ V 1
+  , background Color.grey900
   ][]
 
 recenterBtnView :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
@@ -232,7 +263,6 @@ recenterBtnView state push =
   linearLayout
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
-  , margin (Margin 0 10 0 0)
   -- , stroke $ "1," <> Color.black500
   , cornerRadius 24.0
   ][ imageView
@@ -257,7 +287,7 @@ driverDetail push state =
   ][  linearLayout
       [ width WRAP_CONTENT
       , height MATCH_PARENT
-      , padding (Padding 16 20 12 16)
+      , padding $ Padding 16 20 12 16
       ][ imageView
          [ width $ V 42
          , height $ V 42
@@ -286,6 +316,126 @@ driverDetail push state =
     , driverStatus push state
   ]
 
+driverDetail2 :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+driverDetail2 push state = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation HORIZONTAL
+  , gravity CENTER_VERTICAL
+  , margin (MarginTop 5)
+  ][  linearLayout
+      [ width WRAP_CONTENT
+      , height MATCH_PARENT
+      , padding (Padding 16 20 12 16)
+      ][ imageView
+         [ width $ V 42
+         , height $ V 42
+         , imageWithFallback "ny_ic_new_avatar,https://assets.juspay.in/nammayatri/images/driver/ny_ic_new_avatar.png"
+         ]
+      ]
+    , linearLayout
+      [ width MATCH_PARENT
+      , height MATCH_PARENT
+      , orientation HORIZONTAL
+      , stroke if state.props.driverStatusSet == Offline then ("2," <> Color.red) else if state.props.driverStatusSet == Online then ("2," <> Color.darkMint) else ("2," <> Color.blue800) 
+      , cornerRadius 50.0
+      , margin (Margin 20 10 20 10)--padding (Padding 10 10 10 10)
+      ][
+          driverStatusIndicator Offline push state
+        , driverStatusIndicator Silent push state
+        , driverStatusIndicator Online push state
+      ]
+  ]
+driverStatusIndicator :: forall w . DriverStatus -> (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+driverStatusIndicator status push state =
+  linearLayout
+  [ weight 1.0
+  , height $ V 35
+  , gravity CENTER
+  , color Color.greyTextColor
+  -- , stroke ("2," <> Color.yellow900)
+  , margin (Margin 10 10 10 10)
+  , background if ((status == Offline) && (state.props.driverStatusSet == Offline)) then (Color.red) else if ((status == Online) && (state.props.driverStatusSet == Online)) then (Color.darkMint) else if((status == Silent) && (state.props.driverStatusSet == Silent)) then (Color.blue800) else Color.white900
+  , cornerRadius 50.0
+  , visibility if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) then GONE else VISIBLE
+  ][  linearLayout
+      [ width MATCH_PARENT
+      , height MATCH_PARENT
+      , gravity CENTER
+      , orientation HORIZONTAL
+      , onClick push (const $ SwitchDriverStatus status)--(const (ChangeStatus if state.props.statusOnline then false else true))
+      , clickable if state.props.rideActionModal then false else true
+      ][ imageView
+        [ width $ V 15
+        , height $ V 15
+        , margin (MarginRight 5)
+        , visibility if(state.props.driverStatusSet==status) then VISIBLE else GONE
+        , imageWithFallback if ((status == Offline) && (state.props.driverStatusSet == Offline)) then "ny_ic_driver_status_offline,https://assets.juspay.in/nammayatri/images/driver/ny_ic_driver_status_offline.png" else if ((status == Online) && (state.props.driverStatusSet == Online)) then "ny_ic_driver_status_online,https://assets.juspay.in/nammayatri/images/driver/ny_ic_driver_status_online.png" else if((status == Silent) && (state.props.driverStatusSet == Silent)) then "ny_ic_driver_status_silent,https://assets.juspay.in/nammayatri/images/driver/ny_ic_driver_status_silent.png" else "none"--(getValueToLocalStore IS_DEMOMODE_ENABLED == "true") then "ny_ic_demo_mode_switch,https://assets.juspay.in/nammayatri/images/driver/ny_ic_demo_mode_switch.png" else if state.props.statusOnline then "ny_ic_driver_status_silent,https://assets.juspay.in/nammayatri/images/driver/ny_ic_driver_status_silent.png" else("ny_ic_driver_status_silent,https://assets.juspay.in/nammayatri/images/driver/ny_ic_driver_status_silent.png") --else "ny_ic_toggle_off,https://assets.juspay.in/nammayatri/images/driver/ny_ic_toggle_off.png"
+        ]
+      , textView(
+        [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , text (show status)--(getString SILENT) --if (getValueToLocalStore IS_DEMOMODE_ENABLED == "true") then (getString ONLINE_VIA_DEMO_MODE) else if state.props.statusOnline then (getString ONLINE_) else (getString OFFLINE)
+          , color if state.props.driverStatusSet == status then Color.white900 else  Color.greyTextColor
+          , textSize FontSize.a_14
+        ]  <> FontStyle.subHeading1 TypoGraphy
+      )
+      ]
+
+  ]
+
+updateLocationAndLastUpdatedView2 :: forall w . HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+updateLocationAndLastUpdatedView2 state push = 
+  PrestoAnim.animationSet 
+  [ Anim.translateYAnimFromTop $ AnimConfig.translateYAnimHomeConfig AnimConfig.TOP_BOTTOM ] $
+  linearLayout
+  [ width MATCH_PARENT
+  -- , height $ V 40
+  , padding (Padding 16 8 16 8)
+  , margin (Margin 16 16 16 0)
+  , cornerRadius 7.0
+  , orientation HORIZONTAL
+  , background Color.white900
+  ][ locationLastUpdatedTextAndTimeView push state
+    , updateButtonIconAndText push state
+    -- , recenterBtnView state push
+  ]
+
+statsModel2 :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+statsModel2 push state = 
+  -- PrestoAnim.animationSet 
+  -- [ Anim.translateYAnimFromTop $ AnimConfig.translateYAnimHomeConfig AnimConfig.TOP_BOTTOM ] $
+    linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation HORIZONTAL
+    , gravity CENTER
+    , padding (Padding 16 10 16 10)
+    ][  StatsModel.view (push <<< StatsModelAction) (statsModelConfig state) 
+
+    ]
+
+viewRecenterAndSupport :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
+viewRecenterAndSupport state push =
+  linearLayout
+  [ width WRAP_CONTENT
+  , height WRAP_CONTENT
+  , margin (Margin 0 20 20 0)
+  -- , stroke $ "1," <> Color.black500
+  , orientation VERTICAL
+  ][ imageView
+    [ width ( V 40 )
+    , height ( V 40 )
+    , margin $ MarginBottom 10
+    , imageWithFallback "ny_ic_homepage_support,https://assets.juspay.in/nammayatri/images/common/ny_ic_homepage_support.png"
+    -- , onClick (\action -> do
+    --         _ <- JB.getCurrentPosition push CurrentLocation
+    --         pure unit
+    --       ) (const RecenterButtonAction)
+    ]
+    , recenterBtnView state push
+  ]
 driverStatus :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 driverStatus push state = 
   linearLayout
@@ -516,17 +666,37 @@ updateLocationAndLastUpdatedView state push =
    , updateButtonIconAndText push state
   ]
 
+-- driverDetailsView state push =
+--  linearLayout
+--   [ width MATCH_PARENT
+--   , height $ V 50
+--   , padding (Padding 16 8 16 8)
+--   , orientation HORIZONTAL
+--   ][ locationLastUpdatedTextAndTimeView push state
+--    , updateButtonIconAndText push state
+--   ]
+
 locationLastUpdatedTextAndTimeView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 locationLastUpdatedTextAndTimeView push state =
-  textView
-  [ width $ V $ (EHC.screenWidth unit) * 3/ 5
-  , height WRAP_CONTENT
-  , text $ (getString UPDATED_AT) <> ": " <> if state.data.locationLastUpdatedTime == "" then (if (getValueToLocalStore LOCATION_UPDATE_TIME) == "__failed" then getString(NO_LOCATION_UPDATE) else (getValueToLocalStore LOCATION_UPDATE_TIME) ) else state.data.locationLastUpdatedTime
-  , textSize FontSize.a_14
-  , lineHeight "15"
-  , color Color.brownishGrey
-  , gravity LEFT
-  , fontStyle $ FontStyle.regular LanguageStyle
+  linearLayout
+  [ height MATCH_PARENT
+    , width WRAP_CONTENT
+  ][
+    textView
+    [ text $ (getString UPDATED_AT) <> ": "
+    , textSize FontSize.a_14
+    , lineHeight "15"
+    , color Color.brownishGrey
+    , gravity LEFT
+    , fontStyle $ FontStyle.regular LanguageStyle
+    ]
+    , textView
+    [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , text if state.data.locationLastUpdatedTime == "" then (if (getValueToLocalStore LOCATION_UPDATE_TIME) == "__failed" then getString(NO_LOCATION_UPDATE) else (getValueToLocalStore LOCATION_UPDATE_TIME) ) else state.data.locationLastUpdatedTime
+      , textSize FontSize.a_14
+      , fontStyle $ FontStyle.bold LanguageStyle
+    ]
   ]
 
 updateButtonIconAndText :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -541,15 +711,16 @@ updateButtonIconAndText push state =
         pure unit
         ) (const RetryTimeUpdate)
   , gravity RIGHT
-  ][ PrestoAnim.animationSet [Anim.rotateAnim (AnimConfig.rotateAnimConfig state.props.refreshAnimation)] 
-    $ imageView
-    [ width $ V 20
-    , height $ V 20
-    , margin $ MarginRight 5
-    , imageWithFallback "ny_ic_refresh,https://assets.juspay.in/nammayatri/images/driver/ny_ic_refresh.png"
-    , gravity RIGHT
-    ]
-    , textView
+  ]
+  [ -- PrestoAnim.animationSet [Anim.rotateAnim (AnimConfig.rotateAnimConfig state.props.refreshAnimation)] 
+    -- $ imageView
+    -- [ width $ V 20
+    -- , height $ V 20
+    -- , margin $ MarginRight 5
+    -- , imageWithFallback "ny_ic_refresh,https://assets.juspay.in/nammayatri/images/driver/ny_ic_refresh.png"
+    -- , gravity RIGHT
+    -- ]
+    textView
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
     , text (getString UPDATE)

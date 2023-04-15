@@ -137,6 +137,8 @@ instance loggableAction :: Loggable Action where
       ChatView.Call -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_messaging" "call_driver" 
       ChatView.Navigate -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_messaging" "navigate_to_google_maps"
       ChatView.NoAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_app_messaging" "no_action"
+    SwitchDriverStatus status -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "SwitchDriverStatus"
+
 
 
 data ScreenOutput =   Refresh ST.HomeScreenState
@@ -185,8 +187,12 @@ data Action = NoAction
             | InitializeChat
             | RemoveChat
             | UpdateInChat
+            | SwitchDriverStatus ST.DriverStatus
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
+
+eval (SwitchDriverStatus status) state = continue state{ props { driverStatusSet = status } }
+
 eval AfterRender state = do 
   continue state{props{mapRendered= true}}
 eval BackPressed state = do
@@ -365,8 +371,8 @@ eval RetryTimeUpdate state = do
 
 eval (TimeUpdate time lat lng) state = do
   let isDriverNearBy = ((getDistanceBwCordinates (getLastKnownLocValue ST.LATITUDE lat) (getLastKnownLocValue ST.LONGITUDE lng)  state.data.activeRide.src_lat state.data.activeRide.src_lon) < 0.05) 
-      newState = state { data = state.data { activeRide{isDriverArrived = if (state.props.currentStage == ST.RideAccepted && not state.data.activeRide.notifiedCustomer) then isDriverNearBy else state.data.activeRide.isDriverArrived},currentDriverLat= getLastKnownLocValue ST.LATITUDE lat,  currentDriverLon = getLastKnownLocValue ST.LONGITUDE lng, locationLastUpdatedTime = (convertUTCtoISC time "DD/MM/yyyy  hh:mm:ss a") }}
-  _ <- pure $ setValueToLocalStore LOCATION_UPDATE_TIME (convertUTCtoISC time "DD/MM/yyyy  hh:mm:ss a")
+      newState = state { data = state.data { activeRide{isDriverArrived = if (state.props.currentStage == ST.RideAccepted && not state.data.activeRide.notifiedCustomer) then isDriverNearBy else state.data.activeRide.isDriverArrived},currentDriverLat= getLastKnownLocValue ST.LATITUDE lat,  currentDriverLon = getLastKnownLocValue ST.LONGITUDE lng, locationLastUpdatedTime = (convertUTCtoISC time "hh:mm a") }}
+  _ <- pure $ setValueToLocalStore LOCATION_UPDATE_TIME (convertUTCtoISC time "hh:mm a")
   continueWithCmd newState [ do 
     _ <- if (getValueToLocalNativeStore IS_RIDE_ACTIVE == "false") then checkPermissionAndUpdateDriverMarker newState else pure unit
     pure AfterRender

@@ -39,8 +39,8 @@ view push config =
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , gravity CENTER
-  , stroke $ "1," <> Color.black500
-  , cornerRadius 10.0
+--   , stroke $ "1," <> Color.black500
+--   , cornerRadius 10.0
   , visibility config.visibility
   ][earningsView config push]
 
@@ -50,28 +50,30 @@ earningsView config push =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation HORIZONTAL
-  , background Color.white900
+--   , background Color.white900
   , gravity CENTER
-  , padding (Padding 0 15 0 15)
+  , padding (Padding 0 5 0 5)
   , cornerRadius 9.0
   ][ linearLayout
         [ width $ V ((screenWidth unit) /2 - 10)
         , height WRAP_CONTENT
-        , orientation VERTICAL
+        , orientation HORIZONTAL
         , gravity CENTER
         ][ textView $ 
             [ height config.countTextConfig.height
             , text config.countTextConfig.text
+            , margin $ MarginRight 5
             , gravity config.countTextConfig.gravity
             , color config.countTextConfig.color
-            , weight config.countTextConfig.weight
+            -- , weight config.countTextConfig.weight
             ] <> FontStyle.tags TypoGraphy
          , textView $
             [ height config.textConfig.height
             , text $ show $ config.totalRidesOfDay
+            , margin $ MarginLeft 5
             , gravity config.textConfig.gravity
             , color config.textConfig.color
-            , weight config.textConfig.weight
+            -- , weight config.textConfig.weight
             ] <> FontStyle.h2 TypoGraphy
          ]
     , linearLayout
@@ -82,21 +84,24 @@ earningsView config push =
     , linearLayout
         [ width $ V ((screenWidth unit) /2 - 10)
         , height WRAP_CONTENT
-        , orientation VERTICAL
+        , orientation HORIZONTAL
         , gravity CENTER
         ][ textView $ 
             [ height config.earningsTextConfig.height
             , text config.earningsTextConfig.text
+            , margin $ MarginRight 5
             , gravity config.earningsTextConfig.gravity
             , color config.earningsTextConfig.color
-            , weight config.earningsTextConfig.weight
+            -- , weight config.earningsTextConfig.weight
+            , textSize FontSize.a_12
             ]<> FontStyle.tags TypoGraphy
          , textView $ 
             [ height config.textConfig.height
-            , text $ show $ config.totalEarningsOfDay
+            , text  $ "₹" <> (show  $ config.totalEarningsOfDay)
+            , margin $ MarginLeft 5
             , gravity config.textConfig.gravity
             , color config.textConfig.color
-            , weight config.textConfig.weight
+            -- , weight config.textConfig.weight
             ]<> FontStyle.h2 TypoGraphy
          ]
    ]
