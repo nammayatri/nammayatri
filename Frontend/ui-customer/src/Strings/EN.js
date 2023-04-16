@@ -231,7 +231,7 @@ const englishStrings = {
   "EXPIRES_IN": "Expires in",
   "PAY_DIRECTLY_TO_YOUR_DRIVER_USING_CASH_UPI": "*Pay directly to your driver using Cash / UPI",
   "UPDATE_REQUIRED": "Update Required",
-  "PLEASE_UPDATE_APP_TO_CONTINUE_SERVICE": "Please update app to continue service",
+  "PLEASE_UPDATE_APP_TO_CONTINUE_SERVICE": "We're excited to announce that there's a new update available for our app. This update includes a fresh new design and several new features to make your experience even better.",
   "NOT_NOW": "Not now",
   "OF": "of",
   "LOST_SOMETHING": "Lost Something?",
