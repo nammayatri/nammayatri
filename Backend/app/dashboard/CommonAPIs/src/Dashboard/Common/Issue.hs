@@ -17,6 +17,7 @@ import Data.Time
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.APISuccess (APISuccess)
+import Kernel.Types.Common
 import Kernel.Types.Id
 import Servant hiding (Summary)
 
@@ -227,3 +228,8 @@ data IssueAddCommentByUserReq = IssueAddCommentByUserReq
 
 instance HideSecrets IssueAddCommentByUserReq where
   hideSecrets = identity
+
+type IssueFetchMediaAPI =
+  "media"
+    :> MandatoryQueryParam "filePath" Text
+    :> Get '[JSON] Text

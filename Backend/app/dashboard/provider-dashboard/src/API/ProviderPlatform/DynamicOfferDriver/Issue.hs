@@ -43,6 +43,7 @@ type API =
            :<|> IssueInfoAPI
            :<|> IssueUpdateAPI
            :<|> IssueAddCommentAPI
+           :<|> IssueFetchMediaAPI
        )
 
 type IssueCategoryListAPI =
@@ -65,6 +66,10 @@ type IssueAddCommentAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'ISSUE
     :> Common.IssueAddCommentAPI
 
+type IssueFetchMediaAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'READ_ACCESS 'ISSUE
+    :> Common.IssueFetchMediaAPI
+
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   issueCategoryList merchantId
@@ -72,6 +77,7 @@ handler merchantId =
     :<|> issueInfo merchantId
     :<|> issueUpdate merchantId
     :<|> issueAddComment merchantId
+    :<|> issueFetchMedia merchantId
 
 buildTransaction ::
   ( MonadFlow m,
@@ -146,3 +152,8 @@ issueAddComment merchantShortId apiTokenInfo issueReportId req = withFlowHandler
         { userId = cast apiTokenInfo.personId,
           ..
         }
+
+issueFetchMedia :: ShortId DM.Merchant -> ApiTokenInfo -> Text -> FlowHandler Text
+issueFetchMedia merchantShortId apiTokenInfo filePath = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  Client.callDriverOfferBPP checkedMerchantId (.issue.issueFetchMedia) filePath

@@ -17,6 +17,7 @@ type API =
            :<|> Common.IssueInfoAPI
            :<|> Common.IssueUpdateByUserAPI
            :<|> Common.IssueAddCommentByUserAPI
+           :<|> Common.IssueFetchMediaAPI
        )
 
 handler :: ShortId DM.Merchant -> FlowServer API
@@ -26,6 +27,7 @@ handler merchantId =
     :<|> issueInfo merchantId
     :<|> issueUpdate merchantId
     :<|> issueAddComment merchantId
+    :<|> issueFetchMedia merchantId
 
 issueCategoryList ::
   ShortId DM.Merchant ->
@@ -61,3 +63,6 @@ issueAddComment ::
   Common.IssueAddCommentByUserReq ->
   FlowHandler APISuccess
 issueAddComment merchantShortId issueReportId = withFlowHandlerAPI . DIssue.issueAddComment merchantShortId (cast issueReportId)
+
+issueFetchMedia :: ShortId DM.Merchant -> Text -> FlowHandler Text
+issueFetchMedia merchantShortId = withFlowHandlerAPI . DIssue.issueFetchMedia merchantShortId
