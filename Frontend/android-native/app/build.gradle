@@ -34,18 +34,18 @@ repositories {
     maven {
         url "https://maven.juspay.in/jp-build-packages/beta/"
     }
-    maven {
-        url "https://maven.juspay.in/jp-build-packages/hyper-sdk/"
-    }
+//    maven {
+//        url "https://maven.juspay.in/jp-build-packages/hyper-sdk/"
+//    }
 }
 
 android {
-    compileSdkVersion 31
-    buildToolsVersion "30.0.2"
+    compileSdkVersion 33
+    buildToolsVersion "30.0.3"
 
     defaultConfig {
         minSdkVersion 23
-        targetSdkVersion 31
+        targetSdkVersion 33
         versionCode 100
         versionName "1.2.1"
         multiDexEnabled true
@@ -140,7 +140,7 @@ android {
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-    implementation 'in.juspay:hypersdk:2.1.12-nammayatri-02'
+//    implementation 'in.juspay:hypersdk:2.1.12-nammayatri-02'
     // implementation ('in.juspay:hypersdk:2.0.4-rc.78') {
     //     exclude group:'in.juspay', module: 'mystique'
     // }
@@ -148,11 +148,12 @@ dependencies {
 //    implementation 'in.juspay:mystique:0.2.45'
 //    implementation project (path:':mystique')
     // api (project(':mystique')) -- to link mystique
-//    implementation ( project(path: ':hyper-sdk'))
     // implementation 'in.juspay:mystique:0.2.49'
     // Import the BoM for the Firebase platform
     implementation platform('com.google.firebase:firebase-bom:31.1.1')
-
+    implementation ( project(path: ':mobility-driver'))
+    implementation ( project(path: ':mobility-customer'))
+    implementation ( project(path: ':app-common'))
     implementation 'com.google.firebase:firebase-dynamic-links'
     implementation 'com.google.firebase:firebase-analytics'
 
@@ -175,6 +176,7 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.1.0'
     implementation 'com.google.maps.android:android-maps-utils:2.4.0'
     implementation 'androidx.work:work-runtime:2.7.1'
+    implementation files('/Users/vigneshs/Desktop/hyper-sdk-release.aar')
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.4-alpha07'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
