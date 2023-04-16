@@ -1,5 +1,6 @@
 module Domain.Action.Dashboard.Issue where
 
+import qualified AWS.S3 as S3
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Issue as Common
 import qualified Data.Text as T hiding (map)
 import qualified Domain.Types.Issue.Comment as DC
@@ -173,3 +174,7 @@ issueAddComment _merchantShortId issueReportId req = do
             authorId = cast req.userId,
             createdAt = now
           }
+
+issueFetchMedia :: ShortId DM.Merchant -> Text -> Flow Text
+issueFetchMedia _ filePath =
+  S3.get $ T.unpack filePath

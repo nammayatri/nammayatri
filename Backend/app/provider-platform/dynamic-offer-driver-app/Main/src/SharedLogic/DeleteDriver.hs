@@ -14,6 +14,7 @@
 
 module SharedLogic.DeleteDriver where
 
+import Domain.Types.Issue.IssueReport (IssueReport (..))
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Environment
@@ -26,6 +27,7 @@ import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as CQDriverInfo
+import qualified Storage.CachedQueries.Issue.IssueReport as CQIR
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDriverFlowStatus
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLocation as QDriverLocation
@@ -55,6 +57,8 @@ deleteDriver merchantShortId reqDriverId = do
   driverDeleteCheck <- validateDriver merchant driver
   when driverDeleteCheck $ throwError $ InvalidRequest "Driver can't be deleted"
 
+  issueReports <- CQIR.findAllByDriver reqDriverId
+
   -- this function uses tokens from db, so should be called before transaction
   Auth.clearDriverSession reqDriverId
   Esq.runTransaction $ do
@@ -74,6 +78,8 @@ deleteDriver merchantShortId reqDriverId = do
     QIssueReport.deleteByPersonId reqDriverId
     QPerson.deleteById reqDriverId
   CQDriverInfo.clearDriverInfoCache (cast reqDriverId)
+  CQIR.invalidateIssueReportCache Nothing (Just reqDriverId)
+  mapM_ (\IssueReport {id} -> CQIR.invalidateIssueReportCache (Just id) Nothing) issueReports
   logTagInfo "deleteDriver : " (show reqDriverId)
   return Success
 
