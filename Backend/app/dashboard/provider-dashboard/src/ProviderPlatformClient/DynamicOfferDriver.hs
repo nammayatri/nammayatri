@@ -134,7 +134,8 @@ data IssueAPIs = IssueAPIs
     issueList :: Maybe Int -> Maybe Int -> Maybe Issue.IssueStatus -> Maybe (Id Issue.IssueCategory) -> Maybe Text -> Euler.EulerClient Issue.IssueReportListResponse,
     issueInfo :: Id Issue.IssueReport -> Euler.EulerClient Issue.IssueInfoRes,
     issueUpdate :: Id Issue.IssueReport -> Issue.IssueUpdateByUserReq -> Euler.EulerClient APISuccess,
-    issueAddComment :: Id Issue.IssueReport -> Issue.IssueAddCommentByUserReq -> Euler.EulerClient APISuccess
+    issueAddComment :: Id Issue.IssueReport -> Issue.IssueAddCommentByUserReq -> Euler.EulerClient APISuccess,
+    issueFetchMedia :: Text -> Euler.EulerClient Text
   }
 
 mkDriverOfferAPIs :: CheckedShortId DM.Merchant -> Text -> DriverOfferAPIs
@@ -224,7 +225,8 @@ mkDriverOfferAPIs merchantId token = do
       :<|> issueList
       :<|> issueInfo
       :<|> issueUpdate
-      :<|> issueAddComment = issueClient
+      :<|> issueAddComment
+      :<|> issueFetchMedia = issueClient
 
 callDriverOfferBPP ::
   forall m r b c.
