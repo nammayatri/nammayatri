@@ -319,5 +319,8 @@ getEstimates (EstimateAPIEntity estimate) index = ChooseVehicle.config {
       , capacity = case estimate.vehicleVariant of
           "TAXI" -> (getString ECONOMICAL) <> ", 4 " <> (getString PEOPLE)
           "TAXI_PLUS" -> (getString COMFY) <> ", 4 " <> (getString PEOPLE)
+          "SEDAN" -> (getString COMFY) <> ", " <>(getString UPTO) <>" 4 " <> (getString PEOPLE)
+          "SUV" -> (getString SPACIOUS) <> ", " <> (getString UPTO)<>" 6 " <> (getString PEOPLE)
+          "HATCHBACK" -> (getString EASY_ON_WALLET) <> ", "<> (getString UPTO) <> " 4 " <> (getString PEOPLE)
           _ -> (getString ECONOMICAL) <> ", 4 " <> (getString PEOPLE)
       }

@@ -135,7 +135,7 @@ const englishStrings = {
   "ADD_EMERGENCY_CONTACTS": "Add Emergency Contacts",
   "ADD_ANOTHER_CONTACT": "Add Another Contact",
   "NO_EMERGENCY_CONTACTS_SET": "No Emergency Contacts Set",
-  "EMERGENCY_CONTACTS_SCREEN_DESCRIPTION": "You can share your ride status in case of an emergency with upto 3 emergency contacts.",
+  "EMERGENCY_CONTACTS_SCREEN_DESCRIPTION": "You can share your ride status in case of an emergency \n with upto 3 emergency contacts.",
   "COPIED": "Copied",
   "TRIP_ID": "Trip Id",
   "SAVE_PLACE": "Save Place",
@@ -231,7 +231,7 @@ const englishStrings = {
   "EXPIRES_IN": "Expires in",
   "PAY_DIRECTLY_TO_YOUR_DRIVER_USING_CASH_UPI": "*Pay directly to your driver using Cash / UPI",
   "UPDATE_REQUIRED": "Update Required",
-  "PLEASE_UPDATE_APP_TO_CONTINUE_SERVICE": "Please update app to continue service",
+  "PLEASE_UPDATE_APP_TO_CONTINUE_SERVICE": "We're excited to announce that there's a new update available for our app. This update includes a fresh new design and several new features to make your experience even better.",
   "NOT_NOW": "Not now",
   "OF": "of",
   "LOST_SOMETHING": "Lost Something?",
@@ -382,5 +382,8 @@ const englishStrings = {
   "GOVERNMENT_CHAGRES" : "Government Charges",
   "SERVICE_CHARGES" : "Service Charges",
   "CONFIRM_AND_BOOK" : "Confirm & Book",
-  "PEOPLE" : "people"
+  "PEOPLE" : "people",
+  "SPACIOUS" : "Spacious",
+  "EASY_ON_WALLET" : "Easy on wallet",
+  "UPTO" : "upto"
 }

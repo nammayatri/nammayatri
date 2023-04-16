@@ -31,6 +31,7 @@ import Styles.Colors as Color
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Common.Types.App
+import MerchantConfigs.Utils (getValueFromMerchant)
 
 
 screen :: ST.AppUpdatePopUpScreenState -> ScopedScreen Action ST.AppUpdatePopUpScreenState ScreenOutput
@@ -145,7 +146,7 @@ view push state =
                   , textSize FontSize.a_14
                   , onClick (\action -> do
                               _<- push action
-                              _ <- JB.openUrlInApp "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner"
+                              _ <- JB.openUrlInApp $ getValueFromMerchant "APP_LINK"
                               pure unit
                               ) (const OnAccept)
               ] 

@@ -34,6 +34,12 @@ export function getStringMLValue(key){
     return "error in getCommonKN";
 }
 
+export function getAppLink(os) {
+    if (os == "ANDROID"){
+        return "https://play.google.com/store/apps/details?id=net.openkochi.yatri"
+    }else {return "https://apps.apple.com/in/app/yatri/id1615871038"}
+}
+
 
 const config = {
     "StringKeys": ["ABOUT_APP_DESCRIPTION", "WELCOME_TEXT", "REQUEST_AUTO_RIDE", "CURRENTLY_WE_ARE_LIVE_IN_", "DRIVER_PICKUP_CHARGES", "SUCCESSFUL_ONBOARD", "ABOUT_REFERRAL_PROGRAM_DISCRIPTION", "YOU_CAN_GET_REFERRAL_CODE_FROM_DRIVER"],
@@ -42,7 +48,10 @@ const config = {
     "showRateCard" : "false",
     "showDashboard" : "false",
     "shareAppTitle" : "Share Yatri!",
-    "shareAppContent" : "Hey there!\n\nYatri is Coming soon"
+    "shareAppContent" : "Hey there!\n\nCheck out Yatri, India's first open mobility cab hailing app built for commuters in Kochi.\n100% Open Source\n\nDownload Yatri now! \n"+(getAppLink(window.__OS)) + "\n\n#beOpen #chooseOpen",
+    "DOCUMENT_LINK" : "https://docs.google.com/document/d/1zmQWO_L4EjyCXC3xSlp1f3DS2wI4HfbHxg42tXelWe0",
+    "PRIVACY_POLICY_LINK" : "https://docs.google.com/document/d/1gI_P4oZnVwE0O71rI4Mi8rpZbL9rsIRkyewbql85Np8",
+    "APP_LINK" : getAppLink(window.__OS)
 }
 
 const malayalamStrings = {

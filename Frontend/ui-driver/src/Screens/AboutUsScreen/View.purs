@@ -31,6 +31,7 @@ import JBridge as JB
 import Components.PopUpModal as PopUpModal
 import Common.Types.App
 import Screens.AboutUsScreen.ComponentConfig
+import MerchantConfigs.Utils (getValueFromMerchant)
 
 screen :: ST.AboutUsScreenState -> Screen Action ST.AboutUsScreenState ScreenOutput
 screen initialState =
@@ -182,8 +183,8 @@ underlinedTextView value push  =
   , orientation VERTICAL
   , onClick (\action -> do
               _<- push action
-              _ <- JB.openUrlInApp if (value == (getString T_C)) then "https://docs.google.com/document/d/1K68xvtReD9FVpx-IshtKNMt4baQNgKXt/edit?usp=share_link&ouid=115428839751313950285&rtpof=true&sd=true"
-                else "https://docs.google.com/document/d/1tF96MwtaEiq70y_P40E29Sy3X61moTc9/edit?usp=share_link&ouid=115428839751313950285&rtpof=true&sd=true"
+              _ <- JB.openUrlInApp if (value == (getString T_C)) then (getValueFromMerchant "DOCUMENT_LINK") 
+                else (getValueFromMerchant "PRIVACY_POLICY_LINK")
               pure unit
               ) (const TermsAndConditionAction)
   , margin (Margin 20 30 0 0)

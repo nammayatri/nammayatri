@@ -33,7 +33,7 @@ import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (liftFlow, getNewIDWithTag, bundleVersion, os, getExpiryTime)
 import Foreign.Class (class Encode, encode, decode)
 import Global (readFloat)
-import Helpers.Utils (hideSplash, getTime, convertUTCtoISC, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getCorrespondingErrorMessage, getcurrentdate, getDowngradeOptions, getCurrentUTC)
+import Helpers.Utils (convertUTCtoISC, decodeErrorCode, decodeErrorMessage, getDowngradeOptions, getTime, getcurrentdate, hideSplash, parseFloat, secondsLeft, toString, getMerchant, Merchant(..), getCurrentUTC)
 import JBridge (drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, loaderText, openNavigation, removeAllPolylines, removeMarker, showMarker, startLocationPollingAPI, stopLocationPollingAPI, toast, toggleLoader, generateSessionId, stopChatListenerService, hideKeyboardOnNavigation)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -94,10 +94,17 @@ baseAppFlow = do
 
 checkVersion :: Int -> FlowBT String Unit
 checkVersion versioncode = do
-  when (versioncode < 54) $ do
+  when (versioncode < (getLatestAndroidVersion (getMerchant unit))) $ do
     lift $ lift $ doAff do liftEffect hideSplash
     _ <- UI.handleAppUpdatePopUp
     checkVersion versioncode
+
+getLatestAndroidVersion :: Merchant -> Int 
+getLatestAndroidVersion merchant = 
+  case merchant of 
+    NAMMAYATRIPARTNER -> 54
+    YATRIPARTNER -> 43 
+    JATRISAATHIDRIVER -> 1 
 
 ifNotRegistered :: Unit -> Boolean
 ifNotRegistered _ = getValueToLocalStore REGISTERATION_TOKEN == "__failed"
