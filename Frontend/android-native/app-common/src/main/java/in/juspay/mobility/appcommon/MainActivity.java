@@ -201,34 +201,32 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
             // Update Driver status in Local Storage
-            // COMMENTED CHECK
-//            if (key != null && key.equals("DRIVER_STATUS"))
-//            {String status = sharedPref.getString("DRIVER_STATUS", "null");
-//                WorkManager mWorkManager = WorkManager.getInstance(getApplicationContext());
-//                if (status.equals("null"))
-//                {
-//                    if  (context != null)
-//                    {
-//                        Intent locationUpdateIntent = new Intent(context, LocationUpdateService.class);
-//                        context.stopService(locationUpdateIntent);
-//                        mWorkManager.cancelAllWorkByTag(context.getString(R.string.location_update));
-//                    }
-//                    else {
-//                        Context context = getApplicationContext();
-//                        Intent locationUpdateIntent = new Intent(context, LocationUpdateService.class);
-//                        context.stopService(locationUpdateIntent);
-//                        mWorkManager.cancelAllWorkByTag(context.getString(R.string.location_update));
-//                    }
-//
-//                }
-//            }
-//            if (key != null && sharedPref.getString("DRIVER_STATUS", "null").equals("true") && (key.equals("RIDE_G_FREQUENCY") || key.equals("MAX_LIMIT_TO_STORE_LOCATION_PT") || key.equals("NO_OF_LOCATION_PT_TO_REMOVE") || key.equals("DRIVER_MIN_DISPLACEMENT") || key.equals("RIDE_T_FREQUENCY"))){
-//                System.out.println("TRIGGERED UPDATE POLLING");
-//                Context context = getApplicationContext();
-//                Intent locationUpdateIntent = new Intent(context, LocationUpdateService.class);
-//                context.startService(locationUpdateIntent);
-//            }
-            // COMMENTED CHECK
+            if (key != null && key.equals("DRIVER_STATUS"))
+            {String status = sharedPref.getString("DRIVER_STATUS", "null");
+                WorkManager mWorkManager = WorkManager.getInstance(getApplicationContext());
+                if (status.equals("null"))
+                {
+                    if  (context != null)
+                    {
+                        Intent locationUpdateIntent = new Intent(context, LocationUpdateService.class);
+                        context.stopService(locationUpdateIntent);
+                        mWorkManager.cancelAllWorkByTag(context.getString(R.string.location_update));
+                    }
+                    else {
+                        Context context = getApplicationContext();
+                        Intent locationUpdateIntent = new Intent(context, LocationUpdateService.class);
+                        context.stopService(locationUpdateIntent);
+                        mWorkManager.cancelAllWorkByTag(context.getString(R.string.location_update));
+                    }
+
+                }
+            }
+            if (key != null && sharedPref.getString("DRIVER_STATUS", "null").equals("true") && (key.equals("RIDE_G_FREQUENCY") || key.equals("MAX_LIMIT_TO_STORE_LOCATION_PT") || key.equals("NO_OF_LOCATION_PT_TO_REMOVE") || key.equals("DRIVER_MIN_DISPLACEMENT") || key.equals("RIDE_T_FREQUENCY"))){
+                System.out.println("TRIGGERED UPDATE POLLING");
+                Context context = getApplicationContext();
+                Intent locationUpdateIntent = new Intent(context, LocationUpdateService.class);
+                context.startService(locationUpdateIntent);
+            }
         }
     };
 
@@ -408,13 +406,12 @@ public class MainActivity extends AppCompatActivity {
         });
 //        updateConfigURL();// COMMENTED CHECK
         initApp();
-        // COMMENTED CHECK
-//       NotificationUtils.createNotificationChannel(this, NotificationUtils.CHANNEL_ID);
-//       NotificationUtils.createNotificationChannel(this, NotificationUtils.FLOATING_NOTIFICATION);
-//       NotificationUtils.createNotificationChannel(this, NotificationUtils.RINGING_CHANNEL_ID);
-//       NotificationUtils.createNotificationChannel(this, NotificationUtils.TRIP_CHANNEL_ID);
-//       NotificationUtils.createNotificationChannel(this, NotificationUtils.CANCELLED_PRODUCT);
-//       NotificationUtils.createNotificationChannel(this, NotificationUtils.DRIVER_HAS_REACHED);
+       NotificationUtils.createNotificationChannel(this, NotificationUtils.CHANNEL_ID);
+       NotificationUtils.createNotificationChannel(this, NotificationUtils.FLOATING_NOTIFICATION);
+       NotificationUtils.createNotificationChannel(this, NotificationUtils.RINGING_CHANNEL_ID);
+       NotificationUtils.createNotificationChannel(this, NotificationUtils.TRIP_CHANNEL_ID);
+       NotificationUtils.createNotificationChannel(this, NotificationUtils.CANCELLED_PRODUCT);
+       NotificationUtils.createNotificationChannel(this, NotificationUtils.DRIVER_HAS_REACHED);
         // COMMENTED CHECK
 //       this.notificationCallback = new NotificationUtils.NotificationCallback() {
 //           @Override
@@ -846,10 +843,9 @@ public class MainActivity extends AppCompatActivity {
             stateMonitor.enable(this);
         }
         if (getResources().getString(R.string.service).equals("nammayatripartner")){
-            // COMMENTED CHECK
-//            if (NotificationUtils.overlayFeatureNotAvailable(this)){
-//                checkRideRequest();
-//            }
+            if (NotificationUtils.overlayFeatureNotAvailable(this)){
+                checkRideRequest();
+            }
             if (widgetService!=null){
                 stopService(widgetService);
             }
@@ -1271,17 +1267,16 @@ public class MainActivity extends AppCompatActivity {
 
         timer.schedule(timerTask, 5000);
     }
-    // COMMENTED CHECK
-//    private void checkRideRequest(){
-//        try {
-//            boolean rideReqExpired = NotificationUtils.lastRideReq.getBoolean("rideReqExpired", true);
-//            if (rideReqExpired) return;
-//            Intent rideReqActivity = new Intent(this, RideRequestActivity.class);
-//            rideReqActivity.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-//            rideReqActivity.putExtras(NotificationUtils.lastRideReq);
-//            startActivity(rideReqActivity);
-//        }catch (Exception e){
-//            Log.e(TAG, "Exception in checkRideRequest");
-//        }
-//    }
+    private void checkRideRequest(){
+        try {
+            boolean rideReqExpired = NotificationUtils.lastRideReq.getBoolean("rideReqExpired", true);
+            if (rideReqExpired) return;
+            Intent rideReqActivity = new Intent(this, RideRequestActivity.class);
+            rideReqActivity.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+            rideReqActivity.putExtras(NotificationUtils.lastRideReq);
+            startActivity(rideReqActivity);
+        }catch (Exception e){
+            Log.e(TAG, "Exception in checkRideRequest");
+        }
+    }
 }
