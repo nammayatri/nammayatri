@@ -134,7 +134,7 @@ const hindiStrings = {
   "EMERGENCY_CONTACTS": "आपातकालीन संपर्क",
   "ADD_EMERGENCY_CONTACTS": "आपातकालीन संपर्क जोड़ें",
   "NO_EMERGENCY_CONTACTS_SET": "कोई आपातकालीन संपर्क सेट नहीं",
-  "EMERGENCY_CONTACTS_SCREEN_DESCRIPTION": "आप आपातकालीन स्थिति में 3 आपातकालीन संपर्कों के साथ अपनी सवारी की स्थिति साझा कर सकते हैं",
+  "EMERGENCY_CONTACTS_SCREEN_DESCRIPTION": "आप आपातकालीन स्थिति में 3 आपातकालीन संपर्कों के साथ अपनी \nसवारी की स्थिति साझा कर सकते हैं",
   "COPIED": "कॉपी किया गया",
   "TRIP_ID": "ट्रिप आईडी",
   "SAVE_PLACE": "स्थान सहेजें",
@@ -383,5 +383,9 @@ const hindiStrings = {
   "GOVERNMENT_CHAGRES" : "सरकारी शुल्क",
   "SERVICE_CHARGES" : "सेवा शुल्क",
   "CONFIRM_AND_BOOK" : "पुष्टि करें और बुक करें",
-  "PEOPLE" : "लोग"
+  "PEOPLE" : "लोग",
+  "MAKE_YOURSELF_AVAILABLE_FOR" : "निम्नलिखित के लिए स्वयं को उपलब्ध कराएं",
+  "SPACIOUS" : "विशाल",
+  "EASY_ON_WALLET" : "किफ़ायती",
+  "UPTO" : "तक"
 }

@@ -841,6 +841,7 @@ goOfflineModal push state =
              ][ textView  (
                 [ width WRAP_CONTENT
                 , height WRAP_CONTENT
+                , gravity CENTER
                 , text (getString GO_OFFLINE)
                 , color Color.yellow900
                 ]  <> FontStyle.subHeading1 TypoGraphy

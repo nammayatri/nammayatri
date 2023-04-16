@@ -1457,7 +1457,8 @@ eval (MenuButtonActionController (MenuButtonController.OnClick config)) state = 
 
 eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.OnSelect config))) state = do 
   let updatedQuotes = map (\item -> item{activeIndex = config.index}) state.data.specialZoneQuoteList
-  continue state{data{specialZoneQuoteList = updatedQuotes, specialZoneSelectedQuote = Just config.id}}
+      newState = state{data{specialZoneQuoteList = updatedQuotes}}
+  continue $ if state.props.isSpecialZone then newState{data{specialZoneSelectedQuote = Just config.id }} else newState{props{estimateId = config.id }}
 
 eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state = 
   if state.props.isSpecialZone then do

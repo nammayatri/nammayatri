@@ -358,7 +358,7 @@ viewDetailsAndRepeatRide push state =
     , linearLayout 
       [ width $ V 1
       , height if os == "IOS" then (V 20) else MATCH_PARENT
-      , margin $ MarginHorizontal 40 40
+      , margin $ MarginHorizontal 20 20
       , background Color.grey900
       ][]
     , textView

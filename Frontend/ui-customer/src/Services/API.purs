@@ -1526,6 +1526,10 @@ instance showSendIssueRes :: Show SendIssueRes where show = genericShow
 instance decodeSendIssueRes :: Decode SendIssueRes where decode = defaultDecode
 instance encodeSendIssueRes :: Encode SendIssueRes where encode = defaultEncode
 
+newtype DestinationServiceabilityReq = DestinationServiceabilityReq
+  { location  :: LatLong
+  }
+
 newtype ServiceabilityReq = ServiceabilityReq 
   { location  :: LatLong
   }
@@ -1536,6 +1540,11 @@ newtype ServiceabilityRes = ServiceabilityRes
     specialLocation :: Maybe SpecialLocation 
   }
 
+newtype ServiceabilityResDestination = ServiceabilityResDestination 
+  { serviceable :: Boolean,
+    geoJson :: Maybe String,
+    specialLocation :: Maybe SpecialLocation 
+  }
 newtype SpecialLocation = SpecialLocation
   {
     category :: String,
@@ -1560,12 +1569,31 @@ instance showServiceabilityReq :: Show ServiceabilityReq where show = genericSho
 instance decodeServiceabilityReq :: Decode ServiceabilityReq where decode = defaultDecode
 instance encodeServiceabilityReq :: Encode ServiceabilityReq where encode = defaultEncode
 
+instance makeDestinationServiceabilityReq :: RestEndpoint DestinationServiceabilityReq ServiceabilityResDestination where
+    makeRequest reqBody headers = defaultMakeRequest POST (EP.serviceabilityDest "") headers reqBody
+    decodeResponse = decodeJSON
+    encodeRequest req = defaultEncode req
+
+derive instance genericDestinationServiceabilityReq :: Generic DestinationServiceabilityReq _
+derive instance newtypeDestinationServiceabilityReq:: Newtype DestinationServiceabilityReq _
+instance standardEncodeDestinationServiceabilityReq :: StandardEncode DestinationServiceabilityReq where standardEncode (DestinationServiceabilityReq req) = standardEncode req
+instance showDestinationServiceabilityReq :: Show DestinationServiceabilityReq where show = genericShow
+instance decodeDestinationServiceabilityReq :: Decode DestinationServiceabilityReq where decode = defaultDecode
+instance encodeDestinationServiceabilityReq :: Encode DestinationServiceabilityReq where encode = defaultEncode
+
 derive instance genericServiceabilityRes :: Generic ServiceabilityRes _
 derive instance newtypeServiceabilityRes:: Newtype ServiceabilityRes _
 instance standardEncodeServiceabilityRes :: StandardEncode ServiceabilityRes where standardEncode (ServiceabilityRes req) = standardEncode req
 instance showServiceabilityRes :: Show ServiceabilityRes where show = genericShow
 instance decodeServiceabilityRes :: Decode ServiceabilityRes where decode = defaultDecode
 instance encodeServiceabilityRes :: Encode ServiceabilityRes where encode = defaultEncode
+
+derive instance genericServiceabilityResDestination :: Generic ServiceabilityResDestination _
+derive instance newtypeServiceabilityResDestination :: Newtype ServiceabilityResDestination _
+instance standardEncodeServiceabilityResDestination :: StandardEncode ServiceabilityResDestination where standardEncode (ServiceabilityResDestination req) = standardEncode req
+instance showServiceabilityResDestination :: Show ServiceabilityResDestination where show = genericShow
+instance decodeServiceabilityResDestination :: Decode ServiceabilityResDestination where decode = defaultDecode
+instance encodeServiceabilityResDestination :: Encode ServiceabilityResDestination where encode = defaultEncode
 
 derive instance genericSpecialLocation :: Generic SpecialLocation _
 derive instance newtypeSpecialLocation:: Newtype SpecialLocation _
