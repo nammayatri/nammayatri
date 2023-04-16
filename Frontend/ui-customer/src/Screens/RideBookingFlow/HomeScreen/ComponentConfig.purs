@@ -94,7 +94,7 @@ shareAppConfig state = let
       },
       cornerRadius = (Corners 15.0 true true true true),
       coverImageConfig {
-        imageUrl = "ny_ic_share_app,https://assets.juspay.in/nammayatri/images/user/ny_ic_share_app.png"
+        imageUrl = "ic_share_app,https://assets.juspay.in/nammayatri/images/user/ny_ic_share_app.png"
       , visibility = VISIBLE
       , margin = Margin 16 20 16 24
       , width = MATCH_PARENT

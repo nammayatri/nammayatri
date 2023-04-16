@@ -63,7 +63,7 @@ view push state =
         ]
         [ linearLayout
             [ height MATCH_PARENT
-            , width WRAP_CONTENT
+            , width MATCH_PARENT
             , orientation VERTICAL
             ]
             [ GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)

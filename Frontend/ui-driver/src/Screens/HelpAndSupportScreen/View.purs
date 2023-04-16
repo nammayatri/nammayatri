@@ -15,7 +15,7 @@
 
 module Screens.HelpAndSupportScreen.View where
 
-import Prelude (Unit, ($), const, map, (<>), (<<<), (==), discard, bind, pure, unit, (&&))
+import Prelude (Unit, ($), const, map, (<>), (<<<), (==), (*), (/), discard, bind, pure, unit, (&&))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, layoutGravity, alpha, scrollView, cornerRadius, onBackPressed, stroke, lineHeight, visibility, afterRender, scrollBarY, imageWithFallback)
 import Effect (Effect)
 import PrestoDOM.Types.DomAttributes as PTD
@@ -36,7 +36,7 @@ import Effect.Aff (launchAff_)
 import Control.Monad.Except (runExceptT)
 import Effect.Class (liftEffect)
 import Control.Transformers.Back.Trans (runBackT)
-import Engineering.Helpers.Commons (flowRunner)
+import Engineering.Helpers.Commons (flowRunner, screenWidth)
 import Services.Backend as Remote
 import Common.Types.App
 import Screens.HelpAndSupportScreen.ComponentConfig
@@ -123,7 +123,7 @@ recentRideHeader state push leftText rightText =
  , onClick push $ const $ if (rightText == (getString VIEW_ALL_RIDES)) then ViewAllRides else NoRidesAction
  , visibility if ((rightText == (getString VIEW_ALL_RIDES)) && state.props.isNoRides) then GONE else VISIBLE
  ][ textView
-    [ width WRAP_CONTENT
+    [ width $ V (3 * screenWidth unit / 5)
     , height MATCH_PARENT
     , text leftText
     , gravity CENTER_VERTICAL

@@ -344,5 +344,6 @@ const bengaliStrings = {
 	ENTER_PASSWORD: "পাসওয়ার্ড লিখুন",
 	YOUR_VEHICLE: "আপনার বাহন",
 	BOOKING_OPTIONS: "বুকিং অপশন",
-	OTP: "OTP"
-}
+	OTP: "OTP",
+	MAKE_YOURSELF_AVAILABLE_FOR : "এর জন্য নিজেকে উপলব্ধ করুন"
+ }

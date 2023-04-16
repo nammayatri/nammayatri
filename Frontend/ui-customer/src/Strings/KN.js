@@ -134,7 +134,7 @@ const kannadaStrings = {
   "EMERGENCY_CONTACTS": "ತುರ್ತು ಸಂಪರ್ಕಗಳು",
   "ADD_EMERGENCY_CONTACTS": "ತುರ್ತು ಸಂಪರ್ಕಗಳನ್ನು ಸೇರಿಸಿ",
   "NO_EMERGENCY_CONTACTS_SET": "ತುರ್ತು ಸಂಪರ್ಕಗಳನ್ನು ಹೊಂದಿಸಲಾಗಿಲ್ಲ",
-  "EMERGENCY_CONTACTS_SCREEN_DESCRIPTION": "ತುರ್ತು ಪರಿಸ್ಥಿತಿಯಲ್ಲಿ 3 ತುರ್ತು ಸಂಪರ್ಕಗಳ ಜೊತೆಗೆ ನಿಮ್ಮ ಸವಾರಿಯ ಸ್ಥಿತಿಯನ್ನು ನೀವು ಹಂಚಿಕೊಳ್ಳಬಹುದು",
+  "EMERGENCY_CONTACTS_SCREEN_DESCRIPTION": "ತುರ್ತು ಪರಿಸ್ಥಿತಿಯಲ್ಲಿ 3 ತುರ್ತು ಸಂಪರ್ಕಗಳ ಜೊತೆಗೆ ನಿಮ್ಮ ಸವಾರಿಯ \nಸ್ಥಿತಿಯನ್ನು ನೀವು ಹಂಚಿಕೊಳ್ಳಬಹುದು",
   "COPIED": "ನಕಲಿಸಿದ",
   "TRIP_ID": "ಪ್ರವಾಸದ ಐಡಿ",
   "SAVE_PLACE": "ಸ್ಥಳವನ್ನು ಉಳಿಸಿ",

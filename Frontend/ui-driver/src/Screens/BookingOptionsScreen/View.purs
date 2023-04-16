@@ -203,7 +203,7 @@ downgradeOptionsView push state =
         , padding $ PaddingHorizontal 16 16
         , margin $ MarginBottom 14
         ]
-        [ customTV ("Make Yourself Available for") FontSize.a_20 FontStyle.h3 Color.black
+        [ customTV (getString MAKE_YOURSELF_AVAILABLE_FOR) FontSize.a_20 FontStyle.h3 Color.black
         ]
     , linearLayout
         [ height WRAP_CONTENT

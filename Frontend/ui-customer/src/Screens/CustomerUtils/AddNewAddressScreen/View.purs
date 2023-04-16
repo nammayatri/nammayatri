@@ -388,11 +388,11 @@ searchResultsView state push =
                     , background Color.lightGreyShade
                     ][]
               ]
-              )  (if (DA.null state.data.locationList) then (if state.props.selectFromCurrentOrMap then bottomBtnsData else []) else state.data.locationList )) 
+              )  (if (DA.null state.data.locationList) then (if state.props.selectFromCurrentOrMap then bottomBtnsData state else []) else state.data.locationList )) 
   ]
 
-bottomBtnsData :: Array ST.LocationListItemState 
-bottomBtnsData = 
+bottomBtnsData :: ST.AddNewAddressScreenState ->  Array ST.LocationListItemState 
+bottomBtnsData state = 
   [ { prefixImageUrl : "ny_ic_locate_on_map,https://assets.juspay.in/nammayatri/images/user/ny_ic_locate_on_map.png"
     , title : (getString CHOOSE_ON_MAP) 
     , subTitle :  (getString DRAG_THE_MAP )
@@ -490,7 +490,7 @@ savePlaceView state push =
               , height WRAP_CONTENT
               , gravity CENTER_VERTICAL
               , padding (PaddingRight 8)
-              , width $ V (4 * (EHC.screenWidth unit / 5) - 60)
+              , width $ V (4 * (EHC.screenWidth unit / 5) - 75)
               , maxLines 1
               , ellipsize true 
               ]
@@ -559,7 +559,7 @@ tagView state push =
       , orientation HORIZONTAL
       ](DA.mapWithIndex (\index item -> 
           linearLayout
-          [ height $ V 36
+          [ height WRAP_CONTENT
           , width WRAP_CONTENT
           , orientation HORIZONTAL
           , gravity CENTER 
@@ -582,7 +582,6 @@ tagView state push =
               [ text  item.text
               , textSize FontSize.a_12
               , lineHeight "16"
-              , height $ V 36
               , gravity CENTER
               , color if (Just index) == state.data.activeIndex then Color.blue900 else Color.black800
               , fontStyle $ FontStyle.medium LanguageStyle

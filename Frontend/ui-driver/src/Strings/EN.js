@@ -274,7 +274,7 @@ const englishStrings = {
   MAX_CHAR_LIMIT_REACHED: "Max character limit reached,",
   SHOW_ALL_OPTIONS: "Show all options",
   UPDATE_REQUIRED: "Update Required",
-  PLEASE_UPDATE_APP_TO_CONTINUE_SERVICE: "Please update app to continue service",
+  PLEASE_UPDATE_APP_TO_CONTINUE_SERVICE: "We're excited to announce that there's a new update available for our app. This update includes a fresh new design and several new features to make your experience even better.",
   NOT_NOW: "Not now",
   OF: "of",
   DROP: "Drop",
@@ -344,5 +344,6 @@ const englishStrings = {
   ENTER_PASSWORD: "Enter Password",
   YOUR_VEHICLE: "Your Vehicle",
   BOOKING_OPTIONS: "Booking Options",
-  OTP: "OTP"
+  OTP: "OTP",
+  MAKE_YOURSELF_AVAILABLE_FOR : "Make Yourself Available for"
 }

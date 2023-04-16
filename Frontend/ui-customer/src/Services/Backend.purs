@@ -714,7 +714,7 @@ originServiceabilityBT req = do
     errorHandler (errorPayload) =  do
             BackT $ pure GoBack
 
-destServiceabilityBT :: ServiceabilityReq -> FlowBT String ServiceabilityRes
+destServiceabilityBT :: DestinationServiceabilityReq -> FlowBT String ServiceabilityResDestination
 destServiceabilityBT req = do 
     headers <- getHeaders' ""
     withAPIResultBT ((EP.serviceabilityDest "" )) (\x → x) errorHandler (lift $ lift $ callAPI headers req)
@@ -724,6 +724,14 @@ destServiceabilityBT req = do
 
 makeServiceabilityReq :: Number -> Number -> ServiceabilityReq
 makeServiceabilityReq latitude longitude = ServiceabilityReq {
+    "location" : LatLong {
+                "lat" : latitude,
+                "lon" : longitude
+            }
+    }
+
+makeServiceabilityReqForDest :: Number -> Number -> DestinationServiceabilityReq
+makeServiceabilityReqForDest latitude longitude = DestinationServiceabilityReq {
     "location" : LatLong {
                 "lat" : latitude,
                 "lon" : longitude
