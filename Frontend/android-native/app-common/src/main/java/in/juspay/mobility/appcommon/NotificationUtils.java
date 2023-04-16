@@ -79,7 +79,7 @@ public class NotificationUtils extends AppCompatActivity {
     private static boolean hasStartedService = false;
     public static OverlaySheetService.OverlayBinder binder;
     public static ArrayList<Bundle> listData = new ArrayList();
-//    private static RideRequestUtils rideRequestUtils = new RideRequestUtils();
+    private static RideRequestUtils rideRequestUtils = new RideRequestUtils();
 
     @SuppressLint("MissingPermission")
     private static FirebaseAnalytics mFirebaseAnalytics;
@@ -270,28 +270,27 @@ public class NotificationUtils extends AppCompatActivity {
                             }
                         }, BIND_AUTO_CREATE);
                     } else {
-                        // COMMENTED CHECK
-//                        if (overlayFeatureNotAvailable(context)){
-//                            try{
-//                                mFirebaseAnalytics.logEvent("low_ram_device",params);
-//                                if (RideRequestActivity.getInstance() == null){
-//                                    Intent intent = new Intent(context.getApplicationContext(), RideRequestActivity.class);
-//                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-//                                    intent.putExtras(sheetData);
-//                                    context.getApplicationContext().startActivity(intent);
-//                                }else {
-//                                    RideRequestActivity.getInstance().addToList(sheetData);
-//                                }
-//                                lastRideReq = new Bundle();
-//                                lastRideReq.putAll(sheetData);
-//                                lastRideReq.putBoolean("rideReqExpired", rideReqExpired);
-//                                startMediaPlayer(context, R.raw.allocation_request);
-//                                rideRequestUtils.createRideRequestNotification(context);
-//                            }catch (Exception e){
-//                                params.putString("exception", e.toString());
-//                                mFirebaseAnalytics.logEvent("exception_in_opening_ride_req_activity",params);
-//                            }
-//                        }
+                        if (overlayFeatureNotAvailable(context)){
+                            try{
+                                mFirebaseAnalytics.logEvent("low_ram_device",params);
+                                if (RideRequestActivity.getInstance() == null){
+                                    Intent intent = new Intent(context.getApplicationContext(), RideRequestActivity.class);
+                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                                    intent.putExtras(sheetData);
+                                    context.getApplicationContext().startActivity(intent);
+                                }else {
+                                    RideRequestActivity.getInstance().addToList(sheetData);
+                                }
+                                lastRideReq = new Bundle();
+                                lastRideReq.putAll(sheetData);
+                                lastRideReq.putBoolean("rideReqExpired", rideReqExpired);
+                                startMediaPlayer(context, R.raw.allocation_request);
+                                rideRequestUtils.createRideRequestNotification(context);
+                            }catch (Exception e){
+                                params.putString("exception", e.toString());
+                                mFirebaseAnalytics.logEvent("exception_in_opening_ride_req_activity",params);
+                            }
+                        }
 
                         Log.i("notificationCallback_size", Integer.toString(notificationCallback.size()));
                         System.out.println("no_overlay_permission" + " <> " + searchRequestId + " <> " + sharedPref.getString("DRIVER_ID","null"));

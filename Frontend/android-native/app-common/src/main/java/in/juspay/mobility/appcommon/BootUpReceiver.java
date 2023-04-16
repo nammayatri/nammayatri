@@ -22,29 +22,27 @@ public class BootUpReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        // COMMENTED CHECK
-//        Intent locationUpdateService = new Intent(context, LocationUpdateService.class);
-//        locationUpdateService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+        Intent locationUpdateService = new Intent(context, LocationUpdateService.class);
+        locationUpdateService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
         Intent widgetReloadService = new Intent(context, WidgetService.class);
         widgetReloadService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
         SharedPreferences sharedPrefs = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         String driverStatus = sharedPrefs.getString("DRIVER_STATUS", "__failed");
-        // COMMENTED CHECK
-//        if ((context.getResources().getString(R.string.service)).equals("nammayatripartner")) {
-//            if (driverStatus.equals("true")) {
-//                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-//                    context.startForegroundService(locationUpdateService);
-//                } else {
-//                    context.startService(locationUpdateService);
-//                }
-//            }
-//            if(Settings.canDrawOverlays(context)){
-//                try{
-//                    context.startService(widgetReloadService);
-//                } catch (Exception e) {
-//                    Log.e("BootUpReceiver", "Unable to Start Widget Service");
-//                }
-//            }
-//        }
+        if ((context.getResources().getString(R.string.service)).equals("nammayatripartner")) {
+            if (driverStatus.equals("true")) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.startForegroundService(locationUpdateService);
+                } else {
+                    context.startService(locationUpdateService);
+                }
+            }
+            if(Settings.canDrawOverlays(context)){
+                try{
+                    context.startService(widgetReloadService);
+                } catch (Exception e) {
+                    Log.e("BootUpReceiver", "Unable to Start Widget Service");
+                }
+            }
+        }
     }
 }
