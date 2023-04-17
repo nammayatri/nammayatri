@@ -177,21 +177,7 @@ view push state =
             , orientation VERTICAL
             , background Color.white900
             ,cornerRadius 50.0
-            ][ linearLayout
-                [
-                  width MATCH_PARENT
-                , height WRAP_CONTENT  
-                , orientation VERTICAL
-                , PP.cornerRadii $ PTD.Corners 24.0  false false true true
-                , background $ Color.white900
-                , stroke $ "1," <> "#E5E7EB"
-                ][
-                  driverDetail2 push state
-                  , driverActivityStatus state
-                  -- , updateLocationAndLastUpdatedView2 state push
-                  , statsModel2 push state      
-                ]
-              , linearLayout
+            ][  linearLayout
                 [ width MATCH_PARENT
                 , height $ V 2
                 , background Color.greyTextColor
@@ -206,19 +192,38 @@ view push state =
                   --   , width MATCH_PARENT
                   --   , background Color.blackLessTrans
                   --   ][]
-                  , if not state.props.statusOnline then showOfflineStatus push state else dummyTextView
-                  , linearLayout[
-                    width MATCH_PARENT
-                    , height WRAP_CONTENT
-                    , gravity RIGHT
-                    , orientation VERTICAL
-                    , weight 1.0
-                    ][
-                      if not state.props.rideActionModal && (state.props.driverStatusSet == Online || state.props.driverStatusSet == Silent)  then updateLocationAndLastUpdatedView2 state push else dummyTextView
-                      , viewRecenterAndSupport state push
+                  , if state.props.driverStatusSet == Offline then offlineView push state else dummyTextView
+                  , linearLayout
+                   [ width MATCH_PARENT
+                   , height WRAP_CONTENT
+                   , orientation VERTICAL ]
+                   [ linearLayout
+                      [
+                        width MATCH_PARENT
+                      , height WRAP_CONTENT  
+                      , orientation VERTICAL
+                      , PP.cornerRadii $ PTD.Corners 24.0  false false true true
+                      , background $ Color.white900
+                      , stroke $ "1," <> "#E5E7EB"
+                      ][
+                        driverDetail2 push state
+                        , driverActivityStatus state
+                        -- , updateLocationAndLastUpdatedView2 state push
+                        , statsModel2 push state      
+                      ]
+                  -- , if not state.props.statusOnline then showOfflineStatus push state else dummyTextView
+                    , linearLayout[
+                      width MATCH_PARENT
+                      , height WRAP_CONTENT
+                      , gravity RIGHT
+                      , orientation VERTICAL
+                      , weight 1.0
+                      ][
+                        if not state.props.rideActionModal && (state.props.driverStatusSet == Online || state.props.driverStatusSet == Silent)  then updateLocationAndLastUpdatedView2 state push else dummyTextView
+                        , viewRecenterAndSupport state push
+                      ]
                     ]
                   ]
-              
               ]
         , bottomNavBar push state 
         ]
@@ -276,6 +281,102 @@ recenterBtnView state push =
     ]
   ]
 
+offlineView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+offlineView push state = 
+  linearLayout[
+          width MATCH_PARENT
+        , height MATCH_PARENT--(V 200)
+        -- , alignParentBottom "true,-1"
+        , gravity BOTTOM
+        , background "#2C2F3A80"
+        -- , PP.cornerRadii $ PTD.Corners 40.0 true true false false
+        ][ 
+        --  linearLayout
+        --     [ height WRAP_CONTENT
+        --     , width MATCH_PARENT
+        --     , PP.cornerRadii $ PTD.Corners 40.0 true true false false 
+        --     , orientation VERTICAL
+        --     , background Color.red
+        --     , gravity BOTTOM
+        --     ][ 
+        --       -- textView
+        --       -- [width MATCH_PARENT
+        --       -- , height WRAP_CONTENT
+        --       -- , text "You are currently offline. \n To get ride requests, go online now!"
+        --       -- , gravity CENTER
+        --       -- , margin $ MarginBottom 20 
+        --       -- ]
+        --     ]
+        --   , 
+          frameLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          ][
+            linearLayout
+            [ height MATCH_PARENT
+            , width MATCH_PARENT
+            , gravity BOTTOM
+            ][
+          linearLayout 
+            [ height (V 140)
+            , width MATCH_PARENT
+            , gravity BOTTOM
+            , background Color.white900
+            , PP.cornerRadii $ PTD.Corners 40.0 true true false false
+            ][
+              textView
+              [
+                height WRAP_CONTENT
+              , width MATCH_PARENT
+              , gravity CENTER_HORIZONTAL
+              , margin $ MarginBottom 10
+              , text "You are currently offline. \n To get ride requests, go online now!"
+              , textSize FontSize.a_14
+              ]
+            ]
+            ]
+         , linearLayout
+            [ height (V 205)
+            , width MATCH_PARENT
+            , gravity CENTER_HORIZONTAL
+            ][ linearLayout
+              [ height WRAP_CONTENT 
+              , width WRAP_CONTENT
+              -- , gravity CENTER
+              ][ 
+                frameLayout
+                [ height MATCH_PARENT
+                , width MATCH_PARENT
+                ][ linearLayout
+                  [ height $ V 132
+                  , width $ V 132
+                  , cornerRadius 75.0
+                  , background "#53BB6F"
+                  , onClick  push  (const $ SwitchDriverStatus Online)
+                  ][]
+                , textView
+                  [ height MATCH_PARENT
+                  , width MATCH_PARENT
+                  , gravity CENTER
+                  , text "GO!"
+                  , textSize FontSize.a_32
+                  , fontStyle $ FontStyle.bold LanguageStyle
+                  , color Color.white900
+                  ]
+              ]
+            ]
+          ]
+          ]
+        ]
+
+popupmodal :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+popupmodal push state =
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , background Color.blackLessTrans
+    , visibility if state.props.silentPopUpView then VISIBLE else GONE
+    ][PopUpModal.view (push <<< PopUpModalAction) (silentModeConfig state )]
 driverDetail :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 driverDetail push state = 
   linearLayout

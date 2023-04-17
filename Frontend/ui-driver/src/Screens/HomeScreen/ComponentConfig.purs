@@ -35,6 +35,7 @@ import Screens.Types as ST
 import Styles.Colors as Color
 import Storage (KeyStore(..), getValueToLocalStore)
 
+
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
 rideActionModalConfig state = let 
@@ -206,3 +207,29 @@ pickupSuggestions _ =
     (getString PLEASE_COME_FAST_I_AM_WAITING),
     (getString UNREACHABLE_PLEASE_CALL_BACK)
   ]
+silentModeConfig :: ST.HomeScreenState -> PopUpModal.Config
+silentModeConfig state = let
+  config' = PopUpModal.config
+  popUpConfig' = config'{
+    gravity = CENTER
+  , cornerRadius = (PTD.Corners 15.0 true true true true)
+  , margin = (Margin 16 0 16 0)
+  , primaryText {
+      text = getString CONTACT_SUPPORT <>"?"
+    }
+  , secondaryText {
+      text = getString YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT
+    }
+    , option1 {
+     text =  getString CANCEL
+    }
+  , option2 {
+      text =  getString CALL_SUPPORT
+    }
+  }
+  in popUpConfig'
+
+
+
+
+

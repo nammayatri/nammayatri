@@ -90,6 +90,7 @@ initData = {
         chatcallbackInitiated : false,
         sendMessageActive : false,
         unReadMessages : false
+        silentPopUpView : false
     }
 }
 

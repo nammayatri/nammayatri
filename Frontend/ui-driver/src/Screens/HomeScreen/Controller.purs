@@ -46,6 +46,7 @@ import PrestoDOM.Types.Core (class Loggable)
 import Resource.Constants (decodeAddress)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types as ST
+-- import Screens.Types(DriverStatus(..))
 import Services.APITypes (GetRidesHistoryResp, RidesInfo(..), Status(..))
 import Services.Accessor (_lat, _lon)
 import Services.Config (getCustomerNumber)
@@ -191,7 +192,9 @@ data Action = NoAction
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
-eval (SwitchDriverStatus status) state = continue state{ props { driverStatusSet = status } }
+eval (SwitchDriverStatus status) state = do
+  if (state.props.driverStatusSet == ST.Online) && (status == ST.Offline) then continue state{ props {silentPopUpView = true }} 
+  else continue state{ props { driverStatusSet = status } }
 
 eval AfterRender state = do 
   continue state{props{mapRendered= true}}
