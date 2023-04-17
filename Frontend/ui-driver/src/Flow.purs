@@ -23,18 +23,16 @@ import Data.Either (Either(..))
 import Data.Int (round, toNumber, ceil)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
-import Data.Number (fromString)
+import Data.Number (fromString) as Number
 import Data.String (Pattern(..), split, toUpper)
 import Data.Time.Duration (Milliseconds(..))
-import Debug.Trace (spy)
+import Debug (spy)
 import Effect (Effect)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (liftFlow, getNewIDWithTag, bundleVersion, os, getExpiryTime)
 import Foreign.Class (class Encode, encode, decode)
-import Global (readFloat)
-import Helpers.Utils (getCurrentUTC)
-import Helpers.Utils (hideSplash, getTime, convertUTCtoISC, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getCorrespondingErrorMessage, getcurrentdate)
+import Helpers.Utils (getCurrentUTC, hideSplash, getTime, convertUTCtoISC, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getCorrespondingErrorMessage, getcurrentdate)
 import JBridge (drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, loaderText, openNavigation, removeAllPolylines, removeMarker, showMarker, startLocationPollingAPI, stopLocationPollingAPI, toast, toggleLoader, generateSessionId, stopChatListenerService, hideKeyboardOnNavigation)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -172,12 +170,12 @@ getDriverInfoFlow = do
         let (Vehicle linkedVehicle) = (fromMaybe dummyVehicleObject getDriverInfoResp.linkedVehicle)
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data = homeScreen.data {driverName = getDriverInfoResp.firstName, vehicleType = linkedVehicle.variant ,  driverAlternateMobile =getDriverInfoResp.alternateNumber   }
                                                                            , props {statusOnline =  if (isJust getDriverInfoResp.mode) then
-                                                                                                        (any( _ == (updateDriverStatus getDriverInfoResp.active))[Online, Silent]) 
-                                                                                                    else getDriverInfoResp.active 
+                                                                                                        (any( _ == (updateDriverStatus getDriverInfoResp.active))[Online, Silent])
+                                                                                                    else getDriverInfoResp.active
                                                                                     }
                                                                             }
                                                 )
-        modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> driverDetailsScreen 
+        modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> driverDetailsScreen
          {data = driverDetailsScreen.data { driverName = getDriverInfoResp.firstName,
         driverVehicleType = linkedVehicle.variant,
         driverRating = getDriverInfoResp.rating,
@@ -216,7 +214,7 @@ getDriverInfoFlow = do
 
 
 onBoardingFlow :: FlowBT String Unit
-onBoardingFlow = do 
+onBoardingFlow = do
   _ <- pure $ hideKeyboardOnNavigation true
   (DriverRegistrationStatusResp resp ) <- driverRegistrationStatusBT (DriverRegistrationStatusReq { })
   lift $ lift $ doAff do liftEffect hideSplash
@@ -418,7 +416,7 @@ applicationSubmittedFlow screenType = do
       let (GlobalState defaultEpassState') = defaultGlobalState
       modifyScreenState $ UploadDrivingLicenseScreenStateType (\uploadDrivingLicenseScreen -> defaultEpassState'.uploadDrivingLicenseScreen)
       modifyScreenState $ AddVehicleDetailsScreenStateType (\addVehicleDetailsScreen -> defaultEpassState'.addVehicleDetailsScreen)
-      addVehicleDetailsflow 
+      addVehicleDetailsflow
     VALIDATE_NUMBER state -> do
       getAlternateMobileResp <- lift $ lift $ Remote.validateAlternateNumber (makeValidateAlternateNumberRequest (state.data.mobileNumber))
       case  getAlternateMobileResp of
@@ -433,7 +431,7 @@ applicationSubmittedFlow screenType = do
                 modifyScreenState $ ApplicationStatusScreenType (\applicationStatusScreen -> state {props{enterMobileNumberView = false,enterOtp=false,buttonVisibilty=false}})
               applicationSubmittedFlow screenType
     VALIDATE_OTP state -> do
-      getVerifyAlternateMobileOtpResp <- lift $ lift $ Remote.verifyAlternateNumberOTP (makeVerifyAlternateNumberOtpRequest (state.data.otpValue)) 
+      getVerifyAlternateMobileOtpResp <- lift $ lift $ Remote.verifyAlternateNumberOTP (makeVerifyAlternateNumberOtpRequest (state.data.otpValue))
       case getVerifyAlternateMobileOtpResp of
         Right (DriverAlternateNumberOtpResp resp) -> do
           pure $ toast $ getString NUMBER_ADDED_SUCCESSFULLY
@@ -450,8 +448,8 @@ applicationSubmittedFlow screenType = do
               applicationSubmittedFlow screenType
             else do
               pure $ toast (decodeErrorCode errorPayload.response.errorMessage)
-              applicationSubmittedFlow screenType 
-    RESEND_OTP_TO_ALTERNATE_NUMBER state-> do 
+              applicationSubmittedFlow screenType
+    RESEND_OTP_TO_ALTERNATE_NUMBER state-> do
       let number =  state.data.mobileNumber
       getAlternateMobileResendOtpResp <- lift $ lift $ Remote.resendAlternateNumberOTP (makeResendAlternateNumberOtpRequest (number))
       case getAlternateMobileResendOtpResp of
@@ -821,14 +819,14 @@ homeScreenFlow = do
   let (Vehicle linkedVehicle) = (fromMaybe dummyVehicleObject getDriverInfoResp.linkedVehicle)
   setValueToLocalStore USER_NAME getDriverInfoResp.firstName
   _ <- pure $ spy "response for mode zxc" getDriverInfoResp
-  case getDriverInfoResp.mode of 
-    Just currentMode -> case currentMode of 
+  case getDriverInfoResp.mode of
+    Just currentMode -> case currentMode of
                           "OFFLINE" -> do
                               lift $ lift $ liftFlow $ stopLocationPollingAPI
                               setDriverStatusInLocal "false" (show $ getDriverStatusFromMode currentMode)
                               _ <- pure $ spy "setting offline zxc " (getValueToLocalStore DRIVER_STATUS_N)
                               pure unit
-                          _ ->        do 
+                          _ ->        do
                                       setDriverStatusInLocal "true" (show $ getDriverStatusFromMode currentMode)
                                       lift $ lift $ liftFlow $ startLocationPollingAPI
                                       _ <- pure $ spy "setting ONLINE/SILENT zxc " (getValueToLocalStore DRIVER_STATUS_N)
@@ -842,15 +840,15 @@ homeScreenFlow = do
                 _ <- pure $ spy "Checking respons for mode " resp
                 pure unit
 
-  
+
   _  <- pure $ spy "DRIVERRRR___STATUs" (getValueToLocalNativeStore DRIVER_STATUS)
   _  <- pure $ spy "DRIVERRRR___STATUS LOCAL" (getValueToLocalStore DRIVER_STATUS)
   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {statusOnline = if (isJust getDriverInfoResp.mode) then
-                                                                                                (any( _ == (updateDriverStatus (getDriverInfoResp.active)))[Online, Silent]) 
-                                                                                             else getDriverInfoResp.active 
+                                                                                                (any( _ == (updateDriverStatus (getDriverInfoResp.active)))[Online, Silent])
+                                                                                             else getDriverInfoResp.active
                                                                             , driverStatusSet = getDriverStatus "" }
                                                                       , data{vehicleType = linkedVehicle.variant, driverAlternateMobile =getDriverInfoResp.alternateNumber}})
-  
+
   modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen {data{driverVehicleType = linkedVehicle.variant, driverRating = getDriverInfoResp.rating}})
   modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> driverDetailsScreen { data {driverAlternateMobile =getDriverInfoResp.alternateNumber}})
   modifyScreenState $ ReferralScreenStateType (\ referralScreen -> referralScreen{ data { driverInfo  {  driverName = getDriverInfoResp.firstName, driverMobile = getDriverInfoResp.mobileNumber,  vehicleRegNumber = linkedVehicle.registrationNo , referralCode = getDriverInfoResp.referralCode }}})
@@ -887,7 +885,7 @@ homeScreenFlow = do
       _ <- pure $ printLog "Lon in Floww: " lon
       void $ lift $ lift $ loaderText (getString START_RIDE) ""
       void $ lift $ lift $ toggleLoader true
-      startRideResp <- lift $ lift $ Remote.startRide id (Remote.makeStartRideReq otp (fromMaybe 0.0 (fromString lat)) (fromMaybe 0.0 (fromString lon))) -- driver's lat long during starting ride
+      startRideResp <- lift $ lift $ Remote.startRide id (Remote.makeStartRideReq otp (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon))) -- driver's lat long during starting ride
       case startRideResp of
         Right startRideResp -> do
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props {enterOtpModal = false, showDottedRoute = true}, data{ route = [], activeRide{status = INPROGRESS}}})
@@ -909,7 +907,7 @@ homeScreenFlow = do
       _ <- pure $ printLog "HOME_SCREEN_FLOW GO_TO_END_RIDE" "."
       void $ lift $ lift $ loaderText (getString END_RIDE) ""
       void $ lift $ lift $ toggleLoader true
-      endRideResp <- Remote.endRide id (Remote.makeEndRideReq (fromMaybe 0.0 (fromString lat)) (fromMaybe 0.0 (fromString lon)))-- driver's  lat long during ending ride
+      endRideResp <- Remote.endRide id (Remote.makeEndRideReq (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon)))-- driver's  lat long during ending ride
       _ <- pure $ setValueToLocalNativeStore IS_RIDE_ACTIVE  "false"
       _ <- pure $ setValueToLocalStore DRIVER_STATUS_N "Online"
       _ <- pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
@@ -1034,8 +1032,8 @@ homeScreenFlow = do
 
 constructLatLong :: String -> String -> Location
 constructLatLong lat lng =
-  { lat: readFloat lat
-  , lon : readFloat lng
+  { lat: fromMaybe 0.0 (Number.fromString lat)
+  , lon : fromMaybe 0.0 (Number.fromString lng)
   , place : ""
   }
 
@@ -1142,9 +1140,9 @@ removeChatService _ = do
   pure unit
 
 setDriverStatusInLocal :: String -> String -> FlowBT String Unit
-setDriverStatusInLocal status mode = do 
+setDriverStatusInLocal status mode = do
                                     setValueToLocalStore DRIVER_STATUS status
                                     setValueToLocalNativeStore DRIVER_STATUS status
-                                    setValueToLocalStore DRIVER_STATUS_N mode 
+                                    setValueToLocalStore DRIVER_STATUS_N mode
                                     setValueToLocalNativeStore DRIVER_STATUS_N mode
                                     pure unit

@@ -23,6 +23,7 @@ import Control.Monad.State as S
 import Data.Either (Either(..))
 import Data.Function.Uncurried (Fn2)
 import Data.Maybe (fromMaybe, Maybe(..))
+import Data.Number.Format (toStringWith, fixed) as Number
 import Effect (Effect)
 import Effect.Aff (Aff, makeAff, nonCanceler, try)
 import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
@@ -186,3 +187,6 @@ numericVersion versionName = do
       minorUpdateIndex = fromMaybe (0) $ INT.fromString $ fromMaybe "NA" $ versionArray !! 1
       patchUpdateIndex = fromMaybe (0) $ INT.fromString $ fromMaybe "NA" $ versionArray !! 2
   (majorUpdateIndex * 100 + minorUpdateIndex * 10 + patchUpdateIndex)
+
+parseFloat :: Number -> Int -> String
+parseFloat num prec = Number.toStringWith (Number.fixed prec) num

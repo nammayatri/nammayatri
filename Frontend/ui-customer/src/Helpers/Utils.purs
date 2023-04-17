@@ -13,7 +13,11 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Helpers.Utils where
+module Helpers.Utils
+    ( module Helpers.Utils
+    , module ReExport
+    )
+    where
 
 import Components.LocationListItem.Controller (dummyLocationListState)
 import Control.Monad.Except (runExcept)
@@ -25,7 +29,6 @@ import Data.Foldable (or)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Number.Format (toStringWith, fixed) as Number
 import Data.Profunctor.Strong (first)
 import Data.String as DS
 import Data.Traversable (traverse)
@@ -37,6 +40,7 @@ import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
 import Effect.Class (liftEffect)
 import Effect.Console (logShow)
 import Engineering.Helpers.Commons (liftFlow, os, isPreviousVersion)
+import Engineering.Helpers.Commons (parseFloat, setText') as ReExport
 import Foreign.Class (class Decode, class Encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
 import Juspay.OTP.Reader (initiateSMSRetriever)
@@ -94,10 +98,6 @@ foreign import getTime :: Unit -> Int
 
 -- foreign import generateSessionToken :: String -> String
 foreign import requestKeyboardShow :: String -> Effect Unit
-
-foreign import setTextImpl :: String -> String -> Effect Unit
-setText' :: String -> String -> Effect Unit
-setText' = setTextImpl
 
 foreign import addTimeToDate :: Date -> Number -> String -> Date
 
@@ -344,6 +344,3 @@ rotateArray arr times =
 
 isHaveFare :: String -> Array FareComponent -> Boolean
 isHaveFare fare = not null <<< filter (\item -> item.fareType == fare)
-
-parseFloat :: Number -> Int -> String
-parseFloat num prec = Number.toStringWith (Number.fixed prec) num
