@@ -103,17 +103,164 @@ let upstream =
         sha256:a6d66723b6109f1e3eaf6575910f1c51aa545965ce313024ba329360e2f009ac
 
 in  upstream
-  with presto = /home/ben/code/juspay/purescript-presto/spago.dhall as Location
+  with presto =
+    { dependencies =
+      [ "aff"
+      , "avar"
+      , "datetime"
+      , "effect"
+      , "either"
+      , "exceptions"
+      , "exists"
+      , "foldable-traversable"
+      , "foreign"
+      , "foreign-generic"
+      , "foreign-object"
+      , "free"
+      , "identity"
+      , "maybe"
+      , "newtype"
+      , "parallel"
+      , "prelude"
+      , "record"
+      , "transformers"
+      , "tuples"
+      , "unsafe-coerce"
+      ]
+    , repo = "https://github.com/belevy/purescript-presto.git"
+    , version = "p-0.15-master"
+    }
   with backtrack =
-      /home/ben/code/juspay/purescript-backtrack/spago.dhall as Location
+    { dependencies =
+      [ "control", "effect", "prelude", "tailrec", "transformers" ]
+    , repo = "https://github.com/belevy/purescript-backtrack.git"
+    , version = "ps-0.15"
+    }
   with presto-dom =
-      /home/ben/code/juspay/purescript-presto-dom/spago.dhall as Location
+    { dependencies =
+      [ "effect"
+      , "prelude"
+      , "hyrule"
+      , "halogen-vdom"
+      , "tracker"
+      , "presto"
+      , "aff"
+      , "arrays"
+      , "control"
+      , "either"
+      , "exceptions"
+      , "foldable-traversable"
+      , "foreign"
+      , "foreign-generic"
+      , "foreign-object"
+      , "functions"
+      , "integers"
+      , "lists"
+      , "maybe"
+      , "newtype"
+      , "refs"
+      , "strings"
+      , "transformers"
+      , "tuples"
+      , "typelevel-prelude"
+      , "unsafe-coerce"
+      , "web-dom"
+      , "web-events"
+      ]
+    , repo = "https://github.com/belevy/purescript-presto-dom.git"
+    , version = "nammaYatri-p-0.15"
+    }
   with halogen-vdom =
-      /home/ben/code/juspay/purescript-halogen-vdom/spago.dhall as Location
+    { dependencies =
+      [ "effect"
+      , "prelude"
+      , "foreign-object"
+      , "arrays"
+      , "bifunctors"
+      , "foreign"
+      , "functions"
+      , "maybe"
+      , "newtype"
+      , "nullable"
+      , "refs"
+      , "tuples"
+      , "unsafe-coerce"
+      , "web-dom"
+      , "web-events"
+      ]
+    , repo = "https://github.com/belevy/purescript-halogen-vdom.git"
+    , version = "p-0.15.6-master"
+    }
   with foreign-generic =
-      /home/ben/code/juspay/purescript-foreign-generic/spago.dhall as Location
+    { dependencies =
+      [ "assert"
+      , "console"
+      , "effect"
+      , "exceptions"
+      , "foreign"
+      , "foreign-object"
+      , "identity"
+      , "prelude"
+      , "record"
+      , "arrays"
+      , "bifunctors"
+      , "control"
+      , "either"
+      , "foldable-traversable"
+      , "lists"
+      , "maybe"
+      , "newtype"
+      , "partial"
+      , "strings"
+      , "transformers"
+      , "tuples"
+      , "unsafe-coerce"
+      ]
+    , repo = "https://github.com/juspay/purescript-foreign-generic.git"
+    , version = "main"
+    }
   with tracker =
-      /home/ben/code/juspay/purescript-tracker/spago.dhall as Location
+    { dependencies =
+      [ "effect"
+      , "prelude"
+      , "presto"
+      , "arrays"
+      , "debug"
+      , "foldable-traversable"
+      , "foreign"
+      , "foreign-generic"
+      , "foreign-object"
+      , "maybe"
+      , "strings"
+      ]
+    , repo = "https://github.com/belevy/purescript-tracker.git"
+    , version = "91653fb800192b9ff9f9026b2841061339ced7d2"
+    }
   with otp-reader =
-      /home/ben/code/juspay/purescript-otp-reader/spago.dhall as Location
+    { dependencies =
+      [ "effect"
+      , "prelude"
+      , "presto"
+      , "foreign-generic"
+      , "tracker"
+      , "aff"
+      , "arrays"
+      , "avar"
+      , "datetime"
+      , "either"
+      , "exceptions"
+      , "foldable-traversable"
+      , "foreign"
+      , "foreign-object"
+      , "maybe"
+      , "newtype"
+      , "numbers"
+      , "parallel"
+      , "refs"
+      , "strings"
+      , "transformers"
+      ]
+    , repo = "https://github.com/belevy/purescript-otp-reader.git"
+    , version = "p-0.15-master"
+    }
   with beckn-common = ./ui-common/spago.dhall as Location
