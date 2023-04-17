@@ -39,7 +39,9 @@ export function getStringMLValue(key){
 }
 
 const yatriPartnerConfigs = {
-    RC_VALIDATION_TEXT : "KL"
+    RC_VALIDATION_TEXT : "KL",
+    DOCUMENT_LINK : "https://docs.google.com/document/d/1zmQWO_L4EjyCXC3xSlp1f3DS2wI4HfbHxg42tXelWe0/edit?usp=sharing",
+    APP_LINK : "https://play.google.com/store/apps/details?id=net.openkochi.yatripartner"
 }
 
 const malayalamStrings = {

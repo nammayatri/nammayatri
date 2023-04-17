@@ -22,7 +22,7 @@ import Prelude (Unit, ($), const, unit, not,(<>),(/),(-))
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Styles.Colors as Color
-import PrestoDOM (PrestoDOM, Orientation(..), Gravity(..), Length(..), Padding(..), Margin(..), Visibility(..), margin, padding, orientation, height, width, linearLayout, imageView, imageUrl, text, textView, textSize, fontStyle, gravity, clickable, onClick, color, background, lineHeight, visibility, cornerRadius, stroke, ellipsize, maxLines, imageWithFallback)
+import PrestoDOM (PrestoDOM, Orientation(..), Gravity(..), Length(..), Padding(..), Margin(..), Visibility(..), margin, padding, orientation, height, width, linearLayout, imageView, imageUrl, text, textView, textSize, fontStyle, gravity, clickable, onClick, color, background, lineHeight, visibility, cornerRadius, stroke, ellipsize, maxLines, imageWithFallback, weight)
 import Debug.Trace (spy)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -74,7 +74,7 @@ savedLocationView state push =
       ][  linearLayout
           [ orientation HORIZONTAL
           , height WRAP_CONTENT
-          , width $ V ((screenWidth unit / 2) - 28)
+          , weight 1.0
           , onClick push $ if (not state.isEditEnabled) then const (CardClicked state) else const (EditLocation state)
           ][  textView
               [ text case (getCardType (fromMaybe "" state.cardType)) of 

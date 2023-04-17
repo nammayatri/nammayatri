@@ -51,7 +51,9 @@ const config = {
   "showRateCard" : "true",
   "showDashboard" : "true",
   "shareAppTitle" : "Share Namma Yatri!",
-  "shareAppContent" : "Hey there!\n\nCheck India's first Zero Commission auto booking app.\n100% Open source | 100% Open Data\n\nDownload Namma Yatri now! \nhttps://nammayatri.in/link/rider/SJ8D \n\n #beOpen #chooseOpen"
+  "shareAppContent" : "Hey there!\n\nCheck India's first Zero Commission auto booking app.\n100% Open source | 100% Open Data\n\nDownload Namma Yatri now! \nhttps://nammayatri.in/link/rider/SJ8D \n\n #beOpen #chooseOpen",
+  "DOCUMENT_LINK" : "https://docs.google.com/document/d/1-oRR_oI8ncZRPZvFZEJZeCVQjTmXTmHA/edit?usp=share_link&ouid=115428839751313950285&rtpof=true&sd=true",
+  "APP_LINK" : getAppLink(window.__OS)
 }
 
 const kannadaStrings = {
@@ -61,4 +63,10 @@ const hindiStrings = {
 }
 
 const englishStrings = {
+}
+
+function getAppLink(os) {
+  if (os == "ANDROID"){
+      return "https://play.google.com/store/apps/details?id=in.juspay.nammayatri"
+  }else {return "https://apps.apple.com/in/app/namma-yatri/id1637429831"}
 }

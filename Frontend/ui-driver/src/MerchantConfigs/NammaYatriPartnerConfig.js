@@ -59,7 +59,9 @@ export function getStringTAValue(key){
 
 
 const nammaYatriConfigs = {
-    RC_VALIDATION_TEXT : "KA"
+    RC_VALIDATION_TEXT : "KA",
+    DOCUMENT_LINK : "https://drive.google.com/file/d/1qYXbQUF4DVo2xNOawkHNTR_VVe46nggc/view?usp=sharing",
+    APP_LINK : "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner"
 }
 
 const kannadaStrings = {

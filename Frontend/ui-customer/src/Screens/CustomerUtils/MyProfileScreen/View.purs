@@ -84,7 +84,7 @@ view push state =
             [ width MATCH_PARENT
             , height MATCH_PARENT
             , gravity RIGHT
-            , margin (Margin 0 0 25 0)
+            , margin (Margin 0 0 16 0)
             , visibility if not state.props.updateProfile then VISIBLE else GONE
             ][ linearLayout
                [ width WRAP_CONTENT

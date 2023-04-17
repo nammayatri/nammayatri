@@ -42,7 +42,9 @@ const config = {
     "showRateCard" : "false",
     "showDashboard" : "false",
     "shareAppTitle" : "Share Yatri!",
-    "shareAppContent" : "Hey there!\n\nYatri is Coming soon"
+    "shareAppContent" : "Hey there!\n\nYatri is Coming soon",
+    "DOCUMENT_LINK" : "https://docs.google.com/document/d/1zmQWO_L4EjyCXC3xSlp1f3DS2wI4HfbHxg42tXelWe0/edit?usp=sharing",
+    "APP_LINK" : getAppLink(window.__OS)
 }
 
 const malayalamStrings = {
@@ -67,3 +69,9 @@ const englishStrings = {
     "ABOUT_REFERRAL_PROGRAM_DISCRIPTION": "The referral program incentivises drivers to accept more rides, cancel less and serve you better by recognising and rewarding worthy drivers. \n\n You can help out by entering the driver’s referral code  and improve the quality of rides for the Yatri Community!",
     "YOU_CAN_GET_REFERRAL_CODE_FROM_DRIVER": "\nYou can get a referral code by asking your Yatri Driver."
   }
+
+function getAppLink(os) {
+    if (os == "ANDROID"){
+        return "https://play.google.com/store/apps/details?id=net.openkochi.yatri"
+    }else {return ""}
+}

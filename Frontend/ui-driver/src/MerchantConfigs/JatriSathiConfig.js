@@ -49,7 +49,9 @@ export function getStringBNValue(key){
 
 
 const jatriSathiConfigs = {
-    RC_VALIDATION_TEXT : "WB"
+    RC_VALIDATION_TEXT : "WB",
+    DOCUMENT_LINK : "",
+    APP_LINK : ""
 }
 
 const bengaliStrings = {

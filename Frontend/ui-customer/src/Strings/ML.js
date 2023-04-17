@@ -322,7 +322,7 @@ const malayalamStrings = {
   "MAYBE_LATER": "ഒരുപക്ഷെ പിന്നീട്",
   "YOUR_RIDE_HAS_STARTED": "നിങ്ങളുടെ റൈഡ് ആരംഭിച്ചു",
   "ENJOY_RIDING_WITH_US": "ഞങ്ങളോടൊപ്പം റൈഡ് ചെയ്യുന്നത് ആസ്വദിക്കൂ",
-  "VIEW_DETAILS": "വിശദാംശങ്ങൾ  \n കാണുക",
+  "VIEW_DETAILS": "വിശദാംശങ്ങൾ കാണുക",
   "REPEAT_RIDE": "റിപീറ് റൈഡ് ",
   "FARE_WAS_HIGH": "നിരക്ക് ഉയർന്നതായിരുന്നു",
   "AUTO_ASSIGN_DRIVER": "ഡ്രൈവറെ ഓട്ടോമാറ്റിക്കായി \n നിശ്ചയിക്കുക",

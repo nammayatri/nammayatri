@@ -51,7 +51,9 @@ const config = {
   "showRateCard" : "false",
   "showDashboard" : "false",
   "shareAppTitle" : "Share Jatri Saathi!",
-  "shareAppContent" : "Hey there!\n\n Jatri Saathi is Coming Soon"
+  "shareAppContent" : "Hey there!\n\n Jatri Saathi is Coming Soon",
+  "DOCUMENT_LINK" : "",
+  "APP_LINK" : ""
 }
 
 const bengaliStrings = {
