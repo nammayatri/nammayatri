@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -29,8 +29,8 @@ import Font.Style as FontStyle
 import JBridge (openUrlInApp , startTimerWithTime , toast)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>) , map , discard , show ,(>))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, imageView, imageUrl, cornerRadius, onClick, afterRender, visibility,stroke , alpha, relativeLayout , scrollView , alignParentRight, alignParentBottom)
+import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>) , map , discard , show ,(>), void)
+import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, imageView, imageUrl, cornerRadius, onClick, afterRender, visibility,stroke , alpha, relativeLayout , scrollView , alignParentRight, alignParentBottom)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.ReferralScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.ReferralScreen.ScreenData as ReferralScreenData
@@ -40,7 +40,7 @@ import Styles.Colors as Color
 import Common.Types.App
 import Components.PopUpModal as PopUpModal
 import Data.Maybe (Maybe(..) ,fromMaybe)
-import Effect.Aff (launchAff_)
+import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Control.Monad.Except.Trans (runExceptT , lift)
 import Control.Transformers.Back.Trans (runBackT)
@@ -65,11 +65,11 @@ view push state =
     [ height MATCH_PARENT
     , width MATCH_PARENT
     ](
-    [linearLayout 
+    [linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    , onBackPressed push (const BackPressed) 
+    , onBackPressed push (const BackPressed)
     , background Color.white900
     , gravity CENTER
     , afterRender push (const AfterRender)
@@ -97,7 +97,7 @@ view push state =
     ] <> if state.props.passwordPopUpVisible then [passwordPopUpView push state] else [])
 
 bottomNavBarView :: forall w . (Action -> Effect Unit) -> ST.ReferralScreenState -> PrestoDOM (Effect Unit) w
-bottomNavBarView push state = 
+bottomNavBarView push state =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -105,14 +105,14 @@ bottomNavBarView push state =
 
 
 commonView :: forall w . (Action -> Effect Unit) -> String -> String -> String -> ST.ReferralScreenState -> PrestoDOM (Effect Unit) w
-commonView push img title description state= 
+commonView push img title description state=
   linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
     , afterRender (\action -> do
                         if state.props.stage == ST.SuccessScreen then do
-                          launchAff_ $ flowRunner $ runExceptT $ runBackT $ lift $ lift $ doAff do
+                          void $ launchAff $ flowRunner $ runExceptT $ runBackT $ lift $ lift $ doAff do
                             if (os == "IOS") then liftEffect $ startTimerWithTime (show state.props.seconds) state.props.id "1" push SuccessScreenExpireCountDwon
                               else liftEffect $ countDown state.props.seconds state.props.id push SuccessScreenExpireCountDwon
                         else pure unit
@@ -165,7 +165,7 @@ commonView push img title description state=
 
 
 referralEnrolmentFlow :: forall w . (Action -> Effect Unit) -> ST.ReferralScreenState -> PrestoDOM (Effect Unit) w
-referralEnrolmentFlow push state = 
+referralEnrolmentFlow push state =
     scrollView
     [
       width MATCH_PARENT
@@ -186,17 +186,17 @@ referralEnrolmentFlow push state =
           , textSize $ FontSize.a_14
           , color Color.greyTextColor
           , alpha 0.8
-          ] <> FontStyle.tags TypoGraphy) 
+          ] <> FontStyle.tags TypoGraphy)
         , linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           , orientation VERTICAL
           , background Color.grey700
           , cornerRadius 5.0
-          , margin $ MarginTop 8 
+          , margin $ MarginTop 8
           , padding $ Padding 16 15 0 16
           ]
-          [ 
+          [
             textView (
             [ height WRAP_CONTENT
             , width MATCH_PARENT
@@ -221,7 +221,7 @@ referralEnrolmentFlow push state =
             , cornerRadius 4.0
             , gravity CENTER
             ]
-            [ 
+            [
               linearLayout
               [ height WRAP_CONTENT
               , width WRAP_CONTENT
@@ -232,7 +232,7 @@ referralEnrolmentFlow push state =
               , stroke "1,#454545"
               , gravity CENTER
               ]
-              [ 
+              [
                 textView (
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
@@ -251,11 +251,11 @@ referralEnrolmentFlow push state =
               title: (getString REFERRAL_CODE)
               , hint: (getString REFERRAL_CODE_HINT)
               , valueId: ""
-              , isinValid: false 
+              , isinValid: false
               , error: Just (getString INVALID_MOBILE_NUMBER)
               , pattern : Just "[0-9]*,6"
               , text: ""
-              , letterSpacing: 0.0
+              , letterSpacing: PX 0.0
               , id: (getNewIDWithTag "EnterReferralCodeEditText")
               , fontSize : FontSize.a_18
               , type : "number"
@@ -269,11 +269,11 @@ referralEnrolmentFlow push state =
               title: (getString CONFIRM_REFERRAL_CODE)
               , hint: (getString CONFIRM_REFERRAL_CODE_HINT)
               , valueId: ""
-              , isinValid: false 
+              , isinValid: false
               , error: Just (getString INVALID_MOBILE_NUMBER)
               , pattern : Just "[0-9]*,6"
               , text: ""
-              , letterSpacing: 0.0
+              , letterSpacing: PX 0.0
               , id: (getNewIDWithTag "EnterConfirmReferralCoderEditText")
               , fontSize : FontSize.a_18
               , type : "number"
@@ -281,9 +281,9 @@ referralEnrolmentFlow push state =
           ]
         ]
       ]
-  
+
 continueButtonView :: forall w . (Action -> Effect Unit) -> ST.ReferralScreenState -> PrestoDOM (Effect Unit) w
-continueButtonView push state = 
+continueButtonView push state =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -292,7 +292,7 @@ continueButtonView push state =
     ][PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonViewConfig state)]
 
 qrScreen :: forall w . (Action -> Effect Unit) -> ST.ReferralScreenState -> PrestoDOM (Effect Unit) w
-qrScreen push state =  
+qrScreen push state =
   scrollView
       [ height WRAP_CONTENT
       , width MATCH_PARENT
@@ -310,14 +310,14 @@ qrScreen push state =
             , margin $ MarginTop 24
             , padding (PaddingBottom 5)
             ]
-            [ 
+            [
               linearLayout
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
                 , gravity CENTER
                 , margin $ MarginTop 20
                 ]
-                [ 
+                [
                   imageView
                     [ height $ V 49
                     , width $ V 120
@@ -330,7 +330,7 @@ qrScreen push state =
                 , gravity CENTER
                 , margin $ MarginTop 16
                 ]
-                [ 
+                [
                   imageView
                     [ height $ V 288
                     , width $ V 288
@@ -442,7 +442,7 @@ qrScreen push state =
               [ height WRAP_CONTENT
               , width MATCH_PARENT
               ]
-              [ 
+              [
                 textView
                 [ height WRAP_CONTENT
                 , width WRAP_CONTENT
@@ -467,7 +467,7 @@ qrScreen push state =
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
                 ]
-                [ 
+                [
                   textView
                   [ height WRAP_CONTENT
                   , width WRAP_CONTENT
@@ -493,7 +493,7 @@ qrScreen push state =
         ]
 
 passwordPopUpView :: forall w . (Action -> Effect Unit) -> ST.ReferralScreenState -> PrestoDOM (Effect Unit) w
-passwordPopUpView push state = 
+passwordPopUpView push state =
   linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
@@ -501,8 +501,8 @@ passwordPopUpView push state =
   , orientation VERTICAL
   ][PopUpModal.view (push <<< PasswordModalAction) (passwordPopUpConfig state )]
 
-customerSupportPopUpView :: forall w. ST.ReferralScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
-customerSupportPopUpView state push = 
+customerSupportPopUpView :: forall w. ST.ReferralScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+customerSupportPopUpView state push =
   linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
@@ -513,7 +513,7 @@ customerSupportPopUpView state push =
 
 
 contactUsTextView :: forall w . (Action -> Effect Unit) -> ST.ReferralScreenState -> PrestoDOM (Effect Unit) w
-contactUsTextView push state = 
+contactUsTextView push state =
  linearLayout
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
@@ -539,7 +539,7 @@ contactUsTextView push state =
 
 
 emptyView :: forall w . PrestoDOM (Effect Unit) w
-emptyView = 
+emptyView =
   linearLayout
   [ width WRAP_CONTENT
   , height WRAP_CONTENT

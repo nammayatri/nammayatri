@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -21,7 +21,7 @@ import PrestoDOM.Types.Core (class Loggable)
 import PrestoDOM (Eval, continue, exit, ScrollState(..))
 import Components.BottomNavBar.Controller(Action(..)) as BottomNavBar
 import Components.IndividualRideCard.Controller as IndividualRideCardController
-import Components.ErrorModal as ErrorModalController 
+import Components.ErrorModal as ErrorModalController
 import Services.APITypes (RidesInfo(..), Status(..))
 import PrestoDOM.Types.Core (toPropValue)
 import Helpers.Utils (convertUTCtoISC)
@@ -44,11 +44,11 @@ import Language.Types(STR(..))
 import Storage (setValueToLocalNativeStore, KeyStore(..))
 import JBridge (firebaseLogEvent)
 
-instance showAction :: Show Action where 
+instance showAction :: Show Action where
   show _ = ""
 
-instance loggableAction :: Loggable Action where 
-  performLog action appId = case action of 
+instance loggableAction :: Loggable Action where
+  performLog action appId = case action of
     AfterRender -> trackAppScreenRender appId "screen" (getScreen RIDE_HISTORY_SCREEN)
     BackPressed -> do
       trackAppBackPress appId (getScreen RIDE_HISTORY_SCREEN)
@@ -69,24 +69,24 @@ instance loggableAction :: Loggable Action where
     ErrorModalActionController action -> trackAppScreenEvent appId (getScreen RIDE_HISTORY_SCREEN) "in_screen" "error_modal_action"
     Dummy -> trackAppScreenEvent appId (getScreen RIDE_HISTORY_SCREEN) "in_screen" "dummy_action"
     NoAction -> trackAppScreenEvent appId (getScreen RIDE_HISTORY_SCREEN) "in_screen" "no_action"
-    
-data ScreenOutput = GoBack 
-                    | RideHistoryScreen RideHistoryScreenState 
-                    | HomeScreen 
+
+data ScreenOutput = GoBack
+                    | RideHistoryScreen RideHistoryScreenState
+                    | HomeScreen
                     | GoToFilter String
-                    | ProfileScreen 
-                    | GoToTripDetails RideHistoryScreenState 
-                    | RefreshScreen RideHistoryScreenState 
-                    | LoaderOutput RideHistoryScreenState   
-                    | GoToNotification 
+                    | ProfileScreen
+                    | GoToTripDetails RideHistoryScreenState
+                    | RefreshScreen RideHistoryScreenState
+                    | LoaderOutput RideHistoryScreenState
+                    | GoToNotification
                     | GoToReferralScreen
 
-data Action = Dummy 
-            | OnFadeComplete String 
-            | Refresh 
+data Action = Dummy
+            | OnFadeComplete String
+            | Refresh
             | BackPressed
             | SelectTab String
-            | BottomNavBarAction BottomNavBar.Action 
+            | BottomNavBarAction BottomNavBar.Action
             | IndividualRideCardAction IndividualRideCardController.Action
             | RideHistoryAPIResponseAction (Array RidesInfo)
             | Loader
@@ -99,18 +99,21 @@ data Action = Dummy
 eval :: Action -> RideHistoryScreenState -> Eval Action ScreenOutput RideHistoryScreenState
 eval AfterRender state = continue state
 eval BackPressed state = exit GoBack
-eval (OnFadeComplete _ ) state = if (not state.recievedResponse) then continue state else 
+eval (OnFadeComplete _ ) state = if (not state.recievedResponse) then continue state else
   continue state { shimmerLoader = case state.shimmerLoader of
                               AnimatedIn ->AnimatedOut
                               AnimatingOut -> AnimatedOut
                               a -> a  }
-                                      
+
 eval Refresh state = do
   exit $ RefreshScreen state
 
-eval (ScrollStateChanged scrollState) state = do 
-  _ <- if scrollState == (SCROLL_STATE_FLING) then (pure $ setEnabled "2000030" false)
-          else pure unit 
+eval (ScrollStateChanged scrollState) state = do
+  _ <- case scrollState of
+           SCROLL_STATE_FLING ->
+               pure $ setEnabled "2000030" false
+           _ ->
+               pure unit
   continue state
 
 eval (SelectTab tab) state = do
@@ -131,12 +134,12 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
 
 eval (IndividualRideCardAction (IndividualRideCardController.Select index)) state = do
   let filteredRideList = rideListFilter state.currentTab state.rideList
-  exit $ GoToTripDetails state { 
+  exit $ GoToTripDetails state {
       selectedItem = (fromMaybe dummyCard (filteredRideList !! index))
   }
 eval Loader state = do
   exit $ LoaderOutput state
-  
+
 eval (RideHistoryAPIResponseAction rideList) state = do
   let bufferCardDataPrestoList = (rideHistoryListTransformer rideList)
   let filteredRideList = (rideListResponseTransformer rideList)
@@ -159,7 +162,7 @@ rideHistoryListTransformer :: Array RidesInfo -> Array ItemState
 rideHistoryListTransformer list = (map (\(RidesInfo ride) -> {
     date : toPropValue (convertUTCtoISC (ride.createdAt) "D MMM"),
     time : toPropValue (convertUTCtoISC (ride.createdAt )"h:mm A"),
-    total_amount : toPropValue (case (ride.status) of 
+    total_amount : toPropValue (case (ride.status) of
                     "CANCELLED" -> 0
                     _ -> fromMaybe ride.estimatedBaseFare ride.computedFare),
     card_visibility : toPropValue "visible",
@@ -189,10 +192,10 @@ rideListResponseTransformer :: Array RidesInfo -> Array IndividualRideCardState
 rideListResponseTransformer list = (map (\(RidesInfo ride) -> {
     date : (convertUTCtoISC (ride.createdAt) "D MMM"),
     time : (convertUTCtoISC (ride.createdAt )"h:mm A"),
-    total_amount : (case (ride.status) of 
+    total_amount : (case (ride.status) of
                     "CANCELLED" -> 0
                     _ -> fromMaybe ride.estimatedBaseFare ride.computedFare),
-    card_visibility : (case (ride.status) of 
+    card_visibility : (case (ride.status) of
                         "CANCELLED" -> "gone"
                         _ -> "visible"),
     shimmer_visibility : "gone",

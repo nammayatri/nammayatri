@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -38,14 +38,14 @@ import Data.String.CodeUnits (charAt)
 import Data.String (length)
 import Screens (ScreenName(..), getScreen)
 import Data.Maybe
-import Debug.Trace (spy)
+import Debug (spy)
 import Data.String(length)
 
 instance showAction :: Show Action where
   show _ = ""
 
 instance loggableAction :: Loggable Action where
-  performLog action appId = case action of 
+  performLog action appId = case action of
     AfterRender -> trackAppScreenRender appId "screen" (getScreen ADD_VEHICLE_DETAILS_SCREEN)
     BackPressed flag -> do
       trackAppBackPress appId (getScreen ADD_VEHICLE_DETAILS_SCREEN)
@@ -99,9 +99,9 @@ instance loggableAction :: Loggable Action where
     DatePicker year month date -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "date_picker"
     NoAction -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "no_action"
 
-data ScreenOutput = GoToApplicationSubmitted AddVehicleDetailsScreenState 
+data ScreenOutput = GoToApplicationSubmitted AddVehicleDetailsScreenState
                     | GoBack AddVehicleDetailsScreenState
-                    | ValidateImageAPICall AddVehicleDetailsScreenState 
+                    | ValidateImageAPICall AddVehicleDetailsScreenState
                     | ReferApiCall AddVehicleDetailsScreenState
                     | ApplicationSubmittedScreen
                     | LogoutAccount
@@ -120,7 +120,7 @@ data Action =   WhatsAppSupport | BackPressed Boolean | PrimarySelectItemAction 
   | RegistrationModalAction RegistrationModalController.Action
   | PrimaryButtonAction PrimaryButtonController.Action
   | TutorialModalAction TutorialModalController.Action
-  | TutorialModal String 
+  | TutorialModal String
   | VehicleRCNumber String
   | AfterRender
   | ReferralMobileNumberAction ReferralMobileNumberController.Action
@@ -134,61 +134,61 @@ data Action =   WhatsAppSupport | BackPressed Boolean | PrimarySelectItemAction 
 eval :: Action -> AddVehicleDetailsScreenState -> Eval Action ScreenOutput AddVehicleDetailsScreenState
 eval AfterRender state = continue state
 eval (BackPressed flag) state = do
-            if(state.props.openRCManual) then continue state{props{openRCManual = false}} 
+            if(state.props.openRCManual) then continue state{props{openRCManual = false}}
               else exit $ GoBack state
 eval (OnboardingHeaderAction (OnboardingHeaderController.TriggerRegModal)) state = continue state { props = state.props { openRegistrationModal = true } }
 eval (OnboardingHeaderAction (OnboardingHeaderController.BackPressed)) state = exit $ GoBack state
-eval (RegistrationModalAction (RegistrationModalController.OnCloseClick)) state = do 
+eval (RegistrationModalAction (RegistrationModalController.OnCloseClick)) state = do
   continue state { props = state.props { openRegistrationModal = false } }
-eval (PrimarySelectItemAction (PrimarySelectItem.OnClick item)) state = do 
+eval (PrimarySelectItemAction (PrimarySelectItem.OnClick item)) state = do
   _ <- pure $ hideKeyboardOnNavigation true
   continue $ (state {props = state.props {
     openSelectVehicleTypeModal = true
     }
   })
-eval ScreenClick state = do 
+eval ScreenClick state = do
   let newState = state { props = state.props { openSelectVehicleTypeModal = false }}
   continue newState
-eval RemoveUploadedFile state = do 
+eval RemoveUploadedFile state = do
   let newState = state { props = state.props { rcAvailable = false, rc_name = "", isValidState = false }, data = state.data { rc_base64 = "" }}
   continue newState
-eval (VehicleRegistrationNumber val) state = do 
+eval (VehicleRegistrationNumber val) state = do
   let newState = state {data = state.data { vehicle_registration_number = val }, props = state.props{isValidState = (checkRegNum (val) && state.props.rcAvailable) }}
   continue newState
-eval (ReEnterVehicleRegistrationNumber val) state = do 
+eval (ReEnterVehicleRegistrationNumber val) state = do
   let newState = state {data = state.data { reEnterVehicleRegistrationNumber = val }, props = state.props{isValidState = (checkRegNum (val) && state.props.rcAvailable) }}
   continue newState
-eval (VehicleModelName val) state = do 
+eval (VehicleModelName val) state = do
   _ <- pure $ disableActionEditText (getNewIDWithTag "VehicleModelName")
   let newState = state {data = state.data { vehicle_model_name = val }}
   continue newState
-eval (VehicleColour val) state = do 
+eval (VehicleColour val) state = do
   _ <- pure $ disableActionEditText (getNewIDWithTag "VehicleColour")
   let newState = state {data = state.data { vehicle_color = val }}
   continue newState
 eval (CallBackImageUpload base_64 imageName) state = do
   _ <- pure $ printLog "base_64 CallBackImageUpload" base_64
   _ <- pure $ printLog "imageName" imageName
-  if base_64 /= "" then do 
+  if base_64 /= "" then do
     let newState = state { props = state.props { rcAvailable = true, rc_name = imageName, isValidState = (checkRegNum (state.data.vehicle_registration_number))}, data = state.data { rc_base64 = base_64 }}
     exit $ ValidateImageAPICall newState
     else continue state{props{isValidState = false}}
 eval (UploadFile) state = continueWithCmd state [do
-        _ <- liftEffect $ uploadFile unit 
+        _ <- liftEffect $ uploadFile unit
         pure NoAction]
-eval (VehicleRCNumber val) state = do 
+eval (VehicleRCNumber val) state = do
   _ <- pure $ disableActionEditText (getNewIDWithTag "VehicleRCNumber")
   let newState = state {data = state.data { vehicle_rc_number = val }}
   continue newState
 
-eval (SelectVehicleTypeModalAction (SelectVehicleTypeModal.OnCloseClick)) state = do 
+eval (SelectVehicleTypeModalAction (SelectVehicleTypeModal.OnCloseClick)) state = do
   _ <- pure $ hideKeyboardOnNavigation true
   continue $ (state {props = state.props {
     openSelectVehicleTypeModal = false
   }
 })
 eval (SelectVehicleTypeModalAction (SelectVehicleTypeModal.OnSelect item)) state = let
-    newState = 
+    newState =
       state {
       props = state.props {
         openSelectVehicleTypeModal = false
@@ -200,14 +200,14 @@ eval (SelectVehicleTypeModalAction (SelectVehicleTypeModal.OnSelect item)) state
                         Auto      -> "Auto")
       }
     }
-   
+
     in continueWithCmd newState [ do
             --_ <- trackAction Tracker.User Tracker.Info ON_CLICK  "vehicle_type_select_click" (unsafeToForeign item) Object.empty
             pure NoAction
     ]
 eval (TutorialModal manual) state = do
-  pure $ hideKeyboardOnNavigation true 
-  case manual of 
+  pure $ hideKeyboardOnNavigation true
+  case manual of
     "REGISTERATION_DATE" -> continue state{props{openRegistrationDateManual = true}}
     "RC" -> continue state{props{openRCManual = true}}
     _ -> continue state
@@ -223,7 +223,7 @@ eval (ReferralMobileNumberAction (ReferralMobileNumberController.OnBackClick)) s
 eval (ReferralMobileNumberAction (ReferralMobileNumberController.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state = exit $ ReferApiCall $ state { props { openReferralMobileNumber = false, referralViewstatus = true }}
 eval (ReferralMobileNumberAction (ReferralMobileNumberController.PrimaryEditTextActionController (PrimaryEditTextController.TextChanged valId newVal))) state = do
   let var =  if( (charAt 0 newVal) == Just '0' || (charAt 0 newVal) == Just '1') then true else false
-  _ <- pure $ spy "new val" state 
+  _ <- pure $ spy "new val" state
   _ <- if length newVal == 10 then do
             pure $ hideKeyboardOnNavigation true
             else pure unit
@@ -247,7 +247,7 @@ eval _ state = continue state
 
 checkRegNum :: String -> Boolean
 checkRegNum temp = if (length temp > 1) then true else false
-  
+
 overrides :: String -> (Action -> Effect Unit) -> AddVehicleDetailsScreenState -> Props (Effect Unit)
 overrides _ push state = []
 

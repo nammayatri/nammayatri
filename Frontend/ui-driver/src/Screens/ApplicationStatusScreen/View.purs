@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -20,14 +20,14 @@ import Control.Monad.Except (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Effect (Effect)
-import Effect.Aff (launchAff_)
+import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..), LOGOUT)
-import Prelude (Unit, ($), const, (<>), (/=), (==), (<<<), (||), (&&), discard, bind, pure, unit,not)
+import Prelude (Unit, ($), const, (<>), (/=), (==), (<<<), (||), (&&), discard, bind, pure, unit, not, void)
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, visibility, afterRender, lineHeight, stroke, cornerRadius, alignParentRight, onBackPressed, imageWithFallback,relativeLayout)
 import Screens.ApplicationStatusScreen.Controller (Action(..), ScreenOutput, eval)
@@ -52,13 +52,13 @@ screen initialState screenType =
   , globalEvents : [
       ( \push -> do
         if screenType == "StatusScreen" then do
-          launchAff_ $ EHC.flowRunner $ runExceptT $ runBackT $ do
-            if(initialState.props.enterMobileNumberView || initialState.props.enterOtp) then pure unit 
+          void $ launchAff $ EHC.flowRunner $ runExceptT $ runBackT $ do
+            if(initialState.props.enterMobileNumberView || initialState.props.enterOtp) then pure unit
               else do
               (DriverRegistrationStatusResp driverRegistrationStatusResp ) <- driverRegistrationStatusBT (DriverRegistrationStatusReq { })
               lift $ lift $ doAff do liftEffect $ push $ DriverRegistrationStatusAction (DriverRegistrationStatusResp driverRegistrationStatusResp)
           else pure unit
-        if initialState.props.isAlternateMobileNumberExists then do 
+        if initialState.props.isAlternateMobileNumberExists then do
           EHC.setText' (EHC.getNewIDWithTag "Referalnumber") initialState.data.mobileNumber
           else pure unit
         pure $ pure unit
@@ -69,7 +69,7 @@ screen initialState screenType =
 
 view :: forall w . String -> (Action -> Effect Unit) -> ST.ApplicationStatusScreenState -> PrestoDOM (Effect Unit) w
 view screenType push state =
-  Anim.screenAnimation $ 
+  Anim.screenAnimation $
   relativeLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
@@ -94,7 +94,7 @@ view screenType push state =
     , if screenType == "ApprovedScreen" then applicationApprovedView state push else applicationStatusView state push
     , if (state.props.isVerificationFailed) || (not state.props.onBoardingFailure && state.props.alternateNumberAdded) then textView[] else completeOnboardingView state push
     , supportTextView state push
-    ] 
+    ]
     )
   ] <> if state.props.popupview then [popupmodal push state] else []
     <> if state.props.enterMobileNumberView then [alternateNumber push state] else []
@@ -116,7 +116,7 @@ applicationStatusView state push =
       , imageWithFallback "ny_ic_coming_soon,https://assets.juspay.in/nammayatri/images/driver/ny_ic_coming_soon.png"
       , margin (MarginBottom 32)
       ]
-    , textView 
+    , textView
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , gravity CENTER
@@ -131,14 +131,14 @@ applicationStatusView state push =
   ]
 
 applicationStatus :: ST.ApplicationStatusScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-applicationStatus state push = 
+applicationStatus state push =
   linearLayout
   [ orientation VERTICAL
   , width MATCH_PARENT
   , padding (Padding 16 0 16 24)
   , margin (MarginTop 50)
   , height WRAP_CONTENT
-  ][  textView  
+  ][  textView
       [ text (getString APPLICATION_STATUS)
       , textSize FontSize.a_14
       , visibility if state.data.dlVerificationStatus == "PENDING" && state.data.rcVerificationStatus == "PENDING" then GONE else VISIBLE
@@ -149,8 +149,8 @@ applicationStatus state push =
     , detailsView state (vehicleCardDetails state) push
     ]
 
-detailsView :: ST.ApplicationStatusScreenState -> ST.RegCardDetails -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w 
-detailsView state config push = 
+detailsView :: ST.ApplicationStatusScreenState -> ST.RegCardDetails -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
+detailsView state config push =
   linearLayout
   [ orientation VERTICAL
   , height WRAP_CONTENT
@@ -184,22 +184,22 @@ detailsView state config push =
           , gravity RIGHT
           , orientation HORIZONTAL
           ][  imageView
-              [ imageWithFallback config.image 
-              , height $ V 16 
-              , width $ V 16 
+              [ imageWithFallback config.image
+              , height $ V 16
+              , width $ V 16
               ]
             ]
-          ] 
-    , textView 
-      [ text config.reason 
-      , textSize FontSize.a_12 
+          ]
+    , textView
+      [ text config.reason
+      , textSize FontSize.a_12
       , color Color.black700
       , margin (MarginTop 8)
       , fontStyle $ FontStyle.regular LanguageStyle
       , visibility $ if config.reason /= "" then VISIBLE else GONE
       , lineHeight "16"
       ]
-    , textView 
+    , textView
       [ text (getString TRY_AGAIN)
       , height WRAP_CONTENT
       , width WRAP_CONTENT
@@ -232,7 +232,7 @@ supportTextView state push =
       , color Color.black700
       , fontStyle $ FontStyle.regular LanguageStyle
       ]
-    , textView 
+    , textView
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , text (getString CONTACT_US)
@@ -244,10 +244,10 @@ supportTextView state push =
     ]
   ]
 
-drivingLicenseCardDetails state = 
+drivingLicenseCardDetails state =
   {
     "title" : (getString DRIVING_LICENSE),
-    "image" : case state.data.dlVerificationStatus of 
+    "image" : case state.data.dlVerificationStatus of
                 "VALID" -> "ny_ic_check_mark,https://assets.juspay.in/nammayatri/images/driver/ny_ic_check_mark.png"
                 "PENDING" -> "ny_ic_pending,https://assets.juspay.in/nammayatri/images/driver/ny_ic_pending.png"
                 "FAILED" -> "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png"
@@ -255,8 +255,8 @@ drivingLicenseCardDetails state =
                 "INVALID" -> "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png"
                 "LIMIT_EXCEED" -> "ny_ic_help_circle,https://assets.juspay.in/nammayatri/images/driver/ny_ic_help_circle.png"
                 _ -> "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png",
-    "verificationStatus" :  case state.data.dlVerificationStatus of 
-                "VALID" -> "" 
+    "verificationStatus" :  case state.data.dlVerificationStatus of
+                "VALID" -> ""
                 "PENDING" -> (getString VERIFICATION_PENDING)
                 "FAILED" -> (getString VERIFICATION_FAILED)
                 "NO_DOC_AVAILABLE" -> (getString NO_DOC_AVAILABLE)
@@ -269,10 +269,10 @@ drivingLicenseCardDetails state =
     "status" : state.data.dlVerificationStatus
   }
 
-vehicleCardDetails state= 
+vehicleCardDetails state=
   {
     "title" : (getString VEHICLE_DETAILS),
-    "image" : case state.data.rcVerificationStatus of 
+    "image" : case state.data.rcVerificationStatus of
                 "VALID" -> "ny_ic_check_mark,https://assets.juspay.in/nammayatri/images/driver/ny_ic_check_mark.png"
                 "PENDING" -> "ny_ic_pending,https://assets.juspay.in/nammayatri/images/driver/ny_ic_pending.png"
                 "FAILED" -> "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png"
@@ -280,8 +280,8 @@ vehicleCardDetails state=
                 "INVALID" -> "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png"
                 "LIMIT_EXCEED" -> "ny_ic_help_circle,https://assets.juspay.in/nammayatri/images/driver/ny_ic_help_circle.png"
                 _ -> "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png",
-    "verificationStatus" :  case state.data.rcVerificationStatus of 
-                "VALID" -> "" 
+    "verificationStatus" :  case state.data.rcVerificationStatus of
+                "VALID" -> ""
                 "PENDING" -> (getString VERIFICATION_PENDING)
                 "FAILED" -> (getString VERIFICATION_FAILED)
                 "NO_DOC_AVAILABLE" -> (getString NO_DOC_AVAILABLE)
@@ -336,7 +336,7 @@ applicationApprovedView state push =
   ]
 
 completeOnboardingView:: ST.ApplicationStatusScreenState  -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-completeOnboardingView state push = 
+completeOnboardingView state push =
  linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
@@ -359,7 +359,7 @@ completeOnboardingView state push =
       ]
 
 popupmodal :: forall w . (Action -> Effect Unit) -> ST.ApplicationStatusScreenState -> PrestoDOM (Effect Unit) w
-popupmodal push state = 
+popupmodal push state =
   linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
@@ -367,7 +367,7 @@ popupmodal push state =
   ][PopUpModal.view (push <<< PopUpModalAction) (completeOnboardingConfig state )]
 
 alternateNumber :: forall w . (Action -> Effect Unit) -> ST.ApplicationStatusScreenState -> PrestoDOM (Effect Unit) w
-alternateNumber push state = 
+alternateNumber push state =
   linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
