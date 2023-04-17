@@ -124,13 +124,27 @@ nix run .#run-mobility-stack
 
 #### Updating flake inputs
 
-Nix dependencies specified in `inputs` of the `flake.nix` file. They usually point to external Git repos. The specific revisions of these Git repos are pinned in the `flake.lock` file. To update the `shared-kernel` input, for instance, run:
+External dependencies of the project are usually specified in `inputs` of the `flake.nix` file. They usually point to external Git repos, but they can also point to local directories (useful during development)
+
+The specific revisions of these Git repos are pinned in the `flake.lock` file. To update the `shared-kernel` input, for instance, run:
 
 ```sh
 nix flake lock --update-input shared-kernel
 ```
 
 If you update the `inputs` section of `flake.nix` file, be sure to run `nix flake lock` so as to also update the `flake.lock` file.
+
+You can also point the flake input to point a local checkout. To do this, change the `flake.nix` to be like:
+
+```nix
+{
+  inputs = {
+    shared-kernel.url = "path:/Users/myname/Projects/shared-kernel";
+  }
+}
+```
+
+Now, if you run `nix build` or any of the other nix commands, it will use the local shared-kernel.
 
 ### Testing
 
