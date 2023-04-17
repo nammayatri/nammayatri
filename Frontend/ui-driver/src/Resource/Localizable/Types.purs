@@ -124,7 +124,7 @@ data STR = LETS_GET_STARTED
         | DISTANCE
         | REPORT_AN_ISSUE
         | TIME_TAKEN
-        | OPEN_GOOGLE_MAPS
+        | MAPS
         | CALL
         | START_RIDE
         | CANCEL_RIDE
@@ -306,8 +306,6 @@ data STR = LETS_GET_STARTED
         | YOU_ARE_AT_PICKUP
         | WAITING_FOR_CUSTOMER
         | CUSTOMER_NOTIFIED
-        | I_ARRIVED
-        | ESTIMATED_RIDE_FARE
         | PICKUP_TOO_FAR
         | CUSTOMER_NOT_PICKING_CALL
         | TRAFFIC_JAM
@@ -349,6 +347,21 @@ data STR = LETS_GET_STARTED
         | FOR_UPDATES_SEE_ALERTS
         | SHARE_OPTIONS
         | ENTER_PASSWORD
+        | RIDE_FARE
+        | RIDE_DISTANCE
+        | MESSAGE
+        | START_YOUR_CHAT_USING_THESE_QUICK_CHAT_SUGGESTIONS
+        | START_YOUR_CHAT_WITH_THE_DRIVER
+        | I_AM_ON_MY_WAY 
+        | GETTING_DELAYED_PLEASE_WAIT 
+        | UNREACHABLE_PLEASE_CALL_BACK 
+        | ARE_YOU_STARING 
+        | PLEASE_COME_SOON 
+        | OK_I_WILL_WAIT 
+        | I_HAVE_ARRIVED
+        | PLEASE_COME_FAST_I_AM_WAITING
+        | PLEASE_WAIT_I_WILL_BE_THERE 
+        | LOOKING_FOR_YOU_AT_PICKUP
 
 type LETS_GET_STARTED = String
 type SELECT_LANGUAGE = String
@@ -485,7 +498,7 @@ type HOME = String
 type RIDES = String
 type Profile = String
 type WHERE_IS_MY_LICENSE_NUMBER = String
-type OPEN_GOOGLE_MAPS = String
+type MAPS = String
 type CALL = String
 type START_RIDE = String
 type CANCEL_RIDE = String
@@ -693,8 +706,6 @@ type LESS = String
 type YOU_ARE_AT_PICKUP = String
 type WAITING_FOR_CUSTOMER = String
 type CUSTOMER_NOTIFIED = String
-type I_ARRIVED = String
-type ESTIMATED_RIDE_FARE = String
 type PICKUP_TOO_FAR = String 
 type CUSTOMER_NOT_PICKING_CALL = String 
 type TRAFFIC_JAM = String 
@@ -736,3 +747,18 @@ type DRIVER_DETAILS = String
 type FOR_UPDATES_SEE_ALERTS = String
 type SHARE_OPTIONS = String
 type ENTER_PASSWORD = String
+type START_YOUR_CHAT_USING_THESE_QUICK_CHAT_SUGGESTIONS = String
+type START_YOUR_CHAT_WITH_THE_DRIVER = String
+type MESSAGE = String
+type RIDE_FARE = String
+type RIDE_DISTANCE = String
+type I_AM_ON_MY_WAY = String
+type GETTING_DELAYED_PLEASE_WAIT = String
+type UNREACHABLE_PLEASE_CALL_BACK = String
+type ARE_YOU_STARING = String
+type PLEASE_COME_SOON = String
+type OK_I_WILL_WAIT = String
+type I_HAVE_ARRIVED = String
+type PLEASE_COME_FAST_I_AM_WAITING = String
+type PLEASE_WAIT_I_WILL_BE_THERE = String
+type LOOKING_FOR_YOU_AT_PICKUP = String

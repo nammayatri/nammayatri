@@ -285,18 +285,20 @@ cancelRideLayout push state =
  , margin $ MarginTop 16
  , padding $ PaddingBottom if os == "IOS" then safeMarginBottom else 0
  , visibility if state.props.currentStage == RideAccepted then VISIBLE else GONE
- ][ linearLayout [
-    height WRAP_CONTENT
-   , width WRAP_CONTENT
-   , padding $ Padding 5 5 5 5
-   , onClick push $ const $ CancelRide state
- ] 
-      [textView
-        [ width WRAP_CONTENT
-        , height WRAP_CONTENT
-        , text $ getString CANCEL_RIDE
-        , color Color.red
-        ]]
+ ][ linearLayout
+  [ height WRAP_CONTENT
+  , width WRAP_CONTENT
+  , padding $ Padding 5 5 5 5
+  , onClick push $ const $ CancelRide state
+  ][ textView
+     [ width WRAP_CONTENT
+     , height WRAP_CONTENT
+     , text $ getString CANCEL_RIDE
+     , textSize FontSize.a_14
+     , color Color.red
+     , fontStyle $ FontStyle.regular LanguageStyle
+     ]
+   ]
  ]
 
 ---------------------------------- contactView ---------------------------------------
@@ -341,7 +343,25 @@ contactView push state =
       width MATCH_PARENT
     , gravity RIGHT
     , height WRAP_CONTENT
-    ][PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig)]
+    ][linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , gravity RIGHT
+      ] [ linearLayout
+          [ height $ V 40
+          , width $ V 64
+          , gravity CENTER
+          , cornerRadius 20.0
+          , background Color.green200
+          , onClick push (const MessageDriver)
+          ][ imageView
+              [ imageWithFallback if state.props.unReadMessages then "ic_chat_badge_green,https://assets.juspay.in/nammayatri/images/user/ic_chat_badge_green.png" else "ic_call_msg,https://assets.juspay.in/nammayatri/images/user/ic_call_msg.png"
+              , height $ V 24
+              , width $ V 24
+              ]
+          ]
+        ]
+      ]
 
   ]
 

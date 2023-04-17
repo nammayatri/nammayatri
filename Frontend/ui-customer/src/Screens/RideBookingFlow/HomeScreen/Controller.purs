@@ -29,6 +29,7 @@ import Components.LocationTagBar as LocationTagBarController
 import Components.MenuButton.Controller (Action(..)) as MenuButtonController
 import Components.PopUpModal.Controller as PopUpModal
 import Components.PricingTutorialModel.Controller as PricingTutorialModelController
+import Components.ChatView as ChatView
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Components.QuoteListItem.Controller as QuoteListItemController
@@ -42,8 +43,9 @@ import Components.SavedLocationCard.Controller as SavedLocationCardController
 import Components.SearchLocationModel.Controller as SearchLocationModelController
 import Components.SettingSideBar.Controller as SettingSideBarController
 import Components.SourceToDestination.Controller as SourceToDestinationController
-import Data.Array ((!!), filter, null, snoc, length, head, sortBy)
+import Data.Array ((!!), filter, null, snoc, length, head, last, sortBy)
 import Data.Lens ((^.))
+import EN (getEN)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.Number (fromString) as NUM
 import Data.String as STR
@@ -53,11 +55,11 @@ import Effect.Aff (launchAff_)
 import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os)
 import Global (readFloat)
 import Helpers.Utils (addToRecentSearches, getLocationName, saveRecents, setText', updateInputString, withinTimeRange, getExpiryTime, getDistanceBwCordinates, getCurrentLocationMarker, parseNewContacts, goBackPrevWebPage)
-import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, removeAllPolylines, requestKeyboardShow, requestLocation, showDialer, toast, toggleBtnLoader, shareTextMessage, firebaseLogEventWithTwoParams, removeMarker, openUrlInApp)
+import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, removeAllPolylines, requestKeyboardShow, requestLocation, showDialer, toast, toggleBtnLoader, shareTextMessage, firebaseLogEventWithTwoParams, removeMarker,  sendMessage, stopChatListenerService, openUrlInApp)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent)
-import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (/))
+import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (>=), (||), (<), void, (<), (*), (/))
 import Presto.Core.Types.API (ErrorResponse)
 import PrestoDOM (Eval, Visibility(..), continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
@@ -71,7 +73,7 @@ import Screens.Types (HomeScreenState, Location, LocationListItemState, PopupTyp
 import Services.API (EstimateAPIEntity(..), GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), PlaceName(..), RideBookingRes(..), SelectListRes(..), FareRange, QuoteAPIEntity(..), SelectedQuotes(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
-import Storage (KeyStore(..), isLocalStageOn, updateLocalStage, getValueToLocalStore, getValueToLocalStoreEff, setValueToLocalStore, getValueToLocalNativeStore)
+import Storage (KeyStore(..), isLocalStageOn, updateLocalStage, getValueToLocalStore, getValueToLocalStoreEff, setValueToLocalStore, getValueToLocalNativeStore, setValueToLocalNativeStore)
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Int (toNumber, round, fromString)
@@ -191,6 +193,7 @@ instance loggableAction :: Loggable Action where
       DriverInfoCardController.OpenEmergencyHelp -> trackAppActionClick appId (getScreen HOME_SCREEN) "driver_info_card" "open_emergency_help"
       DriverInfoCardController.SourceToDestinationAC  act -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "driver_info_card" "source_to_destination"
       DriverInfoCardController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "driver_info_card" "no_action"
+      DriverInfoCardController.MessageDriver -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "driver_info_card" "open_in_app_messaging"
     UpdateLocation key lat lon ->  trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_location"
     RateRideButtonActionController act -> case act of
       PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "rate_your_ride" "primary_button"
@@ -387,6 +390,17 @@ instance loggableAction :: Loggable Action where
     UpdateLocAndLatLong lat lon-> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_current_loc_lat_and_lon"
     UpdateSavedLoc state -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_saved_loc"
     NoAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "no_action"
+    UpdateMessages msg sender timeStamp -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_messages"
+    InitializeChat -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "initialize_chat"
+    RemoveChat -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "remove_chat"
+    ChatViewActionController act -> case act of 
+      ChatView.SendMessage -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_messaging" "send_message"
+      ChatView.SendSuggestion suggestion -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_messaging" "send_suggestion"
+      ChatView.BackPressed -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_messaging" "back_pressed"
+      ChatView.TextChanged input -> trackAppTextInput appId (getScreen HOME_SCREEN) "in_app_messaging" "text_changed" 
+      ChatView.Call -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_messaging" "call_driver" 
+      ChatView.Navigate -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_messaging" "navigate_to_google_maps"
+      ChatView.NoAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_app_messaging" "no_action"
     OnResumeCallback -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "on_resume_callback"
     CheckFlowStatusAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "check_flow_status"
 
@@ -506,6 +520,10 @@ data Action = NoAction
             | UpdateSourceFromPastLocations
             | UpdateLocAndLatLong String String
             | UpdateSavedLoc (Array LocationListItemState)
+            | UpdateMessages String String String
+            | InitializeChat
+            | RemoveChat
+            | ChatViewActionController ChatView.Action
             | HideLiveDashboard String
             | LiveDashboardAction
             | OnResumeCallback
@@ -533,6 +551,75 @@ eval OnResumeCallback state =
   else continue state
 
 eval (UpdateSavedLoc savedLoc) state = continue state{data{savedLocations = savedLoc}}
+
+eval (UpdateMessages message sender timeStamp) state = do 
+  let newMessage = [(ChatView.makeChatComponent message sender timeStamp)]
+  let messages = state.data.messages <> [((ChatView.makeChatComponent (getMessage message) sender timeStamp))]
+  case (last newMessage) of
+    Just value -> if value.sentBy == "Customer" 
+                    then updateMessagesWithCmd state {data {messages = messages}} 
+                  else do 
+                    let readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
+                    let unReadMessages = (if readMessages == 0 then true else (if (readMessages < (length messages) && state.props.currentStage /= ChatWithDriver) then true else false))
+                    updateMessagesWithCmd state {data {messages = messages}, props {unReadMessages = unReadMessages}}   
+    Nothing -> continue state
+
+eval (ChatViewActionController (ChatView.TextChanged value)) state = do
+  let sendMessageActive = if (STR.length (STR.trim value)) >= 1 then
+                          true
+                        else
+                          false
+  continue state{data{messageToBeSent = (STR.trim value)},props{sendMessageActive = sendMessageActive}}
+
+eval(ChatViewActionController (ChatView.Call)) state = 
+  continueWithCmd state
+    [ do
+        _ <- pure $ showDialer (getDriverNumber "")
+        customerId <- getValueToLocalStoreEff CUSTOMER_ID
+        _ <- (firebaseLogEventWithTwoParams "ny_user_call_click" "trip_id" (state.props.bookingId) "user_id" customerId)
+        pure NoAction
+    ]
+
+eval (ChatViewActionController (ChatView.SendMessage)) state = do
+  if state.data.messageToBeSent /= ""
+  then 
+   continueWithCmd state{data{messageToBeSent = ""},props {sendMessageActive = false}} [do
+      _ <- pure $ sendMessage state.data.messageToBeSent
+      _ <- setText' (getNewIDWithTag "ChatInputEditText") ""
+      pure NoAction
+   ]
+  else
+    continue state
+
+eval (ChatViewActionController (ChatView.SendSuggestion chatSuggestion)) state = do
+  let suggestions = filter (\item -> (getString item) == chatSuggestion) (chatSuggestionsList "")
+  let messageArr = map (\item -> (getEN item)) suggestions
+  let message = fromMaybe "" (messageArr !! 0)
+  _ <- pure $ sendMessage message
+  _ <- pure $ firebaseLogEvent $ "ny_" <> STR.toLower (STR.replaceAll (STR.Pattern "'") (STR.Replacement "") (STR.replaceAll (STR.Pattern ",") (STR.Replacement "") (STR.replaceAll (STR.Pattern " ") (STR.Replacement "_") message)))
+  continue state
+
+eval (ChatViewActionController (ChatView.BackPressed)) state = do
+  _ <- pure $ hideKeyboardOnNavigation true
+  continueWithCmd state [do 
+      pure $ BackPressed 
+    ]
+
+eval InitializeChat state = do
+  continue state {props { chatcallbackInitiated = true } }
+
+
+eval RemoveChat state = do 
+  continueWithCmd state {props{chatcallbackInitiated = false}} [ do
+    _ <- stopChatListenerService
+    _ <- pure $ setValueToLocalNativeStore READ_MESSAGES "0"
+    pure $ NoAction
+  ]
+
+eval (DriverInfoCardActionController (DriverInfoCardController.MessageDriver)) state = do
+  _ <- pure $ updateLocalStage ChatWithDriver
+  _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (length state.data.messages))
+  continue state {props {currentStage = ChatWithDriver, sendMessageActive = false, unReadMessages = false }}
 
 eval BackPressed state = do
   _ <- pure $ toggleBtnLoader "" false  
@@ -568,6 +655,9 @@ eval BackPressed state = do
     FavouriteLocationModel -> do
                       _ <- pure $ updateLocalStage (if state.props.isSearchLocation == NoView then HomeScreen else SearchLocationModel)
                       continue state { props { currentStage = if state.props.isSearchLocation == NoView then HomeScreen else SearchLocationModel}}
+    ChatWithDriver -> do 
+                      _ <- pure $ updateLocalStage RideAccepted
+                      continue state {props {currentStage = RideAccepted}}
     _               -> do 
                         if state.props.isLocationTracking then continue state{props{isLocationTracking = false}}
                           else if state.props.isSaveFavourite then continueWithCmd state [pure $ (SaveFavouriteCardAction (SaveFavouriteCardController.OnClose))]
@@ -749,7 +839,9 @@ eval (SkipButtonActionController (PrimaryButtonController.OnClick)) state = do
   _ <- pure $ setValueToLocalStore RATING_SKIPPED "true"
   updateAndExit state GoToHome
 
-eval OpenSettings state = continue state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
+eval OpenSettings state = do 
+  _ <- pure $ hideKeyboardOnNavigation true
+  continue state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
 
 eval (SearchExpireCountDown seconds id status timerID) state = do
   if status == "EXPIRED" then do
@@ -785,7 +877,7 @@ eval (DriverArrivedAction driverArrivalTime) state = do
 
 eval (WaitingTimeAction timerID timeInMinutes seconds) state = do
   _ <- pure $ setValueToLocalStore DRIVER_ARRIVAL_ACTION "WAITING_ACTION_TRIGGERED"
-  continue state { data { driverInfoCardState { waitingTime = timeInMinutes, driverArrived = false } }, props { waitingTimeTimerId = timerID } }
+  continue state { data { driverInfoCardState { waitingTime = timeInMinutes } }, props { waitingTimeTimerId = timerID } }
 
 eval (DriverInfoCardActionController (DriverInfoCardController.Support)) state = do
   _ <- pure $ showDialer (getSupportNumber "")
@@ -1575,6 +1667,46 @@ getNearestSavedLocation lat lon savedLocations = (sortBy compareByDistance (map(
 compareByDistance :: CurrentLocationDetailsWithDistance -> CurrentLocationDetailsWithDistance -> Ordering 
 compareByDistance ( a) ( b) = compare (a.distance ) (b.distance)
 
+updateMessagesWithCmd :: HomeScreenState -> Eval Action ScreenOutput HomeScreenState
+updateMessagesWithCmd state =
+  continueWithCmd state [ do
+    if(state.props.currentStage == ChatWithDriver) then do
+      _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (length state.data.messages))
+      pure unit
+    else
+      pure unit
+    pure NoAction
+    ]
+
+getMessage :: String -> String
+getMessage message = case message of 
+                        "I'm on my way" -> (getString I_AM_ON_MY_WAY)
+                        "Getting delayed, Please wait" -> (getString GETTING_DELAYED_PLEASE_WAIT)
+                        "Unreachable, Please call back" -> (getString UNREACHABLE_PLEASE_CALL_BACK)
+                        "Are you starting?" -> (getString ARE_YOU_STARING)
+                        "Please come soon" -> (getString PLEASE_COME_SOON)
+                        "Ok, I'll wait" -> (getString OK_I_WILL_WAIT)
+                        "I've arrived" -> (getString I_HAVE_ARRIVED)
+                        "Please come fast, I'm waiting" -> (getString PLEASE_COME_FAST_I_AM_WAITING)
+                        "Please wait, I'll be there" -> (getString PLEASE_WAIT_I_WILL_BE_THERE)
+                        "Looking for you at pick-up" -> (getString LOOKING_FOR_YOU_AT_PICKUP)
+                        _ -> message
+
+chatSuggestionsList :: String -> Array STR
+chatSuggestionsList _ =
+  [
+    I_AM_ON_MY_WAY,
+    GETTING_DELAYED_PLEASE_WAIT ,
+    UNREACHABLE_PLEASE_CALL_BACK ,
+    ARE_YOU_STARING ,
+    PLEASE_COME_SOON ,
+    OK_I_WILL_WAIT ,
+    I_HAVE_ARRIVED,
+    PLEASE_COME_FAST_I_AM_WAITING,
+    PLEASE_WAIT_I_WILL_BE_THERE ,
+    LOOKING_FOR_YOU_AT_PICKUP
+  ]
+  
 dummySelectedQuotes :: SelectedQuotes
 dummySelectedQuotes = SelectedQuotes {
   selectedQuotes : []
