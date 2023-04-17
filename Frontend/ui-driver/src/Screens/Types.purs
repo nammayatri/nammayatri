@@ -616,6 +616,8 @@ type HomeScreenProps =  {
   unReadMessages :: Boolean,
   updatedArrivalInChat :: Boolean
   driverStatusSet :: DriverStatus
+  driverStatusSet :: DriverStatus,
+  silentPopUpView :: Boolean
  }
 
 data DriverStatus = Online | Offline | Silent
