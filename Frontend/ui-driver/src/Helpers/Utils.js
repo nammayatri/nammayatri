@@ -2300,6 +2300,26 @@ exports["storeCallBackTime"] = function (cb) {
   }
 }
 
+function setText(id, text, pos) {
+  if (__OS === "ANDROID") {
+      var cmd = "set_view=ctx->findViewById:i_" + id + ";";
+      cmd += "get_view->setText:cs_" + text + ";";
+      cmd += "get_view->setSelection:i_" + pos + ";";
+      Android.runInUI(cmd, null);
+  } else {
+      Android.runInUI({id: id, text: text});
+      Android.runInUI({id: id, cursorPosition: pos});
+  }
+}
+
+exports ["setText'"] = function (id) {
+  return function (text) {
+      return function (){
+          setText(id, text, text.length);
+      }
+  }
+} 
+
 exports["launchAppSettings"] = function (unit) {
   return JBridge.launchAppSettings();
 };

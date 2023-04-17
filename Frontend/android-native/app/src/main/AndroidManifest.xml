@@ -15,6 +15,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.READ_CONTACTS" />
     <uses-permission android:name="START_ACTIVITIES_FROM_BACKGROUND"/>
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission
         android:name="android.permission.RECEIVE_SMS"
         tools:node="remove" />
@@ -80,6 +81,11 @@
 
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
+        </receiver>
+        <receiver
+            android:name=".utils.ChatBroadCastReceiver"
+            android:enabled="true"
+            android:exported="false">
         </receiver>
         <receiver
             android:name=".utils.LocationUpdateAlarm"
@@ -165,7 +171,10 @@
             android:exported="false"
             android:foregroundServiceType="location"
             android:stopWithTask="false" />
-
+        <service android:name=".utils.ChatService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync"
+            android:stopWithTask="false" />
         <activity android:name="com.theartofdev.edmodo.cropper.CropImageActivity"
             android:theme="@style/Base.Theme.AppCompat"/>
     </application>

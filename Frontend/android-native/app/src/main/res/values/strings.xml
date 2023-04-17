@@ -36,6 +36,10 @@
     <string name="location_is_turned_off_permission_is_disabled">Location is turned off / permission is disabled</string>
     <string name="ride_assigned_to_another_driver">Ride assigned to another driver</string>
     <string name="select_date">Select Date</string>
+    <string name="chatting_is_enabled">Chatting is enabled</string>
+    <string name="you_can_now_chat_with_driver">You can now chat with driver</string>
+    <string name="you_can_now_chat_with_customer">You can now chat with customer</string>
+
     <string name="new_ride_req">New Ride Request</string>
     <string name="new_ride_available_for_offering">New ride available for offering</string>
 </resources>

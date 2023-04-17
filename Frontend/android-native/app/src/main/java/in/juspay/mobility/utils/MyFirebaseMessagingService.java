@@ -128,6 +128,11 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                     case NotificationTypes.CANCELLED_PRODUCT :
                         NotificationUtils.showNotification(this, title, body, payload, imageUrl);
                         sharedPref.edit().putString(getResources().getString(R.string.IS_RIDE_ACTIVE), "false").apply();
+                        Intent chatListenerService = new Intent(this, ChatService.class);
+                        this.stopService(chatListenerService);
+                        SharedPreferences.Editor editor = sharedPref.edit();
+                        editor.putString("READ_MESSAGES", "0");
+                        editor.apply();
                         startWidgetService(getString(R.string.ride_cancelled));
                         break;
 

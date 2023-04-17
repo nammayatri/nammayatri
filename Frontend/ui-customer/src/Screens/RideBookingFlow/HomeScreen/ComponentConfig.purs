@@ -29,6 +29,7 @@ import Components.EmergencyHelp as EmergencyHelp
 import Components.SearchLocationModel as SearchLocationModel
 import Components.QuoteListModel as QuoteListModel
 import Components.RatingCard as RatingCard
+import Components.ChatView as ChatView
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Data.String as DS
 import Animation.Config as AnimConfig
@@ -44,6 +45,8 @@ import Font.Style as FontStyle
 import Styles.Colors as Color
 import Common.Types.App
 import PrestoDOM
+import Data.Int as INT
+import Storage (KeyStore(..), getValueToLocalStore)
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -265,6 +268,7 @@ primaryButtonConfirmPickupConfig state =
           { text = (getString CONFIRM_LOCATION)
           , color = Color.yellow900
           , textSize = FontSize.a_16
+          , fontStyle = FontStyle.regular LanguageStyle
           }
         , background = Color.black900
         , margin = (Margin 0 22 0 0)
@@ -475,9 +479,65 @@ driverInfoCardViewState :: ST.HomeScreenState -> DriverInfoCard.DriverInfoCardSt
 driverInfoCardViewState state = { props:
                                   { currentStage: state.props.currentStage
                                   , trackingEnabled: state.props.isInApp
+                                  , unReadMessages : state.props.unReadMessages
                                   }
                               , data: state.data.driverInfoCardState
                             }
+
+chatViewConfig :: ST.HomeScreenState -> ChatView.Config
+chatViewConfig state = let
+  config = ChatView.config
+  chatViewConfig' = config {
+    userConfig 
+        {
+          userName = state.data.driverInfoCardState.driverName
+        , appType = "Customer" 
+        }
+      , messages = state.data.messages
+      , sendMessageActive = state.props.sendMessageActive
+      , distance = metersToKm state.data.driverInfoCardState.distance state
+      , suggestionsList = if (metersToKm state.data.driverInfoCardState.distance state) == (getString AT_PICKUP) then pickupSuggestions ""  else initialSuggestions ""
+      , hint = (getString MESSAGE)
+      , suggestionHeader = (getString START_YOUR_CHAT_USING_THESE_QUICK_CHAT_SUGGESTIONS)
+      , emptyChatHeader = (getString START_YOUR_CHAT_WITH_THE_DRIVER)
+      , languageKey = (getValueToLocalStore LANGUAGE_KEY)
+      , mapsText = "Maps"
+      , grey700 = Color.grey700
+      , blue600 = Color.blue600
+      , blue900 = Color.blue900
+      , transparentGrey = Color.transparentGrey
+      , green200 = Color.green200
+      , grey900 = Color.grey900
+      , grey800 = Color.grey800
+      , blue800 = Color.blue800
+      , white900 = Color.white900
+      , black800 = Color.black800
+      , black700 = Color.black700
+  }
+  in chatViewConfig'
+
+initialSuggestions :: String -> Array String
+initialSuggestions _ = 
+  [
+    (getString ARE_YOU_STARING),
+    (getString PLEASE_COME_SOON),
+    (getString OK_I_WILL_WAIT)
+  ]
+
+pickupSuggestions :: String -> Array String
+pickupSuggestions _ = 
+  [
+    (getString PLEASE_WAIT_I_WILL_BE_THERE),
+    (getString LOOKING_FOR_YOU_AT_PICKUP),
+    (getString UNREACHABLE_PLEASE_CALL_BACK)
+  ]
+
+
+metersToKm :: Int -> ST.HomeScreenState -> String
+metersToKm distance state =
+  if (distance <= 10) then
+    (if (state.props.currentStage == ST.RideStarted) then (getString AT_DROP) else (getString AT_PICKUP))
+  else if (distance < 1000) then (HU.toString distance <> " m " <> (getString AWAY_C)) else (HU.parseFloat ((INT.toNumber distance) / 1000.0)) 2 <> " km " <> (getString AWAY_C)
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState
 emergencyHelpModelViewState state = { showContactSupportPopUp: state.props.emergencyHelpModelState.showContactSupportPopUp

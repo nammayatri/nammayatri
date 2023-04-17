@@ -200,6 +200,7 @@ foreign import decodeErrorCode :: String -> String
 foreign import decodeErrorMessage :: String -> String
 foreign import storeCallBackForNotification :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
 foreign import secondsLeft :: String -> Int
+foreign import setText' :: String -> String -> Effect Unit
 foreign import parseFloat :: forall a. a -> Int -> String
 foreign import objectToAllocationType :: String -> AllocationData
 foreign import getcurrentdate :: String -> String

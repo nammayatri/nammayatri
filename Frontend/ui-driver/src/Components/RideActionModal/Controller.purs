@@ -15,6 +15,8 @@
 
 module Components.RideActionModal.Controller where
 
+import Screens.Types (HomeScreenStage(..))
+
 data Action = StartRide 
             | EndRide 
             | CancelRide 
@@ -23,6 +25,7 @@ data Action = StartRide
             | LocationTracking
             | ButtonTimer Int String String String
             | NotifyCustomer
+            | MessageCustomer
 
 type Config = { 
   startRideActive :: Boolean,
@@ -34,7 +37,9 @@ type Config = {
   estimatedRideFare :: Int,
   notifiedCustomer :: Boolean,
   id :: String,
-  buttonTimeOut :: Int
+  buttonTimeOut :: Int,
+  currentStage :: HomeScreenStage,
+  unReadMessages :: Boolean
   }
 
 type AddressConfig = {
@@ -59,5 +64,7 @@ config = {
   estimatedRideFare : 0,
   notifiedCustomer : true,
   buttonTimeOut : 10,
-  id : "buttonTimer"
+  id : "buttonTimer",
+  currentStage : RideAccepted,
+  unReadMessages : false
 }

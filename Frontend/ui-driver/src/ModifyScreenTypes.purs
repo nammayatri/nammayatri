@@ -126,4 +126,6 @@ updateStage stage = do
         HomeScreen -> do 
           _ <- pure $ removeAllPolylines ""
           modifyScreenState $ HomeScreenStateType (\state -> HomeScreenData.initData) 
-          
+        ChatWithCustomer -> do 
+          pure unit
+        _ -> modifyScreenState $ HomeScreenStateType (\state -> state { props { currentStage = stage'} }) 

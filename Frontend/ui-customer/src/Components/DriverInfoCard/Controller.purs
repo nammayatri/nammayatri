@@ -26,6 +26,7 @@ data Action = NoAction
             | CancelRide DriverInfoCardState
             | LocationTracking
             | OpenEmergencyHelp
+            | MessageDriver
 
 type DriverInfoCardState = 
   { props :: DriverInfoCardProps
@@ -35,7 +36,8 @@ type DriverInfoCardState =
 type DriverInfoCardProps = 
   {
     currentStage :: Stage,
-    trackingEnabled :: Boolean
+    trackingEnabled :: Boolean,
+    unReadMessages :: Boolean
   }
 
 type DriverInfoCardData = 
@@ -62,4 +64,5 @@ type DriverInfoCardData =
   , driverArrived :: Boolean
   , estimatedDistance :: String
   , driverArrivalTime :: Int
+  , bppRideId :: String
   }

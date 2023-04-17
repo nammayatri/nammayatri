@@ -16,6 +16,7 @@ import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 
+import android.app.AlarmManager;
 import android.app.ActivityManager;
 import android.app.AlertDialog;
 import android.app.DatePickerDialog;
@@ -91,6 +92,7 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.NumberPicker;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.TimePicker;
 import android.widget.Toast;
@@ -105,7 +107,6 @@ import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import androidx.core.location.LocationManagerCompat;
 
-import androidx.core.text.HtmlCompat;
 import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
@@ -117,11 +118,7 @@ import androidx.work.WorkManager;
 import com.airbnb.lottie.LottieAnimationView;
 import com.google.android.gms.ads.identifier.AdvertisingIdClient;
 import com.google.android.gms.common.api.ApiException;
-import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.common.api.PendingResult;
 import com.google.android.gms.common.api.ResolvableApiException;
-import com.google.android.gms.common.api.ResultCallback;
-import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
@@ -129,8 +126,6 @@ import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.LocationSettingsRequest;
 import com.google.android.gms.location.LocationSettingsResponse;
-import com.google.android.gms.location.LocationSettingsResult;
-import com.google.android.gms.location.LocationSettingsStates;
 import com.google.android.gms.location.LocationSettingsStatusCodes;
 import com.google.android.gms.location.Priority;
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -159,7 +154,6 @@ import com.google.android.gms.tasks.Task;
 //import com.google.android.material.snackbar.Snackbar;
 //import com.google.firebase.installations.FirebaseInstallations;
 import com.google.android.libraries.places.api.model.AutocompleteSessionToken;
-import com.google.android.material.math.MathUtils;
 import com.google.android.play.core.review.ReviewInfo;
 import com.google.android.play.core.review.ReviewManager;
 import com.google.android.play.core.review.ReviewManagerFactory;
@@ -210,6 +204,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.Inflater;
 
+import in.juspay.mobility.utils.ChatBroadCastReceiver;
+import in.juspay.mobility.utils.ChatService;
 import in.juspay.mobility.utils.LocationUpdateWorker;
 import in.juspay.mobility.utils.CheckPermissionAutoStart;
 import in.juspay.mobility.utils.CheckPermissionOverlay;
@@ -354,10 +350,8 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     public void setKeysInSharedPrefs(String key, String value) {
         KeyValueStore.write(juspayServices, key, value);
         setEnvInNativeSharedPrefKeys(key, value);
-        if (MainActivity.getInstance().getResources().getString(R.string.service).equals(context.getResources().getString(R.string.nammayatripartner))){
-            if (key.equals(context.getResources().getString(R.string.LANGUAGE_KEY))){
-                updateLocaleResource(value);
-            }
+        if (key.equals(context.getResources().getString(R.string.LANGUAGE_KEY))){
+            updateLocaleResource(value);
         }
     }
 
@@ -3276,6 +3270,59 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     public void currentPosition(String str) {
         System.out.println("Fetch Current Position");
         showLocationOnMap();
+    }
+
+    @JavascriptInterface
+    public static void sendMessage(final String message){
+        ChatService.sendMessage(message); 
+    }
+
+    @JavascriptInterface
+    public void scrollToBottom(final String id){
+        ScrollView scrollView = activity.findViewById(Integer.parseInt(id));
+        scrollView.fullScroll(View.FOCUS_DOWN);
+    }
+
+    @JavascriptInterface
+    public void storeCallBackMessageUpdated(final String channelId, final String uuid, final String callback){
+        ChatService.storeCallBackMessage = callback;
+        setKeysInSharedPrefs("CHAT_CHANNEL_ID", channelId);
+        ChatService.chatChannelID = channelId;
+        ChatService.chatUserId = uuid;
+    }
+
+    public static void addDynamicView(DuiCallback dynamicUII){
+        ChatService.chatDynamicUI = dynamicUII;
+    }
+
+    @JavascriptInterface
+    public void startChatListenerService() {
+        try {
+            SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+            String appState = sharedPref.getString("ACTIVITY_STATUS", "null");
+            Intent chatListenerService = new Intent(context, ChatService.class);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && appState.equals("onPause"))
+            {
+                AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+                Intent alarmIntent = new Intent(context, ChatBroadCastReceiver.class);
+                PendingIntent pendingIntent = PendingIntent.getBroadcast(context, 0, alarmIntent, PendingIntent.FLAG_IMMUTABLE);
+                manager.setExact(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), pendingIntent);
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
+                context.startForegroundService(chatListenerService);
+            }
+            else
+            {
+                context.startService(chatListenerService);
+            }
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "Failed to start ChatService : " + e);
+        }
+    }
+
+    @JavascriptInterface
+    public void stopChatListenerService() {
+        Intent chatListenerService = new Intent(activity, ChatService.class);
+        activity.stopService(chatListenerService);
     }
 
     private void showLocationOnMap() {

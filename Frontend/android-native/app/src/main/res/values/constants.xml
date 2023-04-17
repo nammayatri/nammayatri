@@ -6,7 +6,7 @@
     <integer name="REQUEST_CODE_UPDATE_APP">587</integer>
     <integer name="WIDGET_MESSAGE_ANIMATION_DURATION">1000</integer>
     <integer name="WIDGET_CORNER_ANIMATION_DURATION">200</integer>
-    <integer name="DURATION_OF_SHOWING_MESSAGE">700</integer>
+    <integer name="DURATION_OF_SHOWING_MESSAGE">5000</integer>
     <integer name="LOADER_WAITING_TIME">15000</integer>
     <string name="DRIVER_STATUS" translatable="false">DRIVER_STATUS</string>
     <string name="WIDGET_MESSAGE" translatable="false">widgetMessage</string>

@@ -463,6 +463,9 @@ grey700 = "#F4F4F6"
 black650 :: Color
 black650 = "#868B98"
 
+green200 :: Color
+green200 = "#2053BB6F"
+
 linearGradient :: Array (Array Color)
 linearGradient = [
   ["#26FE2D" , "#79F400", "#A6E900", "#C8DD00", "#E6CF00", "#FFBF00", "#FFAE00", "#FF9C05", "#FF8A37", "#FF7755", "#FF6670", "#FF598B", "#FF51A5", "#FF51BE", "#FF57D6", "#FF62EC", "#F66EFF"]
