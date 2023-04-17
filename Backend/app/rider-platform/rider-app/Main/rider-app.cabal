@@ -118,7 +118,6 @@ library
       Domain.Action.UI.Booking
       Domain.Action.UI.Call
       Domain.Action.UI.Cancel
-      Domain.Action.UI.CancellationReason
       Domain.Action.UI.Confirm
       Domain.Action.UI.CustomerSupport
       Domain.Action.UI.Feedback
@@ -189,6 +188,7 @@ library
       Environment
       SharedLogic.CallBPP
       SharedLogic.CallBPPInternal
+      SharedLogic.CancellationReasons
       SharedLogic.Confirm
       SharedLogic.DirectionsCache
       SharedLogic.GoogleTranslate
@@ -252,7 +252,6 @@ library
       Storage.Tabular.BookingCancellationReason
       Storage.Tabular.CallbackRequest
       Storage.Tabular.CallStatus
-      Storage.Tabular.CancellationReason
       Storage.Tabular.DriverOffer
       Storage.Tabular.Estimate
       Storage.Tabular.Estimate.Instances

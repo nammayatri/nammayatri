@@ -15,10 +15,11 @@
 module Beckn.Types.Core.Taxi.CancellationReasons.Types where
 
 import Data.OpenApi (ToSchema)
+import Data.OpenApi.Internal.ParamSchema (ToParamSchema)
 import EulerHS.Prelude
 
 newtype CancellationReasonCode = CancellationReasonCode Text
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data CancellationReason = CancellationReason
   { reasonCode :: CancellationReasonCode,

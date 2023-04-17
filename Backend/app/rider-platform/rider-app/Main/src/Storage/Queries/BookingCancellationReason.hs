@@ -41,7 +41,7 @@ upsert cancellationReason =
     [ BookingCancellationReasonBookingId =. val (toKey cancellationReason.bookingId),
       BookingCancellationReasonRideId =. val (toKey <$> cancellationReason.rideId),
       BookingCancellationReasonSource =. val (cancellationReason.source),
-      BookingCancellationReasonReasonCode =. val (toKey <$> cancellationReason.reasonCode),
+      BookingCancellationReasonReasonCode =. val (cancellationReason.reasonCode),
       BookingCancellationReasonReasonStage =. val (cancellationReason.reasonStage),
       BookingCancellationReasonAdditionalInfo =. val (cancellationReason.additionalInfo)
     ]

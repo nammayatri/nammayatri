@@ -20,6 +20,7 @@
 
 module Storage.Tabular.BookingCancellationReason where
 
+import qualified Beckn.Types.Core.Taxi.CancellationReasons.Types as SCR
 import qualified Domain.Types.BookingCancellationReason as Domain
 import qualified Domain.Types.CancellationReason as DCR
 import Kernel.External.Maps
@@ -27,11 +28,14 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Common (Meters (..))
 import qualified Storage.Tabular.Booking as SRB
-import qualified Storage.Tabular.CancellationReason as SCR
 import Storage.Tabular.Merchant (MerchantTId)
 import qualified Storage.Tabular.Ride as SRide
 
 derivePersistField "Domain.CancellationSource"
+
+derivePersistField "DCR.CancellationStage"
+
+derivePersistField "SCR.CancellationReasonCode"
 
 mkPersist
   defaultSqlSettings
@@ -41,7 +45,7 @@ mkPersist
       rideId SRide.RideTId Maybe
       merchantId MerchantTId Maybe
       source Domain.CancellationSource
-      reasonCode SCR.CancellationReasonTId Maybe
+      reasonCode SCR.CancellationReasonCode Maybe
       reasonStage DCR.CancellationStage Maybe
       additionalInfo Text Maybe
       driverCancellationLocationLat Double Maybe

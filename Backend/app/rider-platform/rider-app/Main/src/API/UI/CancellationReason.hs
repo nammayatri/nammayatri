@@ -15,47 +15,39 @@
 module API.UI.CancellationReason
   ( API,
     handler,
-    ListRes,
     getCancellationReasons,
   )
 where
 
 import Beckn.Types.Core.Taxi.CancellationReasons.Types
-import qualified Domain.Action.UI.CancellationReason as DCancellationReason
-import qualified Domain.Types.CancellationReason as DCR
-import qualified Domain.Types.Merchant as Merchant
-import qualified Domain.Types.Person as Person
+import Domain.Types.Merchant
+import Domain.Types.Person
 import Environment
 import EulerHS.Prelude hiding (id)
+import Kernel.Prelude (parseBaseUrl)
+import Kernel.Storage.Esqueleto (runInReplica)
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
-import Servant.Client
-import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.CancellationReasons as SCR
+import qualified Storage.CachedQueries.Merchant as QMerchant
+import qualified Storage.Queries.Person as QPerson
 import Tools.Auth
 
 type API =
   "get_cancellation_reason"
+    :> TokenAuth
+    :> MandatoryQueryParam "providerUrl" Text
     :> Get '[JSON] CancellationReasons
-      :<|> "cancellationReason"
-    :> ( "list"
-           :> TokenAuth
-           :> MandatoryQueryParam "cancellationStage" DCR.CancellationStage
-           :> Get '[JSON] ListRes
-       )
-
-type ListRes = [DCR.CancellationReasonAPIEntity]
 
 handler :: FlowServer API
-handler = getCancellationReasons :<|> list
+handler = getCancellationReasons
 
-list :: (Id Person.Person, Id Merchant.Merchant) -> DCR.CancellationStage -> FlowHandler ListRes
-list _ = withFlowHandlerAPI . DCancellationReason.list
-
-getCancellationReasons :: FlowHandler CancellationReasons
-getCancellationReasons =
-  withFlowHandlerAPI $
-    CallBPP.cancellationReasons bppUrl req
-  where
-    bppUrl = BaseUrl Http "localhost" 8016 "/ui"
-    req = CancellationReasonsReq "" ""
+getCancellationReasons :: (Id Person, Id Merchant) -> Text -> FlowHandler CancellationReasons
+getCancellationReasons (personId, _) providerUrlText =
+  withFlowHandlerAPI $ do
+    person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+    merchant <- QMerchant.findById (person.merchantId) >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
+    providerUrl <- parseBaseUrl providerUrlText
+    SCR.getCancellationReasons providerUrl merchant.shortId.getShortId
