@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -17,8 +17,8 @@ module Services.APITypes where
 
 import Control.Alt ((<|>))
 import Data.Generic.Rep (class Generic)
-import Data.Generic.Rep.Eq (genericEq)
-import Data.Generic.Rep.Show (genericShow)
+import Data.Eq.Generic (genericEq)
+import Data.Show.Generic (genericShow)
 import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype)
 import Foreign (ForeignError(..), fail)
@@ -35,7 +35,7 @@ import Data.Either as Either
 
 newtype ErrorPayloadWrapper = ErrorPayload ErrorResponse
 
-instance decodeErrorPayloadWrapper :: Decode ErrorPayloadWrapper 
+instance decodeErrorPayloadWrapper :: Decode ErrorPayloadWrapper
   where decode payload = ErrorPayload <$> decode payload
 
 
@@ -70,7 +70,7 @@ instance makeTriggerOTPReq :: RestEndpoint TriggerOTPReq TriggerOTPResp where
  makeRequest reqBody headers = defaultMakeRequest POST (EP.triggerOTP "") headers reqBody
  decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
- 
+
 
 derive instance genericTriggerOTPReq :: Generic TriggerOTPReq _
 derive instance newtypeTriggerOTPReq :: Newtype TriggerOTPReq _
@@ -109,7 +109,7 @@ newtype User = User
     , id :: String
     , lastName :: Maybe String
     , maskedMobileNumber :: String
-    , role :: String 
+    , role :: String
     }
 
 instance makeVerifyTokenReq :: RestEndpoint VerifyTokenRequest VerifyTokenResp where
@@ -121,7 +121,7 @@ derive instance genericWhatsappOptMethods :: Generic WhatsappOptMethods _
 instance showWhatsappOptMethods :: Show WhatsappOptMethods where show = genericShow
 instance decodeWhatsappOptMethods :: Decode WhatsappOptMethods where decode = defaultDecode
 instance encodeWhatsappOptMethods :: Encode WhatsappOptMethods where encode = defaultEncode
-instance standardEncodeWhatsappOptMethods :: StandardEncode WhatsappOptMethods 
+instance standardEncodeWhatsappOptMethods :: StandardEncode WhatsappOptMethods
   where
   standardEncode OPT_IN = standardEncode $ show OPT_IN
   standardEncode OPT_OUT = standardEncode $ show OPT_OUT
@@ -216,7 +216,7 @@ instance decodeStartRideRequest :: Decode StartRideRequest where decode = defaul
 instance encodeStartRideRequest :: Encode StartRideRequest where encode = defaultEncode
 
 newtype StartRideReq = StartRideReq
-    {    
+    {
         rideOtp :: String,
         point :: Point
     }
@@ -269,9 +269,9 @@ instance encodeStartRideResponse :: Encode StartRideResponse where encode = defa
 data EndRideRequest = EndRideRequest String EndRideReq
 
 newtype EndRideReq = EndRideReq
-    {    
-      point :: Point   
-    } 
+    {
+      point :: Point
+    }
 
 newtype EndRideResponse = EndRideResponse ApiSuccessResult
 
@@ -545,14 +545,14 @@ instance standardEncodeStatus :: StandardEncode Status
 
 newtype OfferRideReq = OfferRideReq {
   searchRequestId :: String,
-  offeredFare :: Maybe Number 
+  offeredFare :: Maybe Number
 }
 
 newtype OfferRideResp = OfferRideResp {
   result :: String
 }
 
-instance makeOfferRideReq :: RestEndpoint OfferRideReq OfferRideResp where 
+instance makeOfferRideReq :: RestEndpoint OfferRideReq OfferRideResp where
   makeRequest reqBody headers = defaultMakeRequest POST (EP.offerRide "") headers reqBody
   decodeResponse = decodeJSON
   encodeRequest req = standardEncode req
@@ -657,13 +657,13 @@ data RouteReq = RouteReq String GetRouteReq
 
 newtype GetRouteReq = GetRouteReq {
   waypoints :: Array LatLong
-, mode :: Maybe String 
+, mode :: Maybe String
 , calcPoints :: Boolean
 }
 
 newtype GetRouteResp = GetRouteResp (Array Route)
-  
-newtype Route = Route 
+
+newtype Route = Route
   {
     points :: Snapped
   , boundingBox :: Maybe (Array Number)
@@ -676,7 +676,7 @@ newtype Snapped = Snapped (Array LatLong)
 
 newtype LatLong = LatLong {
   lat :: Number,
-  lon :: Number 
+  lon :: Number
 }
 
 instance makeRouteReq :: RestEndpoint RouteReq GetRouteResp where
@@ -689,13 +689,13 @@ derive instance newtypeGetRouteReq :: Newtype GetRouteReq _
 instance standardEncodeGetRouteReq :: StandardEncode GetRouteReq where standardEncode (GetRouteReq body) = standardEncode body
 instance showGetRouteReq :: Show GetRouteReq where show = genericShow
 instance decodeGetRouteReq :: Decode GetRouteReq where decode = defaultDecode
-instance encodeGetRouteReq  :: Encode GetRouteReq where encode = defaultEncode 
+instance encodeGetRouteReq  :: Encode GetRouteReq where encode = defaultEncode
 
 derive instance genericRouteReq :: Generic RouteReq _
 instance standardEncodeRouteReq :: StandardEncode RouteReq where standardEncode (RouteReq rType body) = standardEncode body
 instance showRouteReq :: Show RouteReq where show = genericShow
 instance decodeRouteReq :: Decode RouteReq where decode = defaultDecode
-instance encodeRouteReq  :: Encode RouteReq where encode = defaultEncode   
+instance encodeRouteReq  :: Encode RouteReq where encode = defaultEncode
 
 derive instance genericRoute :: Generic Route _
 derive instance newtypeRoute :: Newtype Route _
@@ -709,14 +709,14 @@ derive instance newtypeGetRouteResp :: Newtype GetRouteResp _
 instance standardEncodeGetRouteResp :: StandardEncode GetRouteResp where standardEncode (GetRouteResp body) = standardEncode body
 instance showGetRouteResp :: Show GetRouteResp where show = genericShow
 instance decodeGetRouteResp :: Decode GetRouteResp where decode = defaultDecode
-instance encodeGetRouteResp  :: Encode GetRouteResp where encode = defaultEncode 
+instance encodeGetRouteResp  :: Encode GetRouteResp where encode = defaultEncode
 
 derive instance genericSnapped :: Generic Snapped _
 derive instance newtypeSnapped :: Newtype Snapped _
 instance standardEncodeSnapped :: StandardEncode Snapped where standardEncode (Snapped body) = standardEncode body
 instance showSnapped :: Show Snapped where show = genericShow
 instance decodeSnapped :: Decode Snapped where decode = defaultDecode
-instance encodeSnapped  :: Encode Snapped where encode = defaultEncode 
+instance encodeSnapped  :: Encode Snapped where encode = defaultEncode
 
 derive instance genericLatLong :: Generic LatLong _
 derive instance newtypeLatLong :: Newtype LatLong _
@@ -737,9 +737,9 @@ newtype DriverRCReq = DriverRCReq {
 
 newtype DriverRCResp = DriverRCResp ApiSuccessResult
 
-instance makeDriverRCReq :: RestEndpoint DriverRCReq DriverRCResp where 
+instance makeDriverRCReq :: RestEndpoint DriverRCReq DriverRCResp where
   makeRequest reqBody headers = defaultMakeRequest POST (EP.registerDriverRC "") headers reqBody
-  decodeResponse = decodeJSON 
+  decodeResponse = decodeJSON
   encodeRequest req = standardEncode req
 
 derive instance genericDriverRCReq :: Generic DriverRCReq _
@@ -747,14 +747,14 @@ derive instance newtypeDriverRCReq :: Newtype DriverRCReq _
 instance standardEncodeDriverRCReq :: StandardEncode DriverRCReq where standardEncode (DriverRCReq body) = standardEncode body
 instance showDriverRCReq :: Show DriverRCReq where show = genericShow
 instance decodeDriverRCReq:: Decode DriverRCReq where decode = defaultDecode
-instance encodeDriverRCReq  :: Encode DriverRCReq where encode = defaultEncode 
+instance encodeDriverRCReq  :: Encode DriverRCReq where encode = defaultEncode
 
 derive instance genericDriverRCResp :: Generic DriverRCResp _
 derive instance newtypeDriverRCResp :: Newtype DriverRCResp _
 instance standardEncodeDriverRCResp :: StandardEncode DriverRCResp where standardEncode (DriverRCResp body) = standardEncode body
 instance showDriverRCResp :: Show DriverRCResp where show = genericShow
 instance decodeDriverRCResp:: Decode DriverRCResp where decode = defaultDecode
-instance encodeDriverRCResp  :: Encode DriverRCResp where encode = defaultEncode 
+instance encodeDriverRCResp  :: Encode DriverRCResp where encode = defaultEncode
 
 
 -- registerDriverDL API request, response types
@@ -769,9 +769,9 @@ newtype DriverDLReq = DriverDLReq {
 
 newtype DriverDLResp = DriverDLResp ApiSuccessResult
 
-instance makeDriverDLReq :: RestEndpoint DriverDLReq DriverDLResp where 
+instance makeDriverDLReq :: RestEndpoint DriverDLReq DriverDLResp where
   makeRequest reqBody headers = defaultMakeRequest POST (EP.registerDriverDL "") headers reqBody
-  decodeResponse = decodeJSON 
+  decodeResponse = decodeJSON
   encodeRequest req = standardEncode req
 
 derive instance genericDriverDLReq :: Generic DriverDLReq _
@@ -779,14 +779,14 @@ derive instance newtypeDriverDLReq :: Newtype DriverDLReq _
 instance standardEncodeDriverDLReq :: StandardEncode DriverDLReq where standardEncode (DriverDLReq body) = standardEncode body
 instance showDriverDLReq :: Show DriverDLReq where show = genericShow
 instance decodeDriverDLReq:: Decode DriverDLReq where decode = defaultDecode
-instance encodeDriverDLReq  :: Encode DriverDLReq where encode = defaultEncode 
+instance encodeDriverDLReq  :: Encode DriverDLReq where encode = defaultEncode
 
 derive instance genericDriverDLResp :: Generic DriverDLResp _
 derive instance newtypeDriverDLResp :: Newtype DriverDLResp _
 instance standardEncodeDriverDLResp :: StandardEncode DriverDLResp where standardEncode (DriverDLResp body) = standardEncode body
 instance showDriverDLResp :: Show DriverDLResp where show = genericShow
 instance decodeDriverDLResp:: Decode DriverDLResp where decode = defaultDecode
-instance encodeDriverDLResp  :: Encode DriverDLResp where encode = defaultEncode 
+instance encodeDriverDLResp  :: Encode DriverDLResp where encode = defaultEncode
 
 -- validateImage API request, response types
 newtype ValidateImageReq = ValidateImageReq {
@@ -798,9 +798,9 @@ newtype ValidateImageRes = ValidateImageRes {
   imageId :: String
 }
 
-instance makeValidateImageReq :: RestEndpoint ValidateImageReq ValidateImageRes where 
+instance makeValidateImageReq :: RestEndpoint ValidateImageReq ValidateImageRes where
   makeRequest reqBody headers = defaultMakeRequest POST (EP.validateImage "") headers reqBody
-  decodeResponse = decodeJSON 
+  decodeResponse = decodeJSON
   encodeRequest req = defaultEncode req
 
 derive instance genericValidateImageReq :: Generic ValidateImageReq _
@@ -808,14 +808,14 @@ derive instance newtypeValidateImageReq :: Newtype ValidateImageReq _
 instance standardEncodeValidateImageReq :: StandardEncode ValidateImageReq where standardEncode (ValidateImageReq body) = standardEncode body
 instance showValidateImageReq :: Show ValidateImageReq where show = genericShow
 instance decodeValidateImageReq:: Decode ValidateImageReq where decode = defaultDecode
-instance encodeValidateImageReq  :: Encode ValidateImageReq where encode = defaultEncode 
+instance encodeValidateImageReq  :: Encode ValidateImageReq where encode = defaultEncode
 
 derive instance genericValidateImageRes :: Generic ValidateImageRes _
 derive instance newtypeValidateImageRes :: Newtype ValidateImageRes _
 instance standardEncodeValidateImageRes :: StandardEncode ValidateImageRes where standardEncode (ValidateImageRes body) = standardEncode body
 instance showValidateImageRes :: Show ValidateImageRes where show = genericShow
 instance decodeValidateImageRes:: Decode ValidateImageRes where decode = defaultDecode
-instance encodeValidateImageRes  :: Encode ValidateImageRes where encode = defaultEncode 
+instance encodeValidateImageRes  :: Encode ValidateImageRes where encode = defaultEncode
 
 
 -- DriverRegistrationStatus API request, response types
@@ -825,7 +825,7 @@ newtype DriverRegistrationStatusResp = DriverRegistrationStatusResp
     { dlVerificationStatus :: String
     , rcVerificationStatus :: String
     }
-  
+
 instance makeDriverRegistrationStatusReq :: RestEndpoint DriverRegistrationStatusReq DriverRegistrationStatusResp where
     makeRequest reqBody headers = defaultMakeRequest GET (EP.driverRegistrationStatus "") headers reqBody
     decodeResponse = decodeJSON
@@ -894,10 +894,10 @@ instance decodeDriverProfileStatsResp :: Decode DriverProfileStatsResp where dec
 instance encodeDriverProfileStatsResp :: Encode DriverProfileStatsResp where encode = defaultEncode
 
 data DriverArrivedRequest = DriverArrivedRequest String DriverArrivedReq
-  
-newtype DriverArrivedReq  = DriverArrivedReq { 
+
+newtype DriverArrivedReq  = DriverArrivedReq {
     lat :: Number
-  , lon :: Number 
+  , lon :: Number
   }
 
 newtype DriverArrivedRes = DriverArrivedRes ApiSuccessResult
@@ -931,7 +931,7 @@ instance encodeDriverArrivedRes :: Encode DriverArrivedRes where encode = defaul
 data FlowStatusReq = FlowStatusReq
 
 newtype FlowStatusRes = FlowStatusRes
-  { currentStatus :: FlowStatus 
+  { currentStatus :: FlowStatus
   , oldStatus :: Maybe FlowStatus
   }
 
@@ -963,7 +963,7 @@ instance encodeFlowStatusRes :: Encode FlowStatusRes where encode = defaultEncod
 derive instance genericFlowStatus :: Generic FlowStatus _
 instance showFlowStatus :: Show FlowStatus where show = genericShow
 instance decodeFlowStatus :: Decode FlowStatus
-  where 
+  where
     decode body = case (runExcept $ (readProp "status" body) >>= decode) of
       Either.Right status -> case status of
         "IDLE"                  -> IDLE <$> decode body
@@ -977,8 +977,8 @@ instance decodeFlowStatus :: Decode FlowStatus
 
       Either.Left error -> fail $ ForeignError "Unknown response"
 
-instance encodeFlowStatus :: Encode FlowStatus 
-  where 
+instance encodeFlowStatus :: Encode FlowStatus
+  where
     encode (IDLE body) = encode body
     encode (ACTIVE body) = encode body
     encode (GOT_SEARCH_REQUEST body) = encode body
@@ -1001,16 +1001,16 @@ instance standardEncodeFlowStatus :: StandardEncode FlowStatus
 data MessageListReq = MessageListReq String String
 
 newtype MessageListRes = MessageListRes (Array MessageAPIEntityResponse)
-    
+
 newtype MessageAPIEntityResponse = MessageAPIEntityResponse
   { type :: MessageType
   , mediaFiles :: Array MediaFileApiResponse
-  , title :: String 
+  , title :: String
   , readStatus :: Boolean
-  , messageId :: String 
+  , messageId :: String
   , description :: String
   , reply :: Maybe String
-  , label :: Maybe String 
+  , label :: Maybe String
   , created_at :: String
   }
 
@@ -1063,20 +1063,20 @@ instance encodeMediaFileApiResponse :: Encode MediaFileApiResponse where encode 
 
 derive instance genericMessageType :: Generic MessageType _
 instance showMessageType :: Show MessageType where show = genericShow
-instance decodeMessageType :: Decode MessageType 
-  where 
+instance decodeMessageType :: Decode MessageType
+  where
     decode body = case (runExcept $ (readProp "tag" body) >>= decode) of
                     Either.Right tag -> case tag of
                                   "Action" -> (Action <$> decode body)
                                   "Read"   -> (Read <$> decode body)
                                   _        -> (fail $ ForeignError "Unknown response")
                     Either.Left err  -> (fail $ ForeignError "Unknown response")
-instance encodeMessageType :: Encode MessageType 
-  where 
+instance encodeMessageType :: Encode MessageType
+  where
     encode (Action body) = encode body
     encode (Read body) = encode body
-instance standardEncodeMessageType :: StandardEncode MessageType 
-  where 
+instance standardEncodeMessageType :: StandardEncode MessageType
+  where
     standardEncode (Action body) = standardEncode body
     standardEncode (Read body) = standardEncode body
 
@@ -1085,8 +1085,8 @@ instance showMediaType :: Show MediaType where show = genericShow
 instance decodeMediaType :: Decode MediaType where decode = defaultEnumDecode
 instance encodeMediaType :: Encode MediaType where encode = defaultEnumEncode
 instance eqMediaType :: Eq MediaType where eq = genericEq
-instance standardEncodeMediaType :: StandardEncode MediaType 
-  where 
+instance standardEncodeMediaType :: StandardEncode MediaType
+  where
     standardEncode _ = standardEncode {}
 
 ------------------------------------------------------ messageSeen -----------------------------------------------
@@ -1148,7 +1148,7 @@ instance standardEncodeMessageResponseRes :: StandardEncode MessageResponseRes w
 instance decodeMessageResponseRes :: Decode MessageResponseRes where decode = defaultDecode
 instance encodeMessageResponseRes :: Encode MessageResponseRes where encode = defaultEncode
 
---------------------------------------------------- linkReferral ---------------------------------------------------- 
+--------------------------------------------------- linkReferral ----------------------------------------------------
 
 newtype LinkReferralCodeReq = LinkReferralCodeReq {
     referralLinkPassword :: String
@@ -1175,7 +1175,7 @@ instance decodeLinkReferralCodeRes :: Decode LinkReferralCodeRes where decode = 
 instance encodeLinkReferralCodeRes :: Encode LinkReferralCodeRes where encode = defaultEncode
 
 
---------------------------------------------------- getPerformance ---------------------------------------------------- 
+--------------------------------------------------- getPerformance ----------------------------------------------------
 
 newtype GetPerformanceReq = GetPerformanceReq {}
 

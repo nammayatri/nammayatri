@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -17,7 +17,7 @@ module Screens.EnterMobileNumberScreen.View where
 
 import Data.Maybe (Maybe(..))
 import Prelude (Unit, const, ($), (<<<), (<>), bind, pure , unit)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), alpha, background, clickable, color, cornerRadius, frameLayout, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textView, visibility, weight, width, afterRender, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), alpha, background, clickable, color, cornerRadius, frameLayout, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textView, visibility, weight, width, afterRender, imageWithFallback)
 import Components.PrimaryEditText.Views as PrimaryEditText
 import Components.PrimaryButton as PrimaryButton
 import Effect (Effect)
@@ -63,25 +63,25 @@ view push state =
         pure unit
         ) (const AfterRender)
     , onBackPressed push (const BackPressed)
-    ][    PrestoAnim.animationSet 
+    ][    PrestoAnim.animationSet
           [ Anim.fadeIn true
           ] $ backArrow state push
-        , PrestoAnim.animationSet 
+        , PrestoAnim.animationSet
           [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig
           ] $ enterMobileNumberTextView state
-        , PrestoAnim.animationSet 
+        , PrestoAnim.animationSet
           [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig
           ] $ primaryEditTextView state push
-        , PrestoAnim.animationSet 
+        , PrestoAnim.animationSet
           [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig
           ] $ termsAndConditionsView state push
-        , PrestoAnim.animationSet 
+        , PrestoAnim.animationSet
           [ Anim.fadeIn true
           ] $ linearLayout
               [ height WRAP_CONTENT
               , width MATCH_PARENT
               ][PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonViewConfig state)]
-    ]   
+    ]
 
 
 --------------------- backArrow ----------------------------
@@ -103,7 +103,7 @@ backArrow state push =
 
 ------------------------- enterMobileNumberTextView -------------------
 enterMobileNumberTextView :: ST.EnterMobileNumberScreenState ->  forall w . PrestoDOM (Effect Unit) w
-enterMobileNumberTextView state = 
+enterMobileNumberTextView state =
  textView (
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
@@ -135,7 +135,7 @@ primaryEditTextView state push =
           error: Just (getString INVALID_MOBILE_NUMBER),
           pattern : Just "[0-9]*,10",
           text: "",
-          letterSpacing: 0.0,
+          letterSpacing: PX 0.0,
           id: (EHC.getNewIDWithTag "EnterMobileNumberEditText"),
           fontSize : FontSize.a_18
         })
@@ -144,7 +144,7 @@ primaryEditTextView state push =
 
 --------------------------------- underlinedTextView ----------------------
 underlinedTextView :: ST.EnterMobileNumberScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-underlinedTextView state push = 
+underlinedTextView state push =
  linearLayout
  [ width WRAP_CONTENT
  , height WRAP_CONTENT
@@ -155,7 +155,7 @@ underlinedTextView state push =
     , text (getString CASE_TWO)
     , alpha 0.5
     , color Color.greyTextColor
-    ] <> FontStyle.body3 TypoGraphy), 
+    ] <> FontStyle.body3 TypoGraphy),
     linearLayout
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
@@ -177,7 +177,7 @@ underlinedTextView state push =
 
 -------------------------------- termsAndConditionsView ------------------
 termsAndConditionsView :: ST.EnterMobileNumberScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-termsAndConditionsView state push = 
+termsAndConditionsView state push =
  linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT

@@ -1,13 +1,15 @@
-const callbackMapper = require("presto-ui").callbackMapper;
-const moment = require("moment");
+import { callbackMapper } from 'presto-ui';
+import moment from 'moment';
 
-// exports["readFile'"] = function (filePath) {
+const { JOS, JBridge } = window;
+
+// export const readFileImpl = function (filePath) {
 //   return function () {
 //     return JBridge.loadFileInDUI(filePath);
 //   };
 // };
 
-// exports["showLoader'"] = function (str) {
+// export const showLoaderImpl = function (str) {
 //   return JBridge.showLoader(str);
 // };
 var timerIdDebounce;
@@ -16,40 +18,40 @@ var timerIdForTimeout;
 var allTimerIID = [];
 var uniqueId = 0;
 
-exports.generateUniqueId = function (unit) {
+export const generateUniqueId = function (unit) {
   uniqueId += 1;
   return JSON.stringify(uniqueId);
 };
 
-exports.getOs = function () {
+export const getOs = function () {
   if (window.__OS) {
     return window.__OS;
   }
   return "ANDROID";
 };
 
-exports["getTimer"] = function (valType) {
+export const getTimer = function (valType) {
   return function (startTime) {
   return function (inputVal) {
     return function (cb){
       return function (action) {
           return function(){
               var callback = callbackMapper.map(function () {
-                    
+
                 console.log(valType+"<===>"+startTime+"<===>"+inputVal)
-                
+
                 var t = new Date().getTime()
-                
+
                 console.log("ttt-->>"+t)
                 var countDownDate = (new Date(inputVal).getTime())-5000;
 
                 console.log("countDownDate-->>"+countDownDate)
-                
+
                 if((Math.floor(((countDownDate - t) % (1000 * 60)) / 1000)) > 25000)
                 {
                   countDownDate = (new Date().getTime())+ 20000;
                 }
-                
+
                 instantGetTimer (function() {
 
                   // Get today's date and time
@@ -77,7 +79,7 @@ exports["getTimer"] = function (valType) {
 
                   if (distance <= 0) {
                     clearInterval(window.timerId);
-                    
+
                     console.log("EXPIRED");
                     cb(action("EXPIRED"))();
                     // return "EXPIRED";
@@ -113,7 +115,7 @@ exports["getTimer"] = function (valType) {
 }
 }
 
-exports["countDown"] = function (countDownTime) {
+export const countDown = function (countDownTime) {
   return function (id) {
     return function (cb) {
       return function (action) {
@@ -147,7 +149,7 @@ exports["countDown"] = function (countDownTime) {
 }
 
 
-exports["get15sTimer"] = function (cb){
+export const get15sTimer = function (cb){
       return function (action) {
           return function(){
               var callback = callbackMapper.map(function () {
@@ -158,7 +160,7 @@ exports["get15sTimer"] = function (cb){
                     clearInterval(window.timerId);
                     console.log("EXPIRED");
                     cb(action("EXPIRED"))();
-                  }else{ 
+                  }else{
                     var timer = seconds + "s "
                     console.log(timer);
                     cb(action(timer))();
@@ -172,13 +174,13 @@ exports["get15sTimer"] = function (cb){
       }
     }
 
-exports["get5sTimer"] = function (cb){
+export const get5sTimer = function (cb){
       return function (action) {
           return function(){
               var callback = callbackMapper.map(function () {
                 var time = 5;
                 sayLetter(time);
-                             
+
                 function sayLetter(seconds){
                  if (seconds >= 0)
                 {
@@ -188,13 +190,13 @@ exports["get5sTimer"] = function (cb){
                        clearInterval(window.timerId);
                       console.log("EXPIRED");
                          cb(action("EXPIRED"))();
-                     }else{ 
+                     }else{
                          var timer = seconds + "s "
                        console.log(timer);
                          cb(action(timer))();
                          sayLetter(seconds-1);
                        }
-                     }, 1000); 
+                     }, 1000);
                 }
                 }
                 console.log("timerId",window.timerId);
@@ -204,7 +206,7 @@ exports["get5sTimer"] = function (cb){
       }
     }
 
-exports ["debounceFunction"] = function (delay) {
+export const debounceFunction = function (delay) {
   return function (cb){
     return function (action){
       return function(){
@@ -222,18 +224,18 @@ exports ["debounceFunction"] = function (delay) {
 }
 
 
-exports ["updateInputString"] = function (a){
+export const updateInputString = function (a){
   inputForDebounce = a;
 }
 
 
-exports["get10sTimer"] = function (cb){
+export const get10sTimer = function (cb){
   return function (action) {
       return function(){
           var callback = callbackMapper.map(function () {
             var time = 10;
             sayLetter(time);
-                         
+
             function sayLetter(seconds){
              if (seconds >= 0)
             {
@@ -243,13 +245,13 @@ exports["get10sTimer"] = function (cb){
                    clearInterval(window.timerId);
                   console.log("EXPIRED");
                      cb(action("EXPIRED"))();
-                 }else{ 
+                 }else{
                      var timer = seconds + "s "
                    console.log(timer);
                      cb(action(timer))();
                      sayLetter(seconds-1);
                    }
-                 }, 1000); 
+                 }, 1000);
             }
             }
             console.log("timerId",window.timerId);
@@ -259,7 +261,7 @@ exports["get10sTimer"] = function (cb){
   }
 }
 
-exports["startTimer"] = function(input){  
+export const startTimer = function(input){
   return function(cb){
     return function (action){
       return function(){
@@ -294,7 +296,7 @@ exports["startTimer"] = function(input){
 }
 
 
-exports ["clearTimer"] = function (a)
+export const clearTimer = function (a)
 { if(timerIdForTimeout){
     clearTimeout(timerIdForTimeout);
   }
@@ -303,7 +305,7 @@ exports ["clearTimer"] = function (a)
   }
 };
 
-exports["clearPopUpTimer"] = function (a) {
+export const clearPopUpTimer = function (a) {
   clearInterval(parseInt(a));
 };
 
@@ -314,14 +316,14 @@ function instantGetTimer (fn , delay) {
   return window.timerId;
 }
 
-exports["clearAllTimer"] = function(a) {
+export const clearAllTimer = function(a) {
   console.log("allTimerIID");
   console.log(allTimerIID);
   while(allTimerIID.length > 0){
     clearInterval(parseInt(allTimerIID.pop()));
   }
 }
-// exports["decodeDriverInfo"] = function (a) {
+// export const decodeDriverInfo = function (a) {
 //   try {
 //     var driverName = JSON.parse(a).tracker.trip.driver.persona.descriptor
 //       .first_name;
@@ -334,7 +336,7 @@ exports["clearAllTimer"] = function(a) {
 //   // return JSON.parse(JSON.parse(a).driverInfo).fullName;
 // };
 
-exports ["setRefreshing"] = function (id){
+export const setRefreshing = function (id){
   return function (bool){
     if (window.__OS == "ANDROID") {
       cmd = "set_v=ctx->findViewById:i_" + id + ";get_v->setRefreshing:b_" + bool + ";"
@@ -343,7 +345,7 @@ exports ["setRefreshing"] = function (id){
   }
 }
 
-exports ["setEnabled"] = function (id){
+export const setEnabled = function (id){
   return function (bool){
     if (window.__OS == "ANDROID") {
       cmd = "set_v=ctx->findViewById:i_" + id + ";get_v->setEnabled:b_" + bool + ";"
@@ -352,7 +354,7 @@ exports ["setEnabled"] = function (id){
   }
 }
 
-exports["decodeDriverInfo"] = function (a) {
+export const decodeDriverInfo = function (a) {
   try {
     var driverName = JSON.parse(a).tracker.trip.driver.persona.descriptor
       .first_name;
@@ -365,7 +367,7 @@ exports["decodeDriverInfo"] = function (a) {
   // return JSON.parse(JSON.parse(a).driverInfo).fullName;
 };
 
-exports["decodeDriver"] = function (a) {
+export const decodeDriver = function (a) {
   try {
     var vehicleVariant = JSON.parse(a).variant;
     var vehicleNo = JSON.parse(a).registrationNo;
@@ -378,7 +380,7 @@ exports["decodeDriver"] = function (a) {
 };
 
 
-exports["decodeAgencyInfo"] = function (a) {
+export const decodeAgencyInfo = function (a) {
   try {
     var agencyName = JSON.parse(a).provider.name;
     var agencyNumbers = JSON.parse(a).provider.phones;
@@ -393,7 +395,7 @@ exports["decodeAgencyInfo"] = function (a) {
   // return JSON.parse(JSON.parse(a).driverInfo).fullName;
 };
 
-exports["decodeErrorCode"] = function (a) {
+export const decodeErrorCode = function (a) {
   try {
     var errorCodee = JSON.parse(a).errorCode;
     return  errorCodee;
@@ -403,13 +405,13 @@ exports["decodeErrorCode"] = function (a) {
   }
 };
 
-exports["decodeErrorMessage"] = function (a) {
+export const decodeErrorMessage = function (a) {
   try {
     var errorMessagee = JSON.parse(a).errorMessage;
     if(errorMessagee == null)
     {
       return "";
-    }  
+    }
     return  errorMessagee;
   } catch (e) {
     console.log(e);
@@ -417,7 +419,7 @@ exports["decodeErrorMessage"] = function (a) {
   }
 };
 
-exports["decodeErrorPayload"] = function (a) {
+export const decodeErrorPayload = function (a) {
   try {
     var errPayload = JSON.parse(a).errorPayload;
     if(errPayload == null){
@@ -431,7 +433,7 @@ exports["decodeErrorPayload"] = function (a) {
   }
 }
 
-exports["decodeAgencyName"] = function (a) {
+export const decodeAgencyName = function (a) {
   try {
     var agencyName = JSON.parse(a).provider.name;
     return  agencyName;
@@ -441,10 +443,10 @@ exports["decodeAgencyName"] = function (a) {
   }
 };
 
-exports["decodeAgencyPhoneNo"] = function (a) {
+export const decodeAgencyPhoneNo = function (a) {
   try {
     var agencyNumbers = JSON.parse(a).provider.phones;
-    var agencyNumber = agencyNumbers[0];    
+    var agencyNumber = agencyNumbers[0];
     return agencyNumber;
   } catch (e) {
     console.log(e);
@@ -454,52 +456,10 @@ exports["decodeAgencyPhoneNo"] = function (a) {
   // return JSON.parse(JSON.parse(a).driverInfo).fullName;
 };
 
-exports["completedRides"] = function (a) {
+export const completedRides = function (a) {
   try {
     var rides1 = JSON.parse(a).provider.info;
     var rides = JSON.parse(rides1).completed;
-    if(rides == null)
-    {
-      return 0;
-    }  
-    return rides;
-  } catch (e) {
-    console.log(e);
-    return 0;
-  }
-};
-
-exports["totalAgencies"] = function (a) {
-  try {
-    var rides = JSON.parse(a).total;
-    if(rides == null)
-    {
-      return 0;
-    }   
-    return rides;
-  } catch (e) {
-    console.log(e);
-    return 0;
-  }
-};
-
-exports["declinedAgencies"] = function (a) {
-  try {
-    var rides = JSON.parse(a).declined;
-    if(rides == null)
-    {
-      return 0;
-    }  
-    return rides;
-  } catch (e) {
-    console.log(e);
-    return 0;
-  }
-};
-
-exports["acceptedAgencies"] = function (a) {
-  try {
-    var rides = JSON.parse(a).accepted;  
     if(rides == null)
     {
       return 0;
@@ -511,13 +471,55 @@ exports["acceptedAgencies"] = function (a) {
   }
 };
 
-exports["hasDriver"] = function (a) {
+export const totalAgencies = function (a) {
+  try {
+    var rides = JSON.parse(a).total;
+    if(rides == null)
+    {
+      return 0;
+    }
+    return rides;
+  } catch (e) {
+    console.log(e);
+    return 0;
+  }
+};
+
+export const declinedAgencies = function (a) {
+  try {
+    var rides = JSON.parse(a).declined;
+    if(rides == null)
+    {
+      return 0;
+    }
+    return rides;
+  } catch (e) {
+    console.log(e);
+    return 0;
+  }
+};
+
+export const acceptedAgencies = function (a) {
+  try {
+    var rides = JSON.parse(a).accepted;
+    if(rides == null)
+    {
+      return 0;
+    }
+    return rides;
+  } catch (e) {
+    console.log(e);
+    return 0;
+  }
+};
+
+export const hasDriver = function (a) {
   try {
     var info = JSON.parse(a);
     if (info.tracker.trip.driver == null)
       {
         return false;
-      }  
+      }
     return true;
   } catch (e) {
     console.log(e);
@@ -527,7 +529,7 @@ exports["hasDriver"] = function (a) {
   // return JSON.parse(JSON.parse(a).driverInfo).fullName;
 };
 
-exports["driverInfo"] = function (a) {
+export const driverInfo = function (a) {
   try {
     var driverName = JSON.parse(a).tracker.trip.driver.name;
     var driverNumbers = JSON.parse(a).tracker.trip.driver.phones;
@@ -541,13 +543,13 @@ exports["driverInfo"] = function (a) {
   // return JSON.parse(JSON.parse(a).driverInfo).fullName;
 };
 
-exports["driverRating"] = function (a) {
+export const driverRating = function (a) {
   try {
     var info = JSON.parse(a);
     if (info.tracker.trip.driver.rating == null)
       {
         return "__";
-      }  
+      }
     return JSON.parse(a).tracker.trip.driver.rating.value;
   } catch (e) {
     console.log(e);
@@ -555,7 +557,7 @@ exports["driverRating"] = function (a) {
   }
 };
 
-exports["otp"] = function (a) {
+export const otp = function (a) {
   try {
     var otp = JSON.parse(a).tracker.trip.id;
     return otp ;
@@ -565,7 +567,7 @@ exports["otp"] = function (a) {
 
 };
 
-exports["vehicleInfo"] = function (a) {
+export const vehicleInfo = function (a) {
   try {
     var vehicleName = JSON.parse(a).tracker.trip.vehicle.variant;
     var vehicleNumber = JSON.parse(a).tracker.trip.vehicle.registrationNumber;
@@ -580,7 +582,7 @@ exports["vehicleInfo"] = function (a) {
 };
 
 
-exports["vehicleNumber"] = function (a) {
+export const vehicleNumber = function (a) {
   try {
     var vehicleNumber = JSON.parse(a).registrationNo;
     return vehicleNumber;
@@ -591,7 +593,7 @@ exports["vehicleNumber"] = function (a) {
 
 };
 
-exports["vehicleColorAndModal"] = function (a) {
+export const vehicleColorAndModal = function (a) {
   try {
     var vehicleColor = JSON.parse(a).tracker.trip.vehicle.color;
     var vehicleModal = JSON.parse(a).tracker.trip.vehicle.model;
@@ -603,7 +605,7 @@ exports["vehicleColorAndModal"] = function (a) {
   }
 };
 
-exports["vehicleType"] = function (a) {
+export const vehicleType = function (a) {
   try {
     var category = JSON.parse(a).category;
     if(category == "AUTO")
@@ -622,7 +624,7 @@ exports["vehicleType"] = function (a) {
 
 };
 
-exports["modelNumber"] = function (a) {
+export const modelNumber = function (a) {
   try {
     var modelNumber = JSON.parse(a).model;
     return modelNumber;
@@ -633,7 +635,7 @@ exports["modelNumber"] = function (a) {
 
 };
 
-exports["vehicleId"] = function (a) {
+export const vehicleId = function (a) {
   try {
     var vehicleId = JSON.parse(a).id;
     return vehicleId;
@@ -645,7 +647,7 @@ exports["vehicleId"] = function (a) {
 };
 
 
-exports["decodeAddress"] = function (a){
+export const decodeAddress = function (a){
   try  {
     var building = JSON.parse(a).door + ", " + JSON.parse(a).building + ", " + JSON.parse(a).street + ", " + JSON.parse(a).locality + ", " + JSON.parse(a).city + ", " + JSON.parse(a).state + ", " + JSON.parse(a).country;
     var building4 = JSON.parse(a).building + ", " + JSON.parse(a).street + ", " + JSON.parse(a).locality + ", " + JSON.parse(a).city + ", " + JSON.parse(a).state + ", " + JSON.parse(a).country;
@@ -675,7 +677,7 @@ exports["decodeAddress"] = function (a){
   // return JSON.parse(JSON.parse(a).driverInfo).fullName;
 };
 
-exports["decodeDriverInfoTransporter"] = function (a) {
+export const decodeDriverInfoTransporter = function (a) {
   try {
     var driverInfo = JSON.parse(a).driverInfo;
     var driverFirstName = JSON.parse(driverInfo).firstName;
@@ -698,7 +700,7 @@ exports["decodeDriverInfoTransporter"] = function (a) {
   // return JSON.parse(JSON.parse(a).driverInfo).fullName;
 };
 
-exports["decodeDriverIdTransporter"] = function (a) {
+export const decodeDriverIdTransporter = function (a) {
   try {
     var driverInfo = JSON.parse(a).driverInfo;
     var driverId = JSON.parse(driverInfo).id;
@@ -712,7 +714,7 @@ exports["decodeDriverIdTransporter"] = function (a) {
   // return JSON.parse(JSON.parse(a).driverInfo).fullName;
 };
 
-exports["decodeVehicleIdTransporter"] = function (a) {
+export const decodeVehicleIdTransporter = function (a) {
   try {
     var vehicleInfo = JSON.parse(a).vehicleInfo;
     var VehicleId = JSON.parse(vehicleInfo).id;
@@ -735,7 +737,7 @@ exports["decodeVehicleIdTransporter"] = function (a) {
   // return JSON.parse(JSON.parse(a).driverInfo).fullName;
 };
 
-// exports["decodeAgencyInfo"] = function (a) {
+// export const decodeAgencyInfo = function (a) {
 //   try {
 //     // var driverName =  JSON.parse(a).tracker.trip.driver.persona.descriptor.full_name;
 //     // var vehicleNo = JSON.parse(a).tracker.trip.vehicle.registration.number;
@@ -745,13 +747,13 @@ exports["decodeVehicleIdTransporter"] = function (a) {
 //     return "";
 //   }
 // // };
-// exports["isLocationPermissionEnabled"] = function (unit) {
+// export const isLocationPermissionEnabled = function (unit) {
 //   return function () {
 //     return JBridge.isLocationPermissionEnabled();
 //   };
 // };
 
-exports["decodeDriverNo"] = function (a) {
+export const decodeDriverNo = function (a) {
   try {
     var driverNo = JSON.parse(a).tracker.trip.driver.persona.descriptor.contact
       .mobile.number;
@@ -761,7 +763,7 @@ exports["decodeDriverNo"] = function (a) {
   }
 };
 
-exports["decodeDriverNoTransporter"] = function (a) {
+export const decodeDriverNoTransporter = function (a) {
   try {
     var driverInfo = JSON.parse(a).driverInfo;
     var driverNo = JSON.parse(driverInfo).mobileNumber;
@@ -772,7 +774,7 @@ exports["decodeDriverNoTransporter"] = function (a) {
   }
 };
 
-// exports["showQrCode'"] = function (id) {
+// export const showQrCodeImpl = function (id) {
 //   return function (str) {
 //     return function (cb) {
 //       JBridge.showQrCode(id, str);
@@ -780,19 +782,19 @@ exports["decodeDriverNoTransporter"] = function (a) {
 //   };
 // };
 
-// exports["dateISO"] = function (str) {
+// export const dateISO = function (str) {
 //   var d = new Date();
 //   var update = moment.utc(d).toDate();
 //   return update.toISOString().split(".")[0];
 // };
 
-exports["getCurrentUTC"] = function (str) {
+export const getCurrentUTC = function (str) {
   var d = new Date();
   // return moment(d).utc().format("YYYY-MM-DDTHH:mm:ss");
   return moment(d).utc().format();
 };
 
-exports["getCurrMinUTC"] = function (mins) {
+export const getCurrMinUTC = function (mins) {
   var d = new Date();
   d.setMinutes(d.getMinutes() + mins);
   // return moment(d).utc().format("YYYY-MM-DDTHH:mm:ss");
@@ -800,7 +802,7 @@ exports["getCurrMinUTC"] = function (mins) {
 };
 
 
-exports["getNextUTC"] = function (mins) {
+export const getNextUTC = function (mins) {
   return function (formatStr) {
     var d = new Date();
     d.setMinutes(d.getMinutes() + mins);
@@ -808,24 +810,24 @@ exports["getNextUTC"] = function (mins) {
   };
 };
 
-exports["convertISTtoUTC"] = function (str) {
+export const convertISTtoUTC = function (str) {
   var n = new Date(str);
   // return moment(n).utc().format("YYYY-MM-DDTHH:mm:ss");
   return moment(n).utc().format();
 };
 
-exports["convertUTCtoISC"] = function (str) {
+export const convertUTCtoISC = function (str) {
   return function (format) {
     var localTime1 = moment.utc(str).toDate();
     localTime1 = moment(localTime1).format(format);
     return localTime1;
   };
-}; 
+};
 
-exports["isUTCTimeValid"] = function (str1) {
+export const isUTCTimeValid = function (str1) {
   return function (str2) {
     var curr1 = new Date(str1);
-    var departure = new Date(str2); 
+    var departure = new Date(str2);
     console.log(departure + " , " + curr1 + "STR");
     var diff =(curr1.getTime() - departure.getTime())/ 1000;
     diff /= 60;
@@ -838,10 +840,10 @@ exports["isUTCTimeValid"] = function (str1) {
   };
 };
 
-exports["differenceBetweenTwoUTC"] = function (str1) {
+export const differenceBetweenTwoUTC = function (str1) {
   return function (str2) {
     var curr1 = new Date(str1);
-    var departure = new Date(str2); 
+    var departure = new Date(str2);
     console.log(departure + " , " + curr1 + "STR");
     var diff =(curr1.getTime() - departure.getTime())/ 1000;
     diff = (Math.round(diff));
@@ -849,7 +851,7 @@ exports["differenceBetweenTwoUTC"] = function (str1) {
   };
 };
 
-exports["saveScreenState'"] = function (screenName) {
+export const saveScreenStateImpl = function (screenName) {
   return function (state) {
     return function () {
       return window.sessionStorage.setItem(screenName, state);
@@ -857,7 +859,7 @@ exports["saveScreenState'"] = function (screenName) {
   };
 };
 
-exports["fetchScreenState'"] = function (screenName) {
+export const fetchScreenStateImpl = function (screenName) {
   return function (just) {
     return function (nothing) {
       return function () {
@@ -871,7 +873,7 @@ exports["fetchScreenState'"] = function (screenName) {
   };
 };
 
-// exports["scanQrCode"] = function (requestCode) {
+// export const scanQrCode = function (requestCode) {
 //   return function (cb) {
 //     return function (action) {
 //       return function () {
@@ -894,7 +896,7 @@ exports["fetchScreenState'"] = function (screenName) {
 //   };
 // };
 
-// exports["timePicker"] = function (cb) {
+// export const timePicker = function (cb) {
 //   return function (action) {
 //     return function () {
 //       var callback = callbackMapper.map(function (hour, min) {
@@ -905,7 +907,7 @@ exports["fetchScreenState'"] = function (screenName) {
 //   };
 // };
 
-// exports["datePicker"] = function (cb) {
+// export const datePicker = function (cb) {
 //   return function (action) {
 //     return function () {
 //       var callback = callbackMapper.map(function (year, month, date) {
@@ -916,11 +918,11 @@ exports["fetchScreenState'"] = function (screenName) {
 //   };
 // };
 
-// exports["setFCMToken"] = function (cb) {
+// export const setFCMToken = function (cb) {
 //   JBridge.setFCMToken();
 // };
 
-// exports["dateTimePicker"] = function (cb) {
+// export const dateTimePicker = function (cb) {
 //   return function (action) {
 //     return function () {
 //       var callback = callbackMapper.map(function (epochTime) {
@@ -931,23 +933,23 @@ exports["fetchScreenState'"] = function (screenName) {
 //   };
 // };
 
-exports["epochToDate"] = function (epochTime) {
+export const epochToDate = function (epochTime) {
   console.log("Date ==----==" + epochTime);
   console.log("Date ==----==" + moment(epochTime).toDate());
   return moment(epochTime).toDate();
 };
 
-exports["epochToDateString"] = function (epochTime) {
+export const epochToDateString = function (epochTime) {
   console.log("Date ==------==" + epochTime);
   console.log("Date ==----==" + moment(epochTime).toDate());
   return moment(epochTime).toDate().toString();
 };
 
-exports["stringToDate"] = function (str) {
+export const stringToDate = function (str) {
   return moment(str).toDate();
 };
 
-exports["formatDate"] = function (date) {
+export const formatDate = function (date) {
   return function (format) {
     var localTime1 = moment.utc(date).toDate();
     localTime1 = moment(localTime1).format(format);
@@ -955,7 +957,7 @@ exports["formatDate"] = function (date) {
     return localTime1;
   };
 };
-exports["formatDateFix"] = function (date) {
+export const formatDateFix = function (date) {
   return function (format) {
     var localTime1 = moment.utc(date).toDate();
     localTime1 = moment(localTime1).format(format);
@@ -963,7 +965,7 @@ exports["formatDateFix"] = function (date) {
   };
 };
 
-exports["storeCallBackForNotification"] = function (cb) {
+export const storeCallBackForNotification = function (cb) {
   try {
   return function (action) {
       return function () {
@@ -971,14 +973,14 @@ exports["storeCallBackForNotification"] = function (cb) {
             cb(action(notificationType))();
           });
           JBridge.storeCallBackForNotification(callback);
-      }    
+      }
   }}
   catch (error){
       console.log("Error occurred in storeCallBackForNotification ------", error);
   }
 }
 
-// exports["getNearbyPlaces"] = function (cb) {
+// export const getNearbyPlaces = function (cb) {
 //   return function (action) {
 //     return function () {
 //       window.activityResultListeners["545"] = function (resultCode, bundle) {
@@ -991,7 +993,7 @@ exports["storeCallBackForNotification"] = function (cb) {
 //   };
 // };
 
-// exports["getNearbyPlaces'"] = function (cb) {
+// export const getNearbyPlacesImpl = function (cb) {
 //   return function (action) {
 //     return function (just) {
 //       return function (nothing) {
@@ -1013,7 +1015,7 @@ exports["storeCallBackForNotification"] = function (cb) {
 //   };
 // };
 
-// exports["showSnackBar"] = function (str) {
+// export const showSnackBar = function (str) {
 //   return function (actionTitle) {
 //     return function (cb) {
 //       return function (action) {
@@ -1028,23 +1030,23 @@ exports["storeCallBackForNotification"] = function (cb) {
 //   };
 // };
 
-// exports["isNetworkAvailable"] = function (unit) {
+// export const isNetworkAvailable = function (unit) {
 //   return JBridge.isNetworkAvailable();
 // };
 
-// exports["goToUrl"] = function (str) {
+// export const goToUrl = function (str) {
 //   return function (unit) {
 //     return JBridge.goToUrl(str);
 //   };
 // };
 
-// exports["openUrlInApp"] = function (str) {
+// export const openUrlInApp = function (str) {
 //   return function (unit) {
 //     return JBridge.openUrlInApp(str);
 //   };
 // };
 
-exports["getuuid"] = function (dummy) {
+export const getuuid = function (dummy) {
   function s4() {
     return Math.floor((1 + Math.random()) * 0x10000)
       .toString(16)
@@ -1066,7 +1068,7 @@ exports["getuuid"] = function (dummy) {
   );
 };
 
-// exports["addMarker'"] = function (title) {
+// export const addMarkerImpl = function (title) {
 //   return function (lat) {
 //     return function (lng) {
 //       return function () {
@@ -1079,7 +1081,7 @@ exports["getuuid"] = function (dummy) {
 // };
 
 
-// exports["removeMarker"] = function (title) {
+// export const removeMarker = function (title) {
 //     try{
 //       return function () {
 //         console.log("I AM HERE to remove marker------------------");
@@ -1088,63 +1090,63 @@ exports["getuuid"] = function (dummy) {
 //       };
 //   }
 //   catch(e)
-//   { 
+//   {
 //     console.log(e);
 //     console.log("error in removeMarker----------------------------------");
 //   }
 // };
 
-exports["convertKmToM"] = function (dist) {
+export const convertKmToM = function (dist) {
   try{
     var distance = parseInt(dist);
-    if (distance<1000) 
+    if (distance<1000)
     {
       return ((distance.toString()) + "m");
     }
-    else 
+    else
     {
       var disKm = distance/1000;
       return (((disKm.toFixed(1)).toString()) + "km");
     }
-  }catch(e){ 
+  }catch(e){
     console.log(e);
     console.log("error in convertKmToM----------------------------------");
   }
 };
 
-exports["convertMToKm"] = function (dist) {
+export const convertMToKm = function (dist) {
   try{
     var distance = parseInt(dist);
-    if (distance<1000) 
+    if (distance<1000)
     {
       return ((distance.toString()) + "m");
     }
-    else 
+    else
     {
       var disKm = distance/1000;
       return (((disKm.toFixed(1)).toString()) + "km");
     }
-  }catch(e){ 
+  }catch(e){
     console.log(e);
     console.log("error in convertKmToM----------------------------------");
   }
 };
 
-exports["calculateETA"] = function (dist) {
+export const calculateETA = function (dist) {
   try{
     var distance = parseInt(dist);
     distance = distance/1000;
     var hours =  distance / 25;
-    var minutes = hours*60; 
-    if ( minutes < 1) 
+    var minutes = hours*60;
+    if ( minutes < 1)
     {
       return ("1 min");
     }
-    else 
+    else
     {
       return (((minutes.toFixed(0)).toString()) + " mins");
     }
-  }catch(e){ 
+  }catch(e){
     console.log(e);
     console.log("error in calculateETA----------------------------------");
   }
@@ -1153,11 +1155,11 @@ exports["calculateETA"] = function (dist) {
 
 
 
-// exports["parseAddress"] = function (json) {
+// export const parseAddress = function (json) {
 //   return JSON.parse(json);
 // };
 
-// exports["drawRoute"] = function (style) {
+// export const drawRoute = function (style) {
 //   return function (trackColor) {
 //     return function (data) {
 //       return function () {
@@ -1175,7 +1177,7 @@ exports["calculateETA"] = function (dist) {
 // };
 
 
-// exports["drawActualRoute"] = function (style) {
+// export const drawActualRoute = function (style) {
 //   try{
 //   return function (trackColor) {
 //     return function (data) {
@@ -1195,12 +1197,12 @@ exports["calculateETA"] = function (dist) {
 // catch(e)
 //   {
 //     console.log(e);
-//     console.log("error ----------------------------------"); 
+//     console.log("error ----------------------------------");
 //   }
 // };
 
 
-// exports["showAndDrawRoute"] = function(title){
+// export const showAndDrawRoute = function(title){
 //   try {
 //   return function (style) {
 //     return function (trackColor) {
@@ -1224,27 +1226,27 @@ exports["calculateETA"] = function (dist) {
 //   catch(e)
 //   {
 //     console.log(e);
-//     console.log("error ----------------------------------"); 
+//     console.log("error ----------------------------------");
 //   }
 
 // };
 
 
-// exports["addMarkers"] = function (data) {
+// export const addMarkers = function (data) {
 //   JBridge.addMarkers(JSON.stringify(data));
 // };
 
-// exports["removePolyLine"] = function (str) {
+// export const removePolyLine = function (str) {
 //   JBridge.removePolyLine(str);
 // };
 
-// exports["requestLocation"] = function (str) {
+// export const requestLocation = function (str) {
 //   return function () {
 //     JBridge.requestLocation();
 //   };
 // };
 
-// exports["showMap'"] = function (id) {
+// export const showMapImpl = function (id) {
 //   return function (type) {
 //     return function (cb) {
 //       return function (action) {
@@ -1263,13 +1265,13 @@ exports["calculateETA"] = function (dist) {
 //   };
 // };
 
-// exports["isLocationPermissionEnabled"] = function (unit) {
+// export const isLocationPermissionEnabled = function (unit) {
 //   return function () {
 //     return JBridge.isLocationPermissionEnabled();
 //   }
 // }
 
-// exports["getCurrentLatLong'"] = function () {
+// export const getCurrentLatLongImpl = function () {
 //   var location = JBridge.getCurrentLatLong();
 //   if (location) {
 //     var parsedData = JSON.parse(location);
@@ -1280,13 +1282,13 @@ exports["calculateETA"] = function (dist) {
 //     }
 //   }
 // };
-// exports["isLocationEnabled"] = function (unit) {
+// export const isLocationEnabled = function (unit) {
 //   return function () {
 //     return JBridge.isLocationEnabled();
 //   };
 // };
 
-// exports["getCurrentPosition"] = function (cb) {
+// export const getCurrentPosition = function (cb) {
 //   return function (action) {
 //     return function () {
 //       var callback = callbackMapper.map(function (lat, lng) {
@@ -1297,7 +1299,7 @@ exports["calculateETA"] = function (dist) {
 //   };
 // };
 
-// exports["openNavigation"] = function (slat) {
+// export const openNavigation = function (slat) {
 //   return function (slong) {
 //     return function (dlat) {
 //       return function (dlong) {
@@ -1307,7 +1309,7 @@ exports["calculateETA"] = function (dist) {
 //   };
 // };
 
-// exports["animateCamera"] = function (lat) {
+// export const animateCamera = function (lat) {
 //   return function (lng) {
 //     return function (zoom) {
 //       return function () {
@@ -1318,7 +1320,7 @@ exports["calculateETA"] = function (dist) {
 // };
 
 
-// exports["moveCamera"] = function (lat1) {
+// export const moveCamera = function (lat1) {
 //   return function (lng1) {
 //     return function (lat2) {
 //       return function (lng2){
@@ -1330,36 +1332,36 @@ exports["calculateETA"] = function (dist) {
 //   };
 // };
 
-// exports["hideLoader'"] = function () {
+// export const hideLoaderImpl = function () {
 //   return JBridge.hideLoader();
 // };
 
-// exports["closeApp"] = function (str) {
+// export const closeApp = function (str) {
 //   JBridge.closeApp();
 // };
 
-// exports["minimizeApp"] = function (str) {
+// export const minimizeApp = function (str) {
 //   JBridge.minimizeApp();
 // };
-// exports["toast"] = function (str) {
+// export const toast = function (str) {
 //   JBridge.toast(str);
 // };
 
-// exports["requestReadAndSendSmsPermission"] = function (permission) {
+// export const requestReadAndSendSmsPermission = function (permission) {
 //   JBridge.requestReadAndSendSmsPermission(permission);
 // };
 
-// exports["hideKeyboardOnNavigation"] = function (permission) {
+// export const hideKeyboardOnNavigation = function (permission) {
 //   JBridge.hideKeyboardOnNavigation(permission);
 // };
 
-// exports["showAuthScreen"] = function (title) {
+// export const showAuthScreen = function (title) {
 //   return function (value) {
 //     JBridge.showAuthScreen(title, value);
 //   };
 // };
 
-exports ["getcurrentdate"] = function (string) {
+export const getcurrentdate = function (string) {
   var today = new Date();
   var dd = String(today.getDate()).padStart(2, '0');
   var mm = String(today.getMonth() + 1).padStart(2, '0'); //January is 0!
@@ -1369,7 +1371,7 @@ exports ["getcurrentdate"] = function (string) {
   return today;
 }
 
-exports["eval'"] = function (string) {
+export const evalImpl = function (string) {
   return function () {
     try {
       eval(string);
@@ -1380,19 +1382,19 @@ exports["eval'"] = function (string) {
   };
 };
 
-exports.getISOTime = function () {
+export const getISOTime = function () {
   return new Date().toISOString();
 };
 
-// exports["getPan"] = function (gstin) {
+// export const getPan = function (gstin) {
 //   return gstin.slice(2, -3);
 // };
 
-exports["getMobileNo"] = function (mobileNo) {
+export const getMobileNo = function (mobileNo) {
   return mobileNo.slice(0, 2) + "xxxxxx" + mobileNo.slice(8, 10);
 };
 
-// exports["setF"] = function (src) {
+// export const setF = function (src) {
 //   return function (key) {
 //     return function (val) {
 //       try {
@@ -1406,7 +1408,7 @@ exports["getMobileNo"] = function (mobileNo) {
 //   };
 // };
 
-// exports.onEvent = function (payload) {
+// export const onEvent = function (payload) {
 //   return function () {
 //     window.temp = payload;
 //     JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), "");
@@ -1435,7 +1437,7 @@ exports["getMobileNo"] = function (mobileNo) {
 
 //   },1000);
 // });
-exports["getAge"] = function (dateFutureS) {
+export const getAge = function (dateFutureS) {
   var localTime1 = moment.utc(dateFutureS).toDate();
   // localTime1 = moment(localTime1).format('YYYY-MM-DD HH:mm:ss');
   // console.log("LOCAL-TIME-"+localTime1)
@@ -1481,7 +1483,7 @@ exports["getAge"] = function (dateFutureS) {
   return difference;
 };
 
-// exports._onEventWithCB = function (payload) {
+// export const _onEventWithCB = function (payload) {
 //   return function (succ) {
 //     return function (err) {
 //       return function () {
@@ -1504,7 +1506,7 @@ exports["getAge"] = function (dateFutureS) {
 //   };
 // };
 
-exports["exitApp'"] = function (code) {
+export const exitAppImpl = function (code) {
   return function (payload) {
     if (JOS) {
       return JOS.finish(code)(payload)();
@@ -1514,29 +1516,29 @@ exports["exitApp'"] = function (code) {
 
 // exports.getSessionInfo = JSON.parse(JBridge.getDeviceInfo());
 
-exports.base64Encode = function (key) {
+export const base64Encode = function (key) {
   return btoa(key + ":");
 };
-// exports.getKeyInSharedPrefKeys = function (key) {
+// export const getKeyInSharedPrefKeys = function (key) {
 //   return JBridge.getKeysInSharedPrefs(key);
 // };
 
-// exports["setKeyInSharedPrefKeys'"] = function (key) {
+// export const setKeyInSharedPrefKeysImpl = function (key) {
 //   return function (value) {
 //     JBridge.setKeysInSharedPrefs(key, value);
 //   };
 // };
 
-// exports.setKeyInSharedPrefKeyss = function (key) {
+// export const setKeyInSharedPrefKeyss = function (key) {
 //   return function (value) {
 //     return JBridge.setKeysInSharedPrefs(key, value);
 //   };
 // };
 
-// exports.removeKeysInSharedPrefs = function (key) {
+// export const removeKeysInSharedPrefs = function (key) {
 //   return JBridge.removeKeysInSharedPrefs(key);
 // };
-// exports.createNonce = function (length) {
+// export const createNonce = function (length) {
 //   var text = "";
 //   var possible =
 //     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -1546,7 +1548,7 @@ exports.base64Encode = function (key) {
 //   return text;
 // };
 
-// exports["startGodel'"] = function (payload) {
+// export const startGodelImpl = function (payload) {
 //   return function (left) {
 //     return function (right) {
 //       return function () {
@@ -1571,7 +1573,7 @@ exports.base64Encode = function (key) {
 //   }
 // };
 
-exports["subscribeEvent'"] = function (event) {
+export const subscribeEventImpl = function (event) {
   return function (fn) {
     return function () {
       window.eventListeners = window.eventListeners || {};
@@ -1580,7 +1582,7 @@ exports["subscribeEvent'"] = function (event) {
   };
 };
 
-exports["subscribeEventCB'"] = function (event) {
+export const subscribeEventCBImpl = function (event) {
   return function (fn) {
     return function () {
       window.eventListeners = window.eventListeners || {};
@@ -1589,7 +1591,7 @@ exports["subscribeEventCB'"] = function (event) {
   };
 };
 
-// exports["registerEvent'"] = function (event) {
+// export const registerEventImpl = function (event) {
 //   return function (fn) {
 //     return function () {
 //       window.eventListeners = window.eventListeners || {};
@@ -1603,15 +1605,15 @@ exports["subscribeEventCB'"] = function (event) {
 //   };
 // };
 
-// exports.getExitFlows = function () {
+// export const getExitFlows = function () {
 //   return window.exitFlows || [];
 // };
 
-exports["_getTime"] = function () {
+export const _getTime = function () {
   return new Date().getTime().toString();
 };
 
-exports["parseURL'"] = function (str) {
+export const parseURLImpl = function (str) {
   return function () {
     var parser = document.createElement("a");
     parser.href = str;
@@ -1627,7 +1629,7 @@ exports["parseURL'"] = function (str) {
   };
 };
 
-// exports["ecBaseUrl"] = (function () {
+// export const ecBaseUrl = (function () {
 //   if (window.__payload && window.__payload.environment) {
 //     return window.__payload.environment == "prod"
 //       ? "https://api.juspay.in"
@@ -1637,24 +1639,24 @@ exports["parseURL'"] = function (str) {
 //   }
 // })();
 
-// exports["getEnvironment"] = function () {
+// export const getEnvironment = function () {
 //   return window.__payload.environment;
 // };
 
-exports["addToExitFlows'"] = function (f) {
+export const addToExitFlowsImpl = function (f) {
   return function () {
     window.exitFlows = window.exitFlows || [];
     window.exitFlows.push(f);
   };
 };
 
-// exports["_log"] = function (msg) {
+// export const _log = function (msg) {
 //   return function () {
 //     console.log(msg);
 //   };
 // };
 
-// exports["getSinValue"] = function (x) {
+// export const getSinValue = function (x) {
 //   var value = Math.sin(degrees_to_radians(x)) + 0.0;
 //   var value2 = value.toFixed(2);
 //   if (value2 == "1") return 1.0;
@@ -1662,7 +1664,7 @@ exports["addToExitFlows'"] = function (f) {
 //   return parseFloat(value2);
 // };
 
-// exports["getCosValue"] = function (y) {
+// export const getCosValue = function (y) {
 //   var value = Math.cos(degrees_to_radians(y)) + 0.0;
 //   var value2 = value.toFixed(2);
 //   if (value2 == "1") return 1.0;
@@ -1675,11 +1677,11 @@ function degrees_to_radians(degrees) {
   return degrees * (pi / 180);
 }
 
-exports["_getSessionId"] = function () {
+export const _getSessionId = function () {
   return window.session_id;
 };
 
-// exports["loadSVGImage"] = function (imageId) {
+// export const loadSVGImage = function (imageId) {
 //   return function (url) {
 //     return function (localAsset) {
 //       return function () {
@@ -1689,7 +1691,7 @@ exports["_getSessionId"] = function () {
 //   };
 // };
 
-// exports["loadGIFImage"] = function (imageId) {
+// export const loadGIFImage = function (imageId) {
 //   return function (url) {
 //     return function (localAsset) {
 //       return function () {
@@ -1699,7 +1701,7 @@ exports["_getSessionId"] = function () {
 //   };
 // };
 
-exports["isMobile"] = (function () {
+export const isMobile = (function () {
   if (window.__OS !== "WEB") {
     return true;
   }
@@ -1711,13 +1713,13 @@ exports["isMobile"] = (function () {
   return false;
 })();
 
-// exports["toggleLoader'"] = function (showLoader) {
+// export const toggleLoaderImpl = function (showLoader) {
 //   return function () {
 //     return JBridge.toggleLoader(showLoader);
 //   };
 // };
 
-// exports["loaderText'"] = function (mainTxt) {
+// export const loaderTextImpl = function (mainTxt) {
 //   return function (subTxt) {
 //     return function () {
 //       return JBridge.loaderText(mainTxt, subTxt);
@@ -1729,7 +1731,7 @@ exports["isMobile"] = (function () {
 
 
 
-exports["calculateDist"] = function(lat1)
+export const calculateDist = function(lat1)
 {
   return function(long1){
       return function(lat2){
@@ -1739,22 +1741,22 @@ exports["calculateDist"] = function(lat1)
           const φ2 = lat2 * Math.PI/180;
           const Δφ = (lat2-lat1) * Math.PI/180;
           const Δλ = (long2-long1) * Math.PI/180;
-          
+
           const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
                     Math.cos(φ1) * Math.cos(φ2) *
                     Math.sin(Δλ/2) * Math.sin(Δλ/2);
           const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-          
+
           const d = R * c; // in metres
           if(d<=100) return true;
-          else return false; 
+          else return false;
         };
       };
   };
 };
 
 
-// exports["showDialer"] = function (str) {
+// export const showDialer = function (str) {
 //   JBridge.showDialer(str);
 // };
 
@@ -2200,7 +2202,7 @@ exports["calculateDist"] = function(lat1)
 //   ],
 // };
 
-// exports["getNearbyPlaces"] = function (cb) {
+// export const getNearbyPlaces = function (cb) {
 //   return function (action) {
 //     return function () {
 //       window.activityResultListeners["545"] = function (resultCode, bundle) {
@@ -2213,9 +2215,9 @@ exports["calculateDist"] = function(lat1)
 //   };
 // };
 
-exports.hideSplash =JOS.emitEvent("java")("onEvent")(JSON.stringify({event:"hide_splash"}))()
+export const hideSplash = JOS.emitEvent("java")("onEvent")(JSON.stringify({event:"hide_splash"}))()
 
-// exports["startLocationPollingAPI"] = function (caseId) {
+// export const startLocationPollingAPI = function (caseId) {
 //   return function (baseUrl) {
 //     return function (title) {
 //       return function (content) {
@@ -2231,7 +2233,7 @@ exports.hideSplash =JOS.emitEvent("java")("onEvent")(JSON.stringify({event:"hide
 //   }
 // }
 
-// exports["stopLocationPollingAPI"] = function () {
+// export const stopLocationPollingAPI = function () {
 //   JBridge.stopLocationPollingAPI()
 // }
 
@@ -2241,29 +2243,29 @@ exports.hideSplash =JOS.emitEvent("java")("onEvent")(JSON.stringify({event:"hide
 //   }
 // }
 
-// exports["removeAllPolylines"] = function(){
+// export const removeAllPolylines = function(){
 //   JBridge.removeAllPolylines();
 // }
 
-exports["currentPosition"] = function (str) {
+export const currentPosition = function (str) {
   return function() {
     JBridge.currentPosition(str);
   }
 }
 
-exports.toString = function (attr) {
+export const toString = function (attr) {
   return JSON.stringify(attr);
 };
 
-exports["getTime"] = function (unit){
+export const getTime = function (unit){
   return Date.now();
 }
 
-exports.toInt = function (val) {
+export const toInt = function (val) {
   return parseInt(val);
 }
 
-exports["secondsLeft"] = function (time){
+export const secondsLeft = function (time){
   var validity = new Date(time).getTime();
   var now = new Date().getTime();
   if (validity <= now){
@@ -2273,19 +2275,19 @@ exports["secondsLeft"] = function (time){
   }
 }
 
-exports["objectToAllocationType"] = function (stringifyObject) {
+export const objectToAllocationType = function (stringifyObject) {
   var json = JSON.parse(stringifyObject);
   console.log(json);
   return json;
 }
 
-exports["parseFloat"] = function (number) {
+export const parseFloat = function (number) {
   return function (decimalDigit) {
       return String(parseFloat(number).toFixed(decimalDigit));
   }
 }
 
-exports["storeCallBackTime"] = function (cb) {
+export const storeCallBackTime = function (cb) {
   try {
   return function (action) {
       return function () {
@@ -2300,6 +2302,7 @@ exports["storeCallBackTime"] = function (cb) {
   }
 }
 
+<<<<<<< HEAD
 function setText(id, text, pos) {
   if (__OS === "ANDROID") {
       var cmd = "set_view=ctx->findViewById:i_" + id + ";";
@@ -2321,10 +2324,13 @@ exports ["setText'"] = function (id) {
 } 
 
 exports["launchAppSettings"] = function (unit) {
+=======
+export const launchAppSettings = function (unit) {
+>>>>>>> 2d3afb30e (Update ui-driver for ps-15)
   return JBridge.launchAppSettings();
 };
 
-exports ["shuffle"] = function (array) {
+export const shuffle = function (array) {
   var shuffled = array
     .map(value => ({ value, sort: Math.random() }))
     .sort((a, b) => a.sort - b.sort)
@@ -2332,7 +2338,7 @@ exports ["shuffle"] = function (array) {
   return shuffled
 }
 
-exports["setYoutubePlayer"] = function (json) {
+export const setYoutubePlayer = function (json) {
   return function (viewId) {
     return function (videoStatus) {
         if (JBridge.setYoutubePlayer) {
@@ -2347,13 +2353,13 @@ exports["setYoutubePlayer"] = function (json) {
   };
 };
 
-exports["getTimeStampString"] = function (utcTime){
+export const getTimeStampString = function (utcTime){
   var createdDate = new Date(utcTime);
   var result =  moment(new Date()).utc().format();
   var currentDate = new Date(result);
   var diff = (currentDate.getTime() - createdDate.getTime())/ 1000;
   seconds = (Math.round(diff));
-  if (seconds <0) return ""; 
+  if (seconds <0) return "";
   var d = Math.floor(seconds / (3600*24));
   var h = Math.floor(seconds % (3600*24) / 3600);
   var m = Math.floor(seconds % 3600 / 60);
@@ -2364,7 +2370,7 @@ exports["getTimeStampString"] = function (utcTime){
   else            return s + (s == 1 ? " second" : " seconds")
 }
 
-exports ["addMediaPlayer"] = function (id) {
+export const addMediaPlayer = function (id) {
   return function(source) {
     return function () {
       JBridge.addMediaPlayer(id,source);
@@ -2372,13 +2378,13 @@ exports ["addMediaPlayer"] = function (id) {
   };
 };
 
-exports ["removeMediaPlayer"] = function (id) {
+export const removeMediaPlayer = function (id) {
   return function () {
     JBridge.removeMediaPlayer();
   };
 };
 
-exports["getVideoID"] = function (url) {
+export const getVideoID = function (url) {
   return getVideoId(url);
 };
 
@@ -2403,7 +2409,7 @@ function getVideoId (url) {
   }
 }
 
-exports["getImageUrl"] = function (url) {
+export const getImageUrl = function (url) {
   try {
     let videoId = getVideoId(url);
     return ("https://img.youtube.com/vi/" + videoId + "/maxresdefault.jpg");

@@ -104,7 +104,8 @@ let upstream =
 
 in  upstream
   with presto = /home/ben/code/juspay/purescript-presto/spago.dhall as Location
-  with backtrack = /home/ben/code/juspay/purescript-backtrack/spago.dhall as Location
+  with backtrack =
+      /home/ben/code/juspay/purescript-backtrack/spago.dhall as Location
   with presto-dom =
       /home/ben/code/juspay/purescript-presto-dom/spago.dhall as Location
   with halogen-vdom =

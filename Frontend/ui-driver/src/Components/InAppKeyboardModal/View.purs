@@ -32,13 +32,13 @@ import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (background, backgroundDrawable, clickable, color, cornerRadii, cornerRadius, fontStyle, gravity, height, imageUrl, margin, orientation, padding, stroke, text, textSize, weight, width, visibility,imageWithFallback)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Styles.Colors as Color
-import Debug.Trace (spy)
+import Debug (spy)
 import Screens.Types(KeyboardModalType(..))
 import Language.Strings (getString)
 
 view :: forall w . (Action -> Effect Unit) -> InAppKeyboardModalState -> PrestoDOM (Effect Unit) w
-view push state = 
-    linearLayout 
+view push state =
+    linearLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
     , orientation VERTICAL
@@ -48,8 +48,8 @@ view push state =
     ][
      PrestoAnim.animationSet [
         translateYAnim translateYAnimConfig
-      ] $ 
-        linearLayout 
+      ] $
+        linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , cornerRadius 20.0
@@ -62,7 +62,7 @@ view push state =
             , orientation VERTICAL
             , gravity CENTER
             , margin (MarginTop 10)
-            ][  linearLayout 
+            ][  linearLayout
                 [ width MATCH_PARENT
                 , height WRAP_CONTENT
                 , orientation HORIZONTAL
@@ -75,7 +75,7 @@ view push state =
                     , onClick push (const BackPressed)
                     , padding (Padding 5 5 5 5)
                     ]
-                  , textView 
+                  , textView
                     [ width state.headingConfig.width
                     , height state.headingConfig.height
                     , gravity state.headingConfig.gravity
@@ -89,7 +89,7 @@ view push state =
                     , padding state.headingConfig.padding
                     , weight state.headingConfig.weight
                     ]
-                    
+
                 ]
               , otpView push state
             ]
@@ -98,8 +98,8 @@ view push state =
     ]
 
 textBoxes :: forall w . (Action -> Effect Unit) -> InAppKeyboardModalState -> PrestoDOM (Effect Unit) w
-textBoxes push state = 
-  linearLayout 
+textBoxes push state =
+  linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation HORIZONTAL
@@ -107,7 +107,7 @@ textBoxes push state =
   , visibility if state.modalType == OTP && not state.otpAttemptsExceeded then VISIBLE else GONE
   , margin (Margin 0 20 0 20)
   , clickable false
-  ](mapWithIndex (\index item -> 
+  ](mapWithIndex (\index item ->
       textView
       [ width (V 48)
       , height (V 56)
@@ -123,11 +123,11 @@ textBoxes push state =
       ]) [1,2,3,4])
 
 singleTextBox :: forall w . (Action -> Effect Unit) -> InAppKeyboardModalState -> PrestoDOM (Effect Unit) w
-singleTextBox push state = 
-  linearLayout 
+singleTextBox push state =
+  linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  , orientation HORIZONTAL 
+  , orientation HORIZONTAL
   , gravity CENTER
   , cornerRadius 4.0
   , visibility if state.modalType == MOBILE__NUMBER then VISIBLE else GONE
@@ -151,7 +151,7 @@ singleTextBox push state =
       ]]
 
 otpView :: forall w . (Action -> Effect Unit) -> InAppKeyboardModalState -> PrestoDOM (Effect Unit) w
-otpView push state = 
+otpView push state =
    linearLayout
       [ width MATCH_PARENT
            , height WRAP_CONTENT
@@ -173,13 +173,13 @@ otpView push state =
                     , padding state.subHeadingConfig.padding
                     , margin state.subHeadingConfig.margin
                     , weight state.subHeadingConfig.weight
-                    ] 
+                    ]
                     )] <>
                     [textView (
                     [ width state.errorConfig.width
                     , height state.errorConfig.width
                     , visibility state.errorConfig.visibility
-                    , margin state.errorConfig.margin 
+                    , margin state.errorConfig.margin
                     , text state.errorConfig.text
                     , color state.errorConfig.color
                     , textSize state.errorConfig.fontSize
@@ -200,12 +200,12 @@ otpView push state =
                       , margin (Margin 0 0 0 0)
                       , onClick push (const (OnClickResendOtp))
                       , visibility if (state.modalType == OTP && state.showResendOtpButton && (not state.otpAttemptsExceeded)) then VISIBLE else GONE
-                      ] 
-                    )])                 
+                      ]
+                    )])
 
-  
+
 keyboard :: forall w . (Action -> Effect Unit) -> InAppKeyboardModalState -> PrestoDOM (Effect Unit) w
-keyboard push state = 
+keyboard push state =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -214,14 +214,14 @@ keyboard push state =
   , padding (Padding 0 5 0 20)
   , gravity CENTER
   , background Color.grey800
-  ] (map (\(item) -> 
+  ] (map (\(item) ->
     linearLayout
      [ width MATCH_PARENT
      , height WRAP_CONTENT
      , orientation HORIZONTAL
      , margin (Margin 4 0 4 0)
      , gravity CENTER
-     ] (mapWithIndex (\index key -> 
+     ] (mapWithIndex (\index key ->
        linearLayout
        [ width MATCH_PARENT
        , height WRAP_CONTENT
@@ -239,17 +239,17 @@ keyboard push state =
            , cornerRadius 4.0
            , cornerRadii $ if key == "back" then Corners 30.0 false false false true else Corners 30.0 false false true false
            , onClick push if key == "back" then (const (OnClickBack state.inputTextConfig.text)) else (const (OnClickDone state.inputTextConfig.text))
-           , clickable if key == "back" then true else 
-                      if ((length state.inputTextConfig.text == 4  && state.modalType == OTP && state.otpIncorrect == false) || (length state.inputTextConfig.text == 10  && state.modalType == MOBILE__NUMBER && state.isValidAlternateNumber==true)) then true else false 
-           ][ 
-                if key == "back" then 
+           , clickable if key == "back" then true else
+                      if ((length state.inputTextConfig.text == 4  && state.modalType == OTP && state.otpIncorrect == false) || (length state.inputTextConfig.text == 10  && state.modalType == MOBILE__NUMBER && state.isValidAlternateNumber==true)) then true else false
+           ][
+                if key == "back" then
                 imageView
                   [ width $ V 24
                   , height $ V 24
                   , imageWithFallback "ny_ic_delete,https://assets.juspay.in/nammayatri/images/common/ny_ic_delete.png"
                   , margin (Margin 0 18 0 18)
                   ]
-                else 
+                else
                   imageView
                   [ width $ V 24
                   , height $ V 24

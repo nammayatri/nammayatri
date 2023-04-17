@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -37,7 +37,7 @@ import Components.BottomNavBar as BottomNavBar
 import Engineering.Helpers.Commons (safeMarginBottom, screenWidth)
 import Services.Backend as Remote
 import PrestoDOM.Events (globalOnScroll)
-import Effect.Aff (launchAff_)
+import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (flowRunner)
 import Control.Monad.Except (runExceptT)
@@ -52,7 +52,7 @@ import Screens.RideHistoryScreen.ComponentConfig
 
 
 screen :: ST.RideHistoryScreenState -> PrestoList.ListItem -> Screen Action ST.RideHistoryScreenState ScreenOutput
-screen initialState rideListItem = 
+screen initialState rideListItem =
   {
     initialState : initialState {
       shimmerLoader = ST.AnimatedIn
@@ -62,7 +62,7 @@ screen initialState rideListItem =
   , globalEvents : [
     globalOnScroll "RideHistoryScreen",
         ( \push -> do
-            launchAff_ $ flowRunner $ runExceptT $ runBackT $ do
+            _ <- launchAff $ flowRunner $ runExceptT $ runBackT $ do
               (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "8" (show initialState.offsetValue) "false"
               lift $ lift $ doAff do liftEffect $ push $ RideHistoryAPIResponseAction rideHistoryResponse.list
             pure $ pure unit
@@ -72,7 +72,7 @@ screen initialState rideListItem =
   }
 
 view :: forall w . PrestoList.ListItem -> (Action -> Effect Unit) -> ST.RideHistoryScreenState -> PrestoDOM (Effect Unit) w
-view rideListItem push state = 
+view rideListItem push state =
    linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
@@ -87,8 +87,8 @@ view rideListItem push state =
         , orientation VERTICAL
         , weight 1.0
         ][ headerView push state
-          , separatorView 
-          , ridesView rideListItem push state 
+          , separatorView
+          , ridesView rideListItem push state
           ]
       , linearLayout
       [ height WRAP_CONTENT
@@ -120,7 +120,7 @@ view rideListItem push state =
 
 
 headerView :: forall w . (Action -> Effect Unit) -> ST.RideHistoryScreenState -> PrestoDOM (Effect Unit) w
-headerView push state = 
+headerView push state =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -138,7 +138,7 @@ headerView push state =
          [ background Color.bg_color
          , orientation HORIZONTAL
          , width MATCH_PARENT
-         , height WRAP_CONTENT 
+         , height WRAP_CONTENT
          ][ linearLayout
               [ orientation VERTICAL
               , width WRAP_CONTENT
@@ -150,7 +150,7 @@ headerView push state =
                   [ width $ (V (screenWidth unit / 2) )
                   , height WRAP_CONTENT
                   , gravity CENTER
-                  ][ textView  
+                  ][ textView
                       [ text (getString COMPLETED_)
                       , textSize FontSize.a_18
                       , color if state.currentTab == "COMPLETED" then Color.black900 else Color.black500
@@ -175,8 +175,8 @@ headerView push state =
                   [ width $ V (screenWidth unit / 2)
                   , height WRAP_CONTENT
                   , gravity CENTER
-                  ][ textView  
-                      [ text (getString CANCELLED_) 
+                  ][ textView
+                      [ text (getString CANCELLED_)
                       , textSize FontSize.a_18
                       , color if state.currentTab == "CANCELLED" then Color.black900 else Color.black500
                       , margin (MarginVertical 15 15)
@@ -194,7 +194,7 @@ headerView push state =
 
 
 ridesView :: forall w . PrestoList.ListItem -> (Action -> Effect Unit) -> ST.RideHistoryScreenState -> PrestoDOM (Effect Unit) w
-ridesView rideListItem push state = 
+ridesView rideListItem push state =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -211,14 +211,14 @@ ridesView rideListItem push state =
         ]([ DT.Tuple "Rides"
             $ PrestoList.list
             [ height MATCH_PARENT
-            , scrollBarY false 
+            , scrollBarY false
             , width MATCH_PARENT
             , onScroll "rides" "RideHistoryScreen" push (Scroll)
             , onScrollStateChange push (ScrollStateChanged)
             , visibility $ case state.shimmerLoader of
                         ST.AnimatedOut -> VISIBLE
                         _ -> GONE
-            , PrestoList.listItem rideListItem 
+            , PrestoList.listItem rideListItem
             , background Color.bg_grey
             , PrestoList.listDataV2 (prestoListFilter state.currentTab state.prestoListArrayItems)
             ]
@@ -267,17 +267,17 @@ ridesView rideListItem push state =
 
   ]
 
-  
+
 
 separatorView :: forall w. PrestoDOM (Effect Unit) w
-separatorView = 
+separatorView =
   linearLayout
   [ height $ V 1
   , width MATCH_PARENT
   , background Color.separatorViewColor
   ][]
 
-shimmerData :: Int -> ST.ItemState 
+shimmerData :: Int -> ST.ItemState
 shimmerData i = {
   date : toPropValue "31/05/2022",
   time : toPropValue "7:35pm",

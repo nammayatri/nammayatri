@@ -1,21 +1,21 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
 module Screens.DriverDetailsScreen.View where
 
-import Prelude 
+import Prelude
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, frameLayout, layoutGravity, alpha, scrollView, cornerRadius, onBackPressed, afterRender, id, visibility, imageWithFallback, clickable, relativeLayout)
 import Effect (Effect)
 import Screens.DriverDetailsScreen.Controller (Action(..), ScreenOutput, eval, getTitle, getValue)
@@ -33,7 +33,7 @@ import Common.Types.App
 import Components.InAppKeyboardModal.View as InAppKeyboardModal
 import Components.InAppKeyboardModal.Controller as InAppKeyboardModalController
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
-import Debug.Trace (spy)
+import Debug (spy)
 import Components.PopUpModal.View as PopUpModal
 import Components.PopUpModal.Controller as PopUpModalConfig
 import Screens.DriverDetailsScreen.ComponentConfig
@@ -122,7 +122,7 @@ profilePictureLayout state push =
                         , gravity RIGHT
                         , cornerRadius 45.0
                         , imageWithFallback "ny_ic_camera_white,https://assets.juspay.in/nammayatri/images/driver/ny_ic_camera_white.png"
-                        , visibility GONE 
+                        , visibility GONE
                         -- To be added after 15 aug
                         -- , onClick (\action-> do
                         --       _ <- liftEffect $ JB.uploadFile unit
@@ -138,7 +138,7 @@ profilePictureLayout state push =
 
 -------------------------------------------------- headerLayout --------------------------
 headerLayout :: ST.DriverDetailsScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-headerLayout state push = 
+headerLayout state push =
  linearLayout
  [ width MATCH_PARENT
  , height WRAP_CONTENT
@@ -314,7 +314,7 @@ removeAlternateNumber push state =
 --------------------------------- horizontalLineView and dummyTextView -------------------
 
 horizontalLineView :: Int -> Int -> forall w . PrestoDOM (Effect Unit) w
-horizontalLineView marginLeft marginRight = 
+horizontalLineView marginLeft marginRight =
  linearLayout
   [ width MATCH_PARENT
   , height $ V 1
@@ -323,7 +323,7 @@ horizontalLineView marginLeft marginRight =
   ][]
 
 dummyTextView :: forall w . PrestoDOM (Effect Unit) w
-dummyTextView = 
+dummyTextView =
  textView
  [ width WRAP_CONTENT
  , height WRAP_CONTENT

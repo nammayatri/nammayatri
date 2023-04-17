@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -17,15 +17,15 @@ module Screens.Types where
 
 import Common.Types.App (CancellationReasons)
 import Data.Generic.Rep (class Generic)
-import Data.Generic.Rep.Eq (genericEq)
-import Data.Generic.Rep.Show (genericShow)
+import Data.Eq.Generic (genericEq)
+import Data.Show.Generic (genericShow)
 import Data.Maybe (Maybe)
 import Foreign.Class (class Decode, class Encode)
 import Halogen.VDom.DOM.Prop (PropValue)
 import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
-import PrestoDOM (Visibility)
+import PrestoDOM (Visibility, LetterSpacing)
 import Services.APITypes (Route, Status, MediaType)
 import Styles.Types (FontSize)
 import Components.ChatView.Controller (ChatComponent)
@@ -227,7 +227,7 @@ type PrimaryEditTextState = {
   error :: Maybe String,
   text :: String,
   fontSize :: FontSize,
-  letterSpacing :: Number,
+  letterSpacing :: LetterSpacing,
   id :: String
 }
 
@@ -254,7 +254,7 @@ type DriverProfileScreenProps = {
   logoutModalView :: Boolean,
   showLiveDashboard :: Boolean
 }
------------------------------------------------ApplicationStatusScreen --------------------------------------- 
+-----------------------------------------------ApplicationStatusScreen ---------------------------------------
 type ApplicationStatusScreenState = {
   data :: ApplicationStatusScreenData,
   props :: ApplicationStatusScreenProps
@@ -333,7 +333,7 @@ type EnterOTPScreenStateProps = {
 }
 
 ---------------------PrimaryButtonState----------------------------------------
-type PrimaryButtonState = { 
+type PrimaryButtonState = {
   title :: String,
   active :: Boolean,
   size :: Boolean,
@@ -356,7 +356,7 @@ instance eqAnimationState :: Eq AnimationState where eq = genericEq
 instance encodeAnimationState :: Encode AnimationState where encode = defaultEnumEncode
 instance decodeAnimationState :: Decode AnimationState where decode = defaultEnumDecode
 
-type RideHistoryScreenState = 
+type RideHistoryScreenState =
   {
     shimmerLoader :: AnimationState,
     prestoListArrayItems :: Array ItemState,
@@ -377,10 +377,10 @@ type ReferralScreenState = {
 }
 
 type ReferralScreenStateData = {
-    referralCode :: String 
+    referralCode :: String
   , confirmReferralCode :: String
-  , password :: String 
-  , driverInfo :: { 
+  , password :: String
+  , driverInfo :: {
       driverName :: String,
       driverMobile :: Maybe String,
       vehicleRegNumber :: String,
@@ -408,8 +408,8 @@ type ReferralScreenStateProps = {
 
 -- ################################################ IndividualRideCardState ##################################################
 
-type IndividualRideCardState = 
-  {  
+type IndividualRideCardState =
+  {
     date :: String,
     time :: String,
     total_amount :: Int,
@@ -430,7 +430,7 @@ type IndividualRideCardState =
   }
 
 
-type ItemState = 
+type ItemState =
   {
     date :: PropValue,
     time :: PropValue,
@@ -608,7 +608,7 @@ type ActiveRide = {
   source :: String,
   destination :: String,
   src_lat :: Number,
-  src_lon :: Number, 
+  src_lon :: Number,
   dest_lat :: Number,
   dest_lon :: Number,
   actualRideDistance :: Number,
@@ -669,19 +669,19 @@ instance eqLocationType :: Eq LocationType where eq = genericEq
 
 -- ############################################################# BottomNavBarState ################################################################################
 
-type BottomNavBarState = { 
+type BottomNavBarState = {
   activeIndex :: Int,
   navButton :: Array NavIcons
 }
 
-type NavIcons = { 
+type NavIcons = {
   activeIcon :: String,
   defaultIcon :: String,
   text :: String
 }
  -- ######################################  TripDetailsScreenState   ######################################
 
-type TripDetailsScreenState = 
+type TripDetailsScreenState =
   {
     data :: TripDetailsScreenData,
     props :: TripDetailsScreenProps
@@ -695,7 +695,7 @@ instance eqPaymentMode :: Eq PaymentMode where eq = genericEq
 instance encodePaymentMode :: Encode PaymentMode where encode = defaultEnumEncode
 instance decodePaymentMode :: Decode PaymentMode where decode = defaultEnumDecode
 
-type TripDetailsScreenData = 
+type TripDetailsScreenData =
   {
     message :: String,
     tripId :: String,
@@ -827,13 +827,13 @@ type EditAadhaarDetailsScreenProps = {
 
 -- ######################################  InvoiceScreenState   ######################################
 
-type InvoiceScreenState = 
+type InvoiceScreenState =
   {
     data :: InvoiceScreenData,
     props :: InvoiceScreenProps
   }
 
-type InvoiceScreenData = 
+type InvoiceScreenData =
   {
     tripCharges :: Number,
     promotion :: Number,
@@ -925,7 +925,7 @@ type DriverRideRatingScreenData = {
 }
 
 type DriverRideRatingScreenProps = {
-  
+
 }
 
 type AppUpdatePopUpScreenState = {
@@ -933,19 +933,19 @@ type AppUpdatePopUpScreenState = {
 }
 
 data FeedbackSuggestions
- = CUSTOMER_RUDE_BEHAVIOUR 
-  | LONG_WAIT_TIME 
+ = CUSTOMER_RUDE_BEHAVIOUR
+  | LONG_WAIT_TIME
   | DIDNT_COME_TO_PICUP
   | NOTHING
 
 derive instance genericFeedbackSuggestions :: Generic FeedbackSuggestions _
 instance eqFeedbackSuggestions :: Eq FeedbackSuggestions where eq = genericEq
 
-data HomeScreenStage =  HomeScreen 
-                      | RideRequested 
+data HomeScreenStage =  HomeScreen
+                      | RideRequested
                       | RideAccepted
-                      | RideStarted 
-                      | RideCompleted  
+                      | RideStarted
+                      | RideCompleted
                       | ChatWithCustomer
 
 derive instance genericHomeScreenStage :: Generic HomeScreenStage _
@@ -954,7 +954,7 @@ instance eqHomeScreenStage :: Eq HomeScreenStage where eq = genericEq
 instance decodeHomeScreenStage :: Decode HomeScreenStage where decode = defaultEnumDecode
 instance encodeHomeScreenStage :: Encode HomeScreenStage where encode = defaultEnumEncode
 
-data NotificationType =  DRIVER_REACHED 
+data NotificationType =  DRIVER_REACHED
                       | CANCELLED_PRODUCT
                       | DRIVER_ASSIGNMENT
                       | RIDE_REQUESTED
@@ -1036,7 +1036,7 @@ type NotificationDetailModelState = {
 }
 
 type YoutubeData = {
-    videoTitle :: String 
+    videoTitle :: String
   , setVideoTitle :: Boolean
   , showMenuButton :: Boolean
   , showDuration :: Boolean
@@ -1044,7 +1044,7 @@ type YoutubeData = {
   , videoId :: String
 }
 
-data YoutubeVideoStatus = PLAY | PAUSE 
+data YoutubeVideoStatus = PLAY | PAUSE
 
 derive instance genericYoutubeVideoStatus:: Generic YoutubeVideoStatus _
 instance showYoutubeVideoStatus :: Show YoutubeVideoStatus where show = genericShow

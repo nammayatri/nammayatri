@@ -16,7 +16,7 @@
 module Components.InAppKeyboardModal.Controller where
 
 import Data.Generic.Rep (class Generic)
-import Data.Generic.Rep.Eq (genericEq)
+import Data.Eq.Generic (genericEq)
 import Prelude ((<>), class Eq)
 import Font.Size as FontSize
 import Font.Style as FontStyle
@@ -34,7 +34,7 @@ data Action = OnSelection String Int
             | OnClickResendOtp
 
 ----------------------------------------------- InAppKeyboardModalState ---------------------------------------------
-type InAppKeyboardModalState = { 
+type InAppKeyboardModalState = {
       errorConfig :: TextConfig
     , headingConfig :: TextConfig
     , subHeadingConfig :: TextConfig
@@ -48,9 +48,9 @@ type InAppKeyboardModalState = {
     , isValidAlternateNumber :: Boolean
     , showResendOtpButton :: Boolean
 }
- 
-type TextConfig = 
-  { text :: String 
+
+type TextConfig =
+  { text :: String
     , fontSize :: Int
     , focusIndex :: Int
     , fontStyle :: String
@@ -65,7 +65,7 @@ type TextConfig =
     , weight :: Number
   }
 
-type ImageConfig = 
+type ImageConfig =
   {
     imageUrl :: String
   , height :: Length
@@ -76,21 +76,21 @@ type ImageConfig =
   }
 
 type ButtonConfig =
-  { margin :: Margin 
+  { margin :: Margin
   , text :: String
   , fontStyle :: String
   , textSize :: Int
-  , color :: String 
+  , color :: String
   , width :: Length
   , height :: Length
-  , cornerRadius :: Number 
+  , cornerRadius :: Number
   , stroke :: String
-  , background :: String 
+  , background :: String
   , visibility :: Visibility
   }
 
 type Keys = {
-  keys :: Array String 
+  keys :: Array String
 }
 
 config :: InAppKeyboardModalState
@@ -155,7 +155,7 @@ config = {
     , margin : (Margin 0 0 0 0)
     , weight : 1.0
     },
-    buttonConfig : { 
+    buttonConfig : {
       margin : (Margin 0 0 0 0)
     , text : ""
     , fontStyle : FontStyle.bold LanguageStyle

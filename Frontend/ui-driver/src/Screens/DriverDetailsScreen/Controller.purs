@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -32,7 +32,7 @@ import Types.App (GlobalState(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), FlowBT,  Sc
 import Storage (KeyStore(..),getValueToLocalStore)
 import Screens (ScreenName(..), getScreen)
 import Components.InAppKeyboardModal as InAppKeyboardModal
-import Debug.Trace (spy)
+import Debug (spy)
 import Data.String (take, length, drop)
 import Data.String.CodeUnits (charAt)
 import Data.Int (fromString)
@@ -45,7 +45,7 @@ import Components.PopUpModal as PopUpModal
 instance showAction :: Show Action where
   show _ = ""
 instance loggableAction :: Loggable Action where
-  performLog action appId = case action of 
+  performLog action appId = case action of
     AfterRender -> trackAppScreenRender appId "screen" (getScreen DRIVER_DETAILS_SCREEN)
     BackPressed -> do
       trackAppBackPress appId (getScreen DRIVER_DETAILS_SCREEN)
@@ -72,16 +72,16 @@ instance loggableAction :: Loggable Action where
     _ -> trackAppActionClick appId (getScreen DRIVER_DETAILS_SCREEN) "in_app_otp_modal" "on_click_done"
 
 
-      
-data ScreenOutput = GoBack DriverDetailsScreenState 
-                    | ValidateAlternateNumber DriverDetailsScreenState 
-                    | ResendAlternateNumberOTP DriverDetailsScreenState 
-                    | VerifyAlternateNumberOTP DriverDetailsScreenState 
-                    | RemoveAlternateNumber DriverDetailsScreenState 
+
+data ScreenOutput = GoBack DriverDetailsScreenState
+                    | ValidateAlternateNumber DriverDetailsScreenState
+                    | ResendAlternateNumberOTP DriverDetailsScreenState
+                    | VerifyAlternateNumberOTP DriverDetailsScreenState
+                    | RemoveAlternateNumber DriverDetailsScreenState
                     | GoToHomeScreen DriverDetailsScreenState
 
-data Action = NoAction 
-              | BackPressed 
+data Action = NoAction
+              | BackPressed
               | CallBackImageUpload String String
               | RenderBase64Image
               | AfterRender
@@ -107,7 +107,7 @@ eval BackPressed state = do
     isEditAlternateMobile = false,
     numberExistError = false}})
 
-eval (CallBackImageUpload image imageName) state = if (image /= "") then 
+eval (CallBackImageUpload image imageName) state = if (image /= "") then
                                             continueWithCmd (state { data { base64Image = image}}) [do pure RenderBase64Image]
                                             else
                                               continue state
@@ -126,7 +126,7 @@ eval ClickAddAlternateButton state = do
   let curr_time = getCurrentUTC ""
   let last_attempt_time = getValueToLocalStore SET_ALTERNATE_TIME
   let time_diff = differenceBetweenTwoUTC curr_time last_attempt_time
-  if(time_diff <= 600) then do 
+  if(time_diff <= 600) then do
     pure $ toast (getString LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER)
     continue state
   else
@@ -137,7 +137,7 @@ eval ClickEditAlternateNumber state = do
   let curr_time = getCurrentUTC ""
   let last_attempt_time = getValueToLocalStore SET_ALTERNATE_TIME
   let time_diff = differenceBetweenTwoUTC curr_time last_attempt_time
-  if(time_diff <= 600) then do 
+  if(time_diff <= 600) then do
    pure $ toast (getString LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER)
    continue state
   else

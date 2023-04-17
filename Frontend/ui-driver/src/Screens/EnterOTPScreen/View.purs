@@ -1,22 +1,22 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
 module Screens.EnterOTPScreen.View where
 import Data.Maybe (Maybe(..))
 import Prelude (Unit, const, bind, pure, unit, ($), (<<<), (<>), (==), (>), discard)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), alpha, background, clickable, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, text, textSize, textView, weight, width, afterRender, visibility, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), alpha, background, clickable, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, text, textSize, textView, weight, width, afterRender, visibility, imageWithFallback)
 import Components.PrimaryEditText.Views as PrimaryEditText
 import Components.PrimaryButton as PrimaryButton
 import Effect (Effect)
@@ -62,7 +62,7 @@ view push state =
   , afterRender (\action -> do
         _ <- push action
         _ <- JB.setFCMToken push $ SetToken
-        _ <- JB.requestKeyboardShow (EHC.getNewIDWithTag "EnterOTPScreenEditText")      
+        _ <- JB.requestKeyboardShow (EHC.getNewIDWithTag "EnterOTPScreenEditText")
         pure unit
         ) (const AfterRender)
   , onBackPressed push (const BackPressed)
@@ -70,21 +70,21 @@ view push state =
       [ width MATCH_PARENT
       , weight 1.0
       , orientation VERTICAL
-      ][  PrestoAnim.animationSet 
+      ][  PrestoAnim.animationSet
           [ Anim.fadeIn true
           ] $ backArrow state push
-        , PrestoAnim.animationSet 
+        , PrestoAnim.animationSet
           [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig
           ] $ enterOTPTextView state
         , primaryEditTextView state push
       ]
-    , PrestoAnim.animationSet 
+    , PrestoAnim.animationSet
       [ Anim.fadeIn true
       ] $ linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           ][PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonViewConfig state)]
-  ]  
+  ]
 
 
 
@@ -109,7 +109,7 @@ backArrow state push =
 
 ------------------------- enterOTPTextView -------------------
 enterOTPTextView :: ST.EnterOTPScreenState -> forall w . PrestoDOM (Effect Unit) w
-enterOTPTextView state= 
+enterOTPTextView state=
  textView
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
@@ -130,7 +130,7 @@ primaryEditTextView state push =
   , height WRAP_CONTENT
   , padding (Padding 18 18 20 0)
   , orientation VERTICAL
-  ][  PrestoAnim.animationSet 
+  ][  PrestoAnim.animationSet
         [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig
         ] $ PrimaryEditText.view(push <<< PrimaryEditTextAction) ({
         title: (getString ENTER_OTP_SENT_TO) <> state.data.mobileNo <> (getString OTP_SENT_TO) ,
@@ -142,17 +142,17 @@ primaryEditTextView state push =
         valueId: "EditTextOtp",
         pattern : Just "[0-9]*,4",
         fontSize : FontSize.a_18,
-        letterSpacing : if state.data.otp == "" then 0.0 else 5.0,
+        letterSpacing : PX if state.data.otp == "" then 0.0 else 5.0,
         id : (EHC.getNewIDWithTag "EnterOTPScreenEditText")
       })
-    , PrestoAnim.animationSet 
+    , PrestoAnim.animationSet
       [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig
       ] $ underlinedTextView state push
   ]
 
 --------------------------------- underlinedTextView ----------------------
 underlinedTextView :: ST.EnterOTPScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-underlinedTextView state push = 
+underlinedTextView state push =
  linearLayout
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
@@ -187,7 +187,7 @@ underlinedTextView state push =
     , textView
       [ height $ V 1
       , width MATCH_PARENT
-      , background Color.mainPrimary 
+      , background Color.mainPrimary
       , margin (Margin 1 0 2 0)
       , visibility if state.props.resendEnabled then VISIBLE else GONE
       ]

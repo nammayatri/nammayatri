@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -32,7 +32,7 @@ import Language.Types(STR(..))
 import Prelude ((/),(*),(-))
 import Data.Array ((!!)) as DA
 import Data.String (Pattern(..), split) as DS
-import Math
+import Data.Number (pi, sin, cos, asin, sqrt)
 -- import Control.Monad.Except (runExcept)
 -- import Data.Array.NonEmpty (fromArray)
 -- import Data.DateTime (Date, DateTime)
@@ -57,12 +57,12 @@ import Math
 -- foreign import get15sTimer :: forall action. (action -> Effect Unit) -> (String -> action)  -> Effect Unit
 -- foreign import get5sTimer :: forall action. (action -> Effect Unit) -> (String -> action)  -> Effect Unit
 -- foreign import get10sTimer :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
--- -- foreign import getCurrentLatLong'  :: Effect String
+-- -- foreign import getCurrentLatLongImpl  :: Effect String
 
 
 
--- -- foreign import readFile'      :: String -> Effect String
--- foreign import eval'          :: String -> Effect Unit
+-- -- foreign import readFileImpl      :: String -> Effect String
+-- foreign import evalImpl          :: String -> Effect Unit
 -- -- foreign import closeApp       :: String -> Unit
 -- -- foreign import minimizeApp    :: String -> Unit
 -- -- foreign import toast          :: String -> Unit
@@ -71,22 +71,22 @@ import Math
 -- -- foreign import showAuthScreen :: String -> String-> Unit
 -- -- foreign import setF           :: forall a. Foreign -> String -> a -> Foreign
 -- -- foreign import onEvent        :: Foreign -> Effect Unit
--- foreign import exitApp'       :: Int -> String -> Unit
+-- foreign import exitAppImpl       :: Int -> String -> Unit
 -- -- foreign import _onEventWithCB :: Foreign -> (String -> Effect Unit) -> (String -> Effect Unit) -> Effect Unit
 -- foreign import getISOTime     :: Effect String
 -- foreign import _getTime       :: Effect String
 foreign import shuffle :: forall a. Array a -> Array a
-foreign import generateUniqueId :: Unit -> String 
+foreign import generateUniqueId :: Unit -> String
 foreign import storeCallBackTime :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action)  -> Effect Unit
 foreign import getTime :: Unit -> Int
 foreign import countDown :: forall action. Int -> String -> (action -> Effect Unit) -> (Int -> String -> String -> String-> action)  -> Effect Unit
 -- -- foreign import getSessionInfo :: { android_id_raw :: String, android_id :: String, os_version :: String, package_name :: String, android_api_level :: String }
 -- -- foreign import getKeyInSharedPrefKeys :: String -> String
--- -- foreign import setKeyInSharedPrefKeys' :: String -> String -> Effect Unit
+-- -- foreign import setKeyInSharedPrefKeysImpl :: String -> String -> Effect Unit
 -- -- foreign import removeKeysInSharedPrefs :: String -> Unit
 -- -- foreign import createNonce    :: Int -> String
--- -- foreign import startGodel'    :: Foreign -> (String -> Effect Unit) -> (String -> Effect Unit) -> Effect Unit
--- foreign import parseURL'      :: String -> Effect String
+-- -- foreign import startGodelImpl    :: Foreign -> (String -> Effect Unit) -> (String -> Effect Unit) -> Effect Unit
+-- foreign import parseURLImpl      :: String -> Effect String
 -- -- foreign import parseAddress      :: String -> Address
 -- foreign import _getSessionId  :: Effect String
 foreign import hideSplash :: Effect Unit
@@ -94,14 +94,14 @@ foreign import startTimer :: forall action. Int -> (action -> Effect Unit) -> (S
 -- -- foreign import startLocationPollingAPI :: String -> String -> String -> String -> String -> Int -> Effect Unit
 -- -- foreign import stopLocationPollingAPI :: Effect Unit
 
--- foreign import subscribeEvent' :: forall a b. String -> (a -> Effect b) -> Effect Unit
--- foreign import subscribeEventCB' :: forall a b. String -> (a -> (String -> Effect Unit) -> Effect b) -> Effect Unit
--- -- foreign import registerEvent' :: forall a b. String -> (a -> Effect b) -> Effect Unit
+-- foreign import subscribeEventImpl :: forall a b. String -> (a -> Effect b) -> Effect Unit
+-- foreign import subscribeEventCBImpl :: forall a b. String -> (a -> (String -> Effect Unit) -> Effect b) -> Effect Unit
+-- -- foreign import registerEventImpl :: forall a b. String -> (a -> Effect b) -> Effect Unit
 -- -- foreign import getExitFlows    :: forall a. Effect (Array (Flow GlobalState a))
--- foreign import addToExitFlows' :: forall a. (Flow GlobalState a) -> Effect Unit
--- -- foreign import showLoader'      :: String -> Effect Unit
--- -- foreign import hideLoader'      :: Effect Unit
--- -- foreign import showQrCode'      :: String -> String -> Effect Unit
+-- foreign import addToExitFlowsImpl :: forall a. (Flow GlobalState a) -> Effect Unit
+-- -- foreign import showLoaderImpl      :: String -> Effect Unit
+-- -- foreign import hideLoaderImpl      :: Effect Unit
+-- -- foreign import showQrCodeImpl      :: String -> String -> Effect Unit
 -- -- foreign import scanQrCode       :: forall action. String -> (action -> Effect Unit) ->  (String -> action) -> Effect Unit
 -- -- foreign import removePolyLine   :: String -> Effect Unit
 
@@ -116,7 +116,7 @@ foreign import startTimer :: forall action. Int -> (action -> Effect Unit) -> (S
 -- -- foreign import getPan :: String -> String
 -- foreign import getMobileNo :: String -> String
 
--- -- foreign import addMarker' :: String -> Number -> Number -> Effect Boolean
+-- -- foreign import addMarkerImpl :: String -> Number -> Number -> Effect Boolean
 -- -- foreign import removeMarker :: String -> Effect Unit
 -- -- foreign import drawRoute :: String -> String -> Locations -> Effect Unit
 -- -- foreign import drawActualRoute :: String -> String -> Locations -> Effect Int
@@ -136,9 +136,9 @@ foreign import startTimer :: forall action. Int -> (action -> Effect Unit) -> (S
 
 -- -- foreign import loadSVGImage :: String -> String -> Boolean -> Effect Unit
 -- -- foreign import loadGIFImage :: String -> String -> Boolean -> Effect Unit
--- -- foreign import toggleLoader' :: Boolean -> Effect Unit
+-- -- foreign import toggleLoaderImpl :: Boolean -> Effect Unit
 -- foreign import isMobile :: Boolean
--- -- foreign import loaderText' :: String -> String -> Effect Unit
+-- -- foreign import loaderTextImpl :: String -> String -> Effect Unit
 -- -- foreign import getNearbyPlaces :: forall action. (action -> Effect Unit) -> (Place -> action) -> Effect Unit
 -- -- foreign import dateISO :: String -> String
 
@@ -190,8 +190,8 @@ foreign import differenceBetweenTwoUTC :: String -> String -> Int
 -- -- foreign import showSnackBar :: forall action. String -> String -> (action -> Effect Unit) -> action -> Effect Unit
 -- foreign import getAge :: String -> String
 foreign import clearTimer :: String -> Unit
-foreign import clearPopUpTimer :: String -> Unit 
-foreign import clearAllTimer :: String -> Unit 
+foreign import clearPopUpTimer :: String -> Unit
+foreign import clearAllTimer :: String -> Unit
 foreign import toString :: forall a. a-> String
 foreign import toInt :: forall a. a -> String
 foreign import setRefreshing :: String -> Boolean -> Unit
@@ -217,15 +217,15 @@ foreign import getImageUrl :: String -> String
 
 -- -- ####### MAP FFI ######## -----
 -- -- foreign import getCurrentPosition  :: forall action. (action -> Effect Unit) -> (String -> String -> action) -> Effect Unit
--- -- foreign import showMap' :: forall action. String -> String -> (action -> Effect Unit) -> action -> Effect Boolean
+-- -- foreign import showMapImpl :: forall action. String -> String -> (action -> Effect Unit) -> action -> Effect Boolean
 -- -- foreign import isLocationPermissionEnabled :: Unit -> Effect Boolean
 -- -- foreign import isLocationEnabled :: Unit -> Effect Boolean
 
 
 -- infixl 5 extract as <.>
 
--- foreign import saveScreenState' :: String -> String -> Effect Unit
--- foreign import fetchScreenState' :: String -> (String -> Maybe String) -> Maybe String -> Effect (Maybe String)
+-- foreign import saveScreenStateImpl :: String -> String -> Effect Unit
+-- foreign import fetchScreenStateImpl :: String -> (String -> Maybe String) -> Maybe String -> Effect (Maybe String)
 
 -- -- foreign import isNetworkAvailable :: Unit -> Boolean
 -- -- foreign import goToUrl  :: String -> Effect Unit
@@ -236,17 +236,17 @@ foreign import currentPosition  :: String -> Effect Unit
 -- -- foreign import getVersionName :: String -> String
 
 -- -- showMap :: forall action. String -> String -> (action -> Effect Unit) -> action -> Effect Boolean
--- -- showMap id mapType callback action = (showMap' id mapType callback action) --liftFlow (showMap' id mapType)
+-- -- showMap id mapType callback action = (showMapImpl id mapType callback action) --liftFlow (showMapImpl id mapType)
 
 -- -- Give ImageView definite height & width as in case of MATCH_PARENT & WRAP_CONTENT function may not be able to handle it
 -- -- showQrCode :: String -> String -> Effect Unit
--- -- showQrCode id str = showQrCode' id str
+-- -- showQrCode id str = showQrCodeImpl id str
 
 -- -- toggleLoader :: Boolean -> Flow GlobalState Unit
--- -- toggleLoader flag = liftFlow (toggleLoader' flag)
+-- -- toggleLoader flag = liftFlow (toggleLoaderImpl flag)
 
 -- -- loaderText :: String -> String -> Flow GlobalState Unit
--- -- loaderText mainTxt subTxt = liftFlow (loaderText' mainTxt subTxt)
+-- -- loaderText mainTxt subTxt = liftFlow (loaderTextImpl mainTxt subTxt)
 
 -- data Title = Title String
 -- data SubTitle = SubTitle String
@@ -258,38 +258,38 @@ foreign import currentPosition  :: String -> Effect Unit
 -- --     _ <- pure $ hideKeyboardOnNavigation true
 -- --     case message of
 -- --         Just (LoaderMessage (Title title) (SubTitle subTitle)) -> do
--- --             _ <- liftFlow (loaderText' (title)  (subTitle))
--- --             liftFlow (toggleLoader' flag)
--- --         Nothing -> liftFlow (toggleLoader' flag)
+-- --             _ <- liftFlow (loaderTextImpl (title)  (subTitle))
+-- --             liftFlow (toggleLoaderImpl flag)
+-- --         Nothing -> liftFlow (toggleLoaderImpl flag)
 
 -- -- addMarker :: String -> Number -> Number -> Effect Boolean
--- -- addMarker title lat lng = (addMarker' title lat lng) --liftFlow (addMarker' title lat lng)
+-- -- addMarker title lat lng = (addMarkerImpl title lat lng) --liftFlow (addMarkerImpl title lat lng)
 
 -- -- showMarker :: String -> Number -> Number -> Effect Boolean
 -- -- showMarker title lat lng = addMarker title lat lng
 
 -- -- showLoader :: String -> Flow GlobalState Unit
--- -- showLoader str = liftFlow (showLoader' str)
+-- -- showLoader str = liftFlow (showLoaderImpl str)
 
 -- -- hideLoader :: String -> Flow GlobalState Unit
--- -- hideLoader _ = liftFlow hideLoader'
+-- -- hideLoader _ = liftFlow hideLoaderImpl
 
--- -- setKeyInSharedPrefKeys :: String -> String -> Flow GlobalState Unit 
--- -- setKeyInSharedPrefKeys key val = liftFlow (setKeyInSharedPrefKeys' key val)
+-- -- setKeyInSharedPrefKeys :: String -> String -> Flow GlobalState Unit
+-- -- setKeyInSharedPrefKeys key val = liftFlow (setKeyInSharedPrefKeysImpl key val)
 
 
 -- -- getCurrentLatLong :: Flow GlobalState LocationLatLong
 -- -- getCurrentLatLong = do
--- --   str <- liftFlow $ getCurrentLatLong'
+-- --   str <- liftFlow $ getCurrentLatLongImpl
 -- --   case (runExcept $ decodeJSON $ str) of
 -- --     Right (a :: LocationLatLong) -> pure a
 -- --     Left err -> pure $ LocationLatLong{"lat": "", "long": ""}
 
 -- -- readFile :: String -> Flow GlobalState String
--- -- readFile = liftFlow <<< readFile'
+-- -- readFile = liftFlow <<< readFileImpl
 
 -- eval :: String -> Flow GlobalState Unit
--- eval = liftFlow <<< eval'
+-- eval = liftFlow <<< evalImpl
 
 -- getDateTime :: Flow GlobalState (Maybe DateTime)
 -- getDateTime = liftFlow $ toDateTime <$> (getISOTime >>= parse)
@@ -305,23 +305,23 @@ foreign import currentPosition  :: String -> Effect Unit
 
 -- -- startGodel :: Foreign -> Flow GlobalState String
 -- -- startGodel p = doAff do
--- --   makeAff \cb -> startGodel' p (Left >>> Right >>> cb) (Right >>> Right >>> cb) *> pure nonCanceler
+-- --   makeAff \cb -> startGodelImpl p (Left >>> Right >>> cb) (Right >>> Right >>> cb) *> pure nonCanceler
 -- --   >>= either throwErr pure
 
 -- subscribeEvent :: forall a b. String -> (a -> Flow GlobalState b) -> Flow GlobalState Unit
--- subscribeEvent event flow = liftFlow $ subscribeEvent' event (\x -> launchAff_ do flowRunner $ flow x)
+-- subscribeEvent event flow = liftFlow $ subscribeEventImpl event (\x -> launchAff_ do flowRunner $ flow x)
 
 -- subscribeEventCB :: forall a b. String -> (a -> (String -> Effect Unit) -> Flow GlobalState b) -> Flow GlobalState Unit
--- subscribeEventCB event flow = liftFlow $ subscribeEventCB' event (\x y -> launchAff_ do flowRunner $ flow x y)
+-- subscribeEventCB event flow = liftFlow $ subscribeEventCBImpl event (\x y -> launchAff_ do flowRunner $ flow x y)
 
 -- exitApp :: Int -> String -> Flow GlobalState Unit
--- exitApp code status = pure $ exitApp' code status
+-- exitApp code status = pure $ exitAppImpl code status
 
 -- parseURL :: String -> Flow GlobalState String
--- parseURL = liftFlow <<< parseURL'
+-- parseURL = liftFlow <<< parseURLImpl
 
 -- addToExitFlows :: forall a. (Flow GlobalState a) -> Flow GlobalState Unit
--- addToExitFlows = liftFlow <<< addToExitFlows'
+-- addToExitFlows = liftFlow <<< addToExitFlowsImpl
 
 -- getSessionId :: Flow GlobalState String
 -- getSessionId = liftFlow _getSessionId
@@ -331,11 +331,11 @@ foreign import currentPosition  :: String -> Effect Unit
 -- wait waitTime = pure $ setTimeout waitTime
 
 -- saveScreenState :: forall state. Encode state => Decode state => String -> state -> Flow GlobalState Unit
--- saveScreenState screenName state = liftFlow $ saveScreenState' screenName $ encodeJSON state
+-- saveScreenState screenName state = liftFlow $ saveScreenStateImpl screenName $ encodeJSON state
 
 -- fetchScreenState :: forall state. Decode state => String -> Flow GlobalState (Maybe state)
 -- fetchScreenState screenName = do
---     (maybeEncodedState :: Maybe String) <- liftFlow $ fetchScreenState' screenName Just Nothing
+--     (maybeEncodedState :: Maybe String) <- liftFlow $ fetchScreenStateImpl screenName Just Nothing
 --     case maybeEncodedState of
 --             Just encodedState -> do
 --                 case runExcept (decodeJSON encodedState) of
@@ -358,7 +358,7 @@ otpRule = Reader.OtpRule {
 startOtpReciever :: forall action. (String -> action) -> (action -> Effect Unit) -> Effect (Effect Unit)
 startOtpReciever action push = do
   fiber <- launchAff $ do
-    otpListener <- traverse Readers.getOtpListener $ fromArray [ Readers.smsRetriever ] 
+    otpListener <- traverse Readers.getOtpListener $ fromArray [ Readers.smsRetriever ]
     _ <- traverse identity $ (otpListener <#> _.setOtpRules) <*> Just [otpRule]
     message <- traverse identity $ (otpListener <#> _.getNextOtp)
     case message of

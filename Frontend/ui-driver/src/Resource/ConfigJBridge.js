@@ -1,8 +1,7 @@
-const callbackMapper = require('presto-ui').callbackMapper;
-exports.getKeyInSharedPrefKeysConfig = function (key) {
-    return JBridge.getKeysInSharedPrefs(key);
+export const getKeyInSharedPrefKeysConfig = function (key) {
+    return window.JBridge.getKeysInSharedPrefs(key);
   };
 
-exports.getValueToLocalNativeStoreConfig = function (key) {
-  return JBridge.getKeyInNativeSharedPrefKeys(key);
+export const getValueToLocalNativeStoreConfig = function (key) {
+  return window.JBridge.getKeyInNativeSharedPrefKeys(key);
 }
