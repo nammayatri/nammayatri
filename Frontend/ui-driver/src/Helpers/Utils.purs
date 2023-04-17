@@ -349,7 +349,7 @@ otpRule :: Reader.OtpRule
 otpRule = Reader.OtpRule {
   matches : {
     sender : [],
-    message : "Your OTP for login to Yatri App is"
+    message : "is your OTP for login to Namma Yatri App"
   },
   otp : "\\d{4}",
   group : Nothing
