@@ -177,8 +177,8 @@ rideHistoryListTransformer list = (map (\(RidesInfo ride) -> {
     vehicleColor : toPropValue ride.vehicleColor  ,
     id : toPropValue ride.shortRideId,
     updatedAt : toPropValue ride.updatedAt,
-    source : toPropValue (decodeAddress (ride.fromLocation) ),
-    destination : toPropValue (decodeAddress (ride.toLocation) ),
+    source : toPropValue (decodeAddress (ride.fromLocation) false),
+    destination : toPropValue (decodeAddress (ride.toLocation) false),
     amountColor: toPropValue (case (ride.status) of
                   "COMPLETED" -> Color.black800
                   "CANCELLED" -> Color.red
@@ -206,8 +206,8 @@ rideListResponseTransformer list = (map (\(RidesInfo ride) -> {
     vehicleColor : ride.vehicleColor  ,
     id : ride.shortRideId,
     updatedAt : ride.updatedAt,
-    source : (decodeAddress (ride.fromLocation) ),
-    destination : (decodeAddress (ride.toLocation) )
+    source : (decodeAddress (ride.fromLocation) false),
+    destination : (decodeAddress (ride.toLocation) false)
 
 }) list )
 

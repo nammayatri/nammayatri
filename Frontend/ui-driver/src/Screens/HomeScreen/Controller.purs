@@ -486,8 +486,8 @@ constructLatLong lat lon =
 activeRideDetail :: ST.HomeScreenState -> RidesInfo -> ST.ActiveRide
 activeRideDetail state (RidesInfo ride) = {
   id : ride.id,
-  source : (decodeAddress ride.fromLocation ),
-  destination : (decodeAddress ride.toLocation),
+  source : (decodeAddress ride.fromLocation true),
+  destination : (decodeAddress ride.toLocation true),
   src_lat :  ((ride.fromLocation) ^. _lat),
   src_lon :  ((ride.fromLocation) ^. _lon),
   dest_lat: ((ride.toLocation) ^. _lat),

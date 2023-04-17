@@ -420,8 +420,8 @@ driverProfileFlow = do
       modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { props {isNoRides = true}})
     Just (RidesInfo response) -> do
       modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data {customerName = fromMaybe "" (response.riderName),
-        source = (decodeAddress response.fromLocation),
-        destination = (decodeAddress response.toLocation),
+        source = (decodeAddress response.fromLocation false),
+        destination = (decodeAddress response.toLocation false),
         date = (convertUTCtoISC (response.createdAt) "D MMM"),
         time = (convertUTCtoISC (response.createdAt )"h:mm A"),
         tripId = response.shortRideId,
@@ -713,12 +713,12 @@ homeScreenFlow = do
           _ <- pure $ printLog "fromLocation lat" (response.fromLocation ^._lat)
           modifyScreenState $ RideDetailScreenStateType (\rideDetailScreen -> rideDetailScreen { data {customerName = fromMaybe "" (response.riderName),
             sourceAddress {
-              place = (decodeAddress response.fromLocation),
+              place = (decodeAddress response.fromLocation false),
               lat = (response.fromLocation ^._lat),
               lon = (response.fromLocation ^._lon)
             },
             destAddress {
-              place = (decodeAddress response.toLocation),
+              place = (decodeAddress response.toLocation false),
               lat = (response.toLocation ^._lat),
               lon = (response.toLocation ^._lon)
             },
