@@ -26,7 +26,6 @@ import qualified Dashboard.RiderPlatform.Customer as RiderCommon
 import qualified Dashboard.RiderPlatform.Merchant as Merchant
 import qualified Dashboard.RiderPlatform.Ride as Ride
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
-import qualified "rider-app" Domain.Types.Person as BAP
 import Domain.Types.ServerName
 import qualified EulerHS.Types as Euler
 import Kernel.Prelude
@@ -47,9 +46,9 @@ data AppBackendAPIs = AppBackendAPIs
 
 data CustomerAPIs = CustomerAPIs
   { customerList :: Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Text -> Euler.EulerClient RiderCommon.CustomerListRes,
-    customerUpdate :: Id BAP.Person -> Text -> Euler.EulerClient Text,
     customerDelete :: Id Common.Customer -> Euler.EulerClient APISuccess,
-    customerBlock :: Id Common.Customer -> Euler.EulerClient APISuccess
+    customerBlock :: Id Common.Customer -> Euler.EulerClient APISuccess,
+    customerUnblock :: Id Common.Customer -> Euler.EulerClient APISuccess
   }
 
 newtype BookingsAPIs = BookingsAPIs
@@ -83,9 +82,9 @@ mkAppBackendAPIs merchantId token = do
       :<|> ridesClient = clientWithMerchant (Proxy :: Proxy BAP.API') merchantId token
 
     customerList
-      :<|> customerUpdate
       :<|> customerDelete
-      :<|> customerBlock = customersClient
+      :<|> customerBlock
+      :<|> customerUnblock = customersClient
 
     stuckBookingsCancel = bookingsClient
 

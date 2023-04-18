@@ -223,7 +223,6 @@ disableDriver merchantShortId reqDriverId = do
   pure Success
 
 ---------------------------------------------------------------------
----------------------------------------------------------------------
 blockDriver :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
 blockDriver merchantShortId reqDriverId = do
   merchant <- findMerchantByShortId merchantShortId

@@ -21,7 +21,6 @@ module Dashboard.RiderPlatform.Customer
 where
 
 import Dashboard.Common as Reexport
-import qualified Dashboard.Common as DP
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.APISuccess (APISuccess)
@@ -31,6 +30,7 @@ import Servant hiding (Summary)
 data CustomerEndpoint
   = DeleteCustomerEndpoint
   | BlockCustomerEndpoint
+  | UnblockCustomerEndpoint
   deriving (Show, Read)
 
 derivePersistField "CustomerEndpoint"
@@ -39,16 +39,24 @@ derivePersistField "CustomerEndpoint"
 -- customer delete --------------------------------------
 
 type CustomerDeleteAPI =
-  Capture "customerId" (Id DP.Customer)
+  Capture "customerId" (Id Customer)
     :> "delete"
     :> Post '[JSON] APISuccess
 
 ---------------------------------------------------------
--- customer Block  --------------------------------------
+-- customer block  --------------------------------------
 
 type CustomerBlockAPI =
-  Capture "customerId" (Id DP.Customer)
+  Capture "customerId" (Id Customer)
     :> "block"
+    :> Post '[JSON] APISuccess
+
+---------------------------------------------------------
+-- customer unblock  ------------------------------------
+
+type CustomerUnblockAPI =
+  Capture "customerId" (Id Customer)
+    :> "unblock"
     :> Post '[JSON] APISuccess
 
 ---------------------------------------------------------

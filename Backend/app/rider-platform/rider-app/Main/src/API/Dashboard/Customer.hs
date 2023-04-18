@@ -24,18 +24,14 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant hiding (throwError)
-import qualified Storage.CachedQueries.Merchant as QM
-import Tools.Error
 
 type API =
   "customer"
-    :> ( CustomerListAPI
-           :<|> CustomerUpdateAPI
-           :<|> CustomerDeleteAPI
-           :<|> CustomerBlockAPI
+    :> ( Common.CustomerListAPI
+           :<|> Common.CustomerDeleteAPI
+           :<|> Common.CustomerBlockAPI
+           :<|> Common.CustomerUnblockAPI
        )
-
-type CustomerListAPI = Common.CustomerListAPI
 
 type CustomerUpdateAPI =
   Capture "customerId" (Id DP.Person)
@@ -43,16 +39,12 @@ type CustomerUpdateAPI =
     :> ReqBody '[JSON] Text -- DProfile.UpdateProfileReq
     :> Post '[JSON] Text -- APISuccess
 
-type CustomerDeleteAPI = Common.CustomerDeleteAPI
-
-type CustomerBlockAPI = Common.CustomerBlockAPI
-
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   listCustomers merchantId
-    :<|> updateCustomer merchantId
     :<|> deleteCustomer merchantId
     :<|> blockCustomer merchantId
+    :<|> unblockCustomer merchantId
 
 listCustomers ::
   ShortId DM.Merchant ->
@@ -65,17 +57,6 @@ listCustomers ::
 listCustomers merchantShortId mbLimit mbOffset enabled blocked =
   withFlowHandlerAPI . DPerson.listCustomers merchantShortId mbLimit mbOffset enabled blocked
 
-updateCustomer ::
-  ShortId DM.Merchant ->
-  Id DP.Person ->
-  Text ->
-  FlowHandler Text
-updateCustomer merchantShortId _personId _req = withFlowHandlerAPI $ do
-  _merchant <-
-    QM.findByShortId merchantShortId
-      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
-  pure "To be done"
-
 deleteCustomer ::
   ShortId DM.Merchant ->
   Id Common.Customer ->
@@ -87,3 +68,9 @@ blockCustomer ::
   Id Common.Customer ->
   FlowHandler APISuccess
 blockCustomer merchantShortId personId = withFlowHandlerAPI $ DPerson.blockCustomer merchantShortId personId
+
+unblockCustomer ::
+  ShortId DM.Merchant ->
+  Id Common.Customer ->
+  FlowHandler APISuccess
+unblockCustomer merchantShortId personId = withFlowHandlerAPI $ DPerson.unblockCustomer merchantShortId personId

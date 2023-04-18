@@ -15,6 +15,7 @@
 module Domain.Action.Dashboard.Customer
   ( deleteCustomer,
     blockCustomer,
+    unblockCustomer,
     listCustomers,
   )
 where
@@ -38,6 +39,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.SavedReqLocation as QSRL
 
+---------------------------------------------------------------------
 deleteCustomer ::
   ShortId DM.Merchant ->
   Id Common.Customer ->
@@ -55,6 +57,7 @@ deleteCustomer merchantShortId customerId = do
     QP.deleteById personId
   pure Success
 
+---------------------------------------------------------------------
 blockCustomer :: ShortId DM.Merchant -> Id Common.Customer -> Flow APISuccess
 blockCustomer merchantShortId customerId = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
@@ -74,6 +77,27 @@ blockCustomer merchantShortId customerId = do
   logTagInfo "dashboard -> blockCustomer : " (show personId)
   pure Success
 
+---------------------------------------------------------------------
+unblockCustomer :: ShortId DM.Merchant -> Id Common.Customer -> Flow APISuccess
+unblockCustomer merchantShortId customerId = do
+  merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+
+  let personId = cast @Common.Customer @DP.Person customerId
+  customer <-
+    runInReplica $
+      QP.findById personId
+        >>= fromMaybeM (PersonDoesNotExist personId.getId)
+
+  -- merchant access checking
+  let merchantId = customer.merchantId
+  unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
+
+  runTransaction $ do
+    QP.updateBlockedState personId False
+  logTagInfo "dashboard -> unblockCustomer : " (show personId)
+  pure Success
+
+---------------------------------------------------------------------
 listCustomers :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Text -> Flow RiderCommon.CustomerListRes
 listCustomers merchantShortId mbLimit mbOffset mbEnabled mbBlocked mbSearchPhone = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
