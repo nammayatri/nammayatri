@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.35.0.
+-- This file has been generated from package.yaml by hpack version 0.35.1.
 --
 -- see: https://github.com/sol/hpack
 
@@ -136,6 +136,7 @@ library
       Domain.Types.Geometry
       Domain.Types.Issue
       Domain.Types.LocationAddress
+      Domain.Types.Maps.PlaceNameCache
       Domain.Types.Merchant
       Domain.Types.Merchant.MerchantMessage
       Domain.Types.Merchant.MerchantServiceConfig
@@ -169,6 +170,7 @@ library
       Storage.CachedQueries.BlackListOrg
       Storage.CachedQueries.CacheConfig
       Storage.CachedQueries.Exophone
+      Storage.CachedQueries.Maps.PlaceNameCache
       Storage.CachedQueries.Merchant
       Storage.CachedQueries.Merchant.MerchantMessage
       Storage.CachedQueries.Merchant.MerchantServiceConfig
@@ -186,6 +188,7 @@ library
       Storage.Queries.FullEntityBuilders
       Storage.Queries.Geometry
       Storage.Queries.Issues
+      Storage.Queries.Maps.PlaceNameCache
       Storage.Queries.Merchant
       Storage.Queries.Merchant.MerchantMessage
       Storage.Queries.Merchant.MerchantServiceConfig
@@ -218,6 +221,7 @@ library
       Storage.Tabular.FarePolicy.FareBreakup
       Storage.Tabular.Geometry
       Storage.Tabular.Issue
+      Storage.Tabular.Maps.PlaceNameCache
       Storage.Tabular.Merchant
       Storage.Tabular.Merchant.MerchantMessage
       Storage.Tabular.Merchant.MerchantServiceConfig
@@ -303,6 +307,7 @@ library
     , dashboard-helper-api
     , euler-hs
     , extra
+    , geohash ==1.0.1
     , http-media
     , http-types
     , lens
@@ -382,6 +387,7 @@ executable rider-app-exe
     , dashboard-helper-api
     , euler-hs
     , extra
+    , geohash ==1.0.1
     , http-media
     , http-types
     , lens

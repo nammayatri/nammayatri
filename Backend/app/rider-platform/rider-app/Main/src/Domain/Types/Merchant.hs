@@ -34,6 +34,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     driverOfferBaseUrl :: BaseUrl,
     driverOfferApiKey :: Text,
     driverOfferMerchantId :: Text,
+    geoHashPrecisionValue :: Int,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
