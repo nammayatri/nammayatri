@@ -25,6 +25,7 @@ import Kernel.Types.App
 import Kernel.Types.Beckn.ReqTypes
 import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError (IsBecknAPI)
+import Kernel.Utils.Monitoring.Prometheus.Servant (SanitizedUrl)
 import Kernel.Utils.Servant.SignatureAuth
 
 confirm ::
@@ -54,6 +55,7 @@ callBecknAPIWithSignature ::
   ( MonadFlow m,
     MonadReader r m,
     CoreMetrics m,
+    SanitizedUrl api,
     IsBecknAPI api req res,
     HasField "selfId" r Text
   ) =>

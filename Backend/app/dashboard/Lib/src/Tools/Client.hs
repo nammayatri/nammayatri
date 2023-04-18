@@ -30,6 +30,8 @@ import Tools.Auth.Merchant
 import Tools.Error
 import Tools.Metrics
 
+-- import Kernel.Utils.Monitoring.Prometheus.Servant
+
 data DataServer = DataServer
   { name :: DSN.ServerName,
     url :: BaseUrl,
@@ -68,7 +70,7 @@ instance
   callServerAPI serverName mkAPIs descr f = do
     dataServer <- getDataServer serverName
     let driverOfferAPIs = mkAPIs dataServer.token
-    callApiUnwrappingApiError (identity @Error) Nothing Nothing dataServer.url (f driverOfferAPIs) descr
+    callApiUnwrappingApiError (identity @Error) Nothing Nothing dataServer.url (f driverOfferAPIs) descr (Proxy :: Proxy Raw)
 
 --instance
 --  ( CoreMetrics m,

@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE TypeApplications #-}
 
 module SharedLogic.CallBPP where
 
@@ -35,6 +36,7 @@ import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Error
 import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError (IsBecknAPI)
+import Kernel.Utils.Monitoring.Prometheus.Servant (SanitizedUrl)
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 import Storage.CachedQueries.CacheConfig (HasCacheConfig)
@@ -147,7 +149,7 @@ callGetDriverLocation ::
 callGetDriverLocation ride = do
   trackingUrl <- ride.trackingUrl & fromMaybeM (RideFieldNotPresent "trackingUrl")
   let eulerClient = Euler.client (Proxy @(Get '[JSON] GetLocationRes))
-  callApiUnwrappingApiError (identity @TrackUrlError) Nothing (Just "TRACK_URL_NOT_AVAILABLE") trackingUrl eulerClient "BPP.driverTrackUrl"
+  callApiUnwrappingApiError (identity @TrackUrlError) Nothing (Just "TRACK_URL_NOT_AVAILABLE") trackingUrl eulerClient "BPP.driverTrackUrl" (Proxy @(Get '[JSON] GetLocationRes))
 
 feedback ::
   ( MonadFlow m,
@@ -164,7 +166,8 @@ callBecknAPIWithSignature,
     ( MonadFlow m,
       CoreMetrics m,
       IsBecknAPI api req res,
-      HasBapInfo r m
+      HasBapInfo r m,
+      SanitizedUrl api
     ) =>
     Text ->
     Proxy api ->
