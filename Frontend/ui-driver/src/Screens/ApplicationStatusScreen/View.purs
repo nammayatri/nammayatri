@@ -36,6 +36,7 @@ import Services.APITypes (DriverRegistrationStatusResp(..), DriverRegistrationSt
 import Services.Backend (driverRegistrationStatusBT)
 import Styles.Colors as Color
 import Common.Types.App
+import Types.App (defaultGlobalState)
 import Components.PrimaryButton as PrimaryButton
 import Components.PopUpModal as PopUpModal
 import Components.ReferralMobileNumber as ReferralMobileNumber
@@ -52,7 +53,7 @@ screen initialState screenType =
   , globalEvents : [
       ( \push -> do
         if screenType == "StatusScreen" then do
-          void $ launchAff $ EHC.flowRunner $ runExceptT $ runBackT $ do
+          void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
             if(initialState.props.enterMobileNumberView || initialState.props.enterOtp) then pure unit
               else do
               (DriverRegistrationStatusResp driverRegistrationStatusResp ) <- driverRegistrationStatusBT (DriverRegistrationStatusReq { })

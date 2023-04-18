@@ -19,7 +19,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Prelude ((<>))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), height, width)
-import Styles.Colors as Color
+import Common.Styles.Colors as Color
 import Common.Types.App
 
 data Action = OnClick | NoAction

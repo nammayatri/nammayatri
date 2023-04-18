@@ -19,7 +19,7 @@ import PrestoDOM ( Length(..), Margin(..), Visibility(..), Padding(..), Gravity(
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Styles.Colors as Color
+import Common.Styles.Colors as Color
 import Common.Types.App
 
 data Action = OnCloseClick

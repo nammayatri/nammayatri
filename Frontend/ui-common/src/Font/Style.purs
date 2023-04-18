@@ -20,16 +20,19 @@ import Styles.Types (FontStyle)
 import Halogen.VDom.DOM.Prop (Prop)
 import Engineering.Helpers.Commons (os)
 import PrestoDOM (fontStyle, lineHeight, textSize)
-import Prelude ((==),($),(/=))
-import Storage (getValueToLocalStore, KeyStore(..))
+import Prelude (Unit, unit, (==),($),(/=))
 import Common.Types.App
+import JBridge as JBridge
+
+getLanguageFromLocalStore :: Unit -> String
+getLanguageFromLocalStore _ = JBridge.getKeyInSharedPrefKeys "LANGUAGE_KEY"
 
 italic :: FontStyle
 italic = fontByOS "PlusJakartaSans-Italic" "PlusJakartaSans-Italic" "Arial"
 
 light :: LazyCheck -> FontStyle
 light style = do
-  case (getValueToLocalStore LANGUAGE_KEY) of
+  case (getLanguageFromLocalStore unit) of
     "EN_US" -> fontByOS "PlusJakartaSans-Light" "PlusJakartaSans-Light" "Arial"
     "KN_IN" -> fontByOS "NotoSansKannada-Light" "NotoSansKannada-Light" "Arial"
     "HI_IN" -> fontByOS "PlusJakartaSans-Light" "PlusJakartaSans-Light" "Arial"
@@ -40,7 +43,7 @@ lightItalic = fontByOS "PlusJakartaSans-LightItalic" "PlusJakartaSans-LightItali
 
 extraLight :: LazyCheck -> FontStyle
 extraLight style = do
-  case (getValueToLocalStore LANGUAGE_KEY) of
+  case (getLanguageFromLocalStore unit) of
     "EN_US" -> fontByOS "PlusJakartaSans-ExtraLight" "PlusJakartaSans-ExtraLight" "Arial"
     "KN_IN" -> fontByOS "NotoSansKannada-ExtraLight" "NotoSansKannada-ExtraLight" "Arial"
     "HI_IN" -> fontByOS "PlusJakartaSans-ExtraLight" "PlusJakartaSans-ExtraLight" "Arial"
@@ -51,7 +54,7 @@ extraLightItalic = fontByOS "PlusJakartaSans-ExtraLightItalic" "PlusJakartaSans-
 
 regular :: LazyCheck -> FontStyle
 regular style = do
-  case (getValueToLocalStore LANGUAGE_KEY) of
+  case (getLanguageFromLocalStore unit) of
     "EN_US" -> fontByOS "PlusJakartaSans-Regular" "PlusJakartaSans-Regular" "Arial"
     "KN_IN" -> fontByOS "NotoSansKannada-Regular" "NotoSansKannada-Regular" "Arial"
     "HI_IN" -> fontByOS "PlusJakartaSans-Regular" "PlusJakartaSans-Regular" "Arial"
@@ -59,7 +62,7 @@ regular style = do
 
 medium :: LazyCheck -> FontStyle
 medium style = do
-  case (getValueToLocalStore LANGUAGE_KEY) of
+  case (getLanguageFromLocalStore unit) of
     "EN_US" -> fontByOS "PlusJakartaSans-Medium" "PlusJakartaSans-Medium" "Arial"
     "KN_IN" -> fontByOS "NotoSansKannada-Medium" "NotoSansKannada-Medium" "Arial"
     "HI_IN" -> fontByOS "PlusJakartaSans-Medium" "PlusJakartaSans-Medium" "Arial"
@@ -70,7 +73,7 @@ mediumItalic = fontByOS "PlusJakartaSans-MediumItalic" "PlusJakartaSans-MediumIt
 
 semiBold :: LazyCheck -> FontStyle
 semiBold style = do
-  case (getValueToLocalStore LANGUAGE_KEY) of
+  case (getLanguageFromLocalStore unit) of
     "EN_US" -> fontByOS "PlusJakartaSans-SemiBold" "PlusJakartaSans-SemiBold" "Arial"
     "KN_IN" -> fontByOS "NotoSansKannada-SemiBold" "NotoSansKannada-SemiBold" "Arial"
     "HI_IN" -> fontByOS "PlusJakartaSans-SemiBold" "PlusJakartaSans-SemiBold" "Arial"
@@ -81,7 +84,7 @@ semiBoldItalic = fontByOS "PlusJakartaSans-SemiBoldItalic" "PlusJakartaSans-Semi
 
 bold :: LazyCheck -> FontStyle
 bold style = do
-  case (getValueToLocalStore LANGUAGE_KEY) of
+  case (getLanguageFromLocalStore unit) of
     "EN_US" -> fontByOS "PlusJakartaSans-Bold" "PlusJakartaSans-Bold" "Arial"
     "KN_IN" -> fontByOS "NotoSansKannada-Bold" "NotoSansKannada-Bold" "Arial"
     "HI_IN" -> fontByOS "PlusJakartaSans-Bold" "PlusJakartaSans-Bold" "Arial"
@@ -92,7 +95,7 @@ boldItalic = fontByOS "PlusJakartaSans-BoldItalic" "PlusJakartaSans-BoldItalic" 
 
 extraBold :: LazyCheck -> FontStyle
 extraBold style = do
-  case (getValueToLocalStore LANGUAGE_KEY) of
+  case (getLanguageFromLocalStore unit) of
     "EN_US" -> fontByOS "PlusJakartaSans-ExtraBold" "PlusJakartaSans-ExtraBold" "Arial"
     "KN_IN" -> fontByOS "NotoSansKannada-ExtraBold" "NotoSansKannada-ExtraBold" "Arial"
     "HI_IN" -> fontByOS "PlusJakartaSans-ExtraBold" "PlusJakartaSans-ExtraBold" "Arial"

@@ -39,6 +39,7 @@ import Control.Transformers.Back.Trans (runBackT)
 import Engineering.Helpers.Commons (flowRunner)
 import Services.Backend as Remote
 import Common.Types.App
+import Types.App (defaultGlobalState)
 import Screens.HelpAndSupportScreen.ComponentConfig
 
 screen :: ST.HelpAndSupportScreenState -> Screen Action ST.HelpAndSupportScreenState ScreenOutput
@@ -48,7 +49,7 @@ screen initialState =
   , name : "HelpAndSupportScreen"
   , eval
   , globalEvents : [( \push -> do
-      void $ launchAff $ flowRunner $ runExceptT $ runBackT $ do
+      void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
         rideHistoryResponse <- Remote.getRideHistoryReqBT "1" "0" "false"
         lift $ lift $ doAff do liftEffect $ push $ RideHistoryAPIResponse rideHistoryResponse
       pure $ pure unit)]

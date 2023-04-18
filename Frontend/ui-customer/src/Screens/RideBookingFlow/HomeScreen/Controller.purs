@@ -73,6 +73,7 @@ import Services.API (EstimateAPIEntity(..), GetDriverLocationResp, GetQuotesRes(
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
 import Storage (KeyStore(..), isLocalStageOn, updateLocalStage, getValueToLocalStore, getValueToLocalStoreEff, setValueToLocalStore, getValueToLocalNativeStore, setValueToLocalNativeStore)
+import Types.App (defaultGlobalState)
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Int (toNumber, round, fromString)
@@ -1504,7 +1505,7 @@ eval (ReferralFlowAction) state = exit $ GoToReferral state
 eval NewUser state = continueWithCmd state [ do
   if (getValueToLocalNativeStore REGISTRATION_APPROVED) == "true" then do
     _ <- pure $ setValueToLocalStore REGISTRATION_APPROVED "false"
-    _ <- launchAff $ flowRunner $ runExceptT $ runBackT $ do
+    _ <- launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
       _ <- UI.successScreen ((getString HEY) <> " " <> (getValueToLocalStore USER_NAME)) (getString SUCCESSFUL_ONBOARD)
       pure unit
     pure unit

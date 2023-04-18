@@ -36,13 +36,14 @@ import Presto.Core.Types.Language.Flow (throwErr)
 import PrestoDOM.Core (processEvent) as PrestoDom
 import Types.App (defaultGlobalState)
 
+
 main :: Effect Unit
 main = do
   epassRef ← new defaultGlobalState
   payload  ::  Either MultipleErrors GlobalPayload  <- runExcept <<< decode <<< fromMaybe (unsafeToForeign {}) <$> (liftEffect $ getWindowVariable "__payload" Just Nothing)
   case payload of
     Right payload'  -> do
-       _ <- launchAff $ flowRunner $ do
+       _ <- launchAff $ flowRunner defaultGlobalState $ do
           -- _ <- pure $ JBridge._addCertificates (Config.getFingerPrint "")
           resp ← runExceptT $ runBackT $ Flow.baseAppFlow payload'
           case resp of
@@ -53,7 +54,7 @@ main = do
                   pure unit
        pure unit
     Left e -> do
-        _ <- launchAff $ flowRunner $ do
+        _ <- launchAff $ flowRunner defaultGlobalState $ do
             throwErr $ show e
         pure unit
 
@@ -69,12 +70,12 @@ onConnectivityEvent triggertype = do
   payload  ::  Either MultipleErrors GlobalPayload  <- runExcept <<< decode <<< fromMaybe (unsafeToForeign {}) <$> (liftEffect $ getWindowVariable "__payload" Just Nothing)
   case payload of
     Right payload'  -> do
-        _ <- launchAff $ flowRunner $ do
+        _ <- launchAff $ flowRunner defaultGlobalState $ do
           -- _ <- pure $ JBridge._addCertificates (Config.getFingerPrint "")
           _ ← runExceptT $ runBackT $ Flow.permissionScreenFlow triggertype
           pure unit
         pure unit
     Left e -> do
-        _ <- launchAff $ flowRunner $ do
+        _ <- launchAff $ flowRunner defaultGlobalState $ do
             throwErr $ show e
         pure unit

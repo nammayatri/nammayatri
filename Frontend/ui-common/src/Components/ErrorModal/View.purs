@@ -22,7 +22,7 @@ import Components.PrimaryButton.View as PrimaryButton
 import Components.PrimaryButton.Controller as PrimaryButtonConfig
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Styles.Colors as Color
+import Common.Styles.Colors as Color
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
   relativeLayout

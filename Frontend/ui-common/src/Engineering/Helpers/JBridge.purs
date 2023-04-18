@@ -21,9 +21,7 @@ import Prelude
 import Effect (Effect)
 -- import Effect.Aff (makeAff, nonCanceler)
 import Presto.Core.Flow (Flow)
-import Types.App (GlobalState)
 import Engineering.Helpers.Commons (liftFlow)
-import Screens.Types (InvoiceScreenState)
 -- import Common.Types.App (Place)
 -- import Types.APIv2 (Address)
 -- import Foreign (Foreign)
@@ -130,7 +128,7 @@ foreign import removeKeysInSharedPrefs :: String -> Unit
 foreign import removeKeysInNativeSharedPrefs :: String -> Unit
 foreign import toggleLoaderImpl :: Boolean -> Effect Unit
 foreign import loaderTextImpl :: String -> String -> Effect Unit
-foreign import generatePDF :: InvoiceScreenState -> String -> Unit
+foreign import generatePDF :: forall invoiceScreenState. invoiceScreenState -> String -> Unit
 foreign import requestKeyboardShow :: String -> Effect Unit
 foreign import showDialer          :: String -> Unit
 foreign import getAAID :: String -> String
@@ -243,10 +241,10 @@ foreign import goBackPrevWebPage ::  String -> Effect Unit
 -- -- rsaEncryption :: String -> String -> String -> Flow String
 -- -- rsaEncryption plainTxt algo key = (liftFlow $ _rsaEncryption plainTxt algo key Left Right) >>= either throwErr pure
 
-showLoader :: String -> Flow GlobalState Unit
+showLoader :: forall st. String -> Flow st Unit
 showLoader str = liftFlow (showLoaderImpl str)
 
--- readFile :: String -> Flow GlobalState String
+-- readFile :: String -> Flow st String
 -- readFile = liftFlow <<< readFileImpl
 
 -- showQrCode :: String -> String -> Effect Unit
@@ -258,10 +256,10 @@ addMarker title lat lng markerSize anchorV anchorV1 = (addMarkerImpl title lat l
 showMap :: forall action. String -> Boolean -> String -> Number -> (action -> Effect Unit) -> (String -> String -> String -> action) -> Effect Boolean
 showMap = showMapImpl --liftFlow (showMapImpl id mapType)
 
-toggleLoader :: Boolean -> Flow GlobalState Unit
+toggleLoader :: forall st. Boolean -> Flow st Unit
 toggleLoader flag = liftFlow (toggleLoaderImpl flag)
 
-loaderText :: String -> String -> Flow GlobalState Unit
+loaderText :: forall st. String -> String -> Flow st Unit
 loaderText mainTxt subTxt = liftFlow (loaderTextImpl mainTxt subTxt)
 
 -- loader :: Boolean -> Maybe LoaderMessage -> Flow GlobalState Unit
@@ -277,10 +275,10 @@ showMarker :: String -> Number -> Number -> Int -> Number -> Number -> Effect Bo
 showMarker title lat lng markerSize anchorV anchorV1 = addMarker title lat lng markerSize anchorV anchorV1
 
 
-setKeyInSharedPrefKeys :: String -> String -> Flow GlobalState Unit
+setKeyInSharedPrefKeys :: forall st. String -> String -> Flow st Unit
 setKeyInSharedPrefKeys key val = liftFlow (setKeyInSharedPrefKeysImpl key val)
 
-setEnvInNativeSharedPrefKeys :: String -> String -> Flow GlobalState Unit
+setEnvInNativeSharedPrefKeys :: forall st. String -> String -> Flow st Unit
 setEnvInNativeSharedPrefKeys key val = liftFlow (setEnvInNativeSharedPrefKeysImpl key val)
 
 -- onEventWithCB :: Foreign -> Flow GlobalState (Either String String)

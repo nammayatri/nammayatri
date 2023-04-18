@@ -21,8 +21,7 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(
 import Components.PrimaryButton.View as PrimaryButton
 import Components.PrimaryButton.Controller as PrimaryButtonConfig
 import Components.GenericMessageModal.Controller(Action(..), Config)
-import Styles.Colors as Color
-import Language.Types (STR(..))
+import Common.Styles.Colors as Color
 import Font.Style as FontStyle
 import Font.Size as FontSize
 import PrestoDOM.Properties(cornerRadii)

@@ -18,6 +18,7 @@ module Screens.NotificationsScreen.View where
 import Prelude
 import Animation (fadeIn, fadeOut, screenAnimationFadeInOut)
 import Common.Types.App (LazyCheck(..))
+import Types.App (defaultGlobalState)
 import Components.ErrorModal as ErrorModal
 import Components.NotificationDetailModel as NotificationDetailModel
 import Control.Monad.Except (runExceptT)
@@ -58,7 +59,7 @@ screen initialState notificationListItem =
   , globalEvents:
       [ globalOnScroll "NotificationsScreen"
       , ( \push -> do
-            void $ launchAff $ flowRunner $ runExceptT $ runBackT
+            void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT
               $ do
                   (MessageListRes messageListRes) <- Remote.messageListBT "8" $ show initialState.offsetValue
                   lift $ lift $ doAff do liftEffect $ push $ MessageListResAction (MessageListRes messageListRes)

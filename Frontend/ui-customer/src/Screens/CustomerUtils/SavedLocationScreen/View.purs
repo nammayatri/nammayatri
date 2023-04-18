@@ -46,7 +46,7 @@ import Services.Backend as Remote
 import Styles.Colors as Color
 import Common.Types.App
 import Data.Maybe(fromMaybe, Maybe(..))
-import Types.App (GlobalState)
+import Types.App (GlobalState, defaultGlobalState)
 import Data.Either (Either(..))
 import Screens.CustomerUtils.SavedLocationScreen.ComponentConfig
 
@@ -57,7 +57,7 @@ screen initialState =
   , name : "SavedLocationScreen"
   , globalEvents : [
       (\push -> do
-        _ <- launchAff $ EHC.flowRunner $ getSavedLocationsList SavedLocationListAPIResponseAction push initialState
+        _ <- launchAff $ EHC.flowRunner defaultGlobalState $ getSavedLocationsList SavedLocationListAPIResponseAction push initialState
         pure $ pure unit
           )
   ]

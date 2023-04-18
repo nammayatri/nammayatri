@@ -38,6 +38,7 @@ import Screens.Types as ST
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
 import Common.Types.App
+import Types.App (defaultGlobalState)
 import Components.PopUpModal as PopUpModal
 import Data.Maybe (Maybe(..) ,fromMaybe)
 import Effect.Aff (launchAff)
@@ -112,7 +113,7 @@ commonView push img title description state=
     , orientation VERTICAL
     , afterRender (\action -> do
                         if state.props.stage == ST.SuccessScreen then do
-                          void $ launchAff $ flowRunner $ runExceptT $ runBackT $ lift $ lift $ doAff do
+                          void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ lift $ lift $ doAff do
                             if (os == "IOS") then liftEffect $ startTimerWithTime (show state.props.seconds) state.props.id "1" push SuccessScreenExpireCountDwon
                               else liftEffect $ countDown state.props.seconds state.props.id push SuccessScreenExpireCountDwon
                         else pure unit

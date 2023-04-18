@@ -26,7 +26,7 @@ import Language.Types (STR(..))
 import Language.Strings (getString)
 import Components.SourceToDestination.Controller as SourceToDestinationConfig
 import Components.SourceToDestination.View as SourceToDestination
-import Helpers.Utils(parseFloat)
+import Helpers.Utils (parseFloat)
 import Data.Int (toNumber)
 import Storage (getValueToLocalStore, KeyStore(..))
 import PrestoDOM (Length(..) , Margin(..), Orientation(..), Padding(..) , Visibility(..), Gravity(..), PrestoDOM, cornerRadius, height, width, margin, padding, linearLayout, gravity, orientation, fontStyle, textSize, textView, text, background, clickable, color, imageView, imageUrl, ellipsize, maxLines, onClick, lineHeight, visibility, textFromHtml, layoutGravity, imageWithFallback)

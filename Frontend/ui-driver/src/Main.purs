@@ -29,6 +29,7 @@ import Presto.Core.Types.Language.Flow (throwErr)
 import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Generic (decode)
 import Common.Types.App (GlobalPayload)
+import Types.App (defaultGlobalState)
 import Effect.Class (liftEffect)
 import Control.Monad.Except (runExcept)
 import Data.Maybe (fromMaybe, Maybe(..))
@@ -36,7 +37,7 @@ import Screens.Types (AllocationData)
 
 main :: Effect Unit
 main = do
-  void $ launchAff $ flowRunner $ do
+  void $ launchAff $ flowRunner defaultGlobalState $ do
     _ <- pure $ printLog "printLog " "in main"
     resp ← runExceptT $ runBackT $ Flow.baseAppFlow
     case resp of
@@ -50,13 +51,13 @@ mainAllocationPop payload_type entityPayload = do
   _ <- pure $ printLog "entity_payload" entityPayload
   payload  ::  Either MultipleErrors GlobalPayload  <- runExcept <<< decode <<< fromMaybe (unsafeToForeign {}) <$> (liftEffect $ getWindowVariable "__payload" Just Nothing)
   case payload of
-    Right _ -> void $ launchAff $ flowRunner $ do
+    Right _ -> void $ launchAff $ flowRunner defaultGlobalState $ do
       if(payload_type == "NEW_RIDE_AVAILABLE") then
         runExceptT $ runBackT $ (Flow.popUpScreenFlow entityPayload)
         else
           runExceptT $ runBackT $ Flow.homeScreenFlow
 
-    Left e -> void $ launchAff $ flowRunner $ do
+    Left e -> void $ launchAff $ flowRunner defaultGlobalState $ do
       _ <- pure $ printLog "payload type mismatch " ""
       throwErr $ show e
 
@@ -66,7 +67,7 @@ onEvent _ = pure unit
 
 onConnectivityEvent :: String -> Effect Unit
 onConnectivityEvent triggertype = do
-  void $ launchAff $ flowRunner $ do
+  void $ launchAff $ flowRunner defaultGlobalState $ do
     resp ← runExceptT $ runBackT $ Flow.noInternetScreenFlow triggertype
     case resp of
       Right _ -> pure $ printLog "Event" "onConnectivityEvent"

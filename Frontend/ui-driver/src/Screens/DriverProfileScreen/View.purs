@@ -43,6 +43,7 @@ import Control.Transformers.Back.Trans (runBackT)
 import Data.Maybe (fromMaybe)
 import Components.PopUpModal as PopUpModal
 import Common.Types.App
+import Types.App (defaultGlobalState)
 import Screens.DriverProfileScreen.ComponentConfig
 import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion)
 
@@ -53,7 +54,7 @@ screen initialState =
   , view
   , name : "DriverProfileScreen"
   , globalEvents : [(\push -> do
-      void $ launchAff $ EHC.flowRunner $ runExceptT $ runBackT $ do
+      void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
         getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
         let (GetDriverInfoResp getDriverInfoResp) = getDriverInfoResp
         lift $ lift $ doAff do liftEffect $ push $ GetDriverInfoResponse (GetDriverInfoResp getDriverInfoResp)

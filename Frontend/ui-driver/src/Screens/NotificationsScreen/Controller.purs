@@ -43,6 +43,7 @@ import Services.APITypes (MediaFileApiResponse(..), MediaType(..), MessageAPIEnt
 import Services.Backend as Remote
 import Storage (KeyStore(..), setValueToLocalNativeStore)
 import Debug (spy)
+import Types.App (defaultGlobalState)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -132,7 +133,7 @@ eval (NotificationDetailModelAC (NotificationDetailModel.AddCommentModelAction P
       let updatedNotificationList = (map(\item -> if(item.messageId == state.notificationDetailModelState.messageId) then item{comment = Just comment } else item)state.notificationList)
       continueWithCmd state { notificationDetailModelState { addCommentModelVisibility = GONE }, notificationList = updatedNotificationList }
         [ do
-            void $ launchAff $ flowRunner $ runExceptT $ runBackT
+            void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT
               $ do
                   res <- Remote.messageResponseBT state.notificationDetailModelState.messageId (Remote.makeMessageReplyReq comment)
                   pure unit

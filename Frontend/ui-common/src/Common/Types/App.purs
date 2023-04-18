@@ -23,6 +23,13 @@ import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype)
 import Data.Eq.Generic (genericEq)
 import Foreign.Generic (class Decode, class Encode)
+import Control.Monad.Free (Free)
+import Control.Monad.Except.Trans (ExceptT)
+import Presto.Core.Types.Language.Flow (FlowWrapper)
+import Control.Transformers.Back.Trans (BackT)
+
+type FlowBT e st a = BackT (ExceptT e (Free (FlowWrapper st))) a
+
 data VehicalTypes = Sedan | Hatchback | SUV | Auto
 data LazyCheck = LanguageStyle | EndPoint | BaseUrl | TypoGraphy | WithoutOffers
 
