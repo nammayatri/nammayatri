@@ -21,7 +21,7 @@ import Prelude (Unit, negate, unit, ($), (/))
 import PrestoDOM (PrestoDOM)
 import PrestoDOM.Animation (Interpolator, toRotation)
 import PrestoDOM.Animation as PrestoAnim
-import Animation.Config
+import Common.Animation.Config
 
 
 animateTime :: Int

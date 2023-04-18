@@ -17,6 +17,7 @@ module Screens.SuccessScreen.View where
 
 import Prelude
 import Common.Types.App (LazyCheck(..))
+import Types.App (defaultGlobalState)
 import Control.Monad.Except.Trans (lift, runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Maybe (Maybe(..))
@@ -44,7 +45,7 @@ screen initialState =
   , parent: Just "SuccessScreen"
   , globalEvents:
       [ ( \push -> do
-            _ <- launchAff $ EHC.flowRunner $ runExceptT $ runBackT
+            _ <- launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT
               $ do
                   lift $ lift $ void $ delay $ Milliseconds 3500.0
                   lift $ lift $ doAff do liftEffect $ push CountDown

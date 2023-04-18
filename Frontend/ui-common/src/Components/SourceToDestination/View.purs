@@ -19,7 +19,7 @@ import Prelude (Unit, ($), (<>))
 import Effect (Effect)
 import Components.SourceToDestination.Controller (Action,Config)
 import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Margin(..), Padding(..), background, color, ellipsize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, maxLines, orientation, padding, text, textSize, textView, visibility, width, cornerRadius, stroke, margin, imageWithFallback)
-import Styles.Colors as Color
+import Common.Styles.Colors as Color
 import Font.Size as FontSize
 
 view :: forall w .  (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w

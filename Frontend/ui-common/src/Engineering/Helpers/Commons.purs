@@ -42,11 +42,12 @@ import Presto.Core.Language.Runtime.Interpreter (PermissionCheckRunner, Permissi
 import Presto.Core.Types.API (Header(..), Headers(..), Request(..), URL,Response)
 import Presto.Core.Types.Language.Flow (Flow, doAff,defaultState)
 import Presto.Core.Utils.Encoding (defaultDecodeJSON, defaultEncodeJSON)
-import Types.App (FlowBT, GlobalState, defaultGlobalState)
+import Common.Types.App (FlowBT)
 import Effect.Aff.AVar (new)
 import Data.String as DS
 import Data.Int as INT
 import Data.Array ((!!))
+import Data.Number.Format as Number
 
 
 foreign import showUIImpl :: Fn2 (String -> Effect  Unit) String (Effect Unit)
@@ -77,7 +78,7 @@ foreign import getCurrentUTC :: String -> String
 os :: String
 os = getOs unit
 
-sendSdkRequest :: forall a b. EncodeWithOptions a => DecodeWithOptions (Maybe b) => SDKRequest a  -> Flow GlobalState (SDKResponse b)
+sendSdkRequest :: forall a b st. EncodeWithOptions a => DecodeWithOptions (Maybe b) => SDKRequest a  -> Flow st (SDKResponse b)
 sendSdkRequest request@(SDKRequest req) = do
   result <- doAff do (fromEffectFnAff <<< callSahay $ request')
   {--_ <- pure $ spy "Got result fromm makeAff"--}
@@ -125,23 +126,23 @@ trackerIcon vehicleType = case vehicleType of
                             "HATCHBACK" -> "tracker_hatchback"
                             _ -> "map_car"
 
-liftFlow :: forall val . (Effect val)  -> Flow GlobalState val
+liftFlow :: forall val st. (Effect val)  -> Flow st val
 liftFlow effVal = doAff do liftEffect (effVal)
 
 fromNull :: forall a. a -> Maybe a -> a
 fromNull a b = fromMaybe a b
 
-window :: forall a. String -> Flow GlobalState (Maybe a)
+window :: forall a st. String -> Flow st (Maybe a)
 window key = liftFlow (getWindowVariable key Just Nothing)
 
-setWindowVariable :: forall a. String -> a -> Flow GlobalState Unit
+setWindowVariable :: forall a st. String -> a -> Flow st Unit
 setWindowVariable key value = liftFlow (setWindowVariableImpl key value)
 
-flowRunner :: forall a. (Flow GlobalState a) -> Aff (Either Error a)
-flowRunner flow = do
+flowRunner :: forall a st. st -> Flow st a -> Aff (Either Error a)
+flowRunner initialState flow = do
   let runtime  = Runtime pure permissionRunner apiRunner
   let freeFlow = S.evalStateT (run runtime flow)
-  try $ new (defaultState defaultGlobalState) >>= freeFlow
+  try $ new (defaultState initialState) >>= freeFlow
 
 permissionCheckRunner :: PermissionCheckRunner
 permissionCheckRunner = checkIfPermissionsGranted
@@ -157,13 +158,13 @@ apiRunner request = makeAff (\cb -> do
     _ <- callAPI' (cb <<< Left) (cb <<< Right) (mkNativeRequest request)
     pure $ nonCanceler)
 
-readFromRef :: Ref GlobalState → FlowBT String GlobalState
+readFromRef :: forall st. Ref st → FlowBT String st st
 readFromRef ref = lift $ lift $ doAff $ liftEffect $ read ref
 
-writeToRef :: GlobalState → Ref GlobalState → FlowBT String Unit
+writeToRef :: forall st. st → Ref st → FlowBT String st Unit
 writeToRef d ref = lift $ lift $ doAff $ liftEffect $ write d ref
 
-modifyEpassRef :: (GlobalState → GlobalState) → Ref GlobalState → FlowBT String GlobalState
+modifyEpassRef :: forall st. (st → st) → Ref st → FlowBT String st st
 modifyEpassRef f ref = do
   d ← readFromRef ref
   writeToRef (f d) ref

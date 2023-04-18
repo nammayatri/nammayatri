@@ -47,6 +47,7 @@ import Screens.Types as ST
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import Merchant.Utils( getValueFromConfig )
+import Types.App (defaultGlobalState)
 
 screen :: ST.EnterMobileNumberScreenState -> Screen Action ST.EnterMobileNumberScreenState ScreenOutput
 screen initialState =
@@ -58,7 +59,7 @@ screen initialState =
       _ <- JB.setFCMToken push $ SetToken
       if initialState.data.timerID == "" then pure unit else pure $ EHC.clearTimer initialState.data.timerID
       if not initialState.props.resendEnable && initialState.data.attempts >= 0 then do
-          _ <- launchAff $ EHC.flowRunner $ runExceptT $ runBackT $ lift $ lift $ doAff do liftEffect $ EHC.countDown 15 "otp" push CountDown
+          _ <- launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ lift $ lift $ doAff do liftEffect $ EHC.countDown 15 "otp" push CountDown
           pure unit
         else pure unit
       pure (pure unit)) ] <> if EHC.os == "IOS" then [] else [ startOtpReciever AutoFill ]

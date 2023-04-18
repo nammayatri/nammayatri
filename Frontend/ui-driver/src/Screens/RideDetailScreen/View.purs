@@ -37,6 +37,7 @@ import Services.APITypes(Route(..))
 import Services.Backend as Remote
 import Services.Backend (walkCoordinate)
 import Common.Types.App
+import Types.App (defaultGlobalState)
 
 screen :: ST.RideDetailScreenState -> Screen Action ST.RideDetailScreenState ScreenOutput
 screen initialState =
@@ -55,7 +56,7 @@ view push state =
   , background Color.white900
   , afterRender (\action -> do
                 _ <- push action
-                _ <- launchAff $ EHC.flowRunner $ runExceptT $ runBackT $ do
+                _ <- launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
                   let coor = (walkCoordinate state.data.sourceAddress.lon state.data.sourceAddress.lat state.data.destAddress.lon state.data.destAddress.lat)
                   _ <- lift $ lift $ doAff do liftEffect $ JB.mapSnapShot (EHC.getNewIDWithTag "RideDetailScreenMap") coor "DOT" false push MapSnapShot
                   pure unit

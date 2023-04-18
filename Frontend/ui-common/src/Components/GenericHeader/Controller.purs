@@ -18,7 +18,7 @@ module Components.GenericHeader.Controller where
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), padding)
-import Styles.Colors as Color
+import Common.Styles.Colors as Color
 import Common.Types.App
 
 data Action = SuffixImgOnClick | PrefixImgOnClick

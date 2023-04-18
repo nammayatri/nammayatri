@@ -47,6 +47,7 @@ import Presto.Core.Types.Language.Flow (doAff)
 import Animation as Anim
 import Services.APITypes (GetRidesHistoryResp(..), Status(..))
 import Common.Types.App
+import Types.App (defaultGlobalState)
 import Components.BottomNavBar.Controller (navData)
 import Screens.RideHistoryScreen.ComponentConfig
 import Screens as ScreenNames
@@ -63,7 +64,7 @@ screen initialState rideListItem =
   , globalEvents : [
     globalOnScroll "RideHistoryScreen",
         ( \push -> do
-            _ <- launchAff $ flowRunner $ runExceptT $ runBackT $ do
+            _ <- launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
               if initialState.currentTab == "COMPLETED" then do
                 (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "8" (show initialState.offsetValue) "false" "COMPLETED"
                 lift $ lift $ doAff do liftEffect $ push $ RideHistoryAPIResponseAction rideHistoryResponse.list

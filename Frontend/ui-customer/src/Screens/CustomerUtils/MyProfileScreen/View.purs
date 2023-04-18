@@ -40,6 +40,7 @@ import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
 import Common.Types.App
+import Types.App (defaultGlobalState)
 import Data.Array (mapWithIndex)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Screens.CustomerUtils.MyProfileScreen.ComponentConfig
@@ -52,7 +53,7 @@ screen initialState =
   , view
   , name : "MyProfileScreen"
   , globalEvents : [(\push -> do
-                      _ <- launchAff $ EHC.flowRunner $ runExceptT $ runBackT $ do
+                      _ <- launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
                         response <- Remote.getProfileBT ""
                         if initialState.props.isEmailValid then
                           lift $ lift $ doAff do liftEffect $ push $ UserProfile response

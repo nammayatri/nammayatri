@@ -19,7 +19,7 @@ import Prelude (Unit, const, (<<<), ($), (-), unit)
 import Effect (Effect)
 import Components.UpdateErrorModal.Controller (Action(..), Config)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, frameLayout, layoutGravity, alpha, scrollView, cornerRadius, visibility, stroke, onBackPressed, relativeLayout, imageWithFallback)
-import Styles.Colors as Color
+import Common.Styles.Colors as Color
 import PrestoDOM.Properties(cornerRadii)
 import Engineering.Helpers.Commons (screenWidth)
 import PrestoDOM.Types.DomAttributes (Corners(..))
