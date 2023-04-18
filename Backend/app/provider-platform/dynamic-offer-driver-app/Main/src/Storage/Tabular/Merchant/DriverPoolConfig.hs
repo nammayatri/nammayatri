@@ -50,6 +50,9 @@ mkPersist
       poolSortingType PoolSortingType
       singleBatchProcessTime Seconds
       tripDistance Meters
+      radiusShrinkValueForDriversOnRide Int
+      driverToDestinationDistanceThreshold Meters
+      driverToDestinationDuration Seconds
       createdAt UTCTime
       updatedAt UTCTime
       Primary merchantId tripDistance

@@ -38,6 +38,9 @@ data DriverPoolConfigD u = DriverPoolConfig
     poolSortingType :: PoolSortingType,
     singleBatchProcessTime :: Seconds,
     tripDistance :: Meters,
+    radiusShrinkValueForDriversOnRide :: Int,
+    driverToDestinationDistanceThreshold :: Meters,
+    driverToDestinationDuration :: Seconds,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

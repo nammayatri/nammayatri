@@ -17,6 +17,7 @@ module Storage.Queries.Person where
 
 import Control.Applicative ((<|>))
 import qualified Data.Maybe as Mb
+import qualified Domain.Types.Booking as Booking
 import Domain.Types.DriverInformation
 import Domain.Types.DriverLocation
 import Domain.Types.Merchant
@@ -34,11 +35,14 @@ import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common hiding (Value)
 import Kernel.Utils.GenericPretty
+import Storage.Tabular.Booking
+import Storage.Tabular.Booking.BookingLocation
 import Storage.Tabular.DriverInformation
 import Storage.Tabular.DriverLocation
 import Storage.Tabular.DriverOnboarding.DriverLicense
 import Storage.Tabular.DriverOnboarding.DriverRCAssociation
 import Storage.Tabular.DriverOnboarding.VehicleRegistrationCertificate
+import Storage.Tabular.DriverQuote
 import Storage.Tabular.Person as TPerson
 import Storage.Tabular.Ride
 import Storage.Tabular.Vehicle as Vehicle
@@ -553,6 +557,135 @@ getNearestDrivers mbVariant LatLong {..} radiusMeters merchantId onlyNotOnRide m
         Just poolVariant -> getResult poolVariant True
       where
         getResult var cond = [NearestDriversResult (cast personId) mbDeviceToken mblang onRide (roundToIntegral dist) var dlat dlon | cond]
+
+data NearestDriversResultCurrentlyOnRide = NearestDriversResultCurrentlyOnRide
+  { driverId :: Id Driver,
+    driverDeviceToken :: Maybe FCM.FCMRecipientToken,
+    language :: Maybe Maps.Language,
+    onRide :: Bool,
+    lat :: Double,
+    lon :: Double,
+    variant :: Vehicle.Variant,
+    destinationLat :: Double,
+    destinationLon :: Double,
+    distanceToDriver :: Meters,
+    distanceFromDriverToDestination :: Meters
+  }
+  deriving (Generic, Show, PrettyShow, HasCoordinates)
+
+baseFullPersonQueryWithRideInfo ::
+  From
+    ( Table PersonT
+        :& Table DriverLocationT
+        :& Table DriverInformationT
+        :& Table VehicleT
+        :& Table DriverQuoteT
+        :& Table BookingT
+        :& Table BookingLocationT
+    )
+baseFullPersonQueryWithRideInfo =
+  table @PersonT
+    `innerJoin` table @DriverLocationT
+    `Esq.on` ( \(person :& location) ->
+                 person ^. PersonTId ==. location ^. DriverLocationDriverId
+             )
+    `innerJoin` table @DriverInformationT
+    `Esq.on` ( \(person :& _ :& driverInfo) ->
+                 person ^. PersonTId ==. driverInfo ^. DriverInformationDriverId
+             )
+    `innerJoin` table @VehicleT
+    `Esq.on` ( \(person :& _ :& _ :& vehicle) ->
+                 person ^. PersonTId ==. vehicle ^. VehicleDriverId
+             )
+    `innerJoin` table @DriverQuoteT
+    `Esq.on` ( \(person :& _ :& _ :& _ :& driverQuoteInfo) ->
+                 person ^. PersonTId ==. driverQuoteInfo ^. DriverQuoteDriverId
+             )
+    `innerJoin` table @BookingT
+    `Esq.on` ( \(_ :& _ :& _ :& _ :& driverQuoteInfo :& bookingInfo) ->
+                 driverQuoteInfo ^. DriverQuoteId ==. bookingInfo ^. BookingQuoteId
+                   &&. bookingInfo ^. BookingStatus ==. val Booking.TRIP_ASSIGNED
+             )
+    `innerJoin` table @BookingLocationT
+    `Esq.on` ( \(_ :& _ :& _ :& _ :& _ :& bookingInfo :& bookingLocationInfo) ->
+                 bookingInfo ^. BookingToLocationId ==. bookingLocationInfo ^. BookingLocationTId
+             )
+
+getNearestDriversCurrentlyOnRide ::
+  (Transactionable m, MonadTime m) =>
+  Maybe Variant ->
+  LatLong ->
+  Int ->
+  Id Merchant ->
+  Maybe Seconds ->
+  Int ->
+  m [NearestDriversResultCurrentlyOnRide]
+getNearestDriversCurrentlyOnRide mbVariant LatLong {..} radiusMeters merchantId mbDriverPositionInfoExpiry reduceRadiusValue = do
+  now <- getCurrentTime
+  res <- Esq.findAll $ do
+    (personInfo :& locationInfo :& driverInfo :& vehicleInfo :& _ :& _ :& bookingLocationInfo) <-
+      from baseFullPersonQueryWithRideInfo
+    let destinationPoint = Esq.getPoint (bookingLocationInfo ^. BookingLocationLat, bookingLocationInfo ^. BookingLocationLon)
+        distanceFromDriverToDestination = locationInfo ^. DriverLocationPoint <->. destinationPoint
+        onRideRadius = val (fromIntegral (radiusMeters - reduceRadiusValue) :: Double)
+        distanceFromDestinationToPickup = Esq.getPoint (val lat, val lon) <->. destinationPoint
+    where_ $
+      personInfo ^. PersonRole ==. val Person.DRIVER
+        &&. personInfo ^. PersonMerchantId ==. val (toKey merchantId)
+        &&. driverInfo ^. DriverInformationActive
+        &&. driverInfo ^. DriverInformationOnRide
+        &&. not_ (driverInfo ^. DriverInformationBlocked)
+        &&. ( val (Mb.isNothing mbDriverPositionInfoExpiry)
+                ||. (locationInfo ^. DriverLocationCoordinatesCalculatedAt +. Esq.interval [Esq.SECOND $ maybe 0 getSeconds mbDriverPositionInfoExpiry] >=. val now)
+            )
+        &&. ( Esq.isNothing (val mbVariant) ||. just (vehicleInfo ^. VehicleVariant) ==. val mbVariant -- when mbVariant = Nothing, we use all variants, is it correct?
+                ||. ( case mbVariant of
+                        Just SEDAN ->
+                          driverInfo ^. DriverInformationCanDowngradeToSedan ==. val True
+                            &&. vehicleInfo ^. VehicleVariant ==. val SUV
+                        Just HATCHBACK ->
+                          driverInfo ^. DriverInformationCanDowngradeToHatchback ==. val True
+                            &&. (vehicleInfo ^. VehicleVariant ==. val SUV ||. vehicleInfo ^. VehicleVariant ==. val SEDAN)
+                        Just TAXI ->
+                          driverInfo ^. DriverInformationCanDowngradeToTaxi ==. val True
+                            &&. vehicleInfo ^. VehicleVariant ==. val TAXI_PLUS
+                        _ -> val False
+                    )
+            )
+        &&. (distanceFromDriverToDestination +. distanceFromDestinationToPickup) <. onRideRadius
+    orderBy [asc (distanceFromDestinationToPickup +. distanceFromDriverToDestination)]
+    pure
+      ( personInfo ^. PersonTId,
+        personInfo ^. PersonDeviceToken,
+        personInfo ^. PersonLanguage,
+        driverInfo ^. DriverInformationOnRide,
+        driverInfo ^. DriverInformationCanDowngradeToSedan,
+        driverInfo ^. DriverInformationCanDowngradeToHatchback,
+        driverInfo ^. DriverInformationCanDowngradeToTaxi,
+        locationInfo ^. DriverLocationLat,
+        locationInfo ^. DriverLocationLon,
+        vehicleInfo ^. VehicleVariant,
+        bookingLocationInfo ^. BookingLocationLat,
+        bookingLocationInfo ^. BookingLocationLon,
+        distanceFromDriverToDestination +. distanceFromDestinationToPickup,
+        distanceFromDriverToDestination
+      )
+  return (makeNearestDriversResult =<< res)
+  where
+    makeNearestDriversResult :: (Id Person, Maybe FCM.FCMRecipientToken, Maybe Maps.Language, Bool, Bool, Bool, Bool, Double, Double, Variant, Double, Double, Double, Double) -> [NearestDriversResultCurrentlyOnRide]
+    makeNearestDriversResult (personId, mbDeviceToken, mblang, onRide, canDowngradeToSedan, canDowngradeToHatchback, canDowngradeToTaxi, dlat, dlon, variant, destinationEndLat, destinationEndLon, dist :: Double, distanceFromDriverToDestination :: Double) =
+      case mbVariant of
+        Nothing -> do
+          let autoResult = getResult AUTO_RICKSHAW $ variant == AUTO_RICKSHAW
+              suvResult = getResult SUV $ variant == SUV
+              sedanResult = getResult SEDAN $ variant == SEDAN || (variant == SUV && canDowngradeToSedan)
+              hatchbackResult = getResult HATCHBACK $ variant == HATCHBACK || ((variant == SUV || variant == SEDAN) && canDowngradeToHatchback)
+              taxiPlusResult = getResult TAXI_PLUS $ variant == TAXI_PLUS
+              taxiResult = getResult TAXI $ variant == TAXI || (variant == TAXI_PLUS && canDowngradeToTaxi)
+          autoResult <> suvResult <> sedanResult <> hatchbackResult <> taxiResult <> taxiPlusResult
+        Just poolVariant -> getResult poolVariant True
+      where
+        getResult var cond = [NearestDriversResultCurrentlyOnRide (cast personId) mbDeviceToken mblang onRide dlat dlon var destinationEndLat destinationEndLon (roundToIntegral dist) (roundToIntegral distanceFromDriverToDestination) | cond]
 
 updateAlternateMobileNumberAndCode :: Person -> SqlDB ()
 updateAlternateMobileNumberAndCode person = do
