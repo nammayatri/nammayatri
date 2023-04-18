@@ -12,34 +12,33 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module API.UI.CancellationReason
-  ( CancellationReasonListRes,
-    API,
-    handler,
-  )
-where
+module API.Beckn.CancellationReasons (API, handler) where -- should move to SharedLogic?
 
-import qualified Domain.Action.Beckn.CancellationReason as DCancellationReason
-import qualified Domain.Types.CancellationReason as SCR
+import qualified Beckn.Types.Core.Taxi.API.CancellationReasons as API
+import qualified Beckn.Types.Core.Taxi.CancellationReasons.Types as API
+import qualified Domain.Action.Beckn.CancellationReason as Q
+import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Person as Person
 import Environment
+import EulerHS.Prelude hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.Servant.SignatureAuth
 import Servant
-import Tools.Auth
 
 type API =
-  "cancellationReason"
-    :> ( "list"
-           :> TokenAuth
-           :> Get '[JSON] CancellationReasonListRes
-       )
+  Capture "merchantId" (Id Merchant)
+    :> SignatureAuth "Authorization"
+    :> API.CancellationReasonsAPI
 
 handler :: FlowServer API
-handler = list
+handler = sendCancellationReasons
 
-type CancellationReasonListRes = [SCR.CancellationReasonAPIEntity]
-
-list :: (Id Person.Person, Id DM.Merchant) -> FlowHandler CancellationReasonListRes
-list _ = withFlowHandlerAPI DCancellationReason.list
+sendCancellationReasons ::
+  Id DM.Merchant ->
+  SignatureAuthResult ->
+  API.CancellationReasonsReq ->
+  FlowHandler API.CancellationReasons
+sendCancellationReasons _ _ _ =
+  withFlowHandlerAPI $ do
+    Q.getCancellationReasons

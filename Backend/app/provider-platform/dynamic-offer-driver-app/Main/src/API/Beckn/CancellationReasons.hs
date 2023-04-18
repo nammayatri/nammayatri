@@ -16,7 +16,7 @@ module API.Beckn.CancellationReasons (API, handler) where -- should move to Shar
 
 import qualified Beckn.Types.Core.Taxi.API.CancellationReasons as API
 import qualified Beckn.Types.Core.Taxi.CancellationReasons.Types as API
-import qualified Domain.Action.UI.CancellationReason as Q
+import qualified Domain.Action.Beckn.CancellationReason as Q
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Merchant as DM
 import Environment

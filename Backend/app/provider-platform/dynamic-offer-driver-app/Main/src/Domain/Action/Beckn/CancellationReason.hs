@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Action.UI.CancellationReason
+module Domain.Action.Beckn.CancellationReason
   ( list,
     getCancellationReasons,
   )

@@ -12,34 +12,21 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module API.UI.CancellationReason
-  ( CancellationReasonListRes,
-    API,
-    handler,
+module Domain.Action.Beckn.CancellationReason
+  ( list,
+    getCancellationReasons,
   )
 where
 
-import qualified Domain.Action.Beckn.CancellationReason as DCancellationReason
+import qualified Beckn.Types.Core.Taxi.CancellationReasons.Types as SCR
 import qualified Domain.Types.CancellationReason as SCR
-import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Person as Person
-import Environment
-import Kernel.Types.Id
-import Kernel.Utils.Common
-import Servant
-import Tools.Auth
+import EulerHS.Prelude hiding (id)
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
+import qualified Storage.Queries.CancellationReason as QCR
 
-type API =
-  "cancellationReason"
-    :> ( "list"
-           :> TokenAuth
-           :> Get '[JSON] CancellationReasonListRes
-       )
+list :: EsqDBReplicaFlow m r => m [SCR.CancellationReasonAPIEntity]
+list = fmap SCR.makeCancellationReasonAPIEntity <$> getCancellationReasons
 
-handler :: FlowServer API
-handler = list
-
-type CancellationReasonListRes = [SCR.CancellationReasonAPIEntity]
-
-list :: (Id Person.Person, Id DM.Merchant) -> FlowHandler CancellationReasonListRes
-list _ = withFlowHandlerAPI DCancellationReason.list
+getCancellationReasons :: EsqDBReplicaFlow m r => m [SCR.CancellationReason]
+getCancellationReasons = runInReplica QCR.findAll

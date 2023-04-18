@@ -91,6 +91,7 @@ library
       Beckn.ACL.Update
       Beckn.Core
       Domain.Action.Beckn.Cancel
+      Domain.Action.Beckn.CancellationReason
       Domain.Action.Beckn.Confirm
       Domain.Action.Beckn.Init
       Domain.Action.Beckn.Rating
@@ -112,7 +113,6 @@ library
       Domain.Action.Internal.DriverReferee
       Domain.Action.Internal.FeedbackForm
       Domain.Action.UI.Call
-      Domain.Action.UI.CancellationReason
       Domain.Action.UI.Driver
       Domain.Action.UI.DriverOnboarding.AadhaarVerification
       Domain.Action.UI.DriverOnboarding.DriverLicense
