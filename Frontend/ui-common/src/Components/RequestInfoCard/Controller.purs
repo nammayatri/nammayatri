@@ -16,7 +16,7 @@
 module Components.RequestInfoCard.Controller where
 
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..))
-import Styles.Colors as Color
+import Common.Styles.Colors as Color
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Common.Types.App

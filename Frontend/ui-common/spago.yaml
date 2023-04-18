@@ -1,0 +1,11 @@
+package:
+  name: "ui-common"
+  dependencies:
+    - "backtrack"
+    - "effect"
+    - "foreign-generic"
+    - "newtype"
+    - "prelude"
+    - "presto"
+    - "presto-dom"
+    - "psci-support"

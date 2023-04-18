@@ -61,9 +61,6 @@ selectLightBlue = "#80E0EAFD"
 hintColor :: Color
 hintColor = "#3E2D2D2D"
 
-darkGreen :: Color
-darkGreen = "#1F9649"
-
 darkBlue :: Color
 darkBlue = "#2172FF"
 

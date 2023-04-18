@@ -1,0 +1,18 @@
+{
+	"folders": [
+		{
+			"path": "ui-driver"
+		},
+		{
+			"path": "ui-customer"
+		},
+		{
+			"path": "ui-common"
+		}
+	],
+	"settings": {
+		"purescript.addSpagoSources": false,
+		"purescript.buildCommand": "purifix --json-errors \"./src/**/*.purs\" \"../ui-common/**/*.purs\"",
+		"purescript.formatter": "none"
+	}
+}

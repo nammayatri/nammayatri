@@ -13,7 +13,139 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module JBridge where
+module JBridge
+  ( Coordinates
+  , IsLocationOnPath
+  , Location
+  , Locations
+  , Paths
+  , SpecialLocationTag
+  , SuggestionDefinitions
+  , Suggestions
+  , UpdateRouteMarker
+  , addMarker
+  , addMarkerImpl
+  , addMediaFile
+  , animateCamera
+  , checkOverlayPermission
+  , cleverTapCustomEvent
+  , cleverTapCustomEventWithParams
+  , cleverTapSetLocation
+  , copyToClipboard
+  , currentPosition
+  , datePicker
+  , deletePopUpCallBack
+  , detectPhoneNumbers
+  , disableActionEditText
+  , drawRoute
+  , enableMyLocation
+  , exitLocateOnMap
+  , factoryResetApp
+  , firebaseLogEvent
+  , firebaseLogEventWithParams
+  , firebaseLogEventWithTwoParams
+  , firebaseScreenNameLog
+  , firebaseUserID
+  , fromMetersToKm
+  , generatePDF
+  , generateSessionId
+  , generateSessionToken
+  , getAAID
+  , getAndroidVersion
+  , getBtnLoader
+  , getCurrentLatLong
+  , getCurrentPosition
+  , getExtendedPath
+  , getHeightFromPercent
+  , getKeyInNativeSharedPrefKeys
+  , getKeyInSharedPrefKeys
+  , getMainFiber
+  , getSuggestionfromKey
+  , getSuggestionsfromLocal
+  , getVersionCode
+  , getVersionName
+  , getWidthFromPercent
+  , goBackPrevWebPage
+  , hideKeyboardOnNavigation
+  , initialWebViewSetUp
+  , initiateLocationServiceClient
+  , isBatteryPermissionEnabled
+  , isCoordOnPath
+  , isInternetAvailable
+  , isLocationEnabled
+  , isLocationPermissionEnabled
+  , isMicrophonePermissionEnabled
+  , isMockLocation
+  , isOverlayPermissionEnabled
+  , launchDateSettings
+  , launchInAppRatingPopup
+  , loaderText
+  , loaderTextImpl
+  , locateOnMap
+  , mapSnapShot
+  , metaLogEvent
+  , minimizeApp
+  , openNavigation
+  , openUrlInApp
+  , openUrlInMailApp
+  , openWhatsAppSupport
+  , previewImage
+  , reallocateMapFragment
+  , removeAllPolylines
+  , removeKeysInNativeSharedPrefs
+  , removeKeysInSharedPrefs
+  , removeMarker
+  , renderBase64Image
+  , requestAutoStartPermission
+  , requestBatteryPermission
+  , requestKeyboardShow
+  , requestLocation
+  , saveSuggestionDefs
+  , saveSuggestions
+  , scrollOnResume
+  , scrollToEnd
+  , sendMessage
+  , setCleverTapUserData
+  , setCleverTapUserProp
+  , setEnvInNativeSharedPrefKeys
+  , setEnvInNativeSharedPrefKeysImpl
+  , setFCMToken
+  , setKeyInSharedPrefKeys
+  , setKeyInSharedPrefKeysImpl
+  , setScaleType
+  , setStoreCallBackPopUp
+  , shareImageMessage
+  , shareTextMessage
+  , showDialer
+  , showInAppNotification
+  , showLoader
+  , showLoaderImpl
+  , showMap
+  , showMapImpl
+  , showMarker
+  , startChatListenerService
+  , startLocationPollingAPI
+  , startLottieProcess
+  , startTimerWithTime
+  , stopChatListenerService
+  , stopLocationPollingAPI
+  , storeCallBackBatteryUsagePermission
+  , storeCallBackDriverLocationPermission
+  , storeCallBackImageUpload
+  , storeCallBackInternetAction
+  , storeCallBackMessageUpdated
+  , storeCallBackOpenChatScreen
+  , storeCallBackOverlayPermission
+  , storeMainFiberOb
+  , toast
+  , toggleBtnLoader
+  , toggleLoader
+  , toggleLoaderImpl
+  , updateRoute
+  , updateRouteMarker
+  , uploadFile
+  )
+  where
 
 
 import Prelude
@@ -34,11 +166,9 @@ import Foreign.Class (class Decode, class Encode)
 import Foreign.Generic (decodeJSON)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Data.Either (Either(..))
-import Engineering.Helpers.Commons (screenHeight, screenWidth)
-import Helpers.Utils (parseFloat)
+import Engineering.Helpers.Commons (screenHeight, screenWidth, parseFloat)
 import Data.Int (toNumber)
 import Data.Function.Uncurried (Fn2(..))
-import Types.App (GlobalState)
 import Presto.Core.Flow (doAff)
 import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
 import Foreign.Generic (encodeJSON)
@@ -398,6 +528,3 @@ fromMetersToKm :: Int -> String
 fromMetersToKm distanceInMeters
   | distanceInMeters >= 1000 = parseFloat (toNumber distanceInMeters / 1000.0) 1 <> " km"
   | otherwise = show distanceInMeters <> " m"
-
-
-

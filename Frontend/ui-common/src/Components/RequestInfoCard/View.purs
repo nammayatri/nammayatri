@@ -19,11 +19,9 @@ import Components.RequestInfoCard.Controller (Action(..) , Config, TextConfig)
 import Prelude ((*), Unit, ($), const, (/), unit, (-))
 import Effect (Effect)
 import PrestoDOM (PrestoDOM, Orientation(..), Gravity(..), Padding(..), Margin(..), Length(..), margin, padding, orientation, height, width, linearLayout, imageView, imageUrl, text, textView, textSize, fontStyle, gravity, onClick, color, background, cornerRadius, weight, imageWithFallback , visibility)
-import Styles.Colors as Color
+import Common.Styles.Colors as Color
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Language.Strings (getString)
-import Language.Types (STR(..))
 import Engineering.Helpers.Commons (screenWidth)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 

@@ -15,7 +15,7 @@
 
 module Components.Banner.Controller where
 
-import Styles.Colors as Color
+import Common.Styles.Colors as Color
 
 data Action = OnClick
             | NoAction

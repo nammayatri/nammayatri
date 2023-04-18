@@ -20,7 +20,7 @@ import Data.Maybe
 import Common.Types.App (OptionButtonList)
 import PrestoDOM ( Length(..) )
 import Font.Size as FontSize
-import Styles.Colors as Color
+import Common.Styles.Colors as Color
 
 
 data Action = Button1 PrimaryButtonController.Action

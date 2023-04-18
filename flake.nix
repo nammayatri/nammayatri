@@ -8,8 +8,11 @@
     beckn-gateway.inputs.common.follows = "common";
     beckn-gateway.inputs.shared-kernel.follows = "shared-kernel";
 
-    easy-purescript-nix.url = "github:justinwoo/easy-purescript-nix";
-    easy-purescript-nix.flake = false;
+    # Frontend inputs
+    purifix.url = "github:purifix/purifix";
+    dream2nix.url = "github:nix-community/dream2nix";
+    dream2nix.inputs.nixpkgs.follows = "dream2nix-nixpkgs-fixed";
+    dream2nix-nixpkgs-fixed.url = "nixpkgs/c1989c17e2658f721df7b0027cbc3d8959f914cb"; # https://github.com/nix-community/dream2nix/pull/531
   };
   outputs = inputs:
     inputs.common.lib.mkFlake { inherit inputs; } {

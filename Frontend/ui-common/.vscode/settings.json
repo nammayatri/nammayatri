@@ -1,0 +1,3 @@
+{
+    "purescript.buildCommand": "purifix --json-errors \"./src/**/*.purs\""
+}
