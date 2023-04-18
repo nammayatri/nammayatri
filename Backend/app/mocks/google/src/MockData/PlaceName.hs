@@ -42,7 +42,8 @@ mkMockResultsResp latLng =
                 { lat = latLng.lat,
                   lng = latLng.lon
                 }
-          }
+          },
+      place_id = Nothing
     }
 
 mockAddressComponents :: [GoogleMaps.AddressResp]

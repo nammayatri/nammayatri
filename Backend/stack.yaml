@@ -87,7 +87,7 @@ extra-deps:
       - app/mock-registry
   # -  ../../shared-kernel/lib/mobility-core
   - git: https://github.com/nammayatri/shared-kernel.git
-    commit: d9dfc9a3cd266b8aad52160ca3468b351cc67aa9
+    commit: fb8c213b92160f3f54d4034bc6f8d168cb1b7bae 
     subdirs:
       - lib/mobility-core
   - git: https://github.com/piyushKumar-1/clickhouse-haskell.git
@@ -126,7 +126,7 @@ extra-deps:
 
   - servant-docs-0.11.7
   - servant-foreign-0.15.2
-
+  - geohash-1.0.1
   # Needed for sequelize
   - named-0.3.0.1@sha256:2975d50c9c5d88095026ffc1303d2d9be52e5f588a8f8bcb7003a04b79f10a06,2312
 

@@ -47,6 +47,7 @@ mkPersist
       driverOfferBaseUrl Text
       driverOfferApiKey Text
       driverOfferMerchantId Text
+      geoHashPrecisionValue Int
       updatedAt UTCTime
       createdAt UTCTime
       Primary id
