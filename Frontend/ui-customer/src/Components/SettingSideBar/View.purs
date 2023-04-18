@@ -24,7 +24,7 @@ import Effect (Effect)
 import Engineering.Helpers.Commons (screenWidth, safeMarginBottom, safeMarginTop, os)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (isPreviousVersion, getPreviousVersion)
+import Helpers.Utils (isPreviousVersion, getMerchant, Merchant(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Merchant.Utils (getValueFromConfig)
@@ -87,7 +87,7 @@ settingsView state push =
   ][
      settingsMenuView {imageUrl : "ic_past_rides,https://assets.juspay.in/nammayatri/images/user/ic_past_rides.png", text : (getString MY_RIDES), tag : SETTINGS_RIDES, iconUrl : ""} push
     , settingsMenuView {imageUrl : "ic_fav,https://assets.juspay.in/nammayatri/images/user/ic_fav.png", text : (getString FAVOURITES)  , tag : SETTINGS_FAVOURITES, iconUrl : ""} push
-    , if (isPreviousVersion (getValueToLocalStore VERSION_NAME) (if os == "IOS" then "1.2.5" else "1.2.1")) then emptyLayout
+    , if (isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "")) then emptyLayout
       else settingsMenuView {imageUrl : "ny_ic_emergency_contacts,https://assets.juspay.in/nammayatri/images/user/ny_ic_emergency_contacts.png" , text : (getString EMERGENCY_CONTACTS)  , tag : SETTINGS_EMERGENCY_CONTACTS, iconUrl : ""} push
     , settingsMenuView {imageUrl : "ic_help,https://assets.juspay.in/nammayatri/images/user/ic_help.png", text : (getString HELP_AND_SUPPORT), tag : SETTINGS_HELP, iconUrl : ""} push
     , settingsMenuView {imageUrl : "ic_change_language,https://assets.juspay.in/nammayatri/images/user/ic_change_language.png", text : (getString LANGUAGE), tag : SETTINGS_LANGUAGE, iconUrl : ""} push
@@ -104,6 +104,14 @@ settingsView state push =
     , logoutView state push
   ]
   
+getPreviousVersion :: String -> String 
+getPreviousVersion _ = 
+  if os == "IOS" then 
+    case getMerchant FunctionCall of 
+      NAMMAYATRI -> "1.2.5"
+      _ -> "1.0.0"
+    else "1.2.1"
+
 ------------------------------ emptylayout --------------------------------
 emptyLayout = linearLayout
               [ height $ V 0

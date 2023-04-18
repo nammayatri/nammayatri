@@ -15,7 +15,7 @@
 
 module Helpers.Utils where
 
-import Common.Types.App (LazyCheck)
+import Common.Types.App (LazyCheck(..))
 import Components.LocationListItem.Controller (dummyLocationListState)
 import Control.Monad.Except (runExcept)
 import Data.Array (cons, deleteAt, filter, head, length, tail, (!!))
@@ -334,7 +334,12 @@ getCurrentLocationMarker :: String -> String
 getCurrentLocationMarker currentVersion = if isPreviousVersion currentVersion (getPreviousVersion "") then "ic_customer_current_location" else "ny_ic_customer_current_location"
 
 getPreviousVersion :: String -> String 
-getPreviousVersion _ = if os == "IOS" then "1.2.5" else "1.2.0"
+getPreviousVersion _ = 
+  if os == "IOS" then 
+    case getMerchant FunctionCall of 
+      NAMMAYATRI -> "1.2.5"
+      _ -> "1.0.0"
+    else "1.2.0"
 
 rotateArray :: forall a. Array a -> Int -> Array a
 rotateArray arr times =

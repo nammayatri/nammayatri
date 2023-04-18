@@ -21,13 +21,13 @@ import Data.Array (mapWithIndex, filter, findIndex, (!!), null)
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Prelude (Unit, const, ($), (<>), (==))
+import Prelude (Unit, const, unit, ($), (<>), (==), (/), (-))
 import Styles.Colors as Color
 import Screens.Types (LocationTagBarState, CardType(..), LocationListItemState)
 import Language.Strings (getString)
 import Data.Maybe (Maybe(..))
 import Language.Types (STR(..))
-import Engineering.Helpers.Commons(os)
+import Engineering.Helpers.Commons(os, screenWidth)
 import Common.Types.App
 
 view :: forall w. (Action -> Effect Unit) -> LocationTagBarState -> PrestoDOM ( Effect Unit ) w
@@ -37,7 +37,7 @@ view push state =
  , height WRAP_CONTENT
  , orientation VERTICAL
  ][ linearLayout
-    [ width MATCH_PARENT
+    [ width $ V (screenWidth unit - 32)
     , height WRAP_CONTENT 
     ](mapWithIndex (\index item -> 
         linearLayout
