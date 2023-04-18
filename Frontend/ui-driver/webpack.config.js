@@ -42,6 +42,14 @@ module.exports = function(env, argv){
     host: "0.0.0.0",
     inline: false,
     port: 8083
+  },
+  watchOptions: {
+      aggregateTimeout: 200
+  },
+  optimization: {
+
+   usedExports: true,
+
   }
   }
   return config;

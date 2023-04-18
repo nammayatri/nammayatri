@@ -1,5 +1,6 @@
-import { callbackMapper } from 'presto-ui');
+import { callbackMapper } from 'presto-ui';
 const btnLoaderState = new Map();
+const { JBridge } = window;
 
 // exports._keyStoreEntryPresent = function(alias) {
 //   return function() {
@@ -561,7 +562,7 @@ export const updateRoute = function (data) {
     };
   };
 
-exports["storeCallBackMessageUpdated"] = function (cb) {
+export const storeCallBackMessageUpdated = function (cb) {
       return function (chatChannelID) {
         return function(chatUserId) {
           return function(action) {
@@ -578,26 +579,26 @@ exports["storeCallBackMessageUpdated"] = function (cb) {
         };
       };
 
-exports["startChatListenerService"] = function() {
+export const startChatListenerService = function() {
   if (JBridge.startChatListenerService) {
     JBridge.startChatListenerService();
   }
 }
 
-exports["stopChatListenerService"] = function () {
+export const stopChatListenerService = function () {
   if (JBridge.stopChatListenerService) {
     JBridge.stopChatListenerService();
   }
 }
 
-exports["sendMessage"] = function (message) {
+export const sendMessage = function (message) {
   console.log("Send Message Called");
   if (JBridge.sendMessage) {
     JBridge.sendMessage(message);
   }
 };
 
-exports["scrollToBottom"] = function(id) {
+export const scrollToBottom = function(id) {
   if (JBridge.scrollToBottom){
     JBridge.scrollToBottom(id)
   }
@@ -1045,49 +1046,49 @@ export const isInternetAvailable = function (unit) {
   };
 };
 
-exports["factoryResetApp"] = function (str) {
+export const factoryResetApp = function (str) {
   console.log("HERE IN RESET ===--->>")
   JBridge.factoryResetApp()
 }
 
-exports["uploadFile"] = function (unit) {
+export const uploadFile = function (unit) {
   return function () {
     return JBridge.uploadFile();
   };
 };
 
-exports["previewImage"] = function (base64Image) {
+export const previewImage = function (base64Image) {
   return function () {
     return JBridge.previewImage(base64Image);
   }
 }
 
-exports["renderBase64Image"] = function (image) {
+export const renderBase64Image = function (image) {
   return function (id) {
       return JBridge.renderBase64Image(image, id);
   };
 };
 
-exports["isOverlayPermissionEnabled"] = function (unit) {
+export const isOverlayPermissionEnabled = function (unit) {
   return function () {
     return JBridge.isOverlayPermissionEnabled();
   };
 };
 
-exports["requestBatteryPermission"] = function (str) {
+export const requestBatteryPermission = function (str) {
   return function () {
     JBridge.requestBatteryPermission();
   };
 };
-exports["copyToClipboard"] = function(str) {
+export const copyToClipboard = function(str) {
      JBridge.copyToClipboard(str);
 }
 
-exports["requestKeyboardShow"] = function(id) {
+export const requestKeyboardShow = function(id) {
   JBridge.requestKeyboardShow(id);
 }
 
-exports["locateOnMap"] = function(str){
+export const locateOnMap = function(str){
   return function (lat){
     return function (lon){
       JBridge.locateOnMap(str, lat, lon);
@@ -1095,11 +1096,11 @@ exports["locateOnMap"] = function(str){
   }
 }
 
-exports["exitLocateOnMap"] = function(str){
+export const exitLocateOnMap = function(str){
   JBridge.exitLocateOnMap(str);
 }
 
-exports["shareTextMessage"] = function(str){
+export const shareTextMessage = function(str){
   return function (message){
     if(JBridge.shareTextMessage){
       JBridge.shareTextMessage(str, message);
@@ -1107,7 +1108,7 @@ exports["shareTextMessage"] = function(str){
   }
 }
 
-exports["shareImageMessage"] = function(message){
+export const shareImageMessage = function(message){
   return function (imageName){
     if(JBridge.shareTextMessage){
       JBridge.shareImageMessage(message,imageName);
@@ -1115,14 +1116,14 @@ exports["shareImageMessage"] = function(message){
   }
 }
 
-exports.openWhatsAppSupport = function (contactNumber) {
+export const openWhatsAppSupport = function (contactNumber) {
   return function () {
     console.log("contactNumber" + contactNumber)
     return JBridge.openWhatsAppSupport(contactNumber)
   }
 }
 
-exports["mapSnapShot"] = function (id) {
+export const mapSnapShot = function (id) {
   return function (coordinates) {
     return function (routeType) {
       return function (actualRoute) {
@@ -1146,7 +1147,7 @@ exports["mapSnapShot"] = function (id) {
 };
 
 
-exports["setStoreCallBackPopUp"] = function (cb) {
+export const setStoreCallBackPopUp = function (cb) {
   try {
   return function (action) {
       return function () {
@@ -1161,13 +1162,13 @@ exports["setStoreCallBackPopUp"] = function (cb) {
   }
 }
 
-exports["deletePopUpCallBack"] = function (dummy) {
+export const deletePopUpCallBack = function (dummy) {
   console.log("jbridge deletepopupcallback before");
   JBridge.deletePopUpCallBack(dummy);
   return true;
 }
 
-exports ["startLottieProcess"] = function (rawJson) {
+export const startLottieProcess = function (rawJson) {
   return function (lottieId) {
     return function (loop) {
       return function (speed) {
@@ -1189,18 +1190,18 @@ exports ["startLottieProcess"] = function (rawJson) {
   };
 };
 
-exports["generateSessionToken"] = function (type) {
+export const generateSessionToken = function (type) {
   if (window.__OS == "IOS"){
     return "d4faebc6-2f98-44a0-957e-20cb4646c013";
   }
   return JBridge.generateSessionToken(type);
 }
 
-exports["enableMyLocation"] = function(isEnableCurrentLocation){
+export const enableMyLocation = function(isEnableCurrentLocation){
   JBridge.enableMyLocation(isEnableCurrentLocation);
 }
 
-exports["toggleBtnLoader"] = function(id){
+export const toggleBtnLoader = function(id){
   return function (val) {
       if (val == true) {
         btnLoaderState.set(id,true);
@@ -1210,16 +1211,16 @@ exports["toggleBtnLoader"] = function(id){
   };
 };
 
-exports["getBtnLoader"] = function(val){
+export const getBtnLoader = function(val){
     return (btnLoaderState.get(val) == true)? true : false;
 };
 
-exports["launchInAppRatingPopup"] = function (unit) {
+export const launchInAppRatingPopup = function (unit) {
   if (JBridge.launchInAppRatingPopup) {
     JBridge.launchInAppRatingPopup();
   }
 };
-exports["getExtendedPath"] = function (path) {
+export const getExtendedPath = function (path) {
   if (JBridge.getExtendedPath) {
     var extendedPath = JBridge.getExtendedPath(JSON.stringify(path));
     return JSON.parse(extendedPath);
@@ -1228,7 +1229,7 @@ exports["getExtendedPath"] = function (path) {
   }
 };
 
-exports ["startTimerWithTime"] = function (time) {
+export const startTimerWithTime = function (time) {
   return function (qouteId) {
     return function (interval) {
       return function (cb) {
@@ -1245,7 +1246,7 @@ exports ["startTimerWithTime"] = function (time) {
 }
 
 
-exports["generateSessionId"] = function () {
+export const generateSessionId = function () {
   try {
     var dt = new Date().getTime();
     var uuid = 'xxxxxxxx-xxxx-xxxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
