@@ -2302,7 +2302,6 @@ export const storeCallBackTime = function (cb) {
   }
 }
 
-<<<<<<< HEAD
 function setText(id, text, pos) {
   if (__OS === "ANDROID") {
       var cmd = "set_view=ctx->findViewById:i_" + id + ";";
@@ -2315,18 +2314,15 @@ function setText(id, text, pos) {
   }
 }
 
-exports ["setText'"] = function (id) {
+export const setTextImpl = function (id) {
   return function (text) {
       return function (){
           setText(id, text, text.length);
       }
   }
-} 
+}
 
-exports["launchAppSettings"] = function (unit) {
-=======
-export const launchAppSettings = function (unit) {
->>>>>>> 2d3afb30e (Update ui-driver for ps-15)
+export const launchAppSettings = function () {
   return JBridge.launchAppSettings();
 };
 

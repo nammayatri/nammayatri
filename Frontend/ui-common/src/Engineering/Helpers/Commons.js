@@ -1,6 +1,6 @@
 import axios from "axios";
 import moment from "moment";
-import { callbackMapper } from 'presto-ui');
+import { callbackMapper } from 'presto-ui';
 
 const { JBridge, Android } = window;
 

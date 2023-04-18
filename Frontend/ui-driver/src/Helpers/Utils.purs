@@ -13,7 +13,10 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Helpers.Utils where
+module Helpers.Utils
+    ( module Helpers.Utils
+    , module ReExport
+    ) where
 
 -- import Prelude (Unit, bind, discard, identity, pure, show, unit, void, ($), (<#>), (<$>), (<*>), (<<<), (<>), (>>=))
 import Effect (Effect)
@@ -33,6 +36,7 @@ import Prelude ((/),(*),(-))
 import Data.Array ((!!)) as DA
 import Data.String (Pattern(..), split) as DS
 import Data.Number (pi, sin, cos, asin, sqrt)
+import Engineering.Helpers.Commons (setText') as ReExport
 -- import Control.Monad.Except (runExcept)
 -- import Data.Array.NonEmpty (fromArray)
 -- import Data.DateTime (Date, DateTime)
@@ -200,7 +204,6 @@ foreign import decodeErrorCode :: String -> String
 foreign import decodeErrorMessage :: String -> String
 foreign import storeCallBackForNotification :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
 foreign import secondsLeft :: String -> Int
-foreign import setText' :: String -> String -> Effect Unit
 foreign import parseFloat :: forall a. a -> Int -> String
 foreign import objectToAllocationType :: String -> AllocationData
 foreign import getcurrentdate :: String -> String

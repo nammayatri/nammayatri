@@ -179,7 +179,7 @@ export const storeCallBackContacts = function (cb) {
   }
 }
 
-export parseNewContacts = function (String) {
+export const parseNewContacts = function (String) {
     return JSON.parse(String);
 }
 
@@ -262,7 +262,7 @@ export const waitingCountdownTimer = function (startingTime) {
   };
 };
 
-export clearWaitingTimer = function (id){
+export const clearWaitingTimer = function (id){
   if(__OS == "IOS" && id=="countUpTimerId") {
     if (window.JBridge.clearCountUpTimer) {
       window.JBridge.clearCountUpTimer();

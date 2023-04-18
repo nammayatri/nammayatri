@@ -261,6 +261,6 @@ in  upstream
       , "transformers"
       ]
     , repo = "https://github.com/belevy/purescript-otp-reader.git"
-    , version = "p-0.15-master"
+    , version = "3a5c85bf41b5abb2c774ab98180c5608adb83551"
     }
   with beckn-common = ./ui-common/spago.dhall as Location
