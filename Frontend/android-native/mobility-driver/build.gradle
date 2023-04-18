@@ -9,6 +9,7 @@ android {
     defaultConfig {
         minSdk 23
         targetSdk 33
+        versionName "1.2.1"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
@@ -18,6 +19,38 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    Properties properties = new Properties()
+    if (rootProject.file("local.properties").exists()) {
+        properties.load(rootProject.file("local.properties").newDataInputStream())
+    }
+    flavorDimensions "app" , "mode"
+
+    productFlavors{
+        prod {
+            buildConfigField "String", "flavor", "\"prod\""
+            buildConfigField "String", "MERCHANT_ID_USER", properties.getProperty("MERCHANT_ID_USER", "")
+            buildConfigField "String", "MERCHANT_ID_DRIVER", properties.getProperty("MERCHANT_ID_DRIVER", "")
+            buildConfigField "String", "CONFIG_URL_USER", properties.getProperty("CONFIG_URL_USER", "")
+            buildConfigField "String", "CONFIG_URL_DRIVER", properties.getProperty("CONFIG_URL_DRIVER", "")
+            manifestPlaceholders = [isUsesCleartextTraffic: "false", mapsApiKey : properties.getProperty("MAPS_API_KEY", "")]
+            dimension "mode"
+        }
+        dev {
+            buildConfigField "String", "flavor", "\"dev\""
+            buildConfigField "String", "MERCHANT_ID_USER", properties.getProperty("MERCHANT_ID_USER", "")
+            buildConfigField "String", "MERCHANT_ID_DRIVER", properties.getProperty("MERCHANT_ID_DRIVER", "")
+            buildConfigField "String", "CONFIG_URL_USER", properties.getProperty("CONFIG_URL_USER", "")
+            buildConfigField "String", "CONFIG_URL_DRIVER", properties.getProperty("CONFIG_URL_DRIVER", "")
+            manifestPlaceholders = [isUsesCleartextTraffic: "true", mapsApiKey : properties.getProperty("MAPS_API_KEY", "")]
+            dimension "mode"
+        }
+        user {
+           dimension "app"
+        }
+        driver {
+           dimension "app"
         }
     }
     compileOptions {

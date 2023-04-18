@@ -38,7 +38,7 @@
     <string name="select_date">Select Date</string>
     <string name="new_ride_req">New Ride Request</string>
     <string name="new_ride_available_for_offering">New ride available for offering</string>
-        <string name="app_name" translatable="false">Namma Yatri Partner</string>
+    <string name="app_name" translatable="false">Namma Yatri Partner</string>
     <string name="client_id" translatable="false">nammayatripartner</string>
     <string name="service" translatable="false">nammayatripartner</string>
     <string name="bodyText" translatable="false">Namma Yatri Partner collects location data to enable share your location to monitor driver current location, even when the app is closed or not in use.</string>

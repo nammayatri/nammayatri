@@ -143,8 +143,6 @@ public class LocationUpdateService extends Service {
         LocationUpdateService.timeUpdateCallback.remove(timeUpdateCallback);
     }
 
-    String versionName = "1.2.1" ; // BuildConfig.VERSION_NAME; // COMMENTED CHECK
-
     @Override
     public void onCreate()
     {
@@ -307,6 +305,7 @@ public class LocationUpdateService extends Service {
             String token = sharedPref.getString("REGISTERATION_TOKEN", "null");
             String bundle_version = sharedPref.getString("BUNDLE_VERSION","null");
             String baseUrl = sharedPref.getString("BASE_URL", "null");
+            String version = sharedPref.getString("VERSION_NAME", "null");
             try
             {
                 //endPoint for driver status
@@ -318,7 +317,7 @@ public class LocationUpdateService extends Service {
                     ((HttpsURLConnection) connection).setSSLSocketFactory(new TLSSocketFactory());
                 connection.setRequestMethod("POST");
                 connection.setRequestProperty("Content-Type", "application/json");
-                connection.setRequestProperty("x-client-version", versionName);
+                connection.setRequestProperty("x-client-version", version);
                 connection.setRequestProperty("token", token);
                 connection.setRequestProperty("x-bundle-version", bundle_version);
                 connection.setDoOutput(true);
@@ -387,6 +386,7 @@ public class LocationUpdateService extends Service {
             String demoModePassword = sharedPref.getString("DEMO_MODE_PASSWORD", "null");
             String isDemoModeEnabled = sharedPref.getString("IS_DEMOMODE_ENABLED", "null");
             String bundle_version = sharedPref.getString("BUNDLE_VERSION","null");
+            String version = sharedPref.getString("VERSION_NAME", "null");
             String baseUrl = sharedPref.getString("BASE_URL", "null");
             String bufferedLocationObjects = sharedPref.getString(LOCATION_PAYLOAD,null);
             JSONArray locationPayload = null;
@@ -436,7 +436,7 @@ public class LocationUpdateService extends Service {
                         ((HttpsURLConnection) connection).setSSLSocketFactory(new TLSSocketFactory());
                     connection.setRequestMethod("POST");
                     connection.setRequestProperty("Content-Type", "application/json");
-                    connection.setRequestProperty("x-client-version", versionName);
+                    connection.setRequestProperty("x-client-version", version);
                     connection.setRequestProperty("source", log);
                     connection.setRequestProperty("token", token);
                     connection.setRequestProperty("x-bundle-version", bundle_version);

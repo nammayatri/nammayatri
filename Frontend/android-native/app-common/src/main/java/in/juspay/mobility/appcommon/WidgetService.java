@@ -175,10 +175,9 @@ public class WidgetService extends Service {
 
                                 //click definition
                                 if (Math.abs(initialTouchX - motionEvent.getRawX()) < 5 && Math.abs(initialTouchY - motionEvent.getRawY()) < 5){
-                                      // COMMENTED CHECK
-//                                    Intent intent = new Intent(getApplicationContext(), MainActivity.class);
-//                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-//                                    getApplicationContext().startActivity(intent);
+                                    Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                                    getApplicationContext().startActivity(intent);
                                     stopSelf();
                                 }
                             }

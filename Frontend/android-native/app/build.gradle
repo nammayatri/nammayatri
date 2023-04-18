@@ -147,13 +147,14 @@ dependencies {
 //    implementation 'com.google.android.flexbox:flexbox:3.0.0'
 //    implementation 'in.juspay:mystique:0.2.45'
 //    implementation project (path:':mystique')
+    implementation project (path:':mobility-driver')
+    implementation project (path:':mobility-customer')
+    implementation ( project(path: ':app-common')) // CHECK IF IT IS NEEDED
     // api (project(':mystique')) -- to link mystique
     // implementation 'in.juspay:mystique:0.2.49'
     // Import the BoM for the Firebase platform
     implementation platform('com.google.firebase:firebase-bom:31.1.1')
-    implementation ( project(path: ':mobility-driver'))
-    implementation ( project(path: ':mobility-customer'))
-    implementation ( project(path: ':app-common'))
+
     implementation 'com.google.firebase:firebase-dynamic-links'
     implementation 'com.google.firebase:firebase-analytics'
 
@@ -176,7 +177,7 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.1.0'
     implementation 'com.google.maps.android:android-maps-utils:2.4.0'
     implementation 'androidx.work:work-runtime:2.7.1'
-    implementation files('/Users/vigneshs/Desktop/hyper-sdk-release.aar')
+    implementation files('/Users/kavyashree.s/Downloads/hyper-sdk-release_new.aar')
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.4-alpha07'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
@@ -185,7 +186,7 @@ dependencies {
     implementation 'com.google.android.libraries.places:places:2.6.0'
     implementation 'com.google.android.gms:play-services-auth:20.3.0'
     implementation 'com.google.android.gms:play-services-auth-api-phone:18.0.1'
-    userImplementation 'com.appeaser.sublimepickerlibrary:sublimepickerlibrary:2.1.2'
+//    userImplementation 'com.appeaser.sublimepickerlibrary:sublimepickerlibrary:/**/2.1.2'
     implementation "androidx.coordinatorlayout:coordinatorlayout:1.2.0"
     // implementation "androidx.swiperefreshlayout:swiperefreshlayout:1.1.0" -- new feature
     implementation 'com.facebook.shimmer:shimmer:0.5.0'

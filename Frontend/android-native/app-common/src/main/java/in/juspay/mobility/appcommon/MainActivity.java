@@ -404,7 +404,7 @@ public class MainActivity extends AppCompatActivity {
                 Log.d(TAG, "No Update available");
             }
         });
-//        updateConfigURL();// COMMENTED CHECK
+        updateConfigURL();
         initApp();
        NotificationUtils.createNotificationChannel(this, NotificationUtils.CHANNEL_ID);
        NotificationUtils.createNotificationChannel(this, NotificationUtils.FLOATING_NOTIFICATION);
@@ -464,17 +464,16 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    // COMMENTED CHECK
-//    public void updateConfigURL() {
-//        String merchantId = getResources().getString(R.string.service).equals("nammayatri") ? in.juspay.mobility.BuildConfig.MERCHANT_ID_USER : in.juspay.mobility.BuildConfig.MERCHANT_ID_DRIVER;
-//        String baseUrl = getResources().getString(R.string.service).equals("nammayatri") ? in.juspay.mobility.BuildConfig.CONFIG_URL_USER : in.juspay.mobility.BuildConfig.CONFIG_URL_DRIVER;
-//        SharedPreferences sharedPreff = this.getSharedPreferences(
-//                activity.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-//        SharedPreferences.Editor editor = sharedPreff.edit();
-//        editor.putString("MERCHANT_ID", merchantId);
-//        editor.putString("BASE_URL", baseUrl);
-//        editor.apply();
-//    }
+    public void updateConfigURL() {
+        String merchantId = getResources().getString(R.string.service).equals("nammayatri") ? in.juspay.mobility.appcommon.BuildConfig.MERCHANT_ID_USER : in.juspay.mobility.appcommon.BuildConfig.MERCHANT_ID_DRIVER;
+        String baseUrl = getResources().getString(R.string.service).equals("nammayatri") ? in.juspay.mobility.appcommon.BuildConfig.CONFIG_URL_USER : in.juspay.mobility.appcommon.BuildConfig.CONFIG_URL_DRIVER;
+        SharedPreferences sharedPreff = this.getSharedPreferences(
+                activity.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreff.edit();
+        editor.putString("MERCHANT_ID", merchantId);
+        editor.putString("BASE_URL", baseUrl);
+        editor.apply();
+    }
 
     public void triggerPopUPMain(String id, String type) {
 
