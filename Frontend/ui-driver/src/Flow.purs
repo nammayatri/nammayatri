@@ -18,7 +18,7 @@ module Flow where
 import Log
 
 import Control.Monad.Except.Trans (lift)
-import Data.Array (head, length, null, (!!))
+import Data.Array (head, length, null, (!!), any)
 import Data.Either (Either(..))
 import Data.Int (round, toNumber, ceil)
 import Data.Lens ((^.))
@@ -45,7 +45,7 @@ import Screens.Handlers as UI
 import Screens.HomeScreen.Controller (activeRideDetail)
 import Screens.HomeScreen.View (rideRequestPollingData)
 import Screens.PopUpScreen.Controller (transformAllocationData)
-import Screens.Types (ActiveRide, AllocationData, HomeScreenStage(..), Location, ReferralType(..))
+import Screens.Types (ActiveRide, AllocationData, HomeScreenStage(..), Location, ReferralType(..), DriverStatus(..))
 import Services.APITypes (DriverActiveInactiveResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GetDriverInfoReq(..), GetDriverInfoResp(..), GetRidesHistoryResp(..), GetRouteResp(..), LogOutReq(..), LogOutRes(..), OfferRideResp(..), ReferDriverResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), TriggerOTPResp(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyTokenResp(..), GetPerformanceReq(..), GetPerformanceRes(..))
 import Services.Accessor (_lat, _lon, _id)
 import Services.Backend (makeGetRouteReq, walkCoordinates, walkCoordinate)
@@ -665,14 +665,13 @@ homeScreenFlow = do
       myRidesScreenFlow
     GO_TO_REFERRAL_SCREEN_FROM_HOME_SCREEN -> referralScreenFlow
     DRIVER_AVAILABILITY_STATUS status -> do
-      _ <- pure $ printLog "HOME_SCREEN_FLOW DRIVER_AVAILABILITY_STATUS" status
-      _ <- setValueToLocalNativeStore DRIVER_STATUS (if status then "true" else "false")
-      void $ lift $ lift $ loaderText (getString PLEASE_WAIT) if status then (getString SETTING_YOU_ONLINE) else (getString SETTING_YOU_OFFLINE)
+      _ <- setValueToLocalNativeStore DRIVER_STATUS (show status)
+      void $ lift $ lift $ loaderText (getString PLEASE_WAIT) if any( _ == status)[Online, Silent] then (getString SETTING_YOU_ONLINE) else (getString SETTING_YOU_OFFLINE)
       void $ lift $ lift $ toggleLoader true
-      (DriverActiveInactiveResp resp) <- Remote.driverActiveInactiveBT (if status then "true" else "false")
-      _ <- setValueToLocalStore RIDE_T_FREQUENCY (if status then "20000" else "300000")
-      _ <- setValueToLocalStore DRIVER_MIN_DISPLACEMENT (if status then "8.0" else "25.0")
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {statusOnline = (if status then true else false)}})
+      (DriverActiveInactiveResp resp) <- Remote.driverActiveInactiveBT (if any( _ == status)[Online, Silent] then "true" else "false")
+      _ <- setValueToLocalStore RIDE_T_FREQUENCY (if any( _ == status)[Online, Silent] then "20000" else "300000")
+      _ <- setValueToLocalStore DRIVER_MIN_DISPLACEMENT (if any( _ == status)[Online, Silent] then "8.0" else "25.0")
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {statusOnline = (if any( _ == status)[Online, Silent] then true else false), driverStatusSet = status}})
       homeScreenFlow
 
     GO_TO_START_RIDE {id, otp , lat, lon} -> do

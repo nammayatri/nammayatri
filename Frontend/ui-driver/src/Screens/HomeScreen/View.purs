@@ -181,6 +181,7 @@ view push state =
                 [ width MATCH_PARENT
                 , height $ V 2
                 , background Color.greyTextColor
+                , visibility if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) then GONE else VISIBLE
                 , alpha 0.1
                 ][]
               , frameLayout
@@ -204,7 +205,7 @@ view push state =
                       , orientation VERTICAL
                       , PP.cornerRadii $ PTD.Corners 24.0  false false true true
                       , background $ Color.white900
-                      , stroke $ "1," <> "#E5E7EB"
+                      , stroke $ (if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) then "0," else "1,") <> "#E5E7EB"
                       ][
                         driverDetail2 push state
                         , driverActivityStatus state
@@ -232,6 +233,7 @@ view push state =
       , if state.props.enterOtpModal then enterOtpModal push state else dummyTextView
       , if state.props.endRidePopUp then endRidePopView push state else dummyTextView
       , if state.props.currentStage == ChatWithCustomer then chatView push state else dummyTextView
+      , if state.props.silentPopUpView then popupModelSilentAsk push state else dummyTextView
       ] <> if state.props.cancelRideModalShow then [cancelRidePopUpView push state] else [] 
         <>  if state.props.cancelConfirmationPopup then [cancelConfirmation push state] else []
         )
@@ -369,14 +371,14 @@ offlineView push state =
           ]
         ]
 
-popupmodal :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-popupmodal push state =
+popupModelSilentAsk :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+popupModelSilentAsk push state =
   linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , background Color.blackLessTrans
-    , visibility if state.props.silentPopUpView then VISIBLE else GONE
-    ][PopUpModal.view (push <<< PopUpModalAction) (silentModeConfig state )]
+    ][PopUpModal.view (push <<< PopUpModalSilentAction) (silentModeConfig state )]
+
 driverDetail :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 driverDetail push state = 
   linearLayout
@@ -442,6 +444,7 @@ driverDetail2 push state =
       , stroke if state.props.driverStatusSet == Offline then ("2," <> Color.red) else if state.props.driverStatusSet == Online then ("2," <> Color.darkMint) else ("2," <> Color.blue800) 
       , cornerRadius 50.0
       , margin (Margin 20 10 20 10)--padding (Padding 10 10 10 10)
+      , visibility if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) then GONE else VISIBLE
       ][
           driverStatusIndicator Offline push state
         , driverStatusIndicator Silent push state
@@ -511,6 +514,7 @@ statsModel2 push state =
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation HORIZONTAL
+    , visibility if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) then GONE else VISIBLE
     , gravity CENTER
     , padding (Padding 16 10 16 10)
     ][  StatsModel.view (push <<< StatsModelAction) (statsModelConfig state) 
@@ -523,19 +527,20 @@ viewRecenterAndSupport state push =
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
   , margin (Margin 0 20 20 0)
-  -- , stroke $ "1," <> Color.black500
   , orientation VERTICAL
-  ][ imageView
-    [ width ( V 40 )
-    , height ( V 40 )
-    , margin $ MarginBottom 10
-    , imageWithFallback "ny_ic_homepage_support,https://assets.juspay.in/nammayatri/images/common/ny_ic_homepage_support.png"
-    -- , onClick (\action -> do
-    --         _ <- JB.getCurrentPosition push CurrentLocation
-    --         pure unit
-    --       ) (const RecenterButtonAction)
-    ]
-    , recenterBtnView state push
+  ][ 
+    -- imageView -- TODO:: ADDING SAFETY/ SUPPORT
+    -- [ width ( V 40 )
+    -- , height ( V 40 )
+    -- , margin $ MarginBottom 10
+    -- , imageWithFallback "ny_ic_homepage_support,https://assets.juspay.in/nammayatri/images/common/ny_ic_homepage_support.png"
+    -- -- , onClick (\action -> do
+    -- --         _ <- JB.getCurrentPosition push CurrentLocation
+    -- --         pure unit
+    -- --       ) (const RecenterButtonAction)
+    -- ]
+    -- , 
+    recenterBtnView state push
   ]
 driverStatus :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 driverStatus push state = 

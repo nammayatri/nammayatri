@@ -89,7 +89,7 @@ initData = {
         cancelConfirmationPopup : false,
         chatcallbackInitiated : false,
         sendMessageActive : false,
-        unReadMessages : false
+        unReadMessages : false,
         silentPopUpView : false
     }
 }

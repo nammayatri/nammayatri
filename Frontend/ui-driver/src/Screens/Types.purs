@@ -614,8 +614,7 @@ type HomeScreenProps =  {
   chatcallbackInitiated :: Boolean,
   sendMessageActive :: Boolean,
   unReadMessages :: Boolean,
-  updatedArrivalInChat :: Boolean
-  driverStatusSet :: DriverStatus
+  updatedArrivalInChat :: Boolean,
   driverStatusSet :: DriverStatus,
   silentPopUpView :: Boolean
  }

@@ -890,6 +890,8 @@ public class MainActivity extends AppCompatActivity {
             stateMonitor.disable(this);
         }
         if (getResources().getString(R.string.service).equals("nammayatripartner") && widgetService != null && Settings.canDrawOverlays(this)  && !sharedPref.getString(getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null")) {
+            widgetService.putExtra("payload","{}");
+            widgetService.putExtra("data", "{}");
             startService(widgetService);
         }
     }

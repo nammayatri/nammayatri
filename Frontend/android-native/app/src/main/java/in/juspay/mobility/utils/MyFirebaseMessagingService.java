@@ -117,7 +117,11 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
                     case NotificationTypes.NEW_RIDE_AVAILABLE :
                         sharedPref.edit().putString(getString(R.string.RIDE_STATUS), getString(R.string.NEW_RIDE_AVAILABLE)).apply();
-                        NotificationUtils.showAllocationNotification(this, title, body, payload, imageUrl, entity_payload);
+                        if (sharedPref.getString("DRIVER_STATUS", "null").equals("Silent")){
+                            startWidgetService(getString(R.string.ride_cancelled), payload, entity_payload);
+                        }else{
+                            NotificationUtils.showAllocationNotification(this, title, body, payload, imageUrl, entity_payload);
+                        }
                         break;
 
                     case NotificationTypes.CLEARED_FARE :
@@ -133,7 +137,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                         SharedPreferences.Editor editor = sharedPref.edit();
                         editor.putString("READ_MESSAGES", "0");
                         editor.apply();
-                        startWidgetService(getString(R.string.ride_cancelled));
+                        startWidgetService(getString(R.string.ride_cancelled), payload, entity_payload);
                         break;
 
                     case NotificationTypes.DRIVER_QUOTE_INCOMING :
@@ -280,11 +284,13 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         }
     }
 
-    private void startWidgetService(String widgetMessage){
+    private void startWidgetService(String widgetMessage, JSONObject data, JSONObject payload){
         SharedPreferences sharedPref = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         Intent widgetService = new Intent(getApplicationContext(), WidgetService.class);
         if (getResources().getString(R.string.service).equals(getString(R.string.nammayatripartner)) && Settings.canDrawOverlays(getApplicationContext())  && !sharedPref.getString(getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && (sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"))) {
             widgetService.putExtra(getResources().getString(R.string.WIDGET_MESSAGE),widgetMessage);
+            widgetService.putExtra("payload", payload.toString());
+            widgetService.putExtra("data", data.toString());
             try{
                 startService(widgetService);
             }catch (Exception e) {
