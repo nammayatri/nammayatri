@@ -3279,8 +3279,14 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
 
     @JavascriptInterface
     public void scrollToBottom(final String id){
-        ScrollView scrollView = activity.findViewById(Integer.parseInt(id));
-        scrollView.fullScroll(View.FOCUS_DOWN);
+       try {
+           ScrollView scrollView = activity.findViewById(Integer.parseInt(id));
+           if(scrollView != null){
+               scrollView.fullScroll(View.FOCUS_DOWN);
+           }
+       } catch(Exception e) {
+           Log.e(LOG_TAG,"Error in scroll to Bottom : " + e);
+       }
     }
 
     @JavascriptInterface
