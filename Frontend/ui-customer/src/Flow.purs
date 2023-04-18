@@ -978,6 +978,8 @@ rideSearchFlow flowType = do
                                                           , destinationAddress : finalState.data.destinationAddress })
           case finalState.props.currentStage of
             TryAgain -> do
+              when (finalState.props.customerTip.isTipSelected) $ do
+                cancelEstimate finalState.props.estimateId
               _ <- pure $ updateLocalStage TryAgain
               modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{searchId = rideSearchRes.searchId, currentStage = TryAgain, rideRequestFlow = true}})
             _        -> do
