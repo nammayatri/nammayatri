@@ -130,7 +130,7 @@ rideRoute merchantShortId reqRideId = do
   (rQStart, rQEnd) <- case (ride.tripStartTime, ride.tripEndTime) of
     (Just x, Just y) -> pure (fetchDate $ show x, fetchDate $ show y)
     _ -> throwError $ InvalidRequest "The ride has not ended yet."
-  ckhTbl <- CH.findAll (Proxy @Common.DriverEdaKafka) ((("partition_date" =.= rQStart) |.| ("partition_date" =.= rQEnd)) &.& ("driver_id" =.= driverQId) &.& ("rid" =.= rideQId)) Nothing Nothing (Just $ CH.Desc "created_at")
+  ckhTbl <- CH.findAll (Proxy @Common.DriverEdaKafka) ((("partition_date" =.= rQStart) |.| ("partition_date" =.= rQEnd)) &.& ("driver_id" =.= driverQId) &.& ("rid" =.= rideQId)) Nothing Nothing (Just $ CH.Desc "ts")
   actualRoute <- case ckhTbl of
     Left err -> do
       logError $ "Clickhouse error: " <> show err
@@ -199,7 +199,7 @@ rideInfo merchantShortId reqRideId = do
         rideDistanceEstimated = Just booking.estimatedDistance,
         rideDistanceActual = roundToIntegral ride.traveledDistance,
         chargeableDistance = ride.chargeableDistance,
-        maxEstimatedDistance = Just booking.maxEstimatedDistance,
+        maxEstimatedDistance = highPrecMetersToMeters <$> booking.maxEstimatedDistance,
         estimatedRideDuration = Just $ secondsToMinutes booking.estimatedDuration,
         estimatedFare = booking.estimatedFare,
         actualFare = ride.fare,
