@@ -38,6 +38,15 @@
                         android:paddingHorizontal="10dp"
                         android:paddingVertical="15dp"
                         android:layout_height="match_parent">
+
+                        <View
+                            android:id="@+id/red_dot_0"
+                            android:layout_width="7dp"
+                            android:layout_height="7dp"
+                            android:layout_marginStart="20dp"
+                            android:layout_marginTop="10dp"
+                            android:visibility="invisible"
+                            android:background="@drawable/circle_red" />
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
@@ -76,6 +85,14 @@
                         android:paddingHorizontal="10dp"
                         android:paddingVertical="15dp"
                         android:layout_height="match_parent">
+                        <View
+                            android:id="@+id/red_dot_1"
+                            android:layout_width="7dp"
+                            android:layout_height="7dp"
+                            android:layout_marginStart="20dp"
+                            android:layout_marginTop="10dp"
+                            android:visibility="invisible"
+                            android:background="@drawable/circle_red" />
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
@@ -114,6 +131,15 @@
                         android:paddingHorizontal="10dp"
                         android:paddingVertical="15dp"
                         android:layout_height="match_parent">
+
+                        <View
+                            android:id="@+id/red_dot_2"
+                            android:layout_width="6dp"
+                            android:layout_height="8dp"
+                            android:layout_marginStart="20dp"
+                            android:layout_marginTop="10dp"
+                            android:background="@drawable/circle_red"
+                            android:visibility="invisible" />
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"

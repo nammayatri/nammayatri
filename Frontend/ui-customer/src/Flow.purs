@@ -437,7 +437,7 @@ homeScreenFlow = do
         Just (Route response) -> do 
           let distance = if response.distance < 1000 then toString(response.distance)  <> " m" else parseFloat(INT.toNumber(response.distance) / 1000.0) 2 <> " km"
               duration = (show (response.duration / 60)) <> " min"
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rideDistance = distance, rideDuration = duration}})
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rideDistance = distance, rideDuration = duration}, props{customerTip{enableTips = if (response.distance < 5000) then true else false}}})
           if response.distance >= 50000 then do
             updateLocalStage DistanceOutsideLimits
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = DistanceOutsideLimits ,rideRequestFlow = true, isSearchLocation = SearchLocation}})
@@ -541,7 +541,8 @@ homeScreenFlow = do
           else do
             pure unit
           void $ pure $ setValueToLocalStore FINDING_QUOTES_START_TIME (getCurrentUTC "LazyCheck")
-          _ <- Remote.selectEstimateBT (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers)) (state.props.estimateId)
+          _ <- Remote.selectEstimateBT (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected then Just state.props.customerTip.tipForDriver else Nothing)) (state.props.estimateId)
+          _ <- pure $ spy "REQUEST FOR TIP ZXC: " (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected then Just state.props.customerTip.tipForDriver else Nothing))
           homeScreenFlow
     SELECT_ESTIMATE state -> do
         updateLocalStage SettingPrice
@@ -996,7 +997,7 @@ rideSearchFlow flowType = do
                 Just (Route response) -> do 
                   let distance = if response.distance < 1000 then toString(response.distance)  <> " m" else parseFloat(INT.toNumber(response.distance) / 1000.0) 2 <> " km"
                       duration = (show (response.duration / 60)) <> " min"
-                  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rideDistance = distance, rideDuration = duration}})
+                  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rideDistance = distance, rideDuration = duration}, props{customerTip{enableTips = if (response.distance < 5000) then true else false}}})
                   if response.distance >= 50000 then do
                     _ <- pure $ updateLocalStage DistanceOutsideLimits
                     modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = DistanceOutsideLimits ,rideRequestFlow = true, isSearchLocation = SearchLocation}})

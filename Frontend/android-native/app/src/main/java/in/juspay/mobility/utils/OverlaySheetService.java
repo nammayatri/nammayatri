@@ -14,6 +14,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
+import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
@@ -66,6 +67,7 @@ import javax.net.ssl.HttpsURLConnection;
 
 import in.juspay.mobility.MainActivity;
 import in.juspay.mobility.R;
+import android.widget.LinearLayout;
 
 public class OverlaySheetService extends Service implements View.OnTouchListener {
 
@@ -466,6 +468,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                         if (sharedPref == null) sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
                         int negotiationUnit = Integer.parseInt(sharedPref.getString("NEGOTIATION_UNIT", "10"));
                         int rideRequestedBuffer =  Integer.parseInt(sharedPref.getString("RIDE_REQUEST_BUFFER", "2"));
+                        int customerTip = rideRequestBundle.getInt("customerTip");
                         if (calculatedTime > rideRequestedBuffer){
                             calculatedTime -= rideRequestedBuffer;
                         }
@@ -482,7 +485,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                                 driverMinExtraFee,
                                 driverMaxExtraFee,
                                 rideRequestPopupDelayDuration,
-                                negotiationUnit);
+                                negotiationUnit,
+                                customerTip);
                         if (floatyView == null) {
                             startTimer();
                             showOverLayPopup();
@@ -855,6 +859,47 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         });
     }
 
+    private void setCustomerTipView(ArrayList<SheetModel> rideDetails, ArrayList<LinearLayout> indicators, int index){
+        for(int i=0;i<3;i++){
+            int red_dot_id = getResources().getIdentifier("red_dot_" + (i), "id", getPackageName());
+            View redDot = floatyView.findViewById(red_dot_id);
+            int customerTip = 10;
+            View customer_tip_block = floatyView.findViewById(R.id.customer_tip_block);
+            TextView customer_tip_text = floatyView.findViewById((R.id.customer_tip_text));
+            View indicator1 = floatyView.findViewById(R.id.indicator1);
+            if(index == i){
+                redDot.setVisibility(View.INVISIBLE);
+                if(customerTip == 0){
+                    indicators.get(i).setBackgroundColor(0xE5E7EB);
+                    customer_tip_block.setVisibility(View.INVISIBLE);
+                    customer_tip_text.setVisibility(View.INVISIBLE);
+                }
+                else{
+                    customer_tip_block.setVisibility(View.VISIBLE);
+                    customer_tip_text.setVisibility(View.VISIBLE);
+                    String str = "Rs " + customerTip + " tip included";
+                    customer_tip_text.setText(str);
+                    int finalI = i;
+                    mainLooper.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            indicators.get(finalI).setBackgroundColor(Color.parseColor("#FEEBB9"));
+                        }
+                    });
+                }
+            }
+            else{
+                indicators.get(i).setBackgroundColor(0xFEEBB9);
+                if(customerTip != 0){
+                    redDot.setVisibility(View.VISIBLE);
+                }
+                else{
+                    redDot.setVisibility(View.INVISIBLE);
+                }
+            }
+
+        }
+    }
     private void setIndicatorClickListener() {
         if (viewPager == null || floatyView == null) return;
         indicatorList = new ArrayList<>(Arrays.asList(
@@ -873,6 +918,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             if (viewPager == null) return;
                             viewPager.setCurrentItem(finalI);
                             if(!(finalI >= sheetArrayList.size() || finalI < 0)){ //index exists
+                                setCustomerTipView(sheetArrayList, indicatorList, finalI);
                                 firebaseLogEventWithParams("indicator_click", "index" , String.valueOf(finalI));
                             }
                         }

@@ -61,6 +61,8 @@ instance loggableAction :: Loggable Action where
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "image"
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "primary_edit_text"
       PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "countdown_updated"
+      PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "tip_clicked"
+      PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "popup_dismissed"
     AccountDeletedModalAction act -> case act of
       PopUpModal.OnButton1Click -> do
         trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "account_deleted"
@@ -70,6 +72,8 @@ instance loggableAction :: Loggable Action where
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "image"
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "primary_edit_text"
       PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "countdown_updated"
+      PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "tip_clicked"
+      PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "popup_dismissed"
     ReqDelAccount -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "in_screen" "delete_account_request"
     
 data Action = GenericHeaderActionController GenericHeader.Action

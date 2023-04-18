@@ -220,6 +220,8 @@ public class NotificationUtils extends AppCompatActivity {
                     sheetData.putInt("driverMinExtraFee", entity_payload.has("driverMinExtraFee")?entity_payload.getInt("driverMinExtraFee"):10);
                     sheetData.putInt("driverMaxExtraFee", entity_payload.has("driverMaxExtraFee")?entity_payload.getInt("driverMaxExtraFee"):20);
                     sheetData.putInt("rideRequestPopupDelayDuration",entity_payload.has("rideRequestPopupDelayDuration")?entity_payload.getInt("rideRequestPopupDelayDuration"):0);
+                    Integer customerTip = (entity_payload.has("customerTip") ? entity_payload.optInt("customerTip") : 0);
+                    sheetData.putInt("customerTip", customerTip);
                     expiryTime = entity_payload.getString("searchRequestValidTill");
                     searchRequestId = entity_payload.getString("searchRequestId");
                     System.out.println(String.valueOf(entity_payload));
