@@ -301,6 +301,9 @@ currentFlowStatus = do
                      , searchExpire = secondsLeft
                      , estimateId = estimateId
                      , rideRequestFlow = true 
+                     , customerTip{
+                        enableTips = if ((getValueToLocalStore ENABLE_TIPS) == "true") then true else false
+                     }
                      , selectedQuote = Nothing}
                 , data { source = flowStatusData.source.place
                        , destination = flowStatusData.destination.place 
@@ -452,6 +455,7 @@ homeScreenFlow = do
           let distance = if response.distance < 1000 then toString(response.distance)  <> " m" else parseFloat(INT.toNumber(response.distance) / 1000.0) 2 <> " km"
               duration = (show (response.duration / 60)) <> " min"
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rideDistance = distance, rideDuration = duration}, props{customerTip{enableTips = if (response.distance < 5000) then true else false}}})
+          _ <- setValueToLocalStore ENABLE_TIPS $ show (response.distance < 5000)
           if response.distance >= 50000 then do
             updateLocalStage DistanceOutsideLimits
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = DistanceOutsideLimits ,rideRequestFlow = true, isSearchLocation = SearchLocation}})
@@ -1014,6 +1018,7 @@ rideSearchFlow flowType = do
                   let distance = if response.distance < 1000 then toString(response.distance)  <> " m" else parseFloat(INT.toNumber(response.distance) / 1000.0) 2 <> " km"
                       duration = (show (response.duration / 60)) <> " min"
                   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rideDistance = distance, rideDuration = duration}, props{customerTip{enableTips = if (response.distance < 5000) then true else false}}})
+                  _ <- setValueToLocalStore ENABLE_TIPS $ show (response.distance < 5000)
                   if response.distance >= 50000 then do
                     _ <- pure $ updateLocalStage DistanceOutsideLimits
                     modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = DistanceOutsideLimits ,rideRequestFlow = true, isSearchLocation = SearchLocation}})
