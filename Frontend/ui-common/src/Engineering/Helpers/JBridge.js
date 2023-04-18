@@ -806,11 +806,7 @@ exports.getKeyInSharedPrefKeys = function (key) {
 };
 
 exports.getKeyInNativeSharedPrefKeys = function (key) {
-  if (window.__OS == "IOS") {
-    return JBridge.getKeysInSharedPrefs(key);
-  } else { 
-    return JBridge.getKeyInNativeSharedPrefKeys(key);
-  }
+    return JBridge.getKeysInSharedPref(key);
 };
 
 exports["setKeyInSharedPrefKeys'"] = function (key) {
@@ -821,11 +817,7 @@ exports["setKeyInSharedPrefKeys'"] = function (key) {
 
 exports["setEnvInNativeSharedPrefKeys'"] = function (key) {
   return function (value) {
-    if (window.__OS == "IOS") {
       JBridge.setKeysInSharedPrefs(key, value);
-    } else { 
-      JBridge.setEnvInNativeSharedPrefKeys(key, value);
-    }
   };
 };
 
@@ -836,19 +828,11 @@ exports["setEnvInNativeSharedPrefKeys'"] = function (key) {
 // };
 
 exports.removeKeysInSharedPrefs = function (key) {
-  if (window.__OS == "IOS") {
     return JBridge.removeFromSharedPrefs(key);
-  } else { 
-    return JBridge.removeKeysInSharedPrefs(key);
-  }
 };
 
 exports.removeKeysInNativeSharedPrefs = function (key) {
-  if (window.__OS == "IOS") {
     JBridge.removeFromSharedPrefs(key);
-  } else { 
-    JBridge.removeKeysInNativeSharedPrefs(key);
-  }
 };
 
 exports["toggleLoader'"] = function (showLoader) {

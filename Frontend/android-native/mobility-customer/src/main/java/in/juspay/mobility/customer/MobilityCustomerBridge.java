@@ -1,5 +1,6 @@
 package in.juspay.mobility.customer;
 
+import static android.Manifest.permission.CAMERA;
 import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
 import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
 
@@ -23,6 +24,7 @@ import android.graphics.pdf.PdfDocument;
 import android.net.Uri;
 import android.os.Environment;
 import android.provider.ContactsContract;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -31,7 +33,9 @@ import android.webkit.JavascriptInterface;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.Manifest;
+import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
@@ -58,19 +62,21 @@ import org.json.JSONObject;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
 import in.juspay.hyper.core.BridgeComponents;
 import in.juspay.hyper.core.ExecutorManager;
+import in.juspay.hypersdk.data.KeyValueStore;
 import in.juspay.mobility.common.MobilityCommonBridge;
 
 public class MobilityCustomerBridge extends MobilityCommonBridge {
 
-    public static BridgeComponents bridgeComponents;
     public String invoice;
     public static final int REQUEST_CONTACTS = 7;
     public static int debounceAnimateCameraCounter = 0;
@@ -83,7 +89,6 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
 
     public MobilityCustomerBridge(BridgeComponents bridgeComponents) {
         super(bridgeComponents);
-        MobilityCustomerBridge.bridgeComponents = bridgeComponents;
     }
 
     // STORE_CALLBACKS AND CALL_CALLBACKS
@@ -100,7 +105,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
         }
     }
 
-    public static void contactsStoreCall(String contacts){
+    public void contactsStoreCall(String contacts){
         if (storeContactsCallBack != null) {
             String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
                     storeContactsCallBack,contacts);
@@ -118,7 +123,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
         storeOnResumeCallback = callback;
     }
 
-    public static void callOnResumeUpdateCallback() {
+    public void callOnResumeUpdateCallback() {
         if (storeOnResumeCallback != null) {
             String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s');", storeOnResumeCallback);
             bridgeComponents.getJsCallback().addJsToWebView(javascript);
@@ -130,7 +135,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
         storeCustomerCallBack = callback;
     }
 
-    public static void callingStoreCallCustomer(String notificationType){
+    public void callingStoreCallCustomer(String notificationType){
             String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
                     storeCustomerCallBack,notificationType);
             bridgeComponents.getJsCallback().addJsToWebView(javascript);
@@ -379,75 +384,9 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
     }
 
     @JavascriptInterface
-    public void moveCamera(final double source_latitude, final double source_longitude, final double destination_latitude, final double destination_longitude, final JSONArray json_coordinates) {
-        ExecutorManager.runOnMainThread(() -> {
-            double source_lat, source_lng, destination_lat, destination_lng;
-
-            Log.i(MAPS, "json_coordinates" + json_coordinates);
-            ArrayList<Double> all_latitudes = new ArrayList();
-            ArrayList<Double> all_longitudes = new ArrayList();
-            for (int i = 0; i < json_coordinates.length(); i++) {
-                JSONObject each_json_coordinates = null;
-                try {
-                    each_json_coordinates = (JSONObject) json_coordinates.get(i);
-                    double lon = each_json_coordinates.getDouble("lng");
-                    double lat = each_json_coordinates.getDouble("lat");
-                    all_latitudes.add(lat);
-                    all_longitudes.add(lon);
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-            }
-            Log.i(MAPS,"all_latitudes" + (all_latitudes));
-            Log.i(MAPS,"all_longitudes" + (all_longitudes));
-            double minimum_latitude = Collections.min(all_latitudes);
-            double maximum_latitude = Collections.max(all_latitudes);
-            double minimum_longitude = Collections.min(all_longitudes);
-            double maximum_longitude = Collections.max(all_longitudes);
-            Log.i(MAPS, String.valueOf(minimum_latitude));
-            Log.i(MAPS, String.valueOf(maximum_latitude));
-
-            if (source_latitude <= destination_latitude) {
-                source_lat = minimum_latitude - 1.3*(maximum_latitude - minimum_latitude);
-                destination_lat = maximum_latitude + 0.1*(maximum_latitude - minimum_latitude);
-            } else {
-                source_lat = maximum_latitude + 0.1*(maximum_latitude - minimum_latitude);
-                destination_lat = minimum_latitude - 1.3*(maximum_latitude - minimum_latitude);
-            }
-            if (source_longitude <= destination_longitude) {
-                source_lng = minimum_longitude - 0.09*(maximum_longitude - minimum_longitude);
-                destination_lng = maximum_longitude + 0.09*(maximum_longitude - minimum_longitude);
-            } else {
-                source_lng = maximum_longitude + 0.09*(maximum_longitude - minimum_longitude);
-                destination_lng = minimum_longitude - 0.09*(maximum_longitude - minimum_longitude);
-            }
-            Log.i(MAPS, "Coordinates Points" + json_coordinates);
-            if(googleMap!=null) {
-                try {
-                    LatLng pickupLatLng = new LatLng(source_lat, source_lng);
-                    LatLng destinationLatLng = new LatLng(destination_lat, destination_lng);
-                    LatLngBounds bounds = LatLngBounds.builder().include(pickupLatLng).include(destinationLatLng).build();
-                    if(json_coordinates.length() < 5 ){
-                        googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 400));
-                    }else {
-                        googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 150));
-                    }
-                } catch (IllegalArgumentException e) {
-                    Log.i(MAPS, "Exception in Move camera" + e);
-                    LatLng pickupLatLng = new LatLng(source_lat, source_lng);
-                    LatLng destinationLatLng = new LatLng(destination_lat, destination_lng);
-                    LatLngBounds bounds = LatLngBounds.builder().include(destinationLatLng).include(pickupLatLng).build();
-                    if(json_coordinates.length() < 5 ){
-                        googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 400));
-                    }else {
-                        googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 150));
-                    }
-                }
-                catch(Exception e){
-                    Log.i(MAPS, "Exception in Move camera" + e);
-                }
-            }
-        });
+    public void fetchAndUpdateCurrentLocation(String callback) {
+        if(!isLocationPermissionEnabled()) return;
+        updateLastKnownLocation(callback, true);
     }
 
 
@@ -575,41 +514,33 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
         return invoiceLayout;
     }
 
-    @SuppressLint("UseCompatLoadingForDrawables")
-    private Bitmap getMarkerBitmapFromView(String locationName, String imageName) {
-        Context context = bridgeComponents.getContext();
-        View customMarkerView = ((LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE)).inflate(R.layout.marker_label_layout, null);
-        TextView label = customMarkerView.findViewById(R.id.marker_text);
-        if(locationName.equals("")){
-            label.setVisibility(View.GONE);
-        }else{
-            if (locationName.length() <= 27) {
-                label.setText(locationName);
-            } else {
-                label.setText(locationName.substring(0, 17)+"...");
+    // Override Functions
+    @Override
+    public boolean onActivityResult(int requestCode, int resultCode, Intent data) {
+        return super.onActivityResult(requestCode, resultCode, data);
+    }
+
+    @Override
+    public boolean onRequestPermissionResult(int requestCode, String[] permissions, int[] grantResults) {
+        System.out.println("inside onRequestPermissionResult");
+            switch (requestCode) {
+                   case REQUEST_CONTACTS:
+                       boolean flag = ContextCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED;
+                       String contacts = null;
+                       try {
+                           if (flag){
+                               contacts = getPhoneContacts();
+                           } else {
+                               JSONArray flagArray = new JSONArray();
+                               contacts = flagArray.toString();
+                           }
+                               contactsStoreCall(contacts);
+                       } catch (JSONException e) {
+                           e.printStackTrace();
+                       }
+                       break;
+                default: break;
             }
-        }
-        ImageView pointer = customMarkerView.findViewById(R.id.pointer_img);
-        try {
-            if(imageName.equals("ny_ic_dest_marker") ){
-                pointer.setImageDrawable(ResourcesCompat.getDrawable(context.getResources(),R.drawable.ny_ic_dest_marker,context.getTheme()));
-            }else{
-                pointer.setImageDrawable(ResourcesCompat.getDrawable(context.getResources(),R.drawable.ny_ic_src_marker,context.getTheme()));
-            }
-        }catch (Exception e){
-            Log.e("Exception in rendering Image", e.toString());
-        }
-        customMarkerView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
-        customMarkerView.layout(0, 0, customMarkerView.getMeasuredWidth(), customMarkerView.getMeasuredHeight());
-        customMarkerView.buildDrawingCache();
-        Bitmap returnedBitmap = Bitmap.createBitmap(customMarkerView.getMeasuredWidth(), customMarkerView.getMeasuredHeight(),
-                Bitmap.Config.ARGB_8888);
-        Canvas canvas = new Canvas(returnedBitmap);
-        canvas.drawColor(Color.WHITE, PorterDuff.Mode.SRC_IN);
-        Drawable drawable = customMarkerView.getBackground();
-        if (drawable != null)
-            drawable.draw(canvas);
-        customMarkerView.draw(canvas);
-        return returnedBitmap;
+        return super.onRequestPermissionResult(requestCode, permissions, grantResults);
     }
 }

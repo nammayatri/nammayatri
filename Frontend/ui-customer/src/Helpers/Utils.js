@@ -14,7 +14,7 @@ exports.getNewTrackingId = function (unit) {
 };
 
 exports.getKeyInSharedPrefKeysConfigEff = function (key) {
-    return JBridge.getKeysInSharedPrefs(key);
+    return JBridge.getKeysInSharedPref(key);
   };
 
 exports["validateInputPattern"] = function (input, pattern){
@@ -385,7 +385,7 @@ exports["fetchFromLocalStore'"] = function(key) {
     return function (just) {
         return function (nothing) {
           return function () {
-            var state = JBridge.getKeysInSharedPrefs(key);
+            var state = JBridge.getKeysInSharedPref(key);
             if (state != "__failed" && state != "(null)") {
               return just(state);
             }
@@ -399,7 +399,7 @@ exports["fetchFromLocalStoreTemp'"] = function(key) {
   return function (just) {
       return function (nothing) {
         return function () {
-          var state = JBridge.getKeysInSharedPrefs(key);
+          var state = JBridge.getKeysInSharedPref(key);
           var newState = JSON.parse(state);
           var predictionArray = newState.predictionArray;
           try {

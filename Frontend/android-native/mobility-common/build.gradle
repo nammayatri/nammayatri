@@ -32,12 +32,14 @@ dependencies {
     implementation 'com.google.android.material:material:1.6.0'
 
     api 'in.juspay:hyper:2.1.12'
-    api files('/Users/kavyashree.s/Downloads/hyper-sdk-release_new.aar')
+    api files('/Users/vigneshs/Downloads/hyper-sdk-release.aar')
 
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+    implementation 'com.airbnb.android:lottie:5.2.0'
     implementation 'com.google.maps.android:android-maps-utils:2.4.0'
     implementation 'com.google.android.gms:play-services-maps:18.1.0'
     implementation 'com.google.android.gms:play-services-location:21.0.1'
+    implementation 'com.google.android.play:review:2.0.1'
 }

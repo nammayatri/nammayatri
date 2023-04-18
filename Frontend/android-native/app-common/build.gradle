@@ -72,11 +72,12 @@ dependencies {
     implementation 'com.google.firebase:firebase-dynamic-links'
     implementation 'com.google.firebase:firebase-messaging'
     api 'com.theartofdev.edmodo:android-image-cropper:2.8.+'
+    implementation 'com.google.android.gms:play-services-location:21.0.1'
     implementation 'com.airbnb.android:lottie:5.2.0'
     implementation 'com.google.android.gms:play-services-location:21.0.1'
     testImplementation 'junit:junit:4.13.2'
     api 'in.juspay:hyper:2.1.12'
-    implementation files('/Users/kavyashree.s/Downloads/hyper-sdk-release_new.aar')
+    implementation files('/Users/vigneshs/Downloads/hyper-sdk-release.aar') // Update their own local hyper sdk
 //    implementation project(':app-common')
 //    implementation project (path:':mobility-driver')
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
