@@ -20,16 +20,18 @@ token: {{customer_service}}
 
 ###
 
-# You have no access to this operation.
-# @name updateCustomer
+# @name customerBlock
 
-POST {{bap-dashboard-host}}/bap/NAMMA_YATRI/customer/111/update
+@customerId = favorit-auto1-0000000000000000000000
+
+POST {{bap-dashboard-host}}/bap/YATRI/customer/{{customerId}}/block
 content-type: application/json
-token: {{juspay_ops}}
+token: {{customer_service}}
 
-"request"
 ###
 
-# @name updateCustomer
+# @name customerUnblock
 
-curl -XGET http://localhost:4000/posts?author=Poli&title=Blood
+POST {{bap-dashboard-host}}/bap/YATRI/customer/{{customerId}}/unblock
+content-type: application/json
+token: {{customer_service}}

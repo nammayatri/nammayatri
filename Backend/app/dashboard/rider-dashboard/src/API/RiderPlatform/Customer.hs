@@ -18,10 +18,8 @@ module API.RiderPlatform.Customer
   )
 where
 
-import qualified "rider-app" API.Dashboard.Customer as BAP
 import qualified Dashboard.RiderPlatform.Customer as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
-import qualified "rider-app" Domain.Types.Person as BAP
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import Kernel.Prelude
@@ -37,21 +35,21 @@ import Tools.Auth.Merchant
 type API =
   "customer"
     :> ( ApiAuth 'APP_BACKEND 'READ_ACCESS 'CUSTOMERS
-           :> BAP.CustomerListAPI
+           :> Common.CustomerListAPI
            :<|> ApiAuth 'APP_BACKEND 'WRITE_ACCESS 'CUSTOMERS
-             :> BAP.CustomerUpdateAPI
+             :> Common.CustomerDeleteAPI
            :<|> ApiAuth 'APP_BACKEND 'WRITE_ACCESS 'CUSTOMERS
-             :> BAP.CustomerDeleteAPI
+             :> Common.CustomerBlockAPI
            :<|> ApiAuth 'APP_BACKEND 'WRITE_ACCESS 'CUSTOMERS
-             :> BAP.CustomerBlockAPI
+             :> Common.CustomerUnblockAPI
        )
 
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   listCustomer merchantId
-    :<|> updateCustomer merchantId
     :<|> deleteCustomer merchantId
     :<|> blockCustomer merchantId
+    :<|> unblockCustomer merchantId
 
 buildTransaction ::
   ( MonadFlow m,
@@ -77,18 +75,6 @@ listCustomer merchantShortId apiTokenInfo mbLimit mbOffset enabled blocked phone
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callRiderApp checkedMerchantId (.customers.customerList) mbLimit mbOffset enabled blocked phone
 
-updateCustomer ::
-  ShortId DM.Merchant ->
-  ApiTokenInfo ->
-  Id BAP.Person ->
-  Text ->
-  FlowHandler Text
-updateCustomer merchantShortId apiTokenInfo customerId req = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-  -- transaction <- buildTransaction Common.UpdateCustomerEndpoint apiTokenInfo customerId (Just req)
-  -- T.withTransactionStoring transaction $
-  Client.callRiderApp checkedMerchantId (.customers.customerUpdate) customerId req
-
 deleteCustomer ::
   ShortId DM.Merchant ->
   ApiTokenInfo ->
@@ -110,3 +96,14 @@ blockCustomer merchantShortId apiTokenInfo customerId = withFlowHandlerAPI $ do
   transaction <- buildTransaction Common.BlockCustomerEndpoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callRiderApp checkedMerchantId (.customers.customerBlock) customerId
+
+unblockCustomer ::
+  ShortId DM.Merchant ->
+  ApiTokenInfo ->
+  Id Common.Customer ->
+  FlowHandler APISuccess
+unblockCustomer merchantShortId apiTokenInfo customerId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  transaction <- buildTransaction Common.UnblockCustomerEndpoint apiTokenInfo T.emptyRequest
+  T.withTransactionStoring transaction $
+    Client.callRiderApp checkedMerchantId (.customers.customerUnblock) customerId
