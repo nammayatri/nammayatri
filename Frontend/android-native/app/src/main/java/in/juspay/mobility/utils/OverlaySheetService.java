@@ -31,6 +31,7 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -88,10 +89,12 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private FirebaseAnalytics mFirebaseAnalytics;
     private Boolean isRideAcceptedOrRejected = false;
     private TextView indicatorText1, indicatorText2, indicatorText3;
+    private ImageView indicatorDot1, indicatorDot2, indicatorDot3;
     private LinearProgressIndicator progressIndicator1, progressIndicator2, progressIndicator3;
     private ArrayList<TextView> indicatorTextList ;
     private ArrayList<LinearProgressIndicator> progressIndicatorsList ;
     private ArrayList<LinearLayout> indicatorList ;
+    private ArrayList<ImageView> dotsList;
     private Handler mainLooper = new Handler(Looper.getMainLooper());
 
     public class OverlayBinder extends Binder {
@@ -129,6 +132,10 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             if (model.getDriverMaxExtraFee() == 0) {
                 holder.buttonIncreasePrice.setVisibility(View.GONE);
                 holder.buttonDecreasePrice.setVisibility(View.GONE);
+            }
+            if (model.getCustomerTip() > 0){
+                holder.customerTipText.setText(String.valueOf("Rs" +model.getCustomerTip() + " tip included"));
+                holder.customerTipBlock.setVisibility(View.VISIBLE);
             }
             updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(),model.getStartTime(), getString(R.string.accept_offer));
             updateIncreaseDecreaseButtons(holder, model);
@@ -468,7 +475,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                         if (sharedPref == null) sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
                         int negotiationUnit = Integer.parseInt(sharedPref.getString("NEGOTIATION_UNIT", "10"));
                         int rideRequestedBuffer =  Integer.parseInt(sharedPref.getString("RIDE_REQUEST_BUFFER", "2"));
-                        int customerTip = rideRequestBundle.getInt("customerTip");
+                        int customerExtraFee = rideRequestBundle.getInt("customerExtraFee");
                         if (calculatedTime > rideRequestedBuffer){
                             calculatedTime -= rideRequestedBuffer;
                         }
@@ -486,7 +493,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                                 driverMaxExtraFee,
                                 rideRequestPopupDelayDuration,
                                 negotiationUnit,
-                                customerTip);
+                                customerExtraFee);
                         if (floatyView == null) {
                             startTimer();
                             showOverLayPopup();
@@ -838,6 +845,10 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                         floatyView.findViewById(R.id.indicator1),
                         floatyView.findViewById(R.id.indicator2),
                         floatyView.findViewById(R.id.indicator3)));
+                indicatorDot1 = floatyView.findViewById(R.id.red_dot_0);
+                indicatorDot2 = floatyView.findViewById(R.id.red_dot_1);
+                indicatorDot3 = floatyView.findViewById(R.id.red_dot_2);
+                dotsList = new ArrayList<>(Arrays.asList(indicatorDot1,indicatorDot2,indicatorDot3));
 
                 for (int  i =0; i<3; i++){
                     if (viewPager.getCurrentItem() == indicatorList.indexOf(indicatorList.get(i))){
@@ -850,56 +861,26 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     if (i < sheetArrayList.size()){
                         indicatorTextList.get(i).setText("₹"+String.valueOf(sheetArrayList.get(i).getBaseFare() + sheetArrayList.get(i).getUpdatedAmount()));
                         progressIndicatorsList.get(i).setVisibility(View.VISIBLE);
+
+                        if (viewPager.getCurrentItem() == indicatorList.indexOf(indicatorList.get(i)) && sheetArrayList.get(i).getCustomerTip() > 0){
+                            indicatorList.get(i).setBackgroundColor(getColor(R.color.quantum_yellow));
+                        }
+
+                        if (sheetArrayList.get(i).getCustomerTip() > 0){
+                            dotsList.get(i).setVisibility(View.VISIBLE);
+                        }else {
+                            dotsList.get(i).setVisibility(View.INVISIBLE);
+                        }
                     } else {
                         indicatorTextList.get(i).setText("--");
                         progressIndicatorsList.get(i).setVisibility(View.GONE);
+                        dotsList.get(i).setVisibility(View.INVISIBLE);
                     }
                 }
             }
         });
     }
 
-    private void setCustomerTipView(ArrayList<SheetModel> rideDetails, ArrayList<LinearLayout> indicators, int index){
-        for(int i=0;i<3;i++){
-            int red_dot_id = getResources().getIdentifier("red_dot_" + (i), "id", getPackageName());
-            View redDot = floatyView.findViewById(red_dot_id);
-            int customerTip = 10;
-            View customer_tip_block = floatyView.findViewById(R.id.customer_tip_block);
-            TextView customer_tip_text = floatyView.findViewById((R.id.customer_tip_text));
-            View indicator1 = floatyView.findViewById(R.id.indicator1);
-            if(index == i){
-                redDot.setVisibility(View.INVISIBLE);
-                if(customerTip == 0){
-                    indicators.get(i).setBackgroundColor(0xE5E7EB);
-                    customer_tip_block.setVisibility(View.INVISIBLE);
-                    customer_tip_text.setVisibility(View.INVISIBLE);
-                }
-                else{
-                    customer_tip_block.setVisibility(View.VISIBLE);
-                    customer_tip_text.setVisibility(View.VISIBLE);
-                    String str = "Rs " + customerTip + " tip included";
-                    customer_tip_text.setText(str);
-                    int finalI = i;
-                    mainLooper.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            indicators.get(finalI).setBackgroundColor(Color.parseColor("#FEEBB9"));
-                        }
-                    });
-                }
-            }
-            else{
-                indicators.get(i).setBackgroundColor(0xFEEBB9);
-                if(customerTip != 0){
-                    redDot.setVisibility(View.VISIBLE);
-                }
-                else{
-                    redDot.setVisibility(View.INVISIBLE);
-                }
-            }
-
-        }
-    }
     private void setIndicatorClickListener() {
         if (viewPager == null || floatyView == null) return;
         indicatorList = new ArrayList<>(Arrays.asList(
@@ -918,7 +899,6 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             if (viewPager == null) return;
                             viewPager.setCurrentItem(finalI);
                             if(!(finalI >= sheetArrayList.size() || finalI < 0)){ //index exists
-                                setCustomerTipView(sheetArrayList, indicatorList, finalI);
                                 firebaseLogEventWithParams("indicator_click", "index" , String.valueOf(finalI));
                             }
                         }

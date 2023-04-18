@@ -12,6 +12,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -65,9 +66,10 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
     }
 
     public class SheetViewHolder extends RecyclerView.ViewHolder{
-        TextView pickUpDistance, acceptRejTimer, baseFare, sourceArea, sourceAddress, destinationArea, destinationAddress, distanceToBeCovered, textIncPrice, textDecPrice;
+        TextView pickUpDistance, acceptRejTimer, baseFare, sourceArea, sourceAddress, destinationArea, destinationAddress, distanceToBeCovered, textIncPrice, textDecPrice, customerTipText;
         Button reqButton, rejectButton;
         View buttonDecreasePrice, buttonIncreasePrice, progressBar;
+        LinearLayout customerTipBlock;
         public SheetViewHolder(@NonNull View itemView) {
             super(itemView);
             pickUpDistance = itemView.findViewById(R.id.distancePickUp);
@@ -85,6 +87,8 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
             progressBar = itemView.findViewById(R.id.progressBar);
             textDecPrice = itemView.findViewById(R.id.textDecPrice);
             textIncPrice = itemView.findViewById(R.id.textIncPrice);
+            customerTipBlock = itemView.findViewById(R.id.customer_tip_block);
+            customerTipText = itemView.findViewById(R.id.customer_tip_text);
         }
     }
 
