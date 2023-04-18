@@ -16,6 +16,9 @@
 module SharedLogic.DriverPool
   ( calculateDriverPool,
     calculateDriverPoolWithActualDist,
+    calculateDriverCurrentlyOnRideWithActualDist,
+    calculateDriverPoolCurrentlyOnRide,
+    changeIntoDriverPoolResult,
     incrementTotalQuotesCount,
     incrementQuoteAcceptedCount,
     decrementTotalQuotesCount,
@@ -498,6 +501,138 @@ calculateDriverPoolWithActualDist poolCalculationStage driverPoolCfg mbVariant p
   where
     filterFunc threshold estDist = getMeters estDist.actualDistanceToPickup <= fromIntegral threshold
 
+calculateDriverPoolCurrentlyOnRide ::
+  ( EncFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    Esq.EsqDBReplicaFlow m r,
+    CoreMetrics m,
+    HasCoordinates a
+  ) =>
+  PoolCalculationStage ->
+  DriverPoolConfig ->
+  Maybe Variant ->
+  a ->
+  Id DM.Merchant ->
+  Maybe PoolRadiusStep ->
+  Int ->
+  m [DriverPoolResultCurrentlyOnRide]
+calculateDriverPoolCurrentlyOnRide poolStage driverPoolCfg mbVariant pickup merchantId mRadiusStep reduceRadiusValue = do
+  let radius = getRadius mRadiusStep
+  let coord = getCoordinates pickup
+  now <- getCurrentTime
+  approxDriverPool <-
+    measuringDurationToLog INFO "calculateDriverPoolCurrentlyOnRide" $
+      Esq.runInReplica $
+        QP.getNearestDriversCurrentlyOnRide
+          mbVariant
+          coord
+          radius
+          merchantId
+          driverPoolCfg.driverPositionInfoExpiry
+          reduceRadiusValue
+  driversWithLessThanNParallelRequests <- case poolStage of
+    DriverSelection -> filterM (fmap (< driverPoolCfg.maxParallelSearchRequests) . getParallelSearchRequestCount now) approxDriverPool
+    Estimate -> pure approxDriverPool --estimate stage we dont need to consider actual parallel request counts
+  pure $ makeDriverPoolResult <$> driversWithLessThanNParallelRequests
+  where
+    getParallelSearchRequestCount now dObj = getValidSearchRequestCount merchantId (cast dObj.driverId) now
+    getRadius mRadiusStep_ = do
+      let maxRadius = fromIntegral driverPoolCfg.maxRadiusOfSearch
+      case mRadiusStep_ of
+        Just radiusStep -> do
+          let minRadius = fromIntegral driverPoolCfg.minRadiusOfSearch
+          let radiusStepSize = fromIntegral driverPoolCfg.radiusStepSize
+          min (minRadius + radiusStepSize * radiusStep) maxRadius
+        Nothing -> maxRadius
+    makeDriverPoolResult :: QP.NearestDriversResultCurrentlyOnRide -> DriverPoolResultCurrentlyOnRide
+    makeDriverPoolResult QP.NearestDriversResultCurrentlyOnRide {..} =
+      DriverPoolResultCurrentlyOnRide
+        { distanceToPickup = distanceToDriver,
+          ..
+        }
+
+calculateDriverCurrentlyOnRideWithActualDist ::
+  ( EncFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    Esq.EsqDBReplicaFlow m r,
+    CoreMetrics m,
+    HasCoordinates a
+  ) =>
+  PoolCalculationStage ->
+  DriverPoolConfig ->
+  Maybe Variant ->
+  a ->
+  Id DM.Merchant ->
+  Maybe PoolRadiusStep ->
+  Int ->
+  m [DriverPoolWithActualDistResult]
+calculateDriverCurrentlyOnRideWithActualDist poolCalculationStage driverPoolCfg mbVariant pickup merchantId mRadiusStep reduceRadiusValue = do
+  driverPool <- calculateDriverPoolCurrentlyOnRide poolCalculationStage driverPoolCfg mbVariant pickup merchantId mRadiusStep reduceRadiusValue
+  case driverPool of
+    [] -> return []
+    (a : pprox) -> do
+      let driverPoolResultsWithDriverLocationAsDestinationLocation = driverResultFromDestinationLocation <$> (a :| pprox)
+          driverToDestinationDistanceThreshold = driverPoolCfg.driverToDestinationDistanceThreshold
+      driverPoolWithActualDistFromDestinationLocation <- computeActualDistance merchantId pickup driverPoolResultsWithDriverLocationAsDestinationLocation
+      driverPoolWithActualDistFromCurrentLocation <- traverse (calculateActualDistanceCurrently driverToDestinationDistanceThreshold) (a :| pprox)
+      let driverPoolWithActualDist = NE.zipWith (curry combine) driverPoolWithActualDistFromDestinationLocation driverPoolWithActualDistFromCurrentLocation
+          filtDriverPoolWithActualDist = case driverPoolCfg.actualDistanceThreshold of
+            Nothing -> NE.toList driverPoolWithActualDist
+            Just threshold -> NE.filter (filterFunc threshold) driverPoolWithActualDist
+      logDebug $ "secondly filtered driver pool result currently on ride" <> show filtDriverPoolWithActualDist
+      return filtDriverPoolWithActualDist
+  where
+    filterFunc threshold estDist = getMeters estDist.actualDistanceToPickup <= fromIntegral threshold
+    driverResultFromDestinationLocation DriverPoolResultCurrentlyOnRide {..} =
+      DriverPoolResult
+        { driverId = driverId,
+          language = language,
+          driverDeviceToken = driverDeviceToken,
+          distanceToPickup = distanceToPickup,
+          variant = variant,
+          lat = destinationLat,
+          lon = destinationLon
+        }
+    calculateActualDistanceCurrently driverToDestinationDistanceThreshold DriverPoolResultCurrentlyOnRide {..} = do
+      let temp = DriverPoolResult {..}
+      if distanceFromDriverToDestination < driverToDestinationDistanceThreshold
+        then do
+          transporter <- CTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
+          let defaultPopupDelay = fromMaybe 2 transporter.popupDelayToAddAsPenalty
+          let time = driverPoolCfg.driverToDestinationDuration
+          pure
+            DriverPoolWithActualDistResult
+              { driverPoolResult = temp,
+                actualDistanceToPickup = distanceFromDriverToDestination,
+                actualDurationToPickup = time,
+                intelligentScores = IntelligentScores Nothing Nothing Nothing Nothing defaultPopupDelay,
+                isPartOfIntelligentPool = False
+              }
+        else computeActualDistanceOneToOne merchantId (LatLong destinationLat destinationLon) temp
+    combine (DriverPoolWithActualDistResult {actualDistanceToPickup = x, actualDurationToPickup = y}, DriverPoolWithActualDistResult {..}) =
+      DriverPoolWithActualDistResult
+        { actualDistanceToPickup = x + actualDistanceToPickup,
+          actualDurationToPickup = y + actualDurationToPickup,
+          ..
+        }
+
+computeActualDistanceOneToOne ::
+  ( CoreMetrics m,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    HasCoordinates a
+  ) =>
+  Id DM.Merchant ->
+  a ->
+  DriverPoolResult ->
+  m DriverPoolWithActualDistResult
+computeActualDistanceOneToOne merchantId pickup driverPoolResult = do
+  (ele :| _) <- computeActualDistance merchantId pickup (driverPoolResult :| [])
+  pure ele
+
 computeActualDistance ::
   ( CoreMetrics m,
     CacheFlow m r,
@@ -530,3 +665,6 @@ computeActualDistance orgId pickup driverPoolResults = do
           intelligentScores = IntelligentScores Nothing Nothing Nothing Nothing defaultPopupDelay,
           isPartOfIntelligentPool = False
         }
+
+changeIntoDriverPoolResult :: DriverPoolResultCurrentlyOnRide -> DriverPoolResult
+changeIntoDriverPoolResult DriverPoolResultCurrentlyOnRide {..} = DriverPoolResult {..}

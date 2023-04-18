@@ -22,7 +22,9 @@ where
 
 import qualified Data.Map as M
 import Domain.Types.FareParameters
+import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.DriverPoolConfig as DPC
 import qualified Domain.Types.QuoteSpecialZone as DQuoteSpecialZone
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import qualified Domain.Types.SearchRequestSpecialZone as DSRSZ
@@ -33,6 +35,8 @@ import Kernel.External.Maps.Google.PolyLinePoints
 import Kernel.Prelude
 import Kernel.Serviceability
 import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Hedis (HedisFlow)
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -41,8 +45,10 @@ import qualified SharedLogic.CacheDistance as CD
 import SharedLogic.DriverPool hiding (lat, lon)
 import SharedLogic.Estimate (EstimateItem, buildEstimate, buildEstimateFromSlabFarePolicy)
 import SharedLogic.FareCalculator
+import Storage.CachedQueries.CacheConfig (HasCacheConfig)
 import qualified Storage.CachedQueries.FarePolicy as FarePolicyS
 import qualified Storage.CachedQueries.Merchant as CQM
+import Storage.CachedQueries.Merchant.TransporterConfig as CTC
 import qualified Storage.CachedQueries.SlabFarePolicy as SFarePolicyS
 import qualified Storage.Queries.Geometry as QGeometry
 import qualified Storage.Queries.QuoteSpecialZone as QQuoteSpecialZone
@@ -213,14 +219,33 @@ handler merchantId sReq = do
             ..
           }
 
+    buildEstimates ::
+      (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r, Esq.EsqDBReplicaFlow m r, CoreMetrics m, EncFlow m r, HasField "vehicleVariant" a DVeh.Variant) =>
+      DSearchReq ->
+      DLoc.SearchReqLocation ->
+      DPC.DriverPoolConfig ->
+      Merchant ->
+      DistanceAndDuration ->
+      (Merchant -> UTCTime -> Meters -> (a, NonEmpty DriverPoolResult) -> m EstimateItem) ->
+      [a] ->
+      m [EstimateItem]
     buildEstimates sReqest fromLocation driverPoolCfg org result buildEstimateFn farePolicies =
       if null farePolicies
         then do
           logDebug "Trip doesnot match any fare policy constraints."
           return []
         else do
-          driverPool <- calculateDriverPool Estimate driverPoolCfg Nothing fromLocation org.id True Nothing
-
+          driverPoolNotOnRide <- calculateDriverPool Estimate driverPoolCfg Nothing fromLocation org.id True Nothing
+          driverPoolCurrentlyOnRide <-
+            if null driverPoolNotOnRide
+              then do
+                let reducedRadiusValue = driverPoolCfg.radiusShrinkValueForDriversOnRide
+                transporter <- CTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigDoesNotExist merchantId.getId)
+                if transporter.includeDriverCurrentlyOnRide
+                  then calculateDriverPoolCurrentlyOnRide Estimate driverPoolCfg Nothing fromLocation org.id Nothing reducedRadiusValue
+                  else pure []
+              else pure []
+          let driverPool = driverPoolNotOnRide ++ map changeIntoDriverPoolResult driverPoolCurrentlyOnRide
           logDebug $ "Search handler: driver pool " <> show driverPool
 
           let filteredProtoQuotes = getfilteredProtoQuotes driverPool farePolicies

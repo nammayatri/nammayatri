@@ -221,7 +221,10 @@ data DriverPoolConfigCreateReq = DriverPoolConfigCreateReq
     maxNumberOfBatches :: Int,
     maxParallelSearchRequests :: Int,
     poolSortingType :: PoolSortingType,
-    singleBatchProcessTime :: Seconds
+    singleBatchProcessTime :: Seconds,
+    radiusShrinkValueForDriversOnRide :: Int,
+    driverToDestinationDistanceThreshold :: Meters,
+    driverToDestinationDuration :: Seconds
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -243,7 +246,10 @@ validateDriverPoolConfigCreateReq DriverPoolConfigCreateReq {..} =
       validateField "driverBatchSize" driverBatchSize $ Min @Int 1,
       validateField "maxNumberOfBatches" maxNumberOfBatches $ Min @Int 1,
       validateField "maxParallelSearchRequests" maxParallelSearchRequests $ Min @Int 1,
-      validateField "singleBatchProcessTime" singleBatchProcessTime $ Min @Seconds 1
+      validateField "singleBatchProcessTime" singleBatchProcessTime $ Min @Seconds 1,
+      validateField "radiusShrinkValueForDriversOnRide" radiusShrinkValueForDriversOnRide $ Min @Int 1,
+      validateField "driverToDestinationDistanceThreshold" driverToDestinationDistanceThreshold $ Min @Meters 1,
+      validateField "driverToDestinationDuration" driverToDestinationDuration $ Min @Seconds 1
     ]
 
 ---------------------------------------------------------

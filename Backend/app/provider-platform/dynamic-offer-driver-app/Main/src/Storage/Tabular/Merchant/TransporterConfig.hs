@@ -37,6 +37,7 @@ mkPersist
       pickupLocThreshold Meters
       dropLocThreshold Meters
       rideTimeEstimatedThreshold Seconds
+      includeDriverCurrentlyOnRide Bool
       defaultPopupDelay Seconds
       popupDelayToAddAsPenalty Seconds Maybe
       thresholdCancellationScore Int Maybe
