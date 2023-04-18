@@ -43,6 +43,7 @@ import JBridge as JB
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Styles.Colors as Color
+import Data.Array((!!))
 import Common.Types.App
 import PrestoDOM
 import Data.Int as INT
@@ -330,30 +331,78 @@ cancelRidePopUpConfig state =
 
 logOutPopUpModelConfig :: ST.HomeScreenState -> PopUpModal.Config
 logOutPopUpModelConfig state =
-  if state.props.isPopUp == ST.Logout then
-    let
-      config' = PopUpModal.config
-      popUpConfig' =
-        config'
-          { primaryText { text = (getString LOGOUT_) }
-          , secondaryText { text = (getString ARE_YOU_SURE_YOU_WANT_TO_LOGOUT) }
-          , option1 { text = (getString GO_BACK_) }
-          , option2 { text = (getString LOGOUT_) }
-          }
-    in
-      popUpConfig'
-  else
-    let
-      config' = PopUpModal.config
-      popUpConfig' =
-        config'
-          { primaryText { text = (getString CANCEL_) }
-          , secondaryText { text = if state.props.isPopUp == ST.ActiveQuotePopUp then (getString YOU_HAVE_RIDE_OFFERS_ARE_YOU_SURE_YOU_WANT_TO_CANCEL) else (getString ARE_YOU_SURE_YOU_WANT_TO_CANCEL)}
-          , option1 { text = (getString NO) }
-          , option2 { text = (getString YES) }
-          }
-    in
-      popUpConfig'
+  case state.props.isPopUp of
+    ST.Logout ->
+      let
+        config' = PopUpModal.config
+        popUpConfig' =
+          config'
+            { primaryText { text = (getString LOGOUT_) }
+            , secondaryText { text = (getString ARE_YOU_SURE_YOU_WANT_TO_LOGOUT) }
+            , option1 { text = (getString GO_BACK_) }
+            , option2 { text = (getString LOGOUT_) }
+            }
+      in
+        popUpConfig'
+    ST.TipsPopUp -> PopUpModal.config{
+          optionButtonOrientation = "VERTICAL"
+          , backgroundClickable = true
+          , customerTipAvailable = true
+          , dismissPopup = true
+          , customerTipArray = ["No Tip", "₹10 🙂", "₹15 😄", "₹20 🤩"]
+          , customerTipArrayWithValues = [0,10, 15, 20]
+          , primaryText {
+              text =  if(state.props.currentStage == ST.QuoteList)then (getString SEARCH_AGAIN_WITH_A_TIP) else (getString TRY_AGAIN_WITH_A_TIP)
+            , fontSize = FontSize.a_22
+            },
+          secondaryText { 
+            text = (getString BOOST_YOUR_RIDE_CHANCES_AND_HELP_DRIVERS_WITH_TIPS)
+          , fontSize = FontSize.a_14
+          , color = Color.black650}
+          , tipLayoutMargin = (Margin 22 0 22 22)
+          , buttonLayoutMargin = (MarginHorizontal 16 16)
+          , activeIndex = state.props.customerTip.tipActiveIndex
+          , tipButton {
+                background = Color.white900
+              , color = Color.black800
+              , strokeColor = Color.grey900
+              , padding = (Padding 16 12 16 12)
+            },
+          option1 {
+            text = if (state.props.customerTip.tipForDriver == 0) then (getString TRY_AGAIN_WITHOUT_TIP) else ((getString TRY_AGAIN_WITH) <> " + ₹"<> (fromMaybe "" (["0", "10", "15", "20"] !! state.props.customerTip.tipActiveIndex))) <>" "<>(getString TIP)
+          , fontSize = FontSize.a_16 
+          , width = MATCH_PARENT
+          , color = Color.yellow900
+          , strokeColor = Color.black900
+          , background = Color.black900
+          , padding = (Padding 0 10 0 10)
+          , fontStyle = FontStyle.semiBold LanguageStyle
+          },
+          option2 {
+            text = if(state.props.currentStage == ST.QuoteList) then (getString HOME) else  (getString CANCEL_SEARCH)
+          , fontSize = FontSize.a_16
+          , width = MATCH_PARENT 
+          , background = Color.white900
+          , strokeColor = Color.white900
+          , margin = MarginTop 3
+          , color = Color.black650
+          , fontStyle = FontStyle.semiBold LanguageStyle
+          },
+          cornerRadius = (Corners 15.0 true true true true)
+
+      }
+    _ ->
+      let
+        config' = PopUpModal.config
+        popUpConfig' =
+          config'
+            { primaryText { text = (getString CANCEL_) }
+            , secondaryText { text = if state.props.isPopUp == ST.ActiveQuotePopUp then (getString YOU_HAVE_RIDE_OFFERS_ARE_YOU_SURE_YOU_WANT_TO_CANCEL) else (getString ARE_YOU_SURE_YOU_WANT_TO_CANCEL)}
+            , option1 { text = (getString NO) }
+            , option2 { text = (getString YES) }
+            }
+      in
+        popUpConfig'
 
 distanceOusideLimitsConfig :: ST.HomeScreenState -> PopUpModal.Config
 distanceOusideLimitsConfig state =

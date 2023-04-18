@@ -46,6 +46,8 @@ instance loggableAction :: Loggable Action where
       PopUpModal.ETextController (PrimaryEditTextController.TextChanged valId newVal) -> trackAppTextInput appId (getScreen ABOUT_US_SCREEN) "popup_modal_password_text_changed" "primary_edit_text"
       PopUpModal.NoAction -> trackAppActionClick appId (getScreen ABOUT_US_SCREEN) "popup_modal" "no_action"
       PopUpModal.CountDown seconds id status timerID -> trackAppActionClick appId (getScreen ABOUT_US_SCREEN) "popup_modal_cancel_confirmation" "countdown_onclick"
+      PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen ABOUT_US_SCREEN) "popup_modal_action" "tip_clicked"
+      PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen ABOUT_US_SCREEN) "popup_modal_action" "popup_dismissed"
     TermsAndConditionAction -> trackAppActionClick appId (getScreen ABOUT_US_SCREEN) "in_screen" "t_&_c"
     NoAction -> trackAppScreenEvent appId (getScreen ABOUT_US_SCREEN) "in_screen" "no_action"
     

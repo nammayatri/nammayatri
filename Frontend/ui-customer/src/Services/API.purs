@@ -925,6 +925,7 @@ data SelectEstimateReq = SelectEstimateReq String DEstimateSelect
 
 newtype DEstimateSelect = DEstimateSelect
   { 
+    customerExtraFee :: Maybe Int,
     autoAssignEnabled :: Boolean,
     autoAssignEnabledV2 :: Boolean
   }
