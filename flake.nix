@@ -7,9 +7,7 @@
     beckn-gateway.url = "github:nammayatri/beckn-gateway";
     beckn-gateway.inputs.common.follows = "common";
     beckn-gateway.inputs.shared-kernel.follows = "shared-kernel";
-
-    easy-purescript-nix.url = "github:justinwoo/easy-purescript-nix";
-    easy-purescript-nix.flake = false;
+    purifix.url = "github:purifix/purifix";
   };
   outputs = inputs:
     inputs.common.lib.mkFlake { inherit inputs; } {
