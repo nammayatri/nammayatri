@@ -1,6 +1,6 @@
 import axios from "axios";
 import moment from "moment";
-import { callbackMapper } from 'presto-ui');
+import { callbackMapper } from 'presto-ui';
 
 const { JBridge, Android } = window;
 
@@ -343,4 +343,11 @@ export const getExpiryTime = function (str1) {
         console.log("error in getExpiryTime " + err);
       }
     };
+};
+
+export const getCurrentUTC = function (str) {
+  var d = new Date();
+  var result =  moment(d).utc().format();
+  console.log(result);
+  return result;
 };

@@ -1,4 +1,4 @@
-import { callbackMapper } from 'presto-ui');
+import { callbackMapper } from 'presto-ui';
 
 export const getPermissionStatusImpl = function(permission) {
 	return function() {
