@@ -29,24 +29,34 @@ data Action = OnButton1Click
             | ETextController PrimaryEditTextController.Action 
             | CountDown Int String String String
             | OnImageClick
+            | Tipbtnclick Int Int
+            | DismissPopup
 
 type Config = {
     primaryText :: TextConfig,
+    customerTipArray :: Array String,
+    customerTipArrayWithValues :: Array Int,
     secondaryText :: TextConfig,
     option1 :: ButtonConfig,
     option2 :: ButtonConfig,
+    tipButton :: ButtonConfig,
     backgroundClickable :: Boolean,
+    customerTipAvailable :: Boolean,
     cornerRadius :: Corners,
     margin :: Margin,
     gravity :: Gravity,
+    activeIndex :: Int,
+    optionButtonOrientation :: String,
     buttonLayoutMargin :: Margin,
+    tipLayoutMargin :: Margin,
     eTextConfig :: PrimaryEditTextController.Config,
     editTextVisibility :: Visibility,
     dismissPopupConfig :: DismissPopupConfig,
     coverImageConfig :: CoverImageConfig,
     contactViewConfig :: ContactViewConfig,
     contactViewPadding :: Padding,
-    contactViewMargin :: Margin
+    contactViewMargin :: Margin,
+    dismissPopup :: Boolean
 }
 
 type ContactViewConfig = {
@@ -105,12 +115,18 @@ type CoverImageConfig =
 
 config :: Config 
 config = {
-  backgroundClickable : true
+  optionButtonOrientation: "HORIZONTAL"
+  , activeIndex : 1
+  , customerTipAvailable : false
+  , backgroundClickable : true
+  , customerTipArray : []
+  , customerTipArrayWithValues : []
   , cornerRadius : (Corners 24.0 true true false false)
   , margin : (Margin 0 0 0 0)
   , gravity : BOTTOM
   , buttonLayoutMargin : (Margin 0 0 0 25)
   , editTextVisibility : GONE
+  , tipLayoutMargin : (Margin 0 0 0 0)
   , primaryText : {
       text : "Text1",
       color : Color.black800,
@@ -131,6 +147,22 @@ config = {
       visibility : VISIBLE,
       fontStyle : FontStyle.medium LanguageStyle
     }
+  , tipButton: {
+     background : Color.white900
+    , text : "Button1"
+    , strokeColor : Color.black900 
+    , color : Color.black900
+    , fontSize : FontSize.a_14
+    , visibility : true
+    , margin : (Margin 0 0 0 0)
+    , isClickable : true
+    , width : (V 100)
+    , padding : (Padding 15 7 15 7)
+    , timerValue : 5
+    , enableTimer : false
+    , timerID : ""
+    , fontStyle : FontStyle.bold LanguageStyle
+  } 
   , option1 : {
       background : Color.white900
     , text : "Button1"
@@ -191,4 +223,5 @@ config = {
     }
     , contactViewPadding : (Padding 23 16 23 16)
     , contactViewMargin : (Margin 16 12 16 32)
+    , dismissPopup:false
 }
