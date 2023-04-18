@@ -331,8 +331,9 @@ selectEstimateBT payload estimateId = do
       errorHandler errorPayload = do
             BackT $ pure GoBack
 
-makeEstimateSelectReq :: Boolean -> DEstimateSelect
-makeEstimateSelectReq isAutoAssigned = DEstimateSelect {
+makeEstimateSelectReq :: Boolean -> Maybe Int -> DEstimateSelect
+makeEstimateSelectReq isAutoAssigned tipForDriver= DEstimateSelect {
+      "customerExtraFee": tipForDriver,
       "autoAssignEnabled": isAutoAssigned, 
       "autoAssignEnabledV2": isAutoAssigned
     }

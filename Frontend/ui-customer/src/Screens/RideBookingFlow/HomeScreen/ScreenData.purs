@@ -80,6 +80,12 @@ initData = {
     , estimateId : ""
     , selectedQuote : Nothing
     , locationRequestCount : 0
+    , customerTip : {
+        enableTips: false
+      , tipForDriver: 10
+      , tipActiveIndex: 1
+      , isTipSelected: false
+      }
     , searchId : ""
     , bookingId : ""
     , expiredQuotes : []
