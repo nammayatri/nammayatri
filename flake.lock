@@ -38,6 +38,7 @@
       "inputs": {
         "common": "common",
         "flake-parts": [
+          "beckn-gateway",
           "common",
           "flake-parts"
         ],
@@ -286,10 +287,14 @@
         "beam-mysql": "beam-mysql",
         "common": "common_4",
         "flake-parts": [
+          "shared-kernel",
+          "euler-hs",
           "common",
           "flake-parts"
         ],
         "haskell-flake": [
+          "shared-kernel",
+          "euler-hs",
           "common",
           "haskell-flake"
         ],
