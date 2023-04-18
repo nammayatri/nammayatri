@@ -348,11 +348,11 @@ logOutPopUpModelConfig state =
           , customerTipArray = ["No Tip", "₹10 🙂", "₹15 😄", "₹20 🤩"]
           , customerTipArrayWithValues = [0,10, 15, 20]
           , primaryText {
-              text =  if(state.props.currentStage == ST.QuoteList)then "Search again with a tip?" else "Try again with a tip?"
+              text =  if(state.props.currentStage == ST.QuoteList)then (getString SEARCH_AGAIN_WITH_A_TIP) else (getString TRY_AGAIN_WITH_A_TIP)
             , fontSize = FontSize.a_22
             },
           secondaryText { 
-            text = "Tip might help increase the chance of  getting a ride.  Helps the driver during peak hours / compensate for empty return trips"
+            text = (getString BOOST_YOUR_RIDE_CHANCES_AND_HELP_DRIVERS_WITH_TIPS)
           , fontSize = FontSize.a_14
           , color = Color.black650}
           , tipLayoutMargin = (Margin 22 0 22 22)
@@ -365,7 +365,7 @@ logOutPopUpModelConfig state =
               , padding = (Padding 16 12 16 12)
             },
           option1 {
-            text = "Try Again With" <> if (state.props.customerTip.tipForDriver == 0) then "out Tip" else ( " + ₹"<> (fromMaybe "" (["0", "10", "15", "20"] !! state.props.customerTip.tipActiveIndex))) <>" Tip"
+            text = if (state.props.customerTip.tipForDriver == 0) then (getString TRY_AGAIN_WITHOUT_TIP) else ((getString TRY_AGAIN_WITH) <> " + ₹"<> (fromMaybe "" (["0", "10", "15", "20"] !! state.props.customerTip.tipActiveIndex))) <>" "<>(getString TIP)
           , fontSize = FontSize.a_16 
           , width = MATCH_PARENT
           , color = Color.yellow900
@@ -375,7 +375,7 @@ logOutPopUpModelConfig state =
           , fontStyle = FontStyle.semiBold LanguageStyle
           },
           option2 {
-            text = if(state.props.currentStage == ST.QuoteList) then "Home" else  "Cancel Search"
+            text = if(state.props.currentStage == ST.QuoteList) then (getString HOME) else  (getString CANCEL_SEARCH)
           , fontSize = FontSize.a_16
           , width = MATCH_PARENT 
           , background = Color.white900
