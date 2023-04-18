@@ -433,7 +433,7 @@ instance showStage :: Show Stage where show = genericShow
 
 data SearchLocationModelType = SearchLocation | LocateOnMap | NoView
 
-data PopupType = Logout | ConfirmBack | NoPopUp | ActiveQuotePopUp
+data PopupType = Logout | ConfirmBack | NoPopUp | ActiveQuotePopUp | TipsPopUp
 
 derive instance genericPopupType :: Generic PopupType _
 instance eqPopupType :: Eq PopupType where eq = genericEq
@@ -501,6 +501,7 @@ type HomeScreenStateProps =
   , locationRequestCount :: Int
   , searchId :: String
   , bookingId :: String
+  , customerTip :: CustomerTipProps
   , expiredQuotes :: Array String
   , isCancelRide :: Boolean
   , cancellationReasons :: Array CancellationReasons
@@ -541,6 +542,13 @@ type HomeScreenStateProps =
   , emergencyHelpModelState :: EmergencyHelpModelState
   , showLiveDashboard :: Boolean
   }
+
+type CustomerTipProps = {
+    enableTips :: Boolean
+  , tipActiveIndex :: Int
+  , tipForDriver :: Int
+  , isTipSelected :: Boolean
+}
 
 type Contact = {
      name :: String,
