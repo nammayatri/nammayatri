@@ -363,6 +363,11 @@ data STR = LETS_GET_STARTED
         | PLEASE_WAIT_I_WILL_BE_THERE 
         | LOOKING_FOR_YOU_AT_PICKUP
         | SILENT
+        | TRY_SILENT_MODE
+        | SILENT_MODE_PROMPT
+        | GO_SILENT
+        | GO_ONLINE
+        | GO_ONLINE_PROMPT
 
 type LETS_GET_STARTED = String
 type SELECT_LANGUAGE = String
@@ -764,3 +769,8 @@ type PLEASE_COME_FAST_I_AM_WAITING = String
 type PLEASE_WAIT_I_WILL_BE_THERE = String
 type LOOKING_FOR_YOU_AT_PICKUP = String
 type SILENT = String
+type TRY_SILENT_MODE = String
+type SILENT_MODE_PROMPT = String
+type GO_SILENT = String
+type GO_ONLINE = String
+type GO_ONLINE_PROMPT = String
