@@ -366,5 +366,9 @@ getTA script = case script of
   PLEASE_COME_FAST_I_AM_WAITING -> "சீக்கிரம் வாருங்கள்"
   PLEASE_WAIT_I_WILL_BE_THERE -> "வந்துகொண்டிருக்கிறேன்"
   LOOKING_FOR_YOU_AT_PICKUP -> "பிக்-அப்பில் உள்ளேன்"
-  SILENT -> "Silent"
-
+  SILENT -> "சைலண்ட்"
+  TRY_SILENT_MODE -> "சைலண்ட் பயன்முறையை முயற்சிக்கவா?"
+  SILENT_MODE_PROMPT -> "நீங்கள் தொந்தரவை தவிர்க்க விரும்பினால், நீங்கள் சைலண்ட் பயன்முறைக்கு மாறலாம்"
+  GO_SILENT -> "சைலண்ட் மோடுக்கு செல்லவும்"
+  GO_ONLINE -> "போ!"
+  GO_ONLINE_PROMPT -> "நீங்கள் தற்போது ஆஃப்லைனில் உள்ளீர்கள். \n சவாரிகளைப் பெற, இப்போதே ஆன்லைனில் செல்லுங்கள்!"
