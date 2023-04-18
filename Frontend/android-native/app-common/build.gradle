@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    compileSdk 32
+    compileSdk 33
     // publishNonDefault true
 
     defaultConfig {
@@ -76,8 +76,9 @@ dependencies {
     implementation 'com.airbnb.android:lottie:5.2.0'
     implementation 'com.google.android.gms:play-services-location:21.0.1'
     testImplementation 'junit:junit:4.13.2'
-    api 'in.juspay:hyper:2.1.12'
-    implementation files('/Users/vigneshs/Downloads/hyper-sdk-release.aar') // Update their own local hyper sdk
+    implementation 'in.juspay:hyper:2.1.12'
+    implementation files('/Users/kavyashree.s/Documents/aar/hyper-sdk-release.aar')
+    // implementation files('/Users/vigneshs/Downloads/hyper-sdk-release.aar') // Update their own local hyper sdk
 //    implementation project(':app-common')
 //    implementation project (path:':mobility-driver')
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
