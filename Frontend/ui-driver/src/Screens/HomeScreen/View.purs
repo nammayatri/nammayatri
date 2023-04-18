@@ -332,7 +332,7 @@ offlineView push state =
               , width MATCH_PARENT
               , gravity CENTER_HORIZONTAL
               , margin $ MarginBottom 10
-              , text "You are currently offline. \n To get ride requests, go online now!"
+              , text $ getString GO_ONLINE_PROMPT
               , textSize FontSize.a_14
               ]
             ]
@@ -360,7 +360,7 @@ offlineView push state =
                   [ height MATCH_PARENT
                   , width MATCH_PARENT
                   , gravity CENTER
-                  , text "GO!"
+                  , text $ getString GO_ONLINE
                   , textSize FontSize.a_32
                   , fontStyle $ FontStyle.bold LanguageStyle
                   , color Color.white900
@@ -434,7 +434,7 @@ driverDetail2 push state =
       ][ imageView
          [ width $ V 42
          , height $ V 42
-         , imageWithFallback "ny_ic_new_avatar,https://assets.juspay.in/nammayatri/images/driver/ny_ic_new_avatar.png"
+         , imageWithFallback "ic_new_avatar,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_new_avatar.png"
          ]
       ]
     , linearLayout
@@ -475,15 +475,19 @@ driverStatusIndicator status push state =
         , height $ V 15
         , margin (MarginRight 5)
         , visibility if(state.props.driverStatusSet==status) then VISIBLE else GONE
-        , imageWithFallback if ((status == Offline) && (state.props.driverStatusSet == Offline)) then "ny_ic_driver_status_offline,https://assets.juspay.in/nammayatri/images/driver/ny_ic_driver_status_offline.png" else if ((status == Online) && (state.props.driverStatusSet == Online)) then "ny_ic_driver_status_online,https://assets.juspay.in/nammayatri/images/driver/ny_ic_driver_status_online.png" else if((status == Silent) && (state.props.driverStatusSet == Silent)) then "ny_ic_driver_status_silent,https://assets.juspay.in/nammayatri/images/driver/ny_ic_driver_status_silent.png" else "none"--(getValueToLocalStore IS_DEMOMODE_ENABLED == "true") then "ny_ic_demo_mode_switch,https://assets.juspay.in/nammayatri/images/driver/ny_ic_demo_mode_switch.png" else if state.props.statusOnline then "ny_ic_driver_status_silent,https://assets.juspay.in/nammayatri/images/driver/ny_ic_driver_status_silent.png" else("ny_ic_driver_status_silent,https://assets.juspay.in/nammayatri/images/driver/ny_ic_driver_status_silent.png") --else "ny_ic_toggle_off,https://assets.juspay.in/nammayatri/images/driver/ny_ic_toggle_off.png"
+        , imageWithFallback if ((status == Offline) && (state.props.driverStatusSet == Offline)) then "ic_driver_status_offline,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_driver_status_offline.png" else if ((status == Online) && (state.props.driverStatusSet == Online)) then "ic_driver_status_online,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_driver_status_online.png" else if((status == Silent) && (state.props.driverStatusSet == Silent)) then "ic_driver_status_silent,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_driver_status_silent.png" else "none"--(getValueToLocalStore IS_DEMOMODE_ENABLED == "true") then "ny_ic_demo_mode_switch,https://assets.juspay.in/nammayatri/images/driver/ny_ic_demo_mode_switch.png" else if state.props.statusOnline then "ny_ic_driver_status_silent,https://assets.juspay.in/nammayatri/images/driver/ny_ic_driver_status_silent.png" else("ny_ic_driver_status_silent,https://assets.juspay.in/nammayatri/images/driver/ny_ic_driver_status_silent.png") --else "ny_ic_toggle_off,https://assets.juspay.in/nammayatri/images/driver/ny_ic_toggle_off.png"
         ]
       , textView(
         [ width WRAP_CONTENT
           , height WRAP_CONTENT
-          , text (show status)--(getString SILENT) --if (getValueToLocalStore IS_DEMOMODE_ENABLED == "true") then (getString ONLINE_VIA_DEMO_MODE) else if state.props.statusOnline then (getString ONLINE_) else (getString OFFLINE)
+          , text $ case status of
+              Online -> (getString ONLINE_)
+              Offline -> (getString OFFLINE)
+              Silent -> (getString SILENT)
           , color if state.props.driverStatusSet == status then Color.white900 else  Color.greyTextColor
+          , fontStyle $ FontStyle.medium LanguageStyle
           , textSize FontSize.a_14
-        ]  <> FontStyle.subHeading1 TypoGraphy
+        ] 
       )
       ]
 

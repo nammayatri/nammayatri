@@ -215,16 +215,18 @@ silentModeConfig state = let
   , cornerRadius = (PTD.Corners 15.0 true true true true)
   , margin = (Margin 16 0 16 0)
   , primaryText {
-      text = "TRY_SILENT_MODE"
+      text = getString TRY_SILENT_MODE
     }
   , secondaryText {
-      text =  "SILENT_MODE_PROMPT"
+      text =  getString SILENT_MODE_PROMPT 
     }
     , option1 {
-     text =   "GO_SILENT_OFFLINE"
+      text =   getString GO_OFFLINE 
+      , width = (V 140)
     }
   , option2 {
-      text =  "GO_SILENT"
+      width = (V 170)
+      , text =  getString GO_SILENT 
     }
   }
   in popUpConfig'
