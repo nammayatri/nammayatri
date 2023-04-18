@@ -139,6 +139,14 @@ instance loggableAction :: Loggable Action where
       ChatView.Navigate -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_messaging" "navigate_to_google_maps"
       ChatView.NoAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_app_messaging" "no_action"
     SwitchDriverStatus status -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "SwitchDriverStatus"
+    PopUpModalSilentAction act -> case act of
+      PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_silent_confirmation" "go_offline_onclick"
+      PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_silent_confirmation" "go_silent_onclick"
+      PopUpModal.CountDown seconds id status timerID -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_silent_confirmation" "countdown_updated"
+      PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_silent_confirmation" "no_action"
+      PopUpModal.ETextController act-> trackAppTextInput appId (getScreen HOME_SCREEN) "popup_modal_cancel_confirmation_text_changed" "primary_edit_text"
+      PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_cancel_confirmation" "image_onclick"
+
 
 
 
@@ -149,7 +157,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | StartRide ST.HomeScreenState 
                     | EndRide ST.HomeScreenState 
                     | CancelRide ST.HomeScreenState 
-                    | DriverAvailabilityStatus ST.HomeScreenState Boolean 
+                    | DriverAvailabilityStatus ST.HomeScreenState ST.DriverStatus 
                     | UpdatedState ST.HomeScreenState
                     | UpdateRoute ST.HomeScreenState
                     | FcmNotification String ST.HomeScreenState
@@ -189,12 +197,9 @@ data Action = NoAction
             | RemoveChat
             | UpdateInChat
             | SwitchDriverStatus ST.DriverStatus
+            | PopUpModalSilentAction PopUpModal.Action
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
-
-eval (SwitchDriverStatus status) state = do
-  if (state.props.driverStatusSet == ST.Online) && (status == ST.Offline) then continue state{ props {silentPopUpView = true }} 
-  else continue state{ props { driverStatusSet = status } }
 
 eval AfterRender state = do 
   continue state{props{mapRendered= true}}
@@ -214,18 +219,18 @@ eval BackPressed state = do
                 continue state
 
 
-eval (ChangeStatus status) state =
-  if (getValueToLocalStore IS_DEMOMODE_ENABLED == "true") then
-        continueWithCmd state [ do 
-          _ <- pure $ setValueToLocalStore IS_DEMOMODE_ENABLED "false"
-          _ <- pure $ toast (getString DEMO_MODE_DISABLED)
-          _ <- pure $  deleteValueFromLocalStore IS_DEMOMODE_ENABLED
-          _ <- pure $  deleteValueFromLocalStore DEMO_MODE_PASSWORD
-          _ <- getCurrentPosition (showDriverMarker state "ny_ic_auto") constructLatLong
-          pure NoAction
-          ]
-    else if  status then exit (DriverAvailabilityStatus state status)
-      else continue state { props { goOfflineModal = true }}
+-- eval (ChangeStatus status) state = -- TODO:: DEPRECATE AFTER 19th April
+--   if (getValueToLocalStore IS_DEMOMODE_ENABLED == "true") then
+--         continueWithCmd state [ do 
+--           _ <- pure $ setValueToLocalStore IS_DEMOMODE_ENABLED "false"
+--           _ <- pure $ toast (getString DEMO_MODE_DISABLED)
+--           _ <- pure $  deleteValueFromLocalStore IS_DEMOMODE_ENABLED
+--           _ <- pure $  deleteValueFromLocalStore DEMO_MODE_PASSWORD
+--           _ <- getCurrentPosition (showDriverMarker state "ny_ic_auto") constructLatLong
+--           pure NoAction
+--           ]
+--     else if  status then exit (DriverAvailabilityStatus state status)
+--       else continue state { props { goOfflineModal = true }}
 
 eval (Notification notificationType) state = do 
   _ <- pure $ printLog "notificationType" notificationType
@@ -238,7 +243,7 @@ eval (Notification notificationType) state = do
 eval CancelGoOffline state = do 
   continue state { props = state.props { goOfflineModal = false } }
 
-eval (GoOffline status) state = exit (DriverAvailabilityStatus state { props = state.props { goOfflineModal = false }} status)
+eval (GoOffline status) state = exit (DriverAvailabilityStatus state { props = state.props { goOfflineModal = false }} ST.Offline)
 
 eval (ShowMap key lat lon) state = continueWithCmd state [ do 
   id <- checkPermissionAndUpdateDriverMarker state
@@ -452,6 +457,23 @@ eval (ChatViewActionController (ChatView.Navigate)) state = do
 eval (RideActiveAction activeRide) state = updateAndExit state { data {activeRide = activeRideDetail state activeRide}} $ UpdateStage ST.RideAccepted state { data {activeRide = activeRideDetail state activeRide}}
 
 eval RecenterButtonAction state = continue state
+
+eval (SwitchDriverStatus status) state = do
+  if state.props.driverStatusSet == status then continue state 
+    else 
+      case status of 
+        ST.Online -> exit (DriverAvailabilityStatus state status)
+        ST.Silent -> exit (DriverAvailabilityStatus state status)
+        ST.Offline -> 
+          do
+            let checkIfLastWasSilent = state.props.driverStatusSet == ST.Silent
+            continue state { props { goOfflineModal = checkIfLastWasSilent, silentPopUpView = not checkIfLastWasSilent }}
+
+eval (PopUpModalSilentAction (PopUpModal.OnButton1Click)) state = exit (DriverAvailabilityStatus state{props{silentPopUpView = false}} ST.Offline)
+eval (PopUpModalSilentAction (PopUpModal.OnButton2Click)) state = 
+  do
+    _ <- pure $ setValueToLocalStore DRIVER_STATUS (show ST.Silent)
+    continue state {props {driverStatusSet = ST.Silent, silentPopUpView = false}}
 
 eval _ state = continue state 
 

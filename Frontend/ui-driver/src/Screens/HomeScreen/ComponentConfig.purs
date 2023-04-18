@@ -215,16 +215,16 @@ silentModeConfig state = let
   , cornerRadius = (PTD.Corners 15.0 true true true true)
   , margin = (Margin 16 0 16 0)
   , primaryText {
-      text = getString CONTACT_SUPPORT <>"?"
+      text = "TRY_SILENT_MODE"
     }
   , secondaryText {
-      text = getString YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT
+      text =  "SILENT_MODE_PROMPT"
     }
     , option1 {
-     text =  getString CANCEL
+     text =   "GO_SILENT_OFFLINE"
     }
   , option2 {
-      text =  getString CALL_SUPPORT
+      text =  "GO_SILENT"
     }
   }
   in popUpConfig'

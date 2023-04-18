@@ -1,75 +1,87 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/root_container"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content">
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="16dp">
 
     <LinearLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
         android:orientation="horizontal">
 
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:paddingVertical="5dp"
-            android:visibility="gone"
-            android:id="@+id/message_view_left">
+            android:id="@+id/message_view_left"
+            android:orientation="horizontal">
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="54dp"
+                    android:background="@drawable/silent_popup_background"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:visibility="gone"
+                    android:id="@+id/silent_ride_request_background"
+                    >
+
+                    <TextView
+                        android:layout_width="50dp"
+                        android:layout_height="wrap_content"
+                        android:text="$120"
+                        android:gravity="end"
+                        android:textColor="#FFFFFF"
+                        android:layout_marginLeft="54dp"
+                        android:id="@+id/ride_fare"/>
+
+                    <ImageView
+                        android:layout_width="4dp"
+                        android:layout_height="4dp"
+                        android:layout_marginHorizontal="6dp"
+                        android:src="@drawable/separator_silent_mode"
+                        ></ImageView>
+
+                    <TextView
+                        android:layout_width="100dp"
+                        android:layout_height="wrap_content"
+                        android:text="900m pickup"
+                        android:textColor="#FFFFFF"
+                        android:id="@+id/distance_to_pickup"/>
+
+                    <TextView
+                        android:layout_width="80dp"
+                        android:layout_height="wrap_content"
+                        android:gravity="end"
+                        android:text="View now"
+                        android:textColor="#FCC32C"></TextView>
+                </LinearLayout>
+                <ImageView
+                    android:layout_width="54dp"
+                    android:layout_height="54dp"
+                    android:src="@drawable/ny_ic_floating_widget"
+                    android:id="@+id/floating_logo"/>
+
+
+
+            </FrameLayout>
             <TextView
                 android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:text="New Ride assigned"
+                android:layout_height="45dp"
+                android:text="   New Ride assigned"
                 android:gravity="center"
                 android:textColor="@color/white"
                 android:paddingRight="20dp"
-                android:background="@drawable/bubble_message_shape_left"
-                android:paddingLeft="10dp"
-                android:id="@+id/messageTextView_left" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_gravity="right">
-
-            <ImageView
-                android:layout_width="54dp"
-                android:layout_height="54dp"
-                android:src="@drawable/ny_ic_floating_widget" />
-
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:paddingVertical="5dp"
-                android:visibility="gone"
                 android:background="@drawable/bubble_message_shape_right"
-                android:orientation="vertical"
-                android:id="@+id/message_view_right">
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="New Ride assigned"
-                    android:gravity="center"
-                    android:visibility="gone"
-                    android:textColor="@color/white"
-                    android:paddingRight="10dp"
-                    android:paddingLeft="20dp"
-                    android:id="@+id/messageTextView_right_header" />
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="match_parent"
-                    android:text="New Ride assigned"
-                    android:gravity="center"
-                    android:visibility="gone"
-                    android:maxLines="1"
-                    android:ellipsize="end"
-                    android:textColor="@color/white"
-                    android:paddingRight="10dp"
-                    android:paddingLeft="20dp"
-                    android:id="@+id/messageTextView_right" />
-
-            </LinearLayout>
+                android:paddingLeft="10dp"
+                android:visibility="gone"
+                android:id="@+id/messageTextView_left" />
         </LinearLayout>
     </LinearLayout>
 </LinearLayout>

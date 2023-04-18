@@ -19,7 +19,7 @@ import Control.Transformers.Back.Trans (BackT)
 import Control.Monad.Except.Trans (ExceptT)
 import Control.Monad.Free (Free)
 import Presto.Core.Types.Language.Flow (FlowWrapper)
-import Screens.Types (SplashScreenState, ChooseLanguageScreenState, UploadDrivingLicenseState, RegistrationScreenState, EnterMobileNumberScreenState, UploadAdhaarScreenState, EnterOTPScreenState, ApplicationStatusScreenState, AddVehicleDetailsScreenState, DriverDetailsScreenState, VehicleDetailsScreenState, DriverProfileScreenState, AboutUsScreenState, SelectLanguageScreenState, HelpAndSupportScreenState, WriteToUsScreenState, BankDetailScreenState, RideHistoryScreenState, HomeScreenState, RideDetailScreenState, TripDetailsScreenState, PermissionsScreenState, EditBankDetailsScreenState, EditAadhaarDetailsScreenState, IndividualRideCardState, ActiveRide, NoInternetScreenState, PopUpScreenState, DriverRideRatingScreenState, AppUpdatePopUpScreenState , ReferralScreenState, NotificationsScreenState)
+import Screens.Types (SplashScreenState, ChooseLanguageScreenState, UploadDrivingLicenseState, RegistrationScreenState, EnterMobileNumberScreenState, UploadAdhaarScreenState, EnterOTPScreenState, ApplicationStatusScreenState, AddVehicleDetailsScreenState, DriverDetailsScreenState, VehicleDetailsScreenState, DriverProfileScreenState, AboutUsScreenState, SelectLanguageScreenState, HelpAndSupportScreenState, WriteToUsScreenState, BankDetailScreenState, RideHistoryScreenState, HomeScreenState, RideDetailScreenState, TripDetailsScreenState, PermissionsScreenState, EditBankDetailsScreenState, EditAadhaarDetailsScreenState, IndividualRideCardState, ActiveRide, NoInternetScreenState, PopUpScreenState, DriverRideRatingScreenState, AppUpdatePopUpScreenState , ReferralScreenState, NotificationsScreenState, DriverStatus)
 import Screens.ChooseLanguageScreen.ScreenData as ChooseLanguageScreenData
 import Screens.EnterMobileNumberScreen.ScreenData as EnterMobileNumberScreenData
 import Screens.EnterOTPScreen.ScreenData as  EnterOTPScreenData
@@ -208,7 +208,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN
                           | GO_TO_START_RIDE {id :: String, otp :: String, lat :: String, lon :: String} 
                           | GO_TO_CANCEL_RIDE {id :: String, info :: String , reason :: String} 
                           | GO_TO_END_RIDE {id :: String, lat :: String , lon :: String } 
-                          | DRIVER_AVAILABILITY_STATUS Boolean
+                          | DRIVER_AVAILABILITY_STATUS DriverStatus
                           | REFRESH_HOME_SCREEN_FLOW
                           | RELOAD HomeScreenState
                           | UPDATE_ROUTE HomeScreenState

@@ -20,6 +20,7 @@ import android.os.IBinder;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.provider.Settings;
+import android.text.Layout;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -28,11 +29,22 @@ import android.view.View;
 import android.view.WindowManager;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
+import android.view.animation.RotateAnimation;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import androidx.annotation.Nullable;
+import androidx.interpolator.view.animation.FastOutLinearInInterpolator;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Date;
+import java.util.TimeZone;
+
 import in.juspay.mobility.MainActivity;
 import in.juspay.mobility.R;
 
@@ -43,17 +55,142 @@ public class WidgetService extends Service {
     private ImageView imageClose;
     private float height, width;
     private String widgetMessage;
+    private JSONObject entity_payload, data;
 
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        addMessageToWidget(intent);
+        showSilentNotification(intent);
+
+//        addMessageToWidget(intent);
         return START_STICKY;
     }
     @Override
     public void onCreate() {
         super.onCreate();
         addWidgetToWindowManager();
+    }
+
+    private void showSilentNotification(Intent intent){
+        try{
+
+            // Fetch TextView for fare and distanceToPickup
+            TextView fareTextView = widgetView.findViewById(R.id.ride_fare);
+            TextView distanceTextView = widgetView.findViewById(R.id.distance_to_pickup);
+
+            // Get Current Time in UTC
+            final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+            f.setTimeZone(TimeZone.getTimeZone("UTC"));
+            String getCurrTime = f.format(new Date());
+            int calculatedTime =0;
+
+            // Fetch data from intent
+            if(intent!=null) {
+                entity_payload = new JSONObject(intent.getStringExtra("payload"));
+                String dataBuilder = intent.hasExtra("data") ? intent.getStringExtra("data") : null;
+                data = dataBuilder!=null ? new JSONObject(dataBuilder) : null;
+            }
+
+
+            if(entity_payload!=null && entity_payload.has("baseFare")) {
+                System.out.println("PAYLOAD + PAYLIAD " + entity_payload); // TODO:: REMOVE
+                // Fetch data from entity_payload
+                int fare = entity_payload.getInt("baseFare");
+                int distanceToPickup = entity_payload.getInt("distanceToPickup");
+                String searchRequestValidTill = entity_payload.getString("searchRequestValidTill");
+
+
+                calculatedTime = calculateExpireTimer(searchRequestValidTill,getCurrTime);
+                calculatedTime= calculatedTime > 30 ? 30 : calculatedTime;
+                DecimalFormat df = new DecimalFormat();
+                df.setMaximumFractionDigits(2);
+
+                // Update text for fare and distanceToPickup
+                fareTextView.setText("₹"+ fare);
+                if(distanceToPickup>1000){
+                    distanceTextView.setText((df.format(distanceToPickup/1000)) + " km pickup");
+                }else {
+                    distanceTextView.setText(distanceToPickup + " m pickup");
+                }
+
+                // Add silentRideRequest view
+                View silentRideRequest = widgetView.findViewById(R.id.silent_ride_request_background);
+                silentRideRequest.setVisibility(View.VISIBLE);
+
+                // Start Slide-in animation
+                silentRideRequest.setTranslationX(-1500);
+                silentRideRequest.animate().translationX(0)
+                        .setInterpolator(new FastOutLinearInInterpolator())
+                        .setDuration(600)
+                        .start();
+
+                //onClick Listener for rideRequest
+                silentRideRequest.setOnClickListener(view -> {
+                    if(data!=null && entity_payload!=null) {
+                        NotificationUtils.showAllocationNotification(getApplicationContext(), "", "", data, "", entity_payload);
+                        silentRideRequest.setVisibility(View.GONE);
+                    }
+                });
+
+                // Animate the floating widget
+                View floatingWidget = widgetView.findViewById(R.id.floating_logo);
+                float mAngleToRotate = 360f;
+                rotationAnimation(floatingWidget, 0.0f, mAngleToRotate);
+
+                //Revert Animation
+                Handler handler = new Handler();
+                handler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        silentRideRequest.animate().translationX(-1500)
+                                .setInterpolator(new FastOutLinearInInterpolator())
+                                .setDuration(600)
+                                .start();
+
+                        rotationAnimation(floatingWidget, mAngleToRotate, 0.0f);
+
+                        handler.postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                silentRideRequest.setVisibility(View.GONE);
+                            }
+                        }, getResources().getInteger(R.integer.WIDGET_MESSAGE_ANIMATION_DURATION));
+                    }
+                }, calculatedTime*1000);
+            }
+        }catch (Exception e){
+
+        }
+    }
+
+    private void rotationAnimation(View view, float start, float end){
+        RotateAnimation wheelRotation = new RotateAnimation(start,end, Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f);
+        wheelRotation.setDuration(600);
+        wheelRotation.setInterpolator(getApplicationContext(), android.R.interpolator.accelerate_decelerate);
+        view.startAnimation(wheelRotation);
+    }
+
+    private int calculateExpireTimer(String expireTimeTemp, String currTimeTemp){
+        String[] arrOfA = expireTimeTemp.split("T");
+        String[] arrOfB = currTimeTemp.split("T");
+        if(!arrOfA[0].equals(arrOfB[0])){
+            return -1;
+        }
+        String[] timeTempExpire = arrOfA[1].split(":");
+        String[] timeTempCurrent = arrOfB[1].split(":");
+        timeTempExpire[2] = timeTempExpire[2].substring(0,2);
+        timeTempCurrent[2] = timeTempCurrent[2].substring(0,2);
+        int currTime = 0, expireTime = 0, calculate = 3600;
+        for(int i = 0 ; i < timeTempCurrent.length;i++){
+            currTime+= (Integer.parseInt(timeTempCurrent[i])*calculate);
+            expireTime+= (Integer.parseInt(timeTempExpire[i])*calculate);
+            calculate = calculate/60;
+        }
+        if ((expireTime-currTime) >= 5)
+        {
+            return expireTime-currTime - 5 ;
+        }
+        return 0;
     }
 
     private void addMessageToWidget(Intent intent){
@@ -66,16 +203,24 @@ public class WidgetService extends Service {
             widgetMessageHeader = intent.getStringExtra("sentBy");
         }
         if (widgetMessage!=null){
-            WindowManager.LayoutParams widgetLayoutParams = new WindowManager.LayoutParams(WindowManager.LayoutParams.WRAP_CONTENT,WindowManager.LayoutParams.WRAP_CONTENT,android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O?WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY:WindowManager.LayoutParams.TYPE_PHONE, WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE, PixelFormat.TRANSLUCENT);
+            WindowManager.LayoutParams widgetLayoutParams =
+                    new WindowManager.LayoutParams(
+                            WindowManager.LayoutParams.MATCH_PARENT,
+                            WindowManager.LayoutParams.WRAP_CONTENT,
+                            android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O ?
+                                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY :
+                                    WindowManager.LayoutParams.TYPE_PHONE,
+                            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                            PixelFormat.TRANSLUCENT);
             if (windowManager!=null){
-                if (widgetLayoutParams.x >= (windowManager.getDefaultDisplay().getWidth())/2){
+//                if (widgetLayoutParams.x >= (windowManager.getDefaultDisplay().getWidth())/2){
                     messageView =  widgetView.findViewById(R.id.message_view_left);
                     messageTextView = widgetView.findViewById(R.id.messageTextView_left);
-                }else {
-                    messageView =  widgetView.findViewById(R.id.message_view_right);
-                    messageHeaderView = widgetView.findViewById(R.id.messageTextView_right_header);
-                    messageTextView = widgetView.findViewById(R.id.messageTextView_right);
-                }
+                // }else {
+                //     messageView =  widgetView.findViewById(R.id.message_view_right);
+                //     messageHeaderView = widgetView.findViewById(R.id.messageTextView_right_header);
+                //     messageTextView = widgetView.findViewById(R.id.messageTextView_right);
+                // }
                 messageView.setVisibility(View.VISIBLE);
                 messageTextView.setText(widgetMessage);
                 if(widgetMessageHeader != null && messageHeaderView != null) {
@@ -86,19 +231,19 @@ public class WidgetService extends Service {
                     messageHeaderView.setVisibility(View.GONE);
                 }
                 Handler handler = new Handler();
-                handler.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        Animation aniFade = AnimationUtils.loadAnimation(getApplicationContext(),R.anim.fade_out);
-                        messageView.startAnimation(aniFade);
-                        handler.postDelayed(new Runnable() {
-                            @Override
-                            public void run() {
-                                messageView.setVisibility(View.GONE);
-                            }
-                        }, getResources().getInteger(R.integer.WIDGET_MESSAGE_ANIMATION_DURATION));
-                    }
-                }, getResources().getInteger(R.integer.DURATION_OF_SHOWING_MESSAGE));
+//                handler.postDelayed(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        Animation aniFade = AnimationUtils.loadAnimation(getApplicationContext(),R.anim.fade_out);
+//                        messageView.startAnimation(aniFade);
+//                        handler.postDelayed(new Runnable() {
+//                            @Override
+//                            public void run() {
+//                                messageView.setVisibility(View.GONE);
+//                            }
+//                        }, getResources().getInteger(R.integer.WIDGET_MESSAGE_ANIMATION_DURATION));
+//                    }
+//                }, getResources().getInteger(R.integer.DURATION_OF_SHOWING_MESSAGE));
             }
         }
     }
@@ -133,13 +278,14 @@ public class WidgetService extends Service {
             Log.e("Exception in rendering Image", e.toString());
         }
         imageClose.setPadding(0,0,0,(int)(10*scale + 0.5f));
-        imageClose.setVisibility(View.INVISIBLE);
+        imageClose.setVisibility(View.GONE);// Removing this option
         imageClose.setBackground(this.getResources().getDrawable(R.drawable.widget_close_gradient));
         windowManager.addView(imageClose, closeImageParams);
         windowManager.addView(widgetView,widgetLayoutParams);
         widgetView.setVisibility(View.VISIBLE);
         height = windowManager.getDefaultDisplay().getHeight();
         width = windowManager.getDefaultDisplay().getWidth();
+
 
         //dragMovement
         widgetView.setOnTouchListener(new View.OnTouchListener() {
@@ -166,9 +312,9 @@ public class WidgetService extends Service {
                             imageClose.setVisibility(View.GONE);
 
                             if (isCloseEnabled){
-                                stopSelf();
+//                                stopSelf();
                             } else {
-                                ValueAnimator valueAnimator = ValueAnimator.ofFloat(widgetLayoutParams.x, widgetLayoutParams.x >= width/2 ? (int)width : 0);
+                                ValueAnimator valueAnimator = ValueAnimator.ofFloat(widgetLayoutParams.x, 0);
                                 valueAnimator.setDuration(getResources().getInteger(R.integer.WIDGET_CORNER_ANIMATION_DURATION));
                                 valueAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
                                     public void onAnimationUpdate(ValueAnimator animation) {
@@ -187,15 +333,15 @@ public class WidgetService extends Service {
                                     Intent intent = new Intent(getApplicationContext(), MainActivity.class);
                                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
                                     getApplicationContext().startActivity(intent);
-                                    stopSelf();
+//                                    stopSelf(); // Removed drag to close option for floating widget
                                 }
                             }
                             return true;
 
                         case MotionEvent.ACTION_MOVE:
-                            if (Calendar.getInstance().getTimeInMillis() - actionDownTime>200){
-                                imageClose.setVisibility(View.VISIBLE);
-                            }
+//                            if (Calendar.getInstance().getTimeInMillis() - actionDownTime>200){
+//                                imageClose.setVisibility(View.GONE);
+//                            }
                             widgetLayoutParams.x = initialX+ (int)(motionEvent.getRawX()- initialTouchX);
                             widgetLayoutParams.y = initialY+ (int)(motionEvent.getRawY()- initialTouchY);
                             windowManager.updateViewLayout(widgetView, widgetLayoutParams);
@@ -216,6 +362,19 @@ public class WidgetService extends Service {
                                 imageClose.setImageResource(R.drawable.ny_ic_close_transparent);
                                 isCloseEnabled = false;
                             }
+//                            ValueAnimator valueAnimator = ValueAnimator.ofFloat(widgetLayoutParams.x, 0);
+//                            valueAnimator.setDuration(getResources().getInteger(R.integer.WIDGET_CORNER_ANIMATION_DURATION));
+//                            valueAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+//                                public void onAnimationUpdate(ValueAnimator animation) {
+//                                    try{
+//                                        widgetLayoutParams.x = Math.round((Float) animation.getAnimatedValue());
+//                                        windowManager.updateViewLayout(widgetView, widgetLayoutParams);
+//                                    }catch (Exception e){
+//                                        e.printStackTrace();
+//                                    }
+//                                }
+//                            });
+//                            valueAnimator.start();
                             return true;
                     }
                 }catch (Exception e){
@@ -225,6 +384,7 @@ public class WidgetService extends Service {
             }
         });
     }
+
 
     @Override
     public void onDestroy() {
