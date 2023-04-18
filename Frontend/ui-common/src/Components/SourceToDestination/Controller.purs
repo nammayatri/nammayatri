@@ -18,7 +18,7 @@ module Components.SourceToDestination.Controller where
 import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..))
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Styles.Colors as Color
+import Common.Styles.Colors as Color
 import Common.Types.App
 
 data Action = Dummy

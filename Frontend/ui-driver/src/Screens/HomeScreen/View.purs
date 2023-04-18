@@ -18,6 +18,7 @@ module Screens.HomeScreen.View where
 import Animation as Anim
 import Animation.Config as AnimConfig
 import Common.Types.App (LazyCheck(..))
+import Types.App (defaultGlobalState)
 import Components.BottomNavBar as BottomNavBar
 import Components.CancelRide as CancelRide
 import Components.InAppKeyboardModal as InAppKeyboardModal
@@ -82,7 +83,7 @@ screen initialState =
           _ <- HU.storeCallBackForNotification push Notification
           _ <- HU.storeCallBackTime push TimeUpdate
           when (getValueToLocalNativeStore IS_RIDE_ACTIVE == "true" && initialState.data.activeRide.status == NOTHING) do
-            void $ launchAff $ EHC.flowRunner $ runExceptT $ runBackT $ do
+            void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
               (GetRidesHistoryResp activeRideResponse) <- Remote.getRideHistoryReqBT "1" "0" "true" "null"
               case (activeRideResponse.list DA.!! 0) of
                 Just ride -> lift $ lift $ doAff do liftEffect $ push $ RideActiveAction ride
@@ -96,7 +97,7 @@ screen initialState =
                                   let secondsOver = if EHC.getExpiryTime (getValueToLocalNativeStore RIDE_REQUEST_TIME) true >= (rideRequestPollingData.duration) then (rideRequestPollingData.duration) else EHC.getExpiryTime (getValueToLocalNativeStore RIDE_REQUEST_TIME) true
                                       counts = ceil $ (toNumber (rideRequestPollingData.duration - secondsOver) * 1000.0)/rideRequestPollingData.delay
                                   if counts > 0 then do
-                                      void $ launchAff $ EHC.flowRunner $ rideRequestPolling (getValueToLocalStore RIDE_STATUS_POLLING_ID) counts rideRequestPollingData.delay initialState push Notification
+                                      void $ launchAff $ EHC.flowRunner defaultGlobalState $ rideRequestPolling (getValueToLocalStore RIDE_STATUS_POLLING_ID) counts rideRequestPollingData.delay initialState push Notification
                                   else
                                       void $ pure $ setValueToLocalStore RIDE_STATUS_POLLING "False"
                                   pure unit
@@ -114,12 +115,12 @@ screen initialState =
                                 if (not initialState.props.routeVisible) && initialState.props.mapRendered then do
                                   _ <- JB.getCurrentPosition push $ ModifyRoute
                                   _ <- JB.removeMarker "ic_vehicle_side" -- TODO : remove if we dont require "ic_auto" icon on homescreen
-                                  pure unit 
-                                  else pure unit 
+                                  pure unit
+                                  else pure unit
                                 if (getValueToLocalStore RIDE_STATUS_POLLING) == "False" then do
                                   _ <- pure $ setValueToLocalStore RIDE_STATUS_POLLING_ID (HU.generateUniqueId unit)
                                   _ <- pure $ setValueToLocalStore RIDE_STATUS_POLLING "True"
-                                  _ <- launchAff $ EHC.flowRunner $ rideStatusPolling (getValueToLocalStore RIDE_STATUS_POLLING_ID) 20000.0 initialState push Notification
+                                  _ <- launchAff $ EHC.flowRunner defaultGlobalState $ rideStatusPolling (getValueToLocalStore RIDE_STATUS_POLLING_ID) 20000.0 initialState push Notification
                                   pure unit
                                   else pure unit
             "RideStarted"    -> do
@@ -130,9 +131,9 @@ screen initialState =
                                 if (not initialState.props.routeVisible) && initialState.props.mapRendered then do
                                   _ <- JB.getCurrentPosition push $ ModifyRoute
                                   _ <- JB.removeMarker "ic_vehicle_side" -- TODO : remove if we dont require "ic_auto" icon on homescreen
-                                  pure unit 
-                                  else pure unit 
-            "ChatWithCustomer" -> do 
+                                  pure unit
+                                  else pure unit
+            "ChatWithCustomer" -> do
                                 if (initialState.data.activeRide.notifiedCustomer && (not initialState.props.updatedArrivalInChat)) then do
                                   _ <- pure $ JB.sendMessage (getEN I_HAVE_ARRIVED)
                                   push UpdateInChat
@@ -144,7 +145,7 @@ screen initialState =
                                 _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "25.0"
                                 _ <- pure $ setValueToLocalStore SESSION_ID (JB.generateSessionId unit)
                                 _ <- checkPermissionAndUpdateDriverMarker initialState
-                                _ <- launchAff $ EHC.flowRunner $ checkCurrentRide push Notification
+                                _ <- launchAff $ EHC.flowRunner defaultGlobalState $ checkCurrentRide push Notification
                                 pure unit
           pure $ pure unit
         )
@@ -248,8 +249,8 @@ view push state =
         <>  if state.props.cancelConfirmationPopup then [cancelConfirmation push state] else []
         )
 
-alternateNumberOrOTPView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
-alternateNumberOrOTPView state push = 
+alternateNumberOrOTPView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+alternateNumberOrOTPView state push =
   linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
@@ -268,7 +269,7 @@ alternateNumberOrOTPView state push =
       ]
 
 otpButtonView :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
-otpButtonView state push = 
+otpButtonView state push =
   linearLayout
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
@@ -280,12 +281,12 @@ otpButtonView state push =
     , margin $ MarginLeft 8
     , gravity CENTER_VERTICAL
     , onClick push $ const $ ZoneOtpAction
-    ][ imageView 
+    ][ imageView
         [ imageWithFallback "ic_mode_standby,https://assets.juspay.in/nammayatri/images/user/ic_mode_standby.png"
         , width $ V 20
         , height $ V 20
         ]
-      , textView $ 
+      , textView $
         [ width WRAP_CONTENT
         , height MATCH_PARENT
         , gravity CENTER
@@ -921,12 +922,12 @@ addAlternateNumber push state =
       , height $ V 15
       , imageWithFallback "ic_call_plus,https://assets.juspay.in/nammayatri/images/driver/ic_call_plus.png"
       , margin (MarginRight 5)
-      ] 
+      ]
     , textView
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , gravity CENTER
-      , text (getString ADD_ALTERNATE_NUMBER)       
+      , text (getString ADD_ALTERNATE_NUMBER)
       , color Color.black900
       , textSize FontSize.a_14
       ]
@@ -1010,7 +1011,7 @@ statsModel push state =
   ]
 
 bottomNavBar :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-bottomNavBar push state = 
+bottomNavBar push state =
     BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.HOME_SCREEN)
 
 rideActionModelView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w

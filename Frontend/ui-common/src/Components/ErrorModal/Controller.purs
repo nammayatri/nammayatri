@@ -20,7 +20,7 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Styles.Colors as Color
+import Common.Styles.Colors as Color
 import Common.Types.App
 
 data Action = PrimaryButtonActionController PrimaryButtonController.Action

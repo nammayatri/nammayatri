@@ -43,7 +43,7 @@ import Screens.Types as ST
 import Services.API (RideBookingListRes(..))
 import Services.Backend as Remote
 import Styles.Colors as Color
-import Types.App (GlobalState)
+import Types.App (GlobalState, defaultGlobalState)
 import Common.Types.App
 import Screens.CustomerUtils.HelpAndSupportScreen.ComponentConfig
 
@@ -56,7 +56,7 @@ screen initialState =
   , globalEvents : [
       (\push -> do
               if (initialState.data.source == "") then
-                launchAff_ $ void $ EHC.flowRunner $ getPastRides RideBookingListAPIResponseAction push initialState
+                launchAff_ $ void $ EHC.flowRunner defaultGlobalState $ getPastRides RideBookingListAPIResponseAction push initialState
               else
                 pure unit
               pure $ pure unit

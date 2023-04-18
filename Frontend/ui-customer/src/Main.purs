@@ -43,21 +43,21 @@ main event = do
   payload  ::  Either MultipleErrors GlobalPayload  <- runExcept <<< decode <<< fromMaybe (unsafeToForeign {}) <$> (liftEffect $ getWindowVariable "__payload" Just Nothing)
   case payload of
     Right payload'  -> do
-      _ <- launchAff $ flowRunner $ do
-        -- _ <- pure $ JBridge._addCertificates (Config.getFingerPrint "")
-        _ <- runExceptT $ runBackT $ updateEventData event
-        resp ← runExceptT $ runBackT $ Flow.baseAppFlow payload'
-        case resp of
-              Right x → pure unit
-              Left err → do
-                _ <- pure $ printLog "printLog error in main is : " err
-                _ <- liftFlow $ main event
-                pure unit
-      pure unit          
+       _ <- launchAff $ flowRunner defaultGlobalState $ do
+          -- _ <- pure $ JBridge._addCertificates (Config.getFingerPrint "")
+          _ <- runExceptT $ runBackT $ updateEventData event
+          resp ← runExceptT $ runBackT $ Flow.baseAppFlow payload'
+          case resp of
+                Right x → pure unit
+                Left err → do
+                  _ <- pure $ printLog "printLog error in main is : " err
+                  _ <- liftFlow $ main
+                  pure unit
+       pure unit
     Left e -> do
-      _ <- launchAff $ flowRunner $ do
-          throwErr $ show e
-      pure unit
+        _ <- launchAff $ flowRunner defaultGlobalState $ do
+            throwErr $ show e
+        pure unit
 
 onEvent :: String -> Effect Unit
 onEvent "onBackPressed" = do
@@ -71,13 +71,14 @@ onConnectivityEvent triggertype = do
   payload  ::  Either MultipleErrors GlobalPayload  <- runExcept <<< decode <<< fromMaybe (unsafeToForeign {}) <$> (liftEffect $ getWindowVariable "__payload" Just Nothing)
   case payload of
     Right payload'  -> do
-      _ <- launchAff $ flowRunner $ do
-        -- _ <- pure $ JBridge._addCertificates (Config.getFingerPrint "")
-        _ ← runExceptT $ runBackT $ Flow.permissionScreenFlow triggertype
+        _ <- launchAff $ flowRunner defaultGlobalState $ do
+          -- _ <- pure $ JBridge._addCertificates (Config.getFingerPrint "")
+          _ ← runExceptT $ runBackT $ Flow.permissionScreenFlow triggertype
+          pure unit
         pure unit
       pure unit
     Left e -> do
-      _ <- launchAff $ flowRunner $ do
+      _ <- launchAff $ flowRunner defaultGlobalState $ do
          throwErr $ show e
       pure unit           
 

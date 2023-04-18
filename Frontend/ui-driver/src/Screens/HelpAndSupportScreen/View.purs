@@ -48,7 +48,7 @@ import Styles.Colors as Color
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Screens.Types as ST
-
+import Types.App (defaultGlobalState)
 
 screen :: ST.HelpAndSupportScreenState -> Screen Action ST.HelpAndSupportScreenState ScreenOutput
 screen initialState =
@@ -57,7 +57,7 @@ screen initialState =
   , name : "HelpAndSupportScreen"
   , eval
   , globalEvents : [( \push -> do
-        _ <- launchAff $ flowRunner $ runExceptT $ runBackT $ do
+        _ <- launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
           (FetchIssueListResp issueListResponse) <- Remote.fetchIssueListBT (FetchIssueListReq)
           lift $ lift $ doAff do liftEffect $ push $ FetchIssueListApiCall issueListResponse.issues
         pure $ pure unit)]
@@ -95,16 +95,16 @@ view push state =
                  , recentRideDetails state push
                  , reportAnIssueHeader state push (getString MORE_OPTIONS)
                  , allOtherTopics state push
-                
-             
+
+
                ]
           ]
 
        ]
    ,  if (state.data.issueListType /= ST.HELP_AND_SUPPORT_SCREEN_MODAL) then issueListModal push state else dummyTextView
-   ]) 
-    
-    
+   ])
+
+
 
 -------------------------------------------------- headerLayout --------------------------
 headerLayout :: ST.HelpAndSupportScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
@@ -254,8 +254,8 @@ categoryView categoryGroup marginLeft marginRight state push =
 
 
 
-getCategoryName :: String -> String 
-getCategoryName categoryName = case categoryName of 
+getCategoryName :: String -> String
+getCategoryName categoryName = case categoryName of
   "LOST_AND_FOUND" -> (getString LOST_AND_FOUND)
   "RIDE_RELATED" -> (getString RIDE_RELATED)
   "APP_RELATED" -> (getString APP_RELATED)
@@ -302,7 +302,7 @@ allOtherTopics state push =
             ]
           ) otherIssueList
     )
- 
+
 -------------------------------------------- issueListModal ------------------------------------------
 issueListModal :: forall w . (Action -> Effect Unit) -> ST.HelpAndSupportScreenState -> PrestoDOM (Effect Unit) w
 issueListModal push state =
@@ -329,7 +329,7 @@ issueListState state = let
         }
 
 
-     
+
       }
       in inAppModalConfig'
 --------------------------------------------------------------- horizontalLineView ----------------------------
@@ -344,7 +344,7 @@ horizontalLineView =
 
 --------------------------------------------------------------- dummyTextView ----------------------------
 dummyTextView :: forall w . PrestoDOM (Effect Unit) w
-dummyTextView = 
+dummyTextView =
   textView
   [ width WRAP_CONTENT
   , height WRAP_CONTENT

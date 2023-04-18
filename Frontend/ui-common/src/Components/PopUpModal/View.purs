@@ -21,7 +21,7 @@ import Components.PopUpModal.Controller (Action(..), Config)
 import PrestoDOM.Properties (lineHeight, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Font.Style as FontStyle
-import Styles.Colors as Color
+import Common.Styles.Colors as Color
 import Font.Size as FontSize
 import Engineering.Helpers.Commons (screenHeight, screenWidth)
 import PrestoDOM.Properties (cornerRadii)

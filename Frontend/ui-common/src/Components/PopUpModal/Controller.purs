@@ -15,7 +15,7 @@
 
 module Components.PopUpModal.Controller where
 
-import Styles.Colors as Color
+import Common.Styles.Colors as Color
 import PrestoDOM (Padding(..), Margin(..), Gravity(..), Visibility(..), Length(..))
 import Font.Size as FontSize
 import Font.Style as FontStyle

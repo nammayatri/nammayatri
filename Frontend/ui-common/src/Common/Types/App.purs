@@ -27,6 +27,13 @@ import Data.Eq.Generic (genericEq)
 import Presto.Core.Types.API (standardEncode,class StandardEncode)
 import Presto.Core.Utils.Encoding (defaultDecode,defaultEncode) 
 import Foreign.Generic (class Decode, class Encode)
+import Control.Monad.Free (Free)
+import Control.Monad.Except.Trans (ExceptT)
+import Presto.Core.Types.Language.Flow (FlowWrapper)
+import Control.Transformers.Back.Trans (BackT)
+
+type FlowBT e st a = BackT (ExceptT e (Free (FlowWrapper st))) a
+
 data VehicalTypes = Sedan | Hatchback | SUV | Auto
 data LazyCheck = LanguageStyle | EndPoint | BaseUrl | TypoGraphy | WithoutOffers | FunctionCall | Config | Language
 

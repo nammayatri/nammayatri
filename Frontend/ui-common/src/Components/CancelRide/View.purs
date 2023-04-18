@@ -23,18 +23,16 @@ import PrestoDOM.Types.DomAttributes (Gravity(..), Corners(..))
 import Components.CancelRide.Controller
 import Components.PrimaryButton.Controller as PrimaryButtonConfig
 import Components.PrimaryButton.View as PrimaryButton
-import Styles.Colors as Color
+import Common.Styles.Colors as Color
 import Font.Style as FontStyle
 import Font.Size as FontSize
 import Data.Array (mapWithIndex, length)
 import Engineering.Helpers.Commons (screenWidth)
 import Log (printLog)
-import Language.Types(STR(..))
 import Effect.Aff (launchAff_)
 import Engineering.Helpers.Commons (flowRunner, os, setText')
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
-import Services.Backend as Remote
 import Control.Monad.Trans.Class (lift)
 import Presto.Core.Types.Language.Flow (doAff)
 import Effect.Class (liftEffect)

@@ -17,7 +17,7 @@ module Components.PrimaryEditText.Controller where
 
 import Prelude((<>))
 import Font.Size as FontSize
-import Styles.Colors as Color
+import Common.Styles.Colors as Color
 import Font.Style as FontStyle
 import Data.Maybe(Maybe(..))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), LetterSpacing(..))

@@ -28,7 +28,7 @@ import Data.Maybe (fromMaybe, Maybe(..))
 import Data.String as DS
 import Data.Int (fromString)
 import Presto.Core.Types.Language.Flow (Flow)
-import Types.App (GlobalState)
+import Types.App (GlobalState, defaultGlobalState)
 import Effect.Aff (launchAff)
 import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os)
 import Control.Monad.Except.Trans (runExceptT)
@@ -87,7 +87,7 @@ data ScreenOutput = GoToHomeScreen
 eval :: Action -> EmergencyContactsScreenState -> Eval Action ScreenOutput EmergencyContactsScreenState
 eval (PrimaryButtonActionControll PrimaryButton.OnClick) state = continueWithCmd state
       [do
-        _ <- launchAff $ flowRunner $ do
+        _ <- launchAff $ flowRunner defaultGlobalState $ do
                 _ <- loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
                 _ <- toggleLoader true
                 pure unit
@@ -115,7 +115,7 @@ eval (ContactsCallback allContacts) state = do
     _ <- pure $ toast (getString PERMISSION_DENIED)
     continueWithCmd state
       [do
-        _ <- launchAff $ flowRunner $ do
+        _ <- launchAff $ flowRunner defaultGlobalState $ do
             _ <- toggleLoader false
             pure unit
         pure NoAction
@@ -124,7 +124,7 @@ eval (ContactsCallback allContacts) state = do
     _ <- pure $ toast (getString NO_CONTACTS_FOUND_ON_DEVICE_TO_ADD)
     continueWithCmd state
       [do
-        _ <- launchAff $ flowRunner $ do
+        _ <- launchAff $ flowRunner defaultGlobalState $ do
             _ <- toggleLoader false
             pure unit
         pure NoAction
@@ -139,7 +139,7 @@ eval (ContactsCallback allContacts) state = do
       _ <- pure $ toast (getString NO_CONTACTS_LEFT_ON_DEVICE_TO_ADD)
       continueWithCmd state
         [do
-          _ <- launchAff $ flowRunner $ do
+          _ <- launchAff $ flowRunner defaultGlobalState $ do
               _ <- toggleLoader false
               pure unit
           pure NoAction
@@ -147,7 +147,7 @@ eval (ContactsCallback allContacts) state = do
     else do
       continueWithCmd state{data{contactInfoState = updatedContactList, contactsNewList = unionNewContacts, contactsCount = 0}, props{showContactList = true}}
         [do
-          _ <- launchAff $ flowRunner $ do
+          _ <- launchAff $ flowRunner defaultGlobalState $ do
               _ <- toggleLoader false
               pure unit
           pure NoAction
