@@ -14,6 +14,7 @@
 -}
 
 module Components.RateCard.Controller where
+import Screens.Types (ZoneType(..))
 
 data Action = Close | BackPressed | NoAction
 
@@ -23,7 +24,8 @@ type Config = {
     pickUpCharges :: String,
     additionalFare :: String,
     nightCharges :: Boolean,
-    nightShiftMultiplier :: String 
+    nightShiftMultiplier :: String,
+    zoneType :: ZoneType
 }
 
 config :: Config 
@@ -33,5 +35,6 @@ config = {
     pickUpCharges : "₹10", 
     additionalFare : "₹30",
     nightCharges : false,
-    nightShiftMultiplier : "1.5"
+    nightShiftMultiplier : "1.5",
+    zoneType : NOZONE
 }

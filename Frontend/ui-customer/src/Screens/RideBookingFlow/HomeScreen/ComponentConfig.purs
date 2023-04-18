@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -47,6 +47,7 @@ import Common.Types.App
 import PrestoDOM
 import Data.Int as INT
 import Storage (KeyStore(..), getValueToLocalStore)
+import Components.PopUpModal as PopUpModal
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -56,24 +57,24 @@ shareAppConfig state = let
       margin = (MarginHorizontal 24 24),
       buttonLayoutMargin = (Margin 16 0 16 20),
       primaryText {
-        text = getString(YOUR_RIDE_HAS_STARTED) 
+        text = getString(YOUR_RIDE_HAS_STARTED)
       , margin = (Margin 16 0 16 0)},
-      secondaryText { 
+      secondaryText {
         text = getString(ENJOY_RIDING_WITH_US)
-      , margin = Margin 0 12 0 24 
+      , margin = Margin 0 12 0 24
       , fontSize = FontSize.a_14
       , color = Color.black700},
       option1 {
-        text = getString(MAYBE_LATER) 
+        text = getString(MAYBE_LATER)
       , fontSize = FontSize.a_16
-      , width = V $ (((EHC.screenWidth unit)-92)/2) 
+      , width = V $ (((EHC.screenWidth unit)-92)/2)
       , background = Color.white900
       , strokeColor = Color.black500
       , color = Color.black700
       , fontStyle = FontStyle.semiBold LanguageStyle
       },
       option2 {
-        text = getString(SHARE_APP) 
+        text = getString(SHARE_APP)
       , fontSize = FontSize.a_16
       , width = V $ (((EHC.screenWidth unit)-92)/2)
       , color = Color.yellow900
@@ -214,10 +215,10 @@ whereToButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
 whereToButtonConfig state =
   let
     config = PrimaryButton.config
-    primaryButtonConfig' = config 
+    primaryButtonConfig' = config
       { textConfig
         { text = (getString WHERE_TO)
-        , color = Color.yellow900     
+        , color = Color.yellow900
         , textSize = FontSize.a_16
         , width = MATCH_PARENT
         , gravity = LEFT
@@ -226,14 +227,14 @@ whereToButtonConfig state =
       , gravity = CENTER
       , cornerRadius = 8.0
       , background = Color.black900
-      , margin = (MarginHorizontal 16 16)  
-      , isClickable = true 
+      , margin = (MarginHorizontal 16 16)
+      , isClickable = true
       , isPrefixImage = true
       , prefixImageConfig
         { imageUrl = "ny_ic_bent_right_arrow,https://assets.juspay.in/nammayatri/images/user/ny_ic_bent_right_arrow.png"
         , height = V 16
         , width = V 21
-        , margin = (Margin 17 0 17 0)  
+        , margin = (Margin 17 0 17 0)
         }
       , id = "WheretoButton"
       }
@@ -457,6 +458,7 @@ rateCardConfig state =
         , pickUpCharges = "₹" <> HU.toString (state.data.rateCard.pickUpCharges)
         , additionalFare = "₹" <> HU.toString (state.data.rateCard.additionalFare)
         , nightShiftMultiplier = HU.toString (state.data.rateCard.nightShiftMultiplier)
+        , zoneType = state.props.zoneType
         }
   in
     rateCardConfig'
@@ -488,10 +490,10 @@ chatViewConfig :: ST.HomeScreenState -> ChatView.Config
 chatViewConfig state = let
   config = ChatView.config
   chatViewConfig' = config {
-    userConfig 
+    userConfig
         {
           userName = state.data.driverInfoCardState.driverName
-        , appType = "Customer" 
+        , appType = "Customer"
         }
       , messages = state.data.messages
       , sendMessageActive = state.props.sendMessageActive
@@ -517,7 +519,7 @@ chatViewConfig state = let
   in chatViewConfig'
 
 initialSuggestions :: String -> Array String
-initialSuggestions _ = 
+initialSuggestions _ =
   [
     (getString ARE_YOU_STARING),
     (getString PLEASE_COME_SOON),
@@ -525,7 +527,7 @@ initialSuggestions _ =
   ]
 
 pickupSuggestions :: String -> Array String
-pickupSuggestions _ = 
+pickupSuggestions _ =
   [
     (getString PLEASE_WAIT_I_WILL_BE_THERE),
     (getString LOOKING_FOR_YOU_AT_PICKUP),
@@ -628,3 +630,45 @@ autoAnimConfig =
         }
   in
     autoAnimConfig'
+
+cancelConfirmationConfig :: ST.HomeScreenState -> PopUpModal.Config
+cancelConfirmationConfig state = let
+  config' = PopUpModal.config
+  popUpConfig' = config'{
+    gravity = CENTER,
+    margin = MarginHorizontal 24 24 ,
+    buttonLayoutMargin = Margin 16 0 16 20 ,
+    primaryText {
+      text = "abc"--(getString "FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES")
+    , margin = Margin 16 24 16 24 },
+    secondaryText {visibility = GONE},
+    option1 {
+      text = (getString CONTINUE)
+    , fontSize = FontSize.a_16
+    , width = V $ (((EHC.screenWidth unit)-92)/2)
+    , isClickable = state.data.cancelRideConfirmationData.continueEnabled
+    , timerValue = state.data.cancelRideConfirmationData.delayInSeconds
+    , enableTimer = true
+    , background = Color.white900
+    , strokeColor = Color.black500
+    , color = Color.black700
+    },
+    option2 {
+      text = "def" --(getString "GO_BACK")
+    , margin = Margin 12 0 0 0
+    , fontSize = FontSize.a_16
+    , width = V $ (((EHC.screenWidth unit)-92)/2)
+    , color = Color.yellow900
+    , strokeColor = Color.black900
+    , background = Color.black900
+    },
+    backgroundClickable = false,
+    cornerRadius = (Corners 15.0 true true true true),
+    coverImageConfig {
+      imageUrl = "ny_ic_cancel_prevention,https://assets.juspay.in/nammayatri/images/driver/ny_ic_cancel_prevention.png"
+    , visibility = VISIBLE
+    , margin = Margin 16 20 16 0
+    , height = V 178
+    }
+  }
+  in popUpConfig'

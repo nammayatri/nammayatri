@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -17,7 +17,7 @@ module Screens.HomeScreen.View where
 
 import Common.Types.App (LazyCheck(..))
 
-import Screens.RideBookingFlow.HomeScreen.Config (autoAnimConfig, cancelRidePopUpConfig, distanceOusideLimitsConfig, driverInfoCardViewState, emergencyHelpModelViewState, estimateChangedPopupConfig, fareBreakUpConfig, logOutPopUpModelConfig, previousRideRatingViewState, primaryButtonConfirmPickupConfig, primaryButtonRequestRideConfig, quoteListModelViewState, rateCardConfig, rateRideButtonConfig, ratingCardViewState, searchLocationModelViewState, shareAppConfig, shortDistanceConfig, skipButtonConfig, sourceUnserviceableConfig, whereToButtonConfig, chatViewConfig, metersToKm)
+import Screens.RideBookingFlow.HomeScreen.Config (autoAnimConfig, cancelRidePopUpConfig, distanceOusideLimitsConfig, driverInfoCardViewState, emergencyHelpModelViewState, estimateChangedPopupConfig, fareBreakUpConfig, logOutPopUpModelConfig, previousRideRatingViewState, primaryButtonConfirmPickupConfig, primaryButtonRequestRideConfig, quoteListModelViewState, rateCardConfig, rateRideButtonConfig, ratingCardViewState, searchLocationModelViewState, shareAppConfig, shortDistanceConfig, skipButtonConfig, sourceUnserviceableConfig, whereToButtonConfig, chatViewConfig, metersToKm, cancelConfirmationConfig)
 import Accessor (_lat, _lon, _selectedQuotes)
 import Animation (fadeOut, translateYAnimFromTop, scaleAnim, translateYAnimFromTopWithAlpha, fadeIn)
 import Animation.Config (Direction(..), translateFullYAnimWithDurationConfig, translateYAnimHomeConfig)
@@ -40,7 +40,7 @@ import Components.RequestInfoCard as RequestInfoCard
 import Components.SaveFavouriteCard as SaveFavouriteCard
 import Components.SearchLocationModel as SearchLocationModel
 import Components.SettingSideBar as SettingSideBar
-import Components.ChatView as ChatView 
+import Components.ChatView as ChatView
 import Control.Monad.Except (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array (any, length, mapWithIndex, null, (!!))
@@ -73,12 +73,13 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.AddNewAddressScreen.Controller as AddNewAddress
 import Screens.HomeScreen.Controller (Action(..), ScreenOutput, checkCurrentLocation, checkSavedLocations, dummySelectedQuotes, eval, flowWithoutOffers, getCurrentCustomerLocation)
 import Screens.HomeScreen.Transformer (transformSavedLocations)
-import Screens.Types (HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..))
+import Screens.Types (HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), ZoneType(..))
 import Services.API (GetDriverLocationResp(..), GetQuotesRes(..), GetRouteResp(..), LatLong(..), RideAPIEntity(..), RideBookingRes(..), Route(..), SavedLocationsListRes(..), SearchReqLocationAPIEntity(..), SelectListRes(..), Snapped(..))
 import Services.Backend (getDriverLocation, getQuotes, getRoute, makeGetRouteReq, rideBooking, selectList, driverTracking, rideTracking, walkCoordinates, walkCoordinate, getSavedLocationList)
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore, updateLocalStage)
 import Styles.Colors as Color
 import Types.App (GlobalState)
+import Components.PopUpModal as PopUpModal
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -115,7 +116,7 @@ screen initialState =
                 _ <- removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                 launchAff_ $ flowRunner $ getEstimate GetEstimates CheckFlowStatusAction 10 1000.0 push initialState
               FindingQuotes -> do
-                when ((getValueToLocalStore FINDING_QUOTES_POLLING) == "false") $ do 
+                when ((getValueToLocalStore FINDING_QUOTES_POLLING) == "false") $ do
                   _ <- pure $ setValueToLocalStore FINDING_QUOTES_POLLING "true"
                   _ <- countDown initialState.props.searchExpire "" push SearchExpireCountDown
                   _ <- pure $ setValueToLocalStore GOT_ONE_QUOTE "FALSE"
@@ -173,11 +174,11 @@ screen initialState =
                   if (initialState.props.currentStage == HomeScreen) then do
                     pure (pure unit)
                   else do
-                    let src = initialState.data.source 
+                    let src = initialState.data.source
                     if src == "" || src == "Current Location" then do
                         if (checkCurrentLocation initialState.props.sourceLat initialState.props.sourceLong initialState.data.previousCurrentLocations.pastCurrentLocations  && initialState.props.storeCurrentLocs )|| checkSavedLocations initialState.props.sourceLat initialState.props.sourceLong initialState.data.savedLocations
-                          then push $ UpdateSourceFromPastLocations 
-                        else do 
+                          then push $ UpdateSourceFromPastLocations
+                        else do
                           getLocationName push (show initialState.props.sourceLat) (show initialState.props.sourceLong) "Current Location" (if src == "Current Location" then UpdateSourceName else UpdateSource)
                         pure (pure unit)
                     else  pure (pure unit)
@@ -256,7 +257,7 @@ view push state =
                         [ width $ V 35
                         , height $ V 35
                         , imageWithFallback $ case (state.props.currentStage == ConfirmingLocation) || state.props.isSource == (Just true) of
-                            true  ->  (if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "src_marker" else "ny_ic_src_marker") <> ",https://assets.juspay.in/nammayatri/images/common/ny_ic_src_marker.png" 
+                            true  ->  (if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "src_marker" else "ny_ic_src_marker") <> ",https://assets.juspay.in/nammayatri/images/common/ny_ic_src_marker.png"
                             false ->  (if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "dest_marker" else "ny_ic_dest_marker") <> ",https://assets.juspay.in/nammayatri/images/common/ny_ic_dest_marker.png"
                         , visibility if ((state.props.currentStage == ConfirmingLocation) || state.props.locateOnMap) then VISIBLE else GONE
                         ]
@@ -273,7 +274,7 @@ view push state =
                 []
             , rideRequestFlowView push state
             , if state.props.currentStage == PricingTutorial then (pricingTutorialView push state) else emptyTextView state
-            , if state.props.currentStage == ChatWithDriver then (chatView push state) else emptyTextView state 
+            , if state.props.currentStage == ChatWithDriver then (chatView push state) else emptyTextView state
             , rideTrackingView push state
             , if ((not state.props.ratingModal) && (state.props.showlocUnserviceablePopUp) && state.props.currentStage == HomeScreen) then (sourceUnserviceableView push state) else emptyTextView state
             , if state.data.settingSideBar.opened /= SettingSideBar.CLOSED then settingSideBarView push state else emptyTextView state
@@ -293,12 +294,21 @@ view push state =
             , if state.props.showShareAppPopUp then (shareAppPopUp push state) else emptyTextView state
             , if state.props.showMultipleRideInfo then (requestInfoCardView push state) else emptyTextView state
             , if state.props.showLiveDashboard then showLiveStatsDashboard push state else emptyTextView state
+            , cancelConfirmation push state
             ]
         ]
     ]
 
+cancelConfirmation :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+cancelConfirmation push state =
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , background Color.blackLessTrans
+  ][PopUpModal.view (push <<< PopUpModalCancelConfirmationAction) (cancelConfirmationConfig state )]
+
 chatView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-chatView push state = 
+chatView push state =
   relativeLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
@@ -319,7 +329,7 @@ showLiveStatsDashboard push state =
             pure unit
         )
         (const NoAction)
-  ] [ webView 
+  ] [ webView
       [ height MATCH_PARENT
       , width MATCH_PARENT
       , id (getNewIDWithTag "webview")
@@ -337,7 +347,7 @@ searchLocationView push state =
 ]
 
 shareAppPopUp :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-shareAppPopUp push state = 
+shareAppPopUp push state =
   linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
@@ -346,8 +356,8 @@ shareAppPopUp push state =
 
 
 
-buttonLayoutParentView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w 
-buttonLayoutParentView push state = 
+buttonLayoutParentView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+buttonLayoutParentView push state =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -373,8 +383,8 @@ recenterButtonView push state =
           --   [ width WRAP_CONTENT
           --   , height WRAP_CONTENT
           --   , stroke ("1," <> Color.grey900)
-          --   , cornerRadii $ Corners 24.0 true true true true 
-          --   ][ 
+          --   , cornerRadii $ Corners 24.0 true true true true
+          --   ][
           imageView
             [ imageWithFallback "ny_ic_recenter_btn,https://assets.juspay.in/nammayatri/images/common/ny_ic_recenter_btn.png"
             , onClick
@@ -426,7 +436,7 @@ liveStatsDashboardView push state =
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
     , visibility if (state.props.isReferred || state.props.hasTakenRide) && state.props.currentStage == RideStarted then VISIBLE else GONE
-    , stroke $ "1," <> Color.blue900 
+    , stroke $ "1," <> Color.blue900
     , margin (MarginHorizontal 16 13)
     , cornerRadius 20.0
     , background Color.white900
@@ -443,7 +453,7 @@ liveStatsDashboardView push state =
       , textView $ [
         width WRAP_CONTENT
       , height WRAP_CONTENT
-      , color Color.blue900 
+      , color Color.blue900
       , text (getString CHECK_OUT_LIVE_STATS)
       ] <> FontStyle.tags TypoGraphy
     ]
@@ -489,7 +499,7 @@ buttonLayout state push =
         , alignParentBottom "true,-1"
         , orientation VERTICAL
         ]
-        [ 
+        [
           linearLayout
           [ width MATCH_PARENT
           , height WRAP_CONTENT
@@ -523,7 +533,7 @@ recentSearchesAndFavourites state push =
   , height WRAP_CONTENT
   , orientation VERTICAL
   , padding $ Padding 16 0 16 (16+safeMarginBottom)
-  , cornerRadii $ Corners (4.0) true true false false 
+  , cornerRadii $ Corners (4.0) true true false false
   , background Color.white900
   ][ savedLocationsView state push
    , recentSearchesView state push
@@ -611,7 +621,7 @@ homeScreenView push state =
 homeScreenTopIconView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 homeScreenTopIconView push state =
   homeScreenAnimation TOP_BOTTOM
-    $ -- 1000 (-100) 0 0 true $ PrestoAnim.Bezier 0.37 0.0 0.63 1.0] $ 
+    $ -- 1000 (-100) 0 0 true $ PrestoAnim.Bezier 0.37 0.0 0.63 1.0] $
       linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -701,10 +711,10 @@ rideRequestFlowView push state =
     , alignParentBottom "true,-1"
     ]
     [ -- TODO Add Animations
-      -- PrestoAnim.animationSet 
+      -- PrestoAnim.animationSet
       -- [ translateYAnim (300) 0 state.props.rideRequestFlow
       -- , translateYAnim 0 (300) (not state.props.rideRequestFlow)
-      -- ] $ 
+      -- ] $
       relativeLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -726,7 +736,7 @@ rideRequestFlowView push state =
         ]
     ]
 
--------------- rideRatingCardView ------------- 
+-------------- rideRatingCardView -------------
 rideRatingCardView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 rideRatingCardView state push =
   linearLayout
@@ -738,7 +748,7 @@ rideRatingCardView state push =
     [ RatingCard.view (push <<< RatingCardAC) $ ratingCardViewState state
     ]
 
--------------- rideCompletedCardView ------------- 
+-------------- rideCompletedCardView -------------
 rideCompletedCardView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 rideCompletedCardView state push =
   linearLayout
@@ -884,129 +894,168 @@ topLeftIconView state push =
 suggestedPriceView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 suggestedPriceView push state =
   linearLayout
-  [ orientation VERTICAL
+  [ width MATCH_PARENT
   , height WRAP_CONTENT
-  , width MATCH_PARENT
-  , background Color.white900
-  , clickable true
-  , visibility if (state.props.currentStage == SettingPrice) then VISIBLE else GONE
-  , padding (Padding 16 16 16 24)
-  , stroke ("1," <> Color.grey900)
+  , orientation VERTICAL
+  , background Color.blue800
+  , cornerRadii $ Corners 24.0 true true false false
   , gravity CENTER
-  , cornerRadii $ Corners 24.0 true true false false 
-  ][  textView
-      [ text $ getString REQUEST_AUTO_RIDE
-      , textSize FontSize.a_22
-      , color Color.black800
-      , gravity CENTER_HORIZONTAL
-      , height WRAP_CONTENT
-      , width MATCH_PARENT
-      , fontStyle $ FontStyle.bold LanguageStyle
-      ]
-    , linearLayout
-      [ width MATCH_PARENT
-      , height WRAP_CONTENT
-      , orientation VERTICAL
-      , stroke $ "1," <> Color.grey900
-      , gravity CENTER
-      , cornerRadius 8.0
-      , margin $ MarginTop 16
-      , padding $ PaddingVertical 2 10
-      ][linearLayout 
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , orientation HORIZONTAL
-        , margin (MarginLeft 15)]
-        [ linearLayout
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , orientation VERTICAL
-        , gravity CENTER 
-        , margin $ MarginTop if os == "IOS" then 10 else 0
-        ][  textView
-            [ text $ if state.data.rateCard.additionalFare == 0 then "₹" <> (show state.data.suggestedAmount) else  "₹" <> (show state.data.suggestedAmount) <> "-" <> "₹" <> (show $ (state.data.suggestedAmount + state.data.rateCard.additionalFare))
-            , textSize FontSize.a_32
-            , color Color.black800
-            , margin $ MarginTop 8
-            , gravity CENTER_HORIZONTAL
-            , width WRAP_CONTENT
-            , height WRAP_CONTENT
-            , fontStyle $ FontStyle.bold LanguageStyle
-            , onClick push $ const ShowRateCard
-            ]
-            , estimatedTimeAndDistanceView push state
-          ]
-          , imageView
-            [ imageWithFallback "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png"
-            , width $ V 40
-            , height $ V 40
-            , gravity BOTTOM
-            , margin (MarginTop 13)
-            , onClick push $ const ShowRateCard
-            ]
+  ][linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation HORIZONTAL
+    , gravity CENTER
+    , padding (PaddingVertical 4 4)
+    ] [ imageView
+        [ width (V 15)
+        , height (V 15)
+        , margin (MarginRight 6)
+        , imageWithFallback "ny_ic_metro_white,https://assets.juspay.in/nammayatri/images/common/ny_ic_metro_white.png"
         ]
-        , linearLayout
-          [ width MATCH_PARENT
-          , height WRAP_CONTENT
-          , orientation VERTICAL
-          ]
+      , textView
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , textSize FontSize.a_14
+        , text "Metro Ride"
+        , color Color.white900
+        ]
+      ]
+  , linearLayout
+    [ orientation VERTICAL
+    , height WRAP_CONTENT
+    , width MATCH_PARENT
+    , background Color.white900
+    , clickable true
+  , visibility if (state.props.currentStage == SettingPrice) then VISIBLE else GONE
+    , padding (Padding 16 16 16 24)
+    , stroke ("1," <> Color.grey900)
+    , gravity CENTER
+    , cornerRadii $ Corners 24.0 true true false false
+    ][  textView
+        [ text $ getString REQUEST_AUTO_RIDE
+        , textSize FontSize.a_22
+        , color Color.black800
+        , gravity CENTER_HORIZONTAL
+        , height WRAP_CONTENT
+        , width MATCH_PARENT
+        , fontStyle $ FontStyle.bold LanguageStyle
+        ]
+      -- , textView
+      --   [ width MATCH_PARENT
+      --   , height WRAP_CONTENT
+      --   , textSize FontSize.a_14
+      --   , gravity CENTER_HORIZONTAL
+      --   , color Color.black650
+      --   , text "This ride is applicable for flat fare"
+      --   , margin (MarginTop 6)
+      --   , visibility if state.props.zoneType == METRO then VISIBLE else GONE
+      --   ]
+      , linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , orientation VERTICAL
+        , stroke $ "1," <> Color.grey900
+        , gravity CENTER
+        , cornerRadius 8.0
+        , margin $ MarginTop 16
+        , padding $ PaddingVertical 2 10
+        ][linearLayout
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , orientation HORIZONTAL
+          , margin (MarginLeft 15)]
           [ linearLayout
-              [ width MATCH_PARENT
-              , height $ V 1
-              , margin $ Margin 16 12 16 14
-              , background Color.grey900
-              ][]
-          , linearLayout
-              [ width MATCH_PARENT
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , orientation VERTICAL
+          , gravity CENTER
+          , margin $ MarginTop if os == "IOS" then 10 else 0
+          ][  textView
+              [ text $ if state.data.rateCard.additionalFare == 0 then "₹" <> (show state.data.suggestedAmount) else  "₹" <> (show state.data.suggestedAmount) <> "-" <> "₹" <> (show $ (state.data.suggestedAmount + state.data.rateCard.additionalFare))
+              , textSize FontSize.a_32
+              , color Color.black800
+              , margin $ MarginTop 8
+              , gravity CENTER_HORIZONTAL
+              , width WRAP_CONTENT
               , height WRAP_CONTENT
-              , orientation VERTICAL
+              , fontStyle $ FontStyle.bold LanguageStyle
+              , onClick push $ const ShowRateCard
               ]
-              [ linearLayout
-                  [ width MATCH_PARENT
-                  , height WRAP_CONTENT
-                  , gravity CENTER_HORIZONTAL
-                  , onClick push $ const PreferencesDropDown
-                  , margin (Margin 0 0 0 8)
-                  ][ 
-                      textView
-                      [ height $ V 24
-                      , width WRAP_CONTENT
-                      , color Color.darkDescriptionText
-                      , text $ getString BOOKING_PREFERENCE
-                      , textSize FontSize.a_16
-                      , fontStyle $ FontStyle.regular LanguageStyle
-                      
-                      ],
-                      imageView
-                      [ width $ V 10
-                      , height $ V 10
-                      , margin (Margin 9 8 0 0)
-                      , imageWithFallback if state.data.showPreferences then "ny_ic_chevron_up,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_up.png" else "ny_ic_chevron_down,https://assets.juspay.in/nammayatri/images/user/ny_ic_down_arrow.png"
-                      ]
-                  ],
-                  linearLayout
+              , estimatedTimeAndDistanceView push state
+            ]
+            , imageView
+              [ imageWithFallback "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png"
+              , width $ V 40
+              , height $ V 40
+              , gravity BOTTOM
+              , margin (MarginTop 13)
+              , onClick push $ const ShowRateCard
+              ]
+          ]
+          , linearLayout
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , orientation VERTICAL
+            -- , visibility if state.props.zoneType == METRO then GONE else VISIBLE
+            ]
+            [ linearLayout
+                [ width MATCH_PARENT
+                , height $ V 1
+                , margin $ Margin 16 12 16 14
+                , background Color.grey900
+                ][]
+            , linearLayout
+                [ width MATCH_PARENT
+                , height WRAP_CONTENT
+                , orientation VERTICAL
+                ]
+                [ linearLayout
                     [ width MATCH_PARENT
                     , height WRAP_CONTENT
-                    , margin $ MarginLeft 20
-                    , orientation VERTICAL 
-                    ][ linearLayout
-                       [ width MATCH_PARENT
-                       , height WRAP_CONTENT
-                       , orientation VERTICAL
-                       , visibility if state.data.showPreferences then VISIBLE else GONE
-                       ][showMenuButtonView push (getString AUTO_ASSIGN_DRIVER) "ny_ic_faster,https://assets.juspay.in/nammayatri/images/user/ny_ic_faster.png" true,
-                         showMenuButtonView push (getString CHOOSE_BETWEEN_MULTIPLE_DRIVERS) "ny_ic_info,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png" false]
-                  ]
-                  
-              ]
-          ]
-      ]
-    , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonRequestRideConfig state)
+                    , gravity CENTER_HORIZONTAL
+                    , onClick push $ const PreferencesDropDown
+                    , margin (Margin 0 0 0 8)
+                    ][
+                        textView
+                        [ height $ V 24
+                        , width WRAP_CONTENT
+                        , color Color.darkDescriptionText
+                        , text $ getString BOOKING_PREFERENCE
+                        , textSize FontSize.a_16
+                        , fontStyle $ FontStyle.regular LanguageStyle
+
+                        ],
+                        imageView
+                        [ width $ V 10
+                        , height $ V 10
+                        , margin (Margin 9 8 0 0)
+                        , imageWithFallback if state.data.showPreferences then "ny_ic_chevron_up,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_up.png" else "ny_ic_chevron_down,https://assets.juspay.in/nammayatri/images/user/ny_ic_down_arrow.png"
+                        ]
+                    ],
+                    linearLayout
+                      [ width MATCH_PARENT
+                      , height WRAP_CONTENT
+                      , margin $ MarginLeft 20
+                      , orientation VERTICAL
+                      ][ linearLayout
+                         [ width MATCH_PARENT
+                         , height WRAP_CONTENT
+                         , orientation VERTICAL
+                         , visibility if state.data.showPreferences then VISIBLE else GONE
+                         ][showMenuButtonView push (getString AUTO_ASSIGN_DRIVER) "ny_ic_faster,https://assets.juspay.in/nammayatri/images/user/ny_ic_faster.png" true,
+                           showMenuButtonView push (getString CHOOSE_BETWEEN_MULTIPLE_DRIVERS) "ny_ic_info,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png" false]
+                    ]
+
+                ]
+            ]
+        ]
+      , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonRequestRideConfig state)
+    ]
   ]
 
 
-showMenuButtonView :: forall w. (Action -> Effect Unit) -> String -> String -> Boolean -> PrestoDOM (Effect Unit) w 
-showMenuButtonView push menuText menuImage autoAssign = 
+showMenuButtonView :: forall w. (Action -> Effect Unit) -> String -> String -> Boolean -> PrestoDOM (Effect Unit) w
+showMenuButtonView push menuText menuImage autoAssign =
   linearLayout
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
@@ -1046,8 +1095,8 @@ showMenuButtonView push menuText menuImage autoAssign =
       ]
   ]
 
-estimatedTimeAndDistanceView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w 
-estimatedTimeAndDistanceView push state = 
+estimatedTimeAndDistanceView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+estimatedTimeAndDistanceView push state =
   linearLayout
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
@@ -1338,10 +1387,10 @@ pricingTutorialView push state =
     , background Color.white900
     ]
     [ -- TODO Add Animations
-      -- PrestoAnim.animationSet 
+      -- PrestoAnim.animationSet
       --   [ translateYAnim 900 0 (state.props.currentStage == PricingTutorial)
       --   , translateYAnim 0 900 (not (state.props.currentStage == PricingTutorial))
-      --   ] $ 
+      --   ] $
       PricingTutorialModel.view (push <<< PricingTutorialModelActionController)
     ]
 
@@ -1359,7 +1408,7 @@ searchLocationModelView push state =
 quoteListModelView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 quoteListModelView push state =
   QuoteListModel.view (push <<< QuoteListModelActionController) $ quoteListModelViewState state
-    
+
 
 ------------------------ emptyTextView ---------------------------
 emptyTextView :: forall w. HomeScreenState ->  PrestoDOM (Effect Unit) w
@@ -1421,7 +1470,7 @@ rideTrackingView push state =
                     ]
                     [ if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) then
                         DriverInfoCard.view (push <<< DriverInfoCardActionController) $ driverInfoCardViewState state
-                         
+
                       else
                         emptyTextView state
                     ]
@@ -1563,13 +1612,13 @@ getQuotesPolling pollingId action retryAction count duration push state = do
           Right response -> do
             _ <- pure $ printLog "Quote api Results " response
             let (SelectListRes resp) = response
-            if (resp.bookingId /= Nothing && resp.bookingId /= Just "") then do 
+            if (resp.bookingId /= Nothing && resp.bookingId /= Just "") then do
                doAff do liftEffect $ push $ action response
             else if not (null ((fromMaybe dummySelectedQuotes resp.selectedQuotes)^._selectedQuotes)) then do
               if (getValueToLocalStore GOT_ONE_QUOTE == "FALSE") then do
                 _ <- pure $ firebaseLogEvent "ny_user_received_quotes"
                 pure unit
-              else pure unit 
+              else pure unit
               _ <- pure $ setValueToLocalStore GOT_ONE_QUOTE "TRUE"
               doAff do liftEffect $ push $ action response
             else
@@ -1590,7 +1639,7 @@ getQuotesPolling pollingId action retryAction count duration push state = do
 driverLocationTracking :: forall action. (action -> Effect Unit) -> (String -> action) -> (String -> action) -> (Int -> Int -> action) -> Number -> String -> HomeScreenState -> String-> Flow GlobalState Unit
 driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState = do
   _ <- pure $ printLog "trackDriverLocation2_function" trackingId
-  if (any (\stage -> isLocalStageOn stage) [ RideAccepted, RideStarted, ChatWithDriver]) && ((getValueToLocalStore TRACKING_ID) == trackingId) then do 
+  if (any (\stage -> isLocalStageOn stage) [ RideAccepted, RideStarted, ChatWithDriver]) && ((getValueToLocalStore TRACKING_ID) == trackingId) then do
     when (state.props.bookingId /= "") $ do
       respBooking <- rideBooking (state.props.bookingId)
       case respBooking of
@@ -1600,8 +1649,8 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
               Just (RideAPIEntity res) -> do
                 let rideStatus = res.status
                 doAff do liftEffect $ push $ action rideStatus
-                if (os /= "IOS" && res.driverArrivalTime /= Nothing  && (getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_DRIVER_ARRIVAL" ) then doAff do liftEffect $ push $ driverArrivedAction (fromMaybe "" res.driverArrivalTime) 
-                  else pure unit  
+                if (os /= "IOS" && res.driverArrivalTime /= Nothing  && (getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_DRIVER_ARRIVAL" ) then doAff do liftEffect $ push $ driverArrivedAction (fromMaybe "" res.driverArrivalTime)
+                  else pure unit
               Nothing -> pure unit
           else
             pure unit
@@ -1648,7 +1697,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                     liftFlow $ updateRoute newPoints markers.destMarker (metersToKm locationResp.distance state)
                     _ <- doAff do liftEffect $ push $ updateState locationResp.eta locationResp.distance
                     void $ delay $ Milliseconds duration
-                    driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState 
+                    driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState
                   else do
                     driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } } routeState
             Nothing -> driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } } routeState
@@ -1691,18 +1740,18 @@ cancelRidePopUpView push state =
     , width MATCH_PARENT
     ][ CancelRidePopUp.view (push <<< CancelRidePopUpAction) (cancelRidePopUpConfig state)]
 
-checkForLatLongInSavedLocations :: forall action. (action -> Effect Unit) -> (Array LocationListItemState -> action) -> HomeScreenState -> Flow GlobalState Unit 
-checkForLatLongInSavedLocations push action state = do 
+checkForLatLongInSavedLocations :: forall action. (action -> Effect Unit) -> (Array LocationListItemState -> action) -> HomeScreenState -> Flow GlobalState Unit
+checkForLatLongInSavedLocations push action state = do
   _ <- runExceptT $ runBackT $ setValueToLocalStore RELOAD_SAVED_LOCATION "false"
   _ <- runExceptT $ runBackT $ transformSavedLocations state.data.savedLocations
-  if getValueToLocalStore RELOAD_SAVED_LOCATION == "true" then do 
-    (savedLocationResp )<- getSavedLocationList "" 
-    case savedLocationResp of 
-        Right (SavedLocationsListRes listResp) -> do 
+  if getValueToLocalStore RELOAD_SAVED_LOCATION == "true" then do
+    (savedLocationResp )<- getSavedLocationList ""
+    case savedLocationResp of
+        Right (SavedLocationsListRes listResp) -> do
           doAff do liftEffect $ push $ action $ AddNewAddress.getSavedLocations listResp.list
-          pure unit 
+          pure unit
         Left err -> pure unit
-    pure unit 
+    pure unit
     else pure unit
   _ <- runExceptT $ runBackT $ setValueToLocalStore RELOAD_SAVED_LOCATION "false"
   pure unit

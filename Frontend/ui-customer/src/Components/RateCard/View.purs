@@ -25,11 +25,12 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, ($), const, (<>), (>))
+import Prelude (Unit, ($), const, (<>), (>), ($), (==))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Styles.Colors as Color
+import Screens.Types (ZoneType(..))
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 view push config = 
@@ -83,98 +84,11 @@ view push config =
            , imageWithFallback if config.nightCharges then "ny_ic_night,https://assets.juspay.in/nammayatri/images/user/ny_ic_night.png" else "ny_ic_day,https://assets.juspay.in/nammayatri/images/user/ny_ic_day.png"
            ]  
          ]
-      , linearLayout
-        [ width MATCH_PARENT
-        , height WRAP_CONTENT
-        , orientation HORIZONTAL
-        , padding (Padding 20 20 20 8)
-        ][ textView
-           [ width WRAP_CONTENT
-           , height WRAP_CONTENT
-           , textSize FontSize.a_16
-           , color Color.black800
-           , text $ (getString MIN_FARE_UPTO) <> if config.nightCharges then " 🌙" else ""
-           ]
-         , textView
-           [ width WRAP_CONTENT
-           , height WRAP_CONTENT
-           , textSize FontSize.a_16
-           , color Color.black800
-           , text config.baseFare
-           , gravity RIGHT
-           , weight 1.0
-           ]
-         ]
-      , linearLayout
-        [ width MATCH_PARENT
-        , height WRAP_CONTENT
-        , orientation HORIZONTAL
-        , margin (Margin 0 8 0 8)
-        , padding (Padding 20 0 20 0)
-        ][ textView
-           [ width WRAP_CONTENT
-           , height WRAP_CONTENT
-           , textSize FontSize.a_16
-           , color Color.black800
-           , text $ (getString RATE_ABOVE_MIN_FARE) <> if config.nightCharges then " 🌙" else ""
-           ]
-         , textView
-           [ width WRAP_CONTENT
-           , height WRAP_CONTENT
-           , textSize FontSize.a_16
-           , color Color.black800
-           , text (config.extraFare <> "/ km")
-           , gravity RIGHT
-           , weight 1.0
-           ]
-         ]
-      , linearLayout
-        [ width MATCH_PARENT
-        , height WRAP_CONTENT
-        , orientation HORIZONTAL
-        , margin (Margin 0 8 0 8)
-        , padding (Padding 20 0 20 0)
-        ][ textView
-           [ width WRAP_CONTENT
-           , height WRAP_CONTENT
-           , textSize FontSize.a_16
-           , color Color.black800
-           , text (getString DRIVER_PICKUP_CHARGES)
-           ]
-         , textView
-           [ width WRAP_CONTENT
-           , height WRAP_CONTENT
-           , textSize FontSize.a_16
-           , color Color.black800
-           , text config.pickUpCharges
-           , gravity RIGHT
-           , weight 1.0
-           ]
-         ]
-      , linearLayout
-        [ width MATCH_PARENT
-        , height WRAP_CONTENT
-        , orientation HORIZONTAL
-        , margin (Margin 0 8 0 8)
-        , padding (Padding 20 0 20 0)
-        , visibility if (getAdditionalFare config.additionalFare) > 0 then VISIBLE else GONE
-        ][ textView
-           [ width WRAP_CONTENT
-           , height WRAP_CONTENT
-           , textSize FontSize.a_16
-           , color Color.black800
-           , text (getString NOMINAL_FARE)
-           ]
-         , textView
-           [ width WRAP_CONTENT
-           , height WRAP_CONTENT
-           , textSize FontSize.a_16
-           , color Color.black800
-           , text (getString PERCENTAGE_OF_NOMINAL_FARE)
-           , gravity RIGHT
-           , weight 1.0
-           ]
-         ]
+      , fareTypeAndFare ((getString MIN_FARE_UPTO) <> if config.nightCharges then " 🌙" else "") config.baseFare VISIBLE
+      , fareTypeAndFare ((getString RATE_ABOVE_MIN_FARE) <> if config.nightCharges then " 🌙" else "") (config.extraFare <> "/ km") VISIBLE
+      , fareTypeAndFare (getString DRIVER_PICKUP_CHARGES) config.pickUpCharges VISIBLE
+      -- , fareTypeAndFare ("Fare between 2km - 3 km") "₹55" (if config.zoneType == METRO then VISIBLE else GONE)
+      , fareTypeAndFare (getString NOMINAL_FARE) (getString PERCENTAGE_OF_NOMINAL_FARE) (if (getAdditionalFare config.additionalFare) > 0 then VISIBLE else GONE)
       , imageView
         [ width MATCH_PARENT
         , height $ V 2 
@@ -185,7 +99,9 @@ view push config =
         [ width MATCH_PARENT
         , height WRAP_CONTENT
             , color Color.black700
-            , text if config.nightCharges then
+            , text if config.zoneType == METRO then
+                    "The flat fare will be applied to Metro Pickup and drop only within 3kms" 
+                   else if config.nightCharges then
                       (getString NIGHT_TIMES_OF) <> config.nightShiftMultiplier <> (getString DAYTIME_CHARGES_APPLIED_AT_NIGHT)
                    else
                       (getString DAY_TIMES_OF) <> config.nightShiftMultiplier <> (getString DAYTIME_CHARGES_APPLICABLE_AT_NIGHT)
@@ -227,3 +143,30 @@ view push config =
 
 getAdditionalFare :: String -> Int
 getAdditionalFare additionalFare = DM.fromMaybe 0 $ DI.fromString $ DS.drop 1 additionalFare
+
+fareTypeAndFare :: forall w. String -> String -> Visibility -> PrestoDOM (Effect Unit) w 
+fareTypeAndFare fareType fare visibility' = 
+    linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation HORIZONTAL
+    , margin (Margin 0 8 0 8)
+    , padding (Padding 20 0 20 0)
+    , visibility visibility'
+    ][ textView
+       [ width WRAP_CONTENT
+       , height WRAP_CONTENT
+       , textSize FontSize.a_16
+       , color Color.black800
+       , text fareType
+       ]
+     , textView
+       [ width WRAP_CONTENT
+       , height WRAP_CONTENT
+       , textSize FontSize.a_16
+       , color Color.black800
+       , text fare
+       , gravity RIGHT
+       , weight 1.0
+       ]
+     ]

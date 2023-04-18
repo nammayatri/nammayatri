@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -47,17 +47,17 @@ import Animation (fadeIn)
 import PrestoDOM.Animation as PrestoAnim
 
 view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit ) w
-view push state = 
+view push state =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , background Color.transparent
-  , orientation VERTICAL 
-  ][  mapOptionsView push state 
-    , driverInfoView push state 
+  , orientation VERTICAL
+  ][  mapOptionsView push state
+    , driverInfoView push state
     ]
 
-mapOptionsView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w 
+mapOptionsView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
 mapOptionsView push state =
   linearLayout
   [ width MATCH_PARENT
@@ -67,7 +67,7 @@ mapOptionsView push state =
   , gravity CENTER_VERTICAL
   , padding $ PaddingHorizontal 16 16
   ][  sosView push state
-    , linearLayout 
+    , linearLayout
       [ height WRAP_CONTENT
       , weight 1.0
       , clickable false
@@ -83,7 +83,7 @@ mapOptionsView push state =
 
 
 supportButton :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
-supportButton push state = 
+supportButton push state =
  linearLayout
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
@@ -103,7 +103,7 @@ supportButton push state =
 
 
 locationTrackButton :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
-locationTrackButton push state = 
+locationTrackButton push state =
   linearLayout
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
@@ -123,8 +123,8 @@ locationTrackButton push state =
       ]
   ]
 
-sosView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w 
-sosView push state = 
+sosView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
+sosView push state =
   linearLayout
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
@@ -139,8 +139,8 @@ sosView push state =
         ]
     ]
 
-otpAndWaitView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w 
-otpAndWaitView push state = 
+otpAndWaitView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
+otpAndWaitView push state =
  linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -171,7 +171,7 @@ otpAndWaitView push state =
             , linearLayout
               [ height WRAP_CONTENT
               , width WRAP_CONTENT
-              ] (map(\item -> 
+              ] (map(\item ->
                   linearLayout
                     [ height $ V 32
                     , width $ V 32
@@ -194,9 +194,9 @@ otpAndWaitView push state =
   ]
 
 
-waitTimeView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w 
-waitTimeView push state = 
- PrestoAnim.animationSet [ fadeIn state.data.driverArrived ] $  
+waitTimeView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
+waitTimeView push state =
+ PrestoAnim.animationSet [ fadeIn state.data.driverArrived ] $
  linearLayout
   [ width WRAP_CONTENT
   , height if os == "IOS" then (V 60) else MATCH_PARENT
@@ -230,7 +230,7 @@ waitTimeView push state =
 
 
 ---------------------------------- driverInfoView ---------------------------------------
-driverInfoView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w 
+driverInfoView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
 driverInfoView push state =
   linearLayout
   [ width MATCH_PARENT
@@ -239,50 +239,89 @@ driverInfoView push state =
       [ height MATCH_PARENT
       , width MATCH_PARENT
       , scrollBarY false
-      ][ linearLayout
-          [ orientation VERTICAL
-          , height WRAP_CONTENT
-          , width MATCH_PARENT
-          , padding $ PaddingBottom 30
-          , margin $ MarginVertical 14 0
-          , background Color.white900
-          , gravity CENTER
-          , cornerRadii $ Corners 24.0 true true false false
-          , stroke $ "1," <> Color.grey900
-          ][ linearLayout
-            [ gravity CENTER
-            , background Color.transparentGrey
-            , height $ V 4
-            , width $ V 34
-            , margin (MarginTop 8)
-            , cornerRadius 4.0
-            ][]
-            , contactView push state
-            , otpAndWaitView push state
-            , separator (Margin 16 0 16 0) (V 1) Color.grey900 (state.props.currentStage == RideAccepted)
-            , driverDetailsView push state
-            , separator (Margin 16 0 16 0) (V 1) Color.grey900 true
-            , paymentMethodView push state
-            , separator (Margin 16 0 16 0) (V 1) Color.grey900 true
-            , (if os == "IOS" then scrollView else linearLayout)
-              [ width MATCH_PARENT
-              , height if os == "IOS" then (V 210) else WRAP_CONTENT
-              , orientation VERTICAL
-              ][ sourceDistanceView push state
-                , separator (Margin 0 0 0 0) (V 1) Color.grey900 (state.props.currentStage == RideAccepted)
-                , cancelRideLayout push state
-              ]
+      -- , background Color.red
+      ][  linearLayout
+          [ width MATCH_PARENT
+          , height (V 20)
+          -- , background Color.black900
+          ][  linearLayout
+               [ orientation VERTICAL
+               , height WRAP_CONTENT
+               , width MATCH_PARENT
+              --  , padding $ PaddingBottom 30
+               , margin $ MarginTop 14
+               , background Color.blue800
+               , gravity CENTER
+               , cornerRadii $ Corners 24.0 true true false false
+               , stroke $ "1," <> Color.grey900
+               ][ linearLayout
+                  [ width MATCH_PARENT
+                  , height WRAP_CONTENT
+                  , background Color.blue800
+                  , cornerRadii $ Corners 24.0 true true false false
+                  , gravity CENTER
+                  , orientation HORIZONTAL
+                  , padding (PaddingVertical 5 5)
+                  ][ imageView
+                      [ width (V 15)
+                      , height (V 15)
+                      , margin (MarginRight 6)
+                      , imageWithFallback "ny_ic_metro_white,https://assets.juspay.in/nammayatri/images/common/ny_ic_metro_white.png"
+                      ]
+                    , textView
+                      [ width WRAP_CONTENT
+                      , height WRAP_CONTENT
+                      , textSize FontSize.a_14
+                      , text "Metro Ride"
+                      , color Color.white900
+                      ]
+                  ]
+                , linearLayout
+                  [ width MATCH_PARENT
+                  , height WRAP_CONTENT
+                  , cornerRadii $ Corners 24.0 true true false false
+                  , gravity CENTER
+                  , orientation VERTICAL
+                  , background Color.white900
+                  ][
+                     linearLayout
+                      [ gravity CENTER
+                      , background Color.transparentGrey
+                      , height $ V 4
+                      , width $ V 34
+                      , margin (MarginTop 8)
+                      , cornerRadius 4.0
+                      -- , background Color.green900
+                      ][]
+                    , contactView push state
+                    , otpAndWaitView push state
+                    , separator (Margin 16 0 16 0) (V 1) Color.grey900 (state.props.currentStage == RideAccepted)
+                    , driverDetailsView push state
+                    , separator (Margin 16 0 16 0) (V 1) Color.grey900 true
+                    , paymentMethodView push state
+                    , separator (Margin 16 0 16 0) (V 1) Color.grey900 true
+                    , (if os == "IOS" then scrollView else linearLayout)
+                      [ width MATCH_PARENT
+                      , height if os == "IOS" then (V 210) else WRAP_CONTENT
+                      , orientation VERTICAL
+                      ][ sourceDistanceView push state
+                        , separator (Margin 0 0 0 0) (V 1) Color.grey900 (state.props.currentStage == RideAccepted)
+                        , cancelRideLayout push state
+                      ]
+                    ]
+               ]
             ]
       ]
   ]
 
-cancelRideLayout :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w 
-cancelRideLayout push state = 
+cancelRideLayout :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
+cancelRideLayout push state =
  linearLayout
  [ width MATCH_PARENT
  , height WRAP_CONTENT
  , gravity CENTER
  , margin $ MarginTop 16
+ , padding $ PaddingBottom 30
  , padding $ PaddingBottom if os == "IOS" then safeMarginBottom else 0
  , visibility if state.props.currentStage == RideAccepted then VISIBLE else GONE
  ][ linearLayout
@@ -302,7 +341,7 @@ cancelRideLayout push state =
  ]
 
 ---------------------------------- contactView ---------------------------------------
-contactView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w 
+contactView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
 contactView push state =
   linearLayout
   [ orientation HORIZONTAL
@@ -321,7 +360,7 @@ contactView push state =
           , fontStyle $ FontStyle.semiBold LanguageStyle
           , color Color.black800
           , ellipsize true
-          , singleLine true 
+          , singleLine true
           ]
         , textView
           [ text $"is " <> secondsToHms state.data.eta
@@ -368,8 +407,8 @@ contactView push state =
 ---------------------------------- driverDetailsView ---------------------------------------
 
 
-driverDetailsView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w 
-driverDetailsView push state =  
+driverDetailsView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
+driverDetailsView push state =
  linearLayout
   [ orientation HORIZONTAL
   , height $ V 170
@@ -391,12 +430,12 @@ driverDetailsView push state =
               , width $ V 50
               , padding $ Padding 2 3 2 1
               , imageWithFallback "ny_ic_user,https://assets.juspay.in/nammayatri/images/user/ny_ic_user.png"
-              ]  
+              ]
           ]
         , textView
           [ text state.data.driverName
           , textSize FontSize.a_16
-          , maxLines 1 
+          , maxLines 1
           , ellipsize true
           , fontStyle $ FontStyle.bold LanguageStyle
           , color Color.black800
@@ -407,14 +446,14 @@ driverDetailsView push state =
         , textView
           [ text state.data.vehicleDetails
           , textSize FontSize.a_12
-          , color Color.black700 
+          , color Color.black700
           , fontStyle $ FontStyle.regular LanguageStyle
           , width MATCH_PARENT
           , height WRAP_CONTENT
           , margin $ Margin 0 4 0 13
           , gravity LEFT
           ]
-        , ratingView push state 
+        , ratingView push state
       ]
     , linearLayout
       [ height WRAP_CONTENT
@@ -445,13 +484,13 @@ driverDetailsView push state =
                   , gravity BOTTOM
                   , padding $ Padding 2 2 2 2
                   , alignParentBottom "true,-1"
-                  ][ 
+                  ][
                     linearLayout
                     [ height $ V 34
                     , width MATCH_PARENT
                     , stroke $ "2," <> Color.black
                     , cornerRadius 4.0
-                    , orientation HORIZONTAL  
+                    , orientation HORIZONTAL
                     ][  imageView
                         [ imageWithFallback "ny_ic_number_plate,https://assets.juspay.in/nammayatri/images/user/ny_ic_number_plate.png"
                         , gravity LEFT
@@ -480,8 +519,8 @@ driverDetailsView push state =
 
 ---------------------------------- ratingView ---------------------------------------
 
-ratingView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w 
-ratingView push state = 
+ratingView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
+ratingView push state =
   linearLayout
   [ orientation HORIZONTAL
   , height $ V 34
@@ -497,7 +536,7 @@ ratingView push state =
       ]
     , textView
       [ text $ if state.data.rating == 0.0 then "New" else show state.data.rating
-      , textSize FontSize.a_12 
+      , textSize FontSize.a_12
       , color Color.black800
       , gravity CENTER
       , fontStyle $ FontStyle.medium LanguageStyle
@@ -510,7 +549,7 @@ ratingView push state =
 
 ---------------------------------- paymentMethodView ---------------------------------------
 
-paymentMethodView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w 
+paymentMethodView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
 paymentMethodView push state =
   linearLayout
   [ orientation HORIZONTAL
@@ -556,9 +595,9 @@ paymentMethodView push state =
 
 ---------------------------------- tripDetailsView ---------------------------------------
 
-sourceDistanceView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w 
+sourceDistanceView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
 sourceDistanceView push state =
-  linearLayout 
+  linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation VERTICAL
@@ -574,7 +613,7 @@ sourceDistanceView push state =
 
 ---------------------------------- separator ---------------------------------------
 
-separator :: forall w. Margin -> Length -> String -> Boolean -> PrestoDOM (Effect Unit) w 
+separator :: forall w. Margin -> Length -> String -> Boolean -> PrestoDOM (Effect Unit) w
 separator margin' height' color' isVisible =
   linearLayout
   [ height $ height'
@@ -587,14 +626,14 @@ separator margin' height' color' isVisible =
 ---------------------------------- primaryButtonConfig ---------------------------------------
 
 primaryButtonConfig :: PrimaryButton.Config
-primaryButtonConfig = let 
+primaryButtonConfig = let
     config' = PrimaryButton.config
-    primaryButtonConfig' = config' 
+    primaryButtonConfig' = config'
       { width = WRAP_CONTENT
       , height = WRAP_CONTENT
       , background = Color.mint
       , cornerRadius = 17.0
-      , isPrefixImage = true 
+      , isPrefixImage = true
       , prefixImageConfig {
           height = V 18
         , width = V 18
@@ -608,7 +647,7 @@ primaryButtonConfig = let
 ---------------------------------- sourceToDestinationConfig ---------------------------------------
 
 sourceToDestinationConfig :: DriverInfoCardState -> SourceToDestination.Config
-sourceToDestinationConfig state = let 
+sourceToDestinationConfig state = let
   config = SourceToDestination.config
   sourceToDestinationConfig' = config
     {
@@ -654,12 +693,12 @@ sourceToDestinationConfig state = let
     }
   in sourceToDestinationConfig'
 
-configurations = 
-  case os of 
+configurations =
+  case os of
     "IOS" -> {paddingOTPText : PaddingVertical 4 4
-              , letterSpacing : 6.0 
+              , letterSpacing : 6.0
               , paddingOTP : Padding 20 5 18 7}
     _     -> {paddingOTPText : PaddingVertical 2 2
-              , letterSpacing : 3.0 
+              , letterSpacing : 3.0
               , paddingOTP : Padding 11 0 11 7
               }
