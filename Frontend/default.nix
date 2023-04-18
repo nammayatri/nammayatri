@@ -2,9 +2,17 @@
 {
   imports = [
   ];
-  perSystem = { config, self', pkgs, lib, ... }:
-    let easy-ps = import inputs.easy-purescript-nix { inherit pkgs; };
-    in {
+  perSystem = { config, self', pkgs, lib, system, ... }:
+    let
+      pkgsWithPurifix = import inputs.nixpkgs {
+        inherit system;
+        overlays = [ inputs.purifix.overlay ];
+      };
+      localPackages = pkgsWithPurifix.purifix {
+        src = ./.;
+      };
+    in
+    {
       treefmt.config = {
         # Suppress autoformatting of frontend dhall files.
         settings.formatter.dhall.excludes = [
@@ -14,15 +22,19 @@
       devShells.frontend = pkgs.mkShell {
         name = "ps-dev-shell";
         inputsFrom = [
+          config.mission-control.devShell
           config.pre-commit.devShell
+          localPackages.ui-customer.develop
         ];
         packages = [
-          easy-ps.purs-0_15_4
-          easy-ps.spago
-          easy-ps.psa
           pkgs.dhall
           pkgs.nodejs-14_x
         ];
+      };
+      packages = {
+        ui-customer = localPackages.ui-customer;
+        ui-driver = localPackages.ui-driver;
+        ui-common = localPackages.beckn-common;
       };
     };
 }

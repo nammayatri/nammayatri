@@ -10,8 +10,7 @@
     shared-kernel.inputs.nixpkgs.follows = "nixpkgs";
     beckn-gateway.url = "github:nammayatri/beckn-gateway";
     beckn-gateway.inputs.shared-kernel.follows = "shared-kernel";
-    easy-purescript-nix.url = "github:justinwoo/easy-purescript-nix";
-    easy-purescript-nix.flake = false;
+    purifix.url = "github:purifix/purifix";
   };
   outputs = inputs:
     inputs.flake-parts.lib.mkFlake { inherit inputs; } {
