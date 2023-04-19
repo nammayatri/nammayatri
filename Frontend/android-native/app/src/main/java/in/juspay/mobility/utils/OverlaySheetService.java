@@ -132,6 +132,9 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             if (model.getDriverMaxExtraFee() == 0) {
                 holder.buttonIncreasePrice.setVisibility(View.GONE);
                 holder.buttonDecreasePrice.setVisibility(View.GONE);
+            }else {
+                holder.buttonIncreasePrice.setVisibility(View.VISIBLE);
+                holder.buttonDecreasePrice.setVisibility(View.VISIBLE);
             }
             updateTipView(holder, model);
             updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(),model.getStartTime(), getString(R.string.accept_offer));

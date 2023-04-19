@@ -302,7 +302,7 @@ currentFlowStatus = do
                      , estimateId = estimateId
                      , rideRequestFlow = true 
                      , customerTip{
-                        enableTips = if ((getValueToLocalStore ENABLE_TIPS) == "true") then true else false
+                        enableTips = ((getValueToLocalStore ENABLE_TIPS) == "true") 
                      }
                      , selectedQuote = Nothing}
                 , data { source = flowStatusData.source.place
@@ -560,7 +560,6 @@ homeScreenFlow = do
             pure unit
           void $ pure $ setValueToLocalStore FINDING_QUOTES_START_TIME (getCurrentUTC "LazyCheck")
           _ <- Remote.selectEstimateBT (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected then Just state.props.customerTip.tipForDriver else Nothing)) (state.props.estimateId)
-          _ <- pure $ spy "REQUEST FOR TIP ZXC: " (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected then Just state.props.customerTip.tipForDriver else Nothing))
           homeScreenFlow
     SELECT_ESTIMATE state -> do
         updateLocalStage SettingPrice
