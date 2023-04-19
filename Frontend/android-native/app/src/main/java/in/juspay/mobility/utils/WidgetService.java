@@ -58,12 +58,14 @@ public class WidgetService extends Service {
     private ImageView imageClose;
     private float height, width;
     private String widgetMessage;
+
+    private int calculatedTime =0;
     private JSONObject entity_payload, data;
 
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        if (intent!=null && intent.getStringExtra(getResources().getString(R.string.WIDGET_MESSAGE))==null){
+        if (intent!=null && calculatedTime!=0 && intent.getStringExtra(getResources().getString(R.string.WIDGET_MESSAGE))==null){
             showSilentNotification(intent);
         } else{
             addMessageToWidget(intent);
@@ -87,7 +89,7 @@ public class WidgetService extends Service {
             final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
             f.setTimeZone(TimeZone.getTimeZone("UTC"));
             String getCurrTime = f.format(new Date());
-            int calculatedTime =0;
+
 
             // Fetch data from intent
             if(intent!=null) {
@@ -157,6 +159,7 @@ public class WidgetService extends Service {
                         silentRideRequest.setVisibility(View.GONE);
                         progressBar.setVisibility(View.GONE);
                         dismissRequest.setVisibility(View.GONE);
+                        calculatedTime = 0;
                     }
                 });
 
@@ -165,52 +168,53 @@ public class WidgetService extends Service {
                 float mAngleToRotate = 360f;
                 rotationAnimation(floatingWidget, 0.0f, mAngleToRotate);
 
-                int calulatedWidth = widgetView.getWidth();
-                calulatedWidth = 700;
-                int[] ar = new int[100];
-                for(int i = ar.length-1, j = 1; i >=0 && j <= ar.length; i--, j++){
-                    ar[i] = (calulatedWidth/100)*j;
-                }
+                widgetView.post(() -> {
+                    int calulatedWidth = widgetView.getWidth();
+                    Log.i("TEST", "Layout width : "+ widgetView.getWidth());
+                    calulatedWidth = (widgetView.getWidth()/100)*85;
+                    int[] ar = new int[100];
+                    for(int i = ar.length-1, j = 1; i >=0 && j <= ar.length; i--, j++){
+                        ar[i] = (calulatedWidth/100)*j;
+                    }
 
-                ValueAnimator anim = ValueAnimator.ofInt(ar);
-                anim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-                    @Override
-                    public void onAnimationUpdate(ValueAnimator valueAnimator) {
+                    ValueAnimator anim = ValueAnimator.ofInt(ar);
+                    anim.addUpdateListener(valueAnimator -> {
                         int val = (Integer) valueAnimator.getAnimatedValue();
                         ViewGroup.LayoutParams layoutParams = progressBar.getLayoutParams();
-                        if(val < width/4 && val > width/5){
+                        if(val < width/3 && val > width/5){
                             progressBar.setIndicatorColor(getColor(R.color.yellow900));
                         }else if(val < width/5){
                             progressBar.setIndicatorColor(getColor(R.color.red900));
                         }
                         layoutParams.width = val;
                         progressBar.setLayoutParams(layoutParams);
-                    }
+                    });
+                    anim.setDuration((calculatedTime+1)*1000);
+                    anim.start();
                 });
-                anim.setDuration((calculatedTime+1)*1000);
-                anim.start();
+
+
 
                 //Revert Animation
                 Handler handler = new Handler();
-                handler.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        silentRideRequest.animate().translationX(-1500)
-                                .setInterpolator(new FastOutLinearInInterpolator())
-                                .setDuration(600)
-                                .start();
+                handler.postDelayed(() -> {
+                    silentRideRequest.animate().translationX(-1500)
+                            .setInterpolator(new FastOutLinearInInterpolator())
+                            .setDuration(600)
+                            .start();
+                    progressBar.animate().translationX(-1500)
+                            .setInterpolator(new FastOutLinearInInterpolator())
+                            .setDuration(600)
+                            .start();
 
-                        rotationAnimation(floatingWidget, mAngleToRotate, 0.0f);
+                    rotationAnimation(floatingWidget, mAngleToRotate, 0.0f);
 
-                        handler.postDelayed(new Runnable() {
-                            @Override
-                            public void run() {
-                                silentRideRequest.setVisibility(View.GONE);
-                                progressBar.setVisibility(View.GONE);
-                                dismissRequest.setVisibility(View.GONE);
-                            }
-                        }, getResources().getInteger(R.integer.WIDGET_MESSAGE_ANIMATION_DURATION));
-                    }
+                    handler.postDelayed(() -> {
+                        silentRideRequest.setVisibility(View.GONE);
+                        progressBar.setVisibility(View.GONE);
+                        dismissRequest.setVisibility(View.GONE);
+                        calculatedTime = 0;
+                    }, getResources().getInteger(R.integer.WIDGET_MESSAGE_ANIMATION_DURATION));
                 }, calculatedTime*1000);
 
                 // Adding dismiss button on widget
@@ -219,10 +223,12 @@ public class WidgetService extends Service {
                     progressBar.setVisibility(View.GONE);
                     dismissRequest.setVisibility(View.GONE);
                     handler.removeCallbacksAndMessages(null);
+                    calculatedTime = 0;
                 });
             }
         }catch (Exception e){
             System.out.println("EXCEPTION " + e.toString());
+            calculatedTime = 0;
         }
     }
 
