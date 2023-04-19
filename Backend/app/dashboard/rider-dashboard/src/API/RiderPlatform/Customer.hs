@@ -42,6 +42,8 @@ type API =
              :> Common.CustomerBlockAPI
            :<|> ApiAuth 'APP_BACKEND 'WRITE_ACCESS 'CUSTOMERS
              :> Common.CustomerUnblockAPI
+           :<|> ApiAuth 'APP_BACKEND 'READ_ACCESS 'CUSTOMERS
+             :> Common.CustomerInfoAPI
        )
 
 handler :: ShortId DM.Merchant -> FlowServer API
@@ -50,6 +52,7 @@ handler merchantId =
     :<|> deleteCustomer merchantId
     :<|> blockCustomer merchantId
     :<|> unblockCustomer merchantId
+    :<|> customerInfo merchantId
 
 buildTransaction ::
   ( MonadFlow m,
@@ -107,3 +110,12 @@ unblockCustomer merchantShortId apiTokenInfo customerId = withFlowHandlerAPI $ d
   transaction <- buildTransaction Common.UnblockCustomerEndpoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callRiderApp checkedMerchantId (.customers.customerUnblock) customerId
+
+customerInfo ::
+  ShortId DM.Merchant ->
+  ApiTokenInfo ->
+  Id Common.Customer ->
+  FlowHandler Common.CustomerInfoRes
+customerInfo merchantShortId apiTokenInfo customerId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  Client.callRiderApp checkedMerchantId (.customers.customerInfo) customerId
