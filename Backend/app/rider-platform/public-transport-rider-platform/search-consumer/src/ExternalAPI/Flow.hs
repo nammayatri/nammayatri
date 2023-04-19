@@ -23,6 +23,7 @@ import Kernel.Types.App
 import Kernel.Types.Beckn.ReqTypes
 import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError (IsBecknAPI)
+import Kernel.Utils.Monitoring.Prometheus.Servant
 import Kernel.Utils.Servant.SignatureAuth
 
 search ::
@@ -43,6 +44,7 @@ callBecknAPIWithSignature ::
     MonadReader r m,
     CoreMetrics m,
     IsBecknAPI api req res,
+    SanitizedUrl api,
     HasField "bapId" r Text
   ) =>
   Text ->

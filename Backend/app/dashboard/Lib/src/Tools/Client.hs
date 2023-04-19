@@ -68,7 +68,7 @@ instance
   callServerAPI serverName mkAPIs descr f = do
     dataServer <- getDataServer serverName
     let driverOfferAPIs = mkAPIs dataServer.token
-    callApiUnwrappingApiError (identity @Error) Nothing Nothing dataServer.url (f driverOfferAPIs) descr
+    callApiUnwrappingApiError (identity @Error) Nothing Nothing dataServer.url (f driverOfferAPIs) descr (Proxy :: Proxy Raw)
 
 --instance
 --  ( CoreMetrics m,
