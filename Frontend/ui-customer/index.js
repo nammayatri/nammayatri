@@ -237,7 +237,7 @@ if (typeof window.JOS != "undefined") {
 }
 
 var sessionInfo = JSON.parse(JBridge.getDeviceInfo())
-if(sessionInfo.package_name === "in.juspay.nammayatri.debug"){
+if(sessionInfo.package_name.includes(".debug")){
   logger.enableLogger();
 }else{
   logger.disableLogger();

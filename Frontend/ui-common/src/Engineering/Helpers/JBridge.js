@@ -398,10 +398,12 @@ exports["datePicker"] = function (label)
 exports["setFCMToken"] = function (cb) {
   return function (action) {
     return function () {
-      var callback = callbackMapper.map(function (id) {
-        cb(action(id))();
-      });
-      return JBridge.setFCMToken(callback);
+      if (JBridge.setFCMToken) {
+        var callback = callbackMapper.map(function (id) {
+          cb(action(id))();
+        });
+        return JBridge.setFCMToken(callback);
+      }
     };
   };
   // JBridge.setFCMToken();

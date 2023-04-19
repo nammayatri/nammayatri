@@ -1511,7 +1511,7 @@ getEstimate action flowStatusAction count duration push state = do
           let errResp = err.response
               codeMessage = decodeErrorMessage errResp.errorMessage
           if ( err.code == 400 && codeMessage == "ACTIVE_BOOKING_ALREADY_PRESENT" ) then do
-            _ <- pure $ firebaseLogEvent "ny_fs_active_booking_found_on_search"
+            -- _ <- pure $ firebaseLogEvent "ny_fs_active_booking_found_on_search"
             void $ pure $ toast "ACTIVE BOOKING ALREADY PRESENT"
             doAff do liftEffect $ push $ flowStatusAction
           else do
@@ -1546,7 +1546,7 @@ getQuotesPolling pollingId action retryAction count duration push state = do
                doAff do liftEffect $ push $ action response
             else if not (null ((fromMaybe dummySelectedQuotes resp.selectedQuotes)^._selectedQuotes)) then do
               if (getValueToLocalStore GOT_ONE_QUOTE == "FALSE") then do
-                _ <- pure $ firebaseLogEvent "ny_user_received_quotes"
+                -- _ <- pure $ firebaseLogEvent "ny_user_received_quotes"
                 pure unit
               else pure unit 
               _ <- pure $ setValueToLocalStore GOT_ONE_QUOTE "TRUE"
@@ -1651,7 +1651,7 @@ confirmRide action count duration push state = do
         case resp.status of
           "TRIP_ASSIGNED" -> do
             doAff do liftEffect $ push $ action response
-            _ <- pure $ firebaseLogEvent "ny_user_ride_assigned"
+            -- _ <- pure $ firebaseLogEvent "ny_user_ride_assigned"
             pure unit
           _ -> do
             void $ delay $ Milliseconds duration
