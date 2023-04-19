@@ -27,7 +27,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess
 import Kernel.Types.Error
-import Kernel.Utils.Common (MonadFlow, decodeFromText, fork, throwError, withFlowHandlerAPI)
+import Kernel.Utils.Common (MonadFlow, decodeFromText, fork, logTagInfo, throwError, withFlowHandlerAPI)
 import qualified ProviderPlatformClient.DynamicOfferDriver as Client
 import qualified ProviderPlatformClient.StaticOfferDriver as Client
 import qualified RiderPlatformClient.RiderApp as Client
@@ -61,26 +61,32 @@ exotelHeartbeat incomingExotelToken req = withFlowHandlerAPI $ do
   exotelToken <- asks (.exotelToken)
   unless (incomingExotelToken == exotelToken) $
     throwError $ InvalidToken incomingExotelToken
-  forM_ [DSN.APP_BACKEND, DSN.BECKN_TRANSPORT, DSN.DRIVER_OFFER_BPP] $ \serverName -> do
-    fork ("exotelHeartbeat:" <> show serverName) $ do
-      mbLastTransaction <- Esq.runInReplica $ QT.fetchLastTransaction (DT.ExotelAPI Common.ExotelHeartbeatEndpoint) serverName
-      let mbLastReq =
-            mbLastTransaction
-              >>= (.request)
-              >>= decodeFromText @(Common.ReqWithoutSecrets Common.ExotelHeartbeatReq)
-      let mbLastStatus = mbLastReq <&> (.statusType)
-      let lastTransactionFailed =
-            mbLastTransaction
-              >>= (.responseError)
-              & isJust
-      let lastStatusWasNotOk = mbLastStatus /= Just Common.OK || lastTransactionFailed
-          lastStatusWasOk = not lastStatusWasNotOk
-          affectedPhonesChanged = Just (getAffectedPhoneNumberSids req) /= (getAffectedPhoneNumberSids <$> mbLastReq)
-          needToCallApp = if req.statusType /= Common.OK then lastStatusWasOk || affectedPhonesChanged else lastStatusWasNotOk
-      when needToCallApp $ do
+  let serverNames = [DSN.APP_BACKEND, DSN.BECKN_TRANSPORT, DSN.DRIVER_OFFER_BPP]
+  needToCallApps <- forM serverNames $ \serverName -> do
+    mbLastTransaction <- Esq.runInReplica $ QT.fetchLastTransaction (DT.ExotelAPI Common.ExotelHeartbeatEndpoint) serverName
+    let mbLastReq =
+          mbLastTransaction
+            >>= (.request)
+            >>= decodeFromText @(Common.ReqWithoutSecrets Common.ExotelHeartbeatReq)
+    let mbLastStatus = mbLastReq <&> (.statusType)
+    let lastTransactionFailed =
+          mbLastTransaction
+            >>= (.responseError)
+            & isJust
+    let lastStatusWasNotOk = mbLastStatus /= Just Common.OK || lastTransactionFailed
+        lastStatusWasOk = not lastStatusWasNotOk
+        affectedPhonesChanged = Just (getAffectedPhoneNumberSids req) /= (getAffectedPhoneNumberSids <$> mbLastReq)
+        needToCallApp = if req.statusType /= Common.OK then lastStatusWasOk || affectedPhonesChanged else lastStatusWasNotOk
+    when needToCallApp $ do
+      fork ("exotelHeartbeat:" <> show serverName) $ do
         transaction <- buildTransaction Common.ExotelHeartbeatEndpoint serverName (Just req)
         T.withTransactionStoring transaction $
           void $ callExotelHeartbeat serverName
+    pure needToCallApp
+
+  when (or needToCallApps) $
+    logTagInfo "exotelHeartbeat: " $ show req.statusType
+
   pure Success
   where
     callExotelHeartbeat DSN.APP_BACKEND = Client.callRiderAppExotelApi (.exotelHeartbeat) req
