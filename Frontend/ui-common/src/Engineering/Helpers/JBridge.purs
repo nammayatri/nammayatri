@@ -62,7 +62,7 @@ foreign import locateOnMap :: Boolean -> Number -> Number -> Unit
 
 foreign import exitLocateOnMap :: String -> Unit
 foreign import shareTextMessage :: String -> String -> Unit
-foreign import shareImageMessage :: String -> String -> Unit
+foreign import shareReferralCode :: String -> Unit
 
 foreign import enableMyLocation :: Boolean -> Unit
 foreign import isLocationPermissionEnabled :: Unit -> Effect Boolean

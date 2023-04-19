@@ -267,6 +267,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     private static Calendar current = Calendar.getInstance();
     private static final int IMAGE_PERMISSION_REQ_CODE = 4997;
     private static final int IMAGE_CAPTURE_REQ_CODE = 101;
+    private static final int REFERRAL_CODE_SHARE_ACTIVITY_RESULT_CODE = 102;
     public static final int REQUEST_CALL = 8;
     public static final int REQUEST_CONTACTS = 7;
     public static String phoneNumber;
@@ -2656,21 +2657,51 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     @JavascriptInterface
-    public void shareImageMessage(String message, String imageName) {
+    public void shareReferralCode(String referralCode) {
+        SharedPreferences sharedPref = context.getSharedPreferences("application", Context.MODE_PRIVATE);
+        String isAlreadyOpen = sharedPref.getString("SHARE_INTENT_IS_OPEN","false");
+        if(isAlreadyOpen=="true"){return;}
         activity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                Intent sendIntent = new Intent();
-                int image = context.getResources().getIdentifier(imageName, "drawable", context.getPackageName());
-                BitmapDrawable bitmapDrawable = (BitmapDrawable) context.getResources().getDrawable(image);
-                Bitmap bitmap = bitmapDrawable.getBitmap();
-                Uri uri = Uri.parse(MediaStore.Images.Media.insertImage(context.getContentResolver() , bitmap , "qrCode",null));
-                sendIntent.setAction(Intent.ACTION_SEND);
-                sendIntent.putExtra(Intent.EXTRA_STREAM,uri);
-                sendIntent.putExtra(Intent.EXTRA_TEXT, message);
-                sendIntent.setType("image/*");
-                Intent shareIntent = Intent.createChooser(sendIntent, null);
-                activity.startActivity(shareIntent);
+                try {
+                    if (ContextCompat.checkSelfPermission(context , READ_EXTERNAL_STORAGE )==PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(context , WRITE_EXTERNAL_STORAGE )==PackageManager.PERMISSION_GRANTED) {
+                        Intent sendIntent = new Intent();
+                        View imageView = LayoutInflater.from(context).inflate(R.layout.referral_code, null, false);
+                        TextView code = imageView.findViewById(R.id.code);
+                        code.setText(referralCode);
+                        imageView.measure(284,340);
+                        imageView.layout(0,0,imageView.getMeasuredWidth(),imageView.getMeasuredHeight());
+                        Bitmap bitmap = Bitmap.createBitmap(imageView.getMeasuredWidth(), imageView.getMeasuredHeight(), Bitmap.Config.ARGB_8888);
+                        Canvas canvas = new Canvas(bitmap);
+                        imageView.draw(canvas);
+
+                        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+                        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, bytes);
+                        String imagePath = MediaStore.Images.Media.insertImage(context.getContentResolver(), bitmap, "IMG_" + Calendar.getInstance().getTime(), null);
+                        Uri uri = Uri.parse(imagePath);
+
+                        String message = "👋 Hey,\n\nMy Namma Yatri Referral Code is "+referralCode+".\n\nScan the QR code and download Namma Yatri app. You can help me out by entering my referral code on the Home screen.\n\nThanks!";
+
+                        sendIntent.setAction(Intent.ACTION_SEND);
+                        sendIntent.putExtra(Intent.EXTRA_STREAM,uri);
+                        sendIntent.putExtra(Intent.EXTRA_TEXT, message);
+                        sendIntent.setType("*/*");
+                        sendIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        Intent shareIntent = Intent.createChooser(sendIntent, null);
+
+                        SharedPreferences.Editor editor = sharedPref.edit();
+                        editor.putString("SHARE_INTENT_IS_OPEN", "true");
+                        editor.putString("referral_image_path",imagePath);
+                        editor.apply();
+                        activity.startActivityForResult(shareIntent , REFERRAL_CODE_SHARE_ACTIVITY_RESULT_CODE);
+                    }
+                    else{
+                        ActivityCompat.requestPermissions(activity ,new  String []{READ_EXTERNAL_STORAGE , WRITE_EXTERNAL_STORAGE},1);
+                    }
+                }catch (Exception e){
+                    Log.e("exception in shareReferralCode", e.getMessage());
+                }
             }
         });
     }

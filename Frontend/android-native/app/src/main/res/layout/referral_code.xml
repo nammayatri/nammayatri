@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/zxing_transparent"
+    android:id="@+id/referral_code">
+    <RelativeLayout
+        android:id="@+id/referral_code_share_layout"
+        android:layout_width="wrap_content"
+        android:layout_height="410dp"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
+        android:background="@drawable/referral_code_background">
+
+        <ImageView
+            android:id="@+id/namma_yatri"
+            android:layout_width="wrap_content"
+            android:layout_height="50dp"
+            android:layout_alignParentStart="true"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentEnd="true"
+            android:layout_marginTop="10dp"
+            android:src="@drawable/ny_namma_yatri" />
+
+        <ImageView
+            android:id="@+id/qr_code"
+            android:layout_width="288dp"
+            android:layout_height="288dp"
+            android:layout_below="@+id/namma_yatri"
+            android:layout_alignParentStart="true"
+            android:layout_alignParentEnd="true"
+            android:layout_marginTop="5dp"
+            android:src="@drawable/ny_ic_qr_code" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:layout_below="@+id/qr_code"
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentStart="true"
+            android:layout_marginTop="5dp"
+            android:paddingBottom="5dp">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="match_parent"
+                android:text="Referral \nCode"
+                android:fontFamily="@font/plus_jakartasans_semibold"
+                android:textAlignment="center"
+                android:textSize="16dp"
+                android:textColor="@color/Black900"/>
+
+            <TextView
+                android:id="@+id/code"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="match_parent"
+                android:text="000001"
+                android:textColor="@color/Black900"
+                android:fontFamily="@font/plus_jakarta_sans_bold"
+                android:textSize="30dp" />
+        </LinearLayout>
+
+    </RelativeLayout>
+</RelativeLayout>

@@ -15,7 +15,7 @@
 
 module Screens.ReferralScreen.Controller where
 
-import Prelude (bind , class Show, pure, unit, ($), discard , (>=) , (<=) ,(==),(&&) , not ,(+) , show , void)
+import Prelude (bind , class Show, pure, unit, ($), discard , (>=) , (<=) ,(==),(&&) , not ,(+) , show , void,(<>))
 import Screens.Types (ReferralScreenState, ReferralType(..))
 import Components.BottomNavBar as BottomNavBar
 import Components.GenericHeader as GenericHeader
@@ -28,11 +28,12 @@ import PrestoDOM.Types.Core (class Loggable)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress , trackAppTextInput, trackAppScreenEvent)
 import Screens (ScreenName(..), getScreen)
 import Data.String (length)
-import JBridge (hideKeyboardOnNavigation, toast, showDialer, firebaseLogEvent)
+import JBridge (hideKeyboardOnNavigation, toast, showDialer, firebaseLogEvent , shareReferralCode)
 import Services.Config (getSupportNumber)
 import Debug.Trace (spy)
 import Helpers.Utils (clearTimer)
 import Storage (setValueToLocalNativeStore, KeyStore(..))
+import Data.Maybe (fromMaybe)
 
 
 instance showAction :: Show Action where
@@ -90,6 +91,7 @@ instance loggableAction :: Loggable Action where
     EnableReferralFlow -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "in_screen" "enable_referral_flow"
     EnableReferralFlowNoAction -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "in_screen" "enable_referral_flow_no_action"
     SuccessScreenRenderAction -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "your_referral_code_is_linked"
+    ShareReferralCode -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "in_screen" "share_referral_code"
 
 data Action = BottomNavBarAction BottomNavBar.Action
             | GenericHeaderActionController GenericHeader.Action
@@ -101,6 +103,7 @@ data Action = BottomNavBarAction BottomNavBar.Action
             | ContactSupportAction PopUpModal.Action
             | GoToAlertScreen
             | EnableReferralFlow
+            | ShareReferralCode
             | BackPressed
             | EnableReferralFlowNoAction
             | AfterRender
@@ -169,6 +172,10 @@ eval (ContactSupportAction (PopUpModal.OnButton2Click)) state = do
 eval (SuccessScreenExpireCountDwon seconds id status timerId) state = if status == "EXPIRED" then do  
   _ <- pure $ clearTimer timerId
   continue state{props {stage = QRScreen}} else continue state
+
+eval ShareReferralCode state = do
+    _ <- pure $ shareReferralCode (fromMaybe "" state.data.driverInfo.referralCode)
+    continue state
 
 eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do 
   pure $ hideKeyboardOnNavigation true 

@@ -149,6 +149,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
     private static final int IMAGE_PERMISSION_REQ_CODE = 4997;
     private static final int IMAGE_CAPTURE_REQ_CODE = 101;
+    private static final int REFERRAL_CODE_SHARE_ACTIVITY_RESULT_CODE = 102;
     private static final int STORAGE_PERMISSION = 67;
     private HyperServices hyperServices;
     private ConnectionStateMonitor stateMonitor;
@@ -912,6 +913,20 @@ public class MainActivity extends AppCompatActivity {
         unregisterReceiver(gpsReceiver);
         unregisterReceiver(networkBroadcastReceiver);
         DefaultMediaPlayerControl.mediaPlayer.reset();
+        SharedPreferences sharedPref = getSharedPreferences("application", Context.MODE_PRIVATE);
+        String path = sharedPref.getString("referral_image_path",null);
+        if(path!=null){
+            try {
+                getContentResolver().delete(Uri.parse(path), null, null);
+            }
+            catch (Exception e){
+                Toast.makeText(this, e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+            SharedPreferences.Editor editor = sharedPref.edit();
+            editor.remove("SHARE_INTENT_IS_OPEN");
+            editor.remove("referral_image_path");
+            editor.apply();
+        }
         super.onDestroy();
     }
 
@@ -948,6 +963,20 @@ public class MainActivity extends AppCompatActivity {
                     CropImage.ActivityResult result = CropImage.getActivityResult(data);
                     Log.e(TAG,result.getError().toString());
                 }
+                break;
+            case REFERRAL_CODE_SHARE_ACTIVITY_RESULT_CODE:
+                SharedPreferences sharedPref = getSharedPreferences("application", Context.MODE_PRIVATE);
+                String path = sharedPref.getString("referral_image_path",null);
+                try {
+                    getContentResolver().delete(Uri.parse(path), null, null);
+                }
+                catch (Exception e){
+                    Toast.makeText(this, e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+                SharedPreferences.Editor editor = sharedPref.edit();
+                editor.remove("SHARE_INTENT_IS_OPEN");
+                editor.remove("referral_image_path");
+                editor.apply();
                 break;
             default:return;
         }

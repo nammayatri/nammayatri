@@ -1066,11 +1066,9 @@ exports["shareTextMessage"] = function(str){
   }
 }
 
-exports["shareImageMessage"] = function(message){
-  return function (imageName){
-    if(JBridge.shareTextMessage){
-      JBridge.shareImageMessage(message,imageName);
-    }
+exports["shareReferralCode"] = function(code){
+  if(JBridge.shareReferralCode){
+    JBridge.shareReferralCode(code);
   }
 }
 

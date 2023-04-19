@@ -30,7 +30,7 @@ import JBridge (openUrlInApp , startTimerWithTime , toast)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>) , map , discard , show ,(>))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, imageView, imageUrl, cornerRadius, onClick, afterRender, visibility,stroke , alpha, relativeLayout , scrollView , alignParentRight, alignParentBottom)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, imageView, imageUrl, cornerRadius, onClick, afterRender, visibility,stroke , alpha, relativeLayout , scrollView , alignParentRight, alignParentBottom , imageWithFallback)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.ReferralScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.ReferralScreen.ScreenData as ReferralScreenData
@@ -359,7 +359,6 @@ qrScreen push state =
               [ height MATCH_PARENT
               , width MATCH_PARENT
               , gravity CENTER
-              , visibility GONE
               , padding (Padding 4 12 4 12)
               ][ linearLayout
                   [ height WRAP_CONTENT
@@ -367,20 +366,22 @@ qrScreen push state =
                   , cornerRadius 24.0
                   , background Color.white900
                   , orientation HORIZONTAL
+                  , onClick push $ const ShareReferralCode
+                  , padding $ Padding 12 5 12 5
                   ]
                   [ imageView
-                    [ height $ V 30
-                    , width $ V 30
-                    , padding (PaddingLeft 10)
-                    , imageUrl "ic_share"
+                    [ height $ V 20
+                    , width $ V 20
+                    , imageWithFallback "ny_ic_share,https://assets.juspay.in/nammayatri/images/user/ny_ic_share.png"
                     ]
                   , textView
                     [ height MATCH_PARENT
                     , width MATCH_PARENT
                     , textSize $ FontSize.a_12
+                    , gravity CENTER
                     , color Color.black900
-                    , padding (Padding 0 6 10 0)
-                    , text  (" " <> getString SHARE_OPTIONS <> " ")
+                    , margin $ MarginLeft 8
+                    , text  (getString SHARE_OPTIONS)
                     ]
                   ]
               ]
