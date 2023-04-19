@@ -71,6 +71,7 @@ get' bucketName path = do
       (url path host)
       (ET.client s3GetAPI)
       "GetS3"
+      s3GetAPI
 
 put' ::
   ( CoreMetrics m,
@@ -87,8 +88,9 @@ put' bucketName path img = do
       (url path host)
       (ET.client s3PutAPI img)
       "PutS3"
+      s3PutAPI
 
-callS3API :: CallAPI env a
+callS3API :: CallAPI env api a
 callS3API =
   callApiUnwrappingApiError
     (identity @S3Error)

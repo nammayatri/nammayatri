@@ -27,9 +27,9 @@ type LinkRefereeAPI =
 
 linkRefereeClient :: Text -> Maybe Text -> RefereeLinkInfoReq -> EulerClient APISuccess
 linkRefereeClient = client likeRefereeApi
-  where
-    likeRefereeApi :: Proxy LinkRefereeAPI
-    likeRefereeApi = Proxy
+
+likeRefereeApi :: Proxy LinkRefereeAPI
+likeRefereeApi = Proxy
 
 linkReferee ::
   ( MonadFlow m,
@@ -44,4 +44,4 @@ linkReferee ::
   Text ->
   m APISuccess
 linkReferee apiKey internalUrl merchantId referralCode phoneNumber countryCode = do
-  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") internalUrl (linkRefereeClient merchantId (Just apiKey) (RefereeLinkInfoReq referralCode phoneNumber countryCode)) "LinkReferee"
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") internalUrl (linkRefereeClient merchantId (Just apiKey) (RefereeLinkInfoReq referralCode phoneNumber countryCode)) "LinkReferee" likeRefereeApi

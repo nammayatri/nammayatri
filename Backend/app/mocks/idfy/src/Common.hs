@@ -25,7 +25,7 @@ sendVerification :: (ToJSON a) => Text -> a -> Flow AckResponse
 sendVerification tag req = do
   url <- asks (.webhookUrl)
   secret <- asks (.secret)
-  callWebhookAPI url (task secret) tag
+  callWebhookAPI url (task secret) tag (Proxy @IdfyWebhookAPI)
   where
     task secret =
       T.client
@@ -39,7 +39,7 @@ sendDLVerification = sendVerification "DLVerificationResult"
 sendRCVerification :: VerificationResponse -> Flow AckResponse
 sendRCVerification = sendVerification "RCVerificationResult"
 
-callWebhookAPI :: CallAPI env res
+callWebhookAPI :: CallAPI env api res
 callWebhookAPI = callApiUnwrappingApiError (identity @Error) Nothing Nothing
 
 buildMeaninglessIdfyResponse :: (MonadTime m, MonadGuid m) => Maybe a -> m (IdfyResponse a)
