@@ -631,7 +631,13 @@ getDriverStatus dummy = do
     "Online" -> Online
     "Offline" -> Offline
     "Silent" -> Silent
-    _ -> Silent
+    _ -> Online
+
+updateDriverStatus :: Boolean -> DriverStatus
+updateDriverStatus status = do
+  if status && getValueToLocalNativeStore DRIVER_STATUS_N == "Silent" then Silent
+    else if status then Online
+      else Offline
 
 homeScreenFlow :: FlowBT String Unit
 homeScreenFlow = do
@@ -649,11 +655,15 @@ homeScreenFlow = do
   if getDriverInfoResp.active then do
     setValueToLocalStore DRIVER_STATUS "true"
     setValueToLocalNativeStore DRIVER_STATUS "true"
+    setValueToLocalStore DRIVER_STATUS_N (show $ updateDriverStatus true)
+    setValueToLocalNativeStore DRIVER_STATUS_N  (show $ updateDriverStatus true)
     lift $ lift $ liftFlow $ startLocationPollingAPI
     else do
       lift $ lift $ liftFlow $ stopLocationPollingAPI
       setValueToLocalStore DRIVER_STATUS "false"
       setValueToLocalNativeStore DRIVER_STATUS "false"
+      setValueToLocalStore DRIVER_STATUS_N  (show $ updateDriverStatus false)
+      setValueToLocalNativeStore DRIVER_STATUS_N  (show $ updateDriverStatus false)
   _  <- pure $ spy "DRIVERRRR___STATUs" (getValueToLocalNativeStore DRIVER_STATUS)
   _  <- pure $ spy "DRIVERRRR___STATUS LOCAL" (getValueToLocalStore DRIVER_STATUS)
   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {statusOnline = getDriverInfoResp.active, driverStatusSet = getDriverStatus ""}, data{vehicleType = linkedVehicle.variant}})
