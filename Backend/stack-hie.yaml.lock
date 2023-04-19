@@ -31,16 +31,16 @@ packages:
     git: https://github.com/nammayatri/beckn-gateway.git
     subdir: app/mock-registry
 - completed:
-    commit: 9d8ccf5da2bbe4f6aa5e4b3044618e2228b28069
+    commit: fb8c213b92160f3f54d4034bc6f8d168cb1b7bae
     git: https://github.com/nammayatri/shared-kernel.git
     name: mobility-core
     pantry-tree:
-      sha256: 63e7f69c1526967e52128f9841a4726db7bab5b7fca548720bdf6e218d6e7cb8
+      sha256: 6d26fcd1e79e053dc7557cd12fe50173fe44b8bdab5685f2fed1ee4dd0d5fbc4
       size: 18889
     subdir: lib/mobility-core
     version: 0.1.0.0
   original:
-    commit: 9d8ccf5da2bbe4f6aa5e4b3044618e2228b28069
+    commit: fb8c213b92160f3f54d4034bc6f8d168cb1b7bae
     git: https://github.com/nammayatri/shared-kernel.git
     subdir: lib/mobility-core
 - completed:

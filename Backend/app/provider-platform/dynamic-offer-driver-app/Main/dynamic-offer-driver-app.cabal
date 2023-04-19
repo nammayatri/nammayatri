@@ -175,6 +175,8 @@ library
       Domain.Types.QuoteSpecialZone
       Domain.Types.Rating
       Domain.Types.RegistrationToken
+      Domain.Types.Reward
+      Domain.Types.RewardEligibility
       Domain.Types.Ride
       Domain.Types.RideDetails
       Domain.Types.RiderDetails
@@ -331,6 +333,7 @@ library
       Storage.Tabular.QuoteSpecialZone
       Storage.Tabular.Rating
       Storage.Tabular.RegistrationToken
+      Storage.Tabular.Rewards
       Storage.Tabular.Ride
       Storage.Tabular.Ride.Instances
       Storage.Tabular.Ride.Table
