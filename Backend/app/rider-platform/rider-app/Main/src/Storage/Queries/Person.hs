@@ -17,6 +17,7 @@ module Storage.Queries.Person where
 import Control.Applicative ((<|>))
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person
+import Domain.Types.Ride as Ride
 import Kernel.External.Encryption
 import Kernel.External.FCM.Types (FCMRecipientToken)
 import Kernel.External.Maps (Language)
@@ -26,7 +27,9 @@ import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Types.Version
+import Storage.Tabular.Booking
 import Storage.Tabular.Person
+import Storage.Tabular.Ride
 
 create :: Person -> SqlDB ()
 create = Esq.create
@@ -296,3 +299,33 @@ countCustomers merchantId =
   where
     mkCount [counter] = counter
     mkCount _ = 0
+
+ridesCountAggTable :: SqlQuery (From (SqlExpr (Esq.Value PersonTId), SqlExpr (Esq.Value Int)))
+ridesCountAggTable = with $ do
+  ride :& booking <-
+    from $
+      table @RideT
+        `innerJoin` table @BookingT
+        `Esq.on` ( \(ride :& booking) ->
+                     ride ^. RideBookingId ==. booking ^. BookingTId
+                 )
+  where_ (not_ $ ride ^. RideStatus `in_` valList [Ride.NEW, Ride.CANCELLED])
+  groupBy $ booking ^. BookingRiderId
+  pure (booking ^. BookingRiderId, count @Int $ ride ^. RideId)
+
+fetchRidesCount :: Transactionable m => Id Person -> m (Maybe Int)
+fetchRidesCount personId =
+  join <$> do
+    Esq.findOne $ do
+      ridesCountAggQuery <- ridesCountAggTable
+      person :& (_, mbRidesCount) <-
+        from $
+          table @PersonT
+            `leftJoin` ridesCountAggQuery
+            `Esq.on` ( \(person :& (mbPersonId, _mbRidesCount)) ->
+                         just (person ^. PersonTId) ==. mbPersonId
+                     )
+      where_ $
+        person ^. PersonTId ==. val (toKey personId)
+          &&. person ^. PersonRole ==. val USER
+      pure mbRidesCount

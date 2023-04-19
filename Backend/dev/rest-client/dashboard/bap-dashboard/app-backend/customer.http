@@ -22,16 +22,24 @@ token: {{customer_service}}
 
 # @name customerBlock
 
-@customerId = favorit-auto1-0000000000000000000000
+@customerId = ec34eede-5a3e-4a41-89d4-7290a0d7a629
 
 POST {{bap-dashboard-host}}/bap/YATRI/customer/{{customerId}}/block
 content-type: application/json
-token: {{customer_service}}
+token: {{juspay_admin}}
 
 ###
 
 # @name customerUnblock
 
 POST {{bap-dashboard-host}}/bap/YATRI/customer/{{customerId}}/unblock
+content-type: application/json
+token: {{juspay_admin}}
+
+###
+
+# @name customerInfo
+
+GET {{bap-dashboard-host}}/bap/YATRI/customer/{{customerId}}/info
 content-type: application/json
 token: {{customer_service}}

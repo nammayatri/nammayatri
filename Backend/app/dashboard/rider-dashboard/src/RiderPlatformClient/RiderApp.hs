@@ -20,9 +20,8 @@ module RiderPlatformClient.RiderApp
 where
 
 import qualified "rider-app" API.Dashboard as BAP
-import qualified Dashboard.Common as Common
 import qualified Dashboard.Common.Booking as Booking
-import qualified Dashboard.RiderPlatform.Customer as RiderCommon
+import qualified Dashboard.RiderPlatform.Customer as Customer
 import qualified Dashboard.RiderPlatform.Merchant as Merchant
 import qualified Dashboard.RiderPlatform.Ride as Ride
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
@@ -45,10 +44,11 @@ data AppBackendAPIs = AppBackendAPIs
   }
 
 data CustomerAPIs = CustomerAPIs
-  { customerList :: Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Text -> Euler.EulerClient RiderCommon.CustomerListRes,
-    customerDelete :: Id Common.Customer -> Euler.EulerClient APISuccess,
-    customerBlock :: Id Common.Customer -> Euler.EulerClient APISuccess,
-    customerUnblock :: Id Common.Customer -> Euler.EulerClient APISuccess
+  { customerList :: Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Text -> Euler.EulerClient Customer.CustomerListRes,
+    customerDelete :: Id Customer.Customer -> Euler.EulerClient APISuccess,
+    customerBlock :: Id Customer.Customer -> Euler.EulerClient APISuccess,
+    customerUnblock :: Id Customer.Customer -> Euler.EulerClient APISuccess,
+    customerInfo :: Id Customer.Customer -> Euler.EulerClient Customer.CustomerInfoRes
   }
 
 newtype BookingsAPIs = BookingsAPIs
@@ -57,7 +57,7 @@ newtype BookingsAPIs = BookingsAPIs
 
 data RidesAPIs = RidesAPIs
   { shareRideInfo :: Id Ride.Ride -> Euler.EulerClient Ride.ShareRideInfoRes,
-    rideList :: Maybe Int -> Maybe Int -> Maybe Ride.BookingStatus -> Maybe (ShortId Common.Ride) -> Maybe Text -> Maybe Text -> Euler.EulerClient Ride.RideListRes
+    rideList :: Maybe Int -> Maybe Int -> Maybe Ride.BookingStatus -> Maybe (ShortId Ride.Ride) -> Maybe Text -> Maybe Text -> Euler.EulerClient Ride.RideListRes
   }
 
 data MerchantAPIs = MerchantAPIs
@@ -84,7 +84,8 @@ mkAppBackendAPIs merchantId token = do
     customerList
       :<|> customerDelete
       :<|> customerBlock
-      :<|> customerUnblock = customersClient
+      :<|> customerUnblock
+      :<|> customerInfo = customersClient
 
     stuckBookingsCancel = bookingsClient
 
