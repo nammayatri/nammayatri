@@ -915,7 +915,7 @@ type FareComponent = {
 , price :: Number
 }
 
-data FareTypes = BASE_FARE | EXTRA_DISTANCE_FARE | DRIVER_SELECTED_FARE | TOTAL_FARE | PICKUP_CHARGES | WAITING_CHARGES | DEAD_KILOMETER_FARE
+data FareTypes = BASE_FARE | EXTRA_DISTANCE_FARE | DRIVER_SELECTED_FARE | TOTAL_FARE | PICKUP_CHARGES | WAITING_CHARGES | DEAD_KILOMETER_FARE | CUSTOMER_SELECTED_FARE
 
 derive instance genericFareTypes :: Generic FareTypes _
 instance eqFareTypes :: Eq FareTypes where eq = genericEq

@@ -348,7 +348,7 @@ logOutPopUpModelConfig state =
           , backgroundClickable = true
           , customerTipAvailable = true
           , dismissPopup = true
-          , customerTipArray = ["No Tip", "₹10 🙂", "₹15 😄", "₹20 🤩"]
+          , customerTipArray = [(getString NO_TIP), "₹10 🙂", "₹15 😄", "₹20 🤩"]
           , customerTipArrayWithValues = [0,10, 15, 20]
           , primaryText {
               text =  if(isLocalStageOn ST.QuoteList)then (getString TRY_AGAIN_WITH_A_TIP) else (getString SEARCH_AGAIN_WITH_A_TIP)

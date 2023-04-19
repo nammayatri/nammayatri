@@ -417,7 +417,11 @@ data STR =  DOWNLOAD_INVOICE
         | YES_TRY_AGAIN
         | NO_DONT
         | YES_CANCEL_SEARCH
+        | NO_TIP
+        | CUSTOMER_SELECTED_FARE
 
+type NO_TIP = String
+type CUSTOMER_SELECTED_FARE = String
 type PLEASE_TELL_US_WHY_YOU_WANT_TO_CANCEL = String
 type NO_DONT = String
 type YES_CANCEL_SEARCH = String

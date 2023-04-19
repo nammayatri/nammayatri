@@ -363,6 +363,7 @@ getEN script = case script of
   TOTAL_PAID -> "Total Paid"
   WAITING_CHARGE -> "Waiting Charges**"
   NOMINAL_FARE -> "Optional Driver Request*"
+  CUSTOMER_SELECTED_FARE -> "Customer Tip*"
   DRIVERS_CAN_CHARGE_AN_ADDITIONAL_FARE_UPTO -> "* Drivers may optionally request 10% of base fare (rounded to nearest Rs.10) to cover other factors like traffic, chances of return trip etc."
   WAITING_CHARGE_DESCRIPTION -> "** Waiting charges : ₹1 / min - after 3 mins of drivers arrival"
   SUCCESSFUL_ONBOARD -> "You have successfully signed on to \nNamma Yatri"
@@ -422,5 +423,7 @@ getEN script = case script of
   NO_DONT -> "No, Don’t"
   YES_CANCEL_SEARCH -> "Yes, Cancel Search"
   TRY_LOOKING_FOR_RIDES_AGAIN -> "It seems to be a very busy day. You may try looking for rides again"
+  NO_TIP -> "No Tip"
+
 --   Are you sure you want to continue with 
 -- cancelling an ongoing search?

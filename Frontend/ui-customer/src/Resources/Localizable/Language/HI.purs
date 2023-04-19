@@ -421,3 +421,5 @@ getHI script = case script of
   NO_DONT -> "नहीं"
   YES_CANCEL_SEARCH -> "हाँ, खोज रद्द करें"
   TRY_LOOKING_FOR_RIDES_AGAIN -> "ऐसा लगता है कि यह बहुत ही व्यस्त दिन है। आप फिर से राइड खोजने की कोशिश कर सकते हैं"
+  NO_TIP -> "कोई टिप नहीं"
+  CUSTOMER_SELECTED_FARE -> "ग्राहक टिप"
