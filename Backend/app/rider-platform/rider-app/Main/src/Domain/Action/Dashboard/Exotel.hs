@@ -18,6 +18,7 @@ module Domain.Action.Dashboard.Exotel
 where
 
 import qualified "dashboard-helper-api" Dashboard.Common.Exotel as Common
+import qualified Data.Text as T
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -30,8 +31,13 @@ exotelHeartbeat ::
   Common.ExotelHeartbeatReq ->
   Flow APISuccess
 exotelHeartbeat req = do
-  let affectedPhones = (req.incomingAffected <&> (.phoneNumber)) <> (req.outgoingAffected <&> (.phoneNumber))
+  let incomingAffected = req.incomingAffected <&> (.phoneNumber)
+      outgoingAffected = req.outgoingAffected <&> (.phoneNumber)
+  let affectedPhones = incomingAffected <> outgoingAffected
   Esq.runTransaction $ CQExophone.updateAffectedPhones affectedPhones
   CQExophone.clearAllCache
-  logTagInfo "dashboard -> exotelHeartbeat: " $ show req.statusType
+  logTagInfo "dashboard -> exotelHeartbeat: " $
+    show req.statusType
+      <> (if null incomingAffected then "" else "; incomingAffected: " <> T.intercalate "," incomingAffected)
+      <> if null outgoingAffected then "" else "; outgoingAffected: " <> T.intercalate "," outgoingAffected
   pure Success

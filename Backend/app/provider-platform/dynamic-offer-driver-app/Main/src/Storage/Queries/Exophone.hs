@@ -57,10 +57,13 @@ findAllExophones = findAll $ from $ table @ExophoneT
 
 updateAffectedPhones :: [Text] -> SqlDB ()
 updateAffectedPhones primaryPhones = do
+  let indianMobileCode = val "+91"
   now <- getCurrentTime
   let primaryPhonesList = valList primaryPhones
   Esq.update $ \tbl -> do
-    let isPrimaryDown = tbl ^. ExophonePrimaryPhone `in_` primaryPhonesList
+    let isPrimaryDown =
+          tbl ^. ExophonePrimaryPhone `in_` primaryPhonesList
+            ||. (indianMobileCode ++. tbl ^. ExophonePrimaryPhone) `in_` primaryPhonesList
     set
       tbl
       [ ExophoneIsPrimaryDown =. isPrimaryDown,
