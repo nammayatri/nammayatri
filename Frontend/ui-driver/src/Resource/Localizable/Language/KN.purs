@@ -374,3 +374,4 @@ getKN script = case script of
   GO_ONLINE -> "ಗೋ!"
   GO_ONLINE_PROMPT -> "ನೀವು ಪ್ರಸ್ತುತ ಆಫ್‌ಲೈನ್‌ನಲ್ಲಿರುವಿರಿ. \n ಸವಾರಿ ವಿನಂತಿಗಳನ್ನು ಪಡೆಯಲು, ಈಗಲೇ ಆನ್‌ಲೈನ್‌ಗೆ ಹೋಗಿ!"
   LIVE_DASHBOARD -> "ಲೈವ್ ಸ್ಥಿತಿ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್"
+  CLICK_TO_ACCESS_YOUR_ACCOUNT -> "ನಿಮ್ಮ ಖಾತೆಯನ್ನು ಪ್ರವೇಶಿಸಲು ಇಲ್ಲಿ ಕ್ಲಿಕ್ ಮಾಡಿ"

@@ -374,3 +374,4 @@ getEN script = case script of
   GO_ONLINE -> "GO!"
   GO_ONLINE_PROMPT -> "You are currently offline.\nTo get ride requests, go online now!"
   LIVE_DASHBOARD -> "Live Stats Dashboard"
+  CLICK_TO_ACCESS_YOUR_ACCOUNT -> "Click here to access your account"
