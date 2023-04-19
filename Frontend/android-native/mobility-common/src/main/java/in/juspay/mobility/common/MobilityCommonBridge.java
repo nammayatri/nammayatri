@@ -13,6 +13,7 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentSender;
+import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
@@ -245,7 +246,6 @@ public class MobilityCommonBridge extends HyperBridge {
                         Double lng = location.getLongitude();
                         lastLatitudeValue = lat;
                         lastLongitudeValue = lng;
-                        setKeysInSharedPrefs("LAST_KNOWN_LAT", String.valueOf(lastLatitudeValue));
                         setKeysInSharedPrefs("LAST_KNOWN_LON", String.valueOf(lastLongitudeValue));
                         if (callback != null) {
                             String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s');",
@@ -912,7 +912,16 @@ public class MobilityCommonBridge extends HyperBridge {
 
     @JavascriptInterface
     public String getKeysInSharedPref(String key) {
-        return KeyValueStore.read(bridgeComponents.getContext(), bridgeComponents.getSdkName(), key, "__failed");
+         if(key.equals("MERCHANT_ID") || key.equals("BASE_URL")){
+             return getKeyInNativeSharedPrefKeys(key);
+         }
+         return KeyValueStore.read(bridgeComponents.getContext(), bridgeComponents.getSdkName(), key, "__failed");
+    }
+
+    @JavascriptInterface
+    public String getKeyInNativeSharedPrefKeys(String key) {
+       SharedPreferences sharedPref = bridgeComponents.getContext().getSharedPreferences("namma_yatri_app_local_keys", Context.MODE_PRIVATE);
+       return sharedPref.getString(key,"__failed");
     }
 
 //    @JavascriptInterface

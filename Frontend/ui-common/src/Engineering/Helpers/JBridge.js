@@ -802,7 +802,7 @@ exports._onEventWithCB = function (payload) {
 // exports.getSessionInfo = JSON.parse(JBridge.getDeviceInfo());
 
 exports.getKeyInSharedPrefKeys = function (key) {
-  return JBridge.getKeysInSharedPrefs(key);
+  return JBridge.getKeysInSharedPref(key);
 };
 
 exports.getKeyInNativeSharedPrefKeys = function (key) {

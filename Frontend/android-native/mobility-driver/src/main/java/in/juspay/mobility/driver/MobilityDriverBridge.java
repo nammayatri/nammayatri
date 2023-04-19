@@ -373,8 +373,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         try {
             HttpURLConnection connection = (HttpURLConnection) (new URL(url).openConnection());
             connection.setRequestMethod("GET");
-            //fix below line
-//             connection.setRequestProperty("token",  getKeyInNativeSharedPrefKeys("REGISTERATION_TOKEN"));
+            connection.setRequestProperty("token",  getKeyInNativeSharedPrefKeys("REGISTERATION_TOKEN"));
             connection.connect();
             int respCode = connection.getResponseCode();
             InputStreamReader respReader;
