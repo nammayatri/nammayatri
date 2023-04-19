@@ -344,3 +344,10 @@ export const getExpiryTime = function (str1) {
       }
     };
 };
+
+export const getCurrentUTC = function (str) {
+  var d = new Date();
+  var result =  moment(d).utc().format();
+  console.log(result);
+  return result;
+};

@@ -35,7 +35,12 @@ module.exports = function(env){
     host: "0.0.0.0",
     inline: false,
     port: 8080
-  }
+  },
+  optimization: {
+
+   usedExports: true,
+
+  },
   }
   return config;
 }

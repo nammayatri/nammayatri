@@ -45,6 +45,11 @@ module.exports = function(env, argv){
   },
   watchOptions: {
       aggregateTimeout: 200
+  },
+  optimization: {
+
+   usedExports: true,
+
   }
   }
   return config;
