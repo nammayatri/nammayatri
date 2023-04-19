@@ -118,7 +118,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                     case NotificationTypes.NEW_RIDE_AVAILABLE :
                         sharedPref.edit().putString(getString(R.string.RIDE_STATUS), getString(R.string.NEW_RIDE_AVAILABLE)).apply();
                         if (sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") && (sharedPref.getString("ACTIVITY_STATUS", "null").equals("onPause") || sharedPref.getString("ACTIVITY_STATUS", "null").equals("onDestroy")) ){
-                            startWidgetService(getString(R.string.ride_cancelled), payload, entity_payload);
+                            startWidgetService(null, payload, entity_payload);
                         }else{
                             NotificationUtils.showAllocationNotification(this, title, body, payload, imageUrl, entity_payload);
                         }
@@ -289,8 +289,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         Intent widgetService = new Intent(getApplicationContext(), WidgetService.class);
         if (getResources().getString(R.string.service).equals(getString(R.string.nammayatripartner)) && Settings.canDrawOverlays(getApplicationContext())  && !sharedPref.getString(getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && (sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"))) {
             widgetService.putExtra(getResources().getString(R.string.WIDGET_MESSAGE),widgetMessage);
-            widgetService.putExtra("payload", payload.toString());
-            widgetService.putExtra("data", data.toString());
+            widgetService.putExtra("payload", payload!=null ? payload.toString(): null);
+            widgetService.putExtra("data", data!=null ? data.toString(): null);
             try{
                 startService(widgetService);
             }catch (Exception e) {
