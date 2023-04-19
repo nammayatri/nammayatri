@@ -1903,75 +1903,47 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     @JavascriptInterface
     public void renderBase64Image (String url, String id){
         String base64Image = getAPIResponse(url);
-        activity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    if (!base64Image.equals("") && base64Image!=null && id!=null){
-                        LinearLayout layout = activity.findViewById(Integer.parseInt(id));
-                        byte[] decodedString = Base64.decode(base64Image, Base64.DEFAULT);
-                        Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
-                        ImageView imageView = new ImageView(context);
-                        imageView.setImageBitmap(decodedByte);
-                        imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
-                        imageView.setAdjustViewBounds(true);
-                        imageView.setClipToOutline(true);
-                        layout.removeAllViews();
-                        layout.addView(imageView);
-                    }
-                } catch (Exception e){
-                    e.printStackTrace();
+        activity.runOnUiThread(() -> {
+            try {
+                if (!base64Image.equals("") && base64Image!=null && id!=null){
+                    LinearLayout layout = activity.findViewById(Integer.parseInt(id));
+                    byte[] decodedString = Base64.decode(base64Image, Base64.DEFAULT);
+                    Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
+                    ImageView imageView = new ImageView(context);
+                    imageView.setImageBitmap(decodedByte);
+                    imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                    imageView.setAdjustViewBounds(true);
+                    imageView.setClipToOutline(true);
+                    layout.removeAllViews();
+                    layout.addView(imageView);
                 }
+            } catch (Exception e){
+                e.printStackTrace();
             }
         });
     }
 
     @JavascriptInterface
     public void startLottieProcess(String rawJson, String id, boolean repeat, float speed, String scaleType) {
-        if (activity != null) activity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    animationView = activity.findViewById(Integer.parseInt(id));
-                    animationView.setAnimationFromJson(getJsonFromResources(rawJson));
-                    animationView.loop(repeat);
-                    animationView.setSpeed(speed);
-                    animationView.playAnimation();
-                    switch (scaleType) {
-                        case "MATRIX" : animationView.setScaleType(ImageView.ScaleType.MATRIX); break;
-                        case "FIT_XY" : animationView.setScaleType(ImageView.ScaleType.FIT_XY); break;
-                        case "FIT_START" : animationView.setScaleType(ImageView.ScaleType.FIT_START); break;
-                        case "FIT_END" : animationView.setScaleType(ImageView.ScaleType.FIT_END); break;
-                        case "CENTER" : animationView.setScaleType(ImageView.ScaleType.CENTER); break;
-                        case "CENTER_CROP" : animationView.setScaleType(ImageView.ScaleType.CENTER_CROP); break;
-                        case "CENTER_INSIDE" : animationView.setScaleType(ImageView.ScaleType.CENTER_INSIDE); break;
-                        default: animationView.setScaleType(ImageView.ScaleType.FIT_CENTER);break;
-                    }
-                } catch (Exception e) {
-                    Log.d("TAG", "exception in startLottieAnimation" , e);
+        if (activity != null) activity.runOnUiThread(() -> {
+            try {
+                animationView = activity.findViewById(Integer.parseInt(id));
+                animationView.setAnimationFromJson(getJsonFromResources(rawJson));
+                animationView.loop(repeat);
+                animationView.setSpeed(speed);
+                animationView.playAnimation();
+                switch (scaleType) {
+                    case "MATRIX" : animationView.setScaleType(ImageView.ScaleType.MATRIX); break;
+                    case "FIT_XY" : animationView.setScaleType(ImageView.ScaleType.FIT_XY); break;
+                    case "FIT_START" : animationView.setScaleType(ImageView.ScaleType.FIT_START); break;
+                    case "FIT_END" : animationView.setScaleType(ImageView.ScaleType.FIT_END); break;
+                    case "CENTER" : animationView.setScaleType(ImageView.ScaleType.CENTER); break;
+                    case "CENTER_CROP" : animationView.setScaleType(ImageView.ScaleType.CENTER_CROP); break;
+                    case "CENTER_INSIDE" : animationView.setScaleType(ImageView.ScaleType.CENTER_INSIDE); break;
+                    default: animationView.setScaleType(ImageView.ScaleType.FIT_CENTER);break;
                 }
-            }
-        });
-    }
-
-    /*
-    * This function is deprecated on 12 Jan - 2023
-    * Remove this function once it is not begin used.
-    * */
-    @JavascriptInterface
-    public void startLottieProcess(String rawJson, String id, boolean repeat, float speed) {
-        if (activity != null) activity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    animationView = activity.findViewById(Integer.parseInt(id));
-                    animationView.setAnimationFromJson(getJsonFromResources(rawJson));
-                    animationView.loop(repeat);
-                    animationView.setSpeed(speed);
-                    animationView.playAnimation();
-                } catch (Exception e) {
-                    Log.d("TAG", "exception in startLottieAnimation" , e);
-                }
+            } catch (Exception e) {
+                Log.d("TAG", "exception in startLottieAnimation" , e);
             }
         });
     }
@@ -2012,17 +1984,14 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     @JavascriptInterface
     public void showMap(final String pureScriptId, boolean isEnableCurrentLocation, final String mapType, final float zoom, final String callback) {
         try {
-            activity.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    SupportMapFragment mapFragment = SupportMapFragment.newInstance();
-                    FragmentManager supportFragmentManager = ((FragmentActivity) activity).getSupportFragmentManager();
-                    FragmentTransaction fragmentTransaction = supportFragmentManager.beginTransaction();
-                    fragmentTransaction.add(Integer.parseInt(pureScriptId), mapFragment);
-                    fragmentTransaction.commitAllowingStateLoss();
-                    if (mapFragment != null){
-                        getMapAsync(mapFragment, isEnableCurrentLocation, mapType, callback, pureScriptId, zoom);
-                    }
+            activity.runOnUiThread(() -> {
+                SupportMapFragment mapFragment = SupportMapFragment.newInstance();
+                FragmentManager supportFragmentManager = ((FragmentActivity) activity).getSupportFragmentManager();
+                FragmentTransaction fragmentTransaction = supportFragmentManager.beginTransaction();
+                fragmentTransaction.add(Integer.parseInt(pureScriptId), mapFragment);
+                fragmentTransaction.commitAllowingStateLoss();
+                if (mapFragment != null){
+                    getMapAsync(mapFragment, isEnableCurrentLocation, mapType, callback, pureScriptId, zoom);
                 }
             });
         } catch (Exception e) {
@@ -2033,63 +2002,57 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     @JavascriptInterface
     public void mapSnapShot(final String pureScriptId, final String json, final String routeType, final boolean actualRoute, final String callback) {
         try {
-            activity.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    SupportMapFragment mapFragment = SupportMapFragment.newInstance();
-                    FragmentManager supportFragmentManager = ((FragmentActivity) activity).getSupportFragmentManager();
-                    FragmentTransaction fragmentTransaction = supportFragmentManager.beginTransaction();
-                    fragmentTransaction.add(Integer.parseInt(pureScriptId), mapFragment);
-                    fragmentTransaction.commitAllowingStateLoss();
-                    mapFragment.getMapAsync(new OnMapReadyCallback() {
+            activity.runOnUiThread(() -> {
+                SupportMapFragment mapFragment = SupportMapFragment.newInstance();
+                FragmentManager supportFragmentManager = ((FragmentActivity) activity).getSupportFragmentManager();
+                FragmentTransaction fragmentTransaction = supportFragmentManager.beginTransaction();
+                fragmentTransaction.add(Integer.parseInt(pureScriptId), mapFragment);
+                fragmentTransaction.commitAllowingStateLoss();
+                mapFragment.getMapAsync(googleMap -> {
+                    CommonJsInterface.this.googleMap = googleMap;
+                    CommonJsInterface.this.googleMap.getUiSettings().setAllGesturesEnabled(false);
+                    CommonJsInterface.this.googleMap.getUiSettings().setRotateGesturesEnabled(false);
+                    googleMap.getUiSettings().setMyLocationButtonEnabled(false);
+                    markers = new JSONObject();
+                    markersElement.put(pureScriptId, markers);
+                    CommonJsInterface.this.googleMap.setOnMapLoadedCallback (new GoogleMap.OnMapLoadedCallback () {
                         @Override
-                        public void onMapReady(GoogleMap googleMap) {
-                            CommonJsInterface.this.googleMap = googleMap;
-                            CommonJsInterface.this.googleMap.getUiSettings().setAllGesturesEnabled(false);
-                            CommonJsInterface.this.googleMap.getUiSettings().setRotateGesturesEnabled(false);
-                            googleMap.getUiSettings().setMyLocationButtonEnabled(false);
-                            markers = new JSONObject();
-                            markersElement.put(pureScriptId, markers);
-                            CommonJsInterface.this.googleMap.setOnMapLoadedCallback (new GoogleMap.OnMapLoadedCallback () {
+                        public synchronized void onMapLoaded() {
+                            System.out.println("onMapLoaded");
+                            System.out.println(json);
+                            showRoute(json, routeType, "#323643", actualRoute, "ny_ic_dest_marker", "ny_ic_src_marker", 8);
+                            final Handler handler = new Handler();
+                            handler.postDelayed(new Runnable() {
                                 @Override
-                                public synchronized void onMapLoaded() {
-                                    System.out.println("onMapLoaded");
-                                    System.out.println(json);
-                                    showRoute(json, routeType, "#323643", actualRoute, "ny_ic_dest_marker", "ny_ic_src_marker", 8);
-                                    final Handler handler = new Handler();
-                                    handler.postDelayed(new Runnable() {
+                                public void run() {
+                                    GoogleMap.SnapshotReadyCallback callback2=new GoogleMap.SnapshotReadyCallback () {
+                                        Bitmap bitmap;
                                         @Override
-                                        public void run() {
-                                            GoogleMap.SnapshotReadyCallback callback2=new GoogleMap.SnapshotReadyCallback () {
-                                                Bitmap bitmap;
-                                                @Override
-                                                public void onSnapshotReady(Bitmap snapshot) {
-                                                    bitmap=snapshot;
-                                                    String encImage = "";
-                                                    try {
-                                                        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                                                        bitmap.compress(Bitmap.CompressFormat.JPEG,80,baos);
-                                                        byte[] b = baos.toByteArray();
-                                                        encImage = Base64.encodeToString(b, Base64.NO_WRAP);
-                                                    } catch (Exception e) {
-                                                        e.printStackTrace();
-                                                    }
+                                        public void onSnapshotReady(Bitmap snapshot) {
+                                            bitmap=snapshot;
+                                            String encImage = "";
+                                            try {
+                                                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                                                bitmap.compress(Bitmap.CompressFormat.JPEG,80,baos);
+                                                byte[] b = baos.toByteArray();
+                                                encImage = Base64.encodeToString(b, Base64.NO_WRAP);
+                                            } catch (Exception e) {
+                                                e.printStackTrace();
+                                            }
 
-                                                    if(dynamicUI != null && callback != null && juspayServices.getDynamicUI() != null){
-                                                        Log.i("callback encoded image 2", encImage);
-                                                        String javascript = String.format("window.callUICallback('%s','%s');", callback, encImage);
-                                                        Log.e(LOG_TAG, javascript);
-                                                        dynamicUI.addJsToWebView(javascript);
-                                                    }
-                                                }
-                                            };CommonJsInterface.this.googleMap.snapshot (callback2);
+                                            if(dynamicUI != null && callback != null && juspayServices.getDynamicUI() != null){
+                                                Log.i("callback encoded image 2", encImage);
+                                                String javascript = String.format("window.callUICallback('%s','%s');", callback, encImage);
+                                                Log.e(LOG_TAG, javascript);
+                                                dynamicUI.addJsToWebView(javascript);
+                                            }
                                         }
-                                    }, 2000);
+                                    };CommonJsInterface.this.googleMap.snapshot (callback2);
                                 }
-                            });
+                            }, 2000);
                         }
                     });
-                }
+                });
             });
         } catch (Exception e) {
             Log.e("ADD_MARKER", e.toString());
@@ -2100,162 +2063,156 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     public void showRoute(final String json, final String style, final String trackColor, final boolean isActual, final String sourceMarker, final String destMarker, final int polylineWidth) {
         ArrayList<Polyline> lines = new ArrayList<>();
 //        polylines.add(lines);
-        activity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                if(googleMap!=null) {
-                    System.out.println("inside_showRoute");
-                    PolylineOptions polylineOptions = new PolylineOptions();
-                    int color = Color.parseColor(trackColor);
-                    try {
-                        JSONObject jsonObject = new JSONObject(json);
-                        JSONArray coordinates = jsonObject.getJSONArray("points");
-                        JSONObject sourceCoordinates = (JSONObject) coordinates.get(0);
-                        JSONObject destCoordinates = (JSONObject) coordinates.get(coordinates.length()-1);
-                        double sourceLat = sourceCoordinates.getDouble("lat");
-                        double sourceLong = sourceCoordinates.getDouble("lng");
-                        double destLat = destCoordinates.getDouble("lat");
-                        double destLong = destCoordinates.getDouble("lng");
+        activity.runOnUiThread(() -> {
+            if(googleMap!=null) {
+                System.out.println("inside_showRoute");
+                PolylineOptions polylineOptions = new PolylineOptions();
+                int color = Color.parseColor(trackColor);
+                try {
+                    JSONObject jsonObject = new JSONObject(json);
+                    JSONArray coordinates = jsonObject.getJSONArray("points");
+                    JSONObject sourceCoordinates = (JSONObject) coordinates.get(0);
+                    JSONObject destCoordinates = (JSONObject) coordinates.get(coordinates.length()-1);
+                    double sourceLat = sourceCoordinates.getDouble("lat");
+                    double sourceLong = sourceCoordinates.getDouble("lng");
+                    double destLat = destCoordinates.getDouble("lat");
+                    double destLong = destCoordinates.getDouble("lng");
 
-                        double source_lat, source_lng, destination_lat, destination_lng;
-                        if (sourceLat <= destLat) {
-                            source_lat = sourceLat - 0.4*(destLat-sourceLat);
-                            destination_lat = destLat + 0.1*(destLat-sourceLat);
-                        } else {
-                            source_lat = sourceLat + 0.1*(sourceLat-destLat);
-                            destination_lat = destLat - 0.4*(sourceLat-destLat);
-                        }
-                        if (sourceLong <= destLong) {
-                            source_lng = sourceLong - 0.09*(destLong-sourceLong);
-                            destination_lng = destLong + 0.09*(destLong-sourceLong);
-                        } else {
-                            source_lng = sourceLong + 0.09*(sourceLong-destLong);
-                            destination_lng = destLong - 0.09*(sourceLong-destLong);
-                        }
-
-                        if(googleMap!=null) {
-                            try {
-                                LatLng pickupLatLng = new LatLng(source_lat, source_lng);
-                                LatLng destinationLatLng = new LatLng(destination_lat, destination_lng);
-                                LatLngBounds bounds = LatLngBounds.builder().include(pickupLatLng).include(destinationLatLng).build();
-                                googleMap.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, 0));
-                            } catch (IllegalArgumentException e) {
-                                LatLng pickupLatLng = new LatLng(source_lat, source_lng);
-                                LatLng destinationLatLng = new LatLng(destination_lat, destination_lng);
-                                LatLngBounds bounds = LatLngBounds.builder().include(destinationLatLng).include(pickupLatLng).build();
-                                googleMap.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, 0));
-                            }
-                            catch(Exception e){
-                                System.out.println("In mmove camera in catch exception " + e);
-                            }
-                        }
-//
-                        if(isActual){
-                            for (int i = coordinates.length() -1 ; i >= 0 ; i--) {
-                                JSONObject coordinate = (JSONObject) coordinates.get(i);
-                                double lng = coordinate.getDouble("lng");
-                                double lat = coordinate.getDouble("lat");
-                                polylineOptions.add(new LatLng(lat, lng));
-                            }
-                        }else{
-                            LatLng fromPointObj = new LatLng(sourceLat, sourceLong);
-                            LatLng toPointObj = new LatLng(destLat, destLong);
-                            polylineOptions.add(toPointObj);
-                            polylineOptions.add(fromPointObj);
-                        }
-
-                        Polyline polyline = setRouteCustomTheme(polylineOptions, color, style, polylineWidth);
-
-                        if(sourceMarker != null && !sourceMarker.equals("")) {
-                            Bitmap sourceBitmap = constructBitmap(90, sourceMarker);
-                            polyline.setStartCap(
-                                    new CustomCap(
-                                            BitmapDescriptorFactory.fromBitmap(sourceBitmap)
-                                    )
-                            );
-                        }
-
-                        if(destMarker != null && !destMarker.equals("")) {
-                            Bitmap destBitmap = constructBitmap(90, destMarker);
-                            polyline.setEndCap(
-                                    new CustomCap(
-                                            BitmapDescriptorFactory.fromBitmap(destBitmap)
-                                    )
-                            );
-                        }
-
-                        lines.add(polyline);
-
-                    } catch (JSONException e) {
-                        e.printStackTrace();
+                    double source_lat, source_lng, destination_lat, destination_lng;
+                    if (sourceLat <= destLat) {
+                        source_lat = sourceLat - 0.4*(destLat-sourceLat);
+                        destination_lat = destLat + 0.1*(destLat-sourceLat);
+                    } else {
+                        source_lat = sourceLat + 0.1*(sourceLat-destLat);
+                        destination_lat = destLat - 0.4*(sourceLat-destLat);
                     }
+                    if (sourceLong <= destLong) {
+                        source_lng = sourceLong - 0.09*(destLong-sourceLong);
+                        destination_lng = destLong + 0.09*(destLong-sourceLong);
+                    } else {
+                        source_lng = sourceLong + 0.09*(sourceLong-destLong);
+                        destination_lng = destLong - 0.09*(sourceLong-destLong);
+                    }
+
+                    if(googleMap!=null) {
+                        try {
+                            LatLng pickupLatLng = new LatLng(source_lat, source_lng);
+                            LatLng destinationLatLng = new LatLng(destination_lat, destination_lng);
+                            LatLngBounds bounds = LatLngBounds.builder().include(pickupLatLng).include(destinationLatLng).build();
+                            googleMap.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, 0));
+                        } catch (IllegalArgumentException e) {
+                            LatLng pickupLatLng = new LatLng(source_lat, source_lng);
+                            LatLng destinationLatLng = new LatLng(destination_lat, destination_lng);
+                            LatLngBounds bounds = LatLngBounds.builder().include(destinationLatLng).include(pickupLatLng).build();
+                            googleMap.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, 0));
+                        }
+                        catch(Exception e){
+                            System.out.println("In mmove camera in catch exception " + e);
+                        }
+                    }
+//
+                    if(isActual){
+                        for (int i = coordinates.length() -1 ; i >= 0 ; i--) {
+                            JSONObject coordinate = (JSONObject) coordinates.get(i);
+                            double lng = coordinate.getDouble("lng");
+                            double lat = coordinate.getDouble("lat");
+                            polylineOptions.add(new LatLng(lat, lng));
+                        }
+                    }else{
+                        LatLng fromPointObj = new LatLng(sourceLat, sourceLong);
+                        LatLng toPointObj = new LatLng(destLat, destLong);
+                        polylineOptions.add(toPointObj);
+                        polylineOptions.add(fromPointObj);
+                    }
+
+                    Polyline polyline = setRouteCustomTheme(polylineOptions, color, style, polylineWidth);
+
+                    if(sourceMarker != null && !sourceMarker.equals("")) {
+                        Bitmap sourceBitmap = constructBitmap(90, sourceMarker);
+                        polyline.setStartCap(
+                                new CustomCap(
+                                        BitmapDescriptorFactory.fromBitmap(sourceBitmap)
+                                )
+                        );
+                    }
+
+                    if(destMarker != null && !destMarker.equals("")) {
+                        Bitmap destBitmap = constructBitmap(90, destMarker);
+                        polyline.setEndCap(
+                                new CustomCap(
+                                        BitmapDescriptorFactory.fromBitmap(destBitmap)
+                                )
+                        );
+                    }
+
+                    lines.add(polyline);
+
+                } catch (JSONException e) {
+                    e.printStackTrace();
                 }
             }
         });
     }
 
     private void getMapAsync(SupportMapFragment mapFragment, boolean isEnableCurrentLocation, final String mapType, final String callback, final String pureScriptId, final float zoom){
-        mapFragment.getMapAsync(new OnMapReadyCallback() {
-            @Override
-            public void onMapReady(GoogleMap googleMap) {
-                CommonJsInterface.this.googleMap = googleMap;
-                googleMap.setMinZoomPreference(7.0f);
-                googleMap.setMaxZoomPreference(googleMap.getMaxZoomLevel());
-                googleMap.getUiSettings().setRotateGesturesEnabled(false);
-                googleMap.getUiSettings().setMyLocationButtonEnabled(false);
-                if (ActivityCompat.checkSelfPermission(activity.getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(activity.getApplicationContext(), Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-                    googleMap.setMyLocationEnabled(isEnableCurrentLocation);
+        mapFragment.getMapAsync(googleMap -> {
+            CommonJsInterface.this.googleMap = googleMap;
+            googleMap.setMinZoomPreference(7.0f);
+            googleMap.setMaxZoomPreference(googleMap.getMaxZoomLevel());
+            googleMap.getUiSettings().setRotateGesturesEnabled(false);
+            googleMap.getUiSettings().setMyLocationButtonEnabled(false);
+            if (ActivityCompat.checkSelfPermission(activity.getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(activity.getApplicationContext(), Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                googleMap.setMyLocationEnabled(isEnableCurrentLocation);
+            }
+            markers = new JSONObject();
+            markersElement.put(pureScriptId, markers);
+            googleMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
+                @Override
+                public boolean onMarkerClick(Marker marker) {
+                    marker.hideInfoWindow();
+                    return true;
                 }
-                markers = new JSONObject();
-                markersElement.put(pureScriptId, markers);
-                googleMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
-                    @Override
-                    public boolean onMarkerClick(Marker marker) {
-                        marker.hideInfoWindow();
-                        return true;
-                    }
-                });
-                try {
-                    if (mapType.equals(LOCATE_ON_MAP)){
-                        upsertMarker(LOCATE_ON_MAP, String.valueOf(lastLatitudeValue), String.valueOf(lastLongitudeValue), 160, 0.5f,0.9f);
-                        CommonJsInterface.this.googleMap.setOnCameraMoveListener(new GoogleMap.OnCameraMoveListener() {
-                            @Override
-                            public void onCameraMove() {
-                                try {
-                                    double lat = (CommonJsInterface.this.googleMap.getCameraPosition().target.latitude);
-                                    double lng =  (CommonJsInterface.this.googleMap.getCameraPosition().target.longitude);
-                                    upsertMarker(LOCATE_ON_MAP, String.valueOf(lat), String.valueOf(lng),160, 0.5f,0.9f);
-                                }catch (Exception e) {
-                                    Log.i(LOG_TAG, "Marker creation error for ", e);
-                                }
+            });
+            try {
+                if (mapType.equals(LOCATE_ON_MAP)){
+                    upsertMarker(LOCATE_ON_MAP, String.valueOf(lastLatitudeValue), String.valueOf(lastLongitudeValue), 160, 0.5f,0.9f);
+                    CommonJsInterface.this.googleMap.setOnCameraMoveListener(new GoogleMap.OnCameraMoveListener() {
+                        @Override
+                        public void onCameraMove() {
+                            try {
+                                double lat = (CommonJsInterface.this.googleMap.getCameraPosition().target.latitude);
+                                double lng =  (CommonJsInterface.this.googleMap.getCameraPosition().target.longitude);
+                                upsertMarker(LOCATE_ON_MAP, String.valueOf(lat), String.valueOf(lng),160, 0.5f,0.9f);
+                            }catch (Exception e) {
+                                Log.i(LOG_TAG, "Marker creation error for ", e);
                             }
-                        });
-                        CommonJsInterface.this.googleMap.setOnCameraIdleListener(new GoogleMap.OnCameraIdleListener() {
-                            @Override
-                            public void onCameraIdle() {
-                                if (dynamicUI != null && juspayServices.getDynamicUI() != null){
-                                    double lat = (CommonJsInterface.this.googleMap.getCameraPosition().target.latitude);
-                                    double lng =  (CommonJsInterface.this.googleMap.getCameraPosition().target.longitude);
-                                    String javascript = String.format("window.callUICallback('%s','%s','%s','%s');", callback, "LatLon", lat, lng);
-                                    Log.e(LOG_TAG, javascript);
-                                    dynamicUI.addJsToWebView(javascript);
-                                }
+                        }
+                    });
+                    CommonJsInterface.this.googleMap.setOnCameraIdleListener(new GoogleMap.OnCameraIdleListener() {
+                        @Override
+                        public void onCameraIdle() {
+                            if (dynamicUI != null && juspayServices.getDynamicUI() != null){
+                                double lat = (CommonJsInterface.this.googleMap.getCameraPosition().target.latitude);
+                                double lng =  (CommonJsInterface.this.googleMap.getCameraPosition().target.longitude);
+                                String javascript = String.format("window.callUICallback('%s','%s','%s','%s');", callback, "LatLon", lat, lng);
+                                Log.e(LOG_TAG, javascript);
+                                dynamicUI.addJsToWebView(javascript);
                             }
-                        });
-                    }
-                    setMapCustomTheme("theme");
-                    if (lastLatitudeValue != 0.0 && lastLongitudeValue != 0.0) {
-                        LatLng latLngObjMain = new LatLng(lastLatitudeValue, lastLongitudeValue);
-                        CommonJsInterface.this.googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLngObjMain, zoom));
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
+                        }
+                    });
                 }
-                if(dynamicUI != null && callback != null && juspayServices.getDynamicUI() != null){
-                    String javascript = String.format("window.callUICallback('%s','%s','%s','%s');", callback, "MAP", "READY", "LOADED");
-                    Log.e(LOG_TAG, javascript);
-                    dynamicUI.addJsToWebView(javascript);
+                setMapCustomTheme("theme");
+                if (lastLatitudeValue != 0.0 && lastLongitudeValue != 0.0) {
+                    LatLng latLngObjMain = new LatLng(lastLatitudeValue, lastLongitudeValue);
+                    CommonJsInterface.this.googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLngObjMain, zoom));
                 }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            if(dynamicUI != null && callback != null && juspayServices.getDynamicUI() != null){
+                String javascript = String.format("window.callUICallback('%s','%s','%s','%s');", callback, "MAP", "READY", "LOADED");
+                Log.e(LOG_TAG, javascript);
+                dynamicUI.addJsToWebView(javascript);
             }
         });
     } //NEW
@@ -2264,12 +2221,9 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     public void exitLocateOnMap (String str){
         try {
             this.storeMapCallBack = null;
-            activity.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    googleMap.setOnCameraMoveListener(null);
-                    googleMap.setOnCameraIdleListener(null);
-                }
+            activity.runOnUiThread(() -> {
+                googleMap.setOnCameraMoveListener(null);
+                googleMap.setOnCameraIdleListener(null);
             });
         } catch (Exception e) {
             Log.i(LOG_TAG, "LocateOnMap Exit Error for ", e);
@@ -2279,12 +2233,9 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     @JavascriptInterface
     public void enableMyLocation (boolean isEnableCurrentLocation ){
         try {
-            activity.runOnUiThread((new Runnable() {
-                @Override
-                public void run() {
-                    if (ActivityCompat.checkSelfPermission(activity.getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(activity.getApplicationContext(), Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED && CommonJsInterface.this.googleMap != null) {
-                        CommonJsInterface.this.googleMap.setMyLocationEnabled(isEnableCurrentLocation);
-                    }
+            activity.runOnUiThread((() -> {
+                if (ActivityCompat.checkSelfPermission(activity.getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(activity.getApplicationContext(), Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED && CommonJsInterface.this.googleMap != null) {
+                    CommonJsInterface.this.googleMap.setMyLocationEnabled(isEnableCurrentLocation);
                 }
             }));
         } catch (Exception e){
@@ -2295,38 +2246,35 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     @JavascriptInterface
     public void locateOnMap (boolean goToCurrentLocation, final String lat, final String lon){
         try {
-            activity.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    removeMarker("ny_ic_customer_current_location");
-                    if(goToCurrentLocation){
-                        LatLng latLng = new LatLng(lastLatitudeValue, lastLongitudeValue);
-                        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 17.0f));
-                    }else{
-                        LatLng latLng = new LatLng(Double.parseDouble(lat), Double.parseDouble(lon));
-                        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 17.0f));
-                        googleMap.moveCamera(CameraUpdateFactory.zoomTo(googleMap.getCameraPosition().zoom + 2.0f));
-                    }
-                    googleMap.setOnCameraIdleListener(new GoogleMap.OnCameraIdleListener() {
-                        @Override
-                        public void onCameraIdle() {
-                            double lat = (CommonJsInterface.this.googleMap.getCameraPosition().target.latitude);
-                            double lng =  (CommonJsInterface.this.googleMap.getCameraPosition().target.longitude);
-                            if (storeMapCallBack != null && dynamicUI!=null && juspayServices.getDynamicUI() != null){
-                                String javascript = String.format("window.callUICallback('%s','%s','%s','%s');", storeMapCallBack, "LatLon", lat, lng);
-                                Log.e(LOG_TAG, javascript);
-                                dynamicUI.addJsToWebView(javascript);
-                            }
+            activity.runOnUiThread(() -> {
+                removeMarker("ny_ic_customer_current_location");
+                if(goToCurrentLocation){
+                    LatLng latLng = new LatLng(lastLatitudeValue, lastLongitudeValue);
+                    googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 17.0f));
+                }else{
+                    LatLng latLng = new LatLng(Double.parseDouble(lat), Double.parseDouble(lon));
+                    googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 17.0f));
+                    googleMap.moveCamera(CameraUpdateFactory.zoomTo(googleMap.getCameraPosition().zoom + 2.0f));
+                }
+                googleMap.setOnCameraIdleListener(new GoogleMap.OnCameraIdleListener() {
+                    @Override
+                    public void onCameraIdle() {
+                        double lat1 = (CommonJsInterface.this.googleMap.getCameraPosition().target.latitude);
+                        double lng =  (CommonJsInterface.this.googleMap.getCameraPosition().target.longitude);
+                        if (storeMapCallBack != null && dynamicUI!=null && juspayServices.getDynamicUI() != null){
+                            String javascript = String.format("window.callUICallback('%s','%s','%s','%s');", storeMapCallBack, "LatLon", lat1, lng);
+                            Log.e(LOG_TAG, javascript);
+                            dynamicUI.addJsToWebView(javascript);
                         }
-                    });
-                    if ((lastLatitudeValue != 0.0 && lastLongitudeValue != 0.0) && goToCurrentLocation) {
-                        LatLng latLngObjMain = new LatLng(lastLatitudeValue, lastLongitudeValue);
-                        CommonJsInterface.this.googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLngObjMain, 17.0f));
-                    }else{
-                        LatLng latLngObjMain = new LatLng(Double.parseDouble(lat), Double.parseDouble(lon));
-                        CommonJsInterface.this.googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLngObjMain, 17.0f));
-                        googleMap.moveCamera(CameraUpdateFactory.zoomTo(googleMap.getCameraPosition().zoom + 2.0f));
                     }
+                });
+                if ((lastLatitudeValue != 0.0 && lastLongitudeValue != 0.0) && goToCurrentLocation) {
+                    LatLng latLngObjMain = new LatLng(lastLatitudeValue, lastLongitudeValue);
+                    CommonJsInterface.this.googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLngObjMain, 17.0f));
+                }else{
+                    LatLng latLngObjMain = new LatLng(Double.parseDouble(lat), Double.parseDouble(lon));
+                    CommonJsInterface.this.googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLngObjMain, 17.0f));
+                    googleMap.moveCamera(CameraUpdateFactory.zoomTo(googleMap.getCameraPosition().zoom + 2.0f));
                 }
             });
 
@@ -2337,26 +2285,20 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
 
     @JavascriptInterface
     public void reallocateMapFragment(final String pureScriptId) {
-        activity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    SupportMapFragment mapFragment = (SupportMapFragment) ((FragmentActivity) activity).getSupportFragmentManager()
-                            .findFragmentById(Integer.parseInt(pureScriptId));
-                    if(mapFragment!=null){
-                        mapFragment.getMapAsync(new OnMapReadyCallback() {
-                            @Override
-                            public void onMapReady(GoogleMap googleMap) {
-                                CommonJsInterface.this.googleMap = googleMap;
-                                googleMap.getUiSettings().setRotateGesturesEnabled(false);
-                                googleMap.getUiSettings().setMyLocationButtonEnabled(false);
-                                markers = markersElement.get(pureScriptId);
-                            }
-                        });
-                    }
-                } catch (Exception e) {
-                    Log.e("FAILED WHILE REALLOCATING", e.toString());
+        activity.runOnUiThread(() -> {
+            try {
+                SupportMapFragment mapFragment = (SupportMapFragment) ((FragmentActivity) activity).getSupportFragmentManager()
+                        .findFragmentById(Integer.parseInt(pureScriptId));
+                if(mapFragment!=null){
+                    mapFragment.getMapAsync(googleMap -> {
+                        CommonJsInterface.this.googleMap = googleMap;
+                        googleMap.getUiSettings().setRotateGesturesEnabled(false);
+                        googleMap.getUiSettings().setMyLocationButtonEnabled(false);
+                        markers = markersElement.get(pureScriptId);
+                    });
                 }
+            } catch (Exception e) {
+                Log.e("FAILED WHILE REALLOCATING", e.toString());
             }
         });
     }
@@ -2434,59 +2376,53 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
 
     @JavascriptInterface
     public void upsertMarker(final String title, final String lat, final String lng, final int markerSize, final float anchorV, final float anchorV1) {
-        activity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    if(lat != null && lng != null){
-                        double latitude = lat.equals("9.9") ? lastLatitudeValue : Double.parseDouble(lat);
-                        double longitude = lat.equals("9.9") ? lastLatitudeValue : Double.parseDouble(lng);
-                        LatLng latLngObj = new LatLng(latitude, longitude);
-                        Marker markerObject;
-                        if (markers.has(title)) {
-                            markerObject = (Marker) markers.get(title);
+        activity.runOnUiThread(() -> {
+            try {
+                if(lat != null && lng != null){
+                    double latitude = lat.equals("9.9") ? lastLatitudeValue : Double.parseDouble(lat);
+                    double longitude = lat.equals("9.9") ? lastLatitudeValue : Double.parseDouble(lng);
+                    LatLng latLngObj = new LatLng(latitude, longitude);
+                    Marker markerObject;
+                    if (markers.has(title)) {
+                        markerObject = (Marker) markers.get(title);
+                        markerObject.setPosition(latLngObj);
+                        markerObject.setFlat(true);
+                        markerObject.setVisible(true);
+                        markerObject.hideInfoWindow();
+                        Log.i(LOG_TAG, "Marker position updated for " + title);
+                    } else {
+                        MarkerOptions markerOptionsObj = makeMarkerObject(title, latitude, longitude, markerSize, anchorV, anchorV1);
+                        if (markerOptionsObj != null && googleMap != null) {
+                            markerObject = googleMap.addMarker(markerOptionsObj);
+                            markers.put(title, markerObject);
                             markerObject.setPosition(latLngObj);
-                            markerObject.setFlat(true);
                             markerObject.setVisible(true);
+                            markerObject.setFlat(true);
                             markerObject.hideInfoWindow();
-                            Log.i(LOG_TAG, "Marker position updated for " + title);
-                        } else {
-                            MarkerOptions markerOptionsObj = makeMarkerObject(title, latitude, longitude, markerSize, anchorV, anchorV1);
-                            if (markerOptionsObj != null && googleMap != null) {
-                                markerObject = googleMap.addMarker(markerOptionsObj);
-                                markers.put(title, markerObject);
-                                markerObject.setPosition(latLngObj);
-                                markerObject.setVisible(true);
-                                markerObject.setFlat(true);
-                                markerObject.hideInfoWindow();
-                                if(title.equals("ny_ic_customer_current_location")){
-                                    userPositionMarker = markerObject;
-                                }
-                                Log.i(LOG_TAG, "New marker created and updated for " + title);
+                            if(title.equals("ny_ic_customer_current_location")){
+                                userPositionMarker = markerObject;
                             }
+                            Log.i(LOG_TAG, "New marker created and updated for " + title);
                         }
                     }
-                } catch (Exception e) {
-                    Log.i(LOG_TAG, "Marker creation error for " + title, e);
                 }
+            } catch (Exception e) {
+                Log.i(LOG_TAG, "Marker creation error for " + title, e);
             }
         });
     }
 
     @JavascriptInterface
     public void removeMarker(final String title) {
-        activity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    if (markers.has(title)) {
-                        Marker m = (Marker) markers.get(title);
-                        m.setVisible(false);
-                        Log.i(LOG_TAG, "Removed marker " + title);
-                    }
-                } catch (Exception e) {
-                    Log.i(LOG_TAG, "Remove Marker error " + title, e);
+        activity.runOnUiThread(() -> {
+            try {
+                if (markers.has(title)) {
+                    Marker m = (Marker) markers.get(title);
+                    m.setVisible(false);
+                    Log.i(LOG_TAG, "Removed marker " + title);
                 }
+            } catch (Exception e) {
+                Log.i(LOG_TAG, "Remove Marker error " + title, e);
             }
         });
     }
@@ -2536,42 +2472,36 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     @JavascriptInterface
-    public void addMediaPlayer (String viewID,String source) throws IOException {
-        activity.runOnUiThread(new Runnable() {
-           @Override
-           public void run() {
-               MediaPlayerView audioPlayer = new MediaPlayerView(context,activity);
-                   try {
-                       audioPlayer.inflateView(Integer.parseInt(viewID));
-                       if (source.contains(".mp3")) {
-                           audioPlayer.addAudioFileUrl(source);
-                       } else {
-                            Thread thread =  new Thread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    try {
-                                       String base64 = getAPIResponse(source);
-                                       byte decodedAudio[] = Base64.decode(base64,Base64.DEFAULT);
-                                       File tempMp3 = File.createTempFile("audio_cache", "mp3", context.getCacheDir());
-                                       tempMp3.deleteOnExit();
-                                       FileOutputStream fos = new FileOutputStream(tempMp3);
-                                       fos.write(decodedAudio);
-                                       fos.close();
-                                       FileInputStream fis = new FileInputStream(tempMp3);
-                                       audioPlayer.addAudioFileInput(fis);
-                                   } catch (Exception e) {
+    public void addMediaPlayer (String viewID,String source) {
+        activity.runOnUiThread(() -> {
+            MediaPlayerView audioPlayer = new MediaPlayerView(context,activity);
+                try {
+                    audioPlayer.inflateView(Integer.parseInt(viewID));
+                    if (source.contains(".mp3")) {
+                        audioPlayer.addAudioFileUrl(source);
+                    } else {
+                         Thread thread =  new Thread(() -> {
+                             try {
+                                String base64 = getAPIResponse(source);
+                                byte decodedAudio[] = Base64.decode(base64,Base64.DEFAULT);
+                                File tempMp3 = File.createTempFile("audio_cache", "mp3", context.getCacheDir());
+                                tempMp3.deleteOnExit();
+                                FileOutputStream fos = new FileOutputStream(tempMp3);
+                                fos.write(decodedAudio);
+                                fos.close();
+                                FileInputStream fis = new FileInputStream(tempMp3);
+                                audioPlayer.addAudioFileInput(fis);
+                            } catch (Exception e) {
 
-                                   }
-                               }
-                           });
-                           thread.start();
-                       }
-                       audioPlayers.add(audioPlayer);
-                   } catch (IOException e) {
-                       e.printStackTrace();
-                   }
-               }
-        });
+                            }
+                        });
+                        thread.start();
+                    }
+                    audioPlayers.add(audioPlayer);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            });
     }
 
     @JavascriptInterface
@@ -2586,58 +2516,55 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
 
     @JavascriptInterface
     public void updateRoute (String json, String dest, String eta, String dummy) {
-        activity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                if(googleMap!=null) {
-                    try {
-                        ArrayList<LatLng> path = new ArrayList<>();
-                        JSONObject jsonObject = null;
-                        jsonObject = new JSONObject(json);
-                        JSONArray coordinates = jsonObject.getJSONArray("points");
-                        for (int i = coordinates.length() -1 ; i >= 0   ; i--) {
-                            JSONObject coordinate = (JSONObject) coordinates.get(i);
-                            double lng = coordinate.getDouble("lng");
-                            double lat = coordinate.getDouble("lat");
-                            LatLng tempPoint = new LatLng(lat, lng);
-                            path.add(tempPoint);
-                        }
-                        Marker currMarker = (Marker) markers.get("ny_ic_auto_map");
-                        Marker destMarker = (Marker) markers.get(dest);
-                        destMarker.setIcon((BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(eta, dest))));
-                        if (polylines != null) {
-                            polylines.setEndCap(new ButtCap());
-                            if (path.size() == 0) {
-                                LatLng destination = destMarker.getPosition();
-                                animateMarkerNew(destination,currMarker);
-                                polylines.remove();
-                                polylines = null;
-                                currMarker.setAnchor(0.5f,0);
-                                animateCamera(destMarker.getPosition().latitude,destMarker.getPosition().longitude,17.0f);
-                            }
-                            else
-                            {
-                                double destinationLat = path.get(0).latitude;
-                                double destinationLon = path.get(0).longitude;
-                                double sourceLat = path.get(path.size()-1).latitude;
-                                double sourceLong = path.get(path.size()-1).longitude;
-                                LatLng destination = path.get(path.size()-1);
-                                animateMarkerNew(destination,currMarker);
-                                PatternItem DASH = new Dash(1);
-                                List<PatternItem> PATTERN_POLYLINE_DOTTED_DASHED = Arrays.asList(DASH);
-                                polylines.setPattern(PATTERN_POLYLINE_DOTTED_DASHED);
-                                polylines.setPoints(path);
-                                if(debounceAnimateCamera!=0) {
-                                    debounceAnimateCamera--;
-                                } else{
-                                    moveCamera(sourceLat, sourceLong, destinationLat, destinationLon, coordinates);
-                                    debounceAnimateCamera = 10;
-                                }
-                            }
-                        }
-                    } catch (JSONException e) {
-                        e.printStackTrace();
+        activity.runOnUiThread(() -> {
+            if(googleMap!=null) {
+                try {
+                    ArrayList<LatLng> path = new ArrayList<>();
+                    JSONObject jsonObject = null;
+                    jsonObject = new JSONObject(json);
+                    JSONArray coordinates = jsonObject.getJSONArray("points");
+                    for (int i = coordinates.length() -1 ; i >= 0   ; i--) {
+                        JSONObject coordinate = (JSONObject) coordinates.get(i);
+                        double lng = coordinate.getDouble("lng");
+                        double lat = coordinate.getDouble("lat");
+                        LatLng tempPoint = new LatLng(lat, lng);
+                        path.add(tempPoint);
                     }
+                    Marker currMarker = (Marker) markers.get("ny_ic_auto_map");
+                    Marker destMarker = (Marker) markers.get(dest);
+                    destMarker.setIcon((BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(eta, dest))));
+                    if (polylines != null) {
+                        polylines.setEndCap(new ButtCap());
+                        if (path.size() == 0) {
+                            LatLng destination = destMarker.getPosition();
+                            animateMarkerNew(destination,currMarker);
+                            polylines.remove();
+                            polylines = null;
+                            currMarker.setAnchor(0.5f,0);
+                            animateCamera(destMarker.getPosition().latitude,destMarker.getPosition().longitude,17.0f);
+                        }
+                        else
+                        {
+                            double destinationLat = path.get(0).latitude;
+                            double destinationLon = path.get(0).longitude;
+                            double sourceLat = path.get(path.size()-1).latitude;
+                            double sourceLong = path.get(path.size()-1).longitude;
+                            LatLng destination = path.get(path.size()-1);
+                            animateMarkerNew(destination,currMarker);
+                            PatternItem DASH = new Dash(1);
+                            List<PatternItem> PATTERN_POLYLINE_DOTTED_DASHED = Arrays.asList(DASH);
+                            polylines.setPattern(PATTERN_POLYLINE_DOTTED_DASHED);
+                            polylines.setPoints(path);
+                            if(debounceAnimateCamera!=0) {
+                                debounceAnimateCamera--;
+                            } else{
+                                moveCamera(sourceLat, sourceLong, destinationLat, destinationLon, coordinates);
+                                debounceAnimateCamera = 10;
+                            }
+                        }
+                    }
+                } catch (JSONException e) {
+                    e.printStackTrace();
                 }
             }
         });
@@ -2650,34 +2577,31 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
 
     @JavascriptInterface
     public void updateRoute (String json,  double currLat, double currLng) {
-        activity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                if(googleMap!=null) {
-                    try {
-                        ArrayList<LatLng> points = getUpdatedPolyPoints(json,currLat,currLng);
-                        Marker currMarker = (Marker) markers.get("ny_ic_auto_map");
-                        if (polylines != null) {
-                            polylines.setEndCap(new ButtCap());
-                            if (points.size() == 0) {
-                                LatLng destination = new LatLng(currLat,currLng);
-                                animateMarkerNew(destination,currMarker);
-                                polylines.remove();
-                                polylines = null;
-                            }
-                            else
-                            {
-                                PatternItem DASH = new Dash(1);
-                                List<PatternItem> PATTERN_POLYLINE_DOTTED_DASHED = Arrays.asList(DASH);
-                                polylines.setPattern(PATTERN_POLYLINE_DOTTED_DASHED);
-                                polylines.setPoints(points);
-                                LatLng destination = points.get(points.size()-1);
-                                animateMarkerNew(destination,currMarker);
-                            }
+        activity.runOnUiThread(() -> {
+            if(googleMap!=null) {
+                try {
+                    ArrayList<LatLng> points = getUpdatedPolyPoints(json,currLat,currLng);
+                    Marker currMarker = (Marker) markers.get("ny_ic_auto_map");
+                    if (polylines != null) {
+                        polylines.setEndCap(new ButtCap());
+                        if (points.size() == 0) {
+                            LatLng destination = new LatLng(currLat,currLng);
+                            animateMarkerNew(destination,currMarker);
+                            polylines.remove();
+                            polylines = null;
                         }
-                    } catch (JSONException e) {
-                        e.printStackTrace();
+                        else
+                        {
+                            PatternItem DASH = new Dash(1);
+                            List<PatternItem> PATTERN_POLYLINE_DOTTED_DASHED = Arrays.asList(DASH);
+                            polylines.setPattern(PATTERN_POLYLINE_DOTTED_DASHED);
+                            polylines.setPoints(points);
+                            LatLng destination = points.get(points.size()-1);
+                            animateMarkerNew(destination,currMarker);
+                        }
                     }
+                } catch (JSONException e) {
+                    e.printStackTrace();
                 }
             }
         });
@@ -2720,37 +2644,31 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
 
     @JavascriptInterface
     public void shareTextMessage(String title, String message) {
-        activity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                Intent sendIntent = new Intent();
-                sendIntent.setAction(Intent.ACTION_SEND);
-                sendIntent.putExtra(Intent.EXTRA_TEXT, message);
-                sendIntent.putExtra(Intent.EXTRA_TITLE, title);
-                sendIntent.setType("text/plain");
-                Intent shareIntent = Intent.createChooser(sendIntent, null);
-                activity.startActivity(shareIntent);
-            }
+        activity.runOnUiThread(() -> {
+            Intent sendIntent = new Intent();
+            sendIntent.setAction(Intent.ACTION_SEND);
+            sendIntent.putExtra(Intent.EXTRA_TEXT, message);
+            sendIntent.putExtra(Intent.EXTRA_TITLE, title);
+            sendIntent.setType("text/plain");
+            Intent shareIntent = Intent.createChooser(sendIntent, null);
+            activity.startActivity(shareIntent);
         });
     }
 
     @JavascriptInterface
     public void shareImageMessage(String message, String imageName) {
-        activity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                Intent sendIntent = new Intent();
-                int image = context.getResources().getIdentifier(imageName, "drawable", context.getPackageName());
-                BitmapDrawable bitmapDrawable = (BitmapDrawable) context.getResources().getDrawable(image);
-                Bitmap bitmap = bitmapDrawable.getBitmap();
-                Uri uri = Uri.parse(MediaStore.Images.Media.insertImage(context.getContentResolver() , bitmap , "qrCode",null));
-                sendIntent.setAction(Intent.ACTION_SEND);
-                sendIntent.putExtra(Intent.EXTRA_STREAM,uri);
-                sendIntent.putExtra(Intent.EXTRA_TEXT, message);
-                sendIntent.setType("image/*");
-                Intent shareIntent = Intent.createChooser(sendIntent, null);
-                activity.startActivity(shareIntent);
-            }
+        activity.runOnUiThread(() -> {
+            Intent sendIntent = new Intent();
+            int image = context.getResources().getIdentifier(imageName, "drawable", context.getPackageName());
+            BitmapDrawable bitmapDrawable = (BitmapDrawable) context.getResources().getDrawable(image);
+            Bitmap bitmap = bitmapDrawable.getBitmap();
+            Uri uri = Uri.parse(MediaStore.Images.Media.insertImage(context.getContentResolver() , bitmap , "qrCode",null));
+            sendIntent.setAction(Intent.ACTION_SEND);
+            sendIntent.putExtra(Intent.EXTRA_STREAM,uri);
+            sendIntent.putExtra(Intent.EXTRA_TEXT, message);
+            sendIntent.setType("image/*");
+            Intent shareIntent = Intent.createChooser(sendIntent, null);
+            activity.startActivity(shareIntent);
         });
     }
 
@@ -2870,25 +2788,16 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
             ValueAnimator valueAnimator = ValueAnimator.ofFloat(0, 1);
             valueAnimator.setDuration(2000); // duration 3 second
             valueAnimator.setInterpolator(new LinearInterpolator());
-            valueAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-                @Override
-                public void onAnimationUpdate(ValueAnimator animation) {
-                    try {
-                        float v = animation.getAnimatedFraction();
-                        LatLng newPosition = SphericalUtil.interpolate(startPosition, endPosition,v);
-//                        googleMap.moveCamera(CameraUpdateFactory.newCameraPosition(new CameraPosition.Builder()
-//                                .target(newPosition)
-//                                .zoom(15.5f)
-//                                .build()
-//                                ));
-                        float rotation = bearingBetweenLocations(startPosition, endPosition);
-                        if (rotation > 1.0)
-                            marker.setRotation(rotation);
-                        marker.setPosition(newPosition);
-                        markers.put("ny_ic_auto_map",marker);
-                    } catch (Exception ex) {
-                        //I don't care atm..
-                    }
+            valueAnimator.addUpdateListener(animation -> {
+                try {
+                    float v = animation.getAnimatedFraction();
+                    LatLng newPosition = SphericalUtil.interpolate(startPosition, endPosition,v);
+                    float rotation = bearingBetweenLocations(startPosition, endPosition);
+                    if (rotation > 1.0)
+                        marker.setRotation(rotation);
+                    marker.setPosition(newPosition);
+                    markers.put("ny_ic_auto_map",marker);
+                } catch (Exception ex) {
                 }
             });
             valueAnimator.addListener(new AnimatorListenerAdapter() {
@@ -2998,91 +2907,85 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     public void drawRoute(final String json, final String style, final String trackColor, final boolean isActual, final String sourceMarker, final String destMarker, final int polylineWidth, String type, String sourceName, String destinationName) {
 //        ArrayList<Polyline> lines = new ArrayList<>();
 //        polylines.add(lines);
-        activity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                if(googleMap!=null) {
-                    PolylineOptions polylineOptions = new PolylineOptions();
-                    int color = Color.parseColor(trackColor);
-                    try {
-                        System.out.println("inside_drawRoute_try");
-                        JSONObject jsonObject = new JSONObject(json);
-                        JSONArray coordinates = jsonObject.getJSONArray("points");
-                        if(coordinates.length() <= 1){
-                            JSONObject coordinate = (JSONObject) coordinates.get(0);
+        activity.runOnUiThread(() -> {
+            if(googleMap!=null) {
+                PolylineOptions polylineOptions = new PolylineOptions();
+                int color = Color.parseColor(trackColor);
+                try {
+                    System.out.println("inside_drawRoute_try");
+                    JSONObject jsonObject = new JSONObject(json);
+                    JSONArray coordinates = jsonObject.getJSONArray("points");
+                    if(coordinates.length() <= 1){
+                        JSONObject coordinate = (JSONObject) coordinates.get(0);
+                        double lng = coordinate.getDouble("lng");
+                        double lat = coordinate.getDouble("lat");
+                        upsertMarker("ny_ic_auto_map",String.valueOf(lat), String.valueOf(lng), 90, 0.5f, 0.5f);
+                        animateCamera(lat,lng,20.0f);
+                        return;
+                    }
+                    JSONObject sourceCoordinates = (JSONObject) coordinates.get(0);
+                    JSONObject destCoordinates = (JSONObject) coordinates.get(coordinates.length()-1);
+                    double sourceLat = sourceCoordinates.getDouble("lat");
+                    double sourceLong = sourceCoordinates.getDouble("lng");
+                    double destLat = destCoordinates.getDouble("lat");
+                    double destLong = destCoordinates.getDouble("lng");
+                    if (sourceLat != 0.0 && sourceLong != 0.0 && destLat != 0.0 && destLong != 0.0)
+                    {
+                        moveCamera(sourceLat, sourceLong, destLat, destLong, coordinates);
+                    }
+                    if(isActual){
+                        for (int i = coordinates.length() -1 ; i >= 0 ; i--) {
+                            JSONObject coordinate = (JSONObject) coordinates.get(i);
                             double lng = coordinate.getDouble("lng");
                             double lat = coordinate.getDouble("lat");
-                            upsertMarker("ny_ic_auto_map",String.valueOf(lat), String.valueOf(lng), 90, 0.5f, 0.5f);
-                            animateCamera(lat,lng,20.0f);
-                            return;
+                            polylineOptions.add(new LatLng(lat, lng));
                         }
-                        JSONObject sourceCoordinates = (JSONObject) coordinates.get(0);
-                        JSONObject destCoordinates = (JSONObject) coordinates.get(coordinates.length()-1);
-                        double sourceLat = sourceCoordinates.getDouble("lat");
-                        double sourceLong = sourceCoordinates.getDouble("lng");
-                        double destLat = destCoordinates.getDouble("lat");
-                        double destLong = destCoordinates.getDouble("lng");
-                        if (sourceLat != 0.0 && sourceLong != 0.0 && destLat != 0.0 && destLong != 0.0)
-                        {
-                            moveCamera(sourceLat, sourceLong, destLat, destLong, coordinates);
-                        }
-                        if(isActual){
-                            for (int i = coordinates.length() -1 ; i >= 0 ; i--) {
-                                JSONObject coordinate = (JSONObject) coordinates.get(i);
-                                double lng = coordinate.getDouble("lng");
-                                double lat = coordinate.getDouble("lat");
-                                polylineOptions.add(new LatLng(lat, lng));
-                            }
-                        }else{
-                            LatLng fromPointObj = new LatLng(sourceLat, sourceLong);
-                            LatLng toPointObj = new LatLng(destLat, destLong);
-                            polylineOptions.add(toPointObj);
-                            polylineOptions.add(fromPointObj);
-                        }
-
-                        polylines = setRouteCustomTheme(polylineOptions, color, style, polylineWidth);
-                        LatLng sourceLatLng = new LatLng(sourceLat, sourceLong);
-                        LatLng destLatLng = new LatLng(destLat, destLong);
-
-                        if(destMarker != null && !destMarker.equals("")) {
-                            List<LatLng> points = polylineOptions.getPoints();
-                            LatLng dest = points.get(0);
-                            MarkerOptions markerObj = new MarkerOptions()
-                                    .title(destMarker)
-                                    .position(dest)
-                                    .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(destinationName, destMarker)));
-
-                            Marker tempmarker = googleMap.addMarker(markerObj);
-                            markers.put(destMarker, tempmarker);
-
-                        }
-                        if (type.equals("DRIVER_LOCATION_UPDATE"))
-                        {
-                            System.out.println("inside insert marker");
-                            List<LatLng> points = polylineOptions.getPoints();
-                            LatLng source = points.get(points.size() - 1);
-                            upsertMarker("ny_ic_auto_map",String.valueOf(source.latitude),String.valueOf(source.longitude), 90, 0.5f, 0.5f);
-                            Marker currMarker = (Marker) markers.get("ny_ic_auto_map");
-                            int index = polylines.getPoints().size()-1;
-                            float rotation = (float) SphericalUtil.computeHeading(polylines.getPoints().get(index), polylines.getPoints().get(index -1));
-                            if (rotation != 0.0) currMarker.setRotation(rotation);
-                            currMarker.setAnchor(0.5f,0.5f);
-                            markers.put("ny_ic_auto_map",currMarker);
-                        } else if(sourceMarker != null && !sourceMarker.equals("")) {
-                            System.out.println("sourcelatlong: " + sourceLatLng);
-                            System.out.println("destlatlong: " + destLatLng);
-                            List<LatLng> points = polylineOptions.getPoints();
-                            LatLng source = points.get(points.size() - 1);
-                            MarkerOptions markerObj = new MarkerOptions()
-                                    .title(sourceMarker)
-                                    .position(source)
-                                    .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(sourceName,sourceMarker)));
-                            Marker tempmarker = googleMap.addMarker(markerObj);
-                            markers.put(sourceMarker, tempmarker);
-                        }
-                    } catch (JSONException e) {
-                        e.printStackTrace();
+                    }else{
+                        LatLng fromPointObj = new LatLng(sourceLat, sourceLong);
+                        LatLng toPointObj = new LatLng(destLat, destLong);
+                        polylineOptions.add(toPointObj);
+                        polylineOptions.add(fromPointObj);
                     }
+
+                    polylines = setRouteCustomTheme(polylineOptions, color, style, polylineWidth);
+                    LatLng sourceLatLng = new LatLng(sourceLat, sourceLong);
+                    LatLng destLatLng = new LatLng(destLat, destLong);
+
+                    if(destMarker != null && !destMarker.equals("")) {
+                        List<LatLng> points = polylineOptions.getPoints();
+                        LatLng dest = points.get(0);
+                        MarkerOptions markerObj = new MarkerOptions()
+                                .title(destMarker)
+                                .position(dest)
+                                .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(destinationName, destMarker)));
+
+                        Marker tempmarker = googleMap.addMarker(markerObj);
+                        markers.put(destMarker, tempmarker);
+
+                    }
+                    if (type.equals("DRIVER_LOCATION_UPDATE"))
+                    {
+                        List<LatLng> points = polylineOptions.getPoints();
+                        LatLng source = points.get(points.size() - 1);
+                        upsertMarker("ny_ic_auto_map",String.valueOf(source.latitude),String.valueOf(source.longitude), 90, 0.5f, 0.5f);
+                        Marker currMarker = (Marker) markers.get("ny_ic_auto_map");
+                        int index = polylines.getPoints().size()-1;
+                        float rotation = (float) SphericalUtil.computeHeading(polylines.getPoints().get(index), polylines.getPoints().get(index -1));
+                        if (rotation != 0.0) currMarker.setRotation(rotation);
+                        currMarker.setAnchor(0.5f,0.5f);
+                        markers.put("ny_ic_auto_map",currMarker);
+                    } else if(sourceMarker != null && !sourceMarker.equals("")) {
+                        List<LatLng> points = polylineOptions.getPoints();
+                        LatLng source = points.get(points.size() - 1);
+                        MarkerOptions markerObj = new MarkerOptions()
+                                .title(sourceMarker)
+                                .position(source)
+                                .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(sourceName,sourceMarker)));
+                        Marker tempmarker = googleMap.addMarker(markerObj);
+                        markers.put(sourceMarker, tempmarker);
+                    }
+                } catch (JSONException e) {
+                    e.printStackTrace();
                 }
             }
         });
@@ -3092,14 +2995,10 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         removeMarker("ny_ic_auto_map");
         removeMarker("ny_ic_src_marker");
         removeMarker("ny_ic_dest_marker");
-        activity.runOnUiThread(
-                new Runnable() {
-                    @Override
-                    public void run() {
-                        if (polylines != null) {
-                            polylines.remove();
-                            polylines = null;
-                        }
+        activity.runOnUiThread(() -> {
+                    if (polylines != null) {
+                        polylines.remove();
+                        polylines = null;
                     }
                 }
         );
@@ -3130,60 +3029,54 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     @JavascriptInterface
     public void animateCamera(final double lat, final double lng, final float zoom) {
         System.out.println("animateCamera " + lat + " " + lng);
-        activity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    if (googleMap != null) {
-                        LatLng latLngObj = new LatLng(lat, lng);
-                        googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLngObj, zoom));
-                    }
-                }catch (Exception e){
-                    e.printStackTrace();
-                    System.out.println("here in catch");
+        activity.runOnUiThread(() -> {
+            try {
+                if (googleMap != null) {
+                    LatLng latLngObj = new LatLng(lat, lng);
+                    googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLngObj, zoom));
                 }
+            }catch (Exception e){
+                e.printStackTrace();
+
             }
         });
     }
 
     @JavascriptInterface
     public void moveCamera(final double source_latitude, final double source_longitude, final double destination_latitude, final double destination_longitude) {
-        activity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                double source_lat, source_lng, destination_lat, destination_lng;
-                if (source_latitude <= destination_latitude) {
-                    source_lat = source_latitude; // - 0.4*(destination_latitude-source_latitude);
-                    destination_lat = destination_latitude; // + 0.1*(destination_latitude-source_latitude);
-                } else {
-                    source_lat = source_latitude;// + 0.1*(source_latitude-destination_latitude);
-                    destination_lat = destination_latitude;// - 0.4*(source_latitude-destination_latitude);
-                }
-                if (source_longitude <= destination_longitude) {
-                    source_lng = source_longitude;// - 1.15*(destination_longitude-source_longitude);
-                    destination_lng = destination_longitude;// + 1.15*(destination_longitude-source_longitude);
-                } else {
-                    source_lng = source_longitude;// + 2.15*(source_longitude-destination_longitude);
-                    destination_lng = destination_longitude;// - 2.15*(source_longitude-destination_longitude);
-                }
+        activity.runOnUiThread(() -> {
+            double source_lat, source_lng, destination_lat, destination_lng;
+            if (source_latitude <= destination_latitude) {
+                source_lat = source_latitude; // - 0.4*(destination_latitude-source_latitude);
+                destination_lat = destination_latitude; // + 0.1*(destination_latitude-source_latitude);
+            } else {
+                source_lat = source_latitude;// + 0.1*(source_latitude-destination_latitude);
+                destination_lat = destination_latitude;// - 0.4*(source_latitude-destination_latitude);
+            }
+            if (source_longitude <= destination_longitude) {
+                source_lng = source_longitude;// - 1.15*(destination_longitude-source_longitude);
+                destination_lng = destination_longitude;// + 1.15*(destination_longitude-source_longitude);
+            } else {
+                source_lng = source_longitude;// + 2.15*(source_longitude-destination_longitude);
+                destination_lng = destination_longitude;// - 2.15*(source_longitude-destination_longitude);
+            }
 
-                if(googleMap!=null) {
-                    try {
-                        LatLng pickupLatLng = new LatLng(source_lat, source_lng);
-                        LatLng destinationLatLng = new LatLng(destination_lat, destination_lng);
-                        LatLngBounds bounds = LatLngBounds.builder().include(pickupLatLng).include(destinationLatLng).build();
-                        googleMap.setPadding(100, 200, 100, getScreenHeight()/2);
-                        googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds,0));
-                        googleMap.setPadding(0, 0, 0, 0);
-                    } catch (IllegalArgumentException e) {
-                        LatLng pickupLatLng = new LatLng(source_lat, source_lng);
-                        LatLng destinationLatLng = new LatLng(destination_lat, destination_lng);
-                        LatLngBounds bounds = LatLngBounds.builder().include(destinationLatLng).include(pickupLatLng).build();
-                        googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 0));
-                    }
-                    catch(Exception e){
-                        System.out.println("In mmove camera in catch exception" + e);
-                    }
+            if(googleMap!=null) {
+                try {
+                    LatLng pickupLatLng = new LatLng(source_lat, source_lng);
+                    LatLng destinationLatLng = new LatLng(destination_lat, destination_lng);
+                    LatLngBounds bounds = LatLngBounds.builder().include(pickupLatLng).include(destinationLatLng).build();
+                    googleMap.setPadding(100, 200, 100, getScreenHeight()/2);
+                    googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds,0));
+                    googleMap.setPadding(0, 0, 0, 0);
+                } catch (IllegalArgumentException e) {
+                    LatLng pickupLatLng = new LatLng(source_lat, source_lng);
+                    LatLng destinationLatLng = new LatLng(destination_lat, destination_lng);
+                    LatLngBounds bounds = LatLngBounds.builder().include(destinationLatLng).include(pickupLatLng).build();
+                    googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 0));
+                }
+                catch(Exception e){
+                    System.out.println("In mmove camera in catch exception" + e);
                 }
             }
         });
@@ -3191,76 +3084,73 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
 
     @JavascriptInterface
     public void moveCamera(final double source_latitude, final double source_longitude, final double destination_latitude, final double destination_longitude, final JSONArray json_coordinates) {
-        activity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                double source_lat, source_lng, destination_lat, destination_lng;
+        activity.runOnUiThread(() -> {
+            double source_lat, source_lng, destination_lat, destination_lng;
 
-                Log.i("json_coordinates", String.valueOf(json_coordinates));
-                ArrayList<Double> all_latitudes = new ArrayList<Double>();
-                ArrayList<Double> all_longitudes = new ArrayList<Double>();
-                for (int i = 0; i < json_coordinates.length(); i++) {
-                    JSONObject each_json_coordinates = null;
-                    try {
-                        each_json_coordinates = (JSONObject) json_coordinates.get(i);
-                        ArrayList<Double> each_coordinates = new ArrayList<Double>();
-                        double lon = each_json_coordinates.getDouble("lng");
-                        double lat = each_json_coordinates.getDouble("lat");
-                        all_latitudes.add(lat);
-                        all_longitudes.add(lon);
-                    } catch (JSONException e) {
-                        e.printStackTrace();
+            Log.i("json_coordinates", String.valueOf(json_coordinates));
+            ArrayList<Double> all_latitudes = new ArrayList<Double>();
+            ArrayList<Double> all_longitudes = new ArrayList<Double>();
+            for (int i = 0; i < json_coordinates.length(); i++) {
+                JSONObject each_json_coordinates = null;
+                try {
+                    each_json_coordinates = (JSONObject) json_coordinates.get(i);
+                    ArrayList<Double> each_coordinates = new ArrayList<Double>();
+                    double lon = each_json_coordinates.getDouble("lng");
+                    double lat = each_json_coordinates.getDouble("lat");
+                    all_latitudes.add(lat);
+                    all_longitudes.add(lon);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+            Log.i("all_latitudes", String.valueOf(all_latitudes));
+            Log.i("all_longitudes", String.valueOf(all_longitudes));
+            double minimum_latitude = Collections.min(all_latitudes);
+            double maximum_latitude = Collections.max(all_latitudes);
+            double minimum_longitude = Collections.min(all_longitudes);
+            double maximum_longitude = Collections.max(all_longitudes);
+            Log.i("minimum_latitude", String.valueOf(minimum_latitude));
+            Log.i("maximum_latitude", String.valueOf(maximum_latitude));
+
+            if (source_latitude <= destination_latitude) {
+                source_lat = minimum_latitude - 1.3*(maximum_latitude - minimum_latitude);
+                destination_lat = maximum_latitude + 0.1*(maximum_latitude - minimum_latitude);
+            } else {
+                source_lat = maximum_latitude + 0.1*(maximum_latitude - minimum_latitude);
+                destination_lat = minimum_latitude - 1.3*(maximum_latitude - minimum_latitude);
+            }
+            if (source_longitude <= destination_longitude) {
+                source_lng = minimum_longitude - 0.09*(maximum_longitude - minimum_longitude);
+                destination_lng = maximum_longitude + 0.09*(maximum_longitude - minimum_longitude);
+            } else {
+                source_lng = maximum_longitude + 0.09*(maximum_longitude - minimum_longitude);
+                destination_lng = minimum_longitude - 0.09*(maximum_longitude - minimum_longitude);
+            }
+
+            Log.i("coordinates points", String.valueOf(json_coordinates));
+
+            if(googleMap!=null) {
+                try {
+                    LatLng pickupLatLng = new LatLng(source_lat, source_lng);
+                    LatLng destinationLatLng = new LatLng(destination_lat, destination_lng);
+                    LatLngBounds bounds = LatLngBounds.builder().include(pickupLatLng).include(destinationLatLng).build();
+                    if(json_coordinates.length() < 5 ){
+                        googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 400));
+                    }else {
+                        googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 150));
+                    }
+                } catch (IllegalArgumentException e) {
+                    LatLng pickupLatLng = new LatLng(source_lat, source_lng);
+                    LatLng destinationLatLng = new LatLng(destination_lat, destination_lng);
+                    LatLngBounds bounds = LatLngBounds.builder().include(destinationLatLng).include(pickupLatLng).build();
+                    if(json_coordinates.length() < 5 ){
+                        googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 400));
+                    }else {
+                        googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 150));
                     }
                 }
-                Log.i("all_latitudes", String.valueOf(all_latitudes));
-                Log.i("all_longitudes", String.valueOf(all_longitudes));
-                double minimum_latitude = Collections.min(all_latitudes);
-                double maximum_latitude = Collections.max(all_latitudes);
-                double minimum_longitude = Collections.min(all_longitudes);
-                double maximum_longitude = Collections.max(all_longitudes);
-                Log.i("minimum_latitude", String.valueOf(minimum_latitude));
-                Log.i("maximum_latitude", String.valueOf(maximum_latitude));
-
-                if (source_latitude <= destination_latitude) {
-                    source_lat = minimum_latitude - 1.3*(maximum_latitude - minimum_latitude);
-                    destination_lat = maximum_latitude + 0.1*(maximum_latitude - minimum_latitude);
-                } else {
-                    source_lat = maximum_latitude + 0.1*(maximum_latitude - minimum_latitude);
-                    destination_lat = minimum_latitude - 1.3*(maximum_latitude - minimum_latitude);
-                }
-                if (source_longitude <= destination_longitude) {
-                    source_lng = minimum_longitude - 0.09*(maximum_longitude - minimum_longitude);
-                    destination_lng = maximum_longitude + 0.09*(maximum_longitude - minimum_longitude);
-                } else {
-                    source_lng = maximum_longitude + 0.09*(maximum_longitude - minimum_longitude);
-                    destination_lng = minimum_longitude - 0.09*(maximum_longitude - minimum_longitude);
-                }
-
-                Log.i("coordinates points", String.valueOf(json_coordinates));
-
-                if(googleMap!=null) {
-                    try {
-                        LatLng pickupLatLng = new LatLng(source_lat, source_lng);
-                        LatLng destinationLatLng = new LatLng(destination_lat, destination_lng);
-                        LatLngBounds bounds = LatLngBounds.builder().include(pickupLatLng).include(destinationLatLng).build();
-                        if(json_coordinates.length() < 5 ){
-                            googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 400));
-                        }else {
-                            googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 150));
-                        }
-                    } catch (IllegalArgumentException e) {
-                        LatLng pickupLatLng = new LatLng(source_lat, source_lng);
-                        LatLng destinationLatLng = new LatLng(destination_lat, destination_lng);
-                        LatLngBounds bounds = LatLngBounds.builder().include(destinationLatLng).include(pickupLatLng).build();
-                        if(json_coordinates.length() < 5 ){
-                            googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 400));
-                        }else {
-                            googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 150));
-                        }
-                    }
-                    catch(Exception e){
-                        System.out.println("In mmove camera in catch exception" + e);
-                    }
+                catch(Exception e){
+                    System.out.println("In mmove camera in catch exception" + e);
                 }
             }
         });
@@ -3343,24 +3233,21 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
 
     @JavascriptInterface
     public void uploadFile (){
-        activity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                if ((ActivityCompat.checkSelfPermission(activity, WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) && (ActivityCompat.checkSelfPermission(activity, CAMERA) == PackageManager.PERMISSION_GRANTED) && (ActivityCompat.checkSelfPermission(activity, READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)){
-                    Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                    String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
-                    SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-                    sharedPref.edit().putString(context.getResources().getString(R.string.TIME_STAMP_FILE_UPLOAD), timeStamp).apply();
-                    Uri photoFile = FileProvider.getUriForFile(context.getApplicationContext(),context.getResources().getString(R.string.fileProviderPath), new File(context.getApplicationContext().getFilesDir(), "IMG_" + timeStamp+".jpg"));
-                    takePicture.putExtra(MediaStore.EXTRA_OUTPUT, photoFile);
-                    Intent chooseFromFile = new Intent(Intent.ACTION_GET_CONTENT);
-                    chooseFromFile.setType("image/*");
-                    Intent chooser = Intent.createChooser(takePicture, "Upload Image");
-                    chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[] { chooseFromFile });
-                    startActivityForResult(activity, chooser, IMAGE_CAPTURE_REQ_CODE, null);
-                } else {
-                    ActivityCompat.requestPermissions(activity, new String[]{CAMERA, WRITE_EXTERNAL_STORAGE, READ_EXTERNAL_STORAGE}, IMAGE_PERMISSION_REQ_CODE);
-                }
+        activity.runOnUiThread(() -> {
+            if ((ActivityCompat.checkSelfPermission(activity, WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) && (ActivityCompat.checkSelfPermission(activity, CAMERA) == PackageManager.PERMISSION_GRANTED) && (ActivityCompat.checkSelfPermission(activity, READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)){
+                Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
+                SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+                sharedPref.edit().putString(context.getResources().getString(R.string.TIME_STAMP_FILE_UPLOAD), timeStamp).apply();
+                Uri photoFile = FileProvider.getUriForFile(context.getApplicationContext(),context.getResources().getString(R.string.fileProviderPath), new File(context.getApplicationContext().getFilesDir(), "IMG_" + timeStamp+".jpg"));
+                takePicture.putExtra(MediaStore.EXTRA_OUTPUT, photoFile);
+                Intent chooseFromFile = new Intent(Intent.ACTION_GET_CONTENT);
+                chooseFromFile.setType("image/*");
+                Intent chooser = Intent.createChooser(takePicture, "Upload Image");
+                chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[] { chooseFromFile });
+                startActivityForResult(activity, chooser, IMAGE_CAPTURE_REQ_CODE, null);
+            } else {
+                ActivityCompat.requestPermissions(activity, new String[]{CAMERA, WRITE_EXTERNAL_STORAGE, READ_EXTERNAL_STORAGE}, IMAGE_PERMISSION_REQ_CODE);
             }
         });
     }
@@ -3675,87 +3562,84 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     @JavascriptInterface
     public void setYoutubePlayer(String rawJson, final String playerId, String videoStatus){
         videoDuration = 0;
-        activity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    if(videoStatus.equals("PAUSE"))   {
-                        pauseYoutubeVideo();
-                    }   else {
-                        JSONObject json = new JSONObject(rawJson);
-                        if (youTubePlayerView != null )
-                            youTubePlayerView.release();
-                            boolean showMenuButton = json.getBoolean("showMenuButton");
-                            boolean showDuration = json.getBoolean("showDuration");
-                            boolean setVideoTitle = json.getBoolean("setVideoTitle");
-                            boolean showSeekBar = json.getBoolean("showSeekBar");
-                            String videoTitle = json.getString("videoTitle");
-                            String videoId = json.getString("videoId");
-                            String videoType = "VIDEO";
-                            if (json.has("videoType"))
-                                {
-                                    videoType = json.getString("videoType");
-                                }
-                            youTubePlayerView = new YouTubePlayerView(context);
-                            LinearLayout layout = activity.findViewById(Integer.parseInt(playerId));
-                            layout.addView(youTubePlayerView);
-                            youTubePlayerView.setEnableAutomaticInitialization(false);
-                            YouTubePlayerListener youTubePlayerListener = new AbstractYouTubePlayerListener() {
-                                @Override
-                                public void onReady(YouTubePlayer youTubePlayer) {
-                                    try {
-                                        youtubePlayer = youTubePlayer;
-                                        DefaultPlayerUiController playerUiController = new DefaultPlayerUiController(youTubePlayerView, youTubePlayer);
-                                        playerUiController.showMenuButton(showMenuButton);
-                                        playerUiController.showDuration(showDuration);
-                                        playerUiController.showSeekBar(showSeekBar);
-                                        playerUiController.showFullscreenButton(true);
-                                        if (setVideoTitle){
-                                            playerUiController.setVideoTitle(videoTitle);
-                                        }
-                                        playerUiController.showYouTubeButton(false);
-                                        youTubePlayerView.setCustomPlayerUi(playerUiController.getRootView());
-
-                                        youTubePlayer.seekTo(videoDuration);
-                                        youTubePlayer.loadVideo(videoId, 0);
-                                        youTubePlayer.play();
-
-                                    } catch (Exception e) {
-                                        Log.e("error inside setYoutubePlayer onReady", String.valueOf(e));
+        activity.runOnUiThread(() -> {
+            try {
+                if(videoStatus.equals("PAUSE"))   {
+                    pauseYoutubeVideo();
+                }   else {
+                    JSONObject json = new JSONObject(rawJson);
+                    if (youTubePlayerView != null )
+                        youTubePlayerView.release();
+                        boolean showMenuButton = json.getBoolean("showMenuButton");
+                        boolean showDuration = json.getBoolean("showDuration");
+                        boolean setVideoTitle = json.getBoolean("setVideoTitle");
+                        boolean showSeekBar = json.getBoolean("showSeekBar");
+                        String videoTitle = json.getString("videoTitle");
+                        String videoId = json.getString("videoId");
+                        String videoType = "VIDEO";
+                        if (json.has("videoType"))
+                            {
+                                videoType = json.getString("videoType");
+                            }
+                        youTubePlayerView = new YouTubePlayerView(context);
+                        LinearLayout layout = activity.findViewById(Integer.parseInt(playerId));
+                        layout.addView(youTubePlayerView);
+                        youTubePlayerView.setEnableAutomaticInitialization(false);
+                        YouTubePlayerListener youTubePlayerListener = new AbstractYouTubePlayerListener() {
+                            @Override
+                            public void onReady(YouTubePlayer youTubePlayer) {
+                                try {
+                                    youtubePlayer = youTubePlayer;
+                                    DefaultPlayerUiController playerUiController = new DefaultPlayerUiController(youTubePlayerView, youTubePlayer);
+                                    playerUiController.showMenuButton(showMenuButton);
+                                    playerUiController.showDuration(showDuration);
+                                    playerUiController.showSeekBar(showSeekBar);
+                                    playerUiController.showFullscreenButton(true);
+                                    if (setVideoTitle){
+                                        playerUiController.setVideoTitle(videoTitle);
                                     }
+                                    playerUiController.showYouTubeButton(false);
+                                    youTubePlayerView.setCustomPlayerUi(playerUiController.getRootView());
 
-                                }
-                                @Override
-                                public void onCurrentSecond(@NonNull YouTubePlayer youTubePlayer, float second){
-                                    videoDuration = second;
-                                }
-                            };
+                                    youTubePlayer.seekTo(videoDuration);
+                                    youTubePlayer.loadVideo(videoId, 0);
+                                    youTubePlayer.play();
 
-                        String finalVideoType = videoType;
-                        youTubePlayerView.addFullScreenListener(new  YouTubePlayerFullScreenListener() {
-                                @Override
-                                public void onYouTubePlayerExitFullScreen() {
+                                } catch (Exception e) {
+                                    Log.e("error inside setYoutubePlayer onReady", String.valueOf(e));
                                 }
 
-                                @Override
-                                public void onYouTubePlayerEnterFullScreen() {
-                                    Intent newIntent = new Intent(MainActivity.getInstance().getApplicationContext(), YoutubeVideoView.class );
-                                    newIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                                    newIntent.putExtra("videoId", videoId);
-                                    newIntent.putExtra("videoDuration", videoDuration);
-                                    newIntent.putExtra("videoType", finalVideoType);
-                                    MainActivity.getInstance().getApplicationContext().startActivity(newIntent);
-                                }
-                            });
+                            }
+                            @Override
+                            public void onCurrentSecond(@NonNull YouTubePlayer youTubePlayer, float second){
+                                videoDuration = second;
+                            }
+                        };
 
-                            IFramePlayerOptions options = new IFramePlayerOptions.Builder().controls(0).rel(0).build();
-                            youTubePlayerView.initialize(youTubePlayerListener, options);
-                        }
-                    } catch (Exception e) {
-                        Log.e("exception in setYoutubePlayer", String.valueOf(e));
-                        }
-                }
-        });
+                    String finalVideoType = videoType;
+                    youTubePlayerView.addFullScreenListener(new  YouTubePlayerFullScreenListener() {
+                            @Override
+                            public void onYouTubePlayerExitFullScreen() {
+                            }
+
+                            @Override
+                            public void onYouTubePlayerEnterFullScreen() {
+                                Intent newIntent = new Intent(MainActivity.getInstance().getApplicationContext(), YoutubeVideoView.class );
+                                newIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                newIntent.putExtra("videoId", videoId);
+                                newIntent.putExtra("videoDuration", videoDuration);
+                                newIntent.putExtra("videoType", finalVideoType);
+                                MainActivity.getInstance().getApplicationContext().startActivity(newIntent);
+                            }
+                        });
+
+                        IFramePlayerOptions options = new IFramePlayerOptions.Builder().controls(0).rel(0).build();
+                        youTubePlayerView.initialize(youTubePlayerListener, options);
+                    }
+                } catch (Exception e) {
+                    Log.e("exception in setYoutubePlayer", String.valueOf(e));
+                    }
+            });
     }
 
     @JavascriptInterface

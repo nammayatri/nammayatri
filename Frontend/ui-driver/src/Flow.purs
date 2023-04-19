@@ -612,7 +612,7 @@ currentRideFlow = do
             stage = (if activeRide.status == NEW then (if state.props.currentStage == ChatWithCustomer then ChatWithCustomer else RideAccepted) else RideStarted)
         setValueToLocalNativeStore IS_RIDE_ACTIVE  "true"
         _ <- updateStage $ HomeScreenStage stage
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data{ activeRide = activeRide }})
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data{ activeRide = activeRide}, props{ silentPopUpView = false, goOfflineModal = false }})
         homeScreenFlow
       Nothing -> do
         setValueToLocalNativeStore IS_RIDE_ACTIVE  "false"
@@ -622,6 +622,14 @@ currentRideFlow = do
       setValueToLocalNativeStore IS_RIDE_ACTIVE  "false"
       _ <- updateStage $ HomeScreenStage HomeScreen
       homeScreenFlow
+
+getDriverStatus :: String -> DriverStatus
+getDriverStatus dummy = do
+  case getValueToLocalNativeStore DRIVER_STATUS_N of
+    "Online" -> Online
+    "Offline" -> Offline
+    "Silent" -> Silent
+    _ -> Silent
 
 homeScreenFlow :: FlowBT String Unit
 homeScreenFlow = do
@@ -646,7 +654,7 @@ homeScreenFlow = do
       setValueToLocalNativeStore DRIVER_STATUS "false"
   _  <- pure $ spy "DRIVERRRR___STATUs" (getValueToLocalNativeStore DRIVER_STATUS)
   _  <- pure $ spy "DRIVERRRR___STATUS LOCAL" (getValueToLocalStore DRIVER_STATUS)
-  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {statusOnline = getDriverInfoResp.active}, data{vehicleType = linkedVehicle.variant}})
+  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {statusOnline = getDriverInfoResp.active, driverStatusSet = getDriverStatus ""}, data{vehicleType = linkedVehicle.variant}})
   modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen {data{driverVehicleType = linkedVehicle.variant, driverRating = getDriverInfoResp.rating}})
   modifyScreenState $ ReferralScreenStateType (\ referralScreen -> referralScreen{ data { driverInfo  {  driverName = getDriverInfoResp.firstName, driverMobile = getDriverInfoResp.mobileNumber,  vehicleRegNumber = linkedVehicle.registrationNo , referralCode = getDriverInfoResp.referralCode }}})
   let currdate = getcurrentdate ""
@@ -665,7 +673,8 @@ homeScreenFlow = do
       myRidesScreenFlow
     GO_TO_REFERRAL_SCREEN_FROM_HOME_SCREEN -> referralScreenFlow
     DRIVER_AVAILABILITY_STATUS status -> do
-      _ <- setValueToLocalNativeStore DRIVER_STATUS (show status)
+      _ <- setValueToLocalStore DRIVER_STATUS if any( _ == status)[Online, Silent] then "true" else "false" --(show status)
+      _ <- setValueToLocalStore DRIVER_STATUS_N (show status)
       void $ lift $ lift $ loaderText (getString PLEASE_WAIT) if any( _ == status)[Online, Silent] then (getString SETTING_YOU_ONLINE) else (getString SETTING_YOU_OFFLINE)
       void $ lift $ lift $ toggleLoader true
       (DriverActiveInactiveResp resp) <- Remote.driverActiveInactiveBT (if any( _ == status)[Online, Silent] then "true" else "false")

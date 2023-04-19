@@ -45,11 +45,12 @@ navData activeIndex = {
       activeIcon: "",
       defaultIcon: if (getValueToLocalNativeStore ALERT_RECEIVED) == "true" then "ny_ic_notification,https://assets.juspay.in/nammayatri/images/driver/ny_ic_notification.png" else "ny_ic_no_notification,https://assets.juspay.in/nammayatri/images/driver/ny_ic_no_notification.png",
       text: "Alert"
-    },
-    {
-      activeIcon: "ny_ic_account_active,https://assets.juspay.in/nammayatri/images/driver/ny_ic_account_active.png",
-      defaultIcon: "ny_ic_account_inactive,https://assets.juspay.in/nammayatri/images/driver/ny_ic_account_inactive.png",
-      text: "Profile"
     }
+    -- , -- TODO::- DEPRECATE THE DESIGN
+    -- {
+    --   activeIcon: "ny_ic_account_active,https://assets.juspay.in/nammayatri/images/driver/ny_ic_account_active.png",
+    --   defaultIcon: "ny_ic_account_inactive,https://assets.juspay.in/nammayatri/images/driver/ny_ic_account_inactive.png",
+    --   text: "Profile"
+    -- }
   ]
 }

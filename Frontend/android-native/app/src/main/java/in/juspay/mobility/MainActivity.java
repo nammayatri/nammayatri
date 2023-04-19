@@ -307,6 +307,7 @@ public class MainActivity extends AppCompatActivity {
         mFirebaseAnalytics.logEvent("device_id", params);
         widgetService = new Intent(MainActivity.this, WidgetService.class);
         new GetGAIDTask().execute();
+        sharedPref.edit().putString(getResources().getString(R.string.ACTIVITY_STATUS),"onCreate").apply();
         // if(key.equals("becknuser")){
         //     //            FacebookSdk.sdkInitialize(getApplicationContext());
         //     //            AppEventsLogger.activateApp(getApplication());

@@ -44,7 +44,7 @@ import Language.Types (STR(..))
 import Log (printLog)
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void)
 import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
-import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback, alignParentBottom, relativeLayout, adjustViewWithKeyboard)
+import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback, alignParentBottom, relativeLayout, adjustViewWithKeyboard, lottieAnimationView)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (coordinatorLayout)
 import PrestoDOM.Properties as PP
@@ -288,33 +288,28 @@ offlineView push state =
   linearLayout[
           width MATCH_PARENT
         , height MATCH_PARENT--(V 200)
-        -- , alignParentBottom "true,-1"
         , gravity BOTTOM
         , background "#2C2F3A80"
-        -- , PP.cornerRadii $ PTD.Corners 40.0 true true false false
         ][ 
-        --  linearLayout
-        --     [ height WRAP_CONTENT
-        --     , width MATCH_PARENT
-        --     , PP.cornerRadii $ PTD.Corners 40.0 true true false false 
-        --     , orientation VERTICAL
-        --     , background Color.red
-        --     , gravity BOTTOM
-        --     ][ 
-        --       -- textView
-        --       -- [width MATCH_PARENT
-        --       -- , height WRAP_CONTENT
-        --       -- , text "You are currently offline. \n To get ride requests, go online now!"
-        --       -- , gravity CENTER
-        --       -- , margin $ MarginBottom 20 
-        --       -- ]
-        --     ]
-        --   , 
           frameLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           ][
             linearLayout
+            [ height (V 280)
+            , width MATCH_PARENT
+            , gravity CENTER_HORIZONTAL
+            ][ lottieAnimationView 
+              [ id (EHC.getNewIDWithTag "RippleGoOnlineLottie")
+              , afterRender (\action-> do
+                              _ <- pure $ JB.startLottieProcess "rippling_online_effect" (EHC.getNewIDWithTag "RippleGoOnlineLottie") true 1.0 "DEFAULT"
+                              pure unit)(const NoAction)
+              , height WRAP_CONTENT
+              , onClick  push  (const $ SwitchDriverStatus Online)
+              , width MATCH_PARENT
+              ]
+            ]
+          , linearLayout
             [ height MATCH_PARENT
             , width MATCH_PARENT
             , gravity BOTTOM
@@ -349,7 +344,8 @@ offlineView push state =
                 frameLayout
                 [ height MATCH_PARENT
                 , width MATCH_PARENT
-                ][ linearLayout
+                , margin $ MarginTop 72
+                ][linearLayout
                   [ height $ V 132
                   , width $ V 132
                   , cornerRadius 75.0
@@ -426,6 +422,7 @@ driverDetail2 push state =
   , height WRAP_CONTENT
   , orientation HORIZONTAL
   , gravity CENTER_VERTICAL
+  , clickable true
   , margin (MarginTop 5)
   ][  linearLayout
       [ width WRAP_CONTENT
@@ -434,6 +431,7 @@ driverDetail2 push state =
       ][ imageView
          [ width $ V 42
          , height $ V 42
+         , onClick push $ const GoToProfile
          , imageWithFallback "ic_new_avatar,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_new_avatar.png"
          ]
       ]
@@ -443,8 +441,8 @@ driverDetail2 push state =
       , orientation HORIZONTAL
       , stroke if state.props.driverStatusSet == Offline then ("2," <> Color.red) else if state.props.driverStatusSet == Online then ("2," <> Color.darkMint) else ("2," <> Color.blue800) 
       , cornerRadius 50.0
+      , alpha if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) then 0.5 else 1.0 
       , margin (Margin 20 10 20 10)--padding (Padding 10 10 10 10)
-      , visibility if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) then GONE else VISIBLE
       ][
           driverStatusIndicator Offline push state
         , driverStatusIndicator Silent push state
@@ -462,14 +460,13 @@ driverStatusIndicator status push state =
   , margin (Margin 10 10 10 10)
   , background if ((status == Offline) && (state.props.driverStatusSet == Offline)) then (Color.red) else if ((status == Online) && (state.props.driverStatusSet == Online)) then (Color.darkMint) else if((status == Silent) && (state.props.driverStatusSet == Silent)) then (Color.blue800) else Color.white900
   , cornerRadius 50.0
-  , visibility if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) then GONE else VISIBLE
   ][  linearLayout
       [ width MATCH_PARENT
       , height MATCH_PARENT
       , gravity CENTER
       , orientation HORIZONTAL
       , onClick push (const $ SwitchDriverStatus status)--(const (ChangeStatus if state.props.statusOnline then false else true))
-      , clickable if state.props.rideActionModal then false else true
+      , clickable if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) then false else true
       ][ imageView
         [ width $ V 15
         , height $ V 15

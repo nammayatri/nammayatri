@@ -139,6 +139,9 @@ instance loggableAction :: Loggable Action where
       ChatView.Navigate -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_messaging" "navigate_to_google_maps"
       ChatView.NoAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_app_messaging" "no_action"
     SwitchDriverStatus status -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "SwitchDriverStatus"
+    GoToProfile -> do
+      trackAppActionClick appId (getScreen HOME_SCREEN) "bottom_nav_bar" "on_navigate"
+      trackAppEndScreen appId (getScreen HOME_SCREEN)
     PopUpModalSilentAction act -> case act of
       PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_silent_confirmation" "go_offline_onclick"
       PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_silent_confirmation" "go_silent_onclick"
@@ -198,6 +201,7 @@ data Action = NoAction
             | UpdateInChat
             | SwitchDriverStatus ST.DriverStatus
             | PopUpModalSilentAction PopUpModal.Action
+            | GoToProfile
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
@@ -472,8 +476,10 @@ eval (SwitchDriverStatus status) state = do
 eval (PopUpModalSilentAction (PopUpModal.OnButton1Click)) state = exit (DriverAvailabilityStatus state{props{silentPopUpView = false}} ST.Offline)
 eval (PopUpModalSilentAction (PopUpModal.OnButton2Click)) state = 
   do
-    _ <- pure $ setValueToLocalStore DRIVER_STATUS (show ST.Silent)
+    _ <- pure $ setValueToLocalStore DRIVER_STATUS_N (show ST.Silent)
     continue state {props {driverStatusSet = ST.Silent, silentPopUpView = false}}
+
+eval GoToProfile state =  exit $ GoToProfileScreen
 
 eval _ state = continue state 
 
