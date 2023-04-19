@@ -43,10 +43,12 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Rs 10 tip included"
+                            android:text="₹ 10 tip included !"
                             android:id="@+id/customer_tip_text"
-                            android:textSize="20sp"
-                            android:textColor="#000000" />
+                            android:textSize="16dp"
+                            android:lineHeight="20dp"
+                            android:fontFamily="@font/plus_jakartasans_semibold"
+                            android:textColor="@color/Black900" />
                     </LinearLayout>
 
                     <LinearLayout
@@ -56,6 +58,7 @@
                         android:orientation="vertical">
 
                         <LinearLayout
+                            android:layout_marginTop="16dp"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical">
@@ -295,7 +298,7 @@
                             <androidx.cardview.widget.CardView
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="32dp"
+                                android:layout_marginTop="16dp"
                                 android:background="#F4F4F6"
                                 app:cardCornerRadius="10dp"
                                 app:cardElevation="0dp"
@@ -437,6 +440,7 @@
                                 android:text="@string/includes_pickup_charges_10"
                                 android:textColor="#6D7280"
                                 android:textFontWeight="400"
+                                android:id="@+id/textIncludesCharges"
                                 android:textSize="12dp" />
 
                         </LinearLayout>
