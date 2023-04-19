@@ -61,6 +61,7 @@ data KeyStore = USER_NAME
                 | MERCHANT_ID
                 | RIDE_REQUEST_BUFFER
                 | SESSION_ID
+                | PROFILE_DEMO
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

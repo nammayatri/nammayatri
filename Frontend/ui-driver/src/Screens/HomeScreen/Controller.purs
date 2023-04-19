@@ -479,7 +479,9 @@ eval (PopUpModalSilentAction (PopUpModal.OnButton2Click)) state =
     _ <- pure $ setValueToLocalStore DRIVER_STATUS_N (show ST.Silent)
     continue state {props {driverStatusSet = ST.Silent, silentPopUpView = false}}
 
-eval GoToProfile state =  exit $ GoToProfileScreen
+eval GoToProfile state =  do 
+  _ <- pure $ setValueToLocalNativeStore PROFILE_DEMO "false"
+  exit $ GoToProfileScreen
 
 eval _ state = continue state 
 

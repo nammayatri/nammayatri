@@ -369,6 +369,7 @@ data STR = LETS_GET_STARTED
         | GO_ONLINE
         | GO_ONLINE_PROMPT
         | LIVE_DASHBOARD
+        | CLICK_TO_ACCESS_YOUR_ACCOUNT
 
 type LETS_GET_STARTED = String
 type SELECT_LANGUAGE = String

@@ -374,3 +374,4 @@ getHI script = case script of
   GO_ONLINE -> "गो!"
   GO_ONLINE_PROMPT -> "आप वर्तमान में ऑफ़लाइन हैं।\nराइड अनुरोध प्राप्त करने के लिए, अभी ऑनलाइन हों!"
   LIVE_DASHBOARD -> "लाइव आँकड़े डैशबोर्ड"
+  CLICK_TO_ACCESS_YOUR_ACCOUNT -> "अपने खाते तक पहुंचने के लिए यहां क्लिक करें"

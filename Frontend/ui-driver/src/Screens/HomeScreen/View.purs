@@ -42,7 +42,7 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
-import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void)
+import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=))
 import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
 import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback, alignParentBottom, relativeLayout, adjustViewWithKeyboard, lottieAnimationView)
 import PrestoDOM.Animation as PrestoAnim
@@ -228,6 +228,7 @@ view push state =
               ]
         , bottomNavBar push state 
         ]
+      , if (getValueToLocalNativeStore PROFILE_DEMO) /= "false" then profileDemoView state push else linearLayout[][]
       , if state.props.goOfflineModal then goOfflineModal push state else dummyTextView
       , if state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted then  rideActionModelView push state else dummyTextView
       , if state.props.enterOtpModal then enterOtpModal push state else dummyTextView
@@ -521,6 +522,55 @@ statsModel2 push state =
     ][  StatsModel.view (push <<< StatsModelAction) (statsModelConfig state) 
 
     ]
+
+profileDemoView :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
+profileDemoView state push = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height MATCH_PARENT
+  , background Color.black9000
+  , clickable true
+  ][ linearLayout
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , margin $ Margin 10 20 0 0
+      , orientation VERTICAL
+      ][ imageView
+          [ width $ V 50
+          , height $ V 50
+          , margin $ Margin 5 5 5 5
+          , imageWithFallback "ic_profile_shadow,https://assets.juspay.in/nammayatri/images/driver/ic_profile_shadow.png"
+          , onClick push $ const $ GoToProfile
+          ]
+        , imageView
+          [ width $ V 40
+          , height $ V 40
+          , margin $ Margin 15 10 0 15
+          , imageWithFallback "up_hand_arrow,https://assets.juspay.in/nammayatri/images/driver/up_hand_arrow.png"
+          ]
+        , clickHereDemoLayout state push
+      ]
+  ]
+
+clickHereDemoLayout :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
+clickHereDemoLayout state push =
+  linearLayout
+  [ width WRAP_CONTENT
+  , height WRAP_CONTENT
+  , background Color.black900
+  , stroke $ "1,"<> Color.yellow900
+  , margin $ MarginLeft 10
+  , cornerRadius 12.0
+  ][ textView
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , text $ getString CLICK_TO_ACCESS_YOUR_ACCOUNT
+      , color Color.white900
+      , textSize FontSize.a_18
+      , fontStyle $ FontStyle.medium TypoGraphy
+      , padding $ Padding 20 12 20 15
+      ]
+  ]
 
 viewRecenterAndSupport :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
 viewRecenterAndSupport state push =
