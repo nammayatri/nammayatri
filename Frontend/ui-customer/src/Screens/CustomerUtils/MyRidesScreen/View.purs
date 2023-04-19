@@ -90,7 +90,7 @@ view listItemm push state =
           , orientation HORIZONTAL
           , padding (Padding 16 12 16 16)
           ][  textView
-              [ text (getString SELECT_A_RIDE)
+              [ text (getString SELECT_A_RIDE_FOR_MORE_DETAILS)
               , textSize FontSize.a_14 
               , fontStyle $ FontStyle.medium LanguageStyle
               , color Color.black700

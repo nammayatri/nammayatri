@@ -31,14 +31,12 @@ interpolator :: PrestoAnim.Interpolator
 interpolator = PrestoAnim.Bezier 0.1 0.4 0.4 0.9
 
 translateInXAnim :: AnimConfig -> PrestoAnim.Animation
-translateInXAnim config = 
-    PrestoAnim.Animation
-    [ PrestoAnim.duration animateTime
-    , PrestoAnim.fromX config.fromX
-    , PrestoAnim.toX config.toX
-    , PrestoAnim.tag "slideIn"
-    , PrestoAnim.interpolator interpolator
-    ] config.ifAnim
+translateInXAnim config =
+   PrestoAnim.Animation
+   [ PrestoAnim.duration config.duration
+   , PrestoAnim.fromX config.fromX
+   , PrestoAnim.toX config.toX
+   ] config.ifAnim
 
 translateOutXAnim :: AnimConfig -> PrestoAnim.Animation
 translateOutXAnim config = 

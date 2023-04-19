@@ -262,6 +262,8 @@ data STR =  DOWNLOAD_INVOICE
         | RIDE_ID 
         | RIDE_DETAILS
         | SELECT_A_RIDE 
+        | SELECT_A_RIDE_FOR_MORE_DETAILS
+        | CONFIRMING_SELECTED_RIDE_IN
         | CONFIRM_RIDE_
         | YOU_CAN_CANCEL_RIDE
         | ESTIMATES_CHANGED
@@ -841,6 +843,8 @@ type RATE_YOUR_DRIVER = String
 type RIDE_ID = String 
 type RIDE_DETAILS = String
 type SELECT_A_RIDE = String
+type SELECT_A_RIDE_FOR_MORE_DETAILS = String
+type CONFIRMING_SELECTED_RIDE_IN = String
 type CONFIRM_RIDE = String
 type YOU_CAN_CANCEL_RIDE = String
 type ESTIMATES_CHANGED = String

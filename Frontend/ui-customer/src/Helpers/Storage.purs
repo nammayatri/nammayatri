@@ -65,6 +65,7 @@ data KeyStore
   | POINTS_FACTOR
   | SESSION_ID
   | HAS_TAKEN_FIRST_RIDE
+  | AUTO_SELECTING_DURATION
 
 derive instance genericKeyStore :: Generic KeyStore _
 

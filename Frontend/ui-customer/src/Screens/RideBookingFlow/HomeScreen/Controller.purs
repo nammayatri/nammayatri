@@ -407,7 +407,7 @@ instance loggableAction :: Loggable Action where
 data ScreenOutput = LogoutUser
                   | Cancel HomeScreenState
                   | GoToHelp HomeScreenState
-                  | ConfirmRide HomeScreenState
+                  | ConfirmRide HomeScreenState Boolean
                   | GoToAbout HomeScreenState
                   | PastRides HomeScreenState
                   | GoToMyProfile HomeScreenState
@@ -1006,7 +1006,7 @@ eval (ExitLocationSelected item addToRecents)state = exit $ LocationSelected ite
 eval (SearchLocationModelActionController (SearchLocationModelController.PrimaryButtonActionController  PrimaryButtonController.OnClick)) state =
       case state.props.selectedQuote,(null state.data.quoteListModelState),(getValueToLocalStore LOCAL_STAGE) of
                     Nothing, true, "SearchLocationModel"  -> exit $ LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false state
-                    Just _ , false, _                     -> exit $ ConfirmRide state
+                    Just _ , false, _                     -> exit $ ConfirmRide state false
                     Nothing, true, "QuoteList"            -> exit $ GoToHome
                     _,_,_                                 -> continue state
 
@@ -1119,7 +1119,9 @@ eval (SearchLocationModelActionController (SearchLocationModelController.UpdateS
 eval (QuoteListModelActionController (QuoteListModelController.QuoteListItemActionController (QuoteListItemController.Click quote))) state = do
   continueWithCmd (state { data { quoteListModelState = map (\x -> x { selectedQuote = (Just quote.id) }) state.data.quoteListModelState }, props { selectedQuote = Just quote.id } })
     [ do
-        if (getValueToLocalStore AUTO_SELECTING) == "CANCELLED_AUTO_ASSIGN" then
+        _ <- pure $ setValueToLocalStore AUTO_SELECTING_DURATION $ if (quote.id /= fromMaybe "" state.props.selectedQuote) then quote.timer else getValueToLocalStore AUTO_SELECTING_DURATION
+        autoSelectFlag <- pure $ getValueToLocalStore AUTO_SELECTING
+        if autoSelectFlag == "CANCELLED_AUTO_ASSIGN" then
           pure NoAction
         else do
           void $ pure $ setValueToLocalStore AUTO_SELECTING quote.id
@@ -1133,7 +1135,7 @@ eval (QuoteListModelActionController (QuoteListModelController.CancelAutoAssigni
 
 eval (QuoteListModelActionController (QuoteListModelController.QuoteListItemActionController QuoteListItemController.ConfirmRide)) state = do
   _ <- pure $ firebaseLogEvent "ny_user_quote_confirm"
-  exit $ ConfirmRide state
+  exit $ ConfirmRide state false
 
 eval (QuoteListModelActionController (QuoteListModelController.QuoteListItemActionController (QuoteListItemController.CountDown seconds id status timerID))) state = do
   if status == "EXPIRED" then do
@@ -1158,7 +1160,7 @@ eval (QuoteListModelActionController (QuoteListModelController.PrimaryButtonActi
       _ <- pure $ updateLocalStage ConfirmingRide
       let
         newState = state { props { currentStage = ConfirmingRide } }
-      updateAndExit newState $ ConfirmRide newState
+      updateAndExit newState $ ConfirmRide newState true
     _, _ -> continue state
 
 eval (QuoteListModelActionController (QuoteListModelController.GoBack)) state = continueWithCmd state [ do pure $ BackPressed ]
@@ -1324,9 +1326,10 @@ eval (GetQuotesList (SelectListRes resp)) state = do
               if isLocalStageOn QuoteList then do 
                 exit $ GetSelectList newState{props{isPopUp = NoPopUp}}
               else if(state.props.selectedQuote == Nothing && (getValueToLocalStore AUTO_SELECTING) /= "CANCELLED_AUTO_ASSIGN") then do
-                let id = (fromMaybe dummyQuoteList (newState.data.quoteListModelState!!0)).id
-                    nextState = newState{data{quoteListModelState = map (\x -> x{selectedQuote = (Just id)}) newState.data.quoteListModelState}, props{selectedQuote = if (id /= "") then Just id else Nothing}}
-                _ <- pure $ setValueToLocalStore AUTO_SELECTING id
+                let firstQuote = fromMaybe dummyQuoteList (newState.data.quoteListModelState!!0)
+                    nextState = newState{data{quoteListModelState = map (\x -> x{selectedQuote = (Just firstQuote.id)}) newState.data.quoteListModelState}, props{selectedQuote = if (firstQuote.id /= "") then Just firstQuote.id else Nothing}}
+                _ <- pure $ setValueToLocalStore AUTO_SELECTING firstQuote.id
+                _ <- pure $ setValueToLocalStore AUTO_SELECTING_DURATION firstQuote.timer
                 continue nextState
               else do
                 let value = null newState.data.quoteListModelState
@@ -1340,7 +1343,7 @@ eval (ContinueWithoutOffers (SelectListRes resp)) state = do
         "" -> continue state
         _  -> do
           _ <- pure $ updateLocalStage ConfirmingRide
-          exit $ ConfirmRide state{props{currentStage = ConfirmingRide, bookingId = bookingId, isPopUp = NoPopUp, selectedQuote = Nothing}}                       
+          exit $ ConfirmRide state{props{currentStage = ConfirmingRide, bookingId = bookingId, isPopUp = NoPopUp, selectedQuote = Nothing}} true                     
     Nothing -> continue state
 
 

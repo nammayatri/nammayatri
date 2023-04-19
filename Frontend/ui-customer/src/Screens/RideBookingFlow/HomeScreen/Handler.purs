@@ -75,9 +75,9 @@ homeScreen = do
     GetSelectList updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ GET_SELECT_LIST updatedState)  
-    ConfirmRide updatedState -> do 
+    ConfirmRide updatedState isAutoAssigned -> do 
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
-      App.BackT $ App.NoBack <$> (pure $ CONFIRM_RIDE updatedState) 
+      App.BackT $ App.NoBack <$> (pure $ CONFIRM_RIDE updatedState isAutoAssigned) 
     RideConfirmed updatedState -> do 
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ ONGOING_RIDE updatedState) 

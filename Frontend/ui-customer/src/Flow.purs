@@ -550,7 +550,7 @@ homeScreenFlow = do
       when (isLocalStageOn QuoteList) $ do
         updateFlowStatus SEARCH_CANCELLED
       homeScreenFlow
-    CONFIRM_RIDE state -> do
+    CONFIRM_RIDE state isAutoAssigned -> do
           _ <- pure $ enableMyLocation false
           if isJust state.props.selectedQuote then do
             updateLocalStage ConfirmingRide
@@ -558,6 +558,7 @@ homeScreenFlow = do
             case response of 
               Right (ConfirmRes resp) -> do 
                 let bookingId = resp.bookingId
+                if isAutoAssigned then pure $ firebaseLogEvent "ride_is_allocated_due_to_auto_select_feature" else pure unit
                 modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ConfirmingRide, bookingId = bookingId, isPopUp = NoPopUp}})
                 homeScreenFlow
               Left err  -> do 

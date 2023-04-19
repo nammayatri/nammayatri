@@ -15,8 +15,8 @@
 
 module Components.QuoteListModel.View where
 
-import Animation (translateYAnimFromTop)
-import Animation.Config (translateFullYAnimWithDurationConfig)
+import Animation (translateYAnimFromTop , translateInXAnim)
+import Animation.Config (translateFullYAnimWithDurationConfig , translateInXAnimConfig)
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Components.QuoteListItem as QuoteListItem
@@ -30,13 +30,14 @@ import Font.Style as FontStyle
 import JBridge (getBtnLoader, startLottieProcess)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (+), (/), (/=), (<<<), (<>), (==), (||))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, background, clickable, color, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, text, textSize, textView, visibility, weight, width, imageWithFallback)
+import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (+), (/), (/=), (<<<), (<=), (<>), (==), (>), (||) , (*) , negate , not ,(>=))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, text, textSize, textView, visibility, weight, width , alpha ,imageWithFallback)
 import PrestoDOM.Animation as PrestoAnim
 import Storage (KeyStore(..), getValueToLocalStore)
 import Helpers.Utils (isPreviousVersion, getPreviousVersion)
 import Styles.Colors as Color
 import Common.Types.App
+import Data.Int as Int
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListModelState -> PrestoDOM (Effect Unit) w
 view push state = 
@@ -220,39 +221,58 @@ findingRidesView state push =
 
 selectRideAndConfirmView :: forall w . QuoteListModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
 selectRideAndConfirmView state push = 
-  linearLayout
-  [ height WRAP_CONTENT
+  frameLayout
+  [
+    height WRAP_CONTENT
   , width MATCH_PARENT
   , background Color.white900
-  , visibility if ( null state.quoteListModel ) then GONE else VISIBLE
-  ][ linearLayout[
-    height WRAP_CONTENT
-  , weight 1.0
-  , padding (Padding 16 16 0 16)
-  ][textView
-    [ height WRAP_CONTENT
-    , color Color.black900
-    , textSize FontSize.a_16
-    , fontStyle $ FontStyle.medium LanguageStyle
-    , text case getValueToLocalStore AUTO_SELECTING of
-       "CANCELLED_AUTO_ASSIGN" -> "Select a Ride"
-       "false"                 -> "Select a Ride"
-       _                       -> case (getValueToLocalStore LANGUAGE_KEY) of
-                                    _ -> "Confirming selected ride in" <> " : " <> (fromMaybe configDummy ((filter (\item -> item.id == (fromMaybe "" state.selectedQuote)) state.quoteListModel) !! 0)).timer <> "s"
-                                    -- _ -> "state.timer" <> "s " <> (getString AUTO_ACCEPTING_SELECTED_RIDE) TODO :: NEED TO UPDATE LANGUAGE
-    ]]
-   , linearLayout
-    [ height MATCH_PARENT
-    , width WRAP_CONTENT
-    , gravity CENTER
-    , padding (Padding 16 12 16 12)
-    , onClick push $ const CancelAutoAssigning
-    ][ imageView
-      [ height $ V 24
-      , width $ V 24
-      , imageWithFallback "ny_ic_close,https://assets.juspay.in/nammayatri/images/common/ny_ic_close.png"
-      , visibility if getValueToLocalStore AUTO_SELECTING == "false" || getValueToLocalStore AUTO_SELECTING == "CANCELLED_AUTO_ASSIGN" then GONE else VISIBLE 
-     
+  , visibility if ( null state.quoteListModel ) then GONE else VISIBLE 
+  ][
+    PrestoAnim.animationSet 
+    [ translateInXAnim $ translateInXAnimConfig (getAnimationDuration "") (calculateStartPosition "") (not ( null state.quoteListModel))] $ linearLayout
+    [ height if os == "IOS" then (V 60) else MATCH_PARENT
+    , width MATCH_PARENT
+    , background Color.blue700'
+    , alpha 0.2
+    , visibility if getValueToLocalStore AUTO_SELECTING == "false" || getValueToLocalStore AUTO_SELECTING == "CANCELLED_AUTO_ASSIGN" then GONE else VISIBLE 
+    ][]
+  , linearLayout
+    [ height if os == "IOS" then (V 60) else MATCH_PARENT
+    , width MATCH_PARENT
+    ]
+    [ linearLayout
+    [
+      height MATCH_PARENT
+    , weight 1.0
+    , padding if os == "IOS" then (PaddingLeft 16) else (Padding 16 16 0 16)
+    ]
+    [textView
+      [ height MATCH_PARENT
+      , color Color.black900
+      , textSize FontSize.a_16
+      , fontStyle $ FontStyle.medium LanguageStyle
+      , text case getValueToLocalStore AUTO_SELECTING of
+        "CANCELLED_AUTO_ASSIGN" -> getString SELECT_A_RIDE
+        "false"                 -> getString SELECT_A_RIDE
+        _                       -> case (getValueToLocalStore LANGUAGE_KEY) of
+                                      "HI_IN" -> (fromMaybe configDummyQuoteListItem ((filter (\item -> item.id == (fromMaybe "" state.selectedQuote)) state.quoteListModel) !! 0)).timer <> "s " <> getString CONFIRMING_SELECTED_RIDE_IN
+                                      _ -> getString CONFIRMING_SELECTED_RIDE_IN <> " : " <> (fromMaybe configDummyQuoteListItem ((filter (\item -> item.id == (fromMaybe "" state.selectedQuote)) state.quoteListModel) !! 0)).timer <> "s"
+      ]
+      ]
+    , linearLayout
+      [ height MATCH_PARENT
+      , width WRAP_CONTENT
+      , gravity CENTER
+      , padding (Padding 16 12 16 12)
+      , onClick push $ const CancelAutoAssigning
+      ]
+      [ imageView
+        [ height $ V 24
+        , width $ V 24
+        , imageWithFallback "ny_ic_close,https://assets.juspay.in/nammayatri/images/common/ny_ic_close.png"
+        , visibility if getValueToLocalStore AUTO_SELECTING == "false" || getValueToLocalStore AUTO_SELECTING == "CANCELLED_AUTO_ASSIGN" then GONE else VISIBLE 
+      
+        ]
       ]
     ]
   ]
@@ -481,8 +501,8 @@ tryAgainButtonConfig state = let
       }
   in tryAgainButtonConfig'
 
-configDummy :: QuoteListItem.QuoteListItemState
-configDummy = {
+configDummyQuoteListItem :: QuoteListItem.QuoteListItemState
+configDummyQuoteListItem = {
    seconds : 15
   , id : ""  
   , timer : "-"
@@ -538,3 +558,13 @@ getSelectedItemTimer state =
   let selectQuoteArray = (filter (\x -> state.selectedQuote == Just x.id) state.quoteListModel)
       timer = (fromMaybe dummyQuoteList (head selectQuoteArray)).timer
     in timer 
+
+
+calculateStartPosition :: String -> Int
+calculateStartPosition _ = do
+    let duration = (getValueToLocalStore AUTO_SELECTING_DURATION)
+    let factor = if (fromMaybe 0 (Int.fromString duration)) >= 10 then 1.0 else ((Int.toNumber (fromMaybe 0 (Int.fromString duration)))/10.0)
+    (- (Int.ceil ((Int.toNumber (screenWidth unit)) * factor)))
+
+getAnimationDuration :: String -> Int
+getAnimationDuration _ = ((fromMaybe 0 (Int.fromString (getValueToLocalStore AUTO_SELECTING_DURATION)))*1000)

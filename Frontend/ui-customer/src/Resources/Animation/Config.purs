@@ -111,3 +111,10 @@ translateFullYAnimWithDurationConfig duration = animConfig {
 , interpolator = PrestoAnim.EaseInOut
 }
   
+translateInXAnimConfig :: Int -> Int -> Boolean -> AnimConfig
+translateInXAnimConfig duration fromX ifAnim= animConfig {
+  duration = duration
+, fromX = fromX
+, toX = 0
+, ifAnim = ifAnim
+}

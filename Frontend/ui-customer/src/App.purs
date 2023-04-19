@@ -115,7 +115,7 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | GET_QUOTES HomeScreenState
                         | SELECT_ESTIMATE HomeScreenState
                         | GET_SELECT_LIST HomeScreenState
-                        | CONFIRM_RIDE HomeScreenState
+                        | CONFIRM_RIDE HomeScreenState Boolean
                         | ONGOING_RIDE HomeScreenState
                         | CANCEL_RIDE_REQUEST HomeScreenState
                         | FCM_NOTIFICATION String HomeScreenState

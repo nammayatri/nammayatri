@@ -203,7 +203,7 @@ driverNameAndTimeView state =
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
         , textSize FontSize.a_16
-        , text $ if state.timeLeft == 0 then (getString NEARBY) else show state.timeLeft <> (getString MINS_AWAY)
+        , text $ if state.timeLeft == 0 then (getString NEARBY) else show state.timeLeft <> " " <> (getString MINS_AWAY)
         , color Color.black800
         , fontStyle $ FontStyle.semiBold LanguageStyle
         , lineHeight "24"
