@@ -68,9 +68,9 @@ import Control.Monad.Except (runExcept)
 import Foreign.Class (class Encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
 
-baseAppFlow :: GlobalPayload -> FlowBT String Unit
-baseAppFlow gPayload = do
-  _ <- pure $ printLog "Global Payload" gPayload
+baseAppFlow :: FlowBT String Unit
+baseAppFlow = do
+  _ <- pure $ printLog "Global Payload" "gPayload" 
   (GlobalState state) <- getState
   let bundle = bundleVersion unit
       customerId = (getValueToLocalStore CUSTOMER_ID)

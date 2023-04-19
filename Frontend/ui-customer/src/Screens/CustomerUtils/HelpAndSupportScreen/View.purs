@@ -72,7 +72,7 @@ view push state =
  relativeLayout
  [  height MATCH_PARENT
   , width MATCH_PARENT
- ][ linearLayout
+ ]$[ linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
@@ -112,11 +112,7 @@ view push state =
       , allTopicsView state push
       , apiFailureView state push 
       ]
-    , if state.props.isCallConfirmation 
-        then PopUpModal.view (push <<< PopupModelActionController) (callConfirmationPopup state)
-        else 
-          linearLayout [][]
-  ] 
+    ] <> if state.props.isCallConfirmation then [(PopUpModal.view (push <<< PopupModelActionController) (callConfirmationPopup state))] else []
 
 ------------------------------- recentRide --------------------------
 recentRideView :: ST.HelpAndSupportScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w

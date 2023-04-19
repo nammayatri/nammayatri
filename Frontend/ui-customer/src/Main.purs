@@ -38,20 +38,14 @@ import Types.App (defaultGlobalState)
 
 main :: Effect Unit
 main = do
-  epassRef ← new defaultGlobalState
-  payload  ::  Either MultipleErrors GlobalPayload  <- runExcept <<< decode <<< fromMaybe (unsafeToForeign {}) <$> (liftEffect $ window' "__payload" Just Nothing)
-  case payload of
-    Right payload'  -> launchAff_ $ flowRunner $ do
-      -- _ <- pure $ JBridge._addCertificates (Config.getFingerPrint "")
-      resp ← runExceptT $ runBackT $ Flow.baseAppFlow payload'
-      case resp of
-            Right x → pure unit
-            Left err → do
-              _ <- pure $ printLog "printLog error in main is : " err
-              _ <- liftFlow $ main 
-              pure unit
-    Left e -> launchAff_ $ flowRunner $ do
-      throwErr $ show e
+  launchAff_ $ flowRunner $ do
+    _ <- pure $ printLog "printLog " "in main"
+    resp ← runExceptT $ runBackT $ Flow.baseAppFlow
+    case resp of
+      Right x -> pure $ printLog "printLog " "Success in main"
+      Left error -> do
+        _ <- pure $ printLog "printLog error in main" error
+        liftFlow $ main
 
 onEvent :: String -> Effect Unit
 onEvent "onBackPressed" = do 

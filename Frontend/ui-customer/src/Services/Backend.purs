@@ -16,35 +16,36 @@
 module Services.Backend where
 
 import Services.API
-import Services.Config as SC
+
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..))
+import Data.Array ((!!), take)
 import Data.Either (Either(..), either)
 import Data.Maybe (Maybe(..), maybe, fromMaybe)
+import Debug.Trace (spy)
+import Engineering.Helpers.Commons (liftFlow, os, bundleVersion)
 import Foreign.Generic (encode)
 import Helpers.Utils (decodeErrorCode, decodeErrorMessage, toString, getTime, isPreviousVersion, getPreviousVersion)
 import JBridge (Locations, factoryResetApp, setKeyInSharedPrefKeys, toast, toggleLoader, drawRoute, toggleBtnLoader)
-import Juspay.OTP.Reader as Readers
-import Log (printLog)
-import ModifyScreenState (modifyScreenState)
-import Screens.Types (AccountSetUpScreenState(..), HomeScreenState(..), NewContacts)
-import Types.App (GlobalState(..), FlowBT, ScreenType(..))
-import Tracker (trackApiCallFlow, trackExceptionFlow)
-import Presto.Core.Types.API (Header(..), Headers(..))
-import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff)
-import Screens.Types (Address, Stage(..))
 import JBridge (factoryResetApp, setKeyInSharedPrefKeys, toast, toggleLoader, removeAllPolylines)
-import Prelude (Unit, bind, discard, map, pure, unit, void, ($), ($>), (&&), (*>), (<<<), (=<<), (==), (<=),(||), show, (<>))
-import Storage (getValueToLocalStore, deleteValueFromLocalStore, getValueToLocalNativeStore, KeyStore(..), setValueToLocalStore)
-import Tracker.Labels (Label(..))
-import Tracker.Types as Tracker
-import Types.App (GlobalState, FlowBT, ScreenType(..))
-import Types.EndPoint as EP
-import Engineering.Helpers.Commons (liftFlow, os, bundleVersion)
-import Data.Array ((!!), take)
+import Juspay.OTP.Reader as Readers
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Debug.Trace (spy)
+import Log (printLog)
+import ModifyScreenState (modifyScreenState)
+import Prelude (Unit, bind, discard, map, pure, unit, void, ($), ($>), (&&), (*>), (<<<), (=<<), (==), (<=), (||), show, (<>))
+import Presto.Core.Types.API (Header(..), Headers(..))
+import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff)
+import Screens.Types (AccountSetUpScreenState(..), HomeScreenState(..), NewContacts)
+import Screens.Types (Address, Stage(..))
+import Services.Config as SC
+import Storage (getValueToLocalStore, deleteValueFromLocalStore, getValueToLocalNativeStore, KeyStore(..), setValueToLocalStore)
+import Tracker (trackApiCallFlow, trackExceptionFlow)
+import Tracker.Labels (Label(..))
+import Tracker.Types as Tracker
+import Types.App (GlobalState(..), FlowBT, ScreenType(..))
+import Types.App (GlobalState, FlowBT, ScreenType(..))
+import Types.EndPoint as EP
 
 getHeaders :: String -> Flow GlobalState Headers
 getHeaders _ = do if ((getValueToLocalStore REGISTERATION_TOKEN) == "__failed") then pure $ (Headers [Header "Content-Type" "application/json", Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),  Header "x-client-version" (getValueToLocalStore VERSION_NAME), Header "session_id" (getValueToLocalStore SESSION_ID)]) else pure $ (Headers [Header "Content-Type" "application/json", Header "token" (getValueToLocalStore REGISTERATION_TOKEN) , Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),  Header "x-client-version" (getValueToLocalStore VERSION_NAME), Header "session_id" (getValueToLocalStore SESSION_ID)])
@@ -144,7 +145,8 @@ withAPIResultBT' url enableCache key f errorHandler flow = do
 
 triggerOTPBT :: TriggerOTPReq → FlowBT String TriggerOTPResp
 triggerOTPBT payload = do
-    _ <- lift $ lift $ doAff Readers.initiateSMSRetriever
+    _ <- pure $ spy "inside triggerOTPBT" ""
+    -- _ <- lift $ lift $ doAff Readers.initiateSMSRetriever
     headers <- getHeaders' ""
     withAPIResultBT (EP.triggerOTP "") (\x → x) errorHandler (lift $ lift $ callAPI headers payload)
     where
