@@ -663,7 +663,7 @@ eval BackPressed state = do
     FindingEstimate -> do
                       _ <- pure $ updateLocalStage SearchLocationModel
                       continue state{props{rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation}}
-    QuoteList       -> if state.props.customerTip.enableTips then continue state{props {customerTip{isTipSelected = true, tipForDriver = 10, tipActiveIndex=1}, isPopUp = TipsPopUp} }else continue state{ props{isPopUp = if ( not null (filter (\a -> a.seconds > 0) state.data.quoteListModelState)) then ActiveQuotePopUp else ConfirmBack}}
+    QuoteList       -> if state.props.customerTip.enableTips then continue ( tipEnabledState state{props { isPopUp = TipsPopUp} } )else continue state{ props{isPopUp = if ( not null (filter (\a -> a.seconds > 0) state.data.quoteListModelState)) then ActiveQuotePopUp else ConfirmBack}}
     PricingTutorial -> continue state { props { currentStage = SettingPrice}}
     DistanceOutsideLimits -> do 
                       _ <- pure $ updateLocalStage SearchLocationModel
@@ -671,7 +671,7 @@ eval BackPressed state = do
     ShortDistance -> do 
                       _ <- pure $ updateLocalStage SearchLocationModel
                       continue state{props{isSource = Just false,isPopUp = NoPopUp, rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSearchLocation = SearchLocation}}
-    FindingQuotes ->  continue state{ props{customerTip{isTipSelected = true, tipForDriver = 10, tipActiveIndex=1}, isPopUp = if state.props.customerTip.enableTips then TipsPopUp else ConfirmBack}}
+    FindingQuotes ->  continue $ tipEnabledState state{ props{isPopUp = if state.props.customerTip.enableTips then TipsPopUp else ConfirmBack}}
     FavouriteLocationModel -> do
                       _ <- pure $ updateLocalStage (if state.props.isSearchLocation == NoView then HomeScreen else SearchLocationModel)
                       continue state { props { currentStage = if state.props.isSearchLocation == NoView then HomeScreen else SearchLocationModel}}
@@ -1210,8 +1210,8 @@ eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = case state.props.isP
   NoPopUp -> continue state
   ActiveQuotePopUp -> exit $ CheckCurrentStatus
 
-eval (PopUpModalAction (PopUpModal.Tipbtnclick idx value)) state = case state.props.isPopUp of
-    TipsPopUp -> continue state{props{customerTip{tipActiveIndex = idx, tipForDriver= value, isTipSelected = if idx == 0 then false else true}}}
+eval (PopUpModalAction (PopUpModal.Tipbtnclick index value)) state = case state.props.isPopUp of
+    TipsPopUp -> continue state{props{customerTip{tipActiveIndex = index, tipForDriver= value, isTipSelected = not (index == 0)}}}
     _ -> continue state
 
 eval (PopUpModalAction (PopUpModal.DismissPopup)) state = continue state{props{isPopUp = NoPopUp}}
@@ -1358,7 +1358,8 @@ eval (GetQuotesList (SelectListRes resp)) state = do
                             else if not null (filter (\a -> a.seconds > 0) state.data.quoteListModelState) then ActiveQuotePopUp 
                             else ConfirmBack}}
               if isLocalStageOn QuoteList then do 
-                exit $ GetSelectList newState{props{customerTip{isTipSelected = true, tipForDriver = 10, tipActiveIndex = 1}, isPopUp = if state.props.customerTip.enableTips then TipsPopUp else NoPopUp}}
+                let newState = tipEnabledState state
+                exit $ GetSelectList newState{props{isPopUp = if state.props.customerTip.enableTips then TipsPopUp else NoPopUp}}
               else if(state.props.selectedQuote == Nothing && (getValueToLocalStore AUTO_SELECTING) /= "CANCELLED_AUTO_ASSIGN") then do
                 let id = (fromMaybe dummyQuoteList (newState.data.quoteListModelState!!0)).id
                     nextState = newState{data{quoteListModelState = map (\x -> x{selectedQuote = (Just id)}) newState.data.quoteListModelState}, props{selectedQuote = if (id /= "") then Just id else Nothing}}
@@ -1754,3 +1755,6 @@ getSearchExpiryTime dummy =
       interval = (fromMaybe 0.0 (NUM.fromString (getValueToLocalStore TEST_POLLING_INTERVAL)) / 1000.0)
       searchExpiryTime = round $ (toNumber count) * interval
   in searchExpiryTime
+
+tipEnabledState :: HomeScreenState -> HomeScreenState
+tipEnabledState state = state { props{customerTip {isTipSelected= true, tipForDriver= 10, tipActiveIndex=1}}}
