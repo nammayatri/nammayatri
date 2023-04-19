@@ -96,14 +96,14 @@ public class OtpUtils extends BroadcastReceiver implements JuspayDuiHook {
             IntentFilter filter = new IntentFilter(SmsRetriever.SMS_RETRIEVED_ACTION);
             filter.addAction(Intent.ACTION_AIRPLANE_MODE_CHANGED);
             activity.registerReceiver(OtpUtils.this, filter);
-            if (hyperFragment != null)
-            hyperFragment.getDuiInterface().invokeCallbackInDUIWebview(initiateCallback, "SUCCESS");
+            if (hyperFragment != null && hyperFragment.getDuiInterface() !=null )
+                hyperFragment.getDuiInterface().invokeCallbackInDUIWebview(initiateCallback, "SUCCESS");
         
         });
 
         task.addOnFailureListener(e -> {
-            if (hyperFragment != null)
-            hyperFragment.getDuiInterface().invokeCallbackInDUIWebview(initiateCallback, "FAILURE");
+            if (hyperFragment != null && hyperFragment.getDuiInterface() != null)
+                hyperFragment.getDuiInterface().invokeCallbackInDUIWebview(initiateCallback, "FAILURE");
         });
     }
 
