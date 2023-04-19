@@ -32,11 +32,10 @@ import Components.PrimaryEditText.View as PrimaryEditText
 import Components.PrimaryEditText.Controller as PrimaryEditTextConfig
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (os, clearTimer, countDown)
-import Data.Array((!!))
+import Data.Array((!!), mapWithIndex)
 import Data.Maybe (fromMaybe)
 import Control.Monad.Trans.Class (lift)
 import JBridge(startTimerWithTime)
-import Data.Array(mapWithIndex)
 
 view :: forall w .  (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push state =
@@ -142,37 +141,7 @@ view push state =
             , width MATCH_PARENT
             , visibility state.editTextVisibility
             ][PrimaryEditText.view (push <<< ETextController) (state.eTextConfig)]
-        , linearLayout
-          [ height WRAP_CONTENT
-          , width MATCH_PARENT
-          , visibility if state.customerTipAvailable then VISIBLE else GONE
-          , stroke $ state.tipButton.strokeColor
-          , margin state.tipLayoutMargin
-          ](mapWithIndex (\index item ->
-            linearLayout
-              [ width WRAP_CONTENT
-              , height WRAP_CONTENT
-              , weight 1.0
-              , margin $ state.tipButton.margin
-
-              ][textView
-                [
-                   text $ ("" <> item)
-                  , color $ state.tipButton.color
-                  , textSize $ state.tipButton.fontSize
-                  , visibility  if state.tipButton.visibility then VISIBLE else GONE
-                  , clickable $ state.tipButton.isClickable
-                  , stroke $ "1," <> (if(state.activeIndex == index) then Color.blue800 else Color.grey900)
-                  , cornerRadius 8.0
-                  , width WRAP_CONTENT
-                  , height WRAP_CONTENT
-                  , padding state.tipButton.padding
-                  , fontStyle $ state.tipButton.fontStyle 
-                  , onClick push $ const $  Tipbtnclick index (fromMaybe 100 (state.customerTipArrayWithValues !! index))
-                  , background (if(state.activeIndex == index) then Color.blue600 else state.tipButton.background) 
-                  ] 
-              ]
-            ) (state.customerTipArray))  
+        , tipsView push state
         , linearLayout 
           [ width MATCH_PARENT 
           , height WRAP_CONTENT
@@ -184,8 +153,7 @@ view push state =
               , height WRAP_CONTENT
               , orientation if(state.optionButtonOrientation == "VERTICAL") then VERTICAL else HORIZONTAL
               ][ linearLayout
-                  [ width if state.optionButtonOrientation == "VERTICAL" then MATCH_PARENT else if state.option2.visibility then ( state.option1.width ) else MATCH_PARENT
-                  -- if state.option2.visibility then ( state.option1.width ) else MATCH_PARENT
+                  [ width if state.option2.visibility then ( state.option1.width ) else MATCH_PARENT
                   , background state.option1.background
                   , height $ V 48
                   , cornerRadius 8.0
@@ -212,7 +180,7 @@ view push state =
                       ]
                     ]
                 , linearLayout
-                  [ width if(state.optionButtonOrientation == "VERTICAL") then MATCH_PARENT else if state.option1.visibility then ( state.option2.width) else MATCH_PARENT
+                  [ width if state.option1.visibility then ( state.option2.width) else MATCH_PARENT
                   , height $ V 48
                   , background $ state.option2.background
                   , cornerRadius 8.0
@@ -243,6 +211,39 @@ view push state =
              ]
         ]
     ]
+
+tipsView ::  forall w .  (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+tipsView push state = 
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , visibility if state.customerTipAvailable then VISIBLE else GONE
+    , stroke $ state.tipButton.strokeColor
+    , margin state.tipLayoutMargin
+    ](mapWithIndex (\index item ->
+      linearLayout
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , weight 1.0
+        , margin $ state.tipButton.margin
+        ][textView
+          [
+              text $ ("" <> item)
+            , color $ state.tipButton.color
+            , textSize $ state.tipButton.fontSize
+            , visibility  if state.tipButton.visibility then VISIBLE else GONE
+            , clickable $ state.tipButton.isClickable
+            , stroke $ "1," <> (if(state.activeIndex == index) then Color.blue800 else Color.grey900)
+            , cornerRadius 8.0
+            , width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , padding state.tipButton.padding
+            , fontStyle $ state.tipButton.fontStyle 
+            , onClick push $ const $  Tipbtnclick index (fromMaybe 100 (state.customerTipArrayWithValues !! index))
+            , background (if(state.activeIndex == index) then Color.blue600 else state.tipButton.background) 
+            ] 
+        ]
+      ) (state.customerTipArray))  
 
 clearTheTimer :: Config -> Effect Unit
 clearTheTimer config = 

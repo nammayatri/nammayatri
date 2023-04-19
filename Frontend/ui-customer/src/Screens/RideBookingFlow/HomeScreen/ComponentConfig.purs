@@ -43,7 +43,6 @@ import JBridge as JB
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Styles.Colors as Color
-import Data.Array((!!))
 import Common.Types.App
 import PrestoDOM
 import Data.Int as INT
@@ -369,7 +368,7 @@ logOutPopUpModelConfig state =
               , padding = (Padding 16 12 16 12)
             },
           option1 {
-            text = if (state.props.customerTip.tipForDriver == 0) then (getString TRY_AGAIN_WITHOUT_TIP) else ((getString TRY_AGAIN_WITH) <> " + ₹"<> (fromMaybe "" (["0", "10", "15", "20"] !! state.props.customerTip.tipActiveIndex))) <>" "<>(getString TIP)
+            text = if (state.props.customerTip.tipForDriver == 0) then (getString TRY_AGAIN_WITHOUT_TIP) else ((getString TRY_AGAIN_WITH) <> " + ₹"<> (fromMaybe "" (["0", "10", "15", "20"] DA.!! state.props.customerTip.tipActiveIndex))) <>" "<>(getString TIP)
           , fontSize = FontSize.a_16 
           , width = MATCH_PARENT
           , color = Color.yellow900
