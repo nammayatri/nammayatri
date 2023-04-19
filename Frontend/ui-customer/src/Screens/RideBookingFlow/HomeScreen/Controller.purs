@@ -736,11 +736,15 @@ eval PreferencesDropDown state = do
 
 eval (RatingCardAC (RatingCard.Rating index)) state = continue state { data { previousRideRatingState { rating = index } } }
 
-eval (RatingCardAC (RatingCard.PrimaryButtonAC PrimaryButtonController.OnClick)) state = updateAndExit state $ SubmitRating state
+eval (RatingCardAC (RatingCard.PrimaryButtonAC PrimaryButtonController.OnClick)) state = do
+  _ <- pure $ firebaseLogEvent "ny_user_ride_give_feedback"
+  updateAndExit state $ SubmitRating state
 
 eval (RatingCardAC (RatingCard.FareBreakUpAC FareBreakUp.ShowInvoice)) state = exit $ GoToInvoice state
 
-eval (RatingCardAC (RatingCard.SkipButtonAC PrimaryButtonController.OnClick)) state = updateAndExit state GoToHome
+eval (RatingCardAC (RatingCard.SkipButtonAC PrimaryButtonController.OnClick)) state = do
+  _ <- pure $ firebaseLogEvent "ny_user_ride_skip_feedback"
+  updateAndExit state GoToHome
 
 eval (RatingCardAC (RatingCard.FeedbackChanged value)) state = continue state { data { previousRideRatingState { feedback = value } } }
 
