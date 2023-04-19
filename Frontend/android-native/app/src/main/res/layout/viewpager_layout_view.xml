@@ -42,8 +42,8 @@
 
                         <ImageView
                             android:id="@+id/red_dot_0"
-                            android:layout_width="7dp"
-                            android:layout_height="7dp"
+                            android:layout_width="8dp"
+                            android:layout_height="8dp"
                             android:layout_marginStart="25dp"
                             android:background="@drawable/circle_red"
                             android:visibility="invisible" />
@@ -91,8 +91,8 @@
 
                         <ImageView
                             android:id="@+id/red_dot_1"
-                            android:layout_width="7dp"
-                            android:layout_height="7dp"
+                            android:layout_width="8dp"
+                            android:layout_height="8dp"
                             android:layout_marginStart="25dp"
                             android:background="@drawable/circle_red"
                             android:visibility="invisible" />
@@ -140,7 +140,7 @@
 
                         <ImageView
                             android:id="@+id/red_dot_2"
-                            android:layout_width="7dp"
+                            android:layout_width="8dp"
                             android:layout_height="8dp"
                             android:layout_marginStart="25dp"
                             android:background="@drawable/circle_red"
