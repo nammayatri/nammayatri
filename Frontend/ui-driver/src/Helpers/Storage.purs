@@ -35,6 +35,7 @@ data KeyStore = USER_NAME
                 | IS_RIDE_ACTIVE
                 | IS_DRIVER_ENABLED
                 | DRIVER_STATUS
+                | DRIVER_STATUS_N
                 | LOCATION_UPDATE_TIME
                 | DRIVER_ID
                 | BUNDLE_VERSION

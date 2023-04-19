@@ -26,6 +26,7 @@ import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
@@ -35,6 +36,8 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import androidx.annotation.Nullable;
 import androidx.interpolator.view.animation.FastOutLinearInInterpolator;
+
+import com.google.android.material.progressindicator.LinearProgressIndicator;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -61,7 +64,6 @@ public class WidgetService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         showSilentNotification(intent);
-
 //        addMessageToWidget(intent);
         return START_STICKY;
     }
@@ -102,6 +104,7 @@ public class WidgetService extends Service {
 
                 calculatedTime = calculateExpireTimer(searchRequestValidTill,getCurrTime);
                 calculatedTime= calculatedTime > 30 ? 30 : calculatedTime;
+                calculatedTime= calculatedTime < 0 ? 20 : calculatedTime;
                 DecimalFormat df = new DecimalFormat();
                 df.setMaximumFractionDigits(2);
 
@@ -117,9 +120,29 @@ public class WidgetService extends Service {
                 View silentRideRequest = widgetView.findViewById(R.id.silent_ride_request_background);
                 silentRideRequest.setVisibility(View.VISIBLE);
 
+                View dismissRequest = widgetView.findViewById(R.id.dismiss_silent_reqID);
+                dismissRequest.setVisibility(View.VISIBLE);
+
+                //Start progress bar :-
+
+                LinearProgressIndicator progressBar = widgetView.findViewById(R.id.silent_progress_indicator);
+                progressBar.setVisibility(View.VISIBLE);
+                progressBar.setIndicatorColor(getColor(R.color.green900));
                 // Start Slide-in animation
                 silentRideRequest.setTranslationX(-1500);
                 silentRideRequest.animate().translationX(0)
+                        .setInterpolator(new FastOutLinearInInterpolator())
+                        .setDuration(600)
+                        .start();
+
+                dismissRequest.setTranslationX(-1500);
+                dismissRequest.animate().translationX(0)
+                        .setInterpolator(new FastOutLinearInInterpolator())
+                        .setDuration(600)
+                        .start();
+
+                progressBar.setTranslationX(-1500);
+                progressBar.animate().translationX(0)
                         .setInterpolator(new FastOutLinearInInterpolator())
                         .setDuration(600)
                         .start();
@@ -129,6 +152,8 @@ public class WidgetService extends Service {
                     if(data!=null && entity_payload!=null) {
                         NotificationUtils.showAllocationNotification(getApplicationContext(), "", "", data, "", entity_payload);
                         silentRideRequest.setVisibility(View.GONE);
+                        progressBar.setVisibility(View.GONE);
+                        dismissRequest.setVisibility(View.GONE);
                     }
                 });
 
@@ -136,6 +161,31 @@ public class WidgetService extends Service {
                 View floatingWidget = widgetView.findViewById(R.id.floating_logo);
                 float mAngleToRotate = 360f;
                 rotationAnimation(floatingWidget, 0.0f, mAngleToRotate);
+
+                int calulatedWidth = widgetView.getWidth();
+                calulatedWidth = 700;
+                int[] ar = new int[100];
+                for(int i = ar.length-1, j = 1; i >=0 && j <= ar.length; i--, j++){
+                    ar[i] = (calulatedWidth/100)*j;
+                }
+
+                ValueAnimator anim = ValueAnimator.ofInt(ar);
+                anim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+                    @Override
+                    public void onAnimationUpdate(ValueAnimator valueAnimator) {
+                        int val = (Integer) valueAnimator.getAnimatedValue();
+                        ViewGroup.LayoutParams layoutParams = progressBar.getLayoutParams();
+                        if(val < width/4 && val > width/5){
+                            progressBar.setIndicatorColor(getColor(R.color.yellow900));
+                        }else if(val < width/5){
+                            progressBar.setIndicatorColor(getColor(R.color.red900));
+                        }
+                        layoutParams.width = val;
+                        progressBar.setLayoutParams(layoutParams);
+                    }
+                });
+                anim.setDuration((calculatedTime+1)*1000);
+                anim.start();
 
                 //Revert Animation
                 Handler handler = new Handler();
@@ -153,13 +203,23 @@ public class WidgetService extends Service {
                             @Override
                             public void run() {
                                 silentRideRequest.setVisibility(View.GONE);
+                                progressBar.setVisibility(View.GONE);
+                                dismissRequest.setVisibility(View.GONE);
                             }
                         }, getResources().getInteger(R.integer.WIDGET_MESSAGE_ANIMATION_DURATION));
                     }
                 }, calculatedTime*1000);
+
+                // Adding dismiss button on widget
+                dismissRequest.setOnClickListener(view -> {
+                    silentRideRequest.setVisibility(View.GONE);
+                    progressBar.setVisibility(View.GONE);
+                    dismissRequest.setVisibility(View.GONE);
+                    handler.removeCallbacksAndMessages(null);
+                });
             }
         }catch (Exception e){
-
+            System.out.println("EXCEPTION " + e.toString());
         }
     }
 
@@ -264,7 +324,7 @@ public class WidgetService extends Service {
 
         //initial Position
         widgetLayoutParams.gravity = Gravity.TOP | Gravity.LEFT;
-        widgetLayoutParams.x = 5;
+        widgetLayoutParams.x = 16;
         widgetLayoutParams.y = (windowManager.getDefaultDisplay().getHeight())/4;
 
         //layout params for close button
@@ -311,30 +371,25 @@ public class WidgetService extends Service {
                         case MotionEvent.ACTION_UP:
                             imageClose.setVisibility(View.GONE);
 
-                            if (isCloseEnabled){
-//                                stopSelf();
-                            } else {
-                                ValueAnimator valueAnimator = ValueAnimator.ofFloat(widgetLayoutParams.x, 0);
-                                valueAnimator.setDuration(getResources().getInteger(R.integer.WIDGET_CORNER_ANIMATION_DURATION));
-                                valueAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-                                    public void onAnimationUpdate(ValueAnimator animation) {
-                                        try{
-                                            widgetLayoutParams.x = Math.round((Float) animation.getAnimatedValue());
-                                            windowManager.updateViewLayout(widgetView, widgetLayoutParams);
-                                        }catch (Exception e){
-                                            e.printStackTrace();
-                                        }
+                            ValueAnimator valueAnimator = ValueAnimator.ofFloat(widgetLayoutParams.x, 0);
+                            valueAnimator.setDuration(getResources().getInteger(R.integer.WIDGET_CORNER_ANIMATION_DURATION));
+                            valueAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+                                public void onAnimationUpdate(ValueAnimator animation) {
+                                    try{
+                                        widgetLayoutParams.x = Math.round((Float) animation.getAnimatedValue());
+                                        windowManager.updateViewLayout(widgetView, widgetLayoutParams);
+                                    }catch (Exception e){
+                                        e.printStackTrace();
                                     }
-                                });
-                                valueAnimator.start();
-
-                                //click definition
-                                if (Math.abs(initialTouchX - motionEvent.getRawX()) < 5 && Math.abs(initialTouchY - motionEvent.getRawY()) < 5){
-                                    Intent intent = new Intent(getApplicationContext(), MainActivity.class);
-                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                                    getApplicationContext().startActivity(intent);
-//                                    stopSelf(); // Removed drag to close option for floating widget
                                 }
+                            });
+                            valueAnimator.start();
+
+                            //click definition
+                            if (Math.abs(initialTouchX - motionEvent.getRawX()) < 5 && Math.abs(initialTouchY - motionEvent.getRawY()) < 5){
+                                Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                                getApplicationContext().startActivity(intent);
                             }
                             return true;
 

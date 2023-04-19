@@ -213,6 +213,7 @@ silentModeConfig state = let
   popUpConfig' = config'{
     gravity = CENTER
   , cornerRadius = (PTD.Corners 15.0 true true true true)
+  , backgroundClickable = false
   , margin = (Margin 16 0 16 0)
   , primaryText {
       text = getString TRY_SILENT_MODE
