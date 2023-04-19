@@ -31,6 +31,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import javax.net.ssl.HttpsURLConnection;
@@ -74,10 +75,10 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             payload.put("entity_type", remoteMessage.getData().get("entity_type"));
             payload.put("show_notification", remoteMessage.getData().get("show_notification"));
 
-            String title;
-            String body;
-            String icon;
-            String imageUrl;
+            String title = "";
+            String body = "";
+            String icon = "";
+            String imageUrl = "";
 
             if (remoteMessage.getData().containsKey("notification_json")) {
                 notification_payload = new JSONObject(remoteMessage.getData().get("notification_json"));
@@ -87,12 +88,13 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             }
             
             RemoteMessage.Notification notification = remoteMessage.getNotification();
+            String notificationType = (String) payload.get("notification_type");
             if (notification != null) {
                 title = notification.getTitle();
                 body = notification.getBody();
                 icon = notification.getIcon();
                 imageUrl = remoteMessage.getData().get("image-url");
-            } else {
+            } else if(!notificationType.equals("UPDATE_STORAGE")) {
                 title = notification_payload.get("title").toString();
                 body = notification_payload.get("body").toString();
                 icon = notification_payload.get("icon").toString();
@@ -105,7 +107,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
             if (notification_payload != null || notification != null) {
                 SharedPreferences sharedPref = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-                String notificationType = (String) payload.get("notification_type");
 
                 switch (notificationType) {
                     case NotificationTypes.TRIGGER_SERVICE :
@@ -183,7 +184,15 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                     case NotificationTypes.REFERRAL_ACTIVATED :
                         sharedPref.edit().putString("REFERRAL_ACTIVATED", "true").apply();
                         break;
-                        
+
+                    case NotificationTypes.UPDATE_STORAGE :
+                        for (Iterator<String> it = notification_payload.keys(); it.hasNext(); ) {
+                            String key = (String)  it.next();
+                            String value = notification_payload.get(key).toString();
+                            sharedPref.edit().putString(key, value).apply();
+                        }
+                        break;
+
                     default:
                         if (payload.get("show_notification").equals("true")) {
                             NotificationUtils.showNotification(this, title, body, payload, imageUrl);
@@ -321,5 +330,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         private static final String NEW_MESSAGE = "NEW_MESSAGE";
         private static final String REGISTRATION_APPROVED = "REGISTRATION_APPROVED";
         private static final String REFERRAL_ACTIVATED = "REFERRAL_ACTIVATED";
+        private static final String UPDATE_STORAGE = "UPDATE_STORAGE";
     }
 }
