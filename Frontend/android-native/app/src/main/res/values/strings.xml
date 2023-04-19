@@ -26,7 +26,7 @@
     <string name="tap_on">3. Tap on </string>
     <string name="location">Location</string>
     <string name="phone">Phone</string>
-    <string name="includes_pickup_charges_10">Includes Pickup Charges ₹ 10</string>
+    <string name="includes_pickup_charges_10">Includes Pickup Charges ₹10</string>
     <string name="away" >away</string>
     <string name="we_made_you_online">We made you Online</string>
     <string name="location_is_turned_on">Location is turned on</string>
@@ -42,4 +42,5 @@
 
     <string name="new_ride_req">New Ride Request</string>
     <string name="new_ride_available_for_offering">New ride available for offering</string>
+    <string name="and">and</string>
 </resources>
