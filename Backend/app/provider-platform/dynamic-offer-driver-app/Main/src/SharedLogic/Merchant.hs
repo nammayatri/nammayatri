@@ -19,6 +19,7 @@ import Environment
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.Merchant as CQM
 import Tools.Error
 
@@ -26,3 +27,10 @@ findMerchantByShortId :: ShortId DM.Merchant -> Flow DM.Merchant
 findMerchantByShortId merchantShortId = do
   CQM.findByShortId merchantShortId
     >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+
+checkMerchantExist :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> m ()
+checkMerchantExist merchantId = do
+  _ <-
+    CQM.findById merchantId
+      >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
+  return ()

@@ -19,7 +19,6 @@ module Domain.Action.Beckn.CancellationReason
 where
 
 import qualified Beckn.Types.Core.Taxi.CancellationReasons.Types as SCR
-import qualified Domain.Types.CancellationReason as SCR
 import EulerHS.Prelude hiding (id)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Storage.Esqueleto.Transactionable (runInReplica)

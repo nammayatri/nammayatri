@@ -33,6 +33,8 @@ import Storage.Tabular.Ride (RideTId)
 
 derivePersistField "Domain.CancellationSource"
 
+--derivePersistField "SCR.CancellationReasonCode"
+
 mkPersist
   defaultSqlSettings
   [defaultQQ|

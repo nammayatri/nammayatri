@@ -25,13 +25,10 @@ content-type: application/json
 }
 
 ###
-
 @token = {{verify.response.body.token}}
-
-
-# @name cancellationReason
-GET {{app-host}}/get_cancellation_reason
-    ?providerUrl=http://localhost:8016/beckn/favorit0-0000-0000-0000-00000favorit
+###
+@bookingId = b58955b3-7556-4327-b128-ac15ed820f53
+GET {{app-host}}/rideBooking/{{bookingId}}/cancellationReasons
 token: {{token}}
 
 ###

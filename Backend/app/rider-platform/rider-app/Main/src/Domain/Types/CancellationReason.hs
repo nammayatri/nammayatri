@@ -14,7 +14,6 @@
 
 module Domain.Types.CancellationReason where
 
-import Beckn.Types.Core.Taxi.CancellationReasons.Types
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
@@ -28,24 +27,3 @@ instance FromHttpApiData CancellationStage where
   parseUrlPiece = parseHeader . encodeUtf8
   parseQueryParam = parseUrlPiece
   parseHeader = left T.pack . eitherDecode . BSL.fromStrict
-
-{-data CancellationReason = CancellationReason
-  { reasonCode :: CancellationReasonCode,
-    description :: Text,
-    enabled :: Bool,
-    onSearch :: Bool,
-    onConfirm :: Bool,
-    onAssign :: Bool,
-    priority :: Int
-  }
-  deriving (Generic, Show)-}
-
-data CancellationReasonAPIEntity = CancellationReasonAPIEntity
-  { reasonCode :: CancellationReasonCode,
-    description :: Text
-  }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
-
-makeCancellationReasonAPIEntity :: CancellationReason -> CancellationReasonAPIEntity
-makeCancellationReasonAPIEntity CancellationReason {..} =
-  CancellationReasonAPIEntity {..}

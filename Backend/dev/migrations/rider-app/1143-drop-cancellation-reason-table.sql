@@ -1,0 +1,1 @@
+DROP TABLE atlas_app.cancellation_reason;

@@ -19,8 +19,8 @@ module API.UI.CancellationReason
   )
 where
 
+import qualified Beckn.Types.Core.Taxi.CancellationReasons.Types as SCR
 import qualified Domain.Action.Beckn.CancellationReason as DCancellationReason
-import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as Person
 import Environment

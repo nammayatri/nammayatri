@@ -55,7 +55,6 @@ library
       API.UI.Booking
       API.UI.Call
       API.UI.Cancel
-      API.UI.CancellationReason
       API.UI.Confirm
       API.UI.CustomerSupport
       API.UI.Feedback
@@ -216,7 +215,6 @@ library
       Storage.Queries.BookingCancellationReason
       Storage.Queries.CallbackRequest
       Storage.Queries.CallStatus
-      Storage.Queries.CancellationReason
       Storage.Queries.DriverOffer
       Storage.Queries.Estimate
       Storage.Queries.EstimateBreakup

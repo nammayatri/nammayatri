@@ -16,9 +16,11 @@ module Domain.Action.UI.Booking
   ( BookingListRes (..),
     bookingStatus,
     bookingList,
+    getBookingCancellationReason,
   )
 where
 
+import Beckn.Types.Core.Taxi.CancellationReasons.Types
 import Data.OpenApi (ToSchema (..))
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Merchant as Merchant
@@ -26,9 +28,12 @@ import qualified Domain.Types.Person as Person
 import EulerHS.Prelude hiding (id)
 import Kernel.Storage.Esqueleto (runInReplica)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.CancellationReasons
 import Storage.CachedQueries.CacheConfig (CacheFlow)
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRB
 import Tools.Error
 
@@ -47,3 +52,18 @@ bookingList :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => (Id Perso
 bookingList (personId, _) mbLimit mbOffset mbOnlyActive mbBookingStatus = do
   rbList <- runInReplica $ QRB.findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus
   BookingListRes <$> traverse SRB.buildBookingAPIEntity rbList
+
+getBookingCancellationReason ::
+  ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    CacheFlow m r,
+    CoreMetrics m,
+    EsqDBReplicaFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Id SRB.Booking ->
+  m CancellationReasonsRes
+getBookingCancellationReason bookingId = do
+  booking <- runInReplica (QRB.findById bookingId) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantDoesNotExist booking.merchantId.getId)
+  cancellationReasonsList <- getCancellationReasons booking.providerUrl booking.providerId merchant.city merchant.country booking.transactionId merchant.bapId
+  buildCancellationReasonsRes booking.providerUrl booking.providerId merchant.city merchant.country booking.transactionId merchant.bapId cancellationReasonsList

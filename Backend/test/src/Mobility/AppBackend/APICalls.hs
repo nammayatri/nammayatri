@@ -72,7 +72,8 @@ callAppFeedback ratingValue rideId =
 
 appBookingStatus :: Id BRB.Booking -> Text -> ClientM AbeBooking.BookingAPIEntity
 appBookingList :: Text -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BRB.BookingStatus -> ClientM AppBooking.BookingListRes
-appBookingStatus :<|> appBookingList = client (Proxy :: Proxy AppBooking.API)
+appBookingCancellationReasonsList :: Id BRB.Booking -> Text -> ClientM SRC.CancellationReasonsRes
+appBookingStatus :<|> appBookingCancellationReasonsList :<|> appBookingList = client (Proxy :: Proxy AppBooking.API)
 
 originServiceability :: RegToken -> AppServ.ServiceabilityReq -> ClientM AppServ.ServiceabilityRes
 originServiceability regToken = origin

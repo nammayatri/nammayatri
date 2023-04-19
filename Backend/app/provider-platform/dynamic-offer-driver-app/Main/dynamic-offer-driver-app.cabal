@@ -73,6 +73,7 @@ library
       App
       App.Server
       Beckn.ACL.Cancel
+      Beckn.ACL.CancellationReasons
       Beckn.ACL.Common
       Beckn.ACL.Confirm
       Beckn.ACL.Init
@@ -153,7 +154,6 @@ library
       Domain.Types.BookingCancellationReason
       Domain.Types.BusinessEvent
       Domain.Types.CallStatus
-      Domain.Types.CancellationReason
       Domain.Types.Common
       Domain.Types.Driver.DriverFlowStatus
       Domain.Types.DriverFee

@@ -64,7 +64,6 @@ instance FromTType BookingCancellationReasonT Domain.BookingCancellationReason w
         { bookingId = fromKey bookingId,
           rideId = fromKey <$> rideId,
           merchantId = fromKey <$> merchantId,
-          reasonCode = fromKey <$> reasonCode,
           driverCancellationLocation = mbDriverCancellationLocation,
           ..
         }
@@ -75,7 +74,6 @@ instance ToTType BookingCancellationReasonT Domain.BookingCancellationReason whe
       { bookingId = toKey bookingId,
         rideId = toKey <$> rideId,
         merchantId = toKey <$> merchantId,
-        reasonCode = toKey <$> reasonCode,
         driverCancellationLocationLat = driverCancellationLocation <&> (.lat),
         driverCancellationLocationLon = driverCancellationLocation <&> (.lon),
         ..

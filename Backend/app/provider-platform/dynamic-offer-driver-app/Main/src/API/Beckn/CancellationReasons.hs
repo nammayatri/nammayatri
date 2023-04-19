@@ -12,12 +12,11 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module API.Beckn.CancellationReasons (API, handler) where -- should move to SharedLogic
+module API.Beckn.CancellationReasons (API, handler) where
 
+import qualified Beckn.ACL.CancellationReasons as ACL
 import qualified Beckn.Types.Core.Taxi.API.CancellationReasons as API
 import qualified Beckn.Types.Core.Taxi.CancellationReasons.Types as API
-import qualified Domain.Action.Beckn.CancellationReason as Q
-import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Merchant as DM
 import Environment
 import EulerHS.Prelude hiding (id)
@@ -27,7 +26,7 @@ import Kernel.Utils.Servant.SignatureAuth
 import Servant
 
 type API =
-  Capture "merchantId" (Id Merchant)
+  Capture "merchantId" (Id DM.Merchant)
     :> SignatureAuth "Authorization"
     :> API.CancellationReasonsAPI
 
@@ -39,6 +38,7 @@ sendCancellationReasons ::
   SignatureAuthResult ->
   API.CancellationReasonsReq ->
   FlowHandler API.CancellationReasons
-sendCancellationReasons _ _ _ =
-  withFlowHandlerAPI $ do
-    Q.getCancellationReasons
+sendCancellationReasons merchantId (SignatureAuthResult _ subscriber) req = withFlowHandlerAPI $
+  withTransactionIdLogTag req $ do
+    logTagInfo "getCancellationReasonsAPI" "Received get_cancellation_reasons API call."
+    ACL.buildCancellationReasonsResp merchantId subscriber req

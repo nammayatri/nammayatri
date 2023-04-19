@@ -16,7 +16,8 @@ module Beckn.Types.Core.Taxi.CancellationReasons.Types where
 
 import Data.OpenApi (ToSchema)
 import Data.OpenApi.Internal.ParamSchema (ToParamSchema)
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
+import Kernel.Types.Beckn.ReqTypes
 
 newtype CancellationReasonCode = CancellationReasonCode Text
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
@@ -31,8 +32,32 @@ data CancellationReason = CancellationReason
 
 type CancellationReasons = [CancellationReason]
 
-data CancellationReasonsReq = CancellationReasonsReq
-  { order_id :: Text,
-    item_id :: Text
+type CancellationReasonsReq = BecknReq Empty
+
+data CancellationReasonAPIEntity = CancellationReasonAPIEntity
+  { reasonCode :: CancellationReasonCode,
+    description :: Text
   }
   deriving (Generic, ToJSON, ToSchema, Show, FromJSON)
+
+makeCancellationReasonAPIEntity :: CancellationReason -> CancellationReasonAPIEntity
+makeCancellationReasonAPIEntity CancellationReason {..} =
+  CancellationReasonAPIEntity {..}
+
+newtype CancellationReasonsMessage = CancellationReasonsMessage {cancellation_reasons :: [CancellationReasonInfo]}
+  deriving (Generic, ToJSON, ToSchema, Show, FromJSON)
+
+data CancellationReasonInfo = CancellationReasonInfo {id :: Int, descriptor :: Name}
+  deriving (Generic, ToJSON, ToSchema, Show, FromJSON)
+
+newtype Name = Name {name :: Text} deriving (Generic, ToJSON, ToSchema, Show, FromJSON)
+
+makeCancellationReasonsMessage :: CancellationReasons -> CancellationReasonsMessage
+makeCancellationReasonsMessage listOfReasons = CancellationReasonsMessage results
+  where
+    toInfoList (x : xs) n = CancellationReasonInfo n (Name x.description) : toInfoList xs (n + 1)
+    toInfoList [] _ = []
+
+    results = toInfoList listOfReasons 1
+
+type CancellationReasonsRes = BecknReq CancellationReasonsMessage
