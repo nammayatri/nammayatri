@@ -180,6 +180,7 @@ getEN script = case script of
   ARE_YOU_SURE_YOU_WANT_TO_LOGOUT -> "Are you sure you want to logout ?"
   ARE_YOU_SURE_YOU_WANT_TO_CANCEL -> "Are you sure you want to Cancel ?"
   YOU_HAVE_RIDE_OFFERS_ARE_YOU_SURE_YOU_WANT_TO_CANCEL -> "You have ride offers, are you sure you want to cancel?"
+  CANCEL_ONGOING_SEARCH -> "Are you sure you want to continue with cancelling an ongoing search?"
   GO_BACK_ -> "Go Back"
   SEARCH_AGAIN_WITH_A_TIP -> "Search again with a tip?"
   TRY_AGAIN_WITH_A_TIP -> "Try again with a tip?"
@@ -417,3 +418,9 @@ getEN script = case script of
   HOW_SHOULD_WE_ADDRESS_YOU -> "How should we address you?"
   GENDER_STR -> "Gender"
   PROFILE_COMPLETION -> "Profile Completion"
+  YES_TRY_AGAIN -> "Yes, Try Again"
+  NO_DONT -> "No, Don’t"
+  YES_CANCEL_SEARCH -> "Yes, Cancel Search"
+  TRY_LOOKING_FOR_RIDES_AGAIN -> "It seems to be a very busy day. You may try looking for rides again"
+--   Are you sure you want to continue with 
+-- cancelling an ongoing search?
