@@ -166,6 +166,8 @@ currentRideFlow rideAssigned = do
                   , ratingModal = false
                   , bookingId = resp.id
                   }}
+        when (not rideAssigned) $ do
+          void $ pure $ firebaseLogEventWithTwoParams "ny_active_ride_with_idle_state" "status" status "bookingId" resp.id
         _ <- pure $ spy "Active api" listResp
         modifyScreenState $ HomeScreenStateType (\homeScreen → newState)
         updateLocalStage rideStatus
