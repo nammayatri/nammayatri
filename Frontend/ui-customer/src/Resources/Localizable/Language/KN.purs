@@ -416,3 +416,8 @@ getKN script = case script of
   HOW_SHOULD_WE_ADDRESS_YOU -> "ನಾವು ನಿಮ್ಮನ್ನು ಹೇಗೆ ಸಂಬೋಧಿಸಬೇಕು?"
   GENDER_STR -> "ಲಿಂಗ"
   PROFILE_COMPLETION -> "ಪ್ರೊಫೈಲ್ ಪೂರ್ಣಗೊಳಿಸುವಿಕೆ"
+  CANCEL_ONGOING_SEARCH -> "ನಡೆಯುತ್ತಿರುವ ಹುಡುಕಾಟವನ್ನು ರದ್ದುಗೊಳಿಸುವುದನ್ನು ಮುಂದುವರಿಸಲು ನೀವು ಖಚಿತವಾಗಿ ಬಯಸುವಿರಾ?"
+  YES_TRY_AGAIN -> "ಹೌದು, ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ"
+  NO_DONT -> "ಇಲ್ಲ, ಬೇಡ"
+  YES_CANCEL_SEARCH -> "ಹೌದು, ಹುಡುಕಾಟ ರದ್ದುಮಾಡಿ"
+  TRY_LOOKING_FOR_RIDES_AGAIN -> "ಇದು ತುಂಬಾ ಬಿಡುವಿಲ್ಲದ ದಿನವಾಗಿದೆ ಎಂದು ತೋರುತ್ತದೆ. ನೀವು ಮತ್ತೆ ಸವಾರಿಗಳನ್ನು ಹುಡುಕಲು ಪ್ರಯತ್ನಿಸಬಹುದು"

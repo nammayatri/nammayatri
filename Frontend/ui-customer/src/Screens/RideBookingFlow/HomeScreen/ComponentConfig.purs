@@ -46,7 +46,7 @@ import Styles.Colors as Color
 import Common.Types.App
 import PrestoDOM
 import Data.Int as INT
-import Storage (KeyStore(..), getValueToLocalStore)
+import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn)
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -351,7 +351,7 @@ logOutPopUpModelConfig state =
           , customerTipArray = ["No Tip", "₹10 🙂", "₹15 😄", "₹20 🤩"]
           , customerTipArrayWithValues = [0,10, 15, 20]
           , primaryText {
-              text =  if(state.props.currentStage == ST.QuoteList)then (getString SEARCH_AGAIN_WITH_A_TIP) else (getString TRY_AGAIN_WITH_A_TIP)
+              text =  if(isLocalStageOn ST.QuoteList)then (getString TRY_AGAIN_WITH_A_TIP) else (getString SEARCH_AGAIN_WITH_A_TIP)
             , fontSize = FontSize.a_22
             },
           secondaryText { 
@@ -378,7 +378,7 @@ logOutPopUpModelConfig state =
           , fontStyle = FontStyle.semiBold LanguageStyle
           },
           option2 {
-            text = if(state.props.currentStage == ST.QuoteList) then (getString HOME) else  (getString CANCEL_SEARCH)
+            text = if (isLocalStageOn ST.QuoteList) then (getString HOME) else  (getString CANCEL_SEARCH)
           , fontSize = FontSize.a_16
           , width = MATCH_PARENT 
           , background = Color.white900
@@ -395,10 +395,31 @@ logOutPopUpModelConfig state =
         config' = PopUpModal.config
         popUpConfig' =
           config'
-            { primaryText { text = (getString CANCEL_) }
-            , secondaryText { text = if state.props.isPopUp == ST.ActiveQuotePopUp then (getString YOU_HAVE_RIDE_OFFERS_ARE_YOU_SURE_YOU_WANT_TO_CANCEL) else (getString ARE_YOU_SURE_YOU_WANT_TO_CANCEL)}
-            , option1 { text = (getString NO) }
-            , option2 { text = (getString YES) }
+            { primaryText { text = if (isLocalStageOn ST.QuoteList) then ((getString TRY_AGAIN) <> "?") else ((getString CANCEL_SEARCH) <> "?")}
+            , buttonLayoutMargin = (MarginHorizontal 16 16)
+            , dismissPopup = true
+            , optionButtonOrientation = if(isLocalStageOn ST.QuoteList || isLocalStageOn ST.FindingQuotes) then  "VERTICAL" else "HORIZONTAL"
+            , secondaryText { text = if (isLocalStageOn ST.QuoteList) then (getString TRY_LOOKING_FOR_RIDES_AGAIN) else (getString CANCEL_ONGOING_SEARCH)}
+            , option1 { 
+              text = if (isLocalStageOn ST.QuoteList) then (getString YES_TRY_AGAIN) else (getString NO_DONT)
+            , fontSize = FontSize.a_16 
+            , width = MATCH_PARENT
+            , color = Color.yellow900
+            , strokeColor = Color.black900
+            , background = Color.black900
+            , padding = (Padding 0 10 0 10)
+            , fontStyle = FontStyle.semiBold LanguageStyle
+            }
+            , option2 { 
+               text = if (isLocalStageOn ST.QuoteList) then (getString HOME) else (getString YES_CANCEL_SEARCH) 
+              , fontSize = FontSize.a_16
+              , width = MATCH_PARENT 
+              , background = Color.white900
+              , strokeColor = Color.white900
+              , margin = MarginTop 3
+              , color = Color.black650
+              , fontStyle = FontStyle.semiBold LanguageStyle
+             }
             }
       in
         popUpConfig'
