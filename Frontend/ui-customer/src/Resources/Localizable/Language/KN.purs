@@ -183,7 +183,9 @@ getKN script = case script of
   TRY_AGAIN_WITH_A_TIP -> "ಸಲಹೆಯೊಂದಿಗೆ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸುವುದೇ?"
   BOOST_YOUR_RIDE_CHANCES_AND_HELP_DRIVERS_WITH_TIPS -> "ಟಿಪ್ ಸೆ ರೈಡ್ ಮಿಲನೆ ಪೀಕ್ ಆವರ್ಸ್ ಕೆ ದೌರನ್ ಡ್ರೈವರ್ ಕಿ ಮದದ ಕರತಾ ಹೈ / ಖಾಲಿ ರಿಟರ್ನ್ ಟ್ರಿಪ್ ಕಿ ಭಾರತೈ"
   TRY_AGAIN_WITHOUT_TIP -> "ಸಲಹೆ ಇಲ್ಲದೆ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ"
+  SEARCH_AGAIN_WITHOUT_A_TIP -> "ಸುಳಿವು ಇಲ್ಲದೆ ಮತ್ತೆ ಹುಡುಕಿ"
   TRY_AGAIN_WITH -> "ಇದರೊಂದಿಗೆ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ"
+  SEARCH_AGAIN_WITH -> "ಇದರೊಂದಿಗೆ ಮತ್ತೆ ಹುಡುಕಿ"
   TIP -> "ತುದಿ"
   REGISTER_USING_DIFFERENT_NUMBER -> "ನೀವು ಬೇರೆ ಮೊಬೈಲ್ ಸಂಖ್ಯೆಯನ್ನು ಬಳಸಿಕೊಂಡು ನೋಂದಾಯಿಸಲು ಬಯಸುವಿರಾ?"
   YES -> "ಹೌದು"
@@ -421,3 +423,6 @@ getKN script = case script of
   NO_DONT -> "ಇಲ್ಲ, ಬೇಡ"
   YES_CANCEL_SEARCH -> "ಹೌದು, ಹುಡುಕಾಟ ರದ್ದುಮಾಡಿ"
   TRY_LOOKING_FOR_RIDES_AGAIN -> "ಇದು ತುಂಬಾ ಬಿಡುವಿಲ್ಲದ ದಿನವಾಗಿದೆ ಎಂದು ತೋರುತ್ತದೆ. ನೀವು ಮತ್ತೆ ಸವಾರಿಗಳನ್ನು ಹುಡುಕಲು ಪ್ರಯತ್ನಿಸಬಹುದು"
+  NO_TIP -> "ಯಾವುದೇ ಸಲಹೆ ಇಲ್ಲ"
+  CUSTOMER_SELECTED_FARE -> "ಗ್ರಾಹಕ ಸಲಹೆ"
+

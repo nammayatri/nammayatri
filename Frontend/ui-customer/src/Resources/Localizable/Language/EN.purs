@@ -185,8 +185,10 @@ getEN script = case script of
   SEARCH_AGAIN_WITH_A_TIP -> "Search again with a tip?"
   TRY_AGAIN_WITH_A_TIP -> "Try again with a tip?"
   BOOST_YOUR_RIDE_CHANCES_AND_HELP_DRIVERS_WITH_TIPS -> "Tip might help increase the chance of  getting a ride.  Helps the driver during peak hours / compensate for empty return trips"
-  TRY_AGAIN_WITHOUT_TIP -> "Try Again Without tip"
+  TRY_AGAIN_WITHOUT_TIP -> "Try Again Without Tip"
+  SEARCH_AGAIN_WITHOUT_A_TIP -> "Search Again Without Tip"
   TRY_AGAIN_WITH -> "Try Again With"
+  SEARCH_AGAIN_WITH -> "Search Again With"
   TIP -> "Tip"
   REGISTER_USING_DIFFERENT_NUMBER -> "Do you want to register using a different mobile number ?"
   YES -> "Yes"
@@ -363,6 +365,7 @@ getEN script = case script of
   TOTAL_PAID -> "Total Paid"
   WAITING_CHARGE -> "Waiting Charges**"
   NOMINAL_FARE -> "Optional Driver Request*"
+  CUSTOMER_SELECTED_FARE -> "Customer Tip*"
   DRIVERS_CAN_CHARGE_AN_ADDITIONAL_FARE_UPTO -> "* Drivers may optionally request 10% of base fare (rounded to nearest Rs.10) to cover other factors like traffic, chances of return trip etc."
   WAITING_CHARGE_DESCRIPTION -> "** Waiting charges : ₹1 / min - after 3 mins of drivers arrival"
   SUCCESSFUL_ONBOARD -> "You have successfully signed on to \nNamma Yatri"
@@ -422,5 +425,7 @@ getEN script = case script of
   NO_DONT -> "No, Don’t"
   YES_CANCEL_SEARCH -> "Yes, Cancel Search"
   TRY_LOOKING_FOR_RIDES_AGAIN -> "It seems to be a very busy day. You may try looking for rides again"
+  NO_TIP -> "No Tip"
+
 --   Are you sure you want to continue with 
 -- cancelling an ongoing search?

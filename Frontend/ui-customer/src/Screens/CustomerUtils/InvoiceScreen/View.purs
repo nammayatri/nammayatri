@@ -130,6 +130,7 @@ amountBreakupView state =
                       ST.BASE_FARE -> ((getString BASE_FARES) <> " (" <> state.data.selectedItem.baseDistance <> ")")
                       ST.EXTRA_DISTANCE_FARE -> (getString NOMINAL_FARE)
                       ST.DRIVER_SELECTED_FARE -> (getString NOMINAL_FARE)
+                      ST.CUSTOMER_SELECTED_FARE -> (getString CUSTOMER_SELECTED_FARE)
                       ST.TOTAL_FARE -> (getString TOTAL_PAID)
                       ST.DEAD_KILOMETER_FARE -> (getString PICKUP_CHARGE)
                       ST.PICKUP_CHARGES -> (getString PICKUP_CHARGE)
