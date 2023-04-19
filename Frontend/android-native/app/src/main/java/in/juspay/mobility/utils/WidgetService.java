@@ -63,8 +63,11 @@ public class WidgetService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        showSilentNotification(intent);
-//        addMessageToWidget(intent);
+        if (intent!=null && intent.getStringExtra(getResources().getString(R.string.WIDGET_MESSAGE))==null){
+            showSilentNotification(intent);
+        } else{
+            addMessageToWidget(intent);
+        }
         return START_STICKY;
     }
     @Override
@@ -273,14 +276,9 @@ public class WidgetService extends Service {
                             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
                             PixelFormat.TRANSLUCENT);
             if (windowManager!=null){
-//                if (widgetLayoutParams.x >= (windowManager.getDefaultDisplay().getWidth())/2){
-                    messageView =  widgetView.findViewById(R.id.message_view_left);
-                    messageTextView = widgetView.findViewById(R.id.messageTextView_left);
-                // }else {
-                //     messageView =  widgetView.findViewById(R.id.message_view_right);
-                //     messageHeaderView = widgetView.findViewById(R.id.messageTextView_right_header);
-                //     messageTextView = widgetView.findViewById(R.id.messageTextView_right);
-                // }
+                messageView =  widgetView.findViewById(R.id.message_view_right);
+                messageHeaderView = widgetView.findViewById(R.id.messageTextView_right_header);
+                messageTextView = widgetView.findViewById(R.id.messageTextView_right);
                 messageView.setVisibility(View.VISIBLE);
                 messageTextView.setText(widgetMessage);
                 if(widgetMessageHeader != null && messageHeaderView != null) {
@@ -291,19 +289,19 @@ public class WidgetService extends Service {
                     messageHeaderView.setVisibility(View.GONE);
                 }
                 Handler handler = new Handler();
-//                handler.postDelayed(new Runnable() {
-//                    @Override
-//                    public void run() {
-//                        Animation aniFade = AnimationUtils.loadAnimation(getApplicationContext(),R.anim.fade_out);
-//                        messageView.startAnimation(aniFade);
-//                        handler.postDelayed(new Runnable() {
-//                            @Override
-//                            public void run() {
-//                                messageView.setVisibility(View.GONE);
-//                            }
-//                        }, getResources().getInteger(R.integer.WIDGET_MESSAGE_ANIMATION_DURATION));
-//                    }
-//                }, getResources().getInteger(R.integer.DURATION_OF_SHOWING_MESSAGE));
+                handler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        Animation aniFade = AnimationUtils.loadAnimation(getApplicationContext(),R.anim.fade_out);
+                        messageView.startAnimation(aniFade);
+                        handler.postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                messageView.setVisibility(View.GONE);
+                            }
+                        }, getResources().getInteger(R.integer.WIDGET_MESSAGE_ANIMATION_DURATION));
+                    }
+                }, getResources().getInteger(R.integer.DURATION_OF_SHOWING_MESSAGE));
             }
         }
     }
