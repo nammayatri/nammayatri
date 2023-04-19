@@ -663,7 +663,9 @@ eval BackPressed state = do
     FindingEstimate -> do
                       _ <- pure $ updateLocalStage SearchLocationModel
                       continue state{props{rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation}}
-    QuoteList       -> if state.props.customerTip.enableTips then continue ( tipEnabledState state{props { isPopUp = TipsPopUp} } )else continue state{ props{isPopUp = if ( not null (filter (\a -> a.seconds > 0) state.data.quoteListModelState)) then ActiveQuotePopUp else ConfirmBack}}
+    QuoteList       -> do 
+                      let newState = if state.props.customerTip.enableTips then (tipEnabledState state) else state
+                      if newState.props.customerTip.enableTips then continue ( newState{props { isPopUp = TipsPopUp} } )else continue newState{ props{isPopUp = if ( not null (filter (\a -> a.seconds > 0) state.data.quoteListModelState)) then ActiveQuotePopUp else ConfirmBack}}
     PricingTutorial -> continue state { props { currentStage = SettingPrice}}
     DistanceOutsideLimits -> do 
                       _ <- pure $ updateLocalStage SearchLocationModel
@@ -671,7 +673,9 @@ eval BackPressed state = do
     ShortDistance -> do 
                       _ <- pure $ updateLocalStage SearchLocationModel
                       continue state{props{isSource = Just false,isPopUp = NoPopUp, rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSearchLocation = SearchLocation}}
-    FindingQuotes ->  continue $ tipEnabledState state{ props{isPopUp = if state.props.customerTip.enableTips then TipsPopUp else ConfirmBack}}
+    FindingQuotes ->  do 
+                      let newState = if state.props.customerTip.enableTips then (tipEnabledState state) else state
+                      continue $ newState { props{isPopUp = if state.props.customerTip.enableTips then TipsPopUp else ConfirmBack}}
     FavouriteLocationModel -> do
                       _ <- pure $ updateLocalStage (if state.props.isSearchLocation == NoView then HomeScreen else SearchLocationModel)
                       continue state { props { currentStage = if state.props.isSearchLocation == NoView then HomeScreen else SearchLocationModel}}
@@ -1195,7 +1199,7 @@ eval (Restart err) state = exit $ (LocationSelected (fromMaybe dummyListItem sta
 
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state =   case state.props.isPopUp of
   TipsPopUp -> updateAndExit state{props{isPopUp = NoPopUp}} $ LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false state{props{currentStage = TryAgain, sourceSelectedOnMap = true, isPopUp = NoPopUp}}
-  _ -> continue state { props { isPopUp = NoPopUp } }
+  _ -> if (isLocalStageOn FindingQuotes ) then continue state{props{isPopUp = NoPopUp}} else updateAndExit state{props{isPopUp = NoPopUp}} $ LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false state{props{currentStage = TryAgain, sourceSelectedOnMap = true, isPopUp = NoPopUp}}
 
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = case state.props.isPopUp of
   TipsPopUp -> case state.props.currentStage of 
@@ -1214,7 +1218,9 @@ eval (PopUpModalAction (PopUpModal.Tipbtnclick index value)) state = case state.
     TipsPopUp -> continue state{props{customerTip{tipActiveIndex = index, tipForDriver= value, isTipSelected = not (index == 0)}}}
     _ -> continue state
 
-eval (PopUpModalAction (PopUpModal.DismissPopup)) state = continue state{props{isPopUp = NoPopUp}}
+eval (PopUpModalAction (PopUpModal.DismissPopup)) state = do
+  let newState = if (isLocalStageOn QuoteList) then state else state{props{isPopUp = NoPopUp}}
+  continue newState
 
 eval (DistanceOutsideLimitsActionController (PopUpModal.OnButton2Click)) state = do
   _ <- pure $ updateLocalStage SearchLocationModel
@@ -1353,13 +1359,14 @@ eval (GetQuotesList (SelectListRes resp)) state = do
               let filteredQuoteList = filter (\a -> length (filter (\b -> a.id == b.id )state.data.quoteListModelState) == 0 ) selectedQuotes
               let removeExpired = filter (\a -> a.seconds > 0) filteredQuoteList
               _ <- pure $ spy "quotes" filteredQuoteList
-              let newState = state{data{quoteListModelState = state.data.quoteListModelState <> removeExpired },props{isSearchLocation = NoView, isSource = Nothing,currentStage = QuoteList,
-                  isPopUp = if state.props.isPopUp == NoPopUp then NoPopUp
-                            else if not null (filter (\a -> a.seconds > 0) state.data.quoteListModelState) then ActiveQuotePopUp 
-                            else ConfirmBack}}
+              let newState = state{data{quoteListModelState = state.data.quoteListModelState <> removeExpired },props{isSearchLocation = NoView, isSource = Nothing,currentStage = QuoteList}}
               if isLocalStageOn QuoteList then do 
-                let newState = tipEnabledState state
-                exit $ GetSelectList newState{props{isPopUp = if state.props.customerTip.enableTips then TipsPopUp else NoPopUp}}
+                _ <- pure $ spy "checking " "state"
+                let updatedState = if newState.props.customerTip.enableTips then tipEnabledState newState{props{isPopUp = TipsPopUp}} else newState
+                _ <- pure $ spy "checking zxc" newState
+                _ <- pure $ spy "checking zxc 2" newState
+                -- exit $ GetSelectList newState{props{isPopUp = if state.props.customerTip.enableTips then TipsPopUp else NoPopUp}}
+                exit $ GetSelectList updatedState
               else if(state.props.selectedQuote == Nothing && (getValueToLocalStore AUTO_SELECTING) /= "CANCELLED_AUTO_ASSIGN") then do
                 let id = (fromMaybe dummyQuoteList (newState.data.quoteListModelState!!0)).id
                     nextState = newState{data{quoteListModelState = map (\x -> x{selectedQuote = (Just id)}) newState.data.quoteListModelState}, props{selectedQuote = if (id /= "") then Just id else Nothing}}

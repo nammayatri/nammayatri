@@ -416,3 +416,8 @@ getHI script = case script of
   HOW_SHOULD_WE_ADDRESS_YOU -> "हमें आपको कैसे संबोधित करना चाहिए?"
   GENDER_STR -> "लिंग"
   PROFILE_COMPLETION -> "प्रोफ़ाइल पूर्णता"
+  CANCEL_ONGOING_SEARCH -> "क्या आप वाकई चल रही खोज को रद्द करना जारी रखना चाहते हैं?"
+  YES_TRY_AGAIN -> "हाँ, पुन: प्रयास करें"
+  NO_DONT -> "नहीं"
+  YES_CANCEL_SEARCH -> "हाँ, खोज रद्द करें"
+  TRY_LOOKING_FOR_RIDES_AGAIN -> "ऐसा लगता है कि यह बहुत ही व्यस्त दिन है। आप फिर से राइड खोजने की कोशिश कर सकते हैं"
