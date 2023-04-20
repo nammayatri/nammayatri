@@ -11,26 +11,17 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE UndecidableInstances #-}
 
-module Domain.Types.RewardEligibility where
-
-import EulerHS.Prelude hiding (id)
-import qualified Kernel.Prelude as BP
+module Storage.Queries.Rewards where
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
-import Kernel.Utils.Common
 import Domain.Types.Rewards
-import Domain.Types.Person (Person)
+import Storage.Tabular.Rewards ()
 
-data RewardEligibility = RewardEligibility
-  { id :: Id RewardEligibility,
-    driverId :: Id Person,
-    rewardId :: Id Reward,
-    quantity :: Int,
-    quantityUnit :: Units,
-    collected :: Bool,
-    collectedAt :: Maybe UTCTime,
-    createdAt :: UTCTime,
-    updatedAt :: UTCTime
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)
+
+create :: Reward -> SqlDB ()
+create = Esq.create
+
+findById :: (Transactionable m) => Id Reward -> m (Maybe Reward)
+findById = Esq.findById

@@ -18,44 +18,54 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.Rewards where
+module Storage.Tabular.RewardEligibility where
 
-import qualified Domain.Types.Rewards as Domain
+import qualified Domain.Types.Rewards as Rewards
+import qualified Domain.Types.RewardEligibility as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
+import Storage.Tabular.Person (PersonTId)
 
 
 mkPersist
   defaultSqlSettings
   [defaultQQ|
-    RewardsT sql=rewards
+    RewardEligibilityT sql=Reward_eligibility
       id Text
-      name Text
-      provider Text
+      rewardId Text
+      driverId PersonTId
+      quantity Int
+      quantityUnit Rewards.Units
+      collected Bool
+      collectedAt UTCTime Maybe
       createdAt UTCTime
       updatedAt UTCTime
-
       Primary id
       deriving Generic
     |]
+derivePersistField "Rewards.Units"
 
-instance TEntityKey RewardsT where
-  type DomainKey RewardsT = Id Domain.Reward
-  fromKey (RewardsTKey _id) = Id _id
-  toKey (Id id) = RewardsTKey id
+instance TEntityKey RewardEligibilityT where
+  type DomainKey RewardEligibilityT = Id Domain.RewardEligibility
+  fromKey (RewardEligibilityTKey _id) = Id _id
+  toKey (Id id) = RewardEligibilityTKey id
 
-instance FromTType RewardsT Domain.Reward where
-  fromTType RewardsT {..} = do
+instance FromTType RewardEligibilityT Domain.RewardEligibility where
+  fromTType RewardEligibilityT {..} = do
     return $
-      Domain.Reward
+      Domain.RewardEligibility
         { id = Id id,
+          rewardId = Id rewardId,
+          driverId = fromKey driverId,
           ..
         }
 
-instance ToTType RewardsT Domain.Reward where
-  toTType Domain.Reward {..} =
-    RewardsT
+instance ToTType RewardEligibilityT Domain.RewardEligibility where
+  toTType Domain.RewardEligibility {..} =
+    RewardEligibilityT
       { id = getId id,
+        rewardId = getId rewardId,
+        driverId = toKey driverId,
         ..
       }

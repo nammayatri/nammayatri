@@ -11,26 +11,27 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE UndecidableInstances #-}
 
-module Domain.Types.RewardEligibility where
+module API.Dashboard.Rewards where
+import qualified Domain.Action.Dashboard.Rewards as Domain
+import Servant
+import Kernel.Types.APISuccess (APISuccess)
+import Environment (FlowHandler, FlowServer)
+import Kernel.Utils.Common (withFlowHandlerAPI)
+import Kernel.Prelude
 
-import EulerHS.Prelude hiding (id)
-import qualified Kernel.Prelude as BP
-import Kernel.Types.Id
-import Kernel.Utils.Common
-import Domain.Types.Rewards
-import Domain.Types.Person (Person)
+type API =
+  "driver"
+    :> "rewards"
+    :> ReqBody '[JSON] Domain.RewardReq
+    :> Post '[JSON] APISuccess
 
-data RewardEligibility = RewardEligibility
-  { id :: Id RewardEligibility,
-    driverId :: Id Person,
-    rewardId :: Id Reward,
-    quantity :: Int,
-    quantityUnit :: Units,
-    collected :: Bool,
-    collectedAt :: Maybe UTCTime,
-    createdAt :: UTCTime,
-    updatedAt :: UTCTime
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)
+
+handler :: FlowServer API
+handler =
+  createReward
+
+createReward :: Domain.RewardReq -> FlowHandler APISuccess
+createReward = withFlowHandlerAPI . Domain.createReward
+
+    

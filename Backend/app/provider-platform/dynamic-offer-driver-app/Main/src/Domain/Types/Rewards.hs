@@ -13,7 +13,7 @@
 -}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Domain.Types.Reward where
+module Domain.Types.Rewards where
 
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude as BP
@@ -26,8 +26,6 @@ data Reward = Reward
   { id :: Id Reward,
     name :: Text,
     provider :: Text,
-    quantity :: Int,
-    quantityUnit :: Units,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
