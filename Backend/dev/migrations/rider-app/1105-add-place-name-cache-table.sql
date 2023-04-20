@@ -8,4 +8,4 @@ CREATE TABLE IF NOT EXISTS atlas_app.place_name_cache(
   address_components Text[] NOT NULL,
   geo_hash TEXT NOT  NULL
 );
-ALTER TABLE atlas_app.merchant ADD COLUMN geo_hash_precision_value INT NOT NULL DEFAULT 8;
+ALTER TABLE atlas_app.merchant ADD COLUMN geo_hash_precision_value INT NOT NULL DEFAULT 9;
