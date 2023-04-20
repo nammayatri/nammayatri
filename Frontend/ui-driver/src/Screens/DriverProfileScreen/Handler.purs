@@ -18,9 +18,10 @@ module Screens.DriverProfileScreen.Handler where
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
 import Engineering.Helpers.BackTrack (getState)
-import Prelude (bind, pure, ($), (<$>), discard)
+import Prelude (bind, pure, ($), (<$>), discard,(==))
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.DriverProfileScreen.Controller (ScreenOutput(..))
+import Data.Maybe (Maybe(..), fromMaybe)
 import Screens.DriverProfileScreen.View as DriverProfileScreen
 import Types.App (FlowBT, GlobalState(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
@@ -36,7 +37,11 @@ driverProfileScreen = do
         driverVehicleType = updatedState.data.driverVehicleType,
         driverRating = updatedState.data.driverRating,
         base64Image = updatedState.data.base64Image,
-        driverMobile = updatedState.data.driverMobile
+        driverMobile = updatedState.data.driverMobile,
+        driverAlternateMobile = updatedState.data.driverAlternateNumber
+        },
+        props {
+          checkAlternateNumber = (if (updatedState.data.driverAlternateNumber == Nothing) then true else false)
         }})
       App.BackT $ App.BackPoint <$> pure DRIVER_DETAILS_SCREEN
     

@@ -62,6 +62,7 @@ data KeyStore = USER_NAME
                 | RIDE_REQUEST_BUFFER
                 | SESSION_ID
                 | PROFILE_DEMO
+                | SET_ALTERNATE_TIME
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

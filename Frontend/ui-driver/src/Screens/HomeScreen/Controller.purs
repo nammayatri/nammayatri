@@ -18,12 +18,13 @@ module Screens.HomeScreen.Controller where
 import Common.Types.App (CancellationReasons)
 import Components.BottomNavBar as BottomNavBar
 import Components.CancelRide as CancelRide
-import Components.InAppOtpModal as InAppOtpModal
+import Components.InAppKeyboardModal as InAppKeyboardModal
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButtonController
 import Components.RideActionModal as RideActionModal
 import Components.ChatView as ChatView
 import Components.StatsModel.Controller (Action) as StatsModelController
+import Control.Monad.State (state)
 import Data.Array as Array
 import Data.Int (round, toNumber, fromString)
 import Data.Lens ((^.))
@@ -35,12 +36,12 @@ import Effect (Effect)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (clearTimer)
 import Global (readFloat)
-import Helpers.Utils (convertUTCtoISC, currentPosition, differenceBetweenTwoUTC, getDistanceBwCordinates, parseFloat,  setText')
-import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams, sendMessage, scrollToBottom, stopChatListenerService)
+import Helpers.Utils (convertUTCtoISC, currentPosition, differenceBetweenTwoUTC, getDistanceBwCordinates, parseFloat,setText',getTime, getCurrentUTC, differenceBetweenTwoUTC)
+import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, scrollToBottom, stopChatListenerService)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
-import Prelude (class Show, Unit, bind, discard, map, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<>), (==), (>), (||), (>=))
+import Prelude (class Show, Unit, bind, discard, map, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<>), (==), (>), (||), (<=),(>=))
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Resource.Constants (decodeAddress)
@@ -52,6 +53,8 @@ import Services.Accessor (_lat, _lon)
 import Services.Config (getCustomerNumber)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalNativeStore, setValueToLocalStore)
 import Engineering.Helpers.Commons (getNewIDWithTag)
+import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..))
+import Types.ModifyScreenState (modifyScreenState)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -81,13 +84,16 @@ instance loggableAction :: Loggable Action where
       RideActionModal.NotifyCustomer -> trackAppActionClick appId (getScreen HOME_SCREEN) "ride_action_modal" "notify_driver"
       RideActionModal.ButtonTimer seconds id status timerID -> trackAppActionClick appId (getScreen HOME_SCREEN) "ride_action_modal" "button_timer"
       RideActionModal.MessageCustomer -> trackAppActionClick appId (getScreen HOME_SCREEN) "ride_action_modal" "message_customer"
-    InAppOtpModalAction act -> case act of
-      InAppOtpModal.OnSelection key index -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_otp_modal" "on_selection"
-      InAppOtpModal.OnClickBack text -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_otp_modal" "on_click_back"
-      InAppOtpModal.OnclickTextBox index -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_otp_modal" "on_click_text_box"
-      InAppOtpModal.BackPressed -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_otp_modal" "on_backpressed"
-      InAppOtpModal.OnClickDone text -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_otp_modal" "on_click_done"
-      InAppOtpModal.AfterRender -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_app_otp_modal" "after_render"
+      _ -> pure unit
+      
+    InAppKeyboardModalAction act -> case act of
+      InAppKeyboardModal.OnSelection key index -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_otp_modal" "on_selection"
+      InAppKeyboardModal.OnClickBack text -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_otp_modal" "on_click_back"
+      InAppKeyboardModal.OnclickTextBox index -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_otp_modal" "on_click_text_box"
+      InAppKeyboardModal.BackPressed -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_otp_modal" "on_backpressed"
+      InAppKeyboardModal.OnClickDone text -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_otp_modal" "on_click_done"
+      _ -> pure unit
+      
     CountDown seconds -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "count_down"
     PopUpModalAction act -> case act of
       PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_end_ride" "go_back_onclick"
@@ -150,6 +156,7 @@ instance loggableAction :: Loggable Action where
       PopUpModal.ETextController act-> trackAppTextInput appId (getScreen HOME_SCREEN) "popup_modal_cancel_confirmation_text_changed" "primary_edit_text"
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_cancel_confirmation" "image_onclick"
 
+    ClickAddAlternateButton -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "add-alternate_btn"
 
 
 
@@ -167,6 +174,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | NotifyDriverArrived ST.HomeScreenState
                     | UpdateStage ST.HomeScreenStage ST.HomeScreenState
                     | GoToNotifications
+                    | AddAlternateNumber ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -179,7 +187,7 @@ data Action = NoAction
             | ShowMap String String String
             | BottomNavBarAction BottomNavBar.Action
             | RideActionModalAction RideActionModal.Action
-            | InAppOtpModalAction InAppOtpModal.Action
+            | InAppKeyboardModalAction InAppKeyboardModal.Action
             | CountDown Int
             | CurrentLocation String String
             | ActiveRideAPIResponseAction (Array RidesInfo)
@@ -202,6 +210,7 @@ data Action = NoAction
             | SwitchDriverStatus ST.DriverStatus
             | PopUpModalSilentAction PopUpModal.Action
             | GoToProfile
+            | ClickAddAlternateButton
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
@@ -266,23 +275,23 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
       exit $ GoToReferralScreen
     _ -> continue state
 
-eval (InAppOtpModalAction (InAppOtpModal.OnSelection key index)) state = do 
+eval (InAppKeyboardModalAction (InAppKeyboardModal.OnSelection key index)) state = do
   let 
     rideOtp = if (index + 1) > (length state.props.rideOtp) then ( take 4 (state.props.rideOtp <> key)) else (take index (state.props.rideOtp)) <> key <> (take 4 (drop (index+1) state.props.rideOtp))
     focusIndex = length rideOtp
-  continue state { props = state.props { rideOtp = rideOtp, enterOtpFocusIndex = focusIndex } }
-eval (InAppOtpModalAction (InAppOtpModal.OnClickBack text)) state = do
+  continue state { props = state.props { rideOtp = rideOtp, enterOtpFocusIndex = focusIndex ,otpIncorrect = false} }
+eval (InAppKeyboardModalAction (InAppKeyboardModal.OnClickBack text)) state = do
   let 
     rideOtp = (if length( text ) > 0 then (take (length ( text ) - 1 ) text) else "" )
     focusIndex = length rideOtp
   continue state { props = state.props { rideOtp = rideOtp, enterOtpFocusIndex = focusIndex, otpIncorrect = false } }
-eval (InAppOtpModalAction (InAppOtpModal.OnclickTextBox index)) state = do 
+eval (InAppKeyboardModalAction (InAppKeyboardModal.OnclickTextBox index)) state = do
   let focusIndex = if index > (length state.props.rideOtp) then (length state.props.rideOtp) else index 
   let rideOtp = take index state.props.rideOtp
   continue state { props = state.props { enterOtpFocusIndex = focusIndex, rideOtp = rideOtp, otpIncorrect = false } }
-eval (InAppOtpModalAction (InAppOtpModal.BackPressed)) state = do 
+eval (InAppKeyboardModalAction (InAppKeyboardModal.BackPressed)) state = do
   continue state { props = state.props { rideOtp = "", enterOtpFocusIndex = 0, enterOtpModal = false} }
-eval (InAppOtpModalAction (InAppOtpModal.OnClickDone text)) state = do 
+eval (InAppKeyboardModalAction (InAppKeyboardModal.OnClickDone text)) state = do
     exit $ StartRide state
 eval (RideActionModalAction (RideActionModal.StartRide)) state = do 
   continue state { props = state.props { enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, otpIncorrect = false } }
@@ -482,6 +491,17 @@ eval (PopUpModalSilentAction (PopUpModal.OnButton2Click)) state =
 eval GoToProfile state =  do 
   _ <- pure $ setValueToLocalNativeStore PROFILE_DEMO "false"
   exit $ GoToProfileScreen
+eval ClickAddAlternateButton state = do
+  let curr_time = getCurrentUTC ""
+  let last_attempt_time = getValueToLocalStore SET_ALTERNATE_TIME
+  let time_diff = differenceBetweenTwoUTC curr_time last_attempt_time
+  if(time_diff <= 600) then do 
+    pure $ toast (getString LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER)
+    continue state
+  else do
+    exit $ AddAlternateNumber state
+   
+  
 
 eval _ state = continue state 
 

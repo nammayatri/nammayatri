@@ -178,7 +178,15 @@ data DRIVER_PROFILE_SCREEN_OUTPUT = DRIVER_DETAILS_SCREEN
                                     | ON_BOARDING_FLOW
                                     | NOTIFICATIONS_SCREEN
                                     | GO_TO_REFERRAL_SCREEN_FROM_DRIVER_PROFILE_SCREEN
-data DRIVER_DETAILS_SCREEN_OUTPUT = UPDATE_DETAILS
+
+
+data DRIVER_DETAILS_SCREEN_OUTPUT = VERIFY_OTP DriverDetailsScreenState
+                                  | DRIVER_ALTERNATE_CALL_API DriverDetailsScreenState
+                                  | RESEND_ALTERNATE_OTP DriverDetailsScreenState
+                                  | ALTERNATE_NUMBER_REMOVE DriverDetailsScreenState
+                                  | GO_TO_HOMESCREEN DriverDetailsScreenState
+
+
 data VEHICLE_DETAILS_SCREEN_OUTPUT = UPDATE_VEHICLE_INFO VehicleDetailsScreenState
 data ABOUT_US_SCREEN_OUTPUT = GO_TO_DRIVER_HOME_SCREEN
 data SELECT_LANGUAGE_SCREEN_OUTPUT = CHANGE_LANGUAGE
@@ -215,6 +223,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN
                           | NOTIFY_CUSTOMER HomeScreenState
                           | UPDATE_STAGE HomeScreenStage
                           | GO_TO_NOTIFICATIONS
+                          | ADD_ALTERNATE_HOME 
                           
 data RIDE_DETAIL_SCREENOUTPUT = GO_TO_HOME_FROM_RIDE_DETAIL | SHOW_ROUTE_IN_RIDE_DETAIL
 data APPLICATION_STATUS_SCREENOUTPUT = GO_TO_HOME_FROM_APPLICATION_STATUS

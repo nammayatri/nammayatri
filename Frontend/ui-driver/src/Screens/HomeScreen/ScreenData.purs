@@ -25,6 +25,7 @@ initData = {
     data: {
         driverName : "",
         vehicleType : "",
+        driverAlternateMobile : Nothing,
         activeRide : {
           id : "",
           source : "",

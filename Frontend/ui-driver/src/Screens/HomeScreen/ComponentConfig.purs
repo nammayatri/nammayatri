@@ -26,6 +26,7 @@ import Data.String as DS
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Helpers.Utils as HU
+import Components.InAppKeyboardModal as InAppKeyboardModal
 import Language.Strings
 import Language.Types (STR(..))
 import Prelude
@@ -236,3 +237,33 @@ silentModeConfig state = let
 
 
 
+enterOtpStateConfig :: ST.HomeScreenState -> InAppKeyboardModal.InAppKeyboardModalState
+enterOtpStateConfig state = let
+      config' = InAppKeyboardModal.config
+      inAppModalConfig' = config'{
+      otpIncorrect = if (state.props.otpAttemptsExceeded) then false else (state.props.otpIncorrect),
+      otpAttemptsExceeded = (state.props.otpAttemptsExceeded),
+      inputTextConfig {
+        text = state.props.rideOtp,
+        -- pattern = "[0-9]*,4",
+        fontSize = FontSize.a_22,
+        focusIndex = state.props.enterOtpFocusIndex
+      },
+      headingConfig {
+        text = getString (ENTER_OTP)
+      },
+      errorConfig {
+        text = if (state.props.otpIncorrect) then (getString ENTERED_WRONG_OTP) else (getString OTP_LIMIT_EXCEED),
+        visibility = if (state.props.otpIncorrect || state.props.otpAttemptsExceeded) then VISIBLE else GONE
+      },
+      subHeadingConfig {
+        text = getString (PLEASE_ASK_THE_CUSTOMER_FOR_THE_OTP),
+        fontSize = FontSize.a_14,
+        visibility = if (state.props.otpAttemptsExceeded) then GONE else VISIBLE
+      },
+      imageConfig {
+        alpha = if(DS.length state.props.rideOtp < 4) then 0.3 else 1.0
+      },
+      modalType = ST.OTP
+      }
+      in inAppModalConfig'
