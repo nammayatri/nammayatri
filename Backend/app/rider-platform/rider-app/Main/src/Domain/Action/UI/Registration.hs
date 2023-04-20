@@ -52,7 +52,7 @@ import Kernel.Types.SlidingWindowLimiter (APIRateLimitOptions)
 import Kernel.Types.Version (Version)
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
-import Kernel.Utils.SlidingWindowLimiter
+-- import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.CachedQueries.CacheConfig
@@ -117,8 +117,8 @@ data AuthVerifyRes = AuthVerifyRes
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
-authHitsCountKey :: SP.Person -> Text
-authHitsCountKey person = "BAP:Registration:auth" <> getId person.id <> ":hitsCount"
+-- authHitsCountKey :: SP.Person -> Text
+-- authHitsCountKey person = "BAP:Registration:auth" <> getId person.id <> ":hitsCount"
 
 auth ::
   ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
@@ -145,7 +145,7 @@ auth req mbBundleVersion mbClientVersion = do
   person <-
     Person.findByRoleAndMobileNumberAndMerchantId SP.USER countryCode mobileNumberHash merchant.id
       >>= maybe (createPerson req mbBundleVersion mbClientVersion merchant.id) return
-  checkSlidingWindowLimit (authHitsCountKey person)
+  -- checkSlidingWindowLimit (authHitsCountKey person)
   let entityId = getId $ person.id
       useFakeOtpM = useFakeSms smsCfg
       scfg = sessionConfig smsCfg
@@ -244,8 +244,8 @@ makeSession SmsSessionConfig {..} entityId fakeOtp = do
         info = Nothing
       }
 
-verifyHitsCountKey :: Id SP.Person -> Text
-verifyHitsCountKey id = "BAP:Registration:verify:" <> getId id <> ":hitsCount"
+-- verifyHitsCountKey :: Id SP.Person -> Text
+-- verifyHitsCountKey id = "BAP:Registration:verify:" <> getId id <> ":hitsCount"
 
 verify ::
   ( HasCacheConfig r,
@@ -262,7 +262,7 @@ verify ::
 verify tokenId req = do
   runRequestValidation validateAuthVerifyReq req
   regToken@SR.RegistrationToken {..} <- getRegistrationTokenE tokenId
-  checkSlidingWindowLimit (verifyHitsCountKey $ Id entityId)
+  -- checkSlidingWindowLimit (verifyHitsCountKey $ Id entityId)
   when verified $ throwError $ AuthBlocked "Already verified."
   checkForExpiry authExpiry updatedAt
   unless (authValueHash == req.otp) $ throwError InvalidAuthData

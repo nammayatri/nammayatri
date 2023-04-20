@@ -48,7 +48,7 @@ import Kernel.Types.SlidingWindowLimiter
 import Kernel.Types.Version
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
-import Kernel.Utils.SlidingWindowLimiter
+-- import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.CachedQueries.CacheConfig
@@ -106,8 +106,8 @@ data AuthVerifyRes = AuthVerifyRes
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
-authHitsCountKey :: SP.Person -> Text
-authHitsCountKey person = "BPP:Registration:auth:" <> getId person.id <> ":hitsCount"
+-- authHitsCountKey :: SP.Person -> Text
+-- authHitsCountKey person = "BPP:Registration:auth:" <> getId person.id <> ":hitsCount"
 
 auth ::
   ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
@@ -135,7 +135,7 @@ auth req mbBundleVersion mbClientVersion = do
   person <-
     QP.findByMobileNumberAndMerchant countryCode mobileNumberHash merchant.id
       >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion merchant.id) return
-  checkSlidingWindowLimit (authHitsCountKey person)
+  -- checkSlidingWindowLimit (authHitsCountKey person)
   let entityId = getId $ person.id
       useFakeOtpM = useFakeSms smsCfg
       scfg = sessionConfig smsCfg
@@ -255,8 +255,8 @@ makeSession SmsSessionConfig {..} entityId entityType fakeOtp = do
         alternateNumberAttempts = altNumAttempts
       }
 
-verifyHitsCountKey :: Id SP.Person -> Text
-verifyHitsCountKey id = "BPP:Registration:verify:" <> getId id <> ":hitsCount"
+-- verifyHitsCountKey :: Id SP.Person -> Text
+-- verifyHitsCountKey id = "BPP:Registration:verify:" <> getId id <> ":hitsCount"
 
 createDriverWithDetails :: (EncFlow m r, EsqDBFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Id DO.Merchant -> m SP.Person
 createDriverWithDetails req mbBundleVersion mbClientVersion mercahntId = do
@@ -288,7 +288,7 @@ verify ::
 verify tokenId req = do
   runRequestValidation validateAuthVerifyReq req
   SR.RegistrationToken {..} <- checkRegistrationTokenExists tokenId
-  checkSlidingWindowLimit (verifyHitsCountKey $ Id entityId)
+  -- checkSlidingWindowLimit (verifyHitsCountKey $ Id entityId)
   when verified $ throwError $ AuthBlocked "Already verified."
   checkForExpiry authExpiry updatedAt
   unless (authValueHash == req.otp) $ throwError InvalidAuthData

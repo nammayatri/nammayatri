@@ -29,9 +29,9 @@ INSERT INTO atlas_app.merchant_service_usage_config (merchant_id, get_distances,
 -- googleKey = "mock-google-key"
 WITH MerchantMapsServiceConfigs AS (
   SELECT T1.id, 'Maps_Google', CAST ('{
-   "googleMapsUrl":"http://localhost:8019/",
-   "googleRoadsUrl":"http://localhost:8019/",
-   "googleKey":"0.1.0|0|Cb8TKe1UWD9IkUDfVg4eE+moqGGHZIlhvXmWDqG/kS1RgdpRQF5Wxigi762BJhW5dKS9iHNnFKrZ2dm+vpuT61Bp"
+   "googleMapsUrl":"https://maps.googleapis.com/maps/api/",
+   "googleRoadsUrl":"https://roads.googleapis.com/",
+   "googleKey":"0.1.0|2|S34+Lq69uC/hNeYSXr4YSjwwmaTS0jO/1ZGlAAwl72hBhgD9AAZhgI4o/6x3oi99KyJkQdt5UvgjlHyeEOuf1Z3xzOBqWBYVQM/RBggZ7NggTyIsDgiG5b3p"
   }' AS json)
   FROM atlas_app.merchant AS T1
 )

@@ -112,7 +112,7 @@ in  { esqDBCfg
       }
     , signingKey = sec.signingKey
     , signatureExpiry = common.signatureExpiry
-    , searchRequestExpiry = Some +600
+    , searchRequestExpiry = Some +60000
     , migrationPath = Some
         (env:RIDER_APP_MIGRATION_PATH as Text ? "dev/migrations/rider-app")
     , autoMigrate = True

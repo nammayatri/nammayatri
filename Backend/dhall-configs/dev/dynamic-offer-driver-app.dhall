@@ -108,7 +108,7 @@ in  { esqDBCfg
     , apiRateLimitOptions
     , slackCfg
     , smsCfg = smsConfig
-    , searchRequestExpirationSeconds = +3600
+    , searchRequestExpirationSeconds = +360000
     , driverQuoteExpirationSeconds = +60
     , driverUnlockDelay = +2
     , dashboardToken = sec.dashboardToken
