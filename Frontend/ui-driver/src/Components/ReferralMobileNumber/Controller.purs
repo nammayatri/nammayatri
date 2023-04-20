@@ -16,20 +16,42 @@
 module Components.ReferralMobileNumber.Controller where
 
 import Prelude
+import Data.Maybe
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Components.PrimaryButton.Controller as PrimaryButtonController
 
 data Action =  OnBackClick
             | PrimaryEditTextActionController PrimaryEditTextController.Action
             | PrimaryButtonActionController PrimaryButtonController.Action
+            | OnSubTextClick
 
 type Config = {
     isApplyButtonActive :: Boolean
     , referralNumber :: String
+    , mainText :: String
+    , subTextView :: Boolean
+    , errorText :: String
+    , primaryButtonText :: String
+    , isValid :: Boolean
+    , pattern :: Maybe String
+    , letterSpacing :: Number
+    , placeholder :: String
+    , subText1 :: String
+    , subText2 :: String
 }
 
 config :: Config
 config = {
     isApplyButtonActive : false
     , referralNumber : ""
+    , errorText : ""
+    , mainText : "Enter Referral Mobile Number"
+    , subTextView : false
+    , primaryButtonText : "Apply"
+    , isValid : false
+    , pattern  : Just "[0-9]*,10"
+    , letterSpacing : 0.0
+    , placeholder : ""
+    , subText1 : ""
+    , subText2 : ""
 }

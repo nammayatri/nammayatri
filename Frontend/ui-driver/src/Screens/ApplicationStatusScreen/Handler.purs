@@ -14,7 +14,6 @@
 -}
 
 module Screens.ApplicationStatusScreen.Handler where
-
 import Engineering.Helpers.BackTrack (getState)
 import Prelude (bind, pure, ($), (<$>))
 import Screens.ApplicationStatusScreen.Controller (ScreenOutput(..))
@@ -22,7 +21,7 @@ import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.ApplicationStatusScreen.View as ApplicationStatusScreen
-import Types.App (FlowBT, GlobalState(..), APPLICATION_STATUS_SCREENOUTPUT(..))
+import Types.App (FlowBT, GlobalState(..), APPLICATION_STATUS_SCREENOUTPUT(..),ScreenType(..))
 
 
 applicationStatus :: String -> FlowBT String APPLICATION_STATUS_SCREENOUTPUT
@@ -34,3 +33,6 @@ applicationStatus screenType = do
     GoToDlScreen -> App.BackT $ App.BackPoint <$> pure GO_TO_UPLOAD_DL_SCREEN
     GoToVehicleDetailScreen ->  App.BackT $ App.BackPoint <$> pure GO_TO_VEHICLE_DETAIL_SCREEN
     LogoutAccount -> App.BackT $ App.BackPoint <$> pure LOGOUT_ACCOUT
+    GoToEnterOtp state -> App.BackT $ App.BackPoint <$> (pure $ VALIDATE_NUMBER state)
+    AddMobileNumber state -> App.BackT $ App.BackPoint <$> (pure $ VALIDATE_OTP state) 
+    ResendOtp state-> App.BackT $ App.BackPoint <$> (pure $ RESEND_OTP_TO_ALTERNATE_NUMBER state)

@@ -21,9 +21,21 @@ initData :: ApplicationStatusScreenState
 initData = {
   data: {
     dlVerificationStatus : "",
-    rcVerificationStatus : ""
+    rcVerificationStatus : "",
+    mobileNumber : "",
+    otpValue : ""
     },
   props : {
-      isSelected : true
+      isSelected : true,
+      onBoardingFailure : false,
+      isVerificationFailed : false,
+      popupview : false,
+      enterMobileNumberView : false,
+      buttonVisibilty : false,
+      enterOtp : false,
+      alternateNumberAdded : false,
+      isValidAlternateNumber : false,
+      isValidOtp : false,
+      isAlternateMobileNumberExists : false
   }
 }

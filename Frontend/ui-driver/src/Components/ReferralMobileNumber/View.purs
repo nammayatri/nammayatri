@@ -15,7 +15,7 @@
 
 module Components.ReferralMobileNumber.View where
 
-import Prelude
+import Prelude(Unit,const,(<<<),($),(<>))
 import Effect (Effect)
 import Components.ReferralMobileNumber.Controller (Action(..), Config(..))
 import PrestoDOM (Gravity(..), Length(..), PrestoDOM(..), Margin(..), Orientation(..), Padding(..), Visibility(..), linearLayout, textView, editText, onBackPressed, onClick, imageView, imageWithFallback)
@@ -31,7 +31,6 @@ import Components.PrimaryEditText as PrimaryEditText
 import Components.PrimaryButton as PrimaryButton
 import Data.String.CodeUnits (charAt)
 import Data.String (length)
-import Data.Maybe
 import Common.Types.App
 
 
@@ -68,7 +67,7 @@ view push state =
               , textView (
                 [ width WRAP_CONTENT
                 , height WRAP_CONTENT
-                , text (getString ENTER_REFERRAL_MOBILE_NUMBER)
+                , text  state.mainText
                 , color Color.black800
                 , margin (MarginLeft 15)
                 ] <> FontStyle.h3 TypoGraphy
@@ -85,23 +84,57 @@ textEditView push state =
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
+    , gravity CENTER    
     ][ PrimaryEditText.view (push <<< PrimaryEditTextActionController) (primaryEditTextConfig state)
+     , subTextView push state
+    ]
+subTextView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+subTextView push state = 
+    linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    , gravity CENTER
+    , visibility if state.subTextView then VISIBLE else GONE
+    ][ textView 
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , text state.subText1
+      , color Color.black800
+      , gravity CENTER
+      ]
+    , textView 
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , margin (MarginVertical 8 32)
+      , text  state.subText2
+      , color Color.blue900
+      , gravity CENTER
+      , onClick push (const OnSubTextClick)
+      ]
     ]
 
 primaryEditTextConfig :: Config -> PrimaryEditText.Config
 primaryEditTextConfig state = let 
     config = PrimaryEditText.config
     primaryEditTextConfig' = config
-        {   editText
+        {   
+            editText
             {   singleLine = true
-                , pattern = Just "[0-9]*,10"
+                , pattern = state.pattern
                 , fontStyle = FontStyle.bold LanguageStyle
                 , textSize = FontSize.a_16
                 , color = Color.black800
-                , text = state.referralNumber
+                , letterSpacing = state.letterSpacing
+                , placeholder = state.placeholder
+            }
+            , showErrorLabel = state.isValid
+            , errorLabel  { 
+            text = state.errorText
             }
             , type = "number"
-            , margin = (Margin 16 0 16 40)}
+            , id = (getNewIDWithTag "Referalnumber")
+            , margin = (Margin 16 0 16 24)}
     in primaryEditTextConfig'
 
 primaryButtonConfig :: Config -> PrimaryButton.Config 
@@ -109,7 +142,7 @@ primaryButtonConfig state = let
     config = PrimaryButton.config
     primaryButtonConfig' = config
       { textConfig
-      { text = (getString APPLY)
+      { text = state.primaryButtonText
       , color = Color.primaryButtonColor
       , textSize = FontSize.a_18}
       , margin = (Margin 16 0 16 10)

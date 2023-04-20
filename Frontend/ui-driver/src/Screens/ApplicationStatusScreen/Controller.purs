@@ -14,16 +14,28 @@
 -}
 
 module Screens.ApplicationStatusScreen.Controller where
-
-import Prelude (class Show, pure, unit, bind, ($), discard, (==), (&&))
-import PrestoDOM (Eval, continue, exit,continueWithCmd)
+import Prelude (class Show, pure, unit, bind, ($), discard, (==), (&&),(||),not,(<=),(>=),(/))
+import PrestoDOM (Eval, continue, exit,continueWithCmd,updateAndExit)
 import Screens.Types (ApplicationStatusScreenState)
 import PrestoDOM.Types.Core (class Loggable)
-import JBridge (openWhatsAppSupport, minimizeApp)
+import JBridge (openWhatsAppSupport, minimizeApp,toast,showDialer, hideKeyboardOnNavigation )
 import Effect.Class (liftEffect)
-import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
+import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent,trackAppTextInput)
 import Screens (ScreenName(..), getScreen)
 import Services.APITypes(DriverRegistrationStatusResp(..))
+import Components.PrimaryButton as PrimaryButtonController
+import Data.Array (any)
+import Components.PopUpModal.Controller as PopUpModal
+import Components.ReferralMobileNumber.Controller as ReferralMobileNumberController
+import Components.PrimaryEditText.Controller as PrimaryEditTextController
+import Data.String (length)
+import Data.String.CodeUnits (charAt)
+import Data.Maybe(Maybe(..))
+import Services.Config (getSupportNumber)
+import Engineering.Helpers.Commons (getNewIDWithTag,getExpiryTime,setText')
+import Storage(KeyStore(..),getValueToLocalStore)
+import Language.Strings (getString)
+import Language.Types (STR(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -44,9 +56,25 @@ instance loggableAction :: Loggable Action where
       "DL" -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "in_screen" "DL_retry_on_click"
       "RC" -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "in_screen" "RC_retry_on_click"
       _ -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "in_screen" "retry_on_click"
+    PopUpModalAction act -> case act of
+      PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal" "on_goback"
+      PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal" "call_Support"
+      PopUpModal.NoAction -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal_action" "no_action"
+      PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal_action" "image"
+      PopUpModal.ETextController act -> trackAppTextInput appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal_action" "primary_edit_text"
+      PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal_action" "countdown_updated"
+    ExitGoToEnterOtp ->  trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "in_screen" "enter_otp"
+    CompleteOnBoardingAction PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "in_screen" "onboardingview"
+    CompleteOnBoardingAction PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "in_screen" "na_action"
+    AlternateMobileNumberAction act -> case act of
+      ReferralMobileNumberController.OnBackClick -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "referral_mobile_number" "on_back_icon_click"
+      ReferralMobileNumberController.PrimaryButtonActionController act -> case act of
+        PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "referral_mobile_number" "primary_button_on_click"
+        PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "referral_mobile_number" "primary_button_no_action"
+      ReferralMobileNumberController.PrimaryEditTextActionController (PrimaryEditTextController.TextChanged valId newVal) -> trackAppTextInput appId (getScreen APPLICATION_STATUS_SCREEN) "referral_mobile_number_text_changed" "primary_edit_text"
+      ReferralMobileNumberController.OnSubTextClick ->  trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "referral_mobile_number" "otpResent"
 
-data ScreenOutput = GoToHomeScreen | LogoutAccount | GoToDlScreen | GoToVehicleDetailScreen
-
+data ScreenOutput = GoToHomeScreen | LogoutAccount | GoToDlScreen | GoToVehicleDetailScreen | GoToEnterOtp ApplicationStatusScreenState | AddMobileNumber ApplicationStatusScreenState | ResendOtp ApplicationStatusScreenState
 data Action = BackPressed 
               | PrimaryButtonActionController 
               | Logout 
@@ -55,14 +83,27 @@ data Action = BackPressed
               | AfterRender 
               | DriverRegistrationStatusAction DriverRegistrationStatusResp
               | ReTry String
+              | PopUpModalAction PopUpModal.Action
+              | CompleteOnBoardingAction PrimaryButtonController.Action
+              | AlternateMobileNumberAction ReferralMobileNumberController.Action
+              | ExitGoToEnterOtp
 
-
+              
+          
 eval :: Action -> ApplicationStatusScreenState -> Eval Action ScreenOutput ApplicationStatusScreenState
-eval AfterRender state = continue state
+eval AfterRender state =  continue state
 eval BackPressed state = do
   _ <- pure $ minimizeApp ""
   continue state
 eval (PrimaryButtonActionController) state = exit GoToHomeScreen
+eval (CompleteOnBoardingAction PrimaryButtonController.OnClick) state = do 
+  let timelimit = (((getExpiryTime (getValueToLocalStore INVALID_OTP_TIME) true))/60)
+  if state.props.onBoardingFailure then  continue state{props{popupview = true}} else do
+    if (not ((timelimit)<=10)||(getValueToLocalStore INVALID_OTP_TIME == "__failed")) then continue state{props{enterMobileNumberView =true,isValidOtp = false,isAlternateMobileNumberExists = false , isValidAlternateNumber = false},data{mobileNumber=""}}
+    else continueWithCmd state [do
+      _ <- pure $ toast $ (getString LIMIT_EXCEEDED_PLEASE_TRY_AGAIN_AFTER_10MIN) 
+      pure Dummy
+    ]
 eval (ReTry docType) state = case docType of
                                 "DL" -> exit GoToDlScreen
                                 "RC" -> exit GoToVehicleDetailScreen
@@ -75,5 +116,51 @@ eval SupportCall  state = continueWithCmd state [do
 eval (DriverRegistrationStatusAction (DriverRegistrationStatusResp resp)) state = do
   if (resp.dlVerificationStatus == "VALID" && resp.rcVerificationStatus == "VALID") then 
     exit GoToHomeScreen
-    else continue state { data { dlVerificationStatus = resp.dlVerificationStatus, rcVerificationStatus = resp.rcVerificationStatus}}
+    else do 
+      let  popup_visibility = any (_ == resp.dlVerificationStatus) ["FAILED","INVALID"]  || any (_ == resp.rcVerificationStatus) ["FAILED","INVALID"]
+      let  onBoardingStatus =  any (_ == resp.dlVerificationStatus) ["LIMIT_EXCEED","NO_DOC_AVAILABLE"] || any (_ == resp.rcVerificationStatus) ["LIMIT_EXCEED","NO_DOC_AVAILABLE"]
+      let timeDifference = (getExpiryTime (getValueToLocalStore DOCUMENT_UPLOAD_TIME) true)/3600
+      if (timeDifference>=48 && (resp.dlVerificationStatus == "PENDING" || resp.rcVerificationStatus == "PENDING")) then continue state{data { dlVerificationStatus = resp.dlVerificationStatus, rcVerificationStatus = resp.rcVerificationStatus},props{onBoardingFailure = true,isVerificationFailed = false}}
+      else continue state { data { dlVerificationStatus = resp.dlVerificationStatus, rcVerificationStatus = resp.rcVerificationStatus}, props{onBoardingFailure = onBoardingStatus, isVerificationFailed = popup_visibility}}
+eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state{props{popupview=false}}
+eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = do
+  _ <- pure $ showDialer (getSupportNumber "")
+  continue state
+eval (AlternateMobileNumberAction (ReferralMobileNumberController.OnBackClick)) state = do
+  if state.props.enterOtp then do 
+    continueWithCmd state{props{enterOtp = false, buttonVisibilty = true}} [do
+      _ <- setText' (getNewIDWithTag "Referalnumber") state.data.mobileNumber
+      pure Dummy
+    ]
+  else continue state{props{enterMobileNumberView=false}}
+eval (AlternateMobileNumberAction (ReferralMobileNumberController.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state = do 
+  if state.props.enterOtp then exit $ AddMobileNumber state 
+  else do 
+    continueWithCmd state [do
+      setText' (getNewIDWithTag "Referalnumber") ""
+      pure $ ExitGoToEnterOtp 
+    ]
+   
+eval (ExitGoToEnterOtp) state = exit $ GoToEnterOtp state  
+eval (AlternateMobileNumberAction (ReferralMobileNumberController.PrimaryEditTextActionController (PrimaryEditTextController.TextChanged valId newVal))) state = do 
+  if state.props.enterOtp then do
+    if length newVal == 4 then do
+      pure $ hideKeyboardOnNavigation true 
+      continue state{props{buttonVisibilty = true},data{otpValue = newVal}}
+    else continue state{props{buttonVisibilty = false,isValidOtp=false}}
+  else do
+    _ <- if length newVal >= 10 then do
+          pure $ hideKeyboardOnNavigation true 
+          else pure unit    
+    let isValidMobileNumber = case (charAt 0 newVal) of 
+                                      Just a -> if a=='0' || a=='1' || a=='2' || a=='3'|| a=='4' || a=='5' then false 
+                                      else true 
+                                      Nothing -> true 
+    if (length newVal == 10 && isValidMobileNumber) then do
+      continue state {props{ buttonVisibilty = if (length newVal == 10 && isValidMobileNumber && not state.props.isAlternateMobileNumberExists) then true else false 
+                                        ,isValidAlternateNumber =  not isValidMobileNumber},data{mobileNumber = if(length newVal == 10 && isValidMobileNumber) then newVal else ""}
+      }
+      else continue state {props{isValidAlternateNumber =  not isValidMobileNumber,buttonVisibilty = false,isAlternateMobileNumberExists=false}
+      }
+eval (AlternateMobileNumberAction (ReferralMobileNumberController.OnSubTextClick)) state = exit $ ResendOtp state
 eval _ state = continue state

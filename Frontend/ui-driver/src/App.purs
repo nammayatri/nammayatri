@@ -230,6 +230,9 @@ data APPLICATION_STATUS_SCREENOUTPUT = GO_TO_HOME_FROM_APPLICATION_STATUS
                                       | LOGOUT_ACCOUT
                                       | GO_TO_UPLOAD_DL_SCREEN
                                       | GO_TO_VEHICLE_DETAIL_SCREEN
+                                      | VALIDATE_NUMBER ApplicationStatusScreenState
+                                      | VALIDATE_OTP ApplicationStatusScreenState
+                                      | RESEND_OTP_TO_ALTERNATE_NUMBER ApplicationStatusScreenState
 data EDIT_BANK_DETAILS_SCREEN_OUTPUT = EDIT_BANK_DETAILS
 data EDIT_AADHAAR_DETAILS_SCREEN_OUTPUT = EDIT_AADHAAR_DETAILS
 data ENTER_MOBILE_NUMBER_SCREEN_OUTPUT = GO_TO_ENTER_OTP EnterMobileNumberScreenState

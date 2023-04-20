@@ -259,14 +259,24 @@ type ApplicationStatusScreenState = {
   data :: ApplicationStatusScreenData,
   props :: ApplicationStatusScreenProps
 }
-
 type ApplicationStatusScreenData =  {
   rcVerificationStatus :: String,
-  dlVerificationStatus :: String
+  dlVerificationStatus :: String,
+  mobileNumber :: String,
+  otpValue :: String
 }
-
 type ApplicationStatusScreenProps =  {
-  isSelected :: Boolean
+  isSelected :: Boolean,
+  onBoardingFailure :: Boolean,
+  isVerificationFailed :: Boolean,
+  popupview :: Boolean,
+  enterMobileNumberView :: Boolean,
+  alternateNumberAdded :: Boolean,
+  isValidAlternateNumber :: Boolean,
+  buttonVisibilty :: Boolean,
+  enterOtp :: Boolean,
+  isValidOtp :: Boolean,
+  isAlternateMobileNumberExists :: Boolean
 }
 
 --------------------------------------------------------------- EnterMobileNumberScreenState -----------------------------------------------------------------------------

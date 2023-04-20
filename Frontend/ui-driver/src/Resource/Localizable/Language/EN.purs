@@ -398,7 +398,7 @@ getEN script = case script of
   OTP_RESEND_LIMIT_EXCEEDED -> "Resend OTP Limit Exceeded"
   LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER -> "Please try again after sometime"
   ALTERNATE_NUMBER_CANNOT_BE_ADDED -> "Alternate Number Cannot Be Added"
-
-
-
-
+  ADD_ALTERNATE_NUMBER_IN_MEANTIME -> "This process can take upto 2 working days \nto be completed. In the meantime,  you \ncan add an alternate mobile number."
+  VERIFICATION_IS_TAKING_A_BIT_LONGER -> "Looks like your verification is taking a bit \nlonger than expected.\nYou can contact support to help you out."
+  COMPLETE_ONBOARDING -> "Complete Onboarding"
+  PERSON_WITH_THIS_NUMBER_ALREADY_EXISTS -> "Person with this mobile number already exists."
