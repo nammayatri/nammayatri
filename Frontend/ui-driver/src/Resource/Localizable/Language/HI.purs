@@ -398,4 +398,7 @@ getHI script = case script of
   OTP_RESEND_LIMIT_EXCEEDED -> "ओटीपी पुनः भेजने की सीमा पार हो गई है"
   LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER -> "कृपया कुछ समय बाद प्रयास करे" 
   ALTERNATE_NUMBER_CANNOT_BE_ADDED -> "दूसरा मोबाइल नंबर ऐड नहीं हो सकता"
-
+  VERIFICATION_IS_TAKING_A_BIT_LONGER -> "ऐसा लगता है कि आपका सत्यापन अपेक्षा से थोड़ा अधिक समय ले रहा है।\nआप सहायता के लिए सहायता से संपर्क कर सकते हैं।"
+  COMPLETE_ONBOARDING -> "पूर्ण ऑनबोर्डिंग"
+  ADD_ALTERNATE_NUMBER_IN_MEANTIME ->  "इस प्रोसेस को पूरा होने में 2 कामकाजी दिन \n तक लग सकते हैं। इस बीच, आप \nएक वैकल्पिक मोबाइल नंबर जोड़ सकते हैं।"
+  PERSON_WITH_THIS_NUMBER_ALREADY_EXISTS -> "इस मोबाइल नंबर वाला व्यक्ति पहले से मौजूद है।"

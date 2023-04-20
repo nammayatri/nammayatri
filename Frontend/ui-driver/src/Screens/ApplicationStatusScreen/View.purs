@@ -27,15 +27,22 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..), LOGOUT)
-import Prelude (Unit, ($), const, (<>), (/=), (==), (||), (&&), discard, bind, pure, unit)
+import Prelude (Unit, ($), const, (<>), (/=), (==), (<<<), (||), (&&), discard, bind, pure, unit,not)
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, visibility, afterRender, lineHeight, stroke, cornerRadius, alignParentRight, onBackPressed, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, visibility, afterRender, lineHeight, stroke, cornerRadius, alignParentRight, onBackPressed, imageWithFallback,relativeLayout)
 import Screens.ApplicationStatusScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Services.APITypes (DriverRegistrationStatusResp(..), DriverRegistrationStatusReq(..))
 import Services.Backend (driverRegistrationStatusBT)
 import Styles.Colors as Color
 import Common.Types.App
+import Components.PrimaryButton as PrimaryButton
+import Components.PopUpModal as PopUpModal
+import Components.ReferralMobileNumber as ReferralMobileNumber
+import PrestoDOM.Types.DomAttributes (Corners(..))
+import Data.Maybe
+import Data.String (length)
+import Screens.ApplicationStatusScreen.ComponentConfig
 
 screen :: ST.ApplicationStatusScreenState -> String -> Screen Action ST.ApplicationStatusScreenState ScreenOutput
 screen initialState screenType =
@@ -46,8 +53,13 @@ screen initialState screenType =
       ( \push -> do
         if screenType == "StatusScreen" then do
           launchAff_ $ EHC.flowRunner $ runExceptT $ runBackT $ do
-            (DriverRegistrationStatusResp driverRegistrationStatusResp ) <- driverRegistrationStatusBT (DriverRegistrationStatusReq { })
-            lift $ lift $ doAff do liftEffect $ push $ DriverRegistrationStatusAction (DriverRegistrationStatusResp driverRegistrationStatusResp)
+            if(initialState.props.enterMobileNumberView || initialState.props.enterOtp) then pure unit 
+              else do
+              (DriverRegistrationStatusResp driverRegistrationStatusResp ) <- driverRegistrationStatusBT (DriverRegistrationStatusReq { })
+              lift $ lift $ doAff do liftEffect $ push $ DriverRegistrationStatusAction (DriverRegistrationStatusResp driverRegistrationStatusResp)
+          else pure unit
+        if initialState.props.isAlternateMobileNumberExists then do 
+          EHC.setText' (EHC.getNewIDWithTag "Referalnumber") initialState.data.mobileNumber
           else pure unit
         pure $ pure unit
       )
@@ -58,14 +70,17 @@ screen initialState screenType =
 view :: forall w . String -> (Action -> Effect Unit) -> ST.ApplicationStatusScreenState -> PrestoDOM (Effect Unit) w
 view screenType push state =
   Anim.screenAnimation $ 
-  linearLayout
+  relativeLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  ]([  linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
     , background Color.white900
     , afterRender push (const AfterRender)
     , onBackPressed push (const BackPressed)
-    ][ textView (
+    ]([ textView (
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , gravity RIGHT
@@ -77,28 +92,14 @@ view screenType push state =
       ] <> FontStyle.body1 TypoGraphy
       )
     , if screenType == "ApprovedScreen" then applicationApprovedView state push else applicationStatusView state push
+    , if (state.props.isVerificationFailed) || (not state.props.onBoardingFailure && state.props.alternateNumberAdded) then textView[] else completeOnboardingView state push
     , supportTextView state push
-    ]
+    ] 
+    )
+  ] <> if state.props.popupview then [popupmodal push state] else []
+    <> if state.props.enterMobileNumberView then [alternateNumber push state] else []
+    )
 
--- ------------------------------------------ primaryButtonView ---------------------------
-primaryButtonView :: ST.ApplicationStatusScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-primaryButtonView state push =
- linearLayout
-  [ height $ V 52
-  , width MATCH_PARENT
-  , background Color.black900
-  , gravity CENTER
-  , margin (Margin 16 0 20 16)
-  , visibility if state.data.dlVerificationStatus == "FAILED" || state.data.rcVerificationStatus == "FAILED" then VISIBLE else GONE
-  , cornerRadius 8.0
-  , onClick push (const PrimaryButtonActionController)
-  ][ textView
-      [ text (getString TRY_AGAIN)
-      , textSize FontSize.a_16
-      , color Color.yellowText
-      , fontStyle $ FontStyle.bold LanguageStyle
-      ]
-  ]
 
 ----------------------------------------- applicationStatusView -----------------------
 applicationStatusView :: ST.ApplicationStatusScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
@@ -108,7 +109,6 @@ applicationStatusView state push =
   , width MATCH_PARENT
   , orientation VERTICAL
   , gravity CENTER
-  , weight 1.0
   ][  imageView
       [ width (V 136)
       , height (V 123)
@@ -201,6 +201,8 @@ detailsView state config push =
       ]
     , textView 
       [ text (getString TRY_AGAIN)
+      , height WRAP_CONTENT
+      , width WRAP_CONTENT
       , textSize FontSize.a_14
       , color Color.blue900
       , margin (MarginTop 8)
@@ -213,29 +215,34 @@ detailsView state config push =
 -- ----------------------------------------- supportTextView -----------------------
 supportTextView state push =
   linearLayout
-  [ height WRAP_CONTENT
+  [ height MATCH_PARENT
   , width MATCH_PARENT
-  , gravity CENTER
-  , orientation HORIZONTAL
-  , padding (PaddingBottom 20)
-  ][ textView
-    [ height WRAP_CONTENT
-    , width WRAP_CONTENT
-    , text (getString FOR_SUPPORT)
-    , textSize FontSize.a_12
-    , color Color.black700
-    , fontStyle $ FontStyle.regular LanguageStyle
-    ]
-  , textView 
-    [ width WRAP_CONTENT
+  , gravity BOTTOM
+  ][ linearLayout
+    [ width MATCH_PARENT
     , height WRAP_CONTENT
-    , text (getString CONTACT_US)
-    , color Color.blueTextColor
-    , fontStyle $ FontStyle.regular LanguageStyle
-    , textSize FontSize.a_12
-    , onClick push (const SupportCall)
+    , gravity CENTER
+    , orientation HORIZONTAL
+    , padding (PaddingBottom 20)
+    ][ textView
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , text (getString FOR_SUPPORT)
+      , textSize FontSize.a_12
+      , color Color.black700
+      , fontStyle $ FontStyle.regular LanguageStyle
+      ]
+    , textView 
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , text (getString CONTACT_US)
+      , color Color.blueTextColor
+      , fontStyle $ FontStyle.regular LanguageStyle
+      , textSize FontSize.a_12
+      , onClick push (const SupportCall)
+      ]
     ]
-  ] 
+  ]
 
 drivingLicenseCardDetails state = 
   {
@@ -327,3 +334,42 @@ applicationApprovedView state push =
           )
       ]
   ]
+
+completeOnboardingView:: ST.ApplicationStatusScreenState  -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
+completeOnboardingView state push = 
+ linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , orientation VERTICAL
+      , gravity CENTER
+      , background  Color.blue600
+      , cornerRadius  4.0
+      , margin (MarginHorizontal 16 16)
+      , padding (Padding 16 16 16 16)
+      ][ textView
+         [ width WRAP_CONTENT
+         , height WRAP_CONTENT
+         , text   if state.props.onBoardingFailure then (getString VERIFICATION_IS_TAKING_A_BIT_LONGER) else (getString ADD_ALTERNATE_NUMBER_IN_MEANTIME)
+         , color Color.black700
+         , textSize FontSize.a_16
+         , margin (Margin 8 0 8 16)
+         , gravity CENTER
+        ]
+        , PrimaryButton.view (push <<< CompleteOnBoardingAction)  (primaryButtonConfig state)
+      ]
+
+popupmodal :: forall w . (Action -> Effect Unit) -> ST.ApplicationStatusScreenState -> PrestoDOM (Effect Unit) w
+popupmodal push state = 
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , background Color.blackLessTrans
+  ][PopUpModal.view (push <<< PopUpModalAction) (completeOnboardingConfig state )]
+
+alternateNumber :: forall w . (Action -> Effect Unit) -> ST.ApplicationStatusScreenState -> PrestoDOM (Effect Unit) w
+alternateNumber push state = 
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , background Color.blackLessTrans
+  ][ReferralMobileNumber.view (push <<< AlternateMobileNumberAction) (alternateMobileNumberConfig state )]

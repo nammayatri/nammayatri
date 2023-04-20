@@ -39,6 +39,7 @@ import Data.String as DS
 import Data.Maybe
 import Common.Types.App
 import Screens.AddVehicleDetailsScreen.ComponentConfig
+import Components.ReferralMobileNumber as ReferralMobileNumber
 
 screen :: AddVehicleDetailsScreenState -> Screen Action AddVehicleDetailsScreenState ScreenOutput
 screen initialState =
@@ -141,7 +142,7 @@ view push state =
         linearLayout
         [ width MATCH_PARENT
         , height MATCH_PARENT] 
-        [ReferralMobileNumber.view (push <<< ReferralMobileNumberAction) {isApplyButtonActive : state.props.btnActive, referralNumber : if state.props.isEdit then state.data.referral_mobile_number else ""}] else linearLayout [][]
+        [ReferralMobileNumber.view (push <<< ReferralMobileNumberAction) (referalNumberConfig state)] else linearLayout [][]
     ] 
 
 applyReferralView :: AddVehicleDetailsScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w 

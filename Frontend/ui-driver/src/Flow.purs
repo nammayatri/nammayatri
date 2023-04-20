@@ -165,6 +165,7 @@ getDriverInfoFlow = do
   case getDriverInfoApiResp of
     Right getDriverInfoResp -> do
       let (GetDriverInfoResp getDriverInfoResp) = getDriverInfoResp
+      modifyScreenState $ ApplicationStatusScreenType (\applicationStatusScreen -> applicationStatusScreen {props{alternateNumberAdded = isJust getDriverInfoResp.alternateNumber}})
       if getDriverInfoResp.enabled then do
         setValueToLocalStore IS_DRIVER_ENABLED "true"
         let (Vehicle linkedVehicle) = (fromMaybe dummyVehicleObject getDriverInfoResp.linkedVehicle)
@@ -240,6 +241,7 @@ uploadDrivingLicenseFlow = do
           case registerDriverDLResp of
             Right (DriverDLResp resp) -> do
               void $ lift $ lift $ toggleLoader false
+              setValueToLocalStore DOCUMENT_UPLOAD_TIME (getCurrentUTC "")
               if state.data.rcVerificationStatus /= "NO_DOC_AVAILABLE" then applicationSubmittedFlow "StatusScreen" else addVehicleDetailsflow
             Left errorPayload -> do
               void $ lift $ lift $ toggleLoader false
@@ -325,6 +327,7 @@ addVehicleDetailsflow = do
           case registerDriverRCResp of
             Right (DriverRCResp resp) -> do
               void $ lift $ lift $ toggleLoader false
+              setValueToLocalStore DOCUMENT_UPLOAD_TIME (getCurrentUTC "")
               applicationSubmittedFlow "StatusScreen"
             Left errorPayload -> do
               void $ lift $ lift $ toggleLoader false
@@ -408,7 +411,53 @@ applicationSubmittedFlow screenType = do
       let (GlobalState defaultEpassState') = defaultGlobalState
       modifyScreenState $ UploadDrivingLicenseScreenStateType (\uploadDrivingLicenseScreen -> defaultEpassState'.uploadDrivingLicenseScreen)
       modifyScreenState $ AddVehicleDetailsScreenStateType (\addVehicleDetailsScreen -> defaultEpassState'.addVehicleDetailsScreen)
-      addVehicleDetailsflow
+      addVehicleDetailsflow 
+    VALIDATE_NUMBER state -> do
+      getAlternateMobileResp <- lift $ lift $ Remote.validateAlternateNumber (makeValidateAlternateNumberRequest (state.data.mobileNumber))
+      case  getAlternateMobileResp of
+            Right (DriverAlternateNumberResp resp) -> do
+              modifyScreenState $ ApplicationStatusScreenType (\applicationStatusScreen -> state{props{enterMobileNumberView = true,enterOtp=true,buttonVisibilty=false,isValidOtp=false}})
+              applicationSubmittedFlow screenType
+            Left errorPayload -> do
+              if (errorPayload.code == 400 && (decodeErrorCode errorPayload.response.errorMessage) == "INVALID_REQUEST") then do
+                modifyScreenState $ ApplicationStatusScreenType (\applicationStatusScreen -> state {props{enterMobileNumberView = true, isAlternateMobileNumberExists = true,enterOtp = false}})
+              else do
+                pure $ toast $ getString SOMETHING_WENT_WRONG
+                modifyScreenState $ ApplicationStatusScreenType (\applicationStatusScreen -> state {props{enterMobileNumberView = false,enterOtp=false,buttonVisibilty=false}})
+              applicationSubmittedFlow screenType
+    VALIDATE_OTP state -> do
+      getVerifyAlternateMobileOtpResp <- lift $ lift $ Remote.verifyAlternateNumberOTP (makeVerifyAlternateNumberOtpRequest (state.data.otpValue)) 
+      case getVerifyAlternateMobileOtpResp of
+        Right (DriverAlternateNumberOtpResp resp) -> do
+          pure $ toast $ getString NUMBER_ADDED_SUCCESSFULLY
+          modifyScreenState $ ApplicationStatusScreenType (\applicationStatusScreen ->  state{props{enterOtp = false , enterMobileNumberView = false , alternateNumberAdded = true}})
+          applicationSubmittedFlow screenType
+        Left errorPayload -> do
+            if (errorPayload.code == 400 && (decodeErrorCode errorPayload.response.errorMessage) == "INVALID_AUTH_DATA") then do
+                modifyScreenState $ ApplicationStatusScreenType (\applicationStatusScreen -> state{props{isValidOtp = true}})
+                applicationSubmittedFlow screenType
+            else if (errorPayload.code == 429 && (decodeErrorCode errorPayload.response.errorMessage == "HITS_LIMIT_EXCEED")) then do
+              pure $ toast $ getString OTP_LIMIT_EXCEEDED
+              (setValueToLocalStore INVALID_OTP_TIME (getCurrentUTC ""))
+              modifyScreenState $ ApplicationStatusScreenType (\applicationStatusScreen -> state{props{enterOtp = false , enterMobileNumberView = false}})
+              applicationSubmittedFlow screenType
+            else do
+              pure $ toast (decodeErrorCode errorPayload.response.errorMessage)
+              applicationSubmittedFlow screenType 
+    RESEND_OTP_TO_ALTERNATE_NUMBER state-> do 
+      let number =  state.data.mobileNumber
+      getAlternateMobileResendOtpResp <- lift $ lift $ Remote.resendAlternateNumberOTP (makeResendAlternateNumberOtpRequest (number))
+      case getAlternateMobileResendOtpResp of
+            Right (AlternateNumberResendOTPResp resp) -> do
+                pure $ toast (getString OTP_RESENT)
+                applicationSubmittedFlow screenType
+            Left errorPayload -> do
+              if (errorPayload.code == 400 &&(decodeErrorCode errorPayload.response.errorMessage) == "AUTH_BLOCKED") then do
+                  pure $ toast (getString OTP_RESEND_LIMIT_EXCEEDED)
+                  applicationSubmittedFlow screenType
+              else do
+                  pure $ toast (decodeErrorCode errorPayload.response.errorMessage)
+                  applicationSubmittedFlow screenType
     LOGOUT_ACCOUT -> do
       (LogOutRes resp) <- Remote.logOutBT LogOutReq
       deleteValueFromLocalStore REGISTERATION_TOKEN

@@ -26,6 +26,7 @@ import Prelude
 import PrestoDOM
 import Screens.Types as ST
 import Styles.Colors as Color
+import Components.ReferralMobileNumber as ReferralMobileNumber
 
 primaryButtonConfig :: ST.AddVehicleDetailsScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
@@ -41,3 +42,13 @@ primaryButtonConfig state = let
       , margin = (Margin 0 0 0 0)
       }
   in primaryButtonConfig'
+
+
+referalNumberConfig :: ST.AddVehicleDetailsScreenState -> ReferralMobileNumber.Config
+referalNumberConfig state = let 
+  config' = ReferralMobileNumber.config
+  referalNumberConfig' = config'{
+   isApplyButtonActive = state.props.btnActive, 
+   referralNumber = if state.props.isEdit then state.data.referral_mobile_number else ""
+  }
+  in referalNumberConfig'

@@ -59,6 +59,8 @@ data KeyStore = USER_NAME
                 | READ_MESSAGES
                 | CHAT_CHANNEL_ID
                 | MERCHANT_ID
+                | DOCUMENT_UPLOAD_TIME
+                | INVALID_OTP_TIME
                 | RIDE_REQUEST_BUFFER
                 | SESSION_ID
                 | PROFILE_DEMO
