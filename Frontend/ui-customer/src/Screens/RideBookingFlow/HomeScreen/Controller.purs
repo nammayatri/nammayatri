@@ -1275,7 +1275,7 @@ eval (GetEstimates (GetQuotesRes quotesRes)) state = do
     exit
       $ SelectEstimate
           state
-            { data { suggestedAmount = estimatedPrice, rateCard = { baseFare: baseFare, extraFare: extraFare, pickUpCharges: pickUpCharges, additionalFare: additionalFare, nightShiftMultiplier: nightShiftMultiplier, nightCharges: nightCharges}, showPreferences = false  }
+            { data { suggestedAmount = estimatedPrice, rateCard = { baseFare: baseFare, extraFare: extraFare, pickUpCharges: pickUpCharges, additionalFare: additionalFare, nightShiftMultiplier: nightShiftMultiplier, nightCharges: nightCharges}, showPreferences = true  }
             , props { estimateId = estimateId, currentStage = SettingPrice, showRateCardIcon = showRateCardIcon}
             }
   else do

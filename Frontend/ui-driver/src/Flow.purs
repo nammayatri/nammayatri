@@ -793,15 +793,12 @@ homeScreenFlow = do
           let shortRoute = (state.data.route !! 0)
           case shortRoute of
             Just (Route route) -> do
-              case (route.snappedWaypoints !! 0) of
-                Just snappedWaypoints -> do
-                  let coor = walkCoordinates route.points
-                  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { routeVisible = true } })
-                  _ <- pure $ removeMarker "ny_ic_auto"
-                  _ <- pure $ removeAllPolylines ""
-                  _ <- lift $ lift $ doAff do liftEffect $ drawRoute coor "LineString" "#323643" true "ny_ic_src_marker" "ny_ic_dest_marker" 9 "NORMAL" source destination
-                  pure unit
-                Nothing -> pure unit
+              let coor = walkCoordinates route.points
+              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { routeVisible = true } })
+              _ <- pure $ removeMarker "ny_ic_auto"
+              _ <- pure $ removeAllPolylines ""
+              _ <- lift $ lift $ doAff do liftEffect $ drawRoute coor "LineString" "#323643" true "ny_ic_src_marker" "ny_ic_dest_marker" 9 "NORMAL" source destination
+              pure unit
             Nothing -> pure unit
           homeScreenFlow
           else do
@@ -811,16 +808,12 @@ homeScreenFlow = do
             let shortRoute = (routeApiResponse !! 0)
             case shortRoute of
               Just (Route route) -> do
-                let coordinates = route.points
-                case (route.snappedWaypoints !! 0) of
-                  Just snappedWaypoints -> do
-                    let coor = walkCoordinates route.points
-                    modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { activeRide { actualRideDistance = if state.props.currentStage == RideStarted then (toNumber route.distance) else state.data.activeRide.actualRideDistance , duration = route.duration } , route = routeApiResponse}, props { routeVisible = true } })
-                    _ <- lift $ lift $ doAff do liftEffect $ removeMarker "ny_ic_auto"
-                    _ <- pure $ removeAllPolylines ""
-                    _ <- lift $ lift $ doAff do liftEffect $ drawRoute coor "LineString" "#323643" true "ny_ic_src_marker" "ny_ic_dest_marker" 9 "NORMAL" source destination
-                    pure unit
-                  Nothing -> pure unit
+                let coor = walkCoordinates route.points
+                modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { activeRide { actualRideDistance = if state.props.currentStage == RideStarted then (toNumber route.distance) else state.data.activeRide.actualRideDistance , duration = route.duration } , route = routeApiResponse}, props { routeVisible = true } })
+                _ <- lift $ lift $ doAff do liftEffect $ removeMarker "ny_ic_auto"
+                _ <- pure $ removeAllPolylines ""
+                _ <- lift $ lift $ doAff do liftEffect $ drawRoute coor "LineString" "#323643" true "ny_ic_src_marker" "ny_ic_dest_marker" 9 "NORMAL" source destination
+                pure unit
               Nothing -> pure unit
             homeScreenFlow
     UPDATE_STAGE stage -> do
