@@ -152,7 +152,7 @@ rideInfo merchantShortId reqRideId = do
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   rideDetails <- runInReplica $ QRideDetails.findById rideId >>= fromMaybeM (RideNotFound rideId.getId) -- FIXME RideDetailsNotFound
   booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound rideId.getId)
-  quote <- runInReplica $ DQ.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
+  mQuote <- runInReplica $ DQ.findById (Id booking.quoteId)
   let driverId = ride.driverId
 
   -- merchant access checking
@@ -160,7 +160,7 @@ rideInfo merchantShortId reqRideId = do
 
   riderId <- booking.riderId & fromMaybeM (BookingFieldNotPresent "rider_id")
   riderDetails <- runInReplica $ QRiderDetails.findById riderId >>= fromMaybeM (RiderDetailsNotFound rideId.getId)
-  driverLocation <- runInReplica $ QDrLoc.findById driverId >>= fromMaybeM LocationNotFound
+  mDriverLocation <- runInReplica $ QDrLoc.findById driverId
 
   mbBCReason <-
     if ride.status == DRide.CANCELLED
@@ -190,9 +190,9 @@ rideInfo merchantShortId reqRideId = do
         driverPhoneNo,
         vehicleNo = rideDetails.vehicleNumber,
         driverStartLocation = ride.tripStartPos,
-        driverCurrentLocation = getCoordinates driverLocation,
+        driverCurrentLocation = getCoordinates <$> mDriverLocation,
         rideBookingTime = booking.createdAt,
-        estimatedDriverArrivalTime = realToFrac quote.durationToPickup `addUTCTime` ride.createdAt,
+        estimatedDriverArrivalTime = (\quote -> realToFrac quote.durationToPickup `addUTCTime` ride.createdAt) <$> mQuote,
         actualDriverArrivalTime = ride.driverArrivalTime,
         rideStartTime = ride.tripStartTime,
         rideEndTime = ride.tripEndTime,
@@ -203,7 +203,7 @@ rideInfo merchantShortId reqRideId = do
         estimatedRideDuration = Just $ secondsToMinutes booking.estimatedDuration,
         estimatedFare = booking.estimatedFare,
         actualFare = ride.fare,
-        driverOfferedFare = quote.fareParams.driverSelectedFare,
+        driverOfferedFare = (.fareParams.driverSelectedFare) =<< mQuote,
         pickupDuration = timeDiffInMinutes <$> ride.tripStartTime <*> (Just ride.createdAt),
         rideDuration = timeDiffInMinutes <$> ride.tripEndTime <*> ride.tripStartTime,
         bookingStatus = mkBookingStatus ride now,
