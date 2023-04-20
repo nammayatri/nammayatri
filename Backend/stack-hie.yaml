@@ -126,6 +126,7 @@ extra-deps:
 
   - servant-docs-0.11.7
   - servant-foreign-0.15.2
+  - geohash-1.0.1
 
   # Needed for sequelize
   - named-0.3.0.1@sha256:2975d50c9c5d88095026ffc1303d2d9be52e5f588a8f8bcb7003a04b79f10a06,2312
