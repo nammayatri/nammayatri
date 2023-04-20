@@ -24,6 +24,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.DriverMode as DMode
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as CDI
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
@@ -50,10 +51,7 @@ getDriverFlowStatus personId = do
         then return $ GetDriverFlowStatusRes Nothing driverStatus
         else do
           driverInfo <- CDI.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
-          if driverInfo.active
-            then do
-              Esq.runTransaction $ QDFS.updateStatus personId DDFS.ACTIVE
-              return $ GetDriverFlowStatusRes (Just driverStatus) DDFS.ACTIVE
-            else do
-              Esq.runTransaction $ QDFS.updateStatus personId DDFS.IDLE
-              return $ GetDriverFlowStatusRes (Just driverStatus) DDFS.IDLE
+          let func status = do
+                Esq.runTransaction $ QDFS.updateStatus personId status
+                return $ GetDriverFlowStatusRes (Just driverStatus) status
+          func $ DMode.getDriverStatus driverInfo.mode driverInfo.active

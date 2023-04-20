@@ -37,6 +37,7 @@ where
 
 import Data.Time (Day)
 import qualified Domain.Action.UI.Driver as DDriver
+import Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id, state)
@@ -69,6 +70,7 @@ type API =
       :> ( "setActivity"
              :> TokenAuth
              :> MandatoryQueryParam "active" Bool
+             :> QueryParam "mode" DI.DriverMode
              :> Post '[JSON] APISuccess
              :<|> "nearbyRideRequest"
                :> ( TokenAuth
@@ -144,8 +146,8 @@ createDriver admin = withFlowHandlerAPI . DDriver.createDriver admin
 getInformation :: Id SP.Person -> FlowHandler DDriver.DriverInformationRes
 getInformation = withFlowHandlerAPI . DDriver.getInformation
 
-setActivity :: Id SP.Person -> Bool -> FlowHandler APISuccess
-setActivity personId = withFlowHandlerAPI . DDriver.setActivity personId
+setActivity :: Id SP.Person -> Bool -> Maybe DI.DriverMode -> FlowHandler APISuccess
+setActivity personId mode = withFlowHandlerAPI . DDriver.setActivity personId mode
 
 listDriver :: SP.Person -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler DDriver.ListDriverRes
 listDriver admin mbSearchString mbLimit = withFlowHandlerAPI . DDriver.listDriver admin mbSearchString mbLimit

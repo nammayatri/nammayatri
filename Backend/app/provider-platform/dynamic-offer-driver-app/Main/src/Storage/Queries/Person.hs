@@ -18,7 +18,7 @@ module Storage.Queries.Person where
 import Control.Applicative ((<|>))
 import qualified Data.Maybe as Mb
 import qualified Domain.Types.Booking as Booking
-import Domain.Types.DriverInformation
+import Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.DriverLocation
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
@@ -485,7 +485,8 @@ data NearestDriversResult = NearestDriversResult
     distanceToDriver :: Meters,
     variant :: Vehicle.Variant,
     lat :: Double,
-    lon :: Double
+    lon :: Double,
+    mode :: Maybe DriverInfo.DriverMode
   }
   deriving (Generic, Show, PrettyShow, HasCoordinates)
 
@@ -507,6 +508,7 @@ getNearestDrivers mbVariant LatLong {..} radiusMeters merchantId onlyNotOnRide m
       person ^. PersonRole ==. val Person.DRIVER
         &&. person ^. PersonMerchantId ==. val (toKey merchantId)
         &&. driverInfo ^. DriverInformationActive
+        &&. driverInfo ^. DriverInformationMode ==. val (Just DriverInfo.SILENT) ||. driverInfo ^. DriverInformationMode ==. val (Just DriverInfo.ONLINE) ||. Esq.isNothing (driverInfo ^. DriverInformationMode)
         &&. (if onlyNotOnRide then not_ (driverInfo ^. DriverInformationOnRide) else val True)
         &&. not_ (driverInfo ^. DriverInformationBlocked)
         &&. ( val (Mb.isNothing mbDriverPositionInfoExpiry)
@@ -539,12 +541,13 @@ getNearestDrivers mbVariant LatLong {..} radiusMeters merchantId onlyNotOnRide m
         location ^. DriverLocationPoint <->. Esq.getPoint (val lat, val lon),
         location ^. DriverLocationLat,
         location ^. DriverLocationLon,
-        vehicle ^. VehicleVariant
+        vehicle ^. VehicleVariant,
+        driverInfo ^. DriverInformationMode
       )
   return (makeNearestDriversResult =<< res)
   where
-    makeNearestDriversResult :: (Id Person, Maybe FCM.FCMRecipientToken, Maybe Maps.Language, Bool, Bool, Bool, Bool, Double, Double, Double, Variant) -> [NearestDriversResult]
-    makeNearestDriversResult (personId, mbDeviceToken, mblang, onRide, canDowngradeToSedan, canDowngradeToHatchback, canDowngradeToTaxi, dist, dlat, dlon, variant) = do
+    makeNearestDriversResult :: (Id Person, Maybe FCM.FCMRecipientToken, Maybe Maps.Language, Bool, Bool, Bool, Bool, Double, Double, Double, Variant, Maybe DriverInfo.DriverMode) -> [NearestDriversResult]
+    makeNearestDriversResult (personId, mbDeviceToken, mblang, onRide, canDowngradeToSedan, canDowngradeToHatchback, canDowngradeToTaxi, dist, dlat, dlon, variant, mode) = do
       case mbVariant of
         Nothing -> do
           let autoResult = getResult AUTO_RICKSHAW $ variant == AUTO_RICKSHAW
@@ -556,7 +559,7 @@ getNearestDrivers mbVariant LatLong {..} radiusMeters merchantId onlyNotOnRide m
           autoResult <> suvResult <> sedanResult <> hatchbackResult <> taxiResult <> taxiPlusResult
         Just poolVariant -> getResult poolVariant True
       where
-        getResult var cond = [NearestDriversResult (cast personId) mbDeviceToken mblang onRide (roundToIntegral dist) var dlat dlon | cond]
+        getResult var cond = [NearestDriversResult (cast personId) mbDeviceToken mblang onRide (roundToIntegral dist) var dlat dlon mode | cond]
 
 data NearestDriversResultCurrentlyOnRide = NearestDriversResultCurrentlyOnRide
   { driverId :: Id Driver,
@@ -569,7 +572,8 @@ data NearestDriversResultCurrentlyOnRide = NearestDriversResultCurrentlyOnRide
     destinationLat :: Double,
     destinationLon :: Double,
     distanceToDriver :: Meters,
-    distanceFromDriverToDestination :: Meters
+    distanceFromDriverToDestination :: Meters,
+    mode :: Maybe DriverInfo.DriverMode
   }
   deriving (Generic, Show, PrettyShow, HasCoordinates)
 
@@ -633,6 +637,7 @@ getNearestDriversCurrentlyOnRide mbVariant LatLong {..} radiusMeters merchantId 
       personInfo ^. PersonRole ==. val Person.DRIVER
         &&. personInfo ^. PersonMerchantId ==. val (toKey merchantId)
         &&. driverInfo ^. DriverInformationActive
+        &&. driverInfo ^. DriverInformationMode ==. val (Just DriverInfo.SILENT) ||. driverInfo ^. DriverInformationMode ==. val (Just DriverInfo.ONLINE) ||. Esq.isNothing (driverInfo ^. DriverInformationMode)
         &&. driverInfo ^. DriverInformationOnRide
         &&. not_ (driverInfo ^. DriverInformationBlocked)
         &&. ( val (Mb.isNothing mbDriverPositionInfoExpiry)
@@ -668,12 +673,13 @@ getNearestDriversCurrentlyOnRide mbVariant LatLong {..} radiusMeters merchantId 
         bookingLocationInfo ^. BookingLocationLat,
         bookingLocationInfo ^. BookingLocationLon,
         distanceFromDriverToDestination +. distanceFromDestinationToPickup,
-        distanceFromDriverToDestination
+        distanceFromDriverToDestination,
+        driverInfo ^. DriverInformationMode
       )
   return (makeNearestDriversResult =<< res)
   where
-    makeNearestDriversResult :: (Id Person, Maybe FCM.FCMRecipientToken, Maybe Maps.Language, Bool, Bool, Bool, Bool, Double, Double, Variant, Double, Double, Double, Double) -> [NearestDriversResultCurrentlyOnRide]
-    makeNearestDriversResult (personId, mbDeviceToken, mblang, onRide, canDowngradeToSedan, canDowngradeToHatchback, canDowngradeToTaxi, dlat, dlon, variant, destinationEndLat, destinationEndLon, dist :: Double, distanceFromDriverToDestination :: Double) =
+    makeNearestDriversResult :: (Id Person, Maybe FCM.FCMRecipientToken, Maybe Maps.Language, Bool, Bool, Bool, Bool, Double, Double, Variant, Double, Double, Double, Double, Maybe DriverInfo.DriverMode) -> [NearestDriversResultCurrentlyOnRide]
+    makeNearestDriversResult (personId, mbDeviceToken, mblang, onRide, canDowngradeToSedan, canDowngradeToHatchback, canDowngradeToTaxi, dlat, dlon, variant, destinationEndLat, destinationEndLon, dist :: Double, distanceFromDriverToDestination :: Double, mode) =
       case mbVariant of
         Nothing -> do
           let autoResult = getResult AUTO_RICKSHAW $ variant == AUTO_RICKSHAW
@@ -685,7 +691,7 @@ getNearestDriversCurrentlyOnRide mbVariant LatLong {..} radiusMeters merchantId 
           autoResult <> suvResult <> sedanResult <> hatchbackResult <> taxiResult <> taxiPlusResult
         Just poolVariant -> getResult poolVariant True
       where
-        getResult var cond = [NearestDriversResultCurrentlyOnRide (cast personId) mbDeviceToken mblang onRide dlat dlon var destinationEndLat destinationEndLon (roundToIntegral dist) (roundToIntegral distanceFromDriverToDestination) | cond]
+        getResult var cond = [NearestDriversResultCurrentlyOnRide (cast personId) mbDeviceToken mblang onRide dlat dlon var destinationEndLat destinationEndLon (roundToIntegral dist) (roundToIntegral distanceFromDriverToDestination) mode | cond]
 
 updateAlternateMobileNumberAndCode :: Person -> SqlDB ()
 updateAlternateMobileNumberAndCode person = do

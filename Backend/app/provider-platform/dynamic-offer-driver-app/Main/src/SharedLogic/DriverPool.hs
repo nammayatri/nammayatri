@@ -594,7 +594,8 @@ calculateDriverCurrentlyOnRideWithActualDist poolCalculationStage driverPoolCfg 
           distanceToPickup = distanceToPickup,
           variant = variant,
           lat = destinationLat,
-          lon = destinationLon
+          lon = destinationLon,
+          mode = mode
         }
     calculateActualDistanceCurrently driverToDestinationDistanceThreshold DriverPoolResultCurrentlyOnRide {..} = do
       let temp = DriverPoolResult {..}

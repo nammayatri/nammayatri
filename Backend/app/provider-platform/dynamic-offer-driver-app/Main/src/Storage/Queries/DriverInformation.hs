@@ -61,13 +61,14 @@ fetchAllAvailableByIds driversIds = Esq.findAll $ do
   where
     personsKeys = toKey . cast <$> driversIds
 
-updateActivity :: Id Person.Driver -> Bool -> SqlDB ()
-updateActivity driverId isActive = do
+updateActivity :: Id Person.Driver -> Bool -> Maybe DriverMode -> SqlDB ()
+updateActivity driverId isActive mode = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
     set
       tbl
       [ DriverInformationActive =. val isActive,
+        DriverInformationMode =. val mode,
         DriverInformationUpdatedAt =. val now
       ]
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)

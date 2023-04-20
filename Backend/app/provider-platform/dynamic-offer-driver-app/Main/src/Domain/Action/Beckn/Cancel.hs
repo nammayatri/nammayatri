@@ -22,7 +22,6 @@ where
 
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
-import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchRequest as SR
@@ -37,6 +36,7 @@ import Kernel.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.CancelSearch as CS
 import qualified SharedLogic.DriverLocation as DLoc
+import qualified SharedLogic.DriverMode as DMode
 import qualified SharedLogic.Ride as SRide
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QM
@@ -93,9 +93,9 @@ cancel transporterId _ req = do
     whenJust mbRide $ \ride -> do
       QRide.updateStatus ride.id SRide.CANCELLED
       driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-      if driverInfo.active
-        then QDFS.updateStatus ride.driverId DDFS.ACTIVE
-        else QDFS.updateStatus ride.driverId DDFS.IDLE
+      Esq.runTransaction $
+        QDFS.updateStatus ride.driverId $
+          DMode.getDriverStatus driverInfo.mode driverInfo.active
   whenJust mbRide $ \ride -> do
     SRide.clearCache $ cast ride.driverId
     DLoc.updateOnRide (cast ride.driverId) False

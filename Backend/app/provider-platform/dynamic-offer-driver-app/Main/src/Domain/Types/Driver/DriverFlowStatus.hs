@@ -31,6 +31,7 @@ import Kernel.Types.Id
 data FlowStatus
   = IDLE
   | ACTIVE
+  | SILENT
   | GOT_SEARCH_REQUEST
       { requestId :: Id DSR.SearchRequest,
         validTill :: UTCTime

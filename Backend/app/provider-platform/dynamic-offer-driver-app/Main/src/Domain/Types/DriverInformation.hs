@@ -1,3 +1,5 @@
+{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -15,11 +17,38 @@
 
 module Domain.Types.DriverInformation where
 
+import Data.Aeson
+import qualified Data.ByteString.Lazy as BSL
+import Data.OpenApi (ToParamSchema, ToSchema)
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as DT
 import Data.Time (UTCTime)
 import Domain.Types.Person (Person)
 import EulerHS.Prelude
 import Kernel.External.Encryption
+import Kernel.Storage.Esqueleto (derivePersistField)
 import Kernel.Types.Id
+import Kernel.Utils.GenericPretty
+import Servant.API
+
+data DriverMode
+  = ONLINE
+  | OFFLINE
+  | SILENT
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+  deriving (PrettyShow) via Showable DriverMode
+
+derivePersistField "DriverMode"
+
+instance FromHttpApiData DriverMode where
+  parseUrlPiece = parseHeader . DT.encodeUtf8
+  parseQueryParam = parseUrlPiece
+  parseHeader = first T.pack . eitherDecode . BSL.fromStrict
+
+instance ToHttpApiData DriverMode where
+  toUrlPiece = DT.decodeUtf8 . toHeader
+  toQueryParam = toUrlPiece
+  toHeader = BSL.toStrict . encode
 
 data DriverInformationE e = DriverInformation
   { driverId :: Id Person,
@@ -34,6 +63,7 @@ data DriverInformationE e = DriverInformation
     canDowngradeToSedan :: Bool,
     canDowngradeToHatchback :: Bool,
     canDowngradeToTaxi :: Bool,
+    mode :: Maybe DriverMode,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

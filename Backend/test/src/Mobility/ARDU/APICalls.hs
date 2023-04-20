@@ -20,6 +20,7 @@ import "dynamic-offer-driver-app" API.UI.Location as LocationAPI
 import qualified "dynamic-offer-driver-app" API.UI.Ride as RideAPI
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Ride as Dashboard
 import Data.Time
+import qualified "dynamic-offer-driver-app" Domain.Types.DriverInformation as TDI
 import qualified "dynamic-offer-driver-app" Domain.Types.Merchant as TDM
 import qualified "dynamic-offer-driver-app" Domain.Types.Ride as TRide
 import EulerHS.Prelude
@@ -48,7 +49,7 @@ data DriverAPIs = DriverAPIs
     getNearbySearchRequests :: RegToken -> ClientM DriverAPI.GetNearbySearchRequestsRes,
     offerQuote :: RegToken -> DriverAPI.DriverOfferReq -> ClientM APISuccess,
     respondQuote :: RegToken -> DriverAPI.DriverRespondReq -> ClientM APISuccess,
-    setDriverOnline :: Text -> Bool -> ClientM APISuccess,
+    setDriverOnline :: Text -> Bool -> Maybe TDI.DriverMode -> ClientM APISuccess,
     validate :: Text -> DriverAPI.DriverAlternateNumberReq -> ClientM DriverAPI.DriverAlternateNumberRes,
     verifyAuth :: Text -> DriverAPI.DriverAlternateNumberOtpReq -> ClientM APISuccess,
     resendOtp :: Text -> DriverAPI.DriverAlternateNumberReq -> ClientM DriverAPI.ResendAuth,

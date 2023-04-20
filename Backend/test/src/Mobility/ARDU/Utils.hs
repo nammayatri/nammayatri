@@ -129,7 +129,7 @@ getBPPDriverInformation driverId =
 -- driver setup/reset
 setupDriver :: DriverTestData -> LatLong -> ClientsM ()
 setupDriver driver initialPoint = do
-  void . callBPP $ API.ui.driver.setDriverOnline driver.token True
+  void . callBPP $ API.ui.driver.setDriverOnline driver.token True (Just TDrInfo.ONLINE)
   -- Moves driver to the pickup point
   preUpdate <- liftIO $ API.buildUpdateLocationRequest $ initialPoint :| []
   void . callBPP $
@@ -145,7 +145,7 @@ resetDriver driver = runARDUFlow "" $ do
       TQRB.updateStatus booking.id TRB.CANCELLED
     void . forM activeQuotes $ \activeQuote ->
       TDQ.setInactiveByRequestId activeQuote.searchRequestId
-    QTDrInfo.updateActivity (cast driver.driverId) False
+    QTDrInfo.updateActivity (cast driver.driverId) False (Just TDrInfo.OFFLINE)
     QTDrInfo.updateOnRide (cast driver.driverId) False
 
 -- flow primitives
