@@ -30,17 +30,35 @@
                     android:layout_height="match_parent"
                     android:background="@color/white"
                     android:orientation="vertical"
-                    android:paddingHorizontal="15dp"
-                    android:paddingTop="12dp"
                     android:paddingBottom="16dp">
-
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:background="#FEEBB9"
+                        android:visibility="gone"
+                        android:id="@+id/customer_tip_block"
+                        android:paddingVertical="3dp"
+                        android:gravity="center">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="₹ 10 tip included !"
+                            android:id="@+id/customer_tip_text"
+                            android:textSize="16dp"
+                            android:lineHeight="20dp"
+                            android:fontFamily="@font/plus_jakartasans_semibold"
+                            android:textColor="@color/Black900" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:paddingHorizontal="15dp"
                         android:orientation="vertical">
 
                         <LinearLayout
+                            android:layout_marginTop="16dp"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical">
@@ -280,7 +298,7 @@
                             <androidx.cardview.widget.CardView
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="32dp"
+                                android:layout_marginTop="16dp"
                                 android:background="#F4F4F6"
                                 app:cardCornerRadius="10dp"
                                 app:cardElevation="0dp"
@@ -422,6 +440,7 @@
                                 android:text="@string/includes_pickup_charges_10"
                                 android:textColor="#6D7280"
                                 android:textFontWeight="400"
+                                android:id="@+id/textIncludesCharges"
                                 android:textSize="12dp" />
 
                         </LinearLayout>
@@ -431,6 +450,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="20dp"
+                        android:paddingHorizontal="15dp"
                         android:orientation="horizontal">
 
                         <com.google.android.material.button.MaterialButton

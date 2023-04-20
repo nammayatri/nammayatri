@@ -272,6 +272,7 @@ getFaresList fares state =
                       "TOTAL_FARE" -> getEN TOTAL_PAID
                       "DEAD_KILOMETER_FARE" -> getEN PICKUP_CHARGE
                       "PICKUP_CHARGES" -> getEN PICKUP_CHARGE
+                      "CUSTOMER_SELECTED_FARE" -> getEN CUSTOMER_SELECTED_FARE
                       "WAITING_CHARGES" -> getEN WAITING_CHARGE
                       "EARLY_END_RIDE_PENALTY" -> getEN EARLY_END_RIDE_CHARGES
                       _ -> getEN BASE_FARES

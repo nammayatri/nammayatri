@@ -62,6 +62,7 @@
                         android:gravity="end"
                         android:textColor="#FFFFFF"
                         android:layout_marginLeft="54dp"
+                        android:textSize="20dp"
                         android:id="@+id/ride_fare"/>
 
                     <ImageView
@@ -75,6 +76,7 @@
                         android:layout_width="100dp"
                         android:layout_height="wrap_content"
                         android:text="900m pickup"
+                        android:textSize="16dp"
                         android:textColor="#FFFFFF"
                         android:id="@+id/distance_to_pickup"/>
 
@@ -83,6 +85,7 @@
                         android:layout_height="wrap_content"
                         android:gravity="end"
                         android:text="View now"
+                        android:textSize="18dp"
                         android:textColor="#FCC32C"></TextView>
                     </LinearLayout>
 

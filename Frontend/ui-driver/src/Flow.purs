@@ -784,7 +784,13 @@ getDriverStatus dummy = do
     "Online" -> Online
     "Offline" -> Offline
     "Silent" -> Silent
-    _ -> Silent
+    _ -> Online
+
+updateDriverStatus :: Boolean -> DriverStatus
+updateDriverStatus status = do
+  if status && getValueToLocalNativeStore DRIVER_STATUS_N == "Silent" then Silent
+    else if status then Online
+      else Offline
 
 homeScreenFlow :: FlowBT String Unit
 homeScreenFlow = do
@@ -802,14 +808,18 @@ homeScreenFlow = do
   if getDriverInfoResp.active then do
     setValueToLocalStore DRIVER_STATUS "true"
     setValueToLocalNativeStore DRIVER_STATUS "true"
+    setValueToLocalStore DRIVER_STATUS_N (show $ updateDriverStatus true)
+    setValueToLocalNativeStore DRIVER_STATUS_N  (show $ updateDriverStatus true)
     lift $ lift $ liftFlow $ startLocationPollingAPI
     else do
       lift $ lift $ liftFlow $ stopLocationPollingAPI
       setValueToLocalStore DRIVER_STATUS "false"
       setValueToLocalNativeStore DRIVER_STATUS "false"
-  _  <- pure $ spy "DRIVERRRR___STATUs" (getValueToLocalNativeStore DRIVER_STATUS) 
-  _  <- pure $ spy "DRIVERRRR___STATUS LOCAL" (getValueToLocalStore DRIVER_STATUS) 
-  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {statusOnline = getDriverInfoResp.active,driverStatusSet = getDriverStatus ""}, data{vehicleType = linkedVehicle.variant, driverAlternateMobile =getDriverInfoResp.alternateNumber}})
+      setValueToLocalStore DRIVER_STATUS_N  (show $ updateDriverStatus false)
+      setValueToLocalNativeStore DRIVER_STATUS_N  (show $ updateDriverStatus false)
+  _  <- pure $ spy "DRIVERRRR___STATUs" (getValueToLocalNativeStore DRIVER_STATUS)
+  _  <- pure $ spy "DRIVERRRR___STATUS LOCAL" (getValueToLocalStore DRIVER_STATUS)
+  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {statusOnline = getDriverInfoResp.active, driverStatusSet = getDriverStatus ""}, data{vehicleType = linkedVehicle.variant, driverAlternateMobile =getDriverInfoResp.alternateNumber}})
   modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen {data{driverVehicleType = linkedVehicle.variant, driverRating = getDriverInfoResp.rating}})
   modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> driverDetailsScreen { data {driverAlternateMobile =getDriverInfoResp.alternateNumber}})
   modifyScreenState $ ReferralScreenStateType (\ referralScreen -> referralScreen{ data { driverInfo  {  driverName = getDriverInfoResp.firstName, driverMobile = getDriverInfoResp.mobileNumber,  vehicleRegNumber = linkedVehicle.registrationNo , referralCode = getDriverInfoResp.referralCode }}})
@@ -869,6 +879,8 @@ homeScreenFlow = do
       void $ lift $ lift $ toggleLoader true
       endRideResp <- Remote.endRide id (Remote.makeEndRideReq (fromMaybe 0.0 (fromString lat)) (fromMaybe 0.0 (fromString lon)))-- driver's  lat long during ending ride
       _ <- pure $ setValueToLocalNativeStore IS_RIDE_ACTIVE  "false"
+      _ <- pure $ setValueToLocalStore DRIVER_STATUS_N "Online"
+      _ <- pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
       (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "1" "0" "false"
       case (head rideHistoryResponse.list) of
         Nothing -> pure unit
@@ -897,6 +909,8 @@ homeScreenFlow = do
       _ <- pure $ printLog "HOME_SCREEN_FLOW GO_TO_CANCEL_RIDE" "."
       cancelRideResp <- Remote.cancelRide id (Remote.makeCancelRideReq info reason)
       _ <- pure $ removeAllPolylines ""
+      _ <- pure $ setValueToLocalStore DRIVER_STATUS_N "Online"
+      _ <- pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
       removeChatService ""
       _ <- updateStage $ HomeScreenStage HomeScreen
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props { chatcallbackInitiated = false}})
@@ -905,6 +919,8 @@ homeScreenFlow = do
       _ <- pure $ removeAllPolylines ""
       case notificationType of
         "CANCELLED_PRODUCT" -> do
+          _ <- pure $ setValueToLocalStore DRIVER_STATUS_N "Online"
+          _ <- pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
           removeChatService ""
           _ <- updateStage $ HomeScreenStage HomeScreen
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props { chatcallbackInitiated = false}})
