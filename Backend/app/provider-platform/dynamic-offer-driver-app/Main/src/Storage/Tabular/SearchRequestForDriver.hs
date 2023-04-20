@@ -20,6 +20,7 @@
 
 module Storage.Tabular.SearchRequestForDriver where
 
+import qualified Domain.Types.DriverInformation as D
 import qualified Domain.Types.SearchRequestForDriver as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.Prelude
@@ -63,6 +64,7 @@ mkPersist
       driverAvailableTime Double Maybe
       parallelSearchRequestCount Int Maybe
       driverSpeed Double Maybe
+      mode D.DriverMode Maybe
       Primary id
       deriving Generic
     |]

@@ -45,6 +45,7 @@ mkPersist
       canDowngradeToSedan Bool
       canDowngradeToHatchback Bool
       canDowngradeToTaxi Bool
+      mode Domain.DriverMode Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary driverId

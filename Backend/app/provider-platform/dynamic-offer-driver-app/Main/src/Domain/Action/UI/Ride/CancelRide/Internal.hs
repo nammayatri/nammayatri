@@ -17,7 +17,6 @@ module Domain.Action.UI.Ride.CancelRide.Internal (cancelRideImpl) where
 
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
-import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.FareParameters as DFParams (FarePolicyType (..))
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DMerc
@@ -39,6 +38,7 @@ import SharedLogic.Allocator
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverLocation as DLoc
+import SharedLogic.DriverMode as DMode
 import SharedLogic.DriverPool
 import SharedLogic.Estimate
 import SharedLogic.FareCalculator
@@ -139,9 +139,9 @@ cancelRideTransaction bookingId ride bookingCReason = do
     QRide.updateStatus ride.id DRide.CANCELLED
     QRB.updateStatus bookingId SRB.CANCELLED
     QBCR.upsert bookingCReason
-    if driverInfo.active
-      then QDFS.updateStatus ride.driverId DDFS.ACTIVE
-      else QDFS.updateStatus ride.driverId DDFS.IDLE
+    Esq.runTransaction $
+      QDFS.updateStatus ride.driverId $
+        DMode.getDriverStatus driverInfo.mode driverInfo.active
   SRide.clearCache ride.driverId
 
 repeatSearch ::

@@ -24,6 +24,8 @@ where
 
 import qualified Control.Monad as CM
 import qualified Data.HashMap as HM
+import qualified Data.List as DL
+import qualified Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.DriverIntelligentPoolConfig
 import Domain.Types.Merchant.DriverPoolConfig
@@ -132,7 +134,6 @@ prepareDriverPoolBatch driverPoolCfg searchReq batchNum = withLogTag ("BatchNum-
 
         makeRandomDriverPool batchSize onlyNewDrivers = take batchSize <$> randomizeAndLimitSelection onlyNewDrivers
 
-    takeDriversUsingPoolPercentage :: (MonadFlow m) => ([a], [a]) -> Int -> DriverIntelligentPoolConfig -> m [a]
     takeDriversUsingPoolPercentage (sortedDriverPool, randomizedDriverPool) driversCount intelligentPoolConfig = do
       let intelligentPoolPercentage = fromMaybe 50 intelligentPoolConfig.intelligentPoolPercentage
           intelligentCount = min (length sortedDriverPool) ((driversCount + 1) * intelligentPoolPercentage `div` 100)
@@ -142,10 +143,13 @@ prepareDriverPoolBatch driverPoolCfg searchReq batchNum = withLogTag ("BatchNum-
           poolBatch = sortedPart <> randomPart
           driversFromRestCount = take (driversCount - length poolBatch) (restRandom <> restSorted) -- taking rest of drivers if poolBatch length is less then driverCount requried.
           finalPoolBatch = poolBatch <> driversFromRestCount
+      let (silentDrivers, activeDrivers) = DL.partition ((== Just DriverInfo.SILENT) . (.driverPoolResult.mode)) finalPoolBatch
+      let finalPoolBatchWithSilentDrivers = activeDrivers <> silentDrivers
       logDebug $ "IntelligentDriverPool - SortedDriversCount " <> show (length sortedPart)
       logDebug $ "IntelligentDriverPool - RandomizedDriversCount " <> show (length randomPart)
       logDebug $ "IntelligentDriverPool - finalPoolBatch " <> show (length finalPoolBatch)
-      pure finalPoolBatch
+      logDebug $ "IntelligentDriverPool - finalPoolBatchWithSilentDrivers " <> show (length finalPoolBatchWithSilentDrivers)
+      pure finalPoolBatchWithSilentDrivers
 
     calcDriverPool radiusStep = do
       let vehicleVariant = searchReq.vehicleVariant

@@ -132,6 +132,7 @@ sendSearchRequestToDrivers searchReq baseFare driverMinExtraFee driverMaxExtraFe
                 cancellationRatio = dpwRes.intelligentScores.cancellationRatio,
                 driverAvailableTime = dpwRes.intelligentScores.availableTime,
                 driverSpeed = dpwRes.intelligentScores.driverSpeed,
+                mode = dpRes.mode,
                 ..
               }
       pure searchRequestForDriver

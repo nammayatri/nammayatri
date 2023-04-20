@@ -36,10 +36,10 @@ findById id =
     Just a -> pure $ Just a
     Nothing -> flip whenJust (cacheDriverInformation id) /=<< Queries.findById id
 
-updateActivity :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person.Driver -> Bool -> m ()
-updateActivity driverId isActive = do
+updateActivity :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person.Driver -> Bool -> Maybe DriverMode -> m ()
+updateActivity driverId isActive mode = do
   clearDriverInfoCache driverId
-  Esq.runTransaction $ Queries.updateActivity driverId isActive
+  Esq.runTransaction $ Queries.updateActivity driverId isActive mode
 
 updateEnabledState :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person.Driver -> Bool -> m ()
 updateEnabledState driverId isEnabled = do

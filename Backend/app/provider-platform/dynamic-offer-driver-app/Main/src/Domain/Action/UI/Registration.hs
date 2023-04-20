@@ -178,6 +178,7 @@ createDriverDetails personId = do
             canDowngradeToSedan = False,
             canDowngradeToHatchback = False,
             canDowngradeToTaxi = False,
+            mode = Just DriverInfo.OFFLINE,
             createdAt = now,
             updatedAt = now
           }
@@ -395,5 +396,5 @@ logout personId = do
   Esq.runTransaction $ do
     QP.updateDeviceToken uperson.id Nothing
     QR.deleteByPersonId personId
-  when (uperson.role == SP.DRIVER) $ QD.updateActivity (cast uperson.id) False
+  when (uperson.role == SP.DRIVER) $ QD.updateActivity (cast uperson.id) False (Just DriverInfo.OFFLINE)
   pure Success

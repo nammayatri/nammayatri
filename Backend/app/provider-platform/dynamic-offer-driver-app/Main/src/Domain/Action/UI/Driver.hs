@@ -47,6 +47,7 @@ module Domain.Action.UI.Driver
     verifyAuth,
     resendOtp,
     remove,
+    DriverInfo.DriverMode,
   )
 where
 
@@ -99,6 +100,7 @@ import qualified Lib.DriverScore.Types as DST
 import SharedLogic.CallBAP (sendDriverOffer)
 import qualified SharedLogic.CancelSearch as CS
 import qualified SharedLogic.DeleteDriver as DeleteDriverOnCheck
+import SharedLogic.DriverMode as DMode
 import SharedLogic.DriverPool as DP
 import SharedLogic.FareCalculator
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -145,7 +147,8 @@ data DriverInformationRes = DriverInformationRes
     alternateNumber :: Maybe Text,
     canDowngradeToSedan :: Bool,
     canDowngradeToHatchback :: Bool,
-    canDowngradeToTaxi :: Bool
+    canDowngradeToTaxi :: Bool,
+    mode :: Maybe DriverInfo.DriverMode
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -171,7 +174,8 @@ data DriverEntityRes = DriverEntityRes
     alternateNumber :: Maybe Text,
     canDowngradeToSedan :: Bool,
     canDowngradeToHatchback :: Bool,
-    canDowngradeToTaxi :: Bool
+    canDowngradeToTaxi :: Bool,
+    mode :: Maybe DriverInfo.DriverMode
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -375,6 +379,7 @@ createDriverDetails personId adminId = do
             canDowngradeToSedan = False,
             canDowngradeToHatchback = False,
             canDowngradeToTaxi = False,
+            mode = Just DriverInfo.OFFLINE,
             lastEnabledOn = Just now,
             createdAt = now,
             updatedAt = now
@@ -406,21 +411,21 @@ getInformation personId = do
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
   pure $ makeDriverInformationRes driverEntity organization driverReferralCode
 
-setActivity :: (CacheFlow m r, EsqDBFlow m r) => Id SP.Person -> Bool -> m APISuccess.APISuccess
-setActivity personId isActive = do
+setActivity :: (CacheFlow m r, EsqDBFlow m r) => Id SP.Person -> Bool -> Maybe DriverInfo.DriverMode -> m APISuccess.APISuccess
+setActivity personId isActive mode = do
   _ <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let driverId = cast personId
-  when isActive $ do
+  when (isActive || (isJust mode && (mode == Just DriverInfo.SILENT || mode == Just DriverInfo.ONLINE))) $ do
     driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
     unless driverInfo.enabled $ throwError DriverAccountDisabled
     unless (not driverInfo.blocked) $ throwError DriverAccountBlocked
-  QDriverInformation.updateActivity driverId isActive
+  QDriverInformation.updateActivity driverId isActive mode
   driverStatus <- QDFS.getStatus personId >>= fromMaybeM (PersonNotFound personId.getId)
   logInfo $ "driverStatus " <> show driverStatus
-  unless (driverStatus `notElem` [DDFS.IDLE, DDFS.ACTIVE]) $ do
-    if isActive
-      then Esq.runTransaction $ QDFS.updateStatus personId DDFS.ACTIVE
-      else Esq.runTransaction $ QDFS.updateStatus personId DDFS.IDLE
+  unless (driverStatus `notElem` [DDFS.IDLE, DDFS.ACTIVE, DDFS.SILENT]) $ do
+    Esq.runTransaction $
+      QDFS.updateStatus personId $
+        DMode.getDriverStatus mode isActive
   pure APISuccess.Success
 
 listDriver :: (EsqDBReplicaFlow m r, EncFlow m r) => SP.Person -> Maybe Text -> Maybe Integer -> Maybe Integer -> m ListDriverRes
@@ -454,7 +459,8 @@ buildDriverEntityRes (person, driverInfo) = do
         alternateNumber = decaltMobNum,
         canDowngradeToSedan = driverInfo.canDowngradeToSedan,
         canDowngradeToHatchback = driverInfo.canDowngradeToHatchback,
-        canDowngradeToTaxi = driverInfo.canDowngradeToTaxi
+        canDowngradeToTaxi = driverInfo.canDowngradeToTaxi,
+        mode = driverInfo.mode
       }
 
 changeDriverEnableState ::
@@ -473,7 +479,7 @@ changeDriverEnableState admin personId isEnabled = do
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
   unless (person.merchantId == admin.merchantId) $ throwError Unauthorized
   QDriverInformation.updateEnabledState driverId isEnabled
-  unless isEnabled $ QDriverInformation.updateActivity driverId False
+  unless isEnabled $ QDriverInformation.updateActivity driverId False (Just DriverInfo.OFFLINE)
   unless isEnabled $ do
     Notify.notifyDriver person.merchantId FCM.ACCOUNT_DISABLED notificationTitle notificationMessage person.id person.deviceToken
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> changeDriverEnableState : ") (show (driverId, isEnabled))

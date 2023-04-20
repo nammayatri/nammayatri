@@ -14,6 +14,7 @@
 
 module Mobility.ARDU.NearestDrivers (spec) where
 
+import qualified "dynamic-offer-driver-app" Domain.Types.DriverInformation as DI
 import qualified "dynamic-offer-driver-app" Environment as ARDUEnv
 import EulerHS.Prelude
 import Kernel.External.Maps.Types (LatLong (..))
@@ -32,10 +33,10 @@ spec = do
   describe "getNearestDrivers function"
     . beforeAll_
       ( runARDUFlow "Turn on drivers" $ do
-          setDriversActive True
+          setDriversActive True (Just DI.ONLINE)
           setDriverWithOldLocation
       )
-    . afterAll_ (runARDUFlow "Turn off drivers." $ setDriversActive False)
+    . afterAll_ (runARDUFlow "Turn off drivers." $ setDriversActive False (Just DI.OFFLINE))
     $ do
       it "Test ordering" testOrder
       it "Test radius filtration" testInRadius
@@ -97,10 +98,10 @@ sedanDriver = "ND-sedan-driver-00000000000000000000"
 hatchbackDriver :: Text
 hatchbackDriver = "ND-hatchback-driver-0000000000000000"
 
-setDriversActive :: Bool -> FlowR ARDUEnv.AppEnv ()
-setDriversActive isActive = Esq.runTransaction $ do
+setDriversActive :: Bool -> Maybe DI.DriverMode -> FlowR ARDUEnv.AppEnv ()
+setDriversActive isActive mode = Esq.runTransaction $ do
   let drivers = [furthestDriver, closestDriver, suvDriver, sedanDriver, hatchbackDriver, driverWithOldLocation]
-  forM_ drivers (\driver -> Q.updateActivity (Id driver) isActive)
+  forM_ drivers (\driver -> Q.updateActivity (Id driver) isActive mode)
 
 -- we can remove this when we flatten migrations
 setDriverWithOldLocation :: FlowR ARDUEnv.AppEnv ()

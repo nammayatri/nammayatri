@@ -41,6 +41,7 @@ import Kernel.Utils.Common
 import Servant.Client (BaseUrl (..))
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverLocation as DLoc
+import qualified SharedLogic.DriverMode as DMode
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.Ride as SRide
 import Storage.CachedQueries.CacheConfig
@@ -321,9 +322,9 @@ cancelBooking booking mbDriver transporter = do
     whenJust mbRide $ \ride -> do
       QRide.updateStatus ride.id DRide.CANCELLED
       driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-      if driverInfo.active
-        then QDFS.updateStatus ride.driverId DDFS.ACTIVE
-        else QDFS.updateStatus ride.driverId DDFS.IDLE
+      Esq.runTransaction $
+        QDFS.updateStatus ride.driverId $
+          DMode.getDriverStatus driverInfo.mode driverInfo.active
   whenJust mbRide $ \ride -> do
     SRide.clearCache ride.driverId
     DLoc.updateOnRide (cast ride.driverId) False

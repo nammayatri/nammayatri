@@ -15,6 +15,7 @@
 
 module Domain.Types.SearchRequestForDriver where
 
+import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.Person
 import Domain.Types.SearchRequest
 import qualified Domain.Types.SearchRequest as DSReq
@@ -62,7 +63,8 @@ data SearchRequestForDriver = SearchRequestForDriver
     acceptanceRatio :: Maybe Double,
     driverAvailableTime :: Maybe Double,
     parallelSearchRequestCount :: Maybe Int,
-    driverSpeed :: Maybe Double
+    driverSpeed :: Maybe Double,
+    mode :: Maybe DI.DriverMode
   }
   deriving (Generic, Show, PrettyShow)
 

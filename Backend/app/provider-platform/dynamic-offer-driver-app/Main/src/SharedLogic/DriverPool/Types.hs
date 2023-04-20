@@ -21,6 +21,7 @@ module SharedLogic.DriverPool.Types
   )
 where
 
+import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.Merchant.DriverIntelligentPoolConfig (IntelligentScores)
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.Vehicle as Vehicle
@@ -43,7 +44,8 @@ data DriverPoolResult = DriverPoolResult
     -- durationToPickup :: Seconds,
     variant :: Vehicle.Variant,
     lat :: Double,
-    lon :: Double
+    lon :: Double,
+    mode :: Maybe DI.DriverMode
   }
   deriving (Generic, Show, HasCoordinates, FromJSON, ToJSON)
 
@@ -57,7 +59,8 @@ data DriverPoolResultCurrentlyOnRide = DriverPoolResultCurrentlyOnRide
     destinationLat :: Double,
     destinationLon :: Double,
     distanceToPickup :: Meters,
-    distanceFromDriverToDestination :: Meters
+    distanceFromDriverToDestination :: Meters,
+    mode :: Maybe DI.DriverMode
   }
   deriving (Generic, Show, HasCoordinates, FromJSON, ToJSON)
 
