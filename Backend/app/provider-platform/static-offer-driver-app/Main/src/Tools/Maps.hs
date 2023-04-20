@@ -94,7 +94,7 @@ snapToRoad ::
     CacheFlow m r,
     EsqDBFlow m r,
     CoreMetrics m,
-    HasField "snapToRoadSnippetThreshold" r HighPrecMeters
+    HasFlowEnv m r '["snapToRoadSnippetThreshold" ::: HighPrecMeters]
   ) =>
   Id Merchant ->
   SnapToRoadReq ->
