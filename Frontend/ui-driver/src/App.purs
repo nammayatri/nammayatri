@@ -161,7 +161,6 @@ data MY_RIDES_SCREEN_OUTPUT = MY_RIDE RideHistoryScreenState
                             | NOTIFICATION_FLOW
 
 data REFERRAL_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_REFERRAL_SCREEN
-                            | Go_BACK
                             | GO_TO_RIDES_SCREEN_FROM_REFERRAL_SCREEN
                             | GO_TO_PROFILE_SCREEN_FROM_REFERRAL_SCREEN
                             | GO_TO_NOTIFICATION_SCREEN_FROM_REFERRAL_SCREEN
@@ -229,4 +228,9 @@ data ENTER_OTP_SCREEN_OUTPUT = RETRY EnterOTPScreenState | DRIVER_INFO_API_CALL 
 data NO_INTERNET_SCREEN_OUTPUT = REFRESH_INTERNET | TURN_ON_GPS | CHECK_INTERNET
 data POPUP_SCREEN_OUTPUT = POPUP_REQUEST_RIDE String Number
 data DRIVER_RIDE_RATING_SCREEN_OUTPUT = CloseScreen | SendCustomerFeedBack DriverRideRatingScreenState
-data NOTIFICATIONS_SCREEN_OUTPUT = REFRESH_SCREEN NotificationsScreenState | LOAD_NOTIFICATIONS NotificationsScreenState
+data NOTIFICATIONS_SCREEN_OUTPUT = REFRESH_SCREEN NotificationsScreenState 
+                                    | LOAD_NOTIFICATIONS NotificationsScreenState 
+                                    | GO_HOME_SCREEN 
+                                    | GO_REFERRAL_SCREEN 
+                                    | GO_RIDE_HISTORY_SCREEN 
+                                    | GO_PROFILE_SCREEN

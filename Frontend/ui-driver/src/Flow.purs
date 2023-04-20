@@ -569,7 +569,6 @@ referralScreenFlow = do
     else pure unit
   act <- UI.referralScreen
   case act of
-    Go_BACK -> referralScreenFlow
     GO_TO_HOME_SCREEN_FROM_REFERRAL_SCREEN -> homeScreenFlow
     GO_TO_RIDES_SCREEN_FROM_REFERRAL_SCREEN -> myRidesScreenFlow
     GO_TO_PROFILE_SCREEN_FROM_REFERRAL_SCREEN -> driverProfileFlow
@@ -927,6 +926,10 @@ notificationFlow = do
     LOAD_NOTIFICATIONS state -> do
       modifyScreenState $ NotificationsScreenStateType (\notificationScreen -> state{offsetValue = (length state.notificationList)})
       notificationFlow
+    GO_HOME_SCREEN -> homeScreenFlow
+    GO_REFERRAL_SCREEN -> referralScreenFlow
+    GO_RIDE_HISTORY_SCREEN -> myRidesScreenFlow
+    GO_PROFILE_SCREEN -> driverProfileFlow
 
 removeChatService :: String -> FlowBT String Unit
 removeChatService _ = do

@@ -16,6 +16,7 @@
 module Screens.NotificationsScreen.Controller where
 
 import Prelude
+import Components.BottomNavBar.Controller(Action(..)) as BottomNavBar
 import Components.ErrorModal as ErrorModalController
 import Components.NotificationCard.Controller as NotificationCardAC
 import Components.NotificationDetailModel as NotificationDetailModel
@@ -41,6 +42,7 @@ import Screens.Types (AnimationState(..), NotificationCardState, NotificationDet
 import Services.APITypes (MediaFileApiResponse(..), MediaType(..), MessageAPIEntityResponse(..), MessageListRes(..), MessageType(..))
 import Services.Backend as Remote
 import Debug.Trace
+import Storage (KeyStore(..), setValueToLocalNativeStore)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -53,6 +55,10 @@ data ScreenOutput
   = RefreshScreen NotificationsScreenState
   | GoBack
   | LoaderOutput NotificationsScreenState
+  | GoToHomeScreen
+  | GoToRidesScreen
+  | GoToReferralScreen
+  | GoToProfileScreen
 
 data Action
   = OnFadeComplete String
@@ -66,6 +72,7 @@ data Action
   | MessageListResAction MessageListRes
   | NoAction
   | LoadMore
+  | BottomNavBarAction BottomNavBar.Action
 
 eval :: Action -> NotificationsScreenState -> Eval Action ScreenOutput NotificationsScreenState
 eval Refresh state = exit $ RefreshScreen state
@@ -76,6 +83,7 @@ eval BackPressed state = do
     [ do
         _ <- pure $ setYoutubePlayer youtubeData (getNewIDWithTag "youtubeView") $ show PAUSE
         _ <- removeMediaPlayer ""
+        _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
         pure NoAction
     ]
   else if state.notificationDetailModelState.addCommentModelVisibility == VISIBLE then
@@ -186,6 +194,22 @@ eval (MessageListResAction (MessageListRes notificationArray)) state = do
 
 eval LoadMore state = do
   exit $ LoaderOutput state{loadMore = true}
+
+eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = 
+  case item of
+    "Home" -> do
+      _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+      exit GoToHomeScreen
+    "Rides" -> do
+      _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+      exit GoToRidesScreen
+    "Profile" -> do
+      _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+      exit GoToProfileScreen
+    "Contest" -> do
+      _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+      exit $ GoToReferralScreen
+    _ -> continue state
 
 eval _ state = continue state
 

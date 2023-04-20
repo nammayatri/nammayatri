@@ -177,6 +177,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
     "Rides" -> exit GoToRidesScreen
     "Profile" -> exit $ GoToProfileScreen
     "Alert" -> do
+      _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       _ <- pure $ firebaseLogEvent "ny_driver_alert_click"
       exit $ GoToNotifications
     _ -> continue state
