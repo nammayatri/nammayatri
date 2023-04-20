@@ -937,6 +937,7 @@ homeScreenFlow = do
           destLon = if state.props.currentStage == RideAccepted then state.data.activeRide.src_lon else state.data.activeRide.dest_lon
           source = if state.props.currentStage == RideAccepted then "" else state.data.activeRide.source
           destination = if state.props.currentStage == RideAccepted then state.data.activeRide.source else state.data.activeRide.destination
+          routeType = if state.props.currentStage == RideAccepted then "pickup" else "trip"
       if state.props.showDottedRoute then do
         let coors = (walkCoordinate srcLon srcLat destLon destLat)
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { routeVisible = true } })
@@ -959,7 +960,7 @@ homeScreenFlow = do
             Nothing -> pure unit
           homeScreenFlow
           else do
-            (GetRouteResp routeApiResponse) <- Remote.getRouteBT (makeGetRouteReq srcLat srcLon destLat destLon)
+            GetRouteResp routeApiResponse <- Remote.getRouteBT (makeGetRouteReq srcLat srcLon destLat destLon) routeType
             _ <- pure $ printLog "route Api response inside UPDATE_ROUTE" routeApiResponse
             _ <- pure $ printLog "state inside UPDATE_ROUTE" state
             let shortRoute = (routeApiResponse !! 0)

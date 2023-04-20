@@ -540,14 +540,14 @@ profileDemoView state push =
           [ width $ V 50
           , height $ V 50
           , margin $ Margin 5 5 5 5
-          , imageWithFallback "ic_profile_shadow,https://assets.juspay.in/nammayatri/images/driver/ic_profile_shadow.png"
+          , imageWithFallback "ic_profile_shadow,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_profile_shadow.png"
           , onClick push $ const $ GoToProfile
           ]
         , imageView
           [ width $ V 40
           , height $ V 40
           , margin $ Margin 15 10 0 15
-          , imageWithFallback "up_hand_arrow,https://assets.juspay.in/nammayatri/images/driver/up_hand_arrow.png"
+          , imageWithFallback "up_hand_arrow,https://assets.juspay.in/beckn/nammayatri/driver/images/up_hand_arrow.png"
           ]
         , clickHereDemoLayout state push
       ]
