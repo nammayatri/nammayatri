@@ -13,6 +13,7 @@ import android.animation.ValueAnimator;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.PixelFormat;
 import android.os.Build;
 import android.os.Handler;
@@ -59,6 +60,7 @@ public class WidgetService extends Service {
     private float height, width;
     private String widgetMessage;
     private JSONObject entity_payload, data;
+    private SharedPreferences sharedPref;
 
 
     @Override
@@ -74,6 +76,7 @@ public class WidgetService extends Service {
     public void onCreate() {
         super.onCreate();
         addWidgetToWindowManager();
+        sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
     }
 
     private void showSilentNotification(Intent intent){
@@ -336,7 +339,7 @@ public class WidgetService extends Service {
             Log.e("Exception in rendering Image", e.toString());
         }
         imageClose.setPadding(0,0,0,(int)(10*scale + 0.5f));
-        imageClose.setVisibility(View.GONE);// Removing this option
+        imageClose.setVisibility(View.INVISIBLE);
         imageClose.setBackground(this.getResources().getDrawable(R.drawable.widget_close_gradient));
         windowManager.addView(imageClose, closeImageParams);
         windowManager.addView(widgetView,widgetLayoutParams);
@@ -369,32 +372,40 @@ public class WidgetService extends Service {
                         case MotionEvent.ACTION_UP:
                             imageClose.setVisibility(View.GONE);
 
-                            ValueAnimator valueAnimator = ValueAnimator.ofFloat(widgetLayoutParams.x, 0);
-                            valueAnimator.setDuration(getResources().getInteger(R.integer.WIDGET_CORNER_ANIMATION_DURATION));
-                            valueAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-                                public void onAnimationUpdate(ValueAnimator animation) {
-                                    try{
-                                        widgetLayoutParams.x = Math.round((Float) animation.getAnimatedValue());
-                                        windowManager.updateViewLayout(widgetView, widgetLayoutParams);
-                                    }catch (Exception e){
-                                        e.printStackTrace();
+                            if (isCloseEnabled){
+                                stopSelf();
+                            } else {
+                                ValueAnimator valueAnimator = ValueAnimator.ofFloat(widgetLayoutParams.x, 0);
+                                valueAnimator.setDuration(getResources().getInteger(R.integer.WIDGET_CORNER_ANIMATION_DURATION));
+                                valueAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+                                    public void onAnimationUpdate(ValueAnimator animation) {
+                                        try{
+                                            widgetLayoutParams.x = Math.round((Float) animation.getAnimatedValue());
+                                            windowManager.updateViewLayout(widgetView, widgetLayoutParams);
+                                        }catch (Exception e){
+                                            e.printStackTrace();
+                                        }
                                     }
-                                }
-                            });
-                            valueAnimator.start();
+                                });
+                                valueAnimator.start();
 
-                            //click definition
-                            if (Math.abs(initialTouchX - motionEvent.getRawX()) < 5 && Math.abs(initialTouchY - motionEvent.getRawY()) < 5){
-                                Intent intent = new Intent(getApplicationContext(), MainActivity.class);
-                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                                getApplicationContext().startActivity(intent);
+                                //click definition
+                                if (Math.abs(initialTouchX - motionEvent.getRawX()) < 5 && Math.abs(initialTouchY - motionEvent.getRawY()) < 5){
+                                    Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                                    getApplicationContext().startActivity(intent);
+                                    stopSelf();
+                                }
                             }
                             return true;
 
                         case MotionEvent.ACTION_MOVE:
-//                            if (Calendar.getInstance().getTimeInMillis() - actionDownTime>200){
-//                                imageClose.setVisibility(View.GONE);
-//                            }
+                            if (sharedPref == null) sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+                            if (Calendar.getInstance().getTimeInMillis() - actionDownTime>200){
+                                if (sharedPref.getString("DRIVER_STATUS_N", "null").equals("Offline")){
+                                    imageClose.setVisibility(View.VISIBLE);
+                                }
+                            }
                             widgetLayoutParams.x = initialX+ (int)(motionEvent.getRawX()- initialTouchX);
                             widgetLayoutParams.y = initialY+ (int)(motionEvent.getRawY()- initialTouchY);
                             windowManager.updateViewLayout(widgetView, widgetLayoutParams);
@@ -410,24 +421,13 @@ public class WidgetService extends Service {
                                         vibrator.vibrate(500);
                                     }
                                 }
-                                isCloseEnabled = true;
+                                if (sharedPref.getString("DRIVER_STATUS_N", "null").equals("Offline")){
+                                    isCloseEnabled = true;
+                                }
                             }else {
                                 imageClose.setImageResource(R.drawable.ny_ic_close_transparent);
                                 isCloseEnabled = false;
                             }
-//                            ValueAnimator valueAnimator = ValueAnimator.ofFloat(widgetLayoutParams.x, 0);
-//                            valueAnimator.setDuration(getResources().getInteger(R.integer.WIDGET_CORNER_ANIMATION_DURATION));
-//                            valueAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-//                                public void onAnimationUpdate(ValueAnimator animation) {
-//                                    try{
-//                                        widgetLayoutParams.x = Math.round((Float) animation.getAnimatedValue());
-//                                        windowManager.updateViewLayout(widgetView, widgetLayoutParams);
-//                                    }catch (Exception e){
-//                                        e.printStackTrace();
-//                                    }
-//                                }
-//                            });
-//                            valueAnimator.start();
                             return true;
                     }
                 }catch (Exception e){

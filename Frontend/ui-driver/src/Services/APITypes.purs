@@ -653,6 +653,8 @@ instance encodeRideCancellationReason :: Encode RideCancellationReason where enc
 
 -- getRoute API request, response types
 
+data RouteReq = RouteReq String GetRouteReq
+
 newtype GetRouteReq = GetRouteReq {
   waypoints :: Array LatLong
 , mode :: Maybe String 
@@ -664,13 +666,11 @@ newtype GetRouteResp = GetRouteResp (Array Route)
 newtype Route = Route 
   {
     points :: Snapped
-  , boundingBox :: Maybe BoundingLatLong
-  , snappedWaypoints :: Array (Snapped)
+  , boundingBox :: Maybe (Array Number)
+  , snappedWaypoints :: Snapped
   , duration :: Int
   , distance :: Int
   }
-
-newtype BoundingLatLong = BoundingLatLong (Array Number)
 
 newtype Snapped = Snapped (Array LatLong)
 
@@ -679,8 +679,8 @@ newtype LatLong = LatLong {
   lon :: Number 
 }
 
-instance makeUpdateGetRouteReq :: RestEndpoint GetRouteReq GetRouteResp where
-  makeRequest reqBody headers = defaultMakeRequest POST (EP.getRoute "") headers reqBody
+instance makeRouteReq :: RestEndpoint RouteReq GetRouteResp where
+  makeRequest reqBody@(RouteReq rType (GetRouteReq reqB)) headers = defaultMakeRequest POST (EP.getRoute rType) headers reqBody
   decodeResponse = decodeJSON
   encodeRequest req = standardEncode req
 
@@ -690,6 +690,12 @@ instance standardEncodeGetRouteReq :: StandardEncode GetRouteReq where standardE
 instance showGetRouteReq :: Show GetRouteReq where show = genericShow
 instance decodeGetRouteReq :: Decode GetRouteReq where decode = defaultDecode
 instance encodeGetRouteReq  :: Encode GetRouteReq where encode = defaultEncode 
+
+derive instance genericRouteReq :: Generic RouteReq _
+instance standardEncodeRouteReq :: StandardEncode RouteReq where standardEncode (RouteReq rType body) = standardEncode body
+instance showRouteReq :: Show RouteReq where show = genericShow
+instance decodeRouteReq :: Decode RouteReq where decode = defaultDecode
+instance encodeRouteReq  :: Encode RouteReq where encode = defaultEncode   
 
 derive instance genericRoute :: Generic Route _
 derive instance newtypeRoute :: Newtype Route _
@@ -711,13 +717,6 @@ instance standardEncodeSnapped :: StandardEncode Snapped where standardEncode (S
 instance showSnapped :: Show Snapped where show = genericShow
 instance decodeSnapped :: Decode Snapped where decode = defaultDecode
 instance encodeSnapped  :: Encode Snapped where encode = defaultEncode 
-
-derive instance genericBoundingLatLong :: Generic BoundingLatLong _
-derive instance newtypeBoundingLatLong :: Newtype BoundingLatLong _
-instance standardEncodeBoundingLatLong :: StandardEncode BoundingLatLong where standardEncode (BoundingLatLong body) = standardEncode body
-instance showBoundingLatLong :: Show BoundingLatLong where show = genericShow
-instance decodeBoundingLatLong :: Decode BoundingLatLong where decode = defaultDecode
-instance encodeBoundingLatLong  :: Encode BoundingLatLong where encode = defaultEncode 
 
 derive instance genericLatLong :: Generic LatLong _
 derive instance newtypeLatLong :: Newtype LatLong _
