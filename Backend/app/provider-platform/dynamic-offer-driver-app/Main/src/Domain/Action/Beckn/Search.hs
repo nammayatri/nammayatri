@@ -139,7 +139,7 @@ handler merchantId sReq = do
             let slabFarePolicies = selectFarePolicy result.distance allFarePolicies
             let listOfVehicleVariants = listVehicleVariantHelper slabFarePolicies
             for listOfVehicleVariants $ \slabFarePolicy -> do
-              fareParams <- calculateFare org.id (Right slabFarePolicy) result.distance sReq.pickupTime Nothing Nothing Nothing
+              fareParams <- calculateFare org.id (Right slabFarePolicy) result.distance sReq.pickupTime Nothing Nothing
               buildSpecialZoneQuote
                 searchRequestSpecialZone
                 fareParams
@@ -153,7 +153,7 @@ handler merchantId sReq = do
             let farePolicies = selectFarePolicy result.distance allFarePolicies
             let listOfVehicleVariants = listVehicleVariantHelper farePolicies
             for listOfVehicleVariants $ \farePolicy -> do
-              fareParams <- calculateFare org.id (Left farePolicy) result.distance sReq.pickupTime Nothing Nothing Nothing
+              fareParams <- calculateFare org.id (Left farePolicy) result.distance sReq.pickupTime Nothing Nothing
               buildSpecialZoneQuote
                 searchRequestSpecialZone
                 fareParams
