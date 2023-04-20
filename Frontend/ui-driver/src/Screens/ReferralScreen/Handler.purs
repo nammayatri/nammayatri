@@ -34,7 +34,7 @@ referralScreen = do
   (GlobalState state) <- getState
   action <- lift $ lift $ runScreen $ ReferralScreen.screen state.referralScreen{ props {stage = if state.referralScreen.props.firstTime then SuccessScreen else if isJust state.referralScreen.data.driverInfo.referralCode then QRScreen else ComingSoonScreen}}
   case action of
-    GoBack -> App.BackT $ App.BackPoint <$> (pure $ Go_BACK)
+    GoBack -> App.BackT $ pure App.GoBack
     GoToHomeScreen -> do
       modifyScreenState $ ReferralScreenStateType (\referralScreen -> referralScreen{props = ReferralScreenData.initData.props })
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_HOME_SCREEN_FROM_REFERRAL_SCREEN)

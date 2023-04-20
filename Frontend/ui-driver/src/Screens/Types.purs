@@ -643,8 +643,7 @@ instance eqLocationType :: Eq LocationType where eq = genericEq
 
 type BottomNavBarState = { 
   activeIndex :: Int,
-  navButton :: Array NavIcons,
-  screenName :: String
+  navButton :: Array NavIcons
 }
 
 type NavIcons = { 

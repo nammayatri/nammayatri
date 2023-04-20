@@ -20,13 +20,17 @@ import Components.BottomNavBar.Controller
 
 import Data.Array (mapWithIndex)
 import Effect (Effect)
+import Engineering.Helpers.Commons (getNewIDWithTag)
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Helpers.Utils (toString)
+import JBridge (startLottieProcess)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, (==), const, (<>))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), PrestoDOM, alignParentBottom, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onClick, orientation, stroke, text, textSize, textView, weight, width, imageWithFallback)
+import Prelude (Unit, (==), const, (<>), (&&), bind, ($), pure, unit, (/=))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Visibility(..), PrestoDOM, alignParentBottom, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onClick, orientation, stroke, text, textSize, textView, weight, width, imageWithFallback, lottieAnimationView, id, afterRender, visibility)
 import Screens.Types (BottomNavBarState)
+import Storage (getValueToLocalNativeStore, KeyStore(..))
 import Styles.Colors as Color
 
 view :: forall w . (Action -> Effect Unit) -> BottomNavBarState -> PrestoDOM (Effect Unit) w
@@ -50,11 +54,18 @@ view push state =
           , orientation VERTICAL
           , gravity CENTER
           , onClick push (const (OnNavigate item.text))
-          ][ imageView 
-             [ width (V 24)
-             , height (V 24)
-             , imageWithFallback if state.activeIndex == index then item.activeIcon else item.defaultIcon
-             ]
+          ][ linearLayout
+              [ width (V 24)
+              , height (V 24)
+              ][ if ((item.text == "Alert") && ((getValueToLocalNativeStore ALERT_RECEIVED) == "true") && state.activeIndex /= 3) then 
+                    lottieLoaderView state push state.activeIndex item.text 
+                 else
+                    imageView 
+                    [ width (V 24)
+                    , height (V 24)
+                    , imageWithFallback if state.activeIndex == index then item.activeIcon else item.defaultIcon
+                    ] 
+                ]
            , textView (
              [ width WRAP_CONTENT
              , height WRAP_CONTENT
@@ -71,3 +82,25 @@ view push state =
          ) state.navButton
          )
     ]
+
+lottieLoaderView :: forall w. BottomNavBarState -> (Action -> Effect Unit) -> Int -> String -> PrestoDOM (Effect Unit) w
+lottieLoaderView state push activeIndex text =
+  linearLayout
+  [ width (V 25)
+  , height (V 25)
+  , visibility if((getValueToLocalNativeStore ALERT_RECEIVED) == "false" ) then GONE else VISIBLE
+  ][ lottieAnimationView
+    [ height (V 25)
+    , width (V 25)
+    , id (getIdForScreenIndex activeIndex)
+    , afterRender
+        ( \action -> do
+            _ <- pure $ startLottieProcess "notification_bell" (getIdForScreenIndex activeIndex) true 1.0 "default"
+            pure unit
+        )
+        (const OnNavigate text)
+    ]
+  ]
+
+getIdForScreenIndex :: Int -> String
+getIdForScreenIndex activeIndex = getNewIDWithTag ("NotificationBellAlertView" <> (toString activeIndex))

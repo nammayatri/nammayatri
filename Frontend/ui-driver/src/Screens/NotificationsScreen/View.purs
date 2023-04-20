@@ -46,6 +46,8 @@ import Services.APITypes (MessageListRes(..))
 import Services.Backend as Remote
 import Styles.Colors as Color
 import Debug.Trace (spy)
+import Components.BottomNavBar.View as BottomNavBar
+import Components.BottomNavBar.Controller (navData)
 
 
 screen :: NotificationsScreenState -> PrestoList.ListItem -> Screen Action NotificationsScreenState ScreenOutput
@@ -81,52 +83,59 @@ view notificationListItem push state =
     , background Color.white900
     , orientation VERTICAL
     , onBackPressed push $ const BackPressed
-    ]
-    ( [ screenAnimationFadeInOut
+    ] $ [ screenAnimationFadeInOut
           $ linearLayout
-              [ height WRAP_CONTENT
+              [ height MATCH_PARENT
               , width MATCH_PARENT
               , orientation VERTICAL
-              ]
-              [ linearLayout
+              ][ linearLayout
                   [ height WRAP_CONTENT
                   , width MATCH_PARENT
                   , orientation VERTICAL
                   , weight 1.0
-                  ]
-                  [ headerLayout state push
-                  , notificationListView notificationListItem push state
-                  ]
-              , linearLayout
-                  [ height WRAP_CONTENT
-                  , width MATCH_PARENT
-                  , orientation VERTICAL
-                  , background Color.white900
-                  , onClick push (const LoadMore)
-                  , gravity CENTER
-                  , alignParentBottom "true,-1"
-                  , padding (PaddingBottom 5)
-                  , visibility if (state.loaderButtonVisibility && (not state.loadMoreDisabled)) then VISIBLE else GONE
-                  ]
-                  [ linearLayout
-                      [height $ V 1
+                  ][ linearLayout
+                      [ height WRAP_CONTENT
                       , width MATCH_PARENT
-                      , background Color.grey900
-                      ][]
-                    , textView
-                      ( [ width WRAP_CONTENT
-                        , height WRAP_CONTENT
-                        , text (getString LOAD_OLDER_ALERTS)
-                        , padding (Padding 10 10 10 10)
-                        , color Color.blueTextColor
-                        ]
-                          <> FontStyle.subHeading1 TypoGraphy
-                      )
+                      , orientation VERTICAL
+                      , weight 1.0
+                      ][ headerLayout state push
+                      ,  notificationListView notificationListItem push state
+                      ]
+                    , loadMoreView push state
                   ]
+              , BottomNavBar.view (push <<< BottomNavBarAction) (navData 3)
               ]
-      ]
-        <> (if (state.notifsDetailModelVisibility == VISIBLE) then [ notificationDetailModel push state ] else [])
-    )
+      ] <> (if (state.notifsDetailModelVisibility == VISIBLE) then [ notificationDetailModel push state ] else [])
+
+loadMoreView :: forall w . (Action -> Effect Unit) -> NotificationsScreenState -> PrestoDOM (Effect Unit) w
+loadMoreView push state =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , background Color.white900
+    , onClick push (const LoadMore)
+    , gravity CENTER
+    , alignParentBottom "true,-1"
+    , padding (PaddingBottom 5)
+    , visibility if (state.loaderButtonVisibility && (not state.loadMoreDisabled)) then VISIBLE else GONE
+    ]
+    [ linearLayout
+        [height $ V 1
+        , width MATCH_PARENT
+        , background Color.grey900
+        ][]
+      , textView
+        ( [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , text (getString LOAD_OLDER_ALERTS)
+          , padding (Padding 10 10 10 10)
+          , color Color.blueTextColor
+          ]
+            <> FontStyle.subHeading1 TypoGraphy
+        )
+    ]
+
 
 notificationDetailModel :: forall w. (Action -> Effect Unit) -> NotificationsScreenState -> PrestoDOM (Effect Unit) w
 notificationDetailModel push state =
