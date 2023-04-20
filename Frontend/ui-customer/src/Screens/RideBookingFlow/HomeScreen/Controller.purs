@@ -1319,7 +1319,7 @@ eval (GetEstimates (GetQuotesRes quotesRes)) state = do
     exit
       $ SelectEstimate
           state
-            { data { suggestedAmount = estimatedPrice, rateCard = { baseFare: baseFare, extraFare: extraFare, pickUpCharges: pickUpCharges, additionalFare: additionalFare, nightShiftMultiplier: nightShiftMultiplier, nightCharges: nightCharges}, showPreferences = true  }
+            { data { suggestedAmount = estimatedPrice, rateCard = { baseFare: baseFare, extraFare: extraFare, pickUpCharges: pickUpCharges, additionalFare: additionalFare, nightShiftMultiplier: nightShiftMultiplier, nightCharges: nightCharges}, showPreferences = getPreferenceValue "" }
             , props { estimateId = estimateId, currentStage = SettingPrice, showRateCardIcon = showRateCardIcon}
             }
   else do
@@ -1775,3 +1775,6 @@ getSearchExpiryTime dummy =
 
 tipEnabledState :: HomeScreenState -> HomeScreenState
 tipEnabledState state = state { props{customerTip {isTipSelected= true, tipForDriver= 10, tipActiveIndex=1}}}
+
+getPreferenceValue :: String -> Boolean
+getPreferenceValue dummy = (getValueToLocalStore ENABLE_TIPS) == "true"
