@@ -103,12 +103,10 @@ view push state =
 referenceList :: ST.InvoiceScreenState -> Array String
 referenceList state =
   [ "1.5" <> (getString DAYTIME_CHARGES_APPLICABLE_AT_NIGHT) ]
-    <> if (isHaveFare "DRIVER_SELECTED_FARE" state.data.selectedItem.faresList) then
-        [ (getString DRIVERS_CAN_CHARGE_AN_ADDITIONAL_FARE_UPTO) ]
-      else
-        []
-          <> if (isHaveFare "WAITING_CHARGES" state.data.selectedItem.faresList) then [ (getString WAITING_CHARGE_DESCRIPTION) ] else []
-          <> if (isHaveFare "EARLY_END_RIDE_PENALTY" state.data.selectedItem.faresList) then [ (getString EARLY_END_RIDE_CHARGES_DESCRIPTION) ] else []
+    <> (if (isHaveFare "DRIVER_SELECTED_FARE" state.data.selectedItem.faresList) then [(getString DRIVERS_CAN_CHARGE_AN_ADDITIONAL_FARE_UPTO) ] else [])
+    <> (if (isHaveFare "WAITING_CHARGES" state.data.selectedItem.faresList) then [ (getString WAITING_CHARGE_DESCRIPTION) ] else [])
+    <> (if (isHaveFare "EARLY_END_RIDE_PENALTY" state.data.selectedItem.faresList) then [ (getString EARLY_END_RIDE_CHARGES_DESCRIPTION) ] else [])
+    <> (if (isHaveFare "CUSTOMER_SELECTED_FARE" state.data.selectedItem.faresList) then [ (getString CUSTOMER_TIP_DESCRIPTION) ] else [])
 
 ---------------------- amountBreakupView -------------------
 amountBreakupView :: forall w. ST.InvoiceScreenState -> PrestoDOM (Effect Unit) w

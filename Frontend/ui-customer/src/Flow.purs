@@ -454,7 +454,7 @@ homeScreenFlow = do
         Just (Route response) -> do 
           let distance = if response.distance < 1000 then toString(response.distance)  <> " m" else parseFloat(INT.toNumber(response.distance) / 1000.0) 2 <> " km"
               duration = (show (response.duration / 60)) <> " min"
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rideDistance = distance, rideDuration = duration}, props{customerTip{enableTips = if (response.distance < 5000) then true else false}}})
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rideDistance = distance, rideDuration = duration}, props{customerTip{enableTips = response.distance < 5000}}})
           _ <- setValueToLocalStore ENABLE_TIPS $ show (response.distance < 5000)
           if response.distance >= 50000 then do
             updateLocalStage DistanceOutsideLimits
