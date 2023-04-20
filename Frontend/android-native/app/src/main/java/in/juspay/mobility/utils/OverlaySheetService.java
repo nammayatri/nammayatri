@@ -14,6 +14,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
+import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
@@ -30,6 +31,7 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -66,6 +68,7 @@ import javax.net.ssl.HttpsURLConnection;
 
 import in.juspay.mobility.MainActivity;
 import in.juspay.mobility.R;
+import android.widget.LinearLayout;
 
 public class OverlaySheetService extends Service implements View.OnTouchListener {
 
@@ -86,10 +89,12 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private FirebaseAnalytics mFirebaseAnalytics;
     private Boolean isRideAcceptedOrRejected = false;
     private TextView indicatorText1, indicatorText2, indicatorText3;
+    private ImageView indicatorDot1, indicatorDot2, indicatorDot3;
     private LinearProgressIndicator progressIndicator1, progressIndicator2, progressIndicator3;
     private ArrayList<TextView> indicatorTextList ;
     private ArrayList<LinearProgressIndicator> progressIndicatorsList ;
     private ArrayList<LinearLayout> indicatorList ;
+    private ArrayList<ImageView> dotsList;
     private Handler mainLooper = new Handler(Looper.getMainLooper());
 
     public class OverlayBinder extends Binder {
@@ -127,7 +132,11 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             if (model.getDriverMaxExtraFee() == 0) {
                 holder.buttonIncreasePrice.setVisibility(View.GONE);
                 holder.buttonDecreasePrice.setVisibility(View.GONE);
+            }else {
+                holder.buttonIncreasePrice.setVisibility(View.VISIBLE);
+                holder.buttonDecreasePrice.setVisibility(View.VISIBLE);
             }
+            updateTipView(holder, model);
             updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(),model.getStartTime(), getString(R.string.accept_offer));
             updateIncreaseDecreaseButtons(holder, model);
             holder.reqButton.setOnClickListener(new View.OnClickListener() {
@@ -144,7 +153,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                                 holder.reqButton.setClickable(false);
                                 updateSharedPreferences();
                                 if (MainActivity.getInstance() != null) MainActivity.getInstance().triggerPopUP("ride_requested","RIDE_REQUESTED");
-                                firebaseLogEvent("ride_accepted");
+                                String logEvent = sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") ? "silent_ride_accepted" : "ride_accepted";
+                                firebaseLogEvent(logEvent);
                                 isRideAcceptedOrRejected = true;
                                 handler.post(() -> {
                                     startLoader(model.getSearchRequestId());
@@ -194,7 +204,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             isRideAcceptedOrRejected = true;
                             holder.rejectButton.setClickable(false);
                             handler.post(() -> {
-                                firebaseLogEvent("ride_declined");
+                                String logEvent = sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") ? "silent_ride_declined" : "ride_declined";
+                                firebaseLogEvent(logEvent);
                                 removeCard(position);
                                 executor.shutdown();
                                 Toast.makeText(getApplicationContext(), getApplicationContext().getResources().getString(R.string.ride_rejected), Toast.LENGTH_SHORT).show();
@@ -293,6 +304,22 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             });
         }
     });
+
+    private void updateTipView(SheetAdapter.SheetViewHolder holder, SheetModel model) {
+        mainLooper.post(new Runnable() {
+            @Override
+            public void run() {
+                if (model.getCustomerTip() > 0){
+                    holder.customerTipText.setText(String.valueOf("₹ " +model.getCustomerTip() + " tip included !"));
+                    holder.customerTipBlock.setVisibility(View.VISIBLE);
+                    holder.textIncludesCharges.setText(getString(R.string.includes_pickup_charges_10)+ " " + getString(R.string.and) +" ₹" + model.getCustomerTip() + " Tip");
+                } else {
+                    holder.customerTipBlock.setVisibility(View.GONE);
+                    holder.textIncludesCharges.setText(getString(R.string.includes_pickup_charges_10));
+                }
+            }
+        });
+    }
 
     private void updateIncreaseDecreaseButtons(SheetAdapter.SheetViewHolder holder, SheetModel model) {
         mainLooper.post(new Runnable() {
@@ -466,6 +493,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                         if (sharedPref == null) sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
                         int negotiationUnit = Integer.parseInt(sharedPref.getString("NEGOTIATION_UNIT", "10"));
                         int rideRequestedBuffer =  Integer.parseInt(sharedPref.getString("RIDE_REQUEST_BUFFER", "2"));
+                        int customerExtraFee = rideRequestBundle.getInt("customerExtraFee");
                         if (calculatedTime > rideRequestedBuffer){
                             calculatedTime -= rideRequestedBuffer;
                         }
@@ -482,7 +510,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                                 driverMinExtraFee,
                                 driverMaxExtraFee,
                                 rideRequestPopupDelayDuration,
-                                negotiationUnit);
+                                negotiationUnit,
+                                customerExtraFee);
                         if (floatyView == null) {
                             startTimer();
                             showOverLayPopup();
@@ -834,6 +863,10 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                         floatyView.findViewById(R.id.indicator1),
                         floatyView.findViewById(R.id.indicator2),
                         floatyView.findViewById(R.id.indicator3)));
+                indicatorDot1 = floatyView.findViewById(R.id.red_dot_0);
+                indicatorDot2 = floatyView.findViewById(R.id.red_dot_1);
+                indicatorDot3 = floatyView.findViewById(R.id.red_dot_2);
+                dotsList = new ArrayList<>(Arrays.asList(indicatorDot1,indicatorDot2,indicatorDot3));
 
                 for (int  i =0; i<3; i++){
                     if (viewPager.getCurrentItem() == indicatorList.indexOf(indicatorList.get(i))){
@@ -846,9 +879,20 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     if (i < sheetArrayList.size()){
                         indicatorTextList.get(i).setText("₹"+String.valueOf(sheetArrayList.get(i).getBaseFare() + sheetArrayList.get(i).getUpdatedAmount()));
                         progressIndicatorsList.get(i).setVisibility(View.VISIBLE);
+
+                        if (viewPager.getCurrentItem() == indicatorList.indexOf(indicatorList.get(i)) && sheetArrayList.get(i).getCustomerTip() > 0){
+                            indicatorList.get(i).setBackgroundColor(Color.parseColor("#FEEBB9"));
+                        }
+
+                        if (sheetArrayList.get(i).getCustomerTip() > 0){
+                            dotsList.get(i).setVisibility(View.VISIBLE);
+                        }else {
+                            dotsList.get(i).setVisibility(View.INVISIBLE);
+                        }
                     } else {
                         indicatorTextList.get(i).setText("--");
                         progressIndicatorsList.get(i).setVisibility(View.GONE);
+                        dotsList.get(i).setVisibility(View.INVISIBLE);
                     }
                 }
             }

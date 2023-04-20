@@ -127,6 +127,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                     case NotificationTypes.CLEARED_FARE :
                         sharedPref.edit().putString(getString(R.string.CLEAR_FARE), String.valueOf(payload.get(getString(R.string.entity_ids)))).apply();
                         NotificationUtils.showAllocationNotification(this, title, body, payload, imageUrl, entity_payload);
+                        startWidgetService("CLEAR_FARE", payload, entity_payload);
                         break;
 
                     case NotificationTypes.CANCELLED_PRODUCT :
@@ -178,6 +179,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                     case NotificationTypes.CANCELLED_SEARCH_REQUEST :
                         sharedPref.edit().putString(getString(R.string.CANCELLED_SEARCH_REQUEST), String.valueOf(payload.get(getString(R.string.entity_ids)))).apply();
                         NotificationUtils.showAllocationNotification(this, title, body, payload, imageUrl, entity_payload);
+                        startWidgetService("CLEAR_FARE", payload, entity_payload);
                         break;
 
                     case NotificationTypes.NEW_MESSAGE :

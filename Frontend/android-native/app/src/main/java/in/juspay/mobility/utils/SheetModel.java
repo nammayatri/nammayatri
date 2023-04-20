@@ -10,7 +10,7 @@ package in.juspay.mobility.utils;
 
 public class SheetModel {
     private String pickUpDistance, distanceToBeCovered, sourceArea, sourceAddress, destinationArea, destinationAddress, requestId, searchRequestId;
-    private int baseFare, reqExpiryTime, startTime, updatedAmount, offeredPrice, driverMinExtraFee, driverMaxExtraFee, rideRequestPopupDelayDuration, negotiationUnit;
+    private int baseFare, reqExpiryTime, startTime, updatedAmount, offeredPrice, driverMinExtraFee, driverMaxExtraFee, rideRequestPopupDelayDuration, negotiationUnit, customerExtraFee;
     private float buttonIncreasePriceAlpha , buttonDecreasePriceAlpha;
     private boolean buttonIncreasePriceClickable , buttonDecreasePriceClickable;
 
@@ -27,7 +27,10 @@ public class SheetModel {
                       int driverMinExtraFee,
                       int driverMaxExtraFee,
                       int rideRequestPopupDelayDuration,
-                      int negotiationUnit){
+                      int negotiationUnit,
+                      int customerExtraFee
+    ){
+        this.customerExtraFee = customerExtraFee;
         this.pickUpDistance = pickUpDistance;
         this.distanceToBeCovered = distanceToBeCovered;
         this.sourceArea = sourceArea;
@@ -53,6 +56,8 @@ public class SheetModel {
     public int getOfferedPrice() {
         return offeredPrice;
     }
+
+    public int getCustomerTip() { return customerExtraFee; }
 
     public void setOfferedPrice(int offeredPrice) {
         this.offeredPrice = offeredPrice;
@@ -168,5 +173,9 @@ public class SheetModel {
 
     public void setButtonDecreasePriceClickable(boolean buttonDecreasePriceClickable) {
         this.buttonDecreasePriceClickable = buttonDecreasePriceClickable;
+    }
+
+    public void  setCustomerTip(int customerExtraFee){
+        this.customerExtraFee = customerExtraFee;
     }
 }

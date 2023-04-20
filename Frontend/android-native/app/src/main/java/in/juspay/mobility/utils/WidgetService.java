@@ -16,6 +16,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.PixelFormat;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.VibrationEffect;
@@ -39,6 +40,7 @@ import androidx.annotation.Nullable;
 import androidx.interpolator.view.animation.FastOutLinearInInterpolator;
 
 import com.google.android.material.progressindicator.LinearProgressIndicator;
+import com.google.firebase.analytics.FirebaseAnalytics;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -59,16 +61,27 @@ public class WidgetService extends Service {
     private ImageView imageClose;
     private float height, width;
     private String widgetMessage;
+
+    private int calculatedTime =0;
     private JSONObject entity_payload, data;
     private SharedPreferences sharedPref;
 
+    private Bundle params = new Bundle();
+
+    private static FirebaseAnalytics mFirebaseAnalytics;
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        if (intent!=null && intent.getStringExtra(getResources().getString(R.string.WIDGET_MESSAGE))==null){
+        mFirebaseAnalytics = FirebaseAnalytics.getInstance(getApplicationContext());
+        String intentMessage = intent !=null && intent.hasExtra(getResources().getString(R.string.WIDGET_MESSAGE)) ? intent.getStringExtra(getResources().getString(R.string.WIDGET_MESSAGE)) : null;
+        if (intent!=null && calculatedTime==0 && intentMessage==null){
             showSilentNotification(intent);
         } else{
-            addMessageToWidget(intent);
+            if(intentMessage!=null  && intentMessage.equals("CLEAR_FARE")&& silentRideRequest!=null && progressBar!=null && dismissRequest!=null && handler != null){
+                removeViewAndRequest(0);
+            } else if (intentMessage!=null && !intentMessage.equals("CLEAR_FARE")){
+                addMessageToWidget(intent);
+            }
         }
         return START_STICKY;
     }
@@ -79,18 +92,26 @@ public class WidgetService extends Service {
         sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
     }
 
+    private TextView fareTextView, distanceTextView;
+    private View silentRideRequest, dismissRequest, floatingWidget;
+
+    private LinearProgressIndicator progressBar;
+
+    private Handler handler;
+
+    private float mAngleToRotate;
+
     private void showSilentNotification(Intent intent){
         try{
-
             // Fetch TextView for fare and distanceToPickup
-            TextView fareTextView = widgetView.findViewById(R.id.ride_fare);
-            TextView distanceTextView = widgetView.findViewById(R.id.distance_to_pickup);
+            fareTextView = widgetView.findViewById(R.id.ride_fare);
+            distanceTextView = widgetView.findViewById(R.id.distance_to_pickup);
 
             // Get Current Time in UTC
             final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
             f.setTimeZone(TimeZone.getTimeZone("UTC"));
             String getCurrTime = f.format(new Date());
-            int calculatedTime =0;
+
 
             // Fetch data from intent
             if(intent!=null) {
@@ -115,6 +136,7 @@ public class WidgetService extends Service {
                 df.setMaximumFractionDigits(2);
 
                 // Update text for fare and distanceToPickup
+
                 fareTextView.setText("₹"+ fare);
                 if(distanceToPickup>1000){
                     distanceTextView.setText((df.format(distanceToPickup/1000)) + " km pickup");
@@ -123,15 +145,15 @@ public class WidgetService extends Service {
                 }
 
                 // Add silentRideRequest view
-                View silentRideRequest = widgetView.findViewById(R.id.silent_ride_request_background);
+                silentRideRequest = widgetView.findViewById(R.id.silent_ride_request_background);
                 silentRideRequest.setVisibility(View.VISIBLE);
 
-                View dismissRequest = widgetView.findViewById(R.id.dismiss_silent_reqID);
+                dismissRequest = widgetView.findViewById(R.id.dismiss_silent_reqID);
                 dismissRequest.setVisibility(View.VISIBLE);
 
                 //Start progress bar :-
 
-                LinearProgressIndicator progressBar = widgetView.findViewById(R.id.silent_progress_indicator);
+                progressBar = widgetView.findViewById(R.id.silent_progress_indicator);
                 progressBar.setVisibility(View.VISIBLE);
                 progressBar.setIndicatorColor(getColor(R.color.green900));
                 // Start Slide-in animation
@@ -160,80 +182,108 @@ public class WidgetService extends Service {
                         silentRideRequest.setVisibility(View.GONE);
                         progressBar.setVisibility(View.GONE);
                         dismissRequest.setVisibility(View.GONE);
+                        calculatedTime = 0;
                     }
                 });
 
                 // Animate the floating widget
-                View floatingWidget = widgetView.findViewById(R.id.floating_logo);
-                float mAngleToRotate = 360f;
+                floatingWidget = widgetView.findViewById(R.id.floating_logo);
+                mAngleToRotate = 360f;
                 rotationAnimation(floatingWidget, 0.0f, mAngleToRotate);
-
-                int calulatedWidth = widgetView.getWidth();
-                calulatedWidth = 700;
-                int[] ar = new int[100];
-                for(int i = ar.length-1, j = 1; i >=0 && j <= ar.length; i--, j++){
-                    ar[i] = (calulatedWidth/100)*j;
-                }
-
-                ValueAnimator anim = ValueAnimator.ofInt(ar);
-                anim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-                    @Override
-                    public void onAnimationUpdate(ValueAnimator valueAnimator) {
-                        int val = (Integer) valueAnimator.getAnimatedValue();
-                        ViewGroup.LayoutParams layoutParams = progressBar.getLayoutParams();
-                        if(val < width/4 && val > width/5){
-                            progressBar.setIndicatorColor(getColor(R.color.yellow900));
-                        }else if(val < width/5){
-                            progressBar.setIndicatorColor(getColor(R.color.red900));
-                        }
-                        layoutParams.width = val;
-                        progressBar.setLayoutParams(layoutParams);
+                widgetView.post(() -> {
+                    int calculatedWidth = (widgetView.getWidth()/100)*85;
+                    int[] ar = new int[100];
+                    for(int i = ar.length-1, j = 1; i >=0 && j <= ar.length; i--, j++){
+                        ar[i] = (calculatedWidth/100)*j;
                     }
+
+                    ValueAnimator anim = ValueAnimator.ofInt(ar);
+                    anim.addUpdateListener(valueAnimator -> {
+                        if(progressBar!=null) {
+                            int val = (Integer) valueAnimator.getAnimatedValue();
+                            ViewGroup.LayoutParams layoutParams = progressBar.getLayoutParams();
+                            if (val < calculatedWidth / 3 && val > calculatedWidth / 5) {
+                                progressBar.setIndicatorColor(getColor(R.color.yellow900));
+                            } else if (val < calculatedWidth / 5) {
+                                progressBar.setIndicatorColor(getColor(R.color.red900));
+                            } else {
+                                progressBar.setIndicatorColor(getColor(R.color.green900));
+                            }
+                            layoutParams.width = val;
+                            progressBar.setLayoutParams(layoutParams);
+                        }else{
+                            anim.removeAllUpdateListeners();
+                            anim.end();
+                        }
+                    });
+                    anim.setDuration((calculatedTime+1)*1000);
+                    anim.start();
                 });
-                anim.setDuration((calculatedTime+1)*1000);
-                anim.start();
+
+
 
                 //Revert Animation
-                Handler handler = new Handler();
-                handler.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        silentRideRequest.animate().translationX(-1500)
-                                .setInterpolator(new FastOutLinearInInterpolator())
-                                .setDuration(600)
-                                .start();
-
-                        rotationAnimation(floatingWidget, mAngleToRotate, 0.0f);
-
-                        handler.postDelayed(new Runnable() {
-                            @Override
-                            public void run() {
-                                silentRideRequest.setVisibility(View.GONE);
-                                progressBar.setVisibility(View.GONE);
-                                dismissRequest.setVisibility(View.GONE);
-                            }
-                        }, getResources().getInteger(R.integer.WIDGET_MESSAGE_ANIMATION_DURATION));
-                    }
-                }, calculatedTime*1000);
+                handler = new Handler();
+                removeViewAndRequest(calculatedTime*1000);
 
                 // Adding dismiss button on widget
                 dismissRequest.setOnClickListener(view -> {
                     silentRideRequest.setVisibility(View.GONE);
                     progressBar.setVisibility(View.GONE);
                     dismissRequest.setVisibility(View.GONE);
+                    silentRideRequest = null;
+                    progressBar = null;
                     handler.removeCallbacksAndMessages(null);
+                    calculatedTime = 0;
                 });
+                mFirebaseAnalytics = FirebaseAnalytics.getInstance(getApplicationContext());
+                mFirebaseAnalytics.logEvent("ny_silent_ride_request",params);
             }
         }catch (Exception e){
-            System.out.println("EXCEPTION " + e.toString());
+            e.printStackTrace();
+            calculatedTime = 0;
         }
     }
 
+    private void removeViewAndRequest(int delayInMilliSeconds){
+        handler.postDelayed(() -> {
+            if(silentRideRequest!=null){
+                silentRideRequest.animate().translationX(-1500)
+                        .setInterpolator(new FastOutLinearInInterpolator())
+                        .setDuration(600)
+                        .start();
+            }
+            if(progressBar != null){
+                progressBar.animate().translationX(-1500)
+                        .setInterpolator(new FastOutLinearInInterpolator())
+                        .setDuration(600)
+                        .start();
+            }
+
+            rotationAnimation(floatingWidget, mAngleToRotate, 0.0f);
+
+            handler.postDelayed(() -> {
+                if(silentRideRequest!=null && progressBar!=null && dismissRequest!=null) {
+                    silentRideRequest.setVisibility(View.GONE);
+                    progressBar.setVisibility(View.GONE);
+                    dismissRequest.setVisibility(View.GONE);
+                    silentRideRequest = null;
+                    progressBar = null;
+                    dismissRequest = null;
+                    calculatedTime = 0;
+                    handler.removeCallbacksAndMessages(null);
+                }
+            }, 700);
+        }, delayInMilliSeconds);
+    }
+
     private void rotationAnimation(View view, float start, float end){
-        RotateAnimation wheelRotation = new RotateAnimation(start,end, Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f);
-        wheelRotation.setDuration(600);
-        wheelRotation.setInterpolator(getApplicationContext(), android.R.interpolator.accelerate_decelerate);
-        view.startAnimation(wheelRotation);
+        if(view!=null){
+            RotateAnimation wheelRotation = new RotateAnimation(start, end, Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f);
+            wheelRotation.setDuration(600);
+            wheelRotation.setInterpolator(getApplicationContext(), android.R.interpolator.accelerate_decelerate);
+            view.startAnimation(wheelRotation);
+        }
     }
 
     private int calculateExpireTimer(String expireTimeTemp, String currTimeTemp){
