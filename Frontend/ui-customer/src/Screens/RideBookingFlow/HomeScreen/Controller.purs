@@ -1777,4 +1777,4 @@ tipEnabledState :: HomeScreenState -> HomeScreenState
 tipEnabledState state = state { props{customerTip {isTipSelected= true, tipForDriver= 10, tipActiveIndex=1}}}
 
 getPreferenceValue :: String -> Boolean
-getPreferenceValue dummy = (getValueToLocalStore ENABLE_TIPS) == "true"
+getPreferenceValue dummy = (getValueToLocalStore ENABLE_TIPS) /= "true"

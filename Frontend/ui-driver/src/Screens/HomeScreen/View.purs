@@ -307,7 +307,6 @@ offlineView push state =
                               _ <- pure $ JB.startLottieProcess "rippling_online_effect" (EHC.getNewIDWithTag "RippleGoOnlineLottie") true 1.0 "DEFAULT"
                               pure unit)(const NoAction)
               , height WRAP_CONTENT
-              , onClick  push  (const $ SwitchDriverStatus Online)
               , width MATCH_PARENT
               ]
             ]
