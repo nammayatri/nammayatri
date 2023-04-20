@@ -59,7 +59,7 @@ listCancelReason :: String -> String
 listCancelReason dummyString = (getBaseUrl "") <> "/cancellationReason/list"
 
 getRoute :: String -> String
-getRoute dummyString = (getBaseUrl "") <> "/route"
+getRoute routeType = (getBaseUrl "") <> "/" <> routeType <>"/route"
 
 registerDriverRC :: String -> String 
 registerDriverRC dummyString = (getBaseUrl "") <> "/driver/register/rc"

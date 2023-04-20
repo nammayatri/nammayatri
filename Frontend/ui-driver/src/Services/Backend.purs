@@ -435,10 +435,10 @@ listCancelReasonBT payload = do
 
 --------------------------------- getRouteBT ---------------------------------------------------------------------------------------------------------------------------------
 
-getRouteBT :: GetRouteReq -> FlowBT String GetRouteResp
-getRouteBT body = do
+getRouteBT :: GetRouteReq -> String -> FlowBT String GetRouteResp
+getRouteBT body routeType= do
      headers <- lift $ lift $ getHeaders ""
-     withAPIResultBT (EP.getRoute "") (\x → x) errorHandler (lift $ lift $ callAPI headers body)
+     withAPIResultBT (EP.getRoute routeType) (\x → x) errorHandler (lift $ lift $ callAPI headers body)
     where
     errorHandler errorPayload = BackT $ pure GoBack
 
