@@ -66,22 +66,25 @@ getPlaceName personId req = do
         Just geoHash -> do
           placeNameCache <- CM.findPlaceByGeoHash (pack geoHash)
           if null placeNameCache
-            then callMapsApi person.merchantId req
+            then callMapsApi person.merchantId req merchant.geoHashPrecisionValue
             else mapM convertToGetPlaceNameResp placeNameCache
-        Nothing -> callMapsApi person.merchantId req
+        Nothing -> callMapsApi person.merchantId req merchant.geoHashPrecisionValue
     MIT.ByPlaceId placeId -> do
       placeNameCache <- CM.findPlaceByPlaceId placeId
       if null placeNameCache
-        then callMapsApi person.merchantId req
+        then callMapsApi person.merchantId req merchant.geoHashPrecisionValue
         else mapM convertToGetPlaceNameResp placeNameCache
 
-callMapsApi :: (EncFlow m r, EsqDBFlow m r, SCC.CacheFlow m r, CoreMetrics m) => Id DMerchant.Merchant -> Maps.GetPlaceNameReq -> m Maps.GetPlaceNameResp
-callMapsApi merchantId req = do
+callMapsApi :: (EncFlow m r, EsqDBFlow m r, SCC.CacheFlow m r, CoreMetrics m) => Id DMerchant.Merchant -> Maps.GetPlaceNameReq -> Int -> m Maps.GetPlaceNameResp
+callMapsApi merchantId req geoHashPrecisionValue = do
   res <- Maps.getPlaceName merchantId req
   let firstElement = listToMaybe res
   case firstElement of
     Just element -> do
-      placeNameCache <- convertResultsRespToPlaceNameCache element
+      let (latitude, longitude) = case req.getBy of
+            MIT.ByLatLong (Maps.LatLong lat lon) -> (lat, lon)
+            _ -> (element.location.lat, element.location.lon)
+      placeNameCache <- convertResultsRespToPlaceNameCache element latitude longitude geoHashPrecisionValue
       Esq.runTransaction $ CM.create placeNameCache
       case (placeNameCache.placeId, placeNameCache.geoHash) of
         (Just placeId, Just geoHash) -> do
@@ -106,8 +109,8 @@ convertToGetPlaceNameResp placeNameCache = do
         placeId = placeNameCache.placeId
       }
 
-convertResultsRespToPlaceNameCache :: MonadGuid m => MIT.PlaceName -> m DTM.PlaceNameCache
-convertResultsRespToPlaceNameCache resultsResp = do
+convertResultsRespToPlaceNameCache :: MonadGuid m => MIT.PlaceName -> Double -> Double -> Int -> m DTM.PlaceNameCache
+convertResultsRespToPlaceNameCache resultsResp latitude longitude geoHashPrecisionValue = do
   id <- generateGUID
   let res =
         DTM.PlaceNameCache
@@ -118,6 +121,6 @@ convertResultsRespToPlaceNameCache resultsResp = do
             lat = resultsResp.location.lat,
             lon = resultsResp.location.lon,
             placeId = resultsResp.placeId,
-            geoHash = pack <$> DG.encode 8 (resultsResp.location.lat, resultsResp.location.lon)
+            geoHash = pack <$> DG.encode geoHashPrecisionValue (latitude, longitude)
           }
   return res
