@@ -202,9 +202,9 @@ library
       SharedLogic.CancelSearch
       SharedLogic.DeleteDriver
       SharedLogic.DriverLocation
+      SharedLogic.DriverMode
       SharedLogic.DriverOnboarding
       SharedLogic.DriverPool
-      SharedLogic.DriverMode
       SharedLogic.DriverPool.Config
       SharedLogic.DriverPool.Types
       SharedLogic.Estimate
