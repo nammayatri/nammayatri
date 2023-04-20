@@ -16,13 +16,14 @@
 module Screens.DriverDetailsScreen.Handler where
 
 import Engineering.Helpers.BackTrack (getState)
-import Prelude (bind, pure, ($), discard)
+import Prelude (bind, pure, ($), discard,(<$>))
 import Screens.DriverDetailsScreen.Controller (ScreenOutput(..))
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import Screens.Types (KeyboardModalType(..))
 import Screens.DriverDetailsScreen.View as DriverDetailsScreen
-import Types.App (GlobalState(..), DRIVER_DETAILS_SCREEN_OUTPUT, FlowBT,  ScreenType(..))
+import Types.App (GlobalState(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), FlowBT,  ScreenType(..))
 import Types.ModifyScreenState(modifyScreenState)
 
 driverDetailsScreen :: FlowBT String DRIVER_DETAILS_SCREEN_OUTPUT
@@ -31,5 +32,10 @@ driverDetailsScreen = do
   action <- lift $ lift $ runScreen $ DriverDetailsScreen.screen state.driverDetailsScreen
   case action of
     GoBack updatedState -> do
-      modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> updatedState)
+      modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> updatedState )
       App.BackT $ pure App.GoBack
+    ValidateAlternateNumber  updatedState -> App.BackT $ App.NoBack <$> pure (DRIVER_ALTERNATE_CALL_API updatedState)
+    VerifyAlternateNumberOTP updatedState -> App.BackT $ App.BackPoint <$> pure (VERIFY_OTP updatedState)
+    ResendAlternateNumberOTP updatedState -> App.BackT $ App.BackPoint <$> pure (RESEND_ALTERNATE_OTP updatedState)
+    RemoveAlternateNumber    updatedState -> App.BackT $ App.NoBack <$> pure (ALTERNATE_NUMBER_REMOVE updatedState)
+    GoToHomeScreen           updatedState -> App.BackT $ App.NoBack <$> pure (GO_TO_HOMESCREEN updatedState)

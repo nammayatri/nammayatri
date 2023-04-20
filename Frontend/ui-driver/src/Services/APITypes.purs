@@ -377,6 +377,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , verified              :: Boolean
     , language              :: Maybe String
     , referralCode          :: Maybe String
+    , alternateNumber       :: Maybe String
     }
 
 newtype  OrganizationInfo = OrganizationInfo
@@ -1202,3 +1203,126 @@ instance showGetGetPerformanceRes :: Show GetPerformanceRes where show = generic
 instance standardEncodeGetPerformanceRes :: StandardEncode GetPerformanceRes where standardEncode (GetPerformanceRes req) = standardEncode req
 instance decodeGetPerformanceRes :: Decode GetPerformanceRes where decode = defaultDecode
 instance encodeGetPerformanceRes :: Encode GetPerformanceRes where encode = defaultEncode
+
+----------------------------------- driverAlternateNumber ----------------------------------------
+
+newtype DriverAlternateNumberReq = DriverAlternateNumberReq
+  {
+    mobileCountryCode :: String,
+    alternateNumber :: String
+  }
+
+newtype DriverAlternateNumberResp =  DriverAlternateNumberResp  {
+  attempts :: Int
+}
+
+
+instance makeDriverAlternateNumberReq :: RestEndpoint DriverAlternateNumberReq DriverAlternateNumberResp where
+  makeRequest reqBody headers = defaultMakeRequest POST (EP.driverAlternateNumber "") headers reqBody
+  decodeResponse = decodeJSON
+  encodeRequest req = standardEncode req
+
+
+derive instance genericDriverAlternateNumberReq :: Generic DriverAlternateNumberReq _
+derive instance newtypeDriverAlternateNumberReq :: Newtype DriverAlternateNumberReq _
+instance standardEncodeDriverAlternateNumberReq :: StandardEncode DriverAlternateNumberReq where standardEncode (DriverAlternateNumberReq reqBody) = standardEncode reqBody
+instance showDriverAlternateNumberReq :: Show DriverAlternateNumberReq where show = genericShow
+instance decodeDriverAlternateNumberReq :: Decode DriverAlternateNumberReq where decode = defaultDecode
+instance encodeDriverAlternateNumberReq :: Encode DriverAlternateNumberReq where encode = defaultEncode
+
+derive instance genericDriverAlternateNumberResp :: Generic DriverAlternateNumberResp _
+derive instance newtypeDriverAlternateNumberResp :: Newtype DriverAlternateNumberResp _
+instance standardEncodeDriverAlternateNumberResp :: StandardEncode DriverAlternateNumberResp where standardEncode (DriverAlternateNumberResp id) = standardEncode id
+instance showDriverAlternateNumberResp :: Show DriverAlternateNumberResp where show = genericShow
+instance decodeDriverAlternateNumberResp :: Decode DriverAlternateNumberResp where decode = defaultDecode
+instance encodeDriverAlternateNumberResp :: Encode DriverAlternateNumberResp where encode = defaultEncode
+
+
+
+--------------------------------  driverAlternateNumberOtp --------------------------------------
+newtype DriverAlternateNumberOtpReq = DriverAlternateNumberOtpReq
+ {
+   otp :: String
+ }
+
+newtype DriverAlternateNumberOtpResp =  DriverAlternateNumberOtpResp  ApiSuccessResult
+
+
+instance makeDriverAlternateNumberOtpReq :: RestEndpoint DriverAlternateNumberOtpReq DriverAlternateNumberOtpResp where
+  makeRequest reqBody headers = defaultMakeRequest POST (EP.verifyAlternateNumberOTP "") headers reqBody
+  decodeResponse = decodeJSON
+  encodeRequest req = standardEncode req
+
+
+derive instance genericDriverAlternateNumberOtpReq :: Generic DriverAlternateNumberOtpReq _
+derive instance newtypeDriverAlternateNumberOtpReq :: Newtype DriverAlternateNumberOtpReq _
+instance standardEncodeDriverAlternateNumberOtpReq :: StandardEncode DriverAlternateNumberOtpReq where standardEncode (DriverAlternateNumberOtpReq reqBody) = standardEncode reqBody
+instance showDriverAlternateNumberOtpReq :: Show DriverAlternateNumberOtpReq where show = genericShow
+instance decodeDriverAlternateNumberOtpReq :: Decode DriverAlternateNumberOtpReq where decode = defaultDecode
+instance encodeDriverAlternateNumberOtpReq :: Encode DriverAlternateNumberOtpReq where encode = defaultEncode
+
+derive instance genericDriverAlternateNumberOtpResp :: Generic DriverAlternateNumberOtpResp _
+derive instance newtypeDriverAlternateNumberOtpResp :: Newtype DriverAlternateNumberOtpResp _
+instance standardEncodeDriverAlternateNumberOtpResp :: StandardEncode DriverAlternateNumberOtpResp where standardEncode (DriverAlternateNumberOtpResp id) = standardEncode id
+instance showDriverAlternateNumberOtpResp :: Show DriverAlternateNumberOtpResp where show = genericShow
+instance decodeDriverAlternateNumberOtpResp :: Decode DriverAlternateNumberOtpResp where decode = defaultDecode
+instance encodeDriverAlternateNumberOtpResp :: Encode DriverAlternateNumberOtpResp where encode = defaultEncode
+
+
+
+------------------------------  AlternateNumberResendOTP -------------------------
+
+data AlternateNumberResendOTPRequest = AlternateNumberResendOTPRequest
+ {
+    alternateNumber :: String,
+    mobileCountryCode :: String
+ }
+newtype AlternateNumberResendOTPResp = AlternateNumberResendOTPResp
+ {  attemptsLeft :: Int,
+    auth :: String
+
+ }
+
+instance makeAlternateNumberResendOTPReq :: RestEndpoint AlternateNumberResendOTPRequest AlternateNumberResendOTPResp where
+    makeRequest reqBody headers = defaultMakeRequest POST (EP.alternateNumberResendOTP "") headers reqBody
+    decodeResponse = decodeJSON
+    encodeRequest req = standardEncode req
+
+derive instance genericAlternateNumberResendOTPResp :: Generic AlternateNumberResendOTPResp _
+derive instance newtypeAlternateNumberResendOTPResp :: Newtype AlternateNumberResendOTPResp _
+instance standardEncodeAlternateNumberResendOTPResp :: StandardEncode AlternateNumberResendOTPResp where standardEncode (AlternateNumberResendOTPResp req) = standardEncode req
+instance showAlternateNumberResendOTPResp :: Show AlternateNumberResendOTPResp where show = genericShow
+instance decodeRAlternateNumberResendOTPResp :: Decode AlternateNumberResendOTPResp where decode = defaultDecode
+instance encodeAlternateNumberResendOTPResp :: Encode AlternateNumberResendOTPResp where encode = defaultEncode
+
+derive instance genericAlternateNumberResendOTPRequest :: Generic AlternateNumberResendOTPRequest _
+instance decodeAlternateNumberResendOTPRequest :: Decode AlternateNumberResendOTPRequest where decode = defaultDecode
+instance standardEncodeAlternateNumberResendOTPRequest :: StandardEncode AlternateNumberResendOTPRequest where standardEncode (AlternateNumberResendOTPRequest token) = standardEncode token
+instance encodeAlternateNumberResendOTPRequest :: Encode AlternateNumberResendOTPRequest where encode = defaultEncode
+
+
+------------------------------------------ RemoveAlternateNumber ----------------------------------------
+
+data RemoveAlternateNumberRequest = RemoveAlternateNumberRequest {}
+
+newtype RemoveAlternateNumberResp = RemoveAlternateNumberResp ApiSuccessResult
+
+
+instance makeRemoveAlternateNumberReq :: RestEndpoint RemoveAlternateNumberRequest RemoveAlternateNumberResp where
+    makeRequest reqBody headers = defaultMakeRequest DELETE (EP.removeAlternateNumber "") headers reqBody
+    decodeResponse = decodeJSON
+    encodeRequest req = standardEncode req
+
+derive instance genericRemoveAlternateNumberResp :: Generic RemoveAlternateNumberResp _
+derive instance newtypeRemoveAlternateNumberResp :: Newtype RemoveAlternateNumberResp _
+instance standardEncodeRemoveAlternateNumberResp :: StandardEncode RemoveAlternateNumberResp where standardEncode (RemoveAlternateNumberResp req) = standardEncode req
+instance showRemoveAlternateNumberResp :: Show RemoveAlternateNumberResp where show = genericShow
+instance decodeRemoveAlternateNumberResp :: Decode RemoveAlternateNumberResp where decode = defaultDecode
+instance encodeRemoveAlternateNumberResp :: Encode RemoveAlternateNumberResp where encode = defaultEncode
+
+derive instance genericRemoveAlternateNumberRequest :: Generic RemoveAlternateNumberRequest _
+instance decodeRemoveAlternateNumberRequest :: Decode RemoveAlternateNumberRequest where decode = defaultDecode
+instance standardEncodeRemoveAlternateNumberRequest :: StandardEncode RemoveAlternateNumberRequest where standardEncode (RemoveAlternateNumberRequest token) = standardEncode token
+instance encodeRemoveAlternateNumberRequest :: Encode RemoveAlternateNumberRequest where encode = defaultEncode
+
+

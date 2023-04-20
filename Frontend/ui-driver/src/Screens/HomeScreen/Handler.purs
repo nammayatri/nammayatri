@@ -29,6 +29,8 @@ import Screens.HomeScreen.Controller (ScreenOutput(..))
 import Screens.HomeScreen.View as HomeScreen
 import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
+import Screens.Types (KeyboardModalType(..))
+import Data.Maybe (Maybe(..))
 
 data Location = Location String String
 
@@ -78,6 +80,9 @@ homeScreen = do
       modifyScreenState $ HomeScreenStateType (\homeScreen → state)
       App.BackT $ App.BackPoint <$> (pure $ UPDATE_STAGE stage)
     GoToNotifications -> App.BackT $ App.BackPoint <$> pure GO_TO_NOTIFICATIONS
+    AddAlternateNumber state -> do
+      App.BackT $ App.BackPoint <$> (pure $ ADD_ALTERNATE_HOME)
+     
 -- DTHS.GoToStart screenState -> do
 --       (Location startRideCurrentLat startRideCurrentLiong) <- spy "george2" <$> (lift $ lift $ doAff $ makeAff \cb -> getCurrentPosition (cb <<< Right) Location $> nonCanceler)
 --       _ <- pure $ spy "lat handler" startRideCurrentLat

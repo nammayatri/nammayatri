@@ -246,7 +246,8 @@ type DriverProfileScreenData = {
   driverMobile :: Maybe String,
   vehicleRegNumber :: String,
   vehicleModelName :: String,
-  vehicleColor :: String
+  vehicleColor :: String,
+  driverAlternateNumber :: Maybe String
 }
 
 type DriverProfileScreenProps = {
@@ -448,17 +449,33 @@ type DriverDetailsScreenState = {
   props :: DriverDetailsScreenStateProps
 }
 
+data KeyboardModalType = MOBILE__NUMBER | OTP | NONE
+
+derive instance genericKeyboardModalType :: Generic KeyboardModalType _
+instance eqKeyboardModalType :: Eq KeyboardModalType where eq = genericEq
 type DriverDetailsScreenStateData =  {
   driverName :: String,
   driverVehicleType :: String,
   driverRating :: Maybe Int,
   base64Image :: String,
   drivingLicenseNo :: String,
-  driverMobile :: Maybe String
+  driverMobile :: Maybe String,
+  driverAlternateMobile :: Maybe String,
+  driverEditAlternateMobile :: Maybe String,
+  otpLimit :: Int,
+  otpBackAlternateNumber :: Maybe String
 }
 
 type DriverDetailsScreenStateProps =  {
-  
+  keyboardModalType :: KeyboardModalType,
+  checkAlternateNumber :: Boolean,
+  enterOtpFocusIndex :: Int,
+  otpIncorrect :: Boolean,
+  otpAttemptsExceeded :: Boolean,
+  alternateMobileOtp :: String,
+  removeNumberPopup :: Boolean,
+  isEditAlternateMobile :: Boolean,
+  numberExistError :: Boolean
 }
 
 
@@ -541,7 +558,8 @@ type HomeScreenData =  {
   cancelRideConfirmationPopUp :: CancelRidePopUpData,
   messages :: Array ChatComponent,
   suggestionsList :: Array String,
-  messageToBeSent :: String
+  messageToBeSent :: String,
+  driverAlternateMobile :: Maybe String
  }
 
 type CancelRidePopUpData = {

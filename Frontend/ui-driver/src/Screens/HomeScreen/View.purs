@@ -20,7 +20,7 @@ import Animation.Config as AnimConfig
 import Common.Types.App (LazyCheck(..))
 import Components.BottomNavBar as BottomNavBar
 import Components.CancelRide as CancelRide
-import Components.InAppOtpModal as InAppOtpModal
+import Components.InAppKeyboardModal as InAppKeyboardModal
 import Components.PopUpModal as PopUpModal
 import Components.RideActionModal as RideActionModal
 import Components.StatsModel as StatsModel
@@ -44,14 +44,14 @@ import Language.Types (STR(..))
 import Log (printLog)
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=))
 import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
-import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback, alignParentBottom, relativeLayout, adjustViewWithKeyboard, lottieAnimationView)
+import PrestoDOM (BottomSheetState(..), alignParentBottom, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback,adjustViewWithKeyboard,lottieAnimationView,relativeLayout)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (coordinatorLayout)
 import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes as PTD
 import Screens.HomeScreen.Controller (Action(..), ScreenOutput, checkPermissionAndUpdateDriverMarker, eval, RideRequestPollingData)
 import Screens.HomeScreen.ScreenData as HomeScreenData
-import Screens.Types (HomeScreenStage(..), HomeScreenState, DriverStatus(..))
+import Screens.Types (HomeScreenStage(..), HomeScreenState, KeyboardModalType(..),DriverStatus(..))
 import Services.APITypes (GetRidesHistoryResp(..))
 import Services.Backend as Remote
 import Storage (getValueToLocalStore, KeyStore(..), setValueToLocalStore, getValueToLocalNativeStore, isLocalStageOn)
@@ -224,6 +224,7 @@ view push state =
                         , viewRecenterAndSupport state push
                       ]
                     ]
+                  , addAlternateNumber push state 
                   ]
               ]
         , bottomNavBar push state 
@@ -626,28 +627,8 @@ driverStatus push state =
 
 enterOtpModal :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 enterOtpModal push state = 
-  InAppOtpModal.view (push <<< InAppOtpModalAction) ({
-    keyList : [
-    {
-        keys: ["1", "2", "3"]
-    },
-    {
-        keys: ["4", "5", "6"]
-    },
-    {
-        keys: ["7", "8", "9"]
-    },
-    {
-        keys: ["back", "0", "done"]
-    }
-    ],
-    text : state.props.rideOtp,
-    pattern : "[0-9]*,4",
-    fontSize : 24,
-    focusIndex : state.props.enterOtpFocusIndex,
-    otpIncorrect : if (state.props.otpAttemptsExceeded) then false else (state.props.otpIncorrect),
-    otpAttemptsExceeded : (state.props.otpAttemptsExceeded)
-  })
+  InAppKeyboardModal.view (push <<< InAppKeyboardModalAction) (enterOtpStateConfig state)
+
 
 showOfflineStatus :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 showOfflineStatus push state = 
@@ -832,6 +813,39 @@ updateLocationAndLastUpdatedView state push =
 --   ][ locationLastUpdatedTextAndTimeView push state
 --    , updateButtonIconAndText push state
 --   ]
+addAlternateNumber :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+addAlternateNumber push state =
+  linearLayout
+  [ layoutGravity "bottom", width MATCH_PARENT, gravity CENTER, margin (MarginBottom 12)]
+  [linearLayout
+  [ height WRAP_CONTENT
+  , width WRAP_CONTENT
+  , background Color.white900
+  , orientation HORIZONTAL
+  , cornerRadius 32.0
+  , stroke $ "1," <> Color.black600
+  , padding (Padding 20 16 20 16)
+  , gravity CENTER_VERTICAL
+  , onClick push (const ClickAddAlternateButton)
+  , visibility (if ((state.data.driverAlternateMobile == Nothing) && (state.props.statusOnline))  then VISIBLE else GONE)
+  ]
+   
+  [   imageView
+                  [ width $ V 20
+                  , height $ V 15
+                  , imageWithFallback "ic_call_plus,https://assets.juspay.in/nammayatri/images/driver/ic_call_plus.png"
+                  , margin (MarginRight 5)
+                  ] 
+  ,
+    textView
+     [ width WRAP_CONTENT
+     , height WRAP_CONTENT
+     , gravity CENTER
+     , text (getString ADD_ALTERNATE_NUMBER)       
+     , color Color.black900
+     , textSize FontSize.a_14
+     ]
+   ]]
 
 locationLastUpdatedTextAndTimeView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 locationLastUpdatedTextAndTimeView push state =

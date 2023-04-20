@@ -164,7 +164,7 @@ foreign import convertKmToM :: String -> String
 -- foreign import epochToDateString :: Int ->String
 -- foreign import formatDate :: Date -> String -> String
 -- foreign import formatDateFix :: String -> String -> String
--- foreign import getCurrentUTC :: String -> String
+foreign import getCurrentUTC :: String -> String
 -- foreign import getNextUTC :: Int -> String -> String
 -- foreign import getCurrMinUTC :: Int -> String
 -- foreign import convertISTtoUTC :: String -> String

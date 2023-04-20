@@ -647,3 +647,57 @@ getPerformanceBT payload = do
     where
         errorHandler (ErrorPayload errorPayload) =  do
             BackT $ pure GoBack
+            
+----------------------------------- validateAlternateNumber --------------------------
+
+validateAlternateNumber payload = do
+    headers <- getHeaders ""
+    withAPIResult (EP.driverAlternateNumber "") unwrapResponse $ callAPI headers payload
+    where
+         unwrapResponse (x) = x
+
+makeValidateAlternateNumberRequest :: String -> DriverAlternateNumberReq
+makeValidateAlternateNumberRequest number = DriverAlternateNumberReq {
+     "alternateNumber" : number,
+    "mobileCountryCode" : "+91"
+
+ }
+
+
+
+---------------------------------- ResendAlternateNumberOtp ------------------------------------------
+resendAlternateNumberOTP payload = do
+    headers <- getHeaders ""
+    withAPIResult (EP.alternateNumberResendOTP "") unwrapResponse $ (callAPI headers payload)
+   where
+         unwrapResponse (x) = x
+
+makeResendAlternateNumberOtpRequest :: String -> AlternateNumberResendOTPRequest
+makeResendAlternateNumberOtpRequest number = AlternateNumberResendOTPRequest {
+    "alternateNumber" : number,
+    "mobileCountryCode" : "+91"
+ }
+---------------------------verifyAlternateNumber------------------------------------
+verifyAlternateNumberOTP payload = do
+    headers <- getHeaders ""
+    withAPIResult (EP.verifyAlternateNumberOTP "") unwrapResponse (callAPI headers payload)
+   where
+        unwrapResponse (x) = x
+
+makeVerifyAlternateNumberOtpRequest :: String -> DriverAlternateNumberOtpReq
+makeVerifyAlternateNumberOtpRequest otp = DriverAlternateNumberOtpReq {
+
+      "otp" : otp
+ }
+
+-----------------------------------removeAlternateNumber-----------------------------------
+
+removeAlternateNumber payload = do
+      headers <- getHeaders ""
+      withAPIResult (EP.removeAlternateNumber "") unwrapResponse (callAPI headers payload)
+   where
+        unwrapResponse (x) = x
+
+
+
+

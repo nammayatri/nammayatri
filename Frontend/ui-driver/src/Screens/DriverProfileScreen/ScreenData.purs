@@ -34,7 +34,9 @@ initData = {
     driverMobile : Just "",
     vehicleRegNumber : "",
     vehicleModelName : "",
-    vehicleColor : ""
+    vehicleColor : "",
+    driverAlternateNumber : Nothing
+
     },
 
   props: {

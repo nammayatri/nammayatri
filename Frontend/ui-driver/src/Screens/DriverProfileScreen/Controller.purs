@@ -129,7 +129,7 @@ eval (OptionClick optionIndex) state = do
 
 eval (HideLiveDashboard val) state = continue state {props {showLiveDashboard = false}}
 
-eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue $ (state {props {logoutModalView = false}}) -- [do
+eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue $ (state {props {logoutModalView = false}}) 
 
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = exit $ GoToLogout
 
