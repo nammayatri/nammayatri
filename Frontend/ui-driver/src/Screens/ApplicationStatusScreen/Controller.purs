@@ -58,7 +58,9 @@ instance loggableAction :: Loggable Action where
       _ -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "in_screen" "retry_on_click"
     PopUpModalAction act -> case act of
       PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal" "on_goback"
-      PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal" "call_Support"
+      PopUpModal.Tipbtnclick _ _ -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal" "tip_button_click"
+      PopUpModal.DismissPopup -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal" "dismiss_popup"
+      PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal" "call_support"
       PopUpModal.NoAction -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal_action" "no_action"
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal_action" "image"
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal_action" "primary_edit_text"

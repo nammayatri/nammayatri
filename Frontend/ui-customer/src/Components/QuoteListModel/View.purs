@@ -60,7 +60,7 @@ view push state =
           ][]
         , quotesView state push
         ]
-      , primaryButtonView state push 
+      --, primaryButtonView state push 
       , paymentView state
     ]
 
@@ -410,7 +410,7 @@ primaryButtonView state push =
     , weight 1.0
     , alignParentBottom "true,-1"
     , background Color.white900 -- TODO : change to white900 once shadow is fixed
-    -- , visibility GONE-- $ checkVisibility state
+    -- --, visibility GONE-- $ checkVisibility state
     , padding (Padding 0 16 0 30)
     ][ homeOrTryAgain state push ] 
 

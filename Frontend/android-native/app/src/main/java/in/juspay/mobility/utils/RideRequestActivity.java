@@ -246,7 +246,8 @@ public class RideRequestActivity extends AppCompatActivity {
                         rideRequestBundle.getInt("driverMinExtraFee"),
                         rideRequestBundle.getInt("driverMaxExtraFee"),
                         rideRequestBundle.getInt("rideRequestPopupDelayDuration"),
-                        negotiationUnit);
+                        negotiationUnit,
+                        rideRequestBundle.getInt("customerTip"));
 
                 sheetArrayList.add(sheetModel);
                 sheetAdapter.updateSheetList(sheetArrayList);
