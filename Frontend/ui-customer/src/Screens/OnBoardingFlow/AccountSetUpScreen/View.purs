@@ -58,7 +58,7 @@ view push state =
     $ relativeLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
-        , background Color.grey700
+        , background Color.white900
         , onBackPressed push (const BackPressed)
         , afterRender push (const AfterRender)
         ]
@@ -68,7 +68,7 @@ view push state =
             , orientation VERTICAL
             , margin (Margin 0 16 0 24)
             , padding (Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom)
-            , background Color.grey700
+            , background Color.white900
             , onBackPressed push (const BackPressed)
             ]
             [ GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig)
@@ -107,7 +107,7 @@ view push state =
             [ height WRAP_CONTENT
             , width MATCH_PARENT
             , alignParentBottom "true,-1"
-            , background Color.grey700
+            , background Color.white900
             , padding (Padding 16 0 16 26)
             ]
             [ PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state) ]
@@ -243,7 +243,7 @@ genderOptionsView state push =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , margin $ MarginTop 8
-    , background Color.white900
+    , background Color.grey700
     , orientation VERTICAL
     , visibility $ if (state.props.genderOptionExpanded || state.props.showOptions) then VISIBLE else GONE
     , onAnimationEnd push AnimationEnd

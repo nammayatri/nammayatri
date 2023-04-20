@@ -429,7 +429,7 @@ genderOptionsView state push =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , margin $ MarginVertical 8 8
-    , background Color.white900
+    , background Color.grey700
     , orientation VERTICAL
     , stroke $ "1,"<>Color.grey900
     , visibility $ if (state.props.genderOptionExpanded || state.props.showOptions) then VISIBLE else GONE
