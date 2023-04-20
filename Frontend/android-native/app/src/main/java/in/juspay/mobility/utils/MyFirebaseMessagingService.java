@@ -192,7 +192,21 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                     case NotificationTypes.REFERRAL_ACTIVATED :
                         sharedPref.edit().putString("REFERRAL_ACTIVATED", "true").apply();
                         break;
-                        
+
+                    case NotificationTypes.UPDATE_STORAGE :
+                        if(notification_payload.has("storage_key") && notification_payload.has("storage_value")) {
+                            String storage_key = notification_payload.get("storage_key").toString();
+                            String storage_value = notification_payload.get("storage_value").toString();
+                            if(storage_key.equals("update_driver_status")){
+                                storage_value = storage_value.toLowerCase();
+                                boolean status = storage_value.equals("true");
+                                NotificationUtils.updateDriverStatus(status, this);
+                            }
+                            else sharedPref.edit().putString(storage_key, storage_value).apply();
+                        }
+                        NotificationUtils.showAllocationNotification(this, title, body, payload, imageUrl, entity_payload);
+                        break;
+
                     default:
                         if (payload.get("show_notification").equals("true")) {
                             NotificationUtils.showNotification(this, title, body, payload, imageUrl);
@@ -332,5 +346,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         private static final String NEW_MESSAGE = "NEW_MESSAGE";
         private static final String REGISTRATION_APPROVED = "REGISTRATION_APPROVED";
         private static final String REFERRAL_ACTIVATED = "REFERRAL_ACTIVATED";
+        private static final String UPDATE_STORAGE = "UPDATE_STORAGE";
     }
 }
