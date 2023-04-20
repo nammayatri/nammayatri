@@ -39,6 +39,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.SlidingWindowCounters
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as Reexport
 import SharedLogic.DriverPool
 import Storage.CachedQueries.CacheConfig (CacheFlow, HasCacheConfig)
@@ -328,8 +329,9 @@ fetchScore merchantId driverIds intelligentPoolConfig cancellationScoreRelatedCo
         getRatios (getLatestCancellationRatio cancellationScoreRelatedConfig merchantId) driverIds
       getScoreWithWeight (intelligentPoolConfig.cancellationRatioWeightage) cancellationRatios
     AvailableTime | intelligentPoolConfig.availabilityTimeWeightage /= 0 -> do
-      driversAvailableTime <- map (second (sum . catMaybes)) <$> getRatios (getCurrentWindowAvailability merchantId) driverIds
-      getScoreWithWeight (intelligentPoolConfig.availabilityTimeWeightage) driversAvailableTime
+      let maxAvailbaleTime = fromIntegral $ intelligentPoolConfig.availabilityTimeWindowOption.period * convertPeriodTypeToSeconds (intelligentPoolConfig.availabilityTimeWindowOption.periodType)
+      driversAvailableTimeRatio <- map (second ((/ maxAvailbaleTime) . sum . catMaybes)) <$> getRatios (getCurrentWindowAvailability merchantId) driverIds
+      getScoreWithWeight (intelligentPoolConfig.availabilityTimeWeightage) driversAvailableTimeRatio
     DriverSpeed | intelligentPoolConfig.driverSpeedWeightage /= 0 -> do
       averageSpeeds <- getRatios (getDriverAverageSpeed merchantId . cast) driverIds
       getSpeedScore (intelligentPoolConfig.driverSpeedWeightage) averageSpeeds
