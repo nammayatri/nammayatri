@@ -410,3 +410,5 @@ getKN script = case script of
   HOW_SHOULD_WE_ADDRESS_YOU -> "ನಾವು ನಿಮ್ಮನ್ನು ಹೇಗೆ ಸಂಬೋಧಿಸಬೇಕು?"
   GENDER_STR -> "ಲಿಂಗ"
   PROFILE_COMPLETION -> "ಪ್ರೊಫೈಲ್ ಪೂರ್ಣಗೊಳಿಸುವಿಕೆ"
+  EARLY_END_RIDE_CHARGES -> "ಬೇಗನೆ ಅಂತಿಮಗೊಂಡ ಸವಾರಿ ಶುಲ್ಕಗಳು"
+  EARLY_END_RIDE_CHARGES_DESCRIPTION -> "^ಮುಂಚಿತವಾಗಿ ಸವಾರಿ ಮಾಡುವುದು ಪ್ರಯಾಣಿಸದ ದೂರದ ಅರ್ಧದಷ್ಟು ದರದ ಹೆಚ್ಚುವರಿ ಶುಲ್ಕವನ್ನು ಉಂಟುಮಾಡುತ್ತದೆ (ಗರಿಷ್ಠ ₹ 50)"
