@@ -93,7 +93,7 @@ genericHeaderConfig =
           , imageUrl = "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
           , margin = (Margin 12 12 12 12)
           }
-        , background = Color.grey700
+        , background = Color.white900
         }
   in
     genericHeaderConfig'
