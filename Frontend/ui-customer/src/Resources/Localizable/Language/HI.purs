@@ -418,7 +418,7 @@ getHI script = case script of
   HOW_SHOULD_WE_ADDRESS_YOU -> "हमें आपको कैसे संबोधित करना चाहिए?"
   GENDER_STR -> "लिंग"
   PROFILE_COMPLETION -> "प्रोफ़ाइल पूर्णता"
-  EARLY_END_RIDE_CHARGES -> "जल्दी सवारी खत्म करने का शुल्क"
+  EARLY_END_RIDE_CHARGES -> "जल्दी सवारी खत्म करने का शुल्क^"
   EARLY_END_RIDE_CHARGES_DESCRIPTION -> "^जल्दी सवारी खत्म करने पर अतिरिक्त शुल्क लगता है जो तय नहीं की गई दूरी का आधा किराया होता है (अधिकतम ₹50)।"
   CANCEL_ONGOING_SEARCH -> "क्या आप वाकई चल रही खोज को रद्द करना जारी रखना चाहते हैं?"
   YES_TRY_AGAIN -> "हाँ, पुन: प्रयास करें"
