@@ -108,6 +108,7 @@ referenceList state =
       else
         []
           <> if (isHaveFare "WAITING_CHARGES" state.data.selectedItem.faresList) then [ (getString WAITING_CHARGE_DESCRIPTION) ] else []
+          <> if (isHaveFare "EARLY_END_RIDE_PENALTY" state.data.selectedItem.faresList) then [ (getString EARLY_END_RIDE_CHARGES_DESCRIPTION) ] else []
 
 ---------------------- amountBreakupView -------------------
 amountBreakupView :: forall w. ST.InvoiceScreenState -> PrestoDOM (Effect Unit) w
@@ -128,13 +129,14 @@ amountBreakupView state =
               ]
               [ textView
                   [ text case item.fareType of
-                      "BASE_FARE" -> ((getString BASE_FARES) <> " (" <> state.data.selectedItem.baseDistance <> ")")
-                      "EXTRA_DISTANCE_FARE" -> (getString NOMINAL_FARE)
-                      "DRIVER_SELECTED_FARE" -> (getString NOMINAL_FARE)
-                      "TOTAL_FARE" -> (getString TOTAL_PAID)
-                      "DEAD_KILOMETER_FARE" -> (getString PICKUP_CHARGE)
-                      "PICKUP_CHARGES" -> (getString PICKUP_CHARGE)
-                      "WAITING_CHARGES" -> (getString WAITING_CHARGE)
+                      "BASE_FARE" -> (getString BASE_FARES) <> " (" <> state.data.selectedItem.baseDistance <> ")"
+                      "EXTRA_DISTANCE_FARE" -> getString NOMINAL_FARE
+                      "DRIVER_SELECTED_FARE" -> getString NOMINAL_FARE
+                      "TOTAL_FARE" -> getString TOTAL_PAID
+                      "DEAD_KILOMETER_FARE" -> getString PICKUP_CHARGE
+                      "PICKUP_CHARGES" -> getString PICKUP_CHARGE
+                      "WAITING_CHARGES" -> getString WAITING_CHARGE
+                      "EARLY_END_RIDE_PENALTY" -> getString EARLY_END_RIDE_CHARGES
                       _ -> "BASE_FARE"
                   , textSize FontSize.a_14
                   , color Color.black800

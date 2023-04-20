@@ -234,6 +234,7 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
   , referenceString : "1.5" <> (getEN DAYTIME_CHARGES_APPLICABLE_AT_NIGHT)
                         <> if (isHaveFare "DRIVER_SELECTED_FARE" updatedFareList) then "\n\n" <> (getEN DRIVERS_CAN_CHARGE_AN_ADDITIONAL_FARE_UPTO) <> "\n\n" else ""
                         <> if (isHaveFare "WAITING_CHARGES" updatedFareList) then "\n\n" <> (getEN WAITING_CHARGE_DESCRIPTION) else ""
+                        <> if (isHaveFare "EARLY_END_RIDE_PENALTY" updatedFareList) then "\n\n" <> (getEN EARLY_END_RIDE_CHARGES_DESCRIPTION) else ""
 
 
 }) (listRes))
@@ -263,16 +264,17 @@ getFaresList fares state =
   map
     ( \(FareBreakupAPIEntity item) ->
           { fareType : item.description
-          , price : if item.description == "BASE_FARE" then (item.amount + getFareFromArray fares "EXTRA_DISTANCE_FARE") - (getFareFromArray fares "DEAD_KILOMETER_FARE") else item.amount
+          , price : if item.description == "BASE_FARE" then (item.amount + getFareFromArray fares "EXTRA_DISTANCE_FARE") else item.amount
           , title : case item.description of
-                      "BASE_FARE" -> ((getEN BASE_FARES) <> " (" <> state.data.selectedItem.baseDistance <> ")")
-                      "EXTRA_DISTANCE_FARE" -> (getEN NOMINAL_FARE)
-                      "DRIVER_SELECTED_FARE" -> (getEN NOMINAL_FARE)
-                      "TOTAL_FARE" -> (getEN TOTAL_PAID)
-                      "DEAD_KILOMETER_FARE" -> (getEN PICKUP_CHARGE)
-                      "PICKUP_CHARGES" -> (getEN PICKUP_CHARGE)
-                      "WAITING_CHARGES" -> (getEN WAITING_CHARGE)
-                      _ -> "BASE_FARE"
+                      "BASE_FARE" -> (getEN BASE_FARES) <> " (" <> state.data.selectedItem.baseDistance <> ")"
+                      "EXTRA_DISTANCE_FARE" -> getEN NOMINAL_FARE
+                      "DRIVER_SELECTED_FARE" -> getEN NOMINAL_FARE
+                      "TOTAL_FARE" -> getEN TOTAL_PAID
+                      "DEAD_KILOMETER_FARE" -> getEN PICKUP_CHARGE
+                      "PICKUP_CHARGES" -> getEN PICKUP_CHARGE
+                      "WAITING_CHARGES" -> getEN WAITING_CHARGE
+                      "EARLY_END_RIDE_PENALTY" -> getEN EARLY_END_RIDE_CHARGES
+                      _ -> getEN BASE_FARES
           }
     )
     (getFilteredFares fares)

@@ -410,3 +410,5 @@ getHI script = case script of
   HOW_SHOULD_WE_ADDRESS_YOU -> "हमें आपको कैसे संबोधित करना चाहिए?"
   GENDER_STR -> "लिंग"
   PROFILE_COMPLETION -> "प्रोफ़ाइल पूर्णता"
+  EARLY_END_RIDE_CHARGES -> "जल्दी सवारी खत्म करने का शुल्क"
+  EARLY_END_RIDE_CHARGES_DESCRIPTION -> "^जल्दी सवारी खत्म करने पर अतिरिक्त शुल्क लगता है जो तय नहीं की गई दूरी का आधा किराया होता है (अधिकतम ₹50)।"
