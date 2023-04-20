@@ -107,6 +107,7 @@ referenceList state =
       else
         []
           <> if (isHaveFare ST.WAITING_CHARGES state.data.selectedItem.faresList) then [ (getString WAITING_CHARGE_DESCRIPTION) ] else []
+          <> if (isHaveFare ST.CUSTOMER_SELECTED_FARE state.data.selectedItem.faresList) then [ (getString CUSTOMER_TIP_DESCRIPTION) ] else []
 
 ---------------------- amountBreakupView -------------------
 amountBreakupView :: forall w. ST.InvoiceScreenState -> PrestoDOM (Effect Unit) w
