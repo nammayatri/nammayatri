@@ -37,7 +37,7 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Common
 import Kernel.Types.Id (Id)
-import Kernel.Utils.Logging
+import Kernel.Utils.Common
 
 data RideInterpolationHandler person m = RideInterpolationHandler
   { batchSize :: Integer,
@@ -125,12 +125,12 @@ recalcDistanceBatchStep RideInterpolationHandler {..} driverId = do
 
 -------------------------------------------------------------------------
 mkRideInterpolationHandler ::
-  ( HedisFlow m env,
-    HasPrettyLogger m env,
+  ( HedisFlow m r,
+    HasPrettyLogger m r,
     HasCallStack,
     Metrics.CoreMetrics m,
-    EncFlow m env,
-    HasField "snapToRoadSnippetThreshold" env HighPrecMeters
+    EncFlow m r,
+    HasFlowEnv m r '["snapToRoadSnippetThreshold" ::: HighPrecMeters]
   ) =>
   Bool ->
   MapsServiceConfig ->
@@ -180,7 +180,7 @@ interpolatePointsAndCalculateDistanceImplementation ::
   ( HasCallStack,
     EncFlow m r,
     Metrics.CoreMetrics m,
-    HasField "snapToRoadSnippetThreshold" r HighPrecMeters
+    HasFlowEnv m r '["snapToRoadSnippetThreshold" ::: HighPrecMeters]
   ) =>
   Bool ->
   MapsServiceConfig ->
