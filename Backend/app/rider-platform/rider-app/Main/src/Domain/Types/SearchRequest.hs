@@ -20,7 +20,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
-import Kernel.Types.Common (HighPrecMeters, Seconds)
+import Kernel.Types.Common (HighPrecMeters, Money, Seconds)
 import Kernel.Types.Id
 import Kernel.Types.Version
 
@@ -42,6 +42,7 @@ data SearchRequest = SearchRequest
     createdAt :: UTCTime,
     bundleVersion :: Maybe Version,
     clientVersion :: Maybe Version,
-    language :: Maybe Maps.Language
+    language :: Maybe Maps.Language,
+    customerExtraFee :: Maybe Money
   }
   deriving (Generic, Show)
