@@ -15,3 +15,10 @@ Frontend/package-lock.json
 Frontend/android-native/app/driverProd/debug/output-metadata.json
 Frontend/android-native/app/driverProd/release/output-metadata.json
 Frontend/android-native/package-lock.json
+
+# Non-nix bans
+Makefile
+docker-compose.yml
+docker-compose.yaml
+stack.yaml
+
