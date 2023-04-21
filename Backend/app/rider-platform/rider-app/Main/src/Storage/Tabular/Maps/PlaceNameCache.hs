@@ -34,7 +34,7 @@ mkPersist
       formattedAddress Text Maybe
       plusCode Text Maybe
       lat Double
-      lon Double 
+      lon Double
       placeId Text Maybe
       geoHash Text Maybe
       addressComponents (PostgresList Domain.AddressResp)
