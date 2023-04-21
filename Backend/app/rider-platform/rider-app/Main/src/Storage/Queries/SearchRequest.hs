@@ -19,6 +19,7 @@ import Domain.Types.Person (Person)
 import Domain.Types.SearchRequest
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Common
 import Kernel.Types.Id
 import Storage.Tabular.SearchRequest
 import Storage.Tabular.SearchRequest.SearchReqLocation
@@ -73,3 +74,12 @@ findAllByPerson perId = Esq.buildDType $ do
       searchRequest ^. SearchRequestRiderId ==. val (toKey perId)
     return (searchRequest, sFromLoc, mbSToLoc)
   pure $ extractSolidType @SearchRequest <$> fullSearchRequestsT
+
+updateCustomerExtraFee :: Id SearchRequest -> Maybe Money -> SqlDB ()
+updateCustomerExtraFee searchReqId customerExtraFee = do
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ SearchRequestCustomerExtraFee =. val customerExtraFee
+      ]
+    where_ $ tbl ^. SearchRequestId ==. val (getId searchReqId)

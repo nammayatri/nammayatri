@@ -129,6 +129,8 @@ select personId estimateId req@DEstimateSelectReq {..} = do
     QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, validTill = searchRequest.validTill}
     QEstimate.updateStatus estimateId $ Just DEstimate.DRIVER_QUOTE_REQUESTED
     QEstimate.updateAutoAssign estimateId autoAssignEnabled (fromMaybe False autoAssignEnabledV2)
+    when (isJust req.customerExtraFee) $ do
+      QSearchRequest.updateCustomerExtraFee searchRequest.id req.customerExtraFee
   pure
     DSelectRes
       { providerId = estimate.providerId,
