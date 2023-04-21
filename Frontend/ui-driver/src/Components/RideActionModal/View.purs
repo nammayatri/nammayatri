@@ -19,12 +19,13 @@ import Common.Types.App
 
 import Components.RideActionModal.Controller (Action(..), Config)
 import Effect (Effect)
+import Effect.Unsafe (unsafePerformEffect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (countDown)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, not, pure, show, unit, ($), (/=), (<>), (&&), (==), (-))
+import Prelude (Unit, bind, const, not, pure, show, unit, ($), (/=), (<>), (&&), (==), (-), (>))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), alpha, background, clickable, color, ellipsize, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, relativeLayout, scrollView, singleLine, stroke, text, textSize, textView, visibility, width, imageWithFallback)
 import PrestoDOM.Properties (cornerRadii, cornerRadius)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -32,6 +33,7 @@ import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color 
 import Engineering.Helpers.Commons (screenWidth)
 import Screens.Types (HomeScreenStage(..))
+import JBridge (getVersionCode)
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = 
@@ -79,7 +81,7 @@ messageButton push config =
   , height WRAP_CONTENT
   , orientation HORIZONTAL
   , gravity CENTER
-  , visibility if config.currentStage == RideAccepted then VISIBLE else GONE
+  , visibility if config.currentStage == RideAccepted && checkVersionForChat 56 then VISIBLE else GONE
   , padding $ Padding 20 16 20 16
   , margin $ MarginLeft 16
   , background Color.white900
@@ -92,6 +94,11 @@ messageButton push config =
       , width $ V 20
       ]
   ]
+
+checkVersionForChat :: Int -> Boolean
+checkVersionForChat reqVersion =
+  let currVersion = unsafePerformEffect getVersionCode
+    in currVersion > reqVersion
 
 callButton :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 callButton push config =
