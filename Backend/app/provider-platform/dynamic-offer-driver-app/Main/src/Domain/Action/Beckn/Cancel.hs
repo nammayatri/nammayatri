@@ -93,9 +93,7 @@ cancel transporterId _ req = do
     whenJust mbRide $ \ride -> do
       QRide.updateStatus ride.id SRide.CANCELLED
       driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-      Esq.runTransaction $
-        QDFS.updateStatus ride.driverId $
-          DMode.getDriverStatus driverInfo.mode driverInfo.active
+      QDFS.updateStatus ride.driverId $ DMode.getDriverStatus driverInfo.mode driverInfo.active
   whenJust mbRide $ \ride -> do
     SRide.clearCache $ cast ride.driverId
     DLoc.updateOnRide (cast ride.driverId) False
