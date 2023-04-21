@@ -25,7 +25,7 @@ import Data.Foldable (or)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Number (fromString)
+import Data.Number.Format (toStringWith, fixed) as Number
 import Data.Profunctor.Strong (first)
 import Data.String as DS
 import Data.Traversable (traverse)
@@ -42,7 +42,7 @@ import Foreign.Generic (decodeJSON, encodeJSON)
 import Juspay.OTP.Reader (initiateSMSRetriever)
 import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
-import Data.Number (pi, sin, cos, sqrt, asin)
+import Data.Number (fromString, pi, sin, cos, sqrt, asin)
 import Prelude (class Show, class Ord, Unit, bind, discard, pure, unit, void, identity, not, (<*>), (<#>), (<<<), (>>>), ($), (<>), (>), show, (==), (/=), (/), (*), (-), (+), map, compare, (<), (=<<), (<=), ($))
 import Presto.Core.Flow (Flow, doAff)
 import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent)
@@ -152,8 +152,6 @@ foreign import getKeyInSharedPrefKeysConfigEff :: String -> Effect String
 foreign import updateInputString :: String -> Unit
 
 foreign import debounceFunction :: forall action. Int -> (action -> Effect Unit) -> (String -> action) -> Effect Unit
-
-foreign import parseFloat :: forall a. a -> Int -> String
 
 foreign import clearWaitingTimer :: String -> Unit
 foreign import contactPermission :: Unit -> Effect Unit
@@ -346,3 +344,6 @@ rotateArray arr times =
 
 isHaveFare :: String -> Array FareComponent -> Boolean
 isHaveFare fare = not null <<< filter (\item -> item.fareType == fare)
+
+parseFloat :: Number -> Int -> String
+parseFloat num prec = Number.toStringWith (Number.fixed prec) num

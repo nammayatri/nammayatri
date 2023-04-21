@@ -639,7 +639,7 @@ export const removePolyLine = function (str) {
   window.JBridge.removePolyLine(str);
 };
 
-export const requestLocation = function (str) {
+export const requestLocation = (unit) => () => {
   window.JBridge.requestLocation();
 };
 

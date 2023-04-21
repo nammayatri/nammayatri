@@ -469,12 +469,6 @@ function between(x, min, max) {
   return x >= min && x <= max;
 }
 
-export const parseFloat = function (number) {
-  return function (decimalDigit) {
-      return String(parseFloat(number).toFixed(decimalDigit));
-  }
-}
-
 export const adjustViewWithKeyboard = function(flag) {
   return function() {
     if (window.JBridge.adjustViewWithKeyboard) {
