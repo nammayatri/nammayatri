@@ -20,12 +20,12 @@ import Screens.Types as ST
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getKeyString)
 import Components.PrimaryButton as PrimaryButton
 import Components.GenericHeader as GenericHeader
 import Styles.Colors as Color
 import Common.Types.App
-import EN
+
 
 genericHeaderConfig :: ST.InvoiceScreenState -> GenericHeader.Config
 genericHeaderConfig state = let
@@ -59,6 +59,6 @@ primaryButtonConfig state = let
      { textConfig
       { text = (getString DOWNLOAD_PDF)
       }
-     , testIdText = (getEN DOWNLOAD_PDF)
+     , testIdText = (getKeyString DOWNLOAD_PDF)
      }
    in primaryButtonConfig'

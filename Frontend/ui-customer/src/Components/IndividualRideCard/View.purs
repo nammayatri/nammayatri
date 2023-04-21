@@ -23,7 +23,7 @@ import Engineering.Helpers.Commons (os)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getKeyString)
 import Prelude (Unit, ($), (<>), (<<<), (==))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, background, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, maxLines, orientation, padding, relativeLayout, shimmerFrameLayout, text, textSize, textView, weight, width, stroke, lineHeight, imageWithFallback, alpha)
 import PrestoDOM.List as PrestoList
@@ -356,6 +356,7 @@ viewDetailsAndRepeatRide push state =
       , fontStyle $ FontStyle.medium LanguageStyle
       , padding $ Padding 10 3 10 3
       , PrestoList.onClickHolder push $ Screen.IndividualRideCardActionController <<< OnClick
+      , Id.testId $ Id.Option (getKeyString VIEW_DETAILS)
       ]
     , linearLayout 
       [ width $ V 1
@@ -373,6 +374,7 @@ viewDetailsAndRepeatRide push state =
       , PrestoList.alphaHolder "alpha"
       , alpha $ if (isLocalStageOn HomeScreen) then 1.0 else 0.5
       , PrestoList.onClickHolder push $ (if (isLocalStageOn HomeScreen) then Screen.IndividualRideCardActionController <<< RepeatRide else Screen.IndividualRideCardActionController <<< NoAction)
+      , Id.testId $ Id.Option (getKeyString REPEAT_RIDE)
       , padding $ Padding 10 3 10 3
       ]
   ]

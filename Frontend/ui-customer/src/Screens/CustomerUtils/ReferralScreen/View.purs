@@ -24,7 +24,7 @@ import Engineering.Helpers.Commons  as EHC
 import Font.Style as FontStyle
 import Helpers.Utils (adjustViewWithKeyboard, isPreviousVersion, getPreviousVersion)
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getKeyString)
 import Prelude (Unit, bind, const, ($), (<<<), (<>), (==))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, color, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, text, textFromHtml, textView, visibility, weight, width)
 import PrestoDOM.Properties (cornerRadii)
@@ -35,7 +35,7 @@ import Styles.Colors as Color
 import Screens.ReferralScreen.ComponentConfig
 import Storage (KeyStore(..), getValueToLocalStore)
 import Constant.Test as Id
-import EN
+
 
 screen :: ST.ReferralScreenState -> Screen Action ST.ReferralScreenState ScreenOutput
 screen initialState =
@@ -158,7 +158,7 @@ referenceView push state =
         , orientation HORIZONTAL
         , onClick push (const $ ExpandReference)
         , gravity CENTER_VERTICAL
-        , Id.testId $ Id.Container (getEN ABOUT_REFERRAL_PROGRAM)
+        , Id.testId $ Id.Container (getKeyString ABOUT_REFERRAL_PROGRAM)
         ]
         [ textView
             $ [ width WRAP_CONTENT

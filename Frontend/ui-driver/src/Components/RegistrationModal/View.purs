@@ -19,7 +19,7 @@ module Components.RegistrationModal.View where
 import Components.RegistrationModal.Controller
 import Effect (Effect)
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getStringFromEnum)
 import Prelude (Unit, const, map, ($), (<>))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, imageWithFallback)
 import PrestoDOM.Animation as PrestoAnim

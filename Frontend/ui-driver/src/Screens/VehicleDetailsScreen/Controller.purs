@@ -23,7 +23,7 @@ import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
 import Components.SelectVehicleTypeModal as SelectVehicleTypeModal
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getStringFromEnum)
 import Screens.VehicleDetailsScreen.ScreenData(ListOptions(..))
 import Effect.Class (liftEffect)
 import JBridge(previewImage, uploadFile)

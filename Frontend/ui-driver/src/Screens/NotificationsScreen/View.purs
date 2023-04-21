@@ -34,7 +34,7 @@ import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getStringFromEnum)
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), alignParentBottom, background, color, gravity, height, id, imageUrl, imageView, layoutGravity, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, relativeLayout, scrollBarY, swipeRefreshLayout, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
@@ -48,7 +48,7 @@ import Services.APITypes (MessageListRes(..))
 import Services.Backend as Remote
 import Styles.Colors as Color
 import Constant.Test as Id
-import EN
+
 
 screen :: NotificationsScreenState -> PrestoList.ListItem -> Screen Action NotificationsScreenState ScreenOutput
 screen initialState notificationListItem =
@@ -106,7 +106,7 @@ view notificationListItem push state =
                   , orientation VERTICAL
                   , background Color.white900
                   , onClick push (const LoadMore)
-                  , Id.testId $ Id.Container (getEN LOAD_OLDER_ALERTS)
+                  , Id.testId $ Id.Container (getStringFromEnum LOAD_OLDER_ALERTS)
                   , gravity CENTER
                   , alignParentBottom "true,-1"
                   , padding (PaddingBottom 5)

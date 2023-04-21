@@ -25,12 +25,12 @@ import Components.TutorialModal.Controller (Action(..), State)
 import Styles.Colors as Color
 import PrestoDOM.Properties(cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Language.Types (STR(..))
+import Language.Types (STR(..), getStringFromEnum)
 import Language.Strings (getString)
 import Font.Style as FontStyle
 import Common.Types.App
 import Constant.Test as Id
-import EN
+
 
 view :: forall w. (Action -> Effect Unit) -> State -> PrestoDOM (Effect Unit) w
 view push state =
@@ -92,7 +92,7 @@ view push state =
                 , gravity LEFT
                 , orientation HORIZONTAL
                 , onClick push (const CallSupport)
-                , Id.testId $ Id.Container (getEN CALL_SUPPORT_CENTER)
+                , Id.testId $ Id.Container (getStringFromEnum CALL_SUPPORT_CENTER)
                 ][ imageView
                 [ imageWithFallback "ny_ic_support,https://assets.juspay.in/nammayatri/images/driver/ny_ic_support.png"
                 , height $ V 17

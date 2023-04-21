@@ -17,10 +17,10 @@ module Screens.EnterOTPScreen.ComponentConfig where
 
 import Components.PrimaryButton as PrimaryButton
 import Language.Strings
-import Language.Types (STR(..))
+import Language.Types (STR(..), getStringFromEnum)
 import PrestoDOM
 import Screens.Types as ST
-import EN
+
 
 primaryButtonViewConfig :: ST.EnterOTPScreenState -> PrimaryButton.Config
 primaryButtonViewConfig state = let
@@ -33,6 +33,6 @@ primaryButtonViewConfig state = let
       , height = (V 60)
       , cornerRadius = 0.0
       , margin = (Margin 0 0 0 0)
-      , testIdText = (getEN REGISTER)
+      , testIdText = (getStringFromEnum REGISTER)
       }
   in primaryButtonConfig'

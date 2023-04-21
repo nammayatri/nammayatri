@@ -39,7 +39,7 @@ import Font.Style as FontStyle
 import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getStringFromEnum)
 import Log (printLog)
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void)
 import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
@@ -64,7 +64,7 @@ import Services.APITypes (Status(..))
 import Components.BottomNavBar.Controller (navData)
 import Screens.HomeScreen.ComponentConfig
 import Constant.Test as Id
-import EN
+
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -212,6 +212,7 @@ otpButtonView state push =
           , background Color.blue600
           , padding (Padding 16 12 16 12)
           , onClick push $ const $ ZoneOtpAction
+          , Id.testId $ Id.Button $ Id.BtnConfig (getStringFromEnum OTP)
           ][ imageView 
               [ imageWithFallback "ic_mode_standby,https://assets.juspay.in/nammayatri/images/user/ic_mode_standby.png"
               , width $ V 20
@@ -339,7 +340,7 @@ driverStatus push state =
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , text if (getValueToLocalStore IS_DEMOMODE_ENABLED == "true") then (getString ONLINE_VIA_DEMO_MODE) else if state.props.statusOnline then (getString ONLINE_) else (getString OFFLINE)
-        , Id.testId $ Id.Status (if (getValueToLocalStore IS_DEMOMODE_ENABLED == "true") then (getEN ONLINE_VIA_DEMO_MODE) else if state.props.statusOnline then (getEN ONLINE_) else (getEN OFFLINE))
+        , Id.testId $ Id.Status (if (getValueToLocalStore IS_DEMOMODE_ENABLED == "true") then (getStringFromEnum ONLINE_VIA_DEMO_MODE) else if state.props.statusOnline then (getStringFromEnum ONLINE_) else (getStringFromEnum OFFLINE))
         , color Color.greyTextColor
         ]  <> FontStyle.tags TypoGraphy
         )
@@ -505,7 +506,7 @@ goOfflineModal push state =
              , gravity CENTER
              , margin (MarginRight 10)
              , onClick push (const CancelGoOffline)
-           , Id.testId $ Id.Button $ Id.BtnConfig (getEN CANCEL)
+           , Id.testId $ Id.Button $ Id.BtnConfig (getStringFromEnum CANCEL)
              ][ textView (
                 [ width WRAP_CONTENT
                 , height WRAP_CONTENT
@@ -523,7 +524,7 @@ goOfflineModal push state =
              , margin (MarginRight 10)
              , background Color.black900
              , onClick push (const $ GoOffline if state.props.statusOnline then false else true)
-             , Id.testId $ Id.Button $ Id.BtnConfig (getEN GO_OFFLINE)
+             , Id.testId $ Id.Button $ Id.BtnConfig (getStringFromEnum GO_OFFLINE)
              ][ textView  (
                 [ width WRAP_CONTENT
                 , height WRAP_CONTENT

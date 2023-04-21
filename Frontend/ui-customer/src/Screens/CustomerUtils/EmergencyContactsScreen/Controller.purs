@@ -17,7 +17,7 @@ import Log (printLog)
 import Screens.EmergencyContactsScreen.Transformer (getContactList)
 import Components.ContactList as ContactListController
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getKeyString)
 import Debug.Trace (spy)
 import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
 import Styles.Types

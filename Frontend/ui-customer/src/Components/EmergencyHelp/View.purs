@@ -20,7 +20,7 @@ import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getKeyString)
 import Prelude (Unit, const, map, ($), (/=), (<>), (==), pure, (<<<), (-), discard, unit, bind)
 import Data.Array (take, (!!), drop, head, mapWithIndex, null)
 import Data.String as DS
@@ -39,7 +39,7 @@ import Helpers.Utils (isPreviousVersion, getPreviousVersion, toString)
 import Storage (getValueToLocalStore, KeyStore(..))
 import Constant.Test as Id
 import Helpers.Utils (toString)
-import EN
+
 
 
 view :: forall w .  (Action  -> Effect Unit) -> EmergencyHelpModelState  -> PrestoDOM (Effect Unit) w
@@ -113,7 +113,7 @@ supportButtonViewContent state push item index =  linearLayout
          ,  margin $ Margin 16 12 16 0
          , clickable true
          , onClick push $ const item.action
-         , Id.testId $ Id.Container (toString(index))
+         , Id.testId $ Id.Container (toString index)
         ][ linearLayout 
            [ height WRAP_CONTENT
            , width WRAP_CONTENT
@@ -196,12 +196,12 @@ callPoliceConfig state  =
       text = getString CANCEL_
     , fontSize = FontSize.a_16
     , margin = (MarginHorizontal 16 16) 
-    , testIdText = (getEN CANCEL_)}
+    , testIdText = (getKeyString CANCEL_)}
     , option2 {
       text = getString CALL_POLICE
     , fontSize = FontSize.a_16
     , margin = (MarginHorizontal 12 0)  
-    , testIdText = (getEN CALL_POLICE)}
+    , testIdText = (getKeyString CALL_POLICE)}
     , backgroundClickable = true
     , secondaryText {
       text = getString YOU_ARE_ABOUT_TO_CALL_POLICE
@@ -225,12 +225,12 @@ contactSupportConfig state  =
       text = getString CANCEL_
     , fontSize = FontSize.a_16
     , margin = (MarginHorizontal 16 16) 
-    , testIdText = (getEN CONTACT_SUPPORT)}
+    , testIdText = (getKeyString CONTACT_SUPPORT)}
     , option2 {
       text = getString CALL_SUPPORT
     , fontSize = FontSize.a_16
     , margin = (MarginHorizontal 12 0) 
-    , testIdText = (getEN CALL_SUPPORT)}
+    , testIdText = (getKeyString CALL_SUPPORT)}
     , backgroundClickable = true
     , secondaryText {
       text = getString YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT
@@ -343,9 +343,9 @@ showEmergencyContact state push =
     , width MATCH_PARENT
     , orientation VERTICAL
     , margin $ Margin 16 20 16 12
-    , visibility if(isPreviousVersion (getValueToLocalStore VERSION_NAME) (if os == "IOS" then "1.2.5" else "1.2.1")) then GONE else VISIBLE
+    , visibility if(isPreviousVersion (getValueToLocalStore VERSION_NAME) (if os == "IOS" then "1.2.5" else "1.2.1")) then VISIBLE else VISIBLE
     , onClick push $ const (if (DA.null state.emergencyContactData) then  AddedEmergencyContacts else NoAction)
-    , Id.testId $ Id.Container (if DA.null state.emergencyContactData then (getEN CALL_EMERGENCY_CONTACTS) else Id.noAction)
+    , Id.testId $ Id.Container (if DA.null state.emergencyContactData then (getKeyString CALL_EMERGENCY_CONTACTS) else Id.noAction)
     ][  linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
@@ -388,7 +388,7 @@ noContactsAvailableView push =
   , lineHeight "16"
   , fontStyle $ FontStyle.regular LanguageStyle
   , onClick push $ const AddedEmergencyContacts
-  , Id.testId $ Id.Text (getEN YOU_WILL_BE_ASKED_TO_SELECT_CONTACTS)
+  , Id.testId $ Id.Text (getKeyString YOU_WILL_BE_ASKED_TO_SELECT_CONTACTS)
   ]
  
 
@@ -440,7 +440,7 @@ allContactsView state push =
                   [ height  WRAP_CONTENT
                   , width  WRAP_CONTENT
                   , onClick push $ const $ CallContactPopUp item
-                  , Id.testId $ Id.Text (getEN CALL <> Id.underScore <> toString index)
+                  , Id.testId $ Id.Text (getKeyString CALL <> Id.underScore <> toString index)
                   ][ textView
                     [ text $ (getString CALL)
                     , color Color.green900

@@ -24,13 +24,12 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import JBridge as JB 
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getKeyString)
 import Prelude (not, (<>))
 import PrestoDOM (Length(..), Margin(..), Visibility(..))
 import Screens.Types as ST
 import Styles.Colors as Color
 import Common.Types.App
-import EN
 
 mobileNumberButtonConfig :: ST.EnterMobileNumberScreenState -> PrimaryButton.Config
 mobileNumberButtonConfig state = let 
@@ -42,7 +41,7 @@ mobileNumberButtonConfig state = let
       , alpha = if state.props.btnActiveMobileNuber then 1.0 else 0.4
       , margin = (Margin 0 0 0 0 )
       , enableLoader = (JB.getBtnLoader "PrimaryButtonMobileNumber")
-      , testIdText = (getEN CONTINUE)
+      , testIdText = (getKeyString CONTINUE)
       }
   in primaryButtonConfig'
 
@@ -56,7 +55,7 @@ verifyOTPButtonConfig state = let
       , alpha = if state.props.btnActiveOTP then 1.0 else 0.4
       , margin = (Margin 0 0 0 0 )
       , enableLoader = (JB.getBtnLoader "PrimaryButtonOTP")
-      , testIdText = (getEN CONTINUE)
+      , testIdText = (getKeyString CONTINUE)
       }
   in primaryButtonConfig'
 
@@ -89,7 +88,7 @@ mobileNumberEditTextConfig state = let
       , errorLabel
         { text = (getString INVALID_MOBILE_NUMBER)
         }
-      , testIdText = (getEN ENTER_MOBILE_NUMBER)
+      , testIdText = (getKeyString ENTER_MOBILE_NUMBER)
       }
     in primaryEditTextConfig'
 
@@ -128,7 +127,7 @@ otpEditTextConfig state = let
       },
       showErrorLabel = state.props.wrongOTP, 
       stroke = if state.props.wrongOTP then ("1," <> Color.warningRed) else ("1," <> Color.borderColorLight),
-      testIdText = (getEN ENTER_4_DIGIT_OTP)
+      testIdText = (getKeyString ENTER_4_DIGIT_OTP)
       }
     in primaryEditTextConfig'
 

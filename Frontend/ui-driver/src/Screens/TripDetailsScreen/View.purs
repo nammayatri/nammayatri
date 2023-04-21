@@ -18,7 +18,7 @@ module Screens.TripDetailsScreen.View where
 import Animation as Anim
 import Components.PrimaryButton as PrimaryButton
 import Effect (Effect)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getStringFromEnum)
 import Language.Strings (getString)
 import Prelude (Unit, const, not, show, unit, ($), (*), (/), (<<<), (<>), (==))
 import PrestoDOM.Animation as PrestoAnim
@@ -34,7 +34,7 @@ import Components.SourceToDestination as SourceToDestination
 import Common.Types.App
 import Screens.TripDetailsScreen.ComponentConfig
 import Constant.Test as Id
-import EN
+
 
 screen :: ST.TripDetailsScreenState -> Screen Action ST.TripDetailsScreenState ScreenOutput 
 screen initialState = 
@@ -117,7 +117,7 @@ view push state =
                          , width MATCH_PARENT
                          , orientation HORIZONTAL
                          , onClick push (const CallSupport)
-                         , Id.testId $ Id.Object (getEN CALL_SUPPORT_CENTER)
+                         , Id.testId $ Id.Object (getStringFromEnum CALL_SUPPORT_CENTER)
                           ][ imageView
                             [ imageWithFallback "ny_ic_support,https://assets.juspay.in/nammayatri/images/driver/ny_ic_support.png"
                             , height $ V 17
@@ -356,7 +356,7 @@ reportIssueView state push =
         , orientation HORIZONTAL
         , margin (MarginBottom 16)
         , onClick push $ const ReportIssue 
-        , Id.testId $ Id.Container (getEN REPORT_AN_ISSUE)
+        , Id.testId $ Id.Container (getStringFromEnum REPORT_AN_ISSUE)
         ][  textView
             ([ text (getString REPORT_AN_ISSUE)
             , color Color.darkDescriptionText
@@ -405,7 +405,7 @@ reportIssueView state push =
                        , hint "You can describe the issue you faced here"
                        , pattern "[A-Za-z0-9 ]*,255"
                        , onChange push $ MessageTextChanged
-                       , Id.testId $ Id.TextField "You can describe the issue you faced here"
+                       , Id.testId $ Id.TextField Id.reason
                        ]
                      ]  
                 ]

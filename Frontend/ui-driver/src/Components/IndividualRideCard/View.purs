@@ -22,12 +22,13 @@ import Screens.RideHistoryScreen.Controller (Action(..)) as RideHistoryScreen
 import Effect (Effect)
 import Screens.Types (IndividualRideCardState)
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getStringFromEnum)
 import PrestoDOM.List as PrestoList
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Styles.Colors as Color
 import Common.Types.App
+import Constant.Test as Id
 
 view :: forall w .  (RideHistoryScreen.Action  -> Effect Unit)  -> PrestoDOM (Effect Unit) w
 view push =
@@ -63,6 +64,7 @@ cardView push =
   , clickable true
   , background Color.white900
   , PrestoList.onClickHolder push $ RideHistoryScreen.IndividualRideCardAction <<< Select
+  , Id.testId $ Id.Component Id.individualRideCard
   ][  rideDetails
     , sourceAndDestination
     , rideWithDetails

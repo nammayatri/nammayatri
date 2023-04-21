@@ -34,7 +34,7 @@ newtype Config = Config
   }
 
 getEnv :: Env
-getEnv = case spy "Selected Environment :- " (environment "") of
+getEnv = case "master" of
   "local"       -> LOCAL
   "master"      -> DEV
   "sandbox"     -> UAT
@@ -43,7 +43,7 @@ getEnv = case spy "Selected Environment :- " (environment "") of
 
 getConfig :: Config
 getConfig = do
-  case getEnv of
+  case DEV of
     LOCAL -> Config
         { baseUrl: "http://localhost:8013/v2"
         , fingerprint : ""
@@ -90,14 +90,14 @@ getFingerPrint dummy = do
 
 
 getDriverNumber :: String -> String
-getDriverNumber _ = case getEnv of 
+getDriverNumber _ = case DEV of 
                         DEV  -> "9999999999"
                         UAT  -> "9999999999"
                         PROD -> "9999999999"
                         _    -> "9999999999"
 
 getSupportNumber :: String -> String
-getSupportNumber _ = case getEnv of 
+getSupportNumber _ = case DEV of 
                         DEV  -> "9999999999"
                         UAT  -> "9999999999"
                         PROD -> "9999999999"

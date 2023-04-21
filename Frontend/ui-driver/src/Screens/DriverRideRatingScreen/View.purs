@@ -27,7 +27,7 @@ import Language.Strings (getString)
 import Animation as Anim
 import Data.Array as DA 
 import Data.Array ((!!))
-import Language.Types (STR(..))
+import Language.Types (STR(..), getStringFromEnum)
 import Font.Style as FontStyle
 import Styles.Colors as Color
 import Font.Size as FontSize
@@ -36,7 +36,7 @@ import Data.Maybe
 import Common.Types.App
 import Screens.DriverRideRatingScreen.ComponentConfig
 import Constant.Test as Id
-import EN
+
 
 screen :: ST.DriverRideRatingScreenState -> Screen Action ST.DriverRideRatingScreenState ScreenOutput
 screen initialState =
@@ -193,7 +193,7 @@ writeCommentView state push =
         , singleLine false
         , margin (MarginTop 12)
         , onChange push FeedbackChanged
-        , Id.testId $ Id.TextField (getEN WRITE_A_COMMENT)
+        , Id.testId $ Id.TextField (getStringFromEnum WRITE_A_COMMENT)
         ]
       ]
 

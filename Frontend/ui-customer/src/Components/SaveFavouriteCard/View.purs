@@ -24,7 +24,7 @@ import Engineering.Helpers.Commons (getNewIDWithTag)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getKeyString)
 import Prelude (Unit, const, not, ($), (<<<), (<>), (&&), (/=), pure, bind, void)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, alpha, background, clickable, color, cornerRadius, ellipsize, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, margin, onClick, orientation, padding, singleLine, stroke, text, textSize, textView, weight, width, afterRender, adjustViewWithKeyboard, imageWithFallback)
 import PrestoDOM.Animation as PrestoAnim
@@ -33,7 +33,7 @@ import Screens.Types (SaveFavouriteCardState)
 import Styles.Colors as Color
 import Common.Types.App
 import Constant.Test as Id
-import EN
+
 
 view :: forall w. (Action -> Effect Unit) -> SaveFavouriteCardState -> PrestoDOM ( Effect Unit ) w
 view push state = 
@@ -86,7 +86,7 @@ view push state =
           , color Color.blue800
           , gravity CENTER
           , onClick push (const SaveFavourite)
-          , Id.testId $ Id.Button $ Id.BtnConfig (getEN CONFIRM_AND_SAVE)
+          , Id.testId $ Id.Button $ Id.BtnConfig (getKeyString CONFIRM_AND_SAVE)
           , padding (Padding 20 14 20 14)
           , clickable ((not state.tagExists) && state.tag /= "" && (state.isBtnActive))
           , alpha if ((not state.tagExists) && state.tag /= "" && state.isBtnActive)  then 1.0 else 0.5

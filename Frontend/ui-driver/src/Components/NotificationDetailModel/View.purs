@@ -33,7 +33,7 @@ import Font.Style as FontStyle
 import Helpers.Utils (addMediaPlayer, getVideoID, setYoutubePlayer)
 import JBridge (renderBase64Image, openUrlInApp)
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getStringFromEnum)
 import Prelude (Unit, bind, const, pure, show, unit, ($), (<<<), (<>), (==), (&&), (-))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageUrl, imageView, linearLayout, margin, onAnimationEnd, onClick, orientation, padding, progressBar, relativeLayout, stroke, text, textSize, textView, visibility, weight, width, scrollBarY, scrollView, lineHeight, textFromHtml)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -43,7 +43,7 @@ import Services.Backend as Remote
 import Styles.Colors as Color
 import Styles.Types (FontStyle)
 import Constant.Test as Id
-import EN
+
 
 view :: forall w. (Action -> Effect Unit) -> NotificationDetailModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -222,7 +222,7 @@ descriptionAndComment state push =
         , stroke $ "1," <> Color.grey900
         , padding $ Padding 16 16 16 16
         , onClick push $ const AddCommentClick
-        , Id.testId $ Id.Container (getEN ADD_A_COMMENT)
+        , Id.testId $ Id.Container (getStringFromEnum ADD_A_COMMENT)
         , clickable if isJust state.comment then false else true
         ]
         [ customTextView (if state.comment == Nothing then (getString ADD_A_COMMENT) else fromMaybe "" state.comment) FontSize.a_14 (if state.comment == Nothing then Color.black600 else Color.black800) (Margin 0 0 0 0) $ FontStyle.medium LanguageStyle ]
@@ -325,7 +325,7 @@ addCommentModelConfig state =
           , fontSize = FontSize.a_16
           , fontStyle = FontStyle.medium LanguageStyle
           , isClickable = state.commentBtnActive
-          , testIdText = (getEN POST_COMMENT)
+          , testIdText = (getStringFromEnum POST_COMMENT)
           }
         , cornerRadius = (Corners 15.0 true true true true)
         }

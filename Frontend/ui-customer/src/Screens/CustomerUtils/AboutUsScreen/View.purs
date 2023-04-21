@@ -23,7 +23,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import JBridge as JB 
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getKeyString)
 import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, imageView, imageUrl, cornerRadius, onClick, afterRender, visibility, imageWithFallback)
 import Screens.AboutUsScreen.Controller (Action(..), ScreenOutput, eval)
@@ -33,7 +33,6 @@ import Styles.Colors as Color
 import Common.Types.App
 import Screens.CustomerUtils.AboutUsScreen.ComponentConfig 
 import Constant.Test as Id
-import EN
 
 screen :: ST.AboutUsScreenState -> Screen Action ST.AboutUsScreenState ScreenOutput
 screen initialState =
@@ -186,7 +185,7 @@ termsAndConditionsView state =
             _ <- JB.openUrlInApp "https://docs.google.com/document/d/1-oRR_oI8ncZRPZvFZEJZeCVQjTmXTmHA/edit?usp=share_link&ouid=115428839751313950285&rtpof=true&sd=true"
             pure unit
           ) (const TermsAndConditions)
-        , Id.testId $ Id.Text (Id.link <> Id.underScore <> getEN TERMS_AND_CONDITIONS)
+        , Id.testId $ Id.Text (Id.link <> Id.underScore <> getKeyString TERMS_AND_CONDITIONS)
         , margin (Margin 0 20 0 0)
         ]
       , linearLayout
@@ -216,7 +215,7 @@ privacyPolicyView state =
             _ <- JB.openUrlInApp "https://docs.google.com/document/d/128VU80K5E1iz-x6QnP1R127m_lwmDO3F/edit?usp=share_link&ouid=115428839751313950285&rtpof=true&sd=true"
             pure unit
           ) (const PrivacyPolicy)
-        , Id.testId $ Id.Text (Id.link <> Id.underScore <> getEN PRIVACY_POLICY)
+        , Id.testId $ Id.Text (Id.link <> Id.underScore <> getKeyString PRIVACY_POLICY)
         ]
       , linearLayout
         [ width MATCH_PARENT

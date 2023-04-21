@@ -23,7 +23,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (countDown)
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getStringFromEnum)
 import Prelude (Unit, bind, const, not, pure, show, unit, ($), (/=), (<>), (&&))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), alpha, background, clickable, color, ellipsize, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, relativeLayout, scrollView, singleLine, stroke, text, textSize, textView, visibility, width, imageWithFallback)
 import PrestoDOM.Properties (cornerRadii, cornerRadius)
@@ -31,7 +31,7 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
 import Constant.Test as Id
-import EN
+
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = 
@@ -116,7 +116,7 @@ openGoogleMap push config =
       , gravity CENTER
       , orientation HORIZONTAL
       , onClick push (const OnNavigate)
-      , Id.testId $ Id.Button $ Id.BtnConfig (getEN OPEN_GOOGLE_MAPS)
+      , Id.testId $ Id.Button $ Id.BtnConfig (getStringFromEnum OPEN_GOOGLE_MAPS)
       ][ textView (
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
@@ -226,7 +226,7 @@ startRide push config =
   , margin $ Margin 16 16 16 0
   , gravity CENTER
   , onClick push (const $ StartRide)
-  , Id.testId $ Id.Button $ Id.BtnConfig (getEN START_RIDE)
+  , Id.testId $ Id.Button $ Id.BtnConfig (getStringFromEnum START_RIDE)
   ][  textView (
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
@@ -246,7 +246,7 @@ endRide push config =
   , margin $ Margin 16 16 16 16
   , gravity CENTER
   , onClick push (const $ EndRide)
-  , Id.testId $ Id.Button $ Id.BtnConfig (getEN END_RIDE)
+  , Id.testId $ Id.Button $ Id.BtnConfig (getStringFromEnum END_RIDE)
   ][  textView (
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
@@ -266,7 +266,7 @@ cancelRide push config =
   , padding $ Padding 16 8 16 8
   , margin $ MarginVertical 16 16
   , onClick push (const CancelRide)
-  , Id.testId $ Id.Button $ Id.BtnConfig (getEN CANCEL_RIDE)
+  , Id.testId $ Id.Button $ Id.BtnConfig (getStringFromEnum CANCEL_RIDE)
   ][  textView (
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
@@ -417,7 +417,7 @@ arrivedButtonView push config =
         else do
           _ <- countDown config.buttonTimeOut config.id push ButtonTimer
           push action) (const NotifyCustomer)
-  , Id.testId $ Id.Container if config.notifiedCustomer then (getEN CUSTOMER_NOTIFIED) else (getEN I_ARRIVED)
+  , Id.testId $ Id.Container if config.notifiedCustomer then (getStringFromEnum CUSTOMER_NOTIFIED) else (getStringFromEnum I_ARRIVED)
   , visibility if config.isDriverArrived then VISIBLE else GONE
   ][  imageView
       [ width $ V 20

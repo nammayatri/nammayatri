@@ -22,7 +22,7 @@ import Screens.Types as ST
 import Prelude (Unit, const, map, ($), (==))
 import Language.Strings (getString)
 import Animation as Anim
-import Language.Types (STR(..))
+import Language.Types (STR(..), getStringFromEnum)
 import Font.Style as FontStyle
 import Styles.Colors as Color
 import Font.Size as FontSize

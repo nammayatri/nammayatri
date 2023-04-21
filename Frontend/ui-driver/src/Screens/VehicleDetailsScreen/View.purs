@@ -28,7 +28,7 @@ import Data.Maybe(Maybe(..))
 import PrestoDOM.Animation as PrestoAnim
 import Animation as Anim
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getStringFromEnum)
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
 import Components.SelectVehicleTypeModal as SelectVehicleTypeModal

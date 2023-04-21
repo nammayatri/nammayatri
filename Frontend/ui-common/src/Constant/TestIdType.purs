@@ -52,7 +52,6 @@ instance showTestID :: Show TestID where
     show (Button a) = "button_" <> show a
     show (Container a) = "container_" <> a
     show (ToolBar a) = "toolbar_" <> a
-    show (Click a) = "click_" <> a
     show (List a) = "list_" <> a
     show (Element a) = "element_" <> a
     show (Select a) = "select_" <> a

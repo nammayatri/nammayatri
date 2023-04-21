@@ -23,13 +23,13 @@ import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getStringFromEnum)
 import Prelude (Unit, (==), const, (<>), ($))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), PrestoDOM, alignParentBottom, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onClick, orientation, stroke, text, textSize, textView, weight, width, imageWithFallback)
 import Screens.Types (BottomNavBarState)
 import Styles.Colors as Color
 import Constant.Test as Id
-import EN
+
 
 view :: forall w . (Action -> Effect Unit) -> BottomNavBarState -> PrestoDOM (Effect Unit) w
 view push state = 
@@ -54,11 +54,11 @@ view push state =
           , gravity CENTER
           , onClick push (const (OnNavigate item.text))
           , Id.testId $ Id.Bar case item.text of 
-                      "Home"          -> getEN HOME
-                      "Rides"         -> getEN RIDES
-                      "Contest"       -> getEN CONTEST
-                      "Profile"       -> getEN PROFILE
-                      "Alert"         -> getEN ALERTS
+                      "Home"          -> getStringFromEnum HOME
+                      "Rides"         -> getStringFromEnum RIDES
+                      "Contest"       -> getStringFromEnum CONTEST
+                      "Profile"       -> getStringFromEnum PROFILE
+                      "Alert"         -> getStringFromEnum ALERTS
                       _               -> ""
           ][ imageView 
              [ width (V 24)

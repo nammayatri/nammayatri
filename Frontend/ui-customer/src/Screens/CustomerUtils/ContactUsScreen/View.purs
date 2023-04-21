@@ -24,7 +24,7 @@ import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getKeyString)
 import Prelude (Unit, const, unit, ($), (*), (-), (/), (<<<))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, orientation, padding, relativeLayout, scrollView, text, textSize, textView, visibility, weight, width, imageWithFallback)
 import Screens.ContactUsScreen.Controller (Action(..), ScreenOutput, eval)

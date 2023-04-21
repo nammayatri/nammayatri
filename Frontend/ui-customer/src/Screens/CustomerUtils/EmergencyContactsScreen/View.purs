@@ -9,7 +9,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import JBridge (openUrlInApp, loaderText)
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getKeyString)
 import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>), map, (/=), discard, (||))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, imageView, imageUrl, cornerRadius, onClick, afterRender, visibility, stroke, relativeLayout, clickable, imageWithFallback)
 import Screens.EmergencyContactsScreen.Controller (Action(..), ScreenOutput, eval, contactColorsList)
@@ -27,7 +27,7 @@ import Data.String (split, Pattern(..))
 import Components.PopUpModal as PopUpModal
 import Screens.CustomerUtils.EmergencyContactsScreen.ComponentConfig
 import Constant.Test as Id
-import EN
+
 
 screen :: EmergencyContactsScreenState -> Screen Action EmergencyContactsScreenState ScreenOutput
 screen initialState =
@@ -232,7 +232,7 @@ contactCardView push state contact index =
         , color Color.blue900
         , textSize 14
         , onClick push (const (RemoveButtonClicked contact))
-        , Id.testId $ Id.Text (getEN REMOVE <> Id.underScore <> toString index)
+        , Id.testId $ Id.Text (getKeyString REMOVE <> Id.underScore <> toString index)
         ]
     ]
 

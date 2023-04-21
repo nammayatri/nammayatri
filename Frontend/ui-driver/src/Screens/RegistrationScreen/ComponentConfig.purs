@@ -17,11 +17,11 @@ module Screens.RegistrationScreen.ComponentConfig where
 
 import Components.PrimaryButton as PrimaryButton
 import Language.Strings
-import Language.Types (STR(..))
+import Language.Types (STR(..), getStringFromEnum)
 import PrestoDOM
 import Screens.Types as ST
 import Styles.Colors as Color
-import EN
+
 
 primaryButtonConfig :: ST.RegistrationScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
@@ -33,6 +33,6 @@ primaryButtonConfig state = let
       , margin = (Margin 0 0 0 0)
       , cornerRadius = 0.0
       , height = (V 60)
-      , testIdText = (getEN NEXT)
+      , testIdText = (getStringFromEnum NEXT)
       }
   in primaryButtonConfig'

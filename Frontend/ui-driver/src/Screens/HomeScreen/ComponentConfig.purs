@@ -26,13 +26,13 @@ import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Helpers.Utils as HU
 import Language.Strings
-import Language.Types (STR(..))
+import Language.Types (STR(..), getStringFromEnum)
 import Prelude
 import PrestoDOM
 import PrestoDOM.Types.DomAttributes as PTD
 import Screens.Types as ST
 import Styles.Colors as Color
-import EN
+
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -66,8 +66,8 @@ endRidePopUp state = let
   popUpConfig' = config'{
     primaryText {text = (getString END_RIDE)},
     secondaryText {text = (getString ARE_YOU_SURE_YOU_WANT_TO_END_THE_RIDE)},
-    option1 {text =(getString GO_BACK), testIdText = (getEN GO_BACK)},
-    option2 {text = (getString END_RIDE), testIdText = (getEN END_RIDE)}
+    option1 {text =(getString GO_BACK), testIdText = (getStringFromEnum GO_BACK)},
+    option2 {text = (getString END_RIDE), testIdText = (getStringFromEnum END_RIDE)}
   }
   in popUpConfig'
 
@@ -135,7 +135,7 @@ cancelConfirmationConfig state = let
     , background = Color.white900
     , strokeColor = Color.black500
     , color = Color.black700
-    , testIdText = (getEN CONTINUE)
+    , testIdText = (getStringFromEnum CONTINUE)
     },
     option2 {
       text = (getString GO_BACK)
@@ -145,7 +145,7 @@ cancelConfirmationConfig state = let
     , color = Color.yellow900
     , strokeColor = Color.black900
     , background = Color.black900
-    , testIdText = (getEN GO_BACK)
+    , testIdText = (getStringFromEnum GO_BACK)
     },
     backgroundClickable = false,
     cornerRadius = (PTD.Corners 15.0 true true true true),

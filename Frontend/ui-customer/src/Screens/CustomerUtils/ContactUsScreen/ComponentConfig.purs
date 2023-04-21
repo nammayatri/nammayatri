@@ -25,14 +25,14 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import JBridge as JB 
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getKeyString)
 import Prelude ((<>), (==), (>=))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..))
 import Screens.ContactUsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
 import Common.Types.App
-import EN
+
 
 primaryButtonConfigSubmit :: ST.ContactUsScreenState -> PrimaryButton.Config
 primaryButtonConfigSubmit state = let 
@@ -48,7 +48,7 @@ primaryButtonConfigSubmit state = let
       , margin = (Margin 0 0 0 0)
       , id = "SubmitButtonContactUsScreen"
       , enableLoader = (JB.getBtnLoader "SubmitButtonContactUsScreen")
-      , testIdText = (getEN SUBMIT)
+      , testIdText = (getKeyString SUBMIT)
       }
   in primaryButtonConfig'
 
@@ -81,7 +81,7 @@ primaryEditTextConfigDescription state = let
         , fontStyle = FontStyle.regular LanguageStyle 
         , color = Color.textDanger
         }
-      , testIdText = (getEN YOU_CAN_DESCRIBE_THE_ISSUE_YOU_FACED_HERE)
+      , testIdText = (getKeyString YOU_CAN_DESCRIBE_THE_ISSUE_YOU_FACED_HERE)
       } 
     in primaryEditTextConfig'
 
@@ -139,7 +139,7 @@ primaryEditTextConfig state = let
         }
       , showErrorLabel = ((DS.length state.data.subject) >= 100 )
       , stroke = if ((DS.length state.data.subject) >= 100 ) then ("1," <> Color.textDanger) else  ("1," <> Color.borderColorLight) 
-      , testIdText = (getEN YOU_CAN_DESCRIBE_THE_ISSUE_YOU_FACED_HERE)
+      , testIdText = (getKeyString YOU_CAN_DESCRIBE_THE_ISSUE_YOU_FACED_HERE)
       } 
     in primaryEditTextConfig'
 
@@ -156,7 +156,7 @@ primaryButtonConfig state = let
       , margin = (Margin 0 0 0 0)
       , id = "GotoHomeThankyouScreen"
       , enableLoader = (JB.getBtnLoader "GotoHomeThankyouScreen")
-      , testIdText = (getEN GO_TO_HOME__)
+      , testIdText = (getKeyString GO_TO_HOME__)
       }
   in primaryButtonConfig'
 

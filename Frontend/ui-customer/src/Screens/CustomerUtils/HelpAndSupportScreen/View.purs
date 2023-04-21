@@ -32,7 +32,7 @@ import Font.Style as FontStyle
 import Helpers.Utils (toString)
 import JBridge as JB 
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getKeyString)
 import Prelude (Unit, bind, const, discard, map, pure, unit, ($), (-), (/=), (<<<), (<=), (<>), (==), (||))
 import Presto.Core.Types.Language.Flow (Flow, doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Shadow(..), Visibility(..), afterRender, alignParentRight, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, shadow, stroke, text, textSize, textView, visibility, width, imageWithFallback)
@@ -47,7 +47,7 @@ import Types.App (GlobalState)
 import Common.Types.App
 import Screens.CustomerUtils.HelpAndSupportScreen.ComponentConfig
 import Constant.Test as Id
-import EN
+
 
 screen :: ST.HelpAndSupportScreenState -> Screen Action ST.HelpAndSupportScreenState ScreenOutput
 screen initialState = 
@@ -109,7 +109,7 @@ view push state =
             , fontStyle $ FontStyle.medium LanguageStyle
             , color Color.blue900
             , onClick push $ const ViewRides
-            , Id.testId $ Id.Text (getEN VIEW_ALL_RIDES)
+            , Id.testId $ Id.Text (getKeyString VIEW_ALL_RIDES)
             ]
           ]
       , recentRideView state push
@@ -170,7 +170,7 @@ recentRideView state push=
     , padding (Padding 10 10 10 10)
     , orientation HORIZONTAL
     , onClick push $ const ReportIssue
-    , Id.testId $ Id.Container (getEN REPORT_AN_ISSUE_WITH_THIS_TRIP)
+    , Id.testId $ Id.Container (getKeyString REPORT_AN_ISSUE_WITH_THIS_TRIP)
     ][  
     textView
         [ text (getString REPORT_AN_ISSUE_WITH_THIS_TRIP)

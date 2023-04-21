@@ -34,7 +34,7 @@ import Font.Style as FontStyle
 import Helpers.Utils (getLocationName, debounceFunction, isPreviousVersion, getPreviousVersion)
 import JBridge (getBtnLoader, requestKeyboardShow, getCurrentPosition, firebaseLogEvent)
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getKeyString)
 import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (+), (-), (/), (/=), (<<<), (<>), (==), (||), not)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, autoCorrectionType, background, color, cornerRadius, disableClickFeedback, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onChange, onClick, onFocus, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, inputTypeI, clickable, imageWithFallback)
 import PrestoDOM.Animation as PrestoAnim
@@ -43,7 +43,7 @@ import Screens.Types (SearchLocationModelType(..), LocationListItemState)
 import Storage (KeyStore(..), getValueToLocalStoreEff, getValueToLocalStore)
 import Styles.Colors as Color
 import Constant.Test as Id
-import EN
+
 
 view :: forall w. (Action -> Effect Unit) -> SearchLocationModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -419,7 +419,7 @@ primaryButtonConfig state =
       , margin = (MarginHorizontal 16 16)
       , isClickable = true 
       , id = "SelectLocationFromMap"
-      , testIdText = if ((state.isSearchLocation == LocateOnMap) && (state.isSource == Just true)) then (getEN CONFIRM_PICKUP_LOCATION) else (getEN CONFIRM_DROP_LOCATION)
+      , testIdText = if ((state.isSearchLocation == LocateOnMap) && (state.isSource == Just true)) then (getKeyString CONFIRM_PICKUP_LOCATION) else (getKeyString CONFIRM_DROP_LOCATION)
       }
   in primaryButtonConfig'
 
@@ -528,7 +528,7 @@ bottomBtnsView state push =
                                   pure unit
                             )
                             (const item.action)
-                        , Id.testId $ Id.Select if item.buttonType == "CurrentLocation" then (getEN CURRENT_LOCATION) else (getEN SET_LOCATION_ON_MAP)
+                        , Id.testId $ Id.Select if item.buttonType == "CurrentLocation" then (getKeyString CURRENT_LOCATION) else (getKeyString SET_LOCATION_ON_MAP)
                         ]
                       <> FontStyle.body1 TypoGraphy
                   ]

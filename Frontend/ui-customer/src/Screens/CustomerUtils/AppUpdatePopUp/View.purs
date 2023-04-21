@@ -24,7 +24,7 @@ import Data.Maybe (Maybe(..))
 import Effect (Effect)
 import JBridge as JB 
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getKeyString)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties as PP 
 import Engineering.Helpers.Commons as EHC 
@@ -35,7 +35,7 @@ import Font.Style as FontStyle
 import Common.Types.App
 import Merchant.Utils(getValueFromConfig)
 import Constant.Test as Id
-import EN
+
 
 screen :: AppUpdatePopUpState -> ScopedScreen Action AppUpdatePopUpState ScreenOutput
 screen initialState =
@@ -133,7 +133,7 @@ view push state =
                                 _<- push action
                                 pure unit
                                 ) (const OnCloseClick)
-                    , Id.testId $ Id.Text (getEN NOT_NOW)
+                    , Id.testId $ Id.Text (getKeyString NOT_NOW)
                     ]
                 ]
             , linearLayout
@@ -155,7 +155,7 @@ view push state =
                               _ <- JB.openUrlInApp $ getValueFromConfig "APP_LINK"
                               pure unit
                               ) (const OnAccept)
-                  , Id.testId $ Id.Text (getEN UPDATE)
+                  , Id.testId $ Id.Text (getKeyString UPDATE)
               ] 
             ]
           ]

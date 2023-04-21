@@ -32,7 +32,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import JBridge as JB
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getStringFromEnum)
 import MerchantConfigs.Utils (getValueFromMerchant)
 import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (<>), (==), not, (>=), (&&), (/=))
 import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), editText, frameLayout, imageView, linearLayout, onBackPressed, onChange, onClick, scrollView, textView, afterRender, alignParentRight, relativeLayout, alignParentBottom, maxLines, ellipsize, layoutGravity, inputTypeI, alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, hint, id, imageUrl, margin, orientation, padding, pattern, stroke, text, textSize, visibility, weight, width, textFromHtml, imageWithFallback)
@@ -42,7 +42,7 @@ import Screens.AddVehicleDetailsScreen.Controller (Action(..), eval, ScreenOutpu
 import Screens.Types (AddVehicleDetailsScreenState)
 import Styles.Colors as Color
 import Constant.Test as Id
-import EN
+
 
 screen :: AddVehicleDetailsScreenState -> Screen Action AddVehicleDetailsScreenState ScreenOutput
 screen initialState =
@@ -140,7 +140,7 @@ view push state =
         linearLayout
         [ width MATCH_PARENT
         , height MATCH_PARENT
-        ] [GenericMessageModal.view (push <<< GenericMessageModalAction) {text : (getString ISSUE_WITH_RC_IMAGE), openGenericMessageModal : state.props.limitExceedModal, buttonText : (getString NEXT) , testIdText : (getEN NEXT)}] else linearLayout [][]
+        ] [GenericMessageModal.view (push <<< GenericMessageModalAction) {text : (getString ISSUE_WITH_RC_IMAGE), openGenericMessageModal : state.props.limitExceedModal, buttonText : (getString NEXT) , testIdText : (getStringFromEnum NEXT)}] else linearLayout [][]
 
     , if state.props.openReferralMobileNumber then
         linearLayout
@@ -174,7 +174,7 @@ applyReferralView state push =
       , textSize FontSize.a_14
       , onClick push (const ReferralMobileNumber)
       , fontStyle $ FontStyle.medium LanguageStyle
-      , Id.testId $ Id.Text (getEN ADD_HERE)
+      , Id.testId $ Id.Text (getStringFromEnum ADD_HERE)
       ]]
 
 referralAppliedView :: AddVehicleDetailsScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w 
@@ -229,7 +229,7 @@ referralAppliedView state push =
               , textSize FontSize.a_14
               , fontStyle $ FontStyle.medium LanguageStyle
               , onClick push (const ReferralMobileNumber)
-              , Id.testId $ Id.Text (getEN SMALLEDIT)
+              , Id.testId $ Id.Text (getStringFromEnum SMALLEDIT)
               ]
             ]
         ]
@@ -297,7 +297,7 @@ vehicleRegistrationNumber state push =
               , stroke ("1," <> Color.white900)
               , id (EHC.getNewIDWithTag "VehicleRegistrationNumber")
               , onChange push (const VehicleRegistrationNumber state.props.input_data)
-              , Id.testId $ Id.TextField (getEN VEHICLE_REGISTRATION_NUMBER)
+              , Id.testId $ Id.TextField (getStringFromEnum ENTER_VEHICLE_NO)
               , inputTypeI 4097
               ] <> FontStyle.subHeading1 TypoGraphy)
             ]
@@ -363,7 +363,7 @@ vehicleRegistrationNumber state push =
                     , stroke ("1," <> Color.white900)
                     , id (EHC.getNewIDWithTag "VehicleRegistrationNumber")
                     , onChange push (const ReEnterVehicleRegistrationNumber state.props.input_data)
-                    , Id.testId $ Id.TextField (getEN RE_ENTER_VEHICLE_REGISTRATION_NUMBER)
+                    , Id.testId $ Id.TextField (getStringFromEnum RE_ENTER_VEHICLE_REGISTRATION_NUMBER)
                     , inputTypeI 4097
                     ] <> FontStyle.subHeading1 TypoGraphy)
                   ]
@@ -548,7 +548,7 @@ referralView state push =
         , color Color.blue900
         , margin (MarginRight 10)
         , onClick push (const ReferralMobileNumber)
-        , Id.testId $ Id.Text (getEN ADD_HERE)
+        , Id.testId $ Id.Text (getStringFromEnum ADD_HERE)
         ] <> FontStyle.subHeading2 TypoGraphy)
   ]
   
@@ -600,7 +600,7 @@ dateOfRCRegistrationView push state =
       , height WRAP_CONTENT
       , orientation HORIZONTAL
       , onClick push (const $ TutorialModal "REGISTERATION_DATE")
-      , Id.testId $ Id.Select (getEN WHERE_IS_MY_REGISTRATION_DATE)
+      , Id.testId $ Id.Select (getStringFromEnum WHERE_IS_MY_REGISTRATION_DATE)
       ][ textView $
         [ text (getString WHERE_IS_MY_REGISTRATION_DATE)
         , weight 1.0
@@ -652,7 +652,7 @@ headerLayout state push =
           , fontStyle $ FontStyle.semiBold LanguageStyle
           , clickable true
           , onClick push $ const $ TutorialModal "RC"
-          , Id.testId $ Id.Text (getEN HELP)
+          , Id.testId $ Id.Text (getStringFromEnum HELP)
           ]
       ]
     ]

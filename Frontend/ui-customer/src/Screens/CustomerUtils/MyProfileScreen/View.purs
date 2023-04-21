@@ -30,7 +30,7 @@ import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getKeyString)
 import Prelude (Unit, bind, const, discard, not, pure, unit, ($), (<<<), (==))
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, cornerRadius, fontStyle, frameLayout, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, width, afterRender, onClick, visibility, alignParentBottom, weight, imageWithFallback)
@@ -42,7 +42,7 @@ import Styles.Colors as Color
 import Common.Types.App
 import Screens.CustomerUtils.MyProfileScreen.ComponentConfig
 import Constant.Test as Id
-import EN
+
 
 screen :: ST.MyProfileScreenState -> Screen Action ST.MyProfileScreenState ScreenOutput
 screen initialState =
@@ -102,7 +102,7 @@ view push state =
                   , color Color.blueTextColor
                   , fontStyle $ FontStyle.semiBold LanguageStyle
                   , onClick push (const EditProfile)
-                  , Id.testId $ Id.ToolBar (getEN EDIT)
+                  , Id.testId $ Id.ToolBar (getKeyString EDIT)
                   ]
                 ]
              ]
@@ -186,7 +186,7 @@ deleteAccountView state push =
             , gravity CENTER_VERTICAL
             , padding (Padding 15 21 15 21)
             , onClick push (const $ ReqDelAccount)
-            , Id.testId $ Id.Container (getEN REQUEST_TO_DELETE_ACCOUNT)
+            , Id.testId $ Id.Container (getKeyString REQUEST_TO_DELETE_ACCOUNT)
             ][  imageView
                 [ width $ V 20
                 , height $ V 20

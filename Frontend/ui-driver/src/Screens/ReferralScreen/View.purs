@@ -28,7 +28,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import JBridge (openUrlInApp , startTimerWithTime , toast)
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getStringFromEnum)
 import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>) , map , discard , show ,(>))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, imageView, imageUrl, cornerRadius, onClick, afterRender, visibility,stroke , alpha, relativeLayout , scrollView , alignParentRight, alignParentBottom)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -48,7 +48,7 @@ import Presto.Core.Types.Language.Flow (doAff)
 import Helpers.Utils (countDown)
 import Screens.ReferralScreen.ComponentConfig
 import Constant.Test as Id
-import EN
+
 
 screen :: ST.ReferralScreenState -> Screen Action ST.ReferralScreenState ScreenOutput
 screen initialState =
@@ -263,7 +263,7 @@ referralEnrolmentFlow push state =
               , id: (getNewIDWithTag "EnterReferralCodeEditText")
               , fontSize : FontSize.a_18
               , type : "number"
-              , testIdText : (getEN REFERRAL_CODE_HINT)
+              , testIdText : (getStringFromEnum REFERRAL_CODE_HINT)
             })
           ]
         , linearLayout
@@ -282,7 +282,7 @@ referralEnrolmentFlow push state =
               , id: (getNewIDWithTag "EnterConfirmReferralCoderEditText")
               , fontSize : FontSize.a_18
               , type : "number",
-              testIdText : (getEN CONFIRM_REFERRAL_CODE_HINT)
+              testIdText : (getStringFromEnum CONFIRM_REFERRAL_CODE_HINT)
             })
           ]
         ]
@@ -527,7 +527,7 @@ contactUsTextView push state =
   , margin $ MarginTop 4
   , visibility if state.data.driverPerformance.referrals.totalActivatedCustomers > 0 then VISIBLE else GONE
   , onClick push $ const GoToAlertScreen
-  , Id.testId $ Id.Object (getEN FOR_UPDATES_SEE_ALERTS)
+  , Id.testId $ Id.Object (getStringFromEnum FOR_UPDATES_SEE_ALERTS)
   ][ textView
     [ height WRAP_CONTENT
     , width MATCH_PARENT

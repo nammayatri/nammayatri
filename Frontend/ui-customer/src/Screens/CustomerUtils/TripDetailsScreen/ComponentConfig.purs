@@ -17,7 +17,7 @@ module Screens.CustomerUtils.TripDetailsScreen.ComponentConfig where
 
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
-import Language.Types (STR(..))
+import Language.Types (STR(..), getKeyString)
 import Language.Strings (getString)
 import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..))
 import Prelude (Unit, const, map, ($), (&&), (/=), (<<<), (<=), (<>), (==), (||))
@@ -28,7 +28,7 @@ import Components.GenericHeader as GenericHeader
 import Components.SourceToDestination as SourceToDestination
 import Styles.Colors as Color
 import Common.Types.App
-import EN
+
 
 genericHeaderConfig :: ST.TripDetailsScreenState -> GenericHeader.Config 
 genericHeaderConfig state= let 
@@ -64,8 +64,8 @@ confirmLostAndFoundConfig state = let
       secondaryText {
         text = (getString TRY_CONNECTING_WITH_THE_DRIVER)
       , margin = (Margin 0 4 0 20)},
-      option1 {text = (getString CANCEL_), testIdText = (getEN CANCEL_)},
-      option2 {text = (getString REQUEST_CALLBACK),margin = (MarginLeft 12), testIdText = (getEN REQUEST_CALLBACK)}
+      option1 {text = (getString CANCEL_), testIdText = (getKeyString CANCEL_)},
+      option2 {text = (getString REQUEST_CALLBACK),margin = (MarginLeft 12), testIdText = (getKeyString REQUEST_CALLBACK)}
     }
     in popUpConfig'
 
@@ -123,6 +123,6 @@ primaryButtonConfig state = let
       , alpha = if (state.props.activateSubmit || state.props.issueReported)  then 1.0 else 0.5 
       , isClickable = (state.props.activateSubmit || state.props.issueReported) 
       , margin = (Margin 16 0 16 16 ) 
-      , testIdText = if state.props.issueReported then (getEN GO_HOME_) else (getEN SUBMIT)
+      , testIdText = if state.props.issueReported then (getKeyString GO_HOME_) else (getKeyString SUBMIT)
       }
   in primaryButtonConfig'

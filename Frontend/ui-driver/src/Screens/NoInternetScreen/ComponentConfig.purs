@@ -20,11 +20,11 @@ import Components.PrimaryButton as PrimaryButton
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings
-import Language.Types (STR(..))
+import Language.Types (STR(..), getStringFromEnum)
 import Prelude
 import PrestoDOM
 import Styles.Colors as Color
-import EN
+
 
 primaryButtonConfig :: String -> PrimaryButton.Config 
 primaryButtonConfig triggertype = let
@@ -40,6 +40,6 @@ primaryButtonConfig triggertype = let
       , background = Color.black900
       , margin = (Margin 0 0 0 0)
       , cornerRadius = 0.0
-      , testIdText = if triggertype == "INTERNET_ACTION" then (getEN TRY_AGAIN) else (getEN GRANT_ACCESS)
+      , testIdText = if triggertype == "INTERNET_ACTION" then (getStringFromEnum TRY_AGAIN) else (getStringFromEnum GRANT_ACCESS)
       }
   in primaryButtonConfig'

@@ -18,7 +18,7 @@ module Screens.DriverProfileScreen.View where
 import Common.Types.App
 import Screens.DriverProfileScreen.ComponentConfig
 import Constant.Test as Id
-import EN
+
 
 import Animation as Anim
 import Components.BottomNavBar.Controller (navData)
@@ -37,7 +37,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import JBridge as JB
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getStringFromEnum)
 import Prelude (Unit, ($), const, map, (==), (||), (/), unit, bind, (-), (<>), (<<<), pure, discard, show, (&&))
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width)
@@ -167,15 +167,15 @@ profileOptionsLayout state push =
             , gravity CENTER_VERTICAL
             , onClick push $ const $ OptionClick optionItem.menuOptions
             , Id.testId $ Id.List case (optionItem.menuOptions) of
-                                    DRIVER_PRESONAL_DETAILS -> (getEN PERSONAL_DETAILS)
-                                    DRIVER_VEHICLE_DETAILS -> (getEN VEHICLE_DETAILS)
-                                    DRIVER_BANK_DETAILS -> (getEN BANK_DETAILS)
-                                    MULTI_LANGUAGE -> (getEN LANGUAGES)
-                                    HELP_AND_FAQS -> (getEN HELP_AND_FAQ)
-                                    ABOUT_APP -> (getEN ABOUT)
-                                    REFER -> (getEN ADD_YOUR_FRIEND)
-                                    DRIVER_LOGOUT -> (getEN LOGOUT)
-                                    APP_INFO_SETTINGS -> (getEN APP_INFO)
+                                    DRIVER_PRESONAL_DETAILS -> (getStringFromEnum PERSONAL_DETAILS)
+                                    DRIVER_VEHICLE_DETAILS -> (getStringFromEnum VEHICLE_DETAILS)
+                                    DRIVER_BOOKING_OPTIONS -> (getStringFromEnum BOOKING_OPTIONS)
+                                    MULTI_LANGUAGE -> (getStringFromEnum LANGUAGES)
+                                    HELP_AND_FAQS -> (getStringFromEnum HELP_AND_FAQ)
+                                    ABOUT_APP -> (getStringFromEnum ABOUT)
+                                    REFER -> (getStringFromEnum ADD_YOUR_FRIEND)
+                                    DRIVER_LOGOUT -> (getStringFromEnum LOGOUT)
+                                    APP_INFO_SETTINGS -> (getStringFromEnum APP_INFO)
             ] <> if (optionItem.menuOptions == DRIVER_BOOKING_OPTIONS) && (null state.data.downgradeOptions) then [alpha 0.5
             ,clickable false] else [])[ linearLayout
               [ width MATCH_PARENT

@@ -22,7 +22,7 @@ import Styles.Colors as Color
 import Data.Array (length)
 import Font.Style as FontStyle
 import Font.Size as FontSize
-import Language.Types (STR(..))
+import Language.Types (STR(..), getKeyString)
 import Language.Strings (getString)
 import Components.SourceToDestination.Controller as SourceToDestinationConfig
 import Components.SourceToDestination.View as SourceToDestination
@@ -33,7 +33,6 @@ import PrestoDOM (Length(..) , Margin(..), Orientation(..), Padding(..) , Visibi
 import Common.Types.App
 import Data.Maybe
 import Constant.Test as Id
-import EN
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 view push config = 
@@ -64,7 +63,7 @@ view push config =
       , padding $ Padding 0 20 4 8
       , margin (MarginVertical 0 8)
       , onClick push $ const ShowInvoice
-      , Id.testId $ Id.Container (getEN VIEW_BREAKDOWN)
+      , Id.testId $ Id.Container (getKeyString VIEW_BREAKDOWN)
       ][ textView
         [ text config.headingText
         , textSize FontSize.a_12

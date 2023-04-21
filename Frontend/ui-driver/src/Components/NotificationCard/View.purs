@@ -20,11 +20,13 @@ import Components.NotificationCard.Controller (Action(..))
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Language.Types (STR(..), getStringFromEnum)
 import Prelude (Unit, map, ($), (<<<), (<>))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, background, color, cornerRadius, fontStyle, gravity, height, imageView, linearLayout, margin, orientation, padding, relativeLayout, shimmerFrameLayout, stroke, textSize, textView, weight, width, ellipsize, maxLines)
 import PrestoDOM.List as PrestoList
 import Screens.NotificationsScreen.Controller (Action(..)) as NotificationsScreen
 import Styles.Colors as Color
+import Constant.Test as Id
 
 view :: forall w. (NotificationsScreen.Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 view push =
@@ -50,6 +52,7 @@ notificationCardView push =
     , stroke $ "1," <> Color.grey900
     , background Color.white900
     , PrestoList.onClickHolder push $ NotificationsScreen.NotificationCardClick <<< IllutrationClick
+    , Id.testId $ Id.Component Id.notificationCard
     ]
     [ relativeLayout
         [ height $ V 159
@@ -174,6 +177,7 @@ actionAndTimeLabel push =
         , padding $ Padding 0 5 5 5
         , textSize FontSize.a_14
         , PrestoList.onClickHolder push $ NotificationsScreen.NotificationCardClick <<< Action1Click
+        , Id.testId $ Id.Container (getStringFromEnum SHOW_MORE)
         ]
     , linearLayout
         [ height WRAP_CONTENT
@@ -190,6 +194,7 @@ actionAndTimeLabel push =
             , PrestoList.visibilityHolder "action2Visibility"
             , padding $ Padding 5 5 5 5
             , PrestoList.onClickHolder push $ NotificationsScreen.NotificationCardClick <<< Action2Click
+            , Id.testId $ Id.Text "take_me_there"
             ]
         ]
     , textView

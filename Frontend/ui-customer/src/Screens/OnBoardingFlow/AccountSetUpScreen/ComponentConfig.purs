@@ -24,13 +24,13 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import JBridge as JB
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getKeyString)
 import Prelude ((/=))
 import PrestoDOM (Length(..), Margin(..))
 import Screens.Types as ST
 import Styles.Colors as Color
 import Common.Types.App
-import EN
+
 
 primaryButtonConfig :: ST.AccountSetUpScreenState -> PrimaryButton.Config
 primaryButtonConfig state =
@@ -45,7 +45,7 @@ primaryButtonConfig state =
         , margin = (Margin 0 0 0 0)
         , enableLoader = (JB.getBtnLoader "AccountSetupScreen")
         , id = "AccountSetupScreen"
-        , testIdText = (getEN CONTINUE)
+        , testIdText = (getKeyString CONTINUE)
         }
   in
     primaryButtonConfig'
@@ -74,7 +74,7 @@ primaryEditTextConfigName state =
           , fontStyle = FontStyle.regular LanguageStyle
           , alpha = 0.8
           }
-        , testIdText = (getEN ENTER_YOUR_NAME)
+        , testIdText = (getKeyString ENTER_YOUR_NAME)
         }
   in
     primaryEditTextConfig'
@@ -106,8 +106,8 @@ goBackPopUpModelConfig =
       config'
         { primaryText { text = (getString GO_BACK_) }
         , secondaryText { text = (getString REGISTER_USING_DIFFERENT_NUMBER) }
-        , option1 { text = (getString NO), testIdText = (getEN NO)}
-        , option2 { text = (getString YES), testIdText = (getEN YES)}
+        , option1 { text = (getString NO), testIdText = (getKeyString NO)}
+        , option2 { text = (getString YES), testIdText = (getKeyString YES)}
         }
   in
     popUpConfig

@@ -21,7 +21,7 @@ import Animation as Anim
 import Effect (Effect)
 import Components.PrimaryButton as PrimaryButton
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getStringFromEnum)
 import Screens.RegistrationScreen.Controller (Action(..), eval, ScreenOutput)
 import Screens.RegistrationScreen.ScreenData (optionList, ListOptions(..))
 import Screens.Types as ST

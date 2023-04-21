@@ -21,12 +21,12 @@ import Data.Maybe
 import Data.String
 import Font.Size as FontSize
 import Language.Strings
-import Language.Types (STR(..))
+import Language.Types (STR(..), getStringFromEnum)
 import Prelude
 import PrestoDOM
 import Screens.Types as ST
 import Styles.Colors as Color
-import EN
+
 
 primaryButtonConfig :: ST.AddVehicleDetailsScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
@@ -40,6 +40,6 @@ primaryButtonConfig state = let
       , alpha = if ((state.props.isValidState) && (toLower(state.data.vehicle_registration_number) == toLower(state.data.reEnterVehicleRegistrationNumber)) && (state.data.dateOfRegistration /= Just "") )  then 1.0 else 0.8
       , isClickable = ((state.props.isValidState) && (toLower(state.data.vehicle_registration_number) == toLower(state.data.reEnterVehicleRegistrationNumber)) && (state.data.dateOfRegistration /= Just "") )
       , margin = (Margin 0 0 0 0)
-      , testIdText = (getEN NEXT)
+      , testIdText = (getStringFromEnum NEXT)
       }
   in primaryButtonConfig'

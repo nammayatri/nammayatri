@@ -29,7 +29,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import JBridge (getBtnLoader, getKeyInSharedPrefKeys)
 import Language.Strings (getString, getKey, LANGUAGE_KEY(..))
-import Language.Types (STR(..))
+import Language.Types (STR(..), getKeyString)
 import Prelude (Unit, const, unit, ($), (-), (<<<), (<=), (<>), (==), (<), (/), (/=), not, (&&))
 import PrestoDOM (Gravity(..), InputType(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, Screen, visibility, alignParentBottom, background, clickable, color, cornerRadius, editText, fontStyle, gravity, height, hint, imageUrl, imageView, inputType, lineHeight, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, relativeLayout, singleLine, stroke, text, textSize, textView, weight, width, multiLineEditText, pattern, maxLines, editText, imageWithFallback, scrollBarY, scrollView)
 import PrestoDOM.Animation as PrestoAnim
@@ -41,7 +41,7 @@ import Screens.Types(Stage(..))
 import Common.Types.App
 import Constant.Test as Id
 import Helpers.Utils (toString)
-import EN
+
 
 view :: forall w. (Action -> Effect Unit) -> RatingCardState -> PrestoDOM ( Effect Unit ) w
 view push state = 
@@ -208,7 +208,7 @@ rideRatingButtonConfig state = let
       , background = Color.black900 
       , id = "RideRatingButton"
       , enableLoader = (getBtnLoader "RightRatingButton")
-      , testIdText = (getEN SUBMIT_FEEDBACK)
+      , testIdText = (getKeyString SUBMIT_FEEDBACK)
       }
   in primaryButtonConfig'
 
@@ -230,7 +230,7 @@ skipButtonConfig state = let
     , margin = (MarginRight 12)
     , id = "SkipCurrentRatingButton"
     , enableLoader = (getBtnLoader "SkipCurrentRatingButton")
-    , testIdText = (getEN SKIP)
+    , testIdText = (getKeyString SKIP)
     }
   in skipButtonConfig'
   

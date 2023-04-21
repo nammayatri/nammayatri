@@ -26,7 +26,7 @@ import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getStringFromEnum)
 import Prelude (Unit, ($), const, (<>), (/=), (==), (||), (&&), discard, bind, pure, unit)
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, visibility, afterRender, lineHeight, stroke, cornerRadius, alignParentRight, onBackPressed, imageWithFallback)
@@ -37,7 +37,7 @@ import Services.Backend (driverRegistrationStatusBT)
 import Styles.Colors as Color
 import Common.Types.App
 import Constant.Test as Id
-import EN
+
 
 screen :: ST.ApplicationStatusScreenState -> String -> Screen Action ST.ApplicationStatusScreenState ScreenOutput
 screen initialState screenType =
@@ -96,7 +96,7 @@ primaryButtonView state push =
   , visibility if state.data.dlVerificationStatus == "FAILED" || state.data.rcVerificationStatus == "FAILED" then VISIBLE else GONE
   , cornerRadius 8.0
   , onClick push (const PrimaryButtonActionController)
-  , Id.testId $ Id.Button $ Id.BtnConfig (getEN TRY_AGAIN)
+  , Id.testId $ Id.Button $ Id.BtnConfig (getStringFromEnum TRY_AGAIN)
   ][ textView
       [ text (getString TRY_AGAIN)
       , textSize FontSize.a_16
@@ -211,7 +211,7 @@ detailsView state config push =
       , margin (MarginTop 8)
       , fontStyle $ FontStyle.medium LanguageStyle
       , onClick push (const $ ReTry config.docType)
-      , Id.testId $ Id.Text (getEN TRY_AGAIN)
+      , Id.testId $ Id.Text (getStringFromEnum TRY_AGAIN)
       , visibility if (config.status == "PENDING" || config.status == "VALID" || config.status == "INVALID") then GONE else VISIBLE -- $ if (config.verificationStatus == "PENDING") then GONE  else VISIBLE
       , lineHeight "18"
       ]
@@ -240,7 +240,7 @@ supportTextView state push =
     , fontStyle $ FontStyle.regular LanguageStyle
     , textSize FontSize.a_12
     , onClick push (const SupportCall)
-    , Id.testId $ Id.Object (getEN CONTACT_US)
+    , Id.testId $ Id.Object (getStringFromEnum CONTACT_US)
     ]
   ] 
 

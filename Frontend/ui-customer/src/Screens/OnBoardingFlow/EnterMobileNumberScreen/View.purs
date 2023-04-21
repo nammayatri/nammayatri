@@ -36,7 +36,7 @@ import Font.Style as FontStyle
 import Helpers.Utils (startOtpReciever)
 import JBridge as JB
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getKeyString)
 import Log (printLog)
 import Prelude (Unit, bind, const, discard, not, pure, unit, when, ($), (&&), (/=), (<<<), (<>), (==))
 import Presto.Core.Types.Language.Flow (doAff)
@@ -48,7 +48,7 @@ import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import Merchant.Utils( getValueFromConfig )
 import Constant.Test as Id
-import EN
+
 
 screen :: ST.EnterMobileNumberScreenState -> Screen Action ST.EnterMobileNumberScreenState ScreenOutput
 screen initialState =
@@ -179,7 +179,7 @@ commonTextView state textValue isLink link push =
                 when isLink $ JB.openUrlInApp (fromMaybe "www.nammayatri.in" link)--"https://drive.google.com/file/d/1qYXbQUF4DVo2xNOawkHNTR_VVe46nggc/view?usp=sharing"
                 pure unit
               ) (const TermsAndConditions)
-    , Id.testId $ Id.Text (Id.link <> Id.underScore <> (getEN TERMS_AND_CONDITIONS))
+    , Id.testId $ Id.Text (Id.link <> Id.underScore <> (getKeyString TERMS_AND_CONDITIONS))
     ]
 
 ------------------------------------- enterOTPView --------------------------------------------
@@ -226,7 +226,7 @@ enterOTPView state lang push=
         , fontStyle $ FontStyle.semiBold LanguageStyle
         , color Color.blue900
         , onClick push (const Resend)
-        , Id.testId $ Id.Text (getEN RESEND)
+        , Id.testId $ Id.Text (getKeyString RESEND)
         ]
         , linearLayout
           [ width MATCH_PARENT

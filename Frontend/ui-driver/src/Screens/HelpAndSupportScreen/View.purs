@@ -29,7 +29,7 @@ import Font.Style as FontStyle
 import Font.Size as FontSize
 import Animation as Anim
 import Language.Strings (getString)
-import Language.Types(STR(..))
+import Language.Types(STR(..), getStringFromEnum)
 import Control.Monad.Trans.Class (lift)
 import Presto.Core.Types.Language.Flow (doAff)
 import Effect.Aff (launchAff_)
@@ -41,7 +41,7 @@ import Services.Backend as Remote
 import Common.Types.App
 import Screens.HelpAndSupportScreen.ComponentConfig
 import Constant.Test as Id
-import EN
+
 
 screen :: ST.HelpAndSupportScreenState -> Screen Action ST.HelpAndSupportScreenState ScreenOutput
 screen initialState =
@@ -125,7 +125,7 @@ recentRideHeader state push leftText rightText =
  , padding (Padding 15 10 10 10)
  , background Color.lightGreyBlue
  , onClick push $ const $ if (rightText == (getString VIEW_ALL_RIDES)) then ViewAllRides else NoRidesAction
- , Id.testId $ Id.Button $ Id.BtnConfig (getEN VIEW_ALL_RIDES)
+ , Id.testId $ Id.Button $ Id.BtnConfig (getStringFromEnum VIEW_ALL_RIDES)
  , visibility if ((rightText == (getString VIEW_ALL_RIDES)) && state.props.isNoRides) then GONE else VISIBLE
  ][ textView
     [ width WRAP_CONTENT
@@ -240,9 +240,9 @@ allOtherTopics state push =
             , onClick push (const $ OptionClick optionItem.menuOptions)
             , visibility if (optionItem.menuOptions == CallSupportCenter) then VISIBLE else GONE
             , Id.testId $ Id.List case optionItem.menuOptions of
-                                    GettingStartedFaq -> (getEN GETTING_STARTED_AND_FAQ)
-                                    OtherIssues -> (getEN FOR_OTHER_ISSUES_WRITE_TO_US)
-                                    CallSupportCenter -> (getEN CALL_SUPPORT_CENTER)
+                                    GettingStartedFaq -> (getStringFromEnum GETTING_STARTED_AND_FAQ)
+                                    OtherIssues -> (getStringFromEnum FOR_OTHER_ISSUES_WRITE_TO_US)
+                                    CallSupportCenter -> (getStringFromEnum CALL_SUPPORT_CENTER)
             ][ linearLayout
               [ width MATCH_PARENT
               , height WRAP_CONTENT

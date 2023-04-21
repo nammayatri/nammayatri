@@ -28,7 +28,7 @@ import Engineering.Helpers.Commons (flowRunner, os, countDown)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getKeyString)
 import Math (ceil)
 import JBridge(startTimerWithTime)
 import Prelude (Unit, bind, const, discard, pure, show, unit, ($), (/=), (<>), (==))
@@ -39,7 +39,7 @@ import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import Common.Types.App
 import Constant.Test as Id
-import EN
+
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListItemState -> PrestoDOM (Effect Unit) w
 view push state = 
@@ -233,7 +233,7 @@ primaryButtonView state push =
   , visibility if state.selectedQuote == Just state.id then VISIBLE else GONE
   , cornerRadius 8.0
   , onClick push $ const ConfirmRide
-  , Id.testId $ Id.Button (Id.BtnConfig (getEN CONFIRM_RIDE_))
+  , Id.testId $ Id.Button (Id.BtnConfig (getKeyString CONFIRM_RIDE_))
   , gravity CENTER
   ][ textView
      [ width WRAP_CONTENT

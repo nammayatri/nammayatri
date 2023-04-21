@@ -17,11 +17,11 @@ module Screens.BankDetailScreen.ComponentConfig where
 
 import Components.PrimaryButton as PrimaryButton
 import Language.Strings
-import Language.Types (STR(..))
+import Language.Types (STR(..), getStringFromEnum)
 import PrestoDOM
 import Screens.Types as ST
 import Styles.Colors as Color
-import EN
+
 
 primaryButtonConfig :: ST.BankDetailScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
@@ -33,6 +33,6 @@ primaryButtonConfig state = let
       , height = (V 64)
       , background = Color.black900
       , margin = (Margin 0 0 0 0)
-      , testIdText = (getEN NEXT)
+      , testIdText = (getStringFromEnum NEXT)
       }
   in primaryButtonConfig'

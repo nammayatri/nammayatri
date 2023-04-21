@@ -279,6 +279,9 @@ enabled = "enabled"
 disabled :: String
 disabled = "disabled"
 
+notificationCard :: String
+notificationCard = "notificationCard"
+
 -------------------ScreenNames----------------------
 
 ------- Driver Screen names -----

@@ -24,7 +24,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import JBridge as JB
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getKeyString)
 import Prelude (Unit, bind, const, pure, unit, (<<<), ($), (==))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, ScopedScreen, afterRender, alignParentBottom, background, clickable, color, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, margin, orientation, padding, relativeLayout, text, textSize, textView, width, imageWithFallback)
 import Screens.PermissionScreen.Controller (Action(..), ScreenOutput, eval)

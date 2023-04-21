@@ -22,11 +22,10 @@ import Components.SourceToDestination as SourceToDestination
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings
-import Language.Types (STR(..))
+import Language.Types (STR(..), getStringFromEnum)
 import PrestoDOM
 import Screens.Types as ST
 import Styles.Colors as Color
-import EN
 
 ---------------- genericHeaderConfig ----------------
 genericHeaderConfig :: ST.TripDetailsScreenState -> GenericHeader.Config 
@@ -103,6 +102,6 @@ primaryButtonConfig state = let
       , cornerRadius = 0.0
       , background = Color.black900
       , height = (V 64)
-      , testIdText = if state.props.issueReported then (getEN GO_HOME) else (getEN SUBMIT)
+      , testIdText = if state.props.issueReported then (getStringFromEnum GO_HOME) else (getStringFromEnum SUBMIT)
       }
   in primaryButtonConfig'

@@ -19,7 +19,7 @@ import Animation as Anim
 import Components.PrimaryButton as PrimaryButton
 import Components.PopUpModal as PopUpModal
 import Effect (Effect)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getKeyString)
 import Language.Strings (getString)
 import Prelude (Unit, const, map, ($), (&&), (/=), (<<<), (<=), (<>), (==))
 import PrestoDOM (Length(..), Margin(..), Orientation(..), Padding(..), Gravity(..), Visibility(..), PrestoDOM, Screen, linearLayout, frameLayout, gravity, orientation, height, width, imageView, imageUrl, text, textSize, textView, padding, color, margin, fontStyle, background, cornerRadius, stroke, editText, weight, hint, onClick, visibility, pattern, onChange, scrollView, relativeLayout, alignParentBottom, onBackPressed, afterRender, multiLineEditText, disableClickFeedback, imageWithFallback)
@@ -36,7 +36,7 @@ import Debug.Trace (spy)
 import Common.Types.App
 import Screens.CustomerUtils.TripDetailsScreen.ComponentConfig
 import Constant.Test as Id
-import EN
+
 
 screen :: ST.TripDetailsScreenState -> Screen Action ST.TripDetailsScreenState ScreenOutput 
 screen initialState = 
@@ -144,7 +144,7 @@ lostAndFoundView push state =
   , disableClickFeedback false 
   , visibility if (state.data.selectedItem.status /= "CANCELLED" && state.props.canConnectWithDriver) then VISIBLE else GONE
   , onClick push $ (const ShowPopUp)
-  , Id.testId $ Id.Container (getEN LOST_SOMETHING)
+  , Id.testId $ Id.Container (getKeyString LOST_SOMETHING)
   ][  textView  
       [ text (getString LOST_SOMETHING)
       , textSize FontSize.a_14 
@@ -345,7 +345,7 @@ ratingAndInvoiceView state push =
     --   , width MATCH_PARENT
     --   , gravity RIGHT
     --   , onClick push $ (const DownloadInvoice)
-    --   , Id.testId $ Id.Text (getEN DOWNLOAD_INVOICE)
+    --   , Id.testId $ Id.Text (getKeyString DOWNLOAD_INVOICE)
     --   ][  textView
     --       [ text (getString DOWNLOAD_INVOICE)
     --       , textSize FontSize.a_12
@@ -366,7 +366,7 @@ invoiceView state push =
     , padding (Padding 0 16 0 16)
     , disableClickFeedback false
     , onClick push $ (const ViewInvoice)
-    , Id.testId $ Id.Text (getEN VIEW_INVOICE)
+    , Id.testId $ Id.Text (getKeyString VIEW_INVOICE)
     , visibility if state.data.selectedItem.status == "CANCELLED" then GONE else VISIBLE
     ][  textView
         [ text (getString VIEW_INVOICE)
@@ -396,7 +396,7 @@ reportIssueView state push =
     , padding (Padding 0 16 0 16)
     , disableClickFeedback true
     , onClick push $ const ReportIssue 
-    , Id.testId $ Id.Container (getEN REPORT_AN_ISSUE)
+    , Id.testId $ Id.Container (getKeyString REPORT_AN_ISSUE)
     ][  linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -452,7 +452,7 @@ reportIssueView state push =
                       , hint $ getString YOU_CAN_DESCRIBE_THE_ISSUE_YOU_FACED_HERE
                       , pattern "[^\n]*,255"
                       , onChange push $ MessageTextChanged
-                      , Id.testId $ Id.TextField (getEN YOU_CAN_DESCRIBE_THE_ISSUE_YOU_FACED_HERE)
+                      , Id.testId $ Id.TextField (getKeyString YOU_CAN_DESCRIBE_THE_ISSUE_YOU_FACED_HERE)
                       ]
 
                  ]  

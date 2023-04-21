@@ -22,12 +22,12 @@ import Components.SourceToDestination as SourceToDestination
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getKeyString)
 import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..))
 import Screens.Types as ST
 import Styles.Colors as Color
 import Common.Types.App
-import EN
+
 
 sourceToDestinationConfig :: ST.HelpAndSupportScreenState -> SourceToDestination.Config
 sourceToDestinationConfig state = let 
@@ -101,7 +101,7 @@ apiErrorModalConfig state = let
       , fontStyle = FontStyle.medium LanguageStyle
       , textSize = FontSize.a_16
       }
-    , testIdText = (getEN NOTIFY_ME)
+    , testIdText = (getKeyString NOTIFY_ME)
     }
   in errorModalConfig' 
 
@@ -119,12 +119,12 @@ callConfirmationPopup state = let
       option1 {
         text = (getString GO_BACK_)
       , fontSize = FontSize.a_16
-      , testIdText = (getEN GO_BACK_)
+      , testIdText = (getKeyString GO_BACK_)
       },
       option2 {
         text = (getString CALL)
       , fontSize = FontSize.a_16 
-      , testIdText = (getEN CALL)
+      , testIdText = (getKeyString CALL)
       }
     }
   in popUpConfig'

@@ -24,12 +24,11 @@ import Screens.WriteToUsScreen.Controller
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings
-import Language.Types (STR(..))
+import Language.Types (STR(..), getStringFromEnum)
 import Prelude
 import PrestoDOM
 import Styles.Colors as Color
 import Screens.Types as ST
-import EN
 
 primaryEditTextConfig :: Listtype -> PrimaryEditText.Config
 primaryEditTextConfig optionItem = let 
@@ -48,7 +47,7 @@ primaryEditTextConfig optionItem = let
         , text = (getTitle optionItem.title)
         , color = Color.greyTextColor
         }
-      , testIdText = (getEN DESCRIBE_YOUR_ISSUE)
+      , testIdText = (getStringFromEnum DESCRIBE_YOUR_ISSUE)
       }
     in primaryEditTextConfig'
 
@@ -64,6 +63,6 @@ primaryButtonConfig state = let
       , cornerRadius = 0.0
       , background = Color.black900
       , height = (V 60)
-      , testIdText = if(state.props.isThankYouScreen) then (getEN GO_TO_HOME) else (getEN SUBMIT)
+      , testIdText = if(state.props.isThankYouScreen) then (getStringFromEnum GO_TO_HOME) else (getStringFromEnum SUBMIT)
       }
   in primaryButtonConfig'

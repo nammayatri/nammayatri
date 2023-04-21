@@ -20,7 +20,7 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(
 import Animation as Anim
 import Effect (Effect)
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getStringFromEnum)
 import Screens.UploadAdhaarScreen.Controller (Action(..), eval, ScreenOutput)
 import Screens.Types as ST
 import Styles.Colors as Color

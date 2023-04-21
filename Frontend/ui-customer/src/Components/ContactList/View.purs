@@ -29,10 +29,10 @@ import JBridge (getBtnLoader)
 import Screens.Types (NewContacts, Contacts)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getKeyString)
 import Engineering.Helpers.Commons (safeMarginTop, safeMarginBottom, os, getNewIDWithTag)
 import Constant.Test as Id
-import EN
+
 
 view :: forall w. (Action -> Effect Unit) -> ContactsState -> PrestoDOM (Effect Unit) w
 view push config =
@@ -77,7 +77,7 @@ view push config =
             , hint $ getString SEARCH_CONTACTS
             , pattern "[^\n]*,255"
             , onChange push $ ContactTextChanged
-            , Id.testId $ Id.TextField (getEN SEARCH_CONTACTS)
+            , Id.testId $ Id.TextField (getKeyString SEARCH_CONTACTS)
             ]
         , imageView
             [ height $ V 17

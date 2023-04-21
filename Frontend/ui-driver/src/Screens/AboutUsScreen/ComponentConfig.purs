@@ -21,12 +21,12 @@ import Data.Maybe
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings
-import Language.Types (STR(..))
+import Language.Types (STR(..), getStringFromEnum)
 import PrestoDOM
 import PrestoDOM.Types.DomAttributes as PTD
 import Screens.Types as ST
 import Styles.Colors as Color
-import EN
+
 
 demoModePopUpConfig :: ST.AboutUsScreenState -> PopUpModal.Config
 demoModePopUpConfig state = let
@@ -73,7 +73,7 @@ demoModePopUpConfig state = let
       padding = (Padding 16 0 16 0), 
       fontSize = FontSize.a_16
     , isClickable = state.props.enableConfirmPassword
-    , testIdText = (getEN CONFIRM_PASSWORD)
+    , testIdText = (getStringFromEnum CONFIRM_PASSWORD)
     },
     cornerRadius = (PTD.Corners 15.0 true true true true)
   }

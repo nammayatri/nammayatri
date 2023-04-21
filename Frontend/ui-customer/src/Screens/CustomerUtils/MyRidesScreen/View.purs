@@ -30,7 +30,7 @@ import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getKeyString)
 import Prelude (Unit, ($), (<$>), (<>), (&&), (<<<), (==), (||), const, show, discard, bind, not, pure, unit)
 import Presto.Core.Types.Language.Flow (Flow, doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, clickable, color, gravity, height, id, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, scrollBarY, swipeRefreshLayout, text, textView, visibility, weight, width, textSize, fontStyle, lineHeight)
@@ -47,7 +47,7 @@ import Styles.Colors as Color
 import Types.App (GlobalState)
 import Screens.CustomerUtils.MyRidesScreen.ComponentConfig
 import Constant.Test as Id
-import EN
+
 
 screen :: ST.MyRidesScreenState -> PrestoList.ListItem -> Screen Action ST.MyRidesScreenState ScreenOutput
 screen initialState listItemm = 
@@ -111,7 +111,7 @@ loadButtonView state push =
   , orientation VERTICAL
   , background Color.white900
   , onClick push (const Loader)
-  , Id.testId $ Id.Container if state.data.loadMoreText == "LoadMore" then (getEN LOAD_MORE) else Id.noAction
+  , Id.testId $ Id.Container if state.data.loadMoreText == "LoadMore" then (getKeyString LOAD_MORE) else Id.noAction
   , clickable if state.data.loadMoreText == "LoadMore" then true else false
   , gravity CENTER
   , alignParentBottom "true,-1"

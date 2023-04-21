@@ -26,11 +26,11 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import JBridge as JB 
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getKeyString)
 import PrestoDOM (Length(..), Margin(..), Padding(..))
 import Styles.Colors as Color
 import Common.Types.App
-import EN
+
 
 genericHeaderConfig :: ST.MyProfileScreenState -> GenericHeader.Config 
 genericHeaderConfig state = let 
@@ -74,7 +74,7 @@ nameEditTextConfig state = let
                 pattern = Just "[a-zA-Z ]*,30"
             },
             id = (EHC.getNewIDWithTag "NameEditText"),
-            testIdText = (getEN NAME)
+            testIdText = (getKeyString NAME)
         }
     in primaryEditTextConfig'
 
@@ -88,7 +88,7 @@ updateButtonConfig state = let
         , margin = (Margin 0 0 0 0)
         , id = "PrimaryButtonUpdate"
         , enableLoader = (JB.getBtnLoader "PrimaryButtonUpdate")
-        , testIdText = (getEN UPDATE)
+        , testIdText = (getKeyString UPDATE)
         }
     in updateButtonConfig'
 
@@ -103,14 +103,14 @@ requestDeletePopUp state = let
       option1 {
         text = (getString CANCEL_STR)
       , fontSize = FontSize.a_16
-      , testIdText = (getEN CANCEL_STR)
+      , testIdText = (getKeyString CANCEL_STR)
       },
       option2 {text = (getString YES_DELETE_IT)
       , background = Color.red
       , color = Color.white900
       , strokeColor = Color.red
       , fontSize = FontSize.a_16 
-      , testIdText = (getEN YES_DELETE_IT)}
+      , testIdText = (getKeyString YES_DELETE_IT)}
     }
   in popUpConfig'
 

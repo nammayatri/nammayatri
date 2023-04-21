@@ -24,7 +24,7 @@ import Effect (Effect)
 import Engineering.Helpers.Commons as EHC 
 import Font.Style as FontStyle
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getKeyString)
 import Prelude (Unit, const, ($), (<<<), (<>))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, afterRender, alignParentBottom, background, color, gravity, height, linearLayout, margin, onBackPressed, orientation, padding, relativeLayout, scrollView, singleLine, text, textView, weight, width)
 import Screens.AccountSetUpScreen.Controller (Action(..), ScreenOutput, eval)

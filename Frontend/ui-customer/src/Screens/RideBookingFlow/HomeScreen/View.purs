@@ -58,7 +58,7 @@ import Font.Style as FontStyle
 import Helpers.Utils (Merchant(..), decodeErrorMessage, fetchAndUpdateCurrentLocation, getCurrentLocationMarker, getLocationName, getMerchant, getNewTrackingId, getPreviousVersion, initialWebViewSetUp, isPreviousVersion, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, storeOnResumeCallback, toString, waitingCountdownTimer)
 import JBridge (addMarker, animateCamera, drawRoute, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, toast, updateRoute, getExtendedPath, generateSessionId)
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getKeyString)
 import Log (printLog)
 import Merchant.Utils (getValueFromConfig)
 import Prelude (Unit, bind, const, discard, map, negate, not, pure, show, unit, void, when, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<=), (<>), (==), (>), (||))
@@ -80,7 +80,7 @@ import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLo
 import Styles.Colors as Color
 import Types.App (GlobalState)
 import Constant.Test as Id
-import EN
+
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -389,7 +389,7 @@ referralView push state =
     , gravity RIGHT
     , padding (Padding 16 12 16 12)
     , onClick push $ const $ if state.props.isReferred then ReferralFlowNoAction else ReferralFlowAction
-    , Id.testId $ Id.Object if not state.props.isReferred then (getEN HAVE_REFERRAL_CODE) else (getEN REFERRAL_CODE_APPLIED)
+    , Id.testId $ Id.Object if not state.props.isReferred then (getKeyString HAVE_REFERRAL_CODE) else (getKeyString REFERRAL_CODE_APPLIED)
     ][
       imageView [
          imageWithFallback "ny_ic_tick,https://assets.juspay.in/nammayatri/images/user/ny_ic_tick.png"
@@ -419,7 +419,7 @@ liveStatsDashboardView push state =
     , gravity RIGHT
     , padding (Padding 16 12 16 12)
     , onClick push $ const $ LiveDashboardAction
-    , Id.testId $ Id.Container (getEN CHECK_OUT_LIVE_STATS)
+    , Id.testId $ Id.Container (getKeyString CHECK_OUT_LIVE_STATS)
     ][
       imageView [
         imageWithFallback "ic_graph_blue,https://assets.juspay.in/nammayatri/images/user/ic_graph_blue.png"
@@ -648,7 +648,7 @@ homeScreenTopIconView push state =
             , height WRAP_CONTENT
             , disableClickFeedback true
             , onClick push (const $ OpenSearchLocation)
-            , Id.testId $ Id.Container (getEN PICK_UP_LOCATION)
+            , Id.testId $ Id.Container (getKeyString PICK_UP_LOCATION)
             ]
             [ textView
                 [ height WRAP_CONTENT
@@ -871,7 +871,7 @@ topLeftIconView state push =
           , weight 1.0
           ][]
         , referralView push state
-        , if ((getValueFromConfig "showDashboard") == "false") || (isPreviousVersion (getValueToLocalStore VERSION_NAME) (if os == "IOS" then "1.2.5" else "1.2.1")) then emptyTextView state else liveStatsDashboardView push state
+        , if ((getValueFromConfig "showDashboard") == "false") || (isPreviousVersion (getValueToLocalStore VERSION_NAME) (if os == "IOS" then "1.2.5" else "1.2.2")) then emptyTextView state else liveStatsDashboardView push state
       ]
 
 ----------- suggestedPriceView -------------
@@ -1036,7 +1036,7 @@ showMenuButtonView push menuText menuImage autoAssign =
       , margin (MarginHorizontal 10 10)
       , fontStyle $ FontStyle.regular LanguageStyle
       , onClick push (const $ CheckBoxClick autoAssign)
-      , Id.testId $ Id.Text if(menuText == (getString AUTO_ASSIGN_DRIVER)) then (getEN AUTO_ASSIGN_DRIVER) else (getEN CHOOSE_BETWEEN_MULTIPLE_DRIVERS)
+      , Id.testId $ Id.Text if(menuText == (getString AUTO_ASSIGN_DRIVER)) then (getKeyString AUTO_ASSIGN_DRIVER) else (getKeyString CHOOSE_BETWEEN_MULTIPLE_DRIVERS)
       ]
     , imageView
       [ height $ if autoAssign then V 30 else V 18
@@ -1110,7 +1110,7 @@ locationTrackingPopUp push state =
         , cornerRadii $ Corners 24.0 true true false false
         , padding (Padding 20 32 20 25)
         , onClick push (const $ TrackLiveLocationAction)
-        , Id.testId $ Id.Container (getEN TRACK_LIVE_LOCATION_USING)
+        , Id.testId $ Id.Container (getKeyString TRACK_LIVE_LOCATION_USING)
         , alignParentBottom "true,-1"
         , disableClickFeedback true
         ]
@@ -1288,7 +1288,7 @@ loaderView push state =
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , onClick push $ const CancelSearch
-        , Id.testId $ Id.Container (getEN CANCEL_SEARCH)
+        , Id.testId $ Id.Container (getKeyString CANCEL_SEARCH)
         , visibility if (any (_ == state.props.currentStage) [ FindingEstimate, TryAgain ]) then VISIBLE else GONE
         , orientation VERTICAL
         , gravity CENTER
@@ -1732,6 +1732,7 @@ notinPickUpZoneView push state =
             , height WRAP_CONTENT
             , fontStyle $ FontStyle.bold LanguageStyle
             , onClick push $ const ShowRateCard
+            , Id.testId $ Id.Container Id.infoIcon
             ]
             , estimatedTimeAndDistanceView push state
           ]
@@ -1742,6 +1743,7 @@ notinPickUpZoneView push state =
             , gravity BOTTOM
             , margin (MarginTop 13)
             , onClick push $ const ShowRateCard
+            , Id.testId $ Id.Object Id.infoIcon
             ]
         ]
         , linearLayout
@@ -1765,6 +1767,7 @@ notinPickUpZoneView push state =
                   , height WRAP_CONTENT
                   , gravity CENTER_HORIZONTAL
                   , onClick push $ const PreferencesDropDown
+                  , Id.testId $ Id.Container (getKeyString BOOKING_PREFERENCE)
                   , margin $ MarginBottom 8
                   ][ 
                       textView

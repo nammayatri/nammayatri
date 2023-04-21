@@ -25,7 +25,7 @@ import Font.Size as FontSize
 import PrestoDOM.Properties (background, color, cornerRadius, fontStyle, gravity, height, imageUrl, margin, orientation, stroke, text, textSize, width, padding, ellipsize, alignParentLeft, alignParentRight)
 import Engineering.Helpers.Commons (screenWidth, screenHeight, flowRunner)
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getStringFromEnum)
 import Helpers.Utils (countDown, toString, parseFloat)
 import Effect.Class (liftEffect)
 import Effect.Aff (launchAff_)
@@ -35,7 +35,7 @@ import Control.Transformers.Back.Trans (runBackT)
 import Control.Monad.Except.Trans (runExceptT)
 import Common.Types.App
 import Constant.Test as Id
-import EN
+
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = 
@@ -330,7 +330,7 @@ declineButton push config =
   , margin (MarginRight 10)
   , gravity CENTER
   , onClick push (const (Decline config.id))
-  , Id.testId $ Id.Container (getEN DECLINE)
+  , Id.testId $ Id.Container (getStringFromEnum DECLINE)
   ][  textView
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
@@ -350,7 +350,7 @@ requestButton push config =
   , background config.request.background
   , gravity CENTER
   , onClick push (const (Request config.id (config.totalPrice - config.basePrice)))
-  , Id.testId $ Id.Container (getEN REQUEST)
+  , Id.testId $ Id.Container (getStringFromEnum REQUEST)
   ][  textView
       [ width WRAP_CONTENT
       , height WRAP_CONTENT

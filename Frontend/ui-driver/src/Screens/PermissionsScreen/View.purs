@@ -19,7 +19,7 @@ import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (<<<), (<>))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), color, fontStyle, frameLayout, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, width, cornerRadius, weight, afterRender, imageWithFallback)
 import Effect (Effect)
 import Language.Strings(getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getStringFromEnum)
 import Styles.Colors as Color
 import Font.Size as FontSize
 import Font.Style as FontStyle
@@ -31,7 +31,7 @@ import JBridge as JB
 import Common.Types.App
 import Screens.PermissionsScreen.ComponentConfig
 import Constant.Test as Id
-import EN
+
 
 screen :: ST.PermissionsScreenState -> Screen Action ST.PermissionsScreenState ScreenOutput
 screen initialState =
@@ -115,10 +115,10 @@ permissionsListView state push =
             , margin (MarginTop 50)
             , onClick push (const (ItemClick item.permission))
             , Id.testId $ Id.List case item.permission of
-                                    Overlay -> (getEN OVERLAY_TO_DRAW_OVER_APPLICATIONS)
-                                    Battery -> (getEN BATTERY_OPTIMIZATIONS)
-                                    AutoStart -> (getEN AUTO_START_APPLICATION_IN_BACKGROUND)
-                                    Location -> (getEN LOCATION_ACCESS)
+                                    Overlay -> (getStringFromEnum OVERLAY_TO_DRAW_OVER_APPLICATIONS)
+                                    Battery -> (getStringFromEnum BATTERY_OPTIMIZATIONS)
+                                    AutoStart -> (getStringFromEnum AUTO_START_APPLICATION_IN_BACKGROUND)
+                                    Location -> (getStringFromEnum LOCATION_ACCESS)
             ][  titleImage item,
                 titleAndDescriptionList item,
                 checkBox item state

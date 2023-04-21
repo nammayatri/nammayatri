@@ -21,11 +21,11 @@ import Components.GenericHeader as GenericHeader
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getKeyString)
 import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..))
 import Screens.Types as ST
 import Styles.Colors as Color
-import EN
+
 
 apiErrorModalConfig :: ErrorModal.Config 
 apiErrorModalConfig = let 
@@ -59,7 +59,7 @@ apiErrorModalConfig = let
       , fontStyle = FontStyle.medium LanguageStyle
       , textSize = FontSize.a_16
       }
-    , testIdText = (getEN NOTIFY_ME)
+    , testIdText = (getKeyString NOTIFY_ME)
     }
   in errorModalConfig' 
 
@@ -94,7 +94,7 @@ errorModalConfig = let
       , fontStyle = FontStyle.medium LanguageStyle
       , textSize = FontSize.a_16
       }
-    , testIdText = (getEN BOOK_NOW)
+    , testIdText = (getKeyString BOOK_NOW)
     }
   in errorModalConfig' 
 

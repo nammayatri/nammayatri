@@ -25,12 +25,12 @@ import Styles.Colors as Color
 import PrestoDOM (PrestoDOM, Orientation(..), Gravity(..), Length(..), Padding(..), Margin(..), Visibility(..), margin, padding, orientation, height, width, linearLayout, imageView, imageUrl, text, textView, textSize, fontStyle, gravity, clickable, onClick, color, background, lineHeight, visibility, cornerRadius, stroke, ellipsize, maxLines, imageWithFallback, weight)
 import Debug.Trace (spy)
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getKeyString)
 import Common.Types.App
 import Engineering.Helpers.Commons(screenWidth)
 import Data.Maybe(Maybe(..), fromMaybe)
 import Constant.Test as Id
-import EN
+
 
 view :: forall w. (Action -> Effect Unit) -> LocationListItemState -> PrestoDOM (Effect Unit) w 
 view push state = 
@@ -43,11 +43,11 @@ view push state =
   , stroke ("1,"<>Color.grey900)
   , cornerRadius 8.0
   , onClick push $ if (not state.isEditEnabled) then const (CardClicked state) else (const (EditLocation state))
-  , Id.testId $ Id.Component (Id.savedLocationCard <> Id.underScore <> (if (not state.isEditEnabled) then (getEN EDIT)  
+  , Id.testId $ Id.Component (Id.savedLocationCard <> Id.underScore <> (if (not state.isEditEnabled) then (getKeyString EDIT)  
           else case (getCardType (fromMaybe "" state.cardType)) of 
                                             Just tag -> case tag of 
-                                              HOME_TAG -> (getEN HOME)
-                                              WORK_TAG -> (getEN WORK)
+                                              HOME_TAG -> (getKeyString HOME)
+                                              WORK_TAG -> (getKeyString WORK)
                                               OTHER_TAG -> state.tagName
                                             Nothing -> state.tagName))
   ][ linearLayout 
@@ -88,8 +88,8 @@ savedLocationView state push =
           , Id.testId $ Id.Object if (state.isEditEnabled) then Id.editLocation  
                             else case (getCardType (fromMaybe "" state.cardType)) of 
                                             Just tag -> case tag of 
-                                              HOME_TAG -> (getEN HOME)
-                                              WORK_TAG -> (getEN WORK)
+                                              HOME_TAG -> (getKeyString HOME)
+                                              WORK_TAG -> (getKeyString WORK)
                                               OTHER_TAG -> state.tagName
                                             Nothing -> state.tagName
           ][  textView
@@ -134,7 +134,7 @@ savedLocationView state push =
             , padding (Padding 4 4 4 4)
             , clickable true
             , onClick push $ const (DeleteLocation state.tagName)
-            , Id.testId $ Id.Text (getEN REMOVE)
+            , Id.testId $ Id.Text (getKeyString REMOVE)
             ][  textView
                 [ text (getString REMOVE)
                 , textSize FontSize.a_14

@@ -27,7 +27,7 @@ import Styles.Colors as Color
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
-import Language.Types(STR(..))
+import Language.Types(STR(..), getStringFromEnum)
 import Engineering.Helpers.Commons as EHC
 import JBridge as JB
 import PrestoDOM.Animation as PrestoAnim
@@ -37,7 +37,7 @@ import Common.Types.App
 import Screens.EnterMobileNumberScreen.ComponentConfig
 import MerchantConfigs.Utils (getValueFromMerchant)
 import Constant.Test as Id
-import EN
+
 
 screen :: ST.EnterMobileNumberScreenState -> Screen Action ST.EnterMobileNumberScreenState ScreenOutput
 screen initialState =
@@ -143,7 +143,7 @@ primaryEditTextView state push =
           letterSpacing: 0.0,
           id: (EHC.getNewIDWithTag "EnterMobileNumberEditText"),
           fontSize : FontSize.a_18,
-          testIdText : (getEN ENTER_MOBILE_NUMBER)
+          testIdText : (getStringFromEnum ENTER_MOBILE_NUMBER)
         })
       ]
   ]
@@ -171,7 +171,7 @@ underlinedTextView state push =
                   _ <- JB.openUrlInApp $ getValueFromMerchant "DOCUMENT_LINK" 
                   pure unit
                   ) (const NonDisclosureAgreementAction)
-      , Id.testId $ Id.Text (Id.link <> Id.underScore <> (getEN NON_DISCLOUSER_AGREEMENT))
+      , Id.testId $ Id.Text (Id.link <> Id.underScore <> (getStringFromEnum NON_DISCLOUSER_AGREEMENT))
       ][ textView (
         [ width WRAP_CONTENT
         , height WRAP_CONTENT

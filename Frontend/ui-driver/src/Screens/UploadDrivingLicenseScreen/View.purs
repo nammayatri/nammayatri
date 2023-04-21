@@ -22,7 +22,7 @@ import PrestoDOM.Properties as PP
 import Animation as Anim
 import Effect (Effect)
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getStringFromEnum)
 import Screens.UploadDrivingLicenseScreen.Controller (Action(..), eval, ScreenOutput)
 import Screens.Types as ST
 import Styles.Colors as Color
@@ -40,7 +40,7 @@ import Data.String as DS
 import Constant.Test as Id
 import Common.Types.App
 import Screens.UploadDrivingLicenseScreen.ComponentConfig
-import EN
+
 
 screen :: ST.UploadDrivingLicenseState -> Screen Action ST.UploadDrivingLicenseState ScreenOutput
 screen initialState =
@@ -136,7 +136,7 @@ linearLayout
       linearLayout[
       width MATCH_PARENT
     , height MATCH_PARENT
-      ] [GenericMessageModal.view (push <<< GenericMessageModalAction) {text : (getString ISSUE_WITH_DL_IMAGE), openGenericMessageModal : state.props.openGenericMessageModal, buttonText : (getString NEXT) , testIdText : (getEN NEXT)}] else linearLayout [][]
+      ] [GenericMessageModal.view (push <<< GenericMessageModalAction) {text : (getString ISSUE_WITH_DL_IMAGE), openGenericMessageModal : state.props.openGenericMessageModal, buttonText : (getString NEXT) , testIdText : (getStringFromEnum NEXT)}] else linearLayout [][]
   ] 
   
 registrationModalView :: ST.UploadDrivingLicenseState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
@@ -187,7 +187,7 @@ enterLicenceNumber state push =
             , fontStyle $ FontStyle.semiBold LanguageStyle
             , clickable true 
             , onClick push (const $ TutorialModal "LICENSE")
-            , Id.testId $ Id.Text (getEN WHERE_IS_MY_LICENSE_NUMBER)
+            , Id.testId $ Id.Text (getStringFromEnum WHERE_IS_MY_LICENSE_NUMBER)
             , visibility GONE
             ]
         ]
@@ -376,7 +376,7 @@ headerLayout state push =
             , fontStyle $ FontStyle.semiBold LanguageStyle
             , clickable true
             , onClick push (const $ TutorialModal "LICENSE")
-            , Id.testId $ Id.Text (getEN HELP)
+            , Id.testId $ Id.Text (getStringFromEnum HELP)
             ]
         ]
     ]
@@ -452,7 +452,7 @@ dateOfIssue push state =
                         _ <- JB.datePicker "MAXIMUM_PRESENT_DATE" push $ DatePicker "DATE_OF_ISSUE"
                         pure unit
                       ) $ const SelectDateOfIssueAction
-      , Id.testId $ Id.Object (getEN SELECT_DATE_OF_ISSUE)
+      , Id.testId $ Id.Object (getStringFromEnum SELECT_DATE_OF_ISSUE)
       ][ textView $
         [ text if state.data.dateOfIssue == Just "" then (getString SELECT_DATE_OF_ISSUE) else state.data.dateOfIssueView
         , color if state.data.dateOfIssue == Just "" then Color.darkGrey else Color.greyTextColor
@@ -471,7 +471,7 @@ dateOfIssue push state =
       , height WRAP_CONTENT
       , orientation HORIZONTAL
       , onClick push (const $ TutorialModal "DATE_OF_ISSUE")
-      , Id.testId $ Id.Text (getEN WHERE_IS_MY_ISSUE_DATE)
+      , Id.testId $ Id.Text (getStringFromEnum WHERE_IS_MY_ISSUE_DATE)
       ][ textView $
         [ text (getString WHERE_IS_MY_ISSUE_DATE)
         , weight 1.0

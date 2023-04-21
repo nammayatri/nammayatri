@@ -50,7 +50,7 @@ view push config =
                             else do 
                               _ <- push action 
                               pure unit) (const $ OnClick config)
-        , Id.testId $ Id.Select config.tag
+        , Id.testId $ Id.Select config.title
         ]([  prefixImageView config
           , linearLayout
             [ height WRAP_CONTENT

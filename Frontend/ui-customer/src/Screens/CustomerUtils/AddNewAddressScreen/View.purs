@@ -33,7 +33,7 @@ import Font.Style as FontStyle
 import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (LANGUAGE_KEY(..), getString, getKey)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getKeyString)
 import Prelude (Unit, bind, const, discard, not, pure, show, unit, ($), (&&), (*), (-), (/), (/=), (<<<), (<>), (==), (||))
 import PrestoDOM (Length(..), Margin(..), Orientation(..), Gravity(..), Visibility(..), Padding(..), PrestoDOM, Screen, height, width, color, background, orientation, padding, margin, onBackPressed, linearLayout, gravity, textView, text, textSize, fontStyle, scrollView, scrollBarY, relativeLayout, editText, hint, singleLine, hintColor, ellipsize, cornerRadius, lineHeight, stroke, onChange, id, visibility, maxLines, onClick, imageView, imageUrl, alignParentBottom, afterRender, adjustViewWithKeyboard, weight, alpha, frameLayout, clickable, onFocus, imageWithFallback)
 import Screens.AddNewAddressScreen.Controller (Action(..), ScreenOutput, eval, validTag)
@@ -43,7 +43,7 @@ import Common.Types.App
 import Screens.CustomerUtils.AddNewAddressScreen.ComponentConfig 
 import Storage (KeyStore(..), getValueToLocalStore)
 import Constant.Test as Id
-import EN
+
 
 screen :: ST.AddNewAddressScreenState -> Screen Action ST.AddNewAddressScreenState ScreenOutput
 screen initialState = 
@@ -209,7 +209,7 @@ bottomBtnsView state push =
                                 else do 
                                   _ <- push action
                                   pure unit) (const item.action)
-              , Id.testId $ Id.Select if item.tag == "LOCATE_ON_MAP" then (getEN SELECT_ON_MAP) else (getEN CURRENT_LOCATION)
+              , Id.testId $ Id.Select if item.tag == "LOCATE_ON_MAP" then (getKeyString SELECT_ON_MAP) else (getKeyString CURRENT_LOCATION)
               ] <> FontStyle.body1 TypoGraphy
             ] 
           , linearLayout
@@ -489,7 +489,7 @@ savePlaceView state push =
                           _ <- HU.setText' (EHC.getNewIDWithTag "SavedLocationEditText") state.data.address
                           pure unit)
               $ const ChangeAddress
-          , Id.testId $ Id.Container (getEN EDIT)
+          , Id.testId $ Id.Container (getKeyString EDIT)
           ][  textView
               [ text (state.data.selectedItem).description 
               , textSize FontSize.a_14
@@ -514,7 +514,7 @@ savePlaceView state push =
                 , textSize FontSize.a_14
                 , fontStyle $ FontStyle.medium LanguageStyle
                 , lineHeight "18"
-                , Id.testId $ Id.Text (getEN EDIT)
+                , Id.testId $ Id.Text (getKeyString EDIT)
                 ]]
           ]
          , textView

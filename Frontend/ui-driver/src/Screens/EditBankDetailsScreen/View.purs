@@ -22,14 +22,14 @@ import Screens.Types as ST
 import Prelude (Unit, const, map, ($), (==))
 import Language.Strings (getString)
 import Animation as Anim
-import Language.Types (STR(..))
+import Language.Types (STR(..), getStringFromEnum)
 import Font.Style as FontStyle
 import Styles.Colors as Color
 import Font.Size as FontSize
 import Effect (Effect)
 import Common.Types.App
 import Constant.Test as Id
-import EN
+
 
 screen :: ST.EditBankDetailsScreenState -> Screen Action ST.EditBankDetailsScreenState ScreenOutput
 screen initialState =
@@ -120,7 +120,7 @@ headerLayout state push heading =
         , fontStyle $ FontStyle.semiBold LanguageStyle
         , visibility if state.props.isInEditBankDetailsScreen then GONE else VISIBLE
         , onClick push (const ToggleScreenMode)
-        , Id.testId $ Id.Text (getEN EDIT)
+        , Id.testId $ Id.Text (getStringFromEnum EDIT)
         ]
     ]
   , linearLayout

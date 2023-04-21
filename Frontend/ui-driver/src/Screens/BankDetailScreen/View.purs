@@ -30,11 +30,11 @@ import Components.RegistrationModal.View as RegistrationModal
 import Components.OnboardingHeader.View as OnboardingHeader
 import Animation as Anim
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getStringFromEnum)
 import Common.Types.App
 import Screens.BankDetailScreen.ComponentConfig
 import Constant.Test as Id
-import EN
+
 
 screen :: ST.BankDetailScreenState -> Screen Action ST.BankDetailScreenState ScreenOutput
 screen initialState =
@@ -166,7 +166,7 @@ enterBeneficiaryNumber state push =
                   , stroke ("1,#FFFFFF")
                   , id (EHC.getNewIDWithTag "beneficiaryNumber")
                   , onChange push (const BeneficiaryNumber state.props.inputData)
-                  , Id.testId $ Id.TextField (getEN ENTER_ACCOUNT_NUMBER)
+                  , Id.testId $ Id.TextField (getStringFromEnum ENTER_ACCOUNT_NUMBER)
                   ] <> FontStyle.subHeading1 TypoGraphy)
               ]
         ]
@@ -232,7 +232,7 @@ reEnterBeneficiaryNumber state push =
                   , stroke ("1,#FFFFFF")
                   , id (EHC.getNewIDWithTag "verifybeneficiary")
                   , onChange push (const ReEnterBeneficiaryNumber state.props.inputData)
-                  , Id.testId $ Id.TextField (getEN RE_ENTER_BENIFICIARY_NUMBER)
+                  , Id.testId $ Id.TextField (getStringFromEnum RE_ENTER_BENIFICIARY_NUMBER)
                   ] <> FontStyle.subHeading1 TypoGraphy)
               ]
         ]
@@ -299,7 +299,7 @@ enterIfsc state push =
                 , stroke ("1,#FFFFFF")
                 , id (EHC.getNewIDWithTag "ifscCode")
                 , onChange push (const IFSCNumber state.props.inputData)
-                , Id.testId $ Id.TextField (getEN ENTER_IFSC_CODE)
+                , Id.testId $ Id.TextField (getStringFromEnum ENTER_IFSC_CODE)
                 ] <> FontStyle.subHeading1 TypoGraphy)
               ]
         ]

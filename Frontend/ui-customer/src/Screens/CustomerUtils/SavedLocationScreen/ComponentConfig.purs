@@ -23,14 +23,13 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import JBridge as JB 
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getKeyString)
 import Prelude ((<>))
 import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..))
 import Screens.Types as ST
 import Styles.Colors as Color
 import Common.Types.App
 import Data.Maybe 
-import EN
 
 requestDeletePopUp :: ST.SavedLocationScreenState -> PopUpModal.Config 
 requestDeletePopUp state = let 
@@ -51,7 +50,7 @@ requestDeletePopUp state = let
       , color = Color.black700
       , strokeColor = Color.black700
       , fontStyle = FontStyle.semiBold LanguageStyle
-      , testIdText = (getEN CANCEL_STR)
+      , testIdText = (getKeyString CANCEL_STR)
       },
       option2 {text = (getString YES_REMOVE)
       , background = Color.red
@@ -60,7 +59,7 @@ requestDeletePopUp state = let
       , fontSize = FontSize.a_16 
       , margin = (MarginLeft 12)
       , fontStyle = FontStyle.semiBold LanguageStyle 
-      , testIdText = (getEN YES_REMOVE)}
+      , testIdText = (getKeyString YES_REMOVE)}
      
     }
   in popUpConfig'
@@ -78,7 +77,7 @@ primaryButtonConfig state = let
       , height = V 52
       , id = "AddNewAddressSavedLocationScreen"
       , enableLoader = (JB.getBtnLoader "AddNewAddressSavedLocationScreen")
-      , testIdText = (getEN ADD_NEW_FAVOURITE)
+      , testIdText = (getKeyString ADD_NEW_FAVOURITE)
       }
   in primaryButtonConfig'
 
@@ -143,6 +142,6 @@ errorModalConfig state = let
       , fontStyle = FontStyle.semiBold LanguageStyle
       , textSize = FontSize.a_16
       }
-    , testIdText = (getEN ADD_NEW_FAVOURITE)
+    , testIdText = (getKeyString ADD_NEW_FAVOURITE)
     }
   in errorModalConfig' 

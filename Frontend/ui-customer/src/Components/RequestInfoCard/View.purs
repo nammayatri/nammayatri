@@ -23,11 +23,11 @@ import Styles.Colors as Color
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getKeyString)
 import Common.Types.App
 import Engineering.Helpers.Commons (screenWidth)
 import Constant.Test as Id
-import EN
+
 
 view :: forall w. (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
 view push = 
@@ -95,7 +95,7 @@ view push =
             , textSize FontSize.a_16
             , padding (Padding 0 28 0 20)
             , onClick push $ const Close
-            , Id.testId $ Id.Object (getEN GOT_IT)
+            , Id.testId $ Id.Object (getKeyString GOT_IT)
             ]
      ]
 

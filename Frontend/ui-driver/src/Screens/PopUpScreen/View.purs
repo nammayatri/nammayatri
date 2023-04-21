@@ -19,7 +19,7 @@ import Prelude --(Unit, bind, const, map, pure, unit, ($), (&&), (<<<))
 import PrestoDOM --(Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), color, fontStyle, frameLayout, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, width)
 import Effect (Effect)
 import Language.Strings(getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getStringFromEnum)
 import Styles.Colors as Color
 import Screens.PopUpScreen.Controller (Action(..), eval, ScreenOutput)
 import Screens.Types as ST

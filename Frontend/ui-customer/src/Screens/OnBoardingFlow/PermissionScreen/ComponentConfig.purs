@@ -22,12 +22,11 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import JBridge as JB
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getKeyString)
 import Prelude ((==))
 import PrestoDOM (Length(..), Margin(..))
 import Styles.Colors as Color
 import Common.Types.App
-import EN
 
 errorModalConfig :: ErrorModal.Config 
 errorModalConfig = let 
@@ -57,7 +56,7 @@ errorModalConfig = let
       , color = Color.yellow900
       , fontStyle = FontStyle.medium LanguageStyle
       }
-    , testIdText = (getEN TRY_AGAIN)
+    , testIdText = (getKeyString TRY_AGAIN)
     }
   in errorModalConfig' 
 
@@ -76,6 +75,6 @@ primaryButtonConfig  = let
       , margin = (Margin 0 0 0 0)
       , id = "PermissionScreenButton"
       , enableLoader = (JB.getBtnLoader "PermissionScreenButton")
-      , testIdText = if EHC.os == "IOS" then (getEN CONTINUE) else (getEN GRANT_ACCESS)
+      , testIdText = if EHC.os == "IOS" then (getKeyString CONTINUE) else (getKeyString GRANT_ACCESS)
       }
   in primaryButtonConfig'

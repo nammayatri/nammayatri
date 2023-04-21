@@ -29,7 +29,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import JBridge (getBtnLoader, startLottieProcess)
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getKeyString)
 import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (+), (/), (/=), (<<<), (<>), (==), (||))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, background, clickable, color, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, text, textSize, textView, visibility, weight, width, imageWithFallback)
 import PrestoDOM.Animation as PrestoAnim
@@ -38,7 +38,7 @@ import Helpers.Utils (isPreviousVersion, getPreviousVersion)
 import Styles.Colors as Color
 import Common.Types.App
 import Constant.Test as Id
-import EN
+
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListModelState -> PrestoDOM (Effect Unit) w
 view push state = 
@@ -466,7 +466,7 @@ homeButtonConfig state = let
       , stroke = ("1," <> Color.black)
       , id = "HomeButtonQuoteList"
       , enableLoader = (getBtnLoader "HomeButtonQuoteList")
-      , testIdText = (getEN HOME)
+      , testIdText = (getKeyString HOME)
       }
   in homeButtonConfig'
 
@@ -484,7 +484,7 @@ tryAgainButtonConfig state = let
       , width = MATCH_PARENT
       , id = "TryAgainButtonQuoteList"
       , enableLoader = (getBtnLoader "TryAgainButtonQuoteList")
-      , testIdText = (getEN TRY_AGAIN)
+      , testIdText = (getKeyString TRY_AGAIN)
       }
   in tryAgainButtonConfig'
 

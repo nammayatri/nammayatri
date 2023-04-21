@@ -25,10 +25,10 @@ import Font.Size as FontSize
 import Components.OnboardingHeader.Controller
 import Engineering.Helpers.Commons (screenWidth)
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getStringFromEnum)
 import Common.Types.App
 import Constant.Test as Id
-import EN
+
 
 view :: forall w .  (Action  -> Effect Unit) -> OnboardingHeaderState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -94,7 +94,7 @@ navigationView state push =
         , cornerRadius 5.0
         , stroke ("1," <> Color.blueBtn)
         , onClick push (const TriggerRegModal)
-        , Id.testId $ Id.Button $ Id.BtnConfig (getEN STEP)
+        , Id.testId $ Id.Button $ Id.BtnConfig (getStringFromEnum STEP)
         ][ textView
             [ text ((getString STEP) <>state.stepNumber <> "/4" )
             , textSize FontSize.a_14

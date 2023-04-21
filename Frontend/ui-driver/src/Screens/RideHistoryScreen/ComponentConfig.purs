@@ -23,11 +23,11 @@ import PrestoDOM
 import Components.ErrorModal as ErrorModal
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Language.Types (STR(..))
+import Language.Types (STR(..), getStringFromEnum)
 import Screens.Types (RideHistoryScreenState)
 import Screens.Types as ST
 import Styles.Colors as Color
-import EN
+
 
 errorModalConfig :: RideHistoryScreenState -> ErrorModal.Config 
 errorModalConfig state = let 
@@ -61,6 +61,6 @@ errorModalConfig state = let
       , textSize = FontSize.a_16
       , visibility  = GONE
       }
-    , testIdText = (getEN BOOK_NOW)
+    , testIdText = (getStringFromEnum BOOK_NOW)
     }
   in errorModalConfig' 

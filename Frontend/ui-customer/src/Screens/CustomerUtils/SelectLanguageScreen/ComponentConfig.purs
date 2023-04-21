@@ -22,13 +22,13 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import JBridge as JB 
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getKeyString)
 import Prelude ((==))
 import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..))
 import Screens.Types as ST 
 import Styles.Colors as Color
 import Common.Types.App
-import EN
+
 
 primaryButtonConfig :: ST.SelectLanguageScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
@@ -43,7 +43,7 @@ primaryButtonConfig state = let
         , margin = (Margin 0 0 0 0)
         , id = "UpdateLanguageButton"
         , enableLoader = (JB.getBtnLoader "UpdateLanguageButton")
-        , testIdText = (getEN UPDATE)
+        , testIdText = (getKeyString UPDATE)
       }
   in primaryButtonConfig'
 

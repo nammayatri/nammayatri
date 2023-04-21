@@ -31,7 +31,7 @@ import Styles.Colors as Color
 import Screens.Types(LocationListItemState, CardType(..), LocationItemType(..))
 import Language.Strings (getString)
 import Data.Maybe
-import Language.Types (STR(..))
+import Language.Types (STR(..), getKeyString)
 import Debug.Trace (spy)
 import Data.Array (filter, length, null)
 import Data.String (toLower)

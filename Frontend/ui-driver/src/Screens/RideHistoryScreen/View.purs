@@ -26,7 +26,7 @@ import PrestoDOM.List as PrestoList
 import PrestoDOM.Elements.Keyed as Keyed
 import Data.Tuple as DT
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getStringFromEnum)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Types.Core (toPropValue)
 import Data.Array as DA
@@ -50,7 +50,7 @@ import Common.Types.App
 import Components.BottomNavBar.Controller (navData)
 import Screens.RideHistoryScreen.ComponentConfig
 import Constant.Test as Id
-import EN
+
 
 screen :: ST.RideHistoryScreenState -> PrestoList.ListItem -> Screen Action ST.RideHistoryScreenState ScreenOutput
 screen initialState rideListItem = 
@@ -98,7 +98,7 @@ view rideListItem push state =
       , orientation VERTICAL
       , background Color.white900
       , onClick push (const Loader)
-      , Id.testId $ Id.Container (getEN LOAD_MORE)
+      , Id.testId $ Id.Container (getStringFromEnum LOAD_MORE)
       , gravity CENTER
       , alignParentBottom "true,-1"
       , padding (PaddingBottom 5)
@@ -148,7 +148,7 @@ headerView push state =
               , height WRAP_CONTENT
               , weight 0.5
               , onClick push (const $ SelectTab "COMPLETED")
-              , Id.testId $ Id.Select (Id.tab <> Id.underScore <> (getEN COMPLETED_))
+              , Id.testId $ Id.Select (Id.tab <> Id.underScore <> (getStringFromEnum COMPLETED_))
               ][
                 linearLayout
                   [ width $ (V (screenWidth unit / 2) )
@@ -174,7 +174,7 @@ headerView push state =
               , height WRAP_CONTENT
               , weight 0.5
               , onClick push (const $ SelectTab "CANCELLED")
-              , Id.testId $ Id.Element (Id.tab <> Id.underScore <> (getEN CANCELLED_))
+              , Id.testId $ Id.Element (Id.tab <> Id.underScore <> (getStringFromEnum CANCELLED_))
               ][
                 linearLayout
                   [ width $ V (screenWidth unit / 2)

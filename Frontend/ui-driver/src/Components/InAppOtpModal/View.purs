@@ -28,7 +28,7 @@ import Helpers.Utils (toString)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getStringFromEnum)
 import Prelude (Unit, const, map, unit, ($), (/), (<>), (==), (||), (>=))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), imageUrl, imageView, linearLayout, onBackPressed, onClick, textView, imageWithFallback)
 import PrestoDOM.Animation as PrestoAnim

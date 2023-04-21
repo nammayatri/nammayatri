@@ -36,7 +36,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (secondsToHms, zoneOtpExpiryTimer, Merchant(..), getMerchant, toString)
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getKeyString)
 import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>), (-), (*), bind, pure, discard, (&&), (||), (/=))
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, alignParentLeft, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width)
@@ -46,7 +46,7 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (Stage(..))
 import Styles.Colors as Color
 import Constant.Test as Id
-import EN
+
 
 view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit ) w
 view push state = 
@@ -198,7 +198,7 @@ otpView push state =
             , textSize FontSize.a_18
             , color Color.white900
             , fontStyle $ FontStyle.bold LanguageStyle
-            , Id.testId $ Id.Text (getEN OTP <> Id.underScore <> toString(index))
+            , Id.testId $ Id.Text (getKeyString OTP <> Id.underScore <> toString(index))
             ]
         ]) $ split (Pattern "")  state.data.otp)
 
@@ -312,7 +312,7 @@ sosView push state =
     , orientation VERTICAL
     , gravity if os == "IOS" then CENTER_VERTICAL else BOTTOM
     , onClick push $ const OpenEmergencyHelp
-    , Id.testId $ Id.Object (Id.sos)
+    , Id.testId $ Id.Object Id.sos
     ][ imageView
         [ imageWithFallback "ny_ic_sos,https://assets.juspay.in/nammayatri/images/user/ny_ic_sos.png"
         , height $ V 50
@@ -460,7 +460,7 @@ cancelRideLayout push state =
    , width WRAP_CONTENT
    , padding $ Padding 5 5 5 5
    , onClick push $ const $ CancelRide state
-   , Id.testId $ Id.Button $ Id.BtnConfig (getEN CANCEL_RIDE)
+   , Id.testId $ Id.Button $ Id.BtnConfig (getKeyString CANCEL_RIDE)
  ] 
       [textView
         [ width WRAP_CONTENT
@@ -891,6 +891,7 @@ openGoogleMap push state =
       , gravity CENTER
       , orientation HORIZONTAL
       , onClick push (const OnNavigate)
+      , Id.testId $ Id.Button $ Id.BtnConfig (getKeyString NAVIGATE)
       ][ textView (
           [ width WRAP_CONTENT
           , height WRAP_CONTENT

@@ -26,7 +26,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (isPreviousVersion, getMerchant, Merchant(..))
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getKeyString)
 import Merchant.Utils (getValueFromConfig)
 import Prelude (Unit, const, unit, ($), (*), (/), (<>), (==), (||), (&&), (/=))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, visibility, background, clickable, color, disableClickFeedback, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, orientation, padding, text, textSize, textView, width, weight, ellipsize, maxLines, imageWithFallback, scrollView, scrollBarY)
@@ -34,7 +34,7 @@ import PrestoDOM.Animation as PrestoAnim
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import Constant.Test as Id
-import EN
+
 
 view :: forall w .  (Action  -> Effect Unit) -> SettingSideBarState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -212,15 +212,15 @@ settingsMenuView item push  =
                               SETTINGS_EMERGENCY_CONTACTS       -> GoToEmergencyContacts
                               SETTINGS_LIVE_DASHBOARD -> LiveStatsDashboard)
   , Id.testId $ Id.Hamburger case item.tag of 
-                              SETTINGS_RIDES          -> (getEN MY_RIDES) 
-                              SETTINGS_FAVOURITES     -> (getEN FAVOURITES) 
-                              SETTINGS_HELP           -> (getEN HELP_AND_SUPPORT) 
-                              SETTINGS_LANGUAGE       -> (getEN LANGUAGE) 
-                              SETTINGS_ABOUT          -> (getEN ABOUT) 
-                              SETTINGS_LOGOUT         -> (getEN LOGOUT_) 
-                              SETTINGS_SHARE_APP      -> (getEN SHARE_APP)
-                              SETTINGS_EMERGENCY_CONTACTS -> (getEN EMERGENCY_CONTACTS)
-                              SETTINGS_LIVE_DASHBOARD -> (getEN LIVE_STATS_DASHBOARD)
+                              SETTINGS_RIDES          -> (getKeyString MY_RIDES) 
+                              SETTINGS_FAVOURITES     -> (getKeyString FAVOURITES) 
+                              SETTINGS_HELP           -> (getKeyString HELP_AND_SUPPORT) 
+                              SETTINGS_LANGUAGE       -> (getKeyString LANGUAGE) 
+                              SETTINGS_ABOUT          -> (getKeyString ABOUT) 
+                              SETTINGS_LOGOUT         -> (getKeyString LOGOUT_) 
+                              SETTINGS_SHARE_APP      -> (getKeyString SHARE_APP)
+                              SETTINGS_EMERGENCY_CONTACTS -> (getKeyString EMERGENCY_CONTACTS)
+                              SETTINGS_LIVE_DASHBOARD -> (getKeyString LIVE_STATS_DASHBOARD)
   ][  imageView
       [ width ( V 25 )
       , height ( V 25 )

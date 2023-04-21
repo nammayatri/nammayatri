@@ -22,7 +22,7 @@ import Engineering.Helpers.Commons as EHC
 import Data.Maybe (Maybe(..))
 import Data.String as DS 
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getKeyString)
 import JBridge as JB 
 import Screens.Types as ST
 import Styles.Colors as Color
@@ -31,7 +31,7 @@ import PrestoDOM (Length(..), Margin(..), Visibility(..))
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Common.Types.App
-import EN
+
 
 primaryButtonConfigConfirmLoc :: ST.AddNewAddressScreenState -> PrimaryButton.Config 
 primaryButtonConfigConfirmLoc state = let 
@@ -45,7 +45,7 @@ primaryButtonConfigConfirmLoc state = let
     , background = Color.black900
     , margin = (Margin 0 22 0 16)
     , id = "AddNewaddressConfirmLocationButton"
-    , testIdText = (getEN CONFIRM_LOCATION)
+    , testIdText = (getKeyString CONFIRM_LOCATION)
     }
   in primaryButtonConfig'
 
@@ -104,7 +104,7 @@ primaryEditTextConfig state = let
         , margin = (MarginTop 1)
         }
       , showErrorLabel = state.props.placeNameExists
-      , testIdText = (getEN GIVE_THIS_LOCATION_A_NAME)
+      , testIdText = (getKeyString GIVE_THIS_LOCATION_A_NAME)
       }
     in primaryEditTextConfig'
 
@@ -119,6 +119,6 @@ primaryButtonConfig state = let
       , alpha = if (state.props.isBtnActive && state.props.isLocationServiceable && (not state.props.tagExists)) then 1.0 else 0.4
       , id = "AddNewAddressButton"
       , enableLoader = (JB.getBtnLoader "AddNewAddressButton")
-      , testIdText = if (state.props.editSavedLocation) then (getEN CONFIRM_CHANGES) else (getEN CONFIRM_AND_SAVE)
+      , testIdText = if (state.props.editSavedLocation) then (getKeyString CONFIRM_CHANGES) else (getKeyString CONFIRM_AND_SAVE)
       }
   in primaryButtonConfig'

@@ -19,7 +19,7 @@ import Prelude (Unit, bind, discard, const, pure, unit, ($), (+), (-), (/), (<>)
 import PrestoDOM --(Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textSize, textView, visibility, weight, width, scrollView, frameLayout, alignParentBottom)
 import Effect (Effect)
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getStringFromEnum)
 import Screens.RideDetailScreen.Controller (Action(..), eval, ScreenOutput)
 import Screens.Types as ST
 import Styles.Colors as Color
@@ -38,7 +38,7 @@ import Services.Backend as Remote
 import Services.Backend (walkCoordinate)
 import Common.Types.App
 import Constant.Test as Id
-import EN
+
 
 screen :: ST.RideDetailScreenState -> Screen Action ST.RideDetailScreenState ScreenOutput
 screen initialState =
@@ -255,7 +255,7 @@ cashCollected state push =
   , gravity CENTER
   -- , clickable state.props.cashCollectedButton  // require this to enable button only when our map snap shot (base64) is ready 
   , onClick push (const GoToHome)
-  , Id.testId $ Id.Button $ Id.BtnConfig (getEN CASH_COLLECTED)
+  , Id.testId $ Id.Button $ Id.BtnConfig (getStringFromEnum CASH_COLLECTED)
   ][  textView (
       [ width WRAP_CONTENT
       , height WRAP_CONTENT

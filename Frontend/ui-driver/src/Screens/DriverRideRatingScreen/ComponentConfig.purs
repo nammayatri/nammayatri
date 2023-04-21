@@ -17,11 +17,11 @@ module Screens.DriverRideRatingScreen.ComponentConfig where
 
 import Components.PrimaryButton as PrimaryButton
 import Language.Strings
-import Language.Types (STR(..))
+import Language.Types (STR(..), getStringFromEnum)
 import PrestoDOM
 import Screens.Types as ST
 import Styles.Colors as Color
-import EN
+
 
 primaryButtonConfig :: ST.DriverRideRatingScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
@@ -33,6 +33,6 @@ primaryButtonConfig state = let
       , cornerRadius = 0.0
       , background = Color.black900
       , height = (V 64)
-      , testIdText = (getEN SUBMIT)
+      , testIdText = (getStringFromEnum SUBMIT)
       }
   in primaryButtonConfig'

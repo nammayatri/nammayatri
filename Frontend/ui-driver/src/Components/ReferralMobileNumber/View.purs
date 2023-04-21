@@ -23,7 +23,7 @@ import PrestoDOM.Properties(alpha, background, clickable, color, cornerRadii, fo
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Styles.Colors as Color
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..), getStringFromEnum)
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Font.Style as FontStyle
 import Font.Size as FontSize
@@ -34,7 +34,7 @@ import Data.String (length)
 import Data.Maybe
 import Common.Types.App
 import Constant.Test as Id
-import EN
+
 
 view :: forall w .(Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push state = 
@@ -123,6 +123,6 @@ primaryButtonConfig state = let
       , height = (V 60)
       , alpha = if (state.isApplyButtonActive) then 1.0 else 0.7
       , isClickable = state.isApplyButtonActive
-      , testIdText = (getEN APPLY)
+      , testIdText = (getStringFromEnum APPLY)
       }
   in primaryButtonConfig'

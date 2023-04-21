@@ -26,7 +26,7 @@ import Styles.Colors as Color
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
-import Language.Types(STR(..))
+import Language.Types(STR(..), getStringFromEnum)
 import Engineering.Helpers.Commons as EHC
 import JBridge as JB
 import Helpers.Utils as HU
@@ -37,7 +37,7 @@ import Animation.Config as AnimConfig
 import Common.Types.App
 import Screens.EnterOTPScreen.ComponentConfig
 import Constant.Test as Id
-import EN
+
 
 screen :: ST.EnterOTPScreenState -> Screen Action ST.EnterOTPScreenState ScreenOutput
 screen initialState =
@@ -148,7 +148,7 @@ primaryEditTextView state push =
         fontSize : FontSize.a_18,
         letterSpacing : if state.data.otp == "" then 0.0 else 5.0,
         id : (EHC.getNewIDWithTag "EnterOTPScreenEditText"),
-        testIdText : (getEN AUTO_READING_OTP)
+        testIdText : (getStringFromEnum AUTO_READING_OTP)
       })
     , PrestoAnim.animationSet 
       [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig
@@ -164,7 +164,7 @@ underlinedTextView state push =
   , margin (MarginTop 18)
   , orientation VERTICAL
   , onClick push (const ResendOTP)
-  , Id.testId $ Id.Text (getEN RESEND_OTP)
+  , Id.testId $ Id.Text (getStringFromEnum RESEND_OTP)
   ][  textView
       [ height WRAP_CONTENT
       , width WRAP_CONTENT

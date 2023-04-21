@@ -26,11 +26,11 @@ import Styles.Colors as Color
 import Screens.Types (LocationTagBarState, CardType(..), LocationListItemState)
 import Language.Strings (getString)
 import Data.Maybe (Maybe(..))
-import Language.Types (STR(..))
+import Language.Types (STR(..), getKeyString)
 import Engineering.Helpers.Commons(os, screenWidth)
 import Common.Types.App
 import Constant.Test as Id
-import EN
+
 
 view :: forall w. (Action -> Effect Unit) -> LocationTagBarState -> PrestoDOM ( Effect Unit ) w
 view push state = 
@@ -53,9 +53,9 @@ view push state =
         , margin $ MarginRight if index == 2 then 0 else 8
         , onClick push $ const $ TagClick item (getSavedLocationByTag state item)
         , Id.testId $ Id.Object case item of
-                                WORK_TAG -> getEN WORK
-                                HOME_TAG -> getEN HOME
-                                _        -> getEN ALL_FAVOURITES
+                                WORK_TAG -> getKeyString WORK
+                                HOME_TAG -> getKeyString HOME
+                                _        -> getKeyString ALL_FAVOURITES
         , cornerRadius 16.0
         ][ imageView
             [ width $ V 15
