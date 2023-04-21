@@ -311,8 +311,7 @@ eval (RideActionModalAction (RideActionModal.OnNavigate)) state = do
 eval (RideActionModalAction (RideActionModal.CancelRide)) state = do
   continue state{ data {cancelRideConfirmationPopUp{delayInSeconds = 5,  continueEnabled=false}}, props{cancelConfirmationPopup = true}}
 eval (RideActionModalAction (RideActionModal.CallCustomer)) state = continueWithCmd state [ do
-  let x = ("0" <> state.data.activeRide.exoPhone <> "," <> (getValueToLocalStore MOBILE_NUMBER_KEY) <> "#")
-  _ <-  pure $ showDialer (x)
+  _ <-  pure $ showDialer ("0" <> state.data.activeRide.exoPhone)
   _ <- (firebaseLogEventWithTwoParams "call_customer" "trip_id" (state.data.activeRide.id) "user_id" (getValueToLocalStore DRIVER_ID))
   pure NoAction
   ]
