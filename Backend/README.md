@@ -1,3 +1,4 @@
+
 This is the sub-project containing backend code written in [haskell] powering [nammayatri] servers.
 
 ## Getting Started
@@ -10,21 +11,21 @@ To build or develop the project, you need to install the following.
 
 Nix is central to building and developing the Namamayatri project. Install and setup Nix as follows:
 
-1. [Install **Nix**](https://github.com/DeterminateSystems/nix-installer#the-determinate-nix-installer)
+1. [Install **Nix** & enable Flakes](https://github.com/DeterminateSystems/nix-installer#the-determinate-nix-installer)
     - Then, run `nix run github:srid/nix-health` to check that everything is green.
 1. Setup the **binary cache** (to avoid compiling locally):
     ```sh
     nix run nixpkgs#cachix use nammayatri
     ```
     - For this command to succed, you must have added yourself to the `trusted-users` list of `nix.conf`
-1. If you are also developing the backend, we recommend that you install **nix-direnv** and **starship**. See the [explanation](https://haskell.flake.page/direnv)[ here](https://haskell.flake.page/direnv); here is a [home-manager template](https://github.com/juspay/nix-dev-home) that you can use to get started easily.
-    - While this is not strictly required, it is recommended for better IDE integration in VSCode and other editors.
+1. If you are also developing the backend, we recommend that you install **nix-direnv** and **starship**. See the [explanation here](https://haskell.flake.page/direnv); here is a [home-manager template](https://github.com/juspay/nix-dev-home) that you can use to get started easily.
+    - While this is not strictly required, direnv is recommended for better IDE integration in VSCode and other editors.
 
 #### Other tools
 
 Aside from Nix, you also need:
 
-1. Install [Docker](https://www.docker.com/products/docker-desktop/) (we use docker-compose, via [arion], for running external services dependencies).
+1. Install [Docker](https://www.docker.com/products/docker-desktop/) (we use [arion]--a docker-compose invoker in Nix--for running external service dependencies).
     - If you are on macOS, open *Docker -> Preferences... -> Resources -> File Sharing* in Docker Desktop and add `/nix/store` to the list of shared folders.
 1. Install [Xcode](https://developer.apple.com/xcode/), if you are on macOS.
 
@@ -44,12 +45,10 @@ This should produce a `./result` symlink in the current directory, containing al
 #### Building the docker image
 
 ```sh
-docker load -i $(nix build .#dockerImage --print-out-paths)
+docker load -i $(nix build .#dockerImage --no-link --print-out-paths)
 ```
 
 ### Development
-
-NOTE: The `Backend/dev/` folder contains all the relevant files and configs for local development, should you need to change or inspect them.
 
 #### Setting up a development environment
 
@@ -59,7 +58,7 @@ To set up your development environment, you should run `direnv allow` from the p
 nix develop # If you cannot do `direnv allow`.
 ```
 
-This will drop you into a shell environment containing all project dependencies. In side the nix shell, run `,` to see the available commands specific to nammayatri development.
+This will drop you into a shell environment containing all project dependencies. Inside the nix shell, run `,` to see the available commands specific to nammayatri development.
 
 To compile the project, use [cabal]:
 
@@ -70,7 +69,7 @@ cd ./Backend
 cabal build all
 # Run a cabal package (by path to the directory containing .cabal file)
 cabal run lib/location-updates
-# Run ghcid
+# Run ghcid (for fast compile feedback)
 , ghcid lib/location-updates
 ```
 
@@ -124,7 +123,7 @@ nix run .#run-mobility-stack
 
 #### Updating flake inputs
 
-External dependencies of the project are usually specified in `inputs` of the `flake.nix` file. They usually point to external Git repos, but they can also point to local directories (useful during development)
+External dependencies of the project are usually specified in [`inputs`](https://nixos.wiki/wiki/Flakes#Input_schema) of the `flake.nix` file. They usually point to external Git repos, but they can also point to local directories (which is useful during development)
 
 The specific revisions of these Git repos are pinned in the `flake.lock` file. To update the `shared-kernel` input, for instance, run:
 
@@ -132,9 +131,9 @@ The specific revisions of these Git repos are pinned in the `flake.lock` file. T
 nix flake lock --update-input shared-kernel
 ```
 
-If you update the `inputs` section of `flake.nix` file, be sure to run `nix flake lock` so as to also update the `flake.lock` file.
+If you update the `inputs` section of `flake.nix` file, be sure to run `nix flake lock` to also update the `flake.lock` file.
 
-You can also point the flake input to point a local checkout. To do this, change the `flake.nix` to be like:
+You can also change the flake input to point a local checkout. To do this, change the `flake.nix` to be like:
 
 ```nix
 {
@@ -144,7 +143,7 @@ You can also point the flake input to point a local checkout. To do this, change
 }
 ```
 
-Now, if you run `nix build` or any of the other nix commands, it will use the local shared-kernel.
+Now, if you run `nix build` or any of the other nix commands, it will use the local shared-kernel to compile nammayatri against.
 
 ### Testing
 
@@ -184,7 +183,7 @@ Each of the application has particular set of defined APIs and Schemas. To get a
 
 The top level of the project has a very descriptive folder structure with helpful names.
 
-The entire project is structured as a collection of smaller focused packages, which can be found listed in the top level `stack.yaml` file, under the _packages_ section.
+The entire project is structured as a collection of smaller focused packages, which can be found listed in the top level `cabal.project` file, under the _packages_ section.
 
 Each package has clear separation of focuses w.r.t the functionality it provides, which helps with maintenance and development and provides clear designated areas to look at for a specific desired behavior and functionality. A good overview of the app structure be found in the table below:-
 
