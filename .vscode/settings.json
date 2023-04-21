@@ -1,0 +1,6 @@
+{
+  "editor.formatOnType": true,
+  "editor.formatOnSave": true,
+  "haskell.formattingProvider": "ormolu",
+  "haskell.manageHLS": "PATH"
+}
