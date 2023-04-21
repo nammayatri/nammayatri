@@ -50,7 +50,7 @@ earningsView config push =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation HORIZONTAL
---   , background Color.white900
+  , background Color.white900
   , gravity CENTER
   , padding (Padding 0 5 0 5)
   , cornerRadius 9.0
