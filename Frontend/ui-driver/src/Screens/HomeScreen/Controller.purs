@@ -55,7 +55,6 @@ import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeSt
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
-import Debug.Trace (spy)
 
 instance showAction :: Show Action where
   show _ = ""
