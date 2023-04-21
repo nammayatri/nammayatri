@@ -9,52 +9,34 @@ in
 {
   config = {
     perSystem = { self', pkgs, lib, ... }: {
-      packages = lib.optionalAttrs pkgs.stdenv.isLinux {
-        dockerImage =
-          let
-            # Wrap the nammayaatri package so that its binaries are in /opt/app.
-            #
-            # Rationale: Our k8s deployment config is hardcoded to look for exes
-            # under /opt/app
-            nammayatri-in-opt = pkgs.symlinkJoin {
-              name = "nammayatri-exes-opt";
-              paths = [ self'.packages.nammayatri ];
-              postBuild = ''
-                mkdir $out/opt && mv $out/bin $out/opt/app
-              '';
-            };
-          in
-          pkgs.dockerTools.buildImage {
-            name = imageName;
-            created = "now";
-            tag = imageTag;
-            copyToRoot = pkgs.buildEnv {
-              paths = with pkgs; [
-                cacert
-                awscli
-                coreutils
-                bash
-                # Add project root to paths to copy dhall-configs and swagger dirs
-                self
-                nammayatri-in-opt
-              ];
-              name = "beckn-root";
-              pathsToLink = [
-                "/Backend/dhall-configs"
-                "/Backend/swagger"
-                "/bin"
-                "/opt"
-              ];
-            };
-            config = {
-              Env = [
-                "SSL_CERT_FILE=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
-                # Ref: https://hackage.haskell.org/package/x509-system-1.6.7/docs/src/System.X509.Unix.html#getSystemCertificateStore
-                "SYSTEM_CERTIFICATE_PATH=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
-              ];
-              Cmd = [ "${self'.packages.nammayatri}/bin/rider-app-exe" ];
-            };
+      packages = {
+        dockerImage = pkgs.dockerTools.buildImage {
+          name = imageName;
+          created = "now";
+          tag = imageTag;
+          copyToRoot = pkgs.buildEnv {
+            paths = with pkgs; [
+              cacert
+              awscli
+              coreutils
+              bash
+              self'.packages.nammayatri-dist
+            ];
+            name = "beckn-root";
+            pathsToLink = [
+              "/bin"
+              "/opt"
+            ];
           };
+          config = {
+            Env = [
+              "SSL_CERT_FILE=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
+              # Ref: https://hackage.haskell.org/package/x509-system-1.6.7/docs/src/System.X509.Unix.html#getSystemCertificateStore
+              "SYSTEM_CERTIFICATE_PATH=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
+            ];
+            Cmd = [ "${self'.packages.nammayatri}/bin/rider-app-exe" ];
+          };
+        };
       };
     };
   };
