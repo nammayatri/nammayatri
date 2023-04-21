@@ -130,10 +130,17 @@ prepareDriverPoolBatch driverPoolCfg searchReq batchNum = withLogTag ("BatchNum-
           (sortedDriverPool, randomizedDriverPool) <-
             bimapM (sortWithDriverScore' [AcceptanceRatio, CancellationRatio, AvailableTime, DriverSpeed] True) (sortWithDriverScore' [AvailableTime, DriverSpeed] False)
               =<< splitDriverPoolForSorting merchantId intelligentPoolConfig.minQuotesToQualifyForIntelligentPool onlyNewDrivers
-          takeDriversUsingPoolPercentage (sortedDriverPool, randomizedDriverPool) batchSize intelligentPoolConfig
+          let sortedDriverPoolWithSilentSort = splitSilentDrivers sortedDriverPool
+          let randomizedDriverPoolWithSilentSort = splitSilentDrivers randomizedDriverPool
+          takeDriversUsingPoolPercentage (sortedDriverPoolWithSilentSort, randomizedDriverPoolWithSilentSort) batchSize intelligentPoolConfig
+          where
+            splitSilentDrivers drivers = do
+              let (silentDrivers, activeDrivers) = DL.partition ((== Just DriverInfo.SILENT) . (.driverPoolResult.mode)) drivers
+              activeDrivers <> silentDrivers
 
         makeRandomDriverPool batchSize onlyNewDrivers = take batchSize <$> randomizeAndLimitSelection onlyNewDrivers
 
+    takeDriversUsingPoolPercentage :: (MonadFlow m) => ([a], [a]) -> Int -> DriverIntelligentPoolConfig -> m [a]
     takeDriversUsingPoolPercentage (sortedDriverPool, randomizedDriverPool) driversCount intelligentPoolConfig = do
       let intelligentPoolPercentage = fromMaybe 50 intelligentPoolConfig.intelligentPoolPercentage
           intelligentCount = min (length sortedDriverPool) ((driversCount + 1) * intelligentPoolPercentage `div` 100)
@@ -143,13 +150,10 @@ prepareDriverPoolBatch driverPoolCfg searchReq batchNum = withLogTag ("BatchNum-
           poolBatch = sortedPart <> randomPart
           driversFromRestCount = take (driversCount - length poolBatch) (restRandom <> restSorted) -- taking rest of drivers if poolBatch length is less then driverCount requried.
           finalPoolBatch = poolBatch <> driversFromRestCount
-      let (silentDrivers, activeDrivers) = DL.partition ((== Just DriverInfo.SILENT) . (.driverPoolResult.mode)) finalPoolBatch
-      let finalPoolBatchWithSilentDrivers = activeDrivers <> silentDrivers
       logDebug $ "IntelligentDriverPool - SortedDriversCount " <> show (length sortedPart)
       logDebug $ "IntelligentDriverPool - RandomizedDriversCount " <> show (length randomPart)
       logDebug $ "IntelligentDriverPool - finalPoolBatch " <> show (length finalPoolBatch)
-      logDebug $ "IntelligentDriverPool - finalPoolBatchWithSilentDrivers " <> show (length finalPoolBatchWithSilentDrivers)
-      pure finalPoolBatchWithSilentDrivers
+      pure finalPoolBatch
 
     calcDriverPool radiusStep = do
       let vehicleVariant = searchReq.vehicleVariant

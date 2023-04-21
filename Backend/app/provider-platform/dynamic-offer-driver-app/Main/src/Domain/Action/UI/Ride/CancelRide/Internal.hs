@@ -139,9 +139,7 @@ cancelRideTransaction bookingId ride bookingCReason = do
     QRide.updateStatus ride.id DRide.CANCELLED
     QRB.updateStatus bookingId SRB.CANCELLED
     QBCR.upsert bookingCReason
-    Esq.runTransaction $
-      QDFS.updateStatus ride.driverId $
-        DMode.getDriverStatus driverInfo.mode driverInfo.active
+    QDFS.updateStatus ride.driverId $ DMode.getDriverStatus driverInfo.mode driverInfo.active
   SRide.clearCache ride.driverId
 
 repeatSearch ::
