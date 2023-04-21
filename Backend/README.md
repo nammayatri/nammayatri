@@ -1,145 +1,164 @@
-This is the sub-project containing backend code written in [haskell] powering nammayatri servers.
+This is the sub-project containing backend code written in [haskell] powering [nammayatri] servers.
 
-[haskell]: https://www.haskell.org/
 ## Getting Started
-
-Getting Started with building and running the project.
 
 ### Pre-requisites
 
-Before we can build the mobility project, there are some pre-requisites in the form of external dependencies which you must install, depending on you OS.
+To build or develop the project, you need to install the following.
 
-#### Haskell language toolchain
+#### Nix
 
-You'd need the Haskell language toolchain (GHC, cabal) installed in order build the project.
+Nix is central to building and developing the Namamayatri project. Install and setup Nix as follows:
 
-[GHCup](https://https://www.haskell.org/ghcup) is the preferred method to install Haskell.
+1. [Install **Nix**](https://github.com/DeterminateSystems/nix-installer#the-determinate-nix-installer)
+    - Then, run `nix run github:srid/nix-health` to check that everything is green.
+1. Setup the **binary cache** (to avoid compiling locally):
+    ```sh
+    nix run nixpkgs#cachix use nammayatri
+    ```
+    - For this command to succed, you must have added yourself to the `trusted-users` list of `nix.conf`
+1. If you are also developing the backend, we recommend that you install **nix-direnv** and **starship**. See the [explanation](https://haskell.flake.page/direnv)[ here](https://haskell.flake.page/direnv); here is a [home-manager template](https://github.com/juspay/nix-dev-home) that you can use to get started easily.
+    - While this is not strictly required, it is recommended for better IDE integration in VSCode and other editors.
+
+#### Other tools
+
+Aside from Nix, you also need:
+
+1. Install [Docker](https://www.docker.com/products/docker-desktop/) (we use docker-compose, via [arion], for running external services dependencies).
+    - If you are on macOS, open *Docker -> Preferences... -> Resources -> File Sharing* in Docker Desktop and add `/nix/store` to the list of shared folders.
+1. Install [Xcode](https://developer.apple.com/xcode/), if you are on macOS.
 
 
-#### Tools
+### Building
 
-These tools are required when working with the mobility repository:-
+Once you have installed all the necessary tools and dependencies, we can proceed with building the project for development.
 
-1. [Docker](https://www.docker.com/products/docker-desktop/) - we use docker and docker-compose for containers.
-2. [Stack](https://docs.haskellstack.org/en/stable/install_and_upgrade/) - we use the stack build tool for building and running the entire project. ([GHCup](https://https://www.haskell.org/ghcup) can also be used to install Stack)
+To compile the backend, use the following command:
 
-For Mac users, some additional tools may be required:-
-
-1. [Xcode](https://developer.apple.com/xcode/)
-2. [Home brew](https://brew.sh)
-
-#### Linters and formatters
-
-Install haskell linter and formatter by running this command in home directory, after you have stack installed.
-
-```
-$ stack install hlint ormolu
-```
-
-#### Extra Dependencies
-
-Depending on your OS, you'd need install these dependencies or their equivalents.
-
-For Mac
-
-```
-$ brew install libpq
-$ brew install librdkafka
-$ brew install postgres
-$ brew install dhall
-$ brew install jq
-$ brew install parallel
+```sh
+nix build .#nammayatri
 ```
 
-For M1 or newer Macs (other dependencies)
+This should produce a `./result` symlink in the current directory, containing all backend binaries under `./result/bin`.
 
-```
-arch -x86_64 /usr/local/bin/brew install libpq
-arch -x86_64 /usr/local/bin/brew install librdkafka
-arch -x86_64 /usr/local/bin/brew install postgres
-arch -x86_64 /usr/local/bin/brew install dhall
-arch -x86_64 /usr/local/bin/brew install jq
-arch -x86_64 /usr/local/bin/brew install parallel
+#### Building the docker image
+
+```sh
+docker load -i $(nix build .#dockerImage --print-out-paths)
 ```
 
-For Linux (other dependencies) or your package-manager equivalents
+### Development
 
-```
-$ sudo apt-get install libpq-dev
-$ sudo apt-get install librdkafka-dev
-$ sudo apt-get install postgresql
-$ sudo apt-get install dhall
-$ sudo apt-get install jq
-$ sudo apt-get install parallel
-```
+NOTE: The `Backend/dev/` folder contains all the relevant files and configs for local development, should you need to change or inspect them.
 
-### Building and Development
+#### Setting up a development environment
 
-After you've all the pre-requisite tools & dependencies installed, we can build the project for development.
+To set up your development environment, you should run `direnv allow` from the project root. If you do not have nix-direnv setup (as per the pre-requisites above), run instead:
 
-#### Building
-
-To build the project for development, we should compile the project with the command
-
-```
-$ stack build --fast
+```sh
+nix develop # If you cannot do `direnv allow`.
 ```
 
-The `--fast` flag disables some compile-time optimizations for faster compile times and should only be used for development builds.
+This will drop you into a shell environment containing all project dependencies. In side the nix shell, run `,` to see the available commands specific to nammayatri development.
 
-> **_Note:_**  For deployment, `stack build` command should be used to compile with optimizations.
+To compile the project, use [cabal]:
 
-This should start building the project and all it's dependencies.
-
-#### Development
-
-Once the above build command completes successfully, we can run the project for development.
-
-The `dev/` folder at the project top-level contains all the relevant files and configs, should you need to change or inspect them.
-
-##### Setting up development environment
-
-To set up your development environment, from project root run
-
-```
-$ ./Backend/dev/setup.sh
+```sh
+# In nix develop shell:
+cd ./Backend
+# Build all packages
+cabal build all
+# Run a cabal package (by path to the directory containing .cabal file)
+cabal run lib/location-updates
+# Run ghcid
+, ghcid lib/location-updates
 ```
 
+#### Running the services
 
-##### Running the services
-To run the project, we'd first need to run some services. These are provided via helpful `make` commands.
+To run the project, we'd first need to run some services. These are provided via docker images, that are built in Nix and run via [arion].
 
+For running the database, redis, passetto and kafka run this command:
 
-For running the database, redis, passetto and kafka run this command
-```
-$ make run-svc
+```sh
+# NOTE: You must run this from inside nix shell.
+, run-svc
 ```
 
 That should run most of the services required.
 
 More services, if needed, can be run with the following commands.
 
-For running pgadmin run this command
-```
-$ make run-pgadmin
+For running pgadmin run this command:
+
+```sh
+, run-pgadmin
 ```
 
-For running monitoring services like prometheus and grafana use this command
-```
-$ make run-monitoring
+For running monitoring services like prometheus and grafana use this command:
+
+```sh
+, run-monitoring
 ```
 
+To run osrm-server, run:
+
+```sh
+nix run .#osrm-server
+```
+
+#### Running backend
+
+To run the backend either use:
+
+```sh
+# From dev shell
+, run-mobility-stack
+```
+
+or (if not in devshell):
+
+```sh
+nix run .#run-mobility-stack
+```
+
+#### Updating flake inputs
+
+External dependencies of the project are usually specified in `inputs` of the `flake.nix` file. They usually point to external Git repos, but they can also point to local directories (useful during development)
+
+The specific revisions of these Git repos are pinned in the `flake.lock` file. To update the `shared-kernel` input, for instance, run:
+
+```sh
+nix flake lock --update-input shared-kernel
+```
+
+If you update the `inputs` section of `flake.nix` file, be sure to run `nix flake lock` so as to also update the `flake.lock` file.
+
+You can also point the flake input to point a local checkout. To do this, change the `flake.nix` to be like:
+
+```nix
+{
+  inputs = {
+    shared-kernel.url = "path:/Users/myname/Projects/shared-kernel";
+  }
+}
+```
+
+Now, if you run `nix build` or any of the other nix commands, it will use the local shared-kernel.
 
 ### Testing
 
-The project comes with a range of tests in it's test-suites. These tests should pass for each correct build.
+The project comes with a range of tests in its test-suites. These tests should pass for each correct build.
 
-To run the test-suite for the project, first ensure you have the services running (see [running servcies section](#running-the-services)).
+To run the test-suite for the project,
 
-Run the following command in the project root folder after the services are up and running:-
+- first ensure you have the services running (see [running servcies section](#running-the-services)).
+- Then, run the osrm-server using `nix run .#osrm-server`
 
-```
-$ stack test
+Run the following command in `./Backend` folder after the services are up and running:
+
+```sh
+cabal test all
 ```
 
 
@@ -202,23 +221,12 @@ Each package has clear separation of focuses w.r.t the functionality it provides
 
 ## FAQs
 
-1. My project doesn't build.
-
-    This could be because of a number of reasons. Most commonly though, we've found that more often than not it's because of the following reasons:-
-
-    * We're missing a (OS specific) dependency.
-    * Have an older or really new version of a required dependency.
-    * Missing a required tool like stack or GHC.
-    * Have incompatible version of the above tools like stack or GHC (though using stack minimizes this)
-    * Our PATH environment/shell variable is not correctly configured.
-    * We're running an incompatible, older or unsupported OS or OS version.
-
-2. I can't run the services correctly.
-
-    To make sure you can run the services correctly for development and testing, please ensure that you have Docker & Docker-compose installed correctly, are configured correctly in you PATH variable and you have the required permissions to run them.
-
-3. I can't figure out the project structure.
+1. I can't figure out the project structure.
 
     Please refer to the [Project Structure Section](#project-structure)
 
-4. TBD...
+2. TBD...
+
+[nammayatri]: https://www.nammayatri.in/
+[haskell]: https://www.haskell.org/
+[arion]: https://github.com/hercules-ci/arion
