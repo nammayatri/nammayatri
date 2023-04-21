@@ -423,6 +423,7 @@ driverDetail2 push state =
   , height WRAP_CONTENT
   , orientation HORIZONTAL
   , gravity CENTER_VERTICAL
+  , background Color.white900
   , clickable true
   , margin (MarginTop 5)
   ][  linearLayout
