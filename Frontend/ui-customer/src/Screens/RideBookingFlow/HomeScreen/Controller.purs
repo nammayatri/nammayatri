@@ -594,7 +594,7 @@ eval (ChatViewActionController (ChatView.TextChanged value)) state = do
 eval(ChatViewActionController (ChatView.Call)) state = 
   continueWithCmd state
     [ do
-        _ <- pure $ showDialer (getDriverNumber "")
+        _ <- pure $ showDialer ("0" <> state.props.merchantExoPhone)
         customerId <- getValueToLocalStoreEff CUSTOMER_ID
         _ <- (firebaseLogEventWithTwoParams "ny_user_call_click" "trip_id" (state.props.bookingId) "user_id" customerId)
         pure NoAction
@@ -892,9 +892,8 @@ eval OpenPricingTutorial state = continue state { props { currentStage = Pricing
 eval (PricingTutorialModelActionController (PricingTutorialModelController.Close)) state = continue state { props { currentStage = SettingPrice } }
 
 eval (DriverInfoCardActionController (DriverInfoCardController.PrimaryButtonAC PrimaryButtonController.OnClick)) state =
-  continueWithCmd state
-    [ do
-        _ <- pure $ showDialer ("0" <> state.props.merchantExoPhone)
+  continueWithCmd state [ do
+        _ <- pure $ showDialer (getDriverNumber "")
         _ <- (firebaseLogEventWithTwoParams "ny_user_call_click" "trip_id" (state.props.bookingId) "user_id" (getValueToLocalStore CUSTOMER_ID))
         pure NoAction
     ]
