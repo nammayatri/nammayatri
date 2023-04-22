@@ -1,6 +1,7 @@
 {
-  "editor.formatOnType": true,
-  "editor.formatOnSave": true,
+  // Disabled until https://github.com/nammayatri/nammayatri/issues/649
+  "editor.formatOnType": false,
+  "editor.formatOnSave": false,
   "haskell.formattingProvider": "ormolu",
   "haskell.manageHLS": "PATH"
 }
