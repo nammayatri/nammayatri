@@ -44,6 +44,7 @@ _:
         '';
         exec = ''
           set -x
+          cd ./Backend  # These processes expect $PWD to be backend, for reading dhall configs
           nix run .#run-mobility-stack
         '';
       };
