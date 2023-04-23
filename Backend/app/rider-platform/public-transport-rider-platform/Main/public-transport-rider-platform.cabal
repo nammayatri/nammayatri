@@ -179,7 +179,7 @@ library
       UndecidableInstances
       DerivingStrategies
       DerivingVia
-  ghc-options: -Wall -Werror -Wcompat -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -Wincomplete-uni-patterns
+  ghc-options: -Wall -Werror -Wcompat -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -Wincomplete-uni-patterns -Wwarn=ambiguous-fields
   build-depends:
       aeson
     , base >=4.7 && <5
