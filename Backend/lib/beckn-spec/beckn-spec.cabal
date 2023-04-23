@@ -223,7 +223,7 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=RecordDotPreprocessor
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=RecordDotPreprocessor -Wwarn=ambiguous-fields
   build-depends:
       aeson
     , aeson-casing

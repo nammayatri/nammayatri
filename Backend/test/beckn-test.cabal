@@ -94,7 +94,7 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wno-unrecognised-pragmas -fplugin=RecordDotPreprocessor -threaded
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wno-unrecognised-pragmas -fplugin=RecordDotPreprocessor -threaded -Wwarn=ambiguous-fields
   build-depends:
       HUnit
     , aeson
