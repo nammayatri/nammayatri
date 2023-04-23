@@ -58,16 +58,17 @@ instance decodeRetryAPIs :: Decode RetryAPIs where decode = defaultDecode
 instance encodeRetryAPIs :: Encode RetryAPIs where encode = defaultEncode
 
 -------------------------------------------------- Trigger OTP API Types --------------------------------------------
+data AuthType = OTP | PASSWORD | DIRECT
+
 newtype TriggerOTPResp = TriggerOTPResp {
     authId :: String
   , attempts :: Int
+  , authType :: Maybe String
+  , token :: Maybe String
+  , person :: Maybe User
 }
 
-newtype TriggerOTPReq = TriggerOTPReq {
-    mobileNumber :: String
-  , mobileCountryCode :: String
-  , merchantId :: String
-}
+newtype TriggerOTPReq = TriggerOTPReq String
 
 instance makeTriggerOTPReq :: RestEndpoint TriggerOTPReq TriggerOTPResp where
  makeRequest reqBody headers = defaultMakeRequest POST (EP.triggerOTP "") headers reqBody
@@ -80,6 +81,16 @@ instance standardEncodeTriggerOTPResp :: StandardEncode TriggerOTPResp where sta
 instance showTriggerOTPResp :: Show TriggerOTPResp where show = genericShow
 instance decodeTriggerOTPResp :: Decode TriggerOTPResp where decode = defaultDecode
 instance encodeTriggerOTPResp :: Encode TriggerOTPResp where encode = defaultEncode
+
+derive instance genericAuthType :: Generic AuthType _
+instance showAuthType :: Show AuthType where show = genericShow
+instance decodeAuthType :: Decode AuthType where decode = defaultDecode
+instance encodeAuthType :: Encode AuthType where encode = defaultEncode
+instance standardEncodeAuthType :: StandardEncode AuthType 
+  where
+  standardEncode OTP = standardEncode $ show OTP
+  standardEncode PASSWORD = standardEncode $ show PASSWORD
+  standardEncode DIRECT = standardEncode $ show DIRECT
 
 derive instance genericTriggerOTPReq :: Generic TriggerOTPReq _
 derive instance newtypeTriggerOTPReq :: Newtype TriggerOTPReq _

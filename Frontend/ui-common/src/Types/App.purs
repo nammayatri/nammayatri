@@ -73,6 +73,16 @@ derive instance newtypeNotificationData :: Newtype NotificationData _
 instance encodeNotificationData :: Encode NotificationData where encode = defaultEncode
 instance decodeNotificationData :: Decode NotificationData where decode = defaultDecode
 
+newtype SignatureAuthData = SignatureAuthData {
+  signature :: String
+  , authData :: String
+  }
+
+derive instance genericSignatureAuthData :: Generic SignatureAuthData _
+derive instance newtypeSignatureAuthData :: Newtype SignatureAuthData _
+instance encodeSignatureAuthData :: Encode SignatureAuthData where encode = defaultEncode
+instance decodeSignatureAuthData :: Decode SignatureAuthData where decode = defaultDecode
+
 newtype GlobalPayload = GlobalPayload
   { activity_recreated :: String
   , betaAssets :: Boolean
@@ -93,6 +103,7 @@ newtype Payload = Payload
   { service :: String
   , environment :: String
   , notificationData :: Maybe NotificationData
+  , signatureAuthData :: Maybe SignatureAuthData
   }
 
 derive instance newPayload :: Newtype Payload _

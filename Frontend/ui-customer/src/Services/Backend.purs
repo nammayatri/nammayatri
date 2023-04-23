@@ -30,7 +30,8 @@ import ModifyScreenState (modifyScreenState)
 import Screens.Types (AccountSetUpScreenState(..), HomeScreenState(..), NewContacts)
 import Types.App (GlobalState(..), FlowBT, ScreenType(..))
 import Tracker (trackApiCallFlow, trackExceptionFlow)
-import Presto.Core.Types.API (Header(..), Headers(..))
+import Presto.Core.Types.API (Header(..), Headers(..), ErrorResponse)
+-- import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, ErrorPayload, Method(..), defaultDecodeResponse, defaultMakeRequest, standardEncode)
 import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff)
 import Screens.Types (Address, Stage(..))
 import JBridge (factoryResetApp, setKeyInSharedPrefKeys, toast, toggleLoader, removeAllPolylines, stopChatListenerService)
@@ -45,6 +46,7 @@ import Data.Array ((!!), take)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Debug.Trace (spy)
+import Common.Types.App (SignatureAuthData(..))
 
 getHeaders :: String -> Flow GlobalState Headers
 getHeaders _ = do if ((getValueToLocalStore REGISTERATION_TOKEN) == "__failed") then pure $ (Headers [Header "Content-Type" "application/json", Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),  Header "x-client-version" (getValueToLocalStore VERSION_NAME), Header "session_id" (getValueToLocalStore SESSION_ID)]) else pure $ (Headers [Header "Content-Type" "application/json", Header "token" (getValueToLocalStore REGISTERATION_TOKEN) , Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),  Header "x-client-version" (getValueToLocalStore VERSION_NAME), Header "session_id" (getValueToLocalStore SESSION_ID)])
@@ -143,7 +145,6 @@ withAPIResultBT' url enableCache key f errorHandler flow = do
             (lift $ lift $ (trackApiCallFlow Tracker.Network Tracker.Info NETWORK_CALL start end (err.code) (codeMessage) url "" "")) *> (errorHandler err)
 
 ---------------------------------------------------------------TriggerOTPBT Function---------------------------------------------------------------------------------------------------
-
 triggerOTPBT :: TriggerOTPReq → FlowBT String TriggerOTPResp
 triggerOTPBT payload = do
     _ <- lift $ lift $ doAff Readers.initiateSMSRetriever
@@ -159,14 +160,16 @@ triggerOTPBT payload = do
         modifyScreenState $ ChooseLanguageScreenStateType (\chooseLanguage -> chooseLanguage { props {btnActive = false} })
         BackT $ pure GoBack
 
+triggerSignatureBasedOTP :: SignatureAuthData → Flow GlobalState (Either ErrorResponse TriggerOTPResp)
+triggerSignatureBasedOTP (SignatureAuthData signatureAuthData) = do
+    Headers headers <- getHeaders ""
+    withAPIResult (EP.triggerOTP "") unwrapResponse $ callAPI (Headers (headers <> [Header "x-sdk-authorization" signatureAuthData.signature])) (TriggerOTPReq signatureAuthData.authData)
+    where
+        unwrapResponse (x) = x
 
 makeTriggerOTPReq :: String -> TriggerOTPReq
-makeTriggerOTPReq mobileNumber = TriggerOTPReq
-    {
-      "mobileNumber"      : mobileNumber,
-      "mobileCountryCode" : "+91",
-      "merchantId" : if SC.getMerchantId == "NA" then getValueToLocalNativeStore MERCHANT_ID else SC.getMerchantId
-    }
+makeTriggerOTPReq mobileNumber =
+    TriggerOTPReq $ "{\"mobileNumber\":\"" <> mobileNumber <> "\",\"mobileCountryCode\":\"+91\",\"merchantId\":\"" <> (if SC.getMerchantId == "NA" then getValueToLocalNativeStore MERCHANT_ID else SC.getMerchantId) <> "\"}"
 
 ----------------------------------------------------------- ResendOTPBT Function ------------------------------------------------------------------------------------------------------
 

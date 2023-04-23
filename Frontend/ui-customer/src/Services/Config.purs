@@ -36,7 +36,7 @@ newtype Config = Config
 getEnv :: Env
 getEnv = case spy "Selected Environment :- " (environment "") of
   "local"       -> LOCAL
-  "master"      -> DEV
+  "master"      -> LOCAL
   "sandbox"     -> UAT
   "prod"        -> PROD
   _             -> PROD
@@ -45,7 +45,7 @@ getConfig :: Config
 getConfig = do
   case getEnv of
     LOCAL -> Config
-        { baseUrl: "http://localhost:8013/v2"
+        { baseUrl: "https://d849-115-99-117-14.in.ngrok.io/v2"
         , fingerprint : ""
         }
     DEV  -> Config
