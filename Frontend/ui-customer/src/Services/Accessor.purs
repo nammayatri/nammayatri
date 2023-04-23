@@ -18,6 +18,7 @@ module Accessor where
 import Prelude
 import Data.Lens (Lens', lens)
 import Data.Newtype (class Newtype, unwrap, wrap)
+import Data.Maybe (Maybe)
 
 _formattedAddress :: forall a b c. Newtype a { formattedAddress :: b | c} => Lens' a b
 _formattedAddress = lens (unwrap >>> _.formattedAddress) (\oldRec newVal -> wrap ((unwrap oldRec) {formattedAddress = newVal}))

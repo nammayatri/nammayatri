@@ -19,6 +19,7 @@ import Services.API
 
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..))
+import Common.Types.App (SignatureAuthData(..))
 import Data.Array ((!!), take)
 import Data.Either (Either(..), either)
 import Data.Maybe (Maybe(..), maybe, fromMaybe)
@@ -33,7 +34,8 @@ import ModifyScreenState (modifyScreenState)
 import Screens.Types (AccountSetUpScreenState(..), HomeScreenState(..), NewContacts)
 import Types.App (GlobalState(..), FlowBT, ScreenType(..))
 import Tracker (trackApiCallFlow, trackExceptionFlow)
-import Presto.Core.Types.API (Header(..), Headers(..))
+import Presto.Core.Types.API (Header(..), Headers(..), ErrorResponse)
+-- import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, ErrorPayload, Method(..), defaultDecodeResponse, defaultMakeRequest, standardEncode)
 import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff)
 import Screens.Types (Address, Stage(..))
 import JBridge (factoryResetApp, setKeyInSharedPrefKeys, toast, toggleLoader, removeAllPolylines, stopChatListenerService)
@@ -147,7 +149,6 @@ withAPIResultBT' url enableCache key f errorHandler flow = do
             (lift $ lift $ (trackApiCallFlow Tracker.Network Tracker.Info NETWORK_CALL start end (err.code) (codeMessage) url "" "")) *> (errorHandler err)
 
 ---------------------------------------------------------------TriggerOTPBT Function---------------------------------------------------------------------------------------------------
-
 triggerOTPBT :: TriggerOTPReq → FlowBT String TriggerOTPResp
 triggerOTPBT payload = do
     _ <- pure $ spy "inside triggerOTPBT" ""
@@ -164,14 +165,16 @@ triggerOTPBT payload = do
         modifyScreenState $ ChooseLanguageScreenStateType (\chooseLanguage -> chooseLanguage { props {btnActive = false} })
         BackT $ pure GoBack
 
+triggerSignatureBasedOTP :: SignatureAuthData → Flow GlobalState (Either ErrorResponse TriggerOTPResp)
+triggerSignatureBasedOTP (SignatureAuthData signatureAuthData) = do
+    Headers headers <- getHeaders ""
+    withAPIResult (EP.triggerOTP "") unwrapResponse $ callAPI (Headers (headers <> [Header "x-sdk-authorization" signatureAuthData.signature])) (TriggerOTPReq signatureAuthData.authData)
+    where
+        unwrapResponse (x) = x
 
 makeTriggerOTPReq :: String -> TriggerOTPReq
-makeTriggerOTPReq mobileNumber = TriggerOTPReq
-    {
-      "mobileNumber"      : mobileNumber,
-      "mobileCountryCode" : "+91",
-      "merchantId" : if SC.getMerchantId == "NA" then getValueToLocalNativeStore MERCHANT_ID else SC.getMerchantId
-    }
+makeTriggerOTPReq mobileNumber =
+    TriggerOTPReq $ "{\"mobileNumber\":\"" <> mobileNumber <> "\",\"mobileCountryCode\":\"+91\",\"merchantId\":\"" <> (if SC.getMerchantId == "NA" then getValueToLocalNativeStore MERCHANT_ID else SC.getMerchantId) <> "\"}"
 
 ----------------------------------------------------------- ResendOTPBT Function ------------------------------------------------------------------------------------------------------
 
