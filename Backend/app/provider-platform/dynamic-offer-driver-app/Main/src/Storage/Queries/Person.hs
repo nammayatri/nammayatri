@@ -507,7 +507,7 @@ getNearestDrivers mbVariant LatLong {..} radiusMeters merchantId onlyNotOnRide m
     where_ $
       person ^. PersonRole ==. val Person.DRIVER
         &&. person ^. PersonMerchantId ==. val (toKey merchantId)
-        &&. (Esq.isNothing (driverInfo ^. DriverInformationMode) &&. driverInfo ^. DriverInformationActive) ||. (not_ (Esq.isNothing (driverInfo ^. DriverInformationMode)) &&. (driverInfo ^. DriverInformationMode ==. val (Just DriverInfo.SILENT) ||. driverInfo ^. DriverInformationMode ==. val (Just DriverInfo.ONLINE)))
+        &&. ((Esq.isNothing (driverInfo ^. DriverInformationMode) &&. driverInfo ^. DriverInformationActive) ||. (not_ (Esq.isNothing (driverInfo ^. DriverInformationMode)) &&. (driverInfo ^. DriverInformationMode ==. val (Just DriverInfo.SILENT) ||. driverInfo ^. DriverInformationMode ==. val (Just DriverInfo.ONLINE))))
         &&. (if onlyNotOnRide then not_ (driverInfo ^. DriverInformationOnRide) else val True)
         &&. not_ (driverInfo ^. DriverInformationBlocked)
         &&. ( val (Mb.isNothing mbDriverPositionInfoExpiry)
@@ -635,7 +635,7 @@ getNearestDriversCurrentlyOnRide mbVariant LatLong {..} radiusMeters merchantId 
     where_ $
       personInfo ^. PersonRole ==. val Person.DRIVER
         &&. personInfo ^. PersonMerchantId ==. val (toKey merchantId)
-        &&. (Esq.isNothing (driverInfo ^. DriverInformationMode) &&. driverInfo ^. DriverInformationActive) ||. (not_ (Esq.isNothing (driverInfo ^. DriverInformationMode)) &&. (driverInfo ^. DriverInformationMode ==. val (Just DriverInfo.SILENT) ||. driverInfo ^. DriverInformationMode ==. val (Just DriverInfo.ONLINE)))
+        &&. ((Esq.isNothing (driverInfo ^. DriverInformationMode) &&. driverInfo ^. DriverInformationActive) ||. (not_ (Esq.isNothing (driverInfo ^. DriverInformationMode)) &&. (driverInfo ^. DriverInformationMode ==. val (Just DriverInfo.SILENT) ||. driverInfo ^. DriverInformationMode ==. val (Just DriverInfo.ONLINE))))
         &&. driverInfo ^. DriverInformationOnRide
         &&. not_ (driverInfo ^. DriverInformationBlocked)
         &&. ( val (Mb.isNothing mbDriverPositionInfoExpiry)
