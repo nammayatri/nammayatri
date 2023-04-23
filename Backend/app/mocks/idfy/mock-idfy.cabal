@@ -68,7 +68,7 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -Wunused-imports -Werror -fplugin=RecordDotPreprocessor -Wincomplete-uni-patterns
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -Wunused-imports -Werror -fplugin=RecordDotPreprocessor -Wincomplete-uni-patterns -Wwarn=ambiguous-fields
   build-depends:
       aeson
     , base >=4.7 && <5
