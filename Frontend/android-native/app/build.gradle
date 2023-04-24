@@ -147,16 +147,14 @@ dependencies {
 //    implementation 'com.google.android.flexbox:flexbox:3.0.0'
 //    implementation 'in.juspay:mystique:0.2.45'
 //    implementation project (path:':mystique')
-    implementation project (path:':mobility-driver')
-    implementation project (path:':mobility-customer')
-    implementation ( project(path: ':app-common')) // CHECK IF IT IS NEEDED
+    implementation project(path: ':mobility-app')
+    // CHECK IF IT IS NEEDED
     // api (project(':mystique')) -- to link mystique
     // implementation 'in.juspay:mystique:0.2.49'
     // Import the BoM for the Firebase platform
     implementation platform('com.google.firebase:firebase-bom:31.1.1')
     driverImplementation ( project(path: ':mobility-driver'))
     userImplementation ( project(path: ':mobility-customer'))
-    implementation ( project(path: ':app-common'))
     implementation 'com.google.firebase:firebase-dynamic-links'
     implementation 'com.google.firebase:firebase-analytics'
 

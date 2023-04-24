@@ -66,10 +66,15 @@ dependencies {
 
     implementation project(':mobility-common')
     api 'in.juspay:hyper:2.1.12'
-    api project(':app-common')
+    api project(':mobility-app')
+    implementation project(':hyper-sdk')
+    implementation 'androidx.work:work-runtime:2.8.1'
 
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
-    implementation 'com.pierfrancescosoffritti.androidyoutubeplayer:core:11.1.0'
+    api 'com.pierfrancescosoffritti.androidyoutubeplayer:core:11.1.0'
+    api 'com.google.maps.android:android-maps-utils:2.4.0'
+    api 'com.google.android.gms:play-services-maps:18.1.0'
+    api 'com.google.android.gms:play-services-location:21.0.1'
 }

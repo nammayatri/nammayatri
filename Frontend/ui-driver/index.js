@@ -135,27 +135,18 @@ window.callUICallback = function () {
   }
 }
 
+window.onResumeListeners = [];
+
 window.onPause = function () {
-  if (window.eventListeners && window.eventListeners["onPause"]) {
-    if (Array.isArray(window.eventListeners["onPause"])) {
-      var onPauseEvents = window.eventListeners["onPause"];
-      onPauseEvents.forEach(function (fn) {
-        fn()();
-      })
-      window.eventListeners["onPause"] = [];
-    } else window.eventListeners["onPause"]()();
-  }
+  console.error("onEvent onPause");
 }
 
 window.onResume = function () {
-  if (window.eventListeners && window.eventListeners["onResume"]) {
-    if (Array.isArray(window.eventListeners["onResume"])) {
-      var onResumeEvents = window.eventListeners["onResume"];
-      onResumeEvents.forEach(function (fn) {
-        fn()();
-      })
-      window.eventListeners["onResume"] = [];
-    } else window.eventListeners["onResume"]()();
+  console.error("onEvent onResume");
+  if (window.onResumeListeners && Array.isArray(window.onResumeListeners)) {
+    for (let i = 0; i < window.onResumeListeners.length;i++) {
+      window.onResumeListeners[i].call();
+    }
   }
 }
 window.onActivityResult = function () {

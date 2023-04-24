@@ -896,8 +896,16 @@ exports["storeCallBackDriverLocationPermission"] = function (cb) {
   return function (action) {
       return function () {
           var callback = callbackMapper.map(function (isLocationPermissionGranted) {
-              cb(action (isLocationPermissionGranted))();
+            cb(action (isLocationPermissionGranted))();
           });
+          var locationCallBack = function () {
+            var isPermissionEnabled = JBridge.isLocationPermissionEnabled()
+            console.log("location permission",isPermissionEnabled);
+            window.callUICallback(callback,isPermissionEnabled);
+          };
+          if (window.onResumeListeners){
+            window.onResumeListeners.push(locationCallBack);
+          };
           console.log("In storeCallBackDriverLocationPermission ---------- + " + action);
           JBridge.storeCallBackDriverLocationPermission(callback);
       }    
@@ -945,12 +953,19 @@ exports["storeCallBackOverlayPermission"] = function (cb) {
           var callback = callbackMapper.map(function (isOverlayPermission) {
               cb(action (isOverlayPermission))();
           });
-          console.log("In storeCallBackOverlapPermission ---------- + " + action);
+          var overlayCallBack = function () {
+            var isPermissionEnabled = JBridge.isOverlayPermissionEnabled()
+            window.callUICallback(callback,isPermissionEnabled);
+          }
+          if (window.onResumeListeners){
+            window.onResumeListeners.push(overlayCallBack);
+          }
+          console.log("In storeCallBackOverlayPermission ---------- + " + action);
           JBridge.storeCallBackOverlayPermission(callback);
       }    
   }}
   catch (error){
-      console.log("Error occurred in storeCallBackOverlapPermission ------", error);
+      console.log("Error occurred in storeCallBackOverlayPermission ------", error);
   }
 }
 
@@ -961,6 +976,13 @@ exports["storeCallBackBatteryUsagePermission"] = function (cb) {
           var callback = callbackMapper.map(function (isPermissionEnabled) {
               cb(action (isPermissionEnabled))();
           });
+          var batteryCallBack = function () {
+            var isPermissionEnabled = JBridge.isBatteryPermissionEnabled()
+            window.callUICallback(callback,isPermissionEnabled);
+          }
+          if (window.onResumeListeners){
+            window.onResumeListeners.push(batteryCallBack);
+          }
           console.log("In storeCallBackBatteryUsagePermission ---------- + " + action);
           JBridge.storeCallBackBatteryUsagePermission(callback);
       }    

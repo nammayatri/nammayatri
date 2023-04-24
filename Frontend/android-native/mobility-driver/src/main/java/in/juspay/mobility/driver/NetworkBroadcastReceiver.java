@@ -14,7 +14,7 @@ import android.content.Intent;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 
-import in.juspay.mobility.appcommon.MainActivity;
+import in.juspay.mobility.app.MainActivity;
 
 public class NetworkBroadcastReceiver extends BroadcastReceiver {
     Context context;

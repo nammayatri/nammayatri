@@ -14,8 +14,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textSize="15dp"
-            android:text="@string/open_settings"
-            android:textColor="@color/quantum_black_100"/>
+            android:text="@string/open_settings" />
 
         <ImageView
             android:id="@+id/ny_ic_settings"
@@ -31,7 +30,6 @@
         android:layout_height="match_parent"
         android:textSize="15dp"
         android:text="@string/tap_on_permission"
-        android:textColor="@color/quantum_black_100"
         android:padding="2dp"/>
     <TextView
         android:layout_width="match_parent"
@@ -39,13 +37,11 @@
         android:text="@string/required_permission"
         android:textSize="15dp"
         android:id="@+id/step_text"
-        android:textColor="@color/quantum_black_100"
         android:padding="2dp"/>
     <TextView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:textSize="15dp"
-        android:textColor="@color/quantum_black_100"
         android:text="@string/select_allow"
         android:padding="2dp"/>
 </LinearLayout>

@@ -15,18 +15,19 @@
 
 module Screens.PermissionsScreen.Controller where
 
-import Prelude(($), pure, class Show, unit, (==), not, bind, discard)
-import PrestoDOM (Eval, continue, continueWithCmd, exit)
 import Components.PrimaryButton.Controller as PrimaryButtonController
-import Screens.Types (PermissionsScreenState)
-import PrestoDOM.Types.Core (class Loggable)
-import JBridge (checkOverlayPermission, requestAutoStartPermission, requestLocation ,isLocationPermissionEnabled, isOverlayPermissionEnabled, requestBatteryPermission, isBatteryPermissionEnabled, firebaseLogEvent)
+import Debug.Trace (spy)
 import Effect.Class (liftEffect)
-import Screens.PermissionsScreen.ScreenData (Permissions(..))
-import Language.Strings(getString)
+import JBridge (checkOverlayPermission, requestAutoStartPermission, requestLocation, isLocationPermissionEnabled, isOverlayPermissionEnabled, requestBatteryPermission, isBatteryPermissionEnabled, firebaseLogEvent)
+import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
+import Prelude (class Show, bind, discard, not, pure, unit, when, ($), (==))
+import PrestoDOM (Eval, continue, continueWithCmd, exit)
+import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
+import Screens.PermissionsScreen.ScreenData (Permissions(..))
+import Screens.Types (PermissionsScreenState)
 
 instance showAction :: Show Action where
     show _ = ""
@@ -60,9 +61,9 @@ data Action = BackPressed
             | ItemClick Permissions
             | UpdateLocationPermissionState
             | UpdateOverlayPermissionState
-            | LocationPermissionCallBack String
-            | OverlayPermissionSwitchCallBack String
-            | BatteryUsagePermissionCallBack String
+            | LocationPermissionCallBack Boolean
+            | OverlayPermissionSwitchCallBack Boolean
+            | BatteryUsagePermissionCallBack Boolean
             | UpdateBatteryPermissionState
             | AfterRender
             | UpdateAllChecks PermissionsScreenState
@@ -84,22 +85,17 @@ eval UpdateOverlayPermissionState state = continue state {props {isOverlayPermis
 eval UpdateBatteryPermissionState state = continue state {props {isBatteryOptimizationChecked = true}}
 
 eval (LocationPermissionCallBack isLocationPermissionEnabled) state = do
-  if isLocationPermissionEnabled == "true" then do
-    _ <- pure $ firebaseLogEvent "permission_granted_location"
-    continue state {props {isLocationPermissionChecked = true}}
-    else continue state{props{isLocationPermissionChecked = false}}
+  _ <- pure $ spy "location permission" isLocationPermissionEnabled
+  when isLocationPermissionEnabled $ pure $ firebaseLogEvent "permission_granted_location"
+  continue state {props {isLocationPermissionChecked = isLocationPermissionEnabled}}
 
 eval (OverlayPermissionSwitchCallBack isOverlayPermissionEnabled) state = do
-  if isOverlayPermissionEnabled == "true" then do
-    _ <- pure $ firebaseLogEvent "permission_granted_overlay"
-    continue state {props {isOverlayPermissionChecked = true }}
-    else continue state{props{isOverlayPermissionChecked = false}}
+  when isOverlayPermissionEnabled $ pure $ firebaseLogEvent "permission_granted_overlay"
+  continue state {props {isOverlayPermissionChecked = isOverlayPermissionEnabled}}
 
 eval (BatteryUsagePermissionCallBack isBatteryOptimizationEnabled) state = do
-  if isBatteryOptimizationEnabled == "true" then do
-    _ <- pure $ firebaseLogEvent "permission_granted_battery"
-    continue state {props {isBatteryOptimizationChecked = true }}
-    else continue state{props{isBatteryOptimizationChecked = false}}
+  when isBatteryOptimizationEnabled $ pure $ firebaseLogEvent "permission_granted_battery"
+  continue state {props {isBatteryOptimizationChecked = isBatteryOptimizationEnabled }}
 
 eval (ItemClick itemType) state =
     case itemType of 
@@ -120,7 +116,7 @@ eval (ItemClick itemType) state =
         if not(state.props.isOverlayPermissionChecked) then do
             continueWithCmd state [do
                 isOverlayPermission <- isOverlayPermissionEnabled unit
-                if (isOverlayPermission) then pure UpdateOverlayPermissionState
+                if isOverlayPermission then pure UpdateOverlayPermissionState
                     else do 
                     _ <- liftEffect $ checkOverlayPermission unit
                     pure NoAction

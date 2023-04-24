@@ -32,7 +32,8 @@ dependencies {
     implementation 'com.google.android.material:material:1.6.0'
 
     api 'in.juspay:hyper:2.1.12'
-    api files('/Users/vigneshs/Downloads/hyper-sdk-release.aar')
+    implementation project(':hyper-sdk')
+    // api files('/Users/vigneshs/Downloads/hyper-release.aar')
 
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'

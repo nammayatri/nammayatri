@@ -27,7 +27,7 @@ import androidx.core.content.ContextCompat;
 import java.io.FileInputStream;
 import java.io.IOException;
 
-import in.juspay.mobility.appcommon.MainActivity;
+import in.juspay.mobility.app.MainActivity;
 import in.juspay.mobility.driver.mediaPlayer.DefaultMediaPlayerControl;
 import in.juspay.mobility.driver.mediaPlayer.MediaPlayerControl;
 import in.juspay.mobility.driver.mediaPlayer.MediaPlayerOnCompleteListener;
