@@ -13,6 +13,9 @@
       };
       devShells.frontend = pkgs.mkShell {
         name = "ps-dev-shell";
+        inputsFrom = [
+          config.pre-commit.devShell
+        ];
         packages = [
           easy-ps.purs-0_15_4
           easy-ps.spago
