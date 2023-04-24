@@ -32,19 +32,20 @@ import Data.Time
   )
 import Domain.Types.FareParameters
 import Domain.Types.FarePolicy
+import qualified Domain.Types.FareProduct as DFareProduct
 import Domain.Types.SlabFarePolicy
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Utils.Common
 
-mkBreakupList :: (Money -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> FareParameters -> [breakupItem]
-mkBreakupList mkPrice mkBreakupItem fareParams = do
-  case fareParams.farePolicyType of
-    SLAB -> mkSlabBreakupList mkPrice mkBreakupItem fareParams
-    NORMAL -> mkNormalBreakupList mkPrice mkBreakupItem fareParams
+mkBreakupList :: (Money -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> FareParameters -> DFareProduct.FarePolicyType -> [breakupItem]
+mkBreakupList mkPrice mkBreakupItem fareParams farePolicyType = do
+  case farePolicyType of
+    DFareProduct.SLAB -> mkSlabBreakupList mkPrice mkBreakupItem fareParams farePolicyType
+    DFareProduct.NORMAL -> mkNormalBreakupList mkPrice mkBreakupItem fareParams farePolicyType
 
-mkSlabBreakupList :: (Money -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> FareParameters -> [breakupItem]
-mkSlabBreakupList mkPrice mkBreakupItem fareParams = do
+mkSlabBreakupList :: (Money -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> FareParameters -> DFareProduct.FarePolicyType -> [breakupItem]
+mkSlabBreakupList mkPrice mkBreakupItem fareParams farePolicyType = do
   let baseDistanceFareCaption = "BASE_FARE"
       baseDistanceFareItem = mkBreakupItem baseDistanceFareCaption (mkPrice fareParams.baseFare)
 
@@ -57,14 +58,14 @@ mkSlabBreakupList mkPrice mkBreakupItem fareParams = do
       mbFixedGovtRateCaption = "FIXED_GOVERNMENT_RATE"
       mbFixedGovtRateItem = (\fixedGovtRate -> mkBreakupItem mbFixedGovtRateCaption (mkPrice $ fromIntegral ((fixedGovtRate * fromIntegral fareParams.baseFare) `div` 100))) <$> fareParams.govtChargesPerc
 
-      totalFareFinalRounded = fareSum fareParams
+      totalFareFinalRounded = fareSum fareParams farePolicyType
       totalFareCaption = "TOTAL_FARE"
       totalFareItem = mkBreakupItem totalFareCaption $ mkPrice totalFareFinalRounded
 
   [baseDistanceFareItem, totalFareItem] <> catMaybes [mbFixedGovtRateItem, mbServiceChargeItem, mbWaitingOrPickupChargesItem]
 
-mkNormalBreakupList :: (Money -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> FareParameters -> [breakupItem]
-mkNormalBreakupList mkPrice mkBreakupItem fareParams = do
+mkNormalBreakupList :: (Money -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> FareParameters -> DFareProduct.FarePolicyType -> [breakupItem]
+mkNormalBreakupList mkPrice mkBreakupItem fareParams farePolicyType = do
   -- TODO: what should be here?
   let dayPartRate = calculateDayPartRate fareParams
       baseFareFinalRounded = roundToIntegral $ fromIntegral fareParams.baseFare * dayPartRate + (maybe 0.0 fromIntegral fareParams.deadKmFare) -- TODO: Remove later part once UI start consuming DEAD_KILOMETER_FARE
@@ -92,34 +93,34 @@ mkNormalBreakupList mkPrice mkBreakupItem fareParams = do
         fareParams.customerExtraFee <&> \ceFare -> do
           mkBreakupItem customerExtraFareCaption (mkPrice ceFare)
 
-      totalFareFinalRounded = fareSum fareParams
+      totalFareFinalRounded = fareSum fareParams farePolicyType
       totalFareCaption = "TOTAL_FARE"
       totalFareItem = mkBreakupItem totalFareCaption $ mkPrice totalFareFinalRounded
   catMaybes [Just totalFareItem, Just baseFareItem, deadKmFareItem, extraDistanceFareItem, mbSelectedFareItem, mkCustomerExtraFareItem]
 
 -- TODO: make some tests for it
 
-fareSum :: FareParameters -> Money
-fareSum fareParams = case fareParams.farePolicyType of
-  NORMAL -> normalFareSum fareParams
-  SLAB -> slabFareSum fareParams
+fareSum :: FareParameters -> DFareProduct.FarePolicyType -> Money
+fareSum fareParams farePolicyType = case farePolicyType of
+  DFareProduct.NORMAL -> normalFareSum fareParams farePolicyType
+  DFareProduct.SLAB -> slabFareSum fareParams farePolicyType
 
-normalFareSum :: FareParameters -> Money
-normalFareSum fareParams = do
-  baseFareSum fareParams + (fromMaybe 0 fareParams.deadKmFare) + fromMaybe 0 fareParams.driverSelectedFare + fromMaybe 0 fareParams.customerExtraFee
+normalFareSum :: FareParameters -> DFareProduct.FarePolicyType -> Money
+normalFareSum fareParams farePolicyType = do
+  baseFareSum fareParams farePolicyType + (fromMaybe 0 fareParams.deadKmFare) + fromMaybe 0 fareParams.driverSelectedFare + fromMaybe 0 fareParams.customerExtraFee
 
-slabFareSum :: FareParameters -> Money
+slabFareSum :: FareParameters -> DFareProduct.FarePolicyType -> Money
 slabFareSum = baseFareSum
 
 addGovtCharges :: FareParameters -> Money
 addGovtCharges fp =
   maybe 0 (\govtChargesPerc -> (fp.baseFare * fromIntegral govtChargesPerc) `div` 100) fp.govtChargesPerc
 
-baseFareSum :: FareParameters -> Money
-baseFareSum fareParams =
-  case fareParams.farePolicyType of
-    SLAB -> baseSlabFareSum
-    NORMAL -> baseNormalFareSum
+baseFareSum :: FareParameters -> DFareProduct.FarePolicyType -> Money
+baseFareSum fareParams farePolicyType =
+  case farePolicyType of
+    DFareProduct.SLAB -> baseSlabFareSum
+    DFareProduct.NORMAL -> baseNormalFareSum
   where
     baseSlabFareSum = do
       let fareAmount = addGovtCharges fareParams + (fromMaybe 0 fareParams.serviceCharge) + fromMaybe 0 fareParams.waitingOrPickupCharges + fromMaybe 0 fareParams.driverSelectedFare
@@ -175,7 +176,7 @@ calculateFareParameters fp distance time mbExtraFare mbCustomerExtraFee = do
         waitingChargePerMin = fp.waitingChargePerMin,
         waitingOrPickupCharges = Nothing,
         serviceCharge = Nothing,
-        farePolicyType = NORMAL,
+        fareProductId = fp.fareProductId,
         govtChargesPerc = Nothing
       }
 
@@ -210,7 +211,7 @@ calculateSlabFareParameters fp distance time mbExtraFare customerExtraFee = do
         nightCoefIncluded,
         waitingOrPickupCharges = Just waitingOrPickupCharges,
         waitingChargePerMin = Nothing,
-        farePolicyType = SLAB,
+        fareProductId = fp.fareProductId,
         govtChargesPerc = fp.govtChargesPerc
       }
 

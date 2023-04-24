@@ -45,6 +45,7 @@ mkPersist
       id Text
       transactionId Text
       fareProductType DQuote.FareProductType
+      specialZoneTag Text Maybe
       bppBookingId Text Maybe sql=bpp_ride_booking_id
       status Domain.BookingStatus
       providerId Text

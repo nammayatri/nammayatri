@@ -18,57 +18,53 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.FareParameters where
+module Storage.Tabular.SpecialZoneLink where
 
-import qualified Domain.Types.FareParameters as Domain
+import qualified Domain.Types.SpecialZoneLink as Domain
+import qualified Domain.Types.Vehicle.Variant as Vehicle
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
-import Kernel.Types.Common (Centesimal, Money)
-import Kernel.Types.Id
+import Kernel.Types.Id (Id (..))
 import Storage.Tabular.FareProduct (FareProductTId)
+import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.Vehicle ()
+
+derivePersistField "Domain.PickupOrDropType"
 
 mkPersist
   defaultSqlSettings
   [defaultQQ|
-    FareParametersT sql=fare_parameters
-
+    SpecialZoneLinkT sql=special_zone_link
       id Text
+      merchantId MerchantTId
       fareProductId FareProductTId
-      baseFare Money
-      deadKmFare Money Maybe
-      extraKmFare Money Maybe
-      driverSelectedFare Money Maybe
-      customerExtraFee Money Maybe
-      nightShiftRate Centesimal Maybe
-      nightCoefIncluded Bool
-      waitingChargePerMin Money Maybe
-      waitingOrPickupCharges Money Maybe
-      serviceCharge Money Maybe
-      govtChargesPerc Int Maybe
-
+      specialZoneId Text
+      vehicleVariant Vehicle.Variant
+      pickupOrDrop Domain.PickupOrDropType
       Primary id
       deriving Generic
     |]
 
-instance TEntityKey FareParametersT where
-  type DomainKey FareParametersT = Id Domain.FareParameters
-  fromKey (FareParametersTKey _id) = Id _id
-  toKey (Id id) = FareParametersTKey id
+instance TEntityKey SpecialZoneLinkT where
+  type DomainKey SpecialZoneLinkT = Id Domain.SpecialZoneLink
+  fromKey (SpecialZoneLinkTKey _id) = Id _id
+  toKey (Id id) = SpecialZoneLinkTKey id
 
-instance FromTType FareParametersT Domain.FareParameters where
-  fromTType FareParametersT {..} = do
+instance FromTType SpecialZoneLinkT Domain.SpecialZoneLink where
+  fromTType SpecialZoneLinkT {..} = do
     return $
-      Domain.FareParameters
+      Domain.SpecialZoneLink
         { id = Id id,
+          merchantId = fromKey merchantId,
           fareProductId = fromKey fareProductId,
           ..
         }
 
-instance ToTType FareParametersT Domain.FareParameters where
-  toTType Domain.FareParameters {..} = do
-    FareParametersT
+instance ToTType SpecialZoneLinkT Domain.SpecialZoneLink where
+  toTType Domain.SpecialZoneLink {..} =
+    SpecialZoneLinkT
       { id = getId id,
+        merchantId = toKey merchantId,
         fareProductId = toKey fareProductId,
         ..
       }

@@ -40,6 +40,7 @@ mkPersist
       searchRequestId SReq.SearchRequestSpecialZoneTId
       providerId SMerchant.MerchantTId
       vehicleVariant Variant.Variant
+      specialZoneTag Text Maybe
       distance Meters
       validTill UTCTime
       estimatedFare Common.Money

@@ -70,6 +70,7 @@ data ProviderInfo = ProviderInfo
 
 data EstimateInfo = EstimateInfo
   { vehicleVariant :: VehicleVariant,
+    specialZoneTag :: Maybe Text,
     estimatedFare :: Money,
     discount :: Maybe Money,
     estimatedTotalFare :: Money,
@@ -104,6 +105,7 @@ data BreakupPriceInfo = BreakupPriceInfo
 
 data QuoteInfo = QuoteInfo
   { vehicleVariant :: VehicleVariant,
+    specialZoneTag :: Maybe Text,
     estimatedFare :: Money,
     discount :: Maybe Money,
     estimatedTotalFare :: Money,

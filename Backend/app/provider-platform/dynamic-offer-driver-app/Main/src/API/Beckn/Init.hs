@@ -32,6 +32,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
+import qualified Storage.CachedQueries.FareProduct as CQFP
 
 type API =
   Capture "merchantId" (Id DM.Merchant)
@@ -53,9 +54,10 @@ init transporterId (SignatureAuthResult _ subscriber) req =
     Redis.whenWithLockRedis (initLockKey dInitReq.driverQuoteId) 60 $ do
       let context = req.context
       dInitRes <- DInit.handler transporterId dInitReq
+      fareProduct <- CQFP.findById dInitRes.booking.fareParams.fareProductId >>= fromMaybeM (InternalError "FareProduct Not Found")
       void . handle (errHandler dInitRes.booking) $
         CallBAP.withCallback dInitRes.transporter Context.INIT OnInit.onInitAPI context context.bap_uri $
-          pure $ ACL.mkOnInitMessage dInitRes
+          pure $ ACL.mkOnInitMessage dInitRes fareProduct.farePolicyType
       return ()
     pure Ack
   where

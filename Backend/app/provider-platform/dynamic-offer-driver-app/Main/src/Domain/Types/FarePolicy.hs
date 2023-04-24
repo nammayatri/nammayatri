@@ -15,6 +15,7 @@
 module Domain.Types.FarePolicy where
 
 import Domain.Types.Common
+import qualified Domain.Types.FareProduct as DFP
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.Prelude
@@ -24,6 +25,7 @@ import Kernel.Types.Id (Id)
 data FarePolicyD (s :: UsageSafety) = FarePolicy
   { id :: Id FarePolicy,
     merchantId :: Id DM.Merchant,
+    fareProductId :: Id DFP.FareProduct,
     vehicleVariant :: Variant.Variant,
     baseDistanceFare :: HighPrecMoney,
     baseDistanceMeters :: Meters,

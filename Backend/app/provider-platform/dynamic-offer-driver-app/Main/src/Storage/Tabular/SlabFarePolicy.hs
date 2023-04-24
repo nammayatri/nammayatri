@@ -26,6 +26,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Common (Centesimal, Meters, Money)
 import Kernel.Types.Id
+import Storage.Tabular.FareProduct (FareProductTId)
 import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.Vehicle ()
 
@@ -39,6 +40,7 @@ mkPersist
     SlabFarePolicyT sql=slab_fare_policy
       id Text
       merchantId MerchantTId
+      fareProductId FareProductTId
       vehicleVariant Variant.Variant
 
       nightShiftStart TimeOfDay Maybe
@@ -70,6 +72,7 @@ instance FromTType SlabFarePolicyT Domain.SlabFarePolicy where
       Domain.SlabFarePolicy
         { id = Id id,
           merchantId = fromKey merchantId,
+          fareProductId = fromKey fareProductId,
           fareSlabs = unPostgresList fareSlabs,
           ..
         }
@@ -79,6 +82,7 @@ instance ToTType SlabFarePolicyT Domain.SlabFarePolicy where
     SlabFarePolicyT
       { id = getId id,
         merchantId = toKey merchantId,
+        fareProductId = toKey fareProductId,
         fareSlabs = PostgresList fareSlabs,
         ..
       }

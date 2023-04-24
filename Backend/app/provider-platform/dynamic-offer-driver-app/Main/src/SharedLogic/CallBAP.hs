@@ -211,7 +211,8 @@ sendBookingCancelledUpdateToBAP ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
-    CoreMetrics m
+    CoreMetrics m,
+    CacheFlow m r
   ) =>
   DRB.Booking ->
   DM.Merchant ->

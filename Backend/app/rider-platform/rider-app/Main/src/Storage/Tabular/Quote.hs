@@ -56,6 +56,7 @@ mkPersist
       driverOfferId SDriverOffer.DriverOfferTId Maybe
       merchantId SMerchant.MerchantTId
       specialZoneQuoteId SSpecialZoneQuote.SpecialZoneQuoteTId Maybe
+      specialZoneTag Text Maybe
       createdAt UTCTime
       Primary id
       deriving Generic

@@ -21,6 +21,7 @@ import qualified Domain.Types.Booking.BookingLocation as DBL
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.DriverQuote as DDQ
+import qualified Domain.Types.FareProduct as DFP
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Ride as DRide
@@ -44,6 +45,7 @@ import qualified SharedLogic.DriverLocation as DLoc
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.Ride as SRide
 import Storage.CachedQueries.CacheConfig
+import qualified Storage.CachedQueries.FareProduct as CQFP
 import Storage.CachedQueries.Merchant as QM
 import Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Booking.BookingLocation as QBL
@@ -72,6 +74,7 @@ data DConfirmReq = DConfirmReq
 
 data DConfirmRes = DConfirmRes
   { booking :: DRB.Booking,
+    fareProduct :: DFP.FareProduct,
     ride :: Maybe DRide.Ride,
     fromLocation :: DBL.BookingLocation,
     toLocation :: DBL.BookingLocation,
@@ -99,8 +102,9 @@ handler ::
   m DConfirmRes
 handler subscriber transporterId req = do
   booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
-  case booking.bookingType of
-    DRB.NormalBooking -> do
+  fareProduct <- CQFP.findById booking.fareParams.fareProductId >>= fromMaybeM (InternalError "FareProduct Not Found")
+  case fareProduct.flowType of
+    DFP.NORMAL_RIDE_FLOW -> do
       driverQuote <- QDQ.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
       driver <- QPerson.findById driverQuote.driverId >>= fromMaybeM (PersonNotFound driverQuote.driverId.getId)
       let transporterId' = booking.providerId
@@ -150,13 +154,14 @@ handler subscriber transporterId req = do
       pure
         DConfirmRes
           { booking = uBooking,
+            fareProduct,
             ride = Just ride,
             riderDetails,
             transporter,
             fromLocation = uBooking.fromLocation,
             toLocation = uBooking.toLocation
           }
-    DRB.SpecialZoneBooking -> do
+    DFP.RIDE_OTP_FLOW -> do
       quoteSpecialZone <- QQSpecialZone.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
       let transporterId' = booking.providerId
       transporter <-
@@ -184,6 +189,7 @@ handler subscriber transporterId req = do
       pure
         DConfirmRes
           { booking = uBooking,
+            fareProduct,
             ride = Nothing,
             riderDetails,
             transporter,

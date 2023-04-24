@@ -17,15 +17,17 @@ module Beckn.ACL.OnConfirm (buildOnConfirmMessage) where
 import qualified Beckn.ACL.Common as Common
 import qualified Beckn.Types.Core.Taxi.OnConfirm as OnConfirm
 import qualified Domain.Action.Beckn.Confirm as DConfirm
-import qualified Domain.Types.Booking as DConfirm
 import qualified Domain.Types.Booking.BookingLocation as DBL
+import qualified Domain.Types.FareProduct as DFP
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.FareCalculator
+import Storage.CachedQueries.CacheConfig (CacheFlow)
+import qualified Storage.CachedQueries.FareProduct as CQFP
 
-buildOnConfirmMessage :: MonadFlow m => UTCTime -> DConfirm.DConfirmRes -> m OnConfirm.OnConfirmMessage
+buildOnConfirmMessage :: (EsqDBFlow m r, CacheFlow m r) => UTCTime -> DConfirm.DConfirmRes -> m OnConfirm.OnConfirmMessage
 buildOnConfirmMessage now res = do
   let booking = res.booking
   let vehicleVariant = Common.castVariant res.booking.vehicleVariant
@@ -33,11 +35,12 @@ buildOnConfirmMessage now res = do
       fareParams = booking.fareParams
       totalFareDecimal = fromIntegral booking.estimatedFare
       currency = "INR"
-  fulfillmentDetails <- case booking.bookingType of
-    DConfirm.SpecialZoneBooking -> do
+  fareProduct <- CQFP.findById fareParams.fareProductId >>= fromMaybeM (InternalError "FareProduct Not Found")
+  fulfillmentDetails <- case fareProduct.flowType of
+    DFP.RIDE_OTP_FLOW -> do
       otpCode <- booking.specialZoneOtpCode & fromMaybeM (OtpNotFoundForSpecialZoneBooking booking.id.getId)
       return $ mkSpecialZoneFulfillmentInfo res.fromLocation res.toLocation now otpCode
-    DConfirm.NormalBooking -> return $ mkFulfillmentInfo res.fromLocation res.toLocation now
+    DFP.NORMAL_RIDE_FLOW -> return $ mkFulfillmentInfo res.fromLocation res.toLocation now
   return $
     OnConfirm.OnConfirmMessage
       { order =
@@ -59,6 +62,7 @@ buildOnConfirmMessage now res = do
                         (OnConfirm.BreakupItemPrice currency . fromIntegral)
                         OnConfirm.BreakupItem
                         fareParams
+                        fareProduct.farePolicyType
                   },
               payment =
                 OnConfirm.Payment

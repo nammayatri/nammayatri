@@ -108,6 +108,7 @@ data OnUpdateFareBreakup = OnUpdateFareBreakup
 
 data EstimateRepetitionEstimateInfo = EstimateRepetitionEstimateInfo
   { vehicleVariant :: VehicleVariant,
+    specialZoneTag :: Maybe Text,
     estimatedFare :: Money,
     discount :: Maybe Money,
     estimatedTotalFare :: Money,
@@ -314,6 +315,7 @@ onUpdate EstimateRepetitionReq {..} = do
             autoAssignEnabled = False,
             autoAssignEnabledV2 = False,
             autoAssignQuoteId = Nothing,
+            specialZoneTag,
             providerMobileNumber = booking.providerMobileNumber,
             providerName = booking.providerName,
             providerCompletedRidesCount = 0, -- FIXME

@@ -15,6 +15,7 @@
 
 module Domain.Types.FareParameters where
 
+import qualified Domain.Types.FareProduct as DFP
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -22,6 +23,7 @@ import Kernel.Utils.GenericPretty
 
 data FareParameters = FareParameters
   { id :: Id FareParameters,
+    fareProductId :: Id DFP.FareProduct,
     baseFare :: Money,
     deadKmFare :: Maybe Money,
     extraKmFare :: Maybe Money,
@@ -32,11 +34,6 @@ data FareParameters = FareParameters
     waitingChargePerMin :: Maybe Money,
     waitingOrPickupCharges :: Maybe Money,
     serviceCharge :: Maybe Money,
-    farePolicyType :: FarePolicyType,
     govtChargesPerc :: Maybe Int
   }
   deriving (Generic, Show, Eq, PrettyShow)
-
-data FarePolicyType = SLAB | NORMAL
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
-  deriving (PrettyShow) via Showable FarePolicyType

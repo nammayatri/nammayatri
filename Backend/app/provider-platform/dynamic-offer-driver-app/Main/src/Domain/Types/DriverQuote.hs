@@ -39,6 +39,7 @@ data DriverQuote = DriverQuote
     driverName :: Text,
     driverRating :: Maybe Centesimal,
     vehicleVariant :: Variant.Variant,
+    specialZoneTag :: Maybe Text,
     distance :: Meters,
     distanceToPickup :: Meters,
     durationToPickup :: Seconds,

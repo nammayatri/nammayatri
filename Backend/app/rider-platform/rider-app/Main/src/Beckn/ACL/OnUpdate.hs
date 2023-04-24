@@ -139,6 +139,9 @@ buildEstimateInfo item = do
       waitingCharges = buildWaitingChargeInfo <$> item.tags
       driversLocation = fromMaybe [] $ item.tags <&> (.drivers_location)
   validatePrices estimatedFare estimatedTotalFare
+  specialZoneTag <- runMaybeT $ do 
+    tags <- MaybeT $ pure item.tags
+    MaybeT $ pure tags.special_zone_tag
 
   let totalFareRange =
         DEstimate.FareRange

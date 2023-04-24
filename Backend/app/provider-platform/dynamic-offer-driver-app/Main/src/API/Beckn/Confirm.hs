@@ -19,7 +19,7 @@ import qualified Beckn.ACL.Confirm as ACL
 import qualified Beckn.ACL.OnConfirm as ACL
 import qualified Beckn.Types.Core.Taxi.API.Confirm as Confirm
 import qualified Domain.Action.Beckn.Confirm as DConfirm
-import qualified Domain.Types.Booking as DBooking
+import qualified Domain.Types.FareProduct as DFP
 import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Prelude
@@ -60,8 +60,8 @@ confirm transporterId (SignatureAuthResult _ subscriber) req =
       let context = req.context
       dConfirmRes <- DConfirm.handler subscriber transporterId dConfirmReq
       transporter <- QM.findById transporterId >>= fromMaybeM (MerchantNotFound transporterId.getId)
-      case dConfirmRes.booking.bookingType of
-        DBooking.NormalBooking -> do
+      case dConfirmRes.fareProduct.flowType of
+        DFP.NORMAL_RIDE_FLOW -> do
           ride <- dConfirmRes.ride & fromMaybeM (RideNotFound dConfirmRes.booking.id.getId)
           now <- getCurrentTime
           driverQuote <- runInReplica $ QDQ.findById (Id dConfirmRes.booking.quoteId) >>= fromMaybeM (QuoteNotFound dConfirmRes.booking.quoteId)
@@ -74,7 +74,7 @@ confirm transporterId (SignatureAuthResult _ subscriber) req =
               void $
                 BP.sendRideAssignedUpdateToBAP dConfirmRes.booking ride
           DS.driverScoreEventHandler DST.OnNewRideAssigned {merchantId = transporterId, driverId = driverQuote.driverId}
-        DBooking.SpecialZoneBooking -> do
+        DFP.RIDE_OTP_FLOW -> do
           now <- getCurrentTime
           fork "on_confirm/on_update" $ do
             handle (errHandler' dConfirmRes transporter) $ do

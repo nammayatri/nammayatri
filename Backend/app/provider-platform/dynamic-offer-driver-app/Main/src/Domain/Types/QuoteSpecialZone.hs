@@ -28,6 +28,7 @@ data QuoteSpecialZone = QuoteSpecialZone
   { id :: Id QuoteSpecialZone,
     searchRequestId :: Id SearchRequestSpecialZone,
     providerId :: Id DMerchant.Merchant,
+    specialZoneTag :: Maybe Text,
     vehicleVariant :: Variant.Variant,
     distance :: Meters,
     estimatedFinishTime :: UTCTime,

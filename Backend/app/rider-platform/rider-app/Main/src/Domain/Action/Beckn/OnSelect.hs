@@ -61,6 +61,7 @@ data ProviderInfo = ProviderInfo
 
 data QuoteInfo = QuoteInfo
   { vehicleVariant :: VehicleVariant,
+    specialZoneTag :: Maybe Text,
     estimatedFare :: Money,
     discount :: Maybe Money,
     estimatedTotalFare :: Money,
@@ -151,6 +152,7 @@ buildSelectedQuote estimate providerInfo now merchantId QuoteInfo {..} = do
         DQuote.Quote
           { id = uid,
             providerMobileNumber = providerInfo.mobileNumber,
+            specialZoneTag,
             providerName = providerInfo.name,
             providerCompletedRidesCount = providerInfo.ridesCompleted,
             providerId = providerInfo.providerId,

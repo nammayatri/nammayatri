@@ -36,6 +36,7 @@ mkPersist
       id Text
       transactionId Text
       messageId Text
+      specialZoneTag Text Maybe
       startTime UTCTime
       validTill UTCTime
       providerId MerchantTId

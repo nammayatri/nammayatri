@@ -38,6 +38,8 @@ import Kernel.Types.Common
 import Kernel.Utils.Common
 import qualified SharedLogic.Estimate as DEstimate
 import SharedLogic.FareCalculator
+import Storage.CachedQueries.CacheConfig (CacheFlow)
+import qualified Storage.CachedQueries.FareProduct as CQFP
 import Tools.Error
 
 data OnUpdateBuildReq
@@ -69,7 +71,7 @@ data OnUpdateBuildReq
       }
 
 buildOnUpdateMessage ::
-  (EsqDBFlow m r, EncFlow m r) =>
+  (EsqDBFlow m r, EncFlow m r, CacheFlow m r) =>
   OnUpdateBuildReq ->
   m OnUpdate.OnUpdateMessage
 buildOnUpdateMessage RideAssignedBuildReq {..} = do
@@ -126,6 +128,7 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
   chargeableDistance <-
     realToFrac <$> req.ride.chargeableDistance
       & fromMaybeM (InternalError "Ride chargeable distance is not present.")
+  fareProduct <- CQFP.findById req.fareParams.fareProductId >>= fromMaybeM (InternalError "FareProduct Not Found")
   let currency = "INR"
       ride = req.ride
       price =
@@ -134,7 +137,7 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
             value = fare,
             computed_value = fare
           }
-      breakup = mkBreakupList (OnUpdate.BreakupPrice currency . fromIntegral) OnUpdate.BreakupItem req.fareParams
+      breakup = mkBreakupList (OnUpdate.BreakupPrice currency . fromIntegral) OnUpdate.BreakupItem req.fareParams fareProduct.farePolicyType
   return $
     OnUpdate.OnUpdateMessage $
       OnUpdate.RideCompleted
@@ -216,7 +219,8 @@ mkQuoteEntities it = do
               night_shift_end = (.nightShiftEnd) =<< it.nightShiftRate,
               waiting_charge_per_min = it.waitingCharges.waitingChargePerMin,
               waiting_time_estimated_threshold = it.waitingCharges.waitingTimeEstimatedThreshold,
-              drivers_location = it.driversLatLong
+              drivers_location = it.driversLatLong,
+              special_zone_tag = it.specialZoneTag
             }
     }
   where

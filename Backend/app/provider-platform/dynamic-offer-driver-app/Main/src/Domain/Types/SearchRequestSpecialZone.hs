@@ -26,6 +26,7 @@ data SearchRequestSpecialZone = SearchRequestSpecialZone
   { id :: Id SearchRequestSpecialZone,
     transactionId :: Text,
     messageId :: Text,
+    specialZoneTag :: Maybe Text,
     startTime :: UTCTime,
     validTill :: UTCTime,
     providerId :: Id DM.Merchant,

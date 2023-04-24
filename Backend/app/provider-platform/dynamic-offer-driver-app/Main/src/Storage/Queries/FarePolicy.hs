@@ -20,6 +20,7 @@ module Storage.Queries.FarePolicy
 where
 
 import Domain.Types.FarePolicy
+import Domain.Types.FareProduct (FareProduct)
 import Domain.Types.Merchant
 import Domain.Types.Vehicle.Variant (Variant)
 import Kernel.Prelude
@@ -39,16 +40,31 @@ findAllByMerchantId merchantId = do
       farePolicy ^. FarePolicyMerchantId ==. val (toKey merchantId)
     return farePolicy
 
-findByMerchantIdAndVariant ::
+findAllByMerchantIdAndFareProductId ::
   Transactionable m =>
   Id Merchant ->
+  Id FareProduct ->
+  m [FarePolicy]
+findAllByMerchantIdAndFareProductId merchantId fareProductId = do
+  Esq.findAll $ do
+    farePolicy <- from $ table @FarePolicyT
+    where_ $
+      farePolicy ^. FarePolicyMerchantId ==. val (toKey merchantId)
+        &&. farePolicy ^. FarePolicyFareProductId ==. val (toKey fareProductId)
+    return farePolicy
+
+findByMerchantIdAndFareProductIdAndVariant ::
+  Transactionable m =>
+  Id Merchant ->
+  Id FareProduct ->
   Variant ->
   m (Maybe FarePolicy)
-findByMerchantIdAndVariant merchantId variant = do
+findByMerchantIdAndFareProductIdAndVariant merchantId fareProductId variant = do
   Esq.findOne $ do
     farePolicy <- from $ table @FarePolicyT
     where_ $
       farePolicy ^. FarePolicyMerchantId ==. val (toKey merchantId)
+        &&. farePolicy ^. FarePolicyFareProductId ==. val (toKey fareProductId)
         &&. farePolicy ^. FarePolicyVehicleVariant ==. val variant
     return farePolicy
 

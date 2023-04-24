@@ -150,7 +150,8 @@ mkItem categoryId fulfillmentId q =
       tags =
         Just $
           OS.ItemTags
-            { distance_to_nearest_driver = OS.DecimalValue $ toRational q.distanceToPickup.getMeters
+            { distance_to_nearest_driver = OS.DecimalValue $ toRational q.distanceToPickup.getMeters,
+              special_zone_tag = q.specialZoneTag
             },
       base_distance = Nothing,
       base_duration = Nothing,

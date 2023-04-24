@@ -31,6 +31,7 @@ import Servant hiding (throwError)
 data SearchRequest = SearchRequest
   { id :: Id SearchRequest,
     transactionId :: Text,
+    specialZoneTag :: Maybe Text,
     messageId :: Text,
     startTime :: UTCTime,
     validTill :: UTCTime,

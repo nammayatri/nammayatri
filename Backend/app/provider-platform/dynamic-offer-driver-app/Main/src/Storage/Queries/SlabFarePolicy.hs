@@ -20,6 +20,7 @@ module Storage.Queries.SlabFarePolicy
     #-}
 where
 
+import Domain.Types.FareProduct (FareProduct)
 import Domain.Types.Merchant
 import Domain.Types.SlabFarePolicy
 import Domain.Types.Vehicle.Variant (Variant)
@@ -28,28 +29,32 @@ import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Storage.Tabular.SlabFarePolicy
 
-findAllByMerchantId ::
+findAllByMerchantIdAndFareProductId ::
   Transactionable m =>
   Id Merchant ->
+  Id FareProduct ->
   m [SlabFarePolicy]
-findAllByMerchantId merchantId = do
+findAllByMerchantIdAndFareProductId merchantId fareProductId = do
   Esq.findAll $ do
     farePolicy <- from $ table @SlabFarePolicyT
     where_ $
       farePolicy ^. SlabFarePolicyMerchantId ==. val (toKey merchantId)
+        &&. farePolicy ^. SlabFarePolicyFareProductId ==. val (toKey fareProductId)
     return farePolicy
 
-findByMerchantIdAndVariant ::
+findByMerchantIdAndFareProductIdAndVariant ::
   Transactionable m =>
   Id Merchant ->
+  Id FareProduct ->
   Variant ->
   m (Maybe SlabFarePolicy)
-findByMerchantIdAndVariant merchantId variant = do
+findByMerchantIdAndFareProductIdAndVariant merchantId fareProductId variant = do
   Esq.findOne $ do
     farePolicy <- from $ table @SlabFarePolicyT
     where_ $
       farePolicy ^. SlabFarePolicyMerchantId ==. val (toKey merchantId)
         &&. farePolicy ^. SlabFarePolicyVehicleVariant ==. val variant
+        &&. farePolicy ^. SlabFarePolicyFareProductId ==. val (toKey fareProductId)
     return farePolicy
 
 findById :: Transactionable m => Id SlabFarePolicy -> m (Maybe SlabFarePolicy)

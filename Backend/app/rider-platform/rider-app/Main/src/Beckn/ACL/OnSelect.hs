@@ -85,6 +85,10 @@ buildQuoteInfo item = do
       estimatedTotalFare = roundToIntegral item.price.offered_value
       descriptions = item.quote_terms
   validatePrices estimatedFare estimatedTotalFare
+  specialZoneTag <- runMaybeT $ do 
+    tags <- MaybeT $ pure item.tags
+    MaybeT $ pure tags.special_zone_tag
+
   -- if we get here, the discount >= 0, estimatedFare >= estimatedTotalFare
   let discount = if estimatedTotalFare == estimatedFare then Nothing else Just $ estimatedFare - estimatedTotalFare
   pure

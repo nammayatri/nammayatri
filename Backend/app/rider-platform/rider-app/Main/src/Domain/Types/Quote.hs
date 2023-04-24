@@ -34,6 +34,7 @@ import qualified Tools.Schema as S
 data Quote = Quote
   { id :: Id Quote,
     requestId :: Id DSearchRequest.SearchRequest,
+    specialZoneTag :: Maybe Text,
     estimatedFare :: Money,
     discount :: Maybe Money,
     estimatedTotalFare :: Money,
@@ -66,6 +67,7 @@ newtype OneWayQuoteDetails = OneWayQuoteDetails
 data QuoteAPIEntity = QuoteAPIEntity
   { id :: Id Quote,
     vehicleVariant :: VehicleVariant,
+    specialZoneTag :: Maybe Text,
     estimatedFare :: Money,
     estimatedTotalFare :: Money,
     discount :: Maybe Money,

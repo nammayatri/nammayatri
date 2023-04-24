@@ -24,6 +24,7 @@ where
 
 import qualified Data.List.NonEmpty as NE
 import Domain.Types.FarePolicy
+import qualified Domain.Types.FareProduct as DFareProduct
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.SlabFarePolicy
 import qualified Domain.Types.Vehicle.Variant as Variant
@@ -38,6 +39,7 @@ import Tools.Maps (LatLong (..))
 
 data EstimateItem = EstimateItem
   { vehicleVariant :: Variant.Variant,
+    specialZoneTag :: Maybe Text,
     distanceToPickup :: Meters,
     minFare :: Money,
     maxFare :: Money,
@@ -74,11 +76,13 @@ buildEstimate ::
   DM.Merchant ->
   UTCTime ->
   Meters ->
+  DFareProduct.FarePolicyType ->
+  Maybe Text ->
   (FarePolicy, NonEmpty DriverPoolResult) ->
   m EstimateItem
-buildEstimate org startTime dist (farePolicy, filteredPoolByVehVariant) = do
+buildEstimate org startTime dist farePolicyType specialZoneTag (farePolicy, filteredPoolByVehVariant) = do
   fareParams <- calculateFare org.id (Left farePolicy) dist startTime Nothing Nothing
-  let baseFare = fareSum fareParams
+  let baseFare = fareSum fareParams farePolicyType
       currency = "INR"
       estimateBreakups = mkBreakupListItems (BreakupPrice currency) BreakupItem farePolicy
   let latlongList = fmap (\x -> LatLong x.lat x.lon) filteredPoolByVehVariant
@@ -88,6 +92,7 @@ buildEstimate org startTime dist (farePolicy, filteredPoolByVehVariant) = do
   pure
     EstimateItem
       { vehicleVariant = farePolicy.vehicleVariant,
+        specialZoneTag,
         distanceToPickup = driverMetadata.distanceToPickup,
         minFare = baseFare,
         maxFare = baseFare + farePolicy.driverExtraFee.maxFee,
@@ -141,11 +146,13 @@ buildEstimateFromSlabFarePolicy ::
   DM.Merchant ->
   UTCTime ->
   Meters ->
+  DFareProduct.FarePolicyType ->
+  Maybe Text ->
   (SlabFarePolicy, NonEmpty DriverPoolResult) ->
   m EstimateItem
-buildEstimateFromSlabFarePolicy org startTime dist (slabFarePolicy, filteredPoolByVehVariant) = do
+buildEstimateFromSlabFarePolicy org startTime dist farePolicyType specialZoneTag (slabFarePolicy, filteredPoolByVehVariant) = do
   fareParams <- calculateFare org.id (Right slabFarePolicy) dist startTime Nothing Nothing
-  let baseFare = fareSum fareParams
+  let baseFare = fareSum fareParams farePolicyType
       currency = "INR"
       estimateBreakups = mkBreakupSlabListItems (BreakupPrice currency) BreakupItem slabFarePolicy fareParams.baseFare fareParams.waitingOrPickupCharges
   let latlongList = fmap (\x -> LatLong x.lat x.lon) filteredPoolByVehVariant
@@ -155,6 +162,7 @@ buildEstimateFromSlabFarePolicy org startTime dist (slabFarePolicy, filteredPool
   pure
     EstimateItem
       { vehicleVariant = slabFarePolicy.vehicleVariant,
+        specialZoneTag,
         distanceToPickup = driverMetadata.distanceToPickup,
         minFare = baseFare,
         maxFare = baseFare,

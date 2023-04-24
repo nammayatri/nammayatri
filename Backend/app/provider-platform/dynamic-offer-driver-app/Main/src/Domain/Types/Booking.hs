@@ -52,7 +52,7 @@ data Booking = Booking
     transactionId :: Text,
     quoteId :: Text,
     status :: BookingStatus,
-    bookingType :: BookingType,
+    specialZoneTag :: Maybe Text,
     specialZoneOtpCode :: Maybe Text,
     providerId :: Id DM.Merchant, -- FIXME merchantId
     primaryExophone :: Text,
@@ -73,6 +73,3 @@ data Booking = Booking
     updatedAt :: UTCTime
   }
   deriving (Generic)
-
-data BookingType = SpecialZoneBooking | NormalBooking
-  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)

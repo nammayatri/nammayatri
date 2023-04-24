@@ -69,6 +69,7 @@ data SearchRequestForDriver = SearchRequestForDriver
 data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
   { searchRequestId :: Id SearchRequest,
     startTime :: UTCTime,
+    specialZoneTag :: Maybe Text,
     searchRequestValidTill :: UTCTime,
     distanceToPickup :: Meters,
     durationToPickup :: Seconds,
@@ -89,6 +90,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest delayDuration =
   SearchRequestForDriverAPIEntity
     { searchRequestId = searchRequest.id,
       startTime = nearbyReq.startTime,
+      specialZoneTag = searchRequest.specialZoneTag,
       searchRequestValidTill = nearbyReq.searchRequestValidTill,
       distanceToPickup = nearbyReq.actualDistanceToPickup,
       durationToPickup = nearbyReq.durationToPickup,

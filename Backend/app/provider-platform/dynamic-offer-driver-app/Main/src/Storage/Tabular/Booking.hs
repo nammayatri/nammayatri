@@ -33,7 +33,6 @@ import Storage.Tabular.RiderDetails (RiderDetailsTId)
 import Storage.Tabular.Vehicle ()
 
 derivePersistField "Domain.BookingStatus"
-derivePersistField "Domain.BookingType"
 
 mkPersist
   defaultSqlSettings
@@ -43,7 +42,7 @@ mkPersist
       transactionId Text
       quoteId Text
       status Domain.BookingStatus
-      bookingType Domain.BookingType
+      specialZoneTag Text Maybe
       specialZoneOtpCode Text Maybe
       providerId MerchantTId
       primaryExophone Text

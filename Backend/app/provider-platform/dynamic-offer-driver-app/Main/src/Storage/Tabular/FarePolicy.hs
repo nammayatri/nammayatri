@@ -26,6 +26,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Common (Centesimal, HighPrecMoney, Meters, Money, Seconds)
 import Kernel.Types.Id
+import Storage.Tabular.FareProduct (FareProductTId)
 import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.Vehicle ()
 
@@ -35,6 +36,7 @@ mkPersist
     FarePolicyT sql=fare_policy
       id Text
       merchantId MerchantTId
+      fareProductId FareProductTId
       vehicleVariant Variant.Variant
 
       baseDistanceFare HighPrecMoney
@@ -77,6 +79,7 @@ instance FromTType FarePolicyT Domain.FarePolicy where
       Domain.FarePolicy
         { id = Id id,
           merchantId = fromKey merchantId,
+          fareProductId = fromKey fareProductId,
           ..
         }
 
@@ -85,6 +88,7 @@ instance ToTType FarePolicyT Domain.FarePolicy where
     FarePolicyT
       { id = getId id,
         merchantId = toKey merchantId,
+        fareProductId = toKey fareProductId,
         driverMinExtraFee = driverExtraFee.minFee,
         driverMaxExtraFee = driverExtraFee.maxFee,
         ..

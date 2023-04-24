@@ -15,6 +15,7 @@
 module Domain.Types.SlabFarePolicy where
 
 import Domain.Types.Common
+import qualified Domain.Types.FareProduct as DFP
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.Prelude
@@ -24,6 +25,7 @@ import Kernel.Types.Id (Id)
 data SlabFarePolicyD (s :: UsageSafety) = SlabFarePolicy
   { id :: Id SlabFarePolicy,
     merchantId :: Id DM.Merchant,
+    fareProductId :: Id DFP.FareProduct,
     vehicleVariant :: Variant.Variant,
     serviceCharge :: Money,
     nightShiftRate :: Maybe Centesimal,

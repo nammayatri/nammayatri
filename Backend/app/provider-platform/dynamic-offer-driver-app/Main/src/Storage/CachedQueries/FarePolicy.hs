@@ -17,8 +17,9 @@
 
 module Storage.CachedQueries.FarePolicy
   ( findById,
-    findByMerchantIdAndVariant,
+    findByMerchantIdAndFareProductIdAndVariant,
     findAllByMerchantId,
+    findAllByMerchantIdAndFareProductId,
     clearCache,
     update,
   )
@@ -27,6 +28,7 @@ where
 import Data.Coerce (coerce)
 import Domain.Types.Common
 import Domain.Types.FarePolicy
+import Domain.Types.FareProduct (FareProduct)
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Vehicle as Vehicle
 import Kernel.Prelude
@@ -59,13 +61,14 @@ findById id =
     Just a -> return . Just $ coerce @(FarePolicyD 'Unsafe) @FarePolicy a
     Nothing -> flip whenJust cacheFarePolicy /=<< Queries.findById id
 
-findByMerchantIdAndVariant ::
+findByMerchantIdAndFareProductIdAndVariant ::
   (CacheFlow m r, EsqDBFlow m r) =>
   Id Merchant ->
+  Id FareProduct ->
   Vehicle.Variant ->
   Maybe Meters ->
   m (Maybe FarePolicy)
-findByMerchantIdAndVariant merchantId vehVar mRideDistance =
+findByMerchantIdAndFareProductIdAndVariant merchantId fareProductId vehVar mRideDistance =
   case mRideDistance of
     Just distance -> mapM (getUpdatedFarePolicy merchantId (Just vehVar) distance) =<< getFarePolicy
     Nothing -> getFarePolicy
@@ -77,7 +80,7 @@ findByMerchantIdAndVariant merchantId vehVar mRideDistance =
           Hedis.withCrossAppRedis (Hedis.safeGet $ makeIdKey id) >>= \case
             Just a -> return . Just $ coerce @(FarePolicyD 'Unsafe) @FarePolicy a
             Nothing -> findAndCache
-    findAndCache = flip whenJust cacheFarePolicy /=<< Queries.findByMerchantIdAndVariant merchantId vehVar
+    findAndCache = flip whenJust cacheFarePolicy /=<< Queries.findByMerchantIdAndFareProductIdAndVariant merchantId fareProductId vehVar
 
 findAllByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Maybe Meters -> m [FarePolicy]
 findAllByMerchantId merchantId mRideDistance =
@@ -92,6 +95,20 @@ findAllByMerchantId merchantId mRideDistance =
     cacheRes fps = do
       expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
       Hedis.withCrossAppRedis $ Hedis.setExp (makeAllMerchantIdKey merchantId) (coerce @[FarePolicy] @[FarePolicyD 'Unsafe] fps) expTime
+
+findAllByMerchantIdAndFareProductId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Id FareProduct -> Maybe Meters -> m [FarePolicy]
+findAllByMerchantIdAndFareProductId merchantId fareProductId mRideDistance =
+  case mRideDistance of
+    Just distance -> traverse (getUpdatedFarePolicy merchantId Nothing distance) =<< getFarePolicy
+    Nothing -> getFarePolicy
+  where
+    getFarePolicy = do
+      Hedis.withCrossAppRedis (Hedis.safeGet $ makeAllMerchantIdKey merchantId) >>= \case
+        Just a -> return $ fmap (coerce @(FarePolicyD 'Unsafe) @FarePolicy) a
+        Nothing -> cacheRes /=<< Queries.findAllByMerchantIdAndFareProductId merchantId fareProductId
+    cacheRes fps = do
+      expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+      Hedis.withCrossAppRedis $ Hedis.setExp (makeAllMerchantIdFareProductIdKey merchantId fareProductId) (coerce @[FarePolicy] @[FarePolicyD 'Unsafe] fps) expTime
 
 cacheFarePolicy :: (CacheFlow m r) => FarePolicy -> m ()
 cacheFarePolicy fp = do
@@ -110,12 +127,16 @@ makeMerchantIdVehVarKey merchantId vehVar = "driver-offer:CachedQueries:FarePoli
 makeAllMerchantIdKey :: Id Merchant -> Text
 makeAllMerchantIdKey merchantId = "driver-offer:CachedQueries:FarePolicy:MerchantId-" <> merchantId.getId <> ":All"
 
+makeAllMerchantIdFareProductIdKey :: Id Merchant -> Id FareProduct -> Text
+makeAllMerchantIdFareProductIdKey merchantId fareProductId = "driver-offer:CachedQueries:FarePolicy:MerchantId-" <> merchantId.getId <> ":FareProductId-" <> fareProductId.getId <> ":All"
+
 -- Call it after any update
 clearCache :: HedisFlow m r => FarePolicy -> m ()
 clearCache fp = Hedis.withCrossAppRedis $ do
   Hedis.del (makeIdKey fp.id)
   Hedis.del (makeMerchantIdVehVarKey fp.merchantId fp.vehicleVariant)
   Hedis.del (makeAllMerchantIdKey fp.merchantId)
+  Hedis.del (makeAllMerchantIdFareProductIdKey fp.merchantId fp.fareProductId)
 
 update :: FarePolicy -> Esq.SqlDB ()
 update = Queries.update

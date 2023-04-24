@@ -36,6 +36,7 @@ import qualified Tools.Schema as S
 data BookingAPIEntity = BookingAPIEntity
   { id :: Id Booking,
     status :: BookingStatus,
+    specialZoneTag :: Maybe Text,
     agencyName :: Text,
     agencyNumber :: Text,
     estimatedFare :: Money,
@@ -90,6 +91,7 @@ makeBookingAPIEntity booking activeRide allRides fareBreakups = do
   BookingAPIEntity
     { id = booking.id,
       status = booking.status,
+      specialZoneTag = booking.specialZoneTag,
       agencyName = booking.providerName,
       agencyNumber = booking.providerMobileNumber,
       estimatedFare = booking.estimatedFare,

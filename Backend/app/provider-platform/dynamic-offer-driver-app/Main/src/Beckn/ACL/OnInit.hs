@@ -16,15 +16,16 @@ module Beckn.ACL.OnInit where
 
 import Beckn.Types.Core.Taxi.OnInit as OnInit
 import Domain.Action.Beckn.Init as DInit
+import qualified Domain.Types.FareProduct as DFP
 import Kernel.Prelude
 import SharedLogic.FareCalculator
 
-mkOnInitMessage :: DInit.InitRes -> OnInit.OnInitMessage
-mkOnInitMessage res = do
+mkOnInitMessage :: DInit.InitRes -> DFP.FarePolicyType -> OnInit.OnInitMessage
+mkOnInitMessage res farePolicyType = do
   let rb = res.booking
       fareDecimalValue = fromIntegral rb.estimatedFare
       currency = "INR"
-      breakup_ = mkBreakupList (OnInit.BreakupItemPrice currency . fromIntegral) OnInit.BreakupItem rb.fareParams
+      breakup_ = mkBreakupList (OnInit.BreakupItemPrice currency . fromIntegral) OnInit.BreakupItem rb.fareParams farePolicyType
 
   OnInit.OnInitMessage
     { order =

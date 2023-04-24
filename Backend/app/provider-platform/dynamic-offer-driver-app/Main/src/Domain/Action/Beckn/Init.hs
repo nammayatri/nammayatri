@@ -115,7 +115,7 @@ handler merchantId req = do
         throwError $ QuoteExpired driverQuote.id.getId
       searchRequest <- QSR.findById driverQuote.searchRequestId >>= fromMaybeM (SearchRequestNotFound driverQuote.searchRequestId.getId)
       -- do we need to check searchRequest.validTill?
-      booking <- buildBooking searchRequest driverQuote DRB.NormalBooking now
+      booking <- buildBooking searchRequest driverQuote now
       Esq.runTransaction $
         QRB.create booking
       pure InitRes {..}
@@ -124,7 +124,7 @@ handler merchantId req = do
       when (specialZoneQuote.validTill < now) $
         throwError $ QuoteExpired specialZoneQuote.id.getId
       searchRequest <- QSRSpecialZone.findById specialZoneQuote.searchRequestId >>= fromMaybeM (SearchRequestNotFound specialZoneQuote.searchRequestId.getId)
-      booking <- buildBooking searchRequest specialZoneQuote DRB.SpecialZoneBooking now
+      booking <- buildBooking searchRequest specialZoneQuote now
       Esq.runTransaction $
         QRB.create booking
       pure InitRes {..}
@@ -133,6 +133,7 @@ handler merchantId req = do
       ( CacheFlow m r,
         EsqDBFlow m r,
         HasField "transactionId" sr Text,
+        HasField "specialZoneTag" sr (Maybe Text),
         HasField "fromLocation" sr DLoc.SearchReqLocation,
         HasField "toLocation" sr DLoc.SearchReqLocation,
         HasField "startTime" sr UTCTime,
@@ -144,10 +145,9 @@ handler merchantId req = do
       ) =>
       sr ->
       q ->
-      DRB.BookingType ->
       UTCTime ->
       m DRB.Booking
-    buildBooking searchRequest driverQuote bookingType now = do
+    buildBooking searchRequest driverQuote now = do
       id <- Id <$> generateGUID
       fromLocation <- buildBookingLocation searchRequest.fromLocation
       toLocation <- buildBookingLocation searchRequest.toLocation
@@ -175,6 +175,7 @@ handler merchantId req = do
             estimatedDuration = searchRequest.estimatedDuration,
             fareParams = driverQuote.fareParams,
             specialZoneOtpCode = Nothing,
+            specialZoneTag = searchRequest.specialZoneTag,
             ..
           }
 

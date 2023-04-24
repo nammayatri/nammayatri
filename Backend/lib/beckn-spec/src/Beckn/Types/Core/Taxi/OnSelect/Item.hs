@@ -86,8 +86,9 @@ data ItemPrice = ItemPrice
 instance ToSchema ItemPrice where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
-newtype ItemTags = ItemTags
-  { distance_to_nearest_driver :: DecimalValue
+data ItemTags = ItemTags
+  { distance_to_nearest_driver :: DecimalValue,
+    special_zone_tag :: Maybe Text
   }
   deriving (Generic, Show)
 

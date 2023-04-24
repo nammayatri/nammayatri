@@ -36,6 +36,7 @@ data Estimate = Estimate
   { id :: Id Estimate,
     requestId :: Id DSearchRequest.SearchRequest,
     estimatedFare :: Money,
+    specialZoneTag :: Maybe Text,
     autoAssignEnabled :: Bool,
     autoAssignEnabledV2 :: Bool,
     autoAssignQuoteId :: Maybe Text,
@@ -91,6 +92,7 @@ data FareRange = FareRange
 data EstimateAPIEntity = EstimateAPIEntity
   { id :: Id Estimate,
     vehicleVariant :: VehicleVariant,
+    specialZoneTag :: Maybe Text,
     estimatedFare :: Money,
     estimatedTotalFare :: Money,
     discount :: Maybe Money,

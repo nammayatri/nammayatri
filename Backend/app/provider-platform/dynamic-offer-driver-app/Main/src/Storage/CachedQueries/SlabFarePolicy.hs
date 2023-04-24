@@ -17,14 +17,15 @@
 
 module Storage.CachedQueries.SlabFarePolicy
   ( findById,
-    findByMerchantIdAndVariant,
-    findAllByMerchantId,
+    findByMerchantIdAndFareProductIdAndVariant,
+    findAllByMerchantIdAndFareProductId,
     clearCache,
   )
 where
 
 import Data.Coerce (coerce)
 import Domain.Types.Common
+import Domain.Types.FareProduct (FareProduct)
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.SlabFarePolicy
 import qualified Domain.Types.Vehicle as Vehicle
@@ -42,12 +43,13 @@ findById id =
     Just a -> return . Just $ coerce @(SlabFarePolicyD 'Unsafe) @SlabFarePolicy a
     Nothing -> flip whenJust cacheSlabFarePolicy /=<< Queries.findById id
 
-findByMerchantIdAndVariant ::
+findByMerchantIdAndFareProductIdAndVariant ::
   (CacheFlow m r, EsqDBFlow m r) =>
   Id Merchant ->
+  Id FareProduct ->
   Vehicle.Variant ->
   m (Maybe SlabFarePolicy)
-findByMerchantIdAndVariant merchantId vehVar = do
+findByMerchantIdAndFareProductIdAndVariant merchantId fareProductId vehVar = do
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantIdVehVarKey merchantId vehVar) >>= \case
     Nothing -> findAndCache
     Just id ->
@@ -55,17 +57,17 @@ findByMerchantIdAndVariant merchantId vehVar = do
         Just a -> return . Just $ coerce @(SlabFarePolicyD 'Unsafe) @SlabFarePolicy a
         Nothing -> findAndCache
   where
-    findAndCache = flip whenJust cacheSlabFarePolicy /=<< Queries.findByMerchantIdAndVariant merchantId vehVar
+    findAndCache = flip whenJust cacheSlabFarePolicy /=<< Queries.findByMerchantIdAndFareProductIdAndVariant merchantId fareProductId vehVar
 
-findAllByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m [SlabFarePolicy]
-findAllByMerchantId merchantId = do
+findAllByMerchantIdAndFareProductId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Id FareProduct -> m [SlabFarePolicy]
+findAllByMerchantIdAndFareProductId merchantId fareProductId = do
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeAllMerchantIdKey merchantId) >>= \case
     Just a -> return $ fmap (coerce @(SlabFarePolicyD 'Unsafe) @SlabFarePolicy) a
-    Nothing -> cacheRes /=<< Queries.findAllByMerchantId merchantId
+    Nothing -> cacheRes /=<< Queries.findAllByMerchantIdAndFareProductId merchantId fareProductId
   where
     cacheRes fps = do
       expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-      Hedis.withCrossAppRedis $ Hedis.setExp (makeAllMerchantIdKey merchantId) (coerce @[SlabFarePolicy] @[SlabFarePolicyD 'Unsafe] fps) expTime
+      Hedis.withCrossAppRedis $ Hedis.setExp (makeAllMerchantIdFareProductIdKey merchantId fareProductId) (coerce @[SlabFarePolicy] @[SlabFarePolicyD 'Unsafe] fps) expTime
 
 cacheSlabFarePolicy :: (CacheFlow m r) => SlabFarePolicy -> m ()
 cacheSlabFarePolicy fp = do
@@ -84,9 +86,13 @@ makeMerchantIdVehVarKey merchantId vehVar = "driver-offer:CachedQueries:SlabFare
 makeAllMerchantIdKey :: Id Merchant -> Text
 makeAllMerchantIdKey merchantId = "driver-offer:CachedQueries:SlabFarePolicy:MerchantId-" <> merchantId.getId <> ":All"
 
+makeAllMerchantIdFareProductIdKey :: Id Merchant -> Id FareProduct -> Text
+makeAllMerchantIdFareProductIdKey merchantId fareProductId = "driver-offer:CachedQueries:FarePolicy:MerchantId-" <> merchantId.getId <> ":FareProductId-" <> fareProductId.getId <> ":All"
+
 -- Call it after any update
 clearCache :: HedisFlow m r => SlabFarePolicy -> m ()
 clearCache fp = Hedis.withCrossAppRedis $ do
   Hedis.del (makeIdKey fp.id)
   Hedis.del (makeMerchantIdVehVarKey fp.merchantId fp.vehicleVariant)
   Hedis.del (makeAllMerchantIdKey fp.merchantId)
+  Hedis.del (makeAllMerchantIdFareProductIdKey fp.merchantId fp.fareProductId)

@@ -22,6 +22,7 @@ where
 
 import qualified Data.Map as M
 import Domain.Types.FareParameters
+import qualified Domain.Types.FareProduct as DFareProduct
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.QuoteSpecialZone as DQuoteSpecialZone
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
@@ -36,8 +37,8 @@ import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified SharedLogic.CacheDistance as CD
+import SharedLogic.CalculateSpecialZone
 import SharedLogic.DriverPool hiding (lat, lon)
 import SharedLogic.Estimate (EstimateItem, buildEstimate, buildEstimateFromSlabFarePolicy)
 import SharedLogic.FareCalculator
@@ -65,6 +66,7 @@ data DSearchReq = DSearchReq
 data SpecialZoneQuoteInfo = SpecialZoneQuoteInfo
   { quoteId :: Id DQuoteSpecialZone.QuoteSpecialZone,
     vehicleVariant :: DVeh.Variant,
+    specialZoneTag :: Maybe Text,
     estimatedFare :: Money,
     fromLocation :: LatLong,
     toLocation :: LatLong,
@@ -115,66 +117,83 @@ handler merchantId sReq = do
   result <- getDistanceAndDuration merchantId fromLocationLatLong toLocationLatLong sReq.routeInfo
   CD.cacheDistance sReq.transactionId (result.distance, result.duration)
   logDebug $ "distance: " <> show result.distance
-  mbSpecialLocation <- QSpecialLocation.findSpecialLocationByLatLong fromLocationLatLong
+  (fareProducts, specialZoneTag) <- calculateFareProductsAndSpecialZone merchantId fromLocationLatLong toLocationLatLong
+  quotesAndEstimates <-
+    mapM
+      ( \fareProduct -> do
+          case fareProduct.flowType of
+            DFareProduct.RIDE_OTP_FLOW -> do
+              whenJustM
+                (QSearchRequestSpecialZone.findByMsgIdAndBapIdAndBppId sReq.messageId sReq.bapId merchantId)
+                (\_ -> throwError $ InvalidRequest "Duplicate Search request")
+              searchRequestSpecialZone <- buildSearchRequestSpecialZone sReq merchantId fromLocation toLocation result.distance result.duration specialZoneTag
+              Esq.runTransaction $ do
+                QSearchRequestSpecialZone.create searchRequestSpecialZone
+              now <- getCurrentTime
+              listOfSpecialZoneQuotes <- case fareProduct.farePolicyType of
+                DFareProduct.SLAB -> do
+                  allFarePolicies <- SFarePolicyS.findAllByMerchantIdAndFareProductId org.id fareProduct.id
+                  let slabFarePolicies = selectFarePolicy result.distance allFarePolicies
+                  -- TODO :: Check that only one variant is present
+                  for slabFarePolicies $ \slabFarePolicy -> do
+                    fareParams <- calculateFare org.id (Right slabFarePolicy) result.distance sReq.pickupTime Nothing Nothing
+                    buildSpecialZoneQuote
+                      searchRequestSpecialZone
+                      fareParams
+                      org.id
+                      result.distance
+                      slabFarePolicy.vehicleVariant
+                      result.duration
+                      fareProduct.farePolicyType
+                      specialZoneTag
+                DFareProduct.NORMAL -> do
+                  allFarePolicies <- FarePolicyS.findAllByMerchantIdAndFareProductId org.id fareProduct.id (Just result.distance)
+                  let farePolicies = selectFarePolicy result.distance allFarePolicies
+                  -- TODO :: Check that only one variant is present
+                  for farePolicies $ \farePolicy -> do
+                    fareParams <- calculateFare org.id (Left farePolicy) result.distance sReq.pickupTime Nothing Nothing
+                    buildSpecialZoneQuote
+                      searchRequestSpecialZone
+                      fareParams
+                      org.id
+                      result.distance
+                      farePolicy.vehicleVariant
+                      result.duration
+                      fareProduct.farePolicyType
+                      specialZoneTag
+              Esq.runTransaction $
+                for_ listOfSpecialZoneQuotes QQuoteSpecialZone.create
+              return (mkQuoteInfo fromLocation toLocation now <$> listOfSpecialZoneQuotes, [])
+            DFareProduct.NORMAL_RIDE_FLOW -> do
+              driverPoolCfg <- getDriverPoolConfig merchantId result.distance
+              estimates <-
+                case fareProduct.farePolicyType of
+                  DFareProduct.SLAB -> do
+                    allFarePolicies <- SFarePolicyS.findAllByMerchantIdAndFareProductId org.id fareProduct.id
+                    let slabFarePolicies = selectFarePolicy result.distance allFarePolicies
+                    buildEstimates sReq fromLocation driverPoolCfg org result buildEstimateFromSlabFarePolicy slabFarePolicies fareProduct.farePolicyType specialZoneTag
+                  DFareProduct.NORMAL -> do
+                    allFarePolicies <- FarePolicyS.findAllByMerchantIdAndFareProductId org.id fareProduct.id (Just result.distance)
+                    let farePolicies = selectFarePolicy result.distance allFarePolicies
+                    buildEstimates sReq fromLocation driverPoolCfg org result buildEstimate farePolicies fareProduct.farePolicyType specialZoneTag
+              return ([], estimates)
+      )
+      fareProducts
 
-  (quotes :: Maybe [SpecialZoneQuoteInfo], estimates' :: Maybe [EstimateItem]) <-
-    if isJust mbSpecialLocation
-      then do
-        whenJustM
-          (QSearchRequestSpecialZone.findByMsgIdAndBapIdAndBppId sReq.messageId sReq.bapId merchantId)
-          (\_ -> throwError $ InvalidRequest "Duplicate Search request")
-        searchRequestSpecialZone <- buildSearchRequestSpecialZone sReq merchantId fromLocation toLocation result.distance result.duration
-        Esq.runTransaction $ do
-          QSearchRequestSpecialZone.create searchRequestSpecialZone
-        now <- getCurrentTime
-        listOfSpecialZoneQuotes <- case org.farePolicyType of
-          SLAB -> do
-            allFarePolicies <- SFarePolicyS.findAllByMerchantId org.id
-            let slabFarePolicies = selectFarePolicy result.distance allFarePolicies
-            let listOfVehicleVariants = listVehicleVariantHelper slabFarePolicies
-            for listOfVehicleVariants $ \slabFarePolicy -> do
-              fareParams <- calculateFare org.id (Right slabFarePolicy) result.distance sReq.pickupTime Nothing Nothing
-              buildSpecialZoneQuote
-                searchRequestSpecialZone
-                fareParams
-                org.id
-                result.distance
-                slabFarePolicy.vehicleVariant
-                result.duration
-          -- return listOfSpecialZoneQuotes
-          NORMAL -> do
-            allFarePolicies <- FarePolicyS.findAllByMerchantId org.id (Just result.distance)
-            let farePolicies = selectFarePolicy result.distance allFarePolicies
-            let listOfVehicleVariants = listVehicleVariantHelper farePolicies
-            for listOfVehicleVariants $ \farePolicy -> do
-              fareParams <- calculateFare org.id (Left farePolicy) result.distance sReq.pickupTime Nothing Nothing
-              buildSpecialZoneQuote
-                searchRequestSpecialZone
-                fareParams
-                org.id
-                result.distance
-                farePolicy.vehicleVariant
-                result.duration
-        Esq.runTransaction $
-          for_ listOfSpecialZoneQuotes QQuoteSpecialZone.create
-        return (Just (mkQuoteInfo fromLocation toLocation now <$> listOfSpecialZoneQuotes), Nothing)
-      else do
-        driverPoolCfg <- getDriverPoolConfig merchantId result.distance
-        estimates <-
-          case org.farePolicyType of
-            SLAB -> do
-              allFarePolicies <- SFarePolicyS.findAllByMerchantId org.id
-              let slabFarePolicies = selectFarePolicy result.distance allFarePolicies
-              buildEstimates sReq fromLocation driverPoolCfg org result buildEstimateFromSlabFarePolicy slabFarePolicies
-            NORMAL -> do
-              allFarePolicies <- FarePolicyS.findAllByMerchantId org.id (Just result.distance)
-              let farePolicies = selectFarePolicy result.distance allFarePolicies
-              buildEstimates sReq fromLocation driverPoolCfg org result buildEstimate farePolicies
-        return (Nothing, Just estimates)
-  buildSearchRes org fromLocationLatLong toLocationLatLong estimates' quotes searchMetricsMVar
+  let (quotes' :: [SpecialZoneQuoteInfo], estimates' :: [EstimateItem]) =
+        foldr'
+          (\(quotes, estimates) (quoteArr, estimateArr) -> (quoteArr ++ quotes, estimateArr ++ estimates))
+          ([], [])
+          quotesAndEstimates
+
+  buildSearchRes
+    org
+    fromLocationLatLong
+    toLocationLatLong
+    (if not (null estimates') then Just estimates' else Nothing)
+    (if not (null quotes') then Just quotes' else Nothing)
+    searchMetricsMVar
   where
-    listVehicleVariantHelper farePolicy = catMaybes $ everyPossibleVariant <&> \var -> find ((== var) . (.vehicleVariant)) farePolicy
-
     selectFarePolicy distance = filter (\fp -> checkTripConstraints distance fp.minAllowedTripDistance fp.maxAllowedTripDistance)
       where
         checkTripConstraints tripDistance minAllowedTripDistance maxAllowedTripDistance =
@@ -213,7 +232,7 @@ handler merchantId sReq = do
             ..
           }
 
-    buildEstimates sReqest fromLocation driverPoolCfg org result buildEstimateFn farePolicies =
+    buildEstimates sReqest fromLocation driverPoolCfg org result buildEstimateFn farePolicies farePolicyType specialZoneTag =
       if null farePolicies
         then do
           logDebug "Trip doesnot match any fare policy constraints."
@@ -224,7 +243,7 @@ handler merchantId sReq = do
           logDebug $ "Search handler: driver pool " <> show driverPool
 
           let filteredProtoQuotes = getfilteredProtoQuotes driverPool farePolicies
-          estimates <- mapM (buildEstimateFn org sReqest.pickupTime result.distance) filteredProtoQuotes
+          estimates <- mapM (buildEstimateFn org sReqest.pickupTime result.distance farePolicyType specialZoneTag) filteredProtoQuotes
           logDebug $ "bap uri: " <> show sReqest.bapUri
           return estimates
 
@@ -262,8 +281,9 @@ buildSearchRequestSpecialZone ::
   DLoc.SearchReqLocation ->
   Meters ->
   Seconds ->
+  Maybe Text ->
   m DSRSZ.SearchRequestSpecialZone
-buildSearchRequestSpecialZone DSearchReq {..} providerId fromLocation toLocation estimatedDistance estimatedDuration = do
+buildSearchRequestSpecialZone DSearchReq {..} providerId fromLocation toLocation estimatedDistance estimatedDuration specialZoneTag = do
   uuid <- generateGUID
   now <- getCurrentTime
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
@@ -291,11 +311,13 @@ buildSpecialZoneQuote ::
   -- Meters ->
   DVeh.Variant ->
   Seconds ->
+  DFareProduct.FarePolicyType ->
+  Maybe Text ->
   m DQuoteSpecialZone.QuoteSpecialZone
-buildSpecialZoneQuote productSearchRequest fareParams transporterId distance vehicleVariant duration = do
+buildSpecialZoneQuote productSearchRequest fareParams transporterId distance vehicleVariant duration farePolicyType specialZoneTag = do
   quoteId <- Id <$> generateGUID
   now <- getCurrentTime
-  let estimatedFare = fareSum fareParams
+  let estimatedFare = fareSum fareParams farePolicyType
       estimatedFinishTime = fromIntegral duration `addUTCTime` now
   driverQuoteExpirationSeconds <- asks (.driverQuoteExpirationSeconds)
   let validTill = driverQuoteExpirationSeconds `addUTCTime` now

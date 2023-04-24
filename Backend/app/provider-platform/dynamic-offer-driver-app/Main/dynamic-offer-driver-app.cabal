@@ -153,6 +153,7 @@ library
       Domain.Types.FareParameters
       Domain.Types.FarePolicy
       Domain.Types.FarePolicy.RestrictedExtraFare
+      Domain.Types.FareProduct
       Domain.Types.Geometry
       Domain.Types.Issue.Comment
       Domain.Types.Issue.IssueCategory
@@ -184,6 +185,8 @@ library
       Domain.Types.SearchRequestSentToDriverEvent
       Domain.Types.SearchRequestSpecialZone
       Domain.Types.SlabFarePolicy
+      Domain.Types.SpecialZoneCategoryPriority
+      Domain.Types.SpecialZoneLink
       Domain.Types.Vehicle
       Domain.Types.Vehicle.Variant
       Environment
@@ -198,6 +201,7 @@ library
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.SendSearchRequestToDrivers
       SharedLogic.CacheDistance
+      SharedLogic.CalculateSpecialZone
       SharedLogic.CallBAP
       SharedLogic.CancelSearch
       SharedLogic.DeleteDriver
@@ -221,6 +225,7 @@ library
       Storage.CachedQueries.Exophone
       Storage.CachedQueries.FarePolicy
       Storage.CachedQueries.FarePolicy.RestrictedExtraFare
+      Storage.CachedQueries.FareProduct
       Storage.CachedQueries.Issue.IssueCategory
       Storage.CachedQueries.Issue.IssueOption
       Storage.CachedQueries.Issue.IssueReport
@@ -234,6 +239,7 @@ library
       Storage.CachedQueries.Merchant.TransporterConfig
       Storage.CachedQueries.OnboardingDocumentConfig
       Storage.CachedQueries.SlabFarePolicy
+      Storage.CachedQueries.SpecialZoneCategoryPriority
       Storage.Queries.Booking
       Storage.Queries.Booking.BookingLocation
       Storage.Queries.BookingCancellationReason
@@ -257,6 +263,7 @@ library
       Storage.Queries.FareParameters
       Storage.Queries.FarePolicy
       Storage.Queries.FarePolicy.RestrictedExtraFare
+      Storage.Queries.FareProduct
       Storage.Queries.Geometry
       Storage.Queries.Issue.Comment
       Storage.Queries.Issue.IssueCategory
@@ -285,6 +292,8 @@ library
       Storage.Queries.SearchRequestForDriver
       Storage.Queries.SearchRequestSpecialZone
       Storage.Queries.SlabFarePolicy
+      Storage.Queries.SpecialZoneCategoryPriority
+      Storage.Queries.SpecialZoneLink
       Storage.Queries.Vehicle
       Storage.Tabular.Booking
       Storage.Tabular.Booking.BookingLocation
@@ -308,6 +317,7 @@ library
       Storage.Tabular.FareParameters
       Storage.Tabular.FarePolicy
       Storage.Tabular.FarePolicy.RestrictedExtraFare
+      Storage.Tabular.FareProduct
       Storage.Tabular.Geometry
       Storage.Tabular.Issue.Comment
       Storage.Tabular.Issue.IssueCategory
@@ -341,6 +351,8 @@ library
       Storage.Tabular.SearchRequestForDriver
       Storage.Tabular.SearchRequestSpecialZone
       Storage.Tabular.SlabFarePolicy
+      Storage.Tabular.SpecialZoneCategoryPriority
+      Storage.Tabular.SpecialZoneLink
       Storage.Tabular.Vehicle
       Tools.Auth
       Tools.Call

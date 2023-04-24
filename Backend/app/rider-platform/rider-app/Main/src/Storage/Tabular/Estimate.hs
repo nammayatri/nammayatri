@@ -54,6 +54,7 @@ mkPersist
       providerMobileNumber Text
       providerCompletedRidesCount Int
       vehicleVariant VehVar.VehicleVariant
+      specialZoneTag Text Maybe
       driversLocation (PostgresList LatLong)
       tripTermsId STripTerms.TripTermsTId Maybe
       nightShiftMultiplier Centesimal Maybe

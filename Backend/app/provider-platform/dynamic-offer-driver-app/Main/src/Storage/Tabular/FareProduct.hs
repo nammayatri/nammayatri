@@ -18,57 +18,50 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.FareParameters where
+module Storage.Tabular.FareProduct where
 
-import qualified Domain.Types.FareParameters as Domain
+import qualified Domain.Types.FareProduct as Domain
+import qualified Domain.Types.Vehicle as Vehicle
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
-import Kernel.Types.Common (Centesimal, Money)
-import Kernel.Types.Id
-import Storage.Tabular.FareProduct (FareProductTId)
+import Kernel.Types.Id (Id (..))
+import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.Vehicle ()
+
+derivePersistField "Domain.FarePolicyType"
+derivePersistField "Domain.FlowType"
 
 mkPersist
   defaultSqlSettings
   [defaultQQ|
-    FareParametersT sql=fare_parameters
-
+    FareProductT sql=fare_product
       id Text
-      fareProductId FareProductTId
-      baseFare Money
-      deadKmFare Money Maybe
-      extraKmFare Money Maybe
-      driverSelectedFare Money Maybe
-      customerExtraFee Money Maybe
-      nightShiftRate Centesimal Maybe
-      nightCoefIncluded Bool
-      waitingChargePerMin Money Maybe
-      waitingOrPickupCharges Money Maybe
-      serviceCharge Money Maybe
-      govtChargesPerc Int Maybe
-
+      merchantId MerchantTId
+      vehicleVariant Vehicle.Variant
+      farePolicyType Domain.FarePolicyType
+      flowType Domain.FlowType
       Primary id
       deriving Generic
     |]
 
-instance TEntityKey FareParametersT where
-  type DomainKey FareParametersT = Id Domain.FareParameters
-  fromKey (FareParametersTKey _id) = Id _id
-  toKey (Id id) = FareParametersTKey id
+instance TEntityKey FareProductT where
+  type DomainKey FareProductT = Id Domain.FareProduct
+  fromKey (FareProductTKey _id) = Id _id
+  toKey (Id id) = FareProductTKey id
 
-instance FromTType FareParametersT Domain.FareParameters where
-  fromTType FareParametersT {..} = do
+instance FromTType FareProductT Domain.FareProduct where
+  fromTType FareProductT {..} = do
     return $
-      Domain.FareParameters
+      Domain.FareProduct
         { id = Id id,
-          fareProductId = fromKey fareProductId,
+          merchantId = fromKey merchantId,
           ..
         }
 
-instance ToTType FareParametersT Domain.FareParameters where
-  toTType Domain.FareParameters {..} = do
-    FareParametersT
+instance ToTType FareProductT Domain.FareProduct where
+  toTType Domain.FareProduct {..} =
+    FareProductT
       { id = getId id,
-        fareProductId = toKey fareProductId,
+        merchantId = toKey merchantId,
         ..
       }

@@ -99,7 +99,8 @@ data ItemTags = ItemTags
     night_shift_end :: Maybe TimeOfDay,
     waiting_time_estimated_threshold :: Maybe Seconds,
     waiting_charge_per_min :: Maybe Money,
-    drivers_location :: [LatLong]
+    drivers_location :: [LatLong],
+    special_zone_tag :: Maybe Text
   }
   deriving (Generic, Show)
 

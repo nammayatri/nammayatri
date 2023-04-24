@@ -20,8 +20,8 @@ import qualified Beckn.Types.Core.Taxi.Common.Address as BA
 import qualified Data.Map as M
 import qualified Data.Text as T
 import Data.Time.Clock (addUTCTime)
-import qualified Domain.Types.FareParameters as DFareParams (FarePolicyType (..))
 import qualified Domain.Types.FarePolicy as DFarePolicy (ExtraFee (..))
+import qualified Domain.Types.FareProduct as DFareProduct
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
@@ -38,6 +38,7 @@ import Lib.Scheduler.Types (ExecutionResult (ReSchedule))
 import SharedLogic.Allocator
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
 import qualified SharedLogic.CacheDistance as CD
+import SharedLogic.CalculateSpecialZone
 import SharedLogic.DriverPool (getDriverPoolConfig)
 import SharedLogic.FareCalculator
 import SharedLogic.GoogleMaps
@@ -87,18 +88,19 @@ handler merchantId sReq = do
               }
         pure (res.distance, res.duration)
       Just distRes -> pure distRes
-  (fareParams, driverExtraFare) <- case org.farePolicyType of
-    DFareParams.SLAB -> do
-      slabFarePolicy <- SFarePolicyS.findByMerchantIdAndVariant org.id sReq.variant >>= fromMaybeM (InternalError "Slab fare policy not found")
+  (fareProduct, specialZoneTag) <- calculateFareProductAndSpecialZone org.id sReq.pickupLocation sReq.dropLocation sReq.variant
+  (fareParams, driverExtraFare) <- case fareProduct.farePolicyType of
+    DFareProduct.SLAB -> do
+      slabFarePolicy <- SFarePolicyS.findByMerchantIdAndFareProductIdAndVariant org.id fareProduct.id sReq.variant >>= fromMaybeM (InternalError "Slab fare policy not found")
       let driverExtraFare = DFarePolicy.ExtraFee {minFee = 0, maxFee = 0}
       fareParams <- calculateFare merchantId (Right slabFarePolicy) distance sReq.pickupTime Nothing sReq.customerExtraFee
       pure (fareParams, driverExtraFare)
-    DFareParams.NORMAL -> do
-      farePolicy <- FarePolicyS.findByMerchantIdAndVariant org.id sReq.variant (Just distance) >>= fromMaybeM NoFarePolicy
+    DFareProduct.NORMAL -> do
+      farePolicy <- FarePolicyS.findByMerchantIdAndFareProductIdAndVariant org.id fareProduct.id sReq.variant (Just distance) >>= fromMaybeM NoFarePolicy
       fareParams <- calculateFare merchantId (Left farePolicy) distance sReq.pickupTime Nothing sReq.customerExtraFee
       pure (fareParams, farePolicy.driverExtraFee)
-  searchReq <- buildSearchRequest fromLocation toLocation merchantId sReq distance duration sReq.customerExtraFee
-  let estimateFare = fareSum fareParams
+  searchReq <- buildSearchRequest fromLocation toLocation merchantId sReq distance duration sReq.customerExtraFee specialZoneTag
+  let estimateFare = fareSum fareParams fareProduct.farePolicyType
   logDebug $
     "search request id=" <> show searchReq.id
       <> "; estimated distance = "
@@ -140,8 +142,9 @@ buildSearchRequest ::
   Meters ->
   Seconds ->
   Maybe Money ->
+  Maybe Text ->
   m DSearchReq.SearchRequest
-buildSearchRequest from to merchantId sReq distance duration customerExtraFee = do
+buildSearchRequest from to merchantId sReq distance duration customerExtraFee specialZoneTag = do
   now <- getCurrentTime
   id_ <- Id <$> generateGUID
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
@@ -149,6 +152,7 @@ buildSearchRequest from to merchantId sReq distance duration customerExtraFee = 
   pure
     DSearchReq.SearchRequest
       { id = id_,
+        specialZoneTag,
         transactionId = sReq.transactionId,
         messageId = sReq.messageId,
         startTime = sReq.pickupTime,

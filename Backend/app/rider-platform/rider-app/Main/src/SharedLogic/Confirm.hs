@@ -125,6 +125,7 @@ buildBooking searchRequest quote fromLoc mbToLoc exophone now otpCode = do
     DRB.Booking
       { id = Id id,
         transactionId = searchRequest.id.getId,
+        specialZoneTag = quote.specialZoneTag,
         bppBookingId = Nothing,
         status = DRB.NEW,
         providerId = quote.providerId,

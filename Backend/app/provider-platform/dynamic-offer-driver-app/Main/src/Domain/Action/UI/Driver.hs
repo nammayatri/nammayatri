@@ -59,6 +59,7 @@ import qualified Domain.Types.DriverQuote as DDrQuote
 import qualified Domain.Types.DriverReferral as DR
 import qualified Domain.Types.FareParameters as Fare
 import Domain.Types.FarePolicy (ExtraFee (..))
+import qualified Domain.Types.FareProduct as DFareProduct
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Merchant.TransporterConfig
 import Domain.Types.Person (Person, PersonAPIEntity)
@@ -96,6 +97,7 @@ import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
+import SharedLogic.CalculateSpecialZone
 import SharedLogic.CallBAP (sendDriverOffer)
 import qualified SharedLogic.CancelSearch as CS
 import qualified SharedLogic.DeleteDriver as DeleteDriverOnCheck
@@ -104,10 +106,10 @@ import SharedLogic.FareCalculator
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as QDriverInformation
-import qualified Storage.CachedQueries.FarePolicy as FarePolicyS (findByMerchantIdAndVariant)
+import qualified Storage.CachedQueries.FarePolicy as FarePolicyS (findByMerchantIdAndFareProductIdAndVariant)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
-import qualified Storage.CachedQueries.SlabFarePolicy as SFarePolicyS (findByMerchantIdAndVariant)
+import qualified Storage.CachedQueries.SlabFarePolicy as SFarePolicyS (findByMerchantIdAndFareProductIdAndVariant)
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverLocation as QDriverLocation
 import qualified Storage.Queries.DriverQuote as QDrQt
@@ -730,6 +732,7 @@ respondQuote ::
 respondQuote driverId req = do
   Redis.whenWithLockRedis (offerQuoteLockKey driverId) 60 $ do
     sReq <- QSReq.findById req.searchRequestId >>= fromMaybeM (SearchRequestNotFound req.searchRequestId.getId)
+    (fareProduct, _) <- calculateFareProductAndSpecialZone sReq.providerId (Maps.LatLong sReq.fromLocation.lat sReq.fromLocation.lon) (Maps.LatLong sReq.toLocation.lat sReq.toLocation.lon) sReq.vehicleVariant
     now <- getCurrentTime
     when (sReq.validTill < now) $ throwError SearchRequestExpired
     let mbOfferedFare = req.offeredFare
@@ -751,20 +754,20 @@ respondQuote driverId req = do
           quoteLimit <- getQuoteLimit sReq.providerId sReq.estimatedDistance
           quoteCount <- runInReplica $ QDrQt.countAllByRequestId sReq.id
           when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)
-          (fareParams, driverExtraFee) <- case organization.farePolicyType of
-            Fare.SLAB -> do
-              slabFarePolicy <- SFarePolicyS.findByMerchantIdAndVariant organization.id sReqFD.vehicleVariant >>= fromMaybeM (InternalError "Slab fare policy not found")
+          (fareParams, driverExtraFee) <- case fareProduct.farePolicyType of
+            DFareProduct.SLAB -> do
+              slabFarePolicy <- SFarePolicyS.findByMerchantIdAndFareProductIdAndVariant organization.id fareProduct.id sReqFD.vehicleVariant >>= fromMaybeM (InternalError "Slab fare policy not found")
               let driverExtraFee = ExtraFee {minFee = 0, maxFee = 0}
               fareParams <- calculateFare organization.id (Right slabFarePolicy) sReq.estimatedDistance sReqFD.startTime mbOfferedFare sReq.customerExtraFee
               pure (fareParams, driverExtraFee)
-            Fare.NORMAL -> do
-              farePolicy <- FarePolicyS.findByMerchantIdAndVariant organization.id sReqFD.vehicleVariant (Just sReq.estimatedDistance) >>= fromMaybeM NoFarePolicy
+            DFareProduct.NORMAL -> do
+              farePolicy <- FarePolicyS.findByMerchantIdAndFareProductIdAndVariant organization.id fareProduct.id sReqFD.vehicleVariant (Just sReq.estimatedDistance) >>= fromMaybeM NoFarePolicy
               fareParams <- calculateFare organization.id (Left farePolicy) sReq.estimatedDistance sReqFD.startTime mbOfferedFare sReq.customerExtraFee
               pure (fareParams, farePolicy.driverExtraFee)
           whenJust mbOfferedFare $ \off ->
             unless (isAllowedExtraFee driverExtraFee off) $
               throwError $ NotAllowedExtraFee $ show off
-          driverQuote <- buildDriverQuote driver sReq sReqFD fareParams
+          driverQuote <- buildDriverQuote driver sReq sReqFD fareParams fareProduct.farePolicyType
           Esq.runTransaction $ do
             QDrQt.create driverQuote
             QSRD.updateDriverResponse sReqFD.id req.response
@@ -794,12 +797,13 @@ respondQuote driverId req = do
       DSReq.SearchRequest ->
       SearchRequestForDriver ->
       Fare.FareParameters ->
+      DFareProduct.FarePolicyType ->
       m DDrQuote.DriverQuote
-    buildDriverQuote driver s sd fareParams = do
+    buildDriverQuote driver s sd fareParams farePolicyType = do
       guid <- generateGUID
       now <- getCurrentTime
       driverQuoteExpirationSeconds <- asks (.driverQuoteExpirationSeconds)
-      let estimatedFare = fareSum fareParams
+      let estimatedFare = fareSum fareParams farePolicyType
       pure
         DDrQuote.DriverQuote
           { id = guid,
@@ -809,6 +813,7 @@ respondQuote driverId req = do
             driverName = driver.firstName,
             driverRating = driver.rating,
             vehicleVariant = sd.vehicleVariant,
+            specialZoneTag = s.specialZoneTag,
             searchRequestForDriverId = Just sd.id,
             distance = s.estimatedDistance,
             distanceToPickup = sd.actualDistanceToPickup,

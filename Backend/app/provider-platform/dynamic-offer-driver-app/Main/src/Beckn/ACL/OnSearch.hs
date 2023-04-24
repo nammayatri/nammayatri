@@ -159,7 +159,8 @@ mkQuoteEntities start end it = do
                     night_shift_end = (.nightShiftEnd) =<< it.nightShiftRate,
                     waiting_charge_per_min = it.waitingCharges.waitingChargePerMin,
                     waiting_time_estimated_threshold = it.waitingCharges.waitingTimeEstimatedThreshold,
-                    drivers_location = it.driversLatLong
+                    drivers_location = it.driversLatLong,
+                    special_zone_tag = it.specialZoneTag
                   },
             base_distance = Nothing,
             base_duration = Nothing
@@ -210,7 +211,8 @@ mkQuoteEntitiesSpecialZone start end it = do
                     night_shift_end = Nothing,
                     waiting_charge_per_min = Nothing,
                     waiting_time_estimated_threshold = Nothing,
-                    drivers_location = []
+                    drivers_location = [],
+                    special_zone_tag = it.specialZoneTag
                   },
             base_distance = Nothing,
             base_duration = Nothing

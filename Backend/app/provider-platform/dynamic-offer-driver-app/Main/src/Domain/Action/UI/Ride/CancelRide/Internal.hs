@@ -18,8 +18,8 @@ module Domain.Action.UI.Ride.CancelRide.Internal (cancelRideImpl) where
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
-import qualified Domain.Types.FareParameters as DFParams (FarePolicyType (..))
 import qualified Domain.Types.FarePolicy as DFP
+import qualified Domain.Types.FareProduct as DFareProduct
 import qualified Domain.Types.Merchant as DMerc
 import Domain.Types.Merchant.DriverPoolConfig (DriverPoolConfig)
 import qualified Domain.Types.Ride as DRide
@@ -47,6 +47,7 @@ import qualified SharedLogic.Ride as SRide
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as CDI
 import qualified Storage.CachedQueries.FarePolicy as QFP
+import qualified Storage.CachedQueries.FareProduct as CQFareProduct
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.CachedQueries.SlabFarePolicy as QSFP
@@ -96,29 +97,30 @@ cancelRideImpl rideId bookingCReason = do
   fork "cancelRide - Notify BAP" $ do
     driverQuote <- QDQ.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
     searchReq <- QSR.findById driverQuote.searchRequestId >>= fromMaybeM (SearchRequestNotFound driverQuote.searchRequestId.getId)
+    fareProduct <- CQFareProduct.findById booking.fareParams.fareProductId >>= fromMaybeM (InternalError "FareProduct Not Found")
     transpConf <- QTC.findByMerchantId merchant.id >>= fromMaybeM (TransporterConfigNotFound merchant.id.getId)
     let searchRepeatLimit = transpConf.searchRepeatLimit
     driverPoolCfg <- getDriverPoolConfig merchant.id searchReq.estimatedDistance
     driverPool <- calculateDriverPool Estimate driverPoolCfg (Just searchReq.vehicleVariant) searchReq.fromLocation merchant.id True Nothing
     now <- getCurrentTime
-    case merchant.farePolicyType of
-      DFParams.NORMAL -> do
-        farePolicy <- QFP.findByMerchantIdAndVariant searchReq.providerId searchReq.vehicleVariant (Just searchReq.estimatedDistance) >>= fromMaybeM NoFarePolicy
+    case fareProduct.farePolicyType of
+      DFareProduct.NORMAL -> do
+        farePolicy <- QFP.findByMerchantIdAndFareProductIdAndVariant searchReq.providerId fareProduct.id searchReq.vehicleVariant (Just searchReq.estimatedDistance) >>= fromMaybeM NoFarePolicy
         let isRepeatSearch = isRepeatSearchFun farePolicy.nightShiftStart farePolicy.nightShiftEnd now booking.fareParams.nightCoefIncluded searchReq.searchRepeatCounter searchRepeatLimit
-        cancelBooking isRepeatSearch ride merchant driverPoolCfg driverPool (Left farePolicy) now booking searchReq
-      DFParams.SLAB -> do
-        slabFarePolicy <- QSFP.findByMerchantIdAndVariant searchReq.providerId searchReq.vehicleVariant >>= fromMaybeM NoFarePolicy
+        cancelBooking isRepeatSearch ride merchant driverPoolCfg driverPool (Left farePolicy) now booking searchReq fareProduct.farePolicyType
+      DFareProduct.SLAB -> do
+        slabFarePolicy <- QSFP.findByMerchantIdAndFareProductIdAndVariant searchReq.providerId fareProduct.id searchReq.vehicleVariant >>= fromMaybeM NoFarePolicy
         let isRepeatSearch = isRepeatSearchFun slabFarePolicy.nightShiftStart slabFarePolicy.nightShiftEnd now booking.fareParams.nightCoefIncluded searchReq.searchRepeatCounter searchRepeatLimit
-        cancelBooking isRepeatSearch ride merchant driverPoolCfg driverPool (Right slabFarePolicy) now booking searchReq
+        cancelBooking isRepeatSearch ride merchant driverPoolCfg driverPool (Right slabFarePolicy) now booking searchReq fareProduct.farePolicyType
   where
     isRepeatSearchFun nightShiftStart nightShiftEnd now nightCoefIncluded searchRepeatCounter searchRepeatLimit =
       searchRepeatCounter < searchRepeatLimit
         && bookingCReason.source == SBCR.ByDriver
         && (isNightShift nightShiftStart nightShiftEnd now == nightCoefIncluded)
 
-    cancelBooking isRepeatSearch ride merchant driverPoolCfg driverPool farePolicy now booking searchReq = do
+    cancelBooking isRepeatSearch ride merchant driverPoolCfg driverPool farePolicy now booking searchReq farePolicyType = do
       case (isRepeatSearch, driverPool) of
-        (True, a : xs) -> repeatSearch merchant farePolicy searchReq booking ride SBCR.ByDriver now driverPoolCfg (a :| xs)
+        (True, a : xs) -> repeatSearch merchant farePolicy searchReq booking ride SBCR.ByDriver now driverPoolCfg (a :| xs) farePolicyType
         _ -> BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source
 
 cancelRideTransaction ::
@@ -164,20 +166,21 @@ repeatSearch ::
   UTCTime ->
   DriverPoolConfig ->
   NonEmpty DriverPoolResult ->
+  DFareProduct.FarePolicyType ->
   m ()
-repeatSearch merchant eitherFarePolicy searchReq booking ride cancellationSource now driverPoolConfig driverPool = do
+repeatSearch merchant eitherFarePolicy searchReq booking ride cancellationSource now driverPoolConfig driverPool farePolicyType = do
   newSearchReq <- buildSearchRequest searchReq
   (estimateItem, driverExtraFare) <- case eitherFarePolicy of
     Left normalFarePolicy ->
       (,normalFarePolicy.driverExtraFee)
-        <$> buildEstimate merchant newSearchReq.startTime newSearchReq.estimatedDistance (normalFarePolicy, driverPool)
+        <$> buildEstimate merchant newSearchReq.startTime newSearchReq.estimatedDistance farePolicyType newSearchReq.specialZoneTag (normalFarePolicy, driverPool)
     Right slabFarePolicy -> do
       (,DFP.ExtraFee {minFee = 0, maxFee = 0})
-        <$> buildEstimateFromSlabFarePolicy merchant newSearchReq.startTime newSearchReq.estimatedDistance (slabFarePolicy, driverPool)
+        <$> buildEstimateFromSlabFarePolicy merchant newSearchReq.startTime newSearchReq.estimatedDistance farePolicyType newSearchReq.specialZoneTag (slabFarePolicy, driverPool)
 
   fareParams <- calculateFare searchReq.providerId eitherFarePolicy searchReq.estimatedDistance now Nothing newSearchReq.customerExtraFee
 
-  let baseFare = fareSum fareParams
+  let baseFare = fareSum fareParams farePolicyType
   Esq.runTransaction $ do
     QSR.create newSearchReq
 

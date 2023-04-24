@@ -48,6 +48,7 @@ mkPersist
       driverName Text
       driverRating Centesimal Maybe
       vehicleVariant Variant.Variant
+      specialZoneTag Text Maybe
       distance Meters
       distanceToPickup Meters
       durationToPickup Double
