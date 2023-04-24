@@ -50,7 +50,7 @@
             # Rationale: Our k8s deployment config is hardcoded to look for exes
             # under /opt/app.
             mkdir -p $out/opt/app
-            for f in $out/bin; do
+            for f in `${lib.getExe pkgs.fd} . $out/bin/`; do
               ln -s $f $out/opt/app/
             done
             cp -r ${./dhall-configs} $out/opt/app/dhall-configs
