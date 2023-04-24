@@ -140,12 +140,16 @@ foreign import currentPosition  :: String -> Unit
 foreign import openNavigation  :: Number -> Number -> Number -> Number -> Effect Unit
 foreign import stopLocationPollingAPI :: Effect Unit
 foreign import startLocationPollingAPI :: Effect Unit
+<<<<<<< Updated upstream
 foreign import startChatListenerService :: Effect Unit
 foreign import stopChatListenerService :: Effect Unit
 foreign import storeCallBackMessageUpdated :: forall action. (action -> Effect Unit) -> String -> String  -> (String -> String -> String -> action) -> Effect Unit
 foreign import sendMessage :: String -> Unit
 foreign import scrollToBottom :: String -> Effect Unit
 foreign import firebaseLogEvent :: String -> Unit
+=======
+foreign import firebaseLogEvent :: String -> Effect Unit
+>>>>>>> Stashed changes
 foreign import firebaseLogEventWithParams :: String -> String -> String -> Effect Unit
 foreign import firebaseLogEventWithTwoParams :: String -> String -> String -> String -> String -> Effect Unit
 foreign import firebaseScreenNameLog :: String  -> Effect Unit

@@ -28,20 +28,36 @@ import Data.Function (flip)
 import Data.Maybe (Maybe(..))
 import Debug.Trace (spy)
 import Effect (Effect)
+<<<<<<< Updated upstream
 import Engineering.Helpers.Commons (getNewIDWithTag, os, safeMarginBottom, safeMarginTop, screenHeight, screenWidth, isPreviousVersion)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (getLocationName, debounceFunction, getPreviousVersion)
 import JBridge (getBtnLoader, requestKeyboardShow, getCurrentPosition, firebaseLogEvent)
+=======
+import Engineering.Helpers.Commons (getNewIDWithTag, os, safeMarginBottom, safeMarginTop, screenHeight, screenWidth, flowRunner, liftFlow)
+import Font.Size as FontSize
+import Font.Style as FontStyle
+import Helpers.Utils (getLocationName, debounceFunction, isPreviousVersion, getPreviousVersion)
+import JBridge (getBtnLoader, requestKeyboardShow, getCurrentPosition)
+>>>>>>> Stashed changes
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (+), (-), (/), (/=), (<<<), (<>), (==), (||), not)
+import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (+), (-), (/), (/=), (<<<), (<>), (==), (||), not, discard)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, autoCorrectionType, background, color, cornerRadius, disableClickFeedback, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onChange, onClick, onFocus, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, inputTypeI, clickable, imageWithFallback)
 import PrestoDOM.Animation as PrestoAnim
 import Resources.Constants (getDelayForAutoComplete)
 import Screens.Types (SearchLocationModelType(..), LocationListItemState)
 import Storage (KeyStore(..), getValueToLocalStoreEff, getValueToLocalStore)
 import Styles.Colors as Color
+import Control.Monad.Except.Trans (lift)
+import Presto.Core.Types.Language.Flow (getLogFields)
+import Types.App (isFirebaseEnabled)
+import Presto.Core.Types.Language.Flow (doAff)
+import Effect.Class (liftEffect)
+import Log (logEvent)
+import Effect.Aff (launchAff_)
+
 
 view :: forall w. (Action -> Effect Unit) -> SearchLocationModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -462,7 +478,7 @@ recenterButtonView push state =
         , onClick (\action -> do
             _ <- push action
             _ <- getCurrentPosition push UpdateCurrentLocation
-            _ <- pure $ firebaseLogEvent "ny_user_recenter_btn_click"
+            _ <- pure $ logEvent "ny_user_choose_lang_scn_view" 
             pure unit 
         ) (const $ RecenterCurrentLocation)
         , height $ V 40

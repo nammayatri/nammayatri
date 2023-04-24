@@ -35,7 +35,11 @@ import Foreign.Class (class Encode, encode, decode)
 import Global (readFloat)
 import Helpers.Utils (getCurrentUTC)
 import Helpers.Utils (hideSplash, getTime, convertUTCtoISC, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getCorrespondingErrorMessage, getcurrentdate)
+<<<<<<< Updated upstream
 import JBridge (drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, loaderText, openNavigation, removeAllPolylines, removeMarker, showMarker, startLocationPollingAPI, stopLocationPollingAPI, toast, toggleLoader, generateSessionId, stopChatListenerService, hideKeyboardOnNavigation)
+=======
+import JBridge (drawRoute, factoryResetApp, firebaseUserID, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, loaderText, openNavigation, removeAllPolylines, removeMarker, showMarker, startLocationPollingAPI, stopLocationPollingAPI, toast, toggleLoader)
+>>>>>>> Stashed changes
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, discard, pure, unit, unless, void, when, ($), (==), (/=), (&&), (||), (/), when, (+), show, (>), not, (<), (*), (-), (<=))
@@ -56,6 +60,7 @@ import Services.Config (getBaseUrl)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore)
 import Types.App (ABOUT_US_SCREEN_OUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREENOUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), defaultGlobalState)
 import Types.ModifyScreenState (modifyScreenState, updateStage)
+import Log (logEvent)
 
 baseAppFlow :: FlowBT String Unit
 baseAppFlow = do
@@ -267,7 +272,7 @@ uploadDrivingLicenseFlow = do
       deleteValueFromLocalStore SET_ALTERNATE_TIME
 
       pure $ factoryResetApp ""
-      _ <- pure $ firebaseLogEvent "logout"
+      _ <- pure $ logEvent "logout"
       loginFlow
 
     VALIDATE_IMAGE_API state -> do
@@ -376,7 +381,7 @@ addVehicleDetailsflow = do
       deleteValueFromLocalStore DRIVER_ID
       deleteValueFromLocalStore SET_ALTERNATE_TIME
       pure $ factoryResetApp ""
-      _ <- pure $ firebaseLogEvent "logout"
+      _ <- pure $ logEvent "logout"
       loginFlow
 
     REFER_API_CALL state -> do
@@ -470,7 +475,7 @@ applicationSubmittedFlow screenType = do
       deleteValueFromLocalStore DRIVER_ID
       deleteValueFromLocalStore SET_ALTERNATE_TIME
       pure $ factoryResetApp ""
-      _ <- pure $ firebaseLogEvent "logout"
+      _ <- pure $ logEvent "logout"
       loginFlow
 
 driverProfileFlow :: FlowBT String Unit
@@ -516,7 +521,7 @@ driverProfileFlow = do
       deleteValueFromLocalStore DRIVER_ID
       deleteValueFromLocalStore SET_ALTERNATE_TIME
       pure $ factoryResetApp ""
-      _ <- pure $ firebaseLogEvent "logout"
+      _ <- pure $ logEvent "logout"
       loginFlow
     HELP_AND_SUPPORT_SCREEN -> helpAndSupportFlow
     GO_TO_DRIVER_HISTORY_SCREEN -> do
@@ -942,8 +947,13 @@ homeScreenFlow = do
         "lat" : state.data.currentDriverLat
       , "lon" : state.data.currentDriverLon
       })
+<<<<<<< Updated upstream
       _ <- pure $ firebaseLogEvent "i_have_arrived_clicked"
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{activeRide{notifiedCustomer = true}}, props{currentStage = ChatWithCustomer}})
+=======
+      _ <- pure $ logEvent "i_have_arrived_clicked"
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{activeRide{notifiedCustomer = true}}})
+>>>>>>> Stashed changes
       homeScreenFlow
     UPDATE_ROUTE state -> do
       _ <- pure $ printLog "HOME_SCREEN_FLOW UPDATE_ROUTE" state

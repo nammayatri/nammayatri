@@ -21,9 +21,9 @@ import Effect (Effect)
 import PrestoDOM (Eval, Props, exit, continue)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types (AppUpdatePopUpState)
-import JBridge (firebaseLogEvent)
 import Log (trackAppActionClick, trackAppScreenRender, trackAppEndScreen)
 import Screens (getScreen, ScreenName(..))
+import Log (logEvent)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -48,7 +48,7 @@ eval :: Action -> AppUpdatePopUpState -> Eval Action ScreenOutput AppUpdatePopUp
 eval OnCloseClick state = do
     exit Decline 
 eval OnAccept state = do 
-  _ <- pure $ firebaseLogEvent "ny_user_update_popup_click"
+  _ <- pure $ logEvent "ny_user_update_popup_click"
   exit Accept
 
 eval AfterRender state = continue state

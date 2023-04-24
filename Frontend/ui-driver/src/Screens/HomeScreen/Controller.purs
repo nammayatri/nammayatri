@@ -36,8 +36,13 @@ import Effect (Effect)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (clearTimer)
 import Global (readFloat)
+<<<<<<< Updated upstream
 import Helpers.Utils (convertUTCtoISC, currentPosition, differenceBetweenTwoUTC, getDistanceBwCordinates, parseFloat,setText',getTime, getCurrentUTC, differenceBetweenTwoUTC)
 import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, scrollToBottom, stopChatListenerService)
+=======
+import Helpers.Utils (convertUTCtoISC, currentPosition, differenceBetweenTwoUTC, getDistanceBwCordinates, parseFloat)
+import JBridge (animateCamera, enableMyLocation, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams)
+>>>>>>> Stashed changes
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
@@ -52,9 +57,13 @@ import Services.APITypes (GetRidesHistoryResp, RidesInfo(..), Status(..))
 import Services.Accessor (_lat, _lon)
 import Services.Config (getCustomerNumber)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalNativeStore, setValueToLocalStore)
+<<<<<<< Updated upstream
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
+=======
+import Log (logEvent , logEventWithTwoParams)
+>>>>>>> Stashed changes
 
 instance showAction :: Show Action where
   show _ = ""
@@ -273,7 +282,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
     "Profile" -> exit $ GoToProfileScreen
     "Alert" -> do 
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      _ <- pure $ firebaseLogEvent "ny_driver_alert_click"
+      _ <- pure $ logEvent "ny_driver_alert_click"
       exit $ GoToNotifications
     "Contest" -> do
       _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
@@ -311,7 +320,8 @@ eval (RideActionModalAction (RideActionModal.CancelRide)) state = do
   continue state{ data {cancelRideConfirmationPopUp{delayInSeconds = 5,  continueEnabled=false}}, props{cancelConfirmationPopup = true}}
 eval (RideActionModalAction (RideActionModal.CallCustomer)) state = continueWithCmd state [ do
   _ <-  pure $ showDialer (getCustomerNumber "")
-  _ <- (firebaseLogEventWithTwoParams "call_customer" "trip_id" (state.data.activeRide.id) "user_id" (getValueToLocalStore DRIVER_ID))
+  _ <- launchAff_ $ flowRunner $ runExceptT $ runBackT $ do
+        logEventWithTwoParams "call_customer" "trip_id" (state.data.activeRide.id) "user_id" (getValueToLocalStore DRIVER_ID)
   pure NoAction
   ]
 

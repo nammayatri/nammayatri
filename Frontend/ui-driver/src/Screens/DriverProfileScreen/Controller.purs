@@ -20,7 +20,10 @@ import Components.BottomNavBar.Controller as BottomNavBar
 import Components.PopUpModal.Controller as PopUpModal
 import Data.Maybe (fromMaybe)
 import Helpers.Utils (launchAppSettings)
+<<<<<<< Updated upstream
 import JBridge (firebaseLogEvent, goBackPrevWebPage)
+=======
+>>>>>>> Stashed changes
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress)
@@ -34,7 +37,11 @@ import Screens.Types (DriverProfileScreenState)
 import Services.APITypes (GetDriverInfoResp(..), Vehicle(..))
 import Services.Backend (dummyVehicleObject)
 import Storage (setValueToLocalNativeStore, KeyStore(..))
+<<<<<<< Updated upstream
 import Engineering.Helpers.Commons (getNewIDWithTag)
+=======
+import Log (logEvent)
+>>>>>>> Stashed changes
 
 instance showAction :: Show Action where
   show _ = ""
@@ -107,7 +114,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
     "Rides" -> exit $ GoToDriverHistoryScreen
     "Alert" -> do
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      _ <- pure $ firebaseLogEvent "ny_driver_alert_click"
+      _ <- pure $ logEvent "ny_driver_alert_click"
       exit $ GoToNotifications
     "Contest" -> do
       _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"

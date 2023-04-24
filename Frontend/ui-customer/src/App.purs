@@ -61,6 +61,9 @@ newtype GlobalState = GlobalState {
   , emergencyContactsScreen :: EmergencyContactsScreenState
   }
 
+isFirebaseEnabled :: Boolean
+isFirebaseEnabled = true
+
 defaultGlobalState :: GlobalState
 defaultGlobalState = GlobalState { 
     splashScreen : {data : {message : "pass"}}

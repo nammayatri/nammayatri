@@ -801,8 +801,10 @@ exports["firebaseLogEventWithTwoParams"] = function (event) {
 };
 
 exports["firebaseLogEvent"] = function (str) {
-  if (JBridge.firebaseLogEvent){
+  return function () {
+    if (JBridge.firebaseLogEvent) {
       JBridge.firebaseLogEvent(str);
+    }
   }
 };
 

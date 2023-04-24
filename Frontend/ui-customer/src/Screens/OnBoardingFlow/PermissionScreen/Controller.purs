@@ -17,13 +17,14 @@ module Screens.PermissionScreen.Controller where
 
 import Components.ErrorModal.Controller as ErrorModalController
 import Components.PrimaryButton.Controller as PrimaryButtonController
-import JBridge (isInternetAvailable, requestLocation, firebaseLogEvent)
+import JBridge (isInternetAvailable, requestLocation)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
 import Prelude (class Show, bind, pure, unit, (==), discard, ($))
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (PermissionScreenState)
+import Log (logEvent)
 
 instance showAction :: Show Action where 
     show _ = ""
@@ -82,7 +83,7 @@ eval (InternetCallBackCustomer isInternetAvailable) state = do
     else continue state
 
 eval (PrimaryButtonActionController PrimaryButtonController.OnClick) state = continueWithCmd state [ do 
-  _ <- pure $ firebaseLogEvent "ny_user_grant_location_permission"
+  _ <- pure $ logEvent "ny_user_grant_location_permission"
   _ <- requestLocation unit
   pure NoAction
   ]

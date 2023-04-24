@@ -28,11 +28,12 @@ import PrestoDOM.Types.Core (class Loggable)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress , trackAppTextInput, trackAppScreenEvent)
 import Screens (ScreenName(..), getScreen)
 import Data.String (length)
-import JBridge (hideKeyboardOnNavigation, toast, showDialer, firebaseLogEvent)
+import JBridge (hideKeyboardOnNavigation, toast, showDialer)
 import Services.Config (getSupportNumber)
 import Debug.Trace (spy)
 import Helpers.Utils (clearTimer)
 import Storage (setValueToLocalNativeStore, KeyStore(..))
+import Log (logEvent)
 
 
 instance showAction :: Show Action where
@@ -181,8 +182,12 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
     "Rides" -> exit GoToRidesScreen
     "Profile" -> exit $ GoToProfileScreen
     "Alert" -> do
+<<<<<<< Updated upstream
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       _ <- pure $ firebaseLogEvent "ny_driver_alert_click"
+=======
+      _ <- pure $ logEvent "ny_driver_alert_click"
+>>>>>>> Stashed changes
       exit $ GoToNotifications
     _ -> continue state
 

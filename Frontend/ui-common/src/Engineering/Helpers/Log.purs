@@ -26,6 +26,14 @@ import Foreign.Object (Object, empty, insert, lookup)
 import Tracker (trackActionObject, trackScreenEnd, trackScreen, trackScreenEvent)
 import Tracker.Types (Action(..), Level(..), Screen(..)) as Tracker
 import Prelude (Unit, pure, unit, ($), (<$>), (<<<), (/=), (&&),bind)
+import Presto.Core.Types.Language.Flow
+import JBridge (firebaseLogEvent , firebaseLogEventWithParams , firebaseLogEventWithTwoParams)
+import Presto.Core.Types.Language.Flow (getLogFields)
+import Control.Monad.Trans.Class (lift)
+import Engineering.Helpers.Commons (liftFlow)
+import Effect.Class(liftEffect)
+import Debug.Trace (spy)
+import Types.App  (FlowBT,isFirebaseEnabled)
 
 foreign import log :: String -> Foreign -> Unit
 
@@ -105,3 +113,54 @@ trackAppScreenEvent logField screen_name event_category event_name = do
 
 printLog :: forall a. Encode a => String -> a -> Unit
 printLog a b = log a (encode b)
+
+logEvent :: String -> FlowBT String Unit
+logEvent event = do
+  logField <- lift $ lift $ getLogFields
+  let isFirebaseEnabled = true
+  if isFirebaseEnabled then do
+    _ <- pure $ spy "debugLog" "logEvent func"
+    _ <- pure $ firebaseLogEvent event
+    lift $ lift $ liftFlow $ firebaseLogEvent event
+  else do
+      _ <- pure $ spy "logEvent-Tracker" event
+      let 
+        x = insert "event" (encode event) empty
+        y = rootLevelKeyWithRefId logField
+      _ <- lift $ lift $ doAff $ liftEffect $ trackActionObject Tracker.User Tracker.Info ON_EVENT x y
+      pure unit 
+
+       
+logEventWithParams :: String -> String -> String -> FlowBT String Unit 
+logEventWithParams event str1 str2 = do 
+  logField <- lift $ lift $ getLogFields 
+  let isFirebaseEnabled_ = true
+  if isFirebaseEnabled_ 
+    then do
+      _ <- pure $ spy "logEvent-Firebase" event
+      lift $ lift $ liftFlow $ firebaseLogEventWithParams event str1 str2 
+    else do
+      _ <- pure $ spy "logEvent-Tracker" event
+      let 
+        x = insert "event" (encode event)  $ insert str1 (encode str2) empty 
+        y = rootLevelKeyWithRefId logField
+      _ <- pure $ spy "testing_inside_if" "nothing"
+      _ <- lift $ lift $ doAff $ liftEffect $ trackActionObject Tracker.User Tracker.Info ON_EVENT x y
+      pure unit 
+
+
+logEventWithTwoParams :: String -> String -> String -> String -> String -> FlowBT String Unit 
+logEventWithTwoParams event param1_str1 param1_str2 param2_str1 param2_str2  = do 
+  logField <- lift $ lift $ getLogFields 
+  let isFirebaseEnabled_ = true 
+  if isFirebaseEnabled_ 
+    then do
+      _ <- pure $ spy "logEvent-Firebase" event
+      lift $ lift $ liftFlow $ firebaseLogEventWithTwoParams event param1_str1 param1_str2 param2_str1 param2_str2
+    else do
+      _ <- pure $ spy "logEvent-Tracker" event
+      let 
+        x = insert "event" (encode event)  $ insert param1_str1 (encode param1_str2) $ insert param2_str1 (encode param2_str2) empty
+        y = rootLevelKeyWithRefId logField
+      _ <- lift $ lift $ doAff $ liftEffect $ trackActionObject Tracker.User Tracker.Info ON_EVENT x y
+      pure unit 

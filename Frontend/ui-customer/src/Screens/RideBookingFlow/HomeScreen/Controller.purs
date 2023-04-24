@@ -54,8 +54,13 @@ import Effect (Effect)
 import Effect.Aff (launchAff_)
 import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os)
 import Global (readFloat)
+<<<<<<< Updated upstream
 import Helpers.Utils (addToRecentSearches, getLocationName, saveRecents, setText', updateInputString, withinTimeRange, getExpiryTime, getDistanceBwCordinates, getCurrentLocationMarker, parseNewContacts)
 import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, removeAllPolylines, requestKeyboardShow, requestLocation, showDialer, toast, toggleBtnLoader, shareTextMessage, firebaseLogEventWithTwoParams, removeMarker,  sendMessage, stopChatListenerService, openUrlInApp, goBackPrevWebPage)
+=======
+import Helpers.Utils (addToRecentSearches, getLocationName, saveRecents, setText', updateInputString, withinTimeRange, getExpiryTime, getDistanceBwCordinates, getCurrentLocationMarker, parseNewContacts, goBackPrevWebPage)
+import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, removeAllPolylines, requestKeyboardShow, requestLocation, showDialer, toast, toggleBtnLoader, shareTextMessage, firebaseLogEventWithTwoParams, removeMarker, openUrlInApp)
+>>>>>>> Stashed changes
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent)
@@ -77,6 +82,10 @@ import Storage (KeyStore(..), isLocalStageOn, updateLocalStage, getValueToLocalS
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Int (toNumber, round, fromString)
+import Log (logEvent, logEventWithTwoParams)
+import Control.Monad.Trans.Class (lift)
+import Engineering.Helpers.Commons (liftFlow)
+import Effect.Class (liftEffect)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -748,7 +757,7 @@ eval (UpdatePickupLocation  key lat lon) state =
 
 eval (CheckBoxClick autoAssign) state = do
   let event = if autoAssign then "ny_user_pref_autoassigned" else "ny_user_pref_driveroffers"
-  _ <- pure $ firebaseLogEvent event
+  _ <- pure $ logEvent event
   _ <- pure $ setValueToLocalStore FLOW_WITHOUT_OFFERS (show autoAssign)
   continue state
 
@@ -833,12 +842,12 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = d
     _ <- pure $ spy "state homeScreen" state
     case state.props.currentStage of 
       HomeScreen   -> do
-        _ <- pure $ firebaseLogEvent "ny_user_where_to_btn"
+        _ <- pure $ logEvent "ny_user_where_to_btn"
         exit $ UpdateSavedLocation state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel}} 
       ConfirmingLocation -> do
         _ <- pure $ exitLocateOnMap ""
         _ <- pure $ updateLocalStage FindingEstimate
-        _ <- pure $ firebaseLogEvent "ny_user_confirm_pickup"
+        _ <- pure $ logEvent "ny_user_confirm_pickup"
         let updatedState = state{props{currentStage = FindingEstimate, locateOnMap = false}}
         -- updateAndExit (updatedState) (UpdatedSource updatedState)
         updateAndExit updatedState $  (UpdatedSource updatedState)
@@ -895,7 +904,8 @@ eval (DriverInfoCardActionController (DriverInfoCardController.PrimaryButtonAC P
   continueWithCmd state
     [ do
         _ <- pure $ showDialer (getDriverNumber "")
-        _ <- (firebaseLogEventWithTwoParams "ny_user_call_click" "trip_id" (state.props.bookingId) "user_id" (getValueToLocalStore CUSTOMER_ID))
+        _ <- launchAff_ $ flowRunner $ runExceptT $ runBackT $ do
+                logEventWithTwoParams "ny_user_call_click" "trip_id" (state.props.bookingId) "user_id" (getValueToLocalStore CUSTOMER_ID)
         pure NoAction
     ]
 
@@ -909,7 +919,7 @@ eval (WaitingTimeAction timerID timeInMinutes seconds) state = do
 
 eval (DriverInfoCardActionController (DriverInfoCardController.Support)) state = do
   _ <- pure $ showDialer (getSupportNumber "")
-  _ <- pure $ firebaseLogEvent "ny_user_ride_support_click"
+  _ <- pure $ logEvent "ny_user_ride_support_click"
   continue state
 
 eval (DriverInfoCardActionController (DriverInfoCardController.CancelRide infoCard)) state = do
@@ -980,7 +990,7 @@ eval (CancelRidePopUpAction (CancelRidePopUp.Button2 PrimaryButtonController.OnC
       Nothing    -> continue state
 
 eval (PredictionClickedAction (LocationListItemController.OnClick item)) state = do
-  _ <- pure $ firebaseLogEvent "ny_user_prediction_list_item"
+  _ <- pure $ logEvent "ny_user_prediction_list_item"
   locationSelected item false state{data{source = "Current Location"}, props{isSource = Just false}}
 
 eval (PredictionClickedAction (LocationListItemController.FavClick item)) state = do 
@@ -1025,7 +1035,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SavedAd
 eval (TagClick savedAddressType arrItem) state = tagClickEvent savedAddressType arrItem state
 
 eval (SearchLocationModelActionController (SearchLocationModelController.LocationListItemActionController (LocationListItemController.OnClick item))) state = do
-  _ <- pure $ firebaseLogEvent "ny_user_location_list_item"
+  _ <- pure $ logEvent "ny_user_location_list_item"
   let condition = state.props.isSource == Just true && item.locationItemType == Just RECENTS
   locationSelected item{tag=if condition then "RECENT" else item.tag} true state{ props { sourceSelectedOnMap = if condition then true else state.props.sourceSelectedOnMap }}
 
@@ -1124,14 +1134,14 @@ eval (SearchLocationModelActionController (SearchLocationModelController.GoBack)
 
 eval (SearchLocationModelActionController (SearchLocationModelController.SetCurrentLocation)) state = do
   _ <- pure $ currentPosition ""
-  _ <- pure $ firebaseLogEvent "ny_user_currentlocation_click"
+  _ <- pure $ logEvent "ny_user_currentlocation_click"
   continue state{props{ sourceSelectedOnMap = if (state.props.isSource == Just true) then false else state.props.sourceSelectedOnMap}}
 
 eval (SearchLocationModelActionController (SearchLocationModelController.SetLocationOnMap)) state = do
   _ <- pure $ locateOnMap true 0.0 0.0
   _ <- pure $ removeAllPolylines ""
   _ <- pure $ hideKeyboardOnNavigation true
-  _ <- pure $ firebaseLogEvent "ny_user_click_set_location_on_map"
+  _ <- pure $ logEvent "ny_user_click_set_location_on_map"
   let newState = state{props{isSearchLocation = LocateOnMap, currentStage = SearchLocationModel, locateOnMap = true, isRideServiceable = true, showlocUnserviceablePopUp = false}}
   (updateAndExit newState) $ UpdatedState newState false
 
@@ -1160,7 +1170,7 @@ eval (QuoteListModelActionController (QuoteListModelController.CancelAutoAssigni
   continue state
 
 eval (QuoteListModelActionController (QuoteListModelController.QuoteListItemActionController QuoteListItemController.ConfirmRide)) state = do
-  _ <- pure $ firebaseLogEvent "ny_user_quote_confirm"
+  _ <- pure $ logEvent "ny_user_quote_confirm"
   exit $ ConfirmRide state
 
 eval (QuoteListModelActionController (QuoteListModelController.QuoteListItemActionController (QuoteListItemController.CountDown seconds id status timerID))) state = do
@@ -1169,7 +1179,7 @@ eval (QuoteListModelActionController (QuoteListModelController.QuoteListItemActi
     let
       autoSelecting = (getValueToLocalStore AUTO_SELECTING) == id
     if (id == fromMaybe "" state.props.selectedQuote && autoSelecting && state.props.currentStage == QuoteList) then do
-      _ <- pure $ firebaseLogEvent "ny_user_auto_assign"
+      _ <- pure $ logEvent "ny_user_auto_assign"
       continueWithCmd state [ pure $ (QuoteListModelActionController (QuoteListModelController.PrimaryButtonActionController PrimaryButtonController.OnClick)) ]
     else do
       let
@@ -1315,7 +1325,7 @@ eval (GetEstimates (GetQuotesRes quotesRes)) state = do
 
     showRateCardIcon = if (null estimateFareBreakup) then false else true
   if ((not (null estimatedVarient)) && (isLocalStageOn FindingEstimate)) then do
-    _ <- pure $ firebaseLogEvent "ny_user_estimate"
+    _ <- pure $ logEvent "ny_user_estimate"
     exit
       $ SelectEstimate
           state
@@ -1332,7 +1342,7 @@ eval (GetEstimates (GetQuotesRes quotesRes)) state = do
         }
 
 eval (EstimatesTryAgain (GetQuotesRes quotesRes)) state = do
-  _ <- pure $ firebaseLogEvent "ny_user_estimate_try_again"
+  _ <- pure $ logEvent "ny_user_estimate_try_again"
   let
     estimatedQuotes = quotesRes.estimates
 

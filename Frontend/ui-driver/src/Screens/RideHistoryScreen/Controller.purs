@@ -42,7 +42,7 @@ import Screens (ScreenName(..), getScreen)
 import Language.Strings (getString)
 import Language.Types(STR(..))
 import Storage (setValueToLocalNativeStore, KeyStore(..))
-import JBridge (firebaseLogEvent)
+import Log (logEvent , logEventWithTwoParams)
 
 instance showAction :: Show Action where 
   show _ = ""
@@ -122,7 +122,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
     "Profile" -> exit $ ProfileScreen
     "Alert" -> do
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      _ <- pure $ firebaseLogEvent "ny_driver_alert_click"
+      _ <- pure $ logEvent "ny_driver_alert_click"
       exit $ GoToNotification
     "Contest" -> do
       _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"

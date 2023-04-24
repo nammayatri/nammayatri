@@ -45,6 +45,7 @@ import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import Common.Types.App
 import Screens.OnBoardingFlow.EnterMobileNumberScreen.ComponentConfig 
+import Debug.Trace (spy)
 
 screen :: ST.EnterMobileNumberScreenState -> Screen Action ST.EnterMobileNumberScreenState ScreenOutput
 screen initialState =

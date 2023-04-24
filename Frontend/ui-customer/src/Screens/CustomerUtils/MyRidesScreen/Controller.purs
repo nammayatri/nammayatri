@@ -26,8 +26,12 @@ import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (Pattern(..), split)
 import Engineering.Helpers.Commons (strToBool)
+<<<<<<< Updated upstream
 import Helpers.Utils (convertUTCtoISC, parseFloat, rotateArray, setEnabled, setRefreshing, toString, isHaveFare)
 import JBridge (firebaseLogEvent)
+=======
+import Helpers.Utils (convertUTCtoISC, parseFloat, rotateArray, setEnabled, setRefreshing, toString)
+>>>>>>> Stashed changes
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
 import Prelude (class Show, pure, unit, bind, map, discard, show, ($), (==), (&&), (+), (/=), (<>), (||), (-), (<), (/), negate, (<<<), not)
 import PrestoDOM (Eval, ScrollState(..), continue, continueWithCmd, exit, updateAndExit)
@@ -38,9 +42,13 @@ import Screens.HomeScreen.Transformer (dummyRideAPIEntity)
 import Screens.Types (AnimationState(..), FareComponent, Fares, IndividualRideCardState, ItemState, MyRidesScreenState, Stage(..))
 import Services.API (FareBreakupAPIEntity(..), RideAPIEntity(..), RideBookingListRes, RideBookingRes(..))
 import Storage (isLocalStageOn)
+<<<<<<< Updated upstream
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import EN (getEN) 
+=======
+import Log (logEvent)
+>>>>>>> Stashed changes
 
 instance showAction :: Show Action where 
   show _ = ""
@@ -140,7 +148,7 @@ eval (IndividualRideCardActionController (IndividualRideCardController.OnClick i
     Nothing -> continue state
 
 eval (IndividualRideCardActionController (IndividualRideCardController.RepeatRide index)) state = do
-  _ <- pure $ firebaseLogEvent "ny_user_repeat_ride_btn_click"
+  _ <- pure $ logEvent "ny_user_repeat_ride_btn_click"
   let selectedCard = state.itemsRides !! index
   case selectedCard of 
     Just selectedRide -> do 

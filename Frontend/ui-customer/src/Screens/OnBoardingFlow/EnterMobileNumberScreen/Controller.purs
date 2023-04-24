@@ -24,16 +24,22 @@ import Data.String.CodeUnits (charAt)
 import Debug.Trace (spy)
 import Engineering.Helpers.Commons (getNewIDWithTag, os, clearTimer)
 import Helpers.Utils (setText')
-import JBridge (hideKeyboardOnNavigation, toast, toggleBtnLoader,minimizeApp, firebaseLogEvent)
+import JBridge (hideKeyboardOnNavigation, toast, toggleBtnLoader,minimizeApp)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
-import Prelude (class Show, bind, pure, unit, show, ($), (&&), (-), (<=), (==), (>), (||), discard)
+import Prelude (class Show, bind, pure, unit, show, ($), (&&), (-), (<=), (==), (>), (||), discard,void)
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (EnterMobileNumberScreenState)
 import Storage (KeyStore(..), setValueToLocalNativeStore)
+import Log (logEvent)
+import Control.Monad.Except.Trans (runExceptT)
+import Control.Transformers.Back.Trans (runBackT)
+import Control.Monad.Free (runFree)
+import Effect.Aff (launchAff_)
+import Engineering.Helpers.Commons (flowRunner)
 
 instance showAction :: Show Action where
     show _ = ""
@@ -96,9 +102,12 @@ data Action = EnterOTP
 
 eval :: Action -> EnterMobileNumberScreenState -> Eval Action ScreenOutput EnterMobileNumberScreenState
 
-eval (MobileNumberButtonAction PrimaryButtonController.OnClick) state = continueWithCmd state [
+eval (MobileNumberButtonAction PrimaryButtonController.OnClick) state = 
+    continueWithCmd state [
         do
-            _ <- pure $ firebaseLogEvent "ny_user_otp_triggered"
+            launchAff_ $ flowRunner $ runExceptT $ runBackT $ do 
+                _ <- logEvent "ny_user_otp_triggered"
+                pure unit 
             _ <- pure $ hideKeyboardOnNavigation true
             let value = (if os == "IOS" then "" else " ")
             _ <- (setText' (getNewIDWithTag "EnterOTPNumberEditText") value )
@@ -119,14 +128,17 @@ eval (MobileNumberEditTextAction (PrimaryEditTextController.TextChanged id value
                                                     if value=="5000500050" then true else false 
                                                         else true 
                                     Nothing -> true 
-    if (length value == 10 && isValidMobileNumber) then do
-        _ <- pure $ firebaseLogEvent "ny_user_mobnum_entry"
-        pure unit
-        else pure unit
     let newState = state { props = state.props { isValidMobileNumber = isValidMobileNumber
                                         , btnActiveMobileNumber = if (length value == 10 && isValidMobileNumber) then true else false}
                                         , data = state.data { mobileNumber = if length value <= 10 then value else state.data.mobileNumber}}  
-    continue newState
+    continueWithCmd newState [do
+        if (length value == 10 && isValidMobileNumber) then do
+            launchAff_ $ flowRunner $ runExceptT $ runBackT $ do
+                _ <- logEvent "ny_user_mobnum_entry"
+                pure unit
+        else pure unit
+        pure $ NoAction
+    ]
 
 eval (OTPEditTextAction (PrimaryEditTextController.TextChanged id value)) state = do 
     let newState = state { props = state.props { btnActiveOTP = if length value == 4 then true else false, letterSpacing = if value == "" then 1.0 else 6.0, wrongOTP = if state.props.wrongOTP && value == "" then true else false}
