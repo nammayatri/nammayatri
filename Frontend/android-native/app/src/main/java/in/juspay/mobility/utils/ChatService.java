@@ -368,6 +368,7 @@ public class ChatService extends Service {
         notificationManager.cancel(chatNotificationId);
         isChatServiceRunning = false;
         shouldNotify = true;
+        sessionCreated = false;
         stopForeground(true);
         if(chatListener != null) chatListener.remove();
         messages.clear();
