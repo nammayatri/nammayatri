@@ -67,6 +67,10 @@ import Effect (Effect)
 import Control.Monad.Except (runExcept)
 import Foreign.Class (class Encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
+import Config.Config
+import Config.Types
+import Control.Monad.Except.Trans (runExceptT)
+import Control.Transformers.Back.Trans (runBackT)
 
 baseAppFlow :: FlowBT String Unit
 baseAppFlow = do
@@ -217,6 +221,7 @@ currentRideFlow rideAssigned = do
                                             Nothing        -> ""
                           }}
                 })
+            -- _ <- pure $ spy "CurrentRideListItem end" currRideListItem
           Left err -> updateLocalStage HomeScreen
       else do 
         updateLocalStage HomeScreen
@@ -321,6 +326,8 @@ enterMobileNumberScreenFlow = do
   lift $ lift $ doAff do liftEffect hideSplash -- Removed initial choose langauge screen
   setValueToLocalStore LANGUAGE_KEY "EN_US"
   void $ lift $ lift $ toggleLoader false
+  config <- getAppConfig
+  modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen {data {config =  config }})
   _ <- pure $ firebaseLogEvent "ny_user_enter_mob_num_scn_view"
   flow <- UI.enterMobileNumberScreen
   case flow of 
