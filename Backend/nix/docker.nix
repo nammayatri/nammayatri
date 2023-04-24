@@ -20,7 +20,7 @@ in
               awscli
               coreutils
               bash
-              self'.packages.nammayatri
+              self'.packages.nammayatri-dist
             ];
             name = "beckn-root";
             pathsToLink = [
