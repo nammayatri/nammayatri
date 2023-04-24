@@ -16,6 +16,7 @@
 module Screens.EnterMobileNumberScreen.ScreenData where
 
 import Screens.Types (EnterMobileNumberScreenState)
+import MerchantConfigs.DefaultConfig as D
 
 initData :: EnterMobileNumberScreenState
 initData = {
@@ -26,6 +27,7 @@ initData = {
     , otp : ""
     , timer : ""
     , timerID : ""
+    , config : D.config
     },
     props: {
         enterOTP : false,

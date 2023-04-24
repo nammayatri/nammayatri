@@ -35,11 +35,12 @@ mobileNumberButtonConfig :: ST.EnterMobileNumberScreenState -> PrimaryButton.Con
 mobileNumberButtonConfig state = let 
     config = PrimaryButton.config
     primaryButtonConfig' = config 
-      { textConfig{ text = (getString CONTINUE) }
+      { textConfig{ text = (getString CONTINUE) ,  color = state.data.config.primaryTextColor }
       , id = "PrimaryButtonMobileNumber"
       , isClickable = state.props.btnActiveMobileNuber
       , alpha = if state.props.btnActiveMobileNuber then 1.0 else 0.4
       , margin = (Margin 0 0 0 0 )
+      , background = state.data.config.primaryBackground
       , enableLoader = (JB.getBtnLoader "PrimaryButtonMobileNumber")
       }
   in primaryButtonConfig'

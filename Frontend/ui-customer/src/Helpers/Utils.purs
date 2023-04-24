@@ -156,6 +156,12 @@ foreign import goBackPrevWebPage ::  String -> Effect Unit
 foreign import adjustViewWithKeyboard :: String -> Effect Unit
 foreign import storeOnResumeCallback :: forall action. (action -> Effect Unit) -> action -> Effect Unit
 -- foreign import debounceFunction :: forall action. Int -> (action -> Effect Unit) -> (String -> action) -> Effect Unit
+
+foreign import getMerchantConfig' :: forall a. (a -> Maybe a) -> (Maybe a) -> Effect (Maybe a)
+
+getMerchantConfig :: forall  a. Effect (Maybe a)
+getMerchantConfig = getMerchantConfig' Just Nothing
+
 data TimeUnit
   = HOUR
   | MINUTE

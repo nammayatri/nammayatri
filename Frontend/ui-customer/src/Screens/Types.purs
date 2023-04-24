@@ -27,6 +27,7 @@ import Halogen.VDom.DOM.Prop (PropValue)
 import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import Services.API (AddressComponents, BookingLocationAPIEntity, QuoteAPIEntity, Route)
+import Config.Types
 
 type Contacts = {
   name :: String,
@@ -157,6 +158,7 @@ type EnterMobileNumberScreenStateData = {
   , otp :: String
   , timer :: String
   , timerID :: String
+  , config :: AppConfig
 }
 -- ################################################ AccountSetUpScreenState ##################################################
 

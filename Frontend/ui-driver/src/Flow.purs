@@ -104,6 +104,8 @@ isTokenValid = (/=) "__failed"
 
 loginFlow :: FlowBT String Unit
 loginFlow = do
+  config <- getAppConfig
+  modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen { data { config = config}})
   lift $ lift $ doAff do liftEffect hideSplash
   runInternetCondition
   setValueToLocalStore LANGUAGE_KEY "EN_US"
