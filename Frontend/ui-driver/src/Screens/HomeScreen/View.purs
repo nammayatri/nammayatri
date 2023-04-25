@@ -42,7 +42,7 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
-import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=))
+import Prelude (Unit, bind,map, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=))
 import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
 import PrestoDOM (BottomSheetState(..), alignParentBottom, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback,adjustViewWithKeyboard,lottieAnimationView,relativeLayout)
 import PrestoDOM.Animation as PrestoAnim
@@ -51,7 +51,7 @@ import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes as PTD
 import Screens.HomeScreen.Controller (Action(..), ScreenOutput, checkPermissionAndUpdateDriverMarker, eval, RideRequestPollingData)
 import Screens.HomeScreen.ScreenData as HomeScreenData
-import Screens.Types (HomeScreenStage(..), HomeScreenState, KeyboardModalType(..),DriverStatus(..))
+import Screens.Types (HomeScreenStage(..), HomeScreenState, KeyboardModalType(..),DriverStatus(..), DriverStatusResult(..), PillButtonState(..))
 import Services.APITypes (GetRidesHistoryResp(..))
 import Services.Backend as Remote
 import Storage (getValueToLocalStore, KeyStore(..), setValueToLocalStore, getValueToLocalNativeStore, isLocalStageOn)
@@ -441,49 +441,64 @@ driverDetail2 push state =
       [ width MATCH_PARENT
       , height MATCH_PARENT
       , orientation HORIZONTAL
-      , stroke if state.props.driverStatusSet == Offline then ("2," <> Color.red) else if state.props.driverStatusSet == Online then ("2," <> Color.darkMint) else ("2," <> Color.blue800) 
+      , stroke if state.props.driverStatusSet == Offline then ("2," <> Color.red) 
+               else if (((getValueToLocalStore IS_DEMOMODE_ENABLED) == "true")&& ((state.props.driverStatusSet == Online) || state.props.driverStatusSet == Silent )) then ("2," <> Color.yellow900)
+               else if state.props.driverStatusSet == Online then ("2," <> Color.darkMint) 
+               else ("2," <> Color.blue800) 
       , cornerRadius 50.0
       , alpha if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) then 0.5 else 1.0 
       , margin (Margin 20 10 20 10)--padding (Padding 10 10 10 10)
-      ][
-          driverStatusIndicator Offline push state
-        , driverStatusIndicator Silent push state
-        , driverStatusIndicator Online push state
-      ]
+      ](DA.mapWithIndex (\index item -> 
+          driverStatusPill item push state index
+        ) driverStatusIndicators
+      )
   ]
-driverStatusIndicator :: forall w . DriverStatus -> (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-driverStatusIndicator status push state =
+
+
+driverStatusPill :: forall w . PillButtonState -> (Action -> Effect Unit) -> HomeScreenState -> Int -> PrestoDOM (Effect Unit) w
+driverStatusPill pillConfig push state index =
   linearLayout
   [ weight 1.0
   , height $ V 35
   , gravity CENTER
   , color Color.greyTextColor
-  -- , stroke ("2," <> Color.yellow900)
   , margin (Margin 10 10 10 10)
-  , background if ((status == Offline) && (state.props.driverStatusSet == Offline)) then (Color.red) else if ((status == Online) && (state.props.driverStatusSet == Online)) then (Color.darkMint) else if((status == Silent) && (state.props.driverStatusSet == Silent)) then (Color.blue800) else Color.white900
+  , background $ case (getDriverStatusResult index state.props.driverStatusSet pillConfig.status) of
+                    ACTIVE -> pillConfig.background
+                    DEMO_ -> Color.yellow900
+                    DEFAULT -> Color.white900
   , cornerRadius 50.0
   ][  linearLayout
       [ width MATCH_PARENT
       , height MATCH_PARENT
       , gravity CENTER
       , orientation HORIZONTAL
-      , onClick push (const $ SwitchDriverStatus status)--(const (ChangeStatus if state.props.statusOnline then false else true))
+      , onClick push (const $ SwitchDriverStatus pillConfig.status)
       , clickable if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) then false else true
       ][ imageView
         [ width $ V 15
         , height $ V 15
         , margin (MarginRight 5)
-        , visibility if(state.props.driverStatusSet==status) then VISIBLE else GONE
-        , imageWithFallback if ((status == Offline) && (state.props.driverStatusSet == Offline)) then "ic_driver_status_offline,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_driver_status_offline.png" else if ((status == Online) && (state.props.driverStatusSet == Online)) then "ic_driver_status_online,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_driver_status_online.png" else if((status == Silent) && (state.props.driverStatusSet == Silent)) then "ic_driver_status_silent,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_driver_status_silent.png" else "none"--(getValueToLocalStore IS_DEMOMODE_ENABLED == "true") then "ny_ic_demo_mode_switch,https://assets.juspay.in/nammayatri/images/driver/ny_ic_demo_mode_switch.png" else if state.props.statusOnline then "ny_ic_driver_status_silent,https://assets.juspay.in/nammayatri/images/driver/ny_ic_driver_status_silent.png" else("ny_ic_driver_status_silent,https://assets.juspay.in/nammayatri/images/driver/ny_ic_driver_status_silent.png") --else "ny_ic_toggle_off,https://assets.juspay.in/nammayatri/images/driver/ny_ic_toggle_off.png"
+        , visibility $ case (getDriverStatusResult index state.props.driverStatusSet pillConfig.status) of
+                    ACTIVE -> VISIBLE
+                    DEMO_ -> VISIBLE
+                    DEFAULT -> GONE
+        , imageWithFallback $ case (getDriverStatusResult index state.props.driverStatusSet pillConfig.status) of
+                    ACTIVE -> pillConfig.imageUrl
+                    DEMO_ -> "ic_driver_status_demo,https://assets.juspay.in/beckn/merchantcommon/images/ic_driver_status_demo.png"
+                    DEFAULT -> "none"
         ]
       , textView(
         [ width WRAP_CONTENT
           , height WRAP_CONTENT
-          , text $ case status of
-              Online -> (getString ONLINE_)
+          , text $ case pillConfig.status of
+              Online -> if ((getValueToLocalStore IS_DEMOMODE_ENABLED) == "true") then (getString DEMO) else (getString ONLINE_)
               Offline -> (getString OFFLINE)
               Silent -> (getString SILENT)
-          , color if state.props.driverStatusSet == status then Color.white900 else  Color.greyTextColor
+          , color $ case (getDriverStatusResult index state.props.driverStatusSet pillConfig.status) of
+                    ACTIVE -> pillConfig.textColor
+                    DEMO_ -> Color.black900
+                    DEFAULT -> Color.greyTextColor
           , fontStyle $ FontStyle.medium LanguageStyle
           , textSize FontSize.a_14
         ] 
@@ -1029,3 +1044,13 @@ rideRequestPollingData = {
   duration : 18,
   delay : 3000.0
 }
+
+
+
+getDriverStatusResult :: Int -> DriverStatus -> DriverStatus -> DriverStatusResult
+getDriverStatusResult index driverStatus currentStatus= case (getValueToLocalStore IS_DEMOMODE_ENABLED) of
+                  "true" -> if(index == 2) then DEMO_ 
+                            else DEFAULT
+                  _ -> if (driverStatus == currentStatus) then ACTIVE
+                       else DEFAULT
+

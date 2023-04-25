@@ -648,7 +648,16 @@ type HomeScreenProps =  {
   silentPopUpView :: Boolean
  }
 
-data DriverStatus = Online | Offline | Silent
+data DriverStatus = Online | Offline | Silent 
+
+type PillButtonState = {
+  status :: DriverStatus,
+  background :: String,
+  imageUrl :: String,
+  textColor :: String
+}
+
+data DriverStatusResult = ACTIVE | DEFAULT | DEMO_
 
 derive instance genericDriverStatus :: Generic DriverStatus _
 instance showDriverStatus :: Show DriverStatus where show = genericShow

@@ -402,3 +402,4 @@ getTA script = case script of
   VERIFICATION_IS_TAKING_A_BIT_LONGER -> "உங்கள் சரிபார்ப்பு \nஎதிர்பார்த்ததை விட சற்று அதிகமாகிறது போல் தெரிகிறது.\nஉங்களுக்கு உதவ நீங்கள் ஆதரவை தொடர்பு கொள்ளலாம்."
   COMPLETE_ONBOARDING -> "ஆன்போர்டிங்கை முடிக்கவும்"
   PERSON_WITH_THIS_NUMBER_ALREADY_EXISTS -> "இந்த மொபைல் எண்ணைக் கொண்ட நபர் ஏற்கனவே இருக்கிறார்."
+  DEMO -> "டெமோ"
