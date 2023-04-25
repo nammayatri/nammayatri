@@ -148,7 +148,15 @@ singleTextBox push state =
       , padding state.inputTextConfig.padding
       , margin state.inputTextConfig.margin
       , onClick push (const (OnclickTextBox 0))
-      ]]
+      ],
+    imageView
+        [ width $ V 23
+         , height $ V 23
+         , imageWithFallback "ny_ic_close,https://assets.juspay.in/nammayatri/images/common/ny_ic_close.png"
+         , visibility if (state.inputTextConfig.text == (getString ENTER_MOBILE_NUMBER)) then GONE else VISIBLE
+         , onClick push (const (OnClickTextCross))
+        ]
+      ]
 
 otpView :: forall w . (Action -> Effect Unit) -> InAppKeyboardModalState -> PrestoDOM (Effect Unit) w
 otpView push state = 
