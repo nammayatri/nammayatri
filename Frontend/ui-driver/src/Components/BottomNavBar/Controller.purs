@@ -17,15 +17,16 @@ module Components.BottomNavBar.Controller where
 
 import Data.Maybe as Maybe
 import Helpers.Utils (getMerchant, Merchant(..))
-import Prelude (unit, (<>), (==))
+import Prelude (unit, (<>), (==), negate)
 import Screens.Types (BottomNavBarState)
 import Storage (getValueToLocalNativeStore, KeyStore(..))
+import Screens as ScreenNames
 
 data Action = OnNavigate String 
 
-navData :: Int -> BottomNavBarState
-navData activeIndex = {
-   activeIndex: activeIndex ,
+navData :: ScreenNames.ScreenName -> BottomNavBarState
+navData screenName = {
+   activeIndex : getActiveIndex  screenName,
    navButton: [
     {
       activeIcon: "ic_home_active,https://assets.juspay.in/nammayatri/images/driver/ic_home_active.png",
@@ -55,3 +56,12 @@ navData activeIndex = {
     -- }
   ]
 }
+
+getActiveIndex :: ScreenNames.ScreenName -> Int
+getActiveIndex screenName = case screenName of
+  ScreenNames.HOME_SCREEN -> 0
+  ScreenNames.RIDE_HISTORY_SCREEN -> 1
+  ScreenNames.REFERRAL_SCREEN -> if (getMerchant unit == NAMMAYATRIPARTNER) then 2 else -1
+  ScreenNames.ALERTS_SCREEN -> if (getMerchant unit == NAMMAYATRIPARTNER) then 3 else 2
+  ScreenNames.DRIVER_PROFILE_SCREEN -> 4
+  _ -> -1

@@ -3,7 +3,7 @@ export function getStringValue(key) {
   if (key in kannadaStrings) {
     return kannadaStrings[key];
   }
-  console.error("string not found in kannadaStrings");
+  console.error(key + " not found in kannadaStrings");
   return "";
 }
 
@@ -394,6 +394,9 @@ const kannadaStrings = {
   ADD_ALTERNATE_NUMBER_IN_MEANTIME : "ಈ ಪ್ರಕ್ರಿಯೆಯು ಪೂರ್ಣಗೊಳ್ಳಲು 2 ಕೆಲಸದ ದಿನಗಳವರೆಗೆ ತೆಗೆದುಕೊಳ್ಳಬಹುದು. ಈ ಮಧ್ಯೆ, ನೀವು \nಪರ್ಯಾಯ ಮೊಬೈಲ್ ಸಂಖ್ಯೆಯನ್ನು ಸೇರಿಸಬಹುದು.",
   VERIFICATION_IS_TAKING_A_BIT_LONGER : "ನಿಮ್ಮ ಪರಿಶೀಲನೆಯು \nನಿರೀಕ್ಷೆಗಿಂತ ಸ್ವಲ್ಪ ಹೆಚ್ಚು ಸಮಯ ತೆಗೆದುಕೊಳ್ಳುತ್ತಿರುವಂತೆ ತೋರುತ್ತಿದೆ.\nನಿಮಗೆ ಸಹಾಯ ಮಾಡಲು ನೀವು ಬೆಂಬಲವನ್ನು ಸಂಪರ್ಕಿಸಬಹುದು.",
   COMPLETE_ONBOARDING : "ಆನ್‌ಬೋರ್ಡಿಂಗ್ ಅನ್ನು ಪೂರ್ಣಗೊಳಿಸಿ",
-  PERSON_WITH_THIS_NUMBER_ALREADY_EXISTS : "ಈ ಮೊಬೈಲ್ ಸಂಖ್ಯೆಯನ್ನು ಹೊಂದಿರುವ ವ್ಯಕ್ತಿ ಈಗಾಗಲೇ ಅಸ್ತಿತ್ವದಲ್ಲಿದ್ದಾರೆ."
+  PERSON_WITH_THIS_NUMBER_ALREADY_EXISTS : "ಈ ಮೊಬೈಲ್ ಸಂಖ್ಯೆಯನ್ನು ಹೊಂದಿರುವ ವ್ಯಕ್ತಿ ಈಗಾಗಲೇ ಅಸ್ತಿತ್ವದಲ್ಲಿದ್ದಾರೆ.",
+  OTP_ : "OTP",
+  MAPS: "Maps",
+  DEMO : "ಡೆಮೊ"
 
 }

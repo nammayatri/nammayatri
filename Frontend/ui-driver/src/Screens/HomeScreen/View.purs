@@ -65,6 +65,7 @@ import Control.Transformers.Back.Trans (runBackT)
 import Services.APITypes (Status(..))
 import Components.BottomNavBar.Controller (navData)
 import Screens.HomeScreen.ComponentConfig
+import Screens as ScreenNames
 
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
@@ -225,7 +226,6 @@ view push state =
                       ]
                     ]
                   , addAlternateNumber push state 
-                  , if not state.props.statusOnline then showOfflineStatus push state else dummyTextView
                   , if (HU.getMerchant unit) == HU.JATRISAATHIDRIVER then otpButtonView state push else dummyTextView
                   ]
               ]
@@ -486,7 +486,7 @@ driverDetail2 push state =
                else if state.props.driverStatusSet == Online then ("2," <> Color.darkMint) 
                else ("2," <> Color.blue800) 
       , cornerRadius 50.0
-      , alpha if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) then 0.5 else 1.0 
+      , alpha if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted || state.props.currentStage == ChatWithCustomer) then 0.5 else 1.0
       , margin (Margin 20 10 20 10)--padding (Padding 10 10 10 10)
       ](DA.mapWithIndex (\index item -> 
           driverStatusPill item push state index
@@ -514,7 +514,7 @@ driverStatusPill pillConfig push state index =
       , gravity CENTER
       , orientation HORIZONTAL
       , onClick push (const $ SwitchDriverStatus pillConfig.status)
-      , clickable if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) then false else true
+      , clickable if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted || state.props.currentStage == ChatWithCustomer) then false else true
       ][ imageView
         [ width $ V 15
         , height $ V 15
@@ -974,7 +974,7 @@ statsModel push state =
 
 bottomNavBar :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 bottomNavBar push state = 
-    BottomNavBar.view (push <<< BottomNavBarAction) (navData 0)
+    BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.HOME_SCREEN)
 
 rideActionModelView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 rideActionModelView push state = 

@@ -2,7 +2,8 @@ export function getStringValue(key) {
   if (key in hindiStrings) {
     return hindiStrings[key];
   }
-  return "error in getCommonHI";
+  console.error(key + " not found in hindiString");
+  return "";
 }
 
 const hindiStrings = {
@@ -421,7 +422,7 @@ const hindiStrings = {
   "HOW_SHOULD_WE_ADDRESS_YOU" : "हमें आपको कैसे संबोधित करना चाहिए?",
   "GENDER_STR" : "लिंग",
   "PROFILE_COMPLETION" : "प्रोफ़ाइल पूर्णता",
-  "EARLY_END_RIDE_CHARGES" : "जल्दी सवारी खत्म करने का शुल्क",
+  "EARLY_END_RIDE_CHARGES" : "जल्दी सवारी खत्म करने का शुल्क^",
   "EARLY_END_RIDE_CHARGES_DESCRIPTION" : "^जल्दी सवारी खत्म करने पर अतिरिक्त शुल्क लगता है जो तय नहीं की गई दूरी का आधा किराया होता है (अधिकतम ₹50)।",
   "CANCEL_ONGOING_SEARCH" : "क्या आप वाकई चल रही खोज को रद्द करना जारी रखना चाहते हैं?",
   "YES_TRY_AGAIN" : "हाँ, पुन: प्रयास करें",
@@ -429,6 +430,6 @@ const hindiStrings = {
   "YES_CANCEL_SEARCH" : "हाँ, खोज रद्द करें",
   "TRY_LOOKING_FOR_RIDES_AGAIN" : "ऐसा लगता है कि यह बहुत ही व्यस्त दिन है। आप फिर से राइड खोजने की कोशिश कर सकते हैं",
   "NO_TIP" : "कोई टिप नहीं",
-  "CUSTOMER_SELECTED_FARE" : "ग्राहक टिप",
+  "CUSTOMER_SELECTED_FARE" : "ग्राहक टिप*",
   "CUSTOMER_TIP_DESCRIPTION" : "*राइड मिलने की संभावना बढ़ाने के लिए ग्राहक द्वारा जोड़ी गई अतिरिक्त राशि।"
 }
