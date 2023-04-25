@@ -44,6 +44,7 @@ data ScreenName = SPLASH_SCREEN
                 | APP_UPDATE_POPUP_SCREEN
                 | NO_INTERNET_SCREEN
                 | POPUP_SCREEEN
+                | ALERTS_SCREEN
 
 getScreen :: ScreenName -> String
 getScreen str = case str of
@@ -76,3 +77,4 @@ getScreen str = case str of
     APP_UPDATE_POPUP_SCREEN         -> "app_update_popup_screen"
     NO_INTERNET_SCREEN              -> "no_internet_screen"
     POPUP_SCREEEN                  -> "popup_screen"
+    ALERTS_SCREEN                  -> "alerts_screen"

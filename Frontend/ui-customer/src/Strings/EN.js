@@ -2,7 +2,8 @@ export function getStringValue(key) {
   if (key in englishStrings) {
     return englishStrings[key];
   }
-  return "error in getCommonEN";
+  console.error(key + " not found in englishStrings");
+  return "";
 }
 
 const englishStrings = {
@@ -421,12 +422,14 @@ const englishStrings = {
   "HOW_SHOULD_WE_ADDRESS_YOU" : "How should we address you?",
   "GENDER_STR" : "Gender",
   "PROFILE_COMPLETION" : "Profile Completion",
-  "EARLY_END_RIDE_CHARGES" : "Early Ride End Charges",
+  "EARLY_END_RIDE_CHARGES" : "Early Ride End Charges^",
   "EARLY_END_RIDE_CHARGES_DESCRIPTION" : "^Ending a ride early incurs additional charges amounting to half the fare of the untravelled distance (max. ₹50)",
   "YES_TRY_AGAIN" : "Yes, Try Again",
   "NO_DONT" : "No, Don’t",
   "YES_CANCEL_SEARCH" : "Yes, Cancel Search",
   "TRY_LOOKING_FOR_RIDES_AGAIN" : "It seems to be a very busy day. You may try looking for rides again",
   "NO_TIP" : "No Tip",
-  "CUSTOMER_TIP_DESCRIPTION" : "*Extra amount added by the customer to increase the chances of getting a ride."
+  "CUSTOMER_TIP_DESCRIPTION" : "*Extra amount added by the customer to increase the chances of getting a ride.",
+  "PLEASE_WAIT_I_WILL_BE_THERE" : "Please wait, I'll be there",
+  "UNREACHABLE_PLEASE_CALL_BACK" : "Unreachable, Please call back"
 }

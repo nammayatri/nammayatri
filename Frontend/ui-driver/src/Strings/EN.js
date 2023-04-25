@@ -3,7 +3,7 @@ export function getStringValue(key) {
   if (key in englishStrings) {
     return englishStrings[key];
   }
-  console.error("string not found in englishStrings");
+  console.error(key + " not found in englishStrings");
   return "";
 }
 
@@ -120,7 +120,7 @@ const englishStrings = {
   REPORT_AN_ISSUE: "Report an issue",
   DISTANCE: "Distance",
   TIME_TAKEN: "Time Taken",
-  OPEN_GOOGLE_MAPS: "Google Maps",
+  MAPS: "Maps",
   CALL: "Call",
   START_RIDE: "Start Ride",
   CANCEL_RIDE: "Cancel Ride",
@@ -242,7 +242,7 @@ const englishStrings = {
   PICKUP: "Pickup",
   TRIP: "Trip",
   CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER: "Currently,We allow only Karnataka registered number",
-  UPDATED_AT: "Updated at",
+  UPDATED_AT: "Map updated at",
   TRIP_COUNT: "Trip Count",
   TODAYS_EARNINGS: "Earnings",
   DATE_OF_REGISTRATION: "Date Of Registration",
@@ -344,7 +344,7 @@ const englishStrings = {
   ENTER_PASSWORD: "Enter Password",
   YOUR_VEHICLE: "Your Vehicle",
   BOOKING_OPTIONS: "Booking Options",
-  OTP: "OTP",
+  OTP_: "OTP",
   MAKE_YOURSELF_AVAILABLE_FOR : "Make Yourself Available for",
   SILENT_MODE_PROMPT : "If you don't want to be disturbed, you may switch to silent mode instead",
   GO_SILENT : "Go Silent",
@@ -396,5 +396,6 @@ const englishStrings = {
   ADD_ALTERNATE_NUMBER_IN_MEANTIME : "This process can take upto 2 working days \nto be completed. In the meantime,  you \ncan add an alternate mobile number.",
   VERIFICATION_IS_TAKING_A_BIT_LONGER : "Looks like your verification is taking a bit \nlonger than expected.\nYou can contact support to help you out.",
   COMPLETE_ONBOARDING : "Complete Onboarding",
-  PERSON_WITH_THIS_NUMBER_ALREADY_EXISTS : "Person with this mobile number already exists."
+  PERSON_WITH_THIS_NUMBER_ALREADY_EXISTS : "Person with this mobile number already exists.",
+  DEMO : "Demo"
 }

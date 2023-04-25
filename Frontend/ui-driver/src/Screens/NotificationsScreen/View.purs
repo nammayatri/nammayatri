@@ -50,6 +50,7 @@ import Styles.Colors as Color
 import Debug.Trace (spy)
 import Components.BottomNavBar.View as BottomNavBar
 import Components.BottomNavBar.Controller (navData)
+import Screens as ScreenNames
 
 
 screen :: NotificationsScreenState -> PrestoList.ListItem -> Screen Action NotificationsScreenState ScreenOutput
@@ -105,7 +106,7 @@ view notificationListItem push state =
                       ]
                     , loadMoreView push state
                   ]
-              , BottomNavBar.view (push <<< BottomNavBarAction) (navData 3)
+              , BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.ALERTS_SCREEN)
               ]
       ] <> (if (state.notifsDetailModelVisibility == VISIBLE) then [ notificationDetailModel push state ] else [])
 

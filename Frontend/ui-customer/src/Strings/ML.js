@@ -2,7 +2,8 @@ export function getStringValue(key) {
   if (key in malayalamStrings) {
     return malayalamStrings[key];
   }
-  return "error in getCommonEN";
+  console.error(key + " not found in malayalamStrings");
+  return "";
 }
 
 const malayalamStrings = {
@@ -422,7 +423,7 @@ const malayalamStrings = {
   "HOW_SHOULD_WE_ADDRESS_YOU" : "How should we address you?",
   "GENDER_STR" : "Gender",
   "PROFILE_COMPLETION" : "Profile Completion",
-  "EARLY_END_RIDE_CHARGES" : "Early Ride End Charges",
+  "EARLY_END_RIDE_CHARGES" : "Early Ride End Charges^",
   "EARLY_END_RIDE_CHARGES_DESCRIPTION" : "^Ending a ride early incurs additional charges amounting to half the fare of the untravelled distance (max. ₹50)",
   "YES_TRY_AGAIN" : "Yes, Try Again",
   "NO_DONT" : "No, Don’t",
