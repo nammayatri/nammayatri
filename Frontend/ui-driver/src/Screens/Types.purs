@@ -248,7 +248,7 @@ type DriverProfileScreenData = {
   vehicleRegNumber :: String,
   vehicleModelName :: String,
   vehicleColor :: String,
-  driverAlternateNumber :: Maybe String
+  driverAlternateNumber :: Maybe String,
   capacity :: Int,
   downgradeOptions :: Array String,
   vehicleSelected :: Array VehicleP
@@ -654,7 +654,7 @@ type HomeScreenProps =  {
   unReadMessages :: Boolean,
   updatedArrivalInChat :: Boolean,
   driverStatusSet :: DriverStatus,
-  silentPopUpView :: Boolean
+  silentPopUpView :: Boolean,
   zoneRideBooking :: Boolean
  }
 

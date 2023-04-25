@@ -484,7 +484,7 @@ public class NotificationUtils extends AppCompatActivity {
                    mBuilder.setSound(notificationSound);
                }else if (notificationType.equals(CANCELLED_PRODUCT)){
                 notificationSound = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.cancel_notification_sound);
-                   mBuilder.setSound(notificationSound);
+                mBuilder.setSound(notificationSound);
                 }else{
                    notificationSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
                }

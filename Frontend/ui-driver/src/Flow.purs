@@ -51,7 +51,7 @@ import Screens.Types (ActiveRide, AllocationData, HomeScreenStage(..), Location,
 import Services.APITypes (DriverActiveInactiveResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GetDriverInfoReq(..), GetDriverInfoResp(..), GetRidesHistoryResp(..), GetRouteResp(..), LogOutReq(..), LogOutRes(..), OfferRideResp(..), ReferDriverResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), TriggerOTPResp(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyTokenResp(..), DriverAlternateNumberResp(..), RemoveAlternateNumberRequest(..), RemoveAlternateNumberResp(..), AlternateNumberResendOTPResp(..), DriverAlternateNumberOtpResp(..), GetPerformanceReq(..), GetPerformanceRes(..))
 import Services.Accessor (_lat, _lon, _id)
 import Services.Backend (makeGetRouteReq, walkCoordinates, walkCoordinate)
-import Services.Backend (makeTriggerOTPReq, makeVerifyOTPReq, makeUpdateDriverInfoReq, makeOfferRideReq, makeDriverRCReq, makeDriverDLReq, makeValidateImageReq, makeReferDriverReq, dummyVehicleObject, driverRegistrationStatusBT, makeUpdateDriverLangChange, makeValidateAlternateNumberRequest, makeResendAlternateNumberOtpRequest, makeVerifyAlternateNumberOtpRequest, makeLinkReferralCodeReq)
+import Services.Backend (makeTriggerOTPReq, makeVerifyOTPReq, makeUpdateDriverInfoReq, makeOfferRideReq, makeDriverRCReq, makeDriverDLReq, makeValidateImageReq, makeReferDriverReq, dummyVehicleObject, driverRegistrationStatusBT, makeUpdateDriverLangChange, makeValidateAlternateNumberRequest, makeResendAlternateNumberOtpRequest, makeVerifyAlternateNumberOtpRequest, makeLinkReferralCodeReq, makeUpdateBookingOptions)
 import Services.Backend as Remote
 import Services.Config (getBaseUrl)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore)
@@ -309,17 +309,6 @@ uploadDrivingLicenseFlow = do
     GOTO_VEHICLE_DETAILS_SCREEN -> addVehicleDetailsflow
     GOTO_ONBOARDING_FLOW -> onBoardingFlow
 
-uploadAdhaarCardFlow :: FlowBT String Unit
-uploadAdhaarCardFlow = do
-  flow <- UI.uploadAdhaar
-  case flow of
-    GO_TO_ADD_BANK_DETAILS -> addBankDetailsFlow
-
-addBankDetailsFlow :: FlowBT String Unit
-addBankDetailsFlow = do
-  flow <- UI.bankDetail
-  case flow of
-    GO_TO_ADD_VEHICLE_DETAILS -> addVehicleDetailsflow
 
 addVehicleDetailsflow :: FlowBT String Unit
 addVehicleDetailsflow = do

@@ -3,11 +3,13 @@ module Merchant.Utils where
 import Common.Types.App (LazyCheck(..))
 import Helpers.Utils (Merchant(..), getMerchant)
 import Prelude ((<>))
-import Screens.Types (FareTypes(..), Language)
+import Screens.Types ( Language)
 
 foreign import getString' :: String -> String
 
 foreign import getValueFromConfig :: String -> String
+
+foreign import getENStrings :: String -> String
 
 type LanguageData
   = { languages :: Array Language

@@ -39,7 +39,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils as HU
 import JBridge as JB
-import Language.Strings (getString)
+import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import Log (printLog)
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=))
@@ -64,7 +64,6 @@ import Control.Transformers.Back.Trans (runBackT)
 import Services.APITypes (Status(..))
 import Components.BottomNavBar.Controller (navData)
 import Screens.HomeScreen.ComponentConfig
-import EN (getEN)
 
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
@@ -224,10 +223,13 @@ view push state =
                         , viewRecenterAndSupport state push
                       ]
                     ]
-                  , addAlternateNumber push state 
-                  , if not state.props.statusOnline then showOfflineStatus push state else dummyTextView
-                  , if not state.props.rideActionModal && state.props.statusOnline then statsModel push state else dummyTextView
-                  , if (HU.getMerchant unit) == HU.JATRISAATHIDRIVER then otpButtonView state push else dummyTextView
+                  , linearLayout
+                    [ layoutGravity "bottom"
+                    , width MATCH_PARENT
+                    , margin $ MarginBottom 12
+                    ][ addAlternateNumber push state 
+                    , if (HU.getMerchant unit) == HU.JATRISAATHIDRIVER then otpButtonView state push else dummyTextView
+                    ]
                   ]
               ]
         , bottomNavBar push state 
@@ -247,12 +249,13 @@ otpButtonView :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  Prest
 otpButtonView state push = 
   linearLayout
   [ height MATCH_PARENT
-  , width MATCH_PARENT
+  , width WRAP_CONTENT
   , orientation VERTICAL
   , background Color.transparent
   , visibility if state.props.statusOnline then VISIBLE else GONE
-  , padding (Padding 0 0 20 20)
-  , gravity BOTTOM
+  , padding $ Padding 0 0 20 20
+  , weight 1.0
+  , layoutGravity "right"
   ][ linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -275,7 +278,7 @@ otpButtonView state push =
               , height WRAP_CONTENT
               , color Color.blue900
               , padding (PaddingLeft 8)
-              , text (getString OTP)
+              , text (getString OTP_)
               ] <> FontStyle.subHeading2 TypoGraphy
           ]
       ]
@@ -858,19 +861,23 @@ updateLocationAndLastUpdatedView state push =
 addAlternateNumber :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 addAlternateNumber push state =
   linearLayout
-  [ layoutGravity "bottom", width MATCH_PARENT, gravity CENTER, margin (MarginBottom 12)]
-  [linearLayout
-  [ height WRAP_CONTENT
+  [ layoutGravity "bottom"
   , width WRAP_CONTENT
-  , background Color.white900
-  , orientation HORIZONTAL
-  , cornerRadius 32.0
-  , stroke $ "1," <> Color.black600
-  , padding (Padding 20 16 20 16)
-  , gravity CENTER_VERTICAL
-  , onClick push (const ClickAddAlternateButton)
-  , visibility (if ((state.data.driverAlternateMobile == Nothing) && (state.props.statusOnline))  then VISIBLE else GONE)
-  ]
+  , gravity CENTER
+  , margin $ MarginBottom 12
+  , weight 1.0
+  , visibility if (state.data.driverAlternateMobile == Nothing) && (state.props.statusOnline)  then VISIBLE else GONE
+  ][ linearLayout
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , background Color.white900
+      , orientation HORIZONTAL
+      , cornerRadius 32.0
+      , stroke $ "1," <> Color.black600
+      , padding $ Padding 20 16 20 16
+      , gravity CENTER_VERTICAL
+      , onClick push $ const ClickAddAlternateButton
+      ]
    
   [   imageView
                   [ width $ V 20

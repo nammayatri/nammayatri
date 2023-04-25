@@ -33,7 +33,7 @@ import PrestoDOM.Properties (background, backgroundDrawable, clickable, color, c
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Styles.Colors as Color
 import Debug.Trace (spy)
-import Screens.Types(KeyboardModalType(..))
+import Screens.Types(KeyboardModalType(..)) as KeyboardModalType
 import Language.Strings (getString)
 
 view :: forall w . (Action -> Effect Unit) -> InAppKeyboardModalState -> PrestoDOM (Effect Unit) w
@@ -104,7 +104,7 @@ textBoxes push state =
   , height WRAP_CONTENT
   , orientation HORIZONTAL
   , gravity CENTER
-  , visibility if state.modalType == OTP && not state.otpAttemptsExceeded then VISIBLE else GONE
+  , visibility if state.modalType == KeyboardModalType.OTP && not state.otpAttemptsExceeded then VISIBLE else GONE
   , margin (Margin 0 20 0 20)
   , clickable false
   ](mapWithIndex (\index item -> 
@@ -130,7 +130,7 @@ singleTextBox push state =
   , orientation HORIZONTAL 
   , gravity CENTER
   , cornerRadius 4.0
-  , visibility if state.modalType == MOBILE__NUMBER then VISIBLE else GONE
+  , visibility if state.modalType == KeyboardModalType.MOBILE__NUMBER then VISIBLE else GONE
   , clickable false
   , padding (Padding 16 16 16 16)
   , stroke ("1," <> if (state.isValidAlternateNumber == false ) then Color.textDanger else Color.borderColorLight )
@@ -157,7 +157,7 @@ otpView push state =
            , height WRAP_CONTENT
            , margin (Margin 20 0 20 0)
            , orientation VERTICAL
-           , gravity if(state.modalType == OTP) then CENTER else LEFT
+           , gravity if(state.modalType == KeyboardModalType.OTP) then CENTER else LEFT
        ]
              ([] <> [textBoxes push state] <> [singleTextBox push state] <>
                     [textView (
@@ -199,7 +199,7 @@ otpView push state =
                       , color Color.blue900
                       , margin (Margin 0 0 0 0)
                       , onClick push (const (OnClickResendOtp))
-                      , visibility if (state.modalType == OTP && state.showResendOtpButton && (not state.otpAttemptsExceeded)) then VISIBLE else GONE
+                      , visibility if (state.modalType == KeyboardModalType.OTP && state.showResendOtpButton && (not state.otpAttemptsExceeded)) then VISIBLE else GONE
                       ] 
                     )])                 
 
@@ -240,7 +240,7 @@ keyboard push state =
            , cornerRadii $ if key == "back" then Corners 30.0 false false false true else Corners 30.0 false false true false
            , onClick push if key == "back" then (const (OnClickBack state.inputTextConfig.text)) else (const (OnClickDone state.inputTextConfig.text))
            , clickable if key == "back" then true else 
-                      if ((length state.inputTextConfig.text == 4  && state.modalType == OTP && state.otpIncorrect == false) || (length state.inputTextConfig.text == 10  && state.modalType == MOBILE__NUMBER && state.isValidAlternateNumber==true)) then true else false 
+                      if ((length state.inputTextConfig.text == 4  && state.modalType == KeyboardModalType.OTP && state.otpIncorrect == false) || (length state.inputTextConfig.text == 10  && state.modalType == KeyboardModalType.MOBILE__NUMBER && state.isValidAlternateNumber==true)) then true else false 
            ][ 
                 if key == "back" then 
                 imageView

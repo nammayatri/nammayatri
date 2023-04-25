@@ -66,37 +66,37 @@
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content">
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="28px"
-            android:fontFamily="@font/plus_jakartasans_medium"
-            android:lineHeight="28px"
-            android:text="Hey "
-            android:textColor="@color/Black800"
-            android:textFontWeight="500"
-            android:textSize="24px" />
-        <TextView
-            android:id="@+id/userName"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="28px"
-            android:fontFamily="@font/plus_jakartasans_medium"
-            android:lineHeight="28px"
-            android:text="Aman Maurya"
-            android:textColor="@color/Black800"
-            android:textFontWeight="500"
-            android:textSize="24px" />
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="28px"
-            android:fontFamily="@font/plus_jakartasans_medium"
-            android:lineHeight="28px"
-            android:text=", here’s your invoice"
-            android:textColor="@color/Black800"
-            android:textFontWeight="500"
-            android:textSize="24px" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="28px"
+                android:fontFamily="@font/plus_jakartasans_medium"
+                android:lineHeight="28px"
+                android:text="Hey "
+                android:textColor="@color/Black800"
+                android:textFontWeight="500"
+                android:textSize="24px" />
+            <TextView
+                android:id="@+id/userName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="28px"
+                android:fontFamily="@font/plus_jakartasans_medium"
+                android:lineHeight="28px"
+                android:text="Aman Maurya"
+                android:textColor="@color/Black800"
+                android:textFontWeight="500"
+                android:textSize="24px" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="28px"
+                android:fontFamily="@font/plus_jakartasans_medium"
+                android:lineHeight="28px"
+                android:text=", here’s your invoice"
+                android:textColor="@color/Black800"
+                android:textFontWeight="500"
+                android:textSize="24px" />
         </LinearLayout>
 
         <LinearLayout
@@ -139,149 +139,13 @@
             android:layout_marginTop="24px"
             android:background="@drawable/ic_invoice_border"
             android:paddingHorizontal="24px"
-            android:paddingTop="30px"
-            android:paddingBottom="40px"
+            android:paddingVertical="20px"
             android:orientation="vertical"
             android:id="@+id/fareBreakupContainer">
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:paddingVertical="10px">
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:fontFamily="@font/plus_jakartasans_regular"
-                android:lineHeight="20px"
-                android:text="Base Fare  ("
-                android:textColor="@color/Black700"
-                android:textFontWeight="400"
-                android:textSize="18px" />
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:fontFamily="@font/plus_jakartasans_regular"
-                android:lineHeight="20px"
-                android:id="@+id/baseDistance"
-                android:text="12 km"
-                android:textColor="@color/Black700"
-                android:textFontWeight="400"
-                android:textSize="18px" />
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:fontFamily="@font/plus_jakartasans_regular"
-                android:lineHeight="20px"
-                android:text=")"
-                android:textColor="@color/Black700"
-                android:textFontWeight="400"
-                android:textSize="18px" />
-
-            <LinearLayout
-                android:layout_width="0px"
-                android:layout_height="0px"
-                android:layout_weight="1.0" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:fontFamily="@font/plus_jakartasans_regular"
-                android:lineHeight="20px"
-                android:text="₹180"
-                android:id="@+id/baseFare"
-                android:textColor="@color/Black700"
-                android:textFontWeight="400"
-                android:textSize="18px" />
-            </LinearLayout>
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingVertical="10px">
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="@font/plus_jakartasans_regular"
-                    android:lineHeight="20px"
-                    android:text="Service Charges"
-                    android:textColor="@color/Black700"
-                    android:textFontWeight="400"
-                    android:textSize="18px" />
-
-                <LinearLayout
-                    android:layout_width="0px"
-                    android:layout_height="0px"
-                    android:layout_weight="1.0" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="@font/plus_jakartasans_regular"
-                    android:lineHeight="20px"
-                    android:text="₹180"
-                    android:id="@+id/pickUpCharge"
-                    android:textColor="@color/Black700"
-                    android:textFontWeight="400"
-                    android:textSize="18px" />
-            </LinearLayout>
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:visibility="gone"
-                android:paddingVertical="10px">
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="@font/plus_jakartasans_regular"
-                    android:lineHeight="20px"
-                    android:text="Nominal Fare*"
-                    android:textColor="@color/Black700"
-                    android:textFontWeight="400"
-                    android:textSize="18px" />
-
-                <LinearLayout
-                    android:layout_width="0px"
-                    android:layout_height="0px"
-                    android:layout_weight="1.0" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="@font/plus_jakartasans_regular"
-                    android:lineHeight="20px"
-                    android:text="₹180"
-                    android:textColor="@color/Black700"
-                    android:textFontWeight="400"
-                    android:id="@+id/nominalFare"
-                    android:textSize="18px" />
-            </LinearLayout>
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingVertical="10px">
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="@font/plus_jakartasans_regular"
-                    android:lineHeight="20px"
-                    android:text="Waiting Charges**"
-                    android:textColor="@color/Black700"
-                    android:textFontWeight="400"
-                    android:textSize="18px" />
-
-                <LinearLayout
-                    android:layout_width="0px"
-                    android:layout_height="0px"
-                    android:layout_weight="1.0" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="@font/plus_jakartasans_regular"
-                    android:lineHeight="20px"
-                    android:text="₹180"
-                    android:textColor="@color/Black700"
-                    android:id="@+id/waitingCharge"
-                    android:textFontWeight="400"
-                    android:textSize="18px" />
+                android:id="@+id/fareBreakupElements">
             </LinearLayout>
             <LinearLayout
                 android:layout_width="match_parent"
@@ -530,28 +394,8 @@
             android:layout_height="wrap_content"
             android:fontFamily="@font/plus_jakartasans_regular"
             android:lineHeight="16px"
-            android:text="1.5x of daytime charges applicable at night, from 10 PM to 4.30 AM"
-            android:textColor="@color/Black700"
-            android:textFontWeight="400"
-            android:textStyle="italic"
-            android:textSize="16px" />
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:fontFamily="@font/plus_jakartasans_regular"
-            android:visibility="gone"
-            android:lineHeight="16px"
-            android:text="* Drivers can charge an additional fare upto ₹20 to cover other factors like traffic, chances of return trip etc."
-            android:textColor="@color/Black700"
-            android:textFontWeight="400"
-            android:textStyle="italic"
-            android:textSize="16px" />
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:fontFamily="@font/plus_jakartasans_regular"
-            android:lineHeight="16px"
-            android:text="** Waiting charges : ₹1 / min - after 3 mins of drivers arrival"
+            android:id="@+id/referenceText"
+            android:text=""
             android:textColor="@color/Black700"
             android:textFontWeight="400"
             android:textStyle="italic"
