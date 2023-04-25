@@ -41,7 +41,7 @@ import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPos
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
-import Prelude (class Show, Unit, bind, discard, map, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<>), (==), (>), (||), (<=),(>=))
+import Prelude (class Show, Unit, bind, discard, map, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<>), (==), (>), (||), (<=),(>=), when)
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Resource.Constants (decodeAddress)
@@ -261,7 +261,8 @@ eval (Notification notificationType) state = do
 eval CancelGoOffline state = do 
   continue state { props = state.props { goOfflineModal = false } }
 
-eval (GoOffline status) state = exit (DriverAvailabilityStatus state { props = state.props { goOfflineModal = false }} ST.Offline)
+eval (GoOffline status) state = do
+  exit (DriverAvailabilityStatus state { props = state.props { goOfflineModal = false }} ST.Offline)
 
 eval (ShowMap key lat lon) state = continueWithCmd state [ do 
   id <- checkPermissionAndUpdateDriverMarker state
@@ -477,7 +478,15 @@ eval (RideActiveAction activeRide) state = updateAndExit state { data {activeRid
 eval RecenterButtonAction state = continue state
 
 eval (SwitchDriverStatus status) state = do
-  if state.props.driverStatusSet == status then continue state 
+  if (((getValueToLocalStore IS_DEMOMODE_ENABLED) == "true") && (status == ST.Silent || status == ST.Offline)) then do
+    continueWithCmd state [ do 
+          _ <- pure $ setValueToLocalStore IS_DEMOMODE_ENABLED "false"
+          _ <- pure $ toast (getString DEMO_MODE_DISABLED)
+          _ <- pure $  deleteValueFromLocalStore DEMO_MODE_PASSWORD
+          _ <- getCurrentPosition (showDriverMarker state "ny_ic_auto") constructLatLong
+          pure NoAction
+          ]
+  else if state.props.driverStatusSet == status then continue state 
     else 
       case status of 
         ST.Online -> exit (DriverAvailabilityStatus state status)
@@ -487,7 +496,8 @@ eval (SwitchDriverStatus status) state = do
             let checkIfLastWasSilent = state.props.driverStatusSet == ST.Silent
             continue state { props { goOfflineModal = checkIfLastWasSilent, silentPopUpView = not checkIfLastWasSilent }}
 
-eval (PopUpModalSilentAction (PopUpModal.OnButton1Click)) state = exit (DriverAvailabilityStatus state{props{silentPopUpView = false}} ST.Offline)
+eval (PopUpModalSilentAction (PopUpModal.OnButton1Click)) state = do
+  exit (DriverAvailabilityStatus state{props{silentPopUpView = false}} ST.Offline)
 eval (PopUpModalSilentAction (PopUpModal.OnButton2Click)) state = 
   do
     _ <- pure $ setValueToLocalStore DRIVER_STATUS_N (show ST.Silent)

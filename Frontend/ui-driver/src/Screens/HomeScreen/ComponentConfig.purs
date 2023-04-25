@@ -267,3 +267,25 @@ enterOtpStateConfig state = let
       modalType = ST.OTP
       }
       in inAppModalConfig'
+
+driverStatusIndicators :: Array ST.PillButtonState
+driverStatusIndicators = [
+    {
+      status : ST.Offline,
+      background : Color.red,
+      imageUrl : "ic_driver_status_offline,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_driver_status_offline.png",
+      textColor : Color.white900
+    },
+    {
+        status : ST.Silent,
+        background : Color.blue800,
+        imageUrl : "ic_driver_status_silent,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_driver_status_silent.png",
+        textColor : Color.white900
+    },
+    {
+      status : ST.Online,
+        background : Color.darkMint,
+        imageUrl : "ic_driver_status_online,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_driver_status_online.png",
+        textColor : Color.white900
+    }
+]
