@@ -662,7 +662,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        hyperServices.onResume();
         sharedPref.edit().putString(getResources().getString(R.string.ACTIVITY_STATUS), "onResume").apply();
         appUpdateManager.getAppUpdateInfo().addOnSuccessListener(appUpdateInfo -> {
             if (appUpdateInfo.updateAvailability() == UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS) {
@@ -710,7 +709,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
-        hyperServices.onPause();
         sharedPref.edit().putString(getResources().getString(R.string.ACTIVITY_STATUS), "onPause").apply();
 //        DefaultMediaPlayerControl.mediaPlayer.pause(); // COMMENTED CHECK
         // for (MediaPlayerView audioPlayer : CommonJsInterface.audioPlayers) {
