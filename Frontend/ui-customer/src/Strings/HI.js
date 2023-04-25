@@ -2,7 +2,8 @@ export function getStringValue(key) {
   if (key in hindiStrings) {
     return hindiStrings[key];
   }
-  return "error in getCommonHI";
+  console.error(key + " not found in hindiString");
+  return "";
 }
 
 const hindiStrings = {

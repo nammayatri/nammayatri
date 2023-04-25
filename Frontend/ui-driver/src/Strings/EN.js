@@ -3,7 +3,7 @@ export function getStringValue(key) {
   if (key in englishStrings) {
     return englishStrings[key];
   }
-  console.error("string not found in englishStrings");
+  console.error(key + " not found in englishStrings");
   return "";
 }
 
@@ -120,7 +120,7 @@ const englishStrings = {
   REPORT_AN_ISSUE: "Report an issue",
   DISTANCE: "Distance",
   TIME_TAKEN: "Time Taken",
-  OPEN_GOOGLE_MAPS: "Google Maps",
+  MAPS: "Maps",
   CALL: "Call",
   START_RIDE: "Start Ride",
   CANCEL_RIDE: "Cancel Ride",

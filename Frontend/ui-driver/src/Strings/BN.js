@@ -3,7 +3,7 @@ export function getStringValue(key) {
 	if (key in bengaliStrings) {
 		return bengaliStrings[key];
 	}
-	console.error("string not found in bengaliStrings");
+	console.error(key + " not found in bengaliStrings");
 	return "";
 }
 
@@ -397,5 +397,6 @@ const bengaliStrings = {
 	VERIFICATION_IS_TAKING_A_BIT_LONGER : "দেখে মনে হচ্ছে আপনার যাচাইকরণটি প্রত্যাশার চেয়ে কিছুটা \ nlonger নিচ্ছে \ \ n আপনি আপনাকে সহায়তা করতে সহায়তার সাথে যোগাযোগ করতে পারেন।",
 	COMPLETE_ONBOARDING : "অনবোর্ডিং সম্পূর্ণ",
 	PERSON_WITH_THIS_NUMBER_ALREADY_EXISTS : "এই মোবাইল নম্বর সহ ব্যক্তি ইতিমধ্যে বিদ্যমান।",
-	OTP_ : "OTP"
+	OTP_ : "OTP",
+	MAPS: "Maps"
  }

@@ -18,11 +18,12 @@ module Language.Strings where
 import Language.Types (STR, getStringFromEnum)
 import MerchantConfigs.Utils (getString', getENStrings)
 import Prelude (($))
+import Data.String.Common (trim)
 
 data Language = EN_US | KN_IN | HI_IN | TA_IN 
 
 getString :: STR -> String
-getString key = getString' $ getStringFromEnum key
+getString key = getString' $ trim $ getStringFromEnum key
 
 getEN :: STR -> String
-getEN key = getENStrings $ getStringFromEnum key
+getEN key = getENStrings $ trim $ getStringFromEnum key

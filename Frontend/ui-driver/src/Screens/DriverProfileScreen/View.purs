@@ -47,6 +47,7 @@ import Services.APITypes (GetDriverInfoReq(..), GetDriverInfoResp(..))
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
+import Screens as ScreenNames
 
 
 screen :: ST.DriverProfileScreenState -> Screen Action ST.DriverProfileScreenState ScreenOutput
@@ -91,7 +92,7 @@ view push state =
           ][ profilePictureLayout state push
            , profileOptionsLayout state push
            ]
-        , BottomNavBar.view (push <<< BottomNavBarAction) (navData ((length (navData 0).navButton)-1))
+        , BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.DRIVER_PROFILE_SCREEN)
       ]
       , linearLayout 
         [ width MATCH_PARENT

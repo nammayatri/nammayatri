@@ -3,7 +3,7 @@ export function getStringValue(key) {
   if (key in mlStrings) {
     return mlStrings[key];
   }
-  console.error("string not found in mlStrings");
+  console.error(key + " not found in mlStrings");
   return "";
 }
 
@@ -399,5 +399,6 @@ const mlStrings = {
   VERIFICATION_IS_TAKING_A_BIT_LONGER : "Looks like your verification is taking a bit \nlonger than expected.\nYou can contact support to help you out.",
   COMPLETE_ONBOARDING : "Complete Onboarding",
   PERSON_WITH_THIS_NUMBER_ALREADY_EXISTS : "Person with this mobile number already exists.",
-  OTP_ : "OTP"
+  OTP_ : "OTP",
+  MAPS: "Maps"
 }

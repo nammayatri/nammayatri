@@ -3,7 +3,7 @@ export function getStringValue(key) {
   if (key in hindiStrings) {
     return hindiStrings[key];
   }
-  console.error("string not found in hindiStrings");
+  console.error( key + " not found in hindiStrings");
   return "";
 }
 
@@ -396,6 +396,7 @@ const hindiStrings = {
   COMPLETE_ONBOARDING : "पूर्ण ऑनबोर्डिंग",
   ADD_ALTERNATE_NUMBER_IN_MEANTIME :  "इस प्रोसेस को पूरा होने में 2 कामकाजी दिन \n तक लग सकते हैं। इस बीच, आप \nएक वैकल्पिक मोबाइल नंबर जोड़ सकते हैं।",
   PERSON_WITH_THIS_NUMBER_ALREADY_EXISTS : "इस मोबाइल नंबर वाला व्यक्ति पहले से मौजूद है।",
-  OTP_ : "OTP"
+  OTP_ : "OTP",
+  MAPS: "Maps"
 
 }

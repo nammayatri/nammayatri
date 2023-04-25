@@ -2,7 +2,8 @@ export function getStringValue(key) {
   if (key in kannadaStrings) {
     return kannadaStrings[key];
   }
-  return "error in getCommonKN";
+  console.error(key + " not found in kannadaString");
+  return "";
 }
 
 const kannadaStrings = {

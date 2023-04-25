@@ -2,7 +2,8 @@ export function getStringValue(key) {
   if (key in malayalamStrings) {
     return malayalamStrings[key];
   }
-  return "error in getCommonEN";
+  console.error(key + " not found in malayalamStrings");
+  return "";
 }
 
 const malayalamStrings = {

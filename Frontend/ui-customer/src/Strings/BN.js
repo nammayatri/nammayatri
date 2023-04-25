@@ -2,7 +2,8 @@ export function getStringValue(key) {
   if (key in bengaliStrings) {
     return bengaliStrings[key];
   }
-  return "error in getCommonBN";
+  console.error(key + " key not found in bengaliStrings");
+  return "";
 }
 
 const bengaliStrings = {
