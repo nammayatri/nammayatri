@@ -212,6 +212,7 @@ handler merchantId sReq = do
       pure
         DLoc.SearchReqLocation
           { street = Nothing,
+            door = Nothing,
             city = Nothing,
             state = Nothing,
             country = Nothing,
