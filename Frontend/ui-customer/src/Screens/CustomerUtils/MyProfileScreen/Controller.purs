@@ -14,14 +14,14 @@ import Components.PrimaryEditText as PrimaryEditText
 import Data.Maybe (Maybe(..), fromMaybe)
 import JBridge (hideKeyboardOnNavigation, requestKeyboardShow ,firebaseLogEvent)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
-import Prelude (class Show, pure, unit, ($), discard, bind, not, (<>), (==), (&&), (/=), (||))
+import Prelude (class Show, pure, unit, ($), discard, bind, not, (<>), (==), (&&), (/=), (||), (>=))
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (MyProfileScreenState, DeleteStatus(..), FieldType(..), EmailErrorType(..), Gender(..))
 import Services.API (GetProfileRes(..))
 import Helpers.Utils (validateEmail)
-import Data.String(length)
+import Data.String(length, trim)
 import Storage(KeyStore(..), getValueToLocalStore)
 import Engineering.Helpers.Commons(getNewIDWithTag)
 import Debug.Trace(spy)
@@ -128,10 +128,10 @@ eval (UserProfile (GetProfileRes profile)) state = do
   continue state { data { name = name, editedName = name, gender = gender, emailId = profile.email } }
 eval (NameEditTextAction (PrimaryEditText.TextChanged id value)) state = do 
   _ <- pure $ spy "Value changed"  value 
-  continue state { data { editedName = value }, props{genderOptionExpanded = false, expandEnabled = false} }
+  continue state { data { editedName = value }, props{genderOptionExpanded = false, expandEnabled = false , isBtnEnabled = if (length (trim value) >= 3  && state.props.isEmailValid) then true else false} }
 eval (EmailIDEditTextAction (PrimaryEditText.TextChanged id value)) state = do
   if (value == "" && state.data.errorMessage == Just EMAIL_EXISTS) then continue state {props{ isEmailValid = false, isBtnEnabled = false, genderOptionExpanded = false, expandEnabled = false}}
-    else continue state {data {editedEmailId = Just value , errorMessage = if (length value == 0) then Nothing else if ( validateEmail value) then Nothing else Just INVALID_EMAIL },props{ isEmailValid = if (length value == 0) then true else validateEmail value, isBtnEnabled = if (length value == 0) then true else validateEmail value, genderOptionExpanded = false}}
+    else continue state {data {editedEmailId = Just value , errorMessage = if (length value == 0) then Nothing else if ( validateEmail value) then Nothing else Just INVALID_EMAIL },props{ isEmailValid = if (length value == 0) then true else validateEmail value, isBtnEnabled = (length state.data.editedName >=3) && (if (length value == 0) then true else validateEmail value), genderOptionExpanded = false}}
 eval (UpdateButtonAction (PrimaryButton.OnClick)) state = do
   _ <- pure $ hideKeyboardOnNavigation true
   if state.data.gender /= state.data.editedGender then do
