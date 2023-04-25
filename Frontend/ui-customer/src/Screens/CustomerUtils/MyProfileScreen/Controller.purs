@@ -54,7 +54,7 @@ instance loggableAction :: Loggable Action where
         trackAppEndScreen appId (getScreen MY_PROFILE_SCREEN)
       PopUpModal.NoAction -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "no_action"
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "image"
-      PopUpModal.ETextController act -> trackAppTextInput appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "primary_edit_text"
+      PopUpModal.ETextController act -> trackAppTextInput appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "primary_edit_text_delete_account"
       PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "countdown_updated"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "tip_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "popup_dismissed"
@@ -65,7 +65,7 @@ instance loggableAction :: Loggable Action where
       PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "button_2"
       PopUpModal.NoAction -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "no_action"
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "image"
-      PopUpModal.ETextController act -> trackAppTextInput appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "primary_edit_text"
+      PopUpModal.ETextController act -> trackAppTextInput appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "primary_edit_text_account_deleted"
       PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "countdown_updated"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "tip_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "popup_dismissed"

@@ -67,7 +67,15 @@ instance loggableAction :: Loggable Action where
       GenericHeader.SuffixImgOnClick -> trackAppActionClick appId (getScreen ADD_NEW_ADDRESS_SCREEN) "generic_header_action" "forward_icon"
     LocationListItemAC act -> case act of 
       LocationListItemController.SelectedCurrentLocation lat lon name -> trackAppActionClick appId (getScreen ADD_NEW_ADDRESS_SCREEN) "location_list_item" "current_location"
-      LocationListItemController.OnClick item -> trackAppActionClick appId (getScreen ADD_NEW_ADDRESS_SCREEN) "location_list_item" "location"
+      LocationListItemController.OnClick item -> do
+        if item.isClickable then do
+          case (getLocTag (fromMaybe "" item.tagType)) of
+            Just tagType -> case tagType of
+                 LOCATE_ON_MAP -> trackAppActionClick appId (getScreen ADD_NEW_ADDRESS_SCREEN) "location_list_item" "locate_on_map"
+                 LOC_LIST      -> trackAppActionClick appId (getScreen ADD_NEW_ADDRESS_SCREEN) "location_list_item" "location_list"
+                 _      -> trackAppActionClick appId (getScreen ADD_NEW_ADDRESS_SCREEN) "location_list_item" "location_continue_state"
+            Nothing -> trackAppScreenEvent appId (getScreen ADD_NEW_ADDRESS_SCREEN) "location_list_item" "continue_state"
+        else pure unit
       LocationListItemController.FavClick act -> trackAppScreenEvent appId (getScreen ADD_NEW_ADDRESS_SCREEN) "location_list_item" "fav"
     PrimaryEditTextAC (PrimaryEditText.TextChanged id input) -> trackAppTextInput appId (getScreen ADD_NEW_ADDRESS_SCREEN)"save_as_text_changed" "primary_edit_text" 
     PrimaryButtonAC act -> case act of
@@ -85,7 +93,9 @@ instance loggableAction :: Loggable Action where
     ClearEditText -> trackAppActionClick appId (getScreen ADD_NEW_ADDRESS_SCREEN) "in_screen" "editted_text_onclear"
     SelectedCurrentLocation key lat lon ->  trackAppScreenEvent appId (getScreen ADD_NEW_ADDRESS_SCREEN) "in_screen" "current_location_selected"
     MAPREADY key latitude longitude -> trackAppScreenEvent appId (getScreen ADD_NEW_ADDRESS_SCREEN) "in_screen" "map_view_rendered"
-    UpdateLocation key lat lon -> trackAppScreenEvent appId (getScreen ADD_NEW_ADDRESS_SCREEN) "in_screen" "location_updated"
+    UpdateLocation key lat lon -> case key of
+      "LatLon" -> trackAppScreenEvent appId (getScreen ADD_NEW_ADDRESS_SCREEN) "in_screen" "location_updated"
+      _ -> trackAppScreenEvent appId (getScreen ADD_NEW_ADDRESS_SCREEN) "in_screen" "update_location_continue_state"
     EditTextFocusChanged -> trackAppScreenEvent appId (getScreen ADD_NEW_ADDRESS_SCREEN) "in_screen" "edit_text_change_focussed"
     UpdateCurrLocName lat lon name -> trackAppScreenEvent appId (getScreen ADD_NEW_ADDRESS_SCREEN) "in_screen" "current_location_name_updated"
     CurrentLocationAction -> trackAppActionClick appId (getScreen ADD_NEW_ADDRESS_SCREEN) "in_screen" "current_location"

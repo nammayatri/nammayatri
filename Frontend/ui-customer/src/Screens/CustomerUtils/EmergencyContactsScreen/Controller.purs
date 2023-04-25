@@ -48,7 +48,8 @@ instance loggableAction :: Loggable Action where
       GenericHeader.PrefixImgOnClick -> do
         trackAppActionClick appId (getScreen EMERGENCY_CONTACS_SCREEN) "generic_header_action" "back_icon_onclick"
         trackAppEndScreen appId (getScreen EMERGENCY_CONTACS_SCREEN)
-      _ -> pure unit
+      GenericHeader.SuffixImgOnClick -> do
+        trackAppActionClick appId (getScreen EMERGENCY_CONTACS_SCREEN) "generic_header_action" "forward_icon_onclick"
     PrimaryButtonActionControll act -> case act of
       PrimaryButton.OnClick -> trackAppActionClick appId (getScreen EMERGENCY_CONTACS_SCREEN) "contacts_list" "primary_btn_onclick"
       PrimaryButton.NoAction -> trackAppActionClick appId (getScreen EMERGENCY_CONTACS_SCREEN) "contacts_list" "primary_btn_noaction"
@@ -61,14 +62,21 @@ instance loggableAction :: Loggable Action where
       ContactListController.ClearText -> trackAppScreenEvent appId (getScreen EMERGENCY_CONTACS_SCREEN) "in_screen" "clear_text"
       ContactListController.ContactSelected item -> trackAppScreenEvent appId (getScreen EMERGENCY_CONTACS_SCREEN) "in_screen" "contacts_callback"
       ContactListController.PrimaryButtonActionController onclick-> trackAppScreenEvent appId (getScreen EMERGENCY_CONTACS_SCREEN) "in_screen" "primary_button_action_controller"
-      _ -> pure unit
+      ContactListController.Click item -> trackAppActionClick appId (getScreen EMERGENCY_CONTACS_SCREEN) "in_screen" "contact_on_click"
+      ContactListController.NoAction -> trackAppActionClick appId (getScreen EMERGENCY_CONTACS_SCREEN) "in_screen" "contacts_no_action"
+      ContactListController.BackPressed -> trackAppActionClick appId (getScreen EMERGENCY_CONTACS_SCREEN) "in_screen" "contacts_backpressed"
+      ContactListController.PrimaryEditTextAction action -> trackAppScreenEvent appId (getScreen EMERGENCY_CONTACS_SCREEN) "in_screen" "contacts_primary_edit_text_action"
     CheckingContactList -> trackAppScreenEvent appId (getScreen EMERGENCY_CONTACS_SCREEN) "in_screen" "checking_contact_list"
     PopUpModalAction act -> case act of
-      PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen EMERGENCY_CONTACS_SCREEN) "in_screen" "pop_up_modal_action_on_button1_click"
-      PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen EMERGENCY_CONTACS_SCREEN) "in_screen" "pop_up_modal_action_on_button2_click"
-      _ -> pure unit
+      PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen EMERGENCY_CONTACS_SCREEN) "in_screen" "pop_up_modal_action_on_cancel_click"
+      PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen EMERGENCY_CONTACS_SCREEN) "in_screen" "pop_up_modal_action_on_yes_remove_click"
+      PopUpModal.NoAction -> trackAppScreenEvent appId (getScreen EMERGENCY_CONTACS_SCREEN) "in_screen" "pop_up_modal_no_action"
+      PopUpModal.ETextController act-> trackAppTextInput appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "popup_modal_action_primary_edit_text"
+      PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "popup_modal_action_countdown_updated"
+      PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen EMERGENCY_CONTACS_SCREEN) "in_screen" "pop_up_modal_action_on_image_click"
+      PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen ACCOUNT_SET_UP_SCREEN) "popup_modal_action" "tip_clicked"
+      PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen ACCOUNT_SET_UP_SCREEN) "popup_modal_action" "popup_dismissed"
     FetchContacts -> trackAppActionClick appId (getScreen EMERGENCY_CONTACS_SCREEN) "in_screen" "fetch_contacts"
-    _ -> pure unit
 data Action = GenericHeaderActionController GenericHeader.Action
             | PrimaryButtonActionControll PrimaryButton.Action
             | RemoveButtonClicked NewContacts

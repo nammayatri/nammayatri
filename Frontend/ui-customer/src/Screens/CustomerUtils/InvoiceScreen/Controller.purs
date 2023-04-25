@@ -31,14 +31,16 @@ instance showAction :: Show Action where
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
     AfterRender -> trackAppScreenRender appId "screen" (getScreen INVOICE_SCREEN)
-    BackPressed -> do
+    BackPressed backPressState-> do
       trackAppBackPress appId (getScreen INVOICE_SCREEN)
+      if(backPressState.props.fromHomeScreen) then trackAppScreenEvent appId (getScreen INVOICE_SCREEN) "in_screen" "from_homescreen_go_home"
+      else trackAppScreenEvent appId (getScreen INVOICE_SCREEN) "in_screen" "go_back" 
       trackAppEndScreen appId (getScreen INVOICE_SCREEN)
     GenericHeaderAC act -> case act of
       GenericHeaderController.PrefixImgOnClick -> do
         trackAppActionClick appId (getScreen INVOICE_SCREEN) "generic_header_action" "back_icon_onclick"
         trackAppEndScreen appId (getScreen INVOICE_SCREEN)
-      _ -> pure unit
+      GenericHeaderController.SuffixImgOnClick -> trackAppActionClick appId (getScreen INVOICE_SCREEN) "generic_header_action" "forward_icon_onclick"
     PrimaryButtonAC act -> case act of
       PrimaryButton.OnClick -> trackAppActionClick appId (getScreen INVOICE_SCREEN) "primary_button" "download_pdf"
       PrimaryButton.NoAction -> trackAppActionClick appId (getScreen INVOICE_SCREEN) "primary_button" "no_action"
@@ -47,7 +49,7 @@ instance loggableAction :: Loggable Action where
 data Action
   = PrimaryButtonAC PrimaryButton.Action
   | GenericHeaderAC GenericHeaderController.Action
-  | BackPressed
+  | BackPressed InvoiceScreenState
   | NoAction
   | AfterRender
 
@@ -56,13 +58,13 @@ data ScreenOutput
   | GoToHome
 
 eval :: Action -> InvoiceScreenState -> Eval Action ScreenOutput InvoiceScreenState
-eval BackPressed state = do
+eval (BackPressed backPressState) state = do
   if state.props.fromHomeScreen then
     exit GoToHome
   else
     exit GoBack
 
-eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = continueWithCmd state [ do pure BackPressed ]
+eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = continueWithCmd state [ do pure $ BackPressed state]
 
 eval (PrimaryButtonAC (PrimaryButton.OnClick)) state = do
   continueWithCmd state

@@ -76,7 +76,7 @@ view push state =
           , alignParentBottom "true,-1"
           , background Color.white900
           , visibility if state.props.reportIssue then VISIBLE else GONE
-          ][PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)]
+          ][PrimaryButton.view (push <<< (PrimaryButtonActionController state)) (primaryButtonConfig state)]
         
         ]]
     , issueReportedView state push
@@ -495,6 +495,6 @@ issueReportedView state push =
           , alignParentBottom "true,-1"
           , gravity BOTTOM
           , margin (MarginBottom 16)
-          ][  PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)]
+          ][  PrimaryButton.view (push <<< (PrimaryButtonActionController state)) (primaryButtonConfig state)]
       ]
   

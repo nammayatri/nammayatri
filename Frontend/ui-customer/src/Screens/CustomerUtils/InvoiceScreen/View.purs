@@ -53,7 +53,7 @@ view push state =
         , orientation VERTICAL
         , background Color.white900
         , padding $ Padding 0 EHC.safeMarginTop 0 (if EHC.safeMarginBottom == 0 then 24 else EHC.safeMarginBottom)
-        , onBackPressed push (const BackPressed)
+        , onBackPressed push (const BackPressed state)
         , afterRender push (const AfterRender)
         ]
         [ GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)

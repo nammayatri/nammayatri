@@ -84,8 +84,28 @@ instance showAction :: Show Action where
 instance loggableAction :: Loggable Action where
   performLog action appId  = case action of
     AfterRender -> trackAppScreenRender appId "screen" (getScreen HOME_SCREEN)
-    BackPressed -> trackAppBackPress appId (getScreen HOME_SCREEN)
-    CancelSearch -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "cancel_search"
+    BackPressed backPressState -> do
+      trackAppBackPress appId (getScreen HOME_SCREEN)
+      _ <- pure $ spy "inside_loggable" action
+      _ <- pure $ spy "testing1" (backPressState.props.currentStage)
+      case backPressState.props.currentStage of 
+        SearchLocationModel -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "backpress_search_location_model"
+        SettingPrice    -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "backpress_setting_price"
+        ConfirmingLocation -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "backpress_confirming_location"
+        FindingEstimate -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "backpress_finding_estimate"
+        QuoteList       -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "backpress_quote_list"
+        PricingTutorial -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "pricing_tutorial"
+        DistanceOutsideLimits -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "backpress_distance_outside_limits"
+        ShortDistance -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "backpress_short_distance"
+        FindingQuotes -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "backpress_finding_quotes"
+        FavouriteLocationModel -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "backpress_favourite_location_model"
+        _               -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "backpress_default_case"
+    CancelSearch cancelSearchState -> do
+      _ <- pure $ spy "inside_cancel_search" cancelSearchState.props.currentStage
+      case cancelSearchState.props.currentStage of
+        FindingEstimate -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "finding_estimate_cancel_search"
+        ConfirmingRide -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "confirming_ride_cancel_search"
+        _ -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "cancel_search_continue_state"
     RecenterCurrentLocation -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "recenter_location"
     SidebarCloseAnimationCompleted -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "side_bar_close"
     OpenSettings -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "open_settings"
@@ -94,8 +114,12 @@ instance loggableAction :: Loggable Action where
     UpdateSource lat lon name -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "update_source_address"
     HideLiveDashboard val -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "hide_live_stats_dashboard"
     LiveDashboardAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "live_Dashboard_action"
-    PrimaryButtonActionController act -> case act of
-      PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "primary_button" "onclick"
+    PrimaryButtonActionController primaryBtnState act -> case act of
+      PrimaryButtonController.OnClick -> case primaryBtnState.props.currentStage of
+        HomeScreen -> trackAppActionClick appId (getScreen HOME_SCREEN) "primary_button" "where_to_btn_onclick"
+        ConfirmingLocation -> trackAppActionClick appId (getScreen HOME_SCREEN) "primary_button" "confirm_location_onclick"
+        SettingPrice -> trackAppActionClick appId (getScreen HOME_SCREEN) "primary_button" "request_ride_onclick"
+        _ -> trackAppActionClick appId (getScreen HOME_SCREEN) "primary_button" "onclick"
       PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "primary_button" "no_action"
     SettingSideBarActionController act -> case act of
       SettingSideBarController.PastRides -> do
@@ -140,13 +164,17 @@ instance loggableAction :: Loggable Action where
         trackAppEndScreen appId (getScreen HOME_SCREEN)      
       SettingSideBarController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "setting_side_bar" "no_action"
     PricingTutorialModelActionController (PricingTutorialModelController.Close) -> trackAppActionClick appId (getScreen HOME_SCREEN) "pricing_tutorial" "close_icon"
-    SearchLocationModelActionController act -> case act of
+    SearchLocationModelActionController searchLocState act -> case act of
       SearchLocationModelController.LocationListItemActionController act -> case act of
         LocationListItemController.OnClick item -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "location_list_item"
         LocationListItemController.SelectedCurrentLocation lat lng name -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "location_list_item_onclick_current_location"
         LocationListItemController.FavClick item -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "favourite"
       SearchLocationModelController.PrimaryButtonActionController act -> case act of
-        PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "primary_button"
+        PrimaryButtonController.OnClick -> case searchLocState.props.selectedQuote,(null searchLocState.data.quoteListModelState),(getValueToLocalStore LOCAL_STAGE) of
+          Nothing, true, "SearchLocationModel"  -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "primary_button_location_selected"
+          Just _ , false, _                     -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "primary_button_confirm_ride"
+          Nothing, true, "QuoteList"            -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "primary_button_go_to_home"
+          _,_,_                                 -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "primary_button_continue_state"
         PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "primary_button_no_action"
       SearchLocationModelController.SourceChanged input -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "source_changed"
       SearchLocationModelController.DestinationChanged input -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "destination_changed"
@@ -194,7 +222,9 @@ instance loggableAction :: Loggable Action where
       DriverInfoCardController.SourceToDestinationAC  act -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "driver_info_card" "source_to_destination"
       DriverInfoCardController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "driver_info_card" "no_action"
       DriverInfoCardController.MessageDriver -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "driver_info_card" "open_in_app_messaging"
-    UpdateLocation key lat lon ->  trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_location"
+    UpdateLocation key lat lon -> case key of
+      "LatLon" -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_location_name"
+      _ -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_location_no_action"
     RateRideButtonActionController act -> case act of
       PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "rate_your_ride" "primary_button"
       PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "rate_your_ride" "primary_button_no_action"
@@ -210,9 +240,17 @@ instance loggableAction :: Loggable Action where
       CancelRidePopUp.ClearOptions -> trackAppActionClick appId (getScreen HOME_SCREEN) "cancel_ride_popup" "clear_options"
       CancelRidePopUp.TextChanged valId newVal ->  trackAppTextInput appId (getScreen HOME_SCREEN) "cancelling_reason_text_changed" "cancel_ride_popup"
       CancelRidePopUp.NoAction ->  trackAppActionClick appId (getScreen HOME_SCREEN) "cancel_ride_popup" "no_action"
-    PopUpModalAction act -> case act of
+    PopUpModalAction popUpState act -> case act of
       PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_action" "on_goback"
-      PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_action" "on_cancel"
+      PopUpModal.OnButton2Click -> case popUpState.props.isPopUp of
+        Logout -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_action" "logout_user_click"
+        ConfirmBack -> case popUpState.props.currentStage of
+          QuoteList -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_action" "confirm_back_quote_list"
+          FindingQuotes -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_action" "confirm_back_finding_quotes"
+          _ -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_action" "confirm_back_continue_state"
+        NoPopUp -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_action" "no_popup"
+        ActiveQuotePopUp -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_action" "active_quote_popup_click"
+        TipsPopUp -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_action" "tips_popup_click"
       PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_action" "no_action"
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_action" "image"
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "popup_modal_action" "primary_edit_text"
@@ -238,7 +276,10 @@ instance loggableAction :: Loggable Action where
       RatingCard.SourceToDestinationAC act -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "rating_card" "source_to_destination"
       RatingCard.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "rating_card" "no_action"
     CloseLocationTracking -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "close_location_tracking"
-    StartLocationTracking item -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "start_location_tracking"
+    StartLocationTracking item -> case item of
+      "GOOGLE_MAP" -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "start_location_tracking_google_map"
+      "IN_APP" -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "start_location_tracking_in_app"
+      _ -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "start_location_tracking_continue_state"
     DistanceOutsideLimitsActionController act -> case act of
       PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_distance_outside_limit" "change_drop_location"
       PopUpModal.OnButton1Click -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_distance_outside_limit" "change_drop_location_cancel"
@@ -371,13 +412,17 @@ instance loggableAction :: Loggable Action where
     NotificationListener notificationType -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "notification_listener"
     GetEstimates quotesRes -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "get_estimates"
     GetRideConfirmation resp -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "get_ride_confirmation"
-    GetQuotesList (SelectListRes resp) -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" ("get_quotes_list -" <> fromMaybe "" resp.bookingId)
+    GetQuotesList (SelectListRes resp) -> case flowWithoutOffers WithoutOffers of
+      true -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "get_quotes_list_without_offers"
+      false -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" ("get_quotes_list_" <> fromMaybe "" resp.bookingId)
     MAPREADY key latitude longitude -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "map_ready"
     CurrentLocation lat lng -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "current_location"
     SourceToDestinationActionController act -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "source_to_destination"
     TrackDriver resp -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "track_driver"
     HandleCallback -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "handle_call_back"
-    UpdatePickupLocation  key lat lon -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_pickup_location"
+    UpdatePickupLocation  key lat lon -> case key of
+      "LatLon" -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_pick_up_name"
+      _ -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_pick_up_no_action"
     ContinueCmd -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "continue_cmd"
     Restart err -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "restart"
     UpdateSourceName lat lon name -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_source_name"
@@ -387,17 +432,6 @@ instance loggableAction :: Loggable Action where
       RequestInfoCard.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "request_info_card" "no_action"
     PreferencesDropDown -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "preferences_drop_down"
     OnIconClick autoAssign -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "close_icon_auto_assign"
-    PopUpModalAction act -> case act of
-        PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_action" "on_goback"
-        PopUpModal.OnButton2Click -> do
-          trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_action" "register_on_different_number"
-          trackAppEndScreen appId (getScreen HOME_SCREEN)
-        PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_action" "no_action"
-        PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_action" "image"
-        PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "popup_modal_action" "primary_edit_text"
-        PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "countdown_updated"
-        PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "tip_clicked"
-        PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "popup_dismissed"
     ReferralFlowAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "have_referral_code"
     ReferralFlowNoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "have_referral_code_no_action"
     NewUser -> do
@@ -468,8 +502,8 @@ data ScreenOutput = LogoutUser
                   | CheckFlowStatus HomeScreenState
 
 data Action = NoAction 
-            | BackPressed 
-            | CancelSearch
+            | BackPressed HomeScreenState
+            | CancelSearch HomeScreenState
             | RecenterCurrentLocation
             | SidebarCloseAnimationCompleted
             | NotificationListener String
@@ -485,18 +519,18 @@ data Action = NoAction
             | UpdateSource String String String
             | Restart ErrorResponse
             | CurrentLocation String String
-            | PrimaryButtonActionController PrimaryButtonController.Action 
+            | PrimaryButtonActionController HomeScreenState PrimaryButtonController.Action
             | SettingSideBarActionController SettingSideBarController.Action
             | PricingTutorialModelActionController PricingTutorialModelController.Action
             | SourceToDestinationActionController SourceToDestinationController.Action
-            | SearchLocationModelActionController SearchLocationModelController.Action
+            | SearchLocationModelActionController HomeScreenState SearchLocationModelController.Action
             | QuoteListModelActionController QuoteListModelController.Action
             | DriverInfoCardActionController DriverInfoCardController.Action
             | RatingCardAC RatingCard.Action
             | UpdateLocation String String String
             | RateRideButtonActionController PrimaryButtonController.Action 
             | CancelRidePopUpAction CancelRidePopUp.Action
-            | PopUpModalAction PopUpModal.Action
+            | PopUpModalAction HomeScreenState PopUpModal.Action
             | TrackDriver GetDriverLocationResp
             | HandleCallback
             | UpdatePickupLocation String String String
@@ -624,7 +658,7 @@ eval (ChatViewActionController (ChatView.SendSuggestion chatSuggestion)) state =
 eval (ChatViewActionController (ChatView.BackPressed)) state = do
   _ <- pure $ hideKeyboardOnNavigation true
   continueWithCmd state [do 
-      pure $ BackPressed 
+      pure $ BackPressed state
     ]
 
 eval InitializeChat state = do
@@ -643,8 +677,9 @@ eval (DriverInfoCardActionController (DriverInfoCardController.MessageDriver)) s
   _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (length state.data.messages))
   continue state {props {currentStage = ChatWithDriver, sendMessageActive = false, unReadMessages = false }}
 
-eval BackPressed state = do
+eval (BackPressed backPressState) state = do
   _ <- pure $ toggleBtnLoader "" false  
+  _ <- pure $ spy "testing2" state.props.currentStage
   case state.props.currentStage of 
     SearchLocationModel -> do 
                             if state.props.isSaveFavourite then continueWithCmd state [pure $ (SaveFavouriteCardAction (SaveFavouriteCardController.OnClose))]
@@ -807,7 +842,7 @@ eval (SettingSideBarActionController (SettingSideBarController.OnClose)) state =
                                                     if state.props.currentStage == HomeScreen then do
                                                       _ <- pure $ minimizeApp ""
                                                       continue state
-                                                      else continueWithCmd state [pure $ BackPressed]
+                                                      else continueWithCmd state [pure $ BackPressed state]
                 _                               -> continue state {data{settingSideBar{opened = SettingSideBarController.CLOSING}}}
 
 eval (SettingSideBarActionController (SettingSideBarController.OnLogout)) state = continue state { props { isPopUp = Logout } }
@@ -823,14 +858,17 @@ eval (SettingSideBarActionController (SettingSideBarController.LiveStatsDashboar
       _ <- openUrlInApp "https://nammayatri.in/open?source=in-app"
       pure NoAction
     ]
-  else continue state {props {showLiveDashboard = true}}
+   
+  else do
+    _ <- pure $ spy "imside_else" ""
+    continue state {props {showLiveDashboard = true}}
 
-eval (SearchLocationModelActionController (SearchLocationModelController.PrimaryButtonActionController PrimaryButtonController.OnClick)) state = do 
+eval (SearchLocationModelActionController searchlocState (SearchLocationModelController.PrimaryButtonActionController PrimaryButtonController.OnClick)) state = do 
   _ <- pure $ exitLocateOnMap ""
   let newState = state{props{isSource = Just false, sourceSelectedOnMap = if (state.props.isSource == Just true) then true else state.props.sourceSelectedOnMap, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, locateOnMap = false}} 
   updateAndExit newState $ LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false newState
 
-eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = do
+eval (PrimaryButtonActionController primaryBtnState (PrimaryButtonController.OnClick)) state = do
     _ <- pure $ spy "state homeScreen" state
     case state.props.currentStage of 
       HomeScreen   -> do
@@ -879,12 +917,13 @@ eval (SearchExpireCountDown seconds id status timerID) state = do
   else
     continue state { props { searchExpire = seconds } }
 
-eval CancelSearch state = case state.props.currentStage of
-  FindingEstimate -> do
-    _ <- pure $ updateLocalStage SearchLocationModel
-    continue state { props { currentStage = SearchLocationModel, rideRequestFlow = false, isSearchLocation = SearchLocation } }
-  ConfirmingRide -> continue state { props { currentStage = SettingPrice, isSearchLocation = NoView } }
-  _ -> continue state
+eval (CancelSearch cancelSearchState) state = do
+  case state.props.currentStage of  
+    FindingEstimate -> do
+      _ <- pure $ updateLocalStage SearchLocationModel
+      continue state { props { currentStage = SearchLocationModel, rideRequestFlow = false, isSearchLocation = SearchLocation } }
+    ConfirmingRide -> continue state { props { currentStage = SettingPrice, isSearchLocation = NoView } }
+    _ -> continue state
 
 eval SidebarCloseAnimationCompleted state = continue state --{props{sideBarStatus = SettingSideBarController.CLOSED}}
 
@@ -1001,7 +1040,7 @@ eval (SaveFavouriteCardAction (SaveFavouriteCardController.PrimayEditTA (Primary
   let updatedState = state{data{saveFavouriteCard{isBtnActive = ((STR.length input) >=3),tagExists = not (validTag (getSavedTagsFromHome state.data.savedLocations) input ""),tag = input}}}  
   continue updatedState
   
-eval (SearchLocationModelActionController (SearchLocationModelController.LocationListItemActionController (LocationListItemController.FavClick item))) state = continueWithCmd state [pure $ (PredictionClickedAction (LocationListItemController.FavClick item))]
+eval (SearchLocationModelActionController searchlocState (SearchLocationModelController.LocationListItemActionController (LocationListItemController.FavClick item))) state = continueWithCmd state [pure $ (PredictionClickedAction (LocationListItemController.FavClick item))]
 
 eval (FavouriteLocationModelAC (FavouriteLocationModelController.GenericHeaderAC (GenericHeaderController.PrefixImgOnClick))) state = continue state { props { currentStage = if state.props.isSearchLocation == NoView then HomeScreen else SearchLocationModel} }
 
@@ -1021,31 +1060,31 @@ eval (FavouriteLocationModelAC (FavouriteLocationModelController.FavouriteLocati
 
 eval (SavedAddressClicked (LocationTagBarController.TagClick savedAddressType arrItem)) state =  tagClickEvent savedAddressType arrItem state{data{source = "Current Location"}, props{isSource = Just false}} 
 
-eval (SearchLocationModelActionController (SearchLocationModelController.SavedAddressClicked (LocationTagBarController.TagClick savedAddressType arrItem))) state = tagClickEvent savedAddressType arrItem state
+eval (SearchLocationModelActionController searchlocState (SearchLocationModelController.SavedAddressClicked (LocationTagBarController.TagClick savedAddressType arrItem))) state = tagClickEvent savedAddressType arrItem state
 
 eval (TagClick savedAddressType arrItem) state = tagClickEvent savedAddressType arrItem state
 
-eval (SearchLocationModelActionController (SearchLocationModelController.LocationListItemActionController (LocationListItemController.OnClick item))) state = do
+eval (SearchLocationModelActionController searchlocState (SearchLocationModelController.LocationListItemActionController (LocationListItemController.OnClick item))) state = do
   _ <- pure $ firebaseLogEvent "ny_user_location_list_item"
   let condition = state.props.isSource == Just true && item.locationItemType == Just RECENTS
   locationSelected item{tag=if condition then "RECENT" else item.tag} true state{ props { sourceSelectedOnMap = if condition then true else state.props.sourceSelectedOnMap }}
 
 eval (ExitLocationSelected item addToRecents)state = exit $ LocationSelected item  addToRecents state
 
-eval (SearchLocationModelActionController (SearchLocationModelController.PrimaryButtonActionController  PrimaryButtonController.OnClick)) state =
+eval (SearchLocationModelActionController searchLocState (SearchLocationModelController.PrimaryButtonActionController PrimaryButtonController.OnClick)) state =
       case state.props.selectedQuote,(null state.data.quoteListModelState),(getValueToLocalStore LOCAL_STAGE) of
                     Nothing, true, "SearchLocationModel"  -> exit $ LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false state
                     Just _ , false, _                     -> exit $ ConfirmRide state
                     Nothing, true, "QuoteList"            -> exit $ GoToHome
                     _,_,_                                 -> continue state
 
-eval (SearchLocationModelActionController (SearchLocationModelController.DebounceCallBack searchString)) state = do
+eval (SearchLocationModelActionController searchlocState (SearchLocationModelController.DebounceCallBack searchString)) state = do
   if (STR.length searchString > 3) then
     validateSearchInput state searchString
   else
     continue state
 
-eval (SearchLocationModelActionController (SearchLocationModelController.SourceChanged input)) state = do
+eval (SearchLocationModelActionController searchlocState (SearchLocationModelController.SourceChanged input)) state = do
   _ <- pure $ (setText' (getNewIDWithTag "SourceEditText") input)
   let 
     newState = state {props{sourceSelectedOnMap = if (state.props.locateOnMap) then true else state.props.sourceSelectedOnMap}}
@@ -1062,7 +1101,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SourceC
           pure NoAction
       ]
 
-eval (SearchLocationModelActionController (SearchLocationModelController.DestinationChanged input)) state = do
+eval (SearchLocationModelActionController searchlocState (SearchLocationModelController.DestinationChanged input)) state = do
   _ <- pure $ (setText' (getNewIDWithTag "DestinationEditText") input)
   if (input /= state.data.destination) then do
     continueWithCmd state { props { isRideServiceable = true } }
@@ -1077,7 +1116,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Destina
           pure NoAction
       ]
 
-eval (SearchLocationModelActionController (SearchLocationModelController.EditTextFocusChanged textType)) state = do
+eval (SearchLocationModelActionController searchlocState (SearchLocationModelController.EditTextFocusChanged textType)) state = do
   _ <- pure $ spy "searchLocationModal" textType
   if textType == "D" then
     continueWithCmd state { props { isSource = Just false } }
@@ -1098,9 +1137,9 @@ eval (SearchLocationModelActionController (SearchLocationModelController.EditTex
             pure $ NoAction
       ]
 
-eval (SearchLocationModelActionController (SearchLocationModelController.NoAction)) state = continue state
+eval (SearchLocationModelActionController searchlocState (SearchLocationModelController.NoAction)) state = continue state
 
-eval (SearchLocationModelActionController (SearchLocationModelController.SourceClear)) state = do
+eval (SearchLocationModelActionController searchlocState (SearchLocationModelController.SourceClear)) state = do
   if (state.props.isSearchLocation /= LocateOnMap) then do
     _ <- pure $ requestKeyboardShow (getNewIDWithTag "SourceEditText")
     pure unit
@@ -1108,7 +1147,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SourceC
     pure unit
   continue state { data { source = "" }, props { sourceLat = -0.1, sourceLong = -0.1, sourcePlaceId = Nothing, isSource = Just true, isSrcServiceable = true, isRideServiceable = true } } 
 
-eval (SearchLocationModelActionController (SearchLocationModelController.DestinationClear)) state = do
+eval (SearchLocationModelActionController searchlocState (SearchLocationModelController.DestinationClear)) state = do
   if (state.props.isSearchLocation /= LocateOnMap) then do
     _ <- pure $ requestKeyboardShow (getNewIDWithTag "DestinationEditText")
     pure unit
@@ -1116,19 +1155,19 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Destina
     pure unit
   continue state { data { destination = "" }, props { destinationLat = -0.1, destinationLong = -0.1, destinationPlaceId = Nothing, isSource = Just false, isDestServiceable = true, isRideServiceable = true } } 
 
-eval (SearchLocationModelActionController (SearchLocationModelController.GoBack)) state =
+eval (SearchLocationModelActionController searchlocState (SearchLocationModelController.GoBack)) state =
   continueWithCmd state
     [ do
         _ <- pure $ hideKeyboardOnNavigation true
-        pure $ BackPressed
+        pure $ BackPressed state
     ]
 
-eval (SearchLocationModelActionController (SearchLocationModelController.SetCurrentLocation)) state = do
+eval (SearchLocationModelActionController searchlocState (SearchLocationModelController.SetCurrentLocation)) state = do
   _ <- pure $ currentPosition ""
   _ <- pure $ firebaseLogEvent "ny_user_currentlocation_click"
   continue state{props{ sourceSelectedOnMap = if (state.props.isSource == Just true) then false else state.props.sourceSelectedOnMap}}
 
-eval (SearchLocationModelActionController (SearchLocationModelController.SetLocationOnMap)) state = do
+eval (SearchLocationModelActionController searchlocState (SearchLocationModelController.SetLocationOnMap)) state = do
   _ <- pure $ locateOnMap true 0.0 0.0
   _ <- pure $ removeAllPolylines ""
   _ <- pure $ hideKeyboardOnNavigation true
@@ -1136,7 +1175,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SetLoca
   let newState = state{props{isSearchLocation = LocateOnMap, currentStage = SearchLocationModel, locateOnMap = true, isRideServiceable = true, showlocUnserviceablePopUp = false}}
   (updateAndExit newState) $ UpdatedState newState false
 
-eval (SearchLocationModelActionController (SearchLocationModelController.UpdateSource lat lng name)) state = do 
+eval (SearchLocationModelActionController searchlocState (SearchLocationModelController.UpdateSource lat lng name)) state = do 
   _ <- pure $ hideKeyboardOnNavigation true
   if state.props.isSource == Just true then do 
     let newState = state{data{source = name,sourceAddress = encodeAddress name [] Nothing},props{ sourceLat= fromMaybe 0.0 (NUM.fromString lat),  sourceLong = fromMaybe 0.0 (NUM.fromString lng), sourcePlaceId = Nothing}}
@@ -1190,7 +1229,7 @@ eval (QuoteListModelActionController (QuoteListModelController.PrimaryButtonActi
       updateAndExit newState $ ConfirmRide newState
     _, _ -> continue state
 
-eval (QuoteListModelActionController (QuoteListModelController.GoBack)) state = continueWithCmd state [ do pure $ BackPressed ]
+eval (QuoteListModelActionController (QuoteListModelController.GoBack)) state = continueWithCmd state [ do pure $ BackPressed state]
 
 eval (QuoteListModelActionController (QuoteListModelController.TryAgainButtonActionController  PrimaryButtonController.OnClick)) state = updateAndExit state $ LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false state{props{currentStage = TryAgain, sourceSelectedOnMap = true}}
 
@@ -1198,7 +1237,7 @@ eval (QuoteListModelActionController (QuoteListModelController.HomeButtonActionC
 
 eval (Restart err) state = exit $ (LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false state)
 
-eval (PopUpModalAction (PopUpModal.OnButton1Click)) state =   case state.props.isPopUp of
+eval (PopUpModalAction popUpState (PopUpModal.OnButton1Click)) state =   case state.props.isPopUp of
   TipsPopUp -> do
     _ <- pure $ firebaseLogEvent if state.props.customerTip.isTipSelected then ("ny_added_tip_for_" <> (show state.props.currentStage)) else "ny_no_tip_added"
     updateAndExit state{props{isPopUp = NoPopUp}} $ LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false state{props{currentStage = TryAgain, sourceSelectedOnMap = true, isPopUp = NoPopUp}}
@@ -1206,7 +1245,7 @@ eval (PopUpModalAction (PopUpModal.OnButton1Click)) state =   case state.props.i
     _ <- pure $ firebaseLogEvent "ny_tip_not_applicable"
     if (isLocalStageOn FindingQuotes ) then exit $ CheckCurrentStatus else updateAndExit state{props{isPopUp = NoPopUp}} $ LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false state{props{currentStage = TryAgain, sourceSelectedOnMap = true, isPopUp = NoPopUp}}
 
-eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = case state.props.isPopUp of
+eval (PopUpModalAction popUpState (PopUpModal.OnButton2Click)) state = case state.props.isPopUp of
   TipsPopUp -> case state.props.currentStage of 
     QuoteList -> updateAndExit state CheckCurrentStatus
     FindingQuotes -> exit $ CheckCurrentStatus
@@ -1221,11 +1260,11 @@ eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = case state.props.isP
   NoPopUp -> continue state
   ActiveQuotePopUp -> exit $ CheckCurrentStatus
 
-eval (PopUpModalAction (PopUpModal.Tipbtnclick index value)) state = case state.props.isPopUp of
+eval (PopUpModalAction popUpState (PopUpModal.Tipbtnclick index value)) state = case state.props.isPopUp of
     TipsPopUp -> continue state{props{customerTip{tipActiveIndex = index, tipForDriver= value, isTipSelected = not (index == 0)}}}
     _ -> continue state
 
-eval (PopUpModalAction (PopUpModal.DismissPopup)) state = do
+eval (PopUpModalAction  popUpState (PopUpModal.DismissPopup)) state = do
   let newState = if (isLocalStageOn QuoteList) then state else state{props{isPopUp = NoPopUp, customerTip{tipActiveIndex = 1,tipForDriver = 10, isTipSelected = false} }}
   continue newState
 
@@ -1429,9 +1468,9 @@ eval (NotificationListener notificationType) state = do
 
 eval RecenterCurrentLocation state = recenterCurrentLocation state
 
-eval (SearchLocationModelActionController (SearchLocationModelController.RecenterCurrentLocation)) state = recenterCurrentLocation state 
+eval (SearchLocationModelActionController searchlocState (SearchLocationModelController.RecenterCurrentLocation)) state = recenterCurrentLocation state 
 
-eval (SearchLocationModelActionController (SearchLocationModelController.UpdateCurrentLocation lat lng)) state = updateCurrentLocation state lat lng
+eval (SearchLocationModelActionController searchlocState (SearchLocationModelController.UpdateCurrentLocation lat lng)) state = updateCurrentLocation state lat lng
 
 eval (UpdateCurrentLocation lat lng) state = updateCurrentLocation state lat lng
 

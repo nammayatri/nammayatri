@@ -40,8 +40,11 @@ instance loggableAction :: Loggable Action where
         BackPressed -> do
             trackAppBackPress appId (getScreen TRIP_DETAILS_SCREEN)
             trackAppEndScreen appId (getScreen TRIP_DETAILS_SCREEN)
-        PrimaryButtonActionController act -> case act of
-            PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "primary_button" "go_home_or_submit"
+        PrimaryButtonActionController primaryBtnState act -> case act of
+            PrimaryButtonController.OnClick -> do
+                if primaryBtnState.props.issueReported then 
+                    trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "primary_button" "go_home" 
+                else trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "primary_button" "submit"
             PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "primary_button" "no_action"
         GenericHeaderActionController act -> case act of
             GenericHeaderController.PrefixImgOnClick -> do
@@ -67,7 +70,7 @@ instance loggableAction :: Loggable Action where
         SourceToDestinationActionController (SourceToDestinationController.Dummy) -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "source_to_destination"
         NoAction -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "no_action"
 
-data Action = PrimaryButtonActionController PrimaryButtonController.Action
+data Action = PrimaryButtonActionController TripDetailsScreenState PrimaryButtonController.Action
             | GenericHeaderActionController GenericHeaderController.Action
             | SourceToDestinationActionController SourceToDestinationController.Action 
             | BackPressed
@@ -100,7 +103,7 @@ eval (MessageTextChanged a) state = continue state { data { message = trim(a) },
 
 eval (GenericHeaderActionController (GenericHeaderController.PrefixImgOnClick )) state = continueWithCmd state [do pure BackPressed]
 
-eval (PrimaryButtonActionController PrimaryButtonController.OnClick) state = do
+eval (PrimaryButtonActionController primaryBtnState PrimaryButtonController.OnClick) state = do
     _ <- pure $ hideKeyboardOnNavigation true
     if state.props.issueReported then 
         updateAndExit state  GoHome 
