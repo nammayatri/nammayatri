@@ -26,6 +26,7 @@ import Kernel.Types.App (MonadFlow)
 
 data Address = Address
   { street :: Maybe Text,
+    door :: Maybe Text,
     city :: Maybe Text,
     state :: Maybe Text,
     country :: Maybe Text,
@@ -44,6 +45,7 @@ mkLocation placeNameResp = do
     Address
       { areaCode = getField ["postal_code"] hashMap,
         street = getField ["route", "street_address"] hashMap,
+        door = Nothing,
         city = getField ["locality"] hashMap,
         state = getField ["administrative_area_level_1"] hashMap,
         country = getField ["country"] hashMap,

@@ -182,6 +182,7 @@ buildSearchReqLocation merchantId sessionToken address customerLanguage latLong@
           Address
             { areaCode = loc.area_code,
               street = loc.street,
+              door = loc.door,
               city = loc.city,
               state = loc.state,
               country = loc.country,
