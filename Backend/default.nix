@@ -25,12 +25,15 @@
       # Some tests fail under Nix. We shoud probably run them in CI directly.
       overrides = self: super:
         with pkgs.haskell.lib.compose;
-        lib.mapAttrs (k: lib.pipe super.${k}) {
+        let
+          defaultOverrides = import ./nix/default-overrides.nix { inherit config pkgs lib; };
+        in
+        lib.mapAttrs (k: lib.pipe super.${k}) (defaultOverrides // {
           # location-updates-tests: Network.Socket.connect: <socket: 6>: does not exist (Connection refused)
-          location-updates = [ dontCheck ];
+          location-updates = defaultOverrides.location-updates ++ [ dontCheck ];
           # tries to find dhall files from wrong CWD
-          beckn-test = [ dontCheck ];
-        };
+          beckn-test = defaultOverrides.beckn-test ++ [ dontCheck ];
+        });
     };
 
     packages = {
@@ -39,7 +42,7 @@
       nammayatri =
         let
           localCabalPackages = builtins.map
-            (p: pkgs.haskell.lib.justStaticExecutables p.package)
+            (p: if p.exes != { } then lib.getBin p.package else null)
             (lib.attrValues config.haskellProjects.default.outputs.packages);
         in
         pkgs.symlinkJoin {
@@ -58,6 +61,5 @@
           '';
         };
     };
-
   };
 }
