@@ -33,11 +33,11 @@ mkOnSearchMessage DOnSearch.DOnSearchRes {..} = do
   let catalogDescriptor = OnSearch.Descriptor "Yatri partner"
       provider =
         OnSearch.Provider
-          { id = transporterInfo.subscriberId.getShortId,
-            descriptor = OnSearch.Descriptor transporterInfo.name,
+          { id = transporterInfo . subscriberId . getShortId,
+            descriptor = OnSearch.Descriptor transporterInfo . name,
             locations = [],
             categories = [mkCategory fareProductType],
-            contacts = transporterInfo.contacts,
+            contacts = transporterInfo . contacts,
             tags = mkTags transporterInfo,
             add_ons = [],
             payment = mkPayment,
@@ -53,8 +53,8 @@ mkOnSearchMessage DOnSearch.DOnSearchRes {..} = do
 mkMainOneWayEntities :: (DOneWaySearch.QuoteInfo, Int) -> (OnSearch.Item, OnSearch.FulfillmentInfo, Maybe OnSearch.Offer)
 mkMainOneWayEntities (quoteInfo, quoteNum) = do
   let fulfillment = mkOneWayFulfillment quoteInfo quoteNum
-      offer = quoteInfo.discount $> mkOffer quoteNum
-      item = mkOneWayItem quoteInfo (offer <&> (.id)) fulfillment.id
+      offer = quoteInfo . discount $> mkOffer quoteNum
+      item = mkOneWayItem quoteInfo (offer <&> (. id)) fulfillment . id
   (item, fulfillment, offer)
 
 mkOneWayItem :: DOneWaySearch.QuoteInfo -> Maybe Text -> Text -> OnSearch.Item
@@ -92,13 +92,12 @@ mkOneWayItem DOneWaySearch.QuoteInfo {..} offer_id fulfillment_id = do
             drivers_location = []
           }
   OnSearch.Item
-    { id = Nothing,
+    { id = Just $ show OnSearch.ONE_WAY_TRIP,
       category_id = OnSearch.ONE_WAY_TRIP,
       base_distance = Nothing,
       base_duration = Nothing,
       quote_terms = [],
       tags = Just tags,
-      id = show OnSearch.ONE_WAY_TRIP,
       ..
     }
 
@@ -134,8 +133,8 @@ mkOneWayFulfillment DOneWaySearch.QuoteInfo {..} fulfillmentId = do
 mkMainRentalEntities :: (DRentalSearch.QuoteInfo, Int) -> (OnSearch.Item, OnSearch.FulfillmentInfo, Maybe OnSearch.Offer)
 mkMainRentalEntities (quoteInfo, quoteNum) = do
   let fulfillment = mkRentalFulfillment quoteInfo quoteNum
-      offer = quoteInfo.discount $> mkOffer quoteNum
-      item = mkRentalItem quoteInfo (offer <&> (.id)) fulfillment.id
+      offer = quoteInfo . discount $> mkOffer quoteNum
+      item = mkRentalItem quoteInfo (offer <&> (. id)) fulfillment . id
   (item, fulfillment, offer)
 
 mkRentalFulfillment :: DRentalSearch.QuoteInfo -> Int -> OnSearch.FulfillmentInfo
@@ -185,7 +184,7 @@ mkRentalItem DRentalSearch.QuoteInfo {..} offer_id fulfillment_id = do
       base_duration = Just baseDuration,
       quote_terms = descriptions,
       tags = Nothing,
-      id = show OnSearch.ONE_WAY_TRIP,
+      id = Just $ show OnSearch.ONE_WAY_TRIP,
       ..
     }
 
@@ -217,9 +216,9 @@ mkCategory DFP.RENTAL = do
 mkTags :: DOnSearch.TransporterInfo -> OnSearch.ProviderTags
 mkTags transporterInfo =
   OnSearch.ProviderTags
-    { rides_inprogress = transporterInfo.ridesInProgress,
-      rides_completed = transporterInfo.ridesCompleted,
-      rides_confirmed = transporterInfo.ridesConfirmed
+    { rides_inprogress = transporterInfo . ridesInProgress,
+      rides_completed = transporterInfo . ridesCompleted,
+      rides_confirmed = transporterInfo . ridesConfirmed
     }
 
 castVehicleVariant :: Veh.Variant -> OnSearch.VehicleVariant

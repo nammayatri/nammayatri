@@ -71,7 +71,8 @@ getDriverLoc rideId personId = do
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   when
     (ride.status == COMPLETED || ride.status == CANCELLED)
-    $ throwError $ RideInvalidStatus "Cannot track this ride"
+    $ throwError
+    $ RideInvalidStatus "Cannot track this ride"
   res <- CallBPP.callGetDriverLocation ride
   booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   let fromLocation = Maps.getCoordinates booking.fromLocation
@@ -122,8 +123,8 @@ getRideStatus rideId personId = withLogTag ("personId-" <> personId.getId) do
       { fromLocation = makeBookingLocationAPIEntity booking.fromLocation,
         toLocation = case booking.bookingDetails of
           DB.OneWayDetails details -> Just $ makeBookingLocationAPIEntity details.toLocation
-          DB.RecurringDetails details -> Just $ makeBookingLocationAPIEntity details.toLocation
           DB.RentalDetails _ -> Nothing
+          DB.RecurringDetails details -> Just $ makeBookingLocationAPIEntity details.toLocation
           DB.OneWaySpecialZoneDetails details -> Just $ makeBookingLocationAPIEntity details.toLocation
           DB.DriverOfferDetails details -> Just $ makeBookingLocationAPIEntity details.toLocation,
         ride = makeRideAPIEntity ride,

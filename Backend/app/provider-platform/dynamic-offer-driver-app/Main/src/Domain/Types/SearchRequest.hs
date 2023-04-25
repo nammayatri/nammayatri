@@ -48,7 +48,8 @@ data SearchRequest = SearchRequest
     vehicleVariant :: Variant.Variant,
     status :: SearchRequestStatus,
     autoAssignEnabled :: Bool,
-    searchRepeatCounter :: Int
+    searchRepeatCounter :: Int,
+    automatedSearch :: Bool
   }
   deriving (Generic, PrettyShow, Show)
 

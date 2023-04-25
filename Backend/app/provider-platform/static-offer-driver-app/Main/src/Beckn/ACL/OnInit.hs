@@ -24,19 +24,20 @@ mkOnInitMessage res =
   OnInit.OnInitMessage
     { order =
         OnInit.Order
-          { id = booking.id.getId,
+          { id = booking . id . getId,
             state = OnInit.NEW,
             items = Nothing,
             quote =
               OnInit.Quote
-                { price = mkPrice booking.estimatedFare booking.estimatedTotalFare,
-                  breakup = mkBreakup booking.estimatedFare booking.discount
+                { price = mkPrice booking . estimatedFare booking . estimatedTotalFare,
+                  breakup = mkBreakup booking . estimatedFare booking . discount
                 },
-            payment = mkPayment booking.estimatedTotalFare
+            payment = mkPayment booking . estimatedTotalFare,
+            fulfillment = Nothing
           }
     }
   where
-    booking = res.booking
+    booking = res . booking
 
 mkPrice :: Money -> Money -> OnInit.QuotePrice
 mkPrice estimatedFare estimatedTotalFare =

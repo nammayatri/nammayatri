@@ -28,6 +28,7 @@ import Kernel.Utils.Servant.SignatureAuth
 import Lib.Scheduler
 import qualified Lib.Scheduler.JobStorageType.DB.Queries as QAllJ
 import SharedLogic.Allocator
+import qualified SharedLogic.Allocator.Jobs.AllocateDriverForUpcomingRide as AllocateDriverForUpcomingRide
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers)
 import qualified Storage.CachedQueries.Merchant as Storage
 
@@ -35,7 +36,7 @@ allocatorHandle :: R.FlowRuntime -> HandlerEnv -> SchedulerHandle AllocatorJobTy
 allocatorHandle flowRt env =
   SchedulerHandle
     { getTasksById = QAllJ.getTasksById,
-      getReadyTasks = QAllJ.getReadyTasks $ Just env.maxShards,
+      getReadyTasks = QAllJ.getReadyTasks $ Just env . maxShards,
       markAsComplete = QAllJ.markAsComplete,
       markAsFailed = QAllJ.markAsFailed,
       updateErrorCountAndFail = QAllJ.updateErrorCountAndFail,
@@ -45,6 +46,7 @@ allocatorHandle flowRt env =
       jobHandlers =
         emptyJobHandlerList
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendSearchRequestToDrivers)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . AllocateDriverForUpcomingRide.handle)
     }
 
 runDriverOfferAllocator ::
@@ -54,21 +56,21 @@ runDriverOfferAllocator configModifier = do
   handlerCfg <- configModifier <$> readDhallConfigDefault "driver-offer-allocator"
   handlerEnv <- buildHandlerEnv handlerCfg
   hostname <- getPodName
-  let loggerRt = L.getEulerLoggerRuntime hostname handlerCfg.appCfg.loggerConfig
+  let loggerRt = L.getEulerLoggerRuntime hostname handlerCfg . appCfg . loggerConfig
 
   R.withFlowRuntime (Just loggerRt) \flowRt -> do
     flowRt' <- runFlowR flowRt handlerEnv $ do
       withLogTag "Server startup" $ do
-        migrateIfNeeded handlerCfg.appCfg.migrationPath handlerCfg.appCfg.autoMigrate handlerCfg.appCfg.esqDBCfg
+        migrateIfNeeded handlerCfg . appCfg . migrationPath handlerCfg . appCfg . autoMigrate handlerCfg . appCfg . esqDBCfg
           >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
 
         logInfo "Setting up for signature auth..."
         allProviders <-
           try Storage.loadAllProviders
             >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
-        let allSubscriberIds = map ((.subscriberId.getShortId) &&& (.uniqueKeyId)) allProviders
+        let allSubscriberIds = map ((. subscriberId . getShortId) &&& (. uniqueKeyId)) allProviders
         flowRt' <- modFlowRtWithAuthManagers flowRt handlerEnv allSubscriberIds
 
-        logInfo ("Runtime created. Starting server at port " <> show (handlerCfg.schedulerConfig.port))
+        logInfo ("Runtime created. Starting server at port " <> show (handlerCfg . schedulerConfig . port))
         pure flowRt'
-    runSchedulerService handlerCfg.schedulerConfig $ allocatorHandle flowRt' handlerEnv
+    runSchedulerService handlerCfg . schedulerConfig $ allocatorHandle flowRt' handlerEnv

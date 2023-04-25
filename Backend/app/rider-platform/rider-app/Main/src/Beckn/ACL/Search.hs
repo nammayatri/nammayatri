@@ -43,14 +43,14 @@ buildOneWaySearchReq ::
   Maybe Text ->
   m (BecknReq Search.SearchMessage)
 buildOneWaySearchReq DOneWaySearch.OneWaySearchRes {..} routeInto =
-    buildSearchReq origin (Just destination) searchId (OnlyTime now) routeInto city
+  buildSearchReq origin (Just destination) searchId (OnlyTime now) routeInto city
 
 buildRentalSearchReq ::
   (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
   DRentalSearch.RentalSearchRes ->
   m (BecknReq Search.SearchMessage)
 buildRentalSearchReq DRentalSearch.RentalSearchRes {..} =
-    buildSearchReq origin Nothing searchId (OnlyTime startTime) Nothing city Nothing
+  buildSearchReq origin Nothing searchId (OnlyTime startTime) Nothing city Nothing
 
 buildRecurringSearchReq ::
   (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>

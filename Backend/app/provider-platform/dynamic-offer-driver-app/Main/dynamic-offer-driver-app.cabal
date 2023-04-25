@@ -80,6 +80,7 @@ library
       Beckn.ACL.Select
       Beckn.ACL.Track
       Beckn.Core
+      CliApp
       Domain.Action.Beckn.Cancel
       Domain.Action.Beckn.Confirm
       Domain.Action.Beckn.Init
@@ -186,6 +187,7 @@ library
       Domain.Types.SearchRequestSentToDriverEvent
       Domain.Types.SearchRequestSpecialZone
       Domain.Types.SlabFarePolicy
+      Domain.Types.TimeRange
       Domain.Types.Timetable
       Domain.Types.Vehicle
       Domain.Types.Vehicle.Variant
@@ -194,6 +196,8 @@ library
       Lib.DriverScore.Types
       Lib.LocationUpdates
       SharedLogic.Allocator
+      SharedLogic.Allocator.Jobs.AllocateDriverForUpcomingRide
+      SharedLogic.Allocator.Jobs.CreateUpcomingRides
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal
@@ -239,6 +243,7 @@ library
       Storage.CachedQueries.Merchant.TransporterConfig
       Storage.CachedQueries.OnboardingDocumentConfig
       Storage.CachedQueries.SlabFarePolicy
+      Storage.Queries.AllocatorJob
       Storage.Queries.Booking
       Storage.Queries.Booking.BookingLocation
       Storage.Queries.BookingCancellationReason
@@ -420,6 +425,7 @@ library
     , extra
     , generic-lens
     , hashmap
+    , hedis
     , hspec
     , http-client
     , lens
@@ -510,10 +516,101 @@ executable dynamic-offer-driver-app-exe
     , extra
     , generic-lens
     , hashmap
+    , hedis
     , hspec
     , http-client
     , lens
     , mobility-core
+    , openapi3
+    , persistent
+    , prometheus-client
+    , record-dot-preprocessor
+    , record-hasfield
+    , resource-pool
+    , scheduler
+    , servant
+    , servant-client
+    , servant-client-core
+    , servant-multipart
+    , servant-openapi3
+    , servant-server
+    , shared-services
+    , singletons
+    , stm
+    , string-conversions
+    , text
+    , text-conversions
+    , time
+    , unordered-containers
+    , uuid
+    , vector
+    , wai
+    , warp
+  default-language: Haskell2010
+
+executable dynamic-offer-driver-cli
+  main-is: Cli.hs
+  other-modules:
+      Main
+      Paths_dynamic_offer_driver_app
+  hs-source-dirs:
+      server
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+      StandaloneDeriving
+      PackageImports
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , beckn-services
+    , bytestring
+    , cassava
+    , containers
+    , cryptonite
+    , dashboard-helper-api
+    , dynamic-offer-driver-app
+    , either
+    , esqueleto
+    , euler-hs
+    , exceptions
+    , extra
+    , generic-lens
+    , hashmap
+    , hedis
+    , hspec
+    , http-client
+    , lens
     , openapi3
     , persistent
     , prometheus-client

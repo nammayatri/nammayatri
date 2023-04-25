@@ -9,10 +9,14 @@
 module Storage.Tabular.Timetable where
 
 import Data.Time.Calendar (Day)
+import Data.Time.LocalTime (LocalTime (..))
+import qualified Domain.Types.RecurringBooking as DRecurringBooking
 import qualified Domain.Types.Timetable as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
+import qualified Storage.Tabular.Booking as SBooking
+import qualified Storage.Tabular.FarePolicy as SFarePolicy
 import qualified Storage.Tabular.RecurringBooking as SRBooking
 
 derivePersistField "Domain.Status"
@@ -23,6 +27,7 @@ mkPersist
     TimetableT sql=timetable
         id Text
         recurringBookingId SRBooking.RecurringBookingTId
+        bookingId SBooking.BookingTId Maybe
         pickupDate Day
         pickupTime TimeOfDay
         status Domain.Status
@@ -42,8 +47,9 @@ instance ToTType TimetableT Domain.Timetable where
     TimetableT
       { id = getId timetable.id,
         recurringBookingId = toKey timetable.recurringBookingId,
-        pickupDate = timetable.pickupDate,
-        pickupTime = timetable.pickupTime,
+        bookingId = fmap toKey timetable.bookingId,
+        pickupDate = localDay timetable.pickupTime,
+        pickupTime = localTimeOfDay timetable.pickupTime,
         status = timetable.status
       }
 
@@ -53,7 +59,21 @@ instance FromTType TimetableT Domain.Timetable where
       Domain.Timetable
         { id = Id (id timetableT),
           recurringBookingId = fromKey (recurringBookingId timetableT),
-          pickupDate = pickupDate timetableT,
-          pickupTime = pickupTime timetableT,
+          bookingId = fmap fromKey (bookingId timetableT),
+          pickupTime = LocalTime (pickupDate timetableT) (pickupTime timetableT),
           status = status timetableT
         }
+
+instance
+  FromTType
+    ( TimetableT,
+      SRBooking.FullRecurringBookingT,
+      SFarePolicy.FarePolicyT
+    )
+    Domain.UpcomingBooking
+  where
+  fromTType (timetableT, bookingT, farePolicyT) = do
+    tt <- fromTType @_ @Domain.Timetable timetableT
+    DRecurringBooking.RecurringBooking {id = recurringBookingId, ..} <- fromTType bookingT
+    farePolicy <- fromTType farePolicyT
+    pure $ Domain.UpcomingBooking {id = tt.id, pickupTime = tt.pickupTime, bookingId = Nothing, ..}

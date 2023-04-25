@@ -99,7 +99,7 @@ generateSearchRequest = do
                                   { gps = API.Gps {lat = 20.5937, lon = 78.9629},
                                     address = Nothing
                                   },
-                              time = API.TimeTimestamp example
+                              time = API.Time example Nothing
                             },
                         end = Nothing
                       }

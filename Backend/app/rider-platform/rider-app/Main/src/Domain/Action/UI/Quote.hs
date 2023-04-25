@@ -26,6 +26,8 @@ import Domain.Types.Estimate (EstimateAPIEntity)
 import qualified Domain.Types.Estimate as DEstimate
 import Domain.Types.Quote (QuoteAPIEntity)
 import qualified Domain.Types.Quote as SQuote
+import Domain.Types.RecurringQuote (RecurringQuoteAPIEntity)
+import qualified Domain.Types.RecurringQuote as SRecurringQuote
 import qualified Domain.Types.SearchRequest as SSR
 import Domain.Types.SearchRequest.SearchReqLocation (SearchReqLocationAPIEntity)
 import qualified Domain.Types.SearchRequest.SearchReqLocation as Location
@@ -47,6 +49,7 @@ import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Quote as QRentalQuote
+import qualified Storage.Queries.RecurringQuote as QRecurringQuote
 import qualified Storage.Queries.SearchRequest as QSR
 import Tools.Error
 
@@ -62,6 +65,7 @@ data OfferRes
   = OnDemandCab QuoteAPIEntity
   | Metro MetroOffer
   | PublicTransport PublicTransportQuote
+  | Recurring RecurringQuoteAPIEntity
   deriving (Show, Generic)
 
 instance ToJSON OfferRes where
@@ -94,13 +98,23 @@ getOffers searchRequest = do
   logDebug $ "search Request is : " <> show searchRequest
   case searchRequest.toLocation of
     Just _ -> do
+      -- On Demand
       quoteList <- runInReplica $ QQuote.findAllByRequestId searchRequest.id
       logDebug $ "quotes are : " <> show quoteList
       let quotes = OnDemandCab . SQuote.makeQuoteAPIEntity <$> sortByNearestDriverDistance quoteList
+
+      -- Recurring
+      recurringQuoteList <- runInReplica $ QRecurringQuote.findAllByRequestId searchRequest.id
+      let recurringQuotes = Recurring . SRecurringQuote.makeQuoteAPIEntity <$> recurringQuoteList
+
+      -- Metro
       metroOffers <- map Metro <$> Metro.getMetroOffers searchRequest.id
+
+      -- Public transport
       publicTransportOffers <- map PublicTransport <$> PublicTransport.getPublicTransportOffers searchRequest.id
-      return . sortBy (compare `on` creationTime) $ quotes <> metroOffers <> publicTransportOffers
+      return . sortBy (compare `on` creationTime) $ quotes <> metroOffers <> publicTransportOffers <> recurringQuotes
     Nothing -> do
+      -- Rental
       quoteList <- runInReplica $ QRentalQuote.findAllByRequestId searchRequest.id
       let quotes = OnDemandCab . SQuote.makeQuoteAPIEntity <$> sortByEstimatedFare quoteList
       return . sortBy (compare `on` creationTime) $ quotes
@@ -118,6 +132,7 @@ getOffers searchRequest = do
     creationTime (OnDemandCab SQuote.QuoteAPIEntity {createdAt}) = createdAt
     creationTime (Metro Metro.MetroOffer {createdAt}) = createdAt
     creationTime (PublicTransport PublicTransportQuote {createdAt}) = createdAt
+    creationTime (Recurring SRecurringQuote.RecurringQuoteAPIEntity {createdAt}) = createdAt
 
 getEstimates :: EsqDBReplicaFlow m r => Id SSR.SearchRequest -> m [DEstimate.EstimateAPIEntity]
 getEstimates searchRequestId = do

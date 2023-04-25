@@ -77,7 +77,6 @@ buildInitReq subscriber req = do
               initTypeReq = initTypeReq,
               maxEstimatedDistance = maxEstimatedDistance
             }
-
   where
     buildInitTypeReq item = do
       let itemCode = item.descriptor.code

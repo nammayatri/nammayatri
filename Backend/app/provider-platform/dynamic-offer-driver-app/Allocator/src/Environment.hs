@@ -66,7 +66,11 @@ data HandlerEnv = HandlerEnv
     coreMetrics :: CoreMetricsContainer,
     ssrMetrics :: SendSearchRequestToDriverMetricsContainer,
     maxShards :: Int,
+<<<<<<< HEAD
     version :: DeploymentVersion
+=======
+    nwAddress :: BaseUrl
+>>>>>>> 9732d435f (rider-platform: add recurring quote; provider-platform: add allocation of drivers for upcoming booking; add cli (squashed commit))
   }
   deriving (Generic)
 
@@ -74,11 +78,18 @@ buildHandlerEnv :: HandlerCfg -> IO HandlerEnv
 buildHandlerEnv HandlerCfg {..} = do
   let AppCfg {..} = appCfg
   hostname <- fmap cs <$> lookupEnv "POD_NAME" :: IO (Maybe Text)
+<<<<<<< HEAD
   version <- lookupDeploymentVersion
   loggerEnv <- prepareLoggerEnv appCfg.loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv appCfg.esqDBCfg loggerEnv
   esqDBReplicaEnv <- prepareEsqDBEnv appCfg.esqDBReplicaCfg loggerEnv
   hedisEnv <- connectHedis appCfg.hedisCfg ("driver-offer-allocator:" <>)
+=======
+  loggerEnv <- prepareLoggerEnv appCfg . loggerConfig hostname
+  esqDBEnv <- prepareEsqDBEnv appCfg . esqDBCfg loggerEnv
+  esqDBReplicaEnv <- prepareEsqDBEnv appCfg . esqDBReplicaCfg loggerEnv
+  hedisEnv <- connectHedis appCfg . hedisCfg ("driver-offer-allocator:" <>)
+>>>>>>> 9732d435f (rider-platform: add recurring quote; provider-platform: add allocation of drivers for upcoming booking; add cli (squashed commit))
   ssrMetrics <- registerSendSearchRequestToDriverMetricsContainer
   coreMetrics <- registerCoreMetricsContainer
   return HandlerEnv {..}
@@ -91,5 +102,5 @@ releaseHandlerEnv HandlerEnv {..} = do
 type Flow = FlowR HandlerEnv
 
 instance AuthenticatingEntity HandlerEnv where
-  getSigningKey = (.signingKey)
-  getSignatureExpiry = (.signatureExpiry)
+  getSigningKey = (. signingKey)
+  getSignatureExpiry = (. signatureExpiry)

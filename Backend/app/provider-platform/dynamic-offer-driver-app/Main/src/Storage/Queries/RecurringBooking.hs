@@ -25,7 +25,7 @@ fullRecurringBookingT =
   table @RecurringBookingT
     `innerJoin` table @Loc.BookingLocationT
     `Esq.on` (\(rb :& l) -> rb ^. RecurringBookingFromLocationId ==. l ^. Loc.BookingLocationTId)
-    `innerJoin` table @Loc.BookingLocationT
+      `innerJoin` table @Loc.BookingLocationT
     `Esq.on` (\(rb :& _ :& l) -> rb ^. RecurringBookingToLocationId ==. l ^. Loc.BookingLocationTId)
 
 findById :: Transactionable m => Id RecurringBooking -> m (Maybe RecurringBooking)
@@ -41,8 +41,8 @@ findAllActiveOnDate day = Esq.buildDType $ do
   res <- Esq.findAll' $ do
     (booking :& fromLocation :& toLocation) <- from fullRecurringBookingT
     where_ $
-      booking ^. RecurringBookingStartDate >=. val day
-        &&. (Esq.isNothing (booking ^. RecurringBookingEndDate) ||. booking ^. RecurringBookingEndDate <=. val (Just day))
+      booking ^. RecurringBookingStartDate <. val day
+        &&. (Esq.isNothing (booking ^. RecurringBookingEndDate) ||. booking ^. RecurringBookingEndDate >=. val (Just day))
     pure (booking, fromLocation, toLocation)
   pure $ extractSolidType @RecurringBooking <$> res
 
