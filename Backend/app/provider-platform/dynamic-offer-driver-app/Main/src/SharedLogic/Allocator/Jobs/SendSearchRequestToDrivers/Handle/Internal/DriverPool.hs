@@ -133,10 +133,6 @@ prepareDriverPoolBatch driverPoolCfg searchReq batchNum = withLogTag ("BatchNum-
           let sortedDriverPoolWithSilentSort = splitSilentDrivers sortedDriverPool
           let randomizedDriverPoolWithSilentSort = splitSilentDrivers randomizedDriverPool
           takeDriversUsingPoolPercentage (sortedDriverPoolWithSilentSort, randomizedDriverPoolWithSilentSort) batchSize intelligentPoolConfig
-          where
-            splitSilentDrivers drivers = do
-              let (silentDrivers, activeDrivers) = DL.partition ((== Just DriverInfo.SILENT) . (.driverPoolResult.mode)) drivers
-              activeDrivers <> silentDrivers
 
         makeRandomDriverPool batchSize onlyNewDrivers = take batchSize <$> randomizeAndLimitSelection onlyNewDrivers
 
@@ -183,7 +179,9 @@ prepareDriverPoolBatch driverPoolCfg searchReq batchNum = withLogTag ("BatchNum-
             (sortedDriverPool, randomizedDriverPool) <-
               bimapM (sortWithDriverScore' [AcceptanceRatio, CancellationRatio, AvailableTime, DriverSpeed] True) (sortWithDriverScore' [AvailableTime, DriverSpeed] False)
                 =<< splitDriverPoolForSorting merchantId intelligentPoolConfig.minQuotesToQualifyForIntelligentPool driversWithValidReqAmount -- snd means taking drivers who recieved less then X(config- minQuotesToQualifyForIntelligentPool) quotes
-            takeDriversUsingPoolPercentage (sortedDriverPool, randomizedDriverPool) fillSize intelligentPoolConfig
+            let sortedDriverPoolWithSilentSort = splitSilentDrivers sortedDriverPool
+            let randomizedDriverPoolWithSilentSort = splitSilentDrivers randomizedDriverPool
+            takeDriversUsingPoolPercentage (sortedDriverPoolWithSilentSort, randomizedDriverPoolWithSilentSort) fillSize intelligentPoolConfig
           Random -> pure $ take fillSize driversWithValidReqAmount
     cacheBatch batch = do
       logDebug $ "Caching batch-" <> show batch
@@ -212,6 +210,11 @@ prepareDriverPoolBatch driverPoolCfg searchReq batchNum = withLogTag ("BatchNum-
       return $ (.driverPoolResult.driverId) <$> concat batches
     -- util function
     bimapM fna fnb (a, b) = (,) <$> fna a <*> fnb b
+
+splitSilentDrivers :: [DriverPoolWithActualDistResult] -> [DriverPoolWithActualDistResult]
+splitSilentDrivers drivers = do
+  let (silentDrivers, activeDrivers) = DL.partition ((== Just DriverInfo.SILENT) . (.driverPoolResult.mode)) drivers
+  activeDrivers <> silentDrivers
 
 getDriverPoolBatch ::
   ( Redis.HedisFlow m r
