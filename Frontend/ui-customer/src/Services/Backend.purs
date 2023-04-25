@@ -16,11 +16,14 @@
 module Services.Backend where
 
 import Services.API
-import Services.Config as SC
+
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..))
+import Data.Array ((!!), take)
 import Data.Either (Either(..), either)
 import Data.Maybe (Maybe(..), maybe, fromMaybe)
+import Debug.Trace (spy)
+import Engineering.Helpers.Commons (liftFlow, os, bundleVersion)
 import Foreign.Generic (encode)
 import Helpers.Utils (decodeErrorCode, decodeErrorMessage, toString, getTime, getPreviousVersion)
 import JBridge (Locations, factoryResetApp, setKeyInSharedPrefKeys, toast, toggleLoader, drawRoute, toggleBtnLoader)
@@ -44,6 +47,7 @@ import Engineering.Helpers.Commons (liftFlow, os, bundleVersion, isPreviousVersi
 import Data.Array ((!!), take)
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Services.Config as SC
 import Debug (spy)
 
 getHeaders :: String -> Flow GlobalState Headers
@@ -146,7 +150,8 @@ withAPIResultBT' url enableCache key f errorHandler flow = do
 
 triggerOTPBT :: TriggerOTPReq → FlowBT String TriggerOTPResp
 triggerOTPBT payload = do
-    _ <- lift $ lift $ doAff Readers.initiateSMSRetriever
+    _ <- pure $ spy "inside triggerOTPBT" ""
+    -- _ <- lift $ lift $ doAff Readers.initiateSMSRetriever
     headers <- getHeaders' ""
     withAPIResultBT (EP.triggerOTP "") (\x → x) errorHandler (lift $ lift $ callAPI headers payload)
     where

@@ -152,12 +152,12 @@ foreign import firebaseLogEventWithTwoParams :: String -> String -> String -> St
 foreign import firebaseScreenNameLog :: String  -> Effect Unit
 foreign import firebaseUserID :: String  -> Effect Unit
 -- foreign import closeApp       :: String -> Effect Unit
-foreign import storeCallBackDriverLocationPermission :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
+foreign import storeCallBackDriverLocationPermission :: forall action. (action -> Effect Unit) -> (Boolean -> action) -> Effect Unit
 foreign import setStoreCallBackPopUp :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
 foreign import deletePopUpCallBack :: String -> Unit
 -- foreign import requestLocationPermissionDriver :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
-foreign import storeCallBackOverlayPermission :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
-foreign import storeCallBackBatteryUsagePermission :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
+foreign import storeCallBackOverlayPermission :: forall action. (action -> Effect Unit) -> (Boolean -> action) -> Effect Unit
+foreign import storeCallBackBatteryUsagePermission :: forall action. (action -> Effect Unit) -> (Boolean -> action) -> Effect Unit
 foreign import isInternetAvailable :: Unit -> Effect Boolean
 foreign import storeCallBackInternetAction :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
 

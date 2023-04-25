@@ -850,15 +850,11 @@ export const _onEventWithCB = function (payload) {
 // exports.getSessionInfo = JSON.parse(JBridge.getDeviceInfo());
 
 export const getKeyInSharedPrefKeys = function (key) {
-  return window.JBridge.getKeysInSharedPrefs(key);
+  return JBridge.getKeysInSharedPref(key);
 };
 
 export const getKeyInNativeSharedPrefKeys = function (key) {
-  if (window.__OS == "IOS") {
-    return window.JBridge.getKeysInSharedPrefs(key);
-  } else {
-    return window.JBridge.getKeyInNativeSharedPrefKeys(key);
-  }
+    return JBridge.getKeysInSharedPref(key);
 };
 
 export const setKeyInSharedPrefKeysImpl = function (key) {
@@ -869,11 +865,7 @@ export const setKeyInSharedPrefKeysImpl = function (key) {
 
 export const setEnvInNativeSharedPrefKeysImpl = function (key) {
   return function (value) {
-    if (window.__OS == "IOS") {
-      window.JBridge.setKeysInSharedPrefs(key, value);
-    } else {
-      window.JBridge.setEnvInNativeSharedPrefKeys(key, value);
-    }
+      JBridge.setKeysInSharedPrefs(key, value);
   };
 };
 
@@ -884,19 +876,11 @@ export const setEnvInNativeSharedPrefKeysImpl = function (key) {
 // };
 
 export const removeKeysInSharedPrefs = function (key) {
-  if (window.__OS == "IOS") {
-    return window.JBridge.removeFromSharedPrefs(key);
-  } else {
-    return window.JBridge.removeKeysInSharedPrefs(key);
-  }
+    return JBridge.removeFromSharedPrefs(key);
 };
 
 export const removeKeysInNativeSharedPrefs = function (key) {
-  if (window.__OS == "IOS") {
-    window.JBridge.removeFromSharedPrefs(key);
-  } else {
-    window.JBridge.removeKeysInNativeSharedPrefs(key);
-  }
+    JBridge.removeFromSharedPrefs(key);
 };
 
 export const toggleLoaderImpl = function (showLoader) {
@@ -958,11 +942,17 @@ export const storeCallBackDriverLocationPermission = function (cb) {
   return function (action) {
       return function () {
           var callback = callbackMapper.map(function (isLocationPermissionGranted) {
-              cb(action (isLocationPermissionGranted))();
+            cb(action (isLocationPermissionGranted))();
           });
+          var locationCallBack = function () {
+            var isPermissionEnabled = JBridge.isLocationPermissionEnabled()
+            cb(action (isPermissionEnabled))();
+          };
+          if (window.onResumeListeners){
+            window.onResumeListeners.push(locationCallBack);
+          };
           console.log("In storeCallBackDriverLocationPermission ---------- + " + action);
-          window.JBridge.storeCallBackDriverLocationPermission(callback);
-      }
+      }    
   }}
   catch (error){
       console.log("Error occurred in storeCallBackDriverLocationPermission ------", error);
@@ -1007,12 +997,19 @@ export const storeCallBackOverlayPermission = function (cb) {
           var callback = callbackMapper.map(function (isOverlayPermission) {
               cb(action (isOverlayPermission))();
           });
-          console.log("In storeCallBackOverlapPermission ---------- + " + action);
+          var overlayCallBack = function () {
+            var isPermissionEnabled = JBridge.isOverlayPermissionEnabled()
+            cb(action (isPermissionEnabled))();
+          }
+          if (window.onResumeListeners){
+            window.onResumeListeners.push(overlayCallBack);
+          }
+          console.log("In storeCallBackOverlayPermission ---------- + " + action);
           window.JBridge.storeCallBackOverlayPermission(callback);
-      }
+      }    
   }}
   catch (error){
-      console.log("Error occurred in storeCallBackOverlapPermission ------", error);
+      console.log("Error occurred in storeCallBackOverlayPermission ------", error);
   }
 }
 
@@ -1023,6 +1020,13 @@ export const storeCallBackBatteryUsagePermission = function (cb) {
           var callback = callbackMapper.map(function (isPermissionEnabled) {
               cb(action (isPermissionEnabled))();
           });
+          var batteryCallBack = function () {
+            var isPermissionEnabled = JBridge.isBatteryPermissionEnabled()
+            cb(action (isPermissionEnabled))();
+          }
+          if (window.onResumeListeners){
+            window.onResumeListeners.push(batteryCallBack);
+          }
           console.log("In storeCallBackBatteryUsagePermission ---------- + " + action);
           window.JBridge.storeCallBackBatteryUsagePermission(callback);
       }

@@ -149,28 +149,22 @@ window.callUICallback = function () {
     console.error(err)
   }
 }
+
+window.onResumeListeners = [];
+
 window.onPause = function () {
-  if (window.eventListeners && window.eventListeners["onPause"]) {
-    if (Array.isArray(window.eventListeners["onPause"])) {
-      var onPauseEvents = window.eventListeners["onPause"];
-      onPauseEvents.forEach(function (fn) {
-        fn()();
-      })
-      window.eventListeners["onPause"] = [];
-    } else window.eventListeners["onPause"]()();
-  }
+  console.error("onEvent onPause");
 }
+
 window.onResume = function () {
-  if (window.eventListeners && window.eventListeners["onResume"]) {
-    if (Array.isArray(window.eventListeners["onResume"])) {
-      var onResumeEvents = window.eventListeners["onResume"];
-      onResumeEvents.forEach(function (fn) {
-        fn()();
-      })
-      window.eventListeners["onResume"] = [];
-    } else window.eventListeners["onResume"]()();
+  console.error("onEvent onResume");
+  if (window.onResumeListeners && Array.isArray(window.onResumeListeners)) {
+    for (let i = 0; i < window.onResumeListeners.length;i++) {
+      window.onResumeListeners[i].call();
+    }
   }
 }
+
 window.onActivityResult = function () {
   console.log(arguments)
 }
@@ -199,15 +193,6 @@ window["onEvent'"] = function (event, args) {
   console.log(event, args);
   if (event == "onBackPressed") {
     purescript.onEvent(event)();
-    // if (window.__dui_screen && window.isObject(window.onBackPressedEvent) && window.onBackPressedEvent[window.__dui_screen]) {
-      // console.log("======----===");
-      // console.log(window.__dui_screen)
-    //   if(window.__dui_screen === "RideHomeScreen" || window.__dui_screen === "HomeScreen"){
-    //     JBridge.minimizeApp();
-    //   }
-    //   window.onBackPressedEvent[window.__dui_screen]();
-    // }
-    // window.onBackPressed();
   } else if (event == "onPause") {
     window.onPause();
   } else if (event == "onResume") {
@@ -237,7 +222,7 @@ if (typeof window.JOS != "undefined") {
 }
 
 var sessionInfo = JSON.parse(JBridge.getDeviceInfo())
-if(sessionInfo.package_name === "in.juspay.nammayatri.debug"){
+if(sessionInfo.package_name.includes(".debug")){
   logger.enableLogger();
 }else{
   logger.disableLogger();
