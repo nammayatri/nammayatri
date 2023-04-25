@@ -2,11 +2,15 @@
 _:
 {
   perSystem = { config, self', pkgs, lib, ... }:
+    let
+      withLogFiles = lib.mapAttrs (name: proc:
+        proc // { log_location = "${name}.log"; });
+    in
     {
       process-compose = {
         port = 7812; # process-compose Swagger API is served here.
         configs = {
-          run-mobility-stack.processes = {
+          run-mobility-stack.processes = withLogFiles {
             # External services
             beckn-gateway.command = lib.getExe config.haskellProjects.default.outputs.finalPackages.beckn-gateway;
             mock-registry.command = lib.getExe config.haskellProjects.default.outputs.finalPackages.mock-registry;
