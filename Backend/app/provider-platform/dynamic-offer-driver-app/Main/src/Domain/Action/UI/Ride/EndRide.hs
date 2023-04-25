@@ -379,10 +379,10 @@ returnEstimatesAsFinalValues handle booking ride = do
 getEndRidePenaltyFare :: SRB.Booking -> Meters -> Either FarePolicy SlabFarePolicy -> Money
 getEndRidePenaltyFare _ _ (Right _) = Money 0
 getEndRidePenaltyFare booking travelledDistance (Left normalFarePolicy) = do
-  let halfUntraveledDistance  = (booking.estimatedDistance - travelledDistance) `div` 2
+  let halfUntraveledDistance = (booking.estimatedDistance - travelledDistance) `div` 2
   let penaltyDistance =
-        if travelledDistance < normalFarePolicy.baseDistanceMeters 
+        if travelledDistance < normalFarePolicy.baseDistanceMeters
           then max (travelledDistance + halfUntraveledDistance - normalFarePolicy.baseDistanceMeters) 0
           else halfUntraveledDistance
-  let penaltyFare :: Money = roundToIntegral $ (realToFrac ((realToFrac penaltyDistance :: Rational) / 1000)) * normalFarePolicy.perExtraKmFare
+  let penaltyFare :: Money = roundToIntegral $ realToFrac ((realToFrac penaltyDistance :: Rational) / 1000) * normalFarePolicy.perExtraKmFare
   min (Money 50) (maybe penaltyFare (\selectedFare -> max (penaltyFare - selectedFare) (Money 0)) booking.fareParams.driverSelectedFare)
