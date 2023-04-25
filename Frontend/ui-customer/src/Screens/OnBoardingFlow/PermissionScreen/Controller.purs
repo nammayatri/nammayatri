@@ -53,7 +53,7 @@ data Action = ErrorModalActionController ErrorModalController.Action
             | NoAction
             | Reload
             | BackPressed
-            | LocationPermissionCallBackCustomer String
+            | LocationPermissionCallBackCustomer Boolean
             | InternetCallBackCustomer String
             | AfterRender
 
@@ -73,8 +73,7 @@ eval (ErrorModalActionController (ErrorModalController.PrimaryButtonActionContro
   ]
 
 eval (LocationPermissionCallBackCustomer isLocationPermissionEnabled) state = do 
-  if isLocationPermissionEnabled == "true" then do 
-    updateAndExit state (LocationCallBack state)
+  if isLocationPermissionEnabled then updateAndExit state (LocationCallBack state)
     else continue state
 eval (InternetCallBackCustomer isInternetAvailable) state = do 
   if( isInternetAvailable == "true") then do

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#3D64F4</color>
+    <color name="colorPrimaryActive">#122B57</color>
+    <color name="colorPrimaryDisable">#BAC5D8</color>
+    <color name="colorPrimaryDark">#2C2F3A</color>
+    <color name="colorAccent">#000000</color>
+    <color name="colorWhite">#ffffff</color>
+    <color name="colorGray">#4DDADADA</color>
+    <color name="colorLightBlue">#E0EAFD</color>
+    <color name="colorLightBlueSel">#80E0EAFD</color>
+    <color name="colorCircleButton">#204480</color>
+    <color name="colorSublimePicker">#323643</color>
+    <color name="PrimaryBlue">#0066FF</color>
+    <color name="greylight">#F4F4F6</color>
+    <color name="greyDark">#E5E7EB</color>
+    <color name="Black700">#6D7280</color>
+    <color name="Black800">#454545</color>
+    <color name="Black900">#2C2F3A</color>
+    <color name="Black500">#B9BABE</color>
+    <color name="green">#268C6E</color>
+    <color name="green900">#53BB6F</color>
+    <color name="red900">#E55454</color>
+    <color name="black650">#868B98</color>
+    <color name="grey700">#F4F4F6</color>
+    <color name="grey900">#E5E7EB</color>
+    <color name="blue700">#80B2FF</color>
+</resources>

@@ -69,10 +69,14 @@ import Effect (Effect)
 import Control.Monad.Except (runExcept)
 import Foreign.Class (class Encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
+import Config.Config
+import Config.Types
+import Control.Monad.Except.Trans (runExceptT)
+import Control.Transformers.Back.Trans (runBackT)
 
-baseAppFlow :: GlobalPayload -> FlowBT String Unit
-baseAppFlow gPayload = do
-  _ <- pure $ printLog "Global Payload" gPayload
+baseAppFlow :: FlowBT String Unit
+baseAppFlow = do
+  _ <- pure $ printLog "Global Payload" "gPayload" 
   (GlobalState state) <- getState
   let bundle = bundleVersion unit
       customerId = (getValueToLocalStore CUSTOMER_ID)
@@ -218,6 +222,7 @@ currentRideFlow rideAssigned = do
                                             Nothing        -> ""
                           }}
                 })
+            -- _ <- pure $ spy "CurrentRideListItem end" currRideListItem
           Left err -> updateLocalStage HomeScreen
       else do
         updateLocalStage HomeScreen
@@ -333,6 +338,8 @@ enterMobileNumberScreenFlow = do
   lift $ lift $ doAff do liftEffect hideSplash -- Removed initial choose langauge screen
   setValueToLocalStore LANGUAGE_KEY "EN_US"
   void $ lift $ lift $ toggleLoader false
+  config <- getAppConfig
+  modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen {data {config =  config }})
   _ <- pure $ firebaseLogEvent "ny_user_enter_mob_num_scn_view"
   flow <- UI.enterMobileNumberScreen
   case flow of

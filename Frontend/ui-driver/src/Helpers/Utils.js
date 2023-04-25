@@ -379,6 +379,7 @@ export const storeCallBackForNotification = function (cb) {
           var callback = callbackMapper.map(function (notificationType) {
             cb(action(notificationType))();
           });
+          window.onResumeListeners = [];
           JBridge.storeCallBackForNotification(callback);
       }
   }}

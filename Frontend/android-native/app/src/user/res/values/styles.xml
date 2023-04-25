@@ -6,24 +6,7 @@
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorAccent</item>
         <item name="colorAccent">@color/colorAccent</item>
-        <item name="sublimePickerStyle">@style/SublimeStyleLight</item>
     </style>
-
-    <style name="SublimeStyleLight" parent="SublimePickerStyleLight">
-        <item name="colorAccent">@color/colorSublimePicker</item>
-        <item name="spDatePickerStyle">@style/DatePicker</item>
-        <item name="spTimePickerStyle">@style/TimePicker</item>
-        <item name="fontFamily">@font/poppins_medium</item>
-    </style>
-
-    <style name="DatePicker" parent="SublimeDatePickerStyle">
-<!--        <item name="spHeaderTextColor">#FDD836</item>-->
-    </style>
-
-    <style name="TimePicker" parent="SublimeTimePickerStyle">
-<!--        <item name="spHeaderTextColor">#FDD836</item>-->
-    </style>
-
     <style name="MaterialAppTheme" parent="ThemeOverlay.MaterialComponents.MaterialAlertDialog">
         <item name="buttonBarPositiveButtonStyle">@style/Alert.Button.Positive</item>
         <item name="buttonBarNegativeButtonStyle">@style/Alert.Button.Neutral</item>
