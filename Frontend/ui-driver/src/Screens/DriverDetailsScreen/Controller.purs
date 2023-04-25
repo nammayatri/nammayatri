@@ -149,6 +149,9 @@ eval ClickRemoveAlternateNumber state = do
 eval (InAppKeyboardModalMobile (InAppKeyboardModal.BackPressed)) state = do
   continue state { data = state.data {driverAlternateMobile = (if (state.props.isEditAlternateMobile == false) then (Nothing) else state.data.driverAlternateMobile), driverEditAlternateMobile = Nothing}, props = state.props {keyboardModalType = NONE, checkAlternateNumber = (state.props.isEditAlternateMobile == false),numberExistError= false ,isEditAlternateMobile = false}}
 
+eval (InAppKeyboardModalMobile (InAppKeyboardModal.OnClickTextCross)) state = do 
+  continue state {data {driverEditAlternateMobile = Nothing, driverAlternateMobile = (if (state.props.isEditAlternateMobile == false) then (Nothing) else state.data.driverAlternateMobile)},props {numberExistError= false, checkAlternateNumber = true}}
+
 eval (InAppKeyboardModalMobile (InAppKeyboardModal.OnSelection key index)) state = do
   let newVal = if (state.props.isEditAlternateMobile == false) then ((fromMaybe "" state.data.driverAlternateMobile) <> key) else ((fromMaybe "" state.data.driverEditAlternateMobile) <> key)
   if(length newVal == 0) then

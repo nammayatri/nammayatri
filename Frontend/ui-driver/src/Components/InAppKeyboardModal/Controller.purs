@@ -32,6 +32,7 @@ data Action = OnSelection String Int
             | OnclickTextBox Int
             | BackPressed
             | OnClickResendOtp
+            | OnClickTextCross
 
 ----------------------------------------------- InAppKeyboardModalState ---------------------------------------------
 type InAppKeyboardModalState = { 
