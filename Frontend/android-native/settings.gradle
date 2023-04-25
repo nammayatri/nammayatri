@@ -1,4 +1,7 @@
 rootProject.name='mobility'
 include ':app'
+include ':mobility-common'
+include ':mobility-customer'
+include ':mobility-driver'
+include ':mobility-app'
 include ':hyper-sdk'
-include ':hyper-upi'

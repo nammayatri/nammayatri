@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="select_date">தேதியைத் தேர்ந்தெடுக்கவும்</string>
+    <string name="open_settings">1. அமைப்புகளைத் திறக்கவும்</string>
+    <string name="tap_on_permission">2. அனுமதிகளைத் தட்டவும்</string>
+    <string name="required_permission">3. தேவையான அனுமதியைத் தட்டவும்</string>
+    <string name="select_allow">4. அனுமதி என்பதைத் தேர்ந்தெடுக்கவும்</string>
+    <string name="tap_on">3. Tap on </string>
+    <string name="location">Location</string>
+    <string name="phone">Phone</string>
+</resources>

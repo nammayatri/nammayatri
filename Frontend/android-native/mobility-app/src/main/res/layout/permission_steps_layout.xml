@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:id="@+id/permission_steps"
+    android:padding="20dp">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="15dp"
+            android:text="@string/open_settings"
+            android:textColor="@color/quantum_black_100"/>
+
+        <ImageView
+            android:id="@+id/ny_ic_settings"
+            android:layout_width="15dp"
+            android:layout_height="15dp"
+            android:padding="2dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ny_ic_settings" />
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:textSize="15dp"
+        android:text="@string/tap_on_permission"
+        android:textColor="@color/quantum_black_100"
+        android:padding="2dp"/>
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:text="@string/required_permission"
+        android:textSize="15dp"
+        android:id="@+id/step_text"
+        android:textColor="@color/quantum_black_100"
+        android:padding="2dp"/>
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:textSize="15dp"
+        android:textColor="@color/quantum_black_100"
+        android:text="@string/select_allow"
+        android:padding="2dp"/>
+</LinearLayout>

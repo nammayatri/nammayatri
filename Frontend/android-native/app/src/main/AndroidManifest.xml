@@ -28,9 +28,9 @@
         android:name="android.permission.CAMERA"
         tools:node="remove" />
 
-    <uses-feature
-        android:name="android.hardware.camera"
-        android:required="true" />
+<!--    <uses-feature-->
+<!--        android:name="android.hardware.camera"-->
+<!--        android:required="true" />-->
 
 <application
         android:allowBackup="false"
@@ -79,28 +79,28 @@
             android:name=".utils.RequestAlarmPremission"
             android:exported="false" />
 
-        <provider
-            android:name="androidx.core.content.FileProvider"
-            android:authorities="@string/fileProviderPath"
-            android:exported="false"
-            android:grantUriPermissions="true">
-            <meta-data
-                android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/file_paths" />
-        </provider>
+<!--        <provider-->
+<!--            android:name="androidx.core.content.FileProvider"-->
+<!--            android:authorities="@string/fileProviderPath"-->
+<!--            android:exported="false"-->
+<!--            android:grantUriPermissions="true">-->
+<!--            <meta-data-->
+<!--                android:name="android.support.FILE_PROVIDER_PATHS"-->
+<!--                android:resource="@xml/file_paths" />-->
+<!--        </provider>-->
 
 
-        <activity
-            android:name=".utils.CheckPermissionAutoStart"
-            android:exported="true" />
+<!--        <activity-->
+<!--            android:name=".utils.CheckPermissionAutoStart"-->
+<!--            android:exported="true" />-->
 
-        <receiver
-            android:name=".BootUpReceiver"
-            android:enabled="true"
-            android:exported="false"
-            android:permission="android.permission.RECEIVE_BOOT_COMPLETED">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
+<!--        <receiver-->
+<!--            android:name=".BootUpReceiver"-->
+<!--            android:enabled="true"-->
+<!--            android:exported="false"-->
+<!--            android:permission="android.permission.RECEIVE_BOOT_COMPLETED">-->
+<!--            <intent-filter>-->
+<!--                <action android:name="android.intent.action.BOOT_COMPLETED" />-->
 
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
@@ -122,67 +122,67 @@
             </intent-filter>
         </receiver>
 
-        <activity
-            android:name=".utils.CheckPermissionOverlay"
-            android:exported="false"
-            android:screenOrientation="portrait" />
+<!--        <activity-->
+<!--            android:name=".utils.CheckPermissionOverlay"-->
+<!--            android:exported="false"-->
+<!--            android:screenOrientation="portrait" />-->
 
-        <meta-data
-            android:name="com.google.android.geo.API_KEY"
-            android:value="${mapsApiKey}" />
+<!--        <meta-data-->
+<!--            android:name="com.google.android.geo.API_KEY"-->
+<!--            android:value="${mapsApiKey}" />-->
 
-        <activity
-            android:name=".MainActivity"
-            android:exported="true"
-            android:largeHeap="true"
-            android:resizeableActivity="false"
-            android:screenOrientation="portrait"
-            android:windowSoftInputMode="adjustResize">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
+<!--        <activity-->
+<!--            android:name=".MainActivity"-->
+<!--            android:exported="true"-->
+<!--            android:largeHeap="true"-->
+<!--            android:resizeableActivity="false"-->
+<!--            android:screenOrientation="portrait"-->
+<!--            android:windowSoftInputMode="adjustResize">-->
+<!--            <intent-filter>-->
+<!--                <action android:name="android.intent.action.MAIN" />-->
 
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity> <!-- <activity -->
-        <!-- android:name="com.journeyapps.barcodescanner.CaptureActivity" -->
-        <!-- android:screenOrientation="fullSensor" -->
-        <!-- tools:replace="screenOrientation" /> -->
-        <service
-            android:name=".utils.MyFirebaseMessagingService"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="com.google.firebase.MESSAGING_EVENT" />
-            </intent-filter>
-        </service>
-        <service
-            android:name=".utils.LocationUpdateService"
-            android:exported="false"
-            android:foregroundServiceType="location"
-            android:largeHeap="true"
-            android:stopWithTask="false" />
-        <service
-            android:name=".utils.WidgetService"
-            android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="mediaProjection"
-            android:permission="android.permission.SYSTEM_ALERT_WINDOW"/>
+<!--                <category android:name="android.intent.category.LAUNCHER" />-->
+<!--            </intent-filter>-->
+<!--        </activity> &lt;!&ndash; <activity &ndash;&gt;-->
+<!--        &lt;!&ndash; android:name="com.journeyapps.barcodescanner.CaptureActivity" &ndash;&gt;-->
+<!--        &lt;!&ndash; android:screenOrientation="fullSensor" &ndash;&gt;-->
+<!--        &lt;!&ndash; tools:replace="screenOrientation" /> &ndash;&gt;-->
+<!--        <service-->
+<!--            android:name=".utils.MyFirebaseMessagingService"-->
+<!--            android:exported="false">-->
+<!--            <intent-filter>-->
+<!--                <action android:name="com.google.firebase.MESSAGING_EVENT" />-->
+<!--            </intent-filter>-->
+<!--        </service>-->
+<!--        <service-->
+<!--            android:name=".utils.LocationUpdateService"-->
+<!--            android:exported="false"-->
+<!--            android:foregroundServiceType="location"-->
+<!--            android:largeHeap="true"-->
+<!--            android:stopWithTask="false" />-->
+<!--        <service-->
+<!--            android:name=".utils.WidgetService"-->
+<!--            android:enabled="true"-->
+<!--            android:exported="false"-->
+<!--            android:foregroundServiceType="mediaProjection"-->
+<!--            android:permission="android.permission.SYSTEM_ALERT_WINDOW"/>-->
 
-        <meta-data
-            android:name="com.google.firebase.messaging.default_notification_icon"
-            android:resource="@mipmap/ic_launcher_round" />
-        <meta-data
-            android:name="com.google.firebase.messaging.default_notification_color"
-            android:resource="@color/colorPrimary" />
-        <meta-data
-            android:name="com.google.firebase.messaging.default_notification_channel_id"
-            android:value="General" />
+<!--        <meta-data-->
+<!--            android:name="com.google.firebase.messaging.default_notification_icon"-->
+<!--            android:resource="@mipmap/ic_launcher_round" />-->
+<!--        <meta-data-->
+<!--            android:name="com.google.firebase.messaging.default_notification_color"-->
+<!--            android:resource="@color/colorPrimary" />-->
+<!--        <meta-data-->
+<!--            android:name="com.google.firebase.messaging.default_notification_channel_id"-->
+<!--            android:value="General" />-->
 
-        <receiver android:name=".utils.NotificationReciever" />
-        <receiver
-            android:name=".utils.NetworkBroadcastReceiver"
-            android:enabled="true"
-            android:exported="true"
-            android:permission="android.permission.ACCESS_NETWORK_STATE" />
+<!--        <receiver android:name=".utils.NotificationReciever" />-->
+<!--        <receiver-->
+<!--            android:name=".utils.NetworkBroadcastReceiver"-->
+<!--            android:enabled="true"-->
+<!--            android:exported="true"-->
+<!--            android:permission="android.permission.ACCESS_NETWORK_STATE" />-->
 
         <service
             android:name=".utils.OverlaySheetService"

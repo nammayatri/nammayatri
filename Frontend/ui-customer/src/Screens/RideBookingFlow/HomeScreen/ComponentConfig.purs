@@ -217,7 +217,6 @@ whereToButtonConfig state =
     primaryButtonConfig' = config 
       { textConfig
         { text = (getString WHERE_TO)
-        , color = Color.yellow900     
         , textSize = FontSize.a_16
         , width = MATCH_PARENT
         , gravity = LEFT
@@ -225,7 +224,6 @@ whereToButtonConfig state =
       , height = V 60
       , gravity = CENTER
       , cornerRadius = 8.0
-      , background = Color.black900
       , margin = (MarginHorizontal 16 16)  
       , isClickable = true 
       , isPrefixImage = true
@@ -247,10 +245,8 @@ primaryButtonRequestRideConfig state =
       config
         { textConfig
           { text = (getString REQUEST_RIDE)
-          , color = Color.yellow900
           , textSize = FontSize.a_16
           }
-        , background = Color.black900
         , margin = (Margin 0 32 0 0)
         , id = "RequestRideButton"
         , enableLoader = (JB.getBtnLoader "RequestRideButton")
@@ -266,11 +262,9 @@ primaryButtonConfirmPickupConfig state =
       config
         { textConfig
           { text = (getString CONFIRM_LOCATION)
-          , color = Color.yellow900
           , textSize = FontSize.a_16
           , fontStyle = FontStyle.regular LanguageStyle
           }
-        , background = Color.black900
         , margin = (Margin 0 22 0 0)
         , id = "ConfirmLocationButton"
         }
