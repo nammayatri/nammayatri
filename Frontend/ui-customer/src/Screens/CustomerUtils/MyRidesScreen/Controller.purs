@@ -77,7 +77,10 @@ instance loggableAction :: Loggable Action where
         PrimaryButton.NoAction -> trackAppActionClick appId (getScreen MY_RIDES_SCREEN) "api_failure_error_modal_action" "primary_button_no_action"
     Scroll str -> trackAppScreenEvent appId (getScreen MY_RIDES_SCREEN) "in_screen" "scroll"
     ScrollStateChanged scrollState -> trackAppScreenEvent appId (getScreen MY_RIDES_SCREEN) "in_screen" "scroll_state_changed"
-    RideBookingListAPIResponseAction rideList status -> trackAppScreenEvent appId (getScreen MY_RIDES_SCREEN) "in_screen" "ride_booking_list"
+    RideBookingListAPIResponseAction rideList status -> case status of
+      "success" -> trackAppScreenEvent appId (getScreen MY_RIDES_SCREEN) "in_screen" "ride_booking_list_success"
+      "listCompleted" -> trackAppScreenEvent appId (getScreen MY_RIDES_SCREEN) "in_screen" "ride_booking_list_completed"
+      _ -> trackAppScreenEvent appId (getScreen MY_RIDES_SCREEN) "in_screen" "ride_booking_list_continue_state"
     NoAction -> trackAppScreenEvent appId (getScreen MY_RIDES_SCREEN) "in_screen" "no_action"
 
 data ScreenOutput = GoBack MyRidesScreenState 

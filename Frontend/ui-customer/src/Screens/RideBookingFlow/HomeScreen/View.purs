@@ -210,7 +210,7 @@ view push state =
   frameLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
-    , onBackPressed push (const BackPressed)
+    , onBackPressed push (const $ BackPressed state)
     , clickable true
     , afterRender push (const AfterRender)
     ]
@@ -511,7 +511,7 @@ buttonLayout state push =
             , orientation VERTICAL
             , padding (PaddingTop 16)
             ]
-            [ PrimaryButton.view (push <<< PrimaryButtonActionController) (whereToButtonConfig state)
+            [ PrimaryButton.view (push <<< PrimaryButtonActionController state) (whereToButtonConfig state)
             , if (((state.data.savedLocations == []) && state.data.recentSearchs.predictionArray == []) || state.props.isSearchLocation == LocateOnMap) then emptyLayout state else recentSearchesAndFavourites state push
             ]
         ]
@@ -862,13 +862,13 @@ topLeftIconView state push =
           , cornerRadius 24.0
           , visibility if (any (_ == state.props.currentStage) [ FindingEstimate, ConfirmingRide, FindingQuotes, TryAgain ]) then GONE else VISIBLE
           , clickable true
-          , onClick push $ if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then const BackPressed else const OpenSettings
+          , onClick push $ if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then const (BackPressed state) else const OpenSettings
           ]
           [ imageView
               [ imageWithFallback if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png" else if checkVersion "LazyCheck" then "ic_menu_notify,https://assets.juspay.in/nammayatri/images/user/ic_menu_notify.png" else "ny_ic_hamburger,https://assets.juspay.in/nammayatri/images/user/ny_ic_hamburger.png"
               , height $ V 25
               , clickable true
-              , onClick push $ if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then const BackPressed else const OpenSettings
+              , onClick push $ if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then const (BackPressed state) else const OpenSettings
               , width $ V 25
               ]
           ]
@@ -1001,7 +1001,7 @@ suggestedPriceView push state =
               ]
           ]
       ]
-    , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonRequestRideConfig state)
+    , PrimaryButton.view (push <<< (PrimaryButtonActionController state)) (primaryButtonRequestRideConfig state)
   ]
 
 
@@ -1265,7 +1265,7 @@ confirmPickUpLocationView push state =
                   ]
                 <> FontStyle.subHeading1 TypoGraphy
             ]
-        , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfirmPickupConfig state)
+        , PrimaryButton.view (push <<< (PrimaryButtonActionController state)) (primaryButtonConfirmPickupConfig state)
         ]
     ]
 
@@ -1309,7 +1309,7 @@ loaderView push state =
     , linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
-        , onClick push $ const CancelSearch
+        , onClick push $ const $ CancelSearch state
         , visibility if (any (_ == state.props.currentStage) [ FindingEstimate, TryAgain ]) then VISIBLE else GONE
         , orientation VERTICAL
         , gravity CENTER
@@ -1353,7 +1353,7 @@ searchLocationModelView push state =
     , width MATCH_PARENT
     , background if state.props.isRideServiceable then Color.transparent else Color.white900
     ]
-    [ SearchLocationModel.view (push <<< SearchLocationModelActionController) $ searchLocationModelViewState state]
+    [ SearchLocationModel.view (push <<< (SearchLocationModelActionController state)) $ searchLocationModelViewState state]
 
 ------------------------ quoteListModelView ---------------------------
 quoteListModelView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -1383,7 +1383,7 @@ rideTrackingView push state =
     , padding (Padding 0 0 0 0)
     , background Color.transparent
     , alignParentBottom "true,-1" -- Check it in Android.
-    , onBackPressed push (const $ BackPressed)
+    , onBackPressed push (const $ BackPressed state)
     , visibility if (any (_ == state.props.currentStage) [RideAccepted, RideStarted]) then VISIBLE else GONE
     ]
     [ -- TODO Add Animations
@@ -1472,7 +1472,7 @@ logOutPopUpView push state =
     [ height MATCH_PARENT
     , width MATCH_PARENT
     ]
-    [ PopUpModal.view (push <<< PopUpModalAction) (logOutPopUpModelConfig state) ]
+    [ PopUpModal.view (push <<< (PopUpModalAction state)) (logOutPopUpModelConfig state) ]
 
 favouriteLocationModel :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 favouriteLocationModel push state =
