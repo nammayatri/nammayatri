@@ -17,7 +17,7 @@
       imports = [
         inputs.beckn-gateway.haskellFlakeProjectModules.output
       ];
-      autoWire = [ "packages" "checks" "apps" ];
+      autoWire = [ "checks" "apps" ];
       devShell.tools = _: {
         inherit (self'.packages)
           arion;
@@ -33,31 +33,32 @@
         };
     };
 
-    packages = {
-      # The final nammayatri package containing the various executables and
-      # configuration files.
-      nammayatri =
-        let
-          localCabalPackages = builtins.map
-            (p: pkgs.haskell.lib.justStaticExecutables p.package)
-            (lib.attrValues config.haskellProjects.default.outputs.packages);
-        in
-        pkgs.symlinkJoin {
-          name = "nammayatri";
-          paths = localCabalPackages;
-          postBuild = ''
-            # Prepare /opt/app layout for Docker image.
-            # Rationale: Our k8s deployment config is hardcoded to look for exes
-            # under /opt/app.
-            mkdir -p $out/opt/app
-            for f in `${lib.getExe pkgs.fd} . $out/bin/`; do
-              ln -s $f $out/opt/app/
-            done
-            cp -r ${./dhall-configs} $out/opt/app/dhall-configs
-            cp -r ${./swagger} $out/opt/app/swagger
-          '';
-        };
-    };
+    packages =
+      let
+        localCabalPackages = lib.mapAttrs
+          (_: p: pkgs.haskell.lib.justStaticExecutables p.package)
+          config.haskellProjects.default.outputs.packages;
+      in
+      localCabalPackages // {
+        # The final nammayatri package containing the various executables and
+        # configuration files.
+        nammayatri =
+          pkgs.symlinkJoin {
+            name = "nammayatri";
+            paths = lib.attrValues localCabalPackages;
+            postBuild = ''
+              # Prepare /opt/app layout for Docker image.
+              # Rationale: Our k8s deployment config is hardcoded to look for exes
+              # under /opt/app.
+              mkdir -p $out/opt/app
+              for f in `${lib.getExe pkgs.fd} . $out/bin/`; do
+                ln -s $f $out/opt/app/
+              done
+              cp -r ${./dhall-configs} $out/opt/app/dhall-configs
+              cp -r ${./swagger} $out/opt/app/swagger
+            '';
+          };
+      };
 
   };
 }
