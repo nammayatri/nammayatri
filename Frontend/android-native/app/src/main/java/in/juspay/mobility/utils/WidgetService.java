@@ -452,7 +452,7 @@ public class WidgetService extends Service {
                         case MotionEvent.ACTION_MOVE:
                             if (sharedPref == null) sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
                             if (Calendar.getInstance().getTimeInMillis() - actionDownTime>200){
-                                if (sharedPref.getString("DRIVER_STATUS_N", "null").equals("Offline")){
+                                if (sharedPref.getString("DRIVER_STATUS_N", "null").equals("OFFLINE")){
                                     imageClose.setVisibility(View.VISIBLE);
                                 }
                             }
@@ -471,7 +471,7 @@ public class WidgetService extends Service {
                                         vibrator.vibrate(500);
                                     }
                                 }
-                                if (sharedPref.getString("DRIVER_STATUS_N", "null").equals("Offline")){
+                                if (sharedPref.getString("DRIVER_STATUS_N", "null").equals("OFFLINE")){
                                     isCloseEnabled = true;
                                 }
                             }else {

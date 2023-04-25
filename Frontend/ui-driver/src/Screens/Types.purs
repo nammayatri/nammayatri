@@ -696,7 +696,7 @@ type TripDetailsScreenState =
     props :: TripDetailsScreenProps
 }
 
-data PaymentMode = CASH | ONLINE
+data PaymentMode = CASH | PAYMENT_ONLINE
 
 derive instance genericPaymentMode :: Generic PaymentMode _
 instance showPaymentMode :: Show PaymentMode where show = genericShow

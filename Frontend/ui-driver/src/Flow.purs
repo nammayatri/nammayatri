@@ -46,7 +46,8 @@ import Screens.Handlers as UI
 import Screens.HomeScreen.Controller (activeRideDetail)
 import Screens.HomeScreen.View (rideRequestPollingData)
 import Screens.PopUpScreen.Controller (transformAllocationData)
-import Screens.Types (ActiveRide, AllocationData, HomeScreenStage(..), Location, KeyboardModalType(..), ReferralType(..),DriverStatus(..))
+import Screens.Types (ActiveRide, AllocationData, HomeScreenStage(..), Location, KeyboardModalType(..), ReferralType(..))
+import Screens.Types as ST
 import Services.APITypes (DriverActiveInactiveResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GetDriverInfoReq(..), GetDriverInfoResp(..), GetRidesHistoryResp(..), GetRouteResp(..), LogOutReq(..), LogOutRes(..), OfferRideResp(..), ReferDriverResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), TriggerOTPResp(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyTokenResp(..), DriverAlternateNumberResp(..), RemoveAlternateNumberRequest(..), RemoveAlternateNumberResp(..), AlternateNumberResendOTPResp(..), DriverAlternateNumberOtpResp(..), GetPerformanceReq(..), GetPerformanceRes(..))
 import Services.Accessor (_lat, _lon, _id)
 import Services.Backend (makeGetRouteReq, walkCoordinates, walkCoordinate)
@@ -169,7 +170,13 @@ getDriverInfoFlow = do
       if getDriverInfoResp.enabled then do
         setValueToLocalStore IS_DRIVER_ENABLED "true"
         let (Vehicle linkedVehicle) = (fromMaybe dummyVehicleObject getDriverInfoResp.linkedVehicle)
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data = homeScreen.data {driverName = getDriverInfoResp.firstName, vehicleType = linkedVehicle.variant ,  driverAlternateMobile =getDriverInfoResp.alternateNumber   }, props {statusOnline = getDriverInfoResp.active}})
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data = homeScreen.data {driverName = getDriverInfoResp.firstName, vehicleType = linkedVehicle.variant ,  driverAlternateMobile =getDriverInfoResp.alternateNumber   }
+                                                                           , props {statusOnline =  if (isJust getDriverInfoResp.mode) then
+                                                                                                        (any( _ == (updateDriverStatus getDriverInfoResp.active))[ST.ONLINE, ST.SILENT]) 
+                                                                                                    else getDriverInfoResp.active 
+                                                                                    }
+                                                                            }
+                                                )
         modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> driverDetailsScreen 
          {data = driverDetailsScreen.data { driverName = getDriverInfoResp.firstName,
         driverVehicleType = linkedVehicle.variant,
@@ -778,19 +785,27 @@ currentRideFlow = do
       _ <- updateStage $ HomeScreenStage HomeScreen
       homeScreenFlow
 
-getDriverStatus :: String -> DriverStatus
+getDriverStatus :: String -> ST.DriverStatus
 getDriverStatus dummy = do
   case getValueToLocalNativeStore DRIVER_STATUS_N of
-    "Online" -> Online
-    "Offline" -> Offline
-    "Silent" -> Silent
-    _ -> Online
+    "ONLINE" -> ST.ONLINE
+    "OFFLINE" -> ST.OFFLINE
+    "SILENT" -> ST.SILENT
+    _ -> ST.ONLINE
 
-updateDriverStatus :: Boolean -> DriverStatus
+getDriverStatusFromMode :: String -> ST.DriverStatus
+getDriverStatusFromMode dummy = do
+  case dummy of
+    "ONLINE" -> ST.ONLINE
+    "OFFLINE" -> ST.OFFLINE
+    "SILENT" -> ST.SILENT
+    _ -> ST.ONLINE
+
+updateDriverStatus :: Boolean -> ST.DriverStatus
 updateDriverStatus status = do
-  if status && getValueToLocalNativeStore DRIVER_STATUS_N == "Silent" then Silent
-    else if status then Online
-      else Offline
+  if status && getValueToLocalNativeStore DRIVER_STATUS_N == "SILENT" then ST.SILENT
+    else if status then ST.ONLINE
+      else ST.OFFLINE
 
 homeScreenFlow :: FlowBT String Unit
 homeScreenFlow = do
@@ -805,21 +820,49 @@ homeScreenFlow = do
   let (GetDriverInfoResp getDriverInfoResp) = getDriverInfoResp
   let (Vehicle linkedVehicle) = (fromMaybe dummyVehicleObject getDriverInfoResp.linkedVehicle)
   setValueToLocalStore USER_NAME getDriverInfoResp.firstName
-  if getDriverInfoResp.active then do
-    setValueToLocalStore DRIVER_STATUS "true"
-    setValueToLocalNativeStore DRIVER_STATUS "true"
-    setValueToLocalStore DRIVER_STATUS_N (show $ updateDriverStatus true)
-    setValueToLocalNativeStore DRIVER_STATUS_N  (show $ updateDriverStatus true)
-    lift $ lift $ liftFlow $ startLocationPollingAPI
-    else do
-      lift $ lift $ liftFlow $ stopLocationPollingAPI
-      setValueToLocalStore DRIVER_STATUS "false"
-      setValueToLocalNativeStore DRIVER_STATUS "false"
-      setValueToLocalStore DRIVER_STATUS_N  (show $ updateDriverStatus false)
-      setValueToLocalNativeStore DRIVER_STATUS_N  (show $ updateDriverStatus false)
+  _ <- pure $ spy "response for mode zxc" getDriverInfoResp
+  case getDriverInfoResp.mode of 
+    Just currentMode -> case currentMode of 
+                          "OFFLINE" -> do
+                              lift $ lift $ liftFlow $ stopLocationPollingAPI
+                              setValueToLocalStore DRIVER_STATUS "false"
+                              setValueToLocalNativeStore DRIVER_STATUS "false"
+                              setValueToLocalStore DRIVER_STATUS_N currentMode 
+                              setValueToLocalNativeStore DRIVER_STATUS_N currentMode
+                              _ <- pure $ spy "setting offline zxc " (getValueToLocalStore DRIVER_STATUS_N)
+                              pure unit
+                          _ ->        do 
+                                      setValueToLocalStore DRIVER_STATUS "true"
+                                      setValueToLocalNativeStore DRIVER_STATUS "true"
+                                      setValueToLocalStore DRIVER_STATUS_N currentMode  
+                                      setValueToLocalNativeStore DRIVER_STATUS_N  currentMode 
+                                      lift $ lift $ liftFlow $ startLocationPollingAPI
+                                      _ <- pure $ spy "setting ONLINE/SILENT zxc " (getValueToLocalStore DRIVER_STATUS_N)
+                                      pure unit
+
+    Nothing -> do
+                setValueToLocalStore DRIVER_STATUS $ show getDriverInfoResp.active
+                setValueToLocalNativeStore DRIVER_STATUS $ show getDriverInfoResp.active
+                setValueToLocalStore DRIVER_STATUS_N (show $ updateDriverStatus (getDriverInfoResp.active))
+                setValueToLocalNativeStore DRIVER_STATUS_N  (show $ updateDriverStatus (getDriverInfoResp.active))
+                _ <- pure $ spy "setting ONLINE/SILENT zxc when mode is nothing" (getValueToLocalStore DRIVER_STATUS_N)
+                lift $ lift $ liftFlow $ if getDriverInfoResp.active then  startLocationPollingAPI else stopLocationPollingAPI
+                (DriverActiveInactiveResp resp) <- Remote.driverActiveInactiveBT (if any( _ == (updateDriverStatus getDriverInfoResp.active))[ST.ONLINE, ST.SILENT] then "true" else "false") (updateDriverStatus getDriverInfoResp.active)
+                _ <- pure $ spy "Checking respons for mode " resp
+                pure unit
+
+  
   _  <- pure $ spy "DRIVERRRR___STATUs" (getValueToLocalNativeStore DRIVER_STATUS)
   _  <- pure $ spy "DRIVERRRR___STATUS LOCAL" (getValueToLocalStore DRIVER_STATUS)
-  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {statusOnline = getDriverInfoResp.active, driverStatusSet = getDriverStatus ""}, data{vehicleType = linkedVehicle.variant, driverAlternateMobile =getDriverInfoResp.alternateNumber}})
+  _ <- pure $ spy "setting through mode - > zxc " if (isJust getDriverInfoResp.mode) then true else false
+  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {statusOnline = if (isJust getDriverInfoResp.mode) then
+                                                                                                (any( _ == (updateDriverStatus (getDriverInfoResp.active)))[ST.ONLINE, ST.SILENT]) 
+                                                                                             else getDriverInfoResp.active 
+                                                                            , driverStatusSet = (if (isJust getDriverInfoResp.mode) then 
+                                                                                                  (getDriverStatusFromMode (fromMaybe "" (getDriverInfoResp.mode))) 
+                                                                                                else (getDriverStatus "")) }
+                                                                      , data{vehicleType = linkedVehicle.variant, driverAlternateMobile =getDriverInfoResp.alternateNumber}})
+  
   modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen {data{driverVehicleType = linkedVehicle.variant, driverRating = getDriverInfoResp.rating}})
   modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> driverDetailsScreen { data {driverAlternateMobile =getDriverInfoResp.alternateNumber}})
   modifyScreenState $ ReferralScreenStateType (\ referralScreen -> referralScreen{ data { driverInfo  {  driverName = getDriverInfoResp.firstName, driverMobile = getDriverInfoResp.mobileNumber,  vehicleRegNumber = linkedVehicle.registrationNo , referralCode = getDriverInfoResp.referralCode }}})
@@ -839,14 +882,15 @@ homeScreenFlow = do
       myRidesScreenFlow
     GO_TO_REFERRAL_SCREEN_FROM_HOME_SCREEN -> referralScreenFlow
     DRIVER_AVAILABILITY_STATUS status -> do
-      _ <- setValueToLocalStore DRIVER_STATUS if any( _ == status)[Online, Silent] then "true" else "false" --(show status)
+      _ <- setValueToLocalStore DRIVER_STATUS if any( _ == status)[ST.ONLINE, ST.SILENT] then "true" else "false" --(show status)
       _ <- setValueToLocalStore DRIVER_STATUS_N (show status)
-      void $ lift $ lift $ loaderText (getString PLEASE_WAIT) if any( _ == status)[Online, Silent] then (getString SETTING_YOU_ONLINE) else (getString SETTING_YOU_OFFLINE)
+      void $ lift $ lift $ loaderText (getString PLEASE_WAIT) if any( _ == status)[ST.ONLINE, ST.SILENT] then (getString SETTING_YOU_ONLINE) else (getString SETTING_YOU_OFFLINE)
       void $ lift $ lift $ toggleLoader true
-      (DriverActiveInactiveResp resp) <- Remote.driverActiveInactiveBT (if any( _ == status)[Online, Silent] then "true" else "false")
-      _ <- setValueToLocalStore RIDE_T_FREQUENCY (if any( _ == status)[Online, Silent] then "20000" else "300000")
-      _ <- setValueToLocalStore DRIVER_MIN_DISPLACEMENT (if any( _ == status)[Online, Silent] then "8.0" else "25.0")
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {statusOnline = (if any( _ == status)[Online, Silent] then true else false), driverStatusSet = status}})
+      (DriverActiveInactiveResp resp) <- Remote.driverActiveInactiveBT (if any( _ == status)[ST.ONLINE, ST.SILENT] then "true" else "false") status
+      _ <- setValueToLocalStore RIDE_T_FREQUENCY (if any( _ == status)[ST.ONLINE, ST.SILENT] then "20000" else "300000")
+      _ <- setValueToLocalStore DRIVER_MIN_DISPLACEMENT (if any( _ == status)[ST.ONLINE, ST.SILENT] then "8.0" else "25.0")
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {statusOnline = (if any( _ == status)[ST.ONLINE, ST.SILENT] then true else false), driverStatusSet = status}})
+      _ <- pure $ spy "zxc updateActivity " status
       homeScreenFlow
 
     GO_TO_START_RIDE {id, otp , lat, lon} -> do
@@ -879,8 +923,9 @@ homeScreenFlow = do
       void $ lift $ lift $ toggleLoader true
       endRideResp <- Remote.endRide id (Remote.makeEndRideReq (fromMaybe 0.0 (fromString lat)) (fromMaybe 0.0 (fromString lon)))-- driver's  lat long during ending ride
       _ <- pure $ setValueToLocalNativeStore IS_RIDE_ACTIVE  "false"
-      _ <- pure $ setValueToLocalStore DRIVER_STATUS_N "Online"
-      _ <- pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
+      _ <- pure $ setValueToLocalStore DRIVER_STATUS_N "ONLINE"
+      _ <- pure $ setValueToLocalNativeStore DRIVER_STATUS_N "ONLINE"
+      (DriverActiveInactiveResp resp) <- Remote.driverActiveInactiveBT "true" ST.ONLINE
       (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "1" "0" "false"
       case (head rideHistoryResponse.list) of
         Nothing -> pure unit
@@ -909,8 +954,9 @@ homeScreenFlow = do
       _ <- pure $ printLog "HOME_SCREEN_FLOW GO_TO_CANCEL_RIDE" "."
       cancelRideResp <- Remote.cancelRide id (Remote.makeCancelRideReq info reason)
       _ <- pure $ removeAllPolylines ""
-      _ <- pure $ setValueToLocalStore DRIVER_STATUS_N "Online"
-      _ <- pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
+      _ <- pure $ setValueToLocalStore DRIVER_STATUS_N "ONLINE"
+      _ <- pure $ setValueToLocalNativeStore DRIVER_STATUS_N "ONLINE"
+      (DriverActiveInactiveResp resp) <- Remote.driverActiveInactiveBT "true" ST.ONLINE
       removeChatService ""
       _ <- updateStage $ HomeScreenStage HomeScreen
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props { chatcallbackInitiated = false}})
@@ -919,8 +965,9 @@ homeScreenFlow = do
       _ <- pure $ removeAllPolylines ""
       case notificationType of
         "CANCELLED_PRODUCT" -> do
-          _ <- pure $ setValueToLocalStore DRIVER_STATUS_N "Online"
-          _ <- pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
+          _ <- pure $ setValueToLocalStore DRIVER_STATUS_N "ONLINE"
+          _ <- pure $ setValueToLocalNativeStore DRIVER_STATUS_N "ONLINE"
+          (DriverActiveInactiveResp resp) <- Remote.driverActiveInactiveBT "true" ST.ONLINE
           removeChatService ""
           _ <- updateStage $ HomeScreenStage HomeScreen
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props { chatcallbackInitiated = false}})
@@ -1038,7 +1085,7 @@ noInternetScreenFlow triggertype = do
                         false ->  currentRideFlow
     TURN_ON_GPS -> if not internetCondition then noInternetScreenFlow "INTERNET_ACTION"
                     else do
-                      (DriverActiveInactiveResp resp) <- Remote.driverActiveInactiveBT "true"
+                      (DriverActiveInactiveResp resp) <- Remote.driverActiveInactiveBT "true" ST.ONLINE
                       currentRideFlow
     CHECK_INTERNET -> case ((ifNotRegistered unit) || (getValueToLocalStore IS_DRIVER_ENABLED == "false")) of
                       true  -> pure unit
