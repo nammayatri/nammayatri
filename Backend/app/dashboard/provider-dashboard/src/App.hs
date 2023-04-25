@@ -36,7 +36,7 @@ runService :: (AppCfg -> AppCfg) -> IO ()
 runService configModifier = do
   appCfg <- readDhallConfigDefault "provider-dashboard" <&> configModifier
   appEnv <- buildAppEnv authTokenCacheKeyPrefix appCfg
-  -- Metrics.serve (appCfg.metricsPort) --  do we need it?
+  -- !! Metrics.serve (appCfg.metricsPort) --  do we need it?
   runServerWithHealthCheck appEnv (Proxy @API) handler identity identity context releaseAppEnv \flowRt -> do
     migrateIfNeeded appCfg.migrationPath appCfg.autoMigrate appCfg.esqDBCfg
       >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
