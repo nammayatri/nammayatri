@@ -69,7 +69,7 @@ initData = {
     },
     props: {
         statusOnline : true,
-        driverStatusSet : Online,
+        driverStatusSet : ONLINE,
         goOfflineModal : false,
         screenName : "Home",
         rideActionModal : false,

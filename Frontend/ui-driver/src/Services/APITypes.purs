@@ -180,7 +180,7 @@ instance encodeResendOTPRequest :: Encode ResendOTPRequest where encode = defaul
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --  Driver Activity API request, response types
-data DriverActiveInactiveReq = DriverActiveInactiveReq String
+data DriverActiveInactiveReq = DriverActiveInactiveReq String String
 
 newtype DriverActiveInactiveResp = DriverActiveInactiveResp ApiSuccessResult
 
@@ -189,12 +189,17 @@ newtype ApiSuccessResult = ApiSuccessResult {
 }
 
 instance makeDriverActiveInactiveReq :: RestEndpoint DriverActiveInactiveReq DriverActiveInactiveResp  where
-    makeRequest reqBody@(DriverActiveInactiveReq status ) headers = defaultMakeRequest POST (EP.driverActiveInactive status) headers reqBody
+    makeRequest reqBody@(DriverActiveInactiveReq status status_n) headers = defaultMakeRequest POST (EP.driverActiveInactiveSilent status status_n) headers reqBody
     decodeResponse = decodeJSON
     encodeRequest req = standardEncode req
 
+-- instance makeDriverActiveInactiveSilentReq :: RestEndpoint DriverActiveInactiveReq DriverActiveInactiveResp  where
+--     makeRequest reqBody@(DriverActiveInactiveReq status ) headers = defaultMakeRequest POST (EP.driverActiveInactiveSilent status status_n) headers reqBody
+--     decodeResponse = decodeJSON
+--     encodeRequest req = standardEncode req
+
 derive instance genericDriverActiveInactiveReq :: Generic DriverActiveInactiveReq _
-instance standardEncodeDriverActiveInactiveReq :: StandardEncode DriverActiveInactiveReq where standardEncode (DriverActiveInactiveReq req) = standardEncode req
+instance standardEncodeDriverActiveInactiveReq :: StandardEncode DriverActiveInactiveReq where standardEncode (DriverActiveInactiveReq req status) = standardEncode req
 instance showDriverActiveInactiveReq :: Show DriverActiveInactiveReq where show = genericShow
 instance decodeDriverActiveInactiveReq :: Decode DriverActiveInactiveReq where decode = defaultDecode
 instance encodeDriverActiveInactiveReq :: Encode DriverActiveInactiveReq where encode = defaultEncode
@@ -370,6 +375,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , firstName             :: String
     , mobileNumber          :: Maybe String
     , active                :: Boolean
+    , mode                  :: Maybe String
     , onRide                :: Boolean
     , linkedVehicle         :: Maybe Vehicle
     , organization          :: OrganizationInfo

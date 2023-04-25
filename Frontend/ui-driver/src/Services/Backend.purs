@@ -42,6 +42,7 @@ import Log (printLog)
 import Effect.Class (liftEffect)
 import Storage (getValueToLocalStore, KeyStore(..))
 import Debug.Trace
+import Screens.Types (DriverStatus)
 
 getHeaders :: String -> Flow GlobalState Headers
 getHeaders dummy = do 
@@ -232,10 +233,10 @@ makeVerifyOTPReq otp = VerifyTokenReq {
     }
 
 ------------------------------------------ driverActiveInactiveBT -------------------------------------------------------------
-driverActiveInactiveBT :: String -> FlowBT String DriverActiveInactiveResp
-driverActiveInactiveBT status = do
+driverActiveInactiveBT :: String -> DriverStatus -> FlowBT String DriverActiveInactiveResp
+driverActiveInactiveBT status status_n = do
         headers <- getHeaders' ""
-        withAPIResultBT (EP.driverActiveInactive status) (\x → x) errorHandler (lift $ lift $ callAPI headers (DriverActiveInactiveReq status ))
+        withAPIResultBT (EP.driverActiveInactiveSilent status $ show status_n) (\x → x) errorHandler (lift $ lift $ callAPI headers (DriverActiveInactiveReq status $ show status_n))
     where
         errorHandler (ErrorPayload errorPayload) =  do 
             modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { props { goOfflineModal = true }})

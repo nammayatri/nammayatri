@@ -261,8 +261,7 @@ eval (Notification notificationType) state = do
 eval CancelGoOffline state = do 
   continue state { props = state.props { goOfflineModal = false } }
 
-eval (GoOffline status) state = do
-  exit (DriverAvailabilityStatus state { props = state.props { goOfflineModal = false }} ST.Offline)
+eval (GoOffline status) state = exit (DriverAvailabilityStatus state { props = state.props { goOfflineModal = false }} ST.OFFLINE)
 
 eval (ShowMap key lat lon) state = continueWithCmd state [ do 
   id <- checkPermissionAndUpdateDriverMarker state
@@ -489,18 +488,18 @@ eval (SwitchDriverStatus status) state = do
   else if state.props.driverStatusSet == status then continue state 
     else 
       case status of 
-        ST.Online -> exit (DriverAvailabilityStatus state status)
-        ST.Silent -> exit (DriverAvailabilityStatus state status)
-        ST.Offline -> 
+        ST.ONLINE -> exit (DriverAvailabilityStatus state status)
+        ST.SILENT -> exit (DriverAvailabilityStatus state status)
+        ST.OFFLINE -> 
           do
-            let checkIfLastWasSilent = state.props.driverStatusSet == ST.Silent
+            let checkIfLastWasSilent = state.props.driverStatusSet == ST.SILENT
             continue state { props { goOfflineModal = checkIfLastWasSilent, silentPopUpView = not checkIfLastWasSilent }}
 
-eval (PopUpModalSilentAction (PopUpModal.OnButton1Click)) state = exit (DriverAvailabilityStatus state{props{silentPopUpView = false}} ST.Offline)
-eval (PopUpModalSilentAction (PopUpModal.OnButton2Click)) state = 
-  do
-    _ <- pure $ setValueToLocalStore DRIVER_STATUS_N (show ST.Silent)
-    continue state {props {driverStatusSet = ST.Silent, silentPopUpView = false}}
+eval (PopUpModalSilentAction (PopUpModal.OnButton1Click)) state = exit (DriverAvailabilityStatus state{props{silentPopUpView = false}} ST.OFFLINE)
+eval (PopUpModalSilentAction (PopUpModal.OnButton2Click)) state = exit (DriverAvailabilityStatus state{props{silentPopUpView = false}} ST.SILENT)
+  -- do
+  --   _ <- pure $ setValueToLocalStore DRIVER_STATUS_N (show ST.SILENT)
+  --   continue state {props {driverStatusSet = ST.SILENT, silentPopUpView = false}}
 
 eval GoToProfile state =  do 
   _ <- pure $ setValueToLocalNativeStore PROFILE_DEMO "false"
