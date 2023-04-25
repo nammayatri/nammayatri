@@ -16,10 +16,13 @@
 module Language.Strings where
 
 import Language.Types (STR, getStringFromEnum)
-import MerchantConfigs.Utils (getString')
+import MerchantConfigs.Utils (getString', getENStrings)
 import Prelude (($))
 
 data Language = EN_US | KN_IN | HI_IN | TA_IN 
 
 getString :: STR -> String
 getString key = getString' $ getStringFromEnum key
+
+getEN :: STR -> String
+getEN key = getENStrings $ getStringFromEnum key

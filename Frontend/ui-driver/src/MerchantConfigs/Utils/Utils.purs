@@ -10,6 +10,8 @@ foreign import getString' :: String -> String
 
 foreign import getValueFromMerchant :: String -> String
 
+foreign import getENStrings :: String -> String
+
 getLanguage :: LazyCheck -> Array Language
 getLanguage language = do
   case getMerchant unit of
@@ -31,3 +33,4 @@ getLanguage language = do
         {name:"English",value:"EN_US", subtitle: ""}, 
         {name:"മലയാളം",value:"ML_IN", subtitle: "Malayalam"}
         ]
+

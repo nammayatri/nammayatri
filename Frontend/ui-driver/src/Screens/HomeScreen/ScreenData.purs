@@ -91,7 +91,7 @@ initData = {
         chatcallbackInitiated : false,
         sendMessageActive : false,
         unReadMessages : false,
-        silentPopUpView : false
+        silentPopUpView : false,
         zoneRideBooking : true
     }
 }

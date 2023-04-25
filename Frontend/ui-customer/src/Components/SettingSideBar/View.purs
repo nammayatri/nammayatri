@@ -24,7 +24,7 @@ import Effect (Effect)
 import Engineering.Helpers.Commons (screenWidth, safeMarginBottom, safeMarginTop, os, isPreviousVersion)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (isPreviousVersion, getMerchant, Merchant(..))
+import Helpers.Utils (getMerchant, Merchant(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Merchant.Utils (getValueFromConfig)

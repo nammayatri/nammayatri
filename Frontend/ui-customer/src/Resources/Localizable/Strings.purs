@@ -16,7 +16,7 @@
 module Language.Strings where
 
 import Language.Types (STR, getKeyString)
-import Merchant.Utils (getString')
+import Merchant.Utils (getString', getENStrings)
 import Prelude (($))
 
 data LANGUAGE_KEY = EN_US | KN_IN | HI_IN | BN_IN | ML_IN
@@ -33,3 +33,6 @@ getKey key = do
 --TODO: Translate in OR AS
 getString :: STR -> String
 getString key = getString' $ getKeyString key
+
+getEN :: STR -> String
+getEN key = getENStrings $ getKeyString key
