@@ -652,6 +652,7 @@ driverInfoTransformer state =
     , isSpecialZone : state.props.isSpecialZone
     , isLocationTracking : state.props.isLocationTracking
     , bookingCreatedAt : cardState.createdAt
+    , bppRideId : ""
     }
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState

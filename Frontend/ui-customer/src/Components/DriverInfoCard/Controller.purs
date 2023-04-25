@@ -39,7 +39,7 @@ type DriverInfoCardProps =
   {
     currentStage :: Stage,
     trackingEnabled :: Boolean,
-    unReadMessages :: Boolean
+    unReadMessages :: Boolean,
     isSpecialZone :: Boolean,
     estimatedTime :: String
   }

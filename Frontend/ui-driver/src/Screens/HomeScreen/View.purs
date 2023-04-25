@@ -39,7 +39,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils as HU
 import JBridge as JB
-import Language.Strings (getString)
+import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import Log (printLog)
 import Prelude (Unit, bind,map, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=))
@@ -65,7 +65,6 @@ import Control.Transformers.Back.Trans (runBackT)
 import Services.APITypes (Status(..))
 import Components.BottomNavBar.Controller (navData)
 import Screens.HomeScreen.ComponentConfig
-import EN (getEN)
 
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
@@ -227,7 +226,6 @@ view push state =
                     ]
                   , addAlternateNumber push state 
                   , if not state.props.statusOnline then showOfflineStatus push state else dummyTextView
-                  , if not state.props.rideActionModal && state.props.statusOnline then statsModel push state else dummyTextView
                   , if (HU.getMerchant unit) == HU.JATRISAATHIDRIVER then otpButtonView state push else dummyTextView
                   ]
               ]
@@ -276,7 +274,7 @@ otpButtonView state push =
               , height WRAP_CONTENT
               , color Color.blue900
               , padding (PaddingLeft 8)
-              , text (getString OTP)
+              , text (getString OTP_)
               ] <> FontStyle.subHeading2 TypoGraphy
           ]
       ]

@@ -46,6 +46,7 @@ import Presto.Core.Flow (Flow, doAff)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, FareComponent)
 import Types.App (GlobalState)
+import Foreign.Generic (decode)
 
 -- shuffle' :: forall a. Array a -> Effect (Array a)
 -- shuffle' array = do 

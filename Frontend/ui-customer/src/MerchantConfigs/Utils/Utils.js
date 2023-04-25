@@ -61,3 +61,7 @@ function getStringFromCommon(key) {
       return EnglishStrings.getStringValue(key);
   }
 }
+
+exports["getENStrings"] = function (constructorKey){
+  return EnglishStrings.getStringValue(constructorKey);
+}

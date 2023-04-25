@@ -35,7 +35,7 @@ initData = {
     vehicleRegNumber : "",
     vehicleModelName : "",
     vehicleColor : "",
-    driverAlternateNumber : Nothing
+    driverAlternateNumber : Nothing,
 
     capacity : 0,
     vehicleSelected: [],

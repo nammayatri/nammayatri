@@ -20,7 +20,7 @@ import Components.ErrorModal as ErrorModal
 import Components.GenericHeader as GenericHeader
 import Components.IndividualRideCard.Controller as IndividualRideCardController
 import Components.PrimaryButton as PrimaryButton
-import Data.Array (union, (!!), length, filter, unionBy, head, all)
+import Data.Array (union, (!!), length, filter, unionBy, head, all, null)
 import Data.Int (fromString, round, toNumber)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
@@ -38,9 +38,8 @@ import Screens.HomeScreen.Transformer (dummyRideAPIEntity)
 import Screens.Types (AnimationState(..), FareComponent, Fares, IndividualRideCardState, ItemState, MyRidesScreenState, Stage(..))
 import Services.API (FareBreakupAPIEntity(..), RideAPIEntity(..), RideBookingListRes, RideBookingRes(..))
 import Storage (isLocalStageOn)
-import Language.Strings (getString)
-import Language.Types (STR(..))
-import EN (getEN) 
+import Language.Strings (getString, getEN)
+import Language.Types (STR(..)) 
 
 instance showAction :: Show Action where 
   show _ = ""
