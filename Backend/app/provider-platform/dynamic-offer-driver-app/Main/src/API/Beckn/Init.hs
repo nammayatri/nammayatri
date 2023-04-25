@@ -61,21 +61,23 @@ init transporterId (SignatureAuthResult _ subscriber) req =
           dInitRes <- DInit.initOneWayTrip transporterId dReq
           void . handle (errHandler dInitRes.booking) $
             CallBAP.withCallback dInitRes.transporter Context.INIT OnInit.onInitAPI context context.bap_uri $
-              pure $ ACL.mkOnInitMessage dInitRes
+              pure $
+                ACL.mkOnInitMessage dInitRes
       DInit.InitRecurringBookingReq dReq -> do
         dRes <- DInit.initRecurringBooking transporterId dReq
         void . handle (recurringBookingErrHandler dRes.booking) $
           CallBAP.withCallback dRes.transporter Context.INIT OnInit.onInitAPI req.context req.context.bap_uri $
-            pure $ ACL.mkOnInitRecurringBookingMessage dRes
+            pure $
+              ACL.mkOnInitRecurringBookingMessage dRes
     pure Ack
   where
     recurringBookingErrHandler _booking exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc =
-        --TODO: Handle this error by deleting the recurring booking
-        pure Ack
+          -- TODO: Handle this error by deleting the recurring booking
+          pure Ack
       | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc =
-        --TODO: Handle this error by deleting the recurring booking
-        pure Ack
+          -- TODO: Handle this error by deleting the recurring booking
+          pure Ack
       | otherwise = throwM exc
 
     errHandler booking exc

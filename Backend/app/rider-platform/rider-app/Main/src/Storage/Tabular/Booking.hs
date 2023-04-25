@@ -78,11 +78,11 @@ instance TEntityKey BookingT where
   toKey (Id id) = BookingTKey id
 
 data BookingDetailsT
-    = OneWayDetailsT SLoc.BookingLocationT
-    | RecurringDetailsT SLoc.BookingLocationT
-    | RentalDetailsT SRentalSlab.RentalSlabT
-    | DriverOfferDetailsT SLoc.BookingLocationT
-    | OneWaySpecialZoneDetailsT SLoc.BookingLocationT
+  = OneWayDetailsT SLoc.BookingLocationT
+  | RecurringDetailsT SLoc.BookingLocationT
+  | RentalDetailsT SRentalSlab.RentalSlabT
+  | DriverOfferDetailsT SLoc.BookingLocationT
+  | OneWaySpecialZoneDetailsT SLoc.BookingLocationT
 
 type FullBookingT = (BookingT, SLoc.BookingLocationT, Maybe STripTerms.TripTermsT, BookingDetailsT)
 

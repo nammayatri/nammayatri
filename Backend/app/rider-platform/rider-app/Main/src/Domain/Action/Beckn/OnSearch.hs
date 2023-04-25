@@ -53,6 +53,7 @@ import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Quote as QQuote
+import qualified Storage.Queries.RecurringQuote as QRecurringQuote
 import qualified Storage.Queries.SearchRequest as QSearchReq
 import Tools.Error
 import qualified Tools.Metrics as Metrics
@@ -156,11 +157,12 @@ onSearchService transactionId DOnSearchReq {..} = do
   Metrics.finishSearchMetrics merchant.name transactionId
   now <- getCurrentTime
   estimates <- traverse (buildEstimate requestId providerInfo now searchRequest) estimatesInfo
-  (quotes, _recurringQuotes) <-
-      E.partitionEithers <$> traverse (buildQuote requestId providerInfo now searchRequest.merchantId) quotesInfo
+  (quotes, recurringQuotes) <-
+    E.partitionEithers <$> traverse (buildQuote requestId providerInfo now searchRequest.merchantId) quotesInfo
   DB.runTransaction do
     QEstimate.createMany estimates
     QQuote.createMany quotes
+    QRecurringQuote.createMany recurringQuotes
     QPFS.updateStatus searchRequest.riderId DPFS.GOT_ESTIMATE {requestId = searchRequest.id, validTill = searchRequest.validTill}
   QPFS.clearCache searchRequest.riderId
 
@@ -237,8 +239,7 @@ buildQuote requestId providerInfo now merchantId QuoteInfo {..} = do
         Left $
           DQuote.Quote
             { id = uid,
-              providerMobileNumber = providerInfo.mobileNumber,
-              providerName = providerInfo.name,
+              providerMobileNumber = providerInfo.mobileNumber, providerName = providerInfo.name,
               providerCompletedRidesCount = providerInfo.ridesCompleted,
               providerId = providerInfo.providerId,
               providerUrl = providerInfo.url,

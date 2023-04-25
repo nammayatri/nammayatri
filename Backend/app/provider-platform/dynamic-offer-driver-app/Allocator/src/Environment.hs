@@ -69,7 +69,8 @@ data HandlerEnv = HandlerEnv
     coreMetrics :: CoreMetricsContainer,
     ssrMetrics :: SendSearchRequestToDriverMetricsContainer,
     maxShards :: Int,
-    version :: DeploymentVersion
+    version :: DeploymentVersion,
+    nwAddress :: BaseUrl
   }
   deriving (Generic)
 

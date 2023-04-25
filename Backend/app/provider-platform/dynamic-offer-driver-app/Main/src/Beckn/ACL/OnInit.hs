@@ -15,9 +15,12 @@
 module Beckn.ACL.OnInit where
 
 import Beckn.Types.Core.Taxi.OnInit as OnInit
+import Beckn.Types.Core.Taxi.OnInit.Fulfillment as OnInit
 import Domain.Action.Beckn.Init as DInit
+import Domain.Types.FareParameters (FareParameters)
 import qualified Domain.Types.ItemId as ItemId
 import Kernel.Prelude
+import Kernel.Types.Common (Money)
 import SharedLogic.FareCalculator
 
 mkOnInitRecurringBookingMessage :: DInit.InitRecurringBookingRes -> OnInit.OnInitMessage
@@ -63,39 +66,41 @@ mkOnInitRecurringBookingMessage res = do
     }
 
 mkOnInitMessage :: DInit.InitRes -> OnInit.OnInitMessage
-mkOnInitMessage res = do
-  let rb = res.booking
-      fareDecimalValue = fromIntegral rb.estimatedFare
-      currency = "INR"
-      breakup_ = mkBreakupList (OnInit.BreakupItemPrice currency . fromIntegral) OnInit.BreakupItem rb.fareParams
+mkOnInitMessage res =
+  mkOnInitMessage' res.booking.id.getId res.booking.estimatedFare res.booking.fareParams Nothing
 
-  OnInit.OnInitMessage
-    { order =
-        OnInit.Order
-          { id = res.booking.id.getId,
-            state = OnInit.NEW,
-            items = Nothing,
-            quote =
-              OnInit.Quote
-                { price =
-                    OnInit.QuotePrice
-                      { currency,
-                        value = fareDecimalValue,
-                        offered_value = fareDecimalValue
-                      },
-                  breakup = breakup_
-                },
-            payment =
-              OnInit.Payment
-                { collected_by = "BPP",
-                  params =
-                    OnInit.PaymentParams
-                      { currency = currency,
-                        amount = fareDecimalValue
-                      },
-                  _type = OnInit.ON_FULFILLMENT,
-                  time = OnInit.TimeDuration "FIXME"
-                },
-            fulfillment = Nothing
-          }
-    }
+mkOnInitMessage' :: Text -> Money -> FareParameters -> Maybe OnInit.Fulfillment -> OnInit.OnInitMessage
+mkOnInitMessage' bookingId estimatedFare fareParams fulfillment =
+  let fareDecimalValue = fromIntegral estimatedFare
+      currency = "INR"
+      breakup_ = mkBreakupList (OnInit.BreakupItemPrice currency . fromIntegral) OnInit.BreakupItem fareParams
+   in OnInit.OnInitMessage
+        { order =
+            OnInit.Order
+              { id = bookingId,
+                state = OnInit.NEW,
+                items = Nothing,
+                quote =
+                  OnInit.Quote
+                    { price =
+                        OnInit.QuotePrice
+                          { currency,
+                            value = fareDecimalValue,
+                            offered_value = fareDecimalValue
+                          },
+                      breakup = breakup_
+                    },
+                payment =
+                  OnInit.Payment
+                    { collected_by = "BPP",
+                      params =
+                        OnInit.PaymentParams
+                          { currency = currency,
+                            amount = fareDecimalValue
+                          },
+                      _type = OnInit.ON_FULFILLMENT,
+                      time = OnInit.TimeDuration "FIXME"
+                    },
+                fulfillment = fulfillment
+              }
+        }

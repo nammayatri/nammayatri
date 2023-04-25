@@ -20,13 +20,16 @@ module SharedLogic.Allocator where
 
 import Data.Singletons.TH
 import qualified Domain.Types.SearchRequest as DSR
+import Domain.Types.Timetable (Timetable)
 import Kernel.Prelude
 import Kernel.Types.Common (Meters, Money)
 import Kernel.Types.Id
 import Kernel.Utils.Dhall (FromDhall)
 import Lib.Scheduler
 
-data AllocatorJobType = SendSearchRequestToDriver
+data AllocatorJobType
+  = SendSearchRequestToDriver
+  | AllocateDriverForUpcomingRide
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -35,6 +38,7 @@ showSingInstance ''AllocatorJobType
 instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo :: Sing (e :: AllocatorJobType) -> Text -> Maybe (AnyJobInfo AllocatorJobType)
   restoreAnyJobInfo SSendSearchRequestToDriver jobData = AnyJobInfo <$> restoreJobInfo SSendSearchRequestToDriver jobData
+  restoreAnyJobInfo SAllocateDriverForUpcomingRide jobData = AnyJobInfo <$> restoreJobInfo SAllocateDriverForUpcomingRide jobData
 
 data SendSearchRequestToDriverJobData = SendSearchRequestToDriverJobData
   { requestId :: Id DSR.SearchRequest,
@@ -49,3 +53,12 @@ data SendSearchRequestToDriverJobData = SendSearchRequestToDriverJobData
 instance JobInfoProcessor 'SendSearchRequestToDriver
 
 type instance JobContent 'SendSearchRequestToDriver = SendSearchRequestToDriverJobData
+
+data AllocateDriverForUpcomingRideJobData = AllocateDriverForUpcomingRideJobData
+  { timetableId :: Id Timetable
+  }
+  deriving (Generic, ToJSON, FromJSON)
+
+instance JobInfoProcessor 'AllocateDriverForUpcomingRide
+
+type instance JobContent 'AllocateDriverForUpcomingRide = AllocateDriverForUpcomingRideJobData

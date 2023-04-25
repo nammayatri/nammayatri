@@ -36,27 +36,27 @@ buildInitReq subscriber req = do
   item <- case items of
     [item] -> return item
     _ -> throwError (InvalidRequest "order.items must contain exactly 1 item.")
-  unless (subscriber.subscriber_id == context.bap_id) $
+  unless (subscriber . subscriber_id == context . bap_id) $
     throwError (InvalidRequest "Invalid bap_id")
-  let itemCode = item.descriptor.code
+  let itemCode = item . descriptor . code
   initTypeReq <- buildInitTypeReq item
-  vehicleVariant <- fromEitherM InvalidRequest $ castVehicleVariant itemCode.vehicleVariant
-  transactionId <- context.transaction_id & fromMaybeM (InvalidRequest "Missing transaction_id")
+  vehicleVariant <- fromEitherM InvalidRequest $ castVehicleVariant itemCode . vehicleVariant
+  transactionId <- context . transaction_id & fromMaybeM (InvalidRequest "Missing transaction_id")
   return $
     DInit.InitReq
       { vehicleVariant, -- = castVehicleVariant itemCode.vehicleVariant,
         transactionId = transactionId,
-        fromLocation = LatLong {lat = fulfillment.start.location.gps.lat, lon = fulfillment.start.location.gps.lon},
+        fromLocation = LatLong {lat = fulfillment . start . location . gps . lat, lon = fulfillment . start . location . gps . lon},
         -- toLocation = fulfillment.end <&> \end -> LatLong {lat = end.location.gps.lat, lon = end.location.gps.lon},
-        bapId = subscriber.subscriber_id,
-        bapUri = subscriber.subscriber_url,
-        startTime = fulfillment.start.time.timestamp,
+        bapId = subscriber . subscriber_id,
+        bapUri = subscriber . subscriber_url,
+        startTime = fulfillment . start . time . timestamp,
         initTypeReq = initTypeReq
       }
   where
-    context = req.context
-    items = req.message.order.items
-    fulfillment = req.message.order.fulfillment
+    context = req . context
+    items = req . message . order . items
+    fulfillment = req . message . order . fulfillment
 
     castVehicleVariant = \case
       Init.SUV -> Right Veh.SUV
@@ -66,22 +66,23 @@ buildInitReq subscriber req = do
       Init.TAXI -> Left "Taxi vehicles are not supported by this BPP"
       Init.TAXI_PLUS -> Left "Taxi-plus vehicles are not supported by this BPP"
     buildInitTypeReq item = do
-      let itemCode = item.descriptor.code
-      case itemCode.fareProductType of
+      let itemCode = item . descriptor . code
+      case itemCode . fareProductType of
         Init.ONE_WAY_TRIP -> do
-          toLocationInfo <- fulfillment.end & fromMaybeM (InternalError "FareProductType is ONE_WAY but ToLocation is Nothing")
-          let toLocation = LatLong {lat = toLocationInfo.location.gps.lat, lon = toLocationInfo.location.gps.lon}
+          toLocationInfo <- fulfillment . end & fromMaybeM (InternalError "FareProductType is ONE_WAY but ToLocation is Nothing")
+          let toLocation = LatLong {lat = toLocationInfo . location . gps . lat, lon = toLocationInfo . location . gps . lon}
           return . DInit.InitOneWayTypeReq $
             DInit.InitOneWayReq
               { ..
               }
         Init.RENTAL_TRIP -> do
-          distance <- itemCode.distance & fromMaybeM (InternalError "FareProductType is RENTAL but distance is Nothing")
-          duration <- itemCode.duration & fromMaybeM (InternalError "FareProductType is RENTAL but duration is Nothing")
+          distance <- itemCode . distance & fromMaybeM (InternalError "FareProductType is RENTAL but distance is Nothing")
+          duration <- itemCode . duration & fromMaybeM (InternalError "FareProductType is RENTAL but duration is Nothing")
           return . DInit.InitRentalTypeReq $
             DInit.InitRentalReq
               { ..
               }
+        Init.RECURRING_TRIP -> throwError $ InvalidRequest "Recurring trip is not supported by this BPP"
         Init.DRIVER_OFFER_ESTIMATE -> throwError $ InvalidRequest "Driver offer is not supported by this BPP"
         Init.DRIVER_OFFER -> throwError $ InvalidRequest "Driver offer is not supported by this BPP"
         Init.ONE_WAY_SPECIAL_ZONE -> throwError $ InvalidRequest "one way special zone is not supported by this BPP"

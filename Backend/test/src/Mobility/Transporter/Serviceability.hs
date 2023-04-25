@@ -83,7 +83,15 @@ nonServiceableSearchRequest appClientEnv = do
           AppBESearch.RentalSearch $
             req
               & #origin . #gps .~ keralaLocation
+<<<<<<< HEAD
   result <- runClient appClientEnv (searchServices appRegistrationToken updatedSearchReq (Just defaultVersion) (Just defaultVersion) Nothing)
+=======
+        AppBESearch.RecurringSearch req ->
+          AppBESearch.RecurringSearch $
+            req
+              & #origin . #gps .~ keralaLocation
+  result <- runClient appClientEnv (searchServices appRegistrationToken updatedSearchReq (Just defaultVersion) (Just defaultVersion))
+>>>>>>> 9732d435f (rider-platform: add recurring quote; provider-platform: add allocation of drivers for upcoming booking; add cli (squashed commit))
   verifyError 400 "RIDE_NOT_SERVICEABLE" result
 
 spec :: Spec

@@ -2,7 +2,7 @@ module SharedLogic.Allocator.Jobs.UpdateRecurringBookingTimetable where
 
 import Data.Time.Calendar (Day)
 import Data.Time.Clock (UTCTime (..))
-import Data.Time.LocalTime (timeToTimeOfDay)
+import Data.Time.LocalTime (LocalTime (..), timeToTimeOfDay)
 import qualified Domain.Types.RecurringBooking as DRecurringBooking
 import qualified Domain.Types.Timetable as DTimetable
 import Kernel.Prelude
@@ -21,7 +21,12 @@ updateRecurringBookingTimetable = do
   bookingTimetables <- traverse (generateNextTimetables timetablesToGenerate now) bookings
   runTransaction $ QTimetable.insertTimetables $ concat bookingTimetables
 
-generateNextTimetables :: MonadFlow m => Int -> UTCTime -> DRecurringBooking.RecurringBooking -> m [DTimetable.Timetable]
+generateNextTimetables ::
+  MonadGuid m =>
+  Int ->
+  UTCTime ->
+  DRecurringBooking.RecurringBooking ->
+  m [DTimetable.Timetable]
 generateNextTimetables count now booking =
   DRecurringBooking.scheduledDates booking
     & dropWhile isPastRide
@@ -34,14 +39,23 @@ generateNextTimetables count now booking =
                && booking.pickupTime > timeToTimeOfDay (utctDayTime now)
            )
 
-makeTimetableForDay :: MonadFlow m => DRecurringBooking.RecurringBooking -> Day -> m DTimetable.Timetable
+makeTimetableForDay ::
+  MonadGuid m =>
+  DRecurringBooking.RecurringBooking ->
+  Day ->
+  m DTimetable.Timetable
 makeTimetableForDay booking day = do
   timetableId <- generateGUID
+  let pickupTime =
+        LocalTime
+          { localDay = day,
+            localTimeOfDay = booking.pickupTime
+          }
   pure $
     DTimetable.Timetable
       { id = timetableId,
         recurringBookingId = booking.id,
-        pickupDate = day,
-        pickupTime = booking.pickupTime,
+        bookingId = Nothing,
+        pickupTime = pickupTime,
         status = DTimetable.Active
       }

@@ -104,7 +104,8 @@ handler merchantId sReq = do
   searchReq <- buildSearchRequest fromLocation toLocation merchantId estimate sReq distance duration sReq.customerExtraFee device
   let estimateFare = fareSum fareParams
   logDebug $
-    "search request id=" <> show searchReq.id
+    "search request id="
+      <> show searchReq.id
       <> "; estimated distance = "
       <> show distance
       <> "; estimated base fare:"
@@ -173,7 +174,8 @@ buildSearchRequest from to merchantId estimate sReq distance duration customerEx
         status = DSearchReq.ACTIVE,
         autoAssignEnabled = sReq.autoAssignEnabled,
         searchRepeatCounter = 0,
-        updatedAt = now
+        updatedAt = now,
+        automatedSearch = False
       }
 
 buildSearchReqLocation :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DM.Merchant -> Text -> Maybe BA.Address -> Maybe Maps.Language -> LatLong -> m DLoc.SearchReqLocation

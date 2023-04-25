@@ -36,6 +36,10 @@ createJob maxShards jobData = do
           maxErrors = 5
         }
 
+createManyJobs :: forall t (e :: t). (SingI e, JobInfoProcessor e, JobProcessor t) => Int -> [JobEntry e] -> Esq.SqlDB ()
+createManyJobs maxShards jobs = do
+  void $ ScheduleJob.createManyJobs @t @e @Esq.SqlDB Esq.createMany maxShards jobs
+
 createJobIn :: forall t (e :: t). (SingI e, JobInfoProcessor e, JobProcessor t) => NominalDiffTime -> Int -> JobContent e -> Esq.SqlDB ()
 createJobIn inTime maxShards jobData = do
   void $
@@ -79,8 +83,12 @@ getReadyTasks mbMaxShards = do
   Esq.findAll $ do
     job <- from $ table @SchedulerJobT
     where_ $
-      job ^. SchedulerJobStatus ==. val Pending
-        &&. job ^. SchedulerJobScheduledAt <=. val now
+      job
+        ^. SchedulerJobStatus
+        ==. val Pending
+        &&. job
+        ^. SchedulerJobScheduledAt
+        <=. val now
         &&. whenJust_ mbMaxShards (\_ -> job ^. SchedulerJobShardId ==. val shardId)
     orderBy [asc $ job ^. SchedulerJobScheduledAt]
     pure job

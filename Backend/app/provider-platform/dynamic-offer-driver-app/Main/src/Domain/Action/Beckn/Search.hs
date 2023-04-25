@@ -37,7 +37,6 @@ import Kernel.External.Maps.Google.PolyLinePoints
 import Kernel.Prelude
 import Kernel.Serviceability
 import qualified Kernel.Storage.Esqueleto as Esq
-import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -58,7 +57,6 @@ import qualified Storage.Queries.SearchRequestSpecialZone as QSearchRequestSpeci
 import Tools.Error
 import qualified Tools.Maps as Maps
 import qualified Tools.Metrics.ARDUBPPMetrics as Metrics
-
 
 data DSearchReq = DSearchReq
   { messageId :: Text,
@@ -126,7 +124,6 @@ handler merchantId sReq = do
     throwError RideNotServiceable
   result <- getDistanceAndDuration merchantId fromLocationLatLong toLocationLatLong sReq.routeDistance sReq.routeDuration
   CD.cacheDistance sReq.transactionId (result.distance, result.duration)
-  Redis.setExp (CD.deviceKey sReq.transactionId) sReq.device 120
   logDebug $ "distance: " <> show result.distance
   mbSpecialLocation <- QSpecialLocation.findSpecialLocationByLatLong fromLocationLatLong
 
@@ -192,11 +189,11 @@ handler merchantId sReq = do
     listVehicleVariantHelper farePolicy = catMaybes $ everyPossibleVariant <&> \var -> find ((== var) . (.vehicleVariant)) farePolicy
 
     selectFarePolicy distance = filter (\fp -> checkTripConstraints distance fp.minAllowedTripDistance fp.maxAllowedTripDistance)
-      where
-        checkTripConstraints tripDistance minAllowedTripDistance maxAllowedTripDistance =
-          let cond1 = (<= tripDistance) <$> minAllowedTripDistance
-              cond2 = (>= tripDistance) <$> maxAllowedTripDistance
-           in and $ catMaybes [cond1, cond2]
+
+    checkTripConstraints tripDistance minAllowedTripDistance maxAllowedTripDistance =
+      let cond1 = (<= tripDistance) <$> minAllowedTripDistance
+          cond2 = (>= tripDistance) <$> maxAllowedTripDistance
+       in and $ catMaybes [cond1, cond2]
 
     zipMatched estimates driverPools = do
       estimate <- estimates

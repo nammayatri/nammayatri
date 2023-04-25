@@ -28,6 +28,7 @@ import Kernel.Utils.Servant.SignatureAuth
 import Lib.Scheduler
 import qualified Lib.Scheduler.JobStorageType.DB.Queries as QAllJ
 import SharedLogic.Allocator
+import qualified SharedLogic.Allocator.Jobs.AllocateDriverForUpcomingRide as AllocateDriverForUpcomingRide
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers)
 import qualified Storage.CachedQueries.Merchant as Storage
 
@@ -45,6 +46,7 @@ allocatorHandle flowRt env =
       jobHandlers =
         emptyJobHandlerList
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendSearchRequestToDrivers)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . AllocateDriverForUpcomingRide.handle)
     }
 
 runDriverOfferAllocator ::
