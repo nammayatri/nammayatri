@@ -249,8 +249,12 @@ makeSearchLocationReq input lat lng radius language components = SearchLocationR
     "radius" : radius,
     "components" : components,
     "language" : language,
-    "sessionToken" : Nothing
-}
+    "sessionToken" : Nothing,
+    "origin" : LatLong {
+            "lat" : lat,
+            "lon" : lng
+            }
+    }
 
 ------------------------------------------------------------------------ PlaceDetailsBT Function --------------------------------------------------------------------------------------
 placeDetailsBT :: PlaceDetailsReq -> FlowBT String PlaceDetailsResp

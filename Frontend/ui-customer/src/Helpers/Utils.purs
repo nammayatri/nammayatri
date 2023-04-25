@@ -50,7 +50,12 @@ import Data.Number (fromString, pi, sin, cos, sqrt, asin)
 import Prelude (class Show, class Ord, Unit, bind, discard, pure, unit, void, identity, not, (<*>), (<#>), (<<<), (>>>), ($), (<>), (>), show, (==), (/=), (/), (*), (-), (+), map, compare, (<), (=<<), (<=), ($))
 import Presto.Core.Flow (Flow, doAff)
 import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent)
+import Services.API (Prediction)
 import Types.App (GlobalState)
+import Data.Array (sortBy)
+import Data.Ord (comparing)
+import Data.Lens ((^.))
+import Accessor (_distance_meters)
 
 -- shuffle' :: forall a. Array a -> Effect (Array a)
 -- shuffle' array = do
@@ -344,3 +349,6 @@ rotateArray arr times =
 
 isHaveFare :: String -> Array FareComponent -> Boolean
 isHaveFare fare = not null <<< filter (\item -> item.fareType == fare)
+
+sortPredctionByDistance :: Array Prediction -> Array Prediction
+sortPredctionByDistance arr = sortBy (comparing (_^._distance_meters)) arr
