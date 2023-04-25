@@ -16,6 +16,7 @@ module Tools.Metrics.ARDUBPPMetrics.Types
   ( HasBPPMetrics,
     BPPMetricsContainer (..),
     module CoreMetrics,
+    RequestDurationMetric,
     registerBPPMetricsContainer,
   )
 where
@@ -27,11 +28,13 @@ import Prometheus as P
 
 type HasBPPMetrics m r = (HasFlowEnv m r ["bppMetrics" ::: BPPMetricsContainer, "version" ::: DeploymentVersion])
 
-type SearchDurationMetric = (P.Vector P.Label2 P.Histogram, P.Vector P.Label2 P.Counter)
+type RequestDurationMetric = (P.Vector P.Label2 P.Histogram, P.Vector P.Label2 P.Counter)
 
 data BPPMetricsContainer = BPPMetricsContainer
   { searchDurationTimeout :: Seconds,
-    searchDuration :: SearchDurationMetric,
+    searchDuration :: RequestDurationMetric,
+    selectDurationTimeout :: Seconds,
+    selectDuration :: RequestDurationMetric,
     countingDeviation :: CountingDeviationMetric
   }
 
@@ -40,9 +43,10 @@ data CountingDeviationMetric = CountingDeviationMetric
     realDistanceDeviation :: P.Vector P.Label2 P.Histogram
   }
 
-registerBPPMetricsContainer :: Seconds -> IO BPPMetricsContainer
-registerBPPMetricsContainer searchDurationTimeout = do
-  searchDuration <- registerSearchDurationMetric searchDurationTimeout
+registerBPPMetricsContainer :: Seconds -> Seconds -> IO BPPMetricsContainer
+registerBPPMetricsContainer searchDurationTimeout selectDurationTimeout = do
+  searchDuration <- registerRequestDurationMetric "search" searchDurationTimeout
+  selectDuration <- registerRequestDurationMetric "select" selectDurationTimeout
   countingDeviation <- registerCountingDeviationMetric
   return $ BPPMetricsContainer {..}
 
@@ -64,8 +68,8 @@ registerCountingDeviationMetric =
         "BPP_distance_deviation"
         "Difference between estimated distance and real distance of a ride"
 
-registerSearchDurationMetric :: Seconds -> IO SearchDurationMetric
-registerSearchDurationMetric searchDurationTimeout = do
+registerRequestDurationMetric :: Text -> Seconds -> IO RequestDurationMetric
+registerRequestDurationMetric requestName requestDurationTimeout = do
   searchDurationHistogram <-
     P.register $
       P.vector ("agency_name", "version") $
@@ -75,17 +79,17 @@ registerSearchDurationMetric searchDurationTimeout = do
   failureCounter <-
     P.register $
       P.vector ("agency_name", "version") $
-        P.counter $ P.Info "BPP_search_failure_counter" ""
+        P.counter $ P.Info ("BPP_" <> requestName <> "_failure_counter") ""
 
   pure (searchDurationHistogram, failureCounter)
   where
     infoSearchDuration =
       P.Info
-        "BPP_search_time"
+        ("BPP_" <> requestName <> "_time")
         ""
     buckets =
       P.linearBuckets
         0
         0.5
         searchDurationBucketCount
-    searchDurationBucketCount = (getSeconds searchDurationTimeout + 1) * 2
+    searchDurationBucketCount = (getSeconds requestDurationTimeout + 1) * 2

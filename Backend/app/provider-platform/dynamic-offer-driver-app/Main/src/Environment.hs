@@ -85,6 +85,7 @@ data AppCfg = AppCfg
     dashboardToken :: Text,
     cacheConfig :: CacheConfig,
     metricsSearchDurationTimeout :: Seconds,
+    metricsSelectDurationTimeout :: Seconds,
     driverLocationUpdateRateLimitOptions :: APIRateLimitOptions,
     driverReachedDistance :: HighPrecMeters,
     cacheTranslationConfig :: CacheTranslationConfig,
@@ -172,7 +173,7 @@ buildAppEnv cfg@AppCfg {..} = do
     if cutOffHedisCluster
       then pure hedisEnv
       else connectHedisCluster hedisClusterCfg modifierFunc
-  bppMetrics <- registerBPPMetricsContainer metricsSearchDurationTimeout
+  bppMetrics <- registerBPPMetricsContainer metricsSearchDurationTimeout metricsSelectDurationTimeout
   ssrMetrics <- registerSendSearchRequestToDriverMetricsContainer
   coreMetrics <- Metrics.registerCoreMetricsContainer
   clickhouseEnv <- createConn clickhouseCfg

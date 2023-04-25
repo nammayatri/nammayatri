@@ -48,6 +48,7 @@ import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.SearchRequest as QSReq
 import Tools.Error
 import Tools.Maps as Maps
+import qualified Tools.Metrics.ARDUBPPMetrics as Metrics
 
 data DSelectReq = DSelectReq
   { messageId :: Text,
@@ -59,7 +60,7 @@ data DSelectReq = DSelectReq
     pickupTime :: UTCTime,
     dropLocation :: LatLong,
     pickupAddress :: Maybe BA.Address,
-    dropAddrress :: Maybe BA.Address,
+    dropAddress :: Maybe BA.Address,
     autoAssignEnabled :: Bool,
     customerLanguage :: Maybe Maps.Language,
     customerExtraFee :: Maybe Money
@@ -69,10 +70,11 @@ type LanguageDictionary = M.Map Maps.Language DSearchReq.SearchRequest
 
 handler :: DM.Merchant -> DSelectReq -> DEst.Estimate -> Flow ()
 handler merchant sReq estimate = do
+  selectMetricsMVar <- Metrics.startSelectMetrics merchant.name
   sessiontoken <- generateGUIDText
   let merchantId = merchant.id
   fromLocation <- buildSearchReqLocation merchantId sessiontoken sReq.pickupAddress sReq.customerLanguage sReq.pickupLocation
-  toLocation <- buildSearchReqLocation merchantId sessiontoken sReq.dropAddrress sReq.customerLanguage sReq.dropLocation
+  toLocation <- buildSearchReqLocation merchantId sessiontoken sReq.dropAddress sReq.customerLanguage sReq.dropLocation
   mbDistRes <- CD.getCacheDistance sReq.transactionId
   logInfo $ "Fetching cached distance and duration" <> show mbDistRes
   (distance, duration) <-
@@ -127,6 +129,7 @@ handler merchant sReq estimate = do
               driverExtraFeeBounds = driverExtraFeeBounds
             }
     _ -> return ()
+  Metrics.finishSelectMetrics merchant.name selectMetricsMVar
 
 buildSearchRequest ::
   ( MonadTime m,

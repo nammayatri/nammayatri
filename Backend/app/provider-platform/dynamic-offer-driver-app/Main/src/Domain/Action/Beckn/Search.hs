@@ -88,7 +88,7 @@ data DSearchRes = DSearchRes
     now :: UTCTime,
     estimateList :: Maybe [EstimateInfo],
     specialQuoteList :: Maybe [SpecialZoneQuoteInfo],
-    searchMetricsMVar :: Metrics.SearchMetricsMVar
+    searchMetricsMVar :: Metrics.RequestMetricsMVar
   }
 
 data EstimateInfo = EstimateInfo
@@ -262,7 +262,7 @@ buildSearchRes ::
   LatLong ->
   Maybe [EstimateInfo] ->
   Maybe [SpecialZoneQuoteInfo] ->
-  Metrics.SearchMetricsMVar ->
+  Metrics.RequestMetricsMVar ->
   m DSearchRes
 buildSearchRes org fromLocation toLocation estimateList specialQuoteList searchMetricsMVar = do
   now <- getCurrentTime
