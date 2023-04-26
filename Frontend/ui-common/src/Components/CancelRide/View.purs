@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -55,36 +55,36 @@ view push config =
       , gravity BOTTOM
       , onClick push (const OnGoBack)
       , adjustViewWithKeyboard "true"
-      ][ linearLayout 
+      ][ linearLayout
           [ width MATCH_PARENT
           , alignParentBottom "true,-1"
           , height WRAP_CONTENT
           , clickable true
           , disableClickFeedback true
-          , onClick ( \action -> do 
+          , onClick ( \action -> do
             _ <- pure $ hideKeyboardOnNavigation true
-            pure unit 
+            pure unit
           ) (const NoAction)
           , cornerRadii $ Corners 20.0 true true false false
           , orientation VERTICAL
           , background Color.white900
           , padding (Padding 20 20 20 0)
-          ][  headingText config push , 
+          ][  headingText config push ,
               cancelationReasonsList push config
            ]
          ]
 
 
 headingText :: forall w . Config -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
-headingText config push = 
+headingText config push =
  linearLayout
  [ width MATCH_PARENT
  , height WRAP_CONTENT
  , orientation VERTICAL
  , clickable true
- , onClick ( \action -> do 
+ , onClick ( \action -> do
             _ <- pure $ hideKeyboardOnNavigation true
-            pure unit 
+            pure unit
           ) (const NoAction)
  , disableClickFeedback true
  ][ textView
@@ -96,8 +96,8 @@ headingText config push =
     , gravity CENTER
     , textSize FontSize.a_22
     , fontStyle $ FontStyle.bold LanguageStyle
-    ], 
-    textView 
+    ],
+    textView
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , text config.subHeadingText
@@ -118,9 +118,9 @@ headingText config push =
         _ <- push action
         _ <- setText' (getNewIDWithTag "OtherReasonEditText") ""
         _ <- setText' (getNewIDWithTag "TechGlitchEditText") ""
-        pure unit 
+        pure unit
     )) ( const ClearOptions)
-    , visibility case config.activeReasonCode of 
+    , visibility case config.activeReasonCode of
                     Just reasonCode -> if ( reasonCode == "OTHER" || reasonCode == "TECHNICAL_GLITCH") then VISIBLE else GONE
                     _               -> GONE
     ][  textView
@@ -137,7 +137,7 @@ headingText config push =
 
 
 cancelationReasonsList :: forall w .  (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-cancelationReasonsList push config = 
+cancelationReasonsList push config =
   linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
@@ -150,42 +150,42 @@ cancelationReasonsList push config =
         ][cancelationReasonOptions config push],
           primaryButtons push config
     ]
-    
+
 
 cancelationReasonOptions :: forall w . Config -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
-cancelationReasonOptions config push = 
+cancelationReasonOptions config push =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
   , padding (PaddingBottom 24)
   ] (mapWithIndex (\index item ->
-      linearLayout 
+      linearLayout
       [ width MATCH_PARENT
       , height MATCH_PARENT
       , orientation VERTICAL
       ][ linearLayout
           [ height MATCH_PARENT
           , width MATCH_PARENT
-          , orientation VERTICAL 
+          , orientation VERTICAL
           , padding (PaddingTop if index == 0 then 12 else 0)
-          , visibility case config.activeReasonCode of 
+          , visibility case config.activeReasonCode of
                 Just reasonCode -> if (( reasonCode == "TECHNICAL_GLITCH" && item.reasonCode /= "TECHNICAL_GLITCH") || ( reasonCode == "OTHER" && item.reasonCode /= "OTHER")) then GONE else VISIBLE
                 _               -> VISIBLE
           , onClick (\action -> do
-            _ <- push action 
-            _ <- case item.reasonCode of 
+            _ <- push action
+            _ <- case item.reasonCode of
               "OTHER" -> requestKeyboardShow (getNewIDWithTag "OtherReasonEditText")
               "TECHNICAL_GLITCH" -> requestKeyboardShow (getNewIDWithTag "TechGlitchEditText")
-              _ -> pure unit 
-            pure unit 
+              _ -> pure unit
+            pure unit
           ) (const (UpdateIndex index))
           ][radioButton config push index item,
             horizontalLine index (fromMaybe (-1) config.activeIndex) config,
-            (case config.activeReasonCode of 
+            (case config.activeReasonCode of
               Just reasonCode -> if (( reasonCode == "OTHER" && item.reasonCode == "OTHER")) then someOtherReason config push index else dummyTextView
               Nothing         -> dummyTextView),
-            (case config.activeReasonCode of 
+            (case config.activeReasonCode of
               Just reasonCode -> if (( reasonCode == "TECHNICAL_GLITCH" && item.reasonCode == "TECHNICAL_GLITCH")) then technicalGlitchDescription config push index else dummyTextView
               Nothing         -> dummyTextView)
             -- , technicalGlitchDescription config push index
@@ -195,14 +195,14 @@ cancelationReasonOptions config push =
 
 
 someOtherReason :: forall w . Config -> (Action  -> Effect Unit) -> Int -> PrestoDOM (Effect Unit) w
-someOtherReason config push index = 
+someOtherReason config push index =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation VERTICAL
   -- , margin (MarginLeft 40)
   , visibility case config.activeReasonCode of
-                  Just reasonCode -> if (reasonCode == "OTHER") then VISIBLE else GONE 
+                  Just reasonCode -> if (reasonCode == "OTHER") then VISIBLE else GONE
                   _               -> GONE
   ][ linearLayout
       [ height MATCH_PARENT
@@ -216,7 +216,7 @@ someOtherReason config push index =
           , cornerRadius 4.0
           , background Color.grey800
           , padding (Padding 16 2 16 2)
-          ][  
+          ][
             ((if os == "ANDROID" then editText else multiLineEditText)
               $ [ width MATCH_PARENT
               , height ( V 58)
@@ -240,19 +240,19 @@ someOtherReason config push index =
             , textSize FontSize.a_12
             , fontStyle $ FontStyle.regular LanguageStyle
             , visibility if ((not config.isMandatoryTextHidden )|| config.isLimitExceeded) then VISIBLE else GONE
-            ]                              
-          ]                                            
-      ] 
+            ]
+          ]
+      ]
 
 technicalGlitchDescription :: forall w . Config -> (Action  -> Effect Unit) -> Int -> PrestoDOM (Effect Unit) w
-technicalGlitchDescription config push index = 
+technicalGlitchDescription config push index =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation VERTICAL
   -- , margin (MarginLeft 40)
   , visibility case config.activeReasonCode of
-                  Just reasonCode -> if (reasonCode == "TECHNICAL_GLITCH" )  then VISIBLE else GONE 
+                  Just reasonCode -> if (reasonCode == "TECHNICAL_GLITCH" )  then VISIBLE else GONE
                   _               -> GONE
   ][ linearLayout
       [ height MATCH_PARENT
@@ -266,7 +266,7 @@ technicalGlitchDescription config push index =
           , cornerRadius 4.0
           , background Color.grey800
           , padding (Padding 16 2 16 2)
-          ][  
+          ][
             ((if os == "ANDROID" then editText else multiLineEditText)
               $ [ width MATCH_PARENT
               , height ( V 58)
@@ -290,11 +290,11 @@ technicalGlitchDescription config push index =
             , textSize FontSize.a_12
             , fontStyle $ FontStyle.regular LanguageStyle
             , visibility if ((not config.isMandatoryTextHidden )|| config.isLimitExceeded) then VISIBLE else GONE
-            ]                              
-          ]                                            
-      ] 
+            ]
+          ]
+      ]
 primaryButtons :: forall w . (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-primaryButtons push config = 
+primaryButtons push config =
  linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -305,7 +305,7 @@ primaryButtons push config =
 
 
 radioButton :: forall w .  Config -> (Action  -> Effect Unit) -> Int -> CancellationReasons -> PrestoDOM (Effect Unit) w
-radioButton config push index item = 
+radioButton config push index item =
  linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
@@ -314,14 +314,14 @@ radioButton config push index item =
   ][ imageView
       [ width (V 24)
       , height (V 24)
-      , imageWithFallback case config.activeIndex of 
+      , imageWithFallback case config.activeIndex of
                     Just activeIndex' -> if ( index == activeIndex') then "ny_ic_radio_selected,https://assets.juspay.in/nammayatri/images/common/ny_ic_radio_selected.png" else "ny_ic_radio_unselected,https://assets.juspay.in/nammayatri/images/common/ny_ic_radio_unselected.png"
                     Nothing           -> "ny_ic_radio_unselected,https://assets.juspay.in/nammayatri/images/common/ny_ic_radio_unselected.png"
       ],
       textView
       [ text item.description
       , margin (MarginLeft 10)
-      , fontStyle case config.activeIndex of 
+      , fontStyle case config.activeIndex of
                     Just activeIndex' -> if index == activeIndex' then FontStyle.bold LanguageStyle else FontStyle.regular LanguageStyle
                     Nothing           -> FontStyle.regular LanguageStyle
       , color Color.black900
@@ -359,7 +359,7 @@ secondPrimaryButtonConfig config = let
 
 
 horizontalLine :: forall w . Int -> Int -> Config -> PrestoDOM (Effect Unit) w
-horizontalLine index activeIndex config = 
+horizontalLine index activeIndex config =
   linearLayout
   [ height $ V 1
   , width MATCH_PARENT
@@ -369,7 +369,7 @@ horizontalLine index activeIndex config =
   ][]
 
 dummyTextView :: forall w . PrestoDOM (Effect Unit) w
-dummyTextView = 
+dummyTextView =
  textView
  [ width $ V 0
  , height $ V 0
