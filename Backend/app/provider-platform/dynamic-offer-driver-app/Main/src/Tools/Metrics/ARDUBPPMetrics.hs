@@ -41,12 +41,11 @@ startSearchMetrics agencyName = do
   version <- asks (.version)
   startRequestMetrics agencyName version bmContainer.searchDurationTimeout bmContainer.searchDuration "Search"
 
--- not used anywhere
--- finishSearchMetrics :: HasBPPMetrics m r => Text -> RequestMetricsMVar -> m ()
--- finishSearchMetrics agencyName requestMetricsMVar = do
---   bmContainer <- asks (.bppMetrics)
---   version <- asks (.version)
---   finishRequestMetrics agencyName version bmContainer.searchDuration requestMetricsMVar
+finishSearchMetrics :: HasBPPMetrics m r => Text -> RequestMetricsMVar -> m ()
+finishSearchMetrics agencyName requestMetricsMVar = do
+  bmContainer <- asks (.bppMetrics)
+  version <- asks (.version)
+  finishRequestMetrics agencyName version bmContainer.searchDuration requestMetricsMVar
 
 startSelectMetrics :: HasBPPMetrics m r => Text -> m RequestMetricsMVar
 startSelectMetrics agencyName = do

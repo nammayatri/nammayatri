@@ -70,20 +70,20 @@ registerCountingDeviationMetric =
 
 registerRequestDurationMetric :: Text -> Seconds -> IO RequestDurationMetric
 registerRequestDurationMetric requestName requestDurationTimeout = do
-  searchDurationHistogram <-
+  requestDurationHistogram <-
     P.register $
       P.vector ("agency_name", "version") $
         P.histogram
-          infoSearchDuration
+          infoRequestDuration
           buckets
   failureCounter <-
     P.register $
       P.vector ("agency_name", "version") $
         P.counter $ P.Info ("BPP_" <> requestName <> "_failure_counter") ""
 
-  pure (searchDurationHistogram, failureCounter)
+  pure (requestDurationHistogram, failureCounter)
   where
-    infoSearchDuration =
+    infoRequestDuration =
       P.Info
         ("BPP_" <> requestName <> "_time")
         ""
@@ -91,5 +91,5 @@ registerRequestDurationMetric requestName requestDurationTimeout = do
       P.linearBuckets
         0
         0.5
-        searchDurationBucketCount
-    searchDurationBucketCount = (getSeconds requestDurationTimeout + 1) * 2
+        requestDurationBucketCount
+    requestDurationBucketCount = (getSeconds requestDurationTimeout + 1) * 2

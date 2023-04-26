@@ -30,6 +30,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Servant
+import qualified Tools.Metrics as Metrics
 
 type API =
   Capture "merchantId" (Id DM.Merchant)
@@ -59,6 +60,7 @@ search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ g
           let callbackUrl = gateway.subscriber_url
           void $
             CallBAP.withCallback dSearchRes.provider Context.SEARCH OnSearch.onSearchAPI context callbackUrl $ do
+              Metrics.finishSearchMetrics dSearchRes.provider.name dSearchRes.searchMetricsMVar
               pure $ ACL.mkOnSearchMessage dSearchRes
     pure Ack
 
