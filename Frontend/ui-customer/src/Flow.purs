@@ -654,7 +654,6 @@ homeScreenFlow = do
                                         (GetProfileRes response) <- Remote.getProfileBT ""
                                         setValueToLocalStore HAS_TAKEN_FIRST_RIDE ( show response.hasTakenRide)
                                         else pure unit
-                                      _ <- pure $ firebaseLogEvent "ny_user_ride_completed"
                                       _ <- Remote.drawMapRoute srcLat srcLon dstLat dstLon (Remote.normalRoute "") "NORMAL" "" "" Nothing "pickup"
                                       _ <- pure $ enableMyLocation true
                                       _ <- updateLocalStage HomeScreen
