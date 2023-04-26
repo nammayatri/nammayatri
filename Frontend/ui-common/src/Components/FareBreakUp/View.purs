@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -33,20 +33,20 @@ import PrestoDOM (Length(..) , Margin(..), Orientation(..), Padding(..) , Visibi
 import Common.Types.App
 import Data.Maybe
 
-view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
-view push config = 
-  linearLayout 
+view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+view push config =
+  linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
-  , gravity LEFT 
+  , gravity LEFT
   , orientation VERTICAL
   , background Color.white900
-  ][  linearLayout 
+  ][  linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
-      , orientation VERTICAL 
-      ][ fareBreakUpView config.totalAmount config.rideDetails.estimatedDistance push 
-        , if (length config.fareDetails /= 0 ) then horizontalLine (Margin 0 0 0 0) config else textView[height (V 0)] 
+      , orientation VERTICAL
+      ][ fareBreakUpView config.totalAmount config.rideDetails.estimatedDistance push
+        , if (length config.fareDetails /= 0 ) then horizontalLine (Margin 0 0 0 0) config else textView[height (V 0)]
         , linearLayout
           [ width MATCH_PARENT
           , height WRAP_CONTENT
@@ -56,7 +56,7 @@ view push config =
     , linearLayout
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
-      , gravity LEFT 
+      , gravity LEFT
       , visibility GONE
       , padding $ Padding 0 20 4 8
       , margin (MarginVertical 0 8)
@@ -69,13 +69,13 @@ view push config =
         , fontStyle $ FontStyle.regular LanguageStyle
         ]]
       , if config.totalAmount.visibility == VISIBLE then horizontalLine (Margin 0 0 0 20) config else textView[height (V 0)]
-      , rideStartTimeView config 
+      , rideStartTimeView config
       , SourceToDestination.view (push <<< SourceToDestinationActionController) (sourceToDestinationConfig config)
       ]
 
 
 rideStartTimeView :: forall w. Config -> PrestoDOM (Effect Unit) w
-rideStartTimeView config = 
+rideStartTimeView config =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -84,22 +84,22 @@ rideStartTimeView config =
   , margin (MarginVertical 0 16)
   ][  textView
       [ text config.rideDetails.rideStartDate
-      , textSize FontSize.a_14 
+      , textSize FontSize.a_14
       , fontStyle $ FontStyle.medium LanguageStyle
       , lineHeight "18"
       , color Color.black800
       ]
-    , textView 
-      [ height $ V 4 
-      , width $ V 4 
-      , cornerRadius 2.0 
+    , textView
+      [ height $ V 4
+      , width $ V 4
+      , cornerRadius 2.0
       , background Color.black600
       , gravity CENTER
       , margin (MarginHorizontal 8 8)
       ]
     , textView
-      [ text config.rideDetails.rideStartTime 
-      , textSize FontSize.a_14 
+      [ text config.rideDetails.rideStartTime
+      , textSize FontSize.a_14
       , fontStyle $ FontStyle.medium LanguageStyle
       , lineHeight "18"
       , color Color.black800
@@ -108,7 +108,7 @@ rideStartTimeView config =
   ]
 
 sourceToDestinationConfig :: Config -> SourceToDestinationConfig.Config
-sourceToDestinationConfig state = let 
+sourceToDestinationConfig state = let
   config = SourceToDestinationConfig.config
   sourceToDestinationConfig' = config
     {
@@ -146,7 +146,7 @@ sourceToDestinationConfig state = let
       , ellipsize = false
       }
     , rideEndedAtConfig {
-        text = state.rideDetails.destination 
+        text = state.rideDetails.destination
       , visibility = VISIBLE
       , textSize = FontSize.a_12
       , padding = (Padding 1 0 1 1)
@@ -156,7 +156,7 @@ sourceToDestinationConfig state = let
       , ellipsize = true
       }
     , rideStartedAtConfig {
-        text = state.rideDetails.source 
+        text = state.rideDetails.source
       , visibility = VISIBLE
       , textSize = FontSize.a_12
       , padding = (Padding 1 0 1 1)
@@ -170,23 +170,23 @@ sourceToDestinationConfig state = let
 
 ----------------------------------- horizontalLine -------------------------------------
 horizontalLine :: forall w. Margin ->  Config -> PrestoDOM (Effect Unit) w
-horizontalLine marginConfig config = 
+horizontalLine marginConfig config =
   linearLayout
   [ height $ V 1
   , width MATCH_PARENT
   , background Color.grey900
   , margin marginConfig
   ,gravity CENTER
-  ][] 
+  ][]
 
 ----------------------------------- fareBreakUpListView -------------------------------------
-fareBreakUpListView :: forall w . Int ->  FareDetails -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
-fareBreakUpListView numberOfViews state push = 
-  linearLayout 
-  [ orientation HORIZONTAL 
+fareBreakUpListView :: forall w . Int ->  FareDetails -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+fareBreakUpListView numberOfViews state push =
+  linearLayout
+  [ orientation HORIZONTAL
   , width MATCH_PARENT
   , height WRAP_CONTENT
-  , visibility state.visibility 
+  , visibility state.visibility
   , margin state.margin
   ][  textView
       [ text state.text
@@ -194,11 +194,11 @@ fareBreakUpListView numberOfViews state push =
       , fontStyle state.fontStyle
       , color state.color
       ]
-    , linearLayout 
+    , linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , gravity RIGHT
-      ][  textView  
+      ][  textView
           [ text $ "₹" <> (show state.priceDetails.text)
           , textSize state.priceDetails.textSize
           , fontStyle state.priceDetails.fontStyle
@@ -209,13 +209,13 @@ fareBreakUpListView numberOfViews state push =
   ]
 
 
-fareBreakUpView :: forall w . FareDetails -> Maybe Int ->(Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
-fareBreakUpView state estimatedDistance push = 
-  linearLayout 
-  [ orientation VERTICAL 
+fareBreakUpView :: forall w . FareDetails -> Maybe Int ->(Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+fareBreakUpView state estimatedDistance push =
+  linearLayout
+  [ orientation VERTICAL
   , width MATCH_PARENT
   , height WRAP_CONTENT
-  , visibility state.visibility 
+  , visibility state.visibility
   , margin $ MarginBottom 20
   ][  linearLayout
       [ width MATCH_PARENT
@@ -227,7 +227,7 @@ fareBreakUpView state estimatedDistance push =
           , lineHeight "20"
           , color state.color
           ]
-        , linearLayout 
+        , linearLayout
           [ height MATCH_PARENT
           , width MATCH_PARENT
           , gravity RIGHT
@@ -242,7 +242,7 @@ fareBreakUpView state estimatedDistance push =
                   , margin $ MarginRight 5
                   , visibility if state.priceDetails.text /= state.priceDetails.offeredFare then VISIBLE else GONE
                   ]
-                , textView  
+                , textView
                   [ text $ "₹" <> show state.priceDetails.text
                   , textSize FontSize.a_16
                   , fontStyle $ FontStyle.medium LanguageStyle
@@ -259,7 +259,7 @@ fareBreakUpView state estimatedDistance push =
                   , fontStyle $ FontStyle.regular LanguageStyle
                   , color Color.black600
                   , lineHeight "16"
-                  , margin $ Margin 5 1 0 0 
+                  , margin $ Margin 5 1 0 0
                   , visibility if state.priceDetails.text /= state.priceDetails.offeredFare then VISIBLE else GONE
                   ]
               ]
@@ -279,12 +279,12 @@ fareBreakUpView state estimatedDistance push =
 getFareUpdatedString :: Int -> String
 getFareUpdatedString diffInDist = do
   let dist = if diffInDist > 0 then (parseFloat (toNumber diffInDist / 1000.0) 2) else (parseFloat (toNumber (-diffInDist) / 1000.0) 2)
-  if diffInDist > 0 then ((getString FARE_UPDATED) <> " - " <> case (getValueToLocalStore LANGUAGE_KEY) of 
+  if diffInDist > 0 then ((getString FARE_UPDATED) <> " - " <> case (getValueToLocalStore LANGUAGE_KEY) of
                                                         "HI_IN" -> "आपकी सवारी  "<> dist <> "किमी कम थी"
                                                         "KN_IN" -> "ನಿಮ್ಮ ಸವಾರಿ " <> dist <> " ಕಿಮೀ ಕಡಿಮೆಯಾಗಿದೆ"
                                                         "ML_IN" -> "താങ്കളുടെ യാത്ര " <> dist <> " Km കുറവായിരുന്നു"
                                                         _       -> "your ride was " <> dist <> " km shorter" )
-    else ((getString FARE_UPDATED) <> " - " <> case (getValueToLocalStore LANGUAGE_KEY) of 
+    else ((getString FARE_UPDATED) <> " - " <> case (getValueToLocalStore LANGUAGE_KEY) of
                                                         "HI_IN" -> "आपकी सवारी  "<> dist <> "किमी लंबी थी"
                                                         "KN_IN" -> "ನಿಮ್ಮ ಸವಾರಿ " <> dist <> " ಕಿಮೀ ಉದ್ದವಾಗಿದೆ"
                                                         "ML_IN" -> "താങ്കളുടെ യാത്ര " <> dist <> " Km കൂടുതലായിരുന്നു"
