@@ -32,12 +32,12 @@ upsertGpsCoord :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Per
 upsertGpsCoord driverId latLong calculationTime = do
   driverInfo <- CDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   if not driverInfo.onRide -- if driver not on ride directly save location updates to DB
-    then void $ Esq.runTransaction $ DLQueries.upsertGpsCoord driverId latLong calculationTime
+    then void $ Esq.runNoTransaction $ DLQueries.upsertGpsCoord driverId latLong calculationTime
     else do
       mOldLocation <- findById driverId
       case mOldLocation of
         Nothing -> do
-          driverLocation <- Esq.runTransaction $ DLQueries.upsertGpsCoord driverId latLong calculationTime
+          driverLocation <- Esq.runNoTransaction $ DLQueries.upsertGpsCoord driverId latLong calculationTime
           cacheDriverLocation driverLocation
         Just oldLoc -> do
           now <- getCurrentTime

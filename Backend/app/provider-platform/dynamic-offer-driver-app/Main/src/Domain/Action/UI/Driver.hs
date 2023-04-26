@@ -77,6 +77,7 @@ import Kernel.External.Encryption
 import Kernel.External.FCM.Types (FCMRecipientToken)
 import qualified Kernel.External.FCM.Types as FCM
 import qualified Kernel.External.Maps as Maps
+import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.External.SMS.MyValueFirst.Flow as SF
 import qualified Kernel.External.SMS.MyValueFirst.Types as SMS
 import Kernel.Prelude (NominalDiffTime)
@@ -386,7 +387,9 @@ createDriverDetails personId adminId = do
           }
   QDriverStats.createInitialDriverStats driverId
   QDriverInformation.create driverInfo
+  QDriverLocation.create personId initLatLong now
   where
+    initLatLong = LatLong 0 0
     driverId = cast personId
 
 getInformation ::
@@ -836,7 +839,7 @@ respondQuote driverId req = do
       pure $ fromIntegral driverPoolCfg.driverQuoteLimit
     sendRemoveRideRequestNotification driverSearchReqs orgId driverQuote = do
       for_ driverSearchReqs $ \driverReq -> do
-        Esq.runTransaction $ do
+        Esq.runNoTransaction $ do
           QSRD.updateDriverResponse driverReq.id Pulled
         driver_ <- runInReplica $ QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
         Notify.notifyDriverClearedFare orgId driverReq.driverId driverReq.searchRequestId driverQuote.estimatedFare driver_.deviceToken

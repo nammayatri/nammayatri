@@ -6,7 +6,7 @@
     systems.url = "github:nix-systems/default";
 
     # Backend inputs
-    shared-kernel.url = "github:nammayatri/shared-kernel";
+    shared-kernel.url = "github:nammayatri/shared-kernel/b458e17e7b86e84c812e95da3491a4b40e84ea9d";
     shared-kernel.inputs.nixpkgs.follows = "nixpkgs";
     beckn-gateway.url = "github:nammayatri/beckn-gateway";
     beckn-gateway.inputs.shared-kernel.follows = "shared-kernel";

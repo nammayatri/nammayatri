@@ -46,7 +46,6 @@ findAvailableTimeInBucketByDriverIdAndMerchantId driverId merchantId bucketStart
           &&. dDriverAvailability ^. DriverAvailabilityMerchantId ==. val merchantId
           &&. dDriverAvailability ^. DriverAvailabilityBucketStartTime ==. val bucketStartTime
           &&. dDriverAvailability ^. DriverAvailabilityBucketEndTime ==. val bucketEndTime
-      orderBy [desc $ dDriverAvailability ^. DriverAvailabilityUpdatedAt]
       limit 1
       pure dDriverAvailability
 
