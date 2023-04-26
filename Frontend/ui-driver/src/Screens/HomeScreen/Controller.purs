@@ -478,7 +478,7 @@ eval (RideActiveAction activeRide) state = updateAndExit state { data {activeRid
 eval RecenterButtonAction state = continue state
 
 eval (SwitchDriverStatus status) state = do
-  if (((getValueToLocalStore IS_DEMOMODE_ENABLED) == "true") && (status == ST.Silent || status == ST.Offline)) then do
+  if ((getValueToLocalStore IS_DEMOMODE_ENABLED) == "true") then do
     continueWithCmd state [ do 
           _ <- pure $ setValueToLocalStore IS_DEMOMODE_ENABLED "false"
           _ <- pure $ toast (getString DEMO_MODE_DISABLED)
@@ -496,8 +496,7 @@ eval (SwitchDriverStatus status) state = do
             let checkIfLastWasSilent = state.props.driverStatusSet == ST.Silent
             continue state { props { goOfflineModal = checkIfLastWasSilent, silentPopUpView = not checkIfLastWasSilent }}
 
-eval (PopUpModalSilentAction (PopUpModal.OnButton1Click)) state = do
-  exit (DriverAvailabilityStatus state{props{silentPopUpView = false}} ST.Offline)
+eval (PopUpModalSilentAction (PopUpModal.OnButton1Click)) state = exit (DriverAvailabilityStatus state{props{silentPopUpView = false}} ST.Offline)
 eval (PopUpModalSilentAction (PopUpModal.OnButton2Click)) state = 
   do
     _ <- pure $ setValueToLocalStore DRIVER_STATUS_N (show ST.Silent)
