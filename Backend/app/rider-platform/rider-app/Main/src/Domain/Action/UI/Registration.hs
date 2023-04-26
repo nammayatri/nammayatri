@@ -13,7 +13,8 @@
 -}
 
 module Domain.Action.UI.Registration
-  ( AuthReq (..),
+  ( AuthRawReq (..),
+    AuthReq (..),
     AuthRes (..),
     ResendAuthRes,
     AuthVerifyReq (..),
@@ -27,7 +28,16 @@ where
 
 -- import Kernel.External.SMS
 
-import Data.OpenApi (ToSchema)
+import qualified Crypto.Hash as Hash
+import qualified Crypto.PubKey.RSA.PKCS15 as RSA
+import qualified Crypto.Store.X509 as CryptoStore
+import qualified Data.Aeson as A
+import Data.Aeson.Types ((.:), (.:?))
+import qualified Data.ByteString.Base64 as B64
+import Data.OpenApi hiding (email, info)
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
+import Data.X509 (PubKey (PubKeyRSA))
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Merchant as DMerchant
 import Domain.Types.Person (PersonAPIEntity, PersonE (updatedAt))
@@ -39,11 +49,13 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
 import Kernel.External.FCM.Types (FCMRecipientToken)
+import qualified Kernel.External.Maps as Maps
 import Kernel.External.Whatsapp.Interface.Types as Whatsapp
 import Kernel.Sms.Config
 import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess as AP
+import Kernel.Types.Base64
 import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.Common as BC
 import Kernel.Types.Id
@@ -57,6 +69,7 @@ import Kernel.Utils.Validation
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
+import qualified Storage.Queries.Merchant.MerchantConfig as MerchantConfig
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Person.PersonFlowStatus as QDFS
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
@@ -67,13 +80,48 @@ import qualified Tools.Notifications as Notify
 import qualified Tools.SMS as Sms
 import Tools.Whatsapp
 
+newtype AuthRawReq = AuthRawReq ByteString deriving (Generic, Show)
+
+instance ToSchema AuthRawReq where
+  declareNamedSchema _ = lift $ Identity (NamedSchema Nothing mempty)
+
 data AuthReq = AuthReq
   { mobileNumber :: Text,
     mobileCountryCode :: Text,
-    merchantId :: ShortId Merchant --,
+    merchantId :: ShortId Merchant,
+    deviceToken :: Maybe FCMRecipientToken,
+    whatsappNotificationEnroll :: Maybe Whatsapp.OptApiMethods,
+    firstName :: Maybe Text,
+    middleName :: Maybe Text,
+    lastName :: Maybe Text,
+    email :: Maybe Text,
+    language :: Maybe Maps.Language,
+    gender :: Maybe SP.Gender,
+    timestamp :: Maybe UTCTime
     -- otpChannel :: Maybe OTPChannel
   }
-  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+  deriving (Generic, ToJSON, Show, ToSchema)
+
+instance A.FromJSON AuthReq where
+  parseJSON v = case v of
+    A.Object obj ->
+      AuthReq <$> obj .: "mobileNumber"
+        <*> obj .: "mobileCountryCode"
+        <*> obj .: "merchantId"
+        <*> obj .:? "deviceToken"
+        <*> obj .:? "whatsappNotificationEnroll"
+        <*> obj .:? "firstName"
+        <*> obj .:? "middleName"
+        <*> obj .:? "lastName"
+        <*> obj .:? "email"
+        <*> obj .:? "language"
+        <*> obj .:? "gender"
+        <*> obj .:? "timestamp"
+    A.String s ->
+      case A.eitherDecodeStrict (TE.encodeUtf8 s) of
+        Left err -> fail err
+        Right req -> return req
+    _ -> fail "Invalid JSON format for AuthReq"
 
 validateAuthReq :: Validate AuthReq
 validateAuthReq AuthReq {..} =
@@ -84,7 +132,10 @@ validateAuthReq AuthReq {..} =
 
 data AuthRes = AuthRes
   { authId :: Id RegistrationToken,
-    attempts :: Int
+    attempts :: Int,
+    authType :: SR.LoginType,
+    token :: Maybe Text,
+    person :: Maybe PersonAPIEntity
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -128,15 +179,18 @@ auth ::
     EncFlow m r,
     CoreMetrics m
   ) =>
-  AuthReq ->
+  AuthRawReq ->
+  Maybe Text ->
   Maybe Version ->
   Maybe Version ->
   m AuthRes
-auth req mbBundleVersion mbClientVersion = do
+auth (AuthRawReq rawReq) mbSignature mbBundleVersion mbClientVersion = do
+  req :: AuthReq <- rawReq & A.eitherDecodeStrict & fromEitherM (InvalidRequest . T.pack)
   runRequestValidation validateAuthReq req
   smsCfg <- asks (.smsCfg)
   let mobileNumber = req.mobileNumber
       countryCode = req.mobileCountryCode
+      deviceToken = req.deviceToken
   -- otpChannel = fromMaybe defaultOTPChannel req.otpChannel
   merchant <-
     QMerchant.findByShortId req.merchantId
@@ -144,20 +198,20 @@ auth req mbBundleVersion mbClientVersion = do
   mobileNumberHash <- getDbHash mobileNumber
   person <-
     Person.findByRoleAndMobileNumberAndMerchantId SP.USER countryCode mobileNumberHash merchant.id
-      >>= maybe (createPerson req mbBundleVersion mbClientVersion merchant.id) return
+      >>= maybe (createPerson mobileNumber countryCode deviceToken mbBundleVersion mbClientVersion merchant.id req.email req.firstName req.middleName req.lastName req.language req.gender) return
   checkSlidingWindowLimit (authHitsCountKey person)
   let entityId = getId $ person.id
       useFakeOtpM = useFakeSms smsCfg
       scfg = sessionConfig smsCfg
 
-  token <- makeSession scfg entityId (show <$> useFakeOtpM)
+  regToken <- makeSession scfg entityId (show <$> useFakeOtpM)
 
   if person.enabled
     then do
       DB.runTransaction $ Person.updatePersonVersions person mbBundleVersion mbClientVersion
-      DB.runTransaction (RegistrationToken.create token)
-      whenNothing_ useFakeOtpM $ do
-        let otpCode = SR.authValueHash token
+      DB.runTransaction (RegistrationToken.create regToken)
+      when (isNothing useFakeOtpM && isNothing mbSignature) $ do
+        let otpCode = SR.authValueHash regToken
         let otpHash = smsCfg.credConfig.otpHash
             phoneNumber = countryCode <> mobileNumber
             sender = smsCfg.sender
@@ -172,36 +226,72 @@ auth req mbBundleVersion mbClientVersion = do
             >>= Sms.checkSmsResult
     else logInfo $ "Person " <> getId person.id <> " is not enabled. Skipping send OTP"
 
-  let attempts = SR.attempts token
-      authId = SR.id token
-  return $ AuthRes {attempts, authId}
+  (personApiEntity, token, authType) <-
+    if person.enabled
+      then case (mbSignature, req.timestamp) of
+        (Just signature, Just timestamp) -> do
+          merchantConfig <- MerchantConfig.findById merchant.id >>= fromMaybeM (InternalError $ "Merchant config not found for " <> merchant.id.getId)
+          let nominal = realToFrac merchantConfig.signatureExpiry
+          expired <- isExpired nominal timestamp
+          let decodedSignature = B64.decodeLenient . TE.encodeUtf8 $ signature
+              publicKeys = getRSAPublicKey merchantConfig.signingPublicKey
+          case publicKeys of
+            [PubKeyRSA publicKey] -> do
+              let isVerified = RSA.verify (Just Hash.SHA256) publicKey rawReq decodedSignature
+              if isVerified && not expired
+                then do
+                  DB.runTransaction $ RegistrationToken.setDirectAuth regToken.id
+                  personAPIEntity <- verifyFlow person regToken req.whatsappNotificationEnroll deviceToken
+                  return (Just personAPIEntity, Just regToken.token, SR.DIRECT)
+                else return (Nothing, Nothing, regToken.authType)
+            _ -> return (Nothing, Nothing, regToken.authType)
+        _ -> return (Nothing, Nothing, regToken.authType)
+      else return (Nothing, Nothing, regToken.authType)
+  return $ AuthRes regToken.id regToken.attempts authType token personApiEntity
+  where
+    getRSAPublicKey (Base64 key) = CryptoStore.readPubKeyFileFromMemory key
 
-buildPerson :: EncFlow m r => AuthReq -> Maybe Version -> Maybe Version -> Id DMerchant.Merchant -> m SP.Person
-buildPerson req bundleVersion clientVersion merchantId = do
+buildPerson ::
+  EncFlow m r =>
+  Text ->
+  Text ->
+  Maybe FCMRecipientToken ->
+  Maybe Version ->
+  Maybe Version ->
+  Id DMerchant.Merchant ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Maps.Language ->
+  Maybe SP.Gender ->
+  m SP.Person
+buildPerson mobileNumber countryCode deviceToken bundleVersion clientVersion merchantId mbEmail mbFirstName mbMiddleName mbLastName mbLanguage mbGender = do
   pid <- BC.generateGUID
   now <- getCurrentTime
-  encMobNum <- encrypt req.mobileNumber
+  encMobNum <- encrypt mobileNumber
+  encEmail <- mapM encrypt mbEmail
   return $
     SP.Person
       { id = pid,
-        firstName = Nothing,
-        middleName = Nothing,
-        lastName = Nothing,
+        firstName = mbFirstName,
+        middleName = mbMiddleName,
+        lastName = mbLastName,
         role = SP.USER,
-        gender = SP.UNKNOWN,
+        gender = fromMaybe SP.UNKNOWN mbGender,
         identifierType = SP.MOBILENUMBER,
-        email = Nothing,
+        email = encEmail,
         passwordHash = Nothing,
-        unencryptedMobileNumber = Just req.mobileNumber,
+        unencryptedMobileNumber = Just mobileNumber,
         mobileNumber = Just encMobNum,
-        mobileCountryCode = Just $ req.mobileCountryCode,
+        mobileCountryCode = Just countryCode,
         identifier = Nothing,
         rating = Nothing,
-        language = Nothing,
+        language = mbLanguage,
         isNew = True,
         enabled = True,
         blocked = False,
-        deviceToken = Nothing,
+        deviceToken = deviceToken,
         description = Nothing,
         merchantId = merchantId,
         referralCode = Nothing,
@@ -247,6 +337,26 @@ makeSession SmsSessionConfig {..} entityId fakeOtp = do
 verifyHitsCountKey :: Id SP.Person -> Text
 verifyHitsCountKey id = "BAP:Registration:verify:" <> getId id <> ":hitsCount"
 
+verifyFlow :: (EsqDBFlow m r, EncFlow m r, CoreMetrics m, CacheFlow m r) => SP.Person -> SR.RegistrationToken -> Maybe Whatsapp.OptApiMethods -> Maybe FCMRecipientToken -> m PersonAPIEntity
+verifyFlow person regToken whatsappNotificationEnroll deviceToken = do
+  let isNewPerson = person.isNew
+  DB.runTransaction $ do
+    RegistrationToken.setDirectAuth regToken.id
+    RegistrationToken.deleteByPersonIdExceptNew person.id regToken.id
+    when isNewPerson $
+      Person.setIsNewFalse person.id
+  when isNewPerson $
+    Notify.notifyOnRegistration regToken person deviceToken
+  updPerson <- Person.findById (Id regToken.entityId) >>= fromMaybeM (PersonDoesNotExist regToken.entityId)
+  decPerson <- decrypt updPerson
+  let personAPIEntity = SP.makePersonAPIEntity decPerson
+  unless (decPerson.whatsappNotificationEnrollStatus == whatsappNotificationEnroll && isJust whatsappNotificationEnroll) $ do
+    fork "whatsapp_opt_api_call" $ do
+      case decPerson.mobileNumber of
+        Nothing -> throwError $ AuthBlocked "Mobile Number is null"
+        Just mobileNo -> callWhatsappOptApi mobileNo person.id person.merchantId whatsappNotificationEnroll
+  return personAPIEntity
+
 verify ::
   ( HasCacheConfig r,
     HasFlowEnv m r '["apiRateLimitOptions" ::: APIRateLimitOptions],
@@ -267,25 +377,10 @@ verify tokenId req = do
   checkForExpiry authExpiry updatedAt
   unless (authValueHash == req.otp) $ throwError InvalidAuthData
   person <- checkPersonExists entityId
-  let isNewPerson = person.isNew
   let deviceToken = Just req.deviceToken
   cleanCachedTokens person.id
-  DB.runTransaction $ do
-    RegistrationToken.deleteByPersonIdExceptNew person.id tokenId
-    RegistrationToken.setVerified tokenId
-    Person.updateDeviceToken person.id deviceToken
-    when isNewPerson $
-      Person.setIsNewFalse person.id
-  when isNewPerson $
-    Notify.notifyOnRegistration regToken person deviceToken
-  updPerson <- Person.findById (Id entityId) >>= fromMaybeM (PersonDoesNotExist entityId)
-  decPerson <- decrypt updPerson
-  let personAPIEntity = SP.makePersonAPIEntity decPerson
-  unless (decPerson.whatsappNotificationEnrollStatus == req.whatsappNotificationEnroll && isJust req.whatsappNotificationEnroll) $ do
-    fork "whatsapp_opt_api_call" $ do
-      case decPerson.mobileNumber of
-        Nothing -> throwError $ AuthBlocked "Mobile Number is null"
-        Just mobileNo -> callWhatsappOptApi mobileNo person.id person.merchantId req.whatsappNotificationEnroll
+  DB.runTransaction $ RegistrationToken.setVerified tokenId
+  personAPIEntity <- verifyFlow person regToken req.whatsappNotificationEnroll deviceToken
   return $ AuthVerifyRes token personAPIEntity
   where
     checkForExpiry authExpiry updatedAt =
@@ -314,9 +409,23 @@ getRegistrationTokenE :: EsqDBFlow m r => Id SR.RegistrationToken -> m SR.Regist
 getRegistrationTokenE tokenId =
   RegistrationToken.findById tokenId >>= fromMaybeM (TokenNotFound $ getId tokenId)
 
-createPerson :: (EncFlow m r, EsqDBFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Id DMerchant.Merchant -> m SP.Person
-createPerson req mbBundleVersion mbClientVersion merchantId = do
-  person <- buildPerson req mbBundleVersion mbClientVersion merchantId
+createPerson ::
+  (EncFlow m r, EsqDBFlow m r) =>
+  Text ->
+  Text ->
+  Maybe FCMRecipientToken ->
+  Maybe Version ->
+  Maybe Version ->
+  Id DMerchant.Merchant ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Maps.Language ->
+  Maybe SP.Gender ->
+  m SP.Person
+createPerson mobileNumber countryCode deviceToken mbBundleVersion mbClientVersion merchantId mbEmail mbFirstName mbMiddleName mbLastName mbLanguage mbGender = do
+  person <- buildPerson mobileNumber countryCode deviceToken mbBundleVersion mbClientVersion merchantId mbEmail mbFirstName mbMiddleName mbLastName mbLanguage mbGender
   DB.runTransaction $ do
     Person.create person
     QDFS.create $ makeIdlePersonFlowStatus person
@@ -363,7 +472,7 @@ resend tokenId = do
     Sms.sendSMS person.merchantId (Sms.SendSMSReq message phoneNumber sender)
       >>= Sms.checkSmsResult
   DB.runTransaction $ RegistrationToken.updateAttempts (attempts - 1) id
-  return $ AuthRes tokenId (attempts - 1)
+  return $ AuthRes tokenId (attempts - 1) authType Nothing Nothing
 
 cleanCachedTokens :: (EsqDBFlow m r, Redis.HedisFlow m r) => Id SP.Person -> m ()
 cleanCachedTokens personId = do

@@ -13,7 +13,8 @@
 -}
 
 module API.UI.Registration
-  ( DRegistration.AuthReq (..),
+  ( DRegistration.AuthRawReq (..),
+    DRegistration.AuthReq (..),
     DRegistration.AuthRes (..),
     DRegistration.ResendAuthRes,
     DRegistration.AuthVerifyReq (..),
@@ -23,6 +24,8 @@ module API.UI.Registration
   )
 where
 
+import qualified Data.ByteString.Lazy as BSL
+import qualified Data.List.NonEmpty as NE
 import qualified Domain.Action.UI.Registration as DRegistration
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
@@ -33,13 +36,28 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common
+import qualified Network.HTTP.Media as M
 import Servant hiding (throwError)
 import Tools.Auth (TokenAuth)
+
+data JSONBS deriving (Typeable)
+
+instance Accept JSONBS where
+  contentTypes _ =
+    "application" M.// "json" M./: ("charset", "utf-8")
+      NE.:| ["application" M.// "json"]
+
+instance MimeRender JSONBS DRegistration.AuthRawReq where
+  mimeRender _ (DRegistration.AuthRawReq bs) = BSL.fromStrict bs
+
+instance MimeUnrender JSONBS DRegistration.AuthRawReq where
+  mimeUnrender _ = pure . DRegistration.AuthRawReq . BSL.toStrict
 
 ---- Registration Flow ------
 type API =
   "auth"
-    :> ( ReqBody '[JSON] DRegistration.AuthReq
+    :> ( ReqBody '[JSONBS] DRegistration.AuthRawReq --ReqBody '[JSON] DRegistration.AuthReq
+           :> Header "x-sdk-authorization" Text
            :> Header "x-bundle-version" Version
            :> Header "x-client-version" Version
            :> Post '[JSON] DRegistration.AuthRes
@@ -63,9 +81,9 @@ handler =
     :<|> resend
     :<|> logout
 
-auth :: DRegistration.AuthReq -> Maybe Version -> Maybe Version -> FlowHandler DRegistration.AuthRes
-auth req mbBundleVersion =
-  withFlowHandlerAPI . DRegistration.auth req mbBundleVersion
+auth :: DRegistration.AuthRawReq -> Maybe Text -> Maybe Version -> Maybe Version -> FlowHandler DRegistration.AuthRes
+auth rawReq mbSignature mbBundleVersion =
+  withFlowHandlerAPI . DRegistration.auth rawReq mbSignature mbBundleVersion
 
 verify :: Id SR.RegistrationToken -> DRegistration.AuthVerifyReq -> FlowHandler DRegistration.AuthVerifyRes
 verify tokenId = withFlowHandlerAPI . DRegistration.verify tokenId

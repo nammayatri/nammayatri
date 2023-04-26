@@ -21,6 +21,8 @@ import qualified "rider-app" API.UI.Feedback as AppFeedback
 import qualified "rider-app" API.UI.Registration as Reg
 import qualified "rider-app" API.UI.Select as AppSelect
 import qualified "rider-app" API.UI.Serviceability as AppServ
+import Data.Aeson (encode)
+import qualified Data.ByteString.Lazy as BSL
 import qualified "rider-app" Domain.Action.UI.Cancel as CancelAPI
 import qualified "rider-app" Domain.Action.UI.Select as DSelect
 import qualified "rider-app" Domain.Types.Booking as AbeBooking
@@ -85,7 +87,7 @@ destinationServiceability regToken = destination
   where
     _ :<|> destination = client (Proxy :: Proxy AppServ.API) regToken
 
-appAuth :: Reg.AuthReq -> Maybe Version -> Maybe Version -> ClientM Reg.AuthRes
+appAuth :: Reg.AuthRawReq -> Maybe Text -> Maybe Version -> Maybe Version -> ClientM Reg.AuthRes
 appVerify :: Id AppSRT.RegistrationToken -> Reg.AuthVerifyReq -> ClientM Reg.AuthVerifyRes
 appReInitiateLogin :: Id AppSRT.RegistrationToken -> ClientM Reg.ResendAuthRes
 logout :: RegToken -> ClientM APISuccess
@@ -100,8 +102,16 @@ mkAuthReq =
   Reg.AuthReq
     { mobileNumber = "9000090000",
       mobileCountryCode = "+91",
-      merchantId = "FIXME" --,
-      -- otpChannel = Nothing
+      merchantId = "FIXME",
+      deviceToken = Nothing,
+      whatsappNotificationEnroll = Nothing,
+      firstName = Nothing,
+      middleName = Nothing,
+      lastName = Nothing,
+      email = Nothing,
+      language = Nothing,
+      gender = Nothing,
+      timestamp = Nothing
     }
 
 mkAuthVerifyReq :: Reg.AuthVerifyReq
@@ -113,7 +123,7 @@ mkAuthVerifyReq =
     }
 
 initiateAuth :: ClientM Reg.AuthRes
-initiateAuth = appAuth mkAuthReq (Just defaultVersion) (Just defaultVersion)
+initiateAuth = appAuth (Reg.AuthRawReq (BSL.toStrict $ encode mkAuthReq)) Nothing (Just defaultVersion) (Just defaultVersion)
 
 verifyAuth :: Id AppSRT.RegistrationToken -> ClientM Reg.AuthVerifyRes
 verifyAuth tokenId = appVerify tokenId mkAuthVerifyReq

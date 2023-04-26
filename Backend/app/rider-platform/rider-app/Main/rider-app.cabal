@@ -138,6 +138,7 @@ library
       Domain.Types.LocationAddress
       Domain.Types.Maps.PlaceNameCache
       Domain.Types.Merchant
+      Domain.Types.Merchant.MerchantConfig
       Domain.Types.Merchant.MerchantMessage
       Domain.Types.Merchant.MerchantServiceConfig
       Domain.Types.Merchant.MerchantServiceUsageConfig
@@ -189,6 +190,7 @@ library
       Storage.Queries.Issues
       Storage.Queries.Maps.PlaceNameCache
       Storage.Queries.Merchant
+      Storage.Queries.Merchant.MerchantConfig
       Storage.Queries.Merchant.MerchantMessage
       Storage.Queries.Merchant.MerchantServiceConfig
       Storage.Queries.Merchant.MerchantServiceUsageConfig
@@ -222,6 +224,7 @@ library
       Storage.Tabular.Issue
       Storage.Tabular.Maps.PlaceNameCache
       Storage.Tabular.Merchant
+      Storage.Tabular.Merchant.MerchantConfig
       Storage.Tabular.Merchant.MerchantMessage
       Storage.Tabular.Merchant.MerchantServiceConfig
       Storage.Tabular.Merchant.MerchantServiceUsageConfig
@@ -303,6 +306,7 @@ library
     , bytestring
     , containers
     , cryptonite
+    , cryptostore
     , dashboard-helper-api
     , euler-hs
     , extra
@@ -330,6 +334,7 @@ library
     , wai
     , wai-middleware-prometheus
     , warp
+    , x509
   default-language: Haskell2010
 
 executable rider-app-exe
@@ -383,6 +388,7 @@ executable rider-app-exe
     , bytestring
     , containers
     , cryptonite
+    , cryptostore
     , dashboard-helper-api
     , euler-hs
     , extra
@@ -410,4 +416,5 @@ executable rider-app-exe
     , wai
     , wai-middleware-prometheus
     , warp
+    , x509
   default-language: Haskell2010

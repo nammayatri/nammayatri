@@ -46,6 +46,19 @@ setVerified rtId = do
       ]
     where_ $ tbl ^. RegistrationTokenId ==. val (getId rtId)
 
+setDirectAuth :: Id RegistrationToken -> SqlDB ()
+setDirectAuth rtId = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ RegistrationTokenUpdatedAt =. val now,
+        RegistrationTokenVerified =. val True,
+        RegistrationTokenAuthMedium =. val NONE,
+        RegistrationTokenAuthType =. val DIRECT
+      ]
+    where_ $ tbl ^. RegistrationTokenId ==. val (getId rtId)
+
 updateAttempts :: Int -> Id RegistrationToken -> SqlDB ()
 updateAttempts attemps rtId = do
   now <- getCurrentTime
