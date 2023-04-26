@@ -155,4 +155,4 @@ workspace:
         - "strings"
         - "transformers"
       git: "https://github.com/belevy/purescript-otp-reader.git"
-      ref: "6931cf301e5302d38c6028d52423d326b22f6887"
+      ref: "3a5c85bf41b5abb2c774ab98180c5608adb83551"
