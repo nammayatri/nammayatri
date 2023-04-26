@@ -18,8 +18,10 @@ Nix is central to building and developing the Namamayatri project. Install and s
     nix run nixpkgs#cachix use nammayatri
     ```
     - For this command to succed, you must have added yourself to the `trusted-users` list of `nix.conf`
-1. If you are also developing the backend, we recommend that you install **nix-direnv** and **starship**. See the [explanation here](https://haskell.flake.page/direnv); here is a [home-manager template](https://github.com/juspay/nix-dev-home) that you can use to get started easily.
-    - While this is not strictly required, direnv is recommended for better IDE integration in VSCode and other editors.
+1. If you are also developing the backend, we recommend that you install **nix-direnv** and **starship**.[^direnv] See the [explanation here](https://haskell.flake.page/direnv); here is a [home-manager template](https://github.com/juspay/nix-dev-home) that you can use to get started easily.
+    - direnv is recommended for better IDE integration in VSCode and other editors.
+
+[^direnv]: Not strictly required to develop nammayatri. If you do not use `direnv` however you would have to remember to manually restart the `nix develop` shell, and know when exactly to do this each time.
 
 #### Other tools
 
