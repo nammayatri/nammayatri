@@ -93,6 +93,9 @@
             "in.juspay.hyperpay": {
                 "configuration": "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/juspay/configuration/8.2/v1-configuration.zip"
             },
+            "in.juspay.paytm": {
+                "configuration": "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/juspay/configuration/8.2/v1-configuration.zip"
+            },
             "in.juspay.upiintent": {
                 "config": "https://assets.juspay.in/juspay/payments/in.juspay.upiintent/release/v1-config.zip"
             }

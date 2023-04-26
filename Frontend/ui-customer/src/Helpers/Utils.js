@@ -561,17 +561,10 @@ exports["storeOnResumeCallback"] = function (cb) {
 exports["getMerchantConfig'"] = function (just) {
   return function (nothing) {
     return function () {
-      if (typeof state !== "undefined") {
-        console.log("state", state)
-        return just(state);
+      if (typeof window.appConfig !== "undefined") {
+        return just(window.appConfig);
       }
       return nothing;
     }
   }
-}
-
-
-var state = {
-  primaryTextColor : "#000000",
-  primaryBackground : "#03B9F5"
 }

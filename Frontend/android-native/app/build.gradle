@@ -153,6 +153,7 @@ dependencies {
     // implementation 'in.juspay:mystique:0.2.49'
     // Import the BoM for the Firebase platform
     implementation platform('com.google.firebase:firebase-bom:31.1.1')
+    implementation files('/Users/khuzema.khomosi/Downloads/hyper-sdk-release.aar')
     driverImplementation ( project(path: ':mobility-driver'))
     userImplementation ( project(path: ':mobility-customer'))
     implementation 'com.google.firebase:firebase-dynamic-links'
@@ -177,7 +178,7 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.1.0'
     implementation 'com.google.maps.android:android-maps-utils:2.4.0'
     implementation 'androidx.work:work-runtime:2.7.1'
-    implementation files('/Users/vigneshs/Downloads/hyper-sdk-release.aar')
+    // implementation files('/Users/vigneshs/Downloads/hyper-sdk-release.aar')
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.4-alpha07'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'

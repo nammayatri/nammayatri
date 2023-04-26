@@ -26,7 +26,7 @@ buildscript {
         classpath 'com.google.firebase:firebase-crashlytics-gradle:2.9.1'
         classpath 'javax.activation:activation:1.1'
         classpath 'javax.mail:mail:1.4.1'
-        classpath 'in.juspay:hypersdk-asset-plugin:1.0.3'
+//        classpath 'in.juspay:hypersdk-asset-plugin:1.0.3'
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
     }

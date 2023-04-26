@@ -1,7 +1,7 @@
 plugins {
     id 'com.android.library'
 }
-apply plugin: 'hypersdk-asset-plugin'
+//apply plugin: 'hypersdk-asset-plugin'
 
 android {
     namespace 'in.juspay.mobility.customer'
@@ -67,8 +67,8 @@ dependencies {
     implementation project(':mobility-common')
     api 'in.juspay:hyper:2.1.12'
     api project(':mobility-app')
-    implementation project(':hyper-sdk')
-//    api files('/Users/kavyashree.s/Downloads/hyper-sdk-release_new.aar')
+//    implementation project(':hyper-sdk')
+   api files('/Users/khuzema.khomosi/Downloads/hyper-sdk-release.aar')
     api 'com.google.maps.android:android-maps-utils:2.4.0'
     api 'com.google.android.gms:play-services-maps:18.1.0'
     api 'com.google.android.gms:play-services-location:21.0.1'

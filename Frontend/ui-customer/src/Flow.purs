@@ -74,6 +74,7 @@ import Control.Transformers.Back.Trans (runBackT)
 
 baseAppFlow :: FlowBT String Unit
 baseAppFlow = do
+  _ <- lift $ lift $ liftFlow $ loadConfig
   _ <- pure $ printLog "Global Payload" "gPayload" 
   (GlobalState state) <- getState
   let bundle = bundleVersion unit

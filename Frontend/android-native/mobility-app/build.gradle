@@ -79,8 +79,8 @@ dependencies {
     testImplementation 'junit:junit:4.13.2'
    implementation 'in.juspay:hyper:2.1.12'
     // api files('/Users/vigneshs/Downloads/hyper-release.aar')
-//    implementation files('/Users/vigneshs/Downloads/hyper-sdk-release.aar') // Update their own local hyper sdk
-    implementation project(':hyper-sdk')
+    implementation files('/Users/khuzema.khomosi/Downloads/hyper-sdk-release.aar') // Update their own local hyper sdk
+//    implementation project(':hyper-sdk')
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
     implementation 'com.pierfrancescosoffritti.androidyoutubeplayer:core:11.1.0'

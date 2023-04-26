@@ -67,7 +67,7 @@ dependencies {
     implementation project(':mobility-common')
     api 'in.juspay:hyper:2.1.12'
     api project(':mobility-app')
-    implementation project(':hyper-sdk')
+//    implementation project(':hyper-sdk')
     implementation 'androidx.work:work-runtime:2.8.1'
 
     testImplementation 'junit:junit:4.13.2'
