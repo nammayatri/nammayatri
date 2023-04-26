@@ -13,7 +13,7 @@ pipeline {
         }
         stage ('Docker image') {
             when {
-                branch 'main'
+                anyOf { branch 'main'; branch 'prodHotPush' }
             }
             steps {
                 dockerPush "dockerImage", "ghcr.io"
@@ -21,7 +21,7 @@ pipeline {
         }
         stage ('Cachix push') {
             when {
-                branch 'main'
+                anyOf { branch 'main'; branch 'prodHotPush' }
             }
             steps {
                 cachixPush "nammayatri"

@@ -158,9 +158,11 @@ oneWaySearch personId bundleVersion clientVersion device req = do
   routeResponse <- Maps.getRoutes person.merchantId request
   let shortestRouteInfo = getRouteInfoWithShortestDuration routeResponse
   let longestRouteDistance = (.distance) =<< getLongestRouteDistance routeResponse
-  dSearchRes <- DOneWaySearch.oneWaySearch person merchant req bundleVersion clientVersion longestRouteDistance device ((.distance) =<< shortestRouteInfo) ((.duration) =<< shortestRouteInfo)
+  let shortestRouteDistance = (.distance) =<< shortestRouteInfo
+  let shortestRouteDuration = (.duration) =<< shortestRouteInfo
+  dSearchRes <- DOneWaySearch.oneWaySearch person merchant req bundleVersion clientVersion longestRouteDistance device shortestRouteDistance shortestRouteDuration
   fork "search cabs" . withShortRetry $ do
-    becknTaxiReq <- TaxiACL.buildOneWaySearchReq dSearchRes shortestRouteInfo device
+    becknTaxiReq <- TaxiACL.buildOneWaySearchReq dSearchRes device shortestRouteDistance shortestRouteDuration
     void $ CallBPP.search dSearchRes.gatewayUrl becknTaxiReq
   fork "search metro" . withShortRetry $ do
     becknMetroReq <- MetroACL.buildSearchReq dSearchRes
