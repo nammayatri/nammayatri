@@ -33,6 +33,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     driverOfferBaseUrl :: BaseUrl,
     driverOfferApiKey :: Text,
     driverOfferMerchantId :: Text,
+    bppBaseUrl :: BaseUrl,
     geoHashPrecisionValue :: Int,
     signingPublicKey :: Base64,
     cipherText :: Maybe Base64,

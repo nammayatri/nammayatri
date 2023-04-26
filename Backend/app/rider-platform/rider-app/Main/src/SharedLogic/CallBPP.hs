@@ -172,6 +172,16 @@ feedback ::
   m RatingRes
 feedback = callBecknAPIWithSignature "feedback" API.ratingAPI
 
+getRatingCategories ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasBapInfo r m
+  ) =>
+  BaseUrl ->
+  GetRatingCategoriesReq ->
+  m GetRatingCategoriesResp
+getRatingCategories = callBecknAPIWithSignature "ratingCategories" API.getRatingCategoriesAPI
+
 callBecknAPIWithSignature,
   callBecknAPIWithSignatureMetro ::
     ( MonadFlow m,

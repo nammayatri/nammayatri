@@ -12,35 +12,14 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.API.Rating where
+module Domain.Types.RatingCategories where
 
-import Beckn.Types.Core.Taxi.Rating (RatingMessage)
 import Beckn.Types.Core.Taxi.Rating.Category
 import EulerHS.Prelude hiding (id)
-import Kernel.Types.Beckn.Ack
-import Kernel.Types.Beckn.ReqTypes (BecknReq, Empty)
-import Servant (JSON, Post, ReqBody, (:>))
+import Kernel.Types.Id
 
-type RatingReq = BecknReq RatingMessage
-
-type RatingRes = AckResponse
-
-type GetRatingCategoriesReq = BecknReq Empty
-
-type GetRatingCategoriesResp = RatingCategories
-
-type RatingAPI =
-  "rating"
-    :> ReqBody '[JSON] RatingReq
-    :> Post '[JSON] RatingRes
-
-ratingAPI :: Proxy RatingAPI
-ratingAPI = Proxy
-
-type GetRatingCategoriesAPI =
-  "get_rating_categories"
-    :> ReqBody '[JSON] GetRatingCategoriesReq
-    :> Post '[JSON] GetRatingCategoriesResp
-
-getRatingCategoriesAPI :: Proxy GetRatingCategoriesAPI
-getRatingCategoriesAPI = Proxy
+data RatingCategory = RatingCategory
+  { id :: Id RatingCategory,
+    category :: CategoryName
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)

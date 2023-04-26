@@ -16,6 +16,7 @@ module API.Beckn (API, handler) where
 
 import qualified API.Beckn.Cancel as Cancel
 import qualified API.Beckn.Confirm as Confirm
+import qualified API.Beckn.GetRatingCategories as GetRatingCategories
 import qualified API.Beckn.Init as Init
 import qualified API.Beckn.Rating as Rating
 import qualified API.Beckn.Search as Search
@@ -35,6 +36,7 @@ type API =
            :<|> Cancel.API
            :<|> Rating.API
            :<|> Update.API
+           :<|> GetRatingCategories.API
        )
 
 handler :: FlowServer API
@@ -47,3 +49,4 @@ handler =
     :<|> Cancel.handler
     :<|> Rating.handler
     :<|> Update.handler
+    :<|> GetRatingCategories.handler
