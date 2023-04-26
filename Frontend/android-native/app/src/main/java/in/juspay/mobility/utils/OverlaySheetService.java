@@ -153,7 +153,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                                 holder.reqButton.setClickable(false);
                                 updateSharedPreferences();
                                 if (MainActivity.getInstance() != null) MainActivity.getInstance().triggerPopUP("ride_requested","RIDE_REQUESTED");
-                                String logEvent = sharedPref.getString("DRIVER_STATUS_N", "null").equals("SILENT") ? "silent_ride_accepted" : "ride_accepted";
+                                String logEvent = sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") ? "silent_ride_accepted" : "ride_accepted";
                                 firebaseLogEvent(logEvent);
                                 isRideAcceptedOrRejected = true;
                                 handler.post(() -> {
@@ -204,7 +204,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             isRideAcceptedOrRejected = true;
                             holder.rejectButton.setClickable(false);
                             handler.post(() -> {
-                                String logEvent = sharedPref.getString("DRIVER_STATUS_N", "null").equals("SILENT") ? "silent_ride_declined" : "ride_declined";
+                                String logEvent = sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") ? "silent_ride_declined" : "ride_declined";
                                 firebaseLogEvent(logEvent);
                                 removeCard(position);
                                 executor.shutdown();

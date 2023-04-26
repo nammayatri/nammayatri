@@ -194,7 +194,7 @@ view push state =
                   --   , width MATCH_PARENT
                   --   , background Color.blackLessTrans
                   --   ][]
-                  , if state.props.driverStatusSet == ST.OFFLINE then offlineView push state else dummyTextView
+                  , if state.props.driverStatusSet == ST.Offline then offlineView push state else dummyTextView
                   , linearLayout
                    [ width MATCH_PARENT
                    , height WRAP_CONTENT
@@ -221,7 +221,7 @@ view push state =
                       , orientation VERTICAL
                       , weight 1.0
                       ][
-                        if not state.props.rideActionModal && (state.props.driverStatusSet == ST.ONLINE || state.props.driverStatusSet == ST.SILENT)  then updateLocationAndLastUpdatedView2 state push else dummyTextView
+                        if not state.props.rideActionModal && (state.props.driverStatusSet == ST.Online || state.props.driverStatusSet == ST.Silent)  then updateLocationAndLastUpdatedView2 state push else dummyTextView
                         , viewRecenterAndSupport state push
                       ]
                     ]
@@ -352,7 +352,7 @@ offlineView push state =
                   , width $ V 132
                   , cornerRadius 75.0
                   , background "#53BB6F"
-                  , onClick  push  (const $ SwitchDriverStatus ST.ONLINE)
+                  , onClick  push  (const $ SwitchDriverStatus ST.Online)
                   ][]
                 , textView
                   [ height MATCH_PARENT

@@ -38,6 +38,7 @@ import Tracker.Types as Tracker
 import Services.EndPoints as EP
 import Engineering.Helpers.Commons (liftFlow, bundleVersion)
 import Data.Maybe
+import Data.String as DS
 import Log (printLog)
 import Effect.Class (liftEffect)
 import Storage (getValueToLocalStore, KeyStore(..))
@@ -233,10 +234,10 @@ makeVerifyOTPReq otp = VerifyTokenReq {
     }
 
 ------------------------------------------ driverActiveInactiveBT -------------------------------------------------------------
-driverActiveInactiveBT :: String -> DriverStatus -> FlowBT String DriverActiveInactiveResp
+driverActiveInactiveBT :: String -> String -> FlowBT String DriverActiveInactiveResp
 driverActiveInactiveBT status status_n = do
         headers <- getHeaders' ""
-        withAPIResultBT (EP.driverActiveInactiveSilent status $ show status_n) (\x → x) errorHandler (lift $ lift $ callAPI headers (DriverActiveInactiveReq status $ show status_n))
+        withAPIResultBT (EP.driverActiveInactiveSilent status status_n) (\x → x) errorHandler (lift $ lift $ callAPI headers (DriverActiveInactiveReq status status_n))
     where
         errorHandler (ErrorPayload errorPayload) =  do 
             modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { props { goOfflineModal = true }})
