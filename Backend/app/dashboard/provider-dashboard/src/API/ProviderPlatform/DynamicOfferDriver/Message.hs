@@ -115,7 +115,7 @@ addLinkAsMedia merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
 uploadFile :: ShortId DM.Merchant -> ApiTokenInfo -> Common.UploadFileRequest -> FlowHandler Common.UploadFileResponse
 uploadFile merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-  unless (req.fileType `elem` [Common.Audio, Common.Image]) $
+  unless (req.fileType `elem` [Common.Audio, Common.Image, Common.S3Image]) $
     throwError $ InvalidRequest "Only support Audio/Image media type. For Video/MediaLinks use AddLink API."
   transaction <- buildTransaction Common.UploadFileEndpoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $

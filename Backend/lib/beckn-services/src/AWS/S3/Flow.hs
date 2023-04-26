@@ -12,11 +12,13 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module AWS.S3.Flow (get', put', get'', put'', mockGet, mockPut) where
+module AWS.S3.Flow (get', put', get'', put'', mockGet, mockPut, getPng'', putPng'', mockGetPng, mockPutPng) where
 
 import AWS.S3.Error
 import AWS.S3.Types
 import AWS.S3.Utils
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Char8 as C
 import Data.String.Conversions
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
@@ -132,6 +134,33 @@ put'' bucketName path img = withLogTag "S3" $ do
       _ <- Posix.fdWrite fd (T.unpack img_)
       Posix.closeFd fd
 
+putPng'' ::
+  ( CoreMetrics m,
+    MonadFlow m
+  ) =>
+  Text ->
+  String ->
+  ByteString ->
+  m ()
+putPng'' bucketName path file = withLogTag "S3" $ do
+  let cmd = "aws s3api put-object --bucket " <> T.unpack bucketName <> " --key " <> path <> " --body " <> C.unpack file
+  liftIO $ callCommand cmd
+
+getPng'' ::
+  ( CoreMetrics m,
+    MonadFlow m
+  ) =>
+  Text ->
+  String ->
+  m ByteString
+getPng'' bucketName path = withLogTag "S3" $ do
+  let tmpPath = getTmpPath path
+  let cmd = "aws s3api get-object --bucket " <> T.unpack bucketName <> " --key " <> path <> " " <> tmpPath
+  liftIO $ callCommand cmd
+  result <- liftIO $ BS.readFile tmpPath
+  liftIO $ removeFile tmpPath
+  return result
+
 getTmpPath :: String -> String
 getTmpPath = (<>) "/tmp/" . T.unpack . last . T.split (== '/') . T.pack
 
@@ -145,10 +174,25 @@ mockPut ::
 mockPut baseDirectory bucketName path img =
   withLogTag "S3" $
     liftIO $ do
-      let fullPath'Name = getFullPathMock baseDirectory bucketName path
-          fullPath = Path.takeDirectory fullPath'Name
+      let fullPathName = getFullPathMock baseDirectory bucketName path
+          fullPath = Path.takeDirectory fullPathName
       Dir.createDirectoryIfMissing True fullPath
-      T.writeFile fullPath'Name img
+      T.writeFile fullPathName img
+
+mockPutPng ::
+  (MonadIO m, Log m) =>
+  String ->
+  Text ->
+  String ->
+  ByteString ->
+  m ()
+mockPutPng baseDirectory bucketName path imageContent =
+  withLogTag "S3" $
+    liftIO $ do
+      let fullPathName = getFullPathMock baseDirectory bucketName path
+          fullPath = Path.takeDirectory fullPathName
+      Dir.createDirectoryIfMissing True fullPath
+      BS.writeFile fullPathName imageContent
 
 mockGet ::
   (MonadIO m, Log m) =>
@@ -159,8 +203,20 @@ mockGet ::
 mockGet baseDirectory bucketName path =
   withLogTag "S3" $
     liftIO $ do
-      let fullPath'Name = getFullPathMock baseDirectory bucketName path
-      T.readFile fullPath'Name
+      let fullPathName = getFullPathMock baseDirectory bucketName path
+      T.readFile fullPathName
+
+mockGetPng ::
+  (MonadIO m, Log m) =>
+  String ->
+  Text ->
+  String ->
+  m ByteString
+mockGetPng baseDirectory bucketName path =
+  withLogTag "S3" $
+    liftIO $ do
+      let fullPathName = getFullPathMock baseDirectory bucketName path
+      BS.readFile fullPathName
 
 getFullPathMock :: String -> Text -> String -> String
 getFullPathMock baseDirectory bucketName path = baseDirectory <> "/" <> cs bucketName <> "/" <> path

@@ -76,7 +76,9 @@ data S3AuthParams = S3AuthParams
 data S3Env m = S3Env
   { pathPrefix :: Text,
     getH :: String -> m Text,
-    putH :: String -> Text -> m ()
+    putH :: String -> Text -> m (),
+    getPngH :: String -> m ByteString,
+    putPngH :: String -> ByteString -> m ()
   }
 
 get :: (MonadReader r m, HasField "s3Env" r (S3Env m)) => String -> m Text
@@ -88,3 +90,13 @@ put :: (MonadReader r m, HasField "s3Env" r (S3Env m)) => String -> Text -> m ()
 put path file_ = do
   s3env <- asks (.s3Env)
   putH s3env path file_
+
+getPng :: (MonadReader r m, HasField "s3Env" r (S3Env m)) => String -> m ByteString
+getPng path = do
+  s3env <- asks (.s3Env)
+  getPngH s3env path
+
+putPng :: (MonadReader r m, HasField "s3Env" r (S3Env m)) => String -> ByteString -> m ()
+putPng path file_ = do
+  s3env <- asks (.s3Env)
+  putPngH s3env path file_

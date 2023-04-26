@@ -87,6 +87,7 @@ createMediaEntry Common.AddLinkAsMedia {..} = do
       Common.AudioLink -> Domain.AudioLink
       Common.VideoLink -> Domain.VideoLink
       Common.ImageLink -> Domain.ImageLink
+      Common.S3Image -> Domain.S3Image
 
     mkFile fileUrl = do
       id <- generateGUID
@@ -101,17 +102,31 @@ createMediaEntry Common.AddLinkAsMedia {..} = do
 
 uploadFile :: ShortId DM.Merchant -> Common.UploadFileRequest -> Flow Common.UploadFileResponse
 uploadFile merchantShortId Common.UploadFileRequest {..} = do
-  -- _ <- validateContentType
   merchant <- findMerchantByShortId merchantShortId
-  mediaFile <- L.runIO $ base64Encode <$> BS.readFile file
-  filePath <- createFilePath merchant.id.getId fileType "" -- TODO: last param is extension (removed it as the content-type header was not comming with proxy api)
   transporterConfig <- CQTC.findByMerchantId merchant.id >>= fromMaybeM (TransporterConfigNotFound merchant.id.getId)
-  let fileUrl =
-        transporterConfig.mediaFileUrlPattern
-          & T.replace "<DOMAIN>" "message"
-          & T.replace "<FILE_PATH>" filePath
-  _ <- fork "S3 put file" $ S3.put (T.unpack filePath) mediaFile
-  createMediaEntry Common.AddLinkAsMedia {url = fileUrl, fileType}
+  -- _ <- validateContentType
+  publicUrl <-
+    case fileType of
+      Common.S3Image -> do
+        mediaFile' <- L.runIO $ BS.readFile file
+        filePath <- createFilePath merchant.id.getId fileType ".png"
+        bppUIUrl <- asks (.selfUIUrl)
+        let s3MediaFileUrlPattern = showBaseUrl bppUIUrl <> transporterConfig.s3MediaFileUrlPattern
+        let publicUrl = generateFilePublicUrl s3MediaFileUrlPattern filePath
+        _ <- fork "S3 put file" $ S3.putPng (T.unpack filePath) mediaFile'
+        pure publicUrl
+      _ -> do
+        mediaFile' <- L.runIO $ base64Encode <$> BS.readFile file
+        filePath <- createFilePath merchant.id.getId fileType "" -- TODO: last param is extension (removed it as the content-type header was not comming with proxy api)
+        let publicUrl = generateFilePublicUrl transporterConfig.mediaFileUrlPattern filePath
+        _ <- fork "S3 put file" $ S3.put (T.unpack filePath) mediaFile'
+        pure publicUrl
+  createMediaEntry Common.AddLinkAsMedia {url = publicUrl, fileType}
+  where
+    generateFilePublicUrl urlPattern filePath =
+      urlPattern
+        & T.replace "<DOMAIN>" "message"
+        & T.replace "<FILE_PATH>" filePath
 
 -- where
 -- validateContentType = do
@@ -153,6 +168,7 @@ toCommonMediaFileType = \case
   Domain.ImageLink -> Common.ImageLink
   Domain.VideoLink -> Common.VideoLink
   Domain.AudioLink -> Common.AudioLink
+  Domain.S3Image -> Common.S3Image
 
 translationToDomainType :: UTCTime -> Common.MessageTranslation -> Domain.MessageTranslation
 translationToDomainType createdAt Common.MessageTranslation {..} = Domain.MessageTranslation {..}

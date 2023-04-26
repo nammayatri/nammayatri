@@ -34,6 +34,7 @@ data TransporterConfigD u = TransporterConfig
     thresholdCancellationScore :: Maybe Int,
     minRidesForCancellationScore :: Maybe Int,
     mediaFileUrlPattern :: Text,
+    s3MediaFileUrlPattern :: Text,
     mediaFileSizeUpperLimit :: Int,
     waitingTimeEstimatedThreshold :: Seconds,
     referralLinkPassword :: Text,

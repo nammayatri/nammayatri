@@ -43,6 +43,7 @@ mkPersist
       thresholdCancellationScore Int Maybe
       minRidesForCancellationScore Int Maybe
       mediaFileUrlPattern Text
+      s3MediaFileUrlPattern Text
       mediaFileSizeUpperLimit Int
       waitingTimeEstimatedThreshold Seconds
       referralLinkPassword Text
