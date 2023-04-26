@@ -80,7 +80,7 @@ INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_acc
         T1.role_id,
         T1.api_entity,
         'USER_FULL_ACCESS',
-        unnest (ARRAY [:'CUSTOMER_DELETE','CUSTOMER_BLOCK','CUSTOMER_UNBLOCK'])
+        unnest (ARRAY ['CUSTOMER_DELETE','CUSTOMER_BLOCK','CUSTOMER_UNBLOCK'])
     FROM atlas_bpp_dashboard.access_matrix AS T1
     WHERE T1.api_entity = 'CUSTOMERS' AND (T1.user_access_type = 'USER_FULL_ACCESS' OR T1.user_access_type = 'USER_WRITE_ACCESS')
     )

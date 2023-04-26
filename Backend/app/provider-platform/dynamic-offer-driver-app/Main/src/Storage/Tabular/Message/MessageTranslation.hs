@@ -37,6 +37,7 @@ mkPersist
       language Language
       title Text
       description Text
+      shortDescription Text
       label Text Maybe
       createdAt UTCTime
       Primary messageId language

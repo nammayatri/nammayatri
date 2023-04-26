@@ -37,6 +37,7 @@ mkPersist
       messageType Domain.MessageType sql=type
       title Text
       description Text
+      shortDescription Text
       label Text Maybe
       likeCount Int
       mediaFiles (PostgresList MediaFileTId)

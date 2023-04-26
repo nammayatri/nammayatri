@@ -115,6 +115,7 @@ data AddMessageRequest = AddMessageRequest
   { _type :: MessageType, -- (Action Text | Read)
     title :: Text, -- max character 100
     description :: Text, -- no max character limit
+    shortDescription :: Text,
     label :: Maybe Text,
     translations :: [MessageTranslation],
     mediaFiles :: [Id File]
@@ -137,6 +138,7 @@ data MessageTranslation = MessageTranslation
   { language :: Language,
     title :: Text,
     description :: Text,
+    shortDescription :: Text,
     label :: Maybe Text
   }
   deriving stock (Eq, Show, Generic)
@@ -229,6 +231,7 @@ data MessageInfoResponse = MessageInfoResponse
   { messageId :: Id Message,
     title :: Text,
     description :: Text,
+    shortDescription :: Text,
     _type :: MessageType,
     mediaFiles :: [MediaFile]
   }
