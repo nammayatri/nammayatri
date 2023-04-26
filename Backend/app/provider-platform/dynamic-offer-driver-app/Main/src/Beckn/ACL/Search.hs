@@ -50,6 +50,7 @@ buildSearchReq subscriber req = do
         pickupLocation = LatLong {lat = pickup.location.gps.lat, lon = pickup.location.gps.lon},
         pickupTime = pickup.time.timestamp,
         dropLocation = LatLong {lat = dropOff.location.gps.lat, lon = dropOff.location.gps.lon},
-        routeInfo = req.message.routeInfo,
+        routeDistance = (.distance) =<< req.message.routeInfo,
+        routeDuration = (.duration) =<< req.message.routeInfo,
         device = req.message.device
       }

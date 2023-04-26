@@ -66,7 +66,8 @@ data DSearchReq = DSearchReq
     pickupLocation :: LatLong,
     pickupTime :: UTCTime,
     dropLocation :: LatLong,
-    routeInfo :: Maybe Maps.RouteInfo,
+    routeDistance :: Maybe Meters,
+    routeDuration :: Maybe Seconds,
     device :: Maybe Text
   }
 
@@ -94,20 +95,17 @@ data DistanceAndDuration = DistanceAndDuration
     duration :: Seconds
   }
 
-getDistanceAndDuration :: Id DM.Merchant -> LatLong -> LatLong -> Maybe Maps.RouteInfo -> Flow DistanceAndDuration
-getDistanceAndDuration merchantId fromLocation toLocation routeInfo = case routeInfo of
-  Just (Maps.RouteInfo (Just duration) (Just distance) _ _ _) -> return $ DistanceAndDuration {distance, duration}
-  _ -> getMapsDistance
-  where
-    getMapsDistance = do
-      response <-
-        Maps.getDistance merchantId $
-          Maps.GetDistanceReq
-            { origin = fromLocation,
-              destination = toLocation,
-              travelMode = Just Maps.CAR
-            }
-      return DistanceAndDuration {distance = response.distance, duration = response.duration}
+getDistanceAndDuration :: Id DM.Merchant -> LatLong -> LatLong -> Maybe Meters -> Maybe Seconds -> Flow DistanceAndDuration
+getDistanceAndDuration _ _ _ (Just distance) (Just duration) = return $ DistanceAndDuration {distance, duration}
+getDistanceAndDuration merchantId fromLocation toLocation _ _ = do
+  response <-
+    Maps.getDistance merchantId $
+      Maps.GetDistanceReq
+        { origin = fromLocation,
+          destination = toLocation,
+          travelMode = Just Maps.CAR
+        }
+  return DistanceAndDuration {distance = response.distance, duration = response.duration}
 
 handler :: Id DM.Merchant -> DSearchReq -> Flow DSearchRes
 handler merchantId sReq = do
@@ -120,7 +118,7 @@ handler merchantId sReq = do
   toLocation <- buildSearchReqLocation toLocationLatLong
   unlessM (rideServiceable org.geofencingConfig QGeometry.someGeometriesContain fromLocationLatLong (Just toLocationLatLong)) $
     throwError RideNotServiceable
-  result <- getDistanceAndDuration merchantId fromLocationLatLong toLocationLatLong sReq.routeInfo
+  result <- getDistanceAndDuration merchantId fromLocationLatLong toLocationLatLong sReq.routeDistance sReq.routeDuration
   CD.cacheDistance sReq.transactionId (result.distance, result.duration)
   Redis.setExp (CD.deviceKey sReq.transactionId) sReq.device 120
   logDebug $ "distance: " <> show result.distance
