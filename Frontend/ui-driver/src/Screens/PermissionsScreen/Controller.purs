@@ -42,13 +42,23 @@ instance loggableAction :: Loggable Action where
                 trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "primary_button" "allow_access_on_click"
                 trackAppEndScreen appId (getScreen NEED_ACCESS_SCREEN)
             PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "primary_button" "no_action"
-        ItemClick str -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "item_type"
+        ItemClick permissionType -> case permissionType of
+            Location -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "location"
+            Overlay -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "overlay"
+            AutoStart -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "auto_start"
+            Battery -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "battery"
         UpdateLocationPermissionState -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "update_location_permission_state"
         UpdateOverlayPermissionState -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "update_overlay_permission_state"
         UpdateBatteryPermissionState -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "update_battery_permission_state"
-        LocationPermissionCallBack str -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "location_permission_callback"
-        OverlayPermissionSwitchCallBack str -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "overlay_permission_switch_callback"
-        BatteryUsagePermissionCallBack str -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "battery_usage_permission_callback"
+        LocationPermissionCallBack isLocationPermissionEnabled -> do
+            if isLocationPermissionEnabled == "true" then trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "location_permission_enabled"
+                else trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "location_permission_not_enabled"
+        OverlayPermissionSwitchCallBack isOverlayPermissionEnabled -> do
+            if isOverlayPermissionEnabled == "true" then trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "overlay_permission_enabled"
+                else trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "overlay_permission_not_enabled"
+        BatteryUsagePermissionCallBack isBatteryOptimizationEnabled -> do
+            if isBatteryOptimizationEnabled == "true" then trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "battery_permission_enabled"
+                else trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "battery_permission_not_enabled"
         UpdateAllChecks updatedState -> trackAppScreenEvent appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "update_all_checks"
         NoAction -> trackAppScreenEvent appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "no_action"
 

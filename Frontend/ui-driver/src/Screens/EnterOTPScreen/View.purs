@@ -158,7 +158,7 @@ underlinedTextView state push =
   , height WRAP_CONTENT
   , margin (MarginTop 18)
   , orientation VERTICAL
-  , onClick push (const ResendOTP)
+  , onClick push $ const (ResendOTP state.props.resendEnabled)
   ][  textView
       [ height WRAP_CONTENT
       , width WRAP_CONTENT

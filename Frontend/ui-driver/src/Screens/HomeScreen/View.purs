@@ -168,7 +168,7 @@ view push state =
           _ <- JB.getCurrentPosition push CurrentLocation
           pure unit
         ) (const AfterRender)
-      , onBackPressed push (const BackPressed)
+      , onBackPressed push (const BackPressed state)
       ][ Anim.screenAnimationFadeInOut $
           linearLayout
             [ width MATCH_PARENT

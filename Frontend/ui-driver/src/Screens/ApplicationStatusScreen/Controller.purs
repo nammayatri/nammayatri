@@ -50,7 +50,11 @@ instance loggableAction :: Loggable Action where
       trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "in_screen" "Logout"
       trackAppEndScreen appId (getScreen APPLICATION_STATUS_SCREEN)
     SupportCall -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "in_screen" "whats_app_support_call"
-    DriverRegistrationStatusAction resp -> trackAppScreenEvent appId (getScreen APPLICATION_STATUS_SCREEN) "in_screen" "driver_registration_status"
+    DriverRegistrationStatusAction (DriverRegistrationStatusResp resp) -> do
+      if (resp.dlVerificationStatus == "VALID" && resp.rcVerificationStatus == "VALID") then do
+        trackAppScreenEvent appId (getScreen APPLICATION_STATUS_SCREEN) "in_screen" "driver_registration_status_is_valid"
+        trackAppEndScreen appId (getScreen APPLICATION_STATUS_SCREEN)
+        else trackAppScreenEvent appId (getScreen APPLICATION_STATUS_SCREEN) "in_screen" "driver_registration_status_is_not_valid"
     Dummy -> trackAppScreenEvent appId (getScreen APPLICATION_STATUS_SCREEN) "in_screen" "dummy"
     ReTry docType -> case docType of
       "DL" -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "in_screen" "DL_retry_on_click"

@@ -15,7 +15,7 @@
 
 module Screens.ReferralScreen.Controller where
 
-import Prelude (bind , class Show, pure, unit, ($), discard , (>=) , (<=) ,(==),(&&) , not ,(+) , show , void)
+import Prelude (bind , class Show, pure, unit, ($), discard , (>=) , (<=) ,(==),(&&) , not ,(+), (<>), show , void)
 import Screens.Types (ReferralScreenState, ReferralType(..))
 import Components.BottomNavBar as BottomNavBar
 import Components.GenericHeader as GenericHeader
@@ -45,7 +45,7 @@ instance loggableAction :: Loggable Action where
       trackAppBackPress appId (getScreen REFERRAL_SCREEN)
       trackAppEndScreen appId (getScreen REFERRAL_SCREEN)
     BottomNavBarAction (BottomNavBar.OnNavigate item) -> do
-      trackAppActionClick appId (getScreen REFERRAL_SCREEN) "bottom_nav_bar" "on_navigate"
+      trackAppActionClick appId (getScreen REFERRAL_SCREEN) "bottom_nav_bar" ("on_navigate_" <> item)
       trackAppEndScreen appId (getScreen REFERRAL_SCREEN)
     PrimaryButtonActionController act -> case act of
       PrimaryButton.OnClick -> do

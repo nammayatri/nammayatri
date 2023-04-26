@@ -34,7 +34,7 @@ import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), alignParentBottom, background, color, gravity, height, id, imageUrl, imageView, layoutGravity, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, relativeLayout, scrollBarY, swipeRefreshLayout, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), alignParentBottom, background, color, gravity, height, id, imageUrl, imageView, layoutGravity, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, relativeLayout, scrollBarY, swipeRefreshLayout, text, textSize, textView, visibility, weight, width, afterRender)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Keyed as Keyed
 import PrestoDOM.Events (globalOnScroll)
@@ -82,7 +82,8 @@ view notificationListItem push state =
     , width MATCH_PARENT
     , background Color.white900
     , orientation VERTICAL
-    , onBackPressed push $ const BackPressed
+    , onBackPressed push $ const BackPressed state
+    , afterRender push (const AfterRender)
     ] $ [ screenAnimationFadeInOut
           $ linearLayout
               [ height MATCH_PARENT
@@ -253,7 +254,7 @@ headerLayout state push =
             , height $ V 30
             , imageUrl "ny_ic_chevron_left"
             , gravity CENTER_VERTICAL
-            , onClick push $ const BackPressed
+            , onClick push $ const (BackPressed state)
             , padding $ Padding 2 2 2 2
             , margin $ MarginLeft 5
             ]

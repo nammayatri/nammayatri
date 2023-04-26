@@ -14,7 +14,7 @@
 -}
 
 module Screens.EnterOTPScreen.Controller where
-import Prelude (class Show, not, pure, unit, (&&), (<=), (==), (||), ($), discard, bind, (>=))
+import Prelude (class Show, not, pure, unit, (&&), (<=), (==), (||), ($), discard, bind, (>=), (<>))
 import PrestoDOM (Eval, continue, exit, updateAndExit)
 import Screens.Types (EnterOTPScreenState)
 import Components.PrimaryEditText.Controllers as PrimaryEditText
@@ -36,7 +36,9 @@ instance loggableAction :: Loggable Action where
     BackPressed -> do
       trackAppBackPress appId (getScreen ENTER_OTP_NUMBER_SCREEN)
       trackAppEndScreen appId (getScreen ENTER_OTP_NUMBER_SCREEN)
-    ResendOTP -> trackAppActionClick appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" "resend_otp" 
+    ResendOTP flag-> do
+      if flag then trackAppActionClick appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" "resend_otp" 
+        else trackAppScreenEvent appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" "retry_not_enabled"
     PrimaryEditTextAction act -> case act of
       PrimaryEditText.OnClick -> trackAppActionClick appId (getScreen ENTER_OTP_NUMBER_SCREEN) "primary_edit_text" "on_click"
       PrimaryEditText.TextChanged valId newVal -> trackAppTextInput appId (getScreen ENTER_OTP_NUMBER_SCREEN) "otp_number_text_changed" "primary_edit_text"
@@ -46,14 +48,16 @@ instance loggableAction :: Loggable Action where
         trackAppActionClick appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" "primary_button_register_on_click"
         trackAppEndScreen appId (getScreen ENTER_OTP_NUMBER_SCREEN)
       PrimaryButton.NoAction -> trackAppActionClick appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" "primary_button_no_action"
-    TIMERACTION time-> trackAppScreenEvent appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" "timer_action"
+    TIMERACTION time -> case time of
+      "EXPIRED" -> trackAppScreenEvent appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" "timer_gone"
+      _ -> trackAppScreenEvent appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" ("timer_" <> time)
     AutoFill otp-> trackAppScreenEvent appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" "otp_autofill"
     SetToken id -> trackAppScreenEvent appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" "set_token"
     NoAction -> trackAppScreenEvent appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" "no_action"
     
 data ScreenOutput = GoBack  EnterOTPScreenState | GoToHome EnterOTPScreenState | Retry EnterOTPScreenState
 data Action = BackPressed 
-            | ResendOTP
+            | ResendOTP Boolean
             | PrimaryEditTextAction PrimaryEditText.Action
             | PrimaryButtonActionController PrimaryButton.Action
             | NoAction
@@ -70,7 +74,7 @@ eval (PrimaryEditTextAction PrimaryEditText.OnClick) state = continue state
 eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = do
   _ <- pure $ hideKeyboardOnNavigation true 
   exit (GoToHome state)
-eval (ResendOTP) state = do
+eval (ResendOTP flag) state = do
   if state.props.resendEnabled then exit (Retry state)
   else continue state
 eval (TIMERACTION time) state = do

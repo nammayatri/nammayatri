@@ -62,12 +62,18 @@ instance showAction :: Show Action where
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of 
     AfterRender -> trackAppScreenRender appId "screen" (getScreen HOME_SCREEN)
-    BackPressed -> do
+    BackPressed backPressState -> do
       trackAppBackPress appId (getScreen HOME_SCREEN)
-      trackAppEndScreen appId (getScreen HOME_SCREEN)
+      if backPressState.props.enterOtpModal then trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "backpress_enter_otp_modal"
+        else if backPressState.props.cancelRideModalShow then trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "backpress_cancel_ride_modal"
+            else if backPressState.props.cancelConfirmationPopup then trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "backpress_cancel_confirmation_popup"
+                else trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "backpress_continue_state"
     ScreenClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "screen_click"
-    Notification _ -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "notification_page"
-    ChangeStatus status -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "change_status"
+    Notification notificationType -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" ("notification_" <> notificationType)
+    ChangeStatus status -> do
+      if (getValueToLocalStore IS_DEMOMODE_ENABLED == "true") then trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "change_status_to_demo_mode"
+        else if status then trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "change_status_to_online_mode"
+          else trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "change_status_to_offline_mode"
     GoOffline status -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "go_offline"
     CancelGoOffline -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "cancell_go_offline"
     ShowMap key lat lon -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "show_map"
@@ -182,7 +188,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | AddAlternateNumber ST.HomeScreenState
 
 data Action = NoAction
-            | BackPressed
+            | BackPressed ST.HomeScreenState
             | ScreenClick
             | Notification String
             | ChangeStatus Boolean
@@ -221,7 +227,7 @@ eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenSt
 
 eval AfterRender state = do 
   continue state{props{mapRendered= true}}
-eval BackPressed state = do
+eval (BackPressed backPressState) state = do
   if state.props.enterOtpModal then do
     continue state { props = state.props { rideOtp = "", enterOtpFocusIndex = 0, enterOtpModal = false, rideActionModal = true } }
     else if (state.props.currentStage == ST.ChatWithCustomer) then do 
@@ -464,7 +470,7 @@ eval (ChatViewActionController (ChatView.SendSuggestion chatSuggestion)) state =
 eval (ChatViewActionController (ChatView.BackPressed)) state = do
   _ <- pure $ hideKeyboardOnNavigation true
   continueWithCmd state [do 
-      pure $ BackPressed 
+      pure $ (BackPressed state)
     ]
 
 eval (ChatViewActionController (ChatView.Navigate)) state = do

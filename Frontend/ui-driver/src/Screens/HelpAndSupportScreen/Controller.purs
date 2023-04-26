@@ -38,9 +38,12 @@ instance loggableAction :: Loggable Action where
       trackAppBackPress appId (getScreen HELP_AND_SUPPORT_SCREEN)
       trackAppEndScreen appId (getScreen HELP_AND_SUPPORT_SCREEN)
     SourceToDestinationAction (SourceToDestinationController.Dummy) -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "source_to_destination" "dummy"
-    OptionClick optionIndex -> do
-      trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "view_options"
-      trackAppEndScreen appId (getScreen HELP_AND_SUPPORT_SCREEN)
+    OptionClick optionIndex -> case optionIndex of
+      GettingStartedFaq -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "getting_started_and_faq"
+      OtherIssues -> do
+        trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "write_to_us"
+        trackAppEndScreen appId (getScreen HELP_AND_SUPPORT_SCREEN)
+      CallSupportCenter -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "call_support_center"
     ViewAllRides -> do
       trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "view_rides"
       trackAppEndScreen appId (getScreen HELP_AND_SUPPORT_SCREEN)

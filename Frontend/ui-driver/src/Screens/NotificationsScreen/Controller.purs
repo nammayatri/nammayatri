@@ -33,11 +33,13 @@ import Data.String.CodeUnits (charAt)
 import Effect.Aff (launchAff_)
 import Language.Strings (getString)
 import Language.Types(STR(..))
+import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Engineering.Helpers.Commons (getNewIDWithTag, strToBool, flowRunner)
-import Helpers.Utils (getImageUrl, getTimeStampString, removeMediaPlayer, setEnabled, setRefreshing, setYoutubePlayer)
+import Helpers.Utils (getImageUrl, getTimeStampString, removeMediaPlayer, setEnabled, setRefreshing, setYoutubePlayer, toString)
 import JBridge (hideKeyboardOnNavigation, requestKeyboardShow)
 import PrestoDOM (Eval, ScrollState(..), Visibility(..), continue, exit, toPropValue, continueWithCmd)
 import PrestoDOM.Types.Core (class Loggable)
+import Screens (ScreenName(..), getScreen)
 import Screens.Types (AnimationState(..), NotificationCardState, NotificationDetailModelState, NotificationsScreenState, NotificationCardPropState, YoutubeData, YoutubeVideoStatus(..))
 import Services.APITypes (MediaFileApiResponse(..), MediaType(..), MessageAPIEntityResponse(..), MessageListRes(..), MessageType(..))
 import Services.Backend as Remote
@@ -49,7 +51,43 @@ instance showAction :: Show Action where
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
-    _ -> pure unit
+    AfterRender -> trackAppScreenRender appId "screen" (getScreen NOTIFICATIONS_SCREEN)
+    BackPressed backPressState -> do
+      trackAppBackPress appId (getScreen NOTIFICATIONS_SCREEN)
+      if backPressState.notifsDetailModelVisibility == VISIBLE && backPressState.notificationDetailModelState.addCommentModelVisibility == GONE then trackAppScreenEvent appId (getScreen NOTIFICATIONS_SCREEN) "in_screen" "backpress_in_notification_detail"
+        else if backPressState.notificationDetailModelState.addCommentModelVisibility == VISIBLE then trackAppScreenEvent appId (getScreen NOTIFICATIONS_SCREEN) "in_screen" "backpress_in_notification_comment_mode"
+          else trackAppEndScreen appId (getScreen NOTIFICATIONS_SCREEN)
+    OnFadeComplete str -> trackAppScreenEvent appId (getScreen NOTIFICATIONS_SCREEN) "in_screen" "on_fade_complete"
+    Refresh -> trackAppScreenEvent appId (getScreen NOTIFICATIONS_SCREEN) "in_screen" "Refresh"
+    ErrorModalActionController action -> trackAppScreenEvent appId (getScreen NOTIFICATIONS_SCREEN) "in_screen" "error_modal_action"
+    NotificationCardClick act -> case act of
+      NotificationCardAC.Action1Click index -> trackAppActionClick appId (getScreen NOTIFICATIONS_SCREEN) "notification_card" ("action_1_onclick" <> (toString index))
+      NotificationCardAC.Action2Click index -> trackAppActionClick appId (getScreen NOTIFICATIONS_SCREEN) "notification_card"("action_2_onclick" <> (toString index))
+      NotificationCardAC.IllutrationClick index -> trackAppActionClick appId (getScreen NOTIFICATIONS_SCREEN) "notification_card" ("illustration_click" <> (toString index))
+      NotificationCardAC.NoAction -> trackAppScreenEvent appId (getScreen NOTIFICATIONS_SCREEN) "in_screen" "no_action"
+    Scroll str -> trackAppScreenEvent appId (getScreen NOTIFICATIONS_SCREEN) "in_screen" "scroll"
+    ScrollStateChanged scrollState -> trackAppScreenEvent appId (getScreen NOTIFICATIONS_SCREEN) "in_screen" "scroll_state_changed"
+    NotificationDetailModelAC act -> case act of
+      NotificationDetailModel.BackArrow -> trackAppActionClick appId (getScreen NOTIFICATIONS_SCREEN) "notification_detail_modal" "back_icon"
+      NotificationDetailModel.AddCommentClick -> trackAppActionClick appId (getScreen NOTIFICATIONS_SCREEN) "notification_detail_modal" "add_a_comment"
+      NotificationDetailModel.AddCommentModelAction act -> case act of
+        PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen NOTIFICATIONS_SCREEN) "popup_notification_detail_modal" "image_onclick"
+        PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen NOTIFICATIONS_SCREEN) "popup_notification_detail_modal" "post_comment"
+        PopUpModal.ETextController (PrimaryEditText.TextChanged id text) -> trackAppTextInput appId (getScreen NOTIFICATIONS_SCREEN) "popup_add_a_comment_text_changed" "primary_edit_text"
+        PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen NOTIFICATIONS_SCREEN) "popup_notification_detail_modal" "continue_onclick"
+        PopUpModal.CountDown seconds id status timerID -> trackAppScreenEvent appId (getScreen NOTIFICATIONS_SCREEN) "popup_notification_detail_modal" "countdown_updated"
+        PopUpModal.NoAction -> trackAppActionClick appId (getScreen NOTIFICATIONS_SCREEN) "popup_notification_detail_modal" "no_action"
+        PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen NOTIFICATIONS_SCREEN) "popup_notification_detail_modal" "tip_clicked"
+        PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen NOTIFICATIONS_SCREEN) "popup_notification_detail_modal" "popup_dismissed"
+      NotificationDetailModel.AfterRender -> trackAppScreenEvent appId (getScreen NOTIFICATIONS_SCREEN) "in_screen" "after_render"
+      NotificationDetailModel.NoAction -> trackAppScreenEvent appId (getScreen NOTIFICATIONS_SCREEN) "in_screen" "no_action"
+    BottomNavBarAction (BottomNavBar.OnNavigate item) -> do
+      trackAppActionClick appId (getScreen NOTIFICATIONS_SCREEN) "bottom_nav_bar" ("on_navigate_" <> item)
+      trackAppEndScreen appId (getScreen NOTIFICATIONS_SCREEN)
+    MessageListResAction (MessageListRes notificationArray) -> trackAppScreenEvent appId (getScreen NOTIFICATIONS_SCREEN) "in_screen" "message_list"
+    LoadMore -> trackAppActionClick appId (getScreen NOTIFICATIONS_SCREEN) "in_screen" "load_more"
+    NoAction -> trackAppScreenEvent appId (getScreen NOTIFICATIONS_SCREEN) "in_screen" "no_action"
+
 
 data ScreenOutput
   = RefreshScreen NotificationsScreenState
@@ -63,7 +101,7 @@ data ScreenOutput
 data Action
   = OnFadeComplete String
   | Refresh
-  | BackPressed
+  | BackPressed NotificationsScreenState
   | ErrorModalActionController ErrorModalController.Action
   | NotificationCardClick NotificationCardAC.Action
   | Scroll String
@@ -73,11 +111,12 @@ data Action
   | NoAction
   | LoadMore
   | BottomNavBarAction BottomNavBar.Action
+  | AfterRender
 
 eval :: Action -> NotificationsScreenState -> Eval Action ScreenOutput NotificationsScreenState
 eval Refresh state = exit $ RefreshScreen state
 
-eval BackPressed state = do
+eval (BackPressed backPressState) state = do
   if state.notifsDetailModelVisibility == VISIBLE && state.notificationDetailModelState.addCommentModelVisibility == GONE then
     continueWithCmd state { notifsDetailModelVisibility = GONE }
     [ do
@@ -105,7 +144,7 @@ eval (NotificationCardClick (NotificationCardAC.IllutrationClick index)) state =
 
 eval (NotificationDetailModelAC NotificationDetailModel.BackArrow) state =
   continueWithCmd state
-    [ pure BackPressed
+    [ pure $ (BackPressed state)
     ]
 
 eval (NotificationDetailModelAC NotificationDetailModel.AddCommentClick) state = do

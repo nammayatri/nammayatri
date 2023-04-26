@@ -57,7 +57,7 @@ instance loggableAction :: Loggable Action where
     Refresh -> trackAppActionClick appId (getScreen RIDE_HISTORY_SCREEN) "in_screen" "refresh"
     SelectTab str -> trackAppActionClick appId (getScreen RIDE_HISTORY_SCREEN) "in_screen" "select_tab"
     BottomNavBarAction (BottomNavBar.OnNavigate item) -> do
-      trackAppActionClick appId (getScreen RIDE_HISTORY_SCREEN) "bottom_nav_bar" "on_navigate"
+      trackAppActionClick appId (getScreen RIDE_HISTORY_SCREEN) "bottom_nav_bar" ("on_navigate_" <> item)
       trackAppEndScreen appId (getScreen RIDE_HISTORY_SCREEN)
     IndividualRideCardAction (IndividualRideCardController.Select index)-> do
       trackAppActionClick appId (getScreen RIDE_HISTORY_SCREEN) "individual_ride_card_action" "select"

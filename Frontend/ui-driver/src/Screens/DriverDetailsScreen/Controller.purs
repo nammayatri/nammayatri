@@ -50,7 +50,10 @@ instance loggableAction :: Loggable Action where
     BackPressed -> do
       trackAppBackPress appId (getScreen DRIVER_DETAILS_SCREEN)
       trackAppEndScreen appId (getScreen DRIVER_DETAILS_SCREEN)
-    CallBackImageUpload str imageName -> trackAppScreenEvent appId (getScreen DRIVER_DETAILS_SCREEN) "in_screen" "upload_callback_image"
+    CallBackImageUpload image imageName -> trackAppScreenEvent appId (getScreen DRIVER_DETAILS_SCREEN) "in_screen" "upload_callback_image"
+    CallBackImageUpload image imageName -> do
+      if image /= "" then trackAppActionClick appId (getScreen DRIVER_DETAILS_SCREEN) "in_screen" "image_uploaded"
+        else trackAppActionClick appId (getScreen DRIVER_DETAILS_SCREEN) "in_screen" "image_upload_continue_state"
     RenderBase64Image -> trackAppScreenEvent appId (getScreen DRIVER_DETAILS_SCREEN) "in_screen" "render_base_image"
     UploadFileAction -> trackAppActionClick appId (getScreen DRIVER_DETAILS_SCREEN) "in_screen" "upload_file"
     NoAction -> trackAppScreenEvent appId (getScreen DRIVER_DETAILS_SCREEN) "in_screen" "no_action"

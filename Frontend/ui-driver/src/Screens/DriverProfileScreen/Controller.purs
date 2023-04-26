@@ -24,7 +24,7 @@ import JBridge (firebaseLogEvent, goBackPrevWebPage)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress)
-import Prelude (class Show, pure, unit, ($), discard, bind)
+import Prelude (class Show, pure, unit, ($), discard, bind, (<>), (==), (||))
 import PrestoDOM (Eval, continue, exit, continueWithCmd)
 import PrestoDOM.Types.Core (class Loggable)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
@@ -46,10 +46,21 @@ instance loggableAction :: Loggable Action where
       if flag then trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "in_screen" "backpress_in_logout_modal"
         else trackAppEndScreen appId (getScreen DRIVER_PROFILE_SCREEN)
     OptionClick optionIndex -> do
-      trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "in_screen" "profile_options_click"
-      trackAppEndScreen appId (getScreen DRIVER_PROFILE_SCREEN)
+      case optionIndex of
+        DRIVER_PRESONAL_DETAILS -> trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "in_screen" "personal_details"
+        DRIVER_VEHICLE_DETAILS -> trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "in_screen" "vehicle_details"
+        DRIVER_BANK_DETAILS -> trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "in_screen" "bank_details"
+        MULTI_LANGUAGE -> trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "in_screen" "languages"
+        HELP_AND_FAQS -> trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "in_screen" "help_and_faqs"
+        ABOUT_APP -> trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "in_screen" "about"
+        DRIVER_LOGOUT -> trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "in_screen" "logout"
+        REFER -> trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "in_screen" "referral"
+        APP_INFO_SETTINGS -> trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "in_screen" "app_info"
+        LIVE_STATS_DASHBOARD -> trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "in_screen" "live_stats_dashboard"
+      if(optionIndex == DRIVER_LOGOUT || optionIndex == APP_INFO_SETTINGS) then trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "in_screen" "driver_profile_continue_state"
+        else trackAppEndScreen appId (getScreen DRIVER_PROFILE_SCREEN)
     BottomNavBarAction (BottomNavBar.OnNavigate item) -> do
-      trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "bottom_nav_bar" "on_navigate"
+      trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "bottom_nav_bar" ("on_navigate_" <> item)
       trackAppEndScreen appId (getScreen DRIVER_PROFILE_SCREEN)
     PopUpModalAction act -> case act of
       PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_logout" "on_goback"
