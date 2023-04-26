@@ -336,6 +336,7 @@ createDriver admin req = do
     QDFS.create $ makeIdleDriverFlowStatus person
     createDriverDetails person.id admin.id
     QVehicle.create vehicle
+    QDriverLocation.create drLocationId latLong calculationTime
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> createDriver : ") (show person.id)
   org <-
     CQM.findById merchantId
@@ -836,7 +837,7 @@ respondQuote driverId req = do
       pure $ fromIntegral driverPoolCfg.driverQuoteLimit
     sendRemoveRideRequestNotification driverSearchReqs orgId driverQuote = do
       for_ driverSearchReqs $ \driverReq -> do
-        Esq.runTransaction $ do
+        Esq.runNoTransaction $ do
           QSRD.updateDriverResponse driverReq.id Pulled
         driver_ <- runInReplica $ QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
         Notify.notifyDriverClearedFare orgId driverReq.driverId driverReq.searchRequestId driverQuote.estimatedFare driver_.deviceToken
