@@ -29,6 +29,7 @@ data Message = Message
     _type :: MessageType,
     title :: Text,
     description :: Text,
+    shortDescription :: Text,
     label :: Maybe Text,
     likeCount :: Int,
     mediaFiles :: [Id MF.MediaFile],
@@ -41,6 +42,7 @@ data MessageTranslation = MessageTranslation
   { language :: Language,
     title :: Text,
     description :: Text,
+    shortDescription :: Text,
     label :: Maybe Text,
     createdAt :: UTCTime
   }
@@ -50,6 +52,7 @@ data RawMessage = RawMessage
     _type :: MessageType,
     title :: Text,
     description :: Text,
+    shortDescription :: Text,
     label :: Maybe Text,
     likeCount :: Int,
     mediaFiles :: [Id MF.MediaFile],
