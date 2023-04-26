@@ -9,6 +9,7 @@ let esqDBCfg =
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev"
       , connectSchemaName = "atlas_scheduler_example"
+      , connectionPoolSize = 10
       }
 
 let rcfg =

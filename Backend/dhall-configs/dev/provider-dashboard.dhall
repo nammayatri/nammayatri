@@ -9,6 +9,7 @@ let esqDBCfg =
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev"
       , connectSchemaName = "atlas_bpp_dashboard"
+      , connectionPoolSize = 10
       }
 
 let esqDBReplicaCfg =

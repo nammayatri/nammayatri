@@ -11,6 +11,7 @@ let esqDBCfg =
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev"
       , connectSchemaName = "atlas_transporter"
+      , connectionPoolSize = 10
       }
 
 let esqDBReplicaCfg =

@@ -41,7 +41,8 @@ defaultConfig =
             connectUser = "User",
             connectPassword = "Pass",
             connectDatabase = "DB",
-            connectSchemaName = "Schema"
+            connectSchemaName = "Schema",
+            connectionPoolSize = 10
           },
       port = 1111,
       loggerConfig =
