@@ -97,7 +97,7 @@ handler merchantId sReq = do
       fareParams <- calculateFare merchantId (Right slabFarePolicy) distance sReq.pickupTime Nothing sReq.customerExtraFee Nothing
       pure (fareParams, driverExtraFare)
     DFareParams.NORMAL -> do
-      farePolicy <- FarePolicyS.findByMerchantIdAndVariant  merchantId estimate.vehicleVariant (Just distance) >>= fromMaybeM NoFarePolicy
+      farePolicy <- FarePolicyS.findByMerchantIdAndVariant merchantId estimate.vehicleVariant (Just distance) >>= fromMaybeM NoFarePolicy
       fareParams <- calculateFare merchantId (Left farePolicy) distance sReq.pickupTime Nothing sReq.customerExtraFee Nothing
       pure (fareParams, farePolicy.driverExtraFee)
   device <- Redis.get (CD.deviceKey sReq.transactionId)

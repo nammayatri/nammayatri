@@ -245,7 +245,7 @@ recalculateFareForDistance handle@ServiceHandle {..} booking ride recalcDistance
   let updatedFare = Fare.fareSum fareParams
       finalFare = updatedFare + waitingCharge
       distanceDiff = recalcDistance - oldDistance
-      fareDiff = abs (finalFare - estimatedFare) -- fareDiff is the penalty we are imposing on half of the remaining distance which user did not travelled than estimated.
+      fareDiff = abs (finalFare - estimatedFare)
   logTagInfo "Fare recalculation" $
     "Fare difference: "
       <> show (realToFrac @_ @Double fareDiff)
@@ -385,4 +385,4 @@ getEndRidePenaltyFare booking travelledDistance (Left normalFarePolicy) = do
           then max (travelledDistance + halfUntraveledDistance - normalFarePolicy.baseDistanceMeters) 0
           else halfUntraveledDistance
   let penaltyFare :: Money = roundToIntegral $ realToFrac ((realToFrac penaltyDistance :: Rational) / 1000) * normalFarePolicy.perExtraKmFare
-  min (Money 50) (maybe penaltyFare (\selectedFare -> max (penaltyFare - selectedFare) (Money 0)) booking.fareParams.driverSelectedFare)
+  min (Money 50) (maybe penaltyFare (\selectedFare -> max (penaltyFare - selectedFare) (Money 0)) booking.fareParams.driverSelectedFare) -- This is calculated as fare for half of Untravelled Distance or ₹50 (whichever is lesser). Driver added fare is included in the penalty in both cases.
