@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -423,13 +423,13 @@ hintText =  "#E5E7E8"
 transparent :: Color
 transparent = "#00FFFFFF"
 
-transparentGrey :: Color 
+transparentGrey :: Color
 transparentGrey = "#66888888"
 
 blue800 :: Color
 blue800 = "#2194FF"
 
-golden :: Color 
+golden :: Color
 golden = "#E9BE4D"
 
 cancelledBg :: Color
@@ -441,7 +441,7 @@ lightBlack900 = "#992C2F3A"
 black500 :: Color
 black500 = "#B9BABE"
 
-mint :: Color 
+mint :: Color
 mint = "#1A53BB6F"
 
 lightMaroon :: Color
@@ -452,7 +452,7 @@ blue700' = "#80B2FF"
 blue600' :: Color
 blue600' = "#F4F7FF"
 
-grey :: Color 
+grey :: Color
 grey = "#D0D5DD"
 
 orange800 :: Color
@@ -469,7 +469,7 @@ green200 = "#2053BB6F"
 linearGradient :: Array (Array Color)
 linearGradient = [
   ["#26FE2D" , "#79F400", "#A6E900", "#C8DD00", "#E6CF00", "#FFBF00", "#FFAE00", "#FF9C05", "#FF8A37", "#FF7755", "#FF6670", "#FF598B", "#FF51A5", "#FF51BE", "#FF57D6", "#FF62EC", "#F66EFF"]
-  , ["#26FE2D" , "#2AFE58", "#2FFE81", "#33FEA8", "#38FECE", "#3CFEF3", "#41E7FE", "#45C6FF", "#4AA7FF", "#4E89FF", "#536DFF", "#5C57FF", "#7E5CFF",          "#9F60FF", "#BD65FF", "#DB69FF", "#F66EFF"] 
+  , ["#26FE2D" , "#2AFE58", "#2FFE81", "#33FEA8", "#38FECE", "#3CFEF3", "#41E7FE", "#45C6FF", "#4AA7FF", "#4E89FF", "#536DFF", "#5C57FF", "#7E5CFF",          "#9F60FF", "#BD65FF", "#DB69FF", "#F66EFF"]
   , ["#26FE2D", "#33F53A", "#40EC47" , "#4DE354", "#5ADA62", "#67D16F", "#74C87C", "#81BF89", "#8EB696", "#9BADA3", "#A8A4B0", "#B59BBD", "#C292CB", "#CF89D8", "#DC80E5", "#E977F2", "#F66EFF"]
   , ["#FE4F95", "#F2529C", "#E654A2", "#DA57A9", "#CE59B0", "#C25CB6", "#B65EBD", "#AA61C3", "#9E63CA", "#9166D1", "#8568D7", "#796BDE", "#6D6DE5", "#6170EB" , "#5572F2" , "#4975F8", "#3D77FF"]
   , ["#D075FE", "#D17EF5", "#D286EB", "#D38FE2", "#D498D8", "#D5A0CF", "#D6A9C5", "#D7B1BC", "#D8BAB2", "#D9C3A9", "#DACB9F", "#DBD496", "#DCDD8C", "#DDE583" , "#DEEE79", "#DFF670", "#E0FF66"]

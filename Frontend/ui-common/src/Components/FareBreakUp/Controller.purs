@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -23,49 +23,49 @@ import PrestoDOM (Margin(..), Visibility(..))
 import Common.Types.App
 import Data.Maybe
 
-data Action = NoAction 
-            | SourceToDestinationActionController SourceToDestinationController.Action 
-            | ShowInvoice 
+data Action = NoAction
+            | SourceToDestinationActionController SourceToDestinationController.Action
+            | ShowInvoice
 
-type Config = 
+type Config =
   { fareDetails :: Array FareDetails
-  , totalAmount :: FareDetails 
+  , totalAmount :: FareDetails
   , rideDetails :: RideDetails
-  , headingText :: String 
+  , headingText :: String
   }
-type FareDetails = 
-  { text :: String 
-  , textSize :: Int 
+type FareDetails =
+  { text :: String
+  , textSize :: Int
   , fontStyle :: String
-  , color :: String 
+  , color :: String
   , margin :: Margin
-  , priceDetails :: PriceDetails 
+  , priceDetails :: PriceDetails
   , visibility :: Visibility
   }
 
-type PriceDetails = 
-  { text :: Int 
-  , textSize :: Int 
-  , fontStyle :: String 
+type PriceDetails =
+  { text :: Int
+  , textSize :: Int
+  , fontStyle :: String
   , offeredFare :: Int
   , distanceDifference :: Int
   }
 
-type RideDetails = 
-  { sourceTitle :: String 
-  , source :: String 
-  , destinationTitle :: String 
-  , destination :: String 
-  , rideStartTime :: String 
-  , rideStartDate :: String 
+type RideDetails =
+  { sourceTitle :: String
+  , source :: String
+  , destinationTitle :: String
+  , destination :: String
+  , rideStartTime :: String
+  , rideStartDate :: String
   , estimatedDistance :: Maybe Int
   }
 
-config :: Config 
-config = 
+config :: Config
+config =
   { fareDetails : []
   , headingText : "View Breakdown"
-  , totalAmount : 
+  , totalAmount :
     { text : "Total Amount"
     , textSize : FontSize.a_16
     , fontStyle : FontStyle.medium LanguageStyle
@@ -74,7 +74,7 @@ config =
     , margin : (Margin 0 0 0 0)
     , priceDetails : {
         text : 0
-      , textSize : FontSize.a_16 
+      , textSize : FontSize.a_16
       , fontStyle : FontStyle.medium LanguageStyle
       , offeredFare : 0
       , distanceDifference : 0
@@ -89,4 +89,4 @@ config =
     , rideStartDate : ""
     , estimatedDistance : Nothing
   }
-  }  
+  }
