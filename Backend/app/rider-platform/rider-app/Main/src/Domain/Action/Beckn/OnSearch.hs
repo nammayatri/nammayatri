@@ -16,6 +16,7 @@ module Domain.Action.Beckn.OnSearch
   ( DOnSearchReq (..),
     ProviderInfo (..),
     EstimateInfo (..),
+    DEstimate.FareRange (..),
     QuoteInfo (..),
     QuoteDetails (..),
     OneWayQuoteDetails (..),
@@ -78,15 +79,16 @@ data EstimateInfo = EstimateInfo
     totalFareRange :: DEstimate.FareRange,
     descriptions :: [Text],
     estimateBreakupList :: [EstimateBreakupInfo],
-    nightShiftRate :: Maybe NightShiftInfo,
+    nightShiftInfo :: Maybe NightShiftInfo,
     waitingCharges :: Maybe WaitingChargesInfo,
     driversLocation :: [LatLong]
   }
 
 data NightShiftInfo = NightShiftInfo
-  { nightShiftMultiplier :: Maybe Centesimal,
-    nightShiftStart :: Maybe TimeOfDay,
-    nightShiftEnd :: Maybe TimeOfDay
+  { nightShiftCharge :: Money,
+    oldNightShiftCharge :: Centesimal,
+    nightShiftStart :: TimeOfDay,
+    nightShiftEnd :: TimeOfDay
   }
 
 data WaitingChargesInfo = WaitingChargesInfo
@@ -185,12 +187,13 @@ buildEstimate requestId providerInfo now _searchRequest EstimateInfo {..} = do
         status = DEstimate.NEW,
         estimateBreakupList = estimateBreakupList',
         driversLocation = driversLocation,
-        nightShiftRate =
-          Just $
-            DEstimate.NightShiftRate
-              { nightShiftMultiplier = nightShiftRate >>= (.nightShiftMultiplier),
-                nightShiftStart = nightShiftRate >>= (.nightShiftStart),
-                nightShiftEnd = nightShiftRate >>= (.nightShiftEnd)
+        nightShiftInfo =
+          nightShiftInfo <&> \nightShiftInfo' ->
+            DEstimate.NightShiftInfo
+              { nightShiftCharge = nightShiftInfo'.nightShiftCharge,
+                oldNightShiftCharge = nightShiftInfo'.oldNightShiftCharge, -- TODO: Doesn't make sense, to be removed
+                nightShiftStart = nightShiftInfo'.nightShiftStart,
+                nightShiftEnd = nightShiftInfo'.nightShiftEnd
               },
         waitingCharges =
           DEstimate.WaitingCharges
@@ -213,7 +216,7 @@ buildQuote requestId providerInfo now merchantId QuoteInfo {..} = do
   tripTerms <- buildTripTerms descriptions
   quoteDetails' <- case quoteDetails of
     OneWayDetails oneWayDetails ->
-      pure . DQuote.OneWayDetails $ mkOneWayQuoteDetails oneWayDetails
+      pure.DQuote.OneWayDetails $ mkOneWayQuoteDetails oneWayDetails
     RentalDetails rentalSlab -> do
       DQuote.RentalDetails <$> buildRentalSlab rentalSlab
     OneWaySpecialZoneDetails details -> do

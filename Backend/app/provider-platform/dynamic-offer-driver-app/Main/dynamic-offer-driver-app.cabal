@@ -209,8 +209,6 @@ library
       SharedLogic.DriverPool.Types
       SharedLogic.Estimate
       SharedLogic.FareCalculator
-      SharedLogic.FareCalculator.Calculator
-      SharedLogic.FareCalculator.Flow
       SharedLogic.GoogleMaps
       SharedLogic.GoogleTranslate
       SharedLogic.Merchant
@@ -310,7 +308,9 @@ library
       Storage.Tabular.Exophone
       Storage.Tabular.FareParameters
       Storage.Tabular.FarePolicy
+      Storage.Tabular.FarePolicy.ProgressiveFarePolicyDetails
       Storage.Tabular.FarePolicy.RestrictedExtraFare
+      Storage.Tabular.FarePolicy.SlabsFarePolicyDetails.SlabsFarePolicyDetailsSlab
       Storage.Tabular.Geometry
       Storage.Tabular.Issue.Comment
       Storage.Tabular.Issue.IssueCategory

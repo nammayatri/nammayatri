@@ -18,49 +18,30 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.FareParameters where
+module Storage.Tabular.FarePolicy.ProgressiveFarePolicyDetails where
 
-import qualified Domain.Types.FareParameters as Domain
+import qualified Domain.Types.FarePolicy as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
-import Kernel.Types.Common (Money)
+import Kernel.Types.Common (HighPrecMoney, Meters)
 import Kernel.Types.Id
-import Storage.Tabular.Vehicle ()
+import Storage.Tabular.FarePolicy (FarePolicyTId)
 
 mkPersist
   defaultSqlSettings
   [defaultQQ|
-    FareParametersT sql=fare_parameters
-      id Text
-      driverSelectedFare Money Maybe
-      customerExtraFee Money Maybe
-      serviceCharge Money Maybe
-      govtCharges Money Maybe
-      baseFare Money
-      waitingCharge Money Maybe
-      nightShiftCharge Money Maybe
+    ProgressiveFarePolicyDetailsT sql=fare_policy_progressive_details
+      farePolicyId FarePolicyTId
+      startMeters Meters
+      baseFare HighPrecMoney
+      waitingCharge Domain.WaitingCharge Maybe
+      nightShiftCharge Domain.NightShiftCharge Maybe
 
-      Primary id
+      Primary farePolicyId
       deriving Generic
     |]
 
-instance TEntityKey FareParametersT where
-  type DomainKey FareParametersT = Id Domain.FareParameters
-  fromKey (FareParametersTKey _id) = Id _id
-  toKey (Id id) = FareParametersTKey id
-
-instance FromTType FareParametersT Domain.FareParameters where
-  fromTType FareParametersT {..} = do
-    return $
-      Domain.FareParameters
-        { id = Id id,
-          fareParametersDetails = undefined,
-          ..
-        }
-
-instance ToTType FareParametersT Domain.FareParameters where
-  toTType Domain.FareParameters {..} = do
-    FareParametersT
-      { id = getId id,
-        ..
-      }
+instance TEntityKey ProgressiveFarePolicyDetailsT where
+  type DomainKey ProgressiveFarePolicyDetailsT = Id Domain.FarePolicy
+  fromKey (ProgressiveFarePolicyDetailsTKey _id) = fromKey _id
+  toKey id = ProgressiveFarePolicyDetailsTKey $ toKey id

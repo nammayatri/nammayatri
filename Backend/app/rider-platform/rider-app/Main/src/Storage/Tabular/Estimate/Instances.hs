@@ -45,11 +45,15 @@ instance FromTType FullEstimateT Domain.Estimate where
           discount = roundToIntegral <$> discount,
           estimatedTotalFare = roundToIntegral estimatedTotalFare,
           driversLocation = unPostgresList driversLocation,
-          nightShiftRate =
-            Just $
-              Domain.NightShiftRate
-                { ..
-                },
+          nightShiftInfo =
+            ((,,,) <$> nightShiftCharge <*> oldNightShiftCharge <*> nightShiftStart <*> nightShiftEnd)
+              <&> \(nightShiftCharge', oldNightShiftCharge', nightShiftStart', nightShiftEnd') ->
+                Domain.NightShiftInfo
+                  { nightShiftCharge = nightShiftCharge',
+                    oldNightShiftCharge = oldNightShiftCharge',
+                    nightShiftStart = nightShiftStart',
+                    nightShiftEnd = nightShiftEnd'
+                  },
           waitingCharges =
             Domain.WaitingCharges
               { ..
@@ -72,9 +76,10 @@ instance ToTType FullEstimateT Domain.Estimate where
               estimatedTotalFare = realToFrac estimatedTotalFare,
               minTotalFare = realToFrac totalFareRange.minFare,
               maxTotalFare = realToFrac totalFareRange.maxFare,
-              nightShiftMultiplier = nightShiftRate >>= (.nightShiftMultiplier),
-              nightShiftStart = nightShiftRate >>= (.nightShiftStart),
-              nightShiftEnd = nightShiftRate >>= (.nightShiftEnd),
+              nightShiftCharge = nightShiftInfo <&> (.nightShiftCharge),
+              oldNightShiftCharge = nightShiftInfo <&> (.oldNightShiftCharge),
+              nightShiftStart = nightShiftInfo <&> (.nightShiftStart),
+              nightShiftEnd = nightShiftInfo <&> (.nightShiftEnd),
               driversLocation = PostgresList driversLocation,
               waitingChargePerMin = waitingCharges.waitingChargePerMin,
               waitingTimeEstimatedThreshold = waitingCharges.waitingTimeEstimatedThreshold,

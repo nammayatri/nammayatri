@@ -19,6 +19,7 @@ module Domain.Action.Beckn.OnUpdate
     EstimateRepetitionEstimateInfo (..),
     NightShiftInfo (..),
     WaitingChargesInfo (..),
+    DEstimate.FareRange (..),
     EstimateBreakupInfo (..),
     BreakupPriceInfo (..),
   )
@@ -113,15 +114,15 @@ data EstimateRepetitionEstimateInfo = EstimateRepetitionEstimateInfo
     totalFareRange :: DEstimate.FareRange,
     descriptions :: [Text],
     estimateBreakupList :: [EstimateBreakupInfo],
-    nightShiftRate :: Maybe NightShiftInfo,
-    waitingCharges :: Maybe WaitingChargesInfo,
+    nightShiftInfo :: Maybe NightShiftInfo,
+    waitingCharges :: WaitingChargesInfo,
     driversLocation :: [LatLong]
   }
 
 data NightShiftInfo = NightShiftInfo
-  { nightShiftMultiplier :: Maybe Centesimal,
-    nightShiftStart :: Maybe TimeOfDay,
-    nightShiftEnd :: Maybe TimeOfDay
+  { nightShiftCharge :: Money,
+    nightShiftStart :: TimeOfDay,
+    nightShiftEnd :: TimeOfDay
   }
 
 data WaitingChargesInfo = WaitingChargesInfo
@@ -198,9 +199,9 @@ onUpdate RideStartedReq {..} = do
   rideStartTime <- getCurrentTime
   let updRideForStartReq =
         ride{status = SRide.INPROGRESS,
-             rideStartTime = Just rideStartTime,
-             rideEndTime = Nothing
-            }
+            rideStartTime = Just rideStartTime,
+            rideEndTime = Nothing
+          }
   DB.runTransaction $ do
     QRide.updateMultiple updRideForStartReq.id updRideForStartReq
   Notify.notifyOnRideStarted booking ride
@@ -212,11 +213,11 @@ onUpdate RideCompletedReq {..} = do
   rideEndTime <- getCurrentTime
   let updRide =
         ride{status = SRide.COMPLETED,
-             fare = Just fare,
-             totalFare = Just totalFare,
-             chargeableDistance = Just chargeableDistance,
-             rideEndTime = Just rideEndTime
-            }
+            fare = Just fare,
+            totalFare = Just totalFare,
+            chargeableDistance = Just chargeableDistance,
+            rideEndTime = Just rideEndTime
+          }
   breakups <- traverse (buildFareBreakup booking.id) fareBreakups
   person <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   minTripDistanceForReferralCfg <- asks (.minTripDistanceForReferralCfg)

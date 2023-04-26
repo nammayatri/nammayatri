@@ -84,7 +84,8 @@ mkOneWayItem DOneWaySearch.QuoteInfo {..} offer_id fulfillment_id = do
       tags =
         OnSearch.ItemTags
           { distance_to_nearest_driver = Just $ realToFrac distanceToNearestDriver,
-            night_shift_multiplier = Nothing,
+            night_shift_charge = Nothing,
+            old_night_shift_charge = Nothing,
             night_shift_start = Nothing,
             night_shift_end = Nothing,
             waiting_charge_per_min = Nothing, -- figure out how to send

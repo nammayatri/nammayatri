@@ -62,15 +62,10 @@ update farePolicy = do
     Esq.update $ \tbl -> do
       set
         tbl
-        [ FarePolicyBaseDistanceFare =. val farePolicy.baseDistanceFare,
-          FarePolicyBaseDistanceMeters =. val farePolicy.baseDistanceMeters,
-          FarePolicyPerExtraKmFare =. val farePolicy.perExtraKmFare,
-          FarePolicyDeadKmFare =. val farePolicy.deadKmFare,
-          FarePolicyDriverMinExtraFee =. val farePolicy.driverExtraFee.minFee,
-          FarePolicyDriverMaxExtraFee =. val farePolicy.driverExtraFee.maxFee,
-          FarePolicyNightShiftStart =. val farePolicy.nightShiftStart,
-          FarePolicyNightShiftEnd =. val farePolicy.nightShiftEnd,
-          FarePolicyNightShiftRate =. val farePolicy.nightShiftRate,
+        [ FarePolicyDriverMinExtraFee =. val (farePolicy.driverExtraFeeBounds <&> (.minFee)),
+          FarePolicyDriverMaxExtraFee =. val (farePolicy.driverExtraFeeBounds <&> (.maxFee)),
+          FarePolicyNightShiftStart =. val (farePolicy.nightShiftBounds <&> (.nightShiftStart)),
+          FarePolicyNightShiftEnd =. val (farePolicy.nightShiftBounds <&> (.nightShiftEnd)),
           FarePolicyUpdatedAt =. val now
         ]
       where_ $ tbl ^. FarePolicyTId ==. val (toKey farePolicy.id)

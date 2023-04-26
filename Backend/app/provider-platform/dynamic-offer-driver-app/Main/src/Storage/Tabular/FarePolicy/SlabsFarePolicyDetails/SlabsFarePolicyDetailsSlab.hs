@@ -18,49 +18,31 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.FareParameters where
+module Storage.Tabular.FarePolicy.SlabsFarePolicyDetails.SlabsFarePolicyDetailsSlab where
 
-import qualified Domain.Types.FareParameters as Domain
+import qualified Domain.Types.FarePolicy as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
-import Kernel.Types.Common (Money)
+import Kernel.Types.Common (HighPrecMoney, Meters)
 import Kernel.Types.Id
-import Storage.Tabular.Vehicle ()
+import Storage.Tabular.FarePolicy (FarePolicyTId)
 
 mkPersist
   defaultSqlSettings
   [defaultQQ|
-    FareParametersT sql=fare_parameters
-      id Text
-      driverSelectedFare Money Maybe
-      customerExtraFee Money Maybe
-      serviceCharge Money Maybe
-      govtCharges Money Maybe
-      baseFare Money
-      waitingCharge Money Maybe
-      nightShiftCharge Money Maybe
+    SlabsFarePolicyDetailsSlabT sql=fare_policy_slabs_details_slab
+      farePolicyId FarePolicyTId
+      startMeters Meters
+      baseFare HighPrecMoney
+      waitingCharge Domain.WaitingCharge Maybe
+      nightShiftChargeType Text Maybe
+      nightShiftCharge Domain.NightShiftCharge Maybe
 
-      Primary id
+      Primary farePolicyId
       deriving Generic
     |]
 
-instance TEntityKey FareParametersT where
-  type DomainKey FareParametersT = Id Domain.FareParameters
-  fromKey (FareParametersTKey _id) = Id _id
-  toKey (Id id) = FareParametersTKey id
-
-instance FromTType FareParametersT Domain.FareParameters where
-  fromTType FareParametersT {..} = do
-    return $
-      Domain.FareParameters
-        { id = Id id,
-          fareParametersDetails = undefined,
-          ..
-        }
-
-instance ToTType FareParametersT Domain.FareParameters where
-  toTType Domain.FareParameters {..} = do
-    FareParametersT
-      { id = getId id,
-        ..
-      }
+instance TEntityKey SlabsFarePolicyDetailsSlabT where
+  type DomainKey SlabsFarePolicyDetailsSlabT = Id Domain.FarePolicy
+  fromKey (SlabsFarePolicyDetailsSlabTKey _id) = fromKey _id
+  toKey id = SlabsFarePolicyDetailsSlabTKey $ toKey id

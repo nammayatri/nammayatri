@@ -36,7 +36,8 @@ mkPersist
       minFare Money
       maxFare Money
       estimateBreakupList (PostgresList Text)
-      nightShiftMultiplier Centesimal Maybe
+      nightShiftCharge Money Maybe
+      oldNightShiftMultiplier Centesimal Maybe sql=night_shift_multiplier
       nightShiftStart TimeOfDay Maybe
       nightShiftEnd TimeOfDay Maybe
       waitingTimeEstimatedThreshold Seconds Maybe
@@ -55,7 +56,7 @@ instance TEntityKey EstimateT where
 
 instance FromTType EstimateT Domain.Estimate where
   fromTType EstimateT {..} = do
-    let nightShiftRate = Domain.NightShiftRate {..}
+    let nightShiftInfo = Domain.NightShiftInfo {..}
         waitingCharges = Domain.WaitingCharges {..}
     estimateBreakupListDec <- (decodeFromText `mapM` unPostgresList estimateBreakupList) & fromMaybeM (InternalError "Unable to decode EstimateBreakup")
     return $
@@ -67,7 +68,7 @@ instance FromTType EstimateT Domain.Estimate where
 
 instance ToTType EstimateT Domain.Estimate where
   toTType Domain.Estimate {..} = do
-    let Domain.NightShiftRate {..} = nightShiftRate
+    let Domain.NightShiftInfo {..} = nightShiftInfo
         Domain.WaitingCharges {..} = waitingCharges
         unsafeEstimateBreakupList = coerce @[Domain.EstimateBreakup] @[Domain.EstimateBreakupD 'Unsafe] $ estimateBreakupList
     EstimateT

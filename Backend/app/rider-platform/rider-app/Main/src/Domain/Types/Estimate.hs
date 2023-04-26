@@ -54,7 +54,7 @@ data Estimate = Estimate
     vehicleVariant :: VehicleVariant,
     tripTerms :: Maybe DTripTerms.TripTerms,
     estimateBreakupList :: [EstimateBreakup],
-    nightShiftRate :: Maybe NightShiftRate,
+    nightShiftInfo :: Maybe NightShiftInfo,
     status :: EstimateStatus,
     waitingCharges :: WaitingCharges,
     driversLocation :: [LatLong],
@@ -67,10 +67,11 @@ data BPPEstimate
 
 deriving instance Read LatLong
 
-data NightShiftRate = NightShiftRate
-  { nightShiftMultiplier :: Maybe Centesimal,
-    nightShiftStart :: Maybe TimeOfDay,
-    nightShiftEnd :: Maybe TimeOfDay
+data NightShiftInfo = NightShiftInfo
+  { nightShiftCharge :: Money,
+    oldNightShiftCharge :: Centesimal, -- TODO: this field works wrong, value in it not always make sense, it have to be removed later
+    nightShiftStart :: TimeOfDay,
+    nightShiftEnd :: TimeOfDay
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -94,6 +95,12 @@ data FareRange = FareRange
   }
   deriving (Generic, Show, PrettyShow, ToJSON, FromJSON, ToSchema)
 
+data WaitingCharges = WaitingCharges
+  { waitingTimeEstimatedThreshold :: Maybe Seconds,
+    waitingChargePerMin :: Maybe Money
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
 data EstimateAPIEntity = EstimateAPIEntity
   { id :: Id Estimate,
     vehicleVariant :: VehicleVariant,
@@ -105,17 +112,19 @@ data EstimateAPIEntity = EstimateAPIEntity
     agencyNumber :: Text,
     agencyCompletedRidesCount :: Int,
     tripTerms :: [Text],
-    createdAt :: UTCTime,
     estimateFareBreakup :: [EstimateBreakupAPIEntity],
-    nightShiftRate :: Maybe NightShiftRate,
+    nightShiftRate :: Maybe NightShiftRateAPIEntity, -- TODO: doesn't make sense, to be removed
+    nightShiftInfo :: Maybe NightShiftInfo,
     waitingCharges :: WaitingCharges,
-    driversLatLong :: [LatLong]
+    driversLatLong :: [LatLong],
+    createdAt :: UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data WaitingCharges = WaitingCharges
-  { waitingTimeEstimatedThreshold :: Maybe Seconds,
-    waitingChargePerMin :: Maybe Money
+data NightShiftRateAPIEntity = NightShiftRateAPIEntity
+  { nightShiftMultuplier :: Centesimal, -- TODO: this field works wrong, value in it not always make sense, it have to be removed later
+    nightShiftStart :: TimeOfDay,
+    nightShiftEnd :: TimeOfDay
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -134,6 +143,14 @@ mkEstimateAPIEntity Estimate {..} = do
       tripTerms = fromMaybe [] $ tripTerms <&> (.descriptions),
       estimateFareBreakup = mkEstimateBreakupAPIEntity <$> estimateBreakupList,
       driversLatLong = driversLocation,
+      nightShiftRate = mkNightShiftRateAPIEntity <$> nightShiftInfo,
+      ..
+    }
+
+mkNightShiftRateAPIEntity :: NightShiftInfo -> NightShiftRateAPIEntity
+mkNightShiftRateAPIEntity NightShiftInfo {..} = do
+  NightShiftRateAPIEntity
+    { nightShiftMultuplier = oldNightShiftCharge,
       ..
     }
 
@@ -148,7 +165,7 @@ data EstimateStatus = NEW | DRIVER_QUOTE_REQUESTED | CANCELLED | GOT_DRIVER_QUOT
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance FromHttpApiData EstimateStatus where
-  parseUrlPiece = parseHeader . DT.encodeUtf8
+  parseUrlPiece = parseHeader.DT.encodeUtf8
   parseQueryParam = parseUrlPiece
   parseHeader = left T.pack . eitherDecode . BSL.fromStrict
 
