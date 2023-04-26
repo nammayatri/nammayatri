@@ -914,6 +914,7 @@ homeScreenFlow = do
       _ <- pure $ setValueToLocalStore DRIVER_STATUS_N "Online"
       _ <- pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
       (DriverActiveInactiveResp resp) <- Remote.driverActiveInactiveBT "true" $ toUpper $ show Online
+      _ <- pure $ firebaseLogEvent "ny_user_ride_completed"
       (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "1" "0" "false"
       case (head rideHistoryResponse.list) of
         Nothing -> pure unit
