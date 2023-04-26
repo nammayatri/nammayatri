@@ -104,11 +104,11 @@
         "devour-flake": "devour-flake"
       },
       "locked": {
-        "lastModified": 1682366631,
-        "narHash": "sha256-qydDydY/IHZORemrfR9ssmBYmuir+saKZb/yd7Q4BBs=",
+        "lastModified": 1682525738,
+        "narHash": "sha256-/5KmYVp5Zi8AEHB2wUaalcBcEE1y9VasrEePMRQll9k=",
         "owner": "juspay",
         "repo": "cachix-push",
-        "rev": "8d04edca62656e0f85647a1bf2f2118b5498163a",
+        "rev": "fa498c2bb2af817e7e550cda3810ec4a46c5c576",
         "type": "github"
       },
       "original": {
@@ -233,11 +233,11 @@
         "treefmt-nix": "treefmt-nix_2"
       },
       "locked": {
-        "lastModified": 1682366657,
-        "narHash": "sha256-qFsbVnBCpCpXoFesctvjXR7kioEI3fQenSeqXQ6Se1k=",
+        "lastModified": 1682525767,
+        "narHash": "sha256-xCw6KnuPl8fo2noJT6ADkRTtwRnv1X1UcuUmTabeZjU=",
         "owner": "nammayatri",
         "repo": "common",
-        "rev": "034c8ef926261e4742d07f4bb47095f44d586d89",
+        "rev": "4c6004cfa30e983f38b8b89633551d7d8abe522b",
         "type": "github"
       },
       "original": {
