@@ -52,9 +52,6 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.TimeZone;
 
-import in.juspay.mobility.MainActivity;
-import in.juspay.mobility.R;
-
 
 public class WidgetService extends Service {
     private View widgetView;

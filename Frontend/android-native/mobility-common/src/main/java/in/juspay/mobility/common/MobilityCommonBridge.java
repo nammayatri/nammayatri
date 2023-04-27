@@ -1,6 +1,11 @@
 package in.juspay.mobility.common;
 
 import static android.Manifest.permission.ACCESS_FINE_LOCATION;
+import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
+import static android.Manifest.permission.READ_MEDIA_AUDIO;
+import static android.Manifest.permission.READ_MEDIA_IMAGES;
+import static android.Manifest.permission.READ_MEDIA_VIDEO;
+import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
 
 import android.Manifest;
 import android.animation.ValueAnimator;
@@ -14,7 +19,6 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentSender;
-import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
@@ -42,18 +46,22 @@ import android.view.View;
 import android.view.WindowManager;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
+import android.webkit.ConsoleMessage;
 import android.webkit.JavascriptInterface;
+import android.webkit.WebChromeClient;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.DatePicker;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.NumberPicker;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
+import androidx.browser.customtabs.CustomTabsIntent;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.res.ResourcesCompat;
@@ -133,7 +141,6 @@ public class MobilityCommonBridge extends HyperBridge {
     protected static GoogleMap googleMap;
     // CallBacks
     protected static String storeLocateOnMapCallBack = null;
-    protected static String storeLocationPermissionCallBack = null;
     protected static String storeInternetActionCallBack = null;
     protected static String storeDashboardCallBack = null;
     private static Marker userPositionMarker;
@@ -269,7 +276,8 @@ public class MobilityCommonBridge extends HyperBridge {
     private void getLastKnownLocationFromClientFallback(String callback, boolean animate) {
         if (!isLocationPermissionEnabled()) return;
         if (bridgeComponents.getActivity() != null) {
-            client.getLastLocation()
+            if (client != null) 
+                client.getLastLocation()
                     .addOnSuccessListener(bridgeComponents.getActivity(), location -> {
                         if (location != null) {
                             Double lat = location.getLatitude();
@@ -352,6 +360,29 @@ public class MobilityCommonBridge extends HyperBridge {
     public void getCurrentPosition(String callback) {
         if (!isLocationPermissionEnabled()) return;
         updateLastKnownLocation(callback, false);
+    }
+
+    @JavascriptInterface
+    public void isMockLocation(String callback) {
+        if (!isLocationPermissionEnabled()) return;
+        if (client != null)
+            client.getLastLocation()
+                .addOnSuccessListener(activity, location -> {
+                    boolean isMock = false;
+                    if (Build.VERSION.SDK_INT <= 30) {
+                        isMock = location.isFromMockProvider();
+                        //methodName = "isFromMockProvider";
+                    } else if(Build.VERSION.SDK_INT >= 31) {
+                        isMock = location.isMock();
+                        //methodName = "isMock";
+                    }
+                    if (callback != null && dynamicUI != null && juspayServices.getDynamicUI() != null) {
+                        String js = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
+                                callback, isMock);
+                        dynamicUI.addJsToWebView(js);
+                    }
+                })
+                .addOnFailureListener(activity, e -> Log.e(LOG_TAG, "Last and current position not known"));
     }
     //endregion
 
@@ -1248,7 +1279,7 @@ public class MobilityCommonBridge extends HyperBridge {
             ExecutorManager.runOnMainThread(() -> {
                 try {
                     animationView = bridgeComponents.getActivity().findViewById(Integer.parseInt(id));
-                    animationView.setAnimationFromJson(getJsonFromResources(rawJson),null);
+                    animationView.setAnimationFromJson(getJsonFromResources(rawJson), null);
                     animationView.setRepeatCount(ValueAnimator.INFINITE);
                     animationView.setSpeed(speed);
                     animationView.playAnimation();
@@ -1314,15 +1345,25 @@ public class MobilityCommonBridge extends HyperBridge {
     public void shareTextMessage(String title, String message) {
         ExecutorManager.runOnMainThread(() -> {
             Intent sendIntent = new Intent();
-            sendIntent.setAction(Intent.ACTION_SEND);
-            sendIntent.putExtra(Intent.EXTRA_TEXT, message);
-            sendIntent.putExtra(Intent.EXTRA_TITLE, title);
-            sendIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            sendIntent.setType("text/plain");
-            Intent shareIntent = Intent.createChooser(sendIntent, null);
-            shareIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            bridgeComponents.getContext().startActivity(shareIntent);
+                sendIntent.setAction(Intent.ACTION_SEND);
+                sendIntent.putExtra(Intent.EXTRA_TEXT, message);
+                sendIntent.putExtra(Intent.EXTRA_TITLE, title);
+                Bitmap thumbnailBitmap = BitmapFactory.decodeResource(context.getResources(), R.drawable.ny_ic_icon);
+                Uri thumbnailUri = getImageUri(context, thumbnailBitmap);
+                ClipData clipData = ClipData.newUri(context.getContentResolver(), "Thumbnail Image", thumbnailUri);
+                sendIntent.setClipData(clipData);
+                sendIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                sendIntent.setType("text/plain");
+                Intent shareIntent = Intent.createChooser(sendIntent, null);
+                activity.startActivity(shareIntent);
         });
+    }
+
+    private Uri getImageUri(Context context, Bitmap bitmap) {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, bytes);
+        String path = MediaStore.Images.Media.insertImage(context.getContentResolver(), bitmap, "Thumbnail Image", null);
+        return Uri.parse(path);
     }
 
     @JavascriptInterface
@@ -1368,34 +1409,64 @@ public class MobilityCommonBridge extends HyperBridge {
     @JavascriptInterface
     public void initialWebViewSetUp(String callback, String id) {
         storeDashboardCallBack = callback;
-        ExecutorManager.runOnMainThread(() -> {
-            if (bridgeComponents.getActivity() != null) {
-                WebView webView = bridgeComponents.getActivity().findViewById(Integer.parseInt(id));
-                if (webView == null) return;
-                webView.setWebViewClient(new WebViewClient() {
-                    @Override
-                    public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                        if (url.startsWith("intent://")) {
-                            try {
-                                Intent intent = Intent.parseUri(url, Intent.URI_INTENT_SCHEME);
-                                if (intent != null) {
-                                    PackageManager packageManager = bridgeComponents.getContext().getPackageManager();
-                                    ResolveInfo info = packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY);
-                                    if (info != null) {
-                                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                                        bridgeComponents.getContext().startActivity(intent);
-                                        return true;
-                                    }
-                                }
-                            } catch (URISyntaxException e) {
-                                Log.e(UTILS, e.toString());
+        Context context = bridgeComponents.getContext();
+        Activity activity = bridgeComponents.getActivity();
+        if (activity != null){
+            ExecutorManager.runOnMainThread(new Runnable() {
+                @Override
+                public void run() {
+                    WebView webView = (WebView) activity.findViewById(Integer.parseInt(id));
+                    if (webView == null) return;
+                    webView.setWebChromeClient(new WebChromeClient() {
+                        @Override
+                        public boolean onConsoleMessage(ConsoleMessage consoleMessage) {
+                            String message = consoleMessage.message();
+                            if (message.contains("Write permission denied")) {
+                                // Handle the error here
+                                ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+                                ClipData clip = ClipData.newPlainText("MyLbl", "https://nammayatri.in/link/rider/SJ8D");
+                                clipboard.setPrimaryClip(clip);
                             }
+                            return super.onConsoleMessage(consoleMessage);
                         }
-                        return false;
-                    }
-                });
-            }
-        });
+                    });
+                    webView.setWebViewClient(new WebViewClient() {
+                        @Override
+                        public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                            if (url.startsWith("intent://")) {
+                                try {
+                                    Intent intent = Intent.parseUri(url, Intent.URI_INTENT_SCHEME);
+                                    if (intent != null) {
+                                        PackageManager packageManager = context.getPackageManager();
+                                        ResolveInfo info = packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY);
+                                        if (info != null) {
+                                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                            context.startActivity(intent);
+                                            return true;
+                                        }
+                                    }
+                                } catch (URISyntaxException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                            if (url.startsWith("tg:") || url.startsWith("https://www.facebook.com") || url.startsWith("https://www.twitter.com/") || url.startsWith("https://www.linkedin.com") || url.startsWith("https://api.whatsapp.com") || url.contains("YATRI.pdf") || url.startsWith("https://telegram.me/")) {
+                                try {
+                                    CustomTabsIntent.Builder builder = new CustomTabsIntent.Builder();
+                                    CustomTabsIntent customTabsIntent = builder.build();
+                                    customTabsIntent.intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                    customTabsIntent.launchUrl(context, Uri.parse(url));
+                                    return true;
+                                } catch (Exception e) {
+                                    Toast.makeText(context, "Looks like there is no app or web browser installed on your device", Toast.LENGTH_SHORT).show();
+                                    return true;
+                                }
+                            }
+                            return false;
+                        }
+                    });
+                }
+            });
+        }
     }
 
     @JavascriptInterface
@@ -1453,6 +1524,20 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
+    @JavascriptInterface
+    public void scrollToBottom(final String id) {
+        try {
+            if (bridgeComponents.getActivity() != null) {
+                ScrollView scrollView = bridgeComponents.getActivity().findViewById(Integer.parseInt(id));
+                if (scrollView != null) {
+                    scrollView.fullScroll(View.FOCUS_DOWN);
+                }
+            }
+        } catch (Exception e) {
+            Log.e(OTHERS, "Error in scroll to Bottom : " + e);
+        }
+    }
+
     private static class DatePickerLabels {
         private static final String MAXIMUM_PRESENT_DATE = "MAXIMUM_PRESENT_DATE";
         private static final String MINIMUM_EIGHTEEN_YEARS = "MINIMUM_EIGHTEEN_YEARS";
@@ -1460,5 +1545,22 @@ public class MobilityCommonBridge extends HyperBridge {
         private static final String MAX_THIRTY_DAYS_FROM_CURRENT_DATE = "MAX_THIRTY_DAYS_FROM_CURRENT_DATE";
     }
 
+    protected boolean isStoragePermissionGiven() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            return (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) && (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED);
+        } else {
+            return (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED) && (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), READ_MEDIA_AUDIO) == PackageManager.PERMISSION_GRANTED) && (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), READ_MEDIA_VIDEO) == PackageManager.PERMISSION_GRANTED);
+        }
+    }
+
+    protected void requestStoragePermission() {
+        if (bridgeComponents.getActivity() != null){
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE}, STORAGE_PERMISSION);
+            } else {
+                ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{READ_MEDIA_AUDIO, READ_MEDIA_VIDEO, READ_MEDIA_IMAGES}, STORAGE_PERMISSION);
+            }
+        }
+    }
     // endregion
 }

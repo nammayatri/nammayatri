@@ -1,4 +1,4 @@
-package in.juspay.mobility.utils;
+package in.juspay.mobility.app;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;

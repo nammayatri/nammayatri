@@ -183,6 +183,11 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                 public void internetCallBack(String isPermission) {
                     callInternetActionCallBack(isPermission);
                 }
+
+                @Override
+                public void chatCallBack(String message, String sentBy, String time) {
+                    Log.i(OTHERS, "No Required");
+                }
             };
             NotificationUtils.registerCallback(callBack);
             Utils.registerCallback(callBack);
@@ -202,7 +207,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         NotificationUtils.deRegisterCallback(callBack);
         Utils.deRegisterCallback(callBack);
         NetworkBroadcastReceiver.deRegisterCallback(callBack);
-        DefaultMediaPlayerControl.mediaPlayer.reset();//
+        DefaultMediaPlayerControl.mediaPlayer.reset();
     }
     //endregion
 
@@ -348,9 +353,9 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                         byte[] decodedString = Base64.decode(base64Image, Base64.DEFAULT);
                         Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
 
-                        AlertDialog.Builder builder = new AlertDialog.Builder(bridgeComponents.getContext());
+                        AlertDialog.Builder builder = new AlertDialog.Builder(bridgeComponents.getActivity());
                         builder.setCancelable(true);
-                        ImageView imagePreview = new ImageView(bridgeComponents.getContext());
+                        ImageView imagePreview = new ImageView(bridgeComponents.getActivity());
                         imagePreview.setImageBitmap(decodedByte);
 
                         DisplayMetrics displayMetrics = new DisplayMetrics();
@@ -445,11 +450,13 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     public void uploadFile() {
         ExecutorManager.runOnMainThread(() -> {
             Context context = bridgeComponents.getContext();
-            if ((ActivityCompat.checkSelfPermission(context.getApplicationContext(), WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) && (ActivityCompat.checkSelfPermission(context.getApplicationContext(), CAMERA) == PackageManager.PERMISSION_GRANTED) && (ActivityCompat.checkSelfPermission(context.getApplicationContext(), READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)) {
+            if ((ActivityCompat.checkSelfPermission(context.getApplicationContext(), CAMERA) == PackageManager.PERMISSION_GRANTED) && isStoragePermissionGiven()) {
                 if (bridgeComponents.getActivity() != null) {
                     Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
                     String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
-                    setKeysInSharedPrefs(context.getResources().getString(R.string.TIME_STAMP_FILE_UPLOAD), timeStamp);
+                    setKeysInSharedPrefs(context.getResources().getString(in.juspay.mobility.app.R.string.TIME_STAMP_FILE_UPLOAD), timeStamp);
+                    Uri photoFile = FileProvider.getUriForFile(context, context.getResources().getString(in.juspay.mobility.app.R.string.fileProviderPath), new File(context.getFilesDir(), "IMG_" + timeStamp + ".jpg"));
+                    takePicture.putExtra(MediaStore.EXTRA_OUTPUT, photoFile);
                     Intent chooseFromFile = new Intent(Intent.ACTION_GET_CONTENT);
                     chooseFromFile.setType("image/*");
                     Intent chooser = Intent.createChooser(takePicture, context.getString(in.juspay.mobility.app.R.string.upload_image));
@@ -458,7 +465,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                 }
             } else {
                 if (bridgeComponents.getActivity() != null) {
-                    ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{CAMERA, WRITE_EXTERNAL_STORAGE, READ_EXTERNAL_STORAGE}, IMAGE_PERMISSION_REQ_CODE);
+                    ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{CAMERA, READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE}, IMAGE_PERMISSION_REQ_CODE);
                 }
             }
         });
@@ -787,7 +794,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         switch (requestCode) {
             case IMAGE_PERMISSION_REQ_CODE:
                 Context context = bridgeComponents.getContext();
-                if ((ActivityCompat.checkSelfPermission(context, WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) && (ActivityCompat.checkSelfPermission(context, CAMERA) == PackageManager.PERMISSION_GRANTED) && (ActivityCompat.checkSelfPermission(context, READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)) {
+                if ((ActivityCompat.checkSelfPermission(context, CAMERA) == PackageManager.PERMISSION_GRANTED) && isStoragePermissionGiven()) {
                     if (bridgeComponents.getActivity() != null) {
                         Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
                         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());

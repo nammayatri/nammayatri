@@ -8,7 +8,7 @@ android {
 
     defaultConfig {
         minSdk 23
-        targetSdk 32
+        targetSdk 33
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
@@ -70,14 +70,17 @@ dependencies {
     implementation platform('com.google.firebase:firebase-bom:31.1.1')
     implementation 'com.google.firebase:firebase-dynamic-links'
     implementation 'com.google.firebase:firebase-messaging'
-    api 'com.theartofdev.edmodo:android-image-cropper:2.8.+'
+    api 'com.theartofdev.edmodo:android-image-cropper:2.8.0'
     implementation 'com.google.android.gms:play-services-location:21.0.1'
     implementation 'com.airbnb.android:lottie:5.2.0'
     implementation 'com.google.android.gms:play-services-location:21.0.1'
     implementation 'com.google.android.play:review:2.0.1'
     implementation 'com.google.android.gms:play-services-auth-api-phone:18.0.1'
     testImplementation 'junit:junit:4.13.2'
-   implementation 'in.juspay:hyper:2.1.12'
+    implementation 'in.juspay:hyper:2.1.12'
+    implementation 'com.google.firebase:firebase-firestore'
+    implementation 'com.google.firebase:firebase-auth'
+    implementation 'androidx.browser:browser:1.2.0'
     // api files('/Users/vigneshs/Downloads/hyper-release.aar')
 //    implementation files('/Users/vigneshs/Downloads/hyper-sdk-release.aar') // Update their own local hyper sdk
     implementation project(':hyper-sdk')

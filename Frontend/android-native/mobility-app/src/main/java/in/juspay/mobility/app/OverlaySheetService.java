@@ -1,4 +1,4 @@
-/* 
+/*
  *  Copyright 2022-23, Juspay India Pvt Ltd
  *  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
  *  as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
@@ -9,6 +9,7 @@
 
 package in.juspay.mobility.app;
 
+import android.annotation.SuppressLint;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -67,23 +68,18 @@ import java.util.concurrent.Executors;
 
 import javax.net.ssl.HttpsURLConnection;
 
-import in.juspay.mobility.MainActivity;
-import in.juspay.mobility.R;
-import android.widget.LinearLayout;
-
 public class OverlaySheetService extends Service implements View.OnTouchListener {
 
-    private static final String TAG = OverlaySheetService.class.getSimpleName();
-    private ViewPager2 viewPager;
-    private ArrayList<SheetModel> sheetArrayList = new ArrayList<>();
+    private static final ArrayList<CallBack> callBack = new ArrayList<>();
+    private final ArrayList<SheetModel> sheetArrayList = new ArrayList<>();
+    private final Handler mainLooper = new Handler(Looper.getMainLooper());
     ExecutorService executor = Executors.newSingleThreadExecutor();
+    private ViewPager2 viewPager;
     private Timer countDownTimer;
     private WindowManager windowManager;
-    private String regToken, baseUrl;
     private SharedPreferences sharedPref;
     private MediaPlayer mediaPlayer;
-    private int currentVolume, time = 0, progressCompat = 0;
-    private AudioManager audio;
+    private int time = 0;
     private View progressDialog, apiLoader, floatyView;
     private CountDownTimer rideStatusListener;
     private WindowManager.LayoutParams params;
@@ -93,49 +89,79 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private TextView indicatorTip1, indicatorTip2, indicatorTip3;
     private ShimmerFrameLayout shimmerTip1, shimmerTip2, shimmerTip3;
     private LinearProgressIndicator progressIndicator1, progressIndicator2, progressIndicator3;
-    private ArrayList<TextView> indicatorTextList ;
-    private ArrayList<LinearProgressIndicator> progressIndicatorsList ;
-    private ArrayList<LinearLayout> indicatorList ;
+    private ArrayList<TextView> indicatorTextList;
+    private ArrayList<LinearProgressIndicator> progressIndicatorsList;
+    private ArrayList<LinearLayout> indicatorList;
     private ArrayList<TextView> tipsList;
     private ArrayList<ShimmerFrameLayout> shimmerTipList;
-    private Handler mainLooper = new Handler(Looper.getMainLooper());
 
-    private static ArrayList<CallBack> callBack = new ArrayList<>();
-    public static void registerCallback(CallBack notificationCallback)
-    {
+    public static void registerCallback(CallBack notificationCallback) {
         callBack.add(notificationCallback);
     }
-    public static void deRegisterCallback(CallBack notificationCallback)
-    {
+
+    public static void deRegisterCallback(CallBack notificationCallback) {
         callBack.remove(notificationCallback);
     }
 
-    public class OverlayBinder extends Binder {
-        public OverlaySheetService getService () {
-            return OverlaySheetService.this;
-        }
+    @SuppressLint("SetTextI18n")
+    private void updateTipView(SheetAdapter.SheetViewHolder holder, SheetModel model) {
+        mainLooper.post(() -> {
+            if (model.getCustomerTip() > 0) {
+                holder.customerTipText.setText("₹ " + model.getCustomerTip() + " tip included !");
+                holder.customerTipBlock.setVisibility(View.VISIBLE);
+                holder.textIncludesCharges.setText(getString(R.string.includes_pickup_charges_10) + " " + getString(R.string.and) + " ₹" + model.getCustomerTip() + " Tip");
+            } else {
+                holder.customerTipBlock.setVisibility(View.GONE);
+                holder.textIncludesCharges.setText(getString(R.string.includes_pickup_charges_10));
+            }
+        });
     }
 
-    private SheetAdapter sheetAdapter = new SheetAdapter(sheetArrayList, viewPager, new SheetAdapter.OnItemClickListener() {
+    private void updateIncreaseDecreaseButtons(SheetAdapter.SheetViewHolder holder, SheetModel model) {
+        mainLooper.post(() -> {
+            holder.buttonDecreasePrice.setAlpha(model.getButtonDecreasePriceAlpha());
+            holder.buttonDecreasePrice.setClickable(model.isButtonDecreasePriceClickable());
+            holder.buttonIncreasePrice.setAlpha(model.getButtonIncreasePriceAlpha());
+            holder.buttonIncreasePrice.setClickable(model.isButtonIncreasePriceClickable());
+        });
+    }
+
+    @SuppressLint("SetTextI18n")
+    private void updateAcceptButtonText(SheetAdapter.SheetViewHolder holder, int rideRequestPopupDelayDuration, int startTime, String text) {
+        if (rideRequestPopupDelayDuration > 0 && (time - startTime) < rideRequestPopupDelayDuration) {
+            holder.reqButton.setText(text + " (" + (rideRequestPopupDelayDuration - (time - startTime)) + " )");
+            holder.reqButton.setAlpha(0.5f);
+            holder.reqButton.setClickable(false);
+            holder.rejectButton.setAlpha(0.5f);
+            holder.rejectButton.setClickable(false);
+        } else {
+            holder.reqButton.setText(text);
+            holder.reqButton.setAlpha(1.0f);
+            holder.reqButton.setClickable(true);
+            holder.rejectButton.setAlpha(1.0f);
+            holder.rejectButton.setClickable(true);
+        }
+    }    private final SheetAdapter sheetAdapter = new SheetAdapter(sheetArrayList, viewPager, new SheetAdapter.OnItemClickListener() {
+        @SuppressLint("SetTextI18n")
         @Override
         public void onViewHolderBind(SheetAdapter.SheetViewHolder holder, int position, ViewPager2 viewPager, List<Object> payloads) {
             SheetModel model = sheetArrayList.get(position);
-            String x = payloads.size() > 0 ? (String) payloads.get(0) :"";
+            String x = payloads.size() > 0 ? (String) payloads.get(0) : "";
             switch (x) {
-                case "inc" :
+                case "inc":
                     updateIndicators();
                     holder.baseFare.setText(String.valueOf(model.getBaseFare() + model.getUpdatedAmount()));
                     updateIncreaseDecreaseButtons(holder, model);
                     return;
-                case "time" :
+                case "time":
                     updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(), model.getStartTime(), getString(R.string.accept_offer));
                     updateProgressBars(true);
                     return;
             }
 
-            holder.pickUpDistance.setText(model.getPickUpDistance()+" km ");
+            holder.pickUpDistance.setText(model.getPickUpDistance() + " km ");
             holder.baseFare.setText(String.valueOf(model.getBaseFare() + model.getUpdatedAmount()));
-            holder.distanceToBeCovered.setText(model.getDistanceToBeCovered()+" km");
+            holder.distanceToBeCovered.setText(model.getDistanceToBeCovered() + " km");
             holder.sourceArea.setText(model.getSourceArea());
             holder.sourceAddress.setText(model.getSourceAddress());
             holder.destinationArea.setText(model.getDestinationArea());
@@ -145,157 +171,123 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             if (model.getDriverMaxExtraFee() == 0) {
                 holder.buttonIncreasePrice.setVisibility(View.GONE);
                 holder.buttonDecreasePrice.setVisibility(View.GONE);
-            }else {
+            } else {
                 holder.buttonIncreasePrice.setVisibility(View.VISIBLE);
                 holder.buttonDecreasePrice.setVisibility(View.VISIBLE);
             }
             updateTipView(holder, model);
-            updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(),model.getStartTime(), getString(R.string.accept_offer));
+            updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(), model.getStartTime(), getString(R.string.accept_offer));
             updateIncreaseDecreaseButtons(holder, model);
-            holder.reqButton.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    holder.reqButton.setClickable(false);
-                    startApiLoader();
-                    ExecutorService executor = Executors.newSingleThreadExecutor();
-                    Handler handler = new Handler(Looper.getMainLooper());
-                    executor.execute(() -> {
-                        try {
-                            Boolean isApiSuccess = driverRespondApi(model.getSearchRequestId(), model.getOfferedPrice(), true, sheetArrayList.indexOf(model));
-                            if (isApiSuccess){
-                                holder.reqButton.setClickable(false);
-                                updateSharedPreferences();
-                                for(int i = 0; i< callBack.size(); i++) {
-                                    callBack.get(i).driverCallBack("RIDE_REQUESTED");
-                                }
-                                String logEvent = sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") ? "silent_ride_accepted" : "ride_accepted";
-                                firebaseLogEvent(logEvent);
-                                isRideAcceptedOrRejected = true;
-                                handler.post(() -> {
-                                    startLoader(model.getSearchRequestId());
-                                    executor.shutdown();
-                                });
-                            }else{
-                                handler.post(() -> {
+            holder.reqButton.setOnClickListener(view -> {
+                holder.reqButton.setClickable(false);
+                startApiLoader();
+                ExecutorService executor = Executors.newSingleThreadExecutor();
+                Handler handler = new Handler(Looper.getMainLooper());
+                executor.execute(() -> {
+                    try {
+                        Boolean isApiSuccess = driverRespondApi(model.getSearchRequestId(), model.getOfferedPrice(), true, sheetArrayList.indexOf(model));
+                        if (isApiSuccess) {
+                            holder.reqButton.setClickable(false);
+                            updateSharedPreferences();
+                            for (int i = 0; i < callBack.size(); i++) {
+                                callBack.get(i).driverCallBack("RIDE_REQUESTED");
+                            }
+                            String logEvent = sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") ? "silent_ride_accepted" : "ride_accepted";
+                            firebaseLogEvent(logEvent);
+                            isRideAcceptedOrRejected = true;
+                            handler.post(() -> {
+                                startLoader(model.getSearchRequestId());
+                                executor.shutdown();
+                            });
+                        } else {
+                            handler.post(() -> {
 //                                    cleanUp();
 //                                    executor.shutdown();
-                                    removeCard(position);
-                                    if(apiLoader!= null) {
-                                        windowManager.removeView(apiLoader);
-                                        apiLoader = null;
-                                    }
-                                    if (sheetArrayList.size() > 0)
-                                    {
-                                        holder.reqButton.setClickable(true);
-                                    }
-                                    else
-                                    {
-                                        cleanUp();
-                                        executor.shutdown();
-                                    }
-                                });
-                            }
-                        } catch (Exception e) {
-                            firebaseLogEventWithParams("exception","request_button_click",e.toString());
-                            cleanUp();
-                        }
-                    });
-                }
-            });
-
-            holder.rejectButton.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    ExecutorService executor = Executors.newSingleThreadExecutor();
-                    Handler handler = new Handler(Looper.getMainLooper());
-                    executor.execute(() -> {
-                        try {
-                            new Thread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    driverRespondApi(model.getSearchRequestId(), model.getOfferedPrice(), false, sheetArrayList.indexOf(model));
-                                }
-                            }).start();
-                            isRideAcceptedOrRejected = true;
-                            holder.rejectButton.setClickable(false);
-                            handler.post(() -> {
-                                String logEvent = sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") ? "silent_ride_declined" : "ride_declined";
-                                firebaseLogEvent(logEvent);
                                 removeCard(position);
-                                executor.shutdown();
-                                Toast.makeText(getApplicationContext(), getApplicationContext().getResources().getString(R.string.ride_rejected), Toast.LENGTH_SHORT).show();
+                                if (apiLoader != null) {
+                                    windowManager.removeView(apiLoader);
+                                    apiLoader = null;
+                                }
+                                if (sheetArrayList.size() > 0) {
+                                    holder.reqButton.setClickable(true);
+                                } else {
+                                    cleanUp();
+                                    executor.shutdown();
+                                }
                             });
-                        } catch (Exception e) {
-                            firebaseLogEventWithParams("exception","reject_button_click",e.toString());
-                            System.out.println("reject exception: " + e);
                         }
-                    });
-                }
+                    } catch (Exception e) {
+                        firebaseLogEventWithParams("exception", "request_button_click", e.toString());
+                        cleanUp();
+                    }
+                });
             });
 
-            holder.buttonIncreasePrice.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    if (model.getOfferedPrice() <= model.getDriverMaxExtraFee() - model.getNegotiationUnit()) {
-                        model.setUpdatedAmount(model.getUpdatedAmount() + model.getNegotiationUnit());
-                        firebaseLogEvent("price_is_increased");
-                        model.setOfferedPrice(model.getOfferedPrice()+model.getNegotiationUnit());
-                        sheetAdapter.notifyItemChanged(position, "inc");
-                        if (model.getOfferedPrice() == model.getDriverMaxExtraFee()){
-                            Handler handler = new Handler(Looper.getMainLooper());
-                            handler.post(new Runnable() {
-                                @Override
-                                public void run() {
-                                    model.setButtonIncreasePriceAlpha(0.5f);
-                                    model.setButtonIncreasePriceClickable(false);
-                                    model.setButtonDecreasePriceAlpha(1.0f);
-                                    model.setButtonDecreasePriceClickable(true);
-                                }
-                            });
-                        }
-                        else {
-                            Handler handler = new Handler(Looper.getMainLooper());
-                            handler.post(new Runnable() {
-                                @Override
-                                public void run() {
-                                    model.setButtonDecreasePriceAlpha(1.0f);
-                                    model.setButtonDecreasePriceClickable(true);
-                                }
-                            });
-                        }
+            holder.rejectButton.setOnClickListener(view -> {
+                ExecutorService executor = Executors.newSingleThreadExecutor();
+                Handler handler = new Handler(Looper.getMainLooper());
+                executor.execute(() -> {
+                    try {
+                        new Thread(() -> driverRespondApi(model.getSearchRequestId(), model.getOfferedPrice(), false, sheetArrayList.indexOf(model))).start();
+                        isRideAcceptedOrRejected = true;
+                        holder.rejectButton.setClickable(false);
+                        handler.post(() -> {
+                            String logEvent = sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") ? "silent_ride_declined" : "ride_declined";
+                            firebaseLogEvent(logEvent);
+                            removeCard(position);
+                            executor.shutdown();
+                            Toast.makeText(getApplicationContext(), getApplicationContext().getResources().getString(R.string.ride_rejected), Toast.LENGTH_SHORT).show();
+                        });
+                    } catch (Exception e) {
+                        firebaseLogEventWithParams("exception", "reject_button_click", e.toString());
+                        System.out.println("reject exception: " + e);
+                    }
+                });
+            });
+
+            holder.buttonIncreasePrice.setOnClickListener(view -> {
+                if (model.getOfferedPrice() <= model.getDriverMaxExtraFee() - model.getNegotiationUnit()) {
+                    model.setUpdatedAmount(model.getUpdatedAmount() + model.getNegotiationUnit());
+                    firebaseLogEvent("price_is_increased");
+                    model.setOfferedPrice(model.getOfferedPrice() + model.getNegotiationUnit());
+                    sheetAdapter.notifyItemChanged(position, "inc");
+                    if (model.getOfferedPrice() == model.getDriverMaxExtraFee()) {
+                        Handler handler = new Handler(Looper.getMainLooper());
+                        handler.post(() -> {
+                            model.setButtonIncreasePriceAlpha(0.5f);
+                            model.setButtonIncreasePriceClickable(false);
+                            model.setButtonDecreasePriceAlpha(1.0f);
+                            model.setButtonDecreasePriceClickable(true);
+                        });
+                    } else {
+                        Handler handler = new Handler(Looper.getMainLooper());
+                        handler.post(() -> {
+                            model.setButtonDecreasePriceAlpha(1.0f);
+                            model.setButtonDecreasePriceClickable(true);
+                        });
                     }
                 }
             });
-            holder.buttonDecreasePrice.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    if (model.getOfferedPrice() > 0) {
-                        model.setUpdatedAmount(model.getUpdatedAmount() - model.getNegotiationUnit());
-                        firebaseLogEvent("price_is_decreased");
-                        model.setOfferedPrice(model.getOfferedPrice()-model.getNegotiationUnit());
-                        sheetAdapter.notifyItemChanged(position,"inc");
-                        if (model.getOfferedPrice() == 0){
-                            Handler handler = new Handler(Looper.getMainLooper());
-                            handler.post(new Runnable() {
-                                @Override
-                                public void run() {
-                                    model.setButtonDecreasePriceAlpha(0.5f);
-                                    model.setButtonDecreasePriceClickable(false);
-                                    model.setButtonIncreasePriceAlpha(1.0f);
-                                    model.setButtonIncreasePriceClickable(true);
-                                }
-                            });
-                        }
-                        else {
-                            Handler handler = new Handler(Looper.getMainLooper());
-                            handler.post(new Runnable() {
-                                @Override
-                                public void run() {
-                                    model.setButtonIncreasePriceAlpha(1.0f);
-                                    model.setButtonIncreasePriceClickable(true);
-                                }
-                            });
-                        }
+            holder.buttonDecreasePrice.setOnClickListener(view -> {
+                if (model.getOfferedPrice() > 0) {
+                    model.setUpdatedAmount(model.getUpdatedAmount() - model.getNegotiationUnit());
+                    firebaseLogEvent("price_is_decreased");
+                    model.setOfferedPrice(model.getOfferedPrice() - model.getNegotiationUnit());
+                    sheetAdapter.notifyItemChanged(position, "inc");
+                    if (model.getOfferedPrice() == 0) {
+                        Handler handler = new Handler(Looper.getMainLooper());
+                        handler.post(() -> {
+                            model.setButtonDecreasePriceAlpha(0.5f);
+                            model.setButtonDecreasePriceClickable(false);
+                            model.setButtonIncreasePriceAlpha(1.0f);
+                            model.setButtonIncreasePriceClickable(true);
+                        });
+                    } else {
+                        Handler handler = new Handler(Looper.getMainLooper());
+                        handler.post(() -> {
+                            model.setButtonIncreasePriceAlpha(1.0f);
+                            model.setButtonIncreasePriceClickable(true);
+                        });
                     }
                 }
             });
@@ -368,62 +360,59 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         removeCard(position, false);
     }
 
-    private void removeCard (int position, boolean isRemoved) {
-        try{
+    private void removeCard(int position, boolean isRemoved) {
+        try {
             Handler handler = new Handler(Looper.getMainLooper());
-            handler.post(new Runnable() {
-                @Override
-                public void run() {
-                    if (!isRemoved) {
-                        if (!(sheetArrayList.size() > position)) {
-                            return;
-                        }
-                        if (position>=0 && position<sheetArrayList.size()){
-                            sheetArrayList.remove(position);
-                        }
+            handler.post(() -> {
+                if (!isRemoved) {
+                    if (!(sheetArrayList.size() > position)) {
+                        return;
                     }
-                    sheetAdapter.updateSheetList(sheetArrayList);
-                    sheetAdapter.notifyItemRemoved(position);
-                    sheetAdapter.notifyItemRangeChanged(position, sheetArrayList.size());
-                    updateIndicators();
-                    updateProgressBars(false);
-                    if(sheetArrayList.isEmpty()) {
-                        cleanUp();
+                    if (position >= 0 && position < sheetArrayList.size()) {
+                        sheetArrayList.remove(position);
                     }
                 }
+                sheetAdapter.updateSheetList(sheetArrayList);
+                sheetAdapter.notifyItemRemoved(position);
+                sheetAdapter.notifyItemRangeChanged(position, sheetArrayList.size());
+                updateIndicators();
+                updateProgressBars(false);
+                if (sheetArrayList.isEmpty()) {
+                    cleanUp();
+                }
             });
-        }catch (Exception e){
-            firebaseLogEventWithParams("exception","remove_card",e.toString());
+        } catch (Exception e) {
+            firebaseLogEventWithParams("exception", "remove_card", e.toString());
             e.printStackTrace();
         }
     }
 
-    private void cleanUp () {
-        if(!isRideAcceptedOrRejected){
+    private void cleanUp() {
+        if (!isRideAcceptedOrRejected) {
             firebaseLogEvent("ride_ignored");
         }
         try {
             countDownTimer.cancel();
             sheetAdapter.updateSheetList(new ArrayList<>());
             viewPager = null;
-            if (rideStatusListener!=null){
+            if (rideStatusListener != null) {
                 rideStatusListener.cancel();
                 rideStatusListener = null;
             }
 
-            if (floatyView !=null){
-                if (floatyView.getParent()!=null){
+            if (floatyView != null) {
+                if (floatyView.getParent() != null) {
                     windowManager.removeView(floatyView);
                 }
             }
 
-            if (progressDialog !=null){
-                if (progressDialog.getParent()!=null){
+            if (progressDialog != null) {
+                if (progressDialog.getParent() != null) {
                     windowManager.removeView(progressDialog);
                 }
             }
 
-            if (apiLoader !=null && apiLoader.getParent()!=null){
+            if (apiLoader != null && apiLoader.getParent() != null) {
                 windowManager.removeView(apiLoader);
             }
             floatyView = null;
@@ -438,8 +427,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             NotificationUtils.binder = null;
             NotificationUtils.listData = new ArrayList<>();
             this.stopSelf();
-        } catch(Exception e){
-            firebaseLogEventWithParams("exception","clean_up",e.toString());
+        } catch (Exception e) {
+            firebaseLogEventWithParams("exception", "clean_up", e.toString());
             Log.e("EXCEPTION", e.toString());
         }
     }
@@ -448,18 +437,13 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     @Override
     public IBinder onBind(Intent intent) {
         try {
-            if (mediaPlayer==null){
+            if (mediaPlayer == null) {
                 mediaPlayer = MediaPlayer.create(getApplicationContext(), R.raw.allocation_request);
                 mediaPlayer.setLooping(true);
-                mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
-                    @Override
-                    public void onPrepared(MediaPlayer mp) {
-                        mediaPlayer.setWakeMode(getApplicationContext(), PowerManager.PARTIAL_WAKE_LOCK);
-                    }
-                });
-                }
+                mediaPlayer.setOnPreparedListener(mp -> mediaPlayer.setWakeMode(getApplicationContext(), PowerManager.PARTIAL_WAKE_LOCK));
+            }
         } catch (Exception e) {
-            firebaseLogEventWithParams("exception","on_bind",e.toString());
+            firebaseLogEventWithParams("exception", "on_bind", e.toString());
             e.printStackTrace();
         }
         return new OverlayBinder();
@@ -470,97 +454,93 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         return START_STICKY;
     }
 
-
-    public void addToList (Bundle rideRequestBundle) {
+    public void addToList(Bundle rideRequestBundle) {
         Handler handler = new Handler(Looper.getMainLooper());
         executor.execute(() -> {
             try {
-                if (sheetArrayList.size() >= 3 || findCardById(rideRequestBundle.getString(getResources().getString(R.string.SEARCH_REQUEST_ID)))) return;
-                if (progressDialog==null || apiLoader == null ){
-                    if (mediaPlayer!=null){
+                if (sheetArrayList.size() >= 3 || findCardById(rideRequestBundle.getString(getResources().getString(R.string.SEARCH_REQUEST_ID))))
+                    return;
+                if (progressDialog == null || apiLoader == null) {
+                    if (mediaPlayer != null) {
                         mediaPlayer.start();
                         increaseVolume();
                     }
                 }
-                handler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        String searchRequestId  = rideRequestBundle.getString(getResources().getString(R.string.SEARCH_REQUEST_ID));
-                        String searchRequestValidTill  = rideRequestBundle.getString(getResources().getString(R.string.SEARCH_REQ_VALID_TILL));
-                        int baseFare  = rideRequestBundle.getInt(getResources().getString(R.string.BASE_FARE));
-                        float distanceToPickup  = (float) rideRequestBundle.getInt(getResources().getString(R.string.DISTANCE_TO_PICKUP));
-                        float distanceTobeCovered = (float) rideRequestBundle.getInt(getResources().getString(R.string.DISTANCE_TO_BE_COVERED));
-                        String durationToPickup  = rideRequestBundle.getString(getResources().getString(R.string.DURATION_TO_PICKUP));
-                        String addressPickUp  = rideRequestBundle.getString(getResources().getString(R.string.ADDRESS_PICKUP));
-                        String addressDrop  = rideRequestBundle.getString(getResources().getString(R.string.ADDRESS_DROP));
-                        String sourceArea = rideRequestBundle.getString("sourceArea");
-                        String destinationArea = rideRequestBundle.getString("destinationArea");
-                        int driverMaxExtraFee = rideRequestBundle.getInt("driverMaxExtraFee");
-                        int driverMinExtraFee = rideRequestBundle.getInt("driverMinExtraFee");
-                        int rideRequestPopupDelayDuration = rideRequestBundle.getInt("rideRequestPopupDelayDuration");
-                        DecimalFormat df = new DecimalFormat();
-                        df.setMaximumFractionDigits(2);
+                handler.post(() -> {
+                    String searchRequestId = rideRequestBundle.getString(getResources().getString(R.string.SEARCH_REQUEST_ID));
+                    String searchRequestValidTill = rideRequestBundle.getString(getResources().getString(R.string.SEARCH_REQ_VALID_TILL));
+                    int baseFare = rideRequestBundle.getInt(getResources().getString(R.string.BASE_FARE));
+                    float distanceToPickup = (float) rideRequestBundle.getInt(getResources().getString(R.string.DISTANCE_TO_PICKUP));
+                    float distanceTobeCovered = (float) rideRequestBundle.getInt(getResources().getString(R.string.DISTANCE_TO_BE_COVERED));
+                    String addressPickUp = rideRequestBundle.getString(getResources().getString(R.string.ADDRESS_PICKUP));
+                    String addressDrop = rideRequestBundle.getString(getResources().getString(R.string.ADDRESS_DROP));
+                    String sourceArea = rideRequestBundle.getString("sourceArea");
+                    String destinationArea = rideRequestBundle.getString("destinationArea");
+                    int driverMaxExtraFee = rideRequestBundle.getInt("driverMaxExtraFee");
+                    int driverMinExtraFee = rideRequestBundle.getInt("driverMinExtraFee");
+                    int rideRequestPopupDelayDuration = rideRequestBundle.getInt("rideRequestPopupDelayDuration");
+                    DecimalFormat df = new DecimalFormat();
+                    df.setMaximumFractionDigits(2);
 
-                        final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
-                        f.setTimeZone(TimeZone.getTimeZone("UTC"));
-                        String getCurrTime = f.format(new Date());
-                        int calculatedTime = calculateExpireTimer(searchRequestValidTill,getCurrTime);
-                        if (sharedPref == null) sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-                        int negotiationUnit = Integer.parseInt(sharedPref.getString("NEGOTIATION_UNIT", "10"));
-                        int rideRequestedBuffer =  Integer.parseInt(sharedPref.getString("RIDE_REQUEST_BUFFER", "2"));
-                        int customerExtraFee = rideRequestBundle.getInt("customerExtraFee");
-                        if (calculatedTime > rideRequestedBuffer){
-                            calculatedTime -= rideRequestedBuffer;
-                        }
-                        SheetModel sheetModel = new SheetModel((df.format(distanceToPickup/1000)),
-                                (df.format(distanceTobeCovered/1000)),
-                                addressPickUp,
-                                addressDrop,
-                                baseFare,
-                                calculatedTime,
-                                searchRequestId,
-                                destinationArea,
-                                sourceArea,
-                                time,
-                                driverMinExtraFee,
-                                driverMaxExtraFee,
-                                rideRequestPopupDelayDuration,
-                                negotiationUnit,
-                                customerExtraFee);
-                        if (floatyView == null) {
-                            startTimer();
-                            showOverLayPopup();
-                        }
-                        sheetArrayList.add(sheetModel);
-                        sheetAdapter.updateSheetList(sheetArrayList);
-                        sheetAdapter.notifyItemInserted(sheetArrayList.indexOf(sheetModel));
-                        updateIndicators();
-                        updateProgressBars(false);
+                    final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+                    f.setTimeZone(TimeZone.getTimeZone("UTC"));
+                    String getCurrTime = f.format(new Date());
+                    int calculatedTime = calculateExpireTimer(searchRequestValidTill, getCurrTime);
+                    if (sharedPref == null)
+                        sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+                    int negotiationUnit = Integer.parseInt(sharedPref.getString("NEGOTIATION_UNIT", "10"));
+                    int rideRequestedBuffer = Integer.parseInt(sharedPref.getString("RIDE_REQUEST_BUFFER", "2"));
+                    int customerExtraFee = rideRequestBundle.getInt("customerExtraFee");
+                    if (calculatedTime > rideRequestedBuffer) {
+                        calculatedTime -= rideRequestedBuffer;
                     }
+                    SheetModel sheetModel = new SheetModel((df.format(distanceToPickup / 1000)),
+                            (df.format(distanceTobeCovered / 1000)),
+                            addressPickUp,
+                            addressDrop,
+                            baseFare,
+                            calculatedTime,
+                            searchRequestId,
+                            destinationArea,
+                            sourceArea,
+                            time,
+                            driverMinExtraFee,
+                            driverMaxExtraFee,
+                            rideRequestPopupDelayDuration,
+                            negotiationUnit,
+                            customerExtraFee);
+                    if (floatyView == null) {
+                        startTimer();
+                        showOverLayPopup();
+                    }
+                    sheetArrayList.add(sheetModel);
+                    sheetAdapter.updateSheetList(sheetArrayList);
+                    sheetAdapter.notifyItemInserted(sheetArrayList.indexOf(sheetModel));
+                    updateIndicators();
+                    updateProgressBars(false);
                 });
             } catch (Exception e) {
-                firebaseLogEventWithParams("exception","add_to_list",e.toString());
+                firebaseLogEventWithParams("exception", "add_to_list", e.toString());
                 e.printStackTrace();
             }
         });
     }
 
-    public void removeCardById(String id){
-        if (sheetArrayList!=null){
-            if (sheetArrayList.size()>0){
-                if ((sheetArrayList.size()==1  && rideStatusListener!=null)){
-                    return;
-                }
-                for (int i = 0; i<sheetArrayList.size(); i++){
-                    if (id.equals(sheetArrayList.get(i).getSearchRequestId())){
-                        removeCard(i);
-                        break;
-                    }
+    public void removeCardById(String id) {
+        if (sheetArrayList.size() > 0) {
+            if ((sheetArrayList.size() == 1 && rideStatusListener != null)) {
+                return;
+            }
+            for (int i = 0; i < sheetArrayList.size(); i++) {
+                if (id.equals(sheetArrayList.get(i).getSearchRequestId())) {
+                    removeCard(i);
+                    break;
                 }
             }
         }
     }
 
+    @SuppressLint("InflateParams")
     private void showOverLayPopup() {
         firebaseLogEvent("Overlay_is_popped_up");
         windowManager = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
@@ -581,21 +561,13 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         params.gravity = Gravity.CENTER;
         params.screenOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT;
         LayoutInflater inflater = ((LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE));
-        floatyView = inflater.inflate(R.layout.viewpager_layout_view,null);
+        floatyView = inflater.inflate(R.layout.viewpager_layout_view, null);
         progressDialog = inflater.inflate(R.layout.loading_screen_overlay, null);
         apiLoader = inflater.inflate(R.layout.api_loader, null);
         View dismissLoader = progressDialog.findViewById(R.id.loaderOverlay);
-        dismissLoader.setOnClickListener(new View.OnClickListener() {
-           @Override
-           public void onClick(View view) {
-               Handler handler = new Handler(Looper.getMainLooper());
-               handler.post(new Runnable() {
-                   @Override
-                   public void run() {
-                       cleanUp();
-                   }
-               });
-           }
+        dismissLoader.setOnClickListener(view -> {
+            Handler handler = new Handler(Looper.getMainLooper());
+            handler.post(this::cleanUp);
         });
         viewPager = floatyView.findViewById(R.id.view_pager);
         sheetAdapter.setViewPager(viewPager);
@@ -608,17 +580,14 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         TimerTask countUpTimerTask = new TimerTask() {
             @Override
             public void run() {
-                time ++;
-                new Handler(Looper.getMainLooper()).post(new Runnable() {
-                    @Override
-                    public void run() {
-                        for (SheetModel model : sheetArrayList) {
-                            int index = sheetArrayList.indexOf(model);
-                            if(model.getReqExpiryTime() + model.getStartTime() - time < 1) {
-                                removeCard(index, false);
-                            } else {
-                                sheetAdapter.notifyItemChanged(index, "time");
-                            }
+                time++;
+                new Handler(Looper.getMainLooper()).post(() -> {
+                    for (SheetModel model : sheetArrayList) {
+                        int index = sheetArrayList.indexOf(model);
+                        if (model.getReqExpiryTime() + model.getStartTime() - time < 1) {
+                            removeCard(index, false);
+                        } else {
+                            sheetAdapter.notifyItemChanged(index, "time");
                         }
                     }
                 });
@@ -634,9 +603,9 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         mFirebaseAnalytics.logEvent(event, params);
     }
 
-    public void firebaseLogEventWithParams(String event,String paramKey,String paramValue) {
+    public void firebaseLogEventWithParams(String event, String paramKey, String paramValue) {
         Bundle params = new Bundle();
-        params.putString(paramKey,paramValue);
+        params.putString(paramKey, paramValue);
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
         mFirebaseAnalytics.logEvent(event, params);
     }
@@ -645,8 +614,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         StringBuilder result = new StringBuilder();
         Handler handler = new Handler(Looper.getMainLooper());
         sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-        regToken = sharedPref.getString(getResources().getString(R.string.REGISTERATION_TOKEN), "null");
-        baseUrl = sharedPref.getString("BASE_URL", "null");
+        String regToken = sharedPref.getString(getResources().getString(R.string.REGISTERATION_TOKEN), "null");
+        String baseUrl = sharedPref.getString("BASE_URL", "null");
         String bundle_version = sharedPref.getString("BUNDLE_VERSION", "null");
         String version = sharedPref.getString("VERSION_NAME", "null");
         try {
@@ -685,33 +654,25 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     result.append(inputLine);
                 }
                 JSONObject errorPayload = new JSONObject(result.toString());
-                if (errorPayload.has(getResources().getString(R.string.ERROR_MESSAGE))){
-                    handler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            try {
-                                Toast.makeText(getApplicationContext(), errorPayload.getString(getResources().getString(R.string.ERROR_MESSAGE)) , Toast.LENGTH_SHORT).show();
-                            } catch (JSONException e) {
-                                e.printStackTrace();
-                            }
+                if (errorPayload.has(getResources().getString(R.string.ERROR_MESSAGE))) {
+                    handler.post(() -> {
+                        try {
+                            Toast.makeText(getApplicationContext(), errorPayload.getString(getResources().getString(R.string.ERROR_MESSAGE)), Toast.LENGTH_SHORT).show();
+                        } catch (JSONException e) {
+                            e.printStackTrace();
                         }
                     });
                 }
             } else {
                 //API Success
-                return  true;
+                return true;
             }
             return false;
-        } catch (SocketTimeoutException e){
-            handler.post(new Runnable() {
-                @Override
-                public void run() {
-                    Toast.makeText(getApplicationContext(), "Request Timeout" , Toast.LENGTH_SHORT).show();
-                }
-            });
+        } catch (SocketTimeoutException e) {
+            handler.post(() -> Toast.makeText(getApplicationContext(), "Request Timeout", Toast.LENGTH_SHORT).show());
             return false;
         } catch (Exception e) {
-            firebaseLogEventWithParams("exception" , "driver_respond_api", e.toString());
+            firebaseLogEventWithParams("exception", "driver_respond_api", e.toString());
             return false;
         }
     }
@@ -730,30 +691,31 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         }
         super.onDestroy();
     }
+
     @Override
     public boolean onTouch(View view, MotionEvent motionEvent) {
         view.performClick();
         return true;
     }
-    private int calculateExpireTimer(String expireTimeTemp, String currTimeTemp){
+
+    private int calculateExpireTimer(String expireTimeTemp, String currTimeTemp) {
         String[] arrOfA = expireTimeTemp.split("T");
         String[] arrOfB = currTimeTemp.split("T");
-        if(!arrOfA[0].equals(arrOfB[0])){
+        if (!arrOfA[0].equals(arrOfB[0])) {
             return -1;
         }
         String[] timeTempExpire = arrOfA[1].split(":");
         String[] timeTempCurrent = arrOfB[1].split(":");
-        timeTempExpire[2] = timeTempExpire[2].substring(0,2);
-        timeTempCurrent[2] = timeTempCurrent[2].substring(0,2);
+        timeTempExpire[2] = timeTempExpire[2].substring(0, 2);
+        timeTempCurrent[2] = timeTempCurrent[2].substring(0, 2);
         int currTime = 0, expireTime = 0, calculate = 3600;
-        for(int i = 0 ; i < timeTempCurrent.length;i++){
-            currTime+= (Integer.parseInt(timeTempCurrent[i])*calculate);
-            expireTime+= (Integer.parseInt(timeTempExpire[i])*calculate);
-            calculate = calculate/60;
+        for (int i = 0; i < timeTempCurrent.length; i++) {
+            currTime += (Integer.parseInt(timeTempCurrent[i]) * calculate);
+            expireTime += (Integer.parseInt(timeTempExpire[i]) * calculate);
+            calculate = calculate / 60;
         }
-        if ((expireTime-currTime) >= 5)
-        {
-            return expireTime-currTime - 5 ;
+        if ((expireTime - currTime) >= 5) {
+            return expireTime - currTime - 5;
         }
         return 0;
     }
@@ -762,39 +724,40 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         countDownTimer.cancel();
         try {
             if (mediaPlayer != null) {
-                if (mediaPlayer.isPlaying()){
+                if (mediaPlayer.isPlaying()) {
                     mediaPlayer.pause();
                 }
             }
             if (floatyView != null) {
-                if (floatyView.getParent()!=null){
+                if (floatyView.getParent() != null) {
                     windowManager.removeView(floatyView);
                 }
             }
-            if(apiLoader!= null) {
-                if (apiLoader.getParent()!=null){
+            if (apiLoader != null) {
+                if (apiLoader.getParent() != null) {
                     windowManager.removeView(apiLoader);
                 }
             }
-            if (progressDialog !=null){
+            if (progressDialog != null) {
                 windowManager.addView(progressDialog, params);
             }
             rideStatusListener = new CountDownTimer(getResources().getInteger(R.integer.LOADER_WAITING_TIME), 1000) {
+                @SuppressLint("SetTextI18n")
                 @Override
                 public void onTick(long millisUntilFinished) {
                     sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-                    if (progressDialog!=null){
+                    if (progressDialog != null) {
                         TextView loaderText = progressDialog.findViewById(R.id.text_waiting_for_customer);
-                        loaderText.setText(getString(R.string.waiting_for_customer_response)+ " (" + String.valueOf(millisUntilFinished/1000) + ") ...");
+                        loaderText.setText(getString(R.string.waiting_for_customer_response) + " (" + (millisUntilFinished / 1000) + ") ...");
                     }
                     if (sharedPref.getString(getResources().getString(R.string.RIDE_STATUS), "null").equals(getResources().getString(R.string.DRIVER_ASSIGNMENT))) {
                         sharedPref.edit().putString(getResources().getString(R.string.RIDE_STATUS), "null").apply();
                         showAcknowledgement(getString(R.string.DRIVER_ASSIGNMENT));
-                    }
-                    else if (sharedPref.getString(getString(R.string.CLEAR_FARE), "null").equals(id)){
+                    } else if (sharedPref.getString(getString(R.string.CLEAR_FARE), "null").equals(id)) {
                         showAcknowledgement(getString(R.string.CLEAR_FARE));
                     }
                 }
+
                 @Override
                 public void onFinish() {
                     sharedPref.edit().putString(getResources().getString(R.string.RIDE_STATUS), "null").apply();
@@ -802,7 +765,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 }
             }.start();
         } catch (Exception e) {
-            firebaseLogEventWithParams("exception","start_loader",e.toString());
+            firebaseLogEventWithParams("exception", "start_loader", e.toString());
             cleanUp();
             e.printStackTrace();
         }
@@ -812,66 +775,60 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         Handler handler = new Handler(Looper.getMainLooper());
         String ackText = ackType.equals(getString(R.string.DRIVER_ASSIGNMENT)) ? getString(R.string.ride_assigned) : getString(R.string.ride_assigned_to_another_driver);
         int rawResource = ackType.equals(getString(R.string.DRIVER_ASSIGNMENT)) ? R.raw.ride_accepted_lottie : R.raw.accepted_by_another_driver_lottie;
-        handler.post(new Runnable() {
-            @Override
-            public void run() {
-                if (progressDialog!=null){
-                    TextView loaderText = progressDialog.findViewById(R.id.text_waiting_for_customer);
-                    LottieAnimationView lottieAnimationView = progressDialog.findViewById(R.id.lottie_view_waiting);
-                    loaderText.setText(ackText);
-                    lottieAnimationView.setAnimation(rawResource);
-                    lottieAnimationView.setProgress(0);
-                    lottieAnimationView.setSpeed(1.2f);
-                    lottieAnimationView.playAnimation();
-                    rideStatusListener.cancel();
-                }
+        handler.post(() -> {
+            if (progressDialog != null) {
+                TextView loaderText = progressDialog.findViewById(R.id.text_waiting_for_customer);
+                LottieAnimationView lottieAnimationView = progressDialog.findViewById(R.id.lottie_view_waiting);
+                loaderText.setText(ackText);
+                lottieAnimationView.setAnimation(rawResource);
+                lottieAnimationView.setProgress(0);
+                lottieAnimationView.setSpeed(1.2f);
+                lottieAnimationView.playAnimation();
+                rideStatusListener.cancel();
             }
         });
-        handler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                cleanUp();
-            }
-        }, 1700);
+        handler.postDelayed(this::cleanUp, 1700);
     }
 
     private void startApiLoader() {
         try {
             if (mediaPlayer != null) {
-                if (mediaPlayer.isPlaying()){
+                if (mediaPlayer.isPlaying()) {
                     mediaPlayer.pause();
                 }
             }
-            if (apiLoader !=null){
+            if (apiLoader != null) {
                 windowManager.addView(apiLoader, params);
             }
         } catch (Exception e) {
-            firebaseLogEventWithParams("exception","start_api_loader",e.toString());
+            firebaseLogEventWithParams("exception", "start_api_loader", e.toString());
             e.printStackTrace();
         }
     }
+
     private void increaseVolume() {
-        audio = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-        currentVolume = audio.getStreamVolume(AudioManager.STREAM_MUSIC);
+        AudioManager audio = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+        float currentVolume = (float) audio.getStreamVolume(AudioManager.STREAM_MUSIC);
         int maxVolume = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
         if (currentVolume / maxVolume < 0.7) {
-            audio.setStreamVolume(AudioManager.STREAM_MUSIC,(int) (maxVolume * 0.9), AudioManager.ADJUST_SAME);
+            audio.setStreamVolume(AudioManager.STREAM_MUSIC, (int) (maxVolume * 0.9), AudioManager.ADJUST_SAME);
         }
     }
 
-    private void updateIndicators(){
+    private void updateIndicators() {
         mainLooper.post(new Runnable() {
+            @SuppressLint("SetTextI18n")
             @Override
             public void run() {
-                if (floatyView == null || viewPager == null || sheetArrayList == null) return;
+                if (floatyView == null || viewPager == null) return;
                 indicatorText1 = floatyView.findViewById(R.id.indicatorText1);
                 indicatorText2 = floatyView.findViewById(R.id.indicatorText2);
                 indicatorText3 = floatyView.findViewById(R.id.indicatorText3);
                 progressIndicator1 = floatyView.findViewById(R.id.progress_indicator_1);
                 progressIndicator2 = floatyView.findViewById(R.id.progress_indicator_2);
                 progressIndicator3 = floatyView.findViewById(R.id.progress_indicator_3);
-                indicatorTextList = new ArrayList<>(Arrays.asList(indicatorText1,indicatorText2,indicatorText3));
-                progressIndicatorsList = new ArrayList<>(Arrays.asList(progressIndicator1,progressIndicator2,progressIndicator3));
+                indicatorTextList = new ArrayList<>(Arrays.asList(indicatorText1, indicatorText2, indicatorText3));
+                progressIndicatorsList = new ArrayList<>(Arrays.asList(progressIndicator1, progressIndicator2, progressIndicator3));
                 indicatorList = new ArrayList<>(Arrays.asList(
                         floatyView.findViewById(R.id.indicator1),
                         floatyView.findViewById(R.id.indicator2),
@@ -894,11 +851,11 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                         progressIndicatorsList.get(i).setTrackColor(getColor(R.color.grey900));
                         shimmerTipList.get(i).startShimmer();
                     }
-                    if (i < sheetArrayList.size()){
-                        indicatorTextList.get(i).setText("₹"+String.valueOf(sheetArrayList.get(i).getBaseFare() + sheetArrayList.get(i).getUpdatedAmount()));
+                    if (i < sheetArrayList.size()) {
+                        indicatorTextList.get(i).setText("₹" + (sheetArrayList.get(i).getBaseFare() + sheetArrayList.get(i).getUpdatedAmount()));
                         progressIndicatorsList.get(i).setVisibility(View.VISIBLE);
 
-                        if (viewPager.getCurrentItem() == indicatorList.indexOf(indicatorList.get(i)) && sheetArrayList.get(i).getCustomerTip() > 0){
+                        if (viewPager.getCurrentItem() == indicatorList.indexOf(indicatorList.get(i)) && sheetArrayList.get(i).getCustomerTip() > 0) {
                             indicatorList.get(i).setBackgroundColor(Color.parseColor("#FEEBB9"));
                         }
 
@@ -924,60 +881,61 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 floatyView.findViewById(R.id.indicator2),
                 floatyView.findViewById(R.id.indicator3)));
 
-        for (int i =0; i<3; i++){
+        for (int i = 0; i < 3; i++) {
             int finalI = i;
-            indicatorList.get(i).setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    mainLooper.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            if (viewPager == null) return;
-                            viewPager.setCurrentItem(finalI);
-                            if(!(finalI >= sheetArrayList.size() || finalI < 0)){ //index exists
-                                firebaseLogEventWithParams("indicator_click", "index" , String.valueOf(finalI));
-                            }
-                        }
-                    });
+            indicatorList.get(i).setOnClickListener(view -> mainLooper.post(() -> {
+                if (viewPager == null) return;
+                viewPager.setCurrentItem(finalI);
+                if (!(finalI >= sheetArrayList.size())) { //index exists
+                    firebaseLogEventWithParams("indicator_click", "index", String.valueOf(finalI));
                 }
-            });
+            }));
         }
     }
 
-    private void updateProgressBars(boolean animated){
-        if (floatyView == null || sheetArrayList == null ) return;
+    private void updateProgressBars(boolean animated) {
+        if (floatyView == null) return;
         progressIndicatorsList = new ArrayList<>(Arrays.asList(
                 floatyView.findViewById(R.id.progress_indicator_1),
                 floatyView.findViewById(R.id.progress_indicator_2),
                 floatyView.findViewById(R.id.progress_indicator_3)));
 
-        for (int i=0; i<sheetArrayList.size(); i++){
-            progressCompat = sheetArrayList.get(i).getReqExpiryTime()  + sheetArrayList.get(i).getStartTime() - time;
-            progressIndicatorsList.get(i).setProgressCompat(progressCompat*4, animated); // (100/maxExpiryTime)
-            if (progressCompat <= 8){
+        for (int i = 0; i < sheetArrayList.size(); i++) {
+            int progressCompat = sheetArrayList.get(i).getReqExpiryTime() + sheetArrayList.get(i).getStartTime() - time;
+            progressIndicatorsList.get(i).setProgressCompat(progressCompat * 4, animated); // (100/maxExpiryTime)
+            if (progressCompat <= 8) {
                 progressIndicatorsList.get(i).setIndicatorColor(getColor(R.color.red900));
-            }else {
+            } else {
                 progressIndicatorsList.get(i).setIndicatorColor(getColor(R.color.green900));
             }
         }
     }
 
-    private boolean findCardById(String id){
-        if (sheetArrayList != null){
-            for (int i = 0; i<sheetArrayList.size(); i++){
-                if (id.equals(sheetArrayList.get(i).getSearchRequestId())){
-                    return true;
-                }
+    private boolean findCardById(String id) {
+        for (int i = 0; i < sheetArrayList.size(); i++) {
+            if (id.equals(sheetArrayList.get(i).getSearchRequestId())) {
+                return true;
             }
         }
         return false;
     }
+
     private void updateSharedPreferences() {
         Context context = getApplicationContext();
         SharedPreferences sharedPreferences = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-        sharedPreferences.edit().putString(getString(R.string.LOCAL_STAGE),getString(R.string.RideRequested));
+        sharedPreferences.edit().putString(getString(R.string.LOCAL_STAGE), getString(R.string.RideRequested)).apply();
         SimpleDateFormat formatter = new SimpleDateFormat("EE MMM d y H:m:s ZZZ");
         String dateString = formatter.format(new Date());
         sharedPref.edit().putString(getString(R.string.RIDE_REQUEST_TIME), dateString).apply();
     }
+
+    public class OverlayBinder extends Binder {
+        public OverlaySheetService getService() {
+            return OverlaySheetService.this;
+        }
+    }
+
+
+
+
 }

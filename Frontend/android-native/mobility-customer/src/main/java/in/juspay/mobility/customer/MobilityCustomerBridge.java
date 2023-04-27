@@ -1,8 +1,5 @@
 package in.juspay.mobility.customer;
 
-import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
-import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
-
 import android.Manifest;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
@@ -14,6 +11,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.graphics.Color;
+import android.graphics.Typeface;
 import android.graphics.pdf.PdfDocument;
 import android.net.Uri;
 import android.os.Environment;
@@ -23,6 +22,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.animation.LinearInterpolator;
 import android.webkit.JavascriptInterface;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -82,22 +82,104 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
 
                 @Override
                 public void driverCallBack(String notificationType) {
-                    Log.i(CALLBACK, "No Driver CallBack Required");
+                    Log.i(CALLBACK, "No Required");
                 }
 
                 @Override
                 public void imageUploadCallBack(String encImage, String filename) {
-                    Log.i(CALLBACK, "No Image Upload CallBack Required");
+                    Log.i(CALLBACK, "No Required");
                 }
 
                 @Override
                 public void internetCallBack(String isPermission) {
                     callInternetActionCallBack(isPermission);
                 }
+
+                @Override
+                public void chatCallBack(String message, String sentBy, String time) {
+                    Log.i(CALLBACK, "No Required");
+                }
             };
             NotificationUtils.registerCallback(callBack);
             NetworkBroadcastReceiver.registerCallback(callBack);
         }
+    }
+
+    private static View getInvoiceLayout(JSONObject selectedRide, JSONArray fares, String user, Context context) throws JSONException {
+        View invoiceLayout = LayoutInflater.from(context).inflate(R.layout.invoice_template, null, false);
+        TextView textView = invoiceLayout.findViewById(R.id.rideDate);
+        textView.setText(selectedRide.getString("date"));
+        textView = invoiceLayout.findViewById(R.id.userName);
+        textView.setText(user.trim());
+        textView = invoiceLayout.findViewById(R.id.paymentDetail);
+        textView.setText(selectedRide.getString("totalAmount"));
+
+        LinearLayout fareBreakupElements = (LinearLayout) invoiceLayout.findViewById(R.id.fareBreakupElements);
+        fareBreakupElements.setOrientation(LinearLayout.VERTICAL);
+
+        try {
+            for (int i = 0; i < fares.length(); i++) {
+
+                LinearLayout.LayoutParams linearParams = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT);
+                LinearLayout linearLayout = new LinearLayout(context);
+                linearLayout.setLayoutParams(linearParams);
+
+                LinearLayout.LayoutParams linearParamsChild = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT);
+                LinearLayout linearLayoutChild = new LinearLayout(context);
+                linearLayoutChild.setLayoutParams(linearParamsChild);
+                linearParamsChild.weight = 1.0f;
+
+                JSONObject fare = fares.getJSONObject(i);
+                String value = fare.getString("price");
+                String fareTypes = fare.getString("title");
+                TextView textViewText = new TextView(context);
+                textViewText.setTextSize(5);
+                textViewText.setTextColor(Color.parseColor("#454545"));
+                textViewText.setPadding(0, 0, 0, 10);
+                Typeface typeface = Typeface.createFromAsset(context.getAssets(), "fonts/PlusJakartaSans-Regular.ttf");
+                textViewText.setTypeface(typeface);
+                textViewText.setText(fareTypes);
+                linearLayout.addView(textViewText);
+                linearLayout.addView(linearLayoutChild);
+
+                TextView textViewPrice = new TextView(context);
+                textViewPrice.setTextSize(5);
+                textViewPrice.setPadding(0, 0, 0, 10);
+                Typeface font = Typeface.createFromAsset(context.getAssets(), "fonts/PlusJakartaSans-Regular.ttf");
+                textViewPrice.setTypeface(font);
+                textViewPrice.setTextColor(Color.parseColor("#454545"));
+                textViewPrice.setText("₹ " + value);
+                linearLayout.addView(textViewPrice);
+
+                fareBreakupElements.addView(linearLayout);
+
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        textView = invoiceLayout.findViewById(R.id.finalAmount);
+        textView.setText(selectedRide.getString("totalAmount"));
+        textView = invoiceLayout.findViewById(R.id.rideId);
+        textView.setText(selectedRide.getString("shortRideId"));
+        textView = invoiceLayout.findViewById(R.id.driverName);
+        textView.setText(selectedRide.getString("driverName"));
+        textView = invoiceLayout.findViewById(R.id.lincensePlate);
+        textView.setText(selectedRide.getString("vehicleNumber"));
+        textView = invoiceLayout.findViewById(R.id.rideStartTime);
+        textView.setText(selectedRide.getString("rideStartTime"));
+        textView = invoiceLayout.findViewById(R.id.source);
+        textView.setText(selectedRide.getString("source"));
+        textView = invoiceLayout.findViewById(R.id.rideEndTime);
+        textView.setText(selectedRide.getString("rideEndTime"));
+        textView = invoiceLayout.findViewById(R.id.destination);
+        textView.setText(selectedRide.getString("destination"));
+        textView = invoiceLayout.findViewById(R.id.referenceText);
+        textView.setText(selectedRide.getString("referenceString"));
+        return invoiceLayout;
     }
 
     //region Store and Trigger CallBack
@@ -140,12 +222,12 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
             bridgeComponents.getJsCallback().addJsToWebView(javascript);
         }
     }
+    // endregion
 
     @JavascriptInterface
     public void storeCallBackCustomer(String callback) {
         storeCustomerCallBack = callback;
     }
-    // endregion
 
     public void callingStoreCallCustomer(String notificationType) {
         String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
@@ -183,7 +265,10 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
             result.put("isInPath", false);
             return result.toString();
         }
-        resultIndex = PolyUtil.locationIndexOnEdgeOrPath(currPoint, path, PolyUtil.isClosedPolygon(path), true, 20.0);
+        SharedPreferences sharedPref = context.getSharedPreferences(
+                activity.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        double locationOnPathThres = Double.parseDouble(sharedPref.getString("ACCURACY_THRESHOLD", "30.0"));
+        resultIndex = PolyUtil.locationIndexOnEdgeOrPath(currPoint, path, PolyUtil.isClosedPolygon(path), true, locationOnPathThres);
         if (resultIndex == -1) {
             result.put("points", coordinates);
             result.put("eta", 0);
@@ -375,6 +460,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
         brng = (brng + 360) % 360;
         return (float) brng;
     }
+    //endregion
 
     @JavascriptInterface
     public String getExtendedPath(String json) throws JSONException {
@@ -417,7 +503,6 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
         newPoints.put("points", remainingPoints);
         return newPoints.toString();
     }
-    //endregion
 
     private LatLng getNewLatLng(float fraction, LatLng a, LatLng b) {
         double lat = (b.latitude - a.latitude) * fraction + a.latitude;
@@ -469,12 +554,10 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
     @JavascriptInterface
     public void generatePDF(String str, String format) throws JSONException {
         invoice = str;
-        if ((ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) && (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)) {
+        if (isStoragePermissionGiven()) {
             downloadPDF(str, bridgeComponents.getContext());
         } else {
-            if (bridgeComponents.getActivity() != null) {
-                ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{WRITE_EXTERNAL_STORAGE}, STORAGE_PERMISSION);
-            }
+            requestStoragePermission();
         }
     }
 
@@ -484,7 +567,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
         JSONObject data = state.getJSONObject("data");
         String userName = getKeysInSharedPref("USER_NAME");
         JSONObject selectedItem = data.getJSONObject("selectedItem");
-        JSONObject fares = selectedItem.optJSONObject("fareBreakUpList");
+        JSONArray fares = selectedItem.getJSONArray("faresList");
         PdfDocument pdfDocument = new PdfDocument();
         PdfDocument.PageInfo invoicePDF = new PdfDocument.PageInfo.Builder(960, 1338, 1).create();
         PdfDocument.Page page = pdfDocument.startPage(invoicePDF);
@@ -498,65 +581,29 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
         File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), fileName);
         try {
             pdfDocument.writeTo(new FileOutputStream(file));
-            Uri path = FileProvider.getUriForFile(context.getApplicationContext(), context.getPackageName() + ".fileProvider", file);
-            Intent pdfOpenintent = new Intent(Intent.ACTION_VIEW);
-            pdfOpenintent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-            pdfOpenintent.setDataAndType(path, "application/pdf");
-            PendingIntent pendingIntent = PendingIntent.getActivity(context, 234567, pdfOpenintent, PendingIntent.FLAG_IMMUTABLE);
-            NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(context, "General");
-            mBuilder.setContentTitle("Invoice Downloaded")
-                    .setSmallIcon(R.drawable.ny_ic_launcher)
-                    .setContentText("Invoice for your ride is downloaded!!!")
-                    .setAutoCancel(true)
-                    .setPriority(NotificationCompat.PRIORITY_DEFAULT);
-            mBuilder.setContentIntent(pendingIntent);
-            NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
-            notificationManager.notify(234567, mBuilder.build());
+            Uri path = FileProvider.getUriForFile(context, context.getPackageName() + ".fileProvider", file);
+            showInvoiceNotification(path);
         } catch (IOException e) {
             e.printStackTrace();
         }
         pdfDocument.close();
     }
 
-    private View getInvoiceLayout(JSONObject selectedRide, JSONObject fares, String user, Context context) throws JSONException {
-        @SuppressLint("InflateParams") View invoiceLayout = LayoutInflater.from(context).inflate(R.layout.invoice_template, null, false);
-        TextView textView = invoiceLayout.findViewById(R.id.rideDate);
-        textView.setText(selectedRide.getString("date"));
-        textView = invoiceLayout.findViewById(R.id.userName);
-        textView.setText(user.trim());
-        textView = invoiceLayout.findViewById(R.id.paymentDetail);
-        textView.setText(selectedRide.getString("totalAmount"));
-        textView = invoiceLayout.findViewById(R.id.baseDistance);
-        try {
-            textView.setText(selectedRide.getString("baseDistance"));
-        } catch (JSONException e) {
-            textView.setText("");
-        }
-        textView = invoiceLayout.findViewById(R.id.baseFare);
-        textView.setText(fares.getString("baseFare"));
-        textView = invoiceLayout.findViewById(R.id.pickUpCharge);
-        textView.setText(fares.getString("pickupCharges"));
-        textView = invoiceLayout.findViewById(R.id.nominalFare);
-        textView.setText(fares.getString("nominalFare"));
-        textView = invoiceLayout.findViewById(R.id.waitingCharge);
-        textView.setText(fares.getString("waitingCharges"));
-        textView = invoiceLayout.findViewById(R.id.finalAmount);
-        textView.setText(selectedRide.getString("totalAmount"));
-        textView = invoiceLayout.findViewById(R.id.rideId);
-        textView.setText(selectedRide.getString("shortRideId"));
-        textView = invoiceLayout.findViewById(R.id.driverName);
-        textView.setText(selectedRide.getString("driverName"));
-        textView = invoiceLayout.findViewById(R.id.lincensePlate);
-        textView.setText(selectedRide.getString("vehicleNumber"));
-        textView = invoiceLayout.findViewById(R.id.rideStartTime);
-        textView.setText(selectedRide.getString("rideStartTime"));
-        textView = invoiceLayout.findViewById(R.id.source);
-        textView.setText(selectedRide.getString("source"));
-        textView = invoiceLayout.findViewById(R.id.rideEndTime);
-        textView.setText(selectedRide.getString("rideEndTime"));
-        textView = invoiceLayout.findViewById(R.id.destination);
-        textView.setText(selectedRide.getString("destination"));
-        return invoiceLayout;
+    private void showInvoiceNotification(Uri path) {
+        Context context = bridgeComponents.getContext();
+        Intent pdfOpenintent = new Intent(Intent.ACTION_VIEW);
+        pdfOpenintent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        pdfOpenintent.setDataAndType(path, "application/pdf");
+        PendingIntent pendingIntent = PendingIntent.getActivity(context, 234567, pdfOpenintent, PendingIntent.FLAG_IMMUTABLE);
+        NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(context, "General");
+        mBuilder.setContentTitle("Invoice Downloaded")
+                .setSmallIcon(R.drawable.ny_ic_launcher)
+                .setContentText("Invoice for your ride is downloaded!!!")
+                .setAutoCancel(true)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT);
+        mBuilder.setContentIntent(pendingIntent);
+        NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
+        notificationManager.notify(234567, mBuilder.build());
     }
     //endregion
 
