@@ -36,6 +36,15 @@ library
       API.Dashboard.Exotel
       API.Dashboard.Merchant
       API.Dashboard.Ride
+      API.Dashboard.RideBooking
+      API.Dashboard.RideBooking.Booking
+      API.Dashboard.RideBooking.Confirm
+      API.Dashboard.RideBooking.Maps
+      API.Dashboard.RideBooking.Profile
+      API.Dashboard.RideBooking.Quote
+      API.Dashboard.RideBooking.Registration
+      API.Dashboard.RideBooking.Search
+      API.Dashboard.RideBooking.Select
       API.MetroBeckn
       API.MetroBeckn.OnSearch
       API.UI

@@ -18,6 +18,10 @@ module API.UI.Select
     DSelect.SelectListRes (..),
     DSelect.QuotesResultResponse (..),
     API,
+    select,
+    selectList,
+    selectResult,
+    cancelSearch,
     handler,
   )
 where

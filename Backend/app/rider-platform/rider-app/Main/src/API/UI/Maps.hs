@@ -21,6 +21,9 @@ module API.UI.Maps
     DMaps.GetPlaceDetailsResp,
     DMaps.GetPlaceNameReq,
     DMaps.GetPlaceNameResp,
+    autoComplete,
+    getPlaceDetails,
+    getPlaceName,
   )
 where
 

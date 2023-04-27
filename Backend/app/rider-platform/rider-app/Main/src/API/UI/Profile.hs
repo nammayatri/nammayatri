@@ -21,6 +21,8 @@ module API.UI.Profile
     DProfile.UpdateProfileDefaultEmergencyNumbersResp,
     DProfile.GetProfileDefaultEmergencyNumbersResp (..),
     API,
+    getPersonDetails,
+    updatePerson,
     handler,
   )
 where

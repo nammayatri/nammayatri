@@ -118,6 +118,7 @@ library
     , persistent-postgresql
     , record-dot-preprocessor
     , record-hasfield
+    , rider-app
     , servant-client
     , servant-openapi3
     , servant-server

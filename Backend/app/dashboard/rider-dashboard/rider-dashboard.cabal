@@ -27,6 +27,15 @@ library
       API.RiderPlatform.Customer
       API.RiderPlatform.Merchant
       API.RiderPlatform.Ride
+      API.RiderPlatform.RideBooking
+      API.RiderPlatform.RideBooking.Booking
+      API.RiderPlatform.RideBooking.Confirm
+      API.RiderPlatform.RideBooking.Maps
+      API.RiderPlatform.RideBooking.Profile
+      API.RiderPlatform.RideBooking.Quote
+      API.RiderPlatform.RideBooking.Registration
+      API.RiderPlatform.RideBooking.Search
+      API.RiderPlatform.RideBooking.Select
       App
       RiderPlatformClient.RiderApp
   other-modules:
