@@ -154,6 +154,7 @@ buildSearchTry merchantId searchReqId estimate sReq baseFare distance duration s
       { id = id_,
         requestId = searchReqId,
         estimateId = estimate.id,
+        merchantId = Just merchantId,
         messageId = sReq.messageId,
         startTime = sReq.pickupTime,
         validTill = validTill_,

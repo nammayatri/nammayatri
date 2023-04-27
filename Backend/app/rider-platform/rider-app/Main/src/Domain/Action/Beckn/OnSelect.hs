@@ -149,7 +149,7 @@ buildSelectedQuote ::
 buildSelectedQuote estimate providerInfo now merchantId QuoteInfo {..} = do
   uid <- generateGUID
   tripTerms <- buildTripTerms descriptions
-  driverOffer <- buildDriverOffer estimate.id quoteDetails
+  driverOffer <- buildDriverOffer estimate.id quoteDetails merchantId
   let quote =
         DQuote.Quote
           { id = uid,
@@ -170,12 +170,14 @@ buildDriverOffer ::
   MonadFlow m =>
   Id DEstimate.Estimate ->
   DriverOfferQuoteDetails ->
+  Id DMerchant.Merchant ->
   m DDriverOffer.DriverOffer
-buildDriverOffer estimateId DriverOfferQuoteDetails {..} = do
+buildDriverOffer estimateId DriverOfferQuoteDetails {..} merchantId = do
   uid <- generateGUID
   pure
     DDriverOffer.DriverOffer
       { id = uid,
+        merchantId = Just merchantId,
         bppQuoteId = bppDriverQuoteId,
         ..
       }

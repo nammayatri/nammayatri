@@ -17,6 +17,7 @@ module Domain.Types.BookingCancellationReason where
 
 import Domain.Types.Booking (Booking)
 import Domain.Types.CancellationReason (CancellationReasonCode, CancellationStage)
+import qualified Domain.Types.Merchant as DM
 import Domain.Types.Ride (Ride)
 import Kernel.External.Maps
 import Kernel.Prelude
@@ -26,6 +27,7 @@ import Kernel.Types.Id
 data BookingCancellationReason = BookingCancellationReason
   { bookingId :: Id Booking,
     rideId :: Maybe (Id Ride),
+    merchantId :: Maybe (Id DM.Merchant),
     source :: CancellationSource,
     reasonCode :: Maybe CancellationReasonCode,
     reasonStage :: Maybe CancellationStage,

@@ -241,7 +241,7 @@ bookingCancel BookingCancelledReq {..} = do
     throwError (BookingInvalidStatus (show booking.status))
   mbRide <- QRide.findActiveByRBId booking.id
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show DBCReason.ByMerchant)
-  let bookingCancellationReason = buildBookingCancellationReason booking.id (mbRide <&> (.id))
+  let bookingCancellationReason = buildBookingCancellationReason booking.id (mbRide <&> (.id)) booking.merchantId
   runTransaction $ do
     QRB.updateStatus booking.id DTB.CANCELLED
     whenJust mbRide $ \ride -> QRide.updateStatus ride.id DRide.CANCELLED
@@ -254,11 +254,13 @@ bookingCancel BookingCancelledReq {..} = do
 buildBookingCancellationReason ::
   Id DTB.Booking ->
   Maybe (Id DRide.Ride) ->
+  Id DM.Merchant ->
   DBCReason.BookingCancellationReason
-buildBookingCancellationReason bookingId mbRideId = do
+buildBookingCancellationReason bookingId mbRideId merchantId = do
   DBCReason.BookingCancellationReason
     { bookingId = bookingId,
       rideId = mbRideId,
+      merchantId = Just merchantId,
       source = DBCReason.ByMerchant,
       reasonCode = Just $ CancellationReasonCode "BOOKING_NEW_STATUS_MORE_THAN_6HRS",
       reasonStage = Nothing,

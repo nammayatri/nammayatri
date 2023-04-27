@@ -22,6 +22,7 @@ import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest as DSearchRequest
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant (VehicleVariant)
@@ -35,6 +36,7 @@ import Servant.API
 data Estimate = Estimate
   { id :: Id Estimate,
     requestId :: Id DSearchRequest.SearchRequest,
+    merchantId :: Maybe (Id DM.Merchant),
     bppEstimateId :: Id BPPEstimate,
     estimatedFare :: Money,
     discount :: Maybe Money,

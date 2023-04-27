@@ -27,6 +27,7 @@ import Kernel.Storage.Esqueleto
 import Kernel.Types.Common (Meters (..))
 import Storage.Tabular.Booking (BookingTId)
 import Storage.Tabular.CancellationReason (CancellationReasonTId)
+import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.Person (PersonTId)
 import Storage.Tabular.Ride (RideTId)
 
@@ -39,6 +40,7 @@ mkPersist
       driverId PersonTId Maybe
       bookingId BookingTId
       rideId RideTId Maybe
+      merchantId MerchantTId Maybe
       source Domain.CancellationSource
       reasonCode CancellationReasonTId Maybe
       additionalInfo Text Maybe
@@ -60,6 +62,7 @@ instance FromTType BookingCancellationReasonT Domain.BookingCancellationReason w
           reasonCode = fromKey <$> reasonCode,
           driverId = fromKey <$> driverId,
           driverCancellationLocation = mbDriverCancellationLocation,
+          merchantId = fromKey <$> merchantId,
           ..
         }
 
@@ -69,6 +72,7 @@ instance ToTType BookingCancellationReasonT Domain.BookingCancellationReason whe
       { driverId = toKey <$> driverId,
         bookingId = toKey bookingId,
         rideId = toKey <$> rideId,
+        merchantId = toKey <$> merchantId,
         reasonCode = toKey <$> reasonCode,
         driverCancellationLocationLat = driverCancellationLocation <&> (.lat),
         driverCancellationLocationLon = driverCancellationLocation <&> (.lon),

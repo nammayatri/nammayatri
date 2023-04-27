@@ -55,6 +55,7 @@ cancelBooking booking = do
         DBCR.BookingCancellationReason
           { bookingId = bookingId,
             rideId = Nothing,
+            merchantId = Just booking.merchantId,
             source = DBCR.ByApplication,
             reasonCode = Nothing,
             reasonStage = Nothing,

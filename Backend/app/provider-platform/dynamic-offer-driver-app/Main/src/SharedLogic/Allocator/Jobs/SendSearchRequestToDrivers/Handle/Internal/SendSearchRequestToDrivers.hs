@@ -111,6 +111,7 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
                 requestId = searchReq.id,
                 searchTryId = searchTry.id,
                 startTime = searchTry.startTime,
+                merchantId = Just searchReq.providerId,
                 searchRequestValidTill = validTill,
                 driverId = cast dpRes.driverId,
                 vehicleVariant = dpRes.variant,

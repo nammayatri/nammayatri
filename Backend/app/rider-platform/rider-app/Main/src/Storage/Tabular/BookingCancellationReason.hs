@@ -28,6 +28,7 @@ import Kernel.Storage.Esqueleto
 import Kernel.Types.Common (Meters (..))
 import qualified Storage.Tabular.Booking as SRB
 import qualified Storage.Tabular.CancellationReason as SCR
+import Storage.Tabular.Merchant (MerchantTId)
 import qualified Storage.Tabular.Ride as SRide
 
 derivePersistField "Domain.CancellationSource"
@@ -38,6 +39,7 @@ mkPersist
     BookingCancellationReasonT sql=booking_cancellation_reason
       bookingId SRB.BookingTId
       rideId SRide.RideTId Maybe
+      merchantId MerchantTId Maybe
       source Domain.CancellationSource
       reasonCode SCR.CancellationReasonTId Maybe
       reasonStage DCR.CancellationStage Maybe
@@ -57,6 +59,7 @@ instance FromTType BookingCancellationReasonT Domain.BookingCancellationReason w
       Domain.BookingCancellationReason
         { bookingId = fromKey bookingId,
           rideId = fromKey <$> rideId,
+          merchantId = fromKey <$> merchantId,
           reasonCode = fromKey <$> reasonCode,
           driverCancellationLocation = mbDriverCancellationLocation,
           ..
@@ -67,6 +70,7 @@ instance ToTType BookingCancellationReasonT Domain.BookingCancellationReason whe
     BookingCancellationReasonT
       { bookingId = toKey bookingId,
         rideId = toKey <$> rideId,
+        merchantId = toKey <$> merchantId,
         reasonCode = toKey <$> reasonCode,
         driverCancellationLocationLat = driverCancellationLocation <&> (.lat),
         driverCancellationLocationLon = driverCancellationLocation <&> (.lon),
