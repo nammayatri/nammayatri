@@ -45,6 +45,7 @@ _:
         exec = ''
           set -x
           cd ./Backend  # These processes expect $PWD to be backend, for reading dhall configs
+          rm -f ./*.log # Clean up the log files
           nix run .#run-mobility-stack
         '';
       };
