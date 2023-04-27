@@ -487,6 +487,7 @@ type HomeScreenStateData =
   , suggestionsList :: Array String
   , messageToBeSent :: String
   , bannerViewState :: BannerViewState
+  , config :: AppConfig
   }
 
 type HomeScreenStateProps =
@@ -758,6 +759,7 @@ type RatingCard =
   , offeredFare :: Int
   , distanceDifference :: Int
   , feedback :: String
+  , appConfig :: AppConfig
   }
 
 type Address =

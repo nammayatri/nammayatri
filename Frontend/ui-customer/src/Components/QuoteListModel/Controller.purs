@@ -18,6 +18,7 @@ module Components.QuoteListModel.Controller where
 import Components.PrimaryButton as PrimaryButtonController
 import Components.QuoteListItem as QuoteListItemController
 import Data.Maybe (Maybe)
+import Config.Types (AppConfig)
 
 data Action = GoBack
             | NoAction
@@ -35,4 +36,5 @@ type QuoteListModelState = {
   , selectedQuote :: Maybe String
   , autoSelecting :: Boolean
   , searchExpire :: Int
+  , appConfig :: AppConfig
 }
