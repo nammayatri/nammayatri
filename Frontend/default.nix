@@ -2,34 +2,60 @@
 {
   imports = [
   ];
-  perSystem = { config, self', pkgs, lib, system, ... }:
+  perSystem = { config, self', lib, system, ... }:
     let
-      pkgsWithPurifix = import inputs.nixpkgs {
+      pkgs = import inputs.nixpkgs {
         inherit system;
-        overlays = [ inputs.purifix.overlay ];
+        overlays = [
+          inputs.purifix.overlay
+          (final: prev: {
+            nodejs = final.nodejs-14_x;
+          })
+        ];
       };
-      localPackages = pkgsWithPurifix.purifix {
+      localPackages = pkgs.purifix {
         src = ./.;
       };
       nodeDeps = (import ./nix/node-composition.nix {
         inherit pkgs;
-        nodejs = pkgs.nodejs-14_x;
+        inherit (pkgs) nodejs;
       }).nodeDependencies;
-      webpack = pkgs.writeShellApplication {
-        name = "webpack-wrapped";
-        runtimeInputs = [ nodeDeps ];
-        text = ''
-          ln -sf ${nodeDeps}/lib/node_modules node_modules
-          trap 'unlink node_modules' EXIT
-          webpack "$@"
+
+      make-temporary-link = { src, dest, function-name ? "_" }:
+        let
+          cleanup-function-name = "${function-name}_cleanup";
+          temp-dir = "${function-name}_TEMP_DIR";
+        in
+        ''
+          function ${function-name}() {
+            ${temp-dir}=$(mktemp -d)
+            function ${cleanup-function-name} {
+              trap - INT TERM EXIT
+              unlink "${dest}"
+              if [[ -e "''$${temp-dir}/${dest}" ]]; then
+                 mv "''$${temp-dir}/${dest}" "${dest}"
+              fi
+              unset -f ${temp-dir}
+              unset -f ${cleanup-function-name}
+            }
+            trap '${cleanup-function-name}' INT TERM EXIT
+            if [[ -e "${dest}" ]]; then
+              mv "${dest}" "''$${temp-dir}/"
+            fi
+            ln -s "${src}" "${dest}"
+          }
+          ${function-name}
+          unset -f ${function-name}
         '';
-      };
+
       webpack-dev-server = pkgs.writeShellApplication {
         name = "webpack-dev-server-wrapped";
         runtimeInputs = [ nodeDeps ];
         text = ''
-          ln -sf ${nodeDeps}/lib/node_modules node_modules
-          trap 'unlink node_modules' EXIT
+          ${make-temporary-link {
+              src = "${nodeDeps}/lib/node_modules";
+              dest = "node_modules";
+            }}
           webpack-dev-server "$@"
         '';
       };
@@ -38,7 +64,7 @@
         text = ''
           trap 'kill 0' EXIT
           for program in "''${@}"; do
-            sh -c "$program" &
+            ($program) &
           done
           wait >/dev/null
         '';
@@ -48,19 +74,18 @@
           name = "purifix-watch";
           runtimeInputs = [
             pkgs.watchexec
-            webpack
             pkgs.nodejs-14_x
           ] ++ localPackages.beckn-common.develop.buildInputs;
           text = ''
             SRC_FOLDERS=()
             SRC_GLOBS=()
             for SRC_FOLDER in "$@"; do
-              if [ -d "$SRC_FOLDER" ]; then
-                SRC_FOLDERS+=(-w "$SRC_FOLDER")
-                SRC_GLOBS+=("$SRC_FOLDER/src/**/*.purs")
+              if [ -d "$SRC_FOLDER/src" ]; then
+                SRC_FOLDERS+=( -w "$SRC_FOLDER/src" )
+                SRC_GLOBS+=( "\"$SRC_FOLDER/src/**/*.purs\"" )
               fi
             done
-            watchexec "''${SRC_FOLDERS[@]}" -rn -f "**/*.purs" -- purifix "''${SRC_GLOBS[@]}"
+            watchexec "''${SRC_FOLDERS[@]}" -r -f "**/*.purs" -- "echo 'Rebuilding...'; purifix ''${SRC_GLOBS[*]}; echo 'Finished rebuilding'"
           '';
         };
       watch-customer = pkgs.writeShellApplication {
@@ -77,6 +102,25 @@
           run-all "purifix-watch . ../ui-common" "webpack-dev-server-wrapped --watch-files-reset --progress --config webpack.android.js --watch-files ./output/Main/index.js ./index.js"
         '';
       };
+
+      ui-customer-android-bundle-js =
+        pkgs.stdenv.mkDerivation {
+          name = "bundle-ui-customer-android";
+          phases = [ "buildPhase" "installPhase" ];
+          nativeBuildInputs = [ pkgs.nodejs ];
+          buildPhase = ''
+            ln -s ${nodeDeps}/lib/node_modules node_modules
+            cp -r -L ${localPackages.ui-customer}/output output
+            cp ${./ui-customer/index.js} index.js
+            cp ${./ui-customer/package.json} package.json
+            cp ${./ui-customer/webpack.config.js} webpack.config.js
+            cp ${./ui-customer/webpack.android.js} webpack.android.js
+            node_modules/.bin/webpack --env prod --mode=production --progress --config webpack.android.js
+          '';
+          installPhase = ''
+            mv dist/android/index_bundle.js $out
+          '';
+        };
     in
     {
       treefmt.config = {
@@ -86,13 +130,9 @@
         ];
       };
       apps = {
-        webpack = {
-          type = "app";
-          program = "${webpack}/bin/webpack-wrapped";
-        };
         webpack-dev-server = {
           type = "app";
-          program = "${webpack-dev-server}/bin/webpack-dev-server-wrapped";
+          program = webpack-dev-server;
         };
         purifix-watch = {
           type = "app";
@@ -112,12 +152,13 @@
         ];
         packages = [
           pkgs.dhall
-          pkgs.nodejs-14_x
+          pkgs.nodejs
           purifix-watch
         ];
       };
       packages = {
         inherit (localPackages) ui-customer ui-driver;
+        inherit ui-customer-android-bundle-js;
         ui-common = localPackages.beckn-common;
       };
     };
