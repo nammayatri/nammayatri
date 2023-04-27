@@ -394,5 +394,6 @@ const tamilStrings = {
   PERSON_WITH_THIS_NUMBER_ALREADY_EXISTS : "இந்த மொபைல் எண்ணைக் கொண்ட நபர் ஏற்கனவே இருக்கிறார்.",
   OTP_ : "OTP",
   MAPS: "Maps",
-  DEMO : "டெமோ"
+  DEMO : "டெமோ",
+  PLEASE_ASK_THE_CUSTOMER_FOR_THE_OTP : "OTP ஐ வாடிக்கையாளரிடம் கேளுங்கள்"
 }

@@ -271,10 +271,11 @@ otpButtonView state push =
               ]
             , textView $ 
               [ width WRAP_CONTENT
-              , height WRAP_CONTENT
+              , height MATCH_PARENT
+              , gravity CENTER
               , color Color.blue900
-              , padding (PaddingLeft 8)
-              , text (getString OTP_)
+              , padding $ PaddingLeft 8
+              , text $ getString OTP_
               ] <> FontStyle.subHeading2 TypoGraphy
           ]
       ]

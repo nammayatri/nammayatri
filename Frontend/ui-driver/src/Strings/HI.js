@@ -398,6 +398,7 @@ const hindiStrings = {
   PERSON_WITH_THIS_NUMBER_ALREADY_EXISTS : "इस मोबाइल नंबर वाला व्यक्ति पहले से मौजूद है।",
   OTP_ : "OTP",
   MAPS: "Maps",
-  DEMO -> "DEMO"
+  DEMO : "DEMO",
+  PLEASE_ASK_THE_CUSTOMER_FOR_THE_OTP : "कृपया ग्राहक से ओटीपी के लिए पूछें"
 
 }
