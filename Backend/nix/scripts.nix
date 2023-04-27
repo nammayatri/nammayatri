@@ -37,7 +37,22 @@ _:
         '';
       };
 
-      run-mobility-stack = {
+      run-mobility-stack-nix = {
+        category = "Backend";
+        description = ''
+          Run the nammayatri backend components via Nix.
+
+          NOTE: This is slower, due to doing full nix build.
+        '';
+        exec = ''
+          set -x
+          cd ./Backend  # These processes expect $PWD to be backend, for reading dhall configs
+          rm -f ./*.log # Clean up the log files
+          nix run .#run-mobility-stack
+        '';
+      };
+
+      run-mobility-stack-dev = {
         category = "Backend";
         description = ''
           Run the nammayatri backend components via "cabal run".
@@ -46,7 +61,8 @@ _:
           set -x
           cd ./Backend  # These processes expect $PWD to be backend, for reading dhall configs
           rm -f ./*.log # Clean up the log files
-          nix run .#run-mobility-stack
+          cabal build all
+          nix run .#run-mobility-stack-dev
         '';
       };
 
