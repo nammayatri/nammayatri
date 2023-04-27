@@ -253,7 +253,7 @@ enterOtpStateConfig state = let
         text = getString (ENTER_OTP)
       },
       errorConfig {
-        text = if (state.props.otpIncorrect) then (getString ENTERED_WRONG_OTP) else (getString OTP_LIMIT_EXCEED),
+        text = if (state.props.otpIncorrect) then (getString ENTERED_WRONG_OTP) else (getString OTP_LIMIT_EXCEEDED),
         visibility = if (state.props.otpIncorrect || state.props.otpAttemptsExceeded) then VISIBLE else GONE
       },
       subHeadingConfig {

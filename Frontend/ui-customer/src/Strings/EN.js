@@ -431,5 +431,6 @@ const englishStrings = {
   "NO_TIP" : "No Tip",
   "CUSTOMER_TIP_DESCRIPTION" : "*Extra amount added by the customer to increase the chances of getting a ride.",
   "PLEASE_WAIT_I_WILL_BE_THERE" : "Please wait, I'll be there",
-  "UNREACHABLE_PLEASE_CALL_BACK" : "Unreachable, Please call back"
+  "UNREACHABLE_PLEASE_CALL_BACK" : "Unreachable, Please call back",
+  "PLACE_CALL" : "Place Call"
 }

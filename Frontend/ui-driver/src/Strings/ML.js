@@ -401,5 +401,6 @@ const mlStrings = {
   PERSON_WITH_THIS_NUMBER_ALREADY_EXISTS : "Person with this mobile number already exists.",
   OTP_ : "OTP",
   MAPS: "Maps",
-  DEMO : "DEMO"
+  DEMO : "DEMO",
+  PLEASE_ASK_THE_CUSTOMER_FOR_THE_OTP : "ഉപഭോക്താവിനോട് OTP ചോദിക്കുക"
 }

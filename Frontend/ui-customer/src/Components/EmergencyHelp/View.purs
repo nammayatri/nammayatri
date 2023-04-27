@@ -245,7 +245,7 @@ callEmergencyContactConfig state  =
     , fontSize = FontSize.a_16
     , margin = (MarginHorizontal 16 16) }
     , option2 {
-      text = "Place Call"
+      text = getString PLACE_CALL
     , fontSize = FontSize.a_16
     , margin = (MarginHorizontal 12 0) }
     , backgroundClickable = true
