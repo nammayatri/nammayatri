@@ -37,9 +37,9 @@ screen initialState =
   , view
   , name : "PermissionsScreen"
   , globalEvents : [ (\ push -> do
+    _ <- JB.storeCallBackBatteryUsagePermission push BatteryUsagePermissionCallBack
     _ <- JB.storeCallBackDriverLocationPermission push LocationPermissionCallBack
     _ <- JB.storeCallBackOverlayPermission push OverlayPermissionSwitchCallBack
-    _ <- JB.storeCallBackBatteryUsagePermission push BatteryUsagePermissionCallBack
     pure $ pure unit)]
   , eval
   }

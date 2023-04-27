@@ -125,10 +125,7 @@ public class MainActivity extends AppCompatActivity {
     private static int updateType;
     @SuppressLint("StaticFieldLeak")
     private static MainActivity instance;
-    public String imageBase64 = "sin";
-    String GAID;
     private HyperServices hyperServices;
-    private ConnectionStateMonitor stateMonitor;
     private Context context;
     private Activity activity;
     @Nullable
@@ -227,6 +224,7 @@ public class MainActivity extends AppCompatActivity {
         activity = this;
         sharedPref = getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         sharedPref.registerOnSharedPreferenceChangeListener(mListener);
+        sharedPref.edit().putString(getResources().getString(R.string.ACTIVITY_STATUS),"onCreate").apply();
         IntentFilter intentFilter = new IntentFilter(LocationManager.PROVIDERS_CHANGED_ACTION);
         networkBroadcastReceiver = new NetworkBroadcastReceiver();
         registerReceiver(networkBroadcastReceiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
@@ -259,7 +257,6 @@ public class MainActivity extends AppCompatActivity {
 
         WebView.setWebContentsDebuggingEnabled(true);
         setContentView(R.layout.activity_main);
-        Intent intent = getIntent();
         if (key != null && key.equals("nammayatripartner")) {
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
             new Utils(context).updateLocaleResource(sharedPref.getString(getResources().getString(R.string.LANGUAGE_KEY), "null"));
@@ -532,7 +529,9 @@ public class MainActivity extends AppCompatActivity {
         super.onPause();
         if (sharedPref != null)
         sharedPref.edit().putString(getResources().getString(R.string.ACTIVITY_STATUS), "onPause").apply();
-        if (getResources().getString(R.string.service).equals("nammayatripartner") && widgetService != null && Settings.canDrawOverlays(this) && !sharedPref.getString(getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null")) {
+        if (getResources().getString(R.string.service).equals("nammayatripartner") && widgetService != null && Settings.canDrawOverlays(this)  && !sharedPref.getString(getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null")) {
+            widgetService.putExtra("payload","{}");
+            widgetService.putExtra("data", "{}");
             startService(widgetService);
         }
     }
@@ -601,137 +600,9 @@ public class MainActivity extends AppCompatActivity {
                     Toast.makeText(this, getString(R.string.please_allow_permission_to_capture_the_image), Toast.LENGTH_SHORT).show();
                 }
                 break;
-            //   case CommonJsInterface.REQUEST_CALL :
-            //       if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            //           Intent intent = new Intent(Intent.ACTION_CALL,Uri.parse("tel:"+CommonJsInterface.phoneNumber));
-            //           this.startActivity(intent);
-            //       }else{
-            //           enablePermissionFromSettings(Manifest.permission.CALL_PHONE, "Phone");
-            //       }
-            //       break;
-            //   case CommonJsInterface.LOCATION_PERMISSION_REQ_CODE:
-            //       if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            //           System.out.println("Location Permission Granted");
-            //       }else{
-            //           enablePermissionFromSettings(Manifest.permission.ACCESS_FINE_LOCATION, "Location");
-            //       }
-            //       break;
-            //   case CommonJsInterface.STORAGE_PERMISSION:
-            //       if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            //           try {
-            //               CommonJsInterface.downloadPDF(CommonJsInterface.invoice , (Activity) this,this);
-            //           } catch (JSONException e) {
-            //               e.printStackTrace();
-            //           }
-            //       }else {
-            //           Toast.makeText(this, "Permission Denied", Toast.LENGTH_SHORT).show();
-            //       }
-            //       break;
-            //   case CommonJsInterface.REQUEST_CONTACTS:
-            //       boolean flag = ContextCompat.checkSelfPermission(MainActivity.getInstance(), Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED;
-            //       String contacts = null;
-            //       try {
-            //           if (flag){
-            //               contacts = getPhoneContacts();
-            //           } else {
-            //               JSONArray flagArray = new JSONArray();
-            //               contacts = flagArray.toString();
-            //           }
-            //           if (juspayServicesGlobal.getDynamicUI() != null) {
-            //               CommonJsInterface.contactsStoreCall(juspayServicesGlobal.getDuiCallback(), contacts);
-            //           }
-            //       } catch (JSONException e) {
-            //           e.printStackTrace();
-            //       }
-            //       break;
             default:
                 return;
         }
-    }
-
-    public String getPhoneContacts() throws JSONException {
-        ContentResolver contentResolver = getContentResolver();
-        Uri uri = ContactsContract.CommonDataKinds.Phone.CONTENT_URI;
-        Cursor cursor = contentResolver.query(uri, null, null, null, null);
-
-        JSONArray contacts = new JSONArray();
-
-        if (cursor.getCount() > 0) {
-            while (cursor.moveToNext()) {
-                String contactNameStr = cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME));
-                String contactStr = cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.NUMBER));
-                String contactNumber = contactStr.replaceAll("[^0-9]", "");
-                String contactName = contactNameStr.replaceAll("'", "");
-                JSONObject tempPoints = new JSONObject();
-                tempPoints.put("name", contactName);
-                tempPoints.put("number", contactNumber);
-                contacts.put(tempPoints);
-            }
-        }
-
-        JSONObject flagObject = new JSONObject();
-        flagObject.put("name", "beckn_contacts_flag");
-        flagObject.put("number", "true");
-        contacts.put(flagObject);
-        System.out.print("Contacts " + contacts);
-        return contacts.toString();
-    }
-
-    public void firstTimeAskingPermission(Context context, String permission) {
-        SharedPreferences sharedPreference = context.getSharedPreferences(activity.getString(R.string.preference_file_key), MODE_PRIVATE);
-        sharedPreference.edit().putString(permission, "false").apply();
-    }
-
-    public String isFirstTimeAskingPermission(Context context, String permission) {
-        return context.getSharedPreferences(activity.getString(R.string.preference_file_key), MODE_PRIVATE).getString(permission, "true");
-    }
-
-    public void enablePermissionFromSettings(@NonNull String permission, String permissionName) {
-//        if(!isFirstTimeAskingPermission(this, Manifest.permission.ACCESS_FINE_LOCATION))
-
-        if (ActivityCompat.shouldShowRequestPermissionRationale(this, permission)) {
-            firstTimeAskingPermission(this, permission);
-        } else {
-            if (isFirstTimeAskingPermission(this, permission).equals("false")) {
-                try {
-                    LayoutInflater inflater = (this).getLayoutInflater();
-                    View permissionStepsView = ((LayoutInflater) this.getSystemService(Context.LAYOUT_INFLATER_SERVICE)).inflate(R.layout.permission_steps_layout, null);
-                    TextView stepText = permissionStepsView.findViewById(R.id.step_text);
-
-                    AlertDialog.Builder builder = new AlertDialog.Builder(this);
-                    stepText.setText("3. Tap on " + permissionName);
-                    builder.setTitle("Permission Required")
-                            .setCancelable(true)
-                            .setView(permissionStepsView)
-                            .setPositiveButton("Go to settings", new DialogInterface.OnClickListener() {
-                                public void onClick(DialogInterface dialog, int which) {
-                                    Intent settingsIntent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-                                    Uri uri = Uri.fromParts("package", getPackageName(), null);
-                                    settingsIntent.setData(uri);
-                                    startActivity(settingsIntent);
-                                }
-                            });
-                    AlertDialog alert = builder.create();
-                    alert.show();
-                } catch (Exception e) {
-                    Log.d("error", e.toString());
-                }
-            }
-        }
-    }
-
-    private String getImageName(Uri uri) {
-        Cursor returnCursor = getContentResolver().query(uri, null, null, null, null);
-        int nameIndex = returnCursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
-        returnCursor.moveToFirst();
-        return returnCursor.getString(nameIndex);
-    }
-
-    private long getImageSizeKB(Uri uri) {
-        Cursor returnCursor = getContentResolver().query(uri, null, null, null, null);
-        int sizeIndex = returnCursor.getColumnIndex(OpenableColumns.SIZE);
-        returnCursor.moveToFirst();
-        return returnCursor.getLong(sizeIndex) / 1000;
     }
 
     public void hideSplash() {
@@ -810,14 +681,12 @@ public class MainActivity extends AppCompatActivity {
         timer = new Timer();
         timerTask = new TimerTask() {
             public void run() {
-                timerHandler.post(new Runnable() {
-                    public void run() {
-                        notification.startAnimation(AnimationUtils.loadAnimation(getApplicationContext(), R.anim.bottom_to_top));
-                        mainLayout.removeView(notification);
-                        if (timer != null) {
-                            timer.cancel();
-                            timer.purge();
-                        }
+                timerHandler.post(() -> {
+                    notification.startAnimation(AnimationUtils.loadAnimation(getApplicationContext(), R.anim.bottom_to_top));
+                    mainLayout.removeView(notification);
+                    if (timer != null) {
+                        timer.cancel();
+                        timer.purge();
                     }
                 });
             }
@@ -843,38 +712,6 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onReceive(Context context, Intent intent) {
             Log.e("In Main activity", context.toString());
-        }
-    }
-
-    private class GetGAIDTask extends AsyncTask<String, Integer, String> {
-        @Override
-        protected String doInBackground(String... strings) {
-            AdvertisingIdClient.Info adInfo;
-            adInfo = null;
-            try {
-                if (GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(MainActivity.this.getApplicationContext()) != ConnectionResult.SUCCESS) {
-                    return "google play service not available";
-                }
-                adInfo = AdvertisingIdClient.getAdvertisingIdInfo(MainActivity.this.getApplicationContext());
-                if (adInfo.isLimitAdTrackingEnabled()) // check if user has opted out of tracking
-                    return "did not found GAID... sorry";
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (GooglePlayServicesNotAvailableException e) {
-                e.printStackTrace();
-            } catch (GooglePlayServicesRepairableException e) {
-                e.printStackTrace();
-            }
-            return adInfo != null ? adInfo.getId() : "did not found GAID... sorry";
-        }
-
-        @Override
-        protected void onPostExecute(String s) {
-            GAID = s;
-            System.out.println("GAID " + GAID);
-            Bundle params = new Bundle();
-            params.putString("id", GAID);
-            mFirebaseAnalytics.logEvent("ad_id", params);
         }
     }
 }

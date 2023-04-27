@@ -1,4 +1,5 @@
-package in.juspay.mobility.utils;
+package in.juspay.mobility.app;
+
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -39,8 +40,6 @@ import java.util.Locale;
 import java.util.Map;
 
 import in.juspay.hypersdk.core.DuiCallback;
-import in.juspay.mobility.MainActivity;
-import in.juspay.mobility.R;
 
 public class ChatService extends Service {
     private static Context context;
@@ -58,9 +57,18 @@ public class ChatService extends Service {
     public static String storeCallBackMessage;
     public static boolean sessionCreated = false;
     public static boolean shouldNotify = true;
-    private static ArrayList<Message> messages = new ArrayList<>();
+    private static final ArrayList<Message> messages = new ArrayList<>();
+    private static final ArrayList<CallBack> callBack = new ArrayList<>();
     private Handler handler = new Handler();
     private String merchant = null;
+
+    public static void registerCallback(CallBack notificationCallback) {
+        callBack.add(notificationCallback);
+    }
+
+    public static void deRegisterCallback(CallBack notificationCallback) {
+        callBack.remove(notificationCallback);
+    }
     @Override
     public void onCreate() {
         super.onCreate();
@@ -245,9 +253,8 @@ public class ChatService extends Service {
         }
         if(appState.equals("onPause") || appState.equals("onResume")){
             try{
-                String javascript = String.format("window.callUICallback(\"%s\",\"%s\",\"%s\",\"%s\");", storeCallBackMessage, _message, _sentBy, _dateFormatted);
-                if(chatDynamicUI != null){
-                    chatDynamicUI.addJsToWebView(javascript);
+                for (int i =0 ;i < callBack.size();i++) {
+                    callBack.get(i).chatCallBack(_message,_sentBy,_dateFormatted);
                 }
             } catch (Exception err) {
                 Log.e(LOG_TAG,"Error sending the message to jbridge : " + err);

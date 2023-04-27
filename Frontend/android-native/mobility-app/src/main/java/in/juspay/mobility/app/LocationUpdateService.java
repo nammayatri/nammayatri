@@ -606,7 +606,7 @@ public class LocationUpdateService extends Service {
         Intent gpsListeningService = new Intent(this, GpsListeningService.class);
         gpsListeningService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            this.getApplicationContext().startForegroundService(gpsListeningService);
+            this.startForegroundService(gpsListeningService);
         }else {
             this.startService(gpsListeningService);
         }
