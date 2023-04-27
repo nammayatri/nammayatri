@@ -11,36 +11,30 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE DerivingVia #-}
 
-module API.UI.Quote
-  ( DQuote.GetQuotesRes (..),
-    DQuote.OfferRes (..),
-    API,
-    getQuotes,
-    handler,
-  )
-where
+module API.Dashboard.RideBooking.Quote where
 
+import qualified API.UI.Quote as UQ
 import qualified Domain.Action.UI.Quote as DQuote
-import qualified Domain.Types.Person as Person
+import qualified Domain.Types.Person as DP
 import qualified Domain.Types.SearchRequest as SSR
 import Environment
-import EulerHS.Prelude hiding (id)
 import Kernel.Types.Id
-import Kernel.Utils.Common
 import Servant
-import Tools.Auth
 
 type API =
-  "rideSearch"
-    :> Capture "searchId" (Id SSR.SearchRequest)
-    :> TokenAuth
-    :> "results"
+  "quote"
+    :> CustomerGetQuoteAPI
+
+type CustomerGetQuoteAPI =
+  Capture "searchId" (Id SSR.SearchRequest)
+    :> Capture "customerId" (Id DP.Person)
+    :> "result"
     :> Get '[JSON] DQuote.GetQuotesRes
 
 handler :: FlowServer API
-handler =
-  getQuotes
+handler = callGetQuotes
 
-getQuotes :: Id SSR.SearchRequest -> Id Person.Person -> FlowHandler DQuote.GetQuotesRes
-getQuotes searchRequestId _ = withFlowHandlerAPI $ DQuote.getQuotes searchRequestId
+callGetQuotes :: Id SSR.SearchRequest -> Id DP.Person -> FlowHandler DQuote.GetQuotesRes
+callGetQuotes = UQ.getQuotes

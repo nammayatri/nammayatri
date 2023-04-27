@@ -11,36 +11,40 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE TemplateHaskell #-}
 
-module API.UI.Quote
-  ( DQuote.GetQuotesRes (..),
-    DQuote.OfferRes (..),
-    API,
-    getQuotes,
-    handler,
-  )
-where
+module API.Dashboard.RideBooking.Confirm where
 
-import qualified Domain.Action.UI.Quote as DQuote
-import qualified Domain.Types.Person as Person
-import qualified Domain.Types.SearchRequest as SSR
+import qualified API.UI.Confirm as UC
+import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Quote as Quote
 import Environment
-import EulerHS.Prelude hiding (id)
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
-import Kernel.Utils.Common
 import Servant
-import Tools.Auth
+
+data RideConfirmEndPoint = ConfirmEndPoint
+  deriving (Show, Read)
+
+derivePersistField "RideConfirmEndPoint"
 
 type API =
+  "confirm"
+    :> CustomerConfirmAPI
+
+type CustomerConfirmAPI =
   "rideSearch"
-    :> Capture "searchId" (Id SSR.SearchRequest)
-    :> TokenAuth
-    :> "results"
-    :> Get '[JSON] DQuote.GetQuotesRes
+    :> Capture "customerId" (Id DP.Person)
+    :> "quotes"
+    :> Capture "quoteId" (Id Quote.Quote)
+    :> "confirm"
+    :> Post '[JSON] UC.ConfirmRes
 
 handler :: FlowServer API
 handler =
-  getQuotes
+  callConfirm
 
-getQuotes :: Id SSR.SearchRequest -> Id Person.Person -> FlowHandler DQuote.GetQuotesRes
-getQuotes searchRequestId _ = withFlowHandlerAPI $ DQuote.getQuotes searchRequestId
+callConfirm :: Id DP.Person -> Id Quote.Quote -> FlowHandler UC.ConfirmRes
+callConfirm = UC.confirm

@@ -11,36 +11,36 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE TemplateHaskell #-}
 
-module API.UI.Quote
-  ( DQuote.GetQuotesRes (..),
-    DQuote.OfferRes (..),
-    API,
-    getQuotes,
-    handler,
-  )
-where
+module API.Dashboard.RideBooking.Search where
 
-import qualified Domain.Action.UI.Quote as DQuote
-import qualified Domain.Types.Person as Person
-import qualified Domain.Types.SearchRequest as SSR
+import qualified API.UI.Search as SH
+import qualified Domain.Types.Person as DP
 import Environment
-import EulerHS.Prelude hiding (id)
+import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
-import Kernel.Utils.Common
 import Servant
-import Tools.Auth
+import Prelude
+
+data RideSearchEndPoint = SearchEndPoint
+  deriving (Show, Read)
+
+derivePersistField "RideSearchEndPoint"
 
 type API =
-  "rideSearch"
-    :> Capture "searchId" (Id SSR.SearchRequest)
-    :> TokenAuth
-    :> "results"
-    :> Get '[JSON] DQuote.GetQuotesRes
+  "search"
+    :> CustomerRideSearchAPI
+
+type CustomerRideSearchAPI =
+  Capture "customerId" (Id DP.Person)
+    :> "rideSearch"
+    :> ReqBody '[JSON] SH.SearchReq
+    :> Post '[JSON] SH.SearchRes
 
 handler :: FlowServer API
-handler =
-  getQuotes
+handler = callSearch
 
-getQuotes :: Id SSR.SearchRequest -> Id Person.Person -> FlowHandler DQuote.GetQuotesRes
-getQuotes searchRequestId _ = withFlowHandlerAPI $ DQuote.getQuotes searchRequestId
+callSearch :: Id DP.Person -> SH.SearchReq -> FlowHandler SH.SearchRes
+callSearch personId req = SH.search personId req Nothing Nothing Nothing

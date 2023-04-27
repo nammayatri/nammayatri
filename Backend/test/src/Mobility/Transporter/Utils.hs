@@ -16,7 +16,7 @@ module Mobility.Transporter.Utils where
 
 import qualified "static-offer-driver-app" API.UI.Booking as BookingAPI
 import "static-offer-driver-app" API.UI.Location as LocationAPI
-import "rider-app" API.UI.Quote
+import "rider-app" API.UI.Quote hiding (getQuotes)
 import qualified "static-offer-driver-app" API.UI.Ride as RideAPI
 import qualified "rider-app" API.UI.Search as AppSearch
 import Common
