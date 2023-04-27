@@ -18,9 +18,9 @@ module Components.DriverInfoCard.View where
 import Components.DriverInfoCard.Controller (Action(..), DriverInfoCardState)
 import Components.PrimaryButton as PrimaryButton
 import Components.SourceToDestination as SourceToDestination
-import Data.Array ((!!))
+import Data.Array as Array
 import Data.Maybe (fromMaybe)
-import Data.String (Pattern(..), split, length)
+import Data.String (Pattern(..), split, length, take, drop)
 import Debug.Trace (spy)
 import Effect (Effect)
 import Engineering.Helpers.Commons (screenWidth, safeMarginBottom, os, flowRunner)
@@ -45,6 +45,7 @@ import Control.Monad.Except.Trans (runExceptT)
 import Presto.Core.Types.Language.Flow (doAff)
 import Animation (fadeIn)
 import PrestoDOM.Animation as PrestoAnim
+import Data.String.CodeUnits (fromCharArray, toCharArray)
 
 view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit ) w
 view push state = 
@@ -443,7 +444,7 @@ driverDetailsView push state =
                         [ margin $ Margin 2 2 2 2
                         , width MATCH_PARENT
                         , height MATCH_PARENT
-                        , text state.data.registrationNumber
+                        , text $ (makeNumber state.data.registrationNumber)
                         , color Color.black
                         , fontStyle $ FontStyle.bold LanguageStyle
                         , textSize FontSize.a_16
@@ -459,6 +460,12 @@ driverDetailsView push state =
     ]
 
 ---------------------------------- ratingView ---------------------------------------
+
+makeNumber :: String -> String
+makeNumber number = (take 2 number) <> " " <> (drop 2 (take 4 number)) <> " " <>  reverse (drop 4 (reverse (drop 4 number))) <> " " <>  reverse (take 4 (reverse number))
+
+reverse :: String -> String
+reverse = fromCharArray <<< Array.reverse <<< toCharArray
 
 ratingView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w 
 ratingView push state = 
