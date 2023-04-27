@@ -11,17 +11,18 @@
         android:layout_marginTop="24dp"
         android:elevation="1dp"
         android:orientation="vertical">
+
         <LinearLayout
+            android:id="@+id/indicatorLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginHorizontal="15dp"
-            android:id="@+id/indicatorLayout">
+            android:layout_marginHorizontal="15dp">
 
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@color/white"
                 android:layout_marginHorizontal="10dp"
+                android:background="@color/white"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="0dp">
 
@@ -30,123 +31,154 @@
                     android:layout_height="wrap_content">
 
                     <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:gravity="center"
-                        android:layout_weight="1"
                         android:id="@+id/indicator1"
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:gravity="center"
                         android:orientation="vertical"
                         android:paddingHorizontal="10dp"
-                        android:paddingVertical="15dp"
-                        android:layout_height="match_parent">
+                        android:paddingVertical="15dp">
+
+                        <ImageView
+                            android:id="@+id/red_dot_0"
+                            android:layout_width="8dp"
+                            android:layout_height="8dp"
+                            android:layout_marginStart="25dp"
+                            android:background="@drawable/circle_red"
+                            android:visibility="invisible" />
+
                         <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
                             android:id="@+id/indicatorText1"
-                            android:textSize="20dp"
-                            android:lineHeight="28dp"
-                            android:textColor="@color/Black800"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
                             android:fontFamily="@font/plus_jakartasans_semibold"
-                            android:text="₹120"/>
+                            android:lineHeight="28dp"
+                            android:text="₹120"
+                            android:textColor="@color/Black800"
+                            android:textSize="20dp" />
 
                         <com.google.android.material.progressindicator.LinearProgressIndicator
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            app:trackColor="@color/grey900"
-                            android:theme="@style/MaterialTheme"
-                            app:trackCornerRadius="20dp"
-                            app:indicatorColor="@color/green900"
-                            app:trackThickness="7dp"
                             android:id="@+id/progress_indicator_1"
-                            android:progress="100"
-                            android:layout_marginTop="10dp"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
                             android:layout_marginHorizontal="5dp"
-                            android:indeterminate="false"/>
+                            android:layout_marginTop="10dp"
+                            android:indeterminate="false"
+                            android:progress="100"
+                            android:theme="@style/MaterialTheme"
+                            app:indicatorColor="@color/green900"
+                            app:trackColor="@color/grey900"
+                            app:trackCornerRadius="20dp"
+                            app:trackThickness="7dp" />
 
                     </LinearLayout>
+
                     <LinearLayout
                         android:layout_width="1dp"
                         android:layout_height="match_parent"
-                        android:background="#E5E7EB"/>
+                        android:background="#E5E7EB" />
+
                     <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:gravity="center"
-                        android:layout_weight="1"
                         android:id="@+id/indicator2"
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:gravity="center"
                         android:orientation="vertical"
                         android:paddingHorizontal="10dp"
-                        android:paddingVertical="15dp"
-                        android:layout_height="match_parent">
+                        android:paddingVertical="15dp">
+
+                        <ImageView
+                            android:id="@+id/red_dot_1"
+                            android:layout_width="8dp"
+                            android:layout_height="8dp"
+                            android:layout_marginStart="25dp"
+                            android:background="@drawable/circle_red"
+                            android:visibility="invisible" />
+
                         <TextView
+                            android:id="@+id/indicatorText2"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:id="@+id/indicatorText2"
-                            android:textSize="20dp"
-                            android:lineHeight="28dp"
-                            android:textColor="@color/Black800"
                             android:fontFamily="@font/plus_jakartasans_semibold"
-                            android:text="₹40"/>
+                            android:lineHeight="28dp"
+                            android:text="₹40"
+                            android:textColor="@color/Black800"
+                            android:textSize="20dp" />
 
                         <com.google.android.material.progressindicator.LinearProgressIndicator
+                            android:id="@+id/progress_indicator_2"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            app:trackColor="@color/grey900"
-                            android:theme="@style/MaterialTheme"
-                            app:trackCornerRadius="20dp"
-                            app:indicatorColor="@color/green900"
-                            app:trackThickness="7dp"
-                            android:id="@+id/progress_indicator_2"
-                            android:progress="100"
-                            android:layout_marginTop="10dp"
                             android:layout_marginHorizontal="5dp"
-                            android:indeterminate="false"/>
+                            android:layout_marginTop="10dp"
+                            android:indeterminate="false"
+                            android:progress="100"
+                            android:theme="@style/MaterialTheme"
+                            app:indicatorColor="@color/green900"
+                            app:trackColor="@color/grey900"
+                            app:trackCornerRadius="20dp"
+                            app:trackThickness="7dp" />
 
                     </LinearLayout>
+
                     <LinearLayout
                         android:layout_width="1dp"
                         android:layout_height="match_parent"
-                        android:background="#E5E7EB"/>
+                        android:background="#E5E7EB" />
+
                     <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:gravity="center"
-                        android:layout_weight="1"
-                        android:orientation="vertical"
                         android:id="@+id/indicator3"
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:orientation="vertical"
                         android:paddingHorizontal="10dp"
-                        android:paddingVertical="15dp"
-                        android:layout_height="match_parent">
+                        android:paddingVertical="15dp">
+
+                        <ImageView
+                            android:id="@+id/red_dot_2"
+                            android:layout_width="8dp"
+                            android:layout_height="8dp"
+                            android:layout_marginStart="25dp"
+                            android:background="@drawable/circle_red"
+                            android:visibility="invisible" />
+
                         <TextView
+                            android:id="@+id/indicatorText3"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:id="@+id/indicatorText3"
-                            android:textSize="20dp"
-                            android:lineHeight="28dp"
-                            android:textColor="@color/Black800"
                             android:fontFamily="@font/plus_jakartasans_semibold"
-                            android:text="₹160"/>
+                            android:lineHeight="28dp"
+                            android:text="₹160"
+                            android:textColor="@color/Black800"
+                            android:textSize="20dp" />
 
                         <com.google.android.material.progressindicator.LinearProgressIndicator
+                            android:id="@+id/progress_indicator_3"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            app:trackColor="@color/grey900"
-                            android:theme="@style/MaterialTheme"
-                            app:trackCornerRadius="20dp"
-                            app:indicatorColor="@color/green900"
-                            android:layout_marginTop="10dp"
                             android:layout_marginHorizontal="5dp"
-                            app:trackThickness="7dp"
-                            android:id="@+id/progress_indicator_3"
+                            android:layout_marginTop="10dp"
+                            android:indeterminate="false"
                             android:progress="100"
-                            android:indeterminate="false"/>
+                            android:theme="@style/MaterialTheme"
+                            app:indicatorColor="@color/green900"
+                            app:trackColor="@color/grey900"
+                            app:trackCornerRadius="20dp"
+                            app:trackThickness="7dp" />
                     </LinearLayout>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
         </LinearLayout>
 
         <androidx.viewpager2.widget.ViewPager2
-            android:layout_marginTop="16dp"
             android:id="@+id/view_pager"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp" />
     </LinearLayout>
 
     <LinearLayout

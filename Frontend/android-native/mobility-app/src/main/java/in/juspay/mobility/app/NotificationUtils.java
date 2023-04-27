@@ -61,11 +61,6 @@ import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import in.juspay.mobility.BuildConfig;
-import in.juspay.mobility.MainActivity;
-import in.juspay.mobility.R;
-
-import com.google.firebase.analytics.FirebaseAnalytics;
 
 import javax.net.ssl.HttpsURLConnection;
 
@@ -99,7 +94,7 @@ public class NotificationUtils extends AppCompatActivity {
     public static MediaPlayer mediaPlayer;
     private static AudioManager audio;
     public static Bundle lastRideReq = new Bundle();
-    public static  String versionName = BuildConfig.VERSION_NAME;
+//    public static  String versionName = BuildConfig.VERSION_NAME;
 
     private static ArrayList<CallBack> callBack = new ArrayList<>();
     public static void registerCallback(CallBack notificationCallback)
@@ -202,7 +197,7 @@ public class NotificationUtils extends AppCompatActivity {
                     ((HttpsURLConnection) connection).setSSLSocketFactory(new TLSSocketFactory());
                 connection.setRequestMethod("POST");
                 connection.setRequestProperty("Content-Type", "application/json");
-                connection.setRequestProperty("x-client-version", versionName);
+//                connection.setRequestProperty("x-client-version", versionName);
                 connection.setRequestProperty("token", token);
                 connection.setRequestProperty("x-bundle-version", bundle_version);
                 connection.setDoOutput(true);

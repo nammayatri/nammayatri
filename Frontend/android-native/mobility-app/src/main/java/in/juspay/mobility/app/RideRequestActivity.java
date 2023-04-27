@@ -1,4 +1,4 @@
-/* 
+/*
  *  Copyright 2022-23, Juspay India Pvt Ltd
  *  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
  *  as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
@@ -40,39 +40,97 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class RideRequestActivity extends AppCompatActivity {
-    private int time = 0;
+    @SuppressLint("StaticFieldLeak")
+    private static RideRequestActivity instance;
+    private final Handler mainLooper = new Handler(Looper.getMainLooper());
     private final ArrayList<SheetModel> sheetArrayList = new ArrayList<>();
+    private int time = 0;
     private ViewPager2 viewPager2;
     private Timer countDownTimer;
     private CountDownTimer rideStatusListener;
-    private final Handler mainLooper = new Handler( Looper.getMainLooper());
-    @SuppressLint("StaticFieldLeak")
-    private static RideRequestActivity instance;
     private TextView indicatorText1, indicatorText2, indicatorText3;
     private LinearProgressIndicator progressIndicator1, progressIndicator2, progressIndicator3;
-    private ArrayList<TextView> indicatorTextList ;
-    private ArrayList<LinearProgressIndicator> progressIndicatorsList ;
-    private ArrayList<LinearLayout> indicatorList ;
+    private ArrayList<TextView> indicatorTextList;
+    private ArrayList<LinearProgressIndicator> progressIndicatorsList;
+    private ArrayList<LinearLayout> indicatorList;
 
-    private final SheetAdapter sheetAdapter = new SheetAdapter(sheetArrayList, viewPager2, new SheetAdapter.OnItemClickListener() {
+    public static RideRequestActivity getInstance() {
+        return instance;
+    }
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        instance = this;
+        setContentView(R.layout.activity_ride_request);
+        viewPager2 = findViewById(R.id.viewPager);
+        sheetAdapter.setViewPager(viewPager2);
+        viewPager2.setAdapter(sheetAdapter);
+        if (getIntent() != null) {
+            addToList(getIntent().getExtras());
+        }
+        setIndicatorClickListener();
+    }
+
+    public void addToList(Bundle rideRequestBundle) {
+        mainLooper.post(() -> {
+            if (rideRequestBundle == null || findCardById(rideRequestBundle.getString(getResources().getString(R.string.SEARCH_REQUEST_ID))))
+                return;
+            String searchRequestValidTill = rideRequestBundle.getString(getResources().getString(R.string.SEARCH_REQ_VALID_TILL));
+            float distanceToPickup = (float) rideRequestBundle.getInt(getResources().getString(R.string.DISTANCE_TO_PICKUP));
+            float distanceTobeCovered = (float) rideRequestBundle.getInt(getResources().getString(R.string.DISTANCE_TO_BE_COVERED));
+            DecimalFormat df = new DecimalFormat();
+            df.setMaximumFractionDigits(2);
+            @SuppressLint("SimpleDateFormat") final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+            simpleDateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+            String getCurrTime = simpleDateFormat.format(new Date());
+            int calculatedTime = RideRequestUtils.calculateExpireTimer(searchRequestValidTill, getCurrTime);
+            if (sheetArrayList.isEmpty()) {
+                startTimer();
+            }
+            SharedPreferences sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+            int negotiationUnit = Integer.parseInt(sharedPref.getString("NEGOTIATION_UNIT", "10"));
+            SheetModel sheetModel = new SheetModel((df.format(distanceToPickup / 1000)),
+                    (df.format(distanceTobeCovered / 1000)),
+                    rideRequestBundle.getString(getResources().getString(R.string.ADDRESS_PICKUP)),
+                    rideRequestBundle.getString(getResources().getString(R.string.ADDRESS_DROP)),
+                    rideRequestBundle.getInt(getResources().getString(R.string.BASE_FARE)),
+                    Math.min(calculatedTime, 25),
+                    rideRequestBundle.getString(getResources().getString(R.string.SEARCH_REQUEST_ID)),
+                    rideRequestBundle.getString("destinationArea"),
+                    rideRequestBundle.getString("sourceArea"),
+                    time,
+                    rideRequestBundle.getInt("driverMinExtraFee"),
+                    rideRequestBundle.getInt("driverMaxExtraFee"),
+                    rideRequestBundle.getInt("rideRequestPopupDelayDuration"),
+                    negotiationUnit,
+                    rideRequestBundle.getInt("customerTip"));
+
+            sheetArrayList.add(sheetModel);
+            sheetAdapter.updateSheetList(sheetArrayList);
+            sheetAdapter.notifyItemInserted(sheetArrayList.indexOf(sheetModel));
+            updateIndicators();
+            updateProgressBars(false);
+        });
+    }    private final SheetAdapter sheetAdapter = new SheetAdapter(sheetArrayList, viewPager2, new SheetAdapter.OnItemClickListener() {
         @SuppressLint("SetTextI18n")
         @Override
         public void onViewHolderBind(SheetAdapter.SheetViewHolder holder, int position, ViewPager2 viewPager, List<Object> payloads) {
             SheetModel model = sheetArrayList.get(position);
-            String x = payloads.size() > 0 ? (String) payloads.get(0) :"";
+            String x = payloads.size() > 0 ? (String) payloads.get(0) : "";
             switch (x) {
-                case "inc" :
+                case "inc":
                     updateIndicators();
                     holder.baseFare.setText(String.valueOf(model.getBaseFare() + model.getUpdatedAmount()));
                     return;
-                case "time" :
+                case "time":
                     updateProgressBars(true);
                     return;
             }
 
-            holder.pickUpDistance.setText(model.getPickUpDistance()+" km " + getString(R.string.away));
+            holder.pickUpDistance.setText(model.getPickUpDistance() + " km " + getString(R.string.away));
             holder.baseFare.setText(String.valueOf(model.getBaseFare() + model.getUpdatedAmount()));
-            holder.distanceToBeCovered.setText(model.getDistanceToBeCovered()+" km");
+            holder.distanceToBeCovered.setText(model.getDistanceToBeCovered() + " km");
             holder.sourceArea.setText(model.getSourceArea());
             holder.sourceAddress.setText(model.getSourceAddress());
             holder.destinationArea.setText(model.getDestinationArea());
@@ -83,7 +141,7 @@ public class RideRequestActivity extends AppCompatActivity {
                 ExecutorService executor = Executors.newSingleThreadExecutor();
                 executor.execute(() -> {
                     Boolean isApiSuccess = RideRequestUtils.driverRespondApi(model.getSearchRequestId(), model.getOfferedPrice(), true, RideRequestActivity.this, sheetArrayList.indexOf(model));
-                    if (isApiSuccess){
+                    if (isApiSuccess) {
                         mainLooper.post(executor::shutdown);
                         startLoader(model.getSearchRequestId());
                     }
@@ -104,17 +162,16 @@ public class RideRequestActivity extends AppCompatActivity {
             holder.buttonIncreasePrice.setOnClickListener(view -> {
                 if (model.getOfferedPrice() <= model.getDriverMaxExtraFee() - model.getNegotiationUnit()) {
                     model.setUpdatedAmount(model.getUpdatedAmount() + model.getNegotiationUnit());
-                    model.setOfferedPrice(model.getOfferedPrice()+model.getNegotiationUnit());
+                    model.setOfferedPrice(model.getOfferedPrice() + model.getNegotiationUnit());
                     sheetAdapter.notifyItemChanged(position, "inc");
-                    if (model.getOfferedPrice() == model.getDriverMaxExtraFee()){
+                    if (model.getOfferedPrice() == model.getDriverMaxExtraFee()) {
                         mainLooper.post(() -> {
                             holder.buttonIncreasePrice.setAlpha(0.5f);
                             holder.buttonIncreasePrice.setClickable(false);
                             holder.buttonDecreasePrice.setAlpha(1.0f);
                             holder.buttonDecreasePrice.setClickable(true);
                         });
-                    }
-                    else {
+                    } else {
                         mainLooper.post(() -> {
                             holder.buttonDecreasePrice.setAlpha(1.0f);
                             holder.buttonDecreasePrice.setClickable(true);
@@ -125,17 +182,16 @@ public class RideRequestActivity extends AppCompatActivity {
             holder.buttonDecreasePrice.setOnClickListener(view -> {
                 if (model.getOfferedPrice() > 0) {
                     model.setUpdatedAmount(model.getUpdatedAmount() - model.getNegotiationUnit());
-                    model.setOfferedPrice(model.getOfferedPrice()-model.getNegotiationUnit());
-                    sheetAdapter.notifyItemChanged(position,"inc");
-                    if (model.getOfferedPrice() == 0){
+                    model.setOfferedPrice(model.getOfferedPrice() - model.getNegotiationUnit());
+                    sheetAdapter.notifyItemChanged(position, "inc");
+                    if (model.getOfferedPrice() == 0) {
                         mainLooper.post(() -> {
                             holder.buttonDecreasePrice.setAlpha(0.5f);
                             holder.buttonDecreasePrice.setClickable(false);
                             holder.buttonIncreasePrice.setAlpha(1.0f);
                             holder.buttonIncreasePrice.setClickable(true);
                         });
-                    }
-                    else {
+                    } else {
                         mainLooper.post(() -> {
                             holder.buttonIncreasePrice.setAlpha(1.0f);
                             holder.buttonIncreasePrice.setClickable(true);
@@ -148,6 +204,7 @@ public class RideRequestActivity extends AppCompatActivity {
                 public void onPageSelected(int position) {
                     super.onPageSelected(position);
                 }
+
                 @Override
                 public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
                     updateIndicators();
@@ -163,70 +220,15 @@ public class RideRequestActivity extends AppCompatActivity {
         }
     });
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        instance = this;
-        setContentView(R.layout.activity_ride_request);
-        viewPager2 = findViewById(R.id.viewPager);
-        sheetAdapter.setViewPager(viewPager2);
-        viewPager2.setAdapter(sheetAdapter);
-        if (getIntent() !=null){
-            addToList(getIntent().getExtras());
-        }
-        setIndicatorClickListener();
-    }
-
-
-    public void addToList(Bundle rideRequestBundle){
-        mainLooper.post(() -> {
-            if (rideRequestBundle == null || findCardById(rideRequestBundle.getString(getResources().getString(R.string.SEARCH_REQUEST_ID)))) return;
-            String searchRequestValidTill  = rideRequestBundle.getString(getResources().getString(R.string.SEARCH_REQ_VALID_TILL));
-            float distanceToPickup  = (float) rideRequestBundle.getInt(getResources().getString(R.string.DISTANCE_TO_PICKUP));
-            float distanceTobeCovered = (float) rideRequestBundle.getInt(getResources().getString(R.string.DISTANCE_TO_BE_COVERED));
-            DecimalFormat df = new DecimalFormat();
-            df.setMaximumFractionDigits(2);
-            final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
-            simpleDateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
-            String getCurrTime = simpleDateFormat.format(new Date());
-            int calculatedTime = RideRequestUtils.calculateExpireTimer(searchRequestValidTill,getCurrTime);
-            if (sheetArrayList.isEmpty()){
-                startTimer();
-            }
-            SharedPreferences sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-            int negotiationUnit = Integer.parseInt(sharedPref.getString("NEGOTIATION_UNIT", "10"));
-            SheetModel sheetModel = new SheetModel((df.format(distanceToPickup/1000)),
-                    (df.format(distanceTobeCovered/1000)),
-                    rideRequestBundle.getString(getResources().getString(R.string.ADDRESS_PICKUP)),
-                    rideRequestBundle.getString(getResources().getString(R.string.ADDRESS_DROP)),
-                    rideRequestBundle.getInt(getResources().getString(R.string.BASE_FARE)),
-                    Math.min(calculatedTime, 25),
-                    rideRequestBundle.getString(getResources().getString(R.string.SEARCH_REQUEST_ID)),
-                    rideRequestBundle.getString("destinationArea"),
-                    rideRequestBundle.getString("sourceArea"),
-                    time,
-                    rideRequestBundle.getInt("driverMinExtraFee"),
-                    rideRequestBundle.getInt("driverMaxExtraFee"),
-                    rideRequestBundle.getInt("rideRequestPopupDelayDuration"),
-                    negotiationUnit);
-
-            sheetArrayList.add(sheetModel);
-            sheetAdapter.updateSheetList(sheetArrayList);
-            sheetAdapter.notifyItemInserted(sheetArrayList.indexOf(sheetModel));
-            updateIndicators();
-            updateProgressBars(false);
-        });
-    }
-
     private void startTimer() {
         TimerTask countUpTimerTask = new TimerTask() {
             @Override
             public void run() {
-                time ++;
+                time++;
                 mainLooper.post(() -> {
                     for (SheetModel model : sheetArrayList) {
                         int index = sheetArrayList.indexOf(model);
-                        if(model.getReqExpiryTime() + model.getStartTime() - time < 1) {
+                        if (model.getReqExpiryTime() + model.getStartTime() - time < 1) {
                             removeCard(index);
                         } else {
                             sheetAdapter.notifyItemChanged(index, "time");
@@ -239,7 +241,7 @@ public class RideRequestActivity extends AppCompatActivity {
         countDownTimer.scheduleAtFixedRate(countUpTimerTask, 1000, 1000);
     }
 
-    private void startLoader(String id){
+    private void startLoader(String id) {
         countDownTimer.cancel();
         cancelSound();
         View progressDialog = findViewById(R.id.progress_loader);
@@ -253,15 +255,15 @@ public class RideRequestActivity extends AppCompatActivity {
                 public void onTick(long millisUntilFinished) {
                     SharedPreferences sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
                     TextView loaderText = progressDialog.findViewById(R.id.text_waiting_for_customer);
-                    loaderText.setText(getString(R.string.waiting_for_customer_response)+ " (" + millisUntilFinished / 1000 + ") ...");
+                    loaderText.setText(getString(R.string.waiting_for_customer_response) + " (" + (millisUntilFinished / 1000) + ") ...");
                     if (sharedPref.getString(getResources().getString(R.string.RIDE_STATUS), "null").equals(getResources().getString(R.string.DRIVER_ASSIGNMENT))) {
                         sharedPref.edit().putString(getResources().getString(R.string.RIDE_STATUS), "null").apply();
                         showAcknowledgement(getString(R.string.DRIVER_ASSIGNMENT));
-                    }
-                    else if (sharedPref.getString(getString(R.string.CLEAR_FARE), "null").equals(id)){
+                    } else if (sharedPref.getString(getString(R.string.CLEAR_FARE), "null").equals(id)) {
                         showAcknowledgement(getString(R.string.CLEAR_FARE));
                     }
                 }
+
                 @Override
                 public void onFinish() {
                     SharedPreferences sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
@@ -289,7 +291,7 @@ public class RideRequestActivity extends AppCompatActivity {
         mainLooper.postDelayed(this::finish, 1700);
     }
 
-    private void removeCard (int position) {
+    private void removeCard(int position) {
         mainLooper.post(() -> {
             if (!(sheetArrayList.size() > position)) {
                 return;
@@ -303,7 +305,7 @@ public class RideRequestActivity extends AppCompatActivity {
             sheetAdapter.notifyItemRangeChanged(position, sheetArrayList.size());
             updateIndicators();
             updateProgressBars(true);
-            if(sheetArrayList.isEmpty()) {
+            if (sheetArrayList.isEmpty()) {
                 cancelSound();
                 finish();
             }
@@ -311,32 +313,32 @@ public class RideRequestActivity extends AppCompatActivity {
     }
 
     @SuppressLint("SetTextI18n")
-    private void updateIndicators(){
+    private void updateIndicators() {
         mainLooper.post(() -> {
-            if ( viewPager2 == null || sheetArrayList == null) return;
+            if (viewPager2 == null || sheetArrayList == null) return;
             indicatorText1 = findViewById(R.id.indicatorText1);
             indicatorText2 = findViewById(R.id.indicatorText2);
             indicatorText3 = findViewById(R.id.indicatorText3);
             progressIndicator1 = findViewById(R.id.progress_indicator_1);
             progressIndicator2 = findViewById(R.id.progress_indicator_2);
             progressIndicator3 = findViewById(R.id.progress_indicator_3);
-            indicatorTextList = new ArrayList<>(Arrays.asList(indicatorText1,indicatorText2,indicatorText3));
-            progressIndicatorsList = new ArrayList<>(Arrays.asList(progressIndicator1,progressIndicator2,progressIndicator3));
+            indicatorTextList = new ArrayList<>(Arrays.asList(indicatorText1, indicatorText2, indicatorText3));
+            progressIndicatorsList = new ArrayList<>(Arrays.asList(progressIndicator1, progressIndicator2, progressIndicator3));
             indicatorList = new ArrayList<>(Arrays.asList(
                     findViewById(R.id.indicator1),
                     findViewById(R.id.indicator2),
                     findViewById(R.id.indicator3)));
 
-            for (int  i =0; i<3; i++){
-                if (viewPager2.getCurrentItem() == indicatorList.indexOf(indicatorList.get(i))){
+            for (int i = 0; i < 3; i++) {
+                if (viewPager2.getCurrentItem() == indicatorList.indexOf(indicatorList.get(i))) {
                     indicatorList.get(i).setBackgroundColor(getColor(R.color.grey900));
                     progressIndicatorsList.get(i).setTrackColor(getColor(R.color.white));
-                }else {
+                } else {
                     indicatorList.get(i).setBackgroundColor(getColor(R.color.white));
                     progressIndicatorsList.get(i).setTrackColor(getColor(R.color.grey900));
                 }
-                if (i < sheetArrayList.size()){
-                    indicatorTextList.get(i).setText("₹"+ (sheetArrayList.get(i).getBaseFare() + sheetArrayList.get(i).getUpdatedAmount()));
+                if (i < sheetArrayList.size()) {
+                    indicatorTextList.get(i).setText("₹" + (sheetArrayList.get(i).getBaseFare() + sheetArrayList.get(i).getUpdatedAmount()));
                     progressIndicatorsList.get(i).setVisibility(View.VISIBLE);
                 } else {
                     indicatorTextList.get(i).setText("--");
@@ -347,46 +349,46 @@ public class RideRequestActivity extends AppCompatActivity {
     }
 
     private void setIndicatorClickListener() {
-        if (viewPager2 == null ) return;
+        if (viewPager2 == null) return;
         indicatorList = new ArrayList<>(Arrays.asList(
                 findViewById(R.id.indicator1),
                 findViewById(R.id.indicator2),
                 findViewById(R.id.indicator3)));
 
-        for (int i =0; i<3; i++){
+        for (int i = 0; i < 3; i++) {
             int finalI = i;
             indicatorList.get(i).setOnClickListener(view -> mainLooper.post(() -> {
                 if (viewPager2 == null) return;
                 viewPager2.setCurrentItem(finalI);
-                if(!(finalI >= sheetArrayList.size())){ //index exists
-                    RideRequestUtils.firebaseLogEventWithParams("indicator_click", "index" , String.valueOf(finalI), RideRequestActivity.this);
+                if (!(finalI >= sheetArrayList.size())) { //index exists
+                    RideRequestUtils.firebaseLogEventWithParams("indicator_click", "index", String.valueOf(finalI), RideRequestActivity.this);
                 }
             }));
         }
     }
 
-    private void updateProgressBars(boolean animated){
-        if (sheetArrayList == null ) return;
+    private void updateProgressBars(boolean animated) {
+        if (sheetArrayList == null) return;
         progressIndicatorsList = new ArrayList<>(Arrays.asList(
                 findViewById(R.id.progress_indicator_1),
                 findViewById(R.id.progress_indicator_2),
                 findViewById(R.id.progress_indicator_3)));
 
-        for (int i=0; i<sheetArrayList.size(); i++){
+        for (int i = 0; i < sheetArrayList.size(); i++) {
             int progressCompat = sheetArrayList.get(i).getReqExpiryTime() + sheetArrayList.get(i).getStartTime() - time;
-            progressIndicatorsList.get(i).setProgressCompat(progressCompat *4, animated); // (100/maxExpiryTime)
-            if (progressCompat <= 8){
+            progressIndicatorsList.get(i).setProgressCompat(progressCompat * 4, animated); // (100/maxExpiryTime)
+            if (progressCompat <= 8) {
                 progressIndicatorsList.get(i).setIndicatorColor(getColor(R.color.red900));
-            }else {
+            } else {
                 progressIndicatorsList.get(i).setIndicatorColor(getColor(R.color.green900));
             }
         }
     }
 
-    private boolean findCardById(String id){
-        if (sheetArrayList != null){
-            for (int i = 0; i<sheetArrayList.size(); i++){
-                if (id.equals(sheetArrayList.get(i).getSearchRequestId())){
+    private boolean findCardById(String id) {
+        if (sheetArrayList != null) {
+            for (int i = 0; i < sheetArrayList.size(); i++) {
+                if (id.equals(sheetArrayList.get(i).getSearchRequestId())) {
                     return true;
                 }
             }
@@ -399,9 +401,7 @@ public class RideRequestActivity extends AppCompatActivity {
         instance = null;
         time = 0;
         sheetArrayList.clear();
-        if (countDownTimer != null){
-            countDownTimer.cancel();
-        }
+        countDownTimer.cancel();
         cancelSound();
         NotificationUtils.lastRideReq.clear();
         RideRequestUtils.cancelRideReqNotification(this);
@@ -419,15 +419,15 @@ public class RideRequestActivity extends AppCompatActivity {
         super.onResume();
     }
 
-    public static RideRequestActivity getInstance(){
-        return instance;
-    }
-
     private void cancelSound() {
-        if (NotificationUtils.mediaPlayer!=null){
-            if (NotificationUtils.mediaPlayer.isPlaying()){
+        if (NotificationUtils.mediaPlayer != null) {
+            if (NotificationUtils.mediaPlayer.isPlaying()) {
                 NotificationUtils.mediaPlayer.pause();
             }
         }
     }
+
+
+
+
 }

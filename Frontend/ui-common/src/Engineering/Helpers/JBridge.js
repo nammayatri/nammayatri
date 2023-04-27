@@ -1005,7 +1005,6 @@ export const storeCallBackOverlayPermission = function (cb) {
             window.onResumeListeners.push(overlayCallBack);
           }
           console.log("In storeCallBackOverlayPermission ---------- + " + action);
-          window.JBridge.storeCallBackOverlayPermission(callback);
       }    
   }}
   catch (error){
@@ -1028,8 +1027,7 @@ export const storeCallBackBatteryUsagePermission = function (cb) {
             window.onResumeListeners.push(batteryCallBack);
           }
           console.log("In storeCallBackBatteryUsagePermission ---------- + " + action);
-          window.JBridge.storeCallBackBatteryUsagePermission(callback);
-      }
+      }    
   }}
   catch (error){
       console.log("Error occurred in storeCallBackBatteryUsagePermission ------", error);
