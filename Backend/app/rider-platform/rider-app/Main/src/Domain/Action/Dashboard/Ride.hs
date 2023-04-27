@@ -15,6 +15,7 @@
 module Domain.Action.Dashboard.Ride
   ( shareRideInfo,
     rideList,
+    -- multipleRideCancel,
   )
 where
 
@@ -38,8 +39,11 @@ import Storage.CachedQueries.Merchant (findByShortId)
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
-
----------------------------------------------------------------------
+-- import qualified API.Dashboard.MultipleRideCancel as DCM
+-- import Kernel.Types.APISuccess (APISuccess (Success))
+-- import qualified Storage.Queries.BookingCancellationReason as QBCR
+-- import qualified Domain.Types.BookingCancellationReason as SBCR
+-- ---------------------------------------------------------------------
 
 mkCommonRideStatus :: Domain.RideStatus -> Common.RideStatus
 mkCommonRideStatus rs = case rs of
@@ -145,3 +149,33 @@ buildRideListItem QRide.RideItem {..} = do
         vehicleNo = ride.vehicleNumber,
         bookingStatus
       }
+
+-- updateRideAndBookingStatus ::
+--   (EsqDBFlow m r)=>
+--   DCM.RideCancelInfo ->
+--   m ()
+-- updateRideAndBookingStatus info = do
+--   cancellationReason <- buildBookingCancelationReason
+--   runTransaction $ do
+--     QRide.updateStatus info.rideId  Domain.CANCELLED
+--     QRB.updateStatus info.bookingId DB.CANCELLED
+--     QBCR.upsert cancellationReason
+--   where
+--   buildBookingCancelationReason = do
+--     return $
+--       SBCR.BookingCancellationReason
+--         { bookingId = info.bookingId,
+--           rideId = Just info.rideId,
+--           source = SBCR.ByMerchant,
+--           reasonCode = Just info.cancellationReasonCode,
+--           reasonStage = Just info.cancellationStage,
+--           additionalInfo = info.additionalInfo
+--         }
+
+-- multipleRideCancel ::
+--   ShortId DM.Merchant ->
+--   DCM.MultipleRideCancelReq ->
+--   Flow APISuccess
+-- multipleRideCancel  _  req = do
+--   _ <- mapM updateRideAndBookingStatus req.multipleRideCancelInfo
+--   pure Success

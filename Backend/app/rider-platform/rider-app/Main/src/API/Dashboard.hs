@@ -19,6 +19,8 @@ import qualified API.Dashboard.Customer as Customer
 import qualified API.Dashboard.Exotel as Exotel
 import qualified API.Dashboard.Merchant as Merchant
 import qualified API.Dashboard.Ride as Ride
+import qualified API.Dashboard.MultipleRideCancel as MultipleRideCancel
+
 import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Types.Id
@@ -38,6 +40,7 @@ type API' =
            :<|> Booking.API
            :<|> Merchant.API
            :<|> Ride.API
+           :<|> MultipleRideCancel.API
        )
 
 handler :: FlowServer API
@@ -47,6 +50,7 @@ handler =
         :<|> Booking.handler merchantId
         :<|> Merchant.handler merchantId
         :<|> Ride.handler merchantId
+        :<|> MultipleRideCancel.handler
   )
     :<|> exotelHandler
 

@@ -15,18 +15,22 @@
 module API.Dashboard.Ride where
 
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
+-- import qualified API.Dashboard.MultipleRideCancel as DCM
 import qualified Domain.Action.Dashboard.Ride as DRide
+-- import qualified Domain.Action.UI.Cancel as DAC
 import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant hiding (throwError)
+-- import Kernel.Types.APISuccess (APISuccess)
 
 type API =
   "ride"
     :> ( ShareRideInfoAPI
            :<|> Common.RideListAPI
+          --  :<|> DCM.MultipleRideCancelAPI
        )
 
 type ShareRideInfoAPI = Common.ShareRideInfoAPI
@@ -35,6 +39,7 @@ handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   shareRideInfo merchantId
     :<|> rideList merchantId
+    -- :<|> multipleRideCancel merchantId
 
 shareRideInfo ::
   ShortId DM.Merchant ->

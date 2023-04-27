@@ -30,6 +30,8 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.ServerName as DSN
 import Kernel.Prelude
 import Kernel.Types.Id
+-- import Dashboard.ProviderPlatform.Ride (MultipleRideCancelAPI)
+import qualified "rider-app" API.Dashboard.MultipleRideCancel as Common
 
 -- request is raw Text here, because if some field will be changed, we can't parse it
 data Transaction = Transaction
@@ -58,4 +60,5 @@ data Endpoint
   | ExotelAPI Common.ExotelEndpoint
   | IssueAPI Common.IssueEndpoint
   | VolunteerAPI Common.VolunteerEndpoint
+  | MultipleRideCancelAPI Common.MultipleRideCancelEndpoint
   deriving (Show, Read)

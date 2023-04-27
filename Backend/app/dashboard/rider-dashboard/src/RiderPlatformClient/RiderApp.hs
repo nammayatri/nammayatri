@@ -21,7 +21,12 @@ where
 
 import qualified "rider-app" API.Dashboard as BAP
 import qualified Dashboard.Common.Booking as Booking
+<<<<<<< Updated upstream
 import qualified Dashboard.RiderPlatform.Customer as Customer
+=======
+import qualified Domain.Action.Dashboard.MultipleRideCancel as DCM
+import qualified Dashboard.RiderPlatform.Customer as RiderCommon
+>>>>>>> Stashed changes
 import qualified Dashboard.RiderPlatform.Merchant as Merchant
 import qualified Dashboard.RiderPlatform.Ride as Ride
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
@@ -40,7 +45,8 @@ data AppBackendAPIs = AppBackendAPIs
   { customers :: CustomerAPIs,
     bookings :: BookingsAPIs,
     merchant :: MerchantAPIs,
-    rides :: RidesAPIs
+    rides :: RidesAPIs,
+    multipleRideCancels :: MultipleRideCancelAPIs
   }
 
 data CustomerAPIs = CustomerAPIs
@@ -55,6 +61,9 @@ newtype BookingsAPIs = BookingsAPIs
   { stuckBookingsCancel :: Booking.StuckBookingsCancelReq -> Euler.EulerClient Booking.StuckBookingsCancelRes
   }
 
+newtype MultipleRideCancelAPIs = MultipleRideCancelAPIs
+  { multipleRideCancel :: DCM.MultipleRideCancelReq -> Euler.EulerClient APISuccess
+  }
 data RidesAPIs = RidesAPIs
   { shareRideInfo :: Id Ride.Ride -> Euler.EulerClient Ride.ShareRideInfoRes,
     rideList :: Maybe Int -> Maybe Int -> Maybe Ride.BookingStatus -> Maybe (ShortId Ride.Ride) -> Maybe Text -> Maybe Text -> Euler.EulerClient Ride.RideListRes
@@ -74,12 +83,15 @@ mkAppBackendAPIs merchantId token = do
   let bookings = BookingsAPIs {..}
   let merchant = MerchantAPIs {..}
   let rides = RidesAPIs {..}
+  let multipleRideCancels = MultipleRideCancelAPIs {..}
+  let 
   AppBackendAPIs {..}
   where
     customersClient
       :<|> bookingsClient
       :<|> merchantClient
-      :<|> ridesClient = clientWithMerchant (Proxy :: Proxy BAP.API') merchantId token
+      :<|> ridesClient 
+      :<|> multipleRideCancelsClient = clientWithMerchant (Proxy :: Proxy BAP.API') merchantId token
 
     customerList
       :<|> customerDelete
@@ -88,6 +100,7 @@ mkAppBackendAPIs merchantId token = do
       :<|> customerInfo = customersClient
 
     stuckBookingsCancel = bookingsClient
+    multipleRideCancel = multipleRideCancelsClient
 
     shareRideInfo
       :<|> rideList = ridesClient

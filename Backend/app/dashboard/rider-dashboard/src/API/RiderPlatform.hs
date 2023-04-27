@@ -22,6 +22,7 @@ import qualified API.RiderPlatform.Booking as Booking
 import qualified API.RiderPlatform.Customer as Customer
 import qualified API.RiderPlatform.Merchant as Merchant
 import qualified API.RiderPlatform.Ride as Ride
+import qualified API.RiderPlatform.MultipleRideCancel as MultipleRideCancel
 import qualified "lib-dashboard" Domain.Types.Merchant as DMerchant
 import "lib-dashboard" Environment
 import Kernel.Types.Id
@@ -34,6 +35,7 @@ type API =
            :<|> Booking.API
            :<|> Merchant.API
            :<|> Ride.API
+           :<|> MultipleRideCancel.API
        )
 
 handler :: FlowServer API
@@ -42,3 +44,4 @@ handler merchantId =
     :<|> Booking.handler merchantId
     :<|> Merchant.handler merchantId
     :<|> Ride.handler merchantId
+    :<|> MultipleRideCancel.handler merchantId

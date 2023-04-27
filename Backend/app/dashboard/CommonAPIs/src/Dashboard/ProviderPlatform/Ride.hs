@@ -38,7 +38,9 @@ import Servant hiding (Summary)
 data RideEndpoint
   = RideStartEndpoint
   | RideEndEndpoint
+  | MultipleRideEndEndpoint
   | RideCancelEndpoint
+  | MultipleRideCancelEndpoint
   | RideSyncEndpoint
   deriving (Show, Read)
 
@@ -134,6 +136,29 @@ newtype EndRideReq = EndRideReq
 instance HideSecrets EndRideReq where
   hideSecrets = identity
 
+
+--------------------------- MultipleRideEndAPI -----------------------------
+type MultipleRideEndAPI =
+  "end"
+    :> ReqBody '[JSON] MultipleRideEndReq
+    :> Post '[JSON] [APISuccess]
+
+newtype MultipleRideEndReq = MultipleRideEndReq
+  { rideLatLong :: [(Id Ride,Maybe LatLong)]
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets MultipleRideEndReq where
+  hideSecrets = identity
+
+-- newtype MultipleRideEndRes = MultipleRideEndRes
+--   { list :: [APISuccess]
+--   }
+--   deriving stock (Show, Generic)
+--   deriving anyclass (ToJSON, FromJSON, ToSchema)
+-- instance HideSecrets MultipleRideEndRes where
+--   hideSecrets = identity
 ---------------------------------------------------------
 -- ride cancel ------------------------------------------
 
@@ -153,6 +178,31 @@ data CancelRideReq = CancelRideReq
 instance HideSecrets CancelRideReq where
   hideSecrets = identity
 
+
+-- Multipleride cancel ------------------------------------------
+
+type MultipleRideCancelAPI =
+     "cancel"
+    :> ReqBody '[JSON] MultipleRideCancelReq
+    :> Post '[JSON] [APISuccess]
+
+data MultipleRideCancelInfo = MultipleRideCancelInfo
+  { rideId :: Id Ride,
+    reasonCode :: CancellationReasonCode,
+    additionalInfo :: Maybe Text
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+
+newtype MultipleRideCancelReq = MultipleRideCancelReq
+  { multiRideCancelReason :: [MultipleRideCancelInfo]
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets MultipleRideCancelReq where
+  hideSecrets = identity
 ---------------------------------------------------------
 -- ride info --------------------------------------------
 
