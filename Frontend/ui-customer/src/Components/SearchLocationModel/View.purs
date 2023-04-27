@@ -28,19 +28,11 @@ import Data.Function (flip)
 import Data.Maybe (Maybe(..))
 import Debug.Trace (spy)
 import Effect (Effect)
-<<<<<<< Updated upstream
 import Engineering.Helpers.Commons (getNewIDWithTag, os, safeMarginBottom, safeMarginTop, screenHeight, screenWidth, isPreviousVersion)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (getLocationName, debounceFunction, getPreviousVersion)
 import JBridge (getBtnLoader, requestKeyboardShow, getCurrentPosition, firebaseLogEvent)
-=======
-import Engineering.Helpers.Commons (getNewIDWithTag, os, safeMarginBottom, safeMarginTop, screenHeight, screenWidth, flowRunner, liftFlow)
-import Font.Size as FontSize
-import Font.Style as FontStyle
-import Helpers.Utils (getLocationName, debounceFunction, isPreviousVersion, getPreviousVersion)
-import JBridge (getBtnLoader, requestKeyboardShow, getCurrentPosition)
->>>>>>> Stashed changes
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (+), (-), (/), (/=), (<<<), (<>), (==), (||), not, discard)

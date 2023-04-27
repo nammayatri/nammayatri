@@ -57,13 +57,8 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (countDown, flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-<<<<<<< Updated upstream
 import Helpers.Utils (getLocationName, getNewTrackingId, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, toString, waitingCountdownTimer, getDistanceBwCordinates, fetchAndUpdateCurrentLocation, getCurrentLocationMarker, getPreviousVersion, storeOnResumeCallback, decodeErrorMessage)
 import JBridge (enableMyLocation, drawRoute, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, updateRoute, storeCallBackMessageUpdated, startChatListenerService, stopChatListenerService, updateRoute, toast, getExtendedPath, generateSessionId, initialWebViewSetUp)
-=======
-import Helpers.Utils (decodeErrorMessage, fetchAndUpdateCurrentLocation, getCurrentLocationMarker, getLocationName, getNewTrackingId, getPreviousVersion, initialWebViewSetUp, isPreviousVersion, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, storeOnResumeCallback, toString, waitingCountdownTimer)
-import JBridge (enableMyLocation, drawRoute, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, updateRoute, toast, getExtendedPath)
->>>>>>> Stashed changes
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)

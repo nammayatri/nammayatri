@@ -20,13 +20,10 @@ import Components.BottomNavBar.Controller as BottomNavBar
 import Components.PopUpModal.Controller as PopUpModal
 import Data.Maybe (fromMaybe)
 import Helpers.Utils (launchAppSettings)
-<<<<<<< Updated upstream
 import JBridge (firebaseLogEvent, goBackPrevWebPage)
-=======
->>>>>>> Stashed changes
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress)
+import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, logEvent)
 import Prelude (class Show, pure, unit, ($), discard, bind)
 import PrestoDOM (Eval, continue, exit, continueWithCmd)
 import PrestoDOM.Types.Core (class Loggable)
@@ -37,11 +34,7 @@ import Screens.Types (DriverProfileScreenState)
 import Services.APITypes (GetDriverInfoResp(..), Vehicle(..))
 import Services.Backend (dummyVehicleObject)
 import Storage (setValueToLocalNativeStore, KeyStore(..))
-<<<<<<< Updated upstream
 import Engineering.Helpers.Commons (getNewIDWithTag)
-=======
-import Log (logEvent)
->>>>>>> Stashed changes
 
 instance showAction :: Show Action where
   show _ = ""

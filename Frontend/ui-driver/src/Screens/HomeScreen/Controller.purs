@@ -36,16 +36,11 @@ import Effect (Effect)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (clearTimer)
 import Global (readFloat)
-<<<<<<< Updated upstream
 import Helpers.Utils (convertUTCtoISC, currentPosition, differenceBetweenTwoUTC, getDistanceBwCordinates, parseFloat,setText',getTime, getCurrentUTC, differenceBetweenTwoUTC)
 import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, scrollToBottom, stopChatListenerService)
-=======
-import Helpers.Utils (convertUTCtoISC, currentPosition, differenceBetweenTwoUTC, getDistanceBwCordinates, parseFloat)
-import JBridge (animateCamera, enableMyLocation, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams)
->>>>>>> Stashed changes
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
+import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent, logEvent, logEventWithTwoParams)
 import Prelude (class Show, Unit, bind, discard, map, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<>), (==), (>), (||), (<=),(>=))
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
@@ -57,13 +52,9 @@ import Services.APITypes (GetRidesHistoryResp, RidesInfo(..), Status(..))
 import Services.Accessor (_lat, _lon)
 import Services.Config (getCustomerNumber)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalNativeStore, setValueToLocalStore)
-<<<<<<< Updated upstream
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
-=======
-import Log (logEvent , logEventWithTwoParams)
->>>>>>> Stashed changes
 
 instance showAction :: Show Action where
   show _ = ""

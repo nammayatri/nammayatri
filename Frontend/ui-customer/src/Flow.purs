@@ -36,11 +36,7 @@ import Engineering.Helpers.BackTrack (getState)
 import Engineering.Helpers.Commons (liftFlow, os, getNewIDWithTag, bundleVersion, getExpiryTime)
 import Foreign.Class (encode)
 import Helpers.Utils (hideSplash, getDistanceBwCordinates, adjustViewWithKeyboard, decodeErrorCode, getObjFromLocal, convertUTCtoISC, differenceOfLocationLists, filterRecentSearches, setText', seperateByWhiteSpaces, getNewTrackingId, checkPrediction, getRecentSearches, addToRecentSearches, saveRecents, clearWaitingTimer, toString, parseFloat, getCurrentLocationsObjFromLocal, addToPrevCurrLoc, saveCurrentLocations, getCurrentDate, getPrediction, getCurrentLocationMarker, parseNewContacts, getCurrentUTC)
-<<<<<<< Updated upstream
 import JBridge (currentPosition, drawRoute, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getVersionCode, getVersionName, hideKeyboardOnNavigation, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, loaderText, locateOnMap, openNavigation, reallocateMapFragment, removeAllPolylines, toast, toggleBtnLoader, toggleLoader, updateRoute, launchInAppRatingPopup, firebaseUserID, addMarker, generateSessionId, stopChatListenerService)
-=======
-import JBridge (currentPosition, drawRoute, enableMyLocation, factoryResetApp, firebaseLogEventWithTwoParams, getVersionCode, getVersionName, hideKeyboardOnNavigation, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, loaderText, locateOnMap, openNavigation, reallocateMapFragment, removeAllPolylines, toast, toggleBtnLoader, toggleLoader, updateRoute, launchInAppRatingPopup, firebaseUserID, addMarker)
->>>>>>> Stashed changes
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -400,15 +396,11 @@ accountSetUpScreenFlow = do
       case resp of 
         Right response -> do
           setValueToLocalStore USER_NAME state.data.name
-<<<<<<< Updated upstream
           case gender of 
             Just value -> modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{settingSideBar{gender = Just value}}})
             Nothing    -> pure unit
-          _ <- pure $ firebaseLogEvent "ny_user_onboarded"
-          pure unit
-=======
           void $ logEvent "ny_user_onboarded"
->>>>>>> Stashed changes
+          pure unit
         Left err -> do
           _ <- pure $ toast (getString ERROR_OCCURED)
           modifyScreenState $ AccountSetUpScreenStateType (\accountSetUpScreen -> state{props{btnActive = true},data{name=state.data.name}})
@@ -448,12 +440,8 @@ homeScreenFlow = do
     GO_TO_EMERGENCY_CONTACTS -> emergencyScreenFlow
     GO_TO_ABOUT -> aboutUsScreenFlow
     GO_TO_MY_PROFILE -> do
-<<<<<<< Updated upstream
-        _ <- pure $ firebaseLogEvent "ny_user_profile_click"
-        modifyScreenState $ MyProfileScreenStateType (\myProfileScreenState ->  MyProfileScreenData.initData)
-=======
         void $ logEvent "ny_user_profile_click"
->>>>>>> Stashed changes
+        modifyScreenState $ MyProfileScreenStateType (\myProfileScreenState ->  MyProfileScreenData.initData)
         myProfileScreenFlow
     GO_TO_FIND_ESTIMATES state-> do
       _ <- lift $ lift $ liftFlow $ firebaseLogEventWithTwoParams "ny_user_source_and_destination" "ny_user_enter_source" (take 99 (state.data.source)) "ny_user_enter_destination" (take 99 (state.data.destination))
@@ -629,12 +617,8 @@ homeScreenFlow = do
       _ <- updateLocalStage HomeScreen
       _ <- Remote.cancelRideBT (Remote.makeCancelRequest state) (state.props.bookingId)
       _ <- pure $ clearWaitingTimer state.props.waitingTimeTimerId
-<<<<<<< Updated upstream
       removeChatService ""
-      _ <- pure $ firebaseLogEvent "ny_user_ride_cancelled_by_user"
-=======
       void $ logEvent "ny_user_ride_cancelled_by_user"
->>>>>>> Stashed changes
       modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData)
       homeScreenFlow
     FCM_NOTIFICATION notification state-> do
@@ -668,16 +652,12 @@ homeScreenFlow = do
                                       _ <- pure $ clearWaitingTimer state.props.waitingTimeTimerId
                                       homeScreenFlow
             "TRIP_FINISHED"       -> do -- TRIP FINISHED
-<<<<<<< Updated upstream
                                       if (getValueToLocalStore HAS_TAKEN_FIRST_RIDE == "false") then do
                                         pure $ firebaseLogEvent "ny_user_first_ride_completed"
                                         (GetProfileRes response) <- Remote.getProfileBT ""
                                         setValueToLocalStore HAS_TAKEN_FIRST_RIDE ( show response.hasTakenRide)
                                         else pure unit
-                                      _ <- pure $ firebaseLogEvent "ny_user_ride_completed"
-=======
                                       void $ logEvent "ny_user_ride_completed"
->>>>>>> Stashed changes
                                       _ <- Remote.drawMapRoute srcLat srcLon dstLat dstLon (Remote.normalRoute "") "NORMAL" "" "" Nothing "pickup"
                                       _ <- pure $ enableMyLocation true
                                       _ <- updateLocalStage HomeScreen
@@ -1747,8 +1727,7 @@ cancelEstimate bookingId = do
         homeScreenFlow
       else do
         void $ pure $ toast "CANCEL FAILED"
-<<<<<<< Updated upstream
-        _ <- pure $ firebaseLogEvent "ny_fs_cancel_estimate_failed_left"
+        void $ logEvent "ny_fs_cancel_estimate_failed_left"
         homeScreenFlow
 
 getGenderValue :: Maybe Gender.Gender -> Maybe String 
@@ -1760,7 +1739,3 @@ getGenderValue gender =
       Gender.OTHER -> Just "OTHER"
       _ -> Just "PREFER_NOT_TO_SAY"
     Nothing -> Nothing
-=======
-        void $ logEvent "ny_fs_cancel_estimate_failed_left"
-        homeScreenFlow
->>>>>>> Stashed changes

@@ -26,13 +26,9 @@ import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (Pattern(..), split)
 import Engineering.Helpers.Commons (strToBool)
-<<<<<<< Updated upstream
 import Helpers.Utils (convertUTCtoISC, parseFloat, rotateArray, setEnabled, setRefreshing, toString, isHaveFare)
 import JBridge (firebaseLogEvent)
-=======
-import Helpers.Utils (convertUTCtoISC, parseFloat, rotateArray, setEnabled, setRefreshing, toString)
->>>>>>> Stashed changes
-import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
+import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent, logEvent)
 import Prelude (class Show, pure, unit, bind, map, discard, show, ($), (==), (&&), (+), (/=), (<>), (||), (-), (<), (/), negate, (<<<), not)
 import PrestoDOM (Eval, ScrollState(..), continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
@@ -42,13 +38,9 @@ import Screens.HomeScreen.Transformer (dummyRideAPIEntity)
 import Screens.Types (AnimationState(..), FareComponent, Fares, IndividualRideCardState, ItemState, MyRidesScreenState, Stage(..))
 import Services.API (FareBreakupAPIEntity(..), RideAPIEntity(..), RideBookingListRes, RideBookingRes(..))
 import Storage (isLocalStageOn)
-<<<<<<< Updated upstream
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import EN (getEN) 
-=======
-import Log (logEvent)
->>>>>>> Stashed changes
 
 instance showAction :: Show Action where 
   show _ = ""

@@ -35,11 +35,7 @@ import Foreign.Class (class Encode, encode, decode)
 import Global (readFloat)
 import Helpers.Utils (getCurrentUTC)
 import Helpers.Utils (hideSplash, getTime, convertUTCtoISC, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getCorrespondingErrorMessage, getcurrentdate)
-<<<<<<< Updated upstream
 import JBridge (drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, loaderText, openNavigation, removeAllPolylines, removeMarker, showMarker, startLocationPollingAPI, stopLocationPollingAPI, toast, toggleLoader, generateSessionId, stopChatListenerService, hideKeyboardOnNavigation)
-=======
-import JBridge (drawRoute, factoryResetApp, firebaseUserID, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, loaderText, openNavigation, removeAllPolylines, removeMarker, showMarker, startLocationPollingAPI, stopLocationPollingAPI, toast, toggleLoader)
->>>>>>> Stashed changes
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, discard, pure, unit, unless, void, when, ($), (==), (/=), (&&), (||), (/), when, (+), show, (>), not, (<), (*), (-), (<=))
@@ -947,13 +943,8 @@ homeScreenFlow = do
         "lat" : state.data.currentDriverLat
       , "lon" : state.data.currentDriverLon
       })
-<<<<<<< Updated upstream
-      _ <- pure $ firebaseLogEvent "i_have_arrived_clicked"
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{activeRide{notifiedCustomer = true}}, props{currentStage = ChatWithCustomer}})
-=======
       _ <- pure $ logEvent "i_have_arrived_clicked"
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{activeRide{notifiedCustomer = true}}})
->>>>>>> Stashed changes
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{activeRide{notifiedCustomer = true}}, props{currentStage = ChatWithCustomer}})
       homeScreenFlow
     UPDATE_ROUTE state -> do
       _ <- pure $ printLog "HOME_SCREEN_FLOW UPDATE_ROUTE" state
