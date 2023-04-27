@@ -20,7 +20,12 @@ _:
             driver-tracking-healthcheck-exe.command = self'.apps.driver-tracking-healthcheck-exe.program;
             dynamic-offer-driver-app-exe.command = self'.apps.dynamic-offer-driver-app-exe.program;
             image-api-helper-exe.command = self'.apps.image-api-helper-exe.program;
-            kafka-consumers-exe.command = self'.apps.kafka-consumers-exe.program;
+            kafka-consumers-exe = {
+              command = self'.apps.kafka-consumers-exe.program;
+              environment = [
+                "CONSUMER_TYPE=AVAILABILITY_TIME"
+              ];
+            };
             mock-fcm-exe.command = self'.apps.mock-fcm-exe.program;
             mock-google-exe.command = self'.apps.mock-google-exe.program;
             mock-idfy-exe.command = self'.apps.mock-idfy-exe.program;
