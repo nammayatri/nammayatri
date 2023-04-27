@@ -397,6 +397,7 @@ const kannadaStrings = {
   PERSON_WITH_THIS_NUMBER_ALREADY_EXISTS : "ಈ ಮೊಬೈಲ್ ಸಂಖ್ಯೆಯನ್ನು ಹೊಂದಿರುವ ವ್ಯಕ್ತಿ ಈಗಾಗಲೇ ಅಸ್ತಿತ್ವದಲ್ಲಿದ್ದಾರೆ.",
   OTP_ : "OTP",
   MAPS: "Maps",
-  DEMO : "ಡೆಮೊ"
+  DEMO : "ಡೆಮೊ",
+  PLEASE_ASK_THE_CUSTOMER_FOR_THE_OTP : "ದಯವಿಟ್ಟು OTP ಗಾಗಿ ಗ್ರಾಹಕರನ್ನು ಕೇಳಿ"
 
 }

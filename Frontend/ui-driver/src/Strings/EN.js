@@ -397,5 +397,6 @@ const englishStrings = {
   VERIFICATION_IS_TAKING_A_BIT_LONGER : "Looks like your verification is taking a bit \nlonger than expected.\nYou can contact support to help you out.",
   COMPLETE_ONBOARDING : "Complete Onboarding",
   PERSON_WITH_THIS_NUMBER_ALREADY_EXISTS : "Person with this mobile number already exists.",
-  DEMO : "Demo"
+  DEMO : "Demo",
+  PLEASE_ASK_THE_CUSTOMER_FOR_THE_OTP : "Please ask the customer for the OTP"
 }

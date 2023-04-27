@@ -1304,28 +1304,31 @@ eval (GetEstimates (GetQuotesRes quotesRes)) state = do
     
 
 eval (EstimatesTryAgain (GetQuotesRes quotesRes)) state = do
-  _ <- pure $ firebaseLogEvent "ny_user_estimate_try_again"
-  let
-    estimatedQuotes = quotesRes.estimates
+  case (getMerchant FunctionCall) of 
+    NAMMAYATRI -> do
+      _ <- pure $ firebaseLogEvent "ny_user_estimate_try_again"
+      let
+        estimatedQuotes = quotesRes.estimates
 
-    estimatedVarient = filter (\x -> x ^. _vehicleVariant == "AUTO_RICKSHAW") estimatedQuotes
+        estimatedVarient = filter (\x -> x ^. _vehicleVariant == "AUTO_RICKSHAW") estimatedQuotes
 
-    estimatedPrice = if (isJust (estimatedVarient !! 0)) then (fromMaybe dummyEstimateEntity (estimatedVarient !! 0)) ^. _estimatedFare else 0
+        estimatedPrice = if (isJust (estimatedVarient !! 0)) then (fromMaybe dummyEstimateEntity (estimatedVarient !! 0)) ^. _estimatedFare else 0
 
-    estimateId = if isJust (estimatedVarient !! 0) then (fromMaybe dummyEstimateEntity (estimatedVarient !! 0)) ^. _estimateId else ""
-  case (null estimatedVarient) of
-    true -> do
-      _ <- pure $ hideKeyboardOnNavigation true
-      _ <- pure $ toast (getString NO_DRIVERS_AVAILABLE)
-      continue state { props { currentStage = SearchLocationModel, rideRequestFlow = false, isSearchLocation = SearchLocation, isSrcServiceable = true, isDestServiceable = true, isRideServiceable = true } }
-    false -> do
-      if (estimatedPrice > state.data.suggestedAmount) then
-        continue state { data { suggestedAmount = estimatedPrice }, props { estimateId = estimateId, isEstimateChanged = true } }
-      else do
-        _ <- pure $ updateLocalStage FindingQuotes
-        let
-          updatedState = state { data { suggestedAmount = estimatedPrice }, props { estimateId = estimateId, currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime "LazyCheck") } }
-        updateAndExit updatedState $ GetQuotes updatedState
+        estimateId = if isJust (estimatedVarient !! 0) then (fromMaybe dummyEstimateEntity (estimatedVarient !! 0)) ^. _estimateId else ""
+      case (null estimatedVarient) of
+        true -> do
+          _ <- pure $ hideKeyboardOnNavigation true
+          _ <- pure $ toast (getString NO_DRIVERS_AVAILABLE)
+          continue state { props { currentStage = SearchLocationModel, rideRequestFlow = false, isSearchLocation = SearchLocation, isSrcServiceable = true, isDestServiceable = true, isRideServiceable = true } }
+        false -> do
+          if (estimatedPrice > state.data.suggestedAmount) then
+            continue state { data { suggestedAmount = estimatedPrice }, props { estimateId = estimateId, isEstimateChanged = true } }
+          else do
+            _ <- pure $ updateLocalStage FindingQuotes
+            let
+              updatedState = state { data { suggestedAmount = estimatedPrice }, props { estimateId = estimateId, currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime "LazyCheck") } }
+            updateAndExit updatedState $ GetQuotes updatedState
+    _ -> estimatesListTryAgainFlow (GetQuotesRes quotesRes) state
 
 eval (GetQuotesList (SelectListRes resp)) state = do 
   case flowWithoutOffers WithoutOffers of
@@ -1457,7 +1460,8 @@ eval (MenuButtonActionController (MenuButtonController.OnClick config)) state = 
 eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.OnSelect config))) state = do 
   let updatedQuotes = map (\item -> item{activeIndex = config.index}) state.data.specialZoneQuoteList
       newState = state{data{specialZoneQuoteList = updatedQuotes}}
-  continue $ if state.props.isSpecialZone then newState{data{specialZoneSelectedQuote = Just config.id }} else newState{props{estimateId = config.id }}
+  continue $ if state.props.isSpecialZone then newState{data{specialZoneSelectedQuote = Just config.id }}
+              else newState{props{estimateId = config.id }, data {selectedEstimatesObject = config}}
 
 eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state = 
   if state.props.isSpecialZone then do
@@ -1832,12 +1836,35 @@ estimatesListFlow estimates state = do
   if ((not (null quoteList)) && (isLocalStageOn FindingEstimate)) then do
     _ <- pure $ firebaseLogEvent "ny_user_quote"
     _ <- pure $ updateLocalStage SettingPrice
-    continue state { data {specialZoneQuoteList = quoteList}, props {currentStage = SettingPrice, estimateId = defaultQuote.id}}
+    continue state { data {specialZoneQuoteList = quoteList, selectedEstimatesObject = defaultQuote}, props {currentStage = SettingPrice, estimateId = defaultQuote.id}}
   else do
     _ <- pure $ hideKeyboardOnNavigation true
     _ <- pure $ updateLocalStage SearchLocationModel
     _ <- pure $ toast (getString NO_DRIVERS_AVAILABLE)
     continue state { props {currentStage = SearchLocationModel}}
+
+
+estimatesListTryAgainFlow :: GetQuotesRes -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
+estimatesListTryAgainFlow (GetQuotesRes quotesRes) state = do
+  let
+    estimates = quotesRes.estimates
+    quoteList = getEstimateList estimates
+    estimatedVarient = filter (\x -> x ^. _vehicleVariant == state.data.selectedEstimatesObject.vehicleVariant) estimates
+    estimatedPrice = if (isJust (estimatedVarient !! 0)) then (fromMaybe dummyEstimateEntity (estimatedVarient !! 0)) ^. _estimatedFare else 0
+    defaultQuote = fromMaybe ChooseVehicleController.config (quoteList !! 0)
+  case (null estimatedVarient) of
+    true -> do
+      _ <- pure $ hideKeyboardOnNavigation true
+      _ <- pure $ toast $ getString NO_DRIVERS_AVAILABLE
+      continue state { props { currentStage = SearchLocationModel, rideRequestFlow = false, isSearchLocation = SearchLocation, isSrcServiceable = true, isDestServiceable = true, isRideServiceable = true } }
+    false -> do
+      if (estimatedPrice > fromMaybe 0 (fromString state.data.selectedEstimatesObject.price)) then
+            continue state { data { suggestedAmount = estimatedPrice }, props { estimateId = defaultQuote.id, isEstimateChanged = true } }
+      else do
+        _ <- pure $ updateLocalStage FindingQuotes
+        let updatedState = state { data { suggestedAmount = estimatedPrice }, props { estimateId = defaultQuote.id, currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime "LazyCheck") } }
+        updateAndExit updatedState $ GetQuotes updatedState
+
 
 normalRideFlow :: RideBookingRes -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 normalRideFlow  (RideBookingRes response) state = do

@@ -80,6 +80,19 @@ initData = {
     , polygonCoordinates : ""
     , specialZoneQuoteList : []
     , specialZoneSelectedQuote : Nothing
+    , selectedEstimatesObject : { 
+      vehicleImage: ""
+      , isSelected: false
+      , vehicleVariant: ""
+      , vehicleType: ""
+      , capacity: ""
+      , price: ""
+      , isCheckBox: false
+      , isEnabled: true
+      , activeIndex: 0
+      , index: 0
+      , id: ""
+      }
     },
     props: {
       rideRequestFlow : false

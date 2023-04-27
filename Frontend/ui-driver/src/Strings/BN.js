@@ -399,5 +399,6 @@ const bengaliStrings = {
 	PERSON_WITH_THIS_NUMBER_ALREADY_EXISTS : "এই মোবাইল নম্বর সহ ব্যক্তি ইতিমধ্যে বিদ্যমান।",
 	OTP_ : "OTP",
 	MAPS: "Maps",
-	Demo : "Demo"
+	Demo : "Demo",
+	PLEASE_ASK_THE_CUSTOMER_FOR_THE_OTP : "অনুগ্রহ করে গ্রাহককে OTP-এর জন্য জিজ্ঞাসা করুন"
  }

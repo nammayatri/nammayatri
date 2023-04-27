@@ -490,6 +490,7 @@ type HomeScreenStateData =
   , polygonCoordinates :: String
   , specialZoneQuoteList :: Array ChooseVehicle.Config
   , specialZoneSelectedQuote :: Maybe String
+  , selectedEstimatesObject :: ChooseVehicle.Config
   }
 
 type HomeScreenStateProps =
