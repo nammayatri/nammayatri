@@ -1,4 +1,4 @@
-module MerchantConfigs.DefaultConfig where
+module Config.DefaultConfig where
 
 import Config.Types
 import Styles.Colors as Color
