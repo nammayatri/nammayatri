@@ -16,8 +16,7 @@
 module Screens.EnterMobileNumberScreen.ScreenData where
 
 import Screens.Types (EnterMobileNumberScreenState)
-import PrestoDOM (LetterSpacing(..))
-import MerchantConfigs.DefaultConfig as D
+import MerchantConfigs.DefaultConfig as MDC
 
 initData :: EnterMobileNumberScreenState
 initData = {
@@ -28,7 +27,7 @@ initData = {
     , otp : ""
     , timer : ""
     , timerID : ""
-    , config : D.config
+    , config : MDC.config
     },
     props: {
         enterOTP : false,

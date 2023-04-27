@@ -178,6 +178,7 @@
       "round_circle" : true,
       "round_corner_layout" : true,
       "rounded_corner_background" : true,
-      "widget_close_gradient" : true
+      "widget_close_gradient" : true,
+      "ic_bent_right_arrow_white" : true
    }
 }

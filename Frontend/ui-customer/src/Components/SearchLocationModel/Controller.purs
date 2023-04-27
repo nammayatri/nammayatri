@@ -22,6 +22,7 @@ import Data.Maybe (Maybe(..))
 import Prelude (show)
 import PrestoDOM (Visibility(..))
 import Screens.Types (SearchLocationModelType, LocationListItemState, LocItemType(..))
+import Config.Types (AppConfig)
 
 data Action = GoBack
             | NoAction
@@ -50,6 +51,7 @@ type SearchLocationModelState = {
   , isSrcServiceable :: Boolean
   , isDestServiceable :: Boolean
   , isRideServiceable :: Boolean
+  , homeScreenConfig :: AppConfig
 }
 
 dummy_data :: Array LocationListItemState

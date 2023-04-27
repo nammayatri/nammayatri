@@ -36,6 +36,7 @@ import PrestoDOM.Animation as PrestoAnim
 import Storage (KeyStore(..), getValueToLocalStore)
 import Helpers.Utils (getPreviousVersion)
 import Styles.Colors as Color
+import MerchantConfigs.DefaultConfig as MDC
 import Common.Types.App
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListModelState -> PrestoDOM (Effect Unit) w
@@ -231,7 +232,7 @@ selectRideAndConfirmView state push =
   , padding (Padding 16 16 0 16)
   ][textView
     [ height WRAP_CONTENT
-    , color Color.black900
+    , color state.appConfig.quoteListModel.backgroundColor
     , textSize FontSize.a_16
     , fontStyle $ FontStyle.medium LanguageStyle
     , text case getValueToLocalStore AUTO_SELECTING of
@@ -471,13 +472,14 @@ tryAgainButtonConfig state = let
     tryAgainButtonConfig' = config 
       { textConfig
         { text = (getString TRY_AGAIN)
-        , color = Color.yellow900      
+        ,  color = state.appConfig.primaryTextColor 
         , textSize = FontSize.a_16  
         }
       , margin =( Margin 8 0 16 0)
       , width = MATCH_PARENT
       , id = "TryAgainButtonQuoteList"
       , enableLoader = (getBtnLoader "TryAgainButtonQuoteList")
+      , background = state.appConfig.primaryBackground
       }
   in tryAgainButtonConfig'
 
