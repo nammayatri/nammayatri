@@ -36,7 +36,6 @@ import PrestoDOM.Animation as PrestoAnim
 import Storage (KeyStore(..), getValueToLocalStore)
 import Helpers.Utils (getPreviousVersion)
 import Styles.Colors as Color
-import MerchantConfigs.DefaultConfig as MDC
 import Common.Types.App
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListModelState -> PrestoDOM (Effect Unit) w

@@ -36,7 +36,7 @@ import Services.API (DriverOfferAPIEntity(..), Prediction, QuoteAPIEntity(..), R
 import Types.App(FlowBT)
 import Storage ( setValueToLocalStore, getValueToLocalStore, KeyStore(..))
 import Debug(spy)
-import MerchantConfigs.DefaultConfig as MDC
+import Config.DefaultConfig as DC
 
 getLocationList :: Array Prediction -> Array LocationListItemState
 getLocationList predcition = map (\x -> getLocation x) predcition

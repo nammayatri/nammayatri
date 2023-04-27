@@ -5,7 +5,7 @@ import Config.Types
 import Prelude
 import Data.Maybe
 import Effect (Effect)
-import MerchantConfigs.DefaultConfig (config) as DefaultConfig
+import Config.DefaultConfig (config) as DefaultConfig
 import Presto.Core.Types.Language.Flow (Flow)
 import Helpers.Utils (getMerchantConfig)
 import Foreign.Generic (decodeJSON)
@@ -16,6 +16,7 @@ import Data.Either (either, hush)
 import Data.Maybe (Maybe(..))
 import Effect (Effect)
 import Effect.Class (liftEffect)
+import Effect.Aff (Aff, makeAff, nonCanceler)
 import Foreign (Foreign)
 import Foreign.Generic (class Decode, decode, encode)
 import Foreign.Index (readProp)
@@ -24,6 +25,8 @@ import Presto.Core.Types.Language.Flow (Flow, doAff)
 import Types.App (FlowBT)
 import Debug.Trace (spy)
 import Control.Monad.Except.Trans (lift)
+
+foreign import loadConfig :: Effect Unit
 
 liftFlow :: forall val z. (Effect val)  -> Flow z val
 liftFlow effVal = doAff do liftEffect (effVal)
