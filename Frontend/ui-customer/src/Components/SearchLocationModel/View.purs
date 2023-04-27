@@ -59,10 +59,10 @@ view push state =
           linearLayout
           [ height $ V ((screenHeight unit)/ 7)
           , width MATCH_PARENT
-          , background Color.black900
-          , clickable case state.isSearchLocation of
-              LocateOnMap -> false
-              _ -> true
+          , background state.homeScreenConfig.searchLocationTheme
+          , clickable case state.isSearchLocation of 
+              LocateOnMap -> false 
+              _ -> true 
           , onClick push (const NoAction)
           , padding (Padding 0 safeMarginTop 0 0)
           ][]
@@ -99,7 +99,7 @@ view push state =
                   [ imageView
                       [ height $ V 25
                       , width $ V 25
-                      , imageWithFallback "ny_ic_chevron_left_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_left_white.png"
+                      , imageWithFallback if state.homeScreenConfig.merchantId == "PAYTM" then "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png" else "ny_ic_chevron_left_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_left_white.png"
                       ]
                   ]
               , linearLayout

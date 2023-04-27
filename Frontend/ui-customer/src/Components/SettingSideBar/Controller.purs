@@ -19,6 +19,7 @@ import Prelude (class Eq)
 import Data.Generic.Rep (class Generic)
 import Data.Eq.Generic (genericEq)
 import Data.Maybe (Maybe(..))
+import Config.Types (AppConfig)
 
 data Action = ChangeLanguage
             | EditProfile
@@ -51,6 +52,7 @@ type SettingSideBarState =
   , number :: String
   , email :: Maybe String
   , gender :: Maybe String
+  , appConfig :: AppConfig
   }
 
 type Item =

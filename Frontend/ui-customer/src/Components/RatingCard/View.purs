@@ -192,7 +192,7 @@ rideRatingButtonConfig state = let
     primaryButtonConfig' = config 
       { textConfig 
         { text = (getString SUBMIT_FEEDBACK)
-        , color = Color.yellow900 
+        , color = state.data.appConfig.primaryTextColor
         , textSize = FontSize.a_16 
         , width = MATCH_PARENT
         }
@@ -202,7 +202,7 @@ rideRatingButtonConfig state = let
       , height = (V 48) 
       , gravity = CENTER_VERTICAL
       , cornerRadius = 8.0
-      , background = Color.black900 
+      , background = state.data.appConfig.primaryBackground
       , id = "RideRatingButton"
       , enableLoader = (getBtnLoader "RightRatingButton")
       }

@@ -152,6 +152,8 @@ forceIOSupdate c_maj c_min c_patch =
 
 currentRideFlow :: Boolean -> FlowBT String Unit
 currentRideFlow rideAssigned = do
+  config <- getAppConfig
+  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data {config = config}})
   rideBookingListResponse <- lift $ lift $ Remote.rideBookingList "1" "0" "true"
   (GlobalState state') <- getState
   let state = state'.homeScreen
@@ -223,6 +225,7 @@ currentRideFlow rideAssigned = do
                           , dateDDMMYY =  case currRideListItem.rideStartTime of
                                             Just startTime -> (convertUTCtoISC startTime "DD/MM/YYYY")
                                             Nothing        -> ""
+                          , appConfig = config
                           }}
                 })
             -- _ <- pure $ spy "CurrentRideListItem end" currRideListItem
@@ -430,7 +433,8 @@ homeScreenFlow = do
   -- TODO: HANDLE LOCATION LIST INITIALLY
   _ <- pure $ firebaseUserID (getValueToLocalStore CUSTOMER_ID)
   void $ lift $ lift $ toggleLoader false
-  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{hasTakenRide = if (getValueToLocalStore REFERRAL_STATUS == "HAS_TAKEN_RIDE") then true else false, isReferred = if (getValueToLocalStore REFERRAL_STATUS == "REFERRED_NOT_TAKEN_RIDE") then true else false }})
+  config <- getAppConfig
+  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{hasTakenRide = if (getValueToLocalStore REFERRAL_STATUS == "HAS_TAKEN_RIDE") then true else false, isReferred = if (getValueToLocalStore REFERRAL_STATUS == "REFERRED_NOT_TAKEN_RIDE") then true else false }, data {config = config}})
   flow <- UI.homeScreen
   case flow of
     CHECK_FLOW_STATUS -> currentFlowStatus
