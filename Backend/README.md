@@ -114,13 +114,17 @@ To run the backend either use:
 
 ```sh
 # From dev shell
-, run-mobility-stack
+, run-mobility-stack-dev
 ```
 
-or (if not in devshell):
+This will run the mobility stack using `cabal run` which is the recommend approach for development environment.
+
+You can also use Nix to run the mobility stack, but this is slower compared to the cabal way.
 
 ```sh
-nix run .#run-mobility-stack
+, run-mobility-stack-nix
+# Or (if you are not in the git repo):
+nix run github:nammayatri/nammyatri#run-mobility-stack-nix
 ```
 
 #### Updating flake inputs
