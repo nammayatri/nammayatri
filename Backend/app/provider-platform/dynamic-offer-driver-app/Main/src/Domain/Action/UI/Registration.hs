@@ -171,6 +171,7 @@ createDriverDetails personId merchantId = do
         DriverInfo.DriverInformation
           { driverId = personId,
             adminId = Nothing,
+            merchantId = Just merchantId,
             active = False,
             onRide = False,
             enabled = False,

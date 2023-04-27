@@ -181,6 +181,7 @@ buildEstimate providerInfo now _searchRequest EstimateInfo {..} = do
     DEstimate.Estimate
       { id = uid,
         requestId = _searchRequest.id,
+        merchantId = Just _searchRequest.merchantId,
         providerMobileNumber = providerInfo.mobileNumber,
         providerName = providerInfo.name,
         providerCompletedRidesCount = providerInfo.ridesCompleted,

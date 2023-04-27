@@ -20,6 +20,7 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import qualified Domain.Types.Booking.Type as DRB
+import qualified Domain.Types.Merchant as DM
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -50,6 +51,7 @@ data Ride = Ride
     bppRideId :: Id BPPRide,
     bookingId :: Id DRB.Booking,
     shortId :: ShortId Ride,
+    merchantId :: Maybe (Id DM.Merchant),
     status :: RideStatus,
     driverName :: Text,
     driverRating :: Maybe Centesimal,

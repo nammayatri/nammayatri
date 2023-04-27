@@ -93,10 +93,10 @@ cancel bookingId _ req = do
     case res of
       Right res' -> do
         disToPickup <- driverDistanceToPickup booking.merchantId (getCoordinates res'.currPoint) (getCoordinates booking.fromLocation)
-        buildBookingCancelationReason (Just res'.currPoint) (Just disToPickup)
+        buildBookingCancelationReason (Just res'.currPoint) (Just disToPickup) (Just booking.merchantId)
       Left err -> do
         logTagInfo "DriverLocationFetchFailed" $ show err
-        buildBookingCancelationReason Nothing Nothing
+        buildBookingCancelationReason Nothing Nothing (Just booking.merchantId)
   DB.runTransaction $ QBCR.upsert cancellationReason
   return $
     CancelRes
@@ -108,12 +108,13 @@ cancel bookingId _ req = do
         city = merchant.city
       }
   where
-    buildBookingCancelationReason currentDriverLocation disToPickup = do
+    buildBookingCancelationReason currentDriverLocation disToPickup merchantId = do
       let CancelReq {..} = req
       return $
         SBCR.BookingCancellationReason
           { bookingId = bookingId,
             rideId = Nothing,
+            merchantId = merchantId,
             source = SBCR.ByUser,
             reasonCode = Just reasonCode,
             reasonStage = Just reasonStage,

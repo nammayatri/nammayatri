@@ -27,6 +27,7 @@ import Kernel.Storage.Esqueleto
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Storage.Tabular.Estimate (EstimateTId)
+import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.SearchRequest (SearchRequestTId)
 import Storage.Tabular.Vehicle ()
 
@@ -41,6 +42,7 @@ mkPersist
       messageId Text
       requestId SearchRequestTId
       estimateId EstimateTId
+      merchantId MerchantTId Maybe
       startTime UTCTime
       validTill UTCTime
       baseFare Money
@@ -51,7 +53,6 @@ mkPersist
       searchRepeatType Domain.SearchRepeatType
       createdAt UTCTime
       updatedAt UTCTime
-
       Primary id
       deriving Generic
     |]
@@ -68,6 +69,7 @@ instance FromTType SearchTryT Domain.SearchTry where
         { id = Id id,
           requestId = fromKey requestId,
           estimateId = fromKey estimateId,
+          merchantId = fromKey <$> merchantId,
           ..
         }
 
@@ -77,5 +79,6 @@ instance ToTType SearchTryT Domain.SearchTry where
       { id = getId id,
         requestId = toKey requestId,
         estimateId = toKey estimateId,
+        merchantId = toKey <$> merchantId,
         ..
       }

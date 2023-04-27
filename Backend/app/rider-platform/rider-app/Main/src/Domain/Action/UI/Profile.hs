@@ -159,6 +159,7 @@ updateDefaultEmergencyNumbers ::
   ( EsqDBFlow m r,
     EncFlow m r,
     CacheFlow m r,
+    EsqDBReplicaFlow m r,
     HasFlowEnv m r '["maxEmergencyNumberCount" ::: Int]
   ) =>
   Id Person.Person ->
