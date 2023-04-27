@@ -530,27 +530,10 @@ export const storeOnResumeCallback = function (cb) {
 exports["getMerchantConfig'"] = function (just) {
   return function (nothing) {
     return function () {
-      if (typeof state !== "undefined") {
-        console.log("state", state)
-        return just(state);
+      if (typeof window.appConfig !== "undefined") {
+        return just(window.appConfig);
       }
       return nothing;
     }
-  }
-}
-
-
-var state = {
-  primaryTextColor : "#FFFFFF",
-  primaryBackground : "#03B9F5",
-  merchantId : "PAYTM" ,
-  searchLocationTheme : "#E3F4FC",
-  estimateConfirmText : "Request a NammaYatri Ride",
-  autoConfirmingLoaderColor : "#03B9F5",
-  quoteListModelBackground : "#E3F4FC",
-  quoteListModel : {
-    backgroundColor : "#E3F4FC",
-    textColor : "#2C2F3A",
-    loaderColor : "#03B9F5"
   }
 }

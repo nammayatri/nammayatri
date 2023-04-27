@@ -76,7 +76,7 @@ import Storage (KeyStore(..), isLocalStageOn, updateLocalStage, getValueToLocalS
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Int (toNumber, round, fromString)
-import MerchantConfigs.DefaultConfig as MDC
+import Config.DefaultConfig as DC
 
 instance showAction :: Show Action where
   show _ = ""
@@ -1612,7 +1612,7 @@ dummyRideRatingState = {
   offeredFare         : 0,
   distanceDifference  : 0,
   feedback            : "",
-  appConfig : MDC.config 
+  appConfig : DC.config 
 }
 dummyListItem :: LocationListItemState
 dummyListItem = {

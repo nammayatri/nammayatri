@@ -22,7 +22,7 @@ import Data.Maybe (Maybe(..))
 import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState)
 import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..))
 import Styles.Colors as Color
-import MerchantConfigs.DefaultConfig as MDC
+import Config.DefaultConfig as DC
 
 initData :: HomeScreenState
 initData = {
@@ -75,7 +75,7 @@ initData = {
       , actionTextColor : Color.elfGreen
       , imageUrl : "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png" 
       }
-    , config : MDC.config
+    , config : DC.config
     },
   --   rating :: Int
   -- , isRated :: Boolean
@@ -226,7 +226,7 @@ dummyPreviousRiderating = {
 , offeredFare : 0
 , distanceDifference : 0
 , feedback : ""
-, appConfig : MDC.config 
+, appConfig : DC.config 
 }
 
 
@@ -265,7 +265,7 @@ dummySettingBar = {
   , opened : CLOSED
   , email : Nothing
   , gender : Nothing
-  , appConfig : MDC.config
+  , appConfig : DC.config
 }
 
 dummyAddress :: Address
