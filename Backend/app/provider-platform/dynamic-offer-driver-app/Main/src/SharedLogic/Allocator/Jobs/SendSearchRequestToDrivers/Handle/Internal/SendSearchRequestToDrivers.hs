@@ -76,8 +76,8 @@ sendSearchRequestToDrivers searchReq baseFare driverMinExtraFee driverMaxExtraFe
   Esq.runTransaction $ do
     QSRD.setInactiveBySRId searchReq.id -- inactive previous request by drivers so that they can make new offers.
     QSRD.createMany searchRequestsForDrivers
-    forM_ driverPoolZipSearchRequests $ \(_, sReqFD) -> do
-      QDFS.updateStatus sReqFD.driverId DDFS.GOT_SEARCH_REQUEST {requestId = sReqFD.searchRequestId, validTill = sReqFD.searchRequestValidTill}
+  forM_ driverPoolZipSearchRequests $ \(_, sReqFD) -> do
+    Esq.runNoTransaction $ QDFS.updateStatus sReqFD.driverId DDFS.GOT_SEARCH_REQUEST {requestId = sReqFD.searchRequestId, validTill = sReqFD.searchRequestValidTill}
 
   forM_ driverPoolZipSearchRequests $ \(dPoolRes, sReqFD) -> do
     let language = fromMaybe Maps.ENGLISH dPoolRes.driverPoolResult.language
