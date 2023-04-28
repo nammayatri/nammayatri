@@ -477,6 +477,7 @@ deleteAccountView state push =
         , width MATCH_PARENT
         , orientation VERTICAL
         , gravity BOTTOM
+        , padding (PaddingBottom EHC.safeMarginBottom)
         , visibility if state.props.updateProfile then GONE else VISIBLE
         ][  linearLayout
             [ height $ V 1

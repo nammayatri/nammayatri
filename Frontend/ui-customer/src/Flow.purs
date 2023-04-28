@@ -437,7 +437,7 @@ homeScreenFlow = do
     GO_TO_ABOUT -> aboutUsScreenFlow
     GO_TO_MY_PROFILE  updateProfile -> do
         _ <- pure $ firebaseLogEvent if updateProfile then "safety_banner_clicked" else "ny_user_profile_click"
-        modifyScreenState $ MyProfileScreenStateType (\myProfileScreenState ->  myProfileScreenState{props{updateProfile = updateProfile , fromHomeScreen = updateProfile}})
+        modifyScreenState $ MyProfileScreenStateType (\myProfileScreenState ->  MyProfileScreenData.initData{props{updateProfile = updateProfile , fromHomeScreen = updateProfile}})
         myProfileScreenFlow
     GO_TO_FIND_ESTIMATES state-> do
       _ <- lift $ lift $ liftFlow $ firebaseLogEventWithTwoParams "ny_user_source_and_destination" "ny_user_enter_source" (take 99 (state.data.source)) "ny_user_enter_destination" (take 99 (state.data.destination))
