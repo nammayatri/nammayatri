@@ -1,1 +1,2 @@
 *.nix @srid
+flake.lock @srid
