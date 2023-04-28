@@ -54,7 +54,7 @@ INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_acc
         T1.role_id,
         T1.api_entity,
         'USER_FULL_ACCESS',
-        unnest (ARRAY ['STUCK_BOOKING_CANCEL','RIDE_START','RIDE_END','RIDE_CANCEL','RIDE_SYNC'])
+        unnest (ARRAY ['STUCK_BOOKING_CANCEL','RIDE_START','RIDE_END','RIDE_CANCEL','RIDE_SYNC','MULTIPLE_RIDE_SYNC'])
     FROM atlas_bpp_dashboard.access_matrix AS T1
     WHERE T1.api_entity = 'RIDES' AND (T1.user_access_type = 'USER_FULL_ACCESS' OR T1.user_access_type = 'USER_WRITE_ACCESS')
     )

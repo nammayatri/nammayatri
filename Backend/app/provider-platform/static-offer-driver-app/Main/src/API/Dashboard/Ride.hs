@@ -40,6 +40,7 @@ type API =
            :<|> Common.RideCancelAPI
            :<|> Common.RideInfoAPI
            :<|> Common.RideSyncAPI
+           :<|> Common.MultipleRideSyncAPI
            :<|> Common.RideRouteAPI
        )
 
@@ -51,6 +52,7 @@ handler merchantId =
     :<|> rideCancel merchantId
     :<|> rideInfo merchantId
     :<|> rideSync merchantId
+    :<|> multipleRideSync merchantId
     :<|> rideRoute merchantId
 
 rideList ::
@@ -100,6 +102,9 @@ rideInfo merchantShortId = withFlowHandlerAPI . DRide.rideInfo merchantShortId
 
 rideSync :: ShortId DM.Merchant -> Id Common.Ride -> FlowHandler Common.RideSyncRes
 rideSync merchantShortId = withFlowHandlerAPI . DRide.rideSync merchantShortId
+
+multipleRideSync :: ShortId DM.Merchant -> Common.MultipleRideSyncReq -> FlowHandler Common.MultipleRideSyncRes
+multipleRideSync merchantShortId = withFlowHandlerAPI . DRide.multipleRideSync merchantShortId
 
 rideRoute :: ShortId DM.Merchant -> Id Common.Ride -> FlowHandler Common.RideRouteRes
 rideRoute merchantShortId rideId = withFlowHandlerAPI $ DRide.rideRoute merchantShortId rideId
