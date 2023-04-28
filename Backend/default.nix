@@ -22,9 +22,6 @@
         inherit (self'.packages)
           arion;
       };
-      source-overrides = {
-        cryptostore = "0.3.0.0";
-      };
       # Some tests fail under Nix. We shoud probably run them in CI directly.
       overrides = self: super:
         with pkgs.haskell.lib.compose;

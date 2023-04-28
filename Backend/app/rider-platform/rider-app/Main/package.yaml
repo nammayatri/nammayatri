@@ -58,7 +58,7 @@ dependencies:
   - base64-bytestring
   - bytestring
   - cryptonite
-  - cryptostore
+  - cryptostore >= 0.3
   - x509
   - euler-hs
   - lens

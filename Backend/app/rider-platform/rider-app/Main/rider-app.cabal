@@ -306,7 +306,7 @@ library
     , bytestring
     , containers
     , cryptonite
-    , cryptostore
+    , cryptostore >=0.3
     , dashboard-helper-api
     , euler-hs
     , extra
@@ -388,7 +388,7 @@ executable rider-app-exe
     , bytestring
     , containers
     , cryptonite
-    , cryptostore
+    , cryptostore >=0.3
     , dashboard-helper-api
     , euler-hs
     , extra
