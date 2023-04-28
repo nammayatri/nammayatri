@@ -16,11 +16,15 @@ module Beckn.Types.Core.Taxi.Rating.Category where
 
 import Data.Aeson as A
 import Data.Aeson.Types
+import Data.ByteString.Lazy as BSL
 import Data.OpenApi
+import Data.Text as T
+import Data.Text.Encoding as DT
 import EulerHS.Prelude hiding (id)
+import Servant
 
 data CategoryName = RIDE
-  deriving (Generic, Show, Read, ToSchema)
+  deriving (Generic, Show, Read, ToSchema, ToParamSchema)
 
 instance ToJSON CategoryName where
   toJSON RIDE = A.String "RIDE"
@@ -29,8 +33,18 @@ instance FromJSON CategoryName where
   parseJSON (A.String "RIDE") = pure RIDE
   parseJSON invalid =
     prependFailure
-      "parsing NotSUM failed, "
+      "parsing CategoryName failed, "
       (typeMismatch "Object" invalid)
+
+instance FromHttpApiData CategoryName where
+  parseUrlPiece = parseHeader . DT.encodeUtf8
+  parseQueryParam = parseUrlPiece
+  parseHeader = first T.pack . eitherDecode . BSL.fromStrict
+
+instance ToHttpApiData CategoryName where
+  toUrlPiece = DT.decodeUtf8 . toHeader
+  toQueryParam = toUrlPiece
+  toHeader = BSL.toStrict . encode
 
 newtype RatingCategories = RatingCategories {rating_categories :: [CategoryName]}
   deriving (Generic, FromJSON, ToJSON, Show, Read, ToSchema)

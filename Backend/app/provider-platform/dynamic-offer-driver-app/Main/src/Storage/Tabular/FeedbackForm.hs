@@ -18,42 +18,50 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.RatingCategories where
+module Storage.Tabular.FeedbackForm where
 
-import Beckn.Types.Core.Taxi.Rating.Category
-import qualified Domain.Types.RatingCategories as Domain
+import Beckn.Types.Core.Taxi.Rating.FeedbackForm (AnswerType)
+import qualified Domain.Types.FeedbackForm as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
+import qualified Storage.Tabular.RatingCategories as RC
 
-derivePersistField "CategoryName"
+derivePersistField "AnswerType"
 
 mkPersist
   defaultSqlSettings
   [defaultQQ|
-    RatingCategoryT sql=rating_category
+    FeedbackFormT sql=feedback_form
       id Text
-      category CategoryName
+      categoryId RC.RatingCategoryTId
+      ratingValue Int
+      question Text
+      answerType AnswerType
       Primary id
       deriving Generic
     |]
 
-instance TEntityKey RatingCategoryT where
-  type DomainKey RatingCategoryT = Id Domain.RatingCategory
-  fromKey (RatingCategoryTKey _id) = Id _id
-  toKey (Id id) = RatingCategoryTKey id
+instance TEntityKey FeedbackFormT where
+  type DomainKey FeedbackFormT = Id Domain.FeedbackForm
+  fromKey (FeedbackFormTKey _id) = Id _id
+  toKey (Id id) = FeedbackFormTKey id
 
-instance FromTType RatingCategoryT Domain.RatingCategory where
-  fromTType RatingCategoryT {..} = do
+instance FromTType FeedbackFormT Domain.FeedbackForm where
+  fromTType FeedbackFormT {..} = do
     return $
-      Domain.RatingCategory
+      Domain.FeedbackForm
         { id = Id id,
+          categoryId = fromKey categoryId,
+          answer_type = answerType,
           ..
         }
 
-instance ToTType RatingCategoryT Domain.RatingCategory where
-  toTType Domain.RatingCategory {..} =
-    RatingCategoryT
+instance ToTType FeedbackFormT Domain.FeedbackForm where
+  toTType Domain.FeedbackForm {..} =
+    FeedbackFormT
       { id = getId id,
+        categoryId = toKey categoryId,
+        answerType = answer_type,
         ..
       }

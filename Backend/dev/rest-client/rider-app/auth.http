@@ -34,3 +34,14 @@ content-type: application/json
 GET {{app-host}}/rating/categories
 content-type: application/json
 token: {{token}}
+
+###
+
+
+# @name feedbackForm
+
+GET {{app-host}}/feedback/form
+    ?categoryName="RIDE"
+    &ratingValue=4
+content-type: application/json
+token: {{token}}

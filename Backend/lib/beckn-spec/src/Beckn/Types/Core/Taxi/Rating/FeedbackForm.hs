@@ -11,9 +11,13 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE InstanceSigs #-}
 
 module Beckn.Types.Core.Taxi.Rating.FeedbackForm where
 
+import Beckn.Types.Core.Taxi.Rating.Category (CategoryName)
+import Data.Aeson as A
+import Data.Aeson.Types
 import Data.OpenApi
 import EulerHS.Prelude hiding (id)
 import Kernel.Utils.Schema
@@ -26,3 +30,29 @@ data FeedbackForm = FeedbackForm
 
 instance ToSchema FeedbackForm where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+data AnswerType = TEXT deriving (Generic, Show, Read, ToSchema)
+
+instance ToJSON AnswerType where
+  toJSON TEXT = A.String "text"
+
+instance FromJSON AnswerType where
+  parseJSON :: Value -> Parser AnswerType
+  parseJSON (A.String "text") = pure TEXT
+  parseJSON invalid =
+    prependFailure
+      "parsing AnswerType failed, "
+      (typeMismatch "Object" invalid)
+
+data FeedbackFormAPIEntity = FeedbackFormAPIEntity
+  { id :: Int,
+    question :: Text,
+    answer_type :: AnswerType
+  }
+  deriving (Generic, Show, Read, ToSchema, ToJSON, FromJSON)
+
+data GetFeedbackFormMes = GetFeedbackFormMes
+  { rating_value :: Int,
+    rating_category :: CategoryName
+  }
+  deriving (Generic, Show, Read, ToSchema, ToJSON, FromJSON)

@@ -44,7 +44,6 @@ mkPersist
       driverOfferBaseUrl Text
       driverOfferApiKey Text
       driverOfferMerchantId Text
-      bppBaseUrl Text
       geoHashPrecisionValue Int
       signingPublicKey Base64
       cipherText Base64 Maybe
@@ -71,7 +70,6 @@ instance FromTType MerchantT Domain.Merchant where
     gwUrl <- parseBaseUrl gatewayUrl
     regUrl <- parseBaseUrl registryUrl
     doBaseUrl <- parseBaseUrl driverOfferBaseUrl
-    bppUrl <- parseBaseUrl bppBaseUrl
     return $
       Domain.Merchant
         { id = Id id,
@@ -80,7 +78,6 @@ instance FromTType MerchantT Domain.Merchant where
           registryUrl = regUrl,
           gatewayUrl = gwUrl,
           driverOfferBaseUrl = doBaseUrl,
-          bppBaseUrl = bppUrl,
           ..
         }
 
@@ -96,6 +93,5 @@ instance ToTType MerchantT Domain.Merchant where
         gatewayUrl = showBaseUrl gatewayUrl,
         registryUrl = showBaseUrl registryUrl,
         driverOfferBaseUrl = showBaseUrl driverOfferBaseUrl,
-        bppBaseUrl = showBaseUrl bppBaseUrl,
         ..
       }

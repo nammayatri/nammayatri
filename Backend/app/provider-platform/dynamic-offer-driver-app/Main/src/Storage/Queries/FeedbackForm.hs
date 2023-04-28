@@ -12,15 +12,19 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Storage.Queries.RatingCategories where
+module Storage.Queries.FeedbackForm where
 
-import Beckn.Types.Core.Taxi.Rating.Category
-import qualified Domain.Types.RatingCategories as Domain
+import qualified Domain.Types.FeedbackForm as Domain
+import qualified Domain.Types.RatingCategories as RC
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
-import Storage.Tabular.RatingCategories
+import Kernel.Types.Id
+import Storage.Tabular.FeedbackForm
 
-findAll :: Transactionable m => m RatingCategories
-findAll = do
-  list <- Esq.findAll $ from $ table @RatingCategoryT
-  return $ RatingCategories $ Domain.category <$> list
+findByCategoryIdAndRatingValue :: Transactionable m => Id RC.RatingCategory -> Int -> m (Maybe Domain.FeedbackForm)
+findByCategoryIdAndRatingValue catId rtValue = Esq.findOne $ do
+  form <- from $ table @FeedbackFormT
+  where_ $
+    form ^. FeedbackFormCategoryId ==. val (toKey catId)
+      &&. form ^. FeedbackFormRatingValue ==. val rtValue
+  return form

@@ -29,11 +29,9 @@ getRatingCategories ::
   m RatingCategories
 getRatingCategories providerUrl bppId city messageId =
   Hedis.safeGet (makeRatingCategoriesId bppId) >>= \case
-    Just a -> do
-      logDebug "GOT FROM REDIS"
+    Just a ->
       return a
-    Nothing -> do
-      logDebug "GOT FROM BPP"
+    Nothing ->
       findAndCache providerUrl bppId city messageId
 
 makeRatingCategoriesId :: Text -> Text

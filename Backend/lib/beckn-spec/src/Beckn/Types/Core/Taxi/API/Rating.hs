@@ -16,6 +16,7 @@ module Beckn.Types.Core.Taxi.API.Rating where
 
 import Beckn.Types.Core.Taxi.Rating (RatingMessage)
 import Beckn.Types.Core.Taxi.Rating.Category
+import Beckn.Types.Core.Taxi.Rating.FeedbackForm
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.Beckn.Ack
 import Kernel.Types.Beckn.ReqTypes (BecknReq, Empty)
@@ -28,6 +29,10 @@ type RatingRes = AckResponse
 type GetRatingCategoriesReq = BecknReq Empty
 
 type GetRatingCategoriesResp = RatingCategories
+
+type GetFeedbackFormReq = BecknReq GetFeedbackFormMes
+
+type GetFeedbackFormResp = FeedbackFormAPIEntity
 
 type RatingAPI =
   "rating"
@@ -44,3 +49,11 @@ type GetRatingCategoriesAPI =
 
 getRatingCategoriesAPI :: Proxy GetRatingCategoriesAPI
 getRatingCategoriesAPI = Proxy
+
+type GetFeedbackFormAPI =
+  "get_feedback_form"
+    :> ReqBody '[JSON] GetFeedbackFormReq
+    :> Post '[JSON] GetFeedbackFormResp
+
+getFeedbackFormAPI :: Proxy GetFeedbackFormAPI
+getFeedbackFormAPI = Proxy

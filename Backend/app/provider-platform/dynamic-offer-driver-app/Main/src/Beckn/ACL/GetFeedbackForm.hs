@@ -12,28 +12,33 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.ACL.GetRatingCategories where
+module Beckn.ACL.GetFeedbackForm where
 
 import qualified Beckn.Types.Core.Taxi.API.Rating as Rating
+import Beckn.Types.Core.Taxi.Rating.FeedbackForm
 import Kernel.Prelude
 import Kernel.Product.Validation.Context
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Common
+import Storage.Queries.FeedbackForm
 import Storage.Queries.RatingCategories
 import Tools.Error
 
-buildRatingCategoriesResp ::
+buildFeedbackFormResp ::
   (HasFlowEnv m r '["coreVersion" ::: Text], Esq.EsqDBReplicaFlow m r) =>
   Subscriber.Subscriber ->
-  Rating.GetRatingCategoriesReq ->
-  m Rating.GetRatingCategoriesResp
-buildRatingCategoriesResp subscriber req = do
+  Rating.GetFeedbackFormReq ->
+  m Rating.GetFeedbackFormResp
+buildFeedbackFormResp subscriber req = do
   let ctx = req.context
-  validateContext Context.GET_RATING_CATEGORIES ctx
+  validateContext Context.GET_FEEDBACK_FORM ctx
   unless (subscriber.subscriber_id == ctx.bap_id) $
     throwError (InvalidRequest "Invalid bap_id")
   unless (subscriber.subscriber_url == ctx.bap_uri) $
     throwError (InvalidRequest "Invalid bap_uri")
-  Esq.runInReplica findAll
+  let mes = req.message
+  categoryId <- Esq.runInReplica $ findByCategoryName (mes.rating_category) >>= fromMaybeM (RatingCategroyDoesNotExist $ show mes.rating_category)
+  feedbackForm <- Esq.runInReplica $ findByCategoryIdAndRatingValue categoryId mes.rating_value >>= fromMaybeM (FeedbackFormDoesNotExist (show mes.rating_category) mes.rating_value)
+  return $ FeedbackFormAPIEntity {id = mes.rating_value, question = feedbackForm.question, answer_type = feedbackForm.answer_type}

@@ -12,9 +12,9 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module API.Beckn.GetRatingCategories (API, handler) where
+module API.Beckn.GetFeedbackForm (API, handler) where
 
-import qualified Beckn.ACL.GetRatingCategories as ACL
+import qualified Beckn.ACL.GetFeedbackForm as ACL
 import qualified Beckn.Types.Core.Taxi.API.Rating as Rating
 import Environment
 import EulerHS.Prelude hiding (id)
@@ -24,16 +24,16 @@ import Servant
 
 type API =
   SignatureAuth "Authorization"
-    :> Rating.GetRatingCategoriesAPI
+    :> Rating.GetFeedbackFormAPI
 
 handler :: FlowServer API
-handler = getRatingCategories
+handler = getFeedbackForm
 
-getRatingCategories ::
+getFeedbackForm ::
   SignatureAuthResult ->
-  Rating.GetRatingCategoriesReq ->
-  FlowHandler Rating.GetRatingCategoriesResp
-getRatingCategories (SignatureAuthResult _ subscriber) req = withFlowHandlerAPI $
+  Rating.GetFeedbackFormReq ->
+  FlowHandler Rating.GetFeedbackFormResp
+getFeedbackForm (SignatureAuthResult _ subscriber) req = withFlowHandlerAPI $
   withTransactionIdLogTag req $ do
-    logTagInfo "getRatingCategoriesAPI" "Received get_rating_categories API call."
-    ACL.buildRatingCategoriesResp subscriber req
+    logTagInfo "getFeedbackFormAPI" "Received get_feedback_form API call."
+    ACL.buildFeedbackFormResp subscriber req

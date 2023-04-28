@@ -12,14 +12,25 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Types.RatingCategories where
+module Domain.Types.FeedbackForm where
 
-import Beckn.Types.Core.Taxi.Rating.Category
-import EulerHS.Prelude hiding (id)
-import Kernel.Types.Id
+import Beckn.Types.Core.Taxi.Rating.FeedbackForm (AnswerType, FeedbackFormAPIEntity (..))
+import Domain.Types.RatingCategories
+import Kernel.Prelude
+import Kernel.Types.Id (Id)
 
-data RatingCategory = RatingCategory
-  { id :: Id RatingCategory,
-    category :: CategoryName
+data FeedbackForm = FeedbackForm
+  { id :: Id FeedbackForm,
+    categoryId :: Id RatingCategory,
+    ratingValue :: Int,
+    question :: Text,
+    answer_type :: AnswerType
   }
-  deriving (Generic, Show, ToJSON, FromJSON)
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+makeFeedbackFormAPIEntity :: FeedbackForm -> FeedbackFormAPIEntity
+makeFeedbackFormAPIEntity FeedbackForm {..} =
+  FeedbackFormAPIEntity
+    { id = ratingValue,
+      ..
+    }

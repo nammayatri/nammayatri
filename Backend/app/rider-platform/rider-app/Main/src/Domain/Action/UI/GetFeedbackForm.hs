@@ -12,8 +12,9 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Action.UI.GetRatingCategories where
+module Domain.Action.UI.GetFeedbackForm where
 
+import Beckn.Types.Core.Taxi.Rating.Category (CategoryName)
 import qualified Domain.Types.Person as Person
 import Environment
 import EulerHS.Prelude hiding (id)
@@ -22,13 +23,13 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified SharedLogic.GetRatingCategories as GRC
+import qualified SharedLogic.GetFeedbackForm as GFF
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Person as QP
 import Tools.Error
 
-getRatingCategories ::
+getFeedbackForm ::
   ( HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl],
     CacheFlow m r,
     CoreMetrics m,
@@ -37,10 +38,12 @@ getRatingCategories ::
     EsqDBFlow m r
   ) =>
   Id Person.Person ->
-  m GRC.RatingCategoriesResp
-getRatingCategories personId = do
+  Int ->
+  CategoryName ->
+  m GFF.FeedbackFormResp
+getFeedbackForm personId ratingValue categoryName = do
   person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   merchant <- CQM.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
   messageId <- generateGUID
-  ratingCategoriesList <- GRC.getRatingCategories merchant.driverOfferBaseUrl merchant.driverOfferMerchantId merchant.city messageId
-  GRC.buildGetRatingCategoriesRes merchant.driverOfferBaseUrl merchant.driverOfferMerchantId merchant.city messageId ratingCategoriesList
+  feedbackForm <- GFF.getFeedbackForm merchant.driverOfferBaseUrl merchant.driverOfferMerchantId merchant.city messageId ratingValue categoryName
+  GFF.buildGetFeedbackFormRes merchant.driverOfferBaseUrl merchant.driverOfferMerchantId merchant.city messageId feedbackForm

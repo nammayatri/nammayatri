@@ -14,10 +14,19 @@
 
 module Storage.Queries.RatingCategories where
 
+import Beckn.Types.Core.Taxi.Rating.Category
 import qualified Domain.Types.RatingCategories as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
 import Storage.Tabular.RatingCategories
 
 findAll :: Transactionable m => m [Domain.RatingCategory]
 findAll = Esq.findAll $ from $ table @RatingCategoryT
+
+findByCategoryName :: Transactionable m => CategoryName -> m (Maybe (Id Domain.RatingCategory))
+findByCategoryName name = Esq.findOne $ do
+  categoryT <- from $ table @RatingCategoryT
+  where_ $
+    categoryT ^. RatingCategoryCategory ==. val name
+  return $ categoryT ^. RatingCategoryTId

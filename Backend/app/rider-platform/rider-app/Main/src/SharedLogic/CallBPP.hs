@@ -40,6 +40,7 @@ import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError (IsBecknAPI)
 import Kernel.Utils.Monitoring.Prometheus.Servant (SanitizedUrl)
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
+import Servant.Client (BaseUrl (..))
 import Storage.CachedQueries.CacheConfig (HasCacheConfig)
 import qualified Storage.CachedQueries.Merchant as CQM
 import Tools.Error
@@ -180,7 +181,17 @@ getRatingCategories ::
   BaseUrl ->
   GetRatingCategoriesReq ->
   m GetRatingCategoriesResp
-getRatingCategories = callBecknAPIWithSignature "ratingCategories" API.getRatingCategoriesAPI
+getRatingCategories url = callBecknAPIWithSignature "ratingCategories" API.getRatingCategoriesAPI (addOneStepToPath url "beckn")
+
+getFeedbackForm ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasBapInfo r m
+  ) =>
+  BaseUrl ->
+  GetFeedbackFormReq ->
+  m GetFeedbackFormResp
+getFeedbackForm url = callBecknAPIWithSignature "feadbacckForm" API.getFeedbackFormAPI (addOneStepToPath url "beckn")
 
 callBecknAPIWithSignature,
   callBecknAPIWithSignatureMetro ::
@@ -201,3 +212,6 @@ callBecknAPIWithSignature a b c d = do
 callBecknAPIWithSignatureMetro a b c d = do
   bapId <- asks (.bapSelfIds.metro)
   callBecknAPI (Just $ getHttpManagerKey bapId) Nothing a b c d
+
+addOneStepToPath :: BaseUrl -> String -> BaseUrl
+addOneStepToPath BaseUrl {baseUrlPath, ..} nextStep = BaseUrl {baseUrlPath = baseUrlPath <> "/" <> nextStep, ..}

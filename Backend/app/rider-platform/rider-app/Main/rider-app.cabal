@@ -58,6 +58,7 @@ library
       API.UI.Confirm
       API.UI.CustomerSupport
       API.UI.Feedback
+      API.UI.FeedbackForm
       API.UI.Frontend
       API.UI.GoogleTranslate
       API.UI.Maps
@@ -119,6 +120,7 @@ library
       Domain.Action.UI.CustomerSupport
       Domain.Action.UI.Feedback
       Domain.Action.UI.Frontend
+      Domain.Action.UI.GetFeedbackForm
       Domain.Action.UI.GetRatingCategories
       Domain.Action.UI.Maps
       Domain.Action.UI.Payment
@@ -184,6 +186,7 @@ library
       SharedLogic.CallBPP
       SharedLogic.CallBPPInternal
       SharedLogic.Confirm
+      SharedLogic.GetFeedbackForm
       SharedLogic.GetRatingCategories
       SharedLogic.GoogleTranslate
       SharedLogic.Merchant

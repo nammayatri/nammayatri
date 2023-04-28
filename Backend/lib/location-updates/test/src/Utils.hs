@@ -78,6 +78,7 @@ wrapTests func = do
     let loggerConfig = defaultLoggerConfig {logToFile = True, prettyPrinting = True}
     withLoggerEnv loggerConfig Nothing $ \loggerEnv -> do
       coreMetrics <- Metrics.registerCoreMetricsContainer
+      version <- lookupDeploymentVersion
       -- fetch google configs for using mock-google or real google
       appCfg <- Environment.readConfig "../"
       version <- lookupDeploymentVersion

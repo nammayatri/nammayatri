@@ -12,13 +12,14 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module API.UI.RatingCategories
+module API.UI.FeedbackForm
   ( API,
     handler,
   )
 where
 
-import qualified Domain.Action.UI.GetRatingCategories as Domain
+import Beckn.Types.Core.Taxi.Rating.Category (CategoryName)
+import qualified Domain.Action.UI.GetFeedbackForm as Domain
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as Person
 import qualified Environment as App
@@ -26,19 +27,21 @@ import EulerHS.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
-import qualified SharedLogic.GetRatingCategories as GRC
+import qualified SharedLogic.GetFeedbackForm as GFF
 import Tools.Auth
 
--------- Rating Categories Flow ----------
+-------- Feedback form Flow ----------
 type API =
-  "rating"
-    :> ( "categories"
+  "feedback"
+    :> ( "form"
            :> TokenAuth
-           :> Get '[JSON] GRC.RatingCategoriesResp
+           :> MandatoryQueryParam "ratingValue" Int
+           :> MandatoryQueryParam "categoryName" CategoryName
+           :> Get '[JSON] GFF.FeedbackFormResp
        )
 
 handler :: App.FlowServer API
-handler = ratingCategories
+handler = feedbackForm
 
-ratingCategories :: (Id Person.Person, Id DM.Merchant) -> App.FlowHandler GRC.RatingCategoriesResp
-ratingCategories (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId $ Domain.getRatingCategories personId
+feedbackForm :: (Id Person.Person, Id DM.Merchant) -> Int -> CategoryName -> App.FlowHandler GFF.FeedbackFormResp
+feedbackForm (personId, _) ratingValue categoryName = withFlowHandlerAPI . withPersonIdLogTag personId $ Domain.getFeedbackForm personId ratingValue categoryName
