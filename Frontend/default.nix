@@ -20,42 +20,23 @@
         inherit pkgs;
         inherit (pkgs) nodejs;
       }).nodeDependencies;
-
-      make-temporary-link = { src, dest, function-name ? "_" }:
-        let
-          cleanup-function-name = "${function-name}_cleanup";
-          temp-dir = "${function-name}_TEMP_DIR";
-        in
-        ''
-          function ${function-name}() {
-            ${temp-dir}=$(mktemp -d)
-            function ${cleanup-function-name} {
-              trap - INT TERM EXIT
-              unlink "${dest}"
-              if [[ -e "''$${temp-dir}/${dest}" ]]; then
-                 mv "''$${temp-dir}/${dest}" "${dest}"
-              fi
-              unset -f ${temp-dir}
-              unset -f ${cleanup-function-name}
-            }
-            trap '${cleanup-function-name}' INT TERM EXIT
-            if [[ -e "${dest}" ]]; then
-              mv "${dest}" "''$${temp-dir}/"
-            fi
-            ln -s "${src}" "${dest}"
-          }
-          ${function-name}
-          unset -f ${function-name}
-        '';
-
       webpack-dev-server = pkgs.writeShellApplication {
         name = "webpack-dev-server-wrapped";
         runtimeInputs = [ nodeDeps ];
         text = ''
-          ${make-temporary-link {
-              src = "${nodeDeps}/lib/node_modules";
-              dest = "node_modules";
-            }}
+          TEMP_DIR=$(mktemp -d)
+          function cleanup {
+            trap - INT TERM EXIT
+            unlink "node_modules"
+            if [[ -e "$TEMP_DIR/node_modules" ]]; then
+               mv "$TEMP_DIR/node_modules" "node_modules"
+            fi
+          }
+          trap 'cleanup' INT TERM EXIT
+          if [[ -e "node_modules" ]]; then
+            mv "node_modules" "$TEMP_DIR/"
+          fi
+          ln -s "${nodeDeps}/lib/node_modules" "node_modules"
           webpack-dev-server "$@"
         '';
       };
@@ -103,24 +84,48 @@
         '';
       };
 
-      ui-customer-android-bundle-js =
+      make-bundle = { mode ? "production", env ? "prod", target, platform }:
+        let
+          webpack-config = "webpack.${platform}.js";
+          dist-folder =
+            if mode != "development" then
+              "./dist/${platform}"
+            else
+              "./dist";
+        in
         pkgs.stdenv.mkDerivation {
-          name = "bundle-ui-customer-android";
+          name = "${target}-${platform}-${env}-${mode}-index-bundle-js";
           phases = [ "buildPhase" "installPhase" ];
           nativeBuildInputs = [ pkgs.nodejs ];
           buildPhase = ''
             ln -s ${nodeDeps}/lib/node_modules node_modules
-            cp -r -L ${localPackages.ui-customer}/output output
-            cp ${./ui-customer/index.js} index.js
-            cp ${./ui-customer/package.json} package.json
-            cp ${./ui-customer/webpack.config.js} webpack.config.js
-            cp ${./ui-customer/webpack.android.js} webpack.android.js
-            node_modules/.bin/webpack --env prod --mode=production --progress --config webpack.android.js
+            cp -r -L ${localPackages.${target}}/output output
+            cp ${ ./${target}/index.js } index.js
+            cp ${ ./${target}/package.json } package.json
+            cp ${ ./${target}/webpack.config.js } webpack.config.js
+            cp ${ ./${target}/${webpack-config} } ${webpack-config}
+            node_modules/.bin/webpack --env ${env} --mode=${mode} --progress --config ${webpack-config}
           '';
           installPhase = ''
-            mv dist/android/index_bundle.js $out
+            mv ${dist-folder}/index_bundle.js $out
           '';
         };
+
+      bundle-options =
+        lib.attrsets.cartesianProductOfSets {
+          mode = [ "production" "development" ];
+          env = [ "master" "sandbox" "prod" ];
+          target = builtins.attrNames localPackages;
+          platform = [ "android" "ios" ];
+        };
+
+      bundles =
+        builtins.listToAttrs (map
+          (args: {
+            name = "${args.target}-${args.platform}-${args.env}-${args.mode}-js";
+            value = make-bundle args;
+          })
+          bundle-options);
     in
     {
       treefmt.config = {
@@ -148,7 +153,7 @@
         inputsFrom = [
           config.mission-control.devShell
           config.pre-commit.devShell
-          localPackages.ui-customer.develop
+          localPackages.beckn-common.develop
         ];
         packages = [
           pkgs.dhall
@@ -158,8 +163,9 @@
       };
       packages = {
         inherit (localPackages) ui-customer ui-driver;
-        inherit ui-customer-android-bundle-js;
         ui-common = localPackages.beckn-common;
-      };
+        android-customer-bundle = bundles.ui-customer-android-prod-production-js;
+        android-driver-bundle = bundles.ui-driver-android-prod-production-js;
+      } // bundles;
     };
 }
