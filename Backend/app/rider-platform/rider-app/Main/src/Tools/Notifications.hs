@@ -462,6 +462,6 @@ notifyDriverHasReached personId ride = do
       body =
         FCMNotificationBody $
           unwords
-            [ "Vehicle No. " <> ride.vehicleNumber <> " has reached your location. Use OTP " <> ride.otp <> " to verify the ride"
+            [ "Use OTP " <> ride.otp <> " to verify the ride with Vehicle No. " <> ride.vehicleNumber
             ]
   FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
