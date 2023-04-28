@@ -22,6 +22,7 @@ module Domain.Action.UI.Location.UpdateLocation
 where
 
 import qualified Data.List.NonEmpty as NE
+import qualified Domain.Types.DriverInformation as DDInfo
 import Domain.Types.DriverLocation (DriverLocation)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as Person
@@ -74,7 +75,8 @@ data DriverLocationUpdateStreamData = DriverLocationUpdateStreamData
     mId :: Text, -- merchantId
     ts :: UTCTime, -- timestamp
     pt :: LatLong, -- lat log
-    da :: Bool -- driver avaiable
+    da :: Bool, -- driver avaiable
+    mode :: Maybe DDInfo.DriverMode
   }
   deriving (Generic, FromJSON, ToJSON)
 
@@ -108,12 +110,13 @@ streamLocationUpdates ::
   LatLong ->
   UTCTime ->
   Bool ->
+  Maybe DDInfo.DriverMode ->
   m ()
-streamLocationUpdates mbRideId merchantId driverId point timestamp isDriverActive = do
+streamLocationUpdates mbRideId merchantId driverId point timestamp isDriverActive mbDriverMode = do
   topicName <- asks (.driverLocationUpdateTopic)
   produceMessage
     (topicName, Just (encodeUtf8 $ getId driverId))
-    (DriverLocationUpdateStreamData (getId <$> mbRideId) (getId merchantId) timestamp point isDriverActive)
+    (DriverLocationUpdateStreamData (getId <$> mbRideId) (getId merchantId) timestamp point isDriverActive mbDriverMode)
 
 updateLocationHandler ::
   ( Redis.HedisFlow m r,
@@ -144,12 +147,13 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
               currPoint = NE.last newWaypoints
           upsertDriverLocation currPoint.pt currPoint.ts
           mbRideIdAndStatus <- getAssignedRide
-          mapM_
-            ( \point -> do
-                updateDriverSpeedInRedis driver.merchantId driver.id point.pt point.ts
-                streamLocationUpdates (fst <$> mbRideIdAndStatus) driver.merchantId driver.id point.pt point.ts driverInfo.active
-            )
-            (a : ax)
+          fork "updating in kafka" $
+            mapM_
+              ( \point -> do
+                  updateDriverSpeedInRedis driver.merchantId driver.id point.pt point.ts
+                  streamLocationUpdates (fst <$> mbRideIdAndStatus) driver.merchantId driver.id point.pt point.ts driverInfo.active driverInfo.mode
+              )
+              (a : ax)
           maybe
             (logInfo "No ride is assigned to driver, ignoring")
             (\(rideId, rideStatus) -> when (rideStatus == DRide.INPROGRESS) $ addIntermediateRoutePoints rideId $ NE.map (.pt) newWaypoints)
