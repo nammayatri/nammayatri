@@ -156,7 +156,7 @@ getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus = do
   return requestorPhone
   where
     dropFirstZero = T.dropWhile (== '0')
-    removeQuotes number = T.replace "\"" "" number
+    removeQuotes = T.replace "\"" ""
     buildCallStatus rideId callId exotelCallId exoStatus dtmfNumberUsed = do
       now <- getCurrentTime
       return $
