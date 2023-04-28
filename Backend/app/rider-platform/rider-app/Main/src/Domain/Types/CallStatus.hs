@@ -23,6 +23,7 @@ data CallStatus = CallStatus
   { id :: Id CallStatus,
     callId :: Text,
     rideId :: Id Ride,
+    dtmfNumberUsed :: Maybe Text,
     status :: CallTypes.CallStatus,
     recordingUrl :: Maybe Text,
     conversationDuration :: Int,
