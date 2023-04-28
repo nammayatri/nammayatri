@@ -1753,9 +1753,9 @@ getSearchExpiryTime dummy =
 tipEnabledState :: HomeScreenState -> HomeScreenState
 tipEnabledState state = state { props{customerTip {isTipSelected= true, tipForDriver= 10, tipActiveIndex=1}}}
 
-getPreferenceValue :: String -> Boolean
-getPreferenceValue dummy = (getValueToLocalStore ENABLE_TIPS) /= "true"
-
+isTipEnabled :: Int -> Boolean
+isTipEnabled distance = distance < 5000 &&
+                        (getValueFromConfig "CUSTOMER_TIP") == "true"
 
 estimatesFlow :: Array EstimateAPIEntity -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 estimatesFlow estimatedQuotes state = do

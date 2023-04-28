@@ -52,7 +52,8 @@ const jatriSathiConfigs = {
     RC_VALIDATION_TEXT : "WB",
     DOCUMENT_LINK : "",
     APP_LINK : "",
-    PRIVACY_POLICY_LINK : ""
+    PRIVACY_POLICY_LINK : "",
+    SPECIAL_ZONE_OTP_VIEW : "true"
 }
 
 const bengaliStrings = {

@@ -54,7 +54,8 @@ const config = {
   "shareAppContent" : "Hey there!\n\n Jatri Saathi is Coming Soon",
   "DOCUMENT_LINK" : "",
   "APP_LINK" : "",
-  "PRIVACY_POLICY_LINK" : ""
+  "PRIVACY_POLICY_LINK" : "",
+  "CUSTOMER_TIP" : "false"
 }
 
 const bengaliStrings = {
