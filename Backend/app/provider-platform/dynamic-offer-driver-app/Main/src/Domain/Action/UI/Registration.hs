@@ -34,6 +34,7 @@ import qualified Domain.Types.RegistrationToken as SR
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption
 import Kernel.External.FCM.Types (FCMRecipientToken)
+import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.External.Whatsapp.Interface.Types as Whatsapp
 import Kernel.Sms.Config
 import qualified Kernel.Storage.Esqueleto as DB
@@ -55,6 +56,7 @@ import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as QD
 import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
+import qualified Storage.Queries.DriverLocation as QDriverLocation
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
@@ -184,7 +186,9 @@ createDriverDetails personId = do
           }
   QDriverStats.createInitialDriverStats driverId
   QD.create driverInfo
+  QDriverLocation.create personId initLatLong now
   where
+    initLatLong = LatLong 0 0
     driverId = cast personId
 
 makePerson :: EncFlow m r => AuthReq -> Maybe Version -> Maybe Version -> Id DO.Merchant -> m SP.Person

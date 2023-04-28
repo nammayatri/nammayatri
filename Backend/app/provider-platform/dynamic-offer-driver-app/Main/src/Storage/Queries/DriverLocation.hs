@@ -48,24 +48,27 @@ findById = Esq.findById
 
 upsertGpsCoord :: Id Person -> LatLong -> UTCTime -> SqlDB DriverLocation
 upsertGpsCoord drLocationId latLong calculationTime = do
-  mbDrLoc <- Esq.findById @DriverLocation @DriverLocationT drLocationId
   now <- getCurrentTime
-  case mbDrLoc of
-    Nothing -> do
-      Storage.Queries.DriverLocation.create drLocationId latLong calculationTime
-      return $ DriverLocation drLocationId latLong.lat latLong.lon calculationTime now now
-    Just oldLocation -> do
-      Esq.update $ \tbl -> do
-        set
-          tbl
-          [ DriverLocationLat =. val latLong.lat,
-            DriverLocationLon =. val latLong.lon,
-            DriverLocationCoordinatesCalculatedAt =. val calculationTime,
-            DriverLocationPoint =. Esq.getPoint (val latLong.lat, val latLong.lon),
-            DriverLocationUpdatedAt =. val now
-          ]
-        where_ $ tbl ^. DriverLocationTId ==. val (toKey $ cast drLocationId)
-      return $ oldLocation{lat = latLong.lat, lon = latLong.lon, coordinatesCalculatedAt = calculationTime, updatedAt = now}
+  let locationObject =
+        DriverLocation
+          { driverId = drLocationId,
+            lat = latLong.lat,
+            lon = latLong.lon,
+            coordinatesCalculatedAt = calculationTime,
+            createdAt = now,
+            updatedAt = now
+          }
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ DriverLocationLat =. val latLong.lat,
+        DriverLocationLon =. val latLong.lon,
+        DriverLocationCoordinatesCalculatedAt =. val calculationTime,
+        DriverLocationPoint =. Esq.getPoint (val latLong.lat, val latLong.lon),
+        DriverLocationUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. DriverLocationTId ==. val (toKey $ cast drLocationId)
+  return locationObject
 
 deleteById :: Id Person -> SqlDB ()
 deleteById = deleteByKey @DriverLocationT
