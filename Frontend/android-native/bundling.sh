@@ -1,32 +1,17 @@
-#!/bin/bash
-echo " ---------- Customer prod:android :- --------------"
-cd ./../ui-customer
-bower i
-npm run prod:android
-cd ./../android-native
+#!/usr/bin/env bash
+echo " ---------- Build/Bundle Customer :- --------------"
 
-echo " ---------- Copy index_bundle.js Customer :- --------------"
-
-mkdir -p "app/src/user/assets/juspay"
-rm -rf app/src/user/assets/juspay/index_bundle.js
-cp ./../ui-customer/dist/android/index_bundle.js app/src/user/assets/juspay
-rm -rf app/src/user/assets/juspay/juspay_assets.json
-cd ..
+mkdir -p "android-native/app/src/user/assets/juspay"
+rm ./android-native/app/src/user/assets/juspay/index_bundle.js
+nix build .#android-customer-bundle -o android-native/app/src/user/assets/juspay/index_bundle.js
+rm android-native/app/src/user/assets/juspay/juspay_assets.json
 sh userJuspayAssets.sh
 
-echo " ---------- Driver prod:android :- --------------"
+echo " ---------- Build/Bundle Driver :- --------------"
 
-cd ui-driver
-bower i
-npm run prod:android
-cd ./../android-native
-
-echo " ---------- Copy index_bundle.js Driver :- --------------"
-
-mkdir -p "app/src/driver/assets/juspay"
-rm -rf app/src/driver/assets/juspay/index_bundle.js
-cp ./../ui-driver/dist/android/index_bundle.js app/src/driver/assets/juspay
-rm -rf app/src/driver/assets/juspay/juspay_assets.json
-cd ..
+mkdir -p "android-native/app/src/driver/assets/juspay"
+rm android-native/app/src/driver/assets/juspay/index_bundle.js
+nix build .#android-driver-bundle -o android-native/app/src/driver/assets/juspay/index_bundle.js
+rm android-native/app/src/driver/assets/juspay/juspay_assets.json
 sh driverJuspayAssets.sh
 
