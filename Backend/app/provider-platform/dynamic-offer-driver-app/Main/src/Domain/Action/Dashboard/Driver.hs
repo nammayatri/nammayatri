@@ -154,8 +154,8 @@ listDrivers merchantShortId mbLimit mbOffset mbVerified mbEnabled mbBlocked mbSe
   items <- mapM buildDriverListItem driversWithInfo
   let count = length items
   -- should we consider filters in totalCount, e.g. count all enabled drivers?
-  totalCount <- Esq.runInReplica $ QPerson.countDrivers merchant.id
-  let summary = Common.Summary {totalCount, count}
+  -- totalCount <- Esq.runInReplica $ QPerson.countDrivers merchant.id
+  let summary = Common.Summary {totalCount = 10000, count}
   pure Common.DriverListRes {totalItems = count, summary, drivers = items}
   where
     maxLimit = 20
