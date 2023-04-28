@@ -78,8 +78,8 @@ rideList merchantShortId mbLimit mbOffset mbBookingStatus mbReqShortRideId mbCus
   rideListItems <- traverse buildRideListItem rideItems
   let count = length rideListItems
   -- should we consider filters in totalCount, e.g. count all canceled rides?
-  totalCount <- runInReplica $ QRide.countRides merchant.id
-  let summary = Common.Summary {totalCount, count}
+  -- totalCount <- runInReplica $ QRide.countRides merchant.id
+  let summary = Common.Summary {totalCount = 10000, count}
   pure Common.RideListRes {totalItems = count, summary, rides = rideListItems}
   where
     maxLimit = 20

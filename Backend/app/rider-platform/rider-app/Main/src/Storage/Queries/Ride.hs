@@ -202,7 +202,6 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
         &&. whenJust_ mbRideShortId (\rideShortId -> ride ^. Ride.RideShortId ==. val rideShortId.getShortId)
         &&. whenJust_ mbCustomerPhoneDBHash (\hash -> person ^. Person.PersonMobileNumberHash ==. val (Just hash))
         &&. whenJust_ mbDriverPhone (\driverMobileNumber -> ride ^. Ride.RideDriverMobileNumber ==. val driverMobileNumber)
-    orderBy [desc $ ride ^. RideCreatedAt]
     limit $ fromIntegral limitVal
     offset $ fromIntegral offsetVal
     return
@@ -227,19 +226,19 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
     mkRideItem (person, ride, bookingStatus) = do
       RideItem {..}
 
-countRides :: Transactionable m => Id Merchant -> m Int
-countRides merchantId =
-  mkCount <$> do
-    Esq.findAll $ do
-      (_ride :& booking) <-
-        from $
-          table @RideT
-            `innerJoin` table @BookingT
-              `Esq.on` ( \(ride :& booking) ->
-                           ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
-                       )
-      where_ $ booking ^. BookingMerchantId ==. val (toKey merchantId)
-      return (countRows :: SqlExpr (Esq.Value Int))
-  where
-    mkCount [counter] = counter
-    mkCount _ = 0
+-- countRides :: Transactionable m => Id Merchant -> m Int
+-- countRides merchantId =
+--   mkCount <$> do
+--     Esq.findAll $ do
+--       (_ride :& booking) <-
+--         from $
+--           table @RideT
+--             `innerJoin` table @BookingT
+--               `Esq.on` ( \(ride :& booking) ->
+--                            ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
+--                        )
+--       where_ $ booking ^. BookingMerchantId ==. val (toKey merchantId)
+--       return (countRows :: SqlExpr (Esq.Value Int))
+--   where
+--     mkCount [counter] = counter
+--     mkCount _ = 0
