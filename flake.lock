@@ -233,11 +233,11 @@
         "treefmt-nix": "treefmt-nix_2"
       },
       "locked": {
-        "lastModified": 1682614792,
-        "narHash": "sha256-ZeGSQnCUdH+PjXIGOgBujUhxYB7QmmCKbdZnBXWaJZI=",
+        "lastModified": 1682687568,
+        "narHash": "sha256-X1BiDtvNmAHYcwrYbHFOYfj3U39a+XcT9Eb7rVmq+HY=",
         "owner": "nammayatri",
         "repo": "common",
-        "rev": "883db102547415ed135fc11dd677513169360df1",
+        "rev": "c2aacc7499fb452daa61f29f986dc320124d9814",
         "type": "github"
       },
       "original": {
@@ -1248,16 +1248,15 @@
         "nixpkgs-stable": "nixpkgs-stable_2"
       },
       "locked": {
-        "lastModified": 1682084120,
-        "narHash": "sha256-eOnSvnUETVIdLRDlmbf3NF7kN1TK0OTLoFLO8eFjFRY=",
-        "owner": "srid",
+        "lastModified": 1682596858,
+        "narHash": "sha256-Hf9XVpqaGqe/4oDGr30W8HlsWvJXtMsEPHDqHZA6dDg=",
+        "owner": "cachix",
         "repo": "pre-commit-hooks.nix",
-        "rev": "93b4cb68eee67a13bfe3641e196f4e1d3c64a888",
+        "rev": "fb58866e20af98779017134319b5663b8215d912",
         "type": "github"
       },
       "original": {
-        "owner": "srid",
-        "ref": "nix-flake-lock",
+        "owner": "cachix",
         "repo": "pre-commit-hooks.nix",
         "type": "github"
       }
