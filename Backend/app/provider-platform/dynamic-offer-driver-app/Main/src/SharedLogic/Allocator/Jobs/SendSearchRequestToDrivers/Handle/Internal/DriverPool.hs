@@ -362,7 +362,7 @@ cleanupDriverPoolBatches ::
   m ()
 cleanupDriverPoolBatches searchReqId = do
   Redis.withCrossAppRedis $ do
-    Redis.delByPattern (driverPoolKey searchReqId <> "*")
+    -- Redis.delByPattern (driverPoolKey searchReqId <> "*")
     Redis.del (poolRadiusStepKey searchReqId)
     Redis.del (poolBatchNumKey searchReqId)
   logInfo "Cleanup redis."
