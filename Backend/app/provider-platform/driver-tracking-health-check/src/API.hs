@@ -33,6 +33,8 @@ healthCheck ::
     HasField "isShuttingDown" r Shutdown,
     HasField "loggerEnv" r LoggerEnv,
     HasField "hedisEnv" r Redis.HedisEnv,
+    HasField "hedisClusterEnv" r Redis.HedisEnv,
+    HasField "hedisMigrationStage" r Bool,
     HasField "driverAppName" r Text
   ) =>
   FlowHandlerR r Text

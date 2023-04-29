@@ -18,9 +18,22 @@ let kafkaConsumerCfgs =
         }
       }
 
+let rccfg =
+      { connectHost = "localhost"
+      , connectPort = 30006
+      , connectAuth = None Text
+      , connectDatabase = +0
+      , connectMaxConnections = +50
+      , connectMaxIdleTime = +30
+      , connectTimeout = None Integer
+      }
+
 in  { port = +8025
     , graceTerminationPeriod = +90
     , hedisCfg = hcfg
+    , hedisClusterCfg = rccfg
+    , hedisMigrationStage = True
+    , cutOffHedisCluster = Flase
     , kafkaConsumerCfgs
     , loggerConfig =
             common.loggerConfig

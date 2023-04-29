@@ -24,6 +24,9 @@ in  { appCfg
     , esqDBCfg = appCfg.esqDBCfg
     , esqDBReplicaCfg = appCfg.esqDBReplicaCfg
     , hedisCfg = appCfg.hedisCfg
+    , hedisClusterCfg = appCfg.hedisClusterCfg
+    , hedisMigrationStage = True
+    , cutOffHedisCluster = Flase
     , loggerConfig =
             appCfg.loggerConfig
         //  { logFilePath = "/tmp/allocation-service.log", logRawSql = False }

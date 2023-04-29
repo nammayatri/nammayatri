@@ -30,6 +30,16 @@ let hedisCfg =
       , connectTimeout = None Integer
       }
 
+let hedisClusterCfg =
+      { connectHost = "localhost"
+      , connectPort = 30006
+      , connectAuth = None Text
+      , connectDatabase = +0
+      , connectMaxConnections = +50
+      , connectMaxIdleTime = +30
+      , connectTimeout = None Integer
+      }
+
 let consumerProperties =
       { groupId = "groupId"
       , brockers = [ "localhost:29092" ]
@@ -45,6 +55,9 @@ let availabilityTimeWindowOption =
 let cacheConfig = { configsExpTime = +86400 }
 
 in  { hedisCfg
+    , hedisClusterCfg
+    , hedisMigrationStage = True
+    , cutOffHedisCluster = Flase
     , esqDBCfg
     , esqDBReplicaCfg
     , cacheConfig

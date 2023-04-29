@@ -30,6 +30,9 @@ data AppCfg = AppCfg
     uniqueKeyId :: Text,
     selfUri :: BaseUrl,
     hedisCfg :: HedisCfg,
+    hedisClusterCfg :: HedisCfg,
+    hedisMigrationStage :: Bool,
+    cutOffHedisCluster :: Bool,
     statusWaitTimeSec :: Seconds,
     callbackWaitTimeMilliSec :: Milliseconds,
     loggerConfig :: LoggerConfig,
@@ -46,6 +49,9 @@ data AppEnv = AppEnv
     loggerConfig :: LoggerConfig,
     authEntity :: AuthenticatingEntity',
     hedisEnv :: HedisEnv,
+    hedisClusterEnv :: HedisEnv,
+    hedisMigrationStage :: Bool,
+    cutOffHedisCluster :: Bool,
     loggerEnv :: LoggerEnv,
     authManager :: Manager
   }
@@ -54,6 +60,10 @@ data AppEnv = AppEnv
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv config@AppCfg {..} = do
   hedisEnv <- connectHedis hedisCfg ("mock_public_transport_provider_platform" <>)
+  hedisClusterEnv <-
+    if cutOffHedisCluster
+      then pure hedisEnv
+      else connectHedisCluster hedisClusterCfg ("mock_public_transport_provider_platform" <>)
   loggerEnv <- prepareLoggerEnv loggerConfig Nothing
   let authManagerSettings = prepareAuthManager config ["Authorization"] selfId uniqueKeyId (logOutputIO loggerEnv)
   authManager <- newManager authManagerSettings
@@ -62,6 +72,7 @@ buildAppEnv config@AppCfg {..} = do
 releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} = do
   disconnectHedis hedisEnv
+  disconnectHedis hedisClusterEnv
   releaseLoggerEnv loggerEnv
 
 withAppEnv :: AppCfg -> (AppEnv -> IO ()) -> IO ()
