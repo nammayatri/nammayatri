@@ -34,11 +34,6 @@ data MetricsHandle m = MetricsHandle
     putTaskDuration :: Milliseconds -> m ()
   }
 
-data IfSearchRequestIsValid m = IfSearchRequestIsValid
-  { expired :: m Bool,
-    cancelled :: m Bool
-  }
-
 data Handle m = Handle
   { isBatchNumExceedLimit :: m Bool,
     isRideAlreadyAssigned :: m Bool,
@@ -49,7 +44,7 @@ data Handle m = Handle
     metrics :: MetricsHandle m,
     setBatchDurationLock :: m (Maybe UTCTime),
     createRescheduleTime :: UTCTime -> m UTCTime,
-    ifSearchRequestIsValid :: IfSearchRequestIsValid m
+    ifSearchRequestIsInvalid :: m Bool
   }
 
 handler :: HandleMonad m => Handle m -> m ExecutionResult
@@ -57,30 +52,29 @@ handler h@Handle {..} = do
   logInfo "Starting job execution"
   metrics.incrementTaskCounter
   measuringDuration (\ms _ -> metrics.putTaskDuration ms) $ do
-    isSearchRequestCancelled <- ifSearchRequestIsValid.cancelled
-    if isSearchRequestCancelled
-      then do
-        logInfo "Search request is cancelled."
-        return Complete
-      else do
-        isSearchRequestExpired <- ifSearchRequestIsValid.expired
-        if isSearchRequestExpired
-          then do
-            logInfo "Search request is expired."
-            return Complete
-          else do
-            isRideAssigned <- isRideAlreadyAssigned
-            if isRideAssigned
-              then do
-                logInfo "Ride already assigned."
-                return Complete
-              else do
-                isReceivedMaxDriverQuotes' <- isReceivedMaxDriverQuotes
-                if isReceivedMaxDriverQuotes'
-                  then do
-                    logInfo "Received enough quotes from drivers."
-                    return Complete
-                  else processRequestSending h
+    isSearchRequestInvalid <- ifSearchRequestIsInvalid
+    res <-
+      if isSearchRequestValid
+        then do
+          logInfo "Search request is either cancelled or expired."
+          return Complete
+        else do
+          isRideAssigned <- isRideAlreadyAssigned
+          if isRideAssigned
+            then do
+              logInfo "Ride already assigned."
+              return Complete
+            else do
+              isReceivedMaxDriverQuotes' <- isReceivedMaxDriverQuotes
+              if isReceivedMaxDriverQuotes'
+                then do
+                  logInfo "Received enough quotes from drivers."
+                  return Complete
+                else processRequestSending h
+    case res of
+      Complete -> cleanupDriverPoolBatches
+      _ -> return ()
+    return res
 
 processRequestSending :: HandleMonad m => Handle m -> m ExecutionResult
 processRequestSending Handle {..} = do

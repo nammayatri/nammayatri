@@ -2812,63 +2812,34 @@
       }
     },
     "shared-kernel": {
-      "inputs": {
-        "clickhouse-haskell": "clickhouse-haskell",
-        "common": "common_3",
-        "euler-hs": "euler-hs",
-        "flake-parts": [
-          "shared-kernel",
-          "common",
-          "flake-parts"
-        ],
-        "nixpkgs": [
-          "nixpkgs"
-        ],
-        "passetto-hs": "passetto-hs",
-        "systems": "systems_2"
-      },
-      "locked": {
-        "lastModified": 1683288426,
-        "narHash": "sha256-bA+aMisI3jo+2N6rnLYOlVDIA9GkD9Jw+dR1mSCsYJU=",
-        "owner": "nammayatri",
-        "repo": "shared-kernel",
-        "rev": "fa707c9e3cdc3951eff56349efdc9766d855966d",
-        "type": "github"
-      },
+		  "inputs": {
+		    "clickhouse-haskell": "clickhouse-haskell",
+		    "common": "common_3",
+		    "euler-hs": "euler-hs",
+		    "flake-parts": [
+		      "shared-kernel",
+		      "common",
+		      "flake-parts"
+		    ],
+		    "nixpkgs": [
+		      "nixpkgs"
+		    ],
+		    "passetto-hs": "passetto-hs",
+		    "systems": "systems"
+		  },
+		  "locked": {
+		    "lastModified": 1682731040,
+		    "narHash": "sha256-NaVvT5ZX2yFi2ayBZTzqycPitayoCOvbfxOHl3HIbXc=",
+		    "owner": "nammayatri",
+		    "repo": "shared-kernel",
+		    "rev": "f8a79646de474d1a103365e27677778f278b100f",
+		    "type": "github"
+		  },
       "original": {
         "owner": "nammayatri",
         "ref": "updatedEulerHS",
         "repo": "shared-kernel",
-        "type": "github"
-      }
-    },
-    "stdlib": {
-      "locked": {
-        "lastModified": 1590026685,
-        "narHash": "sha256-E5INrVvYX/P/UpcoUFDAsuHem+lsqT+/teBs9O7oc9Q=",
-        "owner": "manveru",
-        "repo": "nix-lib",
-        "rev": "99088cf7febcdb21afd375a335dcafa959bef3ed",
-        "type": "github"
-      },
-      "original": {
-        "owner": "manveru",
-        "repo": "nix-lib",
-        "type": "github"
-      }
-    },
-    "stdlib_2": {
-      "locked": {
-        "lastModified": 1590026685,
-        "narHash": "sha256-E5INrVvYX/P/UpcoUFDAsuHem+lsqT+/teBs9O7oc9Q=",
-        "owner": "manveru",
-        "repo": "nix-lib",
-        "rev": "99088cf7febcdb21afd375a335dcafa959bef3ed",
-        "type": "github"
-      },
-      "original": {
-        "owner": "manveru",
-        "repo": "nix-lib",
+        "rev": "f8a79646de474d1a103365e27677778f278b100f",
         "type": "github"
       }
     },
