@@ -111,7 +111,6 @@ findAllDriversWithInfoAndVehicle merchantId limitVal offsetVal mbEnabled mbBlock
         &&. maybe (val True) (\vehicleNumber -> mbVeh ?. VehicleRegistrationNo `Esq.like` just (val vehicleNumber)) mbVehicleNumberSearchString
         &&. maybe (val True) (\blocked -> info ^. DriverInformationBlocked ==. val blocked) mbBlocked
         &&. maybe (val True) (\searchStrDBHash -> person ^. PersonMobileNumberHash ==. val (Just searchStrDBHash)) mbSearchPhoneDBHash
-    orderBy [asc (person ^. PersonFirstName)]
     limit $ fromIntegral limitVal
     offset $ fromIntegral offsetVal
     pure (person, info, mbVeh)
