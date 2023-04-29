@@ -1546,33 +1546,33 @@
       }
     },
     "shared-kernel": {
-      "inputs": {
-        "clickhouse-haskell": "clickhouse-haskell",
-        "common": "common_3",
-        "euler-hs": "euler-hs",
-        "flake-parts": [
-          "shared-kernel",
-          "common",
-          "flake-parts"
-        ],
-        "nixpkgs": [
-          "nixpkgs"
-        ],
-        "passetto-hs": "passetto-hs",
-        "systems": "systems"
-      },
-      "locked": {
-        "lastModified": 1682545932,
-        "narHash": "sha256-ObmWmM+MZ0E2CVoKARmwTeQck7QY3PBtLmPHk9ok2wE=",
-        "owner": "nammayatri",
-        "repo": "shared-kernel",
-        "rev": "b458e17e7b86e84c812e95da3491a4b40e84ea9d",
-        "type": "github"
-      },
+		  "inputs": {
+		    "clickhouse-haskell": "clickhouse-haskell",
+		    "common": "common_3",
+		    "euler-hs": "euler-hs",
+		    "flake-parts": [
+		      "shared-kernel",
+		      "common",
+		      "flake-parts"
+		    ],
+		    "nixpkgs": [
+		      "nixpkgs"
+		    ],
+		    "passetto-hs": "passetto-hs",
+		    "systems": "systems"
+		  },
+		  "locked": {
+		    "lastModified": 1682731040,
+		    "narHash": "sha256-NaVvT5ZX2yFi2ayBZTzqycPitayoCOvbfxOHl3HIbXc=",
+		    "owner": "nammayatri",
+		    "repo": "shared-kernel",
+		    "rev": "f8a79646de474d1a103365e27677778f278b100f",
+		    "type": "github"
+		  },
       "original": {
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "b458e17e7b86e84c812e95da3491a4b40e84ea9d",
+        "rev": "f8a79646de474d1a103365e27677778f278b100f",
         "type": "github"
       }
     },

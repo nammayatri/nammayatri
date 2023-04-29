@@ -67,24 +67,13 @@ getRequestIdfromTransactionId tId = do
       searchT ^. SearchRequestTransactionId ==. val (getId tId)
     return $ searchT ^. SearchRequestTId
 
-getStatus ::
+getSearchRequestStatusOrValidTill ::
   (Transactionable m) =>
   Id SearchRequest ->
-  m (Maybe SearchRequestStatus)
-getStatus searchRequestId = do
+  m (Maybe (UTCTime, SearchRequestStatus))
+getSearchRequestStatusOrValidTill searchRequestId = do
   findOne $ do
     searchT <- from $ table @SearchRequestT
     where_ $
       searchT ^. SearchRequestTId ==. val (toKey searchRequestId)
-    return $ searchT ^. SearchRequestStatus
-
-getValidTill ::
-  (Transactionable m) =>
-  Id SearchRequest ->
-  m (Maybe UTCTime)
-getValidTill searchRequestId = do
-  findOne $ do
-    searchT <- from $ table @SearchRequestT
-    where_ $
-      searchT ^. SearchRequestTId ==. val (toKey searchRequestId)
-    return $ searchT ^. SearchRequestValidTill
+    return (searchT ^. SearchRequestValidTill, searchT ^. SearchRequestStatus)

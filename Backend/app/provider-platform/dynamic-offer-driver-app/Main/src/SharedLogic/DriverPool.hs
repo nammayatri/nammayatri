@@ -86,6 +86,9 @@ mkTotalRidesKey driverId = "driver-offer:DriverPool:Total-Rides:DriverId-" <> dr
 mkRideCancelledKey :: Text -> Text
 mkRideCancelledKey driverId = "driver-offer:DriverPool:Ride-cancelled:DriverId-" <> driverId
 
+mkOldRatioKey :: Text -> Text -> Text
+mkOldRatioKey driverId ratioType = "driver-offer:DriverPool:" <> ratioType <> ":DriverId-" <> driverId
+
 mkAvailableTimeKey :: Text -> Text
 mkAvailableTimeKey driverId = "driver-offer:DriverPool:Available-Time:DriverId-" <> driverId
 
@@ -247,7 +250,7 @@ getLatestAcceptanceRatio ::
   Id DM.Merchant ->
   Id DP.Driver ->
   m Double
-getLatestAcceptanceRatio merchantId driverId = Redis.withCrossAppRedis . withAcceptanceRatioWindowOption merchantId $ SWC.getLatestRatio (getId driverId) mkQuotesAcceptedKey mkTotalQuotesKey
+getLatestAcceptanceRatio merchantId driverId = Redis.withCrossAppRedis . withAcceptanceRatioWindowOption merchantId $ SWC.getLatestRatio (getId driverId) mkQuotesAcceptedKey mkTotalQuotesKey (mkOldRatioKey "AcceptanceRatio")
 
 incrementTotalRidesCount ::
   ( Redis.HedisFlow m r,
@@ -287,7 +290,7 @@ getLatestCancellationRatio' ::
   Id DM.Merchant ->
   Id DP.Driver ->
   m Double
-getLatestCancellationRatio' merchantId driverId = Redis.withCrossAppRedis . withCancellationRatioWindowOption merchantId $ SWC.getLatestRatio driverId.getId mkRideCancelledKey mkTotalRidesKey
+getLatestCancellationRatio' merchantId driverId = Redis.withCrossAppRedis . withCancellationRatioWindowOption merchantId $ SWC.getLatestRatio driverId.getId mkRideCancelledKey mkTotalRidesKey (mkOldRatioKey "CancellationRatio")
 
 getLatestCancellationRatio ::
   ( EsqDBFlow m r,
