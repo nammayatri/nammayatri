@@ -174,7 +174,7 @@ cleanupDriverPoolBatches ::
   Id SRB.Booking ->
   m ()
 cleanupDriverPoolBatches bookingId = do
-  Redis.delByPattern (driverPoolKey bookingId <> "*")
+  -- Redis.delByPattern (driverPoolKey bookingId <> "*")
   Redis.del (poolRadiusStepKey bookingId)
   Redis.del (poolBatchNumKey bookingId)
   logInfo "Cleanup redis."
