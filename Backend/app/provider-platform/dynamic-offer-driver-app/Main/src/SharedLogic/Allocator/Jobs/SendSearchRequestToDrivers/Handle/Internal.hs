@@ -18,8 +18,7 @@ module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal
     isReceivedMaxDriverQuotes,
     setBatchDurationLock,
     createRescheduleTime,
-    ifSearchRequestIsCancelled,
-    ifSearchRequestIsExpired,
+    ifSearchRequestInvalid,
     module Reexport,
   )
 where
@@ -39,7 +38,7 @@ import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.SearchRequest as SR
 
-ifSearchRequestIsCancelled ::
+ifSearchRequestInvalid ::
   ( HasCacheConfig r,
     HedisFlow m r,
     EsqDBFlow m r,
@@ -47,22 +46,10 @@ ifSearchRequestIsCancelled ::
   ) =>
   Id SearchRequest ->
   m Bool
-ifSearchRequestIsCancelled searchReqId = do
-  searchReqStatus <- SR.getStatus searchReqId >>= fromMaybeM (SearchRequestDoesNotExist searchReqId.getId)
-  pure $ searchReqStatus == SR.CANCELLED
-
-ifSearchRequestIsExpired ::
-  ( HasCacheConfig r,
-    HedisFlow m r,
-    EsqDBFlow m r,
-    Log m
-  ) =>
-  Id SearchRequest ->
-  m Bool
-ifSearchRequestIsExpired searchReqId = do
-  searchReqValidTill <- SR.getValidTill searchReqId >>= fromMaybeM (SearchRequestDoesNotExist searchReqId.getId)
+ifSearchRequestInvalid searchReqId = do
+  (validTill, status) <- SR.getSearchRequestStatusOrValidTill searchReqId >>= fromMaybeM (SearchRequestDoesNotExist searchReqId.getId)
   now <- getCurrentTime
-  pure $ searchReqValidTill <= now
+  pure $ status == SR.CANCELLED || validTill <= now
 
 isRideAlreadyAssigned ::
   ( HasCacheConfig r,
