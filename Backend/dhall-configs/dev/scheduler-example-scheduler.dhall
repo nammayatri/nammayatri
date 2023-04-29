@@ -21,6 +21,16 @@ let rcfg =
       , connectTimeout = None Integer
       }
 
+let rccfg =
+      { connectHost = "localhost"
+      , connectPort = 30006
+      , connectAuth = None Text
+      , connectDatabase = +0
+      , connectMaxConnections = +50
+      , connectMaxIdleTime = +30
+      , connectTimeout = None Integer
+      }
+
 in  { loggerConfig =
             common.loggerConfig
         //  { logRawSql = False
@@ -30,6 +40,9 @@ in  { loggerConfig =
     , esqDBCfg
     , metricsPort = +8052
     , hedisCfg = rcfg
+    , hedisClusterCfg = rccfg
+    , hedisMigrationStage = True
+    , cutOffHedisCluster = Flase
     , hedisPrefix = "example-scheduler"
     , port = +8051
     , loopIntervalSec = +5

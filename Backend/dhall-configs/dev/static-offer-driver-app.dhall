@@ -92,10 +92,23 @@ let endRideDefCfg =
       , waitingTimeEstimatedThreshold = +3
       }
 
+let rccfg =
+      { connectHost = "localhost"
+      , connectPort = 30006
+      , connectAuth = None Text
+      , connectDatabase = +0
+      , connectMaxConnections = +50
+      , connectMaxIdleTime = +30
+      , connectTimeout = None Integer
+      }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , clickhouseCfg
     , hedisCfg = rcfg
+    , hedisClusterCfg = rccfg
+    , hedisMigrationStage = True
+    , cutOffHedisCluster = Flase
     , smsCfg = smsConfig
     , infoBIPCfg = InfoBIPConfig
     , webengageCfg = WebengageConfig
