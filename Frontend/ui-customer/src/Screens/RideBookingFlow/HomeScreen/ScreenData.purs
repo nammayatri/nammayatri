@@ -156,10 +156,9 @@ initData = {
     , emergencyHelpModelState : emergencyHelpModalData
     , showLiveDashboard : false
     , isbanner : true
-    }
     , isSpecialZone : false
     , defaultPickUpPoint : ""
-}
+    }
 }
     
 

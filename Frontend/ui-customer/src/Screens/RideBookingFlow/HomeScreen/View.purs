@@ -1660,7 +1660,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
       _ <- doAff $ liftEffect $ animateCamera state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng 17
       _ <- doAff $ liftEffect $ addMarker "ny_ic_src_marker" state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng 160 (0.0) (0.0)
       void $ delay $ Milliseconds duration
-      driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState
+      driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState (dynamicDuration+1)
       else do 
         response <- getDriverLocation state.data.driverInfoCardState.rideId
         case response of
@@ -1677,7 +1677,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
               _ <- pure $ removeAllPolylines ""
               _ <- liftFlow $ drawRoute (walkCoordinate srcLat srcLon dstLat dstLon) "DOT" "#323643" false markers.srcMarker markers.destMarker 8 "DRIVER_LOCATION_UPDATE" "" ""
               void $ delay $ Milliseconds duration
-              driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState
+              driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState (dynamicDuration+1)
               pure unit
             else if ((getValueToLocalStore TRACKING_DRIVER) == "False" || not (isJust state.data.route)) then do
               _ <- pure $ setValueToLocalStore TRACKING_DRIVER "True"
@@ -1692,7 +1692,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                       liftFlow $ drawRoute newPoints "LineString" "#323643" true markers.srcMarker markers.destMarker 8 "DRIVER_LOCATION_UPDATE" "" (metersToKm routes.distance state)
                       _ <- doAff do liftEffect $ push $ updateState routes.duration routes.distance
                       void $ delay $ Milliseconds duration
-                      driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Just (Route newRoute), speed = routes.distance / routes.duration } } routeState
+                      driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Just (Route newRoute), speed = routes.distance / routes.duration } } routeState (dynamicDuration+1)
                     Nothing -> pure unit
                 Left err -> pure unit
             else do
@@ -1704,13 +1704,13 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                         liftFlow $ updateRoute newPoints markers.destMarker (metersToKm locationResp.distance state)
                         _ <- doAff do liftEffect $ push $ updateState locationResp.eta locationResp.distance
                         void $ delay $ Milliseconds duration
-                        driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState 
+                        driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState (dynamicDuration+1)
                       else do
-                        driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } } routeState
-                Nothing -> driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } } routeState
+                        driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } } routeState (dynamicDuration+1)
+                Nothing -> driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } } routeState (dynamicDuration+1)
           Left err -> do
             void $ delay $ Milliseconds (duration * 2.0)
-            driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } } routeState
+            driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } } routeState (dynamicDuration+1)
   else do
     pure unit
 

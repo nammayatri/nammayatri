@@ -701,7 +701,7 @@ homeScreenFlow = do
                                       _ <- updateLocalStage HomeScreen
                                       removeChatService ""
                                       modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{settingSideBar{gender = state.data.settingSideBar.gender , email = state.data.settingSideBar.email}},props { isbanner = state.props.isbanner}})
-                                      _ <- pure $ clearWaitingTimer state.props.waitingTimeTimerId
+                                      _ <- pure $ clearWaitingTimer <$> state.props.waitingTimeTimerIds
                                       homeScreenFlow
             "DRIVER_ASSIGNMENT"   -> if (not (isLocalStageOn RideAccepted || isLocalStageOn RideStarted )) then do
                                         _ <- pure $ firebaseLogEvent "ny_fs_driver_assignment"                                
