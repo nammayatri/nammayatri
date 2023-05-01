@@ -110,7 +110,7 @@ initData = {
     , ratingModal : false
     , callbackInitiated : false
     , isLocationTracking : false
-    , isInApp : false
+    , isInApp : true
     , locateOnMap : false
     , sourceSelectedOnMap : false
     , distance : 0
