@@ -122,7 +122,7 @@ screen initialState =
                   _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
                   let pollingCount = ceil ((toNumber initialState.props.searchExpire)/((fromMaybe 0.0 (NUM.fromString (getValueToLocalStore TEST_POLLING_INTERVAL))) / 1000.0))
                   launchAff_ $ flowRunner $ getQuotesPolling (getValueToLocalStore TRACKING_ID) GetQuotesList Restart pollingCount (fromMaybe 0.0 (NUM.fromString (getValueToLocalStore TEST_POLLING_INTERVAL))) push initialState
-              ConfirmingRide -> launchAff_ $ flowRunner $ confirmRide GetRideConfirmation 5 1000.0 push initialState
+              ConfirmingRide -> launchAff_ $ flowRunner $ confirmRide GetRideConfirmation 5 3000.0 push initialState
               HomeScreen -> do
                 _ <- pure $ setValueToLocalStore SESSION_ID (generateSessionId unit)
                 _ <- pure $ removeAllPolylines ""
@@ -133,7 +133,7 @@ screen initialState =
                 if ((getValueToLocalStore TRACKING_DRIVER) == "False") then do
                   _ <- removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                   _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
-                  launchAff_ $ flowRunner $ driverLocationTracking push UpdateCurrentStage DriverArrivedAction UpdateETA 2000.0 (getValueToLocalStore TRACKING_ID) initialState "pickup" 0
+                  launchAff_ $ flowRunner $ driverLocationTracking push UpdateCurrentStage DriverArrivedAction UpdateETA 5000.0 (getValueToLocalStore TRACKING_ID) initialState "pickup" 0
                 else pure unit
                 if(not initialState.props.chatcallbackInitiated) then do
                   _ <- storeCallBackMessageUpdated push initialState.data.driverInfoCardState.bppRideId "Customer" UpdateMessages
