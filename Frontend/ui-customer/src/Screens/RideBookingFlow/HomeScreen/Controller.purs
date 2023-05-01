@@ -559,7 +559,7 @@ eval CheckFlowStatusAction state = exit $ CheckFlowStatus state
 eval (UpdateCurrentStage stage) state = do
   _ <- pure $ spy "updateCurrentStage" stage
   if (stage == "INPROGRESS") && (not $ isLocalStageOn RideStarted) then
-    exit $ NotificationHandler "TRIP_STARTED" state { props { isInApp = false } }
+    exit $ NotificationHandler "TRIP_STARTED" state
   else if (stage == "COMPLETED") && (not $ isLocalStageOn HomeScreen) then
     exit $ NotificationHandler "TRIP_FINISHED" state
   else if (stage == "CANCELLED") && (not $ isLocalStageOn HomeScreen) then
@@ -1425,7 +1425,7 @@ eval (GetRideConfirmation resp) state = do
 
 eval (NotificationListener notificationType) state = do
   _ <- pure $ printLog "storeCallBackCustomer notificationType" notificationType
-  exit $ NotificationHandler notificationType state { props { callbackInitiated = false, isInApp = if notificationType == "DRIVER_ASSIGNMENT" || state.props.currentStage == RideAccepted then true else false } }
+  exit $ NotificationHandler notificationType state { props { callbackInitiated = false}}
 
 eval RecenterCurrentLocation state = recenterCurrentLocation state
 

@@ -83,7 +83,7 @@ baseAppFlow gPayload = do
   setValueToLocalStore BUNDLE_VERSION bundle
   setValueToLocalNativeStore BUNDLE_VERSION bundle
   _ <- pure $ setValueToLocalStore TRACKING_DRIVER "False"
-  _ <- pure $ setValueToLocalStore TRACKING_ENABLED "False"
+  _ <- pure $ setValueToLocalStore TRACKING_ENABLED "True"
   _ <- pure $ setValueToLocalStore RELOAD_SAVED_LOCATION "true"
   _ <- pure $ setValueToLocalStore TEST_MINIMUM_POLLING_COUNT "15"
   _ <- pure $ setValueToLocalStore TEST_POLLING_INTERVAL "1500.0"
@@ -167,7 +167,6 @@ currentRideFlow rideAssigned = do
                   }}
         _ <- pure $ spy "Active api" listResp
         modifyScreenState $ HomeScreenStateType (\homeScreen → newState)
-        _ <- pure $ setValueToLocalStore TRACKING_ENABLED if status == "NEW" then "True" else "False"
         updateLocalStage rideStatus
       else if ((getValueToLocalStore RATING_SKIPPED) == "false") then do
         updateLocalStage HomeScreen
