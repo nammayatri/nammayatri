@@ -335,7 +335,7 @@ createDriver admin req = do
   Esq.runTransaction $ do
     QPerson.create person
     QDFS.create $ makeIdleDriverFlowStatus person
-    createDriverDetails person.id admin.id
+    createDriverDetails person.id admin.id merchantId
     QVehicle.create vehicle
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> createDriver : ") (show person.id)
   org <-
@@ -364,13 +364,14 @@ createDriver admin req = do
           updatedAt = person.updatedAt
         }
 
-createDriverDetails :: Id SP.Person -> Id SP.Person -> Esq.SqlDB ()
-createDriverDetails personId adminId = do
+createDriverDetails :: Id SP.Person -> Id SP.Person -> Id DM.Merchant -> Esq.SqlDB ()
+createDriverDetails personId adminId merchantId = do
   now <- getCurrentTime
   let driverInfo =
         DriverInfo.DriverInformation
           { driverId = personId,
             adminId = Just adminId,
+            merchantId = merchantId,
             active = False,
             onRide = False,
             enabled = True,

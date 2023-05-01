@@ -163,13 +163,14 @@ auth req mbBundleVersion mbClientVersion = do
       authId = SR.id token
   return $ AuthRes {attempts, authId}
 
-createDriverDetails :: Id SP.Person -> Esq.SqlDB ()
-createDriverDetails personId = do
+createDriverDetails :: Id SP.Person -> Id DO.Merchant -> Esq.SqlDB ()
+createDriverDetails personId merchantId = do
   now <- getCurrentTime
   let driverInfo =
         DriverInfo.DriverInformation
           { driverId = personId,
             adminId = Nothing,
+            merchantId = merchantId,
             active = False,
             onRide = False,
             enabled = False,
@@ -269,7 +270,7 @@ createDriverWithDetails req mbBundleVersion mbClientVersion mercahntId = do
   DB.runTransaction $ do
     QP.create person
     QDFS.create $ makeIdleDriverFlowStatus person
-    createDriverDetails (person.id)
+    createDriverDetails (person.id) mercahntId
   pure person
   where
     makeIdleDriverFlowStatus person =

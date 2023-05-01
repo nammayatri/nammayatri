@@ -23,6 +23,7 @@ import Data.OpenApi (ToParamSchema, ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time (UTCTime)
+import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person (Person)
 import EulerHS.Prelude
 import Kernel.External.Encryption
@@ -53,6 +54,7 @@ instance ToHttpApiData DriverMode where
 data DriverInformationE e = DriverInformation
   { driverId :: Id Person,
     adminId :: Maybe (Id Person),
+    merchantId :: Id Merchant,
     active :: Bool,
     onRide :: Bool,
     enabled :: Bool,

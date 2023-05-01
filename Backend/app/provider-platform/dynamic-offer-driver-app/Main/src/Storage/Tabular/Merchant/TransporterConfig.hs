@@ -45,6 +45,7 @@ mkPersist
       mediaFileUrlPattern Text
       mediaFileSizeUpperLimit Int
       waitingTimeEstimatedThreshold Seconds
+      futureDriverLocationBufferInSec Seconds
       referralLinkPassword Text
       fcmUrl Text
       fcmServiceAccount Text

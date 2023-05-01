@@ -27,6 +27,7 @@ import Kernel.External.Encryption (DbHash (..), Encrypted (..), EncryptedHashed 
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
+import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.Person (PersonTId)
 
 mkPersist
@@ -35,6 +36,7 @@ mkPersist
     DriverInformationT sql=driver_information
       driverId PersonTId
       adminId PersonTId Maybe
+      merchantId MerchantTId
       active Bool
       onRide Bool
       enabled Bool
@@ -63,6 +65,7 @@ instance FromTType DriverInformationT Domain.DriverInformation where
       Domain.DriverInformation
         { driverId = fromKey driverId,
           adminId = fromKey <$> adminId,
+          merchantId = fromKey merchantId,
           referralCode = EncryptedHashed <$> (Encrypted <$> referralCode) <*> Just (DbHash BS.empty),
           ..
         }
@@ -72,6 +75,7 @@ instance ToTType DriverInformationT Domain.DriverInformation where
     DriverInformationT
       { driverId = toKey driverId,
         adminId = toKey <$> adminId,
+        merchantId = toKey merchantId,
         referralCode = referralCode <&> unEncrypted . (.encrypted),
         ..
       }
