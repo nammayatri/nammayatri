@@ -90,6 +90,25 @@ findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus = Esq.buil
           return (extractSolidType @Ride rideT, booking)
       )
 
+findAllRidesBookingsByRideId :: Transactionable m => Id Merchant -> [Id Ride] -> m [(Ride, Booking)]
+findAllRidesBookingsByRideId merchantId rideIds = Esq.buildDType $ do
+  res <- Esq.findAll' $ do
+    ((booking :& fromLocation :& toLocation :& fareParams) :& ride) <-
+      from $
+        baseBookingTable
+          `innerJoin` table @RideT
+            `Esq.on` ( \((booking :& _ :& _ :& _) :& ride) ->
+                         ride ^. Ride.RideBookingId ==. booking ^. BookingTId
+                     )
+    where_ $
+      booking ^. BookingProviderId ==. val (toKey merchantId)
+        &&. ride ^. RideTId `Esq.in_` valList (map toKey rideIds)
+    pure ((booking, fromLocation, toLocation, fareParams), ride)
+
+  pure $
+    res <&> \(fullBookingT, ride) -> do
+      (extractSolidType @Ride ride, extractSolidType @Booking fullBookingT)
+
 findOneByDriverId :: Transactionable m => Id Person -> m (Maybe Ride)
 findOneByDriverId driverId = Esq.findOne $ do
   ride <- from $ table @RideT

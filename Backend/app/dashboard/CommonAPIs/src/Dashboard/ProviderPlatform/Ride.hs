@@ -40,6 +40,7 @@ data RideEndpoint
   | RideEndEndpoint
   | RideCancelEndpoint
   | RideSyncEndpoint
+  | MultipleRideSyncEndpoint
   deriving (Show, Read)
 
 derivePersistField "RideEndpoint"
@@ -229,7 +230,6 @@ data CancellationSource
 
 ---------------------------------------------------------
 -- ride sync ---------------------------------------------
-
 type RideSyncAPI =
   Capture "rideId" (Id Ride)
     :> "sync"
@@ -252,6 +252,39 @@ data RideStatus
   | RIDE_CANCELLED
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+--------------------------- multipleRideSyncApi -----------------------------
+
+type MultipleRideSyncAPI =
+  "sync"
+    :> ReqBody '[JSON] MultipleRideSyncReq
+    :> Post '[JSON] MultipleRideSyncRes
+
+newtype MultipleRideSyncReq = MultipleRideSyncReq
+  { rideIds :: [Id Ride]
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets MultipleRideSyncReq where
+  hideSecrets = identity
+
+newtype MultipleRideSyncRes = MultipleRideSyncRes
+  { list :: [MultipleRideData]
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data MultipleRideData = MultipleRideData
+  { rideId :: Id Ride,
+    newStatus :: RideStatus,
+    message :: Text
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets MultipleRideSyncRes where
+  hideSecrets = identity
 
 ---------------------------------------------------------
 -- ride route -------------------------------------------
