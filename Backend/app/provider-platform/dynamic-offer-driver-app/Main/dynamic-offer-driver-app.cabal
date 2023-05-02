@@ -53,6 +53,7 @@ library
       API.UI.FarePolicy
       API.UI.Frontend
       API.UI.Issue
+      API.UI.LeaderBoard
       API.UI.Location
       API.UI.Message
       API.UI.OrgAdmin
@@ -112,6 +113,7 @@ library
       Domain.Action.UI.FarePolicy
       Domain.Action.UI.Frontend
       Domain.Action.UI.Issue
+      Domain.Action.UI.LeaderBoard
       Domain.Action.UI.Location
       Domain.Action.UI.Location.UpdateLocation
       Domain.Action.UI.Message

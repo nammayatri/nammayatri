@@ -28,7 +28,9 @@ createInitialDriverStats driverId = do
   Esq.create $
     DriverStats
       { driverId = driverId,
-        idleSince = now
+        idleSince = now,
+        totalRides = 0,
+        totalDistance = 0
       }
 
 getTopDriversByIdleTime :: Transactionable m => Int -> [Id Driver] -> m [Id Driver]
@@ -58,3 +60,21 @@ fetchAll = Esq.findAll $ from $ table @DriverStatsT
 
 deleteById :: Id Driver -> SqlDB ()
 deleteById = Esq.deleteByKey @DriverStatsT
+
+incrementTotalRidesAndTotalDist :: Id Driver -> Meters -> SqlDB ()
+incrementTotalRidesAndTotalDist driverId rideDist = do
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ DriverStatsTotalRides =. (tbl ^. DriverStatsTotalRides) +. val 1,
+        DriverStatsTotalDistance =. (tbl ^. DriverStatsTotalDistance) +. val rideDist
+      ]
+    where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
+
+getDriversSortedOrder :: Transactionable m => Maybe Integer -> m [DriverStats]
+getDriversSortedOrder mbLimitVal =
+  Esq.findAll $ do
+    driverStats <- from $ table @DriverStatsT
+    orderBy [desc (driverStats ^. DriverStatsTotalRides), desc (driverStats ^. DriverStatsTotalDistance)]
+    limit $ maybe 10 fromIntegral mbLimitVal
+    return driverStats

@@ -27,6 +27,7 @@ import qualified API.UI.ExotelEndRide as ExotelEndRide
 import qualified API.UI.FarePolicy as FarePolicy
 import qualified API.UI.Frontend as Frontend
 import qualified API.UI.Issue as Issue
+import qualified API.UI.LeaderBoard as LeaderBoard
 import qualified API.UI.Location as Location
 import qualified API.UI.Message as Message
 import qualified API.UI.OrgAdmin as OrgAdmin
@@ -65,6 +66,7 @@ type API =
            :<|> DriverReferral.API
            :<|> Issue.API
            :<|> ExotelEndRide.API
+           :<|> LeaderBoard.API
        )
 
 handler :: FlowServer API
@@ -89,3 +91,4 @@ handler =
     :<|> DriverReferral.handler
     :<|> Issue.handler
     :<|> ExotelEndRide.handler
+    :<|> LeaderBoard.handler
