@@ -165,7 +165,7 @@ You can also change the flake input to point a local checkout. To do this, chang
 }
 ```
 
-Now, if you run `nix build` or any of the other nix commands, it will use the local shared-kernel to compile nammayatri against.
+Now, if you run `nix build` or any of the other nix commands, it will use the local shared-kernel to compile nammayatri against. Whenever you change the contents of `/Users/myname/Projects/shared-kernel`,  you **must** run `nix flake lock --update-input shared-kernel` again, so the current project will use the new contents.
 
 #### Visual Studio Code
 
