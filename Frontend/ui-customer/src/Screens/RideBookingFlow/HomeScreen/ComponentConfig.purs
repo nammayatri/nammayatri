@@ -383,11 +383,12 @@ logOutPopUpModelConfig state =
           , width = MATCH_PARENT 
           , background = Color.white900
           , strokeColor = Color.white900
-          , margin = MarginTop 3
+          , margin = MarginTop 14
+          , padding = PaddingBottom $ getBottomMargin
           , color = Color.black650
           , fontStyle = FontStyle.semiBold LanguageStyle
           },
-          cornerRadius = (Corners 15.0 true true true true)
+          cornerRadius = (Corners 15.0 true true false false)
 
       }
     _ ->
@@ -416,13 +417,18 @@ logOutPopUpModelConfig state =
               , width = MATCH_PARENT 
               , background = Color.white900
               , strokeColor = Color.white900
-              , margin = MarginTop 3
+              , margin = MarginTop $ if (isLocalStageOn ST.QuoteList || isLocalStageOn ST.FindingQuotes) then 14 else 3
               , color = Color.black650
+              , padding = if (isLocalStageOn ST.QuoteList || isLocalStageOn ST.FindingQuotes) then (PaddingBottom getBottomMargin) else (Padding 0 0 0 0)
               , fontStyle = FontStyle.semiBold LanguageStyle
              }
             }
       in
         popUpConfig'
+
+
+getBottomMargin :: Int 
+getBottomMargin = if EHC.safeMarginBottom == 0 then 24 else (EHC.safeMarginBottom)
 
 distanceOusideLimitsConfig :: ST.HomeScreenState -> PopUpModal.Config
 distanceOusideLimitsConfig state =
