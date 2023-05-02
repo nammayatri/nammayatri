@@ -17,9 +17,12 @@ module Domain.Types.DriverStats where
 import Domain.Types.Person
 import Kernel.Prelude
 import Kernel.Types.Id
+import Kernel.Utils.Common
 
 data DriverStats = DriverStats
   { driverId :: Id Driver,
-    idleSince :: UTCTime
+    idleSince :: UTCTime,
+    totalRides :: Int,
+    totalDistance :: Meters
   }
   deriving (Generic)

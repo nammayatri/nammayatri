@@ -83,6 +83,7 @@ endRideTransaction driverId bookingId ride mbFareParams mbRiderDetailsId = do
     QRide.updateStatus ride.id Ride.COMPLETED
     QRB.updateStatus bookingId SRB.COMPLETED
     DriverStats.updateIdleTime driverId
+    DriverStats.incrementTotalRidesAndTotalDist (cast ride.driverId) (fromMaybe 0 ride.chargeableDistance)
     if driverInfo.active
       then QDFS.updateStatus ride.driverId DDFS.ACTIVE
       else QDFS.updateStatus ride.driverId DDFS.IDLE

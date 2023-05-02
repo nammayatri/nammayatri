@@ -56,6 +56,7 @@ mkPersist
       actualRideDistanceDiffThreshold Centesimal
       upwardsRecomputeBuffer Centesimal
       approxRideDistanceDiffThreshold Centesimal
+      driverLeaderBoardExpiry Seconds Maybe
 
       createdAt UTCTime
       updatedAt UTCTime

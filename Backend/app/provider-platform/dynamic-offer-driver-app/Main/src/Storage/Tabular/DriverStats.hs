@@ -25,6 +25,7 @@ import Domain.Types.Person (Driver)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import Storage.Tabular.Person (PersonTId)
 
 mkPersist
@@ -33,6 +34,8 @@ mkPersist
     DriverStatsT sql=driver_stats
       driverId PersonTId
       idleSince UTCTime
+      totalRides Int
+      totalDistance Meters
       Primary driverId
       deriving Generic
     |]
