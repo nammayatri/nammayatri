@@ -292,7 +292,7 @@ library
     , time
     , time-units
     , transformers
-    , universum <1.8
+    , universum
     , unix
     , unliftio
     , unordered-containers
