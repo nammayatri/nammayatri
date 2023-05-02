@@ -115,6 +115,10 @@ newtype DashboardRideAPIs = DashboardRideAPIs
   { rideSync :: Id Dashboard.Ride -> ClientM Dashboard.RideSyncRes
   }
 
+newtype DashboardMultipleRideAPIs = DashboardMultipleRideAPIs
+  { multipleRideSync :: Dashboard.MultipleRideSyncReq -> ClientM Dashboard.MultipleRideSyncRes
+  }
+
 dashboard :: ShortId TDM.Merchant -> Text -> DashboardAPIs
 dashboard merchantId token = do
   let ride = DashboardRideAPIs {..}
