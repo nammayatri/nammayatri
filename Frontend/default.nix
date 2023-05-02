@@ -13,33 +13,27 @@
           })
         ];
       };
+
       localPackages = pkgs.purifix {
         src = ./.;
       };
-      nodeDeps = (import ./nix/node-composition.nix {
+
+      inherit (import ./nix/node-dependencies.nix {
         inherit pkgs;
         inherit (pkgs) nodejs;
-      }).nodeDependencies;
+      }) nodeDependencies;
+
       webpack-dev-server = pkgs.writeShellApplication {
         name = "webpack-dev-server-wrapped";
-        runtimeInputs = [ nodeDeps ];
+        runtimeInputs = [ pkgs.nodejs nodeDependencies ];
         text = ''
-          TEMP_DIR=$(mktemp -d)
-          function cleanup {
-            trap - INT TERM EXIT
-            unlink "node_modules"
-            if [[ -e "$TEMP_DIR/node_modules" ]]; then
-               mv "$TEMP_DIR/node_modules" "node_modules"
-            fi
-          }
-          trap 'cleanup' INT TERM EXIT
-          if [[ -e "node_modules" ]]; then
-            mv "node_modules" "$TEMP_DIR/"
-          fi
-          ln -s "${nodeDeps}/lib/node_modules" "node_modules"
-          webpack-dev-server "$@"
+          export NODE_PATH="${nodeDependencies}/lib/node_modules"
+          PIPE="$1"
+          shift
+          tail -n1 -f "$PIPE" | node ${./watch.js} "$@"
         '';
       };
+
       run-all = pkgs.writeShellApplication {
         name = "run-all";
         text = ''
@@ -47,17 +41,19 @@
           for program in "''${@}"; do
             ($program) &
           done
-          wait >/dev/null
+          wait -n >/dev/null
         '';
       };
+
       purifix-watch =
         pkgs.writeShellApplication {
           name = "purifix-watch";
           runtimeInputs = [
             pkgs.watchexec
-            pkgs.nodejs-14_x
           ] ++ localPackages.beckn-common.develop.buildInputs;
           text = ''
+            PIPE=$1
+            shift
             SRC_FOLDERS=()
             SRC_GLOBS=()
             for SRC_FOLDER in "$@"; do
@@ -66,21 +62,28 @@
                 SRC_GLOBS+=( "\"$SRC_FOLDER/src/**/*.purs\"" )
               fi
             done
-            watchexec "''${SRC_FOLDERS[@]}" -r -f "**/*.purs" -- "echo 'Rebuilding...'; purifix ''${SRC_GLOBS[*]}; echo 'Finished rebuilding'"
+            watchexec "''${SRC_FOLDERS[@]}" -r -f "**/*.purs" -- \
+              "echo 'suspend' >$PIPE;purifix ''${SRC_GLOBS[*]} && echo 'ready' >$PIPE"
           '';
         };
-      watch-customer = pkgs.writeShellApplication {
-        name = "watch-customer";
+
+      start-app-devserver = { target, env, platform }: pkgs.writeShellApplication rec {
+        name = "watch-${target}-${platform}-${env}";
         runtimeInputs = [ run-all purifix-watch webpack-dev-server ];
         text = ''
-          if [ -d ./ui-customer ]; then
-            cd ./ui-customer
+          if [ -d ./${target} ]; then
+            cd ./${target}
           fi
-          if [ "$(basename "$PWD")" != "ui-customer" ]; then
-            echo "Not in ui-customer directory...exiting"
+          if [ "$(basename "$PWD")" != "${target}" ]; then
+            echo "Not in ${target} directory...exiting"
             exit 1
           fi
-          run-all "purifix-watch . ../ui-common" "webpack-dev-server-wrapped --watch-files-reset --progress --config webpack.android.js --watch-files ./output/Main/index.js ./index.js"
+          PIPE=/tmp/${name}
+          mkfifo $PIPE
+          trap 'rm -f $PIPE' EXIT
+          CONFIG_FILE=$(realpath ./webpack.${platform}.js)
+          run-all "purifix-watch $PIPE . ../ui-common" \
+                  "webpack-dev-server-wrapped $PIPE --env ${env} --config $CONFIG_FILE"
         '';
       };
 
@@ -98,7 +101,7 @@
           phases = [ "buildPhase" "installPhase" ];
           nativeBuildInputs = [ pkgs.nodejs ];
           buildPhase = ''
-            ln -s ${nodeDeps}/lib/node_modules node_modules
+            ln -s ${nodeDependencies}/lib/node_modules node_modules
             cp -r -L ${localPackages.${target}}/output output
             cp ${ ./${target}/index.js } index.js
             cp ${ ./${target}/package.json } package.json
@@ -143,9 +146,21 @@
           type = "app";
           program = purifix-watch;
         };
-        watch-customer = {
+        customer-start-android-master = {
           type = "app";
-          program = watch-customer;
+          program = start-app-devserver {
+            target = "ui-customer";
+            platform = "android";
+            env = "master";
+          };
+        };
+        driver-start-android-master = {
+          type = "app";
+          program = start-app-devserver {
+            target = "ui-driver";
+            platform = "android";
+            env = "master";
+          };
         };
       };
       devShells.frontend = pkgs.mkShell {
