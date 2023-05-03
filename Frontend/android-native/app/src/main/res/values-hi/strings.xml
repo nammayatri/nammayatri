@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="tip_included"> टिप शामिल है!</string>
     <string name="ride_rejected"> सवारी अस्वीकृत </string>
     <string name="request"> अनुरोध करें </string>
     <string name="decline">अस्वीकार करें</string>
