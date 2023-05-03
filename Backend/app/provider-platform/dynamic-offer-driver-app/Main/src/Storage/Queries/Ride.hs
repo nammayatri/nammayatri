@@ -278,8 +278,10 @@ findAllRideItems ::
   Maybe DbHash ->
   Maybe Money ->
   UTCTime ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
   m [RideItem]
-findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbFareDiff now = do
+findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbFareDiff now mbFrom mbTo = do
   res <- Esq.findAll $ do
     booking :& ride :& rideDetails :& riderDetails <-
       from $
@@ -299,6 +301,8 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
     let bookingStatusVal = mkBookingStatusVal ride
     where_ $
       booking ^. BookingProviderId ==. val (toKey merchantId)
+        &&. whenJust_ mbFrom (\defaultFrom -> ride ^. RideCreatedAt >=. val defaultFrom)
+        &&. whenJust_ mbTo (\defaultTo -> ride ^. RideCreatedAt <=. val defaultTo)
         &&. whenJust_ mbBookingStatus (\bookingStatus -> bookingStatusVal ==. val bookingStatus)
         &&. whenJust_ mbRideShortId (\rideShortId -> ride ^. Ride.RideShortId ==. val rideShortId.getShortId)
         &&. whenJust_ mbDriverPhoneDBHash (\hash -> rideDetails ^. RideDetailsDriverNumberHash ==. val (Just hash))

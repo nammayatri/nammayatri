@@ -56,6 +56,8 @@ type RideListAPI =
     :> QueryParam "customerPhoneNo" Text
     :> QueryParam "driverPhoneNo" Text
     :> QueryParam "fareDiff" Money
+    :> QueryParam "from" UTCTime
+    :> QueryParam "to" UTCTime
     :> Get '[JSON] RideListRes
 
 data RideListRes = RideListRes
