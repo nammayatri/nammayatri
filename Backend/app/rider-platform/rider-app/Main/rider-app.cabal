@@ -261,6 +261,7 @@ library
       Tools.Metrics.BAPMetrics.Types
       Tools.Notifications
       Tools.Schema
+      Tools.SignatureAuth
       Tools.SMS
       Tools.Streaming.Kafka
       Tools.Whatsapp
@@ -313,6 +314,7 @@ library
     , bytestring
     , containers
     , cryptonite
+    , cryptostore >=0.3.0.0
     , dashboard-helper-api
     , euler-hs
     , extra
@@ -340,6 +342,7 @@ library
     , wai
     , wai-middleware-prometheus
     , warp
+    , x509
   default-language: Haskell2010
 
 executable rider-app-exe
@@ -393,6 +396,7 @@ executable rider-app-exe
     , bytestring
     , containers
     , cryptonite
+    , cryptostore >=0.3.0.0
     , dashboard-helper-api
     , euler-hs
     , extra
@@ -420,4 +424,5 @@ executable rider-app-exe
     , wai
     , wai-middleware-prometheus
     , warp
+    , x509
   default-language: Haskell2010
