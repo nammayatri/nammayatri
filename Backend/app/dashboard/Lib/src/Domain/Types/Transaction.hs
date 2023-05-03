@@ -16,6 +16,7 @@ module Domain.Types.Transaction where
 
 import qualified "rider-app" API.Dashboard.RideBooking.Booking as BAP
 import qualified "rider-app" API.Dashboard.RideBooking.Confirm as BAP
+import qualified "rider-app" API.Dashboard.RideBooking.Frontend as BAP
 import qualified "rider-app" API.Dashboard.RideBooking.Maps as BAP
 import qualified "rider-app" API.Dashboard.RideBooking.Profile as BAP
 import qualified "rider-app" API.Dashboard.RideBooking.Registration as BAP
@@ -72,4 +73,5 @@ data Endpoint
   | RBooking BAP.RideBookingEndPoint
   | ProfileAPI BAP.ProfileEndPoint
   | MapsAPI BAP.MapEndPoints
+  | FlowStatusAPI BAP.RideNotifyEventEndPoint
   deriving (Show, Read)

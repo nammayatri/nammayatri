@@ -28,6 +28,7 @@ import qualified Dashboard.RiderPlatform.Customer as Customer
 import qualified Dashboard.RiderPlatform.Merchant as Merchant
 import qualified Dashboard.RiderPlatform.Ride as Ride
 import qualified "rider-app" Domain.Action.UI.Booking as DBooking
+import qualified "rider-app" Domain.Action.UI.Frontend as DFrontend
 import qualified "rider-app" Domain.Action.UI.Maps as DMaps
 import qualified "rider-app" Domain.Action.UI.Profile as DProfile
 import qualified "rider-app" Domain.Action.UI.Quote as DQuote
@@ -93,7 +94,8 @@ data RideBookingAPIs = RideBookingAPIs
     select :: SelectAPIs,
     confirm :: ConfirmAPIs,
     booking :: BookingAPIs,
-    maps :: MapsAPIs
+    maps :: MapsAPIs,
+    flowStatus :: FlowStatusAPIs
   }
 
 data RegistrationAPIs = RegistrationAPIs
@@ -138,6 +140,11 @@ data MapsAPIs = MapsAPIs
     getPlaceName :: Id DP.Person -> DMaps.GetPlaceNameReq -> Euler.EulerClient DMaps.GetPlaceNameResp
   }
 
+data FlowStatusAPIs = FlowStatusAPIs
+  { personFlowStatus :: Id DP.Person -> Euler.EulerClient DFrontend.GetPersonFlowStatusRes,
+    notifyEvent :: Id DP.Person -> DFrontend.NotifyEventReq -> Euler.EulerClient DFrontend.NotifyEventResp
+  }
+
 mkAppBackendAPIs :: CheckedShortId DM.Merchant -> Text -> AppBackendAPIs
 mkAppBackendAPIs merchantId token = do
   let customers = CustomerAPIs {..}
@@ -152,6 +159,7 @@ mkAppBackendAPIs merchantId token = do
   let confirm = ConfirmAPIs {..}
   let booking = BookingAPIs {..}
   let maps = MapsAPIs {..}
+  let flowStatus = FlowStatusAPIs {..}
   let rideBooking = RideBookingAPIs {..}
   AppBackendAPIs {..}
   where
@@ -179,7 +187,8 @@ mkAppBackendAPIs merchantId token = do
       :<|> selectClient
       :<|> confirmClient
       :<|> bookingClient
-      :<|> mapsClient = rideBookingClient
+      :<|> mapsClient
+      :<|> flowStatusClient = rideBookingClient
 
     auth
       :<|> verify
@@ -206,6 +215,9 @@ mkAppBackendAPIs merchantId token = do
     autoComplete
       :<|> getPlaceDetails
       :<|> getPlaceName = mapsClient
+
+    personFlowStatus
+      :<|> notifyEvent = flowStatusClient
 
     merchantUpdate
       :<|> mapsServiceConfigUpdate

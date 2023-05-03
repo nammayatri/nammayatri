@@ -111,6 +111,8 @@ data UserActionType
   | SELECTLIST
   | SELECTRESULT
   | CANCELSEARCH
+  | FLOW_STATUS
+  | NOTIFYEVENT
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 genSingletons [''UserActionType]
