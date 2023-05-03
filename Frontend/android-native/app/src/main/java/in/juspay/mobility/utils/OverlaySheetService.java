@@ -313,7 +313,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             @Override
             public void run() {
                 if (model.getCustomerTip() > 0){
-                    holder.customerTipText.setText(String.valueOf("₹ " +model.getCustomerTip() + " tip included!"));
+                    holder.customerTipText.setText(String.valueOf("₹ " +model.getCustomerTip() + " " + getString(R.string.tip_included)));
                     holder.customerTipBlock.setVisibility(View.VISIBLE);
                     holder.textIncludesCharges.setText(getString(R.string.includes_pickup_charges_10)+ " " + getString(R.string.and) +" ₹" + model.getCustomerTip() + " Tip");
                 } else {
