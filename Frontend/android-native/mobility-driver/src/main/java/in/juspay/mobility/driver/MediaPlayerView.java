@@ -27,7 +27,6 @@ import androidx.core.content.ContextCompat;
 import java.io.FileInputStream;
 import java.io.IOException;
 
-import in.juspay.mobility.app.MainActivity;
 import in.juspay.mobility.driver.mediaPlayer.DefaultMediaPlayerControl;
 import in.juspay.mobility.driver.mediaPlayer.MediaPlayerControl;
 import in.juspay.mobility.driver.mediaPlayer.MediaPlayerOnCompleteListener;
@@ -143,12 +142,12 @@ public class MediaPlayerView extends FrameLayout implements MediaPlayerOnPlayLis
 
 
 
-    public void inflateView (int id) throws IOException {
-        try {
-            LinearLayout linearLayout = MainActivity.getInstance().findViewById(id);
-            linearLayout.addView(this);
-        } catch (Exception e) {
-
+    public void inflateView (Activity activity, int id) throws IOException {
+        if (activity != null){
+            LinearLayout linearLayout = activity.findViewById(id);
+            if (linearLayout != null) {
+                linearLayout.addView(this);
+            }
         }
     }
 

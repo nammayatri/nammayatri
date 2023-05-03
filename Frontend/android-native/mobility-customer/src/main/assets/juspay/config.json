@@ -6,7 +6,7 @@
         "in.juspay.hyperos",
         "in.juspay.hyperos.placeholder",
         "in.juspay.hyperpay",
-        "in.juspay.paytm",
+        "in.juspay.nammayatri",
         "in.juspay.upiintent"
     ],
     "dependencies": {
@@ -54,7 +54,7 @@
                 "root": "payments/in.juspay.hyperpay/"
             }
         },
-        "in.juspay.paytm": {
+        "in.juspay.nammayatri": {
             "default": {
                 "entry": "becknbase.html",
                 "root": ""
@@ -84,8 +84,8 @@
             },
             "in.juspay.hyperos": {
                 "config": "https://assets.juspay.in/juspay/payments/2.0/release/v1-config.zip",
-                "manifest": "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/paytm/android/release/manifest.json",
-                "sdk_config": "https://assets.juspay.in/juspay/atlas/in.juspay.paytm/release/common/sdk_config.json"
+                "manifest": "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/nammayatri/android/release/manifest.json",
+                "sdk_config": "https://assets.juspay.in/juspay/atlas/in.juspay.nammayatripartner/release/common/sdk_config.json"
             },
             "in.juspay.hyperos.placeholder": {
                 "tracker": "https://assets.juspay.in/hyper/bundles/app/tracker/2.0.34/v1-tracker.zip"
@@ -103,13 +103,13 @@
             "in.juspay.godel": "https://assets.juspay.in/juspay/payments/in.juspay.godel/release/2.0rc1/v1-index_bundle.zip",
             "in.juspay.godel.placeholder": "https://assets.juspay.in/juspay/payments/in.juspay.godel/release/2.0rc1/v1-index_bundle.zip",
             "in.juspay.hyperpay": "https://assets.juspay.in/juspay/payments/in.juspay.hyperpay/release/2.0rc1/v1-index_bundle.zip",
-            "in.juspay.paytm": "https://assets.juspay.in/hyper/bundles/app/in.juspay.paytm/1.1.3/android/v1-index_bundle.zip",
+            "in.juspay.nammayatri": "https://assets.juspay.in/hyper/bundles/app/in.juspay.nammayatri/1.1.3/android/v1-index_bundle.zip",
             "in.juspay.upiintent": "https://axpssets.juspay.in/juspay/payments/in.juspay.upiintent/release/2.0rc1/v1-index_bundle.zip"
         },
-        "package_version": "2.4_paytm_android"
+        "package_version": "2.4_nammayatri_android"
     },
     "meta": {
-        "clientId": "paytm",
+        "clientId": "nammayatri",
         "timeStamp": "Friday 18 November, 2022 at 11:34:53 PM IST"
     },
     "new": {
@@ -129,8 +129,8 @@
             },
             "in.juspay.hyperos": {
                 "config": "https://assets.juspay.in/juspay/payments/2.0/release/v1-config.zip",
-                "manifest": "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/paytm/android/release/manifest.json",
-                "sdk_config": "https://assets.juspay.in/juspay/atlas/in.juspay.paytm/release/common/sdk_config.json"
+                "manifest": "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/nammayatri/android/release/manifest.json",
+                "sdk_config": "https://assets.juspay.in/juspay/atlas/in.juspay.nammayatripartner/release/common/sdk_config.json"
             },
             "in.juspay.hyperos.placeholder": {
                 "tracker": "https://assets.juspay.in/hyper/bundles/app/tracker/2.0.34/v1-tracker.zip"
@@ -148,10 +148,10 @@
             "in.juspay.godel": "https://assets.juspay.in/juspay/payments/in.juspay.godel/release/2.0rc1/v1-index_bundle.zip",
             "in.juspay.godel.placeholder": "https://assets.juspay.in/juspay/payments/in.juspay.godel/release/2.0rc1/v1-index_bundle.zip",
             "in.juspay.hyperpay": "https://assets.juspay.in/juspay/payments/in.juspay.hyperpay/release/2.0rc1/v1-index_bundle.zip",
-            "in.juspay.paytm": "https://assets.juspay.in/hyper/bundles/app/in.juspay.paytm/1.1.3/android/v1-index_bundle.zip",
+            "in.juspay.nammayatri": "https://assets.juspay.in/hyper/bundles/app/in.juspay.nammayatri/1.1.3/android/v1-index_bundle.zip",
             "in.juspay.upiintent": "https://assets.juspay.in/juspay/payments/in.juspay.upiintent/release/2.0rc1/v1-index_bundle.zip"
         },
-        "package_version": "2.4_paytm_android"
+        "package_version": "2.4_nammayatri_android"
     },
     "stagger": 0
 }

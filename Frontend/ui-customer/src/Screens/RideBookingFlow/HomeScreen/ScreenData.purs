@@ -16,10 +16,9 @@
 module Screens.HomeScreen.ScreenData where
 
 import Components.LocationListItem.Controller (dummyLocationListState)
-import Components.QuoteListItem.Controller (QuoteListItemState)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Data.Maybe (Maybe(..))
-import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState)
+import Screens.Types (Address, Contact, DriverInfoCard, EmergencyHelpModelState, HomeScreenState, PopupType(..), RatingCard, SearchLocationModelType(..), Stage(..))
 import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..))
 import Styles.Colors as Color
 import Config.DefaultConfig as DC
@@ -168,45 +167,6 @@ emergencyHelpModalData = {
   isSelectEmergencyContact : false
 }
 
-dummyQuoteList :: Array QuoteListItemState
-dummyQuoteList = [
-  {
-   seconds : 10
-  , id : "1"  
-  , timer : "0"
-  , timeLeft : 0
-  , driverRating : 4.0
-  , profile : ""
-  , price : "200"
-  , vehicleType : "auto"
-  , driverName : "Drive_Name"
-  , selectedQuote : Nothing
-  },
-  {
-   seconds : 10
-  , id : "2"  
-  , timer : "0"
-  , timeLeft : 0
-  , driverRating : 4.0
-  , profile : ""
-  , price : "300"
-  , vehicleType : "auto"
-  , driverName : "Drive_Name"
-  ,selectedQuote : Nothing
-  },
-  {
-   seconds : 3
-  , id : "3"  
-  , timer : "0"
-  , timeLeft : 0
-  , driverRating : 4.0
-  , profile : ""
-  , price : "3150"
-  , vehicleType : "auto"
-  , driverName : "Drive_Name"
-  ,selectedQuote : Nothing
-  }
-]
 
 dummyPreviousRiderating :: RatingCard
 dummyPreviousRiderating = {

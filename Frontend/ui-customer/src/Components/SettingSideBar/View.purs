@@ -51,7 +51,7 @@ view push state =
       ] $ linearLayout
           [ height MATCH_PARENT
           , width WRAP_CONTENT
-          , background Color.black900
+          , background "#E3F4FC"
           , orientation VERTICAL
           , onAnimationEnd push $ if state.opened == CLOSING then const OnClosed else const NoAction
           , padding ( Padding 0 safeMarginTop 0 0 )
@@ -132,7 +132,7 @@ profileView state push =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  , background Color.black900
+  , background "#E3F4FC"
   , gravity CENTER_VERTICAL
   , padding (Padding 18 24 0 24)
   -- , onClick push (const EditProfile) TODO :: add profile view in future

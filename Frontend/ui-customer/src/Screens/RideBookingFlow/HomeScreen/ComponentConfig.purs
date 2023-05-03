@@ -76,9 +76,9 @@ shareAppConfig state = let
         text = getString(SHARE_APP) 
       , fontSize = FontSize.a_16
       , width = V $ (((EHC.screenWidth unit)-92)/2)
-      , color = Color.yellow900
-      , strokeColor = Color.black900
-      , background = Color.black900
+      , color = state.data.config.primaryTextColor
+      , strokeColor = state.data.config.primaryBackground
+      , background = state.data.config.primaryBackground
       , margin = MarginLeft 12
       ,fontStyle = FontStyle.semiBold LanguageStyle
       },
@@ -371,9 +371,9 @@ logOutPopUpModelConfig state =
             text = if (state.props.customerTip.tipForDriver == 0) then ( if(isLocalStageOn ST.QuoteList) then (getString TRY_AGAIN_WITHOUT_TIP)else (getString SEARCH_AGAIN_WITHOUT_A_TIP)) else ((if (isLocalStageOn ST.QuoteList) then (getString TRY_AGAIN_WITH)else(getString SEARCH_AGAIN_WITH) ) <> " + ₹"<> (fromMaybe "" (["0", "10", "15", "20"] DA.!! state.props.customerTip.tipActiveIndex))) <>" "<>(getString TIP)
           , fontSize = FontSize.a_16 
           , width = MATCH_PARENT
-          , color = Color.yellow900
-          , strokeColor = Color.black900
-          , background = Color.black900
+          , color = state.data.config.primaryTextColor
+          , strokeColor = state.data.config.primaryBackground
+          , background = state.data.config.primaryBackground
           , padding = (Padding 0 10 0 10)
           , fontStyle = FontStyle.semiBold LanguageStyle
           },
@@ -405,9 +405,9 @@ logOutPopUpModelConfig state =
               text = if (isLocalStageOn ST.QuoteList) then (getString YES_TRY_AGAIN) else (getString YES_CANCEL_SEARCH)
             , fontSize = FontSize.a_16 
             , width = MATCH_PARENT
-            , color = Color.yellow900
-            , strokeColor = Color.black900
-            , background = Color.black900
+            , color = state.data.config.primaryTextColor
+            , strokeColor = state.data.config.primaryBackground
+            , background = state.data.config.primaryBackground
             , padding = (Padding 0 10 0 10)
             , fontStyle = FontStyle.semiBold LanguageStyle
             }
@@ -512,8 +512,8 @@ sourceUnserviceableConfig state =
           , textSize = FontSize.a_16
           , margin = (Margin 16 0 16 (20 + EHC.safeMarginBottom))
           , fontStyle = FontStyle.medium LanguageStyle
-          , background = Color.black900
-          , color = Color.yellow900
+          , background = state.data.config.primaryBackground
+          , color = state.data.config.primaryTextColor
           , visibility = GONE
           }
         }

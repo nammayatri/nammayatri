@@ -19,6 +19,7 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentSender;
+import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
@@ -122,7 +123,6 @@ import java.util.Locale;
 import in.juspay.hyper.bridge.HyperBridge;
 import in.juspay.hyper.core.BridgeComponents;
 import in.juspay.hyper.core.ExecutorManager;
-import in.juspay.hypersdk.data.KeyValueStore;
 
 public class MobilityCommonBridge extends HyperBridge {
 
@@ -169,6 +169,15 @@ public class MobilityCommonBridge extends HyperBridge {
     public MobilityCommonBridge(BridgeComponents bridgeComponents) {
         super(bridgeComponents);
         client = LocationServices.getFusedLocationProviderClient(bridgeComponents.getContext());
+    }
+
+    public static boolean isClassAvailable(String className) {
+        try {
+            Class.forName(className);
+            return true;
+        } catch (Exception ignored) {
+        }
+        return false;
     }
 
     @Override
@@ -878,6 +887,7 @@ public class MobilityCommonBridge extends HyperBridge {
         }
         return googleMap.addPolyline(options);
     }
+    // endregion
 
     @JavascriptInterface
     public void showMap(final String pureScriptId, boolean isEnableCurrentLocation, final String mapType, final float zoom, final String callback) {
@@ -896,24 +906,25 @@ public class MobilityCommonBridge extends HyperBridge {
             Log.e("ADD_MARKER", e.toString());
         }
     }
-    // endregion
 
     // region Shared Preference Utils
     @JavascriptInterface
     public void setKeysInSharedPrefs(String key, String value) {
-        KeyValueStore.write(bridgeComponents.getContext(), bridgeComponents.getSdkName(), key, value, false);
+        SharedPreferences sharedPref = bridgeComponents.getContext().getSharedPreferences(bridgeComponents.getSdkName(), Context.MODE_PRIVATE);
+        sharedPref.edit().putString(key, value).apply();
     }
 
     @JavascriptInterface
     public String getKeysInSharedPref(String key) {
-        return KeyValueStore.read(bridgeComponents.getContext(), bridgeComponents.getSdkName(), key, "__failed");
+        SharedPreferences sharedPref = bridgeComponents.getContext().getSharedPreferences(bridgeComponents.getSdkName(), Context.MODE_PRIVATE);
+        return sharedPref.getString(key, "__failed");
     }
+    //endregion
 
     @JavascriptInterface
     public String getKeyInNativeSharedPrefKeys(String key) {
         return getKeysInSharedPref(key);
     }
-    //endregion
 
     // region DATE / TIME UTILS
     @JavascriptInterface
@@ -984,6 +995,16 @@ public class MobilityCommonBridge extends HyperBridge {
         TextView input = spinner.findViewById(idPickerInput);
         input.setImeOptions(imeOption);
     }
+
+    private static class DatePickerLabels {
+        private static final String MAXIMUM_PRESENT_DATE = "MAXIMUM_PRESENT_DATE";
+        private static final String MINIMUM_EIGHTEEN_YEARS = "MINIMUM_EIGHTEEN_YEARS";
+        private static final String MIN_EIGHTEEN_MAX_SIXTY_YEARS = "MIN_EIGHTEEN_MAX_SIXTY_YEARS";
+        private static final String MAX_THIRTY_DAYS_FROM_CURRENT_DATE = "MAX_THIRTY_DAYS_FROM_CURRENT_DATE";
+    }
+    //endregion
+
+    // region OTHER UTILS
 
     @JavascriptInterface
     @RequiresApi(api = Build.VERSION_CODES.N)
@@ -1411,7 +1432,7 @@ public class MobilityCommonBridge extends HyperBridge {
         storeDashboardCallBack = callback;
         Context context = bridgeComponents.getContext();
         Activity activity = bridgeComponents.getActivity();
-        if (activity != null){
+        if (activity != null) {
             ExecutorManager.runOnMainThread(new Runnable() {
                 @Override
                 public void run() {
@@ -1538,28 +1559,17 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    private static class DatePickerLabels {
-        private static final String MAXIMUM_PRESENT_DATE = "MAXIMUM_PRESENT_DATE";
-        private static final String MINIMUM_EIGHTEEN_YEARS = "MINIMUM_EIGHTEEN_YEARS";
-        private static final String MIN_EIGHTEEN_MAX_SIXTY_YEARS = "MIN_EIGHTEEN_MAX_SIXTY_YEARS";
-        private static final String MAX_THIRTY_DAYS_FROM_CURRENT_DATE = "MAX_THIRTY_DAYS_FROM_CURRENT_DATE";
-    }
-
     protected boolean isStoragePermissionGiven() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
             return (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) && (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED);
         } else {
-            return (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED) && (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), READ_MEDIA_AUDIO) == PackageManager.PERMISSION_GRANTED) && (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), READ_MEDIA_VIDEO) == PackageManager.PERMISSION_GRANTED);
+            return true;
         }
     }
 
     protected void requestStoragePermission() {
-        if (bridgeComponents.getActivity() != null){
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-                ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE}, STORAGE_PERMISSION);
-            } else {
-                ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{READ_MEDIA_AUDIO, READ_MEDIA_VIDEO, READ_MEDIA_IMAGES}, STORAGE_PERMISSION);
-            }
+        if (bridgeComponents.getActivity() != null) {
+            ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE}, STORAGE_PERMISSION);
         }
     }
     // endregion

@@ -224,7 +224,7 @@ primaryButtonView state push =
  linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
-  , background Color.black900
+  , background state.appConfig.primaryBackground
   , padding $ PaddingVertical 14 14
   , margin $ MarginTop 24
   , visibility if state.selectedQuote == Just state.id then VISIBLE else GONE
@@ -236,7 +236,7 @@ primaryButtonView state push =
      , height WRAP_CONTENT
      , text (getString CONFIRM_RIDE_)
      , textSize FontSize.a_16
-     , color Color.yellow900
+     , color state.appConfig.primaryTextColor
      , fontStyle $ FontStyle.semiBold LanguageStyle
      ]
   ]

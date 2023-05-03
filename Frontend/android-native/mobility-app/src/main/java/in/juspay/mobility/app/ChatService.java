@@ -277,7 +277,7 @@ public class ChatService extends Service {
 
     private Notification createNotification() {
         createNotificationChannel();
-        Intent notificationIntent = new Intent(this, MainActivity.class);
+        Intent notificationIntent = getPackageManager().getLaunchIntentForPackage(getPackageName());
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 10, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
         String contentText;
         if(merchant.equals("nammayatripartner")){
@@ -298,7 +298,7 @@ public class ChatService extends Service {
 
     private void createChatNotification(String sentBy, String message) {
         createChatNotificationChannel();
-        Intent notificationIntent = new Intent(this, MainActivity.class);
+        Intent notificationIntent = getPackageManager().getLaunchIntentForPackage(getPackageName());
         notificationIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);
         PendingIntent pendingIntent = PendingIntent.getActivity(this, chatNotificationId, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
         Notification notification =
