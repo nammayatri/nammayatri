@@ -47,7 +47,8 @@ data TransporterConfigD u = TransporterConfig
     actualRideDistanceDiffThreshold :: HighPrecMeters,
     upwardsRecomputeBuffer :: HighPrecMeters,
     approxRideDistanceDiffThreshold :: HighPrecMeters,
-    driverLeaderBoardExpiry :: Maybe Seconds
+    driverLeaderBoardExpiry :: Maybe Seconds,
+    minAccuracy :: Double
   }
   deriving (Generic, Show)
 
