@@ -807,6 +807,12 @@ export const firebaseLogEvent = function (str) {
   }
 };
 
+export const metaLogEvent = function (event) {
+  if(window.JBridge.metaLogEvent) {
+    window.JBridge.metaLogEvent(event);
+  }
+}
+
 export const hideKeyboardOnNavigation = function (permission) {
   window.JBridge.hideKeyboardOnNavigation(permission);
 };

@@ -119,6 +119,7 @@ import androidx.work.PeriodicWorkRequest;
 import androidx.work.WorkManager;
 
 import com.airbnb.lottie.LottieAnimationView;
+import com.facebook.appevents.AppEventsConstants;
 import com.google.android.gms.ads.identifier.AdvertisingIdClient;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.ResolvableApiException;
@@ -241,6 +242,7 @@ import java.net.URISyntaxException;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.content.pm.ResolveInfo;
+import com.facebook.appevents.AppEventsLogger;
 
 public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.core.JSI {
 
@@ -1415,6 +1417,16 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     public void firebaseLogEvent(String event) {
         Bundle params = new Bundle();
         mFirebaseAnalytics.logEvent(event, params);
+    }
+
+    @JavascriptInterface
+    public void metaLogEvent(String event){
+        try {
+            AppEventsLogger logger = AppEventsLogger.newLogger(context);
+            logger.logEvent(event);
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "Error logging meta event : " + e);
+        }
     }
 
     @JavascriptInterface
