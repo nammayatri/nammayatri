@@ -49,6 +49,7 @@ import SharedLogic.DriverPool (updateDriverSpeedInRedis)
 import qualified SharedLogic.Ride as SRide
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.DriverInformation as DInfo
+import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTConf
 import qualified Storage.Queries.Person as QP
 import Tools.Metrics (CoreMetrics)
 
@@ -137,10 +138,12 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
     driverInfo <- DInfo.findById (cast driver.id) >>= fromMaybeM (PersonNotFound driver.id.getId)
     logInfo $ "got location updates: " <> getId driver.id <> " " <> encodeToText waypoints
     checkLocationUpdatesRateLimit driver.id
+    thresholdConfig <- QTConf.findByMerchantId driver.merchantId >>= fromMaybeM (TransporterConfigNotFound driver.merchantId.getId)
+    let minAccuracy = thresholdConfig.minAccuracy
     unless (driver.role == Person.DRIVER) $ throwError AccessDenied
     LocUpd.whenWithLocationUpdatesLock driver.id $ do
       mbOldLoc <- findDriverLocation
-      case filterNewWaypoints mbOldLoc of
+      case filterNewWaypoints mbOldLoc minAccuracy of
         [] -> logWarning "Incoming points are older than current one, ignoring"
         (a : ax) -> do
           let newWaypoints = a :| ax
@@ -160,9 +163,10 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
             mbRideIdAndStatus
     pure Success
   where
-    filterNewWaypoints mbOldLoc = do
+    filterNewWaypoints mbOldLoc minAccuracy = do
       let sortedWaypoint = toList $ NE.sortWith (.ts) waypoints
-      maybe sortedWaypoint (\oldLoc -> filter ((oldLoc.coordinatesCalculatedAt <) . (.ts)) sortedWaypoint) mbOldLoc
+      let filteredWaypoint = filter (\val -> fromMaybe 0.0 val.acc <= minAccuracy) sortedWaypoint
+      maybe filteredWaypoint (\oldLoc -> filter ((oldLoc.coordinatesCalculatedAt <) . (.ts)) filteredWaypoint) mbOldLoc
 
 checkLocationUpdatesRateLimit ::
   ( Redis.HedisFlow m r,
