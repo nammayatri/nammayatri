@@ -8,6 +8,7 @@
  */
 package in.juspay.mobility.app;
 
+
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -19,6 +20,7 @@ import java.util.ArrayList;
 public class NetworkBroadcastReceiver extends BroadcastReceiver {
     Context context;
     private static final ArrayList<CallBack> callBack = new ArrayList<>();
+    private static final ArrayList<ProcessCallBack> processCallBack = new ArrayList<>();
     public static void registerCallback(CallBack notificationCallback)
     {
         callBack.add(notificationCallback);
@@ -27,13 +29,27 @@ public class NetworkBroadcastReceiver extends BroadcastReceiver {
     {
         callBack.remove(notificationCallback);
     }
+    public static void registerProcessCallback(ProcessCallBack notificationCallback)
+    {
+        processCallBack.add(notificationCallback);
+    }
+    public static void deRegisterProcessCallback(ProcessCallBack notificationCallback)
+    {
+        processCallBack.remove(notificationCallback);
+    }
+
+    public interface ProcessCallBack{
+        void callProcess(String flag,String type);
+    }
 
     @Override
     public void onReceive(Context context, Intent intent) {
         this.context = context;
         if (context!=null){
             if(!isNetworkAvailable()){
-                MainActivity.getInstance().triggerPopUPMain("true","INTERNET_ACTION");
+                for(int i = 0; i< processCallBack.size(); i++) {
+                    processCallBack.get(i).callProcess("true","INTERNET_ACTION");
+                }
             }else {
                 try {
                     for(int i = 0; i< callBack.size(); i++) {

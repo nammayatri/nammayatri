@@ -97,7 +97,7 @@ public class GpsListeningService extends Service {
 
     private Notification createNotification() {
         createNotificationChannel();
-        Intent notificationIntent = new Intent(this, MainActivity.class);
+        Intent notificationIntent = getPackageManager().getLaunchIntentForPackage(getPackageName());
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 10, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
         gpsReceiver = new BroadcastReceiver() {
             @Override
@@ -131,7 +131,7 @@ public class GpsListeningService extends Service {
     }
 
     private void showAlertNotification() {
-        Intent notificationIntent = new Intent(this, MainActivity.class);
+        Intent notificationIntent = getPackageManager().getLaunchIntentForPackage(getPackageName());
         PendingIntent pendingIntent = PendingIntent.getActivity(this, alertNotificationId, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
         NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(this, "General");
         mBuilder.setLargeIcon(BitmapFactory.decodeResource(this.getResources(), R.drawable.ny_ic_launcher));

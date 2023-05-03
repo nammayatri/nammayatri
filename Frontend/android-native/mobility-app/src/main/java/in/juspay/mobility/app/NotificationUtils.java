@@ -119,7 +119,7 @@ public class NotificationUtils extends AppCompatActivity {
 
     public static Notification createNotification (Context context, String title, String msg, JSONObject data) throws JSONException {
         Bitmap bigIcon = BitmapFactory.decodeResource(context.getResources(), R.mipmap.ic_launcher);
-        Intent intent= new Intent(context, MainActivity.class);
+        Intent intent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
         System.out.println("Create notification"+data.toString());
         intent.putExtra("NOTIFICATION_DATA", data.toString());
 //        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
@@ -401,7 +401,7 @@ public class NotificationUtils extends AppCompatActivity {
         {
             bitmap = getBitmapfromUrl(imageUrl);
         }
-        Intent intent= new Intent(context, MainActivity.class);
+        Intent intent= context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
         System.out.println("Notificationn Utils Data"+ data.toString());
         System.out.println("Notificationn111"+data.getString("notification_type"));
         System.out.println("Notificationn222"+(data.getString("entity_ids")));
@@ -412,7 +412,7 @@ public class NotificationUtils extends AppCompatActivity {
         PendingIntent pendingIntent = PendingIntent.getActivity(context, notificationId , intent, PendingIntent.FLAG_IMMUTABLE);
         String notificationType = new String(data.getString("notification_type"));
         String channelId;
-        String key = context.getString(R.string.service);
+       String key = context.getString(R.string.service);
         System.out.println("key"+key);
         if (ALLOCATION_TYPE.equals(notificationType)) {
             System.out.println("showNotification:- "+ notificationType);

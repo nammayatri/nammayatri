@@ -84,8 +84,7 @@ instance encodeSignatureAuthData :: Encode SignatureAuthData where encode = defa
 instance decodeSignatureAuthData :: Decode SignatureAuthData where decode = defaultDecode
 
 newtype GlobalPayload = GlobalPayload
-  { activity_recreated :: String
-  , betaAssets :: Boolean
+  { betaAssets :: Boolean
   , payload :: Payload
   , requestId :: String
   , sdkName :: String

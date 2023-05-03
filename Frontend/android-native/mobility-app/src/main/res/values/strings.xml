@@ -39,8 +39,8 @@
     <string name="chatting_is_enabled">Chatting is enabled</string>
     <string name="you_can_now_chat_with_driver">You can now chat with driver</string>
     <string name="you_can_now_chat_with_customer">You can now chat with customer</string>
-
     <string name="new_ride_req">New Ride Request</string>
     <string name="new_ride_available_for_offering">New ride available for offering</string>
     <string name="and">and</string>
+    <string name="service">for_compilation</string>
 </resources>

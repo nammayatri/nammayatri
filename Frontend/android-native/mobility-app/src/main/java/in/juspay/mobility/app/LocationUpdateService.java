@@ -569,7 +569,7 @@ public class LocationUpdateService extends Service {
     private Notification createNotification()
     {
         createNotificationChannel();
-        Intent notificationIntent = new Intent(this, MainActivity.class);
+        Intent notificationIntent = getPackageManager().getLaunchIntentForPackage(context.getPackageName());
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 10, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
         NotificationCompat.Builder notification =
                 new NotificationCompat.Builder(this, LOCATION_UPDATES)
@@ -586,7 +586,7 @@ public class LocationUpdateService extends Service {
     private void showAlertNotification()
     {
         System.out.println("Notification");
-        Intent notificationIntent = new Intent(this, MainActivity.class);
+        Intent notificationIntent = getPackageManager().getLaunchIntentForPackage(context.getPackageName());
         PendingIntent pendingIntent = PendingIntent.getActivity(this, alertNotificationId, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
         NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(context,"General") ;
         mBuilder.setLargeIcon(BitmapFactory.decodeResource(context.getResources(), R.drawable.ny_ic_launcher));
