@@ -80,7 +80,7 @@ handler merchantId =
 callAuth :: ShortId DM.Merchant -> CustomerAuthReq -> FlowHandler DRegistration.AuthRes
 callAuth merchantShortId req = do
   let authReq = buildAuthReq merchantShortId req
-  withFlowHandlerAPI $ DRegistration.auth authReq Nothing Nothing
+  withFlowHandlerAPI $ DRegistration.auth False authReq Nothing Nothing
 
 callVerify :: Id SR.RegistrationToken -> DRegistration.AuthVerifyReq -> FlowHandler DRegistration.AuthVerifyRes
 callVerify tokenId req = withFlowHandlerAPI $ DRegistration.verify tokenId req
@@ -96,7 +96,15 @@ buildAuthReq merchantShortId req =
   DRegistration.AuthReq
     { mobileNumber = req.mobileNumber,
       mobileCountryCode = req.mobileCountryCode,
-      merchantId = merchantShortId
+      merchantId = merchantShortId,
+      deviceToken = Nothing,
+      whatsappNotificationEnroll = Nothing,
+      firstName = Nothing,
+      middleName = Nothing,
+      lastName = Nothing,
+      email = Nothing,
+      language = Nothing,
+      gender = Nothing
     }
 
 data CustomerAuthReq = CutomerAuthReq
