@@ -152,7 +152,7 @@ public class RideRequestUtils {
         }
         Intent notificationIntent;
         if (RideRequestActivity.getInstance() == null){
-            notificationIntent = new Intent(context, MainActivity.class);
+            notificationIntent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
         }else {
             notificationIntent = new Intent(context, RideRequestActivity.class);
         }

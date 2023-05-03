@@ -14,43 +14,18 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
     }
-
     buildTypes {
         release {
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        qa {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
-    }
-    Properties properties = new Properties()
-    if (rootProject.file("local.properties").exists()) {
-        properties.load(rootProject.file("local.properties").newDataInputStream())
-    }
-    flavorDimensions "app" , "mode"
-
-    productFlavors{
-        prod {
-            buildConfigField "String", "flavor", "\"prod\""
-            buildConfigField "String", "MERCHANT_ID_USER", properties.getProperty("MERCHANT_ID_USER", "")
-            buildConfigField "String", "MERCHANT_ID_DRIVER", properties.getProperty("MERCHANT_ID_DRIVER", "")
-            buildConfigField "String", "CONFIG_URL_USER", properties.getProperty("CONFIG_URL_USER", "")
-            buildConfigField "String", "CONFIG_URL_DRIVER", properties.getProperty("CONFIG_URL_DRIVER", "")
-            manifestPlaceholders = [isUsesCleartextTraffic: "false", mapsApiKey : properties.getProperty("MAPS_API_KEY", "")]
-            dimension "mode"
-        }
-        dev {
-            buildConfigField "String", "flavor", "\"dev\""
-            buildConfigField "String", "MERCHANT_ID_USER", properties.getProperty("MERCHANT_ID_USER", "")
-            buildConfigField "String", "MERCHANT_ID_DRIVER", properties.getProperty("MERCHANT_ID_DRIVER", "")
-            buildConfigField "String", "CONFIG_URL_USER", properties.getProperty("CONFIG_URL_USER", "")
-            buildConfigField "String", "CONFIG_URL_DRIVER", properties.getProperty("CONFIG_URL_DRIVER", "")
-            manifestPlaceholders = [isUsesCleartextTraffic: "true", mapsApiKey : properties.getProperty("MAPS_API_KEY", "")]
-            dimension "mode"
-        }
-        user {
-           dimension "app"
-        }
-        driver {
-           dimension "app"
+        debug {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
     compileOptions {
@@ -65,16 +40,15 @@ dependencies {
     implementation 'com.google.android.material:material:1.6.0'
 
     implementation project(':mobility-common')
-    api 'in.juspay:hyper:2.1.12'
-    api project(':mobility-app')
-    implementation project(':hyper-sdk')
+    implementation 'in.juspay:hyper:2.1.13-nammayatri.09'
+    compileOnly project(':mobility-app')
     implementation 'androidx.work:work-runtime:2.8.1'
 
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
-    api 'com.pierfrancescosoffritti.androidyoutubeplayer:core:11.1.0'
-    api 'com.google.maps.android:android-maps-utils:2.4.0'
-    api 'com.google.android.gms:play-services-maps:18.1.0'
-    api 'com.google.android.gms:play-services-location:21.0.1'
+    compileOnly 'com.pierfrancescosoffritti.androidyoutubeplayer:core:11.1.0'
+    compileOnly 'com.google.maps.android:android-maps-utils:2.4.0'
+    compileOnly 'com.google.android.gms:play-services-maps:18.1.0'
+    compileOnly 'com.google.android.gms:play-services-location:21.0.1'
 }

@@ -84,7 +84,6 @@ import java.util.concurrent.TimeUnit;
 
 import in.juspay.hyper.core.BridgeComponents;
 import in.juspay.hyper.core.ExecutorManager;
-import in.juspay.hypersdk.core.PaymentUtils;
 import in.juspay.mobility.app.CallBack;
 import in.juspay.mobility.app.CheckPermissionOverlay;
 import in.juspay.mobility.app.LocationUpdateService;
@@ -162,7 +161,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     }
 
     public void registerCallBacks() {
-        if (PaymentUtils.isClassAvailable("in.juspay.mobility.app.CallBack")) {
+        if (isClassAvailable("in.juspay.mobility.app.CallBack")) {
             MobilityDriverBridge.callBack = new CallBack() {
                 @Override
                 public void customerCallBack(String notificationType) {
@@ -193,11 +192,11 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
             Utils.registerCallback(callBack);
             NetworkBroadcastReceiver.registerCallback(callBack);
         }
-        if (PaymentUtils.isClassAvailable("in.juspay.mobility.app.LocationUpdateService")) {
+        if (isClassAvailable("in.juspay.mobility.app.LocationUpdateService")) {
             LocationUpdateService.UpdateTimeCallback callback = this::callUpdateTimeCallBack;
             LocationUpdateService.registerCallback(callback);
         }
-        if (PaymentUtils.isClassAvailable("in.juspay.mobility.app.OverlaySheetService")) {
+        if (isClassAvailable("in.juspay.mobility.app.OverlaySheetService")) {
             OverlaySheetService.registerCallback(callBack);
         }
     }
@@ -214,7 +213,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     //region Location
     @JavascriptInterface
     public void startLocationPollingAPI() {
-        if (PaymentUtils.isClassAvailable("in.juspay.mobility.app.LocationUpdateService")){
+        if (isClassAvailable("in.juspay.mobility.app.LocationUpdateService")) {
             Intent locationUpdateService = new Intent(bridgeComponents.getContext(), LocationUpdateService.class);
             locationUpdateService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
             WorkManager mWorkManager;
@@ -383,7 +382,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         ExecutorManager.runOnMainThread(() -> {
             MediaPlayerView audioPlayer = new MediaPlayerView(bridgeComponents.getContext(), bridgeComponents.getActivity());
             try {
-                audioPlayer.inflateView(Integer.parseInt(viewID));
+                audioPlayer.inflateView(bridgeComponents.getActivity(),Integer.parseInt(viewID));
                 if (source.contains(".mp3")) {
                     audioPlayer.addAudioFileUrl(source);
                 } else {
@@ -455,7 +454,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                     Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
                     String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
                     setKeysInSharedPrefs(context.getResources().getString(in.juspay.mobility.app.R.string.TIME_STAMP_FILE_UPLOAD), timeStamp);
-                    Uri photoFile = FileProvider.getUriForFile(context, context.getResources().getString(in.juspay.mobility.app.R.string.fileProviderPath), new File(context.getFilesDir(), "IMG_" + timeStamp + ".jpg"));
+                    Uri photoFile = FileProvider.getUriForFile(context, context.getPackageName() + ".fileProvider", new File(context.getFilesDir(), "IMG_" + timeStamp + ".jpg"));
                     takePicture.putExtra(MediaStore.EXTRA_OUTPUT, photoFile);
                     Intent chooseFromFile = new Intent(Intent.ACTION_GET_CONTENT);
                     chooseFromFile.setType("image/*");
@@ -799,7 +798,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                         Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
                         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
                         setKeysInSharedPrefs(context.getResources().getString(in.juspay.mobility.app.R.string.TIME_STAMP_FILE_UPLOAD), timeStamp);
-                        Uri photoFile = FileProvider.getUriForFile(context, context.getResources().getString(in.juspay.mobility.app.R.string.fileProviderPath), new File(context.getFilesDir(), "IMG_" + timeStamp + ".jpg"));
+                        Uri photoFile = FileProvider.getUriForFile(context, context.getPackageName() + ".fileProvider", new File(context.getFilesDir(), "IMG_" + timeStamp + ".jpg"));
                         takePicture.putExtra(MediaStore.EXTRA_OUTPUT, photoFile);
                         Intent chooseFromFile = new Intent(Intent.ACTION_GET_CONTENT);
                         chooseFromFile.setType("image/*");

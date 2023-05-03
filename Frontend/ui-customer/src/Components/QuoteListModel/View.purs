@@ -17,7 +17,6 @@ module Components.QuoteListModel.View where
 
 import Animation (translateYAnimFromTop)
 import Animation.Config (translateFullYAnimWithDurationConfig)
-import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Components.QuoteListItem as QuoteListItem
 import Components.QuoteListModel.Controller (Action(..), QuoteListModelState)
@@ -162,7 +161,7 @@ sourceDestinationTextView state push =
         [ height WRAP_CONTENT
         , weight 1.0
         , text state.source
-        , color Color.white900
+        , color state.appConfig.quoteListModel.textColor
         , fontStyle $ FontStyle.regular LanguageStyle
         , padding (PaddingHorizontal 5 5)
         , margin (MarginBottom 12)
@@ -174,7 +173,7 @@ sourceDestinationTextView state push =
         [ height WRAP_CONTENT
         , weight 1.0
         , text state.destination
-        , color Color.white900
+        , color state.appConfig.quoteListModel.textColor
         , fontStyle $ FontStyle.regular LanguageStyle
         , padding (PaddingHorizontal 5 5)
         , margin (MarginTop 12)
@@ -231,14 +230,14 @@ selectRideAndConfirmView state push =
   , padding (Padding 16 16 0 16)
   ][textView
     [ height WRAP_CONTENT
-    , color state.appConfig.quoteListModel.backgroundColor
+    , color state.appConfig.quoteListModel.textColor
     , textSize FontSize.a_16
     , fontStyle $ FontStyle.medium LanguageStyle
     , text case getValueToLocalStore AUTO_SELECTING of
        "CANCELLED_AUTO_ASSIGN" -> "Select a Ride"
        "false"                 -> "Select a Ride"
        _                       -> case (getValueToLocalStore LANGUAGE_KEY) of
-                                    _ -> "Confirming selected ride in" <> " : " <> (fromMaybe configDummy ((filter (\item -> item.id == (fromMaybe "" state.selectedQuote)) state.quoteListModel) !! 0)).timer <> "s"
+                                    _ -> "Confirming selected ride in" <> " : " <> (fromMaybe dummyQuoteList ((filter (\item -> item.id == (fromMaybe "" state.selectedQuote)) state.quoteListModel) !! 0)).timer <> "s"
                                     -- _ -> "state.timer" <> "s " <> (getString AUTO_ACCEPTING_SELECTED_RIDE) TODO :: NEED TO UPDATE LANGUAGE
     ]]
    , linearLayout
@@ -315,7 +314,7 @@ quoteListTopSheetView state push =
    linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
-      , background Color.black900
+      , background state.appConfig.quoteListModel.backgroundColor
       , padding $ PaddingTop safeMarginTop
       ][  linearLayout
           [ height MATCH_PARENT
@@ -334,7 +333,7 @@ quoteListTopSheetView state push =
                   ][  imageView 
                       [ height $ V 24
                       , width $ V 24
-                      , imageWithFallback "ny_ic_close_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_close_white.png"
+                      , imageWithFallback "ny_ic_close,https://assets.juspay.in/nammayatri/images/user/ny_ic_close.png"
                       , margin $ MarginTop 7
                       ]
                   ]
@@ -482,20 +481,6 @@ tryAgainButtonConfig state = let
       }
   in tryAgainButtonConfig'
 
-configDummy :: QuoteListItem.QuoteListItemState
-configDummy = {
-   seconds : 15
-  , id : ""  
-  , timer : "-"
-  , timeLeft : 0
-  , driverRating : 4.0
-  , profile : ""
-  , price : "0"
-  , vehicleType : "auto"
-  , driverName : "Drive_Name"
-  , selectedQuote : Nothing
-  }
-
 
 getPrice :: QuoteListModelState -> String
 getPrice state =  
@@ -506,17 +491,17 @@ getPrice state =
 
 
 dummyQuoteList :: QuoteListItem.QuoteListItemState
-dummyQuoteList = {
-   seconds : 15
-  , id : ""  
-  , timer : ""
-  , timeLeft : 15
-  , driverRating : 0.0
-  , profile : ""
-  , price : ""
-  , vehicleType : "auto"
-  , driverName : ""
-  , selectedQuote : Nothing
+dummyQuoteList = QuoteListItem.config{
+   seconds = 15
+  , id = ""  
+  , timer = ""
+  , timeLeft = 15
+  , driverRating = 0.0
+  , profile = ""
+  , price = ""
+  , vehicleType = "auto"
+  , driverName = ""
+  , selectedQuote = Nothing
   }
 
 

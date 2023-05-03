@@ -34,6 +34,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -57,6 +58,21 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             updateFCMToken(deviceToken);
         }
         Log.e("newToken", newToken);
+    }
+
+    private static final ArrayList<BundleUpdateCallBack> bundleUpdate = new ArrayList<>();
+
+    public static void registerBundleUpdateCallback(BundleUpdateCallBack notificationCallback)
+    {
+        bundleUpdate.add(notificationCallback);
+    }
+    public static void deRegisterBundleUpdateCallback(BundleUpdateCallBack notificationCallback)
+    {
+        bundleUpdate.remove(notificationCallback);
+    }
+
+    public interface BundleUpdateCallBack{
+        void callBundleUpdate();
     }
 
     @RequiresApi(api = Build.VERSION_CODES.M)
@@ -165,8 +181,10 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
                     case NotificationTypes.BUNDLE_UPDATE :
                         try{
-                            if (MainActivity.getInstance() != null) {
-                                MainActivity.getInstance().showAlertForUpdate();
+                            if (bundleUpdate.size() != 0) {
+                                for (int i = 0 ; i<bundleUpdate.size();i++){
+                                    bundleUpdate.get(i).callBundleUpdate();
+                                }
                             }
                             else {
                                 firebaseLogEventWithParams("unable_to_update_bundle","reason","Main Activity instance is null");
@@ -319,7 +337,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     private void startMainActivity() {
         SharedPreferences sharedPref = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         if (getResources().getString(R.string.service).equals(getString(R.string.nammayatripartner)) && !sharedPref.getString(getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && (sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"))) {
-            Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+            Intent intent = getPackageManager().getLaunchIntentForPackage(getPackageName());
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
             try {
                 getApplicationContext().startActivity(intent);
