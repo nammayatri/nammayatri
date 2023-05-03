@@ -20,6 +20,7 @@ where
 
 import qualified API.Dashboard.RideBooking.Booking as Booking
 import qualified API.Dashboard.RideBooking.Confirm as Confirm
+import qualified API.Dashboard.RideBooking.Frontend as FlowStatus
 import qualified API.Dashboard.RideBooking.Maps as Maps
 import qualified API.Dashboard.RideBooking.Profile as Profile
 import qualified API.Dashboard.RideBooking.Quote as Quote
@@ -43,6 +44,7 @@ type API =
            :<|> Confirm.API
            :<|> Booking.API
            :<|> Maps.API
+           :<|> FlowStatus.API
        )
 
 handler :: ShortId DM.Merchant -> FlowServer API
@@ -55,3 +57,4 @@ handler merchantId =
     :<|> Confirm.handler
     :<|> Booking.handler
     :<|> Maps.handler
+    :<|> FlowStatus.handler

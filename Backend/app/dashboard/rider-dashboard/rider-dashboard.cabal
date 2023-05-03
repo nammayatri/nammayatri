@@ -30,6 +30,7 @@ library
       API.RiderPlatform.RideBooking
       API.RiderPlatform.RideBooking.Booking
       API.RiderPlatform.RideBooking.Confirm
+      API.RiderPlatform.RideBooking.Frontend
       API.RiderPlatform.RideBooking.Maps
       API.RiderPlatform.RideBooking.Profile
       API.RiderPlatform.RideBooking.Quote

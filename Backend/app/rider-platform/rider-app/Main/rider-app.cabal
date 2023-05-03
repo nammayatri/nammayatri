@@ -39,6 +39,7 @@ library
       API.Dashboard.RideBooking
       API.Dashboard.RideBooking.Booking
       API.Dashboard.RideBooking.Confirm
+      API.Dashboard.RideBooking.Frontend
       API.Dashboard.RideBooking.Maps
       API.Dashboard.RideBooking.Profile
       API.Dashboard.RideBooking.Quote
