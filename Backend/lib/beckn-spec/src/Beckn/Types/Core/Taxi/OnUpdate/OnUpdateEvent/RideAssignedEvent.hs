@@ -20,6 +20,7 @@ where
 
 import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType (OnUpdateEventType (RIDE_ASSIGNED))
+import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.Tags
 import qualified Control.Lens as L
 import Data.Aeson as A
 import Data.OpenApi hiding (Example, example, name, tags)
@@ -93,7 +94,8 @@ data FulfillmentInfo = FulfillmentInfo
   { id :: Text, -- bppRideId
     start :: StartInfo,
     agent :: Agent,
-    vehicle :: Vehicle
+    vehicle :: Vehicle,
+    tags :: Maybe Tags
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 

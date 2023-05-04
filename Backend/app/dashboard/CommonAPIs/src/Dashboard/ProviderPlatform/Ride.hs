@@ -43,6 +43,13 @@ import Servant hiding (Summary)
 --   | RideSyncEndpoint
 --   | MultipleRideSyncEndpoint
 --   deriving (Show, Read)
+-- data RideEndpoint я
+--   = RideStartEndpoint
+--   | RideEndEndpoint
+--   | RideCancelEndpoint
+--   | RideSyncEndpoint
+--   | RideForceSyncEndpoint
+--   deriving (Show, Read)
 
 -- derivePersistField "RideEndpoint"
 
@@ -331,6 +338,14 @@ data MultipleRideData = MultipleRideData
 
 instance HideSecrets MultipleRideSyncRes where
   hideSecrets = identity
+
+---------------------------------------------------------
+-- ride force sync ---------------------------------------------
+
+type RideForceSyncAPI =
+  Capture "rideId" (Id Ride)
+    :> "forceSync"
+    :> Post '[JSON] RideSyncRes
 
 ---------------------------------------------------------
 -- ride route -------------------------------------------

@@ -11,28 +11,32 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TemplateHaskell #-}
 
-module Dashboard.Common.Ride
-  ( module Dashboard.Common.Ride,
-    module Reexport,
-  )
-where
+module Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.Tags where
 
-import Dashboard.Common as Reexport
+import Data.Aeson
+import Data.OpenApi hiding (Example, example, name, tags)
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto (derivePersistField)
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
--- we need to save endpoint transactions only for POST, PUT, DELETE APIs
-data RideEndpoint
-  = RideStartEndpoint
-  | RideEndEndpoint
-  | MultipleRideEndEndpoint
-  | RideCancelEndpoint
-  | MultipleRideCancelEndpoint
-  | RideSyncEndpoint
-  | RideForceSyncEndpoint
-  | MultipleRideSyncEndpoint
-  deriving (Show, Read)
+newtype Tags = Tags
+  { force :: Bool
+  }
+  deriving (Generic, Show)
 
-derivePersistField "RideEndpoint"
+instance ToJSON Tags where
+  toJSON = genericToJSON tagsJSONOptions
+
+instance FromJSON Tags where
+  parseJSON = genericParseJSON tagsJSONOptions
+
+instance ToSchema Tags where
+  declareNamedSchema = genericDeclareUnNamedSchema $ fromAesonOptions tagsJSONOptions
+
+tagsJSONOptions :: Options
+tagsJSONOptions =
+  defaultOptions
+    { fieldLabelModifier = \case
+        "force" -> "./komn/force"
+        a -> a
+    }
