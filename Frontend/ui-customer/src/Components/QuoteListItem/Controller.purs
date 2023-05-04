@@ -17,7 +17,7 @@ module Components.QuoteListItem.Controller where
 
 import Config.Types (AppConfig)
 import Data.Maybe (Maybe(..))
-import MerchantConfigs.DefaultConfig as MDC
+import Config.DefaultConfig as MDC
 
 data Action = Click QuoteListItemState
               | NoAction 

@@ -919,12 +919,18 @@ public class MobilityCommonBridge extends HyperBridge {
         SharedPreferences sharedPref = bridgeComponents.getContext().getSharedPreferences(bridgeComponents.getSdkName(), Context.MODE_PRIVATE);
         return sharedPref.getString(key, "__failed");
     }
-    //endregion
 
     @JavascriptInterface
     public String getKeyInNativeSharedPrefKeys(String key) {
         return getKeysInSharedPref(key);
     }
+
+    @JavascriptInterface
+    public void setEnvInNativeSharedPrefKeys(String key, String value) {
+        setKeysInSharedPrefs(key,value);
+    }
+
+    //endregion
 
     // region DATE / TIME UTILS
     @JavascriptInterface
