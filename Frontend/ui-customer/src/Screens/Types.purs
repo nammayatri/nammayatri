@@ -545,6 +545,7 @@ type HomeScreenStateProps =
   , emergencyHelpModelState :: EmergencyHelpModelState
   , showLiveDashboard :: Boolean
   , isbanner :: Boolean
+  , callSupportPopUp :: Boolean
   }
 
 type CustomerTipProps = {
