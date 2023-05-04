@@ -28,11 +28,11 @@ import Kernel.Storage.Esqueleto
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Error
-import qualified Storage.Tabular.Booking.BookingLocation as SLoc
 import qualified Storage.Tabular.Merchant as SMerchant
 import qualified Storage.Tabular.Person as SPerson
 import qualified Storage.Tabular.Quote as SQuote
 import qualified Storage.Tabular.RentalSlab as SRentalSlab
+import qualified Storage.Tabular.TripLocation as TripLocationTable
 import qualified Storage.Tabular.TripTerms as STripTerms
 import Tools.Error
 
@@ -55,8 +55,8 @@ mkPersist
       primaryExophone Text
       startTime UTCTime
       riderId SPerson.PersonTId
-      fromLocationId SLoc.BookingLocationTId
-      toLocationId SLoc.BookingLocationTId Maybe
+      fromLocationId TripLocationTable.TripLocationTId
+      toLocationId TripLocationTable.TripLocationTId Maybe
       estimatedFare HighPrecMoney
       discount HighPrecMoney Maybe
       estimatedTotalFare HighPrecMoney
@@ -77,9 +77,9 @@ instance TEntityKey BookingT where
   fromKey (BookingTKey _id) = Id _id
   toKey (Id id) = BookingTKey id
 
-data BookingDetailsT = OneWayDetailsT SLoc.BookingLocationT | RentalDetailsT SRentalSlab.RentalSlabT | DriverOfferDetailsT SLoc.BookingLocationT | OneWaySpecialZoneDetailsT SLoc.BookingLocationT
+data BookingDetailsT = OneWayDetailsT TripLocationTable.TripLocationT | RentalDetailsT SRentalSlab.RentalSlabT | DriverOfferDetailsT TripLocationTable.TripLocationT | OneWaySpecialZoneDetailsT TripLocationTable.TripLocationT
 
-type FullBookingT = (BookingT, SLoc.BookingLocationT, Maybe STripTerms.TripTermsT, BookingDetailsT)
+type FullBookingT = (BookingT, TripLocationTable.TripLocationT, Maybe STripTerms.TripTermsT, BookingDetailsT)
 
 instance FromTType FullBookingT Domain.Booking where
   fromTType (BookingT {..}, fromLocT, mbTripTermsT, bookingDetailsT) = do

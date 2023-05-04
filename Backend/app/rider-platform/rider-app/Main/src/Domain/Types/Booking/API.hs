@@ -15,8 +15,6 @@
 module Domain.Types.Booking.API where
 
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
-import Domain.Types.Booking.BookingLocation (BookingLocationAPIEntity)
-import qualified Domain.Types.Booking.BookingLocation as SLoc
 import Domain.Types.Booking.Type
 import qualified Domain.Types.Exophone as DExophone
 import Domain.Types.FarePolicy.FareBreakup
@@ -24,6 +22,8 @@ import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
 import qualified Domain.Types.RentalSlab as DRentalSlab
 import Domain.Types.Ride (Ride, RideAPIEntity, makeRideAPIEntity)
 import qualified Domain.Types.Ride as DRide
+import Domain.Types.TripLocation (TripLocationAPIEntity)
+import qualified Domain.Types.TripLocation as SLoc
 import EulerHS.Prelude hiding (id)
 import Kernel.Storage.Esqueleto (runInReplica)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -44,7 +44,7 @@ data BookingAPIEntity = BookingAPIEntity
     estimatedFare :: Money,
     discount :: Maybe Money,
     estimatedTotalFare :: Money,
-    fromLocation :: BookingLocationAPIEntity,
+    fromLocation :: TripLocationAPIEntity,
     rideList :: [RideAPIEntity],
     tripTerms :: [Text],
     fareBreakup :: [FareBreakupAPIEntity],
@@ -76,13 +76,13 @@ instance ToSchema BookingAPIDetails where
   declareNamedSchema = genericDeclareNamedSchema S.fareProductSchemaOptions
 
 data OneWayBookingAPIDetails = OneWayBookingAPIDetails
-  { toLocation :: BookingLocationAPIEntity,
+  { toLocation :: TripLocationAPIEntity,
     estimatedDistance :: HighPrecMeters
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 data OneWaySpecialZoneBookingAPIDetails = OneWaySpecialZoneBookingAPIDetails
-  { toLocation :: BookingLocationAPIEntity,
+  { toLocation :: TripLocationAPIEntity,
     estimatedDistance :: HighPrecMeters,
     otpCode :: Maybe Text
   }
@@ -99,7 +99,7 @@ makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone = do
       estimatedFare = booking.estimatedFare,
       discount = booking.discount,
       estimatedTotalFare = booking.estimatedTotalFare,
-      fromLocation = SLoc.makeBookingLocationAPIEntity booking.fromLocation,
+      fromLocation = SLoc.makeTripLocationAPIEntity booking.fromLocation,
       rideList = allRides <&> makeRideAPIEntity,
       tripTerms = fromMaybe [] $ booking.tripTerms <&> (.descriptions),
       fareBreakup = DFareBreakup.mkFareBreakupAPIEntity <$> fareBreakups,
@@ -128,12 +128,12 @@ makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone = do
       where
         mkOneWayAPIDetails OneWayBookingDetails {..} =
           OneWayBookingAPIDetails
-            { toLocation = SLoc.makeBookingLocationAPIEntity toLocation,
+            { toLocation = SLoc.makeTripLocationAPIEntity toLocation,
               estimatedDistance = distance
             }
         mkOneWaySpecialZoneAPIDetails OneWaySpecialZoneBookingDetails {..} =
           OneWaySpecialZoneBookingAPIDetails
-            { toLocation = SLoc.makeBookingLocationAPIEntity toLocation,
+            { toLocation = SLoc.makeTripLocationAPIEntity toLocation,
               estimatedDistance = distance,
               ..
             }

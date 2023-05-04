@@ -34,7 +34,6 @@ import qualified Storage.Queries.FarePolicy.DriverExtraFeeBounds as FarePolicyDr
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as QFarePolicyProgressiveDetailsPerExtraKmRateSection
 import qualified Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab as FarePolicySlabsDetailsSlab
 import Storage.Tabular.Booking
-import Storage.Tabular.Booking.BookingLocation
 import qualified Storage.Tabular.DriverQuote as DriverQuote
 import qualified Storage.Tabular.FareParameters as FareParams
 import qualified Storage.Tabular.FareParameters.FareParametersProgressiveDetails as FareParametersProgressiveDetails
@@ -43,14 +42,15 @@ import qualified Storage.Tabular.FarePolicy as FarePolicy
 import qualified Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails as FarePolicyProgressiveDetails
 import qualified Storage.Tabular.FarePolicy.Instances as FarePolicy
 import qualified Storage.Tabular.QuoteSpecialZone as QuoteSpecialZone
+import Storage.Tabular.TripLocation
 
 buildFullBooking ::
   Transactionable m =>
   BookingT ->
   DTypeBuilder m (Maybe (SolidType FullBookingT))
 buildFullBooking bookingT@BookingT {..} = runMaybeT $ do
-  fromLocationT <- MaybeT $ Esq.findById' @BookingLocationT (fromKey fromLocationId)
-  toLocationT <- MaybeT $ Esq.findById' @BookingLocationT (fromKey toLocationId)
+  fromLocationT <- MaybeT $ Esq.findById' @TripLocationT (fromKey fromLocationId)
+  toLocationT <- MaybeT $ Esq.findById' @TripLocationT (fromKey toLocationId)
   fareParamsT <- MaybeT $ Esq.findById' @FareParams.FareParametersT (fromKey fareParametersId)
   fullFareParamsData <- MaybeT $ getFullFareParamsData fareParamsT
   return $ extractSolidType @Booking (bookingT, fromLocationT, toLocationT, fullFareParamsData)

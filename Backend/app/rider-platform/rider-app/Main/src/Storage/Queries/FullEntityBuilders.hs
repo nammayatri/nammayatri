@@ -24,7 +24,6 @@ import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Storage.Queries.EstimateBreakup as QEB
 import Storage.Tabular.Booking as Booking
-import Storage.Tabular.Booking.BookingLocation
 import Storage.Tabular.DriverOffer
 import Storage.Tabular.Estimate
 import Storage.Tabular.Estimate.Instances
@@ -32,6 +31,7 @@ import Storage.Tabular.Quote as Quote
 import Storage.Tabular.Quote.Instances as Quote
 import Storage.Tabular.RentalSlab
 import Storage.Tabular.SpecialZoneQuote
+import Storage.Tabular.TripLocation
 import Storage.Tabular.TripTerms
 
 buildFullQuote ::
@@ -48,7 +48,7 @@ buildFullQuote (quoteT@QuoteT {..}, mbTripTermsT, mbRentalSlab, mbDriverOffer, m
 
 buildFullBooking ::
   Transactionable m =>
-  (BookingT, BookingLocationT, Maybe BookingLocationT, Maybe TripTermsT, Maybe RentalSlabT) ->
+  (BookingT, TripLocationT, Maybe TripLocationT, Maybe TripTermsT, Maybe RentalSlabT) ->
   DTypeBuilder m (Maybe (SolidType FullBookingT))
 buildFullBooking (bookingT@BookingT {..}, fromLocT, mbToLocT, mbTripTermsT, mbRentalSlab) = runMaybeT $ do
   bookingDetails <- case fareProductType of

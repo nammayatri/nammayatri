@@ -12,15 +12,17 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Types.Booking.BookingLocation where
+module Domain.Types.TripLocation where
 
-import Domain.Types.LocationAddress
-import Kernel.External.Maps.HasCoordinates
-import Kernel.Prelude
+import Data.Aeson
+import Data.OpenApi (ToSchema)
+import Data.Time
+import EulerHS.Prelude hiding (id, state)
+import Kernel.External.Maps.HasCoordinates (HasCoordinates)
 import Kernel.Types.Id
 
-data BookingLocation = BookingLocation
-  { id :: Id BookingLocation,
+data TripLocation = TripLocation
+  { id :: Id TripLocation,
     lat :: Double,
     lon :: Double,
     address :: LocationAddress,
@@ -29,25 +31,33 @@ data BookingLocation = BookingLocation
   }
   deriving (Generic, Show, Eq, HasCoordinates)
 
-data BookingLocationAPIEntity = BookingLocationAPIEntity
-  { lat :: Double,
-    lon :: Double,
-    street :: Maybe Text,
-    door :: Maybe Text,
+data LocationAddress = LocationAddress
+  { street :: Maybe Text,
     city :: Maybe Text,
     state :: Maybe Text,
     country :: Maybe Text,
     building :: Maybe Text,
     areaCode :: Maybe Text,
-    area :: Maybe Text,
-    ward :: Maybe Text,
-    placeId :: Maybe Text
+    area :: Maybe Text
+  }
+  deriving (Generic, Show, Eq)
+
+data TripLocationAPIEntity = TripLocationAPIEntity
+  { lat :: Double,
+    lon :: Double,
+    street :: Maybe Text,
+    city :: Maybe Text,
+    state :: Maybe Text,
+    country :: Maybe Text,
+    building :: Maybe Text,
+    areaCode :: Maybe Text,
+    area :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
-makeBookingLocationAPIEntity :: BookingLocation -> BookingLocationAPIEntity
-makeBookingLocationAPIEntity BookingLocation {..} = do
+makeTripLocationAPIEntity :: TripLocation -> TripLocationAPIEntity
+makeTripLocationAPIEntity TripLocation {..} = do
   let LocationAddress {..} = address
-  BookingLocationAPIEntity
+  TripLocationAPIEntity
     { ..
     }

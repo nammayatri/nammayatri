@@ -1,0 +1,1 @@
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN get_place_name_for_trip_end TEXT NOT NULL DEFAULT 'Google';

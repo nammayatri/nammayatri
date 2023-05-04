@@ -27,6 +27,7 @@ import Kernel.Storage.Esqueleto
 import Kernel.Types.Common (Centesimal, HighPrecMeters, HighPrecMoney)
 import Kernel.Types.Id
 import qualified Storage.Tabular.Booking as SRB
+import qualified Storage.Tabular.TripLocation as TripLocationTable
 
 derivePersistField "Domain.RideStatus"
 
@@ -56,6 +57,8 @@ mkPersist
       rideStartTime UTCTime Maybe
       rideEndTime UTCTime Maybe
       rideRating Int Maybe
+      fromLocationId TripLocationTable.TripLocationTId
+      toLocationId TripLocationTable.TripLocationTId Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary id
@@ -80,6 +83,8 @@ instance FromTType RideT Domain.Ride where
           trackingUrl = tUrl,
           fare = roundToIntegral <$> fare,
           totalFare = roundToIntegral <$> totalFare,
+          fromLocationId = fromKey fromLocationId,
+          toLocationId = fromKey <$> toLocationId,
           ..
         }
 
@@ -93,5 +98,7 @@ instance ToTType RideT Domain.Ride where
         trackingUrl = showBaseUrl <$> trackingUrl,
         fare = realToFrac <$> fare,
         totalFare = realToFrac <$> totalFare,
+        fromLocationId = toKey fromLocationId,
+        toLocationId = toKey <$> toLocationId,
         ..
       }

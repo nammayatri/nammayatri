@@ -20,11 +20,11 @@ module Domain.Action.UI.Ride
   )
 where
 
-import Domain.Types.Booking.BookingLocation (BookingLocationAPIEntity, makeBookingLocationAPIEntity)
 import qualified Domain.Types.Booking.Type as DB
 import qualified Domain.Types.Person as SPerson
 import Domain.Types.Ride
 import qualified Domain.Types.Ride as SRide
+import Domain.Types.TripLocation (TripLocationAPIEntity, makeTripLocationAPIEntity)
 import Environment
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
@@ -39,6 +39,7 @@ import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
+import Storage.Queries.TripLocation as QTripLocation
 import Tools.Error
 import qualified Tools.Maps as MapSearch
 import Tools.Metrics
@@ -47,8 +48,8 @@ import qualified Tools.Notifications as Notify
 type GetDriverLocResp = MapSearch.LatLong
 
 data GetRideStatusResp = GetRideStatusResp
-  { fromLocation :: BookingLocationAPIEntity,
-    toLocation :: Maybe BookingLocationAPIEntity,
+  { fromLocation :: TripLocationAPIEntity,
+    toLocation :: Maybe TripLocationAPIEntity,
     ride :: RideAPIEntity,
     customer :: SPerson.PersonAPIEntity,
     driverPosition :: Maybe MapSearch.LatLong
@@ -100,6 +101,7 @@ getDriverLoc rideId personId = do
 getRideStatus ::
   ( HasCacheConfig r,
     EncFlow m r,
+    EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     Redis.HedisFlow m r,
     CoreMetrics m,
@@ -110,6 +112,7 @@ getRideStatus ::
   m GetRideStatusResp
 getRideStatus rideId personId = withLogTag ("personId-" <> personId.getId) do
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  fromLocation <- QTripLocation.findById ride.fromLocationId >>= fromMaybeM (InternalError ride.id.getId)
   mbPos <-
     if ride.status == COMPLETED || ride.status == CANCELLED
       then return Nothing
@@ -117,15 +120,34 @@ getRideStatus rideId personId = withLogTag ("personId-" <> personId.getId) do
   booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   rider <- runInReplica $ QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   decRider <- decrypt rider
-  return $
-    GetRideStatusResp
-      { fromLocation = makeBookingLocationAPIEntity booking.fromLocation,
-        toLocation = case booking.bookingDetails of
-          DB.OneWayDetails details -> Just $ makeBookingLocationAPIEntity details.toLocation
-          DB.RentalDetails _ -> Nothing
-          DB.OneWaySpecialZoneDetails details -> Just $ makeBookingLocationAPIEntity details.toLocation
-          DB.DriverOfferDetails details -> Just $ makeBookingLocationAPIEntity details.toLocation,
-        ride = makeRideAPIEntity ride,
-        customer = SPerson.makePersonAPIEntity decRider,
-        driverPosition = mbPos <&> (.currPoint)
-      }
+
+  case ride.toLocationId of
+    Just toLocationId -> do
+      toLocation <- QTripLocation.findById toLocationId
+      return $
+        GetRideStatusResp
+          { fromLocation = makeTripLocationAPIEntity fromLocation,
+            toLocation = case toLocation of
+              Nothing -> Nothing
+              Just location -> case booking.bookingDetails of
+                DB.OneWayDetails _ -> Just $ makeTripLocationAPIEntity location
+                DB.RentalDetails _ -> Nothing
+                DB.OneWaySpecialZoneDetails _ -> Just $ makeTripLocationAPIEntity location
+                DB.DriverOfferDetails _ -> Just $ makeTripLocationAPIEntity location,
+            ride = makeRideAPIEntity ride,
+            customer = SPerson.makePersonAPIEntity decRider,
+            driverPosition = mbPos <&> (.currPoint)
+          }
+    Nothing ->
+      return $
+        GetRideStatusResp
+          { fromLocation = makeTripLocationAPIEntity fromLocation,
+            toLocation = case booking.bookingDetails of
+              DB.OneWayDetails details -> Just $ makeTripLocationAPIEntity details.toLocation
+              DB.RentalDetails _ -> Nothing
+              DB.OneWaySpecialZoneDetails details -> Just $ makeTripLocationAPIEntity details.toLocation
+              DB.DriverOfferDetails details -> Just $ makeTripLocationAPIEntity details.toLocation,
+            ride = makeRideAPIEntity ride,
+            customer = SPerson.makePersonAPIEntity decRider,
+            driverPosition = mbPos <&> (.currPoint)
+          }

@@ -18,9 +18,9 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.Booking.BookingLocation where
+module Storage.Tabular.TripLocation where
 
-import qualified Domain.Types.Booking.BookingLocation as Domain
+import qualified Domain.Types.TripLocation as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
@@ -28,12 +28,11 @@ import Kernel.Types.Id
 mkPersist
   defaultSqlSettings
   [defaultQQ|
-    BookingLocationT sql=booking_location
+    TripLocationT sql=trip_location
       id Text
       lat Double
       lon Double
       street Text Maybe
-      door Text Maybe
       city Text Maybe
       state Text Maybe
       country Text Maybe
@@ -46,23 +45,47 @@ mkPersist
       deriving Generic
     |]
 
-instance TEntityKey BookingLocationT where
-  type DomainKey BookingLocationT = Id Domain.BookingLocation
-  fromKey (BookingLocationTKey _id) = Id _id
-  toKey (Id id) = BookingLocationTKey id
+instance TEntityKey TripLocationT where
+  type DomainKey TripLocationT = Id Domain.TripLocation
+  fromKey (TripLocationTKey _id) = Id _id
+  toKey (Id id) = TripLocationTKey id
 
-mkDomainBookingLocation :: BookingLocationT -> Domain.BookingLocation
-mkDomainBookingLocation BookingLocationT {..} = do
+instance FromTType TripLocationT Domain.TripLocation where
+  fromTType TripLocationT {..} = do
+    return $
+      Domain.TripLocation
+        { id = Id id,
+          address =
+            Domain.LocationAddress {..},
+          ..
+        }
+
+instance ToTType TripLocationT Domain.TripLocation where
+  toTType Domain.TripLocation {..} =
+    TripLocationT
+      { id = getId id,
+        street = address.street,
+        city = address.city,
+        state = address.state,
+        country = address.country,
+        building = address.building,
+        areaCode = address.areaCode,
+        area = address.area,
+        ..
+      }
+
+mkDomainTripLocation :: TripLocationT -> Domain.TripLocation
+mkDomainTripLocation TripLocationT {..} = do
   let address = Domain.LocationAddress {..}
-  Domain.BookingLocation
+  Domain.TripLocation
     { id = Id id,
       ..
     }
 
-mkTabularBookingLocation :: Domain.BookingLocation -> BookingLocationT
-mkTabularBookingLocation Domain.BookingLocation {..} = do
+mkTabularTripLocation :: Domain.TripLocation -> TripLocationT
+mkTabularTripLocation Domain.TripLocation {..} = do
   let Domain.LocationAddress {..} = address
-  BookingLocationT
+  TripLocationT
     { id = getId id,
       ..
     }

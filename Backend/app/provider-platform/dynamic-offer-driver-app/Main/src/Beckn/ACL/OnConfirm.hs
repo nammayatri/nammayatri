@@ -18,7 +18,7 @@ import qualified Beckn.ACL.Common as Common
 import qualified Beckn.Types.Core.Taxi.OnConfirm as OnConfirm
 import qualified Domain.Action.Beckn.Confirm as DConfirm
 import qualified Domain.Types.Booking as DConfirm
-import qualified Domain.Types.Booking.BookingLocation as DBL
+import qualified Domain.Types.TripLocation as DBL
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -83,7 +83,7 @@ mkOrderItem code =
           }
     }
 
-mklocation :: DBL.BookingLocation -> OnConfirm.Location
+mklocation :: DBL.TripLocation -> OnConfirm.Location
 mklocation loc =
   OnConfirm.Location
     { gps =
@@ -94,9 +94,9 @@ mklocation loc =
       address = castAddress loc.address
     }
   where
-    castAddress DBL.LocationAddress {..} = OnConfirm.Address {area_code = areaCode, locality = area, ward = Nothing, ..}
+    castAddress DBL.LocationAddress {..} = OnConfirm.Address {area_code = areaCode, locality = area, ward = Nothing, door = Nothing, ..}
 
-mkFulfillmentInfo :: DBL.BookingLocation -> DBL.BookingLocation -> UTCTime -> OnConfirm.FulfillmentInfo
+mkFulfillmentInfo :: DBL.TripLocation -> DBL.TripLocation -> UTCTime -> OnConfirm.FulfillmentInfo
 mkFulfillmentInfo fromLoc toLoc startTime =
   OnConfirm.FulfillmentInfo
     { state = OnConfirm.FulfillmentState "TRIP_ASSIGNED",
@@ -113,7 +113,7 @@ mkFulfillmentInfo fromLoc toLoc startTime =
             }
     }
 
-mkSpecialZoneFulfillmentInfo :: DBL.BookingLocation -> DBL.BookingLocation -> UTCTime -> Text -> OnConfirm.FulfillmentInfo
+mkSpecialZoneFulfillmentInfo :: DBL.TripLocation -> DBL.TripLocation -> UTCTime -> Text -> OnConfirm.FulfillmentInfo
 mkSpecialZoneFulfillmentInfo fromLoc toLoc startTime otp = do
   let authorization =
         Just $

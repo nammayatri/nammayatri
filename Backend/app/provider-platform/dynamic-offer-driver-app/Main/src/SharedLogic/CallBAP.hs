@@ -45,6 +45,7 @@ import qualified Domain.Types.FareParameters as Fare
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchRequest as DSR
+import qualified Domain.Types.TripLocation as DBT
 import Kernel.Prelude
 import Kernel.Storage.Hedis
 import qualified Kernel.Types.Beckn.Context as Context
@@ -194,12 +195,14 @@ sendRideCompletedUpdateToBAP ::
   DRB.Booking ->
   SRide.Ride ->
   Fare.FareParameters ->
+  Maybe DBT.TripLocation ->
+  Maybe DBT.TripLocation ->
   m ()
-sendRideCompletedUpdateToBAP booking ride fareParams = do
+sendRideCompletedUpdateToBAP booking ride fareParams startLocation endLocation = do
   transporter <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
-  let rideCompletedBuildReq = ACL.RideCompletedBuildReq {ride, fareParams}
+  let rideCompletedBuildReq = ACL.RideCompletedBuildReq {ride, fareParams, startLocation, endLocation}
   rideCompletedMsg <- ACL.buildOnUpdateMessage rideCompletedBuildReq
 
   retryConfig <- asks (.longDurationRetryCfg)

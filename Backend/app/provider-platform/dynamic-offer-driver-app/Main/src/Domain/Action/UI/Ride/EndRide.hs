@@ -35,6 +35,7 @@ import qualified Domain.Types.Merchant.TransporterConfig as DTConf
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as RD
+import qualified Domain.Types.TripLocation as TripLocationType
 import qualified Domain.Types.Vehicle as DVeh
 import Environment (Flow)
 import EulerHS.Prelude hiding (pi)
@@ -76,8 +77,8 @@ data ServiceHandle m = ServiceHandle
   { findBookingById :: Id SRB.Booking -> m (Maybe SRB.Booking),
     findRideById :: Id DRide.Ride -> m (Maybe DRide.Ride),
     getMerchant :: Id DM.Merchant -> m (Maybe DM.Merchant),
-    endRideTransaction :: Id DP.Driver -> Id SRB.Booking -> DRide.Ride -> Maybe FareParameters -> Maybe (Id RD.RiderDetails) -> m (),
-    notifyCompleteToBAP :: SRB.Booking -> DRide.Ride -> Fare.FareParameters -> m (),
+    endRideTransaction :: Id DP.Driver -> Id SRB.Booking -> DRide.Ride -> Maybe FareParameters -> Maybe (Id RD.RiderDetails) -> Bool -> LatLong -> m (Maybe TripLocationType.TripLocation, Maybe TripLocationType.TripLocation),
+    notifyCompleteToBAP :: SRB.Booking -> DRide.Ride -> Fare.FareParameters -> Maybe TripLocationType.TripLocation -> Maybe TripLocationType.TripLocation -> m (),
     getFarePolicy :: Id DM.Merchant -> DVeh.Variant -> m (Maybe DFP.FarePolicy),
     calculateFareParameters :: Fare.CalculateFareParametersParams -> m Fare.FareParameters,
     putDiffMetric :: Id DM.Merchant -> Money -> Meters -> m (),
@@ -111,7 +112,7 @@ buildEndRideHandle merchantId = do
       }
 
 driverEndRide ::
-  (MonadThrow m, Log m, MonadTime m, MonadGuid m) =>
+  MonadFlow m =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DriverEndRideReq ->
@@ -122,7 +123,7 @@ driverEndRide handle rideId req =
     $ DriverReq req
 
 callBasedEndRide ::
-  (MonadThrow m, Log m, MonadTime m, MonadGuid m) =>
+  MonadFlow m =>
   ServiceHandle m ->
   Id DRide.Ride ->
   CallBasedEndRideReq ->
@@ -130,7 +131,7 @@ callBasedEndRide ::
 callBasedEndRide handle rideId = endRide handle rideId . CallBasedReq
 
 dashboardEndRide ::
-  (MonadThrow m, Log m, MonadTime m, MonadGuid m) =>
+  MonadFlow m =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DashboardEndRideReq ->
@@ -141,8 +142,9 @@ dashboardEndRide handle rideId req =
     $ DashboardReq req
 
 endRide ::
-  (MonadThrow m, Log m, MonadTime m, MonadGuid m) =>
-  ServiceHandle m ->
+  MonadFlow m =>
+  ServiceHandle
+    m ->
   Id DRide.Ride ->
   EndRideReq ->
   m APISuccess.APISuccess
@@ -206,9 +208,10 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
                pickupDropOutsideOfThreshold = Just pickupDropOutsideOfThreshold
               }
     -- we need to store fareParams only when they changed
-    endRideTransaction (cast @DP.Person @DP.Driver driverId) booking.id updRide mbUpdatedFareParams booking.riderId
+    (startLocationCustomer, endLocationCustomer) <-
+      endRideTransaction (cast @DP.Person @DP.Driver driverId) booking.id updRide mbUpdatedFareParams booking.riderId pickupDropOutsideOfThreshold tripEndPoint
 
-    notifyCompleteToBAP booking updRide newFareParams
+    notifyCompleteToBAP booking updRide newFareParams startLocationCustomer endLocationCustomer
   return APISuccess.Success
 
 recalculateFareForDistance :: (MonadThrow m, Log m, MonadTime m, MonadGuid m) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> Meters -> m (Meters, Money, Maybe FareParameters)

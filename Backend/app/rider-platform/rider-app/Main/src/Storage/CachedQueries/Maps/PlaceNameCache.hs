@@ -44,6 +44,12 @@ cachedPlaceByPlaceId placeId placeNameCached = do
   let placeIdKey = makePlaceIdKey placeId
   Hedis.setExp placeIdKey placeNameCached expTime
 
+cachedPlaceByLatLon :: CacheFlow m r => Double -> Double -> Maybe PlaceNameCache -> m ()
+cachedPlaceByLatLon lat lon placeNameCached = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  let placeIdKey = makeLatLongIdKey lat lon
+  Hedis.setExp placeIdKey placeNameCached expTime
+
 cachedPlaceByGeoHash :: CacheFlow m r => Text -> [PlaceNameCache] -> m ()
 cachedPlaceByGeoHash geoHash placeNameCached = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
@@ -55,3 +61,6 @@ makePlaceIdKey placeId = "CachedQueries:Maps:PlaceId-" <> placeId
 
 makeGeoHashIdKey :: Text -> Text
 makeGeoHashIdKey geoHash = "CachedQueries:Maps:GeoHash-" <> geoHash
+
+makeLatLongIdKey :: Double -> Double -> Text
+makeLatLongIdKey lat lon = "CachedQueries:Maps:LatLon-" <> show lat <> show lon

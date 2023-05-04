@@ -23,6 +23,7 @@ import qualified Data.Text.Encoding as DT
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.FareParameters as DFare
 import qualified Domain.Types.Person as DPers
+import Domain.Types.TripLocation as DTripLocation
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Maps.Types
 import qualified Kernel.Prelude as BP
@@ -66,6 +67,8 @@ data Ride = Ride
     fareParametersId :: Maybe (Id DFare.FareParameters),
     distanceCalculationFailed :: Maybe Bool,
     pickupDropOutsideOfThreshold :: Maybe Bool,
+    fromLocationId :: Id DTripLocation.TripLocation,
+    toLocationId :: Id DTripLocation.TripLocation,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

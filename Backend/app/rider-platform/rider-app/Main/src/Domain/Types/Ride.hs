@@ -20,6 +20,7 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import qualified Domain.Types.Booking.Type as DRB
+import Domain.Types.TripLocation
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -67,6 +68,8 @@ data Ride = Ride
     driverArrivalTime :: Maybe UTCTime,
     rideStartTime :: Maybe UTCTime,
     rideEndTime :: Maybe UTCTime,
+    fromLocationId :: Id TripLocation,
+    toLocationId :: Maybe (Id TripLocation),
     rideRating :: Maybe Int,
     createdAt :: UTCTime,
     updatedAt :: UTCTime

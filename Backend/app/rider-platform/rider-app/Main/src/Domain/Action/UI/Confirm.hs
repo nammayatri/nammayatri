@@ -13,15 +13,21 @@
 -}
 
 module Domain.Action.UI.Confirm
-  ( confirm,
+  ( buildTripLocation,
+    confirm,
+    findRandomExophone,
     cancelBooking,
   )
 where
 
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
+import qualified Domain.Types.Exophone as DExophone
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Quote as DQuote
+import qualified Domain.Types.SearchRequest.SearchReqLocation as DSRLoc
+import qualified Domain.Types.TripLocation as DBL
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Esqueleto.Config
@@ -29,6 +35,7 @@ import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.Confirm as SConfirm
+-- import qualified Domain.Types.SearchRequest as DSReq
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
@@ -39,6 +46,12 @@ import qualified Tools.Notifications as Notify
 
 confirm :: (EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Id DQuote.Quote -> m SConfirm.DConfirmRes
 confirm = SConfirm.confirm
+
+buildTripLocation :: MonadGuid m => UTCTime -> DSRLoc.SearchReqLocation -> m DBL.TripLocation
+buildTripLocation = SConfirm.buildTripLocation
+
+findRandomExophone :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> m DExophone.Exophone
+findRandomExophone = SConfirm.findRandomExophone
 
 -- cancel booking when QUOTE_EXPIRED on bpp side, or other EXTERNAL_API_CALL_ERROR catched
 cancelBooking :: (HasCacheConfig r, EncFlow m r, EsqDBFlow m r, HedisFlow m r, CoreMetrics m) => DRB.Booking -> m ()

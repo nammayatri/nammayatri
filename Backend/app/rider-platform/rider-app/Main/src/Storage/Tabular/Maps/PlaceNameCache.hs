@@ -25,6 +25,8 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 
+-- here we are caching things
+
 derivePersistField "Domain.AddressResp"
 mkPersist
   defaultSqlSettings

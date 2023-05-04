@@ -17,7 +17,7 @@ module Beckn.ACL.Confirm where
 import qualified Beckn.Types.Core.Taxi.API.Confirm as Confirm
 import qualified Beckn.Types.Core.Taxi.Confirm as Confirm
 import Domain.Action.Beckn.Confirm as DConfirm
-import qualified Domain.Types.Booking.BookingLocation as DBL
+import qualified Domain.Types.TripLocation as DBL
 import Kernel.Prelude
 import Kernel.Product.Validation.Context
 import Kernel.Types.App

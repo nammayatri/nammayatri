@@ -23,6 +23,7 @@ import Domain.Types.Person
 import Domain.Types.Ride as Ride
 import Domain.Types.RideDetails as RideDetails
 import Domain.Types.RiderDetails as RiderDetails
+import qualified Domain.Types.TripLocation as DBL
 import Kernel.External.Encryption
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
@@ -374,3 +375,15 @@ findStuckRideItems merchantId bookingIds now = do
   pure $ mkStuckRideItem <$> res
   where
     mkStuckRideItem (rideId, bookingId, driverId, driverActive) = StuckRideItem {..}
+
+updateLocationIds :: Id Ride -> Id DBL.TripLocation -> Id DBL.TripLocation -> SqlDB ()
+updateLocationIds rideId fromLocationId toLocationId = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ RideFromLocationId =. val (toKey fromLocationId),
+        RideToLocationId =. val (toKey toLocationId),
+        RideUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. RideTId ==. val (toKey rideId)

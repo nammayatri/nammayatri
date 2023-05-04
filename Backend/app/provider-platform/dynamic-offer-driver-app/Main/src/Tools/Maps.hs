@@ -24,6 +24,7 @@ module Tools.Maps
     snapToRoad,
     getPickupRoutes,
     getTripRoutes,
+    getTripPlaceName,
   )
 where
 
@@ -114,6 +115,9 @@ autoComplete = runWithServiceConfig Maps.autoComplete (.autoComplete)
 
 getPlaceName :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id Merchant -> GetPlaceNameReq -> m GetPlaceNameResp
 getPlaceName = runWithServiceConfig Maps.getPlaceName (.getPlaceName)
+
+getTripPlaceName :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id Merchant -> GetPlaceNameReq -> m GetPlaceNameResp
+getTripPlaceName = runWithServiceConfig Maps.getPlaceName (.getPlaceNameForTripEnd)
 
 getPlaceDetails :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id Merchant -> GetPlaceDetailsReq -> m GetPlaceDetailsResp
 getPlaceDetails = runWithServiceConfig Maps.getPlaceDetails (.getPlaceDetails)

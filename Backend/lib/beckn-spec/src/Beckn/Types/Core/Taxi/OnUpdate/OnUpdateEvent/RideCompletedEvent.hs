@@ -18,7 +18,9 @@ module Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent
   )
 where
 
+import Beckn.Types.Core.Taxi.Common.Address (Address (..))
 import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
+import Beckn.Types.Core.Taxi.Common.Gps (Gps (..))
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType (OnUpdateEventType (RIDE_COMPLETED))
 import qualified Control.Lens as L
 import Data.Aeson as A
@@ -129,9 +131,17 @@ instance ToSchema BreakupPrice where
 
 data FulfillmentInfo = FulfillmentInfo
   { id :: Text, -- bppRideId
-    chargeable_distance :: DecimalValue
+    chargeable_distance :: DecimalValue,
+    start_location :: Maybe LocationInfo,
+    end_location :: Maybe LocationInfo
   }
   deriving (Generic, Show)
+
+data LocationInfo = LocationInfo
+  { latLon :: Gps,
+    address :: Address
+  }
+  deriving (Generic, Show, ToSchema, FromJSON, ToJSON)
 
 instance ToSchema FulfillmentInfo where
   declareNamedSchema = genericDeclareUnNamedSchema $ fromAesonOptions fulfillmentInfoJSONOptions

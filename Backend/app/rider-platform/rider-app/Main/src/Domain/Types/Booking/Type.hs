@@ -18,11 +18,11 @@ import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
-import qualified Domain.Types.Booking.BookingLocation as DLoc
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.RentalSlab as DRentalSlab
+import qualified Domain.Types.TripLocation as DLoc
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Kernel.Prelude
@@ -68,7 +68,7 @@ data Booking = Booking
     primaryExophone :: Text,
     startTime :: UTCTime,
     riderId :: Id DPerson.Person,
-    fromLocation :: DLoc.BookingLocation,
+    fromLocation :: DLoc.TripLocation,
     estimatedFare :: Money,
     discount :: Maybe Money,
     estimatedTotalFare :: Money,
@@ -89,13 +89,13 @@ data BookingDetails
   deriving (Show)
 
 data OneWayBookingDetails = OneWayBookingDetails
-  { toLocation :: DLoc.BookingLocation,
+  { toLocation :: DLoc.TripLocation,
     distance :: HighPrecMeters
   }
   deriving (Show)
 
 data OneWaySpecialZoneBookingDetails = OneWaySpecialZoneBookingDetails
-  { toLocation :: DLoc.BookingLocation,
+  { toLocation :: DLoc.TripLocation,
     distance :: HighPrecMeters,
     otpCode :: Maybe Text
   }

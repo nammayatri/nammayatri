@@ -142,7 +142,9 @@ buildOnUpdateMessage RideCompletedBuildReq {..} = do
             fulfillment =
               RideCompletedOU.FulfillmentInfo
                 { id = ride.id.getId,
-                  chargeable_distance = chargeableDistance
+                  chargeable_distance = chargeableDistance,
+                  start_location = Nothing,
+                  end_location = Nothing
                 }
           }
   where

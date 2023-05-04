@@ -25,9 +25,11 @@ import Kernel.Storage.Esqueleto as Esq hiding (findById, isNothing)
 import Kernel.Types.Id
 import Kernel.Types.Time
 import qualified Storage.Queries.DriverQuote as QDQuote
-import Storage.Queries.FullEntityBuilders
+import qualified Storage.Queries.FullEntityBuilders as Feb
 import Storage.Tabular.Booking
 import Storage.Tabular.DriverQuote as DriverQuote
+import qualified Storage.Tabular.FareParameters as Fare
+import Storage.Tabular.TripLocation
 
 -- fareParams already created with driverQuote
 create :: Booking -> SqlDB ()
@@ -37,6 +39,22 @@ create dBooking =
     Esq.create' toLoc
     Esq.create' booking
 
+baseBookingTable ::
+  From
+    ( Table BookingT
+        :& Table TripLocationT
+        :& Table TripLocationT
+        :& Table Fare.FareParametersT
+    )
+baseBookingTable =
+  table @BookingT
+    `innerJoin` table @TripLocationT `Esq.on` (\(rb :& loc1) -> rb ^. BookingFromLocationId ==. loc1 ^. TripLocationTId)
+    `innerJoin` table @TripLocationT `Esq.on` (\(rb :& _ :& loc2) -> rb ^. BookingToLocationId ==. loc2 ^. TripLocationTId)
+    `innerJoin` table @Fare.FareParametersT
+      `Esq.on` ( \(rb :& _ :& _ :& farePars) ->
+                   rb ^. BookingFareParametersId ==. farePars ^. Fare.FareParametersTId
+               )
+
 findById :: Transactionable m => Id Booking -> m (Maybe Booking)
 findById bookingId = buildDType $ do
   res <-
@@ -44,7 +62,7 @@ findById bookingId = buildDType $ do
       rb <- from $ table @BookingT
       where_ $ rb ^. BookingTId ==. val (toKey bookingId)
       pure rb
-  join <$> mapM buildFullBooking res
+  join <$> mapM Feb.buildFullBooking res
 
 findBySearchReq :: (Transactionable m) => Id DSR.SearchRequest -> m (Maybe Booking)
 findBySearchReq searchReqId = buildDType $ do
@@ -52,7 +70,7 @@ findBySearchReq searchReqId = buildDType $ do
   let mbDriverQuoteId = Id . DriverQuote.id <$> mbDriverQuoteT
   mbBookingT <- (join <$>) $ mapM findBookingByDriverQuoteId' mbDriverQuoteId
 
-  join <$> mapM buildFullBooking mbBookingT
+  join <$> mapM Feb.buildFullBooking mbBookingT
 
 findBookingByDriverQuoteId' :: Transactionable m => Id DriverQuote -> DTypeBuilder m (Maybe BookingT)
 findBookingByDriverQuoteId' driverQuoteId = Esq.findOne' $ do

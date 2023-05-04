@@ -28,6 +28,7 @@ import Kernel.Types.Id
 import Storage.Tabular.Booking (BookingTId)
 import qualified Storage.Tabular.FareParameters as Fare
 import Storage.Tabular.Person (PersonTId)
+import Storage.Tabular.TripLocation (TripLocationTId)
 
 derivePersistField "Domain.RideStatus"
 
@@ -55,6 +56,8 @@ mkPersist
       pickupDropOutsideOfThreshold Bool Maybe
       fareParametersId Fare.FareParametersTId Maybe
       distanceCalculationFailed Bool Maybe
+      fromLocationId TripLocationTId
+      toLocationId TripLocationTId
       createdAt UTCTime
       updatedAt UTCTime
       Primary id

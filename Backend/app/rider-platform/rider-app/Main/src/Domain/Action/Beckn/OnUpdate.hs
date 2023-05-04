@@ -26,14 +26,17 @@ module Domain.Action.Beckn.OnUpdate
   )
 where
 
+import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent (LocationInfo (..))
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
+import Domain.Types.LocationAddress
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchRequest as DSR
+import Domain.Types.TripLocation
 import Domain.Types.VehicleVariant
 import Environment
 import qualified Kernel.External.Maps as Maps
@@ -56,6 +59,7 @@ import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSR
+import qualified Storage.Queries.TripLocation as TripLocation
 import Tools.Error
 import Tools.Maps (LatLong)
 import Tools.Metrics (CoreMetrics)
@@ -84,7 +88,9 @@ data OnUpdateReq
         fare :: Money,
         totalFare :: Money,
         fareBreakups :: [OnUpdateFareBreakup],
-        chargeableDistance :: HighPrecMeters
+        chargeableDistance :: HighPrecMeters,
+        startLocation :: Maybe LocationInfo,
+        endLocation :: Maybe LocationInfo
       }
   | BookingCancelledReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -142,7 +148,9 @@ data ValidatedOnUpdateReq
         chargeableDistance :: HighPrecMeters,
         booking :: SRB.Booking,
         ride :: SRide.Ride,
-        person :: DP.Person
+        person :: DP.Person,
+        startLocation :: Maybe LocationInfo,
+        endLocation :: Maybe LocationInfo
       }
   | ValidatedBookingCancelledReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -254,6 +262,11 @@ onUpdate ValidatedRideAssignedReq {..} = do
       guid <- generateGUID
       shortId <- generateShortId
       now <- getCurrentTime
+      let endLocationId = case booking.bookingDetails of
+            SRB.OneWayDetails details -> Just details.toLocation.id
+            SRB.RentalDetails _ -> Nothing
+            SRB.DriverOfferDetails details -> Just details.toLocation.id
+            SRB.OneWaySpecialZoneDetails details -> Just details.toLocation.id
       return
         SRide.Ride
           { id = guid,
@@ -265,6 +278,8 @@ onUpdate ValidatedRideAssignedReq {..} = do
             chargeableDistance = Nothing,
             driverArrivalTime = Nothing,
             vehicleVariant = booking.vehicleVariant,
+            fromLocationId = booking.fromLocation.id,
+            toLocationId = endLocationId,
             createdAt = now,
             updatedAt = now,
             rideStartTime = Nothing,
@@ -308,6 +323,30 @@ onUpdate ValidatedRideCompletedReq {..} = do
     QFareBreakup.createMany breakups
     QPFS.updateStatus booking.riderId DPFS.PENDING_RATING {rideId = ride.id}
   QPFS.clearCache booking.riderId
+  (actualFromLocationId, startingLocation) <- case startLocation of
+    Nothing -> return (booking.fromLocation.id, Nothing)
+    Just location -> do
+      fromLocationId <- generateGUID
+      fromLocation <- buildLocation fromLocationId location
+      return (fromLocationId, Just fromLocation)
+  (actualToLocationId, endingLocation) <- case endLocation of
+    Nothing -> do
+      let endLocationId = case booking.bookingDetails of
+            SRB.OneWayDetails details -> Just details.toLocation.id
+            SRB.RentalDetails _ -> Nothing
+            SRB.DriverOfferDetails details -> Just details.toLocation.id
+            SRB.OneWaySpecialZoneDetails details -> Just details.toLocation.id
+      return (endLocationId, Nothing)
+    Just location -> do
+      toLocationId <- generateGUID
+      toLocation <- buildLocation toLocationId location
+      return (Just toLocationId, Just toLocation)
+  DB.runTransaction $ do
+    whenJust startingLocation TripLocation.create
+    whenJust endingLocation TripLocation.create
+    QRide.updateFromLocationId ride.id actualFromLocationId
+    whenJust actualToLocationId $ QRide.updateToLocationId ride.id
+
   Notify.notifyOnRideCompleted booking updRide
   where
     buildFareBreakup :: MonadFlow m => Id SRB.Booking -> OnUpdateFareBreakup -> m DFareBreakup.FareBreakup
@@ -452,4 +491,29 @@ buildBookingCancellationReason bookingId mbRideId cancellationSource = do
         reasonCode = Nothing,
         reasonStage = Nothing,
         additionalInfo = Nothing
+      }
+
+buildLocation :: (MonadFlow m) => Id TripLocation -> LocationInfo -> m TripLocation
+buildLocation locationId location = do
+  now <- getCurrentTime
+  return $
+    TripLocation
+      { id = locationId,
+        lat = location.latLon.lat,
+        lon = location.latLon.lon,
+        address =
+          LocationAddress
+            { street = location.address.street,
+              city = location.address.city,
+              state = location.address.state,
+              country = location.address.country,
+              building = location.address.building,
+              areaCode = location.address.area_code,
+              area = location.address.locality,
+              door = location.address.door,
+              ward = location.address.ward,
+              placeId = Nothing
+            },
+        createdAt = now,
+        updatedAt = now
       }

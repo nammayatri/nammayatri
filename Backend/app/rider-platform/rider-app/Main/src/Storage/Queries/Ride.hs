@@ -19,6 +19,7 @@ import Domain.Types.Booking.Type (Booking)
 import Domain.Types.Merchant
 import Domain.Types.Person
 import Domain.Types.Ride as Ride
+import Domain.Types.TripLocation as DBL
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
@@ -226,19 +227,24 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
     mkRideItem (person, ride, bookingStatus) = do
       RideItem {..}
 
--- countRides :: Transactionable m => Id Merchant -> m Int
--- countRides merchantId =
---   mkCount <$> do
---     Esq.findAll $ do
---       (_ride :& booking) <-
---         from $
---           table @RideT
---             `innerJoin` table @BookingT
---               `Esq.on` ( \(ride :& booking) ->
---                            ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
---                        )
---       where_ $ booking ^. BookingMerchantId ==. val (toKey merchantId)
---       return (countRows :: SqlExpr (Esq.Value Int))
---   where
---     mkCount [counter] = counter
---     mkCount _ = 0
+updateFromLocationId :: Id Ride -> Id DBL.TripLocation -> SqlDB ()
+updateFromLocationId rideId fromLocationId = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ RideFromLocationId =. val (toKey fromLocationId),
+        RideUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. RideTId ==. val (toKey rideId)
+
+updateToLocationId :: Id Ride -> Id DBL.TripLocation -> SqlDB ()
+updateToLocationId rideId toLocationId = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ RideToLocationId =. val (Just (toKey toLocationId)),
+        RideUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. RideTId ==. val (toKey rideId)

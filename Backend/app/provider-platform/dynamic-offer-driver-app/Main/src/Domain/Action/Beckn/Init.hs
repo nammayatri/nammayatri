@@ -15,7 +15,6 @@
 module Domain.Action.Beckn.Init where
 
 import qualified Domain.Types.Booking as DRB
-import qualified Domain.Types.Booking.BookingLocation as DLoc
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.Exophone as DExophone
@@ -25,6 +24,7 @@ import qualified Domain.Types.QuoteSpecialZone as DQSZ
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import qualified Domain.Types.SearchRequestSpecialZone as DSRSZ
+import qualified Domain.Types.TripLocation as DLoc
 import qualified Domain.Types.Vehicle.Variant as Veh
 import Kernel.Prelude
 import Kernel.Randomizer (getRandomElement)
@@ -61,12 +61,12 @@ data InitRes = InitRes
     transporter :: DM.Merchant
   }
 
-buildBookingLocation :: (MonadGuid m) => DLoc.SearchReqLocation -> m DLoc.BookingLocation
-buildBookingLocation DLoc.SearchReqLocation {..} = do
+buildTripLocation :: (MonadGuid m) => DLoc.SearchReqLocation -> m DLoc.TripLocation
+buildTripLocation DLoc.SearchReqLocation {..} = do
   let address = DLoc.LocationAddress {..}
   guid <- generateGUIDText
   pure
-    DLoc.BookingLocation
+    DLoc.TripLocation
       { id = Id guid,
         ..
       }
@@ -150,8 +150,8 @@ handler merchantId req eitherReq = do
       m DRB.Booking
     buildBooking searchRequest driverQuote bookingType now = do
       id <- Id <$> generateGUID
-      fromLocation <- buildBookingLocation searchRequest.fromLocation
-      toLocation <- buildBookingLocation searchRequest.toLocation
+      fromLocation <- buildTripLocation searchRequest.fromLocation
+      toLocation <- buildTripLocation searchRequest.toLocation
       exophone <- findRandomExophone merchantId
       pure
         DRB.Booking

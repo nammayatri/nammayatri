@@ -26,9 +26,9 @@ import Kernel.Types.Id
 import Storage.Queries.FullEntityBuilders (buildFullBooking)
 import Storage.Tabular.Booking
 import qualified Storage.Tabular.Booking as RB
-import qualified Storage.Tabular.Booking.BookingLocation as Loc
 import qualified Storage.Tabular.RentalSlab as RentalSlab
 import qualified Storage.Tabular.Ride as R
+import qualified Storage.Tabular.TripLocation as Loc
 import qualified Storage.Tabular.TripTerms as TripTerms
 
 -- we already created TripTerms and RentalSlab when created Quote
@@ -79,20 +79,20 @@ updateOtpCodeBookingId rbId otp = do
 fullBookingTable ::
   From
     ( Table RB.BookingT
-        :& Table Loc.BookingLocationT
-        :& MbTable Loc.BookingLocationT
+        :& Table Loc.TripLocationT
+        :& MbTable Loc.TripLocationT
         :& MbTable TripTerms.TripTermsT
         :& MbTable RentalSlab.RentalSlabT
     )
 fullBookingTable =
   table @BookingT
-    `innerJoin` table @Loc.BookingLocationT
+    `innerJoin` table @Loc.TripLocationT
       `Esq.on` ( \(s :& loc1) ->
-                   s ^. RB.BookingFromLocationId ==. loc1 ^. Loc.BookingLocationTId
+                   s ^. RB.BookingFromLocationId ==. loc1 ^. Loc.TripLocationTId
                )
-    `leftJoin` table @Loc.BookingLocationT
+    `leftJoin` table @Loc.TripLocationT
       `Esq.on` ( \(s :& _ :& mbLoc2) ->
-                   s ^. RB.BookingToLocationId ==. mbLoc2 ?. Loc.BookingLocationTId
+                   s ^. RB.BookingToLocationId ==. mbLoc2 ?. Loc.TripLocationTId
                )
     `leftJoin` table @TripTerms.TripTermsT
       `Esq.on` ( \(s :& _ :& _ :& mbTripTerms) ->

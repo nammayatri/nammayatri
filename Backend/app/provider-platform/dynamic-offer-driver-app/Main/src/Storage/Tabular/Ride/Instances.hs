@@ -38,6 +38,8 @@ instance FromTType RideT Domain.Ride where
           tripStartPos = mbTripStartLoc,
           tripEndPos = mbTripEndLoc,
           fareParametersId = fromKey <$> fareParametersId,
+          fromLocationId = fromKey fromLocationId,
+          toLocationId = fromKey toLocationId,
           ..
         }
 
@@ -54,5 +56,7 @@ instance ToTType RideT Domain.Ride where
         tripEndLat = tripEndPos <&> (.lat),
         tripEndLon = tripEndPos <&> (.lon),
         fareParametersId = toKey <$> fareParametersId,
+        fromLocationId = toKey fromLocationId,
+        toLocationId = toKey toLocationId,
         ..
       }

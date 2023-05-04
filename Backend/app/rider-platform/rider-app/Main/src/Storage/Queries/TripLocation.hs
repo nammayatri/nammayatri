@@ -12,30 +12,36 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Storage.Queries.Booking.BookingLocation where
+module Storage.Queries.TripLocation where
 
-import Domain.Types.Booking.BookingLocation
 import Domain.Types.LocationAddress
+import Domain.Types.TripLocation
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Storage.Tabular.Booking.BookingLocation
+import Storage.Tabular.TripLocation
 
-updateAddress :: Id BookingLocation -> LocationAddress -> SqlDB ()
+findById :: Transactionable m => Id TripLocation -> m (Maybe TripLocation)
+findById = Esq.findById
+
+create :: TripLocation -> SqlDB ()
+create = Esq.create
+
+updateAddress :: Id TripLocation -> LocationAddress -> SqlDB ()
 updateAddress blId LocationAddress {..} = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
     set
       tbl
-      [ BookingLocationStreet =. val street,
-        BookingLocationDoor =. val door,
-        BookingLocationCity =. val city,
-        BookingLocationState =. val state,
-        BookingLocationCountry =. val country,
-        BookingLocationBuilding =. val building,
-        BookingLocationAreaCode =. val areaCode,
-        BookingLocationArea =. val area,
-        BookingLocationUpdatedAt =. val now
+      [ TripLocationStreet =. val street,
+        TripLocationDoor =. val door,
+        TripLocationCity =. val city,
+        TripLocationState =. val state,
+        TripLocationCountry =. val country,
+        TripLocationBuilding =. val building,
+        TripLocationAreaCode =. val areaCode,
+        TripLocationArea =. val area,
+        TripLocationUpdatedAt =. val now
       ]
-    where_ $ tbl ^. BookingLocationTId ==. val (toKey blId)
+    where_ $ tbl ^. TripLocationTId ==. val (toKey blId)

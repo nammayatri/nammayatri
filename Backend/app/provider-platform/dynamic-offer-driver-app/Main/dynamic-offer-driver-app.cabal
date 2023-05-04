@@ -134,7 +134,6 @@ library
       Domain.Action.UI.Vehicle
       Domain.Action.UI.Whatsapp
       Domain.Types.Booking
-      Domain.Types.Booking.BookingLocation
       Domain.Types.BookingCancellationReason
       Domain.Types.BusinessEvent
       Domain.Types.CallStatus
@@ -192,6 +191,7 @@ library
       Domain.Types.SearchRequest.SearchReqLocation
       Domain.Types.SearchRequestForDriver
       Domain.Types.SearchRequestSpecialZone
+      Domain.Types.TripLocation
       Domain.Types.Vehicle
       Domain.Types.Vehicle.Variant
       Environment
@@ -240,7 +240,6 @@ library
       Storage.CachedQueries.Merchant.TransporterConfig
       Storage.CachedQueries.OnboardingDocumentConfig
       Storage.Queries.Booking
-      Storage.Queries.Booking.BookingLocation
       Storage.Queries.BookingCancellationReason
       Storage.Queries.BusinessEvent
       Storage.Queries.CallStatus
@@ -293,9 +292,9 @@ library
       Storage.Queries.SearchRequest
       Storage.Queries.SearchRequestForDriver
       Storage.Queries.SearchRequestSpecialZone
+      Storage.Queries.TripLocation
       Storage.Queries.Vehicle
       Storage.Tabular.Booking
-      Storage.Tabular.Booking.BookingLocation
       Storage.Tabular.BookingCancellationReason
       Storage.Tabular.BusinessEvent
       Storage.Tabular.CallStatus
@@ -357,6 +356,7 @@ library
       Storage.Tabular.SearchRequest.SearchReqLocation
       Storage.Tabular.SearchRequestForDriver
       Storage.Tabular.SearchRequestSpecialZone
+      Storage.Tabular.TripLocation
       Storage.Tabular.Vehicle
       Tools.Auth
       Tools.Call

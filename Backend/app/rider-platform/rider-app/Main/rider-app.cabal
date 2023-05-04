@@ -134,7 +134,6 @@ library
       Domain.Types.BlackListOrg
       Domain.Types.Booking
       Domain.Types.Booking.API
-      Domain.Types.Booking.BookingLocation
       Domain.Types.Booking.Type
       Domain.Types.BookingCancellationReason
       Domain.Types.CallStatus
@@ -167,6 +166,7 @@ library
       Domain.Types.SearchRequest.SearchReqLocation
       Domain.Types.Sos
       Domain.Types.SpecialZoneQuote
+      Domain.Types.TripLocation
       Domain.Types.TripTerms
       Domain.Types.VehicleVariant
       Domain.Types.Webengage
@@ -192,7 +192,6 @@ library
       Storage.CachedQueries.Person.PersonFlowStatus
       Storage.Queries.BlackListOrg
       Storage.Queries.Booking
-      Storage.Queries.Booking.BookingLocation
       Storage.Queries.BookingCancellationReason
       Storage.Queries.CallStatus
       Storage.Queries.CancellationReason
@@ -221,11 +220,11 @@ library
       Storage.Queries.SearchRequest
       Storage.Queries.Sos
       Storage.Queries.SpecialZoneQuote
+      Storage.Queries.TripLocation
       Storage.Queries.TripTerms
       Storage.Queries.Webengage
       Storage.Tabular.BlackListOrg
       Storage.Tabular.Booking
-      Storage.Tabular.Booking.BookingLocation
       Storage.Tabular.BookingCancellationReason
       Storage.Tabular.CallStatus
       Storage.Tabular.CancellationReason
@@ -257,6 +256,7 @@ library
       Storage.Tabular.SearchRequest.SearchReqLocation
       Storage.Tabular.Sos
       Storage.Tabular.SpecialZoneQuote
+      Storage.Tabular.TripLocation
       Storage.Tabular.TripTerms
       Storage.Tabular.Webengage
       Tools.Auth

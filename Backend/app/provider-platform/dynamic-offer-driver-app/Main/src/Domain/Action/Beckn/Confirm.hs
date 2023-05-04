@@ -17,7 +17,6 @@ module Domain.Action.Beckn.Confirm where
 import Data.String.Conversions
 import qualified Data.Text as T
 import Domain.Types.Booking as DRB
-import qualified Domain.Types.Booking.BookingLocation as DBL
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.DriverQuote as DDQ
@@ -28,6 +27,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as SRD
 import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.SearchRequestForDriver as SReqD
+import qualified Domain.Types.TripLocation as DBL
 import Kernel.External.Encryption
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
@@ -48,7 +48,6 @@ import qualified SharedLogic.Ride as SRide
 import Storage.CachedQueries.CacheConfig
 import Storage.CachedQueries.Merchant as QM
 import Storage.Queries.Booking as QRB
-import qualified Storage.Queries.Booking.BookingLocation as QBL
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
@@ -60,6 +59,7 @@ import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRideD
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
+import qualified Storage.Queries.TripLocation as QBL
 import Storage.Queries.Vehicle as QVeh
 import qualified Tools.Notifications as Notify
 
@@ -75,8 +75,8 @@ data DConfirmReq = DConfirmReq
 data DConfirmRes = DConfirmRes
   { booking :: DRB.Booking,
     ride :: Maybe DRide.Ride,
-    fromLocation :: DBL.BookingLocation,
-    toLocation :: DBL.BookingLocation,
+    fromLocation :: DBL.TripLocation,
+    toLocation :: DBL.TripLocation,
     riderDetails :: DRD.RiderDetails,
     transporter :: DM.Merchant
   }
@@ -209,6 +209,8 @@ handler transporter req quote = do
             tripEndPos = Nothing,
             fareParametersId = Nothing,
             distanceCalculationFailed = Nothing,
+            fromLocationId = booking.fromLocation.id,
+            toLocationId = booking.toLocation.id,
             createdAt = now,
             updatedAt = now
           }

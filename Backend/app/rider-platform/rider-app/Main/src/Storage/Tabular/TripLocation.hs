@@ -18,10 +18,10 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.Booking.BookingLocation where
+module Storage.Tabular.TripLocation where
 
-import qualified Domain.Types.Booking.BookingLocation as Domain
 import qualified Domain.Types.LocationAddress as Domain
+import qualified Domain.Types.TripLocation as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
@@ -29,7 +29,7 @@ import Kernel.Types.Id
 mkPersist
   defaultSqlSettings
   [defaultQQ|
-    BookingLocationT sql=booking_location
+    TripLocationT sql=trip_location
       id Text
       lat Double
       lon Double
@@ -49,24 +49,24 @@ mkPersist
       deriving Generic
     |]
 
-instance TEntityKey BookingLocationT where
-  type DomainKey BookingLocationT = Id Domain.BookingLocation
-  fromKey (BookingLocationTKey _id) = Id _id
-  toKey (Id id) = BookingLocationTKey id
+instance TEntityKey TripLocationT where
+  type DomainKey TripLocationT = Id Domain.TripLocation
+  fromKey (TripLocationTKey _id) = Id _id
+  toKey (Id id) = TripLocationTKey id
 
-instance FromTType BookingLocationT Domain.BookingLocation where
-  fromTType BookingLocationT {..} = do
+instance FromTType TripLocationT Domain.TripLocation where
+  fromTType TripLocationT {..} = do
     let address = Domain.LocationAddress {..}
     return $
-      Domain.BookingLocation
+      Domain.TripLocation
         { id = Id id,
           ..
         }
 
-instance ToTType BookingLocationT Domain.BookingLocation where
-  toTType Domain.BookingLocation {..} = do
+instance ToTType TripLocationT Domain.TripLocation where
+  toTType Domain.TripLocation {..} = do
     let Domain.LocationAddress {..} = address
-    BookingLocationT
+    TripLocationT
       { id = getId id,
         ..
       }
