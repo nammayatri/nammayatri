@@ -39,8 +39,6 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 
----------------------------------------------------------------------
-
 mkCommonRideStatus :: Domain.RideStatus -> Common.RideStatus
 mkCommonRideStatus rs = case rs of
   Domain.NEW -> Common.NEW
@@ -122,8 +120,6 @@ rideList merchantShortId mbLimit mbOffset mbBookingStatus mbReqShortRideId mbCus
   rideItems <- runInReplica $ QRide.findAllRideItems merchant.id limit_ offset_ mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhone now
   rideListItems <- traverse buildRideListItem rideItems
   let count = length rideListItems
-  -- should we consider filters in totalCount, e.g. count all canceled rides?
-  -- totalCount <- runInReplica $ QRide.countRides merchant.id
   let summary = Common.Summary {totalCount = 10000, count}
   pure Common.RideListRes {totalItems = count, summary, rides = rideListItems}
   where

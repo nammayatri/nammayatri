@@ -26,6 +26,8 @@ library
       API.RiderPlatform.Booking
       API.RiderPlatform.Customer
       API.RiderPlatform.Merchant
+      API.RiderPlatform.MultipleRideCancel
+      API.RiderPlatform.MultipleRideEnd
       API.RiderPlatform.Ride
       API.RiderPlatform.RideBooking
       API.RiderPlatform.RideBooking.Booking

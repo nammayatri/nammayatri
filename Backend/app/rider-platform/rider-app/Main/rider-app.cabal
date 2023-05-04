@@ -35,6 +35,8 @@ library
       API.Dashboard.Customer
       API.Dashboard.Exotel
       API.Dashboard.Merchant
+      API.Dashboard.MultipleRideCancel
+      API.Dashboard.MultipleRideEnd
       API.Dashboard.Ride
       API.Dashboard.RideBooking
       API.Dashboard.RideBooking.Booking
@@ -103,6 +105,8 @@ library
       Domain.Action.Dashboard.Customer
       Domain.Action.Dashboard.Exotel
       Domain.Action.Dashboard.Merchant
+      Domain.Action.Dashboard.MultipleRideCancel
+      Domain.Action.Dashboard.MultipleRideEnd
       Domain.Action.Dashboard.Ride
       Domain.Action.UI.Booking
       Domain.Action.UI.Call
