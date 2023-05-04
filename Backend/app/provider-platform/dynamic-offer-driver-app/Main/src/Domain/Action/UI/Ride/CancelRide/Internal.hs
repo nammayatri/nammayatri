@@ -98,7 +98,7 @@ cancelRideImpl rideId bookingCReason = do
     driverPoolCfg <- getDriverPoolConfig merchant.id searchReq.estimatedDistance
     driverPool <- calculateDriverPool DP.Estimate driverPoolCfg (Just searchReq.vehicleVariant) searchReq.fromLocation merchant.id True Nothing
     now <- getCurrentTime
-    farePolicy <- QFP.findByMerchantIdAndVariant searchReq.providerId searchReq.vehicleVariant (Just searchReq.estimatedDistance) >>= fromMaybeM NoFarePolicy
+    farePolicy <- QFP.findByMerchantIdAndVariant searchReq.providerId searchReq.vehicleVariant >>= fromMaybeM NoFarePolicy
     let isRepeatSearch =
           searchReq.searchRepeatCounter < searchRepeatLimit
             && bookingCReason.source == SBCR.ByDriver
@@ -170,13 +170,14 @@ repeatSearch merchant farePolicy searchReq booking ride cancellationSource now d
   Esq.runTransaction $ do
     QSR.create newSearchReq
 
+  let driverExtraFeeBounds = DFP.findDriverExtraFeeBoundsByDistance searchReq.estimatedDistance <$> farePolicy.driverExtraFeeBounds
   res <-
     sendSearchRequestToDrivers'
       driverPoolConfig
       newSearchReq
       merchant
       baseFare
-      farePolicy.driverExtraFeeBounds
+      driverExtraFeeBounds
 
   case res of
     ReSchedule _ -> do
@@ -188,7 +189,7 @@ repeatSearch merchant farePolicy searchReq booking ride cancellationSource now d
             { requestId = newSearchReq.id,
               baseFare = baseFare,
               estimatedRideDistance = newSearchReq.estimatedDistance,
-              driverExtraFeeBounds = farePolicy.driverExtraFeeBounds,
+              driverExtraFeeBounds = driverExtraFeeBounds,
               customerExtraFee = newSearchReq.customerExtraFee
             }
     _ -> return ()

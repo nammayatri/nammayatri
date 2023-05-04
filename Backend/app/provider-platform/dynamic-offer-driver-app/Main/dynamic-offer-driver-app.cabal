@@ -157,7 +157,6 @@ library
       Domain.Types.Exophone
       Domain.Types.FareParameters
       Domain.Types.FarePolicy
-      Domain.Types.FarePolicy.RestrictedExtraFare
       Domain.Types.Geometry
       Domain.Types.Issue.Comment
       Domain.Types.Issue.IssueCategory
@@ -222,7 +221,6 @@ library
       Storage.CachedQueries.DriverInformation
       Storage.CachedQueries.Exophone
       Storage.CachedQueries.FarePolicy
-      Storage.CachedQueries.FarePolicy.RestrictedExtraFare
       Storage.CachedQueries.Issue.IssueCategory
       Storage.CachedQueries.Issue.IssueOption
       Storage.CachedQueries.Issue.IssueReport
@@ -258,8 +256,8 @@ library
       Storage.Queries.Exophone
       Storage.Queries.FareParameters
       Storage.Queries.FarePolicy
+      Storage.Queries.FarePolicy.DriverExtraFeeBounds
       Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
-      Storage.Queries.FarePolicy.RestrictedExtraFare
       Storage.Queries.FullEntityBuilders
       Storage.Queries.Geometry
       Storage.Queries.Issue.Comment
@@ -314,10 +312,10 @@ library
       Storage.Tabular.FareParameters.Instances
       Storage.Tabular.FareParameters.Table
       Storage.Tabular.FarePolicy
+      Storage.Tabular.FarePolicy.DriverExtraFeeBounds
       Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails
       Storage.Tabular.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
       Storage.Tabular.FarePolicy.Instances
-      Storage.Tabular.FarePolicy.RestrictedExtraFare
       Storage.Tabular.FarePolicy.Table
       Storage.Tabular.Geometry
       Storage.Tabular.Issue.Comment

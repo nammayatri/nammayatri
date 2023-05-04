@@ -18,48 +18,43 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.FarePolicy.RestrictedExtraFare where
+module Storage.Tabular.FarePolicy.DriverExtraFeeBounds where
 
-import qualified Domain.Types.FarePolicy.RestrictedExtraFare as Domain
-import qualified Domain.Types.Vehicle.Variant as Vehicle
+import qualified Domain.Types.FarePolicy as DFP
+import qualified Domain.Types.FarePolicy as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Common (Meters, Money)
 import Kernel.Types.Id
-import Storage.Tabular.Merchant (MerchantTId)
+import Storage.Tabular.FarePolicy.Table (FarePolicyTId)
 import Storage.Tabular.Vehicle ()
 
 mkPersist
   defaultSqlSettings
   [defaultQQ|
-    RestrictedExtraFareT sql=restricted_extra_fare
-      id Text
-      merchantId MerchantTId
-      vehicleVariant Vehicle.Variant
-      minTripDistance Meters
-      driverMaxExtraFare Money
-      Primary id
+    DriverExtraFeeBoundsT sql=fare_policy_driver_extra_fee_bounds
+      Id Int
+      farePolicyId FarePolicyTId
+      startDistance Meters
+      minFee Money
+      maxFee Money
       deriving Generic
     |]
 
-instance TEntityKey RestrictedExtraFareT where
-  type DomainKey RestrictedExtraFareT = Id Domain.RestrictedExtraFare
-  fromKey (RestrictedExtraFareTKey _id) = Id _id
-  toKey (Id id) = RestrictedExtraFareTKey id
+type FullDriverExtraFeeBounds = (Id DFP.FarePolicy, Domain.DriverExtraFeeBounds)
 
-instance FromTType RestrictedExtraFareT Domain.RestrictedExtraFare where
-  fromTType RestrictedExtraFareT {..} = do
-    return $
-      Domain.RestrictedExtraFare
-        { id = Id id,
-          merchantId = fromKey merchantId,
-          ..
-        }
+instance FromTType DriverExtraFeeBoundsT FullDriverExtraFeeBounds where
+  fromTType DriverExtraFeeBoundsT {..} = do
+    return
+      ( fromKey farePolicyId,
+        Domain.DriverExtraFeeBounds
+          { ..
+          }
+      )
 
-instance ToTType RestrictedExtraFareT Domain.RestrictedExtraFare where
-  toTType Domain.RestrictedExtraFare {..} =
-    RestrictedExtraFareT
-      { id = getId id,
-        merchantId = toKey merchantId,
+instance ToTType DriverExtraFeeBoundsT FullDriverExtraFeeBounds where
+  toTType (farePolicyId, Domain.DriverExtraFeeBounds {..}) =
+    DriverExtraFeeBoundsT
+      { farePolicyId = toKey farePolicyId,
         ..
       }

@@ -27,7 +27,7 @@ data FarePolicyD (s :: UsageSafety) = FarePolicy
   { id :: Id FarePolicy,
     merchantId :: Id DM.Merchant,
     vehicleVariant :: Variant.Variant,
-    driverExtraFeeBounds :: Maybe DriverExtraFeeBounds,
+    driverExtraFeeBounds :: Maybe (NonEmpty DriverExtraFeeBounds),
     serviceCharge :: Maybe Money,
     nightShiftBounds :: Maybe NightShiftBounds,
     allowedTripDistanceBounds :: Maybe AllowedTripDistanceBounds,
@@ -101,10 +101,17 @@ instance FromJSON (FPSlabsDetailsSlabD 'Unsafe)
 instance ToJSON (FPSlabsDetailsSlabD 'Unsafe)
 
 data DriverExtraFeeBounds = DriverExtraFeeBounds
-  { minFee :: Money,
+  { startDistance :: Meters,
+    minFee :: Money,
     maxFee :: Money
   }
   deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
+
+findDriverExtraFeeBoundsByDistance :: Meters -> NonEmpty DriverExtraFeeBounds -> DriverExtraFeeBounds
+findDriverExtraFeeBoundsByDistance dist driverExtraFeeBoundsList = do
+  case NE.filter (\driverExtraFeeBounds -> driverExtraFeeBounds.startDistance < dist) $ NE.sortBy (comparing (.startDistance)) driverExtraFeeBoundsList of
+    [] -> error $ "DriverExtraFeeBounds for dist = " <> show dist <> " not found. Non-emptiness supposed to be guaranteed by app logic."
+    a -> last a
 
 data NightShiftBounds = NightShiftBounds
   { nightShiftStart :: TimeOfDay,
@@ -138,7 +145,7 @@ getFarePolicyType farePolicy = case farePolicy.farePolicyDetails of
 data FarePolicyAPIEntity = FarePolicyAPIEntity
   { id :: Id FarePolicy,
     vehicleVariant :: Variant.Variant,
-    driverExtraFeeBounds :: Maybe DriverExtraFeeBounds,
+    driverExtraFeeBounds :: Maybe (NonEmpty DriverExtraFeeBounds),
     serviceCharge :: Maybe Money,
     nightShiftBounds :: Maybe NightShiftBounds,
     allowedTripDistanceBounds :: Maybe AllowedTripDistanceBounds,

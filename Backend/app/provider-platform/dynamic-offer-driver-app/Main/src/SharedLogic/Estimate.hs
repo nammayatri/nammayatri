@@ -53,13 +53,14 @@ buildEstimate transactionId startTime dist farePolicy = do
   logDebug $ "baseFare: " <> show baseFare
   uuid <- generateGUID
   now <- getCurrentTime
+  let mbDriverExtraFeeBounds = findDriverExtraFeeBoundsByDistance dist <$> farePolicy.driverExtraFeeBounds
   pure
     DEst.Estimate
       { id = Id uuid,
         transactionId = transactionId,
         vehicleVariant = farePolicy.vehicleVariant,
-        minFare = baseFare + maybe 0 (.minFee) farePolicy.driverExtraFeeBounds,
-        maxFare = baseFare + maybe 0 (.maxFee) farePolicy.driverExtraFeeBounds,
+        minFare = baseFare + maybe 0 (.minFee) mbDriverExtraFeeBounds,
+        maxFare = baseFare + maybe 0 (.maxFee) mbDriverExtraFeeBounds,
         estimateBreakupList = estimateBreakups <> additionalBreakups,
         nightShiftInfo =
           ((,,) <$> fareParams.nightShiftCharge <*> getOldNightShiftCharge farePolicy.farePolicyDetails <*> farePolicy.nightShiftBounds)
