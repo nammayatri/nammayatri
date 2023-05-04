@@ -139,6 +139,7 @@ initData = {
     , emergencyHelpModelState : emergencyHelpModalData
     , showLiveDashboard : false
     , isbanner : true
+    , callSupportPopUp : false
     }
 }
 

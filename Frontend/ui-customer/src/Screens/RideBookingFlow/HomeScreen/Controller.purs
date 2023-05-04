@@ -356,6 +356,15 @@ instance loggableAction :: Loggable Action where
       PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_share_app" "countdown_updated"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "tip_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "popup_dismissed"
+    CallSupportAction act -> case act of
+      PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_contact_support" "cancel"
+      PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_contact_support" "accept"
+      PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_contact_support" "no_action"
+      PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_contact_support" "image"
+      PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "popup_modal_contact_support" "primary_edit_text"
+      PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_contact_support" "countdown_updated"
+      PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "tip_clicked"
+      PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "popup_dismissed"
     ContinueWithoutOffers resp -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "continue_without_offers"
     CheckBoxClick autoAssign -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "check_box_click"
     TagClick savedAddressType arrItem -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "tag_click"
@@ -529,6 +538,7 @@ data Action = NoAction
             | CheckBoxClick Boolean
             | PreferencesDropDown
             | PopUpModalShareAppAction PopUpModal.Action
+            | CallSupportAction PopUpModal.Action
             | RequestInfoCardAction RequestInfoCard.Action
             | OnIconClick Boolean
             | ReferralFlowAction
@@ -696,6 +706,7 @@ eval BackPressed state = do
                               pure NoAction
                             ]
                           else if state.props.emergencyHelpModal then continue state {props {emergencyHelpModal = false}}
+                          else if state.props.callSupportPopUp then continue state {props {callSupportPopUp = false}}
                           else do
                             _ <- pure $ minimizeApp ""
                             continue state
@@ -908,9 +919,7 @@ eval (WaitingTimeAction timerID timeInMinutes seconds) state = do
   continue state { data { driverInfoCardState { waitingTime = timeInMinutes } }, props { waitingTimeTimerId = timerID } }
 
 eval (DriverInfoCardActionController (DriverInfoCardController.Support)) state = do
-  _ <- pure $ showDialer (getSupportNumber "")
-  _ <- pure $ firebaseLogEvent "ny_user_ride_support_click"
-  continue state
+  continue state{props{callSupportPopUp = true}}
 
 eval (DriverInfoCardActionController (DriverInfoCardController.CancelRide infoCard)) state = do
   continue state { props { isCancelRide = true, cancellationReasons = cancelReasons "", cancelRideActiveIndex = Nothing, cancelReasonCode = "", cancelDescription = "" } }
@@ -1456,6 +1465,13 @@ eval (PopUpModalShareAppAction PopUpModal.OnButton2Click) state= do
   _ <- pure $ setValueToLocalStore SHARE_APP_COUNT "-1"
   _ <- pure $ shareTextMessage "Share Namma Yatri!" "Hey there!\n\nCheck India's first Zero Commission auto booking app.\n100% Open source | 100% Open Data\n\nDownload Namma Yatri now! \nhttps://nammayatri.in/link/rider/SJ8D \n\n #beOpen #chooseOpen"
   continue state{props{showShareAppPopUp=false}}
+
+eval (CallSupportAction PopUpModal.OnButton1Click) state= continue state{props{callSupportPopUp=false}}
+
+eval (CallSupportAction PopUpModal.OnButton2Click) state= do
+  _ <- pure $ showDialer (getSupportNumber "")
+  _ <- pure $ firebaseLogEvent "ny_user_ride_support_click"
+  continue state{props{callSupportPopUp=false}}
 
 eval (UpdateETA currentETA currentDistance) state = do
   let
