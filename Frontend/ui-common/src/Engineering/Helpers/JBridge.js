@@ -850,11 +850,21 @@ export const _onEventWithCB = function (payload) {
 // exports.getSessionInfo = JSON.parse(JBridge.getDeviceInfo());
 
 export const getKeyInSharedPrefKeys = function (key) {
-  return JBridge.getKeysInSharedPref(key);
+  if (JBridge.getKeysInSharedPref){
+    return JBridge.getKeysInSharedPref(key);
+  }
+  return JBridge.getKeysInSharedPrefs(key);
 };
 
 export const getKeyInNativeSharedPrefKeys = function (key) {
+  if (JBridge.getKeysInSharedPref) {
     return JBridge.getKeysInSharedPref(key);
+  }
+  if (window.__OS == "IOS") {
+    return JBridge.getKeysInSharedPrefs(key);
+  } else { 
+    return JBridge.getKeyInNativeSharedPrefKeys(key);
+  }
 };
 
 export const setKeyInSharedPrefKeysImpl = function (key) {
