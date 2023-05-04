@@ -4,12 +4,13 @@
   ];
   perSystem = { config, self', lib, system, ... }:
     let
+      nodejs = pkgs.nodejs-14_x;
+
       pkgs = import inputs.nixpkgs {
         inherit system;
         overlays = [
           inputs.purifix.overlay
           (final: prev: {
-            nodejs = final.nodejs-14_x;
             npmlock2nix = final.callPackage inputs.npmlock2nix { };
           })
         ];
@@ -34,16 +35,30 @@
           };
         };
       };
-      nodeDependencies = nodePackages.packages.${system}.atlas-ui.lib;
+
+      nodeDependencies = nodePackages.packages.${system}.atlas-ui.nodeModules;
+
+      typescript-language-server = pkgs.symlinkJoin {
+        name = "typescript-language-server";
+        nativeBuildInputs = [ pkgs.makeWrapper ];
+        paths = [
+          pkgs.nodePackages.typescript
+          pkgs.nodePackages.typescript-language-server
+        ];
+        postBuild = ''
+          wrapProgram $out/bin/typescript-language-server \
+            --add-flags "--tsserver-path $out/bin/tsserver"
+        '';
+      };
 
       webpack-dev-server = pkgs.writeShellApplication {
         name = "webpack-dev-server-wrapped";
-        runtimeInputs = [ pkgs.nodejs ];
+        runtimeInputs = [ nodejs ];
         text = ''
           export NODE_PATH="${nodeDependencies}/node_modules"
           PIPE="$1"
           shift
-          tail -n1 -f "$PIPE" | node ${./watch.js} "$@"
+          tail -n1 -f "$PIPE" | node ${./node/watch.js} "$@"
         '';
       };
 
@@ -112,7 +127,7 @@
         pkgs.stdenv.mkDerivation {
           name = "${target}-${platform}-${env}-${mode}-index-bundle-js";
           phases = [ "buildPhase" "installPhase" ];
-          nativeBuildInputs = [ pkgs.nodejs ];
+          nativeBuildInputs = [ nodejs ];
           buildPhase = ''
             ln -s ${nodeDependencies}/node_modules node_modules
             cp -r -L ${localPackages.${target}}/output output
@@ -150,6 +165,7 @@
           "Frontend/packages.dhall"
         ];
       };
+
       apps = {
         webpack-dev-server = {
           type = "app";
@@ -176,6 +192,7 @@
           };
         };
       };
+
       devShells.frontend = pkgs.mkShell {
         name = "ps-dev-shell";
         inputsFrom = [
@@ -185,10 +202,15 @@
         ];
         packages = [
           pkgs.dhall
-          pkgs.nodejs
           purifix-watch
+          nodejs
+          typescript-language-server
         ];
+        shellHook = ''
+          export NODE_PATH="${nodeDependencies}/node_modules"
+        '';
       };
+
       packages = {
         inherit (localPackages) ui-customer ui-driver;
         ui-common = localPackages.beckn-common;
