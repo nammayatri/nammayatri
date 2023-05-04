@@ -26,6 +26,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.Queries.FarePolicy.DriverExtraFeeBounds as QFPDriverExtraFeeBounds
 import qualified Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab as QFPSlabDetSlabs
 import Storage.Queries.FullEntityBuilders (buildFullFarePolicy)
 import Storage.Tabular.FarePolicy
@@ -67,23 +68,26 @@ findById farePolicyId = buildDType $ do
 update :: FarePolicy -> SqlDB ()
 update farePolicy = do
   now <- getCurrentTime
-  withFullEntity farePolicy $ \(FarePolicyT {..}, fpDetailsT) -> do
-    void $
-      Esq.update' $ \tbl -> do
-        set
-          tbl
-          [ FarePolicyDriverMinExtraFee =. val driverMinExtraFee,
-            FarePolicyDriverMaxExtraFee =. val driverMaxExtraFee,
-            FarePolicyNightShiftStart =. val nightShiftStart,
-            FarePolicyNightShiftEnd =. val nightShiftEnd,
-            FarePolicyUpdatedAt =. val now
-          ]
-        where_ $ tbl ^. FarePolicyTId ==. val (toKey farePolicy.id)
+  withFullEntity farePolicy $ \(FarePolicyT {..}, driverExtraFeeBoundsT, fpDetailsT) -> do
+    Esq.update' $ \tbl -> do
+      set
+        tbl
+        [ FarePolicyNightShiftStart =. val nightShiftStart,
+          FarePolicyNightShiftEnd =. val nightShiftEnd,
+          FarePolicyUpdatedAt =. val now
+        ]
+      where_ $ tbl ^. FarePolicyTId ==. val (toKey farePolicy.id)
+
+    updateDriverExtraFeeBounds driverExtraFeeBoundsT
 
     case fpDetailsT of
       ProgressiveDetailsT fpdd -> updateProgressiveDetails fpdd
       SlabsDetailsT fsdd -> updateSlabsDetails fsdd
   where
+    updateDriverExtraFeeBounds driverExtraFeeBoundsT = do
+      QFPDriverExtraFeeBounds.deleteAll' farePolicy.id
+      Esq.createMany' driverExtraFeeBoundsT
+
     updateProgressiveDetails FarePolicyProgressiveDetailsT {..} = do
       void $
         Esq.update' $ \tbl -> do

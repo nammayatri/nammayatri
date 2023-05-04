@@ -21,6 +21,7 @@ import qualified Data.Map as M
 import qualified Data.Text as T
 import Data.Time.Clock (addUTCTime)
 import qualified Domain.Types.Estimate as DEst
+import qualified Domain.Types.FarePolicy as DFarePolicy
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
@@ -87,7 +88,7 @@ handler merchantId sReq = do
               }
         pure (res.distance, res.duration)
       Just distRes -> pure distRes
-  farePolicy <- FarePolicyS.findByMerchantIdAndVariant merchantId estimate.vehicleVariant (Just distance) >>= fromMaybeM NoFarePolicy
+  farePolicy <- FarePolicyS.findByMerchantIdAndVariant merchantId estimate.vehicleVariant >>= fromMaybeM NoFarePolicy
   fareParams <-
     calculateFareParameters
       CalculateFareParametersParams
@@ -112,7 +113,8 @@ handler merchantId sReq = do
   Esq.runTransaction $ do
     QSReq.create searchReq
 
-  res <- sendSearchRequestToDrivers' driverPoolConfig searchReq merchant estimateFare farePolicy.driverExtraFeeBounds
+  let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance distance <$> farePolicy.driverExtraFeeBounds
+  res <- sendSearchRequestToDrivers' driverPoolConfig searchReq merchant estimateFare driverExtraFeeBounds
   case res of
     ReSchedule _ -> do
       maxShards <- asks (.maxShards)
@@ -123,7 +125,7 @@ handler merchantId sReq = do
               baseFare = estimateFare,
               estimatedRideDistance = distance,
               customerExtraFee = sReq.customerExtraFee,
-              driverExtraFeeBounds = farePolicy.driverExtraFeeBounds
+              driverExtraFeeBounds = driverExtraFeeBounds
             }
     _ -> return ()
 

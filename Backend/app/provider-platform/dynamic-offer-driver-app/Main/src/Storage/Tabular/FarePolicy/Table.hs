@@ -63,9 +63,6 @@ mkPersist
 
       farePolicyType Domain.FarePolicyType
 
-      driverMinExtraFee Money Maybe
-      driverMaxExtraFee Money Maybe
-
       serviceCharge Money Maybe
 
       nightShiftStart TimeOfDay Maybe

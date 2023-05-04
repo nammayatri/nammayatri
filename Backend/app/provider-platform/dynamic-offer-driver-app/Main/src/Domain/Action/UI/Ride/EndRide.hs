@@ -78,7 +78,7 @@ data ServiceHandle m = ServiceHandle
     getMerchant :: Id DM.Merchant -> m (Maybe DM.Merchant),
     endRideTransaction :: Id DP.Driver -> Id SRB.Booking -> DRide.Ride -> Maybe FareParameters -> Maybe (Id RD.RiderDetails) -> m (),
     notifyCompleteToBAP :: SRB.Booking -> DRide.Ride -> Fare.FareParameters -> m (),
-    getFarePolicy :: Id DM.Merchant -> DVeh.Variant -> Maybe Meters -> m (Maybe DFP.FarePolicy),
+    getFarePolicy :: Id DM.Merchant -> DVeh.Variant -> m (Maybe DFP.FarePolicy),
     calculateFareParameters :: Fare.CalculateFareParametersParams -> m Fare.FareParameters,
     putDiffMetric :: Id DM.Merchant -> Money -> Meters -> m (),
     findDriverLoc :: Id DP.Person -> m (Maybe DrLoc.DriverLocation),
@@ -217,7 +217,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance = do
 
   -- maybe compare only distance fare?
   let estimatedFare = Fare.fareSum booking.fareParams
-  farePolicy <- getFarePolicy merchantId booking.vehicleVariant (Just booking.estimatedDistance) >>= fromMaybeM (FareParametersNotFound merchantId.getId)
+  farePolicy <- getFarePolicy merchantId booking.vehicleVariant >>= fromMaybeM (FareParametersNotFound merchantId.getId)
   fareParams <-
     calculateFareParameters
       Fare.CalculateFareParametersParams

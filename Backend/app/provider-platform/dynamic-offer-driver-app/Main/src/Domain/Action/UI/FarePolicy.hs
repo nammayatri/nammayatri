@@ -76,7 +76,7 @@ validateUpdateFarePolicyRequest UpdateFarePolicyReq {..} =
 
 listFarePolicies :: (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r) => SP.Person -> m ListFarePolicyRes
 listFarePolicies person = do
-  oneWayFarePolicies <- SFarePolicy.findAllByMerchantId person.merchantId Nothing
+  oneWayFarePolicies <- SFarePolicy.findAllByMerchantId person.merchantId
   pure $
     ListFarePolicyRes
       { oneWayFarePolicies = map makeFarePolicyAPIEntity oneWayFarePolicies
@@ -90,11 +90,13 @@ updateFarePolicy admin fpId req = do
   let updatedFarePolicy =
         farePolicy -- TODO: Make this update work with slabs
           { driverExtraFeeBounds =
-              Just
+              Just $
                 DriverExtraFeeBounds
-                  { minFee = req.driverMinExtraFee,
+                  { startDistance = 0,
+                    minFee = req.driverMinExtraFee,
                     maxFee = req.driverMaxExtraFee
-                  },
+                  }
+                  :| [],
             nightShiftBounds =
               ((,) <$> req.nightShiftStart <*> req.nightShiftEnd) <&> \(nightShiftStart, nightShiftEnd) ->
                 NightShiftBounds

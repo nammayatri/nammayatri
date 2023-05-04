@@ -141,7 +141,7 @@ handler merchantId sReq = do
           QSearchRequestSpecialZone.create searchRequestSpecialZone
         now <- getCurrentTime
         listOfSpecialZoneQuotes <- do
-          allFarePolicies <- FarePolicyS.findAllByMerchantId org.id (Just result.distance)
+          allFarePolicies <- FarePolicyS.findAllByMerchantId org.id
           let farePolicies = selectFarePolicy result.distance allFarePolicies
           let listOfVehicleVariants = listVehicleVariantHelper farePolicies
           for listOfVehicleVariants $ \farePolicy -> do
@@ -168,7 +168,7 @@ handler merchantId sReq = do
       else do
         driverPoolCfg <- getDriverPoolConfig merchantId result.distance
         estimateInfos <- do
-          allFarePolicies <- FarePolicyS.findAllByMerchantId org.id (Just result.distance)
+          allFarePolicies <- FarePolicyS.findAllByMerchantId org.id
           let farePolicies = selectFarePolicy result.distance allFarePolicies
           buildEstimatesInfos fromLocationLatLong driverPoolCfg org result farePolicies
         return (Nothing, Just estimateInfos)

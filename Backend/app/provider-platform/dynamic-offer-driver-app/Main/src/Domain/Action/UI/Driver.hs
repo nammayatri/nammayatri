@@ -60,6 +60,7 @@ import qualified Domain.Types.DriverQuote as DDrQuote
 import qualified Domain.Types.DriverReferral as DR
 import qualified Domain.Types.FareParameters as Fare
 import Domain.Types.FarePolicy (DriverExtraFeeBounds (..))
+import qualified Domain.Types.FarePolicy as DFarePolicy
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Merchant.TransporterConfig
 import Domain.Types.Person (Person, PersonAPIEntity)
@@ -759,7 +760,7 @@ respondQuote driverId req = do
           quoteLimit <- getQuoteLimit sReq.providerId sReq.estimatedDistance
           quoteCount <- runInReplica $ QDrQt.countAllByRequestId sReq.id
           when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)
-          farePolicy <- FarePolicyS.findByMerchantIdAndVariant organization.id sReqFD.vehicleVariant (Just sReq.estimatedDistance) >>= fromMaybeM NoFarePolicy
+          farePolicy <- FarePolicyS.findByMerchantIdAndVariant organization.id sReqFD.vehicleVariant >>= fromMaybeM NoFarePolicy
           fareParams <-
             calculateFareParameters
               CalculateFareParametersParams
@@ -770,8 +771,9 @@ respondQuote driverId req = do
                   driverSelectedFare = mbOfferedFare,
                   customerExtraFee = sReq.customerExtraFee
                 }
+          let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance sReq.estimatedDistance <$> farePolicy.driverExtraFeeBounds
           whenJust mbOfferedFare $ \off ->
-            whenJust farePolicy.driverExtraFeeBounds $ \driverExtraFeeBounds' ->
+            whenJust driverExtraFeeBounds $ \driverExtraFeeBounds' ->
               unless (isAllowedExtraFee driverExtraFeeBounds' off) $
                 throwError $ NotAllowedExtraFee $ show off
           driverQuote <- buildDriverQuote driver sReq sReqFD fareParams
