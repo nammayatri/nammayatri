@@ -40,6 +40,7 @@ type API =
            :<|> RideCancelAPI
            :<|> RideInfoAPI
            :<|> RideSyncAPI
+           :<|> RideForceSyncAPI
            :<|> RideRouteAPI
        )
 
@@ -71,6 +72,10 @@ type RideSyncAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'RIDES 'RIDE_SYNC
     :> Common.RideSyncAPI
 
+type RideForceSyncAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'RIDES 'RIDE_FORCE_SYNC
+    :> Common.RideForceSyncAPI
+
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   rideList merchantId
@@ -79,6 +84,7 @@ handler merchantId =
     :<|> rideCancel merchantId
     :<|> rideInfo merchantId
     :<|> rideSync merchantId
+    :<|> rideForceSync merchantId
     :<|> rideRoute merchantId
 
 buildTransaction ::
@@ -140,6 +146,13 @@ rideSync merchantShortId apiTokenInfo rideId = withFlowHandlerAPI $ do
   transaction <- buildTransaction Common.RideSyncEndpoint apiTokenInfo rideId T.emptyRequest
   T.withResponseTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId (.rides.rideSync) rideId
+
+rideForceSync :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Ride -> FlowHandler Common.RideSyncRes
+rideForceSync merchantShortId apiTokenInfo rideId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  transaction <- buildTransaction Common.RideForceSyncEndpoint apiTokenInfo rideId T.emptyRequest
+  T.withResponseTransactionStoring transaction $
+    Client.callDriverOfferBPP checkedMerchantId (.rides.rideForceSync) rideId
 
 rideRoute ::
   ShortId DM.Merchant ->

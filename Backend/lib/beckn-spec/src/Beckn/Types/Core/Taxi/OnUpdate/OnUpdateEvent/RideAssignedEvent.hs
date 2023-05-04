@@ -32,7 +32,8 @@ data RideAssignedEvent = RideAssignedEvent
   { id :: Text,
     state :: Text,
     update_target :: Text,
-    fulfillment :: FulfillmentInfo
+    fulfillment :: FulfillmentInfo,
+    force :: Maybe Bool -- FIXME find proper field
   }
   deriving (Generic, Show)
 
@@ -44,6 +45,7 @@ instance ToJSON RideAssignedEvent where
         <> "state" .= state
         <> "./komn/update_target" .= update_target
         <> "fulfillment" .= (fulfJSON <> ("state" .= (("code" .= RIDE_ASSIGNED) :: A.Object)))
+        <> "state" .= force
 
 instance FromJSON RideAssignedEvent where
   parseJSON = withObject "RideAssignedEvent" $ \obj -> do
@@ -54,10 +56,12 @@ instance FromJSON RideAssignedEvent where
       <*> obj .: "state"
       <*> obj .: "./komn/update_target"
       <*> obj .: "fulfillment"
+      <*> obj .:? "force"
 
 instance ToSchema RideAssignedEvent where
   declareNamedSchema _ = do
     txt <- declareSchemaRef (Proxy :: Proxy Text)
+    boolean <- declareSchemaRef (Proxy :: Proxy Bool)
     update_type <- declareSchemaRef (Proxy :: Proxy OnUpdateEventType)
     let st =
           mempty
@@ -80,7 +84,8 @@ instance ToSchema RideAssignedEvent where
               [ ("id", txt),
                 ("state", txt),
                 ("./komn/update_target", txt),
-                ("fulfillment", Inline fulfillment)
+                ("fulfillment", Inline fulfillment),
+                ("force", boolean)
               ]
           & required
             L..~ [ "id",

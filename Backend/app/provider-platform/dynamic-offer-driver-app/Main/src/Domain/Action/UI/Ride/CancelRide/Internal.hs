@@ -120,7 +120,7 @@ cancelRideImpl rideId bookingCReason = do
     cancelBooking isRepeatSearch ride merchant driverPoolCfg farePolicy now booking searchReq = do
       if isRepeatSearch
         then repeatSearch merchant farePolicy searchReq booking ride SBCR.ByDriver now driverPoolCfg
-        else BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source
+        else BP.sendBookingCancelledUpdateToBAP BP.SIMPLE booking merchant bookingCReason.source
 
 cancelRideTransaction ::
   ( EsqDBFlow m r,

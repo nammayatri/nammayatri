@@ -21,6 +21,7 @@ module Domain.Action.Beckn.OnUpdate
     WaitingChargesInfo (..),
     EstimateBreakupInfo (..),
     BreakupPriceInfo (..),
+    UpdateType (..),
   )
 where
 
@@ -53,6 +54,8 @@ import Tools.Maps (LatLong)
 import Tools.Metrics (CoreMetrics)
 import qualified Tools.Notifications as Notify
 
+data UpdateType = SIMPLE | FORCED deriving (Eq)
+
 data OnUpdateReq
   = RideAssignedReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -64,11 +67,13 @@ data OnUpdateReq
         otp :: Text,
         vehicleNumber :: Text,
         vehicleColor :: Text,
-        vehicleModel :: Text
+        vehicleModel :: Text,
+        updateType :: UpdateType
       }
   | RideStartedReq
       { bppBookingId :: Id SRB.BPPBooking,
-        bppRideId :: Id SRide.BPPRide
+        bppRideId :: Id SRide.BPPRide,
+        updateType :: UpdateType
       }
   | RideCompletedReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -76,11 +81,13 @@ data OnUpdateReq
         fare :: Money,
         totalFare :: Money,
         fareBreakups :: [OnUpdateFareBreakup],
-        chargeableDistance :: HighPrecMeters
+        chargeableDistance :: HighPrecMeters,
+        updateType :: UpdateType
       }
   | BookingCancelledReq
       { bppBookingId :: Id SRB.BPPBooking,
-        cancellationSource :: SBCR.CancellationSource
+        cancellationSource :: SBCR.CancellationSource,
+        updateType :: UpdateType
       }
   | BookingReallocationReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -157,7 +164,7 @@ onUpdate ::
   m ()
 onUpdate RideAssignedReq {..} = do
   booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
-  unless (isAssignable booking) $ throwError (BookingInvalidStatus $ show booking.status)
+  unless (isAssignable booking || updateType == FORCED) $ throwError (BookingInvalidStatus $ show booking.status)
   ride <- buildRide booking
   DB.runTransaction $ do
     QRB.updateStatus booking.id SRB.TRIP_ASSIGNED
@@ -193,8 +200,8 @@ onUpdate RideAssignedReq {..} = do
 onUpdate RideStartedReq {..} = do
   booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
-  unless (booking.status == SRB.TRIP_ASSIGNED) $ throwError (BookingInvalidStatus $ show booking.status)
-  unless (ride.status == SRide.NEW) $ throwError (RideInvalidStatus $ show ride.status)
+  unless (booking.status == SRB.TRIP_ASSIGNED || updateType == FORCED) $ throwError (BookingInvalidStatus $ show booking.status)
+  unless (ride.status == SRide.NEW || updateType == FORCED) $ throwError (RideInvalidStatus $ show ride.status)
   rideStartTime <- getCurrentTime
   let updRideForStartReq =
         ride{status = SRide.INPROGRESS,
@@ -207,8 +214,8 @@ onUpdate RideStartedReq {..} = do
 onUpdate RideCompletedReq {..} = do
   booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
-  unless (booking.status == SRB.TRIP_ASSIGNED) $ throwError (BookingInvalidStatus $ show booking.status)
-  unless (ride.status == SRide.INPROGRESS) $ throwError (RideInvalidStatus $ show ride.status)
+  unless (booking.status == SRB.TRIP_ASSIGNED || updateType == FORCED) $ throwError (BookingInvalidStatus $ show booking.status)
+  unless (ride.status == SRide.INPROGRESS || updateType == FORCED) $ throwError (RideInvalidStatus $ show ride.status)
   rideEndTime <- getCurrentTime
   let updRide =
         ride{status = SRide.COMPLETED,
@@ -243,7 +250,7 @@ onUpdate RideCompletedReq {..} = do
           }
 onUpdate BookingCancelledReq {..} = do
   booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
-  unless (isBookingCancellable booking) $
+  unless (isBookingCancellable booking || updateType == FORCED) $
     throwError (BookingInvalidStatus (show booking.status))
   mbRide <- QRide.findActiveByRBId booking.id
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show cancellationSource)

@@ -30,7 +30,8 @@ data BookingCancelledEvent = BookingCancelledEvent
   { id :: Text,
     update_target :: Text,
     state :: Text,
-    cancellation_reason :: CancellationSource
+    cancellation_reason :: CancellationSource,
+    force :: Maybe Bool -- FIXME find proper field
   }
   deriving (Generic, Show)
 
@@ -42,6 +43,7 @@ instance ToJSON BookingCancelledEvent where
         <> "state" .= state
         <> "./komn/cancellation_reason" .= cancellation_reason
         <> "fulfillment" .= (("state" .= (("code" .= RIDE_BOOKING_CANCELLED) :: A.Object)) :: A.Object)
+        <> "state" .= force
 
 instance FromJSON BookingCancelledEvent where
   parseJSON = withObject "BookingCancelledEvent" $ \obj -> do
@@ -52,10 +54,12 @@ instance FromJSON BookingCancelledEvent where
       <*> obj .: "./komn/update_target"
       <*> obj .: "state"
       <*> obj .: "./komn/cancellation_reason"
+      <*> obj .:? "force"
 
 instance ToSchema BookingCancelledEvent where
   declareNamedSchema _ = do
     txt <- declareSchemaRef (Proxy :: Proxy Text)
+    boolean <- declareSchemaRef (Proxy :: Proxy Bool)
     cancellationSource <- declareSchemaRef (Proxy :: Proxy CancellationSource)
     update_type <- declareSchemaRef (Proxy :: Proxy OnUpdateEventType)
     let st =
@@ -82,7 +86,8 @@ instance ToSchema BookingCancelledEvent where
                 ("./komn/update_target", txt),
                 ("state", txt),
                 ("./komn/cancellation_reason", cancellationSource),
-                ("fulfillment", Inline fulfillment)
+                ("fulfillment", Inline fulfillment),
+                ("force", boolean)
               ]
           & required
             L..~ [ "id",

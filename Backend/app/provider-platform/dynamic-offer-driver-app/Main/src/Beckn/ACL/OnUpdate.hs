@@ -15,6 +15,7 @@
 module Beckn.ACL.OnUpdate
   ( buildOnUpdateMessage,
     OnUpdateBuildReq (..),
+    UpdateType (..),
   )
 where
 
@@ -40,22 +41,28 @@ import Kernel.Utils.Common
 import SharedLogic.FareCalculator
 import Tools.Error
 
+data UpdateType = SIMPLE | FORCED
+
 data OnUpdateBuildReq
   = RideAssignedBuildReq
       { driver :: SP.Person,
         vehicle :: SVeh.Vehicle,
-        ride :: DRide.Ride
+        ride :: DRide.Ride,
+        updateType :: UpdateType
       }
   | RideStartedBuildReq
-      { ride :: DRide.Ride
+      { ride :: DRide.Ride,
+        updateType :: UpdateType
       }
   | RideCompletedBuildReq
       { ride :: DRide.Ride,
-        fareParams :: Fare.FareParameters
+        fareParams :: Fare.FareParameters,
+        updateType :: UpdateType
       }
   | BookingCancelledBuildReq
       { booking :: DRB.Booking,
-        cancellationSource :: SBCR.CancellationSource
+        cancellationSource :: SBCR.CancellationSource,
+        updateType :: UpdateType
       }
   | DriverArrivedBuildReq
       { ride :: DRide.Ride,
@@ -110,7 +117,8 @@ buildOnUpdateMessage RideAssignedBuildReq {..} = do
           { id = ride.bookingId.getId,
             state = "ACTIVE",
             update_target = "state,fufillment.state.code,fulfillment.start.authorization,fulfillment.agent,fulfillment.vehicle",
-            ..
+            fulfillment,
+            force = castUpdateType updateType
           }
 buildOnUpdateMessage RideStartedBuildReq {..} = do
   return $
@@ -119,7 +127,8 @@ buildOnUpdateMessage RideStartedBuildReq {..} = do
         RideStartedOU.RideStartedEvent
           { id = ride.bookingId.getId,
             update_target = "fufillment.state.code",
-            fulfillment = RideStartedOU.FulfillmentInfo ride.id.getId
+            fulfillment = RideStartedOU.FulfillmentInfo ride.id.getId,
+            force = castUpdateType updateType
           }
 buildOnUpdateMessage req@RideCompletedBuildReq {} = do
   fare <- realToFrac <$> req.ride.fare & fromMaybeM (InternalError "Ride fare is not present.")
@@ -150,7 +159,8 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
               RideCompletedOU.FulfillmentInfo
                 { id = ride.id.getId,
                   chargeable_distance = chargeableDistance
-                }
+                },
+            force = castUpdateType req.updateType
           }
 buildOnUpdateMessage BookingCancelledBuildReq {..} = do
   return $
@@ -160,7 +170,8 @@ buildOnUpdateMessage BookingCancelledBuildReq {..} = do
           { id = booking.id.getId,
             state = "CANCELLED",
             update_target = "state,fufillment.state.code",
-            cancellation_reason = castCancellationSource cancellationSource
+            cancellation_reason = castCancellationSource cancellationSource,
+            force = castUpdateType updateType
           }
 buildOnUpdateMessage DriverArrivedBuildReq {..} = do
   return $
@@ -192,3 +203,7 @@ castCancellationSource = \case
   SBCR.ByMerchant -> BookingCancelledOU.ByMerchant
   SBCR.ByAllocator -> BookingCancelledOU.ByAllocator
   SBCR.ByApplication -> BookingCancelledOU.ByApplication
+
+castUpdateType :: UpdateType -> Maybe Bool
+castUpdateType SIMPLE = Just False
+castUpdateType FORCED = Just True

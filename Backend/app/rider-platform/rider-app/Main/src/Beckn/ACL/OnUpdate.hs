@@ -65,13 +65,15 @@ parseEvent _ (OnUpdate.RideAssigned taEvent) =
         driverRegisteredAt = taEvent.fulfillment.agent.tags.registered_at,
         vehicleNumber = taEvent.fulfillment.vehicle.registration,
         vehicleColor = taEvent.fulfillment.vehicle.color,
-        vehicleModel = taEvent.fulfillment.vehicle.model
+        vehicleModel = taEvent.fulfillment.vehicle.model,
+        updateType = castUpdateType taEvent.force
       }
 parseEvent _ (OnUpdate.RideStarted rsEvent) =
   return $
     DOnUpdate.RideStartedReq
       { bppBookingId = Id rsEvent.id,
-        bppRideId = Id rsEvent.fulfillment.id
+        bppRideId = Id rsEvent.fulfillment.id,
+        updateType = castUpdateType rsEvent.force
       }
 parseEvent _ (OnUpdate.RideCompleted rcEvent) = do
   return $
@@ -81,7 +83,8 @@ parseEvent _ (OnUpdate.RideCompleted rcEvent) = do
         fare = roundToIntegral rcEvent.quote.price.value,
         totalFare = roundToIntegral rcEvent.quote.price.computed_value,
         chargeableDistance = realToFrac rcEvent.fulfillment.chargeable_distance,
-        fareBreakups = mkOnUpdateFareBreakup <$> rcEvent.quote.breakup
+        fareBreakups = mkOnUpdateFareBreakup <$> rcEvent.quote.breakup,
+        updateType = castUpdateType rcEvent.force
       }
   where
     mkOnUpdateFareBreakup breakup =
@@ -93,7 +96,8 @@ parseEvent _ (OnUpdate.BookingCancelled tcEvent) =
   return $
     DOnUpdate.BookingCancelledReq
       { bppBookingId = Id $ tcEvent.id,
-        cancellationSource = castCancellationSource tcEvent.cancellation_reason
+        cancellationSource = castCancellationSource tcEvent.cancellation_reason,
+        updateType = castUpdateType tcEvent.force
       }
 parseEvent _ (OnUpdate.BookingReallocation rbrEvent) =
   return $
@@ -126,3 +130,7 @@ castCancellationSource = \case
   OnUpdate.ByMerchant -> SBCR.ByMerchant
   OnUpdate.ByAllocator -> SBCR.ByAllocator
   OnUpdate.ByApplication -> SBCR.ByApplication
+
+castUpdateType :: Maybe Bool -> DOnUpdate.UpdateType
+castUpdateType (Just True) = DOnUpdate.FORCED
+castUpdateType _ = DOnUpdate.SIMPLE

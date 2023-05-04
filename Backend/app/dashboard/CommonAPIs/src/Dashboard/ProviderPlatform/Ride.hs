@@ -40,6 +40,7 @@ data RideEndpoint
   | RideEndEndpoint
   | RideCancelEndpoint
   | RideSyncEndpoint
+  | RideForceSyncEndpoint
   deriving (Show, Read)
 
 derivePersistField "RideEndpoint"
@@ -249,6 +250,14 @@ data RideStatus
   | RIDE_CANCELLED
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+---------------------------------------------------------
+-- ride force sync ---------------------------------------------
+
+type RideForceSyncAPI =
+  Capture "rideId" (Id Ride)
+    :> "forceSync"
+    :> Post '[JSON] RideSyncRes
 
 ---------------------------------------------------------
 -- ride route -------------------------------------------

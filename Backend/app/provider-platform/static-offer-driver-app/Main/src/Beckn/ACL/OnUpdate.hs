@@ -106,7 +106,8 @@ buildOnUpdateMessage RideAssignedBuildReq {..} = do
           { id = ride.bookingId.getId,
             state = "ACTIVE",
             update_target = "state,fufillment.state.code,fulfillment.start.authorization,fulfillment.agent,fulfillment.vehicle",
-            ..
+            fulfillment,
+            force = Nothing
           }
 buildOnUpdateMessage RideStartedBuildReq {..} = do
   return $
@@ -115,7 +116,8 @@ buildOnUpdateMessage RideStartedBuildReq {..} = do
         RideStartedOU.RideStartedEvent
           { id = ride.bookingId.getId,
             update_target = "fufillment.state.code",
-            fulfillment = RideStartedOU.FulfillmentInfo ride.id.getId
+            fulfillment = RideStartedOU.FulfillmentInfo ride.id.getId,
+            force = Nothing
           }
 buildOnUpdateMessage RideCompletedBuildReq {..} = do
   fare <- fromIntegral <$> ride.fare & fromMaybeM (InternalError "Ride fare is not present.")
@@ -143,7 +145,8 @@ buildOnUpdateMessage RideCompletedBuildReq {..} = do
               RideCompletedOU.FulfillmentInfo
                 { id = ride.id.getId,
                   chargeable_distance = chargeableDistance
-                }
+                },
+            force = Nothing
           }
   where
     mkFareBreakupItem :: DFareBreakup.FareBreakup -> RideCompletedOU.BreakupItem
@@ -164,7 +167,8 @@ buildOnUpdateMessage BookingCancelledBuildReq {..} = do
           { id = booking.id.getId,
             state = "CANCELLED",
             update_target = "state,fufillment.state.code",
-            cancellation_reason = castCancellationSource cancellationSource
+            cancellation_reason = castCancellationSource cancellationSource,
+            force = Nothing
           }
 buildOnUpdateMessage BookingReallocationBuildReq {..} = do
   return $

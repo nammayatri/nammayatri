@@ -38,7 +38,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimit)
 import qualified Lib.LocationUpdates as LocUpd
-import SharedLogic.CallBAP (sendRideStartedUpdateToBAP)
+import SharedLogic.CallBAP (UpdateType (SIMPLE), sendRideStartedUpdateToBAP)
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverLocation as QDrLoc
 import qualified Storage.Queries.Ride as QRide
@@ -77,7 +77,7 @@ buildStartRideHandle merchantId = do
         findBookingById = QRB.findById,
         findLocationByDriverId = QDrLoc.findById,
         startRideAndUpdateLocation = SInternal.startRideTransaction,
-        notifyBAPRideStarted = sendRideStartedUpdateToBAP,
+        notifyBAPRideStarted = sendRideStartedUpdateToBAP SIMPLE,
         rateLimitStartRide = \personId' rideId' -> checkSlidingWindowLimit (getId personId' <> "_" <> getId rideId'),
         initializeDistanceCalculation = LocUpd.initializeDistanceCalculation defaultRideInterpolationHandler,
         whenWithLocationUpdatesLock = LocUpd.whenWithLocationUpdatesLock

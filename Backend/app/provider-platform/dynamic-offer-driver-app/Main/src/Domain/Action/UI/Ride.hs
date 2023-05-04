@@ -217,7 +217,7 @@ otpRideCreate driver otpCode booking = do
   DLoc.updateOnRide (cast driver.id) True
   uBooking <- runInReplica $ QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId) -- in replica db we can have outdated value
   Notify.notifyDriver transporter.id notificationType notificationTitle (message uBooking) driver.id driver.deviceToken
-  void $ BP.sendRideAssignedUpdateToBAP uBooking ride
+  void $ BP.sendRideAssignedUpdateToBAP BP.SIMPLE uBooking ride
   DS.driverScoreEventHandler DST.OnNewRideAssigned {merchantId = transporter.id, driverId = driver.id}
   driverNumber <- RD.getDriverNumber rideDetails
   mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone

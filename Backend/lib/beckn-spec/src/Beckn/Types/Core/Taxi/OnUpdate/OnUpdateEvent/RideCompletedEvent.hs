@@ -23,7 +23,7 @@ import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType (OnUpdateE
 import qualified Control.Lens as L
 import Data.Aeson as A
 import Data.OpenApi hiding (Example, example, title, value)
-import EulerHS.Prelude hiding (id, (.=))
+import EulerHS.Prelude hiding (force, id, (.=))
 import GHC.Exts (fromList)
 import Kernel.Utils.GenericPretty (PrettyShow)
 import Kernel.Utils.Schema
@@ -32,7 +32,8 @@ data RideCompletedEvent = RideCompletedEvent
   { id :: Text,
     update_target :: Text,
     quote :: RideCompletedQuote,
-    fulfillment :: FulfillmentInfo
+    fulfillment :: FulfillmentInfo,
+    force :: Maybe Bool -- FIXME find proper field
   }
   deriving (Generic, Show)
 
@@ -44,6 +45,7 @@ instance ToJSON RideCompletedEvent where
         <> "./komn/update_target" .= update_target
         <> "quote" .= quote
         <> "fulfillment" .= (fulfJSON <> ("state" .= (("code" .= RIDE_COMPLETED) :: A.Object)))
+        <> "state" .= force
 
 instance FromJSON RideCompletedEvent where
   parseJSON = withObject "RideCompletedEvent" $ \obj -> do
@@ -54,10 +56,12 @@ instance FromJSON RideCompletedEvent where
       <*> obj .: "./komn/update_target"
       <*> obj .: "quote"
       <*> obj .: "fulfillment"
+      <*> obj .:? "force"
 
 instance ToSchema RideCompletedEvent where
   declareNamedSchema _ = do
     txt <- declareSchemaRef (Proxy :: Proxy Text)
+    boolean <- declareSchemaRef (Proxy :: Proxy Bool)
     quote <- declareSchemaRef (Proxy :: Proxy RideCompletedQuote)
     update_type <- declareSchemaRef (Proxy :: Proxy OnUpdateEventType)
     let st =
@@ -81,7 +85,8 @@ instance ToSchema RideCompletedEvent where
               [ ("id", txt),
                 ("./komn/update_target", txt),
                 ("quote", quote),
-                ("fulfillment", Inline fulfillment)
+                ("fulfillment", Inline fulfillment),
+                ("force", boolean)
               ]
           & required
             L..~ [ "id",

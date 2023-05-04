@@ -18,14 +18,15 @@ import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType (OnUpdateE
 import qualified Control.Lens as L
 import Data.Aeson as A
 import Data.OpenApi hiding (Example, example)
-import EulerHS.Prelude hiding (id, (.=))
+import EulerHS.Prelude hiding (force, id, (.=))
 import GHC.Exts (fromList)
 import Kernel.Utils.Schema
 
 data RideStartedEvent = RideStartedEvent
   { id :: Text,
     update_target :: Text,
-    fulfillment :: FulfillmentInfo
+    fulfillment :: FulfillmentInfo,
+    force :: Maybe Bool -- FIXME find proper field
   }
   deriving (Generic, Show)
 
@@ -36,6 +37,7 @@ instance ToJSON RideStartedEvent where
       "id" .= id
         <> "./komn/update_target" .= update_target
         <> "fulfillment" .= (fulfJSON <> ("state" .= (("code" .= RIDE_STARTED) :: A.Object)))
+        <> "state" .= force
 
 instance FromJSON RideStartedEvent where
   parseJSON = withObject "RideStartedEvent" $ \obj -> do
@@ -45,10 +47,12 @@ instance FromJSON RideStartedEvent where
       <$> obj .: "id"
       <*> obj .: "./komn/update_target"
       <*> obj .: "fulfillment"
+      <*> obj .:? "force"
 
 instance ToSchema RideStartedEvent where
   declareNamedSchema _ = do
     txt <- declareSchemaRef (Proxy :: Proxy Text)
+    boolean <- declareSchemaRef (Proxy :: Proxy Bool)
     update_type <- declareSchemaRef (Proxy :: Proxy OnUpdateEventType)
     let st =
           mempty
@@ -70,7 +74,8 @@ instance ToSchema RideStartedEvent where
             L..~ fromList
               [ ("id", txt),
                 ("./komn/update_target", txt),
-                ("fulfillment", Inline fulfillment)
+                ("fulfillment", Inline fulfillment),
+                ("force", boolean)
               ]
           & required L..~ ["id", "./komn/update_target", "fulfillment"]
 
