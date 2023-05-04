@@ -27,6 +27,7 @@ import Domain.Types.FarePolicy (FarePolicy)
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.SlabFarePolicy (SlabFarePolicy)
 import EulerHS.Prelude hiding (id)
+import Kernel.Prelude
 import Kernel.Types.Error ()
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -38,24 +39,29 @@ import SharedLogic.FareCalculator.Calculator
     isNightShift,
     mkBreakupList,
   )
+import Storage.CachedQueries.CacheConfig
 
 calculateFare ::
-  (Monad m, Log m, MonadGuid m, MonadThrow m) =>
+  (Monad m, Log m, MonadGuid m, MonadThrow m, CacheFlow m r, EsqDBFlow m r) =>
   Id Merchant ->
   Either FarePolicy SlabFarePolicy ->
   Meters ->
   UTCTime ->
   Maybe Money ->
   Maybe Money ->
+  Int ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  Maybe Money ->
   m FareParameters
-calculateFare merchantId policy distance time driverSelectedFare customerExtraFee = do
+calculateFare merchantId policy distance time driverSelectedFare customerExtraFee waitingBlock mbTripStartTime mbDriverArrivalTime waitingChargePerMin = do
   fareParams <- case policy of
     Left farePolicy -> do
       logFareCalculatorInfo farePolicy.vehicleVariant
-      calculateFareParameters farePolicy distance time driverSelectedFare customerExtraFee
+      calculateFareParameters merchantId farePolicy distance time driverSelectedFare customerExtraFee waitingBlock mbTripStartTime mbDriverArrivalTime waitingChargePerMin
     Right slabFarePolicy -> do
       logFareCalculatorInfo slabFarePolicy.vehicleVariant
-      calculateSlabFareParameters slabFarePolicy distance time driverSelectedFare customerExtraFee
+      calculateSlabFareParameters merchantId slabFarePolicy distance time driverSelectedFare customerExtraFee waitingBlock mbTripStartTime mbDriverArrivalTime waitingChargePerMin
   logTagInfo "FareCalculator" $ "Fare parameters calculated: " +|| fareParams ||+ ""
   pure fareParams
   where

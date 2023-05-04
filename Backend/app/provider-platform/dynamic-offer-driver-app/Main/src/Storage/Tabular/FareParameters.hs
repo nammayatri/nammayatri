@@ -45,7 +45,8 @@ mkPersist
       serviceCharge Money Maybe
       farePolicyType Domain.FarePolicyType
       govtChargesPerc Int Maybe
-
+      tripWaitingFare Money Maybe
+      pickUpWaitingFare Money Maybe
       Primary id
       deriving Generic
     |]

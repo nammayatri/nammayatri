@@ -56,7 +56,8 @@ mkPersist
       actualRideDistanceDiffThreshold Centesimal
       upwardsRecomputeBuffer Centesimal
       approxRideDistanceDiffThreshold Centesimal
-
+      waitingBlockInMinutes Double
+      freeWaitingTime Double
       createdAt UTCTime
       updatedAt UTCTime
 

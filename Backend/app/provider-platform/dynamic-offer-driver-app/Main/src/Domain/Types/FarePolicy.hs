@@ -38,7 +38,8 @@ data FarePolicyD (s :: UsageSafety) = FarePolicy
     waitingChargePerMin :: Maybe Money,
     waitingTimeEstimatedThreshold :: Maybe Seconds,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    tripWaitingChargePerBlock :: Int
   }
   deriving (Generic, Show, Eq)
 

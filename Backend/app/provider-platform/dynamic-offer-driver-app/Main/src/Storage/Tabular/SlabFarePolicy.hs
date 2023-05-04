@@ -52,6 +52,8 @@ mkPersist
       fareSlabs (PostgresList Domain.Slab)
       govtChargesPerc Int Maybe
 
+      tripWaitingChargePerBlock Int
+
       createdAt UTCTime
       updatedAt UTCTime
       UniqueSlabFarePolicyId id

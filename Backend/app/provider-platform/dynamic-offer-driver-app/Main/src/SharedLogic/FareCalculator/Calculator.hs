@@ -18,6 +18,7 @@ module SharedLogic.FareCalculator.Calculator
     baseFareSum,
     calculateFareParameters,
     calculateSlabFareParameters,
+    getPickUpWaitingFare,
     isNightShift,
   )
 where
@@ -32,10 +33,14 @@ import Data.Time
   )
 import Domain.Types.FareParameters
 import Domain.Types.FarePolicy
+import Domain.Types.Merchant (Merchant)
 import Domain.Types.SlabFarePolicy
 import Kernel.Prelude
 import Kernel.Types.Error
+import Kernel.Types.Id
 import Kernel.Utils.Common
+import Storage.CachedQueries.CacheConfig
+import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTConf
 
 mkBreakupList :: (Money -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> FareParameters -> [breakupItem]
 mkBreakupList mkPrice mkBreakupItem fareParams = do
@@ -98,7 +103,6 @@ mkNormalBreakupList mkPrice mkBreakupItem fareParams = do
   catMaybes [Just totalFareItem, Just baseFareItem, deadKmFareItem, extraDistanceFareItem, mbSelectedFareItem, mkCustomerExtraFareItem]
 
 -- TODO: make some tests for it
-
 fareSum :: FareParameters -> Money
 fareSum fareParams = case fareParams.farePolicyType of
   NORMAL -> normalFareSum fareParams
@@ -106,10 +110,10 @@ fareSum fareParams = case fareParams.farePolicyType of
 
 normalFareSum :: FareParameters -> Money
 normalFareSum fareParams = do
-  baseFareSum fareParams + (fromMaybe 0 fareParams.deadKmFare) + fromMaybe 0 fareParams.driverSelectedFare
+  baseFareSum fareParams + (fromMaybe 0 fareParams.deadKmFare) + fromMaybe 0 fareParams.driverSelectedFare + fromMaybe 0 fareParams.customerExtraFee + fromMaybe 0 fareParams.tripWaitingFare
 
 slabFareSum :: FareParameters -> Money
-slabFareSum = baseFareSum
+slabFareSum fareParams = baseFareSum fareParams + fromMaybe 0 fareParams.tripWaitingFare
 
 addGovtCharges :: FareParameters -> Money
 addGovtCharges fp =
@@ -140,22 +144,35 @@ calculateDayPartRate fareParams = do
     then fromMaybe defaultDayPartRate fareParams.nightShiftRate
     else defaultDayPartRate
 
+getPickUpWaitingFare :: (MonadGuid m, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Maybe UTCTime -> Maybe UTCTime -> Maybe Money -> m Money
+getPickUpWaitingFare merchantId mbTripStartTime mbDriverArrivalTime waitingChargePerMin = do
+  thresholdConfig <- QTConf.findByMerchantId merchantId >>= fromMaybeM (InternalError "TransportConfigNotFound")
+  let waitingTimeThreshold = thresholdConfig.waitingTimeEstimatedThreshold
+      driverWaitingTime = fromMaybe 0 (diffUTCTime <$> mbTripStartTime <*> mbDriverArrivalTime)
+      fareableWaitingTime = max 0 (driverWaitingTime / 60 - fromIntegral waitingTimeThreshold)
+  pure $ roundToIntegral fareableWaitingTime * fromMaybe 0 waitingChargePerMin
+
 calculateFareParameters ::
-  MonadGuid m =>
+  (MonadGuid m, CacheFlow m r, EsqDBFlow m r) =>
+  Id Merchant ->
   FarePolicy ->
   Meters ->
   UTCTime ->
   Maybe Money ->
   Maybe Money ->
+  Int ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  Maybe Money ->
   m FareParameters
-calculateFareParameters fp distance time mbExtraFare mbCustomerExtraFee = do
+calculateFareParameters merchantId fp distance time mbExtraFare mbCustomerExtraFee waitingBlock mbTripStartTime mbDriverArrivalTime waitingChargePerMin = do
   let baseDistanceFare = roundToIntegral $ fp.baseDistanceFare
       mbExtraDistance =
         distance - fp.baseDistanceMeters
           & (\dist -> if dist > 0 then Just dist else Nothing)
       mbExtraKmFare = mbExtraDistance <&> \ex -> roundToIntegral $ realToFrac (distanceToKm ex) * fp.perExtraKmFare
       nightCoefIncluded = isNightShift fp.nightShiftStart fp.nightShiftEnd time
-
+  pickUpWaitingFare <- getPickUpWaitingFare merchantId mbTripStartTime mbDriverArrivalTime waitingChargePerMin
   id <- generateGUID
   pure
     FareParameters
@@ -171,18 +188,26 @@ calculateFareParameters fp distance time mbExtraFare mbCustomerExtraFee = do
         waitingOrPickupCharges = Nothing,
         serviceCharge = Nothing,
         farePolicyType = NORMAL,
-        govtChargesPerc = Nothing
+        govtChargesPerc = Nothing,
+        tripWaitingFare = Just $ Money $ fp.tripWaitingChargePerBlock * waitingBlock,
+        pickUpWaitingFare = Just pickUpWaitingFare
+        -- here do the main calculation
       }
 
 calculateSlabFareParameters ::
-  (MonadGuid m, MonadThrow m, Log m) =>
+  (MonadGuid m, MonadThrow m, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  Id Merchant ->
   SlabFarePolicy ->
   Meters ->
   UTCTime ->
   Maybe Money ->
   Maybe Money ->
+  Int ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  Maybe Money ->
   m FareParameters
-calculateSlabFareParameters fp distance time mbExtraFare customerExtraFee = do
+calculateSlabFareParameters merchantId fp distance time mbExtraFare customerExtraFee waitingBlock mbTripStartTime mbDriverArrivalTime waitingChargePerMin = do
   let mbSlab = find (selectSlab distance) fp.fareSlabs
   when (isNothing mbSlab) $ throwError (InvalidRequest "Fare slab not found")
   let slab = fromJust mbSlab
@@ -190,7 +215,7 @@ calculateSlabFareParameters fp distance time mbExtraFare customerExtraFee = do
   let baseDistanceFare = roundToIntegral $ slab.fare
       waitingOrPickupCharges = roundToIntegral $ slab.waitingCharge
       nightCoefIncluded = isNightShift fp.nightShiftStart fp.nightShiftEnd time
-
+  pickUpWaitingFare <- getPickUpWaitingFare merchantId mbTripStartTime mbDriverArrivalTime waitingChargePerMin
   id <- generateGUID
   pure
     FareParameters
@@ -206,7 +231,9 @@ calculateSlabFareParameters fp distance time mbExtraFare customerExtraFee = do
         waitingOrPickupCharges = Just waitingOrPickupCharges,
         waitingChargePerMin = Nothing,
         farePolicyType = SLAB,
-        govtChargesPerc = fp.govtChargesPerc
+        govtChargesPerc = fp.govtChargesPerc,
+        tripWaitingFare = Just $ Money $ fp.tripWaitingChargePerBlock * waitingBlock,
+        pickUpWaitingFare = Just pickUpWaitingFare
       }
 
 selectSlab :: Meters -> Slab -> Bool

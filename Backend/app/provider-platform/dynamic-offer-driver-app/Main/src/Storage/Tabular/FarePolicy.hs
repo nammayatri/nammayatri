@@ -54,6 +54,8 @@ mkPersist
       waitingChargePerMin Money Maybe
       waitingTimeEstimatedThreshold Seconds Maybe
 
+      tripWaitingChargePerBlock Int
+
       createdAt UTCTime
       updatedAt UTCTime
       UniqueFarePolicyId id

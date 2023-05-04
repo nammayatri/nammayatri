@@ -34,7 +34,8 @@ data SlabFarePolicyD (s :: UsageSafety) = SlabFarePolicy
     govtChargesPerc :: Maybe Int,
     fareSlabs :: [Slab],
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    tripWaitingChargePerBlock :: Int
   }
   deriving (Generic, Show, Eq)
 
