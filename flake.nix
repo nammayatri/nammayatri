@@ -11,6 +11,8 @@
     beckn-gateway.url = "github:nammayatri/beckn-gateway";
     beckn-gateway.inputs.shared-kernel.follows = "shared-kernel";
     purifix.url = "github:purifix/purifix";
+
+    dream2nix.url = "github:nix-community/dream2nix";
   };
   outputs = inputs:
     inputs.flake-parts.lib.mkFlake { inherit inputs; } {

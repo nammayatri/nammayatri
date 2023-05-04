@@ -10,6 +10,7 @@
           inputs.purifix.overlay
           (final: prev: {
             nodejs = final.nodejs-14_x;
+            npmlock2nix = final.callPackage inputs.npmlock2nix { };
           })
         ];
       };
@@ -18,16 +19,28 @@
         src = ./.;
       };
 
-      inherit (import ./nix/node-dependencies.nix {
-        inherit pkgs;
-        inherit (pkgs) nodejs;
-      }) nodeDependencies;
+      nodePackages = inputs.dream2nix.lib.makeFlakeOutputs {
+        systems = [ system ];
+        source = ./node;
+        projects = {
+          "atlas-ui" = {
+            name = "atlas-ui";
+            subsystem = "nodejs";
+            translator = "package-lock";
+            builder = "strict-builder";
+            subsystemInfo = {
+              nodejs = 14;
+            };
+          };
+        };
+      };
+      nodeDependencies = nodePackages.packages.${system}.atlas-ui.lib;
 
       webpack-dev-server = pkgs.writeShellApplication {
         name = "webpack-dev-server-wrapped";
-        runtimeInputs = [ pkgs.nodejs nodeDependencies ];
+        runtimeInputs = [ pkgs.nodejs ];
         text = ''
-          export NODE_PATH="${nodeDependencies}/lib/node_modules"
+          export NODE_PATH="${nodeDependencies}/node_modules"
           PIPE="$1"
           shift
           tail -n1 -f "$PIPE" | node ${./watch.js} "$@"
@@ -101,7 +114,7 @@
           phases = [ "buildPhase" "installPhase" ];
           nativeBuildInputs = [ pkgs.nodejs ];
           buildPhase = ''
-            ln -s ${nodeDependencies}/lib/node_modules node_modules
+            ln -s ${nodeDependencies}/node_modules node_modules
             cp -r -L ${localPackages.${target}}/output output
             cp ${ ./${target}/index.js } index.js
             cp ${ ./${target}/package.json } package.json

@@ -7,17 +7,17 @@
   "dependencies": {
     "@babel/core": "^7.7.7",
     "@babel/preset-env": "^7.7.7",
-    "babel-loader": "^8.0.6",
-    "filemanager-webpack-plugin": "^2.0.5",
-    "webpack": "^4.41.5",
-    "webpack-cli": "^3.3.10",
-    "webpack-dev-server": "^3.10.1",
-    "webpack-merge": "^5.8.0",
     "axios": "^0.27.1",
+    "babel-loader": "^8.0.6",
     "core-js": "^2.6.11",
+    "filemanager-webpack-plugin": "^2.0.5",
     "moment": "^2.27.0",
     "presto-ui": "git+https://github.com/juspay/presto-ui.git#master",
     "ramda": "^0.26.1",
-    "regenerator-runtime": "^0.13.5"
+    "regenerator-runtime": "^0.13.5",
+    "webpack": "^4.41.5",
+    "webpack-cli": "^3.3.10",
+    "webpack-dev-server": "^3.10.1",
+    "webpack-merge": "^5.8.0"
   }
 }
