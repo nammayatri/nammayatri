@@ -78,7 +78,7 @@ data RideAPIEntity = RideAPIEntity
     shortRideId :: ShortId Ride,
     status :: RideStatus,
     driverName :: Text,
-    driverNumber :: Text,
+    driverNumber :: Maybe Text,
     driverRatings :: Maybe Centesimal,
     driverRegisteredAt :: UTCTime,
     vehicleNumber :: Text,
@@ -100,12 +100,13 @@ data RideAPIEntity = RideAPIEntity
 
 makeRideAPIEntity :: Ride -> RideAPIEntity
 makeRideAPIEntity Ride {..} =
-  RideAPIEntity
-    { shortRideId = shortId,
-      driverNumber = driverMobileNumber,
-      driverRatings = driverRating,
-      rideOtp = otp,
-      computedPrice = totalFare,
-      chargeableRideDistance = chargeableDistance,
-      ..
-    }
+  let driverMobileNumber' = if status == NEW then Just driverMobileNumber else Nothing
+   in RideAPIEntity
+        { shortRideId = shortId,
+          driverNumber = driverMobileNumber',
+          driverRatings = driverRating,
+          rideOtp = otp,
+          computedPrice = totalFare,
+          chargeableRideDistance = chargeableDistance,
+          ..
+        }
