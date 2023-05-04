@@ -111,7 +111,7 @@ cancel req merchant booking = do
 
   logTagInfo ("bookingId-" <> getId req.bookingId) ("Cancellation reason " <> show bookingCR.source)
   fork "cancelBooking - Notify BAP" $ do
-    BP.sendBookingCancelledUpdateToBAP booking merchant bookingCR.source
+    BP.sendBookingCancelledUpdateToBAP BP.SIMPLE booking merchant bookingCR.source
   whenJust mbRide $ \ride ->
     fork "cancelRide - Notify driver" $ do
       driver <- QPers.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)

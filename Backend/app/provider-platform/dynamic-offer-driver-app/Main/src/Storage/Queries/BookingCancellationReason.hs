@@ -42,15 +42,15 @@ findAllCancelledByDriverId driverId = do
     mkCount [counter] = counter
     mkCount _ = 0
 
-findByRideBookingId ::
+findByBookingId ::
   Transactionable m =>
   Id Booking ->
   m (Maybe BookingCancellationReason)
-findByRideBookingId rideBookingId =
+findByBookingId bookingId =
   Esq.findOne $ do
-    rideBookingCancellationReason <- from $ table @BookingCancellationReasonT
-    where_ $ rideBookingCancellationReason ^. BookingCancellationReasonBookingId ==. val (toKey rideBookingId)
-    return rideBookingCancellationReason
+    bookingCancellationReason <- from $ table @BookingCancellationReasonT
+    where_ $ bookingCancellationReason ^. BookingCancellationReasonBookingId ==. val (toKey bookingId)
+    return bookingCancellationReason
 
 findByRideId :: Transactionable m => Id Ride -> m (Maybe BookingCancellationReason)
 findByRideId rideId = Esq.findOne $ do

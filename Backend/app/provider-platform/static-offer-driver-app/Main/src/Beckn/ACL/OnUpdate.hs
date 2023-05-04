@@ -15,75 +15,53 @@
 module Beckn.ACL.OnUpdate
   ( buildOnUpdateMessage,
     OnUpdateBuildReq (..),
-    UpdateType (..),
   )
 where
 
-import qualified Beckn.ACL.Common as Common
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingCancelledEvent as BookingCancelledOU
+import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingReallocationEvent as BookingReallocationOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.DriverArrivedEvent as DriverArrivedOU
-import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.EstimateRepetitionEvent as EstimateRepetitionOU
-import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.NewMessageEvent as NewMessageOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideAssignedEvent as RideAssignedOU
-import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as OnUpdate
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as RideCompletedOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent as RideStartedOU
-import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.Tags as OnUpdate
-import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
-import qualified Domain.Types.Estimate as DEst
-import qualified Domain.Types.FareParameters as DFParams
-import qualified Domain.Types.FareParameters as Fare
-import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
 import qualified Domain.Types.Person as SP
-import Domain.Types.Ride as DRide
+import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.Vehicle as SVeh
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import SharedLogic.FareCalculator
 import Tools.Error
-
-data UpdateType = SIMPLE | FORCED
 
 data OnUpdateBuildReq
   = RideAssignedBuildReq
       { driver :: SP.Person,
         vehicle :: SVeh.Vehicle,
-        ride :: DRide.Ride,
-        updateType :: UpdateType
+        ride :: SRide.Ride
       }
   | RideStartedBuildReq
-      { ride :: DRide.Ride,
-        updateType :: UpdateType
+      { ride :: SRide.Ride
       }
   | RideCompletedBuildReq
-      { ride :: DRide.Ride,
-        fareParams :: Fare.FareParameters,
-        paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
-        paymentUrl :: Maybe Text,
-        updateType :: UpdateType
+      { ride :: SRide.Ride,
+        fareBreakups :: [DFareBreakup.FareBreakup]
       }
   | BookingCancelledBuildReq
-      { booking :: DRB.Booking,
-        cancellationSource :: SBCR.CancellationSource,
-        updateType :: UpdateType
-      }
-  | DriverArrivedBuildReq
-      { ride :: DRide.Ride,
-        arrivalTime :: Maybe UTCTime
-      }
-  | EstimateRepetitionBuildReq
-      { ride :: DRide.Ride,
-        booking :: DRB.Booking,
-        estimateId :: Id DEst.Estimate,
+      { booking :: SRB.Booking,
         cancellationSource :: SBCR.CancellationSource
       }
-  | NewMessageBuildReq
-      { ride :: DRide.Ride,
-        message :: Text
+  | BookingReallocationBuildReq
+      { booking :: SRB.Booking,
+        rideId :: Id SRide.Ride,
+        reallocationSource :: SBCR.CancellationSource
+      }
+  | DriverArrivedBuildReq
+      { ride :: SRide.Ride,
+        arrivalTime :: Maybe UTCTime
       }
 
 buildOnUpdateMessage ::
@@ -92,7 +70,7 @@ buildOnUpdateMessage ::
   m OnUpdate.OnUpdateMessage
 buildOnUpdateMessage RideAssignedBuildReq {..} = do
   mobileNumber <- SP.getPersonNumber driver >>= fromMaybeM (InternalError "Driver mobile number is not present.")
-  name <- SP.getPersonFullName driver & fromMaybeM (PersonFieldNotPresent "firstName")
+  name <- SP.getPersonFullName driver >>= fromMaybeM (PersonFieldNotPresent "firstName")
   let agent =
         RideAssignedOU.Agent
           { name = name,
@@ -120,7 +98,7 @@ buildOnUpdateMessage RideAssignedBuildReq {..} = do
                 },
             agent,
             vehicle = veh,
-            tags = Just $ mkTags updateType
+            tags = Nothing
           }
   return $
     OnUpdate.OnUpdateMessage $
@@ -141,73 +119,49 @@ buildOnUpdateMessage RideStartedBuildReq {..} = do
             fulfillment =
               RideStartedOU.FulfillmentInfo
                 { id = ride.id.getId,
-                  tags = Just $ mkTags updateType
+                  tags = Nothing
                 }
           }
-buildOnUpdateMessage req@RideCompletedBuildReq {} = do
-  fare <- realToFrac <$> req.ride.fare & fromMaybeM (InternalError "Ride fare is not present.")
-  chargeableDistance <-
-    realToFrac <$> req.ride.chargeableDistance
-      & fromMaybeM (InternalError "Ride chargeable distance is not present.")
-  let traveledDistance = realToFrac req.ride.traveledDistance
-  let currency = "INR"
-      ride = req.ride
-      price =
+buildOnUpdateMessage RideCompletedBuildReq {..} = do
+  fare <- fromIntegral <$> ride.fare & fromMaybeM (InternalError "Ride fare is not present.")
+  totalFare <- fromIntegral <$> ride.totalFare & fromMaybeM (InternalError "Total ride fare is not present.")
+  chargeableDistance <- fmap realToFrac ride.chargeableDistance & fromMaybeM (InternalError "Chargeable ride distance is not present.")
+  let price =
         RideCompletedOU.QuotePrice
-          { currency,
+          { currency = "INR",
             value = fare,
-            computed_value = fare
+            computed_value = totalFare
           }
-      breakup =
-        mkBreakupList (OnUpdate.BreakupPrice currency . fromIntegral) OnUpdate.BreakupItem req.fareParams
-          & filter (filterRequiredBreakups $ DFParams.getFareParametersType req.fareParams) -- TODO: Remove after roll out
+      breakup = mkFareBreakupItem <$> fareBreakups
+
   return $
     OnUpdate.OnUpdateMessage $
       OnUpdate.RideCompleted
         RideCompletedOU.RideCompletedEvent
           { id = ride.bookingId.getId,
-            update_target = "fulfillment.state.code,quote.price,quote.breakup,payment.uri",
+            update_target = "fulfillment.state.code,quote.price,quote.breakup",
             quote =
               RideCompletedOU.RideCompletedQuote
-                { price,
-                  breakup
+                { ..
                 },
-            payment =
-              Just
-                RideCompletedOU.Payment
-                  { collected_by = Common.castDPaymentCollector . (.collectedBy) <$> req.paymentMethodInfo,
-                    _type = Common.castDPaymentType . (.paymentType) <$> req.paymentMethodInfo,
-                    instrument = Common.castDPaymentInstrument . (.paymentInstrument) <$> req.paymentMethodInfo,
-                    time = RideCompletedOU.TimeDuration "FIXME",
-                    uri = req.paymentUrl
-                  },
             fulfillment =
               RideCompletedOU.FulfillmentInfo
                 { id = ride.id.getId,
                   chargeable_distance = chargeableDistance,
-                  traveled_distance = traveledDistance,
-                  tags = Just $ mkTags req.updateType
+                  tags = Nothing
                 }
           }
   where
-    filterRequiredBreakups fParamsType breakup = do
-      case fParamsType of
-        DFParams.Progressive ->
-          breakup.title == "BASE_FARE"
-            || breakup.title == "DEAD_KILOMETER_FARE"
-            || breakup.title == "EXTRA_DISTANCE_FARE"
-            || breakup.title == "DRIVER_SELECTED_FARE"
-            || breakup.title == "CUSTOMER_SELECTED_FARE"
-            || breakup.title == "TOTAL_FARE"
-        DFParams.Slab ->
-          breakup.title == "BASE_FARE"
-            || breakup.title == "SERVICE_CHARGE"
-            || breakup.title == "WAITING_OR_PICKUP_CHARGES"
-            || breakup.title == "PLATFORM_FEE"
-            || breakup.title == "SGST"
-            || breakup.title == "CGST"
-            || breakup.title == "FIXED_GOVERNMENT_RATE"
-            || breakup.title == "TOTAL_FARE"
+    mkFareBreakupItem :: DFareBreakup.FareBreakup -> RideCompletedOU.BreakupItem
+    mkFareBreakupItem DFareBreakup.FareBreakup {..} =
+      RideCompletedOU.BreakupItem
+        { title = description,
+          price =
+            RideCompletedOU.BreakupPrice
+              { currency = "INR",
+                value = realToFrac amount
+              }
+        }
 buildOnUpdateMessage BookingCancelledBuildReq {..} = do
   return $
     OnUpdate.OnUpdateMessage $
@@ -217,10 +171,17 @@ buildOnUpdateMessage BookingCancelledBuildReq {..} = do
             state = "CANCELLED",
             update_target = "state,fufillment.state.code",
             cancellation_reason = castCancellationSource cancellationSource,
-            fulfillment =
-              BookingCancelledOU.FulfillmentInfo
-                { tags = Just $ mkTags updateType
-                }
+            fulfillment = BookingCancelledOU.FulfillmentInfo {tags = Nothing}
+          }
+buildOnUpdateMessage BookingReallocationBuildReq {..} = do
+  return $
+    OnUpdate.OnUpdateMessage $
+      OnUpdate.BookingReallocation
+        BookingReallocationOU.BookingReallocationEvent
+          { id = booking.id.getId,
+            update_target = "fulfillment.state.code",
+            fulfillment = BookingReallocationOU.FulfillmentInfo rideId.getId,
+            reallocation_reason = castCancellationSource reallocationSource
           }
 buildOnUpdateMessage DriverArrivedBuildReq {..} = do
   return $
@@ -232,28 +193,6 @@ buildOnUpdateMessage DriverArrivedBuildReq {..} = do
             fulfillment = DriverArrivedOU.FulfillmentInfo ride.id.getId,
             arrival_time = arrivalTime
           }
-buildOnUpdateMessage EstimateRepetitionBuildReq {..} = do
-  let item = EstimateRepetitionOU.Item {id = estimateId.getId}
-  return $
-    OnUpdate.OnUpdateMessage $
-      OnUpdate.EstimateRepetition
-        EstimateRepetitionOU.EstimateRepetitionEvent
-          { id = booking.id.getId,
-            update_target = "state,fufillment.state.code",
-            item = item,
-            fulfillment = EstimateRepetitionOU.FulfillmentInfo ride.id.getId,
-            cancellation_reason = castCancellationSource cancellationSource
-          }
-buildOnUpdateMessage NewMessageBuildReq {..} = do
-  return $
-    OnUpdate.OnUpdateMessage $
-      OnUpdate.NewMessage
-        NewMessageOU.NewMessageEvent
-          { id = ride.bookingId.getId,
-            update_target = "state,fufillment.state.code",
-            fulfillment = NewMessageOU.FulfillmentInfo ride.id.getId,
-            message = message
-          }
 
 castCancellationSource :: SBCR.CancellationSource -> BookingCancelledOU.CancellationSource
 castCancellationSource = \case
@@ -261,8 +200,3 @@ castCancellationSource = \case
   SBCR.ByDriver -> BookingCancelledOU.ByDriver
   SBCR.ByMerchant -> BookingCancelledOU.ByMerchant
   SBCR.ByAllocator -> BookingCancelledOU.ByAllocator
-  SBCR.ByApplication -> BookingCancelledOU.ByApplication
-
-mkTags :: UpdateType -> OnUpdate.Tags
-mkTags SIMPLE = OnUpdate.Tags {force = False}
-mkTags FORCED = OnUpdate.Tags {force = True}
