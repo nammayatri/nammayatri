@@ -101,6 +101,10 @@ generateSearchRequest = do
                                   },
                               time = API.TimeTimestamp example
                             },
+                        tags =
+                          API.Tags
+                            { search_id = Nothing
+                            },
                         end = Nothing
                       }
                 },

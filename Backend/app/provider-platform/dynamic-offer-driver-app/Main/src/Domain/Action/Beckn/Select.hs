@@ -17,6 +17,7 @@
 module Domain.Action.Beckn.Select where
 
 import qualified Beckn.Types.Core.Taxi.Common.Address as BA
+import qualified Beckn.Types.Core.Taxi.Select as Select
 import qualified Data.Map as M
 import qualified Data.Text as T
 import Data.Time.Clock (addUTCTime)
@@ -26,6 +27,7 @@ import qualified Domain.Types.FarePolicy as DFarePolicy (ExtraFee (..))
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
+import qualified Domain.Types.SearchRequestRetry as SearchRetry
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -48,6 +50,7 @@ import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.CachedQueries.SlabFarePolicy as SFarePolicyS
 import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.SearchRequest as QSReq
+import qualified Storage.Queries.SearchRequestRetry as SQSRR
 import Tools.Error
 import Tools.Maps as Maps
 
@@ -64,7 +67,9 @@ data DSelectReq = DSelectReq
     dropAddrress :: Maybe BA.Address,
     autoAssignEnabled :: Bool,
     customerLanguage :: Maybe Maps.Language,
-    customerExtraFee :: Maybe Money
+    customerExtraFee :: Maybe Money,
+    parentTransactionId :: Maybe Text,
+    retryType :: Maybe Select.RetryType
   }
 
 type LanguageDictionary = M.Map Maps.Language DSearchReq.SearchRequest
@@ -111,9 +116,10 @@ handler merchantId sReq = do
       <> show estimateFare
   driverPoolConfig <- getDriverPoolConfig merchantId distance
   let inTime = fromIntegral driverPoolConfig.singleBatchProcessTime
+  mbSearchRetry <- forM sReq.parentTransactionId $ buildSearchRetry sReq.retryType searchReq.id searchReq.updatedAt
   Esq.runTransaction $ do
     QSReq.create searchReq
-
+    whenJust mbSearchRetry SQSRR.create
   res <- sendSearchRequestToDrivers' driverPoolConfig searchReq merchant estimateFare driverExtraFare.minFee driverExtraFare.maxFee
   case res of
     ReSchedule _ -> do
@@ -220,3 +226,15 @@ decodeAddress BA.Address {..} = do
 
 isEmpty :: Maybe Text -> Bool
 isEmpty = maybe True (T.null . T.replace " " "")
+
+buildSearchRetry :: Maybe Select.RetryType -> Id DSearchReq.SearchRequest -> UTCTime -> Text -> Flow SearchRetry.SearchRequestRetry
+buildSearchRetry retryType searchid now parentSearchId = do
+  justRetryType <- fromMaybeM (InternalError "RetryType is Nothing") retryType
+  req <- QSReq.findByTransactionId parentSearchId >>= fromMaybeM (SearchRequestNotFound parentSearchId)
+  return $
+    SearchRetry.SearchRequestRetry
+      { id = cast searchid,
+        parentSearchId = req.id,
+        retryCreatedAt = now,
+        retryType = justRetryType
+      }

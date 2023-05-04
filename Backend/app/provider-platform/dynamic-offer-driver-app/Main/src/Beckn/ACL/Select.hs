@@ -63,5 +63,7 @@ buildSelectReq subscriber req = do
         autoAssignEnabled = order.fulfillment.tags.auto_assign_enabled,
         customerLanguage = order.fulfillment.tags.customer_language,
         customerExtraFee = customerExtraFee,
-        estimateId = Id item.id
+        estimateId = Id item.id,
+        parentTransactionId = order.fulfillment.tags.parentSearchId,
+        retryType = order.fulfillment.tags.retryType
       }

@@ -29,9 +29,22 @@ import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 -- If end is Just, then bpp sends quotes both for RENTAL and ONE_WAY
 data FulfillmentInfo = FulfillmentInfo
   { start :: StartInfo,
+    tags :: Tags,
     end :: Maybe StopInfo
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
+newtype Tags = Tags
+  { search_id :: Maybe Text
+  }
+  deriving (Generic, Show)
+
 instance ToSchema FulfillmentInfo where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+instance FromJSON Tags
+
+instance ToJSON Tags
+
+instance ToSchema Tags where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

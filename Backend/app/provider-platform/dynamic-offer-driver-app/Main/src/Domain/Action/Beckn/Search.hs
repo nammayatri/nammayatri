@@ -68,7 +68,8 @@ data DSearchReq = DSearchReq
     dropLocation :: LatLong,
     routeDistance :: Maybe Meters,
     routeDuration :: Maybe Seconds,
-    device :: Maybe Text
+    device :: Maybe Text,
+    parentSearchId :: Maybe Text
   }
 
 data SpecialZoneQuoteInfo = SpecialZoneQuoteInfo
@@ -122,9 +123,23 @@ handler merchantId sReq = do
       toLocationLatLong = sReq.dropLocation
   unlessM (rideServiceable org.geofencingConfig QGeometry.someGeometriesContain fromLocationLatLong (Just toLocationLatLong)) $
     throwError RideNotServiceable
-  result <- getDistanceAndDuration merchantId fromLocationLatLong toLocationLatLong sReq.routeDistance sReq.routeDuration
-  CD.cacheDistance sReq.transactionId (result.distance, result.duration)
   Redis.setExp (CD.deviceKey sReq.transactionId) sReq.device 120
+  result <-
+    case sReq.parentSearchId of
+      Just searchId -> do
+        mbDistanceAndDuration <- CD.getCacheDistance searchId
+        case mbDistanceAndDuration of
+          Just distanceAndDuration -> do
+            CD.cacheDistance sReq.transactionId distanceAndDuration
+            return DistanceAndDuration {distance = fst distanceAndDuration, duration = snd distanceAndDuration}
+          Nothing -> do
+            distanceAndDuration <- getDistanceAndDuration merchantId fromLocationLatLong toLocationLatLong sReq.routeDistance sReq.routeDuration
+            CD.cacheDistance sReq.transactionId (distanceAndDuration.distance, distanceAndDuration.duration)
+            return distanceAndDuration
+      Nothing -> do
+        distanceAndDuration <- getDistanceAndDuration merchantId fromLocationLatLong toLocationLatLong sReq.routeDistance sReq.routeDuration
+        CD.cacheDistance sReq.transactionId (distanceAndDuration.distance, distanceAndDuration.duration)
+        return distanceAndDuration
   logDebug $ "distance: " <> show result.distance
   mbSpecialLocation <- QSpecialLocation.findSpecialLocationByLatLong fromLocationLatLong
 

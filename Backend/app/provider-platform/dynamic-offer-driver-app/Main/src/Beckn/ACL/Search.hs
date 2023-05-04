@@ -52,5 +52,6 @@ buildSearchReq subscriber req = do
         dropLocation = LatLong {lat = dropOff.location.gps.lat, lon = dropOff.location.gps.lon},
         routeDistance = (.distance) =<< req.message.routeInfo,
         routeDuration = (.duration) =<< req.message.routeInfo,
-        device = req.message.device
+        device = req.message.device,
+        parentSearchId = intent.fulfillment.tags.search_id
       }

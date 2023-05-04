@@ -33,6 +33,7 @@ buildOneWaySearchReq ::
   Maybe Text ->
   Maybe Meters ->
   Maybe Seconds ->
+  Maybe (Id DSearchReq.SearchRequest) ->
   m (BecknReq Search.SearchMessage)
 buildOneWaySearchReq DOneWaySearch.OneWaySearchRes {..} = buildSearchReq origin (Just destination) searchId now city
 
@@ -40,7 +41,7 @@ buildRentalSearchReq ::
   (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
   DRentalSearch.RentalSearchRes ->
   m (BecknReq Search.SearchMessage)
-buildRentalSearchReq DRentalSearch.RentalSearchRes {..} = buildSearchReq origin Nothing searchId startTime city Nothing Nothing Nothing
+buildRentalSearchReq DRentalSearch.RentalSearchRes {..} = buildSearchReq origin Nothing searchId startTime city Nothing Nothing Nothing Nothing
 
 buildSearchReq ::
   (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
@@ -52,14 +53,15 @@ buildSearchReq ::
   Maybe Text ->
   Maybe Meters ->
   Maybe Seconds ->
+  Maybe (Id DSearchReq.SearchRequest) ->
   m (BecknReq Search.SearchMessage)
-buildSearchReq origin mbDestination searchId startTime city device distance duration = do
+buildSearchReq origin mbDestination searchId startTime city device distance duration parentSearchId = do
   let transactionId = getId searchId
       messageId = transactionId
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
   context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) bapIDs.cabs bapURIs.cabs Nothing Nothing city
-  let intent = mkIntent origin mbDestination startTime
+  let intent = mkIntent origin mbDestination startTime parentSearchId
   let mbRouteInfo = Search.RouteInfo {distance, duration}
   let searchMessage = Search.SearchMessage intent (Just mbRouteInfo) device
   pure $ BecknReq context searchMessage
@@ -68,8 +70,9 @@ mkIntent ::
   DSearchCommon.SearchReqLocation ->
   Maybe DSearchCommon.SearchReqLocation ->
   UTCTime ->
+  Maybe (Id DSearchReq.SearchRequest) ->
   Search.Intent
-mkIntent origin mbDestination startTime = do
+mkIntent origin mbDestination startTime parentSearchId = do
   let startLocation =
         Search.StartInfo
           { location = mkLocation origin,
@@ -84,6 +87,10 @@ mkIntent origin mbDestination startTime = do
       fulfillment =
         Search.FulfillmentInfo
           { start = startLocation,
+            tags =
+              Search.Tags
+                { search_id = (.getId) <$> parentSearchId
+                },
             end = mbEndLocation
           }
   Search.Intent

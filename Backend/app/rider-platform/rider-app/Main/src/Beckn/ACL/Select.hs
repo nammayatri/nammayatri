@@ -68,7 +68,9 @@ mkOrder dSelectRes = do
           { tags =
               Select.Tags
                 { auto_assign_enabled = autoAssignEnabled,
-                  customer_language = dSelectRes.customerLanguage
+                  customer_language = dSelectRes.customerLanguage,
+                  parentSearchId = (.getId) <$> dSelectRes.parentSearchId,
+                  retryType = dSelectRes.retryType
                 },
             start =
               Select.StartInfo

@@ -67,6 +67,7 @@ library
       API.UI.Route
       API.UI.SavedReqLocation
       API.UI.Search
+      API.UI.SearchRetry
       API.UI.Select
       API.UI.Serviceability
       API.UI.Sos
@@ -123,6 +124,7 @@ library
       Domain.Action.UI.Search.Common
       Domain.Action.UI.Search.OneWay
       Domain.Action.UI.Search.Rental
+      Domain.Action.UI.SearchRetry.OneWayRetry
       Domain.Action.UI.Select
       Domain.Action.UI.Serviceability
       Domain.Action.UI.Sos
@@ -164,6 +166,7 @@ library
       Domain.Types.SavedReqLocation
       Domain.Types.SearchRequest
       Domain.Types.SearchRequest.SearchReqLocation
+      Domain.Types.SearchRetry
       Domain.Types.Sos
       Domain.Types.SpecialZoneQuote
       Domain.Types.TripTerms
@@ -179,6 +182,7 @@ library
       SharedLogic.MessageBuilder
       SharedLogic.MetroOffer
       SharedLogic.PublicTransport
+      SharedLogic.Search
       Storage.CachedQueries.BlackListOrg
       Storage.CachedQueries.CacheConfig
       Storage.CachedQueries.Exophone
@@ -189,6 +193,7 @@ library
       Storage.CachedQueries.Merchant.MerchantServiceUsageConfig
       Storage.CachedQueries.MerchantConfig
       Storage.CachedQueries.Person.PersonFlowStatus
+      Storage.CachedQueries.RouteInfo
       Storage.Queries.BlackListOrg
       Storage.Queries.Booking
       Storage.Queries.Booking.BookingLocation
@@ -218,6 +223,7 @@ library
       Storage.Queries.Ride
       Storage.Queries.SavedReqLocation
       Storage.Queries.SearchRequest
+      Storage.Queries.SearchRetry
       Storage.Queries.Sos
       Storage.Queries.SpecialZoneQuote
       Storage.Queries.TripTerms
@@ -254,6 +260,7 @@ library
       Storage.Tabular.SavedReqLocation
       Storage.Tabular.SearchRequest
       Storage.Tabular.SearchRequest.SearchReqLocation
+      Storage.Tabular.SearchRetry
       Storage.Tabular.Sos
       Storage.Tabular.SpecialZoneQuote
       Storage.Tabular.TripTerms

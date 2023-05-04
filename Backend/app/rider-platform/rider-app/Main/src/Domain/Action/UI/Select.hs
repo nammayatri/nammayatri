@@ -25,6 +25,7 @@ module Domain.Action.UI.Select
   )
 where
 
+import qualified Beckn.Types.Core.Taxi.Select as Select
 import Data.Aeson ((.:), (.=))
 import qualified Data.Aeson as A
 import Data.Aeson.Types (parseFail, typeMismatch)
@@ -53,6 +54,7 @@ import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSearchRequest
+import qualified Storage.Queries.SearchRetry as SearchRetry
 import Tools.Error
 
 data DEstimateSelectReq = DEstimateSelectReq
@@ -78,7 +80,9 @@ data DSelectRes = DSelectRes
     city :: Text,
     customerLanguage :: Maybe Maps.Language,
     customerExtraFee :: Maybe Money,
-    autoAssignEnabled :: Bool
+    autoAssignEnabled :: Bool,
+    parentSearchId :: Maybe (Id DSearchReq.SearchRequest),
+    retryType :: Maybe Select.RetryType
   }
 
 data QuotesResultResponse = QuotesResultResponse
@@ -121,6 +125,7 @@ select personId estimateId req@DEstimateSelectReq {..} = do
   unless (estimate.status /= DEstimate.DRIVER_QUOTE_REQUESTED) $ throwError (InvalidRequest "Estimate already offered")
   when (DEstimate.isCancelled estimate.status) $ throwError $ EstimateCancelled estimate.id.getId
   let searchRequestId = estimate.requestId
+  searchRetry <- SearchRetry.findById searchRequestId
   searchRequest <- QSearchRequest.findByPersonId personId searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist personId.getId)
   merchant <- CQM.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
   when ((searchRequest.validTill) < now) $
@@ -139,6 +144,8 @@ select personId estimateId req@DEstimateSelectReq {..} = do
         variant = estimate.vehicleVariant,
         customerLanguage = searchRequest.language,
         city = merchant.city,
+        parentSearchId = searchRetry <&> (.parentSearchId),
+        retryType = searchRetry <&> (.retryType),
         ..
       }
 

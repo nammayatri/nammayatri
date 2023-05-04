@@ -30,7 +30,6 @@ import qualified Beckn.ACL.Search as TaxiACL
 import Data.Aeson
 import Data.OpenApi hiding (Header)
 import qualified Data.OpenApi as OpenApi hiding (Header)
-import qualified Data.Text as T
 import qualified Domain.Action.UI.Search.Common as DSearchCommon
 import qualified Domain.Action.UI.Search.OneWay as DOneWaySearch
 import qualified Domain.Action.UI.Search.Rental as DRentalSearch
@@ -38,27 +37,24 @@ import qualified Domain.Types.Person as Person
 import Domain.Types.SearchRequest (SearchRequest)
 import Environment
 import Kernel.External.Maps
-import qualified Kernel.External.Slack.Flow as SF
-import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Storage.Hedis (HedisFlow)
-import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Topic.PublicTransportSearch
 import Kernel.Streaming.MonadProducer
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Types.SlidingWindowLimiter
 import Kernel.Types.Version
 import Kernel.Utils.Common
-import Kernel.Utils.SlidingWindowLimiter
 import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.PublicTransport as PublicTransport
+import qualified SharedLogic.Search as Search
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
+import Storage.CachedQueries.RouteInfo as Redis
 import qualified Storage.Queries.Person as Person
 import Tools.Auth
 import qualified Tools.JSON as J
@@ -120,7 +116,7 @@ fareProductConstructorModifier = \case
 
 search :: Id Person.Person -> SearchReq -> Maybe Version -> Maybe Version -> Maybe Text -> FlowHandler SearchRes
 search personId req mbBundleVersion mbClientVersion device = withFlowHandlerAPI . withPersonIdLogTag personId $ do
-  checkSearchRateLimit personId
+  Search.checkSearchRateLimit personId
   updateVersions personId mbBundleVersion mbClientVersion
   (searchId, searchExpiry, routeInfo) <- case req of
     OneWaySearch oneWay -> oneWaySearch personId mbBundleVersion mbClientVersion device oneWay
@@ -159,48 +155,20 @@ oneWaySearch personId bundleVersion clientVersion device req = do
             mode = Just Maps.CAR
           }
   routeResponse <- Maps.getRoutes person.merchantId request
-  let shortestRouteInfo = getRouteInfoWithShortestDuration routeResponse
-  let longestRouteDistance = (.distance) =<< getLongestRouteDistance routeResponse
+  let shortestRouteInfo = Search.getRouteInfoWithShortestDuration routeResponse
+  let longestRouteDistance = (.distance) =<< Search.getLongestRouteDistance routeResponse
   let shortestRouteDistance = (.distance) =<< shortestRouteInfo
   let shortestRouteDuration = (.duration) =<< shortestRouteInfo
   dSearchRes <- DOneWaySearch.oneWaySearch person merchant req bundleVersion clientVersion longestRouteDistance device shortestRouteDistance shortestRouteDuration
+  Redis.cacheRouteInfo dSearchRes.searchId routeResponse
   fork "search cabs" . withShortRetry $ do
-    becknTaxiReq <- TaxiACL.buildOneWaySearchReq dSearchRes device shortestRouteDistance shortestRouteDuration
+    becknTaxiReq <- TaxiACL.buildOneWaySearchReq dSearchRes device shortestRouteDistance shortestRouteDuration Nothing
     void $ CallBPP.search dSearchRes.gatewayUrl becknTaxiReq
   fork "search metro" . withShortRetry $ do
     becknMetroReq <- MetroACL.buildSearchReq dSearchRes
     CallBPP.searchMetro dSearchRes.gatewayUrl becknMetroReq
   fork "search public-transport" $ PublicTransport.sendPublicTransportSearchRequest personId dSearchRes
   return (dSearchRes.searchId, dSearchRes.searchRequestExpiry, shortestRouteInfo)
-
-getLongestRouteDistance :: [Maps.RouteInfo] -> Maybe Maps.RouteInfo
-getLongestRouteDistance [] = Nothing
-getLongestRouteDistance (routeInfo : routeInfoArray) =
-  if null routeInfoArray
-    then Just routeInfo
-    else do
-      restRouteresult <- getLongestRouteDistance routeInfoArray
-      Just $ comparator' routeInfo restRouteresult
-  where
-    comparator' route1 route2 =
-      if route1.distance > route2.distance
-        then route1
-        else route2
-
-getRouteInfoWithShortestDuration :: [Maps.RouteInfo] -> Maybe Maps.RouteInfo
-getRouteInfoWithShortestDuration (routeInfo : routeInfoArray) =
-  if null routeInfoArray
-    then Just routeInfo
-    else do
-      restRouteresult <- getRouteInfoWithShortestDuration routeInfoArray
-      Just $ comparator routeInfo restRouteresult
-getRouteInfoWithShortestDuration [] = Nothing
-
-comparator :: Maps.RouteInfo -> Maps.RouteInfo -> Maps.RouteInfo
-comparator route1 route2 =
-  if route1.duration < route2.duration
-    then route1
-    else route2
 
 rentalSearch ::
   ( HasCacheConfig r,
@@ -227,29 +195,6 @@ rentalSearch personId bundleVersion clientVersion device req = do
     becknReq <- TaxiACL.buildRentalSearchReq dSearchRes
     void $ CallBPP.search dSearchRes.gatewayUrl becknReq
   pure (dSearchRes.searchId, dSearchRes.searchRequestExpiry, Nothing)
-
-checkSearchRateLimit ::
-  ( Redis.HedisFlow m r,
-    CoreMetrics m,
-    HasFlowEnv m r '["slackCfg" ::: SlackConfig],
-    HasFlowEnv m r '["searchRateLimitOptions" ::: APIRateLimitOptions],
-    HasFlowEnv m r '["searchLimitExceedNotificationTemplate" ::: Text],
-    MonadTime m
-  ) =>
-  Id Person.Person ->
-  m ()
-checkSearchRateLimit personId = do
-  let key = searchHitsCountKey personId
-  hitsLimit <- asks (.searchRateLimitOptions.limit)
-  limitResetTimeInSec <- asks (.searchRateLimitOptions.limitResetTimeInSec)
-  unlessM (slidingWindowLimiter key hitsLimit limitResetTimeInSec) $ do
-    msgTemplate <- asks (.searchLimitExceedNotificationTemplate)
-    let message = T.replace "{#cust-id#}" (getId personId) msgTemplate
-    _ <- SF.postMessage message
-    throwError $ HitsLimitError limitResetTimeInSec
-
-searchHitsCountKey :: Id Person.Person -> Text
-searchHitsCountKey personId = "BAP:Ride:search:" <> getId personId <> ":hitsCount"
 
 updateVersions :: EsqDBFlow m r => Id Person.Person -> Maybe Version -> Maybe Version -> m ()
 updateVersions personId mbBundleVersion mbClientVersion = do

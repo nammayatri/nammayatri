@@ -35,6 +35,7 @@ import qualified API.UI.Ride as Ride
 import qualified API.UI.Route as Route
 import qualified API.UI.SavedReqLocation as SavedReqLocation
 import qualified API.UI.Search as Search
+import qualified API.UI.SearchRetry as SearchRetry
 import qualified API.UI.Select as Select
 import qualified API.UI.Serviceability as Serviceability
 import qualified API.UI.Sos as Sos
@@ -73,6 +74,7 @@ type API =
            :<|> Frontend.API
            :<|> Whatsapp.API
            :<|> Sos.API
+           :<|> SearchRetry.API
        )
 
 handler :: FlowServer API
@@ -102,3 +104,4 @@ handler =
     :<|> Frontend.handler
     :<|> Whatsapp.handler
     :<|> Sos.handler
+    :<|> SearchRetry.handler

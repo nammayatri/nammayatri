@@ -36,9 +36,14 @@ data FulfillmentInfo = FulfillmentInfo
 
 data Tags = Tags
   { auto_assign_enabled :: Bool,
-    customer_language :: Maybe Language
+    customer_language :: Maybe Language,
+    parentSearchId :: Maybe Text,
+    retryType :: Maybe RetryType
   }
   deriving (Generic, Show)
+
+data RetryType = CancelledAndRetried | Retried
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance ToSchema FulfillmentInfo where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

@@ -184,6 +184,7 @@ library
       Domain.Types.SearchRequest
       Domain.Types.SearchRequest.SearchReqLocation
       Domain.Types.SearchRequestForDriver
+      Domain.Types.SearchRequestRetry
       Domain.Types.SearchRequestSpecialZone
       Domain.Types.SlabFarePolicy
       Domain.Types.Vehicle
@@ -287,6 +288,7 @@ library
       Storage.Queries.RiderDetails
       Storage.Queries.SearchRequest
       Storage.Queries.SearchRequestForDriver
+      Storage.Queries.SearchRequestRetry
       Storage.Queries.SearchRequestSpecialZone
       Storage.Queries.SlabFarePolicy
       Storage.Queries.Vehicle
@@ -344,6 +346,7 @@ library
       Storage.Tabular.SearchRequest
       Storage.Tabular.SearchRequest.SearchReqLocation
       Storage.Tabular.SearchRequestForDriver
+      Storage.Tabular.SearchRequestRetry
       Storage.Tabular.SearchRequestSpecialZone
       Storage.Tabular.SlabFarePolicy
       Storage.Tabular.Vehicle
