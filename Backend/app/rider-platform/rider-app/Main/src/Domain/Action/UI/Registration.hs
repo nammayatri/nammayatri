@@ -57,8 +57,8 @@ import Kernel.Utils.Validation
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
+import qualified Storage.CachedQueries.Person.PersonFlowStatus as QDFS
 import qualified Storage.Queries.Person as Person
-import qualified Storage.Queries.Person.PersonFlowStatus as QDFS
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import Tools.Auth (authTokenCacheKey)
 import Tools.Error

@@ -23,9 +23,9 @@ import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.Estimate as QEstimate
-import qualified Storage.Queries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSReq
 import Tools.Error
@@ -83,6 +83,7 @@ confirm personId quoteId = do
     QRideB.create booking
     QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill}
     QEstimate.updateStatusbyRequestId quote.requestId DEstimate.COMPLETED
+  QPFS.clearCache searchRequest.riderId
   return $
     DConfirmRes
       { booking,

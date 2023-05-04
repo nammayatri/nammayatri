@@ -38,11 +38,11 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig (HasCacheConfig)
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Ride as QR
 import Tools.Error
 
@@ -142,11 +142,11 @@ mkDomainCancelSearch personId estimateId = do
           }
 
 cancelSearch ::
-  (EsqDBFlow m r) =>
+  (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r) =>
   Id Person.Person ->
   CancelSearch ->
   m ()
-cancelSearch personId dcr =
+cancelSearch personId dcr = do
   if dcr.estimateStatus == DEstimate.GOT_DRIVER_QUOTE
     then Esq.runTransaction $ do
       Esq.runTransaction $ QPFS.updateStatus personId DPFS.IDLE
@@ -155,3 +155,4 @@ cancelSearch personId dcr =
       Esq.runTransaction $ do
         Esq.runTransaction $ QPFS.updateStatus personId DPFS.IDLE
         QEstimate.updateStatus dcr.estimateId DEstimate.CANCELLED
+  QPFS.clearCache personId

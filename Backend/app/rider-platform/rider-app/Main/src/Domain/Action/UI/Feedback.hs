@@ -28,8 +28,8 @@ import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRB
-import qualified Storage.Queries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 
@@ -64,6 +64,7 @@ feedback request = do
   DB.runTransaction $ do
     QRide.updateRideRating rideId ratingValue
     QPFS.updateStatus booking.riderId DPFS.IDLE
+  QPFS.clearCache booking.riderId
   pure
     FeedbackRes
       { providerId = booking.providerId,
