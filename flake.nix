@@ -8,6 +8,8 @@
     beckn-gateway.inputs.common.follows = "common";
     beckn-gateway.inputs.shared-kernel.follows = "shared-kernel";
     purifix.url = "github:purifix/purifix";
+
+    dream2nix.url = "github:nix-community/dream2nix";
   };
   outputs = inputs:
     inputs.common.lib.mkFlake { inherit inputs; } {
