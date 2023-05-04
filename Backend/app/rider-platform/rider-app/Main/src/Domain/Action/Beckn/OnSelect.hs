@@ -37,9 +37,9 @@ import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.Confirm as SConfirm
+import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person as Person
-import qualified Storage.Queries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSR
 import Tools.Error
@@ -97,6 +97,7 @@ onSelect DOnSelectReq {..} = do
     QQuote.createMany quotes
     QPFS.updateStatus searchRequest.riderId DPFS.DRIVER_OFFERED_QUOTE {estimateId = estimate.id, validTill = searchRequest.validTill}
     QEstimate.updateStatus estimate.id DEstimate.GOT_DRIVER_QUOTE
+  QPFS.clearCache searchRequest.riderId
 
   if estimate.autoAssignEnabledV2
     then do

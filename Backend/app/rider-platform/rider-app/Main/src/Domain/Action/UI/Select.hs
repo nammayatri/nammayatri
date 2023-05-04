@@ -48,9 +48,9 @@ import Kernel.Types.Predicate
 import Kernel.Utils.Common
 import Kernel.Utils.Validation
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
-import qualified Storage.Queries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
@@ -130,6 +130,7 @@ select personId estimateId req@DEstimateSelectReq {..} = do
     QEstimate.updateAutoAssign estimateId autoAssignEnabled (fromMaybe False autoAssignEnabledV2)
     when (isJust req.customerExtraFee) $ do
       QSearchRequest.updateCustomerExtraFee searchRequest.id req.customerExtraFee
+  QPFS.clearCache searchRequest.riderId
   pure
     DSelectRes
       { providerId = estimate.providerId,

@@ -144,10 +144,10 @@ callGetDriverLocation ::
   ( MonadFlow m,
     CoreMetrics m
   ) =>
-  DRide.Ride ->
+  Maybe BaseUrl ->
   m GetLocationRes
-callGetDriverLocation ride = do
-  trackingUrl <- ride.trackingUrl & fromMaybeM (RideFieldNotPresent "trackingUrl")
+callGetDriverLocation mTrackingUrl = do
+  trackingUrl <- mTrackingUrl & fromMaybeM (RideFieldNotPresent "trackingUrl")
   let eulerClient = Euler.client (Proxy @(Get '[JSON] GetLocationRes))
   callApiUnwrappingApiError (identity @TrackUrlError) Nothing (Just "TRACK_URL_NOT_AVAILABLE") trackingUrl eulerClient "BPP.driverTrackUrl" (Proxy @(Get '[JSON] GetLocationRes))
 

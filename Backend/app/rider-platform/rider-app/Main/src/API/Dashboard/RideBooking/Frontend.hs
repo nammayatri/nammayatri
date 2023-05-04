@@ -39,6 +39,7 @@ type API =
 type PersonFlowStatusAPI =
   "flowStatus"
     :> Capture "customerId" (Id DP.Person)
+    :> QueryParam "isPolling" Bool
     :> Get '[JSON] DFrontend.GetPersonFlowStatusRes
 
 type NotifyEventAPI =
@@ -52,8 +53,8 @@ handler =
   callGetPersonFlowStatus
     :<|> callNotifyEvent
 
-callGetPersonFlowStatus :: Id DP.Person -> FlowHandler DFrontend.GetPersonFlowStatusRes
-callGetPersonFlowStatus = withFlowHandlerAPI . DFrontend.getPersonFlowStatus
+callGetPersonFlowStatus :: Id DP.Person -> Maybe Bool -> FlowHandler DFrontend.GetPersonFlowStatusRes
+callGetPersonFlowStatus personId = withFlowHandlerAPI . DFrontend.getPersonFlowStatus personId
 
 callNotifyEvent :: Id DP.Person -> DFrontend.NotifyEventReq -> FlowHandler DFrontend.NotifyEventResp
 callNotifyEvent personId = withFlowHandlerAPI . DFrontend.notifyEvent personId

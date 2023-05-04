@@ -33,6 +33,7 @@ import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.VehicleVariant
 import Environment
+import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Hedis.Config (HedisFlow)
@@ -40,12 +41,12 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBPP as CallBPP
 import Storage.CachedQueries.CacheConfig
+import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSR
 import Tools.Error
@@ -162,7 +163,8 @@ onUpdate RideAssignedReq {..} = do
   DB.runTransaction $ do
     QRB.updateStatus booking.id SRB.TRIP_ASSIGNED
     QRide.create ride
-    QPFS.updateStatus booking.riderId DPFS.RIDE_ASSIGNED {rideId = ride.id}
+    QPFS.updateStatus booking.riderId DPFS.RIDE_PICKUP {rideId = ride.id, bookingId = booking.id, trackingUrl = Nothing, otp, vehicleNumber, fromLocation = Maps.getCoordinates booking.fromLocation, driverLocation = Nothing}
+  QPFS.clearCache booking.riderId
   Notify.notifyOnRideAssigned booking ride
   withLongRetry $ CallBPP.callTrack booking ride
   where
@@ -203,6 +205,8 @@ onUpdate RideStartedReq {..} = do
             }
   DB.runTransaction $ do
     QRide.updateMultiple updRideForStartReq.id updRideForStartReq
+    QPFS.updateStatus booking.riderId DPFS.RIDE_STARTED {rideId = ride.id, bookingId = booking.id, trackingUrl = ride.trackingUrl, driverLocation = Nothing}
+  QPFS.clearCache booking.riderId
   Notify.notifyOnRideStarted booking ride
 onUpdate RideCompletedReq {..} = do
   booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
@@ -231,6 +235,7 @@ onUpdate RideCompletedReq {..} = do
     QRide.updateMultiple updRide.id updRide
     QFareBreakup.createMany breakups
     QPFS.updateStatus booking.riderId DPFS.PENDING_RATING {rideId = ride.id}
+  QPFS.clearCache booking.riderId
   Notify.notifyOnRideCompleted booking updRide
   where
     buildFareBreakup :: MonadFlow m => Id SRB.Booking -> OnUpdateFareBreakup -> m DFareBreakup.FareBreakup
@@ -254,6 +259,7 @@ onUpdate BookingCancelledReq {..} = do
     unless (cancellationSource == SBCR.ByUser) $
       QBCR.upsert bookingCancellationReason
     QPFS.updateStatus booking.riderId DPFS.IDLE
+  QPFS.clearCache booking.riderId
   -- notify customer
   Notify.notifyOnBookingCancelled booking cancellationSource
   where
@@ -293,6 +299,7 @@ onUpdate EstimateRepetitionReq {..} = do
     QRide.updateStatus ride.id SRide.CANCELLED
     QBCR.upsert bookingCancellationReason
     QPFS.updateStatus searchReq.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimate.id, validTill = searchReq.validTill}
+  QPFS.clearCache searchReq.riderId
   -- notify customer
   Notify.notifyOnEstimatedReallocated booking estimate.id
 

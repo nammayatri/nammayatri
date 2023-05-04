@@ -47,8 +47,8 @@ import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant as QMerch
+import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Estimate as QEstimate
-import qualified Storage.Queries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSearchReq
 import Tools.Error
@@ -153,6 +153,7 @@ onSearchService transactionId DOnSearchReq {..} = do
     QEstimate.createMany estimates
     QQuote.createMany quotes
     QPFS.updateStatus _searchRequest.riderId DPFS.GOT_ESTIMATE {requestId = _searchRequest.id, validTill = _searchRequest.validTill}
+  QPFS.clearCache _searchRequest.riderId
 
 buildEstimate ::
   MonadFlow m =>
