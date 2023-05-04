@@ -1678,7 +1678,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                 String returnedAddressStr = String.valueOf(returnedAddressStrBuilder);
                 returnedAddressStr = returnedAddressStr.replaceAll("'", "");
                 String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s','%s');",
-                        callback, String.valueOf(latitude), String.valueOf(longitude), returnedAddressStr);
+                        callback, latitude, longitude, returnedAddressStr);
                 Log.d(LOG_TAG, "getCurrent___Position___inside if" + latitude + longitude);
                 dynamicUI.addJsToWebView(javascript);
             }
