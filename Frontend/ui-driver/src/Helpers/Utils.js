@@ -295,7 +295,7 @@ export const clearAllTimer = function(a) {
 export const setRefreshing = function (id){
   return function (bool){
     if (window.__OS == "ANDROID") {
-      cmd = "set_v=ctx->findViewById:i_" + id + ";get_v->setRefreshing:b_" + bool + ";"
+      var cmd = "set_v=ctx->findViewById:i_" + id + ";get_v->setRefreshing:b_" + bool + ";"
       Android.runInUI(cmd,null)
     }
   }
@@ -304,7 +304,7 @@ export const setRefreshing = function (id){
 export const setEnabled = function (id){
   return function (bool){
     if (window.__OS == "ANDROID") {
-      cmd = "set_v=ctx->findViewById:i_" + id + ";get_v->setEnabled:b_" + bool + ";"
+      var cmd = "set_v=ctx->findViewById:i_" + id + ";get_v->setEnabled:b_" + bool + ";"
       Android.runInUI(cmd,null)
     }
   }

@@ -25,7 +25,7 @@
     "start:android:master": "npm-run-all -p dev webpack-dev-master",
     "start:android:prod": "npm-run-all -p dev webpack-dev-prod",
     "repl": "spago repl",
-    "clean:s": "sh cleanSpago.sh"
+    "clean": "sh cleanSpago.sh"
   },
   "author": "juspay",
   "license": "ISC",

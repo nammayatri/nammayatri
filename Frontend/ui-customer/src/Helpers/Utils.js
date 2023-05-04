@@ -26,7 +26,7 @@ export const getLocationName = function(cb){
                     return function(){
                         var callback = callbackMapper.map(function (lat,lon,result){
                             var decodedString = decodeURIComponent(result).replace(/\+/g, ' ');
-                            cb(action(lat)(lon)(decodedString))();
+                            cb(action(parseFloat(lat))(parseFloat(lon))(decodedString))();
                         });
                         return window.JBridge.getLocationName(lat, lng, defaultText, callback);
                     }
