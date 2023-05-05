@@ -1706,7 +1706,13 @@ cancelEstimate bookingId = do
       -- TODO : to be removed after new bundle is 100% available (replace with pure unit)
       let (CancelEstimateRes resp) = res
       case resp.result of
-        "Success" -> pure unit
+        "Success" -> do 
+          if(getValueToLocalStore FLOW_WITHOUT_OFFERS == "true") then do
+            _ <- pure $ firebaseLogEvent "ny_user_cancel_waiting_for_driver_assign"
+            pure unit
+            else do
+              _ <- pure $ firebaseLogEvent "ny_user_cancel_waiting_for_quotes"
+              pure unit
         "BookingAlreadyCreated" -> do
           void $ pure $ toast "ACTIVE BOOKING EXISTS"
           _ <- pure $ firebaseLogEvent "ny_fs_cancel_estimate_booking_exists_right"
