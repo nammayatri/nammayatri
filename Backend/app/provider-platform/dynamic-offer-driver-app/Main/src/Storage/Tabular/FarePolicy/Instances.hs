@@ -21,8 +21,8 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails
 import Storage.Tabular.FarePolicy.DriverExtraFeeBounds (DriverExtraFeeBoundsT, FullDriverExtraFeeBounds)
+import Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails
 import Storage.Tabular.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
 import Storage.Tabular.FarePolicy.Table
 import Storage.Tabular.Vehicle ()
@@ -30,7 +30,7 @@ import Tools.Error
 
 type FullFarePolicyT = (FarePolicyT, [DriverExtraFeeBoundsT], FarePolicyDetailsT)
 
-data FarePolicyDetailsT = ProgressiveDetailsT FarePolicyProgressiveDetailsT | SlabsDetailsT [FarePolicySlabsDetailsSlabT]
+data FarePolicyDetailsT = ProgressiveDetailsT FullFarePolicyProgressiveDetailsT | SlabsDetailsT [FarePolicySlabsDetailsSlabT]
 
 instance FromTType FullFarePolicyT Domain.FarePolicy where
   fromTType (FarePolicyT {..}, driverExtraFareBoundsTList, farePolicyDetails) = do

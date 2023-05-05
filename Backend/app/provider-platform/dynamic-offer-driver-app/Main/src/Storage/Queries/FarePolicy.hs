@@ -27,10 +27,11 @@ import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.FarePolicy.DriverExtraFeeBounds as QFPDriverExtraFeeBounds
+import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as QFPProgressiveDetPerExtraKmSlabs
 import qualified Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab as QFPSlabDetSlabs
 import Storage.Queries.FullEntityBuilders (buildFullFarePolicy)
 import Storage.Tabular.FarePolicy
-import Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails (EntityField (FarePolicyProgressiveDetailsBaseDistance, FarePolicyProgressiveDetailsBaseFare, FarePolicyProgressiveDetailsDeadKmFare, FarePolicyProgressiveDetailsNightShiftCharge, FarePolicyProgressiveDetailsPerExtraKmFare, FarePolicyProgressiveDetailsTId), FarePolicyProgressiveDetailsT (..))
+import Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails
 import Storage.Tabular.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab ()
 import Storage.Tabular.FarePolicy.Instances
 
@@ -88,18 +89,19 @@ update farePolicy = do
       QFPDriverExtraFeeBounds.deleteAll' farePolicy.id
       Esq.createMany' driverExtraFeeBoundsT
 
-    updateProgressiveDetails FarePolicyProgressiveDetailsT {..} = do
-      void $
-        Esq.update' $ \tbl -> do
-          set
-            tbl
-            [ FarePolicyProgressiveDetailsBaseFare =. val baseFare,
-              FarePolicyProgressiveDetailsBaseDistance =. val baseDistance,
-              FarePolicyProgressiveDetailsPerExtraKmFare =. val perExtraKmFare,
-              FarePolicyProgressiveDetailsDeadKmFare =. val deadKmFare,
-              FarePolicyProgressiveDetailsNightShiftCharge =. val nightShiftCharge
-            ]
-          where_ $ tbl ^. FarePolicyProgressiveDetailsTId ==. val (toKey farePolicy.id)
+    updateProgressiveDetails (FarePolicyProgressiveDetailsT {..}, perExtraKmRateSectionsT) = do
+      Esq.update' $ \tbl -> do
+        set
+          tbl
+          [ FarePolicyProgressiveDetailsBaseFare =. val baseFare,
+            FarePolicyProgressiveDetailsBaseDistance =. val baseDistance,
+            FarePolicyProgressiveDetailsDeadKmFare =. val deadKmFare,
+            FarePolicyProgressiveDetailsNightShiftCharge =. val nightShiftCharge
+          ]
+        where_ $ tbl ^. FarePolicyProgressiveDetailsTId ==. val (toKey farePolicy.id)
+
+      QFPProgressiveDetPerExtraKmSlabs.deleteAll' farePolicy.id
+      Esq.createMany' perExtraKmRateSectionsT
     updateSlabsDetails dets = do
       QFPSlabDetSlabs.deleteAll' farePolicy.id
       Esq.createMany' dets

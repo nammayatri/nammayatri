@@ -18,6 +18,8 @@ module SharedLogic.Estimate
   )
 where
 
+import qualified Data.List.NonEmpty as NE
+import Data.Ord (comparing)
 import Domain.Types.Estimate as DEst
 import Domain.Types.FarePolicy
 import qualified Domain.Types.FarePolicy as DFP
@@ -99,11 +101,12 @@ buildEstimate transactionId startTime dist farePolicy = do
 
 mkAdditionalBreakups :: (Money -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> Meters -> FarePolicy -> [breakupItem]
 mkAdditionalBreakups mkPrice mkBreakupItem distance farePolicy = do
-  let driverMinExtraFee = farePolicy.driverExtraFeeBounds <&> (.minFee)
+  let driverExtraFeeBounds = findDriverExtraFeeBoundsByDistance distance <$> farePolicy.driverExtraFeeBounds
+  let driverMinExtraFee = driverExtraFeeBounds <&> (.minFee)
       driverMinExtraFeeCaption = "DRIVER_MIN_EXTRA_FEE"
       driverMinExtraFeeItem = mkBreakupItem driverMinExtraFeeCaption . mkPrice <$> driverMinExtraFee
 
-      driverMaxExtraFee = farePolicy.driverExtraFeeBounds <&> (.maxFee)
+      driverMaxExtraFee = driverExtraFeeBounds <&> (.maxFee)
       driverMaxExtraFeeCaption = "DRIVER_MAX_EXTRA_FEE"
       driverMaxExtraFeeItem = mkBreakupItem driverMaxExtraFeeCaption . mkPrice <$> driverMaxExtraFee
 
@@ -119,9 +122,8 @@ mkAdditionalBreakups mkPrice mkBreakupItem distance farePolicy = do
       DFP.SlabsDetails det -> mkAdditionalSlabBreakups $ DFP.findFPSlabsDetailsSlabByDistance distance det.slabs
 
     mkAdditionalProgressiveBreakups det = do
-      let perExtraKmFare = roundToIntegral det.perExtraKmFare
+      let (perExtraKmFareSection :| _) = NE.sortBy (comparing (.startDistance)) det.perExtraKmRateSections
           perExtraKmFareCaption = "EXTRA_PER_KM_FARE"
-          perExtraKmFareItem = mkBreakupItem perExtraKmFareCaption (mkPrice perExtraKmFare)
+          perExtraKmFareItem = mkBreakupItem perExtraKmFareCaption (mkPrice $ roundToIntegral perExtraKmFareSection.perExtraKmRate)
       [perExtraKmFareItem]
-
     mkAdditionalSlabBreakups _ = []

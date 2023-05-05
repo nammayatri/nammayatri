@@ -21,6 +21,7 @@ module SharedLogic.FareCalculator
   )
 where
 
+import qualified Data.List.NonEmpty as NE
 import Data.Time
   ( LocalTime (localTimeOfDay),
     TimeOfDay (..),
@@ -169,7 +170,7 @@ calculateFareParameters params = do
       let mbExtraDistance =
             params.distance - baseDistance
               & (\dist -> if dist > 0 then Just dist else Nothing)
-          mbExtraKmFare = mbExtraDistance <&> \extDist -> roundToIntegral $ fromIntegral @_ @Centesimal (metersToKilometers extDist) * realToFrac perExtraKmFare
+          mbExtraKmFare = processFPProgressiveDetailsPerExtraKmFare perExtraKmRateSections . metersToKilometers <$> mbExtraDistance
       ( baseFare,
         nightShiftCharge,
         waitingCharge,
@@ -179,6 +180,19 @@ calculateFareParameters params = do
               ..
             }
         )
+    processFPProgressiveDetailsPerExtraKmFare perExtraKmRateSections (extraDistance :: Kilometers) = do
+      let sortedPerExtraKmFareSections = NE.sortBy (comparing (.startDistance)) perExtraKmRateSections
+      processFPProgressiveDetailsPerExtraKmFare' sortedPerExtraKmFareSections extraDistance
+      where
+        processFPProgressiveDetailsPerExtraKmFare' _ 0 = 0 :: Money
+        processFPProgressiveDetailsPerExtraKmFare' sortedPerExtraKmFareSectionsLeft (extraDistanceLeft :: Kilometers) =
+          case sortedPerExtraKmFareSectionsLeft of
+            aSection :| [] -> roundToIntegral $ fromIntegral @_ @Centesimal extraDistanceLeft * realToFrac aSection.perExtraKmRate
+            aSection :| bSection : leftSections -> do
+              let sectionDistance = bSection.startDistance - aSection.startDistance
+                  extraDistanceWithinSection = min sectionDistance extraDistanceLeft
+              roundToIntegral (fromIntegral @_ @Centesimal extraDistanceWithinSection * realToFrac aSection.perExtraKmRate)
+                + processFPProgressiveDetailsPerExtraKmFare' (bSection :| leftSections) (extraDistanceLeft - sectionDistance)
 
     processFPSlabsDetailsSlab DFP.FPSlabsDetailsSlab {..} = do
       (baseFare, nightShiftCharge, waitingCharge, DFParams.SlabDetails DFParams.FParamsSlabDetails)
