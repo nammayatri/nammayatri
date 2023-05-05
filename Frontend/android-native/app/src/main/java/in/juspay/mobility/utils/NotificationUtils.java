@@ -362,7 +362,7 @@ public class NotificationUtils extends AppCompatActivity {
                                 lastRideReq = new Bundle();
                                 lastRideReq.putAll(sheetData);
                                 lastRideReq.putBoolean("rideReqExpired", rideReqExpired);
-                                startMediaPlayer(context, R.raw.allocation_request);
+                                startMediaPlayer(context, R.raw.allocation_request, true);
                                 rideRequestUtils.createRideRequestNotification(context);
                             }catch (Exception e){
                                 params.putString("exception", e.toString());
@@ -517,9 +517,9 @@ public class NotificationUtils extends AppCompatActivity {
                 if (key.equals("nammayatripartner"))
                     mFirebaseAnalytics.logEvent("ride_cancelled",params);
                 if (key.equals("nammayatripartner") && msg.contains("Customer had to cancel your ride")){
-                    startMediaPlayer(context, R.raw.ride_cancelled_media);
+                    startMediaPlayer(context, R.raw.ride_cancelled_media, true);
                 }else{
-                    startMediaPlayer(context, R.raw.cancel_notification_sound);
+                    startMediaPlayer(context, R.raw.cancel_notification_sound, false);
                 }
             }
             if (DRIVER_ASSIGNMENT.equals(notificationType) ) {
@@ -527,7 +527,7 @@ public class NotificationUtils extends AppCompatActivity {
                 mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
                 if (key.equals("nammayatripartner")) {
                     mFirebaseAnalytics.logEvent("driver_assigned",params);
-                    startMediaPlayer(context, R.raw.ride_assigned);
+                    startMediaPlayer(context, R.raw.ride_assigned, true);
                 }
             }
             notificationId ++;
@@ -666,13 +666,13 @@ public class NotificationUtils extends AppCompatActivity {
         return 0;
     }
 
-    private static void startMediaPlayer(Context context, int mediaFile){
+    private static void startMediaPlayer(Context context, int mediaFile, boolean increaseVolume){
         if (mediaPlayer != null){
             mediaPlayer.stop();
             mediaPlayer = null;
         }
         audio = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
-        audio.setStreamVolume(AudioManager.STREAM_MUSIC, (int) audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC), AudioManager.ADJUST_SAME);
+        if (increaseVolume) audio.setStreamVolume(AudioManager.STREAM_MUSIC, (int) audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC), AudioManager.ADJUST_SAME);
         mediaPlayer = MediaPlayer.create(context, mediaFile);
         mediaPlayer.start();
     }
