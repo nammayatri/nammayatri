@@ -14,8 +14,10 @@
 -}
 
 module Components.RateCard.Controller where
+import Screens.Types(RateCardType(..))
 
-data Action = Close | BackPressed | NoAction
+data Action = Close | BackPressed | NoAction | GoToDefaultStart | GoToDriverAddition | GoToFareUpdate
+
 
 type Config = {
     baseFare :: String,
@@ -23,7 +25,9 @@ type Config = {
     pickUpCharges :: String,
     additionalFare :: String,
     nightCharges :: Boolean,
-    nightShiftMultiplier :: String 
+    nightShiftMultiplier :: String, 
+    currentRateCardType :: RateCardType,
+    onFirstPage :: Boolean
 }
 
 config :: Config 
@@ -33,5 +37,7 @@ config = {
     pickUpCharges : "₹10", 
     additionalFare : "₹30",
     nightCharges : false,
-    nightShiftMultiplier : "1.5"
+    nightShiftMultiplier : "1.5",
+    currentRateCardType : DefaultRateCard,
+    onFirstPage : false
 }
