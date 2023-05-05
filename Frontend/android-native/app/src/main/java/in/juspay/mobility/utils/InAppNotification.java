@@ -1,6 +1,4 @@
-package in.juspay.beckn.utils;
-
-import static in.juspay.hypersdk.core.JuspayCoreLib.getApplicationContext;
+package in.juspay.mobility.utils;
 
 import android.app.Activity;
 import android.content.Context;
@@ -14,17 +12,12 @@ import android.view.animation.AnimationUtils;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
-
 import org.json.JSONException;
 import org.json.JSONObject;
-
 import java.util.ArrayList;
-import java.util.Stack;
-
-import in.juspay.beckn.R;
+import in.juspay.mobility.R;
 
 public class InAppNotification extends AppCompatActivity {
     private ConstraintLayout mainLayout ;
