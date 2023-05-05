@@ -20,13 +20,14 @@ where
 
 import Domain.Types.Common
 import Domain.Types.FarePolicy.Common as Reexport
+import Domain.Types.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as Reexport
 import Kernel.Prelude
 import Kernel.Types.Common
 
 data FPProgressiveDetailsD (s :: UsageSafety) = FPProgressiveDetails
   { baseFare :: Money,
     baseDistance :: Meters,
-    perExtraKmFare :: HighPrecMoney,
+    perExtraKmRateSections :: NonEmpty (FPProgressiveDetailsPerExtraKmRateSectionD s),
     deadKmFare :: Money,
     waitingCharge :: Maybe WaitingCharge,
     nightShiftCharge :: Maybe NightShiftCharge
@@ -46,7 +47,7 @@ instance ToJSON (FPProgressiveDetailsD 'Unsafe)
 data FPProgressiveDetailsAPIEntity = FPProgressiveDetailsAPIEntity
   { baseFare :: Money,
     baseDistance :: Meters,
-    perExtraKmFare :: HighPrecMoney,
+    perExtraKmRateSections :: NonEmpty FPProgressiveDetailsPerExtraKmRateSectionAPIEntity,
     deadKmFare :: Money,
     waitingCharge :: Maybe WaitingCharge,
     nightShiftCharge :: Maybe NightShiftCharge
@@ -56,5 +57,6 @@ data FPProgressiveDetailsAPIEntity = FPProgressiveDetailsAPIEntity
 makeFPProgressiveDetailsAPIEntity :: FPProgressiveDetails -> FPProgressiveDetailsAPIEntity
 makeFPProgressiveDetailsAPIEntity FPProgressiveDetails {..} =
   FPProgressiveDetailsAPIEntity
-    { ..
+    { perExtraKmRateSections = makeFPProgressiveDetailsPerExtraKmRateSectionAPIEntity <$> perExtraKmRateSections,
+      ..
     }

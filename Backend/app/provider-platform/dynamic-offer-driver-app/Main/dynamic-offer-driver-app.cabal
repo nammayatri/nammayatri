@@ -160,6 +160,7 @@ library
       Domain.Types.FarePolicy.Common
       Domain.Types.FarePolicy.DriverExtraFeeBounds
       Domain.Types.FarePolicy.FarePolicyProgressiveDetails
+      Domain.Types.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
       Domain.Types.FarePolicy.FarePolicySlabsDetails
       Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
       Domain.Types.Geometry
@@ -262,6 +263,7 @@ library
       Storage.Queries.FareParameters
       Storage.Queries.FarePolicy
       Storage.Queries.FarePolicy.DriverExtraFeeBounds
+      Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
       Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
       Storage.Queries.FullEntityBuilders
       Storage.Queries.Geometry
@@ -319,6 +321,7 @@ library
       Storage.Tabular.FarePolicy
       Storage.Tabular.FarePolicy.DriverExtraFeeBounds
       Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails
+      Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
       Storage.Tabular.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
       Storage.Tabular.FarePolicy.Instances
       Storage.Tabular.FarePolicy.Table

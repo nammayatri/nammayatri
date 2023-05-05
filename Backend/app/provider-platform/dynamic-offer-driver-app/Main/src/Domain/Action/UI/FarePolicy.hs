@@ -48,7 +48,7 @@ newtype ListFarePolicyRes = ListFarePolicyRes
 data UpdateFarePolicyReq = UpdateFarePolicyReq
   { baseFare :: HighPrecMoney,
     baseDistance :: Meters,
-    perExtraKmFare :: HighPrecMoney,
+    perExtraKmRate :: HighPrecMoney,
     deadKmFare :: Money, -- constant value
     driverMinExtraFee :: Money,
     driverMaxExtraFee :: Money,
@@ -65,7 +65,7 @@ validateUpdateFarePolicyRequest UpdateFarePolicyReq {..} =
   sequenceA_ --FIXME: ask for lower and upper bounds for all the values
     [ validateField "baseFare" baseFare $ InRange @HighPrecMoney 0 500,
       validateField "baseDistance" baseDistance $ InRange @Meters 0 500,
-      validateField "perExtraKmFare" perExtraKmFare $ InRange @HighPrecMoney 0 500,
+      validateField "perExtraKmRate" perExtraKmRate $ InRange @HighPrecMoney 0 500,
       validateField "deadKmFare" deadKmFare $ InRange @Money 0 500,
       validateField "driverMinExtraFee" driverMinExtraFee $ InRange @Money 0 500,
       validateField "driverMaxExtraFee" driverMaxExtraFee $ InRange @Money driverMinExtraFee 500,
@@ -107,7 +107,12 @@ updateFarePolicy admin fpId req = do
                 FPProgressiveDetails
                   { baseDistance = req.baseDistance,
                     baseFare = roundToIntegral req.baseFare,
-                    perExtraKmFare = req.perExtraKmFare,
+                    perExtraKmRateSections =
+                      FPProgressiveDetailsPerExtraKmRateSection
+                        { startDistance = 0,
+                          perExtraKmRate = req.perExtraKmRate
+                        }
+                        :| [],
                     deadKmFare = req.deadKmFare,
                     nightShiftCharge = ProgressiveNightShiftCharge <$> req.nightShiftCharge,
                     waitingCharge = case farePolicy.farePolicyDetails of

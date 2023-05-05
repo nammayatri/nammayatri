@@ -38,7 +38,7 @@ instance ToJSON (FPSlabsDetailsD 'Unsafe)
 
 findFPSlabsDetailsSlabByDistance :: Meters -> NonEmpty (FPSlabsDetailsSlabD s) -> FPSlabsDetailsSlabD s
 findFPSlabsDetailsSlabByDistance dist slabList = do
-  case NE.filter (\slab -> slab.startDistance < dist) $ NE.sortBy (comparing (.startDistance)) slabList of
+  case NE.filter (\slab -> slab.startDistance <= dist) $ NE.sortBy (comparing (.startDistance)) slabList of
     [] -> error $ "Slab for dist = " <> show dist <> " not found. Non-emptiness supposed to be guaranteed by app logic."
     a -> last a
 
