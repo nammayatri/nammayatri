@@ -17,6 +17,7 @@ module Screens.EnterMobileNumberScreen.ScreenData where
 
 import Screens.Types (EnterMobileNumberScreenState)
 import Config.DefaultConfig as DC
+import PrestoDOM (LetterSpacing(..))
 
 initData :: EnterMobileNumberScreenState
 initData = {

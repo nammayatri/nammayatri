@@ -7,7 +7,7 @@ import Data.Maybe
 import Effect (Effect)
 import Config.DefaultConfig (config) as DefaultConfig
 import Presto.Core.Types.Language.Flow (Flow)
-import Helpers.Utils (getMerchantConfig)
+import Helpers.Utils (getConfig)
 import Foreign.Generic (decodeJSON)
 import Presto.Core.Utils.Encoding 
 import Data.Either (Either(..))
@@ -23,7 +23,7 @@ import Foreign.Index (readProp)
 import Prelude (Unit, unit, (<=<), (<<<))
 import Presto.Core.Types.Language.Flow (Flow, doAff)
 import Types.App (FlowBT)
-import Debug.Trace (spy)
+import Debug (spy)
 import Control.Monad.Except.Trans (lift)
 
 foreign import loadConfig :: Effect Unit
@@ -36,7 +36,7 @@ getAppConfig = lift $ lift $ liftFlow $ getAppConfig_
 
 getAppConfig_ :: Effect AppConfig
 getAppConfig_  = do
-  config' <- getMerchantConfig
+  config' <- getConfig
   _ <- pure $ spy "config' ---->>> "  config'
   pure $
     case config' of
