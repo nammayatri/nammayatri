@@ -91,6 +91,7 @@ data AppEnv = AppEnv
 
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv AppCfg {..} = do
+  let hedisMigrationStage = False
   podName <- getPodName
   version <- lookupDeploymentVersion
   loggerEnv <- prepareLoggerEnv loggerConfig podName
