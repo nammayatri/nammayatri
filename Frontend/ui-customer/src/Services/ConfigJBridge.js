@@ -1,4 +1,4 @@
-exports.getKeyInSharedPrefKeysConfig = function (key) {
+export const getKeyInSharedPrefKeysConfig = function (key) {
   if (JBridge.getKeysInSharedPref) {
     return JBridge.getKeysInSharedPref(key);
   }
@@ -8,7 +8,7 @@ exports.getKeyInSharedPrefKeysConfig = function (key) {
   return JBridge.getKeyInNativeSharedPrefKeys(key);
 };
 
-exports.getKeyInSharedPrefKeysConfigEff = function (key) {
+export const getKeyInSharedPrefKeysConfigEff = function (key) {
   if (JBridge.getKeysInSharedPref) {
     return JBridge.getKeysInSharedPref(key);
   }
@@ -18,7 +18,7 @@ exports.getKeyInSharedPrefKeysConfigEff = function (key) {
   return JBridge.getKeyInNativeSharedPrefKeys(key);
 };
 
-exports.getValueToLocalNativeStoreConfig = function (key) {
+export const getValueToLocalNativeStoreConfig = function (key) {
   if (JBridge.getKeysInSharedPref) {
     return JBridge.getKeysInSharedPref(key);
   }

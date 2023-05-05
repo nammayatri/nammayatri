@@ -526,8 +526,7 @@ export const storeOnResumeCallback = function (cb) {
   }
 }
 
-
-exports["getMerchantConfig'"] = function (just) {
+export const getMerchantConfig = function (just) {
   return function (nothing) {
     return function () {
       if (typeof window.appConfig !== "undefined") {
