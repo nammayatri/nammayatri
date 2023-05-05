@@ -34,7 +34,7 @@ const defaultConfig = {
     }
 };
 
-exports.loadConfig = function() {
+export const loadConfig = function() {
     if (window.appConfig) {
       return;
     }
@@ -43,7 +43,7 @@ exports.loadConfig = function() {
     const newScript = document.createElement("script");
     newScript.type = "text/javascript";
     newScript.id = "ny-customer-configuration";
-    newScript.innerHTML = window.DUIGatekeeper.loadFileInDUI("v1-configuration.js");
+    newScript.innerHTML = window.JBridge.loadFileInDUI("v1-configuration.js");
     headID.appendChild(newScript);
     try {
         const merchantConfig = (

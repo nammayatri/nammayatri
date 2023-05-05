@@ -23,6 +23,7 @@ import android.widget.Toast;
 
 import androidx.browser.customtabs.CustomTabsIntent;
 
+import com.facebook.appevents.AppEventsLogger;
 import com.google.android.gms.tasks.Task;
 import com.google.android.play.core.review.ReviewInfo;
 import com.google.android.play.core.review.ReviewManager;
@@ -42,6 +43,7 @@ public class MobilityAppBridge extends HyperBridge {
 
     // Log Tags
     private static final String CHATS = "CHATS";
+    private static final String META_LOG = "META_LOG";
     private static final String CALLBACK = "CALLBACK";
 
     private static FirebaseAnalytics mFirebaseAnalytics;
@@ -164,10 +166,10 @@ public class MobilityAppBridge extends HyperBridge {
     @JavascriptInterface
     public void metaLogEvent(String event){
         try {
-            AppEventsLogger logger = AppEventsLogger.newLogger(context);
+            AppEventsLogger logger = AppEventsLogger.newLogger(bridgeComponents.getContext());
             logger.logEvent(event);
         } catch (Exception e) {
-            Log.e(LOG_TAG, "Error logging meta event : " + e);
+            Log.e(META_LOG, "Error logging meta event : " + e);
         }
     }
     

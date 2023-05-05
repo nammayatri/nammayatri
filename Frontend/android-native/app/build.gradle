@@ -177,7 +177,6 @@ dependencies {
     implementation 'com.google.firebase:firebase-auth'
     implementation 'com.google.android.play:review:2.0.1'
     implementation 'com.pierfrancescosoffritti.androidyoutubeplayer:core:11.1.0'
-    implementation 'com.facebook.android:facebook-android-sdk:4.42.0'
     api 'com.theartofdev.edmodo:android-image-cropper:2.8.0'
 }
 

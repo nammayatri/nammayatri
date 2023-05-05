@@ -17,7 +17,6 @@ module Screens.EnterMobileNumberScreen.Handler where
 
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans as App
-import Debug.Trace (spy)
 import Engineering.Helpers.BackTrack (getState)
 import ModifyScreenState (modifyScreenState)
 import Prelude (bind, discard, ($), pure, (<$>))
@@ -37,7 +36,6 @@ enterMobileNumberScreen = do
                     modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber ->  state) 
                     App.BackT $ App.NoBack <$> pure act
     GoToOTP state -> do 
-                    _ <- pure $ spy "inside OTP Handler" "EMS"
                     modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber ->  state)
                     App.BackT  $ App.BackPoint <$> pure act 
     ResendOTP state -> do 
