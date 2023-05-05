@@ -892,6 +892,7 @@ eval (SearchExpireCountDown seconds id status timerID) state = do
 eval CancelSearch state = case state.props.currentStage of
   FindingEstimate -> do
     _ <- pure $ updateLocalStage SearchLocationModel
+    _ <- pure $ firebaseLogEvent "ny_user_estimate_cancel_search"
     continue state { props { currentStage = SearchLocationModel, rideRequestFlow = false, isSearchLocation = SearchLocation } }
   ConfirmingRide -> continue state { props { currentStage = SettingPrice, isSearchLocation = NoView } }
   _ -> continue state
