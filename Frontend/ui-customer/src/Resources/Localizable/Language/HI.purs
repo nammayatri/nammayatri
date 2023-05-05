@@ -300,6 +300,8 @@ getHI script = case script of
   AT_PICKUP -> "At Pickup"
   FARE_UPDATED -> "किराया अपडेट किया"
   TOTAL_FARE_MAY_CHANGE_DUE_TO_CHANGE_IN_ROUTE -> "रूट में बदलाव के कारण कुल किराए में बदलाव हो सकता है"
+  DRIVER_ADDITIONS -> "चालक जोड़*"
+  FARE_UPDATE_POLICY -> "किराया अपडेट नीति"
   AT_DROP -> "At Drop"
   EMERGENCY_HELP -> "आपातकालीन सहायता"
   CALL_POLICE -> "पुलिस को कॉल करें "
@@ -433,4 +435,14 @@ getHI script = case script of
   NO_TIP -> "कोई टिप नहीं"
   CUSTOMER_SELECTED_FARE -> "ग्राहक टिप*"
   CUSTOMER_TIP_DESCRIPTION -> "*राइड मिलने की संभावना बढ़ाने के लिए ग्राहक द्वारा जोड़ी गई अतिरिक्त राशि।"
+  DRIVER_ADDITIONS_OPTIONAL -> "चालक जोड़ (वैकल्पिक)"
+  THE_DRIVER_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC -> "चालक यातायात को कवर करने, वापसी यात्रा की संभावना आदि के लिए अतिरिक्त बोली लगा सकता है"
+  DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE -> "ड्राइवर द्वारा अतिरिक्त सीमा की गणना बेस फेयर के 10% पर की जाती है, जिसे निकटतम ₹10 में राउंड किया जाता है"
+  DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE -> "ध्यान दें: ड्राइवर पार्टनर यह अतिरिक्त किराया चार्ज कर सकते हैं या नहीं भी कर सकते हैं।"
+  YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS -> "आप नीचे दिए गए किसी भी कारण से अपडेटेड अंतिम किराया देख सकते हैं:"
+  REASON_CHANGE_IN_ROUTE_A -> "मार्ग में परिवर्तन: "
+  REASON_CHANGE_IN_ROUTE_B ->"मार्ग में बदलाव के कारण कुल किराए में बदलाव हो सकता है"
+  REASON_EARLY_RIDE_END_CHARGES_A -> "जल्दी सवारी समाप्ति शुल्क: "
+  REASON_EARLY_RIDE_END_CHARGES_B-> "राइड जल्दी खत्म करने पर अतिरिक्त शुल्क लगता है, जो तय न की गई दूरी का आधा किराया (अधिकतम ₹50) होता है।"
+
 

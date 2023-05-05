@@ -19,7 +19,7 @@ import Components.LocationListItem.Controller (dummyLocationListState)
 import Components.QuoteListItem.Controller (QuoteListItemState)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Data.Maybe (Maybe(..))
-import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState)
+import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState, RateCardType(..))
 import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..))
 import Styles.Colors as Color
 initData :: HomeScreenState
@@ -48,7 +48,7 @@ initData = {
     , destinationAddress : dummyAddress
     , route : Nothing
     , startedAtUTC : ""
-    , rateCard : { baseFare : 0, extraFare : 0, pickUpCharges : 0, additionalFare : 0, nightShiftMultiplier : 0.0, nightCharges : false }
+    , rateCard : { baseFare : 0, extraFare : 0, pickUpCharges : 0, additionalFare : 0, nightShiftMultiplier : 0.0, nightCharges : false,currentRateCardType : DefaultRateCard,onFirstPage:false}
     , speed : 0
     , selectedLocationListItem : Nothing
     , saveFavouriteCard : {

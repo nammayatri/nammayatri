@@ -570,6 +570,10 @@ type Contact = {
      phoneNo :: String
 }
 
+data RateCardType = DefaultRateCard | DriverAddition | FareUpdate
+derive instance genericRateCardType :: Generic RateCardType _
+instance eqRateCardType :: Eq RateCardType where eq = genericEq
+
 type RateCard =
   {
     baseFare :: Int,
@@ -577,7 +581,9 @@ type RateCard =
     pickUpCharges :: Int,
     additionalFare :: Int,
     nightShiftMultiplier :: Number,
-    nightCharges :: Boolean
+    nightCharges :: Boolean,
+    currentRateCardType :: RateCardType,
+    onFirstPage :: Boolean
   }
 
 type EmergencyHelpModelState = {

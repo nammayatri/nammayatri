@@ -532,6 +532,8 @@ rateCardConfig state =
         , pickUpCharges = "₹" <> HU.toString (state.data.rateCard.pickUpCharges)
         , additionalFare = "₹" <> HU.toString (state.data.rateCard.additionalFare)
         , nightShiftMultiplier = HU.toString (state.data.rateCard.nightShiftMultiplier)
+        , currentRateCardType = state.data.rateCard.currentRateCardType
+        , onFirstPage = state.data.rateCard.onFirstPage
         }
   in
     rateCardConfig'
