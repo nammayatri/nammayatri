@@ -23,7 +23,7 @@ import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType (OnUpdateE
 import qualified Control.Lens as L
 import Data.Aeson as A
 import Data.OpenApi hiding (Example, example, title, value)
-import EulerHS.Prelude hiding (id, (.=))
+import EulerHS.Prelude hiding (id)
 import GHC.Exts (fromList)
 import Kernel.Prelude (UTCTime)
 import Kernel.Utils.Schema

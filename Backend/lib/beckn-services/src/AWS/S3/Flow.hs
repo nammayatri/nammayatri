@@ -94,7 +94,7 @@ callS3API :: CallAPI env api a
 callS3API =
   callApiUnwrappingApiError
     (identity @S3Error)
-    (Just s3AuthManagerKey)
+    (Just $ ET.ManagerSelector $ T.pack s3AuthManagerKey)
     (Just "S3_NOT_AVAILABLE")
 
 get'' ::
@@ -133,7 +133,7 @@ put'' bucketName path img = withLogTag "S3" $ do
       Posix.closeFd fd
 
 getTmpPath :: String -> String
-getTmpPath = (<>) "/tmp/" . T.unpack . last . T.split (== '/') . T.pack
+getTmpPath = (<>) "/tmp/" . T.unpack . T.last . T.split (== '/') . T.pack
 
 mockPut ::
   (MonadIO m, Log m) =>

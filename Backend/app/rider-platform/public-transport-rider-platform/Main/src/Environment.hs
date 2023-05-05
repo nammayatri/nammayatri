@@ -74,6 +74,8 @@ data AppEnv = AppEnv
     esqDBEnv :: EsqDBEnv,
     esqDBReplicaEnv :: EsqDBEnv,
     hedisEnv :: HedisEnv,
+    hedisClusterEnv :: HedisEnv,
+    hedisMigrationStage :: Bool,
     isShuttingDown :: Shutdown,
     loggerEnv :: LoggerEnv,
     coreMetrics :: CoreMetricsContainer,
@@ -85,6 +87,7 @@ data AppEnv = AppEnv
 
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv AppCfg {..} = do
+  let hedisMigrationStage = False
   podName <- getPodName
   version <- lookupDeploymentVersion
   loggerEnv <- prepareLoggerEnv loggerConfig podName
@@ -95,6 +98,7 @@ buildAppEnv AppCfg {..} = do
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   kafkaEnvs <- buildBAPKafkaEnvs
   hedisEnv <- connectHedis hedisCfg publicTransportBapPrefix
+  hedisClusterEnv <- connectHedisCluster hedisCfg publicTransportBapPrefix
   return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()
