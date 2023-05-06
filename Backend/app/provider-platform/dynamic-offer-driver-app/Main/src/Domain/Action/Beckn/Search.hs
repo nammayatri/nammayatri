@@ -329,7 +329,7 @@ buildSpecialZoneQuote ::
     MonadTime m,
     MonadReader r m,
     EsqDBFlow m r,
-    HasField "driverQuoteExpirationSeconds" r NominalDiffTime
+    HasField "searchRequestExpirationSeconds" r NominalDiffTime
   ) =>
   DSRSZ.SearchRequestSpecialZone ->
   FareParameters ->
@@ -344,8 +344,9 @@ buildSpecialZoneQuote productSearchRequest fareParams transporterId distance veh
   now <- getCurrentTime
   let estimatedFare = fareSum fareParams
       estimatedFinishTime = fromIntegral duration `addUTCTime` now
-  driverQuoteExpirationSeconds <- asks (.driverQuoteExpirationSeconds)
-  let validTill = driverQuoteExpirationSeconds `addUTCTime` now
+  -- Keeping quote expiry as search request expiry. Slack discussion: https://juspay.slack.com/archives/C0139KHBFU1/p1683349807003679
+  searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
+  let validTill = searchRequestExpirationSeconds `addUTCTime` now
   pure
     DQuoteSpecialZone.QuoteSpecialZone
       { id = quoteId,
