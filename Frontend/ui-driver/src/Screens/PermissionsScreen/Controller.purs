@@ -16,7 +16,7 @@
 module Screens.PermissionsScreen.Controller where
 
 import Components.PrimaryButton.Controller as PrimaryButtonController
-import Debug.Trace (spy)
+import Debug (spy)
 import Effect.Class (liftEffect)
 import JBridge (checkOverlayPermission, requestAutoStartPermission, requestLocation, isLocationPermissionEnabled, isOverlayPermissionEnabled, requestBatteryPermission, isBatteryPermissionEnabled, firebaseLogEvent)
 import Language.Strings (getString)
