@@ -8,6 +8,7 @@ var path = require('path');
 const getOutputFileDir = (mode) => mode ==  "development" ? "" :"android/";
 const outputFileName = "index_bundle.js";
 const getOutputFileLocation = (mode) => getOutputFileDir(mode) + outputFileName;
+const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 
 
 module.exports = (env, argv) => {
@@ -16,6 +17,11 @@ module.exports = (env, argv) => {
         "window.__OS": JSON.stringify("ANDROID"),
         __VERSION__: JSON.stringify(packageJSON.version),
         "window.configEnv": JSON.stringify(env)
+      }),
+      new BundleAnalyzerPlugin({
+        analyzerMode: 'disabled',
+        generateStatsFile: true,
+        statsOptions: { source: false }
       })]
   return merge(common(env), {
     output: {

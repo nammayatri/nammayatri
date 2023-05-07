@@ -34,7 +34,7 @@ newtype Config = Config
   }
 
 getEnv :: Env
-getEnv = case spy "Selected Environment :- " (environment "") of
+getEnv = case "master" of -- spy "Selected Environment :- " (environment "") of
   "local"       -> LOCAL
   "master"      -> DEV
   "sandbox"     -> UAT

@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -39,7 +39,7 @@ import Services.API (GetDriverLocationResp)
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
-newtype GlobalState = GlobalState { 
+newtype GlobalState = GlobalState {
     splashScreen :: SplashScreenState
   , enterMobileNumberScreen :: EnterMobileNumberScreenState
   , chooseLanguageScreen :: ChooseLanguageScreenState
@@ -62,7 +62,7 @@ newtype GlobalState = GlobalState {
   }
 
 defaultGlobalState :: GlobalState
-defaultGlobalState = GlobalState { 
+defaultGlobalState = GlobalState {
     splashScreen : {data : {message : "pass"}}
   , enterMobileNumberScreen : EnterMobileNumberScreenData.initData
   , chooseLanguageScreen : ChooseLanguageScreenData.initData
@@ -95,21 +95,21 @@ data HELP_AND_SUPPORT_SCREEN_OUTPUT = GO_TO_SUPPORT_SCREEN String | GO_TO_TRIP_D
 
 data ABOUT_US_SCREEN_OUTPUT = GO_TO_HOME_FROM_ABOUT
 
-data EMERGECY_CONTACTS_SCREEN_OUTPUT = GO_TO_HOME_FROM_EMERGENCY_CONTACTS 
+data EMERGECY_CONTACTS_SCREEN_OUTPUT = GO_TO_HOME_FROM_EMERGENCY_CONTACTS
                                       | POST_CONTACTS EmergencyContactsScreenState
                                       | GET_CONTACTS EmergencyContactsScreenState
 
-data HOME_SCREEN_OUTPUT = LOGOUT 
+data HOME_SCREEN_OUTPUT = LOGOUT
                         | RELOAD Boolean
                         | CANCEL
                         | RETRY
-                        | NO_OUTPUT 
-                        | GO_TO_HELP 
-                        | GO_TO_ABOUT 
-                        | GO_TO_MY_RIDES 
-                        | CHANGE_LANGUAGE 
+                        | NO_OUTPUT
+                        | GO_TO_HELP
+                        | GO_TO_ABOUT
+                        | GO_TO_MY_RIDES
+                        | CHANGE_LANGUAGE
                         | GO_TO_EMERGENCY_CONTACTS
-                        | GO_TO_MY_PROFILE 
+                        | GO_TO_MY_PROFILE
                         | LOCATION_SELECTED LocationListItemState Boolean
                         | HOME_SCREEN
                         | GET_QUOTES HomeScreenState
@@ -119,7 +119,7 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | ONGOING_RIDE HomeScreenState
                         | CANCEL_RIDE_REQUEST HomeScreenState
                         | FCM_NOTIFICATION String HomeScreenState
-                        | SEARCH_LOCATION String HomeScreenState 
+                        | SEARCH_LOCATION String HomeScreenState
                         | UPDATE_LOCATION_NAME HomeScreenState Number Number
                         | UPDATE_PICKUP_NAME HomeScreenState Number Number
                         | GET_LOCATION_NAME HomeScreenState
@@ -147,13 +147,13 @@ data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_TO_HOME_SCREEN | UPDATE_LANGUAGE SelectL
 
 data PERMISSION_SCREEN_OUTPUT = REFRESH_INTERNET | TURN_ON_GPS | TURN_ON_INTERNET
 
-data SAVED_LOCATION_SCREEN_OUTPUT = ADD_NEW_LOCATION SavedLocationScreenState | DELETE_LOCATION String | EDIT_LOCATION LocationListItemState | GO_BACK_FROM_SAVED_LOCATION 
+data SAVED_LOCATION_SCREEN_OUTPUT = ADD_NEW_LOCATION SavedLocationScreenState | DELETE_LOCATION String | EDIT_LOCATION LocationListItemState | GO_BACK_FROM_SAVED_LOCATION
 
-data ADD_NEW_ADDRESS_SCREEN_OUTPUT =  SEARCH_ADDRESS String AddNewAddressScreenState 
-                                    | ADD_LOCATION AddNewAddressScreenState 
-                                    | UPDATE_LOCATION_NAME_ADDRESS AddNewAddressScreenState Number Number 
-                                    | GO_TO_FAVOURITES 
-                                    | CHECK_LOCATION_SERVICEABILITY AddNewAddressScreenState LocItemType 
+data ADD_NEW_ADDRESS_SCREEN_OUTPUT =  SEARCH_ADDRESS String AddNewAddressScreenState
+                                    | ADD_LOCATION AddNewAddressScreenState
+                                    | UPDATE_LOCATION_NAME_ADDRESS AddNewAddressScreenState Number Number
+                                    | GO_TO_FAVOURITES
+                                    | CHECK_LOCATION_SERVICEABILITY AddNewAddressScreenState LocItemType
                                     | GO_TO_HOME_SCREEN_FLOW
 
 data MY_PROFILE_SCREEN_OUTPUT = UPDATE_USER_PROFILE MyProfileScreenState | DELETE_ACCOUNT MyProfileScreenState | GO_TO_HOME_

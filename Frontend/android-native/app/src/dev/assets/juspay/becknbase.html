@@ -5,6 +5,9 @@
 <body>
 </body>
 <script type="text/javascript">
+	console.log("becknbase.html start")
+	window.timeFunc = {}
+	window.timeFunc.becknbase = Date.now();
     window.__OS = "ANDROID";
     window.JBridge = top.JBridge;
     window.Android = top.Android;
@@ -24,7 +27,7 @@
           }), "");
         console.log("arguments after -=>", arguments)
       }
-      
+
     }
     window.JOS.addEventListener("onFileUpdated")();
 
@@ -34,15 +37,30 @@
     var ip = DUIGatekeeper.getResourceByName("local_ip");
     var port = DUIGatekeeper.getResourceByName("dev_port");
     port = port ? port : "8080";
-    var url = "http://" + ip + ":" + port;
+    var url = "http://" + "192.168.1.36" + ":" + port;
     var headID = document.getElementsByTagName("head")[0];
     var newScript = document.createElement('script');
     newScript.type = 'text/javascript';
     newScript.id = 'socket';
+	newScript.innerHTML = DUIGatekeeper.loadFileInDUI('index_bundle.js');
     newScript.src = url + '/dist/index_bundle.js';
+	console.log("new script index_bundle", newScript);
     headID.appendChild(newScript);
+
+
+	// var url = "http://" + "192.168.1.36" + ":" + "8082";
+    // var newScript2 = document.createElement('script');
+    // newScript2.type = 'text/javascript';
+    // // newScript.id = 'socket';
+	// newScript2.innerHTML = JBridge.loadFileInDUI('1.index_bundle.js');
+    // newScript2.src = url + '/dist/1.index_bundle.js';
+	// console.log("1.index_bundle.js script", newScript2.innerHTML);
+    // headID.appendChild(newScript2);
+
+    // console.log("head", headID);
+
 </script>
-<!-- 
+<!--
 <script type="text/javascript">
     var ip = DUIGatekeeper.getResourceByName("local_ip");
     var port = DUIGatekeeper.getResourceByName("dev_port");

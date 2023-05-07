@@ -79,6 +79,7 @@ import Services.Backend (getDriverLocation, getQuotes, getRoute, makeGetRouteReq
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore, updateLocalStage)
 import Styles.Colors as Color
 import Types.App (GlobalState)
+import Helpers.Utils (logEvent)
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -219,7 +220,12 @@ view push state =
     , width MATCH_PARENT
     , onBackPressed push (const BackPressed)
     , clickable true
-    , afterRender push (const AfterRender)
+    , afterRender
+            (  \action -> do
+                _ <- logEvent "afterRender"
+                _ <- push action
+                pure unit
+            ) (const AfterRender)
     ]
     [ linearLayout
         [ height MATCH_PARENT

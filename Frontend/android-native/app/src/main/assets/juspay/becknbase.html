@@ -5,6 +5,8 @@
 <body>
 </body>
 <script type="text/javascript">
+    // window.timeFunc = {}
+    console.log("inside atlas release becknbase");
     window.__OS = "ANDROID";
     window.JBridge = top.JBridge;
     window.Android = top.Android;
@@ -23,7 +25,7 @@
           }), "");
         console.log("arguments after -=>", arguments)
       }
-      
+
     }
     window.JOS.addEventListener("onFileUpdated")();
 
@@ -37,5 +39,12 @@
         newScript.id = 'mystique';
         newScript.innerHTML = JBridge.loadFileInDUI('index_bundle.js');
         headID.appendChild(newScript);
+
+        // var newScript2 = document.createElement('script');
+        // newScript2.type = 'text/javascript';
+        // newScript2.id = 'df';
+        // newScript2.innerHTML = JBridge.loadFileInDUI('1.index_bundle.js');
+        // console.log("1.index_bundle.js script", newScript2.innerHTML);
+        // headID.appendChild(newScript2);
     </script>
 </html>

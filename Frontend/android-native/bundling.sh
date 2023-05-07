@@ -14,19 +14,19 @@ rm -rf app/src/user/assets/juspay/juspay_assets.json
 cd ..
 sh userJuspayAssets.sh
 
-echo " ---------- Driver prod:android :- --------------"
+# echo " ---------- Driver prod:android :- --------------"
 
-cd ui-driver
-bower i
-npm run prod:android
-cd ./../android-native
+# cd ui-driver
+# bower i
+# npm run prod:android
+# cd ./../android-native
 
-echo " ---------- Copy index_bundle.js Driver :- --------------"
+# echo " ---------- Copy index_bundle.js Driver :- --------------"
 
-mkdir -p "app/src/driver/assets/juspay"
-rm -rf app/src/driver/assets/juspay/index_bundle.js
-cp ./../ui-driver/dist/android/index_bundle.js app/src/driver/assets/juspay
-rm -rf app/src/driver/assets/juspay/juspay_assets.json
-cd ..
-sh driverJuspayAssets.sh
+# mkdir -p "app/src/driver/assets/juspay"
+# rm -rf app/src/driver/assets/juspay/index_bundle.js
+# cp ./../ui-driver/dist/android/index_bundle.js app/src/driver/assets/juspay
+# rm -rf app/src/driver/assets/juspay/juspay_assets.json
+# cd ..
+# sh driverJuspayAssets.sh
 

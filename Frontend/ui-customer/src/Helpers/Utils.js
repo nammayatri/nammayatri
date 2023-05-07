@@ -545,3 +545,13 @@ export const storeOnResumeCallback = function (cb) {
     }
   }
 }
+
+export const logEvent = function(string) {
+  return function() {
+    if (! window.timeFunc[string]){
+      console.log("log the " + string);
+      window.timeFunc[string] = Date.now();
+    }
+    console.log("timestamp " + string + " : " + Date.now());
+  }
+}

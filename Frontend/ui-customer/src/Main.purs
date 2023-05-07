@@ -26,7 +26,8 @@ import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Ref (new)
 import Engineering.Helpers.Commons (flowRunner, liftFlow, getWindowVariable)
-import Flow as Flow
+-- import Flow as Flow
+import Dynamic.Dynamic (dynamicBaseAppFlow)
 import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Generic (decode)
 import JBridge (toggleBtnLoader)
@@ -35,23 +36,29 @@ import Prelude (Unit, bind, pure, show, unit, ($), (<$>), (<<<))
 import Presto.Core.Types.Language.Flow (throwErr)
 import PrestoDOM.Core (processEvent) as PrestoDom
 import Types.App (defaultGlobalState)
+import Helpers.Utils (logEvent)
+import Effect.Aff (launchAff_)
 
 main :: Effect Unit
 main = do
+  _ <- logEvent "main.purs"
+  -- _ <- launchAff $ DFlow.dynamicFlow ""
   epassRef ← new defaultGlobalState
   payload  ::  Either MultipleErrors GlobalPayload  <- runExcept <<< decode <<< fromMaybe (unsafeToForeign {}) <$> (liftEffect $ getWindowVariable "__payload" Just Nothing)
   case payload of
     Right payload'  -> do
-       _ <- launchAff $ flowRunner $ do
-          -- _ <- pure $ JBridge._addCertificates (Config.getFingerPrint "")
-          resp ← runExceptT $ runBackT $ Flow.baseAppFlow payload'
-          case resp of
-                Right x → pure unit
-                Left err → do
-                  _ <- pure $ printLog "printLog error in main is : " err
-                  _ <- liftFlow $ main
-                  pure unit
-       pure unit
+      -- _ <- launchAff $ DFlow.dynamicBaseAppFlow payload'
+      _ <- launchAff $ flowRunner $ do
+        --  _ <- pure $ JBridge._addCertificates (Config.getFingerPrint "")
+         resp ← runExceptT $ runBackT $ dynamicBaseAppFlow payload'
+        --  resp ← runExceptT $ runBackT $ Flow.baseAppFlow payload'
+         case resp of
+               Right x → pure unit
+               Left err → do
+                 _ <- pure $ printLog "printLog error in main is : " err
+                 _ <- liftFlow $ main
+                 pure unit
+      pure unit
     Left e -> do
         _ <- launchAff $ flowRunner $ do
             throwErr $ show e
@@ -63,18 +70,18 @@ onEvent "onBackPressed" = do
   PrestoDom.processEvent "onBackPressedEvent" unit
 onEvent _ = pure unit
 
-onConnectivityEvent :: String -> Effect Unit
-onConnectivityEvent triggertype = do
-  epassRef ← new defaultGlobalState
-  payload  ::  Either MultipleErrors GlobalPayload  <- runExcept <<< decode <<< fromMaybe (unsafeToForeign {}) <$> (liftEffect $ getWindowVariable "__payload" Just Nothing)
-  case payload of
-    Right payload'  -> do
-        _ <- launchAff $ flowRunner $ do
-          -- _ <- pure $ JBridge._addCertificates (Config.getFingerPrint "")
-          _ ← runExceptT $ runBackT $ Flow.permissionScreenFlow triggertype
-          pure unit
-        pure unit
-    Left e -> do
-        _ <- launchAff $ flowRunner $ do
-            throwErr $ show e
-        pure unit
+-- onConnectivityEvent :: String -> Effect Unit
+-- onConnectivityEvent triggertype = do
+--   epassRef ← new defaultGlobalState
+--   payload  ::  Either MultipleErrors GlobalPayload  <- runExcept <<< decode <<< fromMaybe (unsafeToForeign {}) <$> (liftEffect $ getWindowVariable "__payload" Just Nothing)
+--   case payload of
+--     Right payload'  -> do
+--         _ <- launchAff $ flowRunner $ do
+--           -- _ <- pure $ JBridge._addCertificates (Config.getFingerPrint "")
+--           _ ← runExceptT $ runBackT $ Flow.permissionScreenFlow triggertype
+--           pure unit
+--         pure unit
+--     Left e -> do
+--         _ <- launchAff $ flowRunner $ do
+--             throwErr $ show e
+--         pure unit
