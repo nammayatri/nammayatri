@@ -97,6 +97,7 @@ data PersonE e = Person
     referralCode :: Maybe Text,
     referredAt :: Maybe UTCTime,
     hasTakenValidRide :: Bool,
+    blockedAt :: Maybe UTCTime,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     bundleVersion :: Maybe Version,

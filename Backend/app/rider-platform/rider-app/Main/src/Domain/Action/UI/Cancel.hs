@@ -34,16 +34,22 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis (HedisFlow)
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.MerchantConfig as SMC
 import Storage.CachedQueries.CacheConfig (HasCacheConfig)
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CMSUC
+import qualified Storage.CachedQueries.MerchantConfig as CMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.RegistrationToken as RT
 import qualified Storage.Queries.Ride as QR
+import Tools.Auth (authTokenCacheKey)
 import Tools.Error
 
 data CancelReq = CancelReq
@@ -76,6 +82,22 @@ cancel :: (EncFlow m r, Esq.EsqDBReplicaFlow m r, EsqDBFlow m r, HasCacheConfig 
 cancel bookingId _ req = do
   booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
+  fork "incrementing fraud counters" $ do
+    merchantConfigs <- CMC.findAllByMerchantId booking.merchantId
+    SMC.updateCustomerFraudCounters booking.riderId merchantConfigs
+    useFraudDetection <- maybe False (.useFraudDetection) <$> CMSUC.findByMerchantId booking.merchantId
+    isFraud <-
+      if useFraudDetection
+        then SMC.anyFraudDetected booking.riderId merchantConfigs
+        else pure False
+    when isFraud $ do
+      regTokens <- RT.findAllByPersonId booking.riderId
+      for_ regTokens $ \regToken -> do
+        let key = authTokenCacheKey regToken.token
+        void $ Redis.del key
+      DB.runNoTransaction $ do
+        RT.deleteByPersonId booking.riderId
+        QP.updatingEnabledAndBlockedState booking.riderId True
   when (booking.status == SRB.CANCELLED) $ throwError (BookingInvalidStatus "This booking is already cancelled")
   canCancelBooking <- isBookingCancellable booking
   unless canCancelBooking $

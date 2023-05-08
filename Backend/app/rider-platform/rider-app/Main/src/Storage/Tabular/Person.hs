@@ -66,6 +66,7 @@ mkPersist
       merchantId SMerchant.MerchantTId
       whatsappNotificationEnrollStatus OptApiMethods Maybe
       createdAt UTCTime
+      blockedAt UTCTime Maybe
       updatedAt UTCTime
       bundleVersion Text Maybe
       clientVersion Text Maybe

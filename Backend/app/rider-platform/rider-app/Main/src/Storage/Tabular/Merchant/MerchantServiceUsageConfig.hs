@@ -45,6 +45,7 @@ mkPersist
       getTripRoutes MapsService
       getPlaceDetails MapsService
       autoComplete MapsService
+      useFraudDetection Bool
       smsProvidersPriorityList (PostgresList SmsService)
       whatsappProvidersPriorityList (PostgresList WhatsappService)
       updatedAt UTCTime
