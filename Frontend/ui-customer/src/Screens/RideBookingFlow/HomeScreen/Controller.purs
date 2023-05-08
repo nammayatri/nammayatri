@@ -674,7 +674,7 @@ eval BackPressed state = do
     FindingEstimate -> do
                       _ <- pure $ updateLocalStage SearchLocationModel
                       continue state{props{rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation}}
-    QuoteList       -> do 
+    QuoteList       -> do
                       let newState = if state.props.customerTip.enableTips then (tipEnabledState state) else state
                       if newState.props.customerTip.enableTips then continue ( newState{props { isPopUp = TipsPopUp} } )else continue newState{ props{isPopUp = if ( not null (filter (\a -> a.seconds > 0) state.data.quoteListModelState)) then ActiveQuotePopUp else ConfirmBack}}
     PricingTutorial -> continue state { props { currentStage = SettingPrice}}
@@ -684,7 +684,7 @@ eval BackPressed state = do
     ShortDistance -> do
                       _ <- pure $ updateLocalStage SearchLocationModel
                       continue state{props{isSource = Just false,isPopUp = NoPopUp, rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSearchLocation = SearchLocation}}
-    FindingQuotes ->  do 
+    FindingQuotes ->  do
                       let newState = if state.props.customerTip.enableTips then (tipEnabledState state) else state
                       continue $ newState { props{isPopUp = if state.props.customerTip.enableTips then TipsPopUp else ConfirmBack}}
     FavouriteLocationModel -> do
@@ -1216,10 +1216,10 @@ eval (PopUpModalAction (PopUpModal.OnButton1Click)) state =   case state.props.i
     if (isLocalStageOn FindingQuotes ) then exit $ CheckCurrentStatus else updateAndExit state{props{isPopUp = NoPopUp}} $ LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false state{props{currentStage = TryAgain, sourceSelectedOnMap = true, isPopUp = NoPopUp}}
 
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = case state.props.isPopUp of
-  TipsPopUp -> case state.props.currentStage of 
+  TipsPopUp -> case state.props.currentStage of
     QuoteList -> updateAndExit state CheckCurrentStatus
     FindingQuotes -> exit $ CheckCurrentStatus
-    _ -> continue state 
+    _ -> continue state
   Logout -> exit LogoutUser
   ConfirmBack -> do
     _ <- pure $ firebaseLogEvent "ny_no_retry"
@@ -1376,7 +1376,7 @@ eval (GetQuotesList (SelectListRes resp)) state = do
               let removeExpired = filter (\a -> a.seconds > 0) filteredQuoteList
               _ <- pure $ spy "quotes" filteredQuoteList
               let newState = state{data{quoteListModelState = state.data.quoteListModelState <> removeExpired },props{isSearchLocation = NoView, isSource = Nothing,currentStage = QuoteList}}
-              if isLocalStageOn QuoteList then do 
+              if isLocalStageOn QuoteList then do
                 _ <- pure $ spy "checking " "state"
                 let updatedState = if newState.props.customerTip.enableTips then tipEnabledState newState{props{isPopUp = TipsPopUp}} else newState{props{isPopUp = ConfirmBack}}
                 _ <- pure $ spy "checking zxc" newState
@@ -1400,9 +1400,9 @@ eval (ContinueWithoutOffers (SelectListRes resp)) state = do
         "" -> continue state
         _  -> do
           _ <- pure $ updateLocalStage ConfirmingRide
-          exit $ ConfirmRide state{props{currentStage = ConfirmingRide, bookingId = bookingId, isPopUp = NoPopUp, selectedQuote = Nothing}}                       
+          exit $ ConfirmRide state{props{currentStage = ConfirmingRide, bookingId = bookingId, isPopUp = NoPopUp, selectedQuote = Nothing}}
     Nothing -> do
-      if isLocalStageOn QuoteList then do 
+      if isLocalStageOn QuoteList then do
         let updatedState = if state.props.customerTip.enableTips then tipEnabledState state{props{isPopUp = TipsPopUp}} else state{props{isPopUp = ConfirmBack}}
         continue updatedState
         else continue state
@@ -1543,10 +1543,11 @@ checkPermissionAndUpdatePersonMarker state = do
     if (os == "IOS" && conditionC) then do
       _ <- getLocationName (showPersonMarker state (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))) 9.9 9.9 "Current Location" constructLatLong
       pure unit
-    else do
+    else if (not conditionA || not conditionB) then do
       _ <- requestLocation unit
       _ <- checkPermissionAndUpdatePersonMarker state
       pure unit
+    else pure unit
 
 showPersonMarker :: HomeScreenState -> String -> Location -> Effect Unit
 showPersonMarker state marker location = do
