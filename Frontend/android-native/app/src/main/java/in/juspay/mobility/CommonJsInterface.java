@@ -1,4 +1,4 @@
-/* 
+/*
  *  Copyright 2022-23, Juspay India Pvt Ltd
  *  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
  *  as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
@@ -238,10 +238,13 @@ import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
 import static android.content.Context.WINDOW_SERVICE;
 import static android.content.Context.ACTIVITY_SERVICE;
 import static android.view.View.LAYER_TYPE_SOFTWARE;
+
 import java.net.URISyntaxException;
+
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.content.pm.ResolveInfo;
+
 import com.facebook.appevents.AppEventsLogger;
 
 public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.core.JSI {
@@ -264,7 +267,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     private static final int MAP_ZOOM_LEVEL = 15;
     private FusedLocationProviderClient client;
     private Marker userPositionMarker;
-    private HashMap<String,JSONObject> markersElement = new HashMap<String,JSONObject>();// = new JSONObject();
+    private HashMap<String, JSONObject> markersElement = new HashMap<String, JSONObject>();// = new JSONObject();
     private JSONObject markers = new JSONObject();
     private double lastLatitudeValue;
     private double lastLongitudeValue;
@@ -277,8 +280,8 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     public static final int REQUEST_CALL = 8;
     public static final int REQUEST_CONTACTS = 7;
     public static String phoneNumber;
-    public static String invoice =null;
-    public static String invoiceType =null;
+    public static String invoice = null;
+    public static String invoiceType = null;
     public static boolean permissionCheck = false;
     public static String storeCallBackPopUp = null;
     public static String storeOnResumeCallback = null;
@@ -294,7 +297,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     Toast toast = null;
 
 
-    public CommonJsInterface(){
+    public CommonJsInterface() {
         super();
     }
 
@@ -308,21 +311,21 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
     }
 
-   CommonJsInterface(@NonNull JuspayServices juspayServices, Activity activity, @Nullable HyperFragment browserFragment) {
-       super(juspayServices, activity, browserFragment);
-       try {
-           JSONObject headerObj = new JSONObject();
-           headerObj.put("X-Client-Id", context.getResources().getString(R.string.service));
-           boolean b = setAnalyticsHeader(headerObj.toString());
-       } catch (Exception e) {
-           e.printStackTrace();
-       }
-       this.juspayServices = juspayServices;
-       this.activity = activity;
-       this.dynamicUI = juspayServices.getDuiCallback();
-   }
+    CommonJsInterface(@NonNull JuspayServices juspayServices, Activity activity, @Nullable HyperFragment browserFragment) {
+        super(juspayServices, activity, browserFragment);
+        try {
+            JSONObject headerObj = new JSONObject();
+            headerObj.put("X-Client-Id", context.getResources().getString(R.string.service));
+            boolean b = setAnalyticsHeader(headerObj.toString());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        this.juspayServices = juspayServices;
+        this.activity = activity;
+        this.dynamicUI = juspayServices.getDuiCallback();
+    }
 
-   @Override
+    @Override
     public void setActivity(Activity activity) {
         super.setActivity(activity);
         this.activity = activity;
@@ -346,7 +349,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         Toast.makeText(context, msg, Toast.LENGTH_LONG).show();
     }
 
-    private void fetchLatLonAndUpdate(){
+    private void fetchLatLonAndUpdate() {
         String lat = getKeyInNativeSharedPrefKeys("LAST_KNOWN_LAT");
         String lon = getKeyInNativeSharedPrefKeys("LAST_KNOWN_LON");
         lastLatitudeValue = lat != "__failed" ? Double.parseDouble(lat) : lastLatitudeValue;
@@ -357,25 +360,25 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     public void setKeysInSharedPrefs(String key, String value) {
         KeyValueStore.write(juspayServices, key, value);
         setEnvInNativeSharedPrefKeys(key, value);
-        if (key.equals(context.getResources().getString(R.string.LANGUAGE_KEY))){
+        if (key.equals(context.getResources().getString(R.string.LANGUAGE_KEY))) {
             updateLocaleResource(value);
         }
     }
 
-    public static void updateLocaleResource(String languageKey){
+    public static void updateLocaleResource(String languageKey) {
         Context context = MainActivity.getInstance().getApplicationContext();
         Locale locale;
-        switch (languageKey){
-            case "HI_IN" :
+        switch (languageKey) {
+            case "HI_IN":
                 locale = new Locale("hi");
                 break;
-            case "KN_IN" :
+            case "KN_IN":
                 locale = new Locale("kn");
                 break;
-            case "EN_US" :
+            case "EN_US":
                 locale = new Locale("en");
                 break;
-            case "TA_IN" :
+            case "TA_IN":
                 locale = new Locale("ta");
                 break;
             default:
@@ -384,11 +387,11 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         Locale.setDefault(locale);
         Configuration configuration = context.getResources().getConfiguration();
         configuration.setLocale(locale);
-        context.getResources().updateConfiguration(configuration,context.getResources().getDisplayMetrics());
+        context.getResources().updateConfiguration(configuration, context.getResources().getDisplayMetrics());
     }
 
     @JavascriptInterface
-    public void setEnvInNativeSharedPrefKeys(String key, String value){
+    public void setEnvInNativeSharedPrefKeys(String key, String value) {
         SharedPreferences sharedPref = context.getSharedPreferences(
                 activity.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPref.edit();
@@ -424,8 +427,8 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     @JavascriptInterface
     public String getKeyInNativeSharedPrefKeys(String key) {
         SharedPreferences sharedPref = context.getSharedPreferences(
-                            context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-        return sharedPref.getString(key,"__failed");
+                context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        return sharedPref.getString(key, "__failed");
     }
 
     @JavascriptInterface
@@ -434,9 +437,8 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         removeKeysInNativeSharedPrefs(key);
     }
 
-    private void removeKeysInNativeSharedPrefs(String key){
-        if (!key.equals(""))
-        {
+    private void removeKeysInNativeSharedPrefs(String key) {
+        if (!key.equals("")) {
             SharedPreferences sharedPref = context.getSharedPreferences(
                     activity.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
             SharedPreferences.Editor editor = sharedPref.edit();
@@ -496,6 +498,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         } catch (Exception e) {
         }
     }
+
     private Drawable generateBackgroundWithShadow(int level,
                                                   View[] view,
                                                   JSONArray backgroundColor,
@@ -611,7 +614,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                                 try {
                                     base64Data = Base64.encodeToString(new JSONArray(payload).toString().getBytes(), Base64.NO_WRAP);
                                 } catch (JSONException ee) {
-                                    base64Data = Base64.encodeToString(payload.getBytes(),Base64.NO_WRAP);
+                                    base64Data = Base64.encodeToString(payload.getBytes(), Base64.NO_WRAP);
                                     ee.printStackTrace();
                                 }
                             }
@@ -717,6 +720,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     static String storeCallB = null;
+
     @JavascriptInterface
     public void storeCallBackForNotification(String callback) {
         storeCallB = callback;
@@ -726,8 +730,8 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
 
-    public static void callingStoreCall(DuiCallback dynamicUII, String notificationType){
-        if (dynamicUII != null && storeCallB !=null) {
+    public static void callingStoreCall(DuiCallback dynamicUII, String notificationType) {
+        if (dynamicUII != null && storeCallB != null) {
             String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
                     storeCallB, notificationType);
             dynamicUII.addJsToWebView(javascript);
@@ -758,45 +762,47 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         MainActivity.getInstance().stopAllocationNotification();
     }
 
-    public static void callingStoreCallBackPopUp (DuiCallback dynamicUII, JSONObject entity_payload){
+    public static void callingStoreCallBackPopUp(DuiCallback dynamicUII, JSONObject entity_payload) {
         if (dynamicUII != null) {
             String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
                     storeCallBackPopUp, entity_payload.toString());
             dynamicUII.addJsToWebView(javascript);
         }
     }
+
     static String storeCallBCustomer = "RefreshPagee";
+
     @JavascriptInterface
     public void storeCallBackCustomer(String callback) {
         storeCallBCustomer = callback;
     }
 
 
-    public static void callingStoreCallCustomer(DuiCallback dynamicUII, String notificationType){
+    public static void callingStoreCallCustomer(DuiCallback dynamicUII, String notificationType) {
         if (dynamicUII != null) {
             String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
-            storeCallBCustomer,notificationType);
+                    storeCallBCustomer, notificationType);
             dynamicUII.addJsToWebView(javascript);
         }
     }
 
     static String storeCallBTime = "TimeUpdate";
+
     @JavascriptInterface
     public void storeCallBackTime(String callback) {
         storeCallBTime = callback;
     }
 
 
-    public static void callingStoreCallBackTime(DuiCallback dynamicUII, String time, String lat, String lng, Context context){
+    public static void callingStoreCallBackTime(DuiCallback dynamicUII, String time, String lat, String lng, Context context) {
         if (dynamicUII != null && storeCallBTime != "TimeUpdate") {
             String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s','%s');",
-            storeCallBTime,time, lat, lng);
-            System.out.println("time javascript "+javascript);
+                    storeCallBTime, time, lat, lng);
+            System.out.println("time javascript " + javascript);
             Log.d(LOG_TAG, javascript);
             dynamicUII.addJsToWebView(javascript);
         }
     }
-
 
 
     @JavascriptInterface
@@ -834,7 +840,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     @JavascriptInterface
-    public String getVersionName (){
+    public String getVersionName() {
         PackageManager manager = context.getPackageManager();
         PackageInfo info = null;
         try {
@@ -849,7 +855,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     @JavascriptInterface
-    public int getVersionCode (){
+    public int getVersionCode() {
         PackageManager manager = context.getPackageManager();
         PackageInfo info = null;
         try {
@@ -864,16 +870,17 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     @JavascriptInterface
-    public String getManufacturerName () {
+    public String getManufacturerName() {
         return Build.MANUFACTURER;
     }
 
     @JavascriptInterface
-    public int getAndroidVersion (){
+    public int getAndroidVersion() {
         return Build.VERSION.SDK_INT;
     }
+
     @JavascriptInterface
-    public String getPackageName (){
+    public String getPackageName() {
         PackageManager manager = context.getPackageManager();
         PackageInfo info = null;
         try {
@@ -912,7 +919,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                                 editor.apply();
                                 setKeysInSharedPrefs("FCM_TOKEN", token);
                                 String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
-                                callback,token);
+                                        callback, token);
                                 if (dynamicUI != null && (juspayServices.getDynamicUI() != null)) {
                                     dynamicUI.addJsToWebView(javascript);
                                 }
@@ -923,8 +930,8 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     @JavascriptInterface
-    public void openWhatsAppSupport (String contactNumber){
-        String url = "https://api.whatsapp.com/send?phone="+contactNumber;
+    public void openWhatsAppSupport(String contactNumber) {
+        String url = "https://api.whatsapp.com/send?phone=" + contactNumber;
         Intent i = new Intent(Intent.ACTION_VIEW);
         i.setData(Uri.parse(url));
         i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -958,7 +965,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                     public void onTimeSet(TimePicker timePicker, int hourOfDay, int minute) {
                         if (dynamicUI != null && (juspayServices.getDynamicUI() != null)) {
                             String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s',%d,%d);",
-                                callback, hourOfDay, minute);
+                                    callback, hourOfDay, minute);
                             dynamicUI.addJsToWebView(javascript);
                         }
                     }
@@ -969,7 +976,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     private void reOrderSpinners(DatePickerDialog dialog, char[] dateOrder) {
-        if(!dialog.isShowing()) {
+        if (!dialog.isShowing()) {
             return;
         }
 
@@ -1008,8 +1015,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         final int imeOption;
         if (spinnerIndex < DATEPICKER_SPINNER_COUNT - 1) {
             imeOption = EditorInfo.IME_ACTION_NEXT;
-        }
-        else {
+        } else {
             imeOption = EditorInfo.IME_ACTION_DONE;
         }
         int idPickerInput = Resources.getSystem().getIdentifier("numberpicker_input", "id", "android");
@@ -1018,7 +1024,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     @JavascriptInterface
-    public void datePicker(final String callback,String label) {
+    public void datePicker(final String callback, String label) {
         activity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -1027,43 +1033,43 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                 int mMonth = c.get(Calendar.MONTH);
                 int mDate = c.get(Calendar.DATE);
                 int datePickerTheme = AlertDialog.THEME_HOLO_LIGHT;
-                if(Build.VERSION.SDK_INT <= Build.VERSION_CODES.N) datePickerTheme = 0;
+                if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.N) datePickerTheme = 0;
 
                 DatePickerDialog datePickerDialog = new DatePickerDialog(activity, datePickerTheme, new DatePickerDialog.OnDateSetListener() {
                     @Override
                     public void onDateSet(DatePicker datePicker, int year, int month, int date) {
                         if (dynamicUI != null && callback != null && juspayServices.getDynamicUI() != null) {
                             String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s',%d,%d,%d);",
-                                callback, year, month, date);
+                                    callback, year, month, date);
                             dynamicUI.addJsToWebView(javascript);
                         }
                     }
 
 
-                }, mYear, mMonth, mDate){
+                }, mYear, mMonth, mDate) {
 
                     final int month = getContext().getResources().getIdentifier("month", "id", "android");
                     final String[] monthNumbers =
-                    {
-                            "Jan (01)",
-                            "Feb (02)",
-                            "Mar (03)",
-                            "April (04)",
-                            "May (05)",
-                            "June (06)",
-                            "July (07)",
-                            "Aug (08)",
-                            "Sept (09)",
-                            "Oct (10)",
-                            "Nov (11)",
-                            "Dec (12)"
-                    };
+                            {
+                                    "Jan (01)",
+                                    "Feb (02)",
+                                    "Mar (03)",
+                                    "April (04)",
+                                    "May (05)",
+                                    "June (06)",
+                                    "July (07)",
+                                    "Aug (08)",
+                                    "Sept (09)",
+                                    "Oct (10)",
+                                    "Nov (11)",
+                                    "Dec (12)"
+                            };
 
                     @Override
                     public void onDateChanged(@NonNull DatePicker view, int y, int m, int d) {
                         super.onDateChanged(view, y, m, d);
                         try {
-                            if(Build.VERSION.SDK_INT > Build.VERSION_CODES.N) {
+                            if (Build.VERSION.SDK_INT > Build.VERSION_CODES.N) {
                                 if (month != 0) {
                                     NumberPicker monthPicker = findViewById(month);
                                     if (monthPicker != null) {
@@ -1072,16 +1078,15 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                                 }
                             }
                         } catch (Exception e) {
-                            Log.e(LOG_TAG,"Error in onDateChanged : " + e);
+                            Log.e(LOG_TAG, "Error in onDateChanged : " + e);
                         }
                     }
 
                     @Override
-                    protected void onCreate(Bundle savedInstanceState)
-                    {
+                    protected void onCreate(Bundle savedInstanceState) {
                         super.onCreate(savedInstanceState);
                         try {
-                            if(Build.VERSION.SDK_INT > Build.VERSION_CODES.N) {
+                            if (Build.VERSION.SDK_INT > Build.VERSION_CODES.N) {
                                 if (month != 0) {
                                     NumberPicker monthPicker = findViewById(month);
                                     if (monthPicker != null) {
@@ -1089,14 +1094,14 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                                     }
                                 }
                             }
-                        } catch (Exception e){
-                            Log.e(LOG_TAG,"Error in Date onCreate : " + e);
+                        } catch (Exception e) {
+                            Log.e(LOG_TAG, "Error in Date onCreate : " + e);
                         }
                     }
                 };
 
-                switch (label){
-                    case DatePickerLabels.MINIMUM_EIGHTEEN_YEARS :
+                switch (label) {
+                    case DatePickerLabels.MINIMUM_EIGHTEEN_YEARS:
                         Calendar maxDateDOB = Calendar.getInstance();
                         maxDateDOB.set(Calendar.DAY_OF_MONTH, mDate);
                         maxDateDOB.set(Calendar.MONTH, mMonth);
@@ -1104,22 +1109,24 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                         datePickerDialog.getDatePicker().setMaxDate(maxDateDOB.getTimeInMillis());
                         break;
                     case DatePickerLabels.MAXIMUM_PRESENT_DATE:
-                        datePickerDialog.getDatePicker().setMaxDate(System.currentTimeMillis()-1000);
+                        datePickerDialog.getDatePicker().setMaxDate(System.currentTimeMillis() - 1000);
                         break;
                 }
-                if(Build.VERSION.SDK_INT > Build.VERSION_CODES.N) datePickerDialog.setTitle(context.getString(R.string.select_date));
+                if (Build.VERSION.SDK_INT > Build.VERSION_CODES.N)
+                    datePickerDialog.setTitle(context.getString(R.string.select_date));
                 else datePickerDialog.setTitle("");
                 datePickerDialog.show();
                 final char[] dateOrder =
-                {
-                    'd',
-                    'm',
-                    'y'
-                };
+                        {
+                                'd',
+                                'm',
+                                'y'
+                        };
                 try {
-                    if(Build.VERSION.SDK_INT > Build.VERSION_CODES.N) reOrderSpinners(datePickerDialog, dateOrder);
+                    if (Build.VERSION.SDK_INT > Build.VERSION_CODES.N)
+                        reOrderSpinners(datePickerDialog, dateOrder);
                 } catch (Exception e) {
-                    Log.e(LOG_TAG,"Error in reOrdering spinners : " + e);
+                    Log.e(LOG_TAG, "Error in reOrdering spinners : " + e);
                 }
             }
         });
@@ -1163,45 +1170,45 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         storeCallBBatteryUsagePermission = callback;
     }
 
-    public static void callingStoreCallBackBatteryUsagePermission(DuiCallback dynamicUII, String isPermission){
-        if (dynamicUII != null && storeCallBBatteryUsagePermission!=null) {
+    public static void callingStoreCallBackBatteryUsagePermission(DuiCallback dynamicUII, String isPermission) {
+        if (dynamicUII != null && storeCallBBatteryUsagePermission != null) {
             String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
                     storeCallBBatteryUsagePermission, isPermission);
             dynamicUII.addJsToWebView(javascript);
         }
     }
 
-    public static void callingStoreCallBackDriverLocationPermission(DuiCallback dynamicUII, String isPermission){
-        if (dynamicUII != null && storeCallBDriverLocationPermission!=null) {
+    public static void callingStoreCallBackDriverLocationPermission(DuiCallback dynamicUII, String isPermission) {
+        if (dynamicUII != null && storeCallBDriverLocationPermission != null) {
             String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
                     storeCallBDriverLocationPermission, isPermission);
             dynamicUII.addJsToWebView(javascript);
         }
     }
 
-    public static void callingStoreCallImageUpload(DuiCallback dynamicUII, String stringImage,String imageName){
+    public static void callingStoreCallImageUpload(DuiCallback dynamicUII, String stringImage, String imageName) {
         System.out.println("zxc callingStoreCallImageUpload");
         if (dynamicUII != null) {
-            if (storeCallBackImageUpload == "imageUpload"){
+            if (storeCallBackImageUpload == "imageUpload") {
                 System.out.println("zxc callback not setted");
             }
             System.out.println("zxc stringImage" + stringImage);
             String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s');",
-                    storeCallBackImageUpload,stringImage, imageName);
+                    storeCallBackImageUpload, stringImage, imageName);
             dynamicUII.addJsToWebView(javascript);
         }
     }
 
-    public static void callingStoreCallBackInternetAction(DuiCallback dynamicUII, String isPermission){
+    public static void callingStoreCallBackInternetAction(DuiCallback dynamicUII, String isPermission) {
         if (dynamicUII != null && !storeCallBInternetAction.equals("storeCallBackInternet")) {
             String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
-            storeCallBInternetAction, isPermission);
+                    storeCallBInternetAction, isPermission);
             dynamicUII.addJsToWebView(javascript);
         }
     }
 
-    public static void callingStoreCallBackOverlayPermission(DuiCallback dynamicUII, String isPermission){
-        if (dynamicUII != null && storeCallBOverlayPermission!=null) {
+    public static void callingStoreCallBackOverlayPermission(DuiCallback dynamicUII, String isPermission) {
+        if (dynamicUII != null && storeCallBOverlayPermission != null) {
             String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
                     storeCallBOverlayPermission, isPermission);
             dynamicUII.addJsToWebView(javascript);
@@ -1209,9 +1216,9 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     @JavascriptInterface
-    public void requestBatteryPermission(){
+    public void requestBatteryPermission() {
         try {
-            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 Intent intent = new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
                 Uri uri = Uri.fromParts("package", getPackageName(), null);
                 intent.setData(uri);
@@ -1219,14 +1226,13 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                 PowerManager pm = (PowerManager) context.getSystemService(android.content.Context.POWER_SERVICE);
                 if (pm.isIgnoringBatteryOptimizations(packageName)) {
                     intent.setAction(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
-                }
-                else {
+                } else {
                     intent.setAction(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
                 }
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 context.startActivity(intent);
             }
-        }catch(ActivityNotFoundException e){
+        } catch (ActivityNotFoundException e) {
             e.printStackTrace();
             Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
             Uri uri = Uri.fromParts("package", getPackageName(), null);
@@ -1237,16 +1243,15 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     @JavascriptInterface
-    public boolean isBatteryPermissionEnabled(){
+    public boolean isBatteryPermissionEnabled() {
         PowerManager powerManager = (PowerManager) activity.getSystemService(Context.POWER_SERVICE);
         return (powerManager.isIgnoringBatteryOptimizations(context.getPackageName()));
     }
 
     @JavascriptInterface
-    public void disableActionEditText( final String id)
-    {
+    public void disableActionEditText(final String id) {
         EditText editText = activity.findViewById(Integer.parseInt(id));
-        if (editText!= null) {
+        if (editText != null) {
             editText.setCustomSelectionActionModeCallback(new ActionMode.Callback() {
                 @Override
                 public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
@@ -1269,29 +1274,26 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
             });
             editText.setLongClickable(false);
             editText.setTextIsSelectable(false);
-      }
+        }
     }
 
     @JavascriptInterface
     public void startLocationPollingAPI() {
         Intent locationUpdateService = new Intent(activity, LocationUpdateService.class);
         locationUpdateService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
-        System.out.println( "In startLocationPollingAPI intent" + locationUpdateService);
-        WorkManager mWorkManager ;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-        {
+        System.out.println("In startLocationPollingAPI intent" + locationUpdateService);
+        WorkManager mWorkManager;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             context.getApplicationContext().startForegroundService(locationUpdateService);
-        }
-        else
-        {
+        } else {
             context.startService(locationUpdateService);
         }
         mWorkManager = WorkManager.getInstance(context);
         Constraints constraints = new Constraints.Builder()
                 .setRequiresDeviceIdle(true)
                 .build();
-        PeriodicWorkRequest mWorkRequest = new PeriodicWorkRequest.Builder(LocationUpdateWorker.class,13, TimeUnit.MINUTES).addTag(context.getString(R.string.location_update)).setConstraints(constraints).build();
-        mWorkManager.enqueueUniquePeriodicWork(context.getString(R.string.location_update), ExistingPeriodicWorkPolicy.REPLACE,mWorkRequest);
+        PeriodicWorkRequest mWorkRequest = new PeriodicWorkRequest.Builder(LocationUpdateWorker.class, 13, TimeUnit.MINUTES).addTag(context.getString(R.string.location_update)).setConstraints(constraints).build();
+        mWorkManager.enqueueUniquePeriodicWork(context.getString(R.string.location_update), ExistingPeriodicWorkPolicy.REPLACE, mWorkRequest);
     }
 
     @JavascriptInterface
@@ -1302,7 +1304,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         activity.stopService(locationUpdateService);
         WorkManager mWorkManager = WorkManager.getInstance(context);
         mWorkManager.cancelAllWorkByTag(context.getString(R.string.location_update));
-        Log.i(LOG_TAG, "stopLocationPollingAPI " );
+        Log.i(LOG_TAG, "stopLocationPollingAPI ");
     }
 
     //to check if works fine
@@ -1313,7 +1315,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
 
     @JavascriptInterface
     public boolean isOverlayPermissionEnabled() {
-        if (NotificationUtils.overlayFeatureNotAvailable(context)){
+        if (NotificationUtils.overlayFeatureNotAvailable(context)) {
             return true;
         }
         return Settings.canDrawOverlays(context);
@@ -1349,7 +1351,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     public void requestPermission() {
         try {
             ActivityCompat.requestPermissions(activity, new String[]{ACCESS_FINE_LOCATION}, LOCATION_PERMISSION_REQ_CODE);
-        }catch (Exception e) {
+        } catch (Exception e) {
             Log.e(LOG_TAG, "Exception in request permission", e);
         }
     }
@@ -1357,9 +1359,9 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
 
     @JavascriptInterface
     @RequiresApi(api = Build.VERSION_CODES.M)
-    public void checkOverlayPermission(){
+    public void checkOverlayPermission() {
         System.out.println("CommonJsInterface checkOverlayPermission()");
-        if(!Settings.canDrawOverlays(context)){
+        if (!Settings.canDrawOverlays(context)) {
             requestOverlayPermission();
             System.out.print("After request permission");
         }
@@ -1399,13 +1401,13 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         switch (id) {
             case "SMS_RETRIEVER":
                 detach(new String[]{id});
-                 if(browserFragment != null) {
-                     JuspayDuiHook juspayDuiHook = new OtpUtils(browserFragment, callbackFunctionName);
-                     if (juspayDuiHook != null) {
-                         super.listenerMap.put(id, juspayDuiHook);
-                         juspayDuiHook.attach(activity);
-                     }
-                 }
+                if (browserFragment != null) {
+                    JuspayDuiHook juspayDuiHook = new OtpUtils(browserFragment, callbackFunctionName);
+                    if (juspayDuiHook != null) {
+                        super.listenerMap.put(id, juspayDuiHook);
+                        juspayDuiHook.attach(activity);
+                    }
+                }
                 break;
             default:
                 super.attach(id, argumentsJson, callbackFunctionName);
@@ -1420,7 +1422,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     @JavascriptInterface
-    public void metaLogEvent(String event){
+    public void metaLogEvent(String event) {
         try {
             AppEventsLogger logger = AppEventsLogger.newLogger(context);
             logger.logEvent(event);
@@ -1430,22 +1432,22 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     @JavascriptInterface
-    public void firebaseLogEventWithParams(String event,String paramKey,String paramValue) {
+    public void firebaseLogEventWithParams(String event, String paramKey, String paramValue) {
         Bundle params = new Bundle();
-        params.putString(paramKey,paramValue);
+        params.putString(paramKey, paramValue);
         mFirebaseAnalytics.logEvent(event, params);
     }
 
     @JavascriptInterface
-    public void firebaseLogEventWithTwoParams(String event,String paramKey1,String paramValue1,String paramKey2,String paramValue2) {
+    public void firebaseLogEventWithTwoParams(String event, String paramKey1, String paramValue1, String paramKey2, String paramValue2) {
         Bundle params = new Bundle();
-        params.putString(paramKey1,paramValue1);
-        params.putString(paramKey2,paramValue2);
+        params.putString(paramKey1, paramValue1);
+        params.putString(paramKey2, paramValue2);
         mFirebaseAnalytics.logEvent(event, params);
     }
 
     @JavascriptInterface
-    public void firebaseScreenNameLog (String screenName){
+    public void firebaseScreenNameLog(String screenName) {
         Bundle bundle = new Bundle();
         bundle.putString(FirebaseAnalytics.Param.SCREEN_NAME, screenName);
         bundle.putString(FirebaseAnalytics.Param.SCREEN_CLASS, "MainActivity");
@@ -1453,7 +1455,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     @JavascriptInterface
-    public void firebaseUserID (String id){
+    public void firebaseUserID(String id) {
         mFirebaseAnalytics.setUserId(id);
     }
 
@@ -1462,11 +1464,9 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         Intent intent = new Intent();
         intent.setAction(Intent.ACTION_CALL);
         phoneNumber = phoneNum;
-        if (ContextCompat.checkSelfPermission(activity,Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(activity,new String[]{Manifest.permission.CALL_PHONE},REQUEST_CALL);
-        }
-        else
-        {
+        if (ContextCompat.checkSelfPermission(activity, Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.CALL_PHONE}, REQUEST_CALL);
+        } else {
             if (intent != null) {
                 phoneNumber = "tel:" + phoneNum;
                 intent.setData(Uri.parse(phoneNumber));
@@ -1479,7 +1479,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     @JavascriptInterface
     public void openNavigation(double slat, double slong, double dlat, double dlong) {
         try {
-            Uri gmmIntentUri = Uri.parse("google.navigation:q="+String.valueOf(dlat)+","+String.valueOf(dlong));
+            Uri gmmIntentUri = Uri.parse("google.navigation:q=" + String.valueOf(dlat) + "," + String.valueOf(dlong));
             Intent mapIntent = new Intent(Intent.ACTION_VIEW, gmmIntentUri);
             mapIntent.setPackage("com.google.android.apps.maps");
             activity.startActivity(mapIntent);
@@ -1510,8 +1510,8 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
             @Override
             public void run() {
                 try {
-                    Intent intent=new Intent(Intent.ACTION_SEND);
-                    String[] recipients={mailId};
+                    Intent intent = new Intent(Intent.ACTION_SEND);
+                    String[] recipients = {mailId};
                     intent.putExtra(Intent.EXTRA_EMAIL, recipients);
                     intent.setType("text/html");
                     intent.setPackage("com.google.android.gm");
@@ -1524,20 +1524,19 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     @JavascriptInterface
-    public String getAAID()
-    {
-        try{
+    public String getAAID() {
+        try {
             AdvertisingIdClient.Info adInfo = AdvertisingIdClient.getAdvertisingIdInfo(context);
             String myId = adInfo != null ? adInfo.getId() : null;
-            Log.i("UIDMY",myId);
+            Log.i("UIDMY", myId);
             return myId;
-        }catch (Exception e) {
+        } catch (Exception e) {
             return "No ad id";
         }
     }
 
     @JavascriptInterface
-    public void factoryResetApp(){
+    public void factoryResetApp() {
         // Systems at 29/Q and later don't allow relaunch, but System.exit(0) on
         // all supported systems will relaunch ... but by killing the process, then
         // restarting the process with the back stack intact. We must make sure that
@@ -1550,7 +1549,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         activity.startActivity(intent);    // Start the launch activity
     }
 
-    private LocationCallback createLocCallBack (){
+    private LocationCallback createLocCallBack() {
         return new LocationCallback() {
             @Override
             public void onLocationResult(@NonNull LocationResult locationResult) {
@@ -1559,7 +1558,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         };
     }
 
-    private LocationRequest createLocReq(int priority, long intervalMillis, long fastestIntervalMillis){
+    private LocationRequest createLocReq(int priority, long intervalMillis, long fastestIntervalMillis) {
         LocationRequest locationRequest = LocationRequest.create()
                 .setPriority(priority)
                 .setInterval(intervalMillis)
@@ -1568,7 +1567,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     @SuppressLint("MissingPermission")
-    private void updateLastKnownLocation(String callback, boolean animate){
+    private void updateLastKnownLocation(String callback, boolean animate) {
         if (!isLocationPermissionEnabled()) return;
 
 //        LocationRequest mLocationRequest =
@@ -1594,10 +1593,10 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                                         callback, String.valueOf(lat), String.valueOf(lng));
                                 dynamicUI.addJsToWebView(javascript);
                             }
-                            if (animate && googleMap != null && lat!=null && lng != null){
+                            if (animate && googleMap != null && lat != null && lng != null) {
                                 LatLng latLng = new LatLng(lat, lng);
                                 if (userPositionMarker == null) {
-                                    upsertMarker(CURRENT_LOCATION, String.valueOf(lat), String.valueOf(lng),160, 0.5f,0.9f); //TODO this function will be removed
+                                    upsertMarker(CURRENT_LOCATION, String.valueOf(lat), String.valueOf(lng), 160, 0.5f, 0.9f); //TODO this function will be removed
                                 } else {
                                     if (storeMapCallBack == null)
                                         userPositionMarker.setVisible(true);
@@ -1605,8 +1604,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                                 }
                                 googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 17.0f));
                             }
-                        }
-                        else getLastKnownLocationFromClientFallback(callback, animate);
+                        } else getLastKnownLocationFromClientFallback(callback, animate);
                     }
                 })
                 .addOnFailureListener(activity, new OnFailureListener() {
@@ -1620,44 +1618,45 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     @SuppressLint("MissingPermission")
-    private void getLastKnownLocationFromClientFallback(String callback, boolean animate){
+    private void getLastKnownLocationFromClientFallback(String callback, boolean animate) {
         if (!isLocationPermissionEnabled()) return;
-        client.getLastLocation()
-                .addOnSuccessListener(activity, new OnSuccessListener<Location>() {
-                    @Override
-                    public void onSuccess(Location location) {
-                        if (location != null) {
-                            Double lat = location.getLatitude();
-                            Double lng = location.getLongitude();
-                            lastLatitudeValue = lat;
-                            lastLongitudeValue = lng;
-                            setEnvInNativeSharedPrefKeys("LAST_KNOWN_LAT", String.valueOf(lastLatitudeValue));
-                            setEnvInNativeSharedPrefKeys("LAST_KNOWN_LON", String.valueOf(lastLongitudeValue));
-                            if (callback != null && dynamicUI != null && juspayServices.getDynamicUI() != null) {
-                                String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s');",
-                                        callback, String.valueOf(lat), String.valueOf(lng));
-                                dynamicUI.addJsToWebView(javascript);
-                            }
-                            if (animate && googleMap != null && lat!=null && lng != null){
-                                LatLng latLng = new LatLng(lat, lng);
-                                if (userPositionMarker == null) {
-                                    upsertMarker(CURRENT_LOCATION, String.valueOf(lat), String.valueOf(lng),160, 0.5f,0.9f); //TODO this function will be removed
-                                } else {
-                                    if (storeMapCallBack == null)
-                                        userPositionMarker.setVisible(true);
-                                    userPositionMarker.setPosition(latLng);
+        if (client != null)
+            client.getLastLocation()
+                    .addOnSuccessListener(activity, new OnSuccessListener<Location>() {
+                        @Override
+                        public void onSuccess(Location location) {
+                            if (location != null) {
+                                Double lat = location.getLatitude();
+                                Double lng = location.getLongitude();
+                                lastLatitudeValue = lat;
+                                lastLongitudeValue = lng;
+                                setEnvInNativeSharedPrefKeys("LAST_KNOWN_LAT", String.valueOf(lastLatitudeValue));
+                                setEnvInNativeSharedPrefKeys("LAST_KNOWN_LON", String.valueOf(lastLongitudeValue));
+                                if (callback != null && dynamicUI != null && juspayServices.getDynamicUI() != null) {
+                                    String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s');",
+                                            callback, String.valueOf(lat), String.valueOf(lng));
+                                    dynamicUI.addJsToWebView(javascript);
                                 }
-                                googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 17.0f));
+                                if (animate && googleMap != null && lat != null && lng != null) {
+                                    LatLng latLng = new LatLng(lat, lng);
+                                    if (userPositionMarker == null) {
+                                        upsertMarker(CURRENT_LOCATION, String.valueOf(lat), String.valueOf(lng), 160, 0.5f, 0.9f); //TODO this function will be removed
+                                    } else {
+                                        if (storeMapCallBack == null)
+                                            userPositionMarker.setVisible(true);
+                                        userPositionMarker.setPosition(latLng);
+                                    }
+                                    googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 17.0f));
+                                }
                             }
                         }
-                    }
-                })
-                .addOnFailureListener(activity, new OnFailureListener() {
-                    @Override
-                    public void onFailure(@NonNull Exception e) {
-                        Log.e(LOG_TAG, "Last and current position not known");
-                    }
-                });
+                    })
+                    .addOnFailureListener(activity, new OnFailureListener() {
+                        @Override
+                        public void onFailure(@NonNull Exception e) {
+                            Log.e(LOG_TAG, "Last and current position not known");
+                        }
+                    });
     }
 
     @JavascriptInterface
@@ -1666,7 +1665,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
 
         updateLastKnownLocation(null, false);
 
-        if(defaultText.equals(CURRENT_LOCATION_LATLON)){
+        if (defaultText.equals(CURRENT_LOCATION_LATLON)) {
             latitude = String.valueOf(lastLatitudeValue);
             longitude = String.valueOf(lastLongitudeValue);
         }
@@ -1703,7 +1702,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
 
     @JavascriptInterface
     public void fetchAndUpdateCurrentLocation(String callback) {
-        if(!isLocationPermissionEnabled()) return;
+        if (!isLocationPermissionEnabled()) return;
         updateLastKnownLocation(callback, true);
     }
 
@@ -1734,20 +1733,21 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                             }
                         }
                     } catch (Exception e) {
-                        Log.e(LOG_TAG, "Keyboard Exception" +e.toString() );
+                        Log.e(LOG_TAG, "Keyboard Exception" + e.toString());
                     }
                 }
             });
         }
     }
+
     @JavascriptInterface
     public void initialWebViewSetUp(String callback, String id) {
         webViewCallBack = callback;
         activity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                WebView webView= (WebView) activity.findViewById(Integer.parseInt(id));
-                if(webView == null) return;
+                WebView webView = (WebView) activity.findViewById(Integer.parseInt(id));
+                if (webView == null) return;
                 webView.setWebChromeClient(new WebChromeClient() {
                     @Override
                     public boolean onConsoleMessage(ConsoleMessage consoleMessage) {
@@ -1761,7 +1761,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                         return super.onConsoleMessage(consoleMessage);
                     }
                 });
-                webView.setWebViewClient(new WebViewClient(){
+                webView.setWebViewClient(new WebViewClient() {
                     @Override
                     public boolean shouldOverrideUrlLoading(WebView view, String url) {
                         if (url.startsWith("intent://")) {
@@ -1780,23 +1780,22 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                                 e.printStackTrace();
                             }
                         }
-                        if (url.startsWith("tg:") || url.startsWith("https://www.facebook.com") || url.startsWith("https://www.twitter.com/") || url.startsWith("https://www.linkedin.com") || url.startsWith("https://api.whatsapp.com") || url.contains("YATRI.pdf") || url.startsWith("https://telegram.me/"))
-                            {
-                                try {
-                                    CustomTabsIntent.Builder builder = new CustomTabsIntent.Builder();
-                                    CustomTabsIntent customTabsIntent = builder.build();
-                                    customTabsIntent.intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                                    customTabsIntent.launchUrl(context, Uri.parse(url));
-                                    return true;
-                                } catch (Exception e) {
-                                    if(toast!=null){
-                                        toast.cancel();
-                                    }
-                                    toast = Toast.makeText(context, "Looks like there is no app or web browser installed on your device", Toast.LENGTH_SHORT);
-                                    toast.show();
-                                    return true;
+                        if (url.startsWith("tg:") || url.startsWith("https://www.facebook.com") || url.startsWith("https://www.twitter.com/") || url.startsWith("https://www.linkedin.com") || url.startsWith("https://api.whatsapp.com") || url.contains("YATRI.pdf") || url.startsWith("https://telegram.me/")) {
+                            try {
+                                CustomTabsIntent.Builder builder = new CustomTabsIntent.Builder();
+                                CustomTabsIntent customTabsIntent = builder.build();
+                                customTabsIntent.intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                customTabsIntent.launchUrl(context, Uri.parse(url));
+                                return true;
+                            } catch (Exception e) {
+                                if (toast != null) {
+                                    toast.cancel();
                                 }
+                                toast = Toast.makeText(context, "Looks like there is no app or web browser installed on your device", Toast.LENGTH_SHORT);
+                                toast.show();
+                                return true;
                             }
+                        }
                         return false;
                     }
                 });
@@ -1810,17 +1809,17 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         activity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                if(webView == null) return;
+                if (webView == null) return;
                 if (webView.canGoBack()) {
                     webView.post(new Runnable() {
                         @Override
                         public void run() {
-                            if (webView!=null){
+                            if (webView != null) {
                                 webView.goBack();
                             }
                         }
                     });
-                }else{
+                } else {
                     if (webViewCallBack != null && dynamicUI != null && juspayServices.getDynamicUI() != null) {
                         String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
                                 webViewCallBack, String.valueOf("TRUE"));
@@ -1834,19 +1833,19 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     @JavascriptInterface
     public String getCurrentLatLong() throws JSONException { // TODO:: TO BE DEPRECATED AS FUNCTION IS NOT IN USE
         JSONObject location = new JSONObject();
-        location.put("lat",lastLatitudeValue);
-        location.put("lng",lastLongitudeValue);
+        location.put("lat", lastLatitudeValue);
+        location.put("lng", lastLongitudeValue);
         return location.toString();
     }
 
     @JavascriptInterface
     public void initiateLocationServiceClient() {
-        if(!isLocationPermissionEnabled()) return;
+        if (!isLocationPermissionEnabled()) return;
         resolvableLocationSettingsReq();
     }
 
 
-    private void resolvableLocationSettingsReq(){
+    private void resolvableLocationSettingsReq() {
         LocationRequest locationRequest = createLocReq(Priority.PRIORITY_HIGH_ACCURACY, 1000, 500);
 
         LocationSettingsRequest.Builder lBuilder = new LocationSettingsRequest.Builder()
@@ -1885,7 +1884,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
 
     @JavascriptInterface
     public void getCurrentPosition(String callback) {
-        if(!isLocationPermissionEnabled()) return;
+        if (!isLocationPermissionEnabled()) return;
         updateLastKnownLocation(callback, false);
     }
 
@@ -1903,12 +1902,12 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     @JavascriptInterface
-    public void previewImage ( String base64Image){
+    public void previewImage(String base64Image) {
         activity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 try {
-                    if (!base64Image.equals("") && base64Image!=null){
+                    if (!base64Image.equals("") && base64Image != null) {
                         byte[] decodedString = Base64.decode(base64Image, Base64.DEFAULT);
                         Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
 
@@ -1921,36 +1920,37 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                         activity.getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
                         int screenHeight = displayMetrics.heightPixels;
                         int width = displayMetrics.widthPixels;
-                        imagePreview.setMinimumHeight(screenHeight/2);
+                        imagePreview.setMinimumHeight(screenHeight / 2);
                         imagePreview.setMinimumWidth(width);
 
-                        ViewGroup.LayoutParams layoutParams= new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,LinearLayout.LayoutParams.MATCH_PARENT);
+                        ViewGroup.LayoutParams layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT);
                         imagePreview.setLayoutParams(layoutParams);
                         builder.setView(imagePreview);
                         AlertDialog alertDialog = builder.create();
                         alertDialog.show();
                     }
-                } catch (Exception e){
+                } catch (Exception e) {
                     e.printStackTrace();
                 }
             }
         });
     }
+
     @JavascriptInterface
     public String generateSessionToken(String str) {
 
         AutocompleteSessionToken token = AutocompleteSessionToken.newInstance();
-        System.out.println("SESSION_TOKEN -> "+ token);
-        String sessionToken  = token.toString();
+        System.out.println("SESSION_TOKEN -> " + token);
+        String sessionToken = token.toString();
         return sessionToken;
     }
 
     @JavascriptInterface
-    public void renderBase64Image (String url, String id){
+    public void renderBase64Image(String url, String id) {
         String base64Image = getAPIResponse(url);
         activity.runOnUiThread(() -> {
             try {
-                if (!base64Image.equals("") && base64Image!=null && id!=null){
+                if (!base64Image.equals("") && base64Image != null && id != null) {
                     LinearLayout layout = activity.findViewById(Integer.parseInt(id));
                     byte[] decodedString = Base64.decode(base64Image, Base64.DEFAULT);
                     Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
@@ -1962,7 +1962,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                     layout.removeAllViews();
                     layout.addView(imageView);
                 }
-            } catch (Exception e){
+            } catch (Exception e) {
                 e.printStackTrace();
             }
         });
@@ -1978,22 +1978,38 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                 animationView.setSpeed(speed);
                 animationView.playAnimation();
                 switch (scaleType) {
-                    case "MATRIX" : animationView.setScaleType(ImageView.ScaleType.MATRIX); break;
-                    case "FIT_XY" : animationView.setScaleType(ImageView.ScaleType.FIT_XY); break;
-                    case "FIT_START" : animationView.setScaleType(ImageView.ScaleType.FIT_START); break;
-                    case "FIT_END" : animationView.setScaleType(ImageView.ScaleType.FIT_END); break;
-                    case "CENTER" : animationView.setScaleType(ImageView.ScaleType.CENTER); break;
-                    case "CENTER_CROP" : animationView.setScaleType(ImageView.ScaleType.CENTER_CROP); break;
-                    case "CENTER_INSIDE" : animationView.setScaleType(ImageView.ScaleType.CENTER_INSIDE); break;
-                    default: animationView.setScaleType(ImageView.ScaleType.FIT_CENTER);break;
+                    case "MATRIX":
+                        animationView.setScaleType(ImageView.ScaleType.MATRIX);
+                        break;
+                    case "FIT_XY":
+                        animationView.setScaleType(ImageView.ScaleType.FIT_XY);
+                        break;
+                    case "FIT_START":
+                        animationView.setScaleType(ImageView.ScaleType.FIT_START);
+                        break;
+                    case "FIT_END":
+                        animationView.setScaleType(ImageView.ScaleType.FIT_END);
+                        break;
+                    case "CENTER":
+                        animationView.setScaleType(ImageView.ScaleType.CENTER);
+                        break;
+                    case "CENTER_CROP":
+                        animationView.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                        break;
+                    case "CENTER_INSIDE":
+                        animationView.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+                        break;
+                    default:
+                        animationView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                        break;
                 }
             } catch (Exception e) {
-                Log.d("TAG", "exception in startLottieAnimation" , e);
+                Log.d("TAG", "exception in startLottieAnimation", e);
             }
         });
     }
 
-    private String getJsonFromResources(String rawJson){
+    private String getJsonFromResources(String rawJson) {
         InputStream inputStreams = activity.getResources().openRawResource(activity.getResources().getIdentifier(rawJson, "raw", getPackageName()));
         Writer writer = new StringWriter();
         char[] buffer = new char[1024];
@@ -2026,6 +2042,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         System.out.println("storeCallBackLocateOnMap" + callback);
         storeMapCallBack = callback;
     }
+
     @JavascriptInterface
     public void showMap(final String pureScriptId, boolean isEnableCurrentLocation, final String mapType, final float zoom, final String callback) {
         try {
@@ -2035,7 +2052,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                 FragmentTransaction fragmentTransaction = supportFragmentManager.beginTransaction();
                 fragmentTransaction.add(Integer.parseInt(pureScriptId), mapFragment);
                 fragmentTransaction.commitAllowingStateLoss();
-                if (mapFragment != null){
+                if (mapFragment != null) {
                     getMapAsync(mapFragment, isEnableCurrentLocation, mapType, callback, pureScriptId, zoom);
                 }
             });
@@ -2060,7 +2077,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                     googleMap.getUiSettings().setMyLocationButtonEnabled(false);
                     markers = new JSONObject();
                     markersElement.put(pureScriptId, markers);
-                    CommonJsInterface.this.googleMap.setOnMapLoadedCallback (new GoogleMap.OnMapLoadedCallback () {
+                    CommonJsInterface.this.googleMap.setOnMapLoadedCallback(new GoogleMap.OnMapLoadedCallback() {
                         @Override
                         public synchronized void onMapLoaded() {
                             System.out.println("onMapLoaded");
@@ -2070,29 +2087,31 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                             handler.postDelayed(new Runnable() {
                                 @Override
                                 public void run() {
-                                    GoogleMap.SnapshotReadyCallback callback2=new GoogleMap.SnapshotReadyCallback () {
+                                    GoogleMap.SnapshotReadyCallback callback2 = new GoogleMap.SnapshotReadyCallback() {
                                         Bitmap bitmap;
+
                                         @Override
                                         public void onSnapshotReady(Bitmap snapshot) {
-                                            bitmap=snapshot;
+                                            bitmap = snapshot;
                                             String encImage = "";
                                             try {
                                                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                                                bitmap.compress(Bitmap.CompressFormat.JPEG,80,baos);
+                                                bitmap.compress(Bitmap.CompressFormat.JPEG, 80, baos);
                                                 byte[] b = baos.toByteArray();
                                                 encImage = Base64.encodeToString(b, Base64.NO_WRAP);
                                             } catch (Exception e) {
                                                 e.printStackTrace();
                                             }
 
-                                            if(dynamicUI != null && callback != null && juspayServices.getDynamicUI() != null){
+                                            if (dynamicUI != null && callback != null && juspayServices.getDynamicUI() != null) {
                                                 Log.i("callback encoded image 2", encImage);
                                                 String javascript = String.format("window.callUICallback('%s','%s');", callback, encImage);
                                                 Log.e(LOG_TAG, javascript);
                                                 dynamicUI.addJsToWebView(javascript);
                                             }
                                         }
-                                    };CommonJsInterface.this.googleMap.snapshot (callback2);
+                                    };
+                                    CommonJsInterface.this.googleMap.snapshot(callback2);
                                 }
                             }, 2000);
                         }
@@ -2109,7 +2128,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         ArrayList<Polyline> lines = new ArrayList<>();
 //        polylines.add(lines);
         activity.runOnUiThread(() -> {
-            if(googleMap!=null) {
+            if (googleMap != null) {
                 System.out.println("inside_showRoute");
                 PolylineOptions polylineOptions = new PolylineOptions();
                 int color = Color.parseColor(trackColor);
@@ -2117,7 +2136,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                     JSONObject jsonObject = new JSONObject(json);
                     JSONArray coordinates = jsonObject.getJSONArray("points");
                     JSONObject sourceCoordinates = (JSONObject) coordinates.get(0);
-                    JSONObject destCoordinates = (JSONObject) coordinates.get(coordinates.length()-1);
+                    JSONObject destCoordinates = (JSONObject) coordinates.get(coordinates.length() - 1);
                     double sourceLat = sourceCoordinates.getDouble("lat");
                     double sourceLong = sourceCoordinates.getDouble("lng");
                     double destLat = destCoordinates.getDouble("lat");
@@ -2125,21 +2144,21 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
 
                     double source_lat, source_lng, destination_lat, destination_lng;
                     if (sourceLat <= destLat) {
-                        source_lat = sourceLat - 0.4*(destLat-sourceLat);
-                        destination_lat = destLat + 0.1*(destLat-sourceLat);
+                        source_lat = sourceLat - 0.4 * (destLat - sourceLat);
+                        destination_lat = destLat + 0.1 * (destLat - sourceLat);
                     } else {
-                        source_lat = sourceLat + 0.1*(sourceLat-destLat);
-                        destination_lat = destLat - 0.4*(sourceLat-destLat);
+                        source_lat = sourceLat + 0.1 * (sourceLat - destLat);
+                        destination_lat = destLat - 0.4 * (sourceLat - destLat);
                     }
                     if (sourceLong <= destLong) {
-                        source_lng = sourceLong - 0.09*(destLong-sourceLong);
-                        destination_lng = destLong + 0.09*(destLong-sourceLong);
+                        source_lng = sourceLong - 0.09 * (destLong - sourceLong);
+                        destination_lng = destLong + 0.09 * (destLong - sourceLong);
                     } else {
-                        source_lng = sourceLong + 0.09*(sourceLong-destLong);
-                        destination_lng = destLong - 0.09*(sourceLong-destLong);
+                        source_lng = sourceLong + 0.09 * (sourceLong - destLong);
+                        destination_lng = destLong - 0.09 * (sourceLong - destLong);
                     }
 
-                    if(googleMap!=null) {
+                    if (googleMap != null) {
                         try {
                             LatLng pickupLatLng = new LatLng(source_lat, source_lng);
                             LatLng destinationLatLng = new LatLng(destination_lat, destination_lng);
@@ -2150,20 +2169,19 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                             LatLng destinationLatLng = new LatLng(destination_lat, destination_lng);
                             LatLngBounds bounds = LatLngBounds.builder().include(destinationLatLng).include(pickupLatLng).build();
                             googleMap.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, 0));
-                        }
-                        catch(Exception e){
+                        } catch (Exception e) {
                             System.out.println("In mmove camera in catch exception " + e);
                         }
                     }
 //
-                    if(isActual){
-                        for (int i = coordinates.length() -1 ; i >= 0 ; i--) {
+                    if (isActual) {
+                        for (int i = coordinates.length() - 1; i >= 0; i--) {
                             JSONObject coordinate = (JSONObject) coordinates.get(i);
                             double lng = coordinate.getDouble("lng");
                             double lat = coordinate.getDouble("lat");
                             polylineOptions.add(new LatLng(lat, lng));
                         }
-                    }else{
+                    } else {
                         LatLng fromPointObj = new LatLng(sourceLat, sourceLong);
                         LatLng toPointObj = new LatLng(destLat, destLong);
                         polylineOptions.add(toPointObj);
@@ -2172,7 +2190,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
 
                     Polyline polyline = setRouteCustomTheme(polylineOptions, color, style, polylineWidth);
 
-                    if(sourceMarker != null && !sourceMarker.equals("")) {
+                    if (sourceMarker != null && !sourceMarker.equals("")) {
                         Bitmap sourceBitmap = constructBitmap(90, sourceMarker);
                         polyline.setStartCap(
                                 new CustomCap(
@@ -2181,7 +2199,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                         );
                     }
 
-                    if(destMarker != null && !destMarker.equals("")) {
+                    if (destMarker != null && !destMarker.equals("")) {
                         Bitmap destBitmap = constructBitmap(90, destMarker);
                         polyline.setEndCap(
                                 new CustomCap(
@@ -2199,7 +2217,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         });
     }
 
-    private void getMapAsync(SupportMapFragment mapFragment, boolean isEnableCurrentLocation, final String mapType, final String callback, final String pureScriptId, final float zoom){
+    private void getMapAsync(SupportMapFragment mapFragment, boolean isEnableCurrentLocation, final String mapType, final String callback, final String pureScriptId, final float zoom) {
         mapFragment.getMapAsync(googleMap -> {
             CommonJsInterface.this.googleMap = googleMap;
             googleMap.setMinZoomPreference(7.0f);
@@ -2219,16 +2237,16 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                 }
             });
             try {
-                if (mapType.equals(LOCATE_ON_MAP)){
-                    upsertMarker(LOCATE_ON_MAP, String.valueOf(lastLatitudeValue), String.valueOf(lastLongitudeValue), 160, 0.5f,0.9f);
+                if (mapType.equals(LOCATE_ON_MAP)) {
+                    upsertMarker(LOCATE_ON_MAP, String.valueOf(lastLatitudeValue), String.valueOf(lastLongitudeValue), 160, 0.5f, 0.9f);
                     CommonJsInterface.this.googleMap.setOnCameraMoveListener(new GoogleMap.OnCameraMoveListener() {
                         @Override
                         public void onCameraMove() {
                             try {
                                 double lat = (CommonJsInterface.this.googleMap.getCameraPosition().target.latitude);
-                                double lng =  (CommonJsInterface.this.googleMap.getCameraPosition().target.longitude);
-                                upsertMarker(LOCATE_ON_MAP, String.valueOf(lat), String.valueOf(lng),160, 0.5f,0.9f);
-                            }catch (Exception e) {
+                                double lng = (CommonJsInterface.this.googleMap.getCameraPosition().target.longitude);
+                                upsertMarker(LOCATE_ON_MAP, String.valueOf(lat), String.valueOf(lng), 160, 0.5f, 0.9f);
+                            } catch (Exception e) {
                                 Log.i(LOG_TAG, "Marker creation error for ", e);
                             }
                         }
@@ -2236,9 +2254,9 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                     CommonJsInterface.this.googleMap.setOnCameraIdleListener(new GoogleMap.OnCameraIdleListener() {
                         @Override
                         public void onCameraIdle() {
-                            if (dynamicUI != null && juspayServices.getDynamicUI() != null){
+                            if (dynamicUI != null && juspayServices.getDynamicUI() != null) {
                                 double lat = (CommonJsInterface.this.googleMap.getCameraPosition().target.latitude);
-                                double lng =  (CommonJsInterface.this.googleMap.getCameraPosition().target.longitude);
+                                double lng = (CommonJsInterface.this.googleMap.getCameraPosition().target.longitude);
                                 String javascript = String.format("window.callUICallback('%s','%s','%s','%s');", callback, "LatLon", lat, lng);
                                 Log.e(LOG_TAG, javascript);
                                 dynamicUI.addJsToWebView(javascript);
@@ -2254,7 +2272,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
             } catch (Exception e) {
                 e.printStackTrace();
             }
-            if(dynamicUI != null && callback != null && juspayServices.getDynamicUI() != null){
+            if (dynamicUI != null && callback != null && juspayServices.getDynamicUI() != null) {
                 String javascript = String.format("window.callUICallback('%s','%s','%s','%s');", callback, "MAP", "READY", "LOADED");
                 Log.e(LOG_TAG, javascript);
                 dynamicUI.addJsToWebView(javascript);
@@ -2263,7 +2281,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     } //NEW
 
     @JavascriptInterface
-    public void exitLocateOnMap (String str){
+    public void exitLocateOnMap(String str) {
         try {
             this.storeMapCallBack = null;
             activity.runOnUiThread(() -> {
@@ -2276,27 +2294,27 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     @JavascriptInterface
-    public void enableMyLocation (boolean isEnableCurrentLocation ){
+    public void enableMyLocation(boolean isEnableCurrentLocation) {
         try {
             activity.runOnUiThread((() -> {
                 if (ActivityCompat.checkSelfPermission(activity.getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(activity.getApplicationContext(), Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED && CommonJsInterface.this.googleMap != null) {
                     CommonJsInterface.this.googleMap.setMyLocationEnabled(isEnableCurrentLocation);
                 }
             }));
-        } catch (Exception e){
-            Log.i(LOG_TAG, "Enable My Location on GoogleMap error",e);
+        } catch (Exception e) {
+            Log.i(LOG_TAG, "Enable My Location on GoogleMap error", e);
         }
     }
 
     @JavascriptInterface
-    public void locateOnMap (boolean goToCurrentLocation, final String lat, final String lon){
+    public void locateOnMap(boolean goToCurrentLocation, final String lat, final String lon) {
         try {
             activity.runOnUiThread(() -> {
                 removeMarker("ny_ic_customer_current_location");
-                if(goToCurrentLocation){
+                if (goToCurrentLocation) {
                     LatLng latLng = new LatLng(lastLatitudeValue, lastLongitudeValue);
                     googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 17.0f));
-                }else{
+                } else {
                     LatLng latLng = new LatLng(Double.parseDouble(lat), Double.parseDouble(lon));
                     googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 17.0f));
                     googleMap.moveCamera(CameraUpdateFactory.zoomTo(googleMap.getCameraPosition().zoom + 2.0f));
@@ -2305,8 +2323,8 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                     @Override
                     public void onCameraIdle() {
                         double lat1 = (CommonJsInterface.this.googleMap.getCameraPosition().target.latitude);
-                        double lng =  (CommonJsInterface.this.googleMap.getCameraPosition().target.longitude);
-                        if (storeMapCallBack != null && dynamicUI!=null && juspayServices.getDynamicUI() != null){
+                        double lng = (CommonJsInterface.this.googleMap.getCameraPosition().target.longitude);
+                        if (storeMapCallBack != null && dynamicUI != null && juspayServices.getDynamicUI() != null) {
                             String javascript = String.format("window.callUICallback('%s','%s','%s','%s');", storeMapCallBack, "LatLon", lat1, lng);
                             Log.e(LOG_TAG, javascript);
                             dynamicUI.addJsToWebView(javascript);
@@ -2316,7 +2334,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                 if ((lastLatitudeValue != 0.0 && lastLongitudeValue != 0.0) && goToCurrentLocation) {
                     LatLng latLngObjMain = new LatLng(lastLatitudeValue, lastLongitudeValue);
                     CommonJsInterface.this.googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLngObjMain, 17.0f));
-                }else{
+                } else {
                     LatLng latLngObjMain = new LatLng(Double.parseDouble(lat), Double.parseDouble(lon));
                     CommonJsInterface.this.googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLngObjMain, 17.0f));
                     googleMap.moveCamera(CameraUpdateFactory.zoomTo(googleMap.getCameraPosition().zoom + 2.0f));
@@ -2334,7 +2352,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
             try {
                 SupportMapFragment mapFragment = (SupportMapFragment) ((FragmentActivity) activity).getSupportFragmentManager()
                         .findFragmentById(Integer.parseInt(pureScriptId));
-                if(mapFragment!=null){
+                if (mapFragment != null) {
                     mapFragment.getMapAsync(googleMap -> {
                         CommonJsInterface.this.googleMap = googleMap;
                         googleMap.getUiSettings().setRotateGesturesEnabled(false);
@@ -2354,7 +2372,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                     .position(new LatLng(lat, lng))
                     .title(title)
                     .anchor(anchorV, anchorV1);
-            if(!title.equals(LOCATE_ON_MAP)){
+            if (!title.equals(LOCATE_ON_MAP)) {
                 Bitmap smallMarker = constructBitmap(markerSize, title);
                 markerOptions.icon(BitmapDescriptorFactory.fromBitmap(smallMarker));
             }
@@ -2365,7 +2383,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         }
     }
 
-    private Bitmap constructBitmap(final int markerSize, final String title){
+    private Bitmap constructBitmap(final int markerSize, final String title) {
         int imageID = context.getResources().getIdentifier(title, "drawable", activity.getPackageName());
         BitmapDrawable bitmapdraw = (BitmapDrawable) context.getResources().getDrawable(imageID);
         Bitmap b = bitmapdraw.getBitmap();
@@ -2375,34 +2393,35 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         //}
         float maximum = Math.max(b.getWidth(), b.getHeight());
         float minimum = Math.min(b.getWidth(), b.getHeight());
-        float multiplier = markerSize/maximum;
+        float multiplier = markerSize / maximum;
         int markerWidth = Math.round(b.getWidth() * multiplier);
         int markerHeight = Math.round(b.getHeight() * multiplier);
-        Log.i("real width and height of "+ title, String.valueOf(b.getWidth()) + " , " + String.valueOf(b.getHeight()));
-        Log.i("after width and height of "+ title, String.valueOf(markerWidth) + " , " + String.valueOf(markerHeight));
+        Log.i("real width and height of " + title, String.valueOf(b.getWidth()) + " , " + String.valueOf(b.getHeight()));
+        Log.i("after width and height of " + title, String.valueOf(markerWidth) + " , " + String.valueOf(markerHeight));
         return Bitmap.createScaledBitmap(b, markerWidth, markerHeight, false);
     }
+
     private Bitmap getMarkerBitmapFromView(String locationName, String imageName) {
 
         View customMarkerView = ((LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE)).inflate(R.layout.marker_label_layout, null);
         TextView label = customMarkerView.findViewById(R.id.marker_text);
-        if(locationName.equals("")){
+        if (locationName.equals("")) {
             label.setVisibility(customMarkerView.GONE);
-        }else{
+        } else {
             if (locationName.length() <= 27) {
                 label.setText(locationName);
             } else {
-                label.setText(locationName.substring(0, 17)+"...");
+                label.setText(locationName.substring(0, 17) + "...");
             }
         }
         ImageView pointer = customMarkerView.findViewById(R.id.pointer_img);
         try {
-            if(imageName.equals("ny_ic_dest_marker") ){
+            if (imageName.equals("ny_ic_dest_marker")) {
                 pointer.setImageDrawable(context.getResources().getDrawable(R.drawable.ny_ic_dest_marker));
-            }else{
+            } else {
                 pointer.setImageDrawable(context.getResources().getDrawable(R.drawable.ny_ic_src_marker));
             }
-        }catch (Exception e){
+        } catch (Exception e) {
             Log.e("Exception in rendering Image", e.toString());
         }
         customMarkerView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
@@ -2423,7 +2442,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     public void upsertMarker(final String title, final String lat, final String lng, final int markerSize, final float anchorV, final float anchorV1) {
         activity.runOnUiThread(() -> {
             try {
-                if(lat != null && lng != null){
+                if (lat != null && lng != null) {
                     double latitude = lat.equals("9.9") ? lastLatitudeValue : Double.parseDouble(lat);
                     double longitude = lat.equals("9.9") ? lastLatitudeValue : Double.parseDouble(lng);
                     LatLng latLngObj = new LatLng(latitude, longitude);
@@ -2444,7 +2463,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                             markerObject.setVisible(true);
                             markerObject.setFlat(true);
                             markerObject.hideInfoWindow();
-                            if(title.equals("ny_ic_customer_current_location")){
+                            if (title.equals("ny_ic_customer_current_location")) {
                                 userPositionMarker = markerObject;
                             }
                             Log.i(LOG_TAG, "New marker created and updated for " + title);
@@ -2517,40 +2536,40 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     @JavascriptInterface
-    public void addMediaPlayer (String viewID,String source) {
+    public void addMediaPlayer(String viewID, String source) {
         activity.runOnUiThread(() -> {
-            MediaPlayerView audioPlayer = new MediaPlayerView(context,activity);
-                try {
-                    audioPlayer.inflateView(Integer.parseInt(viewID));
-                    if (source.contains(".mp3")) {
-                        audioPlayer.addAudioFileUrl(source);
-                    } else {
-                         Thread thread =  new Thread(() -> {
-                             try {
-                                String base64 = getAPIResponse(source);
-                                byte decodedAudio[] = Base64.decode(base64,Base64.DEFAULT);
-                                File tempMp3 = File.createTempFile("audio_cache", "mp3", context.getCacheDir());
-                                tempMp3.deleteOnExit();
-                                FileOutputStream fos = new FileOutputStream(tempMp3);
-                                fos.write(decodedAudio);
-                                fos.close();
-                                FileInputStream fis = new FileInputStream(tempMp3);
-                                audioPlayer.addAudioFileInput(fis);
-                            } catch (Exception e) {
+            MediaPlayerView audioPlayer = new MediaPlayerView(context, activity);
+            try {
+                audioPlayer.inflateView(Integer.parseInt(viewID));
+                if (source.contains(".mp3")) {
+                    audioPlayer.addAudioFileUrl(source);
+                } else {
+                    Thread thread = new Thread(() -> {
+                        try {
+                            String base64 = getAPIResponse(source);
+                            byte decodedAudio[] = Base64.decode(base64, Base64.DEFAULT);
+                            File tempMp3 = File.createTempFile("audio_cache", "mp3", context.getCacheDir());
+                            tempMp3.deleteOnExit();
+                            FileOutputStream fos = new FileOutputStream(tempMp3);
+                            fos.write(decodedAudio);
+                            fos.close();
+                            FileInputStream fis = new FileInputStream(tempMp3);
+                            audioPlayer.addAudioFileInput(fis);
+                        } catch (Exception e) {
 
-                            }
-                        });
-                        thread.start();
-                    }
-                    audioPlayers.add(audioPlayer);
-                } catch (IOException e) {
-                    e.printStackTrace();
+                        }
+                    });
+                    thread.start();
                 }
-            });
+                audioPlayers.add(audioPlayer);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
     }
 
     @JavascriptInterface
-    public void removeMediaPlayer () {
+    public void removeMediaPlayer() {
         for (MediaPlayerView audioPlayer : audioPlayers) {
             audioPlayer.resetListeners();
         }
@@ -2560,15 +2579,15 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     @JavascriptInterface
-    public void updateRoute (String json, String dest, String eta, String dummy) {
+    public void updateRoute(String json, String dest, String eta, String dummy) {
         activity.runOnUiThread(() -> {
-            if(googleMap!=null) {
+            if (googleMap != null) {
                 try {
                     ArrayList<LatLng> path = new ArrayList<>();
                     JSONObject jsonObject = null;
                     jsonObject = new JSONObject(json);
                     JSONArray coordinates = jsonObject.getJSONArray("points");
-                    for (int i = coordinates.length() -1 ; i >= 0   ; i--) {
+                    for (int i = coordinates.length() - 1; i >= 0; i--) {
                         JSONObject coordinate = (JSONObject) coordinates.get(i);
                         double lng = coordinate.getDouble("lng");
                         double lat = coordinate.getDouble("lat");
@@ -2582,27 +2601,25 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                         polylines.setEndCap(new ButtCap());
                         if (path.size() == 0) {
                             LatLng destination = destMarker.getPosition();
-                            animateMarkerNew(destination,currMarker);
+                            animateMarkerNew(destination, currMarker);
                             polylines.remove();
                             polylines = null;
-                            currMarker.setAnchor(0.5f,0);
-                            animateCamera(destMarker.getPosition().latitude,destMarker.getPosition().longitude,17.0f);
-                        }
-                        else
-                        {
+                            currMarker.setAnchor(0.5f, 0);
+                            animateCamera(destMarker.getPosition().latitude, destMarker.getPosition().longitude, 17.0f);
+                        } else {
                             double destinationLat = path.get(0).latitude;
                             double destinationLon = path.get(0).longitude;
-                            double sourceLat = path.get(path.size()-1).latitude;
-                            double sourceLong = path.get(path.size()-1).longitude;
-                            LatLng destination = path.get(path.size()-1);
-                            animateMarkerNew(destination,currMarker);
+                            double sourceLat = path.get(path.size() - 1).latitude;
+                            double sourceLong = path.get(path.size() - 1).longitude;
+                            LatLng destination = path.get(path.size() - 1);
+                            animateMarkerNew(destination, currMarker);
                             PatternItem DASH = new Dash(1);
                             List<PatternItem> PATTERN_POLYLINE_DOTTED_DASHED = Arrays.asList(DASH);
                             polylines.setPattern(PATTERN_POLYLINE_DOTTED_DASHED);
                             polylines.setPoints(path);
-                            if(debounceAnimateCamera!=0) {
+                            if (debounceAnimateCamera != 0) {
                                 debounceAnimateCamera--;
-                            } else{
+                            } else {
                                 moveCamera(sourceLat, sourceLong, destinationLat, destinationLon, coordinates);
                                 debounceAnimateCamera = 10;
                             }
@@ -2621,28 +2638,26 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
      */
 
     @JavascriptInterface
-    public void updateRoute (String json,  double currLat, double currLng) {
+    public void updateRoute(String json, double currLat, double currLng) {
         activity.runOnUiThread(() -> {
-            if(googleMap!=null) {
+            if (googleMap != null) {
                 try {
-                    ArrayList<LatLng> points = getUpdatedPolyPoints(json,currLat,currLng);
+                    ArrayList<LatLng> points = getUpdatedPolyPoints(json, currLat, currLng);
                     Marker currMarker = (Marker) markers.get("ny_ic_auto_map");
                     if (polylines != null) {
                         polylines.setEndCap(new ButtCap());
                         if (points.size() == 0) {
-                            LatLng destination = new LatLng(currLat,currLng);
-                            animateMarkerNew(destination,currMarker);
+                            LatLng destination = new LatLng(currLat, currLng);
+                            animateMarkerNew(destination, currMarker);
                             polylines.remove();
                             polylines = null;
-                        }
-                        else
-                        {
+                        } else {
                             PatternItem DASH = new Dash(1);
                             List<PatternItem> PATTERN_POLYLINE_DOTTED_DASHED = Arrays.asList(DASH);
                             polylines.setPattern(PATTERN_POLYLINE_DOTTED_DASHED);
                             polylines.setPoints(points);
-                            LatLng destination = points.get(points.size()-1);
-                            animateMarkerNew(destination,currMarker);
+                            LatLng destination = points.get(points.size() - 1);
+                            animateMarkerNew(destination, currMarker);
                         }
                     }
                 } catch (JSONException e) {
@@ -2657,31 +2672,29 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
      * Remove this function once it is not begin used.
      */
 
-    private ArrayList<LatLng> getUpdatedPolyPoints (String json , double currLat, double currLng) throws JSONException {
-        LatLng currPoint = new LatLng(currLat,currLng);
+    private ArrayList<LatLng> getUpdatedPolyPoints(String json, double currLat, double currLng) throws JSONException {
+        LatLng currPoint = new LatLng(currLat, currLng);
         ArrayList<LatLng> path = new ArrayList<>();
         ArrayList<LatLng> temp = new ArrayList<>();
         JSONObject jsonObject = null;
         jsonObject = new JSONObject(json);
         JSONArray coordinates = jsonObject.getJSONArray("points");
         JSONObject sourceCoordinates = (JSONObject) coordinates.get(0);
-        JSONObject destCoordinates = (JSONObject) coordinates.get(coordinates.length()-1);
+        JSONObject destCoordinates = (JSONObject) coordinates.get(coordinates.length() - 1);
         double sourceLat = sourceCoordinates.getDouble("lat");
         double sourceLong = sourceCoordinates.getDouble("lng");
         moveCamera(sourceLat, sourceLong, currLat, currLng, coordinates);
-        for (int i = coordinates.length() -1 ; i >= 0   ; i--) {
+        for (int i = coordinates.length() - 1; i >= 0; i--) {
             JSONObject coordinate = (JSONObject) coordinates.get(i);
             double lng = coordinate.getDouble("lng");
             double lat = coordinate.getDouble("lat");
             LatLng tempPoints = new LatLng(lat, lng);
             path.add(tempPoints);
         }
-        int index = PolyUtil.locationIndexOnEdgeOrPath(currPoint,path,PolyUtil.isClosedPolygon(path),true,20.0);
-        if (index == 0)
-        {
+        int index = PolyUtil.locationIndexOnEdgeOrPath(currPoint, path, PolyUtil.isClosedPolygon(path), true, 20.0);
+        if (index == 0) {
             path.clear();
-        }
-        else {
+        } else {
             path.subList(index + 1, path.size()).clear();
         }
         return path;
@@ -2707,9 +2720,9 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
             int image = context.getResources().getIdentifier(imageName, "drawable", context.getPackageName());
             BitmapDrawable bitmapDrawable = (BitmapDrawable) context.getResources().getDrawable(image);
             Bitmap bitmap = bitmapDrawable.getBitmap();
-            Uri uri = Uri.parse(MediaStore.Images.Media.insertImage(context.getContentResolver() , bitmap , "qrCode",null));
+            Uri uri = Uri.parse(MediaStore.Images.Media.insertImage(context.getContentResolver(), bitmap, "qrCode", null));
             sendIntent.setAction(Intent.ACTION_SEND);
-            sendIntent.putExtra(Intent.EXTRA_STREAM,uri);
+            sendIntent.putExtra(Intent.EXTRA_STREAM, uri);
             sendIntent.putExtra(Intent.EXTRA_TEXT, message);
             sendIntent.setType("image/*");
             Intent shareIntent = Intent.createChooser(sendIntent, null);
@@ -2718,8 +2731,8 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     @JavascriptInterface
-    public String isCoordOnPath(String json , double currLat, double currLng, int speed) throws JSONException {
-        LatLng currPoint = new LatLng(currLat,currLng);
+    public String isCoordOnPath(String json, double currLat, double currLng, int speed) throws JSONException {
+        LatLng currPoint = new LatLng(currLat, currLng);
         ArrayList<LatLng> path = new ArrayList<>();
         JSONObject jsonObject = new JSONObject(json);
         int distanceRemaining;
@@ -2727,84 +2740,84 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         int eta = 0;
         int resultIndex;
         JSONObject result = new JSONObject();
-        for (int i = coordinates.length() -1 ; i >= 0   ; i--) {
+        for (int i = coordinates.length() - 1; i >= 0; i--) {
             JSONObject coordinate = (JSONObject) coordinates.get(i);
             double lng = coordinate.getDouble("lng");
             double lat = coordinate.getDouble("lat");
-            LatLng tempPoints = new LatLng(lat,lng);
+            LatLng tempPoints = new LatLng(lat, lng);
             path.add(tempPoints);
         }
-        if (path.size() == 0)
-        {
-            result.put("points",new JSONArray());
-            result.put("eta",0);
-            result.put("distance",0);
-            result.put("isInPath",false);
+        if (path.size() == 0) {
+            result.put("points", new JSONArray());
+            result.put("eta", 0);
+            result.put("distance", 0);
+            result.put("isInPath", false);
             return result.toString();
         }
-        resultIndex = PolyUtil.locationIndexOnEdgeOrPath(currPoint, path, PolyUtil.isClosedPolygon(path), true, 20.0);
+        SharedPreferences sharedPref = context.getSharedPreferences(
+                activity.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        double locationOnPathThres = Double.parseDouble(sharedPref.getString("ACCURACY_THRESHOLD", "30.0"));
+        resultIndex = PolyUtil.locationIndexOnEdgeOrPath(currPoint, path, PolyUtil.isClosedPolygon(path), true, locationOnPathThres);
         if (resultIndex == -1) {
-            result.put("points",coordinates);
-            result.put("eta",0);
-            result.put("distance",0);
-            result.put("isInPath",false);
+            result.put("points", coordinates);
+            result.put("eta", 0);
+            result.put("distance", 0);
+            result.put("isInPath", false);
         } else if (resultIndex == 0) {
             path.clear();
-            result.put("points",new JSONArray());
-            result.put("eta",0);
-            result.put("distance",0);
-            result.put("isInPath",true);
-        } else if (resultIndex == (path.size()-2) || resultIndex == (path.size()-1)) {
+            result.put("points", new JSONArray());
+            result.put("eta", 0);
+            result.put("distance", 0);
+            result.put("isInPath", true);
+        } else if (resultIndex == (path.size() - 2) || resultIndex == (path.size() - 1)) {
             distanceRemaining = (int) SphericalUtil.computeLength(path);
             eta = distanceRemaining / speed;
-            result.put("points",coordinates);
-            result.put("eta",eta);
-            result.put("distance",distanceRemaining);
-            result.put("isInPath",true);
+            result.put("points", coordinates);
+            result.put("eta", eta);
+            result.put("distance", distanceRemaining);
+            result.put("isInPath", true);
         } else {
-            path.subList(resultIndex+2,path.size()).clear();
-            distanceRemaining = (int)SphericalUtil.computeLength(path);
+            path.subList(resultIndex + 2, path.size()).clear();
+            distanceRemaining = (int) SphericalUtil.computeLength(path);
             eta = distanceRemaining / speed;
             JSONArray remainingPoints = new JSONArray();
-            for (int i = path.size() - 1 ; i >= 0   ; i--) {
+            for (int i = path.size() - 1; i >= 0; i--) {
                 LatLng point = path.get(i);
                 JSONObject tempPoints = new JSONObject();
-                tempPoints.put("lat",point.latitude);
-                tempPoints.put("lng",point.longitude);
+                tempPoints.put("lat", point.latitude);
+                tempPoints.put("lng", point.longitude);
                 remainingPoints.put(tempPoints);
             }
-            result.put("points",remainingPoints);
-            result.put("eta",eta);
-            result.put("distance",distanceRemaining);
-            result.put("isInPath",true);
+            result.put("points", remainingPoints);
+            result.put("eta", eta);
+            result.put("distance", distanceRemaining);
+            result.put("isInPath", true);
         }
         return result.toString();
     }
 
-    /*
-     * This function is deprecated on 12 Jan - 2023
-     * Remove this function once it is not begin used.
-     */
-
+    @SuppressLint("MissingPermission")
     @JavascriptInterface
-    public boolean isCoordOnPath(String json , double currLat, double currLng) throws JSONException {
-        LatLng currPoint = new LatLng(currLat,currLng);
-        ArrayList<LatLng> path = new ArrayList<>();
-        JSONObject jsonObject = null;
-        jsonObject = new JSONObject(json);
-        JSONArray coordinates = jsonObject.getJSONArray("points");
-        for (int i = coordinates.length() -1 ; i >= 0   ; i--) {
-            JSONObject coordinate = (JSONObject) coordinates.get(i);
-            double lng = coordinate.getDouble("lng");
-            double lat = coordinate.getDouble("lat");
-            LatLng tempPoints = new LatLng(lat,lng);
-            path.add(tempPoints);
-        }
-        boolean result = PolyUtil.isLocationOnPath(currPoint,path,true,50.0);
-        return result;
+    public void isMockLocation(String callback) {
+        if (!isLocationPermissionEnabled()) return;
+        client.getLastLocation()
+                .addOnSuccessListener(activity, location -> {
+                    boolean isMock = false;
+                    if (Build.VERSION.SDK_INT <= 30) {
+                        isMock = location.isFromMockProvider();
+                        //methodName = "isFromMockProvider";
+                    } else if(Build.VERSION.SDK_INT >= 31) {
+                        isMock = location.isMock();
+                        //methodName = "isMock";
+                    }
+                    if (callback != null && dynamicUI != null && juspayServices.getDynamicUI() != null) {
+                        String js = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
+                                callback, isMock);
+                        dynamicUI.addJsToWebView(js);
+                    }
+                })
+                .addOnFailureListener(activity, e -> Log.e(LOG_TAG, "Last and current position not known"));
     }
-
-
 
     private float bearingBetweenLocations(LatLng latLng1,LatLng latLng2) {
         double PI = 3.14159;

@@ -90,6 +90,7 @@ baseAppFlow gPayload = do
   _ <- pure $ setValueToLocalStore TEST_POLLING_COUNT "113"
   _ <- pure $ setValueToLocalStore RATING_SKIPPED "false"
   _ <- pure $ setValueToLocalStore POINTS_FACTOR "3"
+  _ <- pure $ setValueToLocalStore ACCURACY_THRESHOLD "23.0"
   when ((getValueToLocalStore SESSION_ID == "__failed") || (getValueToLocalStore SESSION_ID == "(null)")) $ do
     setValueToLocalStore SESSION_ID (generateSessionId unit)
   _ <- lift $ lift $ setLogField "customer_id" $ encode (customerId)

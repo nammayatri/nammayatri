@@ -176,7 +176,7 @@ dummyRideAPIEntity = RideAPIEntity{
   status : "NEW",
   vehicleModel : "",
   createdAt : "",
-  driverNumber : "",
+  driverNumber : Nothing,
   shortRideId : "",
   driverRegisteredAt : "",
   vehicleNumber : "",

@@ -483,8 +483,7 @@ sourceUnserviceableConfig state =
     config = ErrorModal.config
     errorModalConfig' =
       config
-        { height = WRAP_CONTENT
-        , gravity = BOTTOM
+        { height = MATCH_PARENT
         , background = Color.white900
         , stroke = ("1," <> Color.borderGreyColor)
         , corners = (Corners 20.0 true true false false)
@@ -496,7 +495,7 @@ sourceUnserviceableConfig state =
           }
         , errorConfig
           { text = (getString LOCATION_UNSERVICEABLE)
-          , textSize = FontSize.a_18
+          , textSize = FontSize.a_22
           , color = Color.black800
           , margin = (MarginBottom 5)
           , fontStyle = FontStyle.bold LanguageStyle
@@ -504,7 +503,7 @@ sourceUnserviceableConfig state =
         , errorDescriptionConfig
           { text = (getString CURRENTLY_WE_ARE_LIVE_IN_)
           , color = Color.black700
-          , textSize = FontSize.a_14
+          , textSize = FontSize.a_16
           , margin = (Margin 20 0 20 (40 + EHC.safeMarginBottom))
           , fontStyle = FontStyle.regular LanguageStyle
           }
@@ -515,6 +514,7 @@ sourceUnserviceableConfig state =
           , fontStyle = FontStyle.medium LanguageStyle
           , background = Color.black900
           , color = Color.yellow900
+          , visibility = GONE
           }
         }
   in
