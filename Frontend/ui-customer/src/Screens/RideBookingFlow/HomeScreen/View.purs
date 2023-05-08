@@ -73,7 +73,7 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.AddNewAddressScreen.Controller as AddNewAddress
 import Screens.HomeScreen.Controller (Action(..), ScreenOutput, checkCurrentLocation, checkSavedLocations, dummySelectedQuotes, eval, flowWithoutOffers, getCurrentCustomerLocation)
 import Screens.HomeScreen.Transformer (transformSavedLocations)
-import Screens.Types (HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..))
+import Screens.Types (HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CallType(..))
 import Services.API (GetDriverLocationResp(..), GetQuotesRes(..), GetRouteResp(..), LatLong(..), RideAPIEntity(..), RideBookingRes(..), Route(..), SavedLocationsListRes(..), SearchReqLocationAPIEntity(..), SelectListRes(..), Snapped(..))
 import Services.Backend (getDriverLocation, getQuotes, getRoute, makeGetRouteReq, rideBooking, selectList, driverTracking, rideTracking, walkCoordinates, walkCoordinate, getSavedLocationList)
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore, updateLocalStage)
@@ -296,7 +296,7 @@ view push state =
             , if state.props.showShareAppPopUp then (shareAppPopUp push state) else emptyTextView state
             , if state.props.showMultipleRideInfo then (requestInfoCardView push state) else emptyTextView state
             , if state.props.showLiveDashboard then showLiveStatsDashboard push state else emptyTextView state
-            , if state.props.callSupportPopUp then callSupportPopUpView push state else emptyTextView state
+            , if state.props.showCallPopUp then (driverCallPopUp push state) else emptyTextView state
             ]
         ]
     ]
@@ -336,6 +336,120 @@ showLiveStatsDashboard push state =
       , id (getNewIDWithTag "webview")
       , url if (isPreviousVersion (getValueToLocalStore VERSION_NAME) ("1.2.4")) then "https://nammayatri.in/open/" else "https://nammayatri.in/open?source=in-app"
       ]]
+
+driverCallPopUp :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+driverCallPopUp push state =
+  relativeLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , background Color.black9000
+    , alignParentBottom "true,-1"
+    , onClick push (const $ CloseShowCallDialer)
+    , disableClickFeedback true
+    ]
+    [ linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , background Color.white900
+        , orientation VERTICAL
+        , cornerRadii $ Corners 24.0 true true false false
+        , padding (Padding 20 32 20 25)
+        , alignParentBottom "true,-1"
+        , disableClickFeedback true
+        ]
+        [ textView
+            $
+              [ text (getString CALL_DRIVER_USING)
+              , height WRAP_CONTENT
+              , color Color.black700
+              ]
+            <> FontStyle.subHeading2 TypoGraphy
+        , linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , orientation VERTICAL
+            ]
+            ( map
+                ( \item ->
+                    linearLayout
+                      [ height WRAP_CONTENT
+                      , width MATCH_PARENT
+                      , orientation VERTICAL
+                      ]
+                      [ trackingCardCallView push state item
+                      , linearLayout
+                          [ height $ V 1
+                          , width MATCH_PARENT
+                          , background Color.grey900
+                          ]
+                          []
+                      ]
+                )
+                (driverCallPopUpData state)
+            )
+
+        ]
+    ]
+
+driverCallPopUpData :: HomeScreenState -> Array { text :: String, imageWithFallback :: String, type :: CallType, data :: String }
+driverCallPopUpData state =
+  [ { text: (getString ANONYMOUS_CALL)
+    , imageWithFallback: "ic_anonymous_call ,https://assets.juspay.in/beckn/merchantcommon/images/ic_anonymous_call.png"
+    , type: ANONYMOUS_CALLER
+    , data: (getString YOUR_NUMBER_WILL_NOT_BE_SHOWN_TO_THE_DRIVER)
+    }
+  , { text: (getString DIRECT_CALL)
+    , imageWithFallback: "ic_direct_call,https://assets.juspay.in/beckn/merchantcommon/images/ic_direct_call.png"
+    , type: DIRECT_CALLER
+    , data: (getString YOUR_NUMBER_WILL_BE_VISIBLE_TO_THE_DRIVER_USE_IF_NOT_CALLING_FROM_REGISTERED_NUMBER)
+    }
+  ]
+
+trackingCardCallView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> { text :: String, imageWithFallback :: String, type :: CallType, data :: String} -> PrestoDOM (Effect Unit) w
+trackingCardCallView push state item =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation HORIZONTAL
+    , padding (Padding 0 20 0 20)
+    , gravity CENTER_VERTICAL
+    , onClick push (const (ShowCallDialer item.type))
+    ]
+    [
+    imageView
+        [ imageWithFallback item.imageWithFallback
+        , height $ V 25
+        , width $ V 25
+        , margin (MarginRight 20)
+        ]
+    ,  linearLayout[
+        height WRAP_CONTENT
+      , weight 1.0
+      , orientation VERTICAL]
+    [
+      textView
+        $
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , text item.text
+          , gravity CENTER_VERTICAL
+          , color Color.black800
+          ]
+      , textView
+        $
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , text item.data
+          , color Color.black600
+          ]
+    ]
+    , imageView
+        [ imageWithFallback "ny_ic_chevron_right,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_right.png"
+        , height $ V 30
+        , width $ V 32
+        , padding (Padding 3 3 3 3)
+        ]
+    ]
 
 searchLocationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 searchLocationView push state =

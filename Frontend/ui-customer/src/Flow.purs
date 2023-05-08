@@ -1279,7 +1279,8 @@ dummyRideBooking = RideBookingRes
   id : "",
   updatedAt : "",
   bookingDetails : dummyRideBookingAPIDetails ,
-  fromLocation :  dummyBookingDetails
+  fromLocation :  dummyBookingDetails,
+  merchantExoPhone : ""
   }
 
 dummyRideBookingAPIDetails ::RideBookingAPIDetails

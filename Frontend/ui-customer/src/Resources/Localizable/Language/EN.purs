@@ -20,6 +20,11 @@ import Prelude ((<>))
 
 getEN :: STR -> String
 getEN script = case script of 
+  DIRECT_CALL -> "Direct Call"
+  ANONYMOUS_CALL -> "Anonymous Call"
+  YOUR_NUMBER_WILL_NOT_BE_SHOWN_TO_THE_DRIVER -> "Your number will not be shown to the driver"
+  YOUR_NUMBER_WILL_BE_VISIBLE_TO_THE_DRIVER_USE_IF_NOT_CALLING_FROM_REGISTERED_NUMBER -> "Your number will be visible to the driver. Use if not calling from registered number"
+  CALL_DRIVER_USING -> "Call Driver using:"
   DOWNLOAD_INVOICE -> "Download Invoice"
   REPORT_AN_ISSUE -> "Report an Issue"
   SUBMIT -> "Submit"

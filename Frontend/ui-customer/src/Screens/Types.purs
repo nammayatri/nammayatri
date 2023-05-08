@@ -490,6 +490,7 @@ type HomeScreenStateData =
 type HomeScreenStateProps =
   {
     currentStage :: Stage
+  , showCallPopUp :: Boolean
   , rideRequestFlow :: Boolean
   , isSearchLocation :: SearchLocationModelType
   , isSource :: Maybe Boolean
@@ -730,7 +731,9 @@ type DriverInfoCard =
   , driverArrived :: Boolean
   , estimatedDistance :: String
   , driverArrivalTime :: Int
-  , bppRideId :: String
+  , bppRideId :: String 
+  , driverNumber :: Maybe String
+  , merchantExoPhone :: String
   }
 
 type RatingCard =
@@ -801,6 +804,13 @@ type SavedLocationData =
   , placeName :: String
   , placeId :: Maybe String
   }
+
+data CallType = ANONYMOUS_CALLER | DIRECT_CALLER
+derive instance genericCallType :: Generic CallType _
+instance eqCallType :: Eq CallType where eq = genericEq
+instance showCallType :: Show CallType where show = genericShow
+instance encodeCallType :: Encode CallType where encode = defaultEnumEncode
+instance decodeCallType :: Decode CallType where decode = defaultEnumDecode
 
 
 data CardType = HOME_TAG | WORK_TAG | OTHER_TAG
