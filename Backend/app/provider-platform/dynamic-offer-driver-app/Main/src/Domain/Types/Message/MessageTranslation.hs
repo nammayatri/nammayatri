@@ -25,5 +25,6 @@ data MessageTranslation = MessageTranslation
     title :: Text,
     label :: Maybe Text,
     description :: Text,
+    shortDescription :: Text,
     createdAt :: UTCTime
   }

@@ -149,6 +149,7 @@ library
       Domain.Types.DriverQuote
       Domain.Types.DriverReferral
       Domain.Types.DriverStats
+      Domain.Types.Estimate
       Domain.Types.Exophone
       Domain.Types.FareParameters
       Domain.Types.FarePolicy
@@ -181,7 +182,6 @@ library
       Domain.Types.SearchRequest
       Domain.Types.SearchRequest.SearchReqLocation
       Domain.Types.SearchRequestForDriver
-      Domain.Types.SearchRequestSentToDriverEvent
       Domain.Types.SearchRequestSpecialZone
       Domain.Types.SlabFarePolicy
       Domain.Types.Vehicle
@@ -254,6 +254,7 @@ library
       Storage.Queries.DriverQuote
       Storage.Queries.DriverReferral
       Storage.Queries.DriverStats
+      Storage.Queries.Estimate
       Storage.Queries.Exophone
       Storage.Queries.FareParameters
       Storage.Queries.FarePolicy
@@ -305,6 +306,7 @@ library
       Storage.Tabular.DriverQuote
       Storage.Tabular.DriverReferral
       Storage.Tabular.DriverStats
+      Storage.Tabular.Estimate
       Storage.Tabular.Exophone
       Storage.Tabular.FareParameters
       Storage.Tabular.FarePolicy

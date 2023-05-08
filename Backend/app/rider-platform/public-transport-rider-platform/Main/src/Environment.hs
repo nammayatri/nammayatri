@@ -38,6 +38,9 @@ data AppCfg = AppCfg
     migrationPath :: Maybe FilePath,
     autoMigrate :: Bool,
     hedisCfg :: HedisCfg,
+    hedisClusterCfg :: HedisCfg,
+    cutOffHedisCluster :: Bool,
+    hedisMigrationStage :: Bool,
     port :: Int,
     loggerConfig :: LoggerConfig,
     graceTerminationPeriod :: Seconds,
@@ -74,6 +77,9 @@ data AppEnv = AppEnv
     esqDBEnv :: EsqDBEnv,
     esqDBReplicaEnv :: EsqDBEnv,
     hedisEnv :: HedisEnv,
+    hedisClusterEnv :: HedisEnv,
+    cutOffHedisCluster :: Bool,
+    hedisMigrationStage :: Bool,
     isShuttingDown :: Shutdown,
     loggerEnv :: LoggerEnv,
     coreMetrics :: CoreMetricsContainer,
@@ -95,6 +101,10 @@ buildAppEnv AppCfg {..} = do
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   kafkaEnvs <- buildBAPKafkaEnvs
   hedisEnv <- connectHedis hedisCfg publicTransportBapPrefix
+  hedisClusterEnv <-
+    if cutOffHedisCluster
+      then pure hedisEnv
+      else connectHedisCluster hedisClusterCfg publicTransportBapPrefix
   return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()
@@ -102,6 +112,7 @@ releaseAppEnv AppEnv {..} = do
   releaseKafkaProducerTools kafkaProducerTools
   releaseLoggerEnv loggerEnv
   disconnectHedis hedisEnv
+  disconnectHedis hedisClusterEnv
 
 type FlowHandler = FlowHandlerR AppEnv
 

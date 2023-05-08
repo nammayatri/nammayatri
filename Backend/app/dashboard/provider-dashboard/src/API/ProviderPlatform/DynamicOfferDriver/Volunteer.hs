@@ -39,11 +39,11 @@ type API =
        )
 
 type BookingInfoAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'READ_ACCESS 'VOLUNTEER
+  ApiAuth 'DRIVER_OFFER_BPP 'VOLUNTEER 'VOLUNTEER_BOOKING_INFO
     :> Common.BookingInfoAPI
 
 type AssignCreateAndStartOtpRideAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'VOLUNTEER
+  ApiAuth 'DRIVER_OFFER_BPP 'VOLUNTEER 'VOLUNTEER_ASSIGN_CREATE_AND_START_OTP_RIDE
     :> Common.AssignCreateAndStartOtpRideAPI
 
 handler :: ShortId DM.Merchant -> FlowServer API

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="tip_included"> ಟಿಪ್ ಒಳಗೊಂಡಿದೆ!</string>
     <string name="ride_rejected"> ಸವಾರಿ ತಿರಸ್ಕರಿಸಲಾಗಿದೆ</string>
     <string name="request">ಕೋರಿಕೆ</string>
     <string name="decline">ತಿರಸ್ಕರಿಸು</string>

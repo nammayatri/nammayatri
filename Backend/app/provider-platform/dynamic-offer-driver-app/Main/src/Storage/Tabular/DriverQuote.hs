@@ -41,12 +41,13 @@ mkPersist
   [defaultQQ|
     DriverQuoteT sql=driver_quote
       id Text
-      status Domain.DriverQuoteStatus
+      transactionId Text
       searchRequestId SReq.SearchRequestTId
       searchRequestForDriverId SRFD.SearchRequestForDriverTId Maybe
       driverId PersonTId
       driverName Text
       driverRating Centesimal Maybe
+      status Domain.DriverQuoteStatus
       vehicleVariant Variant.Variant
       distance Meters
       distanceToPickup Meters

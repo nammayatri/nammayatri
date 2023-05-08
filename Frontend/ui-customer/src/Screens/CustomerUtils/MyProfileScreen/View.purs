@@ -24,7 +24,7 @@ import Control.Monad.Except (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Effect (Effect)
-import Effect.Aff (launchAff_)
+import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
@@ -52,7 +52,7 @@ screen initialState =
   , view
   , name : "MyProfileScreen"
   , globalEvents : [(\push -> do
-                      launchAff_ $ EHC.flowRunner $ runExceptT $ runBackT $ do
+                      _ <- launchAff $ EHC.flowRunner $ runExceptT $ runBackT $ do
                         response <- Remote.getProfileBT ""
                         if initialState.props.isEmailValid then
                           lift $ lift $ doAff do liftEffect $ push $ UserProfile response
@@ -477,6 +477,7 @@ deleteAccountView state push =
         , width MATCH_PARENT
         , orientation VERTICAL
         , gravity BOTTOM
+        , padding (PaddingBottom EHC.safeMarginBottom)
         , visibility if state.props.updateProfile then GONE else VISIBLE
         ][  linearLayout
             [ height $ V 1

@@ -1,26 +1,26 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
 module Services.Config where
 
 import Prelude (class Eq, (==), (||))
-import Data.Generic.Rep.Eq (genericEq)
+import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import ConfigJBridge (getKeyInSharedPrefKeysConfig, getValueToLocalNativeStoreConfig)
 import Log (printLog)
-import Debug.Trace (spy)
+import Debug (spy)
 
 foreign import environment :: String -> String
 
@@ -50,7 +50,7 @@ getConfig = do
     LOCAL -> Config
         { baseUrl: ""
         , fingerprint : ""
-        } 
+        }
     DEV  -> Config
         { baseUrl: getValueToLocalNativeStoreConfig "BASE_URL"
         , fingerprint : ""
@@ -68,7 +68,7 @@ getEndpoint :: String -> String
 getEndpoint dummy = do
   if ((getKeyInSharedPrefKeysConfig "MOBILE_NUMBER_KEY") == "" || (getKeyInSharedPrefKeysConfig "MOBILE_NUMBER_KEY") == "") then
     ""
-    else 
+    else
       let Config config = getConfig
       in config.baseUrl
 
@@ -85,19 +85,19 @@ getFingerPrint :: String -> String
 getFingerPrint dummy = do
   if ((getKeyInSharedPrefKeysConfig "MOBILE_NUMBER_KEY") == "" || (getKeyInSharedPrefKeysConfig "MOBILE_NUMBER_KEY") == "") then
     ""
-    else 
+    else
       let Config config = getConfig
       in config.fingerprint
 
 getCustomerNumber :: String -> String
-getCustomerNumber _ = case getEnv of 
+getCustomerNumber _ = case getEnv of
                         DEV  -> ""
                         UAT  -> ""
                         PROD -> ""
                         _    -> ""
 
 getSupportNumber :: String -> String
-getSupportNumber _ = case getEnv of 
+getSupportNumber _ = case getEnv of
                         DEV  -> ""
                         UAT  -> ""
                         PROD -> ""

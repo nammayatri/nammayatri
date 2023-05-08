@@ -20,6 +20,7 @@ module API.UI.Search
     DRentalSearch.RentalSearchReq (..),
     DSearchCommon.SearchReqLocation (..),
     API,
+    search,
     handler,
   )
 where

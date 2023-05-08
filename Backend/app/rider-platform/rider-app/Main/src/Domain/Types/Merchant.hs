@@ -17,6 +17,7 @@ module Domain.Types.Merchant where
 import Domain.Types.Common
 import Kernel.External.FCM.Types
 import Kernel.Prelude
+import Kernel.Types.Base64 (Base64)
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Kernel.Types.Registry (Subscriber)
@@ -35,6 +36,8 @@ data MerchantD (s :: UsageSafety) = Merchant
     driverOfferApiKey :: Text,
     driverOfferMerchantId :: Text,
     geoHashPrecisionValue :: Int,
+    signingPublicKey :: Base64,
+    signatureExpiry :: Int,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

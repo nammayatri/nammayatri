@@ -38,7 +38,6 @@ data Handle m = Handle
     isRideAlreadyAssigned :: m Bool,
     isReceivedMaxDriverQuotes :: m Bool,
     getNextDriverPoolBatch :: m [DriverPoolWithActualDistResult],
-    cleanupDriverPoolBatches :: m (),
     sendSearchRequestToDrivers :: [DriverPoolWithActualDistResult] -> m (),
     getRescheduleTime :: m UTCTime,
     metrics :: MetricsHandle m,
@@ -53,28 +52,23 @@ handler h@Handle {..} = do
   metrics.incrementTaskCounter
   measuringDuration (\ms _ -> metrics.putTaskDuration ms) $ do
     isSearchRequestInvalid <- ifSearchRequestIsInvalid
-    res <-
-      if isSearchRequestInvalid
-        then do
-          logInfo "Search request is either cancelled or expired."
-          return Complete
-        else do
-          isRideAssigned <- isRideAlreadyAssigned
-          if isRideAssigned
-            then do
-              logInfo "Ride already assigned."
-              return Complete
-            else do
-              isReceivedMaxDriverQuotes' <- isReceivedMaxDriverQuotes
-              if isReceivedMaxDriverQuotes'
-                then do
-                  logInfo "Received enough quotes from drivers."
-                  return Complete
-                else processRequestSending h
-    case res of
-      Complete -> cleanupDriverPoolBatches
-      _ -> return ()
-    return res
+    if isSearchRequestInvalid
+      then do
+        logInfo "Search request is either cancelled or expired."
+        return Complete
+      else do
+        isRideAssigned <- isRideAlreadyAssigned
+        if isRideAssigned
+          then do
+            logInfo "Ride already assigned."
+            return Complete
+          else do
+            isReceivedMaxDriverQuotes' <- isReceivedMaxDriverQuotes
+            if isReceivedMaxDriverQuotes'
+              then do
+                logInfo "Received enough quotes from drivers."
+                return Complete
+              else processRequestSending h
 
 processRequestSending :: HandleMonad m => Handle m -> m ExecutionResult
 processRequestSending Handle {..} = do

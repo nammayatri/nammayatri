@@ -35,6 +35,7 @@ import Kernel.Types.Version
 import Kernel.Utils.Common
 import Servant hiding (throwError)
 import Tools.Auth (TokenAuth)
+import Tools.SignatureAuth (PartialSignatureAuth, PartialSignatureAuthResult (..))
 
 ---- Registration Flow ------
 type API =
@@ -43,6 +44,11 @@ type API =
            :> Header "x-bundle-version" Version
            :> Header "x-client-version" Version
            :> Post '[JSON] DRegistration.AuthRes
+           :<|> "signature"
+             :> PartialSignatureAuth DRegistration.AuthReq "x-sdk-authorization"
+             :> Header "x-bundle-version" Version
+             :> Header "x-client-version" Version
+             :> Post '[JSON] DRegistration.AuthRes
            :<|> Capture "authId" (Id SRT.RegistrationToken)
              :> "verify"
              :> ReqBody '[JSON] DRegistration.AuthVerifyReq
@@ -59,13 +65,18 @@ type API =
 handler :: FlowServer API
 handler =
   auth
+    :<|> signatureAuth
     :<|> verify
     :<|> resend
     :<|> logout
 
 auth :: DRegistration.AuthReq -> Maybe Version -> Maybe Version -> FlowHandler DRegistration.AuthRes
 auth req mbBundleVersion =
-  withFlowHandlerAPI . DRegistration.auth req mbBundleVersion
+  withFlowHandlerAPI . DRegistration.auth False req mbBundleVersion
+
+signatureAuth :: PartialSignatureAuthResult DRegistration.AuthReq -> Maybe Version -> Maybe Version -> FlowHandler DRegistration.AuthRes
+signatureAuth (PartialSignatureAuthResult isSignatureValid req) mbBundleVersion =
+  withFlowHandlerAPI . DRegistration.auth isSignatureValid req mbBundleVersion
 
 verify :: Id SR.RegistrationToken -> DRegistration.AuthVerifyReq -> FlowHandler DRegistration.AuthVerifyRes
 verify tokenId = withFlowHandlerAPI . DRegistration.verify tokenId

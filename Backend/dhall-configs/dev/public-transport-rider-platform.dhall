@@ -32,6 +32,16 @@ let rcfg =
 
 let kafkaProducerCfg = { brokers = [ "localhost:29092" ] }
 
+let rccfg =
+      { connectHost = "localhost"
+      , connectPort = 30006
+      , connectAuth = None Text
+      , connectDatabase = +0
+      , connectMaxConnections = +50
+      , connectMaxIdleTime = +30
+      , connectTimeout = None Integer
+      }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , migrationPath = Some
@@ -40,6 +50,9 @@ in  { esqDBCfg
         )
     , autoMigrate = True
     , hedisCfg = rcfg
+    , hedisClusterCfg = rccfg
+    , hedisMigrationStage = True
+    , cutOffHedisCluster = Flase
     , port = +8023
     , loggerConfig =
             common.loggerConfig

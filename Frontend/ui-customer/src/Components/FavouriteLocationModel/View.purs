@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -32,7 +32,7 @@ import Screens.Types(LocationListItemState, CardType(..), LocationItemType(..))
 import Language.Strings (getString)
 import Data.Maybe
 import Language.Types (STR(..))
-import Debug.Trace (spy)
+import Debug (spy)
 import Data.Array (filter, length, null)
 import Data.String (toLower)
 import Engineering.Helpers.Commons(safeMarginBottom, safeMarginTop, os, screenHeight)
@@ -43,7 +43,7 @@ import JBridge(getHeightFromPercent)
 import Common.Types.App
 
 view :: forall w. (Action -> Effect Unit) -> Array LocationListItemState -> PrestoDOM ( Effect Unit ) w
-view push state = 
+view push state =
   relativeLayout
   [ width MATCH_PARENT
   , height MATCH_PARENT
@@ -94,9 +94,9 @@ view push state =
 
 
 
-savedLocationListView :: forall w. (Action -> Effect Unit) -> Array LocationListItemState -> PrestoDOM (Effect Unit) w 
-savedLocationListView push state = 
-  PrestoAnim.animationSet [translateYAnimFromTop $ translateFullYAnimWithDurationConfig 400 ] $  
+savedLocationListView :: forall w. (Action -> Effect Unit) -> Array LocationListItemState -> PrestoDOM (Effect Unit) w
+savedLocationListView push state =
+  PrestoAnim.animationSet [translateYAnimFromTop $ translateFullYAnimWithDurationConfig 400 ] $
   scrollView
       [ height MATCH_PARENT
       , width MATCH_PARENT
@@ -108,21 +108,21 @@ savedLocationListView push state =
           , height WRAP_CONTENT
           , padding (PaddingBottom (100 + safeMarginBottom))
           , margin (MarginTop 8)
-          , orientation VERTICAL     
+          , orientation VERTICAL
           ](map (\item -> SavedLocationCard.view (push <<< FavouriteLocationAC) (item) ) (getFavourites state))]
 
-noSavedLocationView :: forall w. (Action -> Effect Unit) -> Array LocationListItemState -> PrestoDOM (Effect Unit) w 
-noSavedLocationView push state = 
+noSavedLocationView :: forall w. (Action -> Effect Unit) -> Array LocationListItemState -> PrestoDOM (Effect Unit) w
+noSavedLocationView push state =
   linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , visibility if (null (getFavourites state)) then VISIBLE else GONE
     ][ ErrorModal.view (push <<< ErrorModalAC) (errorModalConfig state ) ]
 
-errorModalConfig :: Array LocationListItemState ->  ErrorModalConfig.Config 
-errorModalConfig state = let 
-  config = ErrorModalConfig.config 
-  errorModalConfig' = config 
+errorModalConfig :: Array LocationListItemState ->  ErrorModalConfig.Config
+errorModalConfig state = let
+  config = ErrorModalConfig.config
+  errorModalConfig' = config
     { imageConfig {
         imageUrl = "ny_ic_no_saved_address,https://assets.juspay.in/nammayatri/images/user/ny_ic_no_saved_address.png"
       , height = V 110
@@ -131,7 +131,7 @@ errorModalConfig state = let
       }
     , errorConfig {
         text = (getString NO_FAVOURITES_SAVED_YET)
-      , margin = (MarginBottom 7)  
+      , margin = (MarginBottom 7)
       , color = Color.black900
       , textSize = FontSize.a_18
       , fontStyle = FontStyle.bold LanguageStyle
@@ -148,13 +148,13 @@ errorModalConfig state = let
       visibility = GONE
       }
     }
-  in errorModalConfig' 
+  in errorModalConfig'
 
 
-genericHeaderConfig :: Array LocationListItemState -> GenericHeaderConfig.Config 
-genericHeaderConfig state = let 
+genericHeaderConfig :: Array LocationListItemState -> GenericHeaderConfig.Config
+genericHeaderConfig state = let
   config = GenericHeaderConfig.config
-  genericHeaderConfig' = config 
+  genericHeaderConfig' = config
     {
       height = WRAP_CONTENT
     , width = WRAP_CONTENT
@@ -164,7 +164,7 @@ genericHeaderConfig state = let
       , width = V 25
       , imageUrl = "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
       , margin = (Margin 12 12 12 12)
-      } 
+      }
     , textConfig {
         text = (getString SELECT_FAVOURITE)
       , textSize = FontSize.a_18
@@ -185,7 +185,7 @@ getFavourites arrayItem = do
     let work = (filter (\x -> (toLower x.tag) == "work" ) (arrayItem))
     let otherLocation = (filter (\x -> not  ((toLower x.tag) == "home" || (toLower x.tag) == "work")) ( arrayItem))
     map (\x -> getFavouritesItem x) (home <> work <> otherLocation)
- 
+
 
 getFavouritesItem :: LocationListItemState -> LocationListItemState
 getFavouritesItem item = {
@@ -201,15 +201,15 @@ getFavouritesItem item = {
   , tag : item.tag
   , tagType : item.tagType
   , cardType : Just $ show $ case (toLower item.tag) of
-                              "home" -> HOME_TAG 
-                              "work" -> WORK_TAG 
-                              _      -> OTHER_TAG 
+                              "home" -> HOME_TAG
+                              "work" -> WORK_TAG
+                              _      -> OTHER_TAG
   , address : item.address
   , tagName : item.tag
   , isEditEnabled : false
   , savedLocation : item.description
   , placeName : item.placeName
-  , isClickable : true 
+  , isClickable : true
   , alpha : 1.0
   , fullAddress : item.fullAddress
   , locationItemType : Just SAVED_LOCATION

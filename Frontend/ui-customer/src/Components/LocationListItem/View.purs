@@ -1,22 +1,22 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
 module Components.LocationListItem.View where
 
 import Components.LocationListItem.Controller (Action(..))
-import Debug.Trace (spy)
+import Debug (spy)
 import Common.Types.App
 import Effect (Effect)
 import Font.Size as FontSize
@@ -28,7 +28,7 @@ import Screens.Types (LocationListItemState)
 import Styles.Colors as Color
 
 view :: forall w . (Action  -> Effect Unit) -> LocationListItemState -> PrestoDOM (Effect Unit) w
-view push config = 
+view push config =
   linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
@@ -42,11 +42,11 @@ view push config =
         , orientation HORIZONTAL
         , gravity CENTER
         , disableClickFeedback true
-        , onClick ( \action -> if config.tag == "Current_Location" then do 
-                            _ <- push action 
-                            getLocationName push "9.9" "9.9" "Current Location" SelectedCurrentLocation
-                            else do 
-                              _ <- push action 
+        , onClick ( \action -> if config.tag == "Current_Location" then do
+                            _ <- push action
+                            getLocationName push 9.9 9.9 "Current Location" SelectedCurrentLocation
+                            else do
+                              _ <- push action
                               pure unit) (const $ OnClick config)
         ]([  prefixImageView config
           , linearLayout
@@ -61,10 +61,10 @@ view push config =
             ]
           ] <> if config.postfixImageVisibility then [postfixImageView push config] else [])
       ]
-  
+
 prefixImageView :: forall w . LocationListItemState -> PrestoDOM (Effect Unit) w
-prefixImageView config = 
-  linearLayout 
+prefixImageView config =
+  linearLayout
     [ height MATCH_PARENT
     , width $ V 20
     , orientation VERTICAL
@@ -78,8 +78,8 @@ prefixImageView config =
       ]
 
 postfixImageView :: forall w . (Action  -> Effect Unit) -> LocationListItemState -> PrestoDOM (Effect Unit) w
-postfixImageView push config = 
-  linearLayout 
+postfixImageView push config =
+  linearLayout
     [ height MATCH_PARENT
     , width if config.postfixImageVisibility then (V 50) else (V 0)
     , orientation VERTICAL
@@ -96,7 +96,7 @@ postfixImageView push config =
       ]
 
 titleView :: forall w . LocationListItemState -> PrestoDOM (Effect Unit) w
-titleView config = 
+titleView config =
   textView
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -111,7 +111,7 @@ titleView config =
     ]-- <> FontStyle.body1 TypoGraphy)
 
 subTitleView :: forall w . LocationListItemState -> PrestoDOM (Effect Unit) w
-subTitleView config = 
+subTitleView config =
   textView
     ([ height WRAP_CONTENT
     , width MATCH_PARENT

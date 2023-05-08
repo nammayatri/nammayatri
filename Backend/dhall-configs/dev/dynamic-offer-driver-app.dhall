@@ -39,6 +39,16 @@ let rcfg =
       , connectTimeout = None Integer
       }
 
+let rccfg =
+      { connectHost = "localhost"
+      , connectPort = 30006
+      , connectAuth = None Text
+      , connectDatabase = +0
+      , connectMaxConnections = +50
+      , connectMaxIdleTime = +30
+      , connectTimeout = None Integer
+      }
+
 let smsConfig =
       { sessionConfig = common.smsSessionConfig
       , credConfig =
@@ -75,6 +85,9 @@ in  { esqDBCfg
     , esqDBReplicaCfg
     , clickhouseCfg
     , hedisCfg = rcfg
+    , hedisClusterCfg = rccfg
+    , hedisMigrationStage = True
+    , cutOffHedisCluster = Flase
     , port = +8016
     , metricsPort = +9997
     , hostName = "localhost"

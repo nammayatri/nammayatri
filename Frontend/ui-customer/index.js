@@ -30,7 +30,7 @@ var logger = function()
     var oldConsoleLog = null;
     var pub = {};
 
-    pub.enableLogger =  function enableLogger() 
+    pub.enableLogger =  function enableLogger()
                         {
                             if(oldConsoleLog == null)
                                 return;
@@ -110,7 +110,7 @@ window.onMerchantEvent = function (event, payload) {
     {
         // window.__payload = Nothing;
         window.callPopUp(parsedPayload.payload.id,parsedPayload.payload.popType);
-        
+
     }
     else {
       window.__payload = parsedPayload;
@@ -135,7 +135,7 @@ window.callPopUp = function(id, type){
   }
   else
   {
-    purescript.main(); 
+    purescript.main();
   }
 }
 window.callUICallback = function () {
@@ -201,7 +201,7 @@ window["onEvent'"] = function (event, args) {
     purescript.onEvent(event)();
     // if (window.__dui_screen && window.isObject(window.onBackPressedEvent) && window.onBackPressedEvent[window.__dui_screen]) {
       // console.log("======----===");
-      // console.log(window.__dui_screen) 
+      // console.log(window.__dui_screen)
     //   if(window.__dui_screen === "RideHomeScreen" || window.__dui_screen === "HomeScreen"){
     //     JBridge.minimizeApp();
     //   }

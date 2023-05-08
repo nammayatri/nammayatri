@@ -1,21 +1,21 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
 module Screens.DriverProfileScreen.View where
 
-import Prelude (Unit, ($), const, map, (==), (||), (/), unit, bind, (-), (<>), (<<<), pure, discard, show)
+import Prelude (Unit, ($), const, map, (==), (||), (/), unit, bind, (-), (<>), (<<<), pure, discard, show, void)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, frameLayout, alpha, scrollView, cornerRadius, onBackPressed, visibility, id, afterRender, imageWithFallback, webView, url)
 import Effect (Effect)
 import Screens.DriverProfileScreen.Controller (Action(..), ScreenOutput, eval, getTitle)
@@ -37,7 +37,7 @@ import Services.Backend as Remote
 import Services.APITypes(GetDriverInfoReq(..), GetDriverInfoResp(..))
 import Control.Monad.Trans.Class (lift)
 import Presto.Core.Types.Language.Flow (doAff)
-import Effect.Aff (launchAff_)
+import Effect.Aff (launchAff)
 import Control.Monad.Except (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Maybe (fromMaybe)
@@ -53,7 +53,7 @@ screen initialState =
   , view
   , name : "DriverProfileScreen"
   , globalEvents : [(\push -> do
-      launchAff_ $ EHC.flowRunner $ runExceptT $ runBackT $ do
+      void $ launchAff $ EHC.flowRunner $ runExceptT $ runBackT $ do
         getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
         let (GetDriverInfoResp getDriverInfoResp) = getDriverInfoResp
         lift $ lift $ doAff do liftEffect $ push $ GetDriverInfoResponse (GetDriverInfoResp getDriverInfoResp)
@@ -90,7 +90,7 @@ view push state =
            ]
         , BottomNavBar.view (push <<< BottomNavBarAction) (navData 4)
       ]
-      , linearLayout 
+      , linearLayout
         [ width MATCH_PARENT
         , height MATCH_PARENT
         , background Color.lightBlack900
@@ -112,7 +112,7 @@ showLiveStatsDashboard push state =
             pure unit
         )
         (const NoAction)
-  ] [ webView 
+  ] [ webView
       [ height MATCH_PARENT
       , width MATCH_PARENT
       , id (getNewIDWithTag "webview")
@@ -237,7 +237,7 @@ profileOptionsLayout state push =
 
 --------------------------------------------------------------- ratingView ----------------------------
 ratingView :: ST.DriverProfileScreenState -> forall w . PrestoDOM (Effect Unit) w
-ratingView state= 
+ratingView state=
  linearLayout
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
@@ -257,7 +257,7 @@ ratingView state=
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
     , text $ if (fromMaybe 0 state.data.driverRating ) == 0 then "New" else show (fromMaybe 0 state.data.driverRating )
-    , margin (MarginLeft 7) 
+    , margin (MarginLeft 7)
     , textSize FontSize.a_14
     , color Color.black800
     ]
@@ -274,7 +274,7 @@ ratingView state=
 
 --------------------------------------------------------------- horizontalLineView and dummyTextView ----------------------------
 horizontalLineView :: Int -> Number -> Int -> Int -> Int -> forall w . PrestoDOM (Effect Unit) w
-horizontalLineView heightOfLine lineAlpha marginLeft marginTop marginRight = 
+horizontalLineView heightOfLine lineAlpha marginLeft marginTop marginRight =
  linearLayout
   [ width MATCH_PARENT
   , height $ V heightOfLine
@@ -284,7 +284,7 @@ horizontalLineView heightOfLine lineAlpha marginLeft marginTop marginRight =
   ][]
 
 dummyTextView :: forall w . PrestoDOM (Effect Unit) w
-dummyTextView = 
+dummyTextView =
  textView
  [ width WRAP_CONTENT
  , height WRAP_CONTENT

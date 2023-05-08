@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -27,7 +27,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Engineering.Helpers.Commons as EHC
 import JBridge as JB
-import Effect.Aff (launchAff_)
+import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Trans.Class (lift)
@@ -51,15 +51,15 @@ view :: forall w . (Action -> Effect Unit) -> ST.RideDetailScreenState -> Presto
 view push state =
   linearLayout
   [ width MATCH_PARENT
-  , height MATCH_PARENT 
+  , height MATCH_PARENT
   , background Color.white900
-  , afterRender (\action -> do 
+  , afterRender (\action -> do
                 _ <- push action
-                launchAff_ $ EHC.flowRunner $ runExceptT $ runBackT $ do
+                _ <- launchAff $ EHC.flowRunner $ runExceptT $ runBackT $ do
                   let coor = (walkCoordinate state.data.sourceAddress.lon state.data.sourceAddress.lat state.data.destAddress.lon state.data.destAddress.lat)
                   _ <- lift $ lift $ doAff do liftEffect $ JB.mapSnapShot (EHC.getNewIDWithTag "RideDetailScreenMap") coor "DOT" false push MapSnapShot
-                  pure unit 
-                pure unit 
+                  pure unit
+                pure unit
                 ) (const AfterRender)
   ][  linearLayout
       [ width MATCH_PARENT
@@ -78,7 +78,7 @@ view push state =
                   [ width MATCH_PARENT
                   , height WRAP_CONTENT
                   , orientation VERTICAL
-                  ][  linearLayout 
+                  ][  linearLayout
                       [ width MATCH_PARENT
                       , height MATCH_PARENT
                       , orientation VERTICAL
@@ -105,7 +105,7 @@ view push state =
                           , height (V 1)
                           , background Color.grey900
                           ][]
-                        , linearLayout 
+                        , linearLayout
                           [ width MATCH_PARENT
                           , height WRAP_CONTENT
                           , orientation HORIZONTAL
@@ -128,12 +128,12 @@ view push state =
               ]
             , cashCollected state push
           ]
-        
+
       ]
   ]
 
 totalAmount :: forall w . ST.RideDetailScreenState -> PrestoDOM (Effect Unit) w
-totalAmount state = 
+totalAmount state =
  linearLayout
  [ width WRAP_CONTENT
  , height WRAP_CONTENT
@@ -144,7 +144,7 @@ totalAmount state =
   , height WRAP_CONTENT
   , text "₹"
   , color Color.black
-  , margin (MarginRight 2) 
+  , margin (MarginRight 2)
   , textSize FontSize.a_44
   ],
   textView (
@@ -157,7 +157,7 @@ totalAmount state =
  ]
 
 address :: forall w . ST.RideDetailScreenState -> PrestoDOM (Effect Unit) w
-address state = 
+address state =
   frameLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -174,7 +174,7 @@ address state =
          ]
        , textView (
          [ width WRAP_CONTENT
-         , height WRAP_CONTENT 
+         , height WRAP_CONTENT
          , margin (MarginLeft 10)
          , ellipsize true
          , singleLine true
@@ -182,7 +182,7 @@ address state =
          , color Color.black800
          ] <> FontStyle.body1 TypoGraphy
          )
-      ] 
+      ]
     , textView (
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
@@ -190,7 +190,7 @@ address state =
       , margin (Margin 25 22 20 5)
       ] <> FontStyle.body3 TypoGraphy
       )
-    , imageView 
+    , imageView
       [ width (V 5)
       , height (V ((EHC.screenHeight unit)/13))
       , imageUrl "ic_line"
@@ -209,7 +209,7 @@ address state =
          ]
        , textView (
          [ width WRAP_CONTENT
-         , height WRAP_CONTENT 
+         , height WRAP_CONTENT
          , margin (MarginLeft 10)
          , ellipsize true
          , singleLine true
@@ -228,29 +228,29 @@ address state =
   ]
 
 routeMap :: forall w . ST.RideDetailScreenState -> PrestoDOM (Effect Unit) w
-routeMap state = 
-  linearLayout 
+routeMap state =
+  linearLayout
   [ width MATCH_PARENT
   , height $ V ((EHC.screenWidth unit) - 140)
   , margin (Margin 0 20 0 20)
   , background Color.grey900
-  ][  linearLayout 
+  ][  linearLayout
       [ width MATCH_PARENT
-      , height WRAP_CONTENT 
+      , height WRAP_CONTENT
       , background Color.black
       , id (EHC.getNewIDWithTag "RideDetailScreenMap")
       ][]
   ]
 
 cashCollected :: forall w . ST.RideDetailScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-cashCollected state push = 
+cashCollected state push =
   linearLayout
   [ width MATCH_PARENT
   , height (V 60)
   , background Color.black900
   , alignParentBottom "true,-1"
   , gravity CENTER
-  -- , clickable state.props.cashCollectedButton  // require this to enable button only when our map snap shot (base64) is ready 
+  -- , clickable state.props.cashCollectedButton  // require this to enable button only when our map snap shot (base64) is ready
   , onClick push (const GoToHome)
   ][  textView (
       [ width WRAP_CONTENT
@@ -258,7 +258,7 @@ cashCollected state push =
       , text (getString CASH_COLLECTED)
       , fontStyle $ FontStyle.bold LanguageStyle
       , color Color.yellowText
-      , textSize FontSize.a_16 
+      , textSize FontSize.a_16
       ] <> FontStyle.subHeading1 TypoGraphy
   )
   ]

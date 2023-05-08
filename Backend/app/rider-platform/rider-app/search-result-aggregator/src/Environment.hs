@@ -15,7 +15,7 @@
 module Environment where
 
 import Kernel.Prelude
-import Kernel.Storage.Hedis (HedisCfg, HedisEnv, connectHedis)
+import Kernel.Storage.Hedis (HedisCfg, HedisEnv, connectHedis, connectHedisCluster)
 import Kernel.Storage.Hedis.AppPrefixes (riderAppPrefix)
 import Kernel.Types.Common
 import Kernel.Utils.App (getPodName, lookupDeploymentVersion)
@@ -30,7 +30,10 @@ data AppCfg = AppCfg
     loggerConfig :: LoggerConfig,
     graceTerminationPeriod :: Seconds,
     kafkaConsumerCfgs :: KafkaConsumerCfgs,
-    hedisCfg :: HedisCfg
+    hedisCfg :: HedisCfg,
+    hedisMigrationStage :: Bool,
+    cutOffHedisCluster :: Bool,
+    hedisClusterCfg :: HedisCfg
   }
   deriving (Generic, FromDhall)
 
@@ -43,6 +46,9 @@ data AppEnv = AppEnv
     coreMetrics :: CoreMetricsContainer,
     kafkaConsumerEnv :: KafkaConsumerEnv,
     hedisEnv :: HedisEnv,
+    hedisMigrationStage :: Bool,
+    cutOffHedisCluster :: Bool,
+    hedisClusterEnv :: HedisEnv,
     version :: DeploymentVersion
   }
   deriving (Generic)
@@ -56,6 +62,10 @@ buildAppEnv AppCfg {..} = do
   isShuttingDown <- mkShutdown
   kafkaConsumerEnv <- buildKafkaConsumerEnv kafkaConsumerCfgs
   hedisEnv <- connectHedis hedisCfg riderAppPrefix
+  hedisClusterEnv <-
+    if cutOffHedisCluster
+      then pure hedisEnv
+      else connectHedisCluster hedisClusterCfg riderAppPrefix
   return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

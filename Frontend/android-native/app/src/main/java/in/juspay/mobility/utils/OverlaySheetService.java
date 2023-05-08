@@ -42,6 +42,7 @@ import androidx.viewpager2.widget.ViewPager2;
 import com.airbnb.lottie.LottieAnimationView;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.firebase.analytics.FirebaseAnalytics;
+import com.facebook.shimmer.ShimmerFrameLayout;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -89,12 +90,14 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private FirebaseAnalytics mFirebaseAnalytics;
     private Boolean isRideAcceptedOrRejected = false;
     private TextView indicatorText1, indicatorText2, indicatorText3;
-    private ImageView indicatorDot1, indicatorDot2, indicatorDot3;
+    private TextView indicatorTip1, indicatorTip2, indicatorTip3;
+    private ShimmerFrameLayout shimmerTip1, shimmerTip2, shimmerTip3;
     private LinearProgressIndicator progressIndicator1, progressIndicator2, progressIndicator3;
     private ArrayList<TextView> indicatorTextList ;
     private ArrayList<LinearProgressIndicator> progressIndicatorsList ;
     private ArrayList<LinearLayout> indicatorList ;
-    private ArrayList<ImageView> dotsList;
+    private ArrayList<TextView> tipsList;
+    private ArrayList<ShimmerFrameLayout> shimmerTipList;
     private Handler mainLooper = new Handler(Looper.getMainLooper());
 
     public class OverlayBinder extends Binder {
@@ -310,7 +313,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             @Override
             public void run() {
                 if (model.getCustomerTip() > 0){
-                    holder.customerTipText.setText(String.valueOf("₹ " +model.getCustomerTip() + " tip included !"));
+                    holder.customerTipText.setText(String.valueOf("₹ " +model.getCustomerTip() + " " + getString(R.string.tip_included)));
                     holder.customerTipBlock.setVisibility(View.VISIBLE);
                     holder.textIncludesCharges.setText(getString(R.string.includes_pickup_charges_10)+ " " + getString(R.string.and) +" ₹" + model.getCustomerTip() + " Tip");
                 } else {
@@ -863,18 +866,23 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                         floatyView.findViewById(R.id.indicator1),
                         floatyView.findViewById(R.id.indicator2),
                         floatyView.findViewById(R.id.indicator3)));
-                indicatorDot1 = floatyView.findViewById(R.id.red_dot_0);
-                indicatorDot2 = floatyView.findViewById(R.id.red_dot_1);
-                indicatorDot3 = floatyView.findViewById(R.id.red_dot_2);
-                dotsList = new ArrayList<>(Arrays.asList(indicatorDot1,indicatorDot2,indicatorDot3));
-
+                indicatorTip1 = floatyView.findViewById(R.id.tip_view_0);
+                indicatorTip2 = floatyView.findViewById(R.id.tip_view_1);
+                indicatorTip3 = floatyView.findViewById(R.id.tip_view_2);
+                shimmerTip1 = (ShimmerFrameLayout) floatyView.findViewById(R.id.shimmer_view_container_0);
+                shimmerTip2 = (ShimmerFrameLayout) floatyView.findViewById(R.id.shimmer_view_container_1);
+                shimmerTip3 = (ShimmerFrameLayout) floatyView.findViewById(R.id.shimmer_view_container_2);
+                tipsList = new ArrayList<>(Arrays.asList(indicatorTip1,indicatorTip2,indicatorTip3));
+                shimmerTipList = new ArrayList<>(Arrays.asList(shimmerTip1,shimmerTip2,shimmerTip3));
                 for (int  i =0; i<3; i++){
                     if (viewPager.getCurrentItem() == indicatorList.indexOf(indicatorList.get(i))){
                         indicatorList.get(i).setBackgroundColor(getColor(R.color.grey900));
                         progressIndicatorsList.get(i).setTrackColor(getColor(R.color.white));
+                        shimmerTipList.get(i).stopShimmer();
                     }else {
                         indicatorList.get(i).setBackgroundColor(getColor(R.color.white));
                         progressIndicatorsList.get(i).setTrackColor(getColor(R.color.grey900));
+                        shimmerTipList.get(i).startShimmer();
                     }
                     if (i < sheetArrayList.size()){
                         indicatorTextList.get(i).setText("₹"+String.valueOf(sheetArrayList.get(i).getBaseFare() + sheetArrayList.get(i).getUpdatedAmount()));
@@ -885,14 +893,14 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                         }
 
                         if (sheetArrayList.get(i).getCustomerTip() > 0){
-                            dotsList.get(i).setVisibility(View.VISIBLE);
+                            tipsList.get(i).setVisibility(View.VISIBLE);
                         }else {
-                            dotsList.get(i).setVisibility(View.INVISIBLE);
+                            tipsList.get(i).setVisibility(View.INVISIBLE);
                         }
                     } else {
                         indicatorTextList.get(i).setText("--");
                         progressIndicatorsList.get(i).setVisibility(View.GONE);
-                        dotsList.get(i).setVisibility(View.INVISIBLE);
+                        tipsList.get(i).setVisibility(View.INVISIBLE);
                     }
                 }
             }

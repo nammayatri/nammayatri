@@ -383,11 +383,12 @@ logOutPopUpModelConfig state =
           , width = MATCH_PARENT 
           , background = Color.white900
           , strokeColor = Color.white900
-          , margin = MarginTop 3
+          , margin = MarginTop 14
+          , padding = PaddingBottom $ getBottomMargin
           , color = Color.black650
           , fontStyle = FontStyle.semiBold LanguageStyle
           },
-          cornerRadius = (Corners 15.0 true true true true)
+          cornerRadius = (Corners 15.0 true true false false)
 
       }
     _ ->
@@ -416,13 +417,18 @@ logOutPopUpModelConfig state =
               , width = MATCH_PARENT 
               , background = Color.white900
               , strokeColor = Color.white900
-              , margin = MarginTop 3
+              , margin = MarginTop $ if (isLocalStageOn ST.QuoteList || isLocalStageOn ST.FindingQuotes) then 14 else 3
               , color = Color.black650
+              , padding = if (isLocalStageOn ST.QuoteList || isLocalStageOn ST.FindingQuotes) then (PaddingBottom getBottomMargin) else (Padding 0 0 0 0)
               , fontStyle = FontStyle.semiBold LanguageStyle
              }
             }
       in
         popUpConfig'
+
+
+getBottomMargin :: Int 
+getBottomMargin = if EHC.safeMarginBottom == 0 then 24 else (EHC.safeMarginBottom)
 
 distanceOusideLimitsConfig :: ST.HomeScreenState -> PopUpModal.Config
 distanceOusideLimitsConfig state =
@@ -697,3 +703,33 @@ autoAnimConfig =
         }
   in
     autoAnimConfig'
+
+callSupportConfig :: ST.HomeScreenState ->  PopUpModal.Config
+callSupportConfig state = let
+  config' = PopUpModal.config
+  popUpConfig' = config'{
+    gravity = CENTER
+  , cornerRadius = (Corners 15.0 true true true true)
+  , margin = (MarginHorizontal 16 16)
+  , primaryText {
+      text = getString CONTACT_SUPPORT <>"?"
+    , fontStyle = FontStyle.semiBold LanguageStyle
+    }
+  , secondaryText {
+      text = getString YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT
+    , margin = (Margin 24 12 24 32)
+    , color = Color.black700
+    }
+  , option1 {
+      text =  getString CANCEL_
+    , fontSize = FontSize.a_16
+    , color = Color.black700
+    , strokeColor = Color.black700
+    }
+  , option2 {
+      text =  getString CALL_SUPPORT
+    , fontSize = FontSize.a_16
+    , margin = (MarginLeft 12)
+    }
+  }
+  in popUpConfig'

@@ -65,7 +65,8 @@ buildSearchRequest person pickup mbDrop mbMaxDistance mbDistance now bundleVersi
         device = device,
         bundleVersion = bundleVersion,
         clientVersion = clientVersion,
-        language = person.language
+        language = person.language,
+        customerExtraFee = Nothing
       }
   where
     getSearchRequestExpiry :: (HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds]) => UTCTime -> m UTCTime

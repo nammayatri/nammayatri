@@ -61,6 +61,9 @@ data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
     esqDBReplicaCfg :: EsqDBConfig,
     hedisCfg :: HedisCfg,
+    hedisClusterCfg :: HedisCfg,
+    cutOffHedisCluster :: Bool,
+    hedisMigrationStage :: Bool,
     smsCfg :: SmsConfig,
     infoBIPCfg :: InfoBIPConfig,
     webengageCfg :: WebengageConfig,
@@ -131,6 +134,9 @@ data AppEnv = AppEnv
     encTools :: EncTools,
     selfUIUrl :: BaseUrl,
     hedisEnv :: HedisEnv,
+    hedisClusterEnv :: HedisEnv,
+    cutOffHedisCluster :: Bool,
+    hedisMigrationStage :: Bool,
     esqDBEnv :: EsqDBEnv,
     esqDBReplicaEnv :: EsqDBEnv,
     isShuttingDown :: TMVar (),
@@ -163,6 +169,10 @@ buildAppEnv AppCfg {..} = do
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   kafkaEnvs <- buildBAPKafkaEnvs
   hedisEnv <- connectHedis hedisCfg riderAppPrefix
+  hedisClusterEnv <-
+    if cutOffHedisCluster
+      then pure hedisEnv
+      else connectHedisCluster hedisClusterCfg riderAppPrefix
   return AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()
@@ -170,6 +180,7 @@ releaseAppEnv AppEnv {..} = do
   releaseKafkaProducerTools kafkaProducerTools
   releaseLoggerEnv loggerEnv
   disconnectHedis hedisEnv
+  disconnectHedis hedisClusterEnv
 
 type Env = EnvR AppEnv
 

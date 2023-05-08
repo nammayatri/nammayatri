@@ -25,6 +25,7 @@ import qualified Domain.Types.Estimate as DE
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequest as DSR
+import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Types.Id
 
@@ -51,8 +52,23 @@ data FlowStatus
       { bookingId :: Id DB.Booking,
         validTill :: UTCTime
       }
-  | RIDE_ASSIGNED
+  | RIDE_ASSIGNED -- deprecated status, kept it for backward compatibility
       { rideId :: Id DRide.Ride
+      }
+  | RIDE_PICKUP
+      { rideId :: Id DRide.Ride,
+        bookingId :: Id DB.Booking,
+        trackingUrl :: Maybe BaseUrl,
+        otp :: Text,
+        vehicleNumber :: Text,
+        fromLocation :: Maps.LatLong,
+        driverLocation :: Maybe Maps.LatLong
+      }
+  | RIDE_STARTED
+      { rideId :: Id DRide.Ride,
+        bookingId :: Id DB.Booking,
+        trackingUrl :: Maybe BaseUrl,
+        driverLocation :: Maybe Maps.LatLong
       }
   | PENDING_RATING
       { rideId :: Id DRide.Ride

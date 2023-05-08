@@ -27,7 +27,7 @@ import "dynamic-offer-driver-app" Environment (AppCfg (..))
 import Kernel.External.Encryption (EncTools)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
-import Kernel.Storage.Hedis (HedisEnv, connectHedis, disconnectHedis)
+import Kernel.Storage.Hedis (HedisEnv, connectHedis, connectHedisCluster, disconnectHedis)
 import Kernel.Types.Base64 (Base64)
 import Kernel.Types.Common
 import Kernel.Types.Flow
@@ -59,6 +59,9 @@ data HandlerEnv = HandlerEnv
     esqDBReplicaEnv :: EsqDBEnv,
     encTools :: EncTools,
     hedisEnv :: HedisEnv,
+    hedisClusterEnv :: HedisEnv,
+    cutOffHedisCluster :: Bool,
+    hedisMigrationStage :: Bool,
     cacheConfig :: CacheConfig,
     cacheTranslationConfig :: CacheTranslationConfig,
     googleTranslateUrl :: BaseUrl,
@@ -79,6 +82,10 @@ buildHandlerEnv HandlerCfg {..} = do
   esqDBEnv <- prepareEsqDBEnv appCfg.esqDBCfg loggerEnv
   esqDBReplicaEnv <- prepareEsqDBEnv appCfg.esqDBReplicaCfg loggerEnv
   hedisEnv <- connectHedis appCfg.hedisCfg ("driver-offer-allocator:" <>)
+  hedisClusterEnv <-
+    if cutOffHedisCluster
+      then pure hedisEnv
+      else connectHedisCluster hedisClusterCfg ("driver-offer-allocator:" <>)
   ssrMetrics <- registerSendSearchRequestToDriverMetricsContainer
   coreMetrics <- registerCoreMetricsContainer
   return HandlerEnv {..}
@@ -87,6 +94,7 @@ releaseHandlerEnv :: HandlerEnv -> IO ()
 releaseHandlerEnv HandlerEnv {..} = do
   releaseLoggerEnv loggerEnv
   disconnectHedis hedisEnv
+  disconnectHedis hedisClusterEnv
 
 type Flow = FlowR HandlerEnv
 

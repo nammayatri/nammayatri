@@ -16,6 +16,8 @@ module API.UI.Booking
   ( DBooking.BookingListRes,
     API,
     handler,
+    bookingStatus,
+    bookingList,
   )
 where
 

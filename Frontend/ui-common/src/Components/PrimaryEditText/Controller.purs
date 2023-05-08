@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -20,14 +20,14 @@ import Font.Size as FontSize
 import Styles.Colors as Color
 import Font.Style as FontStyle
 import Data.Maybe(Maybe(..))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), LetterSpacing(..))
 import Common.Types.App
 
 data Action = TextChanged String String
 
-type Config = 
+type Config =
   { height :: Length
-  , width :: Length 
+  , width :: Length
   , editText :: EditTextConfig
   , visibility :: Visibility
   , background :: String
@@ -38,14 +38,14 @@ type Config =
   , showErrorLabel :: Boolean
   , errorLabel :: TextConfig
   , showErrorImage :: Boolean
-  , errorImageConfig :: ImageConfig 
+  , errorImageConfig :: ImageConfig
   , margin :: Margin
   , type :: String
   , warningStroke :: String
   }
 
 
-type EditTextConfig = 
+type EditTextConfig =
   { text :: String
   , textSize :: Int
   , fontStyle :: String
@@ -58,12 +58,12 @@ type EditTextConfig =
   , pattern :: Maybe String
   , margin :: Margin
   , padding :: Padding
-  , letterSpacing :: Number
+  , letterSpacing :: LetterSpacing
   , alpha :: Number
   , capsLock :: Boolean
   }
 
-type TextConfig = 
+type TextConfig =
   { text :: String
   , textSize :: Int
   , fontStyle :: String
@@ -73,7 +73,7 @@ type TextConfig =
   , alpha :: Number
   , margin :: Margin
   }
-type ImageConfig = 
+type ImageConfig =
   { height :: Length
   , width :: Length
   , imageUrl :: String
@@ -82,7 +82,7 @@ type ImageConfig =
   }
 
 config :: Config
-config = {  
+config = {
     height : V 54
   , width : MATCH_PARENT
   , margin : (Margin 10 0 10 15)
@@ -100,7 +100,7 @@ config = {
     , pattern : Nothing
     , margin : (Margin 20 0 10 0)
     , padding : (Padding 0 16 16 16)
-    , letterSpacing : 0.0
+    , letterSpacing : PX 0.0
     , alpha : 1.0
     , capsLock : false
     }
@@ -110,7 +110,7 @@ config = {
   , stroke : ("1," <> Color.borderColorLight)
   , warningStroke : ("1," <> Color.lightMaroon)
   , id : ""
-  , topLabel :  
+  , topLabel :
     { text : ""
     , fontStyle : FontStyle.regular LanguageStyle
     , textSize :  FontSize.a_12
@@ -121,7 +121,7 @@ config = {
     , margin : (Margin 0 0 0 10)
     }
   , showErrorLabel : false
-  , errorLabel : { 
+  , errorLabel : {
       text : ""
     , fontStyle : FontStyle.bold LanguageStyle
     , textSize :  FontSize.a_12
@@ -132,7 +132,7 @@ config = {
     , margin : (Margin 0 0 0 0)
     }
   , showErrorImage : false
-  , errorImageConfig :  
+  , errorImageConfig :
   {   height : V 10
     , width : V 10
     , imageUrl : ""

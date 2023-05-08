@@ -1,21 +1,21 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
 module Components.RideAllocationModal.View where
 
-import Prelude (Unit, bind, const, discard, pure, unit, ($), (*), (+), (-), (/), (<>), (>), (>=))
+import Prelude (Unit, bind, const, discard, pure, unit, ($), (*), (+), (-), (/), (<>), (>), (>=), show)
 import Effect (Effect)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), PrestoDOM, Padding(..), afterRender, frameLayout, imageView, linearLayout, textView, onClick, clickable, maxLines, alpha, relativeLayout, imageWithFallback)
 import Components.RideAllocationModal.Controller (Action(..), Config)
@@ -36,14 +36,14 @@ import Control.Monad.Except.Trans (runExceptT)
 import Common.Types.App
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-view push config = 
+view push config =
     frameLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
-    , afterRender (\action -> do 
+    , afterRender (\action -> do
                           _ <- push action
                           countDown config.seconds config.id push CountDown
-                          pure unit 
+                          pure unit
                         ) (const NoAction)
     ][ linearLayout
        [ width config.width
@@ -62,8 +62,8 @@ view push config =
            , height WRAP_CONTENT
            , padding (PaddingHorizontal ((screenWidth unit)/18) 20)
            , orientation VERTICAL
-           ][  source config 
-             , imageView 
+           ][  source config
+             , imageView
                [ width (V 2)
                , height MATCH_PARENT
                , imageUrl "dashed_line"
@@ -78,7 +78,7 @@ view push config =
            , height (V 1)
            , background Color.lightGrey
            , margin (Margin 20 10 20 10)
-           ][]  
+           ][]
          , linearLayout
            [ width MATCH_PARENT
            , height WRAP_CONTENT
@@ -91,12 +91,12 @@ view push config =
                , gravity CENTER
                , background Color.grey700
                , cornerRadius 8.0
-               ][  reducePrice push config 
+               ][  reducePrice push config
                  , totalPrice config
-                 , increasePrice push config  
+                 , increasePrice push config
                ]
            ]
-         , linearLayout 
+         , linearLayout
            [ width MATCH_PARENT
            , height WRAP_CONTENT
            , padding (Padding 0 ((screenHeight unit)/32) 0 ((screenHeight unit)/50))
@@ -110,7 +110,7 @@ view push config =
     ]
 
 countDownView :: forall w . Config -> PrestoDOM (Effect Unit) w
-countDownView config = 
+countDownView config =
   textView
   [ width (V 60)
   , height (V 60)
@@ -120,12 +120,12 @@ countDownView config =
   , stroke ("1," <> Color.grayDarker)
   , text config.countDown.text
   , gravity CENTER
-  , textSize config.countDown.textSize 
+  , textSize config.countDown.textSize
   , color config.countDown.textColor
   ]
 
 source :: forall w . Config -> PrestoDOM (Effect Unit) w
-source config = 
+source config =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -140,7 +140,7 @@ source config =
      ]
    , textView
      [ width WRAP_CONTENT
-     , height WRAP_CONTENT 
+     , height WRAP_CONTENT
      , margin (MarginLeft 10)
      , text config.source.text
      , textSize config.source.textSize
@@ -150,7 +150,7 @@ source config =
   ]
 
 destinationArea :: forall w . Config -> PrestoDOM (Effect Unit) w
-destinationArea config = 
+destinationArea config =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -171,7 +171,7 @@ destinationArea config =
   ]
 
 destination :: forall w . Config -> PrestoDOM (Effect Unit) w
-destination config = 
+destination config =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -186,7 +186,7 @@ destination config =
      ]
    , textView
      [ width WRAP_CONTENT
-     , height WRAP_CONTENT 
+     , height WRAP_CONTENT
      , margin (MarginLeft 10)
      , text config.destination.text
      , textSize config.destination.textSize
@@ -198,7 +198,7 @@ destination config =
 
 distanceView :: forall w. Config -> PrestoDOM (Effect Unit) w
 distanceView config =
-    relativeLayout  
+    relativeLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation HORIZONTAL
@@ -209,7 +209,7 @@ distanceView config =
        , padding (Padding 40 20 0 10)
        , gravity LEFT
        , alignParentLeft "true,-1"
-       ][ textView 
+       ][ textView
            [ width WRAP_CONTENT
            , height WRAP_CONTENT
            , text (getString PICKUP)
@@ -220,7 +220,7 @@ distanceView config =
          , textView
            [ width WRAP_CONTENT
            , height WRAP_CONTENT
-           , text (( parseFloat (config.pickupDistance) 1) <> " km")
+           , text (show config.pickupDistance <> ".0 km")
            , textSize FontSize.a_18
            , fontStyle $ FontStyle.bold LanguageStyle
            , color Color.greyTextColor
@@ -238,19 +238,19 @@ distanceView config =
           , height WRAP_CONTENT
           , orientation VERTICAL
           , gravity LEFT
-          ][ textView 
+          ][ textView
            [ width WRAP_CONTENT
            , height WRAP_CONTENT
            , text (getString TRIP)
            , textSize FontSize.a_18
            , color Color.black700
            , fontStyle $ FontStyle.regular LanguageStyle
-           
+
            ]
          , textView
            [ width WRAP_CONTENT
            , height WRAP_CONTENT
-           , text ((parseFloat (config.journeyDistance) 1)<> " km")
+           , text (show config.journeyDistance <> ".0 km")
            , textSize FontSize.a_18
            , fontStyle $ FontStyle.bold LanguageStyle
            , color Color.greyTextColor
@@ -260,7 +260,7 @@ distanceView config =
       ]
 
 reducePrice :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-reducePrice push config = 
+reducePrice push config =
   linearLayout
   [ width ( V ((screenWidth unit)/7))
   , height (V ((screenHeight unit)/20))
@@ -282,7 +282,7 @@ reducePrice push config =
   ]
 
 totalPrice :: forall w . Config -> PrestoDOM (Effect Unit) w
-totalPrice config = 
+totalPrice config =
   textView
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
@@ -294,7 +294,7 @@ totalPrice config =
   ]
 
 increasePrice :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-increasePrice push config = 
+increasePrice push config =
   linearLayout
   [ width ( V ((screenWidth unit)/7))
   , height (V ((screenHeight unit)/20))
@@ -313,10 +313,10 @@ increasePrice push config =
       , textSize FontSize.a_19
       , fontStyle $ FontStyle.semiBold LanguageStyle
       ]
-  ] 
+  ]
 
 declineButton :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-declineButton push config = 
+declineButton push config =
   linearLayout
   [ width config.decline.width
   , height config.decline.height
@@ -336,7 +336,7 @@ declineButton push config =
   ]
 
 requestButton :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-requestButton push config = 
+requestButton push config =
   linearLayout
   [ width config.request.width
   , height config.request.height
@@ -348,7 +348,7 @@ requestButton push config =
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , text (getString REQUEST)
-      , color config.request.color 
+      , color config.request.color
       , fontStyle $ FontStyle.bold LanguageStyle
       , textSize FontSize.a_18
       ]

@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -19,14 +19,14 @@ import Common.Types.App
 import Animation as Anim
 import Components.ErrorModal as ErrorModal
 import Components.GenericHeader as GenericHeader
-import Data.Array as DA 
+import Data.Array as DA
 import Data.Array ((..))
 import Data.Either (Either(..))
 import Data.Tuple (Tuple(..))
 import Effect (Effect)
-import Effect.Aff (launchAff_)
+import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
-import Engineering.Helpers.Commons as EHC 
+import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
@@ -40,7 +40,7 @@ import PrestoDOM.Events (globalOnScroll)
 import PrestoDOM.List as PrestoList
 import PrestoDOM.Types.Core (toPropValue)
 import Screens.MyRidesScreen.Controller (Action(..), ScreenOutput, eval)
-import Screens.Types as ST 
+import Screens.Types as ST
 import Services.API (RideBookingListRes(..))
 import Services.Backend as Remote
 import Styles.Colors as Color
@@ -48,7 +48,7 @@ import Types.App (GlobalState)
 import Screens.CustomerUtils.MyRidesScreen.ComponentConfig
 
 screen :: ST.MyRidesScreenState -> PrestoList.ListItem -> Screen Action ST.MyRidesScreenState ScreenOutput
-screen initialState listItemm = 
+screen initialState listItemm =
   {
     initialState : initialState {
       shimmerLoader = ST.AnimatedIn
@@ -58,7 +58,7 @@ screen initialState listItemm =
   , globalEvents : [
        globalOnScroll "MyRidesScreen",
         ( \push -> do
-                    launchAff_ $ EHC.flowRunner $ getPastRides RideBookingListAPIResponseAction push initialState
+                    _ <- launchAff $ EHC.flowRunner $ getPastRides RideBookingListAPIResponseAction push initialState
                     pure $ pure unit
         )
   ]
@@ -66,7 +66,7 @@ screen initialState listItemm =
   }
 
 view :: forall w . PrestoList.ListItem -> (Action -> Effect Unit) -> ST.MyRidesScreenState -> PrestoDOM (Effect Unit) w
-view listItemm push state = 
+view listItemm push state =
   Anim.screenAnimation $ linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
@@ -91,7 +91,7 @@ view listItemm push state =
           , padding (Padding 16 12 16 16)
           ][  textView
               [ text (getString SELECT_A_RIDE)
-              , textSize FontSize.a_14 
+              , textSize FontSize.a_14
               , fontStyle $ FontStyle.medium LanguageStyle
               , color Color.black700
               ]
@@ -101,7 +101,7 @@ view listItemm push state =
     , loadButtonView state push]
 
 loadButtonView :: forall w. ST.MyRidesScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-loadButtonView state push = 
+loadButtonView state push =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -136,7 +136,7 @@ loadButtonView state push =
     ]]
 
 ridesView :: forall w . PrestoList.ListItem -> (Action -> Effect Unit) -> ST.MyRidesScreenState -> PrestoDOM (Effect Unit) w
-ridesView listItemm push state = 
+ridesView listItemm push state =
   swipeRefreshLayout
   ([height MATCH_PARENT
   , width MATCH_PARENT
@@ -149,14 +149,14 @@ ridesView listItemm push state =
     ]([ Tuple "Rides"
         $ PrestoList.list
         [ height MATCH_PARENT
-        , scrollBarY false 
+        , scrollBarY false
         , width MATCH_PARENT
         , onScroll "rides" "MyRidesScreen" push (Scroll)
         , onScrollStateChange push (ScrollStateChanged)
         , visibility $ case DA.null state.itemsRides of
                     false -> VISIBLE
                     true -> GONE
-        , PrestoList.listItem listItemm 
+        , PrestoList.listItem listItemm
         , background Color.white900
         , PrestoList.listDataV2 $ (DA.filter (\item -> (item.status) == toPropValue("COMPLETED") || (item.status) == toPropValue("CANCELLED")) state.prestoListArrayItems)
         ]
@@ -209,14 +209,14 @@ ridesView listItemm push state =
   ]
 
 separatorView :: forall w. PrestoDOM (Effect Unit) w
-separatorView = 
+separatorView =
   linearLayout
   [ height $ V 1
   , width MATCH_PARENT
   , background Color.greySmoke
   ][]
 
-shimmerData :: Int -> ST.ItemState 
+shimmerData :: Int -> ST.ItemState
 shimmerData i = {
   date : toPropValue "31/05/2022",
   time : toPropValue "7:35pm",
@@ -242,14 +242,14 @@ shimmerData i = {
 getPastRides :: forall action.( RideBookingListRes -> String -> action) -> (action -> Effect Unit) -> ST.MyRidesScreenState ->  Flow GlobalState Unit
 getPastRides action push state = do
   (rideBookingListResponse) <- Remote.rideBookingList "8" (show state.data.offsetValue) "false"
-  case rideBookingListResponse of 
-      Right (RideBookingListRes  listResp) -> do 
+  case rideBookingListResponse of
+      Right (RideBookingListRes  listResp) -> do
           doAff do liftEffect $ push $ action (RideBookingListRes listResp) "success"
-          pure unit 
-      Left (err) -> do 
-        if err.code == 500 then 
+          pure unit
+      Left (err) -> do
+        if err.code == 500 then
           doAff do liftEffect $ push $ action (RideBookingListRes dummyListResp ) "listCompleted"
-          else 
+          else
             doAff do liftEffect $ push $ action (RideBookingListRes dummyListResp ) "failure"
         pure unit
 

@@ -21,7 +21,7 @@ import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Data.Maybe (Maybe(..))
 import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState)
 import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..))
-
+import Styles.Colors as Color
 initData :: HomeScreenState
 initData = {
     data: {
@@ -65,6 +65,14 @@ initData = {
     , messages : []
     , suggestionsList : []
     , messageToBeSent : ""
+    , bannerViewState : {
+        backgroundColor : Color.lightMintGreen
+      , title : "Complete Your Profile for a Safer & More Secure Ride"
+      , titleColor : Color.elfGreen
+      , actionText : "Update now"
+      , actionTextColor : Color.elfGreen
+      , imageUrl : "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png" 
+      }
     },
   --   rating :: Int
   -- , isRated :: Boolean
@@ -102,7 +110,7 @@ initData = {
     , ratingModal : false
     , callbackInitiated : false
     , isLocationTracking : false
-    , isInApp : false
+    , isInApp : true
     , locateOnMap : false
     , sourceSelectedOnMap : false
     , distance : 0
@@ -130,6 +138,8 @@ initData = {
     , unReadMessages : false
     , emergencyHelpModelState : emergencyHelpModalData
     , showLiveDashboard : false
+    , isbanner : true
+    , callSupportPopUp : false
     }
 }
 

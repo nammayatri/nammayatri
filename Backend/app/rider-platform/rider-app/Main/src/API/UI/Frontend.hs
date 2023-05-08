@@ -35,6 +35,7 @@ type API =
   "frontend"
     :> ( "flowStatus"
            :> TokenAuth
+           :> QueryParam "isPolling" Bool
            :> Get '[JSON] DFrontend.GetPersonFlowStatusRes
            :<|> "notifyEvent"
              :> TokenAuth
@@ -47,8 +48,8 @@ handler =
   getPersonFlowStatus
     :<|> notifyEvent
 
-getPersonFlowStatus :: Id Person.Person -> FlowHandler DFrontend.GetPersonFlowStatusRes
-getPersonFlowStatus = withFlowHandlerAPI . DFrontend.getPersonFlowStatus
+getPersonFlowStatus :: Id Person.Person -> Maybe Bool -> FlowHandler DFrontend.GetPersonFlowStatusRes
+getPersonFlowStatus personId = withFlowHandlerAPI . DFrontend.getPersonFlowStatus personId
 
 notifyEvent :: Id Person.Person -> DFrontend.NotifyEventReq -> FlowHandler DFrontend.NotifyEventResp
 notifyEvent personId = withFlowHandlerAPI . DFrontend.notifyEvent personId

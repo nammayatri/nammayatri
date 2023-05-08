@@ -20,13 +20,12 @@ import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import SharedLogic.Estimate
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.Estimate as QEstimate
-import qualified Storage.Queries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSReq
 import Tools.Error
@@ -61,8 +60,8 @@ confirm personId quoteId = do
     DQuote.OneWayDetails _ -> pure ()
     DQuote.RentalDetails _ -> pure ()
     DQuote.DriverOfferDetails driverOffer -> do
-      estimate <- QEstimate.findOneEstimateByRequestId quote.requestId >>= fromMaybeM EstimateNotFound
-      checkIfEstimateCancelled estimate.id estimate.status
+      estimate <- QEstimate.findById driverOffer.estimateId >>= fromMaybeM EstimateNotFound
+      when (DEstimate.isCancelled estimate.status) $ throwError $ EstimateCancelled estimate.id.getId
       when (driverOffer.validTill < now) $
         throwError $ QuoteExpired quote.id.getId
     DQuote.OneWaySpecialZoneDetails _ -> pure ()
@@ -83,7 +82,8 @@ confirm personId quoteId = do
   DB.runTransaction $ do
     QRideB.create booking
     QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill}
-    QEstimate.updateStatusbyRequestId quote.requestId $ Just DEstimate.COMPLETED
+    QEstimate.updateStatusbyRequestId quote.requestId DEstimate.COMPLETED
+  QPFS.clearCache searchRequest.riderId
   return $
     DConfirmRes
       { booking,

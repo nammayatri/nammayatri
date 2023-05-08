@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="tip_included"> டிப் சேர்க்கப்பட்டுள்ளது!</string>
     <string name="ride_rejected"> சவாரி நிராகரிக்கப்பட்டது</string>
     <string name="request">கோரிக்கை</string>
     <string name="decline">நிராகரி</string>

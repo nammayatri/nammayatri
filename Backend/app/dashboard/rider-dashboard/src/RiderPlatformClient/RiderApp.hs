@@ -20,11 +20,29 @@ module RiderPlatformClient.RiderApp
 where
 
 import qualified "rider-app" API.Dashboard as BAP
+import qualified "rider-app" API.Dashboard.RideBooking.Registration as CR
+import qualified "rider-app" API.UI.Confirm as UC
+import qualified "rider-app" API.UI.Search as SH
 import qualified Dashboard.Common.Booking as Booking
 import qualified Dashboard.RiderPlatform.Customer as Customer
 import qualified Dashboard.RiderPlatform.Merchant as Merchant
 import qualified Dashboard.RiderPlatform.Ride as Ride
+import qualified "rider-app" Domain.Action.UI.Booking as DBooking
+import qualified "rider-app" Domain.Action.UI.Cancel as DCancel
+import qualified "rider-app" Domain.Action.UI.Frontend as DFrontend
+import qualified "rider-app" Domain.Action.UI.Maps as DMaps
+import qualified "rider-app" Domain.Action.UI.Profile as DProfile
+import qualified "rider-app" Domain.Action.UI.Quote as DQuote
+import qualified "rider-app" Domain.Action.UI.Registration as DR
+import qualified "rider-app" Domain.Action.UI.Select as DSelect
+import qualified "rider-app" Domain.Types.Booking as SRB
+import qualified "rider-app" Domain.Types.Booking.API as DB
+import qualified "rider-app" Domain.Types.Estimate as DEstimate
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
+import qualified "rider-app" Domain.Types.Person as DP
+import qualified "rider-app" Domain.Types.Quote as Quote
+import qualified "rider-app" Domain.Types.RegistrationToken as DTR
+import qualified "rider-app" Domain.Types.SearchRequest as SSR
 import Domain.Types.ServerName
 import qualified EulerHS.Types as Euler
 import Kernel.Prelude
@@ -40,7 +58,8 @@ data AppBackendAPIs = AppBackendAPIs
   { customers :: CustomerAPIs,
     bookings :: BookingsAPIs,
     merchant :: MerchantAPIs,
-    rides :: RidesAPIs
+    rides :: RidesAPIs,
+    rideBooking :: RideBookingAPIs
   }
 
 data CustomerAPIs = CustomerAPIs
@@ -68,18 +87,94 @@ data MerchantAPIs = MerchantAPIs
     smsServiceUsageConfigUpdate :: Merchant.SmsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess
   }
 
+data RideBookingAPIs = RideBookingAPIs
+  { registration :: RegistrationAPIs,
+    profile :: ProfileAPIs,
+    search :: SearchAPIs,
+    quote :: QuoteAPIs,
+    select :: SelectAPIs,
+    confirm :: ConfirmAPIs,
+    booking :: BookingAPIs,
+    maps :: MapsAPIs,
+    flowStatus :: FlowStatusAPIs,
+    cancel :: CancelBookingAPIs
+  }
+
+data RegistrationAPIs = RegistrationAPIs
+  { auth :: CR.CustomerAuthReq -> Euler.EulerClient DR.AuthRes,
+    verify :: Id DTR.RegistrationToken -> DR.AuthVerifyReq -> Euler.EulerClient DR.AuthVerifyRes,
+    resend :: Id DTR.RegistrationToken -> Euler.EulerClient DR.ResendAuthRes,
+    logout :: Id DP.Person -> Euler.EulerClient APISuccess
+  }
+
+data ProfileAPIs = ProfileAPIs
+  { personDetails :: Id DP.Person -> Euler.EulerClient DProfile.ProfileRes,
+    updatePerson :: Id DP.Person -> DProfile.UpdateProfileReq -> Euler.EulerClient APISuccess
+  }
+
+newtype SearchAPIs = SearchAPIs
+  { rsearch :: Id DP.Person -> SH.SearchReq -> Euler.EulerClient SH.SearchRes
+  }
+
+newtype QuoteAPIs = QuoteAPIs
+  { getQuote :: Id SSR.SearchRequest -> Id DP.Person -> Euler.EulerClient DQuote.GetQuotesRes
+  }
+
+data SelectAPIs = SelectAPIs
+  { rSelect :: Id DP.Person -> Id DEstimate.Estimate -> Euler.EulerClient APISuccess,
+    selectList :: Id DP.Person -> Id DEstimate.Estimate -> Euler.EulerClient DSelect.SelectListRes,
+    selectResult :: Id DP.Person -> Id DEstimate.Estimate -> Euler.EulerClient DSelect.QuotesResultResponse,
+    cancelSearch :: Id DP.Person -> Id DEstimate.Estimate -> Euler.EulerClient DSelect.CancelAPIResponse
+  }
+
+newtype ConfirmAPIs = ConfirmAPIs
+  { rconfirm :: Id DP.Person -> Id Quote.Quote -> Euler.EulerClient UC.ConfirmRes
+  }
+
+data BookingAPIs = BookingAPIs
+  { bookingStatus :: Id SRB.Booking -> Id DP.Person -> Euler.EulerClient DB.BookingAPIEntity,
+    bookingList :: Id DP.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Euler.EulerClient DBooking.BookingListRes
+  }
+
+data MapsAPIs = MapsAPIs
+  { autoComplete :: Id DP.Person -> DMaps.AutoCompleteReq -> Euler.EulerClient DMaps.AutoCompleteResp,
+    getPlaceDetails :: Id DP.Person -> DMaps.GetPlaceDetailsReq -> Euler.EulerClient DMaps.GetPlaceDetailsResp,
+    getPlaceName :: Id DP.Person -> DMaps.GetPlaceNameReq -> Euler.EulerClient DMaps.GetPlaceNameResp
+  }
+
+data FlowStatusAPIs = FlowStatusAPIs
+  { personFlowStatus :: Id DP.Person -> Maybe Bool -> Euler.EulerClient DFrontend.GetPersonFlowStatusRes,
+    notifyEvent :: Id DP.Person -> DFrontend.NotifyEventReq -> Euler.EulerClient DFrontend.NotifyEventResp
+  }
+
+newtype CancelBookingAPIs = CancelBookingAPIs
+  { cancelBooking :: Id SRB.Booking -> Id DP.Person -> DCancel.CancelReq -> Euler.EulerClient APISuccess
+  }
+
 mkAppBackendAPIs :: CheckedShortId DM.Merchant -> Text -> AppBackendAPIs
 mkAppBackendAPIs merchantId token = do
   let customers = CustomerAPIs {..}
   let bookings = BookingsAPIs {..}
   let merchant = MerchantAPIs {..}
   let rides = RidesAPIs {..}
+  let registration = RegistrationAPIs {..}
+  let profile = ProfileAPIs {..}
+  let search = SearchAPIs {..}
+  let select = SelectAPIs {..}
+  let quote = QuoteAPIs {..}
+  let confirm = ConfirmAPIs {..}
+  let booking = BookingAPIs {..}
+  let maps = MapsAPIs {..}
+  let flowStatus = FlowStatusAPIs {..}
+  let cancel = CancelBookingAPIs {..}
+  let rideBooking = RideBookingAPIs {..}
   AppBackendAPIs {..}
   where
     customersClient
       :<|> bookingsClient
       :<|> merchantClient
-      :<|> ridesClient = clientWithMerchant (Proxy :: Proxy BAP.API') merchantId token
+      :<|> ridesClient
+      :<|> rideBookingClient = clientWithMerchant (Proxy :: Proxy BAP.API') merchantId token
 
     customerList
       :<|> customerDelete
@@ -91,6 +186,48 @@ mkAppBackendAPIs merchantId token = do
 
     shareRideInfo
       :<|> rideList = ridesClient
+
+    registrationClient
+      :<|> profileClient
+      :<|> searchClient
+      :<|> quoteClient
+      :<|> selectClient
+      :<|> confirmClient
+      :<|> bookingClient
+      :<|> mapsClient
+      :<|> flowStatusClient
+      :<|> cancelBookingClient = rideBookingClient
+
+    auth
+      :<|> verify
+      :<|> resend
+      :<|> logout = registrationClient
+
+    personDetails
+      :<|> updatePerson = profileClient
+
+    rsearch = searchClient
+
+    getQuote = quoteClient
+
+    rSelect
+      :<|> selectList
+      :<|> selectResult
+      :<|> cancelSearch = selectClient
+
+    rconfirm = confirmClient
+
+    bookingStatus
+      :<|> bookingList = bookingClient
+
+    autoComplete
+      :<|> getPlaceDetails
+      :<|> getPlaceName = mapsClient
+
+    personFlowStatus
+      :<|> notifyEvent = flowStatusClient
+
+    cancelBooking = cancelBookingClient
 
     merchantUpdate
       :<|> mapsServiceConfigUpdate

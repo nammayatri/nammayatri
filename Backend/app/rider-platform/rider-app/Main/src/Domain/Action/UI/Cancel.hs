@@ -38,11 +38,11 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig (HasCacheConfig)
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Ride as QR
 import Tools.Error
 
@@ -67,7 +67,7 @@ data CancelSearch = CancelSearch
     providerUrl :: BaseUrl,
     providerId :: Text,
     city :: Text,
-    estimateStatus :: Maybe DEstimate.EstimateStatus,
+    estimateStatus :: DEstimate.EstimateStatus,
     searchReqId :: Id SearchRequest,
     sendToBpp :: Bool
   }
@@ -122,7 +122,7 @@ mkDomainCancelSearch ::
   m CancelSearch
 mkDomainCancelSearch personId estimateId = do
   estStatus <- QEstimate.getStatus estimateId >>= fromMaybeM (EstimateStatusDoesNotExist estimateId.getId)
-  let sendToBpp = estStatus /= Just DEstimate.NEW
+  let sendToBpp = estStatus /= DEstimate.NEW
   buildCancelReq estimateId sendToBpp estStatus
   where
     buildCancelReq estId sendToBpp estStatus = do
@@ -142,16 +142,17 @@ mkDomainCancelSearch personId estimateId = do
           }
 
 cancelSearch ::
-  (EsqDBFlow m r) =>
+  (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r) =>
   Id Person.Person ->
   CancelSearch ->
   m ()
-cancelSearch personId dcr =
-  if dcr.estimateStatus == Just DEstimate.GOT_DRIVER_QUOTE
+cancelSearch personId dcr = do
+  if dcr.estimateStatus == DEstimate.GOT_DRIVER_QUOTE
     then Esq.runTransaction $ do
       Esq.runTransaction $ QPFS.updateStatus personId DPFS.IDLE
-      QEstimate.updateStatus dcr.estimateId $ Just DEstimate.DRIVER_QUOTE_CANCELLED
+      QEstimate.updateStatus dcr.estimateId DEstimate.DRIVER_QUOTE_CANCELLED
     else do
       Esq.runTransaction $ do
         Esq.runTransaction $ QPFS.updateStatus personId DPFS.IDLE
-        QEstimate.updateStatus dcr.estimateId $ Just DEstimate.CANCELLED
+        QEstimate.updateStatus dcr.estimateId DEstimate.CANCELLED
+  QPFS.clearCache personId

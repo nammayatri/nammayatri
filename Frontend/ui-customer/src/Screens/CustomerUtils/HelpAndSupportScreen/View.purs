@@ -1,35 +1,36 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
 module Screens.HelpAndSupportScreen.View where
 
 import Animation as Anim
+import Control.Monad (void)
 import Components.ErrorModal as ErrorModal
 import Components.GenericHeader as GenericHeader
 import Components.PopUpModal as PopUpModal
 import Components.SourceToDestination as SourceToDestination
 import Data.Array as DA
 import Data.Either (Either(..))
-import Debug.Trace (spy)
+import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff_)
 import Effect.Class (liftEffect)
-import Engineering.Helpers.Commons as EHC 
+import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import JBridge as JB 
+import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, map, pure, unit, ($), (-), (/=), (<<<), (<=), (<>), (==), (||))
@@ -47,17 +48,18 @@ import Common.Types.App
 import Screens.CustomerUtils.HelpAndSupportScreen.ComponentConfig
 
 screen :: ST.HelpAndSupportScreenState -> Screen Action ST.HelpAndSupportScreenState ScreenOutput
-screen initialState = 
+screen initialState =
   {
     initialState
   , view
   , name : "HelpAndSupportScreen"
   , globalEvents : [
-      (\push -> do 
-                  if (initialState.data.source == "") then do
-                    launchAff_ $ EHC.flowRunner $ getPastRides RideBookingListAPIResponseAction push initialState
-                    else pure unit
-                  pure $ pure unit
+      (\push -> do
+              if (initialState.data.source == "") then
+                launchAff_ $ void $ EHC.flowRunner $ getPastRides RideBookingListAPIResponseAction push initialState
+              else
+                pure unit
+              pure $ pure unit
       )
   ]
   , eval : \state  action -> do
@@ -68,7 +70,7 @@ screen initialState =
 
 view :: forall w . (Action -> Effect Unit) -> ST.HelpAndSupportScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  Anim.screenAnimation $ 
+  Anim.screenAnimation $
  relativeLayout
  [  height MATCH_PARENT
   , width MATCH_PARENT
@@ -110,13 +112,13 @@ view push state =
       , recentRideView state push
       , headingView state (getString ALL_TOPICS)
       , allTopicsView state push
-      , apiFailureView state push 
+      , apiFailureView state push
       ]
-    , if state.props.isCallConfirmation 
+    , if state.props.isCallConfirmation
         then PopUpModal.view (push <<< PopupModelActionController) (callConfirmationPopup state)
-        else 
+        else
           linearLayout [][]
-  ] 
+  ]
 
 ------------------------------- recentRide --------------------------
 recentRideView :: ST.HelpAndSupportScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
@@ -139,7 +141,7 @@ recentRideView state push=
     ][  imageView
         [ background Color.greyLight
         , imageWithFallback "ny_ic_help_map,https://assets.juspay.in/nammayatri/images/user/ny_ic_help_map.png"
-        , PP.cornerRadii $ PTD.Corners 8.0 true false false false 
+        , PP.cornerRadii $ PTD.Corners 8.0 true false false false
         , height MATCH_PARENT
         , width $ V 130
         ]
@@ -148,9 +150,9 @@ recentRideView state push=
         , width MATCH_PARENT
         , orientation VERTICAL
         , margin (MarginLeft 12)
-        ][  dateAndTimeView state 
+        ][  dateAndTimeView state
           , SourceToDestination.view (push <<< SourceToDestinationActionController) (sourceToDestinationConfig state)
-          , driverRatingView state 
+          , driverRatingView state
           ]
         ]
   , linearLayout
@@ -165,7 +167,7 @@ recentRideView state push=
     , padding (Padding 10 10 10 10)
     , orientation HORIZONTAL
     , onClick push $ const ReportIssue
-    ][  
+    ][
     textView
         [ text (getString REPORT_AN_ISSUE_WITH_THIS_TRIP)
         , textSize FontSize.a_13
@@ -181,10 +183,10 @@ recentRideView state push=
             , height $ V 15
             , width WRAP_CONTENT
             ]
-          ] 
+          ]
       ]
     ]
-  
+
 ------------------------------- dateAndTimeView --------------------------
 dateAndTimeView :: ST.HelpAndSupportScreenState -> forall w . PrestoDOM (Effect Unit) w
 dateAndTimeView state =
@@ -219,7 +221,7 @@ dateAndTimeView state =
       , color Color.greyShade
       , fontStyle $ FontStyle.medium LanguageStyle
       ]
-    ] 
+    ]
 
 ------------------------------- driverRating --------------------------
 driverRatingView :: ST.HelpAndSupportScreenState -> forall w . PrestoDOM (Effect Unit) w
@@ -242,7 +244,7 @@ driverRatingView state =
       , padding (Padding 0 0 0 0)
       , margin (MarginLeft 4)
       , gravity LEFT
-      ](map (\ item -> 
+      ](map (\ item ->
                         linearLayout
                         [ height WRAP_CONTENT
                         , width WRAP_CONTENT
@@ -264,7 +266,7 @@ allTopicsView state push =
     , gravity CENTER_VERTICAL
     , visibility if state.props.apiFailure then GONE else VISIBLE
     , orientation VERTICAL
-    ](DA.mapWithIndex (\index item -> 
+    ](DA.mapWithIndex (\index item ->
         linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -308,7 +310,7 @@ allTopicsView state push =
           ]) (topicsList state))
 
 headingView :: ST.HelpAndSupportScreenState -> String -> forall w . PrestoDOM (Effect Unit) w
-headingView state title = 
+headingView state title =
   textView
     [ text title
     , width MATCH_PARENT
@@ -322,16 +324,16 @@ headingView state title =
 
 getPastRides :: forall action.( RideBookingListRes -> String -> action) -> (action -> Effect Unit) -> ST.HelpAndSupportScreenState ->  Flow GlobalState Unit
 getPastRides action push state = do
-  _ <-  JB.loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS) 
+  _ <-  JB.loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
   _ <-  JB.toggleLoader true
   (rideBookingListResponse) <- Remote.rideBookingList "8" "0" "false"
-  
-  case rideBookingListResponse of 
-      Right (RideBookingListRes  listResp) -> do 
+
+  case rideBookingListResponse of
+      Right (RideBookingListRes  listResp) -> do
           doAff do liftEffect $ push $ action (RideBookingListRes listResp) "success"
           _ <-  JB.toggleLoader false
-          pure unit 
-      Left (err) -> do 
+          pure unit
+      Left (err) -> do
         doAff do liftEffect $ push $ action (RideBookingListRes dummyListResp ) "failure"
         _ <-  JB.toggleLoader false
         pure unit
@@ -341,8 +343,8 @@ dummyListResp :: forall t127.
   }
 dummyListResp = {list : []}
 
-apiFailureView :: forall w. ST.HelpAndSupportScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit ) w  
-apiFailureView state push= 
+apiFailureView :: forall w. ST.HelpAndSupportScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit ) w
+apiFailureView state push=
   linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT

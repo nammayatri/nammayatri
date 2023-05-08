@@ -23,6 +23,7 @@ import Kernel.Types.Id
 data Medium
   = SMS
   | EMAIL
+  | SIGNATURE
   deriving (Generic, FromJSON, ToJSON, Eq, Show, Read, ToSchema)
 
 data RTEntityType
@@ -33,6 +34,7 @@ data RTEntityType
 data LoginType
   = OTP
   | PASSWORD
+  | DIRECT
   deriving (Generic, FromJSON, ToJSON, Eq, Show, Read, ToSchema)
 
 data RegistrationToken = RegistrationToken

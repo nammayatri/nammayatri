@@ -28,7 +28,8 @@ import Kernel.Types.Common
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Item = Item
-  { category_id :: FareProductType,
+  { id :: Text,
+    category_id :: FareProductType,
     id :: Text,
     fulfillment_id :: Text,
     offer_id :: Maybe Text,

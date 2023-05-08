@@ -34,6 +34,7 @@ mkPersist
       id Text
       callId Text
       rideId RideTId
+      dtmfNumberUsed Text Maybe
       status CallTypes.CallStatus
       recordingUrl Text Maybe
       conversationDuration Int

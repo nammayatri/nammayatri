@@ -14,6 +14,15 @@
 
 module Domain.Types.Transaction where
 
+import qualified "rider-app" API.Dashboard.RideBooking.Booking as BAP
+import qualified "rider-app" API.Dashboard.RideBooking.Cancel as BAP
+import qualified "rider-app" API.Dashboard.RideBooking.Confirm as BAP
+import qualified "rider-app" API.Dashboard.RideBooking.Frontend as BAP
+import qualified "rider-app" API.Dashboard.RideBooking.Maps as BAP
+import qualified "rider-app" API.Dashboard.RideBooking.Profile as BAP
+import qualified "rider-app" API.Dashboard.RideBooking.Registration as BAP
+import qualified "rider-app" API.Dashboard.RideBooking.Search as BAP
+import qualified "rider-app" API.Dashboard.RideBooking.Select as BAP
 import qualified "dashboard-helper-api" Dashboard.Common.Booking as Common
 import qualified "dashboard-helper-api" Dashboard.Common.Exotel as Common
 import qualified "dashboard-helper-api" Dashboard.Common.Issue as Common
@@ -58,4 +67,13 @@ data Endpoint
   | ExotelAPI Common.ExotelEndpoint
   | IssueAPI Common.IssueEndpoint
   | VolunteerAPI Common.VolunteerEndpoint
+  | RegistrationAPI BAP.RegistrationEndPoint
+  | SearchAPI BAP.RideSearchEndPoint
+  | SelectAPI BAP.RideEstimatesEndPoint
+  | ConfirmAPI BAP.RideConfirmEndPoint
+  | RBooking BAP.RideBookingEndPoint
+  | ProfileAPI BAP.ProfileEndPoint
+  | MapsAPI BAP.MapEndPoints
+  | FlowStatusAPI BAP.RideNotifyEventEndPoint
+  | CancelAPI BAP.RideCancelEndPoint
   deriving (Show, Read)

@@ -30,9 +30,9 @@ import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCR
-import qualified Storage.Queries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Ride as QRide
 
 ---------------------------------------------------------------------
@@ -60,6 +60,7 @@ stuckBookingsCancel merchantShortId req = do
     QBooking.cancelBookings allStuckBookingIds now
     for_ (bcReasons <> bcReasonsWithRides) QBCR.upsert
     QPFS.updateToIdleMultiple stuckPersonIds now
+  void $ QPFS.clearCache `mapM` stuckPersonIds
   logTagInfo "dashboard -> stuckBookingsCancel: " $ show allStuckBookingIds
   pure $ mkStuckBookingsCancelRes stuckBookingIds stuckRideItems
 

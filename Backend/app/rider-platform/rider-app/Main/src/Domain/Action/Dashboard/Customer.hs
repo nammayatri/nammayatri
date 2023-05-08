@@ -34,9 +34,9 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant as QM
+import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.SavedReqLocation as QSRL
 
 ---------------------------------------------------------------------
@@ -55,6 +55,7 @@ deleteCustomer merchantShortId customerId = do
     QPFS.deleteByPersonId personId
     QSRL.deleteAllByRiderId personId
     QP.deleteById personId
+  QPFS.clearCache personId
   pure Success
 
 ---------------------------------------------------------------------

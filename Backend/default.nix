@@ -22,43 +22,47 @@
         inherit (self'.packages)
           arion;
       };
+      source-overrides = {
+        cryptostore = "0.3.0.0";
+      };
       # Some tests fail under Nix. We shoud probably run them in CI directly.
       overrides = self: super:
         with pkgs.haskell.lib.compose;
-        lib.mapAttrs (k: lib.pipe super.${k}) {
+        let
+          defaultOverrides = import ./nix/default-overrides.nix { inherit config pkgs lib; };
+        in
+        lib.mapAttrs (k: lib.pipe super.${k}) (defaultOverrides // {
           # location-updates-tests: Network.Socket.connect: <socket: 6>: does not exist (Connection refused)
-          location-updates = [ dontCheck ];
+          location-updates = defaultOverrides.location-updates ++ [ dontCheck ];
           # tries to find dhall files from wrong CWD
-          beckn-test = [ dontCheck ];
-        };
+          beckn-test = defaultOverrides.beckn-test ++ [ dontCheck ];
+        });
     };
 
     packages = {
-      # The final nammayatri package containing the various executables.
+      # The final nammayatri package containing the various executables and
+      # configuration files.
       nammayatri =
         let
           localCabalPackages = builtins.map
-            (p: pkgs.haskell.lib.justStaticExecutables p.package)
+            (p: if p.exes != { } then lib.getBin p.package else null)
             (lib.attrValues config.haskellProjects.default.outputs.packages);
         in
         pkgs.symlinkJoin {
-          name = "nammayatri-exes";
+          name = "nammayatri";
           paths = localCabalPackages;
+          postBuild = ''
+            # Prepare /opt/app layout for Docker image.
+            # Rationale: Our k8s deployment config is hardcoded to look for exes
+            # under /opt/app.
+            mkdir -p $out/opt/app
+            for f in `${lib.getExe pkgs.fd} . $out/bin/`; do
+              ln -s $f $out/opt/app/
+            done
+            cp -r ${./dhall-configs} $out/opt/app/dhall-configs
+            cp -r ${./swagger} $out/opt/app/swagger
+          '';
         };
-      # The nammayatri dist to be deployed in Docker image
-      nammayatri-dist = pkgs.symlinkJoin {
-        name = "nammayatri-dist";
-        paths = [ self'.packages.nammayatri ];
-        postBuild = ''
-          mkdir $out/opt
-          # Rationale: Our k8s deployment config is hardcoded to look for exes
-          # under /opt/app.
-          mv $out/bin $out/opt/app
-          cp -r ${./dhall-configs} $out/opt/app/dhall-configs
-          cp -r ${./swagger} $out/opt/app/swagger
-        '';
-      };
     };
-
   };
 }

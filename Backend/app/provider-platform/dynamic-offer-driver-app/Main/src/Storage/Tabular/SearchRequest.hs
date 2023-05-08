@@ -26,6 +26,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)
+import Storage.Tabular.Estimate (EstimateTId)
 import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.SearchRequest.SearchReqLocation (SearchReqLocationT, SearchReqLocationTId, mkDomainSearchReqLocation, mkTabularSearchReqLocation)
 import Storage.Tabular.Vehicle ()
@@ -39,6 +40,7 @@ mkPersist
       id Text
       transactionId Text
       messageId Text
+      estimateId EstimateTId
       startTime UTCTime
       validTill UTCTime
       providerId MerchantTId
@@ -76,6 +78,7 @@ instance FromTType FullSearchRequestT Domain.SearchRequest where
     return $
       Domain.SearchRequest
         { id = Id id,
+          estimateId = fromKey estimateId,
           providerId = fromKey providerId,
           fromLocation = fromLoc_,
           toLocation = toLoc_,
@@ -87,6 +90,7 @@ instance ToTType FullSearchRequestT Domain.SearchRequest where
   toTType Domain.SearchRequest {..} =
     ( SearchRequestT
         { id = getId id,
+          estimateId = toKey estimateId,
           providerId = toKey providerId,
           fromLocationId = toKey fromLocation.id,
           toLocationId = toKey toLocation.id,

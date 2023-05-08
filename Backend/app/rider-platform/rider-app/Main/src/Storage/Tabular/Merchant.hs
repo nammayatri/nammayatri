@@ -24,6 +24,7 @@ import qualified Domain.Types.Merchant as Domain
 import qualified Kernel.External.FCM.Types as FCM
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
+import Kernel.Types.Base64
 import Kernel.Types.Geofencing (GeoRestriction)
 import qualified Kernel.Types.Geofencing as Geo
 import Kernel.Types.Id
@@ -48,6 +49,8 @@ mkPersist
       driverOfferApiKey Text
       driverOfferMerchantId Text
       geoHashPrecisionValue Int
+      signingPublicKey Base64
+      signatureExpiry Int
       updatedAt UTCTime
       createdAt UTCTime
       Primary id

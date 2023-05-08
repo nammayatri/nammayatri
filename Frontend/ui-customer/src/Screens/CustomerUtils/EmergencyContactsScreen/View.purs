@@ -16,7 +16,7 @@ import Screens.EmergencyContactsScreen.Controller (Action(..), ScreenOutput, eva
 import Screens.Types (EmergencyContactsScreenState, ContactDetail, NewContacts)
 import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
 import Styles.Colors as Color
-import Debug.Trace (spy)
+import Debug (spy)
 import Common.Types.App
 import Helpers.Utils (storeCallBackContacts, contactPermission)
 import Components.ContactList as ContactList

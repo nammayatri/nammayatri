@@ -1,18 +1,18 @@
-const callbackMapper = require('presto-ui').callbackMapper;
+import { callbackMapper } from 'presto-ui';
 
-exports["getPermissionStatus'"] = function(permission) {
+export const getPermissionStatusImpl = function(permission) {
 	return function() {
-		JBridge.checkPermission(permission);
+		window.JBridge.checkPermission(permission);
 	};
 };
 
-exports["requestPermission'"] = function(err, success, permissions) {
+export const requestPermissionImpl = function(err, success, permissions) {
 	return function() {
 		var callback = callbackMapper.map(function(params) {
 			console.warn("Permissions", params)
 			success(JSON.stringify(params))();
 		});
 		console.log(permissions,typeof permissions)
-		JBridge.requestPermission(permissions, "2", callback);
+		window.JBridge.requestPermission(permissions, "2", callback);
 	};
 };

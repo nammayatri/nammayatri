@@ -32,12 +32,13 @@ data DriverQuoteStatus = Active | Inactive
 
 data DriverQuote = DriverQuote
   { id :: Id DriverQuote,
-    status :: DriverQuoteStatus,
+    transactionId :: Text,
     searchRequestId :: Id SearchRequest,
     searchRequestForDriverId :: Maybe (Id SearchRequestForDriver),
     driverId :: Id Person,
     driverName :: Text,
     driverRating :: Maybe Centesimal,
+    status :: DriverQuoteStatus,
     vehicleVariant :: Variant.Variant,
     distance :: Meters,
     distanceToPickup :: Meters,

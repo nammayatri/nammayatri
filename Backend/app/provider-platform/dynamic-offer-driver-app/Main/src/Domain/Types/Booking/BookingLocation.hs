@@ -33,6 +33,7 @@ data BookingLocation = BookingLocation
 
 data LocationAddress = LocationAddress
   { street :: Maybe Text,
+    door :: Maybe Text,
     city :: Maybe Text,
     state :: Maybe Text,
     country :: Maybe Text,

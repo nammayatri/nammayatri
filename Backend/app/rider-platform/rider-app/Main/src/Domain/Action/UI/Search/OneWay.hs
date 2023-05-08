@@ -34,8 +34,8 @@ import Kernel.Types.Id
 import Kernel.Types.Version (Version)
 import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
+import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import Storage.Queries.Geometry
-import qualified Storage.Queries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
 import Tools.Metrics
@@ -89,6 +89,7 @@ oneWaySearch person merchant req bundleVersion clientVersion longestRouteDistanc
   DB.runTransaction $ do
     QSearchRequest.create searchRequest
     QPFS.updateStatus person.id DPFS.SEARCHING {requestId = searchRequest.id, validTill = searchRequest.validTill}
+  QPFS.clearCache person.id
   let dSearchRes =
         OneWaySearchRes
           { origin = req.origin,

@@ -16,6 +16,7 @@ module API.UI.Quote
   ( DQuote.GetQuotesRes (..),
     DQuote.OfferRes (..),
     API,
+    getQuotes,
     handler,
   )
 where
