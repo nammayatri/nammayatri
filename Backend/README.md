@@ -147,13 +147,17 @@ nix run github:nammayatri/nammyatri#run-mobility-stack-nix
 
 External dependencies of the project are usually specified in [`inputs`](https://nixos.wiki/wiki/Flakes#Input_schema) attribute of the `flake.nix` file. They usually point to external Git repos, but they can also point to local directories (which is useful during development)
 
-The specific revisions of these Git repos are pinned in the `flake.lock` file. To update the `shared-kernel` input, for instance, run:
+The specific revisions of these Git repos are pinned in the `flake.lock` file. If you want to update, say, shared-kernel to a particular commit, run:
+
+```sh
+nix flake lock --update-input shared-kernel --override-input shared-kernel github:nammayatri/shared-kernel/f8a79646de474d1a103365e27677778f278b100f
+```
+
+If you just want to advance the pinned commit to the HEAD of the `main` branch, run instead:
 
 ```sh
 nix flake lock --update-input shared-kernel
 ```
-
-If you update the `inputs` section of `flake.nix` file, be sure to run `nix flake lock` to also update the `flake.lock` file. The CI will fail if you do not do this.
 
 You can also change the flake input to point a local checkout. To do this, change the `flake.nix` to be like:
 
