@@ -38,6 +38,7 @@ library
       API.Dashboard.Ride
       API.Dashboard.RideBooking
       API.Dashboard.RideBooking.Booking
+      API.Dashboard.RideBooking.Cancel
       API.Dashboard.RideBooking.Confirm
       API.Dashboard.RideBooking.Frontend
       API.Dashboard.RideBooking.Maps

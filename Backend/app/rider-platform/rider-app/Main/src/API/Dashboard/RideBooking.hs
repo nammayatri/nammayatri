@@ -19,6 +19,7 @@ module API.Dashboard.RideBooking
 where
 
 import qualified API.Dashboard.RideBooking.Booking as Booking
+import qualified API.Dashboard.RideBooking.Cancel as Cancel
 import qualified API.Dashboard.RideBooking.Confirm as Confirm
 import qualified API.Dashboard.RideBooking.Frontend as FlowStatus
 import qualified API.Dashboard.RideBooking.Maps as Maps
@@ -27,8 +28,6 @@ import qualified API.Dashboard.RideBooking.Quote as Quote
 import qualified API.Dashboard.RideBooking.Registration as Registration
 import qualified API.Dashboard.RideBooking.Search as Search
 import qualified API.Dashboard.RideBooking.Select as Select
--- import "lib-dashboard" Environment
-
 import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Types.Id
@@ -45,6 +44,7 @@ type API =
            :<|> Booking.API
            :<|> Maps.API
            :<|> FlowStatus.API
+           :<|> Cancel.API
        )
 
 handler :: ShortId DM.Merchant -> FlowServer API
@@ -58,3 +58,4 @@ handler merchantId =
     :<|> Booking.handler
     :<|> Maps.handler
     :<|> FlowStatus.handler
+    :<|> Cancel.handler

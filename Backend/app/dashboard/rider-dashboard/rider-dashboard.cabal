@@ -29,6 +29,7 @@ library
       API.RiderPlatform.Ride
       API.RiderPlatform.RideBooking
       API.RiderPlatform.RideBooking.Booking
+      API.RiderPlatform.RideBooking.Cancel
       API.RiderPlatform.RideBooking.Confirm
       API.RiderPlatform.RideBooking.Frontend
       API.RiderPlatform.RideBooking.Maps
