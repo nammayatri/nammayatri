@@ -69,6 +69,7 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Locale;
 import java.util.TimeZone;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -429,7 +430,7 @@ public class LocationUpdateService extends Service {
                     String orderUrl = baseUrl + "/driver/location";
                     System.out.println("LOCATION_UPDATE: Log by " + log + "baseUrl - " + orderUrl);
 
-                    final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+                    final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",new Locale("en","US"));
                     f.setTimeZone(TimeZone.getTimeZone("UTC"));
                     String getCurrTime = f.format(new Date());
 
@@ -591,7 +592,7 @@ public class LocationUpdateService extends Service {
                 new NotificationCompat.Builder(this, LOCATION_UPDATES)
                         .setContentTitle("Updating")
                         .setContentText(getString(R.string.your_location_is_being_updated))
-                        .setSmallIcon(R.drawable.ny_ic_launcher)
+                        .setSmallIcon(R.drawable.ic_launcher)
                         .setPriority(NotificationCompat.PRIORITY_MIN)
                         .setOngoing(true)
                         .setContentIntent(pendingIntent);
@@ -605,9 +606,9 @@ public class LocationUpdateService extends Service {
         Intent notificationIntent = new Intent(this, MainActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(this, alertNotificationId, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
         NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(context,"General") ;
-        mBuilder.setLargeIcon(BitmapFactory.decodeResource(context.getResources(), R.drawable.ny_ic_launcher));
+        mBuilder.setLargeIcon(BitmapFactory.decodeResource(context.getResources(), R.drawable.ic_launcher));
         mBuilder.setContentTitle(getString(R.string.we_made_you_offline))
-                .setSmallIcon((R.drawable.ny_ic_launcher))
+                .setSmallIcon((R.drawable.ic_launcher))
                 .setContentText(getString(R.string.location_is_turned_off_permission_is_disabled))
                 .setAutoCancel(true)
                 .setPriority(NotificationCompat.PRIORITY_MAX);
@@ -646,7 +647,7 @@ public class LocationUpdateService extends Service {
                     lastLatitudeValue = lat;
                     lastLongitudeValue = lng;
                     long locTimeMilliSeconds = lastLocation.getTime();
-                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",new Locale("en","US"));
                     sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
                     Date locTime = new Date(locTimeMilliSeconds);
                     String thisLocationTimeStamp = sdf.format(locTime);
@@ -725,7 +726,7 @@ public class LocationUpdateService extends Service {
                                 .addOnSuccessListener(new OnSuccessListener<Location>() {
                                     @Override
                                     public void onSuccess(Location location) {
-                                        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+                                        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",new Locale("en","US"));
                                         sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
                                         if (location != null) {
                                             long locTimeMilliSeconds = location.getTime();
@@ -761,7 +762,7 @@ public class LocationUpdateService extends Service {
                                             updateStorage("LAST_KNOWN_LAT", String.valueOf(lastLatitudeValue));
                                             updateStorage("LAST_KNOWN_LON", String.valueOf(lastLongitudeValue));
                                             long locTimeMilliSeconds = location.getTime();
-                                            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+                                            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",new Locale("en","US"));
                                             sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
                                             Date locTime = new Date(locTimeMilliSeconds);
                                             String thisLocationTimeStamp = sdf.format(locTime);

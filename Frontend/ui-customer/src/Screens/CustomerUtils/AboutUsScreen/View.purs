@@ -32,6 +32,7 @@ import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
 import Common.Types.App
 import Screens.CustomerUtils.AboutUsScreen.ComponentConfig 
+import Merchant.Utils (getValueFromConfig)
 
 screen :: ST.AboutUsScreenState -> Screen Action ST.AboutUsScreenState ScreenOutput
 screen initialState =
@@ -77,7 +78,7 @@ topTextView state =
     , width MATCH_PARENT
     , orientation VERTICAL
     , padding (Padding 20 0 20 10)
-    ][  logoView 
+    ][  logoView state
       , textView
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -101,8 +102,8 @@ topTextView state =
       ]
 
 --------------------------------------------------- logoView -----------------------------------------------------
-logoView :: forall w . PrestoDOM (Effect Unit) w
-logoView = 
+logoView :: forall w . ST.AboutUsScreenState -> PrestoDOM (Effect Unit) w
+logoView state = 
   linearLayout
         [ height $ V 48
         , width MATCH_PARENT
@@ -112,7 +113,7 @@ logoView =
         ][  imageView
               [ height $ V 48
               , width $ V 48
-              , imageWithFallback "ny_ic_launcher,https://assets.juspay.in/nammayatri/images/common/ny_ic_launcher.png"
+              , imageWithFallback "ic_launcher,https://assets.juspay.in/nammayatri/images/common/ny_ic_launcher.png"
               ]
           ]
 
@@ -180,7 +181,7 @@ termsAndConditionsView state =
         , color Color.blue900
         , onClick (\action -> do
             _ <- pure action
-            _ <- JB.openUrlInApp "https://docs.google.com/document/d/1-oRR_oI8ncZRPZvFZEJZeCVQjTmXTmHA/edit?usp=share_link&ouid=115428839751313950285&rtpof=true&sd=true"
+            _ <- JB.openUrlInApp $ getValueFromConfig "DOCUMENT_LINK" 
             pure unit
           ) (const TermsAndConditions)
         , margin (Margin 0 20 0 0)
@@ -209,7 +210,7 @@ privacyPolicyView state =
         , margin (Margin 0 20 0 0)
         , onClick (\action -> do
             _ <- pure action
-            _ <- JB.openUrlInApp "https://docs.google.com/document/d/128VU80K5E1iz-x6QnP1R127m_lwmDO3F/edit?usp=share_link&ouid=115428839751313950285&rtpof=true&sd=true"
+            _ <- JB.openUrlInApp $ getValueFromConfig "PRIVACY_POLICY_LINK" 
             pure unit
           ) (const PrivacyPolicy)
         ]

@@ -35,7 +35,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, map, pure, unit, ($), (-), (/=), (<<<), (<=), (<>), (==), (||))
 import Presto.Core.Types.Language.Flow (Flow, doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Shadow(..), Visibility(..), afterRender, alignParentRight, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, shadow, stroke, text, textSize, textView, visibility, width, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Shadow(..), Visibility(..), afterRender, alignParentRight, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, shadow, stroke, text, textSize, textView, visibility, width, imageWithFallback, weight, layoutGravity)
 import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes as PTD
 import Screens.HelpAndSupportScreen.Controller (Action(..), ScreenOutput, eval)
@@ -181,7 +181,7 @@ recentRideView state push=
         ][  imageView
             [ imageWithFallback "ny_ic_chevron_right,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_right.png"
             , height $ V 15
-            , width WRAP_CONTENT
+            , width $ V 15
             ]
           ]
       ]
@@ -292,12 +292,13 @@ allTopicsView state push =
                 ]
               , linearLayout
                 [ height WRAP_CONTENT
-                , width MATCH_PARENT
+                , weight 1.0
                 , gravity RIGHT
+                , layoutGravity "center_vertical"
                 ][  imageView
                     [ imageWithFallback "ny_ic_chevron_right,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_right.png"
                     , height $ V 15
-                    , width WRAP_CONTENT
+                    , width $ V 15  
                     ]
                   ]
               ]

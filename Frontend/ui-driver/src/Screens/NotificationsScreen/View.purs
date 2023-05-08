@@ -16,6 +16,7 @@
 module Screens.NotificationsScreen.View where
 
 import Prelude
+
 import Animation (fadeIn, fadeOut, screenAnimationFadeInOut)
 import Common.Types.App (LazyCheck(..))
 import Components.ErrorModal as ErrorModal
@@ -25,6 +26,7 @@ import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array ((..), length)
 import Data.Tuple (Tuple(..))
+import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
@@ -48,6 +50,7 @@ import Styles.Colors as Color
 import Debug (spy)
 import Components.BottomNavBar.View as BottomNavBar
 import Components.BottomNavBar.Controller (navData)
+import Screens as ScreenNames
 
 
 screen :: NotificationsScreenState -> PrestoList.ListItem -> Screen Action NotificationsScreenState ScreenOutput
@@ -103,7 +106,7 @@ view notificationListItem push state =
                       ]
                     , loadMoreView push state
                   ]
-              , BottomNavBar.view (push <<< BottomNavBarAction) (navData 3)
+              , BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.ALERTS_SCREEN)
               ]
       ] <> (if (state.notifsDetailModelVisibility == VISIBLE) then [ notificationDetailModel push state ] else [])
 
@@ -227,7 +230,7 @@ notificationListView notificationListItem push state =
                               AnimatedOut -> if length state.prestoListArrayItems > 0 then GONE else VISIBLE
                               _ -> GONE
                       ]
-                      [ ErrorModal.view (push <<< ErrorModalActionController) (noNotificationsConfig)
+                      [ ErrorModal.view (push <<< ErrorModalActionController) (noNotificationsConfig Config)
                       ]
               ]
             )
@@ -277,14 +280,14 @@ headerLayout state push =
         []
     ]
 
-noNotificationsConfig :: ErrorModal.Config
-noNotificationsConfig =
+noNotificationsConfig :: LazyCheck -> ErrorModal.Config
+noNotificationsConfig _ =
   let
     config = ErrorModal.config
     noNotificationsConfig' =
       config
         { imageConfig
-          { imageUrl = "ic_no_alerts"
+          { imageUrl = "ny_ic_no_alerts"
           , height = V 116
           , width = V 188
           , margin = MarginBottom 16

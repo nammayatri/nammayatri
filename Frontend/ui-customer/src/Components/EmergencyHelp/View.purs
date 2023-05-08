@@ -189,12 +189,10 @@ callPoliceConfig state  =
     }
     , option1 {
       text = getString CANCEL_
-    , fontSize = FontSize.a_16
-    }
+    , fontSize = FontSize.a_16 }
     , option2 {
       text = getString CALL_POLICE
-    , fontSize = FontSize.a_16 
-    }
+    , fontSize = FontSize.a_16 }
     , backgroundClickable = true
     , secondaryText {
       text = getString YOU_ARE_ABOUT_TO_CALL_POLICE
@@ -246,7 +244,7 @@ callEmergencyContactConfig state  =
     , fontSize = FontSize.a_16
     }
     , option2 {
-      text = "Place Call"
+      text = getString PLACE_CALL
     , fontSize = FontSize.a_16
     }
     , backgroundClickable = true

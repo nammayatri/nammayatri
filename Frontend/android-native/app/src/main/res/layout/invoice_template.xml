@@ -21,7 +21,7 @@
             <ImageView
                 android:layout_width="147px"
                 android:layout_height="47px"
-                android:src="@drawable/ny_ic_invoice_logo"
+                android:src="@drawable/ic_invoice_logo"
                 />
             <LinearLayout
                 android:layout_width="wrap_content"

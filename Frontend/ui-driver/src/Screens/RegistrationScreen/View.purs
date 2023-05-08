@@ -158,7 +158,7 @@ cardItemView state =
           ][ imageView
               [ imageWithFallback case item of
                   DRIVING_LICENSE_OPTION -> "ny_ic_dl_blue,https://assets.juspay.in/nammayatri/images/driver/ny_ic_dl_blue.png"
-                  VEHICLE_DETAILS_OPTION -> "ny_ic_auto_onboard,https://assets.juspay.in/nammayatri/images/driver/ny_ic_auto_onboard.png"
+                  VEHICLE_DETAILS_OPTION -> "ny_ic_vehicle_onboard,https://assets.juspay.in/nammayatri/images/driver/ny_ic_auto_onboard.png"
               , width (V 50)
               , height (V 50)
               , margin (MarginRight 14)
