@@ -152,7 +152,7 @@ auth req mbBundleVersion mbClientVersion = do
 
   token <- makeSession scfg entityId (show <$> useFakeOtpM)
 
-  if person.enabled
+  if person.enabled && not person.blocked
     then do
       DB.runTransaction $ Person.updatePersonVersions person mbBundleVersion mbClientVersion
       DB.runTransaction (RegistrationToken.create token)
@@ -209,6 +209,7 @@ buildPerson req bundleVersion clientVersion merchantId = do
         hasTakenValidRide = False,
         createdAt = now,
         updatedAt = now,
+        blockedAt = Nothing,
         bundleVersion = bundleVersion,
         clientVersion = clientVersion,
         whatsappNotificationEnrollStatus = Nothing

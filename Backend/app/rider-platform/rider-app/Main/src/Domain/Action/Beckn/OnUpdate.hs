@@ -40,7 +40,9 @@ import Kernel.Storage.Hedis.Config (HedisFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.MerchantConfig as SMC
 import Storage.CachedQueries.CacheConfig
+import qualified Storage.CachedQueries.MerchantConfig as CMC
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Estimate as QEstimate
@@ -196,6 +198,8 @@ onUpdate RideStartedReq {..} = do
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
   unless (booking.status == SRB.TRIP_ASSIGNED) $ throwError (BookingInvalidStatus $ show booking.status)
   unless (ride.status == SRide.NEW) $ throwError (RideInvalidStatus $ show ride.status)
+  merchantConfigs <- CMC.findAllByMerchantId booking.merchantId
+  SMC.updateTotalRidesCounters booking.riderId merchantConfigs
   rideStartTime <- getCurrentTime
   let updRideForStartReq =
         ride{status = SRide.INPROGRESS,

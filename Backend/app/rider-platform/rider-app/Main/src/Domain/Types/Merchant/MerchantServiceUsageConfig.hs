@@ -36,6 +36,7 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     autoComplete :: MapsService,
     smsProvidersPriorityList :: [SmsService],
     whatsappProvidersPriorityList :: [WhatsappService],
+    useFraudDetection :: Bool,
     updatedAt :: UTCTime,
     createdAt :: UTCTime
   }
