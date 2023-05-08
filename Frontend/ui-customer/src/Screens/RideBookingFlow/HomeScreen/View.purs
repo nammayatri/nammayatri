@@ -43,9 +43,9 @@ import Components.SettingSideBar as SettingSideBar
 import Components.ChatView as ChatView
 import Control.Monad.Except (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array (any, length, mapWithIndex, null, (!!))
+import Data.Array (any, length, mapWithIndex, null, (!!), filter)
 import Data.Either (Either(..))
-import Data.Int (toNumber, fromString, ceil)
+import Data.Int (toNumber, fromString, ceil , round)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.Number as NUM
@@ -866,12 +866,15 @@ rideCompletedCardView state push =
             , lineHeight "20"
             , width MATCH_PARENT
             , gravity CENTER_HORIZONTAL
-            , fontStyle $ FontStyle.medium LanguageStyle
+            , fontStyle $ FontStyle.semiBold LanguageStyle
             , color Color.black800
             , margin $ MarginVertical 4 24
             ]
         ]
-    , fareUpdatedView state push
+    , if state.data.previousRideRatingState.distanceDifference > 0 
+        then earlyRideFareView state push 
+        else if (state.data.previousRideRatingState.distanceDifference < 0) then fareUpdatedView state push
+        else emptyTextView state
     , linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -890,6 +893,34 @@ rideCompletedCardView state push =
         ]
         [ PrimaryButton.view (push <<< SkipButtonActionController) (skipButtonConfig state)
         , PrimaryButton.view (push <<< RateRideButtonActionController) (rateRideButtonConfig state)
+        ]
+    ]
+earlyRideFareView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+earlyRideFareView state push =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , stroke ("1," <> Color.grey900)
+    , clickable false
+    , cornerRadius 8.0
+    , padding (Padding 16 15 16 15)
+    , margin (MarginBottom 24)
+        ,gravity CENTER_VERTICAL
+    ][ imageView
+        [  width $ V 16
+        , height $ V 18
+        , imageWithFallback "ic_warning,https://assets.juspay.in/beckn/merchantcommon/images/ic_warning.png"
+        , margin $ MarginRight 12
+        ]
+        , textView
+        [ text $ getString EARLY_RIDE_END_TEXT1  <> (show (round $ (toNumber(state.data.finalAmount) - (state.data.totalFare)))) <> getString EARLY_RIDE_END_TEXT2
+        , height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , gravity CENTER_VERTICAL
+        , textSize FontSize.a_12
+        , color Color.black700
+        , fontStyle $ FontStyle.regular LanguageStyle
+        , visibility if state.data.finalAmount /= state.data.driverInfoCardState.price then VISIBLE else GONE
         ]
     ]
 

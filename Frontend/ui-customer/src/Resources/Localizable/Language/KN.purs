@@ -428,3 +428,5 @@ getKN script = case script of
   NO_TIP -> "ಯಾವುದೇ ಸಲಹೆ ಇಲ್ಲ"
   CUSTOMER_SELECTED_FARE -> "ಗ್ರಾಹಕ ಸಲಹೆ*"
   CUSTOMER_TIP_DESCRIPTION -> "*ರೈಡ್ ಪಡೆಯುವ ಸಾಧ್ಯತೆಗಳನ್ನು ಹೆಚ್ಚಿಸಲು ಗ್ರಾಹಕರು ಹೆಚ್ಚುವರಿ ಮೊತ್ತವನ್ನು ಸೇರಿಸಿದ್ದಾರೆ."
+  EARLY_RIDE_END_TEXT1 -> "ನಿಮ್ಮ ಸವಾರಿ ಬೇಗ ಮುಗಿದಿದೆ! ನಿಮ್ಮ ಚಾಲಕನಿಗೆ ನ್ಯಾಯಯುತವಾಗಿ ಸರಿದೂಗಿಸಲು, ₹"
+  EARLY_RIDE_END_TEXT2 -> " ಶುಲ್ಕ ಸೇರಿಸಲಾಗುತ್ತದೆ."

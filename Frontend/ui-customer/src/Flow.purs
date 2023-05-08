@@ -52,7 +52,7 @@ import Screens.Handlers as UI
 import Screens.HelpAndSupportScreen.ScreenData as HelpAndSupportScreenData
 import Screens.HomeScreen.Controller (flowWithoutOffers, getSearchExpiryTime)
 import Screens.HomeScreen.ScreenData as HomeScreenData
-import Screens.HomeScreen.Transformer (getLocationList, getDriverInfo, dummyRideAPIEntity, encodeAddressDescription, getPlaceNameResp, getUpdatedLocationList, transformContactList)
+import Screens.HomeScreen.Transformer (getLocationList, getDriverInfo, dummyRideAPIEntity, encodeAddressDescription, getPlaceNameResp, getUpdatedLocationList, transformContactList, dummyFareBreakupAPIEntity)
 import Screens.InvoiceScreen.Controller (ScreenOutput(..)) as InvoiceScreenOutput
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import Screens.ReferralScreen.ScreenData as ReferralScreen
@@ -61,7 +61,7 @@ import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
 import Screens.MyProfileScreen.ScreenData as MyProfileScreenData
 import Screens.Types (CardType(..), AddNewAddressScreenState(..),CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), EmailErrorType(..))
 import Screens.Types (Gender(..)) as Gender
-import Services.API (AddressGeometry(..), BookingLocationAPIEntity(..), ConfirmRes(..), DeleteSavedLocationReq(..), Geometry(..), GetDriverLocationResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), TriggerOTPResp(..), VerifyTokenResp(..), UserSosRes(..),  GetEmergContactsReq(..), GetEmergContactsResp(..), ContactDetails(..), FlowStatusRes(..), FlowStatus(..), CancelEstimateRes(..))
+import Services.API (AddressGeometry(..), BookingLocationAPIEntity(..), ConfirmRes(..), DeleteSavedLocationReq(..), Geometry(..), GetDriverLocationResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), TriggerOTPResp(..), VerifyTokenResp(..), UserSosRes(..),  GetEmergContactsReq(..), GetEmergContactsResp(..), ContactDetails(..), FlowStatusRes(..), FlowStatus(..), CancelEstimateRes(..),FareBreakupAPIEntity(..))
 import Services.Backend as Remote
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore, updateLocalStage)
 import Types.App (ABOUT_US_SCREEN_OUTPUT(..), ACCOUNT_SET_UP_SCREEN_OUTPUT(..), ADD_NEW_ADDRESS_SCREEN_OUTPUT(..), GlobalState(..), CONTACT_US_SCREEN_OUTPUT(..), FlowBT, HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREEN_OUTPUT(..), MY_PROFILE_SCREEN_OUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), PERMISSION_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUPUT(..), SAVED_LOCATION_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), EMERGECY_CONTACTS_SCREEN_OUTPUT(..))
@@ -667,7 +667,10 @@ homeScreenFlow = do
                                         let (RideAPIEntity ride) = fromMaybe dummyRideAPIEntity (resp.rideList !! 0)
                                         let finalAmount =  INT.round $ fromMaybe 0.0 (fromString (getFinalAmount (RideBookingRes resp)))
                                         let differenceOfDistance = fromMaybe 0 contents.estimatedDistance - INT.round (fromMaybe 0.0 ride.chargeableRideDistance)
-                                        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{startedAt = (convertUTCtoISC (fromMaybe "" resp.rideStartTime ) "h:mm A"), startedAtUTC = ((fromMaybe "" resp.rideStartTime)),endedAt = (convertUTCtoISC (fromMaybe "" resp.rideEndTime ) "h:mm A"), finalAmount = finalAmount, previousRideRatingState {distanceDifference = differenceOfDistance}},props{currentStage = RideCompleted, estimatedDistance = contents.estimatedDistance}})
+                                        let computedPrice = fromMaybe 0 ride.computedPrice
+                                        let (FareBreakupAPIEntity rideFareBreakUp) = fromMaybe dummyFareBreakupAPIEntity $ (filter (\ (FareBreakupAPIEntity x) -> x.description == "TOTAL_FARE") (resp.fareBreakup)) !!0
+                                        let rideTotalFare = rideFareBreakUp.amount
+                                        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{startedAt = (convertUTCtoISC (fromMaybe "" resp.rideStartTime ) "h:mm A"), startedAtUTC = ((fromMaybe "" resp.rideStartTime)),endedAt = (convertUTCtoISC (fromMaybe "" resp.rideEndTime ) "h:mm A"), finalAmount = finalAmount, previousRideRatingState {distanceDifference = differenceOfDistance}, totalFare = rideTotalFare},props{currentStage = RideCompleted, estimatedDistance = contents.estimatedDistance}})
                                         homeScreenFlow
                                         else homeScreenFlow
             "CANCELLED_PRODUCT"   -> do -- REMOVE POLYLINES

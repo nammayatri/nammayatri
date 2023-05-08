@@ -32,7 +32,7 @@ import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponen
 import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySettingBar)
 import Services.Backend as Remote
-import Services.API (DriverOfferAPIEntity(..), Prediction, QuoteAPIEntity(..), RideAPIEntity(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), AddressComponents(..), GetPlaceNameResp(..), PlaceName(..), LatLong(..), DeleteSavedLocationReq(..))
+import Services.API (DriverOfferAPIEntity(..), Prediction, QuoteAPIEntity(..), RideAPIEntity(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), AddressComponents(..), GetPlaceNameResp(..), PlaceName(..), LatLong(..), DeleteSavedLocationReq(..), FareBreakupAPIEntity(..))
 import Types.App(FlowBT)
 import Storage ( setValueToLocalStore, getValueToLocalStore, KeyStore(..))
 import Debug(spy)
@@ -193,6 +193,12 @@ dummyRideAPIEntity = RideAPIEntity{
   rideRating : Nothing,
   driverArrivalTime : Nothing,
   bppRideId : ""
+  }
+
+dummyFareBreakupAPIEntity :: FareBreakupAPIEntity
+dummyFareBreakupAPIEntity = FareBreakupAPIEntity {
+  amount : 0.0,
+  description : ""
   }
 
 isForLostAndFound :: Boolean
