@@ -115,6 +115,8 @@ getDriverInfo (RideBookingRes resp) =
       , driverArrived : false
       , driverArrivalTime : 0
       , bppRideId : rideList.bppRideId
+      , driverNumber : rideList.driverNumber
+      , merchantExoPhone : resp.merchantExoPhone
         }
 encodeAddressDescription :: String -> String -> Maybe String -> Maybe Number -> Maybe Number -> Array AddressComponents -> SavedReqLocationAPIEntity
 encodeAddressDescription address tag placeId lat lon addressComponents = do

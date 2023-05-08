@@ -555,6 +555,7 @@ driverInfoCardViewState state = { props:
                                   { currentStage: state.props.currentStage
                                   , trackingEnabled: state.props.isInApp
                                   , unReadMessages : state.props.unReadMessages
+                                  , showCallPopUp: state.props.showCallPopUp
                                   }
                               , data: state.data.driverInfoCardState
                             }

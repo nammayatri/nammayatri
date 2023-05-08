@@ -19,6 +19,11 @@ import Language.Types (STR(..))
 
 getKN :: STR -> String
 getKN script = case script of
+  DIRECT_CALL -> "ನೇರ ಕರೆ"
+  ANONYMOUS_CALL -> "ಅನಾಮಧೇಯ ಕರೆ"
+  YOUR_NUMBER_WILL_NOT_BE_SHOWN_TO_THE_DRIVER -> "ನಿಮ್ಮ ಸಂಖ್ಯೆಯನ್ನು ಚಾಲಕನಿಗೆ ತೋರಿಸಲಾಗುವುದಿಲ್ಲ"
+  YOUR_NUMBER_WILL_BE_VISIBLE_TO_THE_DRIVER_USE_IF_NOT_CALLING_FROM_REGISTERED_NUMBER -> "ನಿಮ್ಮ ಸಂಖ್ಯೆ ಚಾಲಕನಿಗೆ ಗೋಚರಿಸುತ್ತದೆ. ನೋಂದಾಯಿತ ಸಂಖ್ಯೆಯಿಂದ ಕರೆ ಮಾಡದಿದ್ದರೆ ಬಳಸಿ"
+  CALL_DRIVER_USING -> "ಇದನ್ನು ಬಳಸಿಕೊಂಡು ಚಾಲಕನಿಗೆ ಕರೆ ಮಾಡಿ:"
   DOWNLOAD_INVOICE -> "ಸರಕುಪಟ್ಟಿ ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ"
   REPORT_AN_ISSUE -> "ಸಮಸ್ಯೆಯನ್ನು ವರದಿ ಮಾಡಿ"
   SUBMIT -> "ಸಲ್ಲಿಸಿ"

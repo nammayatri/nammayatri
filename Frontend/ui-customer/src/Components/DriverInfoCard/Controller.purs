@@ -18,6 +18,7 @@ module Components.DriverInfoCard.Controller where
 import Components.PrimaryButton as PrimaryButtonController
 import Components.SourceToDestination as SourceToDestinationController
 import Screens.Types(Stage)
+import Data.Maybe(Maybe)
 
 data Action = NoAction
             | Support 
@@ -38,7 +39,8 @@ type DriverInfoCardProps =
   {
     currentStage :: Stage,
     trackingEnabled :: Boolean,
-    unReadMessages :: Boolean
+    unReadMessages :: Boolean,
+    showCallPopUp :: Boolean
   }
 
 type DriverInfoCardData = 
@@ -66,4 +68,6 @@ type DriverInfoCardData =
   , estimatedDistance :: String
   , driverArrivalTime :: Int
   , bppRideId :: String
+  , driverNumber :: Maybe String
+  , merchantExoPhone :: String
   }

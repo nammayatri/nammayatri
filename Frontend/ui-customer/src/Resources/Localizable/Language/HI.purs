@@ -19,6 +19,11 @@ import Language.Types (STR(..))
 
 getHI :: STR -> String
 getHI script = case script of
+  DIRECT_CALL -> "ड्राइवर को सीधे कॉल करें"
+  ANONYMOUS_CALL -> "गुमनाम रूप से कॉल करें"
+  YOUR_NUMBER_WILL_NOT_BE_SHOWN_TO_THE_DRIVER -> "आपका नंबर ड्राइवर पार्टनर को नहीं दिखाया जाएगा"
+  YOUR_NUMBER_WILL_BE_VISIBLE_TO_THE_DRIVER_USE_IF_NOT_CALLING_FROM_REGISTERED_NUMBER -> "आपका नंबर ड्राइवर को दिखाई देगा अगर रजिस्टर्ड नंबर से कॉल नहीं कर रहे है तो इसका इस्तेमाल करें"
+  CALL_DRIVER_USING -> "ड्राइवर को कॉल करने के लिए प्रयोग करें:"
   DOWNLOAD_INVOICE -> "इनवाइस को डाउनलोड करें"
   REPORT_AN_ISSUE -> "मामले की रिपोर्ट दर्ज करें"
   SUBMIT -> "जमा करें"

@@ -68,7 +68,7 @@ import Screens.AddNewAddressScreen.Controller (validTag, getSavedTagsFromHome)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyQuoteAPIEntity)
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getQuoteList, transformContactList)
 import Screens.SuccessScreen.Handler as UI
-import Screens.Types (HomeScreenState, Location, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CardType(..), RatingCard, CurrentLocationDetailsWithDistance(..), CurrentLocationDetails, LocationItemType(..))
+import Screens.Types (HomeScreenState, Location, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CardType(..), RatingCard, CurrentLocationDetailsWithDistance(..), CurrentLocationDetails, LocationItemType(..), CallType(..))
 import Services.API (EstimateAPIEntity(..), GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), PlaceName(..), RideBookingRes(..), SelectListRes(..), FareRange, QuoteAPIEntity(..), SelectedQuotes(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
@@ -509,6 +509,8 @@ data Action = NoAction
             | HandleCallback
             | UpdatePickupLocation String String String
             | CloseLocationTracking
+            | ShowCallDialer CallType
+            | CloseShowCallDialer 
             | StartLocationTracking String
             | ExitLocationSelected LocationListItemState Boolean
             | DistanceOutsideLimitsActionController PopUpModal.Action
@@ -602,14 +604,7 @@ eval (ChatViewActionController (ChatView.TextChanged value)) state = do
                           false
   continue state{data{messageToBeSent = (STR.trim value)},props{sendMessageActive = sendMessageActive}}
 
-eval(ChatViewActionController (ChatView.Call)) state =
-  continueWithCmd state
-    [ do
-        _ <- pure $ showDialer (getDriverNumber "")
-        customerId <- getValueToLocalStoreEff CUSTOMER_ID
-        _ <- (firebaseLogEventWithTwoParams "ny_user_call_click" "trip_id" (state.props.bookingId) "user_id" customerId)
-        pure NoAction
-    ]
+eval(ChatViewActionController (ChatView.Call)) state = continue state { props { showCallPopUp = true } }
 
 eval (ChatViewActionController (ChatView.SendMessage)) state = do
   if state.data.messageToBeSent /= ""
@@ -910,7 +905,6 @@ eval (DriverInfoCardActionController (DriverInfoCardController.PrimaryButtonAC P
         _ <- (firebaseLogEventWithTwoParams "ny_user_call_click" "trip_id" (state.props.bookingId) "user_id" (getValueToLocalStore CUSTOMER_ID))
         pure NoAction
     ]
-
 eval (DriverArrivedAction driverArrivalTime) state = do
   _ <- pure $ setValueToLocalStore DRIVER_ARRIVAL_ACTION "TRIGGER_WAITING_ACTION"
   exit $ Cancel state { data { driverInfoCardState { driverArrived = true, driverArrivalTime = getExpiryTime driverArrivalTime "" true } } }
@@ -1268,6 +1262,26 @@ eval (EstimateChangedPopUpController (PopUpModal.OnButton2Click)) state = do
 
 eval CloseLocationTracking state = continue state { props { isLocationTracking = false } }
 
+eval CloseShowCallDialer state = continue state { props { showCallPopUp = false } }
+
+eval (ShowCallDialer item) state = do
+  case item of
+    ANONYMOUS_CALLER -> do
+      continueWithCmd state
+        [ do
+            _ <- pure $ showDialer (if (STR.take 1 state.data.driverInfoCardState.merchantExoPhone) == "0" then state.data.driverInfoCardState.merchantExoPhone else "0" <> state.data.driverInfoCardState.merchantExoPhone)
+            _ <- (firebaseLogEventWithTwoParams "ny_user_anonymous_call_click" "trip_id" (state.props.bookingId) "user_id" (getValueToLocalStore CUSTOMER_ID))
+            pure NoAction
+        ]
+    DIRECT_CALLER -> do
+      continueWithCmd state
+        [ do
+            _ <- pure $ showDialer $ fromMaybe state.data.driverInfoCardState.merchantExoPhone state.data.driverInfoCardState.driverNumber
+            _ <- (firebaseLogEventWithTwoParams "ny_user_direct_call_click" "trip_id" (state.props.bookingId) "user_id" (getValueToLocalStore CUSTOMER_ID))
+            pure NoAction
+        ]
+    _ -> continue state
+    
 eval (StartLocationTracking item) state = do
   case item of
     "GOOGLE_MAP" -> do

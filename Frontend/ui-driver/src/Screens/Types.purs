@@ -614,6 +614,7 @@ type ActiveRide = {
   actualRideDistance :: Number,
   status :: Status,
   distance :: Number,
+  exoPhone :: String,
   duration :: Int,
   riderName :: String,
   estimatedFare :: Int,

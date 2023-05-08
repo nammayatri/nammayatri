@@ -809,7 +809,8 @@ newtype RideBookingRes = RideBookingRes {
   id :: String,
   updatedAt :: String,
   bookingDetails :: RideBookingAPIDetails ,
-  fromLocation ::  BookingLocationAPIEntity
+  fromLocation ::  BookingLocationAPIEntity,
+  merchantExoPhone :: String
 }
 
 newtype FareBreakupAPIEntity = FareBreakupAPIEntity {
