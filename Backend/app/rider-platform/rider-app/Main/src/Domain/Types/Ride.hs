@@ -100,7 +100,7 @@ data RideAPIEntity = RideAPIEntity
 
 makeRideAPIEntity :: Ride -> RideAPIEntity
 makeRideAPIEntity Ride {..} =
-  let driverMobileNumber' = if status == NEW then Just driverMobileNumber else Nothing
+  let driverMobileNumber' = if status == NEW then Just driverMobileNumber else Just "xxxx"
    in RideAPIEntity
         { shortRideId = shortId,
           driverNumber = driverMobileNumber',
