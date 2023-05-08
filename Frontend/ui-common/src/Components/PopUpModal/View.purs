@@ -74,6 +74,7 @@ view push state =
         , orientation VERTICAL
         , background Color.white900
         , margin state.margin
+        , padding state.padding
         , clickable true
         ]
         [ linearLayout

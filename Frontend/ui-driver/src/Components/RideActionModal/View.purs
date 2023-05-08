@@ -249,7 +249,7 @@ endRide push config =
   , height (V 50)
   , background Color.red
   , cornerRadius 8.0
-  , margin $ Margin 16 16 16 16
+  , margin $ Margin 16 16 16 24
   , gravity CENTER
   , onClick push (const $ EndRide)
   ][  textView (

@@ -1304,7 +1304,7 @@ confirmPickUpLocationView push state =
         , background Color.white900
         , stroke $ "1," <> Color.grey900
         , cornerRadii $ Corners 24.0 true true false false
-        , padding $ Padding 16 16 16 32
+        , padding $ Padding 16 16 16 24
         ]
         [ textView
             [ text (getString CONFIRM_PICKUP_LOCATION)
@@ -1354,7 +1354,7 @@ loaderView push state =
     [ orientation VERTICAL
     , height WRAP_CONTENT
     , width MATCH_PARENT
-    , padding (Padding 0 40 0 32)
+    , padding (Padding 0 40 0 24)
     , background Color.white900
     , cornerRadii $ Corners 24.0 true true false false
     , stroke ("1," <> Color.grey900)
@@ -1399,7 +1399,7 @@ loaderView push state =
                 , lineHeight "18"
                 , width MATCH_PARENT
                 , height WRAP_CONTENT
-                , padding (Padding 0 20 0 0)
+                , padding (Padding 0 20 0 16)
                 , color Color.red
                 , gravity CENTER
                 ]

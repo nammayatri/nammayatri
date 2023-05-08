@@ -244,7 +244,7 @@ driverInfoView push state =
           [ orientation VERTICAL
           , height WRAP_CONTENT
           , width MATCH_PARENT
-          , padding $ PaddingBottom 30
+          , padding $ PaddingBottom 24
           , margin $ MarginVertical 14 0
           , background Color.white900
           , gravity CENTER
@@ -290,6 +290,7 @@ cancelRideLayout push state =
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
   , padding $ Padding 5 5 5 5
+  , margin $ MarginBottom if os == "IOS" then 24 else 0
   , onClick push $ const $ CancelRide state
   ][ textView
      [ width WRAP_CONTENT
