@@ -87,7 +87,7 @@ in  { esqDBCfg
     , hedisCfg = rcfg
     , hedisClusterCfg = rccfg
     , hedisMigrationStage = True
-    , cutOffHedisCluster = Flase
+    , cutOffHedisCluster = False
     , port = +8016
     , metricsPort = +9997
     , hostName = "localhost"

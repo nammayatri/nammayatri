@@ -113,7 +113,7 @@ data UserActionType
   | CANCELSEARCH
   | FLOW_STATUS
   | NOTIFYEVENT
-  | CANCELBOOKING
+  | CANCEL_BOOKING
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 genSingletons [''UserActionType]
