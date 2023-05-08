@@ -212,7 +212,10 @@ auth isDirectAuth req mbBundleVersion mbClientVersion = do
   (personApiEntity, token, authType) <-
     if person.enabled && isDirectAuth
       then do
-        DB.runTransaction $ RegistrationToken.setDirectAuth regToken.id
+        mbEncEmail <- encrypt `mapM` req.email
+        DB.runTransaction $ do
+          RegistrationToken.setDirectAuth regToken.id
+          Person.updatePersonalInfo person.id req.firstName req.middleName req.lastName Nothing mbEncEmail deviceToken req.language req.gender
         personAPIEntity <- verifyFlow person regToken req.whatsappNotificationEnroll deviceToken
         return (Just personAPIEntity, Just regToken.token, SR.DIRECT)
       else return (Nothing, Nothing, regToken.authType)
