@@ -264,6 +264,19 @@ updateBlockedState personId isBlocked = do
       ]
     where_ $ tbl ^. PersonId ==. val (getId personId)
 
+updatingEnabledAndBlockedState :: Id Person -> Bool -> SqlDB ()
+updatingEnabledAndBlockedState personId isBlocked = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ PersonEnabled =. val (not isBlocked),
+        PersonBlocked =. val isBlocked,
+        PersonBlockedAt =. val (Just now),
+        PersonUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. PersonId ==. val (getId personId)
+
 findAllCustomers ::
   Transactionable m =>
   Id Merchant ->
