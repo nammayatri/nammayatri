@@ -2845,11 +2845,11 @@
         "systems": "systems_2"
       },
       "locked": {
-        "lastModified": 1683754408,
-        "narHash": "sha256-ugXRYIj0AI3Rp5hQz8ZTdMvJBRwquwspUnLZf8C3Sdw=",
+        "lastModified": 1683539475,
+        "narHash": "sha256-S68EcCjdsrOA5SG/JFxocpOZFM8Ca7v46nAn2C06czw=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "292362f989c503942e52197685d6d7dba3b70664",
+        "rev": "4e2e6d9138fe59a685787e194c0dfaa1e4dfab33",
         "type": "github"
       },
       "original": {
