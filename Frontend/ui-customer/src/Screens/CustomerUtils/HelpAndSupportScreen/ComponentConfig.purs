@@ -27,6 +27,8 @@ import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..))
 import Screens.Types as ST
 import Styles.Colors as Color
 import Common.Types.App
+import Engineering.Helpers.Commons (os)
+import Prelude
 
 sourceToDestinationConfig :: ST.HelpAndSupportScreenState -> SourceToDestination.Config
 sourceToDestinationConfig state = let 
@@ -107,8 +109,9 @@ callConfirmationPopup :: ST.HelpAndSupportScreenState -> PopUpModal.Config
 callConfirmationPopup state = let 
     config = PopUpModal.config
     popUpConfig' = config {
-      primaryText { 
-        text = (getString CONTACT_SUPPORT) 
+      padding = PaddingBottom if os =="IOS" then 24 else 0
+      , primaryText { 
+          text = (getString CONTACT_SUPPORT) 
       , margin = (Margin 0 20 0 20)
         },
       secondaryText { 

@@ -90,7 +90,7 @@ view push config =
         , width MATCH_PARENT
         , orientation VERTICAL
         , background Color.white900
-        , padding (Padding 16 16 16 16)
+        , padding (Padding 16 16 16 24)
         , stroke $ "1," <> Color.grey900
         , alignParentBottom "true,-1"
         , margin (Margin 0 0 0 0)
