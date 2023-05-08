@@ -44,7 +44,6 @@ Or did you test this change manually (provide relevant screenshots)?
 ## Checklist
 <!-- Put an `x` in the boxes that apply -->
 
-- [ ] I formatted the code and addressed linter errors `./dev/format-all-files.sh`
 - [ ] I reviewed submitted code
 - [ ] I added unit tests for my changes where possible
 - [ ] I added a [CHANGELOG](/CHANGELOG.md) entry if applicable
