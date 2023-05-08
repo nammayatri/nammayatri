@@ -2702,15 +2702,30 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
 
     @JavascriptInterface
     public void shareTextMessage(String title, String message) {
-        activity.runOnUiThread(() -> {
-            Intent sendIntent = new Intent();
-            sendIntent.setAction(Intent.ACTION_SEND);
-            sendIntent.putExtra(Intent.EXTRA_TEXT, message);
-            sendIntent.putExtra(Intent.EXTRA_TITLE, title);
-            sendIntent.setType("text/plain");
-            Intent shareIntent = Intent.createChooser(sendIntent, null);
-            activity.startActivity(shareIntent);
+        activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Intent sendIntent = new Intent();
+                sendIntent.setAction(Intent.ACTION_SEND);
+                sendIntent.putExtra(Intent.EXTRA_TEXT, message);
+                sendIntent.putExtra(Intent.EXTRA_TITLE, title);
+                Bitmap thumbnailBitmap = BitmapFactory.decodeResource(context.getResources(), R.drawable.ny_ic_icon);
+                Uri thumbnailUri = getImageUri(context, thumbnailBitmap);
+                ClipData clipData = ClipData.newUri(context.getContentResolver(), "Thumbnail Image", thumbnailUri);
+                sendIntent.setClipData(clipData);
+                sendIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                sendIntent.setType("text/plain");
+                Intent shareIntent = Intent.createChooser(sendIntent, null);
+                activity.startActivity(shareIntent);
+            }
         });
+    }
+
+    private Uri getImageUri(Context context, Bitmap bitmap) {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, bytes);
+        String path = MediaStore.Images.Media.insertImage(context.getContentResolver(), bitmap, "Thumbnail Image", null);
+        return Uri.parse(path);
     }
 
     @JavascriptInterface

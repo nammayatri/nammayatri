@@ -27,6 +27,7 @@ data Action = NoAction
             | LocationTracking
             | OpenEmergencyHelp
             | MessageDriver
+            | ShareRide
 
 type DriverInfoCardState = 
   { props :: DriverInfoCardProps

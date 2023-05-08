@@ -94,6 +94,21 @@ supportButton push state =
   , stroke $ "1,"<> Color.grey900
   , cornerRadius 20.0
   ][ imageView
+      [ imageUrl "ny_ic_share"
+      , height $ V 18
+      , width $ V 18
+      , margin $ Margin 10 10 10 10
+      , visibility GONE
+      , onClick push $ const ShareRide
+      ]
+    , linearLayout
+      [ height (V 1)
+      , width (V 19)
+      , visibility GONE
+      , margin (MarginVertical 8 8)
+      , background Color.lightGreyShade
+      ][]
+    , imageView
       [ imageWithFallback "ny_ic_contact_support,https://assets.juspay.in/nammayatri/images/user/ny_ic_contact_support.png"
       , height $ V 18
       , width $ V 18
