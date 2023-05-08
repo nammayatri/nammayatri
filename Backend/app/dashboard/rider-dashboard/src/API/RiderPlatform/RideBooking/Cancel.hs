@@ -34,7 +34,7 @@ import Tools.Auth.Merchant
 
 type API =
   "rideBooking"
-    :> ApiAuth 'APP_BACKEND 'CUSTOMERS 'CANCELBOOKING
+    :> ApiAuth 'APP_BACKEND 'CUSTOMERS 'CANCEL_BOOKING
     :> BAP.CancelBookingAPI
 
 handler :: ShortId DM.Merchant -> FlowServer API

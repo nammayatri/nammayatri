@@ -33,7 +33,7 @@ in  { port = +8025
     , hedisCfg = hcfg
     , hedisClusterCfg = rccfg
     , hedisMigrationStage = True
-    , cutOffHedisCluster = Flase
+    , cutOffHedisCluster = False
     , kafkaConsumerCfgs
     , loggerConfig =
             common.loggerConfig

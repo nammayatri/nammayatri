@@ -53,7 +53,7 @@ let
       db-replica.service = {
         image = "bitnami/postgresql:12.3.0";
         container_name = "atlas-dev-replica";
-        ports = [ "5433:5432" ];
+        ports = [ "5435:5432" ];
         depends_on = [ "db-primary" ];
         environment = {
           BITNAMI_DEBUG = "true";

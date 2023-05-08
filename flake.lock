@@ -53,11 +53,11 @@
         "systems": "systems"
       },
       "locked": {
-        "lastModified": 1683209526,
-        "narHash": "sha256-diEf/MIKWpqNomcVMYb4IYIHptB7k1Sq0ArR4kefzKQ=",
+        "lastModified": 1683308000,
+        "narHash": "sha256-2SFiH5kIx9zYmnOJgGB8Km9HxRm0ORu07zRa8Lkt0D4=",
         "owner": "nammayatri",
         "repo": "beckn-gateway",
-        "rev": "e0337d677890de598c8db7067fc46f22425423d4",
+        "rev": "fc5f10b3be7728ffc8a07b26de71870b5e4af524",
         "type": "github"
       },
       "original": {
@@ -440,22 +440,6 @@
         "type": "github"
       }
     },
-    "easy-purescript-nix": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1679861376,
-        "narHash": "sha256-LLqaLPJNiap2U8I77K5XVPGJA/Be30Z8lyGOyYXmBlc=",
-        "owner": "justinwoo",
-        "repo": "easy-purescript-nix",
-        "rev": "0c10ff170461aed0c336f5c21ed0f430c2c3574b",
-        "type": "github"
-      },
-      "original": {
-        "owner": "justinwoo",
-        "repo": "easy-purescript-nix",
-        "type": "github"
-      }
-    },
     "devour-flake_3": {
       "flake": false,
       "locked": {
@@ -469,6 +453,22 @@
       "original": {
         "owner": "srid",
         "repo": "devour-flake",
+        "type": "github"
+      }
+    },
+    "easy-purescript-nix": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1679861376,
+        "narHash": "sha256-LLqaLPJNiap2U8I77K5XVPGJA/Be30Z8lyGOyYXmBlc=",
+        "owner": "justinwoo",
+        "repo": "easy-purescript-nix",
+        "rev": "0c10ff170461aed0c336f5c21ed0f430c2c3574b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "justinwoo",
+        "repo": "easy-purescript-nix",
         "type": "github"
       }
     },
