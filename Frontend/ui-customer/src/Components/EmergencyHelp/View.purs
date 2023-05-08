@@ -185,15 +185,16 @@ callPoliceConfig state  =
     primaryText { 
       text = getString DAIL_100
     , margin = (Margin 40 23 40 12)
-    , fontStyle = FontStyle.semiBold LanguageStyle }
+    , fontStyle = FontStyle.semiBold LanguageStyle 
+    }
     , option1 {
       text = getString CANCEL_
     , fontSize = FontSize.a_16
-    , margin = (MarginHorizontal 16 16) }
+    }
     , option2 {
       text = getString CALL_POLICE
-    , fontSize = FontSize.a_16
-    , margin = (MarginHorizontal 12 0)  }
+    , fontSize = FontSize.a_16 
+    }
     , backgroundClickable = true
     , secondaryText {
       text = getString YOU_ARE_ABOUT_TO_CALL_POLICE
@@ -216,11 +217,11 @@ contactSupportConfig state  =
     , option1 {
       text = getString CANCEL_
     , fontSize = FontSize.a_16
-    , margin = (MarginHorizontal 16 16) }
+    }
     , option2 {
       text = getString CALL_SUPPORT
     , fontSize = FontSize.a_16
-    , margin = (MarginHorizontal 12 0) }
+    }
     , backgroundClickable = true
     , secondaryText {
       text = getString YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT
@@ -243,11 +244,11 @@ callEmergencyContactConfig state  =
     , option1 {
       text = getString CANCEL_
     , fontSize = FontSize.a_16
-    , margin = (MarginHorizontal 16 16) }
+    }
     , option2 {
       text = "Place Call"
     , fontSize = FontSize.a_16
-    , margin = (MarginHorizontal 12 0) }
+    }
     , backgroundClickable = true
     , secondaryText {
       visibility = GONE
