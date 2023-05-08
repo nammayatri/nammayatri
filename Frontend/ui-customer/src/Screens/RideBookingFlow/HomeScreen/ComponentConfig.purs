@@ -251,7 +251,7 @@ primaryButtonRequestRideConfig state =
           , textSize = FontSize.a_16
           }
         , background = Color.black900
-        , margin = (Margin 0 32 0 15)
+        , margin = (Margin 0 32 0 0)
         , id = "RequestRideButton"
         , enableLoader = (JB.getBtnLoader "RequestRideButton")
         }

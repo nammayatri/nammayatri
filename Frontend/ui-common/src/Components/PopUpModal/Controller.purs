@@ -56,7 +56,8 @@ type Config = {
     contactViewConfig :: ContactViewConfig,
     contactViewPadding :: Padding,
     contactViewMargin :: Margin,
-    dismissPopup :: Boolean
+    dismissPopup :: Boolean,
+    padding :: Padding
 }
 
 type ContactViewConfig = {
@@ -127,6 +128,7 @@ config = {
   , buttonLayoutMargin : (Margin 0 0 0 25)
   , editTextVisibility : GONE
   , tipLayoutMargin : (Margin 0 0 0 0)
+  , padding : (Padding 0 0 0 0)
   , primaryText : {
       text : "Text1",
       color : Color.black800,
