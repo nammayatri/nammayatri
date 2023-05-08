@@ -28,6 +28,7 @@ import qualified Dashboard.RiderPlatform.Customer as Customer
 import qualified Dashboard.RiderPlatform.Merchant as Merchant
 import qualified Dashboard.RiderPlatform.Ride as Ride
 import qualified "rider-app" Domain.Action.UI.Booking as DBooking
+import qualified "rider-app" Domain.Action.UI.Cancel as DCancel
 import qualified "rider-app" Domain.Action.UI.Frontend as DFrontend
 import qualified "rider-app" Domain.Action.UI.Maps as DMaps
 import qualified "rider-app" Domain.Action.UI.Profile as DProfile
@@ -95,7 +96,8 @@ data RideBookingAPIs = RideBookingAPIs
     confirm :: ConfirmAPIs,
     booking :: BookingAPIs,
     maps :: MapsAPIs,
-    flowStatus :: FlowStatusAPIs
+    flowStatus :: FlowStatusAPIs,
+    cancel :: CancelBookingAPIs
   }
 
 data RegistrationAPIs = RegistrationAPIs
@@ -145,6 +147,10 @@ data FlowStatusAPIs = FlowStatusAPIs
     notifyEvent :: Id DP.Person -> DFrontend.NotifyEventReq -> Euler.EulerClient DFrontend.NotifyEventResp
   }
 
+newtype CancelBookingAPIs = CancelBookingAPIs
+  { cancelBooking :: Id SRB.Booking -> Id DP.Person -> DCancel.CancelReq -> Euler.EulerClient APISuccess
+  }
+
 mkAppBackendAPIs :: CheckedShortId DM.Merchant -> Text -> AppBackendAPIs
 mkAppBackendAPIs merchantId token = do
   let customers = CustomerAPIs {..}
@@ -160,6 +166,7 @@ mkAppBackendAPIs merchantId token = do
   let booking = BookingAPIs {..}
   let maps = MapsAPIs {..}
   let flowStatus = FlowStatusAPIs {..}
+  let cancel = CancelBookingAPIs {..}
   let rideBooking = RideBookingAPIs {..}
   AppBackendAPIs {..}
   where
@@ -188,7 +195,8 @@ mkAppBackendAPIs merchantId token = do
       :<|> confirmClient
       :<|> bookingClient
       :<|> mapsClient
-      :<|> flowStatusClient = rideBookingClient
+      :<|> flowStatusClient
+      :<|> cancelBookingClient = rideBookingClient
 
     auth
       :<|> verify
@@ -218,6 +226,8 @@ mkAppBackendAPIs merchantId token = do
 
     personFlowStatus
       :<|> notifyEvent = flowStatusClient
+
+    cancelBooking = cancelBookingClient
 
     merchantUpdate
       :<|> mapsServiceConfigUpdate

@@ -19,6 +19,7 @@ module API.RiderPlatform.RideBooking
 where
 
 import qualified API.RiderPlatform.RideBooking.Booking as Booking
+import qualified API.RiderPlatform.RideBooking.Cancel as Cancel
 import qualified API.RiderPlatform.RideBooking.Confirm as Confirm
 import qualified API.RiderPlatform.RideBooking.Frontend as FlowStatus
 import qualified API.RiderPlatform.RideBooking.Maps as Maps
@@ -43,6 +44,7 @@ type API =
            :<|> Booking.API
            :<|> Maps.API
            :<|> FlowStatus.API
+           :<|> Cancel.API
        )
 
 handler :: ShortId DM.Merchant -> FlowServer API
@@ -56,3 +58,4 @@ handler merchantId =
     :<|> Booking.handler merchantId
     :<|> Maps.handler merchantId
     :<|> FlowStatus.handler merchantId
+    :<|> Cancel.handler merchantId
