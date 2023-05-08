@@ -30,12 +30,12 @@ instance showAction :: Show Action where
 instance loggableAction :: Loggable Action where
    performLog action appId = case action of
     AfterRender -> trackAppScreenRender appId "screen" (getScreen MY_PROFILE_SCREEN)
-    BackPressed backpressState -> do
-      trackAppBackPress appId (getScreen MY_PROFILE_SCREEN)
-      if backpressState.props.updateProfile then trackAppScreenEvent appId (getScreen MY_PROFILE_SCREEN) "in_screen" "backpress_in_update_profile"
-        else if backpressState.props.accountStatus == CONFIRM_REQ then trackAppScreenEvent appId (getScreen MY_PROFILE_SCREEN) "in_screen" "backpress_in_account_status_confirm"
-          else if backpressState.props.accountStatus == DEL_REQUESTED then trackAppScreenEvent appId (getScreen MY_PROFILE_SCREEN) "in_screen" "backpress_in_account_status_delete"
-            else trackAppEndScreen appId (getScreen MY_PROFILE_SCREEN)
+    BackPressed backpressState -> pure unit
+      -- trackAppBackPress appId (getScreen MY_PROFILE_SCREEN)
+      -- if backpressState.props.updateProfile then trackAppScreenEvent appId (getScreen MY_PROFILE_SCREEN) "in_screen" "backpress_in_update_profile"
+      --   else if backpressState.props.accountStatus == CONFIRM_REQ then trackAppScreenEvent appId (getScreen MY_PROFILE_SCREEN) "in_screen" "backpress_in_account_status_confirm"
+      --     else if backpressState.props.accountStatus == DEL_REQUESTED then trackAppScreenEvent appId (getScreen MY_PROFILE_SCREEN) "in_screen" "backpress_in_account_status_delete"
+      --       else trackAppEndScreen appId (getScreen MY_PROFILE_SCREEN)
     GenericHeaderActionController act -> case act of
       GenericHeader.PrefixImgOnClick -> do
         trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "generic_header_action" "back_icon"

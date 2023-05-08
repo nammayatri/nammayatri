@@ -1698,7 +1698,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
           _ <- pure $ setValueToLocalStore TRACKING_DRIVER "True"
           _ <- pure $ removeAllPolylines ""
           _ <- liftFlow $ drawRoute (walkCoordinate srcLat srcLon dstLat dstLon) "DOT" "#323643" false markers.srcMarker markers.destMarker 8 "DRIVER_LOCATION_UPDATE" "" ""
-          void $ delay $ Milliseconds (if dynamicDuration > 20 && routeState == "pickup" then 3.0 else if dynamicDuration > 40 && routeState == "pickup" then 4.0 else duration)
+          void $ delay $ Milliseconds (if dynamicDuration > 20 && routeState == "pickup" then duration + 1000.0 else if dynamicDuration > 40 && routeState == "pickup" then duration + 2000.0 else duration)
           driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState (dynamicDuration+1)
           pure unit
         else if ((getValueToLocalStore TRACKING_DRIVER) == "False" || not (isJust state.data.route)) then do
@@ -1713,7 +1713,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                       newRoute = routes { points = Snapped (map (\item -> LatLong { lat: item.lat, lon: item.lng }) newPoints.points) }
                   liftFlow $ drawRoute newPoints "LineString" "#323643" true markers.srcMarker markers.destMarker 8 "DRIVER_LOCATION_UPDATE" "" (metersToKm routes.distance state)
                   _ <- doAff do liftEffect $ push $ updateState routes.duration routes.distance
-                  void $ delay $ Milliseconds (if dynamicDuration > 20 && routeState == "pickup" then 3.0 else if dynamicDuration > 40 && routeState == "pickup" then 4.0 else duration)
+                  void $ delay $ Milliseconds (if dynamicDuration > 20 && routeState == "pickup" then duration + 1000.0 else if dynamicDuration > 40 && routeState == "pickup" then duration + 2000.0 else duration)
                   driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Just (Route newRoute), speed = routes.distance / routes.duration } } routeState (dynamicDuration+1)
                 Nothing -> pure unit
             Left err -> pure unit
@@ -1725,13 +1725,13 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                     let newPoints = { points : locationResp.points}
                     liftFlow $ updateRoute newPoints markers.destMarker (metersToKm locationResp.distance state)
                     _ <- doAff do liftEffect $ push $ updateState locationResp.eta locationResp.distance
-                    void $ delay $ Milliseconds (if dynamicDuration > 20 && routeState == "pickup" then 3.0 else if dynamicDuration > 40 && routeState == "pickup" then 4.0 else duration)
+                    void $ delay $ Milliseconds (if dynamicDuration > 20 && routeState == "pickup" then duration + 1000.0 else if dynamicDuration > 40 && routeState == "pickup" then duration + 2000.0 else duration)
                     driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState (dynamicDuration+1)
                   else do
                     driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } } routeState (dynamicDuration+1)
             Nothing -> driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } } routeState (dynamicDuration+1)
       Left err -> do
-        void $ delay $ Milliseconds ((if dynamicDuration > 20 && routeState == "pickup" then 3.0 else if dynamicDuration > 40 && routeState == "pickup" then 4.0 else duration) * 2.0)
+        void $ delay $ Milliseconds (if dynamicDuration > 20 && routeState == "pickup" then duration + 1000.0 else if dynamicDuration > 40 && routeState == "pickup" then duration + 2000.0 else duration)
         driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } } routeState (dynamicDuration+1)
   else do
     pure unit

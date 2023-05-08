@@ -201,12 +201,28 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                             String storage_value = notification_payload.get("storage_value").toString();
                             if(storage_key.equals("update_driver_status")){
                                 storage_value = storage_value.toLowerCase();
-                                boolean status = storage_value.equals("true");
-                                NotificationUtils.updateDriverStatus(status, this);
+                                boolean status = storage_value.equals("SILENT") || storage_value.equals("ONLINE") ;
+                                NotificationUtils.updateDriverStatus(status, storage_value, this);
                             }
                             else sharedPref.edit().putString(storage_key, storage_value).apply();
                         }
                         NotificationUtils.showAllocationNotification(this, title, body, payload, imageUrl, entity_payload);
+                        break;
+
+                    case NotificationTypes.CALL_API :
+                        try {
+                            String endPoint = notification_payload.get("endpoint").toString();
+                            String method = notification_payload.get("method").toString();
+                            JSONObject reqBody =(JSONObject) notification_payload.get("reqBody");
+                            if (endPoint != null && method != null){
+                                reqBody = reqBody != null ? reqBody : null;
+                                callAPIViaFCM(endPoint, reqBody, method);
+                            }
+
+                        }catch (Exception e) {
+
+                        }
+
                         break;
 
                     default:
@@ -222,6 +238,62 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             firebaseLogEventWithParams("exception_in_notification","remoteMessage",remoteMessage.getData().toString());
             return;
         }
+    }
+
+    private void callAPIViaFCM(String orderUrl, JSONObject requestBody, String method){
+        SharedPreferences sharedPref = this.getSharedPreferences(
+                this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        String token = sharedPref.getString("REGISTERATION_TOKEN", "null");
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        Handler handler = new Handler(Looper.getMainLooper());
+        executor.execute(() -> {
+            StringBuilder result = new StringBuilder();
+            try {
+                System.out.print("in updateFCMToken");
+                HttpURLConnection connection = (HttpURLConnection) (new URL(orderUrl).openConnection());
+                if (connection instanceof HttpsURLConnection)
+                    ((HttpsURLConnection) connection).setSSLSocketFactory(new TLSSocketFactory());
+                connection.setRequestMethod(method);
+                connection.setRequestProperty("Content-Type", "application/json");
+                connection.setRequestProperty("token", token);
+                connection.setDoOutput(true);
+
+                OutputStream stream = connection.getOutputStream();
+                if(requestBody!=null){
+                    stream.write(requestBody.toString().getBytes());
+                }
+                connection.connect();
+                int respCode = connection.getResponseCode();
+                InputStreamReader respReader;
+
+                if ((respCode < 200 || respCode >= 300) && respCode != 302) {
+                    respReader = new InputStreamReader(connection.getErrorStream());
+                    firebaseLogEventWithParams("ny_fcm_error_calling_api","status_code", String.valueOf(respCode));
+                    System.out.print("in error : " + respReader);
+                } else {
+                    respReader = new InputStreamReader(connection.getInputStream());
+                    firebaseLogEventWithParams("ny_fcm_success_calling_api","status_code", String.valueOf(respCode));
+                    System.out.print("in 200 : " + respReader);
+                }
+
+                BufferedReader in = new BufferedReader(respReader);
+                String inputLine;
+
+                while ((inputLine = in.readLine()) != null) {
+                    result.append(inputLine);
+                }
+                System.out.print("in result : " + result.toString());
+
+            } catch (Exception ignored) {
+                System.out.println("Catch in updateFCMToken : " +ignored);
+            }
+            handler.post(()->{
+                onDestroy();
+                stopForeground(true);
+                stopSelf();
+                executor.shutdown();
+            });
+        });
     }
 
     @SuppressLint("StaticFieldLeak")
@@ -349,5 +421,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         private static final String REGISTRATION_APPROVED = "REGISTRATION_APPROVED";
         private static final String REFERRAL_ACTIVATED = "REFERRAL_ACTIVATED";
         private static final String UPDATE_STORAGE = "UPDATE_STORAGE";
+
+        private static final String CALL_API = "CALL_API";
     }
 }

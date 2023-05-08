@@ -480,7 +480,7 @@ export const getTimeStampString = function (utcTime){
   var result =  moment(new Date()).utc().format();
   var currentDate = new Date(result);
   var diff = (currentDate.getTime() - createdDate.getTime())/ 1000;
-  seconds = (Math.round(diff));
+  var seconds = (Math.round(diff));
   if (seconds <0) return "";
   var d = Math.floor(seconds / (3600*24));
   var h = Math.floor(seconds % (3600*24) / 3600);
@@ -509,16 +509,16 @@ export const removeMediaPlayer = function (id) {
 export const getVideoID = function (url) {
   try {
     var ID = '';
-    url = url.replace(/(>|<)/gi, '').split(/(vi\/|v=|\/v\/|youtu\.be\/|\/embed\/|\/shorts\/)/);
-    if (url[2] !== undefined) {
-      ID = url[2].split(/[^0-9a-z_\-]/i);
+    var updatedURL = url.replace(/(>|<)/gi, '').split(/(vi\/|v=|\/v\/|youtu\.be\/|\/embed\/|\/shorts\/)/);
+    if (updatedURL[2] !== undefined) {
+      ID = updatedURL[2].split(/[^0-9a-z_\-]/i);
       ID = ID[0];
     }
     else {
-      if (url[1] == /shorts/) {
-        ID = url[2];
+      if (updatedURL[1] == /shorts/) {
+        ID = updatedURL[2];
       }else {
-        ID = url;
+        ID = updatedURL;
       }
     }
     return ID;
@@ -529,7 +529,7 @@ export const getVideoID = function (url) {
 
 export const getImageUrl = function (url) {
   try {
-    let videoId = getVideoId(url);
+    let videoId = getVideoID(url);
     return ("https://img.youtube.com/vi/" + videoId + "/maxresdefault.jpg");
   }catch (e) {
     console.log("error in getImageUrl " + e);
