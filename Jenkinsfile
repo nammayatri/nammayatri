@@ -1,7 +1,5 @@
 pipeline {
-    agent {
-        label 'nixos'
-    }
+    agent any
     stages {
         stage ('Matrix') {
             matrix {
