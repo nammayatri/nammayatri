@@ -8,12 +8,18 @@ pipeline {
                 agent {
                     label "${SYSTEM}"
                 }
+                when {
+                    anyOf {
+                        expression { 'x86_64-linux' == env.SYSTEM }
+                        // Enable running macOS builds when on main branch, so
+                        // as to provide Nix cache for people on macOS.
+                        branch 'main'
+                    }
+                }
                 axes {
                     axis {
                         name 'SYSTEM'
-                        // Disabled until we figure out a way to build these only on 'main'
-                        // values 'x86_64-linux', 'aarch64-darwin', 'x86_64-darwin'
-                        values 'x86_64-linux'
+                        values 'x86_64-linux', 'aarch64-darwin', 'x86_64-darwin'
                     }
                 }
                 stages {
