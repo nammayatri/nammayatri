@@ -81,6 +81,7 @@ initData = {
       rideRequestFlow : false
     , isSearchLocation : NoView
     , currentStage : HomeScreen
+    , showCallPopUp : false
     , sourceLat : 0.0
     , isSource : Nothing
     , sourceLong : 0.0
@@ -254,6 +255,8 @@ dummyDriverInfo =
   , estimatedDistance : ""
   , driverArrivalTime : 0
   , bppRideId : ""
+  , driverNumber : Nothing
+  , merchantExoPhone : ""
   }
 
 dummySettingBar :: SettingSideBarState

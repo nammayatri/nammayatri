@@ -198,6 +198,7 @@ dummyCard =RideBookingRes {
       rideStartTime : Nothing,
       rideEndTime : Nothing,
       duration : Nothing,
+      merchantExoPhone : "",
       bookingDetails: RideBookingAPIDetails{
         contents: RideBookingDetails {
           toLocation: BookingLocationAPIEntity {
