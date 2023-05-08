@@ -164,7 +164,7 @@ data DriverWithRidesCount = DriverWithRidesCount
 mkDriverWithRidesCount :: (Person, DriverInformation, Maybe Vehicle, Maybe Int) -> DriverWithRidesCount
 mkDriverWithRidesCount (person, info, vehicle, ridesCount) = DriverWithRidesCount {..}
 
-fetchDriverInfoWithRidesCount :: Transactionable m => Id Merchant -> Maybe (DbHash, Text) -> Maybe Text -> Maybe DbHash -> Maybe DbHash -> m (Maybe DriverWithRidesCount)
+fetchDriverInfoWithRidesCount :: (Transactionable m, MonadTime m) => Id Merchant -> Maybe (DbHash, Text) -> Maybe Text -> Maybe DbHash -> Maybe DbHash -> m (Maybe DriverWithRidesCount)
 fetchDriverInfoWithRidesCount merchantId mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash = do
   mbDriverInfo <- fetchDriverInfo merchantId mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash
   addRidesCount `mapM` mbDriverInfo
@@ -181,8 +181,9 @@ fetchDriverInfoWithRidesCount merchantId mbMobileNumberDbHashWithCode mbVehicleN
           return (count @Int $ ride ^. RideId)
       return $ mkDriverWithRidesCount (person, info, vehicle, ridesCount)
 
-fetchDriverInfo :: Transactionable m => Id Merchant -> Maybe (DbHash, Text) -> Maybe Text -> Maybe DbHash -> Maybe DbHash -> m (Maybe (Person, DriverInformation, Maybe Vehicle))
-fetchDriverInfo merchantId mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash =
+fetchDriverInfo :: (Transactionable m, MonadTime m) => Id Merchant -> Maybe (DbHash, Text) -> Maybe Text -> Maybe DbHash -> Maybe DbHash -> m (Maybe (Person, DriverInformation, Maybe Vehicle))
+fetchDriverInfo merchantId mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash = do
+  now <- getCurrentTime
   Esq.findOne $ do
     person :& driverInfo :& mbVehicle :& mbDriverLicense :& _mbRcAssoc :& mbRegCert <-
       from $
@@ -202,7 +203,9 @@ fetchDriverInfo merchantId mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumb
           `leftJoin` table @DriverRCAssociationT
           `Esq.on` ( \(person :& _ :& _ :& _ :& mbRcAssoc) ->
                        joinOnlyWhenJust mbRcNumberHash $
-                         just (person ^. PersonTId) ==. mbRcAssoc ?. DriverRCAssociationDriverId
+                         do
+                           just (person ^. PersonTId) ==. mbRcAssoc ?. DriverRCAssociationDriverId
+                           &&. just (just (val now)) <. mbRcAssoc ?. DriverRCAssociationAssociatedTill
                    )
           `leftJoin` table @VehicleRegistrationCertificateT
           `Esq.on` ( \(_ :& _ :& _ :& _ :& mbRcAssoc :& mbRegCert) ->
