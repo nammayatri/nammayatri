@@ -116,7 +116,8 @@ eval ShowOptions state = do
   _ <- pure $ hideKeyboardOnNavigation true
   continue state{props{genderOptionExpanded = not state.props.genderOptionExpanded, showOptions = true, expandEnabled = true}}
 eval ( AnimationEnd _ )state = continue state{props{showOptions = false}}
-eval (GenderSelected value) state = continue state{data{editedGender = Just value}, props{genderOptionExpanded = false}}
+eval (GenderSelected value) state = do 
+    continue state{data{editedGender = Just value}, props{genderOptionExpanded = false , isBtnEnabled = true}}
 eval (UserProfile (GetProfileRes profile)) state = do
   let name = (fromMaybe "" profile.firstName) <> " " <> (fromMaybe "" profile.middleName) <> " " <> (fromMaybe "" profile.lastName)
       gender = case (profile.gender) of
@@ -125,13 +126,13 @@ eval (UserProfile (GetProfileRes profile)) state = do
         Just "OTHER" -> Just OTHER
         Just "PREFER_NOT_TO_SAY" -> Just PREFER_NOT_TO_SAY
         _ -> Nothing
-  continue state { data { name = name, editedName = name, gender = gender, emailId = profile.email } }
+  continue state { data { name = name, editedName = name, gender = gender, emailId = profile.email} }
 eval (NameEditTextAction (PrimaryEditText.TextChanged id value)) state = do
   _ <- pure $ spy "Value changed"  value
-  continue state { data { editedName = value }, props{genderOptionExpanded = false, expandEnabled = false, isBtnEnabled = ((length value >=3) && state.props.isEmailValid )} }
+  continue state { data { editedName = value }, props{genderOptionExpanded = state.props.fromHomeScreen, expandEnabled = state.props.fromHomeScreen, isBtnEnabled = ((not state.props.fromHomeScreen) && (length value >=3) && state.props.isEmailValid )} }
 eval (EmailIDEditTextAction (PrimaryEditText.TextChanged id value)) state = do
-  if (value == "" && state.data.errorMessage == Just EMAIL_EXISTS) then continue state {props{ isEmailValid = false, isBtnEnabled = false, genderOptionExpanded = false, expandEnabled = false}}
-    else continue state {data {editedEmailId = Just value , errorMessage = if (length value == 0) then Nothing else if ( validateEmail value) then Nothing else Just INVALID_EMAIL },props{ isEmailValid = if (length value == 0) then true else validateEmail value, isBtnEnabled = (length state.data.editedName >=3)  && (if (length value == 0) then true else validateEmail value), genderOptionExpanded = false}}
+  if (value == "" && state.data.errorMessage == Just EMAIL_EXISTS) then continue state {props{isEmailValid = false, isBtnEnabled = false, genderOptionExpanded = state.props.fromHomeScreen, expandEnabled = state.props.fromHomeScreen}}
+    else continue state {data {editedEmailId = Just value , errorMessage = if (length value == 0) then Nothing else if ( validateEmail value) then Nothing else Just INVALID_EMAIL },props{isEmailValid = if (length value == 0) then true else validateEmail value, isBtnEnabled = ((not state.props.fromHomeScreen) && (length state.data.editedName >=3)  && (if (length value == 0) then true else validateEmail value)), genderOptionExpanded = state.props.fromHomeScreen}}
 eval (UpdateButtonAction (PrimaryButton.OnClick)) state = do
   _ <- pure $ hideKeyboardOnNavigation true
   if state.data.gender /= state.data.editedGender then do
