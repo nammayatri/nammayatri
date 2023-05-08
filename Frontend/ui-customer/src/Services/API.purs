@@ -822,7 +822,7 @@ newtype RideAPIEntity = RideAPIEntity {
   status :: String,
   vehicleModel :: String,
   createdAt :: String,
-  driverNumber :: String,
+  driverNumber :: Maybe String,
   shortRideId :: String,
   driverRegisteredAt :: String,
   vehicleNumber :: String,

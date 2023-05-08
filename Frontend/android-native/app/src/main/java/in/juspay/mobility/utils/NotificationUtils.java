@@ -192,7 +192,7 @@ public class NotificationUtils extends AppCompatActivity {
         editor.apply();
     }
 
-     public static  void updateDriverStatus(Boolean status, Context context) {
+     public static  void updateDriverStatus(Boolean status, String mode, Context context) {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.execute(() ->
         {
@@ -204,7 +204,7 @@ public class NotificationUtils extends AppCompatActivity {
             try
             {
                 //endPoint for driver status
-                String orderUrl = baseUrl + "/driver/setActivity?active=" + status;
+                String orderUrl = baseUrl + "/driver/setActivity?active=" + status + "&mode=\"" + mode + "\"";
                 Log.d(LOG_TAG, "orderUrl " + orderUrl);
                 //Http connection to make API call
                 HttpURLConnection connection = (HttpURLConnection) (new URL(orderUrl).openConnection());

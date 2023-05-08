@@ -48,17 +48,18 @@ instance showAction :: Show Action where
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
     AfterRender -> trackAppScreenRender appId "screen" (getScreen ADD_NEW_ADDRESS_SCREEN)
-    BackPressed backpressState -> do
-      trackAppBackPress appId (getScreen ADD_NEW_ADDRESS_SCREEN)
-      case backpressState.props.isLocateOnMap , backpressState.props.editLocation , backpressState.props.showSavePlaceView , backpressState.props.fromHome of
-        true , _ , _ , _ -> trackAppScreenEvent appId (getScreen ADD_NEW_ADDRESS_SCREEN) "in_screen" "backpress_in_locate_on_map"
-        _ , true , false , _ -> trackAppScreenEvent appId (getScreen ADD_NEW_ADDRESS_SCREEN) "in_screen" "backpress_in_edit_location"
-        _ , _ , _ , true -> do
-          trackAppScreenEvent appId (getScreen ADD_NEW_ADDRESS_SCREEN) "in_screen" "backpress_in_from_home"
-          trackAppEndScreen appId (getScreen ADD_NEW_ADDRESS_SCREEN)
-        _ , _ , _ , _ -> do
-          trackAppScreenEvent appId (getScreen ADD_NEW_ADDRESS_SCREEN) "in_screen" "backpress_in_exit_locate_on_map"
-          trackAppEndScreen appId (getScreen ADD_NEW_ADDRESS_SCREEN)
+    BackPressed backpressState -> pure unit --do // TODO:: FIX THIS ISSUE OF UNDEFINED
+      -- _ <- pure $ spy "IN CONTROLLER" backpressState
+      -- -- trackAppBackPress appId (getScreen ADD_NEW_ADDRESS_SCREEN)
+      -- case backpressState.props.isLocateOnMap , backpressState.props.editLocation , backpressState.props.showSavePlaceView , backpressState.props.fromHome of
+      --   true , _ , _ , _ -> trackAppScreenEvent appId (getScreen ADD_NEW_ADDRESS_SCREEN) "in_screen" "backpress_in_locate_on_map"
+      --   _ , true , false , _ -> trackAppScreenEvent appId (getScreen ADD_NEW_ADDRESS_SCREEN) "in_screen" "backpress_in_edit_location"
+      --   _ , _ , _ , true -> do
+      --     trackAppScreenEvent appId (getScreen ADD_NEW_ADDRESS_SCREEN) "in_screen" "backpress_in_from_home"
+      --     trackAppEndScreen appId (getScreen ADD_NEW_ADDRESS_SCREEN)
+      --   _ , _ , _ , _ -> do
+      --     trackAppScreenEvent appId (getScreen ADD_NEW_ADDRESS_SCREEN) "in_screen" "backpress_in_exit_locate_on_map"
+      --     trackAppEndScreen appId (getScreen ADD_NEW_ADDRESS_SCREEN)
     GenericHeaderAC act -> case act of
       GenericHeader.PrefixImgOnClick -> do
         trackAppActionClick appId (getScreen ADD_NEW_ADDRESS_SCREEN) "generic_header_action" "back_icon"
