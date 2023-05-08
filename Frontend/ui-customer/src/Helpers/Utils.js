@@ -536,3 +536,11 @@ export const getMerchantConfig = function (just) {
     }
   }
 }
+
+export const getMobileNumber = function (signatureAuthData) {
+  try {
+    return JSON.parse(signatureAuthData).mobileNumber
+  } catch (err) {
+    console.log("Decode mobileNumber from SignatureAuthData Error => " + err);
+  }
+}

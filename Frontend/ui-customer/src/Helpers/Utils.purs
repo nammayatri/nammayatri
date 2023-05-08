@@ -161,6 +161,8 @@ foreign import storeOnResumeCallback :: forall action. (action -> Effect Unit) -
 
 foreign import getMerchantConfig :: forall a. (a -> Maybe a) -> (Maybe a) -> Effect (Maybe a)
 
+foreign import getMobileNumber :: String -> String
+
 getConfig :: forall  a. Effect (Maybe a)
 getConfig = getMerchantConfig Just Nothing
 

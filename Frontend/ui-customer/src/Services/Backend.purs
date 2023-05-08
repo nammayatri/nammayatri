@@ -151,7 +151,6 @@ withAPIResultBT' url enableCache key f errorHandler flow = do
 ---------------------------------------------------------------TriggerOTPBT Function---------------------------------------------------------------------------------------------------
 triggerOTPBT :: TriggerOTPReq → FlowBT String TriggerOTPResp
 triggerOTPBT payload = do
-    _ <- pure $ spy "inside triggerOTPBT" ""
     -- _ <- lift $ lift $ doAff Readers.initiateSMSRetriever
     headers <- getHeaders' ""
     withAPIResultBT (EP.triggerOTP "") (\x → x) errorHandler (lift $ lift $ callAPI headers payload)
@@ -165,16 +164,23 @@ triggerOTPBT payload = do
         modifyScreenState $ ChooseLanguageScreenStateType (\chooseLanguage -> chooseLanguage { props {btnActive = false} })
         BackT $ pure GoBack
 
-triggerSignatureBasedOTP :: SignatureAuthData → Flow GlobalState (Either ErrorResponse TriggerOTPResp)
-triggerSignatureBasedOTP (SignatureAuthData signatureAuthData) = do
-    Headers headers <- getHeaders ""
-    withAPIResult (EP.triggerOTP "") unwrapResponse $ callAPI (Headers (headers <> [Header "x-sdk-authorization" signatureAuthData.signature])) (TriggerOTPReq signatureAuthData.authData)
-    where
-        unwrapResponse (x) = x
 
 makeTriggerOTPReq :: String -> TriggerOTPReq
-makeTriggerOTPReq mobileNumber =
-    TriggerOTPReq $ "{\"mobileNumber\":\"" <> mobileNumber <> "\",\"mobileCountryCode\":\"+91\",\"merchantId\":\"" <> (if SC.getMerchantId == "NA" then getValueToLocalNativeStore MERCHANT_ID else SC.getMerchantId) <> "\"}"
+makeTriggerOTPReq mobileNumber = TriggerOTPReq
+    {
+      "mobileNumber"      : mobileNumber,
+      "mobileCountryCode" : "+91",
+      "merchantId" : if SC.getMerchantId == "NA" then getValueToLocalNativeStore MERCHANT_ID else SC.getMerchantId
+    }
+
+---------------------------------------------------------------TriggerSignatureOTPBT Function---------------------------------------------------------------------------------------------------
+
+triggerSignatureBasedOTP :: SignatureAuthData → Flow GlobalState (Either ErrorResponse TriggerSignatureOTPResp)
+triggerSignatureBasedOTP (SignatureAuthData signatureAuthData) = do
+    Headers headers <- getHeaders ""
+    withAPIResult (EP.triggerSignatureOTP "") unwrapResponse $ callAPI (Headers (headers <> [Header "x-sdk-authorization" signatureAuthData.signature])) (TriggerSignatureOTPReq signatureAuthData.authData)
+    where
+        unwrapResponse (x) = x
 
 ----------------------------------------------------------- ResendOTPBT Function ------------------------------------------------------------------------------------------------------
 
