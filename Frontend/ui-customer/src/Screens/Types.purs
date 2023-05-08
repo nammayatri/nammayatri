@@ -28,7 +28,7 @@ import Halogen.VDom.DOM.Prop (PropValue)
 import PrestoDOM (LetterSpacing)
 import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
-import Services.API (AddressComponents, BookingLocationAPIEntity, QuoteAPIEntity, Route)
+import Services.API (AddressComponents, BookingLocationAPIEntity, QuoteAPIEntity, Route, FareBreakupAPIEntity)
 
 type Contacts = {
   name :: String,
@@ -485,6 +485,7 @@ type HomeScreenStateData =
   , suggestionsList :: Array String
   , messageToBeSent :: String
   , bannerViewState :: BannerViewState
+  , totalFare :: Number
   }
 
 type HomeScreenStateProps =

@@ -73,6 +73,7 @@ initData = {
       , actionTextColor : Color.elfGreen
       , imageUrl : "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png" 
       }
+    , totalFare : 0.0
     },
   --   rating :: Int
   -- , isRated :: Boolean

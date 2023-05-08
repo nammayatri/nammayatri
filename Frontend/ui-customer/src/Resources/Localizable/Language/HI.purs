@@ -428,4 +428,6 @@ getHI script = case script of
   NO_TIP -> "कोई टिप नहीं"
   CUSTOMER_SELECTED_FARE -> "ग्राहक टिप*"
   CUSTOMER_TIP_DESCRIPTION -> "*राइड मिलने की संभावना बढ़ाने के लिए ग्राहक द्वारा जोड़ी गई अतिरिक्त राशि।"
+  YOUR_RIDE_ENDED_EARLY_CHARGES -> "आपकी राइड जल्दी खत्म हो गई! आपके ड्राइवर पार्टनर को उचित मुआवजा देने के लिए, ₹"
+  WAS_ADDED -> " का शुल्क जोड़ दिया गया है।"
 
