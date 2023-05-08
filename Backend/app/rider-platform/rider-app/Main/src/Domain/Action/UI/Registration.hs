@@ -43,6 +43,7 @@ import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
 import Kernel.External.FCM.Types (FCMRecipientToken)
 import qualified Kernel.External.Maps as Maps
+import qualified Kernel.External.Types as Language
 import Kernel.External.Whatsapp.Interface.Types as Whatsapp
 import Kernel.Sms.Config
 import qualified Kernel.Storage.Esqueleto as DB
@@ -215,7 +216,7 @@ auth isDirectAuth req mbBundleVersion mbClientVersion = do
         mbEncEmail <- encrypt `mapM` req.email
         DB.runTransaction $ do
           RegistrationToken.setDirectAuth regToken.id
-          Person.updatePersonalInfo person.id req.firstName req.middleName req.lastName Nothing mbEncEmail deviceToken req.language req.gender
+          Person.updatePersonalInfo person.id (req.firstName <|> Just "User") req.middleName req.lastName Nothing mbEncEmail deviceToken (req.language <|> Just Language.ENGLISH) (req.gender <|> Just SP.UNKNOWN)
         personAPIEntity <- verifyFlow person regToken req.whatsappNotificationEnroll deviceToken
         return (Just personAPIEntity, Just regToken.token, SR.DIRECT)
       else return (Nothing, Nothing, regToken.authType)
