@@ -47,27 +47,27 @@ type API =
        )
 
 type IssueCategoryListAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'ISSUE
+  ApiAuth 'DRIVER_OFFER_BPP 'ISSUE 'ISSUE_CATEGORY_LIST
     :> Common.IssueCategoryListAPI
 
 type IssueListAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'ISSUE
+  ApiAuth 'DRIVER_OFFER_BPP 'ISSUE 'ISSUE_LIST
     :> Common.IssueListAPI
 
 type IssueInfoAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'ISSUE
+  ApiAuth 'DRIVER_OFFER_BPP 'ISSUE 'ISSUE_INFO
     :> Common.IssueInfoAPI
 
 type IssueUpdateAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'ISSUE
+  ApiAuth 'DRIVER_OFFER_BPP 'ISSUE 'ISSUE_UPDATE
     :> Common.IssueUpdateAPI
 
 type IssueAddCommentAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'ISSUE
+  ApiAuth 'DRIVER_OFFER_BPP 'ISSUE 'ISSUE_ADD_COMMENT
     :> Common.IssueAddCommentAPI
 
 type IssueFetchMediaAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'READ_ACCESS 'ISSUE
+  ApiAuth 'DRIVER_OFFER_BPP 'ISSUE 'ISSUE_FETCH_MEDIA
     :> Common.IssueFetchMediaAPI
 
 handler :: ShortId DM.Merchant -> FlowServer API

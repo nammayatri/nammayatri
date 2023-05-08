@@ -94,7 +94,7 @@ mklocation loc =
       address = castAddress loc.address
     }
   where
-    castAddress DBL.LocationAddress {..} = OnConfirm.Address {area_code = areaCode, locality = area, ward = Nothing, door = Nothing, ..}
+    castAddress DBL.LocationAddress {..} = OnConfirm.Address {area_code = areaCode, locality = area, ward = Nothing, ..}
 
 mkFulfillmentInfo :: DBL.BookingLocation -> DBL.BookingLocation -> UTCTime -> OnConfirm.FulfillmentInfo
 mkFulfillmentInfo fromLoc toLoc startTime =

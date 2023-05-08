@@ -42,9 +42,22 @@ let appBackend =
       , token = sec.appBackendToken
       }
 
+let rccfg =
+      { connectHost = "localhost"
+      , connectPort = 30006
+      , connectAuth = None Text
+      , connectDatabase = +0
+      , connectMaxConnections = +50
+      , connectMaxIdleTime = +30
+      , connectTimeout = None Integer
+      }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , hedisCfg = rcfg
+    , hedisClusterCfg = rccfg
+    , hedisMigrationStage = True
+    , cutOffHedisCluster = Flase
     , port = +8017
     , migrationPath = Some
         (   env:RIDER_DASHBOARD_MIGRATION_PATH as Text

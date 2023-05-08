@@ -58,6 +58,8 @@ dependencies:
   - base64-bytestring
   - bytestring
   - cryptonite
+  - cryptostore >= 0.3.0.0
+  - x509
   - euler-hs
   - lens
   - prometheus-client

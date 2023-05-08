@@ -8,13 +8,17 @@ This is the frontend codebase for the Nammayatri app.
 
 ## Installation
 
-To install the frontend dependencies, navigate to the frontend > ui-customer/ui-driver both and run the following commands:
+To install the frontend dependencies, first enter the development shell by running
+```bash
+   nix develop .#frontend
+```
+This will give you access to all of the purescript tooling as well as the correct version of node
 
+Then navigate to the frontend > ui-customer/ui-driver both and install the npm dependencies by running the following command:
 ```bash
   npm i
-  bower i
 ```
-    
+
 
 
 
@@ -38,7 +42,7 @@ To start the frontend app for Android, follow these steps:
 ## IOS
 
 To start the frontend app for IOS, follow these steps:
-    
+
 
 **Starting the Server**
 

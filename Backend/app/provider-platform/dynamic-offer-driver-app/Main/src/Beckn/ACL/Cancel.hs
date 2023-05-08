@@ -41,7 +41,7 @@ buildCancelSearchReq ::
   m DCancel.CancelSearchReq
 buildCancelSearchReq req = do
   validateContext Context.CANCEL req.context
-  let searchId = Id req.message.item_id
+  let transactionId = req.message.item_id
   return $
     DCancel.CancelSearchReq
       { ..

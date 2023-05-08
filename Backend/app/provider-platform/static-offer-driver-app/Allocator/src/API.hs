@@ -32,7 +32,9 @@ healthCheck ::
   ( HasCoreMetrics r,
     HasField "isShuttingDown" r Shutdown,
     HasField "loggerEnv" r LoggerEnv,
-    HasField "hedisEnv" r Redis.HedisEnv
+    HasField "hedisEnv" r Redis.HedisEnv,
+    HasField "hedisClusterEnv" r Redis.HedisEnv,
+    HasField "hedisMigrationStage" r Bool
   ) =>
   FlowHandlerR r Text
 healthCheck = withFlowHandlerAPI do

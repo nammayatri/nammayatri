@@ -12,21 +12,19 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.Select.Descriptor
-  ( module Beckn.Types.Core.Taxi.Select.Descriptor,
-    module Reexport,
-  )
-where
+module Storage.Queries.Estimate where
 
-import Beckn.Types.Core.Taxi.Common.ItemCode as Reexport
-import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
-import EulerHS.Prelude hiding (State, id, state)
-import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
+import Domain.Types.Estimate as Domain
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
+import Storage.Tabular.Estimate ()
 
-newtype Descriptor = Descriptor
-  { code :: ItemCode
-  }
-  deriving (Generic, FromJSON, ToJSON, Show)
+create :: Estimate -> SqlDB ()
+create = Esq.create
 
-instance ToSchema Descriptor where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+createMany :: [Estimate] -> SqlDB ()
+createMany = Esq.createMany
+
+findById :: Transactionable m => Id Estimate -> m (Maybe Estimate)
+findById = Esq.findById

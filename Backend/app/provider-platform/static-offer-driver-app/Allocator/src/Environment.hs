@@ -46,6 +46,9 @@ data AppCfg = AppCfg
     esqDBCfg :: EsqDBConfig,
     esqDBReplicaCfg :: EsqDBConfig,
     hedisCfg :: Redis.HedisCfg,
+    hedisClusterCfg :: Redis.HedisCfg,
+    hedisMigrationStage :: Bool,
+    cutOffHedisCluster :: Bool,
     metricsPort :: Int,
     healthcheckPort :: Int,
     httpClientOptions :: HttpClientOptions,
@@ -87,6 +90,9 @@ data AppEnv = AppEnv
     esqDBEnv :: EsqDBEnv,
     esqDBReplicaEnv :: EsqDBEnv,
     hedisEnv :: Redis.HedisEnv,
+    hedisClusterEnv :: Redis.HedisEnv,
+    hedisMigrationStage :: Bool,
+    cutOffHedisCluster :: Bool,
     isShuttingDown :: Shutdown,
     coreMetrics :: CoreMetricsContainer,
     btmMetrics :: AllocatorMetricsContainer,
@@ -112,6 +118,10 @@ buildAppEnv AppCfg {..} = do
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
   hedisEnv <- Redis.connectHedis hedisCfg Redis.staticOfferDriverAppPrefix
+  hedisClusterEnv <-
+    if cutOffHedisCluster
+      then pure hedisEnv
+      else Redis.connectHedisCluster hedisClusterCfg Redis.staticOfferDriverAppPrefix
   pure AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

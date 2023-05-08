@@ -1,19 +1,23 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Helpers.Utils where
+module Helpers.Utils
+    ( module Helpers.Utils
+    , module ReExport
+    )
+    where
 
 import Components.LocationListItem.Controller (dummyLocationListState)
 import Control.Monad.Except (runExcept)
@@ -23,13 +27,12 @@ import Data.Date (Date)
 import Data.Either (Either(..), hush)
 import Data.Foldable (or)
 import Data.Generic.Rep (class Generic)
-import Data.Generic.Rep.Show (genericShow)
+import Data.Show.Generic (genericShow)
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Number (fromString)
 import Data.Profunctor.Strong (first)
 import Data.String as DS
 import Data.Traversable (traverse)
-import Debug.Trace (spy)
+import Debug (spy)
 import Effect (Effect)
 import Effect (Effect)
 import Effect.Aff (error, killFiber, launchAff, launchAff_)
@@ -37,39 +40,40 @@ import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
 import Effect.Class (liftEffect)
 import Effect.Console (logShow)
 import Engineering.Helpers.Commons (liftFlow, os, isPreviousVersion)
+import Engineering.Helpers.Commons (parseFloat, setText') as ReExport
 import Foreign.Class (class Decode, class Encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
 import Juspay.OTP.Reader (initiateSMSRetriever)
 import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
-import Math (pi, sin, cos, sqrt, asin)
+import Data.Number (fromString, pi, sin, cos, sqrt, asin)
 import Prelude (class Show, class Ord, Unit, bind, discard, pure, unit, void, identity, not, (<*>), (<#>), (<<<), (>>>), ($), (<>), (>), show, (==), (/=), (/), (*), (-), (+), map, compare, (<), (=<<), (<=), ($))
 import Presto.Core.Flow (Flow, doAff)
 import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent)
 import Types.App (GlobalState)
 
 -- shuffle' :: forall a. Array a -> Effect (Array a)
--- shuffle' array = do 
---   arrayWithRandom <- addRandom array 
+-- shuffle' array = do
+--   arrayWithRandom <- addRandom array
 --   let sortWithRandom = sortWith (\b -> b.randomNum) arrayWithRandom
 --   arrayWithoutRandom <- removeRandom sortWithRandom
 --   pure arrayWithoutRandom
---   where 
+--   where
 --     addRandom :: Array a -> Effect (Array {randomNum :: Number, value :: a})
 --     addRandom arr = do
---       randomValue <- random 
---       case head arr of 
---         Just x -> do 
+--       randomValue <- random
+--       case head arr of
+--         Just x -> do
 --           future <- (addRandom (drop 1 arr))
 --           pure $ [{randomNum : randomValue, value : x}] <> future
 --         Nothing -> pure []
 --     removeRandom :: Array {randomNum :: Number, value :: a} -> Effect (Array a)
---     removeRandom arr = do 
---       case head arr of 
---         Just x -> do 
+--     removeRandom arr = do
+--       case head arr of
+--         Just x -> do
 --           future <- (removeRandom (drop 1 arr))
---           pure $ [x.value] <> future 
---         Nothing -> pure [] 
+--           pure $ [x.value] <> future
+--         Nothing -> pure []
 foreign import shuffle :: forall a. Array a -> Array a
 
 foreign import withinTimeRange :: String -> String -> Boolean
@@ -80,7 +84,7 @@ foreign import storeCallBackLocateOnMap :: forall action. (action -> Effect Unit
 
 foreign import storeCallBackCustomer :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
 
-foreign import getLocationName :: forall action. (action -> Effect Unit) -> String -> String -> String -> (String -> String -> String -> action) -> Effect Unit
+foreign import getLocationName :: forall action. (action -> Effect Unit) -> Number -> Number -> String -> (Number -> Number -> String -> action) -> Effect Unit
 
 foreign import getCurrentDate :: String -> String
 foreign import storeCallBackContacts :: forall action. (action -> Effect Unit) -> ((Array Contacts) -> action) -> Effect Unit
@@ -94,8 +98,6 @@ foreign import getTime :: Unit -> Int
 
 -- foreign import generateSessionToken :: String -> String
 foreign import requestKeyboardShow :: String -> Effect Unit
-
-foreign import setText' :: String -> String -> Effect Unit
 
 foreign import addTimeToDate :: Date -> Number -> String -> Date
 
@@ -125,11 +127,17 @@ foreign import setRefreshing :: String -> Boolean -> Unit
 
 foreign import setEnabled :: String -> Boolean -> Unit
 
-foreign import saveToLocalStore' :: String -> String -> EffectFnAff Unit
+foreign import saveToLocalStoreImpl :: String -> String -> EffectFnAff Unit
+saveToLocalStore' :: String -> String -> EffectFnAff Unit
+saveToLocalStore' = saveToLocalStoreImpl
 
-foreign import fetchFromLocalStore' :: String -> (String -> Maybe String) -> Maybe String -> Effect (Maybe String)
+foreign import fetchFromLocalStoreImpl :: String -> (String -> Maybe String) -> Maybe String -> Effect (Maybe String)
+fetchFromLocalStore' :: String -> (String -> Maybe String) -> Maybe String -> Effect (Maybe String)
+fetchFromLocalStore' = fetchFromLocalStoreImpl
 
-foreign import fetchFromLocalStoreTemp' :: String -> (String -> Maybe String) -> Maybe String -> Effect (Maybe String)
+foreign import fetchFromLocalStoreTempImpl :: String -> (String -> Maybe String) -> Maybe String -> Effect (Maybe String)
+fetchFromLocalStoreTemp' :: String -> (String -> Maybe String) -> Maybe String -> Effect (Maybe String)
+fetchFromLocalStoreTemp' = fetchFromLocalStoreTempImpl
 
 foreign import fetchAndUpdateCurrentLocation :: forall action. (action -> Effect Unit) -> (String -> String -> action) -> action -> Effect Unit
 
@@ -144,8 +152,6 @@ foreign import getKeyInSharedPrefKeysConfigEff :: String -> Effect String
 foreign import updateInputString :: String -> Unit
 
 foreign import debounceFunction :: forall action. Int -> (action -> Effect Unit) -> (String -> action) -> Effect Unit
-
-foreign import parseFloat :: forall a. a -> Int -> String
 
 foreign import clearWaitingTimer :: String -> Unit
 foreign import contactPermission :: Unit -> Effect Unit
@@ -208,14 +214,14 @@ fetchRecents objName = do
     Just encodedState -> do
       case runExcept (decodeJSON encodedState) of
         Right obj -> pure $ Just obj
-        Left err -> fetchOldRecents objName 
+        Left err -> fetchOldRecents objName
     Nothing -> pure Nothing
 
 fetchOldRecents :: Decode RecentlySearchedObject => String -> Flow GlobalState (Maybe RecentlySearchedObject)
-fetchOldRecents objName = do 
+fetchOldRecents objName = do
   (maybeEncodedState :: Maybe String) <- liftFlow $ fetchFromLocalStoreTemp' objName Just Nothing
   case maybeEncodedState of
-    Just encodedState -> do 
+    Just encodedState -> do
       case runExcept (decodeJSON encodedState) of
         Right obj -> pure $ Just obj
         Left err -> do
@@ -230,13 +236,13 @@ getObjFromLocal homeScreenState = do
     Just recents -> pure $ recents{predictionArray =  map (\item -> item{prefixImageUrl = "ny_ic_recent_search,https://assets.juspay.in/nammayatri/images/user/ny_ic_recent_search.png"}) (recents.predictionArray)}
     Nothing -> pure homeScreenState.data.recentSearchs
 
-getRecentSearches :: AddNewAddressScreenState -> Flow GlobalState RecentlySearchedObject 
-getRecentSearches addNewAddressScreenState = do 
+getRecentSearches :: AddNewAddressScreenState -> Flow GlobalState RecentlySearchedObject
+getRecentSearches addNewAddressScreenState = do
       (recentlySearched :: Maybe RecentlySearchedObject) <- (fetchRecents "RECENT_SEARCHES")
       case recentlySearched of
         Just recents  -> pure recents
         Nothing -> pure addNewAddressScreenState.data.recentSearchs
-        
+
 --------------------------------------------------------------------------------------------------
 
 saveCurrentLocations :: forall s. Serializable s => String -> s -> Flow GlobalState Unit
@@ -267,9 +273,9 @@ checkCurrLoc :: CurrentLocationDetails -> Array CurrentLocationDetails -> Boolea
 checkCurrLoc currLoc currLocArr = or ( map (\item -> (getDistanceBwCordinates currLoc.lat currLoc.lon item.lat item.lon < 0.05)) currLocArr)
 
 addToPrevCurrLoc :: CurrentLocationDetails -> Array CurrentLocationDetails -> Array CurrentLocationDetails
-addToPrevCurrLoc currLoc currLocArr = 
-  if (not (checkCurrLoc currLoc currLocArr)) 
-    then if (length currLocArr == 10) 
+addToPrevCurrLoc currLoc currLocArr =
+  if (not (checkCurrLoc currLoc currLocArr))
+    then if (length currLocArr == 10)
             then (fromMaybe [] (deleteAt 10 (cons currLoc currLocArr)))
             else (cons currLoc currLocArr)
     else currLocArr
@@ -279,18 +285,18 @@ addToPrevCurrLoc currLoc currLocArr =
 checkPrediction :: LocationListItemState -> Array LocationListItemState -> Boolean
 checkPrediction prediction predictionArr = if (length (filter (\ ( item) -> (item.placeId) == (prediction.placeId))(predictionArr)) > 0) then false else true
 
-getPrediction :: LocationListItemState -> Array LocationListItemState -> LocationListItemState 
+getPrediction :: LocationListItemState -> Array LocationListItemState -> LocationListItemState
 getPrediction prediction predictionArr = (fromMaybe dummyLocationListState ((filter (\ ( item) -> (item.placeId) == (prediction.placeId))(predictionArr)) !! 0))
 
 addSearchOnTop :: LocationListItemState -> Array LocationListItemState -> Array LocationListItemState
 addSearchOnTop prediction predictionArr = cons prediction (filter (\ ( item) -> (item.placeId) /= (prediction.placeId))(predictionArr))
-    
+
 addToRecentSearches :: LocationListItemState -> Array LocationListItemState -> Array LocationListItemState
-addToRecentSearches prediction predictionArr = 
+addToRecentSearches prediction predictionArr =
     let prediction' = prediction {prefixImageUrl = "ny_ic_recent_search,https://assets.juspay.in/nammayatri/images/user/ny_ic_recent_search.png", locationItemType = Just RECENTS}
-      in (if (checkPrediction prediction' predictionArr) 
+      in (if (checkPrediction prediction' predictionArr)
            then (if length predictionArr == 30 then (fromMaybe [] (deleteAt 30 (cons prediction' predictionArr)))
-          else (cons  prediction' predictionArr)) else addSearchOnTop prediction' predictionArr) 
+          else (cons  prediction' predictionArr)) else addSearchOnTop prediction' predictionArr)
 
 differenceOfLocationLists :: Array LocationListItemState -> Array LocationListItemState -> Array LocationListItemState
 differenceOfLocationLists arr1 arr2 = filter ( \item1 -> length (filter( \ (item2) -> (item2.placeId == item1.placeId)) arr2) == 0) arr1
@@ -314,11 +320,10 @@ getDistanceBwCordinates lat1 long1 lat2 long2 = do
 toRad :: Number -> Number
 toRad n = (n * pi) / 180.0
 
-  
 getCurrentLocationMarker :: String -> String
 getCurrentLocationMarker currentVersion = if isPreviousVersion currentVersion (getPreviousVersion "") then "ic_customer_current_location" else "ny_ic_customer_current_location"
 
-getPreviousVersion :: String -> String 
+getPreviousVersion :: String -> String
 getPreviousVersion _ = if os == "IOS" then "1.2.5" else "1.2.0"
 
 rotateArray :: forall a. Array a -> Int -> Array a

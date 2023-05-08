@@ -20,7 +20,7 @@ in
               awscli
               coreutils
               bash
-              self'.packages.nammayatri-dist
+              self'.packages.nammayatri
             ];
             name = "beckn-root";
             pathsToLink = [
@@ -36,6 +36,15 @@ in
             ];
             Cmd = [ "${self'.packages.nammayatri}/bin/rider-app-exe" ];
           };
+
+          # Test that the docker image contains contents we expected for
+          # production.
+          extraCommands = ''
+            # Executables are under /opt/app
+            ls opt/app/rider-app-exe
+            # Swagger configs are copied over
+            ls opt/app/swagger
+          '';
         };
       };
     };

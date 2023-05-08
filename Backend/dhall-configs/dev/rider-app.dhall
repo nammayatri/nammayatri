@@ -90,9 +90,22 @@ let registryMap =
       , { mapKey = "JUSPAY.BG.1", mapValue = "http://localhost:8020/" }
       ]
 
+let hccfg =
+      { connectHost = "localhost"
+      , connectPort = 30006
+      , connectAuth = None Text
+      , connectDatabase = +0
+      , connectMaxConnections = +50
+      , connectMaxIdleTime = +30
+      , connectTimeout = None Integer
+      }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , hedisCfg = hcfg
+    , hedisClusterCfg = hccfg
+    , hedisMigrationStage = True
+    , cutOffHedisCluster = Flase
     , smsCfg = smsConfig
     , infoBIPCfg = InfoBIPConfig
     , webengageCfg = WebengageConfig

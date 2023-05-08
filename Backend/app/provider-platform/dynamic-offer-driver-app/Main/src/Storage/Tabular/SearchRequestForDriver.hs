@@ -40,6 +40,7 @@ mkPersist
   [defaultQQ|
     SearchRequestForDriverT sql=search_request_for_driver
       id Text
+      transactionId Text
       searchRequestId SearchRequestTId
       startTime UTCTime
       actualDistanceToPickup Meters

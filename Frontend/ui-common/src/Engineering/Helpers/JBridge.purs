@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -56,8 +56,8 @@ import Engineering.Helpers.Commons (screenHeight, screenWidth)
 -- foreign import _isPlayStoreInstalled :: Effect Boolean
 -- foreign import _isNetworkAvailable :: Effect Boolean
 -- foreign import _renewFile :: String -> Effect Unit
--- foreign import readFile'      :: String -> Effect String
-foreign import showLoader'      :: String -> Effect Unit
+-- foreign import readFileImpl      :: String -> Effect String
+foreign import showLoaderImpl      :: String -> Effect Unit
 foreign import locateOnMap :: Boolean -> Number -> Number -> Unit
 
 foreign import exitLocateOnMap :: String -> Unit
@@ -71,7 +71,7 @@ foreign import getVersionCode   :: Effect Int
 foreign import getVersionName   :: Effect String
 -- foreign import getManufacturerName :: Unit -> String
 -- foreign import getAndroidVersion :: Effect Int
--- foreign import showQrCode'      :: String -> String -> Effect Unit
+-- foreign import showQrCodeImpl      :: String -> String -> Effect Unit
 -- foreign import scanQrCode       :: forall action. String -> (action -> Effect Unit) ->  (String -> action) -> Effect Unit
 -- foreign import timePicker       :: forall action. (action -> Effect Unit) -> (Int -> Int -> action) -> Effect Unit
 foreign import datePicker       :: forall action. String -> (action -> Effect Unit)  -> (Int -> Int -> Int -> action) -> Effect Unit
@@ -81,14 +81,14 @@ foreign import setFCMToken :: forall action. (action -> Effect Unit) -> (String 
 -- foreign import isNetworkAvailable :: Unit -> Boolean
 foreign import openUrlInApp  :: String -> Effect Unit
 -- foreign import openUrlInMailApp  :: String -> Effect Unit
-foreign import addMarker' :: String -> Number -> Number -> Int -> Number -> Number -> Effect Boolean
+foreign import addMarkerImpl :: String -> Number -> Number -> Int -> Number -> Number -> Effect Boolean
 foreign import removeMarker :: String -> Effect Unit
 -- foreign import parseAddress      :: String -> Address
 foreign import disableActionEditText :: String -> Unit
-foreign import uploadFile :: Unit -> Effect Unit 
-foreign import previewImage :: String -> Effect Unit 
+foreign import uploadFile :: Unit -> Effect Unit
+foreign import previewImage :: String -> Effect Unit
 foreign import storeCallBackImageUpload :: forall action. (action -> Effect Unit) -> (String -> String -> action) -> Effect Unit
-foreign import renderBase64Image :: String -> String -> Effect Unit 
+foreign import renderBase64Image :: String -> String -> Effect Unit
 foreign import copyToClipboard :: String -> Unit
 foreign import drawRoute :: Locations -> String -> String -> Boolean -> String -> String -> Int -> String -> String -> String -> Effect Unit
 foreign import isCoordOnPath :: Locations -> Number -> Number -> Int -> Effect IsLocationOnPath
@@ -107,7 +107,7 @@ foreign import requestAutoStartPermission  :: Unit -> Effect Unit
 foreign import requestBatteryPermission :: Unit -> Effect Unit
 foreign import isBatteryPermissionEnabled :: Unit -> Effect Boolean
 foreign import reallocateMapFragment :: String -> Effect Unit
-foreign import showMap' :: forall action. String -> Boolean -> String -> Number -> (action -> Effect Unit) -> (String -> String -> String -> action) -> Effect Boolean
+foreign import showMapImpl :: forall action. String -> Boolean -> String -> Number -> (action -> Effect Unit) -> (String -> String -> String -> action) -> Effect Boolean
 foreign import mapSnapShot :: forall action. String -> Locations -> String -> Boolean -> (action -> Effect Unit) -> (String -> action) -> Effect Boolean
 foreign import getCurrentLatLong  :: Effect Paths
 foreign import isLocationEnabled :: Unit -> Effect Boolean
@@ -124,12 +124,12 @@ foreign import hideKeyboardOnNavigation :: Boolean -> Unit
 -- -- foreign import getSessionInfo :: { android_id_raw :: String, android_id :: String, os_version :: String, package_name :: String, android_api_level :: String }
 foreign import getKeyInSharedPrefKeys :: String -> String
 foreign import getKeyInNativeSharedPrefKeys :: String -> String
-foreign import setKeyInSharedPrefKeys' :: String -> String -> Effect Unit
-foreign import setEnvInNativeSharedPrefKeys' :: String -> String -> Effect Unit
+foreign import setKeyInSharedPrefKeysImpl :: String -> String -> Effect Unit
+foreign import setEnvInNativeSharedPrefKeysImpl :: String -> String -> Effect Unit
 foreign import removeKeysInSharedPrefs :: String -> Unit
 foreign import removeKeysInNativeSharedPrefs :: String -> Unit
-foreign import toggleLoader' :: Boolean -> Effect Unit
-foreign import loaderText' :: String -> String -> Effect Unit
+foreign import toggleLoaderImpl :: Boolean -> Effect Unit
+foreign import loaderTextImpl :: String -> String -> Effect Unit
 foreign import generatePDF :: InvoiceScreenState -> String -> Unit
 foreign import requestKeyboardShow :: String -> Effect Unit
 foreign import showDialer          :: String -> Unit
@@ -145,6 +145,7 @@ foreign import stopChatListenerService :: Effect Unit
 foreign import storeCallBackMessageUpdated :: forall action. (action -> Effect Unit) -> String -> String  -> (String -> String -> String -> action) -> Effect Unit
 foreign import sendMessage :: String -> Unit
 foreign import scrollToBottom :: String -> Effect Unit
+foreign import metaLogEvent :: String -> Unit
 foreign import firebaseLogEvent :: String -> Unit
 foreign import firebaseLogEventWithParams :: String -> String -> String -> Effect Unit
 foreign import firebaseLogEventWithTwoParams :: String -> String -> String -> String -> String -> Effect Unit
@@ -153,7 +154,7 @@ foreign import firebaseUserID :: String  -> Effect Unit
 -- foreign import closeApp       :: String -> Effect Unit
 foreign import storeCallBackDriverLocationPermission :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
 foreign import setStoreCallBackPopUp :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
-foreign import deletePopUpCallBack :: String -> Unit 
+foreign import deletePopUpCallBack :: String -> Unit
 -- foreign import requestLocationPermissionDriver :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
 foreign import storeCallBackOverlayPermission :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
 foreign import storeCallBackBatteryUsagePermission :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
@@ -214,15 +215,15 @@ foreign import goBackPrevWebPage ::  String -> Effect Unit
 
 -- -- sendSafetyNetRequest :: String -> String -> Flow (Either String String)
 -- -- sendSafetyNetRequest key nonce = do
--- --   res <- oneOf [sendSafetyNetRequest' key nonce, doAff do (makeAff \cb -> do (registerEvent' "onPause" (\_ -> _safefyNetShutdownSafeBrowsing (Left >>> Right >>> cb)) *> pure nonCanceler)) ]
+-- --   res <- oneOf [sendSafetyNetRequestImpl key nonce, doAff do (makeAff \cb -> do (registerEvent' "onPause" (\_ -> _safefyNetShutdownSafeBrowsing (Left >>> Right >>> cb)) *> pure nonCanceler)) ]
 -- --   case res of
 -- --     Left "onPause" -> do
--- --       _ <- doAff do (makeAff \cb -> do (registerEvent' "onResume" (\_ -> _safefyNetInitSafeBrowsing (Left >>> Right >>> cb)) *> pure nonCanceler))
+-- --       _ <- doAff do (makeAff \cb -> do (registerEventImpl "onResume" (\_ -> _safefyNetInitSafeBrowsing (Left >>> Right >>> cb)) *> pure nonCanceler))
 -- --       sendSafetyNetRequest key nonce
 -- --     _ -> pure res
 
--- -- sendSafetyNetRequest' :: String -> String -> Flow (Either String String)
--- -- sendSafetyNetRequest' key nonce = doAff do
+-- -- sendSafetyNetRequestImpl :: String -> String -> Flow (Either String String)
+-- -- sendSafetyNetRequestImpl key nonce = doAff do
 -- --   makeAff \cb -> do
 -- --     _sendSafetyNetRequest nonce key (Right >>> Right >>> cb) (Left >>> Right >>> cb)
 -- --     pure nonCanceler
@@ -243,44 +244,44 @@ foreign import goBackPrevWebPage ::  String -> Effect Unit
 -- -- rsaEncryption plainTxt algo key = (liftFlow $ _rsaEncryption plainTxt algo key Left Right) >>= either throwErr pure
 
 showLoader :: String -> Flow GlobalState Unit
-showLoader str = liftFlow (showLoader' str)
+showLoader str = liftFlow (showLoaderImpl str)
 
 -- readFile :: String -> Flow GlobalState String
--- readFile = liftFlow <<< readFile'
+-- readFile = liftFlow <<< readFileImpl
 
 -- showQrCode :: String -> String -> Effect Unit
--- showQrCode id str = showQrCode' id str
+-- showQrCode id str = showQrCodeImpl id str
 
 addMarker :: String -> Number -> Number -> Int -> Number -> Number -> Effect Boolean
-addMarker title lat lng markerSize anchorV anchorV1 = (addMarker' title lat lng markerSize anchorV anchorV1)
+addMarker title lat lng markerSize anchorV anchorV1 = (addMarkerImpl title lat lng markerSize anchorV anchorV1)
 
 showMap :: forall action. String -> Boolean -> String -> Number -> (action -> Effect Unit) -> (String -> String -> String -> action) -> Effect Boolean
-showMap = showMap' --liftFlow (showMap' id mapType)
+showMap = showMapImpl --liftFlow (showMapImpl id mapType)
 
 toggleLoader :: Boolean -> Flow GlobalState Unit
-toggleLoader flag = liftFlow (toggleLoader' flag)
+toggleLoader flag = liftFlow (toggleLoaderImpl flag)
 
 loaderText :: String -> String -> Flow GlobalState Unit
-loaderText mainTxt subTxt = liftFlow (loaderText' mainTxt subTxt)
+loaderText mainTxt subTxt = liftFlow (loaderTextImpl mainTxt subTxt)
 
 -- loader :: Boolean -> Maybe LoaderMessage -> Flow GlobalState Unit
 -- loader flag message = do
 --     _ <- pure $ hideKeyboardOnNavigation true
 --     case message of
 --         Just (LoaderMessage (Title title) (SubTitle subTitle)) -> do
---             _ <- liftFlow (loaderText' (title)  (subTitle))
---             liftFlow (toggleLoader' flag)
---         Nothing -> liftFlow (toggleLoader' flag)
+--             _ <- liftFlow (loaderTextImpl (title)  (subTitle))
+--             liftFlow (toggleLoaderImpl flag)
+--         Nothing -> liftFlow (toggleLoaderImpl flag)
 
 showMarker :: String -> Number -> Number -> Int -> Number -> Number -> Effect Boolean
 showMarker title lat lng markerSize anchorV anchorV1 = addMarker title lat lng markerSize anchorV anchorV1
 
 
-setKeyInSharedPrefKeys :: String -> String -> Flow GlobalState Unit 
-setKeyInSharedPrefKeys key val = liftFlow (setKeyInSharedPrefKeys' key val)
+setKeyInSharedPrefKeys :: String -> String -> Flow GlobalState Unit
+setKeyInSharedPrefKeys key val = liftFlow (setKeyInSharedPrefKeysImpl key val)
 
-setEnvInNativeSharedPrefKeys :: String -> String -> Flow GlobalState Unit 
-setEnvInNativeSharedPrefKeys key val = liftFlow (setEnvInNativeSharedPrefKeys' key val)
+setEnvInNativeSharedPrefKeys :: String -> String -> Flow GlobalState Unit
+setEnvInNativeSharedPrefKeys key val = liftFlow (setEnvInNativeSharedPrefKeysImpl key val)
 
 -- onEventWithCB :: Foreign -> Flow GlobalState (Either String String)
 -- onEventWithCB obj = doAff do
@@ -323,11 +324,11 @@ type IsLocationOnPath = {
 -- data LoaderMessage = LoaderMessage Title SubTitle
 
 getHeightFromPercent :: Int -> Int
-getHeightFromPercent percent = 
+getHeightFromPercent percent =
   let scrHeight = (screenHeight unit)
     in ((scrHeight / 100) * percent)
 
 getWidthFromPercent :: Int -> Int
-getWidthFromPercent percent = 
+getWidthFromPercent percent =
   let scrWidth = (screenWidth unit)
     in ((scrWidth / 100) * percent)

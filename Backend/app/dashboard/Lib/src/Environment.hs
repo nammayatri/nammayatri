@@ -17,7 +17,7 @@ module Environment where
 import Kernel.External.Encryption (EncTools)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
-import Kernel.Storage.Hedis (HedisCfg, HedisEnv, connectHedis, disconnectHedis)
+import Kernel.Storage.Hedis (HedisCfg, HedisEnv, connectHedis, connectHedisCluster, disconnectHedis)
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Common
 import Kernel.Types.Flow
@@ -34,6 +34,9 @@ data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
     esqDBReplicaCfg :: EsqDBConfig,
     hedisCfg :: HedisCfg,
+    hedisClusterCfg :: HedisCfg,
+    hedisMigrationStage :: Bool,
+    cutOffHedisCluster :: Bool,
     port :: Int,
     migrationPath :: Maybe FilePath,
     autoMigrate :: Bool,
@@ -56,6 +59,9 @@ data AppEnv = AppEnv
   { esqDBEnv :: EsqDBEnv,
     esqDBReplicaEnv :: EsqDBEnv,
     hedisEnv :: HedisEnv,
+    hedisClusterEnv :: HedisEnv,
+    hedisMigrationStage :: Bool,
+    cutOffHedisCluster :: Bool,
     port :: Int,
     loggerConfig :: LoggerConfig,
     loggerEnv :: LoggerEnv,
@@ -87,6 +93,10 @@ buildAppEnv authTokenCacheKeyPrefix AppCfg {..} = do
   coreMetrics <- registerCoreMetricsContainer
   let modifierFunc = ("dashboard:" <>)
   hedisEnv <- connectHedis hedisCfg modifierFunc
+  hedisClusterEnv <-
+    if cutOffHedisCluster
+      then pure hedisEnv
+      else connectHedisCluster hedisClusterCfg modifierFunc
   isShuttingDown <- mkShutdown
   return $ AppEnv {..}
 
@@ -94,6 +104,7 @@ releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} = do
   releaseLoggerEnv loggerEnv
   disconnectHedis hedisEnv
+  disconnectHedis hedisClusterEnv
 
 type FlowHandler = FlowHandlerR AppEnv
 

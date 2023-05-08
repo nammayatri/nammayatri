@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -21,7 +21,7 @@ import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode, defaultEnumDeco
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype)
-import Data.Generic.Rep.Eq (genericEq)
+import Data.Eq.Generic (genericEq)
 import Foreign.Generic (class Decode, class Encode)
 data VehicalTypes = Sedan | Hatchback | SUV | Auto
 data LazyCheck = LanguageStyle | EndPoint | BaseUrl | TypoGraphy | WithoutOffers
@@ -101,7 +101,7 @@ instance decodePayload :: Decode Payload where decode = defaultDecode
 instance encodePayload :: Encode Payload where encode = defaultEncode
 
 type CancellationReasons = {
-    reasonCode :: String, 
+    reasonCode :: String,
     description :: String
 }
 

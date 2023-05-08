@@ -72,7 +72,7 @@ getDriverLoc rideId personId = do
   when
     (ride.status == COMPLETED || ride.status == CANCELLED)
     $ throwError $ RideInvalidStatus "Cannot track this ride"
-  res <- CallBPP.callGetDriverLocation ride
+  res <- CallBPP.callGetDriverLocation ride.trackingUrl
   booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   let fromLocation = Maps.getCoordinates booking.fromLocation
   driverReachedDistance <- asks (.rideCfg.driverReachedDistance)
@@ -89,7 +89,7 @@ getDriverLoc rideId personId = do
           Notify.notifyDriverOnTheWay personId
           Redis.setExp driverOnTheWay () driverOnTheWayNotifyExpiry
         when (isNothing mbHasReachedNotified && distance <= driverReachedDistance) $ do
-          Notify.notifyDriverHasReached personId ride
+          Notify.notifyDriverHasReached personId ride.otp ride.vehicleNumber
           Redis.setExp driverHasReached () 1500
   return res.currPoint
   where
@@ -113,7 +113,7 @@ getRideStatus rideId personId = withLogTag ("personId-" <> personId.getId) do
   mbPos <-
     if ride.status == COMPLETED || ride.status == CANCELLED
       then return Nothing
-      else Just <$> CallBPP.callGetDriverLocation ride
+      else Just <$> CallBPP.callGetDriverLocation ride.trackingUrl
   booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   rider <- runInReplica $ QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   decRider <- decrypt rider

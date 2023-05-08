@@ -11,22 +11,30 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE DerivingVia #-}
 
-module Domain.Types.SearchRequestSentToDriverEvent where
+module API.Dashboard.RideBooking.Quote where
 
-import Domain.Types.Person
-import Domain.Types.SearchRequest
-import Kernel.Prelude
-import Kernel.Types.Common
+import qualified API.UI.Quote as UQ
+import qualified Domain.Action.UI.Quote as DQuote
+import qualified Domain.Types.Person as DP
+import qualified Domain.Types.SearchRequest as SSR
+import Environment
 import Kernel.Types.Id
+import Servant
 
-data SearchRequestSentToDriverEvent = SearchRequestSentToDriverEvent
-  { id :: Id SearchRequestSentToDriverEvent,
-    searchRequestId :: Id SearchRequest,
-    searchRequestValidTill :: UTCTime,
-    driverId :: Id Person,
-    distanceToPickup :: Meters,
-    durationToPickup :: Seconds,
-    baseFare :: Double,
-    createdAt :: UTCTime
-  }
+type API =
+  "quote"
+    :> CustomerGetQuoteAPI
+
+type CustomerGetQuoteAPI =
+  Capture "searchId" (Id SSR.SearchRequest)
+    :> Capture "customerId" (Id DP.Person)
+    :> "result"
+    :> Get '[JSON] DQuote.GetQuotesRes
+
+handler :: FlowServer API
+handler = callGetQuotes
+
+callGetQuotes :: Id SSR.SearchRequest -> Id DP.Person -> FlowHandler DQuote.GetQuotesRes
+callGetQuotes = UQ.getQuotes

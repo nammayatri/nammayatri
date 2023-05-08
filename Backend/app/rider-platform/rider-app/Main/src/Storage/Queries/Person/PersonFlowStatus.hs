@@ -12,7 +12,12 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Storage.Queries.Person.PersonFlowStatus where
+module Storage.Queries.Person.PersonFlowStatus
+  {-# WARNING
+    "This module contains direct calls to the table. \
+  \ But most likely you need a version from CachedQueries with caching results feature."
+    #-}
+where
 
 import Domain.Types.Person
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS

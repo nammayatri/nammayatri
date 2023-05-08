@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -30,7 +30,7 @@ import Data.Int (fromString)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (Pattern(..), split, length, take, drop, joinWith, trim)
 import Data.String.CodeUnits (charAt)
-import Effect.Aff (launchAff_)
+import Effect.Aff (launchAff)
 import Language.Strings (getString)
 import Language.Types(STR(..))
 import Engineering.Helpers.Commons (getNewIDWithTag, strToBool, flowRunner)
@@ -41,8 +41,8 @@ import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types (AnimationState(..), NotificationCardState, NotificationDetailModelState, NotificationsScreenState, NotificationCardPropState, YoutubeData, YoutubeVideoStatus(..))
 import Services.APITypes (MediaFileApiResponse(..), MediaType(..), MessageAPIEntityResponse(..), MessageListRes(..), MessageType(..))
 import Services.Backend as Remote
-import Debug.Trace
 import Storage (KeyStore(..), setValueToLocalNativeStore)
+import Debug (spy)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -89,7 +89,7 @@ eval BackPressed state = do
   else if state.notificationDetailModelState.addCommentModelVisibility == VISIBLE then
     continue state { notificationDetailModelState { addCommentModelVisibility = GONE, comment = Nothing} }
   else
-    exit $ GoBack 
+    exit $ GoBack
 
 eval (NotificationCardClick (NotificationCardAC.Action1Click index)) state = do
   case state.notificationList Array.!! index of
@@ -132,7 +132,7 @@ eval (NotificationDetailModelAC (NotificationDetailModel.AddCommentModelAction P
       let updatedNotificationList = (map(\item -> if(item.messageId == state.notificationDetailModelState.messageId) then item{comment = Just comment } else item)state.notificationList)
       continueWithCmd state { notificationDetailModelState { addCommentModelVisibility = GONE }, notificationList = updatedNotificationList }
         [ do
-            launchAff_ $ flowRunner $ runExceptT $ runBackT
+            void $ launchAff $ flowRunner $ runExceptT $ runBackT
               $ do
                   res <- Remote.messageResponseBT state.notificationDetailModelState.messageId (Remote.makeMessageReplyReq comment)
                   pure unit
@@ -141,13 +141,15 @@ eval (NotificationDetailModelAC (NotificationDetailModel.AddCommentModelAction P
     Nothing -> continue state
 
 eval (NotificationDetailModelAC NotificationDetailModel.AfterRender) state = do
-  let 
+  let
     updatedItem = map (\a -> if a.messageId == state.notificationDetailModelState.messageId then a{ notificationNotSeen = false } else a) state.notificationList
     updatedPrestoItem = map (\a -> if a.messageId == toPropValue state.notificationDetailModelState.messageId then a{ notificationNotSeen = toPropValue "gone" } else a) state.prestoListArrayItems
   continue state{ prestoListArrayItems = updatedPrestoItem, notificationList = updatedItem }
 
 eval (ScrollStateChanged scrollState) state = do
-  _ <- if scrollState == SCROLL_STATE_FLING then pure $ setEnabled (getNewIDWithTag "NotificationSwipeRefresh") false else pure unit
+  _ <- case scrollState of
+           SCROLL_STATE_FLING -> pure $ setEnabled (getNewIDWithTag "NotificationSwipeRefresh") false
+           _ -> pure unit
   continue state
 
 eval (Scroll value) state = do
@@ -195,7 +197,7 @@ eval (MessageListResAction (MessageListRes notificationArray)) state = do
 eval LoadMore state = do
   exit $ LoaderOutput state{loadMore = true}
 
-eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = 
+eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state =
   case item of
     "Home" -> do
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
@@ -247,7 +249,7 @@ notificationListTransformer notificationArray =
             , notificationLabel: "New"
             , timeLabel: getTimeStampString notificationItem.created_at <> " ago"
             , comment: notificationItem.reply
-            , imageUrl: 
+            , imageUrl:
                 case media.fileType of
                   VideoLink -> getImageUrl $ media.url
                   Video -> ""
@@ -295,7 +297,7 @@ propValueTransformer notificationArray =
                       AudioLink -> "ny_ic_audio_file"
                       Audio -> "ny_ic_audio_file"
             , previewImage: toPropValue $ if media.fileType == Image then "visible" else "gone"
-            , imageVisibility : toPropValue $ if media.fileType /= Image then "visible" else "gone" 
+            , imageVisibility : toPropValue $ if media.fileType /= Image then "visible" else "gone"
             , previewImageTitle: toPropValue "Preview Image"
             , messageId: toPropValue notificationItem.messageId
             }
@@ -324,7 +326,7 @@ splitUrlsAndText :: String -> Array String
 splitUrlsAndText str = split (Pattern "$$") str
 
 notificationCardDesc :: String -> String
-notificationCardDesc text = 
+notificationCardDesc text =
   let
     splittedArray = splitUrlsAndText text
     filteredArray = map (\word ->
@@ -333,14 +335,14 @@ notificationCardDesc text =
       in
         if charAt 0 word == Just '*' && charAt (wordLength - 1) word == Just '*'
           then let
-          titleAndUrl = fetchTitleAndUrl wordLength word 
+          titleAndUrl = fetchTitleAndUrl wordLength word
           linkTitle = trim $ fromMaybe "" (titleAndUrl Array.!! 0)
           in
             linkTitle
           else
-          word 
+          word
           ) splittedArray
     combinedString = joinWith " " filteredArray
-  in 
+  in
     combinedString
-  
+

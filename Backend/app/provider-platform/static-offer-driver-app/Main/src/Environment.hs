@@ -58,6 +58,9 @@ data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
     esqDBReplicaCfg :: EsqDBConfig,
     hedisCfg :: HedisCfg,
+    hedisClusterCfg :: HedisCfg,
+    hedisMigrationStage :: Bool,
+    cutOffHedisCluster :: Bool,
     clickhouseCfg :: ClickhouseCfg,
     smsCfg :: SmsConfig,
     infoBIPCfg :: InfoBIPConfig,
@@ -134,6 +137,9 @@ data AppEnv = AppEnv
     kafkaProducerTools :: KafkaProducerTools,
     kafkaEnvs :: BPPKafkaEnvs,
     hedisEnv :: HedisEnv,
+    hedisClusterEnv :: HedisEnv,
+    cutOffHedisCluster :: Bool,
+    hedisMigrationStage :: Bool,
     schedulingReserveTime :: Seconds,
     driverEstimatedPickupDuration :: Seconds,
     dashboardToken :: Text,
@@ -162,12 +168,17 @@ buildAppEnv AppCfg {..} = do
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   kafkaEnvs <- buildBPPKafkaEnvs
   hedisEnv <- connectHedis hedisCfg staticOfferDriverAppPrefix
+  hedisClusterEnv <-
+    if cutOffHedisCluster
+      then pure hedisEnv
+      else connectHedisCluster hedisClusterCfg staticOfferDriverAppPrefix
   return AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} = do
   releaseKafkaProducerTools kafkaProducerTools
   disconnectHedis hedisEnv
+  disconnectHedis hedisClusterEnv
   releaseLoggerEnv loggerEnv
 
 type Env = EnvR AppEnv

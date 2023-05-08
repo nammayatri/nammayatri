@@ -33,6 +33,9 @@ data SchedulerConfig = SchedulerConfig
     metricsPort :: Int,
     esqDBCfg :: EsqDBConfig,
     hedisCfg :: HedisCfg,
+    hedisClusterCfg :: HedisCfg,
+    hedisMigrationStage :: Bool,
+    cutOffHedisCluster :: Bool,
     hedisPrefix :: Text,
     port :: Int,
     loopIntervalSec :: Seconds,
@@ -46,6 +49,9 @@ data SchedulerConfig = SchedulerConfig
 data SchedulerEnv = SchedulerEnv
   { esqDBEnv :: EsqDBEnv,
     hedisEnv :: HedisEnv,
+    hedisClusterEnv :: HedisEnv,
+    hedisMigrationStage :: Bool,
+    cutOffHedisCluster :: Bool,
     loggerConfig :: LoggerConfig,
     loggerEnv :: LoggerEnv,
     metrics :: SchedulerMetrics,
@@ -63,6 +69,7 @@ releaseSchedulerEnv :: SchedulerEnv -> IO ()
 releaseSchedulerEnv SchedulerEnv {..} = do
   releaseLoggerEnv loggerEnv
   disconnectHedis hedisEnv
+  disconnectHedis hedisClusterEnv
 
 newtype SchedulerM a = SchedulerM {unSchedulerM :: MockM SchedulerEnv a}
   deriving newtype (Functor, Applicative, Monad, MonadReader SchedulerEnv, MonadIO)

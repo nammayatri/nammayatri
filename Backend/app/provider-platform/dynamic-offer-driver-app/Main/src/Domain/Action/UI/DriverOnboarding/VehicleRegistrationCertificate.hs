@@ -27,6 +27,7 @@ import AWS.S3 as S3
 import Control.Applicative ((<|>))
 import Data.Text as T hiding (length, null)
 import qualified Data.Time as DT
+import qualified Data.Time.Calendar.OrdinalDate as TO
 import qualified Domain.Types.DriverOnboarding.DriverRCAssociation as Domain
 import Domain.Types.DriverOnboarding.Error
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
@@ -196,7 +197,7 @@ onVerifyRC verificationReq output = do
       rCConfigs <- SCO.findByMerchantIdAndDocumentType person.merchantId ODC.RC >>= fromMaybeM (OnboardingDocumentConfigNotFound person.merchantId.getId (show ODC.RC))
       rCInsuranceConfigs <- SCO.findByMerchantIdAndDocumentType person.merchantId ODC.RCInsurance >>= fromMaybeM (OnboardingDocumentConfigNotFound person.merchantId.getId (show ODC.RCInsurance))
       mEncryptedRC <- encrypt `mapM` output.registration_number
-      let mbFitnessEpiry = convertTextToUTC output.fitness_upto
+      let mbFitnessEpiry = convertTextToUTC output.fitness_upto <|> Just (DT.UTCTime (TO.fromOrdinalDate 1900 1) 0)
       let mVehicleRC = createRC rCConfigs rCInsuranceConfigs output id verificationReq.documentImageId1 now <$> mEncryptedRC <*> mbFitnessEpiry
 
       case mVehicleRC of

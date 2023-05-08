@@ -39,10 +39,11 @@ mkPersist
   [defaultQQ|
     EstimateT sql=estimate
       id Text
+      requestId SSearchRequest.SearchRequestTId
+      bppEstimateId Text
       autoAssignEnabled Bool
       autoAssignEnabledV2 Bool
       autoAssignQuoteId Text Maybe
-      requestId SSearchRequest.SearchRequestTId
       estimatedFare HighPrecMoney
       discount HighPrecMoney Maybe
       estimatedTotalFare HighPrecMoney
@@ -62,7 +63,7 @@ mkPersist
       nightShiftMultiplier Centesimal Maybe
       nightShiftStart TimeOfDay Maybe
       nightShiftEnd TimeOfDay Maybe
-      status Domain.EstimateStatus Maybe
+      status Domain.EstimateStatus
       waitingChargePerMin Money Maybe
       waitingTimeEstimatedThreshold Seconds Maybe
       createdAt UTCTime

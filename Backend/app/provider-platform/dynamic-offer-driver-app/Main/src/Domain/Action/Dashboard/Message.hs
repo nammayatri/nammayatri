@@ -176,6 +176,7 @@ addMessage merchantShortId Common.AddMessageRequest {..} = do
             label,
             likeCount = 0,
             description,
+            shortDescription,
             mediaFiles = cast <$> mediaFiles,
             messageTranslations = translationToDomainType now <$> translations,
             createdAt = now
@@ -223,7 +224,7 @@ sendMessage merchantShortId Common.SendMessageRequest {..} = do
       pure $ Domain.MessageDict message (M.fromList $ map (addTranslation message) translations)
 
     addTranslation Domain.RawMessage {..} trans =
-      (show trans.language, Domain.RawMessage {title = trans.title, description = trans.description, label = trans.label, ..})
+      (show trans.language, Domain.RawMessage {title = trans.title, description = trans.description, shortDescription = trans.shortDescription, label = trans.label, ..})
 
     mkMessageReport now driverId =
       Domain.MessageReport
@@ -266,6 +267,7 @@ messageInfo merchantShortId messageId = do
         { messageId = cast id,
           _type = toCommonType _type,
           description,
+          shortDescription,
           title,
           mediaFiles = (\mediaFile -> Common.MediaFile (toCommonMediaFileType mediaFile._type) mediaFile.url) <$> mf
         }

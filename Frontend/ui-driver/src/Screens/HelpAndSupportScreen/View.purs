@@ -1,21 +1,21 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
 module Screens.HelpAndSupportScreen.View where
 
-import Prelude (Unit, ($), const, map, (<>), (<<<), (==), discard, bind, pure, unit, (&&))
+import Prelude (Unit, ($), const, map, (<>), (<<<), (==), discard, bind, pure, unit, (&&), void)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, layoutGravity, alpha, scrollView, cornerRadius, onBackPressed, stroke, lineHeight, visibility, afterRender, scrollBarY, imageWithFallback)
 import Effect (Effect)
 import PrestoDOM.Types.DomAttributes as PTD
@@ -32,7 +32,7 @@ import Language.Strings (getString)
 import Language.Types(STR(..))
 import Control.Monad.Trans.Class (lift)
 import Presto.Core.Types.Language.Flow (doAff)
-import Effect.Aff (launchAff_)
+import Effect.Aff (launchAff)
 import Control.Monad.Except (runExceptT)
 import Effect.Class (liftEffect)
 import Control.Transformers.Back.Trans (runBackT)
@@ -48,7 +48,7 @@ screen initialState =
   , name : "HelpAndSupportScreen"
   , eval
   , globalEvents : [( \push -> do
-      launchAff_ $ flowRunner $ runExceptT $ runBackT $ do
+      void $ launchAff $ flowRunner $ runExceptT $ runBackT $ do
         rideHistoryResponse <- Remote.getRideHistoryReqBT "1" "0" "false"
         lift $ lift $ doAff do liftEffect $ push $ RideHistoryAPIResponse rideHistoryResponse
       pure $ pure unit)]
@@ -76,7 +76,7 @@ view push state =
 
 -------------------------------------------------- headerLayout --------------------------
 headerLayout :: ST.HelpAndSupportScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-headerLayout state push = 
+headerLayout state push =
  linearLayout
  [ width MATCH_PARENT
  , height WRAP_CONTENT
@@ -114,7 +114,7 @@ headerLayout state push =
 ------------------------------------------ recentRide ------------------
 
 recentRideHeader :: ST.HelpAndSupportScreenState -> (Action -> Effect Unit) -> String -> String -> forall w . PrestoDOM (Effect Unit) w
-recentRideHeader state push leftText rightText = 
+recentRideHeader state push leftText rightText =
  linearLayout
  [ width MATCH_PARENT
  , height WRAP_CONTENT
@@ -149,24 +149,24 @@ recentRideHeader state push leftText rightText =
 
 -------------------------------------------------- recentRideDetails --------------------
 recentRideDetails :: ST.HelpAndSupportScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-recentRideDetails state push = 
+recentRideDetails state push =
  linearLayout
  [ width MATCH_PARENT
  , height WRAP_CONTENT
  , margin (Margin 10 10 10 10)
  , orientation VERTICAL
- , PP.cornerRadii $ PTD.Corners 8.0 true true true true  
+ , PP.cornerRadii $ PTD.Corners 8.0 true true true true
  , stroke ("1," <> Color.grey900)
  , visibility if(state.props.isNoRides) then GONE else VISIBLE
  ][ linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation HORIZONTAL
-    ][  imageView 
+    ][  imageView
         [ width $ V 150
         , height $ V 150
         , imageWithFallback state.data.mapImage
-        , PP.cornerRadii $ PTD.Corners 8.0 true false false false  
+        , PP.cornerRadii $ PTD.Corners 8.0 true false false false
         , visibility GONE
         ]
       , linearLayout
@@ -184,7 +184,7 @@ recentRideDetails state push =
 
 ------------------------------------------- dateTimeView -------------------------------------
 dateTimeView :: ST.HelpAndSupportScreenState -> forall w . PrestoDOM (Effect Unit) w
-dateTimeView state = 
+dateTimeView state =
  linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
@@ -239,7 +239,7 @@ allOtherTopics state push =
               , height WRAP_CONTENT
               , orientation HORIZONTAL
               , gravity CENTER_VERTICAL
-              , padding (Padding 15 17 15 17)            
+              , padding (Padding 15 17 15 17)
               ][  imageView
                   [ width $ V 20
                   , height $ V 20
@@ -286,8 +286,8 @@ driverRatingView state =
       , width WRAP_CONTENT
       , margin (MarginLeft 4)
       , gravity CENTER
-      ](map 
-        (\ item -> 
+      ](map
+        (\ item ->
         linearLayout
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
@@ -303,7 +303,7 @@ driverRatingView state =
 
 --------------------------------------------------------------- horizontalLineView ----------------------------
 horizontalLineView :: forall w . PrestoDOM (Effect Unit) w
-horizontalLineView = 
+horizontalLineView =
  linearLayout
   [ width MATCH_PARENT
   , height $ V 1

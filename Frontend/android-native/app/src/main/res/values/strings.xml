@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="tip_included"> tip included!</string>
     <string name="ride_rejected"> Ride Rejected</string>
     <string name="request">Request</string>
     <string name="decline">Decline</string>

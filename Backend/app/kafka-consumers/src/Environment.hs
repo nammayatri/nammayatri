@@ -75,6 +75,9 @@ data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
     esqDBReplicaCfg :: EsqDBConfig,
     hedisCfg :: HedisCfg,
+    hedisClusterCfg :: HedisCfg,
+    hedisMigrationStage :: Bool,
+    cutOffHedisCluster :: Bool,
     dumpEvery :: Seconds,
     kafkaConsumerCfg :: ConsumerConfig,
     timeBetweenUpdates :: Seconds,
@@ -92,6 +95,9 @@ data AppEnv = AppEnv
     dumpEvery :: Seconds,
     hostname :: Maybe Text,
     hedisEnv :: HedisEnv,
+    hedisClusterEnv :: HedisEnv,
+    cutOffHedisCluster :: Bool,
+    hedisMigrationStage :: Bool,
     kafkaConsumerCfg :: ConsumerConfig,
     timeBetweenUpdates :: Seconds,
     availabilityTimeWindowOption :: SWC.SlidingWindowOptions,
@@ -111,6 +117,10 @@ buildAppEnv AppCfg {..} consumerType = do
   hostname <- map T.pack <$> lookupEnv "POD_NAME"
   version <- lookupDeploymentVersion
   hedisEnv <- connectHedis hedisCfg id
+  hedisClusterEnv <-
+    if cutOffHedisCluster
+      then pure hedisEnv
+      else connectHedisCluster hedisClusterCfg id
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   coreMetrics <- Metrics.registerCoreMetricsContainer
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv

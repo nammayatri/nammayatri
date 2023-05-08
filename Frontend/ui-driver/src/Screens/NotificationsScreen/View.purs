@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -26,7 +26,7 @@ import Control.Transformers.Back.Trans (runBackT)
 import Data.Array ((..), length)
 import Data.Tuple (Tuple(..))
 import Effect (Effect)
-import Effect.Aff (launchAff_)
+import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag)
 import Font.Size as FontSize
@@ -45,7 +45,7 @@ import Screens.Types (NotificationsScreenState, AnimationState(..), Notification
 import Services.APITypes (MessageListRes(..))
 import Services.Backend as Remote
 import Styles.Colors as Color
-import Debug.Trace (spy)
+import Debug (spy)
 import Components.BottomNavBar.View as BottomNavBar
 import Components.BottomNavBar.Controller (navData)
 
@@ -58,7 +58,7 @@ screen initialState notificationListItem =
   , globalEvents:
       [ globalOnScroll "NotificationsScreen"
       , ( \push -> do
-            launchAff_ $ flowRunner $ runExceptT $ runBackT
+            void $ launchAff $ flowRunner $ runExceptT $ runBackT
               $ do
                   (MessageListRes messageListRes) <- Remote.messageListBT "8" $ show initialState.offsetValue
                   lift $ lift $ doAff do liftEffect $ push $ MessageListResAction (MessageListRes messageListRes)

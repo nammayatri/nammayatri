@@ -108,6 +108,7 @@ initiateCallToDriver rideId = do
           { id = callStatusId,
             callId = exotelResponse.callId,
             rideId = rideId,
+            dtmfNumberUsed = Nothing,
             status = exotelResponse.callStatus,
             conversationDuration = 0,
             recordingUrl = Nothing,
@@ -128,30 +129,38 @@ directCallStatusCallback callSid dialCallStatus recordingUrl_ callDuration = do
   runTransaction $ QCallStatus.updateCallStatus callStatus.id (exotelStatusToInterfaceStatus dialCallStatus) (fromMaybe 0 callDuration) recordingUrl
   return Ack
 
-getDriverMobileNumber :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Text -> Text -> Text -> Call.ExotelCallStatus -> m GetDriverMobileNumberResp
-getDriverMobileNumber callSid callFrom_ callTo_ callStatus = do
+getDriverMobileNumber :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Text -> Text -> Text -> Maybe Text -> Call.ExotelCallStatus -> m GetDriverMobileNumberResp
+getDriverMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus = do
   let callFrom = dropFirstZero callFrom_
   let callTo = dropFirstZero callTo_
   exophone <- CQExophone.findByPhone callTo >>= fromMaybeM (ExophoneDoesNotExist callTo)
   mobileNumberHash <- getDbHash callFrom
-  person <-
-    runInReplica (Person.findByRoleAndMobileNumberAndMerchantId USER "+91" mobileNumberHash exophone.merchantId)
-      >>= fromMaybeM (PersonWithPhoneNotFound callFrom)
+  (person, dtmfNumberUsed) <-
+    runInReplica (Person.findByRoleAndMobileNumberAndMerchantId USER "+91" mobileNumberHash exophone.merchantId) >>= \case
+      Nothing -> do
+        number <- fromMaybeM (InvalidRequest "DTMF Number Not Found") dtmfNumber_
+        let dtmfNumber = dropFirstZero $ removeQuotes number
+        dtmfMobileHash <- getDbHash dtmfNumber
+        person <- runInReplica $ Person.findByRoleAndMobileNumberAndMerchantId USER "+91" dtmfMobileHash exophone.merchantId >>= fromMaybeM (PersonWithPhoneNotFound dtmfNumber)
+        return (person, Just dtmfNumber)
+      Just entity -> return (entity, Nothing)
   booking <- runInReplica $ QRB.findAssignedByRiderId person.id >>= fromMaybeM (BookingForRiderNotFound $ getId person.id)
   ride <- runInReplica $ QRide.findActiveByRBId booking.id >>= fromMaybeM (RideWithBookingIdNotFound $ getId booking.id)
   callId <- generateGUID
-  callStatusObj <- buildCallStatus ride.id callId callSid (exotelStatusToInterfaceStatus callStatus)
+  callStatusObj <- buildCallStatus ride.id callId callSid (exotelStatusToInterfaceStatus callStatus) dtmfNumberUsed
   runTransaction $ QCallStatus.create callStatusObj
   return ride.driverMobileNumber
   where
     dropFirstZero = T.dropWhile (== '0')
-    buildCallStatus rideId callId exotelCallId exoStatus = do
+    removeQuotes = T.replace "\"" ""
+    buildCallStatus rideId callId exotelCallId exoStatus dtmfNumberUsed = do
       now <- getCurrentTime
       return $
         CallStatus
           { id = callId,
             callId = exotelCallId,
             rideId = rideId,
+            dtmfNumberUsed = dtmfNumberUsed,
             status = exoStatus,
             conversationDuration = 0,
             recordingUrl = Nothing,

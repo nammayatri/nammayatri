@@ -118,7 +118,7 @@ handler subscriber transporterId req = do
       (riderDetails, isNewRider) <- getRiderDetails transporter.id req.customerMobileCountryCode req.customerPhoneNumber now
       ride <- buildRide driver.id booking
       rideDetails <- buildRideDetails ride driver
-      driverSearchReqs <- QSRD.findAllActiveByRequestId driverQuote.searchRequestId
+      driverSearchReqs <- QSRD.findAllActiveBySRId driverQuote.searchRequestId
       Esq.runTransaction $ do
         when isNewRider $ QRD.create riderDetails
         QRB.updateRiderId booking.id riderDetails.id
@@ -132,7 +132,7 @@ handler subscriber transporterId req = do
         QBE.logRideConfirmedEvent booking.id
         QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id
         QDQ.setInactiveByRequestId driverQuote.searchRequestId
-        QSRD.setInactiveByRequestId driverQuote.searchRequestId
+        QSRD.setInactiveBySRId driverQuote.searchRequestId
       DLoc.updateOnRide (cast driver.id) True
 
       for_ driverSearchReqs $ \driverReq -> do

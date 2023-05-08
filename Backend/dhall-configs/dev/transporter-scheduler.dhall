@@ -14,6 +14,16 @@ let rcfg =
       , connectTimeout = None Integer
       }
 
+let rccfg =
+      { connectHost = "localhost"
+      , connectPort = 30006
+      , connectAuth = None Text
+      , connectDatabase = +0
+      , connectMaxConnections = +50
+      , connectMaxIdleTime = +30
+      , connectTimeout = None Integer
+      }
+
 in  { loggerConfig =
             common.loggerConfig
         //  { logRawSql = False
@@ -23,6 +33,9 @@ in  { loggerConfig =
     , esqDBCfg = transporter.esqDBCfg
     , metricsPort = +8054
     , hedisCfg = rcfg
+    , hedisClusterCfg = rccfg
+    , hedisMigrationStage = True
+    , cutOffHedisCluster = Flase
     , hedisPrefix = "transporter-scheduler"
     , port = +8053
     , loopIntervalSec = +5

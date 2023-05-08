@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -26,12 +26,12 @@ import Effect.Class (liftEffect)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
 import Engineering.Helpers.BackTrack (getState)
 import Data.Maybe (Maybe(..))
-import PrestoDOM.Core2 (terminateUI)
+import PrestoDOM.Core (terminateUI)
 
-handleAppUpdatePopUp :: FlowBT String String 
+handleAppUpdatePopUp :: FlowBT String String
 handleAppUpdatePopUp  = do
   (GlobalState state) ← getState
-  _ <- lift $ lift $ doAff $ liftEffect $ initUIWithNameSpace "AppUpdatePopUpScreen" Nothing 
+  _ <- lift $ lift $ doAff $ liftEffect $ initUIWithNameSpace "AppUpdatePopUpScreen" Nothing
   act <- lift $ lift $ runScreenWithNameSpace ( AppUpdatePopUpScreen.screen state.appUpdatePopUpScreen)
   _ <- lift $ lift $ doAff $ liftEffect $ terminateUI $ Just "AppUpdatePopUpScreen"
   case act of

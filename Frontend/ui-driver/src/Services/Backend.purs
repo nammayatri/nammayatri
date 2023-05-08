@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -38,22 +38,24 @@ import Tracker.Types as Tracker
 import Services.EndPoints as EP
 import Engineering.Helpers.Commons (liftFlow, bundleVersion)
 import Data.Maybe
+import Data.String as DS
 import Log (printLog)
 import Effect.Class (liftEffect)
 import Storage (getValueToLocalStore, KeyStore(..))
-import Debug.Trace
+import Screens.Types (DriverStatus)
+import Debug (spy)
 
 getHeaders :: String -> Flow GlobalState Headers
-getHeaders dummy = do 
+getHeaders dummy = do
     _ <- pure $ printLog "dummy" dummy
-    if ((getValueToLocalStore REGISTERATION_TOKEN) == "__failed") then pure $ (Headers [Header "Content-Type" "application/json", Header "x-client-version" (getValueToLocalStore VERSION_NAME), Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION), Header "session_id" (getValueToLocalStore SESSION_ID)]) 
+    if ((getValueToLocalStore REGISTERATION_TOKEN) == "__failed") then pure $ (Headers [Header "Content-Type" "application/json", Header "x-client-version" (getValueToLocalStore VERSION_NAME), Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION), Header "session_id" (getValueToLocalStore SESSION_ID)])
         else pure $ (Headers [Header "Content-Type" "application/json", Header "token" (getValueToLocalStore REGISTERATION_TOKEN), Header "x-client-version" (getValueToLocalStore VERSION_NAME), Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION), Header "session_id" (getValueToLocalStore SESSION_ID)])
 
 getHeaders' :: String -> FlowBT String Headers
-getHeaders' dummy = do 
+getHeaders' dummy = do
         _ <- pure $ printLog "dummy" dummy
-        if ((getValueToLocalStore REGISTERATION_TOKEN) == "__failed") then 
-          lift $ lift $ pure $ (Headers [Header "Content-Type" "application/json", Header "x-client-version" (getValueToLocalStore VERSION_NAME), Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION), Header "session_id" (getValueToLocalStore SESSION_ID)]) 
+        if ((getValueToLocalStore REGISTERATION_TOKEN) == "__failed") then
+          lift $ lift $ pure $ (Headers [Header "Content-Type" "application/json", Header "x-client-version" (getValueToLocalStore VERSION_NAME), Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION), Header "session_id" (getValueToLocalStore SESSION_ID)])
           else lift $ lift $ pure $ (Headers [Header "Content-Type" "application/json",Header "token" (getValueToLocalStore REGISTERATION_TOKEN), Header "x-client-version" (getValueToLocalStore VERSION_NAME), Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION), Header "session_id" (getValueToLocalStore SESSION_ID)])
 
 withAPIResult url f flow = do
@@ -170,7 +172,7 @@ triggerOTPBT payload = do
     errorHandler (ErrorPayload errorPayload) = do
         let errResp = errorPayload.response
         let codeMessage = decodeErrorCode errResp.errorMessage
-        if (errorPayload.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then 
+        if (errorPayload.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then
             pure $ toast (getString LIMIT_EXCEEDED_PLEASE_TRY_AGAIN_AFTER_10MIN)
             else pure $ toast (getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER)
         modifyScreenState $ ChooseLanguageScreenStateType (\chooseLanguageScreen -> chooseLanguageScreen { props {btnActive = false} })
@@ -232,12 +234,12 @@ makeVerifyOTPReq otp = VerifyTokenReq {
     }
 
 ------------------------------------------ driverActiveInactiveBT -------------------------------------------------------------
-driverActiveInactiveBT :: String -> FlowBT String DriverActiveInactiveResp
-driverActiveInactiveBT status = do
+driverActiveInactiveBT :: String -> String -> FlowBT String DriverActiveInactiveResp
+driverActiveInactiveBT status status_n = do
         headers <- getHeaders' ""
-        withAPIResultBT (EP.driverActiveInactive status) (\x → x) errorHandler (lift $ lift $ callAPI headers (DriverActiveInactiveReq status ))
+        withAPIResultBT (EP.driverActiveInactiveSilent status status_n) (\x → x) errorHandler (lift $ lift $ callAPI headers (DriverActiveInactiveReq status status_n))
     where
-        errorHandler (ErrorPayload errorPayload) =  do 
+        errorHandler (ErrorPayload errorPayload) =  do
             modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { props { goOfflineModal = true }})
             pure $ toast (getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER)
             void $ lift $ lift $ toggleLoader false
@@ -250,7 +252,7 @@ startRide productId payload = do
     where
         unwrapResponse (x) = x
 
-makeStartRideReq :: String -> Number -> Number -> StartRideReq 
+makeStartRideReq :: String -> Number -> Number -> StartRideReq
 makeStartRideReq otp lat lon = StartRideReq {
     "rideOtp": otp,
     "point": Point {
@@ -269,9 +271,9 @@ endRide productId payload = do
             void $ lift $ lift $ toggleLoader false
             BackT $ pure GoBack
 
-makeEndRideReq :: Number -> Number -> EndRideReq 
-makeEndRideReq lat lon = EndRideReq { 
-    "point" :  Point 
+makeEndRideReq :: Number -> Number -> EndRideReq
+makeEndRideReq lat lon = EndRideReq {
+    "point" :  Point
     {
         "lat" : lat,
         "lon" : lon
@@ -289,7 +291,7 @@ cancelRide productId payload = do
             void $ lift $ lift $ toggleLoader false
             BackT $ pure GoBack
 
-makeCancelRideReq :: String -> String -> DriverCancelRideReq 
+makeCancelRideReq :: String -> String -> DriverCancelRideReq
 makeCancelRideReq info reason = DriverCancelRideReq {
     "additionalInfo": info,
     "reasonCode": reason
@@ -361,7 +363,7 @@ makeOfferRideReq :: String -> Maybe Number -> OfferRideReq
 makeOfferRideReq requestId offeredFare = OfferRideReq
     {
       "searchRequestId" : requestId,
-      "offeredFare" : offeredFare 
+      "offeredFare" : offeredFare
     }
 
 --------------------------------- getRideHistoryResp -------------------------------------------------------------------------
@@ -378,7 +380,7 @@ getRideHistoryReqBT limit offset onlyActive = do
         headers <- lift $ lift $ getHeaders ""
         withAPIResultBT (EP.getRideHistory limit offset onlyActive) (\x → x) errorHandler (lift $ lift $ callAPI headers (GetRidesHistoryReq limit offset onlyActive))
     where
-    errorHandler (ErrorPayload errorPayload) =  do 
+    errorHandler (ErrorPayload errorPayload) =  do
         BackT $ pure GoBack
 --------------------------------- updateDriverInfoBT ---------------------------------------------------------------------------------------------------------------------------------
 updateDriverInfoBT :: UpdateDriverInfoReq -> FlowBT String UpdateDriverInfoResp
@@ -478,12 +480,12 @@ walkCoordinates (Snapped points) =
 
 --------------------------------- onBoardingFlow  ---------------------------------------------------------------------------------------------------------------------------------
 
-registerDriverRCBT :: DriverRCReq -> FlowBT String  DriverRCResp 
-registerDriverRCBT payload = do 
+registerDriverRCBT :: DriverRCReq -> FlowBT String  DriverRCResp
+registerDriverRCBT payload = do
         headers <- getHeaders' ""
         withAPIResultBT (EP.registerDriverRC "" ) (\x -> x) errorHandler (lift $ lift $ callAPI headers payload)
     where
-    errorHandler (ErrorPayload errorPayload) = do 
+    errorHandler (ErrorPayload errorPayload) = do
         BackT $ pure GoBack
 
 registerDriverRC payload = do
@@ -501,12 +503,12 @@ makeDriverRCReq regNo imageId dateOfRegistration = DriverRCReq
       "dateOfRegistration" : dateOfRegistration
     }
 
-registerDriverDLBT :: DriverDLReq -> FlowBT String  DriverDLResp 
-registerDriverDLBT payload = do 
+registerDriverDLBT :: DriverDLReq -> FlowBT String  DriverDLResp
+registerDriverDLBT payload = do
         headers <- getHeaders' ""
         withAPIResultBT (EP.registerDriverDL "" ) (\x -> x) errorHandler (lift $ lift $ callAPI headers payload)
     where
-    errorHandler (ErrorPayload errorPayload) = do 
+    errorHandler (ErrorPayload errorPayload) = do
         BackT $ pure GoBack
 
 registerDriverDL payload = do
@@ -525,13 +527,13 @@ makeDriverDLReq dlNumber dob dateOfIssue imageIdFront imageIdBack = DriverDLReq
         "imageId2" : Nothing,
         "dateOfIssue" : dateOfIssue
     }
-  
+
 validateImageBT :: ValidateImageReq -> FlowBT String ValidateImageRes
-validateImageBT payload = do 
+validateImageBT payload = do
         headers <- getHeaders' ""
         withAPIResultBT (EP.validateImage "") (\x -> x) errorHandler (lift $ lift $ callAPI headers payload)
     where
-    errorHandler (ErrorPayload errorPayload) = do 
+    errorHandler (ErrorPayload errorPayload) = do
         BackT $ pure GoBack
 
 validateImage payload = do
@@ -587,7 +589,7 @@ driverArrivedBT rideId payload = do
             BackT $ pure GoBack
 
 flowStatusBT :: String -> FlowBT String FlowStatusRes
-flowStatusBT _ = do 
+flowStatusBT _ = do
         headers <- getHeaders' ""
         withAPIResultBT (EP.flowStatus "") (\x → x) errorHandler (lift $ lift $ callAPI headers FlowStatusReq)
     where
@@ -599,7 +601,7 @@ messageListBT limit offset = do
         headers <- lift $ lift $ getHeaders ""
         withAPIResultBT (EP.messageList limit offset) (\x → x) errorHandler (lift $ lift $ callAPI headers (MessageListReq limit offset))
     where
-    errorHandler (ErrorPayload errorPayload) =  do 
+    errorHandler (ErrorPayload errorPayload) =  do
         BackT $ pure GoBack
 
 --------------------------------- messageSeen  --------------------------------------------------------------------------------------------------------
@@ -608,7 +610,7 @@ messageSeenBT messageId = do
         headers <- lift $ lift $ getHeaders ""
         withAPIResultBT (EP.messageSeen messageId) (\x → x) errorHandler (lift $ lift $ callAPI headers (MessageSeenReq messageId))
     where
-    errorHandler (ErrorPayload errorPayload) =  do 
+    errorHandler (ErrorPayload errorPayload) =  do
         BackT $ pure GoBack
 
 --------------------------------- messageResponse --------------------------------------------------------------------------------------------------------
@@ -617,7 +619,7 @@ messageResponseBT messageId reply = do
         headers <- lift $ lift $ getHeaders ""
         withAPIResultBT (EP.messageResponse messageId) (\x → x) errorHandler (lift $ lift $ callAPI headers (MessageResponseReq messageId reply))
     where
-    errorHandler (ErrorPayload errorPayload) =  do 
+    errorHandler (ErrorPayload errorPayload) =  do
         BackT $ pure GoBack
 
 makeMessageReplyReq :: String -> MessageReplyReq
@@ -647,7 +649,7 @@ getPerformanceBT payload = do
     where
         errorHandler (ErrorPayload errorPayload) =  do
             BackT $ pure GoBack
-            
+
 ----------------------------------- validateAlternateNumber --------------------------
 
 validateAlternateNumber payload = do

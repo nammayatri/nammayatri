@@ -47,11 +47,10 @@ import Kernel.Types.Id
 import Kernel.Types.Predicate
 import Kernel.Utils.Common
 import Kernel.Utils.Validation
-import SharedLogic.Estimate (checkIfEstimateCancelled)
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
-import qualified Storage.Queries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
@@ -72,7 +71,7 @@ validateDSelectReq DEstimateSelectReq {..} =
 
 data DSelectRes = DSelectRes
   { searchRequest :: DSearchReq.SearchRequest,
-    estimateId :: Id DEstimate.Estimate,
+    estimate :: DEstimate.Estimate,
     providerId :: Text,
     providerUrl :: BaseUrl,
     variant :: VehicleVariant,
@@ -119,7 +118,7 @@ select personId estimateId req@DEstimateSelectReq {..} = do
   runRequestValidation validateDSelectReq req
   now <- getCurrentTime
   estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
-  checkIfEstimateCancelled estimate.id estimate.status
+  when (DEstimate.isCancelled estimate.status) $ throwError $ EstimateCancelled estimate.id.getId
   let searchRequestId = estimate.requestId
   searchRequest <- QSearchRequest.findByPersonId personId searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist personId.getId)
   merchant <- CQM.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
@@ -127,8 +126,11 @@ select personId estimateId req@DEstimateSelectReq {..} = do
     throwError SearchRequestExpired
   Esq.runTransaction $ do
     QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, validTill = searchRequest.validTill}
-    QEstimate.updateStatus estimateId $ Just DEstimate.DRIVER_QUOTE_REQUESTED
+    QEstimate.updateStatus estimateId DEstimate.DRIVER_QUOTE_REQUESTED
     QEstimate.updateAutoAssign estimateId autoAssignEnabled (fromMaybe False autoAssignEnabledV2)
+    when (isJust req.customerExtraFee) $ do
+      QSearchRequest.updateCustomerExtraFee searchRequest.id req.customerExtraFee
+  QPFS.clearCache searchRequest.riderId
   pure
     DSelectRes
       { providerId = estimate.providerId,
@@ -142,8 +144,8 @@ select personId estimateId req@DEstimateSelectReq {..} = do
 selectList :: (EsqDBReplicaFlow m r) => Id DEstimate.Estimate -> m SelectListRes
 selectList estimateId = do
   estimate <- runInReplica $ QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
-  checkIfEstimateCancelled estimate.id estimate.status
-  selectedQuotes <- runInReplica $ QQuote.findAllByEstimateId' estimateId
+  when (DEstimate.isCancelled estimate.status) $ throwError $ EstimateCancelled estimate.id.getId
+  selectedQuotes <- runInReplica $ QQuote.findAllByEstimateId estimateId
   pure $ SelectListRes $ map DQuote.makeQuoteAPIEntity selectedQuotes
 
 selectResult :: (EsqDBReplicaFlow m r) => Id DEstimate.Estimate -> m QuotesResultResponse
@@ -151,11 +153,11 @@ selectResult estimateId = do
   res <- runMaybeT $ do
     estimate <- MaybeT . runInReplica $ QEstimate.findById estimateId
     quoteId <- MaybeT $ pure estimate.autoAssignQuoteId
-    _ <- MaybeT (Just <$> checkIfEstimateCancelled estimate.id estimate.status)
+    when (DEstimate.isCancelled estimate.status) $ MaybeT $ throwError $ EstimateCancelled estimate.id.getId
     booking <- MaybeT . runInReplica $ QBooking.findAssignedByQuoteId (Id quoteId)
     return $ QuotesResultResponse {bookingId = Just booking.id, selectedQuotes = Nothing}
   case res of
     Just r -> pure r
     Nothing -> do
-      selectedQuotes <- runInReplica $ QQuote.findAllByEstimateId' estimateId
+      selectedQuotes <- runInReplica $ QQuote.findAllByEstimateId estimateId
       return $ QuotesResultResponse {bookingId = Nothing, selectedQuotes = Just $ SelectListRes $ map DQuote.makeQuoteAPIEntity selectedQuotes}

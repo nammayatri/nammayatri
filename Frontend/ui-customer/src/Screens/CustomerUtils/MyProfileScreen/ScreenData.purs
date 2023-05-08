@@ -27,7 +27,8 @@ initData = {
         expandEnabled : false,
         isEmailValid : true,
         isBtnEnabled : true,
-        showOptions : false
+        showOptions : false,
+        fromHomeScreen : false
     },
     data : {
         name : "",

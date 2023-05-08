@@ -50,6 +50,7 @@ mkPersist
       bundleVersion Text Maybe
       clientVersion Text Maybe
       language Language Maybe
+      customerExtraFee Money Maybe
       Primary id
       deriving Generic
     |]

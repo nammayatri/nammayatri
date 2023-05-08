@@ -97,6 +97,9 @@ android {
             buildConfigField "String", "CONFIG_URL_USER", properties.getProperty("CONFIG_URL_USER", "")
             buildConfigField "String", "CONFIG_URL_DRIVER", properties.getProperty("CONFIG_URL_DRIVER", "")
             manifestPlaceholders = [isUsesCleartextTraffic: "false", mapsApiKey : properties.getProperty("MAPS_API_KEY", "")]
+            resValue "string", "facebook_app_id", properties.getProperty("FACEBOOK_APP_ID","")
+            resValue "string", "facebook_client_token", properties.getProperty("FACEBOOK_CLIENT_TOKEN","")
+            resValue "string", "fb_login_protocol_scheme", properties.getProperty("FB_LOGIN_PROTOCOL_SCHEMA","")
             dimension "mode"
         }
         dev {
@@ -106,13 +109,14 @@ android {
             buildConfigField "String", "CONFIG_URL_USER", properties.getProperty("CONFIG_URL_USER", "")
             buildConfigField "String", "CONFIG_URL_DRIVER", properties.getProperty("CONFIG_URL_DRIVER", "")
             manifestPlaceholders = [isUsesCleartextTraffic: "true", mapsApiKey : properties.getProperty("MAPS_API_KEY", "")]
+            resValue "string", "facebook_app_id", properties.getProperty("FACEBOOK_APP_ID","")
+            resValue "string", "facebook_client_token", properties.getProperty("FACEBOOK_CLIENT_TOKEN","")
+            resValue "string", "fb_login_protocol_scheme", properties.getProperty("FB_LOGIN_PROTOCOL_SCHEMA","")
             dimension "mode"
         }
         user {
             applicationId  "in.juspay.nammayatri"
             dimension "app"
-            resValue "string", "facebook_app_id", "192510696087613"
-            resValue "string", "fb_login_protocol_scheme", "fb192510696087613"
         }
         driver {
             applicationId "in.juspay.nammayatripartner"
@@ -195,6 +199,7 @@ dependencies {
     implementation 'com.google.firebase:firebase-auth'
     implementation 'com.google.android.play:review:2.0.1'
     implementation 'com.pierfrancescosoffritti.androidyoutubeplayer:core:11.1.0'
+    implementation 'com.facebook.android:facebook-android-sdk:4.42.0'
     api 'com.theartofdev.edmodo:android-image-cropper:2.8.+'
 }
 

@@ -26,8 +26,8 @@ import Storage.Tabular.SearchRequestForDriver
 createMany :: [SearchRequestForDriver] -> SqlDB ()
 createMany = Esq.createMany
 
-findAllActiveByRequestId :: (Transactionable m, MonadTime m) => Id SearchRequest -> m [SearchRequestForDriver]
-findAllActiveByRequestId searchReqId = do
+findAllActiveBySRId :: (Transactionable m, MonadTime m) => Id SearchRequest -> m [SearchRequestForDriver]
+findAllActiveBySRId searchReqId = do
   Esq.findAll $ do
     sReq <- from $ table @SearchRequestForDriverT
     where_ $
@@ -76,8 +76,8 @@ deleteByDriverId personId = Esq.delete $ do
   sReqForDriver <- from $ table @SearchRequestForDriverT
   where_ $ sReqForDriver ^. SearchRequestForDriverDriverId ==. val (toKey personId)
 
-setInactiveByRequestId :: Id SearchRequest -> SqlDB ()
-setInactiveByRequestId searchReqId = Esq.update $ \p -> do
+setInactiveBySRId :: Id SearchRequest -> SqlDB ()
+setInactiveBySRId searchReqId = Esq.update $ \p -> do
   set p [SearchRequestForDriverStatus =. val Domain.Inactive]
   where_ $ p ^. SearchRequestForDriverSearchRequestId ==. val (toKey searchReqId)
 

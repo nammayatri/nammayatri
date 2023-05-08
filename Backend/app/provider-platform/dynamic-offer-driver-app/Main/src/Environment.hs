@@ -48,7 +48,10 @@ import Tools.Metrics
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
     esqDBReplicaCfg :: EsqDBConfig,
+    hedisMigrationStage :: Bool, -- TODO: remove once data migration is done.
+    cutOffHedisCluster :: Bool,
     hedisCfg :: HedisCfg,
+    hedisClusterCfg :: HedisCfg,
     clickhouseCfg :: ClickhouseCfg,
     port :: Int,
     metricsPort :: Int,
@@ -109,7 +112,10 @@ data AppEnv = AppEnv
     esqDBEnv :: EsqDBEnv,
     esqDBReplicaEnv :: EsqDBEnv,
     clickhouseEnv :: ClickhouseEnv,
+    hedisMigrationStage :: Bool,
+    cutOffHedisCluster :: Bool,
     hedisEnv :: HedisEnv,
+    hedisClusterEnv :: HedisEnv,
     isShuttingDown :: TMVar (),
     loggerEnv :: LoggerEnv,
     encTools :: EncTools,
@@ -161,7 +167,11 @@ buildAppEnv cfg@AppCfg {..} = do
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
   let modifierFunc = ("dynamic-offer-driver-app:" <>)
-  hedisEnv <- connectHedis hedisCfg modifierFunc
+  hedisEnv <- connectHedis hedisCfg modifierFunc -- will be depreciated once data is migrated to cluster
+  hedisClusterEnv <-
+    if cutOffHedisCluster
+      then pure hedisEnv
+      else connectHedisCluster hedisClusterCfg modifierFunc
   bppMetrics <- registerBPPMetricsContainer metricsSearchDurationTimeout
   ssrMetrics <- registerSendSearchRequestToDriverMetricsContainer
   coreMetrics <- Metrics.registerCoreMetricsContainer
@@ -176,6 +186,7 @@ releaseAppEnv AppEnv {..} = do
   -- FIXME: disconnect database?
   releaseLoggerEnv loggerEnv
   disconnectHedis hedisEnv
+  disconnectHedis hedisClusterEnv
 
 type Env = EnvR AppEnv
 

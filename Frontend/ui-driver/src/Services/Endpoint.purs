@@ -15,7 +15,7 @@
 
 module Services.EndPoints where
 
-import Prelude ((<>))
+import Prelude ((<>), ($), show)
 import Services.Config (getBaseUrl)
 
 
@@ -30,6 +30,9 @@ resendOTP token = (getBaseUrl "") <> "/auth/otp/"<>token<>"/resend"
 
 driverActiveInactive :: String -> String
 driverActiveInactive status = (getBaseUrl "") <> "/driver/setActivity?active="<> status
+
+driverActiveInactiveSilent :: String -> String -> String
+driverActiveInactiveSilent status status_n = (getBaseUrl "") <> "/driver/setActivity?active="<> status <>"&mode="<> show status_n
 
 startRide :: String -> String
 startRide rideId = (getBaseUrl "") <> "/driver/ride/" <> rideId <> "/start"

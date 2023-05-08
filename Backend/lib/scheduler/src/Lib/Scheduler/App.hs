@@ -20,7 +20,7 @@ where
 import Kernel.Prelude hiding (mask, throwIO)
 import Kernel.Randomizer
 import Kernel.Storage.Esqueleto.Config (prepareEsqDBEnv)
-import Kernel.Storage.Hedis (connectHedis)
+import Kernel.Storage.Hedis (connectHedis, connectHedisCluster)
 import qualified Kernel.Tools.Metrics.Init as Metrics
 import Kernel.Types.Common (Seconds (..))
 import Kernel.Utils.App
@@ -44,6 +44,10 @@ runSchedulerService SchedulerConfig {..} handle_ = do
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   hedisEnv <- connectHedis hedisCfg (\k -> hedisPrefix <> ":" <> k)
+  hedisClusterEnv <-
+    if cutOffHedisCluster
+      then pure hedisEnv
+      else connectHedisCluster hedisClusterCfg (\k -> hedisPrefix <> ":" <> k)
   metrics <- setupSchedulerMetrics
   isShuttingDown <- mkShutdown
 

@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -23,6 +23,7 @@ import Control.Monad.State as S
 import Data.Either (Either(..))
 import Data.Function.Uncurried (Fn2)
 import Data.Maybe (fromMaybe, Maybe(..))
+import Data.Number.Format (toStringWith, fixed) as Number
 import Effect (Effect)
 import Effect.Aff (Aff, makeAff, nonCanceler, try)
 import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
@@ -32,6 +33,7 @@ import Effect.Ref (Ref, read, write)
 import Engineering.OS.Permission (checkIfPermissionsGranted, requestPermissions)
 import Common.Types.Sdk (SDKRequest(..), SDKResponse(..))
 import Foreign.Class (class Decode, class Encode)
+import Foreign.Generic.Class (class DecodeWithOptions, class EncodeWithOptions)
 import Presto.Core.Language.Runtime.API (APIRunner)
 import Presto.Core.Language.Runtime.Interpreter (PermissionCheckRunner, PermissionRunner(..), PermissionTakeRunner, Runtime(..), run)
 import Presto.Core.Types.API (Header(..), Headers(..), Request(..), URL,Response)
@@ -44,28 +46,35 @@ import Data.Int as INT
 import Data.Array ((!!))
 
 
-foreign import showUI' :: Fn2 (String -> Effect  Unit) String (Effect Unit)
-foreign import callAPI' :: AffError -> AffSuccess (Response String) -> NativeRequest -> (Effect Unit)
-foreign import window' :: forall a. String -> (a -> (Maybe a)) -> (Maybe a) -> Effect a
-foreign import setWindowVariable' :: forall a. String -> a -> Effect Unit
-foreign import setScreen' :: String -> Effect Unit
+foreign import showUIImpl :: Fn2 (String -> Effect  Unit) String (Effect Unit)
+showUI' :: Fn2 (String -> Effect  Unit) String (Effect Unit)
+showUI' = showUIImpl
+foreign import callAPIImpl :: AffError -> AffSuccess (Response String) -> NativeRequest -> (Effect Unit)
+callAPI' :: AffError -> AffSuccess (Response String) -> NativeRequest -> (Effect Unit)
+callAPI' = callAPIImpl
+foreign import getWindowVariable :: forall a. String -> (a -> (Maybe a)) -> (Maybe a) -> Effect a
+foreign import setWindowVariableImpl :: forall a. String -> a -> Effect Unit
+foreign import setScreenImpl :: String -> Effect Unit
 foreign import screenWidth :: Unit -> Int
 foreign import screenHeight :: Unit -> Int
 foreign import bundleVersion :: Unit -> String
 foreign import callSahay ::  String  -> EffectFnAff String
-foreign import safeMarginTop' :: Unit -> Int
-foreign import safeMarginBottom' :: Unit -> Int
+foreign import safeMarginTopImpl :: Unit -> Int
+foreign import safeMarginBottomImpl :: Unit -> Int
 foreign import getNewIDWithTag :: String -> String
 foreign import getOs :: Unit -> String
-foreign import setText' :: String -> String -> Effect Unit
+foreign import setTextImpl :: String -> String -> Effect Unit
+setText' :: String -> String -> Effect Unit
+setText' = setTextImpl
 foreign import countDown :: forall action. Int -> String -> (action -> Effect Unit) -> (Int -> String -> String -> String-> action)  -> Effect Unit
 foreign import clearTimer :: String -> Unit
 foreign import getExpiryTime :: String -> Boolean -> Int
+foreign import getCurrentUTC :: String -> String
 
 os :: String
 os = getOs unit
 
-sendSdkRequest :: forall a b. Encode a => Decode b =>  SDKRequest a  -> Flow GlobalState (SDKResponse b)
+sendSdkRequest :: forall a b. EncodeWithOptions a => DecodeWithOptions (Maybe b) => SDKRequest a  -> Flow GlobalState (SDKResponse b)
 sendSdkRequest request@(SDKRequest req) = do
   result <- doAff do (fromEffectFnAff <<< callSahay $ request')
   {--_ <- pure $ spy "Got result fromm makeAff"--}
@@ -120,10 +129,10 @@ fromNull :: forall a. a -> Maybe a -> a
 fromNull a b = fromMaybe a b
 
 window :: forall a. String -> Flow GlobalState (Maybe a)
-window key = liftFlow (window' key Just Nothing)
+window key = liftFlow (getWindowVariable key Just Nothing)
 
 setWindowVariable :: forall a. String -> a -> Flow GlobalState Unit
-setWindowVariable key value = liftFlow (setWindowVariable' key value)
+setWindowVariable key value = liftFlow (setWindowVariableImpl key value)
 
 flowRunner :: forall a. (Flow GlobalState a) -> Aff (Either Error a)
 flowRunner flow = do
@@ -158,24 +167,27 @@ modifyEpassRef f ref = do
   pure d
 
 safeMarginTop :: Int
-safeMarginTop = safeMarginTop' unit
+safeMarginTop = safeMarginTopImpl unit
 
 safeMarginBottom :: Int
-safeMarginBottom = safeMarginBottom' unit
+safeMarginBottom = safeMarginBottomImpl unit
 
-strToBool :: String -> Maybe Boolean 
-strToBool value = case (DS.toLower value) of 
-                    "true"  -> Just true 
+strToBool :: String -> Maybe Boolean
+strToBool value = case (DS.toLower value) of
+                    "true"  -> Just true
                     "false" -> Just false
                     _       -> Nothing
 
-isPreviousVersion :: String -> String -> Boolean 
+isPreviousVersion :: String -> String -> Boolean
 isPreviousVersion currentVersion previousVersion = numericVersion currentVersion <= numericVersion previousVersion
 
-numericVersion :: String -> Int 
-numericVersion versionName = do 
+numericVersion :: String -> Int
+numericVersion versionName = do
   let versionArray = (DS.split (DS.Pattern ".") versionName)
       majorUpdateIndex = fromMaybe (0) $ INT.fromString $ fromMaybe "NA" $ versionArray !! 0
       minorUpdateIndex = fromMaybe (0) $ INT.fromString $ fromMaybe "NA" $ versionArray !! 1
       patchUpdateIndex = fromMaybe (0) $ INT.fromString $ fromMaybe "NA" $ versionArray !! 2
   (majorUpdateIndex * 100 + minorUpdateIndex * 10 + patchUpdateIndex)
+
+parseFloat :: Number -> Int -> String
+parseFloat num prec = Number.toStringWith (Number.fixed prec) num

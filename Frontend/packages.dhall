@@ -99,91 +99,168 @@ in  upstream
 -------------------------------
 -}
 let upstream =
-      https://github.com/purescript/package-sets/releases/download/psc-0.13.8-20210226/packages.dhall
-        sha256:7e973070e323137f27e12af93bc2c2f600d53ce4ae73bb51f34eb7d7ce0a43ea
+      https://github.com/purescript/package-sets/releases/download/psc-0.15.4/packages.dhall
+        sha256:a6d66723b6109f1e3eaf6575910f1c51aa545965ce313024ba329360e2f009ac
 
 in  upstream
-  with presto = 
+  with presto =
     { dependencies =
-        [ "aff"
-        , "avar"
-        , "console"
-        , "control"
-        , "datetime"
-        , "debug"
-        , "exceptions"
-        , "exists"
-        , "foreign-generic"
-        , "foreign-object"
-        , "free"
-        , "generics-rep"
-        , "prelude"
-        , "record"
-        , "transformers"
-        , "tuples"
-        , "typelevel-prelude"
-        ]
-    , repo = "https://github.com/juspay/purescript-presto.git"
-    , version = "master"
+      [ "aff"
+      , "avar"
+      , "datetime"
+      , "effect"
+      , "either"
+      , "exceptions"
+      , "exists"
+      , "foldable-traversable"
+      , "foreign"
+      , "foreign-generic"
+      , "foreign-object"
+      , "free"
+      , "identity"
+      , "maybe"
+      , "newtype"
+      , "parallel"
+      , "prelude"
+      , "record"
+      , "transformers"
+      , "tuples"
+      , "unsafe-coerce"
+      ]
+    , repo = "https://github.com/belevy/purescript-presto.git"
+    , version = "p-0.15-master"
     }
-  with backtrack = 
+  with backtrack =
     { dependencies =
-        [ "prelude"
-        , "console"
-        , "transformers"
-        , "tailrec"
-        ]
-    , repo = "https://github.com/juspay/purescript-backtrack.git"
-    , version = "master"
+      [ "control", "effect", "prelude", "tailrec", "transformers" ]
+    , repo = "https://github.com/belevy/purescript-backtrack.git"
+    , version = "ps-0.15"
     }
   with presto-dom =
-    { dependencies = 
-        [ "behaviors"
-        , "console"
-        , "effect"
-        , "event"
-        , "prelude"
-        , "psci-support"
-        , "halogen-vdom"
-        , "tracker"
-        ]
-    , repo = "https://github.com/juspay/purescript-presto-dom.git"
-    , version = "main"
+    { dependencies =
+      [ "effect"
+      , "prelude"
+      , "hyrule"
+      , "halogen-vdom"
+      , "tracker"
+      , "presto"
+      , "aff"
+      , "arrays"
+      , "control"
+      , "either"
+      , "exceptions"
+      , "foldable-traversable"
+      , "foreign"
+      , "foreign-generic"
+      , "foreign-object"
+      , "functions"
+      , "integers"
+      , "lists"
+      , "maybe"
+      , "newtype"
+      , "refs"
+      , "strings"
+      , "transformers"
+      , "tuples"
+      , "typelevel-prelude"
+      , "unsafe-coerce"
+      , "web-dom"
+      , "web-events"
+      ]
+    , repo = "https://github.com/belevy/purescript-presto-dom.git"
+    , version = "nammaYatri-p-0.15"
     }
   with halogen-vdom =
-    { dependencies = 
-        [ "behaviors"
-        , "bifunctors"
-        , "effect"
-        , "foreign"
-        , "foreign-object"
-        , "maybe"
-        , "prelude"
-        , "refs"
-        , "tuples"
-        , "unsafe-coerce"
-        , "web-html"
-        ]
-    , repo = "https://github.com/juspay/purescript-halogen-vdom.git"
-    , version = "master"
+    { dependencies =
+      [ "effect"
+      , "prelude"
+      , "foreign-object"
+      , "arrays"
+      , "bifunctors"
+      , "foreign"
+      , "functions"
+      , "maybe"
+      , "newtype"
+      , "nullable"
+      , "refs"
+      , "tuples"
+      , "unsafe-coerce"
+      , "web-dom"
+      , "web-events"
+      ]
+    , repo = "https://github.com/belevy/purescript-halogen-vdom.git"
+    , version = "p-0.15.6-master"
     }
-  with tracker = 
-    { dependencies = 
-        [ "prelude"
-        , "effect"
-        , "foreign-generic"
-        ]
-    , repo = "https://github.com/juspay/purescript-tracker.git"
-    , version = "master"
+  with foreign-generic =
+    { dependencies =
+      [ "assert"
+      , "console"
+      , "effect"
+      , "exceptions"
+      , "foreign"
+      , "foreign-object"
+      , "identity"
+      , "prelude"
+      , "record"
+      , "arrays"
+      , "bifunctors"
+      , "control"
+      , "either"
+      , "foldable-traversable"
+      , "lists"
+      , "maybe"
+      , "newtype"
+      , "partial"
+      , "strings"
+      , "transformers"
+      , "tuples"
+      , "unsafe-coerce"
+      ]
+    , repo = "https://github.com/juspay/purescript-foreign-generic.git"
+    , version = "main"
+    }
+  with tracker =
+    { dependencies =
+      [ "effect"
+      , "prelude"
+      , "presto"
+      , "arrays"
+      , "debug"
+      , "foldable-traversable"
+      , "foreign"
+      , "foreign-generic"
+      , "foreign-object"
+      , "maybe"
+      , "strings"
+      ]
+    , repo = "https://github.com/belevy/purescript-tracker.git"
+    , version = "91653fb800192b9ff9f9026b2841061339ced7d2"
     }
   with otp-reader =
-    { dependencies = 
-        [ "numbers"
-        , "tracker"
-        , "presto"
-        ]
-    , repo = "https://github.com/juspay/purescript-otp-reader.git"
-    , version = "master"
+    { dependencies =
+      [ "effect"
+      , "prelude"
+      , "presto"
+      , "foreign-generic"
+      , "tracker"
+      , "aff"
+      , "arrays"
+      , "avar"
+      , "datetime"
+      , "either"
+      , "exceptions"
+      , "foldable-traversable"
+      , "foreign"
+      , "foreign-object"
+      , "maybe"
+      , "newtype"
+      , "numbers"
+      , "parallel"
+      , "refs"
+      , "strings"
+      , "transformers"
+      ]
+    , repo = "https://github.com/belevy/purescript-otp-reader.git"
+    , version = "3a5c85bf41b5abb2c774ab98180c5608adb83551"
     }
   with beckn-common = ./ui-common/spago.dhall as Location
- 

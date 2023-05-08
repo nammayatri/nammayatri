@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -28,7 +28,7 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(
 import PrestoDOM.Animation as PrestoAnim
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
-import Debug.Trace (spy)
+import Debug (spy)
 import Common.Types.App
 import Helpers.Utils (getPreviousVersion)
 import Data.Maybe (Maybe(..))
@@ -40,12 +40,12 @@ view push state =
     , height MATCH_PARENT
     , orientation VERTICAL
     , clickable true
-    , gravity BOTTOM 
+    , gravity BOTTOM
     , background Color.black9000
     , disableClickFeedback true
     , onClick push $ const OnClose
     , onBackPressed push $ const OnClose
-    ][ PrestoAnim.animationSet 
+    ][ PrestoAnim.animationSet
       [ translateInXSidebarAnim $ state.opened == OPEN
       , translateOutXSidebarAnim $ state.opened == CLOSING
       ] $ linearLayout
@@ -76,7 +76,7 @@ view push state =
 
 
 ------------------------------ settingsView --------------------------------
-settingsView :: forall w. SettingSideBarState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
+settingsView :: forall w. SettingSideBarState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 settingsView state push =
   linearLayout
   [ height WRAP_CONTENT
@@ -97,12 +97,12 @@ settingsView state push =
       , margin ( MarginVertical 8 8 )
       ][]
     , settingsMenuView {imageUrl : "ic_share,https://assets.juspay.in/nammayatri/images/user/ic_share.png", text : (getString SHARE_APP), tag : SETTINGS_SHARE_APP, iconUrl : ""} push
-    , if (isPreviousVersion (getValueToLocalStore VERSION_NAME) (if os == "IOS" then "1.2.5" else "1.2.1")) then emptyLayout 
-      else settingsMenuView {imageUrl : "ic_graph_black,https://assets.juspay.in/nammayatri/images/common/ic_graph_black.png", text : (getString LIVE_STATS_DASHBOARD), tag : SETTINGS_LIVE_DASHBOARD, iconUrl : "ic_red_icon,https://assets.juspay.in/nammayatri/images/user/ic_red_icon.png"} push
+    , if (isPreviousVersion (getValueToLocalStore VERSION_NAME) (if os == "IOS" then "1.2.5" else "1.2.1")) then emptyLayout
+      else settingsMenuView {imageUrl : "ic_graph_black,https://assets.juspay.in/nammayatri/images/user/ic_graph_black.png", text : (getString LIVE_STATS_DASHBOARD), tag : SETTINGS_LIVE_DASHBOARD, iconUrl : "ic_red_icon,https://assets.juspay.in/nammayatri/images/user/ic_red_icon.png"} push
     , settingsMenuView {imageUrl : "ic_info,https://assets.juspay.in/nammayatri/images/user/ic_info.png", text : (getString ABOUT), tag : SETTINGS_ABOUT, iconUrl : ""} push
     , logoutView state push
   ]
-  
+
 ------------------------------ emptylayout --------------------------------
 emptyLayout = linearLayout
               [ height $ V 0
@@ -110,7 +110,7 @@ emptyLayout = linearLayout
               , visibility GONE
               ][]
 ------------------------------ logoutView --------------------------------
-logoutView ::  forall w. SettingSideBarState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
+logoutView ::  forall w. SettingSideBarState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 logoutView state push =
   linearLayout
   [ height MATCH_PARENT
@@ -127,7 +127,7 @@ logoutView state push =
     ]
 
 ------------------------------ profileView --------------------------------
-profileView :: forall w. SettingSideBarState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
+profileView :: forall w. SettingSideBarState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 profileView state push =
   linearLayout
   [ width MATCH_PARENT
@@ -155,13 +155,13 @@ profileView state push =
           , padding (PaddingRight 15)
           ][ textView
               ([ height WRAP_CONTENT
-              , text if ((getValueToLocalStore USER_NAME) == "__failed" || (getValueToLocalStore USER_NAME) == "") then (getString USER) else (getValueToLocalStore USER_NAME) 
+              , text if ((getValueToLocalStore USER_NAME) == "__failed" || (getValueToLocalStore USER_NAME) == "") then (getString USER) else (getValueToLocalStore USER_NAME)
               , textSize FontSize.a_18
               , color Color.white900
               , fontStyle $ FontStyle.medium LanguageStyle
               , margin (MarginRight 5)
               , ellipsize true
-              , maxLines 1 
+              , maxLines 1
               ] <> (if os == "IOS" then [ width (V (screenWidth unit /2))]else [weight 1.0]))
             , imageView
               [ width $ V 12
@@ -183,8 +183,8 @@ profileView state push =
         , orientation HORIZONTAL
         , gravity CENTER_VERTICAL
         , margin $ MarginTop 4
-        , visibility case profileCompleteValue state of 
-            "100" -> GONE 
+        , visibility case profileCompleteValue state of
+            "100" -> GONE
             _ -> VISIBLE
         ][textView
           [ text $ (getString PROFILE_COMPLETION) <> ":"
@@ -194,16 +194,16 @@ profileView state push =
           , height WRAP_CONTENT
           , color Color.yellow900
           ]
-        , imageView 
-          [ imageWithFallback case profileCompleteValue state of 
+        , imageView
+          [ imageWithFallback case profileCompleteValue state of
               "50" -> "ic_50_percent,https://assets.juspay.in/nammayatri/images/user/ic_50_percent.png"
               "75" -> "ic_75_percent,https://assets.juspay.in/nammayatri/images/user/ic_75_percent.png"
               _    -> ""
-          , height $ V 10 
+          , height $ V 10
           , width $ V 10
           , margin $ Margin 4 4 4 2
           ]
-        , textView 
+        , textView
           [ textSize FontSize.a_12
           , fontStyle $ FontStyle.regular LanguageStyle
           , width WRAP_CONTENT
@@ -216,20 +216,20 @@ profileView state push =
       ]]
 
 ------------------------------ settingsMenuView --------------------------------
-settingsMenuView :: forall w. Item -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
-settingsMenuView item push  = 
+settingsMenuView :: forall w. Item -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+settingsMenuView item push  =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , gravity CENTER_VERTICAL
   , disableClickFeedback false
   , padding (Padding 0 16 16 16 )
-  , onClick push $ ( const case item.tag of 
-                              SETTINGS_RIDES          -> PastRides 
+  , onClick push $ ( const case item.tag of
+                              SETTINGS_RIDES          -> PastRides
                               SETTINGS_FAVOURITES     -> GoToFavourites
-                              SETTINGS_HELP           -> OnHelp 
-                              SETTINGS_LANGUAGE       -> ChangeLanguage 
-                              SETTINGS_ABOUT          -> GoToAbout 
+                              SETTINGS_HELP           -> OnHelp
+                              SETTINGS_LANGUAGE       -> ChangeLanguage
+                              SETTINGS_ABOUT          -> GoToAbout
                               SETTINGS_LOGOUT         -> OnLogout
                               SETTINGS_SHARE_APP      -> ShareAppLink
                               SETTINGS_EMERGENCY_CONTACTS       -> GoToEmergencyContacts
@@ -247,20 +247,19 @@ settingsMenuView item push  =
       , color Color.charcoalGrey
       , fontStyle $ FontStyle.medium LanguageStyle
       , padding (PaddingLeft 20)
-      ] 
+      ]
     , imageView
       [ width ( V 8 )
       , height ( V 8 )
       , visibility if item.tag == SETTINGS_LIVE_DASHBOARD && getValueToLocalStore LIVE_DASHBOARD /= "LIVE_DASHBOARD_SELECTED" then VISIBLE else GONE
       , margin ( Margin 6 1 0 0)
       , imageWithFallback item.iconUrl
-      ] 
+      ]
     ]
 
-            
-profileCompleteValue :: SettingSideBarState -> String 
+profileCompleteValue :: SettingSideBarState -> String
 profileCompleteValue state =
-    case state.email , state.gender of 
+    case state.email , state.gender of
       Nothing, Nothing  -> "50"
       Nothing, Just _   -> "75"
       Just _ , Nothing  -> "75"
