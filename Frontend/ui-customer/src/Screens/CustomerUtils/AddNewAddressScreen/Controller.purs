@@ -393,10 +393,11 @@ checkPermissionAndUpdatePersonMarker state = do
       if (os == "IOS" && conditionC) then do
         _ <- getLocationName (showPersonMarker state (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))) 9.9 9.9 "Current Location" constructLatLong
         pure unit
-        else do
-          _ <- requestLocation unit
-          _ <- checkPermissionAndUpdatePersonMarker state
-          pure unit
+      else if (not conditionA || not conditionB) then do
+        _ <- requestLocation unit
+        _ <- checkPermissionAndUpdatePersonMarker state
+        pure unit
+      else pure unit
 
 showPersonMarker :: AddNewAddressScreenState -> String -> Location -> Effect Unit
 showPersonMarker state marker location = animateCamera location.lat location.lng 19
