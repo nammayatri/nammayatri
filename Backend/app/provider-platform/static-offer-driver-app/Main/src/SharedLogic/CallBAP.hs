@@ -34,6 +34,7 @@ import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude
+import qualified EulerHS.Types as ET
 import Kernel.Storage.Hedis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes (BecknCallbackReq (BecknCallbackReq))
@@ -183,7 +184,7 @@ callOnUpdate transporter booking content retryConfig = do
   bppUri <- buildBppUrl transporter.id
   msgId <- generateGUID
   context <- buildTaxiContext Context.ON_UPDATE msgId (Just booking.transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) "Kochi"
-  void $ withRetryConfig retryConfig $ void . Beckn.callBecknAPI (Just authKey) Nothing (show Context.ON_UPDATE) API.onUpdateAPI bapUri . BecknCallbackReq context $ Right content
+  void $ withRetryConfig retryConfig $ void . Beckn.callBecknAPI (Just $ ET.ManagerSelector $ authKey) Nothing (show Context.ON_UPDATE) API.onUpdateAPI bapUri . BecknCallbackReq context $ Right content
 
 buildBppUrl ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],

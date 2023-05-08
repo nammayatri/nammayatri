@@ -315,7 +315,7 @@ library
     , bytestring
     , containers
     , cryptonite
-    , cryptostore >=0.3.0.0
+    , cryptostore >=0.2.3.0
     , dashboard-helper-api
     , euler-hs
     , extra
@@ -340,6 +340,7 @@ library
     , text-conversions
     , time
     , unliftio-core
+    , unordered-containers
     , wai
     , wai-middleware-prometheus
     , warp
@@ -397,7 +398,7 @@ executable rider-app-exe
     , bytestring
     , containers
     , cryptonite
-    , cryptostore >=0.3.0.0
+    , cryptostore >=0.2.3.0
     , dashboard-helper-api
     , euler-hs
     , extra
@@ -422,6 +423,7 @@ executable rider-app-exe
     , text-conversions
     , time
     , unliftio-core
+    , unordered-containers
     , wai
     , wai-middleware-prometheus
     , warp

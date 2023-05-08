@@ -97,6 +97,7 @@ library
     , template-haskell
     , text
     , time
+    , unordered-containers
   default-language: Haskell2010
 
 executable mock-google-exe
@@ -159,4 +160,5 @@ executable mock-google-exe
     , template-haskell
     , text
     , time
+    , unordered-containers
   default-language: Haskell2010

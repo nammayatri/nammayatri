@@ -21,6 +21,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import SharedService.Common as Reexport
+import Text.Read (read)
 
 type IssueCreateAPI =
   ReqBody '[JSON] IssueReportReq

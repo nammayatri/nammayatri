@@ -44,6 +44,7 @@ import qualified Domain.Types.FareParameters as Fare
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchRequest as DSR
+import qualified EulerHS.Types as ET
 import Kernel.Prelude
 import Kernel.Storage.Hedis
 import qualified Kernel.Types.Beckn.Context as Context
@@ -79,7 +80,7 @@ callOnSelect transporter searchRequest content = do
   let msgId = searchRequest.messageId
   context <- buildTaxiContext Context.ON_SELECT msgId (Just searchRequest.transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) transporter.city
   logDebug $ "on_select request bpp: " <> show content
-  void $ withShortRetry $ Beckn.callBecknAPI (Just authKey) Nothing (show Context.ON_SELECT) API.onSelectAPI bapUri . BecknCallbackReq context $ Right content
+  void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector $ authKey) Nothing (show Context.ON_SELECT) API.onSelectAPI bapUri . BecknCallbackReq context $ Right content
 
 callOnUpdate ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -99,7 +100,7 @@ callOnUpdate transporter bapId bapUri transactionId content retryConfig = do
   bppUri <- buildBppUrl (transporter.id)
   msgId <- generateGUID
   context <- buildTaxiContext Context.ON_UPDATE msgId (Just transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) transporter.city
-  void $ withRetryConfig retryConfig $ Beckn.callBecknAPI (Just authKey) Nothing (show Context.ON_UPDATE) API.onUpdateAPI bapUri . BecknCallbackReq context $ Right content
+  void $ withRetryConfig retryConfig $ Beckn.callBecknAPI (Just $ ET.ManagerSelector $ authKey) Nothing (show Context.ON_UPDATE) API.onUpdateAPI bapUri . BecknCallbackReq context $ Right content
 
 callOnConfirm ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -119,7 +120,7 @@ callOnConfirm transporter contextFromConfirm content = do
       authKey = getHttpManagerKey bppSubscriberId
   bppUri <- buildBppUrl transporter.id
   context_ <- buildTaxiContext Context.ON_CONFIRM msgId contextFromConfirm.transaction_id bapId bapUri (Just bppSubscriberId) (Just bppUri) transporter.city
-  void $ withShortRetry $ Beckn.callBecknAPI (Just authKey) Nothing (show Context.ON_CONFIRM) API.onConfirmAPI bapUri . BecknCallbackReq context_ $ Right content
+  void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector $ authKey) Nothing (show Context.ON_CONFIRM) API.onConfirmAPI bapUri . BecknCallbackReq context_ $ Right content
 
 buildBppUrl ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl]

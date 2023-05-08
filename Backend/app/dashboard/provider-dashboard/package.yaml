@@ -74,6 +74,7 @@ dependencies:
   - servant-client
   - openapi3
   - servant-openapi3
+  - unordered-containers
 
 ghc-options:
   - -Wall
