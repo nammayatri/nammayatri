@@ -11,7 +11,9 @@ pipeline {
                 axes {
                     axis {
                         name 'SYSTEM'
-                        values 'x86_64-linux', 'aarch64-darwin', 'x86_64-darwin'
+                        // Disabled until we figure out a way to build these only on 'main'
+                        // values 'x86_64-linux', 'aarch64-darwin', 'x86_64-darwin'
+                        values 'x86_64-linux'
                     }
                 }
                 stages {
