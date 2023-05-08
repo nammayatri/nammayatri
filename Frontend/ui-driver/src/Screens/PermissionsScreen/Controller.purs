@@ -16,7 +16,6 @@
 module Screens.PermissionsScreen.Controller where
 
 import Components.PrimaryButton.Controller as PrimaryButtonController
-import Debug (spy)
 import Effect.Class (liftEffect)
 import JBridge (checkOverlayPermission, requestAutoStartPermission, requestLocation, isLocationPermissionEnabled, isOverlayPermissionEnabled, requestBatteryPermission, isBatteryPermissionEnabled, firebaseLogEvent)
 import Language.Strings (getString)
@@ -85,7 +84,6 @@ eval UpdateOverlayPermissionState state = continue state {props {isOverlayPermis
 eval UpdateBatteryPermissionState state = continue state {props {isBatteryOptimizationChecked = true}}
 
 eval (LocationPermissionCallBack isLocationPermissionEnabled) state = do
-  _ <- pure $ spy "location permission" isLocationPermissionEnabled
   when isLocationPermissionEnabled $ pure $ firebaseLogEvent "permission_granted_location"
   continue state {props {isLocationPermissionChecked = isLocationPermissionEnabled}}
 
