@@ -27,11 +27,13 @@ app/src/user/assets/juspay/index_bundle.js
 app/src/dev/google-services.json
 app/src/release/
 app/src/debug/
-app/src/transporter/
-# app/src/user/
-app/transporterProd/debug/
-app/transporterProd/release/
 app/userProd/release/
 app/userProd/debug/
+app/ny_Prod/
+app/ny_p_Prod/
+app/js_kl_Prod/
+app/js_d_kl_Prod/
+app/yatriProd/
+app/yp_Prod/
 **/build/
 .idea/modules.xml

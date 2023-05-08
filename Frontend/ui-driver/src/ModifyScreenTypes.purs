@@ -56,6 +56,7 @@ modifyScreenState st =
     DriverRideRatingScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { driverRideRatingScreen = a state.driverRideRatingScreen})
     NotificationsScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { notificationScreen = a state.notificationScreen})
     ReferralScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state { referralScreen = a state.referralScreen })
+    BookingOptionsScreenType a -> modifyState (\(GlobalState state) -> GlobalState $ state { bookingOptionsScreen = a state.bookingOptionsScreen })
 
 
 updateStage :: ScreenStage -> FlowBT String Unit
@@ -125,6 +126,7 @@ updateStage stage = do
                 })
         HomeScreen -> do
           _ <- pure $ removeAllPolylines ""
+          _ <- pure $ spy "Inside HomeScreen" "removeAllPolyLines"
           modifyScreenState $ HomeScreenStateType (\state -> HomeScreenData.initData)
         ChatWithCustomer -> do
           pure unit

@@ -38,8 +38,9 @@ import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils as HU
+import MerchantConfigs.Utils as MU
 import JBridge as JB
-import Language.Strings (getString)
+import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import Log (printLog)
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=), when)
@@ -65,7 +66,8 @@ import Control.Transformers.Back.Trans (runBackT)
 import Services.APITypes (Status(..))
 import Components.BottomNavBar.Controller (navData)
 import Screens.HomeScreen.ComponentConfig
-import EN (getEN)
+import Screens as ScreenNames
+import MerchantConfigs.Utils (getValueFromMerchant)
 
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
@@ -109,9 +111,9 @@ screen initialState =
                                 else pure unit
                                 if (not initialState.props.routeVisible) && initialState.props.mapRendered then do
                                   _ <- JB.getCurrentPosition push $ ModifyRoute
-                                  _ <- JB.removeMarker "ny_ic_auto" -- TODO : remove if we dont require "ic_auto" icon on homescreen
-                                  pure unit
-                                  else pure unit
+                                  _ <- JB.removeMarker "ic_vehicle_side" -- TODO : remove if we dont require "ic_auto" icon on homescreen
+                                  pure unit 
+                                  else pure unit 
                                 if (getValueToLocalStore RIDE_STATUS_POLLING) == "False" then do
                                   _ <- pure $ setValueToLocalStore RIDE_STATUS_POLLING_ID (HU.generateUniqueId unit)
                                   _ <- pure $ setValueToLocalStore RIDE_STATUS_POLLING "True"
@@ -124,19 +126,19 @@ screen initialState =
                                 _ <- push RemoveChat
                                 if (not initialState.props.routeVisible) && initialState.props.mapRendered then do
                                   _ <- JB.getCurrentPosition push $ ModifyRoute
-                                  _ <- JB.removeMarker "ny_ic_auto" -- TODO : remove if we dont require "ic_auto" icon on homescreen
-                                  pure unit
-                                  else pure unit
-            "ChatWithCustomer" -> do
+                                  _ <- JB.removeMarker "ic_vehicle_side" -- TODO : remove if we dont require "ic_auto" icon on homescreen
+                                  pure unit 
+                                  else pure unit 
+            "ChatWithCustomer" -> do 
                                 if (initialState.data.activeRide.notifiedCustomer && (not initialState.props.updatedArrivalInChat)) then do
                                   _ <- pure $ JB.sendMessage (getEN I_HAVE_ARRIVED)
                                   push UpdateInChat
                                   else pure unit
             _                -> do
                                 _ <- pure $ setValueToLocalStore RIDE_G_FREQUENCY "50000"
+                                _ <- pure $ JB.removeAllPolylines ""
                                 _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "25.0"
                                 _ <- pure $ setValueToLocalStore SESSION_ID (JB.generateSessionId unit)
-                                _ <- JB.reallocateMapFragment (EHC.getNewIDWithTag "DriverTrackingHomeScreenMap")
                                 _ <- checkPermissionAndUpdateDriverMarker initialState
                                 _ <- launchAff $ EHC.flowRunner $ checkCurrentRide push Notification
                                 pure unit
@@ -226,7 +228,7 @@ view push state =
                         , viewRecenterAndSupport state push
                       ]
                     ]
-                  , addAlternateNumber push state
+                  , alternateNumberOrOTPView state push
                   ]
               ]
         , bottomNavBar push state
@@ -241,6 +243,56 @@ view push state =
       ] <> if state.props.cancelRideModalShow then [cancelRidePopUpView push state] else []
         <>  if state.props.cancelConfirmationPopup then [cancelConfirmation push state] else []
         )
+
+alternateNumberOrOTPView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
+alternateNumberOrOTPView state push = 
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , orientation HORIZONTAL
+  , background Color.transparent
+  , padding $ PaddingBottom 16
+  , gravity BOTTOM
+  ][  linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , orientation HORIZONTAL
+      , gravity CENTER
+      ][  addAlternateNumber push state
+        , if (getValueFromMerchant "SPECIAL_ZONE_OTP_VIEW") == "true"  then otpButtonView state push else dummyTextView
+        ]
+      ]
+
+otpButtonView :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
+otpButtonView state push = 
+  linearLayout
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , stroke $ "1," <> Color.blue900
+    , cornerRadius 32.0
+    , background Color.blue600
+    , visibility $ if (state.props.statusOnline) then VISIBLE else GONE
+    , padding (Padding 16 14 16 14)
+    , margin $ MarginLeft 8
+    , gravity CENTER_VERTICAL
+    , onClick push $ const $ ZoneOtpAction
+    ][ imageView 
+        [ imageWithFallback "ic_mode_standby,https://assets.juspay.in/nammayatri/images/user/ic_mode_standby.png"
+        , width $ V 20
+        , height $ V 20
+        ]
+      , textView $ 
+        [ width WRAP_CONTENT
+        , height MATCH_PARENT
+        , gravity CENTER
+        , color Color.blue900
+        , padding $ PaddingLeft 8
+        , margin $ MarginBottom 2
+        , text $ getString OTP_
+        , textSize FontSize.a_14
+        ] <> FontStyle.subHeading2 TypoGraphy
+    ]
+
 
 cancelConfirmation :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 cancelConfirmation push state =
@@ -411,7 +463,7 @@ driverDetail push state =
         , textView (
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
-          , text "Auto"--state.data.vehicleType
+          , text state.data.vehicleType
           ] <> FontStyle.body3 TypoGraphy
           )
       ]
@@ -448,7 +500,7 @@ driverDetail2 push state =
                else if state.props.driverStatusSet == Online then ("2," <> Color.darkMint)
                else ("2," <> Color.blue800)
       , cornerRadius 50.0
-      , alpha if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) then 0.5 else 1.0
+      , alpha if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted || state.props.currentStage == ChatWithCustomer) then 0.5 else 1.0
       , margin (Margin 20 10 20 10)--padding (Padding 10 10 10 10)
       ](DA.mapWithIndex (\index item ->
           driverStatusPill item push state index
@@ -476,7 +528,7 @@ driverStatusPill pillConfig push state index =
       , gravity CENTER
       , orientation HORIZONTAL
       , onClick push (const $ SwitchDriverStatus pillConfig.status)
-      , clickable if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) then false else true
+      , clickable if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted || state.props.currentStage == ChatWithCustomer) then false else true
       ][ imageView
         [ width $ V 15
         , height $ V 15
@@ -739,7 +791,7 @@ goOfflineModal push state =
           ][ imageView
              [ width (V 55)
              , height (V 55)
-             , imageWithFallback "ny_ic_auto_side_active,https://assets.juspay.in/nammayatri/images/driver/ny_ic_auto_side_active.png"
+             , imageWithFallback "ic_vehicle_side_active,https://assets.juspay.in/nammayatri/images/driver/ny_ic_auto_side_active.png"
              ]
            , imageView
              [ width (V 35)
@@ -750,7 +802,7 @@ goOfflineModal push state =
            , imageView
              [ width (V 55)
              , height (V 55)
-             , imageWithFallback "ny_ic_auto_side_inactive,https://assets.juspay.in/nammayatri/images/driver/ny_ic_auto_side_inactive.png"
+             , imageWithFallback "ic_vehicle_side_inactive,https://assets.juspay.in/nammayatri/images/driver/ny_ic_auto_side_inactive.png"
              ]
           ]
         , linearLayout
@@ -800,6 +852,7 @@ goOfflineModal push state =
              ][ textView  (
                 [ width WRAP_CONTENT
                 , height WRAP_CONTENT
+                , gravity CENTER
                 , text (getString GO_OFFLINE)
                 , color Color.yellow900
                 ]  <> FontStyle.subHeading1 TypoGraphy
@@ -832,8 +885,6 @@ updateLocationAndLastUpdatedView state push =
 addAlternateNumber :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 addAlternateNumber push state =
   linearLayout
-  [ layoutGravity "bottom", width MATCH_PARENT, gravity CENTER, margin (MarginBottom 12)]
-  [linearLayout
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
   , background Color.white900
@@ -844,24 +895,21 @@ addAlternateNumber push state =
   , gravity CENTER_VERTICAL
   , onClick push (const ClickAddAlternateButton)
   , visibility (if ((state.data.driverAlternateMobile == Nothing) && (state.props.statusOnline))  then VISIBLE else GONE)
-  ]
-
-  [   imageView
-                  [ width $ V 20
-                  , height $ V 15
-                  , imageWithFallback "ic_call_plus,https://assets.juspay.in/nammayatri/images/driver/ic_call_plus.png"
-                  , margin (MarginRight 5)
-                  ]
-  ,
-    textView
-     [ width WRAP_CONTENT
-     , height WRAP_CONTENT
-     , gravity CENTER
-     , text (getString ADD_ALTERNATE_NUMBER)
-     , color Color.black900
-     , textSize FontSize.a_14
-     ]
-   ]]
+  ][  imageView
+      [ width $ V 20
+      , height $ V 15
+      , imageWithFallback "ic_call_plus,https://assets.juspay.in/nammayatri/images/driver/ic_call_plus.png"
+      , margin (MarginRight 5)
+      ] 
+    , textView
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , gravity CENTER
+      , text (getString ADD_ALTERNATE_NUMBER)       
+      , color Color.black900
+      , textSize FontSize.a_14
+      ]
+   ]
 
 locationLastUpdatedTextAndTimeView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 locationLastUpdatedTextAndTimeView push state =
@@ -933,8 +981,8 @@ statsModel push state =
       ]
 
 bottomNavBar :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-bottomNavBar push state =
-    BottomNavBar.view (push <<< BottomNavBarAction) (navData 0)
+bottomNavBar push state = 
+    BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.HOME_SCREEN)
 
 rideActionModelView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 rideActionModelView push state =

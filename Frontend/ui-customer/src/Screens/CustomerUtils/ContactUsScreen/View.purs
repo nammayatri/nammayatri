@@ -25,13 +25,14 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, const, unit, ($), (*), (-), (/), (<<<))
+import Prelude (Unit, const, unit, ($), (*), (-), (/), (<<<), (==))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, orientation, padding, relativeLayout, scrollView, text, textSize, textView, visibility, weight, width, imageWithFallback)
 import Screens.ContactUsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
 import Common.Types.App
 import Screens.CustomerUtils.ContactUsScreen.ComponentConfig 
+import Storage (getValueToLocalStore, KeyStore(..))
 
 screen :: ST.ContactUsScreenState -> Screen Action ST.ContactUsScreenState ScreenOutput
 screen initialState =
@@ -89,6 +90,7 @@ instructionView state =
       [ text (getString NOTE)
       , textSize FontSize.a_12
       , fontStyle $ FontStyle.medium LanguageStyle
+      , visibility $ if (getValueToLocalStore LANGUAGE_KEY == "ML_IN") then GONE else VISIBLE
       , color Color.black800
       ]
     , textView

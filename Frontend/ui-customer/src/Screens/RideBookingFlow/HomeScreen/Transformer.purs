@@ -17,22 +17,26 @@ module Screens.HomeScreen.Transformer where
 
 import Prelude
 
-import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance)
+import Accessor (_contents, _description, _estimatedDistance, _lat, _lon, _place_id, _toLocation, _otpCode)
+import Components.ChooseVehicle (Config, config) as ChooseVehicle
 import Components.QuoteListItem.Controller (QuoteListItemState)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
+import Data.Array (mapWithIndex)
 import Data.Array as DA
 import Data.Int (toNumber)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.String (split, Pattern(..), drop, indexOf, length, trim)
+import Data.String (Pattern(..), drop, indexOf, length, split, trim)
 import Helpers.Utils (convertUTCtoISC, getExpiryTime, parseFloat)
 import Data.Number (ceil)
+import Language.Strings (getString)
+import Language.Types (STR(..))
 import PrestoDOM (Visibility(..))
 import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard)
-import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySettingBar)
+import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact)
+import Services.API (AddressComponents(..), BookingLocationAPIEntity, DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..))
 import Services.Backend as Remote
-import Services.API (DriverOfferAPIEntity(..), Prediction, QuoteAPIEntity(..), RideAPIEntity(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), AddressComponents(..), GetPlaceNameResp(..), PlaceName(..), LatLong(..), DeleteSavedLocationReq(..))
 import Types.App(FlowBT)
 import Storage ( setValueToLocalStore, getValueToLocalStore, KeyStore(..))
 import Debug(spy)
@@ -70,28 +74,31 @@ getQuoteList :: Array QuoteAPIEntity -> Array QuoteListItemState
 getQuoteList quotesEntity = (map (\x -> (getQuote x)) quotesEntity)
 
 getQuote :: QuoteAPIEntity -> QuoteListItemState
-getQuote (QuoteAPIEntity quoteEntity) =
-  let (DriverOfferAPIEntity quoteDetails) = (quoteEntity.quoteDetails)^._contents
-  in {
-    seconds : (getExpiryTime quoteDetails.validTill "" isForLostAndFound) -4
-  , id : quoteEntity.id
-  , timer : show $ (getExpiryTime quoteDetails.validTill "" isForLostAndFound) -4
-  , timeLeft : if (quoteDetails.durationToPickup<60) then (quoteDetails.durationToPickup/60) else (quoteDetails.durationToPickup/60)
-  , driverRating : fromMaybe 0.0 quoteDetails.rating
-  , profile : ""
-  , price :  show quoteEntity.estimatedTotalFare
-  , vehicleType : "auto"
-  , driverName : quoteDetails.driverName
-  , selectedQuote : Nothing
-  }
+getQuote (QuoteAPIEntity quoteEntity) = do
+  case (quoteEntity.quoteDetails)^._contents of
+    (ONE_WAY contents) -> dummyQuoteList
+    (SPECIAL_ZONE contents) -> dummyQuoteList
+    (DRIVER_OFFER contents) -> let (DriverOfferAPIEntity quoteDetails) = contents
+        in {
+      seconds : (getExpiryTime quoteDetails.validTill "" isForLostAndFound) -4
+    , id : quoteEntity.id 
+    , timer : show $ (getExpiryTime quoteDetails.validTill "" isForLostAndFound) -4
+    , timeLeft : if (quoteDetails.durationToPickup<60) then (quoteDetails.durationToPickup/60) else (quoteDetails.durationToPickup/60)
+    , driverRating : fromMaybe 0.0 quoteDetails.rating
+    , profile : ""
+    , price :  show quoteEntity.estimatedTotalFare
+    , vehicleType : "auto"
+    , driverName : quoteDetails.driverName 
+    , selectedQuote : Nothing
+    }
 
-getDriverInfo :: RideBookingRes -> DriverInfoCard
-getDriverInfo (RideBookingRes resp) =
+getDriverInfo :: RideBookingRes -> Boolean -> DriverInfoCard
+getDriverInfo (RideBookingRes resp) isSpecialZone =
   let (RideAPIEntity rideList) = fromMaybe  dummyRideAPIEntity ((resp.rideList) DA.!! 0)
   in  {
-        otp :  rideList.rideOtp
-      , driverName : if length (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0)) < 4 then
-                        (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0)) <> " " <> (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 1)) else
+        otp : if isSpecialZone then fromMaybe "" ((resp.bookingDetails)^._contents ^._otpCode) else rideList.rideOtp
+      , driverName : if length (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0)) < 4 then 
+                        (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0)) <> " " <> (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 1)) else 
                           (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0))
       , eta : 0
       , vehicleDetails : rideList.vehicleModel
@@ -108,6 +115,7 @@ getDriverInfo (RideBookingRes resp) =
       , destinationLat : (resp.bookingDetails ^._contents^._toLocation ^._lat)
       , destinationLng : (resp.bookingDetails ^._contents^._toLocation ^._lon)
       , estimatedDistance : parseFloat ((toNumber (fromMaybe 0 (resp.bookingDetails ^._contents ^._estimatedDistance)))/1000.0) 2
+      , createdAt : resp.createdAt
       , driverLat : 0.0
       , driverLng : 0.0
       , distance : 0
@@ -118,6 +126,7 @@ getDriverInfo (RideBookingRes resp) =
       , driverNumber : rideList.driverNumber
       , merchantExoPhone : resp.merchantExoPhone
         }
+  
 encodeAddressDescription :: String -> String -> Maybe String -> Maybe Number -> Maybe Number -> Array AddressComponents -> SavedReqLocationAPIEntity
 encodeAddressDescription address tag placeId lat lon addressComponents = do
     let totalAddressComponents = DA.length $ split (Pattern ", ") address
@@ -142,9 +151,8 @@ encodeAddressDescription address tag placeId lat lon addressComponents = do
                         Just $ getValueByComponent addressComponents "sublocality"
                 }
 
-dummyQuoteList :: Array QuoteListItemState
-dummyQuoteList = [
-  {
+dummyQuoteList :: QuoteListItemState
+dummyQuoteList = {
    seconds : 3
   , id : "1"
   , timer : "0"
@@ -155,21 +163,7 @@ dummyQuoteList = [
   , vehicleType : "auto"
   , driverName : "Drive_Name"
   ,selectedQuote : Nothing
-
-  },
-  {
-   seconds : 3
-  , id : "2"
-  , timer : "0"
-  , timeLeft : 0
-  , driverRating : 4.0
-  , profile : ""
-  , price : "300"
-  , vehicleType : "auto"
-  , driverName : "Drive_Name"
-  ,selectedQuote : Nothing
   }
-]
 
 
 dummyRideAPIEntity :: RideAPIEntity
@@ -208,6 +202,8 @@ getPlaceNameResp placeId lat lon item = do
             Just placeID  -> Remote.placeNameBT (Remote.makePlaceNameReqByPlaceId placeID (case (getValueToLocalStore LANGUAGE_KEY) of
                                                                                             "HI_IN" -> "HINDI"
                                                                                             "KN_IN" -> "KANNADA"
+                                                                                            "BN_IN" -> "BENGALI"
+                                                                                            "ML_IN" -> "MALAYALAM"
                                                                                             _       -> "ENGLISH"))
             Nothing       ->  pure $ makePlaceNameResp lat lon
       _ ->  do
@@ -216,12 +212,16 @@ getPlaceNameResp placeId lat lon item = do
             Just placeID  -> Remote.placeNameBT (Remote.makePlaceNameReqByPlaceId placeID (case (getValueToLocalStore LANGUAGE_KEY) of
                                                                                             "HI_IN" -> "HINDI"
                                                                                             "KN_IN" -> "KANNADA"
+                                                                                            "BN_IN" -> "BENGALI"
+                                                                                            "ML_IN" -> "MALAYALAM"
                                                                                             _       -> "ENGLISH"))
             Nothing       ->  pure $ makePlaceNameResp lat lon
           Just 0.0, Just 0.0 -> case placeId of
             Just placeID  -> Remote.placeNameBT (Remote.makePlaceNameReqByPlaceId placeID (case (getValueToLocalStore LANGUAGE_KEY) of
                                                                                             "HI_IN" -> "HINDI"
                                                                                             "KN_IN" -> "KANNADA"
+                                                                                            "BN_IN" -> "BENGALI"
+                                                                                            "ML_IN" -> "MALAYALAM"
                                                                                             _       -> "ENGLISH"))
             Nothing       ->  pure $ makePlaceNameResp lat lon
           _ , _ -> pure $ makePlaceNameResp lat lon
@@ -284,3 +284,61 @@ getContact contact = {
     name : contact.name
   , phoneNo : contact.number
 }
+
+getSpecialZoneQuotes :: Array OfferRes -> Array ChooseVehicle.Config
+getSpecialZoneQuotes quotes = mapWithIndex (\index item -> getSpecialZoneQuote item index) quotes
+
+getSpecialZoneQuote :: OfferRes -> Int -> ChooseVehicle.Config
+getSpecialZoneQuote quote index = 
+  case quote of
+    Quotes body -> let (QuoteAPIEntity quoteEntity) = body.onDemandCab
+      in ChooseVehicle.config { 
+        vehicleImage = case quoteEntity.vehicleVariant of 
+          "TAXI" -> "ic_sedan_non_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_non_ac.png"
+          "TAXI_PLUS" -> "ic_sedan_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_ac.png"
+          "SEDAN" -> "ic_sedan,https://assets.juspay.in/nammayatri/images/user/ic_sedan.png"
+          "SUV" -> "ic_suv,https://assets.juspay.in/nammayatri/images/user/ic_suv.png"
+          "HATCHBACK" -> "ic_hatchback,https://assets.juspay.in/nammayatri/images/user/ic_hatchback.png"
+          _ -> "ic_sedan_non_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_non_ac.png"
+      , isSelected = (index == 0)
+      , vehicleVariant = quoteEntity.vehicleVariant
+      , price = show quoteEntity.estimatedTotalFare
+      , activeIndex = 0
+      , index = index
+      , id = trim quoteEntity.id
+      , capacity = case quoteEntity.vehicleVariant of
+          "TAXI" -> (getString ECONOMICAL) <> ", 4 " <> (getString PEOPLE)
+          "TAXI_PLUS" -> (getString COMFY) <> ", 4 " <> (getString PEOPLE)
+          "SEDAN" -> (getString COMFY) <> ", " <>(getString UPTO) <>" 4 " <> (getString PEOPLE)
+          "SUV" -> (getString SPACIOUS) <> ", " <> (getString UPTO)<>" 6 " <> (getString PEOPLE)
+          "HATCHBACK" -> (getString EASY_ON_WALLET) <> ", "<> (getString UPTO) <> " 4 " <> (getString PEOPLE)
+          _ -> (getString ECONOMICAL) <> ", 4 " <> (getString PEOPLE)
+      }
+    Metro body -> ChooseVehicle.config
+    Public body -> ChooseVehicle.config
+
+getEstimateList :: Array EstimateAPIEntity -> Array ChooseVehicle.Config
+getEstimateList quotes = mapWithIndex (\index item -> getEstimates item index) quotes
+
+getEstimates :: EstimateAPIEntity -> Int -> ChooseVehicle.Config
+getEstimates (EstimateAPIEntity estimate) index = ChooseVehicle.config { 
+        vehicleImage = case estimate.vehicleVariant of 
+          "TAXI" -> "ic_sedan_non_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_non_ac.png"
+          "TAXI_PLUS" -> "ic_sedan_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_ac.png"
+          "SEDAN" -> "ic_sedan,https://assets.juspay.in/nammayatri/images/user/ic_sedan.png"
+          "SUV" -> "ic_suv,https://assets.juspay.in/nammayatri/images/user/ic_suv.png"
+          "HATCHBACK" -> "ic_hatchback,https://assets.juspay.in/nammayatri/images/user/ic_hatchback.png"
+          _ -> "ic_sedan_non_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_non_ac.png"
+      , vehicleVariant = estimate.vehicleVariant
+      , price = show estimate.estimatedTotalFare
+      , activeIndex = 0
+      , index = index
+      , id = trim estimate.id
+      , capacity = case estimate.vehicleVariant of
+          "TAXI" -> (getString ECONOMICAL) <> ", 4 " <> (getString PEOPLE)
+          "TAXI_PLUS" -> (getString COMFY) <> ", 4 " <> (getString PEOPLE)
+          "SEDAN" -> (getString COMFY) <> ", " <>(getString UPTO) <>" 4 " <> (getString PEOPLE)
+          "SUV" -> (getString SPACIOUS) <> ", " <> (getString UPTO)<>" 6 " <> (getString PEOPLE)
+          "HATCHBACK" -> (getString EASY_ON_WALLET) <> ", "<> (getString UPTO) <> " 4 " <> (getString PEOPLE)
+          _ -> (getString ECONOMICAL) <> ", 4 " <> (getString PEOPLE)
+      }

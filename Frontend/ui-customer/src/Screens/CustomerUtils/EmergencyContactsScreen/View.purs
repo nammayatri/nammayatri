@@ -10,7 +10,7 @@ import Font.Style as FontStyle
 import JBridge (openUrlInApp, loaderText)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>), map, (/=), discard, (||))
+import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>), map, (/=), discard, (||), (&&))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, imageView, imageUrl, cornerRadius, onClick, afterRender, visibility, stroke, relativeLayout, clickable, imageWithFallback)
 import Screens.EmergencyContactsScreen.Controller (Action(..), ScreenOutput, eval, contactColorsList)
 import Screens.Types (EmergencyContactsScreenState, ContactDetail, NewContacts)
@@ -45,7 +45,7 @@ view push state =
         , orientation VERTICAL
         , onBackPressed push (const BackPressed)
         , background Color.white900
-        , padding if os == "IOS" then (Padding 0 safeMarginTop 0 safeMarginBottom) else (Padding 0 0 0 0)
+        , padding if os == "IOS" then (Padding 0 safeMarginTop 0 (if safeMarginBottom == 0 && os == "IOS" then 24 else safeMarginBottom)) else (Padding 0 0 0 0)
         , gravity CENTER
         , afterRender
             ( \action -> do
@@ -63,7 +63,7 @@ view push state =
         ]
         [ linearLayout
             [ height MATCH_PARENT
-            , width WRAP_CONTENT
+            , width MATCH_PARENT
             , orientation VERTICAL
             ]
             [ GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
@@ -112,10 +112,9 @@ contactListView push state =
 
 --------------------------------------------------- emergencyContactsView -----------------------------------------------------
 emergencyContactsView :: forall w. (Action -> Effect Unit) -> EmergencyContactsScreenState -> PrestoDOM (Effect Unit) w
-emergencyContactsView push state =
+emergencyContactsView push state = 
   linearLayout
-    [ height $ WRAP_CONTENT
-    , width $ MATCH_PARENT
+    [ width $ MATCH_PARENT
     , orientation VERTICAL
     , weight 1.0
     ]
@@ -137,7 +136,7 @@ emptyContactsView push state =
     [ imageView
         [ height $ V 150
         , width $ V 150
-        , imageWithFallback "ny_ic_emergency_contact_empty,https://assets.juspay.in/nammayatri/images/user/ny_ic_emergency_contact_empty.png"
+        , imageWithFallback "ic_emergency_contact_empty,https://assets.juspay.in/nammayatri/images/user/ny_ic_emergency_contact_empty.png"
         ]
     , textView
         [ height $ WRAP_CONTENT

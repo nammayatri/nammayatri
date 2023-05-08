@@ -37,6 +37,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.TimeZone;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -224,7 +225,7 @@ public class RideRequestActivity extends AppCompatActivity {
                 float distanceTobeCovered = (float) rideRequestBundle.getInt(getResources().getString(R.string.DISTANCE_TO_BE_COVERED));
                 DecimalFormat df = new DecimalFormat();
                 df.setMaximumFractionDigits(2);
-                final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+                final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",new Locale("en","US"));
                 simpleDateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
                 String getCurrTime = simpleDateFormat.format(new Date());
                 int calculatedTime = rideRequestUtils.calculateExpireTimer(searchRequestValidTill,getCurrTime);

@@ -59,6 +59,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.TimeZone;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -99,6 +100,13 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private ArrayList<TextView> tipsList;
     private ArrayList<ShimmerFrameLayout> shimmerTipList;
     private Handler mainLooper = new Handler(Looper.getMainLooper());
+    private String key = "";
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        key = getApplicationContext().getResources().getString(R.string.service);
+    }
 
     public class OverlayBinder extends Binder {
         public OverlaySheetService getService () {
@@ -140,6 +148,10 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 holder.buttonDecreasePrice.setVisibility(View.VISIBLE);
             }
             updateTipView(holder, model);
+            
+            if (key != null && key.equals("jatrisaathidriver")){
+                holder.textIncludesCharges.setVisibility(View.GONE);
+            }
             updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(),model.getStartTime(), getString(R.string.accept_offer));
             updateIncreaseDecreaseButtons(holder, model);
             holder.reqButton.setOnClickListener(new View.OnClickListener() {
@@ -489,7 +501,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                         DecimalFormat df = new DecimalFormat();
                         df.setMaximumFractionDigits(2);
 
-                        final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+                        final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",new Locale("en","US"));
                         f.setTimeZone(TimeZone.getTimeZone("UTC"));
                         String getCurrTime = f.format(new Date());
                         int calculatedTime = calculateExpireTimer(searchRequestValidTill,getCurrTime);
@@ -570,6 +582,12 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         params.screenOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT;
         LayoutInflater inflater = ((LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE));
         floatyView = inflater.inflate(R.layout.viewpager_layout_view,null);
+        TextView merchantLogo = (TextView) floatyView.findViewById(R.id.merchantLogo);
+        if (key != null && key.equals("jatrisaathidriver")){
+            merchantLogo.setText("Jatri Sathi");
+        } else if (key != null && key.equals("yatripartner")){
+            merchantLogo.setText("Yatri Partner");
+        }
         progressDialog = inflater.inflate(R.layout.loading_screen_overlay, null);
         apiLoader = inflater.inflate(R.layout.api_loader, null);
         View dismissLoader = progressDialog.findViewById(R.id.loaderOverlay);
@@ -807,12 +825,18 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             public void run() {
                 if (progressDialog!=null){
                     TextView loaderText = progressDialog.findViewById(R.id.text_waiting_for_customer);
+                    if (key != null && key.equals("jatrisaathidriver")) {
+                        ImageView loader = progressDialog.findViewById(R.id.image_view_waiting);
+                        loader.setImageResource(R.drawable.ic_ride_assigned);
+                    }
                     LottieAnimationView lottieAnimationView = progressDialog.findViewById(R.id.lottie_view_waiting);
                     loaderText.setText(ackText);
-                    lottieAnimationView.setAnimation(rawResource);
-                    lottieAnimationView.setProgress(0);
-                    lottieAnimationView.setSpeed(1.2f);
-                    lottieAnimationView.playAnimation();
+                    if (lottieAnimationView.getVisibility() != View.GONE){
+                        lottieAnimationView.setAnimation(rawResource);
+                        lottieAnimationView.setProgress(0);
+                        lottieAnimationView.setSpeed(1.2f);
+                        lottieAnimationView.playAnimation();
+                    }
                     rideStatusListener.cancel();
                 }
             }
@@ -966,7 +990,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         Context context = getApplicationContext();
         SharedPreferences sharedPreferences = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         sharedPreferences.edit().putString(getString(R.string.LOCAL_STAGE),getString(R.string.RideRequested));
-        SimpleDateFormat formatter = new SimpleDateFormat("EE MMM d y H:m:s ZZZ");
+        SimpleDateFormat formatter = new SimpleDateFormat("EE MMM d y H:m:s ZZZ", new Locale("en","US"));
         String dateString = formatter.format(new Date());
         sharedPref.edit().putString(getString(R.string.RIDE_REQUEST_TIME), dateString).apply();
     }

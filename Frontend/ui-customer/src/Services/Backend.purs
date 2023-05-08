@@ -445,6 +445,7 @@ makeUpdateProfileRequest name gender referralCode =
             "KN_IN" -> "KANNADA"
             "HI_IN" -> "HINDI"
             "ML_IN" -> "MALAYALAM"
+            "BN_IN" -> "BENGALI"
             "TA_IN" -> "TAMIL"
             _       -> "ENGLISH"
     }
@@ -464,6 +465,7 @@ editProfileRequest firstName middleName lastName emailID gender =
             "KN_IN" -> "KANNADA"
             "HI_IN" -> "HINDI"
             "ML_IN" -> "MALAYALAM"
+            "BN_IN" -> "BENGALI"
             "TA_IN" -> "TAMIL"
             _       -> "ENGLISH"
     }
@@ -482,6 +484,7 @@ makeUpdateLanguageRequest _ = UpdateProfileReq{
             "KN_IN" -> "KANNADA"
             "HI_IN" -> "HINDI"
             "ML_IN" -> "MALAYALAM"
+            "BN_IN" -> "BENGALI"
             "TA_IN" -> "TAMIL"
             _       -> "ENGLISH"
     }
@@ -676,13 +679,13 @@ type Markers = {
 
 driverTracking :: String -> Markers
 driverTracking _ = {
-    srcMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_auto_map" else "ny_ic_auto_map",
+    srcMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_auto_map" else "ic_vehicle_nav_on_map",
     destMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "src_marker" else "ny_ic_src_marker"
 }
 
 rideTracking :: String -> Markers
 rideTracking _ = {
-    srcMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_auto_map" else "ny_ic_auto_map",
+    srcMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_auto_map" else "ic_vehicle_nav_on_map",
     destMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "dest_marker" else "ny_ic_dest_marker"
 }
 
@@ -711,8 +714,8 @@ originServiceabilityBT req = do
     errorHandler (errorPayload) =  do
             BackT $ pure GoBack
 
-destServiceabilityBT :: ServiceabilityReq -> FlowBT String ServiceabilityRes
-destServiceabilityBT req = do
+destServiceabilityBT :: DestinationServiceabilityReq -> FlowBT String ServiceabilityResDestination
+destServiceabilityBT req = do 
     headers <- getHeaders' ""
     withAPIResultBT ((EP.serviceabilityDest "" )) (\x → x) errorHandler (lift $ lift $ callAPI headers req)
     where
@@ -721,6 +724,14 @@ destServiceabilityBT req = do
 
 makeServiceabilityReq :: Number -> Number -> ServiceabilityReq
 makeServiceabilityReq latitude longitude = ServiceabilityReq {
+    "location" : LatLong {
+                "lat" : latitude,
+                "lon" : longitude
+            }
+    }
+
+makeServiceabilityReqForDest :: Number -> Number -> DestinationServiceabilityReq
+makeServiceabilityReqForDest latitude longitude = DestinationServiceabilityReq {
     "location" : LatLong {
                 "lat" : latitude,
                 "lon" : longitude

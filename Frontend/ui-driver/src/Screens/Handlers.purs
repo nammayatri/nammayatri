@@ -45,3 +45,4 @@ import Screens.UploadDrivingLicenseScreen.Handler (uploadDrivingLicense) as UI
 import Screens.VehicleDetailsScreen.Handler (vehicleDetailsScreen) as UI
 import Screens.WriteToUsScreen.Handler (writeToUsScreen) as UI
 import Screens.NotificationsScreen.Handler (notifications) as UI
+import Screens.BookingOptionsScreen.Handler (bookingOptions) as UI

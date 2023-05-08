@@ -58,7 +58,9 @@ import Engineering.Helpers.Commons (screenHeight, screenWidth)
 -- foreign import _renewFile :: String -> Effect Unit
 -- foreign import readFileImpl      :: String -> Effect String
 foreign import showLoaderImpl      :: String -> Effect Unit
-foreign import locateOnMap :: Boolean -> Number -> Number -> Unit
+-- foreign import readFile'      :: String -> Effect String
+-- foreign import showLoader'      :: String -> Effect Unit
+foreign import locateOnMap :: Boolean -> Number -> Number -> String-> Array Location -> Unit
 
 foreign import exitLocateOnMap :: String -> Unit
 foreign import shareTextMessage :: String -> String -> Unit
@@ -309,6 +311,11 @@ type IsLocationOnPath = {
   , distance :: Int
 }
 
+type Location = {
+  lat :: Number,
+  lng :: Number,
+  place :: String
+}
 -- type Point = Array Number
 
 -- type Markers = {

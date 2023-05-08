@@ -384,6 +384,9 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , language              :: Maybe String
     , referralCode          :: Maybe String
     , alternateNumber       :: Maybe String
+    , canDowngradeToHatchback :: Boolean
+    , canDowngradeToSedan :: Boolean
+    , canDowngradeToTaxi :: Boolean
     }
 
 newtype  OrganizationInfo = OrganizationInfo
@@ -590,6 +593,7 @@ newtype UpdateDriverInfoReq = UpdateDriverInfoReq
     ,   deviceToken             :: Maybe String
     ,   canDowngradeToSedan     :: Maybe Boolean
     ,   canDowngradeToHatchback :: Maybe Boolean
+    ,   canDowngradeToTaxi      :: Maybe Boolean
     ,   language                :: Maybe String
     }
 
@@ -1332,3 +1336,30 @@ instance standardEncodeRemoveAlternateNumberRequest :: StandardEncode RemoveAlte
 instance encodeRemoveAlternateNumberRequest :: Encode RemoveAlternateNumberRequest where encode = defaultEncode
 
 
+--------------------------------------------------- rideOtp ---------------------------------------------------- 
+
+newtype OTPRideReq = OTPRideReq
+    {
+      specialZoneOtpCode :: String,
+      point :: LatLong
+    }
+
+data OTPRideRequest = OTPRideRequest OTPRideReq
+
+instance makeOTPRideReq :: RestEndpoint OTPRideRequest RidesInfo where
+    makeRequest reqBody@(OTPRideRequest (OTPRideReq rqBody)) headers = defaultMakeRequest POST (EP.otpRide "") headers reqBody
+    decodeResponse = decodeJSON
+    encodeRequest req = standardEncode req
+
+derive instance genricOTPRideReq :: Generic OTPRideReq _
+instance showOTPRideReq :: Show OTPRideReq where show = genericShow
+instance standardEncodeOTPRideReq :: StandardEncode OTPRideReq where standardEncode (OTPRideReq req) = standardEncode req
+instance decodeOTPRideReq :: Decode OTPRideReq where decode = defaultDecode
+instance encodeOTPRideReq :: Encode OTPRideReq where encode = defaultEncode
+
+
+derive instance genericOTPRideRequest :: Generic OTPRideRequest _
+instance standardEncodeOTPRideRequest :: StandardEncode OTPRideRequest where standardEncode (OTPRideRequest req) = standardEncode req
+instance showOTPRideRequest :: Show OTPRideRequest where show = genericShow
+instance decodeOTPRideRequest :: Decode OTPRideRequest where decode = defaultDecode
+instance encodeOTPRideRequest :: Encode OTPRideRequest where encode = defaultEncode
