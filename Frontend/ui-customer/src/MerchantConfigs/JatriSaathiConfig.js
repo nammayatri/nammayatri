@@ -52,9 +52,9 @@ const config = {
   "showDashboard" : "false",
   "shareAppTitle" : "Share Jatri Sathi!",
   "shareAppContent" : "Hey there!\n\n Jatri Sathi is Coming Soon",
-  "DOCUMENT_LINK" : "https://docs.google.com/document/d/1-oRR_oI8ncZRPZvFZEJZeCVQjTmXTmHA",
+  "DOCUMENT_LINK" : "https://docs.google.com/document/d/19pQUgTWXBqcM7bjy4SU1-z33r-iXsdPMfZggBTXbdR4",
   "APP_LINK" : "",
-  "PRIVACY_POLICY_LINK" : "https://docs.google.com/document/d/128VU80K5E1iz-x6QnP1R127m_lwmDO3F",
+  "PRIVACY_POLICY_LINK" : "https://docs.google.com/document/d/1-bcjLOZ_gR0Rda2BNmkKnqVds8Pm23v1e7JbSDdM70E",
   "CUSTOMER_TIP" : "false"
 }
 
