@@ -5,21 +5,11 @@ This is the frontend codebase for the Nammayatri app.
 
 ## Installation
 
-To install the frontend dependencies, first enter the development shell by running
+Our dependencies are managed via nix, to get access to the language servers and tooling just open the frontend development shell.
 ```bash
    nix develop .#frontend
 ```
-This will give you access to all of the purescript tooling as well as the correct version of node
-
-Then navigate to the frontend > ui-customer/ui-driver both and install the npm dependencies by running the following command:
-```bash
-  npm i
-```
-
-
-
-
-
+This will give you access to all of the purescript tooling as well as the correct version of node and their corresponding language servers.
 
 
 ## Android
@@ -71,7 +61,7 @@ To update the `juspay_assets.json`, follow these steps:
 
 **Starting the Server**
 
-    npm run start:android:<master, sandbox, or prod>
+    nix run <customer, driver>:start:android:master
 
 ## IOS
 
