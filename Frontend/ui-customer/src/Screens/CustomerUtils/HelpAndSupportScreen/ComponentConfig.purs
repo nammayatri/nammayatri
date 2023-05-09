@@ -97,8 +97,8 @@ apiErrorModalConfig state = let
     , buttonConfig {
         text = (getString NOTIFY_ME)
       , margin = (Margin 16 0 16 16)
-      , background = Color.black900
-      , color = Color.yellow900
+      , background = state.data.config.primaryBackground
+      , color = state.data.config.primaryTextColor
       , fontStyle = FontStyle.medium LanguageStyle
       , textSize = FontSize.a_16
       }

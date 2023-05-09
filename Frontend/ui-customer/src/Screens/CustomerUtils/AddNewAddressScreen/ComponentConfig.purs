@@ -110,11 +110,13 @@ primaryButtonConfig state = let
     config = PrimaryButton.config
     primaryButtonConfig' = config 
       { textConfig{ text = if (state.props.editSavedLocation) then (getString CONFIRM_CHANGES) else (getString CONFIRM_AND_SAVE)
-      , textSize = FontSize.a_16 }
+      , textSize = FontSize.a_16 
+      , color = state.data.config.primaryTextColor }
       , margin = (Margin 0 0 0 (24 + (EHC.safeMarginBottom)))
       , isClickable = (state.props.isBtnActive && state.props.isLocationServiceable && (not state.props.tagExists))
       , alpha = if (state.props.isBtnActive && state.props.isLocationServiceable && (not state.props.tagExists)) then 1.0 else 0.4
       , id = "AddNewAddressButton"
       , enableLoader = (JB.getBtnLoader "AddNewAddressButton")
+      , background = state.data.config.primaryBackground
       }
   in primaryButtonConfig'

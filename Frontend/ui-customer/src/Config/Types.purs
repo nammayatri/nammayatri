@@ -12,7 +12,14 @@ type AppConfig =
     estimateConfirmText :: String,
     autoConfirmingLoaderColor :: String,
     quoteListModelBackground :: String,
-    quoteListModel :: QuoteListConfig
+    quoteListModel :: QuoteListConfig,
+    profileBackground :: String,
+    profileName :: String,
+    profileImage :: String,
+    sideBarList :: Array String,
+    otpBackground :: String,
+    otpTextColor :: String,
+    rateCardColor :: String
   } 
 
 type QuoteListConfig = {

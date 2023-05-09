@@ -16,6 +16,7 @@
 module Screens.SelectLanguageScreen.ScreenData where
 
 import Screens.Types (SelectLanguageScreenState)
+import Config.DefaultConfig as DC
 
 initData :: SelectLanguageScreenState
 initData = 
@@ -35,6 +36,7 @@ initData =
         , subTitle : "Hindi"
         }]
         , isSelected : false
+        , config : DC.config
        }
     ,props:
       {

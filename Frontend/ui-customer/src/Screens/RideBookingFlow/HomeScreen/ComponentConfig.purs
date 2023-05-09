@@ -102,13 +102,13 @@ skipButtonConfig state =
       config
         { textConfig
           { text = (getString SKIP)
-          , color = Color.black700
+          , color = state.data.config.rateCardColor
           , fontStyle = FontStyle.bold LanguageStyle
           , textSize = FontSize.a_16
           }
         , width = V (EHC.screenWidth unit / 4)
         , background = Color.white900
-        , stroke = ("1," <> Color.black500)
+        , stroke = ("1," <> state.data.config.rateCardColor)
         , margin = (Margin 0 0 0 0)
         , id = "SkipRatingButton"
         , enableLoader = (JB.getBtnLoader "SkipRatingButton")
@@ -289,7 +289,7 @@ rateRideButtonConfig state =
           , fontStyle = FontStyle.bold LanguageStyle
           ,  color = state.data.config.primaryTextColor 
           }
-        , background = state.data.config.primaryBackground
+        , background = state.data.config.rateCardColor
         , margin = (MarginLeft 12)
         , id = "RateYourDriverButton"
         , enableLoader = (JB.getBtnLoader "RateYourDriverButton")

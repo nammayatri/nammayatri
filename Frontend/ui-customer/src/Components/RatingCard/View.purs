@@ -202,7 +202,7 @@ rideRatingButtonConfig state = let
       , height = (V 48) 
       , gravity = CENTER_VERTICAL
       , cornerRadius = 8.0
-      , background = state.data.appConfig.primaryBackground
+      , background = state.data.appConfig.rateCardColor
       , id = "RideRatingButton"
       , enableLoader = (getBtnLoader "RightRatingButton")
       }
@@ -216,13 +216,13 @@ skipButtonConfig state = let
   skipButtonConfig' = config 
     { textConfig 
       { text = (getString SKIP)
-      , color = Color.black700 
+      , color = state.data.appConfig.rateCardColor
       , fontStyle = FontStyle.bold LanguageStyle
       , textSize = FontSize.a_16 
       }
     , width = V ( screenWidth unit / 4)
     , background = Color.white900 
-    , stroke = ("1," <> Color.black500)
+    , stroke = ("1," <> state.data.appConfig.rateCardColor)
     , margin = (MarginRight 12)
     , id = "SkipCurrentRatingButton"
     , enableLoader = (getBtnLoader "SkipCurrentRatingButton")

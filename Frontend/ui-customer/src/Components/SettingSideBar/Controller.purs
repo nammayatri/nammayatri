@@ -53,6 +53,7 @@ type SettingSideBarState =
   , email :: Maybe String
   , gender :: Maybe String
   , appConfig :: AppConfig
+  , sideBarList :: Array String
   }
 
 type Item =

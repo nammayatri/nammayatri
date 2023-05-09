@@ -70,11 +70,13 @@ primaryButtonConfig state = let
         {
           text = (getString ADD_NEW_FAVOURITE)
         , fontStyle = FontStyle.semiBold LanguageStyle
+        , color = state.data.config.primaryTextColor
         }
       , margin = (Margin 16 15 16 24)
       , height = V 52
       , id = "AddNewAddressSavedLocationScreen"
       , enableLoader = (JB.getBtnLoader "AddNewAddressSavedLocationScreen")
+      , background = state.data.config.primaryBackground
       }
   in primaryButtonConfig'
 
@@ -133,11 +135,11 @@ errorModalConfig state = let
     , buttonConfig {
         text = (getString ADD_NEW_FAVOURITE)
       , margin = (Margin 16 0 16 24)
-      , background = Color.black900
       , height = V 52
-      , color = Color.yellow900
+      , color = state.data.config.primaryTextColor
       , fontStyle = FontStyle.semiBold LanguageStyle
       , textSize = FontSize.a_16
+      , background = state.data.config.primaryBackground
       }
     }
   in errorModalConfig' 
