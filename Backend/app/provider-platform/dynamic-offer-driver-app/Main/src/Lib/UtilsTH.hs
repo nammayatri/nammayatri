@@ -22,16 +22,16 @@ enableKV name pKeyN sKeysN = do
   [tModeMeshSig, tModeMeshDec] <- tableTModMeshD name
   [kvConnectorDec] <- kvConnectorInstancesD name pKeyN sKeysN
   [meshMetaDec] <- meshMetaInstancesD name
-  cerealDec <- cerealInstancesD name
-  pure $ [tModeMeshSig, tModeMeshDec, meshMetaDec, kvConnectorDec] ++ cerealDec
+  -- cerealDec <- cerealInstancesD name
+  pure $ [tModeMeshSig, tModeMeshDec, meshMetaDec, kvConnectorDec] -- ++ cerealDec
 
 enableKVPG :: Name -> [Name] -> [[Name]] -> Q [Dec]
 enableKVPG name pKeyN sKeysN = do
   [tModeMeshSig, tModeMeshDec] <- tableTModMeshD name
   [kvConnectorDec] <- kvConnectorInstancesD name pKeyN sKeysN
   [meshMetaDec] <- meshMetaInstancesDPG name
-  cerealDec <- cerealInstancesD name
-  pure $ [tModeMeshSig, tModeMeshDec, meshMetaDec, kvConnectorDec] ++ cerealDec
+  -- cerealDec <- cerealInstancesD name
+  pure $ [tModeMeshSig, tModeMeshDec, meshMetaDec, kvConnectorDec] -- ++ cerealDec
 
 -- DB.OrderReferenceT (B.FieldModification (B.TableField DB.OrderReferenceT)) add signature
 tableTModMeshD :: Name -> Q [Dec]

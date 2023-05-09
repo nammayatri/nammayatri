@@ -17,48 +17,143 @@
 -- {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wwarn=type-defaults #-}
 
 module Storage.Tabular.BookingNew where
 
--- import qualified Domain.Types.Booking as Domain
--- import qualified Domain.Types.Vehicle.Variant as Veh
 -- import Lib.UtilsTH
 
--- import Kernel.Types.Common hiding (id)
+-- import Kernel.Types.Centesimal (Centesimal)
+-- import Kernel.Types.Geofencing (GeoRestriction(..))
 
 -- import Storage.Tabular.Booking.BookingLocation hiding (createdAt, id, updatedAt)
 -- import qualified Storage.Tabular.FareParameters as Fare
 -- import Storage.Tabular.Merchant (MerchantTId)
 -- import Storage.Tabular.RiderDetails (RiderDetailsTId)
 
--- import qualified Database.Beam.Backend as DBB
 -- import qualified Database.Beam.Postgres as DBP
 -- import           Database.Beam.Schema.Tables (DatabaseEntity, EntityModification)
--- import qualified Database.Beam.Schema.Tables as DBST
 
 import qualified Data.Aeson as A
+import Data.ByteString.Internal (ByteString, unpackChars)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import qualified Data.Time as Time
 import qualified Database.Beam as B
+import Database.Beam.Backend
 import Database.Beam.MySQL ()
+import Database.Beam.Postgres
+  ( Postgres,
+    ResultError (ConversionFailed, UnexpectedNull),
+  )
+import qualified Database.Beam.Schema.Tables as DBST
+import Database.PostgreSQL.Simple.FromField (FromField, fromField)
+import qualified Database.PostgreSQL.Simple.FromField as DPSF
+import qualified Domain.Types.Booking as Domain
+import qualified Domain.Types.Vehicle.Variant as Veh
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
+import Kernel.Types.Common hiding (id)
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Vehicle ()
 
--- import           Database.PostgreSQL.Simple.FromField(FromField, fromField)
--- import qualified Database.PostgreSQL.Simple.FromField as DPSF
+data A = A | B
+  deriving stock (Eq, Generic, Read, Show, Ord)
+  deriving anyclass (A.FromJSON, A.ToJSON)
+
+fromFieldEnum ::
+  (Typeable a, Read a) =>
+  DPSF.Field ->
+  Maybe ByteString ->
+  DPSF.Conversion a
+fromFieldEnum f mbValue = case mbValue of
+  Nothing -> DPSF.returnError UnexpectedNull f mempty
+  Just value' ->
+    case (readMaybe (unpackChars value')) of
+      Just val -> pure val
+      _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
+
+instance FromField Domain.BookingStatus where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.BookingStatus where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.BookingStatus
+
+instance FromBackendRow Postgres Domain.BookingStatus
+
+instance FromField Domain.BookingType where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.BookingType where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.BookingType
+
+instance FromBackendRow Postgres Domain.BookingType
+
+-- deriving stock instance Read GeoRestriction
+
+instance FromField Veh.Variant where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Veh.Variant where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Veh.Variant
+
+instance FromBackendRow Postgres Veh.Variant
+
+instance FromField Meters where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Meters where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Meters
+
+instance FromBackendRow Postgres Meters
+
+instance FromField Centesimal where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Centesimal where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Centesimal
+
+instance FromBackendRow Postgres Centesimal
+
+deriving stock instance Read Money
+
+instance FromField Money where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Money where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Money
+
+instance FromBackendRow Postgres Money
+
+instance FromField Seconds where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Seconds where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Seconds
+
+instance FromBackendRow Postgres Seconds
 
 data BookingNewT f = BookingNew
   { id :: B.C f Text,
     transactionId :: B.C f Text,
     quoteId :: B.C f Text,
-    status :: B.C f Text,
-    bookingType :: B.C f Text,
+    status :: B.C f Domain.BookingStatus,
+    bookingType :: B.C f Domain.BookingType,
     specialZoneOtpCode :: B.C f (Maybe Text),
     providerId :: B.C f Text,
     primaryExophone :: B.C f Text,
@@ -68,11 +163,11 @@ data BookingNewT f = BookingNew
     riderId :: B.C f (Maybe Text),
     fromLocationId :: B.C f Text,
     toLocationId :: B.C f Text,
-    vehicleVariant :: B.C f Text,
-    estimatedDistance :: B.C f Int,
-    maxEstimatedDistance :: B.C f (Maybe Int),
-    estimatedFare :: B.C f Int,
-    estimatedDuration :: B.C f Int,
+    vehicleVariant :: B.C f Veh.Variant,
+    estimatedDistance :: B.C f Meters,
+    maxEstimatedDistance :: B.C f (Maybe Centesimal),
+    estimatedFare :: B.C f Money,
+    estimatedDuration :: B.C f Seconds,
     fareParametersId :: B.C f Int,
     riderName :: B.C f (Maybe Text),
     createdAt :: B.C f Time.LocalTime,
@@ -137,4 +232,4 @@ bookingNewToPSModifiers =
   M.fromList
     []
 
-$(enableKV ''BookingNewT ['id] [])
+$(enableKVPG ''BookingNewT ['id] [])
