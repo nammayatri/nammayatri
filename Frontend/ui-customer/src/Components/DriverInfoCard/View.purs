@@ -98,13 +98,13 @@ supportButton push state =
       , height $ V 18
       , width $ V 18
       , margin $ Margin 10 10 10 10
-      , visibility GONE
+      , visibility VISIBLE
       , onClick push $ const ShareRide
       ]
     , linearLayout
       [ height (V 1)
       , width (V 19)
-      , visibility GONE
+      , visibility VISIBLE
       , margin (MarginVertical 8 8)
       , background Color.lightGreyShade
       ][]
