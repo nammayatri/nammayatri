@@ -131,3 +131,6 @@ _chargeableRideDistance = lens (unwrap >>> _.chargeableRideDistance) (\oldRec ne
 
 _selectedQuotes :: forall a b c. Newtype a { selectedQuotes :: b | c } => Lens' a b
 _selectedQuotes = lens (unwrap >>> _.selectedQuotes) (\oldRec newVal -> wrap ((unwrap oldRec) { selectedQuotes = newVal }))
+
+_signatureAuthData :: forall a b c. Newtype a { signatureAuthData :: b | c } => Lens' a b
+_signatureAuthData = lens (unwrap >>> _.signatureAuthData) (\oldRec newVal -> wrap ((unwrap oldRec) { signatureAuthData = newVal }))

@@ -399,10 +399,12 @@ export const datePicker = function (label)
 export const setFCMToken = function (cb) {
   return function (action) {
     return function () {
-      var callback = callbackMapper.map(function (id) {
-        cb(action(id))();
-      });
-      return window.JBridge.setFCMToken(callback);
+      if (window.JBridge.setFCMToken) {
+        var callback = callbackMapper.map(function (id) {
+          cb(action(id))();
+        });
+        return window.JBridge.setFCMToken(callback);
+      }
     };
   };
   // JBridge.setFCMToken();

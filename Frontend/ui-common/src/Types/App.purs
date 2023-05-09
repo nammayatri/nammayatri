@@ -84,13 +84,13 @@ instance encodeSignatureAuthData :: Encode SignatureAuthData where encode = defa
 instance decodeSignatureAuthData :: Decode SignatureAuthData where decode = defaultDecode
 
 newtype GlobalPayload = GlobalPayload
-  { betaAssets :: Boolean
+  { betaAssets :: Maybe Boolean
   , payload :: Payload
-  , requestId :: String
-  , sdkName :: String
-  , sdkVersion :: String
-  , service :: String
-  , service_based :: Boolean
+  , requestId :: Maybe String
+  , sdkName :: Maybe String
+  , sdkVersion :: Maybe String
+  , service :: Maybe String
+  , service_based :: Maybe Boolean
   }
 
 derive instance newGlobalPayload :: Newtype GlobalPayload _
