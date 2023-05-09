@@ -12,7 +12,7 @@ UPDATE atlas_driver_offer_bpp.driver_stats
         WHERE status = 'COMPLETED'
         GROUP BY driver_id
     ) AS ride_counts
-    WHERE ride_counts.driver_id = rideStats.driver_id;
+    WHERE ride_counts.driver_id = driver_stats.driver_id;
 
 -- Add column in Transporter Configs
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_leader_board_expiry int;
