@@ -22,6 +22,7 @@ where
 
 import Data.Aeson.Types ()
 import qualified Domain.Action.UI.Ride as DRide
+import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as SPerson
 import qualified Domain.Types.Ride as SRide
 import Environment
@@ -49,8 +50,8 @@ handler rideId =
   getDriverLoc rideId
     :<|> getRideStatus rideId
 
-getDriverLoc :: Id SRide.Ride -> Id SPerson.Person -> FlowHandler DRide.GetDriverLocResp
-getDriverLoc rideId personId = withFlowHandlerAPI . withPersonIdLogTag personId $ DRide.getDriverLoc rideId personId
+getDriverLoc :: Id SRide.Ride -> (Id SPerson.Person, Id Merchant.Merchant) -> FlowHandler DRide.GetDriverLocResp
+getDriverLoc rideId (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId $ DRide.getDriverLoc rideId personId
 
-getRideStatus :: Id SRide.Ride -> Id SPerson.Person -> FlowHandler DRide.GetRideStatusResp
-getRideStatus rideId personId = withFlowHandlerAPI . withPersonIdLogTag personId $ DRide.getRideStatus rideId personId
+getRideStatus :: Id SRide.Ride -> (Id SPerson.Person, Id Merchant.Merchant) -> FlowHandler DRide.GetRideStatusResp
+getRideStatus rideId (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId $ DRide.getRideStatus rideId personId

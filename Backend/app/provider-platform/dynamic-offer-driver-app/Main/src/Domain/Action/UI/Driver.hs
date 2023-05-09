@@ -399,23 +399,22 @@ getInformation ::
     EsqDBReplicaFlow m r,
     EncFlow m r
   ) =>
-  Id SP.Person ->
+  (Id SP.Person, Id DM.Merchant) ->
   m DriverInformationRes
-getInformation personId = do
+getInformation (personId, merchantId) = do
   let driverId = cast personId
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   driverReferralCode <- fmap (.referralCode) <$> QDR.findById (cast driverId)
   driverEntity <- buildDriverEntityRes (person, driverInfo)
   logDebug $ "alternateNumber-" <> show driverEntity.alternateNumber
-  let merchantId = person.merchantId
   organization <-
     CQM.findById merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
   pure $ makeDriverInformationRes driverEntity organization driverReferralCode
 
-setActivity :: (CacheFlow m r, EsqDBFlow m r) => Id SP.Person -> Bool -> Maybe DriverInfo.DriverMode -> m APISuccess.APISuccess
-setActivity personId isActive mode = do
+setActivity :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant) -> Bool -> Maybe DriverInfo.DriverMode -> m APISuccess.APISuccess
+setActivity (personId, _) isActive mode = do
   _ <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let driverId = cast personId
   when (isActive || (isJust mode && (mode == Just DriverInfo.SILENT || mode == Just DriverInfo.ONLINE))) $ do
@@ -519,10 +518,10 @@ updateDriver ::
     EsqDBReplicaFlow m r,
     EncFlow m r
   ) =>
-  Id SP.Person ->
+  (Id SP.Person, Id DM.Merchant) ->
   UpdateDriverReq ->
   m UpdateDriverRes
-updateDriver personId req = do
+updateDriver (personId, _) req = do
   runRequestValidation validateUpdateDriverReq req
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let updPerson =
@@ -669,14 +668,13 @@ getNearbySearchRequests ::
     Redis.HedisFlow m r,
     HasCacheConfig r
   ) =>
-  Id SP.Person ->
+  (Id SP.Person, Id DM.Merchant) ->
   m GetNearbySearchRequestsRes
-getNearbySearchRequests driverId = do
-  person <- runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+getNearbySearchRequests (driverId, merchantId) = do
   nearbyReqs <- runInReplica $ QSRD.findByDriver driverId
-  transporterConfig <- CQTC.findByMerchantId person.merchantId >>= fromMaybeM (TransporterConfigNotFound person.merchantId.getId)
+  transporterConfig <- CQTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   let cancellationScoreRelatedConfig = mkCancellationScoreRelatedConfig transporterConfig
-  cancellationRatio <- DP.getLatestCancellationRatio cancellationScoreRelatedConfig person.merchantId (cast driverId)
+  cancellationRatio <- DP.getLatestCancellationRatio cancellationScoreRelatedConfig merchantId (cast driverId)
   searchRequestForDriverAPIEntity <- mapM (buildSearchRequestForDriverAPIEntity cancellationRatio cancellationScoreRelatedConfig transporterConfig) nearbyReqs
   return $ GetNearbySearchRequestsRes searchRequestForDriverAPIEntity
   where
@@ -686,7 +684,7 @@ getNearbySearchRequests driverId = do
       return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest popupDelaySeconds
 
     mkCancellationScoreRelatedConfig :: TransporterConfig -> CancellationScoreRelatedConfig
-    mkCancellationScoreRelatedConfig TransporterConfig {..} = CancellationScoreRelatedConfig popupDelayToAddAsPenalty thresholdCancellationScore minRidesForCancellationScore
+    mkCancellationScoreRelatedConfig tc = CancellationScoreRelatedConfig tc.popupDelayToAddAsPenalty tc.thresholdCancellationScore tc.minRidesForCancellationScore
 
 isAllowedExtraFee :: DriverExtraFeeBounds -> Money -> Bool
 isAllowedExtraFee extraFee val = extraFee.minFee <= val && val <= extraFee.maxFee
@@ -711,12 +709,12 @@ offerQuote ::
     CoreMetrics m,
     HasPrettyLogger m r
   ) =>
-  Id SP.Person ->
+  (Id SP.Person, Id DM.Merchant) ->
   DriverOfferReq ->
   m APISuccess
-offerQuote driverId DriverOfferReq {..} = do
+offerQuote (driverId, merchantId) DriverOfferReq {..} = do
   let response = Accept
-  respondQuote driverId DriverRespondReq {..}
+  respondQuote (driverId, merchantId) DriverRespondReq {..}
 
 respondQuote ::
   ( HasCacheConfig r,
@@ -734,10 +732,10 @@ respondQuote ::
     CoreMetrics m,
     HasPrettyLogger m r
   ) =>
-  Id SP.Person ->
+  (Id SP.Person, Id DM.Merchant) ->
   DriverRespondReq ->
   m APISuccess
-respondQuote driverId req = do
+respondQuote (driverId, _) req = do
   Redis.whenWithLockRedis (offerQuoteLockKey driverId) 60 $ do
     sReq <- QSReq.findById req.searchRequestId >>= fromMaybeM (SearchRequestNotFound req.searchRequestId.getId)
     now <- getCurrentTime
@@ -851,10 +849,10 @@ respondQuote driverId req = do
 
 getStats ::
   (EsqDBReplicaFlow m r, EncFlow m r) =>
-  Id SP.Person ->
+  (Id SP.Person, Id DM.Merchant) ->
   Day ->
   m DriverStatsRes
-getStats driverId date = do
+getStats (driverId, _) date = do
   rides <- runInReplica $ QRide.getRidesForDate driverId date
   return $
     DriverStatsRes
@@ -913,10 +911,10 @@ validate ::
     CoreMetrics m,
     HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig]
   ) =>
-  Id SP.Person ->
+  (Id SP.Person, Id DM.Merchant) ->
   DriverAlternateNumberReq ->
   m DriverAlternateNumberRes
-validate personId phoneNumber = do
+validate (personId, _) phoneNumber = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   altNoAttempt <- runInReplica $ QRegister.getAlternateNumberAttempts personId
   runRequestValidation validationCheck phoneNumber
@@ -960,10 +958,10 @@ verifyHitsCountKey :: Id SP.Person -> Text
 verifyHitsCountKey id = "Driver:AlternateNumberOtp:verify:" <> getId id <> ":hitsCount"
 
 verifyAuth ::
-  Id SP.Person ->
+  (Id SP.Person, Id DM.Merchant) ->
   DriverAlternateNumberOtpReq ->
   Flow APISuccess
-verifyAuth personId req = do
+verifyAuth (personId, _) req = do
   Redis.whenWithLockRedis (makeAlternatePhoneNumberKey personId) 60 $ do
     runRequestValidation validateAuthVerifyReq req
     person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -1004,17 +1002,16 @@ resendOtp ::
     CoreMetrics m,
     Redis.HedisFlow m r
   ) =>
-  Id SP.Person ->
+  (Id SP.Person, Id DM.Merchant) ->
   DriverAlternateNumberReq ->
   m ResendAuth
-resendOtp personId req = do
+resendOtp (personId, merchantId) req = do
   attemptsLeft :: Int <- do
     res <- Redis.get (makeAlternateNumberAttemptsKey personId)
     return $ fromMaybe 0 res
   logDebug $ "attemptsLeft" <> show attemptsLeft
   unless (attemptsLeft > 0) $ throwError $ AuthBlocked "Attempts limit exceed."
   smsCfg <- asks (.smsCfg)
-  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let altNumber = req.alternateNumber
       counCode = req.mobileCountryCode
   otpCode <-
@@ -1029,14 +1026,14 @@ resendOtp personId req = do
   let otpHash = smsCfg.credConfig.otpHash
       altphoneNumber = counCode <> altNumber
       sender = smsCfg.sender
-  withLogTag ("personId_" <> getId person.id) $ do
+  withLogTag ("personId_" <> getId personId) $ do
     message <-
-      MessageBuilder.buildSendAlternateNumberOTPMessage person.merchantId $
+      MessageBuilder.buildSendAlternateNumberOTPMessage merchantId $
         MessageBuilder.BuildSendOTPMessageReq
           { otp = otpCode,
             hash = otpHash
           }
-    Sms.sendSMS person.merchantId (Sms.SendSMSReq message altphoneNumber sender)
+    Sms.sendSMS merchantId (Sms.SendSMSReq message altphoneNumber sender)
       >>= Sms.checkSmsResult
   updAttempts <- Redis.decrby (makeAlternateNumberAttemptsKey personId) 1
   let updAttempt = fromIntegral updAttempts
@@ -1050,9 +1047,9 @@ remove ::
     HasCacheConfig r,
     CoreMetrics m
   ) =>
-  Id SP.Person ->
+  (Id SP.Person, Id DM.Merchant) ->
   m APISuccess
-remove personId = do
+remove (personId, _) = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let driver =
         person

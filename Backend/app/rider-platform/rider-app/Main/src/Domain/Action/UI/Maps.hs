@@ -40,25 +40,20 @@ import Kernel.Utils.Common
 import qualified Storage.CachedQueries.CacheConfig as SCC
 import qualified Storage.CachedQueries.Maps.PlaceNameCache as CM
 import qualified Storage.CachedQueries.Merchant as QMerchant
-import qualified Storage.Queries.Person as QP
 import qualified Tools.Maps as Maps
 import Tools.Metrics (CoreMetrics)
 
-autoComplete :: (EncFlow m r, EsqDBFlow m r, SCC.CacheFlow m r, CoreMetrics m) => Id DP.Person -> Maps.AutoCompleteReq -> m Maps.AutoCompleteResp
-autoComplete personId req = do
-  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  Maps.autoComplete person.merchantId req
+autoComplete :: (EncFlow m r, EsqDBFlow m r, SCC.CacheFlow m r, CoreMetrics m) => (Id DP.Person, Id DMerchant.Merchant) -> Maps.AutoCompleteReq -> m Maps.AutoCompleteResp
+autoComplete (_, merchantId) req = do
+  Maps.autoComplete merchantId req
 
-getPlaceDetails :: (EncFlow m r, EsqDBFlow m r, SCC.CacheFlow m r, CoreMetrics m) => Id DP.Person -> Maps.GetPlaceDetailsReq -> m Maps.GetPlaceDetailsResp
-getPlaceDetails personId req = do
-  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+getPlaceDetails :: (EncFlow m r, EsqDBFlow m r, SCC.CacheFlow m r, CoreMetrics m) => (Id DP.Person, Id DMerchant.Merchant) -> Maps.GetPlaceDetailsReq -> m Maps.GetPlaceDetailsResp
+getPlaceDetails (_, merchantId) req = do
+  Maps.getPlaceDetails merchantId req
 
-  Maps.getPlaceDetails person.merchantId req
-
-getPlaceName :: (EncFlow m r, EsqDBFlow m r, SCC.CacheFlow m r, CoreMetrics m) => Id DP.Person -> Maps.GetPlaceNameReq -> m Maps.GetPlaceNameResp
-getPlaceName personId req = do
-  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  merchant <- QMerchant.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
+getPlaceName :: (EncFlow m r, EsqDBFlow m r, SCC.CacheFlow m r, CoreMetrics m) => (Id DP.Person, Id DMerchant.Merchant) -> Maps.GetPlaceNameReq -> m Maps.GetPlaceNameResp
+getPlaceName (_, merchantId) req = do
+  merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   case req.getBy of
     MIT.ByLatLong (Maps.LatLong lat lon) -> do
       let myGeohash = DG.encode merchant.geoHashPrecisionValue (lat, lon)
@@ -66,13 +61,13 @@ getPlaceName personId req = do
         Just geoHash -> do
           placeNameCache <- CM.findPlaceByGeoHash (pack geoHash)
           if null placeNameCache
-            then callMapsApi person.merchantId req merchant.geoHashPrecisionValue
+            then callMapsApi merchantId req merchant.geoHashPrecisionValue
             else mapM convertToGetPlaceNameResp placeNameCache
-        Nothing -> callMapsApi person.merchantId req merchant.geoHashPrecisionValue
+        Nothing -> callMapsApi merchantId req merchant.geoHashPrecisionValue
     MIT.ByPlaceId placeId -> do
       placeNameCache <- CM.findPlaceByPlaceId placeId
       if null placeNameCache
-        then callMapsApi person.merchantId req merchant.geoHashPrecisionValue
+        then callMapsApi merchantId req merchant.geoHashPrecisionValue
         else mapM convertToGetPlaceNameResp placeNameCache
 
 callMapsApi :: (EncFlow m r, EsqDBFlow m r, SCC.CacheFlow m r, CoreMetrics m) => Id DMerchant.Merchant -> Maps.GetPlaceNameReq -> Int -> m Maps.GetPlaceNameResp

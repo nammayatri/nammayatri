@@ -1,6 +1,7 @@
 module API.UI.LeaderBoard where
 
 import qualified Domain.Action.UI.LeaderBoard as DLeaderBoard
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id)
@@ -20,5 +21,5 @@ handler :: FlowServer API
 handler =
   getDriverLeaderBoard
 
-getDriverLeaderBoard :: Id SP.Person -> Maybe Integer -> FlowHandler DLeaderBoard.LeaderBoardRes
-getDriverLeaderBoard personId mbLimit = withFlowHandlerAPI $ DLeaderBoard.getDriverLeaderBoard personId mbLimit
+getDriverLeaderBoard :: (Id SP.Person, Id DM.Merchant) -> Maybe Integer -> FlowHandler DLeaderBoard.LeaderBoardRes
+getDriverLeaderBoard (personId, merchantid) mbLimit = withFlowHandlerAPI $ DLeaderBoard.getDriverLeaderBoard (personId, merchantid) mbLimit

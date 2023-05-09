@@ -141,7 +141,8 @@ auth req mbBundleVersion mbClientVersion = do
   let entityId = getId $ person.id
       useFakeOtpM = useFakeSms smsCfg
       scfg = sessionConfig smsCfg
-  token <- makeSession scfg entityId SR.USER (show <$> useFakeOtpM)
+  let mkId = getId merchantId
+  token <- makeSession scfg entityId mkId SR.USER (show <$> useFakeOtpM)
   Esq.runTransaction do
     QR.create token
     QP.updatePersonVersions person mbBundleVersion mbClientVersion
@@ -232,10 +233,11 @@ makeSession ::
   ) =>
   SmsSessionConfig ->
   Text ->
+  Text ->
   SR.RTEntityType ->
   Maybe Text ->
   m SR.RegistrationToken
-makeSession SmsSessionConfig {..} entityId entityType fakeOtp = do
+makeSession SmsSessionConfig {..} entityId merchantId entityType fakeOtp = do
   otp <- maybe generateOTPCode return fakeOtp
   rtid <- generateGUID
   token <- generateGUID
@@ -253,6 +255,7 @@ makeSession SmsSessionConfig {..} entityId entityType fakeOtp = do
         authExpiry = authExpiry,
         tokenExpiry = tokenExpiry,
         entityId = entityId,
+        merchantId = merchantId,
         entityType = entityType,
         createdAt = now,
         updatedAt = now,
@@ -390,9 +393,9 @@ logout ::
     CacheFlow m r,
     Redis.HedisFlow m r
   ) =>
-  Id SP.Person ->
+  (Id SP.Person, Id DO.Merchant) ->
   m APISuccess
-logout personId = do
+logout (personId, _) = do
   cleanCachedTokens personId
   uperson <-
     QP.findById personId

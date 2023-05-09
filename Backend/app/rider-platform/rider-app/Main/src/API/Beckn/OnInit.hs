@@ -53,10 +53,10 @@ onInit _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   where
     errHandler booking exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = do
-        dCancelRes <- DCancel.cancel booking.id booking.riderId cancelReq
+        dCancelRes <- DCancel.cancel booking.id (booking.riderId, booking.merchantId) cancelReq
         void . withShortRetry $ CallBPP.cancel dCancelRes.bppUrl =<< CancelACL.buildCancelReq dCancelRes
       | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = do
-        dCancelRes <- DCancel.cancel booking.id booking.riderId cancelReq
+        dCancelRes <- DCancel.cancel booking.id (booking.riderId, booking.merchantId) cancelReq
         void . withShortRetry $ CallBPP.cancel dCancelRes.bppUrl =<< CancelACL.buildCancelReq dCancelRes
       | otherwise = throwM exc
 

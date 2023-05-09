@@ -17,11 +17,15 @@ module API.Dashboard.RideBooking.Quote where
 
 import qualified API.UI.Quote as UQ
 import qualified Domain.Action.UI.Quote as DQuote
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.SearchRequest as SSR
 import Environment
+import Kernel.Prelude
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import Servant
+import SharedLogic.Merchant
 
 type API =
   "quote"
@@ -33,8 +37,10 @@ type CustomerGetQuoteAPI =
     :> "result"
     :> Get '[JSON] DQuote.GetQuotesRes
 
-handler :: FlowServer API
+handler :: ShortId DM.Merchant -> FlowServer API
 handler = callGetQuotes
 
-callGetQuotes :: Id SSR.SearchRequest -> Id DP.Person -> FlowHandler DQuote.GetQuotesRes
-callGetQuotes = UQ.getQuotes
+callGetQuotes :: ShortId DM.Merchant -> Id SSR.SearchRequest -> Id DP.Person -> FlowHandler DQuote.GetQuotesRes
+callGetQuotes merchantId req personId = do
+  m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
+  UQ.getQuotes req (personId, m.id)

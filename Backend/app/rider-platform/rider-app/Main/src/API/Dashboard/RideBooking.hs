@@ -50,12 +50,12 @@ type API =
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   Registration.handler merchantId
-    :<|> Profile.handler
-    :<|> Search.handler
-    :<|> Quote.handler
-    :<|> Select.handler
-    :<|> Confirm.handler
-    :<|> Booking.handler
-    :<|> Maps.handler
+    :<|> Profile.handler merchantId
+    :<|> Search.handler merchantId
+    :<|> Quote.handler merchantId
+    :<|> Select.handler merchantId
+    :<|> Confirm.handler merchantId
+    :<|> Booking.handler merchantId
+    :<|> Maps.handler merchantId
     :<|> FlowStatus.handler
-    :<|> Cancel.handler
+    :<|> Cancel.handler merchantId

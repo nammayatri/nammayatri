@@ -32,6 +32,7 @@ import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.Select as DSelect
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Estimate as DEstimate
+import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as DPerson
 import Environment
 import Kernel.Prelude
@@ -79,8 +80,8 @@ handler =
     :<|> selectResult
     :<|> cancelSearch
 
-select :: Id DPerson.Person -> Id DEstimate.Estimate -> FlowHandler APISuccess
-select personId estimateId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+select :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> FlowHandler APISuccess
+select (personId, _) estimateId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   let autoAssignFlag = False
   let req = DSelect.DEstimateSelectReq {customerExtraFee = Nothing, autoAssignEnabled = autoAssignFlag, autoAssignEnabledV2 = Nothing}
   Redis.whenWithLockRedis (selectEstimateLockKey personId) 60 $ do
@@ -89,22 +90,22 @@ select personId estimateId = withFlowHandlerAPI . withPersonIdLogTag personId $ 
     void $ withShortRetry $ CallBPP.select dSelectReq.providerUrl becknReq
   pure Success
 
-select2 :: Id DPerson.Person -> Id DEstimate.Estimate -> DSelect.DEstimateSelectReq -> FlowHandler APISuccess
-select2 personId estimateId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+select2 :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> DSelect.DEstimateSelectReq -> FlowHandler APISuccess
+select2 (personId, _) estimateId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   Redis.whenWithLockRedis (selectEstimateLockKey personId) 60 $ do
     dSelectReq <- DSelect.select personId estimateId req
     becknReq <- ACL.buildSelectReq dSelectReq
     void $ withShortRetry $ CallBPP.select dSelectReq.providerUrl becknReq
   pure Success
 
-selectList :: Id DPerson.Person -> Id DEstimate.Estimate -> FlowHandler DSelect.SelectListRes
-selectList personId = withFlowHandlerAPI . withPersonIdLogTag personId . DSelect.selectList
+selectList :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> FlowHandler DSelect.SelectListRes
+selectList (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . DSelect.selectList
 
-selectResult :: Id DPerson.Person -> Id DEstimate.Estimate -> FlowHandler DSelect.QuotesResultResponse
-selectResult personId = withFlowHandlerAPI . withPersonIdLogTag personId . DSelect.selectResult
+selectResult :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> FlowHandler DSelect.QuotesResultResponse
+selectResult (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . DSelect.selectResult
 
-cancelSearch :: Id DPerson.Person -> Id DEstimate.Estimate -> FlowHandler DSelect.CancelAPIResponse
-cancelSearch personId estimateId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+cancelSearch :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> FlowHandler DSelect.CancelAPIResponse
+cancelSearch (personId, _) estimateId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   activeBooking <- Esq.runInReplica $ QRB.findLatestByRiderIdAndStatus personId SRB.activeBookingStatus
   if isJust activeBooking
     then do

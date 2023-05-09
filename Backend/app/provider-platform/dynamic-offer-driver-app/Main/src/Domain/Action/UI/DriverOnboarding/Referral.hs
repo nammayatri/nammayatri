@@ -16,6 +16,7 @@
 
 module Domain.Action.UI.DriverOnboarding.Referral where
 
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as Person
 import Environment
 import Kernel.External.Encryption (encrypt)
@@ -40,10 +41,10 @@ validateReferralReq ReferralReq {..} =
     ]
 
 addReferral ::
-  Id Person.Person ->
+  (Id Person.Person, Id DM.Merchant) ->
   ReferralReq ->
   Flow ReferralRes
-addReferral personId req = do
+addReferral (personId, _) req = do
   runRequestValidation validateReferralReq req
   value <- encrypt req.value
   DriverInformation.addReferralCode personId value

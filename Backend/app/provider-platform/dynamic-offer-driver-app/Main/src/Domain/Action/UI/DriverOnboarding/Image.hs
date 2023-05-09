@@ -22,7 +22,7 @@ import Data.Text as T hiding (length)
 import Data.Time.Format.ISO8601
 import Domain.Types.DriverOnboarding.Error
 import qualified Domain.Types.DriverOnboarding.Image as Domain
-import Domain.Types.Merchant
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as Person
 import Environment
 import qualified EulerHS.Language as L
@@ -92,14 +92,13 @@ createPath driverId merchantId imageType = do
 
 validateImage ::
   Bool ->
-  Maybe Merchant ->
-  Id Person.Person ->
+  Maybe DM.Merchant ->
+  (Id Person.Person, Id DM.Merchant) ->
   ImageValidateRequest ->
   Flow ImageValidateResponse
-validateImage isDashboard mbMerchant personId ImageValidateRequest {..} = do
+validateImage isDashboard mbMerchant (personId, _) ImageValidateRequest {..} = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let merchantId = person.merchantId
-
   org <- case mbMerchant of
     Nothing -> do
       CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
@@ -148,17 +147,17 @@ castImageType Domain.VehicleRegistrationCertificate = Verification.VehicleRegist
 
 validateImageFile ::
   Bool ->
-  Id Person.Person ->
+  (Id Person.Person, Id DM.Merchant) ->
   ImageValidateFileRequest ->
   Flow ImageValidateResponse
-validateImageFile isDashboard personId ImageValidateFileRequest {..} = do
+validateImageFile isDashboard (personId, merchantId) ImageValidateFileRequest {..} = do
   image' <- L.runIO $ base64Encode <$> BS.readFile image
-  validateImage isDashboard Nothing personId $ ImageValidateRequest image' imageType
+  validateImage isDashboard Nothing (personId, merchantId) $ ImageValidateRequest image' imageType
 
 mkImage ::
   (MonadGuid m, MonadTime m) =>
   Id Person.Person ->
-  Id Merchant ->
+  Id DM.Merchant ->
   Text ->
   Domain.ImageType ->
   Bool ->
@@ -178,7 +177,7 @@ mkImage personId_ merchantId s3Path imageType_ isValid = do
         createdAt = now
       }
 
-getImage :: Id Merchant -> Id Domain.Image -> Flow Text
+getImage :: Id DM.Merchant -> Id Domain.Image -> Flow Text
 getImage merchantId imageId = do
   imageMetadata <- Query.findById imageId
   case imageMetadata of

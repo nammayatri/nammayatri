@@ -50,5 +50,5 @@ handler =
 updateTransporter :: SP.Person -> Id DM.Merchant -> DTransporter.UpdateTransporterReq -> FlowHandler DTransporter.UpdateTransporterRes
 updateTransporter admin merchantId = withFlowHandlerAPI . DTransporter.updateTransporter admin merchantId
 
-getTransporter :: Id SP.Person -> FlowHandler DTransporter.TransporterRec
+getTransporter :: (Id SP.Person, Id DM.Merchant) -> FlowHandler DTransporter.TransporterRec
 getTransporter = withFlowHandlerAPI . DTransporter.getTransporter

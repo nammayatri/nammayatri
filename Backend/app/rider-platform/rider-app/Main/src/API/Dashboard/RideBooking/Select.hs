@@ -19,13 +19,16 @@ module API.Dashboard.RideBooking.Select where
 import qualified API.UI.Select as US
 import qualified Domain.Action.UI.Select as DSelect
 import qualified Domain.Types.Estimate as DEstimate
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Environment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import Servant
+import SharedLogic.Merchant
 
 data RideEstimatesEndPoint
   = EstimatesEndPoint
@@ -67,17 +70,25 @@ type CustomerCancelSearchAPI =
     :> "cancel"
     :> Post '[JSON] DSelect.CancelAPIResponse
 
-handler :: FlowServer API
-handler = callSelect :<|> callSelectList :<|> callSelectResult :<|> callCancelSearch
+handler :: ShortId DM.Merchant -> FlowServer API
+handler merchantId = callSelect merchantId :<|> callSelectList merchantId :<|> callSelectResult merchantId :<|> callCancelSearch merchantId
 
-callSelect :: Id DP.Person -> Id DEstimate.Estimate -> FlowHandler APISuccess
-callSelect = US.select
+callSelect :: ShortId DM.Merchant -> Id DP.Person -> Id DEstimate.Estimate -> FlowHandler APISuccess
+callSelect merchantId personId estimate = do
+  m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
+  US.select (personId, m.id) estimate
 
-callSelectList :: Id DP.Person -> Id DEstimate.Estimate -> FlowHandler DSelect.SelectListRes
-callSelectList = US.selectList
+callSelectList :: ShortId DM.Merchant -> Id DP.Person -> Id DEstimate.Estimate -> FlowHandler DSelect.SelectListRes
+callSelectList merchantId personId estimate = do
+  m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
+  US.selectList (personId, m.id) estimate
 
-callSelectResult :: Id DP.Person -> Id DEstimate.Estimate -> FlowHandler DSelect.QuotesResultResponse
-callSelectResult = US.selectResult
+callSelectResult :: ShortId DM.Merchant -> Id DP.Person -> Id DEstimate.Estimate -> FlowHandler DSelect.QuotesResultResponse
+callSelectResult merchantId personId estimate = do
+  m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
+  US.selectResult (personId, m.id) estimate
 
-callCancelSearch :: Id DP.Person -> Id DEstimate.Estimate -> FlowHandler DSelect.CancelAPIResponse
-callCancelSearch = US.cancelSearch
+callCancelSearch :: ShortId DM.Merchant -> Id DP.Person -> Id DEstimate.Estimate -> FlowHandler DSelect.CancelAPIResponse
+callCancelSearch merchantId personId estimate = do
+  m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
+  US.cancelSearch (personId, m.id) estimate

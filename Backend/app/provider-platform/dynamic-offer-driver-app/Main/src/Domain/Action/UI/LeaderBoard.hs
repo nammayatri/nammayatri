@@ -15,6 +15,7 @@
 module Domain.Action.UI.LeaderBoard where
 
 import Data.Aeson
+import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -41,10 +42,9 @@ newtype LeaderBoardRes = LeaderBoardRes
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-getDriverLeaderBoard :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, EncFlow m r, Redis.HedisFlow m r, CacheFlow m r) => Id Person -> Maybe Integer -> m LeaderBoardRes
-getDriverLeaderBoard personId mbLimit = do
-  person <- Esq.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  config <- CQTC.findByMerchantId person.merchantId >>= fromMaybeM (TransporterConfigNotFound person.merchantId.getId)
+getDriverLeaderBoard :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, EncFlow m r, Redis.HedisFlow m r, CacheFlow m r) => (Id Person, Id DM.Merchant) -> Maybe Integer -> m LeaderBoardRes
+getDriverLeaderBoard (_, merchantId) mbLimit = do
+  config <- CQTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   driversSortedList <-
     Redis.get makeDriverLeaderBoardKey >>= \case
       Nothing -> do
