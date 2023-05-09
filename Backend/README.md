@@ -99,7 +99,8 @@ For running the database, redis, passetto and kafka run this command:
 
 ```sh
 # NOTE: You must run this from inside nix develop shell.
-, run-svc
+# The `-d` option will run the containers in background. Remove `-d` if you want to run them in foreground.
+, run-svc -d
 ```
 
 That should run most of the services required.
