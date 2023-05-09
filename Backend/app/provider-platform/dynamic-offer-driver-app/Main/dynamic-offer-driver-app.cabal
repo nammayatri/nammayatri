@@ -398,14 +398,20 @@ library
       UndecidableInstances
       StandaloneDeriving
       PackageImports
+      TemplateHaskell
   ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror
   build-depends:
       aeson
     , base >=4.7 && <5
+    , beam-core
+    , beam-mysql
+    , beam-postgres
     , beckn-services
     , beckn-spec
     , bytestring
+    , casing
     , cassava
+    , cereal
     , containers
     , cryptonite
     , dashboard-helper-api
@@ -428,6 +434,7 @@ library
     , record-hasfield
     , resource-pool
     , scheduler
+    , sequelize
     , servant
     , servant-client
     , servant-client-core
@@ -439,6 +446,7 @@ library
     , special-zone
     , stm
     , string-conversions
+    , template-haskell
     , text
     , text-conversions
     , time
@@ -487,14 +495,20 @@ executable dynamic-offer-driver-app-exe
       UndecidableInstances
       StandaloneDeriving
       PackageImports
+      TemplateHaskell
   ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
   build-depends:
       aeson
     , base >=4.7 && <5
+    , beam-core
+    , beam-mysql
+    , beam-postgres
     , beckn-services
     , beckn-spec
     , bytestring
+    , casing
     , cassava
+    , cereal
     , containers
     , cryptonite
     , dashboard-helper-api
@@ -517,6 +531,7 @@ executable dynamic-offer-driver-app-exe
     , record-hasfield
     , resource-pool
     , scheduler
+    , sequelize
     , servant
     , servant-client
     , servant-client-core
@@ -527,6 +542,7 @@ executable dynamic-offer-driver-app-exe
     , singletons
     , stm
     , string-conversions
+    , template-haskell
     , text
     , text-conversions
     , time

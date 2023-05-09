@@ -17,51 +17,70 @@
 -- {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wwarn=type-defaults #-}
 
 module Storage.Tabular.BookingNew where
 
-import qualified Database.Beam as B
-import qualified Domain.Types.Booking as Domain
-import qualified Domain.Types.Vehicle.Variant as Veh
+-- import qualified Domain.Types.Booking as Domain
+-- import qualified Domain.Types.Vehicle.Variant as Veh
 -- import Lib.UtilsTH
 
+-- import Kernel.Types.Common hiding (id)
+
+-- import Storage.Tabular.Booking.BookingLocation hiding (createdAt, id, updatedAt)
+-- import qualified Storage.Tabular.FareParameters as Fare
+-- import Storage.Tabular.Merchant (MerchantTId)
+-- import Storage.Tabular.RiderDetails (RiderDetailsTId)
+
+-- import qualified Database.Beam.Backend as DBB
+-- import qualified Database.Beam.Postgres as DBP
+-- import           Database.Beam.Schema.Tables (DatabaseEntity, EntityModification)
+-- import qualified Database.Beam.Schema.Tables as DBST
+
+import qualified Data.Aeson as A
+import qualified Data.HashMap.Internal as HM
+import qualified Data.Map.Strict as M
+import qualified Data.Time as Time
+import qualified Database.Beam as B
+import Database.Beam.MySQL ()
+import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common hiding (id)
+import Lib.UtilsTH
 import Sequelize
-import Storage.Tabular.Booking.BookingLocation hiding (createdAt, id, updatedAt)
-import qualified Storage.Tabular.FareParameters as Fare
-import Storage.Tabular.Merchant (MerchantTId)
-import Storage.Tabular.RiderDetails (RiderDetailsTId)
 import Storage.Tabular.Vehicle ()
 
--- import           EulerHS.KVConnector.Types (KVConnector(..), MeshMeta(..), tableName, primaryKey, secondaryKeys)
+-- import           Database.PostgreSQL.Simple.FromField(FromField, fromField)
+-- import qualified Database.PostgreSQL.Simple.FromField as DPSF
 
 data BookingNewT f = BookingNew
   { id :: B.C f Text,
     transactionId :: B.C f Text,
     quoteId :: B.C f Text,
-    status :: B.C f Domain.BookingStatus,
-    bookingType :: B.C f Domain.BookingType,
+    status :: B.C f Text,
+    bookingType :: B.C f Text,
     specialZoneOtpCode :: B.C f (Maybe Text),
-    providerId :: B.C f MerchantTId,
+    providerId :: B.C f Text,
     primaryExophone :: B.C f Text,
     bapId :: B.C f Text,
     bapUri :: B.C f Text,
-    startTime :: B.C f UTCTime,
-    riderId :: B.C f (Maybe RiderDetailsTId),
-    fromLocationId :: B.C f BookingLocationTId,
-    toLocationId :: B.C f BookingLocationTId,
-    vehicleVariant :: B.C f Veh.Variant,
-    estimatedDistance :: B.C f Meters,
-    maxEstimatedDistance :: B.C f (Maybe Centesimal),
-    estimatedFare :: B.C f Money,
-    estimatedDuration :: B.C f Seconds,
-    fareParametersId :: B.C f Fare.FareParametersTId,
+    startTime :: B.C f Time.LocalTime,
+    riderId :: B.C f (Maybe Text),
+    fromLocationId :: B.C f Text,
+    toLocationId :: B.C f Text,
+    vehicleVariant :: B.C f Text,
+    estimatedDistance :: B.C f Int,
+    maxEstimatedDistance :: B.C f (Maybe Int),
+    estimatedFare :: B.C f Int,
+    estimatedDuration :: B.C f Int,
+    fareParametersId :: B.C f Int,
     riderName :: B.C f (Maybe Text),
-    createdAt :: B.C f UTCTime,
-    updatedAt :: B.C f UTCTime
+    createdAt :: B.C f Time.LocalTime,
+    updatedAt :: B.C f Time.LocalTime
   }
+  -- data BookingNewT f = BookingNew {
+  --     id :: B.C f Text
+  --   }
   deriving (Generic, B.Beamable)
 
 instance B.Table BookingNewT where
@@ -105,8 +124,17 @@ bookingTMod =
       updatedAt = B.fieldNamed "id"
     }
 
-data Hello = Hello
-  { ids :: Text
-  }
+psToHs :: HM.HashMap Text Text
+psToHs = HM.empty
 
--- $(enableKV ''BookingNewT ['ids] [])
+bookingNewToHSModifiers :: M.Map Text (A.Value -> A.Value)
+bookingNewToHSModifiers =
+  M.fromList
+    []
+
+bookingNewToPSModifiers :: M.Map Text (A.Value -> A.Value)
+bookingNewToPSModifiers =
+  M.fromList
+    []
+
+$(enableKV ''BookingNewT ['id] [])

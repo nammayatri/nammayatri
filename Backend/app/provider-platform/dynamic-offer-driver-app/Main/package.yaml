@@ -49,6 +49,7 @@ default-extensions:
   - UndecidableInstances
   - StandaloneDeriving
   - PackageImports
+  - TemplateHaskell
 
 dependencies:
   - aeson
@@ -94,6 +95,13 @@ dependencies:
   - singletons
   - cassava
   - vector
+  - cereal
+  - beam-core
+  - beam-mysql
+  - beam-postgres
+  - template-haskell
+  - sequelize
+  - casing
 
 ghc-options:
   - -fwrite-ide-info
