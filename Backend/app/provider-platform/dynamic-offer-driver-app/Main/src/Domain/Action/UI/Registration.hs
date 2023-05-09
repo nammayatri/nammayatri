@@ -60,6 +60,7 @@ import qualified Storage.Queries.DriverLocation as QDriverLocation
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
+import qualified Storage.Tabular.BookingNew as BN (findById)
 import Tools.Auth (authTokenCacheKey)
 import Tools.Error
 import Tools.Metrics
@@ -125,6 +126,7 @@ auth ::
   Maybe Version ->
   m AuthRes
 auth req mbBundleVersion mbClientVersion = do
+  _ <- BN.findById "bookingId"
   runRequestValidation validateInitiateLoginReq req
   smsCfg <- asks (.smsCfg)
   let mobileNumber = req.mobileNumber

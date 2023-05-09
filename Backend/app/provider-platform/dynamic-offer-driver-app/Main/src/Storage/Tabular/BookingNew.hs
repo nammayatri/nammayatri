@@ -37,6 +37,7 @@ import qualified Data.Aeson as A
 import Data.ByteString.Internal (ByteString, unpackChars)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
+import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.Backend
@@ -50,7 +51,10 @@ import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import qualified Domain.Types.Booking as Domain
 import qualified Domain.Types.Vehicle.Variant as Veh
-import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types (KVConnector (..), MeshConfig (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
+import qualified EulerHS.Language as L
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
@@ -191,6 +195,14 @@ instance ModelMeta BookingNewT where
 
 type BookingNew = BookingNewT Identity
 
+instance FromJSON BookingNew where
+  parseJSON = A.genericParseJSON A.defaultOptions
+
+instance ToJSON BookingNew where
+  toJSON = A.genericToJSON A.defaultOptions
+
+deriving stock instance Show BookingNew
+
 bookingTMod :: BookingNewT (B.FieldModification (B.TableField BookingNewT))
 bookingTMod =
   B.tableModification
@@ -231,5 +243,31 @@ bookingNewToPSModifiers :: M.Map Text (A.Value -> A.Value)
 bookingNewToPSModifiers =
   M.fromList
     []
+
+meshConfig :: MeshConfig
+meshConfig =
+  MeshConfig
+    { meshEnabled = False,
+      memcacheEnabled = False,
+      meshDBName = "ECRDB",
+      ecRedisDBStream = "db-sync-stream",
+      kvRedis = "KVRedis",
+      redisTtl = 43200,
+      kvHardKilled = False,
+      cerealEnabled = False
+    }
+
+findById :: (L.MonadFlow m) => Text -> m (Maybe BookingNew)
+findById bookingId = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (const Nothing) (\x -> x) <$> KV.findWithKVConnector dbCOnf' meshConfig ([And [Is id (Eq bookingId)]])
+    Nothing -> pure Nothing
+
+-- instance Serialize Domain.BookingStatus where
+
+instance Serialize BookingNew where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''BookingNewT ['id] [])
