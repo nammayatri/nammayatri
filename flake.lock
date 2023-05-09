@@ -2333,6 +2333,21 @@
         "type": "github"
       }
     },
+    "proc-flake": {
+      "locked": {
+        "lastModified": 1671388981,
+        "narHash": "sha256-p++h07G0qiJtnjnyJRPehLIXJ3sU5zGtpOfZbnUxuZU=",
+        "owner": "srid",
+        "repo": "proc-flake",
+        "rev": "676b5af467e52c06aa8a9165edb3345c6dbbabde",
+        "type": "github"
+      },
+      "original": {
+        "owner": "srid",
+        "repo": "proc-flake",
+        "type": "github"
+      }
+    },
     "process-compose-flake": {
       "locked": {
         "lastModified": 1680797953,
@@ -2498,6 +2513,7 @@
         "beckn-gateway": "beckn-gateway",
         "common": "common",
         "dream2nix": "dream2nix",
+        "proc-flake": "proc-flake",
         "purifix": "purifix",
         "shared-kernel": "shared-kernel"
       }

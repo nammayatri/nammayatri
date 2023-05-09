@@ -79,16 +79,16 @@ onConnectivityEvent triggertype = do
     Left e -> do
         _ <- launchAff $ flowRunner defaultGlobalState $ do
           throwErr $ show e
-        pure unit        
+        pure unit
 
 type Event = {
     type :: String
   , data :: String
 }
 
-updateEventData :: Event -> FlowBT String Unit 
+updateEventData :: Event -> FlowBT String Unit
 updateEventData event = do
     case event.type of
       "CHAT_MESSAGE" -> do
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props{ openChatScreen = true } })
-      _ -> pure unit            
+      _ -> pure unit
