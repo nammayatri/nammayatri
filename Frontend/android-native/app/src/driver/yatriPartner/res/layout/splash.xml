@@ -44,28 +44,6 @@
                 android:textColor="@color/Black900"
                 android:textSize="16sp" />
         </RelativeLayout>
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="2dp"
-            android:layout_marginHorizontal="75dp"
-            android:alpha="0.1"
-            android:background="@color/colorAccent"/>
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:fontFamily="@font/plus_jakartasans_regular"
-            android:lineHeight="15sp"
-            android:layout_marginTop="18dp"
-            android:paddingBottom="8dp"
-            android:text="Powered by"
-            android:textColor="@color/Black500"
-            android:textSize="12sp" />
-        <ImageView
-            android:layout_width="231dp"
-            android:layout_height="32dp"
-            android:layout_gravity="center"
-            android:src="@drawable/ic_ny_logo" />
     </LinearLayout>
 
     <LinearLayout
