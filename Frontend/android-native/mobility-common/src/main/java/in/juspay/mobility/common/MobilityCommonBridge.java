@@ -2,9 +2,6 @@ package in.juspay.mobility.common;
 
 import static android.Manifest.permission.ACCESS_FINE_LOCATION;
 import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
-import static android.Manifest.permission.READ_MEDIA_AUDIO;
-import static android.Manifest.permission.READ_MEDIA_IMAGES;
-import static android.Manifest.permission.READ_MEDIA_VIDEO;
 import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
 
 import android.Manifest;
@@ -25,6 +22,7 @@ import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
@@ -105,6 +103,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -285,35 +284,35 @@ public class MobilityCommonBridge extends HyperBridge {
     private void getLastKnownLocationFromClientFallback(String callback, boolean animate) {
         if (!isLocationPermissionEnabled()) return;
         if (bridgeComponents.getActivity() != null) {
-            if (client != null) 
+            if (client != null)
                 client.getLastLocation()
-                    .addOnSuccessListener(bridgeComponents.getActivity(), location -> {
-                        if (location != null) {
-                            Double lat = location.getLatitude();
-                            Double lng = location.getLongitude();
-                            lastLatitudeValue = lat;
-                            lastLongitudeValue = lng;
-                            setKeysInSharedPrefs("LAST_KNOWN_LAT", String.valueOf(lastLatitudeValue));
-                            setKeysInSharedPrefs("LAST_KNOWN_LON", String.valueOf(lastLongitudeValue));
-                            if (callback != null) {
-                                String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s');",
-                                        callback, lat, lng);
-                                bridgeComponents.getJsCallback().addJsToWebView(javascript);
-                            }
-                            if (animate && googleMap != null) {
-                                LatLng latLng = new LatLng(lat, lng);
-                                if (userPositionMarker == null) {
-                                    upsertMarker(CURRENT_LOCATION, String.valueOf(lat), String.valueOf(lng), 160, 0.5f, 0.9f); //TODO this function will be removed
-                                } else {
-                                    if (storeLocateOnMapCallBack == null)
-                                        userPositionMarker.setVisible(true);
-                                    userPositionMarker.setPosition(latLng);
+                        .addOnSuccessListener(bridgeComponents.getActivity(), location -> {
+                            if (location != null) {
+                                Double lat = location.getLatitude();
+                                Double lng = location.getLongitude();
+                                lastLatitudeValue = lat;
+                                lastLongitudeValue = lng;
+                                setKeysInSharedPrefs("LAST_KNOWN_LAT", String.valueOf(lastLatitudeValue));
+                                setKeysInSharedPrefs("LAST_KNOWN_LON", String.valueOf(lastLongitudeValue));
+                                if (callback != null) {
+                                    String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s');",
+                                            callback, lat, lng);
+                                    bridgeComponents.getJsCallback().addJsToWebView(javascript);
                                 }
-                                googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 17.0f));
+                                if (animate && googleMap != null) {
+                                    LatLng latLng = new LatLng(lat, lng);
+                                    if (userPositionMarker == null) {
+                                        upsertMarker(CURRENT_LOCATION, String.valueOf(lat), String.valueOf(lng), 160, 0.5f, 0.9f); //TODO this function will be removed
+                                    } else {
+                                        if (storeLocateOnMapCallBack == null)
+                                            userPositionMarker.setVisible(true);
+                                        userPositionMarker.setPosition(latLng);
+                                    }
+                                    googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 17.0f));
+                                }
                             }
-                        }
-                    })
-                    .addOnFailureListener(bridgeComponents.getActivity(), e -> Log.e(LOCATION, "Last and current position not known"));
+                        })
+                        .addOnFailureListener(bridgeComponents.getActivity(), e -> Log.e(LOCATION, "Last and current position not known"));
         }
     }
 
@@ -371,27 +370,27 @@ public class MobilityCommonBridge extends HyperBridge {
         updateLastKnownLocation(callback, false);
     }
 
+    @SuppressLint("MissingPermission")
     @JavascriptInterface
     public void isMockLocation(String callback) {
+        Activity activity = bridgeComponents.getActivity();
         if (!isLocationPermissionEnabled()) return;
-        if (client != null)
+        if (client != null && activity != null)
             client.getLastLocation()
-                .addOnSuccessListener(activity, location -> {
-                    boolean isMock = false;
-                    if (Build.VERSION.SDK_INT <= 30) {
-                        isMock = location.isFromMockProvider();
-                        //methodName = "isFromMockProvider";
-                    } else if(Build.VERSION.SDK_INT >= 31) {
-                        isMock = location.isMock();
-                        //methodName = "isMock";
-                    }
-                    if (callback != null && dynamicUI != null && juspayServices.getDynamicUI() != null) {
-                        String js = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
-                                callback, isMock);
-                        dynamicUI.addJsToWebView(js);
-                    }
-                })
-                .addOnFailureListener(activity, e -> Log.e(LOG_TAG, "Last and current position not known"));
+                    .addOnSuccessListener(activity, location -> {
+                        boolean isMock;
+                        if (Build.VERSION.SDK_INT <= 30) {
+                            isMock = location.isFromMockProvider();
+                        } else {
+                            isMock = location.isMock();
+                        }
+                        if (callback != null) {
+                            String js = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
+                                    callback, isMock);
+                            bridgeComponents.getJsCallback().addJsToWebView(js);
+                        }
+                    })
+                    .addOnFailureListener(activity, e -> Log.e(LOCATION, "Last and current position not known"));
     }
     //endregion
 
@@ -927,7 +926,7 @@ public class MobilityCommonBridge extends HyperBridge {
 
     @JavascriptInterface
     public void setEnvInNativeSharedPrefKeys(String key, String value) {
-        setKeysInSharedPrefs(key,value);
+        setKeysInSharedPrefs(key, value);
     }
 
     //endregion
@@ -1001,16 +1000,6 @@ public class MobilityCommonBridge extends HyperBridge {
         TextView input = spinner.findViewById(idPickerInput);
         input.setImeOptions(imeOption);
     }
-
-    private static class DatePickerLabels {
-        private static final String MAXIMUM_PRESENT_DATE = "MAXIMUM_PRESENT_DATE";
-        private static final String MINIMUM_EIGHTEEN_YEARS = "MINIMUM_EIGHTEEN_YEARS";
-        private static final String MIN_EIGHTEEN_MAX_SIXTY_YEARS = "MIN_EIGHTEEN_MAX_SIXTY_YEARS";
-        private static final String MAX_THIRTY_DAYS_FROM_CURRENT_DATE = "MAX_THIRTY_DAYS_FROM_CURRENT_DATE";
-    }
-    //endregion
-
-    // region OTHER UTILS
 
     @JavascriptInterface
     @RequiresApi(api = Build.VERSION_CODES.N)
@@ -1120,6 +1109,8 @@ public class MobilityCommonBridge extends HyperBridge {
     //endregion
 
     // region OTHER UTILS
+
+    // region OTHER UTILS
     @JavascriptInterface
     public String getVersionName() {
         PackageManager manager = bridgeComponents.getContext().getPackageManager();
@@ -1131,6 +1122,7 @@ public class MobilityCommonBridge extends HyperBridge {
         }
         return info.versionName;
     }
+    //endregion
 
     @JavascriptInterface
     public int getVersionCode() {
@@ -1372,17 +1364,19 @@ public class MobilityCommonBridge extends HyperBridge {
     public void shareTextMessage(String title, String message) {
         ExecutorManager.runOnMainThread(() -> {
             Intent sendIntent = new Intent();
-                sendIntent.setAction(Intent.ACTION_SEND);
-                sendIntent.putExtra(Intent.EXTRA_TEXT, message);
-                sendIntent.putExtra(Intent.EXTRA_TITLE, title);
-                Bitmap thumbnailBitmap = BitmapFactory.decodeResource(context.getResources(), R.drawable.ny_ic_icon);
-                Uri thumbnailUri = getImageUri(context, thumbnailBitmap);
-                ClipData clipData = ClipData.newUri(context.getContentResolver(), "Thumbnail Image", thumbnailUri);
-                sendIntent.setClipData(clipData);
-                sendIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                sendIntent.setType("text/plain");
-                Intent shareIntent = Intent.createChooser(sendIntent, null);
-                activity.startActivity(shareIntent);
+            Context context = bridgeComponents.getContext();
+            sendIntent.setAction(Intent.ACTION_SEND);
+            sendIntent.putExtra(Intent.EXTRA_TEXT, message);
+            sendIntent.putExtra(Intent.EXTRA_TITLE, title);
+            Bitmap thumbnailBitmap = BitmapFactory.decodeResource(context.getResources(), R.drawable.ny_ic_icon);
+            Uri thumbnailUri = getImageUri(context, thumbnailBitmap);
+            ClipData clipData = ClipData.newUri(context.getContentResolver(), "Thumbnail Image", thumbnailUri);
+            sendIntent.setClipData(clipData);
+            sendIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            sendIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            sendIntent.setType("text/plain");
+            Intent shareIntent = Intent.createChooser(sendIntent, null);
+            context.startActivity(shareIntent);
         });
     }
 
@@ -1442,7 +1436,7 @@ public class MobilityCommonBridge extends HyperBridge {
             ExecutorManager.runOnMainThread(new Runnable() {
                 @Override
                 public void run() {
-                    WebView webView = (WebView) activity.findViewById(Integer.parseInt(id));
+                    WebView webView = activity.findViewById(Integer.parseInt(id));
                     if (webView == null) return;
                     webView.setWebChromeClient(new WebChromeClient() {
                         @Override
@@ -1577,6 +1571,13 @@ public class MobilityCommonBridge extends HyperBridge {
         if (bridgeComponents.getActivity() != null) {
             ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE}, STORAGE_PERMISSION);
         }
+    }
+
+    private static class DatePickerLabels {
+        private static final String MAXIMUM_PRESENT_DATE = "MAXIMUM_PRESENT_DATE";
+        private static final String MINIMUM_EIGHTEEN_YEARS = "MINIMUM_EIGHTEEN_YEARS";
+        private static final String MIN_EIGHTEEN_MAX_SIXTY_YEARS = "MIN_EIGHTEEN_MAX_SIXTY_YEARS";
+        private static final String MAX_THIRTY_DAYS_FROM_CURRENT_DATE = "MAX_THIRTY_DAYS_FROM_CURRENT_DATE";
     }
     // endregion
 }

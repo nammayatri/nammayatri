@@ -9,6 +9,7 @@ import android.app.PendingIntent;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Color;
@@ -138,6 +139,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
     public void storeOnResumeCallback(String callback) {
         storeOnResumeCallback = callback;
     }
+    // endregion
 
     public void callOnResumeUpdateCallback() {
         if (storeOnResumeCallback != null) {
@@ -145,7 +147,6 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
             bridgeComponents.getJsCallback().addJsToWebView(javascript);
         }
     }
-    // endregion
 
     @JavascriptInterface
     public void storeCallBackCustomer(String callback) {
@@ -188,9 +189,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
             result.put("isInPath", false);
             return result.toString();
         }
-        SharedPreferences sharedPref = context.getSharedPreferences(
-                activity.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-        double locationOnPathThres = Double.parseDouble(sharedPref.getString("ACCURACY_THRESHOLD", "30.0"));
+        double locationOnPathThres = Double.parseDouble(getKeysInSharedPref("ACCURACY_THRESHOLD").equals("__failed") ? "30.0" : getKeysInSharedPref("ACCURACY_THRESHOLD"));
         resultIndex = PolyUtil.locationIndexOnEdgeOrPath(currPoint, path, PolyUtil.isClosedPolygon(path), true, locationOnPathThres);
         if (resultIndex == -1) {
             result.put("points", coordinates);
@@ -367,6 +366,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
             valueAnimator.start();
         }
     }
+    //endregion
 
     private float bearingBetweenLocations(LatLng latLng1, LatLng latLng2) {
         double PI = 3.14159;
@@ -383,7 +383,6 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
         brng = (brng + 360) % 360;
         return (float) brng;
     }
-    //endregion
 
     @JavascriptInterface
     public String getExtendedPath(String json) throws JSONException {
@@ -530,7 +529,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
         notificationManager.notify(234567, mBuilder.build());
     }
 
-    private static View getInvoiceLayout(JSONObject selectedRide, JSONArray fares, String user, Context context) throws JSONException {
+    private View getInvoiceLayout(JSONObject selectedRide, JSONArray fares, String user, Context context) throws JSONException {
         View invoiceLayout = LayoutInflater.from(context).inflate(R.layout.invoice_template, null, false);
         TextView textView = invoiceLayout.findViewById(R.id.rideDate);
         textView.setText(selectedRide.getString("date"));

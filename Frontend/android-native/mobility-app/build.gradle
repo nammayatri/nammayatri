@@ -65,4 +65,5 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
     implementation 'com.pierfrancescosoffritti.androidyoutubeplayer:core:11.1.0'
     implementation 'com.facebook.android:facebook-android-sdk:4.42.0'
+    implementation 'com.facebook.shimmer:shimmer:0.5.0'
 }

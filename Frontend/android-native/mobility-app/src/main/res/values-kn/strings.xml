@@ -42,5 +42,6 @@
     <string name="new_ride_req">ಹೊಸ ಸವಾರಿ</string>
     <string name="new_ride_available_for_offering">ಸ್ವೀಕರಿಸಲು ಹೊಸ ಸವಾರಿ ಲಭ್ಯವಿದೆ</string>
     <string name="and">ಮತ್ತು</string>
+    <string name="tip_included">ಟಿಪ್ ಒಳಗೊಂಡಿದೆ!</string>
 
 </resources>

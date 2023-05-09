@@ -106,10 +106,10 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     @SuppressLint("SetTextI18n")
     private void updateTipView(SheetAdapter.SheetViewHolder holder, SheetModel model) {
         mainLooper.post(() -> {
-            if (model.getCustomerTip() > 0) {
-                holder.customerTipText.setText("₹ " + model.getCustomerTip() + " tip included !");
+            if (model.getCustomerTip() > 0){
+                holder.customerTipText.setText("₹ " + model.getCustomerTip() + " " + getString(R.string.tip_included));
                 holder.customerTipBlock.setVisibility(View.VISIBLE);
-                holder.textIncludesCharges.setText(getString(R.string.includes_pickup_charges_10) + " " + getString(R.string.and) + " ₹" + model.getCustomerTip() + " Tip");
+                holder.textIncludesCharges.setText(getString(R.string.includes_pickup_charges_10)+ " " + getString(R.string.and) +" ₹" + model.getCustomerTip() + " Tip");
             } else {
                 holder.customerTipBlock.setVisibility(View.GONE);
                 holder.textIncludesCharges.setText(getString(R.string.includes_pickup_charges_10));
@@ -311,50 +311,6 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             });
         }
     });
-
-    private void updateTipView(SheetAdapter.SheetViewHolder holder, SheetModel model) {
-        mainLooper.post(new Runnable() {
-            @Override
-            public void run() {
-                if (model.getCustomerTip() > 0){
-                    holder.customerTipText.setText(String.valueOf("₹ " +model.getCustomerTip() + " " + getString(R.string.tip_included)));
-                    holder.customerTipBlock.setVisibility(View.VISIBLE);
-                    holder.textIncludesCharges.setText(getString(R.string.includes_pickup_charges_10)+ " " + getString(R.string.and) +" ₹" + model.getCustomerTip() + " Tip");
-                } else {
-                    holder.customerTipBlock.setVisibility(View.GONE);
-                    holder.textIncludesCharges.setText(getString(R.string.includes_pickup_charges_10));
-                }
-            }
-        });
-    }
-
-    private void updateIncreaseDecreaseButtons(SheetAdapter.SheetViewHolder holder, SheetModel model) {
-        mainLooper.post(new Runnable() {
-            @Override
-            public void run() {
-                holder.buttonDecreasePrice.setAlpha(model.getButtonDecreasePriceAlpha());
-                holder.buttonDecreasePrice.setClickable(model.isButtonDecreasePriceClickable());
-                holder.buttonIncreasePrice.setAlpha(model.getButtonIncreasePriceAlpha());
-                holder.buttonIncreasePrice.setClickable(model.isButtonIncreasePriceClickable());
-            }
-        });
-    }
-
-    private void updateAcceptButtonText(SheetAdapter.SheetViewHolder holder, int rideRequestPopupDelayDuration, int startTime, String text) {
-        if(rideRequestPopupDelayDuration > 0 && (time - startTime) < rideRequestPopupDelayDuration) {
-            holder.reqButton.setText(text+" (" + (rideRequestPopupDelayDuration- (time - startTime)) +" )");
-            holder.reqButton.setAlpha(0.5f);
-            holder.reqButton.setClickable(false);    
-            holder.rejectButton.setAlpha(0.5f);
-            holder.rejectButton.setClickable(false);
-        }else {
-            holder.reqButton.setText(text);
-            holder.reqButton.setAlpha(1.0f);
-            holder.reqButton.setClickable(true);
-            holder.rejectButton.setAlpha(1.0f);
-            holder.rejectButton.setClickable(true);
-        }      
-    }
 
     private void removeCard (int position) {
         removeCard(position, false);

@@ -42,5 +42,6 @@
     <string name="new_ride_req">New Ride Request</string>
     <string name="new_ride_available_for_offering">New ride available for offering</string>
     <string name="and">and</string>
-    <string name="service">for_compilation</string>
+    <string name="service" translatable="false">for_compilation</string>
+    <string name="tip_included">" tip included!"</string>
 </resources>
