@@ -2702,21 +2702,23 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
 
     @JavascriptInterface
     public void shareTextMessage(String title, String message) {
-        activity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
+        activity.runOnUiThread(() -> {
+            if (context != null){
                 Intent sendIntent = new Intent();
                 sendIntent.setAction(Intent.ACTION_SEND);
                 sendIntent.putExtra(Intent.EXTRA_TEXT, message);
                 sendIntent.putExtra(Intent.EXTRA_TITLE, title);
                 Bitmap thumbnailBitmap = BitmapFactory.decodeResource(context.getResources(), R.drawable.ny_ic_icon);
-                Uri thumbnailUri = getImageUri(context, thumbnailBitmap);
-                ClipData clipData = ClipData.newUri(context.getContentResolver(), "Thumbnail Image", thumbnailUri);
-                sendIntent.setClipData(clipData);
+                if (thumbnailBitmap != null) {
+                    Uri thumbnailUri = getImageUri(context, thumbnailBitmap);
+                    ClipData clipData = ClipData.newUri(context.getContentResolver(), "Thumbnail Image", thumbnailUri);
+                    sendIntent.setClipData(clipData);
+                }
                 sendIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                 sendIntent.setType("text/plain");
                 Intent shareIntent = Intent.createChooser(sendIntent, null);
-                activity.startActivity(shareIntent);
+                shareIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                context.startActivity(shareIntent);
             }
         });
     }
