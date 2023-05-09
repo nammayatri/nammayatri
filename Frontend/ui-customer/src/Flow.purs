@@ -74,6 +74,7 @@ import Config.Config
 import Config.Types
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
+import Config.DefaultConfig as DC
 
 baseAppFlow :: GlobalPayload ->  FlowBT String Unit
 baseAppFlow (GlobalPayload gPayload) = do
@@ -1459,7 +1460,7 @@ addNewAddressScreenFlow input = do
             modifyScreenState $ HomeScreenStateType (\homeScreen ->
                                                         homeScreen
                                                           { data
-                                                              { settingSideBar {opened = SettingSideBarController.CLOSED}
+                                                              { settingSideBar {opened = SettingSideBarController.CLOSED, appConfig = DC.config}
                                                               , locationList = updatedLocationList
                                                               , savedLocations = (AddNewAddress.getSavedLocations listResp.list)
                                                               }

@@ -19,6 +19,7 @@ import Components.PrimaryButton as PrimaryButtonController
 import Components.SourceToDestination as SourceToDestinationController
 import Screens.Types(Stage)
 import Data.Maybe(Maybe)
+import Config.Types
 
 data Action = NoAction
             | Support 
@@ -70,4 +71,5 @@ type DriverInfoCardData =
   , bppRideId :: String
   , driverNumber :: Maybe String
   , merchantExoPhone :: String
+  , config :: AppConfig
   }

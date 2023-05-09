@@ -34,14 +34,15 @@ primaryButtonConfig state = let
     config = PrimaryButton.config
     primaryButtonConfig' = config 
       {   textConfig
-         {
-          text = (getString UPDATE)
+         { text = (getString UPDATE)
+         , color = state.data.config.primaryTextColor
          } 
         , isClickable = state.props.btnActive
         , alpha = if state.props.btnActive then 1.0 else 0.6
         , margin = (Margin 0 0 0 0)
         , id = "UpdateLanguageButton"
         , enableLoader = (JB.getBtnLoader "UpdateLanguageButton")
+        , background = state.data.config.primaryBackground
       }
   in primaryButtonConfig'
 

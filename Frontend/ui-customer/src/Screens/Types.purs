@@ -217,7 +217,8 @@ type TripDetailsScreenData =
     paymentMode :: PaymentMode,
     rating :: Int,
     selectedItem :: IndividualRideCardState,
-    tripId :: String
+    tripId :: String,
+    config :: AppConfig
     -- bookingId :: String
   }
 
@@ -301,7 +302,8 @@ type HelpAndSupportScreenData =
     rideId :: String,
     vehicleNumber :: String,
     tripId :: String,
-    bookingId :: String
+    bookingId :: String,
+    config :: AppConfig
   }
 
 type HelpAndSuportScreenProps =
@@ -334,7 +336,8 @@ type MyRidesScreenState =
 type MyRideScreenData = {
     selectedItem :: IndividualRideCardState,
     offsetValue :: Int,
-    loadMoreText :: String
+    loadMoreText :: String,
+    config :: AppConfig
   }
 
 type MyRideScreenProps = {
@@ -618,7 +621,8 @@ type SelectLanguageScreenState = {
 
 type SelectLanguageScreenData =  {
   languages :: Array Language,
-  isSelected :: Boolean
+  isSelected :: Boolean,
+  config :: AppConfig
  }
 
 type SelectLanguageScreenProps =  {
@@ -696,7 +700,8 @@ type MyProfileScreenData = {
   gender :: Maybe Gender,
   editedEmailId :: Maybe String,
   editedGender :: Maybe Gender,
-  errorMessage :: Maybe EmailErrorType
+  errorMessage :: Maybe EmailErrorType,
+  config :: AppConfig
 }
 
 data EmailErrorType = INVALID_EMAIL | EMAIL_EXISTS
@@ -737,6 +742,7 @@ type DriverInfoCard =
   , bppRideId :: String 
   , driverNumber :: Maybe String
   , merchantExoPhone :: String
+  , config :: AppConfig
   }
 
 type RatingCard =
@@ -792,6 +798,7 @@ type SavedLocationScreenData =
   {
     savedLocations :: Array LocationListItemState
   , deleteTag :: Maybe String
+  , config :: AppConfig
   }
 
 type DistInfo =
@@ -854,6 +861,7 @@ type AddNewAddressScreenData =
   , latSelectedFromMap :: Number
   , lonSelectedFromMap :: Number
   , addressComponents :: Array AddressComponents
+  , config :: AppConfig
   }
 
 type AddNewAddressScreenProps =

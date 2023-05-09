@@ -17,12 +17,14 @@ module Screens.SavedLocationScreen.ScreenData where
 
 import Screens.Types(SavedLocationScreenState)
 import Data.Maybe(Maybe(..))
+import Config.DefaultConfig as DC
 
 initData :: SavedLocationScreenState
 initData = {
   data: {
     savedLocations : []
   , deleteTag : Nothing
+  , config : DC.config
   }
   , props : {
       showDeleteLocationModel : false
