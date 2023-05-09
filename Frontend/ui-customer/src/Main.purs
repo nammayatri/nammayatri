@@ -36,7 +36,6 @@ import Presto.Core.Types.Language.Flow (throwErr)
 import PrestoDOM.Core (processEvent) as PrestoDom
 import Types.App (defaultGlobalState)
 
-
 main :: Effect Unit
 main = do
   epassRef ← new defaultGlobalState

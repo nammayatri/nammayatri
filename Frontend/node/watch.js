@@ -3,6 +3,9 @@ const WebpackDevServer = require('webpack-dev-server');
 
 const argv = require('yargs/yargs')(process.argv.slice(2)).argv;
 const webpackConfig = require(argv.config)(argv.env, { mode: "development" });
+if(argv.entry) {
+    webpackConfig.entry.app = argv.entry;
+}
 
 const compiler = Webpack(webpackConfig);
 

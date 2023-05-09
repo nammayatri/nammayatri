@@ -1,7 +1,9 @@
 { inputs, ... }:
 {
   imports = [
+    inputs.proc-flake.flakeModule
   ];
+
   perSystem = { config, self', lib, system, ... }:
     let
       nodejs = pkgs.nodejs-14_x;
@@ -10,9 +12,6 @@
         inherit system;
         overlays = [
           inputs.purifix.overlay
-          (final: prev: {
-            npmlock2nix = final.callPackage inputs.npmlock2nix { };
-          })
         ];
       };
 
@@ -36,7 +35,7 @@
         };
       };
 
-      nodeDependencies = nodePackages.packages.${system}.atlas-ui.nodeModules;
+      nodeDependencies = nodePackages.packages.${system}.atlas-ui.lib;
 
       typescript-language-server = pkgs.symlinkJoin {
         name = "typescript-language-server";
@@ -59,17 +58,6 @@
           PIPE="$1"
           shift
           tail -n1 -f "$PIPE" | node ${./node/watch.js} "$@"
-        '';
-      };
-
-      run-all = pkgs.writeShellApplication {
-        name = "run-all";
-        text = ''
-          trap 'kill 0' EXIT
-          for program in "''${@}"; do
-            ($program) &
-          done
-          wait -n >/dev/null
         '';
       };
 
@@ -97,21 +85,19 @@
 
       start-app-devserver = { target, env, platform }: pkgs.writeShellApplication rec {
         name = "watch-${target}-${platform}-${env}";
-        runtimeInputs = [ run-all purifix-watch webpack-dev-server ];
         text = ''
-          if [ -d ./${target} ]; then
-            cd ./${target}
-          fi
-          if [ "$(basename "$PWD")" != "${target}" ]; then
-            echo "Not in ${target} directory...exiting"
-            exit 1
-          fi
-          PIPE=/tmp/${name}
+          FLAKE_ROOT=''$(${lib.getExe config.flake-root.package})
+          cd "$FLAKE_ROOT"
+          export ENV=${env}
+          export TARGET=./Frontend/${target}
+          export CONFIG_FILE
+          CONFIG_FILE=$(realpath "$TARGET/webpack.${platform}.js")
+
+          export PIPE=/tmp/${name}
           mkfifo $PIPE
           trap 'rm -f $PIPE' EXIT
-          CONFIG_FILE=$(realpath ./webpack.${platform}.js)
-          run-all "purifix-watch $PIPE . ../ui-common" \
-                  "webpack-dev-server-wrapped $PIPE --env ${env} --config $CONFIG_FILE"
+
+          ${lib.getExe config.proc.groups.frontend-dev.package}
         '';
       };
 
@@ -135,7 +121,7 @@
             cp ${ ./${target}/package.json } package.json
             cp ${ ./${target}/webpack.config.js } webpack.config.js
             cp ${ ./${target}/${webpack-config} } ${webpack-config}
-            node_modules/.bin/webpack --env ${env} --mode=${mode} --progress --config ${webpack-config}
+            node node_modules/.bin/webpack --env ${env} --mode=${mode} --progress --config ${webpack-config}
           '';
           installPhase = ''
             mv ${dist-folder}/index_bundle.js $out
@@ -159,6 +145,12 @@
           bundle-options);
     in
     {
+      proc.groups.frontend-dev.processes = {
+        webpack-watch.command = "${webpack-dev-server}/bin/webpack-dev-server-wrapped $PIPE --env $ENV --config $CONFIG_FILE --entry $TARGET/index.js";
+        purifix-watch.command = "cd \"$TARGET\";${purifix-watch}/bin/purifix-watch $PIPE . ../ui-common";
+      };
+
+
       treefmt.config = {
         # Suppress autoformatting of frontend dhall files.
         settings.formatter.dhall.excludes = [
