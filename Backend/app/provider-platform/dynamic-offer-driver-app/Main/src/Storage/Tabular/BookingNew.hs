@@ -17,6 +17,7 @@
 -- {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wwarn=type-defaults #-}
 
 module Storage.Tabular.BookingNew where
 
@@ -156,8 +157,8 @@ data BookingNewT f = BookingNew
   { id :: B.C f Text,
     transactionId :: B.C f Text,
     quoteId :: B.C f Text,
-    status :: B.C f Domain.BookingStatus,
-    bookingType :: B.C f Domain.BookingType,
+    status :: B.C f Text,
+    bookingType :: B.C f Text,
     specialZoneOtpCode :: B.C f (Maybe Text),
     providerId :: B.C f Text,
     primaryExophone :: B.C f Text,
