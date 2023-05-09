@@ -130,7 +130,7 @@ workspace:
         - "maybe"
         - "strings"
       git: "https://github.com/belevy/purescript-tracker.git"
-      ref: "1722161c843c4ce3a104838e717be9d6fb4c077d"
+      ref: "91653fb800192b9ff9f9026b2841061339ced7d2"
     otp-reader:
       dependencies:
         - "effect"
