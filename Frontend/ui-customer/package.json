@@ -27,7 +27,9 @@
     "start:android:master": "npm-run-all -p dev webpack-dev-master",
     "start:android:prod": "npm-run-all -p dev webpack-dev-prod",
     "repl": "spago repl",
-    "clean:s": "sh cleanSpago.sh"
+    "clean:s": "sh cleanSpago.sh",
+    "eslint": "eslint src && eslint index.js",
+    "eslint:fix": "eslint src --fix && eslint index.js --fix"
   },
   "author": "juspay",
   "license": "ISC",
@@ -57,7 +59,8 @@
     "webpack": "^4.41.5",
     "webpack-cli": "^3.3.10",
     "webpack-dev-server": "^3.10.1",
-    "webpack-merge": "^5.8.0"
+    "webpack-merge": "^5.8.0",
+    "eslint": "^8.31.0"
   },
   "dependencies": {
     "axios": "^0.27.1",

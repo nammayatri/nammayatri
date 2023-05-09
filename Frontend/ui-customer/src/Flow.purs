@@ -58,7 +58,7 @@ import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import Screens.ReferralScreen.ScreenData as ReferralScreen
 import Screens.SavedLocationScreen.Controller (getSavedLocationForAddNewAddressScreen)
 -- import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
-import Screens.MyProfileScreen.ScreenData as MyProfileScreenData
+-- import Screens.MyProfileScreen.ScreenData as MyProfileScreenData
 import Screens.Types (CardType(..), AddNewAddressScreenState(..),CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), EmailErrorType(..))
 import Screens.Types (Gender(..)) as Gender
 import Services.API (AddressGeometry(..), BookingLocationAPIEntity(..), ConfirmRes(..), DeleteSavedLocationReq(..), Geometry(..), GetDriverLocationResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), TriggerOTPResp(..), VerifyTokenResp(..), UserSosRes(..),  GetEmergContactsReq(..), GetEmergContactsResp(..), ContactDetails(..), FlowStatusRes(..), FlowStatus(..), CancelEstimateRes(..))
@@ -71,7 +71,7 @@ import Foreign.Class (class Encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
 
 import Screens.OnBoardingFlow.Proxy (enterMobileNumberScreenFlow, chooseLanguageScreenFlow, accountSetUpScreenFlow, permissionScreenFlow)
-import Screens.CustomerUtils.Proxy (aboutUsScreenFlow, selectLanguageScreenFlow, helpAndSupportScreenFlow, invoiceScreenFlow, myProfileScreenFlow, emergencyScreenFlow, addNewAddressScreenFlow, tripDetailsScreenFlow, myRidesScreenFlow)
+import Screens.CustomerUtils.Proxy as CUP --(aboutUsScreenFlow, selectLanguageScreenFlow, helpAndSupportScreenFlow, invoiceScreenFlow, myProfileScreenFlow, emergencyScreenFlow, addNewAddressScreenFlow, tripDetailsScreenFlow, myRidesScreenFlow)
 
 baseAppFlow :: GlobalPayload -> FlowBT String Unit
 baseAppFlow gPayload = do
@@ -337,18 +337,18 @@ homeScreenFlow = do
     GO_TO_MY_RIDES -> do
       modifyScreenState $ MyRideScreenStateType (\myRidesScreen -> myRidesScreen{data{offsetValue = 0}})
       _ <- pure $ firebaseLogEvent "ny_user_myrides_click"
-      myRidesScreenFlow true
+      CUP.myRidesScreenFlow true
     GO_TO_HELP -> do
       modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> HelpAndSupportScreenData.initData)
       _ <- pure $ firebaseLogEvent "ny_user_help"
-      helpAndSupportScreenFlow
-    CHANGE_LANGUAGE ->  selectLanguageScreenFlow
-    GO_TO_EMERGENCY_CONTACTS -> emergencyScreenFlow
-    GO_TO_ABOUT -> aboutUsScreenFlow
+      CUP.helpAndSupportScreenFlow
+    CHANGE_LANGUAGE ->  CUP.selectLanguageScreenFlow
+    GO_TO_EMERGENCY_CONTACTS -> CUP.emergencyScreenFlow
+    GO_TO_ABOUT -> CUP.aboutUsScreenFlow
     GO_TO_MY_PROFILE -> do
         _ <- pure $ firebaseLogEvent "ny_user_profile_click"
-        modifyScreenState $ MyProfileScreenStateType (\myProfileScreenState ->  MyProfileScreenData.initData)
-        myProfileScreenFlow
+        -- modifyScreenState $ MyProfileScreenStateType (\myProfileScreenState ->  MyProfileScreenData.initData)
+        CUP.myProfileScreenFlow
     GO_TO_FIND_ESTIMATES state-> do
       _ <- lift $ lift $ liftFlow $ firebaseLogEventWithTwoParams "ny_user_source_and_destination" "ny_user_enter_source" (take 99 (state.data.source)) "ny_user_enter_destination" (take 99 (state.data.destination))
       (ServiceabilityRes sourceServiceabilityResp) <- Remote.originServiceabilityBT (Remote.makeServiceabilityReq state.props.sourceLat state.props.sourceLong)
@@ -767,7 +767,7 @@ homeScreenFlow = do
       let prevRideState = updatedState.data.previousRideRatingState
       let finalAmount = show prevRideState.finalAmount
       modifyScreenState $ InvoiceScreenStateType (\invoiceScreen -> invoiceScreen {props{fromHomeScreen= true},data{totalAmount = ("₹ " <> finalAmount), date = prevRideState.dateDDMMYY, tripCharges = ("₹ " <> finalAmount), selectedItem {date = prevRideState.dateDDMMYY, bookingId = prevRideState.bookingId,rideStartTime = prevRideState.rideStartTime, rideEndTime = prevRideState.rideEndTime, rideId = prevRideState.rideId, shortRideId = prevRideState.shortRideId,vehicleNumber = prevRideState.vehicleNumber,time = prevRideState.rideStartTime,source = prevRideState.source,destination = prevRideState.destination,driverName = prevRideState.driverName,totalAmount = ("₹ " <> finalAmount)}}})
-      invoiceScreenFlow
+      CUP.invoiceScreenFlow
 
     CHECK_FOR_DUPLICATE_SAVED_LOCATION state -> do
       let recents = map
@@ -803,7 +803,7 @@ homeScreenFlow = do
                                                 WORK_TAG -> Just 1
                                                 _        -> Just 2
                                   Nothing  -> Nothing }})
-          addNewAddressScreenFlow ""
+          CUP.addNewAddressScreenFlow ""
         Just selectedLocationListItem -> do
           case selectedLocationListItem.locationItemType of
             Just RECENTS ->  getDistanceDiff state (fromMaybe 0.0 selectedLocationListItem.lat) (fromMaybe 0.0 selectedLocationListItem.lon)
@@ -963,18 +963,6 @@ getFinalAmount (RideBookingRes resp) =
         (RideAPIEntity ride) = (fromMaybe dummyRideAPIEntity (rideList !! 0))
     in (show (fromMaybe 0 ride.computedPrice))
 
--- selectLanguageScreenFlow :: FlowBT String Unit
--- selectLanguageScreenFlow = do
---   flow <- UI.selectLanguageScreen
---   case flow of
---     UPDATE_LANGUAGE state -> do
---                                 setValueToLocalStore LANGUAGE_KEY (state.props.selectedLanguage)
---                                 _ <- lift $ lift $ liftFlow $(firebaseLogEventWithParams "ny_user_lang_selec" "language" (state.props.selectedLanguage))
---                                 resp <- lift $ lift $ Remote.updateProfile (Remote.makeUpdateLanguageRequest "")
---                                 modifyScreenState $ SelectLanguageScreenStateType (\selectLanguageScreen -> SelectLanguageScreenData.initData)
---                                 homeScreenFlow
---     GO_TO_HOME_SCREEN     -> homeScreenFlow
-
 dummyRideBooking :: RideBookingRes
 dummyRideBooking = RideBookingRes
   {
@@ -1024,7 +1012,7 @@ savedLocationFlow = do
       case (AddNewAddress.validTag (AddNewAddress.getSavedTags savedLocationResp.list) "HOME" ""), (AddNewAddress.validTag (AddNewAddress.getSavedTags savedLocationResp.list) "WORK" "") of
           false   , false    -> modifyScreenState $ AddNewAddressScreenStateType(\addNewAddressScreen -> addNewAddressScreen{data{activeIndex = (Just 2), selectedTag = (Just OTHER_TAG) }, props{editSavedLocation = false}})
           _ , _ -> modifyScreenState $ AddNewAddressScreenStateType(\addNewAddressScreen -> addNewAddressScreen{data{activeIndex = Nothing, selectedTag = Nothing}, props{editSavedLocation = false}})
-      addNewAddressScreenFlow "dummy"
+      CUP.addNewAddressScreenFlow "dummy"
     DELETE_LOCATION tagName -> do
       resp <- Remote.deleteSavedLocationBT (DeleteSavedLocationReq (trim tagName))
       pure $ toast (getString FAVOURITE_REMOVED_SUCCESSFULLY)
@@ -1072,7 +1060,7 @@ savedLocationFlow = do
                                                 OTHER_TAG-> Just 2
                                 Nothing   -> Nothing}})
 
-      addNewAddressScreenFlow "edit Location"
+      CUP.addNewAddressScreenFlow "edit Location"
 
     GO_BACK_FROM_SAVED_LOCATION -> do
       _ <- lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreenMap")
@@ -1256,3 +1244,13 @@ cancelEstimate bookingId = do
         void $ pure $ toast "CANCEL FAILED"
         _ <- pure $ firebaseLogEvent "ny_fs_cancel_estimate_failed_left"
         homeScreenFlow
+
+getGenderValue :: Maybe Gender.Gender -> Maybe String
+getGenderValue gender =
+  case gender of
+    Just value -> case value of
+      Gender.MALE -> Just "MALE"
+      Gender.FEMALE -> Just "FEMALE"
+      Gender.OTHER -> Just "OTHER"
+      _ -> Just "PREFER_NOT_TO_SAY"
+    Nothing -> Nothing

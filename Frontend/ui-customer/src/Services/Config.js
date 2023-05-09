@@ -1,5 +1,5 @@
-import { callbackMapper } from 'presto-ui';
+import { callbackMapper } from "presto-ui";
 
 export const environment = function () {
-    return window.configEnv
+  return window.configEnv
 };

@@ -39,12 +39,12 @@ myProfileScreenFlow = do
 
 emergencyScreenFlow :: FlowBT String Unit
 emergencyScreenFlow = do
-    func <- lift $ lift $ doAff $ fromEffectFnAff $ dynamicImport "myProfileScreenFlow" -- (fnProxy HomeScreenHandler.homeScreen)
+    func <- lift $ lift $ doAff $ fromEffectFnAff $ dynamicImport "emergencyScreenFlow" -- (fnProxy HomeScreenHandler.homeScreen)
     func
 
 addNewAddressScreenFlow :: String -> FlowBT String Unit
 addNewAddressScreenFlow a0 = do
-    func <- lift $ lift $ doAff $ fromEffectFnAff $ dynamicImport "myProfileScreenFlow" -- (fnProxy HomeScreenHandler.homeScreen)
+    func <- lift $ lift $ doAff $ fromEffectFnAff $ dynamicImport "addNewAddressScreenFlow" -- (fnProxy HomeScreenHandler.homeScreen)
     func a0
 
 tripDetailsScreenFlow :: Boolean -> FlowBT String Unit

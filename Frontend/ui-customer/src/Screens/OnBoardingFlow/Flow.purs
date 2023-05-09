@@ -53,6 +53,8 @@ import Screens.Types (Gender(..)) as Gender
 
 import Screens.PermissionScreen.Handler (permissionScreen)
 
+import Flow (getGenderValue, currentFlowStatus)
+
 enterMobileNumberScreenFlow :: FlowBT String Unit
 enterMobileNumberScreenFlow = do
   lift $ lift $ doAff do liftEffect hideSplash -- Removed initial choose langauge screen
@@ -74,8 +76,7 @@ enterMobileNumberScreenFlow = do
                     _ <- lift $ lift $ setLogField "customer_id" $ encode (customerId)
                     setValueToLocalStore CUSTOMER_ID customerId
                     setValueToLocalStore REGISTERATION_TOKEN response.token
-                    -- currentFlowStatus
-                    enterMobileNumberScreenFlow
+                    currentFlowStatus
               Left err -> do
                 _ <- lift $ lift $ liftFlow (setText' (getNewIDWithTag "EnterOTPNumberEditText") "" )
                 let errResp = err.response
@@ -158,23 +159,11 @@ permissionScreenFlow triggertype = do
     REFRESH_INTERNET -> do
         if (os == "IOS") then pure unit
           else if not internetCondition then permissionScreenFlow "INTERNET_ACTION"
-        --   else currentFlowStatus
-          else enterMobileNumberScreenFlow
+          else currentFlowStatus
     TURN_ON_GPS -> if not internetCondition then permissionScreenFlow "INTERNET_ACTION" else pure unit
     TURN_ON_INTERNET ->
         case (getValueToLocalStore USER_NAME == "__failed") of
             true -> pure unit
             _ -> if (os == "IOS") then pure unit
                  else if (not (permissionConditionA && permissionConditionB) )then permissionScreenFlow "LOCATION_DISABLED"
-                --  else currentFlowStatus
-                 else enterMobileNumberScreenFlow
-
-getGenderValue :: Maybe Gender.Gender -> Maybe String
-getGenderValue gender =
-  case gender of
-    Just value -> case value of
-      Gender.MALE -> Just "MALE"
-      Gender.FEMALE -> Just "FEMALE"
-      Gender.OTHER -> Just "OTHER"
-      _ -> Just "PREFER_NOT_TO_SAY"
-    Nothing -> Nothing
+                 else currentFlowStatus

@@ -20,3 +20,4 @@ env
 .DS_Store
 **/**.jsa
 .spago
+dist

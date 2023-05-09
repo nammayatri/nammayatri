@@ -60,8 +60,6 @@ import Components.SettingSideBar.Controller as SettingSideBarController
 
 import Screens.EmergencyContactsScreen.Handler (emergencyContactsScreen)
 
-import Screens.OnBoardingFlow.Flow (getGenderValue)
-
 import Screens.ContactUsScreen.Handler (contactUsScreen)
 
 import Screens.TripDetailsScreen.Handler (tripDetailsScreen)
@@ -70,13 +68,13 @@ import Screens.MyRidesScreen.Handler (myRidesScreen)
 
 import Components.LocationListItem.Controller (dummyLocationListState)
 
+import Flow (homeScreenFlow, getGenderValue, rideSearchFlow, savedLocationFlow)
+
 aboutUsScreenFlow :: FlowBT String Unit
 aboutUsScreenFlow = do
   flow <- aboutUsScreen
   case flow of
-    GO_TO_HOME_FROM_ABOUT ->
-        aboutUsScreenFlow
-        -- homeScreenFlow
+    GO_TO_HOME_FROM_ABOUT -> homeScreenFlow
 
 selectLanguageScreenFlow :: FlowBT String Unit
 selectLanguageScreenFlow = do
@@ -87,19 +85,14 @@ selectLanguageScreenFlow = do
                                 _ <- lift $ lift $ liftFlow $(firebaseLogEventWithParams "ny_user_lang_selec" "language" (state.props.selectedLanguage))
                                 resp <- lift $ lift $ Remote.updateProfile (Remote.makeUpdateLanguageRequest "")
                                 modifyScreenState $ SelectLanguageScreenStateType (\selectLanguageScreen -> SelectLanguageScreenData.initData)
-                                selectLanguageScreenFlow
-                                -- homeScreenFlow
-    GO_TO_HOME_SCREEN     ->
-        selectLanguageScreenFlow
-        -- homeScreenFlow
+                                homeScreenFlow
+    GO_TO_HOME_SCREEN     -> homeScreenFlow
 
 helpAndSupportScreenFlow :: FlowBT String Unit
 helpAndSupportScreenFlow = do
   flow <- helpAndSupportScreen
   case flow of
-    GO_TO_HOME_FROM_HELP ->
-        helpAndSupportScreenFlow
-        -- homeScreenFlow
+    GO_TO_HOME_FROM_HELP -> homeScreenFlow
     GO_TO_SUPPORT_SCREEN bookingId'-> do
       modifyScreenState $ ContactUsScreenStateType (\contactUsScreen -> contactUsScreen {data{bookingId = bookingId'}})
       contactUsScreenFlow
@@ -118,11 +111,8 @@ invoiceScreenFlow = do
   flow <- invoiceScreen
   (GlobalState newState) <- getState
   case flow of
-    InvoiceScreenOutput.GoBack ->
-        tripDetailsScreenFlow newState.tripDetailsScreen.props.fromMyRides
-    InvoiceScreenOutput.GoToHome ->
-        invoiceScreenFlow
-        -- homeScreenFlow
+    InvoiceScreenOutput.GoBack -> tripDetailsScreenFlow newState.tripDetailsScreen.props.fromMyRides
+    InvoiceScreenOutput.GoToHome -> homeScreenFlow
 
 myProfileScreenFlow :: FlowBT String Unit
 myProfileScreenFlow = do
@@ -172,24 +162,20 @@ myProfileScreenFlow = do
     GO_TO_HOME_ -> do
       modifyScreenState $ MyProfileScreenStateType (\myProfileScreen -> myProfileScreen{props{accountStatus = ACTIVE}})
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{settingSideBar{opened = SettingSideBarController.CLOSED}}})
-      myProfileScreenFlow
-    --   homeScreenFlow
+      homeScreenFlow
 
 emergencyScreenFlow :: FlowBT String Unit
 emergencyScreenFlow = do
   flow <- emergencyContactsScreen
   case flow of
-    GO_TO_HOME_FROM_EMERGENCY_CONTACTS ->
-        emergencyScreenFlow
-        -- homeScreenFlow
+    GO_TO_HOME_FROM_EMERGENCY_CONTACTS -> homeScreenFlow
     POST_CONTACTS state -> do
       _ <- Remote.emergencyContactsBT (Remote.postContactsReq state.data.contactsList)
       (GlobalState globalState) <- getState
       if globalState.homeScreen.props.emergencyHelpModelState.isSelectEmergencyContact
       then do
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{emergencyHelpModelState{isSelectEmergencyContact = false, emergencyContactData = transformContactList state.data.contactsList}}})
-        emergencyScreenFlow
-        -- homeScreenFlow
+        homeScreenFlow
       else emergencyScreenFlow
     GET_CONTACTS state -> do
       (GetEmergContactsResp res) <- Remote.getEmergencyContactsBT GetEmergContactsReq
@@ -265,14 +251,9 @@ addNewAddressScreenFlow input = do
                                                               , savedLocations = (AddNewAddress.getSavedLocations listResp.list)
                                                               }
                                                             } )
-            addNewAddressScreenFlow ""
-            -- homeScreenFlow
-          Left (err) ->
-            addNewAddressScreenFlow ""
-            -- homeScreenFlow
-        else
-            addNewAddressScreenFlow ""
-            -- savedLocationFlow
+            homeScreenFlow
+          Left (err) -> homeScreenFlow
+        else savedLocationFlow
 
     UPDATE_LOCATION_NAME_ADDRESS state lat lon -> do
       (GetPlaceNameResp locationName) <- Remote.placeNameBT (Remote.makePlaceNameReq lat lon (case (getValueToLocalStore LANGUAGE_KEY) of
@@ -289,8 +270,7 @@ addNewAddressScreenFlow input = do
 
     GO_TO_FAVOURITES -> do
       _ <- lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreenMap")
-      addNewAddressScreenFlow ""
-    --   savedLocationFlow
+      savedLocationFlow
 
     CHECK_LOCATION_SERVICEABILITY state locItemType-> do
       let item  = state.data.selectedItem
@@ -362,8 +342,7 @@ addNewAddressScreenFlow input = do
         updateDistanceInfo state recentItem.lat recentItem.lon
     GO_TO_HOME_SCREEN_FLOW -> do
       _ <- lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreenMap")
-      addNewAddressScreenFlow ""
-    --   homeScreenFlow
+      homeScreenFlow
 
 updateDistanceInfo :: AddNewAddressScreenState ->Maybe Number ->Maybe Number -> FlowBT String Unit
 updateDistanceInfo state lat lon = do
@@ -410,8 +389,7 @@ contactUsScreenFlow = do
     GO_TO_HOME_FROM_CONTACT state -> do
       _ <- Remote.sendIssueBT (Remote.makeSendIssueReq (Just state.data.email) Nothing state.data.description state.data.subject )
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {  data{settingSideBar{opened = SettingSideBarController.CLOSED}}})
-      contactUsScreenFlow
-    --   homeScreenFlow
+      homeScreenFlow
 
 tripDetailsScreenFlow :: Boolean ->  FlowBT String Unit
 tripDetailsScreenFlow fromMyRides = do
@@ -433,8 +411,7 @@ tripDetailsScreenFlow fromMyRides = do
       invoiceScreenFlow
     GO_TO_HOME -> do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {  data{settingSideBar{opened = SettingSideBarController.CLOSED}}})
-      tripDetailsScreenFlow false
-    --   homeScreenFlow
+      homeScreenFlow
     CONNECT_WITH_DRIVER updatedState -> do
       void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
       void $ lift $ lift $ toggleLoader true
@@ -452,19 +429,15 @@ myRidesScreenFlow fromNavBar = do
   flow <- myRidesScreen
   case flow of
     REFRESH state -> myRidesScreenFlow state.props.fromNavBar
-    TRIP_DETAILS state -> do
-      tripDetailsScreenFlow true
+    TRIP_DETAILS state -> tripDetailsScreenFlow true
     LOADER_OUTPUT state -> do
       modifyScreenState $ MyRideScreenStateType (\myRidesScreen -> state{data{offsetValue = state.data.offsetValue + 8}})
       myRidesScreenFlow state.props.fromNavBar
     BOOK_RIDE -> do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {  data{settingSideBar{opened = SettingSideBarController.CLOSED}}})
-      myRidesScreenFlow false
-    --   homeScreenFlow
-    GO_TO_NAV_BAR ->
-        myRidesScreenFlow false
-        -- homeScreenFlow
+      homeScreenFlow
+    GO_TO_NAV_BAR -> homeScreenFlow
     GO_TO_HELP_SCREEN -> helpAndSupportScreenFlow
     REPEAT_RIDE_FLOW state -> do
       updateRideDetails state
-    --   rideSearchFlow "REPEAT_RIDE_FLOW"
+      rideSearchFlow "REPEAT_RIDE_FLOW"

@@ -55,7 +55,7 @@ var dynamicFlow2 = function dynamicFlow2(func) {
     var headID = document.getElementsByTagName("head")[0];
     var newScript = document.createElement("script");
     newScript.type = "text/javascript";
-    var url = "http://" + "192.168.1.36" + ":" + "8081";
+    var url = "http://" + "192.168.1.34" + ":" + "8081";
 
     newScript.onload = function () {
       console.log("dynamic import file");
@@ -72,7 +72,7 @@ var dynamicFlow2 = function dynamicFlow2(func) {
       };
     };
 
-    newScript.src = url + '/dist/1.index_bundle.js'; // newScript.innerHTML = window.DUIGatekeeper.loadFileInDUI("0.index_bundle.js");
+    newScript.src = url + "/dist/0.index_bundle.js"; // newScript.innerHTML = window.DUIGatekeeper.loadFileInDUI("0.index_bundle.js");
 
     console.log("inner script", newScript.innerHTML);
     headID.appendChild(newScript); // newScript.onload();

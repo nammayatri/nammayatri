@@ -26,8 +26,8 @@ import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Ref (new)
 import Engineering.Helpers.Commons (flowRunner, liftFlow, getWindowVariable)
--- import Flow as Flow
-import Dynamic.Dynamic (dynamicBaseAppFlow)
+import Flow as Flow
+-- import Dynamic.Dynamic (dynamicBaseAppFlow) -- as DFlow
 import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Generic (decode)
 import JBridge (toggleBtnLoader)
@@ -50,8 +50,8 @@ main = do
       -- _ <- launchAff $ DFlow.dynamicBaseAppFlow payload'
       _ <- launchAff $ flowRunner $ do
         --  _ <- pure $ JBridge._addCertificates (Config.getFingerPrint "")
-         resp ← runExceptT $ runBackT $ dynamicBaseAppFlow payload'
-        --  resp ← runExceptT $ runBackT $ Flow.baseAppFlow payload'
+        --  resp ← runExceptT $ runBackT $ dynamicBaseAppFlow payload'
+         resp ← runExceptT $ runBackT $ Flow.baseAppFlow payload'
          case resp of
                Right x → pure unit
                Left err → do

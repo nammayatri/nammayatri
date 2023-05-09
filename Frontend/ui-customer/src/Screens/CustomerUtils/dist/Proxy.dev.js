@@ -40,7 +40,7 @@ var dynamicImport = function dynamicImport(func) {
     var headID = document.getElementsByTagName("head")[0];
     var newScript = document.createElement("script");
     newScript.type = "text/javascript";
-    var url = "http://" + "192.168.1.36" + ":" + "8081";
+    var url = "http://" + "192.168.1.34" + ":" + "8081";
 
     newScript.onload = function () {
       console.log("dynamic import file customerUtils " + func);
@@ -50,14 +50,14 @@ var dynamicImport = function dynamicImport(func) {
         console.log("onSuccess import " + func);
         onSuccess(module[func]);
       })["catch"](function (e) {
-        return console.error("error in dynamicFlow2", e);
+        return console.error("error in dynamicImport " + func, e);
       });
       return function (cancelError, onCancelerError, onCancelerSuccess) {
         onCancelerSuccess();
       };
     };
 
-    newScript.src = url + '/dist/2.index_bundle.js'; // newScript.innerHTML = window.DUIGatekeeper.loadFileInDUI("0.index_bundle.js");
+    newScript.src = url + "/dist/customerUtil.index_bundle.js"; // newScript.innerHTML = window.DUIGatekeeper.loadFileInDUI("0.index_bundle.js");
 
     console.log("inner script", newScript.innerHTML);
     headID.appendChild(newScript); // newScript.onload();
