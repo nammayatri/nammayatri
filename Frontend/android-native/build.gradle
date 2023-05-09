@@ -17,7 +17,7 @@ buildscript {
         // Add the dependency for the Performance Monitoring plugin
         classpath 'com.google.firebase:perf-plugin:1.4.1'  // Performance Monitoring plugin
         // To benefit from the latest Performance Monitoring plugin features,
-        classpath 'com.android.tools.build:gradle:7.0.0'
+        classpath 'com.android.tools.build:gradle:7.4.0'
         classpath 'com.google.gms:google-services:4.3.13'
         classpath 'com.google.firebase:firebase-crashlytics-gradle:2.9.1'
         classpath 'javax.activation:activation:1.1'
