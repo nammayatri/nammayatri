@@ -50,9 +50,9 @@ export function getStringBNValue(key){
 
 const jatriSathiConfigs = {
     RC_VALIDATION_TEXT : "WB",
-    DOCUMENT_LINK : "https://drive.google.com/file/d/1qYXbQUF4DVo2xNOawkHNTR_VVe46nggc",
+    DOCUMENT_LINK : "https://docs.google.com/document/d/19pQUgTWXBqcM7bjy4SU1-z33r-iXsdPMfZggBTXbdR4",
     APP_LINK : "",
-    PRIVACY_POLICY_LINK : "https://docs.google.com/document/d/1tF96MwtaEiq70y_P40E29Sy3X61moTc9",
+    PRIVACY_POLICY_LINK : "https://docs.google.com/document/d/1-bcjLOZ_gR0Rda2BNmkKnqVds8Pm23v1e7JbSDdM70E",
     SPECIAL_ZONE_OTP_VIEW : "true"
 }
 
