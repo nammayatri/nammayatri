@@ -41,7 +41,8 @@ repositories {
 
 android {
     compileSdkVersion 31
-    buildToolsVersion "30.0.2"
+    buildToolsVersion "30.0.3"
+    namespace "in.juspay.mobility"
 
     defaultConfig {
         minSdkVersion 23
@@ -199,7 +200,7 @@ dependencies {
     implementation 'com.google.firebase:firebase-auth'
     implementation 'com.google.android.play:review:2.0.1'
     implementation 'com.pierfrancescosoffritti.androidyoutubeplayer:core:11.1.0'
-    implementation 'com.facebook.android:facebook-android-sdk:4.42.0'
+    implementation 'com.facebook.android:facebook-android-sdk:14.0.0'
     api 'com.theartofdev.edmodo:android-image-cropper:2.8.+'
 }
 
