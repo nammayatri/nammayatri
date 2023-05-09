@@ -50,6 +50,7 @@ default-extensions:
   - StandaloneDeriving
   - PackageImports
   - TemplateHaskell
+  - TemplateHaskell
 
 dependencies:
   - aeson
@@ -102,7 +103,6 @@ dependencies:
   - template-haskell
   - sequelize
   - casing
-  - postgresql-simple
 
 ghc-options:
   - -fwrite-ide-info
