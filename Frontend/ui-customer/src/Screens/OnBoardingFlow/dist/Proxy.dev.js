@@ -13,13 +13,8 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 var dynamicImport = function dynamicImport(func) {
   return function (onError, onSuccess) {
-    var headID = document.getElementsByTagName("head")[0];
-    var newScript = document.createElement("script");
-    newScript.type = "text/javascript";
-    var url = "http://" + "192.168.1.34" + ":" + "8081";
-
-    newScript.onload = function () {
-      console.log("dynamic import file");
+    if (document.getElementById("onBoarding")) {
+      console.log("dynamic import function " + func + " already loaded");
       Promise.resolve().then(function () {
         return _interopRequireWildcard(require("./../../output/Screens.OnBoardingFlow.Flow"));
       }).then(function (module) {
@@ -31,11 +26,32 @@ var dynamicImport = function dynamicImport(func) {
       return function (cancelError, onCancelerError, onCancelerSuccess) {
         onCancelerSuccess();
       };
-    };
+    } else {
+      var headID = document.getElementsByTagName("head")[0];
+      var newScript = document.createElement("script");
+      newScript.type = "text/javascript";
+      var url = "http://" + "192.168.1.34" + ":" + "8081";
 
-    newScript.src = url + "/dist/onBoarding.index_bundle.js";
-    console.log("inner script", newScript.innerHTML);
-    headID.appendChild(newScript);
+      newScript.onload = function () {
+        console.log("dynamic import file");
+        Promise.resolve().then(function () {
+          return _interopRequireWildcard(require("./../../output/Screens.OnBoardingFlow.Flow"));
+        }).then(function (module) {
+          console.log("onSuccess import EnterMobileNumberScreen");
+          onSuccess(module[func]);
+        })["catch"](function (e) {
+          return console.error("error in dHandler", e);
+        });
+        return function (cancelError, onCancelerError, onCancelerSuccess) {
+          onCancelerSuccess();
+        };
+      }; // newScript.src = url + "/dist/onBoarding.index_bundle.js";
+
+
+      newScript.innerHTML = JBridge.loadFileInDUI('2.index_bundle.js');
+      headID.appendChild(newScript);
+      newScript.onload();
+    }
   };
 };
 
