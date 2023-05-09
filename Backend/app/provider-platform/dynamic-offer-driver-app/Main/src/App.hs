@@ -18,8 +18,11 @@ import AWS.S3
 import qualified App.Server as App
 import qualified Data.Text as T
 import Environment
+import EulerHS.Interpreters (runFlow)
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
+import Kernel.Connection.Postgres (prepareDBConnections)
+import Kernel.Connection.Types (ConnectionConfig (..))
 import Kernel.Exit
 import Kernel.External.Verification.Interface.Idfy
 import Kernel.Storage.Esqueleto.Migration (migrateIfNeeded)
@@ -60,11 +63,19 @@ runDynamicOfferDriverApp' appCfg = do
           & setInstallShutdownHandler (handleShutdown appEnv.isShuttingDown (releaseAppEnv appEnv))
           & setPort (appCfg.port)
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
+    runFlow
+      flowRt
+      ( prepareDBConnections $
+          ConnectionConfig
+            { esqDBCfg = appCfg.esqDBCfg,
+              esqDBReplicaCfg = appCfg.esqDBReplicaCfg,
+              hedisClusterCfg = appCfg.hedisClusterCfg
+            }
+      )
     flowRt' <- runFlowR flowRt appEnv $ do
       withLogTag "Server startup" $ do
         migrateIfNeeded appCfg.migrationPath appCfg.autoMigrate appCfg.esqDBCfg
           >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
-
         logInfo "Setting up for signature auth..."
         allProviders <-
           try Storage.loadAllProviders

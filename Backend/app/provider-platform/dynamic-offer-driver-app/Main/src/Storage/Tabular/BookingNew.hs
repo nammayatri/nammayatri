@@ -45,7 +45,7 @@ import Database.Beam.Postgres
   ( Postgres,
     ResultError (ConversionFailed, UnexpectedNull),
   )
-import qualified Database.Beam.Schema.Tables as DBST
+-- import qualified Database.Beam.Schema.Tables as DBST
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import qualified Domain.Types.Booking as Domain
