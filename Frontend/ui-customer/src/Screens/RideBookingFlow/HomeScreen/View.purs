@@ -297,6 +297,7 @@ view push state =
             , if state.props.showMultipleRideInfo then (requestInfoCardView push state) else emptyTextView state
             , if state.props.showLiveDashboard then showLiveStatsDashboard push state else emptyTextView state
             , if state.props.showCallPopUp then (driverCallPopUp push state) else emptyTextView state
+            , if state.props.callSupportPopUp then callSupportPopUpView push state else emptyTextView state
             ]
         ]
     ]
