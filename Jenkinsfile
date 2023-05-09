@@ -12,6 +12,10 @@ pipeline {
                         // Enable running macOS builds when on main branch, so
                         // as to provide Nix cache for people on macOS.
                         branch 'main'
+                        // Temporarily allow macOS CI for
+                        // https://github.com/nammayatri/nammayatri/pull/840
+                        // TODO: Remove me before merging to 'main'
+                        changeRequest branch: 'frontend/chore/purifix'
                     }
                 }
                 axes {
