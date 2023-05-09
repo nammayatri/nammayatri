@@ -429,7 +429,8 @@ data STR =  DOWNLOAD_INVOICE
         | NO_TIP
         | CUSTOMER_SELECTED_FARE
         | CUSTOMER_TIP_DESCRIPTION
-
+        | DRIVER_ADDITIONS
+        | EXTRA_DISTANCE_FARE
 
 type CALL_DRIVER_USING = String
 type DIRECT_CALL = String
@@ -1057,3 +1058,5 @@ type ADD_NOW = String
 type HOW_SHOULD_WE_ADDRESS_YOU = String
 type GENDER_STR = String
 type PROFILE_COMPLETION = String
+type DRIVER_ADDITIONS = String
+type EXTRA_DISTANCE_FARE = String

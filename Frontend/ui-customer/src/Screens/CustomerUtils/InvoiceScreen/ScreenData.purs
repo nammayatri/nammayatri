@@ -26,7 +26,8 @@ initData = {
     gst : 0.0,
     totalAmount : "",
     date : "wed,10,45",
-    selectedItem : dummyIndividualCard
+    selectedItem : dummyIndividualCard,
+    nightCharges : false
   },
   props: {
     paymentMode : "Cash"

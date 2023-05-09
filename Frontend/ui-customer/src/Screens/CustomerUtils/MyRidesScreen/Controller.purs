@@ -29,7 +29,7 @@ import Engineering.Helpers.Commons (strToBool)
 import Helpers.Utils (convertUTCtoISC, parseFloat, rotateArray, setEnabled, setRefreshing, toString, isHaveFare)
 import JBridge (firebaseLogEvent)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
-import Prelude (class Show, pure, unit, bind, map, discard, show, ($), (==), (&&), (+), (/=), (<>), (||), (-), (<), (/), negate, (<<<), not)
+import Prelude (class Show, pure, unit, bind, map, discard, show, ($), (==), (&&), (+), (/=), (<>), (||), (-), (<), (/), negate, (<<<), not, (>))
 import PrestoDOM (Eval, ScrollState(..), continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import Resources.Constants (DecodeAddress(..), decodeAddress)
@@ -41,6 +41,7 @@ import Storage (isLocalStageOn)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import EN (getEN) 
+import Data.Int as DI
 
 instance showAction :: Show Action where
   show _ = ""
@@ -198,8 +199,8 @@ myRideListTransformer :: MyRidesScreenState -> Array RideBookingRes -> Array Ind
 myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETED" || item.status == "CANCELLED")) (map (\(RideBookingRes ride) -> 
   let 
     fares = getFares ride.fareBreakup
-    updatedFareList = getFaresList ride.fareBreakup state
     (RideAPIEntity rideDetails) = (fromMaybe dummyRideAPIEntity (ride.rideList !!0))
+    updatedFareList = getFaresList ride.fareBreakup state <> if ( (fromMaybe (0) rideDetails.computedPrice) > ( DI.floor fares.totalFare)) then [{fareType : "EARLY_END_RIDE_PENALTY", price : toNumber((fromMaybe (0) rideDetails.computedPrice) - (DI.floor fares.totalFare)), title : getEN EARLY_END_RIDE_CHARGES}] else []
      in {
     date : (( (fromMaybe "" ((split (Pattern ",") (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "llll")) !!0 )) <> ", " <>  (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "Do MMM") )),
     time :  (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "h:mm A"),
@@ -250,9 +251,12 @@ matchRidebyId rideOne rideTwo = rideOne.bookingId == rideTwo.bookingId
 getFares ∷ Array FareBreakupAPIEntity → Fares
 getFares fares = {
   baseFare : "₹ " <> show (((getFareFromArray fares "BASE_FARE") + (getFareFromArray fares "EXTRA_DISTANCE_FARE")) - 10.0)
-, pickupCharges : "₹ 10.0"
+, pickupCharges : "₹ " <> show (getFareFromArray fares "DEAD_KILOMETER_FARE")
 , waitingCharges : "₹ " <> show (getFareFromArray fares "WAITING_CHARGES")
 , nominalFare : "₹ " <> show (getFareFromArray fares "DRIVER_SELECTED_FARE")
+, customerSelectedFare : "₹ " <> show (getFareFromArray fares "CUSTOMER_SELECTED_FARE")
+, totalFare : (getFareFromArray fares "TOTAL_FARE")
+, extraDistanceFare : "₹ " <> show (getFareFromArray fares "EXTRA_DISTANCE_FARE")
 }
 getFareFromArray :: Array FareBreakupAPIEntity -> String -> Number
 getFareFromArray fareBreakUp fareType = (fromMaybe dummyFareBreakUp (head (filter (\fare -> fare^._description == (fareType)) fareBreakUp)))^._amount
@@ -268,6 +272,8 @@ getFaresList fares state =
           , price : if item.description == "BASE_FARE" then (item.amount + getFareFromArray fares "EXTRA_DISTANCE_FARE") else item.amount
           , title : case item.description of
                       "BASE_FARE" -> (getEN BASE_FARES) <> " (" <> state.data.selectedItem.baseDistance <> ")"
+                      "EXTRA_DISTANCE_FARE" -> getEN EXTRA_DISTANCE_FARE
+                      "DRIVER_SELECTED_FARE" -> getEN DRIVER_ADDITIONS
                       "EXTRA_DISTANCE_FARE" -> getEN NOMINAL_FARE
                       "DRIVER_SELECTED_FARE" -> getEN NOMINAL_FARE
                       "TOTAL_FARE" -> getEN TOTAL_PAID

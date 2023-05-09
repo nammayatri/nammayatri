@@ -434,3 +434,5 @@ getEN script = case script of
   TRY_LOOKING_FOR_RIDES_AGAIN -> "It seems to be a very busy day. You may try looking for rides again"
   NO_TIP -> "No Tip"
   CUSTOMER_TIP_DESCRIPTION -> "*Extra amount added by the customer to increase the chances of getting a ride."
+  DRIVER_ADDITIONS -> "Driver Additions*"
+  EXTRA_DISTANCE_FARE -> "Extra Distance Fare"

@@ -244,7 +244,8 @@ type InvoiceScreenData =
     gst :: Number,
     totalAmount :: String,
     date :: String ,
-    selectedItem :: IndividualRideCardState
+    selectedItem :: IndividualRideCardState ,
+    nightCharges :: Boolean
   }
 
 type InvoiceScreenProps =
@@ -933,6 +934,9 @@ type Fares = {
 , pickupCharges :: String
 , nominalFare :: String
 , waitingCharges :: String
+, customerSelectedFare :: String
+, totalFare :: Number
+, extraDistanceFare :: String
 }
 
 type FareComponent = {
