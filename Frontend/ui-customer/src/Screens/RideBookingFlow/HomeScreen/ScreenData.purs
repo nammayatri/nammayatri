@@ -67,7 +67,7 @@ initData = {
     , messageToBeSent : ""
     , bannerViewState : {
         backgroundColor : Color.lightMintGreen
-      , title : "Complete Your Profile for a Safer & More Secure Ride"
+      , title : "Complete your profile for a personalised ride experience"
       , titleColor : Color.elfGreen
       , actionText : "Update now"
       , actionTextColor : Color.elfGreen
