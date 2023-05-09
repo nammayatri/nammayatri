@@ -29,6 +29,8 @@ import PrestoDOM (Visibility, LetterSpacing)
 import Services.APITypes (Route, Status, MediaType)
 import Styles.Types (FontSize)
 import Components.ChatView.Controller (ChatComponent)
+import Foreign.Object (Object)
+import Foreign (Foreign)
 
 type EditTextInLabelState =
  {
@@ -247,7 +249,8 @@ type DriverProfileScreenData = {
   vehicleRegNumber :: String,
   vehicleModelName :: String,
   vehicleColor :: String,
-  driverAlternateNumber :: Maybe String
+  driverAlternateNumber :: Maybe String,
+  logField :: Object Foreign
 }
 
 type DriverProfileScreenProps = {
@@ -569,7 +572,8 @@ type HomeScreenData =  {
   messages :: Array ChatComponent,
   suggestionsList :: Array String,
   messageToBeSent :: String,
-  driverAlternateMobile :: Maybe String
+  driverAlternateMobile :: Maybe String,
+  logField :: Object Foreign
  }
 
 type CancelRidePopUpData = {
@@ -774,6 +778,7 @@ type PermissionsScreenState = {
 }
 
 type PermissionsScreenData = {
+  logField :: Object Foreign
 
 }
 

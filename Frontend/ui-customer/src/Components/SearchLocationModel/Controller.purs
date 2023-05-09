@@ -23,6 +23,8 @@ import Prelude (show)
 import PrestoDOM (Visibility(..))
 import Screens.Types (SearchLocationModelType, LocationListItemState, LocItemType(..))
 import Config.Types (AppConfig)
+import Foreign.Object (Object)
+import Foreign (Foreign)
 
 data Action = GoBack
             | NoAction
@@ -52,6 +54,7 @@ type SearchLocationModelState = {
   , isDestServiceable :: Boolean
   , isRideServiceable :: Boolean
   , homeScreenConfig :: AppConfig
+  , logField :: Object Foreign
 }
 
 dummy_data :: Array LocationListItemState

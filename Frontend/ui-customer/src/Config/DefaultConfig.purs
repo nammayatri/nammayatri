@@ -17,5 +17,6 @@ config =
       backgroundColor : Color.black900,
       textColor : Color.black900,
       loaderColor : Color.black900
-    }
+    },
+    isFirebaseEnabled : true 
   } 

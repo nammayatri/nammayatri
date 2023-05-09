@@ -22,6 +22,7 @@ import Screens.Types (Address, Contact, DriverInfoCard, EmergencyHelpModelState,
 import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..))
 import Styles.Colors as Color
 import Config.DefaultConfig as DC
+import Foreign.Object (empty)
 
 initData :: HomeScreenState
 initData = {
@@ -75,6 +76,7 @@ initData = {
       , imageUrl : "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png" 
       }
     , config : DC.config
+    , logField : empty
     },
   --   rating :: Int
   -- , isRated :: Boolean

@@ -30,6 +30,8 @@ import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import Services.API (AddressComponents, BookingLocationAPIEntity, QuoteAPIEntity, Route)
 import Config.Types
+import Foreign.Object (Object)
+import Foreign (Foreign)
 
 type Contacts = {
   name :: String,
@@ -160,7 +162,8 @@ type EnterMobileNumberScreenStateData = {
   , otp :: String
   , timer :: String
   , timerID :: String
-  , config :: AppConfig
+  , config :: AppConfig,
+  logField :: Object Foreign
 }
 -- ################################################ AccountSetUpScreenState ##################################################
 
@@ -334,7 +337,8 @@ type MyRidesScreenState =
 type MyRideScreenData = {
     selectedItem :: IndividualRideCardState,
     offsetValue :: Int,
-    loadMoreText :: String
+    loadMoreText :: String,
+    logField :: Object Foreign
   }
 
 type MyRideScreenProps = {
@@ -408,7 +412,7 @@ type ItemState =
 -- ################################################ PermissionScreenState ##################################################
 
 type PermissionScreenState =
-  {}
+  {logField :: Object Foreign}
 -- ######################################  HomeScreenState   ######################################
 
 data Stage = HomeScreen
@@ -488,6 +492,7 @@ type HomeScreenStateData =
   , messageToBeSent :: String
   , bannerViewState :: BannerViewState
   , config :: AppConfig
+  , logField :: Object Foreign
   }
 
 type HomeScreenStateProps =
@@ -861,7 +866,9 @@ type AddNewAddressScreenProps =
   }
 
 type AppUpdatePopUpState =
- { version :: Int }
+ { version :: Int ,
+   logField :: Object Foreign
+ }
 
 
 data NotifyFlowEventType = RATE_DRIVER_SKIPPED | SEARCH_CANCELLED

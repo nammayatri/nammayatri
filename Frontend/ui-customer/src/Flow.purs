@@ -62,7 +62,7 @@ import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
 import Screens.MyProfileScreen.ScreenData as MyProfileScreenData
 import Screens.Types (CardType(..), AddNewAddressScreenState(..),CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), EmailErrorType(..))
 import Screens.Types (Gender(..)) as Gender
-import Services.API (AuthType (..), AddressGeometry(..), BookingLocationAPIEntity(..), ConfirmRes(..), DeleteSavedLocationReq(..), Geometry(..), GetDriverLocationResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), TriggerOTPResp(..), TriggerSignatureOTPResp(..), VerifyTokenResp(..), User(..), UserSosRes(..),  GetEmergContactsReq(..), GetEmergContactsResp(..), ContactDetails(..), FlowStatusRes(..), FlowStatus(..), CancelEstimateRes(..))
+import Services.API (AuthType (..), AddressGeometry(..), BookingLocationAPIEntity(..), ConfirmRes(..), DeleteSavedLocationReq(..), Geometry(..), GetDriverLocationResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), TriggerOTPResp(..), VerifyTokenResp(..), User(..), UserSosRes(..),  GetEmergContactsReq(..), GetEmergContactsResp(..), ContactDetails(..), FlowStatusRes(..), FlowStatus(..), CancelEstimateRes(..))
 import Services.Backend as Remote
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore, updateLocalStage)
 import Types.App (ABOUT_US_SCREEN_OUTPUT(..), ACCOUNT_SET_UP_SCREEN_OUTPUT(..), ADD_NEW_ADDRESS_SCREEN_OUTPUT(..), GlobalState(..), CONTACT_US_SCREEN_OUTPUT(..), FlowBT, HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREEN_OUTPUT(..), MY_PROFILE_SCREEN_OUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), PERMISSION_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUPUT(..), SAVED_LOCATION_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), EMERGECY_CONTACTS_SCREEN_OUTPUT(..))
@@ -72,11 +72,13 @@ import Foreign.Class (class Encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
 import Config.Config
 import Config.Types
-import Control.Monad.Except.Trans (runExceptT)
-import Control.Transformers.Back.Trans (runBackT)
+import Engineering.Helpers.LogEvent (logEventWithParams',logEventWithTwoParams' , logEvent')
+import Presto.Core.Types.Language.Flow (getLogFields)
+import Control.Monad.Trans.Class (lift)
 
 baseAppFlow :: GlobalPayload ->  FlowBT String Unit
-baseAppFlow (GlobalPayload gPayload) = do
+baseAppFlow gPayload = do
+  logField_ <- lift $ lift $ getLogFields
   _ <- lift $ lift $ liftFlow $ loadConfig
   _ <- pure $ printLog "Global Payload" gPayload 
   (GlobalState state) <- getState
@@ -103,32 +105,33 @@ baseAppFlow (GlobalPayload gPayload) = do
   _ <- lift $ lift $ setLogField "bundle_version" $ encode (bundle)
   _ <- lift $ lift $ setLogField "platform" $ encode (os)
   _ <- UI.splashScreen state.splashScreen
-  _ <- lift $ lift $ liftFlow $(firebaseLogEventWithParams "ny_user_app_version" "version" (versionName))
+  _ <- lift $ lift $ liftFlow $(logEventWithParams' logField_ "ny_user_app_version" "version" (versionName))
   if getValueToLocalStore REGISTERATION_TOKEN /= "__failed" && getValueToLocalStore REGISTERATION_TOKEN /= "(null)" 
     then currentFlowStatus 
-    else do
-      let (Payload payload) = gPayload.payload
-      case payload.signatureAuthData of
-        Just signatureAuth -> do
-          response <- lift $ lift $ Remote.triggerSignatureBasedOTP signatureAuth
-          case response of
-            Right (TriggerSignatureOTPResp triggerSignatureOtpResp) ->
-              case triggerSignatureOtpResp.authType of
-                Just "DIRECT" -> do
-                  let person = triggerSignatureOtpResp.person
-                  case triggerSignatureOtpResp.person of
-                    Just person -> do
-                      let customerId = person ^._id
-                      lift $ lift $ setLogField "customer_id" $ encode (customerId)
-                      setValueToLocalStore CUSTOMER_ID customerId
-                    _ -> pure unit
-                  case triggerSignatureOtpResp.token of
-                    Just token -> setValueToLocalStore REGISTERATION_TOKEN token
-                    Nothing -> pure unit
-                  currentFlowStatus
-                _ -> enterMobileNumberScreenFlow
-            Left err -> enterMobileNumberScreenFlow
-        Nothing -> enterMobileNumberScreenFlow
+    else enterMobileNumberScreenFlow -- Removed choose langauge screen
+    -- do
+    --   let (Payload payload) = gPayload.payload
+    --   case payload.signatureAuthData of
+    --     Just signatureAuth -> do
+    --       response <- lift $ lift $ Remote.triggerSignatureBasedOTP signatureAuth
+    --       case response of
+    --         Right (TriggerOTPResp triggerOtpResp) ->
+    --           case triggerOtpResp.authType of
+    --             Just "DIRECT" -> do
+    --               let person = triggerOtpResp.person
+    --               case triggerOtpResp.person of
+    --                 Just person -> do
+    --                   let customerId = person ^._id
+    --                   lift $ lift $ setLogField "customer_id" $ encode (customerId)
+    --                   setValueToLocalStore CUSTOMER_ID customerId
+    --                 _ -> pure unit
+    --               case triggerOtpResp.token of
+    --                 Just token -> setValueToLocalStore REGISTERATION_TOKEN token
+    --                 Nothing -> pure unit
+    --               currentFlowStatus
+    --             _ -> enterMobileNumberScreenFlow
+    --         Left err -> enterMobileNumberScreenFlow
+    --     Nothing -> enterMobileNumberScreenFlow
 
 concatString :: Array String -> String
 concatString arr = case uncons arr of
@@ -147,10 +150,11 @@ enableForceUpdateIOS = false
 
 checkVersion :: Int -> String -> FlowBT String Unit
 checkVersion versioncodeAndroid versionName= do
+  logField_ <- lift $ lift $ getLogFields
   if os /= "IOS" && versioncodeAndroid < 31 then do
     lift $ lift $ doAff do liftEffect hideSplash
     _ <- UI.handleAppUpdatePopUp
-    _ <- pure $ firebaseLogEvent "ny_user_app_update_pop_up_view"
+    _ <- lift $ lift $ liftFlow $ logEvent' logField_ "ny_user_app_update_pop_up_view"
     checkVersion versioncodeAndroid versionName
     else if os == "IOS" && versionName /= "" && enableForceUpdateIOS then do
 
@@ -163,7 +167,7 @@ checkVersion versioncodeAndroid versionName= do
         else if forceIOSupdate majorUpdateIndex minorUpdateIndex patchUpdateIndex  then do
           lift $ lift $ doAff do liftEffect hideSplash
           _ <- UI.handleAppUpdatePopUp
-          _ <- pure $ firebaseLogEvent "ny_user_app_update_pop_up_view"
+          _ <- lift $ lift $ liftFlow $ logEvent' logField_ "ny_user_app_update_pop_up_view"
           checkVersion versioncodeAndroid versionName
           else pure unit
       else pure unit
@@ -176,6 +180,7 @@ forceIOSupdate c_maj c_min c_patch =
 
 currentRideFlow :: Boolean -> FlowBT String Unit
 currentRideFlow rideAssigned = do
+  logField_ <- lift $ lift $ getLogFields
   config <- getAppConfig
   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data {config = config}})
   rideBookingListResponse <- lift $ lift $ Remote.rideBookingList "1" "0" "true"
@@ -184,8 +189,7 @@ currentRideFlow rideAssigned = do
   case rideBookingListResponse of
     Right (RideBookingListRes listResp) -> do
       if not (null listResp.list) then do
-        when (not rideAssigned) $ do
-          void $ pure $ firebaseLogEvent "ny_active_ride_with_idle_state"
+        when (not rideAssigned) $ lift $ lift $ liftFlow $ logEvent' logField_ "ny_active_ride_with_idle_state" 
         let (RideBookingRes resp) = (fromMaybe dummyRideBooking (listResp.list !! 0))
             status = (fromMaybe dummyRideAPIEntity ((resp.rideList) !! 0))^._status
             rideStatus = if status == "NEW" then RideAccepted else RideStarted
@@ -349,15 +353,16 @@ currentFlowStatus = do
 
 
 chooseLanguageScreenFlow :: FlowBT String Unit
-chooseLanguageScreenFlow = do
+chooseLanguageScreenFlow = do  
+  logField_ <- lift $ lift $ getLogFields
   lift $ lift $ doAff do liftEffect hideSplash
   setValueToLocalStore LANGUAGE_KEY "EN_US"
-  _ <- pure $ firebaseLogEvent "ny_user_choose_lang_scn_view"
+  _ <- lift $ lift $ liftFlow $ logEvent' logField_ "ny_user_choose_lang_scn_view"
   flow <- UI.chooseLanguageScreen
   case flow of
     NextScreen language -> do
                             setValueToLocalStore LANGUAGE_KEY language
-                            _ <- lift $ lift $ liftFlow $(firebaseLogEventWithParams "ny_user_lang_choose" "language" (language))
+                            _ <- lift $ lift $ liftFlow $(logEventWithParams' logField_ "ny_user_lang_choose" "language" (language))
                             enterMobileNumberScreenFlow
     Refresh state -> chooseLanguageScreenFlow
 
@@ -368,7 +373,8 @@ enterMobileNumberScreenFlow = do
   void $ lift $ lift $ toggleLoader false
   config <- getAppConfig
   modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen {data {config =  config }})
-  _ <- pure $ firebaseLogEvent "ny_user_enter_mob_num_scn_view"
+  logField_ <- lift $ lift $ getLogFields
+  _ <- lift $ lift $ liftFlow $ logEvent' logField_ "ny_user_enter_mob_num_scn_view"
   flow <- UI.enterMobileNumberScreen
   case flow of
     GoToAccountSetUp state -> do
@@ -377,7 +383,7 @@ enterMobileNumberScreenFlow = do
             (resp) <- lift $ lift $  Remote.verifyToken (Remote.makeVerifyOTPReq state.data.otp) state.data.tokenId
             case resp of
               Right resp -> do
-                    _ <- pure $ firebaseLogEvent "ny_user_verify_otp"
+                    _ <- lift $ lift $ liftFlow $ logEvent' logField_ "ny_user_verify_otp"
                     modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen {props {enterOTP = false}})
                     let (VerifyTokenResp response) = resp
                         customerId = ((response.person)^. _id)
@@ -417,7 +423,8 @@ enterMobileNumberScreenFlow = do
 
 
 accountSetUpScreenFlow :: FlowBT String Unit
-accountSetUpScreenFlow = do
+accountSetUpScreenFlow = do 
+  logField_ <- lift $ lift $ getLogFields
   flow <- UI.accountSetUpScreen
   case flow of
     GO_HOME state -> do
@@ -430,7 +437,7 @@ accountSetUpScreenFlow = do
           case gender of
             Just value -> modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{settingSideBar{gender = Just value}}, props{isbanner = false}})
             Nothing    -> pure unit
-          _ <- pure $ firebaseLogEvent "ny_user_onboarded"
+          _ <- lift $ lift $ liftFlow $ logEvent' logField_ "ny_user_onboarded"
           _ <- pure $ metaLogEvent "ny_user_onboarded"
           pure unit
         Left err -> do
@@ -446,6 +453,7 @@ accountSetUpScreenFlow = do
 
 homeScreenFlow :: FlowBT String Unit
 homeScreenFlow = do
+  logField_ <- lift $ lift $ getLogFields
   (GlobalState currentState) <- getState
   _ <- checkAndUpdateSavedLocations currentState.homeScreen
   -- TODO: REQUIRED ONCE WE NEED TO STORE RECENT CURRENTLOCATIONS
@@ -463,21 +471,21 @@ homeScreenFlow = do
     ON_RESUME_APP -> currentFlowStatus
     GO_TO_MY_RIDES -> do
       modifyScreenState $ MyRideScreenStateType (\myRidesScreen -> myRidesScreen{data{offsetValue = 0}})
-      _ <- pure $ firebaseLogEvent "ny_user_myrides_click"
+      _ <- lift $ lift $ liftFlow $ logEvent' logField_ "ny_user_myrides_click"
       myRidesScreenFlow true
     GO_TO_HELP -> do
       modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> HelpAndSupportScreenData.initData)
-      _ <- pure $ firebaseLogEvent "ny_user_help"
+      _ <- lift $ lift $ liftFlow $ logEvent' logField_ "ny_user_help"
       helpAndSupportScreenFlow
     CHANGE_LANGUAGE ->  selectLanguageScreenFlow
     GO_TO_EMERGENCY_CONTACTS -> emergencyScreenFlow
     GO_TO_ABOUT -> aboutUsScreenFlow
     GO_TO_MY_PROFILE  updateProfile -> do
-        _ <- pure $ firebaseLogEvent if updateProfile then "safety_banner_clicked" else "ny_user_profile_click"
+        _ <- lift $ lift $ liftFlow $ logEvent' logField_ (if updateProfile then "safety_banner_clicked" else "ny_user_profile_click")
         modifyScreenState $ MyProfileScreenStateType (\myProfileScreenState ->  MyProfileScreenData.initData{props{updateProfile = updateProfile , fromHomeScreen = updateProfile}})
         myProfileScreenFlow
     GO_TO_FIND_ESTIMATES state-> do
-      _ <- lift $ lift $ liftFlow $ firebaseLogEventWithTwoParams "ny_user_source_and_destination" "ny_user_enter_source" (take 99 (state.data.source)) "ny_user_enter_destination" (take 99 (state.data.destination))
+      _ <- lift $ lift $ liftFlow $ logEventWithTwoParams' logField_ "ny_user_source_and_destination" "ny_user_enter_source" (take 99 (state.data.source)) "ny_user_enter_destination" (take 99 (state.data.destination))
       (ServiceabilityRes sourceServiceabilityResp) <- Remote.originServiceabilityBT (Remote.makeServiceabilityReq state.props.sourceLat state.props.sourceLong)
       if (not sourceServiceabilityResp.serviceable) then do
         updateLocalStage SearchLocationModel
@@ -560,7 +568,7 @@ homeScreenFlow = do
               Just true -> "ny_user_auto_complete_api_trigger_src"
               Just false -> "ny_user_auto_complete_api_trigger_dst"
               Nothing -> ""
-      _ <- pure $ firebaseLogEvent event
+      _ <- lift $ lift $ liftFlow $ logEvent' logField_ event
       let predictionList = getLocationList searchLocationResp.predictions
       let recentLists = state.data.recentSearchs.predictionArray
       let filteredRecentsList = filterRecentSearches recentLists predictionList
@@ -588,9 +596,9 @@ homeScreenFlow = do
           _ <- pure $ setValueToLocalStore AUTO_SELECTING "false"
           setValueToLocalStore FINDING_QUOTES_POLLING "false"
           _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
-          _ <- pure $ firebaseLogEvent "ny_user_request_quotes"
+          _ <- lift $ lift $ liftFlow $ logEvent' logField_ "ny_user_request_quotes"
           if(getValueToLocalStore FLOW_WITHOUT_OFFERS == "true") then do
-            _ <- pure $ firebaseLogEvent "ny_user_auto_confirm"
+            _ <- lift $ lift $ liftFlow $ logEvent' logField_ "ny_user_auto_confirm"
             pure unit
           else do
             pure unit
@@ -651,7 +659,7 @@ homeScreenFlow = do
       _ <- Remote.cancelRideBT (Remote.makeCancelRequest state) (state.props.bookingId)
       _ <- pure $ clearWaitingTimer state.props.waitingTimeTimerId
       removeChatService ""
-      _ <- pure $ firebaseLogEvent "ny_user_ride_cancelled_by_user"
+      _ <- lift $ lift $ liftFlow $ logEvent' logField_ "ny_user_ride_cancelled_by_user"
       modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{settingSideBar{gender = state.data.settingSideBar.gender , email = state.data.settingSideBar.email}},props { isbanner = state.props.isbanner}})
       homeScreenFlow
     FCM_NOTIFICATION notification state-> do
@@ -671,7 +679,7 @@ homeScreenFlow = do
             pure unit
         case notification of
             "TRIP_STARTED"        -> do -- OTP ENTERED
-                                      _ <- pure $ firebaseLogEvent "ny_user_ride_started"
+                                      _ <- lift $ lift $ liftFlow $ logEvent' logField_ "ny_user_ride_started"
                                       let shareAppCount = getValueToLocalStore SHARE_APP_COUNT
                                       if shareAppCount == "__failed" then do
                                         setValueToLocalStore SHARE_APP_COUNT "1"
@@ -686,7 +694,7 @@ homeScreenFlow = do
                                       homeScreenFlow
             "TRIP_FINISHED"       -> do -- TRIP FINISHED
                                       if (getValueToLocalStore HAS_TAKEN_FIRST_RIDE == "false") then do
-                                        pure $ firebaseLogEvent "ny_user_first_ride_completed"
+                                        _ <- lift $ lift $ liftFlow $ logEvent' logField_ "ny_user_first_ride_completed"
                                         _ <- pure $ metaLogEvent "ny_user_first_ride_completed"
                                         (GetProfileRes response) <- Remote.getProfileBT ""
                                         setValueToLocalStore HAS_TAKEN_FIRST_RIDE ( show response.hasTakenRide)
@@ -707,7 +715,7 @@ homeScreenFlow = do
                                         homeScreenFlow
                                         else homeScreenFlow
             "CANCELLED_PRODUCT"   -> do -- REMOVE POLYLINES
-                                      _ <- pure $ firebaseLogEvent "ny_user_ride_cancelled"
+                                      _ <- lift $ lift $ liftFlow $ logEvent' logField_ "ny_user_ride_cancelled"
                                       _ <- pure $ removeAllPolylines ""
                                       _ <- pure $ enableMyLocation true
                                       _ <- updateLocalStage HomeScreen
@@ -716,7 +724,7 @@ homeScreenFlow = do
                                       _ <- pure $ clearWaitingTimer state.props.waitingTimeTimerId
                                       homeScreenFlow
             "DRIVER_ASSIGNMENT"   -> if (not (isLocalStageOn RideAccepted || isLocalStageOn RideStarted )) then do
-                                        _ <- pure $ firebaseLogEvent "ny_fs_driver_assignment"
+                                        _ <- lift $ lift $ liftFlow $ logEvent' logField_ "ny_fs_driver_assignment"                                
                                         currentRideFlow true
                                         homeScreenFlow
                                      else homeScreenFlow
@@ -731,7 +739,7 @@ homeScreenFlow = do
       _ <- pure $ deleteValueFromLocalStore LANGUAGE_KEY
       _ <- pure $ deleteValueFromLocalStore CONTACTS
       _ <- pure $ factoryResetApp ""
-      _ <- pure $ firebaseLogEvent "ny_user_logout"
+      _ <- lift $ lift $ liftFlow $ logEvent' logField_ "ny_user_logout"
       modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData)
       enterMobileNumberScreenFlow -- Removed choose langauge screen
     SUBMIT_RATING state -> do
@@ -797,7 +805,7 @@ homeScreenFlow = do
                                                                                                                           "HI_IN" -> "HINDI"
                                                                                                                           "KN_IN" -> "KANNADA"
                                                                                                                           _      -> "ENGLISH"))
-      _ <- pure $ firebaseLogEvent "ny_user_placename_api_lom_onDrag"
+      _ <- lift $ lift $ liftFlow $ logEvent' logField_ "ny_user_placename_api_lom_onDrag"
       let (PlaceName placeDetails) = fromMaybe HomeScreenData.dummyLocationName (locationName !! 0)
       modifyScreenState $ HomeScreenStateType (\homeScreen ->
       homeScreen {
@@ -827,7 +835,7 @@ homeScreenFlow = do
                                                                                                                           "HI_IN" -> "HINDI"
                                                                                                                           "KN_IN" -> "KANNADA"
                                                                                                                           _      -> "ENGLISH"))
-      _ <- pure $ firebaseLogEvent "ny_user_placename_api_cpu_onDrag"
+      _ <- lift $ lift $ liftFlow $ logEvent' logField_ "ny_user_placename_api_cpu_onDrag"
       let (PlaceName address) = (fromMaybe HomeScreenData.dummyLocationName (locationName !! 0))
       modifyScreenState $ HomeScreenStateType (\homeScreen ->
       homeScreen {
@@ -842,10 +850,10 @@ homeScreenFlow = do
       let _ = spy "UPDATE_PICKUP_LOCATION_NAME" "UPDATE_PICKUP_LOCATION_NAME"
       homeScreenFlow
     GO_TO_FAVOURITES_  -> do
-        _ <- pure $ firebaseLogEvent "ny_user_addresses"
+        _ <- lift $ lift $ liftFlow $ logEvent' logField_ "ny_user_addresses"
         savedLocationFlow
     OPEN_GOOGLE_MAPS state -> do
-      _ <- pure $ firebaseLogEvent "ny_user_ride_track_gmaps"
+      _ <- lift $ lift $ liftFlow $ logEvent' logField_ "ny_user_ride_track_gmaps"
       (GetDriverLocationResp resp) <- Remote.getDriverLocationBT (state.data.driverInfoCardState.rideId)
       let sourceLat = (resp^._lat)
           sourceLng = (resp^._lon)
@@ -856,10 +864,10 @@ homeScreenFlow = do
     IN_APP_TRACK_STATUS state -> do
       case state.props.currentStage of
           RideAccepted -> do
-                          _ <- pure $ firebaseLogEvent "ny_user_pickup_track_inapp"
+                          _ <- lift $ lift $ liftFlow $ logEvent' logField_ "ny_user_pickup_track_inapp"
                           pure unit
           RideStarted  -> do
-                          _ <- pure $ firebaseLogEvent "ny_user_ride_track_inapp"
+                          _ <- lift $ lift $ liftFlow $ logEvent' logField_ "ny_user_ride_track_inapp"
                           pure unit
           _           -> pure unit
       if (spy "driver current Stage "isLocalStageOn RideAccepted) || (spy "driver current Stage " isLocalStageOn RideStarted) then do
@@ -1025,6 +1033,7 @@ fetchLatAndLong state tag  =
 
 rideSearchFlow :: String -> FlowBT String Unit
 rideSearchFlow flowType = do
+  logField_ <- lift $ lift $ getLogFields
   (GlobalState homeScreenModifiedState) <- getState
   let finalState = homeScreenModifiedState.homeScreen -- bothLocationChangedState{props{isSrcServiceable =homeScreenModifiedState.homeScreen.props.isSrcServiceable, isDestServiceable = homeScreenModifiedState.homeScreen.props.isDestServiceable, isRideServiceable = homeScreenModifiedState.homeScreen.props.isRideServiceable }}
   if (finalState.props.sourceLat /= 0.0 && finalState.props.sourceLong /= 0.0) && (finalState.props.destinationLat /= 0.0 && finalState.props.destinationLong /= 0.0) && (finalState.data.source /= "") && (finalState.data.destination /= "")
@@ -1066,7 +1075,7 @@ rideSearchFlow flowType = do
                       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ShortDistance ,rideRequestFlow = true, isSearchLocation = SearchLocation, distance = response.distance}})
                       void $ lift $ lift $ toggleLoader false
                       else do
-                        if flowType == "REPEAT_RIDE_FLOW" then lift $ lift $ liftFlow $ firebaseLogEventWithParams "ny_user_repeat_ride_flow" "searchId" rideSearchRes.searchId else pure unit
+                        if flowType == "REPEAT_RIDE_FLOW" then lift $ lift $ liftFlow $ logEventWithParams' logField_ "ny_user_repeat_ride_flow" "searchId" rideSearchRes.searchId else pure unit
                         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{searchId = rideSearchRes.searchId,currentStage = FindingEstimate, rideRequestFlow = true, isSearchLocation = SearchLocation, sourcePlaceId = Nothing, destinationPlaceId = Nothing}})
                         _ <- pure $ updateLocalStage FindingEstimate
                         void $ lift $ lift $ toggleLoader false
@@ -1180,12 +1189,13 @@ myRidesScreenFlow fromNavBar = do
       rideSearchFlow "REPEAT_RIDE_FLOW"
 
 selectLanguageScreenFlow :: FlowBT String Unit
-selectLanguageScreenFlow = do
+selectLanguageScreenFlow = do 
+  logField_ <- lift $ lift $ getLogFields
   flow <- UI.selectLanguageScreen
   case flow of
     UPDATE_LANGUAGE state -> do
                                 setValueToLocalStore LANGUAGE_KEY (state.props.selectedLanguage)
-                                _ <- lift $ lift $ liftFlow $(firebaseLogEventWithParams "ny_user_lang_selec" "language" (state.props.selectedLanguage))
+                                _ <- lift $ lift $ liftFlow $(logEventWithParams' logField_ "ny_user_lang_selec" "language" (state.props.selectedLanguage))
                                 resp <- lift $ lift $ Remote.updateProfile (Remote.makeUpdateLanguageRequest "")
                                 modifyScreenState $ SelectLanguageScreenStateType (\selectLanguageScreen -> SelectLanguageScreenData.initData)
                                 homeScreenFlow
@@ -1736,6 +1746,7 @@ updateFlowStatus eventType = do
 
 cancelEstimate :: String -> FlowBT String Unit
 cancelEstimate bookingId = do
+  logField_ <- lift $ lift $ getLogFields
   res <- lift $ lift $ Remote.cancelEstimate bookingId
   case res of
     Right res -> do
@@ -1745,24 +1756,24 @@ cancelEstimate bookingId = do
         "Success" -> pure unit
         "BookingAlreadyCreated" -> do
           void $ pure $ toast "ACTIVE BOOKING EXISTS"
-          _ <- pure $ firebaseLogEvent "ny_fs_cancel_estimate_booking_exists_right"
+          _ <- lift $ lift $ liftFlow $ logEvent' logField_ "ny_fs_cancel_estimate_booking_exists_right"
           currentRideFlow true
           homeScreenFlow
         _ -> do
           void $ pure $ toast "CANCEL FAILED"
-          _ <- pure $ firebaseLogEvent "ny_fs_cancel_estimate_failed_right"
+          _ <- lift $ lift $ liftFlow $ logEvent' logField_ "ny_fs_cancel_estimate_failed_right"
           homeScreenFlow
     Left err -> do
       let errResp = err.response
           codeMessage = decodeErrorCode errResp.errorMessage
       if ( err.code == 400 && codeMessage == "ACTIVE_BOOKING_EXISTS") then do
         void $ pure $ toast "ACTIVE BOOKING EXISTS"
-        _ <- pure $ firebaseLogEvent "ny_fs_cancel_estimate_booking_exists_left"
+        _ <- lift $ lift $ liftFlow $ logEvent' logField_ "ny_fs_cancel_estimate_booking_exists_left"
         currentRideFlow true
         homeScreenFlow
       else do
         void $ pure $ toast "CANCEL FAILED"
-        _ <- pure $ firebaseLogEvent "ny_fs_cancel_estimate_failed_left"
+        _ <- lift $ lift $ liftFlow $ logEvent' logField_ "ny_fs_cancel_estimate_failed_left"
         homeScreenFlow
 
 getGenderValue :: Maybe Gender.Gender -> Maybe String

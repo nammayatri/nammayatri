@@ -18,6 +18,7 @@ module Screens.MyRidesScreen.ScreenData where
 import Data.Maybe (Maybe(..))
 import Screens.Types (AnimationState(..), MyRidesScreenState, IndividualRideCardState)
 import Services.API (BookingLocationAPIEntity(..))
+import Foreign.Object (empty)
 
 initData :: MyRidesScreenState
 initData =
@@ -33,7 +34,8 @@ initData =
   , data:
       { selectedItem: dummyIndividualCard
       , offsetValue: 0
-      , loadMoreText: "LoadMore"
+      , loadMoreText: "LoadMore",
+      logField : empty
       }
   , prestoListArrayItems: []
   }

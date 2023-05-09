@@ -24,6 +24,8 @@ import Screens.Types (AppUpdatePopUpState)
 import JBridge (firebaseLogEvent)
 import Log (trackAppActionClick, trackAppScreenRender, trackAppEndScreen)
 import Screens (getScreen, ScreenName(..))
+import Engineering.Helpers.LogEvent (logEvent')
+import Effect.Unsafe (unsafePerformEffect)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -48,7 +50,7 @@ eval :: Action -> AppUpdatePopUpState -> Eval Action ScreenOutput AppUpdatePopUp
 eval OnCloseClick state = do
     exit Decline 
 eval OnAccept state = do 
-  _ <- pure $ firebaseLogEvent "ny_user_update_popup_click"
+  let _ = unsafePerformEffect $ logEvent' state.logField "ny_user_update_popup_click"
   exit Accept
 
 eval AfterRender state = continue state

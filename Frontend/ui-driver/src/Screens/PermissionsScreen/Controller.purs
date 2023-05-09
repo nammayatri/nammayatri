@@ -27,6 +27,8 @@ import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.PermissionsScreen.ScreenData (Permissions(..))
 import Screens.Types (PermissionsScreenState)
+import Engineering.Helpers.LogEvent (logEvent')
+import Effect.Unsafe (unsafePerformEffect)
 
 instance showAction :: Show Action where
     show _ = ""
@@ -84,21 +86,28 @@ eval UpdateOverlayPermissionState state = continue state {props {isOverlayPermis
 eval UpdateBatteryPermissionState state = continue state {props {isBatteryOptimizationChecked = true}}
 
 eval (LocationPermissionCallBack isLocationPermissionEnabled) state = do
-  when isLocationPermissionEnabled $ pure $ firebaseLogEvent "permission_granted_location"
-  continue state {props {isLocationPermissionChecked = isLocationPermissionEnabled}}
+--   _ <- pure $ spy "location permission" isLocationPermissionEnabled
+  if isLocationPermissionEnabled then do
+    let _ = unsafePerformEffect $ logEvent' state.data.logField  "permission_granted_location"
+    continue state {props {isLocationPermissionChecked = isLocationPermissionEnabled}}
+    else continue state {props {isLocationPermissionChecked = isLocationPermissionEnabled}}
 
 eval (OverlayPermissionSwitchCallBack isOverlayPermissionEnabled) state = do
-  when isOverlayPermissionEnabled $ pure $ firebaseLogEvent "permission_granted_overlay"
-  continue state {props {isOverlayPermissionChecked = isOverlayPermissionEnabled}}
+  if isOverlayPermissionEnabled then do 
+    let _ = unsafePerformEffect $ logEvent' state.data.logField "permission_granted_overlay"
+    continue state {props {isOverlayPermissionChecked = isOverlayPermissionEnabled}}
+    else continue state {props {isOverlayPermissionChecked = isOverlayPermissionEnabled}}
 
 eval (BatteryUsagePermissionCallBack isBatteryOptimizationEnabled) state = do
-  when isBatteryOptimizationEnabled $ pure $ firebaseLogEvent "permission_granted_battery"
-  continue state {props {isBatteryOptimizationChecked = isBatteryOptimizationEnabled }}
+  if isBatteryOptimizationEnabled then do 
+    let _ = unsafePerformEffect $ logEvent' state.data.logField "permission_granted_battery"
+    continue state {props {isBatteryOptimizationChecked = isBatteryOptimizationEnabled }}
+    else continue state {props {isBatteryOptimizationChecked = isBatteryOptimizationEnabled }}
 
 eval (ItemClick itemType) state =
     case itemType of 
     Location -> do
-        _ <- pure $ firebaseLogEvent "permission_btn_click_location"
+        let _ = unsafePerformEffect $ logEvent' state.data.logField "permission_btn_click_location"
         if not(state.props.isLocationPermissionChecked) then do
             continueWithCmd state [do
                 isLocationPermission <- isLocationPermissionEnabled unit
@@ -110,7 +119,7 @@ eval (ItemClick itemType) state =
             else continue state
 
     Overlay -> do
-        _ <- pure $ firebaseLogEvent "permission_btn_click_overlay"
+        let _ = unsafePerformEffect $ logEvent' state.data.logField "permission_btn_click_overlay"
         if not(state.props.isOverlayPermissionChecked) then do
             continueWithCmd state [do
                 isOverlayPermission <- isOverlayPermissionEnabled unit
@@ -122,7 +131,7 @@ eval (ItemClick itemType) state =
             else continue state
 
     AutoStart -> do
-        _ <- pure $ firebaseLogEvent "permission_btn_click_autostart"
+        let _ = unsafePerformEffect $ logEvent' state.data.logField "permission_btn_click_autostart"
         if not(state.props.isAutoStartPermissionChecked) then do
             continueWithCmd state {props {isAutoStartPermissionChecked = true}} [do
                 _ <- liftEffect $ requestAutoStartPermission unit
@@ -131,7 +140,7 @@ eval (ItemClick itemType) state =
             else continue state
 
     Battery -> do
-        _ <- pure $ firebaseLogEvent "permission_btn_click_battery"
+        let _ = unsafePerformEffect $ logEvent' state.data.logField "permission_btn_click_battery"
         if not(state.props.isBatteryOptimizationChecked) then do
             continueWithCmd state [do
                 isBatteryUsagePermission <- isBatteryPermissionEnabled unit

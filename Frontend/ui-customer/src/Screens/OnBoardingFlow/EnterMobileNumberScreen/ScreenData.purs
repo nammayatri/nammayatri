@@ -18,6 +18,7 @@ module Screens.EnterMobileNumberScreen.ScreenData where
 import Screens.Types (EnterMobileNumberScreenState)
 import Config.DefaultConfig as DC
 import PrestoDOM (LetterSpacing(..))
+import Foreign.Object (empty)
 
 initData :: EnterMobileNumberScreenState
 initData = {
@@ -28,7 +29,8 @@ initData = {
     , otp : ""
     , timer : ""
     , timerID : ""
-    , config : DC.config
+    , config : DC.config,
+    logField : empty
     },
     props: {
         enterOTP : false,

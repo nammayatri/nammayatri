@@ -22,6 +22,7 @@ import Data.Eq.Generic (genericEq)
 import Language.Types (STR(..))
 import Prelude (class Eq)
 import Screens.Types (DriverProfileScreenState, BottomNavBarState)
+import Foreign.Object (empty)
 
 initData :: DriverProfileScreenState
 initData = {
@@ -35,7 +36,8 @@ initData = {
     vehicleRegNumber : "",
     vehicleModelName : "",
     vehicleColor : "",
-    driverAlternateNumber : Nothing
+    driverAlternateNumber : Nothing,
+    logField : empty 
 
     },
 

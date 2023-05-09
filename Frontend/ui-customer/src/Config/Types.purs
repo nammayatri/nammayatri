@@ -12,7 +12,8 @@ type AppConfig =
     estimateConfirmText :: String,
     autoConfirmingLoaderColor :: String,
     quoteListModelBackground :: String,
-    quoteListModel :: QuoteListConfig
+    quoteListModel :: QuoteListConfig,
+    isFirebaseEnabled :: Boolean
   } 
 
 type QuoteListConfig = {

@@ -25,7 +25,7 @@ import Data.Function.Uncurried (Fn2)
 import Data.Maybe (fromMaybe, Maybe(..))
 import Data.Number.Format (toStringWith, fixed) as Number
 import Effect (Effect)
-import Effect.Aff (Aff, makeAff, nonCanceler, try)
+import Effect.Aff (Aff, makeAff, nonCanceler, try, launchAff_)
 import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
 import Effect.Class (liftEffect)
 import Effect.Exception (Error)

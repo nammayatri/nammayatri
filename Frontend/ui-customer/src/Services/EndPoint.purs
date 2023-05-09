@@ -23,9 +23,6 @@ import Services.Config (getBaseUrl)
 triggerOTP :: String -> String
 triggerOTP dummyString = (getBaseUrl "dummy1") <> "/auth"
 
-triggerSignatureOTP :: String -> String
-triggerSignatureOTP dummyString = (getBaseUrl "dummy1") <> "/auth/signature"
-
 resendOTP :: String -> String
 resendOTP token = (getBaseUrl "2") <> "/auth/otp/"<>token<>"/resend"
 

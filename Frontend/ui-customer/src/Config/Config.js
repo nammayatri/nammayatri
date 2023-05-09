@@ -31,7 +31,8 @@ const defaultConfig = {
       backgroundColor : "#E3F4FC",
       textColor : "#2C2F3A",
       loaderColor : "#03B9F5"
-    }
+    },
+    isFirebaseEnabled : true
 };
 
 export const loadConfig = function() {

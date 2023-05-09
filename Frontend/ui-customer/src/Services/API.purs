@@ -58,16 +58,17 @@ instance decodeRetryAPIs :: Decode RetryAPIs where decode = defaultDecode
 instance encodeRetryAPIs :: Encode RetryAPIs where encode = defaultEncode
 
 -------------------------------------------------- Trigger OTP API Types --------------------------------------------
+data AuthType = OTP | PASSWORD | DIRECT
+
 newtype TriggerOTPResp = TriggerOTPResp {
     authId :: String
   , attempts :: Int
+  , authType :: Maybe String
+  , token :: Maybe String
+  , person :: Maybe User
 }
 
-newtype TriggerOTPReq = TriggerOTPReq {
-    mobileNumber :: String
-  , mobileCountryCode :: String
-  , merchantId :: String
-}
+newtype TriggerOTPReq = TriggerOTPReq String
 
 instance makeTriggerOTPReq :: RestEndpoint TriggerOTPReq TriggerOTPResp where
  makeRequest reqBody headers = defaultMakeRequest POST (EP.triggerOTP "") headers reqBody
@@ -81,38 +82,6 @@ instance showTriggerOTPResp :: Show TriggerOTPResp where show = genericShow
 instance decodeTriggerOTPResp :: Decode TriggerOTPResp where decode = defaultDecode
 instance encodeTriggerOTPResp :: Encode TriggerOTPResp where encode = defaultEncode
 
-derive instance genericTriggerOTPReq :: Generic TriggerOTPReq _
-derive instance newtypeTriggerOTPReq :: Newtype TriggerOTPReq _
-instance standardEncodeTriggerOTPReq :: StandardEncode TriggerOTPReq where standardEncode (TriggerOTPReq reqBody) = standardEncode reqBody
-instance showTriggerOTPReq :: Show TriggerOTPReq where show = genericShow
-instance decodeTriggerOTPReq :: Decode TriggerOTPReq where decode = defaultDecode
-instance encodeTriggerOTPReq :: Encode TriggerOTPReq where encode = defaultEncode
-
--------------------------------------------------- Trigger Signature OTP API Types --------------------------------------------
-data AuthType = OTP | PASSWORD | DIRECT
-
-newtype TriggerSignatureOTPResp = TriggerSignatureOTPResp {
-    authId :: String
-  , attempts :: Int
-  , authType :: Maybe String
-  , token :: Maybe String
-  , person :: Maybe User
-}
-
-newtype TriggerSignatureOTPReq = TriggerSignatureOTPReq String
-
-instance makeTriggerSignatureOTPReq :: RestEndpoint TriggerSignatureOTPReq TriggerSignatureOTPResp where
- makeRequest reqBody headers = defaultMakeRequest POST (EP.triggerOTP "") headers reqBody
- decodeResponse = decodeJSON
- encodeRequest req = standardEncode req
-
-derive instance genericTriggerSignatureOTPResp :: Generic TriggerSignatureOTPResp _
-derive instance newtypeTriggerSignatureOTPResp :: Newtype TriggerSignatureOTPResp _
-instance standardEncodeTriggerSignatureOTPResp :: StandardEncode TriggerSignatureOTPResp where standardEncode (TriggerSignatureOTPResp id) = standardEncode id
-instance showTriggerSignatureOTPResp :: Show TriggerSignatureOTPResp where show = genericShow
-instance decodeTriggerSignatureOTPResp :: Decode TriggerSignatureOTPResp where decode = defaultDecode
-instance encodeTriggerSignatureOTPResp :: Encode TriggerSignatureOTPResp where encode = defaultEncode
-
 derive instance genericAuthType :: Generic AuthType _
 instance showAuthType :: Show AuthType where show = genericShow
 instance decodeAuthType :: Decode AuthType where decode = defaultDecode
@@ -123,12 +92,12 @@ instance standardEncodeAuthType :: StandardEncode AuthType
   standardEncode PASSWORD = standardEncode $ show PASSWORD
   standardEncode DIRECT = standardEncode $ show DIRECT
 
-derive instance genericTriggerSignatureOTPReq :: Generic TriggerSignatureOTPReq _
-derive instance newtypeTriggerSignatureOTPReq :: Newtype TriggerSignatureOTPReq _
-instance standardEncodeTriggerSignatureOTPReq :: StandardEncode TriggerSignatureOTPReq where standardEncode (TriggerSignatureOTPReq reqBody) = standardEncode reqBody
-instance showTriggerSignatureOTPReq :: Show TriggerSignatureOTPReq where show = genericShow
-instance decodeTriggerSignatureOTPReq :: Decode TriggerSignatureOTPReq where decode = defaultDecode
-instance encodeTriggerSignatureOTPReq :: Encode TriggerSignatureOTPReq where encode = defaultEncode
+derive instance genericTriggerOTPReq :: Generic TriggerOTPReq _
+derive instance newtypeTriggerOTPReq :: Newtype TriggerOTPReq _
+instance standardEncodeTriggerOTPReq :: StandardEncode TriggerOTPReq where standardEncode (TriggerOTPReq reqBody) = standardEncode reqBody
+instance showTriggerOTPReq :: Show TriggerOTPReq where show = genericShow
+instance decodeTriggerOTPReq :: Decode TriggerOTPReq where decode = defaultDecode
+instance encodeTriggerOTPReq :: Encode TriggerOTPReq where encode = defaultEncode
 
 -------------------------------------------------- Resend OTP API Types --------------------------------------------
 
