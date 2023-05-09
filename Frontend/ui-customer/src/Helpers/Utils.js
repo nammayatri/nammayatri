@@ -145,7 +145,7 @@ export const storeCallBackContacts = function (cb) {
     return function () {
       try {
         var callback = callbackMapper.map(function (contact) {
-          json = JSON.parse(contact);
+          var json = JSON.parse(contact);
           console.log("storeCallBackContacts js " + json);
           cb(action(json))();
         });
