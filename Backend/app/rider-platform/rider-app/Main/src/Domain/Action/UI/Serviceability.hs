@@ -18,6 +18,7 @@ module Domain.Action.UI.Serviceability
   )
 where
 
+import qualified Domain.Types.Merchant as Merchant
 import Domain.Types.Person as Person
 import Kernel.External.Maps.Types
 import Kernel.Prelude
@@ -32,7 +33,6 @@ import qualified Lib.Types.SpecialLocation as DSpecialLocation
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import Storage.Queries.Geometry (someGeometriesContain)
-import qualified Storage.Queries.Person as QP
 import Tools.Error
 
 data ServiceabilityRes = ServiceabilityRes
@@ -49,14 +49,11 @@ checkServiceability ::
     EsqDBFlow m r
   ) =>
   (GeofencingConfig -> GeoRestriction) ->
-  Id Person.Person ->
+  (Id Person.Person, Id Merchant.Merchant) ->
   LatLong ->
   m ServiceabilityRes
-checkServiceability settingAccessor personId location = do
-  person <-
-    QP.findById personId
-      >>= fromMaybeM (PersonNotFound personId.getId)
-  let merchId = person.merchantId
+checkServiceability settingAccessor (_, merchantId) location = do
+  let merchId = merchantId
   geoConfig <- fmap (.geofencingConfig) $ QMerchant.findById merchId >>= fromMaybeM (MerchantNotFound merchId.getId)
   let geoRestriction = settingAccessor geoConfig
   case geoRestriction of

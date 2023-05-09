@@ -24,6 +24,7 @@ module API.UI.Registration
 where
 
 import qualified Domain.Action.UI.Registration as DRegistration
+import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
 import qualified Domain.Types.RegistrationToken as SRT
@@ -84,5 +85,5 @@ verify tokenId = withFlowHandlerAPI . DRegistration.verify tokenId
 resend :: Id SR.RegistrationToken -> FlowHandler DRegistration.ResendAuthRes
 resend = withFlowHandlerAPI . DRegistration.resend
 
-logout :: Id SP.Person -> FlowHandler APISuccess
-logout personId = withFlowHandlerAPI . withPersonIdLogTag personId $ DRegistration.logout personId
+logout :: (Id SP.Person, Id Merchant.Merchant) -> FlowHandler APISuccess
+logout (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId $ DRegistration.logout personId

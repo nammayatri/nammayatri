@@ -43,6 +43,7 @@ mkPersist
       authExpiry Int
       tokenExpiry Int
       entityId Text
+      merchantId Text
       entityType Domain.RTEntityType
       createdAt UTCTime
       updatedAt UTCTime

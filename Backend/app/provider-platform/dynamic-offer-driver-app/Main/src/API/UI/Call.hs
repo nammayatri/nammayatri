@@ -23,6 +23,7 @@ where
 import qualified Domain.Action.UI.Call as DCall
 import Domain.Types.CallStatus
 import qualified Domain.Types.CallStatus as SCS
+import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
 import Environment
@@ -91,13 +92,13 @@ frontendBasedCallHandler =
     :<|> directCallStatusCallback
 
 -- | Try to initiate a call driver -> customer
-initiateCallToCustomer :: Id SRide.Ride -> Id Person.Person -> FlowHandler DCall.CallRes
-initiateCallToCustomer rideId personId = withFlowHandlerAPI . withPersonIdLogTag personId $ DCall.initiateCallToCustomer rideId
+initiateCallToCustomer :: Id SRide.Ride -> (Id Person.Person, Id DM.Merchant) -> FlowHandler DCall.CallRes
+initiateCallToCustomer rideId (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId $ DCall.initiateCallToCustomer rideId
 
 callStatusCallback :: DCall.CallCallbackReq -> FlowHandler DCall.CallCallbackRes
 callStatusCallback = withFlowHandlerAPI . DCall.callStatusCallback
 
-getCallStatus :: Id CallStatus -> Id Person -> FlowHandler DCall.GetCallStatusRes
+getCallStatus :: Id CallStatus -> (Id Person.Person, Id DM.Merchant) -> FlowHandler DCall.GetCallStatusRes
 getCallStatus callStatusId _ = withFlowHandlerAPI $ DCall.getCallStatus callStatusId
 
 directCallStatusCallback :: Text -> ExotelCallStatus -> Text -> Maybe Int -> FlowHandler DCall.CallCallbackRes

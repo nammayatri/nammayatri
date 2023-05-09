@@ -21,6 +21,7 @@ module API.UI.Support
 where
 
 import qualified Domain.Action.UI.Support as DSupport
+import qualified Domain.Types.Merchant as Merchant
 import Domain.Types.Person as Person
 import qualified Environment as App
 import EulerHS.Prelude hiding (length)
@@ -41,5 +42,5 @@ type API =
 handler :: App.FlowServer API
 handler = sendIssue
 
-sendIssue :: Id Person.Person -> DSupport.SendIssueReq -> App.FlowHandler DSupport.SendIssueRes
-sendIssue personId = withFlowHandlerAPI . withPersonIdLogTag personId . DSupport.sendIssue personId
+sendIssue :: (Id Person.Person, Id Merchant.Merchant) -> DSupport.SendIssueReq -> App.FlowHandler DSupport.SendIssueRes
+sendIssue (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . DSupport.sendIssue personId

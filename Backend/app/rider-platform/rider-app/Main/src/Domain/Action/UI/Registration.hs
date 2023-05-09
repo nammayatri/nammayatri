@@ -192,8 +192,8 @@ auth isDirectAuth req mbBundleVersion mbClientVersion = do
   let entityId = getId $ person.id
       useFakeOtpM = useFakeSms smsCfg
       scfg = sessionConfig smsCfg
-
-  regToken <- makeSession scfg entityId (show <$> useFakeOtpM)
+  let mkId = getId $ merchant.id
+  regToken <- makeSession scfg entityId mkId (show <$> useFakeOtpM)
 
   if person.enabled && not person.blocked
     then do
@@ -282,9 +282,10 @@ makeSession ::
   MonadFlow m =>
   SmsSessionConfig ->
   Text ->
+  Text ->
   Maybe Text ->
   m SR.RegistrationToken
-makeSession SmsSessionConfig {..} entityId fakeOtp = do
+makeSession SmsSessionConfig {..} entityId merchantId fakeOtp = do
   otp <- maybe generateOTPCode return fakeOtp
   rtid <- L.generateGUID
   token <- L.generateGUID
@@ -301,6 +302,7 @@ makeSession SmsSessionConfig {..} entityId fakeOtp = do
         authExpiry = authExpiry,
         tokenExpiry = tokenExpiry,
         entityId = entityId,
+        merchantId = merchantId,
         entityType = SR.USER,
         createdAt = now,
         updatedAt = now,

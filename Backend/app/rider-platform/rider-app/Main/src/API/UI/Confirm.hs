@@ -24,6 +24,7 @@ where
 import qualified Beckn.ACL.Init as ACL
 import qualified Domain.Action.UI.Confirm as DConfirm
 import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Quote as Quote
 import Environment
@@ -57,10 +58,10 @@ handler =
 
 -- It is confirm UI EP, but we call init beckn EP inside it. confirm beckn EP will be called in on_init
 confirm ::
-  Id SP.Person ->
+  (Id SP.Person, Id Merchant.Merchant) ->
   Id Quote.Quote ->
   FlowHandler ConfirmRes
-confirm personId quoteId =
+confirm (personId, _) quoteId =
   withFlowHandlerAPI . withPersonIdLogTag personId $ do
     dConfirmRes <- DConfirm.confirm personId quoteId
     becknInitReq <- ACL.buildInitReq dConfirmRes

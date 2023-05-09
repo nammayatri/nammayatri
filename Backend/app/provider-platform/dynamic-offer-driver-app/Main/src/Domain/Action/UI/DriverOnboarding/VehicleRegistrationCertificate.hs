@@ -81,10 +81,10 @@ validateDriverRCReq DriverRCReq {..} =
 verifyRC ::
   Bool ->
   Maybe DM.Merchant ->
-  Id Person.Person ->
+  (Id Person.Person, Id DM.Merchant) ->
   DriverRCReq ->
   Flow DriverRCRes
-verifyRC isDashboard mbMerchant personId req@DriverRCReq {..} = do
+verifyRC isDashboard mbMerchant (personId, _) req@DriverRCReq {..} = do
   runRequestValidation validateDriverRCReq req
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   driverInfo <- DriverInfo.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)

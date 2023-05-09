@@ -34,7 +34,6 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.Queries.Person as QP
 import Tools.Error
 
 newtype TransporterRec = TransporterRec
@@ -75,11 +74,6 @@ updateTransporter admin merchantId req = do
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> updateTransporter : ") (show updOrg)
   return $ DM.makeMerchantAPIEntity updOrg
 
-getTransporter :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id SP.Person -> m TransporterRec
-getTransporter personId = do
-  person <-
-    Esq.runInReplica $
-      QP.findById personId
-        >>= fromMaybeM (PersonNotFound personId.getId)
-  let merchantId = person.merchantId
+getTransporter :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => (Id SP.Person, Id DM.Merchant) -> m TransporterRec
+getTransporter (_, merchantId) = do
   TransporterRec . DM.makeMerchantAPIEntity <$> (CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId))

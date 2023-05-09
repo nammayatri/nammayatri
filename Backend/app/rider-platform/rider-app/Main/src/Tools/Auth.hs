@@ -14,6 +14,7 @@
 
 module Tools.Auth where
 
+import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.RegistrationToken as SR
 import EulerHS.Prelude hiding (id)
@@ -41,7 +42,7 @@ instance
   getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy sub)
 
 instance VerificationMethod VerifyToken where
-  type VerificationResult VerifyToken = Id Person.Person
+  type VerificationResult VerifyToken = (Id Person.Person, Id Merchant.Merchant)
   verificationDescription =
     "Checks whether token is registered.\
     \If you don't have a token, use registration endpoints."
@@ -52,19 +53,20 @@ verifyPerson ::
     HasField "authTokenCacheExpiry" r Seconds
   ) =>
   RegToken ->
-  m (Id Person.Person)
+  m (Id Person.Person, Id Merchant.Merchant)
 verifyPerson token = do
   let key = authTokenCacheKey token
   authTokenCacheExpiry <- getSeconds <$> asks (.authTokenCacheExpiry)
-  mbPersonId <- Redis.get key
-  case mbPersonId of
-    Just personId -> return personId
+  result <- Redis.safeGet key
+  case result of
+    Just (personId, merchantId) -> return (personId, merchantId)
     Nothing -> do
       sr <- verifyToken token
       let expiryTime = min sr.tokenExpiry authTokenCacheExpiry
       let personId = Id sr.entityId
-      Redis.setExp key personId expiryTime
-      return personId
+      let merchantId = Id sr.merchantId
+      Redis.setExp key (personId, merchantId) expiryTime
+      return (personId, merchantId)
 
 authTokenCacheKey :: RegToken -> Text
 authTokenCacheKey regToken =

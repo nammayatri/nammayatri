@@ -23,6 +23,7 @@ module API.UI.Frontend
 where
 
 import qualified Domain.Action.UI.Frontend as DFrontend
+import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import Environment
 import EulerHS.Prelude
@@ -48,8 +49,8 @@ handler =
   getPersonFlowStatus
     :<|> notifyEvent
 
-getPersonFlowStatus :: Id Person.Person -> Maybe Bool -> FlowHandler DFrontend.GetPersonFlowStatusRes
-getPersonFlowStatus personId = withFlowHandlerAPI . DFrontend.getPersonFlowStatus personId
+getPersonFlowStatus :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Bool -> FlowHandler DFrontend.GetPersonFlowStatusRes
+getPersonFlowStatus (personId, _) = withFlowHandlerAPI . DFrontend.getPersonFlowStatus personId
 
-notifyEvent :: Id Person.Person -> DFrontend.NotifyEventReq -> FlowHandler DFrontend.NotifyEventResp
-notifyEvent personId = withFlowHandlerAPI . DFrontend.notifyEvent personId
+notifyEvent :: (Id Person.Person, Id Merchant.Merchant) -> DFrontend.NotifyEventReq -> FlowHandler DFrontend.NotifyEventResp
+notifyEvent (personId, _) = withFlowHandlerAPI . DFrontend.notifyEvent personId

@@ -28,6 +28,7 @@ module Domain.Action.UI.Profile
 where
 
 import Data.List (nubBy)
+import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonDefaultEmergencyNumber as DPDEN
 import Environment
@@ -103,8 +104,8 @@ newtype GetProfileDefaultEmergencyNumbersResp = GetProfileDefaultEmergencyNumber
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-getPersonDetails :: (EsqDBReplicaFlow m r, EncFlow m r) => Id Person.Person -> m ProfileRes
-getPersonDetails personId = do
+getPersonDetails :: (EsqDBReplicaFlow m r, EncFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> m ProfileRes
+getPersonDetails (personId, _) = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   decPerson <- decrypt person
   return $ Person.makePersonAPIEntity decPerson
@@ -178,8 +179,8 @@ updateDefaultEmergencyNumbers personId req = do
             ..
           }
 
-getDefaultEmergencyNumbers :: (EsqDBReplicaFlow m r, EncFlow m r) => Id Person.Person -> m GetProfileDefaultEmergencyNumbersResp
-getDefaultEmergencyNumbers personId = do
+getDefaultEmergencyNumbers :: (EsqDBReplicaFlow m r, EncFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> m GetProfileDefaultEmergencyNumbersResp
+getDefaultEmergencyNumbers (personId, _) = do
   personENList <- runInReplica $ QPersonDEN.findAllByPersonId personId
   decPersonENList <- decrypt `mapM` personENList
   return . GetProfileDefaultEmergencyNumbersResp $ DPDEN.makePersonDefaultEmergencyNumberAPIEntity <$> decPersonENList

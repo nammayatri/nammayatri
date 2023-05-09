@@ -64,7 +64,7 @@ uploadDocument merchantShortId driverId_ req = do
     validateImage
       True
       (Just merchant)
-      (cast driverId_)
+      (cast driverId_, cast merchant.id)
       ImageValidateRequest
         { image = req.imageBase64,
           imageType = mapImageType req.imageType
@@ -77,7 +77,7 @@ registerDL merchantShortId driverId_ Common.RegisterDLReq {..} = do
   verifyDL
     True
     (Just merchant)
-    (cast driverId_)
+    (cast driverId_, cast merchant.id)
     DriverDLReq
       { imageId1 = cast imageId1,
         imageId2 = fmap cast imageId2,
@@ -90,7 +90,7 @@ registerRC merchantShortId driverId_ Common.RegisterRCReq {..} = do
   verifyRC
     True
     (Just merchant)
-    (cast driverId_)
+    (cast driverId_, cast merchant.id)
     DriverRCReq
       { imageId = cast imageId,
         ..

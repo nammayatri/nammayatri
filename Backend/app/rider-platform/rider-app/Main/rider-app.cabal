@@ -22,7 +22,6 @@ source-repository head
 library
   exposed-modules:
       API
-      API.Auth
       API.Beckn
       API.Beckn.OnConfirm
       API.Beckn.OnInit
@@ -94,7 +93,6 @@ library
       Beckn.ACL.Select
       Beckn.ACL.Track
       Beckn.Core
-      Domain.Action.Auth
       Domain.Action.Beckn.OnConfirm
       Domain.Action.Beckn.OnInit
       Domain.Action.Beckn.OnSearch

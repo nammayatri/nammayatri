@@ -20,7 +20,6 @@ module API
   )
 where
 
-import qualified API.Auth as Auth
 import qualified API.Beckn as Beckn
 import qualified API.Dashboard as Dashboard
 import qualified API.MetroBeckn as MetroBeckn
@@ -44,7 +43,6 @@ type MainAPI =
   UI.API
     :<|> Beckn.API
     :<|> MetroBeckn.API
-    :<|> Auth.API
     :<|> Dashboard.API
 
 handler :: FlowServer API
@@ -59,7 +57,6 @@ mainServer =
   UI.handler
     :<|> Beckn.handler
     :<|> MetroBeckn.handler
-    :<|> Auth.handler
     :<|> Dashboard.handler
 
 type SwaggerAPI = "swagger" :> Get '[HTML] BS.ByteString

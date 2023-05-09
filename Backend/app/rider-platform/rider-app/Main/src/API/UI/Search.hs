@@ -34,6 +34,7 @@ import qualified Data.Text as T
 import qualified Domain.Action.UI.Search.Common as DSearchCommon
 import qualified Domain.Action.UI.Search.OneWay as DOneWaySearch
 import qualified Domain.Action.UI.Search.Rental as DRentalSearch
+import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import Domain.Types.SearchRequest (SearchRequest)
 import Environment
@@ -120,8 +121,8 @@ fareProductConstructorModifier = \case
   "RentalSearch" -> "RENTAL"
   x -> x
 
-search :: Id Person.Person -> SearchReq -> Maybe Version -> Maybe Version -> Maybe Text -> FlowHandler SearchRes
-search personId req mbBundleVersion mbClientVersion mbDevice = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+search :: (Id Person.Person, Id Merchant.Merchant) -> SearchReq -> Maybe Version -> Maybe Version -> Maybe Text -> FlowHandler SearchRes
+search (personId, _) req mbBundleVersion mbClientVersion mbDevice = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   checkSearchRateLimit personId
   updateVersions personId mbBundleVersion mbClientVersion
   (searchId, searchExpiry, routeInfo) <- case req of

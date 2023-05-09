@@ -25,6 +25,7 @@ module API.UI.Vehicle
 where
 
 import qualified Domain.Action.UI.Vehicle as DVehicle
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Environment
@@ -66,5 +67,5 @@ listVehicles admin variantM mbRegNum limitM = withFlowHandlerAPI . DVehicle.list
 updateVehicle :: SP.Person -> Id SP.Person -> DVehicle.UpdateVehicleReq -> FlowHandler DVehicle.UpdateVehicleRes
 updateVehicle admin driverId = withFlowHandlerAPI . DVehicle.updateVehicle admin driverId
 
-getVehicle :: Id SP.Person -> Maybe Text -> Maybe (Id SP.Person) -> FlowHandler DVehicle.GetVehicleRes
-getVehicle personId registrationNoM = withFlowHandlerAPI . DVehicle.getVehicle personId registrationNoM
+getVehicle :: (Id SP.Person, Id DM.Merchant) -> Maybe Text -> Maybe (Id SP.Person) -> FlowHandler DVehicle.GetVehicleRes
+getVehicle (personId, merchantId) registrationNoM = withFlowHandlerAPI . DVehicle.getVehicle (personId, merchantId) registrationNoM

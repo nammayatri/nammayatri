@@ -131,8 +131,8 @@ updateVehicle admin driverId req = do
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> updateVehicle : ") (show updatedVehicle)
   return $ SV.makeVehicleAPIEntity updatedVehicle
 
-getVehicle :: EsqDBReplicaFlow m r => Id SP.Person -> Maybe Text -> Maybe (Id SP.Person) -> m GetVehicleRes
-getVehicle personId registrationNoM vehicleIdM = do
+getVehicle :: EsqDBReplicaFlow m r => (Id SP.Person, Id DM.Merchant) -> Maybe Text -> Maybe (Id SP.Person) -> m GetVehicleRes
+getVehicle (personId, _) registrationNoM vehicleIdM = do
   user <-
     Esq.runInReplica $
       QP.findById personId
