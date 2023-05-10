@@ -332,7 +332,7 @@ showEmergencyContact state push =
     , width MATCH_PARENT
     , orientation VERTICAL
     , margin $ Margin 16 20 16 12
-    , visibility if(isPreviousVersion (getValueToLocalStore VERSION_NAME) (if os == "IOS" then "1.2.5" else "1.2.1")) then GONE else VISIBLE
+    , visibility if(isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "")) then GONE else VISIBLE
     , onClick push $ const (if (DA.null state.emergencyContactData) then  AddedEmergencyContacts else NoAction)
     ][  linearLayout
         [ width MATCH_PARENT
