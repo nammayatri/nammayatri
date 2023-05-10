@@ -38,6 +38,8 @@ import PrestoDOM.Animation as PrestoAnim
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import Common.Types.App
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListItemState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -121,7 +123,7 @@ driverImageView state =
         [ height $ V 37
         , width $ V 40
         , cornerRadius 20.0
-        , imageWithFallback if state.vehicleType == "auto" then "ny_ic_auto_quote_list,https://assets.juspay.in/nammayatri/images/user/ny_ic_auto_quote_list.png" else "ny_ic_auto_quote_list,https://assets.juspay.in/nammayatri/images/user/ny_ic_auto_quote_list.png"
+        , imageWithFallback if state.vehicleType == "auto" then "ny_ic_auto_quote_list," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_auto_quote_list.png" else "ny_ic_auto_quote_list," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_auto_quote_list.png"
         , weight 1.0
         ]
       ]
@@ -139,7 +141,7 @@ driverRatingView state  =
     ][  imageView
         [ height $ V 13
         , width $ V 13
-        , imageWithFallback "ny_ic_star_active,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_active.png"
+        , imageWithFallback $ "ny_ic_star_active," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_star_active.png"
         , margin (MarginRight 6)
         ]
       , textView
@@ -288,7 +290,7 @@ autoAcceptingView state push =
           , imageView
             [ height $ V 18
             , width $ V 18
-            , imageWithFallback "ny_ic_close,https://assets.juspay.in/nammayatri/images/common/ny_ic_close.png"
+            , imageWithFallback $ "ny_ic_close," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_close.png"
             , onClick push $ const CancelAutoAssigning
             ]
         ]

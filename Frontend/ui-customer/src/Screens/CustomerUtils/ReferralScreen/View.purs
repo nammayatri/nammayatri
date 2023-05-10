@@ -34,6 +34,8 @@ import Screens.Types as ST
 import Styles.Colors as Color
 import Screens.ReferralScreen.ComponentConfig
 import Storage (KeyStore(..), getValueToLocalStore)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
 
 screen :: ST.ReferralScreenState -> Screen Action ST.ReferralScreenState ScreenOutput
 screen initialState =
@@ -82,7 +84,7 @@ referralCodeView push state =
     , visibility if state.showThanks then GONE else VISIBLE
     ]
     [ imageView
-        [ imageUrl if EHC.os == "IOS" then "https://assets.juspay.in/nammayatri/images/user/ny_ic_referral.png" else "ny_ic_referral"
+        [ imageUrl if EHC.os == "IOS" then "" <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_referral.png" else "ny_ic_referral"
         , gravity CENTER
         , height $ V 112
         , width $ V 140
@@ -119,7 +121,7 @@ thanksView push state =
         , gravity CENTER_HORIZONTAL
         ]
         [ imageView
-            [ imageUrl $ if EHC.os == "IOS" then "https://assets.juspay.in/nammayatri/images/user/ny_ic_thanks.png" else "ny_ic_thanks"
+            [ imageUrl $ if EHC.os == "IOS" then "" <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_thanks.png" else "ny_ic_thanks"
             , gravity CENTER
             , height $ V 230
             , width $ V 280

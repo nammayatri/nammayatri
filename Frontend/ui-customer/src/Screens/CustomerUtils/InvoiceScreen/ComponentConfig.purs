@@ -25,6 +25,9 @@ import Components.PrimaryButton as PrimaryButton
 import Components.GenericHeader as GenericHeader
 import Styles.Colors as Color
 import Common.Types.App
+import Prelude ((<>))
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
 
 genericHeaderConfig :: ST.InvoiceScreenState -> GenericHeader.Config
 genericHeaderConfig state = let
@@ -34,7 +37,7 @@ genericHeaderConfig state = let
        , prefixImageConfig
        { height = V 25
        , width = V 25
-       , imageUrl = "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
+       , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_chevron_left.png"
        , margin = (Margin 12 12 12 12)
        , visibility = VISIBLE
        }

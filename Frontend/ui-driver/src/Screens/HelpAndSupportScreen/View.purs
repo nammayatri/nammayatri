@@ -20,8 +20,8 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(
 import Effect (Effect)
 import PrestoDOM.Types.DomAttributes as PTD
 import PrestoDOM.Properties as PP
-import Screens.HelpAndSupportScreen.Controller (Action(..), ScreenOutput, eval, getTitle)
-import Screens.HelpAndSupportScreen.ScreenData (optionList, ListOptions(..))
+import Screens.HelpAndSupportScreen.Controller (Action(..), ScreenOutput, eval, getTitle, optionList)
+import Screens.HelpAndSupportScreen.ScreenData (ListOptions(..))
 import Components.SourceToDestination as SourceToDestination
 import Screens.Types as ST
 import Styles.Colors as Color
@@ -40,6 +40,9 @@ import Engineering.Helpers.Commons (flowRunner, screenWidth)
 import Services.Backend as Remote
 import Common.Types.App
 import Screens.HelpAndSupportScreen.ComponentConfig
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
 
 screen :: ST.HelpAndSupportScreenState -> Screen Action ST.HelpAndSupportScreenState ScreenOutput
 screen initialState =
@@ -90,7 +93,7 @@ headerLayout state push =
     ][ imageView
         [ width $ V 25
         , height MATCH_PARENT
-        , imageWithFallback "ny_ic_back,https://assets.juspay.in/nammayatri/images/driver/ny_ic_back.png"
+        , imageWithFallback $ "ny_ic_back," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_back.png"
         , gravity CENTER_VERTICAL
         , onClick push (const BackPressed)
         , padding (Padding 2 2 2 2)
@@ -256,7 +259,7 @@ allOtherTopics state push =
                   , imageView
                   [ width $ V 20
                   , height $ V 20
-                  , imageWithFallback "ny_ic_chevron_right_grey,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevron_right_grey.png"
+                  , imageWithFallback $ "ny_ic_chevron_right_grey," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_chevron_right_grey.png"
                   ]
               ]
               , horizontalLineView
@@ -295,7 +298,7 @@ driverRatingView state =
         ][imageView
             [ height $ V 14
             , width $ V 14
-            , imageWithFallback "ny_ic_star_inactive,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_inactive.png"
+            , imageWithFallback $ "ny_ic_star_inactive," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_star_inactive.png"
             ]
           ]) [1,2,3,4,5])
     ]

@@ -39,7 +39,7 @@ import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import Screens.Types(Stage(..))
 import Common.Types.App
-
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 
 view :: forall w. (Action -> Effect Unit) -> RatingCardState -> PrestoDOM ( Effect Unit ) w
 view push state = 
@@ -145,7 +145,7 @@ editTextView state push =
   , margin $ MarginBottom 24
   , padding $ Padding 16 16 16 16
   ][  imageView 
-      [ imageWithFallback "ny_ic_message_square,https://assets.juspay.in/nammayatri/images/common/ny_ic_message_square.png"
+      [ imageWithFallback $ "ny_ic_message_square," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_message_square.png"
       , height $ V 16 
       , width $ V 16 
       , margin $ if os == "ANDROID" then MarginRight 9 else  Margin 0 6 9 0 
@@ -267,7 +267,7 @@ starRatingView state push =
                           ][imageView
                               [ height $ V 30
                               , width $ V 30
-                              , imageWithFallback if item <= state.data.rating then "ny_ic_star_active,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_active.png" else "ny_ic_star_inactive,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_inactive.png"
+                              , imageWithFallback if item <= state.data.rating then "ny_ic_star_active," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_star_active.png" else "ny_ic_star_inactive," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_star_inactive.png"
                               ]
                           ]) [1,2,3,4,5])
     ]
@@ -319,7 +319,7 @@ sourceToDestinationConfig state = let
     , sourceMargin = (Margin 0 0 0 14)
     , lineMargin = (Margin 19 7 0 0)
     , sourceImageConfig {
-        imageUrl = "ny_ic_source_dot,https://assets.juspay.in/nammayatri/images/common/ny_ic_source_dot.png"
+        imageUrl = "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_source_dot.png"
       , height = V 33 
       , width = V 33 
       , margin = (Margin 4 0 0 0)
@@ -341,7 +341,7 @@ sourceToDestinationConfig state = let
       , maxLines = 1
       }
     , destinationImageConfig {
-        imageUrl = "ic_location_marker,https://assets.juspay.in/nammayatri/images/user/ic_location_marker.png"
+        imageUrl = "ic_location_marker," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ic_location_marker.png"
       , height = V 17
       , width = V 14
       , margin = (Margin 13 2 0 0)

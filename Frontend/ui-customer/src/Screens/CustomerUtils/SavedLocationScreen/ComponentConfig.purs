@@ -31,6 +31,8 @@ import Styles.Colors as Color
 import Common.Types.App
 import Engineering.Helpers.Commons as EHC
 import Data.Maybe 
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Prelude ((<>))
 
 requestDeletePopUp :: ST.SavedLocationScreenState -> PopUpModal.Config 
 requestDeletePopUp state = let 
@@ -92,7 +94,7 @@ genericHeaderConfig state = let
     , prefixImageConfig {
         height = V 25
       , width = V 25
-      , imageUrl = "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
+      , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_chevron_left.png"
       } 
     , textConfig {
         text = (getString FAVOURITES)
@@ -108,7 +110,7 @@ errorModalConfig state = let
   config = ErrorModal.config 
   errorModalConfig' = config 
     { imageConfig {
-        imageUrl = "ny_ic_no_saved_address,https://assets.juspay.in/nammayatri/images/user/ny_ic_no_saved_address.png"
+        imageUrl = "ny_ic_no_saved_address," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_no_saved_address.png"
       , height = V 110
       , width = V 124
       , margin = (MarginBottom 31)

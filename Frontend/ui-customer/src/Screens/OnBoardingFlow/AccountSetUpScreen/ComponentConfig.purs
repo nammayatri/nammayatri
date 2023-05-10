@@ -32,6 +32,8 @@ import Styles.Colors as Color
 import Common.Types.App
 import Animation.Config (AnimConfig, animConfig)
 import PrestoDOM.Animation as PrestoAnim
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Prelude ((<>))
 
 primaryButtonConfig :: ST.AccountSetUpScreenState -> PrimaryButton.Config
 primaryButtonConfig state =
@@ -90,7 +92,7 @@ genericHeaderConfig =
         , prefixImageConfig
           { height = V 25
           , width = V 25
-          , imageUrl = "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
+          , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_chevron_left.png"
           , margin = (Margin 12 12 12 12)
           }
         , background = Color.white900

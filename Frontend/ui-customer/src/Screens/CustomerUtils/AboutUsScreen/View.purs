@@ -32,7 +32,8 @@ import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
 import Common.Types.App
 import Screens.CustomerUtils.AboutUsScreen.ComponentConfig 
-import Merchant.Utils (getValueFromConfig)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Merchant.Utils(getValueFromConfig)
 
 screen :: ST.AboutUsScreenState -> Screen Action ST.AboutUsScreenState ScreenOutput
 screen initialState =
@@ -116,7 +117,7 @@ logoView state =
         ][  imageView
               [ height $ V 48
               , width $ V 48
-              , imageWithFallback "ic_launcher,https://assets.juspay.in/nammayatri/images/common/ny_ic_launcher.png"
+              , imageWithFallback $ "ic_launcher," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_launcher.png"
               ]
           ]
 

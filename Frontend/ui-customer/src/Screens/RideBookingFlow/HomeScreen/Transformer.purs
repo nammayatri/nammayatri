@@ -41,14 +41,17 @@ import Types.App(FlowBT)
 import Storage ( setValueToLocalStore, getValueToLocalStore, KeyStore(..))
 import Debug(spy)
 import Config.DefaultConfig as DC
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+
 
 getLocationList :: Array Prediction -> Array LocationListItemState
 getLocationList predcition = map (\x -> getLocation x) predcition
 
 getLocation :: Prediction -> LocationListItemState
 getLocation predcition = {
-    prefixImageUrl : "ny_ic_loc_grey,https://assets.juspay.in/nammayatri/images/user/ny_ic_loc_grey.png"
-  , postfixImageUrl : "ny_ic_fav,https://assets.juspay.in/nammayatri/images/user/ny_ic_fav.png"
+    prefixImageUrl : "ny_ic_loc_grey," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_loc_grey.png"
+  , postfixImageUrl : "ny_ic_fav," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_fav.png"
   , postfixImageVisibility : true
   , title : (fromMaybe "" ((split (Pattern ",") (predcition ^. _description)) DA.!! 0))
   , subTitle : (drop ((fromMaybe 0 (indexOf (Pattern ",") (predcition ^. _description))) + 2) (predcition ^. _description))
@@ -281,12 +284,12 @@ getSpecialZoneQuote quote index =
     Quotes body -> let (QuoteAPIEntity quoteEntity) = body.onDemandCab
       in ChooseVehicle.config { 
         vehicleImage = case quoteEntity.vehicleVariant of 
-          "TAXI" -> "ic_sedan_non_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_non_ac.png"
-          "TAXI_PLUS" -> "ic_sedan_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_ac.png"
-          "SEDAN" -> "ic_sedan,https://assets.juspay.in/nammayatri/images/user/ic_sedan.png"
-          "SUV" -> "ic_suv,https://assets.juspay.in/nammayatri/images/user/ic_suv.png"
-          "HATCHBACK" -> "ic_hatchback,https://assets.juspay.in/nammayatri/images/user/ic_hatchback.png"
-          _ -> "ic_sedan_non_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_non_ac.png"
+          "TAXI" -> "ic_sedan_non_ac," <> (getAssetStoreLink FunctionCall) <> "/user/images/ic_sedan_non_ac.png"
+          "TAXI_PLUS" -> "ic_sedan_ac," <> (getAssetStoreLink FunctionCall) <> "/user/images/ic_sedan_ac.png"
+          "SEDAN" -> "ic_sedan," <> (getAssetStoreLink FunctionCall) <> "/user/images/ic_sedan.png"
+          "SUV" -> "ic_suv," <> (getAssetStoreLink FunctionCall) <> "/user/images/ic_suv.png"
+          "HATCHBACK" -> "ic_hatchback," <> (getAssetStoreLink FunctionCall) <> "/user/images/ic_hatchback.png"
+          _ -> "ic_sedan_non_ac," <> (getAssetStoreLink FunctionCall) <> "/user/images/ic_sedan_non_ac.png"
       , isSelected = (index == 0)
       , vehicleVariant = quoteEntity.vehicleVariant
       , price = show quoteEntity.estimatedTotalFare
@@ -310,12 +313,12 @@ getEstimateList quotes = mapWithIndex (\index item -> getEstimates item index) q
 getEstimates :: EstimateAPIEntity -> Int -> ChooseVehicle.Config
 getEstimates (EstimateAPIEntity estimate) index = ChooseVehicle.config { 
         vehicleImage = case estimate.vehicleVariant of 
-          "TAXI" -> "ic_sedan_non_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_non_ac.png"
-          "TAXI_PLUS" -> "ic_sedan_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_ac.png"
-          "SEDAN" -> "ic_sedan,https://assets.juspay.in/nammayatri/images/user/ic_sedan.png"
-          "SUV" -> "ic_suv,https://assets.juspay.in/nammayatri/images/user/ic_suv.png"
-          "HATCHBACK" -> "ic_hatchback,https://assets.juspay.in/nammayatri/images/user/ic_hatchback.png"
-          _ -> "ic_sedan_non_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_non_ac.png"
+          "TAXI" -> "ic_sedan_non_ac," <> (getAssetStoreLink FunctionCall) <> "/user/images/ic_sedan_non_ac.png"
+          "TAXI_PLUS" -> "ic_sedan_ac," <> (getAssetStoreLink FunctionCall) <> "/user/images/ic_sedan_ac.png"
+          "SEDAN" -> "ic_sedan," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ic_sedan.png"
+          "SUV" -> "ic_suv," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ic_suv.png"
+          "HATCHBACK" -> "ic_hatchback," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ic_hatchback.png"
+          _ -> "ic_sedan_non_ac," <> (getAssetStoreLink FunctionCall) <> "/user/images/ic_sedan_non_ac.png"
       , vehicleVariant = estimate.vehicleVariant
       , price = show estimate.estimatedTotalFare
       , activeIndex = 0

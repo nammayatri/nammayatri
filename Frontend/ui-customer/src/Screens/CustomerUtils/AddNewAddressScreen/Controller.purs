@@ -41,6 +41,8 @@ import Screens.HomeScreen.ScreenData (dummyAddress)
 import Screens.Types (AddNewAddressScreenState, CardType(..), Location, LocationListItemState, DistInfo, LocItemType(..), LocationItemType(..))
 import Services.API (AddressComponents, Prediction, SavedReqLocationAPIEntity(..))
 import Storage (KeyStore(..), getValueToLocalStore)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -283,7 +285,7 @@ getLocationList prediction = map (\x -> getLocation x) prediction
 getLocation :: Prediction -> LocationListItemState
 getLocation prediction = {
     postfixImageUrl : " "
-  , prefixImageUrl : "ny_ic_loc_grey,https://assets.juspay.in/nammayatri/images/user/ny_ic_loc_grey.png"
+  , prefixImageUrl : "ny_ic_loc_grey," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_loc_grey.png"
   , postfixImageVisibility : false
   , title : (fromMaybe "" ((split (Pattern ",") (prediction ^. _description)) DA.!! 0))
   , subTitle : (drop ((fromMaybe 0 (indexOf (Pattern ",") (prediction ^. _description))) + 2) (prediction ^. _description))
@@ -336,10 +338,10 @@ encodeAddressDescription state = do
 getSavedLocations :: (Array SavedReqLocationAPIEntity) -> Array LocationListItemState
 getSavedLocations savedLocation =  (map (\ (SavedReqLocationAPIEntity item) ->
   {
-  prefixImageUrl : case (toLower (item.tag) ) of
-                "home" -> "ny_ic_home_blue,https://assets.juspay.in/nammayatri/images/user/ny_ic_home_blue.png"
-                "work" -> "ny_ic_work_blue,https://assets.juspay.in/nammayatri/images/user/ny_ic_work_blue.png"
-                _      -> "ny_ic_fav_red,https://assets.juspay.in/nammayatri/images/user/ny_ic_fav_red.png"
+  prefixImageUrl : case (toLower (item.tag) ) of 
+                "home" -> "ny_ic_home_blue," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_home_blue.png"
+                "work" -> "ny_ic_work_blue," <> (getAssetStoreLink FunctionCall) <> "/user/images/ny_ic_work_blue.png"
+                _      -> "ny_ic_fav_red," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_fav_red.png"
 , postfixImageUrl : ""
 , postfixImageVisibility : false
 , title : (fromMaybe "" ((split (Pattern ",") (decodeAddress(SavedLoc (SavedReqLocationAPIEntity item)))) DA.!! 0))

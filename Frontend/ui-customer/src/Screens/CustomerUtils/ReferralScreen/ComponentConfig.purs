@@ -27,6 +27,9 @@ import Language.Types (STR(..))
 import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..))
 import Screens.Types as ST
 import Styles.Colors as Color
+import Prelude ((<>))
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
 
 continueButtonConfig :: ST.ReferralScreenState -> PrimaryButton.Config
 continueButtonConfig state =
@@ -87,7 +90,7 @@ genericHeaderConfig _ =
     , prefixImageConfig
       { height = V 25
       , width = V 25
-      , imageUrl = "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
+      , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_chevron_left.png"
       , margin = (Margin 12 12 12 12)
       }
     , textConfig

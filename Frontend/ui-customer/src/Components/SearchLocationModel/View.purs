@@ -42,6 +42,9 @@ import Resources.Constants (getDelayForAutoComplete)
 import Screens.Types (SearchLocationModelType(..), LocationListItemState)
 import Storage (KeyStore(..), getValueToLocalStoreEff, getValueToLocalStore)
 import Styles.Colors as Color
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
 
 view :: forall w. (Action -> Effect Unit) -> SearchLocationModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -99,7 +102,7 @@ view push state =
                   [ imageView
                       [ height $ V 25
                       , width $ V 25
-                      , imageWithFallback if state.homeScreenConfig.merchantId == "PAYTM" then "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png" else "ny_ic_chevron_left_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_left_white.png"
+                      , imageWithFallback if state.homeScreenConfig.merchantId == "PAYTM" then "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_chevron_left.png" else "ny_ic_chevron_left_white," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_chevron_left_white.png"
                       ]
                   ]
               , linearLayout
@@ -149,7 +152,7 @@ locationUnserviceableView state push =
     , gravity CENTER_HORIZONTAL
     ]
     [ imageView
-        [ imageWithFallback "ny_ic_location_unserviceable,https://assets.juspay.in/nammayatri/images/user/ny_ic_location_unserviceable.png"
+        [ imageWithFallback $ "ny_ic_location_unserviceable," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_location_unserviceable.png"
         , height $ V 99
         , width $ V 133
         , margin $ (MarginBottom 20)
@@ -199,7 +202,7 @@ sourceDestinationImageView =
         ][  imageView
             [ height $ V 25
             , width $ V 25
-            , imageWithFallback "ny_ic_source_dot,https://assets.juspay.in/nammayatri/images/common/ny_ic_source_dot.png"
+            , imageWithFallback $ "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_source_dot.png"
             ]
           ]
       , imageView
@@ -216,7 +219,7 @@ sourceDestinationImageView =
         ][  imageView
             [ height $ V 25
             , width $ V 25
-            , imageWithFallback "ny_ic_loc_red,https://assets.juspay.in/nammayatri/images/common/ny_ic_loc_red.png"
+            , imageWithFallback $ "ny_ic_loc_red," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_loc_red.png"
             ]
         ]
     ]
@@ -281,7 +284,7 @@ sourceDestinationEditTextView state push =
             [ imageView
                 [ height $ V 16
                 , width $ V 16
-                , imageWithFallback "ny_ic_clear,https://assets.juspay.in/nammayatri/images/user/ny_ic_clear.png"
+                , imageWithFallback $ "ny_ic_clear," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_clear.png"
                 ]
             ]
         ]
@@ -342,7 +345,7 @@ sourceDestinationEditTextView state push =
             [ imageView
                 [ height $ V 16
                 , width $ V 16
-                , imageWithFallback "ny_ic_clear,https://assets.juspay.in/nammayatri/images/user/ny_ic_clear.png"
+                , imageWithFallback $ "ny_ic_clear," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_clear.png"
                 ]
             ]
         ]
@@ -458,7 +461,7 @@ recenterButtonView push state =
   , disableClickFeedback true
   ][
       imageView
-        [ imageWithFallback "ny_ic_recenter_btn,https://assets.juspay.in/nammayatri/images/common/ny_ic_recenter_btn.png"
+        [ imageWithFallback $ "ny_ic_recenter_btn," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_recenter_btn.png"
         , onClick (\action -> do
             _ <- push action
             _ <- getCurrentPosition push UpdateCurrentLocation
@@ -547,7 +550,7 @@ bottomBtnsView state push =
 
 btnData :: SearchLocationModelState -> Array { text :: String, imageUrl :: String, action :: Action, buttonType :: String }
 btnData state =
-  [ { text: (getString SET_LOCATION_ON_MAP), imageUrl: "ny_ic_locate_on_map,https://assets.juspay.in/nammayatri/images/user/ny_ic_locate_on_map.png", action: SetLocationOnMap, buttonType: "LocateOnMap" }]
-  -- , { text: (getString CURRENT_LOCATION), imageUrl: "ny_ic_current_location,https://assets.juspay.in/nammayatri/images/user/ny_ic_current_location.png", action: SetCurrentLocation, buttonType: "CurrentLocation" }
-  -- ]
+  [ { text: (getString SET_LOCATION_ON_MAP), imageUrl: "ny_ic_locate_on_map," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_locate_on_map.png", action: SetLocationOnMap, buttonType: "LocateOnMap" }
+  -- , { text: (getString CURRENT_LOCATION), imageUrl: "ny_ic_current_location," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_current_location.png", action: SetCurrentLocation, buttonType: "CurrentLocation" }
+  ]
 

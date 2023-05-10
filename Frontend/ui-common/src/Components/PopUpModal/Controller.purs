@@ -22,6 +22,8 @@ import Font.Style as FontStyle
 import Common.Types.App
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Prelude ((<>))
 
 data Action = OnButton1Click 
             | OnButton2Click 
@@ -198,7 +200,7 @@ config = {
     , fontStyle : FontStyle.bold LanguageStyle
     }
     , dismissPopupConfig : 
-    { imageUrl : "ny_ic_close,https://assets.juspay.in/nammayatri/images/common/ny_ic_close.png"
+    { imageUrl : "ny_ic_close," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_close.png"
     , height : WRAP_CONTENT
     , width : WRAP_CONTENT
     , margin : (MarginTop 20)
@@ -209,7 +211,7 @@ config = {
     , eTextConfig : PrimaryEditTextController.config
     , coverImageConfig :
     {
-      imageUrl : "ny_ic_ride_completed,https://assets.juspay.in/nammayatri/images/common/ny_ic_ride_completed.png"
+      imageUrl : "ny_ic_ride_completed," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_ride_completed.png"
     , visibility : GONE
     , height : WRAP_CONTENT
     , width : WRAP_CONTENT

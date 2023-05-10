@@ -34,6 +34,9 @@ import PrestoDOM.Animation as PrestoAnim
 import Screens.ChooseLanguageScreen.Controller (Action(..), eval, ScreenOutput)
 import Screens.Types as ST
 import Styles.Colors as Color
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
 
 screen :: ST.ChooseLanguageScreenState -> Screen Action ST.ChooseLanguageScreenState ScreenOutput
 screen initialState =
@@ -94,7 +97,7 @@ scrollableView state push =
           ] $ imageView
               [ width ( V 270)
               , height ( V 270)
-              , imageWithFallback  "ny_ic_welcome,https://assets.juspay.in/nammayatri/images/driver/ny_ic_welcome.png"
+              , imageWithFallback $ "ny_ic_welcome," <> (getAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_welcome.png"
               ]]
         , linearLayout
           [ height WRAP_CONTENT

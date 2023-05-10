@@ -40,8 +40,8 @@ import Language.Types (STR(..))
 import Prelude (Unit, ($), const, map, (==), (||), (/), unit, bind, (-), (<>), (<<<), pure, discard, show, (&&), void)
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable)
-import Screens.DriverProfileScreen.Controller (Action(..), ScreenOutput, eval, getTitle)
-import Screens.DriverProfileScreen.ScreenData (MenuOptions(..), optionList)
+import Screens.DriverProfileScreen.Controller (Action(..), ScreenOutput, eval, getTitle, optionList)
+import Screens.DriverProfileScreen.ScreenData (MenuOptions(..))
 import Screens.Types as ST
 import Services.APITypes (GetDriverInfoReq(..), GetDriverInfoResp(..))
 import Services.Backend as Remote
@@ -49,6 +49,9 @@ import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
 import Screens as ScreenNames
 import Helpers.Utils (getVehicleType)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import MerchantConfigs.Utils (getMerchant, Merchant(..))
 
 
 screen :: ST.DriverProfileScreenState -> Screen Action ST.DriverProfileScreenState ScreenOutput
@@ -139,7 +142,7 @@ profilePictureLayout state push =
         , layoutGravity "center"
         , cornerRadius 45.0
         , id $ EHC.getNewIDWithTag "ProfileImage"
-        , imageWithFallback "ny_ic_profile_image,https://assets.juspay.in/nammayatri/images/common/ny_ic_profile_image.png"
+        , imageWithFallback $ "ny_ic_profile_image," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_profile_image.png"
         ]
       , linearLayout
         [ width WRAP_CONTENT
@@ -221,7 +224,7 @@ profileOptionsLayout state push =
                     , imageView
                       [ width $ V 18
                       , height $ V 18
-                      , imageWithFallback "ny_ic_chevron_right_grey,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevron_right_grey.png"
+                      , imageWithFallback $ "ny_ic_chevron_right_grey," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_chevron_right_grey.png"
                       ]
                   ]
               ]
@@ -241,7 +244,7 @@ ratingView state=
   ][imageView
     [ width $ V 12
     , height MATCH_PARENT
-    , imageWithFallback "ny_ic_star_active,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_active.png"
+    , imageWithFallback $ "ny_ic_star_active," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_star_active.png"
     , gravity CENTER_VERTICAL
     ]
     , textView
@@ -255,7 +258,7 @@ ratingView state=
     , imageView
     [ width $ V 15
     , height MATCH_PARENT
-    , imageWithFallback "ny_ic_chevron_right_grey,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevron_right_grey.png"
+    , imageWithFallback $ "ny_ic_chevron_right_grey," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_chevron_right_grey.png"
     , gravity CENTER_VERTICAL
     , margin (MarginLeft 5)
     , visibility GONE

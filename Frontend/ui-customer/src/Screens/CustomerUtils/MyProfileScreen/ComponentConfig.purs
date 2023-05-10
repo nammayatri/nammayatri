@@ -33,6 +33,8 @@ import Styles.Colors as Color
 import Animation.Config (AnimConfig, animConfig)
 import PrestoDOM.Animation as PrestoAnim
 import Common.Types.App
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Prelude ((<>))
 
 genericHeaderConfig :: ST.MyProfileScreenState -> GenericHeader.Config 
 genericHeaderConfig state = let 
@@ -45,7 +47,7 @@ genericHeaderConfig state = let
         height = (V 35)
       , width = (V 35)
       , margin = (Margin 10 17 16 15)
-      , imageUrl = "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/coomon/ny_ic_chevron_left.png"
+      , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_chevron_left.png"
       , padding = (Padding 5 5 5 5 )
       }
     , textConfig {

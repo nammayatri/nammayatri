@@ -39,6 +39,9 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Array (mapWithIndex)
 import PrestoDOM.Animation as PrestoAnim
 import Resources.Constants as RSRC
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
 
 
 screen :: ST.AccountSetUpScreenState -> Screen Action ST.AccountSetUpScreenState ScreenOutput
@@ -218,7 +221,7 @@ genderCaptureView state push =
             , gravity RIGHT
             ]
             [ imageView
-              [ imageWithFallback if state.props.genderOptionExpanded then "ny_ic_chevron_up,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_up.png" else "ny_ic_chevron_down,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_down.png"
+              [ imageWithFallback $ if state.props.genderOptionExpanded then "ny_ic_chevron_up," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_up.png" else "ny_ic_chevron_down," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_down.png"
               , height $ V 24
               , width $ V 15
               ]

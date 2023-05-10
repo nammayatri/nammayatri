@@ -27,12 +27,16 @@ import PrestoDOM (Eval, continue, exit, continueWithCmd)
 import PrestoDOM.Types.Core (class Loggable)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Screens (ScreenName(..), getScreen)
-import Screens.DriverProfileScreen.ScreenData (MenuOptions(..))
+import Screens.DriverProfileScreen.ScreenData (MenuOptions(..), Listtype)
 import Screens.Types (DriverProfileScreenState,VehicleP)
 import Services.APITypes (GetDriverInfoResp(..), Vehicle(..))
 import Services.Backend (dummyVehicleObject)
 import Storage (setValueToLocalNativeStore, KeyStore(..))
 import Engineering.Helpers.Commons (getNewIDWithTag)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>), (/=), (==))
+import MerchantConfigs.Utils (getMerchant, Merchant(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -170,3 +174,21 @@ getDowngradeOptionsSelected (GetDriverInfoResp driverInfoResponse) =
   , {vehicleName: "SEDAN", isSelected: driverInfoResponse.canDowngradeToSedan}
   , {vehicleName: "TAXI" , isSelected: driverInfoResponse.canDowngradeToTaxi}
   ]
+
+optionList :: String -> Array Listtype
+optionList dummy =
+    [
+      {menuOptions: DRIVER_PRESONAL_DETAILS , icon:"ny_ic_profile" <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_profile.png"},
+      {menuOptions: DRIVER_VEHICLE_DETAILS , icon:"ny_ic_car_profile" <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_car_profile.png"}
+    ]
+    <> (if (getMerchant unit /= NAMMAYATRIPARTNER)  then [{menuOptions: DRIVER_BOOKING_OPTIONS , icon:"ic_booking_options" <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ic_booking_options.png"}] else []) <>
+    [
+      {menuOptions: APP_INFO_SETTINGS , icon:"ny_ic_app_info" <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_app_info.png"},
+      {menuOptions: MULTI_LANGUAGE , icon:"ny_ic_language" <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_language.png"},
+      {menuOptions: HELP_AND_FAQS , icon:"ny_ic_head_phones" <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_head_phones.png"}
+    ]
+    <> (if (getMerchant unit == NAMMAYATRIPARTNER) then [{menuOptions: LIVE_STATS_DASHBOARD , icon:"ic_graph_black," <> (getCommonAssetStoreLink FunctionCall) <> "ic_graph_black.png"}] else []) <>
+    [ 
+      {menuOptions: ABOUT_APP , icon:"ny_ic_about" <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_about.png"},
+      {menuOptions: DRIVER_LOGOUT , icon:"ny_ic_logout_grey" <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_logout_grey.png"}
+    ]

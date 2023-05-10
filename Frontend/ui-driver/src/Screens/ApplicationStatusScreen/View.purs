@@ -43,6 +43,9 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Data.Maybe
 import Data.String (length)
 import Screens.ApplicationStatusScreen.ComponentConfig
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
 
 screen :: ST.ApplicationStatusScreenState -> String -> Screen Action ST.ApplicationStatusScreenState ScreenOutput
 screen initialState screenType =
@@ -113,7 +116,7 @@ applicationStatusView state push =
       [ width (V 136)
       , height (V 123)
       , layoutGravity "center_horizontal"
-      , imageWithFallback "ny_ic_coming_soon,https://assets.juspay.in/nammayatri/images/driver/ny_ic_coming_soon.png"
+      , imageWithFallback $ "ny_ic_coming_soon," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_coming_soon.png"
       , margin (MarginBottom 32)
       ]
     , textView
@@ -248,15 +251,15 @@ drivingLicenseCardDetails state =
   {
     "title" : (getString DRIVING_LICENSE),
     "image" : case state.data.dlVerificationStatus of
-                "VALID" -> "ny_ic_check_mark,https://assets.juspay.in/nammayatri/images/driver/ny_ic_check_mark.png"
-                "PENDING" -> "ny_ic_pending,https://assets.juspay.in/nammayatri/images/driver/ny_ic_pending.png"
-                "FAILED" -> "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png"
-                "NO_DOC_AVAILABLE"  -> "ny_ic_help_circle,https://assets.juspay.in/nammayatri/images/driver/ny_ic_help_circle.png"
-                "INVALID" -> "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png"
-                "LIMIT_EXCEED" -> "ny_ic_help_circle,https://assets.juspay.in/nammayatri/images/driver/ny_ic_help_circle.png"
-                _ -> "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png",
-    "verificationStatus" :  case state.data.dlVerificationStatus of
-                "VALID" -> ""
+                "VALID" -> "ny_ic_check_mark," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_check_mark.png"
+                "PENDING" -> "ny_ic_pending," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_pending.png"
+                "FAILED" -> "ny_ic_api_failure_popup," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_api_failure_popup.png"
+                "NO_DOC_AVAILABLE"  -> "ny_ic_help_circle," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_help_circle.png"
+                "INVALID" -> "ny_ic_api_failure_popup," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_api_failure_popup.png"
+                "LIMIT_EXCEED" -> "ny_ic_help_circle," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_help_circle.png"
+                _ -> "ny_ic_api_failure_popup," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_api_failure_popup.png",
+    "verificationStatus" :  case state.data.dlVerificationStatus of 
+                "VALID" -> "" 
                 "PENDING" -> (getString VERIFICATION_PENDING)
                 "FAILED" -> (getString VERIFICATION_FAILED)
                 "NO_DOC_AVAILABLE" -> (getString NO_DOC_AVAILABLE)
@@ -273,15 +276,15 @@ vehicleCardDetails state=
   {
     "title" : (getString VEHICLE_DETAILS),
     "image" : case state.data.rcVerificationStatus of
-                "VALID" -> "ny_ic_check_mark,https://assets.juspay.in/nammayatri/images/driver/ny_ic_check_mark.png"
-                "PENDING" -> "ny_ic_pending,https://assets.juspay.in/nammayatri/images/driver/ny_ic_pending.png"
-                "FAILED" -> "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png"
-                "NO_DOC_AVAILABLE" -> "ny_ic_help_circle,https://assets.juspay.in/nammayatri/images/driver/ny_ic_help_circle.png"
-                "INVALID" -> "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png"
-                "LIMIT_EXCEED" -> "ny_ic_help_circle,https://assets.juspay.in/nammayatri/images/driver/ny_ic_help_circle.png"
-                _ -> "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png",
-    "verificationStatus" :  case state.data.rcVerificationStatus of
-                "VALID" -> ""
+                "VALID" -> "ny_ic_check_mark," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_check_mark.png"
+                "PENDING" -> "ny_ic_pending," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_pending.png"
+                "FAILED" -> "ny_ic_api_failure_popup," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_api_failure_popup.png"
+                "NO_DOC_AVAILABLE" -> "ny_ic_help_circle," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_help_circle.png"
+                "INVALID" -> "ny_ic_api_failure_popup," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_api_failure_popup.png"
+                "LIMIT_EXCEED" -> "ny_ic_help_circle," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_help_circle.png"
+                _ -> "ny_ic_api_failure_popup," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_api_failure_popup.png",
+    "verificationStatus" :  case state.data.rcVerificationStatus of 
+                "VALID" -> "" 
                 "PENDING" -> (getString VERIFICATION_PENDING)
                 "FAILED" -> (getString VERIFICATION_FAILED)
                 "NO_DOC_AVAILABLE" -> (getString NO_DOC_AVAILABLE)
@@ -313,7 +316,7 @@ applicationApprovedView state push =
           [ width (V 340)
           , height (V 150)
           , layoutGravity "center_horizontal"
-          , imageWithFallback "ny_ic_coming_soon,https://assets.juspay.in/nammayatri/images/driver/ny_ic_coming_soon.png"
+          , imageWithFallback $ "ny_ic_coming_soon," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_coming_soon.png"
           ]
           , textView (
           [ height WRAP_CONTENT

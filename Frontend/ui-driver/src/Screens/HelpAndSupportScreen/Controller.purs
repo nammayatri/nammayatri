@@ -20,7 +20,7 @@ import PrestoDOM (Eval, continue, exit)
 import Screens.Types (HelpAndSupportScreenState)
 import PrestoDOM.Types.Core (class Loggable)
 import Components.SourceToDestination as SourceToDestinationController
-import Screens.HelpAndSupportScreen.ScreenData(ListOptions(..))
+import Screens.HelpAndSupportScreen.ScreenData(ListOptions(..), Listtype)
 import Language.Strings (getString)
 import Services.APITypes (GetRidesHistoryResp)
 import Language.Types(STR(..))
@@ -28,6 +28,9 @@ import Services.Config (getSupportNumber)
 import JBridge (showDialer)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
 import Screens (ScreenName(..), getScreen)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -90,3 +93,11 @@ getTitle menuOption =
     GettingStartedFaq -> (getString GETTING_STARTED_AND_FAQ)
     OtherIssues -> (getString FOR_OTHER_ISSUES_WRITE_TO_US)
     CallSupportCenter -> (getString CALL_SUPPORT_CENTER)
+
+optionList :: Array Listtype
+optionList =
+    [
+      {menuOptions: GettingStartedFaq , icon:"ny_ic_help_circle_transparent," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_help_circle_transparent.png"},
+      {menuOptions: OtherIssues , icon:"ny_ic_clip_board," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_clip_board.png"},
+      {menuOptions: CallSupportCenter , icon:"ny_ic_head_phones," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_head_phones.png"}
+    ]

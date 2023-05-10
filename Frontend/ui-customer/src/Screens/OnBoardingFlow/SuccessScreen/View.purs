@@ -35,6 +35,8 @@ import Screens.SuccessScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types (SuccessScreenState)
 import Styles.Colors as Color
 import Storage (getValueToLocalStore, KeyStore(..))
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
 
 screen :: SuccessScreenState -> ScopedScreen Action SuccessScreenState ScreenOutput
 screen initialState =
@@ -79,7 +81,7 @@ view push state =
             imageView
             [ height $ V 160
             , width $ V 280
-            , imageUrl "https://assets.juspay.in/nammayatri/images/user/ny_ic_success_lottie_placeholder.png"]
+            , imageUrl $ "ny_ic_success_lottie_placeholder" <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_success_lottie_placeholder.png"] 
             else lottieLoaderView state push
         , textView
             $ [ width MATCH_PARENT

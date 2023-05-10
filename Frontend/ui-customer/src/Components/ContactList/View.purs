@@ -31,6 +31,8 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Engineering.Helpers.Commons (safeMarginTop, safeMarginBottom, os, getNewIDWithTag)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Prelude ((<>))
 
 view :: forall w. (Action -> Effect Unit) -> ContactsState -> PrestoDOM (Effect Unit) w
 view push config =
@@ -78,7 +80,7 @@ view push config =
         , imageView
             [ height $ V 17
             , width $ V 17
-            , imageWithFallback "ny_ic_cancel,https://assets.juspay.in/nammayatri/images/user/ny_ic_cancel.png"
+            , imageWithFallback $ "ny_ic_cancel," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_cancel.png"
             , gravity RIGHT
             , margin (Margin 0 10 18 10)
             , onClick push $ const ClearText
@@ -117,7 +119,7 @@ genericHeaderConfig state =
         , prefixImageConfig
           { height = V 25
           , width = V 25
-          , imageUrl = "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
+          , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_chevron_left.png"
           , margin = (Margin 12 12 12 12)
           }
         , padding = (Padding 0 5 0 5)
@@ -254,7 +256,7 @@ showEmergencyContactData push config =
                                     [ imageView
                                         [ height if item.isSelected then V 24 else V 17
                                         , width if item.isSelected then V 24 else V 17
-                                        , imageWithFallback if item.isSelected then "ny_ic_selected_icon,https://assets.juspay.in/nammayatri/images/user/ny_ic_selected_icon.png" else "ny_ic_outer_circle,https://assets.juspay.in/nammayatri/images/user/ny_ic_outer_circle.png"
+                                        , imageWithFallback if item.isSelected then "ny_ic_selected_icon," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_selected_icon.png" else "ny_ic_outer_circle," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_outer_circle.png"
                                         ]
                                     ]
                                 ]

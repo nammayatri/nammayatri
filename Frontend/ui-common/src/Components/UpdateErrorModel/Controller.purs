@@ -21,6 +21,8 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Styles.Colors as Color
 import Common.Types.App
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Prelude ((<>))
 
 data Action = OnCloseClick
 
@@ -64,7 +66,7 @@ type StarterLayoutConfig =
 config :: Config 
 config = 
   { imageConfig : 
-    { imageUrl : "ny_ic_close,https://assets.juspay.in/nammayatri/images/common/ny_ic_close.png"
+    { imageUrl : "ny_ic_close," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_close.png"
     , height : V 25
     , width : V 25
     , margin : (MarginRight 15)

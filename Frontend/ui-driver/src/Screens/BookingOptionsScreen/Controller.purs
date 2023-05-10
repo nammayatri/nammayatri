@@ -9,6 +9,8 @@ import Prelude (class Show, map, pure, show, unit, (<>), (==), not, ($), (>))
 import PrestoDOM (Eval, continue, exit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types (BookingOptionsScreenState, VehicleP)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -57,12 +59,12 @@ getVehicleCapacity vehicleType capacity = case vehicleType of
 
 getVehicleImage :: String -> String
 getVehicleImage vehicleType = case vehicleType of
-  "SEDAN" -> "ic_sedan,https://assets.juspay.in/nammayatri/images/user/ic_sedan.png"
-  "SUV" -> "ic_suv,https://assets.juspay.in/nammayatri/images/user/ic_suv.png"
-  "HATCHBACK" -> "ic_hatchback,https://assets.juspay.in/nammayatri/images/user/ic_hatchback.png"
-  "TAXI" -> "ic_sedan_non_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_non_ac.png"
-  "TAXI_PLUS" -> "ic_sedan_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_ac.png"
-  _ -> "ic_sedan,https://assets.juspay.in/nammayatri/images/user/ic_sedan.png"
+  "SEDAN" -> "ic_sedan" <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ic_sedan.png"
+  "SUV" -> "ic_suv" <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ic_suv.png"
+  "HATCHBACK" -> "ic_hatchback" <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ic_hatchback.png"
+  "TAXI" -> "ic_sedan_non_ac" <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ic_sedan_non_ac.png"
+  "TAXI_PLUS" -> "ic_sedan_ac" <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ic_sedan_ac.png"
+  _ -> "ic_sedan" <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ic_sedan.png"
 
 dummyVehicleP :: VehicleP
 dummyVehicleP = {

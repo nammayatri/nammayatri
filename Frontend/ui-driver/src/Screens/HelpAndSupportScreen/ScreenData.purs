@@ -16,9 +16,10 @@
 module Screens.HelpAndSupportScreen.ScreenData where
 
 import Screens.Types(HelpAndSupportScreenState)
-import Prelude (class Eq)
+import Prelude (class Eq, (<>))
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
+import Common.Types.App (LazyCheck(..))
 
 
 initData :: HelpAndSupportScreenState
@@ -48,11 +49,3 @@ type Listtype =
     { icon :: String,
       menuOptions :: ListOptions
     }
-
-optionList :: Array Listtype
-optionList =
-    [
-      {menuOptions: GettingStartedFaq , icon:"ny_ic_help_circle_transparent,https://assets.juspay.in/nammayatri/images/driver/ny_ic_help_circle_transparent.png"},
-      {menuOptions: OtherIssues , icon:"ny_ic_clip_board,https://assets.juspay.in/nammayatri/images/common/ny_ic_clip_board.png"},
-      {menuOptions: CallSupportCenter , icon:"ny_ic_head_phones,https://assets.juspay.in/nammayatri/images/driver/ny_ic_head_phones.png"}
-    ]

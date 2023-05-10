@@ -68,7 +68,8 @@ import Components.BottomNavBar.Controller (navData)
 import Screens.HomeScreen.ComponentConfig
 import Screens as ScreenNames
 import MerchantConfigs.Utils (getValueFromMerchant)
-
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -278,7 +279,7 @@ otpButtonView state push =
     , gravity CENTER_VERTICAL
     , onClick push $ const $ ZoneOtpAction
     ][ imageView 
-        [ imageWithFallback "ic_mode_standby,https://assets.juspay.in/nammayatri/images/user/ic_mode_standby.png"
+        [ imageWithFallback $ "ic_mode_standby," <> (getAssetStoreLink FunctionCall) <> "/user/images/ic_mode_standby.png"
         , width $ V 20
         , height $ V 20
         ]
@@ -332,7 +333,7 @@ recenterBtnView state push =
   ][ imageView
     [ width ( V 40 )
     , height ( V 40 )
-    , imageWithFallback "ny_ic_recenter_btn,https://assets.juspay.in/nammayatri/images/common/ny_ic_recenter_btn.png"
+    , imageWithFallback $ "ny_ic_recenter_btn," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_recenter_btn.png"
     , onClick (\action -> do
             _ <- JB.getCurrentPosition push CurrentLocation
             pure unit
@@ -446,7 +447,7 @@ driverDetail push state =
       ][ imageView
          [ width $ V 42
          , height $ V 42
-         , imageWithFallback "ny_ic_avatar,https://assets.juspay.in/nammayatri/images/driver/ny_ic_avatar.png"
+         , imageWithFallback $ "ny_ic_avatar," <> (getAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_avatar.png"
          ]
       ]
     , linearLayout
@@ -655,7 +656,7 @@ viewRecenterAndSupport state push =
     -- [ width ( V 40 )
     -- , height ( V 40 )
     -- , margin $ MarginBottom 10
-    -- , imageWithFallback "ny_ic_homepage_support,https://assets.juspay.in/nammayatri/images/common/ny_ic_homepage_support.png"
+    -- , imageWithFallback "ny_ic_homepage_support," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_homepage_support.png"
     -- -- , onClick (\action -> do
     -- --         _ <- JB.getCurrentPosition push CurrentLocation
     -- --         pure unit
@@ -680,7 +681,7 @@ driverStatus push state =
      ][ imageView
         [ width $ V 50
         , height $ V 30
-        , imageWithFallback if (getValueToLocalStore IS_DEMOMODE_ENABLED == "true") then "ny_ic_demo_mode_switch,https://assets.juspay.in/nammayatri/images/driver/ny_ic_demo_mode_switch.png" else if state.props.statusOnline then "ny_ic_toggle_on,https://assets.juspay.in/nammayatri/images/driver/ny_ic_toggle_on.png" else "ny_ic_toggle_off,https://assets.juspay.in/nammayatri/images/driver/ny_ic_toggle_off.png"
+        , imageWithFallback if (getValueToLocalStore IS_DEMOMODE_ENABLED == "true") then "ny_ic_demo_mode_switch," <> (getAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_demo_mode_switch.png" else if state.props.statusOnline then "ny_ic_toggle_on," <> (getAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_toggle_on.png" else "ny_ic_toggle_off," <> (getAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_toggle_off.png"
         , margin (MarginTop 10)
         , onClick push (const (ChangeStatus if state.props.statusOnline then false else true))
         , clickable if state.props.rideActionModal then false else true
@@ -729,7 +730,7 @@ showOfflineStatus push state =
           ][ imageView
              [ width (V 65)
              , height (V 65)
-             , imageWithFallback "ny_ic_offline_status,https://assets.juspay.in/nammayatri/images/driver/ny_ic_offline_status.png"
+             , imageWithFallback $ "ny_ic_offline_status," <> (getAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_offline_status.png"
              ]
           ]
         , linearLayout
@@ -792,18 +793,18 @@ goOfflineModal push state =
           ][ imageView
              [ width (V 55)
              , height (V 55)
-             , imageWithFallback "ic_vehicle_side_active,https://assets.juspay.in/nammayatri/images/driver/ny_ic_auto_side_active.png"
+             , imageWithFallback $ "ic_vehicle_side_active," <> (getAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_auto_side_active.png"
              ]
            , imageView
              [ width (V 35)
              , height (V 35)
              , margin (Margin 35 0 35 0)
-             , imageWithFallback "ny_ic_chevrons_right,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevrons_right.png"
+             , imageWithFallback $ "ny_ic_chevrons_right," <> (getAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_chevrons_right.png"
              ]
            , imageView
              [ width (V 55)
              , height (V 55)
-             , imageWithFallback "ic_vehicle_side_inactive,https://assets.juspay.in/nammayatri/images/driver/ny_ic_auto_side_inactive.png"
+             , imageWithFallback $ "ic_vehicle_side_inactive," <> (getAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_auto_side_inactive.png"
              ]
           ]
         , linearLayout
@@ -899,7 +900,7 @@ addAlternateNumber push state =
   ][  imageView
       [ width $ V 20
       , height $ V 15
-      , imageWithFallback "ic_call_plus,https://assets.juspay.in/nammayatri/images/driver/ic_call_plus.png"
+      , imageWithFallback $ "ic_call_plus," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ic_call_plus.png"
       , margin (MarginRight 5)
       ] 
     , textView
@@ -953,7 +954,7 @@ updateButtonIconAndText push state =
     -- [ width $ V 20
     -- , height $ V 20
     -- , margin $ MarginRight 5
-    -- , imageWithFallback "ny_ic_refresh,https://assets.juspay.in/nammayatri/images/driver/ny_ic_refresh.png"
+    -- , imageWithFallback $ "ny_ic_refresh," <> (getAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_refresh.png"
     -- , gravity RIGHT
     -- ]
     textView

@@ -27,6 +27,9 @@ import Engineering.Helpers.Commons (screenWidth)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Common.Types.App
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
 
 view :: forall w .  (Action  -> Effect Unit) -> OnboardingHeaderState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -97,7 +100,7 @@ navigationView state push =
             , fontStyle $ FontStyle.bold LanguageStyle
             ]
         , imageView
-            [ imageWithFallback "ny_ic_drop_down,https://assets.juspay.in/nammayatri/images/driver/ny_ic_drop_down.png"
+            [ imageWithFallback $ "ny_ic_drop_down," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_drop_down.png"
             , height (V 11)
             , margin (Margin 5 3 0 0)
             , width (V 11)

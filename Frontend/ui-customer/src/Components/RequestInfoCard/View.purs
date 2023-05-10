@@ -26,6 +26,9 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Common.Types.App
 import Engineering.Helpers.Commons (screenWidth)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
 
 view :: forall w. (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
 view push = 
@@ -80,7 +83,7 @@ view push =
             , imageView
               [ width $ V 116
               , height $ V 122
-              , imageWithFallback "ny_ic_select_offer,https://assets.juspay.in/nammayatri/images/user/ny_ic_select_offer.png"
+              , imageWithFallback $ "ny_ic_select_offer," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_select_offer.png"
               ]
         ], textView
             [ width MATCH_PARENT

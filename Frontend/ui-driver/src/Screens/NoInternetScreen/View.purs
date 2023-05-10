@@ -30,6 +30,8 @@ import Language.Strings (getString)
 import Language.Types(STR(..))
 import Common.Types.App
 import Screens.NoInternetScreen.ComponentConfig
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
 
 screen :: ST.NoInternetScreenState -> String -> ScopedScreen Action ST.NoInternetScreenState ScreenOutput
 screen initialState triggertype = 
@@ -89,7 +91,7 @@ locationAccessPermissionView push state triggertype =
         , width MATCH_PARENT
         , gravity CENTER
         ][  imageView
-            [ imageWithFallback "ny_ic_location_access,https://assets.juspay.in/nammayatri/images/common/ny_ic_location_access.png"
+            [ imageWithFallback $ "ny_ic_location_access," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_location_access.png"
             , height $ V 213
             , width $ V 240
             , gravity CENTER
@@ -111,7 +113,7 @@ noInternetScreenView push state triggertype =
       , orientation VERTICAL
       , clickable false
       ][imageView
-        [ imageWithFallback "ic_offline,https://assets.juspay.in/nammayatri/beckn/merchantcommon/images/ic_offline.png"
+        [ imageWithFallback $ "ny_ic_offline," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_offline.png"
         , height $ V 213
         , width $ V 240
         , gravity CENTER

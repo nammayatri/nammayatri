@@ -34,7 +34,8 @@ import Effect (Effect)
 import Data.Maybe
 import Common.Types.App
 import Screens.DriverRideRatingScreen.ComponentConfig
-
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
 
 screen :: ST.DriverRideRatingScreenState -> Screen Action ST.DriverRideRatingScreenState ScreenOutput
 screen initialState =
@@ -94,7 +95,7 @@ topCloseButtonView state push =
         ][  imageView
             [ height $ V 25
             , width $ V 25
-            , imageWithFallback "ny_ic_close,https://assets.juspay.in/nammayatri/images/common/ny_ic_close.png"
+            , imageWithFallback $ "ny_ic_close," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_close.png"
             , margin (Margin 12 12 12 12)
             ]
           ]
@@ -148,7 +149,7 @@ starRatingView state push =
                           ][imageView
                               [ height $ V 30
                               , width $ V 30
-                              , imageWithFallback if index <= state.data.rating then "ny_ic_star_active,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_active.png" else "ny_ic_star_inactive,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_inactive.png"
+                              , imageWithFallback if index <= state.data.rating then "ny_ic_star_active," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_star_active.png" else "ny_ic_star_inactive," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_star_inactive.png"
                               ]
                           ]) [1,2,3,4,5])
     ]
@@ -169,7 +170,7 @@ writeCommentView state push =
         ][imageView
           [ height $ V 20
           , width $ V 20 
-          , imageWithFallback "ny_ic_message_square,https://assets.juspay.in/nammayatri/images/common/ny_ic_message_square.png"
+          , imageWithFallback $ "ny_ic_message_square," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_message_square.png"
           ]
         ]
       , editText

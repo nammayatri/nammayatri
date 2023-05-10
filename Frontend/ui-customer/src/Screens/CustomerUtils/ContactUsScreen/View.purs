@@ -31,8 +31,11 @@ import Screens.ContactUsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
 import Common.Types.App
-import Screens.CustomerUtils.ContactUsScreen.ComponentConfig 
 import Storage (getValueToLocalStore, KeyStore(..))
+import Screens.CustomerUtils.ContactUsScreen.ComponentConfig
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..)) 
+import Prelude ((<>))
 
 screen :: ST.ContactUsScreenState -> Screen Action ST.ContactUsScreenState ScreenOutput
 screen initialState =
@@ -136,7 +139,7 @@ afterSuccessfullSubmissionView state push =
     , gravity CENTER
     , orientation VERTICAL
   ][ imageView
-      [ imageWithFallback "ny_ic_letter,https://assets.juspay.in/nammayatri/images/user/ny_ic_letter.png"
+      [ imageWithFallback $ "ny_ic_letter," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_letter.png"
       , height $ V 149
       , width $ V 149
       , margin (MarginBottom 32)

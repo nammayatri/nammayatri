@@ -35,7 +35,9 @@ import PrestoDOM.Types.DomAttributes as PTD
 import Screens.Types as ST
 import Styles.Colors as Color
 import Storage (KeyStore(..), getValueToLocalStore)
-
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -153,7 +155,7 @@ cancelConfirmationConfig state = let
     backgroundClickable = false,
     cornerRadius = (PTD.Corners 15.0 true true true true),
     coverImageConfig {
-      imageUrl = "ic_cancel_prevention,https://assets.juspay.in/nammayatri/images/driver/ny_ic_cancel_prevention.png"
+      imageUrl = "ic_cancel_prevention," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_cancel_prevention.png"
     , visibility = VISIBLE
     , margin = Margin 16 20 16 0
     , height = V 178

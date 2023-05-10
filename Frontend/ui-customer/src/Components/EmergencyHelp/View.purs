@@ -37,6 +37,8 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Engineering.Helpers.Commons (safeMarginTop, safeMarginBottom, os, isPreviousVersion)
 import Helpers.Utils (getPreviousVersion)
 import Storage (getValueToLocalStore, KeyStore(..))
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
 
 view :: forall w .  (Action  -> Effect Unit) -> EmergencyHelpModelState  -> PrestoDOM (Effect Unit) w
 view push state = 
@@ -135,7 +137,7 @@ supportButtonViewContent state push item index =  linearLayout
             ][  imageView
                 [ height $ V 12
                 , width $ V 12
-                , imageWithFallback "ny_ic_chevron_right,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_right.png"
+                , imageWithFallback $ "ny_ic_chevron_right," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_chevron_right.png"
                 , margin $ MarginTop 4
                 , color Color.black900
                 , fontStyle $ FontStyle.semiBold LanguageStyle
@@ -162,7 +164,7 @@ emergencyHelpLogoContainer state =
     ][  imageView
         [ height $ V 128
         , width MATCH_PARENT
-        , imageWithFallback "ny_ic_emergency_shield,https://assets.juspay.in/nammayatri/images/user/ny_ic_emergency_shield.png"
+        , imageWithFallback $ "ny_ic_emergency_shield," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_emergency_shield.png"
         , margin (MarginBottom 24)
         ]
       , textView
@@ -351,7 +353,7 @@ showEmergencyContact state push =
             ][  imageView
                 [ height $ V 12
                 , width $ V 12
-                , imageWithFallback "ny_ic_chevron_right,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_right.png"
+                , imageWithFallback $ "ny_ic_chevron_right," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_chevron_right.png"
                 , margin $ MarginTop 6
                 , color Color.black900
                 , fontStyle $ FontStyle.semiBold LanguageStyle
@@ -449,7 +451,7 @@ genericHeaderConfig state = let
     , prefixImageConfig {
         height = V 25
       , width = V 25
-      , imageUrl = "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
+      , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_chevron_left.png"
       , margin = (Margin 12 12 12 12) } 
     , padding = (PaddingVertical 5 5)
     , textConfig {

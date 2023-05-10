@@ -36,6 +36,8 @@ import Storage (KeyStore(..), getValueToLocalStore)
 import Helpers.Utils (getPreviousVersion)
 import Styles.Colors as Color
 import Common.Types.App
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Prelude ((<>))
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListModelState -> PrestoDOM (Effect Unit) w
 view push state = 
@@ -118,8 +120,8 @@ imageData :: { height :: Length
 , imageUrl :: String
 }
 imageData = 
-  if os == "IOS" then {imageUrl : "ny_ic_wallet_rect,https://assets.juspay.in/nammayatri/images/user/ny_ic_wallet_rect.png", height : (V 15), width : (V 15)}
-    else {imageUrl : "ny_ic_wallet,https://assets.juspay.in/nammayatri/images/user/ny_ic_wallet.png", height : (V 24) , width : (V 24)}
+  if os == "IOS" then {imageUrl : "ny_ic_wallet_rect," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_wallet_rect.png", height : (V 15), width : (V 15)}
+    else {imageUrl : "ny_ic_wallet," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_wallet.png", height : (V 24) , width : (V 24)}
     
 ---------------------------- sourceDestinationImageView ---------------------------------
 sourceDestinationImageView :: forall w . PrestoDOM (Effect Unit) w
@@ -133,7 +135,7 @@ sourceDestinationImageView  =
     ][ imageView
         [ height $ V 15
         , width $ V 15
-        , imageWithFallback "ny_ic_pickup,https://assets.juspay.in/nammayatri/images/user/ny_ic_pickup.png"
+        , imageWithFallback $ "ny_ic_pickup," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_pickup.png"
         ]
       , imageView
         [ height $ V 27
@@ -144,7 +146,7 @@ sourceDestinationImageView  =
       , imageView
         [ height $ V 15
         , width $ V 15
-        , imageWithFallback "ny_ic_drop,https://assets.juspay.in/nammayatri/images/user/ny_ic_drop.png"  
+        , imageWithFallback $ "ny_ic_drop," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_drop.png"  
         ]
       ]
 
@@ -249,7 +251,7 @@ selectRideAndConfirmView state push =
     ][ imageView
       [ height $ V 24
       , width $ V 24
-      , imageWithFallback "ny_ic_close,https://assets.juspay.in/nammayatri/images/common/ny_ic_close.png"
+      , imageWithFallback $ "ny_ic_close," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_close.png"
       , visibility if getValueToLocalStore AUTO_SELECTING == "false" || getValueToLocalStore AUTO_SELECTING == "CANCELLED_AUTO_ASSIGN" then GONE else VISIBLE 
      
       ]
@@ -282,7 +284,7 @@ paymentMethodView push state =
       , height WRAP_CONTENT
       , margin (MarginTop 7)
       ][  imageView
-          [ imageWithFallback "ny_ic_wallet,https://assets.juspay.in/nammayatri/images/user/ny_ic_wallet.png"
+          [ imageWithFallback $ "ny_ic_wallet," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_wallet.png"
           , height $ V 20
           , width $ V 20
           ]
@@ -333,7 +335,7 @@ quoteListTopSheetView state push =
                   ][  imageView 
                       [ height $ V 24
                       , width $ V 24
-                      , imageWithFallback "ny_ic_close,https://assets.juspay.in/nammayatri/images/user/ny_ic_close.png"
+                      , imageWithFallback $ "ny_ic_close_white," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_close_white.png"
                       , margin $ MarginTop 7
                       ]
                   ]
@@ -361,7 +363,7 @@ noQuotesErrorModel state =
       ][imageView
         [ height $ V 115
         , width $ V 137
-        , imageWithFallback "ic_no_quotes,https://assets.juspay.in/nammayatri/images/user/ny_ic_no_quotes.png"
+        , imageWithFallback $ "ic_no_quotes," <> (getAssetStoreLink FunctionCall) <> "/user/images/ic_no_quotes.png"
         , padding (Padding 0 0 0 0)
         ]
       , textView $

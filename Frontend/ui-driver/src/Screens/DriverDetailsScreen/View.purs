@@ -39,6 +39,9 @@ import Components.PopUpModal.Controller as PopUpModalConfig
 import Screens.DriverDetailsScreen.ComponentConfig
 import PrestoDOM.Types.DomAttributes (Corners(..))
 
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
 
 screen :: ST.DriverDetailsScreenState -> Screen Action ST.DriverDetailsScreenState ScreenOutput
 screen initialState =
@@ -104,7 +107,7 @@ profilePictureLayout state push =
                 , layoutGravity "center"
                 , cornerRadius 45.0
                 , id (EHC.getNewIDWithTag "EditProfileImage")
-                , imageWithFallback "ny_ic_profile_image,https://assets.juspay.in/nammayatri/images/common/ny_ic_profile_image.png"
+                , imageWithFallback $ "ny_ic_profile_image," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_profile_image.png"
                 -- TODO : after 15 aug
                 -- , afterRender push (const RenderBase64Image)
                 ]
@@ -121,8 +124,8 @@ profilePictureLayout state push =
                         , height $ V 30
                         , gravity RIGHT
                         , cornerRadius 45.0
-                        , imageWithFallback "ny_ic_camera_white,https://assets.juspay.in/nammayatri/images/driver/ny_ic_camera_white.png"
-                        , visibility GONE
+                        , imageWithFallback $ "ny_ic_camera_white," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_camera_white.png"
+                        , visibility GONE 
                         -- To be added after 15 aug
                         -- , onClick (\action-> do
                         --       _ <- liftEffect $ JB.uploadFile unit
@@ -152,7 +155,7 @@ headerLayout state push =
     ][ imageView
         [ width $ V 25
         , height MATCH_PARENT
-        , imageWithFallback "ny_ic_back,https://assets.juspay.in/nammayatri/images/driver/ny_ic_back.png"
+        , imageWithFallback $ "ny_ic_back," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_back.png"
         , gravity CENTER_VERTICAL
         , onClick push (const BackPressed)
         , padding (Padding 2 2 2 2)

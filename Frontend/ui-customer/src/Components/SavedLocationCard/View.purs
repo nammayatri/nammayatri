@@ -28,6 +28,9 @@ import Language.Types (STR(..))
 import Common.Types.App
 import Engineering.Helpers.Commons as EHC
 import Data.Maybe(Maybe(..), fromMaybe)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
 
 view :: forall w. (Action -> Effect Unit) -> LocationListItemState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -46,11 +49,11 @@ view push state =
       , gravity CENTER_HORIZONTAL
       ][  imageView
           [ imageWithFallback case (getCardType (fromMaybe "" state.cardType)) of
-                Just card -> case card of
-                  HOME_TAG -> "ny_ic_home,https://assets.juspay.in/nammayatri/images/user/ny_ic_home.png"
-                  WORK_TAG -> "ny_ic_work,https://assets.juspay.in/nammayatri/images/user/ny_ic_work.png"
-                  OTHER_TAG -> "ny_ic_fav_red,https://assets.juspay.in/nammayatri/images/user/ny_ic_fav_red.png"
-                Nothing   -> "ny_ic_fav_red,https://assets.juspay.in/nammayatri/images/user/ny_ic_fav_red.png"
+                Just card -> case card of 
+                  HOME_TAG -> "ny_ic_home," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_home.png"
+                  WORK_TAG -> "ny_ic_work," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_work.png"
+                  OTHER_TAG -> "ny_ic_fav_red," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_fav_red.png"
+                Nothing   -> "ny_ic_fav_red," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_fav_red.png"
           , height $ V 20
           , margin (Margin 0 2 12 0)
           , width $ V 20

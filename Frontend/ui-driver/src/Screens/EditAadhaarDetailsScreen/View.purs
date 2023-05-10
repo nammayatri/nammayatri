@@ -28,6 +28,9 @@ import Styles.Colors as Color
 import Font.Size as FontSize
 import Effect (Effect)
 import Common.Types.App
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
 
 screen :: ST.EditAadhaarDetailsScreenState -> Screen Action ST.EditAadhaarDetailsScreenState ScreenOutput
 screen initialState =
@@ -86,7 +89,7 @@ headerLayout state push heading =
     ][ imageView
         [ width $ V 25
         , height MATCH_PARENT
-        , imageWithFallback "ny_ic_chevron_left_black,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevron_left_black.png"
+        , imageWithFallback $ "ny_ic_chevron_left_black," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_chevron_left_black.png"
         , layoutGravity "center_vertical"
         , padding (Padding 2 2 2 2)
         , margin (MarginLeft 5)

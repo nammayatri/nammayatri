@@ -27,6 +27,8 @@ import Styles.Colors as Color
 import Font.Size as FontSize
 import Screens.Types (VehicalTypes(..))
 import Common.Types.App
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Prelude ((<>))
 
 view :: forall w .  (Action  -> Effect Unit) -> SelectVehicleTypeModalState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -63,7 +65,7 @@ view push state =
               , imageView
                 [ width (V 15)
                 , height MATCH_PARENT
-                , imageWithFallback "ny_ic_close,https://assets.juspay.in/nammayatri/images/common/ny_ic_close.png"
+                , imageWithFallback $ "ny_ic_close," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_close.png"
                 , onClick push (const OnCloseClick)
                 ]
             ]

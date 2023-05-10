@@ -23,6 +23,9 @@ import Font.Style as FontStyle
 import Font.Size as FontSize
 import Styles.Colors as Color
 import Common.Types.App
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
 
 view 
   :: forall w.(Action -> Effect Unit)
@@ -80,13 +83,13 @@ view push state =
                   ][ imageView
                       [ height (V 24)
                       , width (V 24)
-                      , imageWithFallback "ny_ic_radio_selected,https://assets.juspay.in/nammayatri/images/common/ny_ic_radio_selected.png"
+                      , imageWithFallback $ "ny_ic_radio_selected," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_radio_selected.png"
                       , visibility if state.isSelected then VISIBLE else GONE
                       ]
                     , imageView
                       [ width (V 24)
                       , height (V 24)
-                      , imageWithFallback "ny_ic_radio_unselected,https://assets.juspay.in/nammayatri/images/common/ny_ic_radio_unselected.png"
+                      , imageWithFallback $ "ny_ic_radio_unselected," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_radio_unselected.png"
                       , visibility if state.isSelected then GONE else VISIBLE
                       ]
                   ]
