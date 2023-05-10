@@ -33,7 +33,10 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Kernel.Utils.SlidingWindowCounters as SWC
+import SharedLogic.MerchantConfig (mkCancellationKey)
 import qualified Storage.CachedQueries.Merchant as QM
+import qualified Storage.CachedQueries.MerchantConfig as CMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Person as QP
@@ -74,7 +77,7 @@ blockCustomer merchantShortId customerId = do
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
   runTransaction $ do
-    QP.updateBlockedState personId True
+    QP.updatingEnabledAndBlockedState personId True
   logTagInfo "dashboard -> blockCustomer : " (show personId)
   pure Success
 
@@ -92,9 +95,10 @@ unblockCustomer merchantShortId customerId = do
   -- merchant access checking
   let merchantId = customer.merchantId
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
-
+  merchantConfigs <- CMC.findAllByMerchantId merchantId
+  mapM_ (\mc -> SWC.deleteCurrentWindowValues (mkCancellationKey personId.getId) mc.fraudBookingDetectionWindow) merchantConfigs
   runTransaction $ do
-    QP.updateBlockedState personId False
+    QP.updatingEnabledAndBlockedState personId False
   logTagInfo "dashboard -> unblockCustomer : " (show personId)
   pure Success
 
