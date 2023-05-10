@@ -83,7 +83,7 @@ settingsView state push =
   , width MATCH_PARENT
   , padding (Padding 18 24 18 8)
   , orientation VERTICAL
-  ](map (\item -> 
+  ](map (\item ->
         case item of
         "MyRides" -> settingsMenuView {imageUrl : "ic_past_rides,https://assets.juspay.in/nammayatri/images/user/ic_past_rides.png", text : (getString MY_RIDES), tag : SETTINGS_RIDES, iconUrl : ""} push
         "Favorites" -> settingsMenuView {imageUrl : "ic_fav,https://assets.juspay.in/nammayatri/images/user/ic_fav.png", text : (getString FAVOURITES)  , tag : SETTINGS_FAVOURITES, iconUrl : ""} push
@@ -129,7 +129,7 @@ profileView state push =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  , background state.appConfig.profileBackground
+, background state.appConfig.profileBackground
   , gravity CENTER_VERTICAL
   , padding (Padding 18 24 0 24)
   -- , onClick push (const EditProfile) TODO :: add profile view in future

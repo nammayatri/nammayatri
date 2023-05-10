@@ -79,7 +79,7 @@ import Config.DefaultConfig as DC
 baseAppFlow :: GlobalPayload ->  FlowBT String Unit
 baseAppFlow (GlobalPayload gPayload) = do
   _ <- lift $ lift $ liftFlow $ loadConfig
-  _ <- pure $ printLog "Global Payload" gPayload 
+  _ <- pure $ printLog "Global Payload" gPayload
   (GlobalState state) <- getState
   let bundle = bundleVersion unit
       customerId = (getValueToLocalStore CUSTOMER_ID)
@@ -107,7 +107,7 @@ baseAppFlow (GlobalPayload gPayload) = do
   _ <- UI.splashScreen state.splashScreen
   _ <- lift $ lift $ liftFlow $(firebaseLogEventWithParams "ny_user_app_version" "version" (versionName))
   if getValueToLocalStore REGISTERATION_TOKEN /= "__failed" && getValueToLocalStore REGISTERATION_TOKEN /= "(null)" &&  (isNothing $ (gPayload.payload)^._signatureAuthData)
-    then currentFlowStatus 
+    then homeScreenFlow
     else do
       let (Payload payload) = gPayload.payload
       case payload.signatureAuthData of
@@ -128,7 +128,7 @@ baseAppFlow (GlobalPayload gPayload) = do
                   case triggerSignatureOtpResp.token of
                     Just token -> setValueToLocalStore REGISTERATION_TOKEN token
                     Nothing -> pure unit
-                  currentFlowStatus
+                  homeScreenFlow
                 _ -> enterMobileNumberScreenFlow
             Left err -> enterMobileNumberScreenFlow
         Nothing -> enterMobileNumberScreenFlow
@@ -1604,7 +1604,7 @@ isForLostAndFound = true
 
 checkAndUpdateSavedLocations :: HomeScreenState -> FlowBT String Unit
 checkAndUpdateSavedLocations state = do
-  if (getValueToLocalStore RELOAD_SAVED_LOCATION == "true") || (state.props.currentStage == HomeScreen)
+  if ((getValueToLocalStore RELOAD_SAVED_LOCATION == "true") || (state.props.currentStage == HomeScreen)) && not (isLocalStageOn InitialStage)
     then do
       recentPredictionsObject <- lift $ lift $ getObjFromLocal state
       (savedLocationResp )<- lift $ lift $ Remote.getSavedLocationList ""
@@ -1748,7 +1748,7 @@ cancelEstimate bookingId = do
       -- TODO : to be removed after new bundle is 100% available (replace with pure unit)
       let (CancelEstimateRes resp) = res
       case resp.result of
-        "Success" -> do 
+        "Success" -> do
           if(getValueToLocalStore FLOW_WITHOUT_OFFERS == "true") then do
             _ <- pure $ firebaseLogEvent "ny_user_cancel_waiting_for_driver_assign"
             pure unit
