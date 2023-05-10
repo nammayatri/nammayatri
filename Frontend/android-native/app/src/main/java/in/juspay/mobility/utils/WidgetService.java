@@ -53,6 +53,7 @@ import java.util.TimeZone;
 
 import in.juspay.mobility.MainActivity;
 import in.juspay.mobility.R;
+import android.media.MediaPlayer;
 
 
 public class WidgetService extends Service {
@@ -61,7 +62,7 @@ public class WidgetService extends Service {
     private ImageView imageClose;
     private float height, width;
     private String widgetMessage;
-
+    private MediaPlayer mediaPlayer;
     private int calculatedTime =0;
     private JSONObject entity_payload, data;
     private SharedPreferences sharedPref;
@@ -123,6 +124,9 @@ public class WidgetService extends Service {
 
             if(entity_payload!=null && entity_payload.has("baseFare")) {
                 System.out.println("PAYLOAD + PAYLIAD " + entity_payload); // TODO:: REMOVE
+                mediaPlayer = MediaPlayer.create(getApplicationContext(), R.raw.silent_mode_notification_sound);
+                if (mediaPlayer != null)
+                    mediaPlayer.start();
                 // Fetch data from entity_payload
                 int fare = entity_payload.getInt("baseFare");
                 int distanceToPickup = entity_payload.getInt("distanceToPickup");
