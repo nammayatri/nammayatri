@@ -28,6 +28,7 @@ import qualified Domain.Types.SearchRequest as DSearchReq
 import Kernel.Prelude
 import Kernel.Serviceability
 import qualified Kernel.Storage.Esqueleto as DB
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
@@ -60,6 +61,7 @@ data OneWaySearchRes = OneWaySearchRes
 oneWaySearch ::
   ( HasCacheConfig r,
     EncFlow m r,
+    EsqDBReplicaFlow m r,
     HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
     HedisFlow m r,
     EsqDBFlow m r,
