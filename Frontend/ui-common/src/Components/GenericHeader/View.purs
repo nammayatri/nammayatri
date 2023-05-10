@@ -28,7 +28,7 @@ view push config =
   , margin config.margin
   , gravity config.gravity
   , padding config.padding
-  , orientation HORIZONTAL 
+  , orientation config.orientation
   , background config.background
   , clickable config.isClickable
   ][  linearLayout

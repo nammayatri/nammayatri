@@ -19,7 +19,8 @@ type AppConfig =
     sideBarList :: Array String,
     otpBackground :: String,
     otpTextColor :: String,
-    rateCardColor :: String
+    rateCardColor :: String,
+    nyBrandingVisibility :: Boolean
   } 
 
 type QuoteListConfig = {

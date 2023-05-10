@@ -21,7 +21,7 @@ import Components.MenuButton as MenuButton
 import Components.PrimaryButton as PrimaryButton
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC 
-import Prelude (Unit, const, map, ($), (<<<),(==))
+import Prelude (Unit, const, map, ($), (<<<),(==), not)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, afterRender, background, gravity, height, linearLayout, margin, onBackPressed, orientation, padding, weight, width)
 import Screens.SelectLanguageScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
@@ -49,11 +49,14 @@ view push state =
     , padding (Padding 0 EHC.safeMarginTop 0 (if EHC.safeMarginBottom == 0 then 24 else EHC.safeMarginBottom))
     , afterRender push (const AfterRender)
     ][  GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state) 
-      , linearLayout
-        [ height $ V 1
-        , width MATCH_PARENT
-        , background Color.greySmoke
-        ][]
+      , if (not state.data.config.nyBrandingVisibility) then 
+          linearLayout
+          [ height $ V 1
+          , width MATCH_PARENT
+          , background Color.greySmoke
+          ][]
+        else
+          linearLayout[][]
       , linearLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
