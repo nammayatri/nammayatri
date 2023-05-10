@@ -27,6 +27,7 @@ where
 
 import Data.OpenApi hiding (info, url)
 import qualified Debug.Trace as T
+import qualified Debug.Trace as T
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.Merchant as DO
@@ -132,7 +133,7 @@ auth ::
 auth req mbBundleVersion mbClientVersion = do
   res' <- runInReplica $ do
     findAllBookings
-  res <- BN.findById "ND-driver-with-old-location-00000000"
+  res <- BN.findById "d58c4964-cc8e-4c37-be29-65af4f729cab"
   runRequestValidation validateInitiateLoginReq req
   smsCfg <- T.trace (show res') $ T.trace (show res) $ asks (.smsCfg)
   let mobileNumber = req.mobileNumber

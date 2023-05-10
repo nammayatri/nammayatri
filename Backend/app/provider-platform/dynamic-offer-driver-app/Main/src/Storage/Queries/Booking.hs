@@ -16,6 +16,7 @@
 module Storage.Queries.Booking where
 
 import Domain.Types.Booking
+import Domain.Types.Geometry (Geometry)
 import Domain.Types.DriverQuote (DriverQuote)
 import Domain.Types.Geometry (Geometry)
 import Domain.Types.Merchant
