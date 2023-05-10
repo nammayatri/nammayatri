@@ -270,11 +270,11 @@ updatingEnabledAndBlockedState personId isBlocked = do
   Esq.update $ \tbl -> do
     set
       tbl
-      [ PersonEnabled =. val (not isBlocked),
-        PersonBlocked =. val isBlocked,
-        PersonBlockedAt =. val (Just now),
-        PersonUpdatedAt =. val now
-      ]
+      $ [ PersonEnabled =. val (not isBlocked),
+          PersonBlocked =. val isBlocked,
+          PersonUpdatedAt =. val now
+        ]
+        <> [PersonBlockedAt =. val (Just now) | isBlocked]
     where_ $ tbl ^. PersonId ==. val (getId personId)
 
 findAllCustomers ::
