@@ -26,6 +26,7 @@ module Domain.Action.UI.Registration
 where
 
 import Data.OpenApi hiding (info, url)
+import qualified Debug.Trace as T
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.Merchant as DO
@@ -40,6 +41,7 @@ import Kernel.Sms.Config
 import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.Common as BC
@@ -55,12 +57,13 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as QD
 import Storage.CachedQueries.Merchant as QMerchant
+import Storage.Queries.Booking (findAllBookings)
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverLocation as QDriverLocation
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
-import qualified Storage.Tabular.BookingNew as BN (findById)
+import qualified Storage.Tabular.GeometryNew as BN (findById)
 import Tools.Auth (authTokenCacheKey)
 import Tools.Error
 import Tools.Metrics
@@ -126,9 +129,11 @@ auth ::
   Maybe Version ->
   m AuthRes
 auth req mbBundleVersion mbClientVersion = do
-  _ <- BN.findById "bookingId"
+  res' <- runInReplica $ do
+    findAllBookings
+  res <- BN.findById "d58c4964-cc8e-4c37-be29-65af4f729cab"
   runRequestValidation validateInitiateLoginReq req
-  smsCfg <- asks (.smsCfg)
+  smsCfg <- T.trace (show res') $ T.trace (show res) $ asks (.smsCfg)
   let mobileNumber = req.mobileNumber
       countryCode = req.mobileCountryCode
   mobileNumberHash <- getDbHash mobileNumber

@@ -16,6 +16,7 @@
 module Storage.Queries.Booking where
 
 import Domain.Types.Booking
+import Domain.Types.Geometry (Geometry)
 import Domain.Types.Merchant
 import Domain.Types.RiderDetails (RiderDetails)
 import qualified Domain.Types.SearchRequest as DSR
@@ -28,6 +29,7 @@ import Storage.Tabular.Booking
 import Storage.Tabular.Booking.BookingLocation
 import Storage.Tabular.DriverQuote as DriverQuote
 import qualified Storage.Tabular.FareParameters as Fare
+import Storage.Tabular.Geometry (EntityField (..), GeometryT)
 
 -- fareParams already created with driverQuote
 create :: Booking -> SqlDB ()
@@ -171,3 +173,9 @@ cancelBookings bookingIds now = do
         BookingUpdatedAt =. val now
       ]
     where_ $ tbl ^. BookingTId `in_` valList (toKey <$> bookingIds)
+
+findAllBookings :: Transactionable m => m [Id Geometry]
+findAllBookings = do
+  Esq.findAll $ do
+    booking <- from $ table @GeometryT
+    pure $ booking ^. GeometryTId

@@ -314,6 +314,7 @@ library
       Storage.Tabular.FarePolicy
       Storage.Tabular.FarePolicy.RestrictedExtraFare
       Storage.Tabular.Geometry
+      Storage.Tabular.GeometryNew
       Storage.Tabular.Issue.Comment
       Storage.Tabular.Issue.IssueCategory
       Storage.Tabular.Issue.IssueOption
