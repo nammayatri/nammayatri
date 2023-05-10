@@ -761,6 +761,11 @@ respondQuote driverId req = do
           quoteCount <- runInReplica $ QDrQt.countAllByRequestId sReq.id
           when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)
           farePolicy <- FarePolicyS.findByMerchantIdAndVariant organization.id sReqFD.vehicleVariant >>= fromMaybeM NoFarePolicy
+          whenJust mbOfferedFare $ \off -> do
+            let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance sReq.estimatedDistance <$> farePolicy.driverExtraFeeBounds
+            whenJust driverExtraFeeBounds $ \driverExtraFeeBounds' ->
+              unless (isAllowedExtraFee driverExtraFeeBounds' off) $
+                throwError $ NotAllowedExtraFee $ show off
           fareParams <-
             calculateFareParameters
               CalculateFareParametersParams
@@ -771,11 +776,6 @@ respondQuote driverId req = do
                   driverSelectedFare = mbOfferedFare,
                   customerExtraFee = sReq.customerExtraFee
                 }
-          let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance sReq.estimatedDistance <$> farePolicy.driverExtraFeeBounds
-          whenJust mbOfferedFare $ \off ->
-            whenJust driverExtraFeeBounds $ \driverExtraFeeBounds' ->
-              unless (isAllowedExtraFee driverExtraFeeBounds' off) $
-                throwError $ NotAllowedExtraFee $ show off
           driverQuote <- buildDriverQuote driver sReq sReqFD fareParams
           Esq.runTransaction $ do
             QDrQt.create driverQuote

@@ -15,6 +15,7 @@
 module Domain.Types.FarePolicy (module Reexport, module Domain.Types.FarePolicy) where
 
 import Domain.Types.Common
+import Domain.Types.FarePolicy.CustomerExtraFeeBounds as Reexport
 import Domain.Types.FarePolicy.DriverExtraFeeBounds as Reexport
 import Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Reexport
 import Domain.Types.FarePolicy.FarePolicySlabsDetails as Reexport
@@ -28,6 +29,7 @@ data FarePolicyD (s :: UsageSafety) = FarePolicy
   { id :: Id FarePolicy,
     merchantId :: Id DM.Merchant,
     vehicleVariant :: Variant.Variant,
+    customerExtraFeeBounds :: Maybe (NonEmpty CustomerExtraFeeBounds),
     driverExtraFeeBounds :: Maybe (NonEmpty DriverExtraFeeBounds),
     serviceCharge :: Maybe Money,
     nightShiftBounds :: Maybe NightShiftBounds,

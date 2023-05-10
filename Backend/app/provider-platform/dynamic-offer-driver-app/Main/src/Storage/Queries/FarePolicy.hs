@@ -26,6 +26,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.Queries.FarePolicy.CustomerExtraFeeBounds as QFPCustomerExtraFeeBounds
 import qualified Storage.Queries.FarePolicy.DriverExtraFeeBounds as QFPDriverExtraFeeBounds
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as QFPProgressiveDetPerExtraKmSlabs
 import qualified Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab as QFPSlabDetSlabs
@@ -69,7 +70,7 @@ findById farePolicyId = buildDType $ do
 update :: FarePolicy -> SqlDB ()
 update farePolicy = do
   now <- getCurrentTime
-  withFullEntity farePolicy $ \(FarePolicyT {..}, driverExtraFeeBoundsT, fpDetailsT) -> do
+  withFullEntity farePolicy $ \(FarePolicyT {..}, customerExtraFeeBoundsT, driverExtraFeeBoundsT, fpDetailsT) -> do
     Esq.update' $ \tbl -> do
       set
         tbl
@@ -79,12 +80,17 @@ update farePolicy = do
         ]
       where_ $ tbl ^. FarePolicyTId ==. val (toKey farePolicy.id)
 
+    updateCustomerExtraFeeBounds customerExtraFeeBoundsT
     updateDriverExtraFeeBounds driverExtraFeeBoundsT
 
     case fpDetailsT of
       ProgressiveDetailsT fpdd -> updateProgressiveDetails fpdd
       SlabsDetailsT fsdd -> updateSlabsDetails fsdd
   where
+    updateCustomerExtraFeeBounds customerExtraFeeBoundsT = do
+      QFPCustomerExtraFeeBounds.deleteAll' farePolicy.id
+      Esq.createMany' customerExtraFeeBoundsT
+
     updateDriverExtraFeeBounds driverExtraFeeBoundsT = do
       QFPDriverExtraFeeBounds.deleteAll' farePolicy.id
       Esq.createMany' driverExtraFeeBoundsT

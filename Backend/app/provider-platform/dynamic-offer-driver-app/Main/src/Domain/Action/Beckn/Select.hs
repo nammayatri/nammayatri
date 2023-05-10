@@ -19,7 +19,6 @@ module Domain.Action.Beckn.Select where
 import qualified Beckn.Types.Core.Taxi.Common.Address as BA
 import qualified Data.Map as M
 import qualified Data.Text as T
-import Data.Time.Clock (addUTCTime)
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FarePolicy as DFarePolicy
 import qualified Domain.Types.Merchant as DM
@@ -32,7 +31,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Utils.Common (fromMaybeM, logDebug, logInfo)
+import Kernel.Utils.Common
 import Lib.Scheduler.JobStorageType.DB.Queries (createJobIn)
 import Lib.Scheduler.Types (ExecutionResult (ReSchedule))
 import SharedLogic.Allocator
@@ -89,6 +88,11 @@ handler merchantId sReq = do
         pure (res.distance, res.duration)
       Just distRes -> pure distRes
   farePolicy <- FarePolicyS.findByMerchantIdAndVariant merchantId estimate.vehicleVariant >>= fromMaybeM NoFarePolicy
+  whenJust sReq.customerExtraFee $ \customerExtraFee -> do
+    let customerExtraFeeBounds = DFarePolicy.findCustomerExtraFeeBoundsByDistance distance <$> farePolicy.customerExtraFeeBounds
+    whenJust customerExtraFeeBounds $ \customerExtraFeeBounds' ->
+      unless (isAllowedCustomerExtraFee customerExtraFeeBounds' customerExtraFee) $
+        throwError $ NotAllowedExtraFee $ show customerExtraFee
   fareParams <-
     calculateFareParameters
       CalculateFareParametersParams
@@ -128,6 +132,9 @@ handler merchantId sReq = do
               driverExtraFeeBounds = driverExtraFeeBounds
             }
     _ -> return ()
+  where
+    isAllowedCustomerExtraFee :: DFarePolicy.CustomerExtraFeeBounds -> Money -> Bool
+    isAllowedCustomerExtraFee extraFee val = extraFee.minFee <= val && val <= extraFee.maxFee
 
 buildSearchRequest ::
   ( MonadTime m,

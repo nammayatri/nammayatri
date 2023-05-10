@@ -18,10 +18,10 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.FarePolicy.DriverExtraFeeBounds where
+module Storage.Tabular.FarePolicy.CustomerExtraFeeBounds where
 
 import qualified Domain.Types.FarePolicy as DFP
-import qualified Domain.Types.FarePolicy.DriverExtraFeeBounds as Domain
+import qualified Domain.Types.FarePolicy.CustomerExtraFeeBounds as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Common (Meters, Money)
@@ -32,7 +32,7 @@ import Storage.Tabular.Vehicle ()
 mkPersist
   defaultSqlSettings
   [defaultQQ|
-    DriverExtraFeeBoundsT sql=fare_policy_driver_extra_fee_bounds
+    CustomerExtraFeeBoundsT sql=fare_policy_customer_extra_fee_bounds
       Id Int
       farePolicyId FarePolicyTId
       startDistance Meters
@@ -41,20 +41,20 @@ mkPersist
       deriving Generic
     |]
 
-type FullDriverExtraFeeBounds = (Id DFP.FarePolicy, Domain.DriverExtraFeeBounds)
+type FullCustomerExtraFeeBounds = (Id DFP.FarePolicy, Domain.CustomerExtraFeeBounds)
 
-instance FromTType DriverExtraFeeBoundsT FullDriverExtraFeeBounds where
-  fromTType DriverExtraFeeBoundsT {..} = do
+instance FromTType CustomerExtraFeeBoundsT FullCustomerExtraFeeBounds where
+  fromTType CustomerExtraFeeBoundsT {..} = do
     return
       ( fromKey farePolicyId,
-        Domain.DriverExtraFeeBounds
+        Domain.CustomerExtraFeeBounds
           { ..
           }
       )
 
-instance ToTType DriverExtraFeeBoundsT FullDriverExtraFeeBounds where
-  toTType (farePolicyId, Domain.DriverExtraFeeBounds {..}) =
-    DriverExtraFeeBoundsT
+instance ToTType CustomerExtraFeeBoundsT FullCustomerExtraFeeBounds where
+  toTType (farePolicyId, Domain.CustomerExtraFeeBounds {..}) =
+    CustomerExtraFeeBoundsT
       { farePolicyId = toKey farePolicyId,
         ..
       }
