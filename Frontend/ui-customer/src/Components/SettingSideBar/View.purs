@@ -109,6 +109,7 @@ getPreviousVersion _ =
   if os == "IOS" then 
     case getMerchant FunctionCall of 
       NAMMAYATRI -> "1.2.5"
+      JATRISAATHI -> "0.0.0"
       _ -> "1.0.0"
     else do 
       case getMerchant FunctionCall of 
