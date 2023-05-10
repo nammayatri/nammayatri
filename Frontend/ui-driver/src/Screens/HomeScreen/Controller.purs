@@ -177,7 +177,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | FcmNotification String ST.HomeScreenState
                     | NotifyDriverArrived ST.HomeScreenState
                     | UpdateStage ST.HomeScreenStage ST.HomeScreenState
-                    | GoToNotifications
+                    | GoToNotifications ST.HomeScreenState
                     | AddAlternateNumber ST.HomeScreenState
                     | StartZoneRide ST.HomeScreenState 
 
@@ -275,7 +275,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
     "Alert" -> do
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       _ <- pure $ firebaseLogEvent "ny_driver_alert_click"
-      exit $ GoToNotifications
+      exit $ GoToNotifications state
     "Contest" -> do
       _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
       exit $ GoToReferralScreen
@@ -502,6 +502,7 @@ eval (PopUpModalSilentAction (PopUpModal.OnButton2Click)) state = exit (DriverAv
 
 eval GoToProfile state =  do
   _ <- pure $ setValueToLocalNativeStore PROFILE_DEMO "false"
+  _ <- pure $ hideKeyboardOnNavigation true
   exit $ GoToProfileScreen
 eval ClickAddAlternateButton state = do
   let curr_time = getCurrentUTC ""

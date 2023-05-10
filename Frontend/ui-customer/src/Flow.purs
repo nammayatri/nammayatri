@@ -173,6 +173,7 @@ currentRideFlow rideAssigned = do
                   , rideRequestFlow = true
                   , ratingModal = false
                   , bookingId = resp.id
+                  , isPopUp = NoPopUp
                   }}
         when (not rideAssigned) $ do
           void $ pure $ firebaseLogEventWithTwoParams "ny_active_ride_with_idle_state" "status" status "bookingId" resp.id

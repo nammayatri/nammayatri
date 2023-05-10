@@ -944,6 +944,7 @@ homeScreenFlow = do
       void $ lift $ lift $ loaderText (getString END_RIDE) ""
       void $ lift $ lift $ toggleLoader true
       endRideResp <- Remote.endRide id (Remote.makeEndRideReq (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon)))-- driver's  lat long during ending ride
+      _ <- pure $ removeAllPolylines ""
       _ <- pure $ setValueToLocalNativeStore IS_RIDE_ACTIVE  "false"
       _ <- pure $ setValueToLocalStore DRIVER_STATUS_N "Online"
       _ <- pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"

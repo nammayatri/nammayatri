@@ -137,6 +137,7 @@ screen initialState =
             _                -> do
                                 _ <- pure $ setValueToLocalStore RIDE_G_FREQUENCY "50000"
                                 _ <- pure $ JB.removeAllPolylines ""
+                                _ <- JB.reallocateMapFragment (EHC.getNewIDWithTag "DriverTrackingHomeScreenMap")
                                 _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "25.0"
                                 _ <- pure $ setValueToLocalStore SESSION_ID (JB.generateSessionId unit)
                                 _ <- checkPermissionAndUpdateDriverMarker initialState
