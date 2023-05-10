@@ -17,9 +17,11 @@ module App.Types where
 import qualified Data.Map as Map
 import qualified Data.Text as T
 import EulerHS.Prelude
+import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.App
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Flow
+import Kernel.Utils.App (lookupDeploymentVersion)
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Shutdown
@@ -40,13 +42,15 @@ data AppEnv = AppEnv
     graceTerminationPeriod :: Seconds,
     smsMap :: MVar (Map.Map MobileNumber [Text]),
     isShuttingDown :: Shutdown,
-    loggerEnv :: LoggerEnv
+    loggerEnv :: LoggerEnv,
+    version :: Metrics.DeploymentVersion
   }
   deriving (Generic)
 
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv AppCfg {..} = do
   hostname <- map T.pack <$> lookupEnv "POD_NAME"
+  version <- lookupDeploymentVersion
   smsMap <- newMVar Map.empty
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   isShuttingDown <- mkShutdown

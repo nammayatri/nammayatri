@@ -17,9 +17,10 @@ module App.Types where
 import qualified Data.Map as Map
 import EulerHS.Prelude
 import Kernel.External.Notification.FCM.Types
+import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.App
 import Kernel.Types.Common hiding (id)
-import Kernel.Utils.App (getPodName)
+import Kernel.Utils.App (getPodName, lookupDeploymentVersion)
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Shutdown
@@ -39,13 +40,15 @@ data AppEnv = AppEnv
     graceTerminationPeriod :: Seconds,
     notificationsMap :: MVar (Map.Map FCMRecipientToken [FCMMessage Value]),
     isShuttingDown :: Shutdown,
-    loggerEnv :: LoggerEnv
+    loggerEnv :: LoggerEnv,
+    version :: Metrics.DeploymentVersion
   }
   deriving (Generic)
 
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv AppCfg {..} = do
   hostname <- getPodName
+  version <- lookupDeploymentVersion
   notificationsMap <- newMVar Map.empty
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   isShuttingDown <- mkShutdown

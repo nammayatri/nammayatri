@@ -53,11 +53,11 @@
         "systems": "systems"
       },
       "locked": {
-        "lastModified": 1683308000,
-        "narHash": "sha256-2SFiH5kIx9zYmnOJgGB8Km9HxRm0ORu07zRa8Lkt0D4=",
+        "lastModified": 1684407991,
+        "narHash": "sha256-ciMzdhitISuy2rzaQ0DXVOYO73fN3QitNB6661cJZ9c=",
         "owner": "nammayatri",
         "repo": "beckn-gateway",
-        "rev": "fc5f10b3be7728ffc8a07b26de71870b5e4af524",
+        "rev": "2c84ae5c50fa2b3ea5adcc43861c082c48c43d4d",
         "type": "github"
       },
       "original": {
@@ -676,6 +676,24 @@
         "type": "github"
       }
     },
+    "flake-parts_5": {
+      "inputs": {
+        "nixpkgs-lib": "nixpkgs-lib_5"
+      },
+      "locked": {
+        "lastModified": 1683560683,
+        "narHash": "sha256-XAygPMN5Xnk/W2c1aW0jyEa6lfMDZWlQgiNtmHXytPc=",
+        "owner": "hercules-ci",
+        "repo": "flake-parts",
+        "rev": "006c75898cf814ef9497252b022e91c946ba8e17",
+        "type": "github"
+      },
+      "original": {
+        "owner": "hercules-ci",
+        "repo": "flake-parts",
+        "type": "github"
+      }
+    },
     "flake-root": {
       "locked": {
         "lastModified": 1680210152,
@@ -1023,6 +1041,21 @@
         "owner": "srid",
         "repo": "haskell-flake",
         "rev": "7997b6fc5dc2f5beb1bbdbb7a5bbed2e6c530dac",
+        "type": "github"
+      },
+      "original": {
+        "owner": "srid",
+        "repo": "haskell-flake",
+        "type": "github"
+      }
+    },
+    "haskell-flake_5": {
+      "locked": {
+        "lastModified": 1683641774,
+        "narHash": "sha256-6clCN5n/qd5/hk/f+M+4sr1VVs/sEgwH+sgE7PkKQOc=",
+        "owner": "srid",
+        "repo": "haskell-flake",
+        "rev": "ebfe70269fce376a7c95d6e9f011e16cbfd29b8d",
         "type": "github"
       },
       "original": {
@@ -1504,6 +1537,24 @@
         "type": "github"
       }
     },
+    "nixpkgs-lib_5": {
+      "locked": {
+        "dir": "lib",
+        "lastModified": 1682879489,
+        "narHash": "sha256-sASwo8gBt7JDnOOstnps90K1wxmVfyhsTPPNTGBPjjg=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "da45bf6ec7bbcc5d1e14d3795c025199f28e0de0",
+        "type": "github"
+      },
+      "original": {
+        "dir": "lib",
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
     "nixpkgs-regression": {
       "locked": {
         "lastModified": 1643052045,
@@ -1767,6 +1818,22 @@
         "owner": "nixos",
         "repo": "nixpkgs",
         "rev": "6ccc4a59c3f1b56d039d93da52696633e641bc71",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nixos",
+        "ref": "nixpkgs-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs_18": {
+      "locked": {
+        "lastModified": 1683657389,
+        "narHash": "sha256-jx91UqqoBneE8QPAKJA29GANrU/Z7ULghoa/JE0+Edw=",
+        "owner": "nixos",
+        "repo": "nixpkgs",
+        "rev": "9524f57dd5b3944c819dd594aed8ed941932ef56",
         "type": "github"
       },
       "original": {
@@ -2187,14 +2254,15 @@
           "nixpkgs"
         ],
         "passetto-hs": "passetto-hs",
-        "systems": "systems_2"
+        "systems": "systems_2",
+        "wai-middleware-prometheus": "wai-middleware-prometheus"
       },
       "locked": {
-        "lastModified": 1684323166,
-        "narHash": "sha256-xEZbaO/QWxHJJnRZjdnKGnFdBZU07bQU0BLEA4A9e/I=",
+        "lastModified": 1684400346,
+        "narHash": "sha256-ohs3tTAffYYqmTSL2ehw8A+Z7Xp4rEywP/cAEzYrwnQ=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "6e0ac729b73cc3e0454d28a92d3e779cff1aae11",
+        "rev": "9c855b07d7dce20831c2828f8728b331cc65abe4",
         "type": "github"
       },
       "original": {
@@ -2317,6 +2385,27 @@
       "original": {
         "owner": "numtide",
         "repo": "treefmt-nix",
+        "type": "github"
+      }
+    },
+    "wai-middleware-prometheus": {
+      "inputs": {
+        "flake-parts": "flake-parts_5",
+        "haskell-flake": "haskell-flake_5",
+        "nixpkgs": "nixpkgs_18"
+      },
+      "locked": {
+        "lastModified": 1684305829,
+        "narHash": "sha256-MrM4ZFZuu0e6aVd7ixw5ZNhD4Vcrc6lUL+d1NO7mJ38=",
+        "owner": "juspay",
+        "repo": "prometheus-haskell",
+        "rev": "1104a429745c45f333508c7aa2cd7d6f94b76755",
+        "type": "github"
+      },
+      "original": {
+        "owner": "juspay",
+        "ref": "more-proc-metrics",
+        "repo": "prometheus-haskell",
         "type": "github"
       }
     }
