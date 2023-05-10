@@ -16,6 +16,7 @@ module SharedLogic.MerchantConfig
   ( updateCustomerFraudCounters,
     updateTotalRidesCounters,
     anyFraudDetected,
+    mkCancellationKey,
   )
 where
 
