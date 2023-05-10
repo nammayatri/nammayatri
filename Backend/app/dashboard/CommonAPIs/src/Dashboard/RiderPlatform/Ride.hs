@@ -22,6 +22,7 @@ where
 
 import Dashboard.Common as Reexport
 import qualified Dashboard.Common as DP
+import Dashboard.Common.Ride as Reexport
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T

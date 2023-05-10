@@ -21,6 +21,7 @@ import qualified Domain.Types.Merchant as DM
 import Environment
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
+import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant hiding (throwError)
@@ -31,9 +32,15 @@ type API =
            :<|> Common.RideListAPI
            :<|> Common.TripRouteAPI
            :<|> Common.RideInfoAPI
+           :<|> MultipleRideCancelAPI
        )
 
 type ShareRideInfoAPI = Common.ShareRideInfoAPI
+
+type MultipleRideCancelAPI =
+  "cancel"
+    :> ReqBody '[JSON] DRide.MultipleRideCancelReq
+    :> Post '[JSON] APISuccess
 
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
@@ -41,6 +48,7 @@ handler merchantId =
     :<|> rideList merchantId
     :<|> callGetTripRoute merchantId
     :<|> callrideInfo merchantId
+    :<|> multipleRideCancel
 
 shareRideInfo ::
   ShortId DM.Merchant ->
@@ -68,3 +76,8 @@ callrideInfo ::
   Id Common.Ride ->
   FlowHandler Common.RideInfoRes
 callrideInfo merchantShortId rideId = withFlowHandlerAPI $ DRide.rideInfo merchantShortId rideId
+
+multipleRideCancel ::
+  DRide.MultipleRideCancelReq ->
+  FlowHandler APISuccess
+multipleRideCancel = withFlowHandlerAPI . DRide.multipleRideCancel

@@ -28,6 +28,7 @@ library
       Dashboard.Common.Issue
       Dashboard.Common.Merchant
       Dashboard.Common.Message
+      Dashboard.Common.Ride
       Dashboard.Common.SpecialZone
       Dashboard.ProviderPlatform.Driver
       Dashboard.ProviderPlatform.Driver.Registration
