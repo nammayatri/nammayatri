@@ -224,11 +224,7 @@ public class MainActivity extends AppCompatActivity {
 
                         @Override
                         public void onAnimationEnd(Animator animation) {
-                            if (isHideSplashEventCalled) {
-                                hideSplash();
-                            } else {
                                 splashLottieView.playAnimation();
-                            }
                         }
 
                         @Override
@@ -363,12 +359,7 @@ public class MainActivity extends AppCompatActivity {
                     Log.e(LOG_TAG, "json_payload" + json);
                     hyperServices.process(json);
                 } else if (jsonObject.optString("event").equals("hide_splash")) {
-                    String key = getResources().getString(R.string.service);
-                    if (key.equals("nammayatri") && isSystemAnimEnabled) {
-                        isHideSplashEventCalled = true;
-                    } else {
                         hideSplash();
-                    }
                 } else if (jsonObject.optString("event").equals("show_splash")) {
                     View v = findViewById(in.juspay.mobility.app.R.id.splash);
                     if (v != null) {

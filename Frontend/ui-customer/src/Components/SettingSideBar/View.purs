@@ -132,7 +132,7 @@ profileView state push =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  , background "#E3F4FC"
+  , background "#03B9F5"
   , gravity CENTER_VERTICAL
   , padding (Padding 18 24 0 24)
   -- , onClick push (const EditProfile) TODO :: add profile view in future
@@ -174,7 +174,7 @@ profileView state push =
           , height WRAP_CONTENT
           , text ("+91 " <> (getValueToLocalStore MOBILE_NUMBER))
           , textSize FontSize.a_14
-          , color Color.profilePhoneNumber
+          , color Color.white900
           , fontStyle $ FontStyle.regular LanguageStyle
           ]
         , linearLayout[

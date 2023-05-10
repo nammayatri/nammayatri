@@ -430,6 +430,7 @@ data Stage = HomeScreen
            | RideRating
            | FavouriteLocationModel
            | ChatWithDriver
+           | InitialStage
 
 derive instance genericStage :: Generic Stage _
 instance eqStage :: Eq Stage where eq = genericEq
