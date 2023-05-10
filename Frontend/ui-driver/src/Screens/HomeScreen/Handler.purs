@@ -83,7 +83,9 @@ homeScreen = do
     UpdateStage stage state -> do
       modifyScreenState $ HomeScreenStateType (\homeScreen → state)
       App.BackT $ App.BackPoint <$> (pure $ UPDATE_STAGE stage)
-    GoToNotifications -> App.BackT $ App.BackPoint <$> pure GO_TO_NOTIFICATIONS
+    GoToNotifications updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreen → updatedState)
+      App.BackT $ App.BackPoint <$> pure GO_TO_NOTIFICATIONS
     AddAlternateNumber state -> do
       App.BackT $ App.BackPoint <$> (pure $ ADD_ALTERNATE_HOME)
      
