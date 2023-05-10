@@ -48,7 +48,7 @@ _:
           set -x
           cd ./Backend  # These processes expect $PWD to be backend, for reading dhall configs
           rm -f ./*.log # Clean up the log files
-          nix run .#run-mobility-stack-nix
+          nix run .#run-mobility-stack-nix -- "$@"
         '';
       };
 
@@ -62,7 +62,7 @@ _:
           cd ./Backend  # These processes expect $PWD to be backend, for reading dhall configs
           rm -f ./*.log # Clean up the log files
           cabal build all
-          nix run .#run-mobility-stack-dev
+          nix run .#run-mobility-stack-dev -- "$@"
         '';
       };
 
