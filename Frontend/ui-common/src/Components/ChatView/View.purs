@@ -29,6 +29,10 @@ import Data.Maybe (fromMaybe, Maybe(..))
 import JBridge (scrollToBottom)
 import Components.ChatView.Controller (Action(..), Config(..), ChatComponent)
 import Common.Types.App
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
+
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 view push config = 
   linearLayout
@@ -65,7 +69,7 @@ chatHeaderView config push =
          , gravity CENTER
          , onClick push (const BackPressed)
          ][ imageView
-            [ imageWithFallback "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
+            [ imageWithFallback $ "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
             , height $ V 24
             , width $ V 24
             ]
@@ -121,7 +125,7 @@ headerActionView config push =
      , background config.green200
      , onClick push (const Call)
      ][ imageView
-        [ imageWithFallback "ny_ic_call,https://assets.juspay.in/nammayatri/images/common/ny_ic_call.png"
+        [ imageWithFallback $ "ny_ic_call," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_call.png"
         , height $ V 18
         , width $ V 18
         ]
@@ -137,7 +141,7 @@ headerActionView config push =
     , margin $ MarginRight 8
     , onClick push (const $ Call)
     ][ imageView
-       [ imageWithFallback "ic_phone,https://assets.juspay.in/nammayatri/images/common/ic_phone.png"
+       [ imageWithFallback $ "ic_phone," <> (getCommonAssetStoreLink FunctionCall) <> "ic_phone.png"
        , height $ V 20
        , width $ V 20
        ]
@@ -153,7 +157,7 @@ headerActionView config push =
     , cornerRadius 32.0
     , onClick push (const $ Navigate)
     ][ imageView
-       [ imageWithFallback "ic_navigation_blue,https://assets.juspay.in/nammayatri/images/common/ic_navigation_blue.png"
+       [ imageWithFallback $ "ic_navigation_blue," <> (getCommonAssetStoreLink FunctionCall) <> "ic_navigation_blue.png"
        , height $ V 20
        , width $ V 20
        , margin $ MarginRight 8
@@ -245,7 +249,7 @@ chatFooterView config push =
          , gravity CENTER
          , onClick push (const (SendMessage))
          ][ imageView
-            [ imageWithFallback if config.sendMessageActive then "ic_send_blue,https://assets.juspay.in/nammayatri/images/common/ic_send_blue.png" else "ic_send,https://assets.juspay.in/nammayatri/images/common/ic_send.png"
+            [ imageWithFallback $ if config.sendMessageActive then "ic_send_blue," <> (getCommonAssetStoreLink FunctionCall) <> "ic_send_blue.png" else "ic_send," <> (getCommonAssetStoreLink FunctionCall) <> "ic_send.png"
             , height $ V 20 
             , width $ V 20 
             ] 

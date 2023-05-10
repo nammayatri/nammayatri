@@ -17,6 +17,9 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(
 import Screens.BookingOptionsScreen.Controller (Action(..), ScreenOutput, eval, getVehicleCapacity)
 import Screens.Types as ST
 import Styles.Colors as Color
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
 
 screen :: ST.BookingOptionsScreenState -> Screen Action ST.BookingOptionsScreenState ScreenOutput
 screen initialState =
@@ -127,7 +130,7 @@ vehicleLogoAndType push state =
         , height WRAP_CONTENT
         ]
         [ imageView
-            [ imageWithFallback "ic_suv_ac,https://assets.juspay.in/nammayatri/images/driver/ic_suv_ac.png"
+            [ imageWithFallback $ "ic_suv_ac," <> (getAssetStoreLink FunctionCall) <> "/driver/images/ic_suv_ac.png"
             , gravity LEFT
             , height $ V 48
             , width $ V 60
@@ -162,7 +165,7 @@ headerLayout push state =
         [ imageView
             [ width $ V 30
             , height $ V 30
-            , imageWithFallback "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
+            , imageWithFallback $ "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_chevron_left.png"
             , gravity CENTER_VERTICAL
             , onClick push $ const BackPressed
             , padding $ Padding 2 2 2 2

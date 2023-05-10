@@ -33,6 +33,9 @@ import Components.PrimaryEditText as PrimaryEditText
 import PrestoDOM.Animation as PrestoAnim
 import Common.Types.App
 import Screens.WriteToUsScreen.ComponentConfig
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
 
 
 screen :: ST.WriteToUsScreenState -> Screen Action ST.WriteToUsScreenState ScreenOutput
@@ -103,7 +106,7 @@ headerLayout state push=
     ][ imageView
         [ width $ V 25
         , height MATCH_PARENT
-        , imageWithFallback "ny_ic_back,https://assets.juspay.in/nammayatri/images/driver/ny_ic_back.png"
+        , imageWithFallback $ "ny_ic_back," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_back.png"
         , gravity CENTER_VERTICAL
         , onClick push (const BackPressed)
         , padding (Padding 2 2 2 2)
@@ -192,7 +195,7 @@ thankYouForWritingUsScreen state =
         ][ imageView
             [ width ( V 150)
             , height ( V 200)
-            , imageWithFallback "ny_ic_greetings,https://assets.juspay.in/nammayatri/images/driver/ny_ic_greetings.png"
+            , imageWithFallback $ "ny_ic_greetings," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_greetings.png"
             ]
             , textView (
             [ height WRAP_CONTENT

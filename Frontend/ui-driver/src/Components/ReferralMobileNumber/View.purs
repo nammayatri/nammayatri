@@ -32,7 +32,9 @@ import Components.PrimaryButton as PrimaryButton
 import Data.String.CodeUnits (charAt)
 import Data.String (length)
 import Common.Types.App
-
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
 
 view :: forall w .(Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push state = 
@@ -60,7 +62,7 @@ view push state =
             ][  imageView
                 [ width (V 25)
                 , height (V 25)
-                , imageWithFallback "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
+                , imageWithFallback $ "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_chevron_left.png"
                 , margin (MarginLeft 14)
                 , onClick push (const OnBackClick)
                 ]

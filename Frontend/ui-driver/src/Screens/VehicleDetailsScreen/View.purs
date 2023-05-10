@@ -35,6 +35,8 @@ import Components.SelectVehicleTypeModal as SelectVehicleTypeModal
 import JBridge as JB
 import Common.Types.App
 import Screens.VehicleDetailsScreen.ComponentConfig
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
 
 screen :: ST.VehicleDetailsScreenState -> Screen Action ST.VehicleDetailsScreenState ScreenOutput
 screen initialState =
@@ -111,7 +113,7 @@ headerLayout state push heading =
     ][ imageView
         [ width $ V 25
         , height MATCH_PARENT
-        , imageWithFallback "ny_ic_back,https://assets.juspay.in/nammayatri/images/driver/ny_ic_back.png"
+        , imageWithFallback $ "ny_ic_back," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_back.png"
         , layoutGravity "center_vertical"
         , padding (Padding 2 2 2 2)
         , margin (MarginLeft 5)
@@ -334,7 +336,7 @@ vehicleTypeView push state =
           , imageView
             [ width ( V 15 )
             , height ( V 15 )
-            , imageWithFallback "ny_ic_drop_down,https://assets.juspay.in/nammayatri/images/driver/ny_ic_drop_down.png"
+            , imageWithFallback $ "ny_ic_drop_down," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_drop_down.png"
             ]
         ]
     ]
@@ -388,7 +390,7 @@ uploadRCView state push =
              , imageView
                [ width ( V 20 )
                , height ( V 20 )
-               , imageWithFallback if (state.props.deleteButtonVisibility) then "ny_ic_cancel,https://assets.juspay.in/nammayatri/images/driver/ny_ic_cancel.png" else "ny_ic_upload,https://assets.juspay.in/nammayatri/images/driver/ny_ic_upload.png"
+               , imageWithFallback if (state.props.deleteButtonVisibility) then "ny_ic_cancel," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_cancel.png" else "ny_ic_upload," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_upload.png"
                , padding (Padding 2 2 2 0)
                , margin (MarginLeft 5)
                , onClick push $ if (state.props.deleteButtonVisibility) then ((const RemoveImageClick)) else ((const UploadImage))

@@ -32,6 +32,9 @@ import Components.PopUpModal as PopUpModal
 import Common.Types.App
 import Screens.AboutUsScreen.ComponentConfig
 import MerchantConfigs.Utils (getValueFromMerchant)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
 
 screen :: ST.AboutUsScreenState -> Screen Action ST.AboutUsScreenState ScreenOutput
 screen initialState =
@@ -98,7 +101,7 @@ headerLayout state push =
     ][ imageView
         [ width $ V 25
         , height MATCH_PARENT
-        , imageWithFallback "ny_ic_back,https://assets.juspay.in/nammayatri/images/driver/ny_ic_back.png"
+        , imageWithFallback $ "ny_ic_back," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_back.png"
         , gravity CENTER_VERTICAL
         , onClick push (const $ BackPressed state.props.demoModePopup)
         , padding (Padding 2 2 2 2)
@@ -149,7 +152,7 @@ applicationInformationLayout state push =
     ([ width $ V 150
     , height $ V 100
     , layoutGravity "center_horizontal"
-    , imageWithFallback "ny_ic_banner,https://assets.juspay.in/nammayatri/images/driver/ny_ic_banner.png"
+    , imageWithFallback $ "ny_ic_banner," <> (getAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_banner.png"
     ] <> if getValueToLocalStore DRIVER_STATUS == "true" then [onClick push (const ShowDemoPopUp)] else [])
     , textView
     [ width MATCH_PARENT

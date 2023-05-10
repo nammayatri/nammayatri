@@ -21,6 +21,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Styles.Colors as Color
 import Common.Types.App
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 
 data Action = OnClick Config
 
@@ -109,7 +110,7 @@ config =
           , width : V 20
           , imageHeight : V 10
           , imageWidth : V 10
-          , imageUrl : "ny_ic_radio_button,https://assets.juspay.in/nammayatri/images/common/ny_ic_radio_button.png"
+          , imageUrl : "ny_ic_radio_button," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_radio_button.png"
           , imageMargin : (Margin 0 0 0 0)
           , imagePadding : (Padding 0 0 0 0)
           , activeStroke :("2," <> Color.black800)

@@ -43,6 +43,9 @@ import Data.Array (length,(!!))
 import Data.Maybe
 import Common.Types.App
 import JBridge(requestKeyboardShow, hideKeyboardOnNavigation)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
 
 view :: forall w .  (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -315,8 +318,8 @@ radioButton config push index item =
       [ width (V 24)
       , height (V 24)
       , imageWithFallback case config.activeIndex of 
-                    Just activeIndex' -> if ( index == activeIndex') then "ny_ic_radio_selected,https://assets.juspay.in/nammayatri/images/common/ny_ic_radio_selected.png" else "ny_ic_radio_unselected,https://assets.juspay.in/nammayatri/images/common/ny_ic_radio_unselected.png"
-                    Nothing           -> "ny_ic_radio_unselected,https://assets.juspay.in/nammayatri/images/common/ny_ic_radio_unselected.png"
+                    Just activeIndex' -> if ( index == activeIndex') then "ny_ic_radio_selected," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_radio_selected.png" else "ny_ic_radio_unselected," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_radio_unselected.png"
+                    Nothing           -> "ny_ic_radio_unselected," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_radio_unselected.png"
       ],
       textView
       [ text item.description

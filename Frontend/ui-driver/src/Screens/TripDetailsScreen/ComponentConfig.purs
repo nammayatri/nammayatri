@@ -26,6 +26,9 @@ import Language.Types (STR(..))
 import PrestoDOM
 import Screens.Types as ST
 import Styles.Colors as Color
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
 
 ---------------- genericHeaderConfig ----------------
 genericHeaderConfig :: ST.TripDetailsScreenState -> GenericHeader.Config 
@@ -38,7 +41,7 @@ genericHeaderConfig state= let
         height = (V 30)
       , width = (V 30)
       , margin = (Margin 16 16 25 16)
-      , imageUrl = "ny_ic_back,https://assets.juspay.in/nammayatri/images/driver/ny_ic_back.png"
+      , imageUrl = "ny_ic_back," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_back.png"
       , padding = (Padding 5 5 5 5 )
       , visibility = if state.props.issueReported then GONE else VISIBLE
       }
@@ -64,7 +67,7 @@ sourceToDestinationConfig state = let
     , sourceMargin = (Margin 0 10 0 25)
     , lineMargin = (Margin 4 12 0 0)
     , sourceImageConfig {
-        imageUrl = "ny_ic_green_circle,https://assets.juspay.in/nammayatri/images/common/ny_ic_green_circle.png"
+        imageUrl = "ny_ic_green_circle," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_green_circle.png"
       , margin = (MarginTop 3)
       }
     , sourceTextConfig {
@@ -76,7 +79,7 @@ sourceToDestinationConfig state = let
       , maxLines = 2
       }
     , destinationImageConfig {
-        imageUrl = "ny_ic_red_circle,https://assets.juspay.in/nammayatri/images/common/ny_ic_red_circle.png"
+        imageUrl = "ny_ic_red_circle," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_red_circle.png"
       , margin = (MarginTop 3)
       }
     , destinationBackground = Color.blue600

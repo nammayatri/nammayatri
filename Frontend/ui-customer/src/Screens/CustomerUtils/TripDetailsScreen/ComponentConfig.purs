@@ -28,6 +28,8 @@ import Components.GenericHeader as GenericHeader
 import Components.SourceToDestination as SourceToDestination
 import Styles.Colors as Color
 import Common.Types.App
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Prelude ((<>))
 
 genericHeaderConfig :: ST.TripDetailsScreenState -> GenericHeader.Config 
 genericHeaderConfig state= let 
@@ -38,7 +40,7 @@ genericHeaderConfig state= let
      , prefixImageConfig {
         height = V 25
       , width = V 25
-      , imageUrl = "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
+      , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_chevron_left.png"
       , margin = (Margin 12 12 12 12)
       , visibility = if state.props.issueReported then GONE else VISIBLE
       }
@@ -77,7 +79,7 @@ sourceToDestinationConfig state = let
     , sourceMargin = (Margin 0 0 0 25)
     , lineMargin = (Margin 4 4 0 0)
     , sourceImageConfig {
-        imageUrl = "ny_ic_green_circle,https://assets.juspay.in/nammayatri/images/common/ny_ic_green_circle.png"
+        imageUrl = "ny_ic_green_circle," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_green_circle.png"
       , margin = (MarginTop 3)
       }
     , sourceTextConfig {
@@ -90,7 +92,7 @@ sourceToDestinationConfig state = let
       , ellipsize = false
       }
     , destinationImageConfig {
-        imageUrl = "ny_ic_red_circle,https://assets.juspay.in/nammayatri/images/common/ny_ic_red_circle.png"
+        imageUrl = "ny_ic_red_circle," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_red_circle.png"
       , margin = (MarginTop 3)
       }
     , destinationBackground = Color.blue600

@@ -48,6 +48,10 @@ import Prelude (Unit, bind, pure, discard, unit, void, ($), identity, (<*>), (<#
 import Prelude (class Eq, class Show, (<<<))
 import Prelude (map, (*), (-), (/))
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
+import Screens.Types (AllocationData, YoutubeData)
+import Common.Types.App (LazyCheck(..))
+import MerchantConfigs.Utils (getMerchant, Merchant(..))
+
 
 -- import Control.Monad.Except (runExcept)
 -- import Data.Array.NonEmpty (fromArray)
@@ -211,3 +215,13 @@ getVehicleType vehicleType =
     "TAXI" -> "Non AC Taxi"
     "TAXI_PLUS" -> "AC Taxi"
     _ -> ""
+
+getAssetStoreLink :: LazyCheck -> String
+getAssetStoreLink lazy = case (getMerchant unit) of
+  NAMMAYATRIPARTNER -> "https://assets.juspay.in/beckn/nammayatri"
+  JATRISAATHIDRIVER -> "https://assets.juspay.in/beckn/jatrisaathi"
+  YATRIPARTNER -> "https://assets.juspay.in/beckn/yatri"
+  _ -> ""
+
+getCommonAssetStoreLink :: LazyCheck -> String
+getCommonAssetStoreLink lazy = "https://assets.juspay.in/beckn/merchantcommon"

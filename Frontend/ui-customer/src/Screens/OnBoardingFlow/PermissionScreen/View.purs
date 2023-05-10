@@ -32,6 +32,9 @@ import Screens.Types as ST
 import Styles.Colors as Color
 import Common.Types.App
 import Screens.OnBoardingFlow.PermissionScreen.ComponentConfig 
+import Prelude ((<>))
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
 
 screen :: ST.PermissionScreenState -> String -> ScopedScreen Action ST.PermissionScreenState ScreenOutput
 screen initialState triggertype = 
@@ -108,7 +111,7 @@ locationAccessPermissionView push state =
     , width MATCH_PARENT
     , gravity CENTER
     ][imageView
-      [ imageWithFallback "ny_ic_location_access,https://assets.juspay.in/nammayatri/images/common/ny_ic_location_access.png"
+      [ imageWithFallback $ "ny_ic_location_access," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_location_access.png"
       , height $ V 213
       , width $ V 240
       , gravity CENTER

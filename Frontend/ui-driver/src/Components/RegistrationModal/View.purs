@@ -29,6 +29,8 @@ import Font.Style as FontStyle
 import Animation (translateYAnim)
 import Animation.Config (translateYAnimConfig)
 import Common.Types.App
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Prelude ((<>))
 
 view :: forall w .  (Action  -> Effect Unit) -> State -> PrestoDOM (Effect Unit) w
 view push state =
@@ -82,7 +84,7 @@ view push state =
             [ width (V 20)
             , height (V 20)
             , margin (MarginTop 23)
-            , imageWithFallback "ny_ic_close,https://assets.juspay.in/nammayatri/images/common/ny_ic_close.png"
+            , imageWithFallback $ "ny_ic_close," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_close.png"
             , onClick push (const OnCloseClick)
             ]
           ]
@@ -105,7 +107,7 @@ checkBar state =
     , orientation VERTICAL
     , margin (Margin 0 20 15 10)
     ][  imageView
-        [ imageWithFallback "ny_ic_check_mark,https://assets.juspay.in/nammayatri/images/driver/ny_ic_check_mark.png"
+        [ imageWithFallback $ "ny_ic_check_mark," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_check_mark.png"
         , width (V 27)
         , height (V 27)
         ]
@@ -116,7 +118,7 @@ checkBar state =
         , margin (MarginLeft 13)
         ][]
     ,   imageView
-        [ imageWithFallback "ny_ic_check_mark,https://assets.juspay.in/nammayatri/images/driver/ny_ic_check_mark.png"
+        [ imageWithFallback $ "ny_ic_check_mark," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_check_mark.png"
         , width (V 27)
         , height (V 27)
         ]
@@ -127,7 +129,7 @@ checkBar state =
         , margin (MarginLeft 13)
         ][]
     ,   imageView
-        [ imageWithFallback "ny_ic_check_mark,https://assets.juspay.in/nammayatri/images/driver/ny_ic_check_mark.png"
+        [ imageWithFallback $ "ny_ic_check_mark," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_check_mark.png"
         , width (V 27)
         , height (V 27)
         ]
@@ -138,7 +140,7 @@ checkBar state =
         , margin (MarginLeft 13)
         ][]
     ,   imageView
-        [ imageWithFallback "ny_ic_check_mark,https://assets.juspay.in/nammayatri/images/driver/ny_ic_check_mark.png"
+        [ imageWithFallback $ "ny_ic_check_mark," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_check_mark.png"
         , width (V 27)
         , height (V 27)
         ]
@@ -190,18 +192,18 @@ cardArr :: State ->  Array { img :: String , mainTxt :: String, subTxt :: String
 cardArr state = [
           { mainTxt : (getString DRIVING_LICENSE),
             subTxt : (getString UPLOAD_FRONT_BACK),
-            img : "ny_ic_license_blue,https://assets.juspay.in/nammayatri/images/driver/ny_ic_license_blue.png"
+            img : "ny_ic_license_blue," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_license_blue.png"
           },
           { mainTxt : (getString AADHAR_CARD),
             subTxt : (getString UPLOAD_FRONT_BACK),
-            img : "ny_ic_aadhaar,https://assets.juspay.in/nammayatri/images/driver/ny_ic_aadhaar.png"
+            img : "ny_ic_aadhaar," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_aadhaar.png"
           },
           { mainTxt : (getString BANK_DETAILS),
             subTxt : (getString EARNINGS_WILL_BE_CREDITED),
-            img : "ny_ic_bank_blue,https://assets.juspay.in/nammayatri/images/driver/ny_ic_bank_blue.png"
+            img : "ny_ic_bank_blue," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_bank_blue.png"
           },
           { mainTxt : (getString VEHICLE_DETAILS),
             subTxt : (getString FILL_VEHICLE_DETAILS),
-            img : "ny_ic_car_blue,https://assets.juspay.in/nammayatri/images/driver/ny_ic_car_blue.png"
+            img : "ny_ic_car_blue," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_car_blue.png"
           }
           ]

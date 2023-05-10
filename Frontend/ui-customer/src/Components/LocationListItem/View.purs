@@ -26,6 +26,8 @@ import Prelude (Unit, const, bind, pure, unit, ($), (<>), (==), (||))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, text, textSize, textView, visibility, weight, width, alpha, imageWithFallback)
 import Screens.Types (LocationListItemState)
 import Styles.Colors as Color
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
 
 view :: forall w . (Action  -> Effect Unit) -> LocationListItemState -> PrestoDOM (Effect Unit) w
 view push config =
@@ -86,7 +88,7 @@ postfixImageView push config =
     , gravity CENTER
     , padding (Padding 12 22 16 22)
     , onClick push $ const $ FavClick config
-    , clickable (if config.postfixImageUrl == "ny_ic_fav_red,https://assets.juspay.in/nammayatri/images/user/ny_ic_fav_red.png" then false else true)
+    , clickable (if config.postfixImageUrl == "ny_ic_fav_red," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_fav_red.png" then false else true)
     ][  imageView
         [ height $ V 20
         , width $ V 20
@@ -100,7 +102,7 @@ titleView config =
   textView
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , text if config.prefixImageUrl == "ny_ic_home_blue,https://assets.juspay.in/nammayatri/images/user/ny_ic_home_blue.png" || config.prefixImageUrl == "ny_ic_work_blue,https://assets.juspay.in/nammayatri/images/user/ny_ic_work_blue.png" || config.prefixImageUrl == "ny_ic_fav_red,https://assets.juspay.in/nammayatri/images/user/ny_ic_fav_red.png" then config.tag else config.title
+    , text if config.prefixImageUrl == "ny_ic_home_blue," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_home_blue.png" || config.prefixImageUrl == "ny_ic_work_blue," <> (getAssetStoreLink FunctionCall) <> "/user/images/ny_ic_work_blue.png" || config.prefixImageUrl == "ny_ic_fav_red," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_fav_red.png" then config.tag else config.title
     , color Color.black800
     , textSize FontSize.a_14
     , lineHeight "18"

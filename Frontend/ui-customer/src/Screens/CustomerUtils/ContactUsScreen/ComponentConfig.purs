@@ -32,6 +32,8 @@ import Screens.ContactUsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
 import Common.Types.App
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
 
 primaryButtonConfigSubmit :: ST.ContactUsScreenState -> PrimaryButton.Config
 primaryButtonConfigSubmit state = let 
@@ -162,7 +164,7 @@ genericHeaderConfig state = let
       height = WRAP_CONTENT
     , prefixImageConfig {
        visibility = VISIBLE
-      , imageUrl = "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
+      , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_chevron_left.png"
       , height = (V 25)
       , width = (V 25)
       , margin = (Margin 12 12 12 12)

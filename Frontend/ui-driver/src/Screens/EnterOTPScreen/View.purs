@@ -36,6 +36,8 @@ import Animation as Anim
 import Animation.Config as AnimConfig
 import Common.Types.App
 import Screens.EnterOTPScreen.ComponentConfig
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
 
 screen :: ST.EnterOTPScreenState -> Screen Action ST.EnterOTPScreenState ScreenOutput
 screen initialState =
@@ -101,7 +103,7 @@ backArrow state push =
       [ width (V 25)
       , height (V 25)
       , margin (MarginTop 20)
-      , imageWithFallback "ny_ic_back,https://assets.juspay.in/nammayatri/images/driver/ny_ic_back.png"
+      , imageWithFallback $ "ny_ic_back," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_back.png"
       , onClick push (const BackPressed)
       ]
   ]

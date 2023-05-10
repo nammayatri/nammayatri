@@ -21,6 +21,9 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import PrestoDOM
 import Screens.Types as ST
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
 
 sourceToDestinationConfig :: ST.HelpAndSupportScreenState -> SourceToDestination.Config
 sourceToDestinationConfig state =
@@ -29,7 +32,7 @@ sourceToDestinationConfig state =
       margin = (Margin 0 13 0 0)
     , sourceMargin = (Margin 0 0 0 14)
     , sourceImageConfig {
-        imageUrl = "ny_ic_green_circle,https://assets.juspay.in/nammayatri/images/common/ny_ic_green_circle.png"
+        imageUrl = "ny_ic_green_circle," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_green_circle.png"
       , margin = (MarginTop 3)
       }
     , sourceTextConfig {
@@ -42,7 +45,7 @@ sourceToDestinationConfig state =
       , fontStyle = FontStyle.medium LanguageStyle
       }
     , destinationImageConfig {
-        imageUrl = "ny_ic_red_circle,https://assets.juspay.in/nammayatri/images/common/ny_ic_red_circle.png"
+        imageUrl = "ny_ic_red_circle," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_red_circle.png"
       , margin = (MarginTop 3)
       }
     , destinationTextConfig {

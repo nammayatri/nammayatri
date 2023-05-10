@@ -250,7 +250,7 @@ getObjFromLocal :: HomeScreenState -> Flow GlobalState RecentlySearchedObject
 getObjFromLocal homeScreenState = do
   (recentlySearched :: Maybe RecentlySearchedObject) <- (fetchRecents "RECENT_SEARCHES")
   case recentlySearched of
-    Just recents -> pure $ recents{predictionArray =  map (\item -> item{prefixImageUrl = "ny_ic_recent_search,https://assets.juspay.in/nammayatri/images/user/ny_ic_recent_search.png"}) (recents.predictionArray)}
+    Just recents -> pure $ recents{predictionArray =  map (\item -> item{prefixImageUrl = "ny_ic_recent_search," <> (getAssetStoreLink FunctionCall) <> "/user/images/ny_ic_recent_search.png"}) (recents.predictionArray)}
     Nothing -> pure homeScreenState.data.recentSearchs
 
 getRecentSearches :: AddNewAddressScreenState -> Flow GlobalState RecentlySearchedObject
@@ -309,9 +309,9 @@ addSearchOnTop :: LocationListItemState -> Array LocationListItemState -> Array 
 addSearchOnTop prediction predictionArr = cons prediction (filter (\ ( item) -> (item.placeId) /= (prediction.placeId))(predictionArr))
 
 addToRecentSearches :: LocationListItemState -> Array LocationListItemState -> Array LocationListItemState
-addToRecentSearches prediction predictionArr =
-    let prediction' = prediction {prefixImageUrl = "ny_ic_recent_search,https://assets.juspay.in/nammayatri/images/user/ny_ic_recent_search.png", locationItemType = Just RECENTS}
-      in (if (checkPrediction prediction' predictionArr)
+addToRecentSearches prediction predictionArr = 
+    let prediction' = prediction {prefixImageUrl = "ny_ic_recent_search," <> (getAssetStoreLink FunctionCall) <> "/user/images/ny_ic_recent_search.png", locationItemType = Just RECENTS}
+      in (if (checkPrediction prediction' predictionArr) 
            then (if length predictionArr == 30 then (fromMaybe [] (deleteAt 30 (cons prediction' predictionArr)))
           else (cons  prediction' predictionArr)) else addSearchOnTop prediction' predictionArr)
 
@@ -387,3 +387,13 @@ getMerchant lazy = case (decodeMerchantId (getMerchantId "")) of
 
 decodeMerchantId :: Foreign -> Maybe Merchant
 decodeMerchantId = hush <<< runExcept <<< decode
+
+getAssetStoreLink :: LazyCheck -> String
+getAssetStoreLink lazy = case (getMerchant FunctionCall) of
+  NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri"
+  JATRISAATHI -> "https://assets.juspay.in/beckn/jatrisaathi"
+  YATRI -> "https://assets.juspay.in/beckn/yatri"
+  _ -> ""
+
+getCommonAssetStoreLink :: LazyCheck -> String
+getCommonAssetStoreLink lazy = "https://assets.juspay.in/beckn/merchantcommon"

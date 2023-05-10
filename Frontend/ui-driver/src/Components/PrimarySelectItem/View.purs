@@ -25,6 +25,9 @@ import Font.Style as FontStyle
 import Styles.Colors as Color
 import Font.Size as FontSize
 import Common.Types.App
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
 
 view :: forall w .  (Action  -> Effect Unit) -> PrimarySelectItemState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -67,7 +70,7 @@ view push state =
           , imageView
             [ width ( V 15 )
             , height ( V 15 )
-            , imageWithFallback "ny_ic_drop_down,https://assets.juspay.in/nammayatri/images/driver/ny_ic_drop_down.png"
+            , imageWithFallback $ "ny_ic_drop_down," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_drop_down.png"
             ]
         ]
     ]

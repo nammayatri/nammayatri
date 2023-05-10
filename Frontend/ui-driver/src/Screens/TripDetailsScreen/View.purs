@@ -33,6 +33,9 @@ import Components.GenericHeader as GenericHeader
 import Components.SourceToDestination as SourceToDestination
 import Common.Types.App
 import Screens.TripDetailsScreen.ComponentConfig
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
 
 screen :: ST.TripDetailsScreenState -> Screen Action ST.TripDetailsScreenState ScreenOutput 
 screen initialState = 
@@ -115,7 +118,7 @@ view push state =
                          , orientation HORIZONTAL
                          , onClick push (const CallSupport)
                           ][ imageView
-                            [ imageWithFallback "ny_ic_support,https://assets.juspay.in/nammayatri/images/driver/ny_ic_support.png"
+                            [ imageWithFallback $ "ny_ic_support," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_support.png"
                             , height $ V 17
                             , width $ V 20
                             , margin $ MarginRight 7
@@ -159,7 +162,7 @@ tripDetailsView state =
       , orientation HORIZONTAL
       , gravity CENTER_VERTICAL
       ][ imageView
-          [ imageWithFallback "ic_vehicle_front,https://assets.juspay.in/nammayatri/images/driver/ny_ic_auto_front.png"
+          [ imageWithFallback $ "ic_vehicle_front," <> (getAssetStoreLink FunctionCall) <> "/driver/images/ic_vehicle_front.png"
           , width (V 36)
           , height (V 36)
           ]
@@ -261,7 +264,7 @@ tripDataView push state =
                     , textSize FontSize.a_18
                     ]
                   , imageView
-                    [ imageWithFallback "ny_ic_copy,https://assets.juspay.in/nammayatri/images/common/ny_ic_copy.png"
+                    [ imageWithFallback $ "ny_ic_copy," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_copy.png"
                     , height (V 15)
                     , width (V 13)
                     , margin (Margin 10 5 0 0)
@@ -360,7 +363,7 @@ reportIssueView state push =
             , width MATCH_PARENT
             , gravity RIGHT
             ][  imageView
-                [ imageWithFallback if state.props.reportIssue then "ny_ic_chevron_up,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_up.png" else "ny_ic_chevron_down,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_down.png"
+                [ imageWithFallback if state.props.reportIssue then "ny_ic_chevron_up," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_chevron_up.png" else "ny_ic_chevron_down," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_chevron_down.png"
                 , height $ V 5
                 , width $ V 10 
                 ]
@@ -421,7 +424,7 @@ issueReportedView state push =
     , gravity CENTER
     , orientation VERTICAL
   ][ imageView
-      [ imageWithFallback "ny_ic_greetings,https://assets.juspay.in/nammayatri/images/driver/ny_ic_greetings.png"
+      [ imageWithFallback $ "ny_ic_greetings," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_greetings.png"
       , height $ V 81
       , width $ V 135
       , margin (MarginBottom 32)

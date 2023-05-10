@@ -31,6 +31,8 @@ import PrestoDOM (Length(..), Margin(..), Visibility(..))
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Common.Types.App
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
 
 primaryButtonConfigConfirmLoc :: ST.AddNewAddressScreenState -> PrimaryButton.Config 
 primaryButtonConfigConfirmLoc state = let 
@@ -59,7 +61,7 @@ genericHeaderConfig state = let
       , width = (V 25)
       , margin = (Margin 10 17 16 15)
       , visibility = VISIBLE
-      , imageUrl = if state.props.showSavePlaceView then "ny_ic_close_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_close_white.png" else "ny_ic_chevron_left_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_left_white.png"
+      , imageUrl = if state.props.showSavePlaceView then "ny_ic_close_white," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_close_white.png" else "ny_ic_chevron_left_white," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_chevron_left_white.png"
       }
     , textConfig {
         text = if state.props.showSavePlaceView then (getString FAVOURITE_LOCATION) else if state.props.editLocation then (getString EDIT_FAVOURITE) else (getString ADD_FAVOURITE)

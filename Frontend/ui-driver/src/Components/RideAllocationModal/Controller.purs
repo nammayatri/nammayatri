@@ -22,6 +22,9 @@ import Styles.Colors as Color
 import Font.Size as FontSize
 import Engineering.Helpers.Commons (screenWidth, screenHeight)
 import Common.Types.App
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
 
 data Action = Decline String | Request String Number | CountDown Int String String String | NoAction | IncreasePrice String | DecreasePrice String
 
@@ -133,7 +136,7 @@ config = {
         fontStyle : FontStyle.medium LanguageStyle
     },
     source : {
-        imageUrl : "ny_ic_source_dot,https://assets.juspay.in/nammayatri/images/common/ny_ic_source_dot.png",
+        imageUrl : "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_source_dot.png",
         imageWidth : (V 10),
         imageHeight : (V 10),
         text : "",
@@ -142,7 +145,7 @@ config = {
         textColor : Color.black800
     },
     destination : {
-        imageUrl : "ny_ic_destination,https://assets.juspay.in/nammayatri/images/driver/ny_ic_destination.png",
+        imageUrl : "ny_ic_destination," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_destination.png",
         imageWidth : (V 10),
         imageHeight : (V 10),
         text : "",

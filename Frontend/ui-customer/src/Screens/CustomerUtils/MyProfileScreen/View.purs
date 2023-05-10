@@ -45,6 +45,9 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Screens.CustomerUtils.MyProfileScreen.ComponentConfig
 import PrestoDOM.Animation as PrestoAnim
 import Resources.Constants as RSRC
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
 
 screen :: ST.MyProfileScreenState -> Screen Action ST.MyProfileScreenState ScreenOutput
 screen initialState =
@@ -306,7 +309,7 @@ profileImageView state push =
             ][  imageView
                 [ height $ V 100
                 , width $ V 100
-                , imageWithFallback "ny_ic_profile_image,https://assets.juspay.in/nammayatri/images/common/ny_ic_profile_image.png"
+                , imageWithFallback $ "ny_ic_profile_image," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_profile_image.png"
                 ]
             ]
           ]
@@ -397,7 +400,7 @@ genderCaptureView state push =
             , gravity RIGHT
             ]
             [ imageView
-              [ imageWithFallback if state.props.genderOptionExpanded then "ny_ic_chevron_up,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_up.png" else "ny_ic_chevron_down,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_down.png"
+              [ imageWithFallback if state.props.genderOptionExpanded then "ny_ic_chevron_up," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_up.png" else "ny_ic_chevron_down," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_down.png"
               , height $ V 24
               , width $ V 15
               ]
@@ -494,7 +497,7 @@ deleteAccountView state push =
             ][  imageView
                 [ width $ V 20
                 , height $ V 20
-                , imageWithFallback "ny_ic_trash,https://assets.juspay.in/nammayatri/images/user/ny_ic_trash.png"
+                , imageWithFallback $ "ny_ic_trash," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_trash.png"
                 ]
                 , textView
                 [ height WRAP_CONTENT
@@ -513,7 +516,7 @@ deleteAccountView state push =
                 ][ imageView
                     [ width $ V 15
                     , height $ V 15
-                    , imageWithFallback "ny_ic_chevron_right,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_right.png"
+                    , imageWithFallback $ "ny_ic_chevron_right," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_chevron_right.png"
                     ]
                   ]
               ]

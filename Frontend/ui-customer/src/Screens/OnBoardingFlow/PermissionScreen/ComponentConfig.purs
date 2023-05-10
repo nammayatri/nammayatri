@@ -23,19 +23,20 @@ import Font.Style as FontStyle
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude ((==))
+import Prelude ((==),(<>))
 import PrestoDOM (Length(..), Margin(..))
 import Styles.Colors as Color
 import Common.Types.App
 import Screens.Types (PermissionScreenState)
-
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
 
 errorModalConfig :: ErrorModal.Config 
 errorModalConfig = let 
   config = ErrorModal.config 
   errorModalConfig' = config 
     { imageConfig {
-        imageUrl = "ic_offline,https://assets.juspay.in/beckn/merchantcommon/images/ic_offline.png"
+        imageUrl = "ny_ic_offline," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_offline.png"
       , height = V 124
       , width = V 124
       , margin = (MarginBottom 32)

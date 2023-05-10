@@ -28,6 +28,9 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Styles.Colors as Color
 import Common.Types.App
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
 
 view :: forall w .  (RideHistoryScreen.Action  -> Effect Unit)  -> PrestoDOM (Effect Unit) w
 view push =
@@ -84,7 +87,7 @@ rideDetails =
       , fontStyle $ FontStyle.regular LanguageStyle
       ]
     , imageView
-      [ imageWithFallback "ny_ic_circle,https://assets.juspay.in/nammayatri/images/common/ny_ic_circle.png"
+      [ imageWithFallback $ "ny_ic_circle," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_circle.png"
       , height $ V 5
       , width $ V 5
       , cornerRadius 2.5
@@ -154,7 +157,7 @@ sourceAndDestination =
           , margin (MarginBottom 26)
           ][  imageView
               [ margin(MarginTop 5)
-              , imageWithFallback "ny_ic_source_dot,https://assets.juspay.in/nammayatri/images/common/ny_ic_source_dot.png"
+              , imageWithFallback $ "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_source_dot.png"
               , height $ V 19
               , width $ V 17
               ]
@@ -174,7 +177,7 @@ sourceAndDestination =
             , width MATCH_PARENT
             , background Color.white900
             ][  imageView
-                [ imageWithFallback "ny_ic_destination,https://assets.juspay.in/nammayatri/images/driver/ny_ic_destination.png"
+                [ imageWithFallback $ "ny_ic_destination," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_destination.png"
                 , height $ V 16
                 , width $ V 14
                 ]
@@ -279,7 +282,7 @@ sourceAndDestinationShimmerView =
   , PrestoList.visibilityHolder "shimmer_visibility"
   , padding (PaddingBottom 16)
   ][sfl $  imageView[
-    imageWithFallback "ny_ic_shimmer_img,https://assets.juspay.in/nammayatri/images/common/ny_ic_shimmer_img.png"
+    imageWithFallback $ "ny_ic_shimmer_img," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_shimmer_img.png"
   , height $ V 57
   , margin (MarginLeft 4)
   , weight 1.0

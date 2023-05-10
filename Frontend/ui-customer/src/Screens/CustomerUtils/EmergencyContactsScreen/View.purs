@@ -26,6 +26,7 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (split, Pattern(..))
 import Components.PopUpModal as PopUpModal
 import Screens.CustomerUtils.EmergencyContactsScreen.ComponentConfig
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 
 screen :: EmergencyContactsScreenState -> Screen Action EmergencyContactsScreenState ScreenOutput
 screen initialState =
@@ -136,7 +137,7 @@ emptyContactsView push state =
     [ imageView
         [ height $ V 150
         , width $ V 150
-        , imageWithFallback "ic_emergency_contact_empty,https://assets.juspay.in/nammayatri/images/user/ny_ic_emergency_contact_empty.png"
+        , imageWithFallback $ "ny_ic_emergency_contact_empty," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_emergency_contact_empty.png"
         ]
     , textView
         [ height $ WRAP_CONTENT
