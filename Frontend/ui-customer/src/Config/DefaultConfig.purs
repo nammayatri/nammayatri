@@ -24,5 +24,6 @@ config =
     sideBarList : ["MyRides", "Favorites", "HelpAndSupport", "Language", "About"],
     otpBackground : "#F5F9FE",
     otpTextColor : "#101010",
-    rateCardColor : "#00B8F5"
+    rateCardColor : "#00B8F5",
+    nyBrandingVisibility : true
   } 

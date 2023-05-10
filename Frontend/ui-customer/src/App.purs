@@ -34,6 +34,8 @@ import Screens.SavedLocationScreen.ScreenData as SavedLocationScreenData
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
 import Screens.TripDetailsScreen.ScreenData as TripDetailsScreenData
 import Screens.EmergencyContactsScreen.ScreenData as EmergencyContactsScreenData
+import Screens.OnBoardingFlow.PermissionScreen.ScreenData as PermissionScreenData
+import Screens.CustomerUtils.AboutUsScreen.ScreenData as AboutUsScreenData
 import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HelpAndSupportScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState)
 import Services.API (GetDriverLocationResp)
 
@@ -74,8 +76,8 @@ defaultGlobalState = GlobalState {
   , myRidesScreen : MyRideScreenData.initData
   , homeScreen : HomeScreenData.initData
   , selectLanguageScreen : SelectLanguageScreenData.initData
-  , permissionScreen : {}
-  , aboutUsScreen : {}
+  , permissionScreen : PermissionScreenData.initData
+  , aboutUsScreen : AboutUsScreenData.initData
   , myProfileScreen : MyProfileScreenData.initData
   , savedLocationScreen : SavedLocationScreenData.initData
   , addNewAddressScreen : AddNewAddressScreenData.initData
@@ -176,3 +178,5 @@ data ScreenType =
   | SavedLocationScreenStateType (SavedLocationScreenState -> SavedLocationScreenState)
   | ReferralScreenStateType (ReferralScreenState -> ReferralScreenState)
   | EmergencyContactsScreenStateType (EmergencyContactsScreenState -> EmergencyContactsScreenState)
+  | PermissionScreenStateType (PermissionScreenState -> PermissionScreenState)
+  | AboutUsScreenStateType (AboutUsScreenState -> AboutUsScreenState)

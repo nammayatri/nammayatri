@@ -435,6 +435,30 @@ driverInfoView push state =
             , margin (MarginTop 8)
             , cornerRadius 4.0
             ][]
+          , linearLayout [
+                height WRAP_CONTENT
+              , width MATCH_PARENT
+              , gravity CENTER
+              , margin (MarginTop 12)
+              , visibility if state.data.config.nyBrandingVisibility then VISIBLE else GONE
+            ][
+              imageView
+                [ height $ V 18
+                , width $ V 18
+                , cornerRadius 20.0
+                , imageWithFallback "ny_ic_launcher,https://assets.juspay.in/nammayatri/images/common/ny_ic_launcher.png"
+                ]
+              , textView
+                [ text $ "namma yatri"
+                , textSize FontSize.a_14
+                , fontStyle $ FontStyle.bold LanguageStyle
+                , color Color.black
+                , margin $ Margin 3 0 0 2
+                , ellipsize true
+                , singleLine true
+                , gravity CENTER
+                ]
+            ]
             , if state.props.isSpecialZone  then headerTextView push state else contactView push state
             , otpAndWaitView push state
             , separator (Margin 16 0 16 0) (V 1) Color.grey900 (state.props.currentStage == RideAccepted)

@@ -24,7 +24,7 @@ import Font.Style as FontStyle
 import JBridge as JB 
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>))
+import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>), not)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, imageView, imageUrl, cornerRadius, onClick, afterRender, visibility, imageWithFallback)
 import Screens.AboutUsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
@@ -56,11 +56,14 @@ view push state =
     , gravity CENTER
     , afterRender push (const AfterRender)
     ][  GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
-      , linearLayout
-        [ height $ V 1
-        , width MATCH_PARENT
-        , background Color.greySmoke
-        ][]
+      , if (not state.appConfig.nyBrandingVisibility) then 
+          linearLayout
+          [ height $ V 1
+          , width MATCH_PARENT
+          , background Color.greySmoke
+          ][]
+        else
+          linearLayout[][]
       , topTextView state
       , linearLayout
         [ orientation VERTICAL

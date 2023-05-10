@@ -83,7 +83,7 @@ primaryButtonConfig state = let
 
 genericHeaderConfig :: ST.SavedLocationScreenState -> GenericHeader.Config 
 genericHeaderConfig state = let 
-  config = GenericHeader.config
+  config = if state.data.config.nyBrandingVisibility then GenericHeader.merchantConfig else GenericHeader.config
   genericHeaderConfig' = config 
     {
       height = WRAP_CONTENT
@@ -93,18 +93,13 @@ genericHeaderConfig state = let
         height = V 25
       , width = V 25
       , imageUrl = "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
-      , margin = (Margin 12 12 12 12)
       } 
     , textConfig {
         text = (getString FAVOURITES)
-      , textSize = FontSize.a_18
-      , color = Color.black800
-      , fontStyle = FontStyle.semiBold LanguageStyle
       }
     , suffixImageConfig {
         visibility = GONE
       }
-    , padding = (Padding 0 5 0 5)
     }
   in genericHeaderConfig'
 

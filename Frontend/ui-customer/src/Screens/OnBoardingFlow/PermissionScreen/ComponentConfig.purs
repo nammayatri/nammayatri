@@ -27,6 +27,8 @@ import Prelude ((==))
 import PrestoDOM (Length(..), Margin(..))
 import Styles.Colors as Color
 import Common.Types.App
+import Screens.Types (PermissionScreenState)
+
 
 errorModalConfig :: ErrorModal.Config 
 errorModalConfig = let 
@@ -59,18 +61,18 @@ errorModalConfig = let
     }
   in errorModalConfig' 
 
-primaryButtonConfig :: PrimaryButton.Config 
-primaryButtonConfig  = let
+primaryButtonConfig :: PermissionScreenState -> PrimaryButton.Config 
+primaryButtonConfig  state = let
     config' = PrimaryButton.config 
     primaryButtonConfig' = config' 
       { textConfig 
         { text = if EHC.os == "IOS" then (getString CONTINUE) else (getString GRANT_ACCESS)
         , fontStyle = FontStyle.bold LanguageStyle
         , textSize = FontSize.a_16
-        , color = Color.yellow900
+        , color = state.appConfig.primaryTextColor
         }
       , width = MATCH_PARENT 
-      , background = Color.black900
+      , background = state.appConfig.primaryBackground
       , margin = (Margin 0 0 0 0)
       , id = "PermissionScreenButton"
       , enableLoader = (JB.getBtnLoader "PermissionScreenButton")

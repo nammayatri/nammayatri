@@ -412,8 +412,9 @@ type ItemState =
 
 -- ################################################ PermissionScreenState ##################################################
 
-type PermissionScreenState =
-  {}
+type PermissionScreenState = {
+    appConfig :: AppConfig
+}
 -- ######################################  HomeScreenState   ######################################
 
 data Stage = HomeScreen
@@ -668,7 +669,9 @@ type ContactDetail = {
 
 -- ############################################## AboutUsScreenState #############################
 
-type AboutUsScreenState = {}
+type AboutUsScreenState = {
+    appConfig :: AppConfig
+}
 
 -- ############################################## MyProfileScreenState #############################
 

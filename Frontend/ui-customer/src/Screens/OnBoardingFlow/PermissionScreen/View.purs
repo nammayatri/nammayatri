@@ -124,7 +124,7 @@ buttonView push state  =
   , height WRAP_CONTENT
   , width MATCH_PARENT
   , alignParentBottom "true,-1"
-  ][  PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig)
+  ][  PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)
   -- ,  textView $
   --     [ text (getString DENY_ACCESS)
   --     , width MATCH_PARENT
