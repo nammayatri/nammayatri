@@ -11,36 +11,61 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE DerivingStrategies #-}
 
 module Domain.Action.Dashboard.Ride
   ( shareRideInfo,
     rideList,
     rideInfo,
+    multipleRideCancel,
+    MultipleRideCancelReq,
   )
 where
 
 import qualified "dashboard-helper-api" Dashboard.Common as Common
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
 import Data.Coerce (coerce)
+import qualified Domain.Types.Booking as DTB
 import Domain.Types.Booking.BookingLocation (BookingLocation (..))
 import qualified Domain.Types.Booking.Type as DB
 import qualified Domain.Types.BookingCancellationReason as DBCReason
+import Domain.Types.CancellationReason
 import Domain.Types.LocationAddress
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
 import Environment
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (count, isNothing)
+import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.CachedQueries.Merchant (findByShortId)
+import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
+
+data BookingCancelledReq = BookingCancelledReq
+  { bookingId :: Id DTB.Booking,
+    cancellationReasonCode :: CancellationReasonCode,
+    cancellationStage :: CancellationStage,
+    additionalInfo :: Maybe Text
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+newtype MultipleRideCancelReq = MultipleRideCancelReq
+  { multipleRideCancelInfo :: [BookingCancelledReq]
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Common.HideSecrets MultipleRideCancelReq where
+  hideSecrets = identity
 
 ---------------------------------------------------------------------
 
@@ -126,7 +151,6 @@ rideList merchantShortId mbLimit mbOffset mbBookingStatus mbReqShortRideId mbCus
   rideListItems <- traverse buildRideListItem rideItems
   let count = length rideListItems
   -- should we consider filters in totalCount, e.g. count all canceled rides?
-  -- totalCount <- runInReplica $ QRide.countRides merchant.id
   let summary = Common.Summary {totalCount = 10000, count}
   pure Common.RideListRes {totalItems = count, summary, rides = rideListItems}
   where
@@ -206,3 +230,44 @@ castCancellationSource = \case
   DBCReason.ByMerchant -> Common.ByMerchant
   DBCReason.ByAllocator -> Common.ByAllocator
   DBCReason.ByApplication -> Common.ByApplication
+
+bookingCancel ::
+  EsqDBFlow m r =>
+  BookingCancelledReq ->
+  m ()
+bookingCancel BookingCancelledReq {..} = do
+  booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bookingId.getId)
+  unless (isBookingCancellable booking) $
+    throwError (BookingInvalidStatus (show booking.status))
+  mbRide <- QRide.findActiveByRBId booking.id
+  logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show DBCReason.ByMerchant)
+  let bookingCancellationReason = buildBookingCancellationReason booking.id (mbRide <&> (.id))
+  runTransaction $ do
+    QRB.updateStatus booking.id DTB.CANCELLED
+    whenJust mbRide $ \ride -> QRide.updateStatus ride.id DRide.CANCELLED
+    QBCReason.upsert bookingCancellationReason
+    QPFS.updateStatus booking.riderId DPFS.IDLE
+  where
+    isBookingCancellable booking =
+      booking.status `elem` [DTB.NEW, DTB.CONFIRMED, DTB.AWAITING_REASSIGNMENT, DTB.TRIP_ASSIGNED]
+
+buildBookingCancellationReason ::
+  Id DTB.Booking ->
+  Maybe (Id DRide.Ride) ->
+  DBCReason.BookingCancellationReason
+buildBookingCancellationReason bookingId mbRideId = do
+  DBCReason.BookingCancellationReason
+    { bookingId = bookingId,
+      rideId = mbRideId,
+      source = DBCReason.ByMerchant,
+      reasonCode = Just $ CancellationReasonCode "BOOKING_NEW_STATUS_MORE_THAN_6HRS",
+      reasonStage = Nothing,
+      additionalInfo = Nothing
+    }
+
+multipleRideCancel ::
+  MultipleRideCancelReq ->
+  Flow APISuccess
+multipleRideCancel req = do
+  mapM_ bookingCancel req.multipleRideCancelInfo
+  pure Success

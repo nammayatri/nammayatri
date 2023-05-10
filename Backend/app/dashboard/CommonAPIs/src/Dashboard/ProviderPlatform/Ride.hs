@@ -22,6 +22,7 @@ where
 
 import Dashboard.Common as Reexport
 import Dashboard.Common.Booking as Reexport (CancellationReasonCode (..))
+import Dashboard.Common.Ride as Reexport
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
@@ -35,15 +36,15 @@ import Kernel.Types.Id
 import Servant hiding (Summary)
 
 -- we need to save endpoint transactions only for POST, PUT, DELETE APIs
-data RideEndpoint
-  = RideStartEndpoint
-  | RideEndEndpoint
-  | RideCancelEndpoint
-  | RideSyncEndpoint
-  | MultipleRideSyncEndpoint
-  deriving (Show, Read)
+-- data RideEndpoint
+--   = RideStartEndpoint
+--   | RideEndEndpoint
+--   | RideCancelEndpoint
+--   | RideSyncEndpoint
+--   | MultipleRideSyncEndpoint
+--   deriving (Show, Read)
 
-derivePersistField "RideEndpoint"
+-- derivePersistField "RideEndpoint"
 
 ---------------------------------------------------------
 -- ride list --------------------------------------------
@@ -137,7 +138,28 @@ newtype EndRideReq = EndRideReq
 instance HideSecrets EndRideReq where
   hideSecrets = identity
 
----------------------------------------------------------
+--------------------------- MultipleRideEndAPI -----------------------------
+type MultipleRideEndAPI =
+  "end"
+    :> ReqBody '[JSON] MultipleRideEndReq
+    :> Post '[JSON] APISuccess
+
+newtype MultipleRideEndReq = MultipleRideEndReq
+  { rides :: [MultipleRideItem]
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data MultipleRideItem = MultipleRideItem
+  { rideId :: Id Ride,
+    point :: Maybe LatLong
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets MultipleRideEndReq where
+  hideSecrets = identity
+
 -- ride cancel ------------------------------------------
 
 type RideCancelAPI =
@@ -154,6 +176,30 @@ data CancelRideReq = CancelRideReq
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 instance HideSecrets CancelRideReq where
+  hideSecrets = identity
+
+-- Multipleride cancel ------------------------------------------
+
+type MultipleRideCancelAPI =
+  "cancel"
+    :> ReqBody '[JSON] MultipleRideCancelReq
+    :> Post '[JSON] APISuccess
+
+data MultipleRideCancelInfo = MultipleRideCancelInfo
+  { rideId :: Id Ride,
+    reasonCode :: CancellationReasonCode,
+    additionalInfo :: Maybe Text
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+newtype MultipleRideCancelReq = MultipleRideCancelReq
+  { multiRideCancelReason :: [MultipleRideCancelInfo]
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets MultipleRideCancelReq where
   hideSecrets = identity
 
 ---------------------------------------------------------

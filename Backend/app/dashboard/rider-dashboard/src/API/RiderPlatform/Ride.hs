@@ -18,19 +18,24 @@ module API.RiderPlatform.Ride
   )
 where
 
+import qualified "rider-app" API.Dashboard.Ride as BAP
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
+import qualified "rider-app" Domain.Action.Dashboard.Ride as Domain
 import "lib-dashboard" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import "lib-dashboard" Domain.Types.ServerName
+import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
+import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter
 import qualified RiderPlatformClient.RiderApp as Client
 import Servant
-import "lib-dashboard" Tools.Auth
+import qualified SharedLogic.Transaction as T
+import "lib-dashboard" Tools.Auth hiding (BECKN_TRANSPORT, DRIVER_OFFER_BPP)
 import Tools.Auth.Merchant
 
 type API =
@@ -39,6 +44,7 @@ type API =
            :<|> RideListAPI
            :<|> TripRouteAPI
            :<|> RideInfoAPI
+           :<|> MultipleRideCancelAPI
        )
 
 type RideListAPI = Common.RideListAPI
@@ -51,15 +57,31 @@ type RideInfoAPI =
   ApiAuth 'APP_BACKEND 'CUSTOMERS 'RIDE_INFO_CUSTOMER
     :> Common.RideInfoAPI
 
+type MultipleRideCancelAPI =
+  ApiAuth 'APP_BACKEND 'RIDES 'MULTIPLE_RIDE_CANCEL
+    :> BAP.MultipleRideCancelAPI
+
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   shareRideInfo merchantId
     :<|> rideList merchantId
     :<|> tripRoute merchantId
     :<|> rideInfo merchantId
+    :<|> multipleRideCancel merchantId
 
 rideInfoHitsCountKey :: Id Common.Ride -> Text
 rideInfoHitsCountKey rideId = "RideInfoHits:" <> getId rideId <> ":hitsCount"
+
+buildTransaction ::
+  ( MonadFlow m,
+    Common.HideSecrets request
+  ) =>
+  Common.RideEndpoint ->
+  ApiTokenInfo ->
+  Maybe request ->
+  m DT.Transaction
+buildTransaction endpoint apiTokenInfo =
+  T.buildTransaction (DT.RideAPI endpoint) (Just APP_BACKEND) (Just apiTokenInfo) Nothing Nothing
 
 shareRideInfo ::
   ShortId DM.Merchant ->
@@ -103,3 +125,10 @@ rideInfo ::
 rideInfo merchantShortId apiTokenInfo rideId = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callRiderApp checkedMerchantId (.rides.rideInfo) rideId
+
+multipleRideCancel :: ShortId DM.Merchant -> ApiTokenInfo -> Domain.MultipleRideCancelReq -> FlowHandler APISuccess
+multipleRideCancel merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  transaction <- buildTransaction Common.MultipleRideCancelEndpoint apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $
+    Client.callRiderApp checkedMerchantId (.rides.multipleRideCancel) req
