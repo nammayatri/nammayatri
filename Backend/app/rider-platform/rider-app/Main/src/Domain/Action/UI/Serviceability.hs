@@ -21,6 +21,8 @@ where
 import Domain.Types.Person as Person
 import Kernel.External.Maps.Types
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Storage.Hedis
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
@@ -42,6 +44,7 @@ data ServiceabilityRes = ServiceabilityRes
 
 checkServiceability ::
   ( HasCacheConfig r,
+    EsqDBReplicaFlow m r,
     HedisFlow m r,
     EsqDBFlow m r
   ) =>
@@ -62,7 +65,7 @@ checkServiceability settingAccessor personId location = do
       specialLocationBody <- QSpecialLocation.findSpecialLocationByLatLong location
       pure ServiceabilityRes {serviceable = serviceable, specialLocation = fst <$> specialLocationBody, geoJson = snd <$> specialLocationBody}
     Regions regions -> do
-      serviceable <- someGeometriesContain location regions
+      serviceable <- runInReplica $ someGeometriesContain location regions
       if serviceable
         then do
           specialLocationBody <- QSpecialLocation.findSpecialLocationByLatLong location

@@ -43,6 +43,7 @@ import Environment
 import Kernel.External.Maps
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
+import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -143,7 +144,7 @@ onSearchService ::
   DOnSearchReq ->
   Flow ()
 onSearchService transactionId DOnSearchReq {..} = do
-  _searchRequest <- QSearchReq.findById requestId >>= fromMaybeM (SearchRequestDoesNotExist requestId.getId)
+  _searchRequest <- runInReplica $ QSearchReq.findById requestId >>= fromMaybeM (SearchRequestDoesNotExist requestId.getId)
   merchant <- QMerch.findById _searchRequest.merchantId >>= fromMaybeM (MerchantNotFound _searchRequest.merchantId.getId)
   Metrics.finishSearchMetrics merchant.name transactionId
   now <- getCurrentTime

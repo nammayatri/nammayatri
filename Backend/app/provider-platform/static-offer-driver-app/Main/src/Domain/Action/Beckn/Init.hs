@@ -23,6 +23,7 @@ import Kernel.Prelude
 import Kernel.Randomizer (getRandomElement)
 import Kernel.Serviceability
 import qualified Kernel.Storage.Esqueleto as DB
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Storage.Hedis
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Id
@@ -68,6 +69,7 @@ init ::
   ( HasCacheConfig r,
     EncFlow m r,
     EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     HedisFlow m r,
     HasField "driverEstimatedPickupDuration" r Seconds,
     CoreMetrics m
@@ -92,6 +94,7 @@ init transporterId req = do
 
 initOneWayTrip ::
   ( HasCacheConfig r,
+    EsqDBReplicaFlow m r,
     EncFlow m r,
     EsqDBFlow m r,
     HedisFlow m r,
@@ -146,6 +149,7 @@ initOneWayTrip req oneWayReq transporter now = do
 initRentalTrip ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     HedisFlow m r,
     CoreMetrics m
   ) =>

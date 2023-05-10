@@ -30,6 +30,8 @@ import Domain.Types.VehicleVariant
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -112,10 +114,10 @@ onSelect DOnSelectReq {..} = do
     else do
       Notify.notifyOnDriverOfferIncoming estimate.id quotes person
   where
-    duplicateCheckCond :: EsqDBFlow m r => [Id DDriverOffer.BPPQuote] -> Text -> m Bool
+    duplicateCheckCond :: (EsqDBFlow m r, EsqDBReplicaFlow m r) => [Id DDriverOffer.BPPQuote] -> Text -> m Bool
     duplicateCheckCond [] _ = return False
     duplicateCheckCond (bppQuoteId_ : _) bppId_ =
-      isJust <$> QQuote.findByBppIdAndBPPQuoteId bppId_ bppQuoteId_
+      isJust <$> runInReplica (QQuote.findByBppIdAndBPPQuoteId bppId_ bppQuoteId_)
     errHandler booking exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = DConfirm.cancelBooking booking
       | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = DConfirm.cancelBooking booking

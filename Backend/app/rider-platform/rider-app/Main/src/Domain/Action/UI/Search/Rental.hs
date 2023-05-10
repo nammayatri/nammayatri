@@ -26,6 +26,7 @@ import qualified Domain.Types.SearchRequest as DSearchReq
 import Kernel.Prelude
 import Kernel.Serviceability
 import qualified Kernel.Storage.Esqueleto as DB
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
@@ -60,6 +61,7 @@ rentalSearch ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
     Redis.HedisFlow m r,
+    EsqDBReplicaFlow m r,
     CoreMetrics m,
     HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
     HasBAPMetrics m r

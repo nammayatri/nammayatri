@@ -21,6 +21,8 @@ where
 import qualified Domain.Types.Booking as DRB
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Storage.Esqueleto as DB
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -32,9 +34,9 @@ data OnConfirmReq = OnConfirmReq
     specialZoneOtp :: Maybe Text
   }
 
-onConfirm :: EsqDBFlow m r => OnConfirmReq -> m ()
+onConfirm :: (EsqDBFlow m r, EsqDBReplicaFlow m r) => OnConfirmReq -> m ()
 onConfirm req = do
-  booking <- QRB.findByBPPBookingId req.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId" <> req.bppBookingId.getId)
+  booking <- runInReplica $ QRB.findByBPPBookingId req.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId" <> req.bppBookingId.getId)
   whenJust req.specialZoneOtp $ \otp ->
     DB.runTransaction $ do
       QRB.updateOtpCodeBookingId booking.id otp
