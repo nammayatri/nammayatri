@@ -33,7 +33,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Utils.Common (fromMaybeM, logDebug, logInfo)
+import Kernel.Utils.Common (fromMaybeM, logDebug, logInfo, throwError)
 import Lib.Scheduler.JobStorageType.DB.Queries (createJobIn)
 import Lib.Scheduler.Types (ExecutionResult (ReSchedule))
 import SharedLogic.Allocator
@@ -47,6 +47,7 @@ import qualified Storage.CachedQueries.FarePolicy as FarePolicyS
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.CachedQueries.SlabFarePolicy as SFarePolicyS
 import qualified Storage.Queries.Estimate as QEst
+import Storage.Queries.SearchRequest
 import qualified Storage.Queries.SearchRequest as QSReq
 import Tools.Error
 import Tools.Maps as Maps
@@ -77,6 +78,7 @@ handler merchantId sReq = do
   toLocation <- buildSearchReqLocation merchantId sessiontoken sReq.dropAddrress sReq.customerLanguage sReq.dropLocation
   mbDistRes <- CD.getCacheDistance sReq.transactionId
   estimate <- QEst.findById sReq.estimateId >>= fromMaybeM (EstimateDoesNotExist sReq.estimateId.getId)
+  whenM thereAreActiveEstimates (throwError $ InvalidRequest "Active Estimate Found")
   logInfo $ "Fetching cached distance and duration" <> show mbDistRes
   (distance, duration) <-
     case mbDistRes of
@@ -129,6 +131,10 @@ handler merchantId sReq = do
               driverMaxExtraFee = driverExtraFare.maxFee
             }
     _ -> return ()
+  where
+    thereAreActiveEstimates = do
+      activeEstimates <- findActiveByTransactionId sReq.transactionId
+      pure $ not $ null activeEstimates
 
 buildSearchRequest ::
   ( MonadTime m,
