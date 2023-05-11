@@ -230,11 +230,11 @@ isEmpty = maybe True (T.null . T.replace " " "")
 buildSearchRetry :: Maybe Select.RetryType -> Id DSearchReq.SearchRequest -> UTCTime -> Text -> Flow SearchRetry.SearchRequestRetry
 buildSearchRetry retryType searchid now parentSearchId = do
   justRetryType <- fromMaybeM (InternalError "RetryType is Nothing") retryType
-  req <- QSReq.findByTransactionId parentSearchId >>= fromMaybeM (SearchRequestNotFound parentSearchId)
+  reqId <- QSReq.getRequestIdfromTransactionId (Id parentSearchId) >>= fromMaybeM (SearchRequestNotFound parentSearchId)
   return $
     SearchRetry.SearchRequestRetry
       { id = cast searchid,
-        parentSearchId = req.id,
+        parentSearchId = reqId,
         retryCreatedAt = now,
         retryType = justRetryType
       }

@@ -130,11 +130,10 @@ handler merchantId sReq = do
         mbDistanceAndDuration <- CD.getCacheDistance searchId
         case mbDistanceAndDuration of
           Just distanceAndDuration -> do
-            CD.cacheDistance sReq.transactionId distanceAndDuration
             return DistanceAndDuration {distance = fst distanceAndDuration, duration = snd distanceAndDuration}
           Nothing -> do
             distanceAndDuration <- getDistanceAndDuration merchantId fromLocationLatLong toLocationLatLong sReq.routeDistance sReq.routeDuration
-            CD.cacheDistance sReq.transactionId (distanceAndDuration.distance, distanceAndDuration.duration)
+            CD.cacheDistance searchId (distanceAndDuration.distance, distanceAndDuration.duration)
             return distanceAndDuration
       Nothing -> do
         distanceAndDuration <- getDistanceAndDuration merchantId fromLocationLatLong toLocationLatLong sReq.routeDistance sReq.routeDuration

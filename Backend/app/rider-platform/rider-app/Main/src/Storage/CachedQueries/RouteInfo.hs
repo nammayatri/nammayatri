@@ -14,21 +14,21 @@
 
 module Storage.CachedQueries.RouteInfo where
 
+import Domain.Action.UI.Search.OneWay as D
 import Domain.Types.SearchRequest (SearchRequest)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Storage.CachedQueries.CacheConfig
-import qualified Tools.Maps as Maps
 
-cacheRouteInfo :: (Redis.HedisFlow m r, CacheFlow m r) => MonadFlow m => Id SearchRequest -> [Maps.RouteInfo] -> m ()
-cacheRouteInfo searchId routeInfo = do
+distanceAnndDurationInfo :: (Redis.HedisFlow m r, CacheFlow m r) => MonadFlow m => Id SearchRequest -> D.DistanceAndDuration -> m ()
+distanceAnndDurationInfo searchId distanceAndDuration = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Redis.setExp (routeKey searchId) routeInfo expTime
+  Redis.setExp (routeKey searchId) distanceAndDuration expTime
 
-getRouteInfo :: (Redis.HedisFlow m r) => Id SearchRequest -> m (Maybe [Maps.RouteInfo])
-getRouteInfo searchId = Redis.get (routeKey searchId)
+getdistanceAnndDurationInfo :: (Redis.HedisFlow m r) => Id SearchRequest -> m (Maybe D.DistanceAndDuration)
+getdistanceAnndDurationInfo searchId = Redis.get @D.DistanceAndDuration (routeKey searchId)
 
 routeKey :: Id SearchRequest -> Text
 routeKey sreqId = "ParentSearchId:" <> sreqId.getId

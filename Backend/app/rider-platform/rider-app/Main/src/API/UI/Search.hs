@@ -159,8 +159,8 @@ oneWaySearch personId bundleVersion clientVersion device req = do
   let longestRouteDistance = (.distance) =<< Search.getLongestRouteDistance routeResponse
   let shortestRouteDistance = (.distance) =<< shortestRouteInfo
   let shortestRouteDuration = (.duration) =<< shortestRouteInfo
-  dSearchRes <- DOneWaySearch.oneWaySearch person merchant req bundleVersion clientVersion longestRouteDistance device shortestRouteDistance shortestRouteDuration
-  Redis.cacheRouteInfo dSearchRes.searchId routeResponse
+  dSearchRes <- DOneWaySearch.search person merchant (DOneWaySearch.Search req) Nothing bundleVersion clientVersion longestRouteDistance device shortestRouteDistance shortestRouteDuration
+  Redis.distanceAnndDurationInfo dSearchRes.searchId DOneWaySearch.DistanceAndDuration {shortdistance = shortestRouteDistance, duration = shortestRouteDuration, longestditance = longestRouteDistance}
   fork "search cabs" . withShortRetry $ do
     becknTaxiReq <- TaxiACL.buildOneWaySearchReq dSearchRes device shortestRouteDistance shortestRouteDuration Nothing
     void $ CallBPP.search dSearchRes.gatewayUrl becknTaxiReq

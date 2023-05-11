@@ -11,20 +11,29 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
 
 module Domain.Action.UI.Search.OneWay
   ( OneWaySearchReq (..),
     OneWaySearchRes (..),
     DSearch.SearchReqLocation (..),
+    CommonSearchReq (..),
+    SearchRetryReq (..),
+    DistanceAndDuration (..),
     oneWaySearch,
+    search,
   )
 where
 
+import qualified Beckn.Types.Core.Taxi.Select as Select
 import qualified Domain.Action.UI.Search.Common as DSearch
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.SearchRequest as DSearchReq
+import qualified Domain.Types.SearchRetry as DSearchRetry
+import Kernel.External.Maps (LatLong (..))
 import Kernel.Prelude
 import Kernel.Serviceability
 import qualified Kernel.Storage.Esqueleto as DB
@@ -38,6 +47,7 @@ import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import Storage.Queries.Geometry
 import qualified Storage.Queries.SearchRequest as QSearchRequest
+import qualified Storage.Queries.SearchRetry as QSearchRetry
 import Tools.Error
 import Tools.Metrics
 import qualified Tools.Metrics as Metrics
@@ -48,6 +58,27 @@ data OneWaySearchReq = OneWaySearchReq
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
+newtype SearchRetryReq = SearchRetryReq
+  { retryType :: Select.RetryType
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+data DistanceAndDuration = DistanceAndDuration
+  { shortdistance :: Maybe Meters,
+    duration :: Maybe Seconds,
+    longestditance :: Maybe Meters
+  }
+  deriving (Generic, ToJSON, FromJSON)
+
+data SerchRetryRequest = SerchRetryRequest
+  { originAndDestination :: OneWaySearchReq,
+    shortdistance :: Maybe HighPrecMeters,
+    duration :: Maybe Seconds,
+    longestDitance :: Maybe HighPrecMeters
+  }
+
+data CommonSearchReq = SearchRetry SearchRetryReq | Search OneWaySearchReq
+
 data OneWaySearchRes = OneWaySearchRes
   { origin :: DSearch.SearchReqLocation,
     destination :: DSearch.SearchReqLocation,
@@ -57,6 +88,34 @@ data OneWaySearchRes = OneWaySearchRes
     searchRequestExpiry :: UTCTime,
     city :: Text
   }
+
+search ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasBAPMetrics m r,
+    HasCacheConfig r,
+    EncFlow m r,
+    EsqDBFlow m r,
+    HedisFlow m r,
+    HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds]
+  ) =>
+  Person.Person ->
+  Merchant.Merchant ->
+  CommonSearchReq ->
+  Maybe (Id DSearchReq.SearchRequest) ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Meters ->
+  Maybe Text ->
+  Maybe Meters ->
+  Maybe Seconds ->
+  m OneWaySearchRes
+search person merchant req parentSearchId mbBundleVersion mbClientVersion longestRouteDistance device distance duration = do
+  case req of
+    Search searchRequest -> oneWaySearch person merchant searchRequest mbBundleVersion mbClientVersion (metersToHighPrecMeters <$> longestRouteDistance) device (metersToHighPrecMeters <$> distance) duration Nothing Nothing
+    SearchRetry searchRequestRetry -> do
+      result <- originandDestination parentSearchId
+      oneWaySearch person merchant result.originAndDestination mbBundleVersion mbClientVersion (result.longestDitance) device (result.shortdistance) result.duration parentSearchId (Just searchRequestRetry.retryType)
 
 oneWaySearch ::
   ( HasCacheConfig r,
@@ -74,22 +133,26 @@ oneWaySearch ::
   OneWaySearchReq ->
   Maybe Version ->
   Maybe Version ->
-  Maybe Meters ->
+  Maybe HighPrecMeters ->
   Maybe Text ->
-  Maybe Meters ->
+  Maybe HighPrecMeters ->
   Maybe Seconds ->
+  Maybe (Id DSearchReq.SearchRequest) ->
+  Maybe Select.RetryType ->
   m OneWaySearchRes
-oneWaySearch person merchant req bundleVersion clientVersion longestRouteDistance device distance duration = do
+oneWaySearch person merchant req bundleVersion clientVersion longestRouteDistance device distance duration parentSearchId retryType = do
   validateServiceability merchant.geofencingConfig
   fromLocation <- DSearch.buildSearchReqLoc req.origin
   toLocation <- DSearch.buildSearchReqLoc req.destination
   now <- getCurrentTime
-  searchRequest <- DSearch.buildSearchRequest person fromLocation (Just toLocation) (metersToHighPrecMeters <$> longestRouteDistance) (metersToHighPrecMeters <$> distance) now bundleVersion clientVersion device duration
+  searchRequest <- DSearch.buildSearchRequest person fromLocation (Just toLocation) longestRouteDistance distance now bundleVersion clientVersion device duration
   Metrics.incrementSearchRequestCount merchant.name
   let txnId = getId (searchRequest.id)
   Metrics.startSearchMetrics merchant.name txnId
+  mbSearchRetry <- forM parentSearchId $ buildSearchRetry (searchRequest.id) now retryType
   DB.runTransaction $ do
     QSearchRequest.create searchRequest
+    whenJust mbSearchRetry QSearchRetry.create
     QPFS.updateStatus person.id DPFS.SEARCHING {requestId = searchRequest.id, validTill = searchRequest.validTill}
   QPFS.clearCache person.id
   let dSearchRes =
@@ -107,3 +170,51 @@ oneWaySearch person merchant req bundleVersion clientVersion longestRouteDistanc
     validateServiceability geoConfig =
       unlessM (rideServiceable geoConfig someGeometriesContain req.origin.gps (Just req.destination.gps)) $
         throwError RideNotServiceable
+
+originandDestination :: (MonadFlow m, EsqDBFlow m r) => Maybe (Id DSearchReq.SearchRequest) -> m SerchRetryRequest
+originandDestination mbparentSearchId = do
+  parentSearchId <- fromMaybeM (InternalError "parentSearchId Not Found") mbparentSearchId
+  searchRequestRow <- QSearchRequest.findById parentSearchId >>= fromMaybeM (SearchRequestNotFound parentSearchId.getId)
+  let destination = (searchRequestRow.toLocation <&>) $ \toLocation -> do
+        DSearch.SearchReqLocation
+          { gps =
+              LatLong
+                { lat = toLocation.lat,
+                  lon = toLocation.lon
+                },
+            address = toLocation.address
+          }
+  justDestimation <- destination & fromMaybeM (InternalError "Destination is Nothing")
+  let origin =
+        DSearch.SearchReqLocation
+          { gps =
+              LatLong
+                { lat = searchRequestRow.fromLocation.lat,
+                  lon = searchRequestRow.fromLocation.lon
+                },
+            address = searchRequestRow.fromLocation.address
+          }
+  let searchReq =
+        SerchRetryRequest
+          { originAndDestination =
+              OneWaySearchReq
+                { origin = origin,
+                  destination = justDestimation
+                },
+            shortdistance = searchRequestRow.distance,
+            duration = searchRequestRow.estimatedRideDuration,
+            longestDitance = searchRequestRow.maxDistance
+          }
+
+  return searchReq
+
+buildSearchRetry :: (MonadThrow m, Log m) => Id DSearchReq.SearchRequest -> UTCTime -> Maybe Select.RetryType -> Id DSearchReq.SearchRequest -> m DSearchRetry.SearchRetry
+buildSearchRetry retrySearchid now retryType parentSearchId = do
+  justRetryType <- fromMaybeM (InternalError "RetryType is Nothing") retryType
+  return $
+    DSearchRetry.SearchRetry
+      { id = retrySearchid,
+        parentSearchId = parentSearchId,
+        retryCreatedAt = now,
+        retryType = justRetryType
+      }

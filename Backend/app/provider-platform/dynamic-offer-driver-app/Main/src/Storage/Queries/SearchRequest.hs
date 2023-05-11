@@ -42,19 +42,6 @@ findById searchRequestId = buildDType $
       where_ $ sReq ^. SearchRequestTId ==. val (toKey searchRequestId)
       pure (sReq, sFromLoc, sToLoc)
 
-findByTransactionId :: Transactionable m => Text -> m (Maybe SearchRequest)
-findByTransactionId tId = buildDType $
-  fmap (fmap $ extractSolidType @Domain.SearchRequest) $
-    Esq.findOne' $ do
-      (sReq :& sFromLoc :& sToLoc) <-
-        from
-          ( table @SearchRequestT
-              `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& loc1) -> s ^. SearchRequestFromLocationId ==. loc1 ^. SearchReqLocationTId)
-              `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& _ :& loc2) -> s ^. SearchRequestToLocationId ==. loc2 ^. SearchReqLocationTId)
-          )
-      where_ $ sReq ^. SearchRequestTransactionId ==. val tId
-      pure (sReq, sFromLoc, sToLoc)
-
 updateStatus ::
   Id SearchRequest ->
   SearchRequestStatus ->

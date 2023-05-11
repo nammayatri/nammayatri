@@ -27,7 +27,6 @@ import Data.Aeson
 import Data.OpenApi hiding (Header)
 import qualified Domain.Action.UI.Search.Common as DSearchCommon
 import Domain.Action.UI.Search.OneWay as OneWay
-import Domain.Action.UI.SearchRetry.OneWayRetry as DOneWayRetry
 import qualified Domain.Types.Person as Person
 import Domain.Types.SearchRequest (SearchRequest)
 import Environment
@@ -35,6 +34,7 @@ import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Types.Version
 import Kernel.Utils.Common
 import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
@@ -52,51 +52,52 @@ import Tools.Metrics
 type API =
   "rideSearchRetry"
     :> TokenAuth
-    :> ReqBody '[JSON] SearchRetryReq
+    :> ReqBody '[JSON] OneWay.SearchRetryReq
+    :> Servant.Header "x-bundle-version" Version
+    :> Servant.Header "x-client-version" Version
     :> Capture "parentSearchId" (Id SearchRequest)
     :> Header "device" Text
     :> Post '[JSON] SearchRetryRes
 
 handler :: FlowServer API
-handler = search
+handler = searchRetryRequest
 
 data SearchRetryRes = SearchRetryRes
   { searchId :: Id SearchRequest,
-    searchExpiry :: UTCTime,
-    routeInfo :: Maybe Maps.RouteInfo
+    searchExpiry :: UTCTime
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
-search :: Id Person.Person -> SearchRetryReq -> Id SearchRequest -> Maybe Text -> FlowHandler SearchRetryRes
-search personId req parentSearchId device = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+searchRetryRequest :: Id Person.Person -> OneWay.SearchRetryReq -> Maybe Version -> Maybe Version -> Id SearchRequest -> Maybe Text -> FlowHandler SearchRetryRes
+searchRetryRequest personId req mbBundleVersion mbClientVersion parentSearchId device = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   Search.checkSearchRateLimit personId
-  (searchId, searchExpiry, routeInfo) <- searchRetry personId parentSearchId req device
-  return $ SearchRetryRes searchId searchExpiry routeInfo
+  (searchId, searchExpiry) <- searchRetry personId parentSearchId req mbBundleVersion mbClientVersion device
+  return $ SearchRetryRes searchId searchExpiry
 
 searchRetry ::
   Id Person.Person ->
   Id SearchRequest ->
-  DOneWayRetry.SearchRetryReq ->
+  OneWay.SearchRetryReq ->
+  Maybe Version ->
+  Maybe Version ->
   Maybe Text ->
-  Flow (Id SearchRequest, UTCTime, Maybe Maps.RouteInfo)
-searchRetry personId parentSearchId req device = do
+  Flow (Id SearchRequest, UTCTime)
+searchRetry personId parentSearchId req bundleVersion clientVersion device = do
   person <- Person.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   merchant <- QMerchant.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
-  dSearchRes <- DOneWayRetry.oneWaySearchRetry person merchant req parentSearchId
-  mbRouteResponse <- Redis.getRouteInfo parentSearchId
-  routeResponse <-
-    case mbRouteResponse of
-      Just a -> pure a
+  distanceAndDuration <- Redis.getdistanceAnndDurationInfo parentSearchId
+  dSearchRes <- OneWay.search person merchant (OneWay.SearchRetry req) (Just parentSearchId) bundleVersion clientVersion Nothing device Nothing Nothing
+  mbDistanceAndDuration <-
+    case distanceAndDuration of
+      Just distanceandDuration -> do
+        return DistanceAndDuration {shortdistance = distanceandDuration.shortdistance, duration = distanceandDuration.duration, longestditance = distanceandDuration.longestditance}
       Nothing -> getRouteResponse dSearchRes person
-  let shortestRouteInfo = Search.getRouteInfoWithShortestDuration routeResponse
-  let shortestRouteDistance = (.distance) =<< shortestRouteInfo
-  let shortestRouteDuration = (.duration) =<< shortestRouteInfo
   fork "search cabs" . withShortRetry $ do
-    becknTaxiReq <- TaxiACL.buildOneWaySearchReq dSearchRes device shortestRouteDistance shortestRouteDuration (Just parentSearchId)
+    becknTaxiReq <- TaxiACL.buildOneWaySearchReq dSearchRes device mbDistanceAndDuration.shortdistance mbDistanceAndDuration.duration (Just parentSearchId)
     void $ CallBPP.search dSearchRes.gatewayUrl becknTaxiReq
-  return (dSearchRes.searchId, dSearchRes.searchRequestExpiry, shortestRouteInfo)
+  return (dSearchRes.searchId, dSearchRes.searchRequestExpiry)
 
-getRouteResponse :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => OneWay.OneWaySearchRes -> Person.Person -> m [Maps.RouteInfo]
+getRouteResponse :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => OneWay.OneWaySearchRes -> Person.Person -> m DistanceAndDuration
 getRouteResponse dSearchRes person = do
   let sourceLatlong = dSearchRes.origin.gps
   let destinationLatLong = dSearchRes.destination.gps
@@ -106,4 +107,10 @@ getRouteResponse dSearchRes person = do
             calcPoints = True,
             mode = Just Maps.CAR
           }
-  Maps.getRoutes person.merchantId request
+  resp <- Maps.getRoutes person.merchantId request
+  let shortestRouteInfo = Search.getRouteInfoWithShortestDuration resp
+  let shortestRouteDistance = (.distance) =<< shortestRouteInfo
+  let shortestRouteDuration = (.duration) =<< shortestRouteInfo
+  let longestRouteDistance = (.distance) =<< Search.getLongestRouteDistance resp
+  Redis.distanceAnndDurationInfo dSearchRes.searchId OneWay.DistanceAndDuration {shortdistance = shortestRouteDistance, duration = shortestRouteDuration, longestditance = longestRouteDistance}
+  return DistanceAndDuration {shortdistance = shortestRouteDistance, duration = shortestRouteDuration, longestditance = longestRouteDistance}
