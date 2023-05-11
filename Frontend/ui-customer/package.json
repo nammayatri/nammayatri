@@ -5,6 +5,7 @@
   "private": true,
   "main": "index.js",
   "scripts": {
+    "build": "spago build && webpack --mode=production --node-env=production",
     "compile:purs": "spago build",
     "bundle:android": "webpack --env prod --mode=production --progress --config webpack.android.js",
     "bundle:ios": "webpack --env prod --mode=production --progress --config webpack.ios.js",
