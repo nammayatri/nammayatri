@@ -561,11 +561,16 @@ data Action = NoAction
             | OnResumeCallback
             | CheckFlowStatusAction
             | GoToEditProfile
+            | IsMockLocation String
 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 
 eval CheckFlowStatusAction state = exit $ CheckFlowStatus state
+
+eval (IsMockLocation isMock) state = do
+  _ <- pure $ spy "IsMockLocation" isMock
+  continue state{props{isMockLocation = if isMock == "true" then true else false}}
 
 eval (UpdateCurrentStage stage) state = do
   _ <- pure $ spy "updateCurrentStage" stage

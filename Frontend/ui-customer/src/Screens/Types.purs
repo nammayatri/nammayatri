@@ -525,6 +525,7 @@ type HomeScreenStateProps =
   , isDestServiceable :: Boolean
   , isRideServiceable :: Boolean
   , showlocUnserviceablePopUp :: Boolean
+  , isMockLocation :: Boolean
   , autoSelecting :: Boolean
   , searchExpire :: Int
   , isEstimateChanged :: Boolean

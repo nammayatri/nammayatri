@@ -718,6 +718,18 @@ export const isLocationEnabled = function (unit) {
   };
 };
 
+export const isMockLocation = function (cb) {
+  return function (action) {
+    return function () {
+      console.log("IsMockLocationIsMockLocation");
+      var callback = callbackMapper.map(function (lng) {
+        cb(action(lng))();
+      });
+      return window.JBridge.isMockLocation(callback);
+    };
+  };
+};
+
 export const getCurrentPosition = function (cb) {
   return function (action) {
     return function () {
