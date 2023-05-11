@@ -34,4 +34,5 @@ findAllByMerchantId merchantId =
     config <- from $ table @MerchantConfigT
     where_ $
       config ^. MerchantConfigMerchantId ==. val (toKey merchantId)
+        &&. config ^. MerchantConfigEnabled ==. val True
     return config

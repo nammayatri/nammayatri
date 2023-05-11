@@ -30,6 +30,7 @@ import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import Kernel.Utils.Version
 import qualified Storage.Tabular.Merchant as SMerchant
+import qualified Storage.Tabular.MerchantConfig as SMC
 
 derivePersistField "Domain.Role"
 derivePersistField "Domain.Gender"
@@ -67,6 +68,7 @@ mkPersist
       whatsappNotificationEnrollStatus OptApiMethods Maybe
       createdAt UTCTime
       blockedAt UTCTime Maybe
+      blockedByRuleId SMC.MerchantConfigTId Maybe
       updatedAt UTCTime
       bundleVersion Text Maybe
       clientVersion Text Maybe
@@ -92,6 +94,7 @@ instance FromTType PersonT Domain.Person where
           email = EncryptedHashed <$> (Encrypted <$> emailEncrypted) <*> emailHash,
           mobileNumber = EncryptedHashed <$> (Encrypted <$> mobileNumberEncrypted) <*> mobileNumberHash,
           merchantId = fromKey merchantId,
+          blockedByRuleId = fromKey <$> blockedByRuleId,
           bundleVersion = bundleVersion',
           clientVersion = clientVersion',
           ..
@@ -106,6 +109,7 @@ instance ToTType PersonT Domain.Person where
         mobileNumberEncrypted = mobileNumber <&> unEncrypted . (.encrypted),
         mobileNumberHash = mobileNumber <&> (.hash),
         merchantId = toKey merchantId,
+        blockedByRuleId = toKey <$> blockedByRuleId,
         bundleVersion = versionToText <$> bundleVersion,
         clientVersion = versionToText <$> clientVersion,
         ..

@@ -154,6 +154,19 @@ findAllByRiderId personId mbLimit mbOffset mbOnlyActive = Esq.buildDType $ do
     pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
   catMaybes <$> mapM buildFullBooking fullBookingsT
 
+findCountByRideIdAndStatus :: Transactionable m => Id Person -> BookingStatus -> m Int
+findCountByRideIdAndStatus personId status = do
+  mkCount <$> do
+    Esq.findAll $ do
+      messageReport <- from $ table @BookingT
+      where_ $
+        messageReport ^. BookingRiderId ==. val (toKey personId)
+          &&. messageReport ^. BookingStatus ==. val status
+      return (countRows :: SqlExpr (Esq.Value Int))
+  where
+    mkCount [counter] = counter
+    mkCount _ = 0
+
 findByRiderIdAndStatus :: Transactionable m => Id Person -> [BookingStatus] -> m [Booking]
 findByRiderIdAndStatus personId statusList = Esq.buildDType $ do
   fullBookingsT <- Esq.findAll' $ do
