@@ -197,9 +197,10 @@ myRideListTransformerProp listRes =  filter (\item -> (item.status == (toPropVal
 myRideListTransformer :: MyRidesScreenState -> Array RideBookingRes -> Array IndividualRideCardState
 myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETED" || item.status == "CANCELLED")) (map (\(RideBookingRes ride) -> 
   let 
-    fares = getFares ride.fareBreakup
-    updatedFareList = getFaresList ride.fareBreakup state
+    fares = getFares ride.fareBreakup 
     (RideAPIEntity rideDetails) = (fromMaybe dummyRideAPIEntity (ride.rideList !!0))
+    baseDistanceVal = (getKmMeter (fromMaybe 0.0 (rideDetails.chargeableRideDistance)))
+    updatedFareList = getFaresList ride.fareBreakup state baseDistanceVal
      in {
     date : (( (fromMaybe "" ((split (Pattern ",") (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "llll")) !!0 )) <> ", " <>  (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "Do MMM") )),
     time :  (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "h:mm A"),
@@ -230,7 +231,7 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
   , pickupCharges : fares.pickupCharges
   , extraFare : "₹ " <> show (getFareFromArray ride.fareBreakup "EXTRA_DISTANCE_FARE")
   , waitingCharges : fares.waitingCharges
-  , baseDistance : getKmMeter (fromMaybe 0.0 (rideDetails.chargeableRideDistance))
+  , baseDistance : baseDistanceVal
   , extraDistance : getKmMeter $  (\a -> if a < 0.0 then - a else a) ((fromMaybe 0.0 (rideDetails.chargeableRideDistance)) - toNumber (fromMaybe 0 (((ride.bookingDetails)^._contents)^._estimatedDistance)))
   , referenceString : "1.5" <> (getEN DAYTIME_CHARGES_APPLICABLE_AT_NIGHT)
                         <> if (isHaveFare "DRIVER_SELECTED_FARE" updatedFareList) then "\n\n" <> (getEN DRIVERS_CAN_CHARGE_AN_ADDITIONAL_FARE_UPTO) <> "\n\n" else ""
@@ -260,14 +261,14 @@ getFareFromArray fareBreakUp fareType = (fromMaybe dummyFareBreakUp (head (filte
 getKmMeter :: Number -> String
 getKmMeter distance = if (distance < 1000.0) then toString distance <> " m" else (parseFloat (distance / 1000.0)) 2 <> " km"
 
-getFaresList :: Array FareBreakupAPIEntity -> MyRidesScreenState -> Array FareComponent
-getFaresList fares state =
+getFaresList :: Array FareBreakupAPIEntity -> MyRidesScreenState -> String -> Array FareComponent
+getFaresList fares state baseDistance =
   map
     ( \(FareBreakupAPIEntity item) ->
           { fareType : item.description
           , price : if item.description == "BASE_FARE" then (item.amount + getFareFromArray fares "EXTRA_DISTANCE_FARE") else item.amount
           , title : case item.description of
-                      "BASE_FARE" -> (getEN BASE_FARES) <> " (" <> state.data.selectedItem.baseDistance <> ")"
+                      "BASE_FARE" -> (getEN BASE_FARES) <> " (" <> baseDistance <> ")"
                       "EXTRA_DISTANCE_FARE" -> getEN NOMINAL_FARE
                       "DRIVER_SELECTED_FARE" -> getEN NOMINAL_FARE
                       "TOTAL_FARE" -> getEN TOTAL_PAID
