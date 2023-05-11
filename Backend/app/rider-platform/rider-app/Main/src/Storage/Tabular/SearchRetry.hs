@@ -21,7 +21,6 @@ the GNU Affero General Public License along with this program. If not, see <http
 module Storage.Tabular.SearchRetry where
 
 import qualified Beckn.Types.Core.Taxi.Select as Select
-import Domain.Types.SearchRequest (SearchRequest)
 import qualified Domain.Types.SearchRetry as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
@@ -34,7 +33,7 @@ mkPersist
   defaultSqlSettings
   [defaultQQ|
     SearchRetryT sql=search_retry
-      id SearchRequestTId
+      id Text
       parentSearchId SearchRequestTId
       retryCreatedAt UTCTime
       retryType Select.RetryType
@@ -43,15 +42,15 @@ mkPersist
   |]
 
 instance TEntityKey SearchRetryT where
-  type DomainKey SearchRetryT = Id SearchRequest
-  fromKey (SearchRetryTKey _id) = fromKey _id
-  toKey id = SearchRetryTKey $ toKey id
+  type DomainKey SearchRetryT = Id Domain.SearchRetry
+  fromKey (SearchRetryTKey _id) = Id _id
+  toKey (Id id) = SearchRetryTKey id
 
 instance FromTType SearchRetryT Domain.SearchRetry where
   fromTType SearchRetryT {..} = do
     return $
       Domain.SearchRetry
-        { id = fromKey id,
+        { id = Id id,
           parentSearchId = fromKey parentSearchId,
           ..
         }
@@ -59,7 +58,7 @@ instance FromTType SearchRetryT Domain.SearchRetry where
 instance ToTType SearchRetryT Domain.SearchRetry where
   toTType Domain.SearchRetry {..} =
     SearchRetryT
-      { id = toKey id,
+      { id = getId id,
         parentSearchId = toKey parentSearchId,
         ..
       }

@@ -6,7 +6,7 @@ import Kernel.Prelude
 import Kernel.Types.Id
 
 data SearchRequestRetry = SearchRequestRetry
-  { id :: Id SearchRequest,
+  { id :: Id SearchRequestRetry,
     parentSearchId :: Id SearchRequest,
     retryCreatedAt :: UTCTime,
     retryType :: Select.RetryType

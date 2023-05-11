@@ -11,8 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# OPTIONS_GHC -Wno-unused-matches #-}
 
 module Domain.Action.UI.Search.OneWay
   ( OneWaySearchReq (..),
@@ -114,7 +112,7 @@ search person merchant req parentSearchId mbBundleVersion mbClientVersion longes
   case req of
     Search searchRequest -> oneWaySearch person merchant searchRequest mbBundleVersion mbClientVersion (metersToHighPrecMeters <$> longestRouteDistance) device (metersToHighPrecMeters <$> distance) duration Nothing Nothing
     SearchRetry searchRequestRetry -> do
-      result <- originandDestination parentSearchId
+      result <- buildSearchReq parentSearchId
       oneWaySearch person merchant result.originAndDestination mbBundleVersion mbClientVersion (result.longestDitance) device (result.shortdistance) result.duration parentSearchId (Just searchRequestRetry.retryType)
 
 oneWaySearch ::
@@ -171,8 +169,8 @@ oneWaySearch person merchant req bundleVersion clientVersion longestRouteDistanc
       unlessM (rideServiceable geoConfig someGeometriesContain req.origin.gps (Just req.destination.gps)) $
         throwError RideNotServiceable
 
-originandDestination :: (MonadFlow m, EsqDBFlow m r) => Maybe (Id DSearchReq.SearchRequest) -> m SerchRetryRequest
-originandDestination mbparentSearchId = do
+buildSearchReq :: (MonadFlow m, EsqDBFlow m r) => Maybe (Id DSearchReq.SearchRequest) -> m SerchRetryRequest
+buildSearchReq mbparentSearchId = do
   parentSearchId <- fromMaybeM (InternalError "parentSearchId Not Found") mbparentSearchId
   searchRequestRow <- QSearchRequest.findById parentSearchId >>= fromMaybeM (SearchRequestNotFound parentSearchId.getId)
   let destination = (searchRequestRow.toLocation <&>) $ \toLocation -> do
@@ -213,7 +211,7 @@ buildSearchRetry retrySearchid now retryType parentSearchId = do
   justRetryType <- fromMaybeM (InternalError "RetryType is Nothing") retryType
   return $
     DSearchRetry.SearchRetry
-      { id = retrySearchid,
+      { id = cast retrySearchid,
         parentSearchId = parentSearchId,
         retryCreatedAt = now,
         retryType = justRetryType
