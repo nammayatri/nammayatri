@@ -55,9 +55,11 @@ import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter
 import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.PublicTransport as PublicTransport
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
+import qualified Storage.CachedQueries.MerchantConfig as CMC
 import qualified Storage.Queries.Person as Person
 import Tools.Auth
 import qualified Tools.JSON as J
@@ -130,6 +132,7 @@ oneWaySearch ::
   ( HasCacheConfig r,
     EncFlow m r,
     EsqDBFlow m r,
+    DB.EsqDBReplicaFlow m r,
     HedisFlow m r,
     HasFlowEnv m r '["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl],
     HasHttpClientOptions r c,
@@ -169,6 +172,11 @@ oneWaySearch personId bundleVersion clientVersion device req = do
     becknMetroReq <- MetroACL.buildSearchReq dSearchRes
     CallBPP.searchMetro dSearchRes.gatewayUrl becknMetroReq
   fork "search public-transport" $ PublicTransport.sendPublicTransportSearchRequest personId dSearchRes
+  fork "updating search counters" $ do
+    merchantConfigs <- CMC.findAllByMerchantId person.merchantId
+    SMC.updateSearchFraudCounters personId merchantConfigs
+    mFraudDetected <- SMC.anyFraudDetected personId person.merchantId merchantConfigs
+    whenJust mFraudDetected $ \mc -> SMC.blockCustomer personId (Just mc.id)
   return (dSearchRes.searchId, dSearchRes.searchRequestExpiry, shortestRouteInfo)
 
 getLongestRouteDistance :: [Maps.RouteInfo] -> Maybe Maps.RouteInfo

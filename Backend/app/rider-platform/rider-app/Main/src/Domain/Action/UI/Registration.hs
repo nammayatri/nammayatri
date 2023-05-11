@@ -59,6 +59,7 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
+import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
@@ -159,6 +160,7 @@ authHitsCountKey person = "BAP:Registration:auth" <> getId person.id <> ":hitsCo
 auth ::
   ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
     HasCacheConfig r,
+    DB.EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     Redis.HedisFlow m r,
     EncFlow m r,
@@ -222,10 +224,12 @@ auth isDirectAuth req mbBundleVersion mbClientVersion = do
       else return (Nothing, Nothing, regToken.authType)
   return $ AuthRes regToken.id regToken.attempts authType token personApiEntity
 
-buildPerson :: EncFlow m r => AuthReq -> Maybe Version -> Maybe Version -> Id DMerchant.Merchant -> m SP.Person
+buildPerson :: (EncFlow m r, DB.EsqDBReplicaFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Id DMerchant.Merchant -> m SP.Person
 buildPerson req bundleVersion clientVersion merchantId = do
   pid <- BC.generateGUID
   now <- getCurrentTime
+  personWithSameDeviceToken <- listToMaybe <$> DB.runInReplica (Person.findBlockedByDeviceToken req.deviceToken)
+  let isBlockedBySameDeviceToken = maybe False (.blocked) personWithSameDeviceToken
   encMobNum <- encrypt req.mobileNumber
   encEmail <- mapM encrypt req.email
   return $
@@ -246,8 +250,8 @@ buildPerson req bundleVersion clientVersion merchantId = do
         rating = Nothing,
         language = req.language,
         isNew = True,
-        enabled = True,
-        blocked = False,
+        enabled = not isBlockedBySameDeviceToken,
+        blocked = isBlockedBySameDeviceToken,
         deviceToken = req.deviceToken,
         description = Nothing,
         merchantId = merchantId,
@@ -256,7 +260,8 @@ buildPerson req bundleVersion clientVersion merchantId = do
         hasTakenValidRide = False,
         createdAt = now,
         updatedAt = now,
-        blockedAt = Nothing,
+        blockedAt = personWithSameDeviceToken >>= (.blockedAt),
+        blockedByRuleId = personWithSameDeviceToken >>= (.blockedByRuleId),
         bundleVersion = bundleVersion,
         clientVersion = clientVersion,
         whatsappNotificationEnrollStatus = Nothing
@@ -318,6 +323,7 @@ verify ::
   ( HasCacheConfig r,
     HasFlowEnv m r '["apiRateLimitOptions" ::: APIRateLimitOptions],
     EsqDBFlow m r,
+    DB.EsqDBReplicaFlow m r,
     Redis.HedisFlow m r,
     EncFlow m r,
     CoreMetrics m,
@@ -335,7 +341,10 @@ verify tokenId req = do
   unless (authValueHash == req.otp) $ throwError InvalidAuthData
   person <- checkPersonExists entityId
   let deviceToken = Just req.deviceToken
+  personWithSameDeviceToken <- listToMaybe <$> DB.runInReplica (Person.findBlockedByDeviceToken deviceToken)
+  let isBlockedBySameDeviceToken = maybe False (.blocked) personWithSameDeviceToken
   cleanCachedTokens person.id
+  when isBlockedBySameDeviceToken $ SMC.blockCustomer person.id ((.blockedByRuleId) =<< personWithSameDeviceToken)
   DB.runTransaction $ do
     RegistrationToken.setVerified tokenId
     Person.updateDeviceToken person.id deviceToken
@@ -368,7 +377,7 @@ getRegistrationTokenE :: EsqDBFlow m r => Id SR.RegistrationToken -> m SR.Regist
 getRegistrationTokenE tokenId =
   RegistrationToken.findById tokenId >>= fromMaybeM (TokenNotFound $ getId tokenId)
 
-createPerson :: (EncFlow m r, EsqDBFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Id DMerchant.Merchant -> m SP.Person
+createPerson :: (EncFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Id DMerchant.Merchant -> m SP.Person
 createPerson req mbBundleVersion mbClientVersion merchantId = do
   person <- buildPerson req mbBundleVersion mbClientVersion merchantId
   DB.runTransaction $ do
