@@ -228,7 +228,7 @@ buildPerson :: (EncFlow m r, DB.EsqDBReplicaFlow m r) => AuthReq -> Maybe Versio
 buildPerson req bundleVersion clientVersion merchantId = do
   pid <- BC.generateGUID
   now <- getCurrentTime
-  personWithSameDeviceToken <- DB.runInReplica (Person.findByDeviceToken req.deviceToken)
+  personWithSameDeviceToken <- listToMaybe <$> DB.runInReplica (Person.findBlockedByDeviceToken req.deviceToken)
   let isBlockedBySameDeviceToken = maybe False (.blocked) personWithSameDeviceToken
   encMobNum <- encrypt req.mobileNumber
   encEmail <- mapM encrypt req.email
@@ -341,7 +341,7 @@ verify tokenId req = do
   unless (authValueHash == req.otp) $ throwError InvalidAuthData
   person <- checkPersonExists entityId
   let deviceToken = Just req.deviceToken
-  personWithSameDeviceToken <- DB.runInReplica (Person.findByDeviceToken deviceToken)
+  personWithSameDeviceToken <- listToMaybe <$> DB.runInReplica (Person.findBlockedByDeviceToken deviceToken)
   let isBlockedBySameDeviceToken = maybe False (.blocked) personWithSameDeviceToken
   cleanCachedTokens person.id
   when isBlockedBySameDeviceToken $ SMC.blockCustomer person.id ((.blockedByRuleId) =<< personWithSameDeviceToken)

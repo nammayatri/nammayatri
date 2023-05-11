@@ -254,12 +254,13 @@ findByReferralCode referralCode = do
       person ^. PersonReferralCode ==. val (Just referralCode)
     return person
 
-findByDeviceToken :: Transactionable m => Maybe FCMRecipientToken -> m (Maybe Person)
-findByDeviceToken deviceToken = do
-  findOne $ do
+findBlockedByDeviceToken :: Transactionable m => Maybe FCMRecipientToken -> m [Person]
+findBlockedByDeviceToken deviceToken = do
+  findAll $ do
     person <- from $ table @PersonT
     where_ $
       person ^. PersonDeviceToken ==. val deviceToken
+        &&. person ^. PersonBlocked ==. val True
     return person
 
 updateBlockedState :: Id Person -> Bool -> SqlDB ()
