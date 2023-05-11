@@ -16,6 +16,7 @@ module Storage.Queries.Person where
 
 import Control.Applicative ((<|>))
 import Domain.Types.Merchant (Merchant)
+import qualified Domain.Types.MerchantConfig as DMC
 import Domain.Types.Person
 import Domain.Types.Ride as Ride
 import Kernel.External.Encryption
@@ -253,6 +254,14 @@ findByReferralCode referralCode = do
       person ^. PersonReferralCode ==. val (Just referralCode)
     return person
 
+findByDeviceToken :: Transactionable m => Maybe FCMRecipientToken -> m (Maybe Person)
+findByDeviceToken deviceToken = do
+  findOne $ do
+    person <- from $ table @PersonT
+    where_ $
+      person ^. PersonDeviceToken ==. val deviceToken
+    return person
+
 updateBlockedState :: Id Person -> Bool -> SqlDB ()
 updateBlockedState personId isBlocked = do
   now <- getCurrentTime
@@ -264,14 +273,15 @@ updateBlockedState personId isBlocked = do
       ]
     where_ $ tbl ^. PersonId ==. val (getId personId)
 
-updatingEnabledAndBlockedState :: Id Person -> Bool -> SqlDB ()
-updatingEnabledAndBlockedState personId isBlocked = do
+updatingEnabledAndBlockedState :: Id Person -> Maybe (Id DMC.MerchantConfig) -> Bool -> SqlDB ()
+updatingEnabledAndBlockedState personId blockedByRule isBlocked = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
     set
       tbl
       $ [ PersonEnabled =. val (not isBlocked),
           PersonBlocked =. val isBlocked,
+          PersonBlockedByRuleId =. val (toKey <$> blockedByRule),
           PersonUpdatedAt =. val now
         ]
         <> [PersonBlockedAt =. val (Just now) | isBlocked]

@@ -20,7 +20,6 @@
 
 module Storage.Tabular.MerchantConfig where
 
-import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantConfig as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
@@ -35,30 +34,38 @@ mkPersist
   defaultSqlSettings
   [defaultQQ|
     MerchantConfigT sql=merchant_config
+      id Text
       merchantId MerchantTId
-      fraudBookingDetectionWindow SWC.SlidingWindowOptions
       fraudBookingCancellationCountThreshold Int
+      fraudBookingCancellationCountWindow SWC.SlidingWindowOptions
       fraudBookingTotalCountThreshold Int
-      Primary merchantId
+      fraudBookingCancelledByDriverCountThreshold Int
+      fraudBookingCancelledByDriverCountWindow SWC.SlidingWindowOptions
+      fraudSearchCountThreshold Int
+      fraudSearchCountWindow SWC.SlidingWindowOptions
+      enabled Bool
+      Primary id
       deriving Generic
     |]
 
 instance TEntityKey MerchantConfigT where
-  type DomainKey MerchantConfigT = Id DM.Merchant
-  fromKey (MerchantConfigTKey _id) = fromKey _id
-  toKey id = MerchantConfigTKey $ toKey id
+  type DomainKey MerchantConfigT = Id Domain.MerchantConfig
+  fromKey (MerchantConfigTKey _id) = Id _id
+  toKey (Id id) = MerchantConfigTKey id
 
 instance FromTType MerchantConfigT Domain.MerchantConfig where
   fromTType MerchantConfigT {..} = do
     return $
       Domain.MerchantConfig
-        { merchantId = fromKey merchantId,
+        { id = Id id,
+          merchantId = fromKey merchantId,
           ..
         }
 
 instance ToTType MerchantConfigT Domain.MerchantConfig where
   toTType Domain.MerchantConfig {..} =
     MerchantConfigT
-      { merchantId = toKey merchantId,
+      { id = getId id,
+        merchantId = toKey merchantId,
         ..
       }
