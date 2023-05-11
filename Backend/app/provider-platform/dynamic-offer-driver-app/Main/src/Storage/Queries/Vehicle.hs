@@ -14,14 +14,21 @@
 
 module Storage.Queries.Vehicle where
 
+import qualified Data.Text as T
+import qualified Debug.Trace as T
 import Domain.Types.Merchant
 import Domain.Types.Person
 import Domain.Types.Vehicle
 import qualified Domain.Types.Vehicle.Variant as Variant
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Sequelize as Se
+import qualified Storage.Tabular.VechileNew as VN
 import Storage.Tabular.Vehicle
 
 create :: Vehicle -> SqlDB ()
@@ -45,10 +52,14 @@ upsert a@Vehicle {..} =
     ]
 
 findById ::
-  Transactionable m =>
+  (MonadFlow m) =>
   Id Person ->
   m (Maybe Vehicle)
-findById = Esq.findById
+findById (Id driverId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> T.trace (T.unpack driverId) $ either (\x -> T.trace (show x) Nothing) (transformVechileNewToVechile <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is VN.driverId $ Se.Eq driverId]
+    Nothing -> T.trace "Rahull Nothing" $ pure Nothing
 
 updateVehicleRec :: Vehicle -> SqlDB ()
 updateVehicleRec vehicle = do
@@ -113,3 +124,23 @@ findByRegistrationNo registrationNo =
     vehicle <- from $ table @VehicleT
     where_ $ vehicle ^. VehicleRegistrationNo ==. val registrationNo
     return vehicle
+
+transformVechileNewToVechile :: VN.VechileNew -> Vehicle
+transformVechileNewToVechile VN.VechileNew {..} =
+  Vehicle
+    { driverId = Id driverId,
+      merchantId = Id merchantId,
+      variant = variant,
+      model = model,
+      color = color,
+      registrationNo = registrationNo,
+      capacity = capacity,
+      category = category,
+      make = make,
+      size = size,
+      energyType = energyType,
+      registrationCategory = registrationCategory,
+      vehicleClass = vehicleClass,
+      createdAt = createdAt,
+      updatedAt = updatedAt
+    }

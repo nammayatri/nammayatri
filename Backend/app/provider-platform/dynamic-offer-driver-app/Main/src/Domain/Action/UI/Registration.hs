@@ -63,7 +63,7 @@ import qualified Storage.Queries.DriverLocation as QDriverLocation
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
-import qualified Storage.Tabular.GeometryNew as BN (findById)
+import qualified Storage.Tabular.VechileNew as BN (findById)
 import Tools.Auth (authTokenCacheKey)
 import Tools.Error
 import Tools.Metrics
@@ -131,7 +131,7 @@ auth ::
 auth req mbBundleVersion mbClientVersion = do
   res' <- runInReplica $ do
     findAllBookings
-  res <- BN.findById "d58c4964-cc8e-4c37-be29-65af4f729cab"
+  res <- BN.findById "ND-driver-with-old-location-00000000"
   runRequestValidation validateInitiateLoginReq req
   smsCfg <- T.trace (show res') $ T.trace (show res) $ asks (.smsCfg)
   let mobileNumber = req.mobileNumber

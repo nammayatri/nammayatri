@@ -347,6 +347,7 @@ library
       Storage.Tabular.SearchRequestForDriver
       Storage.Tabular.SearchRequestSpecialZone
       Storage.Tabular.SlabFarePolicy
+      Storage.Tabular.VechileNew
       Storage.Tabular.Vehicle
       Tools.Auth
       Tools.Call

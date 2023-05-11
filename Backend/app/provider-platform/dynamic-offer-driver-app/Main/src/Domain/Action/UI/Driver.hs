@@ -440,7 +440,7 @@ listDriver admin mbSearchString mbLimit mbOffset = do
 
 buildDriverEntityRes :: (EsqDBReplicaFlow m r, EncFlow m r) => (SP.Person, DriverInformation) -> m DriverEntityRes
 buildDriverEntityRes (person, driverInfo) = do
-  vehicleMB <- Esq.runInReplica $ QVehicle.findById person.id
+  vehicleMB <- QVehicle.findById person.id
   decMobNum <- mapM decrypt person.mobileNumber
   decaltMobNum <- mapM decrypt person.alternateMobileNumber
   return $
