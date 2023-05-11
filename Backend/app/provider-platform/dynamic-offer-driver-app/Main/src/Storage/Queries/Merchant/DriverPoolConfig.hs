@@ -67,6 +67,8 @@ update config = do
         DriverPoolConfigMaxParallelSearchRequests =. val config.maxParallelSearchRequests,
         DriverPoolConfigPoolSortingType =. val config.poolSortingType,
         DriverPoolConfigSingleBatchProcessTime =. val config.singleBatchProcessTime,
+        DriverPoolConfigConfigStartTime =. val config.configStartTime,
+        DriverPoolConfigConfigEndTime =. val config.configEndTime,
         DriverPoolConfigUpdatedAt =. val now
       ]
     where_ $ tbl ^. DriverPoolConfigTId ==. val (toKey (config.merchantId, config.tripDistance))

@@ -41,6 +41,8 @@ data DriverPoolConfigD u = DriverPoolConfig
     radiusShrinkValueForDriversOnRide :: Int,
     driverToDestinationDistanceThreshold :: Meters,
     driverToDestinationDuration :: Seconds,
+    configStartTime :: Maybe Hours,
+    configEndTime :: Maybe Hours,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

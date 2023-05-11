@@ -173,7 +173,9 @@ data DriverPoolConfigUpdateReq = DriverPoolConfigUpdateReq
     maxNumberOfBatches :: Maybe (MandatoryValue Int),
     maxParallelSearchRequests :: Maybe (MandatoryValue Int),
     poolSortingType :: Maybe (MandatoryValue PoolSortingType),
-    singleBatchProcessTime :: Maybe (MandatoryValue Seconds)
+    singleBatchProcessTime :: Maybe (MandatoryValue Seconds),
+    configStartTime :: Maybe (OptionalValue Hours),
+    configEndTime :: Maybe (OptionalValue Hours)
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -199,7 +201,9 @@ validateDriverPoolConfigUpdateReq DriverPoolConfigUpdateReq {..} =
       validateField "driverBatchSize" driverBatchSize $ InMaybe $ InValue $ Min @Int 1,
       validateField "maxNumberOfBatches" maxNumberOfBatches $ InMaybe $ InValue $ Min @Int 1,
       validateField "maxParallelSearchRequests" maxParallelSearchRequests $ InMaybe $ InValue $ Min @Int 1,
-      validateField "singleBatchProcessTime" singleBatchProcessTime $ InMaybe $ InValue $ Min @Seconds 1
+      validateField "singleBatchProcessTime" singleBatchProcessTime $ InMaybe $ InValue $ Min @Seconds 1,
+      validateField "configStartTime" configStartTime $ InMaybe $ InValue $ Min @Hours 1,
+      validateField "configEndTime" configEndTime $ InMaybe $ InValue $ Min @Hours 1
     ]
 
 ---------------------------------------------------------
@@ -229,7 +233,9 @@ data DriverPoolConfigCreateReq = DriverPoolConfigCreateReq
     singleBatchProcessTime :: Seconds,
     radiusShrinkValueForDriversOnRide :: Int,
     driverToDestinationDistanceThreshold :: Meters,
-    driverToDestinationDuration :: Seconds
+    driverToDestinationDuration :: Seconds,
+    configStartTime :: Maybe Hours,
+    configEndTime :: Maybe Hours
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -254,7 +260,9 @@ validateDriverPoolConfigCreateReq DriverPoolConfigCreateReq {..} =
       validateField "singleBatchProcessTime" singleBatchProcessTime $ Min @Seconds 1,
       validateField "radiusShrinkValueForDriversOnRide" radiusShrinkValueForDriversOnRide $ Min @Int 1,
       validateField "driverToDestinationDistanceThreshold" driverToDestinationDistanceThreshold $ Min @Meters 1,
-      validateField "driverToDestinationDuration" driverToDestinationDuration $ Min @Seconds 1
+      validateField "driverToDestinationDuration" driverToDestinationDuration $ Min @Seconds 1,
+      validateField "configStartTime" configStartTime $ InMaybe $ Min @Hours 1,
+      validateField "configEndTime" configEndTime $ InMaybe $ Min @Hours 1
     ]
 
 ---------------------------------------------------------

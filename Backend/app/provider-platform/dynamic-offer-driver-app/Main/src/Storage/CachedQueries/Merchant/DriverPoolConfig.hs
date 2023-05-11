@@ -20,6 +20,7 @@ module Storage.CachedQueries.Merchant.DriverPoolConfig
     create,
     findAllByMerchantId,
     findByMerchantIdAndTripDistance,
+    findAllByMerchantIdAndConfigTime,
     update,
   )
 where
@@ -47,6 +48,25 @@ findAllByMerchantId id =
 
 findByMerchantIdAndTripDistance :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Meters -> m (Maybe DriverPoolConfig)
 findByMerchantIdAndTripDistance merchantId tripDistance = find (\config -> config.tripDistance == tripDistance) <$> findAllByMerchantId merchantId
+
+findAllByMerchantIdAndConfigTime :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Hours -> m [DriverPoolConfig]
+findAllByMerchantIdAndConfigTime merchantId hour = do
+  configs <- findAllByMerchantId merchantId
+  listBasedOnConfigTime <-
+    filterM
+      ( \config -> do
+          case config.configStartTime of
+            Nothing -> return False
+            Just startHr -> do
+              case config.configEndTime of
+                Nothing -> return False
+                Just endHr -> do
+                  return $ hour >= startHr && hour < endHr
+      )
+      configs
+  if null listBasedOnConfigTime
+    then pure configs
+    else return listBasedOnConfigTime
 
 cacheDriverPoolConfigs :: (CacheFlow m r) => Id Merchant -> [DriverPoolConfig] -> m ()
 cacheDriverPoolConfigs merchantId cfg = do

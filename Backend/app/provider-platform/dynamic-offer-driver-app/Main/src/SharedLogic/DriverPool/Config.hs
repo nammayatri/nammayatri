@@ -14,6 +14,8 @@
 
 module SharedLogic.DriverPool.Config where
 
+import Data.Time (UTCTime (utctDayTime))
+import Data.Time.LocalTime
 import Domain.Types.Merchant
 import Domain.Types.Merchant.DriverPoolConfig
 import Kernel.Prelude
@@ -37,10 +39,14 @@ getDriverPoolConfig ::
   Meters ->
   m DriverPoolConfig
 getDriverPoolConfig merchantId dist = do
-  configs <- CDP.findAllByMerchantId merchantId
+  currentTime <- getCurrentTime
+  let currentHour = getCurrentHour currentTime
+  configs <- CDP.findAllByMerchantIdAndConfigTime merchantId $ Hours currentHour
   let applicableConfig = find filterByDist configs
   case configs of
     [] -> throwError $ InvalidRequest "DriverPoolConfig not found"
     (config : _) -> pure $ maybe config identity applicableConfig
   where
     filterByDist cfg = dist >= cfg.tripDistance
+    getCurrentHour :: UTCTime -> Int
+    getCurrentHour = todHour . timeToTimeOfDay . utctDayTime

@@ -24,7 +24,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.DriverPoolConfig as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
-import Kernel.Types.Common (Meters, Seconds)
+import Kernel.Types.Common (Hours, Meters, Seconds)
 import Kernel.Types.Id
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config (PoolSortingType)
 import Storage.Tabular.Merchant (MerchantTId)
@@ -53,6 +53,8 @@ mkPersist
       radiusShrinkValueForDriversOnRide Int
       driverToDestinationDistanceThreshold Meters
       driverToDestinationDuration Seconds
+      configStartTime Hours Maybe
+      configEndTime Hours Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary merchantId tripDistance

@@ -178,7 +178,9 @@ driverPoolConfigUpdate merchantShortId tripDistance req = do
                maxNumberOfBatches = maybe config.maxNumberOfBatches (.value) req.maxNumberOfBatches,
                maxParallelSearchRequests = maybe config.maxParallelSearchRequests (.value) req.maxParallelSearchRequests,
                poolSortingType = maybe config.poolSortingType (castPoolSortingType . (.value)) req.poolSortingType,
-               singleBatchProcessTime = maybe config.singleBatchProcessTime (.value) req.singleBatchProcessTime
+               singleBatchProcessTime = maybe config.singleBatchProcessTime (.value) req.singleBatchProcessTime,
+               configStartTime = maybe config.configStartTime (.value) req.configStartTime,
+               configEndTime = maybe config.configEndTime (.value) req.configEndTime
               }
   Esq.runTransaction $ do
     CQDPC.update updConfig
