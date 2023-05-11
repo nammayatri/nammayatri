@@ -494,14 +494,14 @@ sourceUnserviceableConfig state =
           , margin = (Margin 0 50 0 20)
           }
         , errorConfig
-          { text = (getString LOCATION_UNSERVICEABLE)
+          { text = if state.props.isMockLocation then "Unable to get your location!" else (getString LOCATION_UNSERVICEABLE)
           , textSize = FontSize.a_22
           , color = Color.black800
           , margin = (MarginBottom 5)
           , fontStyle = FontStyle.bold LanguageStyle
           }
         , errorDescriptionConfig
-          { text = (getString CURRENTLY_WE_ARE_LIVE_IN_)
+          { text = if state.props.isMockLocation then "Turn off any Mock Location app you might be using and restart the app." else (getString CURRENTLY_WE_ARE_LIVE_IN_)
           , color = Color.black700
           , textSize = FontSize.a_16
           , margin = (Margin 20 0 20 (40 + EHC.safeMarginBottom))

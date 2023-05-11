@@ -58,7 +58,7 @@ import Engineering.Helpers.Commons (countDown, flowRunner, getNewIDWithTag, lift
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (getLocationName, getNewTrackingId, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, toString, waitingCountdownTimer, getDistanceBwCordinates, fetchAndUpdateCurrentLocation, getCurrentLocationMarker, getPreviousVersion, storeOnResumeCallback, decodeErrorMessage)
-import JBridge (enableMyLocation, drawRoute, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, updateRoute, storeCallBackMessageUpdated, startChatListenerService, stopChatListenerService, updateRoute, toast, getExtendedPath, generateSessionId, initialWebViewSetUp)
+import JBridge (enableMyLocation, drawRoute, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, updateRoute, storeCallBackMessageUpdated, startChatListenerService, stopChatListenerService, updateRoute, toast, getExtendedPath, generateSessionId, initialWebViewSetUp, isMockLocation)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -90,6 +90,7 @@ screen initialState =
             _ <- pure $ printLog "storeCallBackCustomer initially" "."
             _ <- pure $ printLog "storeCallBackCustomer callbackInitiated" initialState.props.callbackInitiated
             -- push NewUser -- TODO :: Handle the functionality
+            _ <- isMockLocation push IsMockLocation
             _ <- launchAff $ flowRunner $ checkForLatLongInSavedLocations push UpdateSavedLoc initialState
             if (not initialState.props.callbackInitiated) then do
               _ <- pure $ printLog "storeCallBackCustomer initiateCallback" "."
@@ -278,7 +279,7 @@ view push state =
             , if state.props.currentStage == PricingTutorial then (pricingTutorialView push state) else emptyTextView state
             , if state.props.currentStage == ChatWithDriver then (chatView push state) else emptyTextView state
             , rideTrackingView push state
-            , if ((not state.props.ratingModal) && (state.props.showlocUnserviceablePopUp) && state.props.currentStage == HomeScreen) then (sourceUnserviceableView push state) else emptyTextView state
+            , if ((not state.props.ratingModal) && (state.props.showlocUnserviceablePopUp || state.props.isMockLocation) && state.props.currentStage == HomeScreen) then (sourceUnserviceableView push state) else emptyTextView state
             , if state.data.settingSideBar.opened /= SettingSideBar.CLOSED then settingSideBarView push state else emptyTextView state
             , if (state.props.currentStage == SearchLocationModel || state.props.currentStage == FavouriteLocationModel) then searchLocationView push state else emptyTextView state
             , if (any (_ == state.props.currentStage) [ FindingQuotes, QuoteList ]) then (quoteListModelView push state) else emptyTextView state

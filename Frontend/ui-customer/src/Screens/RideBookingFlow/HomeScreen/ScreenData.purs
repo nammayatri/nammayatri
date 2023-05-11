@@ -141,6 +141,7 @@ initData = {
     , showLiveDashboard : false
     , isbanner : true
     , callSupportPopUp : false
+    , isMockLocation: false
     }
 }
 
