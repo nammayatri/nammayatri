@@ -33,7 +33,7 @@ let rccfg =
 
 in  { loggerConfig =
             common.loggerConfig
-        //  { logRawSql = False
+        //  { logRawSql = True
             , logFilePath = "/tmp/scheduler-example-scheduler.log"
             , prettyPrinting = True
             }

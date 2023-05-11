@@ -26,7 +26,7 @@ let loggerConfig =
       { level = LogLevel.DEBUG
       , logToFile = False
       , logToConsole = True
-      , logRawSql = False
+      , logRawSql = True
       , prettyPrinting = False
       }
 

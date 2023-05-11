@@ -26,7 +26,7 @@ let rccfg =
 
 in  { loggerConfig =
             common.loggerConfig
-        //  { logRawSql = False
+        //  { logRawSql = True
             , logFilePath = "/tmp/transporter-scheduler.log"
             , prettyPrinting = True
             }

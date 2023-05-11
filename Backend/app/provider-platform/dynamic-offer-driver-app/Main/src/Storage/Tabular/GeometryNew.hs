@@ -174,6 +174,7 @@ instance B.Table GeometryNewT where
 instance ModelMeta GeometryNewT where
   modelFieldModification = bookingTMod
   modelTableName = "geometry"
+  modelSchemaName = Just "atlas_driver_offer_bpp"
   mkExprWithDefault _ = B.insertExpressions []
 
 type GeometryNew = GeometryNewT Identity
@@ -223,7 +224,7 @@ findById :: (L.MonadFlow m) => Text -> m (Maybe GeometryNew)
 findById bookingId = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbCOnf' -> T.trace (T.unpack bookingId) $ either (const Nothing) (\x -> x) <$> KV.findWithKVConnector dbCOnf' meshConfig ([And [Is id (Eq bookingId)]])
+    Just dbCOnf' -> T.trace (T.unpack bookingId) $ either (\x -> T.trace (show x) Nothing) (\x -> x) <$> KV.findWithKVConnector dbCOnf' meshConfig [Is id $ Eq bookingId]
     Nothing -> T.trace "Rahull Nothing" $ pure Nothing
 
 -- instance Serialize Domain.BookingStatus where

@@ -70,6 +70,6 @@ in  { hedisCfg
     , loggerConfig =
             common.loggerConfig
         //  { logFilePath = "/tmp/kafka-consumers-broadcast-messages.log"
-            , logRawSql = False
+            , logRawSql = True
             }
     }

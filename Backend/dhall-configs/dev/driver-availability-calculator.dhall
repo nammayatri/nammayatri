@@ -69,5 +69,5 @@ in  { hedisCfg
     , httpClientOptions = common.httpClientOptions
     , loggerConfig =
             common.loggerConfig
-        //  { logFilePath = "/tmp/kafka-consumers.log", logRawSql = False }
+        //  { logFilePath = "/tmp/kafka-consumers.log", logRawSql = True }
     }

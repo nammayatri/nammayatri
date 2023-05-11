@@ -105,7 +105,7 @@ in  { esqDBCfg
     , loggerConfig =
             common.loggerConfig
         //  { logFilePath = "/tmp/dynamic-offer-driver-app.log"
-            , logRawSql = False
+            , logRawSql = True
             }
     , googleTranslateUrl = common.googleTranslateUrl
     , googleTranslateKey = common.googleTranslateKey
