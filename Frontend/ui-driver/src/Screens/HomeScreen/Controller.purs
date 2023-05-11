@@ -165,8 +165,8 @@ instance loggableAction :: Loggable Action where
 
 
 data ScreenOutput =   Refresh ST.HomeScreenState
-                    | GoToProfileScreen
-                    | GoToRidesScreen
+                    | GoToProfileScreen ST.HomeScreenState
+                    | GoToRidesScreen ST.HomeScreenState
                     | GoToReferralScreen
                     | StartRide ST.HomeScreenState
                     | EndRide ST.HomeScreenState
@@ -270,8 +270,8 @@ eval (ShowMap key lat lon) state = continueWithCmd state [ do
   ]
 eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
   case item of
-    "Rides" -> exit GoToRidesScreen
-    "Profile" -> exit $ GoToProfileScreen
+    "Rides" -> exit $ GoToRidesScreen state
+    "Profile" -> exit $ GoToProfileScreen state
     "Alert" -> do
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       _ <- pure $ firebaseLogEvent "ny_driver_alert_click"
@@ -503,7 +503,7 @@ eval (PopUpModalSilentAction (PopUpModal.OnButton2Click)) state = exit (DriverAv
 eval GoToProfile state =  do
   _ <- pure $ setValueToLocalNativeStore PROFILE_DEMO "false"
   _ <- pure $ hideKeyboardOnNavigation true
-  exit $ GoToProfileScreen
+  exit $ GoToProfileScreen state
 eval ClickAddAlternateButton state = do
   let curr_time = getCurrentUTC ""
   let last_attempt_time = getValueToLocalStore SET_ALTERNATE_TIME

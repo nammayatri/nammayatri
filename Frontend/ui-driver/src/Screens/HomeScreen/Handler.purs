@@ -39,8 +39,12 @@ homeScreen = do
   (GlobalState state) <- getState
   action <- lift $ lift $ runScreen $ HomeScreen.screen state.homeScreen
   case action of
-    GoToProfileScreen -> App.BackT $ App.BackPoint <$> pure GO_TO_PROFILE_SCREEN
-    GoToRidesScreen -> App.BackT $ App.BackPoint <$> pure GO_TO_RIDES_SCREEN
+    GoToProfileScreen updatedState-> do
+      modifyScreenState $ HomeScreenStateType (\homeScreen → updatedState)
+      App.BackT $ App.BackPoint <$> pure GO_TO_PROFILE_SCREEN
+    GoToRidesScreen updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreen → updatedState)
+      App.BackT $ App.BackPoint <$> pure GO_TO_RIDES_SCREEN
     GoToReferralScreen -> App.BackT $ App.BackPoint <$> pure GO_TO_REFERRAL_SCREEN_FROM_HOME_SCREEN
     DriverAvailabilityStatus state status -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → state)
