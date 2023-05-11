@@ -2703,31 +2703,35 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     @JavascriptInterface
     public void shareTextMessage(String title, String message) {
         activity.runOnUiThread(() -> {
-            if (context != null){
+            try {
                 Intent sendIntent = new Intent();
                 sendIntent.setAction(Intent.ACTION_SEND);
                 sendIntent.putExtra(Intent.EXTRA_TEXT, message);
                 sendIntent.putExtra(Intent.EXTRA_TITLE, title);
                 Bitmap thumbnailBitmap = BitmapFactory.decodeResource(context.getResources(), R.drawable.ny_ic_icon);
-                if (thumbnailBitmap != null) {
-                    Uri thumbnailUri = getImageUri(context, thumbnailBitmap);
+                Uri thumbnailUri = getImageUri(context, thumbnailBitmap);
+                if(thumbnailUri != null){
                     ClipData clipData = ClipData.newUri(context.getContentResolver(), "Thumbnail Image", thumbnailUri);
                     sendIntent.setClipData(clipData);
+                    sendIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    sendIntent.setType("text/plain");
+                    Intent shareIntent = Intent.createChooser(sendIntent, null);
+                    activity.startActivity(shareIntent);
                 }
-                sendIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                sendIntent.setType("text/plain");
-                Intent shareIntent = Intent.createChooser(sendIntent, null);
-                shareIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                context.startActivity(shareIntent);
+            }catch (Exception e){
             }
         });
     }
 
     private Uri getImageUri(Context context, Bitmap bitmap) {
-        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100, bytes);
-        String path = MediaStore.Images.Media.insertImage(context.getContentResolver(), bitmap, "Thumbnail Image", null);
-        return Uri.parse(path);
+        try {
+            ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, bytes);
+            String path = MediaStore.Images.Media.insertImage(context.getContentResolver(), bitmap, "Thumbnail Image", null);
+            return Uri.parse(path);
+        }catch (Exception e){
+            return null;
+        }
     }
 
     @JavascriptInterface
