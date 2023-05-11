@@ -19,6 +19,7 @@ module SharedLogic.MerchantConfig
     updateTotalRidesCounters,
     anyFraudDetected,
     mkCancellationKey,
+    mkCancellationByDriverKey,
     searchFraudDetected,
     blockCustomer,
   )
@@ -57,31 +58,31 @@ mkSearchCounterKey :: Text -> Text -> Text
 mkSearchCounterKey ind idtxt = "Customer:SearchCounter:" <> idtxt <> ":" <> ind
 
 updateSearchFraudCounters :: (HasCacheConfig r, HedisFlow m r, MonadFlow m) => Id Person.Person -> [DMC.MerchantConfig] -> m ()
-updateSearchFraudCounters riderId merchantConfigs = do
+updateSearchFraudCounters riderId merchantConfigs = Redis.withCrossAppRedis $ do
   mapM_ (\mc -> incrementCount mc.id.getId mc.fraudSearchCountWindow) merchantConfigs
   where
     incrementCount ind = SWC.incrementWindowCount (mkSearchCounterKey ind riderId.getId)
 
 updateCancelledByDriverFraudCounters :: (HasCacheConfig r, HedisFlow m r, MonadFlow m) => Id Person.Person -> [DMC.MerchantConfig] -> m ()
-updateCancelledByDriverFraudCounters riderId merchantConfigs = do
+updateCancelledByDriverFraudCounters riderId merchantConfigs = Redis.withCrossAppRedis $ do
   mapM_ (\mc -> incrementCount mc.id.getId mc.fraudBookingCancelledByDriverCountWindow) merchantConfigs
   where
     incrementCount ind = SWC.incrementWindowCount (mkCancellationByDriverKey ind riderId.getId)
 
 updateCustomerFraudCounters :: (HasCacheConfig r, HedisFlow m r, MonadFlow m) => Id Person.Person -> [DMC.MerchantConfig] -> m ()
-updateCustomerFraudCounters riderId merchantConfigs = do
+updateCustomerFraudCounters riderId merchantConfigs = Redis.withCrossAppRedis $ do
   mapM_ (\mc -> incrementCount mc.id.getId mc.fraudBookingCancellationCountWindow) merchantConfigs
   where
     incrementCount ind = SWC.incrementWindowCount (mkCancellationKey ind riderId.getId)
 
 updateTotalRidesCounters :: (HedisFlow m r, EsqDBReplicaFlow m r) => Id Person.Person -> m ()
-updateTotalRidesCounters riderId = do
+updateTotalRidesCounters riderId = Redis.withCrossAppRedis $ do
   _ <- getTotalRidesCount riderId
   let key = mkTotalRidesKey riderId.getId
   void $ Redis.incr key
 
 getTotalRidesCount :: (HedisFlow m r, EsqDBReplicaFlow m r) => Id Person.Person -> m Int
-getTotalRidesCount riderId = do
+getTotalRidesCount riderId = Redis.withCrossAppRedis $ do
   let key = mkTotalRidesKey riderId.getId
   mbTotalCount <- Redis.safeGet key
   case mbTotalCount of
@@ -98,7 +99,7 @@ anyFraudDetected :: (HedisFlow m r, HasCacheConfig r, MonadFlow m, EsqDBFlow m r
 anyFraudDetected riderId merchantId = checkFraudDetected riderId merchantId [MoreCancelling, MoreCancelledByDriver, MoreSearching, TotalRides]
 
 checkFraudDetected :: (HedisFlow m r, HasCacheConfig r, MonadFlow m, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person.Person -> Id DM.Merchant -> [Factors] -> [DMC.MerchantConfig] -> m (Maybe DMC.MerchantConfig)
-checkFraudDetected riderId merchantId factors merchantConfigs = do
+checkFraudDetected riderId merchantId factors merchantConfigs = Redis.withCrossAppRedis $ do
   useFraudDetection <- maybe False (.useFraudDetection) <$> CMSUC.findByMerchantId merchantId
   if useFraudDetection
     then findM (\mc -> and <$> mapM (getFactorResult mc) factors) merchantConfigs
@@ -110,11 +111,11 @@ checkFraudDetected riderId merchantId factors merchantConfigs = do
           cancelledBookingCount :: Int <- sum . catMaybes <$> SWC.getCurrentWindowValues (mkCancellationKey mc.id.getId riderId.getId) mc.fraudBookingCancellationCountWindow
           pure $ cancelledBookingCount >= mc.fraudBookingCancellationCountThreshold
         MoreCancelledByDriver -> do
-          cancelledBookingByDriverCount :: Int <- sum . catMaybes <$> SWC.getCurrentWindowValues (mkCancellationKey mc.id.getId riderId.getId) mc.fraudBookingCancelledByDriverCountWindow
+          cancelledBookingByDriverCount :: Int <- sum . catMaybes <$> SWC.getCurrentWindowValues (mkCancellationByDriverKey mc.id.getId riderId.getId) mc.fraudBookingCancelledByDriverCountWindow
           pure $ cancelledBookingByDriverCount >= mc.fraudBookingCancelledByDriverCountThreshold
         MoreSearching -> do
-          serachCount :: Int <- sum . catMaybes <$> SWC.getCurrentWindowValues (mkSearchCounterKey mc.id.getId riderId.getId) mc.fraudSearchCountWindow
-          pure $ serachCount >= mc.fraudSearchCountThreshold
+          sreachCount :: Int <- sum . catMaybes <$> SWC.getCurrentWindowValues (mkSearchCounterKey mc.id.getId riderId.getId) mc.fraudSearchCountWindow
+          pure $ sreachCount >= mc.fraudSearchCountThreshold
         TotalRides -> do
           totalRidesCount :: Int <- getTotalRidesCount riderId
           pure $ totalRidesCount <= mc.fraudBookingTotalCountThreshold

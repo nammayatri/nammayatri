@@ -29,12 +29,13 @@ import Environment
 import Kernel.External.Encryption (decrypt, getDbHash)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Transactionable (Transactionable' (runTransaction), runInReplica)
+import Kernel.Storage.Hedis (withCrossAppRedis)
 import Kernel.Types.APISuccess
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
-import SharedLogic.MerchantConfig (mkCancellationKey)
+import qualified SharedLogic.MerchantConfig as SMC
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.MerchantConfig as CMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
@@ -76,8 +77,7 @@ blockCustomer merchantShortId customerId = do
   let merchantId = customer.merchantId
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  runTransaction $ do
-    QP.updatingEnabledAndBlockedState personId True
+  SMC.blockCustomer personId Nothing
   logTagInfo "dashboard -> blockCustomer : " (show personId)
   pure Success
 
@@ -96,9 +96,14 @@ unblockCustomer merchantShortId customerId = do
   let merchantId = customer.merchantId
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
   merchantConfigs <- CMC.findAllByMerchantId merchantId
-  mapM_ (\mc -> SWC.deleteCurrentWindowValues (mkCancellationKey personId.getId) mc.fraudBookingDetectionWindow) merchantConfigs
+  mapM_
+    ( \mc -> withCrossAppRedis $ do
+        SWC.deleteCurrentWindowValues (SMC.mkCancellationKey mc.id.getId personId.getId) mc.fraudBookingCancellationCountWindow
+        SWC.deleteCurrentWindowValues (SMC.mkCancellationByDriverKey mc.id.getId personId.getId) mc.fraudBookingCancelledByDriverCountWindow
+    )
+    merchantConfigs
   runTransaction $ do
-    QP.updatingEnabledAndBlockedState personId False
+    QP.updatingEnabledAndBlockedState personId Nothing False
   logTagInfo "dashboard -> unblockCustomer : " (show personId)
   pure Success
 
