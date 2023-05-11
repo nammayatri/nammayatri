@@ -36,6 +36,7 @@ import qualified Domain.Types.Person as DPerson
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -82,16 +83,18 @@ select :: Id DPerson.Person -> Id DEstimate.Estimate -> FlowHandler APISuccess
 select personId estimateId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   let autoAssignFlag = False
   let req = DSelect.DEstimateSelectReq {customerExtraFee = Nothing, autoAssignEnabled = autoAssignFlag, autoAssignEnabledV2 = Nothing}
-  dSelectReq <- DSelect.select personId estimateId req
-  becknReq <- ACL.buildSelectReq dSelectReq
-  void $ withShortRetry $ CallBPP.select dSelectReq.providerUrl becknReq
+  Redis.whenWithLockRedis (selectEstimateLockKey personId) 60 $ do
+    dSelectReq <- DSelect.select personId estimateId req
+    becknReq <- ACL.buildSelectReq dSelectReq
+    void $ withShortRetry $ CallBPP.select dSelectReq.providerUrl becknReq
   pure Success
 
 select2 :: Id DPerson.Person -> Id DEstimate.Estimate -> DSelect.DEstimateSelectReq -> FlowHandler APISuccess
 select2 personId estimateId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
-  dSelectReq <- DSelect.select personId estimateId req
-  becknReq <- ACL.buildSelectReq dSelectReq
-  void $ withShortRetry $ CallBPP.select dSelectReq.providerUrl becknReq
+  Redis.whenWithLockRedis (selectEstimateLockKey personId) 60 $ do
+    dSelectReq <- DSelect.select personId estimateId req
+    becknReq <- ACL.buildSelectReq dSelectReq
+    void $ withShortRetry $ CallBPP.select dSelectReq.providerUrl becknReq
   pure Success
 
 selectList :: Id DPerson.Person -> Id DEstimate.Estimate -> FlowHandler DSelect.SelectListRes
@@ -121,3 +124,6 @@ cancelSearch personId estimateId = withFlowHandlerAPI . withPersonIdLogTag perso
         Right _ -> do
           DCancel.cancelSearch personId dCancelSearch
           pure DSelect.Success
+
+selectEstimateLockKey :: Id DPerson.Person -> Text
+selectEstimateLockKey personId = "Customer:SelectEstimate:CustomerId-" <> personId.getId
