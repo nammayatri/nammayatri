@@ -114,8 +114,8 @@ checkFraudDetected riderId merchantId factors merchantConfigs = Redis.withCrossA
           cancelledBookingByDriverCount :: Int <- sum . catMaybes <$> SWC.getCurrentWindowValues (mkCancellationByDriverKey mc.id.getId riderId.getId) mc.fraudBookingCancelledByDriverCountWindow
           pure $ cancelledBookingByDriverCount >= mc.fraudBookingCancelledByDriverCountThreshold
         MoreSearching -> do
-          sreachCount :: Int <- sum . catMaybes <$> SWC.getCurrentWindowValues (mkSearchCounterKey mc.id.getId riderId.getId) mc.fraudSearchCountWindow
-          pure $ sreachCount >= mc.fraudSearchCountThreshold
+          serachCount :: Int <- sum . catMaybes <$> SWC.getCurrentWindowValues (mkSearchCounterKey mc.id.getId riderId.getId) mc.fraudSearchCountWindow
+          pure $ serachCount >= mc.fraudSearchCountThreshold
         TotalRides -> do
           totalRidesCount :: Int <- getTotalRidesCount riderId
           pure $ totalRidesCount <= mc.fraudBookingTotalCountThreshold
