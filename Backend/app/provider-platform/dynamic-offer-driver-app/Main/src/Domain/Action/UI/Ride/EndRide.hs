@@ -327,15 +327,7 @@ calculateFinalValuesForCorrectDistanceCalculations handle booking ride now mbMax
         else returnEstimatesAsFinalValues handle booking ride
     else
       if distanceDiff < 0
-        then do
-          fare1@(_, money1, _) <- recalculateFareForDistance handle booking ride (roundToIntegral $ ride.traveledDistance + abs (distanceDiff * 0.5))
-          (dist2, money2', fp2) <- recalculateFareForDistance handle booking ride $ roundToIntegral ride.traveledDistance
-          let money2 = money2' + 50 - (fromMaybe 0 booking.fareParams.driverSelectedFare)
-          let fare2 = (dist2, money2, fp2)
-          return $
-            if money1 < money2
-              then fare1
-              else fare2
+        then recalculateFareForDistance handle booking ride $ roundToIntegral ride.traveledDistance
         else
           if distanceDiff < thresholdConfig.actualRideDistanceDiffThreshold
             then do
@@ -359,15 +351,7 @@ calculateFinalValuesForFailedDistanceCalculations handle@ServiceHandle {..} book
     then returnEstimatesAsFinalValues handle booking ride
     else
       if distanceDiff < 0
-        then do
-          fare1@(_, money1, _) <- recalculateFareForDistance handle booking ride (approxTraveledDistance + roundToIntegral (abs (distanceDiff * 0.5)))
-          (dist2, money2', fp2) <- recalculateFareForDistance handle booking ride approxTraveledDistance
-          let money2 = money2' + 50 - (fromMaybe 0 booking.fareParams.driverSelectedFare)
-          let fare2 = (dist2, money2, fp2)
-          return $
-            if money1 < money2
-              then fare1
-              else fare2
+        then recalculateFareForDistance handle booking ride approxTraveledDistance
         else
           if distanceDiff < thresholdConfig.actualRideDistanceDiffThreshold
             then do
