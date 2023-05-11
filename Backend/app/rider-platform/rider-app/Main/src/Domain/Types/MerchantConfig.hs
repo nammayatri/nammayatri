@@ -21,9 +21,15 @@ import qualified Kernel.Types.SlidingWindowCounters as SWC
 
 -- Non empty list here?
 data MerchantConfig = MerchantConfig
-  { merchantId :: Id Merchant,
-    fraudBookingDetectionWindow :: SWC.SlidingWindowOptions,
+  { id :: Id MerchantConfig,
+    merchantId :: Id Merchant,
     fraudBookingCancellationCountThreshold :: Int,
-    fraudBookingTotalCountThreshold :: Int
+    fraudBookingCancellationCountWindow :: SWC.SlidingWindowOptions,
+    fraudBookingTotalCountThreshold :: Int,
+    fraudBookingCancelledByDriverCountThreshold :: Int,
+    fraudBookingCancelledByDriverCountWindow :: SWC.SlidingWindowOptions,
+    fraudSearchCountThreshold :: Int,
+    fraudSearchCountWindow :: SWC.SlidingWindowOptions,
+    enabled :: Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON)
