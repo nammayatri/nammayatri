@@ -21,6 +21,7 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import qualified Domain.Types.Merchant as DMerchant
+import qualified Domain.Types.MerchantConfig as DMC
 import Kernel.External.Encryption
 import qualified Kernel.External.FCM.Types as FCM
 import qualified Kernel.External.Maps as Maps
@@ -98,6 +99,7 @@ data PersonE e = Person
     referredAt :: Maybe UTCTime,
     hasTakenValidRide :: Bool,
     blockedAt :: Maybe UTCTime,
+    blockedByRuleId :: Maybe (Id DMC.MerchantConfig),
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     bundleVersion :: Maybe Version,

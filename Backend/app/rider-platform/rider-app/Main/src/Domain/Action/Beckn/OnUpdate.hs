@@ -145,6 +145,7 @@ data BreakupPriceInfo = BreakupPriceInfo
 onUpdate ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
+    DB.EsqDBReplicaFlow m r,
     CoreMetrics m,
     HasBapInfo r m,
     HasHttpClientOptions r c,
@@ -199,8 +200,7 @@ onUpdate RideStartedReq {..} = do
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
   unless (booking.status == SRB.TRIP_ASSIGNED) $ throwError (BookingInvalidStatus $ show booking.status)
   unless (ride.status == SRide.NEW) $ throwError (RideInvalidStatus $ show ride.status)
-  merchantConfigs <- CMC.findAllByMerchantId booking.merchantId
-  SMC.updateTotalRidesCounters booking.riderId merchantConfigs
+  SMC.updateTotalRidesCounters booking.riderId
   rideStartTime <- getCurrentTime
   let updRideForStartReq =
         ride{status = SRide.INPROGRESS,
@@ -257,6 +257,14 @@ onUpdate BookingCancelledReq {..} = do
   mbRide <- QRide.findActiveByRBId booking.id
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show cancellationSource)
   bookingCancellationReason <- buildBookingCancellationReason booking.id (mbRide <&> (.id)) cancellationSource
+  merchantConfigs <- CMC.findAllByMerchantId booking.merchantId
+  case cancellationSource of
+    SBCR.ByUser -> SMC.updateCustomerFraudCounters booking.riderId merchantConfigs
+    SBCR.ByDriver -> SMC.updateCancelledByDriverFraudCounters booking.riderId merchantConfigs
+    _ -> pure ()
+  fork "incrementing fraud counters" $ do
+    mFraudDetected <- SMC.anyFraudDetected booking.riderId booking.merchantId merchantConfigs
+    whenJust mFraudDetected $ \mc -> SMC.blockCustomer booking.riderId (Just mc.id)
   DB.runTransaction $ do
     QRB.updateStatus booking.id SRB.CANCELLED
     whenJust mbRide $ \ride -> QRide.updateStatus ride.id SRide.CANCELLED
