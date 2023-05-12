@@ -18,10 +18,19 @@ import Domain.Types.FareParameters
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
-import Storage.Tabular.FareParameters ()
+import Storage.Queries.FullEntityBuilders (buildFullFareParameters)
+import Storage.Tabular.FareParameters (FareParametersT)
+import Storage.Tabular.FareParameters.Instances
 
 create :: FareParameters -> SqlDB ()
-create = Esq.create
+create fareParams =
+  withFullEntity fareParams $ \(fareParams', fareParamsDetais) -> do
+    Esq.create' fareParams'
+    case fareParamsDetais of
+      ProgressiveDetailsT fppdt -> Esq.create' fppdt
+      SlabDetailsT -> return ()
 
 findById :: Transactionable m => Id FareParameters -> m (Maybe FareParameters)
-findById = Esq.findById
+findById fareParametersId = buildDType $ do
+  res <- Esq.findById' @FareParametersT fareParametersId
+  join <$> mapM buildFullFareParameters res

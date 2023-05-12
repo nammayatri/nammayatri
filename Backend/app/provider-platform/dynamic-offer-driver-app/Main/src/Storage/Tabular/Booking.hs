@@ -28,6 +28,7 @@ import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Storage.Tabular.Booking.BookingLocation hiding (createdAt, id, updatedAt)
 import qualified Storage.Tabular.FareParameters as Fare
+import qualified Storage.Tabular.FareParameters.Instances as Fare
 import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.RiderDetails (RiderDetailsTId)
 import Storage.Tabular.Vehicle ()
@@ -72,7 +73,7 @@ instance TEntityKey BookingT where
   fromKey (BookingTKey _id) = Id _id
   toKey (Id id) = BookingTKey id
 
-type FullBookingT = (BookingT, BookingLocationT, BookingLocationT, Fare.FareParametersT)
+type FullBookingT = (BookingT, BookingLocationT, BookingLocationT, Fare.FullFareParametersT)
 
 instance FromTType FullBookingT Domain.Booking where
   fromTType (BookingT {..}, fromLoc, toLoc, fareParametersT) = do

@@ -54,7 +54,7 @@ import qualified Lib.DriverScore.Types as DST
 import Servant.Client (BaseUrl (..))
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverLocation as DLoc
-import SharedLogic.FareCalculator
+import SharedLogic.FareCalculator (fareSum)
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as QDriverInformation
 import qualified Storage.CachedQueries.Exophone as CQExophone
@@ -150,7 +150,7 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) =
       vehicleVariant = fromMaybe DVeh.SEDAN rideDetails.vehicleVariant,
       vehicleModel = fromMaybe initial rideDetails.vehicleModel,
       computedFare = ride.fare,
-      estimatedBaseFare = baseFareSum fareParams + (fromMaybe 0 fareParams.deadKmFare),
+      estimatedBaseFare = fareSum fareParams,
       estimatedDistance = booking.estimatedDistance,
       driverSelectedFare = fromMaybe 0 fareParams.driverSelectedFare,
       actualRideDistance = ride.traveledDistance,

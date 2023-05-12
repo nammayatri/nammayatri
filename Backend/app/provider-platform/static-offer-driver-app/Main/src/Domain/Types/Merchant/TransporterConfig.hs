@@ -31,16 +31,16 @@ data TransporterConfigD u = TransporterConfig
     rideTravelledDistThresholdWhenPickupOrDestIsDiff :: Maybe Meters,
     rideTravelledDistThresholdWhenPickupAndDestIsSame :: Maybe Meters,
     rideTimeEstimatedThreshold :: Maybe Seconds,
-    waitingTimeEstimatedThreshold :: Maybe Seconds,
+    waitingTimeEstimatedThreshold :: Maybe Minutes,
     availabilityTimeWeightage :: Int,
     acceptanceRatioWeightage :: Int,
     cancellationRatioWeightage :: Int,
     maxRadius :: Meters,
     minRadius :: Meters,
     radiusStepSize :: Meters,
+    fcmConfig :: FCMConfig,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime,
-    fcmConfig :: FCMConfig
+    updatedAt :: UTCTime
   }
   deriving (Generic, Show)
 

@@ -29,7 +29,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.Queries.Booking (baseBookingTable)
+import Storage.Queries.FullEntityBuilders (buildFullBooking)
 import Storage.Tabular.Booking as Booking
 import Storage.Tabular.DriverInformation as DriverInfo
 import Storage.Tabular.Ride as Ride
@@ -66,11 +66,11 @@ findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus = Esq.buil
       offsetVal = fromIntegral $ fromMaybe 0 mbOffset
       isOnlyActive = Just True == mbOnlyActive
   res <- Esq.findAll' $ do
-    ((booking :& fromLocation :& toLocation :& fareParams) :& ride) <-
+    (booking :& ride) <-
       from $
-        baseBookingTable
+        table @BookingT
           `innerJoin` table @RideT
-            `Esq.on` ( \((booking :& _ :& _ :& _) :& ride) ->
+            `Esq.on` ( \(booking :& ride) ->
                          ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
                      )
     where_ $
@@ -80,11 +80,15 @@ findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus = Esq.buil
     orderBy [desc $ ride ^. RideCreatedAt]
     limit limitVal
     offset offsetVal
-    return ((booking, fromLocation, toLocation, fareParams), ride)
+    return (booking, ride)
 
-  pure $
-    res <&> \(fullBookingT, ride) -> do
-      (extractSolidType @Ride ride, extractSolidType @Booking fullBookingT)
+  catMaybes
+    <$> forM
+      res
+      ( \(bookingT, rideT) -> runMaybeT do
+          booking <- MaybeT $ buildFullBooking bookingT
+          return (extractSolidType @Ride rideT, booking)
+      )
 
 findOneByDriverId :: Transactionable m => Id Person -> m (Maybe Ride)
 findOneByDriverId driverId = Esq.findOne $ do

@@ -59,7 +59,7 @@ import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.DriverQuote as DDrQuote
 import qualified Domain.Types.DriverReferral as DR
 import qualified Domain.Types.FareParameters as Fare
-import Domain.Types.FarePolicy (ExtraFee (..))
+import Domain.Types.FarePolicy (DriverExtraFeeBounds (..))
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Merchant.TransporterConfig
 import Domain.Types.Person (Person, PersonAPIEntity)
@@ -110,7 +110,6 @@ import qualified Storage.CachedQueries.DriverInformation as QDriverInformation
 import qualified Storage.CachedQueries.FarePolicy as FarePolicyS (findByMerchantIdAndVariant)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
-import qualified Storage.CachedQueries.SlabFarePolicy as SFarePolicyS (findByMerchantIdAndVariant)
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverLocation as QDriverLocation
 import qualified Storage.Queries.DriverQuote as QDrQt
@@ -687,7 +686,7 @@ getNearbySearchRequests driverId = do
     mkCancellationScoreRelatedConfig :: TransporterConfig -> CancellationScoreRelatedConfig
     mkCancellationScoreRelatedConfig TransporterConfig {..} = CancellationScoreRelatedConfig popupDelayToAddAsPenalty thresholdCancellationScore minRidesForCancellationScore
 
-isAllowedExtraFee :: ExtraFee -> Money -> Bool
+isAllowedExtraFee :: DriverExtraFeeBounds -> Money -> Bool
 isAllowedExtraFee extraFee val = extraFee.minFee <= val && val <= extraFee.maxFee
 
 offerQuoteLockKey :: Id Person -> Text
@@ -760,19 +759,21 @@ respondQuote driverId req = do
           quoteLimit <- getQuoteLimit sReq.providerId sReq.estimatedDistance
           quoteCount <- runInReplica $ QDrQt.countAllByRequestId sReq.id
           when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)
-          (fareParams, driverExtraFee) <- case organization.farePolicyType of
-            Fare.SLAB -> do
-              slabFarePolicy <- SFarePolicyS.findByMerchantIdAndVariant organization.id sReqFD.vehicleVariant >>= fromMaybeM (InternalError "Slab fare policy not found")
-              let driverExtraFee = ExtraFee {minFee = 0, maxFee = 0}
-              fareParams <- calculateFare organization.id (Right slabFarePolicy) sReq.estimatedDistance sReqFD.startTime mbOfferedFare sReq.customerExtraFee
-              pure (fareParams, driverExtraFee)
-            Fare.NORMAL -> do
-              farePolicy <- FarePolicyS.findByMerchantIdAndVariant organization.id sReqFD.vehicleVariant (Just sReq.estimatedDistance) >>= fromMaybeM NoFarePolicy
-              fareParams <- calculateFare organization.id (Left farePolicy) sReq.estimatedDistance sReqFD.startTime mbOfferedFare sReq.customerExtraFee
-              pure (fareParams, farePolicy.driverExtraFee)
+          farePolicy <- FarePolicyS.findByMerchantIdAndVariant organization.id sReqFD.vehicleVariant (Just sReq.estimatedDistance) >>= fromMaybeM NoFarePolicy
+          fareParams <-
+            calculateFareParameters
+              CalculateFareParametersParams
+                { farePolicy = farePolicy,
+                  distance = sReq.estimatedDistance,
+                  rideTime = sReqFD.startTime,
+                  waitingTime = Nothing,
+                  driverSelectedFare = mbOfferedFare,
+                  customerExtraFee = sReq.customerExtraFee
+                }
           whenJust mbOfferedFare $ \off ->
-            unless (isAllowedExtraFee driverExtraFee off) $
-              throwError $ NotAllowedExtraFee $ show off
+            whenJust farePolicy.driverExtraFeeBounds $ \driverExtraFeeBounds' ->
+              unless (isAllowedExtraFee driverExtraFeeBounds' off) $
+                throwError $ NotAllowedExtraFee $ show off
           driverQuote <- buildDriverQuote driver sReq sReqFD fareParams
           Esq.runTransaction $ do
             QDrQt.create driverQuote
@@ -928,7 +929,7 @@ validate personId phoneNumber = do
   when deleteOldPersonCheck $ throwError $ InvalidRequest "Alternate number can't be validated"
   smsCfg <- asks (.smsCfg)
   let useFakeOtpM = useFakeSms smsCfg
-  otpCode <- maybe generateOTPCode return (show <$> useFakeOtpM)
+  otpCode <- maybe generateOTPCode (return . show) useFakeOtpM
   whenNothing_ useFakeOtpM $ do
     let otpHash = smsCfg.credConfig.otpHash
     let altPhoneNumber = phoneNumber.mobileCountryCode <> phoneNumber.alternateNumber

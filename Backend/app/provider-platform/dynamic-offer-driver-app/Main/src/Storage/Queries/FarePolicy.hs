@@ -26,51 +26,76 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab as QFPSlabDetSlabs
+import Storage.Queries.FullEntityBuilders (buildFullFarePolicy)
 import Storage.Tabular.FarePolicy
+import Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails (EntityField (FarePolicyProgressiveDetailsBaseDistance, FarePolicyProgressiveDetailsBaseFare, FarePolicyProgressiveDetailsDeadKmFare, FarePolicyProgressiveDetailsNightShiftCharge, FarePolicyProgressiveDetailsPerExtraKmFare, FarePolicyProgressiveDetailsTId), FarePolicyProgressiveDetailsT (..))
+import Storage.Tabular.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab ()
+import Storage.Tabular.FarePolicy.Instances
 
 findAllByMerchantId ::
   Transactionable m =>
   Id Merchant ->
   m [FarePolicy]
-findAllByMerchantId merchantId = do
-  Esq.findAll $ do
+findAllByMerchantId merchantId = buildDType $ do
+  res <- Esq.findAll' $ do
     farePolicy <- from $ table @FarePolicyT
     where_ $
       farePolicy ^. FarePolicyMerchantId ==. val (toKey merchantId)
     return farePolicy
+  catMaybes <$> mapM buildFullFarePolicy res
 
 findByMerchantIdAndVariant ::
   Transactionable m =>
   Id Merchant ->
   Variant ->
   m (Maybe FarePolicy)
-findByMerchantIdAndVariant merchantId variant = do
-  Esq.findOne $ do
+findByMerchantIdAndVariant merchantId variant = buildDType $ do
+  res <- Esq.findOne' $ do
     farePolicy <- from $ table @FarePolicyT
     where_ $
       farePolicy ^. FarePolicyMerchantId ==. val (toKey merchantId)
         &&. farePolicy ^. FarePolicyVehicleVariant ==. val variant
     return farePolicy
+  join <$> mapM buildFullFarePolicy res
 
 findById :: Transactionable m => Id FarePolicy -> m (Maybe FarePolicy)
-findById = Esq.findById
+findById farePolicyId = buildDType $ do
+  res <- Esq.findById' farePolicyId
+  join <$> mapM buildFullFarePolicy res
 
 update :: FarePolicy -> SqlDB ()
 update farePolicy = do
   now <- getCurrentTime
-  void $
-    Esq.update $ \tbl -> do
-      set
-        tbl
-        [ FarePolicyBaseDistanceFare =. val farePolicy.baseDistanceFare,
-          FarePolicyBaseDistanceMeters =. val farePolicy.baseDistanceMeters,
-          FarePolicyPerExtraKmFare =. val farePolicy.perExtraKmFare,
-          FarePolicyDeadKmFare =. val farePolicy.deadKmFare,
-          FarePolicyDriverMinExtraFee =. val farePolicy.driverExtraFee.minFee,
-          FarePolicyDriverMaxExtraFee =. val farePolicy.driverExtraFee.maxFee,
-          FarePolicyNightShiftStart =. val farePolicy.nightShiftStart,
-          FarePolicyNightShiftEnd =. val farePolicy.nightShiftEnd,
-          FarePolicyNightShiftRate =. val farePolicy.nightShiftRate,
-          FarePolicyUpdatedAt =. val now
-        ]
-      where_ $ tbl ^. FarePolicyTId ==. val (toKey farePolicy.id)
+  withFullEntity farePolicy $ \(FarePolicyT {..}, fpDetailsT) -> do
+    void $
+      Esq.update' $ \tbl -> do
+        set
+          tbl
+          [ FarePolicyDriverMinExtraFee =. val driverMinExtraFee,
+            FarePolicyDriverMaxExtraFee =. val driverMaxExtraFee,
+            FarePolicyNightShiftStart =. val nightShiftStart,
+            FarePolicyNightShiftEnd =. val nightShiftEnd,
+            FarePolicyUpdatedAt =. val now
+          ]
+        where_ $ tbl ^. FarePolicyTId ==. val (toKey farePolicy.id)
+
+    case fpDetailsT of
+      ProgressiveDetailsT fpdd -> updateProgressiveDetails fpdd
+      SlabsDetailsT fsdd -> updateSlabsDetails fsdd
+  where
+    updateProgressiveDetails FarePolicyProgressiveDetailsT {..} = do
+      void $
+        Esq.update' $ \tbl -> do
+          set
+            tbl
+            [ FarePolicyProgressiveDetailsBaseFare =. val baseFare,
+              FarePolicyProgressiveDetailsBaseDistance =. val baseDistance,
+              FarePolicyProgressiveDetailsPerExtraKmFare =. val perExtraKmFare,
+              FarePolicyProgressiveDetailsDeadKmFare =. val deadKmFare,
+              FarePolicyProgressiveDetailsNightShiftCharge =. val nightShiftCharge
+            ]
+          where_ $ tbl ^. FarePolicyProgressiveDetailsTId ==. val (toKey farePolicy.id)
+    updateSlabsDetails dets = do
+      QFPSlabDetSlabs.deleteAll' farePolicy.id
+      Esq.createMany' dets
