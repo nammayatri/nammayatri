@@ -269,7 +269,7 @@ Each package has clear separation of focuses w.r.t the functionality it provides
 
 1. How to find out where a library dependency is specified in Nix?
 
-    Run `nix run github:nix-commmunity/nix-melt` to navigate and find that transitive flake input specifying the dependency you are looking for. You can also inspect the `flake.lock` file.
+    Run `nix run github:nix-community/nix-melt` to navigate and find that transitive flake input specifying the dependency you are looking for. You can also inspect the `flake.lock` file.
 
 1. TBD...
 
