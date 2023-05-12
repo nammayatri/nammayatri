@@ -35,7 +35,6 @@ import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Queries.DriverQuote as QDQuote
 import Storage.Queries.FullEntityBuilders
 import Storage.Tabular.Booking
-import Storage.Tabular.Booking.BookingLocation
 import Storage.Tabular.DriverQuote as DriverQuote
 import qualified Storage.Tabular.FareParameters as Fare
 import Storage.Tabular.Geometry (EntityField (..), GeometryT)
