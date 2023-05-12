@@ -45,6 +45,19 @@ data FParamsProgressiveDetails = FParamsProgressiveDetails
   }
   deriving (Generic, Show, Eq, PrettyShow, Ord, Read)
 
+data FParamsSlabDetails = FParamsSlabDetails
+  deriving (Generic, Show, Eq)
+
+instance PrettyShow FParamsSlabDetails where
+  prettyShow _ = prettyShow ()
+
+data FareParametersType = Progressive | Slab deriving (Show, Read)
+
+getFareParametersType :: FareParameters -> FareParametersType
+getFareParametersType fareParams = case fareParams.fareParametersDetails of
+  ProgressiveDetails _ -> Progressive
+  SlabDetails _ -> Slab
+
 data FarePolicyType = SLAB | NORMAL
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
   deriving (PrettyShow) via Showable FarePolicyType
