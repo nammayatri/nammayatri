@@ -29,8 +29,8 @@
           inputsFrom = [
             config.mission-control.devShell
             config.pre-commit.devShell
-            config.flake-root.devShell
             config.haskellProjects.default.outputs.devShell
+            config.flake-root.devShell
           ];
         };
       };

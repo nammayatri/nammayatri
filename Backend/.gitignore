@@ -38,3 +38,6 @@ s3
 
 # load test files
 .dev/load-test/*.json
+
+.hie-bios-cache
+.cabal-dir
