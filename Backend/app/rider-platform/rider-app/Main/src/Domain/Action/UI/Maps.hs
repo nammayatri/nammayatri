@@ -27,6 +27,7 @@ where
 
 import qualified Data.Geohash as DG
 import Data.Text (pack)
+import qualified Domain.Action.SimulatedFlow.Maps as SF
 import Domain.Types.Maps.PlaceNameCache as DTM
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person as DP
@@ -47,12 +48,13 @@ import Tools.Metrics (CoreMetrics)
 autoComplete :: (EncFlow m r, EsqDBFlow m r, SCC.CacheFlow m r, CoreMetrics m) => Id DP.Person -> Maps.AutoCompleteReq -> m Maps.AutoCompleteResp
 autoComplete personId req = do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  Maps.autoComplete person.merchantId req
+  if person.isSimulated
+    then SF.autoComplete req
+    else Maps.autoComplete person.merchantId req
 
 getPlaceDetails :: (EncFlow m r, EsqDBFlow m r, SCC.CacheFlow m r, CoreMetrics m) => Id DP.Person -> Maps.GetPlaceDetailsReq -> m Maps.GetPlaceDetailsResp
 getPlaceDetails personId req = do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-
   Maps.getPlaceDetails person.merchantId req
 
 getPlaceName :: (EncFlow m r, EsqDBFlow m r, SCC.CacheFlow m r, CoreMetrics m) => Id DP.Person -> Maps.GetPlaceNameReq -> m Maps.GetPlaceNameResp

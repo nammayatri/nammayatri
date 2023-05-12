@@ -11,23 +11,16 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
-module Storage.CachedQueries.CacheConfig where
+module Domain.Types.SimulatedFlow.Driver where
 
 import Kernel.Prelude
-import Kernel.Storage.Hedis (HedisFlow)
-import Kernel.Types.Common
-import Kernel.Utils.Dhall
+import Kernel.Types.Common (Centesimal)
 
-newtype CacheConfig = CacheConfig
-  { configsExpTime :: Seconds
+data SimulatedDriver = SimulatedDriver
+  { driverName :: Text,
+    driverRating :: Maybe Centesimal,
+    driverNumber :: Text,
+    vehicelNumber :: Text,
+    driverId :: Text
   }
-  deriving (Generic, FromDhall)
-
-type HasCacheConfig r = HasField "cacheConfig" r CacheConfig
-
-type HasSimulatedDataCacheConfig r = HasField "simulatedDataCacheConfig" r CacheConfig
-
-type SimluatedCacheFlow m r = (HasSimulatedDataCacheConfig r, HedisFlow m r)
-
-type CacheFlow m r = (HasCacheConfig r, HedisFlow m r)
+  deriving (Generic, ToJSON, FromJSON)

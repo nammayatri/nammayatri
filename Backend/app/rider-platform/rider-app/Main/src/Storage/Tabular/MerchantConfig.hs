@@ -36,13 +36,14 @@ mkPersist
     MerchantConfigT sql=merchant_config
       id Text
       merchantId MerchantTId
-      fraudBookingCancellationCountThreshold Int
-      fraudBookingCancellationCountWindow SWC.SlidingWindowOptions
-      fraudBookingTotalCountThreshold Int
-      fraudBookingCancelledByDriverCountThreshold Int
-      fraudBookingCancelledByDriverCountWindow SWC.SlidingWindowOptions
-      fraudSearchCountThreshold Int
-      fraudSearchCountWindow SWC.SlidingWindowOptions
+      simulatedBookingCancellationCountThreshold Int
+      simulatedBookingCancellationCountWindow SWC.SlidingWindowOptions
+      simulatedBookingTotalCountThreshold Int
+      simulatedBookingCancelledByDriverCountThreshold Int
+      simulatedBookingCancelledByDriverCountWindow SWC.SlidingWindowOptions
+      simulatedSearchCountThreshold Int
+      simulatedSearchCountWindow SWC.SlidingWindowOptions
+      shouldSimulate Bool
       enabled Bool
       Primary id
       deriving Generic

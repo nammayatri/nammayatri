@@ -22,6 +22,14 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Storage.Tabular.Booking.BookingLocation
 
+findAllByIds :: Transactionable m => [Id BookingLocation] -> m [BookingLocation]
+findAllByIds ids =
+  Esq.findAll $ do
+    bookingLocation <- from $ table @BookingLocationT
+    where_ $
+      bookingLocation ^. BookingLocationId `in_` valList ((.getId) <$> ids)
+    pure bookingLocation
+
 updateAddress :: Id BookingLocation -> LocationAddress -> SqlDB ()
 updateAddress blId LocationAddress {..} = do
   now <- getCurrentTime

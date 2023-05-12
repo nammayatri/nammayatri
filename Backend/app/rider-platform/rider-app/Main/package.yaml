@@ -85,6 +85,8 @@ dependencies:
   - dashboard-helper-api
   - http-types
   - containers
+  - fuzzyset
+  - hashmap
   - geohash == 1.0.1
 
 ghc-options:
