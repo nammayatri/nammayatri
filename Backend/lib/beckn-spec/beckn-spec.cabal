@@ -151,6 +151,7 @@ library
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingReallocationEvent
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.DriverArrivedEvent
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.EstimateRepetitionEvent
+      Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.NewMessageEvent
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideAssignedEvent
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent
