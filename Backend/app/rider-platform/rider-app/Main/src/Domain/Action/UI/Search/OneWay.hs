@@ -91,6 +91,7 @@ search ::
   ( MonadFlow m,
     CoreMetrics m,
     HasBAPMetrics m r,
+    EsqDBReplicaFlow m r,
     HasCacheConfig r,
     EncFlow m r,
     EsqDBFlow m r,
