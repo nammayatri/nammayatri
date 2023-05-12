@@ -57,7 +57,7 @@ mkPersist
       upwardsRecomputeBuffer Centesimal
       approxRideDistanceDiffThreshold Centesimal
       driverLeaderBoardExpiry Seconds Maybe
-      minAccuracy Double
+      minLocationAccuracy Double
       createdAt UTCTime
       updatedAt UTCTime
 
