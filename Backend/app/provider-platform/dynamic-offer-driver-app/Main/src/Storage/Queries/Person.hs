@@ -389,7 +389,9 @@ fetchDriverInfo merchantId mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumb
           mbMobileNumberDbHashWithCode
           ( \(mobileNumberDbHash, mobileCountryCode) ->
               person ^. PersonMobileCountryCode ==. val (Just mobileCountryCode)
-                &&. person ^. PersonMobileNumberHash ==. val (Just mobileNumberDbHash)
+                &&. ( person ^. PersonMobileNumberHash ==. val (Just mobileNumberDbHash)
+                        ||. person ^. PersonAlternateMobileNumberHash ==. val (Just mobileNumberDbHash)
+                    )
           )
         &&. whenJust_ mbVehicleNumber (\vehicleNumber -> mbVehicle ?. VehicleRegistrationNo ==. just (val vehicleNumber))
         &&. whenJust_ mbDlNumberHash (\dlNumberHash -> mbDriverLicense ?. DriverLicenseLicenseNumberHash ==. just (val dlNumberHash))
