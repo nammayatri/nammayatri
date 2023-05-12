@@ -112,25 +112,29 @@ baseAppFlow (GlobalPayload gPayload) = do
       let (Payload payload) = gPayload.payload
       case payload.signatureAuthData of
         Just (SignatureAuthData signatureAuth) -> do
-          response <- lift $ lift $ Remote.triggerSignatureBasedOTP (SignatureAuthData signatureAuth)
-          case response of
-            Right (TriggerSignatureOTPResp triggerSignatureOtpResp) ->
-              case triggerSignatureOtpResp.authType of
-                Just "DIRECT" -> do
-                  let person = triggerSignatureOtpResp.person
-                  setValueToLocalStore MOBILE_NUMBER (getMobileNumber signatureAuth.authData)
-                  case triggerSignatureOtpResp.person of
-                    Just person -> do
-                      let customerId = person ^._id
-                      lift $ lift $ setLogField "customer_id" $ encode (customerId)
-                      setValueToLocalStore CUSTOMER_ID customerId
-                    _ -> pure unit
-                  case triggerSignatureOtpResp.token of
-                    Just token -> setValueToLocalStore REGISTERATION_TOKEN token
-                    Nothing -> pure unit
-                  currentFlowStatus
-                _ -> enterMobileNumberScreenFlow
-            Left err -> enterMobileNumberScreenFlow
+          let tokenExpiry = if (getValueToLocalStore LAST_LOGIN) == "__failed" then 600 else getExpiryTime (getValueToLocalStore LAST_LOGIN) true
+          if tokenExpiry >= 600 then do
+            response <- lift $ lift $ Remote.triggerSignatureBasedOTP (SignatureAuthData signatureAuth)
+            case response of
+              Right (TriggerSignatureOTPResp triggerSignatureOtpResp) ->
+                case triggerSignatureOtpResp.authType of
+                  Just "DIRECT" -> do
+                    let person = triggerSignatureOtpResp.person
+                    setValueToLocalStore MOBILE_NUMBER (getMobileNumber signatureAuth.authData)
+                    setValueToLocalStore LAST_LOGIN (getCurrentUTC "")
+                    case triggerSignatureOtpResp.person of
+                      Just person -> do
+                        let customerId = person ^._id
+                        lift $ lift $ setLogField "customer_id" $ encode (customerId)
+                        setValueToLocalStore CUSTOMER_ID customerId
+                      _ -> pure unit
+                    case triggerSignatureOtpResp.token of
+                      Just token -> setValueToLocalStore REGISTERATION_TOKEN token
+                      Nothing -> pure unit
+                    currentFlowStatus
+                  _ -> enterMobileNumberScreenFlow
+              Left err -> enterMobileNumberScreenFlow
+            else currentFlowStatus
         Nothing -> enterMobileNumberScreenFlow
 
 concatString :: Array String -> String
