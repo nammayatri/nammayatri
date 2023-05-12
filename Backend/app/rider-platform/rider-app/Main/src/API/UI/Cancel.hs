@@ -51,7 +51,7 @@ cancel ::
   DCancel.CancelReq ->
   FlowHandler APISuccess
 cancel bookingId personId req =
-  withFlowHandlerAPI . withPersonIdLogTag personId $ do
+  withFlowHandlerAPI . withPersonIdLogTag personId . DCancel.withSimulatedPerson personId $ do
     dCancelRes <- DCancel.cancel bookingId personId req
     void $ withShortRetry $ CallBPP.cancel dCancelRes.bppUrl =<< ACL.buildCancelReq dCancelRes
     return Success

@@ -260,11 +260,12 @@ buildPerson req bundleVersion clientVersion merchantId = do
         hasTakenValidRide = False,
         createdAt = now,
         updatedAt = now,
-        blockedAt = personWithSameDeviceToken >>= (.blockedAt),
-        blockedByRuleId = personWithSameDeviceToken >>= (.blockedByRuleId),
+        actionTakenAt = personWithSameDeviceToken >>= (.actionTakenAt),
+        actionRuleId = personWithSameDeviceToken >>= (.actionRuleId),
         bundleVersion = bundleVersion,
         clientVersion = clientVersion,
-        whatsappNotificationEnrollStatus = Nothing
+        whatsappNotificationEnrollStatus = Nothing,
+        isSimulated = False
       }
 
 -- FIXME Why do we need to store always the same authExpiry and tokenExpiry from config? info field is always Nothing
@@ -343,8 +344,10 @@ verify tokenId req = do
   let deviceToken = Just req.deviceToken
   personWithSameDeviceToken <- listToMaybe <$> DB.runInReplica (Person.findBlockedByDeviceToken deviceToken)
   let isBlockedBySameDeviceToken = maybe False (.blocked) personWithSameDeviceToken
+  let isSimulatedBySameDeviceToken = maybe False (.isSimulated) personWithSameDeviceToken
+  when isBlockedBySameDeviceToken $ SMC.takeAction person.id ((.actionRuleId) =<< personWithSameDeviceToken) False
+  when isSimulatedBySameDeviceToken $ SMC.takeAction person.id ((.actionRuleId) =<< personWithSameDeviceToken) True
   cleanCachedTokens person.id
-  when isBlockedBySameDeviceToken $ SMC.blockCustomer person.id ((.blockedByRuleId) =<< personWithSameDeviceToken)
   DB.runTransaction $ do
     RegistrationToken.setVerified tokenId
     Person.updateDeviceToken person.id deviceToken

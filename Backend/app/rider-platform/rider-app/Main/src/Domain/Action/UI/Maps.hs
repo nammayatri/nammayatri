@@ -37,6 +37,7 @@ import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.SimulatedFlow.Maps as SF
 import qualified Storage.CachedQueries.CacheConfig as SCC
 import qualified Storage.CachedQueries.Maps.PlaceNameCache as CM
 import qualified Storage.CachedQueries.Merchant as QMerchant
@@ -47,12 +48,13 @@ import Tools.Metrics (CoreMetrics)
 autoComplete :: (EncFlow m r, EsqDBFlow m r, SCC.CacheFlow m r, CoreMetrics m) => Id DP.Person -> Maps.AutoCompleteReq -> m Maps.AutoCompleteResp
 autoComplete personId req = do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  Maps.autoComplete person.merchantId req
+  if person.isSimulated
+    then SF.autoComplete req
+    else Maps.autoComplete person.merchantId req
 
 getPlaceDetails :: (EncFlow m r, EsqDBFlow m r, SCC.CacheFlow m r, CoreMetrics m) => Id DP.Person -> Maps.GetPlaceDetailsReq -> m Maps.GetPlaceDetailsResp
 getPlaceDetails personId req = do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-
   Maps.getPlaceDetails person.merchantId req
 
 getPlaceName :: (EncFlow m r, EsqDBFlow m r, SCC.CacheFlow m r, CoreMetrics m) => Id DP.Person -> Maps.GetPlaceNameReq -> m Maps.GetPlaceNameResp

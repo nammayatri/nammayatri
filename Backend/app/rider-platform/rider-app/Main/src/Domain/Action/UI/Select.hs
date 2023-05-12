@@ -28,7 +28,9 @@ where
 import Data.Aeson ((.:), (.=))
 import qualified Data.Aeson as A
 import Data.Aeson.Types (parseFail, typeMismatch)
+import qualified Data.List.NonEmpty as NE
 import Domain.Types.Booking.Type
+import qualified Domain.Types.DriverOffer as DDriverOffer
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
@@ -39,6 +41,7 @@ import Domain.Types.VehicleVariant (VehicleVariant)
 import Environment
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
+import Kernel.Randomizer
 import Kernel.Storage.Esqueleto (runInReplica)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config
@@ -47,13 +50,20 @@ import Kernel.Types.Id
 import Kernel.Types.Predicate
 import Kernel.Utils.Common
 import Kernel.Utils.Validation
+import qualified SharedLogic.SimulatedFlow.Maps as SM
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
+import qualified Storage.CachedQueries.SimulatedFlow.Driver as CSDQ
+import qualified Storage.CachedQueries.SimulatedFlow.SearchRequest as CSimulated
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
+import qualified Tools.Maps as Maps
+import Tools.Metrics
 
 data DEstimateSelectReq = DEstimateSelectReq
   { customerExtraFee :: Maybe Money,
@@ -142,12 +152,61 @@ select personId estimateId req@DEstimateSelectReq {..} = do
         ..
       }
 
-selectList :: (EsqDBReplicaFlow m r) => Id DEstimate.Estimate -> m SelectListRes
+selectList :: (EsqDBReplicaFlow m r, EsqDBFlow m r, CoreMetrics m, SimluatedCacheFlow m r, CacheFlow m r, EncFlow m r, HasField "simulatedQuoteExpirationSeconds" r NominalDiffTime) => Id DEstimate.Estimate -> m SelectListRes
 selectList estimateId = do
-  estimate <- runInReplica $ QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
-  when (DEstimate.isCancelled estimate.status) $ throwError $ EstimateCancelled estimate.id.getId
-  selectedQuotes <- runInReplica $ QQuote.findAllByEstimateId estimateId
-  pure $ SelectListRes $ map DQuote.makeQuoteAPIEntity selectedQuotes
+  mEstimate <- runInReplica $ QEstimate.findById estimateId
+  case mEstimate of
+    Just estimate -> do
+      when (DEstimate.isCancelled estimate.status) $ throwError $ EstimateCancelled estimate.id.getId
+      selectedQuotes <- runInReplica $ QQuote.findAllByEstimateId estimateId
+      pure $ SelectListRes $ map DQuote.makeQuoteAPIEntity selectedQuotes
+    Nothing -> do
+      personId <- CSimulated.getRiderIdByEstimateId estimateId >>= fromMaybeM (PersonNotFound $ "(Simulated) by estimateId: " <> estimateId.getId)
+      person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      if person.isSimulated
+        then do
+          DEstimate.EstimateAPIEntity {..} <- CSimulated.getEstimateById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
+          now <- getCurrentTime
+          allDrivers <- CSDQ.findAllDrivers
+          selectedDriver <- getRandomElement allDrivers
+          simulatedQuoteExpirationSeconds <- asks (.simulatedQuoteExpirationSeconds)
+          distanceToPickup <- getRandomInRange (100, 2000)
+          searchReqId <- CSimulated.getSearchRequestIdByEstimateId estimateId >>= fromMaybeM (InvalidRequest $ "SimulatedFlow: searchReq not found by estiateId: " <> estimateId.getId)
+          searchReq <- CSimulated.getSearchRequestById searchReqId >>= fromMaybeM (InvalidRequest $ "SimulatedFlow: searchReq not found by reqId: " <> estimateId.getId)
+          let driverPosition = SM.addMeters (fromIntegral distanceToPickup) $ Maps.LatLong searchReq.fromLocation.lat searchReq.fromLocation.lat
+          let destinationLocation = Maps.LatLong searchReq.fromLocation.lat searchReq.fromLocation.lat
+          let request =
+                Maps.GetRoutesReq
+                  { waypoints = NE.fromList [driverPosition, destinationLocation],
+                    calcPoints = True,
+                    mode = Just Maps.CAR
+                  }
+          routeResponse <- Maps.getSimulatedRoutes person.merchantId request
+          let defaultAverageSpeed = 8 -- m/s
+          let durationToPickup = div distanceToPickup defaultAverageSpeed
+              defaultRoute =
+                Maps.RouteInfo
+                  { duration = Nothing,
+                    distance = Nothing,
+                    boundingBox = Nothing,
+                    snappedWaypoints = [],
+                    points = [driverPosition, destinationLocation]
+                  }
+          CSDQ.cacheSelectedDriver estimateId selectedDriver driverPosition (fromMaybe defaultRoute $ listToMaybe routeResponse)
+          let validTill = addUTCTime simulatedQuoteExpirationSeconds now
+              quoteDetails =
+                DQuote.DriverOfferAPIDetails $
+                  DDriverOffer.DriverOfferAPIEntity
+                    { driverName = selectedDriver.driverName,
+                      durationToPickup = durationToPickup,
+                      distanceToPickup = HighPrecMeters (fromIntegral distanceToPickup),
+                      validTill,
+                      rating = selectedDriver.driverRating
+                    }
+          guid <- generateGUID
+          CSimulated.linkEstimateIdWithQuoteId estimateId guid
+          pure $ SelectListRes [DQuote.QuoteAPIEntity {id = guid, ..}]
+        else throwError $ EstimateDoesNotExist estimateId.getId
 
 selectResult :: (EsqDBReplicaFlow m r) => Id DEstimate.Estimate -> m QuotesResultResponse
 selectResult estimateId = do

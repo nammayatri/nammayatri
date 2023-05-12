@@ -26,4 +26,8 @@ newtype CacheConfig = CacheConfig
 
 type HasCacheConfig r = HasField "cacheConfig" r CacheConfig
 
+type HasSimulatedDataCacheConfig r = HasField "simulatedDataCacheConfig" r CacheConfig
+
+type SimluatedCacheFlow m r = (HasSimulatedDataCacheConfig r, HedisFlow m r)
+
 type CacheFlow m r = (HasCacheConfig r, HedisFlow m r)

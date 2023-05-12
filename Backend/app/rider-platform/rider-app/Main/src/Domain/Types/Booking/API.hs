@@ -14,7 +14,6 @@
 
 module Domain.Types.Booking.API where
 
-import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import Domain.Types.Booking.BookingLocation (BookingLocationAPIEntity)
 import qualified Domain.Types.Booking.BookingLocation as SLoc
 import Domain.Types.Booking.Type
@@ -24,17 +23,16 @@ import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
 import qualified Domain.Types.RentalSlab as DRentalSlab
 import Domain.Types.Ride (Ride, RideAPIEntity, makeRideAPIEntity)
 import qualified Domain.Types.Ride as DRide
-import EulerHS.Prelude hiding (id)
+import Kernel.Prelude
 import Kernel.Storage.Esqueleto (runInReplica)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.Booking
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Ride as QRide
-import qualified Tools.JSON as J
-import qualified Tools.Schema as S
 
 data BookingAPIEntity = BookingAPIEntity
   { id :: Id Booking,
@@ -59,34 +57,6 @@ data BookingAPIEntity = BookingAPIEntity
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 -- do not change constructor names without changing fareProductConstructorModifier
-data BookingAPIDetails
-  = OneWayAPIDetails OneWayBookingAPIDetails
-  | RentalAPIDetails DRentalSlab.RentalSlabAPIEntity
-  | DriverOfferAPIDetails OneWayBookingAPIDetails
-  | OneWaySpecialZoneAPIDetails OneWaySpecialZoneBookingAPIDetails
-  deriving (Show, Generic)
-
-instance ToJSON BookingAPIDetails where
-  toJSON = genericToJSON J.fareProductOptions
-
-instance FromJSON BookingAPIDetails where
-  parseJSON = genericParseJSON J.fareProductOptions
-
-instance ToSchema BookingAPIDetails where
-  declareNamedSchema = genericDeclareNamedSchema S.fareProductSchemaOptions
-
-data OneWayBookingAPIDetails = OneWayBookingAPIDetails
-  { toLocation :: BookingLocationAPIEntity,
-    estimatedDistance :: HighPrecMeters
-  }
-  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
-
-data OneWaySpecialZoneBookingAPIDetails = OneWaySpecialZoneBookingAPIDetails
-  { toLocation :: BookingLocationAPIEntity,
-    estimatedDistance :: HighPrecMeters,
-    otpCode :: Maybe Text
-  }
-  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 makeBookingAPIEntity :: Booking -> Maybe Ride -> [Ride] -> [FareBreakup] -> Maybe DExophone.Exophone -> BookingAPIEntity
 makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone = do

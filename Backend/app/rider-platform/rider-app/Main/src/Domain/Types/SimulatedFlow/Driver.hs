@@ -11,23 +11,16 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
-module Domain.Types.RentalSlab where
+module Domain.Types.SimulatedFlow.Driver where
 
 import Kernel.Prelude
-import Kernel.Types.Common
-import Kernel.Types.Id
-import Kernel.Utils.GenericPretty (PrettyShow)
+import Kernel.Types.Common (Centesimal)
 
-data RentalSlab = RentalSlab
-  { id :: Id RentalSlab, --not used in domain layer
-    baseDistance :: Kilometers,
-    baseDuration :: Hours
+data SimulatedDriver = SimulatedDriver
+  { driverName :: Text,
+    driverRating :: Maybe Centesimal,
+    driverNumber :: Text,
+    vehicelNumber :: Text,
+    driverId :: Text
   }
-  deriving (Generic, Show, PrettyShow, ToJSON, FromJSON)
-
-data RentalSlabAPIEntity = RentalSlabAPIEntity
-  { baseDistance :: Kilometers,
-    baseDuration :: Hours
-  }
-  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+  deriving (Generic, ToJSON, FromJSON, Show)

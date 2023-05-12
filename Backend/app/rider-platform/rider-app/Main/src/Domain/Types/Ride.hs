@@ -73,6 +73,13 @@ data Ride = Ride
   }
   deriving (Generic, Show)
 
+data SimulatedLocationInfo = SimulatedLocationInfo
+  { lastCacheTimeStamp :: UTCTime,
+    indexOfRouteInfo :: Int,
+    doneCount :: Int
+  }
+  deriving (Show, FromJSON, ToJSON, Generic, ToSchema)
+
 data RideAPIEntity = RideAPIEntity
   { id :: Id Ride,
     shortRideId :: ShortId Ride,

@@ -105,7 +105,7 @@ in  { esqDBCfg
     , hedisCfg = hcfg
     , hedisClusterCfg = hccfg
     , hedisMigrationStage = True
-    , cutOffHedisCluster = False
+    , cutOffHedisCluster = True
     , smsCfg = smsConfig
     , infoBIPCfg = InfoBIPConfig
     , webengageCfg = WebengageConfig
@@ -147,7 +147,11 @@ in  { esqDBCfg
     , authTokenCacheExpiry = +600
     , disableSignatureAuth = False
     , encTools
+    , simulatedDataCacheConfig.configsExpTime = +6000
+    , simulatedQuoteExpirationSeconds = +60
+    , simulatedMaxDone = +5
     , kafkaProducerCfg
+    , dumpSimulatedDataTopicName = "simulated_data"
     , rideCfg = rideConfig
     , dashboardToken = sec.dashboardToken
     , cacheConfig

@@ -15,6 +15,7 @@
 module Domain.Types.Booking.BookingLocation where
 
 import Domain.Types.LocationAddress
+import qualified Domain.Types.SearchRequest.SearchReqLocation as SSRL
 import Kernel.External.Maps.HasCoordinates
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -27,7 +28,7 @@ data BookingLocation = BookingLocation
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
-  deriving (Generic, Show, Eq, HasCoordinates)
+  deriving (Generic, Show, Eq, HasCoordinates, ToJSON, FromJSON)
 
 data BookingLocationAPIEntity = BookingLocationAPIEntity
   { lat :: Double,
@@ -44,6 +45,13 @@ data BookingLocationAPIEntity = BookingLocationAPIEntity
     placeId :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+makeSimulatedBookingLocationAPIEntity :: SSRL.SearchReqLocation -> BookingLocationAPIEntity
+makeSimulatedBookingLocationAPIEntity SSRL.SearchReqLocation {..} = do
+  let LocationAddress {..} = address
+  BookingLocationAPIEntity
+    { ..
+    }
 
 makeBookingLocationAPIEntity :: BookingLocation -> BookingLocationAPIEntity
 makeBookingLocationAPIEntity BookingLocation {..} = do

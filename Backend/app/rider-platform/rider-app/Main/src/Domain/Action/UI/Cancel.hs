@@ -19,6 +19,7 @@ module Domain.Action.UI.Cancel
     CancelSearch (..),
     mkDomainCancelSearch,
     cancelSearch,
+    withSimulatedPerson,
   )
 where
 
@@ -34,11 +35,13 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis (HedisFlow)
+import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig (HasCacheConfig)
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
+import qualified Storage.CachedQueries.SimulatedFlow.SearchRequest as CS
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Estimate as QEstimate
@@ -156,3 +159,13 @@ cancelSearch personId dcr = do
         Esq.runTransaction $ QPFS.updateStatus personId DPFS.IDLE
         QEstimate.updateStatus dcr.estimateId DEstimate.CANCELLED
   QPFS.clearCache personId
+
+withSimulatedPerson :: (EncFlow m r, Esq.EsqDBReplicaFlow m r, EsqDBFlow m r, HasCacheConfig r, HedisFlow m r, SimluatedCacheFlow m r) => Id Person.Person -> m APISuccess -> m APISuccess
+withSimulatedPerson personId fn = do
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  if person.isSimulated
+    then do
+      bookingId <- CS.getBookingIdByPersonId personId >>= fromMaybeM (InvalidRequest "SimulatedFlow:Booking: booking not found")
+      void $ CS.linkBookingStatusBooking SRB.CANCELLED bookingId
+      pure Success
+    else fn

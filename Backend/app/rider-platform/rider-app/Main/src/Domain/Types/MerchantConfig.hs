@@ -23,13 +23,14 @@ import qualified Kernel.Types.SlidingWindowCounters as SWC
 data MerchantConfig = MerchantConfig
   { id :: Id MerchantConfig,
     merchantId :: Id Merchant,
-    fraudBookingCancellationCountThreshold :: Int,
-    fraudBookingCancellationCountWindow :: SWC.SlidingWindowOptions,
-    fraudBookingTotalCountThreshold :: Int,
-    fraudBookingCancelledByDriverCountThreshold :: Int,
-    fraudBookingCancelledByDriverCountWindow :: SWC.SlidingWindowOptions,
-    fraudSearchCountThreshold :: Int,
-    fraudSearchCountWindow :: SWC.SlidingWindowOptions,
+    simulatedBookingCancellationCountThreshold :: Int,
+    simulatedBookingCancellationCountWindow :: SWC.SlidingWindowOptions,
+    simulatedBookingTotalCountThreshold :: Int,
+    simulatedBookingCancelledByDriverCountThreshold :: Int,
+    simulatedBookingCancelledByDriverCountWindow :: SWC.SlidingWindowOptions,
+    simulatedSearchCountThreshold :: Int,
+    simulatedSearchCountWindow :: SWC.SlidingWindowOptions,
+    shouldSimulate :: Bool,
     enabled :: Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON)

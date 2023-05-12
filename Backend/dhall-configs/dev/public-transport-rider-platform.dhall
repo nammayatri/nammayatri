@@ -52,7 +52,7 @@ in  { esqDBCfg
     , hedisCfg = rcfg
     , hedisClusterCfg = rccfg
     , hedisMigrationStage = True
-    , cutOffHedisCluster = False
+    , cutOffHedisCluster = True
     , port = +8023
     , loggerConfig =
             common.loggerConfig

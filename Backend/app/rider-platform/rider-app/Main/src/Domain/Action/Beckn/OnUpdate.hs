@@ -266,12 +266,12 @@ onUpdate BookingCancelledReq {..} = do
   bookingCancellationReason <- buildBookingCancellationReason booking.id (mbRide <&> (.id)) cancellationSource
   merchantConfigs <- CMC.findAllByMerchantId booking.merchantId
   case cancellationSource of
-    SBCR.ByUser -> SMC.updateCustomerFraudCounters booking.riderId merchantConfigs
-    SBCR.ByDriver -> SMC.updateCancelledByDriverFraudCounters booking.riderId merchantConfigs
+    SBCR.ByUser -> SMC.updateCustomerSimulationCounters booking.riderId merchantConfigs
+    SBCR.ByDriver -> SMC.updateCancelledByDriverSimulationCounters booking.riderId merchantConfigs
     _ -> pure ()
-  fork "incrementing fraud counters" $ do
-    mFraudDetected <- SMC.anyFraudDetected booking.riderId booking.merchantId merchantConfigs
-    whenJust mFraudDetected $ \mc -> SMC.blockCustomer booking.riderId (Just mc.id)
+  fork "incrementing simulated counters" $ do
+    mSimulationDetected <- SMC.anySimulationDetected booking.riderId booking.merchantId merchantConfigs
+    whenJust mSimulationDetected $ \mc -> SMC.takeAction booking.riderId (Just mc.id) mc.shouldSimulate
   DB.runTransaction $ do
     QRB.updateStatus booking.id SRB.CANCELLED
     whenJust mbRide $ \ride -> QRide.updateStatus ride.id SRide.CANCELLED
