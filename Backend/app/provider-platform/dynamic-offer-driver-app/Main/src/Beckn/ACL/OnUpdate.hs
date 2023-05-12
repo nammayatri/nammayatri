@@ -22,6 +22,7 @@ import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingCancelledEvent as BookingCancelledOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.DriverArrivedEvent as DriverArrivedOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.EstimateRepetitionEvent as EstimateRepetitionOU
+import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.NewMessageEvent as NewMessageOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideAssignedEvent as RideAssignedOU
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as OnUpdate
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as RideCompletedOU
@@ -66,6 +67,10 @@ data OnUpdateBuildReq
         booking :: DRB.Booking,
         estimateId :: Id DEst.Estimate,
         cancellationSource :: SBCR.CancellationSource
+      }
+  | NewMessageBuildReq
+      { ride :: DRide.Ride,
+        message :: Text
       }
 
 buildOnUpdateMessage ::
@@ -183,6 +188,16 @@ buildOnUpdateMessage EstimateRepetitionBuildReq {..} = do
             item = item,
             fulfillment = EstimateRepetitionOU.FulfillmentInfo ride.id.getId,
             cancellation_reason = castCancellationSource cancellationSource
+          }
+buildOnUpdateMessage NewMessageBuildReq {..} = do
+  return $
+    OnUpdate.OnUpdateMessage $
+      OnUpdate.NewMessage
+        NewMessageOU.NewMessageEvent
+          { id = ride.bookingId.getId,
+            update_target = "state,fufillment.state.code",
+            fulfillment = NewMessageOU.FulfillmentInfo ride.id.getId,
+            message = message
           }
 
 castCancellationSource :: SBCR.CancellationSource -> BookingCancelledOU.CancellationSource

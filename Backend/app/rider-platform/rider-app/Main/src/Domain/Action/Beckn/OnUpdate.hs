@@ -104,6 +104,11 @@ data OnUpdateReq
         bppRideId :: Id SRide.BPPRide,
         cancellationSource :: SBCR.CancellationSource
       }
+  | NewMessageReq
+      { bppBookingId :: Id SRB.BPPBooking,
+        bppRideId :: Id SRide.BPPRide,
+        message :: Text
+      }
 
 data OnUpdateFareBreakup = OnUpdateFareBreakup
   { amount :: HighPrecMoney,
@@ -290,6 +295,13 @@ onUpdate DriverArrivedReq {..} = do
   unless (isJust ride.driverArrivalTime) $
     DB.runTransaction $ do
       QRide.updateDriverArrival ride.id
+  where
+    isValidRideStatus status = status == SRide.NEW
+onUpdate NewMessageReq {..} = do
+  booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
+  ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
+  unless (isValidRideStatus ride.status) $ throwError $ RideInvalidStatus "The ride has already started."
+  Notify.notifyOnNewMessage booking message
   where
     isValidRideStatus status = status == SRide.NEW
 onUpdate EstimateRepetitionReq {..} = do

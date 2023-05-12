@@ -109,6 +109,13 @@ parseEvent _ (OnUpdate.DriverArrived daEvent) =
         bppRideId = Id daEvent.fulfillment.id,
         arrivalTime = daEvent.arrival_time
       }
+parseEvent _ (OnUpdate.NewMessage daEvent) =
+  return $
+    DOnUpdate.NewMessageReq
+      { bppBookingId = Id daEvent.id,
+        bppRideId = Id daEvent.fulfillment.id,
+        message = daEvent.message
+      }
 parseEvent transactionId (OnUpdate.EstimateRepetition erEvent) = do
   return $
     DOnUpdate.EstimateRepetitionReq
