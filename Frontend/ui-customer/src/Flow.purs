@@ -146,7 +146,7 @@ getLatestAndroidVersion merchant =
   case merchant of 
     NAMMAYATRI -> 31 
     YATRI -> 45
-    JATRISAATHI -> 1
+    JATRISAATHI -> 2
 
 forceIOSupdate :: Int -> Int -> Int -> Boolean
 forceIOSupdate c_maj c_min c_patch =

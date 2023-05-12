@@ -101,7 +101,7 @@ getLatestAndroidVersion merchant =
   case merchant of 
     NAMMAYATRIPARTNER -> 54
     YATRIPARTNER -> 43 
-    JATRISAATHIDRIVER -> 0 
+    JATRISAATHIDRIVER -> 2
 
 checkVersionForChat :: Int -> Boolean
 checkVersionForChat reqVersion =

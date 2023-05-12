@@ -104,7 +104,7 @@ getLatestAndroidVersion merchant =
   case merchant of 
     NAMMAYATRIPARTNER -> 54
     YATRIPARTNER -> 43 
-    JATRISAATHIDRIVER -> 1 
+    JATRISAATHIDRIVER -> 2
 
 ifNotRegistered :: Unit -> Boolean
 ifNotRegistered _ = getValueToLocalStore REGISTERATION_TOKEN == "__failed"
