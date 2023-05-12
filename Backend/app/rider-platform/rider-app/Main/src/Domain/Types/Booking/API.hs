@@ -24,6 +24,7 @@ import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
 import qualified Domain.Types.RentalSlab as DRentalSlab
 import Domain.Types.Ride (Ride, RideAPIEntity, makeRideAPIEntity)
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.SearchRequest.SearchReqLocation as SSRL
 import EulerHS.Prelude hiding (id)
 import Kernel.Storage.Esqueleto (runInReplica)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -137,6 +138,13 @@ makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone = do
               estimatedDistance = distance,
               ..
             }
+
+mkSimulatedBookingAPIDetails :: SSRL.SearchReqLocation -> HighPrecMeters -> BookingAPIDetails
+mkSimulatedBookingAPIDetails toLocation distance = OneWayAPIDetails $ do
+  OneWayBookingAPIDetails
+    { toLocation = SLoc.makeSimulatedBookingLocationAPIEntity toLocation,
+      estimatedDistance = distance
+    }
 
 buildBookingAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Booking -> m BookingAPIEntity
 buildBookingAPIEntity booking = do

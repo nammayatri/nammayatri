@@ -105,7 +105,7 @@ in  { esqDBCfg
     , hedisCfg = hcfg
     , hedisClusterCfg = hccfg
     , hedisMigrationStage = True
-    , cutOffHedisCluster = False
+    , cutOffHedisCluster = True
     , smsCfg = smsConfig
     , infoBIPCfg = InfoBIPConfig
     , webengageCfg = WebengageConfig

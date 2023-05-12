@@ -45,4 +45,4 @@ data SearchRequest = SearchRequest
     language :: Maybe Maps.Language,
     customerExtraFee :: Maybe Money
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, ToJSON, FromJSON)

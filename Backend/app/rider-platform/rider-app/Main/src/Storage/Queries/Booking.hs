@@ -16,6 +16,7 @@
 module Storage.Queries.Booking where
 
 import Domain.Types.Booking as DRB
+import Domain.Types.Booking.BookingLocation as DRBL
 import Domain.Types.Merchant
 import Domain.Types.Person (Person)
 import Domain.Types.Quote
@@ -139,6 +140,16 @@ findByIdAndMerchantId bookingId merchantId = Esq.buildDType $ do
         &&. booking ^. RB.BookingMerchantId ==. val (toKey merchantId)
     pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
   join <$> mapM buildFullBooking mbFullBookingT
+
+findAllBookingLocationIdsByRiderId :: Transactionable m => Id Person -> Maybe Integer -> Maybe Integer -> m [(Id DRBL.BookingLocation, Maybe (Id DRBL.BookingLocation))]
+findAllBookingLocationIdsByRiderId personId mbLimit mbOffset = do
+  Esq.findAll $ do
+    booking <- from $ table @BookingT
+    where_ $
+      booking ^. RB.BookingRiderId ==. val (toKey personId)
+    limit $ fromIntegral $ fromMaybe 10 mbLimit
+    offset $ fromIntegral $ fromMaybe 0 mbOffset
+    pure (booking ^. BookingFromLocationId, booking ^. BookingToLocationId)
 
 findAllByRiderId :: Transactionable m => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [Booking]
 findAllByRiderId personId mbLimit mbOffset mbOnlyActive = Esq.buildDType $ do

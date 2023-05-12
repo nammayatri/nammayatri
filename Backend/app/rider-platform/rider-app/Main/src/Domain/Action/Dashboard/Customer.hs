@@ -77,7 +77,7 @@ blockCustomer merchantShortId customerId = do
   let merchantId = customer.merchantId
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  SMC.blockCustomer personId Nothing
+  SMC.takeAction personId Nothing True
   logTagInfo "dashboard -> blockCustomer : " (show personId)
   pure Success
 
@@ -98,12 +98,12 @@ unblockCustomer merchantShortId customerId = do
   merchantConfigs <- CMC.findAllByMerchantId merchantId
   mapM_
     ( \mc -> withCrossAppRedis $ do
-        SWC.deleteCurrentWindowValues (SMC.mkCancellationKey mc.id.getId personId.getId) mc.fraudBookingCancellationCountWindow
-        SWC.deleteCurrentWindowValues (SMC.mkCancellationByDriverKey mc.id.getId personId.getId) mc.fraudBookingCancelledByDriverCountWindow
+        SWC.deleteCurrentWindowValues (SMC.mkCancellationKey mc.id.getId personId.getId) mc.simulatedBookingCancellationCountWindow
+        SWC.deleteCurrentWindowValues (SMC.mkCancellationByDriverKey mc.id.getId personId.getId) mc.simulatedBookingCancelledByDriverCountWindow
     )
     merchantConfigs
   runTransaction $ do
-    QP.updatingEnabledAndBlockedState personId Nothing False
+    QP.updateHardAction personId Nothing False
   logTagInfo "dashboard -> unblockCustomer : " (show personId)
   pure Success
 

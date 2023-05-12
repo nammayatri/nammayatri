@@ -34,6 +34,8 @@ import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import Servant
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified Storage.CachedQueries.SimulatedFlow.SearchRequest as CSR
+import qualified Storage.Queries.Person as QP
 import Tools.Auth
 
 type API =
@@ -62,14 +64,24 @@ confirm ::
   FlowHandler ConfirmRes
 confirm personId quoteId =
   withFlowHandlerAPI . withPersonIdLogTag personId $ do
-    dConfirmRes <- DConfirm.confirm personId quoteId
-    becknInitReq <- ACL.buildInitReq dConfirmRes
-    handle (errHandler dConfirmRes.booking) $
-      void $ withShortRetry $ CallBPP.init dConfirmRes.providerUrl becknInitReq
-    return $
-      ConfirmRes
-        { bookingId = dConfirmRes.booking.id
-        }
+    person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+    if person.isSimulated
+      then do
+        guid <- generateGUID
+        CSR.linkBookingToQuoteId quoteId guid
+        return $
+          ConfirmRes
+            { bookingId = guid
+            }
+      else do
+        dConfirmRes <- DConfirm.confirm personId quoteId
+        becknInitReq <- ACL.buildInitReq dConfirmRes
+        handle (errHandler dConfirmRes.booking) $
+          void $ withShortRetry $ CallBPP.init dConfirmRes.providerUrl becknInitReq
+        return $
+          ConfirmRes
+            { bookingId = dConfirmRes.booking.id
+            }
   where
     errHandler booking exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = DConfirm.cancelBooking booking

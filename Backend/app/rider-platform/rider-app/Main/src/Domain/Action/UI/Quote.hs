@@ -29,7 +29,9 @@ import qualified Domain.Types.Quote as SQuote
 import qualified Domain.Types.SearchRequest as SSR
 import Domain.Types.SearchRequest.SearchReqLocation (SearchReqLocationAPIEntity)
 import qualified Domain.Types.SearchRequest.SearchReqLocation as Location
+import qualified Domain.Types.VehicleVariant as DVehicle
 import EulerHS.Prelude hiding (id)
+import Kernel.Randomizer
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
 import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Storage.Hedis as Hedis
@@ -41,8 +43,11 @@ import qualified Kernel.Utils.Schema as S
 import SharedLogic.MetroOffer (MetroOffer)
 import qualified SharedLogic.MetroOffer as Metro
 import qualified SharedLogic.PublicTransport as PublicTransport
+import Storage.CachedQueries.CacheConfig
+import qualified Storage.CachedQueries.SimulatedFlow.SearchRequest as CSimulated
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Quote as QRentalQuote
 import qualified Storage.Queries.SearchRequest as QSR
@@ -71,21 +76,73 @@ instance FromJSON OfferRes where
 instance ToSchema OfferRes where
   declareNamedSchema = genericDeclareNamedSchema $ S.objectWithSingleFieldParsing \(f : rest) -> toLower f : rest
 
-getQuotes :: (HedisFlow m r, EsqDBReplicaFlow m r) => Id SSR.SearchRequest -> m GetQuotesRes
+getQuotes :: (HedisFlow m r, SimluatedCacheFlow m r, EsqDBReplicaFlow m r, MonadFlow m) => Id SSR.SearchRequest -> m GetQuotesRes
 getQuotes searchRequestId = do
-  searchRequest <- runInReplica $ QSR.findById searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
-  activeBooking <- runInReplica $ QBooking.findLatestByRiderIdAndStatus searchRequest.riderId DRB.activeBookingStatus
-  whenJust activeBooking $ \_ -> throwError (InvalidRequest "ACTIVE_BOOKING_ALREADY_PRESENT")
-  logDebug $ "search Request is : " <> show searchRequest
-  offers <- getOffers searchRequest
-  estimates <- getEstimates searchRequestId
-  return $
-    GetQuotesRes
-      { fromLocation = Location.makeSearchReqLocationAPIEntity searchRequest.fromLocation,
-        toLocation = Location.makeSearchReqLocationAPIEntity <$> searchRequest.toLocation,
-        quotes = offers,
-        estimates
-      }
+  mbSearchRequest <- runInReplica $ QSR.findById searchRequestId
+  (searchRequest, simulatedFlow) <-
+    case mbSearchRequest of
+      Just searchReq -> pure (searchReq, False)
+      Nothing -> do
+        searchReq <- CSimulated.getSearchRequestById searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
+        person <- runInReplica $ QPerson.findById searchReq.riderId >>= fromMaybeM (PersonNotFound searchReq.riderId.getId)
+        pure (searchReq, person.isSimulated)
+  if simulatedFlow
+    then do
+      estimates <- getSimulatedEstimates searchRequest
+      pure $
+        GetQuotesRes
+          { fromLocation = Location.makeSearchReqLocationAPIEntity searchRequest.fromLocation,
+            toLocation = Location.makeSearchReqLocationAPIEntity <$> searchRequest.toLocation,
+            quotes = [],
+            estimates
+          }
+    else do
+      activeBooking <- runInReplica $ QBooking.findLatestByRiderIdAndStatus searchRequest.riderId DRB.activeBookingStatus
+      whenJust activeBooking $ \_ -> throwError (InvalidRequest "ACTIVE_BOOKING_ALREADY_PRESENT")
+      logDebug $ "search Request is : " <> show searchRequest
+      offers <- getOffers searchRequest
+      estimates <- getEstimates searchRequestId
+      return $
+        GetQuotesRes
+          { fromLocation = Location.makeSearchReqLocationAPIEntity searchRequest.fromLocation,
+            toLocation = Location.makeSearchReqLocationAPIEntity <$> searchRequest.toLocation,
+            quotes = offers,
+            estimates
+          }
+
+getSimulatedEstimates :: (SimluatedCacheFlow m r, MonadFlow m) => HedisFlow m r => SSR.SearchRequest -> m [EstimateAPIEntity]
+getSimulatedEstimates searchReq = do
+  logDebug $ "simulated search Request is : " <> show searchReq
+  now <- getCurrentTime
+  guid <- generateGUID
+  mRouteInfo <- CSimulated.getRouteInfoBySearchReqId searchReq.id
+  distance <-
+    case (\routeInfo -> (.getMeters) <$> routeInfo.distance) =<< mRouteInfo of
+      Just dis -> pure dis
+      Nothing -> getRandomInRange (3, 10)
+  ratePerKM <- fromMaybe 15 <$> Hedis.get "SimulatedFarePerKM"
+  extraFare <- fromMaybe 10 <$> Hedis.get "SimulatedExtraFareToAdd"
+  let fare = distance * ratePerKM + extraFare
+  let estimate =
+        DEstimate.EstimateAPIEntity
+          { id = guid,
+            vehicleVariant = DVehicle.AUTO_RICKSHAW,
+            estimatedFare = Money fare,
+            estimatedTotalFare = Money fare,
+            discount = Nothing,
+            totalFareRange = DEstimate.FareRange (Money fare) (Money $ fare + 20),
+            agencyName = "",
+            agencyNumber = "",
+            agencyCompletedRidesCount = 0,
+            tripTerms = [],
+            createdAt = now,
+            estimateFareBreakup = [],
+            nightShiftRate = Nothing,
+            waitingCharges = DEstimate.WaitingCharges Nothing Nothing,
+            driversLatLong = []
+          }
+  CSimulated.cacheByEstimateId guid estimate searchReq
+  return [estimate]
 
 getOffers :: (HedisFlow m r, EsqDBReplicaFlow m r) => SSR.SearchRequest -> m [OfferRes]
 getOffers searchRequest = do

@@ -34,14 +34,20 @@ import Tools.Metrics (CoreMetrics)
 getRoutes :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DP.Person -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
 getRoutes personId req = do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  Maps.getRoutes person.merchantId req
+  if person.isSimulated
+    then Maps.getSimulatedRoutes person.merchantId req
+    else Maps.getRoutes person.merchantId req
 
 getPickupRoutes :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DP.Person -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
 getPickupRoutes personId req = do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  Maps.getPickupRoutes person.merchantId req
+  if person.isSimulated
+    then Maps.getSimulatedRoutes person.merchantId req
+    else Maps.getPickupRoutes person.merchantId req
 
 getTripRoutes :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DP.Person -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
 getTripRoutes personId req = do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  Maps.getTripRoutes person.merchantId req
+  if person.isSimulated
+    then Maps.getSimulatedRoutes person.merchantId req
+    else Maps.getTripRoutes person.merchantId req

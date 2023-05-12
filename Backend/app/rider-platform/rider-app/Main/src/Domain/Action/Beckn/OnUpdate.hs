@@ -327,9 +327,9 @@ onUpdate ValidatedBookingCancelledReq {..} = do
     SBCR.ByUser -> SMC.updateCustomerFraudCounters booking.riderId merchantConfigs
     SBCR.ByDriver -> SMC.updateCancelledByDriverFraudCounters booking.riderId merchantConfigs
     _ -> pure ()
-  fork "incrementing fraud counters" $ do
+  fork "incrementing simulated counters" $ do
     mFraudDetected <- SMC.anyFraudDetected booking.riderId booking.merchantId merchantConfigs
-    whenJust mFraudDetected $ \mc -> SMC.blockCustomer booking.riderId (Just mc.id)
+    whenJust mFraudDetected $ \mc -> SMC.takeAction booking.riderId (Just mc.id) mc.shouldSimulate
   DB.runTransaction $ do
     QRB.updateStatus booking.id SRB.CANCELLED
     whenJust mbRide $ \ride -> QRide.updateStatus ride.id SRide.CANCELLED

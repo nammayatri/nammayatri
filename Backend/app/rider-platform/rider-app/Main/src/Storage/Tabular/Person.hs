@@ -44,6 +44,7 @@ mkPersist
       id Text
       firstName Text Maybe
       middleName Text Maybe
+      isSimulated Bool
       lastName Text Maybe
       role Domain.Role
       gender Domain.Gender
@@ -67,8 +68,8 @@ mkPersist
       merchantId SMerchant.MerchantTId
       whatsappNotificationEnrollStatus OptApiMethods Maybe
       createdAt UTCTime
-      blockedAt UTCTime Maybe
-      blockedByRuleId SMC.MerchantConfigTId Maybe
+      actionTakenAt UTCTime Maybe
+      actionRuleId SMC.MerchantConfigTId Maybe
       updatedAt UTCTime
       bundleVersion Text Maybe
       clientVersion Text Maybe
@@ -94,7 +95,7 @@ instance FromTType PersonT Domain.Person where
           email = EncryptedHashed <$> (Encrypted <$> emailEncrypted) <*> emailHash,
           mobileNumber = EncryptedHashed <$> (Encrypted <$> mobileNumberEncrypted) <*> mobileNumberHash,
           merchantId = fromKey merchantId,
-          blockedByRuleId = fromKey <$> blockedByRuleId,
+          actionRuleId = fromKey <$> actionRuleId,
           bundleVersion = bundleVersion',
           clientVersion = clientVersion',
           ..
@@ -109,7 +110,7 @@ instance ToTType PersonT Domain.Person where
         mobileNumberEncrypted = mobileNumber <&> unEncrypted . (.encrypted),
         mobileNumberHash = mobileNumber <&> (.hash),
         merchantId = toKey merchantId,
-        blockedByRuleId = toKey <$> blockedByRuleId,
+        actionRuleId = toKey <$> actionRuleId,
         bundleVersion = versionToText <$> bundleVersion,
         clientVersion = versionToText <$> clientVersion,
         ..
