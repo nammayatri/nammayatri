@@ -259,19 +259,17 @@ Each package has clear separation of focuses w.r.t the functionality it provides
 
 ## FAQs
 
-1. I can't figure out the project structure.
+### I can't figure out the project structure.
 
-    Please refer to the [Project Structure Section](#project-structure)
+Please refer to the [Project Structure Section](#project-structure)
 
-1. In Visual Studio Code Terminal, I get the error ```Assertion `path != ""' failed.```.
+### In Visual Studio Code Terminal, I get the error ```Assertion `path != ""' failed```.
 
-    This appears to be [a bug in the VSCode direnv extension](https://github.com/NixOS/nix/issues/6409#issuecomment-1407799718). Run `unset NIX_STORE` in the terminal to fix it.
+This appears to be [a bug in the VSCode direnv extension](https://github.com/NixOS/nix/issues/6409#issuecomment-1407799718). Run `unset NIX_STORE && direnv reload` in the VSCode terminal to fix it.
 
-1. How to find out where a library dependency is specified in Nix?
+### How to find out where a library dependency is specified in Nix?
 
-    Run `nix run github:nix-community/nix-melt` to navigate and find that transitive flake input specifying the dependency you are looking for. You can also inspect the `flake.lock` file.
-
-1. TBD...
+Run `nix run github:nix-community/nix-melt` to navigate and find that transitive flake input specifying the dependency you are looking for. You can also inspect the `flake.lock` file.
 
 [nammayatri]: https://www.nammayatri.in/
 [haskell]: https://www.haskell.org/
