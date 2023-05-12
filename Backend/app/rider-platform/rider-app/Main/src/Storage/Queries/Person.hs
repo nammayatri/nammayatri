@@ -274,16 +274,29 @@ updateBlockedState personId isBlocked = do
       ]
     where_ $ tbl ^. PersonId ==. val (getId personId)
 
-updatingEnabledAndBlockedState :: Id Person -> Maybe (Id DMC.MerchantConfig) -> Bool -> SqlDB ()
-updatingEnabledAndBlockedState personId blockedByRule isBlocked = do
+updateSoftAction :: Id Person -> Maybe (Id DMC.MerchantConfig) -> Bool -> SqlDB ()
+updateSoftAction personId actionRuleId shouldSimulate = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ PersonIsSimulated =. val shouldSimulate,
+        PersonActionTakenAt =. val (Just now),
+        PersonActionRuleId =. val (toKey <$> actionRuleId),
+        PersonUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. PersonId ==. val (getId personId)
+
+updateHardAction :: Id Person -> Maybe (Id DMC.MerchantConfig) -> Bool -> SqlDB ()
+updateHardAction personId actionRuleId isBlocked = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
     set
       tbl
       [ PersonEnabled =. val (not isBlocked),
         PersonBlocked =. val isBlocked,
-        PersonBlockedAt =. val (Just now),
-        PersonBlockedByRuleId =. val (toKey <$> blockedByRule),
+        PersonActionTakenAt =. val (Just now),
+        PersonActionRuleId =. val (toKey <$> actionRuleId),
         PersonUpdatedAt =. val now
       ]
     where_ $ tbl ^. PersonId ==. val (getId personId)

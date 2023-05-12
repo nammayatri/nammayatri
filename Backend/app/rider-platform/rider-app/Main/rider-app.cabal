@@ -105,6 +105,7 @@ library
       Domain.Action.Dashboard.Exotel
       Domain.Action.Dashboard.Merchant
       Domain.Action.Dashboard.Ride
+      Domain.Action.SimulatedFlow.Maps
       Domain.Action.UI.Booking
       Domain.Action.UI.Call
       Domain.Action.UI.Cancel
@@ -164,6 +165,7 @@ library
       Domain.Types.SavedReqLocation
       Domain.Types.SearchRequest
       Domain.Types.SearchRequest.SearchReqLocation
+      Domain.Types.SimulatedFlow.Driver
       Domain.Types.Sos
       Domain.Types.SpecialZoneQuote
       Domain.Types.TripTerms
@@ -189,6 +191,8 @@ library
       Storage.CachedQueries.Merchant.MerchantServiceUsageConfig
       Storage.CachedQueries.MerchantConfig
       Storage.CachedQueries.Person.PersonFlowStatus
+      Storage.CachedQueries.SimulatedFlow.Driver
+      Storage.CachedQueries.SimulatedFlow.SearchRequest
       Storage.Queries.BlackListOrg
       Storage.Queries.Booking
       Storage.Queries.Booking.BookingLocation
@@ -325,7 +329,9 @@ library
     , dashboard-helper-api
     , euler-hs
     , extra
+    , fuzzyset
     , geohash ==1.0.1
+    , hashmap
     , http-media
     , http-types
     , lens
@@ -407,7 +413,9 @@ executable rider-app-exe
     , dashboard-helper-api
     , euler-hs
     , extra
+    , fuzzyset
     , geohash ==1.0.1
+    , hashmap
     , http-media
     , http-types
     , lens

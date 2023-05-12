@@ -37,11 +37,13 @@ import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess (APISuccess (Success))
+import Kernel.Types.Error (PersonError (PersonNotFound))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.Person as QPerson
 import Tools.Auth
 
 -------- Select Flow --------
@@ -80,19 +82,27 @@ handler =
 
 select :: Id DPerson.Person -> Id DEstimate.Estimate -> FlowHandler APISuccess
 select personId estimateId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
-  let autoAssignFlag = False
-  let req = DSelect.DEstimateSelectReq {customerExtraFee = Nothing, autoAssignEnabled = autoAssignFlag, autoAssignEnabledV2 = Nothing}
-  dSelectReq <- DSelect.select personId estimateId req
-  becknReq <- ACL.buildSelectReq dSelectReq
-  void $ withShortRetry $ CallBPP.select dSelectReq.providerUrl becknReq
-  pure Success
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  if not person.isSimulated
+    then do
+      let autoAssignFlag = False
+      let req = DSelect.DEstimateSelectReq {customerExtraFee = Nothing, autoAssignEnabled = autoAssignFlag, autoAssignEnabledV2 = Nothing}
+      dSelectReq <- DSelect.select personId estimateId req
+      becknReq <- ACL.buildSelectReq dSelectReq
+      void $ withShortRetry $ CallBPP.select dSelectReq.providerUrl becknReq
+      pure Success
+    else pure Success
 
 select2 :: Id DPerson.Person -> Id DEstimate.Estimate -> DSelect.DEstimateSelectReq -> FlowHandler APISuccess
 select2 personId estimateId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
-  dSelectReq <- DSelect.select personId estimateId req
-  becknReq <- ACL.buildSelectReq dSelectReq
-  void $ withShortRetry $ CallBPP.select dSelectReq.providerUrl becknReq
-  pure Success
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  if not person.isSimulated
+    then do
+      dSelectReq <- DSelect.select personId estimateId req
+      becknReq <- ACL.buildSelectReq dSelectReq
+      void $ withShortRetry $ CallBPP.select dSelectReq.providerUrl becknReq
+      pure Success
+    else pure Success
 
 selectList :: Id DPerson.Person -> Id DEstimate.Estimate -> FlowHandler DSelect.SelectListRes
 selectList personId = withFlowHandlerAPI . withPersonIdLogTag personId . DSelect.selectList
