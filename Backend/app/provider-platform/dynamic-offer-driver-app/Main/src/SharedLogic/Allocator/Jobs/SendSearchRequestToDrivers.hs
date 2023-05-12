@@ -14,6 +14,7 @@
 
 module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers where
 
+import qualified Domain.Types.FarePolicy as DFP
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.DriverPoolConfig
 import Domain.Types.SearchRequest (SearchRequest)
@@ -52,7 +53,7 @@ sendSearchRequestToDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
   searchReq <- QSR.findById searchReqId >>= fromMaybeM (SearchRequestNotFound searchReqId.getId)
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound (searchReq.providerId.getId))
   driverPoolConfig <- getDriverPoolConfig merchant.id jobData.estimatedRideDistance
-  sendSearchRequestToDrivers' driverPoolConfig searchReq merchant jobData.baseFare jobData.driverMinExtraFee jobData.driverMaxExtraFee
+  sendSearchRequestToDrivers' driverPoolConfig searchReq merchant jobData.baseFare jobData.driverExtraFeeBounds
 
 sendSearchRequestToDrivers' ::
   ( EncFlow m r,
@@ -68,10 +69,9 @@ sendSearchRequestToDrivers' ::
   SearchRequest ->
   Merchant ->
   Money ->
-  Money ->
-  Money ->
+  Maybe DFP.DriverExtraFeeBounds ->
   m ExecutionResult
-sendSearchRequestToDrivers' driverPoolConfig searchReq merchant baseFare driverMinExtraCharge driverMaxExtraCharge = do
+sendSearchRequestToDrivers' driverPoolConfig searchReq merchant baseFare driverExtraFeeBounds = do
   handler handle
   where
     handle =
@@ -80,7 +80,7 @@ sendSearchRequestToDrivers' driverPoolConfig searchReq merchant baseFare driverM
           isRideAlreadyAssigned = I.isRideAlreadyAssigned searchReq.id,
           isReceivedMaxDriverQuotes = I.isReceivedMaxDriverQuotes driverPoolConfig searchReq.id,
           getNextDriverPoolBatch = I.getNextDriverPoolBatch driverPoolConfig searchReq,
-          sendSearchRequestToDrivers = I.sendSearchRequestToDrivers searchReq baseFare driverMinExtraCharge driverMaxExtraCharge driverPoolConfig,
+          sendSearchRequestToDrivers = I.sendSearchRequestToDrivers searchReq baseFare driverExtraFeeBounds driverPoolConfig,
           getRescheduleTime = I.getRescheduleTime driverPoolConfig.singleBatchProcessTime,
           setBatchDurationLock = I.setBatchDurationLock searchReq.id driverPoolConfig.singleBatchProcessTime,
           createRescheduleTime = I.createRescheduleTime driverPoolConfig.singleBatchProcessTime,

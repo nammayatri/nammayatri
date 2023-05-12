@@ -28,6 +28,7 @@ import Kernel.Types.Common (Meters (..))
 import qualified Kernel.Types.Common as Common
 import Kernel.Types.Id
 import qualified Storage.Tabular.FareParameters as Fare
+import qualified Storage.Tabular.FareParameters.Instances as Fare
 import qualified Storage.Tabular.Merchant as SMerchant
 import qualified Storage.Tabular.SearchRequestSpecialZone as SReq
 import Storage.Tabular.Vehicle ()
@@ -56,7 +57,9 @@ instance TEntityKey QuoteSpecialZoneT where
   fromKey (QuoteSpecialZoneTKey _id) = Id _id
   toKey (Id id) = QuoteSpecialZoneTKey id
 
-instance FromTType (QuoteSpecialZoneT, Fare.FareParametersT) Domain.QuoteSpecialZone where
+type FullQuoteSpecialZoneT = (QuoteSpecialZoneT, Fare.FullFareParametersT)
+
+instance FromTType FullQuoteSpecialZoneT Domain.QuoteSpecialZone where
   fromTType (QuoteSpecialZoneT {..}, fareParamsT) = do
     fareParams <- fromTType fareParamsT
     return $
@@ -67,7 +70,7 @@ instance FromTType (QuoteSpecialZoneT, Fare.FareParametersT) Domain.QuoteSpecial
           ..
         }
 
-instance ToTType (QuoteSpecialZoneT, Fare.FareParametersT) Domain.QuoteSpecialZone where
+instance ToTType FullQuoteSpecialZoneT Domain.QuoteSpecialZone where
   toTType Domain.QuoteSpecialZone {..} =
     ( QuoteSpecialZoneT
         { id = getId id,

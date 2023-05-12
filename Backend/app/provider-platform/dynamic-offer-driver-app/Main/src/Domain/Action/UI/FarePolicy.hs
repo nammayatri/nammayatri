@@ -46,7 +46,7 @@ newtype ListFarePolicyRes = ListFarePolicyRes
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data UpdateFarePolicyReq = UpdateFarePolicyReq
-  { baseDistanceFare :: HighPrecMoney,
+  { baseFare :: HighPrecMoney,
     baseDistance :: Meters,
     perExtraKmFare :: HighPrecMoney,
     deadKmFare :: Money, -- constant value
@@ -54,7 +54,7 @@ data UpdateFarePolicyReq = UpdateFarePolicyReq
     driverMaxExtraFee :: Money,
     nightShiftStart :: Maybe TimeOfDay,
     nightShiftEnd :: Maybe TimeOfDay,
-    nightShiftRate :: Maybe Centesimal
+    nightShiftCharge :: Maybe Float
   }
   deriving (Generic, Show, FromJSON, ToSchema)
 
@@ -63,13 +63,13 @@ type UpdateFarePolicyRes = APISuccess
 validateUpdateFarePolicyRequest :: Validate UpdateFarePolicyReq
 validateUpdateFarePolicyRequest UpdateFarePolicyReq {..} =
   sequenceA_ --FIXME: ask for lower and upper bounds for all the values
-    [ validateField "baseDistanceFare" baseDistanceFare $ InRange @HighPrecMoney 0 500,
+    [ validateField "baseFare" baseFare $ InRange @HighPrecMoney 0 500,
       validateField "baseDistance" baseDistance $ InRange @Meters 0 500,
       validateField "perExtraKmFare" perExtraKmFare $ InRange @HighPrecMoney 0 500,
       validateField "deadKmFare" deadKmFare $ InRange @Money 0 500,
       validateField "driverMinExtraFee" driverMinExtraFee $ InRange @Money 0 500,
       validateField "driverMaxExtraFee" driverMaxExtraFee $ InRange @Money driverMinExtraFee 500,
-      validateField "nightShiftRate" nightShiftRate . InMaybe $ InRange @Centesimal 1 2,
+      validateField "nightShiftCharge" nightShiftCharge . InMaybe $ InRange @Float 1 2,
       validateField "nightShiftStart" nightShiftStart . InMaybe $ InRange (TimeOfDay 18 0 0) (TimeOfDay 23 30 0),
       validateField "nightShiftEnd" nightShiftEnd . InMaybe $ InRange (TimeOfDay 0 30 0) (TimeOfDay 7 0 0)
     ]
@@ -88,19 +88,30 @@ updateFarePolicy admin fpId req = do
   farePolicy <- SFarePolicy.findById fpId >>= fromMaybeM NoFarePolicy
   unless (admin.merchantId == farePolicy.merchantId) $ throwError AccessDenied
   let updatedFarePolicy =
-        farePolicy
-          { baseDistanceFare = req.baseDistanceFare,
-            baseDistanceMeters = req.baseDistance,
-            perExtraKmFare = req.perExtraKmFare,
-            deadKmFare = req.deadKmFare,
-            driverExtraFee =
-              ExtraFee
-                { minFee = req.driverMinExtraFee,
-                  maxFee = req.driverMaxExtraFee
-                },
-            nightShiftStart = req.nightShiftStart,
-            nightShiftEnd = req.nightShiftEnd,
-            nightShiftRate = req.nightShiftRate
+        farePolicy -- TODO: Make this update work with slabs
+          { driverExtraFeeBounds =
+              Just
+                DriverExtraFeeBounds
+                  { minFee = req.driverMinExtraFee,
+                    maxFee = req.driverMaxExtraFee
+                  },
+            nightShiftBounds =
+              ((,) <$> req.nightShiftStart <*> req.nightShiftEnd) <&> \(nightShiftStart, nightShiftEnd) ->
+                NightShiftBounds
+                  { ..
+                  },
+            farePolicyDetails =
+              ProgressiveDetails
+                FPProgressiveDetails
+                  { baseDistance = req.baseDistance,
+                    baseFare = roundToIntegral req.baseFare,
+                    perExtraKmFare = req.perExtraKmFare,
+                    deadKmFare = req.deadKmFare,
+                    nightShiftCharge = ProgressiveNightShiftCharge <$> req.nightShiftCharge,
+                    waitingCharge = case farePolicy.farePolicyDetails of
+                      ProgressiveDetails det -> det.waitingCharge
+                      _ -> Nothing
+                  }
           } ::
           DFarePolicy.FarePolicy
   coordinators <- QP.findAdminsByMerchantId admin.merchantId

@@ -22,16 +22,61 @@ import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import Storage.Queries.FullEntityBuilders (buildFullFareParameters)
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.FareParameters as BeamFP
-import Storage.Tabular.FareParameters ()
+import Storage.Tabular.FareParameters (FareParametersT)
+import Storage.Tabular.FareParameters.Instances
 
 create :: FareParameters -> SqlDB ()
-create = Esq.create
+create fareParams =
+  withFullEntity fareParams $ \(fareParams', fareParamsDetais) -> do
+    Esq.create' fareParams'
+    case fareParamsDetais of
+      ProgressiveDetailsT fppdt -> Esq.create' fppdt
+      SlabDetailsT -> return ()
 
 findById :: Transactionable m => Id FareParameters -> m (Maybe FareParameters)
-findById = Esq.findById
+findById fareParametersId = buildDType $ do
+  res <- Esq.findById' @FareParametersT fareParametersId
+  join <$> mapM buildFullFareParameters res
+
+transformBeamFareParametersToDomain :: BeamFP.FareParameters -> FareParameters
+transformBeamFareParametersToDomain BeamFP.FareParametersT {..} = do
+  FareParameters
+    { id = Id id,
+      baseFare = baseFare,
+      deadKmFare = deadKmFare,
+      extraKmFare = extraKmFare,
+      driverSelectedFare = driverSelectedFare,
+      customerExtraFee = customerExtraFee,
+      nightShiftRate = nightShiftRate,
+      nightCoefIncluded = nightCoefIncluded,
+      waitingChargePerMin = waitingChargePerMin,
+      waitingOrPickupCharges = waitingOrPickupCharges,
+      serviceCharge = serviceCharge,
+      farePolicyType = farePolicyType,
+      govtChargesPerc = govtChargesPerc
+    }
+
+transformDomainFareParametersToBeam :: FareParameters -> BeamFP.FareParameters
+transformDomainFareParametersToBeam FareParameters {..} =
+  BeamFP.defaultFareParameters
+    { BeamFP.id = getId id,
+      BeamFP.baseFare = baseFare,
+      BeamFP.deadKmFare = deadKmFare,
+      BeamFP.extraKmFare = extraKmFare,
+      BeamFP.driverSelectedFare = driverSelectedFare,
+      BeamFP.customerExtraFee = customerExtraFee,
+      BeamFP.nightShiftRate = nightShiftRate,
+      BeamFP.nightCoefIncluded = nightCoefIncluded,
+      BeamFP.waitingChargePerMin = waitingChargePerMin,
+      BeamFP.waitingOrPickupCharges = waitingOrPickupCharges,
+      BeamFP.serviceCharge = serviceCharge,
+      BeamFP.farePolicyType = farePolicyType,
+      BeamFP.govtChargesPerc = govtChargesPerc
+    }
 
 transformBeamFareParametersToDomain :: BeamFP.FareParameters -> FareParameters
 transformBeamFareParametersToDomain BeamFP.FareParametersT {..} = do

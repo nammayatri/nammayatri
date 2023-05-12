@@ -22,7 +22,6 @@ import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Utils.GenericPretty
 
 data QuoteSpecialZone = QuoteSpecialZone
   { id :: Id QuoteSpecialZone,
@@ -37,4 +36,4 @@ data QuoteSpecialZone = QuoteSpecialZone
     estimatedFare :: Money,
     fareParams :: Params.FareParameters
   }
-  deriving (Generic, Show, PrettyShow)
+  deriving (Generic, Show)

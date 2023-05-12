@@ -11,61 +11,8 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.FareParameters where
+module Storage.Tabular.FareParameters (module Reexport) where
 
-import qualified Domain.Types.FareParameters as Domain
-import Kernel.Prelude
-import Kernel.Storage.Esqueleto
-import Kernel.Types.Common (Centesimal, Money)
-import Kernel.Types.Id
-import Storage.Tabular.Vehicle ()
-
-mkPersist
-  defaultSqlSettings
-  [defaultQQ|
-    FareParametersT sql=fare_parameters
-
-      id Text
-      baseFare Money
-      deadKmFare Money Maybe
-      extraKmFare Money Maybe
-      driverSelectedFare Money Maybe
-      customerExtraFee Money Maybe
-      nightShiftRate Centesimal Maybe
-      nightCoefIncluded Bool
-      waitingChargePerMin Money Maybe
-      waitingOrPickupCharges Money Maybe
-      serviceCharge Money Maybe
-      farePolicyType Domain.FarePolicyType
-      govtChargesPerc Int Maybe
-
-      Primary id
-      deriving Generic
-    |]
-
-instance TEntityKey FareParametersT where
-  type DomainKey FareParametersT = Id Domain.FareParameters
-  fromKey (FareParametersTKey _id) = Id _id
-  toKey (Id id) = FareParametersTKey id
-
-instance FromTType FareParametersT Domain.FareParameters where
-  fromTType FareParametersT {..} = do
-    return $
-      Domain.FareParameters
-        { id = Id id,
-          ..
-        }
-
-instance ToTType FareParametersT Domain.FareParameters where
-  toTType Domain.FareParameters {..} = do
-    FareParametersT
-      { id = getId id,
-        ..
-      }
+import Storage.Tabular.FareParameters.Instances as Reexport ()
+import Storage.Tabular.FareParameters.Table as Reexport

@@ -106,10 +106,10 @@ instance ToSchema BreakupPrice where
 
 data ItemTags = ItemTags
   { distance_to_nearest_driver :: Maybe DecimalValue,
-    night_shift_multiplier :: Maybe DecimalValue,
+    night_shift_charge :: Maybe Money,
+    old_night_shift_charge :: Maybe DecimalValue, -- TODO: Doesn't make sense, to be removed
     night_shift_start :: Maybe TimeOfDay,
     night_shift_end :: Maybe TimeOfDay,
-    waiting_time_estimated_threshold :: Maybe Seconds,
     waiting_charge_per_min :: Maybe Money,
     drivers_location :: [LatLong]
   }

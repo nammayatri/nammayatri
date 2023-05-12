@@ -18,25 +18,39 @@ module Domain.Types.FareParameters where
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Utils.GenericPretty
+import Kernel.Utils.GenericPretty (PrettyShow (..))
 
 data FareParameters = FareParameters
   { id :: Id FareParameters,
-    baseFare :: Money,
-    deadKmFare :: Maybe Money,
-    extraKmFare :: Maybe Money,
     driverSelectedFare :: Maybe Money,
     customerExtraFee :: Maybe Money,
-    nightShiftRate :: Maybe Centesimal,
-    nightCoefIncluded :: Bool,
-    waitingChargePerMin :: Maybe Money,
-    waitingOrPickupCharges :: Maybe Money,
     serviceCharge :: Maybe Money,
-    farePolicyType :: FarePolicyType,
-    govtChargesPerc :: Maybe Int
+    govtCharges :: Maybe Money,
+    baseFare :: Money,
+    waitingCharge :: Maybe Money,
+    nightShiftCharge :: Maybe Money,
+    fareParametersDetails :: FareParametersDetails
   }
   deriving (Generic, Show, Eq, PrettyShow)
 
-data FarePolicyType = SLAB | NORMAL
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
-  deriving (PrettyShow) via Showable FarePolicyType
+data FareParametersDetails = ProgressiveDetails FParamsProgressiveDetails | SlabDetails FParamsSlabDetails
+  deriving (Generic, Show, Eq, PrettyShow)
+
+data FParamsProgressiveDetails = FParamsProgressiveDetails
+  { deadKmFare :: Money,
+    extraKmFare :: Maybe Money
+  }
+  deriving (Generic, Show, Eq, PrettyShow)
+
+data FParamsSlabDetails = FParamsSlabDetails
+  deriving (Generic, Show, Eq)
+
+instance PrettyShow FParamsSlabDetails where
+  prettyShow _ = prettyShow ()
+
+data FareParametersType = Progressive | Slab deriving (Show, Read)
+
+getFareParametersType :: FareParameters -> FareParametersType
+getFareParametersType fareParams = case fareParams.fareParametersDetails of
+  ProgressiveDetails _ -> Progressive
+  SlabDetails _ -> Slab
