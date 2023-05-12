@@ -139,11 +139,11 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
     logInfo $ "got location updates: " <> getId driver.id <> " " <> encodeToText waypoints
     checkLocationUpdatesRateLimit driver.id
     thresholdConfig <- QTConf.findByMerchantId driver.merchantId >>= fromMaybeM (TransporterConfigNotFound driver.merchantId.getId)
-    let minAccuracy = thresholdConfig.minAccuracy
+    let minLocationAccuracy = thresholdConfig.minLocationAccuracy
     unless (driver.role == Person.DRIVER) $ throwError AccessDenied
     LocUpd.whenWithLocationUpdatesLock driver.id $ do
       mbOldLoc <- findDriverLocation
-      case filterNewWaypoints mbOldLoc minAccuracy of
+      case filterNewWaypoints mbOldLoc minLocationAccuracy of
         [] -> logWarning "Incoming points are older than current one, ignoring"
         (a : ax) -> do
           let newWaypoints = a :| ax
@@ -163,9 +163,9 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
             mbRideIdAndStatus
     pure Success
   where
-    filterNewWaypoints mbOldLoc minAccuracy = do
+    filterNewWaypoints mbOldLoc minLocationAccuracy = do
       let sortedWaypoint = toList $ NE.sortWith (.ts) waypoints
-      let filteredWaypoint = filter (\val -> fromMaybe 0.0 val.acc <= minAccuracy) sortedWaypoint
+      let filteredWaypoint = filter (\val -> fromMaybe 0.0 val.acc <= minLocationAccuracy) sortedWaypoint
       maybe filteredWaypoint (\oldLoc -> filter ((oldLoc.coordinatesCalculatedAt <) . (.ts)) filteredWaypoint) mbOldLoc
 
 checkLocationUpdatesRateLimit ::
