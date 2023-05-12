@@ -21,6 +21,7 @@ import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingCancelledEvent
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingReallocationEvent
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.DriverArrivedEvent
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.EstimateRepetitionEvent
+import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.NewMessageEvent
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideAssignedEvent
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent
@@ -37,6 +38,7 @@ data OnUpdateEvent
   | BookingReallocation BookingReallocationEvent
   | DriverArrived DriverArrivedEvent
   | EstimateRepetition EstimateRepetitionEvent
+  | NewMessage NewMessageEvent
   deriving (Generic, Show)
 
 instance ToJSON OnUpdateEvent where

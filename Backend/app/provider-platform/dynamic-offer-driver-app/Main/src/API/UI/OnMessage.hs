@@ -12,17 +12,30 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType where
+module API.UI.OnMessage
+  ( API,
+    handler,
+  )
+where
 
-import Kernel.Prelude
+import qualified Domain.Action.UI.OnMessage as Dfcm
+import qualified Domain.Types.Person as Person
+import Environment
+import EulerHS.Prelude
+import qualified Kernel.Types.APISuccess as APISuccess
+import Kernel.Types.Id
+import Kernel.Utils.Common
+import Servant
+import Tools.Auth
 
-data OnUpdateEventType
-  = RIDE_COMPLETED
-  | RIDE_STARTED
-  | RIDE_ASSIGNED
-  | RIDE_BOOKING_CANCELLED
-  | RIDE_BOOKING_REALLOCATION
-  | DRIVER_ARRIVED
-  | ESTIMATE_REPETITION
-  | NEW_MESSAGE
-  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+type API =
+  "onMessage"
+    :> TokenAuth
+    :> ReqBody '[JSON] Dfcm.FCMReq
+    :> Post '[JSON] APISuccess.APISuccess
+
+handler :: FlowServer API
+handler = sendMessageFCM
+
+sendMessageFCM :: Id Person.Person -> Dfcm.FCMReq -> FlowHandler APISuccess.APISuccess
+sendMessageFCM personId = withFlowHandlerAPI . Dfcm.sendMessageFCM personId

@@ -466,3 +466,33 @@ notifyDriverHasReached personId otp vehicleNumber = do
             [ "Use OTP " <> otp <> " to verify the ride with Vehicle No. " <> vehicleNumber
             ]
   FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
+
+notifyOnNewMessage ::
+  ( HasCacheConfig r,
+    CoreMetrics m,
+    HedisFlow m r,
+    EsqDBReplicaFlow m r,
+    EsqDBFlow m r
+  ) =>
+  SRB.Booking ->
+  T.Text ->
+  m ()
+notifyOnNewMessage booking message = do
+  person <- runInReplica $ Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+  config <- getFCMConfig person.merchantId
+  let notificationData =
+        FCM.FCMData
+          { fcmNotificationType = FCM.CHAT_MESSAGE,
+            fcmShowNotification = FCM.SHOW,
+            fcmEntityType = FCM.Product,
+            fcmEntityIds = getId person.id,
+            fcmEntityData = (),
+            fcmNotificationJSON = FCM.createAndroidNotification title body FCM.CHAT_MESSAGE
+          }
+      title = FCMNotificationTitle $ T.pack "Driver"
+      body =
+        FCMNotificationBody $
+          unwords
+            [ message
+            ]
+  FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken

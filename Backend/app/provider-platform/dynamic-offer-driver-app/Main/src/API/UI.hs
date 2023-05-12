@@ -30,6 +30,7 @@ import qualified API.UI.Issue as Issue
 import qualified API.UI.LeaderBoard as LeaderBoard
 import qualified API.UI.Location as Location
 import qualified API.UI.Message as Message
+import qualified API.UI.OnMessage as OnMessage
 import qualified API.UI.OrgAdmin as OrgAdmin
 import qualified API.UI.Performance as Performance
 import qualified API.UI.Registration as Registration
@@ -67,6 +68,7 @@ type API =
            :<|> Issue.API
            :<|> ExotelEndRide.API
            :<|> LeaderBoard.API
+           :<|> OnMessage.API
        )
 
 handler :: FlowServer API
@@ -92,3 +94,4 @@ handler =
     :<|> Issue.handler
     :<|> ExotelEndRide.handler
     :<|> LeaderBoard.handler
+    :<|> OnMessage.handler
