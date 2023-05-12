@@ -314,9 +314,9 @@ endRide handle@ServiceHandle {..} rideId req = do
 
     getWaitingFare mbTripStartTime mbDriverArrivalTime waitingChargePerMin = do
       waitingTimeThreshold <- getWaitingTimeThreshold handle
-      let driverWaitingTime = fromMaybe 0 (diffUTCTime <$> mbTripStartTime <*> mbDriverArrivalTime)
-          fareableWaitingTime = max 0 (driverWaitingTime / 60 - fromIntegral waitingTimeThreshold)
-      pure $ roundToIntegral fareableWaitingTime * fromMaybe 0 waitingChargePerMin
+      let driverWaitingTime :: Minutes = secondsToMinutes . roundToIntegral @_ @Seconds $ fromMaybe 0 (diffUTCTime <$> mbTripStartTime <*> mbDriverArrivalTime)
+          fareableWaitingTime = max 0 (driverWaitingTime - waitingTimeThreshold)
+      pure $ fromIntegral $ fareableWaitingTime * fromIntegral (fromMaybe 0 waitingChargePerMin)
 
 data Stop = PICKUP | DROP
   deriving (Show)
@@ -369,10 +369,8 @@ getRideTimeThreshold ServiceHandle {..} = do
 getWaitingTimeThreshold ::
   (MonadThrow m, Log m) =>
   ServiceHandle m ->
-  m Seconds
+  m Minutes
 getWaitingTimeThreshold ServiceHandle {..} = do
   transporterConfig <- getConfig
-  (mbThresholdConfig, defaultThreshold) <-
-    (transporterConfig.waitingTimeEstimatedThreshold,)
-      <$> (getDefaultConfig <&> (.rideTimeEstimatedThreshold))
-  pure $ fromMaybe defaultThreshold mbThresholdConfig
+  let mbThresholdConfig = transporterConfig.waitingTimeEstimatedThreshold
+  pure $ fromMaybe 0 mbThresholdConfig

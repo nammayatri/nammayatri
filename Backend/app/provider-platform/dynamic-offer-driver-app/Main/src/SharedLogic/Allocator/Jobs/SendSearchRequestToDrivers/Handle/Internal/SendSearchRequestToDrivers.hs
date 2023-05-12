@@ -19,6 +19,7 @@ where
 
 import qualified Data.Map as M
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
+import qualified Domain.Types.FarePolicy as DFP
 import Domain.Types.Merchant.DriverPoolConfig
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequest as DSearchReq
@@ -53,12 +54,11 @@ sendSearchRequestToDrivers ::
   ) =>
   DSR.SearchRequest ->
   Money ->
-  Money ->
-  Money ->
+  Maybe DFP.DriverExtraFeeBounds ->
   DriverPoolConfig ->
   [DriverPoolWithActualDistResult] ->
   m ()
-sendSearchRequestToDrivers searchReq baseFare driverMinExtraFee driverMaxExtraFee driverPoolConfig driverPool = do
+sendSearchRequestToDrivers searchReq baseFare driverExtraFeeBounds driverPoolConfig driverPool = do
   logInfo $ "Send search requests to driver pool batch-" <> show driverPool
   validTill <- getSearchRequestValidTill
   batchNumber <- getPoolBatchNum searchReq.transactionId
@@ -71,7 +71,7 @@ sendSearchRequestToDrivers searchReq baseFare driverMinExtraFee driverMaxExtraFe
         validTill = validTill,
         batchProcessTime = fromIntegral driverPoolConfig.singleBatchProcessTime
       }
-  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver batchNumber searchReq baseFare validTill driverMinExtraFee driverMaxExtraFee) driverPool
+  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver batchNumber searchReq baseFare validTill) driverPool
   let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
   Esq.runTransaction $ do
     QSRD.setInactiveBySRId searchReq.id -- inactive previous request by drivers so that they can make new offers.
@@ -98,11 +98,9 @@ sendSearchRequestToDrivers searchReq baseFare driverMinExtraFee driverMaxExtraFe
       DSearchReq.SearchRequest ->
       Money ->
       UTCTime ->
-      Money ->
-      Money ->
       DriverPoolWithActualDistResult ->
       m SearchRequestForDriver
-    buildSearchRequestForDriver batchNumber searchRequest baseFare_ validTill driverMinExtraCharge driverMaxExtraCharge dpwRes = do
+    buildSearchRequestForDriver batchNumber searchRequest baseFare_ validTill dpwRes = do
       guid <- generateGUID
       now <- getCurrentTime
       let dpRes = dpwRes.driverPoolResult
@@ -125,8 +123,8 @@ sendSearchRequestToDrivers searchReq baseFare driverMinExtraFee driverMaxExtraFe
                 baseFare = baseFare_,
                 createdAt = now,
                 response = Nothing,
-                driverMinExtraFee = driverMinExtraCharge,
-                driverMaxExtraFee = driverMaxExtraCharge,
+                driverMinExtraFee = driverExtraFeeBounds <&> (.minFee),
+                driverMaxExtraFee = driverExtraFeeBounds <&> (.maxFee),
                 rideRequestPopupDelayDuration = dpwRes.intelligentScores.rideRequestPopupDelayDuration,
                 isPartOfIntelligentPool = dpwRes.isPartOfIntelligentPool,
                 acceptanceRatio = dpwRes.intelligentScores.acceptanceRatio,

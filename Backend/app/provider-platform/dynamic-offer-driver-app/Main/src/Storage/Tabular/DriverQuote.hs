@@ -28,6 +28,7 @@ import Kernel.Types.Common (Centesimal, Meters (..))
 import qualified Kernel.Types.Common as Common
 import Kernel.Types.Id
 import qualified Storage.Tabular.FareParameters as Fare
+import qualified Storage.Tabular.FareParameters.Instances as Fare
 import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.Person (PersonTId)
 import qualified Storage.Tabular.SearchRequest as SReq
@@ -68,7 +69,7 @@ instance TEntityKey DriverQuoteT where
   fromKey (DriverQuoteTKey _id) = Id _id
   toKey (Id id) = DriverQuoteTKey id
 
-type FullDriverQuoteT = (DriverQuoteT, Fare.FareParametersT)
+type FullDriverQuoteT = (DriverQuoteT, Fare.FullFareParametersT)
 
 instance FromTType FullDriverQuoteT Domain.DriverQuote where
   fromTType (DriverQuoteT {..}, fareParamsT) = do

@@ -187,7 +187,6 @@ library
       Domain.Types.SearchRequest.SearchReqLocation
       Domain.Types.SearchRequestForDriver
       Domain.Types.SearchRequestSpecialZone
-      Domain.Types.SlabFarePolicy
       Domain.Types.Vehicle
       Domain.Types.Vehicle.Variant
       Environment
@@ -213,8 +212,6 @@ library
       SharedLogic.DriverPool.Types
       SharedLogic.Estimate
       SharedLogic.FareCalculator
-      SharedLogic.FareCalculator.Calculator
-      SharedLogic.FareCalculator.Flow
       SharedLogic.GoogleMaps
       SharedLogic.GoogleTranslate
       SharedLogic.Merchant
@@ -238,7 +235,6 @@ library
       Storage.CachedQueries.Merchant.MerchantServiceUsageConfig
       Storage.CachedQueries.Merchant.TransporterConfig
       Storage.CachedQueries.OnboardingDocumentConfig
-      Storage.CachedQueries.SlabFarePolicy
       Storage.Queries.Booking
       Storage.Queries.Booking.BookingLocation
       Storage.Queries.BookingCancellationReason
@@ -262,7 +258,9 @@ library
       Storage.Queries.Exophone
       Storage.Queries.FareParameters
       Storage.Queries.FarePolicy
+      Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
       Storage.Queries.FarePolicy.RestrictedExtraFare
+      Storage.Queries.FullEntityBuilders
       Storage.Queries.Geometry
       Storage.Queries.Issue.Comment
       Storage.Queries.Issue.IssueCategory
@@ -290,7 +288,6 @@ library
       Storage.Queries.SearchRequest
       Storage.Queries.SearchRequestForDriver
       Storage.Queries.SearchRequestSpecialZone
-      Storage.Queries.SlabFarePolicy
       Storage.Queries.Vehicle
       Storage.Tabular.Booking
       Storage.Tabular.Booking.BookingLocation
@@ -313,8 +310,15 @@ library
       Storage.Tabular.Estimate
       Storage.Tabular.Exophone
       Storage.Tabular.FareParameters
+      Storage.Tabular.FareParameters.FareParametersProgressiveDetails
+      Storage.Tabular.FareParameters.Instances
+      Storage.Tabular.FareParameters.Table
       Storage.Tabular.FarePolicy
+      Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails
+      Storage.Tabular.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
+      Storage.Tabular.FarePolicy.Instances
       Storage.Tabular.FarePolicy.RestrictedExtraFare
+      Storage.Tabular.FarePolicy.Table
       Storage.Tabular.Geometry
       Storage.Tabular.Issue.Comment
       Storage.Tabular.Issue.IssueCategory
@@ -347,7 +351,6 @@ library
       Storage.Tabular.SearchRequest.SearchReqLocation
       Storage.Tabular.SearchRequestForDriver
       Storage.Tabular.SearchRequestSpecialZone
-      Storage.Tabular.SlabFarePolicy
       Storage.Tabular.Vehicle
       Tools.Auth
       Tools.Call

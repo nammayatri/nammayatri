@@ -21,8 +21,6 @@ import qualified Data.Map as M
 import qualified Data.Text as T
 import Data.Time.Clock (addUTCTime)
 import qualified Domain.Types.Estimate as DEst
-import qualified Domain.Types.FareParameters as DFareParams (FarePolicyType (..))
-import qualified Domain.Types.FarePolicy as DFarePolicy (ExtraFee (..))
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
@@ -45,7 +43,6 @@ import SharedLogic.GoogleMaps
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.FarePolicy as FarePolicyS
 import qualified Storage.CachedQueries.Merchant as QMerch
-import qualified Storage.CachedQueries.SlabFarePolicy as SFarePolicyS
 import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.SearchRequest as QSReq
 import Tools.Error
@@ -90,16 +87,17 @@ handler merchantId sReq = do
               }
         pure (res.distance, res.duration)
       Just distRes -> pure distRes
-  (fareParams, driverExtraFare) <- case merchant.farePolicyType of
-    DFareParams.SLAB -> do
-      slabFarePolicy <- SFarePolicyS.findByMerchantIdAndVariant merchant.id estimate.vehicleVariant >>= fromMaybeM (InternalError "Slab fare policy not found")
-      let driverExtraFare = DFarePolicy.ExtraFee {minFee = 0, maxFee = 0}
-      fareParams <- calculateFare merchantId (Right slabFarePolicy) distance sReq.pickupTime Nothing sReq.customerExtraFee
-      pure (fareParams, driverExtraFare)
-    DFareParams.NORMAL -> do
-      farePolicy <- FarePolicyS.findByMerchantIdAndVariant merchantId estimate.vehicleVariant (Just distance) >>= fromMaybeM NoFarePolicy
-      fareParams <- calculateFare merchantId (Left farePolicy) distance sReq.pickupTime Nothing sReq.customerExtraFee
-      pure (fareParams, farePolicy.driverExtraFee)
+  farePolicy <- FarePolicyS.findByMerchantIdAndVariant merchantId estimate.vehicleVariant (Just distance) >>= fromMaybeM NoFarePolicy
+  fareParams <-
+    calculateFareParameters
+      CalculateFareParametersParams
+        { farePolicy = farePolicy,
+          distance = distance,
+          rideTime = sReq.pickupTime,
+          waitingTime = Nothing,
+          driverSelectedFare = Nothing,
+          customerExtraFee = sReq.customerExtraFee
+        }
   device <- Redis.get (CD.deviceKey sReq.transactionId)
   searchReq <- buildSearchRequest fromLocation toLocation merchantId estimate sReq distance duration sReq.customerExtraFee device
   let estimateFare = fareSum fareParams
@@ -114,7 +112,7 @@ handler merchantId sReq = do
   Esq.runTransaction $ do
     QSReq.create searchReq
 
-  res <- sendSearchRequestToDrivers' driverPoolConfig searchReq merchant estimateFare driverExtraFare.minFee driverExtraFare.maxFee
+  res <- sendSearchRequestToDrivers' driverPoolConfig searchReq merchant estimateFare farePolicy.driverExtraFeeBounds
   case res of
     ReSchedule _ -> do
       maxShards <- asks (.maxShards)
@@ -125,8 +123,7 @@ handler merchantId sReq = do
               baseFare = estimateFare,
               estimatedRideDistance = distance,
               customerExtraFee = sReq.customerExtraFee,
-              driverMinExtraFee = driverExtraFare.minFee,
-              driverMaxExtraFee = driverExtraFare.maxFee
+              driverExtraFeeBounds = farePolicy.driverExtraFeeBounds
             }
     _ -> return ()
 

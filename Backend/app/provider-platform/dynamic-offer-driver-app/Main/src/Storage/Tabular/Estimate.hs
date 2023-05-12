@@ -36,10 +36,10 @@ mkPersist
       minFare Money
       maxFare Money
       estimateBreakupList (PostgresList Text)
-      nightShiftMultiplier Centesimal Maybe
+      nightShiftCharge Money Maybe
+      oldNightShiftCharge Centesimal Maybe sql=night_shift_multiplier
       nightShiftStart TimeOfDay Maybe
       nightShiftEnd TimeOfDay Maybe
-      waitingTimeEstimatedThreshold Seconds Maybe
       waitingChargePerMin Money Maybe
       waitingOrPickupCharges Money Maybe
       createdAt UTCTime
@@ -55,7 +55,15 @@ instance TEntityKey EstimateT where
 
 instance FromTType EstimateT Domain.Estimate where
   fromTType EstimateT {..} = do
-    let nightShiftRate = Domain.NightShiftRate {..}
+    let nightShiftInfo =
+          ((,,,) <$> nightShiftCharge <*> oldNightShiftCharge <*> nightShiftStart <*> nightShiftEnd)
+            <&> \(nightShiftCharge', oldNightShiftCharge', nightShiftStart', nightShiftEnd') ->
+              Domain.NightShiftInfo
+                { nightShiftCharge = nightShiftCharge',
+                  oldNightShiftCharge = oldNightShiftCharge', -- TODO: To be removed
+                  nightShiftStart = nightShiftStart',
+                  nightShiftEnd = nightShiftEnd'
+                }
         waitingCharges = Domain.WaitingCharges {..}
     estimateBreakupListDec <- (decodeFromText `mapM` unPostgresList estimateBreakupList) & fromMaybeM (InternalError "Unable to decode EstimateBreakup")
     return $
@@ -67,11 +75,14 @@ instance FromTType EstimateT Domain.Estimate where
 
 instance ToTType EstimateT Domain.Estimate where
   toTType Domain.Estimate {..} = do
-    let Domain.NightShiftRate {..} = nightShiftRate
-        Domain.WaitingCharges {..} = waitingCharges
+    let Domain.WaitingCharges {..} = waitingCharges
         unsafeEstimateBreakupList = coerce @[Domain.EstimateBreakup] @[Domain.EstimateBreakupD 'Unsafe] $ estimateBreakupList
     EstimateT
       { id = getId id,
         estimateBreakupList = PostgresList $ encodeToText <$> unsafeEstimateBreakupList,
+        nightShiftCharge = nightShiftInfo <&> (.nightShiftCharge),
+        oldNightShiftCharge = nightShiftInfo <&> (.oldNightShiftCharge),
+        nightShiftStart = nightShiftInfo <&> (.nightShiftStart),
+        nightShiftEnd = nightShiftInfo <&> (.nightShiftEnd),
         ..
       }

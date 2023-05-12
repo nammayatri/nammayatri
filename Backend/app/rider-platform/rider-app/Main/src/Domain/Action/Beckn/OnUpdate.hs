@@ -19,6 +19,7 @@ module Domain.Action.Beckn.OnUpdate
     EstimateRepetitionEstimateInfo (..),
     NightShiftInfo (..),
     WaitingChargesInfo (..),
+    DEstimate.FareRange (..),
     EstimateBreakupInfo (..),
     BreakupPriceInfo (..),
   )
@@ -123,15 +124,15 @@ data EstimateRepetitionEstimateInfo = EstimateRepetitionEstimateInfo
     totalFareRange :: DEstimate.FareRange,
     descriptions :: [Text],
     estimateBreakupList :: [EstimateBreakupInfo],
-    nightShiftRate :: Maybe NightShiftInfo,
-    waitingCharges :: Maybe WaitingChargesInfo,
+    nightShiftInfo :: Maybe NightShiftInfo,
+    waitingCharges :: WaitingChargesInfo,
     driversLocation :: [LatLong]
   }
 
 data NightShiftInfo = NightShiftInfo
-  { nightShiftMultiplier :: Maybe Centesimal,
-    nightShiftStart :: Maybe TimeOfDay,
-    nightShiftEnd :: Maybe TimeOfDay
+  { nightShiftCharge :: Money,
+    nightShiftStart :: TimeOfDay,
+    nightShiftEnd :: TimeOfDay
   }
 
 data WaitingChargesInfo = WaitingChargesInfo

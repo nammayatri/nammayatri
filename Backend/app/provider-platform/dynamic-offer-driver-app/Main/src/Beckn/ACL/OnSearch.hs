@@ -16,7 +16,7 @@ module Beckn.ACL.OnSearch where
 
 import qualified Beckn.Types.Core.Taxi.Common.VehicleVariant as Common
 import qualified Beckn.Types.Core.Taxi.OnSearch as OS
-import Beckn.Types.Core.Taxi.OnSearch.Item (BreakupItem (..), BreakupPrice (..))
+import Beckn.Types.Core.Taxi.OnSearch.Item (BreakupItem (..), BreakupPrice (..), ItemTags (night_shift_charge))
 import qualified Domain.Action.Beckn.Search as DSearch
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.Vehicle.Variant as Variant
@@ -155,11 +155,11 @@ mkQuoteEntities start end estInfo = do
               Just $
                 OS.ItemTags
                   { distance_to_nearest_driver = Just $ realToFrac estInfo.distanceToNearestDriver,
-                    night_shift_multiplier = OS.DecimalValue . toRational <$> (estimate.nightShiftRate.nightShiftMultiplier),
-                    night_shift_start = estimate.nightShiftRate.nightShiftStart,
-                    night_shift_end = estimate.nightShiftRate.nightShiftEnd,
+                    night_shift_charge = estimate.nightShiftInfo <&> (.nightShiftCharge),
+                    old_night_shift_charge = OS.DecimalValue . toRational <$> (estimate.nightShiftInfo <&> (.oldNightShiftCharge)),
+                    night_shift_start = estimate.nightShiftInfo <&> (.nightShiftStart),
+                    night_shift_end = estimate.nightShiftInfo <&> (.nightShiftEnd),
                     waiting_charge_per_min = estimate.waitingCharges.waitingChargePerMin,
-                    waiting_time_estimated_threshold = estimate.waitingCharges.waitingTimeEstimatedThreshold,
                     drivers_location = toList estInfo.driverLatLongs
                   },
             base_distance = Nothing,
@@ -206,11 +206,11 @@ mkQuoteEntitiesSpecialZone start end it = do
               Just $
                 OS.ItemTags
                   { distance_to_nearest_driver = Nothing,
-                    night_shift_multiplier = Nothing,
+                    night_shift_charge = Nothing,
+                    old_night_shift_charge = Nothing,
                     night_shift_start = Nothing,
                     night_shift_end = Nothing,
                     waiting_charge_per_min = Nothing,
-                    waiting_time_estimated_threshold = Nothing,
                     drivers_location = []
                   },
             base_distance = Nothing,

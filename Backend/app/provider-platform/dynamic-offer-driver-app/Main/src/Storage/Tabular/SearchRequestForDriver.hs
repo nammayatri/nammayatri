@@ -13,6 +13,7 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -54,10 +55,9 @@ mkPersist
       searchRequestValidTill UTCTime
       driverId PersonTId
       status Domain.DriverSearchRequestStatus
-      createdAt UTCTime
       response Domain.SearchRequestForDriverResponse Maybe
-      driverMinExtraFee Money
-      driverMaxExtraFee Money
+      driverMinExtraFee Money Maybe
+      driverMaxExtraFee Money Maybe
       rideRequestPopupDelayDuration Seconds
       isPartOfIntelligentPool Bool
       cancellationRatio Double Maybe
@@ -66,6 +66,8 @@ mkPersist
       parallelSearchRequestCount Int Maybe
       driverSpeed Double Maybe
       mode D.DriverMode Maybe
+      createdAt UTCTime
+
       Primary id
       deriving Generic
     |]
@@ -86,6 +88,7 @@ instance FromTType SearchRequestForDriverT Domain.SearchRequestForDriver where
         }
 
 instance ToTType SearchRequestForDriverT Domain.SearchRequestForDriver where
+  toTType :: Domain.SearchRequestForDriver -> SearchRequestForDriverT
   toTType Domain.SearchRequestForDriver {..} =
     SearchRequestForDriverT
       { id = getId id,

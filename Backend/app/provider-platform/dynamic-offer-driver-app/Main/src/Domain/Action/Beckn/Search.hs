@@ -25,6 +25,7 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.Map as M
 import qualified Domain.Types.Estimate as DEst
 import Domain.Types.FareParameters
+import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Merchant.DriverPoolConfig (DriverPoolConfig)
 import qualified Domain.Types.QuoteSpecialZone as DQuoteSpecialZone
@@ -32,7 +33,7 @@ import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import qualified Domain.Types.SearchRequestSpecialZone as DSRSZ
 import qualified Domain.Types.Vehicle as DVeh
 import Environment
-import EulerHS.Prelude (whenJustM)
+import EulerHS.Prelude (Alternative (empty), whenJustM)
 import Kernel.External.Maps.Google.PolyLinePoints
 import Kernel.Prelude
 import Kernel.Serviceability
@@ -49,7 +50,6 @@ import SharedLogic.FareCalculator
 import qualified Storage.CachedQueries.FarePolicy as FarePolicyS
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.CachedQueries.Merchant.TransporterConfig as CTC
-import qualified Storage.CachedQueries.SlabFarePolicy as SFarePolicyS
 import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.Geometry as QGeometry
 import qualified Storage.Queries.QuoteSpecialZone as QQuoteSpecialZone
@@ -140,61 +140,51 @@ handler merchantId sReq = do
         Esq.runTransaction $ do
           QSearchRequestSpecialZone.create searchRequestSpecialZone
         now <- getCurrentTime
-        listOfSpecialZoneQuotes <- case org.farePolicyType of
-          SLAB -> do
-            allFarePolicies <- SFarePolicyS.findAllByMerchantId org.id
-            let slabFarePolicies = selectFarePolicy result.distance allFarePolicies
-            let listOfVehicleVariants = listVehicleVariantHelper slabFarePolicies
-            for listOfVehicleVariants $ \slabFarePolicy -> do
-              fareParams <- calculateFare org.id (Right slabFarePolicy) result.distance sReq.pickupTime Nothing Nothing
-              buildSpecialZoneQuote
-                searchRequestSpecialZone
-                fareParams
-                org.id
-                result.distance
-                slabFarePolicy.vehicleVariant
-                result.duration
-          -- return listOfSpecialZoneQuotes
-          NORMAL -> do
-            allFarePolicies <- FarePolicyS.findAllByMerchantId org.id (Just result.distance)
-            let farePolicies = selectFarePolicy result.distance allFarePolicies
-            let listOfVehicleVariants = listVehicleVariantHelper farePolicies
-            for listOfVehicleVariants $ \farePolicy -> do
-              fareParams <- calculateFare org.id (Left farePolicy) result.distance sReq.pickupTime Nothing Nothing
-              buildSpecialZoneQuote
-                searchRequestSpecialZone
-                fareParams
-                org.id
-                result.distance
-                farePolicy.vehicleVariant
-                result.duration
+        listOfSpecialZoneQuotes <- do
+          allFarePolicies <- FarePolicyS.findAllByMerchantId org.id (Just result.distance)
+          let farePolicies = selectFarePolicy result.distance allFarePolicies
+          let listOfVehicleVariants = listVehicleVariantHelper farePolicies
+          for listOfVehicleVariants $ \farePolicy -> do
+            fareParams <-
+              calculateFareParameters
+                CalculateFareParametersParams
+                  { farePolicy = farePolicy,
+                    distance = result.distance,
+                    rideTime = sReq.pickupTime,
+                    waitingTime = Nothing,
+                    driverSelectedFare = Nothing,
+                    customerExtraFee = Nothing
+                  }
+            buildSpecialZoneQuote
+              searchRequestSpecialZone
+              fareParams
+              org.id
+              result.distance
+              farePolicy.vehicleVariant
+              result.duration
         Esq.runTransaction $
           for_ listOfSpecialZoneQuotes QQuoteSpecialZone.create
         return (Just (mkQuoteInfo fromLocation toLocation now <$> listOfSpecialZoneQuotes), Nothing)
       else do
         driverPoolCfg <- getDriverPoolConfig merchantId result.distance
-        estimateInfos <-
-          case org.farePolicyType of
-            SLAB -> do
-              allFarePolicies <- SFarePolicyS.findAllByMerchantId org.id
-              let slabFarePolicies = selectFarePolicy result.distance allFarePolicies
-              buildEstimatesInfos fromLocationLatLong driverPoolCfg org result SHEst.buildEstimateFromSlabFarePolicy slabFarePolicies
-            NORMAL -> do
-              allFarePolicies <- FarePolicyS.findAllByMerchantId org.id (Just result.distance)
-              let farePolicies = selectFarePolicy result.distance allFarePolicies
-              --TODO: REFACTOR THIS HELL
-              buildEstimatesInfos fromLocationLatLong driverPoolCfg org result SHEst.buildEstimate farePolicies
+        estimateInfos <- do
+          allFarePolicies <- FarePolicyS.findAllByMerchantId org.id (Just result.distance)
+          let farePolicies = selectFarePolicy result.distance allFarePolicies
+          buildEstimatesInfos fromLocationLatLong driverPoolCfg org result farePolicies
         return (Nothing, Just estimateInfos)
   buildSearchRes org fromLocationLatLong toLocationLatLong mbEstimateInfos quotes searchMetricsMVar
   where
     listVehicleVariantHelper farePolicy = catMaybes $ everyPossibleVariant <&> \var -> find ((== var) . (.vehicleVariant)) farePolicy
 
-    selectFarePolicy distance = filter (\fp -> checkTripConstraints distance fp.minAllowedTripDistance fp.maxAllowedTripDistance)
-      where
-        checkTripConstraints tripDistance minAllowedTripDistance maxAllowedTripDistance =
-          let cond1 = (<= tripDistance) <$> minAllowedTripDistance
-              cond2 = (>= tripDistance) <$> maxAllowedTripDistance
-           in and $ catMaybes [cond1, cond2]
+    selectFarePolicy distance farePolicies = do
+      farePolicy <- farePolicies
+      let check =
+            farePolicy.allowedTripDistanceBounds <&> \allowedTripDistanceBounds ->
+              allowedTripDistanceBounds.minAllowedTripDistance <= distance
+                && allowedTripDistanceBounds.maxAllowedTripDistance >= distance
+      case check of
+        Just False -> empty
+        _ -> return farePolicy
 
     zipMatched estimates driverPools = do
       estimate <- estimates
@@ -224,21 +214,13 @@ handler merchantId sReq = do
           }
 
     buildEstimatesInfos ::
-      (HasField "vehicleVariant" fp DVeh.Variant) =>
       LatLong ->
       DriverPoolConfig ->
       DM.Merchant ->
       DistanceAndDuration ->
-      ( DM.Merchant ->
-        Text ->
-        UTCTime ->
-        Meters ->
-        fp ->
-        Flow DEst.Estimate
-      ) ->
-      [fp] ->
+      [DFP.FarePolicy] ->
       Flow [EstimateInfo]
-    buildEstimatesInfos fromLocation driverPoolCfg org result buildEstimateFn farePolicies =
+    buildEstimatesInfos fromLocation driverPoolCfg org result farePolicies =
       if null farePolicies
         then do
           logDebug "Trip doesnot match any fare policy constraints."
@@ -258,7 +240,7 @@ handler merchantId sReq = do
           logDebug $ "Search handler: driver pool " <> show driverPool
 
           let onlyFPWithDrivers = filter (\fp -> isJust (find (\dp -> dp.variant == fp.vehicleVariant) driverPool)) farePolicies
-          estimates <- mapM (buildEstimateFn org sReq.transactionId sReq.pickupTime result.distance) onlyFPWithDrivers
+          estimates <- mapM (SHEst.buildEstimate sReq.transactionId sReq.pickupTime result.distance) onlyFPWithDrivers
           Esq.runTransaction $ do
             QEst.createMany estimates
 

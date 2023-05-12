@@ -42,7 +42,7 @@ mkPersist
       rideTravelledDistThresholdWhenPickupOrDestIsDiff Meters Maybe
       rideTravelledDistThresholdWhenPickupAndDestIsSame Meters Maybe
       rideTimeEstimatedThreshold Seconds Maybe
-      waitingTimeEstimatedThreshold Seconds Maybe
+      waitingTimeEstimatedThreshold Minutes Maybe
       maxRadius Meters
       minRadius Meters
       radiusStepSize Meters

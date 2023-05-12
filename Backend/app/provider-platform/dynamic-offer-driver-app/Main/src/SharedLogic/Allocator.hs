@@ -19,6 +19,7 @@
 module SharedLogic.Allocator where
 
 import Data.Singletons.TH
+import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.SearchRequest as DSR
 import Kernel.Prelude
 import Kernel.Types.Common (Meters, Money)
@@ -41,8 +42,7 @@ data SendSearchRequestToDriverJobData = SendSearchRequestToDriverJobData
     baseFare :: Money,
     estimatedRideDistance :: Meters,
     customerExtraFee :: Maybe Money,
-    driverMinExtraFee :: Money,
-    driverMaxExtraFee :: Money
+    driverExtraFeeBounds :: Maybe DFP.DriverExtraFeeBounds
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 

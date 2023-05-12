@@ -79,7 +79,7 @@ logOnSearchEvent (BecknCallbackReq context (leftToMaybe -> mbErr)) = do
   id <- generateGUID
   bppId <- context.bpp_id & fromMaybeM (InvalidRequest "Missing context.bpp_id")
   let messageId = context.message_id
-  let errorType = show . (._type) <$> mbErr
+  let errorType = show.(._type) <$> mbErr
   let errorCode = (.code) <$> mbErr
   let errorMessage = (.message) =<< mbErr
   runTransaction $
@@ -97,7 +97,7 @@ buildEstimateOrQuoteInfo item = do
       estimatedTotalFare = roundToIntegral item.price.offered_value
       estimateBreakupList = buildEstimateBreakUpList <$> item.price.value_breakup
       descriptions = item.quote_terms
-      nightShiftRate = buildNightShiftRate <$> item.tags
+      nightShiftInfo = buildNightShiftInfo =<< item.tags
       waitingCharges = buildWaitingChargeInfo <$> item.tags
       driversLocation = fromMaybe [] $ item.tags <&> (.drivers_location)
   validatePrices estimatedFare estimatedTotalFare
@@ -155,7 +155,7 @@ buildOneWaySpecialZoneQuoteDetails item = do
       { quoteId = item.id
       }
 
---FIXME remove round by using Kilometers and Hours in spec
+-- FIXME remove round by using Kilometers and Hours in spec
 buildRentalQuoteDetails ::
   (MonadThrow m, Log m) =>
   OnSearch.Item ->
@@ -185,21 +185,21 @@ buildEstimateBreakUpList BreakupItem {..} = do
           }
     }
 
-buildNightShiftRate ::
+buildNightShiftInfo ::
   OnSearch.ItemTags ->
-  DOnSearch.NightShiftInfo
-buildNightShiftRate itemTags = do
-  DOnSearch.NightShiftInfo
-    { nightShiftMultiplier = realToFrac <$> itemTags.night_shift_multiplier,
-      nightShiftStart = itemTags.night_shift_start,
-      nightShiftEnd = itemTags.night_shift_end
-    }
+  Maybe DOnSearch.NightShiftInfo
+buildNightShiftInfo itemTags = do
+  ((,,,) <$> itemTags.night_shift_charge <*> itemTags.old_night_shift_charge <*> itemTags.night_shift_start <*> itemTags.night_shift_end)
+    <&> \(nightShiftCharge, oldNightShiftCharge, nightShiftStart, nightShiftEnd) ->
+      DOnSearch.NightShiftInfo
+        { oldNightShiftCharge = realToFrac oldNightShiftCharge,
+          ..
+        }
 
 buildWaitingChargeInfo ::
   OnSearch.ItemTags ->
   DOnSearch.WaitingChargesInfo
 buildWaitingChargeInfo itemTags = do
   DOnSearch.WaitingChargesInfo
-    { waitingChargePerMin = itemTags.waiting_charge_per_min,
-      waitingTimeEstimatedThreshold = itemTags.waiting_time_estimated_threshold
+    { waitingChargePerMin = itemTags.waiting_charge_per_min
     }

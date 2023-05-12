@@ -56,8 +56,8 @@ data SearchRequestForDriver = SearchRequestForDriver
     lon :: Maybe Double,
     createdAt :: UTCTime,
     response :: Maybe SearchRequestForDriverResponse,
-    driverMinExtraFee :: Money,
-    driverMaxExtraFee :: Money,
+    driverMinExtraFee :: Maybe Money,
+    driverMaxExtraFee :: Maybe Money,
     rideRequestPopupDelayDuration :: Seconds,
     isPartOfIntelligentPool :: Bool,
     cancellationRatio :: Maybe Double,
@@ -81,8 +81,8 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     toLocation :: DLoc.SearchReqLocation,
     distance :: Meters,
     driverLatLong :: LatLong,
-    driverMinExtraFee :: Money,
-    driverMaxExtraFee :: Money,
+    driverMinExtraFee :: Maybe Money,
+    driverMaxExtraFee :: Maybe Money,
     rideRequestPopupDelayDuration :: Seconds
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show, PrettyShow)

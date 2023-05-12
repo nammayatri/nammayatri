@@ -47,7 +47,7 @@ getUpdatedFarePolicy mId varId distance farePolicy = do
       Nothing -> findRestrictedFareListByMerchant mId
   pure $ maybe farePolicy (updateMaxExtraFare farePolicy) (restrictedFair restrictedPolicy)
   where
-    updateMaxExtraFare FarePolicy {..} maxFee = FarePolicy {driverExtraFee = driverExtraFee {maxFee}, ..}
+    updateMaxExtraFare FarePolicy {..} maxFee = FarePolicy {driverExtraFeeBounds = driverExtraFeeBounds <&> \b -> b {maxFee}, ..}
     restrictedFair fares =
       case find (\fare -> fare.minTripDistance <= distance) fares of
         Just fare -> Just (fare.driverMaxExtraFare)

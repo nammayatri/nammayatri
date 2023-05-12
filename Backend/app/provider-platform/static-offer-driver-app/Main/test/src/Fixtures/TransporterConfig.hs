@@ -21,7 +21,7 @@ import qualified Fixtures.Person as Fixtures
 import qualified Fixtures.Time as Fixtures
 import qualified Kernel.External.FCM.Types as FCM (FCMConfig (..))
 import Kernel.Types.Common (Meters (..))
-import Kernel.Types.Time (Seconds (..))
+import Kernel.Types.Time (Minutes (..), Seconds (..))
 
 defaultTransporterConfig :: DTConf.TransporterConfig
 defaultTransporterConfig =
@@ -32,7 +32,7 @@ defaultTransporterConfig =
       rideTravelledDistThresholdWhenPickupOrDestIsDiff = Just $ Meters 700,
       rideTravelledDistThresholdWhenPickupAndDestIsSame = Just $ Meters 1200,
       rideTimeEstimatedThreshold = Just $ Seconds 900,
-      waitingTimeEstimatedThreshold = Just $ Seconds 3,
+      waitingTimeEstimatedThreshold = Just $ Minutes 3,
       availabilityTimeWeightage = 70,
       acceptanceRatioWeightage = 40,
       cancellationRatioWeightage = -40,
