@@ -29,8 +29,10 @@ where
 
 import Data.Text
 import qualified Data.Text as T
+import qualified Domain.Types.Booking as BT
 import Domain.Types.CallStatus
 import qualified Domain.Types.CallStatus as DCS
+import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
 import qualified Kernel.External.Call.Exotel.Types as Call
@@ -135,16 +137,13 @@ getDriverMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus = do
   let callTo = dropFirstZero callTo_
   exophone <- CQExophone.findByPhone callTo >>= fromMaybeM (ExophoneDoesNotExist callTo)
   mobileNumberHash <- getDbHash callFrom
-  (person, dtmfNumberUsed) <-
+  (dtmfNumberUsed, booking) <-
     runInReplica (Person.findByRoleAndMobileNumberAndMerchantId USER "+91" mobileNumberHash exophone.merchantId) >>= \case
-      Nothing -> do
-        number <- fromMaybeM (InvalidRequest "DTMF Number Not Found") dtmfNumber_
-        let dtmfNumber = dropFirstZero $ removeQuotes number
-        dtmfMobileHash <- getDbHash dtmfNumber
-        person <- runInReplica $ Person.findByRoleAndMobileNumberAndMerchantId USER "+91" dtmfMobileHash exophone.merchantId >>= fromMaybeM (PersonWithPhoneNotFound dtmfNumber)
-        return (person, Just dtmfNumber)
-      Just entity -> return (entity, Nothing)
-  booking <- runInReplica $ QRB.findAssignedByRiderId person.id >>= fromMaybeM (BookingForRiderNotFound $ getId person.id)
+      Nothing -> getDtmfFlow dtmfNumber_ exophone.merchantId
+      Just person -> do
+        runInReplica (QRB.findAssignedByRiderId person.id) >>= \case
+          Nothing -> getDtmfFlow dtmfNumber_ exophone.merchantId
+          Just activeBooking -> return (Nothing, activeBooking)
   ride <- runInReplica $ QRide.findActiveByRBId booking.id >>= fromMaybeM (RideWithBookingIdNotFound $ getId booking.id)
   callId <- generateGUID
   callStatusObj <- buildCallStatus ride.id callId callSid (exotelStatusToInterfaceStatus callStatus) dtmfNumberUsed
@@ -152,7 +151,6 @@ getDriverMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus = do
   return ride.driverMobileNumber
   where
     dropFirstZero = T.dropWhile (== '0')
-    removeQuotes = T.replace "\"" ""
     buildCallStatus rideId callId exotelCallId exoStatus dtmfNumberUsed = do
       now <- getCurrentTime
       return $
@@ -166,6 +164,18 @@ getDriverMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus = do
             recordingUrl = Nothing,
             createdAt = now
           }
+
+getDtmfFlow :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Maybe Text -> Id Merchant -> m (Maybe Text, BT.Booking)
+getDtmfFlow dtmfNumber_ merchantId = do
+  number <- fromMaybeM (InvalidRequest "DTMF Number Not Found") dtmfNumber_
+  let dtmfNumber = dropFirstZero $ removeQuotes number
+  dtmfMobileHash <- getDbHash dtmfNumber
+  person <- runInReplica $ Person.findByRoleAndMobileNumberAndMerchantId USER "+91" dtmfMobileHash merchantId >>= fromMaybeM (PersonWithPhoneNotFound dtmfNumber)
+  booking <- runInReplica $ QRB.findAssignedByRiderId person.id >>= fromMaybeM (BookingForRiderNotFound $ getId person.id)
+  return (Just dtmfNumber, booking)
+  where
+    dropFirstZero = T.dropWhile (== '0')
+    removeQuotes = T.replace "\"" ""
 
 getCallStatus :: EsqDBReplicaFlow m r => Id CallStatus -> m GetCallStatusRes
 getCallStatus callStatusId = do
