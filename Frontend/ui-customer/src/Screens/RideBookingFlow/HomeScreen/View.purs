@@ -76,8 +76,8 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.AddNewAddressScreen.Controller as AddNewAddress
 import Screens.HomeScreen.Controller (Action(..), ScreenOutput, checkCurrentLocation, checkSavedLocations, dummySelectedQuotes, eval, flowWithoutOffers, getCurrentCustomerLocation)
 import Screens.HomeScreen.Transformer (transformSavedLocations)
-import Screens.Types (HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CallType(..), ZoneType(..))
-import Services.API (GetDriverLocationResp(..), GetQuotesRes(..), GetRouteResp(..), LatLong(..), RideAPIEntity(..), RideBookingRes(..), Route(..), SavedLocationsListRes(..), SearchReqLocationAPIEntity(..), SelectListRes(..), Snapped(..), GetPlaceNameResp(..), PlaceName(..))
+import Screens.Types (HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CallType(..), ZoneType(..), RideStatusType(..))
+import Services.API (GetDriverLocationResp(..), GetQuotesRes(..), GetRouteResp(..), LatLong(..), RideAPIEntity(..), RideBookingRes(..), Route(..), SavedLocationsListRes(..), SearchReqLocationAPIEntity(..), SelectListRes(..), Snapped(..), GetPlaceNameResp(..), PlaceName(..), FlowStatusRes(..), FlowStatus(..))
 import Services.Backend (getDriverLocation, getQuotes, getRoute, makeGetRouteReq, rideBooking, selectList, driverTracking, rideTracking, walkCoordinates, walkCoordinate, getSavedLocationList)
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore, updateLocalStage)
 import Styles.Colors as Color
@@ -1751,7 +1751,7 @@ getEstimate :: forall action. (GetQuotesRes -> action) -> action -> Int -> Numbe
 getEstimate action flowStatusAction count duration push state = do
   if (isLocalStageOn FindingEstimate) || (isLocalStageOn TryAgain) then
     if (count > 0) then do
-      resp <- getQuotes (state.props.searchId)
+      resp <- Remote.getQuotes (state.props.searchId)
       _ <- pure $ printLog "caseId" (state.props.searchId)
       case resp of
         Right response -> do
@@ -1796,7 +1796,7 @@ getQuotesPolling pollingId action retryAction count duration push state = do
       let minimumPollingCount = fromMaybe 0 (fromString (getValueToLocalStore TEST_MINIMUM_POLLING_COUNT))
       let usableCount = if gotQuote == "TRUE" && count > minimumPollingCount then minimumPollingCount else count
       if (spy "USABLECOUNT :- " usableCount > 0) then do
-        resp <- selectList (state.props.estimateId)
+        resp <- Remote.selectList (state.props.estimateId)
         _ <- pure $ printLog "caseId" (state.props.estimateId)
         case resp of
           Right response -> do
@@ -1821,100 +1821,104 @@ getQuotesPolling pollingId action retryAction count duration push state = do
         _ <- pure $ updateLocalStage QuoteList
         doAff do liftEffect $ push $ action response
 
-driverLocationTracking :: forall action. (action -> Effect Unit) -> (String -> action) -> (String -> action) -> (Int -> Int -> action) -> Number -> String -> HomeScreenState -> String -> Flow GlobalState Unit
+driverLocationTracking :: forall action. (action -> Effect Unit) -> (RideStatusType -> action) -> (String -> action) -> (Int -> Int -> action) -> Number -> String -> HomeScreenState -> String -> Flow GlobalState Unit
 driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState = do
   _ <- pure $ printLog "trackDriverLocation2_function" trackingId
   if (any (\stage -> isLocalStageOn stage) [ RideAccepted, RideStarted, ChatWithDriver]) && ((getValueToLocalStore TRACKING_ID) == trackingId) then do
-    when (state.props.bookingId /= "") $ do
-      respBooking <- rideBooking (state.props.bookingId)
-      case respBooking of
-        Right (RideBookingRes respBooking) -> do
-          if (length respBooking.rideList) > 0 then do
-            case (respBooking.rideList !! 0) of
-              Just (RideAPIEntity res) -> do
-                let rideStatus = res.status
-                doAff do liftEffect $ push $ action rideStatus
-                if (os /= "IOS" && res.driverArrivalTime /= Nothing  && (getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_DRIVER_ARRIVAL" ) then doAff do liftEffect $ push $ driverArrivedAction (fromMaybe "" res.driverArrivalTime)
-                  else pure unit
-              Nothing -> pure unit
-          else
-            pure unit
-        Left err -> pure unit
-    if (state.props.isSpecialZone) && (isLocalStageOn RideAccepted) then do
+    when ( state.props.isSpecialZone && (isLocalStageOn RideAccepted) ) $ do 
       _ <- pure $ enableMyLocation true
       _ <- pure $ removeAllPolylines ""
       _ <- doAff $ liftEffect $ animateCamera state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng 17
       _ <- doAff $ liftEffect $ addMarker "ny_ic_src_marker" state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng 160 (0.0) (0.0)
       void $ delay $ Milliseconds duration
       driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState
-      else do
-        response <- getDriverLocation state.data.driverInfoCardState.rideId
-        case response of
-          Right (GetDriverLocationResp resp) -> do
-            let
-              rideID = state.data.driverInfoCardState.rideId
-              srcLat = (resp ^. _lat)
-              srcLon = (resp ^. _lon)
-              dstLat = if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) then state.data.driverInfoCardState.sourceLat else state.data.driverInfoCardState.destinationLat
-              dstLon = if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) then state.data.driverInfoCardState.sourceLng else state.data.driverInfoCardState.destinationLng
-              markers = if (isLocalStageOn RideAccepted) || (isLocalStageOn ChatWithDriver) then (driverTracking "" ) else (rideTracking "")
-              sourceSpecialTagIcon = specialLocationIcons state.props.zoneType.sourceTag
-              destSpecialTagIcon = specialLocationIcons state.props.zoneType.destinationTag
-              specialLocationTag =  if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) then
-                                      specialLocationConfig destSpecialTagIcon sourceSpecialTagIcon
-                                    else
-                                      specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon
-            if (getValueToLocalStore TRACKING_ENABLED) == "False" then do
-              _ <- pure $ setValueToLocalStore TRACKING_DRIVER "True"
-              _ <- pure $ removeAllPolylines ""
-              _ <- liftFlow $ drawRoute (walkCoordinate srcLat srcLon dstLat dstLon) "DOT" "#323643" false markers.srcMarker markers.destMarker 8 "DRIVER_LOCATION_UPDATE" "" "" specialLocationTag
-              void $ delay $ Milliseconds duration
-              driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState
-              pure unit
-            else if ((getValueToLocalStore TRACKING_DRIVER) == "False" || not (isJust state.data.route)) then do
-              _ <- pure $ setValueToLocalStore TRACKING_DRIVER "True"
-              routeResponse <- getRoute routeState $ makeGetRouteReq srcLat srcLon dstLat dstLon
-              case routeResponse of
-                Right (GetRouteResp routeResp) -> do
-                  case ((routeResp) !! 0) of
-                    Just (Route routes) -> do
-                      _ <- pure $ removeAllPolylines ""
-                      let newPoints = getExtendedPath (walkCoordinates routes.points)
-                          newRoute = routes { points = Snapped (map (\item -> LatLong { lat: item.lat, lon: item.lng }) newPoints.points) }
-                      liftFlow $ drawRoute newPoints "LineString" "#323643" true markers.srcMarker markers.destMarker 8 "DRIVER_LOCATION_UPDATE" "" (metersToKm routes.distance state) specialLocationTag
-                      _ <- doAff do liftEffect $ push $ updateState routes.duration routes.distance
-                      void $ delay $ Milliseconds duration
-                      driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Just (Route newRoute), speed = routes.distance / routes.duration } } routeState
-                    Nothing -> pure unit
-                Left err -> pure unit
-            else do
-              case state.data.route of
-                Just (Route route) -> do
-                      locationResp <- liftFlow $ isCoordOnPath (walkCoordinates route.points) (resp ^. _lat) (resp ^. _lon) (state.data.speed)
-                      if locationResp.isInPath then do
-                        let newPoints = { points : locationResp.points}
-                        let specialLocationTag =  if (any (\stage -> isLocalStageOn stage) [ RideAccepted, ChatWithDriver]) then
-                                                    specialLocationConfig "" sourceSpecialTagIcon
-                                                  else
-                                                    specialLocationConfig "" destSpecialTagIcon
-                        liftFlow $ updateRoute newPoints markers.destMarker (metersToKm locationResp.distance state) specialLocationTag
-                        _ <- doAff do liftEffect $ push $ updateState locationResp.eta locationResp.distance
-                        void $ delay $ Milliseconds duration
-                        driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState
-                      else do
-                        driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } } routeState
-                Nothing -> driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } } routeState
-          Left err -> do
-            void $ delay $ Milliseconds duration
-            driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } } routeState
+
+    flowResponse <- Remote.flowStatus "true"
+    case flowResponse of
+      Right (FlowStatusRes resp) -> do
+        case resp.currentStatus of
+          RIDE_PICKUP currentStatus -> updateLocation currentStatus.driverLocation
+          DRIVER_ARRIVED currentStatus -> do 
+            if (os /= "IOS" && currentStatus.driverArrivalTime /= Nothing  && (getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_DRIVER_ARRIVAL" ) then doAff do liftEffect $ push $ driverArrivedAction (fromMaybe "" currentStatus.driverArrivalTime)
+            else pure unit 
+            updateLocation currentStatus.driverLocation
+          RIDE_STARTED currentStatus -> do 
+            doAff do liftEffect $ push $ action INPROGRESS
+            updateLocation currentStatus.driverLocation
+          PENDING_RATING _ -> doAff do liftEffect $ push $ action COMPLETED
+          IDLE _ -> doAff do liftEffect $ push $ action CANCELLED_RIDE
+          _ -> pure unit
+        pure unit
+      Left err -> do
+        void $ delay $ Milliseconds duration
+        driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } } routeState
   else do
     pure unit
+  where
+    updateLocation :: Maybe LatLong -> Flow GlobalState Unit
+    updateLocation Nothing = do 
+      void $ delay $ Milliseconds duration
+      driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } } routeState
+    updateLocation (Just (LatLong latlong)) = do
+        let
+          rideID = state.data.driverInfoCardState.rideId
+          srcLat = latlong.lat
+          srcLon = latlong.lon
+          dstLat = if (any (\stage -> isLocalStageOn stage) [ RideAccepted, ChatWithDriver]) then state.data.driverInfoCardState.sourceLat else state.data.driverInfoCardState.destinationLat
+          dstLon = if (any (\stage -> isLocalStageOn stage) [ RideAccepted, ChatWithDriver]) then state.data.driverInfoCardState.sourceLng else state.data.driverInfoCardState.destinationLng
+          markers = if (any (\stage -> isLocalStageOn stage) [ RideAccepted, ChatWithDriver]) then (Remote.driverTracking "" ) else (Remote.rideTracking "")
+          sourceSpecialTagIcon = specialLocationIcons state.props.zoneType.sourceTag
+          destSpecialTagIcon = specialLocationIcons state.props.zoneType.destinationTag
+          specialLocationTag =  if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) then
+                                  specialLocationConfig destSpecialTagIcon sourceSpecialTagIcon
+                                else
+                                  specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon
+        if (getValueToLocalStore TRACKING_ENABLED) == "False" then do
+          _ <- pure $ setValueToLocalStore TRACKING_DRIVER "True"
+          _ <- pure $ removeAllPolylines ""
+          _ <- liftFlow $ drawRoute (walkCoordinate srcLat srcLon dstLat dstLon) "DOT" "#323643" false markers.srcMarker markers.destMarker 8 "DRIVER_LOCATION_UPDATE" "" "" specialLocationTag
+          void $ delay $ Milliseconds duration
+          driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState
+          pure unit
+        else if ((getValueToLocalStore TRACKING_DRIVER) == "False" || not (isJust state.data.route)) then do
+          _ <- pure $ setValueToLocalStore TRACKING_DRIVER "True"
+          routeResponse <- getRoute routeState $ makeGetRouteReq srcLat srcLon dstLat dstLon
+          case routeResponse of
+            Right (GetRouteResp routeResp) -> do
+              case ((routeResp) !! 0) of
+                Just (Route routes) -> do
+                  _ <- pure $ removeAllPolylines ""
+                  let newPoints = getExtendedPath (walkCoordinates routes.points)
+                      newRoute = routes { points = Snapped (map (\item -> LatLong { lat: item.lat, lon: item.lng }) newPoints.points) }
+                  liftFlow $ drawRoute newPoints "LineString" "#323643" true markers.srcMarker markers.destMarker 8 "DRIVER_LOCATION_UPDATE" "" (metersToKm routes.distance state) specialLocationTag
+                  _ <- doAff do liftEffect $ push $ updateState routes.duration routes.distance
+                  void $ delay $ Milliseconds duration
+                  driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Just (Route newRoute), speed = routes.distance / routes.duration } } routeState
+                Nothing -> pure unit
+            Left err -> pure unit
+        else do
+          case state.data.route of
+            Just (Route route) -> do
+                  locationResp <- liftFlow $ isCoordOnPath (walkCoordinates route.points) srcLat srcLon (state.data.speed)
+                  if locationResp.isInPath then do
+                    let newPoints = { points : locationResp.points}
+                    let specialLocationTag =  if (any (\stage -> isLocalStageOn stage) [ RideAccepted, ChatWithDriver]) then
+                                                specialLocationConfig "" sourceSpecialTagIcon
+                                              else
+                                                specialLocationConfig "" destSpecialTagIcon
+                    liftFlow $ updateRoute newPoints markers.destMarker (metersToKm locationResp.distance state) specialLocationTag
+                    _ <- doAff do liftEffect $ push $ updateState locationResp.eta locationResp.distance
+                    void $ delay $ Milliseconds duration
+                    driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState
+                  else do
+                    driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } } routeState
+            Nothing -> driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } } routeState
 
 
 confirmRide :: forall action. (RideBookingRes -> action) -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
 confirmRide action count duration push state = do
   if (count /= 0) && (isLocalStageOn ConfirmingRide) && (state.props.bookingId /= "")then do
-    resp <- rideBooking (state.props.bookingId)
+    resp <- Remote.rideBooking (state.props.bookingId)
     _ <- pure $ printLog "response to confirm ride:- " (state.props.searchId)
     case resp of
       Right response -> do
@@ -1948,7 +1952,7 @@ checkForLatLongInSavedLocations push action state = do
   _ <- runExceptT $ runBackT $ setValueToLocalStore RELOAD_SAVED_LOCATION "false"
   _ <- runExceptT $ runBackT $ transformSavedLocations state.data.savedLocations
   if getValueToLocalStore RELOAD_SAVED_LOCATION == "true" then do
-    (savedLocationResp )<- getSavedLocationList ""
+    (savedLocationResp )<- Remote.getSavedLocationList ""
     case savedLocationResp of
         Right (SavedLocationsListRes listResp) -> do
           doAff do liftEffect $ push $ action $ AddNewAddress.getSavedLocations listResp.list

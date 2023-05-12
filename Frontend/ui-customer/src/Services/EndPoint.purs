@@ -117,7 +117,7 @@ getCoordinates :: String -> String -> String
 getCoordinates id  language = (getBaseUrl "32") <> "/googleMaps/getCoordinates?placeId=" <> id <> "&language=" <> language
 
 flowStatus :: String -> String 
-flowStatus dummy = (getBaseUrl "33") <> "/frontend/flowStatus"
+flowStatus pollingFlag = (getBaseUrl "33") <> "/frontend/flowStatus?isPolling=" <> pollingFlag
 
 notifyFlowEvent :: String -> String 
 notifyFlowEvent dummy = (getBaseUrl "34") <> "/frontend/notifyEvent"

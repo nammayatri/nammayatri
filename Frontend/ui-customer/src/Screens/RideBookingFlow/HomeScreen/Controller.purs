@@ -78,7 +78,7 @@ import Screens.AddNewAddressScreen.Controller (validTag, getSavedTagsFromHome)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyQuoteAPIEntity, dummyZoneType)
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getSpecialZoneQuotes, transformContactList)
 import Screens.SuccessScreen.Handler as UI
-import Screens.Types (HomeScreenState, Location, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CardType(..), RatingCard, CurrentLocationDetailsWithDistance(..), CurrentLocationDetails, LocationItemType(..), RateCardType(..), CallType(..), ZoneType(..), SpecialTags, TipViewStage(..))
+import Screens.Types (HomeScreenState, Location, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CardType(..), RatingCard, CurrentLocationDetailsWithDistance(..), CurrentLocationDetails, LocationItemType(..), RateCardType(..), CallType(..), ZoneType(..), SpecialTags, TipViewStage(..), RideStatusType(..))
 import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
@@ -539,7 +539,7 @@ data Action = NoAction
             | ShortDistanceActionController PopUpModal.Action
             | SourceUnserviceableActionController ErrorModalController.Action
             | UpdateCurrentLocation String String
-            | UpdateCurrentStage String
+            | UpdateCurrentStage RideStatusType
             | GoBackToSearchLocationModal
             | FareBreakUpActionController FareBreakUp.Action
             | SkipButtonActionController PrimaryButtonController.Action
@@ -609,11 +609,11 @@ eval (IsMockLocation isMock) state = do
 
 eval (UpdateCurrentStage stage) state = do
   _ <- pure $ spy "updateCurrentStage" stage
-  if (stage == "INPROGRESS") && (not $ isLocalStageOn RideStarted) then
+  if (stage == INPROGRESS) && (not $ isLocalStageOn RideStarted) then
     exit $ NotificationHandler "TRIP_STARTED" state
-  else if (stage == "COMPLETED") && (not $ isLocalStageOn HomeScreen) then
+  else if (stage == COMPLETED) && (not $ isLocalStageOn HomeScreen) then
     exit $ NotificationHandler "TRIP_FINISHED" state
-  else if (stage == "CANCELLED") && (not $ isLocalStageOn HomeScreen) then
+  else if (stage == CANCELLED_RIDE) && (not $ isLocalStageOn HomeScreen) then
     exit $ NotificationHandler "CANCELLED_PRODUCT" state
   else
     continue state

@@ -1096,3 +1096,7 @@ derive instance genericTipViewData :: Generic TipViewData _
 instance showTipViewData :: Show TipViewData where show = genericShow
 instance encodeTipViewData :: Encode TipViewData where encode = defaultEncode
 instance decodeTipViewData :: Decode TipViewData where decode = defaultDecode
+data RideStatusType = INPROGRESS | COMPLETED | CANCELLED_RIDE
+
+derive instance genericRideStatusType :: Generic RideStatusType _
+instance eqRideStatusType :: Eq RideStatusType where eq = genericEq

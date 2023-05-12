@@ -290,12 +290,15 @@ currentFlowStatus = do
   _ <- pure $ spy "currentFlowStatus" ":::"
   _ <- pure $ setValueToLocalStore DRIVER_ARRIVAL_ACTION "TRIGGER_DRIVER_ARRIVAL"
   verifyProfile "LazyCheck"
-  (FlowStatusRes flowStatus) <- Remote.flowStatusBT "LazyCheck"
+  (FlowStatusRes flowStatus) <- Remote.flowStatusBT "false"
   void $ pure $ spy "flowStatus" flowStatus
   case flowStatus.currentStatus of
     WAITING_FOR_DRIVER_OFFERS currentStatus -> goToFindingQuotesStage currentStatus.estimateId false
     DRIVER_OFFERED_QUOTE currentStatus      -> goToFindingQuotesStage currentStatus.estimateId true
     RIDE_ASSIGNED _                         -> currentRideFlow true
+    RIDE_PICKUP _                         -> currentRideFlow true
+    RIDE_STARTED _                         -> currentRideFlow true
+    DRIVER_ARRIVED _                         -> currentRideFlow true
     _                                       -> currentRideFlow false
   lift $ lift $ doAff do liftEffect hideSplash
   _ <- pure $ hideKeyboardOnNavigation true
@@ -1894,9 +1897,18 @@ getFlowStatusData dummy =
 
 updateFlowStatus :: NotifyFlowEventType -> FlowBT String Unit
 updateFlowStatus eventType = do
-  (FlowStatusRes flowStatus) <- Remote.flowStatusBT "LazyCheck"
+  (FlowStatusRes flowStatus) <- Remote.flowStatusBT "false"
   case flowStatus.currentStatus of
     RIDE_ASSIGNED _ -> do
+      currentRideFlow true
+      homeScreenFlow
+    RIDE_PICKUP _ -> do
+      currentRideFlow true
+      homeScreenFlow
+    RIDE_STARTED _ -> do
+      currentRideFlow true
+      homeScreenFlow
+    DRIVER_ARRIVED _ -> do
       currentRideFlow true
       homeScreenFlow
     _               -> do
