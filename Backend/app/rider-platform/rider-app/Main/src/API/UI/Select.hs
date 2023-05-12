@@ -29,6 +29,7 @@ where
 import qualified Beckn.ACL.Cancel as CACL
 import qualified Beckn.ACL.Select as ACL
 import qualified Domain.Action.UI.Cancel as DCancel
+import Domain.Action.UI.Profile
 import qualified Domain.Action.UI.Select as DSelect
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Estimate as DEstimate
@@ -37,11 +38,13 @@ import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess (APISuccess (Success))
+import Kernel.Types.Error (PersonError (PersonNotFound))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.Person as QPerson
 import Tools.Auth
 
 -------- Select Flow --------
@@ -80,19 +83,27 @@ handler =
 
 select :: Id DPerson.Person -> Id DEstimate.Estimate -> FlowHandler APISuccess
 select personId estimateId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
-  let autoAssignFlag = False
-  let req = DSelect.DEstimateSelectReq {customerExtraFee = Nothing, autoAssignEnabled = autoAssignFlag, autoAssignEnabledV2 = Nothing}
-  dSelectReq <- DSelect.select personId estimateId req
-  becknReq <- ACL.buildSelectReq dSelectReq
-  void $ withShortRetry $ CallBPP.select dSelectReq.providerUrl becknReq
-  pure Success
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  if not (shouldSimulateRide person)
+    then do
+      let autoAssignFlag = False
+      let req = DSelect.DEstimateSelectReq {customerExtraFee = Nothing, autoAssignEnabled = autoAssignFlag, autoAssignEnabledV2 = Nothing}
+      dSelectReq <- DSelect.select personId estimateId req
+      becknReq <- ACL.buildSelectReq dSelectReq
+      void $ withShortRetry $ CallBPP.select dSelectReq.providerUrl becknReq
+      pure Success
+    else pure Success
 
 select2 :: Id DPerson.Person -> Id DEstimate.Estimate -> DSelect.DEstimateSelectReq -> FlowHandler APISuccess
 select2 personId estimateId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
-  dSelectReq <- DSelect.select personId estimateId req
-  becknReq <- ACL.buildSelectReq dSelectReq
-  void $ withShortRetry $ CallBPP.select dSelectReq.providerUrl becknReq
-  pure Success
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  if not (shouldSimulateRide person)
+    then do
+      dSelectReq <- DSelect.select personId estimateId req
+      becknReq <- ACL.buildSelectReq dSelectReq
+      void $ withShortRetry $ CallBPP.select dSelectReq.providerUrl becknReq
+      pure Success
+    else pure Success
 
 selectList :: Id DPerson.Person -> Id DEstimate.Estimate -> FlowHandler DSelect.SelectListRes
 selectList personId = withFlowHandlerAPI . withPersonIdLogTag personId . DSelect.selectList

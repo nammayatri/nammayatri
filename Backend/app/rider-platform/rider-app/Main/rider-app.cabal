@@ -189,6 +189,7 @@ library
       Storage.CachedQueries.Merchant.MerchantServiceUsageConfig
       Storage.CachedQueries.MerchantConfig
       Storage.CachedQueries.Person.PersonFlowStatus
+      Storage.CachedQueries.SearchRequestCache
       Storage.Queries.BlackListOrg
       Storage.Queries.Booking
       Storage.Queries.Booking.BookingLocation

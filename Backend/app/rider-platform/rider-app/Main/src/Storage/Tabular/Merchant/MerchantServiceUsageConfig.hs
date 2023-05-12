@@ -38,10 +38,12 @@ mkPersist
       merchantId MerchantTId
       initiateCall CallService
       getDistances MapsService
+      getSimulatedRoutes MapsService
       getRoutes MapsService
       snapToRoad MapsService
       getPlaceName MapsService
       getPickupRoutes MapsService
+      getSimulatedDistance MapsService
       getTripRoutes MapsService
       getPlaceDetails MapsService
       autoComplete MapsService

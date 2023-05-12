@@ -45,6 +45,7 @@ mkPersist
       id Text
       firstName Text Maybe
       middleName Text Maybe
+      isSimulated Bool Maybe
       lastName Text Maybe
       role Domain.Role
       gender Domain.Gender

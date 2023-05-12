@@ -264,7 +264,8 @@ buildPerson req bundleVersion clientVersion merchantId = do
         blockedByRuleId = personWithSameDeviceToken >>= (.blockedByRuleId),
         bundleVersion = bundleVersion,
         clientVersion = clientVersion,
-        whatsappNotificationEnrollStatus = Nothing
+        whatsappNotificationEnrollStatus = Nothing,
+        isSimulated = Just False
       }
 
 -- FIXME Why do we need to store always the same authExpiry and tokenExpiry from config? info field is always Nothing

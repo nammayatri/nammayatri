@@ -94,6 +94,7 @@ data PersonE e = Person
     deviceToken :: Maybe FCM.FCMRecipientToken,
     description :: Maybe Text,
     merchantId :: Id DMerchant.Merchant,
+    isSimulated :: Maybe Bool,
     whatsappNotificationEnrollStatus :: Maybe Whatsapp.OptApiMethods,
     referralCode :: Maybe Text,
     referredAt :: Maybe UTCTime,

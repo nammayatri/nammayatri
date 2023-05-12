@@ -23,6 +23,7 @@ module Domain.Action.UI.Profile
     getPersonDetails,
     updatePerson,
     updateDefaultEmergencyNumbers,
+    shouldSimulateRide,
     getDefaultEmergencyNumbers,
   )
 where
@@ -108,6 +109,12 @@ getPersonDetails personId = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   decPerson <- decrypt person
   return $ Person.makePersonAPIEntity decPerson
+
+shouldSimulateRide :: Person.Person -> Bool
+shouldSimulateRide person = case person.isSimulated of
+  Nothing -> False
+  Just True -> True
+  Just False -> False
 
 updatePerson :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasBapInfo r m, CoreMetrics m) => Id Person.Person -> UpdateProfileReq -> m APISuccess.APISuccess
 updatePerson personId req = do

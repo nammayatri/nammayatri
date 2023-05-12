@@ -31,6 +31,7 @@ import Data.Aeson
 import Data.OpenApi hiding (Header)
 import qualified Data.OpenApi as OpenApi hiding (Header)
 import qualified Data.Text as T
+import Domain.Action.UI.Profile
 import qualified Domain.Action.UI.Search.Common as DSearchCommon
 import qualified Domain.Action.UI.Search.OneWay as DOneWaySearch
 import qualified Domain.Action.UI.Search.Rental as DRentalSearch
@@ -121,12 +122,81 @@ fareProductConstructorModifier = \case
 
 search :: Id Person.Person -> SearchReq -> Maybe Version -> Maybe Version -> Maybe Text -> FlowHandler SearchRes
 search personId req mbBundleVersion mbClientVersion device = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   checkSearchRateLimit personId
+  logDebug $ ("answer of search" :: Text) <> show (shouldSimulateRide person)
   updateVersions personId mbBundleVersion mbClientVersion
-  (searchId, searchExpiry, routeInfo) <- case req of
-    OneWaySearch oneWay -> oneWaySearch personId mbBundleVersion mbClientVersion device oneWay
-    RentalSearch rental -> rentalSearch personId mbBundleVersion mbClientVersion device rental
-  return $ SearchRes searchId searchExpiry routeInfo
+  if shouldSimulateRide person
+    then do
+      (searchId, searchExpiry, routeInfo) <- case req of
+        OneWaySearch oneWay -> simulatedOneWaySearch personId mbBundleVersion mbClientVersion device oneWay
+        RentalSearch rental -> simulatedRentalSearch personId mbBundleVersion mbClientVersion device rental
+      return $ SearchRes searchId searchExpiry routeInfo
+    else do
+      (searchId, searchExpiry, routeInfo) <- case req of
+        OneWaySearch oneWay -> oneWaySearch personId mbBundleVersion mbClientVersion device oneWay
+        RentalSearch rental -> rentalSearch personId mbBundleVersion mbClientVersion device rental
+      return $ SearchRes searchId searchExpiry routeInfo
+
+simulatedRentalSearch ::
+  ( HasCacheConfig r,
+    EsqDBFlow m r,
+    HedisFlow m r,
+    HasFlowEnv m r '["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl],
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    CoreMetrics m,
+    HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
+    HasBAPMetrics m r
+  ) =>
+  Id Person.Person ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Text ->
+  DRentalSearch.RentalSearchReq ->
+  m (Id SearchRequest, UTCTime, Maybe Maps.RouteInfo)
+simulatedRentalSearch personId bundleVersion clientVersion device req = do
+  dSearchRes <- DRentalSearch.simulatedRentalSearch personId bundleVersion clientVersion device req
+  pure (dSearchRes.searchId, dSearchRes.searchRequestExpiry, Nothing)
+
+simulatedOneWaySearch ::
+  ( HasCacheConfig r,
+    EncFlow m r,
+    EsqDBFlow m r,
+    DB.EsqDBReplicaFlow m r,
+    HedisFlow m r,
+    HasFlowEnv m r '["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl],
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    CoreMetrics m,
+    HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
+    HasBAPMetrics m r,
+    MonadProducer PublicTransportSearch m
+  ) =>
+  Id Person.Person ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Text ->
+  DOneWaySearch.OneWaySearchReq ->
+  m (Id SearchRequest, UTCTime, Maybe Maps.RouteInfo)
+simulatedOneWaySearch personId bundleVersion clientVersion device req = do
+  person <- Person.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  merchant <- QMerchant.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
+  let sourceLatlong = req.origin.gps
+  let destinationLatLong = req.destination.gps
+  let request =
+        Maps.GetRoutesReq
+          { waypoints = [sourceLatlong, destinationLatLong],
+            calcPoints = True,
+            mode = Just Maps.CAR
+          }
+  routeResponse <- Maps.getSimulatedRoutes person.merchantId request
+  let shortestRouteInfo = getRouteInfoWithShortestDuration routeResponse
+  let longestRouteDistance = (.distance) =<< getLongestRouteDistance routeResponse
+  let shortestRouteDistance = (.distance) =<< shortestRouteInfo
+  let shortestRouteDuration = (.duration) =<< shortestRouteInfo
+  dSearchRes <- DOneWaySearch.oneWaySimulatedSearch person merchant req bundleVersion clientVersion longestRouteDistance device shortestRouteDistance shortestRouteDuration
+  return (dSearchRes.searchId, dSearchRes.searchRequestExpiry, shortestRouteInfo)
 
 oneWaySearch ::
   ( HasCacheConfig r,

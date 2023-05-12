@@ -17,6 +17,7 @@ module Domain.Action.UI.Search.Rental
     RentalSearchRes (..),
     DSearch.SearchReqLocation (..),
     rentalSearch,
+    simulatedRentalSearch,
   )
 where
 
@@ -33,6 +34,7 @@ import Kernel.Types.Version (Version)
 import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
+import Storage.CachedQueries.SearchRequestCache
 import Storage.Queries.Geometry
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.SearchRequest as QSearchRequest
@@ -84,6 +86,48 @@ rentalSearch personId bundleVersion clientVersion device req = do
   Metrics.startSearchMetrics merchant.name txnId
   DB.runTransaction $ do
     QSearchRequest.create searchRequest
+  let dSearchRes =
+        RentalSearchRes
+          { origin = req.origin,
+            searchId = searchRequest.id,
+            startTime = req.startTime,
+            gatewayUrl = merchant.gatewayUrl,
+            searchRequestExpiry = searchRequest.validTill,
+            city = merchant.city
+          }
+  return dSearchRes
+  where
+    validateServiceability geoConfig = do
+      unlessM (rideServiceable geoConfig someGeometriesContain req.origin.gps Nothing) $
+        throwError RideNotServiceable
+
+simulatedRentalSearch ::
+  ( HasCacheConfig r,
+    EsqDBFlow m r,
+    Redis.HedisFlow m r,
+    CoreMetrics m,
+    HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
+    HasBAPMetrics m r
+  ) =>
+  Id Person.Person ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Text ->
+  RentalSearchReq ->
+  m RentalSearchRes
+simulatedRentalSearch personId bundleVersion clientVersion device req = do
+  person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  merchant <-
+    QMerchant.findById person.merchantId
+      >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
+  validateServiceability merchant.geofencingConfig
+  fromLocation <- DSearch.buildSearchReqLoc req.origin
+  now <- getCurrentTime
+  searchRequest <- DSearch.buildSearchRequest person fromLocation Nothing Nothing Nothing now bundleVersion clientVersion device Nothing
+  Metrics.incrementSearchRequestCount merchant.name
+  let txnId = getId (searchRequest.id)
+  Metrics.startSearchMetrics merchant.name txnId
+  cacheSearchRequest merchant.id searchRequest person
   let dSearchRes =
         RentalSearchRes
           { origin = req.origin,
