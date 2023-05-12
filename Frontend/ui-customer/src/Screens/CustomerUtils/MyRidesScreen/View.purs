@@ -174,7 +174,7 @@ ridesView listItemm push state =
           , background Color.white900
           , gravity CENTER
           , visibility if state.props.apiFailure then VISIBLE else GONE
-          ][  ErrorModal.view (push <<< APIFailureActionController) (apiErrorModalConfig)]
+          ][  ErrorModal.view (push <<< APIFailureActionController) (apiErrorModalConfig state)]
       , Tuple "LOADER"
           $ PrestoAnim.animationSet
           [ PrestoAnim.Animation

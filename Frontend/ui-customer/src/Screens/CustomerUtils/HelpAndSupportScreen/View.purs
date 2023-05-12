@@ -74,7 +74,7 @@ view push state =
  relativeLayout
  [  height MATCH_PARENT
   , width MATCH_PARENT
- ][ linearLayout
+ ]$[ linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL

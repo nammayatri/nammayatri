@@ -14,7 +14,7 @@ export const getNewTrackingId = function (unit) {
 };
 
 export const getKeyInSharedPrefKeysConfigEff = function (key) {
-    return window.JBridge.getKeysInSharedPrefs(key);
+    return (JBridge.getKeysInSharedPref ? JBridge.getKeysInSharedPref(key) : window.JBridge.getKeysInSharedPrefs(key));
   };
 
 export const validateInputPattern = function (input, pattern){
@@ -399,7 +399,7 @@ export const fetchFromLocalStoreImpl = function(key) {
     return function (just) {
         return function (nothing) {
           return function () {
-            var state = window.JBridge.getKeysInSharedPrefs(key);
+            var state = window.JBridge.getKeysInSharedPref ? window.JBridge.getKeysInSharedPref(key) : window.JBridge.getKeysInSharedPrefs(key);
             if (state != "__failed" && state != "(null)") {
               return just(state);
             }
@@ -413,7 +413,7 @@ export const fetchFromLocalStoreTempImpl = function(key) {
   return function (just) {
       return function (nothing) {
         return function () {
-          var state = window.JBridge.getKeysInSharedPrefs(key);
+          var state = window.JBridge.getKeysInSharedPref ? window.JBridge.getKeysInSharedPref(key) : window.JBridge.getKeysInSharedPrefs(key);
           var newState = JSON.parse(state);
           var predictionArray = newState.predictionArray;
           try {
@@ -585,5 +585,24 @@ export const removeLabelFromMarker = function(unit){
     if (JBridge.removeLabelFromMarker){
       return JBridge.removeLabelFromMarker();
     }
+  }
+}
+
+export const getMerchantConfig = function (just) {
+  return function (nothing) {
+    return function () {
+      if (typeof window.appConfig !== "undefined") {
+        return just(window.appConfig);
+      }
+      return nothing;
+    }
+  }
+}
+
+export const getMobileNumber = function (signatureAuthData) {
+  try {
+    return JSON.parse(signatureAuthData).mobileNumber
+  } catch (err) {
+    console.log("Decode mobileNumber from SignatureAuthData Error => " + err);
   }
 }

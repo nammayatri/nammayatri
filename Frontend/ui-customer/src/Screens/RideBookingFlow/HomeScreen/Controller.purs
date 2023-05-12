@@ -82,6 +82,10 @@ import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, Ge
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
 import Storage (KeyStore(..), isLocalStageOn, updateLocalStage, getValueToLocalStore, getValueToLocalStoreEff, setValueToLocalStore, getValueToLocalNativeStore, setValueToLocalNativeStore)
+import Control.Monad.Except.Trans (runExceptT)
+import Control.Transformers.Back.Trans (runBackT)
+import Data.Int (toNumber, round, fromString)
+import Config.DefaultConfig as DC
 
 instance showAction :: Show Action where
   show _ = ""
@@ -1621,7 +1625,8 @@ dummyRideRatingState = {
   dateDDMMYY          : "",
   offeredFare         : 0,
   distanceDifference  : 0,
-  feedback            : ""
+  feedback            : "",
+  appConfig : DC.config 
 }
 dummyListItem :: LocationListItemState
 dummyListItem = {

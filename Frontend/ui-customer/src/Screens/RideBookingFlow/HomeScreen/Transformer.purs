@@ -19,7 +19,7 @@ import Prelude
 
 import Accessor (_contents, _description, _estimatedDistance, _lat, _lon, _place_id, _toLocation, _otpCode)
 import Components.ChooseVehicle (Config, config) as ChooseVehicle
-import Components.QuoteListItem.Controller (QuoteListItemState)
+import Components.QuoteListItem.Controller (QuoteListItemState, config)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Data.Array (mapWithIndex)
 import Data.Array as DA
@@ -40,7 +40,7 @@ import Services.Backend as Remote
 import Types.App(FlowBT)
 import Storage ( setValueToLocalStore, getValueToLocalStore, KeyStore(..))
 import Debug(spy)
-
+import Config.DefaultConfig as DC
 
 getLocationList :: Array Prediction -> Array LocationListItemState
 getLocationList predcition = map (\x -> getLocation x) predcition
@@ -79,7 +79,7 @@ getQuote (QuoteAPIEntity quoteEntity) = do
     (ONE_WAY contents) -> dummyQuoteList
     (SPECIAL_ZONE contents) -> dummyQuoteList
     (DRIVER_OFFER contents) -> let (DriverOfferAPIEntity quoteDetails) = contents
-        in {
+        in config {
       seconds : (getExpiryTime quoteDetails.validTill "" isForLostAndFound) -4
     , id : quoteEntity.id 
     , timer : show $ (getExpiryTime quoteDetails.validTill "" isForLostAndFound) -4
@@ -125,6 +125,7 @@ getDriverInfo (RideBookingRes resp) isSpecialZone =
       , bppRideId : rideList.bppRideId
       , driverNumber : rideList.driverNumber
       , merchantExoPhone : resp.merchantExoPhone
+      , config : DC.config
         }
   
 encodeAddressDescription :: String -> String -> Maybe String -> Maybe Number -> Maybe Number -> Array AddressComponents -> SavedReqLocationAPIEntity
@@ -151,19 +152,34 @@ encodeAddressDescription address tag placeId lat lon addressComponents = do
                         Just $ getValueByComponent addressComponents "sublocality"
                 }
 
-dummyQuoteList :: QuoteListItemState
-dummyQuoteList = {
-   seconds : 3
-  , id : "1"
-  , timer : "0"
-  , timeLeft : 0
-  , driverRating : 4.0
-  , profile : ""
-  , price : "200"
-  , vehicleType : "auto"
-  , driverName : "Drive_Name"
-  ,selectedQuote : Nothing
+dummyQuoteList :: Array QuoteListItemState
+dummyQuoteList = [
+  config {
+   seconds = 3
+  , id = "1"  
+  , timer = "0"
+  , timeLeft = 0
+  , driverRating = 4.0
+  , profile = ""
+  , price = "200"
+  , vehicleType = "auto"
+  , driverName = "Drive_Name"
+  ,selectedQuote = Nothing
+
+  },
+  config {
+   seconds = 3
+  , id = "2"  
+  , timer = "0"
+  , timeLeft = 0
+  , driverRating = 4.0
+  , profile = ""
+  , price = "300"
+  , vehicleType = "auto"
+  , driverName = "Drive_Name"
+  ,selectedQuote = Nothing
   }
+]
 
 
 dummyRideAPIEntity :: RideAPIEntity

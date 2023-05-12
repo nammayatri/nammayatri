@@ -112,13 +112,13 @@ primaryButtonConfig state = let
     primaryButtonConfig' = config 
       { textConfig { 
           text = if state.props.issueReported then (getString GO_HOME_) else (getString SUBMIT)
-        , color = if (state.props.activateSubmit) || (state.props.issueReported ) then Color.yellow900 else "#FEEBB9"
+        , color = state.data.config.primaryTextColor
         , fontStyle = FontStyle.bold LanguageStyle
         , textSize = FontSize.a_16
         }
       , height = V 48
       , width = MATCH_PARENT
-      , background = if (state.props.activateSubmit || state.props.issueReported)  then Color.black900 else "#B9BABE"
+      , background = state.data.config.primaryBackground
       , alpha = if (state.props.activateSubmit || state.props.issueReported)  then 1.0 else 0.5 
       , isClickable = (state.props.activateSubmit || state.props.issueReported) 
       , margin = (Margin 16 0 16 16 ) 

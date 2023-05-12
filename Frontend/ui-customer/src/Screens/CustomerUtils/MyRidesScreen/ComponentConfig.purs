@@ -27,8 +27,8 @@ import Screens.Types as ST
 import Styles.Colors as Color
 import Storage as Storage
 
-apiErrorModalConfig :: ErrorModal.Config 
-apiErrorModalConfig = let 
+apiErrorModalConfig :: ST.MyRidesScreenState -> ErrorModal.Config 
+apiErrorModalConfig state = let 
   config = ErrorModal.config 
   errorModalConfig' = config 
     { imageConfig {
@@ -54,8 +54,8 @@ apiErrorModalConfig = let
     , buttonConfig {
         text = (getString NOTIFY_ME)
       , margin = (Margin 16 0 16 16)
-      , background = Color.black900
-      , color = Color.yellow900
+      , background = state.data.config.primaryBackground
+      , color = state.data.config.primaryTextColor
       , fontStyle = FontStyle.medium LanguageStyle
       , textSize = FontSize.a_16
       }

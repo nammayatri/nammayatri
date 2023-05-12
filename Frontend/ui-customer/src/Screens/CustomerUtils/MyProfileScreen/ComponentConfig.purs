@@ -115,7 +115,7 @@ updateButtonConfig :: ST.MyProfileScreenState -> PrimaryButton.Config
 updateButtonConfig state = let
     config = PrimaryButton.config
     updateButtonConfig' = config 
-        { textConfig{ text = (getString UPDATE) }
+        { textConfig{ text = (getString UPDATE), color = state.data.config.primaryTextColor}
         , height = (V 48)
         , cornerRadius = 8.0
         , margin = (Margin 16 0 16 0)
@@ -123,6 +123,7 @@ updateButtonConfig state = let
         , enableLoader = (JB.getBtnLoader "PrimaryButtonUpdate")
         , isClickable = state.props.isBtnEnabled
         , alpha = if state.props.isBtnEnabled then 1.0 else 0.5
+        , background = state.data.config.primaryBackground
         }
     in updateButtonConfig'
 

@@ -15,8 +15,8 @@
 
 module Flow where
 
-import Accessor (_computedPrice, _contents, _formattedAddress, _id, _lat, _lon, _status, _toLocation)
-import Common.Types.App (GlobalPayload)
+import Accessor (_computedPrice, _contents, _formattedAddress, _id, _lat, _lon, _status, _toLocation, _signatureAuthData)
+import Common.Types.App (GlobalPayload(..), SignatureAuthData (..), Payload(..))
 import Common.Types.App (LazyCheck(..))
 import Components.LocationListItem.Controller (dummyLocationListState)
 import Components.SavedLocationCard.Controller (getCardType)
@@ -30,6 +30,7 @@ import Data.Int as INT
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing)
 import Data.Number (fromString)
+import Data.Newtype (unwrap)
 import Data.String (Pattern(..), drop, indexOf, split, toLower, trim, take)
 import Debug (spy)
 import Effect (Effect)
@@ -38,7 +39,6 @@ import Engineering.Helpers.BackTrack (getState)
 import Engineering.Helpers.Commons (liftFlow, os, getNewIDWithTag, bundleVersion, getExpiryTime)
 import Foreign.Class (class Encode)
 import Foreign.Class (encode)
-import Foreign.Generic (decodeJSON, encodeJSON)
 import Helpers.Utils (hideSplash, getDistanceBwCordinates, adjustViewWithKeyboard, decodeErrorCode, getObjFromLocal, convertUTCtoISC, differenceOfLocationLists, filterRecentSearches, setText', seperateByWhiteSpaces, getNewTrackingId, checkPrediction, getRecentSearches, addToRecentSearches, saveRecents, clearWaitingTimer, toString, parseFloat, getCurrentLocationsObjFromLocal, addToPrevCurrLoc, saveCurrentLocations, getCurrentDate, getPrediction, getCurrentLocationMarker, parseNewContacts, getCurrentUTC, getMerchant, Merchant(..), drawPolygon,requestKeyboardShow, removeLabelFromMarker)
 import JBridge (metaLogEvent, currentPosition, drawRoute, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getVersionCode, getVersionName, hideKeyboardOnNavigation, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, loaderText, locateOnMap, openNavigation, reallocateMapFragment, removeAllPolylines, toast, toggleBtnLoader, toggleLoader, updateRoute, launchInAppRatingPopup, firebaseUserID, addMarker, generateSessionId, stopChatListenerService)
 import Language.Strings (getString)
@@ -63,22 +63,32 @@ import Screens.ReferralScreen.ScreenData as ReferralScreen
 import Screens.SavedLocationScreen.Controller (getSavedLocationForAddNewAddressScreen)
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
 import Screens.Types (CardType(..), AddNewAddressScreenState(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), EmailErrorType(..))
-import Services.API (AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..))
+import Services.API (AuthType (..), AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..))
 import Services.Backend as Remote
 import Screens.Types (Gender(..)) as Gender
 import Screens.MyProfileScreen.ScreenData as MyProfileScreenData
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore, updateLocalStage)
 import Types.App (ABOUT_US_SCREEN_OUTPUT(..), ACCOUNT_SET_UP_SCREEN_OUTPUT(..), ADD_NEW_ADDRESS_SCREEN_OUTPUT(..), GlobalState(..), CONTACT_US_SCREEN_OUTPUT(..), FlowBT, HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREEN_OUTPUT(..), MY_PROFILE_SCREEN_OUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), PERMISSION_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUPUT(..), SAVED_LOCATION_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), EMERGECY_CONTACTS_SCREEN_OUTPUT(..))
+import Effect (Effect)
+import Control.Monad.Except (runExcept)
+import Foreign.Class (class Encode)
+import Foreign.Generic (decodeJSON, encodeJSON)
+import Config.Config
+import Config.Types
+import Control.Monad.Except.Trans (runExceptT)
+import Control.Transformers.Back.Trans (runBackT)
+import Config.DefaultConfig as DC
 
-baseAppFlow :: GlobalPayload -> FlowBT String Unit
-baseAppFlow gPayload = do
-  _ <- pure $ printLog "Global Payload" gPayload
+baseAppFlow :: GlobalPayload ->  FlowBT String Unit
+baseAppFlow (GlobalPayload gPayload) = do
+  _ <- lift $ lift $ liftFlow $ loadConfig
+  _ <- pure $ printLog "Global Payload" gPayload 
   (GlobalState state) <- getState
   let bundle = bundleVersion unit
       customerId = (getValueToLocalStore CUSTOMER_ID)
   versionCode <- lift $ lift $ liftFlow $ getVersionCode
   versionName <- lift $ lift $ liftFlow $ getVersionName
-  checkVersion versionCode versionName
+  -- checkVersion versionCode versionName
   setValueToLocalStore VERSION_NAME $ concatString $ Arr.take 3 $ split (Pattern ".") versionName
   setValueToLocalStore BUNDLE_VERSION bundle
   setValueToLocalNativeStore BUNDLE_VERSION bundle
@@ -99,8 +109,36 @@ baseAppFlow gPayload = do
   _ <- lift $ lift $ setLogField "platform" $ encode (os)
   _ <- UI.splashScreen state.splashScreen
   _ <- lift $ lift $ liftFlow $(firebaseLogEventWithParams "ny_user_app_version" "version" (versionName))
-  if getValueToLocalStore REGISTERATION_TOKEN /= "__failed" && getValueToLocalStore REGISTERATION_TOKEN /= "(null)" then currentFlowStatus else enterMobileNumberScreenFlow -- Removed choose langauge screen
-
+  if getValueToLocalStore REGISTERATION_TOKEN /= "__failed" && getValueToLocalStore REGISTERATION_TOKEN /= "(null)" &&  (isNothing $ (gPayload.payload)^._signatureAuthData)
+    then currentFlowStatus 
+    else do
+      let (Payload payload) = gPayload.payload
+      case payload.signatureAuthData of
+        Just (SignatureAuthData signatureAuth) -> do
+          let tokenExpiry = if (getValueToLocalStore LAST_LOGIN) == "__failed" then 600 else getExpiryTime (getValueToLocalStore LAST_LOGIN) true
+          if tokenExpiry >= 600 then do
+            response <- lift $ lift $ Remote.triggerSignatureBasedOTP (SignatureAuthData signatureAuth)
+            case response of
+              Right (TriggerSignatureOTPResp triggerSignatureOtpResp) ->
+                case triggerSignatureOtpResp.authType of
+                  Just "DIRECT" -> do
+                    let person = triggerSignatureOtpResp.person
+                    setValueToLocalStore MOBILE_NUMBER (getMobileNumber signatureAuth.authData)
+                    setValueToLocalStore LAST_LOGIN (getCurrentUTC "")
+                    case triggerSignatureOtpResp.person of
+                      Just person -> do
+                        let customerId = person ^._id
+                        lift $ lift $ setLogField "customer_id" $ encode (customerId)
+                        setValueToLocalStore CUSTOMER_ID customerId
+                      _ -> pure unit
+                    case triggerSignatureOtpResp.token of
+                      Just token -> setValueToLocalStore REGISTERATION_TOKEN token
+                      Nothing -> pure unit
+                    currentFlowStatus
+                  _ -> enterMobileNumberScreenFlow
+              Left err -> enterMobileNumberScreenFlow
+            else currentFlowStatus
+        Nothing -> enterMobileNumberScreenFlow
 
 concatString :: Array String -> String
 concatString arr = case uncons arr of
@@ -156,6 +194,8 @@ forceIOSupdate c_maj c_min c_patch =
 
 currentRideFlow :: Boolean -> FlowBT String Unit
 currentRideFlow rideAssigned = do
+  config <- getAppConfig
+  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data {config = config}})
   rideBookingListResponse <- lift $ lift $ Remote.rideBookingList "1" "0" "true"
   (GlobalState state') <- getState
   let state = state'.homeScreen
@@ -244,8 +284,10 @@ currentRideFlow rideAssigned = do
                           , dateDDMMYY =  case currRideListItem.rideStartTime of
                                             Just startTime -> (convertUTCtoISC startTime "DD/MM/YYYY")
                                             Nothing        -> ""
+                          , appConfig = config
                           }}
                 })
+            -- _ <- pure $ spy "CurrentRideListItem end" currRideListItem
           Left err -> updateLocalStage HomeScreen
       else do
         updateLocalStage HomeScreen
@@ -361,6 +403,8 @@ enterMobileNumberScreenFlow = do
   lift $ lift $ doAff do liftEffect hideSplash -- Removed initial choose langauge screen
   setValueToLocalStore LANGUAGE_KEY "EN_US"
   void $ lift $ lift $ toggleLoader false
+  config <- getAppConfig
+  modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen {data {config =  config }})
   _ <- pure $ firebaseLogEvent "ny_user_enter_mob_num_scn_view"
   flow <- UI.enterMobileNumberScreen
   case flow of
@@ -448,7 +492,8 @@ homeScreenFlow = do
   -- TODO: HANDLE LOCATION LIST INITIALLY
   _ <- pure $ firebaseUserID (getValueToLocalStore CUSTOMER_ID)
   void $ lift $ lift $ toggleLoader false
-  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{hasTakenRide = if (getValueToLocalStore REFERRAL_STATUS == "HAS_TAKEN_RIDE") then true else false, isReferred = if (getValueToLocalStore REFERRAL_STATUS == "REFERRED_NOT_TAKEN_RIDE") then true else false }})
+  config <- getAppConfig
+  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{hasTakenRide = if (getValueToLocalStore REFERRAL_STATUS == "HAS_TAKEN_RIDE") then true else false, isReferred = if (getValueToLocalStore REFERRAL_STATUS == "REFERRED_NOT_TAKEN_RIDE") then true else false }, data {config = config}})
   flow <- UI.homeScreen
   case flow of
     CHECK_FLOW_STATUS -> currentFlowStatus
@@ -1469,7 +1514,7 @@ addNewAddressScreenFlow input = do
             modifyScreenState $ HomeScreenStateType (\homeScreen ->
                                                         homeScreen
                                                           { data
-                                                              { settingSideBar {opened = SettingSideBarController.CLOSED}
+                                                              { settingSideBar {opened = SettingSideBarController.CLOSED, appConfig = DC.config}
                                                               , locationList = updatedLocationList
                                                               , savedLocations = (AddNewAddress.getSavedLocations listResp.list)
                                                               }

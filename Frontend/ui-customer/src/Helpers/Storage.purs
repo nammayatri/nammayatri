@@ -67,6 +67,7 @@ data KeyStore
   | HAS_TAKEN_FIRST_RIDE
   | ENABLE_TIPS
   | ACCURACY_THRESHOLD
+  | LAST_LOGIN
 
 derive instance genericKeyStore :: Generic KeyStore _
 

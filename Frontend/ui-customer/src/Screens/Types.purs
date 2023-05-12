@@ -30,6 +30,7 @@ import PrestoDOM (LetterSpacing)
 import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import Services.API (AddressComponents, BookingLocationAPIEntity, QuoteAPIEntity, Route)
+import Config.Types
 
 type Contacts = {
   name :: String,
@@ -160,6 +161,7 @@ type EnterMobileNumberScreenStateData = {
   , otp :: String
   , timer :: String
   , timerID :: String
+  , config :: AppConfig
 }
 -- ################################################ AccountSetUpScreenState ##################################################
 
@@ -216,7 +218,8 @@ type TripDetailsScreenData =
     paymentMode :: PaymentMode,
     rating :: Int,
     selectedItem :: IndividualRideCardState,
-    tripId :: String
+    tripId :: String,
+    config :: AppConfig
     -- bookingId :: String
   }
 
@@ -300,7 +303,8 @@ type HelpAndSupportScreenData =
     rideId :: String,
     vehicleNumber :: String,
     tripId :: String,
-    bookingId :: String
+    bookingId :: String,
+    config :: AppConfig
   }
 
 type HelpAndSuportScreenProps =
@@ -333,7 +337,8 @@ type MyRidesScreenState =
 type MyRideScreenData = {
     selectedItem :: IndividualRideCardState,
     offsetValue :: Int,
-    loadMoreText :: String
+    loadMoreText :: String,
+    config :: AppConfig
   }
 
 type MyRideScreenProps = {
@@ -492,6 +497,7 @@ type HomeScreenStateData =
   , specialZoneQuoteList :: Array ChooseVehicle.Config
   , specialZoneSelectedQuote :: Maybe String
   , selectedEstimatesObject :: ChooseVehicle.Config
+  , config :: AppConfig
   }
 
 type HomeScreenStateProps =
@@ -624,7 +630,8 @@ type SelectLanguageScreenState = {
 }
 
 type SelectLanguageScreenData =  {
-  isSelected :: Boolean
+  isSelected :: Boolean,
+  config :: AppConfig
  }
 
 type SelectLanguageScreenProps =  {
@@ -702,7 +709,8 @@ type MyProfileScreenData = {
   gender :: Maybe Gender,
   editedEmailId :: Maybe String,
   editedGender :: Maybe Gender,
-  errorMessage :: Maybe EmailErrorType
+  errorMessage :: Maybe EmailErrorType,
+  config :: AppConfig
 }
 
 data EmailErrorType = INVALID_EMAIL | EMAIL_EXISTS
@@ -744,6 +752,7 @@ type DriverInfoCard =
   , driverNumber :: Maybe String
   , merchantExoPhone :: String
   , createdAt :: String
+  , config :: AppConfig
   }
 
 type RatingCard =
@@ -766,6 +775,7 @@ type RatingCard =
   , offeredFare :: Int
   , distanceDifference :: Int
   , feedback :: String
+  , appConfig :: AppConfig
   }
 
 type Address =
@@ -798,6 +808,7 @@ type SavedLocationScreenData =
   {
     savedLocations :: Array LocationListItemState
   , deleteTag :: Maybe String
+  , config :: AppConfig
   }
 
 type DistInfo =
@@ -860,6 +871,7 @@ type AddNewAddressScreenData =
   , latSelectedFromMap :: Number
   , lonSelectedFromMap :: Number
   , addressComponents :: Array AddressComponents
+  , config :: AppConfig
   }
 
 type AddNewAddressScreenProps =

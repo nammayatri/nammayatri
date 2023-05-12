@@ -86,9 +86,9 @@ shareAppConfig state = let
         text = getString(SHARE_APP) 
       , fontSize = FontSize.a_16
       , width = V $ (((EHC.screenWidth unit)-92)/2)
-      , color = Color.yellow900
-      , strokeColor = Color.black900
-      , background = Color.black900
+      , color = state.data.config.primaryTextColor
+      , strokeColor = state.data.config.primaryBackground
+      , background = state.data.config.primaryBackground
       , margin = MarginLeft 12
       ,fontStyle = FontStyle.semiBold LanguageStyle
       },
@@ -112,13 +112,13 @@ skipButtonConfig state =
       config
         { textConfig
           { text = (getString SKIP)
-          , color = Color.black700
+          , color = state.data.config.rateCardColor
           , fontStyle = FontStyle.bold LanguageStyle
           , textSize = FontSize.a_16
           }
         , width = V (EHC.screenWidth unit / 4)
         , background = Color.white900
-        , stroke = ("1," <> Color.black500)
+        , stroke = ("1," <> state.data.config.rateCardColor)
         , margin = (Margin 0 0 0 0)
         , id = "SkipRatingButton"
         , enableLoader = (JB.getBtnLoader "SkipRatingButton")
@@ -227,20 +227,20 @@ whereToButtonConfig state =
     primaryButtonConfig' = config 
       { textConfig
         { text = (getString WHERE_TO)
-        , color = Color.yellow900     
         , textSize = FontSize.a_16
         , width = MATCH_PARENT
         , gravity = LEFT
+        , color = state.data.config.primaryTextColor 
         }
       , height = V 60
       , gravity = CENTER
       , cornerRadius = 8.0
-      , background = Color.black900
       , margin = (MarginHorizontal 16 16)  
       , isClickable = true 
       , isPrefixImage = true
+      , background = state.data.config.primaryBackground
       , prefixImageConfig
-        { imageUrl = "ny_ic_bent_right_arrow,https://assets.juspay.in/nammayatri/images/user/ny_ic_bent_right_arrow.png"
+        { imageUrl = if state.data.config.merchantId == "PAYTM" then "ic_bent_right_arrow_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_bent_right_arrow.png" else  "ny_ic_bent_right_arrow,https://assets.juspay.in/nammayatri/images/user/ny_ic_bent_right_arrow.png"
         , height = V 16
         , width = V 21
         , margin = (Margin 17 0 17 0)  
@@ -256,14 +256,14 @@ primaryButtonRequestRideConfig state =
     primaryButtonConfig' =
       config
         { textConfig
-          { text = (getString REQUEST_RIDE)
-          , color = Color.yellow900
+          { text = state.data.config.estimateConfirmText
           , textSize = FontSize.a_16
+          ,  color = state.data.config.primaryTextColor
           }
-        , background = Color.black900
         , margin = (Margin 0 32 0 0)
         , id = "RequestRideButton"
         , enableLoader = (JB.getBtnLoader "RequestRideButton")
+        , background = state.data.config.primaryBackground
         }
   in
     primaryButtonConfig'
@@ -276,13 +276,13 @@ primaryButtonConfirmPickupConfig state =
       config
         { textConfig
           { text = (getString CONFIRM_LOCATION)
-          , color = Color.yellow900
           , textSize = FontSize.a_16
           , fontStyle = FontStyle.regular LanguageStyle
+          , color = state.data.config.primaryTextColor
           }
-        , background = Color.black900
         , margin = (Margin 0 22 0 0)
         , id = "ConfirmLocationButton"
+        , background = state.data.config.primaryBackground
         }
   in
     primaryButtonConfig'
@@ -295,11 +295,11 @@ rateRideButtonConfig state =
       config
         { textConfig
           { text = (getString RATE_YOUR_DRIVER)
-          , color = Color.yellow900
           , textSize = FontSize.a_16
           , fontStyle = FontStyle.bold LanguageStyle
+          ,  color = state.data.config.primaryTextColor 
           }
-        , background = Color.black900
+        , background = state.data.config.rateCardColor
         , margin = (MarginLeft 12)
         , id = "RateYourDriverButton"
         , enableLoader = (JB.getBtnLoader "RateYourDriverButton")
@@ -381,9 +381,9 @@ logOutPopUpModelConfig state =
             text = if (state.props.customerTip.tipForDriver == 0) then ( if(isLocalStageOn ST.QuoteList) then (getString TRY_AGAIN_WITHOUT_TIP)else (getString SEARCH_AGAIN_WITHOUT_A_TIP)) else ((if (isLocalStageOn ST.QuoteList) then (getString TRY_AGAIN_WITH)else(getString SEARCH_AGAIN_WITH) ) <> " + ₹"<> (fromMaybe "" (["0", "10", "15", "20"] DA.!! state.props.customerTip.tipActiveIndex))) <>" "<>(getString TIP)
           , fontSize = FontSize.a_16 
           , width = MATCH_PARENT
-          , color = Color.yellow900
-          , strokeColor = Color.black900
-          , background = Color.black900
+          , color = state.data.config.primaryTextColor
+          , strokeColor = state.data.config.primaryBackground
+          , background = state.data.config.primaryBackground
           , padding = (Padding 0 10 0 10)
           , fontStyle = FontStyle.semiBold LanguageStyle
           },
@@ -415,9 +415,9 @@ logOutPopUpModelConfig state =
               text = if (isLocalStageOn ST.QuoteList) then (getString YES_TRY_AGAIN) else (getString YES_CANCEL_SEARCH)
             , fontSize = FontSize.a_16 
             , width = MATCH_PARENT
-            , color = Color.yellow900
-            , strokeColor = Color.black900
-            , background = Color.black900
+            , color = state.data.config.primaryTextColor
+            , strokeColor = state.data.config.primaryBackground
+            , background = state.data.config.primaryBackground
             , padding = (Padding 0 10 0 10)
             , fontStyle = FontStyle.semiBold LanguageStyle
             }
@@ -522,8 +522,8 @@ sourceUnserviceableConfig state =
           , textSize = FontSize.a_16
           , margin = (Margin 16 0 16 (20 + EHC.safeMarginBottom))
           , fontStyle = FontStyle.medium LanguageStyle
-          , background = Color.black900
-          , color = Color.yellow900
+          , background = state.data.config.primaryBackground
+          , color = state.data.config.primaryTextColor
           , visibility = GONE
           }
         }
@@ -693,6 +693,7 @@ searchLocationModelViewState state = { isSearchLocation: state.props.isSearchLoc
                                     , isDestServiceable: state.props.isDestServiceable
                                     , isRideServiceable: state.props.isRideServiceable
                                     , savedlocationList: state.data.savedLocations
+                                    , homeScreenConfig : state.data.config
                                     }
 
 quoteListModelViewState :: ST.HomeScreenState -> QuoteListModel.QuoteListModelState
@@ -702,6 +703,7 @@ quoteListModelViewState state = { source: state.data.source
                             , selectedQuote: state.props.selectedQuote
                             , autoSelecting: state.props.autoSelecting
                             , searchExpire: state.props.searchExpire
+                            , appConfig : state.data.config
                             }
 
 previousRideRatingViewState :: ST.HomeScreenState -> RatingCard.RatingCardState

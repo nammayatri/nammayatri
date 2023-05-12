@@ -177,24 +177,23 @@ estimatedTimeAndDistanceView push state =
   ]
 
 otpView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w 
-otpView push state = 
-  linearLayout
+otpView push state = linearLayout
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
-  ] (map(\item -> 
+  ] (map(\item ->
       linearLayout
         [ height $ V 32
         , width $ V 32
         , gravity CENTER
         , cornerRadius 4.0
-        , background Color.black900
+        , background state.data.config.primaryTextColor
         , margin $ MarginLeft 7
         ][ textView
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
             , text item
             , textSize FontSize.a_18
-            , color Color.white900
+            , color state.data.config.otpTextColor
             , fontStyle $ FontStyle.bold LanguageStyle
             ]
         ]) $ split (Pattern "")  state.data.otp)
@@ -345,7 +344,7 @@ otpAndWaitView push state =
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , cornerRadius 9.0
-          , background Color.grey800
+          , background state.data.config.otpBackground
           , gravity CENTER
           , padding $ Padding 10 14 10 14
           , weight 1.0
@@ -353,7 +352,7 @@ otpAndWaitView push state =
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
               , text $ getString OTP <> ":"
-              , color Color.black700
+              , color state.data.config.otpTextColor
               , textSize FontSize.a_14
               , lineHeight "18"
               , fontStyle $ FontStyle.bold LanguageStyle
