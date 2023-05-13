@@ -40,10 +40,10 @@ primaryButtonConfigConfirmLoc state = let
   primaryButtonConfig' = config 
     { textConfig 
       { text = (getString CONFIRM_LOCATION)
-      , color = Color.yellow900
+      , color = state.data.config.primaryTextColor
       , textSize = FontSize.a_16
       }
-    , background = Color.black900
+    , background = state.data.config.primaryBackground
     , margin = (Margin 0 22 0 16)
     , id = "AddNewaddressConfirmLocationButton"
     }
@@ -61,12 +61,14 @@ genericHeaderConfig state = let
       , width = (V 25)
       , margin = (Margin 10 17 16 15)
       , visibility = VISIBLE
-      , imageUrl = if state.props.showSavePlaceView then "ny_ic_close_white," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_close_white.png" else "ny_ic_chevron_left_white," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_chevron_left_white.png"
+      , imageUrl = if state.data.config.nyBrandingVisibility && (not state.props.showSavePlaceView) then config.prefixImageConfig.imageUrl 
+                    else if state.props.showSavePlaceView then if state.data.config.nyBrandingVisibility then "ny_ic_close,"<> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_close.png"
+                      else  "ny_ic_close_white," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_close_white.png" else config.prefixImageConfig.imageUrl
       }
     , textConfig {
         text = if state.props.showSavePlaceView then (getString FAVOURITE_LOCATION) else if state.props.editLocation then (getString EDIT_FAVOURITE) else (getString ADD_FAVOURITE)
       , textSize = FontSize.a_18
-      , color = Color.white900
+      , color = state.data.config.profileName
       , fontStyle = FontStyle.semiBold LanguageStyle
       }
     , suffixImageConfig {

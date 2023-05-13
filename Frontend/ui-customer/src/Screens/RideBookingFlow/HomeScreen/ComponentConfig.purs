@@ -21,28 +21,28 @@ import Prelude
 import PrestoDOM
 
 import Animation.Config as AnimConfig
+import Animation.Config as AnimConfig
 import Components.CancelRide as CancelRidePopUpConfig
+import Components.ChatView as ChatView
+import Components.ChooseYourRide as ChooseYourRide
 import Components.DriverInfoCard (DriverInfoCardData)
 import Components.DriverInfoCard as DriverInfoCard
 import Components.EmergencyHelp as EmergencyHelp
 import Components.ErrorModal as ErrorModal
 import Components.FareBreakUp as FareBreakUp
+import Components.MenuButton as MenuButton
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
-import Components.SearchLocationModel as SearchLocationModel
-import Components.ChooseYourRide as ChooseYourRide
-import Components.MenuButton as MenuButton
 import Components.QuoteListModel as QuoteListModel
 import Components.RateCard as RateCard
 import Components.RatingCard as RatingCard
-import Components.ChatView as ChatView
-import PrestoDOM.Types.DomAttributes (Corners(..))
-import Data.String as DS
-import Animation.Config as AnimConfig
+import Components.SearchLocationModel as SearchLocationModel
 import Components.SearchLocationModel as SearchLocationModel
 import Components.SourceToDestination as SourceToDestination
 import Data.Array as DA
+import Data.Int as INT
 import Data.Maybe (Maybe(..), fromMaybe)
+import Data.String as DS
 import Data.String as DS
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
@@ -51,11 +51,11 @@ import Helpers.Utils as HU
 import JBridge as JB
 import Language.Types (STR(..))
 import PrestoDOM.Types.DomAttributes (Corners(..))
+import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (DriverInfoCard)
 import Screens.Types as ST
-import Styles.Colors as Color
-import Data.Int as INT
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn)
+import Styles.Colors as Color
 
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
@@ -243,7 +243,7 @@ whereToButtonConfig state =
       , isPrefixImage = true
       , background = state.data.config.primaryBackground
       , prefixImageConfig
-        { imageUrl = if state.data.config.merchantId == "PAYTM" then "ny_ic_bent_right_arrow_white," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_bent_right_arrow_white.png" else  "ny_ic_bent_right_arrow," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_bent_right_arrow.png"
+        { imageUrl = if (HU.getMerchant FunctionCall) == HU.UNKNOWN then "ny_ic_bent_right_arrow_white," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_bent_right_arrow_white.png" else  "ny_ic_bent_right_arrow," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_bent_right_arrow.png"
         , height = V 16
         , width = V 21
         , margin = (Margin 17 0 17 0)  
@@ -259,7 +259,7 @@ primaryButtonRequestRideConfig state =
     primaryButtonConfig' =
       config
         { textConfig
-          { text = state.data.config.estimateConfirmText
+          { text = (getString REQUEST_RIDE)
           , textSize = FontSize.a_16
           ,  color = state.data.config.primaryTextColor
           }
@@ -351,8 +351,18 @@ logOutPopUpModelConfig state =
           config'
             { primaryText { text = (getString LOGOUT_) }
             , secondaryText { text = (getString ARE_YOU_SURE_YOU_WANT_TO_LOGOUT) }
-            , option1 { text = (getString GO_BACK_) }
-            , option2 { text = (getString LOGOUT_) }
+            , option1 { 
+                color = state.data.config.primaryTextColor
+              , strokeColor = state.data.config.primaryBackground
+              , background = state.data.config.primaryBackground
+              , text = (getString GO_BACK_)
+              }
+            , option2 { 
+                background = state.data.config.primaryTextColor
+              , strokeColor = state.data.config.primaryBackground
+              , color = state.data.config.primaryBackground
+              , text = (getString LOGOUT_)
+              }
             }
       in
         popUpConfig'
@@ -460,8 +470,11 @@ distanceOusideLimitsConfig state =
           , margin = (Margin 0 16 0 20)
           }
         , option1 { visibility = false }
-        , option2
-          { text = (getString CHANGE_DROP_LOCATION)
+        , option2 { 
+            background = state.data.config.primaryTextColor
+          , strokeColor = state.data.config.primaryBackground
+          , color = state.data.config.primaryBackground
+          , text = (getString CHANGE_DROP_LOCATION)
           , margin = (Margin 16 0 16 EHC.safeMarginBottom)
           }
         }
@@ -484,8 +497,18 @@ shortDistanceConfig state =
           { text = (getString YOU_CAN_TAKE_A_WALK_OR_CONTINUE_WITH_RIDE_BOOKING)
           , margin = (Margin 0 16 0 20)
           }
-        , option1 { text = (getString GO_BACK_) }
-        , option2 { text = (getString BOOK_RIDE_) }
+        , option1 { 
+            background = state.data.config.primaryTextColor
+          , strokeColor = state.data.config.primaryBackground
+          , color = state.data.config.primaryBackground
+          , text = (getString GO_BACK_)
+          }
+        , option2 {
+            color = state.data.config.primaryTextColor
+          , strokeColor = state.data.config.primaryBackground
+          , background = state.data.config.primaryBackground
+          , text = (getString BOOK_RIDE_)
+          }
         }
   in
     popUpConfig'
@@ -557,8 +580,18 @@ estimateChangedPopupConfig state =
       config'
         { primaryText { text = (getString ESTIMATES_CHANGED) }
         , secondaryText { text = (getString ESTIMATES_REVISED_TO) <> "₹" <> (show state.data.suggestedAmount) <> "-" <> "₹" <> (show $ (state.data.suggestedAmount + state.data.rateCard.additionalFare)) }
-        , option1 { text = (getString GO_HOME_) }
-        , option2 { text = (getString CONTINUE) }
+        , option1 { 
+            background = state.data.config.primaryTextColor
+          , strokeColor = state.data.config.primaryBackground
+          , color = state.data.config.primaryBackground
+          , text = (getString GO_HOME_)
+          }
+        , option2 { 
+            color = state.data.config.primaryTextColor
+          , strokeColor = state.data.config.primaryBackground
+          , background = state.data.config.primaryBackground
+          , text = (getString CONTINUE)
+          }
         }
   in
     popUpConfig'
@@ -779,12 +812,16 @@ callSupportConfig state = let
   , option1 {
       text =  getString CANCEL_
     , fontSize = FontSize.a_16
-    , color = Color.black700
-    , strokeColor = Color.black700
+    , background = state.data.config.primaryTextColor
+    , strokeColor = state.data.config.primaryBackground
+    , color = state.data.config.primaryBackground
     }
   , option2 {
       text =  getString CALL_SUPPORT
     , fontSize = FontSize.a_16
+    , color = state.data.config.primaryTextColor
+    , strokeColor = state.data.config.primaryBackground
+    , background = state.data.config.primaryBackground
     , margin = (MarginLeft 12)
     }
   }

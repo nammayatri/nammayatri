@@ -8,7 +8,7 @@ config =
   {
     primaryTextColor :  "#FFFFFF",
     primaryBackground : "#03B9F5",
-    merchantId : "PAYTM",
+    merchantId : "UNKNOWN",
     searchLocationTheme : Color.black900,
     estimateConfirmText : "Request a NammaYatri Ride",
     autoConfirmingLoaderColor : "#03B9F5",

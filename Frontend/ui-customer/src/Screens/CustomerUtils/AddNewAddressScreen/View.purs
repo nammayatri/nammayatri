@@ -44,6 +44,7 @@ import Screens.CustomerUtils.AddNewAddressScreen.ComponentConfig
 import Storage (KeyStore(..), getValueToLocalStore)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
+import Debug
 
 screen :: ST.AddNewAddressScreenState -> Screen Action ST.AddNewAddressScreenState ScreenOutput
 screen initialState =
@@ -57,7 +58,10 @@ screen initialState =
                         _ <- HU.storeCallBackLocateOnMap push UpdateLocation
                         pure unit
                         pure (pure unit))]
-  , eval
+  , eval : \action state -> do
+        let _ = spy "AddNewAddressScreenState action " action
+        let _ = spy "AddNewAddressScreenState state " state
+        eval action state
   }
 
 view :: forall w . (Action  -> Effect Unit) -> ST.AddNewAddressScreenState -> PrestoDOM (Effect Unit) w
@@ -110,7 +114,7 @@ view push state =
         [ height $ V ((EHC.screenHeight unit) / 7)
         , width MATCH_PARENT
         , clickable true
-        , background Color.black900
+        , background state.data.config.searchLocationTheme
         , padding (Padding 0 EHC.safeMarginTop 0 0)
         ][]
       , GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)

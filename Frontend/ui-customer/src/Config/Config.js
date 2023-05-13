@@ -22,7 +22,7 @@ function mergeDeep(target, source) {
 const defaultConfig = {
     primaryTextColor : "#FFFFFF",
     primaryBackground : "#03B9F5",
-    merchantId : "PAYTM" ,
+    merchantId : "UNKNOWN" ,
     searchLocationTheme : "#E3F4FC",
     estimateConfirmText : "Request a NammaYatri Ride",
     autoConfirmingLoaderColor : "#03B9F5",

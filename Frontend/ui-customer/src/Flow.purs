@@ -159,7 +159,7 @@ enableForceUpdateIOS = false
 
 checkVersion :: Int -> String -> FlowBT String Unit
 checkVersion versioncodeAndroid versionName= do
-  if os /= "IOS" && versioncodeAndroid < (getLatestAndroidVersion (getMerchant FunctionCall)) then do
+  if os /= "IOS" && versioncodeAndroid < (if isJust (getLatestAndroidVersion (getMerchant FunctionCall)) then fromMaybe 0 (getLatestAndroidVersion (getMerchant FunctionCall)) else versioncodeAndroid) then do
     lift $ lift $ doAff do liftEffect hideSplash
     _ <- UI.handleAppUpdatePopUp
     _ <- pure $ firebaseLogEvent "ny_user_app_update_pop_up_view"
@@ -181,12 +181,13 @@ checkVersion versioncodeAndroid versionName= do
       else pure unit
 
 
-getLatestAndroidVersion :: Merchant -> Int 
+getLatestAndroidVersion :: Merchant -> Maybe Int 
 getLatestAndroidVersion merchant = 
   case merchant of 
-    NAMMAYATRI -> 31 
-    YATRI -> 45
-    JATRISAATHI -> 1
+    NAMMAYATRI -> Just 31 
+    YATRI -> Just 45
+    JATRISAATHI -> Just 1
+    _ -> Nothing
 
 forceIOSupdate :: Int -> Int -> Int -> Boolean
 forceIOSupdate c_maj c_min c_patch =
@@ -457,6 +458,8 @@ enterMobileNumberScreenFlow = do
 
 accountSetUpScreenFlow :: FlowBT String Unit
 accountSetUpScreenFlow = do
+  config <- getAppConfig
+  modifyScreenState $ AccountSetUpScreenStateType (\accountSetUpScreen -> accountSetUpScreen{data{config = config}})
   flow <- UI.accountSetUpScreen
   case flow of
     GO_HOME state -> do
@@ -1201,6 +1204,8 @@ contactUsScreenFlow = do
 
 helpAndSupportScreenFlow :: FlowBT String Unit
 helpAndSupportScreenFlow = do
+  config <- getAppConfig
+  modifyScreenState $ ContactUsScreenStateType (\contactUsScreen -> contactUsScreen{data{config = config}})
   flow <- UI.helpAndSupportScreen
   case flow of
     GO_TO_HOME_FROM_HELP -> homeScreenFlow
@@ -1389,6 +1394,8 @@ dummyRideBookingDetails =  RideBookingDetails{
 
 savedLocationFlow :: FlowBT String Unit
 savedLocationFlow = do
+  config <- getAppConfig
+  modifyScreenState $ SavedLocationScreenStateType (\savedLocationScreen -> savedLocationScreen{data{config = config}})
   void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
   flow <- UI.savedLocationScreen
   (SavedLocationsListRes savedLocationResp )<- Remote.getSavedLocationBT SavedLocationReq
@@ -1459,10 +1466,12 @@ savedLocationFlow = do
 
 addNewAddressScreenFlow ::String -> FlowBT String Unit
 addNewAddressScreenFlow input = do
-  (GlobalState newState) <- getState
+  config <- getAppConfig
+  modifyScreenState $ AddNewAddressScreenStateType (\addNewAddressScreen -> addNewAddressScreen{data{config = config}})
   flow <- UI.addNewAddressScreen
   case flow of
     SEARCH_ADDRESS input state -> do
+      (GlobalState newState) <- getState
       (SearchLocationResp searchLocationResp) <- Remote.searchLocationBT (Remote.makeSearchLocationReq input ( newState.homeScreen.props.sourceLat) ( newState.homeScreen.props.sourceLong) 50000 (case (getValueToLocalStore LANGUAGE_KEY) of
                                                                                                                                                                                                                                 "HI_IN" -> "HINDI"
                                                                                                                                                                                                                                 "KN_IN" -> "KANNADA"

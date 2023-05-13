@@ -15,6 +15,9 @@
 
 module Screens.MyProfileScreen.View where
 
+import Common.Types.App
+import Screens.CustomerUtils.MyProfileScreen.ComponentConfig
+
 import Animation as Anim
 import Components.GenericHeader as GenericHeader
 import Components.PopUpModal as PopUpModal
@@ -23,31 +26,27 @@ import Components.PrimaryEditText as PrimaryEditText
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
+import Data.Array (mapWithIndex)
+import Data.Maybe (Maybe(..), fromMaybe)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Helpers.Utils (getCommonAssetStoreLink)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, not, pure, unit, (-), ($), (<<<), (==), (||), (/=), (<>))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, cornerRadius, fontStyle, frameLayout, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, width, afterRender, onClick, visibility, alignParentBottom, weight, imageWithFallback, editText, onChange, hint, hintColor, pattern, id, singleLine, stroke, clickable, inputTypeI, hintColor, relativeLayout, scrollView, frameLayout, scrollBarY, onAnimationEnd)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, editText, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, imageWithFallback, inputTypeI, linearLayout, margin, onAnimationEnd, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width)
+import PrestoDOM.Animation as PrestoAnim
+import Resources.Constants as RSRC
 import Screens.MyProfileScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
-import Common.Types.App
-import Data.Array (mapWithIndex)
-import Data.Maybe (Maybe(..), fromMaybe)
-import Screens.CustomerUtils.MyProfileScreen.ComponentConfig
-import PrestoDOM.Animation as PrestoAnim
-import Resources.Constants as RSRC
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
-import Common.Types.App (LazyCheck(..))
-import Prelude ((<>))
 
 screen :: ST.MyProfileScreenState -> Screen Action ST.MyProfileScreenState ScreenOutput
 screen initialState =
@@ -89,13 +88,7 @@ view push state =
                 , height WRAP_CONTENT
                 , width MATCH_PARENT
                 ]
-                [ linearLayout
-                  [ background Color.borderColorLight
-                  , height $ V 1
-                  , margin $ MarginBottom if EHC.os == "IOS" then 12 else 2
-                  , width MATCH_PARENT
-                  ][]
-                , PrimaryButton.view (push <<< UpdateButtonAction) (updateButtonConfig state)
+                [ PrimaryButton.view (push <<< UpdateButtonAction) (updateButtonConfig state)
                 ]
               ]
         , linearLayout
@@ -112,6 +105,7 @@ view push state =
                 [ height $ V 1
                 , width MATCH_PARENT
                 , background Color.greySmoke
+                , visibility if state.data.config.nyBrandingVisibility then GONE else VISIBLE
                 ][]
               , detailsView state push
             ]
@@ -276,7 +270,7 @@ headerView state push =
         ][ linearLayout
           [ width WRAP_CONTENT
           , height MATCH_PARENT
-          , gravity CENTER
+          , gravity BOTTOM
           , orientation VERTICAL
           ][ textView
               [ height WRAP_CONTENT
@@ -285,6 +279,7 @@ headerView state push =
               , text (getString EDIT)
               , color Color.blueTextColor
               , fontStyle $ FontStyle.semiBold LanguageStyle
+              , padding $ PaddingBottom 10
               , onClick push (const $ EditProfile Nothing)
               ]
             ]

@@ -17,20 +17,6 @@ type LanguageData
 
 getLanguagesList :: LazyCheck -> Array Language
 getLanguagesList lazy = case (getMerchant FunctionCall) of
-  NAMMAYATRI ->
-    [ { name: "English"
-      , value: "EN_US"
-      , subTitle: ""
-      }
-    , { name: "ಕನ್ನಡ"
-      , value: "KN_IN"
-      , subTitle: "Kannada"
-      }
-    , { name: "हिंदी"
-      , value: "HI_IN"
-      , subTitle: "Hindi"
-      }
-    ]
   JATRISAATHI ->
     [ { name: "English"
       , value: "EN_US"
@@ -53,5 +39,19 @@ getLanguagesList lazy = case (getMerchant FunctionCall) of
     , { name: "മലയാളം"
       , value: "ML_IN"
       , subTitle: "Malayalam"
+      }
+    ]
+  _ ->
+    [ { name: "English"
+      , value: "EN_US"
+      , subTitle: ""
+      }
+    , { name: "ಕನ್ನಡ"
+      , value: "KN_IN"
+      , subTitle: "Kannada"
+      }
+    , { name: "हिंदी"
+      , value: "HI_IN"
+      , subTitle: "Hindi"
       }
     ]

@@ -1,6 +1,7 @@
 const JatriConfig = require("./../../src/MerchantConfigs/JatriSaathiConfig.js");
 const NammaYatriConfig = require("./../../src/MerchantConfigs/NammaYatriConfig.js");
 const YatriConfig = require("./../../src/MerchantConfigs/YatriConfig.js");
+const UnknownMerchant = require("./../../src/MerchantConfigs/UnknownMerchant.js");
 const HindiStrings = require("./../../src/Strings/HI.js");
 const KannadaStrings = require("./../../src/Strings/KN.js");
 const EnglishStrings = require("./../../src/Strings/EN.js");
@@ -25,6 +26,10 @@ export const getStringFromConfig = function (key) {
         return YatriConfig.getMerchantString(key);
       }
       break;
+    case "UNKNOWN":
+        if (UnknownMerchant.isMerchantString(key)) {
+          return UnknownMerchant.getMerchantString(key);
+        }
     default:
       return getStringFromCommon(key);
   }
@@ -40,6 +45,8 @@ export const getValueFromConfig = function (constructorKey){
           return NammaYatriConfig.getMerchantConfig(key);
       case "YATRI" :
           return YatriConfig.getMerchantConfig(key);
+      case "UNKNOWN" :
+          return UnknownMerchant.getMerchantConfig(key);
       default:
           console.error("no value found for key "+ key);
           return "";
@@ -47,7 +54,7 @@ export const getValueFromConfig = function (constructorKey){
 }
 
 function getStringFromCommon(key) {
-  var selectedLanguage = JBridge.getKeysInSharedPrefs("LANGUAGE_KEY");
+  var selectedLanguage = JBridge.getKeysInSharedPref("LANGUAGE_KEY");
   switch (selectedLanguage) {
     case "HI_IN":
       return HindiStrings.getStringValue(key);

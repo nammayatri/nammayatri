@@ -332,7 +332,7 @@ public class MainActivity extends AppCompatActivity {
             json.put("requestId", "123");
             json.put("service", getService());
             json.put("betaAssets", false);
-            payload.put("clientId",getResources().getString(R.string.client_id));
+            payload.put("clientId","mobilitypaytmconsumer");
             payload.put("action", "initiate");
             payload.put("service", getService());
             payload.put(PaymentConstants.ENV, "prod");
@@ -642,13 +642,14 @@ public class MainActivity extends AppCompatActivity {
         }
     }
     public String getService () {
-        StringBuilder key = new StringBuilder();
-        if (in.juspay.mobility.BuildConfig.MERCHANT.equals("KL")) {
-            key.append("net.openkochi.");
-        } else {
-            key.append("in.juspay.");
-        }
-        key.append(getResources().getString(R.string.service));
-        return key.toString();
+        return "in.yatri.consumer";
+//        StringBuilder key = new StringBuilder();
+//        if (in.juspay.mobility.BuildConfig.MERCHANT.equals("KL")) {
+//            key.append("net.openkochi.");
+//        } else {
+//            key.append("in.juspay.");
+//        }
+//        key.append(getResources().getString(R.string.service));
+//        return key.toString();
     }
 }

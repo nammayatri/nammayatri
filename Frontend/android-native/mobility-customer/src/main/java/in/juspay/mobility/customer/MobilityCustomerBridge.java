@@ -838,7 +838,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                 textViewText.setTextSize(5);
                 textViewText.setTextColor(Color.parseColor("#454545"));
                 textViewText.setPadding(0, 0, 0, 10);
-                Typeface typeface = Typeface.createFromAsset(context.getAssets(), "fonts/PlusJakartaSans-Regular.ttf");
+                Typeface typeface = Typeface.createFromAsset(context.getAssets(), "fonts/Roboto-Regular.ttf");
                 textViewText.setTypeface(typeface);
                 textViewText.setText(fareTypes);
                 linearLayout.addView(textViewText);
@@ -847,7 +847,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                 TextView textViewPrice = new TextView(context);
                 textViewPrice.setTextSize(5);
                 textViewPrice.setPadding(0, 0, 0, 10);
-                Typeface font = Typeface.createFromAsset(context.getAssets(), "fonts/PlusJakartaSans-Regular.ttf");
+                Typeface font = Typeface.createFromAsset(context.getAssets(), "fonts/Roboto-Regular.ttf");
                 textViewPrice.setTypeface(font);
                 textViewPrice.setTextColor(Color.parseColor("#454545"));
                 textViewPrice.setText("₹ " + value);

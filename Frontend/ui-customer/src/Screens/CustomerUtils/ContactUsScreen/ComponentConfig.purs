@@ -146,10 +146,10 @@ primaryButtonConfig state = let
     primaryButtonConfig' = config 
       { textConfig
         { text = (getString GO_TO_HOME__)
-        , color = Color.yellowRadler           
+        , color = state.data.config.primaryTextColor          
         }
       , cornerRadius = 0.0
-      , background = Color.black900
+      , background = state.data.config.primaryBackground
       , margin = (Margin 0 0 0 0)
       , id = "GotoHomeThankyouScreen"
       , enableLoader = (JB.getBtnLoader "GotoHomeThankyouScreen")

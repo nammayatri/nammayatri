@@ -18,6 +18,7 @@ module Screens.HomeScreen.Controller where
 import Accessor (_estimatedFare, _estimateId, _vehicleVariant, _status, _estimateFareBreakup, _title, _price, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _selectedQuotes)
 import Common.Types.App (CancellationReasons, LazyCheck(..))
 import Components.CancelRide.Controller as CancelRidePopUp
+import Components.ChatView as ChatView
 import Components.ChooseVehicle as ChooseVehicleController
 import Components.ChooseYourRide as ChooseYourRide
 import Components.ChooseYourRide.Controller as ChooseYourRideController
@@ -34,7 +35,6 @@ import Components.MenuButton as MenuButton
 import Components.MenuButton.Controller (Action(..)) as MenuButtonController
 import Components.PopUpModal.Controller as PopUpModal
 import Components.PricingTutorialModel.Controller as PricingTutorialModelController
-import Components.ChatView as ChatView
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Components.QuoteListItem.Controller as QuoteListItemController
@@ -48,10 +48,14 @@ import Components.SavedLocationCard.Controller as SavedLocationCardController
 import Components.SearchLocationModel.Controller as SearchLocationModelController
 import Components.SettingSideBar.Controller as SettingSideBarController
 import Components.SourceToDestination.Controller as SourceToDestinationController
+import Config.DefaultConfig as DC
 import Control.Monad.Except.Trans (runExceptT)
+import Control.Monad.Except.Trans (runExceptT)
+import Control.Transformers.Back.Trans (runBackT)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array ((!!), filter, null, snoc, length, head, last, sortBy, union)
 import Data.Int (toNumber, round)
+import Data.Int (toNumber, round, fromString)
 import Data.Int (toNumber, round, fromString)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
@@ -61,7 +65,7 @@ import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os)
-import Helpers.Utils (Merchant(..), addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getExpiryTime, getLocationName, parseNewContacts, saveRecents, setText', updateInputString, withinTimeRange, getMerchant)
+import Helpers.Utils (Merchant(..), addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getExpiryTime, getLocationName, getMerchant, parseNewContacts, saveRecents, setText', updateInputString, withinTimeRange)
 import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
@@ -82,10 +86,6 @@ import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, Ge
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
 import Storage (KeyStore(..), isLocalStageOn, updateLocalStage, getValueToLocalStore, getValueToLocalStoreEff, setValueToLocalStore, getValueToLocalNativeStore, setValueToLocalNativeStore)
-import Control.Monad.Except.Trans (runExceptT)
-import Control.Transformers.Back.Trans (runBackT)
-import Data.Int (toNumber, round, fromString)
-import Config.DefaultConfig as DC
 
 instance showAction :: Show Action where
   show _ = ""
@@ -1314,7 +1314,6 @@ eval (ShowCallDialer item) state = do
             _ <- (firebaseLogEventWithTwoParams "ny_user_direct_call_click" "trip_id" (state.props.bookingId) "user_id" (getValueToLocalStore CUSTOMER_ID))
             pure NoAction
         ]
-    _ -> continue state
     
 eval (StartLocationTracking item) state = do
   case item of
@@ -1328,14 +1327,19 @@ eval (StartLocationTracking item) state = do
 eval (GetEstimates (GetQuotesRes quotesRes)) state = do
   case state.props.isSpecialZone of
     true -> specialZoneFlow quotesRes.quotes state
-    false -> case (getMerchant FunctionCall) of 
-      NAMMAYATRI -> estimatesFlow quotesRes.estimates state
-      _ -> estimatesListFlow quotesRes.estimates state
+    false -> case spy " merchant ->" (getMerchant FunctionCall) of 
+      YATRI -> estimatesListFlow quotesRes.estimates state
+      JATRISAATHI -> estimatesListFlow quotesRes.estimates state
+      _ -> do 
+        _ <- pure $ spy "inside" "estimates"
+        estimatesFlow quotesRes.estimates state
     
 
 eval (EstimatesTryAgain (GetQuotesRes quotesRes)) state = do
-  case (getMerchant FunctionCall) of 
-    NAMMAYATRI -> do
+  case (getMerchant FunctionCall) of
+    YATRI -> estimatesListTryAgainFlow (GetQuotesRes quotesRes) state
+    JATRISAATHI -> estimatesListTryAgainFlow (GetQuotesRes quotesRes) state
+    _ -> do
       _ <- pure $ firebaseLogEvent "ny_user_estimate_try_again"
       let
         estimatedQuotes = quotesRes.estimates
@@ -1358,7 +1362,6 @@ eval (EstimatesTryAgain (GetQuotesRes quotesRes)) state = do
             let
               updatedState = state { data { suggestedAmount = estimatedPrice }, props { estimateId = estimateId, currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime "LazyCheck") } }
             updateAndExit updatedState $ GetQuotes updatedState
-    _ -> estimatesListTryAgainFlow (GetQuotesRes quotesRes) state
 
 eval (GetQuotesList (SelectListRes resp)) state = do
   case flowWithoutOffers WithoutOffers of

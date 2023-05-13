@@ -189,6 +189,7 @@ type AccountSetUpScreenStateData =
   {   name :: String
     , email :: String
     , gender :: Maybe Gender
+    , config :: AppConfig
   }
 
  -- ######################################  TripDetailsScreenState   ######################################
@@ -270,7 +271,8 @@ type ContactUsScreenData =
     email :: String,
     subject :: String,
     description :: String,
-    bookingId :: String
+    bookingId :: String,
+    config :: AppConfig
   }
 
 type ContactUsScreenProps =

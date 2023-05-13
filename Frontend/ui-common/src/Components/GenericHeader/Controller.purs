@@ -70,7 +70,7 @@ config = {
   , prefixImageConfig : {
       height : V 25
     , width : V 25
-    , imageUrl : ""
+    , imageUrl : "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
     , padding : (Padding 0 0 0 0)
     , margin : (Margin 12 12 12 12)
     , visibility : VISIBLE

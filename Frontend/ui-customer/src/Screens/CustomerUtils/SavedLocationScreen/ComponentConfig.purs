@@ -75,7 +75,7 @@ primaryButtonConfig state = let
         , fontStyle = FontStyle.semiBold LanguageStyle
         , color = state.data.config.primaryTextColor
         }
-      , margin = (Margin 16 15 16 if EHC.os == "IOS" then 0 else 24)
+      , margin = (Margin 16 0 16 if EHC.os == "IOS" then 0 else 24)
       , height = V 52
       , id = "AddNewAddressSavedLocationScreen"
       , enableLoader = (JB.getBtnLoader "AddNewAddressSavedLocationScreen")

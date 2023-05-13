@@ -373,7 +373,11 @@ isHaveFare fare = not null <<< filter (\item -> item.fareType == fare)
 
 foreign import getMerchantId :: String -> Foreign
 
-data Merchant = NAMMAYATRI | JATRISAATHI | YATRI
+data Merchant
+  = NAMMAYATRI
+  | JATRISAATHI
+  | YATRI
+  | UNKNOWN
 
 derive instance genericMerchant :: Generic Merchant _
 instance eqMerchant :: Eq Merchant where eq = genericEq
@@ -383,7 +387,7 @@ instance decodeMerchant:: Decode Merchant where decode = defaultEnumDecode
 getMerchant :: LazyCheck -> Merchant
 getMerchant lazy = case (decodeMerchantId (getMerchantId "")) of 
   Just merchant -> merchant
-  Nothing -> NAMMAYATRI
+  Nothing -> UNKNOWN
 
 decodeMerchantId :: Foreign -> Maybe Merchant
 decodeMerchantId = hush <<< runExcept <<< decode

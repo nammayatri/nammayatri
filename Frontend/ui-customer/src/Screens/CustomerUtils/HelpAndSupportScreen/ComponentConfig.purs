@@ -121,10 +121,16 @@ callConfirmationPopup state = let
       option1 {
         text = (getString GO_BACK_)
       , fontSize = FontSize.a_16
+      , strokeColor = state.data.config.primaryBackground
+      , background = state.data.config.primaryTextColor
+      , color = state.data.config.primaryBackground
       },
       option2 {
         text = (getString CALL)
-      , fontSize = FontSize.a_16 
+      , fontSize = FontSize.a_16
+      , strokeColor = state.data.config.primaryBackground
+      , background = state.data.config.primaryBackground
+      , color = state.data.config.primaryTextColor
       }
     }
   in popUpConfig'

@@ -386,15 +386,17 @@ public class MobilityCommonBridge extends HyperBridge {
             client.getLastLocation()
                     .addOnSuccessListener(activity, location -> {
                         boolean isMock;
-                        if (Build.VERSION.SDK_INT <= 30) {
-                            isMock = location.isFromMockProvider();
-                        } else {
-                            isMock = location.isMock();
-                        }
-                        if (callback != null) {
-                            String js = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
-                                    callback, isMock);
-                            bridgeComponents.getJsCallback().addJsToWebView(js);
+                        if (location != null){
+                            if (Build.VERSION.SDK_INT <= 30) {
+                                isMock = location.isFromMockProvider();
+                            } else {
+                                isMock = location.isMock();
+                            }
+                            if (callback != null) {
+                                String js = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
+                                        callback, isMock);
+                                bridgeComponents.getJsCallback().addJsToWebView(js);
+                            }
                         }
                     })
                     .addOnFailureListener(activity, e -> Log.e(LOCATION, "Last and current position not known"));
@@ -792,11 +794,11 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @JavascriptInterface
-    public void removeAllpolyline(String str) {
-        removeMarker("ic_vehicle_nav_on_map");
-        removeMarker("ny_ic_src_marker");
-        removeMarker("ny_ic_dest_marker");
+    public void removeAllPolylines(String str) {
         ExecutorManager.runOnMainThread(() -> {
+            removeMarker("ic_vehicle_nav_on_map");
+            removeMarker("ny_ic_src_marker");
+            removeMarker("ny_ic_dest_marker");
             if (polyline != null) {
                 polyline.remove();
                 polyline = null;
@@ -1345,27 +1347,29 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @SuppressLint("DiscouragedApi")
-    private String getJsonFromResources(String rawJson) {
+    private String getJsonFromResources(String rawJson) throws IOException {
         Writer writer = new StringWriter();
         if (bridgeComponents.getActivity() != null) {
-            InputStream inputStreams = bridgeComponents.getActivity().getResources().openRawResource(bridgeComponents.getActivity().getResources().getIdentifier(rawJson, "raw", bridgeComponents.getActivity().getPackageName()));
+            InputStream inputStreams = (bridgeComponents.getActivity().getResources().getIdentifier(rawJson, "raw", bridgeComponents.getActivity().getPackageName()) == 0) ?
+                    bridgeComponents.getContext().getAssets().open(rawJson + ".json") :
+                    bridgeComponents.getActivity().getResources().openRawResource(bridgeComponents.getActivity().getResources().getIdentifier(rawJson, "raw", bridgeComponents.getActivity().getPackageName()));
             char[] buffer = new char[1024];
-            try {
-                Reader reader = new BufferedReader(new InputStreamReader(inputStreams, StandardCharsets.UTF_8));
-                int n;
-                while ((n = reader.read(buffer)) != -1) {
-                    writer.write(buffer, 0, n);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            } finally {
                 try {
-                    inputStreams.close();
-                } catch (IOException e) {
+                    Reader reader = new BufferedReader(new InputStreamReader(inputStreams, StandardCharsets.UTF_8));
+                    int n;
+                    while ((n = reader.read(buffer)) != -1) {
+                        writer.write(buffer, 0, n);
+                    }
+                } catch (Exception e) {
                     e.printStackTrace();
+                } finally {
+                    try {
+                        inputStreams.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
-        }
         return writer.toString();
     }
 

@@ -49,7 +49,7 @@ export const getValueFromMerchant = function (constructorKey){
 }
 
 function getStringFromCommon(key){
-    var selectedLanguage = JBridge.getKeysInSharedPrefs("LANGUAGE_KEY");
+    var selectedLanguage = JBridge.getKeysInSharedPref("LANGUAGE_KEY");
     switch(selectedLanguage) {
         case "HI_IN" :
             return hiString.getStringValue(key);

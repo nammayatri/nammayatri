@@ -38,7 +38,7 @@ import Prelude ((<>))
 
 genericHeaderConfig :: ST.MyProfileScreenState -> GenericHeader.Config 
 genericHeaderConfig state = let 
-  config = GenericHeader.config
+  config = if state.data.config.nyBrandingVisibility then GenericHeader.merchantConfig else GenericHeader.config
   genericHeaderConfig' = config 
     {
       height = WRAP_CONTENT

@@ -1,5 +1,5 @@
 export function getMerchantString(key){
-    var selectedLanguage = JBridge.getKeysInSharedPrefs("LANGUAGE_KEY");
+    var selectedLanguage = JBridge.getKeysInSharedPref("LANGUAGE_KEY");
     switch(selectedLanguage) {
         case "ML_IN" :
             return getStringMLValue(key);

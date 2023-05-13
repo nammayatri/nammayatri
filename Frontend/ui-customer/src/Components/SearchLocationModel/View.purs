@@ -31,7 +31,7 @@ import Effect (Effect)
 import Engineering.Helpers.Commons (getNewIDWithTag, os, safeMarginBottom, safeMarginTop, screenHeight, screenWidth, isPreviousVersion)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getLocationName, debounceFunction, getPreviousVersion)
+import Helpers.Utils (Merchant(..), debounceFunction, getLocationName, getMerchant, getPreviousVersion)
 import JBridge (getBtnLoader, requestKeyboardShow, getCurrentPosition, firebaseLogEvent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -102,7 +102,7 @@ view push state =
                   [ imageView
                       [ height $ V 25
                       , width $ V 25
-                      , imageWithFallback if state.homeScreenConfig.merchantId == "PAYTM" then "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_chevron_left.png" else "ny_ic_chevron_left_white," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_chevron_left_white.png"
+                      , imageWithFallback if (getMerchant FunctionCall) == UNKNOWN then "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_chevron_left.png" else "ny_ic_chevron_left_white," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_chevron_left_white.png"
                       ]
                   ]
               , linearLayout
@@ -404,13 +404,13 @@ primaryButtonConfig state =
     primaryButtonConfig' = config
       { textConfig
         { text = if state.isSearchLocation == LocateOnMap then if state.isSource == Just true then (getString CONFIRM_PICKUP_LOCATION) else (getString CONFIRM_DROP_LOCATION) else ""
-        , color = Color.yellow900
+        , color = state.homeScreenConfig.primaryTextColor
         , textSize = FontSize.a_16
         }
       , height = V 60
       , gravity = CENTER
       , cornerRadius = 8.0
-      , background = Color.black900
+      , background = state.homeScreenConfig.primaryBackground
       , margin = (MarginHorizontal 16 16)
       , isClickable = true
       , id = "SelectLocationFromMap"

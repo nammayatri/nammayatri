@@ -124,7 +124,7 @@ goBackPopUpView push state =
     , width MATCH_PARENT
     , gravity CENTER
     ]
-    [ PopUpModal.view (push <<< PopUpModalAction) goBackPopUpModelConfig ]
+    [ PopUpModal.view (push <<< PopUpModalAction) (goBackPopUpModelConfig state) ]
 
 ------------------------ emptyTextView ---------------------------
 emptyTextView :: forall w. PrestoDOM (Effect Unit) w
