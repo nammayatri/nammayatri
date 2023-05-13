@@ -113,7 +113,7 @@ getPreviousVersion _ =
         JATRISAATHI -> "0.0.0"
         _ -> "1.2.1"
 
-separator :: PrestoDOM (Effect Unit) w
+separator :: forall w. PrestoDOM (Effect Unit) w
 separator = linearLayout
       [ width MATCH_PARENT
       , height (V 1)

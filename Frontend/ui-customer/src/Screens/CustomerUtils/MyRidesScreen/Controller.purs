@@ -198,7 +198,7 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
   let 
     fares = getFares ride.fareBreakup 
     (RideAPIEntity rideDetails) = (fromMaybe dummyRideAPIEntity (ride.rideList !!0))
-    baseDistanceVal = (getKmMeter (fromMaybe 0.0 (rideDetails.chargeableRideDistance)))
+    baseDistanceVal = (getKmMeter (fromMaybe 0 (rideDetails.chargeableRideDistance)))
     updatedFareList = getFaresList ride.fareBreakup state baseDistanceVal
      in {
     date : (( (fromMaybe "" ((split (Pattern ",") (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "llll")) !!0 )) <> ", " <>  (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "Do MMM") )),
@@ -231,7 +231,7 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
   , extraFare : "₹ " <> show (getFareFromArray ride.fareBreakup "EXTRA_DISTANCE_FARE")
   , waitingCharges : fares.waitingCharges
   , baseDistance : baseDistanceVal
-  , extraDistance : getKmMeter $  (\a -> if a < 0.0 then - a else a) ((fromMaybe 0.0 (rideDetails.chargeableRideDistance)) - toNumber (fromMaybe 0 (((ride.bookingDetails)^._contents)^._estimatedDistance)))
+  , extraDistance : getKmMeter $  (\a -> if a < 0 then - a else a) ((fromMaybe 0 (rideDetails.chargeableRideDistance)) - (fromMaybe 0 (((ride.bookingDetails)^._contents)^._estimatedDistance)))
   , referenceString : "1.5" <> (getEN DAYTIME_CHARGES_APPLICABLE_AT_NIGHT)
                         <> if (isHaveFare "DRIVER_SELECTED_FARE" updatedFareList) then "\n\n" <> (getEN DRIVERS_CAN_CHARGE_AN_ADDITIONAL_FARE_UPTO) <> "\n\n" else ""
                         <> if (isHaveFare "WAITING_CHARGES" updatedFareList) then "\n\n" <> (getEN WAITING_CHARGE_DESCRIPTION) else ""

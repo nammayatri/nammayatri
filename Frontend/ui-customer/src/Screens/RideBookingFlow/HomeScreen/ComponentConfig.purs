@@ -662,6 +662,7 @@ driverInfoTransformer state =
     , bppRideId : ""
     , driverNumber : cardState.driverNumber
     , merchantExoPhone : cardState.merchantExoPhone
+    , config : state.data.config
     }
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState

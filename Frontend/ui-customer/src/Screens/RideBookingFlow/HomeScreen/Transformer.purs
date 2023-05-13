@@ -19,7 +19,7 @@ import Prelude
 
 import Accessor (_contents, _description, _estimatedDistance, _lat, _lon, _place_id, _toLocation, _otpCode)
 import Components.ChooseVehicle (Config, config) as ChooseVehicle
-import Components.QuoteListItem.Controller (QuoteListItemState, config)
+import Components.QuoteListItem.Controller (QuoteListItemState, config) as QLI
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Data.Array (mapWithIndex)
 import Data.Array as DA
@@ -70,27 +70,27 @@ getLocation predcition = {
   , locationItemType : Just PREDICTION
 }
 
-getQuoteList :: Array QuoteAPIEntity -> Array QuoteListItemState
+getQuoteList :: Array QuoteAPIEntity -> Array QLI.QuoteListItemState
 getQuoteList quotesEntity = (map (\x -> (getQuote x)) quotesEntity)
 
-getQuote :: QuoteAPIEntity -> QuoteListItemState
+getQuote :: QuoteAPIEntity -> QLI.QuoteListItemState
 getQuote (QuoteAPIEntity quoteEntity) = do
   case (quoteEntity.quoteDetails)^._contents of
-    (ONE_WAY contents) -> dummyQuoteList
-    (SPECIAL_ZONE contents) -> dummyQuoteList
+    (ONE_WAY contents) -> QLI.config
+    (SPECIAL_ZONE contents) -> QLI.config
     (DRIVER_OFFER contents) -> let (DriverOfferAPIEntity quoteDetails) = contents
-        in config {
-      seconds : (getExpiryTime quoteDetails.validTill "" isForLostAndFound) -4
-    , id : quoteEntity.id 
-    , timer : show $ (getExpiryTime quoteDetails.validTill "" isForLostAndFound) -4
-    , timeLeft : if (quoteDetails.durationToPickup<60) then (quoteDetails.durationToPickup/60) else (quoteDetails.durationToPickup/60)
-    , driverRating : fromMaybe 0.0 quoteDetails.rating
-    , profile : ""
-    , price :  show quoteEntity.estimatedTotalFare
-    , vehicleType : "auto"
-    , driverName : quoteDetails.driverName 
-    , selectedQuote : Nothing
-    }
+        in QLI.config {
+          seconds = (getExpiryTime quoteDetails.validTill "" isForLostAndFound) -4
+        , id = quoteEntity.id 
+        , timer = show $ (getExpiryTime quoteDetails.validTill "" isForLostAndFound) -4
+        , timeLeft = if (quoteDetails.durationToPickup<60) then (quoteDetails.durationToPickup/60) else (quoteDetails.durationToPickup/60)
+        , driverRating = fromMaybe 0.0 quoteDetails.rating
+        , profile = ""
+        , price =  show quoteEntity.estimatedTotalFare
+        , vehicleType = "auto"
+        , driverName = quoteDetails.driverName 
+        , selectedQuote = Nothing
+        }
 
 getDriverInfo :: RideBookingRes -> Boolean -> DriverInfoCard
 getDriverInfo (RideBookingRes resp) isSpecialZone =
@@ -151,35 +151,6 @@ encodeAddressDescription address tag placeId lat lon addressComponents = do
                       else
                         Just $ getValueByComponent addressComponents "sublocality"
                 }
-
-dummyQuoteList :: Array QuoteListItemState
-dummyQuoteList = [
-  config {
-   seconds = 3
-  , id = "1"  
-  , timer = "0"
-  , timeLeft = 0
-  , driverRating = 4.0
-  , profile = ""
-  , price = "200"
-  , vehicleType = "auto"
-  , driverName = "Drive_Name"
-  ,selectedQuote = Nothing
-
-  },
-  config {
-   seconds = 3
-  , id = "2"  
-  , timer = "0"
-  , timeLeft = 0
-  , driverRating = 4.0
-  , profile = ""
-  , price = "300"
-  , vehicleType = "auto"
-  , driverName = "Drive_Name"
-  ,selectedQuote = Nothing
-  }
-]
 
 
 dummyRideAPIEntity :: RideAPIEntity

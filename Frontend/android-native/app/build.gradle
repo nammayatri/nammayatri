@@ -187,11 +187,11 @@ android {
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-    implementation 'in.juspay:hypersdk:2.1.13-nammayatri.09'
+    implementation 'in.juspay:hypersdk:2.1.13-nammayatri.11'
     implementation project(path: ':mobility-app')
     implementation platform('com.google.firebase:firebase-bom:31.1.1')
-    driverImplementation project(path: ':mobility-driver')
-    userImplementation project(path: ':mobility-customer')
+    implementation project(path: ':mobility-driver')
+    implementation project(path: ':mobility-customer')
     implementation 'com.google.firebase:firebase-dynamic-links'
     implementation 'com.google.firebase:firebase-analytics'
 
@@ -257,7 +257,7 @@ tasks.create(name: 'minifyJsFiles') {
                     String fileName = file.substring(0, file.lastIndexOf("."))
                     String extension = file.substring(file.lastIndexOf(".") + 1, file.length())
 
-                    File tmp = new File(tmpSource + suffix);
+                    File tmp = new File(tmpSource + suffix)
                     if (!tmp.exists()) {
                         tmp.mkdirs()
                     }
@@ -283,7 +283,7 @@ tasks.create(name: 'minifyJsFiles') {
             String outPath = minJsFiles[index]
 
             println "Processing " + inPath + " " + outPath
-            File outDir = new File(outPath.substring(0, outPath.lastIndexOf("/")));
+            File outDir = new File(outPath.substring(0, outPath.lastIndexOf("/")))
             if (!outDir.exists()) {
                 outDir.mkdirs();
             }

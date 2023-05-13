@@ -42,6 +42,7 @@ import android.provider.Settings;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
@@ -63,7 +64,6 @@ import androidx.annotation.RequiresApi;
 import androidx.browser.customtabs.CustomTabsIntent;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import androidx.core.content.res.ResourcesCompat;
 import androidx.core.location.LocationManagerCompat;
 import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentManager;
@@ -97,6 +97,7 @@ import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.gms.tasks.CancellationTokenSource;
 import com.google.android.gms.tasks.Task;
 import com.google.maps.android.SphericalUtil;
+import com.google.maps.android.data.geojson.GeoJsonLayer;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -131,24 +132,24 @@ public class MobilityCommonBridge extends HyperBridge {
     protected static final int STORAGE_PERMISSION = 67;
     //Constants
     private static final String LOCATE_ON_MAP = "LocateOnMap";
-    private static final String CURRENT_LOCATION = "ny_ic_customer_current_location";
+    protected static final String CURRENT_LOCATION = "ny_ic_customer_current_location";
     private static final String CURRENT_LOCATION_LATLON = "Current Location";
     private static final int LOCATION_RESOLUTION_REQUEST_CODE = 21345;
     private static final int DATEPICKER_SPINNER_COUNT = 3;
     //Maps
     protected static JSONObject markers = new JSONObject();
     protected static GoogleMap googleMap;
-    public static ArrayList<Marker> pickupPointsZoneMarkers = new ArrayList<Marker>();
-    public static GeoJsonLayer layer;
-    public static List<LatLng> zoneLatLngPoints = new ArrayList<LatLng>();
-    private String regToken, baseUrl;
-    private String zoneName = "";
-    private float zoom = 17.0f;
+    protected static ArrayList<Marker> pickupPointsZoneMarkers = new ArrayList<>();
+    protected static GeoJsonLayer layer;
+    protected static List<LatLng> zoneLatLngPoints = new ArrayList<LatLng>();
+    protected String regToken, baseUrl;
+    protected String zoneName = "";
+    protected float zoom = 17.0f;
     // CallBacks
     protected static String storeLocateOnMapCallBack = null;
     protected static String storeInternetActionCallBack = null;
     protected static String storeDashboardCallBack = null;
-    private static Marker userPositionMarker;
+    protected static Marker userPositionMarker;
     private final FusedLocationProviderClient client;
     protected Polyline polyline = null;
     protected HashMap<String, JSONObject> markersElement = new HashMap<>();
@@ -677,7 +678,7 @@ public class MobilityCommonBridge extends HyperBridge {
                         JSONObject coordinate = (JSONObject) coordinates.get(0);
                         double lng = coordinate.getDouble("lng");
                         double lat = coordinate.getDouble("lat");
-                        upsertMarker("ic_vehicle_nav_on_map",String.valueOf(lat), String.valueOf(lng), 90, 0.5f, 0.5f);
+                        upsertMarker("ic_vehicle_nav_on_map", String.valueOf(lat), String.valueOf(lng), 90, 0.5f, 0.5f);
                         animateCamera(lat, lng, 20.0f);
                         return;
                     }
@@ -720,25 +721,24 @@ public class MobilityCommonBridge extends HyperBridge {
                         markers.put(destMarker, tempmarker);
 
                     }
-                    if((sourceMarker != null && !sourceMarker.equals(""))){
-                        if (type.equals("DRIVER_LOCATION_UPDATE"))
-                        {
+                    if ((sourceMarker != null && !sourceMarker.equals(""))) {
+                        if (type.equals("DRIVER_LOCATION_UPDATE")) {
                             List<LatLng> points = polylineOptions.getPoints();
                             LatLng source = points.get(points.size() - 1);
-                            upsertMarker(sourceMarker,String.valueOf(source.latitude),String.valueOf(source.longitude), 90, 0.5f, 0.5f);
+                            upsertMarker(sourceMarker, String.valueOf(source.latitude), String.valueOf(source.longitude), 90, 0.5f, 0.5f);
                             Marker currMarker = (Marker) markers.get(sourceMarker);
-                            int index = polylines.getPoints().size()-1;
-                            float rotation = (float) SphericalUtil.computeHeading(polylines.getPoints().get(index), polylines.getPoints().get(index -1));
+                            int index = polyline.getPoints().size() - 1;
+                            float rotation = (float) SphericalUtil.computeHeading(polyline.getPoints().get(index), polyline.getPoints().get(index - 1));
                             if (rotation != 0.0) currMarker.setRotation(rotation);
-                            currMarker.setAnchor(0.5f,0.5f);
-                            markers.put(sourceMarker,currMarker);
+                            currMarker.setAnchor(0.5f, 0.5f);
+                            markers.put(sourceMarker, currMarker);
                         } else {
                             List<LatLng> points = polylineOptions.getPoints();
                             LatLng source = points.get(points.size() - 1);
                             MarkerOptions markerObj = new MarkerOptions()
                                     .title(sourceMarker)
                                     .position(source)
-                                    .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(sourceName,sourceMarker)));
+                                    .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(sourceName, sourceMarker)));
                             Marker tempmarker = googleMap.addMarker(markerObj);
                             markers.put(sourceMarker, tempmarker);
                         }
@@ -753,7 +753,8 @@ public class MobilityCommonBridge extends HyperBridge {
     @SuppressLint({"UseCompatLoadingForDrawables", "SetTextI18n"})
     protected Bitmap getMarkerBitmapFromView(String locationName, String imageName) {
         Context context = bridgeComponents.getContext();
-        @SuppressLint("InflateParams") View customMarkerView = ((LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE)).inflate( imageName.equals("ny_ic_zone_pickup_marker") ? R.layout.zone_label_layout :  R.layout.marker_label_layout, null);
+        @SuppressLint("InflateParams")
+        View customMarkerView = ((LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE)).inflate(context.getResources().getLayout(context.getResources().getIdentifier(imageName.equals("ny_ic_zone_pickup_marker") ? "zone_label_layout" : "marker_label_layout", "layout", context.getPackageName())), null);
         TextView label = customMarkerView.findViewById(R.id.marker_text);
         if (locationName.equals("")) {
             label.setVisibility(View.GONE);
@@ -766,18 +767,12 @@ public class MobilityCommonBridge extends HyperBridge {
         }
         ImageView pointer = customMarkerView.findViewById(R.id.pointer_img);
         try {
-            if (imageName.equals("ny_ic_dest_marker")) {
-                pointer.setImageDrawable(ResourcesCompat.getDrawable(context.getResources(), R.drawable.ny_ic_dest_marker, context.getTheme()));
-            } else if(imageName.equals("ny_ic_zone_pickup_marker")){
-                pointer.setImageDrawable(context.getResources().getDrawable(R.drawable.ny_ic_zone_pickup_marker));
-            } else if(imageName.equals("ny_ic_customer_current_location")){
-                pointer.setImageDrawable(context.getResources().getDrawable(R.drawable.ny_ic_customer_current_location));
-                ViewGroup.LayoutParams layoutParams = (ViewGroup.LayoutParams) pointer.getLayoutParams();
+            pointer.setImageDrawable(context.getResources().getDrawable(context.getResources().getIdentifier(imageName, "drawable", context.getPackageName())));
+            if (imageName.equals("ny_ic_customer_current_location")) {
+                ViewGroup.LayoutParams layoutParams = pointer.getLayoutParams();
                 layoutParams.height = 160;
                 layoutParams.width = 160;
                 pointer.setLayoutParams(layoutParams);
-             } else {
-                pointer.setImageDrawable(ResourcesCompat.getDrawable(context.getResources(), R.drawable.ny_ic_src_marker, context.getTheme()));
             }
         } catch (Exception e) {
             Log.e("Exception in rendering Image", e.toString());
@@ -797,7 +792,7 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @JavascriptInterface
-    public void removeAllPolylines(String str) {
+    public void removeAllpolyline(String str) {
         removeMarker("ic_vehicle_nav_on_map");
         removeMarker("ny_ic_src_marker");
         removeMarker("ny_ic_dest_marker");

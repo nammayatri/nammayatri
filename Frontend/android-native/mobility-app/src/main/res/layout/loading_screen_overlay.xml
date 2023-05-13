@@ -52,9 +52,16 @@
                     android:paddingHorizontal="35dp"
                     android:fontFamily="@font/plus_jakartasans_medium"
                     android:gravity="center"
-                    android:textColor="@color/quantum_black_100"
                     android:layout_marginBottom="25dp"
                     android:text="@string/waiting_for_customer_response" />
+                <ImageView
+                    android:layout_width="128dp"
+                    android:id="@+id/image_view_waiting"
+                    android:layout_height="128dp"
+                    android:layout_gravity="center"
+                    android:layout_marginTop="20dp"
+                    android:visibility="gone"
+                    android:background="@drawable/ic_waiting_image" />
 
             </LinearLayout>
         </androidx.cardview.widget.CardView>
@@ -62,7 +69,7 @@
         <ImageView
             android:layout_width="match_parent"
             android:layout_height="45dp"
-            android:src="@drawable/ny_ic_namma_yatri_text_with_logo"/>
+            android:src="@drawable/ny_ic_namma_yatri_text_with_logo" />
 
     </RelativeLayout>
 </LinearLayout>

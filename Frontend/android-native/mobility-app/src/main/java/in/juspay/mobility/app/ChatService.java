@@ -305,7 +305,7 @@ public class ChatService extends Service {
                 new NotificationCompat.Builder(this, "Message")
                         .setContentTitle(getString(R.string.chatting_is_enabled))
                         .setContentText(contentText)
-                        .setSmallIcon(R.drawable.ic_launcher)
+                        .setSmallIcon(R.drawable.ny_ic_launcher)
                         .setPriority(NotificationCompat.PRIORITY_MIN)
                         .setOngoing(true)
                         .setContentIntent(pendingIntent);
@@ -322,7 +322,7 @@ public class ChatService extends Service {
                         .setContentTitle(sentBy)
                         .setAutoCancel(true)
                         .setContentText(message)
-                        .setSmallIcon(R.drawable.ic_launcher)
+                        .setSmallIcon(R.drawable.ny_ic_launcher)
                         .setDefaults(Notification.DEFAULT_ALL)
                         .setPriority(NotificationCompat.PRIORITY_HIGH)
                         .setContentIntent(pendingIntent)

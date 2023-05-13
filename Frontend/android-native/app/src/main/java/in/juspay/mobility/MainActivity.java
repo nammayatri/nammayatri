@@ -9,6 +9,8 @@
 
 package in.juspay.mobility;
 
+import static in.juspay.mobility.BuildConfig.MERCHANT_TYPE;
+
 import android.Manifest;
 import android.animation.Animator;
 import android.annotation.SuppressLint;
@@ -188,7 +190,6 @@ public class MainActivity extends AppCompatActivity {
         networkBroadcastReceiver = new NetworkBroadcastReceiver();
         registerReceiver(networkBroadcastReceiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
         registerReceiver(gpsReceiver, intentFilter);
-        String key = getResources().getString(R.string.service);
         @SuppressLint("HardwareIds") String androidId = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
         Bundle params = new Bundle();
         params.putString("id", androidId);
@@ -207,7 +208,7 @@ public class MainActivity extends AppCompatActivity {
 
         WebView.setWebContentsDebuggingEnabled(true);
         setContentView(R.layout.activity_main);
-        if (key != null && key.equals("nammayatripartner")) {
+        if (MERCHANT_TYPE.equals("DRIVER")) {
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
             new Utils(context).updateLocaleResource(sharedPref.getString(getResources().getString(in.juspay.mobility.app.R.string.LANGUAGE_KEY), "null"));
         } else {
@@ -244,9 +245,6 @@ public class MainActivity extends AppCompatActivity {
             } catch (Settings.SettingNotFoundException e) {
                 isSystemAnimEnabled = false;
             }
-        } else if (in.juspay.mobility.BuildConfig.MERCHANT_TYPE.equals("DRIVER")) {
-            getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-            CommonJsInterface.updateLocaleResource(sharedPref.getString(getResources().getString(R.string.LANGUAGE_KEY), "null"));
         }
         processCallBack = this::triggerPopUPMain;
         NetworkBroadcastReceiver.registerProcessCallback(processCallBack);
@@ -302,7 +300,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void updateConfigURL() {
-        String key = in.juspay.mobility.BuildConfig.MERCHANT_TYPE;
+        String key = MERCHANT_TYPE;
         String merchantId = key.equals("USER") ? in.juspay.mobility.BuildConfig.MERCHANT_ID_USER : in.juspay.mobility.BuildConfig.MERCHANT_ID_DRIVER;
         String baseUrl = key.equals("USER") ? in.juspay.mobility.BuildConfig.CONFIG_URL_USER : in.juspay.mobility.BuildConfig.CONFIG_URL_DRIVER;
         SharedPreferences sharedPreff = this.getSharedPreferences(

@@ -21,6 +21,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.AudioAttributes;
@@ -56,6 +57,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.Locale;
 import java.util.Random;
 import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
@@ -91,7 +93,7 @@ public class NotificationUtils extends AppCompatActivity {
     private static FirebaseAnalytics mFirebaseAnalytics;
     static Random rand = new Random();
     public static int notificationId = rand.nextInt(1000000);
-    private static int smallIcon = R.drawable.ic_launcher;
+    private static int smallIcon = R.drawable.ny_ic_launcher;
     public static MediaPlayer mediaPlayer;
     private static AudioManager audio;
     public static Bundle lastRideReq = new Bundle();
@@ -402,7 +404,8 @@ public class NotificationUtils extends AppCompatActivity {
             {
                 bitmap = getBitmapfromUrl(imageUrl);
             }
-            Intent intent= new Intent(context, MainActivity.class);
+            final PackageManager pm = context.getPackageManager();
+            Intent intent= pm.getLaunchIntentForPackage(context.getPackageName());
             System.out.println("Notificationn Utils Data"+ data.toString());
             System.out.println("Notificationn111"+data.getString("notification_type"));
             System.out.println("Notificationn222"+(data.getString("entity_ids")));
@@ -413,7 +416,8 @@ public class NotificationUtils extends AppCompatActivity {
             PendingIntent pendingIntent = PendingIntent.getActivity(context, notificationId , intent, PendingIntent.FLAG_IMMUTABLE);
             String notificationType = new String(data.getString("notification_type"));
             String channelId;
-            String key = BuildConfig.MERCHANT_TYPE;
+            String merchantType = context.getString(R.string.service);
+            String key = merchantType.contains("partner") || merchantType.contains("driver") ? "DRIVER" : "USER";
             System.out.println("key"+key);
             if (ALLOCATION_TYPE.equals(notificationType)) {
                 System.out.println("showNotification:- "+ notificationType);
