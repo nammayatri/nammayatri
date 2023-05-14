@@ -101,7 +101,7 @@ view push state =
       ][ imageView
          [ width $ V 60
          , height $ V 60 
-         , imageWithFallback $ (HU.getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)) <> "," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_customer_current_location.png"
+         , imageWithFallback $ (HU.getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)) <> "," <> (getAssetStoreLink FunctionCall) <> "ny_ic_customer_current_location.png"
          ]
        ]
     , relativeLayout
@@ -146,7 +146,7 @@ recenterButtonView state push =
   , width MATCH_PARENT
   , gravity RIGHT
   ][  imageView
-      [ imageWithFallback $ "ny_ic_recenter_btn," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_recenter_btn.png"
+      [ imageWithFallback $ "ny_ic_recenter_btn," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_recenter_btn.png"
       , height $ V 40 
       , width $ V 40 
       , onClick (\action -> do
@@ -223,8 +223,8 @@ bottomBtnsView state push =
         ]) $ btnData state)]
 
 btnData :: ST.AddNewAddressScreenState ->  Array {text :: String, imageUrl :: String, action :: Action, tag :: String}
-btnData state = [ {text : (getString SELECT_ON_MAP), imageUrl : "ny_ic_locate_on_map," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_locate_on_map.png", action : SetLocationOnMap, tag : "LOCATE_ON_MAP"}
-                  -- ,{text : (getString CURRENT_LOCATION), imageUrl : "ny_ic_current_location," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_current_location.png", action : CurrentLocationAction, tag : "CURRENT_LOCATION"}
+btnData state = [ {text : (getString SELECT_ON_MAP), imageUrl : "ny_ic_locate_on_map," <> (getAssetStoreLink FunctionCall) <> "ny_ic_locate_on_map.png", action : SetLocationOnMap, tag : "LOCATE_ON_MAP"}
+                  -- ,{text : (getString CURRENT_LOCATION), imageUrl : "ny_ic_current_location," <> (getAssetStoreLink FunctionCall) <> "ny_ic_current_location.png", action : CurrentLocationAction, tag : "CURRENT_LOCATION"}
                   ]
 
 addNewScreenView :: forall w. ST.AddNewAddressScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -289,7 +289,7 @@ addNewScreenView state push =
           ][imageView
             [ height $ V 16
             , width $ V 16
-            , imageWithFallback $ "ny_ic_clear," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_clear.png"
+            , imageWithFallback $ "ny_ic_clear," <> (getAssetStoreLink FunctionCall) <> "ny_ic_clear.png"
             ]
           ]
         ]
@@ -305,7 +305,7 @@ addNewScreenView state push =
         , clickable true
         , visibility if state.props.isLocateOnMap then VISIBLE else GONE
       ][  imageView
-          [ imageWithFallback $ "ny_ic_loc_grey," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_loc_grey.png"
+          [ imageWithFallback $ "ny_ic_loc_grey," <> (getAssetStoreLink FunctionCall) <> "ny_ic_loc_grey.png"
           , height $ V 21
           , width $ V 18
           , margin (MarginRight 11)
@@ -338,7 +338,7 @@ textViews state push =
   , gravity CENTER_VERTICAL
   , cornerRadius 8.0
 ][  imageView
-    [ imageWithFallback $ "ny_ic_loc_grey," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_loc_grey.png"
+    [ imageWithFallback $ "ny_ic_loc_grey," <> (getAssetStoreLink FunctionCall) <> "ny_ic_loc_grey.png"
     , height $ V 21
     , width $ V 18
     , margin (MarginRight 11)
@@ -400,7 +400,7 @@ searchResultsView state push =
 
 bottomBtnsData :: ST.AddNewAddressScreenState ->  Array ST.LocationListItemState 
 bottomBtnsData state = 
-  [ { prefixImageUrl : "ny_ic_locate_on_map," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_locate_on_map.png"
+  [ { prefixImageUrl : "ny_ic_locate_on_map," <> (getAssetStoreLink FunctionCall) <> "ny_ic_locate_on_map.png"
     , title : (getString CHOOSE_ON_MAP)
     , subTitle :  (getString DRAG_THE_MAP )
     , placeId : Nothing
@@ -422,7 +422,7 @@ bottomBtnsData state =
     , fullAddress : dummyAddress
     , locationItemType : Nothing
     }
-  , { prefixImageUrl : "ny_ic_current_location," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_current_location.png"
+  , { prefixImageUrl : "ny_ic_current_location," <> (getAssetStoreLink FunctionCall) <> "ny_ic_current_location.png"
     , title :  (getString USE_CURRENT_LOCATION)
     , subTitle : (getString FAVOURITE_YOUR_CURRENT_LOCATION)
     , placeId : Nothing
@@ -592,9 +592,9 @@ tagView state push =
               , color if (Just index) == state.data.activeIndex then Color.blue900 else Color.black800
               , fontStyle $ FontStyle.medium LanguageStyle
               ]
-          ]) [  { activeImageUrl : "ny_ic_home_blue," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_home_blue.png", inActiveImageUrl : "ny_ic_home," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_home.png", text : (getString HOME), tag : "HOME"},
-                { activeImageUrl : "ny_ic_work_blue," <> (getAssetStoreLink FunctionCall) <> "/user/images/ny_ic_work_blue.png", inActiveImageUrl : "ny_ic_work," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_work.png", text : (getString WORK), tag : "WORK"},
-                { activeImageUrl : "ny_ic_fav_blue," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_fav_blue.png",inActiveImageUrl : "ny_ic_fav_tag," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_fav_inactive.png", text : (getString FAVOURITE), tag : "FAVOURITE"}] )
+          ]) [  { activeImageUrl : "ny_ic_home_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_home_blue.png", inActiveImageUrl : "ny_ic_home," <> (getAssetStoreLink FunctionCall) <> "ny_ic_home.png", text : (getString HOME), tag : "HOME"},
+                { activeImageUrl : "ny_ic_work_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_work_blue.png", inActiveImageUrl : "ny_ic_work," <> (getAssetStoreLink FunctionCall) <> "ny_ic_work.png", text : (getString WORK), tag : "WORK"},
+                { activeImageUrl : "ny_ic_fav_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_blue.png",inActiveImageUrl : "ny_ic_fav_tag," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_inactive.png", text : (getString FAVOURITE), tag : "FAVOURITE"}] )
 
   ]
 
@@ -609,7 +609,7 @@ locationUnserviceableView state push =
   , background "#F5F5F5"
   , gravity CENTER
   ][  imageView 
-      [ imageWithFallback $ "ny_ic_location_unserviceable," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_location_unserviceable.png"
+      [ imageWithFallback $ "ny_ic_location_unserviceable," <> (getAssetStoreLink FunctionCall) <> "ny_ic_location_unserviceable.png"
       , height $ V 99
       , width $ V 133
       , margin $ (MarginBottom 20)

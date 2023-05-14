@@ -318,8 +318,8 @@ radioButton config push index item =
       [ width (V 24)
       , height (V 24)
       , imageWithFallback case config.activeIndex of 
-                    Just activeIndex' -> if ( index == activeIndex') then "ny_ic_radio_selected," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_radio_selected.png" else "ny_ic_radio_unselected," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_radio_unselected.png"
-                    Nothing           -> "ny_ic_radio_unselected," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_radio_unselected.png"
+                    Just activeIndex' -> if ( index == activeIndex') then "ny_ic_radio_selected," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_radio_selected.png" else "ny_ic_radio_unselected," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_radio_unselected.png"
+                    Nothing           -> "ny_ic_radio_unselected," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_radio_unselected.png"
       ],
       textView
       [ text item.description

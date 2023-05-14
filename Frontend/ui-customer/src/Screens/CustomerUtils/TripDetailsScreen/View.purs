@@ -154,7 +154,7 @@ lostAndFoundView push state =
       , width MATCH_PARENT
       , gravity RIGHT
       ][  imageView
-          [ imageWithFallback $ "ny_ic_chevron_right," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_chevron_right.png"
+          [ imageWithFallback $ "ny_ic_chevron_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
           , height (V 15)
           , width (V 15)
           ]
@@ -189,7 +189,7 @@ tripIdView push state =
           , textSize FontSize.a_14
           ]
         , imageView
-          [ imageWithFallback $ "ny_ic_copy," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_copy.png"
+          [ imageWithFallback $ "ny_ic_copy," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_copy.png"
           , height (V 13)
           , width (V 11)
           , margin (Margin 10 0 0 0)
@@ -224,10 +224,10 @@ tripDetailsView state =
               -- , background Color.grey800
               , width (V 36)
               , height (V 36)
-              , imageWithFallback $ "ny_ic_user," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_user.png"
+              , imageWithFallback $ "ny_ic_user," <> (getAssetStoreLink FunctionCall) <> "ny_ic_user.png"
               ]
             , imageView
-              [ imageWithFallback $ "ic_hatchback," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ic_hatchback.png"
+              [ imageWithFallback $ "ny_ic_auto," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_auto.png"
               , width (V 40)
               , height (V 40)
               ]
@@ -334,7 +334,7 @@ ratingAndInvoiceView state push =
                           ][imageView
                               [ height $ V 14
                               , width $ V 14
-                              , imageWithFallback if item <= state.data.rating then "ny_ic_star_active," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_star_active.png" else "ny_ic_star_inactive," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_star_inactive.png" 
+                              , imageWithFallback if item <= state.data.rating then "ny_ic_star_active," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_star_active.png" else "ny_ic_star_inactive," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_star_inactive.png" 
                               ]
                             ]) [1 ,2 ,3 ,4 ,5])
     -- , linearLayout
@@ -374,7 +374,7 @@ invoiceView state push =
         , width MATCH_PARENT
         , gravity RIGHT
         ][  imageView
-            [ imageWithFallback $     "ny_ic_chevron_right," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_chevron_right.png"
+            [ imageWithFallback $     "ny_ic_chevron_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
             , height (V 15)
             , width (V 15)
             ]
@@ -408,7 +408,7 @@ reportIssueView state push =
             , width MATCH_PARENT
             , gravity RIGHT
             ][  imageView
-                [ imageWithFallback if state.props.reportIssue then "ny_ic_chevron_up," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_chevron_up.png" else "ny_ic_chevron_right," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_chevron_right.png"
+                [ imageWithFallback if state.props.reportIssue then "ny_ic_chevron_up," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_up.png" else "ny_ic_chevron_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
                 , height $ if state.props.reportIssue then V 6 else V 15
                 , width $ if state.props.reportIssue then V 12 else V 15
                 ]
@@ -469,7 +469,7 @@ issueReportedView state push =
       , gravity CENTER
       , orientation VERTICAL
       ][ imageView
-          [ imageWithFallback $ "ny_ic_letter," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_letter.png"
+          [ imageWithFallback $ "ny_ic_letter," <> (getAssetStoreLink FunctionCall) <> "ny_ic_letter.png"
           , height $ V 149
           , width $ V 149
           , margin (MarginBottom 32)

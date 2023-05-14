@@ -110,7 +110,7 @@ config =
           , width : V 20
           , imageHeight : V 10
           , imageWidth : V 10
-          , imageUrl : "ny_ic_radio_button," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_radio_button.png"
+          , imageUrl : "ny_ic_radio_button," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_radio_button.png"
           , imageMargin : (Margin 0 0 0 0)
           , imagePadding : (Padding 0 0 0 0)
           , activeStroke :("2," <> Color.black800)

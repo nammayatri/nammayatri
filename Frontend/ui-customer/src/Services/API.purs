@@ -26,7 +26,7 @@ import Foreign (ForeignError(..), fail)
 import Foreign.Class (class Decode, class Encode, decode, encode)
 import Foreign.Generic (decodeJSON)
 import Prelude (class Show, show, ($), (<$>), (>>=))
-import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, ErrorPayload, Method(..), defaultDecodeResponse, defaultMakeRequest, standardEncode)
+import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, ErrorPayload, Method(..), defaultDecodeResponse, defaultMakeRequest, standardEncode, defaultMakeRequestString)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Types.EndPoint as EP
 import Foreign.Index (readProp)
@@ -104,7 +104,7 @@ newtype TriggerSignatureOTPResp = TriggerSignatureOTPResp {
 newtype TriggerSignatureOTPReq = TriggerSignatureOTPReq String
 
 instance makeTriggerSignatureOTPReq :: RestEndpoint TriggerSignatureOTPReq TriggerSignatureOTPResp where
- makeRequest reqBody headers = defaultMakeRequest POST (EP.triggerSignatureOTP "") headers reqBody
+ makeRequest (TriggerSignatureOTPReq reqBody) headers = defaultMakeRequestString POST (EP.triggerSignatureOTP "") headers reqBody
  decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 

@@ -119,7 +119,7 @@ titleView push state =
       ][imageView
       [ height $ V 24
       , width $ V 24
-      , imageWithFallback $ "ny_ic_close," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_close.png"
+      , imageWithFallback $ "ny_ic_close," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_close.png"
       , onClick push (const $ OnClose)
       ]]
     ]

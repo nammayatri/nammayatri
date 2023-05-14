@@ -111,7 +111,7 @@ locationAccessPermissionView push state =
     , width MATCH_PARENT
     , gravity CENTER
     ][imageView
-      [ imageWithFallback $ "ny_ic_location_access," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_location_access.png"
+      [ imageWithFallback $ "ny_ic_location_access," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_location_access.png"
       , height $ V 213
       , width $ V 240
       , gravity CENTER

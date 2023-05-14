@@ -97,7 +97,7 @@ shareAppConfig state = let
       },
       cornerRadius = (Corners 15.0 true true true true),
       coverImageConfig {
-        imageUrl = "ny_ic_share_app," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_share_app.png"
+        imageUrl = "ny_ic_share_app," <> (getAssetStoreLink FunctionCall) <> "ny_ic_share_app.png"
       , visibility = VISIBLE
       , margin = Margin 16 20 16 24
       , width = MATCH_PARENT
@@ -140,7 +140,7 @@ sourceToDestinationConfig state =
         , sourceMargin = (Margin 0 0 0 14)
         , lineMargin = (Margin 20 10 0 0)
         , sourceImageConfig
-          { imageUrl = "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_source_dot.png"
+          { imageUrl = "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_source_dot.png"
           , height = V 13
           , width = V 13
           , margin = (Margin 14 2 0 0)
@@ -162,7 +162,7 @@ sourceToDestinationConfig state =
           , maxLines = 1
           }
         , destinationImageConfig
-          { imageUrl = "ny_ic_loc_red," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_loc_red.png"
+          { imageUrl = "ny_ic_loc_red," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_loc_red.png"
           , height = V 17
           , width = V 14
           , margin = (Margin 13 3 0 0)
@@ -243,7 +243,7 @@ whereToButtonConfig state =
       , isPrefixImage = true
       , background = state.data.config.primaryBackground
       , prefixImageConfig
-        { imageUrl = if (HU.getMerchant FunctionCall) == HU.UNKNOWN then "ny_ic_bent_right_arrow_white," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_bent_right_arrow_white.png" else  "ny_ic_bent_right_arrow," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_bent_right_arrow.png"
+        { imageUrl = if (HU.getMerchant FunctionCall) == HU.UNKNOWN then "ny_ic_bent_right_arrow_white," <> (getAssetStoreLink FunctionCall) <> "ny_ic_bent_right_arrow_white.png" else  "ny_ic_bent_right_arrow," <> (getAssetStoreLink FunctionCall) <> "ny_ic_bent_right_arrow.png"
         , height = V 16
         , width = V 21
         , margin = (Margin 17 0 17 0)  
@@ -523,7 +523,7 @@ sourceUnserviceableConfig state =
         , stroke = ("1," <> Color.borderGreyColor)
         , corners = (Corners 20.0 true true false false)
         , imageConfig
-          { imageUrl = "ny_ic_location_unserviceable," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_location_unserviceable.png"
+          { imageUrl = "ny_ic_location_unserviceable," <> (getAssetStoreLink FunctionCall) <> "ny_ic_location_unserviceable.png"
           , height = V 99
           , width = V 133
           , margin = (Margin 0 50 0 20)

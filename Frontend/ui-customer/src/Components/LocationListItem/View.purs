@@ -88,7 +88,7 @@ postfixImageView push config =
     , gravity CENTER
     , padding (Padding 12 22 16 22)
     , onClick push $ const $ FavClick config
-    , clickable (if config.postfixImageUrl == "ny_ic_fav_red," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_fav_red.png" then false else true)
+    , clickable (if config.postfixImageUrl == "ny_ic_fav_red," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_red.png" then false else true)
     ][  imageView
         [ height $ V 20
         , width $ V 20
@@ -102,7 +102,7 @@ titleView config =
   textView
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , text if config.prefixImageUrl == "ny_ic_home_blue," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_home_blue.png" || config.prefixImageUrl == "ny_ic_work_blue," <> (getAssetStoreLink FunctionCall) <> "/user/images/ny_ic_work_blue.png" || config.prefixImageUrl == "ny_ic_fav_red," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_fav_red.png" then config.tag else config.title
+    , text if config.prefixImageUrl == "ny_ic_home_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_home_blue.png" || config.prefixImageUrl == "ny_ic_work_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_work_blue.png" || config.prefixImageUrl == "ny_ic_fav_red," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_red.png" then config.tag else config.title
     , color Color.black800
     , textSize FontSize.a_14
     , lineHeight "18"

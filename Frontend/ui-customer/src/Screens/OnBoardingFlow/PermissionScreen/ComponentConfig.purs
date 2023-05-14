@@ -36,7 +36,7 @@ errorModalConfig = let
   config = ErrorModal.config 
   errorModalConfig' = config 
     { imageConfig {
-        imageUrl = "ny_ic_offline," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_offline.png"
+        imageUrl = "ny_ic_offline," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_offline.png"
       , height = V 124
       , width = V 124
       , margin = (MarginBottom 32)

@@ -161,7 +161,7 @@ getSavedLocation (savedLocation) = (map (\(SavedReqLocationAPIEntity item) ->
 
 getSavedLocationForAddNewAddressScreen :: (Array LocationListItemState) -> Array LocationListItemState 
 getSavedLocationForAddNewAddressScreen (savedLocation) = (map (\ (item) -> 
-  { prefixImageUrl : "ny_ic_loc_grey," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_loc_grey.png"
+  { prefixImageUrl : "ny_ic_loc_grey," <> (getAssetStoreLink FunctionCall) <> "ny_ic_loc_grey.png"
   , postfixImageUrl : ""
   , postfixImageVisibility : false
   , title : (fromMaybe "" ((split (Pattern ",") (item.address)) !! 0))

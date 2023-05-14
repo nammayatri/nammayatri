@@ -119,7 +119,7 @@ sourceToDestinationConfig state = let
     , sourceMargin = (Margin 0 0 0 24)
     , lineMargin = (Margin 7 4 0 0)
     , sourceImageConfig {
-        imageUrl = "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_source_dot.png"
+        imageUrl = "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_source_dot.png"
       , margin = (MarginTop 2)
       , height = (V 16)
       , width = (V 16)
@@ -134,7 +134,7 @@ sourceToDestinationConfig state = let
       , ellipsize = false
       }
     , destinationImageConfig {
-        imageUrl = "ny_ic_loc_red," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_loc_red.png"
+        imageUrl = "ny_ic_loc_red," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_loc_red.png"
       , margin = (MarginTop 3)
       , height = (V 16)
       , width = (V 16)
@@ -241,7 +241,7 @@ fareBreakUpView state estimatedDistance push =
               ][ imageView
                   [ width $ V 16
                   , height $ V 16
-                  , imageWithFallback $ "ny_ic_parallel_arrows," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_parallel_arrows.png"
+                  , imageWithFallback $ "ny_ic_parallel_arrows," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_parallel_arrows.png"
                   , margin $ MarginRight 5
                   , visibility if state.priceDetails.text /= state.priceDetails.offeredFare then VISIBLE else GONE
                   ]

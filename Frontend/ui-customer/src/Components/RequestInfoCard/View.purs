@@ -83,7 +83,7 @@ view push =
             , imageView
               [ width $ V 116
               , height $ V 122
-              , imageWithFallback $ "ny_ic_select_offer," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_select_offer.png"
+              , imageWithFallback $ "ny_ic_select_offer," <> (getAssetStoreLink FunctionCall) <> "ny_ic_select_offer.png"
               ]
         ], textView
             [ width MATCH_PARENT

@@ -137,7 +137,7 @@ emptyContactsView push state =
     [ imageView
         [ height $ V 150
         , width $ V 150
-        , imageWithFallback $ "ny_ic_emergency_contact_empty," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_emergency_contact_empty.png"
+        , imageWithFallback $ "ny_ic_emergency_contact_empty," <> (getAssetStoreLink FunctionCall) <> "ny_ic_emergency_contact_empty.png"
         ]
     , textView
         [ height $ WRAP_CONTENT

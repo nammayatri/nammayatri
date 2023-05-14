@@ -140,7 +140,7 @@ recentRideView state push=
     , orientation HORIZONTAL
     ][  imageView
         [ background Color.greyLight
-        , imageWithFallback $ "ny_ic_help_map," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_help_map.png"
+        , imageWithFallback $ "ny_ic_help_map," <> (getAssetStoreLink FunctionCall) <> "ny_ic_help_map.png"
         , PP.cornerRadii $ PTD.Corners 8.0 true false false false
         , height MATCH_PARENT
         , width $ V 130
@@ -179,7 +179,7 @@ recentRideView state push=
         , width MATCH_PARENT
         , gravity RIGHT
         ][  imageView
-            [ imageWithFallback $ "ny_ic_chevron_right," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_chevron_right.png"
+            [ imageWithFallback $ "ny_ic_chevron_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
             , height $ V 15
             , width $ V 15
             ]
@@ -252,7 +252,7 @@ driverRatingView state =
                         ][imageView
                             [ height $ V 14
                             , width $ V 14
-                            , imageWithFallback if item <= state.data.rating then "ny_ic_star_active," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_star_active.png" else "ny_ic_star_inactive," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_star_inactive.png"
+                            , imageWithFallback if item <= state.data.rating then "ny_ic_star_active," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_star_active.png" else "ny_ic_star_inactive," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_star_inactive.png"
                             ]
                           ]) [1 ,2 ,3 ,4 ,5])
     ]
@@ -296,7 +296,7 @@ allTopicsView state push =
                 , gravity RIGHT
                 , layoutGravity "center_vertical"
                 ][  imageView
-                    [ imageWithFallback $ "ny_ic_chevron_right," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_chevron_right.png"
+                    [ imageWithFallback $ "ny_ic_chevron_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
                     , height $ V 15
                     , width $ V 15  
                     ]
@@ -361,10 +361,10 @@ topicsList :: ST.HelpAndSupportScreenState ->  Array { action :: Action
 topicsList state = [
   { action : ContactUs
   , title : (getString FOR_OTHER_ISSUES_WRITE_TO_US)
-  , image : "ny_ic_clip_board," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_clip_board.png"
+  , image : "ny_ic_clip_board," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_clip_board.png"
   },
   { action : CallSupport
   , title : (getString CONTACT_SUPPORT)
-  , image : "ny_ic_help," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_help.png"
+  , image : "ny_ic_help," <> (getAssetStoreLink FunctionCall) <> "ny_ic_help.png"
   }
 ]

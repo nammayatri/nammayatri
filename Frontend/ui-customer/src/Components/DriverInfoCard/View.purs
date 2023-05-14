@@ -284,7 +284,7 @@ supportButton push state =
       , background Color.lightGreyShade
       ][]
     , imageView
-      [ imageWithFallback $ "ny_ic_contact_support," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_contact_support.png"
+      [ imageWithFallback $ "ny_ic_contact_support," <> (getAssetStoreLink FunctionCall) <> "ny_ic_contact_support.png"
       , height $ V 18
       , width $ V 18
       , margin $ Margin 10 10 10 10
@@ -307,7 +307,7 @@ locationTrackButton push state =
   , onClick push (const $ LocationTracking)
   , margin $ MarginTop 8
   ][  imageView
-      [ imageWithFallback $ "ny_ic_location_track," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_location_track.png"
+      [ imageWithFallback $ "ny_ic_location_track," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_location_track.png"
       , height $ V 18
       , width $ V 18
       , margin $ Margin 10 10 10 10
@@ -324,7 +324,7 @@ sosView push state =
     , gravity if os == "IOS" then CENTER_VERTICAL else BOTTOM
     , onClick push $ const OpenEmergencyHelp
     ][ imageView
-        [ imageWithFallback $ "ny_ic_sos," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_sos.png"
+        [ imageWithFallback $ "ny_ic_sos," <> (getAssetStoreLink FunctionCall) <> "ny_ic_sos.png"
         , height $ V 50
         , width $ V 50
         ]
@@ -560,7 +560,7 @@ contactView push state =
           , background Color.green200
           , onClick push (const MessageDriver)
           ][ imageView
-              [ imageWithFallback if state.props.unReadMessages then "ic_chat_badge_green," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ic_chat_badge_green.png" else "ic_call_msg," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ic_call_msg.png"
+              [ imageWithFallback if state.props.unReadMessages then "ic_chat_badge_green," <> (getAssetStoreLink FunctionCall) <> "ic_chat_badge_green.png" else "ic_call_msg," <> (getAssetStoreLink FunctionCall) <> "ic_call_msg.png"
               , height $ V 24
               , width $ V 24
               ]
@@ -596,7 +596,7 @@ driverDetailsView push state =
               [ height $ V 50
               , width $ V 50
               , padding $ Padding 2 3 2 1
-              , imageWithFallback $ "ny_ic_user," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_user.png"
+              , imageWithFallback $ "ny_ic_user," <> (getAssetStoreLink FunctionCall) <> "ny_ic_user.png"
               ]  
           ]
         , textView
@@ -632,7 +632,7 @@ driverDetailsView push state =
           , width $ V 172
           , gravity BOTTOM
           ][  imageView
-              [ imageWithFallback $ "ic_driver_vehicle," <> (getAssetStoreLink FunctionCall) <> "/user/images/ic_driver_vehicle.png"
+              [ imageWithFallback $ "ic_driver_vehicle," <> (getAssetStoreLink FunctionCall) <> "ic_driver_vehicle.png"
               , height $ V 120
               , gravity RIGHT
               , width MATCH_PARENT
@@ -659,7 +659,7 @@ driverDetailsView push state =
                     , cornerRadius 4.0
                     , orientation HORIZONTAL
                     ][  imageView
-                        [ imageWithFallback $ "ny_ic_number_plate," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_number_plate.png"
+                        [ imageWithFallback $ "ny_ic_number_plate," <> (getAssetStoreLink FunctionCall) <> "ny_ic_number_plate.png"
                         , gravity LEFT
                         , background "#1C4188"
                         , height MATCH_PARENT
@@ -703,7 +703,7 @@ ratingView push state =
   , gravity CENTER_VERTICAL
   , cornerRadius 6.0
   ][  imageView
-      [ imageWithFallback $ "ny_ic_star_active," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_star_active.png"
+      [ imageWithFallback $ "ny_ic_star_active," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_star_active.png"
       , height $ V 13
       , width $ V 13
       ]
@@ -755,7 +755,7 @@ paymentMethodView push state title shouldShowIcon =
           , gravity CENTER
           , visibility if shouldShowIcon then VISIBLE else GONE
           ][  imageView
-              [ imageWithFallback $ "ny_ic_wallet," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_wallet.png"
+              [ imageWithFallback $ "ny_ic_wallet," <> (getAssetStoreLink FunctionCall) <> "ny_ic_wallet.png"
               , height $ V 20
               , width $ V 20
               ]
@@ -811,7 +811,7 @@ primaryButtonConfig = let
       , prefixImageConfig {
           height = V 18
         , width = V 18
-        , imageUrl = "ny_ic_call," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_call.png"
+        , imageUrl = "ny_ic_call," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_call.png"
         , margin = Margin 20 10 20 10
         }
       }
@@ -829,7 +829,7 @@ sourceToDestinationConfig state = let
     , lineMargin = Margin 19 7 0 0
     , destinationMargin = MarginTop 16
     , sourceImageConfig {
-        imageUrl = "ny_ic_pickup," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_pickup.png"
+        imageUrl = "ny_ic_pickup," <> (getAssetStoreLink FunctionCall) <> "ny_ic_pickup.png"
       , height = V 14
       , width = V 14
       , margin = Margin 13 4 0 0
@@ -844,7 +844,7 @@ sourceToDestinationConfig state = let
       , maxLines = 1
       }
     , destinationImageConfig {
-        imageUrl = "ny_ic_drop," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_drop.png"
+        imageUrl = "ny_ic_drop," <> (getAssetStoreLink FunctionCall) <> "ny_ic_drop.png"
       , height = V 17
       , width = V 14
       , margin = Margin 13 2 0 0
@@ -964,7 +964,7 @@ openGoogleMap push state =
           [ width $ V 20
           , height $ V 20
           , margin (MarginLeft 6)
-          , imageWithFallback $ "ny_ic_navigation," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_navigation.png"
+          , imageWithFallback $ "ny_ic_navigation," <> (getCommonAssetStoreLink FunctionCall) <> "driver/images/ny_ic_navigation.png"
           ]
       ]
   ] 

@@ -35,7 +35,7 @@ apiErrorModalConfig state = let
   config = ErrorModal.config 
   errorModalConfig' = config 
     { imageConfig {
-        imageUrl = "ny_ic_error_404," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_error_404.png"
+        imageUrl = "ny_ic_error_404," <> (getAssetStoreLink FunctionCall) <> "ny_ic_error_404.png"
       , height = V 110
       , width = V 124
       , margin = (MarginBottom 32)
@@ -70,7 +70,7 @@ errorModalConfig state = let
   config = ErrorModal.config 
   errorModalConfig' = config 
     { imageConfig {
-        imageUrl = "ny_ic_no_past_rides," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_no_past_rides.png"
+        imageUrl = "ny_ic_no_past_rides," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_no_past_rides.png"
       , height = V 110
       , width = V 124
       , margin = (MarginBottom 32)
@@ -109,7 +109,7 @@ genericHeaderConfig state = let
     , prefixImageConfig {
         height = V 25
       , width = V 25
-      , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_chevron_left.png"
+      , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
       } 
     , textConfig {
         text = (getString MY_RIDES)

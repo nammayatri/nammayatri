@@ -117,7 +117,7 @@ logoView state =
         ][  imageView
               [ height $ V 48
               , width $ V 48
-              , imageWithFallback $ "ic_launcher," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_launcher.png"
+              , imageWithFallback $ "ic_launcher," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_launcher.png"
               ]
           ]
 

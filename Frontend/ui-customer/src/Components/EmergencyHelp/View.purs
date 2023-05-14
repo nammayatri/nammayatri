@@ -138,7 +138,7 @@ supportButtonViewContent state push item index =  linearLayout
             ][  imageView
                 [ height $ V 12
                 , width $ V 12
-                , imageWithFallback $ "ny_ic_chevron_right," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_chevron_right.png"
+                , imageWithFallback $ "ny_ic_chevron_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
                 , margin $ MarginTop 4
                 , color Color.black900
                 , fontStyle $ FontStyle.semiBold LanguageStyle
@@ -165,7 +165,7 @@ emergencyHelpLogoContainer state =
     ][  imageView
         [ height $ V 128
         , width MATCH_PARENT
-        , imageWithFallback $ "ny_ic_emergency_shield," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_emergency_shield.png"
+        , imageWithFallback $ "ny_ic_emergency_shield," <> (getAssetStoreLink FunctionCall) <> "ny_ic_emergency_shield.png"
         , margin (MarginBottom 24)
         ]
       , textView
@@ -382,7 +382,7 @@ showEmergencyContact state push =
             ][  imageView
                 [ height $ V 12
                 , width $ V 12
-                , imageWithFallback $ "ny_ic_chevron_right," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_chevron_right.png"
+                , imageWithFallback $ "ny_ic_chevron_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
                 , margin $ MarginTop 6
                 , color Color.black900
                 , fontStyle $ FontStyle.semiBold LanguageStyle

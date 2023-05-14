@@ -139,7 +139,7 @@ afterSuccessfullSubmissionView state push =
     , gravity CENTER
     , orientation VERTICAL
   ][ imageView
-      [ imageWithFallback $ "ny_ic_letter," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_letter.png"
+      [ imageWithFallback $ "ny_ic_letter," <> (getAssetStoreLink FunctionCall) <> "ny_ic_letter.png"
       , height $ V 149
       , width $ V 149
       , margin (MarginBottom 32)

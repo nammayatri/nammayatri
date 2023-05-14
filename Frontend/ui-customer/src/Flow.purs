@@ -626,13 +626,13 @@ homeScreenFlow = do
                       lat = savedLocation.lat,
                       lon = savedLocation.lon,
                       locationItemType = Just SAVED_LOCATION,
-                      postfixImageUrl = "ny_ic_fav_red," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_fav_red.png" }
+                      postfixImageUrl = "ny_ic_fav_red," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_red.png" }
                     else 
                       item {
                         lat = item.lat,
                         lon = item.lon,
                         locationItemType = item.locationItemType,
-                        postfixImageUrl = "ny_ic_fav," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_fav.png" } 
+                        postfixImageUrl = "ny_ic_fav," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav.png" } 
             ) ((filteredRecentsList) <> filteredPredictionList) }})
       homeScreenFlow
     GET_QUOTES state -> do
@@ -938,11 +938,11 @@ homeScreenFlow = do
       case savedLocationResp of
         Right (SavedLocationsListRes listResp) -> do
           recentPredictionsObject <- lift $ lift $ getObjFromLocal currentState.homeScreen
-          let savedLocationWithHomeOrWorkTag = (filter (\listItem ->  (listItem.prefixImageUrl == "ny_ic_home_blue," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_home_blue.png"|| (listItem.prefixImageUrl == "ny_ic_work_blue," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_work_blue.png"))) (AddNewAddress.getSavedLocations listResp.list))
+          let savedLocationWithHomeOrWorkTag = (filter (\listItem ->  (listItem.prefixImageUrl == "ny_ic_home_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_home_blue.png"|| (listItem.prefixImageUrl == "ny_ic_work_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_work_blue.png"))) (AddNewAddress.getSavedLocations listResp.list))
               recents = (differenceOfLocationLists recentPredictionsObject.predictionArray savedLocationWithHomeOrWorkTag)
-              savedLocationsWithOtherTag = (filter (\listItem -> not(listItem.prefixImageUrl == "ny_ic_home_blue," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_home_blue.png" || listItem.prefixImageUrl == "ny_ic_work_blue," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_work_blue.png")) (AddNewAddress.getSavedLocations listResp.list))
-              updatedList = (map (\item ->  item { postfixImageUrl = if not (checkPrediction item savedLocationsWithOtherTag) then "ny_ic_fav_red," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_fav_red.png" 
-                                                                        else "ny_ic_fav," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_fav.png" }) (recents))
+              savedLocationsWithOtherTag = (filter (\listItem -> not(listItem.prefixImageUrl == "ny_ic_home_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_home_blue.png" || listItem.prefixImageUrl == "ny_ic_work_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_work_blue.png")) (AddNewAddress.getSavedLocations listResp.list))
+              updatedList = (map (\item ->  item { postfixImageUrl = if not (checkPrediction item savedLocationsWithOtherTag) then "ny_ic_fav_red," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_red.png" 
+                                                                        else "ny_ic_fav," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav.png" }) (recents))
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen
                                                                     { data
                                                                       { savedLocations = (AddNewAddress.getSavedLocations listResp.list)
@@ -1485,7 +1485,7 @@ addNewAddressScreenFlow input = do
 
       modifyScreenState $ AddNewAddressScreenStateType (\addNewAddressScreen -> state{  data  { locationList = map
                                                                                                                 (\item -> item{ postfixImageVisibility = (not (checkPrediction item state.data.savedLocations))
-                                                                                                                              , postfixImageUrl = if (checkPrediction item state.data.savedLocations) then "" else "ny_ic_fav_red," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_fav_red.png"
+                                                                                                                              , postfixImageUrl = if (checkPrediction item state.data.savedLocations) then "" else "ny_ic_fav_red," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_red.png"
                                                                                                                               , isClickable = (checkPrediction item state.data.savedLocations)
                                                                                                                               , alpha = if (checkPrediction item state.data.savedLocations) then 1.0 else 0.5 }) (filteredPredictionList <> filteredRecentsList) }})
       addNewAddressScreenFlow ""
@@ -1680,7 +1680,7 @@ checkAndUpdateSavedLocations state = do
       (savedLocationResp )<- lift $ lift $ Remote.getSavedLocationList ""   
       case savedLocationResp of 
         Right (SavedLocationsListRes listResp) -> do 
-          let savedLocationWithHomeOrWorkTag = (filter (\listItem ->  (listItem.prefixImageUrl == ("ny_ic_home_blue," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_home_blue.png") || (listItem.prefixImageUrl == ("ny_ic_work_blue," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_work_blue.png")))) (AddNewAddress.getSavedLocations listResp.list))
+          let savedLocationWithHomeOrWorkTag = (filter (\listItem ->  (listItem.prefixImageUrl == ("ny_ic_home_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_home_blue.png") || (listItem.prefixImageUrl == ("ny_ic_work_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_work_blue.png")))) (AddNewAddress.getSavedLocations listResp.list))
           let recent = (differenceOfLocationLists recentPredictionsObject.predictionArray savedLocationWithHomeOrWorkTag)
           let twoElements = catMaybes ([] <> [recent!!0] <> [recent!!1])
           _ <- pure $ setValueToLocalStore RELOAD_SAVED_LOCATION "false"
@@ -1693,10 +1693,10 @@ checkAndUpdateSavedLocations state = do
                   { recentSearchs
                     { predictionArray =  
                         map 
-                          (\item -> item { postfixImageUrl =  if not (checkPrediction item (AddNewAddress.getSavedLocations listResp.list)) then "ny_ic_fav_red," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_fav_red.png" else "ny_ic_fav," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_fav.png" } ) twoElements},
+                          (\item -> item { postfixImageUrl =  if not (checkPrediction item (AddNewAddress.getSavedLocations listResp.list)) then "ny_ic_fav_red," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_red.png" else "ny_ic_fav," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav.png" } ) twoElements},
                       savedLocations = (AddNewAddress.getSavedLocations listResp.list), 
                       locationList =  map 
-                          (\item -> item { postfixImageUrl =  if not (checkPrediction item (AddNewAddress.getSavedLocations listResp.list)) then "ny_ic_fav_red," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_fav_red.png" else "ny_ic_fav," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_fav.png" } ) recent
+                          (\item -> item { postfixImageUrl =  if not (checkPrediction item (AddNewAddress.getSavedLocations listResp.list)) then "ny_ic_fav_red," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_red.png" else "ny_ic_fav," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav.png" } ) recent
                     }
                   }
                 )

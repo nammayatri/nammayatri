@@ -66,7 +66,7 @@ type StarterLayoutConfig =
 config :: Config 
 config = 
   { imageConfig : 
-    { imageUrl : "ny_ic_close," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_close.png"
+    { imageUrl : "ny_ic_close," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_close.png"
     , height : V 25
     , width : V 25
     , margin : (MarginRight 15)

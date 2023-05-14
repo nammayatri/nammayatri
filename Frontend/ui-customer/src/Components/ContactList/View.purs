@@ -5,7 +5,7 @@ import Components.MenuButton.Controller as MenuButtonConfig
 import Components.MenuButton.View as MenuButton
 import Components.GenericHeader.Controller as GenericHeaderConfig
 import Components.GenericHeader.View as GenericHeader
-import Helpers.Utils (storeCallBackContacts, contactPermission)
+import Helpers.Utils (storeCallBackContacts, contactPermission, getAssetStoreLink, getCommonAssetStoreLink)
 import Prelude
 import Effect (Effect)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Gradient(..), background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, relativeLayout, frameLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, weight, width, textFromHtml, onBackPressed, scrollView, afterRender, stroke, alignParentBottom, gradient, editText, id, hint, pattern, onChange, imageWithFallback)
@@ -31,7 +31,6 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Engineering.Helpers.Commons (safeMarginTop, safeMarginBottom, os, getNewIDWithTag)
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Prelude ((<>))
 
 view :: forall w. (Action -> Effect Unit) -> ContactsState -> PrestoDOM (Effect Unit) w
@@ -80,7 +79,7 @@ view push config =
         , imageView
             [ height $ V 17
             , width $ V 17
-            , imageWithFallback $ "ny_ic_cancel," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_cancel.png"
+            , imageWithFallback $ "ny_ic_cancel," <> (getAssetStoreLink FunctionCall) <> "ny_ic_cancel.png"
             , gravity RIGHT
             , margin (Margin 0 10 18 10)
             , onClick push $ const ClearText
@@ -119,7 +118,7 @@ genericHeaderConfig state =
         , prefixImageConfig
           { height = V 25
           , width = V 25
-          , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_chevron_left.png"
+          , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
           , margin = (Margin 12 12 12 12)
           }
         , padding = (Padding 0 5 0 5)
@@ -256,7 +255,7 @@ showEmergencyContactData push config =
                                     [ imageView
                                         [ height if item.isSelected then V 24 else V 17
                                         , width if item.isSelected then V 24 else V 17
-                                        , imageWithFallback if item.isSelected then "ny_ic_selected_icon," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_selected_icon.png" else "ny_ic_outer_circle," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_outer_circle.png"
+                                        , imageWithFallback if item.isSelected then "ny_ic_selected_icon," <> (getAssetStoreLink FunctionCall) <> "ny_ic_selected_icon.png" else "ny_ic_outer_circle," <> (getAssetStoreLink FunctionCall) <> "ny_ic_outer_circle.png"
                                         ]
                                     ]
                                 ]

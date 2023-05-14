@@ -263,8 +263,8 @@ view push state =
                         [ width $ V 35
                         , height $ V 35
                         , imageWithFallback $ case (state.props.currentStage == ConfirmingLocation) || state.props.isSource == (Just true) of
-                            true  ->  (if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "src_marker" else "ny_ic_src_marker") <> "," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_src_marker.png" 
-                            false ->  (if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "dest_marker" else "ny_ic_dest_marker") <> "," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_dest_marker.png"
+                            true  ->  (if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "src_marker" else "ny_ic_src_marker") <> "," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_src_marker.png" 
+                            false ->  (if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "dest_marker" else "ny_ic_dest_marker") <> "," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_dest_marker.png"
                         , visibility if ((state.props.currentStage == ConfirmingLocation) || state.props.locateOnMap) then VISIBLE else GONE
                         ]
                     ]
@@ -449,7 +449,7 @@ trackingCardCallView push state item =
           ]
     ]
     , imageView
-        [ imageWithFallback $ "ny_ic_chevron_right," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_chevron_right.png"
+        [ imageWithFallback $ "ny_ic_chevron_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
         , height $ V 30
         , width $ V 32
         , padding (Padding 3 3 3 3)
@@ -506,7 +506,7 @@ recenterButtonView push state =
           --   , cornerRadii $ Corners 24.0 true true true true
           --   ][
           imageView
-            [ imageWithFallback $ "ny_ic_recenter_btn," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_recenter_btn.png"
+            [ imageWithFallback $ "ny_ic_recenter_btn," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_recenter_btn.png"
             , onClick
                 ( \action -> do
                     _ <- push action
@@ -536,7 +536,7 @@ referralView push state =
     , onClick push $ const $ if state.props.isReferred then ReferralFlowNoAction else ReferralFlowAction
     ][
       imageView [
-         imageWithFallback $ "ny_ic_tick," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_tick.png"
+         imageWithFallback $ "ny_ic_tick," <> (getAssetStoreLink FunctionCall) <> "ny_ic_tick.png"
         , width $ V 20
         , height $ V 15
         , margin (Margin 0 3 5 0)
@@ -565,7 +565,7 @@ liveStatsDashboardView push state =
     , onClick push $ const $ LiveDashboardAction
     ][
       imageView [
-        imageWithFallback $ "ic_graph_blue," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ic_graph_blue.png"
+        imageWithFallback $ "ic_graph_blue," <> (getAssetStoreLink FunctionCall) <> "ic_graph_blue.png"
         , width $ V 20
         , height $ V 15
         , margin (Margin 0 0 5 0)
@@ -712,7 +712,7 @@ bannerView state push =
           --     height $ V 8
           --   , width $ V 10
           --   , margin $ MarginLeft 5
-          --   , imageWithFallback "ny_ic_right_arrow_green," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_banner_gender_feat.png"
+          --   , imageWithFallback "ny_ic_right_arrow_green," <> (getAssetStoreLink FunctionCall) <> "ny_ic_banner_gender_feat.png"
           --   ]
           ]
         ]
@@ -830,7 +830,7 @@ homeScreenTopIconView push state =
             , onClick push $ const OpenSettings
             ]
             [ imageView
-                [ imageWithFallback if ((getValueFromConfig "showDashboard") == "true") && (checkVersion "LazyCheck")  then "ic_menu_notify," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ic_menu_notify.png" else "ny_ic_hamburger," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_hamburger.png"
+                [ imageWithFallback if ((getValueFromConfig "showDashboard") == "true") && (checkVersion "LazyCheck")  then "ic_menu_notify," <> (getAssetStoreLink FunctionCall) <> "ic_menu_notify.png" else "ny_ic_hamburger," <> (getAssetStoreLink FunctionCall) <> "ny_ic_hamburger.png"
                 , height $ V 24
                 , width $ V 24
                 , margin (Margin 16 16 16 16)
@@ -843,7 +843,7 @@ homeScreenTopIconView push state =
             ]
             []
         , imageView
-            [ imageWithFallback $ "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_source_dot.png"
+            [ imageWithFallback $ "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_source_dot.png"
             , height $ V 20
             , width $ V 20
             , margin (Margin 5 5 5 5)
@@ -1030,7 +1030,7 @@ fareUpdatedView state push =
     [ imageView
         [ width $ V 16
         , height $ V 16
-        , imageWithFallback $ "ny_ic_parallel_arrows," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_parallel_arrows.png"
+        , imageWithFallback $ "ny_ic_parallel_arrows," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_parallel_arrows.png"
         , margin $ MarginRight 12
         ]
     , textView
@@ -1065,7 +1065,7 @@ topLeftIconView state push =
           , onClick push $ if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then const BackPressed else const OpenSettings
           ]
           [ imageView
-              [ imageWithFallback if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_chevron_left.png" else if ((getValueFromConfig "showDashboard") == "true") && (checkVersion "LazyCheck") then "ic_menu_notify," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ic_menu_notify.png" else "ny_ic_hamburger," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_hamburger.png"
+              [ imageWithFallback if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png" else if ((getValueFromConfig "showDashboard") == "true") && (checkVersion "LazyCheck") then "ic_menu_notify," <> (getAssetStoreLink FunctionCall) <> "ic_menu_notify.png" else "ny_ic_hamburger," <> (getAssetStoreLink FunctionCall) <> "ny_ic_hamburger.png"
               , height $ V 25
               , clickable true
               , onClick push $ if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then const BackPressed else const OpenSettings
@@ -1137,7 +1137,7 @@ suggestedPriceView push state =
             , estimatedTimeAndDistanceView push state
           ]
           , imageView
-            [ imageWithFallback $ "ny_ic_info_blue," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_info_blue.png"
+            [ imageWithFallback $ "ny_ic_info_blue," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_info_blue.png"
             , width $ V 40
             , height $ V 40
             , gravity BOTTOM
@@ -1183,7 +1183,7 @@ suggestedPriceView push state =
                       [ width $ V 10
                       , height $ V 10
                       , margin (Margin 9 8 0 0)
-                      , imageWithFallback if state.data.showPreferences then "ny_ic_chevron_up," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_chevron_up.png" else "ny_ic_chevron_down," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_down_arrow.png"
+                      , imageWithFallback if state.data.showPreferences then "ny_ic_chevron_up," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_up.png" else "ny_ic_chevron_down," <> (getAssetStoreLink FunctionCall) <> "ny_ic_down_arrow.png"
                       ]
                   ],
                   linearLayout
@@ -1196,8 +1196,8 @@ suggestedPriceView push state =
                        , height WRAP_CONTENT
                        , orientation VERTICAL
                        , visibility if state.data.showPreferences then VISIBLE else GONE
-                       ][showMenuButtonView push (getString AUTO_ASSIGN_DRIVER) ("ny_ic_faster," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_faster.png") true,
-                         showMenuButtonView push (getString CHOOSE_BETWEEN_MULTIPLE_DRIVERS) ("ny_ic_info," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_information_grey.png") false]
+                       ][showMenuButtonView push (getString AUTO_ASSIGN_DRIVER) ("ny_ic_faster," <> (getAssetStoreLink FunctionCall) <> "ny_ic_faster.png") true,
+                         showMenuButtonView push (getString CHOOSE_BETWEEN_MULTIPLE_DRIVERS) ("ny_ic_info," <> (getAssetStoreLink FunctionCall) <> "ny_ic_information_grey.png") false]
                   ]
 
               ]
@@ -1224,7 +1224,7 @@ showMenuButtonView push menuText menuImage autoAssign =
       ][  imageView
           [ width $ V 10
           , height $ V 10
-          , imageWithFallback $ "ny_ic_radio_button," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_radio_button.png"
+          , imageWithFallback $ "ny_ic_radio_button," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_radio_button.png"
           , visibility if ( (flowWithoutOffers WithoutOffers) && autoAssign || not (flowWithoutOffers WithoutOffers) && not autoAssign ) then VISIBLE else GONE
           ]
         ]
@@ -1387,7 +1387,7 @@ trackingCardView push state item =
         ]
         []
     , imageView
-        [ imageWithFallback $ "ny_ic_chevron_right," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_chevron_right.png"
+        [ imageWithFallback $ "ny_ic_chevron_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
         , height $ V 20
         , width $ V 22
         , padding (Padding 3 3 3 3)
@@ -1397,11 +1397,11 @@ trackingCardView push state item =
 locationTrackingData :: String -> Array { text :: String, imageWithFallback :: String, type :: String }
 locationTrackingData lazyCheck =
   [ { text: (getString GOOGLE_MAP_)
-    , imageWithFallback: "ny_ic_track_google_map," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_track_google_map.png"
+    , imageWithFallback: "ny_ic_track_google_map," <> (getAssetStoreLink FunctionCall) <> "ny_ic_track_google_map.png"
     , type: "GOOGLE_MAP"
     }
   , { text: (getString IN_APP_TRACKING)
-    , imageWithFallback: "ny_ic_track_in_app," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_track_in_app.png"
+    , imageWithFallback: "ny_ic_track_in_app," <> (getAssetStoreLink FunctionCall) <> "ny_ic_track_in_app.png"
     , type: "IN_APP"
     }
   ]
@@ -1927,7 +1927,7 @@ notinPickUpZoneView push state =
             , estimatedTimeAndDistanceView push state
           ]
           , imageView
-            [ imageWithFallback $ "ny_ic_info_blue," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_info_blue.png"
+            [ imageWithFallback $ "ny_ic_info_blue," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_info_blue.png"
             , width $ V 40
             , height $ V 40
             , gravity BOTTOM
@@ -1971,7 +1971,7 @@ notinPickUpZoneView push state =
                       [ width $ V 10
                       , height $ V 10
                       , margin (Margin 9 8 0 0)
-                      , imageWithFallback if state.data.showPreferences then "ny_ic_chevron_up," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_chevron_up.png" else "ny_ic_chevron_down," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_down_arrow.png"
+                      , imageWithFallback if state.data.showPreferences then "ny_ic_chevron_up," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_up.png" else "ny_ic_chevron_down," <> (getAssetStoreLink FunctionCall) <> "ny_ic_down_arrow.png"
                       ]
                   ],
                   linearLayout
@@ -1984,8 +1984,8 @@ notinPickUpZoneView push state =
                        , height WRAP_CONTENT
                        , orientation VERTICAL
                        , visibility if state.data.showPreferences then VISIBLE else GONE
-                       ][showMenuButtonView push (getString AUTO_ASSIGN_DRIVER) ("ny_ic_faster," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_faster.png") true,
-                         showMenuButtonView push (getString CHOOSE_BETWEEN_MULTIPLE_DRIVERS) ("ny_ic_info," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_information_grey.png") false]
+                       ][showMenuButtonView push (getString AUTO_ASSIGN_DRIVER) ("ny_ic_faster," <> (getAssetStoreLink FunctionCall) <> "ny_ic_faster.png") true,
+                         showMenuButtonView push (getString CHOOSE_BETWEEN_MULTIPLE_DRIVERS) ("ny_ic_info," <> (getAssetStoreLink FunctionCall) <> "ny_ic_information_grey.png") false]
                   ]
                   
               ]
@@ -2005,7 +2005,7 @@ currentLocationView push state =
             , cornerRadius 5.0
             ]
             [ imageView
-                [ imageWithFallback $ "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_source_dot.png"
+                [ imageWithFallback $ "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_source_dot.png"
                 , height $ V 20
                 , width $ V 20
                 , gravity CENTER_VERTICAL

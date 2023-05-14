@@ -81,7 +81,7 @@ view push state =
             imageView
             [ height $ V 160
             , width $ V 280
-            , imageUrl $ "ny_ic_success_lottie_placeholder" <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_success_lottie_placeholder.png"] 
+            , imageUrl $ "ny_ic_success_lottie_placeholder" <> (getAssetStoreLink FunctionCall) <> "ny_ic_success_lottie_placeholder.png"] 
             else lottieLoaderView state push
         , textView
             $ [ width MATCH_PARENT

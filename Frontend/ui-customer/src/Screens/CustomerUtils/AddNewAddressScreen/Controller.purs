@@ -285,7 +285,7 @@ getLocationList prediction = map (\x -> getLocation x) prediction
 getLocation :: Prediction -> LocationListItemState
 getLocation prediction = {
     postfixImageUrl : " "
-  , prefixImageUrl : "ny_ic_loc_grey," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_loc_grey.png"
+  , prefixImageUrl : "ny_ic_loc_grey," <> (getAssetStoreLink FunctionCall) <> "ny_ic_loc_grey.png"
   , postfixImageVisibility : false
   , title : (fromMaybe "" ((split (Pattern ",") (prediction ^. _description)) DA.!! 0))
   , subTitle : (drop ((fromMaybe 0 (indexOf (Pattern ",") (prediction ^. _description))) + 2) (prediction ^. _description))
@@ -339,9 +339,9 @@ getSavedLocations :: (Array SavedReqLocationAPIEntity) -> Array LocationListItem
 getSavedLocations savedLocation =  (map (\ (SavedReqLocationAPIEntity item) ->
   {
   prefixImageUrl : case (toLower (item.tag) ) of 
-                "home" -> "ny_ic_home_blue," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_home_blue.png"
-                "work" -> "ny_ic_work_blue," <> (getAssetStoreLink FunctionCall) <> "/user/images/ny_ic_work_blue.png"
-                _      -> "ny_ic_fav_red," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_fav_red.png"
+                "home" -> "ny_ic_home_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_home_blue.png"
+                "work" -> "ny_ic_work_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_work_blue.png"
+                _      -> "ny_ic_fav_red," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_red.png"
 , postfixImageUrl : ""
 , postfixImageVisibility : false
 , title : (fromMaybe "" ((split (Pattern ",") (decodeAddress(SavedLoc (SavedReqLocationAPIEntity item)))) DA.!! 0))

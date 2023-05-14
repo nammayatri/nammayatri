@@ -179,7 +179,7 @@ sourceAndDestination =
           , width MATCH_PARENT
           , margin (MarginBottom 20)
           ][  imageView
-              [ imageWithFallback $ "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_source_dot.png"
+              [ imageWithFallback $ "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_source_dot.png"
               , height $ V 16
               , width $ V 16
               , margin (MarginTop 2)
@@ -202,7 +202,7 @@ sourceAndDestination =
           , width MATCH_PARENT
           , background if os == "IOS" then Color.transparent else Color.white900
           ][  imageView
-              [ imageWithFallback $ "ny_ic_loc_red," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_loc_red.png"
+              [ imageWithFallback $ "ny_ic_loc_red," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_loc_red.png"
               , height $ V 16
               , width $ V 16
               , margin (MarginTop 2)
@@ -290,7 +290,7 @@ sourceAndDestinationShimmerView state =
   , PrestoList.visibilityHolder "shimmerVisibility"
   , margin $ MarginVertical 20 20
   ][sfl $  imageView[
-    imageWithFallback $ "ny_ic_shimmer_img," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_shimmer_img.png"
+    imageWithFallback $ "ny_ic_shimmer_img," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_shimmer_img.png"
   , height $ V 57
   , margin (MarginLeft 4)
   , weight 1.0

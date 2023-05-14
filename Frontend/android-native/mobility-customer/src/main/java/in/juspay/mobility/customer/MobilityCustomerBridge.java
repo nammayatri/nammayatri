@@ -895,12 +895,12 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     showDialer(phoneNumber);
                 } else {
-                    enablePermissionFromSettings(Manifest.permission.CALL_PHONE, "Phone");
+                    toast("Permission Denied");
                 }
                 break;
             case LOCATION_PERMISSION_REQ_CODE:
                 if (grantResults.length > 0 && grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-                    enablePermissionFromSettings(Manifest.permission.ACCESS_FINE_LOCATION, "Location");
+                    toast("Permission Denied");
                 }
                 break;
             case STORAGE_PERMISSION:
@@ -911,7 +911,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                         e.printStackTrace();
                     }
                 } else
-                    Toast.makeText(bridgeComponents.getContext(), "Permission Denied", Toast.LENGTH_SHORT).show();
+                    toast("Permission Denied");
                 break;
             case REQUEST_CONTACTS:
                 boolean flag = ContextCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED;

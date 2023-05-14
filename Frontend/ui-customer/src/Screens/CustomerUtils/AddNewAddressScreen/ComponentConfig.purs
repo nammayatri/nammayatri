@@ -63,7 +63,7 @@ genericHeaderConfig state = let
       , visibility = VISIBLE
       , imageUrl = if state.data.config.nyBrandingVisibility && (not state.props.showSavePlaceView) then config.prefixImageConfig.imageUrl 
                     else if state.props.showSavePlaceView then if state.data.config.nyBrandingVisibility then "ny_ic_close,"<> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_close.png"
-                      else  "ny_ic_close_white," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_close_white.png" else config.prefixImageConfig.imageUrl
+                      else  "ny_ic_close_white," <> (getAssetStoreLink FunctionCall) <> "ny_ic_close_white.png" else config.prefixImageConfig.imageUrl
       }
     , textConfig {
         text = if state.props.showSavePlaceView then (getString FAVOURITE_LOCATION) else if state.props.editLocation then (getString EDIT_FAVOURITE) else (getString ADD_FAVOURITE)

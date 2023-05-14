@@ -393,11 +393,13 @@ decodeMerchantId :: Foreign -> Maybe Merchant
 decodeMerchantId = hush <<< runExcept <<< decode
 
 getAssetStoreLink :: LazyCheck -> String
-getAssetStoreLink lazy = case (getMerchant FunctionCall) of
-  NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri"
-  JATRISAATHI -> "https://assets.juspay.in/beckn/jatrisaathi"
-  YATRI -> "https://assets.juspay.in/beckn/yatri"
-  _ -> ""
+getAssetStoreLink lazy = case (getMerchant lazy) of
+  NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/"
+  JATRISAATHI -> "https://assets.juspay.in/beckn/jatrisaathi/"
+  YATRI -> "https://assets.juspay.in/beckn/yatri/"
+  UNKNOWN -> "https://assets.juspay.in/beckn/mobilitypaytm/user/"
 
 getCommonAssetStoreLink :: LazyCheck -> String
-getCommonAssetStoreLink lazy = "https://assets.juspay.in/beckn/merchantcommon"
+getCommonAssetStoreLink lazy = case (getMerchant lazy) of
+  UNKNOWN -> "https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/"
+  _ ->"https://assets.juspay.in/beckn/merchantcommon/"

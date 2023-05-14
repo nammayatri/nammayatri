@@ -34,7 +34,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getCommonAssetStoreLink)
+import Helpers.Utils (getCommonAssetStoreLink, getAssetStoreLink)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, not, pure, unit, (-), ($), (<<<), (==), (||), (/=), (<>))
@@ -304,7 +304,7 @@ profileImageView state push =
             ][  imageView
                 [ height $ V 100
                 , width $ V 100
-                , imageWithFallback $ "ny_ic_profile_image," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_profile_image.png"
+                , imageWithFallback $ "ny_ic_profile_image," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_profile_image.png"
                 ]
             ]
           ]
@@ -492,7 +492,7 @@ deleteAccountView state push =
             ][  imageView
                 [ width $ V 20
                 , height $ V 20
-                , imageWithFallback $ "ny_ic_trash," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_trash.png"
+                , imageWithFallback $ "ny_ic_trash," <> (getAssetStoreLink FunctionCall) <> "ny_ic_trash.png"
                 ]
                 , textView
                 [ height WRAP_CONTENT
@@ -511,7 +511,7 @@ deleteAccountView state push =
                 ][ imageView
                     [ width $ V 15
                     , height $ V 15
-                    , imageWithFallback $ "ny_ic_chevron_right," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_chevron_right.png"
+                    , imageWithFallback $ "ny_ic_chevron_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
                     ]
                   ]
               ]

@@ -82,7 +82,7 @@ view push config =
          , imageView
            [ width MATCH_PARENT
            , height $ V 90
-           , imageWithFallback if config.nightCharges then "ny_ic_night," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_night.png" else "ny_ic_day," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_day.png"
+           , imageWithFallback if config.nightCharges then "ny_ic_night," <> (getAssetStoreLink FunctionCall) <> "ny_ic_night.png" else "ny_ic_day," <> (getAssetStoreLink FunctionCall) <> "ny_ic_day.png"
            ]  
          ]
       , linearLayout
@@ -180,7 +180,7 @@ view push config =
       , imageView
         [ width MATCH_PARENT
         , height $ V 2 
-        , imageWithFallback $ "ny_ic_horizontal_dash," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_horizontal_dash.png"
+        , imageWithFallback $ "ny_ic_horizontal_dash," <> (getAssetStoreLink FunctionCall) <> "ny_ic_horizontal_dash.png"
         , margin (Margin 20 7 20 10)
         ]
       , textView

@@ -1525,41 +1525,6 @@ public class MobilityCommonBridge extends HyperBridge {
         Toast.makeText(bridgeComponents.getContext(), msg, Toast.LENGTH_SHORT).show();
     }
 
-    @SuppressLint("SetTextI18n")
-    public void enablePermissionFromSettings(@NonNull String permission, String permissionName) {
-        if (bridgeComponents.getActivity() != null) {
-
-            if (ActivityCompat.shouldShowRequestPermissionRationale(bridgeComponents.getActivity(), permission)) {
-                setKeysInSharedPrefs(permission, "false");
-            } else {
-                if (getKeysInSharedPref(permission).equals("false")) {
-                    try {
-                        LayoutInflater inflater = LayoutInflater.from(bridgeComponents.getContext());
-                        View permissionStepsView = inflater.inflate(R.layout.permission_steps_layout, null);
-                        TextView stepText = permissionStepsView.findViewById(R.id.step_text);
-
-                        AlertDialog.Builder builder = new AlertDialog.Builder(bridgeComponents.getContext());
-                        stepText.setText("3. Tap on " + permissionName);
-                        builder.setTitle("Permission Required")
-                                .setCancelable(true)
-                                .setView(permissionStepsView)
-                                .setPositiveButton("Go to settings", (dialog, which) -> {
-                                    Intent settingsIntent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-                                    settingsIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                                    Uri uri = Uri.fromParts("package", bridgeComponents.getContext().getPackageName(), null);
-                                    settingsIntent.setData(uri);
-                                    bridgeComponents.getContext().startActivity(settingsIntent);
-                                });
-                        AlertDialog alert = builder.create();
-                        alert.show();
-                    } catch (Exception e) {
-                        Log.d(OVERRIDE, e.toString());
-                    }
-                }
-            }
-        }
-    }
-
     @JavascriptInterface
     public void scrollToBottom(final String id) {
         try {
