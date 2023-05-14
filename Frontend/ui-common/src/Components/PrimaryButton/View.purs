@@ -20,6 +20,7 @@ import Components.PrimaryButton.Controller (Action(..), Config)
 import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, width, imageWithFallback)
 import JBridge (startLottieProcess, toggleBtnLoader, getKeyInSharedPrefKeys)
 import Engineering.Helpers.Commons (getNewIDWithTag, os)
+import Merchant.Utils (getValueFromConfig)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -39,7 +40,7 @@ view push config =
         , onClick
             ( \action -> do
                 _ <- pure $ toggleBtnLoader config.id true
-                _ <- pure $ startLottieProcess "Payments-Loader" (getNewIDWithTag config.id) true 0.6 "Default"
+                _ <- pure $ startLottieProcess (getValueFromConfig "apiLoaderLottie") (getNewIDWithTag config.id) true 0.6 "Default"
                 push action
             )
             (const OnClick)

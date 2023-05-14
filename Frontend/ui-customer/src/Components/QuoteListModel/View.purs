@@ -335,7 +335,7 @@ quoteListTopSheetView state push =
                   ][  imageView 
                       [ height $ V 24
                       , width $ V 24
-                      , imageWithFallback $ "ny_ic_close_white," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_close_white.png"
+                      , imageWithFallback $ if state.appConfig.nyBrandingVisibility then  "ny_ic_close," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_close.png" else "ny_ic_close_white," <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ny_ic_close_white.png"
                       , margin $ MarginTop 7
                       ]
                   ]

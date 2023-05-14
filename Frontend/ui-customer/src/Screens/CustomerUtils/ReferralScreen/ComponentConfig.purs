@@ -16,25 +16,30 @@
 module Screens.ReferralScreen.ComponentConfig where
 
 import Common.Types.App
+
+import Common.Types.App (LazyCheck(..))
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
 import Data.Maybe (Maybe(..))
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Prelude ((<>))
 import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..))
 import Screens.Types as ST
 import Styles.Colors as Color
-import Prelude ((<>))
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
-import Common.Types.App (LazyCheck(..))
 
 continueButtonConfig :: ST.ReferralScreenState -> PrimaryButton.Config
 continueButtonConfig state =
   PrimaryButton.config
-    { textConfig { text = (getString CONTINUE) }
+    { textConfig { 
+        text = (getString CONTINUE) 
+      ,  color = state.config.primaryTextColor
+      }
+    , background = state.config.primaryBackground
     , isClickable = state.btnActive
     , alpha = if state.btnActive then 1.0 else 0.4
     , id = "ReferralCodeModelContinue"
@@ -44,7 +49,11 @@ continueButtonConfig state =
 goToHomeButtonConfig :: ST.ReferralScreenState -> PrimaryButton.Config
 goToHomeButtonConfig state =
   PrimaryButton.config
-    { textConfig { text = (getString GO_TO_HOME__) }
+    { textConfig { 
+        text = (getString GO_TO_HOME__)      
+      , color = state.config.primaryTextColor
+      }
+    , background = state.config.primaryBackground
     , id = "GoToHomePrimaryButton"
     , margin = (Margin 0 0 0 0)
     }
@@ -84,9 +93,9 @@ primaryEditTextConfig state =
     primaryEditTextConfig'
 
 genericHeaderConfig :: ST.ReferralScreenState -> GenericHeader.Config
-genericHeaderConfig _ =
-  GenericHeader.config
-    { height = WRAP_CONTENT
+genericHeaderConfig state =
+  let config = if state.config.nyBrandingVisibility then GenericHeader.merchantConfig else GenericHeader.config
+  in config { height = WRAP_CONTENT
     , prefixImageConfig
       { height = V 25
       , width = V 25

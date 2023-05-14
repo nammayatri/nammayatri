@@ -623,6 +623,7 @@ type ReferralScreenState =
     , showThanks :: Boolean
     , isInvalidCode :: Boolean
     , isExpandReference :: Boolean
+    , config :: AppConfig
   }
 
 -- ################################## SelectLanguageScreenState ###############################

@@ -1633,6 +1633,8 @@ addNewAddressScreenFlow input = do
 
 referralScreenFlow :: FlowBT String Unit
 referralScreenFlow = do
+  config <- getAppConfig 
+  modifyScreenState $ ReferralScreenStateType (\referralScreen -> referralScreen { config = config })
   flow <- UI.referralScreen
   case flow of
     UPDATE_REFERRAL referralCode -> do

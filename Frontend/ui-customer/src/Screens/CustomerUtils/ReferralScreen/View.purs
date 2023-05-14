@@ -22,7 +22,7 @@ import Components.PrimaryEditText as PrimaryEditText
 import Effect (Effect)
 import Engineering.Helpers.Commons  as EHC
 import Font.Style as FontStyle
-import Helpers.Utils (adjustViewWithKeyboard, getPreviousVersion)
+import Helpers.Utils (adjustViewWithKeyboard, getCommonAssetStoreLink, getPreviousVersion)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, ($), (<<<), (<>), (==))
@@ -34,8 +34,6 @@ import Screens.Types as ST
 import Styles.Colors as Color
 import Screens.ReferralScreen.ComponentConfig
 import Storage (KeyStore(..), getValueToLocalStore)
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
-import Common.Types.App (LazyCheck(..))
 
 screen :: ST.ReferralScreenState -> Screen Action ST.ReferralScreenState ScreenOutput
 screen initialState =
@@ -67,6 +65,7 @@ view push state =
         [ height $ V 1
         , width MATCH_PARENT
         , background Color.grey900
+        , visibility if state.config.nyBrandingVisibility then GONE else VISIBLE 
         ]
         []
     , referralCodeView push state

@@ -61,7 +61,9 @@ const config = {
   "APP_LINK" : getAppLink(window.__OS),
   "PRIVACY_POLICY_LINK" : "https://docs.google.com/document/d/128VU80K5E1iz-x6QnP1R127m_lwmDO3F",
   "CUSTOMER_TIP" : "true",
-  "isShareAppEnabled" : "true"
+  "isShareAppEnabled" : "true",
+  "apiLoaderLottie" : "primary_button_loader",
+  "isEmergencyContacts" : "true"
 }
 
 const kannadaStrings = {

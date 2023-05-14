@@ -280,7 +280,6 @@ primaryButtonConfirmPickupConfig state =
         { textConfig
           { text = (getString CONFIRM_LOCATION)
           , textSize = FontSize.a_16
-          , fontStyle = FontStyle.regular LanguageStyle
           , color = state.data.config.primaryTextColor
           }
         , margin = (Margin 0 22 0 0)
@@ -708,6 +707,7 @@ emergencyHelpModelViewState state = { showContactSupportPopUp: state.props.emerg
                                 , emergencyContactData: state.props.emergencyHelpModelState.emergencyContactData
                                 , currentlySelectedContact: state.props.emergencyHelpModelState.currentlySelectedContact
                                 , showCallSuccessfulPopUp : state.props.emergencyHelpModelState.showCallSuccessfulPopUp
+                                , config : state.data.config
                                 }
 
 ratingCardViewState :: ST.HomeScreenState -> RatingCard.RatingCardState

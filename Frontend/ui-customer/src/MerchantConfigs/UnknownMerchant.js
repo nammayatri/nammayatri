@@ -61,7 +61,9 @@ export function getMerchantString(key) {
     "APP_LINK" : getAppLink(window.__OS),
     "PRIVACY_POLICY_LINK" : "https://docs.google.com/document/d/128VU80K5E1iz-x6QnP1R127m_lwmDO3F",
     "CUSTOMER_TIP" : "true",
-    "isShareAppEnabled" : "false"
+    "isShareAppEnabled" : "false",
+    "apiLoaderLottie" : "Payments-Loader",
+    "isEmergencyContacts" : "false"
   }
   
   const kannadaStrings = {

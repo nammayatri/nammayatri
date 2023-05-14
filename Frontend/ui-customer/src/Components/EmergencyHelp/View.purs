@@ -39,6 +39,7 @@ import Helpers.Utils (getPreviousVersion)
 import Storage (getValueToLocalStore, KeyStore(..))
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
+import Merchant.Utils (getValueFromConfig)
 
 view :: forall w .  (Action  -> Effect Unit) -> EmergencyHelpModelState  -> PrestoDOM (Effect Unit) w
 view push state = 
@@ -191,10 +192,18 @@ callPoliceConfig state  =
     }
     , option1 {
       text = getString CANCEL_
-    , fontSize = FontSize.a_16 }
+    , fontSize = FontSize.a_16 
+    , strokeColor = state.config.primaryBackground
+    , background = state.config.primaryTextColor
+    , color = state.config.primaryBackground
+    }
     , option2 {
       text = getString CALL_POLICE
-    , fontSize = FontSize.a_16 }
+    , fontSize = FontSize.a_16 
+    , strokeColor = state.config.primaryBackground
+    , background = state.config.primaryBackground
+    , color = state.config.primaryTextColor
+    }
     , backgroundClickable = true
     , secondaryText {
       text = getString YOU_ARE_ABOUT_TO_CALL_POLICE
@@ -217,10 +226,16 @@ contactSupportConfig state  =
     , option1 {
       text = getString CANCEL_
     , fontSize = FontSize.a_16
+    , strokeColor = state.config.primaryBackground
+    , background = state.config.primaryTextColor
+    , color = state.config.primaryBackground
     }
     , option2 {
       text = getString CALL_SUPPORT
     , fontSize = FontSize.a_16
+    , strokeColor = state.config.primaryBackground
+    , background = state.config.primaryBackground
+    , color = state.config.primaryTextColor
     }
     , backgroundClickable = true
     , secondaryText {
@@ -244,10 +259,16 @@ callEmergencyContactConfig state  =
     , option1 {
       text = getString CANCEL_
     , fontSize = FontSize.a_16
+    , strokeColor = state.config.primaryBackground
+    , background = state.config.primaryTextColor
+    , color = state.config.primaryBackground
     }
     , option2 {
       text = getString PLACE_CALL
     , fontSize = FontSize.a_16
+    , strokeColor = state.config.primaryBackground
+    , background = state.config.primaryBackground
+    , color = state.config.primaryTextColor
     }
     , backgroundClickable = true
     , secondaryText {
@@ -276,11 +297,19 @@ callSuccessfulConfig state  =
     , option1 {
       text = "No"
     , fontSize = FontSize.a_16
-    , margin = (MarginHorizontal 16 16) }
+    , margin = (MarginHorizontal 16 16) 
+    , strokeColor = state.config.primaryBackground
+    , background = state.config.primaryTextColor
+    , color = state.config.primaryBackground
+    }
     , option2 {
       text = "Yes"
     , fontSize = FontSize.a_16
-    , margin = (MarginHorizontal 12 0) }
+    , margin = (MarginHorizontal 12 0) 
+    , strokeColor = state.config.primaryBackground
+    , background = state.config.primaryBackground
+    , color = state.config.primaryTextColor
+    }
     , backgroundClickable = true
     , secondaryText {
       visibility = GONE }
@@ -334,7 +363,7 @@ showEmergencyContact state push =
     , width MATCH_PARENT
     , orientation VERTICAL
     , margin $ Margin 16 20 16 12
-    , visibility if(isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "")) then GONE else VISIBLE
+    , visibility if(getValueFromConfig "isEmergencyContacts" == "false") then GONE else VISIBLE
     , onClick push $ const (if (DA.null state.emergencyContactData) then  AddedEmergencyContacts else NoAction)
     ][  linearLayout
         [ width MATCH_PARENT
@@ -445,14 +474,9 @@ allContactsView state push =
 
 genericHeaderConfig :: EmergencyHelpModelState -> GenericHeaderConfig.Config
 genericHeaderConfig state = let 
-  config = GenericHeaderConfig.config
+  config = if state.config.nyBrandingVisibility then GenericHeaderConfig.merchantConfig else  GenericHeaderConfig.config
   genericHeaderConfig' = config 
     { height = WRAP_CONTENT
-    , prefixImageConfig {
-        height = V 25
-      , width = V 25
-      , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_chevron_left.png"
-      , margin = (Margin 12 12 12 12) } 
     , padding = (PaddingVertical 5 5)
     , textConfig {
         text = getString EMERGENCY_HELP

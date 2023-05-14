@@ -15,15 +15,19 @@
 
 module Screens.CustomerUtils.ContactUsScreen.ComponentConfig where
 
+import Common.Types.App
+
+import Common.Types.App (LazyCheck(..))
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
 import Data.Maybe (Maybe(..))
-import Data.String as DS 
+import Data.String as DS
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import JBridge as JB 
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude ((<>), (==), (>=))
@@ -31,9 +35,7 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(.
 import Screens.ContactUsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
-import Common.Types.App
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
-import Common.Types.App (LazyCheck(..))
+import Debug
 
 primaryButtonConfigSubmit :: ST.ContactUsScreenState -> PrimaryButton.Config
 primaryButtonConfigSubmit state = let 
@@ -41,11 +43,12 @@ primaryButtonConfigSubmit state = let
     primaryButtonConfig' = config 
       { textConfig
         { text = (getString SUBMIT)
-        , color = if state.props.btnActive then Color.yellowRadler else "#FEEBB9"      
+        , color = state.data.config.primaryTextColor
         }
       , cornerRadius = 0.0
-      , background = if state.props.btnActive then Color.black900 else "#B9BABE"
+      , background = state.data.config.primaryBackground
       , isClickable = state.props.btnActive 
+      , alpha = if state.props.btnActive then 1.0 else 0.5
       , margin = (Margin 0 0 0 0)
       , id = "SubmitButtonContactUsScreen"
       , enableLoader = (JB.getBtnLoader "SubmitButtonContactUsScreen")
@@ -143,7 +146,7 @@ primaryEditTextConfig state = let
 primaryButtonConfig :: ST.ContactUsScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
     config = PrimaryButton.config
-    primaryButtonConfig' = config 
+    primaryButtonConfig' = spy "primary button" config 
       { textConfig
         { text = (getString GO_TO_HOME__)
         , color = state.data.config.primaryTextColor          
@@ -158,16 +161,12 @@ primaryButtonConfig state = let
 
 genericHeaderConfig :: ST.ContactUsScreenState -> GenericHeader.Config 
 genericHeaderConfig state = let 
-  config = GenericHeader.config
-  genericHeaderConfig' = config 
+  config = if state.data.config.nyBrandingVisibility then GenericHeader.merchantConfig else GenericHeader.config
+  genericHeaderConfig' = spy "config " config 
     {
       height = WRAP_CONTENT
     , prefixImageConfig {
        visibility = VISIBLE
-      , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_chevron_left.png"
-      , height = (V 25)
-      , width = (V 25)
-      , margin = (Margin 12 12 12 12)
       } 
     , padding = (Padding 0 5 0 5)
     , textConfig {
