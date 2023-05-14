@@ -58,7 +58,7 @@ import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, fire
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent)
-import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (>=), (||), (<), void, (<), (*), (/))
+import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, when, ($), (&&), (-), (/=), (<>), (==), (>), (>=), (||), (<), void, (<), (*), (/))
 import Presto.Core.Types.API (ErrorResponse)
 import PrestoDOM (Eval, Visibility(..), continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
@@ -570,7 +570,11 @@ eval CheckFlowStatusAction state = exit $ CheckFlowStatus state
 
 eval (IsMockLocation isMock) state = do
   _ <- pure $ spy "IsMockLocation" isMock
-  continue state{props{isMockLocation = if isMock == "true" then true else false}}
+  let val = if isMock == "true" then true else false
+  when (val) do
+    _ <- pure $ firebaseLogEvent $ "ny_fakeGPS_enabled"
+    pure unit
+  continue state{props{isMockLocation = val}}
 
 eval (UpdateCurrentStage stage) state = do
   _ <- pure $ spy "updateCurrentStage" stage
