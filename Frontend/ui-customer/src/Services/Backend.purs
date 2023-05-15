@@ -250,6 +250,7 @@ makeSearchLocationReq input lat lng radius language components = SearchLocationR
     "components" : components,
     "language" : language,
     "sessionToken" : Nothing,
+    "strictbounds": Nothing,
     "origin" : LatLong {
             "lat" : lat,
             "lon" : lng

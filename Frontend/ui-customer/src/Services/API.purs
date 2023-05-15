@@ -211,6 +211,7 @@ newtype SearchLocationReq = SearchLocationReq {
   radius :: Int,
   input :: String,
   language :: String,
+  strictbounds :: Maybe Boolean,
   origin :: LatLong
 }
 
@@ -221,7 +222,7 @@ newtype SearchLocationResp = SearchLocationResp {
 newtype Prediction = Prediction {
  description :: String,
  placeId :: Maybe String,
- distance_meters :: Maybe Int
+ distance :: Maybe Int
 }
 
 instance makeSearchLocationReq :: RestEndpoint SearchLocationReq SearchLocationResp where

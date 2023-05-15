@@ -22,8 +22,8 @@ import Data.Newtype (class Newtype, unwrap, wrap)
 _formattedAddress :: forall a b c. Newtype a { formattedAddress :: b | c} => Lens' a b
 _formattedAddress = lens (unwrap >>> _.formattedAddress) (\oldRec newVal -> wrap ((unwrap oldRec) {formattedAddress = newVal}))
 
-_distance_meters :: forall a b c. Newtype a { distance_meters :: b | c} => Lens' a b
-_distance_meters = lens (unwrap >>> _.distance_meters) (\oldRec newVal -> wrap ((unwrap oldRec) {distance_meters = newVal}))
+_distance_meters :: forall a b c. Newtype a { distance :: b | c} => Lens' a b
+_distance_meters = lens (unwrap >>> _.distance) (\oldRec newVal -> wrap ((unwrap oldRec) {distance = newVal}))
 
 _description :: forall a b c. Newtype a {description :: c | b} => Lens' a c
 _description = lens (unwrap >>> _.description) (\oldRec newVal -> wrap ((unwrap oldRec) {description = newVal}))
