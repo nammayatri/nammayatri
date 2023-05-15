@@ -15,6 +15,7 @@
 module Domain.Types.CallStatus where
 
 import Domain.Types.Ride
+import GHC.StaticPtr (IsStatic)
 import qualified Kernel.External.Call.Interface.Types as CallTypes
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -29,7 +30,7 @@ data CallStatus = CallStatus
     conversationDuration :: Int,
     createdAt :: UTCTime
   }
-  deriving (Generic)
+  deriving (Generic, Show)
 
 data CallStatusAPIEntity = CallStatusAPIEntity
   { callStatusId :: Id CallStatus,
