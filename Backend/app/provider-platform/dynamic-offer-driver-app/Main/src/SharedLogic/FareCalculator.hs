@@ -42,6 +42,8 @@ mkBreakupList mkPrice mkBreakupItem fareParams = do
   let baseFareFinalRounded = fareParams.baseFare
       baseFareCaption = "BASE_FARE"
       baseFareItem = mkBreakupItem baseFareCaption (mkPrice baseFareFinalRounded)
+      baseFareDistanceCaption = "BASE_DISTANCE_FARE" --TODO: deprecated, to be removed
+      baseFareDistanceItem = mkBreakupItem baseFareDistanceCaption (mkPrice baseFareFinalRounded)
 
       serviceChargeCaption = "SERVICE_CHARGE"
       mbServiceChargeItem = fmap (mkBreakupItem serviceChargeCaption) (mkPrice <$> fareParams.serviceCharge)
@@ -60,14 +62,27 @@ mkBreakupList mkPrice mkBreakupItem fareParams = do
       totalFareCaption = "TOTAL_FARE"
       totalFareItem = mkBreakupItem totalFareCaption $ mkPrice totalFareFinalRounded
 
-      waitingOrPickupChargesCaption = "WAITING_CHARGE"
+      waitingOrPickupChargesCaption = "WAITING_OR_PICKUP_CHARGES" --TODO: deprecated, to be removed
       mbWaitingOrPickupChargesItem = mkBreakupItem waitingOrPickupChargesCaption . mkPrice <$> fareParams.waitingCharge
+      waitingChargesCaption = "WAITING_CHARGE"
+      mbWaitingChargesItem = mkBreakupItem waitingChargesCaption . mkPrice <$> fareParams.waitingCharge
 
       mbFixedGovtRateCaption = "FIXED_GOVERNMENT_RATE"
       mbFixedGovtRateItem = mkBreakupItem mbFixedGovtRateCaption . mkPrice <$> fareParams.govtCharges
 
       detailsBreakups = processFareParamsDetails fareParams.fareParametersDetails
-  catMaybes [Just totalFareItem, Just baseFareItem, mbWaitingOrPickupChargesItem, mbFixedGovtRateItem, mbServiceChargeItem, mbSelectedFareItem, mkCustomerExtraFareItem] <> detailsBreakups
+  catMaybes
+    [ Just totalFareItem,
+      Just baseFareItem,
+      Just baseFareDistanceItem,
+      mbWaitingOrPickupChargesItem,
+      mbWaitingChargesItem,
+      mbFixedGovtRateItem,
+      mbServiceChargeItem,
+      mbSelectedFareItem,
+      mkCustomerExtraFareItem
+    ]
+    <> detailsBreakups
   where
     processFareParamsDetails = \case
       DFParams.ProgressiveDetails det -> mkFPProgressiveDetailsBreakupList det

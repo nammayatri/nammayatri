@@ -49,6 +49,7 @@ buildEstimate transactionId startTime dist farePolicy = do
         }
   let baseFare = fareSum fareParams
       estimateBreakups = mkBreakupList mkPrice mkBreakupItem fareParams
+      additionalBreakups = mkAdditionalBreakups mkPrice mkBreakupItem dist farePolicy
   logDebug $ "baseFare: " <> show baseFare
   uuid <- generateGUID
   now <- getCurrentTime
@@ -57,9 +58,9 @@ buildEstimate transactionId startTime dist farePolicy = do
       { id = Id uuid,
         transactionId = transactionId,
         vehicleVariant = farePolicy.vehicleVariant,
-        minFare = baseFare,
-        maxFare = baseFare + fromMaybe 0 (farePolicy.driverExtraFeeBounds <&> (.maxFee)),
-        estimateBreakupList = estimateBreakups,
+        minFare = baseFare + maybe 0 (.minFee) farePolicy.driverExtraFeeBounds,
+        maxFare = baseFare + maybe 0 (.maxFee) farePolicy.driverExtraFeeBounds,
+        estimateBreakupList = estimateBreakups <> additionalBreakups,
         nightShiftInfo =
           ((,,) <$> fareParams.nightShiftCharge <*> getOldNightShiftCharge farePolicy.farePolicyDetails <*> farePolicy.nightShiftBounds)
             <&> \(nightShiftCharge, oldNightShiftCharge, nightShiftBounds) ->
@@ -94,3 +95,32 @@ buildEstimate transactionId startTime dist farePolicy = do
       case farePolicyDetails of
         DFP.SlabsDetails det -> getNightShiftChargeValue <$> (DFP.findFPSlabsDetailsSlabByDistance dist det.slabs).nightShiftCharge
         DFP.ProgressiveDetails det -> getNightShiftChargeValue <$> det.nightShiftCharge
+
+mkAdditionalBreakups :: (Money -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> Meters -> FarePolicy -> [breakupItem]
+mkAdditionalBreakups mkPrice mkBreakupItem distance farePolicy = do
+  let driverMinExtraFee = farePolicy.driverExtraFeeBounds <&> (.minFee)
+      driverMinExtraFeeCaption = "DRIVER_MIN_EXTRA_FEE"
+      driverMinExtraFeeItem = mkBreakupItem driverMinExtraFeeCaption . mkPrice <$> driverMinExtraFee
+
+      driverMaxExtraFee = farePolicy.driverExtraFeeBounds <&> (.maxFee)
+      driverMaxExtraFeeCaption = "DRIVER_MAX_EXTRA_FEE"
+      driverMaxExtraFeeItem = mkBreakupItem driverMaxExtraFeeCaption . mkPrice <$> driverMaxExtraFee
+
+      additionalDetailsBreakups = processAdditionalDetails farePolicy.farePolicyDetails
+  catMaybes
+    [ driverMinExtraFeeItem,
+      driverMaxExtraFeeItem
+    ]
+    <> additionalDetailsBreakups
+  where
+    processAdditionalDetails = \case
+      DFP.ProgressiveDetails det -> mkAdditionalProgressiveBreakups det
+      DFP.SlabsDetails det -> mkAdditionalSlabBreakups $ DFP.findFPSlabsDetailsSlabByDistance distance det.slabs
+
+    mkAdditionalProgressiveBreakups det = do
+      let perExtraKmFare = roundToIntegral det.perExtraKmFare
+          perExtraKmFareCaption = "EXTRA_PER_KM_FARE"
+          perExtraKmFareItem = mkBreakupItem perExtraKmFareCaption (mkPrice perExtraKmFare)
+      [perExtraKmFareItem]
+
+    mkAdditionalSlabBreakups _ = []
