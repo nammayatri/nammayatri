@@ -326,7 +326,10 @@ cancelBooking booking mbDriver transporter = do
             rideId = (.id) <$> ride,
             source = DBCR.ByApplication,
             reasonCode = Nothing,
-            additionalInfo = Nothing
+            additionalInfo = Nothing,
+            driverLat = Nothing,
+            driverLon = Nothing,
+            driverDistToPickup = Nothing
           }
 
 validateRequest ::

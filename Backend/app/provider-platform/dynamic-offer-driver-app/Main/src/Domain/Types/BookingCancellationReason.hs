@@ -20,6 +20,7 @@ import Domain.Types.CancellationReason (CancellationReasonCode)
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import EulerHS.Prelude hiding (id)
+import Kernel.Types.Common
 import Kernel.Types.Id
 
 data BookingCancellationReason = BookingCancellationReason
@@ -28,7 +29,10 @@ data BookingCancellationReason = BookingCancellationReason
     rideId :: Maybe (Id DRide.Ride),
     source :: CancellationSource,
     reasonCode :: Maybe CancellationReasonCode,
-    additionalInfo :: Maybe Text
+    additionalInfo :: Maybe Text,
+    driverLat :: Maybe Double,
+    driverLon :: Maybe Double,
+    driverDistToPickup :: Maybe Meters
   }
   deriving (Generic)
 
