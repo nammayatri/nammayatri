@@ -4,7 +4,6 @@ package:
     - "aff"
     - "arrays"
     - "backtrack"
-    - "beckn-common"
     - "control"
     - "datetime"
     - "debug"
@@ -29,3 +28,4 @@ package:
     - "tracker"
     - "transformers"
     - "tuples"
+    - "ui-common"
