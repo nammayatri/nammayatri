@@ -1,5 +1,5 @@
 package:
-  name: "beckn-common"
+  name: "ui-common"
   dependencies:
     - "backtrack"
     - "effect"

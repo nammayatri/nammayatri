@@ -71,7 +71,7 @@
           name = "purifix-watch";
           runtimeInputs = [
             pkgs.watchexec
-          ] ++ localPackages.beckn-common.develop.buildInputs;
+          ] ++ localPackages.ui-common.develop.buildInputs;
           text = ''
             PIPE=$1
             shift
@@ -137,7 +137,7 @@
         lib.attrsets.cartesianProductOfSets {
           mode = [ "production" "development" ];
           env = [ "master" "sandbox" "prod" ];
-          target = builtins.attrNames localPackages;
+          target = [ "ui-customer" "ui-driver" ];
           platform = [ "android" "ios" ];
         };
 
@@ -195,7 +195,7 @@
         inputsFrom = [
           config.mission-control.devShell
           config.pre-commit.devShell
-          localPackages.beckn-common.develop
+          localPackages.ui-common.develop
         ];
         packages = [
           pkgs.dhall
@@ -209,8 +209,7 @@
       };
 
       packages = {
-        inherit (localPackages) ui-customer ui-driver;
-        ui-common = localPackages.beckn-common;
+        inherit (localPackages) ui-customer ui-driver ui-common;
         android-customer-bundle = bundles.ui-customer-android-prod-production-js;
         android-driver-bundle = bundles.ui-driver-android-prod-production-js;
       } // bundles;
