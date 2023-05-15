@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-<i>Open Direct-to-Driver app. Zero commision. No middleman. Secure. Safe.</i>
+<i>Open Direct-to-Driver app. Zero commission. No middleman. Secure. Safe.</i>
 </p>
 
 <p align="center">
