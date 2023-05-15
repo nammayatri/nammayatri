@@ -37,6 +37,11 @@
 
       nodeDependencies = nodePackages.packages.${system}.atlas-ui.lib;
 
+      # Wrapper for typescript language server to make it work with vscode/neovim by default
+      # Ensure that typescript is installed and the language server knows where tsserver lives
+      # The --tsserver-path argument being hardcoded instead of sent in the initialization
+      # both simplifies the process and ensures that everyone is using the same tsserver when
+      # the editor is running in the development shell
       typescript-language-server = pkgs.symlinkJoin {
         name = "typescript-language-server";
         nativeBuildInputs = [ pkgs.makeWrapper ];
