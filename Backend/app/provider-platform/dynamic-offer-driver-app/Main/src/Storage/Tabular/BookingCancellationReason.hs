@@ -23,6 +23,7 @@ module Storage.Tabular.BookingCancellationReason where
 import qualified Domain.Types.BookingCancellationReason as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
+import Kernel.Types.Common (Meters (..))
 import Storage.Tabular.Booking (BookingTId)
 import Storage.Tabular.CancellationReason (CancellationReasonTId)
 import Storage.Tabular.Person (PersonTId)
@@ -40,6 +41,9 @@ mkPersist
       source Domain.CancellationSource
       reasonCode CancellationReasonTId Maybe
       additionalInfo Text Maybe
+      driverLat Double Maybe
+      driverLon Double Maybe
+      driverDistToPickup Meters Maybe
       Primary bookingId
       UniqueBookingCancellationReasonBookingId bookingId
       deriving Generic

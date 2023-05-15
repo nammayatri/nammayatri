@@ -120,6 +120,9 @@ cancel req merchant booking = do
             reasonCode = Nothing,
             driverId = Nothing,
             additionalInfo = Nothing,
+            driverLat = Nothing,
+            driverLon = Nothing,
+            driverDistToPickup = Nothing,
             ..
           }
 

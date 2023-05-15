@@ -107,7 +107,10 @@ cancelBooking booking transporterId = do
             rideId = Nothing,
             source = DBCR.ByApplication,
             reasonCode = Nothing,
-            additionalInfo = Nothing
+            additionalInfo = Nothing,
+            driverLat = Nothing,
+            driverLon = Nothing,
+            driverDistToPickup = Nothing
           }
 
 handler :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> InitReq -> Either (DDQ.DriverQuote, DSR.SearchRequest, DST.SearchTry) (DQSZ.QuoteSpecialZone, DSRSZ.SearchRequestSpecialZone) -> m InitRes
