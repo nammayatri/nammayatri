@@ -6,9 +6,11 @@
  or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE DerivingStrategies #-}
 
 module Domain.Types.Estimate where
 
+import qualified Data.Aeson as A
 import Domain.Types.Common (UsageSafety (..))
 import qualified Domain.Types.Vehicle as Variant
 import Kernel.Prelude
@@ -46,22 +48,48 @@ data EstimateBreakupD (s :: UsageSafety) = EstimateBreakup
   { title :: Text,
     price :: EstimateBreakupPriceD s
   }
-  deriving (Generic)
+  deriving (Generic, Show)
 
 type EstimateBreakup = EstimateBreakupD 'Safe
 
 deriving instance FromJSON (EstimateBreakupD 'Unsafe)
 
+deriving instance FromJSON (EstimateBreakupD 'Safe)
+
+-- deriving instance FromJSON (EstimateBreakup)
+
 deriving instance ToJSON (EstimateBreakupD 'Unsafe)
+
+deriving instance ToJSON (EstimateBreakupD 'Safe)
+
+deriving stock instance Ord (EstimateBreakupD 'Unsafe)
+
+deriving stock instance Ord (EstimateBreakupD 'Safe)
+
+deriving stock instance Eq (EstimateBreakupD 'Unsafe)
+
+deriving stock instance Eq (EstimateBreakupD 'Safe)
 
 data EstimateBreakupPriceD (s :: UsageSafety) = EstimateBreakupPrice
   { currency :: Text,
     value :: Money
   }
-  deriving (Generic)
+  deriving (Generic, Show)
 
 type EstimateBreakupPrice = EstimateBreakupPriceD 'Safe
 
 deriving instance FromJSON (EstimateBreakupPriceD 'Unsafe)
 
 deriving instance ToJSON (EstimateBreakupPriceD 'Unsafe)
+
+deriving instance FromJSON (EstimateBreakupPriceD 'Safe)
+
+deriving instance ToJSON (EstimateBreakupPriceD 'Safe)
+
+deriving instance Ord (EstimateBreakupPriceD 'Safe)
+
+deriving instance Ord (EstimateBreakupPriceD 'Unsafe)
+
+deriving instance Eq (EstimateBreakupPriceD 'Safe)
+
+deriving instance Eq (EstimateBreakupPriceD 'Unsafe)

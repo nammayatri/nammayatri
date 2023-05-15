@@ -218,6 +218,35 @@ library
       SharedLogic.MessageBuilder
       SharedLogic.Person
       SharedLogic.Ride
+      Storage.Beam.Booking
+      Storage.Beam.BookingCancellationReason
+      Storage.Beam.BusinessEvent
+      Storage.Beam.CallStatus
+      Storage.Beam.CancellationReason
+      Storage.Beam.DriverInformation
+      Storage.Beam.DriverLocation
+      Storage.Beam.DriverQuote
+      Storage.Beam.DriverReferral
+      Storage.Beam.DriverStats
+      Storage.Beam.Estimate
+      Storage.Beam.Exophone
+      Storage.Beam.FareParameters
+      Storage.Beam.FarePolicy
+      Storage.Beam.Geometry
+      Storage.Beam.MediaFile
+      Storage.Beam.Merchant
+      Storage.Beam.OnboardingDocumentConfig
+      Storage.Beam.Person
+      Storage.Beam.QuoteSpecialZone
+      Storage.Beam.Rating
+      Storage.Beam.RegistrationToken
+      Storage.Beam.RideDetails
+      Storage.Beam.RiderDetails
+      Storage.Beam.SearchRequest
+      Storage.Beam.SearchRequestForDriver
+      Storage.Beam.SearchRequestSpecialZone
+      Storage.Beam.SlabFarePolicy
+      Storage.Beam.Vehicle
       Storage.CachedQueries.CacheConfig
       Storage.CachedQueries.DriverInformation
       Storage.CachedQueries.Exophone

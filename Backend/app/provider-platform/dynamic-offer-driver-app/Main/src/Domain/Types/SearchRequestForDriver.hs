@@ -28,7 +28,7 @@ import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
 
 data DriverSearchRequestStatus = Active | Inactive
-  deriving (Show, Read, Eq)
+  deriving (Show, Read, Eq, Generic)
   deriving (PrettyShow) via Showable DriverSearchRequestStatus
 
 data SearchRequestForDriverResponse
