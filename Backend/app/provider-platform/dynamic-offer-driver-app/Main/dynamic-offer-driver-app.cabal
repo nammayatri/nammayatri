@@ -193,6 +193,7 @@ library
       Lib.DriverScore
       Lib.DriverScore.Types
       Lib.LocationUpdates
+      Lib.Utils
       Lib.UtilsTH
       SharedLogic.Allocator
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers
