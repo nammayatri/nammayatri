@@ -69,6 +69,7 @@ import Effect (Effect)
 import Control.Monad.Except (runExcept)
 import Foreign.Class (class Encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
+import Resources.Constants (getSearchRadius)
 
 baseAppFlow :: GlobalPayload -> FlowBT String Unit
 baseAppFlow gPayload = do
@@ -518,7 +519,7 @@ homeScreenFlow = do
         rideSearchFlow "NORMAL_FLOW"
 
     SEARCH_LOCATION input state -> do
-      (SearchLocationResp searchLocationResp) <- Remote.searchLocationBT (Remote.makeSearchLocationReq input ( state.props.sourceLat) ( state.props.sourceLong) 50000  (case (getValueToLocalStore LANGUAGE_KEY) of
+      (SearchLocationResp searchLocationResp) <- Remote.searchLocationBT (Remote.makeSearchLocationReq input ( state.props.sourceLat) ( state.props.sourceLong) getSearchRadius  (case (getValueToLocalStore LANGUAGE_KEY) of
                                                                                                                                                                                                     "HI_IN" -> "HINDI"
                                                                                                                                                                                                     "KN_IN" -> "KANNADA"
                                                                                                                                                                                                     _      -> "ENGLISH") "")
@@ -1372,11 +1373,12 @@ addNewAddressScreenFlow input = do
   flow <- UI.addNewAddressScreen
   case flow of
     SEARCH_ADDRESS input state -> do
-      (SearchLocationResp searchLocationResp) <- Remote.searchLocationBT (Remote.makeSearchLocationReq input ( newState.homeScreen.props.sourceLat) ( newState.homeScreen.props.sourceLong) 50000 (case (getValueToLocalStore LANGUAGE_KEY) of
+      (SearchLocationResp searchLocationResp) <- Remote.searchLocationBT (Remote.makeSearchLocationReq input ( newState.homeScreen.props.sourceLat) ( newState.homeScreen.props.sourceLong) getSearchRadius (case (getValueToLocalStore LANGUAGE_KEY) of
                                                                                                                                                                                                                                 "HI_IN" -> "HINDI"
                                                                                                                                                                                                                                 "KN_IN" -> "KANNADA"
                                                                                                                                                                                                                                 _      -> "ENGLISH") "")
-      let predictionList = AddNewAddress.getLocationList searchLocationResp.predictions
+      let sortedByDistanceList = sortPredctionByDistance searchLocationResp.predictions
+          predictionList = AddNewAddress.getLocationList sortedByDistanceList
           recentLists = state.data.recentSearchs.predictionArray
           filteredRecentsList = filterRecentSearches recentLists predictionList
           filteredPredictionList = differenceOfLocationLists predictionList filteredRecentsList
