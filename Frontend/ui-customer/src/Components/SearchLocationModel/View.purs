@@ -219,7 +219,7 @@ sourceDestinationImageView =
         ][  imageView
             [ height $ V 25
             , width $ V 25
-            , imageWithFallback $ "ny_ic_loc_red," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_loc_red.png"
+            , imageWithFallback $ "ny_ic_loc_red," <> (getAssetStoreLink FunctionCall) <> "ny_ic_loc_red.png"
             ]
         ]
     ]

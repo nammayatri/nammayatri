@@ -91,8 +91,8 @@ errorModalConfig state = let
     , buttonConfig {
         text = (getString BOOK_NOW)
       , margin = (Margin 16 0 16 16)
-      , background = Color.black900
-      , color = Color.yellow900
+      , background = state.data.config.primaryBackground
+      , color = state.data.config.primaryTextColor
       , fontStyle = FontStyle.medium LanguageStyle
       , textSize = FontSize.a_16
       , visibility = if (Storage.isLocalStageOn ST.HomeScreen) then VISIBLE else GONE
