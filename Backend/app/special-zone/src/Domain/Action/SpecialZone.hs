@@ -14,6 +14,7 @@
 
 module Domain.Action.SpecialZone where
 
+import Data.Maybe (listToMaybe)
 import qualified Domain.Types.SpecialZone as Domain
 import EulerHS.Prelude hiding (id, state)
 import Kernel.External.Maps (LatLong)
