@@ -11,6 +11,8 @@
     # Frontend inputs
     purifix.url = "github:purifix/purifix";
     dream2nix.url = "github:nix-community/dream2nix";
+    dream2nix.inputs.nixpkgs.follows = "dream2nix-nixpkgs-fixed";
+    dream2nix-nixpkgs-fixed.url = "nixpkgs/c1989c17e2658f721df7b0027cbc3d8959f914cb"; # when this fix gets upstreamed remove
     proc-flake.url = "github:srid/proc-flake";
   };
   outputs = inputs:
