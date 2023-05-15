@@ -138,7 +138,7 @@
           mode = [ "production" "development" ];
           env = [ "master" "sandbox" "prod" ];
           target = [ "ui-customer" "ui-driver" ];
-          platform = [ "android" "ios" ];
+          platform = [ "android" ]; # TODO: Re-add ios
         };
 
       bundles =
