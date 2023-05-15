@@ -122,7 +122,7 @@ Ex: `backend/feat: #341 Driver onboarding flow`, `frontend/fix: #322 Font size i
 
 `<issue-number>` Github issue number to automatically link the commit with the issue
 
-`<short-summary>` try to provide descriptive message here. Its also easier to write smaller
+`<short-summary>` try to provide descriptive message here. It's also easier to write smaller
 message if the commits are smaller.
 
 ### Branch naming convention
