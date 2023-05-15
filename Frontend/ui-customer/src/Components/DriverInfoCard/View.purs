@@ -94,17 +94,17 @@ supportButton push state =
   , stroke $ "1,"<> Color.grey900
   , cornerRadius 20.0
   ][ imageView
-      [ imageUrl "ny_ic_share"
+      [ imageWithFallback "ny_ic_share_icon,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_share_icon.png"
       , height $ V 18
       , width $ V 18
-      , margin $ Margin 10 10 10 10
-      , visibility GONE
-      -- , onClick push $ const ShareRide
+      , margin $ Margin 10 10 10 4
+      , visibility VISIBLE
+      , onClick push $ const ShareRide
       ]
     , linearLayout
       [ height (V 1)
       , width (V 19)
-      , visibility GONE
+      , visibility VISIBLE
       , margin (MarginVertical 8 8)
       , background Color.lightGreyShade
       ][]
@@ -112,7 +112,7 @@ supportButton push state =
       [ imageWithFallback "ny_ic_contact_support,https://assets.juspay.in/nammayatri/images/user/ny_ic_contact_support.png"
       , height $ V 18
       , width $ V 18
-      , margin $ Margin 10 10 10 10
+      , margin $ Margin 10 4 10 10
       , onClick push $ const Support
       ]
   ]
@@ -142,7 +142,7 @@ locationTrackButton push state =
 sosView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
 sosView push state =
   linearLayout
-    [ height WRAP_CONTENT
+    [ height MATCH_PARENT
     , width WRAP_CONTENT
     , visibility if (state.props.currentStage == RideAccepted) || (state.props.currentStage == RideStarted) then VISIBLE else GONE
     , orientation VERTICAL
