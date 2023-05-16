@@ -207,7 +207,7 @@ defaultEstimate =
       waitingTimeEstimatedThreshold = Nothing,
       waitingChargePerMin = Nothing,
       waitingOrPickupCharges = Nothing,
-      createdAt = defaultUTCDate
+      createdAt = defaultDate
     }
 
 instance Serialize Estimate where

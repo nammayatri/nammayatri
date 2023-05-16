@@ -294,8 +294,8 @@ defaultPerson =
       alternateMobileNumberEncrypted = Nothing,
       unencryptedAlternateMobileNumber = Nothing,
       alternateMobileNumberHash = Nothing,
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate,
+      createdAt = defaultDate,
+      updatedAt = defaultDate,
       bundleVersion = Nothing,
       clientVersion = Nothing
     }
