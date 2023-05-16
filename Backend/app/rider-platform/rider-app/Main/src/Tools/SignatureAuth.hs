@@ -17,7 +17,7 @@
 module Tools.SignatureAuth where
 
 import Control.Arrow
-import Control.Lens ((?=))
+import Control.Lens (at, (.=), (.~), (?=))
 import qualified Crypto.Hash as Hash
 import qualified Crypto.PubKey.RSA.PKCS15 as RSA
 import qualified Crypto.Store.X509 as CryptoStore
