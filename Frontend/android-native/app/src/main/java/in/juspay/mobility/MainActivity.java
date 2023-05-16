@@ -372,11 +372,7 @@ public class MainActivity extends AppCompatActivity {
 
                         @Override
                         public void onAnimationEnd(Animator animation) {
-                            if (isHideSplashEventCalled) {
                                 hideSplash();
-                            } else {
-                                splashLottieView.playAnimation();
-                            }
                         }
                         @Override
                         public void onAnimationCancel(Animator animation) {
@@ -683,12 +679,7 @@ public class MainActivity extends AppCompatActivity {
                     System.out.println("Json Data" + json.toString());
                     hyperServices.process(json);
                 } else if (jsonObject.optString("event").equals("hide_splash")) {
-                    String key = getResources().getString(R.string.service);
-                    if (key != null && key.equals("nammayatri") && isSystemAnimEnabled) {
-                            isHideSplashEventCalled = true;
-                    } else {
                         hideSplash();
-                    }
                 } else if (jsonObject.optString("event").equals("show_splash")) {
                     View v = findViewById(R.id.splash);
                     if (v != null) {

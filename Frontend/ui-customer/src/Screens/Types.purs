@@ -428,6 +428,7 @@ data Stage = HomeScreen
            | RideRating
            | FavouriteLocationModel
            | ChatWithDriver
+           | InitialStage
 
 derive instance genericStage :: Generic Stage _
 instance eqStage :: Eq Stage where eq = genericEq
@@ -732,7 +733,7 @@ type DriverInfoCard =
   , driverArrived :: Boolean
   , estimatedDistance :: String
   , driverArrivalTime :: Int
-  , bppRideId :: String 
+  , bppRideId :: String
   , driverNumber :: Maybe String
   , merchantExoPhone :: String
   }

@@ -57,7 +57,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (countDown, flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getLocationName, getNewTrackingId, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, toString, waitingCountdownTimer, getDistanceBwCordinates, fetchAndUpdateCurrentLocation, getCurrentLocationMarker, getPreviousVersion, storeOnResumeCallback, decodeErrorMessage)
+import Helpers.Utils (getLocationName, getNewTrackingId, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, toString, waitingCountdownTimer, getDistanceBwCordinates, fetchAndUpdateCurrentLocation, getCurrentLocationMarker, getPreviousVersion, storeOnResumeCallback, decodeErrorMessage, hideSplash)
 import JBridge (enableMyLocation, drawRoute, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, updateRoute, storeCallBackMessageUpdated, startChatListenerService, stopChatListenerService, updateRoute, toast, getExtendedPath, generateSessionId, initialWebViewSetUp, isMockLocation)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -79,6 +79,8 @@ import Services.Backend (getDriverLocation, getQuotes, getRoute, makeGetRouteReq
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore, updateLocalStage)
 import Styles.Colors as Color
 import Types.App (GlobalState)
+import Helpers.Utils (logEvent)
+import Debug (spy)
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -216,7 +218,12 @@ view push state =
     , width MATCH_PARENT
     , onBackPressed push (const BackPressed)
     , clickable true
-    , afterRender push (const AfterRender)
+    , afterRender(\action -> do
+                    _ <- hideSplash
+                    _ <- logEvent "afterRender"
+                    _ <- push action
+                    pure unit
+                  )(const AfterRender)
     ]
     [ linearLayout
         [ height MATCH_PARENT
@@ -275,10 +282,10 @@ view push state =
                 , background if (state.props.currentStage == RideCompleted || state.props.currentStage == RideRating) then Color.black9000 else Color.transparent
                 ]
                 []
-            , rideRequestFlowView push state
+            , if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, RideCompleted, FindingEstimate, ConfirmingRide, FindingQuotes, TryAgain ]) then rideRequestFlowView push state else emptyTextView state
             , if state.props.currentStage == PricingTutorial then (pricingTutorialView push state) else emptyTextView state
             , if state.props.currentStage == ChatWithDriver then (chatView push state) else emptyTextView state
-            , rideTrackingView push state
+            , if (any (_ == state.props.currentStage) [RideAccepted, RideStarted]) then rideTrackingView push state else emptyTextView state
             , if ((not state.props.ratingModal) && (state.props.showlocUnserviceablePopUp || state.props.isMockLocation) && state.props.currentStage == HomeScreen) then (sourceUnserviceableView push state) else emptyTextView state
             , if state.data.settingSideBar.opened /= SettingSideBar.CLOSED then settingSideBarView push state else emptyTextView state
             , if (state.props.currentStage == SearchLocationModel || state.props.currentStage == FavouriteLocationModel) then searchLocationView push state else emptyTextView state
@@ -304,7 +311,7 @@ view push state =
     ]
 
 callSupportPopUpView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-callSupportPopUpView push state = 
+callSupportPopUpView push state =
   linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
@@ -891,7 +898,6 @@ rideRequestFlowView push state =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , cornerRadii $ Corners 24.0 true true false false
-    , visibility if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, RideCompleted, FindingEstimate, ConfirmingRide, FindingQuotes, TryAgain ]) then VISIBLE else GONE
     , alignParentBottom "true,-1"
     ]
     [ -- TODO Add Animations
@@ -1578,7 +1584,6 @@ rideTrackingView push state =
     , background Color.transparent
     , alignParentBottom "true,-1" -- Check it in Android.
     , onBackPressed push (const $ BackPressed)
-    , visibility if (any (_ == state.props.currentStage) [RideAccepted, RideStarted]) then VISIBLE else GONE
     ]
     [ -- TODO Add Animations
       -- PrestoAnim.animationSet

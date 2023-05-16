@@ -510,7 +510,7 @@ data Action = NoAction
             | UpdatePickupLocation String String String
             | CloseLocationTracking
             | ShowCallDialer CallType
-            | CloseShowCallDialer 
+            | CloseShowCallDialer
             | StartLocationTracking String
             | ExitLocationSelected LocationListItemState Boolean
             | DistanceOutsideLimitsActionController PopUpModal.Action
@@ -562,9 +562,15 @@ data Action = NoAction
             | CheckFlowStatusAction
             | GoToEditProfile
             | IsMockLocation String
+            | UpdateData
 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
+
+eval UpdateData state = do
+  if (isLocalStageOn InitialStage) then do
+    exit $ CheckFlowStatus state
+  else continue state
 
 eval CheckFlowStatusAction state = exit $ CheckFlowStatus state
 
@@ -932,8 +938,8 @@ eval (DriverInfoCardActionController (DriverInfoCardController.LocationTracking)
 
 eval (DriverInfoCardActionController (DriverInfoCardController.OpenEmergencyHelp)) state = continue state{props{emergencyHelpModal = true}}
 
-eval (DriverInfoCardActionController (DriverInfoCardController.ShareRide)) state = do 
-  continueWithCmd state 
+eval (DriverInfoCardActionController (DriverInfoCardController.ShareRide)) state = do
+  continueWithCmd state
         [ do
             _ <- pure $ shareTextMessage (getValueToLocalStore USER_NAME <> "is on a Namma Yatri Ride") $ "👋 Hey,\n\nI am riding with Namma Driver " <> (state.data.driverInfoCardState.driverName) <> "! Track this ride on: " <> ("https://nammayatri.in/track/?id="<>state.data.driverInfoCardState.rideId) <> "\n\nVehicle number: " <> (state.data.driverInfoCardState.registrationNumber)
             pure NoAction
@@ -1290,7 +1296,7 @@ eval (ShowCallDialer item) state = do
             pure NoAction
         ]
     _ -> continue state
-    
+
 eval (StartLocationTracking item) state = do
   case item of
     "GOOGLE_MAP" -> do

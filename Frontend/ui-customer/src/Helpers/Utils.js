@@ -53,27 +53,9 @@ export const validateEmail = function (email){
     return re.test(String(email).toLowerCase());
 }
 
-export const addTimeToDate = function(date){
-    return function(num){
-        return function(timeunit){
-            return moment(date).add(num,timeunit).toDate();
-        }
-    }
-}
-
 export const factoryResetApp = function (str) {
     console.log("HERE IN RESET ===--->>")
     window.JBridge.factoryResetApp()
-}
-
-export const dateCompare = function (currentDate) {
-    return function (validDate) {
-        console.log (moment(currentDate).isBefore(validDate), currentDate, validDate);
-        if(!moment(currentDate).isBefore(validDate)){
-            window.JBridge.toast("Invalid Date/Time");
-        }
-        return moment(currentDate).isBefore(validDate);
-    }
 }
 
 export const secondsToHms = function (d) {

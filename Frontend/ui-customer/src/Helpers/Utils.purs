@@ -90,16 +90,12 @@ foreign import getCurrentDate :: String -> String
 foreign import storeCallBackContacts :: forall action. (action -> Effect Unit) -> ((Array Contacts) -> action) -> Effect Unit
 foreign import parseNewContacts :: String -> (Array NewContacts)
 
-foreign import dateCompare :: Date -> Date -> Boolean
-
 foreign import secondsToHms :: Int -> String
 
 foreign import getTime :: Unit -> Int
 
 -- foreign import generateSessionToken :: String -> String
 foreign import requestKeyboardShow :: String -> Effect Unit
-
-foreign import addTimeToDate :: Date -> Number -> String -> Date
 
 foreign import factoryResetApp :: String -> Unit
 
