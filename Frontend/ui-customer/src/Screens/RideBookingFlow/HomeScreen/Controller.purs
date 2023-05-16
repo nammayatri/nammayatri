@@ -569,11 +569,8 @@ eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 eval CheckFlowStatusAction state = exit $ CheckFlowStatus state
 
 eval (IsMockLocation isMock) state = do
-  _ <- pure $ spy "IsMockLocation" isMock
-  let val = if isMock == "true" then true else false
-  when (val) do
-    _ <- pure $ firebaseLogEvent $ "ny_fakeGPS_enabled"
-    pure unit
+  let val = isMock == "true"
+  _ <- pure if val then firebaseLogEvent "ny_fakeGPS_enabled" else unit 
   continue state{props{isMockLocation = val}}
 
 eval (UpdateCurrentStage stage) state = do

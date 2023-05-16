@@ -2821,23 +2821,28 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     @JavascriptInterface
     public void isMockLocation(String callback) {
         if (!isLocationPermissionEnabled()) return;
-        client.getLastLocation()
-                .addOnSuccessListener(activity, location -> {
-                    boolean isMock = false;
-                    if (Build.VERSION.SDK_INT <= 30) {
-                        isMock = location.isFromMockProvider();
-                        //methodName = "isFromMockProvider";
-                    } else if(Build.VERSION.SDK_INT >= 31) {
-                        isMock = location.isMock();
-                        //methodName = "isMock";
-                    }
-                    if (callback != null && dynamicUI != null && juspayServices.getDynamicUI() != null) {
-                        String js = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
-                                callback, isMock);
-                        dynamicUI.addJsToWebView(js);
-                    }
-                })
-                .addOnFailureListener(activity, e -> Log.e(LOG_TAG, "Last and current position not known"));
+        try {
+            client.getLastLocation()
+                    .addOnSuccessListener(activity, location -> {
+                        boolean isMock = false;
+                        if (location==null) return;
+                        if (Build.VERSION.SDK_INT <= 30) {
+                            isMock = location.isFromMockProvider();
+                            //methodName = "isFromMockProvider";
+                        } else if(Build.VERSION.SDK_INT >= 31) {
+                            isMock = location.isMock();
+                            //methodName = "isMock";
+                        }
+                        if (callback != null && dynamicUI != null && juspayServices.getDynamicUI() != null) {
+                            String js = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
+                                    callback, isMock);
+                            dynamicUI.addJsToWebView(js);
+                        }
+                    })
+                    .addOnFailureListener(activity, e -> Log.e(LOG_TAG, "Last and current position not known"));
+        }catch (Exception e){
+            e.printStackTrace();
+        }
     }
 
     private float bearingBetweenLocations(LatLng latLng1,LatLng latLng2) {
