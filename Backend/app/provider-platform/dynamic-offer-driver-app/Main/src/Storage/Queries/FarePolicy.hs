@@ -146,6 +146,10 @@ import Domain.Types.Vehicle.Variant (Variant)
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
@@ -234,3 +238,48 @@ update farePolicy = do
     updateSlabsDetails dets = do
       QFPSlabDetSlabs.deleteAll' farePolicy.id
       Esq.createMany' dets
+
+transformBeamFarePolicyToDomain :: BeamFP.FarePolicy -> FarePolicy
+transformBeamFarePolicyToDomain BeamFP.FarePolicyT {..} = do
+  FarePolicy
+    { id = Id id,
+      merchantId = Id merchantId,
+      vehicleVariant = vehicleVariant,
+      baseDistanceFare = baseDistanceFare,
+      baseDistanceMeters = baseDistanceMeters,
+      perExtraKmFare = perExtraKmFare,
+      deadKmFare = deadKmFare,
+      driverExtraFee = ExtraFee driverMinExtraFee driverMaxExtraFee,
+      nightShiftRate = nightShiftRate,
+      nightShiftStart = nightShiftStart,
+      nightShiftEnd = nightShiftEnd,
+      maxAllowedTripDistance = maxAllowedTripDistance,
+      minAllowedTripDistance = minAllowedTripDistance,
+      waitingChargePerMin = waitingChargePerMin,
+      waitingTimeEstimatedThreshold = waitingTimeEstimatedThreshold,
+      createdAt = createdAt,
+      updatedAt = updatedAt
+    }
+
+transformDomainFarePolicyToBeam :: FarePolicy -> BeamFP.FarePolicy
+transformDomainFarePolicyToBeam FarePolicy {..} =
+  BeamFP.defaultFarePolicy
+    { BeamFP.id = getId id,
+      BeamFP.merchantId = getId merchantId,
+      BeamFP.vehicleVariant = vehicleVariant,
+      BeamFP.baseDistanceFare = baseDistanceFare,
+      BeamFP.baseDistanceMeters = baseDistanceMeters,
+      BeamFP.perExtraKmFare = perExtraKmFare,
+      BeamFP.deadKmFare = deadKmFare,
+      BeamFP.driverMinExtraFee = minFee driverExtraFee,
+      BeamFP.driverMaxExtraFee = maxFee driverExtraFee,
+      BeamFP.nightShiftRate = nightShiftRate,
+      BeamFP.nightShiftStart = nightShiftStart,
+      BeamFP.nightShiftEnd = nightShiftEnd,
+      BeamFP.maxAllowedTripDistance = maxAllowedTripDistance,
+      BeamFP.minAllowedTripDistance = minAllowedTripDistance,
+      BeamFP.waitingChargePerMin = waitingChargePerMin,
+      BeamFP.waitingTimeEstimatedThreshold = waitingTimeEstimatedThreshold,
+      BeamFP.createdAt = createdAt,
+      BeamFP.updatedAt = updatedAt
+    }
