@@ -254,4 +254,44 @@ merchantServiceUsageConfigToPSModifiers =
   M.fromList
     []
 
+instance IsString CallService where
+  fromString = show
+
+instance IsString MapsService where
+  fromString = show
+
+instance IsString VerificationService where
+  fromString = show
+
+instance IsString WhatsappService where
+  fromString = show
+
+instance IsString SmsService where
+  fromString = show
+
+defaultMerchantServiceUsageConfig :: MerchantServiceUsageConfig
+defaultMerchantServiceUsageConfig =
+  MerchantServiceUsageConfigT
+    { merchantId = "",
+      initiateCall = "",
+      getDistances = "",
+      getEstimatedPickupDistances = "",
+      getRoutes = "",
+      getPickupRoutes = "",
+      getTripRoutes = "",
+      snapToRoad = "",
+      getPlaceName = "",
+      getPlaceDetails = "",
+      autoComplete = "",
+      smsProvidersPriorityList = [""],
+      whatsappProvidersPriorityList = [""],
+      verificationService = "",
+      updatedAt = defaultDate,
+      createdAt = defaultDate
+    }
+
+instance Serialize MerchantServiceUsageConfig where
+  put = error "undefined"
+  get = error "undefined"
+
 $(enableKVPG ''MerchantServiceUsageConfigT ['merchantId] [])

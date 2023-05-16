@@ -39,6 +39,7 @@ import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common (Meters, Money)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Merchant (MerchantTId)
@@ -163,5 +164,28 @@ restrictedExtraFareToPSModifiers :: M.Map Text (A.Value -> A.Value)
 restrictedExtraFareToPSModifiers =
   M.fromList
     []
+
+instance IsString Vehicle.Variant where
+  fromString = show
+
+instance IsString Meters where
+  fromString = show
+
+instance IsString Money where
+  fromString = show
+
+defaultRestrictedExtraFare :: RestrictedExtraFare
+defaultRestrictedExtraFare =
+  RestrictedExtraFareT
+    { id = "",
+      merchantId = "",
+      vehicleVariant = "",
+      minTripDistance = "",
+      driverMaxExtraFare = ""
+    }
+
+instance Serialize RestrictedExtraFare where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''RestrictedExtraFareT ['id] [])

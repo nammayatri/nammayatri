@@ -229,4 +229,47 @@ transporterConfigToPSModifiers =
   M.fromList
     []
 
+instance IsString Meters where
+  fromString = show
+
+instance IsString Seconds where
+  fromString = show
+
+instance IsString Centesimal where
+  fromString = show
+
+defaultTransporterConfig :: TransporterConfig
+defaultTransporterConfig =
+  TransporterConfigT
+    { merchantId = "",
+      pickupLocThreshold = "",
+      dropLocThreshold = "",
+      rideTimeEstimatedThreshold = "",
+      includeDriverCurrentlyOnRide = False,
+      defaultPopupDelay = "",
+      popupDelayToAddAsPenalty = Nothing,
+      thresholdCancellationScore = Nothing,
+      minRidesForCancellationScore = Nothing,
+      mediaFileUrlPattern = "",
+      mediaFileSizeUpperLimit = 0,
+      waitingTimeEstimatedThreshold = "",
+      referralLinkPassword = "",
+      fcmUrl = "",
+      fcmServiceAccount = "",
+      fcmTokenKeyPrefix = "",
+      onboardingTryLimit = 0,
+      onboardingRetryTimeInHours = 0,
+      checkImageExtractionForDashboard = False,
+      searchRepeatLimit = 0,
+      actualRideDistanceDiffThreshold = "",
+      upwardsRecomputeBuffer = "",
+      approxRideDistanceDiffThreshold = "",
+      createdAt = defaultDate,
+      updatedAt = defaultDate
+    }
+
+instance Serialize TransporterConfig where
+  put = error "undefined"
+  get = error "undefined"
+
 $(enableKVPG ''TransporterConfigT ['merchantId] [])
