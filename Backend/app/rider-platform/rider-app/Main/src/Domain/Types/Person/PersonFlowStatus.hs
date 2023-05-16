@@ -73,6 +73,13 @@ data FlowStatus
   | PENDING_RATING
       { rideId :: Id DRide.Ride
       }
+  | DRIVER_ARRIVED
+      { rideId :: Id DRide.Ride,
+        bookingId :: Id DB.Booking,
+        driverLocation :: Maybe Maps.LatLong,
+        trackingUrl :: Maybe BaseUrl,
+        driverArrivalTime :: Maybe UTCTime
+      }
   deriving (Show, Eq, Generic)
 
 flowStatusCustomJSONOptions :: Options
