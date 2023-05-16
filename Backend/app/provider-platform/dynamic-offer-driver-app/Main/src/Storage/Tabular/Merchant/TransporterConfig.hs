@@ -22,7 +22,7 @@ module Storage.Tabular.Merchant.TransporterConfig where
 
 import qualified Domain.Types.Merchant as Domain
 import qualified Domain.Types.Merchant.TransporterConfig as Domain
-import qualified Kernel.External.FCM.Types as FCM
+import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Common

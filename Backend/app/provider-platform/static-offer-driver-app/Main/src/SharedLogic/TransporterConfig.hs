@@ -15,7 +15,7 @@
 module SharedLogic.TransporterConfig where
 
 import qualified Domain.Types.Merchant as DM
-import Kernel.External.FCM.Types
+import Kernel.External.Notification.FCM.Types
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Error

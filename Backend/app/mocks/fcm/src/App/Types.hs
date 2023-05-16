@@ -16,7 +16,7 @@ module App.Types where
 
 import qualified Data.Map as Map
 import EulerHS.Prelude
-import Kernel.External.FCM.Types
+import Kernel.External.Notification.FCM.Types
 import Kernel.Types.App
 import Kernel.Types.Common hiding (id)
 import Kernel.Utils.App (getPodName)

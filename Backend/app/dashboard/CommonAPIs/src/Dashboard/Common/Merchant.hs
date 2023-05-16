@@ -27,9 +27,9 @@ import Data.Either (isRight)
 import Data.List.Extra (anySame)
 import Data.OpenApi hiding (description, name, password, url)
 import Kernel.External.Encryption (encrypt)
-import qualified Kernel.External.FCM.Flow as FCM
-import qualified Kernel.External.FCM.Types as FCM
 import qualified Kernel.External.Maps as Maps
+import qualified Kernel.External.Notification.FCM.Flow as FCM
+import qualified Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.External.SMS as SMS
 import qualified Kernel.External.SMS.ExotelSms.Types as Exotel
 import qualified Kernel.External.Verification as Verification

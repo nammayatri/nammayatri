@@ -25,6 +25,7 @@ import qualified Domain.Types.Merchant as Domain
 import qualified Domain.Types.Merchant.MerchantServiceConfig as Domain
 import qualified Kernel.External.Call as Call
 import qualified Kernel.External.Maps.Interface as Maps
+import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.SMS.Interface as Sms
 import qualified Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude
@@ -66,6 +67,8 @@ instance FromTType MerchantServiceConfigT Domain.MerchantServiceConfig where
       Domain.SmsService Sms.MyValueFirst -> Domain.SmsServiceConfig . Sms.MyValueFirstConfig <$> decodeFromText configJSON
       Domain.WhatsappService Whatsapp.GupShup -> Domain.WhatsappServiceConfig . Whatsapp.GupShupConfig <$> decodeFromText configJSON
       Domain.CallService Call.Exotel -> Domain.CallServiceConfig . Call.ExotelConfig <$> decodeFromText configJSON
+      Domain.NotificationService Notification.FCM -> Domain.NotificationServiceConfig . Notification.FCMConfig <$> decodeFromText configJSON
+      Domain.NotificationService Notification.PayTM -> Domain.NotificationServiceConfig . Notification.PayTMConfig <$> decodeFromText configJSON
     return $
       Domain.MerchantServiceConfig
         { merchantId = fromKey merchantId,
@@ -93,3 +96,6 @@ getServiceNameConfigJSON = \case
     Whatsapp.GupShupConfig cfg -> (Domain.WhatsappService Whatsapp.GupShup, encodeToText cfg)
   Domain.CallServiceConfig callCfg -> case callCfg of
     Call.ExotelConfig cfg -> (Domain.CallService Call.Exotel, encodeToText cfg)
+  Domain.NotificationServiceConfig notificationCfg -> case notificationCfg of
+    Notification.FCMConfig cfg -> (Domain.NotificationService Notification.FCM, encodeToText cfg)
+    Notification.PayTMConfig cfg -> (Domain.NotificationService Notification.PayTM, encodeToText cfg)

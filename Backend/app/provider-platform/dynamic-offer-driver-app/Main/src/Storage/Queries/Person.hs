@@ -25,9 +25,9 @@ import Domain.Types.Person as Person
 import Domain.Types.Ride as Ride
 import Domain.Types.Vehicle as Vehicle
 import Kernel.External.Encryption
-import Kernel.External.FCM.Types (FCMRecipientToken)
-import qualified Kernel.External.FCM.Types as FCM
 import Kernel.External.Maps as Maps
+import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
+import qualified Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq

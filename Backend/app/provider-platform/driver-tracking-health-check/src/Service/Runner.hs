@@ -22,8 +22,8 @@ import Domain.Types.Person (Driver)
 import qualified Domain.Types.Person as SP
 import Environment (Flow)
 import Kernel.External.Encryption (decrypt)
-import Kernel.External.FCM.Types (FCMNotificationType (TRIGGER_SERVICE))
-import qualified Kernel.External.FCM.Types as FCM
+import Kernel.External.Notification.FCM.Types (FCMNotificationType (TRIGGER_SERVICE))
+import qualified Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.External.SMS.MyValueFirst.Flow as SF
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq

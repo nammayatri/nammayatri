@@ -15,7 +15,6 @@
 module Domain.Types.Merchant where
 
 import Domain.Types.Common
-import Kernel.External.FCM.Types
 import Kernel.Prelude
 import Kernel.Types.Base64 (Base64)
 import Kernel.Types.Geofencing
@@ -28,7 +27,6 @@ data MerchantD (s :: UsageSafety) = Merchant
     shortId :: ShortId Merchant,
     name :: Text,
     city :: Text,
-    fcmConfig :: FCMConfig,
     geofencingConfig :: GeofencingConfig,
     gatewayUrl :: BaseUrl,
     registryUrl :: BaseUrl,

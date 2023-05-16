@@ -22,7 +22,7 @@ module Storage.Tabular.Person where
 
 import qualified Domain.Types.Person as Domain
 import Kernel.External.Encryption (DbHash, Encrypted (..), EncryptedHashed (..))
-import Kernel.External.FCM.Types (FCMRecipientToken)
+import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Centesimal

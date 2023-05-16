@@ -33,8 +33,8 @@ import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption
-import Kernel.External.FCM.Types (FCMRecipientToken)
 import Kernel.External.Maps.Types (LatLong (..))
+import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
 import Kernel.External.Whatsapp.Interface.Types as Whatsapp
 import Kernel.Sms.Config
 import qualified Kernel.Storage.Esqueleto as DB

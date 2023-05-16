@@ -35,9 +35,9 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as DRD
 import qualified Domain.Types.RideDetails as RD
 import qualified Domain.Types.Vehicle as DVeh
-import qualified Kernel.External.FCM.Types as FCM
 import Kernel.External.Maps (HasCoordinates (getCoordinates))
 import Kernel.External.Maps.Types
+import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
