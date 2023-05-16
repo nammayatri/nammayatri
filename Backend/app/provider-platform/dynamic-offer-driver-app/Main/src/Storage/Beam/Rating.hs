@@ -37,6 +37,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Person (PersonTId)
@@ -110,5 +111,21 @@ ratingToPSModifiers :: M.Map Text (A.Value -> A.Value)
 ratingToPSModifiers =
   M.fromList
     []
+
+defaultRating :: Rating
+defaultRating =
+  RatingT
+    { id = "",
+      rideId = "",
+      driverId = "",
+      ratingValue = 0,
+      feedbackDetails = Nothing,
+      createdAt = defaultDate,
+      updatedAt = defaultDate
+    }
+
+instance Serialize Rating where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''RatingT ['id] [])

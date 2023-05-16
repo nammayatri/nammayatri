@@ -38,6 +38,7 @@ import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.App (RegToken)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 
@@ -138,6 +139,15 @@ deriving stock instance Ord Domain.LoginType
 
 deriving stock instance Ord Domain.RTEntityType
 
+instance IsString Domain.LoginType where
+  fromString = show
+
+instance IsString Domain.Medium where
+  fromString = show
+
+instance IsString Domain.RTEntityType where
+  fromString = show
+
 registrationTokenTMod :: RegistrationTokenT (B.FieldModification (B.TableField RegistrationTokenT))
 registrationTokenTMod =
   B.tableModification
@@ -169,5 +179,28 @@ registrationTokenToPSModifiers :: M.Map Text (A.Value -> A.Value)
 registrationTokenToPSModifiers =
   M.fromList
     []
+
+defaultRegistrationToken :: RegistrationToken
+defaultRegistrationToken =
+  RegistrationTokenT
+    { id = "",
+      token = "",
+      attempts = 0,
+      authMedium = "",
+      authType = "",
+      authValueHash = "",
+      verified = False,
+      authExpiry = 10,
+      tokenExpiry = 10,
+      entityId = "",
+      entityType = "",
+      createdAt = defaultDate,
+      updatedAt = defaultDate,
+      info = Nothing
+    }
+
+instance Serialize RegistrationToken where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''RegistrationTokenT ['id] [])

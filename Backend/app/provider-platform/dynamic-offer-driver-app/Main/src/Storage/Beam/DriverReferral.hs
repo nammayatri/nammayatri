@@ -37,6 +37,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Person (PersonTId)
@@ -107,7 +108,7 @@ defaultDriverReferral =
   DriverReferralT
     { referralCode = "",
       driverId = "",
-      linkedAt = defaultUTCDate
+      linkedAt = defaultDate
     }
 
 instance Serialize DriverReferral where

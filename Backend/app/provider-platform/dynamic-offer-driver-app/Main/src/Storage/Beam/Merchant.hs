@@ -39,6 +39,7 @@ import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Geofencing
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 
@@ -83,6 +84,15 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.Status where
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.Status
 
 instance FromBackendRow Postgres Domain.Status
+
+instance IsString Domain.Status where
+  fromString = show
+
+instance IsString Domain.FarePolicyType where
+  fromString = show
+
+instance IsString GeoRestriction where
+  fromString = show
 
 data MerchantT f = MerchantT
   { id :: B.C f Text,
@@ -203,8 +213,8 @@ defaultMerchant =
       verified = False,
       enabled = False,
       internalApiKey = "",
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate,
+      createdAt = defaultDate,
+      updatedAt = defaultDate,
       originRestriction = "",
       destinationRestriction = "",
       farePolicyType = "",

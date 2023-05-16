@@ -37,6 +37,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import qualified Storage.Tabular.Merchant as SM
@@ -109,5 +110,21 @@ exophoneToPSModifiers :: M.Map Text (A.Value -> A.Value)
 exophoneToPSModifiers =
   M.fromList
     []
+
+defaultExophone :: Exophone
+defaultExophone =
+  ExophoneT
+    { id = "",
+      merchantId = "",
+      primaryPhone = "",
+      backupPhone = "",
+      isPrimaryDown = False,
+      createdAt = defaultDate,
+      updatedAt = defaultDate
+    }
+
+instance Serialize Exophone where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''ExophoneT ['id] [])

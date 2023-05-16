@@ -38,6 +38,7 @@ import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common (Centesimal, Money)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Vehicle ()
@@ -101,6 +102,12 @@ data FareParametersT f = FareParametersT
   }
   deriving (Generic, B.Beamable)
 
+instance IsString Money where
+  fromString = show
+
+instance IsString Domain.FarePolicyType where
+  fromString = show
+
 instance B.Table FareParametersT where
   data PrimaryKey FareParametersT f
     = Id (B.C f Text)
@@ -156,5 +163,27 @@ fareParametersToPSModifiers :: M.Map Text (A.Value -> A.Value)
 fareParametersToPSModifiers =
   M.fromList
     []
+
+defaultFareParameters :: FareParameters
+defaultFareParameters =
+  FareParametersT
+    { id = "",
+      baseFare = "",
+      deadKmFare = Nothing,
+      extraKmFare = Nothing,
+      driverSelectedFare = Nothing,
+      customerExtraFee = Nothing,
+      nightShiftRate = Nothing,
+      nightCoefIncluded = False,
+      waitingChargePerMin = Nothing,
+      waitingOrPickupCharges = Nothing,
+      serviceCharge = Nothing,
+      farePolicyType = "",
+      govtChargesPerc = Nothing
+    }
+
+instance Serialize FareParameters where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''FareParametersT ['id] [])

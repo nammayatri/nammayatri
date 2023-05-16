@@ -39,6 +39,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import qualified Storage.Tabular.Merchant as TM
@@ -85,6 +86,15 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.Category whe
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.Category
 
 instance FromBackendRow Postgres Domain.Category
+
+instance IsString Domain.RegistrationCategory where
+  fromString = show
+
+instance IsString Domain.Category where
+  fromString = show
+
+instance IsString Variant.Variant where
+  fromString = show
 
 data VehicleT f = VehicleT
   { driverId :: B.C f Text,
@@ -162,5 +172,29 @@ vehicleToPSModifiers :: M.Map Text (A.Value -> A.Value)
 vehicleToPSModifiers =
   M.fromList
     []
+
+defaultVehicle :: Vehicle
+defaultVehicle =
+  VehicleT
+    { driverId = "",
+      merchantId = "",
+      variant = "",
+      model = "",
+      color = "",
+      registrationNo = "",
+      capacity = Nothing,
+      category = Nothing,
+      make = Nothing,
+      size = Nothing,
+      energyType = Nothing,
+      registrationCategory = Nothing,
+      vehicleClass = "",
+      createdAt = defaultDate,
+      updatedAt = defaultDate
+    }
+
+instance Serialize Vehicle where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''VehicleT ['driverId] [])

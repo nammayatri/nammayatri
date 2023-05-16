@@ -37,6 +37,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Booking (BookingTId)
@@ -75,6 +76,9 @@ data BookingCancellationReasonT f = BookingCancellationReasonT
     additionalInfo :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
+
+instance IsString Domain.CancellationSource where
+  fromString = show
 
 instance B.Table BookingCancellationReasonT where
   data PrimaryKey BookingCancellationReasonT f
@@ -126,5 +130,20 @@ bookingCancellationReasonToPSModifiers :: M.Map Text (A.Value -> A.Value)
 bookingCancellationReasonToPSModifiers =
   M.fromList
     []
+
+defaultBookingCancellationReason :: BookingCancellationReason
+defaultBookingCancellationReason =
+  BookingCancellationReasonT
+    { driverId = Nothing,
+      bookingId = "",
+      rideId = Nothing,
+      source = "",
+      reasonCode = Nothing,
+      additionalInfo = Nothing
+    }
+
+instance Serialize BookingCancellationReason where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''BookingCancellationReasonT ['bookingId] [])

@@ -38,6 +38,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Merchant (MerchantTId)
@@ -157,8 +158,8 @@ defaultOnboardingDocumentConfig =
       checkExpiry = False,
       validVehicleClasses = [""],
       vehicleClassCheckType = "",
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
+      createdAt = defaultDate,
+      updatedAt = defaultDate
     }
 
 instance Serialize OnboardingDocumentConfig where

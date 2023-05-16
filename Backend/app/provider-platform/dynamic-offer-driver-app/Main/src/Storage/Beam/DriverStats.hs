@@ -38,6 +38,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Person (PersonTId)
@@ -105,7 +106,7 @@ defaultDriverStats :: DriverStats
 defaultDriverStats =
   DriverStatsT
     { driverId = "",
-      idleSince = defaultUTCDate
+      idleSince = defaultDate
     }
 
 instance Serialize DriverStats where

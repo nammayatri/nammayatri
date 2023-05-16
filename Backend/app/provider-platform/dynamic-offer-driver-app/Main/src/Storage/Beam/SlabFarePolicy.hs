@@ -39,6 +39,7 @@ import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common (Centesimal, Meters, Money)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Merchant (MerchantTId)
@@ -128,6 +129,12 @@ data SlabFarePolicyT f = SlabFarePolicyT
   }
   deriving (Generic, B.Beamable)
 
+instance IsString Variant.Variant where
+  fromString = show
+
+instance IsString Money where
+  fromString = show
+
 instance B.Table SlabFarePolicyT where
   data PrimaryKey SlabFarePolicyT f
     = Id (B.C f Text)
@@ -152,6 +159,9 @@ deriving stock instance Show SlabFarePolicy
 deriving stock instance Read Money
 
 deriving stock instance Ord Domain.Slab
+
+instance IsString Domain.Slab where
+  fromString = show
 
 slabFarePolicyTMod :: SlabFarePolicyT (B.FieldModification (B.TableField SlabFarePolicyT))
 slabFarePolicyTMod =
@@ -183,5 +193,27 @@ slabFarePolicyToPSModifiers :: M.Map Text (A.Value -> A.Value)
 slabFarePolicyToPSModifiers =
   M.fromList
     []
+
+defaultSlabFarePolicy :: SlabFarePolicy
+defaultSlabFarePolicy =
+  SlabFarePolicyT
+    { id = "",
+      merchantId = "",
+      vehicleVariant = "",
+      nightShiftStart = Nothing,
+      nightShiftEnd = Nothing,
+      nightShiftRate = Nothing,
+      maxAllowedTripDistance = Nothing,
+      minAllowedTripDistance = Nothing,
+      serviceCharge = "",
+      fareSlabs = [""],
+      govtChargesPerc = Nothing,
+      createdAt = defaultDate,
+      updatedAt = defaultDate
+    }
+
+instance Serialize SlabFarePolicy where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''SlabFarePolicyT ['id] [])

@@ -38,6 +38,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Booking (BookingTId)
@@ -136,6 +137,12 @@ deriving stock instance Show BusinessEvent
 deriving stock instance Ord Domain.EventType
 
 deriving stock instance Ord Domain.WhenPoolWasComputed
+
+instance IsString Domain.EventType where
+  fromString = show
+
+instance IsString Domain.WhenPoolWasComputed where
+  fromString = show
 
 businessEventTMod :: BusinessEventT (B.FieldModification (B.TableField BusinessEventT))
 businessEventTMod =

@@ -40,6 +40,7 @@ import GHC.Generics (Generic)
 import Kernel.External.Encryption
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Ride (RideTId)
@@ -139,5 +140,24 @@ rideDetailsToPSModifiers :: M.Map Text (A.Value -> A.Value)
 rideDetailsToPSModifiers =
   M.fromList
     []
+
+defaultRideDetails :: RideDetails
+defaultRideDetails =
+  RideDetailsT
+    { id = "",
+      driverName = "",
+      driverNumberEncrypted = Nothing,
+      driverNumberHash = Nothing,
+      driverCountryCode = Nothing,
+      vehicleNumber = "",
+      vehicleColor = Nothing,
+      vehicleVariant = Nothing,
+      vehicleModel = Nothing,
+      vehicleClass = Nothing
+    }
+
+instance Serialize RideDetails where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''RideDetailsT ['id] [])

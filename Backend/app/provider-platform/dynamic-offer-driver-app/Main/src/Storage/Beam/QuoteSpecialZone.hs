@@ -40,6 +40,7 @@ import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common (Meters (..))
 import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.Common as Common
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import qualified Storage.Tabular.FareParameters as Fare
@@ -104,6 +105,15 @@ data QuoteSpecialZoneT f = QuoteSpecialZoneT
   }
   deriving (Generic, B.Beamable)
 
+instance IsString Variant.Variant where
+  fromString = show
+
+instance IsString Common.Money where
+  fromString = show
+
+instance IsString Meters where
+  fromString = show
+
 instance B.Table QuoteSpecialZoneT where
   data PrimaryKey QuoteSpecialZoneT f
     = Id (B.C f Text)
@@ -164,12 +174,12 @@ defaultQuoteSpecialZone =
       providerId = "",
       vehicleVariant = "",
       distance = "",
-      validTill = defaultUTCDate,
+      validTill = defaultDate,
       estimatedFare = "",
       fareParametersId = "",
-      estimatedFinishTime = defaultUTCDate,
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
+      estimatedFinishTime = defaultDate,
+      createdAt = defaultDate,
+      updatedAt = defaultDate
     }
 
 instance Serialize QuoteSpecialZone where

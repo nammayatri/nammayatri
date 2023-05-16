@@ -39,7 +39,8 @@ import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Storage.Esqueleto (Point (..))
 import Kernel.Types.Common hiding (id)
-import Kernel.Types.Id hiding (Id)
+import Kernel.Types.Id
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Person (PersonTId)
@@ -128,5 +129,21 @@ driverLocationToPSModifiers :: M.Map Text (A.Value -> A.Value)
 driverLocationToPSModifiers =
   M.fromList
     []
+
+defaultDriverLocation :: DriverLocation
+defaultDriverLocation =
+  DriverLocationT
+    { driverId = "",
+      lat = "",
+      lon = "",
+      point = "",
+      coordinatesCalculatedAt = defaultUTCDate,
+      createdAt = defaultUTCDate,
+      updatedAt = defaultUTCDate
+    }
+
+instance Serialize DriverLocation where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''DriverLocationT ['driverId] [])
