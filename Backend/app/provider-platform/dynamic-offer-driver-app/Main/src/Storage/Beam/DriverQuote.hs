@@ -218,6 +218,29 @@ driverQuoteToPSModifiers =
   M.fromList
     []
 
+defaultDriverQuote :: DriverQuote
+defaultDriverQuote =
+  DriverQuoteT
+    { id = "",
+      transactionId = "",
+      searchRequestId = "",
+      searchRequestForDriverId = Nothing,
+      driverId = "",
+      driverName = "",
+      driverRating = Nothing,
+      status = "",
+      vehicleVariant = "",
+      distance = "",
+      distanceToPickup = "",
+      durationToPickup = 1.0,
+      validTill = defaultDate,
+      estimatedFare = "",
+      fareParametersId = "",
+      providerId = "",
+      createdAt = defaultDate,
+      updatedAt = defaultDate
+    }
+
 instance Serialize DriverQuote where
   put = error "undefined"
   get = error "undefined"

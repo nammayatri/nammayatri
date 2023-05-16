@@ -174,12 +174,12 @@ defaultQuoteSpecialZone =
       providerId = "",
       vehicleVariant = "",
       distance = "",
-      validTill = defaultUTCDate,
+      validTill = defaultDate,
       estimatedFare = "",
       fareParametersId = "",
-      estimatedFinishTime = defaultUTCDate,
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
+      estimatedFinishTime = defaultDate,
+      createdAt = defaultDate,
+      updatedAt = defaultDate
     }
 
 instance Serialize QuoteSpecialZone where

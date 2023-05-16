@@ -131,6 +131,17 @@ bookingCancellationReasonToPSModifiers =
   M.fromList
     []
 
+defaultBookingCancellationReason :: BookingCancellationReason
+defaultBookingCancellationReason =
+  BookingCancellationReasonT
+    { driverId = Nothing,
+      bookingId = "",
+      rideId = Nothing,
+      source = "",
+      reasonCode = Nothing,
+      additionalInfo = Nothing
+    }
+
 instance Serialize BookingCancellationReason where
   put = error "undefined"
   get = error "undefined"

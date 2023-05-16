@@ -122,7 +122,7 @@ defaultMediaFile =
     { id = "",
       fileType = "",
       url = "",
-      createdAt = defaultUTCDate
+      createdAt = defaultDate
     }
 
 instance Serialize MediaFile where
