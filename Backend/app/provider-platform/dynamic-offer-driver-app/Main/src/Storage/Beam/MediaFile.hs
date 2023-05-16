@@ -57,7 +57,7 @@ data MediaFileT f = MediaFileT
   { id :: B.C f Text,
     fileType :: B.C f Domain.MediaType,
     url :: B.C f Text,
-    createdAt :: B.C f Time.LocalTime
+    createdAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -122,7 +122,7 @@ defaultMediaFile =
     { id = "",
       fileType = "",
       url = "",
-      createdAt = defaultDate
+      createdAt = defaultUTCDate
     }
 
 instance Serialize MediaFile where

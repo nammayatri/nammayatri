@@ -57,7 +57,7 @@ fromFieldEnum f mbValue = case mbValue of
 data DriverReferralT f = DriverReferralT
   { referralCode :: B.C f Text,
     driverId :: B.C f Text,
-    linkedAt :: B.C f Time.LocalTime
+    linkedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -108,7 +108,7 @@ defaultDriverReferral =
   DriverReferralT
     { referralCode = "",
       driverId = "",
-      linkedAt = defaultDate
+      linkedAt = defaultUTCDate
     }
 
 instance Serialize DriverReferral where

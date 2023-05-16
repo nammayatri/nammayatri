@@ -57,7 +57,7 @@ fromFieldEnum f mbValue = case mbValue of
 
 data DriverStatsT f = DriverStatsT
   { driverId :: B.C f Text,
-    idleSince :: B.C f Time.LocalTime
+    idleSince :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -106,7 +106,7 @@ defaultDriverStats :: DriverStats
 defaultDriverStats =
   DriverStatsT
     { driverId = "",
-      idleSince = defaultDate
+      idleSince = defaultUTCDate
     }
 
 instance Serialize DriverStats where

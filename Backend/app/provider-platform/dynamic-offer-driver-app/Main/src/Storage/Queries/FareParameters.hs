@@ -15,9 +15,16 @@
 module Storage.Queries.FareParameters where
 
 import Domain.Types.FareParameters
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import qualified Lib.Mesh as Mesh
+import qualified Sequelize as Se
+import qualified Storage.Beam.FareParameters as BeamFP
 import Storage.Tabular.FareParameters ()
 
 create :: FareParameters -> SqlDB ()
@@ -25,3 +32,39 @@ create = Esq.create
 
 findById :: Transactionable m => Id FareParameters -> m (Maybe FareParameters)
 findById = Esq.findById
+
+transformBeamFareParametersToDomain :: BeamFP.FareParameters -> FareParameters
+transformBeamFareParametersToDomain BeamFP.FareParametersT {..} = do
+  FareParameters
+    { id = Id id,
+      baseFare = baseFare,
+      deadKmFare = deadKmFare,
+      extraKmFare = extraKmFare,
+      driverSelectedFare = driverSelectedFare,
+      customerExtraFee = customerExtraFee,
+      nightShiftRate = nightShiftRate,
+      nightCoefIncluded = nightCoefIncluded,
+      waitingChargePerMin = waitingChargePerMin,
+      waitingOrPickupCharges = waitingOrPickupCharges,
+      serviceCharge = serviceCharge,
+      farePolicyType = farePolicyType,
+      govtChargesPerc = govtChargesPerc
+    }
+
+transformDomainFareParametersToBeam :: FareParameters -> BeamFP.FareParameters
+transformDomainFareParametersToBeam FareParameters {..} =
+  BeamFP.defaultFareParameters
+    { BeamFP.id = getId id,
+      BeamFP.baseFare = baseFare,
+      BeamFP.deadKmFare = deadKmFare,
+      BeamFP.extraKmFare = extraKmFare,
+      BeamFP.driverSelectedFare = driverSelectedFare,
+      BeamFP.customerExtraFee = customerExtraFee,
+      BeamFP.nightShiftRate = nightShiftRate,
+      BeamFP.nightCoefIncluded = nightCoefIncluded,
+      BeamFP.waitingChargePerMin = waitingChargePerMin,
+      BeamFP.waitingOrPickupCharges = waitingOrPickupCharges,
+      BeamFP.serviceCharge = serviceCharge,
+      BeamFP.farePolicyType = farePolicyType,
+      BeamFP.govtChargesPerc = govtChargesPerc
+    }

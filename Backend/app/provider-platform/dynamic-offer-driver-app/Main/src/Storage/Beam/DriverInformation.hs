@@ -75,14 +75,14 @@ data DriverInformationT f = DriverInformationT
     enabled :: B.C f Bool,
     blocked :: B.C f Bool,
     verified :: B.C f Bool,
-    lastEnabledOn :: B.C f (Maybe Time.LocalTime),
+    lastEnabledOn :: B.C f (Maybe Time.UTCTime),
     referralCode :: B.C f (Maybe Text),
     canDowngradeToSedan :: B.C f Bool,
     canDowngradeToHatchback :: B.C f Bool,
     canDowngradeToTaxi :: B.C f Bool,
     mode :: B.C f (Maybe Domain.DriverMode),
-    createdAt :: B.C f Time.LocalTime,
-    updatedAt :: B.C f Time.LocalTime
+    createdAt :: B.C f Time.UTCTime,
+    updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -156,8 +156,8 @@ defaultDriverInformation =
       canDowngradeToHatchback = False,
       canDowngradeToTaxi = False,
       mode = Nothing,
-      createdAt = defaultDate,
-      updatedAt = defaultDate
+      createdAt = defaultUTCDate,
+      updatedAt = defaultUTCDate
     }
 
 instance Serialize DriverInformation where

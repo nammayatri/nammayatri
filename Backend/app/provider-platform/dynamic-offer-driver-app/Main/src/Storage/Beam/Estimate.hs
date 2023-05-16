@@ -127,7 +127,7 @@ data EstimateT f = EstimateT
     waitingTimeEstimatedThreshold :: B.C f (Maybe Seconds),
     waitingChargePerMin :: B.C f (Maybe Money),
     waitingOrPickupCharges :: B.C f (Maybe Money),
-    createdAt :: B.C f Time.LocalTime
+    createdAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -209,7 +209,7 @@ defaultEstimate =
       waitingTimeEstimatedThreshold = Nothing,
       waitingChargePerMin = Nothing,
       waitingOrPickupCharges = Nothing,
-      createdAt = defaultDate
+      createdAt = defaultUTCDate
     }
 
 instance Serialize Estimate where

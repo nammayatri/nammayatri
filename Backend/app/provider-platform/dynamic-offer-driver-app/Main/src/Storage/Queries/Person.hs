@@ -17,6 +17,7 @@ module Storage.Queries.Person where
 
 import Control.Applicative ((<|>))
 import qualified Data.Maybe as Mb
+import Data.Text (splitOn)
 import qualified Domain.Types.Booking as Booking
 import Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.DriverLocation
@@ -24,6 +25,10 @@ import Domain.Types.Merchant
 import Domain.Types.Person as Person
 import Domain.Types.Ride as Ride
 import Domain.Types.Vehicle as Vehicle
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import Kernel.External.Encryption
 import Kernel.External.FCM.Types (FCMRecipientToken)
 import qualified Kernel.External.FCM.Types as FCM
@@ -35,6 +40,9 @@ import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common hiding (Value)
 import Kernel.Utils.GenericPretty
+import qualified Lib.Mesh as Mesh
+import qualified Sequelize as Se
+import qualified Storage.Beam.Person as BeamP
 import Storage.Tabular.Booking
 import Storage.Tabular.Booking.BookingLocation
 import Storage.Tabular.DriverInformation
@@ -709,3 +717,69 @@ updateAlternateMobileNumberAndCode person = do
         PersonUpdatedAt =. val now
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey person.id)
+
+-- transformBeamPersonToDomain :: BeamP.Person -> Person
+-- transformBeamPersonToDomain BeamP.PersonT {..} = do
+--   Person
+--     {
+--       id = Id id,
+--       firstName = firstName,
+--       middleName = middleName,
+--       lastName = lastName,
+--       role = role,
+--       gender = gender,
+--       identifierType = identifierType,
+--       email = email,
+--       unencryptedMobileNumber = unencryptedMobileNumber,
+--       mobileNumber = EncryptedHashed <$> (Encrypted <$> mobileNumberEncrypted) <*> mobileNumberHash,
+--       mobileCountryCode = mobileCountryCode,
+--       passwordHash = passwordHash,
+--       identifier = identifier,
+--       rating = rating,
+--       isNew = isNew,
+--       merchantId = Id merchantId,
+--       deviceToken = deviceToken,
+--       whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus,
+--       language = language,
+--       description = description,
+--       createdAt = createdAt,
+--       updatedAt = updatedAt,
+--       bundleVersion = Just $ Version (bundleVersion) (bundleVersion) (bundleVersion),
+--       clientVersion = Just $ Version (clientVersion) (clientVersion) (clientVersion),
+--       unencryptedAlternateMobileNumber = unencryptedAlternateMobileNumber,
+--       alternateMobileNumber = EncryptedHashed <$> (Encrypted <$> alternateMobileNumberEncrypted) <*> alternateMobileNumberHash
+--     }
+
+-- transformDomainPersonToBeam :: Person -> BeamP.Person
+-- transformDomainPersonToBeam Person {..} =
+--   BeamP.defaultPerson
+--     {
+--       BeamP.id = getId id,
+--       BeamP.firstName = firstName,
+--       BeamP.middleName = middleName,
+--       BeamP.lastName = lastName,
+--       BeamP.role = role,
+--       BeamP.gender = gender,
+--       BeamP.identifierType = identifierType,
+--       BeamP.email = email,
+--       BeamP.unencryptedMobileNumber = unencryptedMobileNumber,
+--       BeamP.mobileNumberEncrypted = mobileNumber <&> unEncrypted . (.encrypted),
+--       BeamP.mobileNumberHash = mobileNumber <&> (.hash),
+--       BeamP.mobileCountryCode = mobileCountryCode,
+--       BeamP.passwordHash = passwordHash,
+--       BeamP.identifier = identifier,
+--       BeamP.rating = rating,
+--       BeamP.isNew = isNew,
+--       BeamP.merchantId = getId merchantId,
+--       BeamP.deviceToken = deviceToken,
+--       BeamP.whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus,
+--       BeamP.language = language,
+--       BeamP.description = description,
+--       BeamP.createdAt = createdAt,
+--       BeamP.updatedAt = updatedAt,
+--       BeamP.bundleVersion = versionToText <$> bundleVersion,
+--       BeamP.clientVersion = versionToText <$> clientVersion,
+--       BeamP.unencryptedAlternateMobileNumber = unencryptedAlternateMobileNumber,
+--       BeamP.alternateMobileNumberHash = alternateMobileNumber <&> (.hash),
+--       BeamP.alternateMobileNumberEncrypted = alternateMobileNumber <&> unEncrypted . (.encrypted)
+--     }

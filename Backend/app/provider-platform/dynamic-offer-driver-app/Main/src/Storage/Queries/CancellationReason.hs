@@ -50,3 +50,21 @@ transformBeamCancReasonToDomain BeamCR.CancellationReasonT {..} = do
       enabled = enabled,
       priority = priority
     }
+
+transformBeamCancellationReasonToDomain :: BeamCR.CancellationReason -> CancellationReason
+transformBeamCancellationReasonToDomain BeamCR.CancellationReasonT {..} = do
+  CancellationReason
+    { reasonCode = CancellationReasonCode $ reasonCode,
+      description = description,
+      enabled = enabled,
+      priority = priority
+    }
+
+transformDomainCancellationReasonToBeam :: CancellationReason -> BeamCR.CancellationReason
+transformDomainCancellationReasonToBeam CancellationReason {..} =
+  BeamCR.defaultCancellationReason
+    { BeamCR.reasonCode = (\(CancellationReasonCode x) -> x) reasonCode,
+      BeamCR.description = description,
+      BeamCR.enabled = enabled,
+      BeamCR.priority = priority
+    }

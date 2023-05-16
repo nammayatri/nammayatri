@@ -144,8 +144,8 @@ data FarePolicyT f = FarePolicyT
     minAllowedTripDistance :: B.C f (Maybe Meters),
     waitingChargePerMin :: B.C f (Maybe Money),
     waitingTimeEstimatedThreshold :: B.C f (Maybe Seconds),
-    createdAt :: B.C f Time.LocalTime,
-    updatedAt :: B.C f Time.LocalTime
+    createdAt :: B.C f Time.UTCTime,
+    updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -239,8 +239,8 @@ defaultFarePolicy =
       minAllowedTripDistance = Nothing,
       waitingChargePerMin = Nothing,
       waitingTimeEstimatedThreshold = Nothing,
-      createdAt = defaultDate,
-      updatedAt = defaultDate
+      createdAt = defaultUTCDate,
+      updatedAt = defaultUTCDate
     }
 
 instance Serialize FarePolicy where

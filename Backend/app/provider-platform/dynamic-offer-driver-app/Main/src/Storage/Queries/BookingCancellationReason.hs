@@ -16,10 +16,18 @@ module Storage.Queries.BookingCancellationReason where
 
 import Domain.Types.Booking
 import Domain.Types.BookingCancellationReason
+import Domain.Types.CancellationReason (CancellationReasonCode (..))
 import Domain.Types.Ride
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import qualified Lib.Mesh as Mesh
+import qualified Sequelize as Se
+import qualified Storage.Beam.BookingCancellationReason as BeamBCR
 import Storage.Tabular.BookingCancellationReason
 
 create :: BookingCancellationReason -> SqlDB ()
@@ -50,3 +58,25 @@ upsert cancellationReason =
       BookingCancellationReasonReasonCode =. val (toKey <$> cancellationReason.reasonCode),
       BookingCancellationReasonAdditionalInfo =. val (cancellationReason.additionalInfo)
     ]
+
+transformBeamBookingCancellationReasonToDomain :: BeamBCR.BookingCancellationReason -> BookingCancellationReason
+transformBeamBookingCancellationReasonToDomain BeamBCR.BookingCancellationReasonT {..} = do
+  BookingCancellationReason
+    { driverId = Id <$> driverId,
+      bookingId = Id bookingId,
+      rideId = Id <$> rideId,
+      source = source,
+      reasonCode = CancellationReasonCode <$> reasonCode,
+      additionalInfo = additionalInfo
+    }
+
+transformDomainBookingCancellationReasonToBeam :: BookingCancellationReason -> BeamBCR.BookingCancellationReason
+transformDomainBookingCancellationReasonToBeam BookingCancellationReason {..} =
+  BeamBCR.defaultBookingCancellationReason
+    { BeamBCR.driverId = getId <$> driverId,
+      BeamBCR.bookingId = getId bookingId,
+      BeamBCR.rideId = getId <$> rideId,
+      BeamBCR.source = source,
+      BeamBCR.reasonCode = (\(CancellationReasonCode x) -> x) <$> reasonCode,
+      BeamBCR.additionalInfo = additionalInfo
+    }

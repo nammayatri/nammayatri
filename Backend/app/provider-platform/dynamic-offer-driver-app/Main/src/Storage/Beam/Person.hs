@@ -165,8 +165,8 @@ data PersonT f = PersonT
     alternateMobileNumberEncrypted :: B.C f (Maybe Text),
     unencryptedAlternateMobileNumber :: B.C f (Maybe Text),
     alternateMobileNumberHash :: B.C f (Maybe DbHash),
-    createdAt :: B.C f Time.LocalTime,
-    updatedAt :: B.C f Time.LocalTime,
+    createdAt :: B.C f Time.UTCTime,
+    updatedAt :: B.C f Time.UTCTime,
     bundleVersion :: B.C f (Maybe Text),
     clientVersion :: B.C f (Maybe Text)
   }
@@ -285,8 +285,8 @@ defaultPerson =
       alternateMobileNumberEncrypted = Nothing,
       unencryptedAlternateMobileNumber = Nothing,
       alternateMobileNumberHash = Nothing,
-      createdAt = defaultDate,
-      updatedAt = defaultDate,
+      createdAt = defaultUTCDate,
+      updatedAt = defaultUTCDate,
       bundleVersion = Nothing,
       clientVersion = Nothing
     }

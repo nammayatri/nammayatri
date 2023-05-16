@@ -22,10 +22,17 @@ where
 
 import Domain.Types.Merchant
 import Domain.Types.OnboardingDocumentConfig
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Mesh as Mesh
+import qualified Sequelize as Se
+import qualified Storage.Beam.OnboardingDocumentConfig as BeamODC
 import Storage.Tabular.OnboardingDocumentConfig
 
 create :: OnboardingDocumentConfig -> SqlDB ()
@@ -53,3 +60,29 @@ update config = do
         OnboardingDocumentConfigUpdatedAt =. val now
       ]
     where_ $ tbl ^. OnboardingDocumentConfigTId ==. val (toKey (config.merchantId, config.documentType))
+
+transformBeamOnboardingDocumentConfigToDomain :: BeamODC.OnboardingDocumentConfig -> OnboardingDocumentConfig
+transformBeamOnboardingDocumentConfigToDomain BeamODC.OnboardingDocumentConfigT {..} = do
+  OnboardingDocumentConfig
+    { merchantId = Id merchantId,
+      documentType = documentType,
+      checkExtraction = checkExtraction,
+      checkExpiry = checkExpiry,
+      validVehicleClasses = validVehicleClasses,
+      vehicleClassCheckType = vehicleClassCheckType,
+      createdAt = createdAt,
+      updatedAt = updatedAt
+    }
+
+transformDomainOnboardingDocumentConfigToBeam :: OnboardingDocumentConfig -> BeamODC.OnboardingDocumentConfig
+transformDomainOnboardingDocumentConfigToBeam OnboardingDocumentConfig {..} =
+  BeamODC.defaultOnboardingDocumentConfig
+    { BeamODC.merchantId = getId merchantId,
+      BeamODC.documentType = documentType,
+      BeamODC.checkExtraction = checkExtraction,
+      BeamODC.checkExpiry = checkExpiry,
+      BeamODC.validVehicleClasses = validVehicleClasses,
+      BeamODC.vehicleClassCheckType = vehicleClassCheckType,
+      BeamODC.createdAt = createdAt,
+      BeamODC.updatedAt = updatedAt
+    }

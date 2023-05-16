@@ -16,14 +16,23 @@
 module Storage.Queries.DriverInformation where
 
 import Control.Applicative (liftA2)
+import qualified Data.ByteString as BS
 import Domain.Types.DriverInformation
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person as Person
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import Kernel.External.Encryption
+import Kernel.External.Encryption (DbHash (..), Encrypted (..), EncryptedHashed (..))
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
+import qualified Lib.Mesh as Mesh
+import qualified Sequelize as Se
+import qualified Storage.Beam.DriverInformation as BeamDI
 import Storage.Tabular.DriverInformation
 import Storage.Tabular.DriverLocation
 import Storage.Tabular.Person
@@ -268,3 +277,43 @@ updateDowngradingOptions personId canDowngradeToSedan canDowngradeToHatchback ca
         DriverInformationUpdatedAt =. val now
       ]
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey personId)
+
+transformBeamDriverInformationToDomain :: BeamDI.DriverInformation -> DriverInformation
+transformBeamDriverInformationToDomain BeamDI.DriverInformationT {..} = do
+  DriverInformation
+    { driverId = Id driverId,
+      adminId = Id <$> adminId,
+      active = active,
+      onRide = onRide,
+      enabled = enabled,
+      blocked = blocked,
+      verified = verified,
+      referralCode = EncryptedHashed <$> (Encrypted <$> referralCode) <*> Just (DbHash BS.empty),
+      lastEnabledOn = lastEnabledOn,
+      canDowngradeToSedan = canDowngradeToSedan,
+      canDowngradeToHatchback = canDowngradeToHatchback,
+      canDowngradeToTaxi = canDowngradeToTaxi,
+      mode = mode,
+      createdAt = createdAt,
+      updatedAt = updatedAt
+    }
+
+transformDomainDriverInformationToBeam :: DriverInformation -> BeamDI.DriverInformation
+transformDomainDriverInformationToBeam DriverInformation {..} =
+  BeamDI.defaultDriverInformation
+    { BeamDI.driverId = getId driverId,
+      BeamDI.adminId = getId <$> adminId,
+      BeamDI.active = active,
+      BeamDI.onRide = onRide,
+      BeamDI.enabled = enabled,
+      BeamDI.blocked = blocked,
+      BeamDI.verified = verified,
+      BeamDI.referralCode = referralCode <&> unEncrypted . (.encrypted),
+      BeamDI.lastEnabledOn = lastEnabledOn,
+      BeamDI.canDowngradeToSedan = canDowngradeToSedan,
+      BeamDI.canDowngradeToHatchback = canDowngradeToHatchback,
+      BeamDI.canDowngradeToTaxi = canDowngradeToTaxi,
+      BeamDI.mode = mode,
+      BeamDI.createdAt = createdAt,
+      BeamDI.updatedAt = updatedAt
+    }

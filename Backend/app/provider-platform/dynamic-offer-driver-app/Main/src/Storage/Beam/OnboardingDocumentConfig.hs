@@ -87,8 +87,8 @@ data OnboardingDocumentConfigT f = OnboardingDocumentConfigT
     checkExpiry :: B.C f Bool,
     validVehicleClasses :: B.C f [Text],
     vehicleClassCheckType :: B.C f Domain.VehicleClassCheckType,
-    createdAt :: B.C f Time.LocalTime,
-    updatedAt :: B.C f Time.LocalTime
+    createdAt :: B.C f Time.UTCTime,
+    updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -158,8 +158,8 @@ defaultOnboardingDocumentConfig =
       checkExpiry = False,
       validVehicleClasses = [""],
       vehicleClassCheckType = "",
-      createdAt = defaultDate,
-      updatedAt = defaultDate
+      createdAt = defaultUTCDate,
+      updatedAt = defaultUTCDate
     }
 
 instance Serialize OnboardingDocumentConfig where
