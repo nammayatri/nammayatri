@@ -46,6 +46,7 @@ import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Kernel.Utils.Common (decodeFromText, encodeToText)
 import Kernel.Utils.Error
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Merchant (MerchantTId)
@@ -125,5 +126,22 @@ merchantServiceConfigToPSModifiers :: M.Map Text (A.Value -> A.Value)
 merchantServiceConfigToPSModifiers =
   M.fromList
     []
+
+instance IsString Domain.ServiceName where
+  fromString = show
+
+defaultMerchantServiceConfig :: MerchantServiceConfig
+defaultMerchantServiceConfig =
+  MerchantServiceConfigT
+    { merchantId = "",
+      serviceName = "",
+      configJSON = "",
+      updatedAt = defaultDate,
+      createdAt = defaultDate
+    }
+
+instance Serialize MerchantServiceConfig where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''MerchantServiceConfigT ['serviceName] [])

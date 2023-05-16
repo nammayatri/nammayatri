@@ -39,6 +39,7 @@ import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common (Meters, Seconds)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config (PoolSortingType (..))
@@ -172,5 +173,43 @@ driverPoolConfigToPSModifiers :: M.Map Text (A.Value -> A.Value)
 driverPoolConfigToPSModifiers =
   M.fromList
     []
+
+instance IsString Meters where
+  fromString = show
+
+instance IsString PoolSortingType where
+  fromString = show
+
+instance IsString Seconds where
+  fromString = show
+
+defaultDriverPoolConfig :: DriverPoolConfig
+defaultDriverPoolConfig =
+  DriverPoolConfigT
+    { merchantId = "",
+      minRadiusOfSearch = "",
+      maxRadiusOfSearch = "",
+      radiusStepSize = "",
+      driverPositionInfoExpiry = Nothing,
+      actualDistanceThreshold = Nothing,
+      maxDriverQuotesRequired = 0,
+      maxParallelSearchRequests = 0,
+      driverQuoteLimit = 0,
+      driverRequestCountLimit = 0,
+      driverBatchSize = 0,
+      maxNumberOfBatches = 0,
+      poolSortingType = "",
+      singleBatchProcessTime = "",
+      tripDistance = "",
+      radiusShrinkValueForDriversOnRide = 0,
+      driverToDestinationDistanceThreshold = "",
+      driverToDestinationDuration = "",
+      createdAt = defaultDate,
+      updatedAt = defaultDate
+    }
+
+instance Serialize DriverPoolConfig where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''DriverPoolConfigT ['tripDistance] [])

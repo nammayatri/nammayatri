@@ -37,6 +37,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Issue.IssueCategory (IssueCategoryTId)
@@ -138,5 +139,29 @@ issueReportToPSModifiers :: M.Map Text (A.Value -> A.Value)
 issueReportToPSModifiers =
   M.fromList
     []
+
+instance IsString Domain.IssueStatus where
+  fromString = show
+
+defaultIssueReport :: IssueReport
+defaultIssueReport =
+  IssueReportT
+    { id = "",
+      driverId = "",
+      rideId = Nothing,
+      description = "",
+      assignee = Nothing,
+      status = "",
+      categoryId = "",
+      optionId = Nothing,
+      deleted = False,
+      mediaFiles = [""],
+      createdAt = defaultDate,
+      updatedAt = defaultDate
+    }
+
+instance Serialize IssueReport where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''IssueReportT ['id] [])

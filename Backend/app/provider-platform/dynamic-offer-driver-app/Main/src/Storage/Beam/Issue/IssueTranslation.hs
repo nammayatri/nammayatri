@@ -38,6 +38,7 @@ import GHC.Generics (Generic)
 import Kernel.External.Types (Language)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 
@@ -113,5 +114,21 @@ issueTranslationToPSModifiers :: M.Map Text (A.Value -> A.Value)
 issueTranslationToPSModifiers =
   M.fromList
     []
+
+instance IsString Language where
+  fromString = show
+
+defaultIssueTranslation :: IssueTranslation
+defaultIssueTranslation =
+  IssueTranslationT
+    { id = "",
+      sentence = "",
+      translation = "",
+      language = ""
+    }
+
+instance Serialize IssueTranslation where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''IssueTranslationT ['id] [])

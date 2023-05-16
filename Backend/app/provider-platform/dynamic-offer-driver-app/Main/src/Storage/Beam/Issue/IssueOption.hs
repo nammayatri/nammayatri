@@ -37,6 +37,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Issue.IssueCategory (IssueCategoryTId)
@@ -101,5 +102,17 @@ issueOptionToPSModifiers :: M.Map Text (A.Value -> A.Value)
 issueOptionToPSModifiers =
   M.fromList
     []
+
+defaultIssueOption :: IssueOption
+defaultIssueOption =
+  IssueOptionT
+    { id = "",
+      issueCategoryId = "",
+      option = ""
+    }
+
+instance Serialize IssueOption where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''IssueOptionT ['id] [])

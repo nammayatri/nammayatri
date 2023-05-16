@@ -39,6 +39,7 @@ import GHC.Generics (Generic)
 import Kernel.External.Types (Language)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import qualified Storage.Tabular.Message.Message as Msg
@@ -122,5 +123,24 @@ messageTranslationToPSModifiers :: M.Map Text (A.Value -> A.Value)
 messageTranslationToPSModifiers =
   M.fromList
     []
+
+instance IsString Language where
+  fromString = show
+
+defaultMessageTranslation :: MessageTranslation
+defaultMessageTranslation =
+  MessageTranslationT
+    { messageId = "",
+      language = "",
+      title = "",
+      description = "",
+      shortDescription = "",
+      label = Nothing,
+      createdAt = defaultDate
+    }
+
+instance Serialize MessageTranslation where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''MessageTranslationT ['language] [])

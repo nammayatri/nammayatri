@@ -39,6 +39,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import qualified Storage.Tabular.Message.Message as Msg
@@ -140,5 +141,29 @@ messageReportToPSModifiers :: M.Map Text (A.Value -> A.Value)
 messageReportToPSModifiers =
   M.fromList
     []
+
+instance IsString Domain.DeliveryStatus where
+  fromString = show
+
+instance IsString Domain.MessageDynamicFieldsType where
+  fromString = show
+
+defaultMessageReport :: MessageReport
+defaultMessageReport =
+  MessageReportT
+    { messageId = "",
+      driverId = "",
+      deliveryStatus = "",
+      readStatus = False,
+      likeStatus = False,
+      reply = Nothing,
+      messageDynamicFields = "",
+      updatedAt = defaultDate,
+      createdAt = defaultDate
+    }
+
+instance Serialize MessageReport where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''MessageReportT ['driverId] [])
