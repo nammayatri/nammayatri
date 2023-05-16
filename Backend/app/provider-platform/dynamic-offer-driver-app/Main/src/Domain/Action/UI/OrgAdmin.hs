@@ -25,7 +25,7 @@ import Control.Applicative
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SP
 import Kernel.External.Encryption (decrypt)
-import Kernel.External.FCM.Types
+import Kernel.External.Notification.FCM.Types
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id

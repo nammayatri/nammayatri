@@ -22,7 +22,7 @@ where
 import App.Types
 import Data.Aeson
 import EulerHS.Prelude
-import Kernel.External.FCM.Flow as API
+import Kernel.External.Notification.FCM.Flow as API
 import Kernel.Types.App (FlowServerR)
 import qualified Product.Fcm as P
 import Servant hiding (throwError)

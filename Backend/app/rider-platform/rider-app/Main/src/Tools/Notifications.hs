@@ -14,12 +14,15 @@
 
 module Tools.Notifications where
 
+import Data.Default.Class
 import qualified Data.Text as T
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import Domain.Types.Estimate (Estimate)
 import qualified Domain.Types.Estimate as DEst
 import Domain.Types.Merchant
+import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
+import Domain.Types.Merchant.MerchantServiceUsageConfig (MerchantServiceUsageConfig)
 import Domain.Types.Person as Person
 import Domain.Types.Quote (makeQuoteAPIEntity)
 import qualified Domain.Types.Quote as DQuote
@@ -27,28 +30,52 @@ import Domain.Types.RegistrationToken as RegToken
 import qualified Domain.Types.Ride as SRide
 import Domain.Types.SearchRequest as SearchRequest
 import EulerHS.Prelude
-import qualified Kernel.External.FCM.Flow as FCM
-import Kernel.External.FCM.Types as FCM
+import qualified Kernel.External.Notification as Notification
 import Kernel.Storage.Esqueleto
 import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
-import qualified Storage.CachedQueries.Merchant as QMerchant
+import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
+import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.SearchRequest as QSearchReq
 import Tools.Metrics
 
-getFCMConfig ::
-  (CacheFlow m r, EsqDBFlow m r) =>
+notifyPerson ::
+  ( EncFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    CoreMetrics m,
+    Default a,
+    ToJSON a,
+    ToJSON b
+  ) =>
   Id Merchant ->
-  m FCM.FCMConfig
-getFCMConfig merchId = do
-  fmap (.fcmConfig) $ QMerchant.findById merchId >>= fromMaybeM (MerchantNotFound merchId.getId)
+  Notification.NotificationReq a b ->
+  m ()
+notifyPerson = runWithServiceConfig Notification.notifyPerson (.notifyPerson)
+
+runWithServiceConfig ::
+  (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) =>
+  (Notification.NotificationServiceConfig -> req -> m resp) ->
+  (MerchantServiceUsageConfig -> Notification.NotificationService) ->
+  Id Merchant ->
+  req ->
+  m resp
+runWithServiceConfig func getCfg merchantId req = do
+  merchantConfig <- QMSUC.findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
+  merchantNotificationServiceConfig <-
+    QMSC.findByMerchantIdAndService merchantId (DMSC.NotificationService $ getCfg merchantConfig)
+      >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "notification" (show $ getCfg merchantConfig))
+  case merchantNotificationServiceConfig.serviceConfig of
+    DMSC.NotificationServiceConfig msc -> func msc req
+    _ -> throwError $ InternalError "Unknown ServiceConfig"
 
 notifyOnDriverOfferIncoming ::
   ( HasCacheConfig r,
+    EncFlow m r,
     EsqDBFlow m r,
     HedisFlow m r,
     CoreMetrics m
@@ -58,28 +85,34 @@ notifyOnDriverOfferIncoming ::
   Person.Person ->
   m ()
 notifyOnDriverOfferIncoming estimateId quotes person = do
-  config <- getFCMConfig person.merchantId
-
   let notificationData =
-        FCM.FCMData
-          { fcmNotificationType = FCM.DRIVER_QUOTE_INCOMING,
-            fcmShowNotification = FCM.SHOW,
-            fcmEntityType = FCM.Product,
-            fcmEntityIds = estimateId.getId,
-            fcmEntityData = map makeQuoteAPIEntity quotes,
-            fcmNotificationJSON = FCM.createAndroidNotification title body FCM.DRIVER_QUOTE_INCOMING
+        Notification.NotificationReq
+          { category = Notification.DRIVER_QUOTE_INCOMING,
+            subCategory = Nothing,
+            showNotification = Notification.SHOW,
+            messagePriority = Nothing,
+            entity = Notification.Entity Notification.Product estimateId.getId $ map makeQuoteAPIEntity quotes,
+            body = body,
+            title = title,
+            dynamicParams = (),
+            auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken
           }
-      title = FCMNotificationTitle "New driver offers incoming!"
+      title = "New driver offers incoming!"
       body =
-        FCMNotificationBody $
-          unwords
-            [ "There are new driver offers!",
-              "Check the app for details"
-            ]
-  FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
+        unwords
+          [ "There are new driver offers!",
+            "Check the app for details"
+          ]
+  notifyPerson person.merchantId notificationData
+
+newtype RideAssignedParam = RideAssignedParam
+  { driverName :: Text
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 notifyOnRideAssigned ::
   ( HasCacheConfig r,
+    EncFlow m r,
     EsqDBFlow m r,
     HedisFlow m r,
     CoreMetrics m
@@ -92,27 +125,34 @@ notifyOnRideAssigned booking ride = do
       rideId = ride.id
       driverName = ride.driverName
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  config <- getFCMConfig person.merchantId
   let notificationData =
-        FCM.FCMData
-          { fcmNotificationType = FCM.DRIVER_ASSIGNMENT,
-            fcmShowNotification = FCM.SHOW,
-            fcmEntityType = FCM.Product,
-            fcmEntityIds = getId rideId,
-            fcmEntityData = (),
-            fcmNotificationJSON = FCM.createAndroidNotification title body FCM.DRIVER_ASSIGNMENT
+        Notification.NotificationReq
+          { category = Notification.DRIVER_ASSIGNMENT,
+            subCategory = Nothing,
+            showNotification = Notification.SHOW,
+            messagePriority = Nothing,
+            entity = Notification.Entity Notification.Product rideId.getId (),
+            body = body,
+            title = title,
+            dynamicParams = RideAssignedParam driverName,
+            auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken
           }
-      title = FCMNotificationTitle $ T.pack "Driver assigned!"
+      title = T.pack "Driver assigned!"
       body =
-        FCMNotificationBody $
-          unwords
-            [ driverName,
-              "will be your driver for this trip."
-            ]
-  FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
+        unwords
+          [ driverName,
+            "will be your driver for this trip."
+          ]
+  notifyPerson person.merchantId notificationData
+
+newtype RideStartedParam = RideStartedParam
+  { driverName :: Text
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 notifyOnRideStarted ::
   ( HasCacheConfig r,
+    EncFlow m r,
     EsqDBFlow m r,
     HedisFlow m r,
     CoreMetrics m
@@ -125,27 +165,35 @@ notifyOnRideStarted booking ride = do
       rideId = ride.id
       driverName = ride.driverName
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  config <- getFCMConfig person.merchantId
   let notificationData =
-        FCM.FCMData
-          { fcmNotificationType = FCM.TRIP_STARTED,
-            fcmShowNotification = FCM.SHOW,
-            fcmEntityType = FCM.Product,
-            fcmEntityIds = getId rideId,
-            fcmEntityData = (),
-            fcmNotificationJSON = FCM.createAndroidNotification title body FCM.TRIP_STARTED
+        Notification.NotificationReq
+          { category = Notification.TRIP_STARTED,
+            subCategory = Nothing,
+            showNotification = Notification.SHOW,
+            messagePriority = Nothing,
+            entity = Notification.Entity Notification.Product rideId.getId (),
+            body = body,
+            title = title,
+            dynamicParams = RideStartedParam driverName,
+            auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken
           }
-      title = FCMNotificationTitle $ T.pack "Trip started!"
+      title = T.pack "Trip started!"
       body =
-        FCMNotificationBody $
-          unwords
-            [ driverName,
-              "has started your trip. Please enjoy the ride!"
-            ]
-  FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
+        unwords
+          [ driverName,
+            "has started your trip. Please enjoy the ride!"
+          ]
+  notifyPerson person.merchantId notificationData
+
+data RideCompleteParam = RideCompleteParam
+  { driverName :: Text,
+    fare :: Text
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 notifyOnRideCompleted ::
   ( HasCacheConfig r,
+    EncFlow m r,
     EsqDBFlow m r,
     HedisFlow m r,
     CoreMetrics m
@@ -159,28 +207,30 @@ notifyOnRideCompleted booking ride = do
       driverName = ride.driverName
       totalFare = ride.totalFare
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  config <- getFCMConfig person.merchantId
   let notificationData =
-        FCM.FCMData
-          { fcmNotificationType = FCM.TRIP_FINISHED,
-            fcmShowNotification = FCM.SHOW,
-            fcmEntityType = FCM.Product,
-            fcmEntityIds = getId rideId,
-            fcmEntityData = (),
-            fcmNotificationJSON = FCM.createAndroidNotification title body FCM.TRIP_FINISHED
+        Notification.NotificationReq
+          { category = Notification.TRIP_FINISHED,
+            subCategory = Nothing,
+            showNotification = Notification.SHOW,
+            messagePriority = Nothing,
+            entity = Notification.Entity Notification.Product rideId.getId (),
+            body = body,
+            title = title,
+            dynamicParams = RideCompleteParam driverName $ show (fromMaybe booking.estimatedFare totalFare),
+            auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken
           }
-      title = FCMNotificationTitle $ T.pack "Trip finished!"
+      title = T.pack "Trip finished!"
       body =
-        FCMNotificationBody $
-          unwords
-            [ "Hope you enjoyed your trip with",
-              driverName,
-              "Total Fare " <> show (fromMaybe booking.estimatedFare totalFare)
-            ]
-  FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
+        unwords
+          [ "Hope you enjoyed your trip with",
+            driverName,
+            "Total Fare " <> show (fromMaybe booking.estimatedFare totalFare)
+          ]
+  notifyPerson person.merchantId notificationData
 
 notifyOnExpiration ::
   ( HasCacheConfig r,
+    EncFlow m r,
     EsqDBFlow m r,
     HedisFlow m r,
     CoreMetrics m
@@ -194,58 +244,67 @@ notifyOnExpiration searchReq = do
   case person of
     Just p -> do
       let notificationData =
-            FCM.FCMData
-              { fcmNotificationType = FCM.EXPIRED_CASE,
-                fcmShowNotification = FCM.SHOW,
-                fcmEntityType = FCM.SearchRequest,
-                fcmEntityIds = getId searchRequestId,
-                fcmEntityData = (),
-                fcmNotificationJSON = FCM.createAndroidNotification title body FCM.EXPIRED_CASE
+            Notification.NotificationReq
+              { category = Notification.EXPIRED_CASE,
+                subCategory = Nothing,
+                showNotification = Notification.SHOW,
+                messagePriority = Nothing,
+                entity = Notification.Entity Notification.SearchRequest searchRequestId.getId (),
+                body = body,
+                title = title,
+                dynamicParams = (),
+                auth = Notification.Auth p.id.getId p.deviceToken p.notificationToken
               }
-          title = FCMNotificationTitle $ T.pack "Ride expired!"
+          title = T.pack "Ride expired!"
           body =
-            FCMNotificationBody $
-              unwords
-                [ "Your ride has expired as you did not confirm any offer.",
-                  "Please book again to continue."
-                ]
-      config <- getFCMConfig p.merchantId
-      FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient p.id.getId p.deviceToken
+            unwords
+              [ "Your ride has expired as you did not confirm any offer.",
+                "Please book again to continue."
+              ]
+      notifyPerson p.merchantId notificationData
     _ -> pure ()
 
 notifyOnRegistration ::
   ( HasCacheConfig r,
+    EncFlow m r,
     CoreMetrics m,
     HedisFlow m r,
     EsqDBFlow m r
   ) =>
   RegistrationToken ->
   Person ->
-  Maybe FCM.FCMRecipientToken ->
+  Maybe Text ->
   m ()
 notifyOnRegistration regToken person mbDeviceToken = do
-  config <- getFCMConfig person.merchantId
   let tokenId = RegToken.id regToken
       notificationData =
-        FCM.FCMData
-          { fcmNotificationType = FCM.REGISTRATION_APPROVED,
-            fcmShowNotification = FCM.SHOW,
-            fcmEntityType = FCM.Merchant,
-            fcmEntityIds = getId tokenId,
-            fcmEntityData = (),
-            fcmNotificationJSON = FCM.createAndroidNotification title body FCM.REGISTRATION_APPROVED
+        Notification.NotificationReq
+          { category = Notification.REGISTRATION_APPROVED,
+            subCategory = Nothing,
+            showNotification = Notification.SHOW,
+            messagePriority = Nothing,
+            entity = Notification.Entity Notification.Merchant tokenId.getId (),
+            body = body,
+            title = title,
+            dynamicParams = (),
+            auth = Notification.Auth person.id.getId mbDeviceToken person.notificationToken
           }
-      title = FCMNotificationTitle $ T.pack "Registration Completed!"
+      title = T.pack "Registration Completed!"
       body =
-        FCMNotificationBody $
-          unwords
-            [ "Welcome to Yatri.",
-              "Click here to book your first ride with us."
-            ]
-   in FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient person.id.getId mbDeviceToken
+        unwords
+          [ "Welcome to Yatri.",
+            "Click here to book your first ride with us."
+          ]
+   in notifyPerson person.merchantId notificationData
+
+newtype RideCancelParam = RideCancelParam
+  { rideTime :: Text
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 notifyOnBookingCancelled ::
   ( HasCacheConfig r,
+    EncFlow m r,
     CoreMetrics m,
     HedisFlow m r,
     EsqDBFlow m r
@@ -255,21 +314,27 @@ notifyOnBookingCancelled ::
   m ()
 notifyOnBookingCancelled booking cancellationSource = do
   person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
-  config <- getFCMConfig person.merchantId
-  FCM.notifyPerson config (notificationData $ booking.providerName) $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
+  notifyPerson person.merchantId (notificationData booking.providerName person)
   where
-    notificationData orgName =
-      FCM.FCMData
-        { fcmNotificationType = FCM.CANCELLED_PRODUCT,
-          fcmShowNotification = FCM.SHOW,
-          fcmEntityType = FCM.Product,
-          fcmEntityIds = getId booking.id,
-          fcmEntityData = (),
-          fcmNotificationJSON = FCM.createAndroidNotification title (body orgName) FCM.CANCELLED_PRODUCT
+    notificationData orgName person =
+      Notification.NotificationReq
+        { category = Notification.CANCELLED_PRODUCT,
+          subCategory = Just subCategory,
+          showNotification = Notification.SHOW,
+          messagePriority = Nothing,
+          entity = Notification.Entity Notification.Product booking.id.getId (),
+          body = getCancellationText orgName,
+          title = title,
+          dynamicParams = RideCancelParam $ showTimeIst (booking.startTime),
+          auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken
         }
-    title = FCMNotificationTitle $ T.pack "Ride cancelled!"
-    body orgName =
-      FCMNotificationBody $ getCancellationText orgName
+    title = T.pack "Ride cancelled!"
+    subCategory = case cancellationSource of
+      SBCR.ByUser -> Notification.ByUser
+      SBCR.ByMerchant -> Notification.ByMerchant
+      SBCR.ByDriver -> Notification.ByDriver
+      SBCR.ByAllocator -> Notification.ByAllocator
+      SBCR.ByApplication -> Notification.ByApplication
     getCancellationText orgName = case cancellationSource of
       SBCR.ByUser ->
         unwords
@@ -306,6 +371,7 @@ notifyOnBookingCancelled booking cancellationSource = do
 
 notifyOnBookingReallocated ::
   ( HasCacheConfig r,
+    EncFlow m r,
     CoreMetrics m,
     HedisFlow m r,
     EsqDBFlow m r
@@ -314,34 +380,31 @@ notifyOnBookingReallocated ::
   m ()
 notifyOnBookingReallocated booking = do
   person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
-  notificationData <- buildNotificationData
-  config <- getFCMConfig person.merchantId
-  FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
+  notifyPerson person.merchantId (notificationData person)
   where
-    buildNotificationData = do
-      body <- buildBody
-      return $
-        FCM.FCMData
-          { fcmNotificationType = FCM.REALLOCATE_PRODUCT,
-            fcmShowNotification = FCM.SHOW,
-            fcmEntityType = FCM.Product,
-            fcmEntityIds = getId booking.id,
-            fcmEntityData = (),
-            fcmNotificationJSON = FCM.createAndroidNotification title body FCM.REALLOCATE_PRODUCT
-          }
-    title = FCMNotificationTitle $ T.pack "Ride cancelled!"
-    buildBody = do
-      FCMNotificationBody <$> getReallocationText
-    getReallocationText =
-      return $
-        unwords
-          [ "The driver had to cancel the ride for",
-            showTimeIst (booking.startTime) <> ".",
-            "Please wait until we allocate other driver."
-          ]
+    notificationData person =
+      Notification.NotificationReq
+        { category = Notification.REALLOCATE_PRODUCT,
+          subCategory = Nothing,
+          showNotification = Notification.SHOW,
+          messagePriority = Nothing,
+          entity = Notification.Entity Notification.Product booking.id.getId (),
+          body = body,
+          title = title,
+          dynamicParams = (),
+          auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken
+        }
+    title = T.pack "Ride cancelled!"
+    body =
+      unwords
+        [ "The driver had to cancel the ride for",
+          showTimeIst (booking.startTime) <> ".",
+          "Please wait until we allocate other driver."
+        ]
 
 notifyOnEstimatedReallocated ::
   ( HasCacheConfig r,
+    EncFlow m r,
     CoreMetrics m,
     HedisFlow m r,
     EsqDBFlow m r
@@ -351,34 +414,31 @@ notifyOnEstimatedReallocated ::
   m ()
 notifyOnEstimatedReallocated booking estimateId = do
   person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
-  notificationData <- buildNotificationData
-  config <- getFCMConfig person.merchantId
-  FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
+  notifyPerson person.merchantId (notificationData person)
   where
-    buildNotificationData = do
-      body <- buildBody
-      return $
-        FCM.FCMData
-          { fcmNotificationType = FCM.REALLOCATE_PRODUCT,
-            fcmShowNotification = FCM.SHOW,
-            fcmEntityType = FCM.Product,
-            fcmEntityIds = getId estimateId,
-            fcmEntityData = (),
-            fcmNotificationJSON = FCM.createAndroidNotification title body FCM.REALLOCATE_PRODUCT
-          }
-    title = FCMNotificationTitle $ T.pack "Ride cancelled!"
-    buildBody = do
-      FCMNotificationBody <$> getReallocationText
-    getReallocationText =
-      return $
-        unwords
-          [ "The driver had to cancel the ride for",
-            showTimeIst (booking.startTime) <> ".",
-            "Please wait until we allocate other driver."
-          ]
+    notificationData person =
+      Notification.NotificationReq
+        { category = Notification.REALLOCATE_PRODUCT,
+          subCategory = Nothing,
+          showNotification = Notification.SHOW,
+          messagePriority = Nothing,
+          entity = Notification.Entity Notification.Product estimateId.getId (),
+          body = body,
+          title = title,
+          dynamicParams = (),
+          auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken
+        }
+    title = T.pack "Ride cancelled!"
+    body =
+      unwords
+        [ "The driver had to cancel the ride for",
+          showTimeIst (booking.startTime) <> ".",
+          "Please wait until we allocate other driver."
+        ]
 
 notifyOnQuoteReceived ::
   ( HasCacheConfig r,
+    EncFlow m r,
     CoreMetrics m,
     HedisFlow m r,
     EsqDBFlow m r
@@ -388,29 +448,31 @@ notifyOnQuoteReceived ::
 notifyOnQuoteReceived quote = do
   searchRequest <- QSearchReq.findById quote.requestId >>= fromMaybeM (SearchRequestDoesNotExist quote.requestId.getId)
   person <- Person.findById searchRequest.riderId >>= fromMaybeM (PersonNotFound searchRequest.riderId.getId)
-  config <- getFCMConfig person.merchantId
-  let notificationData = mkNotificationData
-  FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
+  let notificationData = mkNotificationData person
+  notifyPerson person.merchantId notificationData
   where
-    mkNotificationData = do
-      let title = FCMNotificationTitle $ T.pack "Quote received!"
+    mkNotificationData person = do
+      let title = T.pack "Quote received!"
           body =
-            FCMNotificationBody $
-              unwords
-                [ "New quote received with price",
-                  show quote.estimatedFare <> "."
-                ]
-      FCM.FCMData
-        { fcmNotificationType = FCM.QUOTE_RECEIVED,
-          fcmShowNotification = FCM.SHOW,
-          fcmEntityType = FCM.Product,
-          fcmEntityIds = getId quote.requestId,
-          fcmEntityData = (),
-          fcmNotificationJSON = FCM.createAndroidNotification title body FCM.REALLOCATE_PRODUCT
+            unwords
+              [ "New quote received with price",
+                show quote.estimatedFare <> "."
+              ]
+      Notification.NotificationReq
+        { category = Notification.QUOTE_RECEIVED,
+          subCategory = Nothing,
+          showNotification = Notification.SHOW,
+          messagePriority = Nothing,
+          entity = Notification.Entity Notification.Product quote.requestId.getId (),
+          body = body,
+          title = title,
+          dynamicParams = (),
+          auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken
         }
 
 notifyDriverOnTheWay ::
   ( HasCacheConfig r,
+    EncFlow m r,
     EsqDBFlow m r,
     HedisFlow m r,
     CoreMetrics m
@@ -419,26 +481,34 @@ notifyDriverOnTheWay ::
   m ()
 notifyDriverOnTheWay personId = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  config <- getFCMConfig person.merchantId
   let notificationData =
-        FCM.FCMData
-          { fcmNotificationType = FCM.DRIVER_ON_THE_WAY,
-            fcmShowNotification = FCM.SHOW,
-            fcmEntityType = FCM.Product,
-            fcmEntityIds = getId personId,
-            fcmEntityData = (),
-            fcmNotificationJSON = FCM.createAndroidNotification title body FCM.DRIVER_ON_THE_WAY
+        Notification.NotificationReq
+          { category = Notification.DRIVER_ON_THE_WAY,
+            subCategory = Nothing,
+            showNotification = Notification.SHOW,
+            messagePriority = Nothing,
+            entity = Notification.Entity Notification.Product personId.getId (),
+            body = body,
+            title = title,
+            dynamicParams = (),
+            auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken
           }
-      title = FCMNotificationTitle $ T.pack "Driver On The Way!"
+      title = T.pack "Driver On The Way!"
       body =
-        FCMNotificationBody $
-          unwords
-            [ "Driver is on the way"
-            ]
-  FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
+        unwords
+          [ "Driver is on the way"
+          ]
+  notifyPerson person.merchantId notificationData
+
+data DriverReachedParam = DriverReachedParam
+  { vehicleNumber :: Text,
+    rideOtp :: Text
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 notifyDriverHasReached ::
   ( HasCacheConfig r,
+    EncFlow m r,
     EsqDBFlow m r,
     HedisFlow m r,
     CoreMetrics m
@@ -449,26 +519,28 @@ notifyDriverHasReached ::
   m ()
 notifyDriverHasReached personId otp vehicleNumber = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  config <- getFCMConfig person.merchantId
   let notificationData =
-        FCM.FCMData
-          { fcmNotificationType = FCM.DRIVER_HAS_REACHED,
-            fcmShowNotification = FCM.SHOW,
-            fcmEntityType = FCM.Product,
-            fcmEntityIds = getId personId,
-            fcmEntityData = (),
-            fcmNotificationJSON = FCM.createAndroidNotification title body FCM.DRIVER_HAS_REACHED
+        Notification.NotificationReq
+          { category = Notification.DRIVER_HAS_REACHED,
+            subCategory = Nothing,
+            showNotification = Notification.SHOW,
+            messagePriority = Nothing,
+            entity = Notification.Entity Notification.Product personId.getId (),
+            body = body,
+            title = title,
+            dynamicParams = DriverReachedParam vehicleNumber otp,
+            auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken
           }
-      title = FCMNotificationTitle $ T.pack "Driver Has Reached!"
+      title = T.pack "Driver Has Reached!"
       body =
-        FCMNotificationBody $
-          unwords
-            [ "Use OTP " <> otp <> " to verify the ride with Vehicle No. " <> vehicleNumber
-            ]
-  FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
+        unwords
+          [ "Use OTP " <> otp <> " to verify the ride with Vehicle No. " <> vehicleNumber
+          ]
+  notifyPerson person.merchantId notificationData
 
 notifyOnNewMessage ::
   ( HasCacheConfig r,
+    EncFlow m r,
     CoreMetrics m,
     HedisFlow m r,
     EsqDBReplicaFlow m r,
@@ -479,20 +551,21 @@ notifyOnNewMessage ::
   m ()
 notifyOnNewMessage booking message = do
   person <- runInReplica $ Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
-  config <- getFCMConfig person.merchantId
   let notificationData =
-        FCM.FCMData
-          { fcmNotificationType = FCM.CHAT_MESSAGE,
-            fcmShowNotification = FCM.SHOW,
-            fcmEntityType = FCM.Product,
-            fcmEntityIds = getId person.id,
-            fcmEntityData = (),
-            fcmNotificationJSON = FCM.createAndroidNotification title body FCM.CHAT_MESSAGE
+        Notification.NotificationReq
+          { category = Notification.CHAT_MESSAGE,
+            subCategory = Nothing,
+            showNotification = Notification.SHOW,
+            messagePriority = Nothing,
+            entity = Notification.Entity Notification.Product person.id.getId (),
+            body = body,
+            title = title,
+            dynamicParams = (),
+            auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken
           }
-      title = FCMNotificationTitle $ T.pack "Driver"
+      title = T.pack "Driver"
       body =
-        FCMNotificationBody $
-          unwords
-            [ message
-            ]
-  FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
+        unwords
+          [ message
+          ]
+  notifyPerson person.merchantId notificationData

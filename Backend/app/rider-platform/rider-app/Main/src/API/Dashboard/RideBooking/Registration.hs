@@ -98,6 +98,7 @@ buildAuthReq merchantShortId req =
       mobileCountryCode = req.mobileCountryCode,
       merchantId = merchantShortId,
       deviceToken = Nothing,
+      notificationToken = Nothing,
       whatsappNotificationEnroll = Nothing,
       firstName = Nothing,
       middleName = Nothing,

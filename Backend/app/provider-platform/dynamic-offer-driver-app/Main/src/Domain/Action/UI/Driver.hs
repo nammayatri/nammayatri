@@ -74,10 +74,10 @@ import Environment
 import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
 import Kernel.External.Encryption
-import Kernel.External.FCM.Types (FCMRecipientToken)
-import qualified Kernel.External.FCM.Types as FCM
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Types (LatLong (..))
+import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
+import qualified Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.External.SMS.MyValueFirst.Flow as SF
 import qualified Kernel.External.SMS.MyValueFirst.Types as SMS
 import Kernel.Prelude (NominalDiffTime)

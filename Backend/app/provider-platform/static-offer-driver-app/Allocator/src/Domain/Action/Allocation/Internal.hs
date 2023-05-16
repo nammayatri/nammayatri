@@ -64,7 +64,7 @@ import qualified Domain.Types.RideRequest as SRR
 import Environment (Flow)
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption
-import qualified Kernel.External.FCM.Types as FCM
+import qualified Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common

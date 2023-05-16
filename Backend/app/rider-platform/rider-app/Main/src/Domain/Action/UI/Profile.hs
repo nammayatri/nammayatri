@@ -32,7 +32,6 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonDefaultEmergencyNumber as DPDEN
 import Environment
 import Kernel.External.Encryption
-import qualified Kernel.External.FCM.Types as FCM
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (runInReplica, runTransaction)
@@ -61,7 +60,8 @@ data UpdateProfileReq = UpdateProfileReq
     middleName :: Maybe Text,
     lastName :: Maybe Text,
     email :: Maybe Text,
-    deviceToken :: Maybe FCM.FCMRecipientToken,
+    deviceToken :: Maybe Text,
+    notificationToken :: Maybe Text,
     referralCode :: Maybe Text,
     language :: Maybe Maps.Language,
     gender :: Maybe Person.Gender
@@ -125,6 +125,7 @@ updatePerson personId req = do
       refCode
       mbEncEmail
       req.deviceToken
+      req.notificationToken
       req.language
       req.gender
   pure APISuccess.Success

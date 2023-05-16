@@ -20,7 +20,7 @@ import Data.Time (UTCTime)
 import Domain.Types.Common
 import Domain.Types.Merchant (Merchant)
 import EulerHS.Prelude hiding (id)
-import Kernel.External.FCM.Types (FCMConfig)
+import Kernel.External.Notification.FCM.Types (FCMConfig)
 import Kernel.Types.Common
 import Kernel.Types.Id
 

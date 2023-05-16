@@ -25,9 +25,9 @@ import Domain.Types.Person as Person
 import qualified Domain.Types.Ride as Ride
 import Domain.Types.Vehicle as Vehicle
 import Kernel.External.Encryption
-import Kernel.External.FCM.Types (FCMRecipientToken)
 import qualified Kernel.External.Maps.HasCoordinates as GoogleMaps
 import Kernel.External.Maps.Types (LatLong (..))
+import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Centesimal

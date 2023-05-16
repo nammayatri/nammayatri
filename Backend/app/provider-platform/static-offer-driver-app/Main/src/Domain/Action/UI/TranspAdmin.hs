@@ -28,7 +28,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SP
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (decrypt)
-import Kernel.External.FCM.Types (FCMRecipientToken)
+import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id

@@ -152,6 +152,7 @@ data BreakupPriceInfo = BreakupPriceInfo
 onUpdate ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
+    EncFlow m r,
     EsqDBReplicaFlow m r,
     CoreMetrics m,
     HasBapInfo r m,
