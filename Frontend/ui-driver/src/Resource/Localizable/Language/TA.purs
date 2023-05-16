@@ -403,3 +403,4 @@ getTA script = case script of
   COMPLETE_ONBOARDING -> "ஆன்போர்டிங்கை முடிக்கவும்"
   PERSON_WITH_THIS_NUMBER_ALREADY_EXISTS -> "இந்த மொபைல் எண்ணைக் கொண்ட நபர் ஏற்கனவே இருக்கிறார்."
   DEMO -> "டெமோ"
+  YOU_CAN_DESCRIBE_THE_ISSUE_YOU_FACED_HERE -> "நீங்கள் எதிர்கொள்ளும் சிக்கலை இங்கே விவரிக்கலாம்"

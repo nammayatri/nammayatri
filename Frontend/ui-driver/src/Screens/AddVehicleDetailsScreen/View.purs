@@ -36,11 +36,11 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Effect.Class(liftEffect)
 import Data.String as DS
-import Constant.Test as Id
 import Data.Maybe
 import Common.Types.App
 import Screens.AddVehicleDetailsScreen.ComponentConfig
 import Components.ReferralMobileNumber as ReferralMobileNumber
+import Constant.Test as Id
 import EN
 
 screen :: AddVehicleDetailsScreenState -> Screen Action AddVehicleDetailsScreenState ScreenOutput
@@ -511,7 +511,7 @@ previewIcon state push =
         , onClick (\action-> do
                       _ <- liftEffect $ JB.previewImage state.data.rc_base64
                       pure unit)(const PreviewImageAction)
-        , Id.testId $ Id.Element if state.props.rcAvailable then Id.preview else Id.noAction
+        , Id.testId $ Id.Text if state.props.rcAvailable then Id.preview else Id.noAction
         ] 
       , imageView
         [ height (V 10)
@@ -519,7 +519,7 @@ previewIcon state push =
         , margin (Margin 10 0 0 0)
         , imageWithFallback "ny_ic_close,https://assets.juspay.in/nammayatri/images/common/ny_ic_close.png"
         , onClick push (const RemoveUploadedFile)
-        , Id.testId $ Id.Element Id.clear
+        , Id.testId $ Id.Object Id.clear
         ]
     ]
 
@@ -599,7 +599,7 @@ dateOfRCRegistrationView push state =
       , height WRAP_CONTENT
       , orientation HORIZONTAL
       , onClick push (const $ TutorialModal "REGISTERATION_DATE")
-      , Id.testId $ Id.Select (getEN WHERE_IS_MY_REGISTRATION_DATE)
+      , Id.testId $ Id.Text (getEN WHERE_IS_MY_REGISTRATION_DATE)
       ][ textView $
         [ text (getString WHERE_IS_MY_REGISTRATION_DATE)
         , weight 1.0

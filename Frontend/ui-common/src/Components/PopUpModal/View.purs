@@ -265,6 +265,7 @@ tipsView push state =
                   , padding state.tipButton.padding
                   , fontStyle $ state.tipButton.fontStyle
                   , onClick push $ const $ Tipbtnclick index (fromMaybe 100 (state.customerTipArrayWithValues !! index))
+                  , Id.testId $ Id.List (state.tipButton.testIdText)
                   , background (if (state.activeIndex == index) then Color.blue600 else state.tipButton.background)
                   ]
               ]

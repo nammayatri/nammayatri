@@ -57,7 +57,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (countDown, flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getLocationName, getNewTrackingId, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, toString, waitingCountdownTimer, getDistanceBwCordinates, fetchAndUpdateCurrentLocation, getCurrentLocationMarker, getPreviousVersion, storeOnResumeCallback, decodeErrorMessage)
+import Helpers.Utils (getLocationName, getNewTrackingId, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, waitingCountdownTimer, getDistanceBwCordinates, fetchAndUpdateCurrentLocation, getCurrentLocationMarker, getPreviousVersion, storeOnResumeCallback, decodeErrorMessage)
 import JBridge (enableMyLocation, drawRoute, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, updateRoute, storeCallBackMessageUpdated, startChatListenerService, stopChatListenerService, updateRoute, toast, getExtendedPath, generateSessionId, initialWebViewSetUp, isMockLocation)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -535,7 +535,7 @@ referralView push state =
     , gravity RIGHT
     , padding (Padding 16 12 16 12)
     , onClick push $ const $ if state.props.isReferred then ReferralFlowNoAction else ReferralFlowAction
-    , Id.testId $ Id.Object if not state.props.isReferred then (getEN HAVE_REFERRAL_CODE) else (getEN REFERRAL_CODE_APPLIED)
+    , Id.testId $ Id.Container if not state.props.isReferred then (getEN HAVE_REFERRAL_CODE) else (getEN REFERRAL_CODE_APPLIED)
     ][
       imageView [
          imageWithFallback "ny_ic_tick,https://assets.juspay.in/nammayatri/images/user/ny_ic_tick.png"
@@ -1066,7 +1066,7 @@ topLeftIconView state push =
           , visibility if (any (_ == state.props.currentStage) [ FindingEstimate, ConfirmingRide, FindingQuotes, TryAgain ]) then GONE else VISIBLE
           , clickable true
           , onClick push $ if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then const BackPressed else const OpenSettings
-          , Id.testId $ if (any (_ == state.props.currentStage) [SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits]) then Id.Object Id.backIcon else Id.Object Id.hamburger
+          , Id.testId $ Id.Object if (any (_ == state.props.currentStage) [SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits]) then Id.backIcon else Id.hamburger
           ]
           [ imageView
               [ imageWithFallback if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png" else if checkVersion "LazyCheck" then "ic_menu_notify,https://assets.juspay.in/nammayatri/images/user/ic_menu_notify.png" else "ny_ic_hamburger,https://assets.juspay.in/nammayatri/images/user/ny_ic_hamburger.png"

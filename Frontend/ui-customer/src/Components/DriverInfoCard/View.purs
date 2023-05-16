@@ -26,7 +26,7 @@ import Effect (Effect)
 import Engineering.Helpers.Commons (screenWidth, safeMarginBottom, os, flowRunner)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (secondsToHms, toString)
+import Helpers.Utils (secondsToHms)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>),(-),(*), bind, pure, discard, (&&), (||))
@@ -103,6 +103,7 @@ supportButton push state =
       , margin $ Margin 10 10 10 4
       , visibility VISIBLE
       , onClick push $ const ShareRide
+      , Id.testId $ Id.Object Id.share
       ]
     , linearLayout
       [ height (V 1)
@@ -193,7 +194,7 @@ otpAndWaitView push state =
             , linearLayout
               [ height WRAP_CONTENT
               , width WRAP_CONTENT
-              ] (map(\item ->
+              ] (Array.mapWithIndex(\index item ->
                   linearLayout
                     [ height $ V 32
                     , width $ V 32
@@ -208,7 +209,6 @@ otpAndWaitView push state =
                         , textSize FontSize.a_18
                         , color Color.white900
                         , fontStyle $ FontStyle.bold LanguageStyle
-                        , Id.testId $ Id.Text (getEN OTP <> Id.underScore <> toString(index))
                         ]
                     ]) $ split (Pattern "")  state.data.otp)
           ]
@@ -379,6 +379,7 @@ contactView push state =
           , cornerRadius 20.0
           , background Color.green200
           , onClick push (const MessageDriver)
+          , Id.testId $ Id.Object if state.props.unReadMessages then Id.messageReceivedIcon else Id.callMessageIcon
           ][ imageView
               [ imageWithFallback if state.props.unReadMessages then "ic_chat_badge_green,https://assets.juspay.in/nammayatri/images/user/ic_chat_badge_green.png" else "ic_call_msg,https://assets.juspay.in/nammayatri/images/user/ic_call_msg.png"
               , height $ V 24

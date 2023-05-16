@@ -30,11 +30,10 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (toString)
 import JBridge as JB 
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, discard, map, pure, unit, ($), (-), (/=), (<<<), (<=), (<>), (==), (||))
+import Prelude (Unit, bind, const, discard, map, pure, unit, ($), (-), (/=), (<<<), (<=), (<>), (==), (||), show)
 import Presto.Core.Types.Language.Flow (Flow, doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Shadow(..), Visibility(..), afterRender, alignParentRight, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, shadow, stroke, text, textSize, textView, visibility, width, imageWithFallback)
 import PrestoDOM.Properties as PP
@@ -278,7 +277,7 @@ allTopicsView state push =
         , width MATCH_PARENT
         , padding (Padding 20 0 20 0)
         , onClick push (const item.action)
-        , Id.testId $ Id.List (Id.contactUsScreen <> Id.underScore <> toString(index))
+        , Id.testId $ Id.List (Id.contactUsScreen <> Id.underScore <> (show index))
         , orientation VERTICAL
         ][  linearLayout
             [ height WRAP_CONTENT

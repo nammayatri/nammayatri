@@ -261,7 +261,7 @@ previewIcon state push previewType =
         , onClick (\action-> do
                       _ <- liftEffect $ JB.previewImage $ if(previewType == "front") then state.data.imageFront else state.data.imageBack
                       pure unit)(const PreviewImageAction)
-        , Id.testId $ Id.Container Id.preview
+        , Id.testId $ Id.Text Id.preview
         ] 
       , imageView
           [ height (V 20)
@@ -269,6 +269,6 @@ previewIcon state push previewType =
           , margin (Margin 10 0 0 0)
           , imageWithFallback "ny_ic_cancel,https://assets.juspay.in/nammayatri/images/driver/ny_ic_cancel.png"
           , onClick push (const(RemoveUploadedFile previewType))
-          , Id.testId $ Id.Container (Id.preview <> Id.underScore <> Id.clear)
+          , Id.testId $ Id.Object (Id.preview <> Id.underScore <> Id.clear)
           ]
     ]

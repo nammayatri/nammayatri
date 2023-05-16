@@ -117,7 +117,7 @@ view push state =
                          , width MATCH_PARENT
                          , orientation HORIZONTAL
                          , onClick push (const CallSupport)
-                         , Id.testId $ Id.Object (getEN CALL_SUPPORT_CENTER)
+                         , Id.testId $ Id.Container (getEN CALL_SUPPORT_CENTER)
                           ][ imageView
                             [ imageWithFallback "ny_ic_support,https://assets.juspay.in/nammayatri/images/driver/ny_ic_support.png"
                             , height $ V 17
@@ -258,7 +258,7 @@ tripDataView push state =
                 , width WRAP_CONTENT
                 , orientation HORIZONTAL
                 , onClick push (const Copy)
-                , Id.testId $ Id.Object Id.copy
+                , Id.testId $ Id.Container Id.copy
                 ][ textView
                     [ text state.data.tripId
                     , width WRAP_CONTENT
@@ -402,10 +402,10 @@ reportIssueView state push =
                        , background Color.white900
                        , fontStyle $ FontStyle.bold LanguageStyle
                        , text ""
-                       , hint "You can describe the issue you faced here"
+                       , hint (getString YOU_CAN_DESCRIBE_THE_ISSUE_YOU_FACED_HERE)
                        , pattern "[A-Za-z0-9 ]*,255"
                        , onChange push $ MessageTextChanged
-                       , Id.testId $ Id.TextField "You can describe the issue you faced here"
+                       , Id.testId $ Id.TextField (getEN YOU_CAN_DESCRIBE_THE_ISSUE_YOU_FACED_HERE)
                        ]
                      ]  
                 ]

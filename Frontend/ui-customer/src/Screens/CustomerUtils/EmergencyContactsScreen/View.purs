@@ -10,7 +10,7 @@ import Font.Style as FontStyle
 import JBridge (openUrlInApp, loaderText)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>), map, (/=), discard, (||))
+import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>), map, (/=), discard, (||), show)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, imageView, imageUrl, cornerRadius, onClick, afterRender, visibility, stroke, relativeLayout, clickable, imageWithFallback)
 import Screens.EmergencyContactsScreen.Controller (Action(..), ScreenOutput, eval, contactColorsList)
 import Screens.Types (EmergencyContactsScreenState, ContactDetail, NewContacts)
@@ -18,7 +18,7 @@ import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
 import Styles.Colors as Color
 import Debug (spy)
 import Common.Types.App
-import Helpers.Utils (storeCallBackContacts, contactPermission, toString)
+import Helpers.Utils (storeCallBackContacts, contactPermission)
 import Components.ContactList as ContactList
 import Data.Array (take, (!!), mapWithIndex, null, length)
 import Data.String as DS
@@ -232,7 +232,7 @@ contactCardView push state contact index =
         , color Color.blue900
         , textSize 14
         , onClick push (const (RemoveButtonClicked contact))
-        , Id.testId $ Id.Text (getEN REMOVE <> Id.underScore <> toString index)
+        , Id.testId $ Id.Text (getEN REMOVE <> Id.underScore <> (show index))
         ]
     ]
 

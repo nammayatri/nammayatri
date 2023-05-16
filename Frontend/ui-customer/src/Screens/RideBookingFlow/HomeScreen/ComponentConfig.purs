@@ -47,6 +47,7 @@ import Common.Types.App
 import PrestoDOM
 import Data.Int as INT
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn)
+import Constant.Test as Id
 import EN
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
@@ -376,6 +377,7 @@ logOutPopUpModelConfig state =
               , color = Color.black800
               , strokeColor = Color.grey900
               , padding = (Padding 16 12 16 12)
+              , testIdText = (Id.tip <> Id.underScore <> (show state.props.customerTip.tipActiveIndex))
             },
           option1 {
             text = if (state.props.customerTip.tipForDriver == 0) then ( if(isLocalStageOn ST.QuoteList) then (getString TRY_AGAIN_WITHOUT_TIP)else (getString SEARCH_AGAIN_WITHOUT_A_TIP)) else ((if (isLocalStageOn ST.QuoteList) then (getString TRY_AGAIN_WITH)else(getString SEARCH_AGAIN_WITH) ) <> " + ₹"<> (fromMaybe "" (["0", "10", "15", "20"] DA.!! state.props.customerTip.tipActiveIndex))) <>" "<>(getString TIP)
@@ -386,7 +388,7 @@ logOutPopUpModelConfig state =
           , background = Color.black900
           , padding = (Padding 0 10 0 10)
           , fontStyle = FontStyle.semiBold LanguageStyle
-          , testIdText = if (state.props.customerTip.tipForDriver == 0) then ( if(isLocalStageOn ST.QuoteList) then (getEN TRY_AGAIN_WITHOUT_TIP)else (getEN SEARCH_AGAIN_WITHOUT_A_TIP)) else ((if (isLocalStageOn ST.QuoteList) then (getEN TRY_AGAIN_WITH) else (getEN SEARCH_AGAIN_WITH) ) <> Id.underScore (fromMaybe "" (["0", "10", "15", "20"] DA.!! state.props.customerTip.tipActiveIndex))) <> Id.underScore <>(getEN TIP)
+          , testIdText = if (state.props.customerTip.tipForDriver == 0) then ( if(isLocalStageOn ST.QuoteList) then (getEN TRY_AGAIN_WITHOUT_TIP)else (getEN SEARCH_AGAIN_WITHOUT_A_TIP)) else ((if (isLocalStageOn ST.QuoteList) then (getEN TRY_AGAIN_WITH) else (getEN SEARCH_AGAIN_WITH) ) <> Id.underScore <> (fromMaybe "" (["0", "10", "15", "20"] DA.!! state.props.customerTip.tipActiveIndex))) <> Id.underScore <>(getEN TIP)
           },
           option2 {
             text = if (isLocalStageOn ST.QuoteList) then (getString HOME) else  (getString CANCEL_SEARCH)
@@ -742,11 +744,13 @@ callSupportConfig state = let
     , fontSize = FontSize.a_16
     , color = Color.black700
     , strokeColor = Color.black700
+    , testIdText = getEN CANCEL_
     }
   , option2 {
       text =  getString CALL_SUPPORT
     , fontSize = FontSize.a_16
     , margin = (MarginLeft 12)
+    , testIdText = getEN CALL_SUPPORT
     }
   }
   in popUpConfig'

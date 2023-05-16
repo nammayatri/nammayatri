@@ -32,6 +32,7 @@ import Components.PopUpModal as PopUpModal
 import Common.Types.App
 import Screens.AboutUsScreen.ComponentConfig
 import Constant.Test as Id
+import EN
 
 screen :: ST.AboutUsScreenState -> Screen Action ST.AboutUsScreenState ScreenOutput
 screen initialState =
@@ -190,7 +191,7 @@ underlinedTextView value push  =
               pure unit
               ) (const TermsAndConditionAction)
   , margin (Margin 20 30 0 0)
-  , Id.testId $ Id.Text if (value == (getString T_C)) then (Id.link <> Id.underScore <> (getString T_C)) else (Id.link <> Id.underScore <> (getString PRIVACY_POLICY))
+  , Id.testId $ Id.Text (Id.link <> Id.underScore <> if value == (getString T_C) then (getEN T_C) else (getEN PRIVACY_POLICY))
   ][ textView
     [ width WRAP_CONTENT
     , height WRAP_CONTENT

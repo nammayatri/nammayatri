@@ -114,6 +114,7 @@ subTextView push state =
       , color Color.blue900
       , gravity CENTER
       , onClick push (const OnSubTextClick)
+      , Id.testId $ Id.Text Id.subText
       ]
     ]
 

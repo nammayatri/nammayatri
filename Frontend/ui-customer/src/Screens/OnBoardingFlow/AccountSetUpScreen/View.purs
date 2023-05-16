@@ -40,7 +40,7 @@ import Data.Array (mapWithIndex)
 import PrestoDOM.Animation as PrestoAnim
 import Resources.Constants as RSRC
 import Constant.Test as Id
-
+import EN
 
 screen :: ST.AccountSetUpScreenState -> Screen Action ST.AccountSetUpScreenState ScreenOutput
 screen initialState =
@@ -163,6 +163,7 @@ nameEditTextView state push =
           , padding $ Padding 20 15 20 15
           , color Color.black800
           , onChange push $ TextChanged
+          , Id.testId $ Id.TextField (getEN ENTER_YOUR_NAME)
           , onFocus push $ const $ EditTextFocusChanged
           , gravity LEFT
           , cornerRadius 8.0
@@ -203,6 +204,7 @@ genderCaptureView state push =
         , padding $ Padding 20 15 20 15
         , cornerRadius 8.0
         , onClick push (const ShowOptions)
+        , Id.testId $ Id.Container (getEN SELECT_YOUR_GENDER)
         , stroke $ "1,"<> Color.borderColorLight
         , gravity CENTER_VERTICAL
         ]
@@ -257,6 +259,11 @@ genderOptionsView state push =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , onClick push $ const $ GenderSelected item.value
+        , Id.testId $ Id.List case item.value of
+                                ST.FEMALE -> (getEN FEMALE)
+                                ST.MALE -> (getEN MALE)
+                                ST.OTHER -> (getEN OTHER)
+                                ST.PREFER_NOT_TO_SAY -> (getEN PREFER_NOT_TO_SAY)
         , orientation VERTICAL
         ]
         [ textView

@@ -52,7 +52,7 @@ view push state =
         , padding $ Padding 8 8 8 8
         , margin $ MarginRight if index == 2 then 0 else 8
         , onClick push $ const $ TagClick item (getSavedLocationByTag state item)
-        , Id.testId $ Id.Object case item of
+        , Id.testId $ Id.List case item of
                                 WORK_TAG -> getEN WORK
                                 HOME_TAG -> getEN HOME
                                 _        -> getEN ALL_FAVOURITES

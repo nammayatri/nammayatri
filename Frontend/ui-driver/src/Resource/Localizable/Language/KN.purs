@@ -404,3 +404,4 @@ getKN script = case script of
   COMPLETE_ONBOARDING -> "ಆನ್‌ಬೋರ್ಡಿಂಗ್ ಅನ್ನು ಪೂರ್ಣಗೊಳಿಸಿ"
   PERSON_WITH_THIS_NUMBER_ALREADY_EXISTS -> "ಈ ಮೊಬೈಲ್ ಸಂಖ್ಯೆಯನ್ನು ಹೊಂದಿರುವ ವ್ಯಕ್ತಿ ಈಗಾಗಲೇ ಅಸ್ತಿತ್ವದಲ್ಲಿದ್ದಾರೆ."
   DEMO -> "ಡೆಮೊ"
+  YOU_CAN_DESCRIBE_THE_ISSUE_YOU_FACED_HERE -> "ನಿಮ್ಮ ಸಮಸ್ಯೆಯನ್ನು ಇಲ್ಲಿ ವಿವರಿಸಬಹುದು / ನೀವು ಎದುರಿಸಿದ ಸಮಸ್ಯೆಯನ್ನು ಇಲ್ಲಿ ವಿವರಿಸಬಹುದು"

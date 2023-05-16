@@ -25,6 +25,7 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(
 import PrestoDOM.List as PrestoList
 import Screens.NotificationsScreen.Controller (Action(..)) as NotificationsScreen
 import Styles.Colors as Color
+import Constant.Test as Id
 
 view :: forall w. (NotificationsScreen.Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 view push =
@@ -32,6 +33,7 @@ view push =
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , background Color.white900
+    , Id.testId $ Id.Component Id.notificationCard
     ]
     [ shimmerView
     , notificationCardView push
@@ -50,6 +52,7 @@ notificationCardView push =
     , stroke $ "1," <> Color.grey900
     , background Color.white900
     , PrestoList.onClickHolder push $ NotificationsScreen.NotificationCardClick <<< IllutrationClick
+    , Id.testId $ Id.Container Id.notificationCard
     ]
     [ relativeLayout
         [ height $ V 159
@@ -174,6 +177,7 @@ actionAndTimeLabel push =
         , padding $ Padding 0 5 5 5
         , textSize FontSize.a_14
         , PrestoList.onClickHolder push $ NotificationsScreen.NotificationCardClick <<< Action1Click
+        , Id.testId $ Id.Text "action1Text"
         ]
     , linearLayout
         [ height WRAP_CONTENT
@@ -190,6 +194,7 @@ actionAndTimeLabel push =
             , PrestoList.visibilityHolder "action2Visibility"
             , padding $ Padding 5 5 5 5
             , PrestoList.onClickHolder push $ NotificationsScreen.NotificationCardClick <<< Action2Click
+            , Id.testId $ Id.Text "action2Text"
             ]
         ]
     , textView

@@ -129,7 +129,7 @@ view push state =
                                 _<- push action
                                 pure unit
                                 ) (const OnCloseClick)
-                    , Id.testId $ Id.Option (getEN NOT_NOW)
+                    , Id.testId $ Id.Button $ Id.BtnConfig (getEN NOT_NOW)
                     ]
                 ]
             , linearLayout
@@ -151,7 +151,7 @@ view push state =
                               _ <- JB.openUrlInApp "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner"
                               pure unit
                               ) (const OnAccept)
-                  , Id.testId $ Id.Option (getEN UPDATE)
+                  , Id.testId $ Id.Button $ Id.BtnConfig (getEN UPDATE)
               ] 
             ]
           ]

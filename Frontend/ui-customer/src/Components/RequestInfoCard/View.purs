@@ -95,7 +95,7 @@ view push =
             , textSize FontSize.a_16
             , padding (Padding 0 28 0 20)
             , onClick push $ const Close
-            , Id.testId $ Id.Object (getEN GOT_IT)
+            , Id.testId $ Id.Text (getEN GOT_IT)
             ]
      ]
 

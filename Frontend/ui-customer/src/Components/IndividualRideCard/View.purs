@@ -33,6 +33,7 @@ import Storage
 import Styles.Colors as Color
 import Storage
 import Constant.Test as Id
+import EN
 
 view :: forall w .  (Screen.Action  -> Effect Unit) -> IndividualRideCardState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -356,6 +357,7 @@ viewDetailsAndRepeatRide push state =
       , fontStyle $ FontStyle.medium LanguageStyle
       , padding $ Padding 10 3 10 3
       , PrestoList.onClickHolder push $ Screen.IndividualRideCardActionController <<< OnClick
+      , Id.testId $ Id.Text (getEN VIEW_DETAILS)
       ]
     , linearLayout 
       [ width $ V 1
@@ -373,6 +375,7 @@ viewDetailsAndRepeatRide push state =
       , PrestoList.alphaHolder "alpha"
       , alpha $ if (isLocalStageOn HomeScreen) then 1.0 else 0.5
       , PrestoList.onClickHolder push $ (if (isLocalStageOn HomeScreen) then Screen.IndividualRideCardActionController <<< RepeatRide else Screen.IndividualRideCardActionController <<< NoAction)
+      , Id.testId $ Id.Text (getEN REPEAT_RIDE)
       , padding $ Padding 10 3 10 3
       ]
   ]

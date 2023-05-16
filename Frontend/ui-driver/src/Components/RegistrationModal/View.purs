@@ -41,7 +41,7 @@ view push state =
     , background Color.black9000
     , gravity BOTTOM
     , onClick push (const OnCloseClick)
-    , Id.testId $ Id.Component (Id.registrationModal <> Id.underScore <> Id.close)
+    , Id.testId $ Id.Component (Id.registrationModal <> Id.underScore <> Id.backgroundClick)
   ][
    PrestoAnim.animationSet [
       translateYAnim translateYAnimConfig

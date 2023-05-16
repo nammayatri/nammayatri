@@ -36,6 +36,7 @@ import JBridge as JB
 import Common.Types.App
 import Screens.VehicleDetailsScreen.ComponentConfig
 import Constant.Test as Id
+import EN
 
 screen :: ST.VehicleDetailsScreenState -> Screen Action ST.VehicleDetailsScreenState ScreenOutput
 screen initialState =
@@ -140,7 +141,7 @@ headerLayout state push heading =
         , fontStyle $ FontStyle.semiBold LanguageStyle
         , visibility GONE -- if state.props.isInEditVehicleDetailsView then GONE else VISIBLE  TILL 15AUG
         , onClick push (const ToggleScreenMode)
-        , Id.testId $ Id.ToolBar Id.toggle
+        , Id.testId $ Id.ToolBar (getEN EDIT)
         ]
     ]
   , linearLayout
@@ -238,7 +239,7 @@ rcImageField optionItem push state =
          , margin (MarginLeft 10)
          , textSize FontSize.a_16
          , onClick push (const PreviewImage)
-         , Id.testId $ Id.Object Id.preview
+         , Id.testId $ Id.Text Id.preview
          ]
       ]
   ]
@@ -389,7 +390,7 @@ uploadRCView state push =
                , color Color.blueBtn
                , textSize FontSize.a_16
                , onClick push (const PreviewImage)
-               , Id.testId $ Id.Object Id.preview
+               , Id.testId $ Id.Text (getEN PREVIEW)
                , visibility if state.props.deleteButtonVisibility then VISIBLE else GONE
                ]
              , imageView

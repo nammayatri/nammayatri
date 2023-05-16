@@ -148,7 +148,7 @@ headerView push state =
               , height WRAP_CONTENT
               , weight 0.5
               , onClick push (const $ SelectTab "COMPLETED")
-              , Id.testId $ Id.Select (Id.tab <> Id.underScore <> (getEN COMPLETED_))
+              , Id.testId $ Id.Button $ Id.BtnConfig (Id.tab <> Id.underScore <> (getEN COMPLETED_))
               ][
                 linearLayout
                   [ width $ (V (screenWidth unit / 2) )
@@ -174,7 +174,7 @@ headerView push state =
               , height WRAP_CONTENT
               , weight 0.5
               , onClick push (const $ SelectTab "CANCELLED")
-              , Id.testId $ Id.Element (Id.tab <> Id.underScore <> (getEN CANCELLED_))
+              , Id.testId $ Id.Button $ Id.BtnConfig (Id.tab <> Id.underScore <> (getEN CANCELLED_))
               ][
                 linearLayout
                   [ width $ V (screenWidth unit / 2)

@@ -42,7 +42,6 @@ import Engineering.Helpers.Commons (getNewIDWithTag)
 import Data.Array (length,(!!))
 import Data.Maybe
 import Common.Types.App
-import Helpers.Utils (toString)
 import JBridge(requestKeyboardShow, hideKeyboardOnNavigation)
 import Constant.Test as Id
 
@@ -68,6 +67,7 @@ view push config =
             _ <- pure $ hideKeyboardOnNavigation true
             pure unit 
           ) (const NoAction)
+          , Id.testId $ Id.View (Id.backgroundClick <> Id.underScore <> Id.keyboard)
           , cornerRadii $ Corners 20.0 true true false false
           , orientation VERTICAL
           , background Color.white900
@@ -89,6 +89,7 @@ headingText config push =
             _ <- pure $ hideKeyboardOnNavigation true
             pure unit 
           ) (const NoAction)
+  , Id.testId $ Id.View (Id.backgroundClick <> Id.underScore <> Id.keyboard)
  , disableClickFeedback true
  ][ textView
     [ width MATCH_PARENT
@@ -184,7 +185,7 @@ cancelationReasonOptions config push =
               _ -> pure unit 
             pure unit 
           ) (const (UpdateIndex index))
-          , Id.testId $ Id.RadioButton (Id.cancelRide <> Id.reason <> Id.underScore <> toString (index))
+          , Id.testId $ Id.List (Id.cancelRide <> Id.reason <> Id.underScore <> (show index))
           ][radioButton config push index item,
             horizontalLine index (fromMaybe (-1) config.activeIndex) config,
             (case config.activeReasonCode of 

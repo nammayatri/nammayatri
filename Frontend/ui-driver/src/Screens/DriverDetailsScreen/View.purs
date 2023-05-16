@@ -39,7 +39,7 @@ import Components.PopUpModal.Controller as PopUpModalConfig
 import Screens.DriverDetailsScreen.ComponentConfig
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Constant.Test as Id
-
+import EN
 
 screen :: ST.DriverDetailsScreenState -> Screen Action ST.DriverDetailsScreenState ScreenOutput
 screen initialState =
@@ -258,6 +258,7 @@ driverSubsection push state title =
   , color Color.blue900
   , margin (Margin 0 10 20 0)
   , onClick push (const ClickEditAlternateNumber)
+  , Id.testId $ Id.Text (getEN EDIT)
   ] <> FontStyle.body1 TypoGraphy
   ),
   textView(
@@ -271,6 +272,7 @@ driverSubsection push state title =
   , color Color.blue900
   , margin (Margin 0 10 0 0)
   , onClick push (const ClickRemoveAlternateNumber)
+  , Id.testId $ Id.Text (getEN REMOVE)
   ]<> FontStyle.body1 TypoGraphy
   )
 ]
@@ -296,6 +298,7 @@ addAlternateNumber push state =
     , width WRAP_CONTENT
     , orientation VERTICAL
     , onClick push (const ClickAddAlternateButton)
+    , Id.testId $ Id.Text (getEN ADD_ALTERNATE_NUMBER)
     ][  textView
         [
           width WRAP_CONTENT

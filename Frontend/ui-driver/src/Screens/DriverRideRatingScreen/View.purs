@@ -17,12 +17,11 @@ module Screens.DriverRideRatingScreen.View where
 
 import PrestoDOM (Gravity(..), InputType(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, alignParentBottom, background, clickable, color, cornerRadius, editText, fontStyle, gravity, height, hint, imageUrl, imageView, inputType, lineHeight, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, relativeLayout, singleLine, stroke, text, textSize, textView, weight, width, pattern, scrollView, afterRender, imageWithFallback)
 import Screens.DriverRideRatingScreen.Controller (Action(..), ScreenOutput, eval, getFeedBackString)
-import Prelude (Unit, const, unit, ($), (-), (<<<), (<=), (<>), (==), bind, pure)
+import Prelude (Unit, const, unit, ($), (-), (<<<), (<=), (<>), (==), bind, pure, show)
 import Screens.Types as ST
 import Screens.DriverRideRatingScreen.ScreenData(feedbackSuggestionArray)
 import Components.PrimaryButton as PrimaryButton
 import Engineering.Helpers.Commons as EHC
-import Helpers.Utils (toString)
 import Language.Strings (getString)
 import Animation as Anim
 import Data.Array as DA 
@@ -149,7 +148,7 @@ starRatingView state push =
                           , width WRAP_CONTENT
                           , margin (MarginHorizontal 5 5)
                           , onClick push $ const (Rating index)
-                          , Id.testId $ Id.Select (Id.rideStarRating <> Id.underScore <> toString(index))
+                          , Id.testId $ Id.List (Id.rideStarRating <> Id.underScore <> (show index))
                           ][imageView
                               [ height $ V 30
                               , width $ V 30
@@ -233,7 +232,7 @@ suggestionButtonView state push =
                       , gravity CENTER
                       , margin (MarginRight 10)
                       , onClick push (const $ FeedBackClick item)
-                      , Id.testId $ Id.Object (Id.feedback <> Id.underScore <> toString(index))
+                      , Id.testId $ Id.List (Id.feedback <> Id.underScore <> (show index))
                       , cornerRadius 7.0
                       ][textView
                           [ height WRAP_CONTENT

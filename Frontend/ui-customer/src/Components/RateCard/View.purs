@@ -30,7 +30,6 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Styles.Colors as Color
-import Common.Types.App
 import Constant.Test as Id
 import EN
 
@@ -225,7 +224,7 @@ view push config =
         , textSize FontSize.a_18
         , padding (Padding 0 8 0 25)
         , onClick push $ const Close
-        , Id.testId $ Id.Button $ Id.BtnConfig (getEN GOT_IT)
+        , Id.testId $ Id.Text (getEN GOT_IT)
         ]
       ]
    ]

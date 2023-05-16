@@ -142,7 +142,7 @@ commonView push img title description state=
               , imageUrl img
               , margin $ if img == "ny_ic_comming_soon_poster" then (Margin 0 0 0 0) else (MarginBottom 72)
               , onClick push (const if img == "ny_ic_comming_soon_poster" then EnableReferralFlow else EnableReferralFlowNoAction)
-              , Id.testId $ Id.Object Id.image
+              , Id.testId $ Id.Object Id.comingSoon
               ]
           , textView
               [ height WRAP_CONTENT
@@ -281,8 +281,8 @@ referralEnrolmentFlow push state =
               , letterSpacing: PX 0.0
               , id: (getNewIDWithTag "EnterConfirmReferralCoderEditText")
               , fontSize : FontSize.a_18
-              , type : "number",
-              testIdText : (getEN CONFIRM_REFERRAL_CODE_HINT)
+              , type : "number"
+              , testIdText : (getEN CONFIRM_REFERRAL_CODE_HINT)
             })
           ]
         ]
@@ -527,7 +527,7 @@ contactUsTextView push state =
   , margin $ MarginTop 4
   , visibility if state.data.driverPerformance.referrals.totalActivatedCustomers > 0 then VISIBLE else GONE
   , onClick push $ const GoToAlertScreen
-  , Id.testId $ Id.Object (getEN FOR_UPDATES_SEE_ALERTS)
+  , Id.testId $ Id.Text (getEN FOR_UPDATES_SEE_ALERTS)
   ][ textView
     [ height WRAP_CONTENT
     , width MATCH_PARENT

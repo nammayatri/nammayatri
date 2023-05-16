@@ -366,7 +366,7 @@ invoiceView state push =
     , padding (Padding 0 16 0 16)
     , disableClickFeedback false
     , onClick push $ (const ViewInvoice)
-    , Id.testId $ Id.Text (getEN VIEW_INVOICE)
+    , Id.testId $ Id.Container (getEN VIEW_INVOICE)
     , visibility if state.data.selectedItem.status == "CANCELLED" then GONE else VISIBLE
     ][  textView
         [ text (getString VIEW_INVOICE)

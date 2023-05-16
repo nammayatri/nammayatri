@@ -209,7 +209,7 @@ bottomBtnsView state push =
                                 else do
                                   _ <- push action
                                   pure unit) (const item.action)
-              , Id.testId $ Id.Select if item.tag == "LOCATE_ON_MAP" then (getEN SELECT_ON_MAP) else (getEN CURRENT_LOCATION)
+              , Id.testId $ Id.List if item.tag == "LOCATE_ON_MAP" then (getEN SELECT_ON_MAP) else (getEN CURRENT_LOCATION)
               ] <> FontStyle.body1 TypoGraphy
             ]
           , linearLayout
@@ -576,7 +576,7 @@ tagView state push =
           , background if (Just index) == state.data.activeIndex then Color.catskillWhite else Color.grey800
           , onClick push $ const (TagSelected index)
           , margin (MarginRight 12)
-          , Id.testId $ Id.Object (Id.tag <> Id.underScore <> item.tag)
+          , Id.testId $ Id.List (Id.tag <> Id.underScore <> item.tag)
           , cornerRadius 6.0
           , alpha case item.tag of
                       "FAVOURITE"     -> 1.0

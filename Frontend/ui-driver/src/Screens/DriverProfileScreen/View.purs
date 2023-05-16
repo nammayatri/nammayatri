@@ -202,6 +202,7 @@ profileOptionsLayout state push =
                                     REFER -> (getEN ADD_YOUR_FRIEND)
                                     DRIVER_LOGOUT -> (getEN LOGOUT)
                                     APP_INFO_SETTINGS -> (getEN APP_INFO)
+                                    LIVE_STATS_DASHBOARD -> (getEN LIVE_DASHBOARD)
             ][ linearLayout
               [ width MATCH_PARENT
               , height WRAP_CONTENT

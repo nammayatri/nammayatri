@@ -21,7 +21,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, const, map, ($), (/=), (<>), (==), pure, (<<<), (-), discard, unit, bind)
+import Prelude (Unit, const, map, ($), (/=), (<>), (==), pure, (<<<), (-), discard, unit, bind, show)
 import Data.Array (take, (!!), drop, head, mapWithIndex, null)
 import Data.String as DS
 import Data.Array as DA
@@ -35,10 +35,9 @@ import Components.GenericHeader.View as GenericHeader
 import Common.Types.App
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Engineering.Helpers.Commons (safeMarginTop, safeMarginBottom, os, isPreviousVersion)
-import Helpers.Utils (getPreviousVersion, toString)
+import Helpers.Utils (getPreviousVersion)
 import Storage (getValueToLocalStore, KeyStore(..))
 import Constant.Test as Id
-import Helpers.Utils (toString)
 import EN
 
 
@@ -113,7 +112,7 @@ supportButtonViewContent state push item index =  linearLayout
          ,  margin $ Margin 16 12 16 0
          , clickable true
          , onClick push $ const item.action
-         , Id.testId $ Id.Container (toString(index))
+         , Id.testId $ Id.Container (show index)
         ][ linearLayout 
            [ height WRAP_CONTENT
            , width WRAP_CONTENT
@@ -441,7 +440,7 @@ allContactsView state push =
                   [ height  WRAP_CONTENT
                   , width  WRAP_CONTENT
                   , onClick push $ const $ CallContactPopUp item
-                  , Id.testId $ Id.Text (getEN CALL <> Id.underScore <> toString index)
+                  , Id.testId $ Id.List (getEN CALL <> Id.underScore <> (show index))
                   ][ textView
                     [ text $ (getString CALL)
                     , color Color.green900

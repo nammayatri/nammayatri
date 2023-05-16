@@ -109,7 +109,8 @@ emailEditTextConfig state = let
             , fontStyle = FontStyle.regular LanguageStyle
             , color = Color.textDanger
             },
-            id = (EHC.getNewIDWithTag "EmailEditText")
+            id = (EHC.getNewIDWithTag "EmailEditText"),
+            testIdText = (getEN EMAIL_ID)
         }
     in primaryEditTextConfig'
 

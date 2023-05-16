@@ -403,3 +403,4 @@ getHI script = case script of
   ADD_ALTERNATE_NUMBER_IN_MEANTIME ->  "इस प्रोसेस को पूरा होने में 2 कामकाजी दिन \n तक लग सकते हैं। इस बीच, आप \nएक वैकल्पिक मोबाइल नंबर जोड़ सकते हैं।"
   PERSON_WITH_THIS_NUMBER_ALREADY_EXISTS -> "इस मोबाइल नंबर वाला व्यक्ति पहले से मौजूद है।"
   DEMO -> "DEMO"
+  YOU_CAN_DESCRIBE_THE_ISSUE_YOU_FACED_HERE -> "आप यहां जिस समस्या का सामना कर रहे हैं उसका वर्णन कर सकते हैं"

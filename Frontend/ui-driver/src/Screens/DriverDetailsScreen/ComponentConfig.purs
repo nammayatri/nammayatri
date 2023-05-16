@@ -33,6 +33,7 @@ import Data.String (length)
 import Components.PopUpModal.View as PopUpModal
 import Components.PopUpModal.Controller as PopUpModalConfig
 import PrestoDOM.Types.DomAttributes (Corners(..))
+import EN
 
 removeAlternateNumberConfig :: ST.DriverDetailsScreenState -> PopUpModalConfig.Config
 removeAlternateNumberConfig state = let
@@ -54,6 +55,7 @@ removeAlternateNumberConfig state = let
       , color = Color.black900
       , strokeColor = Color.black700
       , fontStyle = FontStyle.semiBold LanguageStyle
+      , testIdText = (getEN CANCEL)
       },
       option2 {text = (getString YES_REMOVE_IT)
       , background = Color.red
@@ -61,7 +63,9 @@ removeAlternateNumberConfig state = let
       , strokeColor = Color.red
       , fontSize = FontSize.a_16
       , margin = (MarginLeft 12)
-      , fontStyle = FontStyle.semiBold LanguageStyle }
+      , fontStyle = FontStyle.semiBold LanguageStyle 
+      , testIdText = (getEN YES_REMOVE_IT)
+      }
     }
   in popUpConfig'
 
@@ -90,7 +94,7 @@ enterOtpExceededModalStateConfig state = let
       , strokeColor = Color.black700
       , fontStyle = FontStyle.semiBold LanguageStyle
       , visibility =false
-
+      , testIdText = (getEN YES_REMOVE_IT)
       },
       option2 {text = (getString TRY_AGAIN_LATER)
       , color = Color.yellow900
@@ -99,7 +103,7 @@ enterOtpExceededModalStateConfig state = let
       , margin = (Margin 16 0 16 0 )
       , fontStyle = FontStyle.semiBold LanguageStyle
       , width = (V 50)
-
+      , testIdText = (getEN TRY_AGAIN_LATER)
       , background = Color.black900
       }
     }

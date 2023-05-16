@@ -37,9 +37,9 @@ import Effect.Class (liftEffect)
 import Data.Maybe
 import Log (printLog)
 import Data.String as DS
-import Constant.Test as Id
 import Common.Types.App
 import Screens.UploadDrivingLicenseScreen.ComponentConfig
+import Constant.Test as Id
 import EN
 
 screen :: ST.UploadDrivingLicenseState -> Screen Action ST.UploadDrivingLicenseState ScreenOutput
@@ -318,7 +318,7 @@ previewIcon state push previewType =
         , onClick (\action-> do
                       _ <- liftEffect $ JB.previewImage $ if(previewType == "front") then state.data.imageFrontUrl else state.data.imageBack
                       pure unit)(const NoAction)
-        , Id.testId $ Id.Container Id.preview
+        , Id.testId $ Id.Text Id.preview
         ] 
       , imageView
           [ height (V 10)
@@ -326,7 +326,7 @@ previewIcon state push previewType =
           , margin (MarginLeft 10)
           , imageWithFallback "ny_ic_close,https://assets.juspay.in/nammayatri/images/common/ny_ic_close.png"
           , onClick push (const( RemoveUploadedFile previewType))
-          , Id.testId $ Id.Container (Id.preview <> Id.underScore <> Id.clear)
+          , Id.testId $ Id.Object (Id.preview <> Id.underScore <> Id.clear)
           ]
     ]
 
@@ -409,7 +409,7 @@ dateOfBirth push state =
                         _ <- JB.datePicker "MINIMUM_EIGHTEEN_YEARS" push $ DatePicker "DATE_OF_BIRTH"
                         pure unit
                       ) (const SelectDateOfBirthAction)
-        , Id.testId $ Id.Object Id.date
+        , Id.testId $ Id.Container Id.date
       ][ textView
         ([ text if state.data.dob == "" then (getString SELECT_DATE_OF_BIRTH) else state.data.dobView
         , color if (state.data.dob == "") then Color.darkGrey else Color.greyTextColor
@@ -452,7 +452,7 @@ dateOfIssue push state =
                         _ <- JB.datePicker "MAXIMUM_PRESENT_DATE" push $ DatePicker "DATE_OF_ISSUE"
                         pure unit
                       ) $ const SelectDateOfIssueAction
-      , Id.testId $ Id.Object (getEN SELECT_DATE_OF_ISSUE)
+      , Id.testId $ Id.Container (getEN SELECT_DATE_OF_ISSUE)
       ][ textView $
         [ text if state.data.dateOfIssue == Just "" then (getString SELECT_DATE_OF_ISSUE) else state.data.dateOfIssueView
         , color if state.data.dateOfIssue == Just "" then Color.darkGrey else Color.greyTextColor

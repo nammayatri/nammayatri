@@ -356,6 +356,7 @@ offlineView push state =
                   , cornerRadius 75.0
                   , background "#53BB6F"
                   , onClick  push  (const $ SwitchDriverStatus ST.Online)
+                  , Id.testId $ Id.Button $ Id.BtnConfig (getEN GO_ONLINE)
                   ][]
                 , textView
                   [ height MATCH_PARENT
@@ -438,6 +439,7 @@ driverDetail2 push state =
          [ width $ V 42
          , height $ V 42
          , onClick push $ const GoToProfile
+         , Id.testId $ Id.Object Id.profile
          , imageWithFallback "ic_new_avatar,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_new_avatar.png"
          ]
       ]
@@ -452,6 +454,10 @@ driverDetail2 push state =
       , cornerRadius 50.0
       , alpha if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) then 0.5 else 1.0
       , margin (Margin 20 10 20 10)--padding (Padding 10 10 10 10)
+      , Id.testId $ Id.Container case state.props.driverStatusSet of
+                                  Online -> (getEN ONLINE_)
+                                  Offline -> (getEN OFFLINE)
+                                  Silent -> (getEN SILENT)
       ](DA.mapWithIndex (\index item ->
           driverStatusPill item push state index
         ) driverStatusIndicators
@@ -478,6 +484,10 @@ driverStatusPill pillConfig push state index =
       , gravity CENTER
       , orientation HORIZONTAL
       , onClick push (const $ SwitchDriverStatus pillConfig.status)
+      , Id.testId $ Id.Status $ case pillConfig.status of
+                                  Online -> (getEN ONLINE_)
+                                  Offline -> (getEN OFFLINE)
+                                  Silent -> (getEN SILENT)
       , clickable if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) then false else true
       ][ imageView
         [ width $ V 15
@@ -561,6 +571,7 @@ profileDemoView state push =
           , margin $ Margin 5 5 5 5
           , imageWithFallback "ic_profile_shadow,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_profile_shadow.png"
           , onClick push $ const $ GoToProfile
+          , Id.testId $ Id.Object Id.profile
           ]
         , imageView
           [ width $ V 40
@@ -784,7 +795,7 @@ goOfflineModal push state =
              , gravity CENTER
              , margin (MarginRight 10)
              , onClick push (const CancelGoOffline)
-           , Id.testId $ Id.Button $ Id.BtnConfig (getEN CANCEL)
+             , Id.testId $ Id.Button $ Id.BtnConfig (getEN CANCEL)
              ][ textView (
                 [ width WRAP_CONTENT
                 , height WRAP_CONTENT
@@ -849,6 +860,7 @@ addAlternateNumber push state =
   , padding (Padding 20 16 20 16)
   , gravity CENTER_VERTICAL
   , onClick push (const ClickAddAlternateButton)
+  , Id.testId $ Id.Button $ Id.BtnConfig (getEN ADD_ALTERNATE_NUMBER)
   , visibility (if ((state.data.driverAlternateMobile == Nothing) && (state.props.statusOnline))  then VISIBLE else GONE)
   ]
 
@@ -903,7 +915,7 @@ updateButtonIconAndText push state =
         _<- push action
         pure unit
         ) (const RetryTimeUpdate)
-  , Id.testId $ Id.Object Id.update
+  , Id.testId $ Id.Text (getEN UPDATE)
   , gravity RIGHT
   ]
   [ -- PrestoAnim.animationSet [Anim.rotateAnim (AnimConfig.rotateAnimConfig state.props.refreshAnimation)]

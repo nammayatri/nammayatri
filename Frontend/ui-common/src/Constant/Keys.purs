@@ -93,9 +93,6 @@ front = "front"
 back :: String
 back = "back"
 
-click :: String
-click = "click"
-
 tab :: String
 tab = "tab"
 
@@ -278,6 +275,51 @@ enabled = "enabled"
 
 disabled :: String
 disabled = "disabled"
+
+chatView :: String
+chatView = "chatView"
+
+navigate :: String
+navigate = "navigate"
+
+chatInput :: String
+chatInput = "chatInput"
+
+send :: String
+send = "send"
+
+tip :: String
+tip = "tip"
+
+subText :: String
+subText = "subText"
+
+messageIcon :: String
+messageIcon = "messageIcon"
+
+messageReceivedIcon :: String
+messageReceivedIcon = "messageReceivedIcon"
+
+callMessageIcon :: String
+callMessageIcon = "callMessageIcon"
+
+backgroundClick :: String
+backgroundClick = "backgroundClick"
+
+keyboard :: String
+keyboard = "keyboard"
+
+share :: String
+share = "share"
+
+textBox :: String
+textBox = "textBox"
+
+notificationCard :: String
+notificationCard = "notificationCard"
+
+comingSoon :: String
+comingSoon = "comingSoon"
 
 -------------------ScreenNames----------------------
 

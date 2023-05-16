@@ -5,7 +5,7 @@ import Components.MenuButton.Controller as MenuButtonConfig
 import Components.MenuButton.View as MenuButton
 import Components.GenericHeader.Controller as GenericHeaderConfig
 import Components.GenericHeader.View as GenericHeader
-import Helpers.Utils (storeCallBackContacts, contactPermission, toString)
+import Helpers.Utils (storeCallBackContacts, contactPermission)
 import Prelude
 import Effect (Effect)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Gradient(..), background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, relativeLayout, frameLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, weight, width, textFromHtml, onBackPressed, scrollView, afterRender, stroke, alignParentBottom, gradient, editText, id, hint, pattern, onChange, imageWithFallback)
@@ -210,7 +210,7 @@ showEmergencyContactData push config =
                             , weight 1.0
                             , if item.isSelected then background Color.grey900 else background Color.white900
                             , onClick push $ (const (ContactSelected item))
-                            , Id.testId $ Id.Container (Id.contactList <> Id.underScore <> toString ind2)
+                            , Id.testId $ Id.List (Id.contactList <> Id.underScore <> (show ind2))
                             ]
                             [ linearLayout
                                 [ height WRAP_CONTENT

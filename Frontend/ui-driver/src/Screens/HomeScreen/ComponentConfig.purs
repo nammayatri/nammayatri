@@ -227,10 +227,12 @@ silentModeConfig state = let
     , option1 {
       text =   getString GO_OFFLINE 
       , width = (V 140)
+      , testIdText = getEN GO_OFFLINE
     }
   , option2 {
       width = (V 170)
       , text =  getString GO_SILENT 
+      , testIdText = getEN GO_SILENT
     }
   }
   in popUpConfig'

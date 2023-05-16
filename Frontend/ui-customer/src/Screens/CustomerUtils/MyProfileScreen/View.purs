@@ -46,6 +46,7 @@ import Screens.CustomerUtils.MyProfileScreen.ComponentConfig
 import PrestoDOM.Animation as PrestoAnim
 import Resources.Constants as RSRC
 import Constant.Test as Id
+import EN
 
 screen :: ST.MyProfileScreenState -> Screen Action ST.MyProfileScreenState ScreenOutput
 screen initialState =
@@ -203,6 +204,11 @@ personalDetails state push =
                                   ST.GENDER_ -> if state.data.gender /= Nothing then const $ NoAction  else const $ EditProfile $ Just ST.GENDER_
                                   _ -> const $ NoAction
                               , fontStyle $ FontStyle.semiBold LanguageStyle
+                              , Id.testId $ Id.List case item.fieldType of
+                                  ST.NAME -> (getEN NAME)
+                                  ST.EMAILID_ -> (getEN EMAIL_ID)
+                                  ST.GENDER_ -> (getEN GENDER_STR)
+                                  ST.MOBILE -> (getEN MOBILE)
                               ]
                             ]
                       , horizontalLineView state (index /= 3)
@@ -285,6 +291,7 @@ headerView state push =
               , color Color.blueTextColor
               , fontStyle $ FontStyle.semiBold LanguageStyle
               , onClick push (const $ EditProfile Nothing)
+              , Id.testId $ Id.Text (getEN EDIT)
               ]
             ]
           ]
@@ -382,6 +389,7 @@ genderCaptureView state push =
         , padding $ Padding 20 15 20 15
         , cornerRadius 8.0
         , onClick push (const ShowOptions)
+        , Id.testId $ Id.Container (getEN SELECT_YOUR_GENDER)
         , stroke $ "1,"<> Color.borderColorLight
         , gravity CENTER_VERTICAL
         ]
@@ -443,6 +451,11 @@ genderOptionsView state push =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , onClick push $ const $ GenderSelected item.value
+        , Id.testId $ Id.List case item.value of
+                                ST.FEMALE -> (getEN FEMALE)
+                                ST.MALE -> (getEN MALE)
+                                ST.OTHER -> (getEN OTHER)
+                                ST.PREFER_NOT_TO_SAY -> (getEN PREFER_NOT_TO_SAY)
         , orientation VERTICAL
         ]
         [ textView

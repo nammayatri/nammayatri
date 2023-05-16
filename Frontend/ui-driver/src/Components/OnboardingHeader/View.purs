@@ -78,7 +78,7 @@ navigationView state push =
     , gravity CENTER_VERTICAL
     , padding (Padding 16 16 16 0)
     , onClick push (const BackPressed)
-    , Id.testId $ Id.Element Id.back
+    , Id.testId $ Id.Container Id.backgroundClick
     ][ linearLayout
         [
           weight 1.0

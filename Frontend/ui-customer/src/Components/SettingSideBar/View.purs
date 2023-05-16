@@ -33,6 +33,7 @@ import Common.Types.App
 import Helpers.Utils (getPreviousVersion)
 import Data.Maybe (Maybe(..))
 import Constant.Test as Id
+import EN
 
 view :: forall w .  (Action  -> Effect Unit) -> SettingSideBarState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -45,7 +46,7 @@ view push state =
     , background Color.black9000
     , disableClickFeedback true
     , onClick push $ const OnClose
-    , Id.testId $ Id.Object (Id.settingSideBar <> Id.underScore <> Id.close)
+    , Id.testId $ Id.Component (Id.settingSideBar <> Id.underScore <> Id.close)
     , onBackPressed push $ const OnClose
     ][ PrestoAnim.animationSet
       [ translateInXSidebarAnim $ state.opened == OPEN

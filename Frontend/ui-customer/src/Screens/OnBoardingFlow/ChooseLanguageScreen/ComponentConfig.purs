@@ -22,6 +22,7 @@ import Prelude ((==))
 import PrestoDOM (Margin(..))
 import Screens.Types as ST
 import Constant.Test as Id
+import EN
 
 primaryButtonConfig :: ST.ChooseLanguageScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
@@ -51,5 +52,6 @@ menuButtonConfig state language = let
       }
       , id = language.value
       , isSelected = (language.value == state.props.selectedLanguage)
+      , testIdText = (if (language.value == "EN_US") then language.name else language.subTitle)
     }
     in menuButtonConfig'

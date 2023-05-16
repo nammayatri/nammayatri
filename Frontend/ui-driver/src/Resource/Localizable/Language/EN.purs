@@ -403,3 +403,4 @@ getEN script = case script of
   COMPLETE_ONBOARDING -> "Complete Onboarding"
   PERSON_WITH_THIS_NUMBER_ALREADY_EXISTS -> "Person with this mobile number already exists."
   DEMO -> "DEMO"
+  YOU_CAN_DESCRIBE_THE_ISSUE_YOU_FACED_HERE -> "You can describe the issue you faced here"

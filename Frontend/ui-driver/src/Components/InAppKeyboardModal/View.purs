@@ -26,7 +26,7 @@ import Engineering.Helpers.Commons (screenWidth)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Types (STR(..))
-import Prelude (Unit, const, map, unit, ($), (/), (<>), (==), (||), (>=), (&&), (<), not)
+import Prelude (Unit, const, map, unit, ($), (/), (<>), (==), (||), (>=), (&&), (<), not, show)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), imageUrl, imageView, linearLayout, onBackPressed, onClick, textView, alpha)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (background, backgroundDrawable, clickable, color, cornerRadii, cornerRadius, fontStyle, gravity, height, imageUrl, margin, orientation, padding, stroke, text, textSize, weight, width, visibility,imageWithFallback)
@@ -35,6 +35,8 @@ import Styles.Colors as Color
 import Debug (spy)
 import Screens.Types(KeyboardModalType(..))
 import Language.Strings (getString)
+import Constant.Test as Id
+import EN
 
 view :: forall w . (Action -> Effect Unit) -> InAppKeyboardModalState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -73,6 +75,7 @@ view push state =
                     , height (V 35)
                     , imageWithFallback "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
                     , onClick push (const BackPressed)
+                    , Id.testId $ Id.Object Id.backIcon
                     , padding (Padding 5 5 5 5)
                     ]
                   , textView
@@ -120,6 +123,7 @@ textBoxes push state =
       , stroke ("1," <> if (state.otpIncorrect || state.otpAttemptsExceeded ) then Color.textDanger else if state.inputTextConfig.focusIndex == index then Color.highlightBorderColor else Color.borderColorLight )
       , margin (Margin ((screenWidth unit)/30) 0 ((screenWidth unit)/30) 0)
       , onClick push (const (OnclickTextBox index))
+      , Id.testId $ Id.List (Id.textBox <> Id.underScore <> (show index))
       ]) [1,2,3,4])
 
 singleTextBox :: forall w . (Action -> Effect Unit) -> InAppKeyboardModalState -> PrestoDOM (Effect Unit) w
@@ -148,6 +152,7 @@ singleTextBox push state =
       , padding state.inputTextConfig.padding
       , margin state.inputTextConfig.margin
       , onClick push (const (OnclickTextBox 0))
+      , Id.testId $ Id.Text (show state.inputTextConfig.text)
       ],
     imageView
         [ width $ V 23
@@ -155,6 +160,7 @@ singleTextBox push state =
          , imageWithFallback "ny_ic_close,https://assets.juspay.in/nammayatri/images/common/ny_ic_close.png"
          , visibility if (state.inputTextConfig.text == (getString ENTER_MOBILE_NUMBER)) then GONE else VISIBLE
          , onClick push (const (OnClickTextCross))
+         , Id.testId $ Id.Object Id.close
         ]
       ]
 
@@ -207,6 +213,7 @@ otpView push state =
                       , color Color.blue900
                       , margin (Margin 0 0 0 0)
                       , onClick push (const (OnClickResendOtp))
+                      , Id.testId $ Id.Text (getEN RESEND_OTP)
                       , visibility if (state.modalType == OTP && state.showResendOtpButton && (not state.otpAttemptsExceeded)) then VISIBLE else GONE
                       ]
                     )])
@@ -249,6 +256,7 @@ keyboard push state =
            , onClick push if key == "back" then (const (OnClickBack state.inputTextConfig.text)) else (const (OnClickDone state.inputTextConfig.text))
            , clickable if key == "back" then true else
                       if ((length state.inputTextConfig.text == 4  && state.modalType == OTP && state.otpIncorrect == false) || (length state.inputTextConfig.text == 10  && state.modalType == MOBILE__NUMBER && state.isValidAlternateNumber==true)) then true else false
+           , Id.testId $ Id.List if key == "back" then Id.backSpace else Id.done
            ][
                 if key == "back" then
                 imageView
@@ -274,6 +282,7 @@ keyboard push state =
            , background Color.white900
            , cornerRadius 4.0
            , onClick push (const (OnSelection key state.inputTextConfig.focusIndex))
+           , Id.testId $ Id.List (Id.keyboard <> Id.underScore <> (show index))
            ][  textView
                [ width WRAP_CONTENT
                , height MATCH_PARENT

@@ -165,6 +165,7 @@ config = {
     , enableTimer : false
     , timerID : ""
     , fontStyle : FontStyle.bold LanguageStyle
+    , testIdText : ""
   } 
   , option1 : {
       background : Color.white900

@@ -11,6 +11,7 @@ import Language.Strings (getString)
 import Styles.Colors as Color
 import Font.Size as FontSize
 import Data.Maybe
+import EN
 
 primaryButtonConfig :: ST.ApplicationStatusScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let
@@ -23,6 +24,7 @@ primaryButtonConfig state = let
       , cornerRadius = 8.0
       , background = Color.black900
       , height = (V 48)
+      , testIdText = if state.props.onBoardingFailure then getEN COMPLETE_ONBOARDING else getEN ADD_ALTERNATE_NUMBER
       }
   in primaryButtonConfig'
 
@@ -58,10 +60,12 @@ completeOnboardingConfig state = let
       text = getString YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT
     }
     , option1 {
-     text =  getString CANCEL
+     text =  getString CANCEL,
+     testIdText = getEN CANCEL
     }
   , option2 {
-      text =  getString CALL_SUPPORT
+      text =  getString CALL_SUPPORT,
+      testIdText = getEN CALL_SUPPORT
     }
   }
   in popUpConfig'

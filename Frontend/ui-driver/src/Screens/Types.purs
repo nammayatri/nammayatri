@@ -227,7 +227,7 @@ type PrimaryEditTextState = {
   error :: Maybe String,
   text :: String,
   fontSize :: FontSize,
-  letterSpacing :: Number,
+  letterSpacing :: LetterSpacing,
   id :: String,
   testIdText :: String
 }

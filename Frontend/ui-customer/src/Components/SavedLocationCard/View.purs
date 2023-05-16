@@ -49,7 +49,7 @@ view push state =
                     HOME_TAG -> (getEN HOME)
                     WORK_TAG -> (getEN WORK)
                     OTHER_TAG -> state.tagName
-                  Nothing -> state.tagName))
+                  Nothing -> Id.noAction))
   ][ linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT

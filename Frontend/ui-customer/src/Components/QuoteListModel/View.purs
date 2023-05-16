@@ -335,7 +335,7 @@ quoteListTopSheetView state push =
                   [ height $ V 40
                   , width $ V 40
                   , onClick push $ const GoBack
-                  , Id.testId $ Id.ToolBar Id.backIcon
+                  , Id.testId $ Id.Object Id.backIcon
                   ][  imageView 
                       [ height $ V 24
                       , width $ V 24

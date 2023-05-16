@@ -529,7 +529,7 @@ bottomBtnsView state push =
                                   pure unit
                             )
                             (const item.action)
-                        , Id.testId $ Id.Select if item.buttonType == "CurrentLocation" then (getEN CURRENT_LOCATION) else (getEN SET_LOCATION_ON_MAP)
+                        , Id.testId $ Id.List if item.buttonType == "CurrentLocation" then (getEN CURRENT_LOCATION) else (getEN SET_LOCATION_ON_MAP)
                         ]
                       <> FontStyle.body1 TypoGraphy
                   ]

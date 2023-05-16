@@ -247,7 +247,7 @@ headerLayout state push =
             , imageUrl "ny_ic_chevron_left"
             , gravity CENTER_VERTICAL
             , onClick push $ const BackArrow
-            , Id.testId $ Id.Object Id.backIcon
+            , Id.testId $ Id.ToolBar Id.backIcon
             , padding $ Padding 2 2 2 2
             , margin $ MarginLeft 5
             ]

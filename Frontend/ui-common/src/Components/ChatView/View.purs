@@ -29,6 +29,8 @@ import Data.Maybe (fromMaybe, Maybe(..))
 import JBridge (scrollToBottom)
 import Components.ChatView.Controller (Action(..), Config(..), ChatComponent)
 import Common.Types.App
+import Constant.Test as Id
+
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 view push config = 
   linearLayout
@@ -41,6 +43,7 @@ view push config =
   , gravity BOTTOM
   , stroke ("1," <> config.grey800)
   , background config.white900
+  , Id.testId $ Id.Component Id.chatView
   ]
   [ chatHeaderView config push
   , chatBodyView config push
@@ -64,6 +67,7 @@ chatHeaderView config push =
          , width $ V 40
          , gravity CENTER
          , onClick push (const BackPressed)
+         , Id.testId $ Id.Object Id.backIcon
          ][ imageView
             [ imageWithFallback "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
             , height $ V 24
@@ -120,6 +124,7 @@ headerActionView config push =
      , clickable true
      , background config.green200
      , onClick push (const Call)
+     , Id.testId $ Id.Object Id.call
      ][ imageView
         [ imageWithFallback "ny_ic_call,https://assets.juspay.in/nammayatri/images/common/ny_ic_call.png"
         , height $ V 18
@@ -136,6 +141,7 @@ headerActionView config push =
     , cornerRadius 32.0
     , margin $ MarginRight 8
     , onClick push (const $ Call)
+    , Id.testId $ Id.Object Id.call
     ][ imageView
        [ imageWithFallback "ic_phone,https://assets.juspay.in/nammayatri/images/common/ic_phone.png"
        , height $ V 20
@@ -152,6 +158,7 @@ headerActionView config push =
     , stroke $ "1,"<> config.blue900
     , cornerRadius 32.0
     , onClick push (const $ Navigate)
+    , Id.testId $ Id.Button $ Id.BtnConfig Id.navigate
     ][ imageView
        [ imageWithFallback "ic_navigation_blue,https://assets.juspay.in/nammayatri/images/common/ic_navigation_blue.png"
        , height $ V 20
@@ -237,6 +244,7 @@ chatFooterView config push =
          , ellipsize true
          , fontStyle $ FontStyle.medium LanguageStyle
          , onChange push $ TextChanged
+         , Id.testId $ Id.TextField Id.chatInput
          , pattern "[^\n]*,255"
          ]
        , linearLayout
@@ -244,6 +252,7 @@ chatFooterView config push =
          , width $ V 36
          , gravity CENTER
          , onClick push (const (SendMessage))
+         , Id.testId $ Id.Button $ Id.BtnConfig Id.send
          ][ imageView
             [ imageWithFallback if config.sendMessageActive then "ic_send_blue,https://assets.juspay.in/nammayatri/images/common/ic_send_blue.png" else "ic_send,https://assets.juspay.in/nammayatri/images/common/ic_send.png"
             , height $ V 20 
@@ -303,6 +312,7 @@ quickMessageView config message isLastItem push =
   , gravity LEFT
   , orientation VERTICAL
   , onClick push (const (SendSuggestion message))
+  , Id.testId $ Id.Button $ Id.BtnConfig Id.send
   ][ textView
      [ text (message)
      , color config.blue800

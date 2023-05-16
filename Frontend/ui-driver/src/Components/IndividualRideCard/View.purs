@@ -28,12 +28,14 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Styles.Colors as Color
 import Common.Types.App
+import Constant.Test as Id
 
 view :: forall w .  (RideHistoryScreen.Action  -> Effect Unit)  -> PrestoDOM (Effect Unit) w
 view push =
   relativeLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
+  , Id.testId $ Id.Component Id.individualRideCard
   ][  shimmerView
     , cardView push
   ]
@@ -63,6 +65,7 @@ cardView push =
   , clickable true
   , background Color.white900
   , PrestoList.onClickHolder push $ RideHistoryScreen.IndividualRideCardAction <<< Select
+  , Id.testId $ Id.Container Id.individualRideCard
   ][  rideDetails
     , sourceAndDestination
     , rideWithDetails

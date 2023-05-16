@@ -20,7 +20,6 @@ import Prelude
 import Data.Generic.Rep (class Generic)
 import Foreign.Class (class Decode)
 import Halogen.VDom.DOM.Prop (Prop(..))
-import Presto.Core.Utils.Encoding (defaultDecode)
 import PrestoDOM as PD
 
 data TestID
@@ -30,8 +29,6 @@ data TestID
     | ToolBar String
     | Component String
     | List String
-    | Element String
-    | Select String
     | DropDown String
     | Bar String
     | Object String
@@ -42,6 +39,7 @@ data TestID
     | Toggle String
     | RadioButton String
     | Hamburger String
+    | View String
 
 data Check
   = BtnConfig String
@@ -52,10 +50,7 @@ instance showTestID :: Show TestID where
     show (Button a) = "button_" <> show a
     show (Container a) = "container_" <> a
     show (ToolBar a) = "toolbar_" <> a
-    show (Click a) = "click_" <> a
     show (List a) = "list_" <> a
-    show (Element a) = "element_" <> a
-    show (Select a) = "select_" <> a
     show (DropDown a) = "dropdown_" <> a
     show (Bar a) = "bar_" <> a
     show (Object a) = "object_" <> a
@@ -66,11 +61,11 @@ instance showTestID :: Show TestID where
     show (Toggle a) = "toggle_" <> a
     show (RadioButton a) = "radiobutton_" <> a
     show (Hamburger a) = "hamburger_" <> a
+    show (View a) = "view_" <> a
 
 
 
 derive instance genericCheck :: Generic Check _
-instance decodeCheck :: Decode Check where decode = defaultDecode
 instance showCheck :: Show Check where
   show (BtnConfig a) = a
 

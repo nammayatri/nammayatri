@@ -34,6 +34,8 @@ import Styles.Colors as Color
 import Engineering.Helpers.Commons (screenWidth)
 import Screens.Types (HomeScreenStage(..))
 import JBridge (getVersionCode)
+import Constant.Test as Id
+import EN
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = 
@@ -89,6 +91,7 @@ messageButton push config =
   , stroke $ "1,"<> Color.black500
   , cornerRadius 30.0
   , onClick push (const $ MessageCustomer)
+  , Id.testId $ Id.Button $ Id.BtnConfig if config.unReadMessages then Id.messageReceivedIcon else Id.messageIcon
   ][  imageView
       [ imageWithFallback if config.unReadMessages then "ic_chat_badge,https://assets.juspay.in/nammayatri/images/driver/ic_chat_badge.png" else "ic_chat,https://assets.juspay.in/nammayatri/images/driver/ic_chat.png"
       , height $ V 20
@@ -115,7 +118,7 @@ callButton push config =
   , cornerRadius 30.0
   , visibility if (config.currentStage == RideAccepted) then VISIBLE else GONE
   , onClick push (const $ CallCustomer)
-  , Id.testId $ Id.Object Id.call
+  , Id.testId $ Id.Button $ Id.BtnConfig Id.call
   ][  imageView
       [ imageWithFallback "ic_phone,https://assets.juspay.in/nammayatri/images/common/ic_phone.png"
       , height $ V 20
@@ -427,7 +430,7 @@ arrivedButtonView push config =
         else do
           _ <- countDown config.buttonTimeOut config.id push ButtonTimer
           push action) (const NotifyCustomer)
-  , Id.testId $ Id.Container if config.notifiedCustomer then (getEN CUSTOMER_NOTIFIED) else (getEN I_ARRIVED)
+  , Id.testId $ Id.Container if config.notifiedCustomer then (getEN CUSTOMER_NOTIFIED) else (getEN I_HAVE_ARRIVED)
   , visibility if config.isDriverArrived then VISIBLE else GONE
   ][  imageView
       [ width $ V 20
