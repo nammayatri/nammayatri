@@ -90,6 +90,13 @@ instance ToJSON Message where
 
 deriving stock instance Show Message
 
+deriving stock instance Ord Domain.MessageType
+
+deriving stock instance Eq Domain.MessageType
+
+instance IsString Domain.MessageType where
+  fromString = show
+
 messageTMod :: MessageT (B.FieldModification (B.TableField MessageT))
 messageTMod =
   B.tableModification
@@ -136,5 +143,24 @@ messageToPSModifiers :: M.Map Text (A.Value -> A.Value)
 messageToPSModifiers =
   M.fromList
     []
+
+defaultMessage :: Message
+defaultMessage =
+  MessageT
+    { id = "",
+      messageType = "",
+      title = "",
+      description = "",
+      shortDescription = "",
+      label = Nothing,
+      likeCount = 0,
+      mediaFiles = [""],
+      merchantId = "",
+      createdAt = defaultDate
+    }
+
+instance Serialize Message where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''MessageT ['id] [])

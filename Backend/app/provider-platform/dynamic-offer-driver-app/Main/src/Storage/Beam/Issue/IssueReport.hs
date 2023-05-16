@@ -159,4 +159,28 @@ issueReportToPSModifiers =
   M.fromList
     []
 
+instance IsString Domain.IssueStatus where
+  fromString = show
+
+defaultIssueReport :: IssueReport
+defaultIssueReport =
+  IssueReportT
+    { id = "",
+      driverId = "",
+      rideId = Nothing,
+      description = "",
+      assignee = Nothing,
+      status = "",
+      categoryId = "",
+      optionId = Nothing,
+      deleted = False,
+      mediaFiles = [""],
+      createdAt = defaultDate,
+      updatedAt = defaultDate
+    }
+
+instance Serialize IssueReport where
+  put = error "undefined"
+  get = error "undefined"
+
 $(enableKVPG ''IssueReportT ['id] [])

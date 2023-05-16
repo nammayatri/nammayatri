@@ -208,4 +208,13 @@ driverPoolConfigToPSModifiers =
   M.fromList
     []
 
-$(enableKVPG ''DriverPoolConfigT ['merchantId] [])
+instance IsString Meters where
+  fromString = show
+
+instance IsString PoolSortingType where
+  fromString = show
+
+instance IsString Seconds where
+  fromString = show
+
+$(enableKVPG ''DriverPoolConfigT ['tripDistance] [])

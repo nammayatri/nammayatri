@@ -226,4 +226,46 @@ rideToPSModifiers =
   M.fromList
     []
 
+instance IsString Domain.RideStatus where
+  fromString = show
+
+instance IsString Money where
+  fromString = show
+
+instance IsString HighPrecMeters where
+  fromString = show
+
+instance IsString Meters where
+  fromString = show
+
+defaultRide :: Ride
+defaultRide =
+  RideT
+    { id = "",
+      bookingId = "",
+      shortId = "",
+      status = "",
+      driverId = "",
+      otp = "",
+      trackingUrl = "",
+      fare = Nothing,
+      traveledDistance = "",
+      chargeableDistance = Nothing,
+      driverArrivalTime = Nothing,
+      tripStartTime = Nothing,
+      tripEndTime = Nothing,
+      tripStartLat = Nothing,
+      tripStartLon = Nothing,
+      tripEndLat = Nothing,
+      tripEndLon = Nothing,
+      fareParametersId = Nothing,
+      distanceCalculationFailed = Nothing,
+      createdAt = defaultDate,
+      updatedAt = defaultDate
+    }
+
+instance Serialize Ride where
+  put = error "undefined"
+  get = error "undefined"
+
 $(enableKVPG ''RideT ['id] [])
