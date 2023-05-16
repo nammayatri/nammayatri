@@ -83,6 +83,7 @@ dependencies:
   - extra
   - text-conversions
   - dashboard-helper-api
+  - data-default-class
   - http-types
   - containers
   - geohash == 1.0.1

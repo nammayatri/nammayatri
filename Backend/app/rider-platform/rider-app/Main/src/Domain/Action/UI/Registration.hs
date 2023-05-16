@@ -41,7 +41,6 @@ import qualified Domain.Types.RegistrationToken as SR
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
-import Kernel.External.FCM.Types (FCMRecipientToken)
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Types as Language
 import Kernel.External.Whatsapp.Interface.Types as Whatsapp
@@ -77,7 +76,8 @@ data AuthReq = AuthReq
   { mobileNumber :: Text,
     mobileCountryCode :: Text,
     merchantId :: ShortId Merchant,
-    deviceToken :: Maybe FCMRecipientToken,
+    deviceToken :: Maybe Text,
+    notificationToken :: Maybe Text,
     whatsappNotificationEnroll :: Maybe Whatsapp.OptApiMethods,
     firstName :: Maybe Text,
     middleName :: Maybe Text,
@@ -96,6 +96,7 @@ instance A.FromJSON AuthReq where
         <*> obj .: "mobileCountryCode"
         <*> obj .: "merchantId"
         <*> obj .:? "deviceToken"
+        <*> obj .:? "userId" -- TODO :: This needs to be changed to notificationToken
         <*> obj .:? "whatsappNotificationEnroll"
         <*> obj .:? "firstName"
         <*> obj .:? "middleName"
@@ -137,7 +138,7 @@ type ResendAuthRes = AuthRes
 ---------- Verify Login --------
 data AuthVerifyReq = AuthVerifyReq
   { otp :: Text,
-    deviceToken :: FCMRecipientToken,
+    deviceToken :: Text,
     whatsappNotificationEnroll :: Maybe Whatsapp.OptApiMethods
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
@@ -177,6 +178,7 @@ auth isDirectAuth req mbBundleVersion mbClientVersion = do
   let mobileNumber = req.mobileNumber
       countryCode = req.mobileCountryCode
       deviceToken = req.deviceToken
+      notificationToken = req.notificationToken
   -- otpChannel = fromMaybe defaultOTPChannel req.otpChannel
   merchant <-
     QMerchant.findByShortId req.merchantId
@@ -218,7 +220,7 @@ auth isDirectAuth req mbBundleVersion mbClientVersion = do
         mbEncEmail <- encrypt `mapM` req.email
         DB.runTransaction $ do
           RegistrationToken.setDirectAuth regToken.id
-          Person.updatePersonalInfo person.id (req.firstName <|> Just "User") req.middleName req.lastName Nothing mbEncEmail deviceToken (req.language <|> Just Language.ENGLISH) (req.gender <|> Just SP.UNKNOWN)
+          Person.updatePersonalInfo person.id (req.firstName <|> Just "User") req.middleName req.lastName Nothing mbEncEmail deviceToken notificationToken (req.language <|> Just Language.ENGLISH) (req.gender <|> Just SP.UNKNOWN)
         personAPIEntity <- verifyFlow person regToken req.whatsappNotificationEnroll deviceToken
         return (Just personAPIEntity, Just regToken.token, SR.DIRECT)
       else return (Nothing, Nothing, regToken.authType)
@@ -253,6 +255,7 @@ buildPerson req bundleVersion clientVersion merchantId = do
         enabled = not isBlockedBySameDeviceToken,
         blocked = isBlockedBySameDeviceToken,
         deviceToken = req.deviceToken,
+        notificationToken = req.notificationToken,
         description = Nothing,
         merchantId = merchantId,
         referralCode = Nothing,
@@ -300,7 +303,7 @@ makeSession SmsSessionConfig {..} entityId fakeOtp = do
 verifyHitsCountKey :: Id SP.Person -> Text
 verifyHitsCountKey id = "BAP:Registration:verify:" <> getId id <> ":hitsCount"
 
-verifyFlow :: (EsqDBFlow m r, EncFlow m r, CoreMetrics m, CacheFlow m r) => SP.Person -> SR.RegistrationToken -> Maybe Whatsapp.OptApiMethods -> Maybe FCMRecipientToken -> m PersonAPIEntity
+verifyFlow :: (EsqDBFlow m r, EncFlow m r, CoreMetrics m, CacheFlow m r) => SP.Person -> SR.RegistrationToken -> Maybe Whatsapp.OptApiMethods -> Maybe Text -> m PersonAPIEntity
 verifyFlow person regToken whatsappNotificationEnroll deviceToken = do
   let isNewPerson = person.isNew
   DB.runTransaction $ do

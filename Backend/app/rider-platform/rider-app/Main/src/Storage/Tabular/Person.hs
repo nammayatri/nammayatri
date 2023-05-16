@@ -22,7 +22,6 @@ module Storage.Tabular.Person where
 
 import qualified Domain.Types.Person as Domain
 import Kernel.External.Encryption (DbHash, Encrypted (..), EncryptedHashed (..))
-import Kernel.External.FCM.Types (FCMRecipientToken)
 import Kernel.External.Maps (Language)
 import Kernel.External.Whatsapp.Interface.Types (OptApiMethods)
 import Kernel.Prelude
@@ -62,7 +61,8 @@ mkPersist
       isNew Bool
       enabled Bool
       blocked Bool
-      deviceToken FCMRecipientToken Maybe
+      deviceToken Text Maybe
+      notificationToken Text Maybe
       description Text Maybe
       merchantId SMerchant.MerchantTId
       whatsappNotificationEnrollStatus OptApiMethods Maybe

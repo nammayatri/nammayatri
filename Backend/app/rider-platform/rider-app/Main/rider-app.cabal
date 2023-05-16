@@ -323,6 +323,7 @@ library
     , cryptonite
     , cryptostore >=0.3.0.0
     , dashboard-helper-api
+    , data-default-class
     , euler-hs
     , extra
     , geohash ==1.0.1
@@ -406,6 +407,7 @@ executable rider-app-exe
     , cryptonite
     , cryptostore >=0.3.0.0
     , dashboard-helper-api
+    , data-default-class
     , euler-hs
     , extra
     , geohash ==1.0.1

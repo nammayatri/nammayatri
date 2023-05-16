@@ -49,7 +49,6 @@ merchantUpdate merchantShortId req = do
 
   let updMerchant =
         merchant{DM.name = fromMaybe merchant.name req.name,
-                 DM.fcmConfig = maybe merchant.fcmConfig (Common.mkFCMConfig merchant.fcmConfig.fcmTokenKeyPrefix) req.fcmConfig,
                  DM.gatewayUrl = fromMaybe merchant.gatewayUrl req.gatewayUrl,
                  DM.registryUrl = fromMaybe merchant.registryUrl req.registryUrl
                 }

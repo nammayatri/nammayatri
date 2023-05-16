@@ -28,7 +28,7 @@ import qualified Domain.Types.RideDetails as SRD
 import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.SearchRequestForDriver as SReqD
 import Kernel.External.Encryption
-import qualified Kernel.External.FCM.Types as FCM
+import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis (HedisFlow)

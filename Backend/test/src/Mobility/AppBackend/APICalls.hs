@@ -31,7 +31,6 @@ import qualified "rider-app" Domain.Types.Quote as AbeQuote
 import qualified "rider-app" Domain.Types.RegistrationToken as AppSRT
 import qualified "rider-app" Domain.Types.Ride as BRide
 import EulerHS.Prelude
-import Kernel.External.FCM.Types
 import Kernel.External.Whatsapp.Interface.Types (OptApiMethods (..))
 import Kernel.Types.APISuccess
 import Kernel.Types.App
@@ -104,6 +103,7 @@ mkAuthReq =
       mobileCountryCode = "+91",
       merchantId = "FIXME",
       deviceToken = Nothing,
+      notificationToken = Nothing,
       whatsappNotificationEnroll = Nothing,
       firstName = Nothing,
       middleName = Nothing,
@@ -117,7 +117,7 @@ mkAuthVerifyReq :: Reg.AuthVerifyReq
 mkAuthVerifyReq =
   Reg.AuthVerifyReq
     { otp = "7891",
-      deviceToken = FCMRecipientToken "AN_DEV_TOKEN",
+      deviceToken = "AN_DEV_TOKEN",
       whatsappNotificationEnroll = Just OPT_IN
     }
 
