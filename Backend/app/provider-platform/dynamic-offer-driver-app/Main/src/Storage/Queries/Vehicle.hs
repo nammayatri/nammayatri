@@ -14,7 +14,7 @@
 
 module Storage.Queries.Vehicle where
 
-import qualified Data.Text as T
+-- import qualified Data.Text as T
 import qualified Debug.Trace as T
 import Domain.Types.Merchant
 import Domain.Types.Person
@@ -58,8 +58,8 @@ findById ::
 findById (Id driverId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbCOnf' -> T.trace (T.unpack driverId) $ either (\x -> T.trace (show x) Nothing) (transformVechileNewToVechile <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is VN.driverId $ Se.Eq driverId]
-    Nothing -> T.trace "Rahull Nothing" $ pure Nothing
+    Just dbCOnf' -> either (pure Nothing) (transformVechileNewToVechile <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is VN.driverId $ Se.Eq driverId]
+    Nothing -> pure Nothing
 
 updateVehicleRec :: Vehicle -> SqlDB ()
 updateVehicleRec vehicle = do
