@@ -38,7 +38,7 @@ import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.UtilsTH
-import Sequelize
+import Sequelize as Se
 
 fromFieldEnum ::
   (Typeable a, Read a) =>
@@ -102,5 +102,9 @@ cancellationReasonToPSModifiers :: M.Map Text (A.Value -> A.Value)
 cancellationReasonToPSModifiers =
   M.fromList
     []
+
+instance Serialize CancellationReason where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''CancellationReasonT ['reasonCode] [])
