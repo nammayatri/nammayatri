@@ -39,6 +39,7 @@ import GHC.Generics (Generic)
 import Kernel.External.Encryption
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.DriverOnboarding.Image (ImageTId)
@@ -160,5 +161,38 @@ vehicleRegistrationCertificateToPSModifiers :: M.Map Text (A.Value -> A.Value)
 vehicleRegistrationCertificateToPSModifiers =
   M.fromList
     []
+
+instance IsString DbHash where
+  fromString = show
+
+instance IsString Domain.VerificationStatus where
+  fromString = show
+
+defaultVehicleRegistrationCertificate :: VehicleRegistrationCertificate
+defaultVehicleRegistrationCertificate =
+  VehicleRegistrationCertificateT
+    { id = "",
+      documentImageId = "",
+      certificateNumberEncrypted = "",
+      certificateNumberHash = "",
+      fitnessExpiry = defaultDate,
+      permitExpiry = Nothing,
+      pucExpiry = Nothing,
+      insuranceValidity = Nothing,
+      vehicleClass = Nothing,
+      vehicleManufacturer = Nothing,
+      vehicleCapacity = Nothing,
+      vehicleModel = Nothing,
+      vehicleColor = Nothing,
+      vehicleEnergyType = Nothing,
+      verificationStatus = "",
+      failedRules = [""],
+      createdAt = defaultDate,
+      updatedAt = defaultDate
+    }
+
+instance Serialize VehicleRegistrationCertificate where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''VehicleRegistrationCertificateT ['id] [])

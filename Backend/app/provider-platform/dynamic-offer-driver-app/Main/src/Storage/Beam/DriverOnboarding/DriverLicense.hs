@@ -39,6 +39,7 @@ import GHC.Generics (Generic)
 import Kernel.External.Encryption
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.DriverOnboarding.Image (ImageTId)
@@ -157,5 +158,36 @@ driverLicenseToPSModifiers :: M.Map Text (A.Value -> A.Value)
 driverLicenseToPSModifiers =
   M.fromList
     []
+
+instance IsString DbHash where
+  fromString = show
+
+instance IsString Domain.VerificationStatus where
+  fromString = show
+
+defaultDriverLicense :: DriverLicense
+defaultDriverLicense =
+  DriverLicenseT
+    { id = "",
+      driverId = "",
+      documentImageId1 = "",
+      documentImageId2 = Nothing,
+      driverDob = Nothing,
+      driverName = Nothing,
+      licenseNumberEncrypted = "",
+      licenseNumberHash = "",
+      licenseExpiry = defaultDate,
+      classOfVehicles = [""],
+      failedRules = [""],
+      verificationStatus = "",
+      consent = False,
+      consentTimestamp = defaultDate,
+      createdAt = defaultDate,
+      updatedAt = defaultDate
+    }
+
+instance Serialize DriverLicense where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''DriverLicenseT ['id] [])

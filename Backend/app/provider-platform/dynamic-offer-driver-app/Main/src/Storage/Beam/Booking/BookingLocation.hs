@@ -37,6 +37,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 
@@ -120,5 +121,27 @@ bookingLocationToPSModifiers :: M.Map Text (A.Value -> A.Value)
 bookingLocationToPSModifiers =
   M.fromList
     []
+
+defaultBookingLocation :: BookingLocation
+defaultBookingLocation =
+  BookingLocationT
+    { id = "",
+      lat = 0.0,
+      lon = 0.0,
+      street = Nothing,
+      door = Nothing,
+      city = Nothing,
+      state = Nothing,
+      country = Nothing,
+      building = Nothing,
+      areaCode = Nothing,
+      area = Nothing,
+      createdAt = defaultDate,
+      updatedAt = defaultDate
+    }
+
+instance Serialize BookingLocation where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''BookingLocationT ['id] [])

@@ -39,6 +39,7 @@ import GHC.Generics (Generic)
 import Kernel.External.Encryption
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import qualified Storage.Tabular.DriverOnboarding.Image as ImageT
@@ -160,5 +161,37 @@ idfyVerificationToPSModifiers :: M.Map Text (A.Value -> A.Value)
 idfyVerificationToPSModifiers =
   M.fromList
     []
+
+instance IsString Image.ImageType where
+  fromString = show
+
+instance IsString DbHash where
+  fromString = show
+
+instance IsString Domain.ImageExtractionValidation where
+  fromString = show
+
+defaultIdfyVerification :: IdfyVerification
+defaultIdfyVerification =
+  IdfyVerificationT
+    { id = "",
+      driverId = "",
+      documentImageId1 = "",
+      documentImageId2 = Nothing,
+      requestId = "",
+      docType = "",
+      status = "",
+      issueDateOnDoc = Nothing,
+      documentNumberEncrypted = "",
+      documentNumberHash = "",
+      imageExtractionValidation = "",
+      idfyResponse = Nothing,
+      createdAt = defaultDate,
+      updatedAt = defaultDate
+    }
+
+instance Serialize IdfyVerification where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''IdfyVerificationT ['id] [])
