@@ -42,15 +42,6 @@ findAll' = do
     Just dbCOnf' -> either (pure []) (transformBeamCancReasonToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamCR.enabled $ Se.Eq True]
     Nothing -> pure []
 
-transformBeamCancReasonToDomain :: BeamCR.CancellationReason -> CancellationReason
-transformBeamCancReasonToDomain BeamCR.CancellationReasonT {..} = do
-  CancellationReason
-    { reasonCode = CancellationReasonCode $ reasonCode,
-      description = description,
-      enabled = enabled,
-      priority = priority
-    }
-
 transformBeamCancellationReasonToDomain :: BeamCR.CancellationReason -> CancellationReason
 transformBeamCancellationReasonToDomain BeamCR.CancellationReasonT {..} = do
   CancellationReason
