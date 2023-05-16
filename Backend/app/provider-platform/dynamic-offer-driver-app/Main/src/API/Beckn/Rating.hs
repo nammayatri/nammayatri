@@ -45,7 +45,9 @@ rating _ (SignatureAuthResult _ subscriber) req = withFlowHandlerBecknAPI $
     logTagInfo "ratingAPI" "Received rating API call."
     dRatingReq <- ACL.buildRatingReq subscriber req
     Redis.whenWithLockRedis (ratingLockKey dRatingReq.bookingId.getId) 60 $ do
-      DRating.handler dRatingReq
+      ride <- DRating.validateRequest dRatingReq
+      fork "rating request processing" $
+        DRating.handler dRatingReq ride
     pure Ack
 
 ratingLockKey :: Text -> Text

@@ -17,10 +17,14 @@ module Domain.Action.Beckn.Init where
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DLoc
 import qualified Domain.Types.BookingCancellationReason as DBCR
+import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.FareParameters as DFP
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.QuoteSpecialZone as DQSZ
+import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
+import qualified Domain.Types.SearchRequestSpecialZone as DSRSZ
 import qualified Domain.Types.Vehicle.Variant as Veh
 import Kernel.Prelude
 import Kernel.Randomizer (getRandomElement)
@@ -104,30 +108,36 @@ cancelBooking booking transporterId = do
             additionalInfo = Nothing
           }
 
-handler :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> InitReq -> m InitRes
-handler merchantId req = do
+handler :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> InitReq -> (Either (DDQ.DriverQuote, DSR.SearchRequest) (DQSZ.QuoteSpecialZone, DSRSZ.SearchRequestSpecialZone)) -> m InitRes
+handler merchantId req eitherReq = do
   transporter <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   now <- getCurrentTime
   case req.initTypeReq of
     InitNormalReq -> do
-      driverQuote <- QDQuote.findById (Id req.driverQuoteId) >>= fromMaybeM (QuoteNotFound req.driverQuoteId)
-      when (driverQuote.validTill < now) $
-        throwError $ QuoteExpired driverQuote.id.getId
-      searchRequest <- QSR.findById driverQuote.searchRequestId >>= fromMaybeM (SearchRequestNotFound driverQuote.searchRequestId.getId)
+      -- driverQuote <- QDQuote.findById (Id req.driverQuoteId) >>= fromMaybeM (QuoteNotFound req.driverQuoteId)
+      -- when (driverQuote.validTill < now) $
+      --   throwError $ QuoteExpired driverQuote.id.getId
+      -- searchRequest <- QSR.findById driverQuote.searchRequestId >>= fromMaybeM (SearchRequestNotFound driverQuote.searchRequestId.getId)
       -- do we need to check searchRequest.validTill?
-      booking <- buildBooking searchRequest driverQuote DRB.NormalBooking now
-      Esq.runTransaction $
-        QRB.create booking
-      pure InitRes {..}
+      case eitherReq of
+        Left (driverQuote, searchRequest) -> do
+          booking <- buildBooking searchRequest driverQuote DRB.NormalBooking now
+          Esq.runTransaction $
+            QRB.create booking
+          pure InitRes {..}
+        Right _ -> throwError $ QuoteExpired "" ------------------- need to correct the error
     InitSpecialZoneReq -> do
-      specialZoneQuote <- QSZoneQuote.findById (Id req.driverQuoteId) >>= fromMaybeM (QuoteNotFound req.driverQuoteId)
-      when (specialZoneQuote.validTill < now) $
-        throwError $ QuoteExpired specialZoneQuote.id.getId
-      searchRequest <- QSRSpecialZone.findById specialZoneQuote.searchRequestId >>= fromMaybeM (SearchRequestNotFound specialZoneQuote.searchRequestId.getId)
-      booking <- buildBooking searchRequest specialZoneQuote DRB.SpecialZoneBooking now
-      Esq.runTransaction $
-        QRB.create booking
-      pure InitRes {..}
+      case eitherReq of
+        Right (specialZoneQuote, searchRequest) -> do
+          -- specialZoneQuote <- QSZoneQuote.findById (Id req.driverQuoteId) >>= fromMaybeM (QuoteNotFound req.driverQuoteId)
+          -- when (specialZoneQuote.validTill < now) $
+          --   throwError $ QuoteExpired specialZoneQuote.id.getId
+          -- searchRequest <- QSRSpecialZone.findById specialZoneQuote.searchRequestId >>= fromMaybeM (SearchRequestNotFound specialZoneQuote.searchRequestId.getId)
+          booking <- buildBooking searchRequest specialZoneQuote DRB.SpecialZoneBooking now
+          Esq.runTransaction $
+            QRB.create booking
+          pure InitRes {..}
+        Left _ -> throwError $ QuoteExpired "" ------------------- need to correct the error
   where
     buildBooking ::
       ( CacheFlow m r,
@@ -185,3 +195,21 @@ findRandomExophone merchantId = do
     [] -> throwError $ ExophoneNotFound merchantId.getId
     e : es -> pure $ e :| es
   getRandomElement nonEmptyExophones
+
+validateRequest :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> InitReq -> m (Either (DDQ.DriverQuote, DSR.SearchRequest) (DQSZ.QuoteSpecialZone, DSRSZ.SearchRequestSpecialZone))
+validateRequest merchantId req = do
+  _ <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  now <- getCurrentTime
+  case req.initTypeReq of
+    InitNormalReq -> do
+      driverQuote <- QDQuote.findById (Id req.driverQuoteId) >>= fromMaybeM (QuoteNotFound req.driverQuoteId)
+      when (driverQuote.validTill < now) $
+        throwError $ QuoteExpired driverQuote.id.getId
+      searchRequest <- QSR.findById driverQuote.searchRequestId >>= fromMaybeM (SearchRequestNotFound driverQuote.searchRequestId.getId)
+      return $ Left (driverQuote, searchRequest)
+    InitSpecialZoneReq -> do
+      specialZoneQuote <- QSZoneQuote.findById (Id req.driverQuoteId) >>= fromMaybeM (QuoteNotFound req.driverQuoteId)
+      when (specialZoneQuote.validTill < now) $
+        throwError $ QuoteExpired specialZoneQuote.id.getId
+      searchRequest <- QSRSpecialZone.findById specialZoneQuote.searchRequestId >>= fromMaybeM (SearchRequestNotFound specialZoneQuote.searchRequestId.getId)
+      return $ Right (specialZoneQuote, searchRequest)
