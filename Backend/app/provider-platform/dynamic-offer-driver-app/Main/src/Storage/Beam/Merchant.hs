@@ -77,6 +77,9 @@ instance FromBackendRow Postgres Domain.Status
 instance IsString Domain.Status where
   fromString = show
 
+instance IsString Domain.FarePolicyType where
+  fromString = show
+
 instance IsString GeoRestriction where
   fromString = show
 

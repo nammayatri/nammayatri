@@ -212,6 +212,15 @@ deriving stock instance Ord Domain.IdentifierType
 
 deriving stock instance Ord OptApiMethods
 
+instance IsString Domain.Role where
+  fromString = show
+
+instance IsString Domain.Gender where
+  fromString = show
+
+instance IsString Domain.IdentifierType where
+  fromString = show
+
 personTMod :: PersonT (B.FieldModification (B.TableField PersonT))
 personTMod =
   B.tableModification

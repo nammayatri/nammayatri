@@ -247,7 +247,7 @@ defaultBooking =
       primaryExophone = "",
       bapId = "",
       bapUri = "",
-      startTime = defaultDate,
+      startTime = defaultUTCDate,
       riderId = Nothing,
       fromLocationId = "",
       toLocationId = "",
@@ -258,8 +258,8 @@ defaultBooking =
       estimatedDuration = "",
       fareParametersId = "",
       riderName = Nothing,
-      createdAt = defaultDate,
-      updatedAt = defaultDate
+      createdAt = defaultUTCDate,
+      updatedAt = defaultUTCDate
     }
 
 instance Serialize Booking where
