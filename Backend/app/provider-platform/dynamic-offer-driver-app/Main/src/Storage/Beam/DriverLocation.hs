@@ -37,8 +37,9 @@ import Domain.Types.Person (Person)
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
+import Kernel.Storage.Esqueleto (Point (..))
 import Kernel.Types.Common hiding (id)
-import Kernel.Types.Id
+import Kernel.Types.Id hiding (Id)
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Person (PersonTId)
@@ -65,6 +66,12 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Point
 
 instance FromBackendRow Postgres Point
 
+deriving anyclass instance A.FromJSON Point
+
+deriving stock instance Ord Point
+
+deriving anyclass instance A.ToJSON Point
+
 data DriverLocationT f = DriverLocationT
   { driverId :: B.C f Text,
     lat :: B.C f Double,
@@ -80,7 +87,7 @@ instance B.Table DriverLocationT where
   data PrimaryKey DriverLocationT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
-  primaryKey = Id . id
+  primaryKey = Id . driverId
 
 instance ModelMeta DriverLocationT where
   modelFieldModification = driverLocationTMod

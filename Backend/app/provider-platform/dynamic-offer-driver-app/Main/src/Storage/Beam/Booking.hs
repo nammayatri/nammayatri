@@ -118,6 +118,8 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Money
 
 instance FromBackendRow Postgres Money
 
+deriving stock instance Read Money
+
 instance FromField Veh.Variant where
   fromField = fromFieldEnum
 

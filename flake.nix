@@ -6,8 +6,8 @@
     systems.url = "github:nix-systems/default";
 
     # Backend inputs
-    #shared-kernel.url = "github:nammayatri/shared-kernel/8b378e892f0b89e35e7a1889513475330b2c3c09";
     shared-kernel.url = "github:nammayatri/shared-kernel/updatedEulerHS";
+    #shared-kernel.url = "/home/juspay/Documents/code/shared-kernel/";
     shared-kernel.inputs.nixpkgs.follows = "nixpkgs";
     beckn-gateway.url = "github:nammayatri/beckn-gateway/updatedEulerHS";
     beckn-gateway.inputs.shared-kernel.follows = "shared-kernel";

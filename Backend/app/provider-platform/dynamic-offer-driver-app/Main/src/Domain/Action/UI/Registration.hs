@@ -64,7 +64,7 @@ import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Tabular.VechileNew as BN (findById)
-import qualified Storage.Tabular.BookingNew as BN (findById)
+-- import qualified Storage.Tabular.BookingNew as BN (findById)
 import Tools.Auth (authTokenCacheKey)
 import Tools.Error
 import Tools.Metrics
