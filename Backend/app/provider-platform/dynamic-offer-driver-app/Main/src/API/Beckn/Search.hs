@@ -51,7 +51,8 @@ search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ g
     logTagInfo "Search API Flow" "Reached"
     dSearchReq <- ACL.buildSearchReq subscriber req
     Redis.whenWithLockRedis (searchLockKey dSearchReq.messageId transporterId.getId) 60 $ do
-      dSearchRes <- DSearch.handler transporterId dSearchReq
+      merchant <- DSearch.validateRequest transporterId dSearchReq
+      dSearchRes <- DSearch.handler merchant dSearchReq
       let context = req.context
       let callbackUrl = gateway.subscriber_url
       void $

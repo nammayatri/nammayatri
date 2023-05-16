@@ -18,6 +18,7 @@ module Domain.Action.Beckn.Search
     EstimateInfo (..),
     SpecialZoneQuoteInfo (..),
     handler,
+    validateRequest,
   )
 where
 
@@ -113,15 +114,16 @@ getDistanceAndDuration merchantId fromLocation toLocation _ _ = do
         }
   return DistanceAndDuration {distance = response.distance, duration = response.duration}
 
-handler :: Id DM.Merchant -> DSearchReq -> Flow DSearchRes
-handler merchantId sReq = do
-  org <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
-  unless org.enabled $ throwError AgencyDisabled
+handler :: DM.Merchant -> DSearchReq -> Flow DSearchRes
+handler org sReq = do
+  -- org <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
+  -- unless org.enabled $ throwError AgencyDisabled
   searchMetricsMVar <- Metrics.startSearchMetrics org.name
   let fromLocationLatLong = sReq.pickupLocation
       toLocationLatLong = sReq.dropLocation
-  unlessM (rideServiceable org.geofencingConfig QGeometry.someGeometriesContain fromLocationLatLong (Just toLocationLatLong)) $
-    throwError RideNotServiceable
+      merchantId = org.id
+  -- unlessM (rideServiceable org.geofencingConfig QGeometry.someGeometriesContain fromLocationLatLong (Just toLocationLatLong)) $
+  --   throwError RideNotServiceable
   result <- getDistanceAndDuration merchantId fromLocationLatLong toLocationLatLong sReq.routeDistance sReq.routeDuration
   CD.cacheDistance sReq.transactionId (result.distance, result.duration)
   Redis.setExp (CD.deviceKey sReq.transactionId) sReq.device 120
@@ -170,7 +172,7 @@ handler merchantId sReq = do
         estimateInfos <- do
           allFarePolicies <- FarePolicyS.findAllByMerchantId org.id
           let farePolicies = selectFarePolicy result.distance allFarePolicies
-          buildEstimatesInfos fromLocationLatLong driverPoolCfg org result farePolicies
+          buildEstimatesInfos fromLocationLatLong driverPoolCfg result farePolicies
         return (Nothing, Just estimateInfos)
   buildSearchRes org fromLocationLatLong toLocationLatLong mbEstimateInfos quotes searchMetricsMVar
   where
@@ -216,24 +218,24 @@ handler merchantId sReq = do
     buildEstimatesInfos ::
       LatLong ->
       DriverPoolConfig ->
-      DM.Merchant ->
       DistanceAndDuration ->
       [DFP.FarePolicy] ->
       Flow [EstimateInfo]
-    buildEstimatesInfos fromLocation driverPoolCfg org result farePolicies =
+    buildEstimatesInfos fromLocation driverPoolCfg result farePolicies = do
+      let merchantId = org.id
       if null farePolicies
         then do
           logDebug "Trip doesnot match any fare policy constraints."
           return []
         else do
-          driverPoolNotOnRide <- calculateDriverPool Estimate driverPoolCfg Nothing fromLocation org.id True Nothing
+          driverPoolNotOnRide <- calculateDriverPool Estimate driverPoolCfg Nothing fromLocation merchantId True Nothing
           driverPoolCurrentlyOnRide <-
             if null driverPoolNotOnRide
               then do
                 let reducedRadiusValue = driverPoolCfg.radiusShrinkValueForDriversOnRide
                 transporter <- CTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigDoesNotExist merchantId.getId)
                 if transporter.includeDriverCurrentlyOnRide
-                  then calculateDriverPoolCurrentlyOnRide Estimate driverPoolCfg Nothing fromLocation org.id Nothing reducedRadiusValue
+                  then calculateDriverPoolCurrentlyOnRide Estimate driverPoolCfg Nothing fromLocation merchantId Nothing reducedRadiusValue
                   else pure []
               else pure []
           let driverPool = driverPoolNotOnRide ++ map changeIntoDriverPoolResult driverPoolCurrentlyOnRide
@@ -347,3 +349,13 @@ mkQuoteInfo fromLoc toLoc startTime DQuoteSpecialZone.QuoteSpecialZone {..} = do
     { quoteId = id,
       ..
     }
+
+validateRequest :: Id DM.Merchant -> DSearchReq -> Flow DM.Merchant
+validateRequest merchantId sReq = do
+  org <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
+  unless org.enabled $ throwError AgencyDisabled
+  let fromLocationLatLong = sReq.pickupLocation
+      toLocationLatLong = sReq.dropLocation
+  unlessM (rideServiceable org.geofencingConfig QGeometry.someGeometriesContain fromLocationLatLong (Just toLocationLatLong)) $
+    throwError RideNotServiceable
+  return org

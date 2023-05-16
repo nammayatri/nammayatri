@@ -52,10 +52,12 @@ init transporterId (SignatureAuthResult _ subscriber) req =
     dInitReq <- ACL.buildInitReq subscriber req
     Redis.whenWithLockRedis (initLockKey dInitReq.driverQuoteId) 60 $ do
       let context = req.context
-      dInitRes <- DInit.handler transporterId dInitReq
-      void . handle (errHandler dInitRes.booking) $
-        CallBAP.withCallback dInitRes.transporter Context.INIT OnInit.onInitAPI context context.bap_uri $
-          pure $ ACL.mkOnInitMessage dInitRes
+      validatedRes <- DInit.validateRequest transporterId dInitReq
+      fork "init request processing" $ do
+        dInitRes <- DInit.handler transporterId dInitReq validatedRes
+        void . handle (errHandler dInitRes.booking) $
+          CallBAP.withCallback dInitRes.transporter Context.INIT OnInit.onInitAPI context context.bap_uri $
+            pure $ ACL.mkOnInitMessage dInitRes
       return ()
     pure Ack
   where

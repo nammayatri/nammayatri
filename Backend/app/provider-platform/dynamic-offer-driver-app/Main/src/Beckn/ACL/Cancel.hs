@@ -26,14 +26,25 @@ import Kernel.Utils.Common
 buildCancelReq ::
   (HasFlowEnv m r '["coreVersion" ::: Text]) =>
   Cancel.CancelReq ->
-  m DCancel.CancelReq
+  -- m DCancel.CancelReq
+  m (Either DCancel.CancelReq DCancel.CancelSearchReq)
 buildCancelReq req = do
   validateContext Context.CANCEL req.context
-  let bookingId = Id req.message.order_id
-  return $
-    DCancel.CancelReq
-      { ..
-      }
+  if req.message.item_id == ""
+    then do
+      let bookingId = Id req.message.order_id
+      return $
+        Left $
+          DCancel.CancelReq
+            { ..
+            }
+    else do
+      let transactionId = req.message.item_id
+      return $
+        Right $
+          DCancel.CancelSearchReq
+            { ..
+            }
 
 buildCancelSearchReq ::
   (HasFlowEnv m r '["coreVersion" ::: Text]) =>
