@@ -15,7 +15,7 @@
 module Domain.Types.CallStatus where
 
 import Domain.Types.Ride
-import GHC.StaticPtr (IsStatic)
+-- import GHC.StaticPtr (IsStatic)
 import qualified Kernel.External.Call.Interface.Types as CallTypes
 import Kernel.Prelude
 import Kernel.Types.Id

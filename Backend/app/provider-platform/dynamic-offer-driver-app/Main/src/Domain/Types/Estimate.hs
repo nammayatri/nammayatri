@@ -52,6 +52,8 @@ data EstimateBreakupD (s :: UsageSafety) = EstimateBreakup
 
 type EstimateBreakup = EstimateBreakupD 'Safe
 
+deriving instance Read (Id Estimate)
+
 deriving instance FromJSON (EstimateBreakupD 'Unsafe)
 
 deriving instance FromJSON (EstimateBreakupD 'Safe)

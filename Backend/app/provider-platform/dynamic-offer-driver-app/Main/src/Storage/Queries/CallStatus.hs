@@ -37,7 +37,7 @@ create :: CallStatus -> SqlDB ()
 create callStatus = void $ Esq.createUnique callStatus
 
 -- create' :: CallStatus -> SqlDB ()
-create' :: L.MonadFlow m => CallStatus -> m (EulerHS.KVConnector.Types.MeshResult ())
+create' :: L.MonadFlow m => CallStatus -> m (MeshResult ())
 create' callStatus = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
@@ -119,9 +119,9 @@ transformBeamCallStatusToDomain BeamCT.CallStatusT {..} = do
 transformDomainCallStatusToBeam :: CallStatus -> BeamCT.CallStatus
 transformDomainCallStatusToBeam CallStatus {..} =
   BeamCT.defaultCallStatus
-    { BeamCT.id = show id,
+    { BeamCT.id = getId id,
       BeamCT.callId = callId,
-      BeamCT.rideId = show rideId,
+      BeamCT.rideId = getId rideId,
       BeamCT.dtmfNumberUsed = dtmfNumberUsed,
       BeamCT.status = status,
       BeamCT.recordingUrl = recordingUrl,
