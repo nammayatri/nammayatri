@@ -85,3 +85,39 @@ findById fareParametersId = buildDType $ do
 --       BeamFP.farePolicyType = farePolicyType,
 --       BeamFP.govtChargesPerc = govtChargesPerc
 --     }
+
+transformBeamFareParametersToDomain :: BeamFP.FareParameters -> FareParameters
+transformBeamFareParametersToDomain BeamFP.FareParametersT {..} = do
+  FareParameters
+    { id = Id id,
+      baseFare = baseFare,
+      deadKmFare = deadKmFare,
+      extraKmFare = extraKmFare,
+      driverSelectedFare = driverSelectedFare,
+      customerExtraFee = customerExtraFee,
+      nightShiftRate = nightShiftRate,
+      nightCoefIncluded = nightCoefIncluded,
+      waitingChargePerMin = waitingChargePerMin,
+      waitingOrPickupCharges = waitingOrPickupCharges,
+      serviceCharge = serviceCharge,
+      farePolicyType = farePolicyType,
+      govtChargesPerc = govtChargesPerc
+    }
+
+transformDomainFareParametersToBeam :: FareParameters -> BeamFP.FareParameters
+transformDomainFareParametersToBeam FareParameters {..} =
+  BeamFP.defaultFareParameters
+    { BeamFP.id = getId id,
+      BeamFP.baseFare = baseFare,
+      BeamFP.deadKmFare = deadKmFare,
+      BeamFP.extraKmFare = extraKmFare,
+      BeamFP.driverSelectedFare = driverSelectedFare,
+      BeamFP.customerExtraFee = customerExtraFee,
+      BeamFP.nightShiftRate = nightShiftRate,
+      BeamFP.nightCoefIncluded = nightCoefIncluded,
+      BeamFP.waitingChargePerMin = waitingChargePerMin,
+      BeamFP.waitingOrPickupCharges = waitingOrPickupCharges,
+      BeamFP.serviceCharge = serviceCharge,
+      BeamFP.farePolicyType = farePolicyType,
+      BeamFP.govtChargesPerc = govtChargesPerc
+    }

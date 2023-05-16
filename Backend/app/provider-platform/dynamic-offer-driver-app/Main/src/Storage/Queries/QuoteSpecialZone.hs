@@ -106,3 +106,37 @@ findById dQuoteId = buildDType $ do
 --       BeamQSZ.estimatedFare = estimatedFare,
 --       BeamQSZ.fareParams = fareParams
 --     }
+
+-- transformBeamQuoteSpecialZoneToDomain :: BeamQSZ.QuoteSpecialZone -> QuoteSpecialZone
+-- transformBeamQuoteSpecialZoneToDomain BeamQSZ.QuoteSpecialZoneT {..} = do
+--   QuoteSpecialZone
+--     {
+--       id = Id id,
+--       searchRequestId = Id searchRequestId,
+--       providerId = Id providerId,
+--       vehicleVariant = vehicleVariant,
+--       distance = distance,
+--       estimatedFinishTime = estimatedFinishTime,
+--       createdAt = createdAt,
+--       updatedAt = updatedAt,
+--       validTill = validTill,
+--       estimatedFare = estimatedFare,
+--       fareParams = fareParams
+--     }
+
+-- transformDomainQuoteSpecialZoneToBeam :: QuoteSpecialZone -> BeamQSZ.QuoteSpecialZone
+-- transformDomainQuoteSpecialZoneToBeam QuoteSpecialZone {..} =
+--   BeamQSZ.defaultQuoteSpecialZone
+--     {
+--       BeamQSZ.id = getId id,
+--       BeamQSZ.searchRequestId = getId searchRequestId,
+--       BeamQSZ.providerId = getId providerId,
+--       BeamQSZ.vehicleVariant = vehicleVariant,
+--       BeamQSZ.distance = distance,
+--       BeamQSZ.estimatedFinishTime = estimatedFinishTime,
+--       BeamQSZ.createdAt = createdAt,
+--       BeamQSZ.updatedAt = updatedAt,
+--       BeamQSZ.validTill = validTill,
+--       BeamQSZ.estimatedFare = estimatedFare,
+--       BeamQSZ.fareParams = fareParams
+--     }
