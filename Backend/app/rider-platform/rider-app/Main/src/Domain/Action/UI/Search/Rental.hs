@@ -59,6 +59,7 @@ data RentalSearchRes = RentalSearchRes
 rentalSearch ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
+    DB.EsqDBReplicaFlow m r,
     Redis.HedisFlow m r,
     CoreMetrics m,
     HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],

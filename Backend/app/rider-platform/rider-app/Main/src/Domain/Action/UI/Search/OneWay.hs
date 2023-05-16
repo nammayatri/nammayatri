@@ -63,6 +63,7 @@ oneWaySearch ::
     HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
     HedisFlow m r,
     EsqDBFlow m r,
+    DB.EsqDBReplicaFlow m r,
     HedisFlow m r,
     CoreMetrics m,
     HasBAPMetrics m r

@@ -130,6 +130,7 @@ oneWaySearch ::
   ( HasCacheConfig r,
     EncFlow m r,
     EsqDBFlow m r,
+    DB.EsqDBReplicaFlow m r,
     HedisFlow m r,
     HasFlowEnv m r '["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl],
     HasHttpClientOptions r c,
@@ -203,6 +204,7 @@ comparator route1 route2 =
 rentalSearch ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
+    DB.EsqDBReplicaFlow m r,
     HedisFlow m r,
     HasFlowEnv m r '["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl],
     HasHttpClientOptions r c,

@@ -68,6 +68,7 @@ init ::
   ( HasCacheConfig r,
     EncFlow m r,
     EsqDBFlow m r,
+    DB.EsqDBReplicaFlow m r,
     HedisFlow m r,
     HasField "driverEstimatedPickupDuration" r Seconds,
     CoreMetrics m
@@ -94,6 +95,7 @@ initOneWayTrip ::
   ( HasCacheConfig r,
     EncFlow m r,
     EsqDBFlow m r,
+    DB.EsqDBReplicaFlow m r,
     HedisFlow m r,
     HasField "driverEstimatedPickupDuration" r Seconds,
     CoreMetrics m
@@ -147,6 +149,7 @@ initRentalTrip ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
     HedisFlow m r,
+    DB.EsqDBReplicaFlow m r,
     CoreMetrics m
   ) =>
   InitReq ->
