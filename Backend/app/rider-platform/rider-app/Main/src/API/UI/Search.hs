@@ -27,9 +27,6 @@ where
 
 import qualified Beckn.ACL.Metro.Search as MetroACL
 import qualified Beckn.ACL.Search as TaxiACL
-import Data.Aeson
-import Data.OpenApi hiding (Header)
-import qualified Data.OpenApi as OpenApi hiding (Header)
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Search.Common as DSearchCommon
 import qualified Domain.Action.UI.Search.OneWay as DOneWaySearch
@@ -58,13 +55,13 @@ import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.PublicTransport as PublicTransport
+import SharedLogic.Search
+import SharedLogic.SimulatedFlow.Search
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.MerchantConfig as CMC
-import Storage.CachedQueries.SimulatedFlow.SearchRequest
 import qualified Storage.Queries.Person as Person
 import Tools.Auth
-import qualified Tools.JSON as J
 import qualified Tools.Maps as Maps
 import Tools.Metrics
 
@@ -82,125 +79,16 @@ type API =
 handler :: FlowServer API
 handler = search
 
-data SearchReq = OneWaySearch DOneWaySearch.OneWaySearchReq | RentalSearch DRentalSearch.RentalSearchReq
-  deriving (Generic, Show)
-
-instance ToJSON SearchReq where
-  toJSON = genericToJSON fareProductOptions
-
-instance FromJSON SearchReq where
-  parseJSON = genericParseJSON fareProductOptions
-
-instance ToSchema SearchReq where
-  declareNamedSchema = genericDeclareNamedSchema fareProductSchemaOptions
-
-fareProductOptions :: Options
-fareProductOptions =
-  defaultOptions
-    { sumEncoding = J.fareProductTaggedObject,
-      constructorTagModifier = fareProductConstructorModifier
-    }
-
-fareProductSchemaOptions :: OpenApi.SchemaOptions
-fareProductSchemaOptions =
-  OpenApi.defaultSchemaOptions
-    { OpenApi.sumEncoding = J.fareProductTaggedObject,
-      OpenApi.constructorTagModifier = fareProductConstructorModifier
-    }
-
-data SearchRes = SearchRes
-  { searchId :: Id SearchRequest,
-    searchExpiry :: UTCTime,
-    routeInfo :: Maybe Maps.RouteInfo
-  }
-  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
-
-fareProductConstructorModifier :: String -> String
-fareProductConstructorModifier = \case
-  "OneWaySearch" -> "ONE_WAY"
-  "RentalSearch" -> "RENTAL"
-  x -> x
-
 search :: Id Person.Person -> SearchReq -> Maybe Version -> Maybe Version -> Maybe Text -> FlowHandler SearchRes
 search personId req mbBundleVersion mbClientVersion device = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   checkSearchRateLimit personId
-  logDebug $ ("answer of search" :: Text) <> show person.isSimulated
   updateVersions personId mbBundleVersion mbClientVersion
-  if person.isSimulated
-    then do
-      (searchId, searchExpiry, routeInfo) <- case req of
-        OneWaySearch oneWay -> simulatedOneWaySearch personId mbBundleVersion mbClientVersion device oneWay
-        RentalSearch rental -> simulatedRentalSearch personId mbBundleVersion mbClientVersion device rental
-      return $ SearchRes searchId searchExpiry routeInfo
-    else do
-      (searchId, searchExpiry, routeInfo) <- case req of
-        OneWaySearch oneWay -> oneWaySearch personId mbBundleVersion mbClientVersion device oneWay
-        RentalSearch rental -> rentalSearch personId mbBundleVersion mbClientVersion device rental
-      return $ SearchRes searchId searchExpiry routeInfo
-
-simulatedRentalSearch ::
-  ( HasCacheConfig r,
-    EsqDBFlow m r,
-    HedisFlow m r,
-    HasFlowEnv m r '["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl],
-    HasHttpClientOptions r c,
-    SimluatedCacheFlow m r,
-    HasShortDurationRetryCfg r c,
-    CoreMetrics m,
-    HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
-    HasBAPMetrics m r
-  ) =>
-  Id Person.Person ->
-  Maybe Version ->
-  Maybe Version ->
-  Maybe Text ->
-  DRentalSearch.RentalSearchReq ->
-  m (Id SearchRequest, UTCTime, Maybe Maps.RouteInfo)
-simulatedRentalSearch personId bundleVersion clientVersion device req = do
-  dSearchRes <- DRentalSearch.simulatedRentalSearch personId bundleVersion clientVersion device req
-  pure (dSearchRes.searchId, dSearchRes.searchRequestExpiry, Nothing)
-
-simulatedOneWaySearch ::
-  ( HasCacheConfig r,
-    EncFlow m r,
-    EsqDBFlow m r,
-    DB.EsqDBReplicaFlow m r,
-    HedisFlow m r,
-    SimluatedCacheFlow m r,
-    HasFlowEnv m r '["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl],
-    HasHttpClientOptions r c,
-    HasShortDurationRetryCfg r c,
-    CoreMetrics m,
-    HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
-    HasBAPMetrics m r,
-    MonadProducer PublicTransportSearch m
-  ) =>
-  Id Person.Person ->
-  Maybe Version ->
-  Maybe Version ->
-  Maybe Text ->
-  DOneWaySearch.OneWaySearchReq ->
-  m (Id SearchRequest, UTCTime, Maybe Maps.RouteInfo)
-simulatedOneWaySearch personId bundleVersion clientVersion device req = do
-  person <- Person.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  merchant <- QMerchant.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
-  let sourceLatlong = req.origin.gps
-  let destinationLatLong = req.destination.gps
-  let request =
-        Maps.GetRoutesReq
-          { waypoints = [sourceLatlong, destinationLatLong],
-            calcPoints = True,
-            mode = Just Maps.CAR
-          }
-  routeResponse <- Maps.getSimulatedRoutes person.merchantId request
-  let shortestRouteInfo = getRouteInfoWithShortestDuration routeResponse
-  let longestRouteDistance = (.distance) =<< getLongestRouteDistance routeResponse
-  let shortestRouteDistance = (.distance) =<< shortestRouteInfo
-  let shortestRouteDuration = (.duration) =<< shortestRouteInfo
-  dSearchRes <- DOneWaySearch.oneWaySimulatedSearch person merchant req bundleVersion clientVersion longestRouteDistance device shortestRouteDistance shortestRouteDuration
-  whenJust shortestRouteInfo $ \routeInfo -> cacheRouteInfo dSearchRes.searchId routeInfo
-  return (dSearchRes.searchId, dSearchRes.searchRequestExpiry, shortestRouteInfo)
+  interceptWhenSimulated person.isSimulated req personId mbBundleVersion mbClientVersion device $ do
+    (searchId, searchExpiry, routeInfo) <- case req of
+      OneWaySearch oneWay -> oneWaySearch personId mbBundleVersion mbClientVersion device oneWay
+      RentalSearch rental -> rentalSearch personId mbBundleVersion mbClientVersion device rental
+    return $ SearchRes searchId searchExpiry routeInfo
 
 oneWaySearch ::
   ( HasCacheConfig r,
@@ -248,39 +136,10 @@ oneWaySearch personId bundleVersion clientVersion device req = do
   fork "search public-transport" $ PublicTransport.sendPublicTransportSearchRequest personId dSearchRes
   fork "updating search counters" $ do
     merchantConfigs <- CMC.findAllByMerchantId person.merchantId
-    SMC.updateSearchFraudCounters personId merchantConfigs
-    mFraudDetected <- SMC.anyFraudDetected personId person.merchantId merchantConfigs
-    whenJust mFraudDetected $ \mc -> SMC.takeAction personId (Just mc.id) mc.shouldSimulate
+    SMC.updateSearchSimulationCounters personId merchantConfigs
+    mSimulationDetected <- SMC.anySimulationDetected personId person.merchantId merchantConfigs
+    whenJust mSimulationDetected $ \mc -> SMC.takeAction personId (Just mc.id) mc.shouldSimulate
   return (dSearchRes.searchId, dSearchRes.searchRequestExpiry, shortestRouteInfo)
-
-getLongestRouteDistance :: [Maps.RouteInfo] -> Maybe Maps.RouteInfo
-getLongestRouteDistance [] = Nothing
-getLongestRouteDistance (routeInfo : routeInfoArray) =
-  if null routeInfoArray
-    then Just routeInfo
-    else do
-      restRouteresult <- getLongestRouteDistance routeInfoArray
-      Just $ comparator' routeInfo restRouteresult
-  where
-    comparator' route1 route2 =
-      if route1.distance > route2.distance
-        then route1
-        else route2
-
-getRouteInfoWithShortestDuration :: [Maps.RouteInfo] -> Maybe Maps.RouteInfo
-getRouteInfoWithShortestDuration (routeInfo : routeInfoArray) =
-  if null routeInfoArray
-    then Just routeInfo
-    else do
-      restRouteresult <- getRouteInfoWithShortestDuration routeInfoArray
-      Just $ comparator routeInfo restRouteresult
-getRouteInfoWithShortestDuration [] = Nothing
-
-comparator :: Maps.RouteInfo -> Maps.RouteInfo -> Maps.RouteInfo
-comparator route1 route2 =
-  if route1.duration < route2.duration
-    then route1
-    else route2
 
 rentalSearch ::
   ( HasCacheConfig r,

@@ -11,7 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-module Domain.Action.SimulatedFlow.Maps
+module SharedLogic.SimulatedFlow.Maps
   ( autoComplete,
     addMeters,
   )
@@ -32,9 +32,9 @@ autoComplete req = do
   now <- getCurrentTime
   let cachedBookingMap = HM.fromList cachedBookingDetails
       fuzzySet = FS.fromList $ HM.keys cachedBookingMap
-      hits = map snd $ FS.get fuzzySet req.input
+      hits = map snd $ FS.getWithMinScore 0.1 fuzzySet req.input
       matchingAddresses = map (\key -> (key, HM.lookup key cachedBookingMap)) hits
-      predictions = map (\bi -> KMaps.Prediction bi.description bi.placeId Nothing) . catMaybes $ map snd matchingAddresses
+      predictions = map (\bi -> KMaps.Prediction bi.description bi.placeId Nothing) $ mapMaybe snd matchingAddresses
   mapM_
     ( \(key, value) ->
         case value of

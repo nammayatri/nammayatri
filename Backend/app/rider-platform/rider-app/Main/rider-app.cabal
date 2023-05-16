@@ -105,7 +105,6 @@ library
       Domain.Action.Dashboard.Exotel
       Domain.Action.Dashboard.Merchant
       Domain.Action.Dashboard.Ride
-      Domain.Action.SimulatedFlow.Maps
       Domain.Action.UI.Booking
       Domain.Action.UI.Call
       Domain.Action.UI.Cancel
@@ -172,6 +171,7 @@ library
       Domain.Types.VehicleVariant
       Domain.Types.Webengage
       Environment
+      SharedLogic.Booking
       SharedLogic.CallBPP
       SharedLogic.CallBPPInternal
       SharedLogic.Confirm
@@ -181,6 +181,11 @@ library
       SharedLogic.MessageBuilder
       SharedLogic.MetroOffer
       SharedLogic.PublicTransport
+      SharedLogic.Search
+      SharedLogic.SimulatedFlow.Booking
+      SharedLogic.SimulatedFlow.Confirm
+      SharedLogic.SimulatedFlow.Maps
+      SharedLogic.SimulatedFlow.Search
       Storage.CachedQueries.BlackListOrg
       Storage.CachedQueries.CacheConfig
       Storage.CachedQueries.Exophone

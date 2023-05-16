@@ -21,7 +21,6 @@ where
 
 import Data.OpenApi (ToSchema (..))
 import qualified Domain.Types.Booking as SRB
-import qualified Domain.Types.Booking.API as DBA
 import qualified Domain.Types.Booking.BookingLocation as DBL
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as Ride
@@ -30,8 +29,11 @@ import Kernel.Storage.Esqueleto (runInReplica)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.Booking
+import qualified SharedLogic.SimulatedFlow.Booking as SSBooking
 import Storage.CachedQueries.CacheConfig (CacheFlow, SimluatedCacheFlow)
 import qualified Storage.CachedQueries.SimulatedFlow.Driver as CSD
+import Storage.CachedQueries.SimulatedFlow.SearchRequest
 import qualified Storage.CachedQueries.SimulatedFlow.SearchRequest as CSR
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Person as QP
@@ -49,7 +51,7 @@ bookingStatus bookingId personId = do
     then do
       now <- getCurrentTime
       CSR.linkBookingWithPerson bookingId personId
-      pure $ createSimuatedReponse now bookingId
+      createSimuatedReponse now bookingId
     else do
       booking <- runInReplica (QRB.findById bookingId) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
       unless (booking.riderId == personId) $ throwError AccessDenied
@@ -74,10 +76,12 @@ createBookingList mbBookingStatus personId = do
   estimate <- CSR.getEstimateById estimateId >>= fromMaybeM (InvalidRequest "SimulatedFlow:Booking: estimate not found")
   searchReqId <- CSR.getSearchRequestIdByEstimateId estimateId >>= fromMaybeM (InvalidRequest "SimulatedFlow:Booking: searchReqId not found")
   searchReq <- CSR.getSearchRequestById searchReqId >>= fromMaybeM (InvalidRequest "SimulatedFlow:Booking: searchReq not found")
-  driverInfo <- CSD.getLinkedDriverByQuoteId quoteId >>= fromMaybeM (InvalidRequest "SimulatedFlow:Booking: driver not found")
+  driverInfo <- CSD.getLinkedDriverByEstimateId estimateId >>= fromMaybeM (InvalidRequest "SimulatedFlow:Booking: driver not found")
   toLocation <- searchReq.toLocation & fromMaybeM (InvalidRequest "SimulatedFlow:Booking: toLocaiton not found")
   shortId <- generateShortId
   guid <- generateGUID
+  CSR.linkBookingStatusBooking SRB.TRIP_ASSIGNED bookingId
+  CSR.linkBookingIdWithRideId bookingId guid
   bpguid <- generateGUID
   otp <- generateOTPCode
   let simulatedRide =
@@ -106,7 +110,7 @@ createBookingList mbBookingStatus personId = do
           }
 
   pure . BookingListRes . (: []) $
-    DBA.BookingAPIEntity
+    SRB.BookingAPIEntity
       { id = bookingId,
         status = fromMaybe SRB.TRIP_ASSIGNED mbBookingStatus,
         agencyName = "",
@@ -118,7 +122,7 @@ createBookingList mbBookingStatus personId = do
         rideList = [simulatedRide],
         tripTerms = [],
         fareBreakup = [], -- FareBreakupAPIEntity
-        bookingDetails = SRB.mkSimulatedBookingAPIDetails toLocation $ fromMaybe 1200 searchReq.distance,
+        bookingDetails = SSBooking.mkSimulatedBookingAPIDetails toLocation $ fromMaybe 1200 searchReq.distance,
         rideStartTime = Nothing,
         rideEndTime = Nothing,
         duration = Nothing,
@@ -127,8 +131,9 @@ createBookingList mbBookingStatus personId = do
         updatedAt = now
       }
 
-createSimuatedReponse :: UTCTime -> Id SRB.Booking -> SRB.BookingAPIEntity
+createSimuatedReponse :: (MonadFlow m, SimluatedCacheFlow m r) => UTCTime -> Id SRB.Booking -> m SRB.BookingAPIEntity
 createSimuatedReponse now bookingId = do
+  status <- getLinkBookingStatusBooking bookingId
   let bookingLocation =
         DBL.BookingLocationAPIEntity
           { lat = 0,
@@ -145,28 +150,29 @@ createSimuatedReponse now bookingId = do
             placeId = Nothing
           }
       bookingDetails =
-        DBA.DriverOfferAPIDetails $
-          DBA.OneWayBookingAPIDetails
+        DriverOfferAPIDetails $
+          OneWayBookingAPIDetails
             { toLocation = bookingLocation,
               estimatedDistance = HighPrecMeters 0
             }
-  SRB.BookingAPIEntity
-    { id = bookingId,
-      status = SRB.TRIP_ASSIGNED,
-      agencyName = "",
-      agencyNumber = "",
-      estimatedFare = Money 0,
-      discount = Nothing,
-      estimatedTotalFare = Money 0,
-      fromLocation = bookingLocation,
-      rideList = [],
-      tripTerms = [],
-      fareBreakup = [],
-      bookingDetails = bookingDetails,
-      rideStartTime = Nothing,
-      rideEndTime = Nothing,
-      duration = Nothing,
-      merchantExoPhone = "0000000000",
-      createdAt = now,
-      updatedAt = now
-    }
+  return
+    SRB.BookingAPIEntity
+      { id = bookingId,
+        status = if isNothing status then SRB.TRIP_ASSIGNED else SRB.CANCELLED,
+        agencyName = "",
+        agencyNumber = "",
+        estimatedFare = Money 0,
+        discount = Nothing,
+        estimatedTotalFare = Money 0,
+        fromLocation = bookingLocation,
+        rideList = [],
+        tripTerms = [],
+        fareBreakup = [],
+        bookingDetails = bookingDetails,
+        rideStartTime = Nothing,
+        rideEndTime = Nothing,
+        duration = Nothing,
+        merchantExoPhone = "0000000000",
+        createdAt = now,
+        updatedAt = now
+      }

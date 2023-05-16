@@ -104,12 +104,14 @@ rentalSearch personId bundleVersion clientVersion device req = do
         throwError RideNotServiceable
 
 simulatedRentalSearch ::
-  ( EsqDBFlow m r,
-    SimluatedCacheFlow m r,
-    CacheFlow m r,
+  ( HasCacheConfig r,
+    EsqDBFlow m r,
+    Redis.HedisFlow m r,
+    EsqDBReplicaFlow m r,
     CoreMetrics m,
     HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
-    HasBAPMetrics m r
+    HasBAPMetrics m r,
+    SimluatedCacheFlow m r
   ) =>
   Id Person.Person ->
   Maybe Version ->

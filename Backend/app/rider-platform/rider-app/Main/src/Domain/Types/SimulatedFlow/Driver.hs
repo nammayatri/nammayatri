@@ -23,4 +23,4 @@ data SimulatedDriver = SimulatedDriver
     vehicelNumber :: Text,
     driverId :: Text
   }
-  deriving (Generic, ToJSON, FromJSON)
+  deriving (Generic, ToJSON, FromJSON, Show)

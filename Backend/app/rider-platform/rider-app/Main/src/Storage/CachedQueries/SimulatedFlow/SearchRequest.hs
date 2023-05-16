@@ -18,9 +18,12 @@ import Domain.Types.Booking as DB
 import Domain.Types.Estimate as DEstimate
 import Domain.Types.Person as DP
 import Domain.Types.Quote as DQ
+import Domain.Types.Ride as DR
+import Domain.Types.Ride as DRide
 import Domain.Types.SearchRequest
 import Kernel.Prelude
 import Kernel.Storage.Hedis as Hedis
+import Kernel.Types.Common
 import Kernel.Types.Id
 import Storage.CachedQueries.CacheConfig
 import qualified Tools.Maps as Maps
@@ -39,6 +42,20 @@ cacheRouteInfo searchReqId shortestRouteInfo = do
   let pointKey = mkRouteKey searchReqId
   expTime <- fromIntegral <$> asks (.simulatedDataCacheConfig.configsExpTime)
   Hedis.setExp pointKey shortestRouteInfo expTime
+
+mkDurationSearchRequestKey :: Id SearchRequest -> Text
+mkDurationSearchRequestKey searchRequestId = "CachedQueries:SimulatedUser:Booking:PersonLink" <> searchRequestId.getId
+
+getSimulatedDurationBySearchRequestId :: SimluatedCacheFlow m r => Id SearchRequest -> m (Maybe Seconds)
+getSimulatedDurationBySearchRequestId searchRequestId = Hedis.get (mkDurationSearchRequestKey searchRequestId)
+
+cacheSimulatedLocationInfoByRideId :: SimluatedCacheFlow m r => Id Ride -> DRide.SimulatedLocationInfo -> m ()
+cacheSimulatedLocationInfoByRideId rideId simulatedLocationInfo = do
+  expTime <- fromIntegral <$> asks (.simulatedDataCacheConfig.configsExpTime)
+  Hedis.setExp (mkSimulatedLocationKey rideId) simulatedLocationInfo expTime
+
+getSimulatedLocationInfoByRideId :: SimluatedCacheFlow m r => Id Ride -> m (Maybe DRide.SimulatedLocationInfo)
+getSimulatedLocationInfoByRideId rideId = Hedis.get (mkSimulatedLocationKey rideId)
 
 cacheByEstimateId :: SimluatedCacheFlow m r => Id DEstimate.Estimate -> DEstimate.EstimateAPIEntity -> SearchRequest -> m ()
 cacheByEstimateId estimateId estimate searchReq = do
@@ -59,6 +76,17 @@ linkBookingWithPerson bookingId personId = do
 getBookingIdByPersonId :: SimluatedCacheFlow m r => Id DP.Person -> m (Maybe (Id DB.Booking))
 getBookingIdByPersonId personId = fmap Id <$> Hedis.get (mkBookingPersonLinkKey personId)
 
+linkBookingStatusBooking :: SimluatedCacheFlow m r => DB.BookingStatus -> Id DB.Booking -> m ()
+linkBookingStatusBooking bookingStatus bookingId = do
+  expTime <- fromIntegral <$> asks (.simulatedDataCacheConfig.configsExpTime)
+  Hedis.setExp (mkBookingStatusPersonKey bookingId) bookingStatus expTime
+
+getLinkBookingStatusBooking :: SimluatedCacheFlow m r => Id DB.Booking -> m (Maybe DB.BookingStatus)
+getLinkBookingStatusBooking bookingId = Hedis.get (mkBookingStatusPersonKey bookingId)
+
+mkBookingStatusPersonKey :: Id DB.Booking -> Text
+mkBookingStatusPersonKey bookingId = "CachedQueries:SimulatedUser:BookingStatus:PersonLink" <> bookingId.getId
+
 mkBookingPersonLinkKey :: Id DP.Person -> Text
 mkBookingPersonLinkKey personId = "CachedQueries:SimulatedUser:Booking:PersonLink" <> personId.getId
 
@@ -76,6 +104,21 @@ linkEstimateIdWithQuoteId estimateId quoteId = do
   let quoteLinkKey = mkEstimateQuoteLinkKey quoteId
   expTime <- fromIntegral <$> asks (.simulatedDataCacheConfig.configsExpTime)
   Hedis.setExp quoteLinkKey estimateId.getId expTime
+
+mkBookingRideLinkKey :: Id DR.Ride -> Text
+mkBookingRideLinkKey rideId = "CachedQueries:SimulatedUser:Booking:QuoteRide" <> rideId.getId
+
+linkBookingIdWithRideId :: SimluatedCacheFlow m r => Id DB.Booking -> Id DR.Ride -> m ()
+linkBookingIdWithRideId bookingId rideId = do
+  let rideLinkKey = mkBookingRideLinkKey rideId
+  expTime <- fromIntegral <$> asks (.simulatedDataCacheConfig.configsExpTime)
+  Hedis.setExp rideLinkKey bookingId.getId expTime
+
+mkSimulatedLocationKey :: Id Ride -> Text
+mkSimulatedLocationKey rideId = "CachedQueries:SimulatedUser:Location" <> rideId.getId
+
+getBookingIdByRideId :: SimluatedCacheFlow m r => Id DR.Ride -> m (Maybe (Id DB.Booking))
+getBookingIdByRideId rideId = fmap Id <$> Hedis.get (mkBookingRideLinkKey rideId)
 
 mkQuoteBookingLinkKey :: Id DB.Booking -> Text
 mkQuoteBookingLinkKey quoteId = "CachedQueries:SimulatedUser:Quote:BookingLink" <> quoteId.getId

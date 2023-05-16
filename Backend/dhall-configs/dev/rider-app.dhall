@@ -147,6 +147,9 @@ in  { esqDBCfg
     , authTokenCacheExpiry = +600
     , disableSignatureAuth = False
     , encTools
+    , simulatedDataCacheConfig.configsExpTime = +6000
+    , simulatedQuoteExpirationSeconds = +60
+    , simulatedMaxDone = +5
     , kafkaProducerCfg
     , rideCfg = rideConfig
     , dashboardToken = sec.dashboardToken

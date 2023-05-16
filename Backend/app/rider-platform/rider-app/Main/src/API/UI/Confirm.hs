@@ -23,7 +23,6 @@ where
 
 import qualified Beckn.ACL.Init as ACL
 import qualified Domain.Action.UI.Confirm as DConfirm
-import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Quote as Quote
 import Environment
@@ -34,7 +33,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import Servant
 import qualified SharedLogic.CallBPP as CallBPP
-import qualified Storage.CachedQueries.SimulatedFlow.SearchRequest as CSR
+import SharedLogic.SimulatedFlow.Confirm
 import qualified Storage.Queries.Person as QP
 import Tools.Auth
 
@@ -45,11 +44,6 @@ type API =
     :> Capture "quoteId" (Id Quote.Quote)
     :> "confirm"
     :> Post '[JSON] ConfirmRes
-
-newtype ConfirmRes = ConfirmRes
-  { bookingId :: Id DRB.Booking
-  }
-  deriving (Show, FromJSON, ToJSON, Generic, ToSchema)
 
 -------- Confirm Flow --------
 
@@ -67,12 +61,7 @@ confirm personId quoteId =
     person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
     if person.isSimulated
       then do
-        guid <- generateGUID
-        CSR.linkBookingToQuoteId quoteId guid
-        return $
-          ConfirmRes
-            { bookingId = guid
-            }
+        simulateBooking quoteId
       else do
         dConfirmRes <- DConfirm.confirm personId quoteId
         becknInitReq <- ACL.buildInitReq dConfirmRes

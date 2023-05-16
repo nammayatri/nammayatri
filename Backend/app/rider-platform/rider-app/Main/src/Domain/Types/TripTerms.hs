@@ -24,7 +24,7 @@ data TripTerms = TripTerms
   { id :: Id TripTerms,
     descriptions :: [Text]
   }
-  deriving (Generic, Show, PrettyShow)
+  deriving (Generic, Show, PrettyShow, ToJSON, FromJSON)
 
 -- descriptions on Tabular level is separated with '|' symbol
 -- On Domain level it's list

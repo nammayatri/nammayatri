@@ -50,7 +50,7 @@ handler rideId =
     :<|> getRideStatus rideId
 
 getDriverLoc :: Id SRide.Ride -> Id SPerson.Person -> FlowHandler DRide.GetDriverLocResp
-getDriverLoc rideId personId = withFlowHandlerAPI . withPersonIdLogTag personId $ DRide.getDriverLoc rideId personId
+getDriverLoc rideId personId = withFlowHandlerAPI . withPersonIdLogTag personId $ DRide.getDriverLocWrapper rideId personId
 
 getRideStatus :: Id SRide.Ride -> Id SPerson.Person -> FlowHandler DRide.GetRideStatusResp
 getRideStatus rideId personId = withFlowHandlerAPI . withPersonIdLogTag personId $ DRide.getRideStatus rideId personId

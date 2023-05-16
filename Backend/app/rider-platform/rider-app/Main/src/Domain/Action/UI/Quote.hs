@@ -118,11 +118,11 @@ getSimulatedEstimates searchReq = do
   mRouteInfo <- CSimulated.getRouteInfoBySearchReqId searchReq.id
   distance <-
     case (\routeInfo -> (.getMeters) <$> routeInfo.distance) =<< mRouteInfo of
-      Just dis -> pure dis
+      Just dis -> pure $ fromIntegral dis
       Nothing -> getRandomInRange (3, 10)
-  ratePerKM <- fromMaybe 15 <$> Hedis.get "SimulatedFarePerKM"
-  extraFare <- fromMaybe 10 <$> Hedis.get "SimulatedExtraFareToAdd"
-  let fare = distance * ratePerKM + extraFare
+  ratePerKM :: Double <- fromMaybe 15.0 <$> Hedis.get "SimulatedFarePerKM"
+  extraFare :: Double <- fromMaybe 10.0 <$> Hedis.get "SimulatedExtraFareToAdd"
+  let fare = floor (max 30.0 (distance / 1000.0 * ratePerKM) + extraFare :: Double)
   let estimate =
         DEstimate.EstimateAPIEntity
           { id = guid,
@@ -138,7 +138,8 @@ getSimulatedEstimates searchReq = do
             createdAt = now,
             estimateFareBreakup = [],
             nightShiftRate = Nothing,
-            waitingCharges = DEstimate.WaitingCharges Nothing Nothing,
+            nightShiftInfo = Nothing,
+            waitingCharges = DEstimate.WaitingCharges Nothing,
             driversLatLong = []
           }
   CSimulated.cacheByEstimateId guid estimate searchReq

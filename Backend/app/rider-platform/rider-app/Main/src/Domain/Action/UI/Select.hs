@@ -28,7 +28,7 @@ where
 import Data.Aeson ((.:), (.=))
 import qualified Data.Aeson as A
 import Data.Aeson.Types (parseFail, typeMismatch)
-import qualified Domain.Action.SimulatedFlow.Maps as SM
+import qualified Data.List.NonEmpty as NE
 import Domain.Types.Booking.Type
 import qualified Domain.Types.DriverOffer as DDriverOffer
 import qualified Domain.Types.Estimate as DEstimate
@@ -50,6 +50,7 @@ import Kernel.Types.Id
 import Kernel.Types.Predicate
 import Kernel.Utils.Common
 import Kernel.Utils.Validation
+import qualified SharedLogic.SimulatedFlow.Maps as SM
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
@@ -61,6 +62,8 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
+import qualified Tools.Maps as Maps
+import Tools.Metrics
 
 data DEstimateSelectReq = DEstimateSelectReq
   { customerExtraFee :: Maybe Money,
@@ -149,7 +152,7 @@ select personId estimateId req@DEstimateSelectReq {..} = do
         ..
       }
 
-selectList :: (EsqDBReplicaFlow m r, SimluatedCacheFlow m r, HasField "simulatedQuoteExpirationSeconds" r NominalDiffTime) => Id DEstimate.Estimate -> m SelectListRes
+selectList :: (EsqDBReplicaFlow m r, EsqDBFlow m r, CoreMetrics m, SimluatedCacheFlow m r, CacheFlow m r, EncFlow m r, HasField "simulatedQuoteExpirationSeconds" r NominalDiffTime) => Id DEstimate.Estimate -> m SelectListRes
 selectList estimateId = do
   mEstimate <- runInReplica $ QEstimate.findById estimateId
   case mEstimate of
@@ -171,8 +174,25 @@ selectList estimateId = do
           searchReqId <- CSimulated.getSearchRequestIdByEstimateId estimateId >>= fromMaybeM (InvalidRequest $ "SimulatedFlow: searchReq not found by estiateId: " <> estimateId.getId)
           searchReq <- CSimulated.getSearchRequestById searchReqId >>= fromMaybeM (InvalidRequest $ "SimulatedFlow: searchReq not found by reqId: " <> estimateId.getId)
           let driverPosition = SM.addMeters (fromIntegral distanceToPickup) $ Maps.LatLong searchReq.fromLocation.lat searchReq.fromLocation.lat
-          CSDQ.cacheSelectedDriver (cast estimateId) selectedDriver driverPosition
-          let durationToPickup = div distanceToPickup 8
+          let destinationLocation = Maps.LatLong searchReq.fromLocation.lat searchReq.fromLocation.lat
+          let request =
+                Maps.GetRoutesReq
+                  { waypoints = NE.fromList [driverPosition, destinationLocation],
+                    calcPoints = True,
+                    mode = Just Maps.CAR
+                  }
+          routeResponse <- Maps.getSimulatedRoutes person.merchantId request
+          let defaultAverageSpeed = 8 -- m/s
+          let durationToPickup = div distanceToPickup defaultAverageSpeed
+              defaultRoute =
+                Maps.RouteInfo
+                  { duration = Nothing,
+                    distance = Nothing,
+                    boundingBox = Nothing,
+                    snappedWaypoints = [],
+                    points = [driverPosition, destinationLocation]
+                  }
+          CSDQ.cacheSelectedDriver estimateId selectedDriver driverPosition (fromMaybe defaultRoute $ listToMaybe routeResponse)
           let validTill = addUTCTime simulatedQuoteExpirationSeconds now
               quoteDetails =
                 DQuote.DriverOfferAPIDetails $

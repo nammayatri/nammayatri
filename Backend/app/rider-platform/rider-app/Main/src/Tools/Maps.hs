@@ -24,6 +24,7 @@ module Tools.Maps
     getPickupRoutes,
     getTripRoutes,
     getSimulatedRoutes,
+    getSimulatedDistance,
   )
 where
 
@@ -61,6 +62,19 @@ getDistance ::
   GetDistanceReq a b ->
   m (GetDistanceResp a b)
 getDistance = runWithServiceConfig Maps.getDistance (.getDistances)
+
+getSimulatedDistance ::
+  ( EncFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    CoreMetrics m,
+    HasCoordinates a,
+    HasCoordinates b
+  ) =>
+  Id Merchant ->
+  GetDistanceReq a b ->
+  m (GetDistanceResp a b)
+getSimulatedDistance = runWithServiceConfig Maps.getDistance (.getSimulatedDistance)
 
 getDistances ::
   ( EncFlow m r,

@@ -68,6 +68,7 @@ oneWaySimulatedSearch ::
     EsqDBFlow m r,
     HedisFlow m r,
     CoreMetrics m,
+    EsqDBReplicaFlow m r,
     SimluatedCacheFlow m r,
     HasBAPMetrics m r
   ) =>

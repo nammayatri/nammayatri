@@ -27,7 +27,6 @@ where
 
 import qualified Data.Geohash as DG
 import Data.Text (pack)
-import qualified Domain.Action.SimulatedFlow.Maps as SF
 import Domain.Types.Maps.PlaceNameCache as DTM
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person as DP
@@ -38,6 +37,7 @@ import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.SimulatedFlow.Maps as SF
 import qualified Storage.CachedQueries.CacheConfig as SCC
 import qualified Storage.CachedQueries.Maps.PlaceNameCache as CM
 import qualified Storage.CachedQueries.Merchant as QMerchant

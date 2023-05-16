@@ -13,14 +13,14 @@
 -}
 
 module SharedLogic.MerchantConfig
-  ( updateCustomerFraudCounters,
-    updateCancelledByDriverFraudCounters,
-    updateSearchFraudCounters,
+  ( updateCustomerSimulationCounters,
+    updateCancelledByDriverSimulationCounters,
+    updateSearchSimulationCounters,
     updateTotalRidesCounters,
-    anyFraudDetected,
+    anySimulationDetected,
     mkCancellationKey,
     mkCancellationByDriverKey,
-    searchFraudDetected,
+    searchSimulationDetected,
     takeAction,
     bookingInfoStoreKey,
     BookingInfoStore (..),
@@ -73,20 +73,20 @@ mkTotalRidesKey idtxt = "Customer:TotalRidesCount:" <> idtxt
 mkSearchCounterKey :: Text -> Text -> Text
 mkSearchCounterKey ind idtxt = "Customer:SearchCounter:" <> idtxt <> ":" <> ind
 
-updateSearchFraudCounters :: (HasCacheConfig r, HedisFlow m r, MonadFlow m) => Id Person.Person -> [DMC.MerchantConfig] -> m ()
-updateSearchFraudCounters riderId merchantConfigs = Redis.withCrossAppRedis $ do
+updateSearchSimulationCounters :: (HasCacheConfig r, HedisFlow m r, MonadFlow m) => Id Person.Person -> [DMC.MerchantConfig] -> m ()
+updateSearchSimulationCounters riderId merchantConfigs = Redis.withCrossAppRedis $ do
   mapM_ (\mc -> incrementCount mc.id.getId mc.simulatedSearchCountWindow) merchantConfigs
   where
     incrementCount ind = SWC.incrementWindowCount (mkSearchCounterKey ind riderId.getId)
 
-updateCancelledByDriverFraudCounters :: (HasCacheConfig r, HedisFlow m r, MonadFlow m) => Id Person.Person -> [DMC.MerchantConfig] -> m ()
-updateCancelledByDriverFraudCounters riderId merchantConfigs = Redis.withCrossAppRedis $ do
+updateCancelledByDriverSimulationCounters :: (HasCacheConfig r, HedisFlow m r, MonadFlow m) => Id Person.Person -> [DMC.MerchantConfig] -> m ()
+updateCancelledByDriverSimulationCounters riderId merchantConfigs = Redis.withCrossAppRedis $ do
   mapM_ (\mc -> incrementCount mc.id.getId mc.simulatedBookingCancelledByDriverCountWindow) merchantConfigs
   where
     incrementCount ind = SWC.incrementWindowCount (mkCancellationByDriverKey ind riderId.getId)
 
-updateCustomerFraudCounters :: (HasCacheConfig r, HedisFlow m r, MonadFlow m) => Id Person.Person -> [DMC.MerchantConfig] -> m ()
-updateCustomerFraudCounters riderId merchantConfigs = Redis.withCrossAppRedis $ do
+updateCustomerSimulationCounters :: (HasCacheConfig r, HedisFlow m r, MonadFlow m) => Id Person.Person -> [DMC.MerchantConfig] -> m ()
+updateCustomerSimulationCounters riderId merchantConfigs = Redis.withCrossAppRedis $ do
   mapM_ (\mc -> incrementCount mc.id.getId mc.simulatedBookingCancellationCountWindow) merchantConfigs
   where
     incrementCount ind = SWC.incrementWindowCount (mkCancellationKey ind riderId.getId)
@@ -108,16 +108,16 @@ getTotalRidesCount riderId = Redis.withCrossAppRedis $ do
       Redis.setExp key totalCount 14400
       pure totalCount
 
-searchFraudDetected :: (HedisFlow m r, HasCacheConfig r, MonadFlow m, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person.Person -> Id DM.Merchant -> [DMC.MerchantConfig] -> m (Maybe DMC.MerchantConfig)
-searchFraudDetected riderId merchantId = checkFraudDetected riderId merchantId [MoreSearching]
+searchSimulationDetected :: (HedisFlow m r, HasCacheConfig r, MonadFlow m, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person.Person -> Id DM.Merchant -> [DMC.MerchantConfig] -> m (Maybe DMC.MerchantConfig)
+searchSimulationDetected riderId merchantId = checkSimulationDetected riderId merchantId [MoreSearching]
 
-anyFraudDetected :: (HedisFlow m r, HasCacheConfig r, MonadFlow m, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person.Person -> Id DM.Merchant -> [DMC.MerchantConfig] -> m (Maybe DMC.MerchantConfig)
-anyFraudDetected riderId merchantId = checkFraudDetected riderId merchantId [MoreCancelling, MoreCancelledByDriver, MoreSearching, TotalRides]
+anySimulationDetected :: (HedisFlow m r, HasCacheConfig r, MonadFlow m, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person.Person -> Id DM.Merchant -> [DMC.MerchantConfig] -> m (Maybe DMC.MerchantConfig)
+anySimulationDetected riderId merchantId = checkSimulationDetected riderId merchantId [MoreCancelling, MoreCancelledByDriver, MoreSearching, TotalRides]
 
-checkFraudDetected :: (HedisFlow m r, HasCacheConfig r, MonadFlow m, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person.Person -> Id DM.Merchant -> [Factors] -> [DMC.MerchantConfig] -> m (Maybe DMC.MerchantConfig)
-checkFraudDetected riderId merchantId factors merchantConfigs = Redis.withCrossAppRedis $ do
-  useFraudDetection <- maybe False (.useFraudDetection) <$> CMSUC.findByMerchantId merchantId
-  if useFraudDetection
+checkSimulationDetected :: (HedisFlow m r, HasCacheConfig r, MonadFlow m, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person.Person -> Id DM.Merchant -> [Factors] -> [DMC.MerchantConfig] -> m (Maybe DMC.MerchantConfig)
+checkSimulationDetected riderId merchantId factors merchantConfigs = Redis.withCrossAppRedis $ do
+  useSimulationDetection <- maybe False (.useSimulationDetection) <$> CMSUC.findByMerchantId merchantId
+  if useSimulationDetection
     then findM (\mc -> and <$> mapM (getFactorResult mc) factors) merchantConfigs
     else pure Nothing
   where

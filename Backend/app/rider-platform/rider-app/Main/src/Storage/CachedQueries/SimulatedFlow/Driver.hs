@@ -14,11 +14,11 @@
 module Storage.CachedQueries.SimulatedFlow.Driver
   ( findAllDrivers,
     cacheSelectedDriver,
-    getLinkedDriverByQuoteId,
+    getLinkedDriverByEstimateId,
   )
 where
 
-import qualified Domain.Types.Quote as DQ
+import qualified Domain.Types.Estimate as DE
 import Domain.Types.SimulatedFlow.Driver
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
@@ -29,22 +29,23 @@ import Storage.CachedQueries.CacheConfig
 allDriversKey :: Text
 allDriversKey = "Customer:SimulatedFlow:AllSimulatedDrivers"
 
-mkDriverLinkKey :: Id DQ.Quote -> Text
-mkDriverLinkKey quoteId = "Customer:SimulatedFlow:Link:Estimate:Driver:" <> quoteId.getId
+mkDriverLinkKey :: Id DE.Estimate -> Text
+mkDriverLinkKey estimateId = "Customer:SimulatedFlow:Link:Estimate:Driver:" <> estimateId.getId
 
 findAllDrivers :: SimluatedCacheFlow m r => m [SimulatedDriver]
 findAllDrivers = Redis.lRange allDriversKey 0 (-1)
 
 data DriverInfo = DriverInfo
   { driver :: SimulatedDriver,
-    location :: Maps.LatLong
+    location :: Maps.LatLong,
+    driverRoute :: Maps.RouteInfo
   }
   deriving (Generic, ToJSON, FromJSON)
 
-cacheSelectedDriver :: SimluatedCacheFlow m r => Id DQ.Quote -> SimulatedDriver -> Maps.LatLong -> m ()
-cacheSelectedDriver quoteId selectedDriver driverPosition = do
+cacheSelectedDriver :: SimluatedCacheFlow m r => Id DE.Estimate -> SimulatedDriver -> Maps.LatLong -> Maps.RouteInfo -> m ()
+cacheSelectedDriver estimateId selectedDriver driverPosition routeInfo = do
   expTime <- fromIntegral <$> asks (.simulatedDataCacheConfig.configsExpTime)
-  Redis.setExp (mkDriverLinkKey quoteId) (DriverInfo selectedDriver driverPosition) expTime
+  Redis.setExp (mkDriverLinkKey estimateId) (DriverInfo selectedDriver driverPosition routeInfo) expTime
 
-getLinkedDriverByQuoteId :: SimluatedCacheFlow m r => Id DQ.Quote -> m (Maybe DriverInfo)
-getLinkedDriverByQuoteId quoteId = Redis.get (mkDriverLinkKey quoteId)
+getLinkedDriverByEstimateId :: SimluatedCacheFlow m r => Id DE.Estimate -> m (Maybe DriverInfo)
+getLinkedDriverByEstimateId estimateId = Redis.get (mkDriverLinkKey estimateId)
