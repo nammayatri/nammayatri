@@ -164,8 +164,8 @@ data PersonT f = PersonT
     alternateMobileNumberEncrypted :: B.C f (Maybe Text),
     unencryptedAlternateMobileNumber :: B.C f (Maybe Text),
     alternateMobileNumberHash :: B.C f (Maybe DbHash),
-    createdAt :: B.C f Time.LocalTime,
-    updatedAt :: B.C f Time.LocalTime,
+    createdAt :: B.C f Time.UTCTime,
+    updatedAt :: B.C f Time.UTCTime,
     bundleVersion :: B.C f (Maybe Text),
     clientVersion :: B.C f (Maybe Text)
   }
@@ -247,5 +247,42 @@ personToPSModifiers :: M.Map Text (A.Value -> A.Value)
 personToPSModifiers =
   M.fromList
     []
+
+defaultPerson :: Person
+defaultPerson =
+  PersonT
+    { id = "",
+      firstName = "",
+      middleName = Nothing,
+      lastName = Nothing,
+      role = "",
+      gender = "",
+      identifierType = "",
+      email = Nothing,
+      unencryptedMobileNumber = Nothing,
+      mobileNumberEncrypted = Nothing,
+      mobileNumberHash = Nothing,
+      mobileCountryCode = Nothing,
+      passwordHash = Nothing,
+      identifier = Nothing,
+      rating = Nothing,
+      isNew = False,
+      merchantId = "",
+      deviceToken = Nothing,
+      language = Nothing,
+      whatsappNotificationEnrollStatus = Nothing,
+      description = Nothing,
+      alternateMobileNumberEncrypted = Nothing,
+      unencryptedAlternateMobileNumber = Nothing,
+      alternateMobileNumberHash = Nothing,
+      createdAt = defaultUTCDate,
+      updatedAt = defaultUTCDate,
+      bundleVersion = Nothing,
+      clientVersion = Nothing
+    }
+
+instance Serialize Person where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''PersonT ['id] [])

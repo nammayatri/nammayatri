@@ -204,6 +204,10 @@ instance ToJSON BookingNew where
 
 deriving stock instance Show BookingNew
 
+instance Serialize BookingNew where
+  put = error "undefined"
+  get = error "undefined"
+
 bookingTMod :: BookingNewT (B.FieldModification (B.TableField BookingNewT))
 bookingTMod =
   B.tableModification
@@ -266,9 +270,5 @@ findById bookingId = do
     Nothing -> pure Nothing
 
 -- instance Serialize Domain.BookingStatus where
-
-instance Serialize BookingNew where
-  put = error "undefined"
-  get = error "undefined"
 
 $(enableKVPG ''BookingNewT ['id] [])

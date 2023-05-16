@@ -74,14 +74,14 @@ data DriverInformationT f = DriverInformationT
     enabled :: B.C f Bool,
     blocked :: B.C f Bool,
     verified :: B.C f Bool,
-    lastEnabledOn :: B.C f (Maybe Time.LocalTime),
+    lastEnabledOn :: B.C f (Maybe Time.UTCTime),
     referralCode :: B.C f (Maybe Text),
     canDowngradeToSedan :: B.C f Bool,
     canDowngradeToHatchback :: B.C f Bool,
     canDowngradeToTaxi :: B.C f Bool,
     mode :: B.C f (Maybe Domain.DriverMode),
-    createdAt :: B.C f Time.LocalTime,
-    updatedAt :: B.C f Time.LocalTime
+    createdAt :: B.C f Time.UTCTime,
+    updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -138,5 +138,29 @@ driverInformationToPSModifiers :: M.Map Text (A.Value -> A.Value)
 driverInformationToPSModifiers =
   M.fromList
     []
+
+defaultDriverInformation :: DriverInformation
+defaultDriverInformation =
+  DriverInformationT
+    { driverId = "",
+      adminId = Nothing,
+      active = False,
+      onRide = False,
+      enabled = False,
+      blocked = False,
+      verified = False,
+      lastEnabledOn = Nothing,
+      referralCode = Nothing,
+      canDowngradeToSedan = False,
+      canDowngradeToHatchback = False,
+      canDowngradeToTaxi = False,
+      mode = Nothing,
+      createdAt = defaultUTCDate,
+      updatedAt = defaultUTCDate
+    }
+
+instance Serialize DriverInformation where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''DriverInformationT ['driverId] [])

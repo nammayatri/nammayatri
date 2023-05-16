@@ -90,7 +90,7 @@ data BusinessEventT f = BusinessEventT
   { id :: B.C f Text,
     driverId :: B.C f (Maybe Text),
     eventType :: B.C f Domain.EventType,
-    timeStamp :: B.C f Time.LocalTime,
+    timeStamp :: B.C f Time.UTCTime,
     bookingId :: B.C f (Maybe Text),
     whenPoolWasComputed :: B.C f (Maybe Domain.WhenPoolWasComputed),
     vehicleVariant :: B.C f (Maybe Variant),
@@ -164,5 +164,24 @@ businessEventToPSModifiers :: M.Map Text (A.Value -> A.Value)
 businessEventToPSModifiers =
   M.fromList
     []
+
+defaultBusinessEvent :: BusinessEvent
+defaultBusinessEvent =
+  BusinessEventT
+    { id = "",
+      driverId = Nothing,
+      eventType = "",
+      timeStamp = defaultUTCDate,
+      bookingId = Nothing,
+      whenPoolWasComputed = Nothing,
+      vehicleVariant = Nothing,
+      distance = Nothing,
+      duration = Nothing,
+      rideId = Nothing
+    }
+
+instance Serialize BusinessEvent where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''BusinessEventT ['id] [])

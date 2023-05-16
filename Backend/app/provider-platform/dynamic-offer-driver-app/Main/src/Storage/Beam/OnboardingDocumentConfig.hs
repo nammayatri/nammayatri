@@ -86,8 +86,8 @@ data OnboardingDocumentConfigT f = OnboardingDocumentConfigT
     checkExpiry :: B.C f Bool,
     validVehicleClasses :: B.C f [Text],
     vehicleClassCheckType :: B.C f Domain.VehicleClassCheckType,
-    createdAt :: B.C f Time.LocalTime,
-    updatedAt :: B.C f Time.LocalTime
+    createdAt :: B.C f Time.UTCTime,
+    updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -141,5 +141,28 @@ onboardingDocumentConfigToPSModifiers :: M.Map Text (A.Value -> A.Value)
 onboardingDocumentConfigToPSModifiers =
   M.fromList
     []
+
+instance IsString Domain.DocumentType where
+  fromString = show
+
+instance IsString Domain.VehicleClassCheckType where
+  fromString = show
+
+defaultOnboardingDocumentConfig :: OnboardingDocumentConfig
+defaultOnboardingDocumentConfig =
+  OnboardingDocumentConfigT
+    { merchantId = "",
+      documentType = "",
+      checkExtraction = False,
+      checkExpiry = False,
+      validVehicleClasses = [""],
+      vehicleClassCheckType = "",
+      createdAt = defaultUTCDate,
+      updatedAt = defaultUTCDate
+    }
+
+instance Serialize OnboardingDocumentConfig where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''OnboardingDocumentConfigT ['documentType] [])

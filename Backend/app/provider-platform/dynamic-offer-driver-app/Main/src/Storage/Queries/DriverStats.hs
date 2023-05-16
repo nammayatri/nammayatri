@@ -16,10 +16,17 @@ module Storage.Queries.DriverStats where
 
 import Domain.Types.DriverStats
 import Domain.Types.Person (Driver)
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Mesh as Mesh
+import qualified Sequelize as Se
+import qualified Storage.Beam.DriverStats as BeamDS
 import Storage.Tabular.DriverStats
 
 createInitialDriverStats :: Id Driver -> SqlDB ()
@@ -78,3 +85,16 @@ getDriversSortedOrder mbLimitVal =
     orderBy [desc (driverStats ^. DriverStatsTotalRides), desc (driverStats ^. DriverStatsTotalDistance)]
     limit $ maybe 10 fromIntegral mbLimitVal
     return driverStats
+transformBeamDriverStatsToDomain :: BeamDS.DriverStats -> DriverStats
+transformBeamDriverStatsToDomain BeamDS.DriverStatsT {..} = do
+  DriverStats
+    { driverId = Id driverId,
+      idleSince = idleSince
+    }
+
+transformDomainDriverStatsToBeam :: DriverStats -> BeamDS.DriverStats
+transformDomainDriverStatsToBeam DriverStats {..} =
+  BeamDS.defaultDriverStats
+    { BeamDS.driverId = getId driverId,
+      BeamDS.idleSince = idleSince
+    }

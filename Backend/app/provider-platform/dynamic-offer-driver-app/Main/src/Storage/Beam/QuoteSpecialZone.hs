@@ -95,12 +95,12 @@ data QuoteSpecialZoneT f = QuoteSpecialZoneT
     providerId :: B.C f Text,
     vehicleVariant :: B.C f Variant.Variant,
     distance :: B.C f Meters,
-    validTill :: B.C f Time.LocalTime,
+    validTill :: B.C f Time.UTCTime,
     estimatedFare :: B.C f Common.Money,
     fareParametersId :: B.C f Text,
-    estimatedFinishTime :: B.C f Time.LocalTime,
-    createdAt :: B.C f Time.LocalTime,
-    updatedAt :: B.C f Time.LocalTime
+    estimatedFinishTime :: B.C f Time.UTCTime,
+    createdAt :: B.C f Time.UTCTime,
+    updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -155,5 +155,25 @@ quoteSpecialZoneToPSModifiers :: M.Map Text (A.Value -> A.Value)
 quoteSpecialZoneToPSModifiers =
   M.fromList
     []
+
+defaultQuoteSpecialZone :: QuoteSpecialZone
+defaultQuoteSpecialZone =
+  QuoteSpecialZoneT
+    { id = "",
+      searchRequestId = "",
+      providerId = "",
+      vehicleVariant = "",
+      distance = "",
+      validTill = defaultUTCDate,
+      estimatedFare = "",
+      fareParametersId = "",
+      estimatedFinishTime = defaultUTCDate,
+      createdAt = defaultUTCDate,
+      updatedAt = defaultUTCDate
+    }
+
+instance Serialize QuoteSpecialZone where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''QuoteSpecialZoneT ['id] [])

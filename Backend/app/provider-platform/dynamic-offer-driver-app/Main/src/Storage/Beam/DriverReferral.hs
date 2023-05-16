@@ -56,7 +56,7 @@ fromFieldEnum f mbValue = case mbValue of
 data DriverReferralT f = DriverReferralT
   { referralCode :: B.C f Text,
     driverId :: B.C f Text,
-    linkedAt :: B.C f Time.LocalTime
+    linkedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -101,5 +101,17 @@ driverReferralToPSModifiers :: M.Map Text (A.Value -> A.Value)
 driverReferralToPSModifiers =
   M.fromList
     []
+
+defaultDriverReferral :: DriverReferral
+defaultDriverReferral =
+  DriverReferralT
+    { referralCode = "",
+      driverId = "",
+      linkedAt = defaultUTCDate
+    }
+
+instance Serialize DriverReferral where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''DriverReferralT ['referralCode] [])

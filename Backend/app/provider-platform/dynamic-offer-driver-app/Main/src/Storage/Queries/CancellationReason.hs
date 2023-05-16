@@ -25,3 +25,39 @@ findAll = Esq.findAll $ do
   where_ $ cancellationReason ^. CancellationReasonEnabled
   orderBy [desc $ cancellationReason ^. CancellationReasonPriority]
   return cancellationReason
+
+findAll' :: L.MonadFlow m => m [CancellationReason]
+findAll' = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    -- Just dbCOnf' -> either (pure Nothing) (transformBeamCallStatusToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamCT.id $ Se.Eq callStatusId]
+    -- findAllWithKVConnector
+    Just dbCOnf' -> either (pure []) (transformBeamCancReasonToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamCR.enabled $ Se.Eq True]
+    Nothing -> pure []
+
+transformBeamCancReasonToDomain :: BeamCR.CancellationReason -> CancellationReason
+transformBeamCancReasonToDomain BeamCR.CancellationReasonT {..} = do
+  CancellationReason
+    { reasonCode = CancellationReasonCode $ reasonCode,
+      description = description,
+      enabled = enabled,
+      priority = priority
+    }
+
+transformBeamCancellationReasonToDomain :: BeamCR.CancellationReason -> CancellationReason
+transformBeamCancellationReasonToDomain BeamCR.CancellationReasonT {..} = do
+  CancellationReason
+    { reasonCode = CancellationReasonCode $ reasonCode,
+      description = description,
+      enabled = enabled,
+      priority = priority
+    }
+
+transformDomainCancellationReasonToBeam :: CancellationReason -> BeamCR.CancellationReason
+transformDomainCancellationReasonToBeam CancellationReason {..} =
+  BeamCR.defaultCancellationReason
+    { BeamCR.reasonCode = (\(CancellationReasonCode x) -> x) reasonCode,
+      BeamCR.description = description,
+      BeamCR.enabled = enabled,
+      BeamCR.priority = priority
+    }

@@ -56,7 +56,7 @@ fromFieldEnum f mbValue = case mbValue of
 
 data DriverStatsT f = DriverStatsT
   { driverId :: B.C f Text,
-    idleSince :: B.C f Time.LocalTime
+    idleSince :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -100,5 +100,16 @@ driverStatsToPSModifiers :: M.Map Text (A.Value -> A.Value)
 driverStatsToPSModifiers =
   M.fromList
     []
+
+defaultDriverStats :: DriverStats
+defaultDriverStats =
+  DriverStatsT
+    { driverId = "",
+      idleSince = defaultUTCDate
+    }
+
+instance Serialize DriverStats where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''DriverStatsT ['driverId] [])

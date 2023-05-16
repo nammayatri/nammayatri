@@ -15,10 +15,17 @@
 module Storage.Queries.MediaFile where
 
 import Domain.Types.MediaFile
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import qualified Lib.Mesh as Mesh
+import qualified Sequelize as Se
+import qualified Storage.Beam.MediaFile as BeamMF
 import Storage.Tabular.MediaFile
 
 create :: MediaFile -> SqlDB ()
@@ -33,3 +40,21 @@ findAllIn mfList =
     mediaFile <- from $ table @MediaFileT
     where_ $ mediaFile ^. MediaFileId `in_` valList (map getId mfList)
     return mediaFile
+
+transformBeamMediaFileToDomain :: BeamMF.MediaFile -> MediaFile
+transformBeamMediaFileToDomain BeamMF.MediaFileT {..} = do
+  MediaFile
+    { id = Id id,
+      _type = fileType,
+      url = url,
+      createdAt = createdAt
+    }
+
+transformDomainMediaFileToBeam :: MediaFile -> BeamMF.MediaFile
+transformDomainMediaFileToBeam MediaFile {..} =
+  BeamMF.defaultMediaFile
+    { BeamMF.id = getId id,
+      BeamMF.fileType = _type,
+      BeamMF.url = url,
+      BeamMF.createdAt = createdAt
+    }

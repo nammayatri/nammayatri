@@ -18,9 +18,16 @@ module Storage.Queries.QuoteSpecialZone where
 import Data.Int (Int32)
 import Domain.Types.QuoteSpecialZone
 import Domain.Types.SearchRequestSpecialZone
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import qualified Lib.Mesh as Mesh
+import qualified Sequelize as Se
+import qualified Storage.Beam.QuoteSpecialZone as BeamQSZ
 import qualified Storage.Tabular.FareParameters as Fare
 import Storage.Tabular.QuoteSpecialZone
 
@@ -59,3 +66,37 @@ findById dQuoteId = buildDType $
         from baseQuoteSpecialZoneQuery
       where_ $ dQuote ^. QuoteSpecialZoneTId ==. val (toKey dQuoteId)
       pure (dQuote, farePars)
+
+-- transformBeamQuoteSpecialZoneToDomain :: BeamQSZ.QuoteSpecialZone -> QuoteSpecialZone
+-- transformBeamQuoteSpecialZoneToDomain BeamQSZ.QuoteSpecialZoneT {..} = do
+--   QuoteSpecialZone
+--     {
+--       id = Id id,
+--       searchRequestId = Id searchRequestId,
+--       providerId = Id providerId,
+--       vehicleVariant = vehicleVariant,
+--       distance = distance,
+--       estimatedFinishTime = estimatedFinishTime,
+--       createdAt = createdAt,
+--       updatedAt = updatedAt,
+--       validTill = validTill,
+--       estimatedFare = estimatedFare,
+--       fareParams = fareParams
+--     }
+
+-- transformDomainQuoteSpecialZoneToBeam :: QuoteSpecialZone -> BeamQSZ.QuoteSpecialZone
+-- transformDomainQuoteSpecialZoneToBeam QuoteSpecialZone {..} =
+--   BeamQSZ.defaultQuoteSpecialZone
+--     {
+--       BeamQSZ.id = getId id,
+--       BeamQSZ.searchRequestId = getId searchRequestId,
+--       BeamQSZ.providerId = getId providerId,
+--       BeamQSZ.vehicleVariant = vehicleVariant,
+--       BeamQSZ.distance = distance,
+--       BeamQSZ.estimatedFinishTime = estimatedFinishTime,
+--       BeamQSZ.createdAt = createdAt,
+--       BeamQSZ.updatedAt = updatedAt,
+--       BeamQSZ.validTill = validTill,
+--       BeamQSZ.estimatedFare = estimatedFare,
+--       BeamQSZ.fareParams = fareParams
+--     }

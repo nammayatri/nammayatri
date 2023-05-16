@@ -56,7 +56,7 @@ data MediaFileT f = MediaFileT
   { id :: B.C f Text,
     fileType :: B.C f Domain.MediaType,
     url :: B.C f Text,
-    createdAt :: B.C f Time.LocalTime
+    createdAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -111,5 +111,21 @@ mediaFileToPSModifiers :: M.Map Text (A.Value -> A.Value)
 mediaFileToPSModifiers =
   M.fromList
     []
+
+instance IsString Domain.MediaType where
+  fromString = show
+
+defaultMediaFile :: MediaFile
+defaultMediaFile =
+  MediaFileT
+    { id = "",
+      fileType = "",
+      url = "",
+      createdAt = defaultUTCDate
+    }
+
+instance Serialize MediaFile where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''MediaFileT ['id] [])

@@ -143,8 +143,8 @@ data FarePolicyT f = FarePolicyT
     minAllowedTripDistance :: B.C f (Maybe Meters),
     waitingChargePerMin :: B.C f (Maybe Money),
     waitingTimeEstimatedThreshold :: B.C f (Maybe Seconds),
-    createdAt :: B.C f Time.LocalTime,
-    updatedAt :: B.C f Time.LocalTime
+    createdAt :: B.C f Time.UTCTime,
+    updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -206,5 +206,32 @@ farePolicyToPSModifiers :: M.Map Text (A.Value -> A.Value)
 farePolicyToPSModifiers =
   M.fromList
     []
+
+defaultFarePolicy :: FarePolicy
+defaultFarePolicy =
+  FarePolicyT
+    { id = "",
+      merchantId = "",
+      vehicleVariant = "",
+      baseDistanceFare = "",
+      baseDistanceMeters = "",
+      perExtraKmFare = "",
+      deadKmFare = "",
+      driverMinExtraFee = "",
+      driverMaxExtraFee = "",
+      nightShiftStart = Nothing,
+      nightShiftEnd = Nothing,
+      nightShiftRate = Nothing,
+      maxAllowedTripDistance = Nothing,
+      minAllowedTripDistance = Nothing,
+      waitingChargePerMin = Nothing,
+      waitingTimeEstimatedThreshold = Nothing,
+      createdAt = defaultUTCDate,
+      updatedAt = defaultUTCDate
+    }
+
+instance Serialize FarePolicy where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''FarePolicyT ['id] [])

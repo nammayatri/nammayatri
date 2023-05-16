@@ -15,9 +15,16 @@
 module Storage.Queries.Estimate where
 
 import Domain.Types.Estimate as Domain
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import qualified Lib.Mesh as Mesh
+import qualified Sequelize as Se
+import qualified Storage.Beam.Estimate as BeamE
 import Storage.Tabular.Estimate ()
 
 create :: Estimate -> SqlDB ()
@@ -28,3 +35,35 @@ createMany = Esq.createMany
 
 findById :: Transactionable m => Id Estimate -> m (Maybe Estimate)
 findById = Esq.findById
+
+transformBeamEstimateToDomain :: BeamE.Estimate -> Estimate
+transformBeamEstimateToDomain BeamE.EstimateT {..} = do
+  Estimate
+    { id = Id id,
+      transactionId = transactionId,
+      vehicleVariant = vehicleVariant,
+      minFare = minFare,
+      maxFare = maxFare,
+      estimateBreakupList = estimateBreakupList,
+      nightShiftRate = NightShiftRate nightShiftMultiplier nightShiftStart nightShiftEnd,
+      waitingCharges = WaitingCharges waitingTimeEstimatedThreshold waitingChargePerMin waitingOrPickupCharges,
+      createdAt = createdAt
+    }
+
+transformDomainEstimateToBeam :: Estimate -> BeamE.Estimate
+transformDomainEstimateToBeam Estimate {..} =
+  BeamE.defaultEstimate
+    { BeamE.id = getId id,
+      BeamE.transactionId = transactionId,
+      BeamE.vehicleVariant = vehicleVariant,
+      BeamE.minFare = minFare,
+      BeamE.maxFare = maxFare,
+      BeamE.estimateBreakupList = estimateBreakupList,
+      BeamE.nightShiftMultiplier = nightShiftMultiplier $ nightShiftRate,
+      BeamE.nightShiftStart = nightShiftStart $ nightShiftRate,
+      BeamE.nightShiftEnd = nightShiftEnd $ nightShiftRate,
+      BeamE.waitingTimeEstimatedThreshold = waitingTimeEstimatedThreshold $ waitingCharges,
+      BeamE.waitingChargePerMin = waitingChargePerMin $ waitingCharges,
+      BeamE.waitingOrPickupCharges = waitingOrPickupCharges $ waitingCharges,
+      BeamE.createdAt = createdAt
+    }

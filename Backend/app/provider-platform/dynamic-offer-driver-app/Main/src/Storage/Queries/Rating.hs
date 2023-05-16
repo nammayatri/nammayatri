@@ -17,10 +17,17 @@ module Storage.Queries.Rating where
 import Domain.Types.Person
 import Domain.Types.Rating
 import Domain.Types.Ride
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Mesh as Mesh
+import qualified Sequelize as Se
+import qualified Storage.Beam.Rating as BeamR
 import Storage.Tabular.Rating
 
 create :: Rating -> SqlDB ()
@@ -52,3 +59,29 @@ findRatingForRide rideId = findOne $ do
   rating <- from $ table @RatingT
   where_ $ rating ^. RatingRideId ==. val (toKey rideId)
   pure rating
+
+-- transformBeamRatingToDomain :: BeamR.Rating -> Rating
+-- transformBeamRatingToDomain BeamR.RatingT {..} = do
+--   Rating
+--     {
+--       id = Id id,
+--       rideId = Id rideId,
+--       driverId = Id driverId,
+--       ratingValue = ratingValue,
+--       feedbackDetails = feedbackDetails,
+--       createdAt = createdAt,
+--       updatedAt = updatedAt
+--     }
+
+-- transformDomainRatingToBeam :: Rating -> BeamR.Rating
+-- transformDomainRatingToBeam Rating {..} =
+--   BeamR.defaultRating
+--     {
+--       BeamR.id = getId id,
+--       BeamR.rideId = getId rideId,
+--       BeamR.driverId = getId driverId,
+--       BeamR.ratingValue = ratingValue,
+--       BeamR.feedbackDetails = feedbackDetails,
+--       BeamR.createdAt = createdAt,
+--       BeamR.updatedAt = updatedAt
+--     }

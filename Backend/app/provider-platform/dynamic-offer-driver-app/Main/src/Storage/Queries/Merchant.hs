@@ -20,10 +20,18 @@ module Storage.Queries.Merchant
 where
 
 import Domain.Types.Merchant as DM
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Mesh as Mesh
+import qualified Sequelize as Se
+import qualified Storage.Beam.Merchant as BeamM
 import Storage.Tabular.Merchant
 
 findById :: Transactionable m => Id Merchant -> m (Maybe Merchant)
@@ -70,3 +78,58 @@ update org = do
         MerchantFromTime =. val org.fromTime
       ]
     where_ $ tbl ^. MerchantTId ==. val (toKey org.id)
+
+transformBeamMerchantToDomain :: BeamM.Merchant -> Merchant
+transformBeamMerchantToDomain BeamM.MerchantT {..} = do
+  Merchant
+    { id = Id id,
+      name = name,
+      description = description,
+      subscriberId = ShortId subscriberId,
+      uniqueKeyId = uniqueKeyId,
+      shortId = ShortId shortId,
+      city = city,
+      mobileNumber = mobileNumber,
+      mobileCountryCode = mobileCountryCode,
+      gstin = gstin,
+      fromTime = fromTime,
+      toTime = toTime,
+      headCount = headCount,
+      status = status,
+      verified = verified,
+      enabled = enabled,
+      internalApiKey = internalApiKey,
+      createdAt = createdAt,
+      updatedAt = updatedAt,
+      geofencingConfig = GeofencingConfig originRestriction destinationRestriction,
+      farePolicyType = farePolicyType,
+      info = info
+    }
+
+transformDomainMerchantToBeam :: Merchant -> BeamM.Merchant
+transformDomainMerchantToBeam Merchant {..} =
+  BeamM.defaultMerchant
+    { BeamM.id = getId id,
+      BeamM.name = name,
+      BeamM.description = description,
+      BeamM.subscriberId = getShortId subscriberId,
+      BeamM.uniqueKeyId = uniqueKeyId,
+      BeamM.shortId = getShortId shortId,
+      BeamM.city = city,
+      BeamM.mobileNumber = mobileNumber,
+      BeamM.mobileCountryCode = mobileCountryCode,
+      BeamM.gstin = gstin,
+      BeamM.fromTime = fromTime,
+      BeamM.toTime = toTime,
+      BeamM.headCount = headCount,
+      BeamM.status = status,
+      BeamM.verified = verified,
+      BeamM.enabled = enabled,
+      BeamM.internalApiKey = internalApiKey,
+      BeamM.createdAt = createdAt,
+      BeamM.updatedAt = updatedAt,
+      BeamM.originRestriction = origin geofencingConfig,
+      BeamM.destinationRestriction = destination geofencingConfig,
+      BeamM.farePolicyType = farePolicyType,
+      BeamM.info = info
+    }

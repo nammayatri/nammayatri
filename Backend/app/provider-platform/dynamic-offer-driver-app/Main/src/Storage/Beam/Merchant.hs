@@ -94,16 +94,16 @@ data MerchantT f = MerchantT
     mobileNumber :: B.C f (Maybe Text),
     mobileCountryCode :: B.C f (Maybe Text),
     gstin :: B.C f (Maybe Text),
-    fromTime :: B.C f (Maybe Time.LocalTime),
-    toTime :: B.C f (Maybe Time.LocalTime),
+    fromTime :: B.C f (Maybe Time.UTCTime),
+    toTime :: B.C f (Maybe Time.UTCTime),
     headCount :: B.C f (Maybe Int),
     status :: B.C f Domain.Status,
     city :: B.C f Text,
     verified :: B.C f Bool,
     enabled :: B.C f Bool,
     internalApiKey :: B.C f Text,
-    createdAt :: B.C f Time.LocalTime,
-    updatedAt :: B.C f Time.LocalTime,
+    createdAt :: B.C f Time.UTCTime,
+    updatedAt :: B.C f Time.UTCTime,
     originRestriction :: B.C f GeoRestriction,
     destinationRestriction :: B.C f GeoRestriction,
     farePolicyType :: B.C f Domain.FarePolicyType,
@@ -182,5 +182,37 @@ merchantToPSModifiers :: M.Map Text (A.Value -> A.Value)
 merchantToPSModifiers =
   M.fromList
     []
+
+defaultMerchant :: Merchant
+defaultMerchant =
+  MerchantT
+    { id = "",
+      name = "",
+      description = Nothing,
+      subscriberId = "",
+      uniqueKeyId = "",
+      shortId = "",
+      mobileNumber = Nothing,
+      mobileCountryCode = Nothing,
+      gstin = Nothing,
+      fromTime = Nothing,
+      toTime = Nothing,
+      headCount = Nothing,
+      status = "",
+      city = "",
+      verified = False,
+      enabled = False,
+      internalApiKey = "",
+      createdAt = defaultUTCDate,
+      updatedAt = defaultUTCDate,
+      originRestriction = "",
+      destinationRestriction = "",
+      farePolicyType = "",
+      info = Nothing
+    }
+
+instance Serialize Merchant where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''MerchantT ['id] [])
