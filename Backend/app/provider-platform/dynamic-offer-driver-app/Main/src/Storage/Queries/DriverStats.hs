@@ -121,3 +121,16 @@ getDriversSortedOrder mbLimitVal =
     orderBy [desc (driverStats ^. DriverStatsTotalRides), desc (driverStats ^. DriverStatsTotalDistance)]
     limit $ maybe 10 fromIntegral mbLimitVal
     return driverStats
+transformBeamDriverStatsToDomain :: BeamDS.DriverStats -> DriverStats
+transformBeamDriverStatsToDomain BeamDS.DriverStatsT {..} = do
+  DriverStats
+    { driverId = Id driverId,
+      idleSince = idleSince
+    }
+
+transformDomainDriverStatsToBeam :: DriverStats -> BeamDS.DriverStats
+transformDomainDriverStatsToBeam DriverStats {..} =
+  BeamDS.defaultDriverStats
+    { BeamDS.driverId = getId driverId,
+      BeamDS.idleSince = idleSince
+    }

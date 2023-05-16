@@ -108,13 +108,13 @@ transformBeamBusinessEventToDomain BeamBE.BusinessEventT {..} = do
       whenPoolWasComputed = whenPoolWasComputed,
       vehicleVariant = vehicleVariant,
       distance = Meters <$> distance,
-      duration = Seconds <$> duration,
+      duration = Seconds <$> distance,
       rideId = Id <$> rideId
     }
 
 transformDomainBusinessEventToBeam :: BusinessEvent -> BeamBE.BusinessEvent
 transformDomainBusinessEventToBeam BusinessEvent {..} =
-  BeamBE.BusinessEventT
+  BeamBE.defaultBusinessEvent
     { BeamBE.id = getId id,
       BeamBE.driverId = getId <$> driverId,
       BeamBE.eventType = eventType,

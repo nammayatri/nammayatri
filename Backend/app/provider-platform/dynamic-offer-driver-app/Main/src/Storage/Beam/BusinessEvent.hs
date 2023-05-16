@@ -172,6 +172,21 @@ businessEventToPSModifiers =
   M.fromList
     []
 
+defaultBusinessEvent :: BusinessEvent
+defaultBusinessEvent =
+  BusinessEventT
+    { id = "",
+      driverId = Nothing,
+      eventType = "",
+      timeStamp = defaultUTCDate,
+      bookingId = Nothing,
+      whenPoolWasComputed = Nothing,
+      vehicleVariant = Nothing,
+      distance = Nothing,
+      duration = Nothing,
+      rideId = Nothing
+    }
+
 instance Serialize BusinessEvent where
   put = error "undefined"
   get = error "undefined"
