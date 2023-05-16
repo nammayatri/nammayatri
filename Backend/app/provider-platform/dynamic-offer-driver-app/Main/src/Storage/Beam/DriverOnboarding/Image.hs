@@ -38,6 +38,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Merchant (MerchantTId)
@@ -137,5 +138,28 @@ imageToPSModifiers :: M.Map Text (A.Value -> A.Value)
 imageToPSModifiers =
   M.fromList
     []
+
+instance IsString Domain.ImageType where
+  fromString = show
+
+instance IsString Domain.DriverOnboardingError where
+  fromString = show
+
+defaultImage :: Image
+defaultImage =
+  ImageT
+    { id = "",
+      personId = "",
+      merchantId = "",
+      s3Path = "",
+      imageType = "",
+      isValid = False,
+      failureReason = Nothing,
+      createdAt = defaultDate
+    }
+
+instance Serialize Image where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''ImageT ['id] [])

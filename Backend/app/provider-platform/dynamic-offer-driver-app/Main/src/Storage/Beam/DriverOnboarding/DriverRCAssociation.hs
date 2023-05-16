@@ -37,6 +37,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.DriverOnboarding.VehicleRegistrationCertificate (VehicleRegistrationCertificateTId)
@@ -110,5 +111,21 @@ driverRcAssociationToPSModifiers :: M.Map Text (A.Value -> A.Value)
 driverRcAssociationToPSModifiers =
   M.fromList
     []
+
+defaultDriverRCAssociation :: DriverRCAssociation
+defaultDriverRCAssociation =
+  DriverRCAssociationT
+    { id = "",
+      driverId = "",
+      rcId = "",
+      associatedOn = defaultDate,
+      associatedTill = Nothing,
+      consent = False,
+      consentTimestamp = defaultDate
+    }
+
+instance Serialize DriverRCAssociation where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''DriverRCAssociationT ['id] [])

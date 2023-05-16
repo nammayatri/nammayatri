@@ -38,6 +38,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Booking.BookingLocation hiding (createdAt, id, updatedAt)
@@ -157,6 +158,24 @@ data BookingT f = BookingT
   }
   deriving (Generic, B.Beamable)
 
+instance IsString Domain.BookingStatus where
+  fromString = show
+
+instance IsString Domain.BookingType where
+  fromString = show
+
+instance IsString Veh.Variant where
+  fromString = show
+
+instance IsString Money where
+  fromString = show
+
+instance IsString Meters where
+  fromString = show
+
+instance IsString Seconds where
+  fromString = show
+
 instance B.Table BookingT where
   data PrimaryKey BookingT f
     = Id (B.C f Text)
@@ -177,6 +196,8 @@ instance ToJSON Booking where
   toJSON = A.genericToJSON A.defaultOptions
 
 deriving stock instance Show Booking
+
+deriving stock instance Read Money
 
 bookingTMod :: BookingT (B.FieldModification (B.TableField BookingT))
 bookingTMod =
@@ -232,7 +253,7 @@ defaultBooking =
       primaryExophone = "",
       bapId = "",
       bapUri = "",
-      startTime = defaultUTCDate,
+      startTime = defaultDate,
       riderId = Nothing,
       fromLocationId = "",
       toLocationId = "",
@@ -243,8 +264,8 @@ defaultBooking =
       estimatedDuration = "",
       fareParametersId = "",
       riderName = Nothing,
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
+      createdAt = defaultDate,
+      updatedAt = defaultDate
     }
 
 instance Serialize Booking where
