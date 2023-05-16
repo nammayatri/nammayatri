@@ -5,6 +5,7 @@
   "private": true,
   "main": "index.js",
   "scripts": {
+    "bundle-analyze": "webpack --profile --json > stats.json; webpack-bundle-analyzer ./stats.json ./dist/android/ ",
     "compile:purs": "spago build",
     "bundle:android": "webpack --env prod --mode=production --progress --config webpack.android.js",
     "bundle:ios": "webpack --env prod --mode=production --progress --config webpack.ios.js",
@@ -14,7 +15,7 @@
     "dev": "spago build --watch",
     "webpack-dev-sandbox": "webpack-dev-server --env sandbox --mode development --config webpack.android.js --host",
     "webpack-dev-master": "webpack-dev-server --env master --mode development --config webpack.android.js --host",
-    "webpack-dev-prod": "webpack-dev-server --env prod --mode development --config webpack.android.js --host",
+    "webpack-dev-prod": "webpack-dev-server --env prod --mode production --config webpack.android.js --host",
     "webpack-dev-ios-master": "webpack-dev-server --env master --mode development --config webpack.ios.js --host",
     "webpack-dev-ios-sandbox": "webpack-dev-server --env sandbox --mode development --config webpack.ios.js --host",
     "webpack-dev-ios-prod": "webpack-dev-server --env prod --mode development --config webpack.ios.js --host",
@@ -30,6 +31,7 @@
   "author": "juspay",
   "license": "ISC",
   "devDependencies": {
+    "webpack-bundle-analyzer": "^4.8.0",
     "@babel/core": "^7.7.7",
     "@babel/preset-env": "^7.7.7",
     "@commitlint/cli": "^17.1.2",
