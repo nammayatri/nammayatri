@@ -14,9 +14,16 @@
 
 module Storage.Queries.CancellationReason where
 
-import Domain.Types.CancellationReason hiding (priority)
+import Domain.Types.CancellationReason
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import Kernel.Prelude hiding (isNothing)
 import Kernel.Storage.Esqueleto as Esq
+import qualified Lib.Mesh as Mesh
+import qualified Sequelize as Se
+import qualified Storage.Beam.CancellationReason as BeamCR
 import Storage.Tabular.CancellationReason
 
 findAll :: Transactionable m => m [CancellationReason]
@@ -25,3 +32,21 @@ findAll = Esq.findAll $ do
   where_ $ cancellationReason ^. CancellationReasonEnabled
   orderBy [desc $ cancellationReason ^. CancellationReasonPriority]
   return cancellationReason
+
+findAll' :: L.MonadFlow m => m [CancellationReason]
+findAll' = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    -- Just dbCOnf' -> either (pure Nothing) (transformBeamCallStatusToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamCT.id $ Se.Eq callStatusId]
+    -- findAllWithKVConnector
+    Just dbCOnf' -> either (pure []) (transformBeamCancReasonToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamCR.enabled $ Se.Eq True]
+    Nothing -> pure []
+
+transformBeamCancReasonToDomain :: BeamCR.CancellationReason -> CancellationReason
+transformBeamCancReasonToDomain BeamCR.CancellationReasonT {..} = do
+  CancellationReason
+    { reasonCode = CancellationReasonCode $ reasonCode,
+      description = description,
+      enabled = enabled,
+      priority = priority
+    }
