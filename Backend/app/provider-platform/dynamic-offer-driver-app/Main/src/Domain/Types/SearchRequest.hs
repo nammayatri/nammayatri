@@ -54,6 +54,10 @@ data SearchRequest = SearchRequest
   }
   deriving (Generic, PrettyShow, Show)
 
+deriving instance Read (Id SearchRequest)
+
+-- deriving instance Read (BaseUrl)
+
 data SearchRequestStatus = ACTIVE | CANCELLED | REPEATITION
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
   deriving (PrettyShow) via Showable SearchRequestStatus

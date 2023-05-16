@@ -27,6 +27,7 @@ import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import Storage.Tabular.Ride (RideTId)
 
+--CallStatusCallId
 mkPersist
   defaultSqlSettings
   [defaultQQ|
