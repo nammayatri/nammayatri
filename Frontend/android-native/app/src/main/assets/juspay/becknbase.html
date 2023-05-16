@@ -5,6 +5,8 @@
 <body>
 </body>
 <script type="text/javascript">
+    window.timeFunc = {};
+    window.timeFunc["becknbase.html"] = Date.now();
     window.__OS = "ANDROID";
     window.JBridge = top.JBridge;
     window.Android = top.Android;
@@ -23,7 +25,7 @@
           }), "");
         console.log("arguments after -=>", arguments)
       }
-      
+
     }
     window.JOS.addEventListener("onFileUpdated")();
 

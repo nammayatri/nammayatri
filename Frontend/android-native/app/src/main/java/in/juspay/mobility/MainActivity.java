@@ -266,6 +266,7 @@ public class MainActivity extends AppCompatActivity {
     @SuppressLint("SetJavaScriptEnabled")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        System.out.println("timestamp oncreate : " +  System.currentTimeMillis());
         super.onCreate(savedInstanceState);
         // Obtain the FirebaseAnalytics instance.
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
@@ -372,7 +373,7 @@ public class MainActivity extends AppCompatActivity {
 
                         @Override
                         public void onAnimationEnd(Animator animation) {
-                                hideSplash();
+                            hideSplash();
                         }
                         @Override
                         public void onAnimationCancel(Animator animation) {
@@ -644,7 +645,7 @@ public class MainActivity extends AppCompatActivity {
 //        } catch (JSONException e) {
 //            e.printStackTrace();
 //        }
-
+        System.out.println("timestamp hyperservice initiate before : " +  System.currentTimeMillis());
         hyperServices.initiate(json, new HyperPaymentsCallbackAdapter() {
             @Override
             public void onEvent(JSONObject jsonObject, JuspayResponseHandler juspayResponseHandler) {
@@ -679,7 +680,7 @@ public class MainActivity extends AppCompatActivity {
                     System.out.println("Json Data" + json.toString());
                     hyperServices.process(json);
                 } else if (jsonObject.optString("event").equals("hide_splash")) {
-                        hideSplash();
+                    hideSplash();
                 } else if (jsonObject.optString("event").equals("show_splash")) {
                     View v = findViewById(R.id.splash);
                     if (v != null) {

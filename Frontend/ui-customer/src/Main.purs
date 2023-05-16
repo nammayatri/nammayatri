@@ -35,9 +35,11 @@ import Prelude (Unit, bind, pure, show, unit, ($), (<$>), (<<<))
 import Presto.Core.Types.Language.Flow (throwErr)
 import PrestoDOM.Core (processEvent) as PrestoDom
 import Types.App (defaultGlobalState)
+import Helpers.Utils (logEvent)
 
 main :: Effect Unit
 main = do
+  _ <- logEvent "main.purs ss"
   epassRef ← new defaultGlobalState
   payload  ::  Either MultipleErrors GlobalPayload  <- runExcept <<< decode <<< fromMaybe (unsafeToForeign {}) <$> (liftEffect $ getWindowVariable "__payload" Just Nothing)
   case payload of

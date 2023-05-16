@@ -154,6 +154,7 @@ foreign import contactPermission :: Unit -> Effect Unit
 foreign import adjustViewWithKeyboard :: String -> Effect Unit
 foreign import storeOnResumeCallback :: forall action. (action -> Effect Unit) -> action -> Effect Unit
 -- foreign import debounceFunction :: forall action. Int -> (action -> Effect Unit) -> (String -> action) -> Effect Unit
+foreign import logEvent :: String -> Effect Unit
 data TimeUnit
   = HOUR
   | MINUTE

@@ -1,3 +1,4 @@
+window.timeFunc["index.js"] = Date.now();
 require("regenerator-runtime/runtime");
 
 // This will make sure init() is called. It will make available JBridge and Android variables
