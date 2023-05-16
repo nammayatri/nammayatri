@@ -39,6 +39,7 @@ import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common (Centesimal, HighPrecMoney, Meters, Money, Seconds)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Merchant (MerchantTId)
@@ -148,6 +149,18 @@ data FarePolicyT f = FarePolicyT
   }
   deriving (Generic, B.Beamable)
 
+instance IsString Meters where
+  fromString = show
+
+instance IsString Variant.Variant where
+  fromString = show
+
+instance IsString HighPrecMoney where
+  fromString = show
+
+instance IsString Money where
+  fromString = show
+
 instance B.Table FarePolicyT where
   data PrimaryKey FarePolicyT f
     = Id (B.C f Text)
@@ -206,5 +219,32 @@ farePolicyToPSModifiers :: M.Map Text (A.Value -> A.Value)
 farePolicyToPSModifiers =
   M.fromList
     []
+
+defaultFarePolicy :: FarePolicy
+defaultFarePolicy =
+  FarePolicyT
+    { id = "",
+      merchantId = "",
+      vehicleVariant = "",
+      baseDistanceFare = "",
+      baseDistanceMeters = "",
+      perExtraKmFare = "",
+      deadKmFare = "",
+      driverMinExtraFee = "",
+      driverMaxExtraFee = "",
+      nightShiftStart = Nothing,
+      nightShiftEnd = Nothing,
+      nightShiftRate = Nothing,
+      maxAllowedTripDistance = Nothing,
+      minAllowedTripDistance = Nothing,
+      waitingChargePerMin = Nothing,
+      waitingTimeEstimatedThreshold = Nothing,
+      createdAt = defaultDate,
+      updatedAt = defaultDate
+    }
+
+instance Serialize FarePolicy where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''FarePolicyT ['id] [])

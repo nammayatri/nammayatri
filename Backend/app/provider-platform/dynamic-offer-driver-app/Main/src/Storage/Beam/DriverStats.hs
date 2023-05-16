@@ -38,6 +38,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Person (PersonTId)
@@ -100,5 +101,16 @@ driverStatsToPSModifiers :: M.Map Text (A.Value -> A.Value)
 driverStatsToPSModifiers =
   M.fromList
     []
+
+defaultDriverStats :: DriverStats
+defaultDriverStats =
+  DriverStatsT
+    { driverId = "",
+      idleSince = defaultDate
+    }
+
+instance Serialize DriverStats where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''DriverStatsT ['driverId] [])

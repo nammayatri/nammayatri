@@ -38,6 +38,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Merchant (MerchantTId)
@@ -141,5 +142,28 @@ onboardingDocumentConfigToPSModifiers :: M.Map Text (A.Value -> A.Value)
 onboardingDocumentConfigToPSModifiers =
   M.fromList
     []
+
+instance IsString Domain.DocumentType where
+  fromString = show
+
+instance IsString Domain.VehicleClassCheckType where
+  fromString = show
+
+defaultOnboardingDocumentConfig :: OnboardingDocumentConfig
+defaultOnboardingDocumentConfig =
+  OnboardingDocumentConfigT
+    { merchantId = "",
+      documentType = "",
+      checkExtraction = False,
+      checkExpiry = False,
+      validVehicleClasses = [""],
+      vehicleClassCheckType = "",
+      createdAt = defaultDate,
+      updatedAt = defaultDate
+    }
+
+instance Serialize OnboardingDocumentConfig where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''OnboardingDocumentConfigT ['documentType] [])

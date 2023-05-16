@@ -40,6 +40,7 @@ import GHC.Generics (Generic)
 import Kernel.External.Encryption (DbHash (..), Encrypted (..), EncryptedHashed (..))
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Person (PersonTId)
@@ -138,5 +139,29 @@ driverInformationToPSModifiers :: M.Map Text (A.Value -> A.Value)
 driverInformationToPSModifiers =
   M.fromList
     []
+
+defaultDriverInformation :: DriverInformation
+defaultDriverInformation =
+  DriverInformationT
+    { driverId = "",
+      adminId = Nothing,
+      active = False,
+      onRide = False,
+      enabled = False,
+      blocked = False,
+      verified = False,
+      lastEnabledOn = Nothing,
+      referralCode = Nothing,
+      canDowngradeToSedan = False,
+      canDowngradeToHatchback = False,
+      canDowngradeToTaxi = False,
+      mode = Nothing,
+      createdAt = defaultDate,
+      updatedAt = defaultDate
+    }
+
+instance Serialize DriverInformation where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''DriverInformationT ['driverId] [])

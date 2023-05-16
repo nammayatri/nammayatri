@@ -43,6 +43,7 @@ import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common (Centesimal)
 import Kernel.Types.Common hiding (id)
 import Kernel.Utils.Version
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Merchant (MerchantTId)
@@ -202,6 +203,15 @@ deriving stock instance Ord Domain.IdentifierType
 
 deriving stock instance Ord OptApiMethods
 
+instance IsString Domain.Role where
+  fromString = show
+
+instance IsString Domain.Gender where
+  fromString = show
+
+instance IsString Domain.IdentifierType where
+  fromString = show
+
 personTMod :: PersonT (B.FieldModification (B.TableField PersonT))
 personTMod =
   B.tableModification
@@ -247,5 +257,42 @@ personToPSModifiers :: M.Map Text (A.Value -> A.Value)
 personToPSModifiers =
   M.fromList
     []
+
+defaultPerson :: Person
+defaultPerson =
+  PersonT
+    { id = "",
+      firstName = "",
+      middleName = Nothing,
+      lastName = Nothing,
+      role = "",
+      gender = "",
+      identifierType = "",
+      email = Nothing,
+      unencryptedMobileNumber = Nothing,
+      mobileNumberEncrypted = Nothing,
+      mobileNumberHash = Nothing,
+      mobileCountryCode = Nothing,
+      passwordHash = Nothing,
+      identifier = Nothing,
+      rating = Nothing,
+      isNew = False,
+      merchantId = "",
+      deviceToken = Nothing,
+      language = Nothing,
+      whatsappNotificationEnrollStatus = Nothing,
+      description = Nothing,
+      alternateMobileNumberEncrypted = Nothing,
+      unencryptedAlternateMobileNumber = Nothing,
+      alternateMobileNumberHash = Nothing,
+      createdAt = defaultDate,
+      updatedAt = defaultDate,
+      bundleVersion = Nothing,
+      clientVersion = Nothing
+    }
+
+instance Serialize Person where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''PersonT ['id] [])

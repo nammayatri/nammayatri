@@ -40,6 +40,7 @@ import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common (Centesimal, Meters (..))
 import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.Common as Common
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import qualified Storage.Tabular.FareParameters as Fare
@@ -133,6 +134,18 @@ data DriverQuoteT f = DriverQuoteT
   }
   deriving (Generic, B.Beamable)
 
+instance IsString Domain.DriverQuoteStatus where
+  fromString = show
+
+instance IsString Variant.Variant where
+  fromString = show
+
+instance IsString Common.Money where
+  fromString = show
+
+instance IsString Meters where
+  fromString = show
+
 instance B.Table DriverQuoteT where
   data PrimaryKey DriverQuoteT f
     = Id (B.C f Text)
@@ -199,5 +212,32 @@ driverQuoteToPSModifiers :: M.Map Text (A.Value -> A.Value)
 driverQuoteToPSModifiers =
   M.fromList
     []
+
+defaultDriverQuote :: DriverQuote
+defaultDriverQuote =
+  DriverQuoteT
+    { id = "",
+      transactionId = "",
+      searchRequestId = "",
+      searchRequestForDriverId = Nothing,
+      driverId = "",
+      driverName = "",
+      driverRating = Nothing,
+      status = "",
+      vehicleVariant = "",
+      distance = "",
+      distanceToPickup = "",
+      durationToPickup = 1.0,
+      validTill = defaultDate,
+      estimatedFare = "",
+      fareParametersId = "",
+      providerId = "",
+      createdAt = defaultDate,
+      updatedAt = defaultDate
+    }
+
+instance Serialize DriverQuote where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''DriverQuoteT ['id] [])

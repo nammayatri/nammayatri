@@ -37,6 +37,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 
@@ -111,5 +112,21 @@ mediaFileToPSModifiers :: M.Map Text (A.Value -> A.Value)
 mediaFileToPSModifiers =
   M.fromList
     []
+
+instance IsString Domain.MediaType where
+  fromString = show
+
+defaultMediaFile :: MediaFile
+defaultMediaFile =
+  MediaFileT
+    { id = "",
+      fileType = "",
+      url = "",
+      createdAt = defaultDate
+    }
+
+instance Serialize MediaFile where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''MediaFileT ['id] [])

@@ -38,6 +38,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Booking (BookingTId)
@@ -137,6 +138,12 @@ deriving stock instance Ord Domain.EventType
 
 deriving stock instance Ord Domain.WhenPoolWasComputed
 
+instance IsString Domain.EventType where
+  fromString = show
+
+instance IsString Domain.WhenPoolWasComputed where
+  fromString = show
+
 businessEventTMod :: BusinessEventT (B.FieldModification (B.TableField BusinessEventT))
 businessEventTMod =
   B.tableModification
@@ -164,5 +171,24 @@ businessEventToPSModifiers :: M.Map Text (A.Value -> A.Value)
 businessEventToPSModifiers =
   M.fromList
     []
+
+defaultBusinessEvent :: BusinessEvent
+defaultBusinessEvent =
+  BusinessEventT
+    { id = "",
+      driverId = Nothing,
+      eventType = "",
+      timeStamp = defaultDate,
+      bookingId = Nothing,
+      whenPoolWasComputed = Nothing,
+      vehicleVariant = Nothing,
+      distance = Nothing,
+      duration = Nothing,
+      rideId = Nothing
+    }
+
+instance Serialize BusinessEvent where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''BusinessEventT ['id] [])
