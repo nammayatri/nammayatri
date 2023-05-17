@@ -33,12 +33,12 @@ import qualified Storage.Tabular.VechileNew as VN
 create :: RideDetails -> SqlDB ()
 create = Esq.create
 
--- create' :: L.MonadFlow m => DRD.RideDetails -> m (MeshResult ())
--- create' rideDetails = do
---   dbConf <- L.getOption Extra.EulerPsqlDbCfg
---   case dbConf of
---     Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainRideDetailsToBeam rideDetails)
---     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+create' :: L.MonadFlow m => DRD.RideDetails -> m (MeshResult ())
+create' rideDetails = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainRideDetailsToBeam rideDetails)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 findById ::
   Transactionable m =>
