@@ -25,7 +25,6 @@ import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
-import Storage.Queries.FullEntityBuilders (buildFullQuoteSpecialZone)
 import qualified Lib.Mesh as Mesh
 import Lib.Utils
 import qualified Sequelize as Se
@@ -33,6 +32,7 @@ import Storage.Beam.FareParameters as BeamFP hiding (Id)
 import qualified Storage.Beam.QuoteSpecialZone as BeamQSZ
 import Storage.Queries.FullEntityBuilders (buildFullQuoteSpecialZone)
 import Storage.Queries.FareParameters as BeamQFP
+import Storage.Queries.FullEntityBuilders (buildFullQuoteSpecialZone)
 import qualified Storage.Tabular.FareParameters as Fare
 import qualified Storage.Tabular.FareParameters.Instances as FareParamsT
 import Storage.Tabular.QuoteSpecialZone
