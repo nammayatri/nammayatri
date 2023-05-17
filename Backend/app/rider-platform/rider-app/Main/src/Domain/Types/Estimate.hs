@@ -57,6 +57,7 @@ data Estimate = Estimate
     nightShiftInfo :: Maybe NightShiftInfo,
     status :: EstimateStatus,
     waitingCharges :: WaitingCharges,
+    customerExtraFeeBounds :: Maybe CustomerExtraFeeBounds,
     driversLocation :: [LatLong],
     updatedAt :: UTCTime,
     createdAt :: UTCTime
@@ -88,6 +89,12 @@ data EstimateBreakupPrice = EstimateBreakupPrice
     value :: Money
   }
   deriving (Generic, FromJSON, ToJSON, Show, PrettyShow, ToSchema)
+
+data CustomerExtraFeeBounds = CustomerExtraFeeBounds
+  { minFee :: Money,
+    maxFee :: Money
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data FareRange = FareRange
   { minFare :: Money,

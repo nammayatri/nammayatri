@@ -111,7 +111,9 @@ data ItemTags = ItemTags
     night_shift_start :: Maybe TimeOfDay,
     night_shift_end :: Maybe TimeOfDay,
     waiting_charge_per_min :: Maybe Money,
-    drivers_location :: [LatLong]
+    drivers_location :: [LatLong],
+    min_customer_extra_fee :: Maybe Money,
+    max_customer_extra_fee :: Maybe Money
   }
   deriving (Generic, Show)
 
@@ -134,5 +136,7 @@ itemTagsJSONOptions =
         "night_shift_end" -> "./komn/night_shift_end"
         "waiting_time_estimated_threshold" -> "./komn/waiting_time_estimated_threshold"
         "waiting_charge_per_min" -> "./komn/waiting_charge_per_min"
+        "min_customer_extra_fee" -> "./komn/min_customer_extra_fee"
+        "max_customer_extra_fee" -> "./komn/max_customer_extra_fee"
         a -> a
     }

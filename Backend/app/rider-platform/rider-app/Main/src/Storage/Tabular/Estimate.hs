@@ -65,6 +65,8 @@ mkPersist
       nightShiftStart TimeOfDay Maybe
       nightShiftEnd TimeOfDay Maybe
       status Domain.EstimateStatus
+      minCustomerExtraFee Money Maybe
+      maxCustomerExtraFee Money Maybe
       waitingChargePerMin Money Maybe
       createdAt UTCTime
       updatedAt UTCTime

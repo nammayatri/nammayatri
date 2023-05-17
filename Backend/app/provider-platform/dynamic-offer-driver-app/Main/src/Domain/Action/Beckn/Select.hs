@@ -89,7 +89,7 @@ handler merchantId sReq = do
       Just distRes -> pure distRes
   farePolicy <- FarePolicyS.findByMerchantIdAndVariant merchantId estimate.vehicleVariant >>= fromMaybeM NoFarePolicy
   whenJust sReq.customerExtraFee $ \customerExtraFee -> do
-    let customerExtraFeeBounds = DFarePolicy.findCustomerExtraFeeBoundsByDistance distance <$> farePolicy.customerExtraFeeBounds
+    let customerExtraFeeBounds = DFarePolicy.findFPCustomerExtraFeeBoundsByDistance distance <$> farePolicy.customerExtraFeeBounds
     whenJust customerExtraFeeBounds $ \customerExtraFeeBounds' ->
       unless (isAllowedCustomerExtraFee customerExtraFeeBounds' customerExtraFee) $
         throwError $ NotAllowedExtraFee $ show customerExtraFee

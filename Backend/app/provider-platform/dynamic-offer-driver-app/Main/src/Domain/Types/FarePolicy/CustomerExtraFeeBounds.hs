@@ -26,8 +26,8 @@ data CustomerExtraFeeBounds = CustomerExtraFeeBounds
   }
   deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
 
-findCustomerExtraFeeBoundsByDistance :: Meters -> NonEmpty CustomerExtraFeeBounds -> CustomerExtraFeeBounds
-findCustomerExtraFeeBoundsByDistance dist customerExtraFeeBoundsList = do
+findFPCustomerExtraFeeBoundsByDistance :: Meters -> NonEmpty CustomerExtraFeeBounds -> CustomerExtraFeeBounds
+findFPCustomerExtraFeeBoundsByDistance dist customerExtraFeeBoundsList = do
   case NE.filter (\customerExtraFeeBounds -> customerExtraFeeBounds.startDistance < dist) $ NE.sortBy (comparing (.startDistance)) customerExtraFeeBoundsList of
     [] -> error $ "CustomerExtraFeeBounds for dist = " <> show dist <> " not found. Non-emptiness supposed to be guaranteed by app logic."
     a -> last a

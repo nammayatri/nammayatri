@@ -29,6 +29,7 @@ import Data.Aeson ((.:), (.=))
 import qualified Data.Aeson as A
 import Data.Aeson.Types (parseFail, typeMismatch)
 import Domain.Types.Booking.Type
+import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
@@ -63,10 +64,10 @@ data DEstimateSelectReq = DEstimateSelectReq
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-validateDSelectReq :: Validate DEstimateSelectReq
-validateDSelectReq DEstimateSelectReq {..} =
+validateDSelectReq :: Maybe DEst.CustomerExtraFeeBounds -> Validate DEstimateSelectReq
+validateDSelectReq mbCustomerExtraFeeBounds DEstimateSelectReq {..} =
   sequenceA_
-    [ validateField "customerExtraFee" customerExtraFee $ InMaybe $ InRange @Money 1 100
+    [ whenJust mbCustomerExtraFeeBounds $ \customerExtraFeeBounds -> validateField "customerExtraFee" customerExtraFee $ InMaybe $ InRange @Money customerExtraFeeBounds.minFee customerExtraFeeBounds.maxFee
     ]
 
 data DSelectRes = DSelectRes
@@ -115,9 +116,9 @@ instance FromJSON CancelAPIResponse where
 
 select :: Id DPerson.Person -> Id DEstimate.Estimate -> DEstimateSelectReq -> Flow DSelectRes
 select personId estimateId req@DEstimateSelectReq {..} = do
-  runRequestValidation validateDSelectReq req
-  now <- getCurrentTime
   estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
+  runRequestValidation (validateDSelectReq estimate.customerExtraFeeBounds) req
+  now <- getCurrentTime
   unless (estimate.status /= DEstimate.DRIVER_QUOTE_REQUESTED) $ throwError (InvalidRequest "Estimate already offered")
   when (DEstimate.isCancelled estimate.status) $ throwError $ EstimateCancelled estimate.id.getId
   let searchRequestId = estimate.requestId

@@ -160,7 +160,9 @@ mkQuoteEntities start end estInfo = do
                     night_shift_start = estimate.nightShiftInfo <&> (.nightShiftStart),
                     night_shift_end = estimate.nightShiftInfo <&> (.nightShiftEnd),
                     waiting_charge_per_min = estimate.waitingCharges.waitingChargePerMin,
-                    drivers_location = toList estInfo.driverLatLongs
+                    drivers_location = toList estInfo.driverLatLongs,
+                    min_customer_extra_fee = estimate.customerExtraFeeBounds <&> (.minFee),
+                    max_customer_extra_fee = estimate.customerExtraFeeBounds <&> (.maxFee)
                   },
             base_distance = Nothing,
             base_duration = Nothing
@@ -211,7 +213,9 @@ mkQuoteEntitiesSpecialZone start end it = do
                     night_shift_start = Nothing,
                     night_shift_end = Nothing,
                     waiting_charge_per_min = Nothing,
-                    drivers_location = []
+                    drivers_location = [],
+                    min_customer_extra_fee = Nothing,
+                    max_customer_extra_fee = Nothing
                   },
             base_distance = Nothing,
             base_duration = Nothing

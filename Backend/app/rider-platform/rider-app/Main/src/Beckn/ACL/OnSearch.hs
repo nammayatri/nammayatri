@@ -19,7 +19,6 @@ import qualified Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
 import qualified Beckn.Types.Core.Taxi.OnSearch as OnSearch
 import Beckn.Types.Core.Taxi.OnSearch.Item (BreakupItem (..))
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
-import qualified Domain.Types.Estimate as DEstimate
 import Domain.Types.OnSearchEvent
 import qualified Domain.Types.VehicleVariant as VehVar
 import EulerHS.Prelude hiding (id, state, unpack)
@@ -100,10 +99,11 @@ buildEstimateOrQuoteInfo item = do
       nightShiftInfo = buildNightShiftInfo =<< item.tags
       waitingCharges = buildWaitingChargeInfo <$> item.tags
       driversLocation = fromMaybe [] $ item.tags <&> (.drivers_location)
+      customerExtraFeeBounds = buildCustomerExtraFeeBounds =<< item.tags
   validatePrices estimatedFare estimatedTotalFare
 
   let totalFareRange =
-        DEstimate.FareRange
+        DOnSearch.FareRange
           { minFare = roundToIntegral item.price.minimum_value,
             maxFare = roundToIntegral item.price.maximum_value
           }
@@ -165,8 +165,8 @@ buildRentalQuoteDetails item = do
   baseDuration <- item.base_duration & fromMaybeM (InvalidRequest "Missing base_duration in rental search item")
   pure DOnSearch.RentalQuoteDetails {..}
 
-validateFareRange :: (MonadThrow m, Log m) => Money -> DEstimate.FareRange -> m ()
-validateFareRange totalFare DEstimate.FareRange {..} = do
+validateFareRange :: (MonadThrow m, Log m) => Money -> DOnSearch.FareRange -> m ()
+validateFareRange totalFare DOnSearch.FareRange {..} = do
   when (minFare < 0) $ throwError $ InvalidRequest "Minimum discounted price is less than zero"
   when (maxFare < 0) $ throwError $ InvalidRequest "Maximum discounted price is less than zero"
   when (maxFare < minFare) $ throwError $ InvalidRequest "Maximum discounted price is less than minimum discounted price"
@@ -203,3 +203,13 @@ buildWaitingChargeInfo itemTags = do
   DOnSearch.WaitingChargesInfo
     { waitingChargePerMin = itemTags.waiting_charge_per_min
     }
+
+buildCustomerExtraFeeBounds ::
+  OnSearch.ItemTags ->
+  Maybe DOnSearch.CustomerExtraFeeBounds
+buildCustomerExtraFeeBounds itemTags = do
+  ((,) <$> itemTags.min_customer_extra_fee <*> itemTags.max_customer_extra_fee)
+    <&> \(minFee, maxFee) ->
+      DOnSearch.CustomerExtraFeeBounds
+        { ..
+        }

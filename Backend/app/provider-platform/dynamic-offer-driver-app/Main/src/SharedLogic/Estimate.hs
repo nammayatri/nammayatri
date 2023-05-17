@@ -64,6 +64,7 @@ buildEstimate transactionId startTime dist farePolicy = do
         minFare = baseFare + maybe 0 (.minFee) mbDriverExtraFeeBounds,
         maxFare = baseFare + maybe 0 (.maxFee) mbDriverExtraFeeBounds,
         estimateBreakupList = estimateBreakups <> additionalBreakups,
+        customerExtraFeeBounds = makeCustomerExtraFeeBounds,
         nightShiftInfo =
           ((,,) <$> fareParams.nightShiftCharge <*> getOldNightShiftCharge farePolicy.farePolicyDetails <*> farePolicy.nightShiftBounds)
             <&> \(nightShiftCharge, oldNightShiftCharge, nightShiftBounds) ->
@@ -98,6 +99,9 @@ buildEstimate transactionId startTime dist farePolicy = do
       case farePolicyDetails of
         DFP.SlabsDetails det -> getNightShiftChargeValue <$> (DFP.findFPSlabsDetailsSlabByDistance dist det.slabs).nightShiftCharge
         DFP.ProgressiveDetails det -> getNightShiftChargeValue <$> det.nightShiftCharge
+    makeCustomerExtraFeeBounds = do
+      let mbCustomerExtraFeeBounds = findFPCustomerExtraFeeBoundsByDistance dist <$> farePolicy.customerExtraFeeBounds
+      mbCustomerExtraFeeBounds <&> \DFP.CustomerExtraFeeBounds {..} -> DEst.CustomerExtraFeeBounds {..}
 
 mkAdditionalBreakups :: (Money -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> Meters -> FarePolicy -> [breakupItem]
 mkAdditionalBreakups mkPrice mkBreakupItem distance farePolicy = do

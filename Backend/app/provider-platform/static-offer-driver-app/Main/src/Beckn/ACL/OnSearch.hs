@@ -89,7 +89,9 @@ mkOneWayItem DOneWaySearch.QuoteInfo {..} offer_id fulfillment_id = do
             night_shift_start = Nothing,
             night_shift_end = Nothing,
             waiting_charge_per_min = Nothing, -- figure out how to send
-            drivers_location = []
+            drivers_location = [],
+            min_customer_extra_fee = Nothing,
+            max_customer_extra_fee = Nothing
           }
   OnSearch.Item
     { category_id = OnSearch.ONE_WAY_TRIP,

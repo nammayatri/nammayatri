@@ -26,12 +26,19 @@ data Estimate = Estimate
     vehicleVariant :: Variant.Variant,
     minFare :: Money,
     maxFare :: Money,
+    customerExtraFeeBounds :: Maybe CustomerExtraFeeBounds,
     estimateBreakupList :: [EstimateBreakup],
     nightShiftInfo :: Maybe NightShiftInfo,
     waitingCharges :: WaitingCharges,
     createdAt :: UTCTime
   }
   deriving (Generic)
+
+data CustomerExtraFeeBounds = CustomerExtraFeeBounds
+  { minFee :: Money,
+    maxFee :: Money
+  }
+  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
 
 data WaitingCharges = WaitingCharges
   { waitingChargePerMin :: Maybe Money,

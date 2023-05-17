@@ -35,6 +35,8 @@ mkPersist
       vehicleVariant Variant.Variant
       minFare Money
       maxFare Money
+      minCustomerExtraFee Money Maybe
+      maxCustomerExtraFee Money Maybe
       estimateBreakupList (PostgresList Text)
       nightShiftCharge Money Maybe
       oldNightShiftCharge Centesimal Maybe sql=night_shift_multiplier
@@ -65,6 +67,13 @@ instance FromTType EstimateT Domain.Estimate where
                   nightShiftEnd = nightShiftEnd'
                 }
         waitingCharges = Domain.WaitingCharges {..}
+        customerExtraFeeBounds =
+          ((,) <$> minCustomerExtraFee <*> maxCustomerExtraFee)
+            <&> \(minCustomerExtraFee', maxCustomerExtraFee') ->
+              Domain.CustomerExtraFeeBounds
+                { minFee = minCustomerExtraFee',
+                  maxFee = maxCustomerExtraFee'
+                }
     estimateBreakupListDec <- (decodeFromText `mapM` unPostgresList estimateBreakupList) & fromMaybeM (InternalError "Unable to decode EstimateBreakup")
     return $
       Domain.Estimate
@@ -84,5 +93,7 @@ instance ToTType EstimateT Domain.Estimate where
         oldNightShiftCharge = nightShiftInfo <&> (.oldNightShiftCharge),
         nightShiftStart = nightShiftInfo <&> (.nightShiftStart),
         nightShiftEnd = nightShiftInfo <&> (.nightShiftEnd),
+        minCustomerExtraFee = customerExtraFeeBounds <&> (.minFee),
+        maxCustomerExtraFee = customerExtraFeeBounds <&> (.maxFee),
         ..
       }

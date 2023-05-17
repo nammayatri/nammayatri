@@ -16,7 +16,8 @@ module Domain.Action.Beckn.OnSearch
   ( DOnSearchReq (..),
     ProviderInfo (..),
     EstimateInfo (..),
-    DEstimate.FareRange (..),
+    CustomerExtraFeeBounds (..),
+    FareRange (..),
     QuoteInfo (..),
     QuoteDetails (..),
     OneWayQuoteDetails (..),
@@ -76,12 +77,23 @@ data EstimateInfo = EstimateInfo
     estimatedFare :: Money,
     discount :: Maybe Money,
     estimatedTotalFare :: Money,
-    totalFareRange :: DEstimate.FareRange,
+    customerExtraFeeBounds :: Maybe CustomerExtraFeeBounds,
+    totalFareRange :: FareRange,
     descriptions :: [Text],
     estimateBreakupList :: [EstimateBreakupInfo],
     nightShiftInfo :: Maybe NightShiftInfo,
     waitingCharges :: Maybe WaitingChargesInfo,
     driversLocation :: [LatLong]
+  }
+
+data CustomerExtraFeeBounds = CustomerExtraFeeBounds
+  { minFee :: Money,
+    maxFee :: Money
+  }
+
+data FareRange = FareRange
+  { minFare :: Money,
+    maxFare :: Money
   }
 
 data NightShiftInfo = NightShiftInfo
@@ -198,6 +210,17 @@ buildEstimate providerInfo now _searchRequest EstimateInfo {..} = do
         waitingCharges =
           DEstimate.WaitingCharges
             { waitingChargePerMin = waitingCharges >>= (.waitingChargePerMin)
+            },
+        customerExtraFeeBounds =
+          customerExtraFeeBounds <&> \customerExtraFeeBounds' ->
+            DEstimate.CustomerExtraFeeBounds
+              { minFee = customerExtraFeeBounds'.minFee,
+                maxFee = customerExtraFeeBounds'.maxFee
+              },
+        totalFareRange =
+          DEstimate.FareRange
+            { minFare = totalFareRange.minFare,
+              maxFare = totalFareRange.maxFare
             },
         ..
       }

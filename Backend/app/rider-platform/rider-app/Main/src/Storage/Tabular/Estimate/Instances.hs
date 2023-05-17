@@ -35,6 +35,13 @@ instance FromTType FullEstimateT Domain.Estimate where
             { minFare = roundToIntegral minTotalFare,
               maxFare = roundToIntegral maxTotalFare
             }
+        customerExtraFeeBounds =
+          ((,) <$> minCustomerExtraFee <*> maxCustomerExtraFee)
+            <&> \(minCustomerExtraFee', maxCustomerExtraFee') ->
+              Domain.CustomerExtraFeeBounds
+                { minFee = minCustomerExtraFee',
+                  maxFee = maxCustomerExtraFee'
+                }
     return $
       Domain.Estimate
         { id = Id id,
@@ -83,6 +90,8 @@ instance ToTType FullEstimateT Domain.Estimate where
               driversLocation = PostgresList driversLocation,
               waitingChargePerMin = waitingCharges.waitingChargePerMin,
               status = status,
+              minCustomerExtraFee = customerExtraFeeBounds <&> (.minFee),
+              maxCustomerExtraFee = customerExtraFeeBounds <&> (.maxFee),
               ..
             }
     let mbTripTermsT = toTType <$> tripTerms
