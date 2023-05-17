@@ -432,21 +432,9 @@ fareUpdateView push config =
     , color Color.black650
     , textFromHtml $ "<span style=\"color:black;\">" <> (getString REASON_CHANGE_IN_ROUTE_A) <> "</span>" <> (getString REASON_CHANGE_IN_ROUTE_B)
     , margin $ MarginTop 20
-    , padding (Padding 20 0 20 0)
-    ]
-  ,textView
-    [ width WRAP_CONTENT
-    , height WRAP_CONTENT
-    , textSize FontSize.a_14
-    , lineHeight "16"
-    , fontStyle $ FontStyle.regular LanguageStyle
-    , color Color.black650
-    , textFromHtml $ "<span style=\"color:black;\">" <> (getString REASON_EARLY_RIDE_END_CHARGES_A) <> "</span>" <> (getString REASON_EARLY_RIDE_END_CHARGES_B)
-    , margin $ MarginTop 12
-    , padding (Padding 20 0 20 48)
+    , padding (Padding 20 0 20 180)
     ]
   ]
-
 
 getAdditionalFare :: String -> Int
 getAdditionalFare additionalFare = DM.fromMaybe 0 $ DI.fromString $ DS.drop 1 additionalFare

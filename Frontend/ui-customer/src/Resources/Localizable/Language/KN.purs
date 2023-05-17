@@ -440,8 +440,6 @@ getKN script = case script of
   DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE -> "ಚಾಲಕ ಸೇರ್ಪಡೆ ಮಿತಿಯನ್ನು ಮೂಲ ದರದ 10% ರಷ್ಟನ್ನು ಸುಮಾರು ₹10 ಕ್ಕೆ ಲೆಕ್ಕಹಾಕಲಾಗುತ್ತದೆ"
   DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE -> "ಗಮನಿಸಿ: ಚಾಲಕರು ಈ ಹೆಚ್ಚುವರಿ ದರವನ್ನು ವಿಧಿಸಬಹುದು/ಇಲ್ಲ."
   YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS -> "ಕೆಳಗಿನ ಯಾವುದೇ ಕಾರಣಗಳಿಂದ ನೀವು ನವೀಕರಿಸಿದ ಅಂತಿಮ ದರವನ್ನು ನೋಡಬಹುದು:"
-  REASON_CHANGE_IN_ROUTE_A -> "ಮಾರ್ಗದಲ್ಲಿ ಬದಲಾವಣೆ: "
+  REASON_CHANGE_IN_ROUTE_A -> "1.ಮಾರ್ಗದಲ್ಲಿ ಬದಲಾವಣೆ: "
   REASON_CHANGE_IN_ROUTE_B ->"ಮಾರ್ಗದಲ್ಲಿನ ಬದಲಾವಣೆಯಿಂದಾಗಿ ಒಟ್ಟು ದರ ಬದಲಾಗಬಹುದು"
-  REASON_EARLY_RIDE_END_CHARGES_A -> "ಶೀಘ್ರ ರೈಡ್ ಎಂಡ್ ಶುಲ್ಕಗಳು:"
-  REASON_EARLY_RIDE_END_CHARGES_B-> "ರೈಡ್ ಅನ್ನು ಬೇಗ ಮುಗಿಸಿದರೆ ಪ್ರಯಾಣಿಸದ ದೂರದ ಅರ್ಧದಷ್ಟು ದರದ ಹೆಚ್ಚುವರಿ ಶುಲ್ಕಗಳು ನೀಡಬೇಕು (ಗರಿಷ್ಠ ₹50)"
-
+  

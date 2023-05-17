@@ -441,8 +441,6 @@ getEN script = case script of
   DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE -> "Driver addition limit are calculated at 10% of the base fare rounded of to nearest ₹10"
   DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE -> "Note: Driver may/may not charge this additional fare."
   YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS -> "You may see an updated final fare due to any of the below reasons:"
-  REASON_CHANGE_IN_ROUTE_A -> "Change in Route: "
+  REASON_CHANGE_IN_ROUTE_A -> "1.Change in Route: "
   REASON_CHANGE_IN_ROUTE_B ->"Total fare may change due to change in route"
-  REASON_EARLY_RIDE_END_CHARGES_A -> "Early Ride End Charges: "
-  REASON_EARLY_RIDE_END_CHARGES_B-> "Ending a ride early incurs additional charges amounting to half the fare of untravelled distance (max ₹50)"
-
+  
