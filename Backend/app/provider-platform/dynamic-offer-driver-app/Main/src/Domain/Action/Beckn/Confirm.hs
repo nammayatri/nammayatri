@@ -192,6 +192,7 @@ handler transporter req quote = do
       return
         DRide.Ride
           { id = guid,
+            pickupDropOutsideOfThreshold = Nothing,
             bookingId = booking.id,
             shortId = shortId,
             status = DRide.NEW,

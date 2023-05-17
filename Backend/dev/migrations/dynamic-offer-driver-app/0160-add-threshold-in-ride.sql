@@ -1,0 +1,1 @@
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN pickup_drop_outside_of_threshold Boolean;

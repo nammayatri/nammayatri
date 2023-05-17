@@ -189,6 +189,7 @@ rideInfo merchantShortId reqRideId = do
         actualDropLocation = ride.tripEndPos,
         driverId = cast @DP.Person @Common.Driver driverId,
         driverName = rideDetails.driverName,
+        pickupDropOutsideOfThreshold = ride.pickupDropOutsideOfThreshold,
         driverPhoneNo,
         vehicleNo = rideDetails.vehicleNumber,
         driverStartLocation = ride.tripStartPos,
