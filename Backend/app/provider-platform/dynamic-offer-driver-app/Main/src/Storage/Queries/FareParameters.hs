@@ -22,7 +22,6 @@ import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
-import Storage.Queries.FullEntityBuilders (buildFullFareParameters)
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.FareParameters as BeamFP
