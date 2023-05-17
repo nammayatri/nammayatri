@@ -41,7 +41,6 @@ onSearch _ _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   whenJust mbDOnSearchReq $ \request -> do
     Redis.whenWithLockRedis (onSearchLockKey req.context.message_id) 60 $ do
       validatedRequest <- DOnSearch.validateRequest request
-      -- whenJust mbReq $ \request -> do
       fork "on search processing" $
         DOnSearch.onSearch req.context.message_id validatedRequest
   pure Ack

@@ -108,36 +108,27 @@ cancelBooking booking transporterId = do
             additionalInfo = Nothing
           }
 
-handler :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> InitReq -> (Either (DDQ.DriverQuote, DSR.SearchRequest) (DQSZ.QuoteSpecialZone, DSRSZ.SearchRequestSpecialZone)) -> m InitRes
+handler :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> InitReq -> Either (DDQ.DriverQuote, DSR.SearchRequest) (DQSZ.QuoteSpecialZone, DSRSZ.SearchRequestSpecialZone) -> m InitRes
 handler merchantId req eitherReq = do
   transporter <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   now <- getCurrentTime
   case req.initTypeReq of
     InitNormalReq -> do
-      -- driverQuote <- QDQuote.findById (Id req.driverQuoteId) >>= fromMaybeM (QuoteNotFound req.driverQuoteId)
-      -- when (driverQuote.validTill < now) $
-      --   throwError $ QuoteExpired driverQuote.id.getId
-      -- searchRequest <- QSR.findById driverQuote.searchRequestId >>= fromMaybeM (SearchRequestNotFound driverQuote.searchRequestId.getId)
-      -- do we need to check searchRequest.validTill?
       case eitherReq of
         Left (driverQuote, searchRequest) -> do
           booking <- buildBooking searchRequest driverQuote DRB.NormalBooking now
           Esq.runTransaction $
             QRB.create booking
           pure InitRes {..}
-        Right _ -> throwError $ QuoteExpired "" ------------------- need to correct the error
+        Right _ -> throwError $ InvalidRequest "Can't have specialZoneQuote in normal booking"
     InitSpecialZoneReq -> do
       case eitherReq of
         Right (specialZoneQuote, searchRequest) -> do
-          -- specialZoneQuote <- QSZoneQuote.findById (Id req.driverQuoteId) >>= fromMaybeM (QuoteNotFound req.driverQuoteId)
-          -- when (specialZoneQuote.validTill < now) $
-          --   throwError $ QuoteExpired specialZoneQuote.id.getId
-          -- searchRequest <- QSRSpecialZone.findById specialZoneQuote.searchRequestId >>= fromMaybeM (SearchRequestNotFound specialZoneQuote.searchRequestId.getId)
           booking <- buildBooking searchRequest specialZoneQuote DRB.SpecialZoneBooking now
           Esq.runTransaction $
             QRB.create booking
           pure InitRes {..}
-        Left _ -> throwError $ QuoteExpired "" ------------------- need to correct the error
+        Left _ -> throwError $ InvalidRequest "Can't have driverQuote in specialZone booking"
   where
     buildBooking ::
       ( CacheFlow m r,

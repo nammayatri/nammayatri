@@ -107,20 +107,6 @@ handler transporter req quote = do
     DRB.NormalBooking -> do
       case quote of
         Left (driver, driverQuote) -> do
-          -- driverQuote <- QDQ.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
-          -- driver <- QPerson.findById driverQuote.driverId >>= fromMaybeM (PersonNotFound driverQuote.driverId.getId)
-          -- let transporterId' = booking.providerId
-          -- transporter <-
-          --   QM.findById transporterId'
-          --     >>= fromMaybeM (MerchantNotFound transporterId'.getId)
-          -- unless (transporterId' == transporterId) $ throwError AccessDenied
-          -- now <- getCurrentTime
-          -- unless (driverQuote.validTill > now || driverQuote.status == DDQ.Active) $ do
-          --   cancelBooking booking (Just driver) transporter
-          --   throwError $ QuoteExpired driverQuote.id.getId
-          -- let bapMerchantId = booking.bapId
-          -- unless (subscriber.subscriber_id == bapMerchantId) $ throwError AccessDenied
-          -- (riderDetails, isNewRider) <- getRiderDetails transporter.id req.customerMobileCountryCode req.customerPhoneNumber now
           ride <- buildRide driver.id booking
           rideDetails <- buildRideDetails ride driver
           driverSearchReqs <- QSRD.findAllActiveBySRId driverQuote.searchRequestId
@@ -167,19 +153,6 @@ handler transporter req quote = do
       case quote of
         Left _ -> throwError AccessDenied
         Right _ -> do
-          -- quoteSpecialZone <- QQSpecialZone.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
-          -- let transporterId' = booking.providerId
-          -- transporter <-
-          --   QM.findById transporterId'
-          --     >>= fromMaybeM (MerchantNotFound transporterId'.getId)
-          -- unless (transporterId' == transporterId) $ throwError AccessDenied
-          -- now <- getCurrentTime
-          -- unless (quoteSpecialZone.validTill > now) $ do
-          --   cancelBooking booking Nothing transporter
-          --   throwError $ QuoteExpired quoteSpecialZone.id.getId
-          -- let bapMerchantId = booking.bapId
-          -- unless (subscriber.subscriber_id == bapMerchantId) $ throwError AccessDenied
-          -- (riderDetails, isNewRider) <- getRiderDetails transporter.id req.customerMobileCountryCode req.customerPhoneNumber now
           otpCode <- generateOTPCode
           Esq.runTransaction $ do
             when isNewRider $ QRD.create riderDetails
@@ -372,7 +345,7 @@ validateRequest ::
   Subscriber.Subscriber ->
   Id DM.Merchant ->
   DConfirmReq ->
-  m (DM.Merchant, (Either (DPerson.Person, DDQ.DriverQuote) DQSZ.QuoteSpecialZone))
+  m (DM.Merchant, Either (DPerson.Person, DDQ.DriverQuote) DQSZ.QuoteSpecialZone)
 validateRequest subscriber transporterId req = do
   booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
   let transporterId' = booking.providerId
@@ -387,31 +360,13 @@ validateRequest subscriber transporterId req = do
     DRB.NormalBooking -> do
       driverQuote <- QDQ.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
       driver <- QPerson.findById driverQuote.driverId >>= fromMaybeM (PersonNotFound driverQuote.driverId.getId)
-      -- let transporterId' = booking.providerId
-      -- transporter <-
-      --   QM.findById transporterId'
-      --     >>= fromMaybeM (MerchantNotFound transporterId'.getId)
-      -- unless (transporterId' == transporterId) $ throwError AccessDenied
-      -- now <- getCurrentTime
       unless (driverQuote.validTill > now || driverQuote.status == DDQ.Active) $ do
         cancelBooking booking (Just driver) transporter
         throwError $ QuoteExpired driverQuote.id.getId
       return (transporter, Left (driver, driverQuote))
-    -- let bapMerchantId = booking.bapId
-    -- unless (subscriber.subscriber_id == bapMerchantId) $ throwError AccessDenied
     DRB.SpecialZoneBooking -> do
       quoteSpecialZone <- QQSpecialZone.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
-      -- let transporterId' = booking.providerId
-      -- transporter <-
-      --   QM.findById transporterId'
-      --     >>= fromMaybeM (MerchantNotFound transporterId'.getId)
-      -- unless (transporterId' == transporterId) $ throwError AccessDenied
-      -- now <- getCurrentTime
       unless (quoteSpecialZone.validTill > now) $ do
         cancelBooking booking Nothing transporter
         throwError $ QuoteExpired quoteSpecialZone.id.getId
       return (transporter, Right quoteSpecialZone)
-
--- let bapMerchantId = booking.bapId
--- unless (subscriber.subscriber_id == bapMerchantId) $ throwError AccessDenied
--- return ()

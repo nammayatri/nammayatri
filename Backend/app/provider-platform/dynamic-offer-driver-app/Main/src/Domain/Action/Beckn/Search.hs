@@ -116,14 +116,10 @@ getDistanceAndDuration merchantId fromLocation toLocation _ _ = do
 
 handler :: DM.Merchant -> DSearchReq -> Flow DSearchRes
 handler org sReq = do
-  -- org <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
-  -- unless org.enabled $ throwError AgencyDisabled
   searchMetricsMVar <- Metrics.startSearchMetrics org.name
   let fromLocationLatLong = sReq.pickupLocation
       toLocationLatLong = sReq.dropLocation
       merchantId = org.id
-  -- unlessM (rideServiceable org.geofencingConfig QGeometry.someGeometriesContain fromLocationLatLong (Just toLocationLatLong)) $
-  --   throwError RideNotServiceable
   result <- getDistanceAndDuration merchantId fromLocationLatLong toLocationLatLong sReq.routeDistance sReq.routeDuration
   CD.cacheDistance sReq.transactionId (result.distance, result.duration)
   Redis.setExp (CD.deviceKey sReq.transactionId) sReq.device 120
