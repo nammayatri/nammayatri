@@ -215,7 +215,7 @@ verifyToken payload token = do
 makeVerifyOTPReq :: String -> VerifyTokenReq
 makeVerifyOTPReq otp = VerifyTokenReq {
       "otp": otp,
-      "deviceToken": if getValueToLocalNativeStore FCM_TOKEN == "__failed" then "" else (getValueToLocalNativeStore FCM_TOKEN),
+      "deviceToken": if getValueToLocalNativeStore FCM_TOKEN == "__failed" then "generated_xxxx_xxxx_xxxx" else (getValueToLocalNativeStore FCM_TOKEN),
       "whatsappNotificationEnroll": OPT_IN
     }
 
