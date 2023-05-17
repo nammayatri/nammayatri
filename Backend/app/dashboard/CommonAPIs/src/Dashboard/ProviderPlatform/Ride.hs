@@ -187,6 +187,7 @@ data RideInfoRes = RideInfoRes
     chargeableDistance :: Maybe Meters,
     maxEstimatedDistance :: Maybe Meters,
     estimatedRideDuration :: Maybe Minutes,
+    pickupDropOutsideOfThreshold :: Maybe Bool,
     estimatedFare :: Money,
     actualFare :: Maybe Money,
     driverOfferedFare :: Maybe Money,

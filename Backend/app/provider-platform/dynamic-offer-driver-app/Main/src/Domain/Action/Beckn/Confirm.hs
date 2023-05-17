@@ -210,6 +210,7 @@ handler subscriber transporterId req = do
       return
         DRide.Ride
           { id = guid,
+            pickupDropOutsideOfThreshold = Nothing,
             bookingId = booking.id,
             shortId = shortId,
             status = DRide.NEW,

@@ -79,6 +79,7 @@ data DriverRideRes = DriverRideRes
     driverName :: Text,
     driverNumber :: Maybe Text,
     vehicleVariant :: DVeh.Variant,
+    pickupDropOutsideOfThreshold :: Maybe Bool,
     vehicleModel :: Text,
     vehicleColor :: Text,
     vehicleNumber :: Text,
@@ -157,6 +158,7 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) =
       createdAt = ride.createdAt,
       updatedAt = ride.updatedAt,
       riderName = booking.riderName,
+      pickupDropOutsideOfThreshold = ride.pickupDropOutsideOfThreshold,
       tripStartTime = ride.tripStartTime,
       tripEndTime = ride.tripEndTime,
       rideRating = rideRating <&> (.ratingValue),
@@ -240,6 +242,7 @@ otpRideCreate driver otpCode booking = do
       return
         DRide.Ride
           { id = guid,
+            pickupDropOutsideOfThreshold = Nothing,
             bookingId = booking.id,
             shortId = shortId,
             status = DRide.NEW,
