@@ -289,6 +289,13 @@ instance HideSecrets MultipleRideSyncRes where
 ---------------------------------------------------------
 -- ride route -------------------------------------------
 
+data Status
+  = ON_RIDE
+  | ON_PICKUP
+  | IDLE
+  deriving stock (Show, Generic, Read)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 type RideRouteAPI =
   Capture "rideId" (Id Ride)
     :> "route"
@@ -297,7 +304,9 @@ type RideRouteAPI =
 data ActualRoute = ActualRoute
   { lat :: Double,
     lon :: Double,
-    timestamp :: UTCTime
+    timestamp :: UTCTime,
+    accuracy :: Maybe Double,
+    rideStatus :: Status
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -312,6 +321,8 @@ data DriverEdaKafka = DriverEdaKafka
   { driver_id :: String,
     rid :: Maybe String,
     ts :: String,
+    acc :: Maybe String,
+    rideStatus :: Maybe String,
     lat :: Maybe String,
     lon :: Maybe String,
     mid :: Maybe String,
