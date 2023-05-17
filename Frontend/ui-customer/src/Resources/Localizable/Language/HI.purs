@@ -440,9 +440,7 @@ getHI script = case script of
   DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE -> "ड्राइवर द्वारा अतिरिक्त सीमा की गणना बेस फेयर के 10% पर की जाती है, जिसे निकटतम ₹10 में राउंड किया जाता है"
   DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE -> "ध्यान दें: ड्राइवर पार्टनर यह अतिरिक्त किराया चार्ज कर सकते हैं या नहीं भी कर सकते हैं।"
   YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS -> "आप नीचे दिए गए किसी भी कारण से अपडेटेड अंतिम किराया देख सकते हैं:"
-  REASON_CHANGE_IN_ROUTE_A -> "मार्ग में परिवर्तन: "
+  REASON_CHANGE_IN_ROUTE_A -> "1.मार्ग में परिवर्तन: "
   REASON_CHANGE_IN_ROUTE_B ->"मार्ग में बदलाव के कारण कुल किराए में बदलाव हो सकता है"
-  REASON_EARLY_RIDE_END_CHARGES_A -> "जल्दी सवारी समाप्ति शुल्क: "
-  REASON_EARLY_RIDE_END_CHARGES_B-> "राइड जल्दी खत्म करने पर अतिरिक्त शुल्क लगता है, जो तय न की गई दूरी का आधा किराया (अधिकतम ₹50) होता है।"
-
+  
 
