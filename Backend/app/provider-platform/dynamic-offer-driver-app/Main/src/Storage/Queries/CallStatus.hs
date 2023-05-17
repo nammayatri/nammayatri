@@ -20,12 +20,16 @@ import Domain.Types.CallStatus
 import Domain.Types.Ride
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import qualified Kernel.External.Call.Interface.Types as Call
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import qualified Lib.Mesh as Mesh
 import Sequelize as Se
+import qualified Sequelize as Se
+import qualified Storage.Beam.CallStatus as BeamCS
 import qualified Storage.Beam.CallStatus as BeamCT
 import Storage.Tabular.CallStatus
 import qualified Storage.Tabular.CallStatus as CS
@@ -88,4 +92,17 @@ transformBeamCallStatusToDomain BeamCT.CallStatusT {..} = do
       recordingUrl = recordingUrl,
       conversationDuration = conversationDuration,
       createdAt = createdAt
+    }
+
+transformDomainCallStatusToBeam :: CallStatus -> BeamCS.CallStatus
+transformDomainCallStatusToBeam CallStatus {..} =
+  BeamCS.defaultCallStatus
+    { BeamCS.id = getId id,
+      BeamCS.callId = callId,
+      BeamCS.rideId = getId rideId,
+      BeamCS.dtmfNumberUsed = dtmfNumberUsed,
+      BeamCS.status = status,
+      BeamCS.recordingUrl = recordingUrl,
+      BeamCS.conversationDuration = conversationDuration,
+      BeamCS.createdAt = createdAt
     }

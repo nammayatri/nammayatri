@@ -23,9 +23,16 @@ where
 import Domain.Types.Merchant
 import Domain.Types.SlabFarePolicy
 import Domain.Types.Vehicle.Variant (Variant)
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import qualified Lib.Mesh as Mesh
+import qualified Sequelize as Se
+import qualified Storage.Beam.SlabFarePolicy as BeamSFP
 import Storage.Tabular.SlabFarePolicy
 
 findAllByMerchantId ::
@@ -54,3 +61,46 @@ findByMerchantIdAndVariant merchantId variant = do
 
 findById :: Transactionable m => Id SlabFarePolicy -> m (Maybe SlabFarePolicy)
 findById = Esq.findById
+
+findById' :: L.MonadFlow m => Id SlabFarePolicy -> m (Maybe SlabFarePolicy)
+findById' (Id slabFarePolicyId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure Nothing) (transformBeamSlabFarePolicyToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamSFP.id $ Se.Eq slabFarePolicyId]
+    Nothing -> pure Nothing
+
+transformBeamSlabFarePolicyToDomain :: BeamSFP.SlabFarePolicy -> SlabFarePolicy
+transformBeamSlabFarePolicyToDomain BeamSFP.SlabFarePolicyT {..} = do
+  SlabFarePolicy
+    { id = Id id,
+      merchantId = Id merchantId,
+      vehicleVariant = vehicleVariant,
+      serviceCharge = serviceCharge,
+      nightShiftRate = nightShiftRate,
+      nightShiftStart = nightShiftStart,
+      nightShiftEnd = nightShiftEnd,
+      maxAllowedTripDistance = maxAllowedTripDistance,
+      minAllowedTripDistance = minAllowedTripDistance,
+      govtChargesPerc = govtChargesPerc,
+      fareSlabs = fareSlabs,
+      createdAt = createdAt,
+      updatedAt = updatedAt
+    }
+
+transformDomainSlabFarePolicyToBeam :: SlabFarePolicy -> BeamSFP.SlabFarePolicy
+transformDomainSlabFarePolicyToBeam SlabFarePolicy {..} =
+  BeamSFP.defaultSlabFarePolicy
+    { BeamSFP.id = getId id,
+      BeamSFP.merchantId = getId merchantId,
+      BeamSFP.vehicleVariant = vehicleVariant,
+      BeamSFP.serviceCharge = serviceCharge,
+      BeamSFP.nightShiftRate = nightShiftRate,
+      BeamSFP.nightShiftStart = nightShiftStart,
+      BeamSFP.nightShiftEnd = nightShiftEnd,
+      BeamSFP.maxAllowedTripDistance = maxAllowedTripDistance,
+      BeamSFP.minAllowedTripDistance = minAllowedTripDistance,
+      BeamSFP.govtChargesPerc = govtChargesPerc,
+      BeamSFP.fareSlabs = fareSlabs,
+      BeamSFP.createdAt = createdAt,
+      BeamSFP.updatedAt = updatedAt
+    }

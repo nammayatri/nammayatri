@@ -43,6 +43,13 @@ create = Esq.create
 findById :: Transactionable m => Id Person.Driver -> m (Maybe DriverInformation)
 findById = Esq.findById . cast
 
+findById' :: L.MonadFlow m => Id Person.Driver -> m (Maybe DriverInformation)
+findById' (Id driverInformationId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure Nothing) (transformBeamDriverInformationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamDI.id $ Se.Eq driverInformationId]
+    Nothing -> pure Nothing
+
 fetchAllByIds :: Transactionable m => Id Merchant -> [Id Driver] -> m [DriverInformation]
 fetchAllByIds merchantId driversIds = Esq.findAll $ do
   (driverInformation :& person) <-

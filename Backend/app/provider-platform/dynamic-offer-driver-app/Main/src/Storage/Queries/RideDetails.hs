@@ -16,9 +16,16 @@ module Storage.Queries.RideDetails where
 
 import qualified Domain.Types.Ride as SR
 import Domain.Types.RideDetails
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import qualified Lib.Mesh as Mesh
+import qualified Sequelize as Se
+import qualified Storage.Beam.RideDetails as BeamRD
 import Storage.Tabular.RideDetails ()
 
 create :: RideDetails -> SqlDB ()
@@ -29,3 +36,38 @@ findById ::
   Id SR.Ride ->
   m (Maybe RideDetails)
 findById = Esq.findById
+
+findById' :: L.MonadFlow m => Id SR.Ride -> m (Maybe RideDetails)
+findById' (Id rideDetailsId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure Nothing) (transformBeamRideDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamRD.id $ Se.Eq rideDetailsId]
+    Nothing -> pure Nothing
+
+transformBeamRideDetailsToDomain :: BeamRD.RideDetails -> RideDetails
+transformBeamRideDetailsToDomain BeamRD.RideDetailsT {..} = do
+  RideDetails
+    { id = Id id,
+      driverName = driverName,
+      driverNumber = driverNumber,
+      driverCountryCode = driverCountryCode,
+      vehicleNumber = vehicleNumber,
+      vehicleColor = vehicleColor,
+      vehicleVariant = vehicleVariant,
+      vehicleModel = vehicleModel,
+      vehicleClass = vehicleClass
+    }
+
+transformDomainRideDetailsToBeam :: RideDetails -> BeamRD.RideDetails
+transformDomainRideDetailsToBeam RideDetails {..} =
+  BeamRD.defaultRideDetails
+    { BeamRD.id = getId id,
+      BeamRD.driverName = driverName,
+      BeamRD.driverNumber = driverNumber,
+      BeamRD.driverCountryCode = driverCountryCode,
+      BeamRD.vehicleNumber = vehicleNumber,
+      BeamRD.vehicleColor = vehicleColor,
+      BeamRD.vehicleVariant = vehicleVariant,
+      BeamRD.vehicleModel = vehicleModel,
+      BeamRD.vehicleClass = vehicleClass
+    }

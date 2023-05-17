@@ -37,6 +37,13 @@ import Storage.Tabular.Merchant
 findById :: Transactionable m => Id Merchant -> m (Maybe Merchant)
 findById = Esq.findById
 
+findById' :: L.MonadFlow m => Id Merchant -> m (Maybe Merchant)
+findById' (Id merchantId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure Nothing) (transformBeamMerchantToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamM.id $ Se.Eq merchantId]
+    Nothing -> pure Nothing
+
 findBySubscriberId :: Transactionable m => ShortId Subscriber -> m (Maybe Merchant)
 findBySubscriberId subscriberId = Esq.findOne $ do
   org <- from $ table @MerchantT

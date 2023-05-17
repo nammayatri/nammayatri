@@ -83,3 +83,27 @@ deleteByMerchantId merchantId = do
   Esq.delete $ do
     exophone <- from $ table @ExophoneT
     where_ $ exophone ^. ExophoneMerchantId ==. val (toKey merchantId)
+
+transformBeamExophoneToDomain :: BeamE.Exophone -> Exophone
+transformBeamExophoneToDomain BeamE.ExophoneT {..} = do
+  Exophone
+    { id = Id id,
+      merchantId = Id merchantId,
+      primaryPhone = primaryPhone,
+      backupPhone = backupPhone,
+      isPrimaryDown = isPrimaryDown,
+      createdAt = createdAt,
+      updatedAt = updatedAt
+    }
+
+transformDomainExophoneToBeam :: Exophone -> BeamE.Exophone
+transformDomainExophoneToBeam Exophone {..} =
+  BeamE.defaultExophone
+    { BeamE.id = getId id,
+      BeamE.merchantId = getId merchantId,
+      BeamE.primaryPhone = primaryPhone,
+      BeamE.backupPhone = backupPhone,
+      BeamE.isPrimaryDown = isPrimaryDown,
+      BeamE.createdAt = createdAt,
+      BeamE.updatedAt = updatedAt
+    }

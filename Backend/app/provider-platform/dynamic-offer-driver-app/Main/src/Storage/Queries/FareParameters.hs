@@ -33,6 +33,13 @@ create = Esq.create
 findById :: Transactionable m => Id FareParameters -> m (Maybe FareParameters)
 findById = Esq.findById
 
+findById' :: L.MonadFlow m => Id FareParameters -> m (Maybe FareParameters)
+findById' (Id fareParametersId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure Nothing) (transformBeamFareParametersToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamFP.id $ Se.Eq fareParametersId]
+    Nothing -> pure Nothing
+
 transformBeamFareParametersToDomain :: BeamFP.FareParameters -> FareParameters
 transformBeamFareParametersToDomain BeamFP.FareParametersT {..} = do
   FareParameters
