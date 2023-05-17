@@ -27,6 +27,7 @@ module Domain.Action.Beckn.OnSearch
     NightShiftInfo (..),
     WaitingChargesInfo (..),
     onSearch,
+    validateRequest,
   )
 where
 
@@ -61,6 +62,15 @@ data DOnSearchReq = DOnSearchReq
     providerInfo :: ProviderInfo,
     estimatesInfo :: [EstimateInfo],
     quotesInfo :: [QuoteInfo]
+  }
+
+data ValidatedOnSearchReq = ValidatedOnSearchReq
+  { requestId :: Id DSearchReq.SearchRequest,
+    providerInfo :: ProviderInfo,
+    estimatesInfo :: [EstimateInfo],
+    quotesInfo :: [QuoteInfo],
+    _searchRequest :: SearchRequest,
+    merchant :: DMerchant.Merchant
   }
 
 data ProviderInfo = ProviderInfo
@@ -133,20 +143,36 @@ data RentalQuoteDetails = RentalQuoteDetails
     baseDuration :: Hours
   }
 
-onSearch ::
-  Text ->
-  Maybe DOnSearchReq ->
-  Flow ()
-onSearch transactionId mbReq = do
-  whenJust mbReq (onSearchService transactionId)
+-- validateRequest :: Maybe DOnSearchReq -> Flow (Maybe (SearchRequest, DMerchant.Merchant))
+-- validateRequest mbReq = do
+--   -- whenJust mbReq (validateRequest')
+--   maybe (pure Nothing) validateRequest' mbReq
+-- _searchRequest <- runInReplica $ QSearchReq.findById requestId >>= fromMaybeM (SearchRequestDoesNotExist requestId.getId)
+-- merchant <- QMerch.findById _searchRequest.merchantId >>= fromMaybeM (MerchantNotFound _searchRequest.merchantId.getId)
+-- return $ Just (_searchRequest, merchant)
+-- return Nothing
 
-onSearchService ::
-  Text ->
-  DOnSearchReq ->
-  Flow ()
-onSearchService transactionId DOnSearchReq {..} = do
+validateRequest :: DOnSearchReq -> Flow ValidatedOnSearchReq
+validateRequest DOnSearchReq {..} = do
   _searchRequest <- runInReplica $ QSearchReq.findById requestId >>= fromMaybeM (SearchRequestDoesNotExist requestId.getId)
   merchant <- QMerch.findById _searchRequest.merchantId >>= fromMaybeM (MerchantNotFound _searchRequest.merchantId.getId)
+  return $ ValidatedOnSearchReq {..}
+
+-- onSearch ::
+--   Text ->
+--   Maybe DOnSearchReq ->
+--   (SearchRequest, DMerchant.Merchant) ->
+--   Flow ()
+-- onSearch transactionId mbReq (searchReq, merchant) = do
+--   whenJust mbReq (onSearchService transactionId searchReq merchant)
+
+onSearch ::
+  Text ->
+  ValidatedOnSearchReq ->
+  Flow ()
+onSearch transactionId ValidatedOnSearchReq {..} = do
+  -- _searchRequest <- runInReplica $ QSearchReq.findById requestId >>= fromMaybeM (SearchRequestDoesNotExist requestId.getId)
+  -- merchant <- QMerch.findById _searchRequest.merchantId >>= fromMaybeM (MerchantNotFound _searchRequest.merchantId.getId)
   Metrics.finishSearchMetrics merchant.name transactionId
   now <- getCurrentTime
   estimates <- traverse (buildEstimate requestId providerInfo now _searchRequest) estimatesInfo
