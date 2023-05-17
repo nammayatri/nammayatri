@@ -41,6 +41,7 @@ import Kernel.Types.Common
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.SlidingWindowCounters (PeriodType)
 import qualified Kernel.Types.SlidingWindowCounters as SWC
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Merchant (MerchantTId)

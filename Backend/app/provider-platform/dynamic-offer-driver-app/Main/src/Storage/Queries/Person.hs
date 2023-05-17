@@ -83,12 +83,12 @@ baseFullPersonQuery =
 create :: Person -> SqlDB ()
 create = Esq.create
 
-create' :: L.MonadFlow m => Person.Person -> m (MeshResult ())
-create' person = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
-  case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainPersonToBeam person)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+-- create' :: L.MonadFlow m => Person.Person -> m (MeshResult ())
+-- create' person = do
+--   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   case dbConf of
+--     Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainPersonToBeam person)
+--     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 findById ::
   Transactionable m =>

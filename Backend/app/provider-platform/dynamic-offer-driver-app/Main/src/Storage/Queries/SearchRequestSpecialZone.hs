@@ -30,6 +30,7 @@ import qualified Storage.Beam.SearchRequestSpecialZone as BeamSRSZ
 import Storage.Queries.SearchRequest.SearchReqLocation as QSRL
 import Storage.Tabular.SearchRequest.SearchReqLocation
 import Storage.Tabular.SearchRequestSpecialZone
+import qualified Storage.Tabular.VechileNew as VN
 
 create :: SearchRequestSpecialZone -> SqlDB ()
 create dsReq = Esq.runTransaction $
