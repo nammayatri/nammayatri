@@ -38,7 +38,6 @@ import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import qualified SharedLogic.MerchantConfig as SMC
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.MerchantConfig as CMC
-import qualified Storage.CachedQueries.MerchantConfig as CMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Person as QP

@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.34.6.
+-- This file has been generated from package.yaml by hpack version 0.35.2.
 --
 -- see: https://github.com/sol/hpack
 
@@ -410,7 +410,6 @@ library
       Storage.Tabular.SearchRequest.SearchReqLocation
       Storage.Tabular.SearchRequestForDriver
       Storage.Tabular.SearchRequestSpecialZone
-      Storage.Tabular.SlabFarePolicy
       Storage.Tabular.VechileNew
       Storage.Tabular.Vehicle
       Tools.Auth
@@ -465,6 +464,7 @@ library
       StandaloneDeriving
       PackageImports
       TemplateHaskell
+      TemplateHaskell
   ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror
   build-depends:
       aeson
@@ -495,7 +495,6 @@ library
     , mobility-core
     , openapi3
     , persistent
-    , postgresql-simple
     , prometheus-client
     , record-dot-preprocessor
     , record-hasfield
@@ -563,6 +562,7 @@ executable dynamic-offer-driver-app-exe
       StandaloneDeriving
       PackageImports
       TemplateHaskell
+      TemplateHaskell
   ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
   build-depends:
       aeson
@@ -593,7 +593,6 @@ executable dynamic-offer-driver-app-exe
     , mobility-core
     , openapi3
     , persistent
-    , postgresql-simple
     , prometheus-client
     , record-dot-preprocessor
     , record-hasfield

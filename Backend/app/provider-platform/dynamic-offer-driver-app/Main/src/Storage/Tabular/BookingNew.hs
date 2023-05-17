@@ -18,7 +18,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wwarn=type-defaults #-}
-{-# OPTIONS_GHC -Wwarn=type-defaults #-}
 
 module Storage.Tabular.BookingNew where
 

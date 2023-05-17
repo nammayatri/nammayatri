@@ -27,7 +27,6 @@ where
 
 import Data.OpenApi hiding (info, url)
 import qualified Debug.Trace as T
-import qualified Debug.Trace as T
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.Merchant as DO
