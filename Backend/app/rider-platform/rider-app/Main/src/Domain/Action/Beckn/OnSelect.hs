@@ -96,15 +96,7 @@ onSelect ::
   OnSelectValidatedReq ->
   Flow ()
 onSelect OnSelectValidatedReq {..} = do
-  -- estimate <- QEstimate.findByBPPEstimateId bppEstimateId >>= fromMaybeM (EstimateDoesNotExist $ "bppEstimateId-" <> bppEstimateId.getId)
-  -- searchRequest <-
-  --   QSR.findById estimate.requestId
-  --     >>= fromMaybeM (SearchRequestDoesNotExist estimate.requestId.getId)
-  -- let personId = searchRequest.riderId
-  -- person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   now <- getCurrentTime
-  -- whenM (duplicateCheckCond (quotesInfo <&> (.quoteDetails.bppDriverQuoteId)) providerInfo.providerId) $
-  --   throwError $ InvalidRequest "Duplicate OnSelect quote"
   quotes <- traverse (buildSelectedQuote estimate providerInfo now searchRequest.merchantId) quotesInfo
   logPretty DEBUG "quotes" quotes
   DB.runTransaction $ do
@@ -126,10 +118,6 @@ onSelect OnSelectValidatedReq {..} = do
     else do
       Notify.notifyOnDriverOfferIncoming estimate.id quotes person
   where
-    -- duplicateCheckCond :: (EsqDBFlow m r, EsqDBReplicaFlow m r) => [Id DDriverOffer.BPPQuote] -> Text -> m Bool
-    -- duplicateCheckCond [] _ = return False
-    -- duplicateCheckCond (bppQuoteId_ : _) bppId_ =
-    --   isJust <$> runInReplica (QQuote.findByBppIdAndBPPQuoteId bppId_ bppQuoteId_)
     errHandler booking exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = DConfirm.cancelBooking booking
       | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = DConfirm.cancelBooking booking

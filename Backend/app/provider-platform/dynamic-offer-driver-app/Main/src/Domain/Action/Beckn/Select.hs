@@ -71,11 +71,9 @@ handler :: DM.Merchant -> DSelectReq -> DEst.Estimate -> Flow ()
 handler merchant sReq estimate = do
   sessiontoken <- generateGUIDText
   let merchantId = merchant.id
-  -- merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   fromLocation <- buildSearchReqLocation merchantId sessiontoken sReq.pickupAddress sReq.customerLanguage sReq.pickupLocation
   toLocation <- buildSearchReqLocation merchantId sessiontoken sReq.dropAddrress sReq.customerLanguage sReq.dropLocation
   mbDistRes <- CD.getCacheDistance sReq.transactionId
-  -- estimate <- QEst.findById sReq.estimateId >>= fromMaybeM (EstimateDoesNotExist sReq.estimateId.getId)
   logInfo $ "Fetching cached distance and duration" <> show mbDistRes
   (distance, duration) <-
     case mbDistRes of

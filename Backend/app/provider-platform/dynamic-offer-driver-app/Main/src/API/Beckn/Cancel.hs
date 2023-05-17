@@ -56,11 +56,6 @@ cancel transporterId subscriber req =
         searchReq <- DCancel.validateCancelSearchRequest transporterId subscriber cancelSearchReq
         fork ("cancelSearch:" <> cancelSearchReq.transactionId) $
           DCancel.cancelSearch transporterId cancelSearchReq searchReq
-    -- dCancelReq <- ACL.buildCancelSearchReq req
-    -- DCancel.cancelSearch transporterId subscriber dCancelReq
-    -- pure ()
-    -- Redis.whenWithLockRedis (cancelLockKey dCancelReq.bookingId.getId) 60 $
-    --   DCancel.cancel transporterId subscriber dCancelReq
     return Ack
 
 cancelLockKey :: Text -> Text

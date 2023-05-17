@@ -134,8 +134,6 @@ cancelSearch ::
   Id DSR.SearchRequest ->
   m ()
 cancelSearch merchantId req searchRequestId = do
-  -- let transactionId = req.transactionId
-  -- searchRequestId <- QSR.findActiveByTransactionId transactionId >>= fromMaybeM (SearchRequestNotFound $ "transactionId-" <> transactionId)
   CS.lockSearchRequest searchRequestId
   driverSearchReqs <- QSRD.findAllActiveBySRId searchRequestId
   logTagInfo ("transactionId-" <> req.transactionId) "Search Request Cancellation"
@@ -147,11 +145,7 @@ cancelSearch merchantId req searchRequestId = do
     Notify.notifyOnCancelSearchRequest merchantId driverReq.driverId driver_.deviceToken searchRequestId
 
 validateCancelSearchRequest ::
-  ( --HasCacheConfig r,
-    -- HedisFlow m r,
-    EsqDBFlow m r
-    -- Esq.EsqDBReplicaFlow m r,
-    -- CoreMetrics m
+  ( EsqDBFlow m r
   ) =>
   Id DM.Merchant ->
   SignatureAuthResult ->
@@ -163,22 +157,12 @@ validateCancelSearchRequest _ _ req = do
 
 validateCancelRequest ::
   ( HasCacheConfig r,
-    --   HedisFlow m r,
     EsqDBFlow m r,
-    --   Esq.EsqDBReplicaFlow m r,
-    --   HedisFlow m r,
-    CacheFlow m r --,
-    --   HasHttpClientOptions r c,
-    --   EncFlow m r,
-    --   HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    --   HasLongDurationRetryCfg r c,
-    --   CoreMetrics m
+    CacheFlow m r
   ) =>
   Id DM.Merchant ->
   SignatureAuthResult ->
   CancelReq ->
-  -- DM.Merchant ->
-  -- SRB.Booking ->
   m (DM.Merchant, SRB.Booking)
 validateCancelRequest merchantId _ req = do
   merchant <-

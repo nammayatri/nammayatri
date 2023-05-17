@@ -43,7 +43,6 @@ data ValidatedOnConfirmReq = ValidatedOnConfirmReq
 
 onConfirm :: (EsqDBFlow m r, EsqDBReplicaFlow m r) => ValidatedOnConfirmReq -> m ()
 onConfirm ValidatedOnConfirmReq {..} = do
-  -- booking <- runInReplica $ QRB.findByBPPBookingId req.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId" <> req.bppBookingId.getId)
   whenJust specialZoneOtp $ \otp ->
     DB.runTransaction $ do
       QRB.updateOtpCodeBookingId booking.id otp
