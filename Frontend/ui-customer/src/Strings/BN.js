@@ -280,6 +280,7 @@ const bengaliStrings = {
   "CALL_SUPPORT": "সাপোর্টে কল করুন",
   "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT": "আপনি নাম্মা ইয়াত্রি সমর্থন দলকে কল করতে চলেছেন। আপনি কি এগিয়ে যেতে চান?",
   "YOU_ARE_ABOUT_TO_CALL_JATRI_SATHI_SUPPORT": "You are about to place a call to the Jatri Sathi Support Team. Do you want to proceed?",
+  "YOU_ARE_ABOUT_TO_CALL_YATRI_SUPPORT": "You are about to place a call to the Yatri Support Team. Do you want to proceed?",
   "YOU_ARE_ABOUT_TO_CALL_POLICE": "আপনি পুলিশকে কল করতে চলেছেন। আপনি কি এগিয়ে যেতে চান?",
   "DAIL_100": "ডায়াল 100?",
   "HELP_US_WITH_YOUR_FEEDBACK": "আপনার মতামত দিয়ে আমাদের সহায়তা করুন",
@@ -434,5 +435,6 @@ const bengaliStrings = {
   "ANONYMOUS_CALL" : "বেনামী কল",
   "YOUR_NUMBER_WILL_NOT_BE_SHOWN_TO_THE_DRIVER" : "আপনার নম্বর ড্রাইভারকে দেখানো হবে না",
   "YOUR_NUMBER_WILL_BE_VISIBLE_TO_THE_DRIVER_USE_IF_NOT_CALLING_FROM_REGISTERED_NUMBER" : "আপনার নম্বরটি ড্রাইভারের কাছে দৃশ্যমান হবে। নিবন্ধিত নম্বর থেকে কল না করলে ব্যবহার করুন",
-  "CALL_DRIVER_USING" : "ব্যবহার করে ড্রাইভারকে কল করুন:"
+  "CALL_DRIVER_USING" : "ব্যবহার করে ড্রাইভারকে কল করুন:",
+  "WAS_YOUR_CALL_SUCCESSFUL" : "আপনার কল সফল ছিল" 
 }

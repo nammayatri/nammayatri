@@ -82,7 +82,7 @@ messageButton push config =
   , height WRAP_CONTENT
   , orientation HORIZONTAL
   , gravity CENTER
-  , visibility if config.currentStage == RideAccepted && checkVersionForChat (getLatestAndroidVersion (getMerchant unit)) then VISIBLE else GONE
+  , visibility if config.currentStage == RideAccepted && checkVersionForChat (getCurrentAndroidVersion (getMerchant unit)) then VISIBLE else GONE
   , padding $ Padding 20 16 20 16
   , margin $ MarginLeft 16
   , background Color.white900
@@ -96,12 +96,12 @@ messageButton push config =
       ]
   ]
 
-getLatestAndroidVersion :: Merchant -> Int 
-getLatestAndroidVersion merchant = 
+getCurrentAndroidVersion :: Merchant -> Int 
+getCurrentAndroidVersion merchant = 
   case merchant of 
     NAMMAYATRIPARTNER -> 54
-    YATRIPARTNER -> 43 
-    JATRISAATHIDRIVER -> 2
+    YATRIPARTNER -> 47 
+    JATRISAATHIDRIVER -> 1
 
 checkVersionForChat :: Int -> Boolean
 checkVersionForChat reqVersion =

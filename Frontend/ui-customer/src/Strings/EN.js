@@ -282,6 +282,7 @@ const englishStrings = {
   "SHARE_RIDE_WITH_EMERGENCY_CONTACTS": "Share Ride with Emergency Contacts",
   "DO_YOU_NEED_EMERGENCY_HELP": "Do you need Emergency Help ?",
   "CALL_SUPPORT": "Call Support",
+  "YOU_ARE_ABOUT_TO_CALL_YATRI_SUPPORT": "You are about to place a call to the Yatri Support Team. Do you want to proceed?",
   "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT": "You are about to place a call to the Namma Yatri Support Team. Do you want to proceed?",
   "YOU_ARE_ABOUT_TO_CALL_POLICE": "You are about to place a call to the Police. Do you want to proceed?",
   "DAIL_100": "Dial 100?",
@@ -437,5 +438,7 @@ const englishStrings = {
   "ANONYMOUS_CALL" : "Anonymous Call",
   "YOUR_NUMBER_WILL_NOT_BE_SHOWN_TO_THE_DRIVER" : "Your number will not be shown to the driver",
   "YOUR_NUMBER_WILL_BE_VISIBLE_TO_THE_DRIVER_USE_IF_NOT_CALLING_FROM_REGISTERED_NUMBER" : "Your number will be visible to the driver. Use if not calling from registered number",
-  "CALL_DRIVER_USING" : "Call Driver using:"
+  "CALL_DRIVER_USING" : "Call Driver using:",
+  "WAS_YOUR_CALL_SUCCESSFUL" : "Was Your Call Successful"
+  
 }

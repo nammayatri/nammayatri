@@ -437,5 +437,7 @@ const hindiStrings = {
   "ANONYMOUS_CALL" : "अनाम कॉल",
   "YOUR_NUMBER_WILL_NOT_BE_SHOWN_TO_THE_DRIVER" : "आपका नंबर ड्राइवर पार्टनर को नहीं दिखाया जाएगा",
   "YOUR_NUMBER_WILL_BE_VISIBLE_TO_THE_DRIVER_USE_IF_NOT_CALLING_FROM_REGISTERED_NUMBER" : "आपका नंबर ड्राइवर को दिखाई देगा। अगर रजिस्टर्ड नंबर से कॉल नहीं कर रहे हैं तो इस्तेमाल करें",
-  "CALL_DRIVER_USING" : "ड्राइवर को कॉल करें:"
+  "CALL_DRIVER_USING" : "ड्राइवर को कॉल करें:",
+  "WAS_YOUR_CALL_SUCCESSFUL" : "क्या आपका कॉल सक्सेसफुल था" 
+
 }

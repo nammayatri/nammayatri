@@ -431,5 +431,6 @@ const kannadaStrings = {
   "ANONYMOUS_CALL" : "ಅನಾಮಧೇಯ ಕರೆ",
   "YOUR_NUMBER_WILL_NOT_BE_SHOWN_TO_THE_DRIVER" : "ನಿಮ್ಮ ಸಂಖ್ಯೆಯನ್ನು ಚಾಲಕನಿಗೆ ತೋರಿಸಲಾಗುವುದಿಲ್ಲ",
   "YOUR_NUMBER_WILL_BE_VISIBLE_TO_THE_DRIVER_USE_IF_NOT_CALLING_FROM_REGISTERED_NUMBER" : "ನಿಮ್ಮ ಸಂಖ್ಯೆ ಚಾಲಕನಿಗೆ ಗೋಚರಿಸುತ್ತದೆ. ನೋಂದಾಯಿತ ಸಂಖ್ಯೆಯಿಂದ ಕರೆ ಮಾಡದಿದ್ದರೆ ಬಳಸಿ",
-  "CALL_DRIVER_USING" : "ಇದನ್ನು ಬಳಸಿಕೊಂಡು ಚಾಲಕಕ್ಕೆ ಕರೆ ಮಾಡಿ:"
+  "CALL_DRIVER_USING" : "ಇದನ್ನು ಬಳಸಿಕೊಂಡು ಚಾಲಕಕ್ಕೆ ಕರೆ ಮಾಡಿ:",
+  "WAS_YOUR_CALL_SUCCESSFUL" : "ನಿಮ್ಮ ಕರೆ ಯಶಸ್ವಿಯಾಗಿದೆಯೇ"
 }

@@ -108,23 +108,42 @@ concatString arr = case uncons arr of
   Nothing -> ""
 
 -- IOS latest version : 1.2.4
-updatedIOSversion = {
-  majorUpdateIndex : 1,
-  minorUpdateIndex : 2,
-  patchUpdateIndex : 4
-}
+type IosVersion = {
+  majorUpdateIndex :: Int,
+  minorUpdateIndex :: Int,
+  patchUpdateIndex :: Int,
+  enableForceUpdateIOS :: Boolean
+} 
 
-enableForceUpdateIOS :: Boolean
-enableForceUpdateIOS = false
+getIosVersion :: Merchant -> IosVersion 
+getIosVersion merchant = 
+  case merchant of 
+    NAMMAYATRI -> { majorUpdateIndex : 1,
+                    minorUpdateIndex : 2,
+                    patchUpdateIndex : 4,
+                    enableForceUpdateIOS : false
+                  }
+    YATRI -> { majorUpdateIndex : 1,
+               minorUpdateIndex : 1,
+               patchUpdateIndex : 0,
+               enableForceUpdateIOS : true
+              }
+    JATRISAATHI -> { majorUpdateIndex : 0,
+                     minorUpdateIndex : 1,
+                     patchUpdateIndex : 0,
+                     enableForceUpdateIOS : false
+                    }
+
 
 checkVersion :: Int -> String -> FlowBT String Unit
 checkVersion versioncodeAndroid versionName= do
+  let updatedIOSversion = getIosVersion (getMerchant FunctionCall)
   if os /= "IOS" && versioncodeAndroid < (getLatestAndroidVersion (getMerchant FunctionCall)) then do
     lift $ lift $ doAff do liftEffect hideSplash
     _ <- UI.handleAppUpdatePopUp
     _ <- pure $ firebaseLogEvent "ny_user_app_update_pop_up_view"
     checkVersion versioncodeAndroid versionName
-    else if os == "IOS" && versionName /= "" && enableForceUpdateIOS then do
+    else if os == "IOS" && versionName /= "" && updatedIOSversion.enableForceUpdateIOS then do
 
       let versionArray = (split (Pattern ".") versionName)
           majorUpdateIndex = fromMaybe (-1) $ INT.fromString $ fromMaybe "NA" $ versionArray !! 0
@@ -132,7 +151,7 @@ checkVersion versioncodeAndroid versionName= do
           patchUpdateIndex = fromMaybe (-1) $ INT.fromString $ fromMaybe "NA" $ versionArray !! 2
 
       if any (_ == -1) [majorUpdateIndex, minorUpdateIndex, patchUpdateIndex] then pure unit
-        else if forceIOSupdate majorUpdateIndex minorUpdateIndex patchUpdateIndex  then do
+        else if forceIOSupdate majorUpdateIndex minorUpdateIndex patchUpdateIndex updatedIOSversion then do
           lift $ lift $ doAff do liftEffect hideSplash
           _ <- UI.handleAppUpdatePopUp
           _ <- pure $ firebaseLogEvent "ny_user_app_update_pop_up_view"
@@ -145,11 +164,11 @@ getLatestAndroidVersion :: Merchant -> Int
 getLatestAndroidVersion merchant = 
   case merchant of 
     NAMMAYATRI -> 31 
-    YATRI -> 45
+    YATRI -> 49
     JATRISAATHI -> 2
 
-forceIOSupdate :: Int -> Int -> Int -> Boolean
-forceIOSupdate c_maj c_min c_patch =
+forceIOSupdate :: Int -> Int -> Int -> IosVersion -> Boolean
+forceIOSupdate c_maj c_min c_patch updatedIOSversion=
   c_maj < updatedIOSversion.majorUpdateIndex ||
   c_min < updatedIOSversion.minorUpdateIndex ||
   c_patch < updatedIOSversion.patchUpdateIndex
