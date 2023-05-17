@@ -41,10 +41,6 @@ import Kernel.Types.Common hiding (id)
 import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
-import Storage.Tabular.Booking.BookingLocation hiding (createdAt, id, updatedAt)
-import qualified Storage.Tabular.FareParameters as Fare
-import Storage.Tabular.Merchant (MerchantTId)
-import Storage.Tabular.RiderDetails (RiderDetailsTId)
 import Storage.Tabular.Vehicle ()
 
 fromFieldEnum ::
@@ -55,7 +51,7 @@ fromFieldEnum ::
 fromFieldEnum f mbValue = case mbValue of
   Nothing -> DPSF.returnError UnexpectedNull f mempty
   Just value' ->
-    case (readMaybe (unpackChars value')) of
+    case readMaybe (unpackChars value') of
       Just val -> pure val
       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
 
@@ -196,8 +192,6 @@ instance ToJSON Booking where
   toJSON = A.genericToJSON A.defaultOptions
 
 deriving stock instance Show Booking
-
-deriving stock instance Read Money
 
 bookingTMod :: BookingT (B.FieldModification (B.TableField BookingT))
 bookingTMod =

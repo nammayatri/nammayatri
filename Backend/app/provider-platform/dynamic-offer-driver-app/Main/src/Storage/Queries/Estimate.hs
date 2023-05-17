@@ -43,41 +43,34 @@ createMany = Esq.createMany
 findById :: Transactionable m => Id Estimate -> m (Maybe Estimate)
 findById = Esq.findById
 
-findById' :: L.MonadFlow m => Id Estimate -> m (Maybe Estimate)
-findById' (Id estimateId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
-  case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamEstimateToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamE.id $ Se.Eq sstimateId]
-    Nothing -> pure Nothing
+-- transformBeamEstimateToDomain :: BeamE.Estimate -> Estimate
+-- transformBeamEstimateToDomain BeamE.EstimateT {..} = do
+--   Estimate
+--     { id = Id id,
+--       transactionId = transactionId,
+--       vehicleVariant = vehicleVariant,
+--       minFare = minFare,
+--       maxFare = maxFare,
+--       estimateBreakupList = estimateBreakupList,
+--       nightShiftRate = NightShiftRate nightShiftMultiplier nightShiftStart nightShiftEnd,
+--       waitingCharges = WaitingCharges waitingTimeEstimatedThreshold waitingChargePerMin waitingOrPickupCharges,
+--       createdAt = createdAt
+--     }
 
-transformBeamEstimateToDomain :: BeamE.Estimate -> Estimate
-transformBeamEstimateToDomain BeamE.EstimateT {..} = do
-  Estimate
-    { id = Id id,
-      transactionId = transactionId,
-      vehicleVariant = vehicleVariant,
-      minFare = minFare,
-      maxFare = maxFare,
-      estimateBreakupList = estimateBreakupList,
-      nightShiftRate = NightShiftRate nightShiftMultiplier nightShiftStart nightShiftEnd,
-      waitingCharges = WaitingCharges waitingTimeEstimatedThreshold waitingChargePerMin waitingOrPickupCharges,
-      createdAt = createdAt
-    }
-
-transformDomainEstimateToBeam :: Estimate -> BeamE.Estimate
-transformDomainEstimateToBeam Estimate {..} =
-  BeamE.defaultEstimate
-    { BeamE.id = getId id,
-      BeamE.transactionId = transactionId,
-      BeamE.vehicleVariant = vehicleVariant,
-      BeamE.minFare = minFare,
-      BeamE.maxFare = maxFare,
-      BeamE.estimateBreakupList = estimateBreakupList,
-      BeamE.nightShiftMultiplier = nightShiftMultiplier $ nightShiftRate,
-      BeamE.nightShiftStart = nightShiftStart $ nightShiftRate,
-      BeamE.nightShiftEnd = nightShiftEnd $ nightShiftRate,
-      BeamE.waitingTimeEstimatedThreshold = waitingTimeEstimatedThreshold $ waitingCharges,
-      BeamE.waitingChargePerMin = waitingChargePerMin $ waitingCharges,
-      BeamE.waitingOrPickupCharges = waitingOrPickupCharges $ waitingCharges,
-      BeamE.createdAt = createdAt
-    }
+-- transformDomainEstimateToBeam :: Estimate -> BeamE.Estimate
+-- transformDomainEstimateToBeam Estimate {..} =
+--   BeamE.defaultEstimate
+--     { BeamE.id = getId id,
+--       BeamE.transactionId = transactionId,
+--       BeamE.vehicleVariant = vehicleVariant,
+--       BeamE.minFare = minFare,
+--       BeamE.maxFare = maxFare,
+--       BeamE.estimateBreakupList = estimateBreakupList,
+--       BeamE.nightShiftMultiplier = nightShiftMultiplier $ nightShiftRate,
+--       BeamE.nightShiftStart = nightShiftStart $ nightShiftRate,
+--       BeamE.nightShiftEnd = nightShiftEnd $ nightShiftRate,
+--       BeamE.waitingTimeEstimatedThreshold = waitingTimeEstimatedThreshold $ waitingCharges,
+--       BeamE.waitingChargePerMin = waitingChargePerMin $ waitingCharges,
+--       BeamE.waitingOrPickupCharges = waitingOrPickupCharges $ waitingCharges,
+--       BeamE.createdAt = createdAt
+--     }

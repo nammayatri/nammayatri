@@ -49,81 +49,38 @@ findById fareParametersId = buildDType $ do
   res <- Esq.findById' @FareParametersT fareParametersId
   join <$> mapM buildFullFareParameters res
 
-transformBeamFareParametersToDomain :: BeamFP.FareParameters -> FareParameters
-transformBeamFareParametersToDomain BeamFP.FareParametersT {..} = do
-  FareParameters
-    { id = Id id,
-      baseFare = baseFare,
-      deadKmFare = deadKmFare,
-      extraKmFare = extraKmFare,
-      driverSelectedFare = driverSelectedFare,
-      customerExtraFee = customerExtraFee,
-      nightShiftRate = nightShiftRate,
-      nightCoefIncluded = nightCoefIncluded,
-      waitingChargePerMin = waitingChargePerMin,
-      waitingOrPickupCharges = waitingOrPickupCharges,
-      serviceCharge = serviceCharge,
-      farePolicyType = farePolicyType,
-      govtChargesPerc = govtChargesPerc
-    }
+-- transformBeamFareParametersToDomain :: BeamFP.FareParameters -> FareParameters
+-- transformBeamFareParametersToDomain BeamFP.FareParametersT {..} = do
+--   FareParameters
+--     { id = Id id,
+--       baseFare = baseFare,
+--       deadKmFare = deadKmFare,
+--       extraKmFare = extraKmFare,
+--       driverSelectedFare = driverSelectedFare,
+--       customerExtraFee = customerExtraFee,
+--       nightShiftRate = nightShiftRate,
+--       nightCoefIncluded = nightCoefIncluded,
+--       waitingChargePerMin = waitingChargePerMin,
+--       waitingOrPickupCharges = waitingOrPickupCharges,
+--       serviceCharge = serviceCharge,
+--       farePolicyType = farePolicyType,
+--       govtChargesPerc = govtChargesPerc
+--     }
 
-transformDomainFareParametersToBeam :: FareParameters -> BeamFP.FareParameters
-transformDomainFareParametersToBeam FareParameters {..} =
-  BeamFP.defaultFareParameters
-    { BeamFP.id = getId id,
-      BeamFP.baseFare = baseFare,
-      BeamFP.deadKmFare = deadKmFare,
-      BeamFP.extraKmFare = extraKmFare,
-      BeamFP.driverSelectedFare = driverSelectedFare,
-      BeamFP.customerExtraFee = customerExtraFee,
-      BeamFP.nightShiftRate = nightShiftRate,
-      BeamFP.nightCoefIncluded = nightCoefIncluded,
-      BeamFP.waitingChargePerMin = waitingChargePerMin,
-      BeamFP.waitingOrPickupCharges = waitingOrPickupCharges,
-      BeamFP.serviceCharge = serviceCharge,
-      BeamFP.farePolicyType = farePolicyType,
-      BeamFP.govtChargesPerc = govtChargesPerc
-    }
-
-findById' :: L.MonadFlow m => Id FareParameters -> m (Maybe FareParameters)
-findById' (Id fareParametersId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
-  case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamFareParametersToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamFP.id $ Se.Eq fareParametersId]
-    Nothing -> pure Nothing
-
-transformBeamFareParametersToDomain :: BeamFP.FareParameters -> FareParameters
-transformBeamFareParametersToDomain BeamFP.FareParametersT {..} = do
-  FareParameters
-    { id = Id id,
-      baseFare = baseFare,
-      deadKmFare = deadKmFare,
-      extraKmFare = extraKmFare,
-      driverSelectedFare = driverSelectedFare,
-      customerExtraFee = customerExtraFee,
-      nightShiftRate = nightShiftRate,
-      nightCoefIncluded = nightCoefIncluded,
-      waitingChargePerMin = waitingChargePerMin,
-      waitingOrPickupCharges = waitingOrPickupCharges,
-      serviceCharge = serviceCharge,
-      farePolicyType = farePolicyType,
-      govtChargesPerc = govtChargesPerc
-    }
-
-transformDomainFareParametersToBeam :: FareParameters -> BeamFP.FareParameters
-transformDomainFareParametersToBeam FareParameters {..} =
-  BeamFP.defaultFareParameters
-    { BeamFP.id = getId id,
-      BeamFP.baseFare = baseFare,
-      BeamFP.deadKmFare = deadKmFare,
-      BeamFP.extraKmFare = extraKmFare,
-      BeamFP.driverSelectedFare = driverSelectedFare,
-      BeamFP.customerExtraFee = customerExtraFee,
-      BeamFP.nightShiftRate = nightShiftRate,
-      BeamFP.nightCoefIncluded = nightCoefIncluded,
-      BeamFP.waitingChargePerMin = waitingChargePerMin,
-      BeamFP.waitingOrPickupCharges = waitingOrPickupCharges,
-      BeamFP.serviceCharge = serviceCharge,
-      BeamFP.farePolicyType = farePolicyType,
-      BeamFP.govtChargesPerc = govtChargesPerc
-    }
+-- transformDomainFareParametersToBeam :: FareParameters -> BeamFP.FareParameters
+-- transformDomainFareParametersToBeam FareParameters {..} =
+--   BeamFP.defaultFareParameters
+--     { BeamFP.id = getId id,
+--       BeamFP.baseFare = baseFare,
+--       BeamFP.deadKmFare = deadKmFare,
+--       BeamFP.extraKmFare = extraKmFare,
+--       BeamFP.driverSelectedFare = driverSelectedFare,
+--       BeamFP.customerExtraFee = customerExtraFee,
+--       BeamFP.nightShiftRate = nightShiftRate,
+--       BeamFP.nightCoefIncluded = nightCoefIncluded,
+--       BeamFP.waitingChargePerMin = waitingChargePerMin,
+--       BeamFP.waitingOrPickupCharges = waitingOrPickupCharges,
+--       BeamFP.serviceCharge = serviceCharge,
+--       BeamFP.farePolicyType = farePolicyType,
+--       BeamFP.govtChargesPerc = govtChargesPerc
+--     }

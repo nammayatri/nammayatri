@@ -124,7 +124,7 @@ data WaitingCharge = PerMinuteWaitingCharge HighPrecMoney | ConstantWaitingCharg
 data NightShiftCharge = ProgressiveNightShiftCharge Float | ConstantNightShiftCharge Money
   deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
 
-data FarePolicyType = Progressive | Slabs deriving (Show, Read)
+data FarePolicyType = Progressive | Slabs deriving (Show, Read, Generic, Eq)
 
 getFarePolicyType :: FarePolicy -> FarePolicyType
 getFarePolicyType farePolicy = case farePolicy.farePolicyDetails of

@@ -57,7 +57,9 @@ fromFieldEnum f mbValue = case mbValue of
 
 data DriverStatsT f = DriverStatsT
   { driverId :: B.C f Text,
-    idleSince :: B.C f Time.UTCTime
+    idleSince :: B.C f Time.UTCTime,
+    totalRides :: B.C f Int,
+    totalDistance :: B.C f Meters
   }
   deriving (Generic, B.Beamable)
 
@@ -82,11 +84,23 @@ instance ToJSON DriverStats where
 
 deriving stock instance Show DriverStats
 
+instance FromField Meters where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Meters where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Meters
+
+instance FromBackendRow Postgres Meters
+
 driverStatsTMod :: DriverStatsT (B.FieldModification (B.TableField DriverStatsT))
 driverStatsTMod =
   B.tableModification
     { driverId = B.fieldNamed "driver_id",
-      idleSince = B.fieldNamed "idle_since"
+      idleSince = B.fieldNamed "idle_since",
+      totalRides = B.fieldNamed "total_rides",
+      totalDistance = B.fieldNamed "total_distance"
     }
 
 psToHs :: HM.HashMap Text Text
@@ -106,7 +120,9 @@ defaultDriverStats :: DriverStats
 defaultDriverStats =
   DriverStatsT
     { driverId = "",
-      idleSince = defaultDate
+      idleSince = defaultUTCDate,
+      totalRides = 0,
+      totalDistance = 0
     }
 
 instance Serialize DriverStats where

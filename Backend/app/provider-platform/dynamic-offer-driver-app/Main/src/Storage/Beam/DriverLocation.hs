@@ -32,18 +32,15 @@ import Database.Beam.Postgres
   )
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
-import qualified Domain.Types.DriverLocation as Domain
-import Domain.Types.Person (Person)
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Storage.Esqueleto (Point (..))
 import Kernel.Types.Common hiding (id)
-import Kernel.Types.Id
+import Kernel.Types.Id hiding (Id)
 import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
-import Storage.Tabular.Person (PersonTId)
 
 fromFieldEnum ::
   (Typeable a, Read a) =>
@@ -53,7 +50,7 @@ fromFieldEnum ::
 fromFieldEnum f mbValue = case mbValue of
   Nothing -> DPSF.returnError UnexpectedNull f mempty
   Just value' ->
-    case (readMaybe (unpackChars value')) of
+    case readMaybe (unpackChars value') of
       Just val -> pure val
       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
 
@@ -105,6 +102,9 @@ instance ToJSON DriverLocation where
 
 deriving stock instance Show DriverLocation
 
+instance IsString Point where
+  fromString = show
+
 driverLocationTMod :: DriverLocationT (B.FieldModification (B.TableField DriverLocationT))
 driverLocationTMod =
   B.tableModification
@@ -134,12 +134,12 @@ defaultDriverLocation :: DriverLocation
 defaultDriverLocation =
   DriverLocationT
     { driverId = "",
-      lat = "",
-      lon = "",
+      lat = 0.0,
+      lon = 0.0,
       point = "",
-      coordinatesCalculatedAt = defaultUTCDate,
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
+      coordinatesCalculatedAt = defaultDate,
+      createdAt = defaultDate,
+      updatedAt = defaultDate
     }
 
 instance Serialize DriverLocation where

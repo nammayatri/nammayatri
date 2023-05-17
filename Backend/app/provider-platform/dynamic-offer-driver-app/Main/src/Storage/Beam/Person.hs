@@ -100,6 +100,9 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.Gender
 
 instance FromBackendRow Postgres Domain.Gender
 
+instance IsString Domain.Gender where
+  fromString = show
+
 instance FromField DbHash where
   fromField = fromFieldEnum
 
@@ -120,6 +123,9 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.Role
 
 instance FromBackendRow Postgres Domain.Role
 
+instance IsString Domain.Role where
+  fromString = show
+
 instance FromField FCMRecipientToken where
   fromField = fromFieldEnum
 
@@ -139,6 +145,9 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.IdentifierTy
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.IdentifierType
 
 instance FromBackendRow Postgres Domain.IdentifierType
+
+instance IsString Domain.IdentifierType where
+  fromString = show
 
 data PersonT f = PersonT
   { id :: B.C f Text,
@@ -202,15 +211,6 @@ deriving stock instance Ord Domain.Gender
 deriving stock instance Ord Domain.IdentifierType
 
 deriving stock instance Ord OptApiMethods
-
-instance IsString Domain.Role where
-  fromString = show
-
-instance IsString Domain.Gender where
-  fromString = show
-
-instance IsString Domain.IdentifierType where
-  fromString = show
 
 personTMod :: PersonT (B.FieldModification (B.TableField PersonT))
 personTMod =
@@ -285,8 +285,8 @@ defaultPerson =
       alternateMobileNumberEncrypted = Nothing,
       unencryptedAlternateMobileNumber = Nothing,
       alternateMobileNumberHash = Nothing,
-      createdAt = defaultDate,
-      updatedAt = defaultDate,
+      createdAt = defaultUTCDate,
+      updatedAt = defaultUTCDate,
       bundleVersion = Nothing,
       clientVersion = Nothing
     }

@@ -67,16 +67,6 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Variant.Variant
 
 instance FromBackendRow Postgres Variant.Variant
 
-instance FromField Centesimal where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Centesimal where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Centesimal
-
-instance FromBackendRow Postgres Centesimal
-
 -- instance FromField TimeOfDay where
 --   fromField = fromFieldEnum
 
@@ -96,16 +86,6 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be Seconds where
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Seconds
 
 instance FromBackendRow Postgres Seconds
-
-instance FromField HighPrecMoney where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be HighPrecMoney where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be HighPrecMoney
-
-instance FromBackendRow Postgres HighPrecMoney
 
 instance FromField Meters where
   fromField = fromFieldEnum
@@ -127,23 +107,29 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Money
 
 instance FromBackendRow Postgres Money
 
+instance FromField Domain.FarePolicyType where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.FarePolicyType where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.FarePolicyType
+
+instance FromBackendRow Postgres Domain.FarePolicyType
+
 data FarePolicyT f = FarePolicyT
   { id :: B.C f Text,
     merchantId :: B.C f Text,
     vehicleVariant :: B.C f Variant.Variant,
-    baseDistanceFare :: B.C f HighPrecMoney,
-    baseDistanceMeters :: B.C f Meters,
-    perExtraKmFare :: B.C f HighPrecMoney,
-    deadKmFare :: B.C f Money,
-    driverMinExtraFee :: B.C f Money,
-    driverMaxExtraFee :: B.C f Money,
+    farePolicyType :: B.C f Domain.FarePolicyType,
+    driverMinExtraFee :: B.C f (Maybe Money),
+    driverMaxExtraFee :: B.C f (Maybe Money),
+    serviceCharge :: B.C f (Maybe Money),
     nightShiftStart :: B.C f (Maybe TimeOfDay),
     nightShiftEnd :: B.C f (Maybe TimeOfDay),
-    nightShiftRate :: B.C f (Maybe Centesimal),
     maxAllowedTripDistance :: B.C f (Maybe Meters),
     minAllowedTripDistance :: B.C f (Maybe Meters),
-    waitingChargePerMin :: B.C f (Maybe Money),
-    waitingTimeEstimatedThreshold :: B.C f (Maybe Seconds),
+    govtCharges :: B.C f (Maybe Double),
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime
   }
@@ -155,10 +141,10 @@ instance IsString Meters where
 instance IsString Variant.Variant where
   fromString = show
 
-instance IsString HighPrecMoney where
+instance IsString Money where
   fromString = show
 
-instance IsString Money where
+instance IsString Domain.FarePolicyType where
   fromString = show
 
 instance B.Table FarePolicyT where
@@ -174,13 +160,21 @@ instance ModelMeta FarePolicyT where
 
 type FarePolicy = FarePolicyT Identity
 
-instance FromJSON FarePolicy where
+-- instance FromJSON FarePolicy where
+--   parseJSON = A.genericParseJSON A.defaultOptions
+
+-- instance ToJSON FarePolicy where
+--   toJSON = A.genericToJSON A.defaultOptions
+
+instance FromJSON Domain.FarePolicyType where
   parseJSON = A.genericParseJSON A.defaultOptions
 
-instance ToJSON FarePolicy where
+instance ToJSON Domain.FarePolicyType where
   toJSON = A.genericToJSON A.defaultOptions
 
 deriving stock instance Show FarePolicy
+
+deriving stock instance Ord Domain.FarePolicyType
 
 deriving stock instance Read Money
 
@@ -190,19 +184,15 @@ farePolicyTMod =
     { id = B.fieldNamed "id",
       merchantId = B.fieldNamed "merchant_id",
       vehicleVariant = B.fieldNamed "vehicle_variant",
-      baseDistanceFare = B.fieldNamed "base_distance_fare",
-      baseDistanceMeters = B.fieldNamed "base_distance_meters",
-      perExtraKmFare = B.fieldNamed "per_extra_km_fare",
-      deadKmFare = B.fieldNamed "dead_km_fare",
+      farePolicyType = B.fieldNamed "fare_policy_type",
       driverMinExtraFee = B.fieldNamed "driver_min_extra_fee",
       driverMaxExtraFee = B.fieldNamed "driver_max_extra_fee",
+      serviceCharge = B.fieldNamed "service_charge",
       nightShiftStart = B.fieldNamed "night_shift_start",
       nightShiftEnd = B.fieldNamed "night_shift_end",
-      nightShiftRate = B.fieldNamed "night_shift_rate",
       maxAllowedTripDistance = B.fieldNamed "max_allowed_trip_distance",
       minAllowedTripDistance = B.fieldNamed "min_allowed_trip_distance",
-      waitingChargePerMin = B.fieldNamed "waiting_charge_per_min",
-      waitingTimeEstimatedThreshold = B.fieldNamed "waiting_time_estimated_threshold",
+      govtCharges = B.fieldNamed "govt_charges",
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"
     }
@@ -226,21 +216,17 @@ defaultFarePolicy =
     { id = "",
       merchantId = "",
       vehicleVariant = "",
-      baseDistanceFare = "",
-      baseDistanceMeters = "",
-      perExtraKmFare = "",
-      deadKmFare = "",
-      driverMinExtraFee = "",
-      driverMaxExtraFee = "",
+      farePolicyType = "",
+      driverMinExtraFee = Nothing,
+      driverMaxExtraFee = Nothing,
+      serviceCharge = Nothing,
       nightShiftStart = Nothing,
       nightShiftEnd = Nothing,
-      nightShiftRate = Nothing,
       maxAllowedTripDistance = Nothing,
       minAllowedTripDistance = Nothing,
-      waitingChargePerMin = Nothing,
-      waitingTimeEstimatedThreshold = Nothing,
-      createdAt = defaultDate,
-      updatedAt = defaultDate
+      govtCharges = Nothing,
+      createdAt = defaultUTCDate,
+      updatedAt = defaultUTCDate
     }
 
 instance Serialize FarePolicy where

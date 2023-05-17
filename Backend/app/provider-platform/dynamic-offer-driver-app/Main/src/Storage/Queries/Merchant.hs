@@ -109,7 +109,6 @@ transformBeamMerchantToDomain BeamM.MerchantT {..} = do
       createdAt = createdAt,
       updatedAt = updatedAt,
       geofencingConfig = GeofencingConfig originRestriction destinationRestriction,
-      farePolicyType = farePolicyType,
       info = info
     }
 
@@ -137,6 +136,5 @@ transformDomainMerchantToBeam Merchant {..} =
       BeamM.updatedAt = updatedAt,
       BeamM.originRestriction = origin geofencingConfig,
       BeamM.destinationRestriction = destination geofencingConfig,
-      BeamM.farePolicyType = farePolicyType,
       BeamM.info = info
     }

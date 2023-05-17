@@ -55,16 +55,6 @@ fromFieldEnum f mbValue = case mbValue of
       Just val -> pure val
       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
 
-instance FromField Domain.FarePolicyType where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.FarePolicyType where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.FarePolicyType
-
-instance FromBackendRow Postgres Domain.FarePolicyType
-
 instance FromField Centesimal where
   fromField = fromFieldEnum
 
@@ -97,15 +87,11 @@ data FareParametersT f = FareParametersT
     waitingChargePerMin :: B.C f (Maybe Money),
     waitingOrPickupCharges :: B.C f (Maybe Money),
     serviceCharge :: B.C f (Maybe Money),
-    farePolicyType :: B.C f Domain.FarePolicyType,
     govtChargesPerc :: B.C f (Maybe Int)
   }
   deriving (Generic, B.Beamable)
 
 instance IsString Money where
-  fromString = show
-
-instance IsString Domain.FarePolicyType where
   fromString = show
 
 instance B.Table FareParametersT where
@@ -129,8 +115,6 @@ instance ToJSON FareParameters where
 
 deriving stock instance Show FareParameters
 
-deriving stock instance Ord Domain.FarePolicyType
-
 deriving stock instance Read Money
 
 fareParametersTMod :: FareParametersT (B.FieldModification (B.TableField FareParametersT))
@@ -147,7 +131,6 @@ fareParametersTMod =
       waitingChargePerMin = B.fieldNamed "waiting_charge_per_min",
       waitingOrPickupCharges = B.fieldNamed "waiting_or_pickup_charges",
       serviceCharge = B.fieldNamed "service_charge",
-      farePolicyType = B.fieldNamed "fare_policy_type",
       govtChargesPerc = B.fieldNamed "govt_charges_perc"
     }
 
@@ -178,7 +161,6 @@ defaultFareParameters =
       waitingChargePerMin = Nothing,
       waitingOrPickupCharges = Nothing,
       serviceCharge = Nothing,
-      farePolicyType = "",
       govtChargesPerc = Nothing
     }
 

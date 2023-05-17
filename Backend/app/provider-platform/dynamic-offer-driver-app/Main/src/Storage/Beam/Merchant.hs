@@ -32,7 +32,6 @@ import Database.Beam.Postgres
   )
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
-import qualified Domain.Types.FareParameters as Domain (FarePolicyType (..))
 import qualified Domain.Types.Merchant as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
@@ -55,16 +54,6 @@ fromFieldEnum f mbValue = case mbValue of
       Just val -> pure val
       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
 
-instance FromField Domain.FarePolicyType where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.FarePolicyType where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.FarePolicyType
-
-instance FromBackendRow Postgres Domain.FarePolicyType
-
 instance FromField GeoRestriction where
   fromField = fromFieldEnum
 
@@ -86,9 +75,6 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.Status
 instance FromBackendRow Postgres Domain.Status
 
 instance IsString Domain.Status where
-  fromString = show
-
-instance IsString Domain.FarePolicyType where
   fromString = show
 
 instance IsString GeoRestriction where
@@ -116,7 +102,6 @@ data MerchantT f = MerchantT
     updatedAt :: B.C f Time.UTCTime,
     originRestriction :: B.C f GeoRestriction,
     destinationRestriction :: B.C f GeoRestriction,
-    farePolicyType :: B.C f Domain.FarePolicyType,
     info :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
@@ -150,8 +135,6 @@ deriving stock instance Ord GeoRestriction
 
 deriving stock instance Eq GeoRestriction
 
-deriving stock instance Ord Domain.FarePolicyType
-
 merchantTMod :: MerchantT (B.FieldModification (B.TableField MerchantT))
 merchantTMod =
   B.tableModification
@@ -176,7 +159,6 @@ merchantTMod =
       updatedAt = B.fieldNamed "updated_at",
       originRestriction = B.fieldNamed "origin_restriction",
       destinationRestriction = B.fieldNamed "destination_restriction",
-      farePolicyType = B.fieldNamed "fare_policy_type",
       info = B.fieldNamed "info"
     }
 
@@ -213,11 +195,10 @@ defaultMerchant =
       verified = False,
       enabled = False,
       internalApiKey = "",
-      createdAt = defaultDate,
-      updatedAt = defaultDate,
+      createdAt = defaultUTCDate,
+      updatedAt = defaultUTCDate,
       originRestriction = "",
       destinationRestriction = "",
-      farePolicyType = "",
       info = Nothing
     }
 

@@ -123,12 +123,10 @@ psToHs = HM.empty
 
 driverFlowStatusToHSModifiers :: M.Map Text (A.Value -> A.Value)
 driverFlowStatusToHSModifiers =
-  M.fromList
-    []
+  M.empty
 
 driverFlowStatusToPSModifiers :: M.Map Text (A.Value -> A.Value)
 driverFlowStatusToPSModifiers =
-  M.fromList
-    []
+  M.empty
 
 $(enableKVPG ''DriverFlowStatusT ['personId] [])
