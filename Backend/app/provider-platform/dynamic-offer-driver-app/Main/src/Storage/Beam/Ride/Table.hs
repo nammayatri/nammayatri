@@ -66,15 +66,8 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Meters
 
 instance FromBackendRow Postgres Meters
 
-instance FromField Domain.RideStatus where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.RideStatus where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.RideStatus
-
-instance FromBackendRow Postgres Domain.RideStatus
+instance IsString Meters where
+  fromString = show
 
 instance FromField Money where
   fromField = fromFieldEnum
@@ -86,6 +79,22 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Money
 
 instance FromBackendRow Postgres Money
 
+instance IsString Money where
+  fromString = show
+
+instance FromField Domain.RideStatus where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.RideStatus where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.RideStatus
+
+instance FromBackendRow Postgres Domain.RideStatus
+
+instance IsString Domain.RideStatus where
+  fromString = show
+
 instance FromField HighPrecMeters where
   fromField = fromFieldEnum
 
@@ -95,6 +104,9 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be HighPrecMeters wher
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be HighPrecMeters
 
 instance FromBackendRow Postgres HighPrecMeters
+
+instance IsString HighPrecMeters where
+  fromString = show
 
 data RideT f = RideT
   { id :: B.C f Text,
@@ -107,17 +119,17 @@ data RideT f = RideT
     fare :: B.C f (Maybe Money),
     traveledDistance :: B.C f HighPrecMeters,
     chargeableDistance :: B.C f (Maybe Meters),
-    driverArrivalTime :: B.C f (Maybe Time.LocalTime),
-    tripStartTime :: B.C f (Maybe Time.LocalTime),
-    tripEndTime :: B.C f (Maybe Time.LocalTime),
+    driverArrivalTime :: B.C f (Maybe Time.UTCTime),
+    tripStartTime :: B.C f (Maybe Time.UTCTime),
+    tripEndTime :: B.C f (Maybe Time.UTCTime),
     tripStartLat :: B.C f (Maybe Double),
     tripStartLon :: B.C f (Maybe Double),
     tripEndLat :: B.C f (Maybe Double),
     tripEndLon :: B.C f (Maybe Double),
     fareParametersId :: B.C f (Maybe Text),
     distanceCalculationFailed :: B.C f (Maybe Bool),
-    createdAt :: B.C f Time.LocalTime,
-    updatedAt :: B.C f Time.LocalTime
+    createdAt :: B.C f Time.UTCTime,
+    updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -141,8 +153,6 @@ instance ToJSON Ride where
   toJSON = A.genericToJSON A.defaultOptions
 
 deriving stock instance Show Ride
-
-deriving stock instance Read Money
 
 rideTMod :: RideT (B.FieldModification (B.TableField RideT))
 rideTMod =
@@ -170,16 +180,46 @@ rideTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
+defaultTable :: Table
+defaultTable =
+  TableT
+    { id = "",
+      bookingId = "",
+      shortId = "",
+      status = "",
+      driverId = "",
+      otp = "",
+      trackingUrl = "",
+      fare = Nothing,
+      traveledDistance = "",
+      chargeableDistance = Nothing,
+      driverArrivalTime = Nothing,
+      tripStartTime = Nothing,
+      tripEndTime = Nothing,
+      tripStartLat = Nothing,
+      tripStartLon = Nothing,
+      tripEndLat = Nothing,
+      tripEndLon = Nothing,
+      fareParametersId = Nothing,
+      distanceCalculationFailed = Nothing,
+      createdAt = defaultUTCDate,
+      updatedAt = defaultUTCDate
+    }
+
+instance Serialize Table where
+  put = error "undefined"
+  get = error "undefined"
+
 psToHs :: HM.HashMap Text Text
 psToHs = HM.empty
 
-rideToHSModifiers :: M.Map Text (A.Value -> A.Value)
-rideToHSModifiers =
+tableToHSModifiers :: M.Map Text (A.Value -> A.Value)
+tableToHSModifiers =
   M.fromList
     []
 
-rideToPSModifiers :: M.Map Text (A.Value -> A.Value)
-rideToPSModifiers =
+tableToPSModifiers :: M.Map Text (A.Value -> A.Value)
+tableToPSModifiers =
   M.fromList
     []
 

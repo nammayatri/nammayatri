@@ -63,14 +63,12 @@ instance FromField Domain.IssueStatus where
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.IssueStatus where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be [Text] where
-  sqlValueSyntax = autoSqlValueSyntax
-
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.IssueStatus
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be [Text]
-
 instance FromBackendRow Postgres Domain.IssueStatus
+
+instance IsString Domain.IssueStatus where
+  fromString = show
 
 data IssueReportT f = IssueReportT
   { id :: B.C f Text,
@@ -82,9 +80,9 @@ data IssueReportT f = IssueReportT
     categoryId :: B.C f Text,
     optionId :: B.C f (Maybe Text),
     deleted :: B.C f Bool,
-    mediaFiles :: B.C f [Text],
-    createdAt :: B.C f Time.LocalTime,
-    updatedAt :: B.C f Time.LocalTime
+    mediaFiles :: B.C f MediaFileTId,
+    createdAt :: B.C f Time.UTCTime,
+    updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -125,6 +123,27 @@ issueReportTMod =
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"
     }
+
+defaultIssueReport :: IssueReport
+defaultIssueReport =
+  IssueReportT
+    { id = "",
+      driverId = "",
+      rideId = Nothing,
+      description = "",
+      assignee = Nothing,
+      status = "",
+      categoryId = "",
+      optionId = Nothing,
+      deleted = False,
+      mediaFiles = "",
+      createdAt = defaultUTCDate,
+      updatedAt = defaultUTCDate
+    }
+
+instance Serialize IssueReport where
+  put = error "undefined"
+  get = error "undefined"
 
 psToHs :: HM.HashMap Text Text
 psToHs = HM.empty

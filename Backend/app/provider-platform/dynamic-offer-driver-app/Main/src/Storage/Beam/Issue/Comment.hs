@@ -60,7 +60,7 @@ data CommentT f = CommentT
     issueReportId :: B.C f Text,
     authorId :: B.C f Text,
     comment :: B.C f Text,
-    createdAt :: B.C f Time.LocalTime
+    createdAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -94,6 +94,20 @@ commentTMod =
       comment = B.fieldNamed "comment",
       createdAt = B.fieldNamed "created_at"
     }
+
+defaultComment :: Comment
+defaultComment =
+  CommentT
+    { id = "",
+      issueReportId = "",
+      authorId = "",
+      comment = "",
+      createdAt = defaultUTCDate
+    }
+
+instance Serialize Comment where
+  put = error "undefined"
+  get = error "undefined"
 
 psToHs :: HM.HashMap Text Text
 psToHs = HM.empty

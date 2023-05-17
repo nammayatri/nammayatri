@@ -21,7 +21,7 @@ import qualified Data.Aeson as A
 import Data.ByteString.Internal (ByteString, unpackChars)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
-import Data.Serialize hiding (label)
+import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.Backend
@@ -56,15 +56,15 @@ fromFieldEnum f mbValue = case mbValue of
 
 data MessageT f = MessageT
   { id :: B.C f Text,
-    messageType :: B.C f Domain.MessageType,
+    messageType :: B.C f Text,
     title :: B.C f Text,
     description :: B.C f Text,
     shortDescription :: B.C f Text,
     label :: B.C f (Maybe Text),
     likeCount :: B.C f Int,
-    mediaFiles :: B.C f [Text],
+    mediaFiles :: B.C f Text,
     merchantId :: B.C f Text,
-    createdAt :: B.C f Time.LocalTime
+    createdAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -87,21 +87,7 @@ instance FromJSON Message where
 instance ToJSON Message where
   toJSON = A.genericToJSON A.defaultOptions
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be [Text] where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be [Text]
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.MessageType where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.MessageType
-
 deriving stock instance Show Message
-
-deriving stock instance Ord Domain.MessageType
-
-deriving stock instance Eq Domain.MessageType
 
 messageTMod :: MessageT (B.FieldModification (B.TableField MessageT))
 messageTMod =
@@ -117,6 +103,25 @@ messageTMod =
       merchantId = B.fieldNamed "merchant_id",
       createdAt = B.fieldNamed "created_at"
     }
+
+defaultMessage :: Message
+defaultMessage =
+  MessageT
+    { id = "",
+      messageType = "",
+      title = "",
+      description = "",
+      shortDescription = "",
+      label = Nothing,
+      likeCount = 0,
+      mediaFiles = "",
+      merchantId = "",
+      createdAt = defaultUTCDate
+    }
+
+instance Serialize Message where
+  put = error "undefined"
+  get = error "undefined"
 
 psToHs :: HM.HashMap Text Text
 psToHs = HM.empty

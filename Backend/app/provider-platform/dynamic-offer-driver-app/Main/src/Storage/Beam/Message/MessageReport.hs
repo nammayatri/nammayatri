@@ -56,16 +56,6 @@ fromFieldEnum f mbValue = case mbValue of
       Just val -> pure val
       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
 
-instance FromField Domain.MessageDynamicFieldsType where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.MessageDynamicFieldsType where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.MessageDynamicFieldsType
-
-instance FromBackendRow Postgres Domain.MessageDynamicFieldsType
-
 instance FromField Domain.DeliveryStatus where
   fromField = fromFieldEnum
 
@@ -76,6 +66,22 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.DeliveryStatus
 
 instance FromBackendRow Postgres Domain.DeliveryStatus
 
+instance IsString Domain.DeliveryStatus where
+  fromString = show
+
+instance FromField Domain.MessageDynamicFieldsType where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.MessageDynamicFieldsType where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.MessageDynamicFieldsType
+
+instance FromBackendRow Postgres Domain.MessageDynamicFieldsType
+
+instance IsString Domain.MessageDynamicFieldsType where
+  fromString = show
+
 data MessageReportT f = MessageReportT
   { messageId :: B.C f Text,
     driverId :: B.C f Text,
@@ -84,8 +90,8 @@ data MessageReportT f = MessageReportT
     likeStatus :: B.C f Bool,
     reply :: B.C f (Maybe Text),
     messageDynamicFields :: B.C f Domain.MessageDynamicFieldsType,
-    updatedAt :: B.C f Time.LocalTime,
-    createdAt :: B.C f Time.LocalTime
+    updatedAt :: B.C f Time.UTCTime,
+    createdAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -93,7 +99,7 @@ instance B.Table MessageReportT where
   data PrimaryKey MessageReportT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
-  primaryKey = Id . messageId
+  primaryKey = Id . driverId
 
 instance ModelMeta MessageReportT where
   modelFieldModification = messageReportTMod
@@ -110,10 +116,6 @@ instance ToJSON MessageReport where
 
 deriving stock instance Show MessageReport
 
-deriving stock instance Ord Domain.DeliveryStatus
-
-deriving stock instance Eq Domain.DeliveryStatus
-
 messageReportTMod :: MessageReportT (B.FieldModification (B.TableField MessageReportT))
 messageReportTMod =
   B.tableModification
@@ -127,6 +129,24 @@ messageReportTMod =
       updatedAt = B.fieldNamed "updated_at",
       createdAt = B.fieldNamed "created_at"
     }
+
+defaultMessageReport :: MessageReport
+defaultMessageReport =
+  MessageReportT
+    { messageId = "",
+      driverId = "",
+      deliveryStatus = "",
+      readStatus = False,
+      likeStatus = False,
+      reply = Nothing,
+      messageDynamicFields = "",
+      updatedAt = defaultUTCDate,
+      createdAt = defaultUTCDate
+    }
+
+instance Serialize MessageReport where
+  put = error "undefined"
+  get = error "undefined"
 
 psToHs :: HM.HashMap Text Text
 psToHs = HM.empty

@@ -65,8 +65,8 @@ data SearchReqLocationT f = SearchReqLocationT
     full_address :: B.C f (Maybe Text),
     areaCode :: B.C f (Maybe Text),
     area :: B.C f (Maybe Text),
-    createdAt :: B.C f Time.LocalTime,
-    updatedAt :: B.C f Time.LocalTime
+    createdAt :: B.C f Time.UTCTime,
+    updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -109,6 +109,29 @@ searchReqLocationTMod =
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"
     }
+
+defaultSearchReqLocation :: SearchReqLocation
+defaultSearchReqLocation =
+  SearchReqLocationT
+    { id = "",
+      lat = "",
+      lon = "",
+      street = Nothing,
+      door = Nothing,
+      city = Nothing,
+      state = Nothing,
+      country = Nothing,
+      building = Nothing,
+      full_address = Nothing,
+      areaCode = Nothing,
+      area = Nothing,
+      createdAt = defaultUTCDate,
+      updatedAt = defaultUTCDate
+    }
+
+instance Serialize SearchReqLocation where
+  put = error "undefined"
+  get = error "undefined"
 
 psToHs :: HM.HashMap Text Text
 psToHs = HM.empty

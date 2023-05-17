@@ -73,12 +73,15 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.ServiceName
 
 instance FromBackendRow Postgres Domain.ServiceName
 
+instance IsString Domain.ServiceName where
+  fromString = show
+
 data MerchantServiceConfigT f = MerchantServiceConfigT
   { merchantId :: B.C f Text,
     serviceName :: B.C f Domain.ServiceName,
     configJSON :: B.C f Text,
-    updatedAt :: B.C f Time.LocalTime,
-    createdAt :: B.C f Time.LocalTime
+    updatedAt :: B.C f Time.UTCTime,
+    createdAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -86,7 +89,7 @@ instance B.Table MerchantServiceConfigT where
   data PrimaryKey MerchantServiceConfigT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
-  primaryKey = Id . merchantId
+  primaryKey = Id . serviceName
 
 instance ModelMeta MerchantServiceConfigT where
   modelFieldModification = merchantServiceConfigTMod
@@ -112,6 +115,20 @@ merchantServiceConfigTMod =
       updatedAt = B.fieldNamed "updated_at",
       createdAt = B.fieldNamed "created_at"
     }
+
+defaultMerchantServiceConfig :: MerchantServiceConfig
+defaultMerchantServiceConfig =
+  MerchantServiceConfigT
+    { merchantId = "",
+      serviceName = "",
+      configJSON = "",
+      updatedAt = defaultUTCDate,
+      createdAt = defaultUTCDate
+    }
+
+instance Serialize MerchantServiceConfig where
+  put = error "undefined"
+  get = error "undefined"
 
 psToHs :: HM.HashMap Text Text
 psToHs = HM.empty

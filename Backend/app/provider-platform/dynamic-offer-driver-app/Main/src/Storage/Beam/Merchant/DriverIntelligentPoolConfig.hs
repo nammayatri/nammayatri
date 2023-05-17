@@ -57,6 +57,19 @@ fromFieldEnum f mbValue = case mbValue of
       Just val -> pure val
       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
 
+instance FromField Minutes where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Minutes where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Minutes
+
+instance FromBackendRow Postgres Minutes
+
+instance IsString Minutes where
+  fromString = show
+
 instance FromField SWC.SlidingWindowOptions where
   fromField = fromFieldEnum
 
@@ -67,15 +80,8 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be SWC.SlidingWindowOptions
 
 instance FromBackendRow Postgres SWC.SlidingWindowOptions
 
-instance FromField Minutes where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Minutes where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Minutes
-
-instance FromBackendRow Postgres Minutes
+instance IsString SWC.SlidingWindowOptions where
+  fromString = show
 
 data DriverIntelligentPoolConfigT f = DriverIntelligentPoolConfigT
   { merchantId :: B.C f Text,
@@ -93,8 +99,8 @@ data DriverIntelligentPoolConfigT f = DriverIntelligentPoolConfigT
     locationUpdateSampleTime :: B.C f Minutes,
     minLocationUpdates :: B.C f Int,
     defaultDriverSpeed :: B.C f Double,
-    createdAt :: B.C f Time.LocalTime,
-    updatedAt :: B.C f Time.LocalTime
+    createdAt :: B.C f Time.UTCTime,
+    updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -119,12 +125,6 @@ instance ToJSON DriverIntelligentPoolConfig where
 
 deriving stock instance Show DriverIntelligentPoolConfig
 
-deriving stock instance Ord SWC.SlidingWindowOptions
-
-deriving stock instance Eq SWC.SlidingWindowOptions
-
-deriving stock instance Ord PeriodType
-
 driverIntelligentPoolConfigTMod :: DriverIntelligentPoolConfigT (B.FieldModification (B.TableField DriverIntelligentPoolConfigT))
 driverIntelligentPoolConfigTMod =
   B.tableModification
@@ -146,6 +146,32 @@ driverIntelligentPoolConfigTMod =
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"
     }
+
+defaultDriverIntelligentPoolConfig :: DriverIntelligentPoolConfig
+defaultDriverIntelligentPoolConfig =
+  DriverIntelligentPoolConfigT
+    { merchantId = "",
+      availabilityTimeWeightage = 0,
+      availabilityTimeWindowOption = "",
+      acceptanceRatioWeightage = 0,
+      acceptanceRatioWindowOption = "",
+      cancellationRatioWeightage = 0,
+      cancellationRatioWindowOption = "",
+      minQuotesToQualifyForIntelligentPool = 0,
+      minQuotesToQualifyForIntelligentPoolWindowOption = "",
+      intelligentPoolPercentage = Nothing,
+      speedNormalizer = "",
+      driverSpeedWeightage = 0,
+      locationUpdateSampleTime = "",
+      minLocationUpdates = 0,
+      defaultDriverSpeed = "",
+      createdAt = defaultUTCDate,
+      updatedAt = defaultUTCDate
+    }
+
+instance Serialize DriverIntelligentPoolConfig where
+  put = error "undefined"
+  get = error "undefined"
 
 psToHs :: HM.HashMap Text Text
 psToHs = HM.empty

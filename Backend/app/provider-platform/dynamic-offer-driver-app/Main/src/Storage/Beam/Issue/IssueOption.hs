@@ -89,6 +89,18 @@ issueOptionTMod =
       option = B.fieldNamed "option"
     }
 
+defaultIssueOption :: IssueOption
+defaultIssueOption =
+  IssueOptionT
+    { id = "",
+      issueCategoryId = "",
+      option = ""
+    }
+
+instance Serialize IssueOption where
+  put = error "undefined"
+  get = error "undefined"
+
 psToHs :: HM.HashMap Text Text
 psToHs = HM.empty
 

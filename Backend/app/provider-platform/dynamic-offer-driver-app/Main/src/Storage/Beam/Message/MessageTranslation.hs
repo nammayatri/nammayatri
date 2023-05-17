@@ -21,7 +21,7 @@ import qualified Data.Aeson as A
 import Data.ByteString.Internal (ByteString, unpackChars)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
-import Data.Serialize hiding (label)
+import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.Backend
@@ -66,6 +66,9 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Language
 
 instance FromBackendRow Postgres Language
 
+instance IsString Language where
+  fromString = show
+
 data MessageTranslationT f = MessageTranslationT
   { messageId :: B.C f Text,
     language :: B.C f Language,
@@ -73,7 +76,7 @@ data MessageTranslationT f = MessageTranslationT
     description :: B.C f Text,
     shortDescription :: B.C f Text,
     label :: B.C f (Maybe Text),
-    createdAt :: B.C f Time.LocalTime
+    createdAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -81,7 +84,7 @@ instance B.Table MessageTranslationT where
   data PrimaryKey MessageTranslationT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
-  primaryKey = Id . messageId
+  primaryKey = Id . language
 
 instance ModelMeta MessageTranslationT where
   modelFieldModification = messageTranslationTMod
@@ -109,6 +112,22 @@ messageTranslationTMod =
       label = B.fieldNamed "label",
       createdAt = B.fieldNamed "created_at"
     }
+
+defaultMessageTranslation :: MessageTranslation
+defaultMessageTranslation =
+  MessageTranslationT
+    { messageId = "",
+      language = "",
+      title = "",
+      description = "",
+      shortDescription = "",
+      label = Nothing,
+      createdAt = defaultUTCDate
+    }
+
+instance Serialize MessageTranslation where
+  put = error "undefined"
+  get = error "undefined"
 
 psToHs :: HM.HashMap Text Text
 psToHs = HM.empty

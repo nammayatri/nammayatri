@@ -56,16 +56,6 @@ fromFieldEnum f mbValue = case mbValue of
       Just val -> pure val
       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
 
-instance FromField Meters where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Meters where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Meters
-
-instance FromBackendRow Postgres Meters
-
 instance FromField Vehicle.Variant where
   fromField = fromFieldEnum
 
@@ -76,6 +66,22 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Vehicle.Variant
 
 instance FromBackendRow Postgres Vehicle.Variant
 
+instance IsString Vehicle.Variant where
+  fromString = show
+
+instance FromField Meters where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Meters where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Meters
+
+instance FromBackendRow Postgres Meters
+
+instance IsString Meters where
+  fromString = show
+
 instance FromField Money where
   fromField = fromFieldEnum
 
@@ -85,6 +91,9 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be Money where
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Money
 
 instance FromBackendRow Postgres Money
+
+instance IsString Money where
+  fromString = show
 
 data RestrictedExtraFareT f = RestrictedExtraFareT
   { id :: B.C f Text,
@@ -116,8 +125,6 @@ instance ToJSON RestrictedExtraFare where
 
 deriving stock instance Show RestrictedExtraFare
 
-deriving stock instance Read Money
-
 restrictedExtraFareTMod :: RestrictedExtraFareT (B.FieldModification (B.TableField RestrictedExtraFareT))
 restrictedExtraFareTMod =
   B.tableModification
@@ -127,6 +134,20 @@ restrictedExtraFareTMod =
       minTripDistance = B.fieldNamed "min_trip_distance",
       driverMaxExtraFare = B.fieldNamed "driver_max_extra_fare"
     }
+
+defaultRestrictedExtraFare :: RestrictedExtraFare
+defaultRestrictedExtraFare =
+  RestrictedExtraFareT
+    { id = "",
+      merchantId = "",
+      vehicleVariant = "",
+      minTripDistance = "",
+      driverMaxExtraFare = ""
+    }
+
+instance Serialize RestrictedExtraFare where
+  put = error "undefined"
+  get = error "undefined"
 
 psToHs :: HM.HashMap Text Text
 psToHs = HM.empty

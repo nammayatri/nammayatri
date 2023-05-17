@@ -56,15 +56,18 @@ fromFieldEnum f mbValue = case mbValue of
       Just val -> pure val
       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
 
-instance FromField Meters where
+instance FromField Centesimal where
   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Meters where
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Centesimal where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Meters
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Centesimal
 
-instance FromBackendRow Postgres Meters
+instance FromBackendRow Postgres Centesimal
+
+instance IsString Centesimal where
+  fromString = show
 
 instance FromField Seconds where
   fromField = fromFieldEnum
@@ -76,15 +79,21 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Seconds
 
 instance FromBackendRow Postgres Seconds
 
-instance FromField Centesimal where
+instance IsString Seconds where
+  fromString = show
+
+instance FromField Meters where
   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Centesimal where
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Meters where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Centesimal
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Meters
 
-instance FromBackendRow Postgres Centesimal
+instance FromBackendRow Postgres Meters
+
+instance IsString Meters where
+  fromString = show
 
 data TransporterConfigT f = TransporterConfigT
   { merchantId :: B.C f Text,
@@ -110,8 +119,10 @@ data TransporterConfigT f = TransporterConfigT
     actualRideDistanceDiffThreshold :: B.C f Centesimal,
     upwardsRecomputeBuffer :: B.C f Centesimal,
     approxRideDistanceDiffThreshold :: B.C f Centesimal,
-    createdAt :: B.C f Time.LocalTime,
-    updatedAt :: B.C f Time.LocalTime
+    driverLeaderBoardExpiry :: B.C f (Maybe Seconds),
+    minLocationAccuracy :: B.C f Double,
+    createdAt :: B.C f Time.UTCTime,
+    updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -162,9 +173,47 @@ transporterConfigTMod =
       actualRideDistanceDiffThreshold = B.fieldNamed "actual_ride_distance_diff_threshold",
       upwardsRecomputeBuffer = B.fieldNamed "upwards_recompute_buffer",
       approxRideDistanceDiffThreshold = B.fieldNamed "approx_ride_distance_diff_threshold",
+      driverLeaderBoardExpiry = B.fieldNamed "driver_leader_board_expiry",
+      minLocationAccuracy = B.fieldNamed "min_location_accuracy",
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"
     }
+
+defaultTransporterConfig :: TransporterConfig
+defaultTransporterConfig =
+  TransporterConfigT
+    { merchantId = "",
+      pickupLocThreshold = "",
+      dropLocThreshold = "",
+      rideTimeEstimatedThreshold = "",
+      includeDriverCurrentlyOnRide = False,
+      defaultPopupDelay = "",
+      popupDelayToAddAsPenalty = Nothing,
+      thresholdCancellationScore = Nothing,
+      minRidesForCancellationScore = Nothing,
+      mediaFileUrlPattern = "",
+      mediaFileSizeUpperLimit = 0,
+      waitingTimeEstimatedThreshold = "",
+      referralLinkPassword = "",
+      fcmUrl = "",
+      fcmServiceAccount = "",
+      fcmTokenKeyPrefix = "",
+      onboardingTryLimit = 0,
+      onboardingRetryTimeInHours = 0,
+      checkImageExtractionForDashboard = False,
+      searchRepeatLimit = 0,
+      actualRideDistanceDiffThreshold = "",
+      upwardsRecomputeBuffer = "",
+      approxRideDistanceDiffThreshold = "",
+      driverLeaderBoardExpiry = Nothing,
+      minLocationAccuracy = "",
+      createdAt = defaultUTCDate,
+      updatedAt = defaultUTCDate
+    }
+
+instance Serialize TransporterConfig where
+  put = error "undefined"
+  get = error "undefined"
 
 psToHs :: HM.HashMap Text Text
 psToHs = HM.empty

@@ -64,12 +64,15 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.MessageKey
 
 instance FromBackendRow Postgres Domain.MessageKey
 
+instance IsString Domain.MessageKey where
+  fromString = show
+
 data MerchantMessageT f = MerchantMessageT
   { merchantId :: B.C f Text,
     messageKey :: B.C f Domain.MessageKey,
     message :: B.C f Text,
-    updatedAt :: B.C f Time.LocalTime,
-    createdAt :: B.C f Time.LocalTime
+    updatedAt :: B.C f Time.UTCTime,
+    createdAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -77,7 +80,7 @@ instance B.Table MerchantMessageT where
   data PrimaryKey MerchantMessageT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
-  primaryKey = Id . merchantId
+  primaryKey = Id . messageKey
 
 instance ModelMeta MerchantMessageT where
   modelFieldModification = merchantMessageTMod
@@ -103,6 +106,20 @@ merchantMessageTMod =
       updatedAt = B.fieldNamed "updated_at",
       createdAt = B.fieldNamed "created_at"
     }
+
+defaultMerchantMessage :: MerchantMessage
+defaultMerchantMessage =
+  MerchantMessageT
+    { merchantId = "",
+      messageKey = "",
+      message = "",
+      updatedAt = defaultUTCDate,
+      createdAt = defaultUTCDate
+    }
+
+instance Serialize MerchantMessage where
+  put = error "undefined"
+  get = error "undefined"
 
 psToHs :: HM.HashMap Text Text
 psToHs = HM.empty

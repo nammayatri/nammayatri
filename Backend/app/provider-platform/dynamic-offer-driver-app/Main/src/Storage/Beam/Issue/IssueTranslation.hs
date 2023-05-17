@@ -63,6 +63,9 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Language
 
 instance FromBackendRow Postgres Language
 
+instance IsString Language where
+  fromString = show
+
 data IssueTranslationT f = IssueTranslationT
   { id :: B.C f Text,
     sentence :: B.C f Text,
@@ -100,6 +103,19 @@ issueTranslationTMod =
       translation = B.fieldNamed "translation",
       language = B.fieldNamed "language"
     }
+
+defaultIssueTranslation :: IssueTranslation
+defaultIssueTranslation =
+  IssueTranslationT
+    { id = "",
+      sentence = "",
+      translation = "",
+      language = ""
+    }
+
+instance Serialize IssueTranslation where
+  put = error "undefined"
+  get = error "undefined"
 
 psToHs :: HM.HashMap Text Text
 psToHs = HM.empty

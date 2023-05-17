@@ -35,9 +35,7 @@ import Database.Beam.Postgres
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import qualified Domain.Types.Driver.DriverFlowStatus as Domain
-import Domain.Types.Merchant
 import Domain.Types.Person (Person)
-import Domain.Types.SearchRequest
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
@@ -55,7 +53,7 @@ fromFieldEnum ::
 fromFieldEnum f mbValue = case mbValue of
   Nothing -> DPSF.returnError UnexpectedNull f mempty
   Just value' ->
-    case readMaybe (unpackChars value') of
+    case (readMaybe (unpackChars value')) of
       Just val -> pure val
       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
 
@@ -69,10 +67,13 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.FlowStatus
 
 instance FromBackendRow Postgres Domain.FlowStatus
 
+instance IsString Domain.FlowStatus where
+  fromString = show
+
 data DriverFlowStatusT f = DriverFlowStatusT
   { personId :: B.C f Text,
     flowStatus :: B.C f Domain.FlowStatus,
-    updatedAt :: B.C f Time.LocalTime
+    updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -97,14 +98,6 @@ instance ToJSON DriverFlowStatus where
 
 deriving stock instance Show DriverFlowStatus
 
-deriving stock instance Ord Domain.FlowStatus
-
-deriving stock instance Read Domain.FlowStatus
-
--- deriving stock instance Read (SearchRequest)
-
--- deriving stock instance Read (Merchant)
-
 driverFlowStatusTMod :: DriverFlowStatusT (B.FieldModification (B.TableField DriverFlowStatusT))
 driverFlowStatusTMod =
   B.tableModification
@@ -112,6 +105,18 @@ driverFlowStatusTMod =
       flowStatus = B.fieldNamed "flow_status",
       updatedAt = B.fieldNamed "updated_at"
     }
+
+defaultDriverFlowStatus :: DriverFlowStatus
+defaultDriverFlowStatus =
+  DriverFlowStatusT
+    { personId = "",
+      flowStatus = "",
+      updatedAt = defaultUTCDate
+    }
+
+instance Serialize DriverFlowStatus where
+  put = error "undefined"
+  get = error "undefined"
 
 psToHs :: HM.HashMap Text Text
 psToHs = HM.empty

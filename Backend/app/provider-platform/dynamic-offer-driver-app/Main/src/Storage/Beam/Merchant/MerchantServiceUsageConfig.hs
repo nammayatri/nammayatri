@@ -59,16 +59,6 @@ fromFieldEnum f mbValue = case mbValue of
       Just val -> pure val
       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
 
-instance FromField MapsService where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be MapsService where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be MapsService
-
-instance FromBackendRow Postgres MapsService
-
 instance FromField VerificationService where
   fromField = fromFieldEnum
 
@@ -79,6 +69,22 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be VerificationService
 
 instance FromBackendRow Postgres VerificationService
 
+instance IsString VerificationService where
+  fromString = show
+
+instance FromField MapsService where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be MapsService where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be MapsService
+
+instance FromBackendRow Postgres MapsService
+
+instance IsString MapsService where
+  fromString = show
+
 instance FromField CallService where
   fromField = fromFieldEnum
 
@@ -87,17 +93,10 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be CallService where
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be CallService
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be [SmsService] where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be [SmsService]
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be [WhatsappService] where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be [WhatsappService]
-
 instance FromBackendRow Postgres CallService
+
+instance IsString CallService where
+  fromString = show
 
 data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
   { merchantId :: B.C f Text,
@@ -111,11 +110,11 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     getPlaceName :: B.C f MapsService,
     getPlaceDetails :: B.C f MapsService,
     autoComplete :: B.C f MapsService,
-    smsProvidersPriorityList :: B.C f [SmsService],
-    whatsappProvidersPriorityList :: B.C f [WhatsappService],
+    smsProvidersPriorityList :: B.C f SmsService,
+    whatsappProvidersPriorityList :: B.C f WhatsappService,
     verificationService :: B.C f VerificationService,
-    updatedAt :: B.C f Time.LocalTime,
-    createdAt :: B.C f Time.LocalTime
+    updatedAt :: B.C f Time.UTCTime,
+    createdAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -160,6 +159,31 @@ merchantServiceUsageConfigTMod =
       updatedAt = B.fieldNamed "updated_at",
       createdAt = B.fieldNamed "created_at"
     }
+
+defaultMerchantServiceUsageConfig :: MerchantServiceUsageConfig
+defaultMerchantServiceUsageConfig =
+  MerchantServiceUsageConfigT
+    { merchantId = "",
+      initiateCall = "",
+      getDistances = "",
+      getEstimatedPickupDistances = "",
+      getRoutes = "",
+      getPickupRoutes = "",
+      getTripRoutes = "",
+      snapToRoad = "",
+      getPlaceName = "",
+      getPlaceDetails = "",
+      autoComplete = "",
+      smsProvidersPriorityList = "",
+      whatsappProvidersPriorityList = "",
+      verificationService = "",
+      updatedAt = defaultUTCDate,
+      createdAt = defaultUTCDate
+    }
+
+instance Serialize MerchantServiceUsageConfig where
+  put = error "undefined"
+  get = error "undefined"
 
 psToHs :: HM.HashMap Text Text
 psToHs = HM.empty

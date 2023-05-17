@@ -88,6 +88,18 @@ issueCategoryTMod =
       logoUrl = B.fieldNamed "logo_url"
     }
 
+defaultIssueCategory :: IssueCategory
+defaultIssueCategory =
+  IssueCategoryT
+    { id = "",
+      category = "",
+      logoUrl = ""
+    }
+
+instance Serialize IssueCategory where
+  put = error "undefined"
+  get = error "undefined"
+
 psToHs :: HM.HashMap Text Text
 psToHs = HM.empty
 

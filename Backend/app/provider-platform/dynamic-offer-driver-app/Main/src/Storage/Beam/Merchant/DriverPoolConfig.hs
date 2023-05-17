@@ -41,7 +41,7 @@ import Kernel.Types.Common (Meters, Seconds)
 import Kernel.Types.Common hiding (id)
 import Lib.UtilsTH
 import Sequelize
-import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config (PoolSortingType (..))
+import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config (PoolSortingType)
 import Storage.Tabular.Merchant (MerchantTId)
 
 fromFieldEnum ::
@@ -56,15 +56,18 @@ fromFieldEnum f mbValue = case mbValue of
       Just val -> pure val
       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
 
-instance FromField Meters where
+instance FromField PoolSortingType where
   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Meters where
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be PoolSortingType where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Meters
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be PoolSortingType
 
-instance FromBackendRow Postgres Meters
+instance FromBackendRow Postgres PoolSortingType
+
+instance IsString PoolSortingType where
+  fromString = show
 
 instance FromField Seconds where
   fromField = fromFieldEnum
@@ -76,15 +79,21 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Seconds
 
 instance FromBackendRow Postgres Seconds
 
-instance FromField PoolSortingType where
+instance IsString Seconds where
+  fromString = show
+
+instance FromField Meters where
   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be PoolSortingType where
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Meters where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be PoolSortingType
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Meters
 
-instance FromBackendRow Postgres PoolSortingType
+instance FromBackendRow Postgres Meters
+
+instance IsString Meters where
+  fromString = show
 
 data DriverPoolConfigT f = DriverPoolConfigT
   { merchantId :: B.C f Text,
@@ -105,8 +114,8 @@ data DriverPoolConfigT f = DriverPoolConfigT
     radiusShrinkValueForDriversOnRide :: B.C f Int,
     driverToDestinationDistanceThreshold :: B.C f Meters,
     driverToDestinationDuration :: B.C f Seconds,
-    createdAt :: B.C f Time.LocalTime,
-    updatedAt :: B.C f Time.LocalTime
+    createdAt :: B.C f Time.UTCTime,
+    updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -114,7 +123,7 @@ instance B.Table DriverPoolConfigT where
   data PrimaryKey DriverPoolConfigT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
-  primaryKey = Id . merchantId
+  primaryKey = Id . tripDistance
 
 instance ModelMeta DriverPoolConfigT where
   modelFieldModification = driverPoolConfigTMod
@@ -130,10 +139,6 @@ instance ToJSON DriverPoolConfig where
   toJSON = A.genericToJSON A.defaultOptions
 
 deriving stock instance Show DriverPoolConfig
-
-deriving stock instance Ord PoolSortingType
-
-deriving stock instance Eq PoolSortingType
 
 driverPoolConfigTMod :: DriverPoolConfigT (B.FieldModification (B.TableField DriverPoolConfigT))
 driverPoolConfigTMod =
@@ -159,6 +164,35 @@ driverPoolConfigTMod =
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"
     }
+
+defaultDriverPoolConfig :: DriverPoolConfig
+defaultDriverPoolConfig =
+  DriverPoolConfigT
+    { merchantId = "",
+      minRadiusOfSearch = "",
+      maxRadiusOfSearch = "",
+      radiusStepSize = "",
+      driverPositionInfoExpiry = Nothing,
+      actualDistanceThreshold = Nothing,
+      maxDriverQuotesRequired = 0,
+      maxParallelSearchRequests = 0,
+      driverQuoteLimit = 0,
+      driverRequestCountLimit = 0,
+      driverBatchSize = 0,
+      maxNumberOfBatches = 0,
+      poolSortingType = "",
+      singleBatchProcessTime = "",
+      tripDistance = "",
+      radiusShrinkValueForDriversOnRide = 0,
+      driverToDestinationDistanceThreshold = "",
+      driverToDestinationDuration = "",
+      createdAt = defaultUTCDate,
+      updatedAt = defaultUTCDate
+    }
+
+instance Serialize DriverPoolConfig where
+  put = error "undefined"
+  get = error "undefined"
 
 psToHs :: HM.HashMap Text Text
 psToHs = HM.empty
