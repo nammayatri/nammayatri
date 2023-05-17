@@ -15,6 +15,7 @@
 module Storage.Queries.CallStatus where
 
 import qualified Data.Text as T
+import qualified Database.Beam.Postgres as DP
 import Database.Beam (insertExpressions)
 import qualified Debug.Trace as T
 import Domain.Types.CallStatus as DCS
@@ -23,6 +24,8 @@ import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
+import qualified EulerHS.Types as ET
+import qualified Kernel.Beam.Types as KBT
 import qualified Kernel.External.Call.Interface.Types as Call
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
@@ -53,12 +56,10 @@ create callStatus = do
 -- findById :: Transactionable m => Id CallStatus -> m (Maybe CallStatus)
 -- findById = Esq.findById
 
-findById :: L.MonadFlow m => Id DCS.CallStatus -> m (Maybe DCS.CallStatus)
-findById (Id.Id callStatusId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
-  case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamCallStatusToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamCS.id $ Se.Eq callStatusId]
-    Nothing -> pure Nothing
+findById' :: (L.MonadFlow m) => Id CallStatus -> KBT.BeamFlow m (Maybe CallStatus)
+findById' (Id callStatusId) = do
+  KBT.BeamState {..} <- ask
+  either (pure Nothing) (transformBeamCallStatusToDomain <$>) <$> KV.findWithKVConnector dbConf VN.meshConfig [Se.Is BeamCT.id $ Se.Eq callStatusId]
 
 findByCallSid :: L.MonadFlow m => Text -> m (Maybe DCS.CallStatus)
 findByCallSid callSid = do

@@ -3038,11 +3038,11 @@
         "systems": "systems_2"
       },
       "locked": {
-        "lastModified": 1683754408,
-        "narHash": "sha256-ugXRYIj0AI3Rp5hQz8ZTdMvJBRwquwspUnLZf8C3Sdw=",
+        "lastModified": 1684323930,
+        "narHash": "sha256-fqoB2WQuPMP2txQFKMBEb5yQyDhuCaemohvbrPQZDr4=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "292362f989c503942e52197685d6d7dba3b70664",
+        "rev": "2b722f8596a2197823961806526942fe21882558",
         "type": "github"
       },
       "original": {
