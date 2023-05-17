@@ -15,12 +15,15 @@
 module Storage.Queries.CallStatus where
 
 import qualified Data.Text as T
+import qualified Database.Beam.Postgres as DP
 import qualified Debug.Trace as T
 import Domain.Types.CallStatus
 import Domain.Types.Ride
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
+import qualified EulerHS.Types as ET
+import qualified Kernel.Beam.Types as KBT
 import qualified Kernel.External.Call.Interface.Types as Call
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
@@ -37,12 +40,10 @@ create callStatus = void $ Esq.createUnique callStatus
 findById :: Transactionable m => Id CallStatus -> m (Maybe CallStatus)
 findById = Esq.findById
 
-findById' :: L.MonadFlow m => Id CallStatus -> m (Maybe CallStatus)
+findById' :: (L.MonadFlow m) => Id CallStatus -> KBT.BeamFlow m (Maybe CallStatus)
 findById' (Id callStatusId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
-  case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamCallStatusToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamCT.id $ Se.Eq callStatusId]
-    Nothing -> pure Nothing
+  KBT.BeamState {..} <- ask
+  either (pure Nothing) (transformBeamCallStatusToDomain <$>) <$> KV.findWithKVConnector dbConf VN.meshConfig [Se.Is BeamCT.id $ Se.Eq callStatusId]
 
 findByCallSid :: Transactionable m => Text -> m (Maybe CallStatus)
 findByCallSid callSid =
