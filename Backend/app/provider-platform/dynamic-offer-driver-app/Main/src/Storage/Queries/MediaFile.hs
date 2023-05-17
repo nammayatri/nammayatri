@@ -42,12 +42,12 @@ create = Esq.create
 findById :: Transactionable m => Id MediaFile -> m (Maybe MediaFile)
 findById = Esq.findById
 
--- findById' :: L.MonadFlow m => Id MediaFile -> m (Maybe MediaFile)
--- findById' (Id mediaFileId) = do
---   dbConf <- L.getOption Extra.EulerPsqlDbCfg
---   case dbConf of
---     Just dbCOnf' -> either (pure Nothing) (transformBeamMediaFileToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamMF.id $ Se.Eq mediaFileId]
---     Nothing -> pure Nothing
+findById' :: L.MonadFlow m => Id MediaFile -> m (Maybe MediaFile)
+findById' (Id mediaFileId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure Nothing) (transformBeamMediaFileToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamMF.id $ Se.Eq mediaFileId]
+    Nothing -> pure Nothing
 
 findAllIn :: Transactionable m => [Id MediaFile] -> m [MediaFile]
 findAllIn mfList =

@@ -96,12 +96,12 @@ findById ::
   m (Maybe Person)
 findById = Esq.findById
 
--- findById' :: L.MonadFlow m => Id Person -> m (Maybe Person)
--- findById' (Id personId) = do
---   dbConf <- L.getOption Extra.EulerPsqlDbCfg
---   case dbConf of
---     Just dbCOnf' -> either (pure Nothing) (transformBeamPersonToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamP.id $ Se.Eq personId]
---     Nothing -> pure Nothing
+findById' :: L.MonadFlow m => Id Person -> m (Maybe Person)
+findById' (Id personId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure Nothing) (transformBeamPersonToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamP.id $ Se.Eq personId]
+    Nothing -> pure Nothing
 
 data FullDriver = FullDriver
   { person :: Person,

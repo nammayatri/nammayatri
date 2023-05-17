@@ -65,7 +65,7 @@ findByCallSid :: L.MonadFlow m => Text -> m (Maybe DCS.CallStatus)
 findByCallSid callSid = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamCallStatusToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BCS.callId $ Se.Eq callSid]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamCallStatusToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamCS.callId $ Se.Eq callSid]
     Nothing -> pure Nothing
 
 -- findByCallSid' :: Transactionable m => Text -> m (Maybe CallStatus)
@@ -95,11 +95,11 @@ updateCallStatus (Id.Id callId) status conversationDuration recordingUrl = do
       KV.updateWoReturningWithKVConnector
         dbConf'
         VN.meshConfig
-        [ Set BCS.conversationDuration conversationDuration,
-          Set BCS.recordingUrl $ Just (showBaseUrl recordingUrl),
-          Set BCS.status status
+        [ Set BeamCS.conversationDuration conversationDuration,
+          Set BeamCS.recordingUrl $ Just (showBaseUrl recordingUrl),
+          Set BeamCS.status status
         ]
-        [Is BCS.callId (Se.Eq callId)]
+        [Is BeamCS.callId (Se.Eq callId)]
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 countCallsByRideId :: Transactionable m => Id Ride -> m Int
@@ -110,7 +110,7 @@ countCallsByRideId rideId = (fromMaybe 0 <$>) $
     groupBy $ callStatus ^. CallStatusRideId
     pure $ count @Int $ callStatus ^. CallStatusTId
 
-transformBeamCallStatusToDomain :: BeamCS.CallStatus -> CallStatus
+transformBeamCallStatusToDomain :: BeamCS.CallStatus -> DCS.CallStatus
 transformBeamCallStatusToDomain BeamCS.CallStatusT {..} = do
   CallStatus
     { id = Id.Id id,
