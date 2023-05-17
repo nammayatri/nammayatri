@@ -41,7 +41,6 @@ import Kernel.Types.Common
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.SlidingWindowCounters (PeriodType)
 import qualified Kernel.Types.SlidingWindowCounters as SWC
-import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Merchant (MerchantTId)
@@ -148,6 +147,12 @@ driverIntelligentPoolConfigTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
+instance IsString SWC.SlidingWindowOptions where
+  fromString = show
+
+instance IsString Minutes where
+  fromString = show
+
 defaultDriverIntelligentPoolConfig :: DriverIntelligentPoolConfig
 defaultDriverIntelligentPoolConfig =
   DriverIntelligentPoolConfigT
@@ -161,11 +166,11 @@ defaultDriverIntelligentPoolConfig =
       minQuotesToQualifyForIntelligentPool = 0,
       minQuotesToQualifyForIntelligentPoolWindowOption = "",
       intelligentPoolPercentage = Nothing,
-      speedNormalizer = 0.0,
+      speedNormalizer = "",
       driverSpeedWeightage = 0,
       locationUpdateSampleTime = "",
       minLocationUpdates = 0,
-      defaultDriverSpeed = 0.0,
+      defaultDriverSpeed = "",
       createdAt = defaultUTCDate,
       updatedAt = defaultUTCDate
     }
@@ -186,37 +191,5 @@ driverIntelligentPoolConfigToPSModifiers :: M.Map Text (A.Value -> A.Value)
 driverIntelligentPoolConfigToPSModifiers =
   M.fromList
     []
-
-instance IsString SWC.SlidingWindowOptions where
-  fromString = show
-
-instance IsString Minutes where
-  fromString = show
-
-defaultDriverIntelligentPoolConfig :: DriverIntelligentPoolConfig
-defaultDriverIntelligentPoolConfig =
-  DriverIntelligentPoolConfigT
-    { merchantId = "",
-      availabilityTimeWeightage = 0,
-      availabilityTimeWindowOption = "",
-      acceptanceRatioWeightage = 0,
-      acceptanceRatioWindowOption = "",
-      cancellationRatioWeightage = 0,
-      cancellationRatioWindowOption = "",
-      minQuotesToQualifyForIntelligentPool = 0,
-      minQuotesToQualifyForIntelligentPoolWindowOption = "",
-      intelligentPoolPercentage = Nothing,
-      speedNormalizer = 0.0,
-      driverSpeedWeightage = 0,
-      locationUpdateSampleTime = "",
-      minLocationUpdates = 0,
-      defaultDriverSpeed = 0.0,
-      createdAt = defaultDate,
-      updatedAt = defaultDate
-    }
-
-instance Serialize DriverIntelligentPoolConfig where
-  put = error "undefined"
-  get = error "undefined"
 
 $(enableKVPG ''DriverIntelligentPoolConfigT ['merchantId] [])

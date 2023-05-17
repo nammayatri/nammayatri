@@ -37,7 +37,6 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.MediaFile (MediaFileTId)
@@ -90,13 +89,6 @@ instance ToJSON Message where
 
 deriving stock instance Show Message
 
-deriving stock instance Ord Domain.MessageType
-
-deriving stock instance Eq Domain.MessageType
-
-instance IsString Domain.MessageType where
-  fromString = show
-
 messageTMod :: MessageT (B.FieldModification (B.TableField MessageT))
 messageTMod =
   B.tableModification
@@ -111,6 +103,7 @@ messageTMod =
       merchantId = B.fieldNamed "merchant_id",
       createdAt = B.fieldNamed "created_at"
     }
+
 
 defaultMessage :: Message
 defaultMessage =
@@ -127,7 +120,7 @@ defaultMessage =
       createdAt = defaultUTCDate
     }
 
-instance Se.Serialize Message where
+instance Serialize Message where
   put = error "undefined"
   get = error "undefined"
 
@@ -143,24 +136,5 @@ messageToPSModifiers :: M.Map Text (A.Value -> A.Value)
 messageToPSModifiers =
   M.fromList
     []
-
-defaultMessage :: Message
-defaultMessage =
-  MessageT
-    { id = "",
-      messageType = "",
-      title = "",
-      description = "",
-      shortDescription = "",
-      label = Nothing,
-      likeCount = 0,
-      mediaFiles = [""],
-      merchantId = "",
-      createdAt = defaultDate
-    }
-
-instance Serialize Message where
-  put = error "undefined"
-  get = error "undefined"
 
 $(enableKVPG ''MessageT ['id] [])

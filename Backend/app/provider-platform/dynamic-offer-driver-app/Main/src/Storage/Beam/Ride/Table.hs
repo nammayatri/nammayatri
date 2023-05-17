@@ -38,7 +38,6 @@ import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common (HighPrecMeters, Meters, Money)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Booking (BookingTId)
@@ -183,48 +182,6 @@ rideTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-defaultRide :: Ride
-defaultRide =
-  RideT
-    { id = "",
-      bookingId = "",
-      shortId = "",
-      status = "",
-      driverId = "",
-      otp = "",
-      trackingUrl = "",
-      fare = Nothing,
-      traveledDistance = "",
-      chargeableDistance = Nothing,
-      driverArrivalTime = Nothing,
-      tripStartTime = Nothing,
-      tripEndTime = Nothing,
-      tripStartLat = Nothing,
-      tripStartLon = Nothing,
-      tripEndLat = Nothing,
-      tripEndLon = Nothing,
-      fareParametersId = Nothing,
-      distanceCalculationFailed = Nothing,
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
-    }
-
-instance Serialize Ride where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-rideToHSModifiers :: M.Map Text (A.Value -> A.Value)
-rideToHSModifiers =
-  M.fromList
-    []
-
-rideToPSModifiers :: M.Map Text (A.Value -> A.Value)
-rideToPSModifiers =
-  M.fromList
-    []
 
 instance IsString Domain.RideStatus where
   fromString = show
@@ -260,12 +217,25 @@ defaultRide =
       tripEndLon = Nothing,
       fareParametersId = Nothing,
       distanceCalculationFailed = Nothing,
-      createdAt = defaultDate,
-      updatedAt = defaultDate
+      createdAt = defaultUTCDate,
+      updatedAt = defaultUTCDate
     }
 
-instance Serialize Ride where
+instance Serialize Table where
   put = error "undefined"
   get = error "undefined"
+
+psToHs :: HM.HashMap Text Text
+psToHs = HM.empty
+
+tableToHSModifiers :: M.Map Text (A.Value -> A.Value)
+tableToHSModifiers =
+  M.fromList
+    []
+
+tableToPSModifiers :: M.Map Text (A.Value -> A.Value)
+tableToPSModifiers =
+  M.fromList
+    []
 
 $(enableKVPG ''RideT ['id] [])

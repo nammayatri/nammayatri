@@ -40,7 +40,6 @@ import qualified Kernel.External.FCM.Types as FCM
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Merchant (MerchantTId)
@@ -180,54 +179,6 @@ transporterConfigTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-defaultTransporterConfig :: TransporterConfig
-defaultTransporterConfig =
-  TransporterConfigT
-    { merchantId = "",
-      pickupLocThreshold = "",
-      dropLocThreshold = "",
-      rideTimeEstimatedThreshold = "",
-      includeDriverCurrentlyOnRide = False,
-      defaultPopupDelay = "",
-      popupDelayToAddAsPenalty = Nothing,
-      thresholdCancellationScore = Nothing,
-      minRidesForCancellationScore = Nothing,
-      mediaFileUrlPattern = "",
-      mediaFileSizeUpperLimit = 0,
-      waitingTimeEstimatedThreshold = "",
-      referralLinkPassword = "",
-      fcmUrl = "",
-      fcmServiceAccount = "",
-      fcmTokenKeyPrefix = "",
-      onboardingTryLimit = 0,
-      onboardingRetryTimeInHours = 0,
-      checkImageExtractionForDashboard = False,
-      searchRepeatLimit = 0,
-      actualRideDistanceDiffThreshold = "",
-      upwardsRecomputeBuffer = "",
-      approxRideDistanceDiffThreshold = "",
-      driverLeaderBoardExpiry = Nothing,
-      minLocationAccuracy = 0.0,
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
-    }
-
-instance Serialize TransporterConfig where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-transporterConfigToHSModifiers :: M.Map Text (A.Value -> A.Value)
-transporterConfigToHSModifiers =
-  M.fromList
-    []
-
-transporterConfigToPSModifiers :: M.Map Text (A.Value -> A.Value)
-transporterConfigToPSModifiers =
-  M.fromList
-    []
 
 instance IsString Meters where
   fromString = show
@@ -264,12 +215,27 @@ defaultTransporterConfig =
       actualRideDistanceDiffThreshold = "",
       upwardsRecomputeBuffer = "",
       approxRideDistanceDiffThreshold = "",
-      createdAt = defaultDate,
-      updatedAt = defaultDate
+      driverLeaderBoardExpiry = Nothing,
+      minLocationAccuracy = "",
+      createdAt = defaultUTCDate,
+      updatedAt = defaultUTCDate
     }
 
 instance Serialize TransporterConfig where
   put = error "undefined"
   get = error "undefined"
+
+psToHs :: HM.HashMap Text Text
+psToHs = HM.empty
+
+transporterConfigToHSModifiers :: M.Map Text (A.Value -> A.Value)
+transporterConfigToHSModifiers =
+  M.fromList
+    []
+
+transporterConfigToPSModifiers :: M.Map Text (A.Value -> A.Value)
+transporterConfigToPSModifiers =
+  M.fromList
+    []
 
 $(enableKVPG ''TransporterConfigT ['merchantId] [])

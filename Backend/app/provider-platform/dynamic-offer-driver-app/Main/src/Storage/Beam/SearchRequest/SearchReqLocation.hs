@@ -37,7 +37,6 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 
@@ -115,8 +114,8 @@ defaultSearchReqLocation :: SearchReqLocation
 defaultSearchReqLocation =
   SearchReqLocationT
     { id = "",
-      lat = 0.0,
-      lon = 0.0,
+      lat = "",
+      lon = "",
       street = Nothing,
       door = Nothing,
       city = Nothing,
@@ -146,28 +145,5 @@ searchReqLocationToPSModifiers :: M.Map Text (A.Value -> A.Value)
 searchReqLocationToPSModifiers =
   M.fromList
     []
-
-defaultSearchReqLocation :: SearchReqLocation
-defaultSearchReqLocation =
-  SearchReqLocationT
-    { id = "",
-      lat = 0.0,
-      lon = 0.0,
-      street = Nothing,
-      door = Nothing,
-      city = Nothing,
-      state = Nothing,
-      country = Nothing,
-      building = Nothing,
-      full_address = Nothing,
-      areaCode = Nothing,
-      area = Nothing,
-      createdAt = defaultDate,
-      updatedAt = defaultDate
-    }
-
-instance Serialize SearchReqLocation where
-  put = error "undefined"
-  get = error "undefined"
 
 $(enableKVPG ''SearchReqLocationT ['id] [])
