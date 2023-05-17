@@ -14,7 +14,7 @@
 
 module Storage.Queries.FareParameters where
 
-import Domain.Types.FareParameters
+import Domain.Types.FareParameters as DFP
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
@@ -29,6 +29,13 @@ import Storage.Tabular.FareParameters ()
 
 create :: FareParameters -> SqlDB ()
 create = Esq.create
+
+create' :: L.MonadFlow m => DFP.FareParameters -> m (MeshResult ())
+create' fareParameters = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainFareParametersToBeam fareParameters)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 findById :: Transactionable m => Id FareParameters -> m (Maybe FareParameters)
 findById = Esq.findById

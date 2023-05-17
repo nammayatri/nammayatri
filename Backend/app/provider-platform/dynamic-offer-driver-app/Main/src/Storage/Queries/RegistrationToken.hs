@@ -15,7 +15,7 @@
 module Storage.Queries.RegistrationToken where
 
 import Domain.Types.Person
-import Domain.Types.RegistrationToken
+import Domain.Types.RegistrationToken as DRT
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
@@ -31,6 +31,13 @@ import Storage.Tabular.RegistrationToken
 
 create :: RegistrationToken -> SqlDB ()
 create = Esq.create
+
+create' :: L.MonadFlow m => DRT.RegistrationToken -> m (MeshResult ())
+create' registrationToken = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainRegistrationTokenToBeam registrationToken)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 findById :: Transactionable m => Id RegistrationToken -> m (Maybe RegistrationToken)
 findById = Esq.findById

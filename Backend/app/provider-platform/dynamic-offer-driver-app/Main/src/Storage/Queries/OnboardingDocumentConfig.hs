@@ -21,7 +21,7 @@ module Storage.Queries.OnboardingDocumentConfig
 where
 
 import Domain.Types.Merchant
-import Domain.Types.OnboardingDocumentConfig
+import Domain.Types.OnboardingDocumentConfig as DODC
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
@@ -37,6 +37,13 @@ import Storage.Tabular.OnboardingDocumentConfig
 
 create :: OnboardingDocumentConfig -> SqlDB ()
 create = Esq.create
+
+create' :: L.MonadFlow m => DODC.OnboardingDocumentConfig -> m (MeshResult ())
+create' onboardingDocumentConfig = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainOnboardingDocumentConfigToBeam onboardingDocumentConfig)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 findByMerchantIdAndDocumentType :: Transactionable m => Id Merchant -> DocumentType -> m (Maybe OnboardingDocumentConfig)
 findByMerchantIdAndDocumentType merchantId documentType =

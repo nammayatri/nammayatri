@@ -15,7 +15,7 @@
 module Storage.Queries.RideDetails where
 
 import qualified Domain.Types.Ride as SR
-import Domain.Types.RideDetails
+import Domain.Types.RideDetails as DRD
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
@@ -30,6 +30,13 @@ import Storage.Tabular.RideDetails ()
 
 create :: RideDetails -> SqlDB ()
 create = Esq.create
+
+create' :: L.MonadFlow m => DRD.RideDetails -> m (MeshResult ())
+create' rideDetails = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainRideDetailsToBeam rideDetails)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 findById ::
   Transactionable m =>

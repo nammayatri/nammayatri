@@ -16,7 +16,7 @@ module Storage.Queries.CallStatus where
 
 import qualified Data.Text as T
 import qualified Debug.Trace as T
-import Domain.Types.CallStatus
+import Domain.Types.CallStatus as DCS
 import Domain.Types.Ride
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
@@ -30,13 +30,20 @@ import qualified Lib.Mesh as Mesh
 import Sequelize as Se
 import qualified Sequelize as Se
 import qualified Storage.Beam.CallStatus as BeamCS
-import qualified Storage.Beam.CallStatus as BeamCT
+-- import qualified Storage.Beam.CallStatus as BeamCT
 import Storage.Tabular.CallStatus
 import qualified Storage.Tabular.CallStatus as CS
 import qualified Storage.Tabular.VechileNew as VN
 
 create :: CallStatus -> SqlDB ()
 create callStatus = void $ Esq.createUnique callStatus
+
+create' :: L.MonadFlow m => DCS.CallStatus -> m (MeshResult ())
+create' callStatus = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainCallStatusToBeam callStatus)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 findById :: Transactionable m => Id CallStatus -> m (Maybe CallStatus)
 findById = Esq.findById
@@ -45,7 +52,7 @@ findById' :: L.MonadFlow m => Id CallStatus -> m (Maybe CallStatus)
 findById' (Id callStatusId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamCallStatusToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamCT.id $ Se.Eq callStatusId]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamCallStatusToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamCS.id $ Se.Eq callStatusId]
     Nothing -> pure Nothing
 
 findByCallSid :: Transactionable m => Text -> m (Maybe CallStatus)
@@ -81,8 +88,8 @@ countCallsByRideId rideId = (fromMaybe 0 <$>) $
     groupBy $ callStatus ^. CallStatusRideId
     pure $ count @Int $ callStatus ^. CallStatusTId
 
-transformBeamCallStatusToDomain :: BeamCT.CallStatus -> CallStatus
-transformBeamCallStatusToDomain BeamCT.CallStatusT {..} = do
+transformBeamCallStatusToDomain :: BeamCS.CallStatus -> CallStatus
+transformBeamCallStatusToDomain BeamCS.CallStatusT {..} = do
   CallStatus
     { id = Id id,
       callId = callId,

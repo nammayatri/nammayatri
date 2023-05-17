@@ -46,6 +46,13 @@ import Storage.Tabular.RiderDetails as RiderDetails
 create :: Ride -> SqlDB ()
 create = Esq.create
 
+create' :: L.MonadFlow m => Ride.Ride -> m (MeshResult ())
+create' ride = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainRideToBeam ride)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+
 findById :: Transactionable m => Id Ride -> m (Maybe Ride)
 findById rideId = Esq.findOne $ do
   ride <- from $ table @RideT

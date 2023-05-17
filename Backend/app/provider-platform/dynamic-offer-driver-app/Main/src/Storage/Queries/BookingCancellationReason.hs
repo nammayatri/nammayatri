@@ -15,7 +15,7 @@
 module Storage.Queries.BookingCancellationReason where
 
 import Domain.Types.Booking
-import Domain.Types.BookingCancellationReason
+import Domain.Types.BookingCancellationReason as DBCR
 import Domain.Types.CancellationReason (CancellationReasonCode (..))
 import Domain.Types.Ride
 import qualified EulerHS.Extra.EulerDB as Extra
@@ -32,6 +32,13 @@ import Storage.Tabular.BookingCancellationReason
 
 create :: BookingCancellationReason -> SqlDB ()
 create = Esq.create
+
+create' :: L.MonadFlow m => DBCR.BookingCancellationReason -> m (MeshResult ())
+create' bookingCancellationReason = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainBookingCancellationReasonToBeam bookingCancellationReason)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 findByRideBookingId ::
   Transactionable m =>
