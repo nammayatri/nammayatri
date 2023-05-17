@@ -101,6 +101,7 @@ linkReferralCode dummyString = (getBaseUrl "") <> "/driver/linkReferralCode"
 
 getPerformance :: String -> String
 getPerformance dummyString = (getBaseUrl "") <> "/driver/performance"
+
 driverAlternateNumber :: String -> String
 driverAlternateNumber  dummy = (getBaseUrl "" ) <> "/driver/alternateNumber/validate"
 
@@ -112,3 +113,6 @@ verifyAlternateNumberOTP dummy = (getBaseUrl "") <> "/driver/alternateNumber/ver
 
 removeAlternateNumber :: String -> String
 removeAlternateNumber dummy = (getBaseUrl "") <> "/driver/alternateNumber/remove"
+
+otpRide :: String -> String
+otpRide dummyRideOtp = (getBaseUrl "") <> "/driver/otpRide/start"

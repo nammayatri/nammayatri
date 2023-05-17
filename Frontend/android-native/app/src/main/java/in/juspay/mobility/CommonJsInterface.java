@@ -25,7 +25,6 @@ import android.app.TimePickerDialog;
 import android.content.ActivityNotFoundException;
 import android.content.ClipData;
 import android.content.ClipboardManager;
-import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentSender;
@@ -34,17 +33,13 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.content.res.Resources;
-import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Interpolator;
 import android.graphics.Paint;
-import android.graphics.PixelFormat;
 import android.graphics.PorterDuff;
-import android.graphics.Rect;
-import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
@@ -66,9 +61,6 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.PowerManager;
-import android.print.PrintAttributes;
-import android.print.pdf.PrintedPdfDocument;
-import android.provider.ContactsContract;
 import android.provider.MediaStore;
 import android.provider.Settings;
 import android.util.Base64;
@@ -78,8 +70,6 @@ import android.view.ActionMode;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.PixelCopy;
-import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
@@ -165,6 +155,8 @@ import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.maps.android.PolyUtil;
 import com.google.maps.android.SphericalUtil;
+import com.google.maps.android.data.geojson.GeoJsonLayer;
+import com.google.maps.android.data.geojson.GeoJsonPolygonStyle;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.YouTubePlayerFullScreenListener;
@@ -184,6 +176,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.Reader;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
@@ -206,7 +199,6 @@ import java.lang.Math;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.zip.Inflater;
 
 import in.juspay.mobility.utils.ChatBroadCastReceiver;
 import in.juspay.mobility.utils.ChatService;
@@ -218,7 +210,6 @@ import in.juspay.mobility.utils.MediaPlayerView;
 import in.juspay.mobility.utils.NotificationUtils;
 import in.juspay.mobility.utils.OtpUtils;
 import in.juspay.mobility.utils.mediaPlayer.DefaultMediaPlayerControl;
-import in.juspay.mobility.utils.mediaPlayer.MediaPlayerControl;
 import in.juspay.hypersdk.core.HyperFragment;
 import in.juspay.hypersdk.core.JBridge;
 import in.juspay.hypersdk.core.JuspayDuiHook;
@@ -228,15 +219,11 @@ import in.juspay.hypersdk.utils.network.JuspayHttpResponse;
 import in.juspay.hypersdk.utils.network.NetUtils;
 import in.juspay.hypersdk.core.DuiCallback;
 
-import static android.Manifest.permission.ACCESS_BACKGROUND_LOCATION;
 import static android.Manifest.permission.ACCESS_FINE_LOCATION;
 import static androidx.core.app.ActivityCompat.startActivityForResult;
-import static androidx.core.content.ContextCompat.getCodeCacheDir;
 import static android.Manifest.permission.CAMERA;
 import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
 import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
-import static android.content.Context.WINDOW_SERVICE;
-import static android.content.Context.ACTIVITY_SERVICE;
 import static android.view.View.LAYER_TYPE_SOFTWARE;
 
 import java.net.URISyntaxException;
@@ -295,6 +282,14 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     public static String webViewCallBack = null;
     public static int debounceAnimateCamera = 0;
     Toast toast = null;
+
+    public static ArrayList<Marker> pickupPointsZoneMarkers = new ArrayList<Marker>();
+    public static GeoJsonLayer layer;
+    public static List<LatLng> zoneLatLngPoints = new ArrayList<LatLng>();
+    private String regToken, baseUrl;
+    private SharedPreferences sharedPref;
+    private String zoneName = "";
+    private float zoom = 17.0f;
 
 
     public CommonJsInterface() {
@@ -380,6 +375,12 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                 break;
             case "TA_IN":
                 locale = new Locale("ta");
+                break;
+            case "BN_IN" :
+                locale = new Locale("bn");
+                break;
+            case "ML_IN" : 
+                locale = new Locale("ml");
                 break;
             default:
                 return;
@@ -1602,7 +1603,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                                         userPositionMarker.setVisible(true);
                                     userPositionMarker.setPosition(latLng);
                                 }
-                                googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 17.0f));
+                                googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, zoom));
                             }
                         } else getLastKnownLocationFromClientFallback(callback, animate);
                     }
@@ -2285,6 +2286,14 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         try {
             this.storeMapCallBack = null;
             activity.runOnUiThread(() -> {
+                for (Marker m : pickupPointsZoneMarkers) {
+                    m.setVisible(false);
+                }
+
+                if(layer != null){
+                    layer.removeLayerFromMap();
+                }
+
                 googleMap.setOnCameraMoveListener(null);
                 googleMap.setOnCameraIdleListener(null);
             });
@@ -2303,6 +2312,295 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
             }));
         } catch (Exception e) {
             Log.i(LOG_TAG, "Enable My Location on GoogleMap error", e);
+        }
+    }
+
+    public JSONObject getNearestPoint(double lat, double lng, JSONArray path) throws JSONException {
+
+        JSONObject jsonObject = new JSONObject();
+
+        Location locationA = new Location("point A");
+        locationA.setLatitude(lat);
+        locationA.setLongitude(lng);
+
+        double minDist = 10000000000.0;
+
+        Location location = new Location("final point");
+
+        for(int i=0;i<path.length();i++) {
+            JSONObject a = path.getJSONObject(i);
+            double px = (Double) a.get("lat");
+            double py = (Double) a.get("lng");
+
+            Location locationB = new Location("point B");
+            locationB.setLatitude(px);
+            locationB.setLongitude(py);
+
+            float distance = locationA.distanceTo(locationB);
+
+            if(distance<minDist){
+                minDist = distance;
+                location = locationB;
+                zoneName = a.getString("place");
+            }
+        }
+        jsonObject.put("place", zoneName);
+        jsonObject.put("lat", location.getLatitude());
+        jsonObject.put("long", location.getLongitude());
+        return jsonObject;
+    }
+
+    public void drawMarkers(double lat , double lng, String name) {
+        activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    MarkerOptions markerOptionsObj = new MarkerOptions()
+                                                .title("")
+                                                .position(new LatLng(lat,lng))
+                                                .anchor(0.49f, 0.78f)
+                                                .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(name,"ny_ic_zone_pickup_marker")));
+                    Marker m = googleMap.addMarker(markerOptionsObj);
+                    m.hideInfoWindow();
+                    pickupPointsZoneMarkers.add(m);
+                } catch (Exception e) {
+                    Log.d("error on pickup markers", e.toString());
+                }
+            }
+        });
+    }
+
+    @JavascriptInterface
+    public void drawPolygon(String geoJson, String locationName) throws JSONException {
+
+        activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                System.out.println("Inside drawPolygon function");
+                if(layer != null){
+                    layer.removeLayerFromMap();
+                }
+                JSONObject geo = null;
+                try {
+                    geo = new JSONObject(geoJson);
+                    PatternItem DASH = new Dash(20);
+                    PatternItem GAP = new Gap(20);
+                    List<PatternItem> PATTERN_POLYGON_ALPHA = Arrays.asList(GAP, DASH);
+                    layer = new GeoJsonLayer(googleMap, geo);
+                    GeoJsonPolygonStyle polyStyle = layer.getDefaultPolygonStyle();
+                    polyStyle.setFillColor(Color.argb(25,0, 102, 255));
+                    polyStyle.setStrokePattern(PATTERN_POLYGON_ALPHA);
+                    polyStyle.setStrokeWidth(2);
+                    polyStyle.setStrokeColor(Color.BLUE);
+                    if (locationName.length() > 0){
+                        zoom = 14.0f;
+                        if (userPositionMarker == null) {
+                            upsertMarker(CURRENT_LOCATION, String.valueOf(getKeyInNativeSharedPrefKeys("LAST_KNOWN_LAT")), String.valueOf( getKeyInNativeSharedPrefKeys("LAST_KNOWN_LON")),160, 0.5f,0.9f); //TODO this function will be removed
+                        } else {
+                        }
+                        userPositionMarker.setIcon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(locationName,CURRENT_LOCATION)));
+                        userPositionMarker.setTitle("");
+                        LatLng latLng = new LatLng(Double.valueOf(getKeyInNativeSharedPrefKeys("LAST_KNOWN_LAT")) , Double.valueOf( getKeyInNativeSharedPrefKeys("LAST_KNOWN_LON")));
+                    }
+                    layer.addLayerToMap();
+//                    return;
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+//                return ;
+            }
+        });
+//        return ;
+
+    }
+
+    @JavascriptInterface
+    public void removeLabelFromMarker(){
+        activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                try{
+                    zoom = 17.0f;
+                    if(layer != null){
+                        layer.removeLayerFromMap();
+                    }
+                    userPositionMarker.setIcon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView("",CURRENT_LOCATION)));
+                    userPositionMarker.setTitle("");
+                }
+                catch (Exception e){
+                    e.printStackTrace();
+                }
+            }
+        });
+
+        return;
+    }
+
+    @JavascriptInterface
+    public void locateOnMap (boolean goToCurrentLocation, final String lat, final String lon, String geoJson, String points){
+        System.out.println("Inside locateOnMap" + geoJson);
+        if (geoJson.equals("")){
+            locateOnMap(goToCurrentLocation,lat,lon);
+            return;
+        }
+        try {
+            activity.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        drawPolygon(geoJson, "");
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                    removeMarker("ny_ic_customer_current_location");
+                    if(goToCurrentLocation){
+                        LatLng latLng = new LatLng(lastLatitudeValue, lastLongitudeValue);
+                        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 17.0f));
+                    }else{
+                        LatLng latLng = new LatLng(Double.parseDouble(lat), Double.parseDouble(lon));
+                        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 17.0f));
+                        googleMap.moveCamera(CameraUpdateFactory.zoomTo(googleMap.getCameraPosition().zoom + 2.0f));
+                    }
+                    googleMap.setOnCameraIdleListener(new GoogleMap.OnCameraIdleListener() {
+                        @Override
+                        public void onCameraIdle() {
+                            double lat = (CommonJsInterface.this.googleMap.getCameraPosition().target.latitude);
+                            double lng = (CommonJsInterface.this.googleMap.getCameraPosition().target.longitude);
+                            System.out.println("Inside OnCameraIdle");
+                            ExecutorService executor = Executors.newSingleThreadExecutor();
+                            Handler handler = new Handler(Looper.getMainLooper());
+                            System.out.println("Inside OnCameraIdle");
+                            executor.execute(() -> {
+                                try {
+                                    new Thread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            Boolean res =  isPointInside(lat, lng);
+                                            System.out.println("Inside OnCameraIdle");
+                                            handler.post(() -> {
+                                                try {
+                                                    if(res){
+                                                        System.out.println("Inside OnCameraIdle"+res);
+                                                        JSONArray zonePoints = new JSONArray(points);
+                                                        System.out.println("Inside zonepoints" + zonePoints);
+                                                        JSONObject nearestPickupPointObj = getNearestPoint(lat, lng, zonePoints);
+                                                        Location nearestPickupPoint = new Location("");
+                                                        nearestPickupPoint.setLatitude(nearestPickupPointObj.getDouble("lat"));
+                                                        nearestPickupPoint.setLongitude(nearestPickupPointObj.getDouble("long"));
+
+                                                        for (Marker m : pickupPointsZoneMarkers) {
+                                                            m.setVisible(false);
+                                                        }
+
+                                                        for(int i=0;i<zonePoints.length();i++){
+                                                            if(SphericalUtil.computeDistanceBetween(CommonJsInterface.this.googleMap.getCameraPosition().target, new LatLng((Double)zonePoints.getJSONObject(i).get("lat"), (Double) zonePoints.getJSONObject(i).get("lng")))<=1){
+                                                                drawMarkers((Double) zonePoints.getJSONObject(i).get("lat"),(Double) zonePoints.getJSONObject(i).get("lng"),  (String)zonePoints.getJSONObject(i).get("place"));
+                                                                zoneName = (String)zonePoints.getJSONObject(i).get("place");
+                                                            }
+                                                            else{
+                                                                drawMarkers((Double) zonePoints.getJSONObject(i).get("lat"),(Double) zonePoints.getJSONObject(i).get("lng"), "");
+                                                            }
+                                                        }
+
+                                                        if(SphericalUtil.computeDistanceBetween(CommonJsInterface.this.googleMap.getCameraPosition().target, new LatLng(nearestPickupPoint.getLatitude(), nearestPickupPoint.getLongitude()))>1){
+                                                            animateCamera(nearestPickupPoint.getLatitude(), nearestPickupPoint.getLongitude(),25.0f);
+                                                        }
+                                                    }
+                                                    else {
+                                                        for (Marker m : pickupPointsZoneMarkers) {
+                                                            m.setVisible(false);
+                                                        }
+                                                    }
+                                                    if (storeMapCallBack != null && dynamicUI!=null && juspayServices.getDynamicUI() != null){
+                                                        String javascript = String.format("window.callUICallback('%s','%s','%s','%s');", storeMapCallBack, zoneName, lat, lng);
+                                                        Log.e(LOG_TAG, javascript);
+                                                        dynamicUI.addJsToWebView(javascript);
+                                                    }
+                                                } catch (JSONException e) {
+                                                    System.out.println("Exception " + e);
+                                                }
+                                                executor.shutdown();
+                                            });
+                                        }
+                                    }).start();
+                                } catch (Exception e) {
+                                    Log.e ("api response error",e.toString());
+                                }
+                            });
+//                            if (storeMapCallBack != null && dynamicUI!=null && juspayServices.getDynamicUI() != null){
+//                                String javascript = String.format("window.callUICallback('%s','%s','%s','%s');", storeMapCallBack, zoneName, lat, lng);
+//                                Log.e(LOG_TAG, javascript);
+//                                dynamicUI.addJsToWebView(javascript);
+//                            }
+                        }
+                    });
+                    if ((lastLatitudeValue != 0.0 && lastLongitudeValue != 0.0) && goToCurrentLocation) {
+                        LatLng latLngObjMain = new LatLng(lastLatitudeValue, lastLongitudeValue);
+                        CommonJsInterface.this.googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLngObjMain, 17.0f));
+                    }else{
+                        LatLng latLngObjMain = new LatLng(Double.parseDouble(lat), Double.parseDouble(lon));
+                        CommonJsInterface.this.googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLngObjMain, 17.0f));
+                        googleMap.moveCamera(CameraUpdateFactory.zoomTo(googleMap.getCameraPosition().zoom + 2.0f));
+                    }
+                }
+            });
+        } catch (Exception e) {
+            Log.i(LOG_TAG, "LocateOnMap error for ", e);
+        }
+    }
+
+    private Boolean isPointInside(Double lat, Double lng) {
+        System.out.println("Inside isPOinteINside");
+        StringBuilder result = new StringBuilder();
+        sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        regToken = sharedPref.getString(context.getResources().getString(R.string.REGISTERATION_TOKEN), "null");
+        baseUrl = sharedPref.getString("BASE_URL", "null");
+        String version = sharedPref.getString("VERSION_NAME", "null");
+        System.out.println("BaseUrl" + baseUrl);
+        try {
+            String url = baseUrl + "/serviceability/origin";
+            HttpURLConnection connection = (HttpURLConnection) (new URL(url).openConnection());
+            connection.setRequestMethod("POST");
+            connection.setRequestProperty("Content-Type", "application/json");
+            connection.setRequestProperty("token", regToken);
+            connection.setRequestProperty("x-client-version", version);
+
+            JSONObject payload = new JSONObject();
+
+            JSONObject latLng = new JSONObject();
+            latLng.put("lat", lat);
+            latLng.put("lon", lng);
+            payload.put("location", latLng);
+
+            OutputStream stream = connection.getOutputStream();
+            stream.write(payload.toString().getBytes());
+            connection.connect();
+            int respCode = connection.getResponseCode();
+            System.out.println("Response Code ::" + respCode);
+            InputStreamReader respReader;
+            if ((respCode < 200 || respCode >= 300) && respCode != 302) {
+                respReader = new InputStreamReader(connection.getErrorStream());
+                BufferedReader in = new BufferedReader(respReader);
+                String inputLine;
+                while ((inputLine = in.readLine()) != null) {
+                    result.append(inputLine);
+                }
+                JSONObject errorPayload = new JSONObject(result.toString());
+            } else {
+                respReader = new InputStreamReader(connection.getInputStream());
+                BufferedReader in = new BufferedReader(respReader);
+                String inputLine;
+                while ((inputLine = in.readLine()) != null) {
+                    result.append(inputLine);
+                }
+                JSONObject res = new JSONObject(String.valueOf(result));
+                System.out.println( res.getString("serviceable") + "my point result");
+                return  true;
+            }
+
+            return false;
+        } catch (Exception e) {
+            return false;
         }
     }
 
@@ -2403,11 +2701,11 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
 
     private Bitmap getMarkerBitmapFromView(String locationName, String imageName) {
 
-        View customMarkerView = ((LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE)).inflate(R.layout.marker_label_layout, null);
+        View customMarkerView = ((LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE)).inflate( imageName.equals("ny_ic_zone_pickup_marker") ? R.layout.zone_label_layout :  R.layout.marker_label_layout, null);
         TextView label = customMarkerView.findViewById(R.id.marker_text);
         if (locationName.equals("")) {
             label.setVisibility(customMarkerView.GONE);
-        } else {
+        }else {
             if (locationName.length() <= 27) {
                 label.setText(locationName);
             } else {
@@ -2418,7 +2716,16 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         try {
             if (imageName.equals("ny_ic_dest_marker")) {
                 pointer.setImageDrawable(context.getResources().getDrawable(R.drawable.ny_ic_dest_marker));
-            } else {
+            } else if(imageName.equals("ny_ic_zone_pickup_marker")){
+                pointer.setImageDrawable(context.getResources().getDrawable(R.drawable.ny_ic_zone_pickup_marker));
+            } else if(imageName.equals("ny_ic_customer_current_location")){
+                pointer.setImageDrawable(context.getResources().getDrawable(R.drawable.ny_ic_customer_current_location));
+                ViewGroup.LayoutParams layoutParams = (ViewGroup.LayoutParams) pointer.getLayoutParams();
+                layoutParams.height = 160;
+                layoutParams.width = 160;
+                pointer.setLayoutParams(layoutParams);
+             }
+            else{
                 pointer.setImageDrawable(context.getResources().getDrawable(R.drawable.ny_ic_src_marker));
             }
         } catch (Exception e) {
@@ -2594,7 +2901,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                         LatLng tempPoint = new LatLng(lat, lng);
                         path.add(tempPoint);
                     }
-                    Marker currMarker = (Marker) markers.get("ny_ic_auto_map");
+                    Marker currMarker = (Marker) markers.get("ic_vehicle_nav_on_map");
                     Marker destMarker = (Marker) markers.get(dest);
                     destMarker.setIcon((BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(eta, dest))));
                     if (polylines != null) {
@@ -2632,91 +2939,25 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         });
     }
 
-    /*
-     * This function is deprecated on 12 Jan - 2023
-     * Remove this function once it is not begin used.
-     */
-
-    @JavascriptInterface
-    public void updateRoute(String json, double currLat, double currLng) {
-        activity.runOnUiThread(() -> {
-            if (googleMap != null) {
-                try {
-                    ArrayList<LatLng> points = getUpdatedPolyPoints(json, currLat, currLng);
-                    Marker currMarker = (Marker) markers.get("ny_ic_auto_map");
-                    if (polylines != null) {
-                        polylines.setEndCap(new ButtCap());
-                        if (points.size() == 0) {
-                            LatLng destination = new LatLng(currLat, currLng);
-                            animateMarkerNew(destination, currMarker);
-                            polylines.remove();
-                            polylines = null;
-                        } else {
-                            PatternItem DASH = new Dash(1);
-                            List<PatternItem> PATTERN_POLYLINE_DOTTED_DASHED = Arrays.asList(DASH);
-                            polylines.setPattern(PATTERN_POLYLINE_DOTTED_DASHED);
-                            polylines.setPoints(points);
-                            LatLng destination = points.get(points.size() - 1);
-                            animateMarkerNew(destination, currMarker);
-                        }
-                    }
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-    }
-
-    /*
-     * This function is deprecated on 12 Jan - 2023
-     * Remove this function once it is not begin used.
-     */
-
-    private ArrayList<LatLng> getUpdatedPolyPoints(String json, double currLat, double currLng) throws JSONException {
-        LatLng currPoint = new LatLng(currLat, currLng);
-        ArrayList<LatLng> path = new ArrayList<>();
-        ArrayList<LatLng> temp = new ArrayList<>();
-        JSONObject jsonObject = null;
-        jsonObject = new JSONObject(json);
-        JSONArray coordinates = jsonObject.getJSONArray("points");
-        JSONObject sourceCoordinates = (JSONObject) coordinates.get(0);
-        JSONObject destCoordinates = (JSONObject) coordinates.get(coordinates.length() - 1);
-        double sourceLat = sourceCoordinates.getDouble("lat");
-        double sourceLong = sourceCoordinates.getDouble("lng");
-        moveCamera(sourceLat, sourceLong, currLat, currLng, coordinates);
-        for (int i = coordinates.length() - 1; i >= 0; i--) {
-            JSONObject coordinate = (JSONObject) coordinates.get(i);
-            double lng = coordinate.getDouble("lng");
-            double lat = coordinate.getDouble("lat");
-            LatLng tempPoints = new LatLng(lat, lng);
-            path.add(tempPoints);
-        }
-        int index = PolyUtil.locationIndexOnEdgeOrPath(currPoint, path, PolyUtil.isClosedPolygon(path), true, 20.0);
-        if (index == 0) {
-            path.clear();
-        } else {
-            path.subList(index + 1, path.size()).clear();
-        }
-        return path;
-    }
-
     @JavascriptInterface
     public void shareTextMessage(String title, String message) {
-        activity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
+        activity.runOnUiThread(() -> {
+            if (context != null){
                 Intent sendIntent = new Intent();
                 sendIntent.setAction(Intent.ACTION_SEND);
                 sendIntent.putExtra(Intent.EXTRA_TEXT, message);
                 sendIntent.putExtra(Intent.EXTRA_TITLE, title);
-                Bitmap thumbnailBitmap = BitmapFactory.decodeResource(context.getResources(), R.drawable.ny_ic_icon);
-                Uri thumbnailUri = getImageUri(context, thumbnailBitmap);
-                ClipData clipData = ClipData.newUri(context.getContentResolver(), "Thumbnail Image", thumbnailUri);
-                sendIntent.setClipData(clipData);
+                Bitmap thumbnailBitmap = BitmapFactory.decodeResource(context.getResources(), R.drawable.ic_launcher);
+                if (thumbnailBitmap != null) {
+                    Uri thumbnailUri = getImageUri(context, thumbnailBitmap);
+                    ClipData clipData = ClipData.newUri(context.getContentResolver(), "Thumbnail Image", thumbnailUri);
+                    sendIntent.setClipData(clipData);
+                }
                 sendIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                 sendIntent.setType("text/plain");
                 Intent shareIntent = Intent.createChooser(sendIntent, null);
-                activity.startActivity(shareIntent);
+                shareIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                context.startActivity(shareIntent);
             }
         });
     }
@@ -2869,7 +3110,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                     if (rotation > 1.0)
                         marker.setRotation(rotation);
                     marker.setPosition(newPosition);
-                    markers.put("ny_ic_auto_map",marker);
+                    markers.put("ic_vehicle_nav_on_map",marker);
                 } catch (Exception ex) {
                 }
             });
@@ -2992,7 +3233,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                         JSONObject coordinate = (JSONObject) coordinates.get(0);
                         double lng = coordinate.getDouble("lng");
                         double lat = coordinate.getDouble("lat");
-                        upsertMarker("ny_ic_auto_map",String.valueOf(lat), String.valueOf(lng), 90, 0.5f, 0.5f);
+                        upsertMarker("ic_vehicle_nav_on_map",String.valueOf(lat), String.valueOf(lng), 90, 0.5f, 0.5f);
                         animateCamera(lat,lng,20.0f);
                         return;
                     }
@@ -3036,26 +3277,28 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                         markers.put(destMarker, tempmarker);
 
                     }
-                    if (type.equals("DRIVER_LOCATION_UPDATE"))
-                    {
-                        List<LatLng> points = polylineOptions.getPoints();
-                        LatLng source = points.get(points.size() - 1);
-                        upsertMarker("ny_ic_auto_map",String.valueOf(source.latitude),String.valueOf(source.longitude), 90, 0.5f, 0.5f);
-                        Marker currMarker = (Marker) markers.get("ny_ic_auto_map");
-                        int index = polylines.getPoints().size()-1;
-                        float rotation = (float) SphericalUtil.computeHeading(polylines.getPoints().get(index), polylines.getPoints().get(index -1));
-                        if (rotation != 0.0) currMarker.setRotation(rotation);
-                        currMarker.setAnchor(0.5f,0.5f);
-                        markers.put("ny_ic_auto_map",currMarker);
-                    } else if(sourceMarker != null && !sourceMarker.equals("")) {
-                        List<LatLng> points = polylineOptions.getPoints();
-                        LatLng source = points.get(points.size() - 1);
-                        MarkerOptions markerObj = new MarkerOptions()
-                                .title(sourceMarker)
-                                .position(source)
-                                .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(sourceName,sourceMarker)));
-                        Marker tempmarker = googleMap.addMarker(markerObj);
-                        markers.put(sourceMarker, tempmarker);
+                    if((sourceMarker != null && !sourceMarker.equals(""))){
+                        if (type.equals("DRIVER_LOCATION_UPDATE"))
+                        {
+                            List<LatLng> points = polylineOptions.getPoints();
+                            LatLng source = points.get(points.size() - 1);
+                            upsertMarker(sourceMarker,String.valueOf(source.latitude),String.valueOf(source.longitude), 90, 0.5f, 0.5f);
+                            Marker currMarker = (Marker) markers.get(sourceMarker);
+                            int index = polylines.getPoints().size()-1;
+                            float rotation = (float) SphericalUtil.computeHeading(polylines.getPoints().get(index), polylines.getPoints().get(index -1));
+                            if (rotation != 0.0) currMarker.setRotation(rotation);
+                            currMarker.setAnchor(0.5f,0.5f);
+                            markers.put(sourceMarker,currMarker);
+                        } else {
+                            List<LatLng> points = polylineOptions.getPoints();
+                            LatLng source = points.get(points.size() - 1);
+                            MarkerOptions markerObj = new MarkerOptions()
+                                    .title(sourceMarker)
+                                    .position(source)
+                                    .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(sourceName,sourceMarker)));
+                            Marker tempmarker = googleMap.addMarker(markerObj);
+                            markers.put(sourceMarker, tempmarker);
+                        }
                     }
                 } catch (JSONException e) {
                     e.printStackTrace();
@@ -3065,7 +3308,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
     @JavascriptInterface
     public void removeAllPolylines(String str) {
-        removeMarker("ny_ic_auto_map");
+        removeMarker("ic_vehicle_nav_on_map");
         removeMarker("ny_ic_src_marker");
         removeMarker("ny_ic_dest_marker");
         activity.runOnUiThread(() -> {
@@ -3306,21 +3549,24 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
 
     @JavascriptInterface
     public void uploadFile (){
-        activity.runOnUiThread(() -> {
-            if ((ActivityCompat.checkSelfPermission(activity, WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) && (ActivityCompat.checkSelfPermission(activity, CAMERA) == PackageManager.PERMISSION_GRANTED) && (ActivityCompat.checkSelfPermission(activity, READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)){
-                Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
-                SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-                sharedPref.edit().putString(context.getResources().getString(R.string.TIME_STAMP_FILE_UPLOAD), timeStamp).apply();
-                Uri photoFile = FileProvider.getUriForFile(context.getApplicationContext(),context.getResources().getString(R.string.fileProviderPath), new File(context.getApplicationContext().getFilesDir(), "IMG_" + timeStamp+".jpg"));
-                takePicture.putExtra(MediaStore.EXTRA_OUTPUT, photoFile);
-                Intent chooseFromFile = new Intent(Intent.ACTION_GET_CONTENT);
-                chooseFromFile.setType("image/*");
-                Intent chooser = Intent.createChooser(takePicture, "Upload Image");
-                chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[] { chooseFromFile });
-                startActivityForResult(activity, chooser, IMAGE_CAPTURE_REQ_CODE, null);
-            } else {
-                ActivityCompat.requestPermissions(activity, new String[]{CAMERA, WRITE_EXTERNAL_STORAGE, READ_EXTERNAL_STORAGE}, IMAGE_PERMISSION_REQ_CODE);
+        activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if ((ActivityCompat.checkSelfPermission(activity, WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) && (ActivityCompat.checkSelfPermission(activity, CAMERA) == PackageManager.PERMISSION_GRANTED) && (ActivityCompat.checkSelfPermission(activity, READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)){
+                    Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                    String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", new Locale("en","US")).format(new Date());
+                    SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+                    sharedPref.edit().putString(context.getResources().getString(R.string.TIME_STAMP_FILE_UPLOAD), timeStamp).apply();
+                    Uri photoFile = FileProvider.getUriForFile(context.getApplicationContext(),context.getApplicationInfo().packageName + ".fileProvider", new File(context.getApplicationContext().getFilesDir(), "IMG_" + timeStamp+".jpg"));
+                    takePicture.putExtra(MediaStore.EXTRA_OUTPUT, photoFile);
+                    Intent chooseFromFile = new Intent(Intent.ACTION_GET_CONTENT);
+                    chooseFromFile.setType("image/*");
+                    Intent chooser = Intent.createChooser(takePicture, "Upload Image");
+                    chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[] { chooseFromFile });
+                    startActivityForResult(activity, chooser, IMAGE_CAPTURE_REQ_CODE, null);
+                } else {
+                    ActivityCompat.requestPermissions(activity, new String[]{CAMERA, WRITE_EXTERNAL_STORAGE, READ_EXTERNAL_STORAGE}, IMAGE_PERMISSION_REQ_CODE);
+                }
             }
         });
     }
@@ -3376,7 +3622,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         if (invoiceType.equals("OLD")){
             int pageHeight = 1555;
             int pagewidth = 960;
-            Bitmap logo = BitmapFactory.decodeResource(context.getResources(), R.drawable.ny_ic_launcher);
+            Bitmap logo = BitmapFactory.decodeResource(context.getResources(), R.drawable.ic_launcher);
             Bitmap src_icon = BitmapFactory.decodeResource(context.getResources(), R.drawable.ny_ic_green_circle);
             Bitmap dest_icon = BitmapFactory.decodeResource(context.getResources(), R.drawable.ny_ic_red_circle);
             Bitmap ic_line = BitmapFactory.decodeResource(context.getResources(), R.drawable.ny_ic_vertical_line);
@@ -3500,7 +3746,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
             File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), fileName);
             try {
                 pdfDocument.writeTo(new FileOutputStream(file));
-                Uri path = FileProvider.getUriForFile(context.getApplicationContext(), context.getResources().getString(R.string.fileProviderPath), file);
+                Uri path = FileProvider.getUriForFile(context.getApplicationContext(), context.getApplicationInfo().packageName + ".fileProvider", file);
                 Intent pdfOpenintent = new Intent(Intent.ACTION_VIEW);
                 pdfOpenintent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_CLEAR_TOP);
                 pdfOpenintent.setDataAndType(path, "application/pdf");
@@ -3508,7 +3754,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                 NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(context, "General");
                 mBuilder.setLargeIcon(logo);
                 mBuilder.setContentTitle("Invoice Downloaded")
-                        .setSmallIcon((R.drawable.ny_ic_launcher))
+                        .setSmallIcon((R.drawable.ic_launcher))
                         .setContentText("Invoice for your ride is downloaded!!!")
                         .setAutoCancel(true)
                         .setPriority(NotificationCompat.PRIORITY_DEFAULT);
@@ -3522,13 +3768,6 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         }
         else
         {
-            int pageHeight = 1388;
-            int pagewidth = 960;
-            Bitmap logo = BitmapFactory.decodeResource(context.getResources(), R.drawable.ny_ic_invoice_logo);
-            Bitmap src_icon = BitmapFactory.decodeResource(context.getResources(), R.drawable.ny_ic_green_circle);
-            Bitmap dest_icon = BitmapFactory.decodeResource(context.getResources(), R.drawable.ny_ic_red_circle);
-            Bitmap ic_line = BitmapFactory.decodeResource(context.getResources(), R.drawable.ny_ic_vertical_line);
-            Bitmap scaledBmp = null;
             PdfDocument pdfDocument = new PdfDocument();
             PdfDocument.PageInfo invoicePDF = new PdfDocument.PageInfo.Builder(960, 1338, 1).create();
             PdfDocument.Page page = pdfDocument.startPage(invoicePDF);
@@ -3537,20 +3776,31 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
             content.layout(0,0,page.getCanvas().getWidth(),page.getCanvas().getHeight());
             content.draw(page.getCanvas());
             pdfDocument.finishPage(page);
-            String fileNameformat = "NY_Ride_" + selectedItem.getString("date") + selectedItem.getString("rideStartTime") + ".pdf";
+
+            String fileNameformat = "";
+            String serviceName = context.getResources().getString(R.string.service);
+            if (serviceName.equals("jatrisaathi"))
+            {
+                fileNameformat = "JS_RIDE_";
+            } else if (serviceName.equals("nammayatri"))
+            {
+                fileNameformat = "NY_RIDE_";
+            }else{
+                fileNameformat = "YATRI_RIDE_";
+            }
+            fileNameformat = fileNameformat + selectedItem.getString("date") + selectedItem.getString("rideStartTime") + ".pdf";
             String fileName = fileNameformat.replaceAll(":",".");
             File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), fileName);
             try {
                 pdfDocument.writeTo(new FileOutputStream(file));
-                Uri path = FileProvider.getUriForFile(context.getApplicationContext(), context.getResources().getString(R.string.fileProviderPath), file);
+                Uri path = FileProvider.getUriForFile(context.getApplicationContext(), context.getApplicationInfo().packageName + ".fileProvider", file);
                 Intent pdfOpenintent = new Intent(Intent.ACTION_VIEW);
                 pdfOpenintent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_CLEAR_TOP);
                 pdfOpenintent.setDataAndType(path, "application/pdf");
-                Bitmap notification_logo = BitmapFactory.decodeResource(context.getResources(), R.drawable.ny_ic_launcher);
                 PendingIntent pendingIntent = PendingIntent.getActivity(context, 234567, pdfOpenintent, PendingIntent.FLAG_IMMUTABLE);
                 NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(context, "General");
                 mBuilder.setContentTitle("Invoice Downloaded")
-                        .setSmallIcon((R.drawable.ny_ic_launcher))
+                        .setSmallIcon((R.drawable.ic_launcher))
                         .setContentText("Invoice for your ride is downloaded!!!")
                         .setAutoCancel(true)
                         .setPriority(NotificationCompat.PRIORITY_DEFAULT);

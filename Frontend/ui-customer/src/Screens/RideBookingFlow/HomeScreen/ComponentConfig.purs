@@ -15,38 +15,48 @@
 
 module Screens.RideBookingFlow.HomeScreen.Config where
 
+import Common.Types.App
+import Language.Strings
 import Prelude
-import Screens.Types as ST
-import Components.PopUpModal as PopUpModal
-import Components.PrimaryButton as PrimaryButton
-import Components.SourceToDestination as SourceToDestination
+import PrestoDOM
+
+import Animation.Config as AnimConfig
 import Components.CancelRide as CancelRidePopUpConfig
-import Components.FareBreakUp as FareBreakUp
-import Components.ErrorModal as ErrorModal
-import Components.RateCard as RateCard
+import Components.DriverInfoCard (DriverInfoCardData)
 import Components.DriverInfoCard as DriverInfoCard
 import Components.EmergencyHelp as EmergencyHelp
+import Components.ErrorModal as ErrorModal
+import Components.FareBreakUp as FareBreakUp
+import Components.PopUpModal as PopUpModal
+import Components.PrimaryButton as PrimaryButton
 import Components.SearchLocationModel as SearchLocationModel
+import Components.ChooseYourRide as ChooseYourRide
+import Components.MenuButton as MenuButton
 import Components.QuoteListModel as QuoteListModel
+import Components.RateCard as RateCard
 import Components.RatingCard as RatingCard
 import Components.ChatView as ChatView
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Data.String as DS
 import Animation.Config as AnimConfig
+import Components.SearchLocationModel as SearchLocationModel
+import Components.SourceToDestination as SourceToDestination
 import Data.Array as DA
 import Data.Maybe (Maybe(..), fromMaybe)
-import Language.Strings
-import Language.Types (STR(..))
-import Helpers.Utils as HU
+import Data.String as DS
 import Engineering.Helpers.Commons as EHC
-import JBridge as JB
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Helpers.Utils as HU
+import JBridge as JB
+import Language.Types (STR(..))
+import PrestoDOM.Types.DomAttributes (Corners(..))
+import Screens.Types (DriverInfoCard)
+import Screens.Types as ST
 import Styles.Colors as Color
-import Common.Types.App
-import PrestoDOM
 import Data.Int as INT
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn)
+
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -57,10 +67,10 @@ shareAppConfig state = let
       buttonLayoutMargin = (Margin 16 0 16 20),
       primaryText {
         text = getString(YOUR_RIDE_HAS_STARTED) 
-      , margin = (Margin 16 0 16 0)},
+      , margin = (MarginHorizontal 16 16)},
       secondaryText { 
         text = getString(ENJOY_RIDING_WITH_US)
-      , margin = Margin 0 12 0 24 
+      , margin = MarginVertical 12 24  
       , fontSize = FontSize.a_14
       , color = Color.black700},
       option1 {
@@ -84,7 +94,7 @@ shareAppConfig state = let
       },
       cornerRadius = (Corners 15.0 true true true true),
       coverImageConfig {
-        imageUrl = "ny_ic_share_app,https://assets.juspay.in/nammayatri/images/user/ny_ic_share_app.png"
+        imageUrl = "ic_share_app,https://assets.juspay.in/nammayatri/images/user/ny_ic_share_app.png"
       , visibility = VISIBLE
       , margin = Margin 16 20 16 24
       , width = MATCH_PARENT
@@ -556,8 +566,10 @@ driverInfoCardViewState state = { props:
                                   , trackingEnabled: state.props.isInApp
                                   , unReadMessages : state.props.unReadMessages
                                   , showCallPopUp: state.props.showCallPopUp
+                                  , isSpecialZone: state.props.isSpecialZone
+                                  , estimatedTime : state.data.rideDuration
                                   }
-                              , data: state.data.driverInfoCardState
+                              , data: driverInfoTransformer state
                             }
 
 chatViewConfig :: ST.HomeScreenState -> ChatView.Config
@@ -614,6 +626,43 @@ metersToKm distance state =
   if (distance <= 10) then
     (if (state.props.currentStage == ST.RideStarted) then (getString AT_DROP) else (getString AT_PICKUP))
   else if (distance < 1000) then (HU.toString distance <> " m " <> (getString AWAY_C)) else (HU.parseFloat ((INT.toNumber distance) / 1000.0)) 2 <> " km " <> (getString AWAY_C)
+
+
+driverInfoTransformer :: ST.HomeScreenState -> DriverInfoCardData
+driverInfoTransformer state =
+  let cardState = state.data.driverInfoCardState
+  in
+    { otp : cardState.otp
+    , driverName : cardState.driverName
+    , eta : cardState.eta
+    , vehicleDetails : cardState.vehicleDetails
+    , registrationNumber : cardState.registrationNumber
+    , rating : cardState.rating
+    , startedAt : cardState.startedAt
+    , endedAt : cardState.endedAt
+    , source : cardState.source
+    , destination : cardState.destination
+    , rideId : cardState.rideId
+    , price : cardState.price
+    , sourceLat : cardState.sourceLat
+    , sourceLng : cardState.sourceLng
+    , destinationLat : cardState.destinationLat
+    , destinationLng : cardState.destinationLng
+    , driverLat : cardState.driverLat
+    , driverLng : cardState.driverLng
+    , distance : cardState.distance
+    , waitingTime : cardState.waitingTime
+    , driverArrived : cardState.driverArrived
+    , estimatedDistance : cardState.estimatedDistance
+    , driverArrivalTime : cardState.driverArrivalTime
+    , estimatedDropTime : ""
+    , isSpecialZone : state.props.isSpecialZone
+    , isLocationTracking : state.props.isLocationTracking
+    , bookingCreatedAt : cardState.createdAt
+    , bppRideId : ""
+    , driverNumber : cardState.driverNumber
+    , merchantExoPhone : cardState.merchantExoPhone
+    }
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState
 emergencyHelpModelViewState state = { showContactSupportPopUp: state.props.emergencyHelpModelState.showContactSupportPopUp
@@ -734,3 +783,39 @@ callSupportConfig state = let
     }
   }
   in popUpConfig'
+menuButtonConfig :: ST.HomeScreenState -> ST.Location -> MenuButton.Config
+menuButtonConfig state item = let  
+    config = MenuButton.config
+    menuButtonConfig' = config {
+      titleConfig{
+          text = item.place
+          ,selectedFontStyle = FontStyle.bold LanguageStyle
+          ,unselectedFontStyle = FontStyle.regular LanguageStyle
+      }
+      , radioButtonConfig {
+        height = V 16
+        , width = V 16
+        , imageHeight = V 10
+        , imageWidth = V 10
+        , imageUrl = "ny_ic_pickup"
+        , cornerRadius = 10.0
+        , buttonMargin = (MarginRight 15)
+        , activeStroke = ("2," <> Color.positive)
+      }
+      , height = V 40
+      , id = item.place
+      , lat = item.lat
+      , lng = item.lng
+      , leftsidebutton = true
+      , padding = PaddingBottom 10 
+      , isSelected = item.place == state.props.defaultPickUpPoint
+    }
+    in menuButtonConfig'
+
+chooseYourRideConfig :: ST.HomeScreenState -> ChooseYourRide.Config
+chooseYourRideConfig state = ChooseYourRide.config
+  { 
+    rideDistance = state.data.rideDistance,
+    rideDuration = state.data.rideDuration,
+    quoteList = state.data.specialZoneQuoteList
+  }

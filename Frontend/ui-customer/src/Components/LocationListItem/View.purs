@@ -106,6 +106,7 @@ titleView config =
     , lineHeight "18"
     , maxLines 1
     , ellipsize true
+    , padding (PaddingRight 20)
     , margin (MarginBottom 4)
     , fontStyle $ FontStyle.semiBold LanguageStyle
     ]-- <> FontStyle.body1 TypoGraphy)

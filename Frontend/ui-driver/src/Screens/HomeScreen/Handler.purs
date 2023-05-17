@@ -39,8 +39,12 @@ homeScreen = do
   (GlobalState state) <- getState
   action <- lift $ lift $ runScreen $ HomeScreen.screen state.homeScreen
   case action of
-    GoToProfileScreen -> App.BackT $ App.BackPoint <$> pure GO_TO_PROFILE_SCREEN
-    GoToRidesScreen -> App.BackT $ App.BackPoint <$> pure GO_TO_RIDES_SCREEN
+    GoToProfileScreen updatedState-> do
+      modifyScreenState $ HomeScreenStateType (\homeScreen → updatedState)
+      App.BackT $ App.BackPoint <$> pure GO_TO_PROFILE_SCREEN
+    GoToRidesScreen updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreen → updatedState)
+      App.BackT $ App.BackPoint <$> pure GO_TO_RIDES_SCREEN
     GoToReferralScreen -> App.BackT $ App.BackPoint <$> pure GO_TO_REFERRAL_SCREEN_FROM_HOME_SCREEN
     DriverAvailabilityStatus state status -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → state)
@@ -51,6 +55,10 @@ homeScreen = do
       _ <- pure $ printLog "lat handler" startRideCurrentLat
       _ <- pure $ printLog "lon handler" startRideCurrentLong
       App.BackT $ App.NoBack <$> (pure $ GO_TO_START_RIDE {id: state.data.activeRide.id, otp : state.props.rideOtp , lat : startRideCurrentLat, lon : startRideCurrentLong})
+    StartZoneRide  state -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState → state)
+      (Location startZoneRideCurrentLat startZoneRideCurrentLong) <- (lift $ lift $ doAff $ makeAff \cb -> getCurrentPosition (cb <<< Right) Location $> nonCanceler)
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_START_ZONE_RIDE {otp : state.props.rideOtp , lat : startZoneRideCurrentLat, lon : startZoneRideCurrentLong})
     EndRide updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
       (Location endRideCurrentLat endRideCurrentLong) <- (lift $ lift $ doAff $ makeAff \cb -> getCurrentPosition (cb <<< Right) Location $> nonCanceler)
@@ -79,7 +87,9 @@ homeScreen = do
     UpdateStage stage state -> do
       modifyScreenState $ HomeScreenStateType (\homeScreen → state)
       App.BackT $ App.BackPoint <$> (pure $ UPDATE_STAGE stage)
-    GoToNotifications -> App.BackT $ App.BackPoint <$> pure GO_TO_NOTIFICATIONS
+    GoToNotifications updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreen → updatedState)
+      App.BackT $ App.BackPoint <$> pure GO_TO_NOTIFICATIONS
     AddAlternateNumber state -> do
       App.BackT $ App.BackPoint <$> (pure $ ADD_ALTERNATE_HOME)
      

@@ -235,11 +235,27 @@ public class ChatService extends Service {
         String appState = null;
         if(sharedPrefs != null) appState = sharedPrefs.getString("ACTIVITY_STATUS", "null");
         String sentBy = "";
-        if (_sentBy.equals("Driver")) sentBy = "nammayatripartner";
-        else sentBy = "nammayatri";
+        if (_sentBy.equals("Driver")) {
+            String appName = getApplicationContext().getResources().getString(R.string.app_name);
+            if (appName.equals("Yatri Partner"))
+                sentBy = "yatripartner";
+            else if(appName.equals("Jatri Sathi Driver"))
+                sentBy = "jatrisaathidriver";
+            else
+                sentBy = "nammayatripartner";
+        }
+        else {
+            String appName = getApplicationContext().getResources().getString(R.string.app_name);
+            if (appName.equals("Yatri"))
+                sentBy = "yatri";
+            else if(appName.equals("Jatri Sathi"))
+                sentBy = "jatrisaathi";
+            else
+                sentBy = "nammayatri";
+        }
         if(appState.equals("onDestroy") || appState.equals("onPause")){
             if(!(merchant.equals(sentBy)) && isChatServiceRunning && shouldNotify){
-                if(merchant.equals("nammayatripartner")) startWidgetService(_message, _sentBy);
+                if(merchant.equals("nammayatripartner") || merchant.equals("yatripartner") || merchant.equals("jatrisaathidriver")) startWidgetService(_message, _sentBy);
                 else createChatNotification(_sentBy, _message);
             }
         }
@@ -257,7 +273,7 @@ public class ChatService extends Service {
 
     private void startWidgetService(String widgetMessage, String sentBy){
         Intent widgetService = new Intent(getApplicationContext(), WidgetService.class);
-        if (merchant.equals(getString(R.string.nammayatripartner)) && Settings.canDrawOverlays(getApplicationContext())  && !sharedPrefs.getString(getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && (sharedPrefs.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPrefs.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"))) {
+        if ((merchant.equals("nammayatripartner") || merchant.equals("yatripartner") || merchant.equals("jatrisaathidriver")) && Settings.canDrawOverlays(getApplicationContext())  && !sharedPrefs.getString(getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && (sharedPrefs.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPrefs.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"))) {
             widgetService.putExtra(getResources().getString(R.string.WIDGET_MESSAGE),widgetMessage);
             widgetService.putExtra("sentBy",(sentBy + " :-"));
             try{
@@ -273,7 +289,7 @@ public class ChatService extends Service {
         Intent notificationIntent = new Intent(this, MainActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 10, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
         String contentText;
-        if(merchant.equals("nammayatripartner")){
+        if(merchant.equals("nammayatripartner") || merchant.equals("yatripartner") || merchant.equals("jatrisaathidriver")){
             contentText = getString(R.string.you_can_now_chat_with_customer);
         } else {
             contentText = getString(R.string.you_can_now_chat_with_driver);
@@ -282,7 +298,7 @@ public class ChatService extends Service {
                 new NotificationCompat.Builder(this, "Message")
                         .setContentTitle(getString(R.string.chatting_is_enabled))
                         .setContentText(contentText)
-                        .setSmallIcon(R.drawable.ny_ic_launcher)
+                        .setSmallIcon(R.drawable.ic_launcher)
                         .setPriority(NotificationCompat.PRIORITY_MIN)
                         .setOngoing(true)
                         .setContentIntent(pendingIntent);
@@ -299,7 +315,7 @@ public class ChatService extends Service {
                         .setContentTitle(sentBy)
                         .setAutoCancel(true)
                         .setContentText(message)
-                        .setSmallIcon(R.drawable.ny_ic_launcher)
+                        .setSmallIcon(R.drawable.ic_launcher)
                         .setDefaults(Notification.DEFAULT_ALL)
                         .setPriority(NotificationCompat.PRIORITY_HIGH)
                         .setContentIntent(pendingIntent)

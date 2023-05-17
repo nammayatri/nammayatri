@@ -33,6 +33,8 @@ import Styles.Colors as Color
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Common.Types.App
+import Helpers.Utils(Merchant(..), getMerchant)
+import Merchant.Utils(getValueFromConfig)
 
 screen :: AppUpdatePopUpState -> ScopedScreen Action AppUpdatePopUpState ScreenOutput
 screen initialState =
@@ -147,7 +149,7 @@ view push state =
                   , textSize FontSize.a_14
                   , onClick (\action -> do
                               _<- push action
-                              _ <- JB.openUrlInApp if EHC.os  == "ANDROID" then "https://play.google.com/store/apps/details?id=in.juspay.nammayatri" else "https://apps.apple.com/in/app/namma-yatri/id1637429831"
+                              _ <- JB.openUrlInApp (getAppLink (getMerchant FunctionCall))
                               pure unit
                               ) (const OnAccept)
               ] 
@@ -156,3 +158,15 @@ view push state =
         ]
       ]
   ]
+
+
+getAppLink :: Merchant -> String 
+getAppLink merchant = 
+  case merchant of 
+    YATRI -> case EHC.os of 
+      "IOS" -> "https://apps.apple.com/in/app/yatri/id1615871038"
+      _     -> "https://play.google.com/store/apps/details?id=net.openkochi.yatri"
+    NAMMAYATRI -> case EHC.os of 
+      "IOS" -> "https://apps.apple.com/in/app/namma-yatri/id1637429831"
+      _ -> "https://play.google.com/store/apps/details?id=in.juspay.nammayatri"
+    _ -> ""

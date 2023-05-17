@@ -15,36 +15,40 @@
 
 module Screens.DriverProfileScreen.View where
 
-import Prelude (Unit, ($), const, map, (==), (||), (/), unit, bind, (-), (<>), (<<<), pure, discard, show, void)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, frameLayout, alpha, scrollView, cornerRadius, onBackPressed, visibility, id, afterRender, imageWithFallback, webView, url)
-import Effect (Effect)
-import Screens.DriverProfileScreen.Controller (Action(..), ScreenOutput, eval, getTitle)
-import Screens.DriverProfileScreen.ScreenData (MenuOptions(..), optionList)
-import Components.BottomNavBar.Controller (navData)
-import Screens.Types as ST
-import Styles.Colors as Color
-import Font.Style as FontStyle
-import Font.Size as FontSize
-import Language.Types (STR(..))
-import Language.Strings (getString)
-import Engineering.Helpers.Commons as EHC
-import Animation as Anim
-import Components.BottomNavBar.View as BottomNavBar
-import Storage (KeyStore(..),getValueToLocalStore)
-import JBridge as JB
-import Effect.Class (liftEffect)
-import Services.Backend as Remote
-import Services.APITypes(GetDriverInfoReq(..), GetDriverInfoResp(..))
-import Control.Monad.Trans.Class (lift)
-import Presto.Core.Types.Language.Flow (doAff)
 import Effect.Aff (launchAff)
-import Control.Monad.Except (runExceptT)
-import Control.Transformers.Back.Trans (runBackT)
-import Data.Maybe (fromMaybe)
-import Components.PopUpModal as PopUpModal
 import Common.Types.App
 import Screens.DriverProfileScreen.ComponentConfig
 import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion)
+
+import Animation as Anim
+import Components.BottomNavBar.Controller (navData)
+import Components.BottomNavBar.View as BottomNavBar
+import Components.PopUpModal as PopUpModal
+import Control.Monad.Except (runExceptT)
+import Control.Monad.Trans.Class (lift)
+import Control.Transformers.Back.Trans (runBackT)
+import Data.Array (length, mapWithIndex, null)
+import Data.Maybe (fromMaybe)
+import Effect (Effect)
+import Effect.Class (liftEffect)
+import Engineering.Helpers.Commons as EHC
+import Font.Size as FontSize
+import Font.Style as FontStyle
+import JBridge as JB
+import Language.Strings (getString)
+import Language.Types (STR(..))
+import Prelude (Unit, ($), const, map, (==), (||), (/), unit, bind, (-), (<>), (<<<), pure, discard, show, (&&), void)
+import Presto.Core.Types.Language.Flow (doAff)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable)
+import Screens.DriverProfileScreen.Controller (Action(..), ScreenOutput, eval, getTitle)
+import Screens.DriverProfileScreen.ScreenData (MenuOptions(..), optionList)
+import Screens.Types as ST
+import Services.APITypes (GetDriverInfoReq(..), GetDriverInfoResp(..))
+import Services.Backend as Remote
+import Storage (KeyStore(..), getValueToLocalStore)
+import Styles.Colors as Color
+import Screens as ScreenNames
+import Helpers.Utils (getVehicleType)
 
 
 screen :: ST.DriverProfileScreenState -> Screen Action ST.DriverProfileScreenState ScreenOutput
@@ -79,6 +83,7 @@ view push state =
       , background Color.white900
       , onBackPressed push (const BackPressed state)
       , afterRender push (const AfterRender)
+      , background Color.white900
       ][ Anim.screenAnimationFadeInOut $
           linearLayout
           [ width MATCH_PARENT
@@ -88,7 +93,7 @@ view push state =
           ][ profilePictureLayout state push
            , profileOptionsLayout state push
            ]
-        , BottomNavBar.view (push <<< BottomNavBarAction) (navData 4)
+        , BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.DRIVER_PROFILE_SCREEN)
       ]
       , linearLayout
         [ width MATCH_PARENT
@@ -122,48 +127,39 @@ showLiveStatsDashboard push state =
 ------------------------------------------------- profilePictureLayout ------------------------------
 profilePictureLayout :: ST.DriverProfileScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 profilePictureLayout state push =
-    frameLayout
+    linearLayout
     [ width MATCH_PARENT
-    , height $ V ((EHC.screenHeight unit)/3 - 10)
+    , height WRAP_CONTENT
+    , background Color.black900
+    , padding $ Padding 16 40 16 24
+    , gravity CENTER_VERTICAL
     ][ imageView
-      [ width MATCH_PARENT
-      , height MATCH_PARENT
-      , imageUrl "shape_profile_drawable"
-      ]
+        [ width $ V 64
+        , height MATCH_PARENT
+        , layoutGravity "center"
+        , cornerRadius 45.0
+        , id $ EHC.getNewIDWithTag "ProfileImage"
+        , imageWithFallback "ny_ic_profile_image,https://assets.juspay.in/nammayatri/images/common/ny_ic_profile_image.png"
+        ]
       , linearLayout
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , orientation VERTICAL
-        , layoutGravity "center"
-        , padding (PaddingTop 25)
-        ][ imageView
-            [ width $ V 75
-            , height $ V 75
-            , layoutGravity "center"
-            , cornerRadius 45.0
-            , id (EHC.getNewIDWithTag "ProfileImage")
-            , imageWithFallback "ny_ic_profile_image,https://assets.juspay.in/nammayatri/images/common/ny_ic_profile_image.png"
-            -- TODO : after 15 aug
-            -- , afterRender (\action-> do
-            --               _ <- pure $ JB.renderBase64Image state.data.base64Image (EHC.getNewIDWithTag "ProfileImage")
-            --               pure unit)(const NoAction)
-            ]
+        , padding $ PaddingLeft 20
+        ][ textView $ 
+            [ width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , text $ getValueToLocalStore USER_NAME
+            , color Color.white900
+            ] <> FontStyle.h3 TypoGraphy
             , textView
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
-            , text (getValueToLocalStore USER_NAME)
-            , layoutGravity "center"
-            , color Color.black800
-            , textSize FontSize.a_17
-            , fontStyle $ FontStyle.medium LanguageStyle
-            ]
-            , textView
-            [ width WRAP_CONTENT
-            , height WRAP_CONTENT
-            , text "Auto"--state.data.driverVehicleType
-            , layoutGravity "center"
-            , textSize FontSize.a_12
+            , margin $ MarginTop 3
+            , text $ getVehicleType state.data.driverVehicleType
+            , textSize FontSize.a_10
             , fontStyle $ FontStyle.regular LanguageStyle
+            , color Color.black500
             ]
             , ratingView state
         ]
@@ -180,16 +176,17 @@ profileOptionsLayout state push =
     [ width MATCH_PARENT
     , height MATCH_PARENT
     , orientation VERTICAL
-    , padding (Padding 0 5 0 5)
-    ] (map(\optionItem ->
+    , padding $ Padding 0 10 0 5
+    ] (mapWithIndex
+        (\index optionItem ->
             linearLayout
-            [ width MATCH_PARENT
+            ([ width MATCH_PARENT
             , height WRAP_CONTENT
             , orientation VERTICAL
             , gravity CENTER_VERTICAL
-            , onClick push (const $ OptionClick optionItem.menuOptions)
-            , visibility if (optionItem.menuOptions == DRIVER_BANK_DETAILS || optionItem.menuOptions == REFER) then GONE else VISIBLE
-            ][ linearLayout
+            , onClick push $ const $ OptionClick optionItem.menuOptions
+            ] <> if (optionItem.menuOptions == DRIVER_BOOKING_OPTIONS) && (null state.data.downgradeOptions) then [alpha 0.5
+            ,clickable false] else [])[ linearLayout
               [ width MATCH_PARENT
               , height WRAP_CONTENT
               , orientation HORIZONTAL
@@ -203,8 +200,8 @@ profileOptionsLayout state push =
                   , textView (
                   [ height WRAP_CONTENT
                   , weight 1.0
-                  , text (getTitle optionItem.menuOptions)
-                  , margin (MarginLeft 10)
+                  , text $ getTitle optionItem.menuOptions
+                  , margin $ MarginLeft 10
                   , color Color.black900
                   ] <> FontStyle.subHeading2 TypoGraphy
                   )
@@ -216,7 +213,7 @@ profileOptionsLayout state push =
                   ][ textView
                       [ width WRAP_CONTENT
                       , height WRAP_CONTENT
-                      , text ("V " <> (getValueToLocalStore VERSION_NAME))
+                      , text $ "V " <> (getValueToLocalStore VERSION_NAME)
                       , textSize FontSize.a_14
                       , visibility if(optionItem.menuOptions == ABOUT_APP) then VISIBLE else GONE
                       , margin (MarginRight 5)
@@ -228,12 +225,11 @@ profileOptionsLayout state push =
                       ]
                   ]
               ]
-              , if (optionItem.menuOptions == DRIVER_VEHICLE_DETAILS || optionItem.menuOptions == ABOUT_APP) then (horizontalLineView 7 0.5 0 20 0) else if(optionItem.menuOptions == DRIVER_LOGOUT) then dummyTextView else horizontalLineView 1 1.0 15 15 15
+              , if (index == 2 || index == length (optionList "lazyEvaluation") - 2) then (horizontalLineView 7 0.5 0 20 0) else if(optionItem.menuOptions == DRIVER_LOGOUT) then dummyTextView else horizontalLineView 1 1.0 15 15 15
             ]
           ) (optionList "lazyEvaluation")
     )
  ]
-
 
 --------------------------------------------------------------- ratingView ----------------------------
 ratingView :: ST.DriverProfileScreenState -> forall w . PrestoDOM (Effect Unit) w
@@ -241,12 +237,7 @@ ratingView state=
  linearLayout
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
-  , background Color.grey800
-  , layoutGravity "center"
-  , margin (MarginTop 7)
-  , orientation HORIZONTAL
-  , padding (Padding 13 6 13 6)
-  , cornerRadius 5.0
+  , margin $ MarginTop 5
   ][imageView
     [ width $ V 12
     , height MATCH_PARENT
@@ -259,7 +250,7 @@ ratingView state=
     , text $ if (fromMaybe 0 state.data.driverRating ) == 0 then "New" else show (fromMaybe 0 state.data.driverRating )
     , margin (MarginLeft 7)
     , textSize FontSize.a_14
-    , color Color.black800
+    , color Color.white900
     ]
     , imageView
     [ width $ V 15

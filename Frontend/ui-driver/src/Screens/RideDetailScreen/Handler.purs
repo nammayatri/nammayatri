@@ -24,6 +24,8 @@ import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.RideDetailScreen.View as RideDetailScreen
 import Types.App (FlowBT, GlobalState(..), RIDE_DETAIL_SCREENOUTPUT(..), ScreenType(..), defaultGlobalState)
 import Types.ModifyScreenState (modifyScreenState)
+import JBridge as JB
+import Engineering.Helpers.Commons as EHC
 
 rideDetail :: FlowBT String RIDE_DETAIL_SCREENOUTPUT
 rideDetail = do
@@ -34,5 +36,6 @@ rideDetail = do
     GoToHomeScreen -> do
       let (GlobalState defaultState) = defaultGlobalState
       modifyScreenState $ HomeScreenStateType (\homeScreen → defaultState.homeScreen)
+      _ <- lift $ lift $ EHC.liftFlow $ JB.reallocateMapFragment (EHC.getNewIDWithTag "DriverTrackingHomeScreenMap")
       App.BackT $ App.BackPoint <$> pure GO_TO_HOME_FROM_RIDE_DETAIL
     ShowRoute -> App.BackT $ App.BackPoint <$> pure SHOW_ROUTE_IN_RIDE_DETAIL
