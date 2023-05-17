@@ -77,9 +77,6 @@ instance FromBackendRow Postgres Domain.Status
 instance IsString Domain.Status where
   fromString = show
 
-instance IsString Domain.FarePolicyType where
-  fromString = show
-
 instance IsString GeoRestriction where
   fromString = show
 
@@ -198,8 +195,8 @@ defaultMerchant =
       verified = False,
       enabled = False,
       internalApiKey = "",
-      createdAt = defaultDate,
-      updatedAt = defaultDate,
+      createdAt = defaultUTCDate,
+      updatedAt = defaultUTCDate,
       originRestriction = "",
       destinationRestriction = "",
       info = Nothing
