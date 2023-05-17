@@ -108,7 +108,7 @@ defaultDriverReferral =
   DriverReferralT
     { referralCode = "",
       driverId = "",
-      linkedAt = defaultDate
+      linkedAt = defaultUTCDate
     }
 
 instance Serialize DriverReferral where

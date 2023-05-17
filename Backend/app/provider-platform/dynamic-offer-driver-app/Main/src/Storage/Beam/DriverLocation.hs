@@ -137,9 +137,9 @@ defaultDriverLocation =
       lat = 0.0,
       lon = 0.0,
       point = "",
-      coordinatesCalculatedAt = defaultUTCDate,
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
+      coordinatesCalculatedAt = defaultDate,
+      createdAt = defaultDate,
+      updatedAt = defaultDate
     }
 
 instance Serialize DriverLocation where

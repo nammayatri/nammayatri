@@ -97,9 +97,6 @@ data FareParametersT f = FareParametersT
 instance IsString Money where
   fromString = show
 
-instance IsString Domain.FarePolicyType where
-  fromString = show
-
 instance B.Table FareParametersT where
   data PrimaryKey FareParametersT f
     = Id (B.C f Text)
@@ -169,7 +166,6 @@ defaultFareParameters =
       waitingChargePerMin = Nothing,
       waitingOrPickupCharges = Nothing,
       serviceCharge = Nothing,
-      farePolicyType = "",
       govtChargesPerc = Nothing
     }
 

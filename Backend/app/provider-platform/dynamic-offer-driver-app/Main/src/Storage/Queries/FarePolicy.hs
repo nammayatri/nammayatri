@@ -145,9 +145,6 @@ import Domain.Types.Merchant
 import Domain.Types.Vehicle.Variant (Variant)
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
-import qualified EulerHS.Language as L
-import qualified EulerHS.Extra.EulerDB as Extra
-import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.Prelude

@@ -123,7 +123,7 @@ defaultDriverStats =
     { driverId = "",
       idleSince = defaultUTCDate,
       totalRides = 0,
-      totalDistance = Meters 0
+      totalDistance = 0
     }
 
 instance Serialize DriverStats where

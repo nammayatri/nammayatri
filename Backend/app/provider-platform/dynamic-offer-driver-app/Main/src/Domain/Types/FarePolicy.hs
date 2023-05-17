@@ -106,9 +106,34 @@ data DriverExtraFeeBounds = DriverExtraFeeBounds
   }
   deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
 
--- the formula is
--- fare = (base fare * base distance) + deadKmFare + (extraKm * extraKmFare) + driver selected extra fee
--- (and additionally night shift coefficients)
+data NightShiftBounds = NightShiftBounds
+  { nightShiftStart :: TimeOfDay,
+    nightShiftEnd :: TimeOfDay
+  }
+  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
+
+data AllowedTripDistanceBounds = AllowedTripDistanceBounds
+  { maxAllowedTripDistance :: Meters,
+    minAllowedTripDistance :: Meters
+  }
+  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
+
+data WaitingCharge = PerMinuteWaitingCharge HighPrecMoney | ConstantWaitingCharge Money
+  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
+
+data NightShiftCharge = ProgressiveNightShiftCharge Float | ConstantNightShiftCharge Money
+  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
+
+data FarePolicyType = Progressive | Slabs deriving (Show, Read)
+
+getFarePolicyType :: FarePolicy -> FarePolicyType
+getFarePolicyType farePolicy = case farePolicy.farePolicyDetails of
+  ProgressiveDetails _ -> Progressive
+  SlabsDetails _ -> Slabs
+
+-----------------------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------APIEntity--------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------------------
 
 data FarePolicyAPIEntity = FarePolicyAPIEntity
   { id :: Id FarePolicy,

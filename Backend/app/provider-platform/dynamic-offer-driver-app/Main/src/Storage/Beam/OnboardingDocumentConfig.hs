@@ -158,8 +158,8 @@ defaultOnboardingDocumentConfig =
       checkExpiry = False,
       validVehicleClasses = [""],
       vehicleClassCheckType = "",
-      createdAt = defaultDate,
-      updatedAt = defaultDate
+      createdAt = defaultUTCDate,
+      updatedAt = defaultUTCDate
     }
 
 instance Serialize OnboardingDocumentConfig where
