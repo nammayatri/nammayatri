@@ -41,6 +41,7 @@ import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Kernel.Utils.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Vehicle ()
@@ -129,6 +130,15 @@ data EstimateT f = EstimateT
     createdAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
+
+instance IsString Domain.EstimateBreakup where
+  fromString = show
+
+instance IsString Money where
+  fromString = show
+
+instance IsString Variant.Variant where
+  fromString = show
 
 instance B.Table EstimateT where
   data PrimaryKey EstimateT f

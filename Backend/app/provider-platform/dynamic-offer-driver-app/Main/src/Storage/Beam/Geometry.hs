@@ -37,6 +37,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 
@@ -98,5 +99,16 @@ geometryToPSModifiers :: M.Map Text (A.Value -> A.Value)
 geometryToPSModifiers =
   M.fromList
     []
+
+defaultGeometry :: Geometry
+defaultGeometry =
+  GeometryT
+    { id = "",
+      region = ""
+    }
+
+instance Serialize Geometry where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''GeometryT ['id] [])

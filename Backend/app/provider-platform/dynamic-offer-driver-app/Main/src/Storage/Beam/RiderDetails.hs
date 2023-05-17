@@ -38,6 +38,7 @@ import GHC.Generics (Generic)
 import Kernel.External.Encryption
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.DriverReferral (DriverReferralTId)
@@ -103,6 +104,9 @@ instance ToJSON RiderDetails where
 
 deriving stock instance Show RiderDetails
 
+instance IsString DbHash where
+  fromString = show
+
 riderDetailsTMod :: RiderDetailsT (B.FieldModification (B.TableField RiderDetailsT))
 riderDetailsTMod =
   B.tableModification
@@ -132,5 +136,26 @@ riderDetailsToPSModifiers :: M.Map Text (A.Value -> A.Value)
 riderDetailsToPSModifiers =
   M.fromList
     []
+
+defaultRiderDetails :: RiderDetails
+defaultRiderDetails =
+  RiderDetailsT
+    { id = "",
+      mobileCountryCode = "",
+      mobileNumberEncrypted = "",
+      mobileNumberHash = "",
+      merchantId = "",
+      referralCode = Nothing,
+      referredByDriver = Nothing,
+      referredAt = Nothing,
+      hasTakenValidRide = False,
+      hasTakenValidRideAt = Nothing,
+      createdAt = defaultDate,
+      updatedAt = defaultDate
+    }
+
+instance Serialize RiderDetails where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''RiderDetailsT ['id] [])

@@ -22,6 +22,17 @@ import Data.ByteString.Internal (ByteString, unpackChars)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
+import Data.Time
+  ( LocalTime (LocalTime),
+    TimeOfDay (TimeOfDay),
+    localDay,
+    localTimeOfDay,
+    localTimeToUTC,
+    todHour,
+    todMin,
+    todSec,
+    utc,
+  )
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.Backend
@@ -38,6 +49,7 @@ import GHC.Generics (Generic)
 import qualified Kernel.External.Call.Interface.Types as Call
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Ride (RideTId)
@@ -75,7 +87,7 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Call.CallStatus
 instance FromBackendRow Postgres Call.CallStatus
 
 data CallStatusT f = CallStatusT
-  { id :: B.C f Text,
+  { id :: B.C f (Text),
     callId :: B.C f Text,
     rideId :: B.C f Text,
     dtmfNumberUsed :: B.C f (Maybe Text),
@@ -122,6 +134,22 @@ callStatusTMod =
       recordingUrl = B.fieldNamed "recording_url",
       conversationDuration = B.fieldNamed "conversation_duration",
       createdAt = B.fieldNamed "created_at"
+    }
+
+instance IsString Call.CallStatus where
+  fromString = show
+
+defaultCallStatus :: CallStatus
+defaultCallStatus =
+  CallStatusT
+    { id = "", -- :: Int,
+      callId = "",
+      rideId = "",
+      dtmfNumberUsed = Nothing,
+      status = "",
+      recordingUrl = Nothing,
+      conversationDuration = 0,
+      createdAt = defaultUTCDate --localTimeToUTC utc defaultDate
     }
 
 psToHs :: HM.HashMap Text Text

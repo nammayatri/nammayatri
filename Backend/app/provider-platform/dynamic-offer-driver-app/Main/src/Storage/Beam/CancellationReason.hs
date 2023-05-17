@@ -37,8 +37,9 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
-import Sequelize
+import Sequelize as Se
 
 fromFieldEnum ::
   (Typeable a, Read a) =>
@@ -102,5 +103,18 @@ cancellationReasonToPSModifiers :: M.Map Text (A.Value -> A.Value)
 cancellationReasonToPSModifiers =
   M.fromList
     []
+
+instance Serialize CancellationReason where
+  put = error "undefined"
+  get = error "undefined"
+
+defaultCancellationReason :: CancellationReason
+defaultCancellationReason =
+  CancellationReasonT
+    { reasonCode = "",
+      description = "",
+      enabled = False,
+      priority = 0
+    }
 
 $(enableKVPG ''CancellationReasonT ['reasonCode] [])

@@ -39,6 +39,7 @@ import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common (Centesimal, HighPrecMoney, Meters, Money, Seconds)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Merchant (MerchantTId)
@@ -147,6 +148,18 @@ data FarePolicyT f = FarePolicyT
     updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
+
+instance IsString Meters where
+  fromString = show
+
+instance IsString Variant.Variant where
+  fromString = show
+
+instance IsString HighPrecMoney where
+  fromString = show
+
+instance IsString Money where
+  fromString = show
 
 instance B.Table FarePolicyT where
   data PrimaryKey FarePolicyT f

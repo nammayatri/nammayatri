@@ -194,6 +194,8 @@ library
       Lib.DriverScore
       Lib.DriverScore.Types
       Lib.LocationUpdates
+      Lib.Mesh
+      Lib.Utils
       Lib.UtilsTH
       SharedLogic.Allocator
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers
@@ -223,12 +225,20 @@ library
       SharedLogic.Person
       SharedLogic.Ride
       Storage.Beam.Booking
+      Storage.Beam.Booking.BookingLocation
       Storage.Beam.BookingCancellationReason
       Storage.Beam.BusinessEvent
       Storage.Beam.CallStatus
       Storage.Beam.CancellationReason
+      Storage.Beam.Driver.DriverFlowStatus
       Storage.Beam.DriverInformation
       Storage.Beam.DriverLocation
+      Storage.Beam.DriverOnboarding.DriverLicense
+      Storage.Beam.DriverOnboarding.DriverRCAssociation
+      Storage.Beam.DriverOnboarding.IdfyVerification
+      Storage.Beam.DriverOnboarding.Image
+      Storage.Beam.DriverOnboarding.OperatingCity
+      Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate
       Storage.Beam.DriverQuote
       Storage.Beam.DriverReferral
       Storage.Beam.DriverStats
@@ -236,17 +246,34 @@ library
       Storage.Beam.Exophone
       Storage.Beam.FareParameters
       Storage.Beam.FarePolicy
+      Storage.Beam.FarePolicy.RestrictedExtraFare
       Storage.Beam.Geometry
+      Storage.Beam.Issue.Comment
+      Storage.Beam.Issue.IssueCategory
+      Storage.Beam.Issue.IssueOption
+      Storage.Beam.Issue.IssueReport
+      Storage.Beam.Issue.IssueTranslation
       Storage.Beam.MediaFile
       Storage.Beam.Merchant
+      Storage.Beam.Merchant.DriverIntelligentPoolConfig
+      Storage.Beam.Merchant.DriverPoolConfig
+      Storage.Beam.Merchant.MerchantMessage
+      Storage.Beam.Merchant.MerchantServiceConfig
+      Storage.Beam.Merchant.MerchantServiceUsageConfig
+      Storage.Beam.Merchant.TransporterConfig
+      Storage.Beam.Message.Message
+      Storage.Beam.Message.MessageReport
+      Storage.Beam.Message.MessageTranslation
       Storage.Beam.OnboardingDocumentConfig
       Storage.Beam.Person
       Storage.Beam.QuoteSpecialZone
       Storage.Beam.Rating
       Storage.Beam.RegistrationToken
+      Storage.Beam.Ride.Table
       Storage.Beam.RideDetails
       Storage.Beam.RiderDetails
       Storage.Beam.SearchRequest
+      Storage.Beam.SearchRequest.SearchReqLocation
       Storage.Beam.SearchRequestForDriver
       Storage.Beam.SearchRequestSpecialZone
       Storage.Beam.SlabFarePolicy

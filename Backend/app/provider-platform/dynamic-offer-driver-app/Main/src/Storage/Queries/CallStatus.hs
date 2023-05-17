@@ -15,12 +15,14 @@
 module Storage.Queries.CallStatus where
 
 import qualified Data.Text as T
+import Database.Beam (insertExpressions)
 import qualified Database.Beam.Postgres as DP
 import qualified Debug.Trace as T
 import Domain.Types.CallStatus
 import Domain.Types.Ride
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import qualified EulerHS.Types as ET
 import qualified Kernel.Beam.Types as KBT
@@ -36,6 +38,14 @@ import qualified Storage.Tabular.VechileNew as VN
 
 create :: CallStatus -> SqlDB ()
 create callStatus = void $ Esq.createUnique callStatus
+
+-- create' :: CallStatus -> SqlDB ()
+create' :: L.MonadFlow m => CallStatus -> m (MeshResult ())
+create' callStatus = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainCallStatusToBeam callStatus)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 findById :: Transactionable m => Id CallStatus -> m (Maybe CallStatus)
 findById = Esq.findById
@@ -70,6 +80,22 @@ updateCallStatus callId status conversationDuration recordingUrl = do
       ]
     where_ $ tbl ^. CallStatusId ==. val (getId callId)
 
+-- updateCallStatus' :: Id CallStatus -> Call.CallStatus -> Int -> BaseUrl -> SqlDB ()
+updateCallStatus' :: L.MonadFlow m => Id CallStatus -> Call.CallStatus -> Int -> BaseUrl -> m (MeshResult ())
+updateCallStatus' (Id callId) status conversationDuration recordingUrl = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        VN.meshConfig
+        [ Set BeamCT.conversationDuration $ conversationDuration,
+          Set BeamCT.recordingUrl $ Just (showBaseUrl recordingUrl),
+          Set BeamCT.status $ (status)
+        ]
+        [Is BeamCT.callId (Se.Eq callId)]
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+
 countCallsByRideId :: Transactionable m => Id Ride -> m Int
 countCallsByRideId rideId = (fromMaybe 0 <$>) $
   Esq.findOne $ do
@@ -89,4 +115,17 @@ transformBeamCallStatusToDomain BeamCT.CallStatusT {..} = do
       recordingUrl = recordingUrl,
       conversationDuration = conversationDuration,
       createdAt = createdAt
+    }
+
+transformDomainCallStatusToBeam :: CallStatus -> BeamCT.CallStatus
+transformDomainCallStatusToBeam CallStatus {..} =
+  BeamCT.defaultCallStatus
+    { BeamCT.id = getId id,
+      BeamCT.callId = callId,
+      BeamCT.rideId = getId rideId,
+      BeamCT.dtmfNumberUsed = dtmfNumberUsed,
+      BeamCT.status = status,
+      BeamCT.recordingUrl = recordingUrl,
+      BeamCT.conversationDuration = conversationDuration,
+      BeamCT.createdAt = createdAt
     }

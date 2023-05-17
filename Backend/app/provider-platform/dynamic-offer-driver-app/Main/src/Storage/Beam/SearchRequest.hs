@@ -39,6 +39,7 @@ import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Kernel.Utils.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Estimate (EstimateTId)
@@ -133,6 +134,18 @@ data SearchRequestT f = SearchRequestT
   }
   deriving (Generic, B.Beamable)
 
+instance IsString Domain.SearchRequestStatus where
+  fromString = show
+
+instance IsString Variant.Variant where
+  fromString = show
+
+instance IsString Meters where
+  fromString = show
+
+instance IsString Seconds where
+  fromString = show
+
 instance B.Table SearchRequestT where
   data PrimaryKey SearchRequestT f
     = Id (B.C f Text)
@@ -194,5 +207,35 @@ searchRequestToPSModifiers :: M.Map Text (A.Value -> A.Value)
 searchRequestToPSModifiers =
   M.fromList
     []
+
+defaultSearchRequest :: SearchRequest
+defaultSearchRequest =
+  SearchRequestT
+    { id = "",
+      transactionId = "",
+      messageId = "",
+      estimateId = "",
+      startTime = defaultDate,
+      validTill = defaultDate,
+      providerId = "",
+      fromLocationId = "",
+      toLocationId = "",
+      bapId = "",
+      bapUri = "",
+      estimatedDistance = "",
+      estimatedDuration = "",
+      customerExtraFee = Nothing,
+      device = Nothing,
+      status = "",
+      vehicleVariant = "",
+      searchRepeatCounter = 0,
+      autoAssignEnabled = False,
+      createdAt = defaultDate,
+      updatedAt = defaultDate
+    }
+
+instance Serialize SearchRequest where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''SearchRequestT ['id] [])

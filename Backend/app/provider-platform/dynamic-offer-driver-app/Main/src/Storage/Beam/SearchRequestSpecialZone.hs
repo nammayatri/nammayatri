@@ -38,6 +38,7 @@ import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Kernel.Utils.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Merchant (MerchantTId)
@@ -94,6 +95,12 @@ data SearchRequestSpecialZoneT f = SearchRequestSpecialZoneT
   }
   deriving (Generic, B.Beamable)
 
+instance IsString Seconds where
+  fromString = show
+
+instance IsString Meters where
+  fromString = show
+
 instance B.Table SearchRequestSpecialZoneT where
   data PrimaryKey SearchRequestSpecialZoneT f
     = Id (B.C f Text)
@@ -146,5 +153,28 @@ searchRequestSpecialZoneToPSModifiers :: M.Map Text (A.Value -> A.Value)
 searchRequestSpecialZoneToPSModifiers =
   M.fromList
     []
+
+defaultSearchRequestSpecialZone :: SearchRequestSpecialZone
+defaultSearchRequestSpecialZone =
+  SearchRequestSpecialZoneT
+    { id = "",
+      transactionId = "",
+      messageId = "",
+      startTime = defaultDate,
+      validTill = defaultDate,
+      providerId = "",
+      fromLocationId = "",
+      toLocationId = "",
+      bapId = "",
+      bapUri = "",
+      estimatedDistance = "",
+      estimatedDuration = "",
+      createdAt = defaultDate,
+      updatedAt = defaultDate
+    }
+
+instance Serialize SearchRequestSpecialZone where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''SearchRequestSpecialZoneT ['id] [])

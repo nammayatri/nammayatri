@@ -41,6 +41,7 @@ import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common (Meters, Money)
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Time
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Person (PersonTId)
@@ -160,6 +161,24 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
   }
   deriving (Generic, B.Beamable)
 
+instance IsString Money where
+  fromString = show
+
+instance IsString Domain.DriverSearchRequestStatus where
+  fromString = show
+
+instance IsString Domain.SearchRequestForDriverResponse where
+  fromString = show
+
+instance IsString Variant.Variant where
+  fromString = show
+
+instance IsString Seconds where
+  fromString = show
+
+instance IsString Meters where
+  fromString = show
+
 instance B.Table SearchRequestForDriverT where
   data PrimaryKey SearchRequestForDriverT f
     = Id (B.C f Text)
@@ -237,5 +256,41 @@ searchRequestForDriverToPSModifiers :: M.Map Text (A.Value -> A.Value)
 searchRequestForDriverToPSModifiers =
   M.fromList
     []
+
+defaultSearchRequestForDriver :: SearchRequestForDriver
+defaultSearchRequestForDriver =
+  SearchRequestForDriverT
+    { id = "",
+      transactionId = "",
+      searchRequestId = "",
+      startTime = defaultDate,
+      actualDistanceToPickup = "",
+      straightLineDistanceToPickup = "",
+      durationToPickup = "",
+      vehicleVariant = "",
+      batchNumber = 0,
+      baseFare = "",
+      lat = Nothing,
+      lon = Nothing,
+      searchRequestValidTill = defaultDate,
+      driverId = "",
+      status = "",
+      createdAt = defaultDate,
+      response = Nothing,
+      driverMinExtraFee = "",
+      driverMaxExtraFee = "",
+      rideRequestPopupDelayDuration = "",
+      isPartOfIntelligentPool = False,
+      cancellationRatio = Nothing,
+      acceptanceRatio = Nothing,
+      driverAvailableTime = Nothing,
+      parallelSearchRequestCount = Nothing,
+      driverSpeed = Nothing,
+      mode = Nothing
+    }
+
+instance Serialize SearchRequestForDriver where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''SearchRequestForDriverT ['id] [])
