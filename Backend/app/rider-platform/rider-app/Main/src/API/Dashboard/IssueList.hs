@@ -12,23 +12,29 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Storage.Queries.Issues where
+module API.Dashboard.IssueList where
 
-import Domain.Types.Issue
-import Domain.Types.Person (Person)
+import qualified Domain.Action.Dashboard.IssueList as DDI
+import qualified Domain.Types.Issue as DI
+import qualified Domain.Types.Merchant as DM
+import Environment
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
-import Storage.Tabular.Issue
+import Kernel.Utils.Common
+import Servant
 
-insertIssue :: Issue -> SqlDB ()
-insertIssue = do
-  Esq.create
+type API =
+  "issue"
+    :> ListCustomerIssue
 
-findByCustomerId :: Transactionable m => Id Person -> m [Issue]
-findByCustomerId customerId = do
-  Esq.findAll $ do
-    issues <- from $ table @IssueT
-    where_ $
-      issues ^. IssueCustomerId ==. val (toKey customerId)
-    pure issues
+type ListCustomerIssue =
+  "list"
+    :> Capture "mobileCountryCode" Text
+    :> Capture "mobileNumber" Text
+    :> Get '[JSON] [DI.Issue]
+
+handler :: ShortId DM.Merchant -> FlowServer API
+handler = listIssue
+
+listIssue :: ShortId DM.Merchant -> Text -> Text -> FlowHandler [DI.Issue]
+listIssue merchantShortId mobileCountryCode mobileNumber = withFlowHandlerAPI $ DDI.getIssueList merchantShortId mobileCountryCode mobileNumber
