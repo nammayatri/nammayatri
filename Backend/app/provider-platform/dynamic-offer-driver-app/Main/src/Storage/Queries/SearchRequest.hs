@@ -15,10 +15,17 @@
 module Storage.Queries.SearchRequest where
 
 import Domain.Types.SearchRequest as Domain
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Mesh as Mesh
+import qualified Sequelize as Se
+import qualified Storage.Beam.SearchRequest as BeamSR
 import Storage.Tabular.SearchRequest
 import Storage.Tabular.SearchRequest.SearchReqLocation
 
@@ -89,3 +96,55 @@ findActiveByTransactionId transactionId = do
       searchT ^. SearchRequestTransactionId ==. val transactionId
         &&. searchT ^. SearchRequestStatus ==. val Domain.ACTIVE
     return $ searchT ^. SearchRequestTId
+
+transformBeamSearchRequestToDomain :: BeamSR.SearchRequest -> SearchRequest
+transformBeamSearchRequestToDomain BeamSR.SearchRequestT {..} = do
+  SearchRequest
+    { id = Id id,
+      estimateId = Id estimateId,
+      transactionId = transactionId,
+      messageId = messageId,
+      startTime = startTime,
+      validTill = validTill,
+      providerId = Id providerId,
+      fromLocation = fromLocation,
+      toLocation = toLocation,
+      bapId = bapId,
+      bapUri = bapUri,
+      estimatedDistance = estimatedDistance,
+      estimatedDuration = estimatedDuration,
+      customerExtraFee = customerExtraFee,
+      device = device,
+      createdAt = createdAt,
+      updatedAt = updatedAt,
+      vehicleVariant = vehicleVariant,
+      status = status,
+      autoAssignEnabled = autoAssignEnabled,
+      searchRepeatCounter = searchRepeatCounter
+    }
+
+transformDomainSearchRequestToBeam :: SearchRequest -> BeamSR.SearchRequest
+transformDomainSearchRequestToBeam SearchRequest {..} =
+  BeamSR.defaultSearchRequest
+    { BeamSR.id = getId id,
+      BeamSR.estimateId = getId estimateId,
+      BeamSR.transactionId = transactionId,
+      BeamSR.messageId = messageId,
+      BeamSR.startTime = startTime,
+      BeamSR.validTill = validTill,
+      BeamSR.providerId = getId providerId,
+      BeamSR.fromLocation = fromLocation,
+      BeamSR.toLocation = toLocation,
+      BeamSR.bapId = bapId,
+      BeamSR.bapUri = bapUri,
+      BeamSR.estimatedDistance = estimatedDistance,
+      BeamSR.estimatedDuration = estimatedDuration,
+      BeamSR.customerExtraFee = customerExtraFee,
+      BeamSR.device = device,
+      BeamSR.createdAt = createdAt,
+      BeamSR.updatedAt = updatedAt,
+      BeamSR.vehicleVariant = vehicleVariant,
+      BeamSR.status = status,
+      BeamSR.autoAssignEnabled = autoAssignEnabled,
+      BeamSR.searchRepeatCounter = searchRepeatCounter
+    }

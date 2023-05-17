@@ -30,11 +30,25 @@ import Storage.Tabular.Estimate ()
 create :: Estimate -> SqlDB ()
 create = Esq.create
 
+create' :: L.MonadFlow m => Domain.Estimate -> m (MeshResult ())
+create' estimate = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainEstimateToBeam estimate)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+
 createMany :: [Estimate] -> SqlDB ()
 createMany = Esq.createMany
 
 findById :: Transactionable m => Id Estimate -> m (Maybe Estimate)
 findById = Esq.findById
+
+findById' :: L.MonadFlow m => Id Estimate -> m (Maybe Estimate)
+findById' (Id estimateId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure Nothing) (transformBeamEstimateToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamE.id $ Se.Eq sstimateId]
+    Nothing -> pure Nothing
 
 transformBeamEstimateToDomain :: BeamE.Estimate -> Estimate
 transformBeamEstimateToDomain BeamE.EstimateT {..} = do

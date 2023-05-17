@@ -71,6 +71,13 @@ findById farePolicyId = buildDType $ do
   res <- Esq.findById' farePolicyId
   join <$> mapM buildFullFarePolicy res
 
+findById' :: L.MonadFlow m => Id FarePolicy -> m (Maybe FarePolicy)
+findById' (Id farePolicyId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure Nothing) (transformBeamFarePolicyToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamFP.id $ Se.Eq farePolicyId]
+    Nothing -> pure Nothing
+
 update :: FarePolicy -> SqlDB ()
 update farePolicy = do
   now <- getCurrentTime

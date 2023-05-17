@@ -15,7 +15,7 @@
 module Storage.Queries.Rating where
 
 import Domain.Types.Person
-import Domain.Types.Rating
+import Domain.Types.Rating as DR
 import Domain.Types.Ride
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
@@ -32,6 +32,13 @@ import Storage.Tabular.Rating
 
 create :: Rating -> SqlDB ()
 create = Esq.create
+
+create' :: L.MonadFlow m => DR.Rating -> m (MeshResult ())
+create' rating = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainRatingToBeam rating)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 updateRating :: Id Rating -> Id Person -> Int -> Maybe Text -> SqlDB ()
 updateRating ratingId driverId newRatingValue newFeedbackDetails = do

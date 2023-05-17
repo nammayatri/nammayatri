@@ -21,10 +21,17 @@ import Domain.Types.Geometry (Geometry)
 import Domain.Types.Merchant
 import Domain.Types.RiderDetails (RiderDetails)
 import qualified Domain.Types.SearchRequest as DSR
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq hiding (findById, isNothing)
 import Kernel.Types.Id
 import Kernel.Types.Time
+import qualified Lib.Mesh as Mesh
+import qualified Sequelize as Se
+import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Queries.DriverQuote as QDQuote
 import Storage.Queries.FullEntityBuilders
 import Storage.Tabular.Booking
@@ -154,3 +161,59 @@ findAllBookings = do
   Esq.findAll $ do
     booking <- from $ table @GeometryT
     pure $ booking ^. GeometryTId
+
+transformBeamBookingToDomain :: BeamB.Booking -> Booking
+transformBeamBookingToDomain BeamB.BookingT {..} = do
+  Booking
+    { id = Id id,
+      transactionId = transactionId,
+      quoteId = quoteId,
+      status = status,
+      bookingType = bookingType,
+      specialZoneOtpCode = specialZoneOtpCode,
+      providerId = Id providerId,
+      primaryExophone = primaryExophone,
+      bapId = bapId,
+      bapUri = bapUri,
+      startTime = startTime,
+      riderId = Id <$> riderId,
+      fromLocation = fromLocation,
+      toLocation = toLocation,
+      vehicleVariant = vehicleVariant,
+      estimatedDistance = estimatedDistance,
+      maxEstimatedDistance = maxEstimatedDistance,
+      estimatedFare = estimatedFare,
+      estimatedDuration = estimatedDuration,
+      fareParams = fareParams,
+      riderName = riderName,
+      createdAt = createdAt,
+      updatedAt = updatedAt
+    }
+
+transformDomainBookingToBeam :: Booking -> BeamB.Booking
+transformDomainBookingToBeam Booking {..} =
+  BeamB.defaultBooking
+    { BeamB.id = getId id,
+      BeamB.transactionId = transactionId,
+      BeamB.quoteId = quoteId,
+      BeamB.status = status,
+      BeamB.bookingType = bookingType,
+      BeamB.specialZoneOtpCode = specialZoneOtpCode,
+      BeamB.providerId = getId providerId,
+      BeamB.primaryExophone = primaryExophone,
+      BeamB.bapId = bapId,
+      BeamB.bapUri = bapUri,
+      BeamB.startTime = startTime,
+      BeamB.riderId = getId <$> riderId,
+      BeamB.fromLocation = fromLocation,
+      BeamB.toLocation = toLocation,
+      BeamB.vehicleVariant = vehicleVariant,
+      BeamB.estimatedDistance = estimatedDistance,
+      BeamB.maxEstimatedDistance = maxEstimatedDistance,
+      BeamB.estimatedFare = estimatedFare,
+      BeamB.estimatedDuration = estimatedDuration,
+      BeamB.fareParams = fareParams,
+      BeamB.riderName = riderName,
+      BeamB.createdAt = createdAt,
+      BeamB.updatedAt = updatedAt
+    }

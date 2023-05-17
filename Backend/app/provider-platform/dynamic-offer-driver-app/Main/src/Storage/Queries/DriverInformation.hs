@@ -17,7 +17,7 @@ module Storage.Queries.DriverInformation where
 
 import Control.Applicative (liftA2)
 import qualified Data.ByteString as BS
-import Domain.Types.DriverInformation
+import Domain.Types.DriverInformation as DDI
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person as Person
 import qualified EulerHS.Extra.EulerDB as Extra
@@ -40,8 +40,22 @@ import Storage.Tabular.Person
 create :: DriverInformation -> SqlDB ()
 create = Esq.create
 
+create' :: L.MonadFlow m => DDI.DriverInformation -> m (MeshResult ())
+create' driverInformation = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainDriverInformationToBeam driverInformation)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+
 findById :: Transactionable m => Id Person.Driver -> m (Maybe DriverInformation)
 findById = Esq.findById . cast
+
+findById' :: L.MonadFlow m => Id Person.Driver -> m (Maybe DriverInformation)
+findById' (Id driverInformationId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure Nothing) (transformBeamDriverInformationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamDI.driverId $ Se.Eq driverInformationId]
+    Nothing -> pure Nothing
 
 fetchAllByIds :: Transactionable m => Id Merchant -> [Id Driver] -> m [DriverInformation]
 fetchAllByIds merchantId driversIds = Esq.findAll $ do

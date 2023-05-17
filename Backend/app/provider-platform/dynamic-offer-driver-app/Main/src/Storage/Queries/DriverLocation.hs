@@ -18,11 +18,18 @@ module Storage.Queries.DriverLocation where
 
 import Domain.Types.DriverLocation
 import Domain.Types.Person
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common (MonadTime (getCurrentTime))
 import Kernel.Types.Id
+import qualified Lib.Mesh as Mesh
+import qualified Sequelize as Se
+import qualified Storage.Beam.DriverLocation as BeamDL
 import Storage.Tabular.DriverLocation
 
 create :: Id Person -> LatLong -> UTCTime -> SqlDB ()
@@ -45,6 +52,13 @@ findById ::
   Id Person ->
   m (Maybe DriverLocation)
 findById = Esq.findById
+
+findById' :: L.MonadFlow m => Id Person -> m (Maybe DriverLocation)
+findById' (Id driverLocationId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure Nothing) (transformBeamDriverLocationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamDL.id $ Se.Eq driverLocationId]
+    Nothing -> pure Nothing
 
 upsertGpsCoord :: Id Person -> LatLong -> UTCTime -> SqlDB DriverLocation
 upsertGpsCoord drLocationId latLong calculationTime = do
@@ -72,3 +86,25 @@ upsertGpsCoord drLocationId latLong calculationTime = do
 
 deleteById :: Id Person -> SqlDB ()
 deleteById = deleteByKey @DriverLocationT
+
+transformBeamDriverLocationToDomain :: BeamDL.DriverLocation -> DriverLocation
+transformBeamDriverLocationToDomain BeamDL.DriverLocationT {..} = do
+  DriverLocation
+    { driverId = Id driverId,
+      lat = lat,
+      lon = lon,
+      coordinatesCalculatedAt = coordinatesCalculatedAt,
+      createdAt = createdAt,
+      updatedAt = updatedAt
+    }
+
+transformDomainDriverLocationToBeam :: DriverLocation -> BeamDL.DriverLocation
+transformDomainDriverLocationToBeam DriverLocation {..} =
+  BeamDL.defaultDriverLocation
+    { BeamDL.driverId = getId driverId,
+      BeamDL.lat = lat,
+      BeamDL.lon = lon,
+      BeamDL.coordinatesCalculatedAt = coordinatesCalculatedAt,
+      BeamDL.createdAt = createdAt,
+      BeamDL.updatedAt = updatedAt
+    }

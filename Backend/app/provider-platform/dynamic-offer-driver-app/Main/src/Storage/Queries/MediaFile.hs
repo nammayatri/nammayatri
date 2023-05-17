@@ -14,7 +14,7 @@
 
 module Storage.Queries.MediaFile where
 
-import Domain.Types.MediaFile
+import Domain.Types.MediaFile as DMF
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
@@ -31,8 +31,22 @@ import Storage.Tabular.MediaFile
 create :: MediaFile -> SqlDB ()
 create = Esq.create
 
+create' :: L.MonadFlow m => DMF.MediaFile -> m (MeshResult ())
+create' mediaFile = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainMediaFileToBeam mediaFile)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+
 findById :: Transactionable m => Id MediaFile -> m (Maybe MediaFile)
 findById = Esq.findById
+
+findById' :: L.MonadFlow m => Id MediaFile -> m (Maybe MediaFile)
+findById' (Id mediaFileId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure Nothing) (transformBeamMediaFileToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamMF.id $ Se.Eq mediaFileId]
+    Nothing -> pure Nothing
 
 findAllIn :: Transactionable m => [Id MediaFile] -> m [MediaFile]
 findAllIn mfList =

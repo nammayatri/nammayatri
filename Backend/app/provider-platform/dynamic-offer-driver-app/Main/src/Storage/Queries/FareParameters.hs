@@ -14,7 +14,7 @@
 
 module Storage.Queries.FareParameters where
 
-import Domain.Types.FareParameters
+import Domain.Types.FareParameters as DFP
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
@@ -36,6 +36,13 @@ create fareParams =
     case fareParamsDetais of
       ProgressiveDetailsT fppdt -> Esq.create' fppdt
       SlabDetailsT -> return ()
+
+create' :: L.MonadFlow m => DFP.FareParameters -> m (MeshResult ())
+create' fareParameters = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainFareParametersToBeam fareParameters)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 findById :: Transactionable m => Id FareParameters -> m (Maybe FareParameters)
 findById fareParametersId = buildDType $ do
@@ -77,6 +84,13 @@ transformDomainFareParametersToBeam FareParameters {..} =
       BeamFP.farePolicyType = farePolicyType,
       BeamFP.govtChargesPerc = govtChargesPerc
     }
+
+findById' :: L.MonadFlow m => Id FareParameters -> m (Maybe FareParameters)
+findById' (Id fareParametersId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure Nothing) (transformBeamFareParametersToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamFP.id $ Se.Eq fareParametersId]
+    Nothing -> pure Nothing
 
 transformBeamFareParametersToDomain :: BeamFP.FareParameters -> FareParameters
 transformBeamFareParametersToDomain BeamFP.FareParametersT {..} = do

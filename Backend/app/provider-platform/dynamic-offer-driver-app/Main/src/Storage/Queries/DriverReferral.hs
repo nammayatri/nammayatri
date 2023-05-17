@@ -1,6 +1,6 @@
 module Storage.Queries.DriverReferral where
 
-import Domain.Types.DriverReferral
+import Domain.Types.DriverReferral as DDR
 import qualified Domain.Types.Person as SP
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
@@ -16,6 +16,13 @@ import Storage.Tabular.DriverReferral
 
 create :: DriverReferral -> SqlDB ()
 create = Esq.create
+
+create' :: L.MonadFlow m => DDR.DriverReferral -> m (MeshResult ())
+create' driverReferral = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainDriverReferralToBeam driverReferral)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 findByRefferalCode :: Transactionable m => Id DriverReferral -> m (Maybe DriverReferral)
 findByRefferalCode = Esq.findById
