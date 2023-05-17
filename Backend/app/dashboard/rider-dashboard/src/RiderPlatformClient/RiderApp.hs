@@ -38,6 +38,7 @@ import qualified "rider-app" Domain.Action.UI.Select as DSelect
 import qualified "rider-app" Domain.Types.Booking as SRB
 import qualified "rider-app" Domain.Types.Booking.API as DB
 import qualified "rider-app" Domain.Types.Estimate as DEstimate
+import qualified "rider-app" Domain.Types.Issue as DI
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "rider-app" Domain.Types.Person as DP
 import qualified "rider-app" Domain.Types.Quote as Quote
@@ -59,7 +60,8 @@ data AppBackendAPIs = AppBackendAPIs
     bookings :: BookingsAPIs,
     merchant :: MerchantAPIs,
     rides :: RidesAPIs,
-    rideBooking :: RideBookingAPIs
+    rideBooking :: RideBookingAPIs,
+    issues :: ListIssueAPIs
   }
 
 data CustomerAPIs = CustomerAPIs
@@ -151,6 +153,10 @@ newtype CancelBookingAPIs = CancelBookingAPIs
   { cancelBooking :: Id SRB.Booking -> Id DP.Person -> DCancel.CancelReq -> Euler.EulerClient APISuccess
   }
 
+newtype ListIssueAPIs = ListIssueAPIs
+  { listIssue :: Text -> Text -> Euler.EulerClient [DI.Issue]
+  }
+
 mkAppBackendAPIs :: CheckedShortId DM.Merchant -> Text -> AppBackendAPIs
 mkAppBackendAPIs merchantId token = do
   let customers = CustomerAPIs {..}
@@ -168,13 +174,15 @@ mkAppBackendAPIs merchantId token = do
   let flowStatus = FlowStatusAPIs {..}
   let cancel = CancelBookingAPIs {..}
   let rideBooking = RideBookingAPIs {..}
+  let issues = ListIssueAPIs {..}
   AppBackendAPIs {..}
   where
     customersClient
       :<|> bookingsClient
       :<|> merchantClient
       :<|> ridesClient
-      :<|> rideBookingClient = clientWithMerchant (Proxy :: Proxy BAP.API') merchantId token
+      :<|> rideBookingClient
+      :<|> issueClient = clientWithMerchant (Proxy :: Proxy BAP.API') merchantId token
 
     customerList
       :<|> customerDelete
@@ -234,6 +242,8 @@ mkAppBackendAPIs merchantId token = do
       :<|> mapsServiceUsageConfigUpdate
       :<|> smsServiceConfigUpdate
       :<|> smsServiceUsageConfigUpdate = merchantClient
+
+    listIssue = issueClient
 
 callRiderApp ::
   forall m r b c.
