@@ -143,30 +143,34 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
     unless (driver.role == Person.DRIVER) $ throwError AccessDenied
     LocUpd.whenWithLocationUpdatesLock driver.id $ do
       mbOldLoc <- findDriverLocation
-      case filterNewWaypoints mbOldLoc minLocationAccuracy of
+      let sortedWaypoint = toList $ NE.sortWith (.ts) waypoints
+          filteredWaypoint = maybe sortedWaypoint (\oldLoc -> filter ((oldLoc.coordinatesCalculatedAt <) . (.ts)) sortedWaypoint) mbOldLoc
+      mbRideIdAndStatus <- getAssignedRide
+
+      case filteredWaypoint of
         [] -> logWarning "Incoming points are older than current one, ignoring"
         (a : ax) -> do
           let newWaypoints = a :| ax
               currPoint = NE.last newWaypoints
           upsertDriverLocation currPoint.pt currPoint.ts
-          mbRideIdAndStatus <- getAssignedRide
           fork "updating in kafka" $
-            mapM_
-              ( \point -> do
-                  updateDriverSpeedInRedis driver.merchantId driver.id point.pt point.ts
-                  streamLocationUpdates (fst <$> mbRideIdAndStatus) driver.merchantId driver.id point.pt point.ts driverInfo.active driverInfo.mode
-              )
-              (a : ax)
+            forM_ (a : ax) $ \point -> do
+              streamLocationUpdates (fst <$> mbRideIdAndStatus) driver.merchantId driver.id point.pt point.ts driverInfo.active driverInfo.mode
+
+      let filteredWaypointWithAccuracy = filter (\val -> fromMaybe 0.0 val.acc <= minLocationAccuracy) filteredWaypoint
+      case filteredWaypointWithAccuracy of
+        [] -> logWarning "Accuracy of the points is low, ignoring"
+        (a : ax) -> do
+          let newWaypoints = a :| ax
+          fork "update driver speed in redis" $
+            forM_ (a : ax) $ \point -> do
+              updateDriverSpeedInRedis driver.merchantId driver.id point.pt point.ts
           maybe
             (logInfo "No ride is assigned to driver, ignoring")
             (\(rideId, rideStatus) -> when (rideStatus == DRide.INPROGRESS) $ addIntermediateRoutePoints rideId $ NE.map (.pt) newWaypoints)
             mbRideIdAndStatus
+
     pure Success
-  where
-    filterNewWaypoints mbOldLoc minLocationAccuracy = do
-      let sortedWaypoint = toList $ NE.sortWith (.ts) waypoints
-      let filteredWaypoint = filter (\val -> fromMaybe 0.0 val.acc <= minLocationAccuracy) sortedWaypoint
-      maybe filteredWaypoint (\oldLoc -> filter ((oldLoc.coordinatesCalculatedAt <) . (.ts)) filteredWaypoint) mbOldLoc
 
 checkLocationUpdatesRateLimit ::
   ( Redis.HedisFlow m r,
