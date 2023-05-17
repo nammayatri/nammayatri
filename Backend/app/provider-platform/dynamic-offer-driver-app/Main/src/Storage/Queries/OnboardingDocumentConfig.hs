@@ -39,12 +39,12 @@ import qualified Storage.Tabular.VechileNew as VN
 create :: OnboardingDocumentConfig -> SqlDB ()
 create = Esq.create
 
-create' :: L.MonadFlow m => DODC.OnboardingDocumentConfig -> m (MeshResult ())
-create' onboardingDocumentConfig = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
-  case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainOnboardingDocumentConfigToBeam onboardingDocumentConfig)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+-- create' :: L.MonadFlow m => DODC.OnboardingDocumentConfig -> m (MeshResult ())
+-- create' onboardingDocumentConfig = do
+--   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   case dbConf of
+--     Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainOnboardingDocumentConfigToBeam onboardingDocumentConfig)
+--     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 findByMerchantIdAndDocumentType :: Transactionable m => Id Merchant -> DocumentType -> m (Maybe OnboardingDocumentConfig)
 findByMerchantIdAndDocumentType merchantId documentType =

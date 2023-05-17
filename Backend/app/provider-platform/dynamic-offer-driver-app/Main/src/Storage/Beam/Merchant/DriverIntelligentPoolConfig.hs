@@ -41,6 +41,7 @@ import Kernel.Types.Common
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.SlidingWindowCounters (PeriodType)
 import qualified Kernel.Types.SlidingWindowCounters as SWC
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Merchant (MerchantTId)
@@ -166,11 +167,11 @@ defaultDriverIntelligentPoolConfig =
       minQuotesToQualifyForIntelligentPool = 0,
       minQuotesToQualifyForIntelligentPoolWindowOption = "",
       intelligentPoolPercentage = Nothing,
-      speedNormalizer = "",
+      speedNormalizer = 0.0,
       driverSpeedWeightage = 0,
       locationUpdateSampleTime = "",
       minLocationUpdates = 0,
-      defaultDriverSpeed = "",
+      defaultDriverSpeed = 0.0,
       createdAt = defaultUTCDate,
       updatedAt = defaultUTCDate
     }

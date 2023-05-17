@@ -83,12 +83,12 @@ baseFullPersonQuery =
 create :: Person -> SqlDB ()
 create = Esq.create
 
-create' :: L.MonadFlow m => Person.Person -> m (MeshResult ())
-create' person = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
-  case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainPersonToBeam person)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+-- create' :: L.MonadFlow m => Person.Person -> m (MeshResult ())
+-- create' person = do
+--   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   case dbConf of
+--     Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainPersonToBeam person)
+--     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 findById ::
   Transactionable m =>
@@ -96,12 +96,12 @@ findById ::
   m (Maybe Person)
 findById = Esq.findById
 
-findById' :: L.MonadFlow m => Id Person -> m (Maybe Person)
-findById' (Id personId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
-  case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamPersonToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamP.id $ Se.Eq personId]
-    Nothing -> pure Nothing
+-- findById' :: L.MonadFlow m => Id Person -> m (Maybe Person)
+-- findById' (Id personId) = do
+--   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   case dbConf of
+--     Just dbCOnf' -> either (pure Nothing) (transformBeamPersonToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamP.id $ Se.Eq personId]
+--     Nothing -> pure Nothing
 
 data FullDriver = FullDriver
   { person :: Person,

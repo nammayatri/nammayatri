@@ -386,50 +386,50 @@ findStuckRideItems merchantId bookingIds now = do
   where
     mkStuckRideItem (rideId, bookingId, driverId, driverActive) = StuckRideItem {..}
 
-transformBeamRideToDomain :: BeamR.Ride -> Ride
-transformBeamRideToDomain BeamR.RideT {..} = do
-  Ride
-    { id = Id id,
-      bookingId = Id bookingId,
-      shortId = Id shortId,
-      status = status,
-      driverId = Id driverId,
-      otp = otp,
-      trackingUrl = trackingUrl,
-      fare = fare,
-      traveledDistance = traveledDistance,
-      chargeableDistance = chargeableDistance,
-      driverArrivalTime = driverArrivalTime,
-      tripStartTime = tripStartTime,
-      tripEndTime = tripEndTime,
-      tripStartPos = tripStartPos,
-      tripEndPos = tripEndPos,
-      fareParametersId = Id <$> fareParametersId,
-      distanceCalculationFailed = distanceCalculationFailed,
-      createdAt = createdAt,
-      updatedAt = updatedAt
-    }
+-- transformBeamRideToDomain :: BeamR.Ride -> Ride
+-- transformBeamRideToDomain BeamR.RideT {..} = do
+--   Ride
+--     { id = Id id,
+--       bookingId = Id bookingId,
+--       shortId = Id shortId,
+--       status = status,
+--       driverId = Id driverId,
+--       otp = otp,
+--       trackingUrl = trackingUrl,
+--       fare = fare,
+--       traveledDistance = traveledDistance,
+--       chargeableDistance = chargeableDistance,
+--       driverArrivalTime = driverArrivalTime,
+--       tripStartTime = tripStartTime,
+--       tripEndTime = tripEndTime,
+--       tripStartPos = tripStartPos,
+--       tripEndPos = tripEndPos,
+--       fareParametersId = Id <$> fareParametersId,
+--       distanceCalculationFailed = distanceCalculationFailed,
+--       createdAt = createdAt,
+--       updatedAt = updatedAt
+--     }
 
-transformDomainRideToBeam :: Ride -> BeamR.Ride
-transformDomainRideToBeam Ride {..} =
-  BeamR.defaultRide
-    { BeamR.id = getId id,
-      BeamR.bookingId = getId bookingId,
-      BeamR.shortId = getId shortId,
-      BeamR.status = status,
-      BeamR.driverId = getId driverId,
-      BeamR.otp = otp,
-      BeamR.trackingUrl = trackingUrl,
-      BeamR.fare = fare,
-      BeamR.traveledDistance = traveledDistance,
-      BeamR.chargeableDistance = chargeableDistance,
-      BeamR.driverArrivalTime = driverArrivalTime,
-      BeamR.tripStartTime = tripStartTime,
-      BeamR.tripEndTime = tripEndTime,
-      BeamR.tripStartPos = tripStartPos,
-      BeamR.tripEndPos = tripEndPos,
-      BeamR.fareParametersId = getId <$> fareParametersId,
-      BeamR.distanceCalculationFailed = distanceCalculationFailed,
-      BeamR.createdAt = createdAt,
-      BeamR.updatedAt = updatedAt
-    }
+-- transformDomainRideToBeam :: Ride -> BeamR.Ride
+-- transformDomainRideToBeam Ride {..} =
+--   BeamR.defaultRide
+--     { BeamR.id = getId id,
+--       BeamR.bookingId = getId bookingId,
+--       BeamR.shortId = getId shortId,
+--       BeamR.status = status,
+--       BeamR.driverId = getId driverId,
+--       BeamR.otp = otp,
+--       BeamR.trackingUrl = trackingUrl,
+--       BeamR.fare = fare,
+--       BeamR.traveledDistance = traveledDistance,
+--       BeamR.chargeableDistance = chargeableDistance,
+--       BeamR.driverArrivalTime = driverArrivalTime,
+--       BeamR.tripStartTime = tripStartTime,
+--       BeamR.tripEndTime = tripEndTime,
+--       BeamR.tripStartPos = tripStartPos,
+--       BeamR.tripEndPos = tripEndPos,
+--       BeamR.fareParametersId = getId <$> fareParametersId,
+--       BeamR.distanceCalculationFailed = distanceCalculationFailed,
+--       BeamR.createdAt = createdAt,
+--       BeamR.updatedAt = updatedAt
+--     }

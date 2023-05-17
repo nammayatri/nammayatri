@@ -33,12 +33,12 @@ import qualified Storage.Tabular.VechileNew as VN
 create :: RideDetails -> SqlDB ()
 create = Esq.create
 
-create' :: L.MonadFlow m => DRD.RideDetails -> m (MeshResult ())
-create' rideDetails = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
-  case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainRideDetailsToBeam rideDetails)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+-- create' :: L.MonadFlow m => DRD.RideDetails -> m (MeshResult ())
+-- create' rideDetails = do
+--   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   case dbConf of
+--     Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainRideDetailsToBeam rideDetails)
+--     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 findById ::
   Transactionable m =>
@@ -46,37 +46,37 @@ findById ::
   m (Maybe RideDetails)
 findById = Esq.findById
 
-findById' :: L.MonadFlow m => Id SR.Ride -> m (Maybe RideDetails)
-findById' (Id rideDetailsId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
-  case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamRideDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamRD.id $ Se.Eq rideDetailsId]
-    Nothing -> pure Nothing
+-- findById' :: L.MonadFlow m => Id SR.Ride -> m (Maybe RideDetails)
+-- findById' (Id rideDetailsId) = do
+--   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   case dbConf of
+--     Just dbCOnf' -> either (pure Nothing) (transformBeamRideDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamRD.id $ Se.Eq rideDetailsId]
+--     Nothing -> pure Nothing
 
-transformBeamRideDetailsToDomain :: BeamRD.RideDetails -> RideDetails
-transformBeamRideDetailsToDomain BeamRD.RideDetailsT {..} = do
-  RideDetails
-    { id = Id id,
-      driverName = driverName,
-      driverNumber = driverNumber,
-      driverCountryCode = driverCountryCode,
-      vehicleNumber = vehicleNumber,
-      vehicleColor = vehicleColor,
-      vehicleVariant = vehicleVariant,
-      vehicleModel = vehicleModel,
-      vehicleClass = vehicleClass
-    }
+-- transformBeamRideDetailsToDomain :: BeamRD.RideDetails -> RideDetails
+-- transformBeamRideDetailsToDomain BeamRD.RideDetailsT {..} = do
+--   RideDetails
+--     { id = Id id,
+--       driverName = driverName,
+--       driverNumber = driverNumber,
+--       driverCountryCode = driverCountryCode,
+--       vehicleNumber = vehicleNumber,
+--       vehicleColor = vehicleColor,
+--       vehicleVariant = vehicleVariant,
+--       vehicleModel = vehicleModel,
+--       vehicleClass = vehicleClass
+--     }
 
-transformDomainRideDetailsToBeam :: RideDetails -> BeamRD.RideDetails
-transformDomainRideDetailsToBeam RideDetails {..} =
-  BeamRD.defaultRideDetails
-    { BeamRD.id = getId id,
-      BeamRD.driverName = driverName,
-      BeamRD.driverNumber = driverNumber,
-      BeamRD.driverCountryCode = driverCountryCode,
-      BeamRD.vehicleNumber = vehicleNumber,
-      BeamRD.vehicleColor = vehicleColor,
-      BeamRD.vehicleVariant = vehicleVariant,
-      BeamRD.vehicleModel = vehicleModel,
-      BeamRD.vehicleClass = vehicleClass
-    }
+-- transformDomainRideDetailsToBeam :: RideDetails -> BeamRD.RideDetails
+-- transformDomainRideDetailsToBeam RideDetails {..} =
+--   BeamRD.defaultRideDetails
+--     { BeamRD.id = getId id,
+--       BeamRD.driverName = driverName,
+--       BeamRD.driverNumber = driverNumber,
+--       BeamRD.driverCountryCode = driverCountryCode,
+--       BeamRD.vehicleNumber = vehicleNumber,
+--       BeamRD.vehicleColor = vehicleColor,
+--       BeamRD.vehicleVariant = vehicleVariant,
+--       BeamRD.vehicleModel = vehicleModel,
+--       BeamRD.vehicleClass = vehicleClass
+--     }

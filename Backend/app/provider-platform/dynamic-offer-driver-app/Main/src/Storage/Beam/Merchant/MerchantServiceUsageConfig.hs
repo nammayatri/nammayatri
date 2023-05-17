@@ -43,6 +43,7 @@ import Kernel.External.Verification.Types
 import Kernel.External.Whatsapp.Types
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Merchant (MerchantTId)
@@ -154,6 +155,32 @@ instance IsString WhatsappService where
   fromString = show
 
 instance IsString CallService where
+  fromString = show
+
+instance FromField SmsService where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be SmsService where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be SmsService
+
+instance FromBackendRow Postgres SmsService
+
+instance IsString SmsService where
+  fromString = show
+
+instance FromField WhatsappService where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be WhatsappService where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be WhatsappService
+
+instance FromBackendRow Postgres WhatsappService
+
+instance IsString WhatsappService where
   fromString = show
 
 data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT

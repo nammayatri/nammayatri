@@ -37,6 +37,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 
@@ -114,8 +115,8 @@ defaultSearchReqLocation :: SearchReqLocation
 defaultSearchReqLocation =
   SearchReqLocationT
     { id = "",
-      lat = "",
-      lon = "",
+      lat = 0.0,
+      lon = 0.0,
       street = Nothing,
       door = Nothing,
       city = Nothing,

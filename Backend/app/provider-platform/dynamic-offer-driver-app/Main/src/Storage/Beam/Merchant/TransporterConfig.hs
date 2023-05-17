@@ -40,6 +40,7 @@ import qualified Kernel.External.FCM.Types as FCM
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Merchant (MerchantTId)
@@ -216,7 +217,7 @@ defaultTransporterConfig =
       upwardsRecomputeBuffer = "",
       approxRideDistanceDiffThreshold = "",
       driverLeaderBoardExpiry = Nothing,
-      minLocationAccuracy = "",
+      minLocationAccuracy = 0.0,
       createdAt = defaultUTCDate,
       updatedAt = defaultUTCDate
     }

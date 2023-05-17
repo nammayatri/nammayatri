@@ -36,12 +36,12 @@ import qualified Storage.Tabular.VechileNew as VN
 create :: RiderDetails -> SqlDB ()
 create = Esq.create
 
-create' :: L.MonadFlow m => DRDD.RiderDetails -> m (MeshResult ())
-create' riderDetails = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
-  case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainRiderDetailsToBeam riderDetails)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+-- create' :: L.MonadFlow m => DRDD.RiderDetails -> m (MeshResult ())
+-- create' riderDetails = do
+--   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   case dbConf of
+--     Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainRiderDetailsToBeam riderDetails)
+--     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 -- TODO :: write cached query for this
 findById ::
@@ -50,12 +50,12 @@ findById ::
   m (Maybe RiderDetails)
 findById = Esq.findById
 
-findById' :: L.MonadFlow m => Id RiderDetails -> m (Maybe RiderDetails)
-findById' (Id riderDetailsId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
-  case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamRiderDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamRD.id $ Se.Eq riderDetailsId]
-    Nothing -> pure Nothing
+-- findById' :: L.MonadFlow m => Id RiderDetails -> m (Maybe RiderDetails)
+-- findById' (Id riderDetailsId) = do
+--   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   case dbConf of
+--     Just dbCOnf' -> either (pure Nothing) (transformBeamRiderDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamRD.id $ Se.Eq riderDetailsId]
+--     Nothing -> pure Nothing
 
 findByMobileNumberAndMerchant ::
   (MonadThrow m, Log m, Transactionable m, EncFlow m r) =>
