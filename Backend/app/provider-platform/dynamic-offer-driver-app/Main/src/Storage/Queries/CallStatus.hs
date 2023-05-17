@@ -122,15 +122,15 @@ transformBeamCallStatusToDomain BCS.CallStatusT {..} = do
       createdAt = createdAt
     }
 
-transformDomainCallStatusToBeam :: DCS.CallStatus -> BCS.CallStatus
+transformDomainCallStatusToBeam :: CallStatus -> BeamCS.CallStatus
 transformDomainCallStatusToBeam CallStatus {..} =
-  BCS.defaultCallStatus
-    { BCS.id = getId id,
-      BCS.callId = callId,
-      BCS.rideId = getId rideId,
-      BCS.dtmfNumberUsed = dtmfNumberUsed,
-      BCS.status = status,
-      BCS.recordingUrl = recordingUrl,
-      BCS.conversationDuration = conversationDuration,
-      BCS.createdAt = createdAt
+  BeamCS.defaultCallStatus
+    { BeamCS.id = getId id,
+      BeamCS.callId = callId,
+      BeamCS.rideId = getId rideId,
+      BeamCS.dtmfNumberUsed = dtmfNumberUsed,
+      BeamCS.status = status,
+      BeamCS.recordingUrl = recordingUrl,
+      BeamCS.conversationDuration = conversationDuration,
+      BeamCS.createdAt = createdAt
     }

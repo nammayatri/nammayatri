@@ -58,7 +58,7 @@ transformBeamRideDetailsToDomain BeamRD.RideDetailsT {..} = do
   RideDetails
     { id = Id id,
       driverName = driverName,
-      driverNumber = EncryptedHashed <$> (Encrypted <$> driverNumberEncrypted) <*> driverNumberHash,
+      driverNumber = driverNumber,
       driverCountryCode = driverCountryCode,
       vehicleNumber = vehicleNumber,
       vehicleColor = vehicleColor,
@@ -72,8 +72,7 @@ transformDomainRideDetailsToBeam RideDetails {..} =
   BeamRD.defaultRideDetails
     { BeamRD.id = getId id,
       BeamRD.driverName = driverName,
-      BeamRD.driverNumberEncrypted = driverNumber <&> unEncrypted . (.encrypted),
-      BeamRD.driverNumberHash = driverNumber <&> (.hash),
+      BeamRD.driverNumber = driverNumber,
       BeamRD.driverCountryCode = driverCountryCode,
       BeamRD.vehicleNumber = vehicleNumber,
       BeamRD.vehicleColor = vehicleColor,
