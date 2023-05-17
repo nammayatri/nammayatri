@@ -39,7 +39,6 @@ import GHC.Generics (Generic)
 import Kernel.External.Encryption
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.DriverOnboarding.Image (ImageTId)
@@ -66,20 +65,21 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.VerificationStatus
 
 instance FromBackendRow Postgres Domain.VerificationStatus
 
+instance IsString Domain.VerificationStatus where
+  fromString = show
+
 instance FromField DbHash where
   fromField = fromFieldEnum
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be DbHash where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be [Text] where
-  sqlValueSyntax = autoSqlValueSyntax
-
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be DbHash
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be [Text]
-
 instance FromBackendRow Postgres DbHash
+
+instance IsString DbHash where
+  fromString = show
 
 data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
   { id :: B.C f Text,
@@ -97,7 +97,7 @@ data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
     vehicleColor :: B.C f (Maybe Text),
     vehicleEnergyType :: B.C f (Maybe Text),
     verificationStatus :: B.C f Domain.VerificationStatus,
-    failedRules :: B.C f [Text],
+    failedRules :: B.C f Text,
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime
   }
@@ -124,8 +124,6 @@ instance ToJSON VehicleRegistrationCertificate where
 
 deriving stock instance Show VehicleRegistrationCertificate
 
-deriving stock instance Ord Domain.VerificationStatus
-
 vehicleRegistrationCertificateTMod :: VehicleRegistrationCertificateT (B.FieldModification (B.TableField VehicleRegistrationCertificateT))
 vehicleRegistrationCertificateTMod =
   B.tableModification
@@ -149,6 +147,33 @@ vehicleRegistrationCertificateTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
+defaultVehicleRegistrationCertificate :: VehicleRegistrationCertificate
+defaultVehicleRegistrationCertificate =
+  VehicleRegistrationCertificateT
+    { id = "",
+      documentImageId = "",
+      certificateNumberEncrypted = "",
+      certificateNumberHash = "",
+      fitnessExpiry = defaultUTCDate,
+      permitExpiry = Nothing,
+      pucExpiry = Nothing,
+      insuranceValidity = Nothing,
+      vehicleClass = Nothing,
+      vehicleManufacturer = Nothing,
+      vehicleCapacity = Nothing,
+      vehicleModel = Nothing,
+      vehicleColor = Nothing,
+      vehicleEnergyType = Nothing,
+      verificationStatus = "",
+      failedRules = "",
+      createdAt = defaultUTCDate,
+      updatedAt = defaultUTCDate
+    }
+
+instance Serialize VehicleRegistrationCertificate where
+  put = error "undefined"
+  get = error "undefined"
+
 psToHs :: HM.HashMap Text Text
 psToHs = HM.empty
 
@@ -161,15 +186,5 @@ vehicleRegistrationCertificateToPSModifiers :: M.Map Text (A.Value -> A.Value)
 vehicleRegistrationCertificateToPSModifiers =
   M.fromList
     []
-
-instance IsString DbHash where
-  fromString = show
-
-instance IsString Domain.VerificationStatus where
-  fromString = show
-
-instance Serialize VehicleRegistrationCertificate where
-  put = error "undefined"
-  get = error "undefined"
 
 $(enableKVPG ''VehicleRegistrationCertificateT ['id] [])

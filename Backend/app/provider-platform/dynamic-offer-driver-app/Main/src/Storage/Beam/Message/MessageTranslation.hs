@@ -39,7 +39,6 @@ import GHC.Generics (Generic)
 import Kernel.External.Types (Language)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import qualified Storage.Tabular.Message.Message as Msg
@@ -85,7 +84,7 @@ instance B.Table MessageTranslationT where
   data PrimaryKey MessageTranslationT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
-  primaryKey = Id . messageId
+  primaryKey = Id . language
 
 instance ModelMeta MessageTranslationT where
   modelFieldModification = messageTranslationTMod
@@ -142,12 +141,5 @@ messageTranslationToPSModifiers :: M.Map Text (A.Value -> A.Value)
 messageTranslationToPSModifiers =
   M.fromList
     []
-
-instance IsString Language where
-  fromString = show
-
-instance Serialize MessageTranslation where
-  put = error "undefined"
-  get = error "undefined"
 
 $(enableKVPG ''MessageTranslationT ['language] [])

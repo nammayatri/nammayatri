@@ -38,7 +38,6 @@ import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common (HighPrecMeters, Meters, Money)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Booking (BookingTId)
@@ -216,30 +215,14 @@ instance Serialize Ride where
 psToHs :: HM.HashMap Text Text
 psToHs = HM.empty
 
-rideToHSModifiers :: M.Map Text (A.Value -> A.Value)
-rideToHSModifiers =
+tableToHSModifiers :: M.Map Text (A.Value -> A.Value)
+tableToHSModifiers =
   M.fromList
     []
 
-rideToPSModifiers :: M.Map Text (A.Value -> A.Value)
-rideToPSModifiers =
+tableToPSModifiers :: M.Map Text (A.Value -> A.Value)
+tableToPSModifiers =
   M.fromList
     []
-
-instance IsString Domain.RideStatus where
-  fromString = show
-
-instance IsString Money where
-  fromString = show
-
-instance IsString HighPrecMeters where
-  fromString = show
-
-instance IsString Meters where
-  fromString = show
-
-instance Serialize Ride where
-  put = error "undefined"
-  get = error "undefined"
 
 $(enableKVPG ''RideT ['id] [])

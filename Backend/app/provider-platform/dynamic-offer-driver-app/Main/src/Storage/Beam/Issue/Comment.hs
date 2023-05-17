@@ -38,7 +38,6 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Issue.IssueReport (IssueReportTId)
@@ -122,9 +121,5 @@ commentToPSModifiers :: M.Map Text (A.Value -> A.Value)
 commentToPSModifiers =
   M.fromList
     []
-
-instance Serialize Comment where
-  put = error "undefined"
-  get = error "undefined"
 
 $(enableKVPG ''CommentT ['id] [])

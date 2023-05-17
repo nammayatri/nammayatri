@@ -40,7 +40,6 @@ import qualified Kernel.External.FCM.Types as FCM
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Merchant (MerchantTId)
@@ -228,18 +227,5 @@ transporterConfigToPSModifiers :: M.Map Text (A.Value -> A.Value)
 transporterConfigToPSModifiers =
   M.fromList
     []
-
-instance IsString Meters where
-  fromString = show
-
-instance IsString Seconds where
-  fromString = show
-
-instance IsString Centesimal where
-  fromString = show
-
-instance Serialize TransporterConfig where
-  put = error "undefined"
-  get = error "undefined"
 
 $(enableKVPG ''TransporterConfigT ['merchantId] [])

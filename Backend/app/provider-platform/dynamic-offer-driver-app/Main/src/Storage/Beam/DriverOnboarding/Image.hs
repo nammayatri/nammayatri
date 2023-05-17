@@ -38,7 +38,6 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Merchant (MerchantTId)
@@ -66,6 +65,9 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.ImageType
 
 instance FromBackendRow Postgres Domain.ImageType
 
+instance IsString Domain.ImageType where
+  fromString = show
+
 instance FromField Domain.DriverOnboardingError where
   fromField = fromFieldEnum
 
@@ -75,6 +77,9 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.DriverOnboar
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.DriverOnboardingError
 
 instance FromBackendRow Postgres Domain.DriverOnboardingError
+
+instance IsString Domain.DriverOnboardingError where
+  fromString = show
 
 data ImageT f = ImageT
   { id :: B.C f Text,
@@ -109,10 +114,6 @@ instance ToJSON Image where
 
 deriving stock instance Show Image
 
-deriving stock instance Ord Domain.ImageType
-
-deriving stock instance Ord Domain.DriverOnboardingError
-
 imageTMod :: ImageT (B.FieldModification (B.TableField ImageT))
 imageTMod =
   B.tableModification
@@ -126,6 +127,23 @@ imageTMod =
       createdAt = B.fieldNamed "created_at"
     }
 
+defaultImage :: Image
+defaultImage =
+  ImageT
+    { id = "",
+      personId = "",
+      merchantId = "",
+      s3Path = "",
+      imageType = "",
+      isValid = False,
+      failureReason = Nothing,
+      createdAt = defaultUTCDate
+    }
+
+instance Serialize Image where
+  put = error "undefined"
+  get = error "undefined"
+
 psToHs :: HM.HashMap Text Text
 psToHs = HM.empty
 
@@ -138,15 +156,5 @@ imageToPSModifiers :: M.Map Text (A.Value -> A.Value)
 imageToPSModifiers =
   M.fromList
     []
-
-instance IsString Domain.ImageType where
-  fromString = show
-
-instance IsString Domain.DriverOnboardingError where
-  fromString = show
-
-instance Serialize Image where
-  put = error "undefined"
-  get = error "undefined"
 
 $(enableKVPG ''ImageT ['id] [])

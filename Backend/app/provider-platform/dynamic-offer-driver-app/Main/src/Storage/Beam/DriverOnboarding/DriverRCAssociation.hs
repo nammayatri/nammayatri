@@ -37,7 +37,6 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.DriverOnboarding.VehicleRegistrationCertificate (VehicleRegistrationCertificateTId)
@@ -99,21 +98,33 @@ driverRCAssociationTMod =
       consentTimestamp = B.fieldNamed "consent_timestamp"
     }
 
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-driverRcAssociationToHSModifiers :: M.Map Text (A.Value -> A.Value)
-driverRcAssociationToHSModifiers =
-  M.fromList
-    []
-
-driverRcAssociationToPSModifiers :: M.Map Text (A.Value -> A.Value)
-driverRcAssociationToPSModifiers =
-  M.fromList
-    []
+defaultDriverRCAssociation :: DriverRCAssociation
+defaultDriverRCAssociation =
+  DriverRCAssociationT
+    { id = "",
+      driverId = "",
+      rcId = "",
+      associatedOn = defaultUTCDate,
+      associatedTill = Nothing,
+      consent = False,
+      consentTimestamp = defaultUTCDate
+    }
 
 instance Serialize DriverRCAssociation where
   put = error "undefined"
   get = error "undefined"
+
+psToHs :: HM.HashMap Text Text
+psToHs = HM.empty
+
+driverRCAssociationToHSModifiers :: M.Map Text (A.Value -> A.Value)
+driverRCAssociationToHSModifiers =
+  M.fromList
+    []
+
+driverRCAssociationToPSModifiers :: M.Map Text (A.Value -> A.Value)
+driverRCAssociationToPSModifiers =
+  M.fromList
+    []
 
 $(enableKVPG ''DriverRCAssociationT ['id] [])

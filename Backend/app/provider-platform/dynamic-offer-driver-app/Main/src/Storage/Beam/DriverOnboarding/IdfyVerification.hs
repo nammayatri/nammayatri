@@ -39,7 +39,6 @@ import GHC.Generics (Generic)
 import Kernel.External.Encryption
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import qualified Storage.Tabular.DriverOnboarding.Image as ImageT
@@ -57,16 +56,6 @@ fromFieldEnum f mbValue = case mbValue of
       Just val -> pure val
       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
 
-instance FromField Image.ImageType where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Image.ImageType where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Image.ImageType
-
-instance FromBackendRow Postgres Image.ImageType
-
 instance FromField Domain.ImageExtractionValidation where
   fromField = fromFieldEnum
 
@@ -77,6 +66,22 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.ImageExtractionVal
 
 instance FromBackendRow Postgres Domain.ImageExtractionValidation
 
+instance IsString Domain.ImageExtractionValidation where
+  fromString = show
+
+instance FromField Image.ImageType where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Image.ImageType where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Image.ImageType
+
+instance FromBackendRow Postgres Image.ImageType
+
+instance IsString Image.ImageType where
+  fromString = show
+
 instance FromField DbHash where
   fromField = fromFieldEnum
 
@@ -86,6 +91,9 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be DbHash where
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be DbHash
 
 instance FromBackendRow Postgres DbHash
+
+instance IsString DbHash where
+  fromString = show
 
 data IdfyVerificationT f = IdfyVerificationT
   { id :: B.C f Text,
@@ -126,10 +134,6 @@ instance ToJSON IdfyVerification where
 
 deriving stock instance Show IdfyVerification
 
-deriving stock instance Ord Image.ImageType
-
-deriving stock instance Ord Domain.ImageExtractionValidation
-
 idfyVerificationTMod :: IdfyVerificationT (B.FieldModification (B.TableField IdfyVerificationT))
 idfyVerificationTMod =
   B.tableModification
@@ -149,6 +153,29 @@ idfyVerificationTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
+defaultIdfyVerification :: IdfyVerification
+defaultIdfyVerification =
+  IdfyVerificationT
+    { id = "",
+      driverId = "",
+      documentImageId1 = "",
+      documentImageId2 = Nothing,
+      requestId = "",
+      docType = "",
+      status = "",
+      issueDateOnDoc = Nothing,
+      documentNumberEncrypted = "",
+      documentNumberHash = "",
+      imageExtractionValidation = "",
+      idfyResponse = Nothing,
+      createdAt = defaultUTCDate,
+      updatedAt = defaultUTCDate
+    }
+
+instance Serialize IdfyVerification where
+  put = error "undefined"
+  get = error "undefined"
+
 psToHs :: HM.HashMap Text Text
 psToHs = HM.empty
 
@@ -161,18 +188,5 @@ idfyVerificationToPSModifiers :: M.Map Text (A.Value -> A.Value)
 idfyVerificationToPSModifiers =
   M.fromList
     []
-
-instance IsString Image.ImageType where
-  fromString = show
-
-instance IsString DbHash where
-  fromString = show
-
-instance IsString Domain.ImageExtractionValidation where
-  fromString = show
-
-instance Serialize IdfyVerification where
-  put = error "undefined"
-  get = error "undefined"
 
 $(enableKVPG ''IdfyVerificationT ['id] [])

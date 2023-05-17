@@ -43,7 +43,6 @@ import Kernel.External.Verification.Types
 import Kernel.External.Whatsapp.Types
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Merchant (MerchantTId)
@@ -123,6 +122,9 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be WhatsappService
 instance FromBackendRow Postgres WhatsappService
 
 instance IsString WhatsappService where
+  fromString = show
+
+instance IsString CallService where
   fromString = show
 
 data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
@@ -224,45 +226,5 @@ merchantServiceUsageConfigToPSModifiers :: M.Map Text (A.Value -> A.Value)
 merchantServiceUsageConfigToPSModifiers =
   M.fromList
     []
-
-instance IsString CallService where
-  fromString = show
-
-instance IsString MapsService where
-  fromString = show
-
-instance IsString VerificationService where
-  fromString = show
-
-instance IsString WhatsappService where
-  fromString = show
-
-instance IsString SmsService where
-  fromString = show
-
--- defaultMerchantServiceUsageConfig :: MerchantServiceUsageConfig
--- defaultMerchantServiceUsageConfig =
---   MerchantServiceUsageConfigT
---     { merchantId = "",
---       initiateCall = "",
---       getDistances = "",
---       getEstimatedPickupDistances = "",
---       getRoutes = "",
---       getPickupRoutes = "",
---       getTripRoutes = "",
---       snapToRoad = "",
---       getPlaceName = "",
---       getPlaceDetails = "",
---       autoComplete = "",
---       smsProvidersPriorityList = [""],
---       whatsappProvidersPriorityList = [""],
---       verificationService = "",
---       updatedAt = defaultDate,
---       createdAt = defaultDate
---     }
-
-instance Serialize MerchantServiceUsageConfig where
-  put = error "undefined"
-  get = error "undefined"
 
 $(enableKVPG ''MerchantServiceUsageConfigT ['merchantId] [])

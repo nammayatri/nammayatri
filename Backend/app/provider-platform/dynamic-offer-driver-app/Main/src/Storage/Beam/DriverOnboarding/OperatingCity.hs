@@ -37,7 +37,6 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Merchant (MerchantTId)
@@ -96,6 +95,21 @@ operatingCityTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
+defaultOperatingCity :: OperatingCity
+defaultOperatingCity =
+  OperatingCityT
+    { id = "",
+      merchantId = "",
+      cityName = "",
+      enabled = False,
+      createdAt = defaultUTCDate,
+      updatedAt = defaultUTCDate
+    }
+
+instance Serialize OperatingCity where
+  put = error "undefined"
+  get = error "undefined"
+
 psToHs :: HM.HashMap Text Text
 psToHs = HM.empty
 
@@ -108,9 +122,5 @@ operatingCityToPSModifiers :: M.Map Text (A.Value -> A.Value)
 operatingCityToPSModifiers =
   M.fromList
     []
-
-instance Serialize OperatingCity where
-  put = error "undefined"
-  get = error "undefined"
 
 $(enableKVPG ''OperatingCityT ['id] [])

@@ -41,7 +41,6 @@ import Kernel.Types.Common
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.SlidingWindowCounters (PeriodType)
 import qualified Kernel.Types.SlidingWindowCounters as SWC
-import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Merchant (MerchantTId)
@@ -186,15 +185,5 @@ driverIntelligentPoolConfigToPSModifiers :: M.Map Text (A.Value -> A.Value)
 driverIntelligentPoolConfigToPSModifiers =
   M.fromList
     []
-
-instance IsString SWC.SlidingWindowOptions where
-  fromString = show
-
-instance IsString Minutes where
-  fromString = show
-
-instance Serialize DriverIntelligentPoolConfig where
-  put = error "undefined"
-  get = error "undefined"
 
 $(enableKVPG ''DriverIntelligentPoolConfigT ['merchantId] [])

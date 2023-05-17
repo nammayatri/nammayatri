@@ -38,7 +38,6 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Merchant (MerchantTId)
@@ -134,12 +133,5 @@ merchantMessageToPSModifiers :: M.Map Text (A.Value -> A.Value)
 merchantMessageToPSModifiers =
   M.fromList
     []
-
-instance IsString Domain.MessageKey where
-  fromString = show
-
-instance Serialize MerchantMessage where
-  put = error "undefined"
-  get = error "undefined"
 
 $(enableKVPG ''MerchantMessageT ['messageKey] [])

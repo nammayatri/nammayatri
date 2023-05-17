@@ -54,7 +54,7 @@ fromFieldEnum ::
 fromFieldEnum f mbValue = case mbValue of
   Nothing -> DPSF.returnError UnexpectedNull f mempty
   Just value' ->
-    case readMaybe (unpackChars value') of
+    case (readMaybe (unpackChars value')) of
       Just val -> pure val
       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
 
