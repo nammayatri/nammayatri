@@ -15,6 +15,7 @@
 module Consumer.AvailabilityTime.Types where
 
 import Data.Time
+import qualified Domain.Action.UI.Location.UpdateLocation as LU
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Types.Id (Id)
@@ -37,6 +38,8 @@ data LocationUpdates = LocationUpdates
     ts :: UTCTime,
     st :: Maybe UTCTime,
     pt :: LatLong,
+    acc :: Maybe Double,
+    rideStatus :: LU.RideStatus,
     mId :: Text
   }
   deriving (Generic, FromJSON, ToJSON, Show)

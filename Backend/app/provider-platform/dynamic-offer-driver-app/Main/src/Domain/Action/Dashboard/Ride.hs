@@ -112,13 +112,15 @@ buildRideListItem QRide.RideItem {..} = do
 
 getActualRoute :: MonadFlow m => Common.DriverEdaKafka -> m Common.ActualRoute
 getActualRoute Common.DriverEdaKafka {..} =
-  case (lat, lon, ts) of
-    (Just lat_, Just lon_, ts_) -> do
+  case (lat, lon, ts, acc, rideStatus) of
+    (Just lat_, Just lon_, ts_, acc_, Just rideStatus_) -> do
       lat' <- readMaybe lat_ & fromMaybeM (InvalidRequest "Couldn't find driver's location.")
       lon' <- readMaybe lon_ & fromMaybeM (InvalidRequest "Couldn't find driver's location.")
+      let acc' = readMaybe $ fromMaybe "" acc_
+      rideStatus' <- readMaybe rideStatus_ & fromMaybeM (InvalidRequest "Couldn't find rideStatus")
       logInfo $ "Driver's hearbeat's timestamp received from clickhouse " <> show ts_ -- can be removed after running once in prod
       ts' <- Time.parseTimeM True Time.defaultTimeLocale "%Y-%m-%d %H:%M:%S%Q" ts_ & fromMaybeM (InvalidRequest "Couldn't find driver's timestamp.")
-      pure $ Common.ActualRoute lat' lon' ts'
+      pure $ Common.ActualRoute lat' lon' ts' acc' rideStatus'
     _ -> throwError $ InvalidRequest "Couldn't find driver's location."
 
 rideRoute :: ShortId DM.Merchant -> Id Common.Ride -> Flow Common.RideRouteRes

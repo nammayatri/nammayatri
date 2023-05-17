@@ -11,9 +11,11 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE DerivingStrategies #-}
 
 module Domain.Action.UI.Location.UpdateLocation
   ( UpdateLocationReq,
+    RideStatus,
     Waypoint (..),
     UpdateLocationHandle (..),
     buildUpdateLocationHandle,
@@ -63,6 +65,13 @@ data Waypoint = Waypoint
   }
   deriving (Generic, ToJSON, Show, FromJSON, ToSchema, PrettyShow)
 
+data RideStatus
+  = ON_RIDE
+  | ON_PICKUP
+  | IDLE
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data UpdateLocationHandle m = UpdateLocationHandle
   { driver :: Person.Person,
     findDriverLocation :: m (Maybe DriverLocation),
@@ -77,6 +86,8 @@ data DriverLocationUpdateStreamData = DriverLocationUpdateStreamData
     ts :: UTCTime, -- timestamp
     st :: UTCTime, -- systemtime when location update recieved
     pt :: LatLong, -- lat log
+    acc :: Maybe Double, -- accuracy
+    rideStatus :: RideStatus, -- ride status
     da :: Bool, -- driver avaiable
     mode :: Maybe DDInfo.DriverMode
   }
@@ -111,15 +122,17 @@ streamLocationUpdates ::
   Id Person.Person ->
   LatLong ->
   UTCTime ->
+  Maybe Double ->
+  RideStatus ->
   Bool ->
   Maybe DDInfo.DriverMode ->
   m ()
-streamLocationUpdates mbRideId merchantId driverId point timestamp isDriverActive mbDriverMode = do
+streamLocationUpdates mbRideId merchantId driverId point timestamp accuracy status isDriverActive mbDriverMode = do
   topicName <- asks (.driverLocationUpdateTopic)
   now <- getCurrentTime
   produceMessage
     (topicName, Just (encodeUtf8 $ getId driverId))
-    (DriverLocationUpdateStreamData (getId <$> mbRideId) (getId merchantId) timestamp now point isDriverActive mbDriverMode)
+    (DriverLocationUpdateStreamData (getId <$> mbRideId) (getId merchantId) timestamp now point accuracy status isDriverActive mbDriverMode)
 
 updateLocationHandler ::
   ( Redis.HedisFlow m r,
@@ -157,7 +170,11 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
           upsertDriverLocation currPoint.pt currPoint.ts driver.merchantId
           fork "updating in kafka" $
             forM_ (a : ax) $ \point -> do
-              streamLocationUpdates (fst <$> mbRideIdAndStatus) driver.merchantId driver.id point.pt point.ts driverInfo.active driverInfo.mode
+              status <- case mbRideIdAndStatus of
+                Just (_, DRide.INPROGRESS) -> pure ON_RIDE
+                Just (_, DRide.NEW) -> pure ON_PICKUP
+                _ -> pure IDLE
+              streamLocationUpdates (fst <$> mbRideIdAndStatus) driver.merchantId driver.id point.pt point.ts point.acc status driverInfo.active driverInfo.mode
 
       let filteredWaypointWithAccuracy = filter (\val -> fromMaybe 0.0 val.acc <= minLocationAccuracy) filteredWaypoint
       case filteredWaypointWithAccuracy of
