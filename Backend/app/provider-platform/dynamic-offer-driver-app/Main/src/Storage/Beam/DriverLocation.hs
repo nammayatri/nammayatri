@@ -75,9 +75,9 @@ data DriverLocationT f = DriverLocationT
     lat :: B.C f Double,
     lon :: B.C f Double,
     point :: B.C f Point,
-    coordinatesCalculatedAt :: B.C f Time.LocalTime,
-    createdAt :: B.C f Time.LocalTime,
-    updatedAt :: B.C f Time.LocalTime
+    coordinatesCalculatedAt :: B.C f Time.UTCTime,
+    createdAt :: B.C f Time.UTCTime,
+    updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -137,9 +137,9 @@ defaultDriverLocation =
       lat = 0.0,
       lon = 0.0,
       point = "",
-      coordinatesCalculatedAt = defaultDate,
-      createdAt = defaultDate,
-      updatedAt = defaultDate
+      coordinatesCalculatedAt = defaultUTCDate,
+      createdAt = defaultUTCDate,
+      updatedAt = defaultUTCDate
     }
 
 instance Serialize DriverLocation where

@@ -28,6 +28,7 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequest as BeamSR
 import Storage.Tabular.SearchRequest
 import Storage.Tabular.SearchRequest.SearchReqLocation
+import qualified Storage.Tabular.VechileNew as VN
 
 create :: SearchRequest -> SqlDB ()
 create dsReq = Esq.runTransaction $

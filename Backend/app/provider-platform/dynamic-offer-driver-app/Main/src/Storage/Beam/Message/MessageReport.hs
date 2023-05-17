@@ -39,6 +39,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import qualified Storage.Tabular.Message.Message as Msg
@@ -81,6 +82,8 @@ instance FromBackendRow Postgres Domain.MessageDynamicFieldsType
 
 instance IsString Domain.MessageDynamicFieldsType where
   fromString = show
+
+deriving stock instance Ord Domain.DeliveryStatus
 
 data MessageReportT f = MessageReportT
   { messageId :: B.C f Text,

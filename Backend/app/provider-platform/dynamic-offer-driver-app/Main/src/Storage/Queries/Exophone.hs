@@ -34,16 +34,17 @@ import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.Exophone as BeamE
 import Storage.Tabular.Exophone
+import qualified Storage.Tabular.VechileNew as VN
 
 create :: Exophone -> SqlDB ()
 create = Esq.create
 
-create' :: L.MonadFlow m => DE.Exophone -> m (MeshResult ())
-create' exophone = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
-  case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainExophoneToBeam exophone)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+-- create' :: L.MonadFlow m => DE.Exophone -> m (MeshResult ())
+-- create' exophone = do
+--   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   case dbConf of
+--     Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainExophoneToBeam exophone)
+--     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 findAllByPhone :: Transactionable m => Text -> m [Exophone]
 findAllByPhone phone = do

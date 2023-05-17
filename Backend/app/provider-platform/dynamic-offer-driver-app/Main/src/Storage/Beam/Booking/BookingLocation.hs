@@ -30,6 +30,7 @@ import Database.Beam.Postgres
   ( Postgres,
     ResultError (ConversionFailed, UnexpectedNull),
   )
+import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import qualified Domain.Types.Booking.BookingLocation as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)

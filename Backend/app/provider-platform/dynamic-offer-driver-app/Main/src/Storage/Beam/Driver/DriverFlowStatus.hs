@@ -41,6 +41,7 @@ import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Kernel.Utils.Text (encodeToText)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Person (PersonTId)
@@ -97,6 +98,8 @@ instance ToJSON DriverFlowStatus where
   toJSON = A.genericToJSON A.defaultOptions
 
 deriving stock instance Show DriverFlowStatus
+
+deriving stock instance Ord Domain.FlowStatus
 
 driverFlowStatusTMod :: DriverFlowStatusT (B.FieldModification (B.TableField DriverFlowStatusT))
 driverFlowStatusTMod =

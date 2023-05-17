@@ -162,58 +162,58 @@ findAllBookings = do
     booking <- from $ table @GeometryT
     pure $ booking ^. GeometryTId
 
-transformBeamBookingToDomain :: BeamB.Booking -> Booking
-transformBeamBookingToDomain BeamB.BookingT {..} = do
-  Booking
-    { id = Id id,
-      transactionId = transactionId,
-      quoteId = quoteId,
-      status = status,
-      bookingType = bookingType,
-      specialZoneOtpCode = specialZoneOtpCode,
-      providerId = Id providerId,
-      primaryExophone = primaryExophone,
-      bapId = bapId,
-      bapUri = bapUri,
-      startTime = startTime,
-      riderId = Id <$> riderId,
-      fromLocation = fromLocation,
-      toLocation = toLocation,
-      vehicleVariant = vehicleVariant,
-      estimatedDistance = estimatedDistance,
-      maxEstimatedDistance = maxEstimatedDistance,
-      estimatedFare = estimatedFare,
-      estimatedDuration = estimatedDuration,
-      fareParams = fareParams,
-      riderName = riderName,
-      createdAt = createdAt,
-      updatedAt = updatedAt
-    }
+-- transformBeamBookingToDomain :: BeamB.Booking -> Booking
+-- transformBeamBookingToDomain BeamB.BookingT {..} = do
+--   Booking
+--     { id = Id id,
+--       transactionId = transactionId,
+--       quoteId = quoteId,
+--       status = status,
+--       bookingType = bookingType,
+--       specialZoneOtpCode = specialZoneOtpCode,
+--       providerId = Id providerId,
+--       primaryExophone = primaryExophone,
+--       bapId = bapId,
+--       bapUri = bapUri,
+--       startTime = startTime,
+--       riderId = Id <$> riderId,
+--       fromLocation = fromLocation,
+--       toLocation = toLocation,
+--       vehicleVariant = vehicleVariant,
+--       estimatedDistance = estimatedDistance,
+--       maxEstimatedDistance = maxEstimatedDistance,
+--       estimatedFare = estimatedFare,
+--       estimatedDuration = estimatedDuration,
+--       fareParams = fareParams,
+--       riderName = riderName,
+--       createdAt = createdAt,
+--       updatedAt = updatedAt
+--     }
 
-transformDomainBookingToBeam :: Booking -> BeamB.Booking
-transformDomainBookingToBeam Booking {..} =
-  BeamB.defaultBooking
-    { BeamB.id = getId id,
-      BeamB.transactionId = transactionId,
-      BeamB.quoteId = quoteId,
-      BeamB.status = status,
-      BeamB.bookingType = bookingType,
-      BeamB.specialZoneOtpCode = specialZoneOtpCode,
-      BeamB.providerId = getId providerId,
-      BeamB.primaryExophone = primaryExophone,
-      BeamB.bapId = bapId,
-      BeamB.bapUri = bapUri,
-      BeamB.startTime = startTime,
-      BeamB.riderId = getId <$> riderId,
-      BeamB.fromLocation = fromLocation,
-      BeamB.toLocation = toLocation,
-      BeamB.vehicleVariant = vehicleVariant,
-      BeamB.estimatedDistance = estimatedDistance,
-      BeamB.maxEstimatedDistance = maxEstimatedDistance,
-      BeamB.estimatedFare = estimatedFare,
-      BeamB.estimatedDuration = estimatedDuration,
-      BeamB.fareParams = fareParams,
-      BeamB.riderName = riderName,
-      BeamB.createdAt = createdAt,
-      BeamB.updatedAt = updatedAt
-    }
+-- transformDomainBookingToBeam :: Booking -> BeamB.Booking
+-- transformDomainBookingToBeam Booking {..} =
+--   BeamB.defaultBooking
+--     { BeamB.id = getId id,
+--       BeamB.transactionId = transactionId,
+--       BeamB.quoteId = quoteId,
+--       BeamB.status = status,
+--       BeamB.bookingType = bookingType,
+--       BeamB.specialZoneOtpCode = specialZoneOtpCode,
+--       BeamB.providerId = getId providerId,
+--       BeamB.primaryExophone = primaryExophone,
+--       BeamB.bapId = bapId,
+--       BeamB.bapUri = bapUri,
+--       BeamB.startTime = startTime,
+--       BeamB.riderId = getId <$> riderId,
+--       BeamB.fromLocation = fromLocation,
+--       BeamB.toLocation = toLocation,
+--       BeamB.vehicleVariant = vehicleVariant,
+--       BeamB.estimatedDistance = estimatedDistance,
+--       BeamB.maxEstimatedDistance = maxEstimatedDistance,
+--       BeamB.estimatedFare = estimatedFare,
+--       BeamB.estimatedDuration = estimatedDuration,
+--       BeamB.fareParams = fareParams,
+--       BeamB.riderName = riderName,
+--       BeamB.createdAt = createdAt,
+--       BeamB.updatedAt = updatedAt
+--     }

@@ -29,6 +29,7 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequestSpecialZone as BeamSRSZ
 import Storage.Tabular.SearchRequest.SearchReqLocation
 import Storage.Tabular.SearchRequestSpecialZone
+import qualified Storage.Tabular.VechileNew as VN
 
 create :: SearchRequestSpecialZone -> SqlDB ()
 create dsReq = Esq.runTransaction $
@@ -94,40 +95,40 @@ getValidTill searchRequestId = do
       searchT ^. SearchRequestSpecialZoneTId ==. val (toKey searchRequestId)
     return $ searchT ^. SearchRequestSpecialZoneValidTill
 
-transformBeamSearchRequestSpecialZoneToDomain :: BeamSRSZ.SearchRequestSpecialZone -> SearchRequestSpecialZone
-transformBeamSearchRequestSpecialZoneToDomain BeamSRSZ.SearchRequestSpecialZoneT {..} = do
-  SearchRequestSpecialZone
-    { id = Id id,
-      transactionId = transactionId,
-      messageId = messageId,
-      startTime = startTime,
-      validTill = validTill,
-      providerId = Id providerId,
-      fromLocation = fromLocation,
-      toLocation = toLocation,
-      bapId = bapId,
-      bapUri = bapUri,
-      estimatedDistance = estimatedDistance,
-      estimatedDuration = estimatedDuration,
-      createdAt = createdAt,
-      updatedAt = updatedAt
-    }
+-- transformBeamSearchRequestSpecialZoneToDomain :: BeamSRSZ.SearchRequestSpecialZone -> SearchRequestSpecialZone
+-- transformBeamSearchRequestSpecialZoneToDomain BeamSRSZ.SearchRequestSpecialZoneT {..} = do
+--   SearchRequestSpecialZone
+--     { id = Id id,
+--       transactionId = transactionId,
+--       messageId = messageId,
+--       startTime = startTime,
+--       validTill = validTill,
+--       providerId = Id providerId,
+--       fromLocation = fromLocation,
+--       toLocation = toLocation,
+--       bapId = bapId,
+--       bapUri = bapUri,
+--       estimatedDistance = estimatedDistance,
+--       estimatedDuration = estimatedDuration,
+--       createdAt = createdAt,
+--       updatedAt = updatedAt
+--     }
 
-transformDomainSearchRequestSpecialZoneToBeam :: SearchRequestSpecialZone -> BeamSRSZ.SearchRequestSpecialZone
-transformDomainSearchRequestSpecialZoneToBeam SearchRequestSpecialZone {..} =
-  BeamSRSZ.defaultSearchRequestSpecialZone
-    { BeamSRSZ.id = getId id,
-      BeamSRSZ.transactionId = transactionId,
-      BeamSRSZ.messageId = messageId,
-      BeamSRSZ.startTime = startTime,
-      BeamSRSZ.validTill = validTill,
-      BeamSRSZ.providerId = getId providerId,
-      BeamSRSZ.fromLocation = fromLocation,
-      BeamSRSZ.toLocation = toLocation,
-      BeamSRSZ.bapId = bapId,
-      BeamSRSZ.bapUri = bapUri,
-      BeamSRSZ.estimatedDistance = estimatedDistance,
-      BeamSRSZ.estimatedDuration = estimatedDuration,
-      BeamSRSZ.createdAt = createdAt,
-      BeamSRSZ.updatedAt = updatedAt
-    }
+-- transformDomainSearchRequestSpecialZoneToBeam :: SearchRequestSpecialZone -> BeamSRSZ.SearchRequestSpecialZone
+-- transformDomainSearchRequestSpecialZoneToBeam SearchRequestSpecialZone {..} =
+--   BeamSRSZ.defaultSearchRequestSpecialZone
+--     { BeamSRSZ.id = getId id,
+--       BeamSRSZ.transactionId = transactionId,
+--       BeamSRSZ.messageId = messageId,
+--       BeamSRSZ.startTime = startTime,
+--       BeamSRSZ.validTill = validTill,
+--       BeamSRSZ.providerId = getId providerId,
+--       BeamSRSZ.fromLocation = fromLocation,
+--       BeamSRSZ.toLocation = toLocation,
+--       BeamSRSZ.bapId = bapId,
+--       BeamSRSZ.bapUri = bapUri,
+--       BeamSRSZ.estimatedDistance = estimatedDistance,
+--       BeamSRSZ.estimatedDuration = estimatedDuration,
+--       BeamSRSZ.createdAt = createdAt,
+--       BeamSRSZ.updatedAt = updatedAt
+--     }

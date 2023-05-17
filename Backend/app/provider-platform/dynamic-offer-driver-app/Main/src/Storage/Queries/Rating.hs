@@ -29,6 +29,7 @@ import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.Rating as BeamR
 import Storage.Tabular.Rating
+import qualified Storage.Tabular.VechileNew as VN
 
 create :: Rating -> SqlDB ()
 create = Esq.create
@@ -67,28 +68,26 @@ findRatingForRide rideId = findOne $ do
   where_ $ rating ^. RatingRideId ==. val (toKey rideId)
   pure rating
 
--- transformBeamRatingToDomain :: BeamR.Rating -> Rating
--- transformBeamRatingToDomain BeamR.RatingT {..} = do
---   Rating
---     {
---       id = Id id,
---       rideId = Id rideId,
---       driverId = Id driverId,
---       ratingValue = ratingValue,
---       feedbackDetails = feedbackDetails,
---       createdAt = createdAt,
---       updatedAt = updatedAt
---     }
+transformBeamRatingToDomain :: BeamR.Rating -> Rating
+transformBeamRatingToDomain BeamR.RatingT {..} = do
+  Rating
+    { id = Id id,
+      rideId = Id rideId,
+      driverId = Id driverId,
+      ratingValue = ratingValue,
+      feedbackDetails = feedbackDetails,
+      createdAt = createdAt,
+      updatedAt = updatedAt
+    }
 
--- transformDomainRatingToBeam :: Rating -> BeamR.Rating
--- transformDomainRatingToBeam Rating {..} =
---   BeamR.defaultRating
---     {
---       BeamR.id = getId id,
---       BeamR.rideId = getId rideId,
---       BeamR.driverId = getId driverId,
---       BeamR.ratingValue = ratingValue,
---       BeamR.feedbackDetails = feedbackDetails,
---       BeamR.createdAt = createdAt,
---       BeamR.updatedAt = updatedAt
---     }
+transformDomainRatingToBeam :: Rating -> BeamR.Rating
+transformDomainRatingToBeam Rating {..} =
+  BeamR.defaultRating
+    { BeamR.id = getId id,
+      BeamR.rideId = getId rideId,
+      BeamR.driverId = getId driverId,
+      BeamR.ratingValue = ratingValue,
+      BeamR.feedbackDetails = feedbackDetails,
+      BeamR.createdAt = createdAt,
+      BeamR.updatedAt = updatedAt
+    }

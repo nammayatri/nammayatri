@@ -29,6 +29,7 @@ import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequestForDriver as BeamSRFD
 import Storage.Tabular.SearchRequestForDriver
+import qualified Storage.Tabular.VechileNew as VN
 
 createMany :: [SearchRequestForDriver] -> SqlDB ()
 createMany = Esq.createMany

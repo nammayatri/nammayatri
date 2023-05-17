@@ -35,14 +35,14 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
-import qualified Storage.Beam.Ride as BeamR
-import Storage.Queries.Booking (baseBookingTable)
+-- import qualified Storage.Beam.Ride as BeamR
+-- import Storage.Queries.Booking (baseBookingTable)
 import Storage.Queries.FullEntityBuilders (buildFullBooking)
 import Storage.Tabular.Booking as Booking
 import Storage.Tabular.DriverInformation as DriverInfo
 import Storage.Tabular.Ride as Ride
 import Storage.Tabular.RideDetails as RideDetails
-import Storage.Tabular.RiderDetails as RiderDetails
+import qualified Storage.Tabular.VechileNew as VN
 
 create :: Ride -> SqlDB ()
 create = Esq.create
@@ -385,50 +385,50 @@ findStuckRideItems merchantId bookingIds now = do
   where
     mkStuckRideItem (rideId, bookingId, driverId, driverActive) = StuckRideItem {..}
 
-transformBeamRideToDomain :: BeamR.Ride -> Ride
-transformBeamRideToDomain BeamR.RideT {..} = do
-  Ride
-    { id = Id id,
-      bookingId = Id bookingId,
-      shortId = Id shortId,
-      status = status,
-      driverId = Id driverId,
-      otp = otp,
-      trackingUrl = trackingUrl,
-      fare = fare,
-      traveledDistance = traveledDistance,
-      chargeableDistance = chargeableDistance,
-      driverArrivalTime = driverArrivalTime,
-      tripStartTime = tripStartTime,
-      tripEndTime = tripEndTime,
-      tripStartPos = tripStartPos,
-      tripEndPos = tripEndPos,
-      fareParametersId = Id <$> fareParametersId,
-      distanceCalculationFailed = distanceCalculationFailed,
-      createdAt = createdAt,
-      updatedAt = updatedAt
-    }
+-- transformBeamRideToDomain :: BeamR.Ride -> Ride
+-- transformBeamRideToDomain BeamR.RideT {..} = do
+--   Ride
+--     { id = Id id,
+--       bookingId = Id bookingId,
+--       shortId = Id shortId,
+--       status = status,
+--       driverId = Id driverId,
+--       otp = otp,
+--       trackingUrl = trackingUrl,
+--       fare = fare,
+--       traveledDistance = traveledDistance,
+--       chargeableDistance = chargeableDistance,
+--       driverArrivalTime = driverArrivalTime,
+--       tripStartTime = tripStartTime,
+--       tripEndTime = tripEndTime,
+--       tripStartPos = tripStartPos,
+--       tripEndPos = tripEndPos,
+--       fareParametersId = Id <$> fareParametersId,
+--       distanceCalculationFailed = distanceCalculationFailed,
+--       createdAt = createdAt,
+--       updatedAt = updatedAt
+--     }
 
-transformDomainRideToBeam :: Ride -> BeamR.Ride
-transformDomainRideToBeam Ride {..} =
-  BeamR.defaultRide
-    { BeamR.id = getId id,
-      BeamR.bookingId = getId bookingId,
-      BeamR.shortId = getId shortId,
-      BeamR.status = status,
-      BeamR.driverId = getId driverId,
-      BeamR.otp = otp,
-      BeamR.trackingUrl = trackingUrl,
-      BeamR.fare = fare,
-      BeamR.traveledDistance = traveledDistance,
-      BeamR.chargeableDistance = chargeableDistance,
-      BeamR.driverArrivalTime = driverArrivalTime,
-      BeamR.tripStartTime = tripStartTime,
-      BeamR.tripEndTime = tripEndTime,
-      BeamR.tripStartPos = tripStartPos,
-      BeamR.tripEndPos = tripEndPos,
-      BeamR.fareParametersId = getId <$> fareParametersId,
-      BeamR.distanceCalculationFailed = distanceCalculationFailed,
-      BeamR.createdAt = createdAt,
-      BeamR.updatedAt = updatedAt
-    }
+-- transformDomainRideToBeam :: Ride -> BeamR.Ride
+-- transformDomainRideToBeam Ride {..} =
+--   BeamR.defaultRide
+--     { BeamR.id = getId id,
+--       BeamR.bookingId = getId bookingId,
+--       BeamR.shortId = getId shortId,
+--       BeamR.status = status,
+--       BeamR.driverId = getId driverId,
+--       BeamR.otp = otp,
+--       BeamR.trackingUrl = trackingUrl,
+--       BeamR.fare = fare,
+--       BeamR.traveledDistance = traveledDistance,
+--       BeamR.chargeableDistance = chargeableDistance,
+--       BeamR.driverArrivalTime = driverArrivalTime,
+--       BeamR.tripStartTime = tripStartTime,
+--       BeamR.tripEndTime = tripEndTime,
+--       BeamR.tripStartPos = tripStartPos,
+--       BeamR.tripEndPos = tripEndPos,
+--       BeamR.fareParametersId = getId <$> fareParametersId,
+--       BeamR.distanceCalculationFailed = distanceCalculationFailed,
+--       BeamR.createdAt = createdAt,
+--       BeamR.updatedAt = updatedAt
+--     }

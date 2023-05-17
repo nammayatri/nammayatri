@@ -33,6 +33,7 @@ import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant as BeamM
 import Storage.Tabular.Merchant
+import qualified Storage.Tabular.VechileNew as VN
 
 findById :: Transactionable m => Id Merchant -> m (Maybe Merchant)
 findById = Esq.findById

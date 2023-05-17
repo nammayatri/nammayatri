@@ -39,6 +39,7 @@ import GHC.Generics (Generic)
 import Kernel.External.Types (Language)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import qualified Storage.Tabular.Message.Message as Msg

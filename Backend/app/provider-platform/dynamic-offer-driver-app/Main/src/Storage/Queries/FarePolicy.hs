@@ -143,6 +143,9 @@ where
 import Domain.Types.FarePolicy
 import Domain.Types.Merchant
 import Domain.Types.Vehicle.Variant (Variant)
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
@@ -156,6 +159,7 @@ import Storage.Tabular.FarePolicy
 import Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails (EntityField (FarePolicyProgressiveDetailsBaseDistance, FarePolicyProgressiveDetailsBaseFare, FarePolicyProgressiveDetailsDeadKmFare, FarePolicyProgressiveDetailsNightShiftCharge, FarePolicyProgressiveDetailsPerExtraKmFare, FarePolicyProgressiveDetailsTId), FarePolicyProgressiveDetailsT (..))
 import Storage.Tabular.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab ()
 import Storage.Tabular.FarePolicy.Instances
+import qualified Storage.Tabular.VechileNew as VN
 
 findAllByMerchantId ::
   Transactionable m =>
@@ -188,12 +192,12 @@ findById farePolicyId = buildDType $ do
   res <- Esq.findById' farePolicyId
   join <$> mapM buildFullFarePolicy res
 
-findById' :: L.MonadFlow m => Id FarePolicy -> m (Maybe FarePolicy)
-findById' (Id farePolicyId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
-  case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamFarePolicyToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamFP.id $ Se.Eq farePolicyId]
-    Nothing -> pure Nothing
+-- findById' :: L.MonadFlow m => Id FarePolicy -> m (Maybe FarePolicy)
+-- findById' (Id farePolicyId) = do
+--   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   case dbConf of
+--     Just dbCOnf' -> either (pure Nothing) (transformBeamFarePolicyToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamFP.id $ Se.Eq farePolicyId]
+--     Nothing -> pure Nothing
 
 update :: FarePolicy -> SqlDB ()
 update farePolicy = do

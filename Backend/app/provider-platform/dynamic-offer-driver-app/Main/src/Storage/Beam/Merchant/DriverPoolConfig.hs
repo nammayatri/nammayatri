@@ -39,6 +39,7 @@ import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common (Meters, Seconds)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config (PoolSortingType)
@@ -123,7 +124,7 @@ instance B.Table DriverPoolConfigT where
   data PrimaryKey DriverPoolConfigT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
-  primaryKey = Id . tripDistance
+  primaryKey = Id . merchantId
 
 instance ModelMeta DriverPoolConfigT where
   modelFieldModification = driverPoolConfigTMod
@@ -207,4 +208,4 @@ driverPoolConfigToPSModifiers =
   M.fromList
     []
 
-$(enableKVPG ''DriverPoolConfigT ['tripDistance] [])
+$(enableKVPG ''DriverPoolConfigT ['merchantId] [])

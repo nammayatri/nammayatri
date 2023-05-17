@@ -13,6 +13,7 @@ import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverReferral as BeamDR
 import Storage.Tabular.DriverReferral
+import qualified Storage.Tabular.VechileNew as VN
 
 create :: DriverReferral -> SqlDB ()
 create = Esq.create

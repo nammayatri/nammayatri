@@ -29,6 +29,7 @@ import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.BookingCancellationReason as BeamBCR
 import Storage.Tabular.BookingCancellationReason
+import qualified Storage.Tabular.VechileNew as VN
 
 create :: BookingCancellationReason -> SqlDB ()
 create = Esq.create

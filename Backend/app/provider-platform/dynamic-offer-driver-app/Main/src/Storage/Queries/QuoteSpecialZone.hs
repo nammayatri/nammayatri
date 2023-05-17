@@ -32,6 +32,7 @@ import Storage.Queries.FullEntityBuilders (buildFullQuoteSpecialZone)
 import qualified Storage.Tabular.FareParameters as Fare
 import qualified Storage.Tabular.FareParameters.Instances as FareParamsT
 import Storage.Tabular.QuoteSpecialZone
+import qualified Storage.Tabular.VechileNew as VN
 
 create :: QuoteSpecialZone -> SqlDB ()
 create quote = Esq.runTransaction $

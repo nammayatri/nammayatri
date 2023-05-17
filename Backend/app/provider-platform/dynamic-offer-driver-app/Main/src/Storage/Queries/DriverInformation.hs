@@ -36,6 +36,7 @@ import qualified Storage.Beam.DriverInformation as BeamDI
 import Storage.Tabular.DriverInformation
 import Storage.Tabular.DriverLocation
 import Storage.Tabular.Person
+import qualified Storage.Tabular.VechileNew as VN
 
 create :: DriverInformation -> SqlDB ()
 create = Esq.create

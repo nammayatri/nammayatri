@@ -92,6 +92,8 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Money
 
 instance FromBackendRow Postgres Money
 
+deriving stock instance Read Money
+
 instance IsString Money where
   fromString = show
 

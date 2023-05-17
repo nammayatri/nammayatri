@@ -31,6 +31,7 @@ import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverLocation as BeamDL
 import Storage.Tabular.DriverLocation
+import qualified Storage.Tabular.VechileNew as VN
 
 create :: Id Person -> LatLong -> UTCTime -> SqlDB ()
 create drLocationId latLong updateTime = do
@@ -57,7 +58,7 @@ findById' :: L.MonadFlow m => Id Person -> m (Maybe DriverLocation)
 findById' (Id driverLocationId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamDriverLocationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamDL.id $ Se.Eq driverLocationId]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamDriverLocationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamDL.driverId $ Se.Eq driverLocationId]
     Nothing -> pure Nothing
 
 upsertGpsCoord :: Id Person -> LatLong -> UTCTime -> SqlDB DriverLocation

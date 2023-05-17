@@ -60,8 +60,8 @@ data ExophoneT f = ExophoneT
     primaryPhone :: B.C f Text,
     backupPhone :: B.C f Text,
     isPrimaryDown :: B.C f Bool,
-    createdAt :: B.C f Time.LocalTime,
-    updatedAt :: B.C f Time.LocalTime
+    createdAt :: B.C f Time.UTCTime,
+    updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -119,8 +119,8 @@ defaultExophone =
       primaryPhone = "",
       backupPhone = "",
       isPrimaryDown = False,
-      createdAt = defaultDate,
-      updatedAt = defaultDate
+      createdAt = defaultUTCDate,
+      updatedAt = defaultUTCDate
     }
 
 instance Serialize Exophone where

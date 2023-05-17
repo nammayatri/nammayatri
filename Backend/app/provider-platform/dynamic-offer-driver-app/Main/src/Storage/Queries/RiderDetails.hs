@@ -31,16 +31,17 @@ import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.RiderDetails as BeamRD
 import Storage.Tabular.RiderDetails
+import qualified Storage.Tabular.VechileNew as VN
 
 create :: RiderDetails -> SqlDB ()
 create = Esq.create
 
-create' :: L.MonadFlow m => DRDD.RiderDetails -> m (MeshResult ())
-create' riderDetails = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
-  case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainRiderDetailsToBeam riderDetails)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+-- create' :: L.MonadFlow m => DRDD.RiderDetails -> m (MeshResult ())
+-- create' riderDetails = do
+--   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   case dbConf of
+--     Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainRiderDetailsToBeam riderDetails)
+--     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 -- TODO :: write cached query for this
 findById ::
@@ -49,12 +50,12 @@ findById ::
   m (Maybe RiderDetails)
 findById = Esq.findById
 
-findById' :: L.MonadFlow m => Id RiderDetails -> m (Maybe RiderDetails)
-findById' (Id riderDetailsId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
-  case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamRiderDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamRD.id $ Se.Eq riderDetailsId]
-    Nothing -> pure Nothing
+-- findById' :: L.MonadFlow m => Id RiderDetails -> m (Maybe RiderDetails)
+-- findById' (Id riderDetailsId) = do
+--   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   case dbConf of
+--     Just dbCOnf' -> either (pure Nothing) (transformBeamRiderDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamRD.id $ Se.Eq riderDetailsId]
+--     Nothing -> pure Nothing
 
 findByMobileNumberAndMerchant ::
   (MonadThrow m, Log m, Transactionable m, EncFlow m r) =>
@@ -117,34 +118,34 @@ updateReferralInfo customerNumberHash merchantId referralId driverId = do
       rd ^. RiderDetailsMobileNumberHash ==. val customerNumberHash
         &&. rd ^. RiderDetailsMerchantId ==. val (toKey merchantId)
 
-transformBeamRiderDetailsToDomain :: BeamRD.RiderDetails -> RiderDetails
-transformBeamRiderDetailsToDomain BeamRD.RiderDetailsT {..} = do
-  RiderDetails
-    { id = Id id,
-      mobileCountryCode = mobileCountryCode,
-      mobileNumber = mobileNumber,
-      createdAt = createdAt,
-      updatedAt = updatedAt,
-      referralCode = Id <$> referralCode,
-      referredByDriver = Id <$> referredByDriver,
-      referredAt = referredAt,
-      hasTakenValidRide = hasTakenValidRide,
-      hasTakenValidRideAt = hasTakenValidRideAt,
-      merchantId = Id merchantId
-    }
+-- transformBeamRiderDetailsToDomain :: BeamRD.RiderDetails -> RiderDetails
+-- transformBeamRiderDetailsToDomain BeamRD.RiderDetailsT {..} = do
+--   RiderDetails
+--     { id = Id id,
+--       mobileCountryCode = mobileCountryCode,
+--       mobileNumber = mobileNumber,
+--       createdAt = createdAt,
+--       updatedAt = updatedAt,
+--       referralCode = Id <$> referralCode,
+--       referredByDriver = Id <$> referredByDriver,
+--       referredAt = referredAt,
+--       hasTakenValidRide = hasTakenValidRide,
+--       hasTakenValidRideAt = hasTakenValidRideAt,
+--       merchantId = Id merchantId
+--     }
 
-transformDomainRiderDetailsToBeam :: RiderDetails -> BeamRD.RiderDetails
-transformDomainRiderDetailsToBeam RiderDetails {..} =
-  BeamRD.defaultRiderDetails
-    { BeamRD.id = getId id,
-      BeamRD.mobileCountryCode = mobileCountryCode,
-      BeamRD.mobileNumber = mobileNumber,
-      BeamRD.createdAt = createdAt,
-      BeamRD.updatedAt = updatedAt,
-      BeamRD.referralCode = getId <$> referralCode,
-      BeamRD.referredByDriver = getId <$> referredByDriver,
-      BeamRD.referredAt = referredAt,
-      BeamRD.hasTakenValidRide = hasTakenValidRide,
-      BeamRD.hasTakenValidRideAt = hasTakenValidRideAt,
-      BeamRD.merchantId = getId merchantId
-    }
+-- transformDomainRiderDetailsToBeam :: RiderDetails -> BeamRD.RiderDetails
+-- transformDomainRiderDetailsToBeam RiderDetails {..} =
+--   BeamRD.defaultRiderDetails
+--     { BeamRD.id = getId id,
+--       BeamRD.mobileCountryCode = mobileCountryCode,
+--       BeamRD.mobileNumber = mobileNumber,
+--       BeamRD.createdAt = createdAt,
+--       BeamRD.updatedAt = updatedAt,
+--       BeamRD.referralCode = getId <$> referralCode,
+--       BeamRD.referredByDriver = getId <$> referredByDriver,
+--       BeamRD.referredAt = referredAt,
+--       BeamRD.hasTakenValidRide = hasTakenValidRide,
+--       BeamRD.hasTakenValidRideAt = hasTakenValidRideAt,
+--       BeamRD.merchantId = getId merchantId
+--     }
