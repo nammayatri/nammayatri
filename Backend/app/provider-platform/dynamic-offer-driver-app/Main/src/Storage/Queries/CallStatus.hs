@@ -57,7 +57,7 @@ findById :: L.MonadFlow m => Id DCS.CallStatus -> m (Maybe DCS.CallStatus)
 findById (Id.Id callStatusId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamCallStatusToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BCS.id $ Se.Eq callStatusId]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamCallStatusToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamCS.id $ Se.Eq callStatusId]
     Nothing -> pure Nothing
 
 findByCallSid :: L.MonadFlow m => Text -> m (Maybe DCS.CallStatus)
@@ -109,8 +109,8 @@ countCallsByRideId rideId = (fromMaybe 0 <$>) $
     groupBy $ callStatus ^. CallStatusRideId
     pure $ count @Int $ callStatus ^. CallStatusTId
 
-transformBeamCallStatusToDomain :: BCS.CallStatus -> DCS.CallStatus
-transformBeamCallStatusToDomain BCS.CallStatusT {..} = do
+transformBeamCallStatusToDomain :: BeamCS.CallStatus -> CallStatus
+transformBeamCallStatusToDomain BeamCS.CallStatusT {..} = do
   CallStatus
     { id = Id.Id id,
       callId = callId,
