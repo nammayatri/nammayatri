@@ -267,38 +267,38 @@ personToPSModifiers =
   M.fromList
     []
 
-defaultPerson :: Person
-defaultPerson =
-  PersonT
-    { id = "",
-      firstName = "",
-      middleName = Nothing,
-      lastName = Nothing,
-      role = "",
-      gender = "",
-      identifierType = "",
-      email = Nothing,
-      unencryptedMobileNumber = Nothing,
-      mobileNumberEncrypted = Nothing,
-      mobileNumberHash = Nothing,
-      mobileCountryCode = Nothing,
-      passwordHash = Nothing,
-      identifier = Nothing,
-      rating = Nothing,
-      isNew = False,
-      merchantId = "",
-      deviceToken = Nothing,
-      language = Nothing,
-      whatsappNotificationEnrollStatus = Nothing,
-      description = Nothing,
-      alternateMobileNumberEncrypted = Nothing,
-      unencryptedAlternateMobileNumber = Nothing,
-      alternateMobileNumberHash = Nothing,
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate,
-      bundleVersion = Nothing,
-      clientVersion = Nothing
-    }
+-- defaultPerson :: Person
+-- defaultPerson =
+--   PersonT
+--     { id = "",
+--       firstName = "",
+--       middleName = Nothing,
+--       lastName = Nothing,
+--       role = "",
+--       gender = "",
+--       identifierType = "",
+--       email = Nothing,
+--       unencryptedMobileNumber = Nothing,
+--       mobileNumberEncrypted = Nothing,
+--       mobileNumberHash = Nothing,
+--       mobileCountryCode = Nothing,
+--       passwordHash = Nothing,
+--       identifier = Nothing,
+--       rating = Nothing,
+--       isNew = False,
+--       merchantId = "",
+--       deviceToken = Nothing,
+--       language = Nothing,
+--       whatsappNotificationEnrollStatus = Nothing,
+--       description = Nothing,
+--       alternateMobileNumberEncrypted = Nothing,
+--       unencryptedAlternateMobileNumber = Nothing,
+--       alternateMobileNumberHash = Nothing,
+--       createdAt = defaultUTCDate,
+--       updatedAt = defaultUTCDate,
+--       bundleVersion = Nothing,
+--       clientVersion = Nothing
+--     }
 
 instance Serialize Person where
   put = error "undefined"

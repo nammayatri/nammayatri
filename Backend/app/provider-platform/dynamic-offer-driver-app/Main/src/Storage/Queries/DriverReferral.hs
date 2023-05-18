@@ -48,7 +48,7 @@ transformBeamDriverReferralToDomain BeamDR.DriverReferralT {..} = do
 
 transformDomainDriverReferralToBeam :: DriverReferral -> BeamDR.DriverReferral
 transformDomainDriverReferralToBeam DriverReferral {..} =
-  BeamDR.defaultDriverReferral
+  BeamDR.DriverReferralT
     { BeamDR.referralCode = getId referralCode,
       BeamDR.driverId = getId driverId,
       BeamDR.linkedAt = linkedAt

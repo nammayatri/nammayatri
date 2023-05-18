@@ -67,7 +67,7 @@ transformBeamMediaFileToDomain BeamMF.MediaFileT {..} = do
 
 transformDomainMediaFileToBeam :: MediaFile -> BeamMF.MediaFile
 transformDomainMediaFileToBeam MediaFile {..} =
-  BeamMF.defaultMediaFile
+  BeamMF.MediaFileT
     { BeamMF.id = getId id,
       BeamMF.fileType = _type,
       BeamMF.url = url,

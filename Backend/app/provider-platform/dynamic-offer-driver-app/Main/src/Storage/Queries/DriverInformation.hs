@@ -441,7 +441,7 @@ transformBeamDriverInformationToDomain BeamDI.DriverInformationT {..} = do
 
 transformDomainDriverInformationToBeam :: DriverInformation -> BeamDI.DriverInformation
 transformDomainDriverInformationToBeam DriverInformation {..} =
-  BeamDI.defaultDriverInformation
+  BeamDI.DriverInformationT
     { BeamDI.driverId = getId driverId,
       BeamDI.adminId = getId <$> adminId,
       BeamDI.active = active,

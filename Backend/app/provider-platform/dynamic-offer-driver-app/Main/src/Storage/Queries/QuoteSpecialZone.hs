@@ -121,12 +121,12 @@ findById dQuoteId = buildDType $ do
 --       updatedAt = updatedAt,
 --       validTill = validTill,
 --       estimatedFare = estimatedFare,
---       fareParams = fareParams
+--       fareParametersId = getId fareParams.id
 --     }
 
 -- transformDomainQuoteSpecialZoneToBeam :: QuoteSpecialZone -> BeamQSZ.QuoteSpecialZone
 -- transformDomainQuoteSpecialZoneToBeam QuoteSpecialZone {..} =
---   BeamQSZ.defaultQuoteSpecialZone
+--   BeamQSZ.QuoteSpecialZoneT
 --     {
 --       BeamQSZ.id = getId id,
 --       BeamQSZ.searchRequestId = getId searchRequestId,
@@ -138,5 +138,5 @@ findById dQuoteId = buildDType $ do
 --       BeamQSZ.updatedAt = updatedAt,
 --       BeamQSZ.validTill = validTill,
 --       BeamQSZ.estimatedFare = estimatedFare,
---       BeamQSZ.fareParams = fareParams
+--       BeamQSZ.fareParametersId = getId fareParams.id
 --     }
