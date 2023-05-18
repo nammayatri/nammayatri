@@ -50,4 +50,4 @@ data DriverQuote = DriverQuote
     fareParams :: Params.FareParameters,
     providerId :: Id DMerchant.Merchant
   }
-  deriving (Generic, Show, PrettyShow, Read, Eq, Ord)
+  deriving (Generic, Show, PrettyShow, Eq)

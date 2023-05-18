@@ -49,7 +49,7 @@ data FlowStatus
   | ON_RIDE
       { rideId :: Id DRide.Ride
       }
-  deriving (Show, Eq, Generic, Read)
+  deriving (Show, Eq, Generic)
 
 flowStatusCustomJSONOptions :: Options
 flowStatusCustomJSONOptions =

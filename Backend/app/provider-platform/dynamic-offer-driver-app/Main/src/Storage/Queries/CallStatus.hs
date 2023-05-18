@@ -56,10 +56,17 @@ create callStatus = do
 -- findById :: Transactionable m => Id CallStatus -> m (Maybe CallStatus)
 -- findById = Esq.findById
 
+findById :: L.MonadFlow m => Id DCS.CallStatus -> m (Maybe DCS.CallStatus)
+findById (Id callStatusId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure Nothing) (transformBeamCallStatusToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamCS.id $ Se.Eq callStatusId]
+    Nothing -> pure Nothing
+
 findById' :: (L.MonadFlow m) => Id CallStatus -> KBT.BeamFlow m (Maybe CallStatus)
 findById' (Id callStatusId) = do
   KBT.BeamState {..} <- ask
-  either (pure Nothing) (transformBeamCallStatusToDomain <$>) <$> KV.findWithKVConnector dbConf VN.meshConfig [Se.Is BeamCT.id $ Se.Eq callStatusId]
+  either (pure Nothing) (transformBeamCallStatusToDomain <$>) <$> KV.findWithKVConnector dbConf VN.meshConfig [Se.Is BeamCS.id $ Se.Eq callStatusId]
 
 findByCallSid :: L.MonadFlow m => Text -> m (Maybe DCS.CallStatus)
 findByCallSid callSid = do
@@ -88,7 +95,7 @@ findByCallSid callSid = do
 
 -- updateCallStatus' :: Id CallStatus -> Call.CallStatus -> Int -> BaseUrl -> SqlDB ()
 updateCallStatus :: L.MonadFlow m => Id DCS.CallStatus -> Call.CallStatus -> Int -> BaseUrl -> m (MeshResult ())
-updateCallStatus (Id.Id callId) status conversationDuration recordingUrl = do
+updateCallStatus (Id callId) status conversationDuration recordingUrl = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' ->
@@ -113,9 +120,9 @@ countCallsByRideId rideId = (fromMaybe 0 <$>) $
 transformBeamCallStatusToDomain :: BeamCS.CallStatus -> DCS.CallStatus
 transformBeamCallStatusToDomain BeamCS.CallStatusT {..} = do
   CallStatus
-    { id = Id.Id id,
+    { id = Id id,
       callId = callId,
-      rideId = Id.Id rideId,
+      rideId = Id rideId,
       dtmfNumberUsed = dtmfNumberUsed,
       status = status,
       recordingUrl = recordingUrl,

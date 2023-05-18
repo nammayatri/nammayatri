@@ -39,6 +39,7 @@ import GHC.Generics (Generic)
 import Kernel.External.Encryption
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.DriverOnboarding.Image (ImageTId)
@@ -123,6 +124,8 @@ instance ToJSON VehicleRegistrationCertificate where
   toJSON = A.genericToJSON A.defaultOptions
 
 deriving stock instance Show VehicleRegistrationCertificate
+
+deriving stock instance Ord Domain.VerificationStatus
 
 vehicleRegistrationCertificateTMod :: VehicleRegistrationCertificateT (B.FieldModification (B.TableField VehicleRegistrationCertificateT))
 vehicleRegistrationCertificateTMod =

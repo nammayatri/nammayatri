@@ -135,6 +135,8 @@ instance ToJSON QuoteSpecialZone where
 
 deriving stock instance Show QuoteSpecialZone
 
+deriving stock instance Read Money
+
 quoteSpecialZoneTMod :: QuoteSpecialZoneT (B.FieldModification (B.TableField QuoteSpecialZoneT))
 quoteSpecialZoneTMod =
   B.tableModification

@@ -178,6 +178,8 @@ instance ToJSON Domain.DriverQuoteStatus where
 
 deriving stock instance Show DriverQuote
 
+deriving stock instance Read Money
+
 -- deriving stock instance Ord Domain.DriverQuoteStatus
 
 driverQuoteTMod :: DriverQuoteT (B.FieldModification (B.TableField DriverQuoteT))

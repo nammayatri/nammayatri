@@ -46,6 +46,7 @@ import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Kernel.Utils.Common (decodeFromText, encodeToText)
 import Kernel.Utils.Error
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Merchant (MerchantTId)

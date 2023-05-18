@@ -38,6 +38,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Merchant (MerchantTId)
@@ -113,6 +114,10 @@ instance ToJSON Image where
   toJSON = A.genericToJSON A.defaultOptions
 
 deriving stock instance Show Image
+
+deriving stock instance Ord Domain.ImageType
+
+deriving stock instance Ord Domain.DriverOnboardingError
 
 imageTMod :: ImageT (B.FieldModification (B.TableField ImageT))
 imageTMod =

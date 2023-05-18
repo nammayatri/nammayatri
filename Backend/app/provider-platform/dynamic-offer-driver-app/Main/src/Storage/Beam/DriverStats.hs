@@ -41,8 +41,8 @@ import Kernel.Types.Common hiding (id)
 import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
-import Storage.Tabular.Person (PersonTId)
 import Storage.Beam.Instances ()
+import Storage.Tabular.Person (PersonTId)
 
 fromFieldEnum ::
   (Typeable a, Read a) =>
@@ -84,16 +84,6 @@ instance ToJSON DriverStats where
   toJSON = A.genericToJSON A.defaultOptions
 
 deriving stock instance Show DriverStats
-
-instance FromField Meters where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Meters where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Meters
-
-instance FromBackendRow Postgres Meters
 
 driverStatsTMod :: DriverStatsT (B.FieldModification (B.TableField DriverStatsT))
 driverStatsTMod =

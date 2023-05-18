@@ -161,6 +161,8 @@ instance ToJSON Estimate where
 
 deriving stock instance Show Estimate
 
+deriving stock instance Read Money
+
 estimateTMod :: EstimateT (B.FieldModification (B.TableField EstimateT))
 estimateTMod =
   B.tableModification

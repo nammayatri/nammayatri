@@ -122,6 +122,10 @@ deriving stock instance Ord Domain.FarePolicyType
 
 deriving stock instance Read Money
 
+-- deriving stock instance Ord Domain.FarePolicyType
+
+deriving stock instance Read Money
+
 fareParametersTMod :: FareParametersT (B.FieldModification (B.TableField FareParametersT))
 fareParametersTMod =
   B.tableModification

@@ -12,7 +12,6 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingVia #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Domain.Types.FareParameters where
 
@@ -32,7 +31,16 @@ data FareParameters = FareParameters
     nightShiftCharge :: Maybe Money,
     fareParametersDetails :: FareParametersDetails
   }
-  deriving (Generic, Show, Eq, PrettyShow, Ord, Read)
+  deriving (Generic, Show, Eq, PrettyShow)
+
+data FareParametersDetails = ProgressiveDetails FParamsProgressiveDetails | SlabDetails FParamsSlabDetails
+  deriving (Generic, Show, Eq, PrettyShow)
+
+data FParamsProgressiveDetails = FParamsProgressiveDetails
+  { deadKmFare :: Money,
+    extraKmFare :: Maybe Money
+  }
+  deriving (Generic, Show, Eq, PrettyShow)
 
 deriving stock instance Read Money
 

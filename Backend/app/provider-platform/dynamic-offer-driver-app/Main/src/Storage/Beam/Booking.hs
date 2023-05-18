@@ -136,7 +136,7 @@ data BookingT f = BookingT
     primaryExophone :: B.C f Text,
     bapId :: B.C f Text,
     bapUri :: B.C f Text,
-    startTime :: B.C f Time.LocalTime,
+    startTime :: B.C f Time.UTCTime,
     riderId :: B.C f (Maybe Text),
     fromLocationId :: B.C f Text,
     toLocationId :: B.C f Text,
@@ -147,8 +147,8 @@ data BookingT f = BookingT
     estimatedDuration :: B.C f Seconds,
     fareParametersId :: B.C f Text,
     riderName :: B.C f (Maybe Text),
-    createdAt :: B.C f Time.LocalTime,
-    updatedAt :: B.C f Time.LocalTime
+    createdAt :: B.C f Time.UTCTime,
+    updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -190,6 +190,8 @@ instance ToJSON Booking where
   toJSON = A.genericToJSON A.defaultOptions
 
 deriving stock instance Show Booking
+
+deriving stock instance Read Money
 
 bookingTMod :: BookingT (B.FieldModification (B.TableField BookingT))
 bookingTMod =

@@ -26,6 +26,7 @@ import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.Estimate as BeamE
 import Storage.Tabular.Estimate ()
+import Storage.Tabular.VechileNew as VN
 import qualified Storage.Tabular.VechileNew as VN
 
 create :: Estimate -> SqlDB ()

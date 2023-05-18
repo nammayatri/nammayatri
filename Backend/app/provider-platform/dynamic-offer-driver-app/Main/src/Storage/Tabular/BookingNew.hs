@@ -61,6 +61,7 @@ import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.UtilsTH
 import Sequelize
+import Storage.Beam.Instances
 import Storage.Tabular.Vehicle ()
 
 data A = A | B
@@ -111,15 +112,15 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Veh.Variant
 
 instance FromBackendRow Postgres Veh.Variant
 
-instance FromField Meters where
-  fromField = fromFieldEnum
+-- instance FromField Meters where
+--   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Meters where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Meters where
+--   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Meters
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Meters
 
-instance FromBackendRow Postgres Meters
+-- instance FromBackendRow Postgres Meters
 
 instance FromField Centesimal where
   fromField = fromFieldEnum
@@ -201,6 +202,8 @@ instance ToJSON BookingNew where
   toJSON = A.genericToJSON A.defaultOptions
 
 deriving stock instance Show BookingNew
+
+deriving stock instance Read Money
 
 instance Serialize BookingNew where
   put = error "undefined"
