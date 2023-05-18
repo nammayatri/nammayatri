@@ -106,9 +106,10 @@ data RegistrationTokenT f = RegistrationTokenT
     tokenExpiry :: B.C f Int,
     entityId :: B.C f Text,
     entityType :: B.C f Domain.RTEntityType,
-    createdAt :: B.C f Time.LocalTime,
-    updatedAt :: B.C f Time.LocalTime,
-    info :: B.C f (Maybe Text)
+    createdAt :: B.C f Time.UTCTime,
+    updatedAt :: B.C f Time.UTCTime,
+    info :: B.C f (Maybe Text),
+    alternateNumberAttempts :: B.C f Int
   }
   deriving (Generic, B.Beamable)
 
@@ -164,7 +165,8 @@ registrationTokenTMod =
       entityType = B.fieldNamed "entity_type",
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at",
-      info = B.fieldNamed "info"
+      info = B.fieldNamed "info",
+      alternateNumberAttempts = B.fieldNamed "alternateNumberAttempts"
     }
 
 psToHs :: HM.HashMap Text Text

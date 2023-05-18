@@ -341,6 +341,7 @@ library
       Storage.Queries.RideDetails
       Storage.Queries.RiderDetails
       Storage.Queries.SearchRequest
+      Storage.Queries.SearchRequest.SearchReqLocation
       Storage.Queries.SearchRequestForDriver
       Storage.Queries.SearchRequestSpecialZone
       Storage.Queries.SlabFarePolicy

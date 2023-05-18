@@ -17,9 +17,17 @@ module Storage.Queries.SearchRequestSpecialZone where
 
 import Domain.Types.Merchant
 import Domain.Types.SearchRequestSpecialZone as Domain
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import qualified Lib.Mesh as Mesh
+import qualified Sequelize as Se
+import qualified Storage.Beam.SearchRequestSpecialZone as BeamSRSZ
+import Storage.Queries.SearchRequest.SearchReqLocation as QSRL
 import Storage.Tabular.SearchRequest.SearchReqLocation
 import Storage.Tabular.SearchRequestSpecialZone
 
@@ -86,3 +94,44 @@ getValidTill searchRequestId = do
     where_ $
       searchT ^. SearchRequestSpecialZoneTId ==. val (toKey searchRequestId)
     return $ searchT ^. SearchRequestSpecialZoneValidTill
+
+transformBeamSearchRequestSpecialZoneToDomain :: L.MonadFlow m => BeamSRSZ.SearchRequestSpecialZone -> m (SearchRequestSpecialZone)
+transformBeamSearchRequestSpecialZoneToDomain BeamSRSZ.SearchRequestSpecialZoneT {..} = do
+  fl <- QSRL.findById' (Id fromLocationId)
+  tl <- QSRL.findById' (Id toLocationId)
+  pure
+    SearchRequestSpecialZone
+      { id = Id id,
+        transactionId = transactionId,
+        messageId = messageId,
+        startTime = startTime,
+        validTill = validTill,
+        providerId = Id providerId,
+        fromLocation = fromJust fl,
+        toLocation = fromJust tl,
+        bapId = bapId,
+        bapUri = bapUri,
+        estimatedDistance = estimatedDistance,
+        estimatedDuration = estimatedDuration,
+        createdAt = createdAt,
+        updatedAt = updatedAt
+      }
+
+transformDomainSearchRequestSpecialZoneToBeam :: SearchRequestSpecialZone -> BeamSRSZ.SearchRequestSpecialZone
+transformDomainSearchRequestSpecialZoneToBeam SearchRequestSpecialZone {..} =
+  BeamSRSZ.SearchRequestSpecialZoneT
+    { BeamSRSZ.id = getId id,
+      BeamSRSZ.transactionId = transactionId,
+      BeamSRSZ.messageId = messageId,
+      BeamSRSZ.startTime = startTime,
+      BeamSRSZ.validTill = validTill,
+      BeamSRSZ.providerId = getId providerId,
+      BeamSRSZ.fromLocationId = getId fromLocation.id,
+      BeamSRSZ.toLocationId = getId toLocation.id,
+      BeamSRSZ.bapId = bapId,
+      BeamSRSZ.bapUri = bapUri,
+      BeamSRSZ.estimatedDistance = estimatedDistance,
+      BeamSRSZ.estimatedDuration = estimatedDuration,
+      BeamSRSZ.createdAt = createdAt,
+      BeamSRSZ.updatedAt = updatedAt
+    }

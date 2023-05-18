@@ -16,9 +16,17 @@ module Storage.Queries.RideDetails where
 
 import qualified Domain.Types.Ride as SR
 import Domain.Types.RideDetails
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
+import Kernel.External.Encryption (DbHash (..), Encrypted (..), EncryptedHashed (..))
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import qualified Lib.Mesh as Mesh
+import qualified Sequelize as Se
+import qualified Storage.Beam.RideDetails as BeamRD
 import Storage.Tabular.RideDetails ()
 
 create :: RideDetails -> SqlDB ()
@@ -29,3 +37,32 @@ findById ::
   Id SR.Ride ->
   m (Maybe RideDetails)
 findById = Esq.findById
+
+transformBeamRideDetailsToDomain :: BeamRD.RideDetails -> RideDetails
+transformBeamRideDetailsToDomain BeamRD.RideDetailsT {..} = do
+  RideDetails
+    { id = Id id,
+      driverName = driverName,
+      driverNumber = EncryptedHashed <$> (Encrypted <$> driverNumberEncrypted) <*> driverNumberHash,
+      driverCountryCode = driverCountryCode,
+      vehicleNumber = vehicleNumber,
+      vehicleColor = vehicleColor,
+      vehicleVariant = vehicleVariant,
+      vehicleModel = vehicleModel,
+      vehicleClass = vehicleClass
+    }
+
+transformDomainRideDetailsToBeam :: RideDetails -> BeamRD.RideDetails
+transformDomainRideDetailsToBeam RideDetails {..} =
+  BeamRD.RideDetailsT
+    { BeamRD.id = getId id,
+      BeamRD.driverName = driverName,
+      BeamRD.driverNumberEncrypted = driverNumber <&> unEncrypted . (.encrypted),
+      BeamRD.driverNumberHash = driverNumber <&> (.hash),
+      BeamRD.driverCountryCode = driverCountryCode,
+      BeamRD.vehicleNumber = vehicleNumber,
+      BeamRD.vehicleColor = vehicleColor,
+      BeamRD.vehicleVariant = vehicleVariant,
+      BeamRD.vehicleModel = vehicleModel,
+      BeamRD.vehicleClass = vehicleClass
+    }

@@ -1,7 +1,7 @@
 module Lib.Utils where
 
 import Data.Time
-import Kernel.Prelude hiding (Generic)
+import Kernel.Prelude
 
 defaultDate :: LocalTime
 defaultDate =

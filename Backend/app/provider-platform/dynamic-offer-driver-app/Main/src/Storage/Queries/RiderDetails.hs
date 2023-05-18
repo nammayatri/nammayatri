@@ -18,11 +18,18 @@ import Domain.Types.DriverReferral
 import Domain.Types.Merchant
 import Domain.Types.Person
 import Domain.Types.RiderDetails
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
+import qualified Lib.Mesh as Mesh
+import qualified Sequelize as Se
+import qualified Storage.Beam.RiderDetails as BeamRD
 import Storage.Tabular.RiderDetails
 
 create :: RiderDetails -> SqlDB ()
@@ -95,3 +102,36 @@ updateReferralInfo customerNumberHash merchantId referralId driverId = do
     where_ $
       rd ^. RiderDetailsMobileNumberHash ==. val customerNumberHash
         &&. rd ^. RiderDetailsMerchantId ==. val (toKey merchantId)
+
+transformBeamRiderDetailsToDomain :: BeamRD.RiderDetails -> RiderDetails
+transformBeamRiderDetailsToDomain BeamRD.RiderDetailsT {..} = do
+  RiderDetails
+    { id = Id id,
+      mobileCountryCode = mobileCountryCode,
+      mobileNumber = EncryptedHashed (Encrypted mobileNumberEncrypted) mobileNumberHash,
+      createdAt = createdAt,
+      updatedAt = updatedAt,
+      referralCode = Id <$> referralCode,
+      referredByDriver = Id <$> referredByDriver,
+      referredAt = referredAt,
+      hasTakenValidRide = hasTakenValidRide,
+      hasTakenValidRideAt = hasTakenValidRideAt,
+      merchantId = Id merchantId
+    }
+
+transformDomainRiderDetailsToBeam :: RiderDetails -> BeamRD.RiderDetails
+transformDomainRiderDetailsToBeam RiderDetails {..} =
+  BeamRD.RiderDetailsT
+    { BeamRD.id = getId id,
+      BeamRD.mobileCountryCode = mobileCountryCode,
+      BeamRD.mobileNumberEncrypted = unEncrypted mobileNumber.encrypted,
+      BeamRD.mobileNumberHash = mobileNumber.hash,
+      BeamRD.createdAt = createdAt,
+      BeamRD.updatedAt = updatedAt,
+      BeamRD.referralCode = getId <$> referralCode,
+      BeamRD.referredByDriver = getId <$> referredByDriver,
+      BeamRD.referredAt = referredAt,
+      BeamRD.hasTakenValidRide = hasTakenValidRide,
+      BeamRD.hasTakenValidRideAt = hasTakenValidRideAt,
+      BeamRD.merchantId = getId merchantId
+    }

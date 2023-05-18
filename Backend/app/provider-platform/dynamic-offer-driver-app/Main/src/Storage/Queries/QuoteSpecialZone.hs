@@ -85,7 +85,7 @@ transformBeamQuoteSpecialZoneToDomain BeamQSZ.QuoteSpecialZoneT {..} = do
         updatedAt = updatedAt,
         validTill = validTill,
         estimatedFare = estimatedFare,
-        fareParams = fromJust fp
+        fareParams = fromJust fp -- to take a default value?
       }
 
 transformDomainQuoteSpecialZoneToBeam :: QuoteSpecialZone -> BeamQSZ.QuoteSpecialZone

@@ -108,7 +108,7 @@ transformBeamBusinessEventToDomain BeamBE.BusinessEventT {..} = do
       whenPoolWasComputed = whenPoolWasComputed,
       vehicleVariant = vehicleVariant,
       distance = Meters <$> distance,
-      duration = Seconds <$> distance,
+      duration = Seconds <$> duration,
       rideId = Id <$> rideId
     }
 

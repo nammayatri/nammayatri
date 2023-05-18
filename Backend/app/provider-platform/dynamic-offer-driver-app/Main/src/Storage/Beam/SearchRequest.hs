@@ -107,6 +107,11 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be Money where
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Money
 
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be BaseUrl where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be BaseUrl
+
 instance FromBackendRow Postgres Money
 
 data SearchRequestT f = SearchRequestT
@@ -114,13 +119,13 @@ data SearchRequestT f = SearchRequestT
     transactionId :: B.C f Text,
     messageId :: B.C f Text,
     estimateId :: B.C f Text,
-    startTime :: B.C f Time.LocalTime,
-    validTill :: B.C f Time.LocalTime,
+    startTime :: B.C f Time.UTCTime,
+    validTill :: B.C f Time.UTCTime,
     providerId :: B.C f Text,
     fromLocationId :: B.C f Text,
     toLocationId :: B.C f Text,
     bapId :: B.C f Text,
-    bapUri :: B.C f Text,
+    bapUri :: B.C f BaseUrl,
     estimatedDistance :: B.C f Meters,
     estimatedDuration :: B.C f Seconds,
     customerExtraFee :: B.C f (Maybe Money),
@@ -129,8 +134,8 @@ data SearchRequestT f = SearchRequestT
     vehicleVariant :: B.C f Variant.Variant,
     searchRepeatCounter :: B.C f Int,
     autoAssignEnabled :: B.C f Bool,
-    createdAt :: B.C f Time.LocalTime,
-    updatedAt :: B.C f Time.LocalTime
+    createdAt :: B.C f Time.UTCTime,
+    updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 

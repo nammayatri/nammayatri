@@ -40,7 +40,9 @@ import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common hiding (Value)
 import Kernel.Utils.GenericPretty
+import Kernel.Utils.Version
 import qualified Lib.Mesh as Mesh
+import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.Person as BeamP
 import Storage.Tabular.Booking
@@ -718,68 +720,69 @@ updateAlternateMobileNumberAndCode person = do
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey person.id)
 
--- transformBeamPersonToDomain :: BeamP.Person -> Person
--- transformBeamPersonToDomain BeamP.PersonT {..} = do
---   Person
---     {
---       id = Id id,
---       firstName = firstName,
---       middleName = middleName,
---       lastName = lastName,
---       role = role,
---       gender = gender,
---       identifierType = identifierType,
---       email = email,
---       unencryptedMobileNumber = unencryptedMobileNumber,
---       mobileNumber = EncryptedHashed <$> (Encrypted <$> mobileNumberEncrypted) <*> mobileNumberHash,
---       mobileCountryCode = mobileCountryCode,
---       passwordHash = passwordHash,
---       identifier = identifier,
---       rating = rating,
---       isNew = isNew,
---       merchantId = Id merchantId,
---       deviceToken = deviceToken,
---       whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus,
---       language = language,
---       description = description,
---       createdAt = createdAt,
---       updatedAt = updatedAt,
---       bundleVersion = Just $ Version (bundleVersion) (bundleVersion) (bundleVersion),
---       clientVersion = Just $ Version (clientVersion) (clientVersion) (clientVersion),
---       unencryptedAlternateMobileNumber = unencryptedAlternateMobileNumber,
---       alternateMobileNumber = EncryptedHashed <$> (Encrypted <$> alternateMobileNumberEncrypted) <*> alternateMobileNumberHash
---     }
+transformBeamPersonToDomain :: (L.MonadFlow m, Log m) => BeamP.Person -> m (Person)
+transformBeamPersonToDomain BeamP.PersonT {..} = do
+  bundleVersion' <- forM bundleVersion readVersion
+  clientVersion' <- forM clientVersion readVersion
+  pure
+    Person
+      { id = Id id,
+        firstName = firstName,
+        middleName = middleName,
+        lastName = lastName,
+        role = role,
+        gender = gender,
+        identifierType = identifierType,
+        email = email,
+        unencryptedMobileNumber = unencryptedMobileNumber,
+        mobileNumber = EncryptedHashed <$> (Encrypted <$> mobileNumberEncrypted) <*> mobileNumberHash,
+        mobileCountryCode = mobileCountryCode,
+        passwordHash = passwordHash,
+        identifier = identifier,
+        rating = rating,
+        isNew = isNew,
+        merchantId = Id merchantId,
+        deviceToken = deviceToken,
+        whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus,
+        language = language,
+        description = description,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
+        bundleVersion = bundleVersion',
+        clientVersion = clientVersion',
+        unencryptedAlternateMobileNumber = unencryptedAlternateMobileNumber,
+        alternateMobileNumber = EncryptedHashed <$> (Encrypted <$> alternateMobileNumberEncrypted) <*> alternateMobileNumberHash
+      }
 
--- transformDomainPersonToBeam :: Person -> BeamP.Person
--- transformDomainPersonToBeam Person {..} =
---   BeamP.PersonT
---     {
---       BeamP.id = getId id,
---       BeamP.firstName = firstName,
---       BeamP.middleName = middleName,
---       BeamP.lastName = lastName,
---       BeamP.role = role,
---       BeamP.gender = gender,
---       BeamP.identifierType = identifierType,
---       BeamP.email = email,
---       BeamP.unencryptedMobileNumber = unencryptedMobileNumber,
---       BeamP.mobileNumberEncrypted = mobileNumber <&> unEncrypted . (.encrypted),
---       BeamP.mobileNumberHash = mobileNumber <&> (.hash),
---       BeamP.mobileCountryCode = mobileCountryCode,
---       BeamP.passwordHash = passwordHash,
---       BeamP.identifier = identifier,
---       BeamP.rating = rating,
---       BeamP.isNew = isNew,
---       BeamP.merchantId = getId merchantId,
---       BeamP.deviceToken = deviceToken,
---       BeamP.whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus,
---       BeamP.language = language,
---       BeamP.description = description,
---       BeamP.createdAt = createdAt,
---       BeamP.updatedAt = updatedAt,
---       BeamP.bundleVersion = versionToText <$> bundleVersion,
---       BeamP.clientVersion = versionToText <$> clientVersion,
---       BeamP.unencryptedAlternateMobileNumber = unencryptedAlternateMobileNumber,
---       BeamP.alternateMobileNumberHash = alternateMobileNumber <&> (.hash),
---       BeamP.alternateMobileNumberEncrypted = alternateMobileNumber <&> unEncrypted . (.encrypted)
---     }
+transformDomainPersonToBeam :: Person -> BeamP.Person
+transformDomainPersonToBeam Person {..} =
+  BeamP.PersonT
+    { BeamP.id = getId id,
+      BeamP.firstName = firstName,
+      BeamP.middleName = middleName,
+      BeamP.lastName = lastName,
+      BeamP.role = role,
+      BeamP.gender = gender,
+      BeamP.identifierType = identifierType,
+      BeamP.email = email,
+      BeamP.unencryptedMobileNumber = unencryptedMobileNumber,
+      BeamP.mobileNumberEncrypted = mobileNumber <&> unEncrypted . (.encrypted),
+      BeamP.mobileNumberHash = mobileNumber <&> (.hash),
+      BeamP.mobileCountryCode = mobileCountryCode,
+      BeamP.passwordHash = passwordHash,
+      BeamP.identifier = identifier,
+      BeamP.rating = rating,
+      BeamP.isNew = isNew,
+      BeamP.merchantId = getId merchantId,
+      BeamP.deviceToken = deviceToken,
+      BeamP.whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus,
+      BeamP.language = language,
+      BeamP.description = description,
+      BeamP.createdAt = createdAt,
+      BeamP.updatedAt = updatedAt,
+      BeamP.bundleVersion = versionToText <$> bundleVersion,
+      BeamP.clientVersion = versionToText <$> clientVersion,
+      BeamP.unencryptedAlternateMobileNumber = unencryptedAlternateMobileNumber,
+      BeamP.alternateMobileNumberHash = alternateMobileNumber <&> (.hash),
+      BeamP.alternateMobileNumberEncrypted = alternateMobileNumber <&> unEncrypted . (.encrypted)
+    }
