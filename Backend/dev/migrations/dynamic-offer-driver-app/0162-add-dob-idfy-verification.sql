@@ -1,0 +1,1 @@
+ALTER TABLE atlas_driver_offer_bpp.idfy_verification ADD column driver_date_of_birth timestamp with time zone;
