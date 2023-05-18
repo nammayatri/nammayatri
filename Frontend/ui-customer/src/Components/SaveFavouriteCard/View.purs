@@ -99,15 +99,13 @@ titleView push state =
   , height WRAP_CONTENT
   , gravity CENTER
   , orientation HORIZONTAL
-  ][  textView
+  ][  textView $
       [ text$ (getString SAVE) <> " " <> (getString FAVOURITE)
       , height WRAP_CONTENT
       , width WRAP_CONTENT
-      , textSize FontSize.a_18
       , color Color.black800
-      , fontStyle $ FontStyle.bold LanguageStyle
       , gravity CENTER
-      ]
+      ] <> (FontStyle.h2 TypoGraphy)
     , linearLayout
       [ weight 1.0
       , orientation HORIZONTAL
@@ -132,24 +130,20 @@ primaryEditTextConfig state =
           color = Color.black800
         , singleLine = true
         , placeholder = (getString GIVE_THIS_LOCATION_A_NAME) 
-        , fontStyle = FontStyle.medium LanguageStyle
-        , textSize = FontSize.a_14
+        , textStyle = FontStyle.Body1
         , pattern = Just "[a-zA-Z0-9'‘’. ]*,30"
         , text = ""
         }
       , background = Color.white900
       , topLabel { 
-          textSize = FontSize.a_12
-        , text = (getString SAVE_AS)
+          text = (getString SAVE_AS)
         , color = Color.black800
-        , fontStyle = FontStyle.medium LanguageStyle
         }
       , stroke = ("1,"<> Color.black500)
       , margin = (Margin 0 0 0 16)
       , id = (getNewIDWithTag "SaveFavouriteEditText")
       , errorLabel { 
           text = (getString NAME_ALREADY_IN_USE)
-        , fontStyle = FontStyle.medium LanguageStyle
         , margin = (MarginVertical 4 4)
         }
       , showErrorLabel = state.tagExists

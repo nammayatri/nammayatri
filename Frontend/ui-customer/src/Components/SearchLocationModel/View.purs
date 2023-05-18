@@ -31,7 +31,7 @@ import Effect (Effect)
 import Engineering.Helpers.Commons (getNewIDWithTag, os, safeMarginBottom, safeMarginTop, screenHeight, screenWidth, isPreviousVersion)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (Merchant(..), debounceFunction, getLocationName, getMerchant, getPreviousVersion)
+import Helpers.Utils ( debounceFunction, getLocationName, getPreviousVersion)
 import JBridge (getBtnLoader, requestKeyboardShow, getCurrentPosition, firebaseLogEvent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -44,6 +44,7 @@ import Storage (KeyStore(..), getValueToLocalStoreEff, getValueToLocalStore)
 import Styles.Colors as Color
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
+import Merchant.Utils (Merchant(..), getMerchant)
 import Prelude ((<>))
 
 view :: forall w. (Action -> Effect Unit) -> SearchLocationModelState -> PrestoDOM (Effect Unit) w
@@ -163,26 +164,22 @@ locationUnserviceableView state push =
         , gravity CENTER
         , margin (MarginBottom 10)
         ]
-        [ textView
+        [ textView $
             [ text (getString LOCATION_UNSERVICEABLE)
-            , textSize FontSize.a_18
             , color Color.black800
             , gravity CENTER
-            , fontStyle $ FontStyle.bold LanguageStyle
-            ]
+            ] <> FontStyle.h2 LanguageStyle
         ]
     , linearLayout
         [ width (V (screenWidth unit - 40))
         , height WRAP_CONTENT
         , gravity CENTER
         ]
-        [ textView
+        [ textView $
             [ text (getString CURRENTLY_WE_ARE_LIVE_IN_)
-            , textSize FontSize.a_14
             , gravity CENTER
             , color Color.black700
-            , fontStyle $ FontStyle.regular LanguageStyle
-            ]
+            ] <> FontStyle.paragraphText LanguageStyle
         ]
     ]
 
@@ -244,20 +241,18 @@ sourceDestinationEditTextView state push =
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation HORIZONTAL
-      ][ editText
+      ][ editText $
             [ height $ V 45
             , weight 1.0
             , text state.source
             , color Color.black800
             , stroke if state.isSource == Just true && state.isSearchLocation == LocateOnMap then "1,#FDD836" else "0,#FDD836"
             , background Color.white900
-            , fontStyle $ FontStyle.semiBold LanguageStyle
             , singleLine true
             , ellipsize true
             , cornerRadius 10.0
             , padding (Padding 5 0 5 0)
             , margin (Margin 0 10 0 0)
-            , textSize FontSize.a_16
             , lineHeight "24"
             , hint (getString START_)
             , hintColor "#A7A7A7"
@@ -272,7 +267,7 @@ sourceDestinationEditTextView state push =
             , inputTypeI if state.isSearchLocation == LocateOnMap then 0 else 1
             , onFocus push $ const $ EditTextFocusChanged "S"
             , autoCorrectionType 1
-            ]
+            ] <> FontStyle.subHeading1 LanguageStyle
         , linearLayout
             [ height $ V 45
             , width WRAP_CONTENT
@@ -405,7 +400,6 @@ primaryButtonConfig state =
       { textConfig
         { text = if state.isSearchLocation == LocateOnMap then if state.isSource == Just true then (getString CONFIRM_PICKUP_LOCATION) else (getString CONFIRM_DROP_LOCATION) else ""
         , color = state.homeScreenConfig.primaryTextColor
-        , textSize = FontSize.a_16
         }
       , height = V 60
       , gravity = CENTER

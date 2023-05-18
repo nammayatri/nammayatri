@@ -16,7 +16,7 @@
 module Components.PrimaryButton.Controller where
 
 import Font.Size as FontSize
-import Font.Style as FontStyle
+import Font.Style (Style(..))
 import Prelude ((<>))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), height, width)
 import Styles.Colors as Color
@@ -48,8 +48,7 @@ type Config =
 
 type TextConfig = 
   { text :: String
-  , textSize :: Int
-  , fontStyle :: String
+  , textStyle :: Style
   , color :: String
   , gravity :: Gravity
   , visibility :: Visibility
@@ -72,8 +71,7 @@ config :: Config
 config =   { 
     textConfig  : 
     { text : ""
-    , fontStyle : FontStyle.semiBold LanguageStyle
-    , textSize :  FontSize.a_16
+    , textStyle : SubHeading1
     , gravity : CENTER
     , visibility : VISIBLE
     , color : Color.yellow900

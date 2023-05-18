@@ -143,12 +143,10 @@ lostAndFoundView push state =
   , disableClickFeedback false
   , visibility if (state.data.selectedItem.status /= "CANCELLED" && state.props.canConnectWithDriver) then VISIBLE else GONE
   , onClick push $ (const ShowPopUp)
-  ][  textView
+  ][  textView $
       [ text (getString LOST_SOMETHING)
-      , textSize FontSize.a_14
       , color Color.darkDescriptionText
-      , fontStyle $ FontStyle.medium LanguageStyle
-      ]
+      ] <> FontStyle.body1 LanguageStyle
     , linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
@@ -170,24 +168,21 @@ tripIdView push state =
   , width WRAP_CONTENT
   , margin (MarginBottom 16)
   , gravity LEFT
-  ][  textView
+  ][  textView $
       [ text (getString RIDE_ID)
-      , textSize FontSize.a_14
       , color Color.black700
-      , fontStyle $ FontStyle.medium LanguageStyle
-      ]
+      ] <> FontStyle.body1 LanguageStyle
     , linearLayout
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
       , orientation HORIZONTAL
       , onClick push (const Copy)
       , gravity CENTER_VERTICAL
-      ][ textView
+      ][ textView $
           [ text state.data.tripId
           , width WRAP_CONTENT
           , color Color.black900
-          , textSize FontSize.a_14
-          ]
+          ] <> FontStyle.paragraphText LanguageStyle
         , imageView
           [ imageWithFallback $ "ny_ic_copy," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_copy.png"
           , height (V 13)
@@ -238,23 +233,19 @@ tripDetailsView state =
       , width WRAP_CONTENT
       , orientation VERTICAL
       , margin (MarginLeft 10)
-      ][  textView
+      ][  textView $
           [ text state.data.driverName
-          , textSize FontSize.a_14
-          , fontStyle $ FontStyle.medium LanguageStyle
           , color Color.darkDescriptionText
-          ]
+          ] <> FontStyle.body1 LanguageStyle
         , linearLayout
           [ height WRAP_CONTENT
           , width WRAP_CONTENT
           , orientation HORIZONTAL
           , gravity CENTER_VERTICAL
-          ][  textView
+          ][  textView $
               [ text state.data.date
-              , textSize FontSize.a_11
               , color Color.greyShade
-              , fontStyle $ FontStyle.medium LanguageStyle
-              ]
+              ] <> FontStyle.body16 LanguageStyle
             , linearLayout
               [ height MATCH_PARENT
               , width WRAP_CONTENT
@@ -268,12 +259,10 @@ tripDetailsView state =
                   , width (V 5)
                   ][]
                ]
-            , textView
+            , textView $
               [ text state.data.time
-              , textSize FontSize.a_11
               , color Color.greyShade
-              , fontStyle $ FontStyle.medium LanguageStyle
-              ]
+              ] <> FontStyle.body16 LanguageStyle
             ]
         ]
     , linearLayout
@@ -281,18 +270,14 @@ tripDetailsView state =
       , width MATCH_PARENT
       , gravity RIGHT
       , orientation VERTICAL
-      ][  textView
+      ][  textView $
           [ text (state.data.totalAmount)
-          , textSize FontSize.a_18
-          , fontStyle $ FontStyle.bold LanguageStyle
           , color Color.black
-          ]
-        , textView
+          ] <> FontStyle.h2 LanguageStyle
+        , textView $
           [ text $ if state.data.selectedItem.status == "CANCELLED" then (getString CANCELLED) else (getString PAID) <> " " <> if state.data.paymentMode == CASH then (getString BY_CASH) else (getString ONLINE_)
-          , textSize FontSize.a_11
           , color if state.data.selectedItem.status == "CANCELLED" then Color.red else Color.greyShade
-          , fontStyle $ FontStyle.regular LanguageStyle
-          ]
+          ] <> FontStyle.captions LanguageStyle
         ]
     ]
 
@@ -315,12 +300,10 @@ ratingAndInvoiceView state push =
   , gravity CENTER_VERTICAL
   , orientation HORIZONTAL
   , visibility if state.data.selectedItem.status == "CANCELLED" then GONE else VISIBLE
-  ][  textView
+  ][  textView $ 
       [ text $ (getString YOU_RATED)
-      , textSize FontSize.a_12
-      , fontStyle $ FontStyle.medium LanguageStyle
       , color Color.greyDavy
-      ]
+      ] <> FontStyle.tags LanguageStyle
     , linearLayout
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
@@ -363,12 +346,10 @@ invoiceView state push =
     , disableClickFeedback false
     , onClick push $ (const ViewInvoice)
     , visibility if state.data.selectedItem.status == "CANCELLED" then GONE else VISIBLE
-    ][  textView
+    ][  textView $
         [ text (getString VIEW_INVOICE)
-        , textSize FontSize.a_14
         , color Color.darkDescriptionText
-        , fontStyle $ FontStyle.medium LanguageStyle
-        ]
+        ] <> FontStyle.body1 LanguageStyle
      ,  linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -397,12 +378,10 @@ reportIssueView state push =
         , gravity CENTER_VERTICAL
         , orientation HORIZONTAL
         , margin (MarginBottom 16)
-        ][  textView
+        ][  textView $
             [ text (getString REPORT_AN_ISSUE)
-            , textSize FontSize.a_14
             , color Color.darkDescriptionText
-            , fontStyle $ FontStyle.medium LanguageStyle
-            ]
+            ] <> FontStyle.body1 LanguageStyle
           , linearLayout
             [ height WRAP_CONTENT
             , width MATCH_PARENT
@@ -436,18 +415,16 @@ reportIssueView state push =
                       $ [ height MATCH_PARENT
                       , width WRAP_CONTENT
                       , weight 1.0
-                      , textSize FontSize.a_14
                       , padding (Padding 14 14 14 14)
                       , color Color.black800
                       , gravity LEFT
                       , background Color.white900
-                      , fontStyle $ FontStyle.semiBold LanguageStyle
                       , text ""
                       , hint $ getString YOU_CAN_DESCRIBE_THE_ISSUE_YOU_FACED_HERE
                       , hintColor $ Color.blueGrey
                       , pattern "[^\n]*,255"
                       , onChange push $ MessageTextChanged
-                      ]
+                      ] <> FontStyle.body6 LanguageStyle
 
                  ]
               ]
@@ -474,23 +451,20 @@ issueReportedView state push =
           , width $ V 149
           , margin (MarginBottom 32)
           ]
-        , textView
+        , textView $
           [ text $ getString THANK_YOU_FOR_WRITING
-          , textSize FontSize.a_22
-          , fontStyle $ FontStyle.bold LanguageStyle
           , gravity CENTER
           , width MATCH_PARENT
           , color Color.black900
           , margin (MarginBottom 12)
-          ]
-        , textView
+          ] <> FontStyle.h1 LanguageStyle
+        , textView $
           [ text $ getString WE_HAVE_RECEIVED_YOUR_ISSUE
-          , textSize FontSize.a_13
           , margin (Margin 42 0 42 0)
           , gravity CENTER
           , width MATCH_PARENT
           , color Color.blackLightGrey
-          ]
+          ] <> FontStyle.body3 TypoGraphy
         ]
         , linearLayout
           [ width MATCH_PARENT

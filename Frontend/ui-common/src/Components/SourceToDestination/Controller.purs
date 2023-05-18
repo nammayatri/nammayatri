@@ -17,8 +17,9 @@ module Components.SourceToDestination.Controller where
 
 import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..))
 import Font.Size as FontSize
-import Font.Style as FontStyle
+import Font.Style (Style(..))
 import Styles.Colors as Color
+import Halogen.VDom.DOM.Prop (Prop)
 import Common.Types.App
 
 data Action = Dummy
@@ -58,26 +59,24 @@ type ImageConfig =
 type TextConfig = 
   {
     text :: String
-  , textSize :: Int
   , padding :: Padding
   , margin :: Margin
-  , fontStyle :: String
   , color :: String
   , ellipsize :: Boolean
   , maxLines :: Int
+  , textStyle :: Style
   }
 
 type TimeConfig =
   {
     text :: String
-  , textSize :: Int
-  , fontStyle :: String 
   , color :: String
   , visibility :: Visibility
   , margin :: Margin 
   , padding :: Padding
   , maxLines :: Int 
   , ellipsize :: Boolean 
+  , textStyle :: Style
   }
 config :: Config
 config = {
@@ -94,24 +93,22 @@ config = {
     }
   , sourceTextConfig : {
       text : ""
-    , textSize : FontSize.a_12
     , padding : ( Padding 0 0 0 0)
     , margin : (Margin 0 0 0 0)
-    , fontStyle : FontStyle.regular LanguageStyle
     , color : Color.greyDavy 
     , ellipsize : false  
     , maxLines : 10
+    , textStyle : Body3
   }
   , rideStartedAtConfig : {
       text : ""
-    , textSize : FontSize.a_12
-    , fontStyle : FontStyle.regular LanguageStyle
     , color : Color.black700
     , visibility : GONE 
     , margin : (MarginTop 2)
     , padding : (Padding 0 0 0 0)
     , maxLines : 1
     , ellipsize : true
+    , textStyle : Body3
     }
   , destinationMargin : (Margin 0 0 0 0)
   , destinationBackground : Color.white900
@@ -123,24 +120,22 @@ config = {
     }
   , destinationTextConfig : {
       text : ""
-    , textSize : FontSize.a_12
     , padding : (Padding 0 0 0 0)
     , margin : (Margin 0 0 0 0)
-    , fontStyle : FontStyle.regular LanguageStyle
     , color : Color.greyDavy
     , ellipsize : false
     , maxLines : 10
+    , textStyle : Body3
     }
   , rideEndedAtConfig : {
       text : ""
-    , textSize : FontSize.a_12
-    , fontStyle : FontStyle.regular LanguageStyle
     , color : Color.black700
     , visibility : GONE 
     , margin : (MarginTop 2)
     , maxLines : 1
     , ellipsize : false
     , padding : (Padding 0 0 0 0)
+    , textStyle : Body3
     }
   , distanceConfig : {
       distanceVisibility : GONE

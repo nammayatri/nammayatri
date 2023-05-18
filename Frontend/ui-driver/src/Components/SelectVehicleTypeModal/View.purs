@@ -125,18 +125,17 @@ textList item =
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , padding (Padding 0 16 0 16)
-      ][ textView
+      ][ textView $
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , color Color.greyTextColor
-          , textSize FontSize.a_14
           , alpha 0.5
           , text $ case item of
               Sedan     -> "Sedan"
               SUV       -> "SUV"
               Hatchback -> "Hatchback"
               Auto      -> "Auto"
-          ]
+          ] <> FontStyle.paragraphText TypoGraphy
       ]
     , linearLayout
       [ width MATCH_PARENT

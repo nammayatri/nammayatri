@@ -86,13 +86,11 @@ view listItemm push state =
           else
             linearLayout[][]
         , if state.data.config.nyBrandingVisibility then do
-            textView
+            textView $ 
               [ text (getString SELECT_A_RIDE)
-              , textSize FontSize.a_14
-              , fontStyle $ FontStyle.medium LanguageStyle
               , color Color.black700
               , padding (Padding 16 0 16 0)
-              ]
+              ] <> FontStyle.body1 LanguageStyle
           else do
             (linearLayout
             [ height WRAP_CONTENT
@@ -101,12 +99,10 @@ view listItemm push state =
             , visibility if (not (DA.null state.itemsRides)) then VISIBLE else GONE
             , orientation HORIZONTAL
             , padding (Padding 16 12 16 16)
-            ][  textView
+            ][  textView $
                 [ text (getString SELECT_A_RIDE)
-                , textSize FontSize.a_14
-                , fontStyle $ FontStyle.medium LanguageStyle
                 , color Color.black700
-                ]
+                ] <> FontStyle.body1 LanguageStyle
             ])
         , ridesView listItemm push state
         ]
@@ -136,15 +132,13 @@ loadButtonView state push =
     , orientation VERTICAL
     , margin $ Margin 0 5 0 5
     ]
-    [ textView
-      ([ width WRAP_CONTENT
+    [ textView $
+      [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , text $ if state.data.loadMoreText == "LoadMore" then (getString LOAD_MORE) else (getString NO_MORE_RIDES)
       , padding (Padding 10 5 10 5)
       , color Color.blue900
-      , fontStyle $ FontStyle.medium LanguageStyle
-      , lineHeight "18"
-      ] )
+      ] <> FontStyle.body1 LanguageStyle
     ]]
 
 ridesView :: forall w . PrestoList.ListItem -> (Action -> Effect Unit) -> ST.MyRidesScreenState -> PrestoDOM (Effect Unit) w

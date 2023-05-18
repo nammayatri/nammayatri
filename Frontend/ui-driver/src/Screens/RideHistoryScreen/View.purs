@@ -128,13 +128,12 @@ headerView push state =
     , orientation VERTICAL
     , gravity CENTER
     , margin (MarginTop 30)
-    ][ textView
+    ][ textView $ 
         [ text (getString TRIPS)
         , gravity CENTER_VERTICAL
-        , textSize FontSize.a_20
         , color Color.black900
         , margin (MarginBottom 10)
-        ]
+        ] <> FontStyle.body12 TypoGraphy
       , linearLayout
          [ background Color.bg_color
          , orientation HORIZONTAL
@@ -151,12 +150,11 @@ headerView push state =
                   [ width $ (V (screenWidth unit / 2) )
                   , height WRAP_CONTENT
                   , gravity CENTER
-                  ][ textView
+                  ][ textView $
                       [ text (getString COMPLETED_)
-                      , textSize FontSize.a_18
                       , color if state.currentTab == "COMPLETED" then Color.black900 else Color.black500
                       , margin (MarginVertical 15 15)
-                      ]
+                      ] <> FontStyle.body14 TypoGraphy
                   ]
               , linearLayout
                   [ height (V 2)
@@ -176,12 +174,11 @@ headerView push state =
                   [ width $ V (screenWidth unit / 2)
                   , height WRAP_CONTENT
                   , gravity CENTER
-                  ][ textView
+                  ][ textView $
                       [ text (getString CANCELLED_)
-                      , textSize FontSize.a_18
                       , color if state.currentTab == "CANCELLED" then Color.black900 else Color.black500
                       , margin (MarginVertical 15 15)
-                      ]
+                      ] <> FontStyle.body14 TypoGraphy
                   ]
               , linearLayout
                   [ height (V 2)

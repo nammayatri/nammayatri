@@ -49,18 +49,15 @@ requestDeletePopUp state = let
         },
       option1 {
         text = (getString CANCEL_STR)
-      , fontSize = FontSize.a_16 
       , color = Color.black700
       , strokeColor = Color.black700
-      , fontStyle = FontStyle.semiBold LanguageStyle
       },
       option2 {text = (getString YES_REMOVE)
       , background = Color.red
       , color = Color.white900
       , strokeColor = Color.red
-      , fontSize = FontSize.a_16 
       , margin = (MarginLeft 12)
-      , fontStyle = FontStyle.semiBold LanguageStyle }
+      }
      
     }
   in popUpConfig'
@@ -72,7 +69,6 @@ primaryButtonConfig state = let
       { textConfig
         {
           text = (getString ADD_NEW_FAVOURITE)
-        , fontStyle = FontStyle.semiBold LanguageStyle
         , color = state.data.config.primaryTextColor
         }
       , margin = (Margin 16 0 16 if EHC.os == "IOS" then 0 else 24)
@@ -119,24 +115,18 @@ errorModalConfig state = let
         text = (getString NO_FAVOURITES_SAVED_YET)
       , margin = (MarginBottom 7)  
       , color = Color.black900
-      , textSize = FontSize.a_18
-      , fontStyle = FontStyle.bold LanguageStyle
       }
     , errorDescriptionConfig {
         text = (getString SAVED_ADDRESS_HELPS_YOU_KEEP_YOUR_FAVOURITE_PLACES_HANDY)
       , color = Color.black700
-      , textSize = FontSize.a_14
       , margin = (Margin 33 0 33 0)
       , padding = (Padding 16 0 16 16)
-      , fontStyle =  FontStyle.regular LanguageStyle
       }
     , buttonConfig {
         text = (getString ADD_NEW_FAVOURITE)
       , margin = (Margin 16 0 16 if EHC.os == "IOS" then 0 else 24)
       , height = V 52
       , color = state.data.config.primaryTextColor
-      , fontStyle = FontStyle.semiBold LanguageStyle
-      , textSize = FontSize.a_16
       , background = state.data.config.primaryBackground
       }
     }

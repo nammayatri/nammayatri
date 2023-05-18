@@ -125,17 +125,14 @@ starRatingView state push =
     , width MATCH_PARENT
     , orientation VERTICAL
     , gravity CENTER
-    ][ textView
+    ][ textView $
         [ height WRAP_CONTENT
         , width MATCH_PARENT
-        , textSize FontSize.a_16
         , text $ (getString HOW_WAS_YOUR_RIDE_WITH ) <> " " <> state.data.customerName
         , color Color.black800
-        , fontStyle $ FontStyle.semiBold LanguageStyle
         , gravity CENTER
-        , lineHeight "20"
         , margin (MarginVertical 32 18)
-        ]
+        ] <> FontStyle.subHeading1 TypoGraphy
     , linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -200,17 +197,14 @@ suggestionButtonView state push =
     , orientation VERTICAL
     , gravity CENTER
     , margin (MarginTop 40)
-    ][  textView
+    ][  textView $
         [ height WRAP_CONTENT
         , width MATCH_PARENT
-        , textSize FontSize.a_16
         , text $ getString GOT_IT_TELL_US_MORE
         , color Color.black800
-        , fontStyle $ FontStyle.semiBold LanguageStyle
         , gravity CENTER
-        , lineHeight "20"
         , margin (MarginBottom 10)
-        ]
+        ] <> FontStyle.subHeading1 TypoGraphy
         , linearLayout
           [ width MATCH_PARENT
           , orientation VERTICAL  
@@ -229,18 +223,16 @@ suggestionButtonView state push =
                       , margin (MarginRight 10)
                       , onClick push (const $ FeedBackClick item)
                       , cornerRadius 7.0
-                      ][textView
+                      ][textView $
                           [ height WRAP_CONTENT
                           , width MATCH_PARENT
-                          , textSize FontSize.a_12
                           , text $ getFeedBackString item
                           , color if (item == fromMaybe ST.NOTHING state.data.activeFeedBackOption) then Color.white900 else Color.black800
-                          , fontStyle $ FontStyle.medium LanguageStyle
                           , gravity CENTER
                           , lineHeight "15"
                           , singleLine true
                           , padding (Padding 6 2 6 2)
-                          ]
+                          ] <> FontStyle.tags TypoGraphy
                         ]) (fromMaybe [] (feedbackSuggestionArray!!index)) )
                     ) feedbackSuggestionArray)
         ]

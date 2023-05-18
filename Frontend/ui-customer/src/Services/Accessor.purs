@@ -136,3 +136,6 @@ _otpCode :: forall a b c. Newtype a { otpCode :: b | c } => Lens' a b
 _otpCode = lens (unwrap >>> _.otpCode) (\oldRec newVal -> wrap ((unwrap oldRec) { otpCode = newVal }))
 _signatureAuthData :: forall a b c. Newtype a { signatureAuthData :: b | c } => Lens' a b
 _signatureAuthData = lens (unwrap >>> _.signatureAuthData) (\oldRec newVal -> wrap ((unwrap oldRec) { signatureAuthData = newVal }))
+
+_fareProductType :: forall a b c. Newtype a { fareProductType :: b | c } => Lens' a b
+_fareProductType = lens (unwrap >>> _.fareProductType) (\oldRec newVal -> wrap ((unwrap oldRec) { fareProductType = newVal }))

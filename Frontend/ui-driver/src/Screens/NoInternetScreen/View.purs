@@ -71,20 +71,16 @@ locationAccessPermissionView push state triggertype =
       , width MATCH_PARENT
       , orientation VERTICAL
       , padding (Padding 16 16 0 0)
-      ][  textView 
+      ][  textView $
           [ text (getString WE_NEED_ACCESS_TO_YOUR_LOCATION)
-          , textSize FontSize.a_22
           , color Color.black800
           , gravity LEFT
           , margin (MarginVertical 22 16)
-          , fontStyle $ FontStyle.bold LanguageStyle
-          ]
-        , textView
+          ] <> FontStyle.h1 LanguageStyle
+        , textView $
           [ text (getString YOUR_LOCATION_HELPS_OUR_SYSTEM)
-          , textSize FontSize.a_16
           , color Color.black800
-          , fontStyle $ FontStyle.regular LanguageStyle
-          ]
+          ] <> FontStyle.body5 TypoGraphy
         ]
         , linearLayout
         [ height MATCH_PARENT
@@ -118,20 +114,16 @@ noInternetScreenView push state triggertype =
         , width $ V 240
         , gravity CENTER
         ],
-        textView 
+        textView $
         [ text (getString NO_INTERNET_CONNECTION)
-        , textSize FontSize.a_22
         , color Color.black800
         , gravity LEFT
-        , fontStyle $ FontStyle.bold LanguageStyle
-        ],
-        textView
+        ] <> FontStyle.h1 LanguageStyle,
+        textView $
         [ text (getString PLEASE_CHECK_YOUR_INTERNET_CONNECTION_AND_TRY_AGAIN)
-        , textSize FontSize.a_16
         , color Color.black800
-        , fontStyle $ FontStyle.regular LanguageStyle
         , margin (MarginTop 10)
-        ]
+        ] <> FontStyle.body5 TypoGraphy
       ]
       , buttonView push state triggertype
   ]

@@ -93,14 +93,12 @@ navigationView state push =
         , cornerRadius 5.0
         , stroke ("1," <> Color.blueBtn)
         , onClick push (const TriggerRegModal)
-        ][ textView
+        ][ textView $
             [ text ((getString STEP) <>state.stepNumber <> "/4" )
-            , textSize FontSize.a_14
             , color Color.blueBtn
-            , fontStyle $ FontStyle.bold LanguageStyle
-            ]
+            ] <> FontStyle.paragraphText TypoGraphy
         , imageView
-            [ imageWithFallback $ "ny_ic_drop_down," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_drop_down.png"
+            [ imageWithFallback $ "ny_ic_drop_down," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_drop_down.png"
             , height (V 11)
             , margin (Margin 5 3 0 0)
             , width (V 11)

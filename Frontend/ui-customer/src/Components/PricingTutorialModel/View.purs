@@ -39,16 +39,14 @@ view push =
       , background Color.white900
       , padding $ Padding 16 16 16 16
       ][  closeBtnView push
-        , textView
+        , textView $
             [ height WRAP_CONTENT
             , width MATCH_PARENT
-            , textSize FontSize.a_20
             , text (getString HOW_THE_PRICING_WORKS)
             , color Color.black800
-            , fontStyle $ FontStyle.bold LanguageStyle
             , gravity CENTER
             , margin (Margin 0 12 0 14)
-            ]
+            ] <> FontStyle.body8 TypoGraphy
         , listComponentView ""
       ]
 
@@ -100,32 +98,28 @@ listComponentView dummy =
                 , weight 1.0
                 , orientation VERTICAL
                 , margin (Margin 16 20 10 9)
-                ][textView
+                ][textView (
                   [ height WRAP_CONTENT
                   , width WRAP_CONTENT
-                  , textSize FontSize.a_16
                   , text item.heading
                   , color Color.black800
-                  , fontStyle $ FontStyle.semiBold LanguageStyle
                   , margin (Margin 0 0 0 9)
-                  ]
+                  ] <> FontStyle.subHeading1 TypoGraphy)
                 , textView $
                   [ height WRAP_CONTENT
                   , width WRAP_CONTENT
                   , textFromHtml item.subHeading
                   , color Color.black700
                   ]<> FontStyle.paragraphText TypoGraphy
-                , textView
+                , textView (
                   [ height WRAP_CONTENT
                   , width WRAP_CONTENT
-                  , textSize FontSize.a_12
                   , text (fromMaybe "" item.note)
                   , color Color.black700
-                  , fontStyle $ FontStyle.medium LanguageStyle
                   , lineHeight "13"
                   , margin (MarginTop 6)
                   , visibility if item.note /= Nothing then VISIBLE else GONE
-                  ]
+                  ] <> FontStyle.tags TypoGraphy)
                 ]
                 , imageView
                       [height $ V 110

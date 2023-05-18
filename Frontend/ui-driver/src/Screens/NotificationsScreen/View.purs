@@ -264,7 +264,6 @@ headerLayout state push =
             $ [ width WRAP_CONTENT
               , height WRAP_CONTENT
               , text $ getString ALL_ALERTS
-              , textSize FontSize.a_18
               , margin $ MarginLeft 20
               , weight 1.0
               , gravity CENTER_VERTICAL
@@ -295,15 +294,11 @@ noNotificationsConfig _ =
         , errorConfig
           { text = getString NO_NOTIFICATIONS_RIGHT_NOW
           , margin = MarginBottom 7
-          , color = Color.black900
-          , textSize = FontSize.a_18
-          , fontStyle = FontStyle.bold LanguageStyle
+          , color = Color.black900      
           }
         , errorDescriptionConfig
           { text = getString NO_NOTIFICATIONS_RIGHT_NOW_DESC
           , color = Color.black700
-          , textSize = FontSize.a_14
-          , fontStyle = FontStyle.regular LanguageStyle
           , margin = MarginHorizontal 40 40
           }
         , buttonConfig { visibility = GONE }

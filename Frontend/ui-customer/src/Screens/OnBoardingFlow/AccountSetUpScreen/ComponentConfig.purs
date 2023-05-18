@@ -58,17 +58,13 @@ primaryEditTextConfigName state =
           , placeholder = (getString ENTER_YOUR_NAME)
           , placeholderColor = Color.black600
           , singleLine = true
-          , textSize = FontSize.a_16
-          , fontStyle = if state.data.name /= "" then FontStyle.bold LanguageStyle else FontStyle.semiBold LanguageStyle
           , pattern = Just "[a-zA-Z ]*,30"
           }
         , background = Color.grey700
         , margin = (Margin 0 30 0 0)
         , topLabel
-          { textSize = FontSize.a_12
-          , text = (getString HOW_SHOULD_WE_ADDRESS_YOU)
+          { text = (getString HOW_SHOULD_WE_ADDRESS_YOU)
           , color = Color.greyTextColor
-          , fontStyle = FontStyle.regular LanguageStyle
           , alpha = 0.8
           }
         }

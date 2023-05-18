@@ -124,7 +124,7 @@ profilePictureLayout state push =
                         , height $ V 30
                         , gravity RIGHT
                         , cornerRadius 45.0
-                        , imageWithFallback $ "ny_ic_camera_white," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_camera_white.png"
+                        , imageWithFallback $ "ny_ic_camera_white," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_camera_white.png"
                         , visibility GONE 
                         -- To be added after 15 aug
                         -- , onClick (\action-> do
@@ -155,24 +155,22 @@ headerLayout state push =
     ][ imageView
         [ width $ V 25
         , height MATCH_PARENT
-        , imageWithFallback $ "ny_ic_back," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_back.png"
+        , imageWithFallback $ "ny_ic_back," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_back.png"
         , gravity CENTER_VERTICAL
         , onClick push (const BackPressed)
         , padding (Padding 2 2 2 2)
         , margin (MarginLeft 5)
         ]
-      , textView
+      , textView $
         [ width WRAP_CONTENT
         , height MATCH_PARENT
         , text (getString PERSONAL_DETAILS)
-        , textSize FontSize.a_19
         , margin (MarginLeft 20)
         , color Color.black
-        , fontStyle $ FontStyle.semiBold LanguageStyle
         , weight 1.0
         , gravity CENTER_VERTICAL
         , alpha 0.8
-        ]
+        ] <> FontStyle.h3 TypoGraphy
     ]
   , horizontalLineView 0 0
  ]
@@ -209,15 +207,14 @@ driverDetailsView push state =
                                                                       Just _ -> VISIBLE
                                                                       _ -> GONE
                                       _ -> VISIBLE
-              ][ textView
+              ][ textView $
                   [ height WRAP_CONTENT
                   , width WRAP_CONTENT
                   , text (getTitle optionItem.title)
                   , color Color.black800
-                  , fontStyle $ FontStyle.medium LanguageStyle
-                  , textSize FontSize.a_14
                   , alpha 0.9
-                  ], driverSubsection push state optionItem.title
+                  ]  <> FontStyle.body1 TypoGraphy
+                  , driverSubsection push state optionItem.title
                   , if(optionItem.title == DRIVER_MOBILE_INFO && state.props.checkAlternateNumber == true && state.props.keyboardModalType == ST.NONE && state.data.driverAlternateMobile == Nothing) then addAlternateNumber push state else dummyTextView
                   , horizontalLineView 0 0
               ]
@@ -253,8 +250,6 @@ driverSubsection push state title =
   , text (getString EDIT)
   , gravity RIGHT
   , visibility if(title == DRIVER_ALTERNATE_MOBILE_INFO) then VISIBLE else GONE
-  , textSize FontSize.a_14
-  , fontStyle $ FontStyle.medium LanguageStyle
   , color Color.blue900
   , margin (Margin 0 10 20 0)
   , onClick push (const ClickEditAlternateNumber)
@@ -266,8 +261,6 @@ driverSubsection push state title =
   , text (getString REMOVE)
   , gravity RIGHT
   , visibility if(title == DRIVER_ALTERNATE_MOBILE_INFO) then VISIBLE else GONE
-  , textSize FontSize.a_14
-  , fontStyle $ FontStyle.medium LanguageStyle
   , color Color.blue900
   , margin (Margin 0 10 0 0)
   , onClick push (const ClickRemoveAlternateNumber)
@@ -296,16 +289,14 @@ addAlternateNumber push state =
     , width WRAP_CONTENT
     , orientation VERTICAL
     , onClick push (const ClickAddAlternateButton)
-    ][  textView
+    ][  textView $
         [
           width WRAP_CONTENT
         , height WRAP_CONTENT
         , text (getString ADD_ALTERNATE_NUMBER)
-        , textSize FontSize.a_14
-        , fontStyle $ FontStyle.medium LanguageStyle
         , color Color.blue900
         , margin (Margin 0 8 0 20)
-        ]
+        ] <> FontStyle.body1 TypoGraphy
         ]
 
 removeAlternateNumber :: forall w . (Action -> Effect Unit) -> ST.DriverDetailsScreenState -> PrestoDOM (Effect Unit) w

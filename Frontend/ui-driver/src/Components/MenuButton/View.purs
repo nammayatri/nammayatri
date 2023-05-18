@@ -54,22 +54,18 @@ view push state =
               [ height WRAP_CONTENT
               , width WRAP_CONTENT
               , orientation VERTICAL
-              ][textView
+              ][textView $
                 [ width WRAP_CONTENT
                 , height WRAP_CONTENT
                 , text state.text.name
                 , color Color.greyTextColor
-                , fontStyle if state.isSelected then FontStyle.medium LanguageStyle else FontStyle.regular LanguageStyle
-                , textSize FontSize.a_17
-                ]
-                , textView
+                ] <> if state.isSelected then FontStyle.subHeading2 TypoGraphy else FontStyle.body5 TypoGraphy
+                , textView $
                 [ width WRAP_CONTENT
                 , height if state.index == 0 then ( V 0) else WRAP_CONTENT
                 , text state.text.subtitle
-                , fontStyle if state.isSelected then FontStyle.medium LanguageStyle else FontStyle.regular LanguageStyle
-                , textSize FontSize.a_17
                 , visibility if state.index == 0 then GONE else VISIBLE
-                ]
+                ] <> if state.isSelected then FontStyle.subHeading2 TypoGraphy else FontStyle.body5 TypoGraphy
               ]
             ,linearLayout
               [ height WRAP_CONTENT

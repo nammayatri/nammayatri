@@ -36,9 +36,7 @@ genericHeaderConfig state =
         , padding = (Padding 0 5 0 5)
         , textConfig
           { text = (getString EMERGENCY_CONTACTS)
-          , textSize = FontSize.a_18
           , color = Color.darkDescriptionText
-          , fontStyle = FontStyle.semiBold LanguageStyle
           }
         , suffixImageConfig
           { visibility = GONE

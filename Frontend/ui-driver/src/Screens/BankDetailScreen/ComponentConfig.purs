@@ -26,7 +26,7 @@ primaryButtonConfig :: ST.BankDetailScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
     config = PrimaryButton.config
     primaryButtonConfig' = config 
-      { textConfig{ text = (getString NEXT), textSize = 16}
+      { textConfig{ text = (getString NEXT)}
       , width = MATCH_PARENT
       , cornerRadius = 0.0
       , height = (V 64)

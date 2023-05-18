@@ -303,7 +303,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                         LatLng tempPoint = new LatLng(lat, lng);
                         path.add(tempPoint);
                     }
-                    Marker currMarker = (Marker) markers.get("ic_vehicle_nav_on_map");
+                    Marker currMarker = (Marker) markers.get("ny_ic_vehicle_nav_on_map");
                     Marker destMarker = (Marker) markers.get(dest);
                     destMarker.setIcon((BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(eta, dest))));
                     if (polyline != null) {
@@ -358,7 +358,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                     if (rotation > 1.0)
                         marker.setRotation(rotation);
                     marker.setPosition(newPosition);
-                    markers.put("ic_vehicle_nav_on_map", marker);
+                    markers.put("ny_ic_vehicle_nav_on_map", marker);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -838,8 +838,6 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                 textViewText.setTextSize(5);
                 textViewText.setTextColor(Color.parseColor("#454545"));
                 textViewText.setPadding(0, 0, 0, 10);
-                Typeface typeface = Typeface.createFromAsset(context.getAssets(), "fonts/Roboto-Regular.ttf");
-                textViewText.setTypeface(typeface);
                 textViewText.setText(fareTypes);
                 linearLayout.addView(textViewText);
                 linearLayout.addView(linearLayoutChild);
@@ -847,8 +845,6 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                 TextView textViewPrice = new TextView(context);
                 textViewPrice.setTextSize(5);
                 textViewPrice.setPadding(0, 0, 0, 10);
-                Typeface font = Typeface.createFromAsset(context.getAssets(), "fonts/Roboto-Regular.ttf");
-                textViewPrice.setTypeface(font);
                 textViewPrice.setTextColor(Color.parseColor("#454545"));
                 textViewPrice.setText("₹ " + value);
                 linearLayout.addView(textViewPrice);

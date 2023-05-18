@@ -15,10 +15,12 @@ window.getMerchantConfig = function () {
         profileBackground : "#81DFFA",
         profileName : "#101010",
         profileImage : "#012A72",
+        feedbackBackground : "#D3D3D3",
         sideBarList : ["MyRides", "Favorites", "HelpAndSupport", "Language", "About"],
         otpBackground : "#F5F9FE",
         otpTextColor : "#101010",
         rateCardColor : "#00B8F5",
-        nyBrandingVisibility: true
+        nyBrandingVisibility: true,
+        fontType : "System"
     })
 }

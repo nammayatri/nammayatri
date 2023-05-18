@@ -56,7 +56,7 @@ import Screens.Types (DriverInfoCard)
 import Screens.Types as ST
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn)
 import Styles.Colors as Color
-
+import Merchant.Utils as MU
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
@@ -74,26 +74,21 @@ shareAppConfig state = let
       secondaryText { 
         text = getString(ENJOY_RIDING_WITH_US)
       , margin = MarginVertical 12 24  
-      , fontSize = FontSize.a_14
       , color = Color.black700},
       option1 {
         text = getString(MAYBE_LATER) 
-      , fontSize = FontSize.a_16
       , width = V $ (((EHC.screenWidth unit)-92)/2) 
       , background = Color.white900
       , strokeColor = Color.black500
       , color = Color.black700
-      , fontStyle = FontStyle.semiBold LanguageStyle
       },
       option2 {
         text = getString(SHARE_APP) 
-      , fontSize = FontSize.a_16
       , width = V $ (((EHC.screenWidth unit)-92)/2)
       , color = state.data.config.primaryTextColor
       , strokeColor = state.data.config.primaryBackground
       , background = state.data.config.primaryBackground
       , margin = MarginLeft 12
-      ,fontStyle = FontStyle.semiBold LanguageStyle
       },
       cornerRadius = (Corners 15.0 true true true true),
       coverImageConfig {
@@ -116,8 +111,6 @@ skipButtonConfig state =
         { textConfig
           { text = (getString SKIP)
           , color = state.data.config.rateCardColor
-          , fontStyle = FontStyle.bold LanguageStyle
-          , textSize = FontSize.a_16
           }
         , width = V (EHC.screenWidth unit / 4)
         , background = Color.white900
@@ -153,10 +146,9 @@ sourceToDestinationConfig state =
           }
         , sourceTextConfig
           { text = state.data.driverInfoCardState.source
-          , textSize = FontSize.a_14
+          , textStyle = FontStyle.Body1
           , padding = (Padding 0 0 0 0)
           , margin = (Margin 11 0 15 0)
-          , fontStyle = FontStyle.medium LanguageStyle
           , color = Color.black800
           , ellipsize = true
           , maxLines = 1
@@ -169,13 +161,12 @@ sourceToDestinationConfig state =
           }
         , destinationTextConfig
           { text = state.data.driverInfoCardState.destination
-          , textSize = FontSize.a_14
           , padding = (Padding 2 0 2 2)
           , margin = (Margin 10 0 15 0)
           , maxLines = 1
           , color = Color.black800
-          , fontStyle = FontStyle.medium LanguageStyle
           , ellipsize = true
+          , textStyle = FontStyle.Body1
           }
         , rideEndedAtConfig
           { text = state.data.endedAt
@@ -195,29 +186,22 @@ fareBreakUpConfig state =
       config
         { fareDetails = []
         , headingText = (getString VIEW_BREAKDOWN)
-        , totalAmount =
-          { text: ""
-          , textSize: FontSize.a_16
-          , fontStyle: FontStyle.semiBold LanguageStyle
-          , color: Color.black800
-          , margin: (Margin 0 0 0 20)
-          , visibility: GONE
-          , priceDetails:
-              { text: 0
-              , textSize: FontSize.a_16
-              , fontStyle: FontStyle.semiBold LanguageStyle
-              , offeredFare: state.data.driverInfoCardState.price
-              , distanceDifference: state.data.previousRideRatingState.distanceDifference
+        , totalAmount { text = ""
+          , color= Color.black800
+          , margin= (Margin 0 0 0 20)
+          , visibility= GONE
+          , priceDetails{ text= 0
+              , offeredFare= state.data.driverInfoCardState.price
+              , distanceDifference= state.data.previousRideRatingState.distanceDifference
               }
           }
-        , rideDetails =
-          { destination: state.data.driverInfoCardState.destination
-          , destinationTitle: (fromMaybe "" ((DS.split (DS.Pattern ",") (state.data.driverInfoCardState.destination)) DA.!! 0))
-          , source: state.data.driverInfoCardState.source
-          , sourceTitle: (fromMaybe "" ((DS.split (DS.Pattern ",") (state.data.driverInfoCardState.source)) DA.!! 0))
-          , rideStartTime: state.data.startedAt
-          , rideStartDate: ((fromMaybe "" ((DS.split (DS.Pattern ",") (HU.convertUTCtoISC (state.data.startedAtUTC) "llll")) DA.!! 0)) <> ", " <> (HU.convertUTCtoISC (state.data.startedAtUTC) "Do MMM"))
-          , estimatedDistance: state.props.estimatedDistance
+        , rideDetails{ destination= state.data.driverInfoCardState.destination
+          , destinationTitle = (fromMaybe "" ((DS.split (DS.Pattern ",") (state.data.driverInfoCardState.destination)) DA.!! 0))
+          , source = state.data.driverInfoCardState.source
+          , sourceTitle = (fromMaybe "" ((DS.split (DS.Pattern ",") (state.data.driverInfoCardState.source)) DA.!! 0))
+          , rideStartTime = state.data.startedAt
+          , rideStartDate = ((fromMaybe "" ((DS.split (DS.Pattern ",") (HU.convertUTCtoISC (state.data.startedAtUTC) "llll")) DA.!! 0)) <> ", " <> (HU.convertUTCtoISC (state.data.startedAtUTC) "Do MMM"))
+          , estimatedDistance = state.props.estimatedDistance
           }
         }
   in
@@ -230,7 +214,6 @@ whereToButtonConfig state =
     primaryButtonConfig' = config 
       { textConfig
         { text = (getString WHERE_TO)
-        , textSize = FontSize.a_16
         , width = MATCH_PARENT
         , gravity = LEFT
         , color = state.data.config.primaryTextColor 
@@ -243,7 +226,7 @@ whereToButtonConfig state =
       , isPrefixImage = true
       , background = state.data.config.primaryBackground
       , prefixImageConfig
-        { imageUrl = if (HU.getMerchant FunctionCall) == HU.UNKNOWN then "ny_ic_bent_right_arrow_white," <> (getAssetStoreLink FunctionCall) <> "ny_ic_bent_right_arrow_white.png" else  "ny_ic_bent_right_arrow," <> (getAssetStoreLink FunctionCall) <> "ny_ic_bent_right_arrow.png"
+        { imageUrl = if (MU.getMerchant FunctionCall) == MU.UNKNOWN then "ny_ic_bent_right_arrow_white," <> (getAssetStoreLink FunctionCall) <> "ny_ic_bent_right_arrow_white.png" else  "ny_ic_bent_right_arrow," <> (getAssetStoreLink FunctionCall) <> "ny_ic_bent_right_arrow.png"
         , height = V 16
         , width = V 21
         , margin = (Margin 17 0 17 0)  
@@ -260,7 +243,6 @@ primaryButtonRequestRideConfig state =
       config
         { textConfig
           { text = (getString REQUEST_RIDE)
-          , textSize = FontSize.a_16
           ,  color = state.data.config.primaryTextColor
           }
         , margin = (Margin 0 32 0 0)
@@ -279,7 +261,6 @@ primaryButtonConfirmPickupConfig state =
       config
         { textConfig
           { text = (getString CONFIRM_LOCATION)
-          , textSize = FontSize.a_16
           , color = state.data.config.primaryTextColor
           }
         , margin = (Margin 0 22 0 0)
@@ -297,8 +278,6 @@ rateRideButtonConfig state =
       config
         { textConfig
           { text = (getString RATE_YOUR_DRIVER)
-          , textSize = FontSize.a_16
-          , fontStyle = FontStyle.bold LanguageStyle
           ,  color = state.data.config.primaryTextColor 
           }
         , background = state.data.config.rateCardColor
@@ -374,11 +353,10 @@ logOutPopUpModelConfig state =
           , customerTipArrayWithValues = [0,10, 15, 20]
           , primaryText {
               text =  if(isLocalStageOn ST.QuoteList)then (getString TRY_AGAIN_WITH_A_TIP) else (getString SEARCH_AGAIN_WITH_A_TIP)
-            , fontSize = FontSize.a_22
+            , textStyle = FontStyle.Heading1
             },
           secondaryText { 
             text = (getString BOOST_YOUR_RIDE_CHANCES_AND_HELP_DRIVERS_WITH_TIPS)
-          , fontSize = FontSize.a_14
           , color = Color.black650}
           , tipLayoutMargin = (Margin 22 0 22 22)
           , buttonLayoutMargin = (MarginHorizontal 16 16)
@@ -391,24 +369,20 @@ logOutPopUpModelConfig state =
             },
           option1 {
             text = if (state.props.customerTip.tipForDriver == 0) then ( if(isLocalStageOn ST.QuoteList) then (getString TRY_AGAIN_WITHOUT_TIP)else (getString SEARCH_AGAIN_WITHOUT_A_TIP)) else ((if (isLocalStageOn ST.QuoteList) then (getString TRY_AGAIN_WITH)else(getString SEARCH_AGAIN_WITH) ) <> " + ₹"<> (fromMaybe "" (["0", "10", "15", "20"] DA.!! state.props.customerTip.tipActiveIndex))) <>" "<>(getString TIP)
-          , fontSize = FontSize.a_16 
           , width = MATCH_PARENT
           , color = state.data.config.primaryTextColor
           , strokeColor = state.data.config.primaryBackground
           , background = state.data.config.primaryBackground
           , padding = (Padding 0 10 0 10)
-          , fontStyle = FontStyle.semiBold LanguageStyle
           },
           option2 {
             text = if (isLocalStageOn ST.QuoteList) then (getString HOME) else  (getString CANCEL_SEARCH)
-          , fontSize = FontSize.a_16
           , width = MATCH_PARENT 
           , background = Color.white900
           , strokeColor = Color.white900
           , margin = MarginTop 14
           , padding = PaddingBottom $ getBottomMargin
           , color = Color.black650
-          , fontStyle = FontStyle.semiBold LanguageStyle
           },
           cornerRadius = (Corners 15.0 true true false false)
 
@@ -425,24 +399,20 @@ logOutPopUpModelConfig state =
             , secondaryText { text = if (isLocalStageOn ST.QuoteList) then (getString TRY_LOOKING_FOR_RIDES_AGAIN) else (getString CANCEL_ONGOING_SEARCH)}
             , option1 { 
               text = if (isLocalStageOn ST.QuoteList) then (getString YES_TRY_AGAIN) else (getString YES_CANCEL_SEARCH)
-            , fontSize = FontSize.a_16 
             , width = MATCH_PARENT
             , color = state.data.config.primaryTextColor
             , strokeColor = state.data.config.primaryBackground
             , background = state.data.config.primaryBackground
             , padding = (Padding 0 10 0 10)
-            , fontStyle = FontStyle.semiBold LanguageStyle
             }
             , option2 { 
                text = if (isLocalStageOn ST.QuoteList) then (getString HOME) else (getString NO_DONT) 
-              , fontSize = FontSize.a_16
               , width = MATCH_PARENT 
               , background = Color.white900
               , strokeColor = Color.white900
               , margin = MarginTop $ if (isLocalStageOn ST.QuoteList || isLocalStageOn ST.FindingQuotes) then 14 else 3
               , color = Color.black650
               , padding = if (isLocalStageOn ST.QuoteList || isLocalStageOn ST.FindingQuotes) then (PaddingBottom getBottomMargin) else (Padding 0 0 0 0)
-              , fontStyle = FontStyle.semiBold LanguageStyle
              }
             }
       in
@@ -462,7 +432,6 @@ distanceOusideLimitsConfig state =
         , primaryText
           { text = (getString DESTINATION_OUTSIDE_LIMITS)
           , margin = (Margin 16 20 16 0)
-          , fontSize = FontSize.a_20
           }
         , secondaryText
           { text = (getString DROP_LOCATION_FAR_AWAY)
@@ -490,7 +459,6 @@ shortDistanceConfig state =
         , primaryText
           { text = (getString YOUR_TRIP_IS_TOO_SHORT_YOU_ARE_JUST) <> HU.toString (state.props.distance) <> (getString METERS_AWAY_FROM_YOUR_DESTINATION)
           , margin = (Margin 16 20 16 0)
-          , fontSize = FontSize.a_20
           }
         , secondaryText
           { text = (getString YOU_CAN_TAKE_A_WALK_OR_CONTINUE_WITH_RIDE_BOOKING)
@@ -530,23 +498,17 @@ sourceUnserviceableConfig state =
           }
         , errorConfig
           { text = if state.props.isMockLocation then "Unable to get your location!" else (getString LOCATION_UNSERVICEABLE)
-          , textSize = FontSize.a_22
           , color = Color.black800
           , margin = (MarginBottom 5)
-          , fontStyle = FontStyle.bold LanguageStyle
           }
         , errorDescriptionConfig
           { text = if state.props.isMockLocation then "Turn off any Mock Location app you might be using and restart the app." else (getString CURRENTLY_WE_ARE_LIVE_IN_)
           , color = Color.black700
-          , textSize = FontSize.a_16
           , margin = (Margin 20 0 20 (40 + EHC.safeMarginBottom))
-          , fontStyle = FontStyle.regular LanguageStyle
           }
         , buttonConfig
           { text = (getString CHANGE_LOCATION)
-          , textSize = FontSize.a_16
           , margin = (Margin 16 0 16 (20 + EHC.safeMarginBottom))
-          , fontStyle = FontStyle.medium LanguageStyle
           , background = state.data.config.primaryBackground
           , color = state.data.config.primaryTextColor
           , visibility = GONE
@@ -802,7 +764,6 @@ callSupportConfig state = let
   , margin = (MarginHorizontal 16 16)
   , primaryText {
       text = getString CONTACT_SUPPORT <>"?"
-    , fontStyle = FontStyle.semiBold LanguageStyle
     }
   , secondaryText {
       text = getString YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT
@@ -811,14 +772,12 @@ callSupportConfig state = let
     }
   , option1 {
       text =  getString CANCEL_
-    , fontSize = FontSize.a_16
     , background = state.data.config.primaryTextColor
     , strokeColor = state.data.config.primaryBackground
     , color = state.data.config.primaryBackground
     }
   , option2 {
       text =  getString CALL_SUPPORT
-    , fontSize = FontSize.a_16
     , color = state.data.config.primaryTextColor
     , strokeColor = state.data.config.primaryBackground
     , background = state.data.config.primaryBackground
@@ -832,10 +791,8 @@ menuButtonConfig state item = let
     menuButtonConfig' = config {
       titleConfig{
           text = item.place
-          ,selectedFontStyle = FontStyle.bold LanguageStyle
-          ,unselectedFontStyle = FontStyle.regular LanguageStyle
       }
-      , radioButtonConfig {
+    , radioButtonConfig {
         height = V 16
         , width = V 16
         , imageHeight = V 10

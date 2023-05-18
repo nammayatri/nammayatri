@@ -145,7 +145,7 @@ config = {
         textColor : Color.black800
     },
     destination : {
-        imageUrl : "ny_ic_destination," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_destination.png",
+        imageUrl : "ny_ic_destination," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_destination.png",
         imageWidth : (V 10),
         imageHeight : (V 10),
         text : "",

@@ -69,8 +69,6 @@ primaryEditTextConfig state =
           { color = Color.black800
           , placeholder = (getString SIX_DIGIT_REFERRAL_CODE)
           , singleLine = true
-          , fontStyle = FontStyle.bold LanguageStyle
-          , textSize = FontSize.a_16
           , pattern = Just "[0-9]*,6"
           , placeholderColor = Color.black600
           }
@@ -84,8 +82,6 @@ primaryEditTextConfig state =
         , showErrorLabel = state.isInvalidCode
         , errorLabel
           { text = (getString INVALID_CODE_PLEASE_RE_ENTER)
-          , fontStyle = FontStyle.medium LanguageStyle
-          , textSize = FontSize.a_14
           , color = Color.red
           }
         }
@@ -104,9 +100,7 @@ genericHeaderConfig state =
       }
     , textConfig
       { text = (getString HAVE_REFERRAL_CODE)
-      , textSize = FontSize.a_18
       , color = Color.black900
-      , fontStyle = FontStyle.semiBold LanguageStyle
       }
     , suffixImageConfig
       { visibility = GONE

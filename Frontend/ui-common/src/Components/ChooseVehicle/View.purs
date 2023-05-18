@@ -112,7 +112,7 @@ priceDetailsView push config =
         , imageView
             [ width (V 18)
             , height (V 18)
-            , imageWithFallback $ "ny_ic_check_box," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_check_box.png"
+            , imageWithFallback $ "ny_ic_check_box," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_check_box.png"
             , visibility if config.isSelected then VISIBLE else GONE
             ]
         ]

@@ -33,7 +33,7 @@ import Storage (KeyStore(..), getValueToLocalStore)
 import Engineering.Helpers.Commons (screenWidth)
 import Screens.Types (HomeScreenStage(..))
 import JBridge (getVersionCode)
-import MerchantConfigs.Utils(getMerchant, Merchant(..))
+import Merchant.Utils(getMerchant, Merchant(..))
 import Styles.Colors as Color
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
@@ -93,7 +93,7 @@ messageButton push config =
   , cornerRadius 30.0
   , onClick push (const $ MessageCustomer)
   ][  imageView
-      [ imageWithFallback if config.unReadMessages then "ic_chat_badge," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ic_chat_badge.png" else "ic_chat," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ic_chat.png"
+      [ imageWithFallback if config.unReadMessages then "ic_chat_badge," <> (getCommonAssetStoreLink FunctionCall) <> "ic_chat_badge.png" else "ic_chat," <> (getCommonAssetStoreLink FunctionCall) <> "ic_chat.png"
       , height $ V 20
       , width $ V 20
       ]
@@ -152,7 +152,7 @@ openGoogleMap push config =
       ][  imageView
           [ width $ V 20
           , height $ V 20
-          , imageWithFallback $ "ny_ic_navigation," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_navigation.png"
+          , imageWithFallback $ "ny_ic_navigation," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_navigation.png"
           ]
         , textView (
           [ width WRAP_CONTENT
@@ -207,7 +207,6 @@ totalDistanceView push config =
         , width WRAP_CONTENT
         , text (getString RIDE_DISTANCE)
         , color Color.black650
-        , textSize FontSize.a_14
         , ellipsize true
         , singleLine true
         ] <> FontStyle.body1 TypoGraphy
@@ -216,11 +215,9 @@ totalDistanceView push config =
         , width WRAP_CONTENT
         , text config.totalDistance
         , color Color.black650
-        , textSize FontSize.a_20
         , ellipsize true
         , singleLine true
-        , fontStyle (FontStyle.medium TypoGraphy)
-        ]
+        ] <> FontStyle.body11 TypoGraphy
     ]
 
 sourceAndDestinationView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -329,7 +326,6 @@ estimatedFareView push config =
         , width WRAP_CONTENT
         , text (getString RIDE_FARE)
         , color Color.black650
-        , textSize FontSize.a_14
         , ellipsize true
         , singleLine true
         ] <> FontStyle.body1 TypoGraphy
@@ -339,10 +335,8 @@ estimatedFareView push config =
         , text ("₹" <> (show config.estimatedRideFare))
         , color Color.black900
         , ellipsize true
-        , textSize FontSize.a_20
         , singleLine true
-        , fontStyle (FontStyle.semiBold TypoGraphy)
-        ]
+        ] <> FontStyle.body10 TypoGraphy
     ]
 
 rideInfoView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -381,7 +375,7 @@ sourceDestinationImageView  config =
         [ height $ V 14
         , width $ V 14
         , margin $ MarginTop 4
-        , imageWithFallback $ "ny_ic_destination," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_destination.png"        
+        , imageWithFallback $ "ny_ic_destination," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_destination.png"        
         ]
       ]
 
@@ -400,7 +394,6 @@ sourceDestinationTextView push config =
         , color Color.black800
         , ellipsize true
         , singleLine true
-        , textSize FontSize.a_16 
         ] <> FontStyle.subHeading1 TypoGraphy
       , textView $ 
         [ height WRAP_CONTENT
@@ -410,7 +403,6 @@ sourceDestinationTextView push config =
         , margin (MarginBottom 30)
         , ellipsize true
         , singleLine true
-        , textSize FontSize.a_14 
         ] <> FontStyle.body1 TypoGraphy
       , destAddressTextView config push
       ]   
@@ -436,7 +428,7 @@ arrivedButtonView push config =
   ][  imageView
       [ width $ V 20
       , height $ V 20
-      , imageWithFallback if config.notifiedCustomer then "ny_ic_tick_grey," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_tick_grey.png" else "ny_ic_hand_wave," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_hand_wave.png"
+      , imageWithFallback if config.notifiedCustomer then "ny_ic_tick_grey," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_tick_grey.png" else "ny_ic_hand_wave," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_hand_wave.png"
       , margin $ MarginRight 4
       ]
     , textView $
@@ -486,7 +478,6 @@ destAddressTextView config push=
         , color Color.black800
         , ellipsize true
         , singleLine true
-        , textSize FontSize.a_16 
         ] <> FontStyle.subHeading1 TypoGraphy
       , textView $
         [ height WRAP_CONTENT
@@ -494,7 +485,6 @@ destAddressTextView config push=
         , text config.destinationAddress.detailText
         , color Color.black650
         , ellipsize true
-        , textSize FontSize.a_14
         , maxLines if config.currentStage == RideAccepted then 1 else 2
         ]<> FontStyle.body1 TypoGraphy
       ]

@@ -209,22 +209,18 @@ distanceView config =
        , padding (Padding 40 20 0 10)
        , gravity LEFT
        , alignParentLeft "true,-1"
-       ][ textView
+       ][ textView $
            [ width WRAP_CONTENT
            , height WRAP_CONTENT
            , text (getString PICKUP)
-           , textSize FontSize.a_18
            , color Color.black700
-           , fontStyle $ FontStyle.regular LanguageStyle
-           ]
-         , textView
+           ] <> FontStyle.body14 LanguageStyle
+         , textView $
            [ width WRAP_CONTENT
            , height WRAP_CONTENT
            , text (show config.pickupDistance <> ".0 km")
-           , textSize FontSize.a_18
-           , fontStyle $ FontStyle.bold LanguageStyle
            , color Color.greyTextColor
-           ]
+           ] <> FontStyle.h3 LanguageStyle
        ]
      , linearLayout
        [ width WRAP_CONTENT
@@ -238,23 +234,18 @@ distanceView config =
           , height WRAP_CONTENT
           , orientation VERTICAL
           , gravity LEFT
-          ][ textView
+          ][ textView $
            [ width WRAP_CONTENT
            , height WRAP_CONTENT
            , text (getString TRIP)
-           , textSize FontSize.a_18
            , color Color.black700
-           , fontStyle $ FontStyle.regular LanguageStyle
-
-           ]
-         , textView
+           ] <> FontStyle.body14 LanguageStyle
+         , textView $
            [ width WRAP_CONTENT
            , height WRAP_CONTENT
            , text (show config.journeyDistance <> ".0 km")
-           , textSize FontSize.a_18
-           , fontStyle $ FontStyle.bold LanguageStyle
            , color Color.greyTextColor
-           ]
+           ] <> FontStyle.h2 LanguageStyle
           ]
        ]
       ]
@@ -271,27 +262,23 @@ reducePrice push config =
   , onClick push (const (DecreasePrice config.id))
   , background Color.white900
   , alpha if (config.totalPrice > config.basePrice) then 1.0 else 0.5
-  ][  textView
+  ][  textView $
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , text ("- " <> toString(config.reducePrice))
       , color if (config.totalPrice > config.basePrice) then Color.greyTextColor else Color.borderGreyColor
-      , textSize FontSize.a_19
-      , fontStyle $ FontStyle.semiBold LanguageStyle
-      ]
+      ] <> FontStyle.h3 LanguageStyle
   ]
 
 totalPrice :: forall w . Config -> PrestoDOM (Effect Unit) w
 totalPrice config =
-  textView
+  textView $
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
   , color Color.greyTextColor
   , text ("₹ " <>  (parseFloat config.totalPrice 2))
-  , textSize FontSize.a_20
   , margin (Margin 20 0 20 0)
-  , fontStyle $ FontStyle.bold LanguageStyle
-  ]
+  ] <> FontStyle.body8 LanguageStyle
 
 increasePrice :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 increasePrice push config =
@@ -305,14 +292,12 @@ increasePrice push config =
   , onClick push (const (IncreasePrice config.id))
   , background Color.white900
   , alpha if (config.totalPrice >= config.basePrice + config.increasePrice * 3.0) then 0.5 else 1.0
-  ][  textView
+  ][  textView $
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , text ("+ " <> toString(config.increasePrice))
       , color if (config.totalPrice >= config.basePrice + config.increasePrice * 3.0) then Color.borderGreyColor else Color.greyTextColor
-      , textSize FontSize.a_19
-      , fontStyle $ FontStyle.semiBold LanguageStyle
-      ]
+      ] <> FontStyle.h3 LanguageStyle
   ]
 
 declineButton :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -325,14 +310,12 @@ declineButton push config =
   , margin (MarginRight 10)
   , gravity CENTER
   , onClick push (const (Decline config.id))
-  ][  textView
+  ][  textView $
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , text (getString DECLINE)
       , color config.decline.color
-      , fontStyle $ FontStyle.bold LanguageStyle
-      , textSize FontSize.a_18
-      ]
+      ] <> FontStyle.h2 LanguageStyle
   ]
 
 requestButton :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -344,12 +327,10 @@ requestButton push config =
   , background config.request.background
   , gravity CENTER
   , onClick push (const (Request config.id (config.totalPrice - config.basePrice)))
-  ][  textView
+  ][  textView $
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , text (getString REQUEST)
       , color config.request.color
-      , fontStyle $ FontStyle.bold LanguageStyle
-      , textSize FontSize.a_18
-      ]
+      ] <> FontStyle.h2 LanguageStyle
   ]

@@ -27,7 +27,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import MerchantConfigs.Utils (getLanguage)
+import Merchant.Utils (getLanguage)
 import Prelude (Unit, const, unit, discard, ($), (<<<), (==), (<>))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, afterRender, background, clickable, color, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, weight, width)
 import PrestoDOM.Animation as PrestoAnim
@@ -97,7 +97,7 @@ scrollableView state push =
           ] $ imageView
               [ width ( V 270)
               , height ( V 270)
-              , imageWithFallback $ "ny_ic_welcome," <> (getAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_welcome.png"
+              , imageWithFallback $ "ny_ic_welcome," <> (getAssetStoreLink FunctionCall) <> "ny_ic_welcome.png"
               ]]
         , linearLayout
           [ height WRAP_CONTENT
@@ -122,7 +122,6 @@ scrollableView state push =
           ] $ textView (
               [ height WRAP_CONTENT
               , width WRAP_CONTENT
-              , textSize FontSize.a_17
               , text "Choose Language"
               , color Color.inactive
               , margin $ Margin 20 50 0 0

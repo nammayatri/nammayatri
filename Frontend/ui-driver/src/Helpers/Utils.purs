@@ -50,7 +50,7 @@ import Prelude (map, (*), (-), (/))
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import Screens.Types (AllocationData, YoutubeData)
 import Common.Types.App (LazyCheck(..))
-import MerchantConfigs.Utils (getMerchant, Merchant(..))
+import Merchant.Utils (getMerchant, Merchant(..))
 
 
 -- import Control.Monad.Except (runExcept)
@@ -218,10 +218,14 @@ getVehicleType vehicleType =
 
 getAssetStoreLink :: LazyCheck -> String
 getAssetStoreLink lazy = case (getMerchant unit) of
-  NAMMAYATRIPARTNER -> "https://assets.juspay.in/beckn/nammayatri"
-  JATRISAATHIDRIVER -> "https://assets.juspay.in/beckn/jatrisaathi"
-  YATRIPARTNER -> "https://assets.juspay.in/beckn/yatri"
+  NAMMAYATRIPARTNER -> "https://assets.juspay.in/beckn/nammayatri/driver/images/"
+  JATRISAATHIDRIVER -> "https://assets.juspay.in/beckn/jatrisaathi/driver/images/"
+  YATRIPARTNER -> "https://assets.juspay.in/beckn/yatri/driver/images/"
   _ -> ""
 
 getCommonAssetStoreLink :: LazyCheck -> String
-getCommonAssetStoreLink lazy = "https://assets.juspay.in/beckn/merchantcommon"
+getCommonAssetStoreLink lazy = case (getMerchant unit) of
+  NAMMAYATRIPARTNER -> "https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/"
+  JATRISAATHIDRIVER -> "https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/"
+  YATRIPARTNER -> "https://assets.juspay.in/beckn/yatri/yatricommon/images/"
+  _ -> ""

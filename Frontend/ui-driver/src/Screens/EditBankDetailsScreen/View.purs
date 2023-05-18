@@ -93,22 +93,20 @@ headerLayout state push heading =
     ][ imageView
         [ width $ V 25
         , height MATCH_PARENT
-        , imageWithFallback $ "ny_ic_chevron_left_black," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_chevron_left_black.png"
+        , imageWithFallback $ "ny_ic_chevron_left_black," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left_black.png"
         , layoutGravity "center_vertical"
         , padding (Padding 2 2 2 2)
         , margin (MarginLeft 5)
         , onClick push (const BackPressed)
         ]
-      , textView
+      , textView $
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , text heading
-        , textSize FontSize.a_19
         , margin (MarginLeft 20)
         , color Color.black
-        , fontStyle $ FontStyle.semiBold LanguageStyle
         , weight 1.0
-        ]
+        ] <> FontStyle.h3 LanguageStyle
       , textView
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
@@ -160,15 +158,13 @@ bankDetailsView state push =
                     , color Color.black800
                     , alpha 0.8
                     ]
-                    , textView
+                    , textView $
                     [ width WRAP_CONTENT
                     , height WRAP_CONTENT
                     , margin (MarginTop 10)
                     , text optionItem.value
-                    , textSize FontSize.a_16
                     , color Color.black800
-                    , fontStyle $ FontStyle.semiBold LanguageStyle
-                    ]
+                    ] <> FontStyle.subHeading1 LanguageStyle
                 ]
               , if(optionItem.title == IFSC ) then dummyTextView else horizontalLineView
             ]

@@ -175,19 +175,16 @@ personalDetails state push =
                           , width MATCH_PARENT
                           , orientation VERTICAL
                           , margin $ Margin 16 0 16 0
-                          ][  textView
+                          ][  textView $
                               [ height WRAP_CONTENT
                               , width MATCH_PARENT
-                              , textSize FontSize.a_12
                               , text item.title
                               , color Color.black700
                               , margin $ MarginBottom 8
-                              , fontStyle $ FontStyle.regular LanguageStyle
-                              ]
-                            , textView
+                              ] <> FontStyle.body3 LanguageStyle
+                            , textView $
                               [ height WRAP_CONTENT
                               , width MATCH_PARENT
-                              , textSize FontSize.a_14
                               , text item.text
                               , color case item.fieldType of
                                   ST.EMAILID_ ->  if state.data.emailId /= Nothing then Color.black900 else Color.blue900
@@ -197,8 +194,7 @@ personalDetails state push =
                                   ST.EMAILID_ ->  if state.data.emailId /= Nothing then const $ NoAction else const $ EditProfile $ Just ST.EMAILID_
                                   ST.GENDER_ -> if state.data.gender /= Nothing then const $ NoAction  else const $ EditProfile $ Just ST.GENDER_
                                   _ -> const $ NoAction
-                              , fontStyle $ FontStyle.semiBold LanguageStyle
-                              ]
+                              ] <> FontStyle.body6 LanguageStyle
                             ]
                       , horizontalLineView state (index /= 3)
                       ] ) (personalDetailsArray state))
@@ -272,16 +268,14 @@ headerView state push =
           , height MATCH_PARENT
           , gravity BOTTOM
           , orientation VERTICAL
-          ][ textView
+          ][ textView $
               [ height WRAP_CONTENT
               , width WRAP_CONTENT
-              , textSize FontSize.a_16
               , text (getString EDIT)
               , color Color.blueTextColor
-              , fontStyle $ FontStyle.semiBold LanguageStyle
               , padding $ PaddingBottom 10
               , onClick push (const $ EditProfile Nothing)
-              ]
+              ] <> FontStyle.subHeading1 LanguageStyle
             ]
           ]
       ]
@@ -321,29 +315,25 @@ mobileNumberTextView state =
   , width MATCH_PARENT
   , orientation VERTICAL
   , margin $ MarginTop 32
-  ][  textView
+  ][  textView $
       [ height WRAP_CONTENT
       , width MATCH_PARENT
-      , textSize FontSize.a_12
       , text (getString MOBILE_NUMBER_STR)
       , color Color.black700
       , margin $ MarginBottom 8
-      , fontStyle $ FontStyle.regular LanguageStyle
-      ]
+      ] <> FontStyle.body3 LanguageStyle
     , linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , padding $ Padding 20 17 20 17
       , cornerRadius 8.0
       , stroke $ "1,"<>Color.greySmoke
-      ][textView
+      ][textView $
       [ height WRAP_CONTENT
       , width MATCH_PARENT
-      , textSize FontSize.a_16
       , text $ getValueToLocalStore MOBILE_NUMBER
       , color Color.black600
-      , fontStyle $ FontStyle.semiBold LanguageStyle
-      ] ]
+      ] <> FontStyle.subHeading1 LanguageStyle ]
   ]
 
 
@@ -361,17 +351,15 @@ genderCaptureView state push =
     , background Color.white900
     , orientation VERTICAL
     ] $
-    [ textView
+    [ textView $
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , text $ getString GENDER_STR
       , color Color.black800
       , gravity LEFT
-      , fontStyle $ FontStyle.regular LanguageStyle
       , singleLine true
-      , textSize FontSize.a_12
       , margin $ MarginBottom 12
-      ]
+      ] <> FontStyle.body3 LanguageStyle
     , linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -381,14 +369,12 @@ genderCaptureView state push =
         , stroke $ "1,"<> Color.borderColorLight
         , gravity CENTER_VERTICAL
         ]
-        [ textView
+        [ textView $
           [ text $ RSRC.getGender state.data.editedGender (getString SELECT_YOUR_GENDER)
-          , textSize FontSize.a_16
-          , fontStyle $ FontStyle.semiBold LanguageStyle
           , height WRAP_CONTENT
           , width WRAP_CONTENT
           , color if state.data.editedGender == Nothing then Color.black600 else Color.black800
-          ]
+          ] <> FontStyle.subHeading1 LanguageStyle
         , linearLayout
             [ height WRAP_CONTENT
             , width MATCH_PARENT
@@ -441,13 +427,11 @@ genderOptionsView state push =
         , onClick push $ const $ GenderSelected item.value
         , orientation VERTICAL
         ]
-        [ textView
+        [ textView $
           [ text item.text
-          , textSize FontSize.a_14
-          , fontStyle $ FontStyle.regular LanguageStyle
           , color Color.black900
           , margin $ Margin 16 15 16 15
-          ]
+          ] <> FontStyle.paragraphText LanguageStyle
         , linearLayout
           [ height $ V 1
           , width MATCH_PARENT
@@ -494,15 +478,13 @@ deleteAccountView state push =
                 , height $ V 20
                 , imageWithFallback $ "ny_ic_trash," <> (getAssetStoreLink FunctionCall) <> "ny_ic_trash.png"
                 ]
-                , textView
+                , textView $
                 [ height WRAP_CONTENT
                 , weight 1.0
                 , text (getString REQUEST_TO_DELETE_ACCOUNT)
                 , margin (MarginLeft 10)
-                , textSize FontSize.a_14
                 , color Color.red
-                , fontStyle $ FontStyle.medium LanguageStyle
-                ]
+                ] <> FontStyle.body1 LanguageStyle
                 , linearLayout
                 [ width WRAP_CONTENT
                 , height WRAP_CONTENT

@@ -102,15 +102,13 @@ paymentView state =
           , width imageData.width
           , margin (MarginRight 8)
           ] 
-        , textView $
+        , textView (
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , text (getString PAY_DRIVER_USING_CASH_OR_UPI)
           , gravity CENTER_HORIZONTAL
           , color Color.black800
-          , textSize FontSize.a_14 
-          , fontStyle $ FontStyle.medium LanguageStyle
-          ]
+          ] <> FontStyle.body1 TypoGraphy)
         ]
     ]
 
@@ -159,30 +157,26 @@ sourceDestinationTextView state push =
     , height WRAP_CONTENT
     , margin (MarginTop 5)
     ][   
-      textView
+      textView (
         [ height WRAP_CONTENT
         , weight 1.0
         , text state.source
         , color state.appConfig.quoteListModel.textColor
-        , fontStyle $ FontStyle.regular LanguageStyle
         , padding (PaddingHorizontal 5 5)
         , margin (MarginBottom 12)
-        , textSize FontSize.a_14
         , ellipsize true
         , singleLine true
-        ]
-      , textView
+        ] <> FontStyle.paragraphText TypoGraphy)
+      , textView (
         [ height WRAP_CONTENT
         , weight 1.0
         , text state.destination
         , color state.appConfig.quoteListModel.textColor
-        , fontStyle $ FontStyle.regular LanguageStyle
         , padding (PaddingHorizontal 5 5)
         , margin (MarginTop 12)
-        , textSize FontSize.a_14
         , ellipsize true
         , singleLine true
-        ]
+        ] <> FontStyle.paragraphText TypoGraphy)
     ]   
       
 ---------------------------- quotesView ---------------------------------
@@ -230,18 +224,16 @@ selectRideAndConfirmView state push =
     height WRAP_CONTENT
   , weight 1.0
   , padding (Padding 16 16 0 16)
-  ][textView
+  ][textView (
     [ height WRAP_CONTENT
     , color state.appConfig.quoteListModel.textColor
-    , textSize FontSize.a_16
-    , fontStyle $ FontStyle.medium LanguageStyle
     , text case getValueToLocalStore AUTO_SELECTING of
        "CANCELLED_AUTO_ASSIGN" -> "Select a Ride"
        "false"                 -> "Select a Ride"
        _                       -> case (getValueToLocalStore LANGUAGE_KEY) of
                                     _ -> "Confirming selected ride in" <> " : " <> (fromMaybe dummyQuoteList ((filter (\item -> item.id == (fromMaybe "" state.selectedQuote)) state.quoteListModel) !! 0)).timer <> "s"
                                     -- _ -> "state.timer" <> "s " <> (getString AUTO_ACCEPTING_SELECTED_RIDE) TODO :: NEED TO UPDATE LANGUAGE
-    ]]
+    ] <> FontStyle.subHeading2 TypoGraphy)]
    , linearLayout
     [ height MATCH_PARENT
     , width WRAP_CONTENT
@@ -272,12 +264,10 @@ paymentMethodView push state =
   , padding (Padding 16 6 16 16)
   , width WRAP_CONTENT
   , gravity LEFT
-  ][  textView
+  ][  textView (
       [ text (getString PAYMENT_METHOD)
-      , textSize FontSize.a_12
       , color Color.black700
-      , fontStyle $ FontStyle.regular LanguageStyle
-      ]
+      ] <> FontStyle.body3 TypoGraphy)
     , linearLayout
       [ orientation HORIZONTAL
       , width WRAP_CONTENT
@@ -288,13 +278,11 @@ paymentMethodView push state =
           , height $ V 20
           , width $ V 20
           ]
-        , textView
+        , textView $
           [ text (getString PAYMENT_METHOD_STRING)
           , margin (MarginLeft 8)
-          , textSize FontSize.a_14
           , color Color.black800
-          , fontStyle $ FontStyle.medium LanguageStyle
-          ]
+          ] <> FontStyle.body1 TypoGraphy
       ]
   ] -- TODO ADD PAYMENT OPTIONS
   -- , linearLayout[
@@ -454,7 +442,6 @@ homeButtonConfig state = let
       { textConfig
         { text = (getString HOME)
         , color = Color.black900
-        , textSize = FontSize.a_16  
         }
       , margin =( Margin 16 0 8 0)
       , width = V $ (screenWidth unit/4)
@@ -473,7 +460,6 @@ tryAgainButtonConfig state = let
       { textConfig
         { text = (getString TRY_AGAIN)
         ,  color = state.appConfig.primaryTextColor 
-        , textSize = FontSize.a_16  
         }
       , margin =( Margin 8 0 16 0)
       , width = MATCH_PARENT

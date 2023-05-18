@@ -36,6 +36,7 @@ import Foreign.Generic (decodeJSON)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Data.Either (Either(..))
 import Engineering.Helpers.Commons (screenHeight, screenWidth)
+import Effect.Uncurried (EffectFn3, EffectFn2)
 -- -- import Control.Monad.Except.Trans (lift)
 -- -- foreign import _keyStoreEntryPresent :: String -> Effect Boolean
 -- -- foreign import _createKeyStoreEntry :: String -> String -> (Effect Unit) -> (String -> Effect Unit) -> Effect Unit
@@ -178,6 +179,10 @@ foreign import generateSessionId :: Unit -> String
 
 foreign import initialWebViewSetUp :: forall action. (action -> Effect Unit) -> String -> (String -> action) -> Effect Unit
 foreign import goBackPrevWebPage ::  String -> Effect Unit
+
+foreign import emitJOSEvent ::  EffectFn3 String String String Unit
+
+foreign import locationPermissionCallBack :: forall action. EffectFn2 (action -> Effect Unit) action Unit
 
 -- -- keyStoreEntryPresent :: String -> Flow Boolean
 -- -- keyStoreEntryPresent = liftFlow <<< _keyStoreEntryPresent
