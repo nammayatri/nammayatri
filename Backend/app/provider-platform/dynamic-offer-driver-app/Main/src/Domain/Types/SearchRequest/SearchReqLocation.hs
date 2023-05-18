@@ -37,8 +37,6 @@ data SearchReqLocation = SearchReqLocation
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show, PrettyShow, Read, HasCoordinates)
 
-deriving instance Read (Id SearchReqLocation)
-
 data SearchReqLocationAPIEntity = SearchReqLocationAPIEntity
   { lat :: Double,
     lon :: Double,

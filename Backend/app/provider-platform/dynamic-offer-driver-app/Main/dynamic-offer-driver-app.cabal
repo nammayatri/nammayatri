@@ -246,6 +246,7 @@ library
       Storage.Beam.FarePolicy
       Storage.Beam.FarePolicy.RestrictedExtraFare
       Storage.Beam.Geometry
+      Storage.Beam.Instances
       Storage.Beam.Issue.Comment
       Storage.Beam.Issue.IssueCategory
       Storage.Beam.Issue.IssueOption

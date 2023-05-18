@@ -121,6 +121,8 @@ instance ToJSON FareParameters where
 
 deriving stock instance Show FareParameters
 
+deriving stock instance Ord Domain.FarePolicyType
+
 deriving stock instance Read Money
 
 fareParametersTMod :: FareParametersT (B.FieldModification (B.TableField FareParametersT))

@@ -172,8 +172,6 @@ instance ToJSON SearchRequest where
 
 deriving stock instance Show SearchRequest
 
-deriving stock instance Read Money
-
 searchRequestTMod :: SearchRequestT (B.FieldModification (B.TableField SearchRequestT))
 searchRequestTMod =
   B.tableModification

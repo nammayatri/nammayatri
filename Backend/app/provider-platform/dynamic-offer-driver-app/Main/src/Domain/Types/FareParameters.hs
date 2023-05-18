@@ -12,6 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingVia #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Domain.Types.FareParameters where
 
@@ -31,7 +32,9 @@ data FareParameters = FareParameters
     nightShiftCharge :: Maybe Money,
     fareParametersDetails :: FareParametersDetails
   }
-  deriving (Generic, Show, Eq, PrettyShow)
+  deriving (Generic, Show, Eq, PrettyShow, Ord, Read)
+
+deriving stock instance Read Money
 
 data FareParametersDetails = ProgressiveDetails FParamsProgressiveDetails | SlabDetails FParamsSlabDetails
   deriving (Generic, Show, Eq, PrettyShow)
@@ -40,17 +43,10 @@ data FParamsProgressiveDetails = FParamsProgressiveDetails
   { deadKmFare :: Money,
     extraKmFare :: Maybe Money
   }
-  deriving (Generic, Show, Eq, PrettyShow)
+  deriving (Generic, Show, Eq, PrettyShow, Ord, Read)
 
-data FParamsSlabDetails = FParamsSlabDetails
-  deriving (Generic, Show, Eq)
+deriving stock instance Read Money
 
-instance PrettyShow FParamsSlabDetails where
-  prettyShow _ = prettyShow ()
-
-data FareParametersType = Progressive | Slab deriving (Show, Read)
-
-getFareParametersType :: FareParameters -> FareParametersType
-getFareParametersType fareParams = case fareParams.fareParametersDetails of
-  ProgressiveDetails _ -> Progressive
-  SlabDetails _ -> Slab
+data FarePolicyType = SLAB | NORMAL
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (PrettyShow) via Showable FarePolicyType

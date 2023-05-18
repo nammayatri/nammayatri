@@ -42,6 +42,7 @@ import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Person (PersonTId)
+import Storage.Beam.Instances ()
 
 fromFieldEnum ::
   (Typeable a, Read a) =>
@@ -122,7 +123,7 @@ defaultDriverStats =
     { driverId = "",
       idleSince = defaultUTCDate,
       totalRides = 0,
-      totalDistance = 0
+      totalDistance = Meters 0
     }
 
 instance Serialize DriverStats where

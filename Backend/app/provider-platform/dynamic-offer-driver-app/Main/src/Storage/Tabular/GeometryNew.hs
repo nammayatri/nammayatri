@@ -135,7 +135,7 @@ import Storage.Tabular.Vehicle ()
 
 -- instance FromBackendRow Postgres Centesimal
 
--- deriving stock instance Read Money
+--
 
 -- instance FromField Money where
 --   fromField = fromFieldEnum
