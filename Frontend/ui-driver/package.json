@@ -4,6 +4,7 @@
   "description": "Atlas Driver",
   "private": true,
   "main": "index.js",
+<<<<<<< HEAD
   "scripts": {
     "compile:purs": "spago build",
     "bundle:android": "webpack --env prod --mode=production --progress --config webpack.android.js",
@@ -112,4 +113,8 @@
       "@semantic-release/git"
     ]
   }
+=======
+  "author": "juspay",
+  "license": "ISC"
+>>>>>>> f6b4c8a47 (Remove old-style spago files, only support building via purifix; Modify bundling.sh to match spagobundling behavior of running createJSAFiles. Cleanup package.json files to remove the scripts and dependencies which are now managed via nix.)
 }
