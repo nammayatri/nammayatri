@@ -136,4 +136,6 @@ in  { esqDBCfg
     , snapToRoadSnippetThreshold = +300
     , minTripDistanceForReferralCfg = Some +1000
     , maxShards = +5
+    , sendMessageToDriversBatchSize = +30
+    , sendMessageToDriversSndsDelay = +30
     }

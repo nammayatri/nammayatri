@@ -20,6 +20,8 @@ module SharedLogic.Allocator where
 
 import Data.Singletons.TH
 import qualified Domain.Types.FarePolicy as DFP
+import qualified Domain.Types.Message.Message as Domain
+import Domain.Types.Person (Driver)
 import qualified Domain.Types.SearchRequest as DSR
 import Kernel.Prelude
 import Kernel.Types.Common (Meters, Money)
@@ -27,15 +29,18 @@ import Kernel.Types.Id
 import Kernel.Utils.Dhall (FromDhall)
 import Lib.Scheduler
 
-data AllocatorJobType = SendSearchRequestToDriver
+data SchedulerJobType
+  = SendSearchRequestToDriver
+  | SendDriverMessages
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
-genSingletons [''AllocatorJobType]
-showSingInstance ''AllocatorJobType
+genSingletons [''SchedulerJobType]
+showSingInstance ''SchedulerJobType
 
-instance JobProcessor AllocatorJobType where
-  restoreAnyJobInfo :: Sing (e :: AllocatorJobType) -> Text -> Maybe (AnyJobInfo AllocatorJobType)
+instance JobProcessor SchedulerJobType where
+  restoreAnyJobInfo :: Sing (e :: SchedulerJobType) -> Text -> Maybe (AnyJobInfo SchedulerJobType)
   restoreAnyJobInfo SSendSearchRequestToDriver jobData = AnyJobInfo <$> restoreJobInfo SSendSearchRequestToDriver jobData
+  restoreAnyJobInfo SSendDriverMessages jobData = AnyJobInfo <$> restoreJobInfo SSendDriverMessages jobData
 
 data SendSearchRequestToDriverJobData = SendSearchRequestToDriverJobData
   { requestId :: Id DSR.SearchRequest,
@@ -49,3 +54,14 @@ data SendSearchRequestToDriverJobData = SendSearchRequestToDriverJobData
 instance JobInfoProcessor 'SendSearchRequestToDriver
 
 type instance JobContent 'SendSearchRequestToDriver = SendSearchRequestToDriverJobData
+
+data SendDriverMessagesJobData = SendDriverMessagesJobData
+  { messageId :: Text,
+    message :: Domain.RawMessage,
+    driversIds :: [Id Driver]
+  }
+  deriving (Generic, FromJSON, ToJSON)
+
+type instance JobContent 'SendDriverMessages = SendDriverMessagesJobData
+
+instance {-# OVERLAPS #-} JobInfoProcessor 'SendDriverMessages

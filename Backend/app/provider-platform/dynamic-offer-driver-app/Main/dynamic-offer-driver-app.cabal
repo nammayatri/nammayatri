@@ -223,6 +223,7 @@ library
       SharedLogic.MessageBuilder
       SharedLogic.Person
       SharedLogic.Ride
+      SharedLogic.SendMessageJob
       Storage.CachedQueries.CacheConfig
       Storage.CachedQueries.DriverInformation
       Storage.CachedQueries.Exophone

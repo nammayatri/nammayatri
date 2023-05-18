@@ -24,7 +24,7 @@ import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.Error
 import Kernel.Utils.Common
 import Lib.Scheduler
-import SharedLogic.Allocator (AllocatorJobType (..))
+import SharedLogic.Allocator (SchedulerJobType (..))
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal as I
 import SharedLogic.DriverPool

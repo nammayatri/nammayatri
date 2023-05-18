@@ -22,7 +22,6 @@ import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Co
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Csv
-import qualified Data.Map as M
 import qualified Data.Text as T
 import Data.Time.Format.ISO8601 (iso8601Show)
 import Data.Tuple.Extra (secondM)
@@ -37,17 +36,17 @@ import EulerHS.Types (base64Encode)
 import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
-import Kernel.Streaming.Kafka.Producer (produceMessage)
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Common (Forkable (fork), GuidLike (generateGUID), MonadTime (getCurrentTime))
 import Kernel.Types.Id
-import Kernel.Utils.Common (fromMaybeM, logDebug, throwError)
+import Kernel.Utils.Common (fromMaybeM, throwError)
+import Lib.Scheduler.JobStorageType.DB.Queries (createJob)
+import SharedLogic.Allocator (SchedulerJobType (SendDriverMessages), SendDriverMessagesJobData (..))
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.Queries.MediaFile as MFQuery
 import qualified Storage.Queries.Message.Message as MQuery
 import qualified Storage.Queries.Message.MessageReport as MRQuery
-import qualified Storage.Queries.Message.MessageTranslation as MTQuery
 import qualified Storage.Queries.Person as QP
 import Tools.Error
 
@@ -197,19 +196,10 @@ sendMessage merchantShortId Common.SendMessageRequest {..} = do
     Exclude -> do
       driverIds <- readCsv
       Esq.runInReplica $ QP.findAllDriverIdExceptProvided (merchant.id) driverIds
-  logDebug $ "DriverId to which the message is sent" <> show allDriverIds
-  fork "Adding messages to kafka queue" $ mapM_ (addToKafka message) allDriverIds
+  Esq.runTransaction $
+    createJob @_ @'SendDriverMessages 1 (SendDriverMessagesJobData messageId message allDriverIds)
   return Success
   where
-    addToKafka message driverId = do
-      topicName <- asks (.broadcastMessageTopic)
-      now <- getCurrentTime
-      void $ try @_ @SomeException (Esq.runTransaction $ MRQuery.create (mkMessageReport now driverId)) -- avoid extra DB call to check if driverId exists
-      msg <- createMessageLanguageDict message
-      produceMessage
-        (topicName, Just (encodeUtf8 $ getId driverId))
-        msg
-
     readCsv = case csvFile of
       Just csvFile_ -> do
         csvData <- L.runIO $ BS.readFile csvFile_
@@ -217,27 +207,6 @@ sendMessage merchantShortId Common.SendMessageRequest {..} = do
           Left err -> throwError (InvalidRequest $ show err)
           Right (_, v) -> pure $ V.toList $ V.map (Id . T.pack . (.driverId)) v
       Nothing -> throwError (InvalidRequest "CSV FilePath Not Found")
-
-    createMessageLanguageDict :: Domain.RawMessage -> Flow Domain.MessageDict
-    createMessageLanguageDict message = do
-      translations <- Esq.runInReplica $ MTQuery.findByMessageId message.id
-      pure $ Domain.MessageDict message (M.fromList $ map (addTranslation message) translations)
-
-    addTranslation Domain.RawMessage {..} trans =
-      (show trans.language, Domain.RawMessage {title = trans.title, description = trans.description, shortDescription = trans.shortDescription, label = trans.label, ..})
-
-    mkMessageReport now driverId =
-      Domain.MessageReport
-        { driverId,
-          messageId = Id messageId,
-          deliveryStatus = Domain.Queued,
-          readStatus = False,
-          likeStatus = False,
-          messageDynamicFields = M.empty,
-          reply = Nothing,
-          createdAt = now,
-          updatedAt = now
-        }
 
 messageList :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Flow Common.MessageListResponse
 messageList merchantShortId mbLimit mbOffset = do

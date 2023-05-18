@@ -29,9 +29,10 @@ import Lib.Scheduler
 import qualified Lib.Scheduler.JobStorageType.DB.Queries as QAllJ
 import SharedLogic.Allocator
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers)
+import SharedLogic.SendMessageJob (sendMessagesToDrivers)
 import qualified Storage.CachedQueries.Merchant as Storage
 
-allocatorHandle :: R.FlowRuntime -> HandlerEnv -> SchedulerHandle AllocatorJobType
+allocatorHandle :: R.FlowRuntime -> HandlerEnv -> SchedulerHandle SchedulerJobType
 allocatorHandle flowRt env =
   SchedulerHandle
     { getTasksById = QAllJ.getTasksById,
@@ -45,6 +46,7 @@ allocatorHandle flowRt env =
       jobHandlers =
         emptyJobHandlerList
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendSearchRequestToDrivers)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendMessagesToDrivers)
     }
 
 runDriverOfferAllocator ::

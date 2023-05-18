@@ -28,6 +28,8 @@ import Kernel.External.Encryption (EncTools)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis (HedisEnv, connectHedis, connectHedisCluster, disconnectHedis)
+import Kernel.Streaming.Kafka.Commons (KafkaTopic)
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools, buildKafkaProducerTools)
 import Kernel.Types.Base64 (Base64)
 import Kernel.Types.Common
 import Kernel.Types.Flow
@@ -69,7 +71,11 @@ data HandlerEnv = HandlerEnv
     coreMetrics :: CoreMetricsContainer,
     ssrMetrics :: SendSearchRequestToDriverMetricsContainer,
     maxShards :: Int,
-    version :: DeploymentVersion
+    version :: DeploymentVersion,
+    broadcastMessageTopic :: KafkaTopic,
+    kafkaProducerTools :: KafkaProducerTools,
+    sendMessageToDriversBatchSize :: Int,
+    sendMessageToDriversSndsDelay :: Int
   }
   deriving (Generic)
 
@@ -88,6 +94,7 @@ buildHandlerEnv HandlerCfg {..} = do
       else connectHedisCluster hedisClusterCfg ("driver-offer-allocator:" <>)
   ssrMetrics <- registerSendSearchRequestToDriverMetricsContainer
   coreMetrics <- registerCoreMetricsContainer
+  kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   return HandlerEnv {..}
 
 releaseHandlerEnv :: HandlerEnv -> IO ()
