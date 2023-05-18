@@ -45,8 +45,6 @@ data FParamsProgressiveDetails = FParamsProgressiveDetails
   }
   deriving (Generic, Show, Eq, PrettyShow, Ord, Read)
 
-deriving stock instance Read Money
-
 data FarePolicyType = SLAB | NORMAL
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
   deriving (PrettyShow) via Showable FarePolicyType
