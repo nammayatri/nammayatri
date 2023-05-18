@@ -14,6 +14,7 @@
 
 module Tools.Notifications where
 
+import Data.Aeson (object)
 import Data.Default.Class
 import qualified Data.Text as T
 import qualified Domain.Types.Booking as SRB
@@ -42,6 +43,11 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QM
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.SearchRequest as QSearchReq
 import Tools.Metrics
+
+data EmptyDynamicParam = EmptyDynamicParam
+
+instance ToJSON EmptyDynamicParam where
+  toJSON EmptyDynamicParam = object []
 
 notifyPerson ::
   ( EncFlow m r,
@@ -94,7 +100,7 @@ notifyOnDriverOfferIncoming estimateId quotes person = do
             entity = Notification.Entity Notification.Product estimateId.getId $ map makeQuoteAPIEntity quotes,
             body = body,
             title = title,
-            dynamicParams = (),
+            dynamicParams = EmptyDynamicParam,
             auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken
           }
       title = "New driver offers incoming!"
@@ -252,7 +258,7 @@ notifyOnExpiration searchReq = do
                 entity = Notification.Entity Notification.SearchRequest searchRequestId.getId (),
                 body = body,
                 title = title,
-                dynamicParams = (),
+                dynamicParams = EmptyDynamicParam,
                 auth = Notification.Auth p.id.getId p.deviceToken p.notificationToken
               }
           title = T.pack "Ride expired!"
@@ -286,7 +292,7 @@ notifyOnRegistration regToken person mbDeviceToken = do
             entity = Notification.Entity Notification.Merchant tokenId.getId (),
             body = body,
             title = title,
-            dynamicParams = (),
+            dynamicParams = EmptyDynamicParam,
             auth = Notification.Auth person.id.getId mbDeviceToken person.notificationToken
           }
       title = T.pack "Registration Completed!"
@@ -391,7 +397,7 @@ notifyOnBookingReallocated booking = do
           entity = Notification.Entity Notification.Product booking.id.getId (),
           body = body,
           title = title,
-          dynamicParams = (),
+          dynamicParams = EmptyDynamicParam,
           auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken
         }
     title = T.pack "Ride cancelled!"
@@ -425,7 +431,7 @@ notifyOnEstimatedReallocated booking estimateId = do
           entity = Notification.Entity Notification.Product estimateId.getId (),
           body = body,
           title = title,
-          dynamicParams = (),
+          dynamicParams = EmptyDynamicParam,
           auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken
         }
     title = T.pack "Ride cancelled!"
@@ -466,7 +472,7 @@ notifyOnQuoteReceived quote = do
           entity = Notification.Entity Notification.Product quote.requestId.getId (),
           body = body,
           title = title,
-          dynamicParams = (),
+          dynamicParams = EmptyDynamicParam,
           auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken
         }
 
@@ -490,7 +496,7 @@ notifyDriverOnTheWay personId = do
             entity = Notification.Entity Notification.Product personId.getId (),
             body = body,
             title = title,
-            dynamicParams = (),
+            dynamicParams = EmptyDynamicParam,
             auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken
           }
       title = T.pack "Driver On The Way!"
@@ -560,7 +566,7 @@ notifyOnNewMessage booking message = do
             entity = Notification.Entity Notification.Product person.id.getId (),
             body = body,
             title = title,
-            dynamicParams = (),
+            dynamicParams = EmptyDynamicParam,
             auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken
           }
       title = T.pack "Driver"

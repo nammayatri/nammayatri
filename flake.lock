@@ -2190,11 +2190,11 @@
         "systems": "systems_2"
       },
       "locked": {
-        "lastModified": 1684323166,
-        "narHash": "sha256-xEZbaO/QWxHJJnRZjdnKGnFdBZU07bQU0BLEA4A9e/I=",
+        "lastModified": 1684783162,
+        "narHash": "sha256-WondNFaeL0mfrGq+uOQi/2fWQu+5hp1NFKVzUKEgi+c=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "6e0ac729b73cc3e0454d28a92d3e779cff1aae11",
+        "rev": "a839c3798f367e7821d03f2fc0be2d718a215cd6",
         "type": "github"
       },
       "original": {
