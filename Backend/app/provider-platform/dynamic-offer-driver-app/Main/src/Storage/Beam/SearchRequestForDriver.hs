@@ -257,38 +257,6 @@ searchRequestForDriverToPSModifiers =
   M.fromList
     []
 
-defaultSearchRequestForDriver :: SearchRequestForDriver
-defaultSearchRequestForDriver =
-  SearchRequestForDriverT
-    { id = "",
-      transactionId = "",
-      searchRequestId = "",
-      startTime = defaultDate,
-      actualDistanceToPickup = "",
-      straightLineDistanceToPickup = "",
-      durationToPickup = "",
-      vehicleVariant = "",
-      batchNumber = 0,
-      baseFare = "",
-      lat = Nothing,
-      lon = Nothing,
-      searchRequestValidTill = defaultDate,
-      driverId = "",
-      status = "",
-      createdAt = defaultDate,
-      response = Nothing,
-      driverMinExtraFee = "",
-      driverMaxExtraFee = "",
-      rideRequestPopupDelayDuration = "",
-      isPartOfIntelligentPool = False,
-      cancellationRatio = Nothing,
-      acceptanceRatio = Nothing,
-      driverAvailableTime = Nothing,
-      parallelSearchRequestCount = Nothing,
-      driverSpeed = Nothing,
-      mode = Nothing
-    }
-
 instance Serialize SearchRequestForDriver where
   put = error "undefined"
   get = error "undefined"

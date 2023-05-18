@@ -220,29 +220,6 @@ farePolicyToPSModifiers =
   M.fromList
     []
 
-defaultFarePolicy :: FarePolicy
-defaultFarePolicy =
-  FarePolicyT
-    { id = "",
-      merchantId = "",
-      vehicleVariant = "",
-      baseDistanceFare = "",
-      baseDistanceMeters = "",
-      perExtraKmFare = "",
-      deadKmFare = "",
-      driverMinExtraFee = "",
-      driverMaxExtraFee = "",
-      nightShiftStart = Nothing,
-      nightShiftEnd = Nothing,
-      nightShiftRate = Nothing,
-      maxAllowedTripDistance = Nothing,
-      minAllowedTripDistance = Nothing,
-      waitingChargePerMin = Nothing,
-      waitingTimeEstimatedThreshold = Nothing,
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
-    }
-
 instance Serialize FarePolicy where
   put = error "undefined"
   get = error "undefined"

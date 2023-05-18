@@ -238,34 +238,6 @@ bookingToPSModifiers =
   M.fromList
     []
 
-defaultBooking :: Booking
-defaultBooking =
-  BookingT
-    { id = "",
-      transactionId = "",
-      quoteId = "",
-      status = "",
-      bookingType = "",
-      specialZoneOtpCode = Nothing,
-      providerId = "",
-      primaryExophone = "",
-      bapId = "",
-      bapUri = "",
-      startTime = defaultDate,
-      riderId = Nothing,
-      fromLocationId = "",
-      toLocationId = "",
-      vehicleVariant = "",
-      estimatedDistance = "",
-      maxEstimatedDistance = Nothing,
-      estimatedFare = "",
-      estimatedDuration = "",
-      fareParametersId = "",
-      riderName = Nothing,
-      createdAt = defaultDate,
-      updatedAt = defaultDate
-    }
-
 instance Serialize Booking where
   put = error "undefined"
   get = error "undefined"

@@ -141,21 +141,6 @@ rideDetailsToPSModifiers =
   M.fromList
     []
 
-defaultRideDetails :: RideDetails
-defaultRideDetails =
-  RideDetailsT
-    { id = "",
-      driverName = "",
-      driverNumberEncrypted = Nothing,
-      driverNumberHash = Nothing,
-      driverCountryCode = Nothing,
-      vehicleNumber = "",
-      vehicleColor = Nothing,
-      vehicleVariant = Nothing,
-      vehicleModel = Nothing,
-      vehicleClass = Nothing
-    }
-
 instance Serialize RideDetails where
   put = error "undefined"
   get = error "undefined"

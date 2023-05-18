@@ -102,14 +102,6 @@ issueCategoryToPSModifiers =
   M.fromList
     []
 
-defaultIssueCategory :: IssueCategory
-defaultIssueCategory =
-  IssueCategoryT
-    { id = "",
-      category = "",
-      logoUrl = ""
-    }
-
 instance Serialize IssueCategory where
   put = error "undefined"
   get = error "undefined"

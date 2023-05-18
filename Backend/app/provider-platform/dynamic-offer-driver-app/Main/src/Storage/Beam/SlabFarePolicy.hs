@@ -194,24 +194,6 @@ slabFarePolicyToPSModifiers =
   M.fromList
     []
 
-defaultSlabFarePolicy :: SlabFarePolicy
-defaultSlabFarePolicy =
-  SlabFarePolicyT
-    { id = "",
-      merchantId = "",
-      vehicleVariant = "",
-      nightShiftStart = Nothing,
-      nightShiftEnd = Nothing,
-      nightShiftRate = Nothing,
-      maxAllowedTripDistance = Nothing,
-      minAllowedTripDistance = Nothing,
-      serviceCharge = "",
-      fareSlabs = [""],
-      govtChargesPerc = Nothing,
-      createdAt = defaultDate,
-      updatedAt = defaultDate
-    }
-
 instance Serialize SlabFarePolicy where
   put = error "undefined"
   get = error "undefined"

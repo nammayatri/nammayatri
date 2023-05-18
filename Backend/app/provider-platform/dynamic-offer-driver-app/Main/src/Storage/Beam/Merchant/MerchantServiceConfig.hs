@@ -130,16 +130,6 @@ merchantServiceConfigToPSModifiers =
 instance IsString Domain.ServiceName where
   fromString = show
 
-defaultMerchantServiceConfig :: MerchantServiceConfig
-defaultMerchantServiceConfig =
-  MerchantServiceConfigT
-    { merchantId = "",
-      serviceName = "",
-      configJSON = "",
-      updatedAt = defaultDate,
-      createdAt = defaultDate
-    }
-
 instance Serialize MerchantServiceConfig where
   put = error "undefined"
   get = error "undefined"

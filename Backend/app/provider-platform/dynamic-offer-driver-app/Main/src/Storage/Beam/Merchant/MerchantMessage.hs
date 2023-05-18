@@ -121,16 +121,6 @@ merchantMessageToPSModifiers =
 instance IsString Domain.MessageKey where
   fromString = show
 
-defaultMerchantMessage :: MerchantMessage
-defaultMerchantMessage =
-  MerchantMessageT
-    { merchantId = "",
-      messageKey = "",
-      message = "",
-      updatedAt = defaultDate,
-      createdAt = defaultDate
-    }
-
 instance Serialize MerchantMessage where
   put = error "undefined"
   get = error "undefined"

@@ -123,18 +123,6 @@ driverLocationToPSModifiers =
   M.fromList
     []
 
-defaultDriverLocation :: DriverLocation
-defaultDriverLocation =
-  DriverLocationT
-    { driverId = "",
-      lat = "",
-      lon = "",
-      point = "",
-      coordinatesCalculatedAt = defaultUTCDate,
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
-    }
-
 instance Serialize DriverLocation where
   put = error "undefined"
   get = error "undefined"

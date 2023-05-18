@@ -190,26 +190,26 @@ instance IsString WhatsappService where
 instance IsString SmsService where
   fromString = show
 
-defaultMerchantServiceUsageConfig :: MerchantServiceUsageConfig
-defaultMerchantServiceUsageConfig =
-  MerchantServiceUsageConfigT
-    { merchantId = "",
-      initiateCall = "",
-      getDistances = "",
-      getEstimatedPickupDistances = "",
-      getRoutes = "",
-      getPickupRoutes = "",
-      getTripRoutes = "",
-      snapToRoad = "",
-      getPlaceName = "",
-      getPlaceDetails = "",
-      autoComplete = "",
-      smsProvidersPriorityList = [""],
-      whatsappProvidersPriorityList = [""],
-      verificationService = "",
-      updatedAt = defaultDate,
-      createdAt = defaultDate
-    }
+-- defaultMerchantServiceUsageConfig :: MerchantServiceUsageConfig
+-- defaultMerchantServiceUsageConfig =
+--   MerchantServiceUsageConfigT
+--     { merchantId = "",
+--       initiateCall = "",
+--       getDistances = "",
+--       getEstimatedPickupDistances = "",
+--       getRoutes = "",
+--       getPickupRoutes = "",
+--       getTripRoutes = "",
+--       snapToRoad = "",
+--       getPlaceName = "",
+--       getPlaceDetails = "",
+--       autoComplete = "",
+--       smsProvidersPriorityList = [""],
+--       whatsappProvidersPriorityList = [""],
+--       verificationService = "",
+--       updatedAt = defaultDate,
+--       createdAt = defaultDate
+--     }
 
 instance Serialize MerchantServiceUsageConfig where
   put = error "undefined"

@@ -127,18 +127,6 @@ messageTranslationToPSModifiers =
 instance IsString Language where
   fromString = show
 
-defaultMessageTranslation :: MessageTranslation
-defaultMessageTranslation =
-  MessageTranslationT
-    { messageId = "",
-      language = "",
-      title = "",
-      description = "",
-      shortDescription = "",
-      label = Nothing,
-      createdAt = defaultDate
-    }
-
 instance Serialize MessageTranslation where
   put = error "undefined"
   get = error "undefined"

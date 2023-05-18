@@ -124,25 +124,6 @@ searchReqLocationToPSModifiers =
   M.fromList
     []
 
-defaultSearchReqLocation :: SearchReqLocation
-defaultSearchReqLocation =
-  SearchReqLocationT
-    { id = "",
-      lat = 0.0,
-      lon = 0.0,
-      street = Nothing,
-      door = Nothing,
-      city = Nothing,
-      state = Nothing,
-      country = Nothing,
-      building = Nothing,
-      full_address = Nothing,
-      areaCode = Nothing,
-      area = Nothing,
-      createdAt = defaultDate,
-      updatedAt = defaultDate
-    }
-
 instance Serialize SearchReqLocation where
   put = error "undefined"
   get = error "undefined"

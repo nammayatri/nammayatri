@@ -149,19 +149,6 @@ instance IsString Domain.DocumentType where
 instance IsString Domain.VehicleClassCheckType where
   fromString = show
 
-defaultOnboardingDocumentConfig :: OnboardingDocumentConfig
-defaultOnboardingDocumentConfig =
-  OnboardingDocumentConfigT
-    { merchantId = "",
-      documentType = "",
-      checkExtraction = False,
-      checkExpiry = False,
-      validVehicleClasses = [""],
-      vehicleClassCheckType = "",
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
-    }
-
 instance Serialize OnboardingDocumentConfig where
   put = error "undefined"
   get = error "undefined"

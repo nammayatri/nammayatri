@@ -167,28 +167,6 @@ instance IsString SWC.SlidingWindowOptions where
 instance IsString Minutes where
   fromString = show
 
-defaultDriverIntelligentPoolConfig :: DriverIntelligentPoolConfig
-defaultDriverIntelligentPoolConfig =
-  DriverIntelligentPoolConfigT
-    { merchantId = "",
-      availabilityTimeWeightage = 0,
-      availabilityTimeWindowOption = "",
-      acceptanceRatioWeightage = 0,
-      acceptanceRatioWindowOption = "",
-      cancellationRatioWeightage = 0,
-      cancellationRatioWindowOption = "",
-      minQuotesToQualifyForIntelligentPool = 0,
-      minQuotesToQualifyForIntelligentPoolWindowOption = "",
-      intelligentPoolPercentage = Nothing,
-      speedNormalizer = 0.0,
-      driverSpeedWeightage = 0,
-      locationUpdateSampleTime = "",
-      minLocationUpdates = 0,
-      defaultDriverSpeed = 0.0,
-      createdAt = defaultDate,
-      updatedAt = defaultDate
-    }
-
 instance Serialize DriverIntelligentPoolConfig where
   put = error "undefined"
   get = error "undefined"

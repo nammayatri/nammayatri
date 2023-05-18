@@ -154,25 +154,6 @@ searchRequestSpecialZoneToPSModifiers =
   M.fromList
     []
 
-defaultSearchRequestSpecialZone :: SearchRequestSpecialZone
-defaultSearchRequestSpecialZone =
-  SearchRequestSpecialZoneT
-    { id = "",
-      transactionId = "",
-      messageId = "",
-      startTime = defaultDate,
-      validTill = defaultDate,
-      providerId = "",
-      fromLocationId = "",
-      toLocationId = "",
-      bapId = "",
-      bapUri = "",
-      estimatedDistance = "",
-      estimatedDuration = "",
-      createdAt = defaultDate,
-      updatedAt = defaultDate
-    }
-
 instance Serialize SearchRequestSpecialZone where
   put = error "undefined"
   get = error "undefined"

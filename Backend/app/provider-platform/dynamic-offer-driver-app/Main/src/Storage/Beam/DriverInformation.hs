@@ -140,26 +140,6 @@ driverInformationToPSModifiers =
   M.fromList
     []
 
-defaultDriverInformation :: DriverInformation
-defaultDriverInformation =
-  DriverInformationT
-    { driverId = "",
-      adminId = Nothing,
-      active = False,
-      onRide = False,
-      enabled = False,
-      blocked = False,
-      verified = False,
-      lastEnabledOn = Nothing,
-      referralCode = Nothing,
-      canDowngradeToSedan = False,
-      canDowngradeToHatchback = False,
-      canDowngradeToTaxi = False,
-      mode = Nothing,
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
-    }
-
 instance Serialize DriverInformation where
   put = error "undefined"
   get = error "undefined"

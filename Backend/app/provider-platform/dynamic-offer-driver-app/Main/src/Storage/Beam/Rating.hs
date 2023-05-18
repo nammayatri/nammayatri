@@ -112,18 +112,6 @@ ratingToPSModifiers =
   M.fromList
     []
 
--- defaultRating :: Rating
--- defaultRating =
---   RatingT
---     { id = "",
---       rideId = "",
---       driverId = "",
---       ratingValue = 0,
---       feedbackDetails = Nothing,
---       createdAt = defaultDate,
---       updatedAt = defaultDate
---     }
-
 instance Serialize Rating where
   put = error "undefined"
   get = error "undefined"

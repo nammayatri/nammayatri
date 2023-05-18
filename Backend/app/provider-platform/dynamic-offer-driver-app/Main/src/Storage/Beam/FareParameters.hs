@@ -164,24 +164,6 @@ fareParametersToPSModifiers =
   M.fromList
     []
 
-defaultFareParameters :: FareParameters
-defaultFareParameters =
-  FareParametersT
-    { id = "",
-      baseFare = "",
-      deadKmFare = Nothing,
-      extraKmFare = Nothing,
-      driverSelectedFare = Nothing,
-      customerExtraFee = Nothing,
-      nightShiftRate = Nothing,
-      nightCoefIncluded = False,
-      waitingChargePerMin = Nothing,
-      waitingOrPickupCharges = Nothing,
-      serviceCharge = Nothing,
-      farePolicyType = "",
-      govtChargesPerc = Nothing
-    }
-
 instance Serialize FareParameters where
   put = error "undefined"
   get = error "undefined"

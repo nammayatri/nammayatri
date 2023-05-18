@@ -108,13 +108,4 @@ instance Serialize CancellationReason where
   put = error "undefined"
   get = error "undefined"
 
-defaultCancellationReason :: CancellationReason
-defaultCancellationReason =
-  CancellationReasonT
-    { reasonCode = "",
-      description = "",
-      enabled = False,
-      priority = 0
-    }
-
 $(enableKVPG ''CancellationReasonT ['reasonCode] [])

@@ -183,31 +183,6 @@ instance IsString PoolSortingType where
 instance IsString Seconds where
   fromString = show
 
-defaultDriverPoolConfig :: DriverPoolConfig
-defaultDriverPoolConfig =
-  DriverPoolConfigT
-    { merchantId = "",
-      minRadiusOfSearch = "",
-      maxRadiusOfSearch = "",
-      radiusStepSize = "",
-      driverPositionInfoExpiry = Nothing,
-      actualDistanceThreshold = Nothing,
-      maxDriverQuotesRequired = 0,
-      maxParallelSearchRequests = 0,
-      driverQuoteLimit = 0,
-      driverRequestCountLimit = 0,
-      driverBatchSize = 0,
-      maxNumberOfBatches = 0,
-      poolSortingType = "",
-      singleBatchProcessTime = "",
-      tripDistance = "",
-      radiusShrinkValueForDriversOnRide = 0,
-      driverToDestinationDistanceThreshold = "",
-      driverToDestinationDuration = "",
-      createdAt = defaultDate,
-      updatedAt = defaultDate
-    }
-
 instance Serialize DriverPoolConfig where
   put = error "undefined"
   get = error "undefined"

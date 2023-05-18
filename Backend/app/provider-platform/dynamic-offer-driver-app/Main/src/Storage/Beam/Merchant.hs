@@ -193,34 +193,6 @@ merchantToPSModifiers =
   M.fromList
     []
 
-defaultMerchant :: Merchant
-defaultMerchant =
-  MerchantT
-    { id = "",
-      name = "",
-      description = Nothing,
-      subscriberId = "",
-      uniqueKeyId = "",
-      shortId = "",
-      mobileNumber = Nothing,
-      mobileCountryCode = Nothing,
-      gstin = Nothing,
-      fromTime = Nothing,
-      toTime = Nothing,
-      headCount = Nothing,
-      status = "",
-      city = "",
-      verified = False,
-      enabled = False,
-      internalApiKey = "",
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate,
-      originRestriction = "",
-      destinationRestriction = "",
-      farePolicyType = "",
-      info = Nothing
-    }
-
 instance Serialize Merchant where
   put = error "undefined"
   get = error "undefined"

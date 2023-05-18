@@ -111,18 +111,6 @@ exophoneToPSModifiers =
   M.fromList
     []
 
-defaultExophone :: Exophone
-defaultExophone =
-  ExophoneT
-    { id = "",
-      merchantId = "",
-      primaryPhone = "",
-      backupPhone = "",
-      isPrimaryDown = False,
-      createdAt = defaultDate,
-      updatedAt = defaultDate
-    }
-
 instance Serialize Exophone where
   put = error "undefined"
   get = error "undefined"

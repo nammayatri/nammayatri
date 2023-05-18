@@ -180,25 +180,6 @@ registrationTokenToPSModifiers =
   M.fromList
     []
 
-defaultRegistrationToken :: RegistrationToken
-defaultRegistrationToken =
-  RegistrationTokenT
-    { id = "",
-      token = "",
-      attempts = 0,
-      authMedium = "",
-      authType = "",
-      authValueHash = "",
-      verified = False,
-      authExpiry = 10,
-      tokenExpiry = 10,
-      entityId = "",
-      entityType = "",
-      createdAt = defaultDate,
-      updatedAt = defaultDate,
-      info = Nothing
-    }
-
 instance Serialize RegistrationToken where
   put = error "undefined"
   get = error "undefined"

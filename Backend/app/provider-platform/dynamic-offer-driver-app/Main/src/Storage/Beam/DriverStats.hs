@@ -102,13 +102,6 @@ driverStatsToPSModifiers =
   M.fromList
     []
 
-defaultDriverStats :: DriverStats
-defaultDriverStats =
-  DriverStatsT
-    { driverId = "",
-      idleSince = defaultUTCDate
-    }
-
 instance Serialize DriverStats where
   put = error "undefined"
   get = error "undefined"

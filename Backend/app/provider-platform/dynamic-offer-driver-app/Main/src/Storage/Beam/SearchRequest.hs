@@ -208,32 +208,6 @@ searchRequestToPSModifiers =
   M.fromList
     []
 
-defaultSearchRequest :: SearchRequest
-defaultSearchRequest =
-  SearchRequestT
-    { id = "",
-      transactionId = "",
-      messageId = "",
-      estimateId = "",
-      startTime = defaultDate,
-      validTill = defaultDate,
-      providerId = "",
-      fromLocationId = "",
-      toLocationId = "",
-      bapId = "",
-      bapUri = "",
-      estimatedDistance = "",
-      estimatedDuration = "",
-      customerExtraFee = Nothing,
-      device = Nothing,
-      status = "",
-      vehicleVariant = "",
-      searchRepeatCounter = 0,
-      autoAssignEnabled = False,
-      createdAt = defaultDate,
-      updatedAt = defaultDate
-    }
-
 instance Serialize SearchRequest where
   put = error "undefined"
   get = error "undefined"
