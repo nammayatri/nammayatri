@@ -22,7 +22,7 @@ ALTER TABLE atlas_driver_offer_bpp.fare_parameters ALTER COLUMN fare_parameters_
 
 WITH ProgressiveFareParameters AS (
   SELECT T1.id,
-    T1.dead_km_fare,
+    COALESCE (T1.dead_km_fare, 0),
     T1.extra_km_fare
   FROM atlas_driver_offer_bpp.fare_parameters AS T1
 )
@@ -30,7 +30,7 @@ INSERT INTO atlas_driver_offer_bpp.fare_parameters_progressive_details (
   fare_parameters_id,
   dead_km_fare,
   extra_km_fare)
-  (SELECT * FROM ProgressiveFareParameters);
+(SELECT * FROM ProgressiveFareParameters);
 
 ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN govt_charges integer;
 ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN waiting_charge integer;
@@ -111,8 +111,12 @@ ALTER TABLE atlas_driver_offer_bpp.fare_policy ALTER COLUMN base_distance_fare S
 ALTER TABLE atlas_driver_offer_bpp.fare_policy ALTER COLUMN per_extra_km_fare SET NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.fare_policy ALTER COLUMN dead_km_fare SET NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.fare_policy ALTER COLUMN waiting_charge_per_min SET NOT NULL;
+-- ***** RUN THE BELOW QUERY AFTER VERIFYING THE CONFIG IN PROD ONCE -----------------
+UPDATE atlas_driver_offer_bpp.fare_policy SET night_shift_rate=1 where night_shift_rate is null;
+--------------------------------------------------------------------------------------
 ALTER TABLE atlas_driver_offer_bpp.fare_policy ALTER COLUMN night_shift_rate SET NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.fare_policy ALTER COLUMN waiting_time_estimated_threshold SET NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters ALTER COLUMN fare_parameters_type drop NOT NULL;
 
 -- INSERT INTO atlas_driver_offer_bpp.fare_policy (
 --   T1.id,
@@ -140,6 +144,12 @@ ALTER TABLE atlas_driver_offer_bpp.fare_policy ALTER COLUMN waiting_time_estimat
 -- Slabs are saved using show/read. It's rather difficult to migrate them
 
 -------------------------------------------------------------------------------------------
+-------------------------------AFTER RELEASE-------------------------------------------------------
+-------------------------------------------------------------------------------------------
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters ALTER COLUMN fare_parameters_type SET NOT NULL;
+
+
+-------------------------------------------------------------------------------------------
 -------------------------------DROPS-------------------------------------------------------
 -------------------------------------------------------------------------------------------
 
@@ -162,5 +172,6 @@ ALTER TABLE atlas_driver_offer_bpp.fare_policy DROP COLUMN dead_km_fare;
 ALTER TABLE atlas_driver_offer_bpp.fare_policy DROP COLUMN waiting_charge_per_min;
 ALTER TABLE atlas_driver_offer_bpp.fare_policy DROP COLUMN night_shift_rate;
 ALTER TABLE atlas_driver_offer_bpp.fare_policy DROP COLUMN waiting_time_estimated_threshold;
+
 
 DROP TABLE atlas_driver_offer_bpp.slab_fare_policy;
