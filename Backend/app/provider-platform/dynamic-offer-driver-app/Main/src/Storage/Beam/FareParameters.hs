@@ -63,6 +63,9 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be Centesimal where
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Centesimal
 
+instance IsString Centesimal where
+  fromString = show
+
 instance FromBackendRow Postgres Centesimal
 
 instance FromField Money where
