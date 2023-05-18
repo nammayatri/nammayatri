@@ -26,16 +26,17 @@ import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.Estimate as BeamE
 import Storage.Tabular.Estimate ()
+import qualified Storage.Tabular.VechileNew as VN
 
 create :: Estimate -> SqlDB ()
 create = Esq.create
 
-create' :: L.MonadFlow m => Domain.Estimate -> m (MeshResult ())
-create' estimate = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
-  case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainEstimateToBeam estimate)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+-- create' :: L.MonadFlow m => Domain.Estimate -> m (MeshResult ())
+-- create' estimate = do
+--   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   case dbConf of
+--     Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainEstimateToBeam estimate)
+--     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 createMany :: [Estimate] -> SqlDB ()
 createMany = Esq.createMany
