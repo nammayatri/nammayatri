@@ -14,6 +14,7 @@
 
 module Storage.Queries.DriverStats where
 
+import Data.Time.Clock (UTCTime (..), utctDay)
 import Domain.Types.DriverStats
 import Domain.Types.Person (Driver)
 import Kernel.Prelude
@@ -71,10 +72,15 @@ incrementTotalRidesAndTotalDist driverId rideDist = do
       ]
     where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
 
-getDriversSortedOrder :: Transactionable m => Maybe Integer -> m [DriverStats]
-getDriversSortedOrder mbLimitVal =
+getDriversSortedOrder :: (Transactionable m, MonadTime m) => Maybe Integer -> m [DriverStats]
+getDriversSortedOrder mbLimitVal = do
+  now <- getCurrentTime
+  let todayMidnight = UTCTime (utctDay now) 0
+  let difference = diffUTCTime now todayMidnight
+  let timeDifference = addUTCTime (- difference) now
   Esq.findAll $ do
     driverStats <- from $ table @DriverStatsT
+    where_ (driverStats ^. DriverStatsIdleSince >=. val timeDifference)
     orderBy [desc (driverStats ^. DriverStatsTotalRides), desc (driverStats ^. DriverStatsTotalDistance)]
     limit $ maybe 10 fromIntegral mbLimitVal
     return driverStats
