@@ -28,7 +28,7 @@ const startServer = () => {
         startServer.promise = new Promise((resolve, reject) => {
             let server = new WebpackDevServer(compiler, {
                 ...webpackConfig.devServer,
-                progress: true
+                progress: false
             });
             server.listen(port, host, (err) => {
                 if(err) {
