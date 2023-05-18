@@ -23,7 +23,7 @@ import Effect (Effect)
 import Engineering.Helpers.Commons (screenWidth, safeMarginBottom, safeMarginTop, os, isPreviousVersion)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getMerchant, Merchant(..))
+import Merchant.Utils (getMerchant, Merchant(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Merchant.Utils (getValueFromConfig)
@@ -176,28 +176,24 @@ profileView state push =
           ][ textView
               ([ height WRAP_CONTENT
               , text if ((getValueToLocalStore USER_NAME) == "__failed" || (getValueToLocalStore USER_NAME) == "") then (getString USER) else (getValueToLocalStore USER_NAME)
-              , textSize FontSize.a_18
               , color state.appConfig.profileName
-              , fontStyle $ FontStyle.medium LanguageStyle
               , margin (MarginRight 5)
               , ellipsize true
               , maxLines 1
-              ] <> (if os == "IOS" then [ width (V (screenWidth unit /2))]else [weight 1.0]))
+              ] <> (if os == "IOS" then [ width (V (screenWidth unit /2))]else [weight 1.0]) <> FontStyle.body13 TypoGraphy)
             , imageView
-              [ width $ V 12
-              , height (V 12)
+              [ width $ V 22
+              , height (V 22)
               , color state.appConfig.profileName
-              , imageWithFallback $ "ny_ic_chevron_right_white," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right_white.png"
+              , imageWithFallback $ "ny_ic_chevron_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
               ]
           ]
-        , textView
+        , textView $
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , text ("+91 " <> (getValueToLocalStore MOBILE_NUMBER))
-          , textSize FontSize.a_14
           , color state.appConfig.profileName
-          , fontStyle $ FontStyle.regular LanguageStyle
-          ]
+          ] <> FontStyle.paragraphText TypoGraphy
         , linearLayout[
           height WRAP_CONTENT
         , width WRAP_CONTENT
@@ -207,14 +203,12 @@ profileView state push =
         , visibility case profileCompleteValue state of
             "100" -> GONE
             _ -> VISIBLE
-        ][textView
+        ][textView $
           [ text $ (getString PROFILE_COMPLETION) <> ":"
-          , textSize FontSize.a_12
-          , fontStyle $ FontStyle.regular LanguageStyle
           , width WRAP_CONTENT
           , height WRAP_CONTENT
           , color Color.yellow900
-          ]
+          ] <> FontStyle.body3 TypoGraphy
         , imageView
           [ imageWithFallback case profileCompleteValue state of
               "50" -> "ic_50_percent," <> (getAssetStoreLink FunctionCall) <> "ic_50_percent.png"
@@ -224,15 +218,12 @@ profileView state push =
           , width $ V 10
           , margin $ Margin 4 4 4 2
           ]
-        , textView
-          [ textSize FontSize.a_12
-          , fontStyle $ FontStyle.regular LanguageStyle
-          , width WRAP_CONTENT
+        , textView $
+          [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , color Color.yellow900
           , text $ (profileCompleteValue state) <> " %"
-
-          ]
+          ] <> FontStyle.body3 TypoGraphy
         ]
       ]]
 
@@ -260,15 +251,13 @@ settingsMenuView item push  =
       , height ( V 25 )
       , imageWithFallback item.imageUrl
       ]
-    , textView
+    , textView $
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , text item.text
-      , textSize FontSize.a_18
       , color Color.charcoalGrey
-      , fontStyle $ FontStyle.medium LanguageStyle
       , padding (PaddingLeft 20)
-      ]
+      ] <> FontStyle.body13 TypoGraphy
     , imageView
       [ width ( V 8 )
       , height ( V 8 )

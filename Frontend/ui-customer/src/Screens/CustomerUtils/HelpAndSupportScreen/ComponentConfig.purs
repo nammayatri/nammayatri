@@ -46,11 +46,10 @@ sourceToDestinationConfig state = let
       }
     , sourceTextConfig {
         text = state.data.source
-      , textSize = FontSize.a_13
       , padding = (Padding 0 0 0 0)
       , margin = (Margin 7 0 15 0)
       , color = Color.darkDescriptionText
-      , fontStyle = FontStyle.medium LanguageStyle
+      , textStyle = FontStyle.Body1
       , ellipsize = true
       , maxLines = 1
       }
@@ -60,11 +59,10 @@ sourceToDestinationConfig state = let
       }
     , destinationTextConfig {
         text = state.data.destination
-      , textSize = FontSize.a_13
       , padding = (Padding 0 0 0 0)
       , margin = (Margin 7 0 15 0)
       , color = Color.darkDescriptionText
-      , fontStyle = FontStyle.medium LanguageStyle
+      , textStyle = FontStyle.Body1
       , maxLines = 1
       , ellipsize = true
       }
@@ -85,23 +83,17 @@ apiErrorModalConfig state = let
         text = (getString ERROR_404)
       , margin = (MarginBottom 7)  
       , color = Color.black800
-      , textSize = FontSize.a_18
-      , fontStyle = FontStyle.bold LanguageStyle
       }
     , errorDescriptionConfig {
         text = (getString PROBLEM_AT_OUR_END)
       , color = Color.black700
-      , textSize = FontSize.a_14
       , margin = (Margin 16 0 16 0)
-      , fontStyle =  FontStyle.regular LanguageStyle
       }
     , buttonConfig {
         text = (getString NOTIFY_ME)
       , margin = (Margin 16 0 16 16)
       , background = state.data.config.primaryBackground
       , color = state.data.config.primaryTextColor
-      , fontStyle = FontStyle.medium LanguageStyle
-      , textSize = FontSize.a_16
       }
     }
   in errorModalConfig' 
@@ -120,14 +112,12 @@ callConfirmationPopup state = let
         },
       option1 {
         text = (getString GO_BACK_)
-      , fontSize = FontSize.a_16
       , strokeColor = state.data.config.primaryBackground
       , background = state.data.config.primaryTextColor
       , color = state.data.config.primaryBackground
       },
       option2 {
         text = (getString CALL)
-      , fontSize = FontSize.a_16
       , strokeColor = state.data.config.primaryBackground
       , background = state.data.config.primaryBackground
       , color = state.data.config.primaryTextColor
@@ -149,7 +139,6 @@ genericHeaderConfig state = let
     , textConfig {
         text = (getString HELP_AND_SUPPORT)
       , color = Color.darkDescriptionText
-      , fontStyle = FontStyle.bold LanguageStyle
       }
     , suffixImageConfig {
         visibility = GONE

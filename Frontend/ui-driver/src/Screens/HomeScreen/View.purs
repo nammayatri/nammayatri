@@ -38,7 +38,7 @@ import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils as HU
-import MerchantConfigs.Utils as MU
+import Merchant.Utils as MU
 import JBridge as JB
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
@@ -67,7 +67,7 @@ import Services.APITypes (Status(..))
 import Components.BottomNavBar.Controller (navData)
 import Screens.HomeScreen.ComponentConfig
 import Screens as ScreenNames
-import MerchantConfigs.Utils (getValueFromMerchant)
+import Merchant.Utils (getValueFromMerchant)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
 
@@ -279,7 +279,7 @@ otpButtonView state push =
     , gravity CENTER_VERTICAL
     , onClick push $ const $ ZoneOtpAction
     ][ imageView 
-        [ imageWithFallback $ "ic_mode_standby," <> (getAssetStoreLink FunctionCall) <> "/user/images/ic_mode_standby.png"
+        [ imageWithFallback $ "ic_mode_standby," <> (getAssetStoreLink FunctionCall) <> "ic_mode_standby.png"
         , width $ V 20
         , height $ V 20
         ]
@@ -291,7 +291,6 @@ otpButtonView state push =
         , padding $ PaddingLeft 8
         , margin $ MarginBottom 2
         , text $ getString OTP_
-        , textSize FontSize.a_14
         ] <> FontStyle.subHeading2 TypoGraphy
     ]
 
@@ -378,15 +377,14 @@ offlineView push state =
             , background Color.white900
             , PP.cornerRadii $ PTD.Corners 40.0 true true false false
             ][
-              textView
+              textView $
               [
                 height WRAP_CONTENT
               , width MATCH_PARENT
               , gravity CENTER_HORIZONTAL
               , margin $ MarginBottom 10
               , text $ getString GO_ONLINE_PROMPT
-              , textSize FontSize.a_14
-              ]
+              ] <> FontStyle.paragraphText TypoGraphy
             ]
             ]
          , linearLayout
@@ -447,7 +445,7 @@ driverDetail push state =
       ][ imageView
          [ width $ V 42
          , height $ V 42
-         , imageWithFallback $ "ny_ic_avatar," <> (getAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_avatar.png"
+         , imageWithFallback $ "ny_ic_avatar," <> (getAssetStoreLink FunctionCall) <> "ny_ic_avatar.png"
          ]
       ]
     , linearLayout
@@ -555,9 +553,7 @@ driverStatusPill pillConfig push state index =
                     ACTIVE -> pillConfig.textColor
                     DEMO_ -> Color.black900
                     DEFAULT -> Color.greyTextColor
-          , fontStyle $ FontStyle.medium LanguageStyle
-          , textSize FontSize.a_14
-        ]
+        ] <> FontStyle.body1 TypoGraphy
       )
       ]
 
@@ -633,15 +629,13 @@ clickHereDemoLayout state push =
   , stroke $ "1,"<> Color.yellow900
   , margin $ MarginLeft 10
   , cornerRadius 12.0
-  ][ textView
+  ][ textView $
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , text $ getString CLICK_TO_ACCESS_YOUR_ACCOUNT
       , color Color.white900
-      , textSize FontSize.a_18
-      , fontStyle $ FontStyle.medium TypoGraphy
       , padding $ Padding 20 12 20 15
-      ]
+      ] <> FontStyle.body13 TypoGraphy
   ]
 
 viewRecenterAndSupport :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
@@ -681,7 +675,7 @@ driverStatus push state =
      ][ imageView
         [ width $ V 50
         , height $ V 30
-        , imageWithFallback if (getValueToLocalStore IS_DEMOMODE_ENABLED == "true") then "ny_ic_demo_mode_switch," <> (getAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_demo_mode_switch.png" else if state.props.statusOnline then "ny_ic_toggle_on," <> (getAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_toggle_on.png" else "ny_ic_toggle_off," <> (getAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_toggle_off.png"
+        , imageWithFallback if (getValueToLocalStore IS_DEMOMODE_ENABLED == "true") then "ny_ic_demo_mode_switch," <> (getAssetStoreLink FunctionCall) <> "ny_ic_demo_mode_switch.png" else if state.props.statusOnline then "ny_ic_toggle_on," <> (getAssetStoreLink FunctionCall) <> "ny_ic_toggle_on.png" else "ny_ic_toggle_off," <> (getAssetStoreLink FunctionCall) <> "ny_ic_toggle_off.png"
         , margin (MarginTop 10)
         , onClick push (const (ChangeStatus if state.props.statusOnline then false else true))
         , clickable if state.props.rideActionModal then false else true
@@ -730,7 +724,7 @@ showOfflineStatus push state =
           ][ imageView
              [ width (V 65)
              , height (V 65)
-             , imageWithFallback $ "ny_ic_offline_status," <> (getAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_offline_status.png"
+             , imageWithFallback $ "ny_ic_offline_status," <> (getAssetStoreLink FunctionCall) <> "ny_ic_offline_status.png"
              ]
           ]
         , linearLayout
@@ -793,32 +787,31 @@ goOfflineModal push state =
           ][ imageView
              [ width (V 55)
              , height (V 55)
-             , imageWithFallback $ "ic_vehicle_side_active," <> (getAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_auto_side_active.png"
+             , imageWithFallback $ "ic_vehicle_side_active," <> (getAssetStoreLink FunctionCall) <> "ny_ic_auto_side_active.png"
              ]
            , imageView
              [ width (V 35)
              , height (V 35)
              , margin (Margin 35 0 35 0)
-             , imageWithFallback $ "ny_ic_chevrons_right," <> (getAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_chevrons_right.png"
+             , imageWithFallback $ "ny_ic_chevrons_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevrons_right.png"
              ]
            , imageView
              [ width (V 55)
              , height (V 55)
-             , imageWithFallback $ "ic_vehicle_side_inactive," <> (getAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_auto_side_inactive.png"
+             , imageWithFallback $ "ic_vehicle_side_inactive," <> (getAssetStoreLink FunctionCall) <> "ny_ic_auto_side_inactive.png"
              ]
           ]
         , linearLayout
           [ width MATCH_PARENT
           , height WRAP_CONTENT
           , margin (Margin ((EHC.screenWidth unit)/5) 0 ((EHC.screenWidth unit)/5) 0)
-          ][ textView
+          ][ textView $
              [ width MATCH_PARENT
              , height WRAP_CONTENT
              , text (getString GOING_OFFLINE_WILL_NOT_GET_YOU_ANY_RIDE)
-             , textSize FontSize.a_19
              , color Color.black
              , gravity CENTER
-             ]
+             ] <> FontStyle.body14 TypoGraphy
           ]
         , linearLayout
           [ width MATCH_PARENT
@@ -900,17 +893,16 @@ addAlternateNumber push state =
   ][  imageView
       [ width $ V 20
       , height $ V 15
-      , imageWithFallback $ "ic_call_plus," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ic_call_plus.png"
+      , imageWithFallback $ "ic_call_plus," <> (getCommonAssetStoreLink FunctionCall) <> "ic_call_plus.png"
       , margin (MarginRight 5)
       ] 
-    , textView
+    , textView $
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , gravity CENTER
       , text (getString ADD_ALTERNATE_NUMBER)       
       , color Color.black900
-      , textSize FontSize.a_14
-      ]
+      ] <> FontStyle.paragraphText TypoGraphy
    ]
 
 locationLastUpdatedTextAndTimeView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -919,21 +911,17 @@ locationLastUpdatedTextAndTimeView push state =
   [ height MATCH_PARENT
     , width WRAP_CONTENT
   ][
-    textView
+    textView $
     [ text $ (getString UPDATED_AT) <> ": "
-    , textSize FontSize.a_14
     , lineHeight "15"
     , color Color.brownishGrey
     , gravity LEFT
-    , fontStyle $ FontStyle.regular LanguageStyle
-    ]
-    , textView
+    ] <> FontStyle.paragraphText TypoGraphy
+    , textView $
     [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , text if state.data.locationLastUpdatedTime == "" then (if (getValueToLocalStore LOCATION_UPDATE_TIME) == "__failed" then getString(NO_LOCATION_UPDATE) else (getValueToLocalStore LOCATION_UPDATE_TIME) ) else state.data.locationLastUpdatedTime
-      , textSize FontSize.a_14
-      , fontStyle $ FontStyle.bold LanguageStyle
-    ]
+    ] <> FontStyle.body4 TypoGraphy
   ]
 
 updateButtonIconAndText :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -954,18 +942,16 @@ updateButtonIconAndText push state =
     -- [ width $ V 20
     -- , height $ V 20
     -- , margin $ MarginRight 5
-    -- , imageWithFallback $ "ny_ic_refresh," <> (getAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_refresh.png"
+    -- , imageWithFallback $ "ny_ic_refresh," <> (getAssetStoreLink FunctionCall) <> "ny_ic_refresh.png"
     -- , gravity RIGHT
     -- ]
-    textView
+    textView $
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
     , text (getString UPDATE)
     , color Color.blueTextColor
-    , textSize FontSize.a_14
     , gravity RIGHT
-    , fontStyle $ FontStyle.bold LanguageStyle
-    ]
+    ] <> FontStyle.body4 TypoGraphy
   ]
 
 statsModel :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w

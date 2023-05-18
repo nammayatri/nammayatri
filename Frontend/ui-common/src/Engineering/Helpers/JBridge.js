@@ -1326,3 +1326,13 @@ export const goBackPrevWebPage = function (id) {
     console.log("goBackPrevWebPage error " + err);
   }
 }
+
+export const emitJOSEvent = function (mapp,eventType,event) {
+  JOS.emitEvent(mapp)(eventType)(JSON.stringify({ event: event}))()()
+}
+export const locationPermissionCallBack = function (cb,action) {
+  var locationRequestCallBack = function (){
+    cb(action)();
+  }
+  window.locationRequestCallBack = locationRequestCallBack;
+}

@@ -60,22 +60,20 @@ view push config =
         , gravity LEFT
         , stroke ("1," <> Color.borderColorLight)
         ]
-        [ editText
+        [ editText $ 
             [ height MATCH_PARENT
             , width WRAP_CONTENT
             , weight 1.0
-            , textSize FontSize.a_16
             , padding (Padding 14 10 0 10)
             , color Color.black800
             , gravity LEFT
             , id (getNewIDWithTag "contactEditText")
             , background Color.white900
-            , fontStyle $ FontStyle.semiBold LanguageStyle
             , text ""
             , hint $ getString SEARCH_CONTACTS
             , pattern "[^\n]*,255"
             , onChange push $ ContactTextChanged
-            ]
+            ] <> FontStyle.subHeading1 LanguageStyle
         , imageView
             [ height $ V 17
             , width $ V 17
@@ -124,9 +122,7 @@ genericHeaderConfig state =
         , padding = (Padding 0 5 0 5)
         , textConfig
           { text = ((show (state.count)) <> "/" <> show (3 - (length state.contactList)) <> " " <> (getString CONTACTS_SELECTED))
-          , textSize = FontSize.a_18
           , color = Color.darkDescriptionText
-          , fontStyle = FontStyle.semiBold LanguageStyle
           }
         , suffixImageConfig
           { visibility = GONE
@@ -186,11 +182,10 @@ showEmergencyContactData push config =
                   , background Color.blue600
                   , visibility if (((filter (\contact -> DS.take 1 contact.name == letter) config.contactsData) /= []) && (config.editedText == "")) then VISIBLE else GONE
                   ]
-                  [ textView
+                  [ textView $
                       [ text (letter)
-                      , textSize FontSize.a_12
                       , color Color.black700
-                      ]
+                      ] <> FontStyle.body3 TypoGraphy
                   ]
               , linearLayout
                   [ height MATCH_PARENT
@@ -229,21 +224,16 @@ showEmergencyContactData push config =
                                     , gravity CENTER_VERTICAL
                                     , weight 1.0
                                     ]
-                                    [ textView
+                                    [ textView (
                                         [ text (item.name)
                                         , color Color.black900
-                                        , textSize FontSize.a_14
                                         , margin (Margin 0 0 4 0)
-                                        , lineHeight "16"
-                                        , fontStyle $ FontStyle.medium LanguageStyle
-                                        ]
-                                    , textView
+                                        ] <> FontStyle.body1 TypoGraphy)
+                                    , textView (
                                         [ text ((item.number))
                                         , color Color.black700
-                                        , textSize FontSize.a_14
                                         , margin (Margin 0 0 0 0)
-                                        , fontStyle $ FontStyle.regular LanguageStyle
-                                        ]
+                                        ] <> FontStyle.paragraphText TypoGraphy)
                                     ]
                                 , linearLayout
                                     [ height $ V 24

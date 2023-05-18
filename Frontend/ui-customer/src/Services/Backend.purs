@@ -170,7 +170,7 @@ makeTriggerOTPReq mobileNumber = TriggerOTPReq
     {
       "mobileNumber"      : mobileNumber,
       "mobileCountryCode" : "+91",
-      "merchantId" : if SC.getMerchantId == "NA" then getValueToLocalNativeStore MERCHANT_ID else SC.getMerchantId
+      "merchantId" : "MOBILITY_PAYTM"--if SC.getMerchantId == "NA" then getValueToLocalNativeStore MERCHANT_ID else SC.getMerchantId
     }
 
 ---------------------------------------------------------------TriggerSignatureOTPBT Function---------------------------------------------------------------------------------------------------
@@ -229,7 +229,7 @@ verifyToken payload token = do
 makeVerifyOTPReq :: String -> VerifyTokenReq
 makeVerifyOTPReq otp = VerifyTokenReq {
       "otp": otp,
-      "deviceToken": if getValueToLocalNativeStore FCM_TOKEN == "__failed" then "" else (getValueToLocalNativeStore FCM_TOKEN),
+      "deviceToken": if getValueToLocalNativeStore FCM_TOKEN == "__failed" then "generated-xxxx-xxxx-xxxx" else (getValueToLocalNativeStore FCM_TOKEN),
       "whatsappNotificationEnroll": OPT_IN
     }
 

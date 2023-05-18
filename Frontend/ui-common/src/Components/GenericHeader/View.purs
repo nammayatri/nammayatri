@@ -17,7 +17,9 @@ module Components.GenericHeader.View where
 
 import Components.GenericHeader.Controller (Action(..), Config)
 import Effect (Effect)
-import Prelude (Unit, const, ($), (==))
+import Prelude (Unit, const, ($), (==), (<>))
+import Font.Style as FontStyle
+import Common.Types.App (LazyCheck(..))
 import PrestoDOM (Gravity(..), Length(..), Orientation(..), Visibility(..), PrestoDOM, background, clickable, color, disableClickFeedback, fontStyle, gravity, height, imageView, linearLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, width, imageWithFallback)
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
@@ -45,15 +47,13 @@ view push config =
         , visibility config.prefixImageConfig.visibility
         ]
     ]
-    , textView
+    , textView $ 
       [ height WRAP_CONTENT
       , width WRAP_CONTENT 
       , text config.textConfig.text
-      , textSize config.textConfig.textSize
       , margin config.textConfig.margin
-      , fontStyle config.textConfig.fontStyle
       , color config.textConfig.color
-      ]
+      ] <> (FontStyle.getFontStyle config.textConfig.textStyle LanguageStyle)
     , suffixImageLayout config push
   ]
 

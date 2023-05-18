@@ -59,14 +59,12 @@ view push state =
                         WORK_TAG -> if  (getSavedLocationByTag state item) == Nothing then "ny_ic_add_address," <> (getAssetStoreLink FunctionCall) <> "ny_ic_add_address.png" else "ny_ic_work_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_work_blue.png"
                         _      -> "ny_ic_fav_red," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_red.png"
             ]
-          , textView
+          , textView $
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
-            , textSize if os == "IOS" then FontSize.a_13 else FontSize.a_12
             , margin $ MarginLeft 8
             , singleLine true
             , color Color.black800
-            , fontStyle $  FontStyle.medium LanguageStyle
             , gravity CENTER_VERTICAL
             , lineHeight "18"
             , padding $ PaddingBottom 1
@@ -75,7 +73,7 @@ view push state =
                     WORK_TAG -> getString WORK
                     HOME_TAG -> getString HOME
                     _        -> getString ALL_FAVOURITES
-            ]
+            ] <> FontStyle.tags LanguageStyle
             ]) [HOME_TAG, WORK_TAG, OTHER_TAG] )
     ]
 

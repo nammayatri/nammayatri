@@ -31,7 +31,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (flowRunner, os, safeMarginBottom, screenWidth, getExpiryTime)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (secondsToHms, zoneOtpExpiryTimer, Merchant(..), getMerchant)
+import Helpers.Utils (secondsToHms, zoneOtpExpiryTimer)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>), (-), (*), bind, pure, discard, (&&), (||), (/=))
@@ -46,6 +46,7 @@ import Data.String.CodeUnits (fromCharArray, toCharArray)
 import Storage (isLocalStageOn)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
+import Merchant.Utils (Merchant(..), getMerchant)
 
 view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit ) w
 view push state =
@@ -112,15 +113,13 @@ titleAndETA push state =
   , gravity CENTER_VERTICAL
   , padding $ Padding 16 20 16 16
   , visibility $ if ((state.props.currentStage /= RideAccepted && (secondsToHms state.data.eta) == "") || (state.props.currentStage == RideStarted && (spy "estimatedTimeABCD" state.props.estimatedTime == "--"))) then GONE else VISIBLE
-  ][ textView 
+  ][ textView (
       [ width MATCH_PARENT 
       , height WRAP_CONTENT
       , text $ if state.props.currentStage == RideAccepted then getString BOARD_THE_FIRST_TAXI else "ETA: " <> if state.props.isSpecialZone then (state.props.estimatedTime) else (secondsToHms state.data.eta)
       , color Color.black800
-      , fontStyle $ FontStyle.bold LanguageStyle
-      , textSize FontSize.a_18
       -- , fontSize FontSize.a_22
-      ]
+      ] <> FontStyle.h2 TypoGraphy)
   ]
 
 dropPointView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w 
@@ -130,12 +129,10 @@ dropPointView push state =
   , width MATCH_PARENT
   , orientation VERTICAL
   , padding $ Padding 0 10 16 if (os == "IOS") then if safeMarginBottom == 0 then 16 else safeMarginBottom else 16
-  ][  textView
+  ][  textView (
       [ text $ getString DROP <> " :-"
-      , fontStyle $ FontStyle.regular LanguageStyle
       , margin $ Margin 16 0 0 5
-      , textSize $ FontSize.a_12
-      ]
+      ] <> FontStyle.body3 TypoGraphy)
     , textView $
       [ text state.data.destination
       , color Color.black800
@@ -151,15 +148,13 @@ estimatedTimeAndDistanceView push state =
   , height WRAP_CONTENT
   , gravity CENTER
   , margin $ Margin 16 4 16 0
-  ][ textView
+  ][ textView (
       [ text $ state.data.estimatedDistance <> "km " <> getString AWAY
-      , textSize FontSize.a_14
       , width MATCH_PARENT
       , gravity CENTER
       , color Color.black650
       , height WRAP_CONTENT
-      , fontStyle $ FontStyle.regular LanguageStyle
-      ]
+      ] <> FontStyle.paragraphText TypoGraphy)
     -- , linearLayout
     --   [height $ V 4
     --   , width $ V 4
@@ -190,14 +185,12 @@ otpView push state = linearLayout
         , cornerRadius 4.0
         , background state.data.config.primaryTextColor
         , margin $ MarginLeft 7
-        ][ textView
+        ][ textView (
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
             , text item
-            , textSize FontSize.a_18
             , color state.data.config.otpTextColor
-            , fontStyle $ FontStyle.bold LanguageStyle
-            ]
+            ] <> FontStyle.h2 TypoGraphy)
         ]) $ split (Pattern "")  state.data.otp)
 
 expiryTimeView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w 
@@ -218,15 +211,12 @@ expiryTimeView push state =
           , height WRAP_CONTENT
           , padding $ Padding 10 14 10 14
           , weight 1.0
-          ][ textView
+          ][ textView (
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
               , text $ getString OTP <> ":"
               , color Color.black700
-              , textSize FontSize.a_14
-              , lineHeight "18"
-              , fontStyle $ FontStyle.bold LanguageStyle
-              ]
+              ] <> FontStyle.body4 TypoGraphy)
             , otpView push state
           ]
         , waitTimeView push state
@@ -350,15 +340,12 @@ otpAndWaitView push state =
           , gravity CENTER
           , padding $ Padding 10 14 10 14
           , weight 1.0
-          ][ textView
+          ][ textView (
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
               , text $ getString OTP <> ":"
               , color state.data.config.otpTextColor
-              , textSize FontSize.a_14
-              , lineHeight "18"
-              , fontStyle $ FontStyle.bold LanguageStyle
-              ]
+              ] <> FontStyle.body4 TypoGraphy)
             , otpView push state
           ]
         , waitTimeView push state
@@ -381,22 +368,16 @@ waitTimeView push state =
   , visibility case state.data.isSpecialZone of
       true -> VISIBLE
       false -> if state.data.driverArrived then VISIBLE else GONE
-  ][ textView
+  ][ textView (
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , text $ if state.data.isSpecialZone then getString EXPIRES_IN else  getString WAIT_TIME <> ":"
-      , textSize FontSize.a_14
-      , fontStyle $ FontStyle.medium LanguageStyle
-      , lineHeight "18"
       , color Color.black700
-
-      ]
-    , textView
+      ] <> FontStyle.body1 TypoGraphy)
+    , textView (
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , text state.data.waitingTime
-      , textSize FontSize.a_18
-      , fontStyle $ FontStyle.bold LanguageStyle
       , lineHeight "24"
       , color Color.black800
       , afterRender
@@ -407,7 +388,7 @@ waitTimeView push state =
                   else pure unit
             )
             (const NoAction)
-      ]
+      ] <> FontStyle.h2 TypoGraphy)
   ]
 
 driverInfoView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w 
@@ -450,16 +431,14 @@ driverInfoView push state =
                 , cornerRadius 20.0
                 , imageWithFallback $ "ny_ic_launcher," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_launcher.png"
                 ]
-              , textView
+              , textView (
                 [ text $ "namma yatri"
-                , textSize FontSize.a_14
-                , fontStyle $ FontStyle.bold LanguageStyle
                 , color Color.black
                 , margin $ Margin 3 0 0 2
                 , ellipsize true
                 , singleLine true
                 , gravity CENTER
-                ]
+                ] <> FontStyle.body4 TypoGraphy)
             ]
             , if state.props.isSpecialZone  then headerTextView push state else contactView push state
             , otpAndWaitView push state
@@ -495,14 +474,12 @@ cancelRideLayout push state =
   , padding $ Padding 5 5 5 5
   , margin $ MarginBottom if os == "IOS" then 24 else 0
   , onClick push $ const $ CancelRide state
-  ][ textView
+  ][ textView (
      [ width WRAP_CONTENT
      , height WRAP_CONTENT
      , text $ getString CANCEL_RIDE
-     , textSize FontSize.a_14
      , color Color.red
-     , fontStyle $ FontStyle.regular LanguageStyle
-     ]
+     ] <> FontStyle.paragraphText TypoGraphy)
    ]
  ]
 
@@ -520,29 +497,23 @@ contactView push state =
       [ width (V (((screenWidth unit)/3 * 2)-27))
       , height WRAP_CONTENT
       , orientation if length state.data.driverName > 16 then VERTICAL else HORIZONTAL
-      ][  textView
+      ][  textView (
           [ text $ state.data.driverName <> " "
-          , textSize FontSize.a_16
-          , fontStyle $ FontStyle.semiBold LanguageStyle
           , color Color.black800
           , ellipsize true
           , singleLine true
-          ]
-        , textView
+          ] <> FontStyle.subHeading1 TypoGraphy)
+        , textView (
           [ text $"is " <> secondsToHms state.data.eta
-          , textSize FontSize.a_16
-          , fontStyle $ FontStyle.semiBold LanguageStyle
           , color Color.black800
           , visibility if state.data.distance > 1000 then VISIBLE else GONE
-          ]
-        , textView
+          ] <> FontStyle.subHeading1 TypoGraphy)
+        , textView (
           [ text case state.data.distance > 1000 of
             true -> getString AWAY
             false -> if state.data.waitingTime == "--" then getString IS_ON_THE_WAY else getString IS_WAITING_FOR_YOU
-          , textSize FontSize.a_16
-          , fontStyle $ FontStyle.semiBold LanguageStyle
           , color Color.black800
-          ]
+          ] <> FontStyle.subHeading1 TypoGraphy)
       ]
     , linearLayout[
       width MATCH_PARENT
@@ -599,27 +570,23 @@ driverDetailsView push state =
               , imageWithFallback $ "ny_ic_user," <> (getAssetStoreLink FunctionCall) <> "ny_ic_user.png"
               ]  
           ]
-        , textView
+        , textView $
           [ text state.data.driverName
-          , textSize FontSize.a_16
           , maxLines 1
           , ellipsize true
-          , fontStyle $ FontStyle.bold LanguageStyle
           , color Color.black800
           , width MATCH_PARENT
           , height WRAP_CONTENT
           , gravity LEFT
-          ]
-        , textView
+          ] <> FontStyle.body7 TypoGraphy
+        , textView (
           [ text state.data.vehicleDetails
-          , textSize FontSize.a_12
           , color Color.black700
-          , fontStyle $ FontStyle.regular LanguageStyle
           , width MATCH_PARENT
           , height WRAP_CONTENT
           , margin $ Margin 0 4 0 13
           , gravity LEFT
-          ]
+          ] <> FontStyle.body3 TypoGraphy)
         , ratingView push state
       ]
     , linearLayout
@@ -665,17 +632,15 @@ driverDetailsView push state =
                         , height MATCH_PARENT
                         , width $ V 22
                         ]
-                        , textView
+                        , textView $
                         [ margin $ Margin 2 2 2 2
                         , width MATCH_PARENT
                         , height MATCH_PARENT
                         , text $ (makeNumber state.data.registrationNumber)
                         , color Color.black
-                        , fontStyle $ FontStyle.bold LanguageStyle
-                        , textSize FontSize.a_16
                         , gravity CENTER
                         , cornerRadius 4.0
-                        ]
+                        ] <> FontStyle.body7 TypoGraphy
                       ]
                     ]
                 ]
@@ -707,17 +672,14 @@ ratingView push state =
       , height $ V 13
       , width $ V 13
       ]
-    , textView
+    , textView (
       [ text $ if state.data.rating == 0.0 then "New" else show state.data.rating
-      , textSize FontSize.a_12
       , color Color.black800
       , gravity CENTER
-      , fontStyle $ FontStyle.medium LanguageStyle
       , margin (Margin 8 0 2 0)
       , width $ V 26
       , height $ V 30
-      , lineHeight "15"
-      ]
+      ] <> FontStyle.tags TypoGraphy)
     ]
 
 ---------------------------------- paymentMethodView ---------------------------------------
@@ -776,12 +738,10 @@ sourceDistanceView push state =
   , width MATCH_PARENT
   , orientation VERTICAL
   , padding $ Padding 0 10 0 if (os == "IOS" && state.props.currentStage == RideStarted) then safeMarginBottom else 16
-  ][  textView
+  ][  textView (
       [ text $ getString PICKUP_AND_DROP
-      , fontStyle $ FontStyle.regular LanguageStyle
       , margin $ Margin 16 0 0 10
-      , textSize $ FontSize.a_12
-      ]
+      ] <> FontStyle.body3 TypoGraphy)
     , SourceToDestination.view (push <<< SourceToDestinationAC) (sourceToDestinationConfig state)
   ]
 
@@ -836,10 +796,9 @@ sourceToDestinationConfig state = let
       }
     , sourceTextConfig {
         text = state.data.source
-      , textSize = FontSize.a_14
+      , textStyle = FontStyle.Body1
       , padding = Padding 2 0 2 2
       , margin = Margin 12 0 15 0
-      , fontStyle = FontStyle.medium LanguageStyle
       , ellipsize = true
       , maxLines = 1
       }
@@ -851,11 +810,10 @@ sourceToDestinationConfig state = let
       }
     , destinationTextConfig {
         text = state.data.destination
-      , textSize = FontSize.a_14
       , padding = Padding 2 0 2 2
       , margin = MarginVertical 12 15 
       , maxLines = 1
-      , fontStyle = FontStyle.medium LanguageStyle
+      , textStyle = FontStyle.Tags
       , ellipsize = true
       }
     , distanceConfig {
@@ -875,14 +833,12 @@ headerTextView push state =
   , width MATCH_PARENT
   , gravity CENTER_VERTICAL
   , padding $ Padding 16 20 16 16
-  ][ textView
+  ][ textView $
       [ text if state.props.currentStage == RideStarted then "ETA :" <> state.props.estimatedTime else  getString BOARD_THE_FIRST_TAXI
-      , textSize FontSize.a_20
-      , fontStyle $ FontStyle.bold LanguageStyle
       , color Color.black800
       , padding $ PaddingBottom 16
       , ellipsize true
-      ]
+      ] <> FontStyle.body8 TypoGraphy
     ,  separator (MarginHorizontal 16 16) (V 1) Color.grey900 (state.props.currentStage == RideStarted)
     , if state.props.currentStage == RideStarted then  contactView push state else linearLayout[][]
   ]
@@ -909,15 +865,13 @@ destinationView push state=
             , height WRAP_CONTENT
             , gravity CENTER
             , margin $ MarginTop 4
-            ][ textView
+            ][ textView (
                 [ text $ state.data.estimatedDistance <> " km"
-                , textSize FontSize.a_14
                 , width MATCH_PARENT
                 , gravity CENTER
                 , color Color.black650
                 , height WRAP_CONTENT
-                , fontStyle $ FontStyle.regular LanguageStyle
-                ]
+                ] <> FontStyle.paragraphText TypoGraphy)
               , linearLayout
                 [height $ V 4
                 , width $ V 4
@@ -925,15 +879,13 @@ destinationView push state=
                 , background Color.black600
                 , margin (Margin 6 2 6 0)
                 ][]
-              , textView
+              , textView (
                 [ text state.props.estimatedTime
-                , textSize FontSize.a_14
                 , width MATCH_PARENT
                 , gravity CENTER
                 , color Color.black650
                 , height WRAP_CONTENT
-                , fontStyle $ FontStyle.regular LanguageStyle
-                ]
+                ] <> FontStyle.paragraphText TypoGraphy)
             ]
       ]
 openGoogleMap :: forall w . (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w

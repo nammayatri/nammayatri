@@ -65,7 +65,7 @@ import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os)
-import Helpers.Utils (Merchant(..), addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getExpiryTime, getLocationName, getMerchant, parseNewContacts, saveRecents, setText', updateInputString, withinTimeRange)
+import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getExpiryTime, getLocationName, parseNewContacts, saveRecents, setText', updateInputString, withinTimeRange)
 import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
@@ -86,6 +86,7 @@ import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, Ge
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
 import Storage (KeyStore(..), isLocalStageOn, updateLocalStage, getValueToLocalStore, getValueToLocalStoreEff, setValueToLocalStore, getValueToLocalNativeStore, setValueToLocalNativeStore)
+import Merchant.Utils (Merchant(..), getMerchant)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -1327,7 +1328,7 @@ eval (StartLocationTracking item) state = do
 eval (GetEstimates (GetQuotesRes quotesRes)) state = do
   case state.props.isSpecialZone of
     true -> specialZoneFlow quotesRes.quotes state
-    false -> case spy " merchant ->" (getMerchant FunctionCall) of 
+    false -> case (getMerchant FunctionCall) of 
       YATRI -> estimatesListFlow quotesRes.estimates state
       JATRISAATHI -> estimatesListFlow quotesRes.estimates state
       _ -> do 

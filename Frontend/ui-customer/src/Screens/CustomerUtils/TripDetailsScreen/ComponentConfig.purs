@@ -46,9 +46,7 @@ genericHeaderConfig state= let
       }
     , textConfig {
         text = if state.props.issueReported then "" else (getString RIDE_DETAILS)
-      , textSize = FontSize.a_18
       , color = Color.darkDescriptionText
-      , fontStyle = FontStyle.bold LanguageStyle
       }
     , suffixImageConfig {
         visibility = GONE
@@ -95,10 +93,8 @@ sourceToDestinationConfig state = let
       }
     , sourceTextConfig {
         text = state.data.source
-      , textSize = FontSize.a_12
       , padding = (Padding 2 0 2 2)
       , margin = (Margin 12 0 15 0)
-      , fontStyle = FontStyle.regular LanguageStyle
       , color = Color.greyDavy
       , ellipsize = false
       }
@@ -109,10 +105,8 @@ sourceToDestinationConfig state = let
     , destinationBackground = Color.blue600
     , destinationTextConfig {
         text = state.data.destination
-      , textSize = FontSize.a_12
       , padding = (Padding 2 0 2 2)
       , margin = (Margin 12 0 15 0)
-      , fontStyle = FontStyle.regular LanguageStyle
       , color = Color.greyDavy
       , ellipsize = false
       }
@@ -126,8 +120,6 @@ primaryButtonConfig state = let
       { textConfig { 
           text = if state.props.issueReported then (getString GO_HOME_) else (getString SUBMIT)
         , color = state.data.config.primaryTextColor
-        , fontStyle = FontStyle.bold LanguageStyle
-        , textSize = FontSize.a_16
         }
       , height = V 48
       , width = MATCH_PARENT

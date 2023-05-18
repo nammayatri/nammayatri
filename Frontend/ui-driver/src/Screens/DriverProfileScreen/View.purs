@@ -51,7 +51,7 @@ import Screens as ScreenNames
 import Helpers.Utils (getVehicleType)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
-import MerchantConfigs.Utils (getMerchant, Merchant(..))
+import Merchant.Utils (getMerchant, Merchant(..))
 
 
 screen :: ST.DriverProfileScreenState -> Screen Action ST.DriverProfileScreenState ScreenOutput
@@ -155,15 +155,13 @@ profilePictureLayout state push =
             , text $ getValueToLocalStore USER_NAME
             , color Color.white900
             ] <> FontStyle.h3 TypoGraphy
-            , textView
+            , textView $
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
             , margin $ MarginTop 3
             , text $ getVehicleType state.data.driverVehicleType
-            , textSize FontSize.a_10
-            , fontStyle $ FontStyle.regular LanguageStyle
             , color Color.black500
-            ]
+            ] <> FontStyle.captions TypoGraphy
             , ratingView state
         ]
     ]
@@ -213,18 +211,17 @@ profileOptionsLayout state push =
                   , height WRAP_CONTENT
                   , orientation HORIZONTAL
                   , gravity CENTER_VERTICAL
-                  ][ textView
+                  ][ textView $
                       [ width WRAP_CONTENT
                       , height WRAP_CONTENT
                       , text $ "V " <> (getValueToLocalStore VERSION_NAME)
-                      , textSize FontSize.a_14
                       , visibility if(optionItem.menuOptions == ABOUT_APP) then VISIBLE else GONE
                       , margin (MarginRight 5)
-                      ]
+                      ] <> FontStyle.paragraphText TypoGraphy
                     , imageView
                       [ width $ V 18
                       , height $ V 18
-                      , imageWithFallback $ "ny_ic_chevron_right_grey," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_chevron_right_grey.png"
+                      , imageWithFallback $ "ny_ic_chevron_right_grey," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_right_grey.png"
                       ]
                   ]
               ]
@@ -247,18 +244,17 @@ ratingView state=
     , imageWithFallback $ "ny_ic_star_active," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_star_active.png"
     , gravity CENTER_VERTICAL
     ]
-    , textView
+    , textView $
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
     , text $ if (fromMaybe 0 state.data.driverRating ) == 0 then "New" else show (fromMaybe 0 state.data.driverRating )
     , margin (MarginLeft 7)
-    , textSize FontSize.a_14
     , color Color.white900
-    ]
+    ] <> FontStyle.paragraphText TypoGraphy
     , imageView
     [ width $ V 15
     , height MATCH_PARENT
-    , imageWithFallback $ "ny_ic_chevron_right_grey," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_chevron_right_grey.png"
+    , imageWithFallback $ "ny_ic_chevron_right_grey," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_right_grey.png"
     , gravity CENTER_VERTICAL
     , margin (MarginLeft 5)
     , visibility GONE

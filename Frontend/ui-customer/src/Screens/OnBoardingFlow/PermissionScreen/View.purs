@@ -15,26 +15,27 @@
 
 module Screens.PermissionScreen.View where
 
+import Common.Types.App
 import Data.Maybe
+import Screens.OnBoardingFlow.PermissionScreen.ComponentConfig
+
+import Common.Types.App (LazyCheck(..))
 import Components.ErrorModal as ErrorModal
 import Components.PrimaryButton as PrimaryButton
 import Effect (Effect)
-import Engineering.Helpers.Commons as EHC 
+import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Prelude ((<>))
 import Prelude (Unit, bind, const, pure, unit, (<<<), ($), (==))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, ScopedScreen, afterRender, alignParentBottom, background, clickable, color, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, margin, orientation, padding, relativeLayout, text, textSize, textView, width, imageWithFallback)
 import Screens.PermissionScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
-import Common.Types.App
-import Screens.OnBoardingFlow.PermissionScreen.ComponentConfig 
-import Prelude ((<>))
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
-import Common.Types.App (LazyCheck(..))
 
 screen :: ST.PermissionScreenState -> String -> ScopedScreen Action ST.PermissionScreenState ScreenOutput
 screen initialState triggertype = 
@@ -89,22 +90,18 @@ locationAccessPermissionView push state =
         --   , imageUrl "ic_close"
         --   ]
         -- ]
-      textView 
+      textView $
       [ text (getString WE_NEED_ACCESS_TO_YOUR_LOCATION)
-      , textSize FontSize.a_22
       , color Color.black800
       , gravity LEFT
       , lineHeight "27"
       , margin (Margin 0 22 0 16)
-      , fontStyle $ FontStyle.bold LanguageStyle
-      ]
-    , textView
+      ] <> FontStyle.h1 TypoGraphy
+    , textView $
       [ text (getString YOUR_LOCATION_HELPS_OUR_SYSTEM)
-      , textSize FontSize.a_16
       , color Color.black800
-      , fontStyle $ FontStyle.regular LanguageStyle
       , lineHeight "22"
-      ]
+      ] <> FontStyle.body5 TypoGraphy
     ]
     , linearLayout[
       height MATCH_PARENT

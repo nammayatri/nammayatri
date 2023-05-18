@@ -44,23 +44,17 @@ apiErrorModalConfig state = let
         text = (getString ERROR_404)
       , margin = (MarginBottom 7)  
       , color = Color.black800
-      , textSize = FontSize.a_18
-      , fontStyle = FontStyle.bold LanguageStyle
       }
     , errorDescriptionConfig {
         text = (getString PROBLEM_AT_OUR_END)
       , color = Color.black700
-      , textSize = FontSize.a_14
       , margin = (Margin 16 0 16 0)
-      , fontStyle =  FontStyle.regular LanguageStyle
       }
     , buttonConfig {
         text = (getString NOTIFY_ME)
       , margin = (Margin 16 0 16 16)
       , background = state.data.config.primaryBackground
       , color = state.data.config.primaryTextColor
-      , fontStyle = FontStyle.medium LanguageStyle
-      , textSize = FontSize.a_16
       }
     }
   in errorModalConfig' 
@@ -79,22 +73,16 @@ errorModalConfig state = let
         text = (getString EMPTY_RIDES)
       , margin = (MarginBottom 7)  
       , color = Color.black800
-      , textSize = FontSize.a_18
-      , fontStyle = FontStyle.bold LanguageStyle
       }
     , errorDescriptionConfig {
         text = (getString YOU_HAVENT_TAKEN_A_TRIP_YET)
       , color = Color.black700
-      , textSize = FontSize.a_14
-      , fontStyle =  FontStyle.regular LanguageStyle
       }
     , buttonConfig {
         text = (getString BOOK_NOW)
       , margin = (Margin 16 0 16 16)
       , background = state.data.config.primaryBackground
       , color = state.data.config.primaryTextColor
-      , fontStyle = FontStyle.medium LanguageStyle
-      , textSize = FontSize.a_16
       , visibility = if (Storage.isLocalStageOn ST.HomeScreen) then VISIBLE else GONE
       }
     }
@@ -114,7 +102,6 @@ genericHeaderConfig state = let
     , textConfig {
         text = (getString MY_RIDES)
       , color = Color.darkDescriptionText
-      , fontStyle = FontStyle.bold LanguageStyle
       }
     , suffixImageConfig {
         visibility = GONE

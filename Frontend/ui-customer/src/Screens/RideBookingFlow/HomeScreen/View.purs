@@ -15,7 +15,7 @@
 
 module Screens.HomeScreen.View where
 
-import Accessor (_lat, _lon, _selectedQuotes)
+import Accessor (_fareProductType, _lat, _lon, _selectedQuotes)
 import Animation (fadeOut, translateYAnimFromTop, scaleAnim, translateYAnimFromTopWithAlpha, fadeIn)
 import Animation.Config (Direction(..), translateFullYAnimWithDurationConfig, translateYAnimHomeConfig)
 import Common.Types.App (LazyCheck(..))
@@ -56,13 +56,13 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (countDown, flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (Merchant(..), decodeErrorMessage, fetchAndUpdateCurrentLocation, getCurrentLocationMarker, getLocationName, getMerchant, getNewTrackingId, getPreviousVersion, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, storeOnResumeCallback, toString, waitingCountdownTimer)
+import Helpers.Utils (decodeErrorMessage, fetchAndUpdateCurrentLocation, getCurrentLocationMarker, getLocationName, getNewTrackingId, getPreviousVersion, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, storeOnResumeCallback, toString, waitingCountdownTimer)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import JBridge (addMarker, animateCamera, drawRoute, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, toast, updateRoute, getExtendedPath, generateSessionId, initialWebViewSetUp, stopChatListenerService, startChatListenerService, storeCallBackMessageUpdated, isMockLocation)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
-import Merchant.Utils (getValueFromConfig)
+import Merchant.Utils (Merchant(..), getValueFromConfig, getMerchant)
 import Prelude (Unit, bind, const, discard, map, negate, not, pure, show, unit, void, when, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<=), (<>), (==), (>), (||))
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
@@ -672,41 +672,35 @@ bannerView state push =
         , padding $ Padding 20 13 0 0
         , orientation VERTICAL
         ]
-        [ textView
+        [ textView $
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           , gravity LEFT
           , text state.data.bannerViewState.title
           , color state.data.bannerViewState.titleColor
-          , textSize FontSize.a_14
-          , fontStyle $ FontStyle.bold LanguageStyle
-          ]
+          ] <> FontStyle.body4 TypoGraphy
         , linearLayout
           [ height WRAP_CONTENT
           , width WRAP_CONTENT
           , gravity CENTER_VERTICAL
           ]
           [
-            textView
+            textView $
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
             , gravity LEFT
             , text state.data.bannerViewState.actionText
             , color state.data.bannerViewState.actionTextColor
-            , textSize $ FontSize.a_12
-            , fontStyle  $ FontStyle.regular LanguageStyle
-            ]
-          , textView
+            ] <> FontStyle.body3 TypoGraphy
+          , textView $
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
             , gravity LEFT
             , text "→"
             , color state.data.bannerViewState.actionTextColor
-            , textSize $ FontSize.a_14
-            , fontStyle  $ FontStyle.regular LanguageStyle
             , padding $ PaddingBottom 3
             , margin  $ MarginLeft 5
-            ]
+            ] <> FontStyle.body3 TypoGraphy
           -- , imageView
           --   [
           --     height $ V 8
@@ -857,17 +851,15 @@ homeScreenTopIconView push state =
             , disableClickFeedback true
             , onClick push (const $ OpenSearchLocation)
             ]
-            [ textView
+            [ textView $
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
                 , text (getString PICK_UP_LOCATION)
                 , color Color.black800
                 , gravity LEFT
-                , fontStyle $ FontStyle.regular LanguageStyle
-                , textSize FontSize.a_12
                 , lineHeight "16"
-                ]
-            , textView
+                ] <> FontStyle.body3 LanguageStyle
+            , textView $
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
                 , text if state.data.source /= "" then state.data.source else (getString CURRENT_LOCATION)
@@ -875,10 +867,8 @@ homeScreenTopIconView push state =
                 , ellipsize true
                 , color Color.black800
                 , gravity LEFT
-                , fontStyle $ FontStyle.bold LanguageStyle
-                , textSize FontSize.a_16
                 , lineHeight "23"
-                ]
+                ] <> FontStyle.body7 LanguageStyle
             ]
         ]
   where
@@ -962,36 +952,30 @@ rideCompletedCardView state push =
             , height MATCH_PARENT
             , gravity CENTER
             ]
-            [ textView
+            [ textView $
                 [ text $ "₹" <> show state.data.finalAmount
                 , color Color.black800
-                , textSize FontSize.a_40
                 , width WRAP_CONTENT
                 , height WRAP_CONTENT
-                , fontStyle $ FontStyle.bold LanguageStyle
-                ]
-            , textView
+                ] <> FontStyle.priceFont LanguageStyle
+            , textView $ 
                 [ textFromHtml $ "<strike> ₹" <> (show state.data.driverInfoCardState.price) <> "</strike>"
-                , textSize FontSize.a_24
                 , margin $ Margin 8 5 0 0
                 , width WRAP_CONTENT
                 , height WRAP_CONTENT
-                , fontStyle $ FontStyle.medium LanguageStyle
                 , lineHeight "40"
                 , color Color.black600
                 , visibility if state.data.finalAmount /= state.data.driverInfoCardState.price then VISIBLE else GONE
-                ]
+                ] <> FontStyle.h0 LanguageStyle
             ]
-        , textView
+        , textView $
             [ text $ getString PAY_DRIVER_USING_CASH_OR_UPI
-            , textSize FontSize.a_16
             , lineHeight "20"
             , width MATCH_PARENT
             , gravity CENTER_HORIZONTAL
-            , fontStyle $ FontStyle.medium LanguageStyle
             , color Color.black800
             , margin $ MarginVertical 4 24
-            ]
+            ] <> FontStyle.subHeading2 LanguageStyle
         ]
     , fareUpdatedView state push
     , linearLayout
@@ -1094,15 +1078,13 @@ suggestedPriceView push state =
   , stroke ("1," <> Color.grey900)
   , gravity CENTER
   , cornerRadii $ Corners 24.0 true true false false
-  ][  textView
+  ][  textView $
       [ text $ getString REQUEST_AUTO_RIDE
-      , textSize FontSize.a_22
       , color Color.black800
       , gravity CENTER_HORIZONTAL
       , height WRAP_CONTENT
       , width MATCH_PARENT
-      , fontStyle $ FontStyle.bold LanguageStyle
-      ]
+      ] <> FontStyle.h1 LanguageStyle
     , linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -1123,17 +1105,15 @@ suggestedPriceView push state =
         , orientation VERTICAL
         , gravity CENTER
         , margin $ MarginTop if os == "IOS" then 10 else 0
-        ][  textView
+        ][  textView $ 
             [ text $ if state.data.rateCard.additionalFare == 0 then "₹" <> (show state.data.suggestedAmount) else  "₹" <> (show state.data.suggestedAmount) <> "-" <> "₹" <> (show $ (state.data.suggestedAmount + state.data.rateCard.additionalFare))
-            , textSize FontSize.a_32
             , color Color.black800
             , margin $ MarginTop 8
             , gravity CENTER_HORIZONTAL
             , width WRAP_CONTENT
             , height WRAP_CONTENT
-            , fontStyle $ FontStyle.bold LanguageStyle
             , onClick (\action -> if (getValueFromConfig "showRateCard") == "true" then push action else pure unit ) $ const ShowRateCard
-            ]
+            ] <> FontStyle.priceFont LanguageStyle
             , estimatedTimeAndDistanceView push state
           ]
           , imageView
@@ -1170,15 +1150,13 @@ suggestedPriceView push state =
                   , onClick push $ const PreferencesDropDown
                   , margin (Margin 0 0 0 8)
                   ][
-                      textView
+                      textView $
                       [ height $ V 24
                       , width WRAP_CONTENT
                       , color Color.darkDescriptionText
                       , text $ getString BOOKING_PREFERENCE
-                      , textSize FontSize.a_16
-                      , fontStyle $ FontStyle.regular LanguageStyle
 
-                      ],
+                      ] <> FontStyle.body5 LanguageStyle,
                       imageView
                       [ width $ V 10
                       , height $ V 10
@@ -1228,17 +1206,15 @@ showMenuButtonView push menuText menuImage autoAssign =
           , visibility if ( (flowWithoutOffers WithoutOffers) && autoAssign || not (flowWithoutOffers WithoutOffers) && not autoAssign ) then VISIBLE else GONE
           ]
         ]
-    , textView
+    , textView $
       [ text menuText
-      , textSize FontSize.a_14
       , width MATCH_PARENT
       , gravity CENTER
       , color Color.black700
       , height WRAP_CONTENT
       , margin (MarginHorizontal 10 10)
-      , fontStyle $ FontStyle.regular LanguageStyle
       , onClick push (const $ CheckBoxClick autoAssign)
-      ]
+      ] <> FontStyle.paragraphText LanguageStyle
     , imageView
       [ height $ if autoAssign then V 30 else V 18
       , width $ if autoAssign then V 75 else V 18
@@ -1255,15 +1231,13 @@ estimatedTimeAndDistanceView push state =
   , height WRAP_CONTENT
   , gravity CENTER
   , margin $ MarginTop 4
-  ][ textView
+  ][ textView $
       [ text state.data.rideDistance
-      , textSize FontSize.a_14
       , width MATCH_PARENT
       , gravity CENTER
       , color Color.black650
       , height WRAP_CONTENT
-      , fontStyle $ FontStyle.regular LanguageStyle
-      ]
+      ] <> FontStyle.paragraphText LanguageStyle
     , linearLayout
       [height $ V 4
       , width $ V 4
@@ -1271,15 +1245,13 @@ estimatedTimeAndDistanceView push state =
       , background Color.black600
       , margin (Margin 6 2 6 0)
       ][]
-    , textView
+    , textView $
       [ text state.data.rideDuration
-      , textSize FontSize.a_14
       , width MATCH_PARENT
       , gravity CENTER
       , color Color.black650
       , height WRAP_CONTENT
-      , fontStyle $ FontStyle.regular LanguageStyle
-      ]
+      ] <> FontStyle.paragraphText LanguageStyle
   ]
 
 emergencyHelpModal :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -1430,15 +1402,13 @@ confirmPickUpLocationView push state =
         , cornerRadii $ Corners 24.0 true true false false
         , padding $ Padding 16 16 16 24
         ]
-        [ textView
+        [ textView $
             [ text (getString CONFIRM_PICKUP_LOCATION)
-            , textSize FontSize.a_22
             , color Color.black800
             , gravity CENTER_HORIZONTAL
             , height WRAP_CONTENT
             , width MATCH_PARENT
-            , fontStyle $ FontStyle.bold LanguageStyle
-            ] 
+            ] <> FontStyle.h1 TypoGraphy
         , if  ((getMerchant FunctionCall == JATRISAATHI) && state.props.isSpecialZone ) then  nearByPickUpPointsView state push else currentLocationView push state
         , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfirmPickupConfig state)
         ]
@@ -1462,7 +1432,7 @@ loaderView push state =
     [ PrestoAnim.animationSet [ scaleAnim $ autoAnimConfig ]
         $ lottieLoaderView state push
     , PrestoAnim.animationSet [ fadeIn true ]
-        $ textView
+        $ textView $
             [ text
                 ( case state.props.currentStage of
                     ConfirmingRide -> (getString CONFIRMING_THE_RIDE_FOR_YOU)
@@ -1470,15 +1440,13 @@ loaderView push state =
                     TryAgain -> (getString LET_TRY_THAT_AGAIN)
                     _ -> (getString GETTING_ESTIMATES_FOR_YOU)
                 )
-            , textSize FontSize.a_16
             , color Color.black800
-            , fontStyle $ FontStyle.semiBold LanguageStyle
             , height WRAP_CONTENT
             , width MATCH_PARENT
             , lineHeight "20"
             , gravity CENTER
             , margin (Margin 0 24 0 36)
-            ]
+            ] <> FontStyle.subHeading1 TypoGraphy
     , PrestoAnim.animationSet [ translateYAnimFromTopWithAlpha $ translateFullYAnimWithDurationConfig 300 ]
         $ separator (V 1) Color.grey900 state.props.currentStage
     , linearLayout
@@ -1490,16 +1458,15 @@ loaderView push state =
         , gravity CENTER
         ]
         [ PrestoAnim.animationSet [ translateYAnimFromTopWithAlpha $ translateFullYAnimWithDurationConfig 300 ]
-            $ textView
+            $ textView $
                 [ text (getString CANCEL_SEARCH)
-                , textSize FontSize.a_14
                 , lineHeight "18"
                 , width MATCH_PARENT
                 , height WRAP_CONTENT
                 , padding (Padding 0 20 0 16)
                 , color Color.red
                 , gravity CENTER
-                ]
+                ] <> FontStyle.paragraphText TypoGraphy
         ]
     ]
 ------------------------------- pricingTutorialView --------------------------
@@ -1854,7 +1821,9 @@ confirmRide action count duration push state = do
       Right response -> do
         _ <- pure $ printLog "api Results " response
         let (RideBookingRes resp) = response
-        if (any (_ == resp.status) ["TRIP_ASSIGNED","CONFIRMED"]) then do
+        let fareProductType = (resp.bookingDetails) ^. _fareProductType
+        let status = if fareProductType == "OneWaySpecialZoneAPIDetails" then "CONFIRMED" else "TRIP_ASSIGNED"
+        if  status == resp.status then do
             doAff do liftEffect $ push $ action response
             -- _ <- pure $ firebaseLogEvent "ny_user_ride_assigned"
             pure unit
@@ -1913,17 +1882,15 @@ notinPickUpZoneView push state =
         , orientation VERTICAL
         , gravity CENTER 
         , margin $ MarginTop if os == "IOS" then 10 else 0
-        ][  textView
+        ][  textView $
             [ text $ if state.data.rateCard.additionalFare == 0 then "₹" <> (show state.data.suggestedAmount) else  "₹" <> (show state.data.suggestedAmount) <> "-" <> "₹" <> (show $ (state.data.suggestedAmount + state.data.rateCard.additionalFare))
-            , textSize FontSize.a_32
             , color Color.black800
             , margin $ MarginTop 8
             , gravity CENTER_HORIZONTAL
             , width WRAP_CONTENT
             , height WRAP_CONTENT
-            , fontStyle $ FontStyle.bold LanguageStyle
             , onClick push $ const ShowRateCard
-            ]
+            ] <> FontStyle.priceFont LanguageStyle
             , estimatedTimeAndDistanceView push state
           ]
           , imageView
@@ -1958,15 +1925,13 @@ notinPickUpZoneView push state =
                   , onClick push $ const PreferencesDropDown
                   , margin $ MarginBottom 8
                   ][ 
-                      textView
+                      textView $
                       [ height $ V 24
                       , width WRAP_CONTENT
                       , color Color.darkDescriptionText
                       , text $ getString BOOKING_PREFERENCE
-                      , textSize FontSize.a_16
-                      , fontStyle $ FontStyle.regular LanguageStyle
                       
-                      ],
+                      ] <> FontStyle.body5 TypoGraphy,
                       imageView
                       [ width $ V 10
                       , height $ V 10

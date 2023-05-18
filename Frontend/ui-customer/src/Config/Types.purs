@@ -1,6 +1,7 @@
 module Config.Types where
 
 import Prelude
+import Styles.Types (FontType)
 
 
 type AppConfig =
@@ -16,11 +17,13 @@ type AppConfig =
     profileBackground :: String,
     profileName :: String,
     profileImage :: String,
+    feedbackBackground :: String,
     sideBarList :: Array String,
     otpBackground :: String,
     otpTextColor :: String,
     rateCardColor :: String,
-    nyBrandingVisibility :: Boolean
+    nyBrandingVisibility :: Boolean,
+    fontType :: String
   } 
 
 type QuoteListConfig = {

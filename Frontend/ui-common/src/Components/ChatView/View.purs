@@ -90,23 +90,19 @@ headerNameView config push =
   [ height WRAP_CONTENT
   , width (V (((screenWidth unit)/100)* (getConfig config.userConfig.appType).margin )) 
   , orientation VERTICAL
-  ][textView 
+  ][textView (
     [ text config.userConfig.userName
-    , textSize FontSize.a_16
     , color config.black800
-    , fontStyle $ FontStyle.semiBold LanguageStyle
     , ellipsize true
     , singleLine true
-    ]
-   ,textView
+    ] <> FontStyle.subHeading1 TypoGraphy)
+   ,textView (
     [ text config.distance
-    , textSize FontSize.a_12
     , visibility (getConfig config.userConfig.appType).customerVisibility
     , color config.black700
-    , fontStyle $ FontStyle.regular LanguageStyle
     , ellipsize true
     , singleLine true
-    ]
+    ] <> FontStyle.body3 TypoGraphy)
   ]
 
 headerActionView ::forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -162,12 +158,10 @@ headerActionView config push =
        , width $ V 20
        , margin $ MarginRight 8
        ]
-     , textView
+     , textView (
        [ text config.mapsText
        , color config.blue900
-       , textSize FontSize.a_16
-       , fontStyle $ FontStyle.medium LanguageStyle
-       ]
+       ] <> FontStyle.subHeading2 TypoGraphy)
     ]  
   ]
 
@@ -228,21 +222,19 @@ chatFooterView config push =
       , gravity CENTER_VERTICAL
       , background config.grey800
       , orientation HORIZONTAL
-      ][ editText
+      ][ editText $
          [ weight 1.0
          , height $ V 48 
          , id (getNewIDWithTag "ChatInputEditText")
          , background config.grey800
          , cornerRadius 24.0
-         , textSize FontSize.a_14
          , hint $ config.hint <> " " <> fromMaybe "" ((STR.split (STR.Pattern " ") config.userConfig.userName) !! 0) <> "..."
          , singleLine true
          , hintColor config.black700
          , ellipsize true
-         , fontStyle $ FontStyle.medium LanguageStyle
          , onChange push $ TextChanged
          , pattern "[^\n]*,255"
-         ]
+         ] <> FontStyle.body1 LanguageStyle
        , linearLayout
          [ height $ V 36
          , width $ V 36
@@ -268,17 +260,15 @@ emptyChatView config push =
      , width MATCH_PARENT
      , orientation VERTICAL
      , background config.white900
-     ]([ textView 
+     ]([ textView (
        [ text $ if config.userConfig.appType == "Customer" && null config.suggestionsList && null config.messages then config.emptyChatHeader else config.suggestionHeader
        , color config.black700
-       , textSize FontSize.a_14
        , width MATCH_PARENT
        , margin (Margin 16 16 16 20)
        , maxLines 2
        , ellipsize true
        , gravity CENTER
-       , fontStyle $ FontStyle.medium LanguageStyle
-       ]
+       ] <> FontStyle.body2 TypoGraphy)
      ] <> [suggestionsView config push])
   ] 
   
@@ -307,14 +297,11 @@ quickMessageView config message isLastItem push =
   , gravity LEFT
   , orientation VERTICAL
   , onClick push (const (SendSuggestion message))
-  ][ textView
+  ][ textView (
      [ text (message)
      , color config.blue800
      , padding (Padding 12 16 12 16)
-     , textSize FontSize.a_14
-     , lineHeight "18"
-     , fontStyle $ FontStyle.medium LanguageStyle
-     ]
+     ] <> FontStyle.body1 TypoGraphy)
    , linearLayout
      [ width MATCH_PARENT
      , height $ V 1
@@ -345,21 +332,16 @@ chatComponent state config isLastItem userType =
      , background (getChatConfig state config.sentBy isLastItem).background
      , cornerRadii (getChatConfig state config.sentBy isLastItem).cornerRadii
      , gravity (getChatConfig state config.sentBy isLastItem).gravity
-     ][ textView
+     ][ textView (
         [ text (config.message)
-        , textSize FontSize.a_14
         , singleLine false
-        , lineHeight "18"
         , color (getChatConfig state config.sentBy isLastItem).textColor
-        , fontStyle $ FontStyle.medium LanguageStyle
-        ]
+        ] <> FontStyle.body1 TypoGraphy)
       ]
-    , textView
+    , textView (
       [ text config.timeStamp
-      , textSize FontSize.a_10
       , color state.black800
-      , fontStyle $ FontStyle.regular LanguageStyle
-      ]
+      ] <> FontStyle.captions TypoGraphy)
   ]
   
 getConfig :: String -> {margin :: Int, customerVisibility :: Visibility, driverVisibility :: Visibility}

@@ -41,7 +41,6 @@ export const getLocationName = function(cb){
         }
     }
 }
-export const hideSplash = window.JOS.emitEvent("java")("onEvent")(JSON.stringify({event:"hide_splash"}))()
 
 
 export const getCurrentDate = function (string) {
@@ -137,6 +136,10 @@ export const storeCallBackCustomer = function (cb) {
             var callback = callbackMapper.map(function (notificationType) {
                 cb(action (notificationType))();
             });
+            var notificationCallBack = function (notificationType) {
+              cb(action (notificationType))();
+          };
+            window.callNotificationCallBack = notificationCallBack;
             console.log("In storeCallBackCustomer ---------- + " + action);
             window.JBridge.storeCallBackCustomer(callback);
         }
@@ -566,9 +569,6 @@ export const storeOnResumeCallback = function (cb) {
   }
 }
 
-export const getMerchantId = function(id) {
-  return window.merchantID;
-}
 
 export const drawPolygon = function(geoJson) {
   return function (locationName) {

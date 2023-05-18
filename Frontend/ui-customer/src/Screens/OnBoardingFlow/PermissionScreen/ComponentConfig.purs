@@ -45,19 +45,16 @@ errorModalConfig = let
         text = (getString YOU_ARE_OFFLINE)
       , margin = (MarginBottom 7)  
       , color = Color.black900
-      , fontStyle = FontStyle.medium LanguageStyle
       }
     , errorDescriptionConfig {
         text = (getString CHECK_YOUR_INTERNET_CONNECTION_AND_TRY_AGAIN)
       , color = Color.black700
-      , fontStyle =  FontStyle.regular LanguageStyle
       }
     , buttonConfig {
         text = (getString TRY_AGAIN)
       , margin = (Margin 16 0 16 24)
       , background = Color.black900
       , color = Color.yellow900
-      , fontStyle = FontStyle.medium LanguageStyle
       }
     }
   in errorModalConfig' 
@@ -68,8 +65,6 @@ primaryButtonConfig  state = let
     primaryButtonConfig' = config' 
       { textConfig 
         { text = if EHC.os == "IOS" then (getString CONTINUE) else (getString GRANT_ACCESS)
-        , fontStyle = FontStyle.bold LanguageStyle
-        , textSize = FontSize.a_16
         , color = state.appConfig.primaryTextColor
         }
       , width = MATCH_PARENT 

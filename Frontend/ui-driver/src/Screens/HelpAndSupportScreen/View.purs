@@ -93,24 +93,22 @@ headerLayout state push =
     ][ imageView
         [ width $ V 25
         , height MATCH_PARENT
-        , imageWithFallback $ "ny_ic_back," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_back.png"
+        , imageWithFallback $ "ny_ic_back," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_back.png"
         , gravity CENTER_VERTICAL
         , onClick push (const BackPressed)
         , padding (Padding 2 2 2 2)
         , margin (MarginLeft 5)
         ]
-      , textView
+      , textView $
         [ width WRAP_CONTENT
         , height MATCH_PARENT
         , text (getString Help_AND_SUPPORT)
-        , textSize FontSize.a_19
         , margin (MarginLeft 20)
         , color Color.black
-        , fontStyle $ FontStyle.semiBold LanguageStyle
         , weight 1.0
         , gravity CENTER_VERTICAL
         , alpha 0.8
-        ]
+        ] <> FontStyle.h3 LanguageStyle
     ]
  ]
 
@@ -125,28 +123,24 @@ recentRideHeader state push leftText rightText =
  , background Color.lightGreyBlue
  , onClick push $ const $ if (rightText == (getString VIEW_ALL_RIDES)) then ViewAllRides else NoRidesAction
  , visibility if ((rightText == (getString VIEW_ALL_RIDES)) && state.props.isNoRides) then GONE else VISIBLE
- ][ textView
+ ][ textView $
     [ width $ V (3 * screenWidth unit / 5)
     , height MATCH_PARENT
     , text leftText
     , gravity CENTER_VERTICAL
-    , fontStyle $ FontStyle.semiBold LanguageStyle
-    , textSize FontSize.a_18
     , color Color.black800
     , lineHeight "25"
-    ]
+    ] <> FontStyle.h3 LanguageStyle
   , linearLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
-    ][ textView
+    ][ textView $
         [ width MATCH_PARENT
         , height MATCH_PARENT
         , text rightText
-        , textSize FontSize.a_17
-        , fontStyle $ FontStyle.semiBold LanguageStyle
         , gravity RIGHT
         , color Color.blueTextColor
-        ]
+        ] <> FontStyle.subHeading1 LanguageStyle
     ]
  ]
 
@@ -193,12 +187,11 @@ dateTimeView state =
     , height WRAP_CONTENT
     , orientation HORIZONTAL
     , gravity CENTER_VERTICAL
-    ][ textView
+    ][ textView $
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , text state.data.date
-        , textSize FontSize.a_13
-        ]
+        ] <> FontStyle.body3 LanguageStyle
         , linearLayout
         [ background Color.filterDisableButtonColor
         , cornerRadius 2.5
@@ -206,12 +199,11 @@ dateTimeView state =
         , height (V 5)
         , width (V 5)
         ][]
-        , textView
+        , textView $
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , text state.data.time
-        , textSize FontSize.a_13
-        ]
+        ] <> FontStyle.body3 LanguageStyle
     ]
 
 
@@ -248,18 +240,17 @@ allOtherTopics state push =
                   , height $ V 20
                   , imageWithFallback optionItem.icon
                   ]
-                  , textView
+                  , textView $
                   [ height WRAP_CONTENT
                   , weight 1.0
                   , text  (getTitle optionItem.menuOptions)
                   , margin (MarginLeft 10)
                   , color Color.black800
-                  , textSize FontSize.a_17
-                  ]
+                  ] <> FontStyle.body5 LanguageStyle
                   , imageView
                   [ width $ V 20
                   , height $ V 20
-                  , imageWithFallback $ "ny_ic_chevron_right_grey," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_chevron_right_grey.png"
+                  , imageWithFallback $ "ny_ic_chevron_right_grey," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_right_grey.png"
                   ]
               ]
               , horizontalLineView
@@ -278,12 +269,10 @@ driverRatingView state =
   , orientation HORIZONTAL
   , margin (MarginTop 20)
   , visibility GONE
-  ][  textView
+  ][  textView $
       [ text (getString YOU_RATED)
-      , textSize FontSize.a_13
-      , fontStyle $ FontStyle.medium LanguageStyle
       , color Color.black800
-      ]
+      ] <> FontStyle.tags LanguageStyle
     , linearLayout
       [ height WRAP_CONTENT
       , width WRAP_CONTENT

@@ -43,9 +43,7 @@ genericHeaderConfig state = let
        }
     , textConfig
       { text = (getString INVOICE)
-      , textSize = FontSize.a_18
       , color = Color.darkDescriptionText
-      , fontStyle = FontStyle.bold LanguageStyle
       }
     , suffixImageConfig
       { visibility = GONE

@@ -33,6 +33,30 @@ export const getStringFromConfig = function (constructorKey){
       return getStringFromCommon(key);
 }
 
+export const getValueFromConfig = function (constructorKey){
+    let key = constructorKey.trim(); 
+    switch(window.merchantID) {
+        case "JATRISAATHIDRIVER" :
+            if (jatriConfig.isCurrentMerchantString(key)){
+                return jatriConfig.currentMerchantString(key);
+            }
+            break;
+        case "NAMMAYATRIPARTNER" :
+            if (nammaYatriConfig.isCurrentMerchantString(key)){
+                return nammaYatriConfig.currentMerchantString(key);
+            }
+            break;
+        case "YATRIPARTNER" :
+            if (yatriConfig.isCurrentMerchantString(key)){
+                return yatriConfig.currentMerchantString(key);
+            }
+            break;
+        default:
+            return getStringFromCommon(key);
+      }
+      return getStringFromCommon(key);
+}
+
 export const getValueFromMerchant = function (constructorKey){
     let key = constructorKey.trim(); 
     switch(window.merchantID) {

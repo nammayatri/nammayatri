@@ -124,8 +124,6 @@ primaryEditTextConfig state = let
             editText
             {   singleLine = true
                 , pattern = state.pattern
-                , fontStyle = FontStyle.bold LanguageStyle
-                , textSize = FontSize.a_16
                 , color = Color.black800
                 , letterSpacing = state.letterSpacing
                 , placeholder = state.placeholder
@@ -146,7 +144,7 @@ primaryButtonConfig state = let
       { textConfig
       { text = state.primaryButtonText
       , color = Color.primaryButtonColor
-      , textSize = FontSize.a_18}
+      }
       , margin = (Margin 16 0 16 10)
       , cornerRadius = 8.0
       , background = Color.black900

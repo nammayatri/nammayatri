@@ -568,7 +568,7 @@ public class MobilityCommonBridge extends HyperBridge {
                 googleMap.setMaxZoomPreference(googleMap.getMaxZoomLevel());
                 googleMap.getUiSettings().setRotateGesturesEnabled(false);
                 googleMap.getUiSettings().setMyLocationButtonEnabled(false);
-                if (!isLocationPermissionEnabled()) {
+                if (isLocationPermissionEnabled()) {
                     googleMap.setMyLocationEnabled(isEnableCurrentLocation);
                 }
                 markers = new JSONObject();
@@ -680,7 +680,7 @@ public class MobilityCommonBridge extends HyperBridge {
                         JSONObject coordinate = (JSONObject) coordinates.get(0);
                         double lng = coordinate.getDouble("lng");
                         double lat = coordinate.getDouble("lat");
-                        upsertMarker("ic_vehicle_nav_on_map", String.valueOf(lat), String.valueOf(lng), 90, 0.5f, 0.5f);
+                        upsertMarker("ny_ic_vehicle_nav_on_map", String.valueOf(lat), String.valueOf(lng), 90, 0.5f, 0.5f);
                         animateCamera(lat, lng, 20.0f);
                         return;
                     }
@@ -796,7 +796,7 @@ public class MobilityCommonBridge extends HyperBridge {
     @JavascriptInterface
     public void removeAllPolylines(String str) {
         ExecutorManager.runOnMainThread(() -> {
-            removeMarker("ic_vehicle_nav_on_map");
+            removeMarker("ny_ic_vehicle_nav_on_map");
             removeMarker("ny_ic_src_marker");
             removeMarker("ny_ic_dest_marker");
             if (polyline != null) {

@@ -71,7 +71,7 @@
       "ic_share_location" : true,
       "ic_transparent_logo" : true,
       "ic_vehicle_front" : true,
-      "ic_vehicle_nav_on_map" : true,
+      "ny_ic_vehicle_nav_on_map" : true,
       "ic_vehicle_side" : true,
       "ic_waiting_image" : true,
       "label_shadow" : true,

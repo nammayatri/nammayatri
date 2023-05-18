@@ -251,11 +251,10 @@ addNewScreenView state push =
           , visibility if state.props.isLocateOnMap then GONE else VISIBLE
           , stroke ("1,"<>Color.grey900)
           , background Color.white900
-          ][  editText
+          ][  editText $
               [ height WRAP_CONTENT
               , color Color.black800
               , hint (getString ENTER_A_LOCATION)
-              , fontStyle $ FontStyle.semiBold LanguageStyle
               , singleLine true
               , weight 1.0
               , cornerRadius 8.0
@@ -269,11 +268,10 @@ addNewScreenView state push =
                   ) (const RenderKeyboardActin)
               , ellipsize true
               , padding (Padding 21 27 16 27)
-              , textSize FontSize.a_16
               , lineHeight "24"
               , onChange push AddressChanged
               , hintColor "#A7A7A7"
-              ]
+              ] <> FontStyle.subHeading1 LanguageStyle
         ,linearLayout
           [  height MATCH_PARENT
           , width WRAP_CONTENT
@@ -310,18 +308,15 @@ addNewScreenView state push =
           , width $ V 18
           , margin (MarginRight 11)
           ]
-        , textView
+        , textView $
         [ color Color.black800
-        , fontStyle $ FontStyle.semiBold LanguageStyle
         , singleLine true
         , width MATCH_PARENT
         , height MATCH_PARENT
         , gravity CENTER
         , text state.data.locSelectedFromMap
         , ellipsize true
-        , textSize FontSize.a_16
-        , lineHeight "24"
-        ]]
+        ] <> FontStyle.subHeading1 LanguageStyle]
     , bottomLayout state push
 
   ]  ) ]
@@ -343,16 +338,13 @@ textViews state push =
     , width $ V 18
     , margin (MarginRight 11)
     ]
-  , textView
+  , textView $
   [ color Color.black800
-  , fontStyle $ FontStyle.semiBold LanguageStyle
   , singleLine true
   , width MATCH_PARENT
   , text (state.data.selectedItem.description)
   , ellipsize true
-  , textSize FontSize.a_16
-  , lineHeight "24"
-  ]]
+  ] <> FontStyle.subHeading1 LanguageStyle]
 
 bottomLayout :: forall w. ST.AddNewAddressScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 bottomLayout state push =
@@ -466,16 +458,13 @@ savePlaceView state push =
       , cornerRadius 8.0
       , padding (Padding 16 20 16 20)
       , background Color.white900
-      ][  textView
+      ][  textView $
           [ text (getString LOCATION)
           , color Color.black600
-          , textSize FontSize.a_12
-          , lineHeight "15"
-          , fontStyle $ FontStyle.medium LanguageStyle
           , width MATCH_PARENT
           , margin (MarginBottom 8)
           , gravity LEFT
-          ]
+          ] <> FontStyle.tags LanguageStyle
         , linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
@@ -490,39 +479,32 @@ savePlaceView state push =
                           pure unit)
               $ const ChangeAddress
           ][  textView
-              ([ text (state.data.selectedItem).description 
-              , textSize FontSize.a_14
-              , fontStyle $ FontStyle.medium LanguageStyle
+              ([ text (state.data.selectedItem).description
               , color Color.black600
               , height WRAP_CONTENT
               , gravity CENTER_VERTICAL
               , padding (PaddingRight 8)
               , maxLines 1
               , ellipsize true 
-              ] <> (if EHC.os == "IOS" then [width $ V (4 * (EHC.screenWidth unit / 5) - 75)] else [weight 1.0]) )
+              ] <> (if EHC.os == "IOS" then [width $ V (4 * (EHC.screenWidth unit / 5) - 75)] else [weight 1.0]) <> FontStyle.body1 LanguageStyle)
             , linearLayout[
               height WRAP_CONTENT
             , width WRAP_CONTENT
             , gravity RIGHT 
-            ][  textView
+            ][  textView $
                 [ text (getString EDIT)
                 , color Color.blue900
                 , onFocus push $ const $ EditTextFocusChanged
                 , gravity CENTER_VERTICAL
-                , textSize FontSize.a_14
-                , fontStyle $ FontStyle.medium LanguageStyle
-                , lineHeight "18"
-                ]]
+                ] <> FontStyle.body1 LanguageStyle]
           ]
-         , textView
+         , textView $
           [ text if state.props.isLocationServiceable then (getText state) else (getString LOCATION_UNSERVICEABLE)
-          , textSize FontSize.a_12
           , gravity LEFT
           , margin (MarginTop 4)
           , visibility if ((state.props.tagExists && state.data.existsAs /= "") || (not state.props.isLocationServiceable)) then VISIBLE else GONE
-          , fontStyle $ FontStyle.medium LanguageStyle
           , color Color.red
-          ]
+          ] <> FontStyle.body3 TypoGraphy
         , tagView state push
         , linearLayout
           [ height WRAP_CONTENT
@@ -549,16 +531,13 @@ tagView state push =
   , width MATCH_PARENT
   , margin (MarginTop 24)
   , orientation VERTICAL
-  ][  textView
+  ][  textView $
       [ text (getString ADD_TAG)
       , color Color.black800
-      , textSize FontSize.a_12
-      , lineHeight "15"
-      , fontStyle $ FontStyle.medium LanguageStyle
       , width MATCH_PARENT
       , margin (MarginBottom 8)
       , gravity LEFT
-      ]
+      ] <> FontStyle.tags LanguageStyle
     , linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
@@ -584,14 +563,11 @@ tagView state push =
               , height $ V 15
               , margin (MarginRight 8)
               ]
-            , textView
+            , textView $
               [ text  item.text
-              , textSize FontSize.a_12
-              , lineHeight "16"
               , gravity CENTER
               , color if (Just index) == state.data.activeIndex then Color.blue900 else Color.black800
-              , fontStyle $ FontStyle.medium LanguageStyle
-              ]
+              ] <> FontStyle.tags LanguageStyle
           ]) [  { activeImageUrl : "ny_ic_home_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_home_blue.png", inActiveImageUrl : "ny_ic_home," <> (getAssetStoreLink FunctionCall) <> "ny_ic_home.png", text : (getString HOME), tag : "HOME"},
                 { activeImageUrl : "ny_ic_work_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_work_blue.png", inActiveImageUrl : "ny_ic_work," <> (getAssetStoreLink FunctionCall) <> "ny_ic_work.png", text : (getString WORK), tag : "WORK"},
                 { activeImageUrl : "ny_ic_fav_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_blue.png",inActiveImageUrl : "ny_ic_fav_tag," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_inactive.png", text : (getString FAVOURITE), tag : "FAVOURITE"}] )
@@ -619,25 +595,21 @@ locationUnserviceableView state push =
       , height WRAP_CONTENT
       , gravity CENTER
       , margin (MarginBottom 10)
-      ][  textView
+      ][  textView $
           [ text (getString LOCATION_UNSERVICEABLE)
-          , textSize FontSize.a_18
           , color Color.black800
           , gravity CENTER
-          , fontStyle $ FontStyle.bold LanguageStyle
-          ]
+          ] <> FontStyle.h2 LanguageStyle
         ]
     , linearLayout
       [ width (V (EHC.screenWidth unit - 40 ))
       , height WRAP_CONTENT
       , gravity CENTER
-      ][  textView
+      ][  textView $
           [ text (getString  CURRENTLY_WE_ARE_LIVE_IN_)
-          , textSize FontSize.a_14
           , gravity CENTER
           , color Color.black700
-          , fontStyle $ FontStyle.regular LanguageStyle
-          ]
+          ] <> FontStyle.paragraphText LanguageStyle
         ]
   ]
 

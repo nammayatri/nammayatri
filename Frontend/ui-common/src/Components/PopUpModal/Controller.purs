@@ -18,7 +18,7 @@ module Components.PopUpModal.Controller where
 import Styles.Colors as Color
 import PrestoDOM (Padding(..), Margin(..), Gravity(..), Visibility(..), Length(..))
 import Font.Size as FontSize
-import Font.Style as FontStyle
+import Font.Style (Style(..))
 import Common.Types.App
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
@@ -72,19 +72,17 @@ type ContactViewConfig = {
 type TextConfig = {
   text :: String,
   color :: String,
-  fontSize :: Int,
   gravity :: Gravity,
   padding :: Padding,
   margin :: Margin,
   visibility :: Visibility,
-  fontStyle :: String
+  textStyle :: Style
 }
 type ButtonConfig = {
   background :: String,
   strokeColor :: String,
   text :: String,
   color :: String,
-  fontSize :: Int,
   visibility :: Boolean,
   margin :: Margin,
   isClickable :: Boolean,
@@ -93,7 +91,7 @@ type ButtonConfig = {
   timerValue :: Int,
   enableTimer :: Boolean,
   timerID :: String,
-  fontStyle :: String
+  textStyle :: Style
 }
 
 type DismissPopupConfig = 
@@ -134,29 +132,26 @@ config = {
   , primaryText : {
       text : "Text1",
       color : Color.black800,
-      fontSize : FontSize.a_18,
       gravity : CENTER,
       padding : (Padding 16 0 16 0),
       margin : (Margin 0 20 0 0),
       visibility : VISIBLE,
-      fontStyle : FontStyle.bold LanguageStyle
+      textStyle : Heading2
     }
   , secondaryText : {
       text : "Text2",
       color : Color.textSecondary,
-      fontSize : FontSize.a_15,
       gravity : CENTER,
       padding : (Padding 16 0 16 0),
       margin : (Margin 0 20 0 20),
       visibility : VISIBLE,
-      fontStyle : FontStyle.medium LanguageStyle
+      textStyle : ParagraphText
     }
   , tipButton: {
      background : Color.white900
     , text : "Button1"
     , strokeColor : Color.black900 
     , color : Color.black900
-    , fontSize : FontSize.a_14
     , visibility : true
     , margin : (Margin 0 0 0 0)
     , isClickable : true
@@ -165,14 +160,13 @@ config = {
     , timerValue : 5
     , enableTimer : false
     , timerID : ""
-    , fontStyle : FontStyle.bold LanguageStyle
+    , textStyle : Body3
   } 
   , option1 : {
       background : Color.white900
     , text : "Button1"
     , strokeColor : Color.black900 
     , color : Color.black900
-    , fontSize : FontSize.a_14
     , visibility : true
     , margin : (Margin 0 0 0 0)
     , isClickable : true
@@ -181,14 +175,13 @@ config = {
     , timerValue : 5
     , enableTimer : false
     , timerID : ""
-    , fontStyle : FontStyle.bold LanguageStyle
+    , textStyle : SubHeading1
     }
   , option2 : {
       background : Color.black900
     , text : "Button2"
     , strokeColor : Color.black900
     , color : Color.yellow900
-    , fontSize : FontSize.a_14
     , visibility : true
     , margin : (Margin 12 0 0 16)
     , isClickable : true
@@ -197,7 +190,7 @@ config = {
     , timerValue : 5
     , enableTimer : false
     , timerID : ""
-    , fontStyle : FontStyle.bold LanguageStyle
+    , textStyle : SubHeading1
     }
     , dismissPopupConfig : 
     { imageUrl : "ny_ic_close," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_close.png"

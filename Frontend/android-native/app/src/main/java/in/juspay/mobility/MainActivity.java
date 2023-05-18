@@ -62,9 +62,11 @@ import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.dynamiclinks.FirebaseDynamicLinks;
 import com.google.firebase.messaging.FirebaseMessaging;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.ObjectOutputStream;
 import java.util.Date;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -315,7 +317,7 @@ public class MainActivity extends AppCompatActivity {
 
         try {
             Log.i(LOG_TAG, "Triggering the process");
-            hyperServices.process(new JSONObject().put("service", "in.juspay.nammayatri").put("requestId", UUID.randomUUID()).put("payload", new JSONObject().put("action", "showPopup").put("id", id).put("popType", type)));
+            hyperServices.process(new JSONObject().put("service", "in.yatri.consumer").put("requestId", UUID.randomUUID()).put("payload", new JSONObject().put("action", "showPopup").put("id", id).put("popType", type)));
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -332,10 +334,10 @@ public class MainActivity extends AppCompatActivity {
             json.put("requestId", "123");
             json.put("service", getService());
             json.put("betaAssets", false);
-            payload.put("clientId","mobilitypaytmconsumer");
+            payload.put("clientId","nammayatri");
             payload.put("action", "initiate");
             payload.put("service", getService());
-            payload.put(PaymentConstants.ENV, "prod");
+            payload.put(PaymentConstants.ENV, "master");
 
 //            JSONObject signatureAuthData = new JSONObject();
 //            signatureAuthData.put("signature", "Tz8ew9MYewcXBKIkjT7U+Tu3bPN06RZHBIKKbaJjMQ+e5uTaI4Hz0Ktu2KAXITR+7xBhBaLkMZ4Fb6HyaEOUjZES/qid/cVghyi1rJn3A0mI4VmMGt50IOep0b+5Ae2N1yCz58SwWvIRunv345amE0URHD6uca71rk2Rijva5XGjwgNrqOWXpzrHT0y0FRrvEr4u3du8QS2q0Wu4fZ2Ps9RSh04iPVNNuuMcUgkGSktxFP5vJLVYllYJDUzrOxi7nq3R11utNlSQMu18+ATSO5HyMTLxpndjhFlUJqn4QGxYovpp7amztJYjvoEnG9itPp2WdYamVeRAEcJnqRon2w==");
@@ -350,7 +352,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onEvent(JSONObject jsonObject, JuspayResponseHandler juspayResponseHandler) {
                 Log.d(LOG_TAG, "onEvent: " + jsonObject.toString());
-                if (jsonObject.optString("event").equals("initiate_result")) {
+                String event = jsonObject.optString("event");
+                if (event.equals("initiate_result")) {
                     //Getting Notification Data from Bundle and attaching to process payload
                     if (getIntent().hasExtra("NOTIFICATION_DATA") || (getIntent().hasExtra("notification_type") && getIntent().hasExtra("entity_ids") && getIntent().hasExtra("entity_type"))) {
                         try {
@@ -365,25 +368,34 @@ public class MainActivity extends AppCompatActivity {
                     }
                     Log.e(LOG_TAG, "json_payload" + json);
                     hyperServices.process(json);
-                } else if (jsonObject.optString("event").equals("hide_splash")) {
+                } else if (event.equals("hide_loader")) {
                     String key = getResources().getString(R.string.service);
                     if (key.equals("nammayatri") && isSystemAnimEnabled) {
                         isHideSplashEventCalled = true;
                     } else {
                         hideSplash();
                     }
-                } else if (jsonObject.optString("event").equals("show_splash")) {
+                } else if (event.equals("show_splash")) {
                     View v = findViewById(in.juspay.mobility.app.R.id.splash);
                     if (v != null) {
                         findViewById(in.juspay.mobility.app.R.id.splash).setVisibility(View.VISIBLE);
                     }
-                } else if (jsonObject.optString("event").equals("reboot")) {
+                } else if (event.equals("reboot")) {
                     Log.i(LOG_TAG, "event reboot");
                     hyperServices.terminate();
                     hyperServices = null;
                     initApp();
-                } else if (jsonObject.optString("event").equals("in_app_notification")) {
+                } else if (event.equals("in_app_notification")) {
                     showInAppNotifiation(jsonObject.optString("title"), jsonObject.optString("message"));
+                } else if (event.equals("location_permission")) {
+                    try {
+                        JSONObject payload1 = json.getJSONObject(PaymentConstants.PAYLOAD);
+                        payload1.put("action", "location_permission_result");
+                        json.put(PaymentConstants.PAYLOAD, payload1);
+                    } catch (Exception e) {
+                        Log.e(LOG_TAG,"Exception in location_permission");
+                    }
+                    hyperServices.process(json);
                 }
             }
         });

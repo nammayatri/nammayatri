@@ -80,12 +80,10 @@ rideDetails =
   , orientation HORIZONTAL
   , gravity CENTER_VERTICAL
   , padding (Padding 16 5 16 16)
-  ][  textView
+  ][  textView $
       [ PrestoList.textHolder "date"
-      , textSize FontSize.a_14
       , color Color.black700
-      , fontStyle $ FontStyle.regular LanguageStyle
-      ]
+      ] <> FontStyle.paragraphText LanguageStyle
     , imageView
       [ imageWithFallback $ "ny_ic_circle," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_circle.png"
       , height $ V 5
@@ -94,40 +92,33 @@ rideDetails =
       , background Color.black700
       , margin (Margin 6 0 6 0)
       ]
-    , textView
+    , textView $
       [ PrestoList.textHolder "time"
-      , textSize FontSize.a_14
       , color Color.black700
-      , fontStyle $ FontStyle.regular LanguageStyle
-      ]
+      ] <> FontStyle.paragraphText LanguageStyle
     , linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation HORIZONTAL
       , gravity RIGHT 
       ][
-        textView
+        textView $
           [ text "₹"
-          , textSize FontSize.a_20
           , PrestoList.colorHolder "amountColor"
-          , fontStyle $ FontStyle.medium LanguageStyle
-          ]  
-        , textView
+          ] <> FontStyle.body11 TypoGraphy
+        , textView $
           [ PrestoList.textHolder "total_amount"
-          , textSize FontSize.a_20
           , PrestoList.colorHolder "amountColor"
           , margin (MarginRight 12)
-          , fontStyle $ FontStyle.medium LanguageStyle
-          ]
-        , textView
+          ] <> FontStyle.body11 TypoGraphy
+        , textView $
           [ text (getString CANCELLED_)
           , background Color.peach
           , cornerRadius 3.0
           , visibility GONE
-          , textSize FontSize.a_12
           , color Color.red
           , padding (Padding 10 2 10 2)
-          ]
+          ] <> FontStyle.body3 TypoGraphy
         ]
     ]
 
@@ -161,15 +152,13 @@ sourceAndDestination =
               , height $ V 19
               , width $ V 17
               ]
-            , textView
+            , textView $
               [ PrestoList.textHolder "source"
-              , textSize FontSize.a_14
               , padding (Padding 10 0 70 2)
-              , fontStyle $ FontStyle.regular LanguageStyle
               , color Color.black700
               , maxLines 1
               , ellipsize true
-              ]
+              ] <> FontStyle.paragraphText LanguageStyle
             ]
           , linearLayout
             [ orientation HORIZONTAL
@@ -177,20 +166,18 @@ sourceAndDestination =
             , width MATCH_PARENT
             , background Color.white900
             ][  imageView
-                [ imageWithFallback $ "ny_ic_destination," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_destination.png"
+                [ imageWithFallback $ "ny_ic_destination," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_destination.png"
                 , height $ V 16
                 , width $ V 14
                 ]
-              , textView
+              , textView $
                 [ PrestoList.textHolder "destination"
-                , textSize FontSize.a_14
                 , layoutGravity "center_vertical"
                 , padding (Padding 10 0 70 2)
-                , fontStyle $ FontStyle.regular LanguageStyle
                 , maxLines 1
                 , ellipsize true
                 , color Color.black700
-                ]
+                ] <> FontStyle.paragraphText LanguageStyle
               ]
         ]
       
@@ -198,18 +185,16 @@ sourceAndDestination =
 
 rideWithDetails :: forall w. PrestoDOM (Effect Unit) w 
 rideWithDetails = 
-  textView
+  textView $
     [ PrestoList.textHolder "rideDistance"
     , PrestoList.visibilityHolder "ride_distance_visibility"
-    , textSize FontSize.a_14
     , height WRAP_CONTENT
-    , fontStyle $ FontStyle.regular LanguageStyle
     , layoutGravity "center_vertical"
     , padding (Padding 16 0 70 20)
     , maxLines 1
     , ellipsize true
     , color Color.black700
-    ]
+    ] <> FontStyle.paragraphText LanguageStyle
 
 separator :: forall w. PrestoDOM (Effect Unit) w 
 separator = 
@@ -238,17 +223,15 @@ rideDetailsShimmerView =
       , cornerRadius 5.0
       , margin (Margin 16 0 6 0)
   ][
-    textView
+    textView $
       [ PrestoList.textHolder "date"
-      , textSize FontSize.a_14
       , color Color.borderGreyColor
-      ]
-    ,  textView
+      ] <> FontStyle.paragraphText TypoGraphy
+    ,  textView $
       [ PrestoList.textHolder "time"
-      , textSize FontSize.a_14
       , margin (MarginLeft 46)
       , color Color.borderGreyColor
-      ]]
+      ] <> FontStyle.paragraphText TypoGraphy]
     , linearLayout
       [
         width MATCH_PARENT
@@ -260,15 +243,14 @@ rideDetailsShimmerView =
     , height WRAP_CONTENT
     , gravity RIGHT
     -- , background Color.borderGreyColor
-    ][textView
+    ][textView $
           [ PrestoList.textHolder "total_amount"
-          , textSize FontSize.a_14
           , color Color.borderGreyColor
           , background Color.borderGreyColor
           , cornerRadius 5.0
           , width MATCH_PARENT
           , gravity RIGHT
-          ]]
+          ] <> FontStyle.paragraphText TypoGraphy]
     ]
 
 

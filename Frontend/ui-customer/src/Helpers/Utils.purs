@@ -26,35 +26,36 @@ import Data.Array (length, filter, cons, deleteAt, sortWith, drop, head, tail, (
 import Data.Array.NonEmpty (fromArray)
 import Data.Date (Date)
 import Data.Either (Either(..), hush)
+import Data.Eq.Generic (genericEq)
 import Data.Foldable (or)
 import Data.Generic.Rep (class Generic)
-import Data.Show.Generic (genericShow)
 import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Number (fromString, pi, sin, cos, sqrt, asin)
 import Data.Profunctor.Strong (first)
+import Data.Show.Generic (genericShow)
 import Data.String as DS
-import Data.Eq.Generic (genericEq)
 import Data.Traversable (traverse)
 import Debug (spy)
 import Effect (Effect)
 import Effect (Effect)
 import Effect.Aff (error, killFiber, launchAff, launchAff_)
-import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
+import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff, runEffectFn2, runEffectFn3)
 import Effect.Class (liftEffect)
 import Effect.Console (logShow)
 import Engineering.Helpers.Commons (liftFlow, os, isPreviousVersion)
 import Engineering.Helpers.Commons (parseFloat, setText') as ReExport
 import Foreign.Class (class Decode, class Encode)
 import Foreign.Generic (Foreign, decodeJSON, encodeJSON)
+import Foreign.Generic (decode)
 import Juspay.OTP.Reader (initiateSMSRetriever)
 import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
-import Data.Number (fromString, pi, sin, cos, sqrt, asin)
 import Prelude (class Show, class Ord, class Eq, Unit, bind, discard, pure, unit, void, identity, not, (<*>), (<#>), (<<<), (>>>), ($), (<>), (>), show, (==), (/=), (/), (*), (-), (+), map, compare, (<), (=<<), (<=), ($))
 import Presto.Core.Flow (Flow, doAff)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, FareComponent)
 import Types.App (GlobalState)
-import Foreign.Generic (decode)
+import Merchant.Utils
 
 -- shuffle' :: forall a. Array a -> Effect (Array a)
 -- shuffle' array = do
@@ -115,8 +116,6 @@ foreign import validateEmail :: String -> Boolean
 foreign import getUTCDay :: Date -> Int
 
 foreign import makePascalCase :: String -> String
-
-foreign import hideSplash :: Effect Unit
 
 foreign import validateInputPattern :: String -> String -> Boolean
 
@@ -250,7 +249,7 @@ getObjFromLocal :: HomeScreenState -> Flow GlobalState RecentlySearchedObject
 getObjFromLocal homeScreenState = do
   (recentlySearched :: Maybe RecentlySearchedObject) <- (fetchRecents "RECENT_SEARCHES")
   case recentlySearched of
-    Just recents -> pure $ recents{predictionArray =  map (\item -> item{prefixImageUrl = "ny_ic_recent_search," <> (getAssetStoreLink FunctionCall) <> "/user/images/ny_ic_recent_search.png"}) (recents.predictionArray)}
+    Just recents -> pure $ recents{predictionArray =  map (\item -> item{prefixImageUrl = "ny_ic_recent_search," <> (getAssetStoreLink FunctionCall) <> "ny_ic_recent_search.png"}) (recents.predictionArray)}
     Nothing -> pure homeScreenState.data.recentSearchs
 
 getRecentSearches :: AddNewAddressScreenState -> Flow GlobalState RecentlySearchedObject
@@ -310,7 +309,7 @@ addSearchOnTop prediction predictionArr = cons prediction (filter (\ ( item) -> 
 
 addToRecentSearches :: LocationListItemState -> Array LocationListItemState -> Array LocationListItemState
 addToRecentSearches prediction predictionArr = 
-    let prediction' = prediction {prefixImageUrl = "ny_ic_recent_search," <> (getAssetStoreLink FunctionCall) <> "/user/images/ny_ic_recent_search.png", locationItemType = Just RECENTS}
+    let prediction' = prediction {prefixImageUrl = "ny_ic_recent_search," <> (getAssetStoreLink FunctionCall) <> "ny_ic_recent_search.png", locationItemType = Just RECENTS}
       in (if (checkPrediction prediction' predictionArr) 
            then (if length predictionArr == 30 then (fromMaybe [] (deleteAt 30 (cons prediction' predictionArr)))
           else (cons  prediction' predictionArr)) else addSearchOnTop prediction' predictionArr)
@@ -370,36 +369,16 @@ rotateArray arr times =
 isHaveFare :: String -> Array FareComponent -> Boolean
 isHaveFare fare = not null <<< filter (\item -> item.fareType == fare)
 
-
-foreign import getMerchantId :: String -> Foreign
-
-data Merchant
-  = NAMMAYATRI
-  | JATRISAATHI
-  | YATRI
-  | UNKNOWN
-
-derive instance genericMerchant :: Generic Merchant _
-instance eqMerchant :: Eq Merchant where eq = genericEq
-instance encodeMerchant :: Encode Merchant where encode = defaultEnumEncode
-instance decodeMerchant:: Decode Merchant where decode = defaultEnumDecode
-
-getMerchant :: LazyCheck -> Merchant
-getMerchant lazy = case (decodeMerchantId (getMerchantId "")) of 
-  Just merchant -> merchant
-  Nothing -> UNKNOWN
-
-decodeMerchantId :: Foreign -> Maybe Merchant
-decodeMerchantId = hush <<< runExcept <<< decode
-
 getAssetStoreLink :: LazyCheck -> String
 getAssetStoreLink lazy = case (getMerchant lazy) of
-  NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/"
-  JATRISAATHI -> "https://assets.juspay.in/beckn/jatrisaathi/"
-  YATRI -> "https://assets.juspay.in/beckn/yatri/"
+  NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/user/images/"
+  JATRISAATHI -> "https://assets.juspay.in/beckn/jatrisaathi/user/images/"
+  YATRI -> "https://assets.juspay.in/beckn/yatri/user/images/"
   UNKNOWN -> "https://assets.juspay.in/beckn/mobilitypaytm/user/"
 
 getCommonAssetStoreLink :: LazyCheck -> String
 getCommonAssetStoreLink lazy = case (getMerchant lazy) of
+  NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/"
+  JATRISAATHI -> "https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/"
+  YATRI -> "https://assets.juspay.in/beckn/yatri/yatricommon/images/"
   UNKNOWN -> "https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/"
-  _ ->"https://assets.juspay.in/beckn/merchantcommon/"

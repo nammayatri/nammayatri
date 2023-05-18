@@ -19,7 +19,7 @@ import PrestoDOM ( Length(..), Margin(..), Visibility(..), Padding(..), Gravity(
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Components.PrimaryButton.Controller as PrimaryButtonController 
 import Font.Size as FontSize
-import Font.Style as FontStyle
+import Font.Style (Style(..))
 import Styles.Colors as Color
 import Common.Types.App
 
@@ -48,8 +48,7 @@ type ImageConfig =
 
 type TextConfig =
   { text :: String
-  , textSize :: Int
-  , fontStyle :: String
+  , textStyle :: Style
   , color :: String 
   , padding :: Padding
   , margin :: Margin 
@@ -59,8 +58,7 @@ type TextConfig =
 type ButtonConfig =
   { margin :: Margin 
   , text :: String
-  , fontStyle :: String
-  , textSize :: Int
+  , textStyle :: Style
   , color :: String 
   , width :: Length
   , height :: Length
@@ -86,8 +84,7 @@ config =
     }
   , errorConfig :
     { text : ""
-    , textSize : FontSize.a_18
-    , fontStyle : FontStyle.medium LanguageStyle
+    , textStyle : Heading2
     , color : Color.black
     , padding : (Padding 0 0 0 0)
     , margin : (Margin 0 0 0 0)
@@ -95,8 +92,7 @@ config =
     }
   , errorDescriptionConfig :
     { text : ""
-    , textSize : FontSize.a_14 
-    , fontStyle : FontStyle.regular LanguageStyle
+    , textStyle : ParagraphText
     , color : Color.black
     , padding : (Padding 0 0 0 0)
     , margin : (Margin 0 0 0 0)
@@ -105,8 +101,7 @@ config =
   , buttonConfig :
     { margin : (Margin 0 0 0 0)
     , text : ""
-    , fontStyle : FontStyle.bold LanguageStyle
-    , textSize : FontSize.a_17
+    , textStyle : SubHeading1
     , color : Color.yellow900
     , width : MATCH_PARENT
     , height : V 50

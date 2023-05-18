@@ -31,7 +31,7 @@ import JBridge as JB
 import Components.PopUpModal as PopUpModal
 import Common.Types.App
 import Screens.AboutUsScreen.ComponentConfig
-import MerchantConfigs.Utils (getValueFromMerchant)
+import Merchant.Utils (getValueFromMerchant)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
@@ -101,23 +101,21 @@ headerLayout state push =
     ][ imageView
         [ width $ V 25
         , height MATCH_PARENT
-        , imageWithFallback $ "ny_ic_back," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_back.png"
+        , imageWithFallback $ "ny_ic_back," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_back.png"
         , gravity CENTER_VERTICAL
         , onClick push (const $ BackPressed state.props.demoModePopup)
         , padding (Padding 2 2 2 2)
         , margin (MarginLeft 5)
         ]
-      , textView
+      , textView $
         [ width WRAP_CONTENT
         , height MATCH_PARENT
         , text (getString ABOUT)
-        , textSize FontSize.a_19
         , margin (MarginLeft 20)
         , color Color.black
-        , fontStyle $ FontStyle.semiBold LanguageStyle
         , weight 1.0
         , gravity CENTER_VERTICAL
-        ]
+        ] <> FontStyle.h3 TypoGraphy
     ]
   , horizontalLine 0 0
  ]
@@ -130,14 +128,13 @@ footerView state =
  , height WRAP_CONTENT
  , orientation VERTICAL
  , margin (MarginBottom 30)
- ][textView
+ ][textView $
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , text $ "v" <> (getValueToLocalStore VERSION_NAME) <> "-[" <> (getValueToLocalStore BUNDLE_VERSION) <> "]"
-    , textSize FontSize.a_15
     , color Color.black800
     , gravity CENTER
-    ]
+    ] <> FontStyle.paragraphText TypoGraphy
  ]
 
 --------------------------------- applicationInformationLayout ----------------------------
@@ -152,20 +149,17 @@ applicationInformationLayout state push =
     ([ width $ V 150
     , height $ V 100
     , layoutGravity "center_horizontal"
-    , imageWithFallback $ "ny_ic_banner," <> (getAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_banner.png"
+    , imageWithFallback $ "ny_ic_banner," <> (getAssetStoreLink FunctionCall) <> "ny_ic_banner.png"
     ] <> if getValueToLocalStore DRIVER_STATUS == "true" then [onClick push (const ShowDemoPopUp)] else [])
-    , textView
+    , textView $
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , text $ getString ABOUT_TEXT
-    , textSize FontSize.a_16
-    , fontStyle $ FontStyle.regular LanguageStyle
     , color Color.black800
     , gravity LEFT
     , margin (MarginTop 20)
     , padding (Padding 20 0 20 0)
-    , lineHeight "20"
-    ]
+    ] <> FontStyle.body5 TypoGraphy
     , underlinedTextView (getString T_C) push
     , underlinedTextView (getString PRIVACY_POLICY) push
   ]
@@ -184,14 +178,12 @@ underlinedTextView value push  =
               pure unit
               ) (const TermsAndConditionAction)
   , margin (Margin 20 30 0 0)
-  ][ textView
+  ][ textView $
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
     , text value
-    , textSize FontSize.a_16
-    , fontStyle $ FontStyle.regular LanguageStyle
     , color Color.primaryBlue
-    ]
+    ] <> FontStyle.body5 TypoGraphy
     , linearLayout
     [ height $ V 1
     , width MATCH_PARENT
