@@ -108,7 +108,7 @@ transformBeamMerchantToDomain BeamM.MerchantT {..} = do
 
 transformDomainMerchantToBeam :: Merchant -> BeamM.Merchant
 transformDomainMerchantToBeam Merchant {..} =
-  BeamM.defaultMerchant
+  BeamM.MerchantT
     { BeamM.id = getId id,
       BeamM.name = name,
       BeamM.description = description,

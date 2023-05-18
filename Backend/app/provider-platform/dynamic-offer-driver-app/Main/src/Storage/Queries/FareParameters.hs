@@ -53,7 +53,7 @@ transformBeamFareParametersToDomain BeamFP.FareParametersT {..} = do
 
 transformDomainFareParametersToBeam :: FareParameters -> BeamFP.FareParameters
 transformDomainFareParametersToBeam FareParameters {..} =
-  BeamFP.defaultFareParameters
+  BeamFP.FareParametersT
     { BeamFP.id = getId id,
       BeamFP.baseFare = baseFare,
       BeamFP.deadKmFare = deadKmFare,

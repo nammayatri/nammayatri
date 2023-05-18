@@ -164,21 +164,21 @@ quoteSpecialZoneToPSModifiers =
   M.fromList
     []
 
-defaultQuoteSpecialZone :: QuoteSpecialZone
-defaultQuoteSpecialZone =
-  QuoteSpecialZoneT
-    { id = "",
-      searchRequestId = "",
-      providerId = "",
-      vehicleVariant = "",
-      distance = "",
-      validTill = defaultUTCDate,
-      estimatedFare = "",
-      fareParametersId = "",
-      estimatedFinishTime = defaultUTCDate,
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
-    }
+-- defaultQuoteSpecialZone :: QuoteSpecialZone
+-- defaultQuoteSpecialZone =
+--   QuoteSpecialZoneT
+--     { id = "",
+--       searchRequestId = "",
+--       providerId = "",
+--       vehicleVariant = "",
+--       distance = "",
+--       validTill = defaultUTCDate,
+--       estimatedFare = "",
+--       fareParametersId = "",
+--       estimatedFinishTime = defaultUTCDate,
+--       createdAt = defaultUTCDate,
+--       updatedAt = defaultUTCDate
+--     }
 
 instance Serialize QuoteSpecialZone where
   put = error "undefined"

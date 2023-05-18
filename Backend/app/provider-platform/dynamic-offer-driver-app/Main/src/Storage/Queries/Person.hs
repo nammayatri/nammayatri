@@ -754,7 +754,7 @@ updateAlternateMobileNumberAndCode person = do
 
 -- transformDomainPersonToBeam :: Person -> BeamP.Person
 -- transformDomainPersonToBeam Person {..} =
---   BeamP.defaultPerson
+--   BeamP.PersonT
 --     {
 --       BeamP.id = getId id,
 --       BeamP.firstName = firstName,

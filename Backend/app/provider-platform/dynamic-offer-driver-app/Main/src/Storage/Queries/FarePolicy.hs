@@ -106,7 +106,7 @@ transformBeamFarePolicyToDomain BeamFP.FarePolicyT {..} = do
 
 transformDomainFarePolicyToBeam :: FarePolicy -> BeamFP.FarePolicy
 transformDomainFarePolicyToBeam FarePolicy {..} =
-  BeamFP.defaultFarePolicy
+  BeamFP.FarePolicyT
     { BeamFP.id = getId id,
       BeamFP.merchantId = getId merchantId,
       BeamFP.vehicleVariant = vehicleVariant,
