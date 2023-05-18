@@ -78,9 +78,9 @@ data DriverLocationT f = DriverLocationT
     lat :: B.C f Double,
     lon :: B.C f Double,
     point :: B.C f Point,
-    coordinatesCalculatedAt :: B.C f Time.LocalTime,
-    createdAt :: B.C f Time.LocalTime,
-    updatedAt :: B.C f Time.LocalTime
+    coordinatesCalculatedAt :: B.C f Time.UTCTime,
+    createdAt :: B.C f Time.UTCTime,
+    updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -130,17 +130,17 @@ driverLocationToPSModifiers =
   M.fromList
     []
 
-defaultDriverLocation :: DriverLocation
-defaultDriverLocation =
-  DriverLocationT
-    { driverId = "",
-      lat = "",
-      lon = "",
-      point = "",
-      coordinatesCalculatedAt = defaultUTCDate,
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
-    }
+-- defaultDriverLocation :: DriverLocation
+-- defaultDriverLocation =
+--   DriverLocationT
+--     { driverId = "",
+--       lat = "",
+--       lon = "",
+--       point = "",
+--       coordinatesCalculatedAt = defaultUTCDate,
+--       createdAt = defaultUTCDate,
+--       updatedAt = defaultUTCDate
+--     }
 
 instance Serialize DriverLocation where
   put = error "undefined"

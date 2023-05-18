@@ -68,8 +68,6 @@ data MerchantD (s :: UsageSafety) = Merchant
 
 type Merchant = MerchantD 'Safe
 
-deriving instance Read (Id Merchant)
-
 instance FromJSON (MerchantD 'Unsafe)
 
 instance ToJSON (MerchantD 'Unsafe)

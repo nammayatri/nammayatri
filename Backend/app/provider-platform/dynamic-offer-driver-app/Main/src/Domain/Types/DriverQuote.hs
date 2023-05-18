@@ -27,7 +27,7 @@ import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
 
 data DriverQuoteStatus = Active | Inactive
-  deriving (Show, Read, Eq, Generic)
+  deriving (Show, Read, Eq, Generic, Ord)
   deriving (PrettyShow) via Showable DriverQuoteStatus
 
 data DriverQuote = DriverQuote
@@ -50,4 +50,4 @@ data DriverQuote = DriverQuote
     fareParams :: Params.FareParameters,
     providerId :: Id DMerchant.Merchant
   }
-  deriving (Generic, Show, PrettyShow)
+  deriving (Generic, Show, PrettyShow, Read, Eq, Ord)

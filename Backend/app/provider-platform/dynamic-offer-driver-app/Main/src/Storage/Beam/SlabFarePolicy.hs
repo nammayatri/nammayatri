@@ -156,8 +156,6 @@ instance ToJSON SlabFarePolicy where
 
 deriving stock instance Show SlabFarePolicy
 
-deriving stock instance Read Money
-
 deriving stock instance Ord Domain.Slab
 
 instance IsString Domain.Slab where

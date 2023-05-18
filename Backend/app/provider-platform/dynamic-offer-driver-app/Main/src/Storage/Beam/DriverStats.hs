@@ -42,6 +42,7 @@ import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Person (PersonTId)
+import Storage.Beam.Instances ()
 
 fromFieldEnum ::
   (Typeable a, Read a) =>
@@ -57,7 +58,9 @@ fromFieldEnum f mbValue = case mbValue of
 
 data DriverStatsT f = DriverStatsT
   { driverId :: B.C f Text,
-    idleSince :: B.C f Time.UTCTime
+    idleSince :: B.C f Time.UTCTime,
+    totalRides :: B.C f Int,
+    totalDistance :: B.C f Meters
   }
   deriving (Generic, B.Beamable)
 
@@ -86,7 +89,9 @@ driverStatsTMod :: DriverStatsT (B.FieldModification (B.TableField DriverStatsT)
 driverStatsTMod =
   B.tableModification
     { driverId = B.fieldNamed "driver_id",
-      idleSince = B.fieldNamed "idle_since"
+      idleSince = B.fieldNamed "idle_since",
+      totalRides = B.fieldNamed "total_rides",
+      totalDistance = B.fieldNamed "total_distance"
     }
 
 psToHs :: HM.HashMap Text Text
@@ -106,7 +111,9 @@ defaultDriverStats :: DriverStats
 defaultDriverStats =
   DriverStatsT
     { driverId = "",
-      idleSince = defaultUTCDate
+      idleSince = defaultUTCDate,
+      totalRides = 0,
+      totalDistance = Meters 0
     }
 
 instance Serialize DriverStats where

@@ -117,8 +117,6 @@ instance ToJSON RestrictedExtraFare where
 
 deriving stock instance Show RestrictedExtraFare
 
-deriving stock instance Read Money
-
 restrictedExtraFareTMod :: RestrictedExtraFareT (B.FieldModification (B.TableField RestrictedExtraFareT))
 restrictedExtraFareTMod =
   B.tableModification

@@ -143,8 +143,6 @@ instance ToJSON Ride where
 
 deriving stock instance Show Ride
 
-deriving stock instance Read Money
-
 rideTMod :: RideT (B.FieldModification (B.TableField RideT))
 rideTMod =
   B.tableModification

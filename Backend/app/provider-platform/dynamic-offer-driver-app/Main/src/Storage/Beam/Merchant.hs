@@ -150,8 +150,6 @@ deriving stock instance Ord GeoRestriction
 
 deriving stock instance Eq GeoRestriction
 
-deriving stock instance Ord Domain.FarePolicyType
-
 merchantTMod :: MerchantT (B.FieldModification (B.TableField MerchantT))
 merchantTMod =
   B.tableModification

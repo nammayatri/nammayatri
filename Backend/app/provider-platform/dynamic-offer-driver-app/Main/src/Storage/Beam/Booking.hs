@@ -119,8 +119,6 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Money
 
 instance FromBackendRow Postgres Money
 
-deriving stock instance Read Money
-
 instance FromField Veh.Variant where
   fromField = fromFieldEnum
 
@@ -196,8 +194,6 @@ instance ToJSON Booking where
   toJSON = A.genericToJSON A.defaultOptions
 
 deriving stock instance Show Booking
-
-deriving stock instance Read Money
 
 bookingTMod :: BookingT (B.FieldModification (B.TableField BookingT))
 bookingTMod =

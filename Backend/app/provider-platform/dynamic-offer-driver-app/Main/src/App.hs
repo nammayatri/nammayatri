@@ -22,8 +22,8 @@ import Environment
 import EulerHS.Interpreters (runFlow)
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
-import Kernel.Connection.Postgres (prepareDBConnections)
-import Kernel.Connection.Types (ConnectionConfig (..))
+import Kernel.Beam.Connection.Flow (prepareConnection)
+import Kernel.Beam.Connection.Types (ConnectionConfig (..))
 import Kernel.Exit
 import Kernel.External.Verification.Interface.Idfy
 import Kernel.Storage.Esqueleto.Migration (migrateIfNeeded)
@@ -66,7 +66,7 @@ runDynamicOfferDriverApp' appCfg = do
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     runFlow
       flowRt
-      ( prepareDBConnections $
+      ( prepareConnection $
           ConnectionConfig
             { esqDBCfg = appCfg.esqDBCfg,
               esqDBReplicaCfg = appCfg.esqDBReplicaCfg,

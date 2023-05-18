@@ -12,6 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingVia #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Domain.Types.FareParameters where
 
@@ -35,8 +36,10 @@ data FareParameters = FareParameters
     farePolicyType :: FarePolicyType,
     govtChargesPerc :: Maybe Int
   }
-  deriving (Generic, Show, Eq, PrettyShow)
+  deriving (Generic, Show, Eq, PrettyShow, Ord, Read)
+
+deriving stock instance Read Money
 
 data FarePolicyType = SLAB | NORMAL
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
   deriving (PrettyShow) via Showable FarePolicyType

@@ -182,8 +182,6 @@ instance ToJSON FarePolicy where
 
 deriving stock instance Show FarePolicy
 
-deriving stock instance Read Money
-
 farePolicyTMod :: FarePolicyT (B.FieldModification (B.TableField FarePolicyT))
 farePolicyTMod =
   B.tableModification

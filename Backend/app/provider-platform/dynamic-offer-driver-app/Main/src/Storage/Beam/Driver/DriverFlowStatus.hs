@@ -99,8 +99,6 @@ deriving stock instance Show DriverFlowStatus
 
 deriving stock instance Ord Domain.FlowStatus
 
-deriving stock instance Read Domain.FlowStatus
-
 -- deriving stock instance Read (SearchRequest)
 
 -- deriving stock instance Read (Merchant)
