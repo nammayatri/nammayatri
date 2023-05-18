@@ -27,6 +27,7 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Kernel.External.Maps
+import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Centesimal
@@ -141,3 +142,18 @@ instance ToHttpApiData BookingStatus where
   toUrlPiece = DT.decodeUtf8 . toHeader
   toQueryParam = toUrlPiece
   toHeader = BSL.toStrict . encode
+
+---------------------------------------------------------
+-- Trip Route--------------------------------------
+
+type TripRouteAPI =
+  "trip"
+    :> "route"
+    :> Capture "rideId" (Id DP.Ride)
+    :> ReqBody '[JSON] TripRouteReq
+    :> Get '[JSON] Maps.GetRoutesResp
+
+newtype TripRouteReq = TripRouteReq
+  { pickupLocation :: Maps.LatLong
+  }
+  deriving (Show, ToJSON, FromJSON, Generic, ToSchema)

@@ -75,7 +75,7 @@ in  { esqDBCfg
     , hedisCfg = rcfg
     , hedisClusterCfg = rccfg
     , hedisMigrationStage = True
-    , cutOffHedisCluster = False
+    , cutOffHedisCluster = True
     , port = +8018
     , migrationPath = Some
         (   env:PROVIDER_DASHBOARD_MIGRATION_PATH as Text

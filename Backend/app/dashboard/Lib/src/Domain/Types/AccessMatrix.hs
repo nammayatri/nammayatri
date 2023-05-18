@@ -119,6 +119,7 @@ data UserActionType
   | SPECIAL_ZONE_UPDATE
   | SPECIAL_ZONE_LOOKUP
   | LIST_ISSUE
+  | TRIP_ROUTE
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 genSingletons [''UserActionType]

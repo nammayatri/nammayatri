@@ -21,28 +21,33 @@ where
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import "lib-dashboard" Environment
+import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter
 import qualified RiderPlatformClient.RiderApp as Client
-import Servant hiding (throwError)
+import Servant
 import Tools.Auth.Merchant
 
 type API =
   "ride"
     :> ( ShareRideInfoAPI
            :<|> RideListAPI
+           :<|> TripRouteAPI
        )
 
 type RideListAPI = Common.RideListAPI
 
 type ShareRideInfoAPI = Common.ShareRideInfoAPI
 
+type TripRouteAPI = Common.TripRouteAPI
+
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   shareRideInfo merchantId
     :<|> rideList merchantId
+    :<|> tripRoute merchantId
 
 rideInfoHitsCountKey :: Id Common.Ride -> Text
 rideInfoHitsCountKey rideId = "RideInfoHits:" <> getId rideId <> ":hitsCount"
@@ -70,3 +75,12 @@ rideList merchantShortId mbLimit mbOffset mbBookingStatus mbShortRideId mbCustom
   withFlowHandlerAPI $ do
     checkedMerchantId <- merchantAccessCheck merchantShortId merchantShortId
     Client.callRiderApp checkedMerchantId (.rides.rideList) mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbDriverPhone
+
+tripRoute ::
+  ShortId DM.Merchant ->
+  Id Common.Ride ->
+  Common.TripRouteReq ->
+  FlowHandler Maps.GetRoutesResp
+tripRoute merchantShortId rideId req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId merchantShortId
+  Client.callRiderApp checkedMerchantId (.rides.tripRoute) rideId req

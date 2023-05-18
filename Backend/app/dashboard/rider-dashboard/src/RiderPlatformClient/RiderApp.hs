@@ -46,12 +46,13 @@ import qualified "rider-app" Domain.Types.RegistrationToken as DTR
 import qualified "rider-app" Domain.Types.SearchRequest as SSR
 import Domain.Types.ServerName
 import qualified EulerHS.Types as Euler
+import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (callAPI)
-import Servant
+import Servant hiding (route)
 import Tools.Auth.Merchant (CheckedShortId)
 import Tools.Client
 
@@ -76,17 +77,18 @@ newtype BookingsAPIs = BookingsAPIs
   { stuckBookingsCancel :: Booking.StuckBookingsCancelReq -> Euler.EulerClient Booking.StuckBookingsCancelRes
   }
 
-data RidesAPIs = RidesAPIs
-  { shareRideInfo :: Id Ride.Ride -> Euler.EulerClient Ride.ShareRideInfoRes,
-    rideList :: Maybe Int -> Maybe Int -> Maybe Ride.BookingStatus -> Maybe (ShortId Ride.Ride) -> Maybe Text -> Maybe Text -> Euler.EulerClient Ride.RideListRes
-  }
-
 data MerchantAPIs = MerchantAPIs
   { merchantUpdate :: Merchant.MerchantUpdateReq -> Euler.EulerClient APISuccess,
     mapsServiceConfigUpdate :: Merchant.MapsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
     mapsServiceUsageConfigUpdate :: Merchant.MapsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
     smsServiceConfigUpdate :: Merchant.SmsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
     smsServiceUsageConfigUpdate :: Merchant.SmsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess
+  }
+
+data RidesAPIs = RidesAPIs
+  { shareRideInfo :: Id Ride.Ride -> Euler.EulerClient Ride.ShareRideInfoRes,
+    rideList :: Maybe Int -> Maybe Int -> Maybe Ride.BookingStatus -> Maybe (ShortId Ride.Ride) -> Maybe Text -> Maybe Text -> Euler.EulerClient Ride.RideListRes,
+    tripRoute :: Id Ride.Ride -> Ride.TripRouteReq -> Euler.EulerClient Maps.GetRoutesResp
   }
 
 data RideBookingAPIs = RideBookingAPIs
@@ -193,7 +195,8 @@ mkAppBackendAPIs merchantId token = do
     stuckBookingsCancel = bookingsClient
 
     shareRideInfo
-      :<|> rideList = ridesClient
+      :<|> rideList
+      :<|> tripRoute = ridesClient
 
     registrationClient
       :<|> profileClient
