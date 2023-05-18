@@ -23,6 +23,7 @@ import qualified "rider-app" API.Dashboard.RideBooking.Profile as BAP
 import qualified "rider-app" API.Dashboard.RideBooking.Registration as BAP
 import qualified "rider-app" API.Dashboard.RideBooking.Search as BAP
 import qualified "rider-app" API.Dashboard.RideBooking.Select as BAP
+import qualified "rider-app" API.Dashboard.Route as BAP
 import qualified "dashboard-helper-api" Dashboard.Common.Booking as Common
 import qualified "dashboard-helper-api" Dashboard.Common.Exotel as Common
 import qualified "dashboard-helper-api" Dashboard.Common.Issue as Common
@@ -77,5 +78,6 @@ data Endpoint
   | MapsAPI BAP.MapEndPoints
   | FlowStatusAPI BAP.RideNotifyEventEndPoint
   | CancelAPI BAP.RideCancelEndPoint
+  | TripRouteAPI BAP.RouteEndPoint
   | SpecialZoneAPI Common.SpecialZoneEndpoint
   deriving (Show, Read)

@@ -27,6 +27,7 @@ import qualified Dashboard.Common.Booking as Booking
 import qualified Dashboard.RiderPlatform.Customer as Customer
 import qualified Dashboard.RiderPlatform.Merchant as Merchant
 import qualified Dashboard.RiderPlatform.Ride as Ride
+import qualified "rider-app" Domain.Action.Dashboard.Route as Routes
 import qualified "rider-app" Domain.Action.UI.Booking as DBooking
 import qualified "rider-app" Domain.Action.UI.Cancel as DCancel
 import qualified "rider-app" Domain.Action.UI.Frontend as DFrontend
@@ -42,15 +43,17 @@ import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "rider-app" Domain.Types.Person as DP
 import qualified "rider-app" Domain.Types.Quote as Quote
 import qualified "rider-app" Domain.Types.RegistrationToken as DTR
+import qualified "rider-app" Domain.Types.Ride as DP
 import qualified "rider-app" Domain.Types.SearchRequest as SSR
 import Domain.Types.ServerName
 import qualified EulerHS.Types as Euler
+import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (callAPI)
-import Servant
+import Servant hiding (route)
 import Tools.Auth.Merchant (CheckedShortId)
 import Tools.Client
 
@@ -59,6 +62,7 @@ data AppBackendAPIs = AppBackendAPIs
     bookings :: BookingsAPIs,
     merchant :: MerchantAPIs,
     rides :: RidesAPIs,
+    route :: TripRouteAPIs,
     rideBooking :: RideBookingAPIs
   }
 
@@ -77,6 +81,10 @@ newtype BookingsAPIs = BookingsAPIs
 data RidesAPIs = RidesAPIs
   { shareRideInfo :: Id Ride.Ride -> Euler.EulerClient Ride.ShareRideInfoRes,
     rideList :: Maybe Int -> Maybe Int -> Maybe Ride.BookingStatus -> Maybe (ShortId Ride.Ride) -> Maybe Text -> Maybe Text -> Euler.EulerClient Ride.RideListRes
+  }
+
+newtype TripRouteAPIs = TripRouteAPIs
+  { tripRoute :: Id DP.Ride -> Routes.TripRouteReq -> Euler.EulerClient Maps.GetRoutesResp
   }
 
 data MerchantAPIs = MerchantAPIs
@@ -157,6 +165,7 @@ mkAppBackendAPIs merchantId token = do
   let bookings = BookingsAPIs {..}
   let merchant = MerchantAPIs {..}
   let rides = RidesAPIs {..}
+  let route = TripRouteAPIs {..}
   let registration = RegistrationAPIs {..}
   let profile = ProfileAPIs {..}
   let search = SearchAPIs {..}
@@ -174,6 +183,7 @@ mkAppBackendAPIs merchantId token = do
       :<|> bookingsClient
       :<|> merchantClient
       :<|> ridesClient
+      :<|> tripRouteClient
       :<|> rideBookingClient = clientWithMerchant (Proxy :: Proxy BAP.API') merchantId token
 
     customerList
@@ -186,6 +196,8 @@ mkAppBackendAPIs merchantId token = do
 
     shareRideInfo
       :<|> rideList = ridesClient
+
+    tripRoute = tripRouteClient
 
     registrationClient
       :<|> profileClient
