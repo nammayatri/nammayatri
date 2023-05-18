@@ -100,13 +100,6 @@ geometryToPSModifiers =
   M.fromList
     []
 
-defaultGeometry :: Geometry
-defaultGeometry =
-  GeometryT
-    { id = "",
-      region = ""
-    }
-
 instance Serialize Geometry where
   put = error "undefined"
   get = error "undefined"

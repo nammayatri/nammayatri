@@ -121,23 +121,23 @@ bookingLocationToPSModifiers =
   M.fromList
     []
 
-defaultBookingLocation :: BookingLocation
-defaultBookingLocation =
-  BookingLocationT
-    { id = "",
-      lat = 0.0,
-      lon = 0.0,
-      street = Nothing,
-      door = Nothing,
-      city = Nothing,
-      state = Nothing,
-      country = Nothing,
-      building = Nothing,
-      areaCode = Nothing,
-      area = Nothing,
-      createdAt = defaultDate,
-      updatedAt = defaultDate
-    }
+-- defaultBookingLocation :: BookingLocation
+-- defaultBookingLocation =
+--   BookingLocationT
+--     { id = "",
+--       lat = 0.0,
+--       lon = 0.0,
+--       street = Nothing,
+--       door = Nothing,
+--       city = Nothing,
+--       state = Nothing,
+--       country = Nothing,
+--       building = Nothing,
+--       areaCode = Nothing,
+--       area = Nothing,
+--       createdAt = defaultDate,
+--       updatedAt = defaultDate
+--     }
 
 instance Serialize BookingLocation where
   put = error "undefined"

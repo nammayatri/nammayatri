@@ -144,21 +144,6 @@ messageToPSModifiers =
   M.fromList
     []
 
-defaultMessage :: Message
-defaultMessage =
-  MessageT
-    { id = "",
-      messageType = "",
-      title = "",
-      description = "",
-      shortDescription = "",
-      label = Nothing,
-      likeCount = 0,
-      mediaFiles = [""],
-      merchantId = "",
-      createdAt = defaultDate
-    }
-
 instance Serialize Message where
   put = error "undefined"
   get = error "undefined"

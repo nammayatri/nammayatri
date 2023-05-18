@@ -145,19 +145,6 @@ instance IsString Domain.ImageType where
 instance IsString Domain.DriverOnboardingError where
   fromString = show
 
-defaultImage :: Image
-defaultImage =
-  ImageT
-    { id = "",
-      personId = "",
-      merchantId = "",
-      s3Path = "",
-      imageType = "",
-      isValid = False,
-      failureReason = Nothing,
-      createdAt = defaultDate
-    }
-
 instance Serialize Image where
   put = error "undefined"
   get = error "undefined"

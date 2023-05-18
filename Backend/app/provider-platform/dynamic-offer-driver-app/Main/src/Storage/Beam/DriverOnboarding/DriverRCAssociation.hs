@@ -112,18 +112,6 @@ driverRcAssociationToPSModifiers =
   M.fromList
     []
 
-defaultDriverRCAssociation :: DriverRCAssociation
-defaultDriverRCAssociation =
-  DriverRCAssociationT
-    { id = "",
-      driverId = "",
-      rcId = "",
-      associatedOn = defaultDate,
-      associatedTill = Nothing,
-      consent = False,
-      consentTimestamp = defaultDate
-    }
-
 instance Serialize DriverRCAssociation where
   put = error "undefined"
   get = error "undefined"

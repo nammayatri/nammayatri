@@ -139,19 +139,6 @@ callStatusTMod =
 instance IsString Call.CallStatus where
   fromString = show
 
-defaultCallStatus :: CallStatus
-defaultCallStatus =
-  CallStatusT
-    { id = "", -- :: Int,
-      callId = "",
-      rideId = "",
-      dtmfNumberUsed = Nothing,
-      status = "",
-      recordingUrl = Nothing,
-      conversationDuration = 0,
-      createdAt = defaultUTCDate --localTimeToUTC utc defaultDate
-    }
-
 psToHs :: HM.HashMap Text Text
 psToHs = HM.empty
 

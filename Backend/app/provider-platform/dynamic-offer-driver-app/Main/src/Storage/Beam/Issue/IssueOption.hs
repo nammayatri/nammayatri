@@ -115,14 +115,6 @@ issueOptionToPSModifiers =
   M.fromList
     []
 
-defaultIssueOption :: IssueOption
-defaultIssueOption =
-  IssueOptionT
-    { id = "",
-      issueCategoryId = "",
-      option = ""
-    }
-
 instance Serialize IssueOption where
   put = error "undefined"
   get = error "undefined"

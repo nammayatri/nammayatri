@@ -171,25 +171,6 @@ instance IsString DbHash where
 instance IsString Domain.ImageExtractionValidation where
   fromString = show
 
-defaultIdfyVerification :: IdfyVerification
-defaultIdfyVerification =
-  IdfyVerificationT
-    { id = "",
-      driverId = "",
-      documentImageId1 = "",
-      documentImageId2 = Nothing,
-      requestId = "",
-      docType = "",
-      status = "",
-      issueDateOnDoc = Nothing,
-      documentNumberEncrypted = "",
-      documentNumberHash = "",
-      imageExtractionValidation = "",
-      idfyResponse = Nothing,
-      createdAt = defaultDate,
-      updatedAt = defaultDate
-    }
-
 instance Serialize IdfyVerification where
   put = error "undefined"
   get = error "undefined"

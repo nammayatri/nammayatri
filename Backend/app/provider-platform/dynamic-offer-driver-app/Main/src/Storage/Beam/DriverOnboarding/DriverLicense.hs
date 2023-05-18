@@ -165,27 +165,6 @@ instance IsString DbHash where
 instance IsString Domain.VerificationStatus where
   fromString = show
 
-defaultDriverLicense :: DriverLicense
-defaultDriverLicense =
-  DriverLicenseT
-    { id = "",
-      driverId = "",
-      documentImageId1 = "",
-      documentImageId2 = Nothing,
-      driverDob = Nothing,
-      driverName = Nothing,
-      licenseNumberEncrypted = "",
-      licenseNumberHash = "",
-      licenseExpiry = defaultDate,
-      classOfVehicles = [""],
-      failedRules = [""],
-      verificationStatus = "",
-      consent = False,
-      consentTimestamp = defaultDate,
-      createdAt = defaultDate,
-      updatedAt = defaultDate
-    }
-
 instance Serialize DriverLicense where
   put = error "undefined"
   get = error "undefined"

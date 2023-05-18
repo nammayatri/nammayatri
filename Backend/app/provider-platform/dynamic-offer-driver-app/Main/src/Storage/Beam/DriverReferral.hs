@@ -103,14 +103,6 @@ driverReferralToPSModifiers =
   M.fromList
     []
 
-defaultDriverReferral :: DriverReferral
-defaultDriverReferral =
-  DriverReferralT
-    { referralCode = "",
-      driverId = "",
-      linkedAt = defaultUTCDate
-    }
-
 instance Serialize DriverReferral where
   put = error "undefined"
   get = error "undefined"

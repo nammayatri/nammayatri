@@ -123,16 +123,6 @@ commentToPSModifiers =
   M.fromList
     []
 
-defaultComment :: Comment
-defaultComment =
-  CommentT
-    { id = "",
-      issueReportId = "",
-      authorId = "",
-      comment = "",
-      createdAt = defaultDate
-    }
-
 instance Serialize Comment where
   put = error "undefined"
   get = error "undefined"

@@ -168,29 +168,6 @@ instance IsString DbHash where
 instance IsString Domain.VerificationStatus where
   fromString = show
 
-defaultVehicleRegistrationCertificate :: VehicleRegistrationCertificate
-defaultVehicleRegistrationCertificate =
-  VehicleRegistrationCertificateT
-    { id = "",
-      documentImageId = "",
-      certificateNumberEncrypted = "",
-      certificateNumberHash = "",
-      fitnessExpiry = defaultDate,
-      permitExpiry = Nothing,
-      pucExpiry = Nothing,
-      insuranceValidity = Nothing,
-      vehicleClass = Nothing,
-      vehicleManufacturer = Nothing,
-      vehicleCapacity = Nothing,
-      vehicleModel = Nothing,
-      vehicleColor = Nothing,
-      vehicleEnergyType = Nothing,
-      verificationStatus = "",
-      failedRules = [""],
-      createdAt = defaultDate,
-      updatedAt = defaultDate
-    }
-
 instance Serialize VehicleRegistrationCertificate where
   put = error "undefined"
   get = error "undefined"

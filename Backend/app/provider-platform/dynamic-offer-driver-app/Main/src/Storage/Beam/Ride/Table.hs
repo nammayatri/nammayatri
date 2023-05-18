@@ -238,32 +238,6 @@ instance IsString HighPrecMeters where
 instance IsString Meters where
   fromString = show
 
-defaultRide :: Ride
-defaultRide =
-  RideT
-    { id = "",
-      bookingId = "",
-      shortId = "",
-      status = "",
-      driverId = "",
-      otp = "",
-      trackingUrl = "",
-      fare = Nothing,
-      traveledDistance = "",
-      chargeableDistance = Nothing,
-      driverArrivalTime = Nothing,
-      tripStartTime = Nothing,
-      tripEndTime = Nothing,
-      tripStartLat = Nothing,
-      tripStartLon = Nothing,
-      tripEndLat = Nothing,
-      tripEndLon = Nothing,
-      fareParametersId = Nothing,
-      distanceCalculationFailed = Nothing,
-      createdAt = defaultDate,
-      updatedAt = defaultDate
-    }
-
 instance Serialize Ride where
   put = error "undefined"
   get = error "undefined"

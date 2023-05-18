@@ -170,20 +170,6 @@ instance IsString Domain.DeliveryStatus where
 instance IsString Domain.MessageDynamicFieldsType where
   fromString = show
 
-defaultMessageReport :: MessageReport
-defaultMessageReport =
-  MessageReportT
-    { messageId = "",
-      driverId = "",
-      deliveryStatus = "",
-      readStatus = False,
-      likeStatus = False,
-      reply = Nothing,
-      messageDynamicFields = "",
-      updatedAt = defaultDate,
-      createdAt = defaultDate
-    }
-
 instance Serialize MessageReport where
   put = error "undefined"
   get = error "undefined"

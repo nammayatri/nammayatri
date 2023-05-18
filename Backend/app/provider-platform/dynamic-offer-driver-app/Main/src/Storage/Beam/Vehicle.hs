@@ -173,26 +173,6 @@ vehicleToPSModifiers =
   M.fromList
     []
 
-defaultVehicle :: Vehicle
-defaultVehicle =
-  VehicleT
-    { driverId = "",
-      merchantId = "",
-      variant = "",
-      model = "",
-      color = "",
-      registrationNo = "",
-      capacity = Nothing,
-      category = Nothing,
-      make = Nothing,
-      size = Nothing,
-      energyType = Nothing,
-      registrationCategory = Nothing,
-      vehicleClass = "",
-      createdAt = defaultDate,
-      updatedAt = defaultDate
-    }
-
 instance Serialize Vehicle where
   put = error "undefined"
   get = error "undefined"

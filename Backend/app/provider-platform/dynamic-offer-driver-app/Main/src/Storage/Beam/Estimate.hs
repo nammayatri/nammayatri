@@ -194,24 +194,6 @@ estimateToPSModifiers =
   M.fromList
     []
 
-defaultEstimate :: Estimate
-defaultEstimate =
-  EstimateT
-    { id = "",
-      transactionId = "",
-      vehicleVariant = "",
-      minFare = "",
-      maxFare = "",
-      estimateBreakupList = [""],
-      nightShiftMultiplier = Nothing,
-      nightShiftStart = Nothing,
-      nightShiftEnd = Nothing,
-      waitingTimeEstimatedThreshold = Nothing,
-      waitingChargePerMin = Nothing,
-      waitingOrPickupCharges = Nothing,
-      createdAt = defaultUTCDate
-    }
-
 instance Serialize Estimate where
   put = error "undefined"
   get = error "undefined"

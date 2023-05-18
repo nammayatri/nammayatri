@@ -174,16 +174,6 @@ instance IsString Meters where
 instance IsString Money where
   fromString = show
 
-defaultRestrictedExtraFare :: RestrictedExtraFare
-defaultRestrictedExtraFare =
-  RestrictedExtraFareT
-    { id = "",
-      merchantId = "",
-      vehicleVariant = "",
-      minTripDistance = "",
-      driverMaxExtraFare = ""
-    }
-
 instance Serialize RestrictedExtraFare where
   put = error "undefined"
   get = error "undefined"

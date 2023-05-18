@@ -109,17 +109,6 @@ operatingCityToPSModifiers =
   M.fromList
     []
 
-defaultOperatingCity :: OperatingCity
-defaultOperatingCity =
-  OperatingCityT
-    { id = "",
-      merchantId = "",
-      cityName = "",
-      enabled = False,
-      createdAt = defaultDate,
-      updatedAt = defaultDate
-    }
-
 instance Serialize OperatingCity where
   put = error "undefined"
   get = error "undefined"

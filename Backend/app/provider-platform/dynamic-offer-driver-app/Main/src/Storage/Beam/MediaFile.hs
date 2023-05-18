@@ -116,15 +116,6 @@ mediaFileToPSModifiers =
 instance IsString Domain.MediaType where
   fromString = show
 
-defaultMediaFile :: MediaFile
-defaultMediaFile =
-  MediaFileT
-    { id = "",
-      fileType = "",
-      url = "",
-      createdAt = defaultUTCDate
-    }
-
 instance Serialize MediaFile where
   put = error "undefined"
   get = error "undefined"
