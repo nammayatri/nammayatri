@@ -55,6 +55,22 @@ updateRating ratingId driverId newRatingValue newFeedbackDetails = do
       tbl ^. RatingTId ==. val (toKey ratingId)
         &&. tbl ^. RatingDriverId ==. val (toKey driverId)
 
+-- updateRating' :: (L.MonadFlow m, MonadTime m) => Id Rating -> Id Person -> Int -> Maybe Text -> m (MeshResult ())
+-- updateRating' (Id ratingId) (Id driverId) newRatingValue newFeedbackDetails = do
+--   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   now <- getCurrentTime
+--   case dbConf of
+--     Just dbConf' ->
+--       KV.updateWoReturningWithKVConnector
+--         dbConf'
+--         VN.meshConfig
+--         [ Se.Set BeamR.ratingValue newRatingValue,
+--           Se.Set BeamR.feedbackDetails newFeedbackDetails,
+--           Se.Set BeamR.updatedAt now
+--         ]
+--         [Se.Is BeamR.id (Se.Eq ratingId) && Se.Is BeamR.driverId (Se.Eq driverId)]
+--     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+
 findAllRatingsForPerson :: Transactionable m => Id Person -> m [Rating]
 findAllRatingsForPerson driverId =
   findAll $ do

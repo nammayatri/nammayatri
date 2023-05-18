@@ -90,6 +90,19 @@ setInactiveBySRId searchReqId = Esq.update $ \p -> do
   set p [SearchRequestForDriverStatus =. val Domain.Inactive]
   where_ $ p ^. SearchRequestForDriverSearchRequestId ==. val (toKey searchReqId)
 
+-- overlapping error
+-- setInactiveBySRId' :: L.MonadFlow m => Id SearchRequest -> m (MeshResult ())
+-- setInactiveBySRId' (Id searchReqId) = do
+--   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   case dbConf of
+--     Just dbConf' ->
+--       KV.updateWoReturningWithKVConnector
+--         dbConf'
+--         VN.meshConfig
+--         [ Se.Set BeamSRFD.status Domain.Inactive]
+--         [Se.Is BeamSRFD.searchRequestId (Se.Eq searchReqId)]
+--     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+
 updateDriverResponse :: Id SearchRequestForDriver -> SearchRequestForDriverResponse -> SqlDB ()
 updateDriverResponse id response = Esq.update $ \p -> do
   set p [SearchRequestForDriverResponse =. val (Just response)]

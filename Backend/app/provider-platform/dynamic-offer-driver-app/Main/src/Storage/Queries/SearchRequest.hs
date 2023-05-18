@@ -64,6 +64,22 @@ updateStatus searchId status_ = do
       ]
     where_ $ tbl ^. SearchRequestTId ==. val (toKey searchId)
 
+-- Overlapping instances error
+-- updateStatus' :: (L.MonadFlow m, MonadTime m) => Id SearchRequest -> SearchRequestStatus -> m (MeshResult ())
+-- updateStatus' (Id searchId) status_ = do
+--   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   now <- getCurrentTime
+--   case dbConf of
+--     Just dbConf' ->
+--       KV.updateWoReturningWithKVConnector
+--         dbConf'
+--         VN.meshConfig
+--         [ Se.Set BeamSR.status status_,
+--           Se.Set BeamSR.updatedAt now
+--         ]
+--         [Se.Is BeamSR.id (Se.Eq searchId)]
+--     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+
 getRequestIdfromTransactionId ::
   (Transactionable m) =>
   Id SearchRequest ->
@@ -111,7 +127,7 @@ findActiveByTransactionId transactionId = do
 --       fromLocation = fromLocation,
 --       toLocation = toLocation,
 --       bapId = bapId,
---       bapUri = bapUri,
+--       bapUri = pUrl,
 --       estimatedDistance = estimatedDistance,
 --       estimatedDuration = estimatedDuration,
 --       customerExtraFee = customerExtraFee,
@@ -124,28 +140,28 @@ findActiveByTransactionId transactionId = do
 --       searchRepeatCounter = searchRepeatCounter
 --     }
 
--- transformDomainSearchRequestToBeam :: SearchRequest -> BeamSR.SearchRequest
--- transformDomainSearchRequestToBeam SearchRequest {..} =
---   BeamSR.defaultSearchRequest
---     { BeamSR.id = getId id,
---       BeamSR.estimateId = getId estimateId,
---       BeamSR.transactionId = transactionId,
---       BeamSR.messageId = messageId,
---       BeamSR.startTime = startTime,
---       BeamSR.validTill = validTill,
---       BeamSR.providerId = getId providerId,
---       BeamSR.fromLocation = fromLocation,
---       BeamSR.toLocation = toLocation,
---       BeamSR.bapId = bapId,
---       BeamSR.bapUri = bapUri,
---       BeamSR.estimatedDistance = estimatedDistance,
---       BeamSR.estimatedDuration = estimatedDuration,
---       BeamSR.customerExtraFee = customerExtraFee,
---       BeamSR.device = device,
---       BeamSR.createdAt = createdAt,
---       BeamSR.updatedAt = updatedAt,
---       BeamSR.vehicleVariant = vehicleVariant,
---       BeamSR.status = status,
---       BeamSR.autoAssignEnabled = autoAssignEnabled,
---       BeamSR.searchRepeatCounter = searchRepeatCounter
---     }
+transformDomainSearchRequestToBeam :: SearchRequest -> BeamSR.SearchRequest
+transformDomainSearchRequestToBeam SearchRequest {..} =
+  BeamSR.defaultSearchRequest
+    { BeamSR.id = getId id,
+      BeamSR.estimateId = getId estimateId,
+      BeamSR.transactionId = transactionId,
+      BeamSR.messageId = messageId,
+      BeamSR.startTime = startTime,
+      BeamSR.validTill = validTill,
+      BeamSR.providerId = getId providerId,
+      BeamSR.fromLocationId = getId fromLocation.id,
+      BeamSR.toLocationId = getId toLocation.id,
+      BeamSR.bapId = bapId,
+      BeamSR.bapUri = showBaseUrl bapUri,
+      BeamSR.estimatedDistance = estimatedDistance,
+      BeamSR.estimatedDuration = estimatedDuration,
+      BeamSR.customerExtraFee = customerExtraFee,
+      BeamSR.device = device,
+      BeamSR.createdAt = createdAt,
+      BeamSR.updatedAt = updatedAt,
+      BeamSR.vehicleVariant = vehicleVariant,
+      BeamSR.status = status,
+      BeamSR.autoAssignEnabled = autoAssignEnabled,
+      BeamSR.searchRepeatCounter = searchRepeatCounter
+    }

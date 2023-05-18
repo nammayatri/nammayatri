@@ -114,8 +114,8 @@ data SearchRequestT f = SearchRequestT
     transactionId :: B.C f Text,
     messageId :: B.C f Text,
     estimateId :: B.C f Text,
-    startTime :: B.C f Time.LocalTime,
-    validTill :: B.C f Time.LocalTime,
+    startTime :: B.C f Time.UTCTime,
+    validTill :: B.C f Time.UTCTime,
     providerId :: B.C f Text,
     fromLocationId :: B.C f Text,
     toLocationId :: B.C f Text,
@@ -129,8 +129,8 @@ data SearchRequestT f = SearchRequestT
     vehicleVariant :: B.C f Variant.Variant,
     searchRepeatCounter :: B.C f Int,
     autoAssignEnabled :: B.C f Bool,
-    createdAt :: B.C f Time.LocalTime,
-    updatedAt :: B.C f Time.LocalTime
+    createdAt :: B.C f Time.UTCTime,
+    updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -215,8 +215,8 @@ defaultSearchRequest =
       transactionId = "",
       messageId = "",
       estimateId = "",
-      startTime = defaultDate,
-      validTill = defaultDate,
+      startTime = defaultUTCDate,
+      validTill = defaultUTCDate,
       providerId = "",
       fromLocationId = "",
       toLocationId = "",
@@ -230,8 +230,8 @@ defaultSearchRequest =
       vehicleVariant = "",
       searchRepeatCounter = 0,
       autoAssignEnabled = False,
-      createdAt = defaultDate,
-      updatedAt = defaultDate
+      createdAt = defaultUTCDate,
+      updatedAt = defaultUTCDate
     }
 
 instance Serialize SearchRequest where

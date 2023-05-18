@@ -81,8 +81,8 @@ data SearchRequestSpecialZoneT f = SearchRequestSpecialZoneT
   { id :: B.C f Text,
     transactionId :: B.C f Text,
     messageId :: B.C f Text,
-    startTime :: B.C f Time.LocalTime,
-    validTill :: B.C f Time.LocalTime,
+    startTime :: B.C f Time.UTCTime,
+    validTill :: B.C f Time.UTCTime,
     providerId :: B.C f Text,
     fromLocationId :: B.C f Text,
     toLocationId :: B.C f Text,
@@ -90,8 +90,8 @@ data SearchRequestSpecialZoneT f = SearchRequestSpecialZoneT
     bapUri :: B.C f Text,
     estimatedDistance :: B.C f Meters,
     estimatedDuration :: B.C f Seconds,
-    createdAt :: B.C f Time.LocalTime,
-    updatedAt :: B.C f Time.LocalTime
+    createdAt :: B.C f Time.UTCTime,
+    updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -160,8 +160,8 @@ defaultSearchRequestSpecialZone =
     { id = "",
       transactionId = "",
       messageId = "",
-      startTime = defaultDate,
-      validTill = defaultDate,
+      startTime = defaultUTCDate,
+      validTill = defaultUTCDate,
       providerId = "",
       fromLocationId = "",
       toLocationId = "",
@@ -169,8 +169,8 @@ defaultSearchRequestSpecialZone =
       bapUri = "",
       estimatedDistance = "",
       estimatedDuration = "",
-      createdAt = defaultDate,
-      updatedAt = defaultDate
+      createdAt = defaultUTCDate,
+      updatedAt = defaultUTCDate
     }
 
 instance Serialize SearchRequestSpecialZone where

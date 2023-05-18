@@ -75,11 +75,11 @@ data RiderDetailsT f = RiderDetailsT
     merchantId :: B.C f Text,
     referralCode :: B.C f (Maybe Text),
     referredByDriver :: B.C f (Maybe Text),
-    referredAt :: B.C f (Maybe Time.LocalTime),
+    referredAt :: B.C f (Maybe Time.UTCTime),
     hasTakenValidRide :: B.C f Bool,
-    hasTakenValidRideAt :: B.C f (Maybe Time.LocalTime),
-    createdAt :: B.C f Time.LocalTime,
-    updatedAt :: B.C f Time.LocalTime
+    hasTakenValidRideAt :: B.C f (Maybe Time.UTCTime),
+    createdAt :: B.C f Time.UTCTime,
+    updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -150,8 +150,8 @@ defaultRiderDetails =
       referredAt = Nothing,
       hasTakenValidRide = False,
       hasTakenValidRideAt = Nothing,
-      createdAt = defaultDate,
-      updatedAt = defaultDate
+      createdAt = defaultUTCDate,
+      updatedAt = defaultUTCDate
     }
 
 instance Serialize RiderDetails where

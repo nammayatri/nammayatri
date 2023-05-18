@@ -403,6 +403,21 @@ updateName personId name = do
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey personId)
 
+updateName' :: (L.MonadFlow m, MonadTime m) => Id Person -> Text -> m (MeshResult ())
+updateName' (Id personId) name = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  now <- getCurrentTime
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        VN.meshConfig
+        [ Se.Set BeamP.firstName name,
+          Se.Set BeamP.updatedAt now
+        ]
+        [Se.Is BeamP.id (Se.Eq personId)]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+
 updatePersonRec :: Id Person -> Person -> SqlDB ()
 updatePersonRec personId person = do
   now <- getCurrentTime
@@ -427,6 +442,33 @@ updatePersonRec personId person = do
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey personId)
 
+-- updatePersonRec' :: (L.MonadFlow m, MonadTime m) => Id Person -> Text -> m (MeshResult ())
+-- updatePersonRec' (Id personId) person = do
+--   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   now <- getCurrentTime
+--   case dbConf of
+--     Just dbConf' ->
+--       KV.updateWoReturningWithKVConnector
+--         dbConf'
+--         VN.meshConfig
+--         [ Se.Set BeamP.firstName person.firstName,
+--           Se.Set BeamP.middleName person.middleName,
+--           Se.Set BeamP.lastName person.lastName,
+--           Se.Set BeamP.gender person.gender,
+--           Se.Set BeamP.email person.email,
+--           Se.Set BeamP.identifier person.identifier,
+--           Se.Set BeamP.rating person.rating,
+--           Se.Set BeamP.language person.language,
+--           Se.Set BeamP.deviceToken person.deviceToken,
+--           Se.Set BeamP.merchantId person.merchantId,
+--           Se.Set BeamP.description person.description,
+--           Se.Set BeamP.updatedAt now,
+--           Se.Set BeamP.clientVersion (versionToText <$> person.clientVersion),
+--           Se.Set BeamP.bundleVersion (versionToText <$> person.bundleVersion)
+--         ]
+--         [Se.Is BeamP.id (Se.Eq personId)]
+--     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+
 updatePersonVersions :: Person -> Maybe Version -> Maybe Version -> SqlDB ()
 updatePersonVersions person mbBundleVersion mbClientVersion =
   when
@@ -445,6 +487,27 @@ updatePersonVersions person mbBundleVersion mbClientVersion =
         where_ $
           tbl ^. PersonTId ==. val (toKey person.id)
 
+-- updatePersonRec' :: (L.MonadFlow m, MonadTime m) => Person -> Maybe Version -> Maybe Version -> m (MeshResult ())
+-- updatePersonRec' person mbBundleVersion mbClientVersion =
+--   when
+--     ((isJust mbBundleVersion || isJust mbClientVersion) && (person.bundleVersion /= mbBundleVersion || person.clientVersion /= mbClientVersion))
+--     do
+--       now <- getCurrentTime
+--       let mbBundleVersionText = versionToText <$> (mbBundleVersion <|> person.bundleVersion)
+--           mbClientVersionText = versionToText <$> (mbClientVersion <|> person.clientVersion)
+--       dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--       case dbConf of
+--         Just dbConf' ->
+--           KV.updateWoReturningWithKVConnector
+--             dbConf'
+--             VN.meshConfig
+--             [ Se.Set BeamP.clientVersion mbClientVersionText,
+--               Se.Set BeamP.clientVersion mbBundleVersionText,
+--               Se.Set BeamP.updatedAt now
+--             ]
+--             [Se.Is BeamP.id (Se.Eq person.id)]
+--         Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+
 updateDeviceToken :: Id Person -> Maybe FCMRecipientToken -> SqlDB ()
 updateDeviceToken personId mbDeviceToken = do
   now <- getCurrentTime
@@ -456,6 +519,21 @@ updateDeviceToken personId mbDeviceToken = do
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey personId)
 
+updateDeviceToken' :: (L.MonadFlow m, MonadTime m) => Id Person -> Maybe FCMRecipientToken -> m (MeshResult ())
+updateDeviceToken' (Id personId) mbDeviceToken = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  now <- getCurrentTime
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        VN.meshConfig
+        [ Se.Set BeamP.deviceToken mbDeviceToken,
+          Se.Set BeamP.updatedAt now
+        ]
+        [Se.Is BeamP.id (Se.Eq personId)]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+
 updateWhatsappNotificationEnrollStatus :: Id Person -> Maybe Whatsapp.OptApiMethods -> SqlDB ()
 updateWhatsappNotificationEnrollStatus personId enrollStatus = do
   now <- getCurrentTime
@@ -466,6 +544,21 @@ updateWhatsappNotificationEnrollStatus personId enrollStatus = do
         PersonUpdatedAt =. val now
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey personId)
+
+updateWhatsappNotificationEnrollStatus' :: (L.MonadFlow m, MonadTime m) => Id Person -> Maybe Whatsapp.OptApiMethods -> m (MeshResult ())
+updateWhatsappNotificationEnrollStatus' (Id personId) enrollStatus = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  now <- getCurrentTime
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        VN.meshConfig
+        [ Se.Set BeamP.whatsappNotificationEnrollStatus enrollStatus,
+          Se.Set BeamP.updatedAt now
+        ]
+        [Se.Is BeamP.id (Se.Eq personId)]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 updateMobileNumberAndCode :: Person -> SqlDB ()
 updateMobileNumberAndCode person = do
@@ -493,6 +586,21 @@ setIsNewFalse personId = do
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey personId)
 
+setIsNewFalse' :: (L.MonadFlow m, MonadTime m) => Id Person -> m (MeshResult ())
+setIsNewFalse' (Id personId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  now <- getCurrentTime
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        VN.meshConfig
+        [ Se.Set BeamP.isNew False,
+          Se.Set BeamP.updatedAt now
+        ]
+        [Se.Is BeamP.id (Se.Eq personId)]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+
 deleteById :: Id Person -> SqlDB ()
 deleteById = Esq.deleteByKey @PersonT
 
@@ -506,6 +614,21 @@ updateAverageRating personId newAverageRating = do
         PersonUpdatedAt =. val now
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey personId)
+
+updateAverageRating' :: (L.MonadFlow m, MonadTime m) => Id Person -> Centesimal -> m (MeshResult ())
+updateAverageRating' (Id personId) newAverageRating = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  now <- getCurrentTime
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        VN.meshConfig
+        [ Se.Set BeamP.rating (Just newAverageRating),
+          Se.Set BeamP.updatedAt now
+        ]
+        [Se.Is BeamP.id (Se.Eq personId)]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 data NearestDriversResult = NearestDriversResult
   { driverId :: Id Driver,

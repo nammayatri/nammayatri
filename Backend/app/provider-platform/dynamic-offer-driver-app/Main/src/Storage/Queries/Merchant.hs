@@ -87,6 +87,25 @@ update org = do
       ]
     where_ $ tbl ^. MerchantTId ==. val (toKey org.id)
 
+-- update' :: (L.MonadFlow m, MonadTime m) => Merchant -> m (MeshResult ())
+-- update' org = do
+--   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   now <- getCurrentTime
+--   case dbConf of
+--     Just dbConf' ->
+--       KV.updateWoReturningWithKVConnector
+--         dbConf'
+--         VN.meshConfig
+--         [ Se.Set BeamM.name org.name,
+--           Se.Set BeamM.description org.description,
+--           Se.Set BeamM.headCount org.headCount,
+--           Se.Set BeamM.enabled org.enabled,
+--           Se.Set BeamM.updatedAt now,
+--           Se.Set BeamM.fromTime org.fromTime
+--         ]
+--         [Se.Is BeamM.id (Se.Eq org.id)]
+--     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+
 transformBeamMerchantToDomain :: BeamM.Merchant -> Merchant
 transformBeamMerchantToDomain BeamM.MerchantT {..} = do
   Merchant

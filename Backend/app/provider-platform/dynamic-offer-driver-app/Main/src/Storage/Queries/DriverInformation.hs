@@ -97,6 +97,22 @@ updateActivity driverId isActive mode = do
       ]
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
 
+updateActivity' :: (L.MonadFlow m, MonadTime m) => Id Person.Driver -> Bool -> Maybe DriverMode -> m (MeshResult ())
+updateActivity' (Id driverId) isActive mode = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  now <- getCurrentTime
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        VN.meshConfig
+        [ Se.Set BeamDI.active isActive,
+          Se.Set BeamDI.mode mode,
+          Se.Set BeamDI.updatedAt now
+        ]
+        [Se.Is BeamDI.driverId (Se.Eq driverId)]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+
 updateEnabledState :: Id Driver -> Bool -> SqlDB ()
 updateEnabledState driverId isEnabled = do
   now <- getCurrentTime
@@ -108,6 +124,21 @@ updateEnabledState driverId isEnabled = do
         ]
         <> [DriverInformationLastEnabledOn =. val (Just now) | isEnabled]
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
+
+updateEnabledState' :: (L.MonadFlow m, MonadTime m) => Id Driver -> Bool -> m (MeshResult ())
+updateEnabledState' (Id driverId) isEnabled = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  now <- getCurrentTime
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        VN.meshConfig
+        [ Se.Set BeamDI.enabled isEnabled,
+          Se.Set BeamDI.updatedAt now
+        ]
+        [Se.Is BeamDI.driverId (Se.Eq driverId)]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 updateEnabledVerifiedState :: Id Person.Driver -> Bool -> Bool -> SqlDB ()
 updateEnabledVerifiedState driverId isEnabled isVerified = do
@@ -122,6 +153,22 @@ updateEnabledVerifiedState driverId isEnabled isVerified = do
         <> [DriverInformationLastEnabledOn =. val (Just now) | isEnabled]
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
 
+updateEnabledVerifiedState' :: (L.MonadFlow m, MonadTime m) => Id Driver -> Bool -> Bool -> m (MeshResult ())
+updateEnabledVerifiedState' (Id driverId) isEnabled isVerified = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  now <- getCurrentTime
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        VN.meshConfig
+        [ Se.Set BeamDI.enabled isEnabled,
+          Se.Set BeamDI.verified isVerified,
+          Se.Set BeamDI.updatedAt now
+        ]
+        [Se.Is BeamDI.driverId (Se.Eq driverId)]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+
 updateBlockedState :: Id Person.Driver -> Bool -> SqlDB ()
 updateBlockedState driverId isBlocked = do
   now <- getCurrentTime
@@ -132,6 +179,21 @@ updateBlockedState driverId isBlocked = do
         DriverInformationUpdatedAt =. val now
       ]
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
+
+updateBlockedState' :: (L.MonadFlow m, MonadTime m) => Id Person.Driver -> Bool -> m (MeshResult ())
+updateBlockedState' (Id driverId) isBlocked = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  now <- getCurrentTime
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        VN.meshConfig
+        [ Se.Set BeamDI.blocked isBlocked,
+          Se.Set BeamDI.updatedAt now
+        ]
+        [Se.Is BeamDI.driverId (Se.Eq driverId)]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 verifyAndEnableDriver :: Id Person -> SqlDB ()
 verifyAndEnableDriver driverId = do
@@ -145,6 +207,23 @@ verifyAndEnableDriver driverId = do
         DriverInformationLastEnabledOn =. val (Just now)
       ]
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey driverId)
+
+verifyAndEnableDriver' :: (L.MonadFlow m, MonadTime m) => Id Person.Driver -> m (MeshResult ())
+verifyAndEnableDriver' (Id driverId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  now <- getCurrentTime
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        VN.meshConfig
+        [ Se.Set BeamDI.enabled True,
+          Se.Set BeamDI.verified True,
+          Se.Set BeamDI.lastEnabledOn $ Just now,
+          Se.Set BeamDI.updatedAt now
+        ]
+        [Se.Is BeamDI.driverId (Se.Eq driverId)]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 updateEnabledStateReturningIds :: EsqDBFlow m r => Id Merchant -> [Id Driver] -> Bool -> m [Id Driver]
 updateEnabledStateReturningIds merchantId driverIds isEnabled =
@@ -179,6 +258,21 @@ updateOnRide driverId onRide = do
       ]
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
 
+updateOnRide' :: (L.MonadFlow m, MonadTime m) => Id Person.Driver -> Bool -> m (MeshResult ())
+updateOnRide' (Id driverId) onRide = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  now <- getCurrentTime
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        VN.meshConfig
+        [ Se.Set BeamDI.onRide onRide,
+          Se.Set BeamDI.updatedAt now
+        ]
+        [Se.Is BeamDI.driverId (Se.Eq driverId)]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+
 updateNotOnRideMultiple :: [Id Person.Driver] -> SqlDB ()
 updateNotOnRideMultiple driverIds = do
   now <- getCurrentTime
@@ -189,6 +283,21 @@ updateNotOnRideMultiple driverIds = do
         DriverInformationUpdatedAt =. val now
       ]
     where_ $ tbl ^. DriverInformationDriverId `in_` valList (toKey . cast <$> driverIds)
+
+-- updateNotOnRideMultiple' :: (L.MonadFlow m, MonadTime m) => [Id Person.Driver] -> m (MeshResult ())
+-- updateNotOnRideMultiple' driverIds = do
+--   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   now <- getCurrentTime
+--   case dbConf of
+--     Just dbConf' ->
+--       KV.updateWoReturningWithKVConnector
+--         dbConf'
+--         VN.meshConfig
+--         [ Se.Set BeamDI.onRide False,
+--           Se.Set BeamDI.updatedAt now
+--         ]
+--         [Se.Is BeamDI.driverId (Se.In driverIds)]
+--     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 deleteById :: Id Person.Driver -> SqlDB ()
 deleteById = Esq.deleteByKey @DriverInformationT . cast
@@ -292,6 +401,23 @@ updateDowngradingOptions personId canDowngradeToSedan canDowngradeToHatchback ca
         DriverInformationUpdatedAt =. val now
       ]
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey personId)
+
+updateDowngradingOptions' :: (L.MonadFlow m, MonadTime m) => Id Person -> Bool -> Bool -> Bool -> m (MeshResult ())
+updateDowngradingOptions' (Id driverId) canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  now <- getCurrentTime
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        VN.meshConfig
+        [ Se.Set BeamDI.canDowngradeToSedan canDowngradeToSedan,
+          Se.Set BeamDI.canDowngradeToHatchback canDowngradeToHatchback,
+          Se.Set BeamDI.canDowngradeToTaxi canDowngradeToTaxi,
+          Se.Set BeamDI.updatedAt now
+        ]
+        [Se.Is BeamDI.driverId (Se.Eq driverId)]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 transformBeamDriverInformationToDomain :: BeamDI.DriverInformation -> DriverInformation
 transformBeamDriverInformationToDomain BeamDI.DriverInformationT {..} = do
