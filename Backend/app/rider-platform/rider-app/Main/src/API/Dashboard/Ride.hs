@@ -16,8 +16,10 @@ module API.Dashboard.Ride where
 
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
 import qualified Domain.Action.Dashboard.Ride as DRide
+import Domain.Action.Dashboard.Route (mkGetLocation)
 import qualified Domain.Types.Merchant as DM
 import Environment
+import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -27,6 +29,7 @@ type API =
   "ride"
     :> ( ShareRideInfoAPI
            :<|> Common.RideListAPI
+           :<|> Common.TripRouteAPI
        )
 
 type ShareRideInfoAPI = Common.ShareRideInfoAPI
@@ -35,6 +38,7 @@ handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   shareRideInfo merchantId
     :<|> rideList merchantId
+    :<|> callGetTripRoute merchantId
 
 shareRideInfo ::
   ShortId DM.Merchant ->
@@ -53,3 +57,6 @@ rideList ::
   FlowHandler Common.RideListRes
 rideList merchantShortId mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbDriverPhone =
   withFlowHandlerAPI $ DRide.rideList merchantShortId mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbDriverPhone
+
+callGetTripRoute :: ShortId DM.Merchant -> Id Common.Ride -> Common.TripRouteReq -> FlowHandler Maps.GetRoutesResp
+callGetTripRoute merchantShortId rideId req = withFlowHandlerAPI $ mkGetLocation merchantShortId rideId req
