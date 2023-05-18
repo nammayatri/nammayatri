@@ -173,6 +173,7 @@ verifyRCFlow person imageExtraction rcNumber imageId dateOfRegistration = do
             requestId,
             docType = Image.VehicleRegistrationCertificate,
             documentNumber = encryptedRC,
+            driverDateOfBirth = Nothing,
             imageExtractionValidation = imageExtractionValidation,
             issueDateOnDoc = dateOfRegistration,
             status = "pending",

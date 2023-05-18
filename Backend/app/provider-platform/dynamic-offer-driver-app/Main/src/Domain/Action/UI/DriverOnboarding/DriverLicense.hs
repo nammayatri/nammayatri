@@ -174,6 +174,7 @@ verifyDLFlow person onboardingDocumentConfig dlNumber driverDateOfBirth imageId1
             imageExtractionValidation = imageExtractionValidation,
             documentNumber = encryptedDL,
             issueDateOnDoc = dateOfIssue,
+            driverDateOfBirth = Just driverDateOfBirth,
             docType = Image.DriverLicense,
             status = "pending",
             idfyResponse = Nothing,
