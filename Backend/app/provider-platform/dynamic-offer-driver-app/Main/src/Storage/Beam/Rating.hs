@@ -61,8 +61,8 @@ data RatingT f = RatingT
     driverId :: B.C f Text,
     ratingValue :: B.C f Int,
     feedbackDetails :: B.C f (Maybe Text),
-    createdAt :: B.C f Time.LocalTime,
-    updatedAt :: B.C f Time.LocalTime
+    createdAt :: B.C f Time.UTCTime,
+    updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -112,17 +112,17 @@ ratingToPSModifiers =
   M.fromList
     []
 
-defaultRating :: Rating
-defaultRating =
-  RatingT
-    { id = "",
-      rideId = "",
-      driverId = "",
-      ratingValue = 0,
-      feedbackDetails = Nothing,
-      createdAt = defaultDate,
-      updatedAt = defaultDate
-    }
+-- defaultRating :: Rating
+-- defaultRating =
+--   RatingT
+--     { id = "",
+--       rideId = "",
+--       driverId = "",
+--       ratingValue = 0,
+--       feedbackDetails = Nothing,
+--       createdAt = defaultDate,
+--       updatedAt = defaultDate
+--     }
 
 instance Serialize Rating where
   put = error "undefined"

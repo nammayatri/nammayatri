@@ -51,7 +51,7 @@ transformBeamGeometryToDomain BeamG.GeometryT {..} = do
 
 transformDomainGeometryToBeam :: Geometry -> BeamG.Geometry
 transformDomainGeometryToBeam Geometry {..} =
-  BeamG.defaultGeometry
+  BeamG.GeometryT
     { BeamG.id = getId id,
       BeamG.region = region
     }

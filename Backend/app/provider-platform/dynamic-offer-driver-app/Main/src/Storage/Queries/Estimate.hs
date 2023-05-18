@@ -52,7 +52,7 @@ transformBeamEstimateToDomain BeamE.EstimateT {..} = do
 
 transformDomainEstimateToBeam :: Estimate -> BeamE.Estimate
 transformDomainEstimateToBeam Estimate {..} =
-  BeamE.defaultEstimate
+  BeamE.EstimateT
     { BeamE.id = getId id,
       BeamE.transactionId = transactionId,
       BeamE.vehicleVariant = vehicleVariant,
