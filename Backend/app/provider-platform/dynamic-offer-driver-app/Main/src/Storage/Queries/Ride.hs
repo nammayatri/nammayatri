@@ -42,17 +42,18 @@ import Storage.Tabular.Booking as Booking
 import Storage.Tabular.DriverInformation as DriverInfo
 import Storage.Tabular.Ride as Ride
 import Storage.Tabular.RideDetails as RideDetails
+import Storage.Tabular.RiderDetails as RiderDetails
 import qualified Storage.Tabular.VechileNew as VN
 
 create :: Ride -> SqlDB ()
 create = Esq.create
 
-create' :: L.MonadFlow m => Ride.Ride -> m (MeshResult ())
-create' ride = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
-  case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainRideToBeam ride)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+-- create' :: L.MonadFlow m => Ride.Ride -> m (MeshResult ())
+-- create' ride = do
+--   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   case dbConf of
+--     Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainRideToBeam ride)
+--     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 findById :: Transactionable m => Id Ride -> m (Maybe Ride)
 findById rideId = Esq.findOne $ do
