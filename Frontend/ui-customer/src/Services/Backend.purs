@@ -825,3 +825,31 @@ makeSosStatus :: String -> SosStatus
 makeSosStatus sosStatus = SosStatus {
      "status" : sosStatus
 }
+
+
+makePayloadFromState :: HomeScreenState -> PPPayloadReq
+makePayloadFromState state =
+    PPPayloadReq $ {
+      amount : "1"
+    }
+
+
+getPaymentPagePayload :: PPPayloadReq -> FlowBT String PPPayloadResp
+getPaymentPagePayload req = do
+    headers <- getHeaders' ""
+    pure dummyPPPayloadResp
+    
+    {-
+    UNCOMMENT FOR HITTING SERVER TO GET PAYLOAD
+    withAPIResultBT EP.getPayload (\x → x) errorHandler (lift $ lift $ callAPI headers req)
+    where
+    errorHandler (errorPayload) =  do
+            BackT $ pure GoBack
+
+    -}
+
+dummyPPPayloadResp = PPPayloadResp $ {
+    signature : ""
+  , signaturePayload : "{\"merchant_id\":\"idea_preprod\", \"customer_id\": \"1234567890\",\"mobile_number\": \"9234567890\",\"email_address\": \"test@gmail.com\",\"timestamp\":\"1573724015209\"}"
+  , orderDetails : "{\"merchant_id\":\"idea_preprod\", \"customer_id\": \"1234567890\",\"mobile_number\": \"9234567890\",\"email_address\": \"test@gmail.com\",\"timestamp\":\"1573724015209\"}"
+    }

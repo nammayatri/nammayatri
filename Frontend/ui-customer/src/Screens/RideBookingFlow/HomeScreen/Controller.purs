@@ -804,11 +804,11 @@ eval (SettingSideBarActionController (SettingSideBarController.OnHelp)) state = 
 
 eval (SettingSideBarActionController (SettingSideBarController.ChangeLanguage)) state = exit $ ChangeLanguage state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
 
-eval (SettingSideBarActionController (SettingSideBarController.GoToAbout)) state = exit $ GoToAbout state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
+eval (SettingSideBarActionController (SettingSideBarController.GoToAbout)) state = exit $ SubmitRating state
 
 eval (SettingSideBarActionController (SettingSideBarController.GoToEmergencyContacts)) state = exit $ GoToEmergencyContacts state { data{settingSideBar{opened = SettingSideBarController.OPEN}}}
 
-eval (SettingSideBarActionController (SettingSideBarController.GoToAbout)) state = exit $ GoToAbout state { data{settingSideBar{opened = SettingSideBarController.OPEN}}}
+-- eval (SettingSideBarActionController (SettingSideBarController.GoToAbout)) state = exit $ GoToAbout state { data{settingSideBar{opened = SettingSideBarController.OPEN}}}
 
 eval (SettingSideBarActionController (SettingSideBarController.ShareAppLink)) state =
   do

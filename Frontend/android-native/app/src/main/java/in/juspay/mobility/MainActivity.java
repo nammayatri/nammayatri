@@ -332,9 +332,11 @@ public class MainActivity extends AppCompatActivity {
             json.put("requestId", "123");
             json.put("service", getService());
             json.put("betaAssets", false);
-            payload.put("clientId","mobilitypaytmconsumer");
+            // payload.put("clientId","mobilitypaytmconsumer");
             payload.put("action", "initiate");
             payload.put("service", getService());
+            payload.put("clientId", "nammayatri");
+            payload.put("merchantId", "nammayatri");
             payload.put(PaymentConstants.ENV, "prod");
 
 //            JSONObject signatureAuthData = new JSONObject();

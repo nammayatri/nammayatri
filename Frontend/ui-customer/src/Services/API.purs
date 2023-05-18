@@ -1863,3 +1863,35 @@ instance standardEncodeSosStatus :: StandardEncode SosStatus where standardEncod
 instance showSosStatus :: Show SosStatus where show = genericShow
 instance decodeSosStatus:: Decode SosStatus where decode = defaultDecode
 instance encodeSosStatus :: Encode SosStatus where encode = defaultEncode
+
+
+-------------------------------------------------- Payment Page API Types --------------------------------------------
+newtype PPPayloadResp = PPPayloadResp {
+    signature :: String
+  , signaturePayload :: String
+  , orderDetails :: String
+}
+
+-- Payload SEND TO BECKN SERVER TO GENERATE PP Payload
+newtype PPPayloadReq = PPPayloadReq {
+    amount :: String
+    }
+
+instance makeFetchSignatureReq :: RestEndpoint PPPayloadReq PPPayloadResp where
+ makeRequest reqBody headers = defaultMakeRequest POST (EP.getPayload) headers reqBody
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericFetchSignatureResp :: Generic PPPayloadResp _
+derive instance newtypeFetchSignatureResp :: Newtype PPPayloadResp _
+instance standardEncodeFetchSignatureResp :: StandardEncode PPPayloadResp where standardEncode (PPPayloadResp id) = standardEncode id
+instance showFetchSignatureResp :: Show PPPayloadResp where show = genericShow
+instance decodeFetchSignatureResp :: Decode PPPayloadResp where decode = defaultDecode
+instance encodeFetchSignatureResp :: Encode PPPayloadResp where encode = defaultEncode
+
+derive instance genericFetchSignatureReq :: Generic PPPayloadReq _
+derive instance newtypeFetchSignatureReq :: Newtype PPPayloadReq _
+instance standardEncodeFetchSignatureReq :: StandardEncode PPPayloadReq where standardEncode (PPPayloadReq reqBody) = standardEncode reqBody
+instance showFetchSignatureReq :: Show PPPayloadReq where show = genericShow
+instance decodeFetchSignatureReq :: Decode PPPayloadReq where decode = defaultDecode
+instance encodeFetchSignatureReq :: Encode PPPayloadReq where encode = defaultEncode

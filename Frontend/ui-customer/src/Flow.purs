@@ -63,7 +63,7 @@ import Screens.ReferralScreen.ScreenData as ReferralScreen
 import Screens.SavedLocationScreen.Controller (getSavedLocationForAddNewAddressScreen)
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
 import Screens.Types (CardType(..), AddNewAddressScreenState(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), EmailErrorType(..))
-import Services.API (AuthType (..), AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..), TriggerSignatureOTPResp(..))
+import Services.API (PPPayloadResp(..), AuthType (..), AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..), TriggerSignatureOTPResp(..))
 import Services.Backend as Remote
 import Screens.Types (Gender(..)) as Gender
 import Screens.MyProfileScreen.ScreenData as MyProfileScreenData
@@ -80,6 +80,7 @@ import Control.Transformers.Back.Trans (runBackT)
 import Config.DefaultConfig as DC
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
+import PaymentPage.Utils
 
 baseAppFlow :: GlobalPayload ->  FlowBT String Unit
 baseAppFlow (GlobalPayload gPayload) = do
@@ -783,15 +784,16 @@ homeScreenFlow = do
       _ <- pure $ firebaseLogEvent "ny_user_logout"
       modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData)
       enterMobileNumberScreenFlow -- Removed choose langauge screen
-    SUBMIT_RATING state -> do
-      _ <- Remote.rideFeedbackBT (Remote.makeFeedBackReq (state.data.previousRideRatingState.rating) (state.data.previousRideRatingState.rideId) (state.data.previousRideRatingState.feedback))
-      _ <- updateLocalStage HomeScreen
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{settingSideBar{gender = state.data.settingSideBar.gender , email = state.data.settingSideBar.email}},props { isbanner = state.props.isbanner}})
-      if state.data.previousRideRatingState.rating == 5 then do
-        _ <- pure $ launchInAppRatingPopup unit
-        pure unit
-        else pure unit
-      homeScreenFlow
+    SUBMIT_RATING state -> startPaymentPageFlow state
+    -- do
+    --   _ <- Remote.rideFeedbackBT (Remote.makeFeedBackReq (state.data.previousRideRatingState.rating) (state.data.previousRideRatingState.rideId) (state.data.previousRideRatingState.feedback))
+    --   _ <- updateLocalStage HomeScreen
+    --   modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{settingSideBar{gender = state.data.settingSideBar.gender , email = state.data.settingSideBar.email}},props { isbanner = state.props.isbanner}})
+    --   if state.data.previousRideRatingState.rating == 5 then do
+    --     _ <- pure $ launchInAppRatingPopup unit
+    --     pure unit
+    --     else pure unit
+    --   homeScreenFlow
     CANCEL -> homeScreenFlow
     RELOAD saveToCurrLocs -> do
       (GlobalState state) <- getState
@@ -1856,3 +1858,22 @@ getGenderValue gender =
       Gender.OTHER -> Just "OTHER"
       _ -> Just "PREFER_NOT_TO_SAY"
     Nothing -> Nothing
+
+startPaymentPageFlow :: HomeScreenState -> FlowBT String Unit
+startPaymentPageFlow state = do
+  _ <- pure $ spy "Ahey bro" ""
+  (PPPayloadResp payloadFromBknd) <- Remote.getPaymentPagePayload $ Remote.makePayloadFromState state
+  let
+      payload = PaymentPagePayload {
+            action : "paymentPage"
+          , merchantId : "picasso"
+          , signaturePayload : payloadFromBknd.signaturePayload
+          , orderDetails : payloadFromBknd.orderDetails
+          , signature : payloadFromBknd.signature
+          , clientId : "picasso"
+          , merchantKeyId : "4794"
+          , environment : "sandbox" -- sandbox | production
+          }
+  paymentPageOutput <- startPP payload
+  _ <- pure $ spy "Ahey bro" paymentPageOutput
+  homeScreenFlow
