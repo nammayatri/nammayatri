@@ -1,9 +1,4 @@
 {
-   "fonts" : {
-      "Roboto-Bold" : true,
-      "Roboto-Medium" : true,
-      "Roboto-Regular" : true
-   },
    "images" : {
       "ic_50_percent" : true,
       "ic_75_percent" : true,

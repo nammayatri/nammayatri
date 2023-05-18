@@ -15,32 +15,45 @@
 
 module Flow where
 
+import Config.Config
+import Config.Types
+
 import Accessor (_computedPrice, _contents, _formattedAddress, _id, _lat, _lon, _status, _toLocation, _signatureAuthData)
-import Common.Types.App (GlobalPayload(..), SignatureAuthData (..), Payload(..))
+import Common.Types.App (GlobalPayload(..), SignatureAuthData(..), Payload(..))
+import Common.Types.App (LazyCheck(..))
 import Common.Types.App (LazyCheck(..))
 import Components.LocationListItem.Controller (dummyLocationListState)
 import Components.SavedLocationCard.Controller (getCardType)
 import Components.SettingSideBar.Controller as SettingSideBarController
+import Config.DefaultConfig as DC
+import Control.Monad.Except (runExcept)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Except.Trans (lift)
+import Control.Monad.Except.Trans (runExceptT)
+import Control.Transformers.Back.Trans (runBackT)
 import Data.Array (catMaybes, filter, length, null, snoc, (!!), any, sortBy, head, uncons)
 import Data.Array as Arr
 import Data.Either (Either(..))
 import Data.Int as INT
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing)
-import Data.Number (fromString)
 import Data.Newtype (unwrap)
+import Data.Number (fromString)
 import Data.String (Pattern(..), drop, indexOf, split, toLower, trim, take)
 import Debug (spy)
 import Effect (Effect)
+import Effect (Effect)
 import Effect.Class (liftEffect)
+import Effect.Uncurried (runEffectFn3)
 import Engineering.Helpers.BackTrack (getState)
 import Engineering.Helpers.Commons (liftFlow, os, getNewIDWithTag, bundleVersion, getExpiryTime)
 import Foreign.Class (class Encode)
+import Foreign.Class (class Encode)
 import Foreign.Class (encode)
-import Helpers.Utils (hideSplash, getDistanceBwCordinates, adjustViewWithKeyboard, decodeErrorCode, getObjFromLocal, convertUTCtoISC, differenceOfLocationLists, filterRecentSearches, setText', seperateByWhiteSpaces, getNewTrackingId, checkPrediction, getRecentSearches, addToRecentSearches, saveRecents, clearWaitingTimer, toString, parseFloat, getCurrentLocationsObjFromLocal, addToPrevCurrLoc, saveCurrentLocations, getCurrentDate, getPrediction, getCurrentLocationMarker, parseNewContacts, getCurrentUTC, getMerchant, Merchant(..), drawPolygon,requestKeyboardShow, removeLabelFromMarker, getMobileNumber)
-import JBridge (metaLogEvent, currentPosition, drawRoute, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getVersionCode, getVersionName, hideKeyboardOnNavigation, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, loaderText, locateOnMap, openNavigation, reallocateMapFragment, removeAllPolylines, toast, toggleBtnLoader, toggleLoader, updateRoute, launchInAppRatingPopup, firebaseUserID, addMarker, generateSessionId, stopChatListenerService)
+import Foreign.Generic (decodeJSON, encodeJSON)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (getDistanceBwCordinates, adjustViewWithKeyboard, decodeErrorCode, getObjFromLocal, convertUTCtoISC, differenceOfLocationLists, filterRecentSearches, setText', seperateByWhiteSpaces, getNewTrackingId, checkPrediction, getRecentSearches, addToRecentSearches, saveRecents, clearWaitingTimer, toString, parseFloat, getCurrentLocationsObjFromLocal, addToPrevCurrLoc, saveCurrentLocations, getCurrentDate, getPrediction, getCurrentLocationMarker, parseNewContacts, getCurrentUTC, drawPolygon, requestKeyboardShow, removeLabelFromMarker, getMobileNumber)
+import JBridge (addMarker, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getVersionCode, getVersionName, hideKeyboardOnNavigation, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, loaderText, locateOnMap, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, stopChatListenerService, toast, toggleBtnLoader, toggleLoader, updateRoute)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -58,28 +71,18 @@ import Screens.HomeScreen.Controller (flowWithoutOffers, getSearchExpiryTime, is
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (getLocationList, getDriverInfo, dummyRideAPIEntity, encodeAddressDescription, getPlaceNameResp, getUpdatedLocationList, transformContactList)
 import Screens.InvoiceScreen.Controller (ScreenOutput(..)) as InvoiceScreenOutput
+import Screens.MyProfileScreen.ScreenData as MyProfileScreenData
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import Screens.ReferralScreen.ScreenData as ReferralScreen
 import Screens.SavedLocationScreen.Controller (getSavedLocationForAddNewAddressScreen)
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
 import Screens.Types (CardType(..), AddNewAddressScreenState(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), EmailErrorType(..))
-import Services.API (AuthType (..), AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..), TriggerSignatureOTPResp(..))
-import Services.Backend as Remote
 import Screens.Types (Gender(..)) as Gender
-import Screens.MyProfileScreen.ScreenData as MyProfileScreenData
+import Services.API (AuthType(..), AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..), TriggerSignatureOTPResp(..))
+import Services.Backend as Remote
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore, updateLocalStage)
 import Types.App (ABOUT_US_SCREEN_OUTPUT(..), ACCOUNT_SET_UP_SCREEN_OUTPUT(..), ADD_NEW_ADDRESS_SCREEN_OUTPUT(..), GlobalState(..), CONTACT_US_SCREEN_OUTPUT(..), FlowBT, HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREEN_OUTPUT(..), MY_PROFILE_SCREEN_OUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), PERMISSION_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUPUT(..), SAVED_LOCATION_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), EMERGECY_CONTACTS_SCREEN_OUTPUT(..))
-import Effect (Effect)
-import Control.Monad.Except (runExcept)
-import Foreign.Class (class Encode)
-import Foreign.Generic (decodeJSON, encodeJSON)
-import Config.Config
-import Config.Types
-import Control.Monad.Except.Trans (runExceptT)
-import Control.Transformers.Back.Trans (runBackT)
-import Config.DefaultConfig as DC
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
-import Common.Types.App (LazyCheck(..))
+import Merchant.Utils (getMerchant, Merchant(..))
 
 baseAppFlow :: GlobalPayload ->  FlowBT String Unit
 baseAppFlow (GlobalPayload gPayload) = do
@@ -117,29 +120,24 @@ baseAppFlow (GlobalPayload gPayload) = do
       let (Payload payload) = gPayload.payload
       case payload.signatureAuthData of
         Just (SignatureAuthData signatureAuth) -> do
-          let tokenExpiry = if (getValueToLocalStore LAST_LOGIN) == "__failed" then 600 else getExpiryTime (getValueToLocalStore LAST_LOGIN) true
-          if tokenExpiry >= 600 then do
-            response <- lift $ lift $ Remote.triggerSignatureBasedOTP (SignatureAuthData signatureAuth)
-            case response of
-              Right (TriggerSignatureOTPResp triggerSignatureOtpResp) ->
-                case triggerSignatureOtpResp.authType of
-                  Just "DIRECT" -> do
-                    let person = triggerSignatureOtpResp.person
-                    setValueToLocalStore MOBILE_NUMBER (getMobileNumber signatureAuth.authData)
-                    setValueToLocalStore LAST_LOGIN (getCurrentUTC "")
-                    case triggerSignatureOtpResp.person of
-                      Just person -> do
-                        let customerId = person ^._id
-                        lift $ lift $ setLogField "customer_id" $ encode (customerId)
-                        setValueToLocalStore CUSTOMER_ID customerId
-                      _ -> pure unit
-                    case triggerSignatureOtpResp.token of
-                      Just token -> setValueToLocalStore REGISTERATION_TOKEN token
-                      Nothing -> pure unit
-                    currentFlowStatus
-                  _ -> enterMobileNumberScreenFlow
-              Left err -> enterMobileNumberScreenFlow
-            else currentFlowStatus
+          response <- lift $ lift $ Remote.triggerSignatureBasedOTP (SignatureAuthData signatureAuth)
+          case response of
+            Right (TriggerSignatureOTPResp triggerSignatureOtpResp) -> do
+              let person = triggerSignatureOtpResp.person
+              setValueToLocalStore MOBILE_NUMBER (getMobileNumber signatureAuth.authData)
+              case triggerSignatureOtpResp.person of
+                Just person -> do
+                  let customerId = person ^._id
+                  lift $ lift $ setLogField "customer_id" $ encode (customerId)
+                  setValueToLocalStore CUSTOMER_ID customerId
+                _ -> pure unit
+              case triggerSignatureOtpResp.token of
+                Just token -> setValueToLocalStore REGISTERATION_TOKEN token
+                Nothing -> pure unit
+              currentFlowStatus
+            Left err -> do
+              _ <- lift $ lift $ liftFlow $ runEffectFn3 emitJOSEvent "java" "onEvent" "signature_auth_failed"
+              pure unit
         Nothing -> enterMobileNumberScreenFlow
 
 concatString :: Array String -> String
@@ -160,7 +158,7 @@ enableForceUpdateIOS = false
 checkVersion :: Int -> String -> FlowBT String Unit
 checkVersion versioncodeAndroid versionName= do
   if os /= "IOS" && versioncodeAndroid < (if isJust (getLatestAndroidVersion (getMerchant FunctionCall)) then fromMaybe 0 (getLatestAndroidVersion (getMerchant FunctionCall)) else versioncodeAndroid) then do
-    lift $ lift $ doAff do liftEffect hideSplash
+    _ <- lift $ lift $ liftFlow $ runEffectFn3 emitJOSEvent "java" "onEvent" "hide_loader"
     _ <- UI.handleAppUpdatePopUp
     _ <- pure $ firebaseLogEvent "ny_user_app_update_pop_up_view"
     checkVersion versioncodeAndroid versionName
@@ -173,7 +171,7 @@ checkVersion versioncodeAndroid versionName= do
 
       if any (_ == -1) [majorUpdateIndex, minorUpdateIndex, patchUpdateIndex] then pure unit
         else if forceIOSupdate majorUpdateIndex minorUpdateIndex patchUpdateIndex  then do
-          lift $ lift $ doAff do liftEffect hideSplash
+          _ <- lift $ lift $ liftFlow $ runEffectFn3 emitJOSEvent "java" "onEvent" "hide_loader"
           _ <- UI.handleAppUpdatePopUp
           _ <- pure $ firebaseLogEvent "ny_user_app_update_pop_up_view"
           checkVersion versioncodeAndroid versionName
@@ -309,7 +307,7 @@ currentFlowStatus = do
     DRIVER_OFFERED_QUOTE currentStatus      -> goToFindingQuotesStage currentStatus.estimateId true
     RIDE_ASSIGNED _                         -> currentRideFlow true
     _                                       -> currentRideFlow false
-  lift $ lift $ doAff do liftEffect hideSplash
+  _ <- lift $ lift $ liftFlow $ runEffectFn3 emitJOSEvent "java" "onEvent" "hide_loader"
   permissionConditionA <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
   permissionConditionB <- lift $ lift $ liftFlow $ isLocationEnabled unit
   internetCondition <- lift $ lift $ liftFlow $ isInternetAvailable unit
@@ -334,7 +332,7 @@ currentFlowStatus = do
       setValueToLocalStore HAS_TAKEN_FIRST_RIDE if response.hasTakenRide then "true" else "false"
       if (((fromMaybe "" response.firstName) == "" ) && not (isJust response.firstName)) then do
         _ <- updateLocalStage HomeScreen
-        lift $ lift $ doAff do liftEffect hideSplash
+        _ <- lift $ lift $ liftFlow $ runEffectFn3 emitJOSEvent "java" "onEvent" "hide_loader"
         accountSetUpScreenFlow
       else do
           modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{data{settingSideBar{name =fromMaybe "" response.firstName}}})
@@ -390,7 +388,7 @@ currentFlowStatus = do
 
 chooseLanguageScreenFlow :: FlowBT String Unit
 chooseLanguageScreenFlow = do
-  lift $ lift $ doAff do liftEffect hideSplash
+  _ <- lift $ lift $ liftFlow $ runEffectFn3 emitJOSEvent "java" "onEvent" "hide_loader"
   setValueToLocalStore LANGUAGE_KEY "EN_US"
   _ <- pure $ firebaseLogEvent "ny_user_choose_lang_scn_view"
   flow <- UI.chooseLanguageScreen
@@ -403,7 +401,7 @@ chooseLanguageScreenFlow = do
 
 enterMobileNumberScreenFlow :: FlowBT String Unit
 enterMobileNumberScreenFlow = do
-  lift $ lift $ doAff do liftEffect hideSplash -- Removed initial choose langauge screen
+  _ <- lift $ lift $ liftFlow $ runEffectFn3 emitJOSEvent "java" "onEvent" "hide_loader" -- Removed initial choose langauge screen
   setValueToLocalStore LANGUAGE_KEY "EN_US"
   void $ lift $ lift $ toggleLoader false
   config <- getAppConfig

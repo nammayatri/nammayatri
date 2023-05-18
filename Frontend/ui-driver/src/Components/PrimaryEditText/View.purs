@@ -41,28 +41,24 @@ view push state =
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , orientation HORIZONTAL
-        ][ textView
+        ][ textView $
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , text state.title
-          , textSize FontSize.a_14
           , color Color.greyTextColor
-          , fontStyle $ FontStyle.regular LanguageStyle
           , alpha 0.8
           , margin (MarginBottom 10)
           , visibility (if state.title == (getString MOBILE_NUMBER ) then GONE else VISIBLE)
-          ]
-          , textView
+          ] <> FontStyle.paragraphText TypoGraphy
+          , textView $
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
             , text "  *"
             , color Color.redRoman
-            , textSize FontSize.a_18
-            , fontStyle $ FontStyle.bold LanguageStyle
             , alpha 0.8
             , margin (MarginBottom 10)
             , visibility (if state.title == (getString MOBILE_NUMBER ) || state.valueId == "EditTextOtp" then GONE else VISIBLE)
-            ]
+            ] <> FontStyle.h2 TypoGraphy
           ]
         , linearLayout
           [ width MATCH_PARENT
@@ -105,14 +101,12 @@ view push state =
               )
             ]
         , PrestoAnim.animationSet [fadeIn state.isinValid, fadeOut $ not state.isinValid]
-          $ textView
+          $ textView $
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , text (fromMaybe "" state.error)
           , visibility if state.isinValid then VISIBLE else GONE
-          , textSize FontSize.a_14
           , color Color.lightMaroon
-          , fontStyle $ FontStyle.regular LanguageStyle
           , margin (MarginTop 10)
-          ]
+          ] <> FontStyle.paragraphText TypoGraphy
     ]

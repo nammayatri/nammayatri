@@ -77,20 +77,18 @@ view push state =
                     , onClick push (const BackPressed)
                     , padding (Padding 5 5 5 5)
                     ]
-                  , textView
+                  , textView $ 
                     [ width state.headingConfig.width
                     , height state.headingConfig.height
                     , gravity state.headingConfig.gravity
                     , text state.headingConfig.text
                     , color state.headingConfig.color
-                    , textSize state.headingConfig.fontSize
-                    , fontStyle state.headingConfig.fontStyle
                     , margin state.headingConfig.margin
                     , visibility state.headingConfig.visibility
                     , cornerRadius state.headingConfig.cornerRadius
                     , padding state.headingConfig.padding
                     , weight state.headingConfig.weight
-                    ]
+                    ]  <> (FontStyle.getFontStyle state.inputTextConfig.textStyle LanguageStyle)
 
                 ]
               , otpView push state
@@ -110,19 +108,17 @@ textBoxes push state =
   , margin (Margin 0 20 0 20)
   , clickable false
   ](mapWithIndex (\index item ->
-      textView
+      textView $
       [ width (V 48)
       , height (V 56)
       , color Color.greyTextColor
       , text ( take 1 (drop index state.inputTextConfig.text) )
-      , textSize state.inputTextConfig.fontSize
-      , fontStyle $ FontStyle.bold LanguageStyle
       , gravity CENTER
       , cornerRadius 4.0
       , stroke ("1," <> if (state.otpIncorrect || state.otpAttemptsExceeded ) then Color.textDanger else if state.inputTextConfig.focusIndex == index then Color.highlightBorderColor else Color.borderColorLight )
       , margin (Margin ((screenWidth unit)/30) 0 ((screenWidth unit)/30) 0)
       , onClick push (const (OnclickTextBox index))
-      ]) [1,2,3,4])
+      ]<> (FontStyle.getFontStyle state.inputTextConfig.textStyle LanguageStyle)) [1,2,3,4])
 
 singleTextBox :: forall w . (Action -> Effect Unit) -> InAppKeyboardModalState -> PrestoDOM (Effect Unit) w
 singleTextBox push state =
@@ -136,13 +132,11 @@ singleTextBox push state =
   , clickable false
   , padding (Padding 16 16 16 16)
   , stroke ("1," <> if (state.isValidAlternateNumber == false ) then Color.textDanger else Color.borderColorLight )
-  ][textView
+  ][textView $
       [ width state.inputTextConfig.width
       , height state.inputTextConfig.height
       , color state.inputTextConfig.color
       , text state.inputTextConfig.text
-      , textSize state.inputTextConfig.fontSize
-      , fontStyle state.inputTextConfig.fontStyle
       , weight state.inputTextConfig.weight
       , gravity state.inputTextConfig.gravity
       , visibility state.inputTextConfig.visibility
@@ -150,7 +144,7 @@ singleTextBox push state =
       , padding state.inputTextConfig.padding
       , margin state.inputTextConfig.margin
       , onClick push (const (OnclickTextBox 0))
-      ],
+      ] <> (FontStyle.getFontStyle state.inputTextConfig.textStyle LanguageStyle),
     imageView
         [ width $ V 23
          , height $ V 23
@@ -170,47 +164,42 @@ otpView push state =
            , gravity if(state.modalType == KeyboardModalType.OTP) then CENTER else LEFT
        ]
              ([] <> [textBoxes push state] <> [singleTextBox push state] <>
-                    [textView (
+                    [textView $
                     [ width state.subHeadingConfig.width
                     , height state.subHeadingConfig.height
                     , color state.subHeadingConfig.color
                     , text state.subHeadingConfig.text
                     , visibility state.subHeadingConfig.visibility
-                    , fontStyle state.subHeadingConfig.fontStyle
-                    , textSize state.subHeadingConfig.fontSize
                     , gravity state.subHeadingConfig.gravity
                     , cornerRadius state.subHeadingConfig.cornerRadius
                     , padding state.subHeadingConfig.padding
                     , margin state.subHeadingConfig.margin
                     , weight state.subHeadingConfig.weight
-                    ]
-                    )] <>
-                    [textView (
+                    ] <> (FontStyle.getFontStyle state.subHeadingConfig.textStyle LanguageStyle)
+                    ] <>
+                    [textView $
                     [ width state.errorConfig.width
                     , height state.errorConfig.width
                     , visibility state.errorConfig.visibility
                     , margin state.errorConfig.margin
                     , text state.errorConfig.text
                     , color state.errorConfig.color
-                    , textSize state.errorConfig.fontSize
                     , gravity state.errorConfig.gravity
                     , cornerRadius state.errorConfig.cornerRadius
                     , padding state.errorConfig.padding
                     , weight state.errorConfig.weight
-                    ] <> FontStyle.body1 TypoGraphy
-                  )] <>
+                    ] <> (FontStyle.getFontStyle state.errorConfig.textStyle LanguageStyle)
+                  ] <>
                     [textView(
                       [
                         width WRAP_CONTENT
                       , height WRAP_CONTENT
                       , text (getString RESEND_OTP)
-                      , textSize FontSize.a_12
-                      , fontStyle $ FontStyle.medium LanguageStyle
                       , color Color.blue900
                       , margin (Margin 0 0 0 0)
                       , onClick push (const (OnClickResendOtp))
                       , visibility if (state.modalType == KeyboardModalType.OTP && state.showResendOtpButton && (not state.otpAttemptsExceeded)) then VISIBLE else GONE
-                      ] 
+                      ] <> FontStyle.tags TypoGraphy
                     )])                 
 
 keyboard :: forall w . (Action -> Effect Unit) -> InAppKeyboardModalState -> PrestoDOM (Effect Unit) w
@@ -275,15 +264,13 @@ keyboard push state =
            , background Color.white900
            , cornerRadius 4.0
            , onClick push (const (OnSelection key state.inputTextConfig.focusIndex))
-           ][  textView
+           ][  textView $
                [ width WRAP_CONTENT
                , height MATCH_PARENT
                , text key
                , color Color.greyTextColor
-               , textSize FontSize.a_21
-               , fontStyle $ FontStyle.bold LanguageStyle
                , padding (Padding 0 15 0 15)
-               ]
+               ] <> FontStyle.h1 TypoGraphy
            ]
        ]
        ) item.keys )

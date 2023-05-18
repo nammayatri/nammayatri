@@ -106,23 +106,21 @@ headerLayout state push=
     ][ imageView
         [ width $ V 25
         , height MATCH_PARENT
-        , imageWithFallback $ "ny_ic_back," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_back.png"
+        , imageWithFallback $ "ny_ic_back," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_back.png"
         , gravity CENTER_VERTICAL
         , onClick push (const BackPressed)
         , padding (Padding 2 2 2 2)
         , margin (MarginLeft 5)
         ]
-      , textView
+      , textView $
         [ width WRAP_CONTENT
         , height MATCH_PARENT
         , text (getString WRITE_TO_US)
-        , textSize FontSize.a_19
         , margin (MarginLeft 20)
         , color Color.black
-        , fontStyle $ FontStyle.semiBold LanguageStyle
         , gravity CENTER_VERTICAL
         , alpha 0.8
-        ]
+        ] <> FontStyle.h3 TypoGraphy
     ]
  ]
 
@@ -135,15 +133,13 @@ noteView state push =
  , padding (Padding 15 10 10 10)
  , background Color.grey800
  , orientation HORIZONTAL
- ][ textView
+ ][ textView $
     [ width WRAP_CONTENT
     , height MATCH_PARENT
     , text (getString NOTE)
     , gravity CENTER_VERTICAL
-    , fontStyle $ FontStyle.semiBold LanguageStyle
-    , textSize FontSize.a_13
     , color Color.black800
-    ]
+    ] <> FontStyle.body9 TypoGraphy
   , textView (
     [ width WRAP_CONTENT
     , height MATCH_PARENT
@@ -195,7 +191,7 @@ thankYouForWritingUsScreen state =
         ][ imageView
             [ width ( V 150)
             , height ( V 200)
-            , imageWithFallback $ "ny_ic_greetings," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_greetings.png"
+            , imageWithFallback $ "ny_ic_greetings," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_greetings.png"
             ]
             , textView (
             [ height WRAP_CONTENT
@@ -204,15 +200,14 @@ thankYouForWritingUsScreen state =
             , color Color.black
             ] <> FontStyle.h1 TypoGraphy
             )
-            , textView
+            , textView $
             [ height WRAP_CONTENT
             , width MATCH_PARENT
             , text (getString WE_HAVE_RECIEVED_YOUR_ISSUE)
             , gravity CENTER_HORIZONTAL
             , padding (Padding 30 0 30 0)
             , color Color.inactive
-            , textSize FontSize.a_15
-            ]
+            ] <> FontStyle.paragraphText TypoGraphy
         ]
     ]
 ]

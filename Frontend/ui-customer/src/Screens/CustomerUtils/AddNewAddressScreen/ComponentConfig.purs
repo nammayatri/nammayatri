@@ -41,7 +41,6 @@ primaryButtonConfigConfirmLoc state = let
     { textConfig 
       { text = (getString CONFIRM_LOCATION)
       , color = state.data.config.primaryTextColor
-      , textSize = FontSize.a_16
       }
     , background = state.data.config.primaryBackground
     , margin = (Margin 0 22 0 16)
@@ -67,9 +66,7 @@ genericHeaderConfig state = let
       }
     , textConfig {
         text = if state.props.showSavePlaceView then (getString FAVOURITE_LOCATION) else if state.props.editLocation then (getString EDIT_FAVOURITE) else (getString ADD_FAVOURITE)
-      , textSize = FontSize.a_18
       , color = state.data.config.profileName
-      , fontStyle = FontStyle.semiBold LanguageStyle
       }
     , suffixImageConfig {
         visibility = GONE
@@ -85,24 +82,21 @@ primaryEditTextConfig state = let
         { color = Color.black800
         , singleLine = true
         , placeholder = (getString GIVE_THIS_LOCATION_A_NAME) 
-        , fontStyle = FontStyle.semiBold LanguageStyle
-        , textSize = FontSize.a_14
+        , textStyle = FontStyle.Body1
         , pattern = Just "[a-zA-Z0-9'‘’. ]*,30"
         , text = if (DS.toLower state.data.placeName == "home" || DS.toLower state.data.placeName == "work" ) then "" else state.data.placeName
         }
       , background = Color.white900
       , topLabel
-        { textSize = FontSize.a_12
-        , text = (getString SAVE_AS)
+        { text = (getString SAVE_AS)
         , color = Color.black800
-        , fontStyle = FontStyle.medium LanguageStyle
+        , textStyle = FontStyle.Tags
         }
       , stroke = ("1,"<> Color.black500)
       , margin = (Margin 0 0 0 0)
       , id = (EHC.getNewIDWithTag "SaveAsEditText")
       , errorLabel 
         { text = (getString NAME_ALREADY_IN_USE)
-        , fontStyle = FontStyle.medium LanguageStyle
         , margin = (MarginTop 1)
         }
       , showErrorLabel = state.props.placeNameExists
@@ -114,7 +108,6 @@ primaryButtonConfig state = let
     config = PrimaryButton.config
     primaryButtonConfig' = config 
       { textConfig{ text = if (state.props.editSavedLocation) then (getString CONFIRM_CHANGES) else (getString CONFIRM_AND_SAVE)
-      , textSize = FontSize.a_16 
       , color = state.data.config.primaryTextColor }
       , margin = (Margin 0 0 0 (24 + (EHC.safeMarginBottom)))
       , isClickable = (state.props.isBtnActive && state.props.isLocationServiceable && (not state.props.tagExists))

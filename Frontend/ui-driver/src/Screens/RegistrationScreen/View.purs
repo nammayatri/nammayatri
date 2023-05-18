@@ -72,7 +72,7 @@ view push state =
     ][ imageView
         [ width ( V 20 )
         , height ( V 20)
-        , imageWithFallback $ "ny_ic_back," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_back.png"
+        , imageWithFallback $ "ny_ic_back," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_back.png"
         , visibility GONE
         ]
       , linearLayout
@@ -107,11 +107,10 @@ registrationHeader state =
     , margin (MarginVertical 15 10)
     , text (getString REGISTRATION)
     ]
-  , textView
+  , textView $
     [ text (getString FOLLOW_STEPS)
-    , textSize FontSize.a_16
     , margin (MarginBottom 20)
-    ]
+    ] <> FontStyle.body5 TypoGraphy
   ]
 
 
@@ -134,7 +133,7 @@ tutorialView state =
       , color Color.black800
       ] <> FontStyle.body1 TypoGraphy)
     , imageView
-      [ imageWithFallback $ "ny_ic_media," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_media.png"
+      [ imageWithFallback $ "ny_ic_media," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_media.png"
       , width (V 40)
       , height (V 40)
       ]
@@ -158,8 +157,8 @@ cardItemView state =
           , cornerRadius 3.0
           ][ imageView
               [ imageWithFallback case item of
-                  DRIVING_LICENSE_OPTION -> "ny_ic_dl_blue," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_dl_blue.png"
-                  VEHICLE_DETAILS_OPTION -> "ny_ic_vehicle_onboard," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_auto_onboard.png"
+                  DRIVING_LICENSE_OPTION -> "ny_ic_dl_blue," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_dl_blue.png"
+                  VEHICLE_DETAILS_OPTION -> "ny_ic_vehicle_onboard," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_auto_onboard.png"
               , width (V 50)
               , height (V 50)
               , margin (MarginRight 14)

@@ -61,8 +61,7 @@ primaryEditTextConfigDescription state = let
     primaryEditTextConfig' = config
       { editText 
         { color = Color.black800
-        , textSize = FontSize.a_14
-        , fontStyle = FontStyle.medium LanguageStyle
+        , textStyle = FontStyle.Body1
         , margin = if EHC.os == "IOS" then (Margin 10 16 10 10) else (Margin 16 16 16 16)
         , singleLine = false
         , placeholder = (getString YOU_CAN_DESCRIBE_THE_ISSUE_YOU_FACED_HERE)
@@ -73,15 +72,12 @@ primaryEditTextConfigDescription state = let
       , stroke = if (DS.length state.data.description >= 300) then ("1,"<>Color.textDanger) else ("1,"<>Color.borderColorLight)
       , topLabel
         { text = (getString DESCRIBE_YOUR_ISSUE)
-        , textSize = FontSize.a_12
         , color = Color.black800
-        , fontStyle = FontStyle.regular LanguageStyle
         }  
       , margin = (Margin 10 32 10 0)
       , showErrorLabel = (DS.length state.data.description >= 300)
       , errorLabel 
         { text = ((getString MAX_CHAR_LIMIT_REACHED) <> " 300 " <> (getString OF) <> " 300")
-        , fontStyle = FontStyle.regular LanguageStyle 
         , color = Color.textDanger
         }
       } 
@@ -93,17 +89,14 @@ primaryEditTextConfigEmail state = let
     primaryEditTextConfig' = config
       { editText 
         { color = Color.black800
-        , textSize = FontSize.a_14
-        , fontStyle = FontStyle.medium LanguageStyle
+        , textStyle = FontStyle.Body1
         , margin = (Margin 16 16 16 16)
         , placeholder = "example@xyz.com"
         }
       , background = Color.white900
       , topLabel
         { text = (getString YOUR_EMAIL_ID)
-        , textSize = FontSize.a_12
         , color = Color.black800
-        , fontStyle = FontStyle.regular LanguageStyle
         }  
       , margin = (Margin 10 32 10 0)
       } 
@@ -115,8 +108,7 @@ primaryEditTextConfig state = let
     primaryEditTextConfig' = config
       { editText 
         { color = Color.black800
-        , textSize = FontSize.a_14
-        , fontStyle = FontStyle.medium LanguageStyle
+        , textStyle = FontStyle.Body1
         , margin = if EHC.os == "ANDROID" then (Margin 16 4 16 4) else (Margin 16 16 16 4)
         , gravity = CENTER_VERTICAL
         , placeholder = (getString I_AM_NOT_RECEIVING_ANY_RIDES)
@@ -129,13 +121,10 @@ primaryEditTextConfig state = let
       , background = Color.white900
       , topLabel
         { text = (getString SUBJECT)
-        , textSize = FontSize.a_12
         , color = Color.black800
-        , fontStyle = FontStyle.regular LanguageStyle
         }  
       , errorLabel
         { text = ((getString MAX_CHAR_LIMIT_REACHED) <> " 100 " <> (getString OF) <> " 100")
-        , fontStyle = FontStyle.regular LanguageStyle
         , color = Color.textDanger
         }
       , showErrorLabel = ((DS.length state.data.subject) >= 100 )
@@ -171,9 +160,7 @@ genericHeaderConfig state = let
     , padding = (Padding 0 5 0 5)
     , textConfig {
         text = (getString WRITE_TO_US)
-      , textSize = FontSize.a_18
       , color = Color.darkDescriptionText
-      , fontStyle = FontStyle.bold LanguageStyle
       }
     , suffixImageConfig {
         visibility = GONE

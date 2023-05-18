@@ -47,34 +47,31 @@ view push config =
             ]
 titleView :: forall w . Config -> PrestoDOM (Effect Unit) w
 titleView config = 
-  textView 
+  textView $
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
     , text config.titleConfig.text
     , color if config.isSelected then Color.black900 else config.titleConfig.color
-    , fontStyle if config.isSelected then config.titleConfig.selectedFontStyle else config.titleConfig.unselectedFontStyle
     , gravity LEFT
     , singleLine config.titleConfig.singleLine
     , lineHeight "24"
     , visibility config.titleConfig.visibility
-    ] 
+    ] <> (FontStyle.getFontStyle (if config.isSelected then config.titleConfig.selectedTextStyle else config.titleConfig.unselectedTextStyle) LanguageStyle)
     
 
 
 subTitleView :: forall w . Config -> PrestoDOM (Effect Unit) w
 subTitleView config =
-  textView
+  textView $ 
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
-    , textSize config.subTitleConfig.textSize
     , text config.subTitleConfig.text
     , color config.subTitleConfig.color
-    , fontStyle config.subTitleConfig.selectedFontStyle
     , gravity LEFT
     , lineHeight "23"
     , singleLine config.subTitleConfig.singleLine
     , visibility if config.subTitleConfig.text /= "" then VISIBLE else GONE
-    ]
+    ] <> (FontStyle.getFontStyle config.subTitleConfig.selectedTextStyle LanguageStyle)
 
 buttonLayout :: forall w . Config -> PrestoDOM (Effect Unit) w
 buttonLayout config =

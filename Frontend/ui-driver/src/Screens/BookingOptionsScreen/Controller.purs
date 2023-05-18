@@ -59,12 +59,12 @@ getVehicleCapacity vehicleType capacity = case vehicleType of
 
 getVehicleImage :: String -> String
 getVehicleImage vehicleType = case vehicleType of
-  "SEDAN" -> "ic_sedan" <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ic_sedan.png"
-  "SUV" -> "ic_suv" <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ic_suv.png"
-  "HATCHBACK" -> "ic_hatchback" <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ic_hatchback.png"
-  "TAXI" -> "ic_sedan_non_ac" <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ic_sedan_non_ac.png"
-  "TAXI_PLUS" -> "ic_sedan_ac" <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ic_sedan_ac.png"
-  _ -> "ic_sedan" <> (getCommonAssetStoreLink FunctionCall) <> "/user/images/ic_sedan.png"
+  "SEDAN" -> "ic_sedan" <> (getCommonAssetStoreLink FunctionCall) <> "ic_sedan.png"
+  "SUV" -> "ic_suv" <> (getCommonAssetStoreLink FunctionCall) <> "ic_suv.png"
+  "HATCHBACK" -> "ic_hatchback" <> (getCommonAssetStoreLink FunctionCall) <> "ic_hatchback.png"
+  "TAXI" -> "ic_sedan_non_ac" <> (getCommonAssetStoreLink FunctionCall) <> "ic_sedan_non_ac.png"
+  "TAXI_PLUS" -> "ic_sedan_ac" <> (getCommonAssetStoreLink FunctionCall) <> "ic_sedan_ac.png"
+  _ -> "ic_sedan" <> (getCommonAssetStoreLink FunctionCall) <> "ic_sedan.png"
 
 dummyVehicleP :: VehicleP
 dummyVehicleP = {

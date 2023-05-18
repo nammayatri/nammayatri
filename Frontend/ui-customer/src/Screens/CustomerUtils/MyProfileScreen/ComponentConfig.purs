@@ -52,9 +52,7 @@ genericHeaderConfig state = let
       }
     , textConfig {
         text = if state.props.updateProfile then (getString UPDATE_PERSONAL_DETAILS) else (getString PERSONAL_DETAILS)
-      , textSize = FontSize.a_18
       , color = Color.black
-      , fontStyle = FontStyle.semiBold LanguageStyle
       }
     }
   in genericHeaderConfig'
@@ -67,14 +65,10 @@ nameEditTextConfig state = let
             margin = (Margin 16 32 16 0),
             topLabel {
                 text = (getString NAME),
-                textSize = FontSize.a_12,
-                color = Color.black900,
-                fontStyle = FontStyle.regular LanguageStyle
+                color = Color.black900
             },
             editText {
                 text = state.data.name,
-                textSize = FontSize.a_16,
-                fontStyle = FontStyle.semiBold LanguageStyle,
                 pattern = Just "[a-zA-Z ]*,30"
             },
             id = (EHC.getNewIDWithTag "UserNameEditText")
@@ -90,23 +84,18 @@ emailEditTextConfig state = let
             showErrorLabel = (not state.props.isEmailValid),
             topLabel {
                 text = (getString EMAIL_ID),
-                textSize = FontSize.a_12,
-                color = Color.black900,
-                fontStyle = FontStyle.regular LanguageStyle
+                color = Color.black900
             },
             editText {
                 text = fromMaybe "" state.data.emailId,
                 placeholder = "example@xyz.com",
-                placeholderColor = Color.black600,
-                textSize = FontSize.a_16,
-                fontStyle = FontStyle.semiBold LanguageStyle
+                placeholderColor = Color.black600
             },
             errorLabel{
               text = case state.data.errorMessage of 
                 Just ST.EMAIL_EXISTS -> "Email already exists"
                 Just ST.INVALID_EMAIL -> "Please enter a valid email"
                 Nothing -> ""
-            , fontStyle = FontStyle.regular LanguageStyle
             , color = Color.textDanger
             },
             id = (EHC.getNewIDWithTag "EmailEditText")
@@ -139,13 +128,11 @@ requestDeletePopUp state = let
       color = Color.black600},
       option1 {
         text = (getString CANCEL_STR)
-      , fontSize = FontSize.a_16
       },
       option2 {text = (getString YES_DELETE_IT)
       , background = Color.red
       , color = Color.white900
-      , strokeColor = Color.red
-      , fontSize = FontSize.a_16 }
+      , strokeColor = Color.red}
      
     }
   in popUpConfig'

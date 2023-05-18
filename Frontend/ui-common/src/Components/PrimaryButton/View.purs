@@ -15,12 +15,14 @@
 module Components.PrimaryButton.View where
 
 import Effect (Effect)
-import Prelude (Unit, bind, const, discard, pure, unit, ($), (&&), (==))
+import Prelude (Unit, bind, const, discard, pure, unit, ($), (&&), (==), (<>))
 import Components.PrimaryButton.Controller (Action(..), Config)
 import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, width, imageWithFallback)
 import JBridge (startLottieProcess, toggleBtnLoader, getKeyInSharedPrefKeys)
 import Engineering.Helpers.Commons (getNewIDWithTag, os)
 import Merchant.Utils (getValueFromConfig)
+import Font.Style as FontStyle
+import Common.Types.App (LazyCheck(..))
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -29,7 +31,6 @@ view push config =
     , width config.width
     , margin config.margin
     , visibility config.visibility
-    , clickable if config.enableLoader then false else config.isClickable
     ]
     [ linearLayout
         [ height config.height
@@ -37,6 +38,7 @@ view push config =
         , cornerRadius config.cornerRadius
         , background config.background
         , gravity config.gravity
+        , clickable if config.enableLoader then false else config.isClickable
         , onClick
             ( \action -> do
                 _ <- pure $ toggleBtnLoader config.id true
@@ -62,16 +64,14 @@ view push config =
             , visibility if config.enableLoader then GONE else VISIBLE
             ]
             [ prefixImageLayout config
-            , textView
+            , textView $ 
                 [ height config.textConfig.height
                 , width config.textConfig.width
-                , textSize config.textConfig.textSize
                 , text config.textConfig.text
                 , color config.textConfig.color
-                , fontStyle config.textConfig.fontStyle
                 , gravity config.textConfig.gravity
                 , lineHeight "20"
-                ]
+                ] <> (FontStyle.getFontStyle config.textConfig.textStyle LanguageStyle)
             , suffixImageLayout config
             ]
         ]

@@ -99,19 +99,17 @@ postfixImageView push config =
 
 titleView :: forall w . LocationListItemState -> PrestoDOM (Effect Unit) w
 titleView config =
-  textView
+  textView (
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , text if config.prefixImageUrl == "ny_ic_home_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_home_blue.png" || config.prefixImageUrl == "ny_ic_work_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_work_blue.png" || config.prefixImageUrl == "ny_ic_fav_red," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_red.png" then config.tag else config.title
     , color Color.black800
-    , textSize FontSize.a_14
     , lineHeight "18"
     , maxLines 1
     , ellipsize true
     , padding (PaddingRight 20)
     , margin (MarginBottom 4)
-    , fontStyle $ FontStyle.semiBold LanguageStyle
-    ]-- <> FontStyle.body1 TypoGraphy)
+    ] <> FontStyle.body6 TypoGraphy)
 
 subTitleView :: forall w . LocationListItemState -> PrestoDOM (Effect Unit) w
 subTitleView config =

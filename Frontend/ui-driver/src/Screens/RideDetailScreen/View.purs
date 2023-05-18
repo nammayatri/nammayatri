@@ -260,7 +260,6 @@ cashCollected state push =
       , text (getString CASH_COLLECTED)
       , fontStyle $ FontStyle.bold LanguageStyle
       , color Color.yellowText
-      , textSize FontSize.a_16
       ] <> FontStyle.subHeading1 TypoGraphy
   )
   ]

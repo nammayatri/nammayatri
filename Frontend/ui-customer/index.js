@@ -93,7 +93,7 @@ var purescript = require("./output/Main");
 window.onMerchantEvent = function (event, payload) {
   console = top.console;
   console.log(payload);
-  var clientPaylod = JSON.parse(payload);
+  var clientPaylod = JSON.parse(payload).payload;
   if (event == "initiate") {
     let payload = {
       event: "initiate_result"
@@ -103,7 +103,7 @@ window.onMerchantEvent = function (event, payload) {
       , errorMessage: ""
       , errorCode: ""
     }
-    var clientId = clientPaylod.payload.clientId;
+    var clientId = clientPaylod.clientId;
     if (clientId.includes("_ios"))
     {
       clientId = clientId.replace("_ios","");
@@ -121,6 +121,13 @@ window.onMerchantEvent = function (event, payload) {
   } else if (event == "process") {
     console.warn("Process called");
     window.__payload.sdkVersion = "2.0.1"
+    if (clientPaylod.action == "location_permission_result") {
+      window.locationRequestCallBack.call();
+    } else if(clientPaylod.action == "location_event") {
+      purescript.onConnectivityEvent("LOCATION_DISABLED")();
+    } else if (clientPaylod.action == "notification") {
+      window.callNotificationCallBack(clientPaylod.notificationType);
+    } else {
     var parsedPayload = JSON.parse(payload);
     if (parsedPayload && parsedPayload.payload && parsedPayload.payload.action == "showPopup" && parsedPayload.payload.id && parsedPayload.payload.popType)
     {
@@ -138,6 +145,7 @@ window.onMerchantEvent = function (event, payload) {
       JBridge.runInJuspayBrowser("onEvent", JSON.stringify(jpConsumingBackpress), "");
       purescript.main();
     }
+  }
   } else {
     console.error("unknown event: ", event);
   }

@@ -83,17 +83,15 @@ topTextView state =
     , orientation VERTICAL
     , padding (Padding 20 0 20 10)
     ][  logoView state
-      , textView
+      , textView $
         [ height WRAP_CONTENT
         , width MATCH_PARENT
-        , textSize FontSize.a_16
         , text (getString ABOUT_APP_DESCRIPTION)
         , color Color.black800
-        , fontStyle $ FontStyle.regular LanguageStyle
         , gravity LEFT
         , lineHeight "22"
         , margin (Margin 0 40 0 32)
-        ]
+        ] <> FontStyle.body5 LanguageStyle
       , linearLayout
         [ gravity LEFT
         , width WRAP_CONTENT
@@ -130,14 +128,12 @@ bottomLinksView state =
         , gravity CENTER
         , orientation VERTICAL
         , margin (Margin 0 10 0 10)
-        ][  textView
+        ][  textView $
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
             , text $ "v" <> (getValueToLocalStore VERSION_NAME) <> " [ " <> (getValueToLocalStore BUNDLE_VERSION) <> " ]"
-            , textSize FontSize.a_14
-            , fontStyle $ FontStyle.semiBold LanguageStyle
             , color "#354052"
-            ]
+            ] <> FontStyle.paragraphText LanguageStyle
           ]
   
 --------------------------------------------------- softwareLicenseView -----------------------------------------------------
@@ -152,15 +148,13 @@ softwareLicenseView =
         , orientation VERTICAL
         , width WRAP_CONTENT
         , visibility GONE
-        ][  textView
+        ][  textView $
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
             , text (getString SOFTWARE_LICENSE)
-            , textSize FontSize.a_14
-            , fontStyle $ FontStyle.regular LanguageStyle
             , color Color.blue900
             , margin (Margin 0 0 0 0)
-            ]
+            ] <> FontStyle.paragraphText LanguageStyle
           , linearLayout
             [ width MATCH_PARENT
             , height (V 1)
@@ -176,12 +170,10 @@ termsAndConditionsView state =
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
     , orientation VERTICAL
-    ][  textView
+    ][  textView $
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , text (getString TERMS_AND_CONDITIONS)
-        , textSize FontSize.a_14
-        , fontStyle $ FontStyle.regular LanguageStyle
         , color Color.blue900
         , onClick (\action -> do
             _ <- pure action
@@ -189,7 +181,7 @@ termsAndConditionsView state =
             pure unit
           ) (const TermsAndConditions)
         , margin (Margin 0 20 0 0)
-        ]
+        ] <> FontStyle.paragraphText LanguageStyle
       , linearLayout
               [ width MATCH_PARENT
               , height (V 1)
@@ -204,12 +196,10 @@ privacyPolicyView state =
     [ height WRAP_CONTENT
     , orientation VERTICAL
     , width WRAP_CONTENT
-    ][  textView
+    ][  textView $
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , text (getString PRIVACY_POLICY)
-        , textSize FontSize.a_14
-        , fontStyle $ FontStyle.regular LanguageStyle
         , color Color.blue900
         , margin (Margin 0 20 0 0)
         , onClick (\action -> do
@@ -217,7 +207,7 @@ privacyPolicyView state =
             _ <- JB.openUrlInApp $ getValueFromConfig "PRIVACY_POLICY_LINK" 
             pure unit
           ) (const PrivacyPolicy)
-        ]
+        ] <> FontStyle.paragraphText LanguageStyle
       , linearLayout
         [ width MATCH_PARENT
         , height (V 1)

@@ -74,15 +74,11 @@ mobileNumberEditTextConfig state = let
           , placeholder = (getString ENTER_MOBILE_NUMBER)
           , singleLine = true
           , pattern = Just "[0-9]*,10"
-          , fontStyle = FontStyle.bold LanguageStyle
-          , textSize = FontSize.a_16
         }
       , background = Color.white900
       , topLabel
-        { textSize = FontSize.a_12
-        , text = (getString ENTER_YOUR_MOBILE_NUMBER)
+        { text = (getString ENTER_YOUR_MOBILE_NUMBER)
         , color = Color.black800
-        , fontStyle = FontStyle.semiBold LanguageStyle
         , alpha = 0.8
         }
       , id = (EHC.getNewIDWithTag "EnterMobileNumberEditText")
@@ -105,18 +101,14 @@ otpEditTextConfig state = let
         , placeholder = (getString ENTER_4_DIGIT_OTP)
         , singleLine = true
         , pattern = Just "[0-9]*,4"
-        , fontStyle = FontStyle.bold LanguageStyle
-        , textSize = FontSize.a_16
         , letterSpacing = state.props.letterSpacing
         , text = ""
         }
       , background = Color.white900
       , margin = (Margin 0 30 0 20)
       , topLabel
-        { textSize = FontSize.a_12
-        , text = (getString LOGIN_USING_THE_OTP_SENT_TO) <> " +91 " <> state.data.mobileNumber
+        { text = (getString LOGIN_USING_THE_OTP_SENT_TO) <> " +91 " <> state.data.mobileNumber
         , color = Color.black800
-        , fontStyle = FontStyle.regular LanguageStyle
         , alpha = 0.8
         } 
       , id = (EHC.getNewIDWithTag "EnterOTPNumberEditText")
@@ -125,8 +117,6 @@ otpEditTextConfig state = let
       , errorLabel {
             text = (getString WRONG_OTP),
             visibility = VISIBLE,
-            textSize = FontSize.a_12,
-            fontStyle = FontStyle.bold LanguageStyle,
             alpha = 0.8
       },
       showErrorLabel = state.props.wrongOTP, 

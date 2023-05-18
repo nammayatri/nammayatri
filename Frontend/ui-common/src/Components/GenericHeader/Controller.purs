@@ -16,7 +16,7 @@
 module Components.GenericHeader.Controller where
 
 import Font.Size as FontSize
-import Font.Style as FontStyle
+import Font.Style (Style(..))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), Orientation(..), padding)
 import Styles.Colors as Color
 import Common.Types.App
@@ -53,10 +53,9 @@ type ImageConfig =
 type TextConfig =
   {
     text :: String
-  , textSize :: Int
   , margin :: Margin
-  , fontStyle :: String
   , color :: String
+  , textStyle :: Style
   }
 
 config :: Config
@@ -79,9 +78,8 @@ config = {
     }
   , textConfig : {
       text : ""
-    , textSize : FontSize.a_18
+    , textStyle : Heading3
     , margin : (Margin 0 0 0 0)
-    , fontStyle : FontStyle.semiBold LanguageStyle
     , color : Color.black800
     }
   , suffixImageConfig : {
@@ -115,9 +113,8 @@ merchantConfig = {
     }
   , textConfig : {
       text : ""
-    , textSize : FontSize.a_24
+    , textStyle : Heading0
     , margin : (Margin 16 0 16 10)
-    , fontStyle : FontStyle.bold LanguageStyle
     , color : "#101010"
     }
   , suffixImageConfig : {

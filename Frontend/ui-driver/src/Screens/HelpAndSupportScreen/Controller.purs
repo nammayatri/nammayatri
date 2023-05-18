@@ -97,7 +97,7 @@ getTitle menuOption =
 optionList :: Array Listtype
 optionList =
     [
-      {menuOptions: GettingStartedFaq , icon:"ny_ic_help_circle_transparent," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_help_circle_transparent.png"},
+      {menuOptions: GettingStartedFaq , icon:"ny_ic_help_circle_transparent," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_help_circle_transparent.png"},
       {menuOptions: OtherIssues , icon:"ny_ic_clip_board," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_clip_board.png"},
-      {menuOptions: CallSupportCenter , icon:"ny_ic_head_phones," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_head_phones.png"}
+      {menuOptions: CallSupportCenter , icon:"ny_ic_head_phones," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_head_phones.png"}
     ]

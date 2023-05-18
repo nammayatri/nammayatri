@@ -23,7 +23,7 @@ import Data.Maybe as DM
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (Merchant(..), getMerchant)
+import Merchant.Utils (Merchant(..), getMerchant)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, ($), const, (<>), (>), (==), (&&))
@@ -61,23 +61,20 @@ view push config =
            , height WRAP_CONTENT
            , orientation VERTICAL
            , padding (Padding 20 15 0 10)
-           ][ textView
+           ][ textView $
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
-              , textSize FontSize.a_24
               , color if config.nightCharges then Color.white900 else Color.black800
               , text (getString RATE_CARD)
-              , fontStyle $ FontStyle.bold LanguageStyle
               , margin (Margin 0 5 0 5)
-              ]
-            , textView
+              ] <> FontStyle.h0 LanguageStyle
+            , textView $
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
-              , textSize FontSize.a_14
               , color if config.nightCharges then Color.black500 else Color.black700
               , text if config.nightCharges then (getString NIGHT_TIME_CHARGES) else (getString DAY_TIME_CHARGES)
               , margin (MarginBottom 8)
-              ] 
+              ] <> FontStyle.paragraphText TypoGraphy
             ]
          , imageView
            [ width MATCH_PARENT
@@ -90,22 +87,20 @@ view push config =
         , height WRAP_CONTENT
         , orientation HORIZONTAL
         , padding (Padding 20 20 20 8)
-        ][ textView
+        ][ textView $
            [ width WRAP_CONTENT
            , height WRAP_CONTENT
-           , textSize FontSize.a_16
            , color Color.black800
            , text $ (getString MIN_FARE_UPTO) <> if config.nightCharges then " 🌙" else ""
-           ]
-         , textView
+           ] <> FontStyle.body5 TypoGraphy
+         , textView $
            [ width WRAP_CONTENT
            , height WRAP_CONTENT
-           , textSize FontSize.a_16
            , color Color.black800
            , text config.baseFare
            , gravity RIGHT
            , weight 1.0
-           ]
+           ] <> FontStyle.body5 TypoGraphy
          ]
       , linearLayout
         [ width MATCH_PARENT
@@ -113,22 +108,20 @@ view push config =
         , orientation HORIZONTAL
         , margin (Margin 0 8 0 8)
         , padding (Padding 20 0 20 0)
-        ][ textView
+        ][ textView $
            [ width WRAP_CONTENT
            , height WRAP_CONTENT
-           , textSize FontSize.a_16
            , color Color.black800
            , text $ (getString RATE_ABOVE_MIN_FARE) <> if config.nightCharges then " 🌙" else ""
-           ]
-         , textView
+           ] <> FontStyle.body5 TypoGraphy
+         , textView $
            [ width WRAP_CONTENT
            , height WRAP_CONTENT
-           , textSize FontSize.a_16
            , color Color.black800
            , text (config.extraFare <> "/ km")
            , gravity RIGHT
            , weight 1.0
-           ]
+           ] <> FontStyle.body5 TypoGraphy
          ]
       , linearLayout
         [ width MATCH_PARENT
@@ -136,22 +129,20 @@ view push config =
         , orientation HORIZONTAL
         , margin (Margin 0 8 0 8)
         , padding (Padding 20 0 20 0)
-        ][ textView
+        ][ textView $
            [ width WRAP_CONTENT
            , height WRAP_CONTENT
-           , textSize FontSize.a_16
            , color Color.black800
            , text (getString DRIVER_PICKUP_CHARGES)
-           ]
-         , textView
+           ] <> FontStyle.body5 TypoGraphy
+         , textView $
            [ width WRAP_CONTENT
            , height WRAP_CONTENT
-           , textSize FontSize.a_16
            , color Color.black800
            , text config.pickUpCharges
            , gravity RIGHT
            , weight 1.0
-           ]
+           ] <> FontStyle.body5 TypoGraphy
          ]
       , linearLayout
         [ width MATCH_PARENT
@@ -160,22 +151,20 @@ view push config =
         , margin (Margin 0 8 0 8)
         , padding (Padding 20 0 20 0)
         , visibility if (getAdditionalFare config.additionalFare) > 0 then VISIBLE else GONE
-        ][ textView
+        ][ textView $
            [ width WRAP_CONTENT
            , height WRAP_CONTENT
-           , textSize FontSize.a_16
            , color Color.black800
            , text (getString NOMINAL_FARE)
-           ]
-         , textView
+           ] <> FontStyle.body5 TypoGraphy
+         , textView $
            [ width WRAP_CONTENT
            , height WRAP_CONTENT
-           , textSize FontSize.a_16
            , color Color.black800
            , text (getString PERCENTAGE_OF_NOMINAL_FARE)
            , gravity RIGHT
            , weight 1.0
-           ]
+           ] <> FontStyle.body5 TypoGraphy
          ]
       , imageView
         [ width MATCH_PARENT
@@ -183,7 +172,7 @@ view push config =
         , imageWithFallback $ "ny_ic_horizontal_dash," <> (getAssetStoreLink FunctionCall) <> "ny_ic_horizontal_dash.png"
         , margin (Margin 20 7 20 10)
         ]
-      , textView
+      , textView $
         [ width MATCH_PARENT
         , height WRAP_CONTENT
             , color Color.black700
@@ -191,39 +180,34 @@ view push config =
                       (getString NIGHT_TIMES_OF) <> config.nightShiftMultiplier <> (getString DAYTIME_CHARGES_APPLIED_AT_NIGHT)
                    else
                       (getString DAY_TIMES_OF) <> config.nightShiftMultiplier <> (getString DAYTIME_CHARGES_APPLICABLE_AT_NIGHT)
-            , textSize FontSize.a_14
         , padding (Padding 20 0 20 0)
-        ]
-      , textView
+        ] <> FontStyle.paragraphText TypoGraphy
+      , textView $
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , color Color.black700
         , text (getString TOTAL_FARE_MAY_CHANGE_DUE_TO_CHANGE_IN_ROUTE)
         , margin (Margin 0 8 0 8)
-        , textSize FontSize.a_14
         , padding (Padding 20 0 20 0)
-        ]
-      , textView
+        ] <> FontStyle.paragraphText TypoGraphy
+      , textView $
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , color Color.black700
-        , textSize FontSize.a_14
         , text (getString DRIVERS_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC)
         , visibility if (getMerchant FunctionCall) == NAMMAYATRI && ((getAdditionalFare config.additionalFare) > 0) then VISIBLE else GONE
         , margin (MarginBottom 12)
         , padding (Padding 20 0 20 0)
-        ]
-      , textView
+        ] <> FontStyle.paragraphText TypoGraphy
+      , textView $
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , color Color.blue800
         , gravity CENTER
-        , fontStyle $ FontStyle.bold LanguageStyle
         , text (getString GOT_IT)
-        , textSize FontSize.a_18
         , padding (Padding 0 8 0 25)
         , onClick push $ const Close
-        ]
+        ] <> FontStyle.h2 LanguageStyle
       ]
    ]
 

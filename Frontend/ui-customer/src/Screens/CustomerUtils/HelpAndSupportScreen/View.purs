@@ -91,25 +91,21 @@ view push state =
         , orientation HORIZONTAL
         , visibility if state.props.apiFailure || state.data.isNull then GONE else VISIBLE
         , background Color.catskillWhite
-        ][  textView
+        ][  textView $
             [ text (getString YOUR_RECENT_RIDE)
-            , textSize FontSize.a_16
             , color Color.darkDescriptionText
             , width WRAP_CONTENT
-            , fontStyle $ FontStyle.medium LanguageStyle
             , margin (Margin 16 12 0 12)
-            ]
-          , textView
+            ] <> FontStyle.subHeading2 LanguageStyle
+          , textView $
             [ text (getString VIEW_ALL_RIDES)
             , alignParentRight "true,-1"
-            , textSize FontSize.a_14
             , margin (Margin 0 14 16 14)
             , width MATCH_PARENT
             , gravity RIGHT
-            , fontStyle $ FontStyle.medium LanguageStyle
             , color Color.blue900
             , onClick push $ const ViewRides
-            ]
+            ] <> FontStyle.body1 LanguageStyle
           ]
       , recentRideView state push
       , headingView state (getString ALL_TOPICS)
@@ -168,12 +164,10 @@ recentRideView state push=
     , orientation HORIZONTAL
     , onClick push $ const ReportIssue
     ][
-    textView
+    textView $
         [ text (getString REPORT_AN_ISSUE_WITH_THIS_TRIP)
-        , textSize FontSize.a_13
         , color Color.blue900
-        , fontStyle $ FontStyle.medium LanguageStyle
-        ]
+        ] <> FontStyle.tags LanguageStyle
      ,  linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -196,12 +190,10 @@ dateAndTimeView state =
   , orientation HORIZONTAL
   , margin (Margin 0 12 0 0)
   , gravity CENTER_VERTICAL
-  ][  textView
+  ][  textView $
       [ text state.data.date
-      , textSize FontSize.a_11
       , color Color.greyShade
-      , fontStyle $ FontStyle.medium LanguageStyle
-      ]
+      ] <> FontStyle.body16 LanguageStyle
     , linearLayout
       [ height MATCH_PARENT
       , width WRAP_CONTENT
@@ -215,12 +207,10 @@ dateAndTimeView state =
           , width (V 5)
           ][]
        ]
-    , textView
+    , textView $
       [ text state.data.time
-      , textSize FontSize.a_11
       , color Color.greyShade
-      , fontStyle $ FontStyle.medium LanguageStyle
-      ]
+      ] <> FontStyle.body16 LanguageStyle
     ]
 
 ------------------------------- driverRating --------------------------
@@ -232,12 +222,10 @@ driverRatingView state =
   , gravity CENTER_VERTICAL
   , orientation HORIZONTAL
   , margin (Margin 0 13 0 10)
-  ][  textView
+  ][  textView $
       [ text (getString YOU_RATED)
-      , textSize FontSize.a_12
       , color Color.darkDescriptionText
-      , fontStyle $ FontStyle.regular LanguageStyle
-      ]
+      ] <> FontStyle.body3 LanguageStyle
     , linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
@@ -283,13 +271,11 @@ allTopicsView state push =
                 , height $ V 17
                 , width $ V 17
                 ]
-              , textView
+              , textView $
                 [ text item.title
-                , textSize FontSize.a_14
                 , color Color.darkDescriptionText
                 , margin (MarginLeft 13)
-                , fontStyle $ FontStyle.regular LanguageStyle
-                ]
+                ] <> FontStyle.paragraphText LanguageStyle
               , linearLayout
                 [ height WRAP_CONTENT
                 , weight 1.0
@@ -312,16 +298,15 @@ allTopicsView state push =
 
 headingView :: ST.HelpAndSupportScreenState -> String -> forall w . PrestoDOM (Effect Unit) w
 headingView state title =
-  textView
+  textView $
     [ text title
     , width MATCH_PARENT
     , visibility if state.props.apiFailure then GONE else VISIBLE
     , height WRAP_CONTENT
     , padding (Padding 16 12 0 12)
     , background Color.catskillWhite
-    , textSize FontSize.a_16
     , color Color.darkDescriptionText
-    ]
+    ] <> FontStyle.body5 LanguageStyle
 
 getPastRides :: forall action.( RideBookingListRes -> String -> action) -> (action -> Effect Unit) -> ST.HelpAndSupportScreenState ->  Flow GlobalState Unit
 getPastRides action push state = do

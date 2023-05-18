@@ -92,7 +92,7 @@ view push state =
                 , orientation HORIZONTAL
                 , onClick push (const CallSupport)
                 ][ imageView
-                [ imageWithFallback $   "ny_ic_support," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_support.png"
+                [ imageWithFallback $   "ny_ic_support," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_support.png"
                 , height $ V 17
                 , width $ V 20
                 , margin $ (Margin 0 0 7 27)
@@ -109,7 +109,7 @@ view push state =
                 , orientation HORIZONTAL
                 , onClick push (const Logout)
                 ][ imageView
-                [ imageWithFallback $ "ny_ic_logout_grey," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_logout_grey.png"
+                [ imageWithFallback $ "ny_ic_logout_grey," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_logout_grey.png"
                 , height $ V 17
                 , width $ V 20
                 , margin $ MarginRight 7

@@ -72,3 +72,7 @@ function getStringFromCommon(key) {
 export const getENStrings = function (constructorKey){
   return EnglishStrings.getStringValue(constructorKey);
 }
+
+export const getMerchantId = function(id) {
+  return window.merchantID;
+}

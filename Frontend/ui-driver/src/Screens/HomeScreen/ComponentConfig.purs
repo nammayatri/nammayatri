@@ -134,7 +134,6 @@ cancelConfirmationConfig state = let
     secondaryText {visibility = GONE},
     option1 {
       text = (getString CONTINUE)
-    , fontSize = FontSize.a_16
     , width = V $ (((EHC.screenWidth unit)-92)/2) 
     , isClickable = state.data.cancelRideConfirmationPopUp.continueEnabled
     , timerValue = state.data.cancelRideConfirmationPopUp.delayInSeconds
@@ -146,7 +145,6 @@ cancelConfirmationConfig state = let
     option2 {
       text = (getString GO_BACK)
     , margin = Margin 12 0 0 0
-    , fontSize = FontSize.a_16
     , width = V $ (((EHC.screenWidth unit)-92)/2)
     , color = Color.yellow900
     , strokeColor = Color.black900
@@ -155,7 +153,7 @@ cancelConfirmationConfig state = let
     backgroundClickable = false,
     cornerRadius = (PTD.Corners 15.0 true true true true),
     coverImageConfig {
-      imageUrl = "ic_cancel_prevention," <> (getCommonAssetStoreLink FunctionCall) <> "/driver/images/ny_ic_cancel_prevention.png"
+      imageUrl = "ic_cancel_prevention," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_cancel_prevention.png"
     , visibility = VISIBLE
     , margin = Margin 16 20 16 0
     , height = V 178
@@ -248,7 +246,6 @@ enterOtpStateConfig state = let
       inputTextConfig {
         text = state.props.rideOtp,
         -- pattern = "[0-9]*,4",
-        fontSize = FontSize.a_22,
         focusIndex = state.props.enterOtpFocusIndex
       },
       headingConfig {
@@ -260,7 +257,6 @@ enterOtpStateConfig state = let
       },
       subHeadingConfig {
         text = getString (PLEASE_ASK_THE_CUSTOMER_FOR_THE_OTP),
-        fontSize = FontSize.a_14,
         visibility = if (state.props.otpAttemptsExceeded) then GONE else VISIBLE
       },
       imageConfig {

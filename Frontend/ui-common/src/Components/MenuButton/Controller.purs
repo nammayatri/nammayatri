@@ -18,7 +18,7 @@ module Components.MenuButton.Controller where
 import Prelude((<>))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..))
 import Font.Size as FontSize
-import Font.Style as FontStyle
+import Font.Style (Style(..))
 import Styles.Colors as Color
 import Common.Types.App
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
@@ -48,9 +48,8 @@ type Config =
 
 type TextConfig = 
   { text :: String
-  , textSize :: Int
-  , selectedFontStyle :: String
-  , unselectedFontStyle :: String
+  , selectedTextStyle :: Style
+  , unselectedTextStyle :: Style
   , color :: String
   , gravity :: Gravity
   , visibility :: Visibility
@@ -78,9 +77,8 @@ config =
   {
       titleConfig :
           { text : ""
-          , selectedFontStyle : FontStyle.regular LanguageStyle
-          , unselectedFontStyle : FontStyle.regular LanguageStyle
-          , textSize :  FontSize.a_16
+          , selectedTextStyle : SubHeading2
+          , unselectedTextStyle : Body1
           , gravity : LEFT
           , visibility : VISIBLE
           , color : Color.black800
@@ -88,9 +86,8 @@ config =
           }
     , subTitleConfig :  
           { text : ""
-          , selectedFontStyle : FontStyle.regular LanguageStyle
-          , unselectedFontStyle : FontStyle.regular LanguageStyle
-          , textSize :  FontSize.a_16
+          , selectedTextStyle : Body1
+          , unselectedTextStyle : Body1
           , gravity : LEFT
           , visibility : VISIBLE
           , color : Color.black700

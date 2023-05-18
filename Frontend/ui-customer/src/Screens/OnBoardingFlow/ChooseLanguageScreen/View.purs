@@ -112,15 +112,13 @@ scrollLanguageView state push =
         ]
         , PrestoAnim.animationSet 
           [ Anim.translateYAnimFromTopWithAlpha translateYAnimConfig --300 10 0 0 true $ PrestoAnim.Bezier 0.37 0.0 0.63 1.0
-          ] $ textView 
+          ] $ textView $
           [ height WRAP_CONTENT
           , width WRAP_CONTENT
-          , textSize FontSize.a_17
           , text "Choose language"
           , color Color.inactive
-          , fontStyle $ FontStyle.medium LanguageStyle
           , margin $ MarginTop 50
-          ]
+          ] <> FontStyle.subHeading2 TypoGraphy
         , listLanguageView state push
     ]
     ]
