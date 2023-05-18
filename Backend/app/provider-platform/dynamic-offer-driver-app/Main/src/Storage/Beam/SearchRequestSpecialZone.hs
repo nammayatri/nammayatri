@@ -75,6 +75,11 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be Seconds where
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Seconds
 
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be BaseUrl where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be BaseUrl
+
 instance FromBackendRow Postgres Seconds
 
 data SearchRequestSpecialZoneT f = SearchRequestSpecialZoneT
@@ -87,7 +92,7 @@ data SearchRequestSpecialZoneT f = SearchRequestSpecialZoneT
     fromLocationId :: B.C f Text,
     toLocationId :: B.C f Text,
     bapId :: B.C f Text,
-    bapUri :: B.C f Text,
+    bapUri :: B.C f BaseUrl,
     estimatedDistance :: B.C f Meters,
     estimatedDuration :: B.C f Seconds,
     createdAt :: B.C f Time.UTCTime,

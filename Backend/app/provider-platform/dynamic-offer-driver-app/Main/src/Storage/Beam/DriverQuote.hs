@@ -110,6 +110,11 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be Meters where
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Meters
 
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Seconds where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Seconds
+
 instance FromBackendRow Postgres Meters
 
 data DriverQuoteT f = DriverQuoteT
@@ -124,13 +129,13 @@ data DriverQuoteT f = DriverQuoteT
     vehicleVariant :: B.C f Variant.Variant,
     distance :: B.C f Meters,
     distanceToPickup :: B.C f Meters,
-    durationToPickup :: B.C f Double,
-    validTill :: B.C f Time.LocalTime,
+    durationToPickup :: B.C f Seconds,
+    validTill :: B.C f Time.UTCTime,
     estimatedFare :: B.C f Common.Money,
     fareParametersId :: B.C f Text,
     providerId :: B.C f Text,
-    createdAt :: B.C f Time.LocalTime,
-    updatedAt :: B.C f Time.LocalTime
+    createdAt :: B.C f Time.UTCTime,
+    updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 

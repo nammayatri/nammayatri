@@ -107,6 +107,11 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be Money where
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Money
 
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be BaseUrl where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be BaseUrl
+
 instance FromBackendRow Postgres Money
 
 data SearchRequestT f = SearchRequestT
@@ -120,7 +125,7 @@ data SearchRequestT f = SearchRequestT
     fromLocationId :: B.C f Text,
     toLocationId :: B.C f Text,
     bapId :: B.C f Text,
-    bapUri :: B.C f Text,
+    bapUri :: B.C f BaseUrl,
     estimatedDistance :: B.C f Meters,
     estimatedDuration :: B.C f Seconds,
     customerExtraFee :: B.C f (Maybe Money),
