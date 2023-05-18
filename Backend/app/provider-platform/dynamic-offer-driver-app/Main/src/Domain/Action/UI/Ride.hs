@@ -137,6 +137,10 @@ mkDriverRideRes ::
   DriverRideRes
 mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) = do
   let fareParams = booking.fareParams
+      estimatedBaseFare =
+        fareSum $
+          fareParams{driverSelectedFare = Nothing -- it should not be part of estimatedBaseFare
+                    }
   let initial = "" :: Text
   DriverRideRes
     { id = ride.id,
@@ -151,7 +155,7 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) =
       vehicleVariant = fromMaybe DVeh.SEDAN rideDetails.vehicleVariant,
       vehicleModel = fromMaybe initial rideDetails.vehicleModel,
       computedFare = ride.fare,
-      estimatedBaseFare = fareSum fareParams,
+      estimatedBaseFare = estimatedBaseFare,
       estimatedDistance = booking.estimatedDistance,
       driverSelectedFare = fromMaybe 0 fareParams.driverSelectedFare,
       actualRideDistance = ride.traveledDistance,

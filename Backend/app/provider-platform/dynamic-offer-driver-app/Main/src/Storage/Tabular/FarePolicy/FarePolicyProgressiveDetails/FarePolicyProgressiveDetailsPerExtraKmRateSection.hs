@@ -23,7 +23,7 @@ module Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgres
 import qualified Domain.Types.FarePolicy as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
-import Kernel.Types.Common (HighPrecMoney, Kilometers)
+import Kernel.Types.Common (HighPrecMoney, Meters)
 import Kernel.Types.Id
 import Storage.Tabular.FarePolicy.Table (FarePolicyTId)
 
@@ -33,7 +33,7 @@ mkPersist
     FarePolicyProgressiveDetailsPerExtraKmRateSectionT sql=fare_policy_progressive_details_per_extra_km_rate_section
       Id Int
       farePolicyId FarePolicyTId
-      startDistance Kilometers
+      startDistance Meters
       perExtraKmRate HighPrecMoney
 
       deriving Generic

@@ -170,7 +170,7 @@ calculateFareParameters params = do
       let mbExtraDistance =
             params.distance - baseDistance
               & (\dist -> if dist > 0 then Just dist else Nothing)
-          mbExtraKmFare = processFPProgressiveDetailsPerExtraKmFare perExtraKmRateSections . metersToKilometers <$> mbExtraDistance
+          mbExtraKmFare = processFPProgressiveDetailsPerExtraKmFare perExtraKmRateSections <$> mbExtraDistance
       ( baseFare,
         nightShiftCharge,
         waitingCharge,
@@ -180,19 +180,20 @@ calculateFareParameters params = do
               ..
             }
         )
-    processFPProgressiveDetailsPerExtraKmFare perExtraKmRateSections (extraDistance :: Kilometers) = do
+    processFPProgressiveDetailsPerExtraKmFare perExtraKmRateSections (extraDistance :: Meters) = do
       let sortedPerExtraKmFareSections = NE.sortBy (comparing (.startDistance)) perExtraKmRateSections
       processFPProgressiveDetailsPerExtraKmFare' sortedPerExtraKmFareSections extraDistance
       where
         processFPProgressiveDetailsPerExtraKmFare' _ 0 = 0 :: Money
-        processFPProgressiveDetailsPerExtraKmFare' sortedPerExtraKmFareSectionsLeft (extraDistanceLeft :: Kilometers) =
+        processFPProgressiveDetailsPerExtraKmFare' sortedPerExtraKmFareSectionsLeft (extraDistanceLeft :: Meters) =
           case sortedPerExtraKmFareSectionsLeft of
-            aSection :| [] -> roundToIntegral $ fromIntegral @_ @Centesimal extraDistanceLeft * realToFrac aSection.perExtraKmRate
+            aSection :| [] -> roundToIntegral $ fromIntegral @_ @Centesimal extraDistanceLeft * getPerExtraMRate aSection.perExtraKmRate
             aSection :| bSection : leftSections -> do
               let sectionDistance = bSection.startDistance - aSection.startDistance
                   extraDistanceWithinSection = min sectionDistance extraDistanceLeft
-              roundToIntegral (fromIntegral @_ @Centesimal extraDistanceWithinSection * realToFrac aSection.perExtraKmRate)
+              roundToIntegral (fromIntegral @_ @Centesimal extraDistanceWithinSection * getPerExtraMRate aSection.perExtraKmRate)
                 + processFPProgressiveDetailsPerExtraKmFare' (bSection :| leftSections) (extraDistanceLeft - sectionDistance)
+        getPerExtraMRate perExtraKmRate = realToFrac @_ @Centesimal perExtraKmRate / 1000
 
     processFPSlabsDetailsSlab DFP.FPSlabsDetailsSlab {..} = do
       (baseFare, nightShiftCharge, waitingCharge, DFParams.SlabDetails DFParams.FParamsSlabDetails)
