@@ -17,9 +17,16 @@ module Storage.Queries.DriverOnboarding.OperatingCity where
 
 import Domain.Types.DriverOnboarding.OperatingCity
 import Domain.Types.Merchant
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import qualified Lib.Mesh as Mesh
+import qualified Sequelize as Se
+import qualified Storage.Beam.DriverOnboarding.OperatingCity as BeamOC
 import Storage.Tabular.DriverOnboarding.OperatingCity
 
 create :: OperatingCity -> SqlDB ()
@@ -66,3 +73,25 @@ findEnabledCityByMerchantIdAndName merchantId city =
         &&. operatingCity ^. OperatingCityMerchantId ==. val (toKey merchantId)
         &&. operatingCity ^. OperatingCityEnabled
     return operatingCity
+
+transformBeamOperatingCityToDomain :: BeamOC.OperatingCity -> OperatingCity
+transformBeamOperatingCityToDomain BeamOC.OperatingCityT {..} = do
+  OperatingCity
+    { id = Id id,
+      merchantId = Id merchantId,
+      cityName = cityName,
+      enabled = enabled,
+      createdAt = createdAt,
+      updatedAt = updatedAt
+    }
+
+transformDomainOperatingCityToBeam :: OperatingCity -> BeamOC.OperatingCity
+transformDomainOperatingCityToBeam OperatingCity {..} =
+  BeamOC.OperatingCityT
+    { BeamOC.id = getId id,
+      BeamOC.merchantId = getId merchantId,
+      BeamOC.cityName = cityName,
+      BeamOC.enabled = enabled,
+      BeamOC.createdAt = createdAt,
+      BeamOC.updatedAt = updatedAt
+    }

@@ -18,10 +18,17 @@ module Storage.Queries.DriverOnboarding.DriverRCAssociation where
 import Domain.Types.DriverOnboarding.DriverRCAssociation
 import Domain.Types.DriverOnboarding.VehicleRegistrationCertificate
 import Domain.Types.Person (Person)
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Mesh as Mesh
+import qualified Sequelize as Se
+import qualified Storage.Beam.DriverOnboarding.DriverRCAssociation as BeamDRCA
 import Storage.Tabular.DriverOnboarding.DriverRCAssociation
 import Storage.Tabular.DriverOnboarding.VehicleRegistrationCertificate
 
@@ -97,3 +104,27 @@ deleteByDriverId driverId =
   Esq.delete $ do
     associations <- from $ table @DriverRCAssociationT
     where_ $ associations ^. DriverRCAssociationDriverId ==. val (toKey driverId)
+
+transformBeamDriverRCAssociationToDomain :: BeamDRCA.DriverRCAssociation -> DriverRCAssociation
+transformBeamDriverRCAssociationToDomain BeamDRCA.DriverRCAssociationT {..} = do
+  DriverRCAssociation
+    { id = Id id,
+      driverId = Id driverId,
+      rcId = Id rcId,
+      associatedOn = associatedOn,
+      associatedTill = associatedTill,
+      consent = consent,
+      consentTimestamp = consentTimestamp
+    }
+
+transformDomainDriverRCAssociationToBeam :: DriverRCAssociation -> BeamDRCA.DriverRCAssociation
+transformDomainDriverRCAssociationToBeam DriverRCAssociation {..} =
+  BeamDRCA.DriverRCAssociationT
+    { BeamDRCA.id = getId id,
+      BeamDRCA.driverId = getId driverId,
+      BeamDRCA.rcId = getId rcId,
+      BeamDRCA.associatedOn = associatedOn,
+      BeamDRCA.associatedTill = associatedTill,
+      BeamDRCA.consent = consent,
+      BeamDRCA.consentTimestamp = consentTimestamp
+    }

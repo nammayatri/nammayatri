@@ -59,8 +59,8 @@ data OperatingCityT f = OperatingCityT
     merchantId :: B.C f Text,
     cityName :: B.C f Text,
     enabled :: B.C f Bool,
-    createdAt :: B.C f Time.LocalTime,
-    updatedAt :: B.C f Time.LocalTime
+    createdAt :: B.C f Time.UTCTime,
+    updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 

@@ -3,10 +3,17 @@ module Storage.Queries.Issue.IssueOption where
 import Domain.Types.Issue.IssueCategory
 import Domain.Types.Issue.IssueOption
 import Domain.Types.Issue.IssueTranslation
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import qualified Lib.Mesh as Mesh
+import qualified Sequelize as Se
+import qualified Storage.Beam.Issue.IssueOption as BeamIO
 import Storage.Tabular.Issue.IssueOption
 import Storage.Tabular.Issue.IssueTranslation
 
@@ -52,3 +59,19 @@ findById issueOptionId = Esq.findOne $ do
   where_ $
     issueOption ^. IssueOptionTId ==. val (toKey issueOptionId)
   pure issueOption
+
+transformBeamIssueOptionToDomain :: BeamIO.IssueOption -> IssueOption
+transformBeamIssueOptionToDomain BeamIO.IssueOptionT {..} = do
+  IssueOption
+    { id = Id id,
+      issueCategoryId = Id issueCategoryId,
+      option = option
+    }
+
+transformDomainIssueOptionToBeam :: IssueOption -> BeamIO.IssueOption
+transformDomainIssueOptionToBeam IssueOption {..} =
+  BeamIO.IssueOptionT
+    { BeamIO.id = getId id,
+      BeamIO.issueCategoryId = getId issueCategoryId,
+      BeamIO.option = option
+    }

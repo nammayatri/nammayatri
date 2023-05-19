@@ -17,11 +17,18 @@ module Storage.Queries.Message.MessageTranslation where
 
 import qualified Domain.Types.Message.Message as Msg
 import Domain.Types.Message.MessageTranslation
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import qualified Lib.Mesh as Mesh
+import qualified Sequelize as Se
+import qualified Storage.Beam.Message.MessageTranslation as BeamMT
 import Storage.Tabular.Message.MessageTranslation
 
 create :: MessageTranslation -> SqlDB ()
@@ -42,3 +49,36 @@ findByMessageId messageId =
     where_ $
       messageTranslations ^. MessageTranslationMessageId ==. val (toKey messageId)
     return messageTranslations
+
+findByMessageId' :: L.MonadFlow m => Id Msg.Message -> m [MessageTranslation]
+findByMessageId' (Id messageId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    -- Just dbCOnf' -> either (pure Nothing) (transformBeamCallStatusToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamCT.id $ Se.Eq callStatusId]
+    -- findAllWithKVConnector
+    Just dbCOnf' -> either (pure []) (transformBeamMessageTranslationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamMT.messageId $ Se.Eq messageId]
+    Nothing -> pure []
+
+transformBeamMessageTranslationToDomain :: BeamMT.MessageTranslation -> MessageTranslation
+transformBeamMessageTranslationToDomain BeamMT.MessageTranslationT {..} = do
+  MessageTranslation
+    { messageId = Id messageId,
+      language = language,
+      title = title,
+      label = label,
+      description = description,
+      shortDescription = shortDescription,
+      createdAt = createdAt
+    }
+
+transformDomainMessageTranslationToBeam :: MessageTranslation -> BeamMT.MessageTranslation
+transformDomainMessageTranslationToBeam MessageTranslation {..} =
+  BeamMT.MessageTranslationT
+    { BeamMT.messageId = getId messageId,
+      BeamMT.language = language,
+      BeamMT.title = title,
+      BeamMT.label = label,
+      BeamMT.description = description,
+      BeamMT.shortDescription = shortDescription,
+      BeamMT.createdAt = createdAt
+    }

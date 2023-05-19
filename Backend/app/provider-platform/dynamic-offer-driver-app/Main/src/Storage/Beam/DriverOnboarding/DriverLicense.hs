@@ -87,18 +87,18 @@ data DriverLicenseT f = DriverLicenseT
     driverId :: B.C f Text,
     documentImageId1 :: B.C f Text,
     documentImageId2 :: B.C f (Maybe Text),
-    driverDob :: B.C f (Maybe Time.LocalTime),
+    driverDob :: B.C f (Maybe Time.UTCTime),
     driverName :: B.C f (Maybe Text),
     licenseNumberEncrypted :: B.C f Text,
     licenseNumberHash :: B.C f DbHash,
-    licenseExpiry :: B.C f Time.LocalTime,
+    licenseExpiry :: B.C f Time.UTCTime,
     classOfVehicles :: B.C f [Text],
     failedRules :: B.C f [Text],
     verificationStatus :: B.C f Domain.VerificationStatus,
     consent :: B.C f Bool,
-    consentTimestamp :: B.C f Time.LocalTime,
-    createdAt :: B.C f Time.LocalTime,
-    updatedAt :: B.C f Time.LocalTime
+    consentTimestamp :: B.C f Time.UTCTime,
+    createdAt :: B.C f Time.UTCTime,
+    updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 

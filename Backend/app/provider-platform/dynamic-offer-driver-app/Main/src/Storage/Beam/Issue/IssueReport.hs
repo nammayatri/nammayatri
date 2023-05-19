@@ -81,7 +81,7 @@ data IssueReportT f = IssueReportT
     categoryId :: B.C f Text,
     optionId :: B.C f (Maybe Text),
     deleted :: B.C f Bool,
-    mediaFiles :: B.C f Text,
+    mediaFiles :: B.C f [Text],
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime
   }

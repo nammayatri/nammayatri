@@ -64,8 +64,8 @@ data BookingLocationT f = BookingLocationT
     building :: B.C f (Maybe Text),
     areaCode :: B.C f (Maybe Text),
     area :: B.C f (Maybe Text),
-    createdAt :: B.C f Time.LocalTime,
-    updatedAt :: B.C f Time.LocalTime
+    createdAt :: B.C f Time.UTCTime,
+    updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 

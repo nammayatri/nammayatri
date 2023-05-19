@@ -18,10 +18,18 @@ module Storage.Queries.DriverOnboarding.IdfyVerification where
 import Domain.Types.DriverOnboarding.IdfyVerification
 import Domain.Types.DriverOnboarding.Image
 import Domain.Types.Person (Person)
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
+import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Mesh as Mesh
+import qualified Sequelize as Se
+import qualified Storage.Beam.DriverOnboarding.IdfyVerification as BeamIV
 import Storage.Tabular.DriverOnboarding.IdfyVerification
 
 create :: IdfyVerification -> SqlDB ()
@@ -103,3 +111,40 @@ deleteByPersonId personId =
   Esq.delete $ do
     verifications <- from $ table @IdfyVerificationT
     where_ $ verifications ^. IdfyVerificationDriverId ==. val (toKey personId)
+
+transformBeamIdfyVerificationToDomain :: BeamIV.IdfyVerification -> IdfyVerification
+transformBeamIdfyVerificationToDomain BeamIV.IdfyVerificationT {..} = do
+  IdfyVerification
+    { id = Id id,
+      documentImageId1 = Id documentImageId1,
+      documentImageId2 = Id <$> documentImageId2,
+      driverId = Id driverId,
+      requestId = requestId,
+      docType = docType,
+      status = status,
+      issueDateOnDoc = issueDateOnDoc,
+      documentNumber = EncryptedHashed (Encrypted documentNumberEncrypted) documentNumberHash,
+      imageExtractionValidation = imageExtractionValidation,
+      idfyResponse = idfyResponse,
+      createdAt = createdAt,
+      updatedAt = updatedAt
+    }
+
+transformDomainIdfyVerificationToBeam :: IdfyVerification -> BeamIV.IdfyVerification
+transformDomainIdfyVerificationToBeam IdfyVerification {..} =
+  BeamIV.IdfyVerificationT
+    { BeamIV.id = getId id,
+      BeamIV.documentImageId1 = getId documentImageId1,
+      BeamIV.documentImageId2 = getId <$> documentImageId2,
+      BeamIV.driverId = getId driverId,
+      BeamIV.requestId = requestId,
+      BeamIV.docType = docType,
+      BeamIV.status = status,
+      BeamIV.issueDateOnDoc = issueDateOnDoc,
+      BeamIV.documentNumberEncrypted = documentNumber & unEncrypted . (.encrypted),
+      BeamIV.documentNumberHash = documentNumber & (.hash),
+      BeamIV.imageExtractionValidation = imageExtractionValidation,
+      BeamIV.idfyResponse = idfyResponse,
+      BeamIV.createdAt = createdAt,
+      BeamIV.updatedAt = updatedAt
+    }

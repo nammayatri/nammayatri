@@ -17,10 +17,19 @@ module Storage.Queries.Message.Message where
 
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Message.Message
+import Domain.Types.Message.MessageTranslation as DomainMT
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import qualified Lib.Mesh as Mesh
+import qualified Sequelize as Se
+import qualified Storage.Beam.Message.Message as BeamM
+import qualified Storage.Queries.Message.MessageTranslation as MT
 import Storage.Tabular.Message.Instances ()
 import Storage.Tabular.Message.Message
 
@@ -59,3 +68,38 @@ updateMessageLikeCount messageId value = do
   Esq.update $ \msg -> do
     set msg [MessageLikeCount =. (msg ^. MessageLikeCount) +. val value]
     where_ $ msg ^. MessageId ==. val (getId messageId)
+
+transformBeamMessageToDomain :: L.MonadFlow m => BeamM.Message -> m (Message)
+transformBeamMessageToDomain BeamM.MessageT {..} = do
+  mT' <- MT.findByMessageId' (Id id)
+  -- let mT = MessageTranslation <*> (language <$> mT') <$> (title <$> mT') <$> (description <$> mT') <$> (shortDescription <$> mT') <$> (label <$> mT') <$> (createdAt <$> mT')
+  let mT = (\(DomainMT.MessageTranslation _ language_ title_ label_ description_ shortDescription_ createdAt_) -> Domain.Types.Message.Message.MessageTranslation language_ title_ description_ shortDescription_ label_ createdAt_) <$> mT'
+  pure
+    Message
+      { id = Id id,
+        _type = messageType,
+        title = title,
+        description = description,
+        shortDescription = shortDescription,
+        label = label,
+        likeCount = likeCount,
+        mediaFiles = Id <$> mediaFiles,
+        messageTranslations = mT,
+        merchantId = Id merchantId,
+        createdAt = createdAt
+      }
+
+transformDomainMessageToBeam :: Message -> BeamM.Message
+transformDomainMessageToBeam Message {..} =
+  BeamM.MessageT
+    { BeamM.id = getId id,
+      BeamM.messageType = _type,
+      BeamM.title = title,
+      BeamM.description = description,
+      BeamM.shortDescription = shortDescription,
+      BeamM.label = label,
+      BeamM.likeCount = likeCount,
+      BeamM.mediaFiles = getId <$> mediaFiles,
+      BeamM.merchantId = getId merchantId,
+      BeamM.createdAt = createdAt
+    }
