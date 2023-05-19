@@ -52,12 +52,26 @@ findBySubscriberId subscriberId = Esq.findOne $ do
     org ^. MerchantSubscriberId ==. val (subscriberId.getShortId)
   return org
 
+findBySubscriberId' :: L.MonadFlow m => ShortId Subscriber -> m (Maybe Merchant)
+findBySubscriberId' (ShortId subscriberId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure Nothing) (transformBeamMerchantToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamM.subscriberId $ Se.Eq subscriberId]
+    Nothing -> pure Nothing
+
 findByShortId :: Transactionable m => ShortId Merchant -> m (Maybe Merchant)
 findByShortId shortId = Esq.findOne $ do
   org <- from $ table @MerchantT
   where_ $
     org ^. MerchantShortId ==. val (shortId.getShortId)
   return org
+
+findByShortId' :: L.MonadFlow m => ShortId Subscriber -> m (Maybe Merchant)
+findByShortId' (ShortId shortId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure Nothing) (transformBeamMerchantToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamM.shortId $ Se.Eq shortId]
+    Nothing -> pure Nothing
 
 loadAllProviders :: Transactionable m => m [Merchant]
 loadAllProviders =

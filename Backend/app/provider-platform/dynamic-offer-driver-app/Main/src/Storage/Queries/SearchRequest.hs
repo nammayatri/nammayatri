@@ -51,6 +51,20 @@ findById searchRequestId = buildDType $
       where_ $ sReq ^. SearchRequestTId ==. val (toKey searchRequestId)
       pure (sReq, sFromLoc, sToLoc)
 
+-- findById' :: Transactionable m => Id SearchRequest -> m (Maybe SearchRequest)
+-- findById' searchRequestId = Esq.buildDType . runMaybeT $ do
+--   searchRequest <- Esq.findByIdM @SearchRequestT $ toKey searchRequestId
+--   fetchFullSearchRequestM searchRequest
+
+-- fetchFullSearchRequestM ::
+--   Transactionable m =>
+--   SearchRequestT ->
+--   MaybeT (DTypeBuilder m) (SolidType FullSearchRequestT)
+-- fetchFullSearchRequestM searchRequest@SearchRequestT {..} = do
+--   fromLocation <- Esq.findByIdM @SearchReqLocationT fromLocationId
+--   toLocation <- Esq.findByIdM @SearchReqLocationT toLocationId
+--   pure $ extractSolidType @SearchRequest (searchRequest, fromLocation, toLocation)
+
 updateStatus ::
   Id SearchRequest ->
   SearchRequestStatus ->

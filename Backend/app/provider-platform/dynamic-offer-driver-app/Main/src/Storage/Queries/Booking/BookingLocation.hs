@@ -28,6 +28,7 @@ import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.Booking.BookingLocation as BeamBL
 import Storage.Tabular.Booking.BookingLocation hiding (area, areaCode, building, city, country, door, state, street)
+import qualified Storage.Tabular.VechileNew as VN
 
 updateAddress :: Id BookingLocation -> LocationAddress -> SqlDB ()
 updateAddress blId LocationAddress {..} = do
@@ -45,6 +46,27 @@ updateAddress blId LocationAddress {..} = do
         BookingLocationUpdatedAt =. val now
       ]
     where_ $ tbl ^. BookingLocationTId ==. val (toKey blId)
+
+-- updateAddress' :: (L.MonadFlow m, MonadTime m) => Id BookingLocation -> LocationAddress -> m (MeshResult ())
+-- updateAddress' (Id blId) LocationAddress = do
+--   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   now <- getCurrentTime
+--   case dbConf of
+--     Just dbConf' ->
+--       KV.updateWoReturningWithKVConnector
+--         dbConf'
+--         VN.meshConfig
+--         [ Se.Set BeamBL.street street,
+--           Se.Set BeamBL.city city,
+--           Se.Set BeamBL.state state,
+--           Se.Set BeamBL.country country,
+--           Se.Set BeamBL.building building,
+--           Se.Set BeamBL.areaCode areaCode,
+--           Se.Set BeamBL.area area,
+--           Se.Set BeamBL.updatedAt now
+--         ]
+--         [Se.Is BeamBL.id (Se.Eq blId)]
+--     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 transformBeamBookingLocationToDomain :: BeamBL.BookingLocation -> BookingLocation
 transformBeamBookingLocationToDomain BeamBL.BookingLocationT {..} = do

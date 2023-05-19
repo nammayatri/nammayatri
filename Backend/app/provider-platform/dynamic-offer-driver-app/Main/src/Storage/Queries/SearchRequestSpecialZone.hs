@@ -52,6 +52,20 @@ findById searchRequestSpecialZoneId = buildDType $
       where_ $ sReq ^. SearchRequestSpecialZoneTId ==. val (toKey searchRequestSpecialZoneId)
       pure (sReq, sFromLoc, sToLoc)
 
+-- findById' :: Transactionable m => Id SearchRequestSpecialZone -> m (Maybe SearchRequestSpecialZone)
+-- findById' searchRequestSpecialZoneId = Esq.buildDType . runMaybeT $ do
+--   searchRequestSpecialZone <- Esq.findByIdM @SearchRequestSpecialZoneT $ toKey searchRequestSpecialZoneId
+--   fetchFullSearchRequestSpecialZoneM searchRequestSpecialZone
+
+-- fetchFullSearchRequestSpecialZoneM ::
+--   Transactionable m =>
+--   SearchRequestSpecialZoneT ->
+--   MaybeT (DTypeBuilder m) (SolidType FullSearchRequestSpecialZoneT)
+-- fetchFullSearchRequestSpecialZoneM searchRequestSpecialZone@SearchRequestSpecialZoneT {..} = do
+--   fromLocation <- Esq.findByIdM @SearchReqLocationT fromLocationId
+--   toLocation <- Esq.findByIdM @SearchReqLocationT toLocationId
+--   pure $ extractSolidType @SearchRequestSpecialZone (searchRequestSpecialZone, fromLocation, toLocation)
+
 fullSearchRequestTable ::
   From
     ( Table SearchRequestSpecialZoneT

@@ -84,6 +84,13 @@ findRatingForRide rideId = findOne $ do
   where_ $ rating ^. RatingRideId ==. val (toKey rideId)
   pure rating
 
+findRatingForRide' :: L.MonadFlow m => Id Ride -> m (Maybe Rating)
+findRatingForRide' (Id rideId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure Nothing) (transformBeamRatingToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamR.id $ Se.Eq rideId]
+    Nothing -> pure Nothing
+
 transformBeamRatingToDomain :: BeamR.Rating -> Rating
 transformBeamRatingToDomain BeamR.RatingT {..} = do
   Rating

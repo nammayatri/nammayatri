@@ -68,6 +68,13 @@ findByToken token =
     where_ $ regToken ^. RegistrationTokenToken ==. val token
     return regToken
 
+-- findByToken' :: L.MonadFlow m => RegToken -> m (Maybe RegistrationToken)
+-- findByToken' token = do
+--   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   case dbConf of
+--     Just dbCOnf' -> either (pure Nothing) (transformBeamRegistrationTokenToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamRT.token $ Se.Eq token]
+--     Nothing -> pure Nothing
+
 updateAttempts :: Int -> Id RegistrationToken -> SqlDB ()
 updateAttempts attemps rtId = do
   now <- getCurrentTime
