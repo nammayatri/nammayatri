@@ -99,5 +99,7 @@ transformDomainDriverStatsToBeam :: DriverStats -> BeamDS.DriverStats
 transformDomainDriverStatsToBeam DriverStats {..} =
   BeamDS.DriverStatsT
     { BeamDS.driverId = getId driverId,
-      BeamDS.idleSince = idleSince
+      BeamDS.idleSince = idleSince,
+      BeamDS.totalRides = totalRides,
+      BeamDS.totalDistance = totalDistance
     }
