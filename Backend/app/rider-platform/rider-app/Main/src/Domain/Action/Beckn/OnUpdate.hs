@@ -451,5 +451,8 @@ buildBookingCancellationReason bookingId mbRideId cancellationSource = do
         source = cancellationSource,
         reasonCode = Nothing,
         reasonStage = Nothing,
-        additionalInfo = Nothing
+        additionalInfo = Nothing,
+        driverLat = Nothing,
+        driverLon = Nothing,
+        driverDistToPickup = Nothing
       }
