@@ -141,7 +141,7 @@ calculateFareParameters params = do
           + fromMaybe 0 fp.serviceCharge
           + partOfNightShiftCharge
   let resultNightShiftCharge = (\isCoefIncluded -> if isCoefIncluded then countNightShiftCharge fullRideCost <$> nightShiftCharge else Nothing) =<< isNightShiftChargeIncluded
-      resultWaitingCharge = countWaitingCharge <$> params.waitingTime <*> waitingCharge
+      resultWaitingCharge = countWaitingCharge =<< waitingCharge
       fullRideCostN {-without govtCharges-} =
         fullRideCost
           + fromMaybe 0 resultNightShiftCharge
@@ -203,11 +203,11 @@ calculateFareParameters params = do
         ProgressiveNightShiftCharge charge -> roundToIntegral $ fromIntegral fullRideCost * charge
         ConstantNightShiftCharge charge -> charge
 
-    countWaitingCharge :: Minutes -> WaitingCharge -> Money
-    countWaitingCharge waitingTime waitingCharge = do
+    countWaitingCharge :: WaitingCharge -> Maybe Money
+    countWaitingCharge waitingCharge = do
       case waitingCharge of
-        PerMinuteWaitingCharge charge -> roundToIntegral $ fromIntegral waitingTime * charge
-        ConstantWaitingCharge charge -> charge
+        PerMinuteWaitingCharge charge -> (\waitingTime -> roundToIntegral $ fromIntegral waitingTime * charge) <$> params.waitingTime
+        ConstantWaitingCharge charge -> Just charge
 
 countFullFareOfParamsDetails :: DFParams.FareParametersDetails -> (Money, Money)
 countFullFareOfParamsDetails = \case
