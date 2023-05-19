@@ -187,13 +187,13 @@ calculateFareParameters params = do
         processFPProgressiveDetailsPerExtraKmFare' _ 0 = 0 :: Money
         processFPProgressiveDetailsPerExtraKmFare' sortedPerExtraKmFareSectionsLeft (extraDistanceLeft :: Meters) =
           case sortedPerExtraKmFareSectionsLeft of
-            aSection :| [] -> roundToIntegral $ fromIntegral @_ @Centesimal extraDistanceLeft * getPerExtraMRate aSection.perExtraKmRate
+            aSection :| [] -> roundToIntegral $ fromIntegral @_ @Float extraDistanceLeft * getPerExtraMRate aSection.perExtraKmRate
             aSection :| bSection : leftSections -> do
               let sectionDistance = bSection.startDistance - aSection.startDistance
                   extraDistanceWithinSection = min sectionDistance extraDistanceLeft
-              roundToIntegral (fromIntegral @_ @Centesimal extraDistanceWithinSection * getPerExtraMRate aSection.perExtraKmRate)
+              roundToIntegral (fromIntegral @_ @Float extraDistanceWithinSection * getPerExtraMRate aSection.perExtraKmRate)
                 + processFPProgressiveDetailsPerExtraKmFare' (bSection :| leftSections) (extraDistanceLeft - sectionDistance)
-        getPerExtraMRate perExtraKmRate = realToFrac @_ @Centesimal perExtraKmRate / 1000
+        getPerExtraMRate perExtraKmRate = realToFrac @_ @Float perExtraKmRate / 1000
 
     processFPSlabsDetailsSlab DFP.FPSlabsDetailsSlab {..} = do
       (baseFare, nightShiftCharge, waitingCharge, DFParams.SlabDetails DFParams.FParamsSlabDetails)
