@@ -105,8 +105,8 @@ findByBppIdAndBPPQuoteId bppId bppQuoteId = buildDType $ do
     pure (quote, mbTripTerms, mbRentalSlab, mbDriverOffer, mbspecialZoneQuote)
   join <$> mapM buildFullQuote mbFullQuoteT
 
-findAllByRequestId :: Transactionable m => Id SearchRequest -> m [Quote]
-findAllByRequestId searchRequestId = Esq.buildDType $ do
+findAllBySRId :: Transactionable m => Id SearchRequest -> m [Quote]
+findAllBySRId searchRequestId = Esq.buildDType $ do
   fullQuoteTs <- Esq.findAll' $ do
     (quote :& mbTripTerms :& mbRentalSlab :& mbDriverOffer :& mbspecialZoneQuote) <- from fullQuoteTable
     where_ $ quote ^. QuoteRequestId ==. val (toKey searchRequestId)

@@ -26,7 +26,7 @@ import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as SRide
-import qualified Domain.Types.SearchTry as DST
+import qualified Domain.Types.SearchRequest as DSR
 import EulerHS.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -49,8 +49,9 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QPers
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
-import Storage.Queries.SearchTry as QST
+import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
 import Tools.Metrics
 import qualified Tools.Notifications as Notify
@@ -131,14 +132,14 @@ cancelSearch ::
   ) =>
   Id DM.Merchant ->
   CancelSearchReq ->
-  Id DST.SearchTry ->
+  Id DSR.SearchRequest ->
   m ()
 cancelSearch merchantId req searchRequestId = do
-  CS.lockSearchTry searchRequestId
+  CS.lockSearchRequest searchRequestId
   driverSearchReqs <- QSRD.findAllActiveBySRId searchRequestId
   logTagInfo ("transactionId-" <> req.transactionId) "Search Request Cancellation"
   DB.runTransaction $ do
-    QST.updateStatus searchRequestId DST.CANCELLED
+    QST.cancelActiveTriesByRequestId searchRequestId
     QSRD.setInactiveBySRId searchRequestId
   for_ driverSearchReqs $ \driverReq -> do
     driver_ <- QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
@@ -150,10 +151,10 @@ validateCancelSearchRequest ::
   Id DM.Merchant ->
   SignatureAuthResult ->
   CancelSearchReq ->
-  m (Id DST.SearchTry)
+  m (Id DSR.SearchRequest)
 validateCancelSearchRequest _ _ req = do
   let transactionId = req.transactionId
-  QST.findActiveByTransactionId transactionId >>= fromMaybeM (SearchRequestNotFound $ "transactionId-" <> transactionId)
+  QSR.findByTransactionId transactionId >>= fromMaybeM (SearchRequestNotFound $ "transactionId-" <> transactionId)
 
 validateCancelRequest ::
   ( HasCacheConfig r,

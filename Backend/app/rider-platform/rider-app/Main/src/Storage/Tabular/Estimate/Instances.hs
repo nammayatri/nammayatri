@@ -63,10 +63,9 @@ instance FromTType FullEstimateT Domain.Estimate where
 
 instance ToTType FullEstimateT Domain.Estimate where
   toTType Domain.Estimate {..} = do
-    let estimateId = getId id
     let estimateT =
           SEstimate.EstimateT
-            { id = estimateId,
+            { id = getId id,
               requestId = toKey requestId,
               bppEstimateId = getId bppEstimateId,
               providerUrl = showBaseUrl providerUrl,

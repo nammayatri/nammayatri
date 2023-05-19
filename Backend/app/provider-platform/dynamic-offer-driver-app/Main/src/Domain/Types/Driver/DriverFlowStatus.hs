@@ -33,7 +33,7 @@ data FlowStatus
   | ACTIVE
   | SILENT
   | GOT_SEARCH_REQUEST
-      { requestId :: Id DST.SearchTry,
+      { searchTryId :: Id DST.SearchTry,
         validTill :: UTCTime
       }
   | OFFERED_QUOTE

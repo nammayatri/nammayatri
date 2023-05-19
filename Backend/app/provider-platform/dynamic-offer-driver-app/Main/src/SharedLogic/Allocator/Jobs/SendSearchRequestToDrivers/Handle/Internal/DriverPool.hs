@@ -30,6 +30,7 @@ import Domain.Types.Merchant.DriverIntelligentPoolConfig
 import Domain.Types.Merchant.DriverPoolConfig
 import Domain.Types.Merchant.TransporterConfig (TransporterConfig)
 import Domain.Types.Person (Driver)
+import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import EulerHS.Prelude hiding (id)
 import Kernel.Randomizer (randomizeList)
@@ -53,18 +54,18 @@ isBatchNumExceedLimit ::
     CacheFlow m r
   ) =>
   DriverPoolConfig ->
-  Text ->
+  Id DSR.SearchRequest ->
   m Bool
-isBatchNumExceedLimit driverPoolConfig transactionId = do
+isBatchNumExceedLimit driverPoolConfig searchReqId = do
   let maxNumberOfBatches = driverPoolConfig.maxNumberOfBatches
-  currentBatchNum <- getPoolBatchNum transactionId
+  currentBatchNum <- getPoolBatchNum searchReqId
   return $ currentBatchNum >= maxNumberOfBatches
 
-driverPoolKey :: Text -> Text
-driverPoolKey transactionId = "Driver-Offer:DriverPool:transactionId-" <> transactionId
+driverPoolKey :: Id DSR.SearchRequest -> Text
+driverPoolKey searchReqId = "Driver-Offer:DriverPool:SearchReqId-" <> searchReqId.getId
 
-driverPoolBatchKey :: Text -> PoolBatchNum -> Text
-driverPoolBatchKey transactionId batchNum = driverPoolKey transactionId <> ":BatchNum-" <> show batchNum
+driverPoolBatchKey :: Id DSR.SearchRequest -> PoolBatchNum -> Text
+driverPoolBatchKey searchReqId batchNum = driverPoolKey searchReqId <> ":BatchNum-" <> show batchNum
 
 prepareDriverPoolBatch ::
   ( EncFlow m r,
@@ -75,16 +76,17 @@ prepareDriverPoolBatch ::
     Redis.HedisFlow m r
   ) =>
   DriverPoolConfig ->
+  DSR.SearchRequest ->
   DST.SearchTry ->
   PoolBatchNum ->
   m [DriverPoolWithActualDistResult]
-prepareDriverPoolBatch driverPoolCfg searchReq batchNum = withLogTag ("BatchNum-" <> show batchNum) $ do
+prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum = withLogTag ("BatchNum-" <> show batchNum) $ do
   previousBatchesDrivers <- getPreviousBatchesDrivers
   logDebug $ "PreviousBatchesDrivers-" <> show previousBatchesDrivers
   prepareDriverPoolBatch' previousBatchesDrivers
   where
     prepareDriverPoolBatch' previousBatchesDrivers = do
-      radiusStep <- getPoolRadiusStep searchReq.transactionId
+      radiusStep <- getPoolRadiusStep searchReq.id
       transporterConfig <- TC.findByMerchantId searchReq.providerId >>= fromMaybeM (TransporterConfigDoesNotExist searchReq.providerId.getId)
       intelligentPoolConfig <- DIP.findByMerchantId searchReq.providerId >>= fromMaybeM (InternalError "Intelligent Pool Config not found")
       allNearbyDriversCurrentlyNotOnRide <- calcDriverPool radiusStep
@@ -101,7 +103,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq batchNum = withLogTag ("BatchNum-
           if isAtMaxRadiusStep'
             then calculatePool batchSize sortingType onlyNewDrivers allNearbyDrivers intelligentPoolConfig transporterConfig
             else do
-              incrementPoolRadiusStep searchReq.transactionId
+              incrementPoolRadiusStep searchReq.id
               prepareDriverPoolBatch' previousBatchesDrivers
         else calculatePool batchSize sortingType onlyNewDrivers allNearbyDrivers intelligentPoolConfig transporterConfig
       where
@@ -152,7 +154,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq batchNum = withLogTag ("BatchNum-
       pure finalPoolBatch
 
     calcDriverPool radiusStep = do
-      let vehicleVariant = searchReq.vehicleVariant
+      let vehicleVariant = searchTry.vehicleVariant
           merchantId = searchReq.providerId
       let pickupLoc = searchReq.fromLocation
       let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
@@ -161,7 +163,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq batchNum = withLogTag ("BatchNum-
       let merchantId = searchReq.providerId
       if transporterConfig.includeDriverCurrentlyOnRide && (radiusStep - 1) > 0
         then do
-          let vehicleVariant = searchReq.vehicleVariant
+          let vehicleVariant = searchTry.vehicleVariant
           let pickupLoc = searchReq.fromLocation
           let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
           calculateDriverCurrentlyOnRideWithActualDist DriverSelection driverPoolCfg (Just vehicleVariant) pickupLatLong merchantId (Just $ radiusStep - 1) reduceRadiusValue
@@ -185,7 +187,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq batchNum = withLogTag ("BatchNum-
           Random -> pure $ take fillSize driversWithValidReqAmount
     cacheBatch batch = do
       logDebug $ "Caching batch-" <> show batch
-      Redis.withCrossAppRedis $ Redis.setExp (driverPoolBatchKey searchReq.transactionId batchNum) batch (60 * 10)
+      Redis.withCrossAppRedis $ Redis.setExp (driverPoolBatchKey searchReq.id batchNum) batch (60 * 10)
     -- splitDriverPoolForSorting :: minQuotes Int -> [DriverPool Array] -> ([GreaterThanMinQuotesDP], [LessThanMinQuotesDP])
     splitDriverPoolForSorting merchantId minQuotes =
       foldrM
@@ -206,7 +208,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq batchNum = withLogTag ("BatchNum-
       return $ maxRadiusStep <= radiusStep
     getPreviousBatchesDrivers = do
       batches <- forM [0 .. (batchNum - 1)] \num -> do
-        getDriverPoolBatch searchReq.transactionId num
+        getDriverPoolBatch searchReq.id num
       return $ (.driverPoolResult.driverId) <$> concat batches
     -- util function
     bimapM fna fnb (a, b) = (,) <$> fna a <*> fnb b
@@ -219,12 +221,12 @@ splitSilentDrivers drivers = do
 getDriverPoolBatch ::
   ( Redis.HedisFlow m r
   ) =>
-  Text ->
+  Id DSR.SearchRequest ->
   PoolBatchNum ->
   m [DriverPoolWithActualDistResult]
-getDriverPoolBatch transactionId batchNum = do
+getDriverPoolBatch searchReqId batchNum = do
   Redis.withCrossAppRedis $
-    Redis.safeGet (driverPoolBatchKey transactionId batchNum)
+    Redis.safeGet (driverPoolBatchKey searchReqId batchNum)
       >>= maybe whenFoundNothing whenFoundSomething
   where
     whenFoundNothing = do
@@ -353,22 +355,22 @@ randomizeAndLimitSelection ::
   m [DriverPoolWithActualDistResult]
 randomizeAndLimitSelection = randomizeList
 
-poolBatchNumKey :: Text -> Text
-poolBatchNumKey transactionId = "Driver-Offer:Allocator:PoolBatchNum:SearchReqId-" <> transactionId
+poolBatchNumKey :: Id DSR.SearchRequest -> Text
+poolBatchNumKey searchReqId = "Driver-Offer:Allocator:PoolBatchNum:SearchReqId-" <> searchReqId.getId
 
-poolRadiusStepKey :: Text -> Text
-poolRadiusStepKey transactionId = "Driver-Offer:Allocator:PoolRadiusStep:SearchReqId-" <> transactionId
+poolRadiusStepKey :: Id DSR.SearchRequest -> Text
+poolRadiusStepKey searchReqId = "Driver-Offer:Allocator:PoolRadiusStep:SearchReqId-" <> searchReqId.getId
 
 -- cleanupDriverPoolBatches ::
 --   ( Redis.HedisFlow m r
 --   ) =>
---   Text ->
+--   Id DSR.SearchRequest ->
 --   m ()
--- cleanupDriverPoolBatches transactionId = do
+-- cleanupDriverPoolBatches searchReqId = do
 --   Redis.withCrossAppRedis $ do
---     Redis.delByPattern (driverPoolKey transactionId <> "*")
---     Redis.del (poolRadiusStepKey transactionId)
---     Redis.del (poolBatchNumKey transactionId)
+--     Redis.delByPattern (driverPoolKey searchReqId <> "*")
+--     Redis.del (poolRadiusStepKey searchReqId)
+--     Redis.del (poolBatchNumKey searchReqId)
 --   logInfo "Cleanup redis."
 
 getNextDriverPoolBatch ::
@@ -380,60 +382,63 @@ getNextDriverPoolBatch ::
     Redis.HedisFlow m r
   ) =>
   DriverPoolConfig ->
+  DSR.SearchRequest ->
   DST.SearchTry ->
   m [DriverPoolWithActualDistResult]
-getNextDriverPoolBatch driverPoolConfig searchReq = withLogTag "getNextDriverPoolBatch" do
-  batchNum <- getPoolBatchNum searchReq.transactionId
-  incrementBatchNum searchReq.transactionId
-  prepareDriverPoolBatch driverPoolConfig searchReq batchNum
+getNextDriverPoolBatch driverPoolConfig searchReq searchTry = withLogTag "getNextDriverPoolBatch" do
+  batchNum <- getPoolBatchNum searchReq.id
+  incrementBatchNum searchReq.id
+  prepareDriverPoolBatch driverPoolConfig searchReq searchTry batchNum
 
-getPoolBatchNum :: (Redis.HedisFlow m r) => Text -> m PoolBatchNum
-getPoolBatchNum transactionId = do
-  res <- Redis.withCrossAppRedis $ Redis.get (poolBatchNumKey transactionId)
+getPoolBatchNum :: (Redis.HedisFlow m r) => Id DSR.SearchRequest -> m PoolBatchNum
+getPoolBatchNum searchReqId = do
+  res <- Redis.withCrossAppRedis $ Redis.get (poolBatchNumKey searchReqId)
   case res of
     Just i -> return i
     Nothing -> do
       let expTime = 600
-      Redis.withCrossAppRedis $ Redis.setExp (poolBatchNumKey transactionId) (0 :: Integer) expTime
+      Redis.withCrossAppRedis $ Redis.setExp (poolBatchNumKey searchReqId) (0 :: Integer) expTime
       return 0
 
 incrementBatchNum ::
   ( Redis.HedisFlow m r
   ) =>
-  Text ->
+  Id DSR.SearchRequest ->
   m ()
-incrementBatchNum transactionId = do
-  res <- Redis.withCrossAppRedis $ Redis.incr (poolBatchNumKey transactionId)
+incrementBatchNum searchReqId = do
+  res <- Redis.withCrossAppRedis $ Redis.incr (poolBatchNumKey searchReqId)
   logInfo $ "Increment batch num to " <> show res <> "."
   return ()
 
-getPoolRadiusStep :: (Redis.HedisFlow m r) => Text -> m PoolRadiusStep
-getPoolRadiusStep transactionId = do
-  res <- Redis.withCrossAppRedis $ Redis.get (poolRadiusStepKey transactionId)
+getPoolRadiusStep :: (Redis.HedisFlow m r) => Id DSR.SearchRequest -> m PoolRadiusStep
+getPoolRadiusStep searchReqId = do
+  res <- Redis.withCrossAppRedis $ Redis.get (poolRadiusStepKey searchReqId)
   case res of
     Just i -> return i
     Nothing -> do
       let expTime = 600
-      Redis.withCrossAppRedis $ Redis.setExp (poolRadiusStepKey transactionId) (0 :: Integer) expTime
+      Redis.withCrossAppRedis $ Redis.setExp (poolRadiusStepKey searchReqId) (0 :: Integer) expTime
       return 0
 
 incrementPoolRadiusStep ::
   ( Redis.HedisFlow m r
   ) =>
-  Text ->
+  Id DSR.SearchRequest ->
   m ()
-incrementPoolRadiusStep transactionId = do
-  res <- Redis.withCrossAppRedis $ Redis.incr (poolRadiusStepKey transactionId)
+incrementPoolRadiusStep searchReqId = do
+  res <- Redis.withCrossAppRedis $ Redis.incr (poolRadiusStepKey searchReqId)
   logInfo $ "Increment radius step to " <> show res <> "."
   return ()
 
-driverRequestCountKey :: Id DST.SearchTry -> Id Driver -> Text
-driverRequestCountKey searchReqId driverId = "Driver-Request-Count-Key:SearchReqId-DriverId" <> searchReqId.getId <> driverId.getId
+driverRequestCountKey :: Id DSR.SearchRequest -> Id Driver -> Text
+driverRequestCountKey searchReqId driverId = "Driver-Request-Count-Key:SearchReqId-" <> searchReqId.getId <> ":DriverId-" <> driverId.getId
 
-checkRequestCount :: Redis.HedisFlow m r => Id DST.SearchTry -> Id Driver -> DriverPoolConfig -> m Bool
-checkRequestCount searchReqId driverId driverPoolConfig = maybe True (\count -> (count :: Int) < driverPoolConfig.driverRequestCountLimit) <$> Redis.withCrossAppRedis (Redis.get (driverRequestCountKey searchReqId driverId))
+checkRequestCount :: Redis.HedisFlow m r => Id DSR.SearchRequest -> Id Driver -> DriverPoolConfig -> m Bool
+checkRequestCount searchReqId driverId driverPoolConfig =
+  maybe True (\count -> (count :: Int) < driverPoolConfig.driverRequestCountLimit)
+    <$> Redis.withCrossAppRedis (Redis.get (driverRequestCountKey searchReqId driverId))
 
-incrementDriverRequestCount :: (Redis.HedisFlow m r) => [DriverPoolWithActualDistResult] -> Id DST.SearchTry -> m ()
+incrementDriverRequestCount :: (Redis.HedisFlow m r) => [DriverPoolWithActualDistResult] -> Id DSR.SearchRequest -> m ()
 incrementDriverRequestCount finalPoolBatch searchReqId = do
   CM.mapM_
     ( \dpr ->

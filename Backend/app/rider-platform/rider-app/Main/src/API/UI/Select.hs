@@ -13,12 +13,13 @@
 -}
 
 module API.UI.Select
-  ( DSelect.DEstimateSelectReq (..),
+  ( DSelect.DSelectReq (..),
     DSelect.DSelectRes (..),
     DSelect.SelectListRes (..),
     DSelect.QuotesResultResponse (..),
+    DSelect.CancelAPIResponse (..),
     API,
-    select,
+    select2,
     selectList,
     selectResult,
     cancelSearch,
@@ -51,13 +52,9 @@ type API =
   "estimate"
     :> ( TokenAuth
            :> Capture "estimateId" (Id DEstimate.Estimate)
-           :> "select"
+           :> "select2" -- TODO will replace "select" once 100% rolled out
+           :> ReqBody '[JSON] DSelect.DSelectReq
            :> Post '[JSON] APISuccess
-           :<|> TokenAuth
-             :> Capture "estimateId" (Id DEstimate.Estimate)
-             :> "select2" -- TODO will replace "select" once 100% rolled out
-             :> ReqBody '[JSON] DSelect.DEstimateSelectReq
-             :> Post '[JSON] APISuccess
            :<|> TokenAuth
              :> Capture "estimateId" (Id DEstimate.Estimate)
              :> "quotes"
@@ -74,23 +71,12 @@ type API =
 
 handler :: FlowServer API
 handler =
-  select
-    :<|> select2
+  select2
     :<|> selectList
     :<|> selectResult
     :<|> cancelSearch
 
-select :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> FlowHandler APISuccess
-select (personId, _) estimateId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
-  let autoAssignFlag = False
-  let req = DSelect.DEstimateSelectReq {customerExtraFee = Nothing, autoAssignEnabled = autoAssignFlag, autoAssignEnabledV2 = Nothing}
-  Redis.whenWithLockRedis (selectEstimateLockKey personId) 60 $ do
-    dSelectReq <- DSelect.select personId estimateId req
-    becknReq <- ACL.buildSelectReq dSelectReq
-    void $ withShortRetry $ CallBPP.select dSelectReq.providerUrl becknReq
-  pure Success
-
-select2 :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> DSelect.DEstimateSelectReq -> FlowHandler APISuccess
+select2 :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> DSelect.DSelectReq -> FlowHandler APISuccess
 select2 (personId, _) estimateId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   Redis.whenWithLockRedis (selectEstimateLockKey personId) 60 $ do
     dSelectReq <- DSelect.select personId estimateId req

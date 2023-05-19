@@ -58,10 +58,10 @@ findById dQuoteId = buildDType $ do
     pure (dQuote, farePars)
   join <$> mapM buildFullDriverQuote res
 
-setInactiveByRequestId :: Id DST.SearchTry -> SqlDB ()
-setInactiveByRequestId searchReqId = Esq.update $ \p -> do
+setInactiveBySTId :: Id DST.SearchTry -> SqlDB ()
+setInactiveBySTId searchTryId = Esq.update $ \p -> do
   set p [DriverQuoteStatus =. val Domain.Inactive]
-  where_ $ p ^. DriverQuoteSearchRequestId ==. val (toKey searchReqId)
+  where_ $ p ^. DriverQuoteSearchTryId ==. val (toKey searchTryId)
 
 findActiveQuotesByDriverId :: (Transactionable m, MonadTime m) => Id Person -> Seconds -> m [Domain.DriverQuote]
 findActiveQuotesByDriverId driverId driverUnlockDelay = do
@@ -78,26 +78,26 @@ findActiveQuotesByDriverId driverId driverUnlockDelay = do
       pure (dQuote, farePars)
     catMaybes <$> mapM buildFullDriverQuote res
 
-findAllByRequestId :: Transactionable m => Id DST.SearchTry -> m [Domain.DriverQuote]
-findAllByRequestId searchReqId = do
+findAllBySTId :: Transactionable m => Id DST.SearchTry -> m [Domain.DriverQuote]
+findAllBySTId searchTryId = do
   buildDType $ do
     res <- Esq.findAll' $ do
       (dQuote :& farePars) <-
         from baseDriverQuoteQuery
       where_ $
         dQuote ^. DriverQuoteStatus ==. val Domain.Active
-          &&. dQuote ^. DriverQuoteSearchRequestId ==. val (toKey searchReqId)
+          &&. dQuote ^. DriverQuoteSearchTryId ==. val (toKey searchTryId)
       pure (dQuote, farePars)
     catMaybes <$> mapM buildFullDriverQuote res
 
-countAllByRequestId :: Transactionable m => Id DST.SearchTry -> m Int32
-countAllByRequestId searchReqId = do
+countAllBySTId :: Transactionable m => Id DST.SearchTry -> m Int32
+countAllBySTId searchTryId = do
   fmap (fromMaybe 0) $
     Esq.findOne $ do
       dQuote <- from $ table @DriverQuoteT
       where_ $
         dQuote ^. DriverQuoteStatus ==. val Domain.Active
-          &&. dQuote ^. DriverQuoteSearchRequestId ==. val (toKey searchReqId)
+          &&. dQuote ^. DriverQuoteSearchTryId ==. val (toKey searchTryId)
       pure (countRows @Int32)
 
 deleteByDriverId :: Id Person -> SqlDB ()
@@ -106,8 +106,8 @@ deleteByDriverId personId =
     driverQuotes <- from $ table @DriverQuoteT
     where_ $ driverQuotes ^. DriverQuoteDriverId ==. val (toKey personId)
 
-findDriverQuoteBySearchId :: Transactionable m => Id DST.SearchTry -> DTypeBuilder m (Maybe DriverQuoteT)
-findDriverQuoteBySearchId searchReqId = Esq.findOne' $ do
+findDriverQuoteBySTId :: Transactionable m => Id DST.SearchTry -> DTypeBuilder m (Maybe DriverQuoteT)
+findDriverQuoteBySTId searchTryId = Esq.findOne' $ do
   driverQuote <- from $ table @DriverQuoteT
-  where_ $ driverQuote ^. DriverQuoteSearchRequestId ==. val (toKey searchReqId)
+  where_ $ driverQuote ^. DriverQuoteSearchTryId ==. val (toKey searchTryId)
   pure driverQuote

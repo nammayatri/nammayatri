@@ -44,6 +44,7 @@ import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FareParameters as Fare
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as SRide
+import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import Kernel.Prelude
 import Kernel.Storage.Hedis
@@ -68,16 +69,17 @@ callOnSelect ::
     HasShortDurationRetryCfg r c
   ) =>
   DM.Merchant ->
+  DSR.SearchRequest ->
   DST.SearchTry ->
   OnSelect.OnSelectMessage ->
   m ()
-callOnSelect transporter searchRequest content = do
+callOnSelect transporter searchRequest searchTry content = do
   let bapId = searchRequest.bapId
       bapUri = searchRequest.bapUri
   let bppSubscriberId = getShortId $ transporter.subscriberId
       authKey = getHttpManagerKey bppSubscriberId
   bppUri <- buildBppUrl (transporter.id)
-  let msgId = searchRequest.messageId
+  let msgId = searchTry.estimateId.getId
   context <- buildTaxiContext Context.ON_SELECT msgId (Just searchRequest.transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) transporter.city
   logDebug $ "on_select request bpp: " <> show content
   void $ withShortRetry $ Beckn.callBecknAPI (Just authKey) Nothing (show Context.ON_SELECT) API.onSelectAPI bapUri . BecknCallbackReq context $ Right content
@@ -234,16 +236,17 @@ sendDriverOffer ::
     HasPrettyLogger m r
   ) =>
   DM.Merchant ->
+  DSR.SearchRequest ->
   DST.SearchTry ->
   DDQ.DriverQuote ->
   m ()
-sendDriverOffer transporter searchReq driverQuote = do
-  callOnSelect transporter searchReq =<< (buildOnSelectReq transporter searchReq [driverQuote] <&> ACL.mkOnSelectMessage)
+sendDriverOffer transporter searchReq searchTry driverQuote = do
+  callOnSelect transporter searchReq searchTry =<< (buildOnSelectReq transporter searchReq [driverQuote] <&> ACL.mkOnSelectMessage)
   where
     buildOnSelectReq ::
       (MonadTime m, HasPrettyLogger m r) =>
       DM.Merchant ->
-      DST.SearchTry ->
+      DSR.SearchRequest ->
       [DDQ.DriverQuote] ->
       m ACL.DOnSelectReq
     buildOnSelectReq org searchRequest quotes = do

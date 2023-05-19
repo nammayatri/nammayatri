@@ -25,7 +25,9 @@ defaultSearchReq =
   OneWaySearch $
     OneWaySearchReq
       { origin = SearchReqLocation (LatLong 10.0739 76.2733) defaultSearchReqAddress,
-        destination = SearchReqLocation (LatLong 10.5449 76.4356) defaultSearchReqAddress
+        destination = SearchReqLocation (LatLong 10.5449 76.4356) defaultSearchReqAddress,
+        autoAssignEnabled = False,
+        autoAssignEnabledV2 = False
       }
 
 defaultSearchReqAddress :: LocationAddress
@@ -78,7 +80,9 @@ searchReqFromUpdatesList updList =
         OneWaySearch $
           OneWaySearchReq
             { origin = SearchReqLocation (NE.head $ NE.head updList) defaultSearchReqAddress,
-              destination = SearchReqLocation (NE.last $ NE.last updList) defaultSearchReqAddress
+              destination = SearchReqLocation (NE.last $ NE.last updList) defaultSearchReqAddress,
+              autoAssignEnabled = False,
+              autoAssignEnabledV2 = False
             }
    in (origin, destination, req)
 
@@ -88,7 +92,9 @@ mkSearchReqFromLocations origin destination =
         OneWaySearch $
           OneWaySearchReq
             { origin = SearchReqLocation origin defaultSearchReqAddress,
-              destination = SearchReqLocation destination defaultSearchReqAddress
+              destination = SearchReqLocation destination defaultSearchReqAddress,
+              autoAssignEnabled = False,
+              autoAssignEnabledV2 = False
             }
    in (origin, destination, req)
 

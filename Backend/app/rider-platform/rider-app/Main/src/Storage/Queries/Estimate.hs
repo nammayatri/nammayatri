@@ -17,7 +17,6 @@ module Storage.Queries.Estimate where
 
 import Data.Tuple.Extra
 import Domain.Types.Estimate
-import Domain.Types.Quote
 import Domain.Types.SearchRequest
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
@@ -81,20 +80,6 @@ findByBPPEstimateId bppEstimateId_ = Esq.buildDType $ do
     pure (estimate, mbTripTerms)
   mapM buildFullEstimate mbFullEstimateT
 
-updateQuote ::
-  Id Estimate ->
-  Id Quote ->
-  SqlDB ()
-updateQuote estimateId quoteId = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ EstimateUpdatedAt =. val now,
-        EstimateAutoAssignQuoteId =. val (Just quoteId.getId)
-      ]
-    where_ $ tbl ^. EstimateId ==. val (getId estimateId)
-
 updateStatus ::
   Id Estimate ->
   EstimateStatus ->
@@ -106,20 +91,6 @@ updateStatus estimateId status_ = do
       tbl
       [ EstimateUpdatedAt =. val now,
         EstimateStatus =. val status_
-      ]
-    where_ $ tbl ^. EstimateId ==. val (getId estimateId)
-
-updateAutoAssign ::
-  Id Estimate ->
-  Bool ->
-  Bool ->
-  SqlDB ()
-updateAutoAssign estimateId autoAssignedEnabled autoAssignedEnabledV2 = do
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ EstimateAutoAssignEnabled =. val autoAssignedEnabled,
-        EstimateAutoAssignEnabledV2 =. val autoAssignedEnabledV2
       ]
     where_ $ tbl ^. EstimateId ==. val (getId estimateId)
 

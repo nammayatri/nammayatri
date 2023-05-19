@@ -19,8 +19,9 @@ where
 import Data.Time
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
-import qualified Domain.Types.SearchTry as DST
+import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequestForDriver as SRD
+import qualified Domain.Types.SearchTry as DST
 import Kernel.Prelude (Show)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id (Id)
@@ -30,7 +31,7 @@ data DriverRideRequeset
   = OnDriverAcceptingSearchRequest
       { merchantId :: Id DM.Merchant,
         driverId :: Id DP.Person,
-        searchReqId :: Id DST.SearchTry,
+        searchTryId :: Id DST.SearchTry,
         restDriverIds :: [Id DP.Person],
         response :: SRD.SearchRequestForDriverResponse
       }
@@ -41,7 +42,8 @@ data DriverRideRequeset
   | OnNewSearchRequestForDrivers
       { driverPool :: [DP.DriverPoolWithActualDistResult],
         merchantId :: Id DM.Merchant,
-        searchReq :: DST.SearchTry,
+        searchReq :: DSR.SearchRequest,
+        searchTry :: DST.SearchTry,
         validTill :: UTCTime,
         batchProcessTime :: Redis.ExpirationTime
       }
