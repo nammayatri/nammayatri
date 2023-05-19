@@ -310,6 +310,8 @@ calculateFinalValuesForFailedDistanceCalculations handle@ServiceHandle {..} book
             then do
               recalculateFareForDistance handle booking ride booking.estimatedDistance
             else do
-              if distanceDiff < thresholdConfig.approxRideDistanceDiffThreshold
+              if distanceDiff < thresholdConfig.upwardsRecomputeBuffer
                 then recalculateFareForDistance handle booking ride approxTraveledDistance
-                else recalculateFareForDistance handle booking ride (booking.estimatedDistance + highPrecMetersToMeters thresholdConfig.approxRideDistanceDiffThreshold)
+                else do
+                  logTagInfo "Inaccurate Location Updates and Pickup/Drop Deviated." ("DistanceDiff: " <> show distanceDiff)
+                  recalculateFareForDistance handle booking ride (booking.estimatedDistance + highPrecMetersToMeters thresholdConfig.upwardsRecomputeBuffer)
