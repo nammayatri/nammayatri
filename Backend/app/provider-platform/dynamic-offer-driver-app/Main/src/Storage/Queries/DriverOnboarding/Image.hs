@@ -20,12 +20,19 @@ import Domain.Types.DriverOnboarding.Error
 import Domain.Types.DriverOnboarding.Image
 import Domain.Types.Merchant
 import Domain.Types.Person (Person)
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Error.Throwing
+import qualified Lib.Mesh as Mesh
+import qualified Sequelize as Se
+import qualified Storage.Beam.DriverOnboarding.Image as BeamI
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.Queries.Person as QP
@@ -112,3 +119,29 @@ deleteByPersonId personId =
   Esq.delete $ do
     images <- from $ table @ImageT
     where_ $ images ^. ImagePersonId ==. val (toKey personId)
+
+transformBeamImageToDomain :: BeamI.Image -> Image
+transformBeamImageToDomain BeamI.ImageT {..} = do
+  Image
+    { id = Id id,
+      personId = Id personId,
+      merchantId = Id merchantId,
+      s3Path = s3Path,
+      imageType = imageType,
+      isValid = isValid,
+      failureReason = failureReason,
+      createdAt = createdAt
+    }
+
+transformDomainImageToBeam :: Image -> BeamI.Image
+transformDomainImageToBeam Image {..} =
+  BeamI.ImageT
+    { BeamI.id = getId id,
+      BeamI.personId = getId personId,
+      BeamI.merchantId = getId merchantId,
+      BeamI.s3Path = s3Path,
+      BeamI.imageType = imageType,
+      BeamI.isValid = isValid,
+      BeamI.failureReason = failureReason,
+      BeamI.createdAt = createdAt
+    }

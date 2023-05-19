@@ -85,8 +85,8 @@ data MessageReportT f = MessageReportT
     likeStatus :: B.C f Bool,
     reply :: B.C f (Maybe Text),
     messageDynamicFields :: B.C f Domain.MessageDynamicFieldsType,
-    updatedAt :: B.C f Time.LocalTime,
-    createdAt :: B.C f Time.LocalTime
+    updatedAt :: B.C f Time.UTCTime,
+    createdAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 

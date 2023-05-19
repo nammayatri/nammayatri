@@ -59,10 +59,10 @@ data DriverRCAssociationT f = DriverRCAssociationT
   { id :: B.C f Text,
     driverId :: B.C f Text,
     rcId :: B.C f Text,
-    associatedOn :: B.C f Time.LocalTime,
-    associatedTill :: B.C f (Maybe Time.LocalTime),
+    associatedOn :: B.C f Time.UTCTime,
+    associatedTill :: B.C f (Maybe Time.UTCTime),
     consent :: B.C f Bool,
-    consentTimestamp :: B.C f Time.LocalTime
+    consentTimestamp :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 

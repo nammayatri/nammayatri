@@ -86,10 +86,10 @@ data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
     documentImageId :: B.C f Text,
     certificateNumberEncrypted :: B.C f Text,
     certificateNumberHash :: B.C f DbHash,
-    fitnessExpiry :: B.C f Time.LocalTime,
-    permitExpiry :: B.C f (Maybe Time.LocalTime),
-    pucExpiry :: B.C f (Maybe Time.LocalTime),
-    insuranceValidity :: B.C f (Maybe Time.LocalTime),
+    fitnessExpiry :: B.C f Time.UTCTime,
+    permitExpiry :: B.C f (Maybe Time.UTCTime),
+    pucExpiry :: B.C f (Maybe Time.UTCTime),
+    insuranceValidity :: B.C f (Maybe Time.UTCTime),
     vehicleClass :: B.C f (Maybe Text),
     vehicleManufacturer :: B.C f (Maybe Text),
     vehicleCapacity :: B.C f (Maybe Int),
@@ -98,8 +98,8 @@ data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
     vehicleEnergyType :: B.C f (Maybe Text),
     verificationStatus :: B.C f Domain.VerificationStatus,
     failedRules :: B.C f [Text],
-    createdAt :: B.C f Time.LocalTime,
-    updatedAt :: B.C f Time.LocalTime
+    createdAt :: B.C f Time.UTCTime,
+    updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 

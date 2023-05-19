@@ -74,7 +74,7 @@ data MessageTranslationT f = MessageTranslationT
     description :: B.C f Text,
     shortDescription :: B.C f Text,
     label :: B.C f (Maybe Text),
-    createdAt :: B.C f Time.LocalTime
+    createdAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 

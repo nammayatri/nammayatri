@@ -4,10 +4,17 @@ import Domain.Types.Issue.IssueCategory
 import Domain.Types.Issue.IssueOption
 import Domain.Types.Issue.IssueReport
 import qualified Domain.Types.Person as SP
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common (getCurrentTime)
+import qualified Lib.Mesh as Mesh
+import qualified Sequelize as Se
+import qualified Storage.Beam.Issue.IssueReport as BeamIR
 import Storage.Tabular.Issue.IssueReport
 
 create :: IssueReport -> SqlDB ()
@@ -102,3 +109,37 @@ updateOption issueReportId optionId = do
     where_ $
       tbl ^. IssueReportTId ==. val (toKey issueReportId)
         &&. tbl ^. IssueReportDeleted ==. val False
+
+transformBeamIssueReportToDomain :: BeamIR.IssueReport -> IssueReport
+transformBeamIssueReportToDomain BeamIR.IssueReportT {..} = do
+  IssueReport
+    { id = Id id,
+      driverId = Id driverId,
+      rideId = Id <$> rideId,
+      description = description,
+      assignee = assignee,
+      status = status,
+      categoryId = Id categoryId,
+      optionId = Id <$> optionId,
+      deleted = deleted,
+      mediaFiles = Id <$> mediaFiles,
+      createdAt = createdAt,
+      updatedAt = updatedAt
+    }
+
+transformDomainIssueReportToBeam :: IssueReport -> BeamIR.IssueReport
+transformDomainIssueReportToBeam IssueReport {..} =
+  BeamIR.IssueReportT
+    { BeamIR.id = getId id,
+      BeamIR.driverId = getId driverId,
+      BeamIR.rideId = getId <$> rideId,
+      BeamIR.description = description,
+      BeamIR.assignee = assignee,
+      BeamIR.status = status,
+      BeamIR.categoryId = getId categoryId,
+      BeamIR.optionId = getId <$> optionId,
+      BeamIR.deleted = deleted,
+      BeamIR.mediaFiles = getId <$> mediaFiles,
+      BeamIR.createdAt = createdAt,
+      BeamIR.updatedAt = updatedAt
+    }

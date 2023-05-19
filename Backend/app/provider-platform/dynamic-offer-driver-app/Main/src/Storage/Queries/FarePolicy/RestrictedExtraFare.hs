@@ -18,9 +18,16 @@ module Storage.Queries.FarePolicy.RestrictedExtraFare where
 import qualified Domain.Types.FarePolicy.RestrictedExtraFare as Domain
 import Domain.Types.Merchant
 import qualified Domain.Types.Vehicle.Variant as Vehicle
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import qualified Lib.Mesh as Mesh
+import qualified Sequelize as Se
+import qualified Storage.Beam.FarePolicy.RestrictedExtraFare as BeamREF
 import Storage.Tabular.FarePolicy.RestrictedExtraFare
 
 create :: Domain.RestrictedExtraFare -> SqlDB ()
@@ -44,3 +51,23 @@ findMaxExtraFareByMerchant merchantId = do
       restrictedExtraFare ^. RestrictedExtraFareMerchantId ==. val (toKey merchantId)
     orderBy [desc (restrictedExtraFare ^. RestrictedExtraFareMinTripDistance)]
     return restrictedExtraFare
+
+transformBeamRestrictedExtraFareToDomain :: BeamREF.RestrictedExtraFare -> Domain.RestrictedExtraFare
+transformBeamRestrictedExtraFareToDomain BeamREF.RestrictedExtraFareT {..} = do
+  Domain.RestrictedExtraFare
+    { id = Id id,
+      merchantId = Id merchantId,
+      vehicleVariant = vehicleVariant,
+      minTripDistance = minTripDistance,
+      driverMaxExtraFare = driverMaxExtraFare
+    }
+
+transformDomainRestrictedExtraFareToBeam :: Domain.RestrictedExtraFare -> BeamREF.RestrictedExtraFare
+transformDomainRestrictedExtraFareToBeam Domain.RestrictedExtraFare {..} =
+  BeamREF.RestrictedExtraFareT
+    { BeamREF.id = getId id,
+      BeamREF.merchantId = getId merchantId,
+      BeamREF.vehicleVariant = vehicleVariant,
+      BeamREF.minTripDistance = minTripDistance,
+      BeamREF.driverMaxExtraFare = driverMaxExtraFare
+    }

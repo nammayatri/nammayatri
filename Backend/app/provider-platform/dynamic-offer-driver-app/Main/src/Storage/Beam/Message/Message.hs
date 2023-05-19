@@ -65,7 +65,7 @@ data MessageT f = MessageT
     likeCount :: B.C f Int,
     mediaFiles :: B.C f [Text],
     merchantId :: B.C f Text,
-    createdAt :: B.C f Time.LocalTime
+    createdAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 

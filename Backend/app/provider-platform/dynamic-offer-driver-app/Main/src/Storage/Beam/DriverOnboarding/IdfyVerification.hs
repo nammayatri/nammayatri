@@ -95,13 +95,13 @@ data IdfyVerificationT f = IdfyVerificationT
     requestId :: B.C f Text,
     docType :: B.C f Image.ImageType,
     status :: B.C f Text,
-    issueDateOnDoc :: B.C f (Maybe Time.LocalTime),
+    issueDateOnDoc :: B.C f (Maybe Time.UTCTime),
     documentNumberEncrypted :: B.C f Text,
     documentNumberHash :: B.C f DbHash,
     imageExtractionValidation :: B.C f Domain.ImageExtractionValidation,
     idfyResponse :: B.C f (Maybe Text),
-    createdAt :: B.C f Time.LocalTime,
-    updatedAt :: B.C f Time.LocalTime
+    createdAt :: B.C f Time.UTCTime,
+    updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 

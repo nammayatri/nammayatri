@@ -61,7 +61,7 @@ data CommentT f = CommentT
     issueReportId :: B.C f Text,
     authorId :: B.C f Text,
     comment :: B.C f Text,
-    createdAt :: B.C f Time.LocalTime
+    createdAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 

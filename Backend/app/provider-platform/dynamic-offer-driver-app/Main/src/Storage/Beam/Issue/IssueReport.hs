@@ -84,8 +84,8 @@ data IssueReportT f = IssueReportT
     optionId :: B.C f (Maybe Text),
     deleted :: B.C f Bool,
     mediaFiles :: B.C f [Text],
-    createdAt :: B.C f Time.LocalTime,
-    updatedAt :: B.C f Time.LocalTime
+    createdAt :: B.C f Time.UTCTime,
+    updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 

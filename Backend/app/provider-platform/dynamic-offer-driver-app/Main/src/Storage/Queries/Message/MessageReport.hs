@@ -19,12 +19,19 @@ import qualified Domain.Types.Message.Message as Msg
 import Domain.Types.Message.MessageReport
 import qualified Domain.Types.Message.MessageTranslation as MTD
 import qualified Domain.Types.Person as P
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common (MonadTime (getCurrentTime))
 import Kernel.Types.Id
+import qualified Lib.Mesh as Mesh
+import qualified Sequelize as Se
+import qualified Storage.Beam.Message.MessageReport as BeamMR
 import Storage.Tabular.Message.Instances ()
 import qualified Storage.Tabular.Message.Message as M
 import Storage.Tabular.Message.MessageReport
@@ -185,3 +192,31 @@ deleteByPersonId personId =
   Esq.delete $ do
     messagereport <- from $ table @MessageReportT
     where_ $ messagereport ^. MessageReportDriverId ==. val (toKey personId)
+
+transformBeamMessageReportToDomain :: BeamMR.MessageReport -> MessageReport
+transformBeamMessageReportToDomain BeamMR.MessageReportT {..} = do
+  MessageReport
+    { messageId = Id messageId,
+      driverId = Id driverId,
+      deliveryStatus = deliveryStatus,
+      readStatus = readStatus,
+      likeStatus = likeStatus,
+      reply = reply,
+      messageDynamicFields = messageDynamicFields,
+      createdAt = createdAt,
+      updatedAt = updatedAt
+    }
+
+transformDomainMessageReportToBeam :: MessageReport -> BeamMR.MessageReport
+transformDomainMessageReportToBeam MessageReport {..} =
+  BeamMR.MessageReportT
+    { BeamMR.messageId = getId messageId,
+      BeamMR.driverId = getId driverId,
+      BeamMR.deliveryStatus = deliveryStatus,
+      BeamMR.readStatus = readStatus,
+      BeamMR.likeStatus = likeStatus,
+      BeamMR.reply = reply,
+      BeamMR.messageDynamicFields = messageDynamicFields,
+      BeamMR.createdAt = createdAt,
+      BeamMR.updatedAt = updatedAt
+    }

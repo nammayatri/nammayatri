@@ -16,10 +16,17 @@
 module Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate where
 
 import Domain.Types.DriverOnboarding.VehicleRegistrationCertificate
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import qualified Lib.Mesh as Mesh
+import qualified Sequelize as Se
+import qualified Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate as BeamVRC
 import Storage.Tabular.DriverOnboarding.VehicleRegistrationCertificate
 import Storage.Tabular.Person ()
 
@@ -79,3 +86,48 @@ findByRCAndExpiry certNumber expiry = do
       rc ^. VehicleRegistrationCertificateCertificateNumberHash ==. val certNumberHash
         &&. rc ^. VehicleRegistrationCertificateFitnessExpiry ==. val expiry
     return rc
+
+transformBeamVehicleRegistrationCertificateToDomain :: BeamVRC.VehicleRegistrationCertificate -> VehicleRegistrationCertificate
+transformBeamVehicleRegistrationCertificateToDomain BeamVRC.VehicleRegistrationCertificateT {..} = do
+  VehicleRegistrationCertificate
+    { id = Id id,
+      documentImageId = Id documentImageId,
+      certificateNumber = EncryptedHashed (Encrypted certificateNumberEncrypted) certificateNumberHash,
+      fitnessExpiry = fitnessExpiry,
+      permitExpiry = permitExpiry,
+      pucExpiry = pucExpiry,
+      insuranceValidity = insuranceValidity,
+      vehicleClass = vehicleClass,
+      failedRules = failedRules,
+      vehicleManufacturer = vehicleManufacturer,
+      vehicleCapacity = vehicleCapacity,
+      vehicleModel = vehicleModel,
+      vehicleColor = vehicleColor,
+      vehicleEnergyType = vehicleEnergyType,
+      verificationStatus = verificationStatus,
+      createdAt = createdAt,
+      updatedAt = updatedAt
+    }
+
+transformDomainVehicleRegistrationCertificateToBeam :: VehicleRegistrationCertificate -> BeamVRC.VehicleRegistrationCertificate
+transformDomainVehicleRegistrationCertificateToBeam VehicleRegistrationCertificate {..} =
+  BeamVRC.VehicleRegistrationCertificateT
+    { BeamVRC.id = getId id,
+      BeamVRC.documentImageId = getId documentImageId,
+      BeamVRC.certificateNumberEncrypted = certificateNumber & unEncrypted . (.encrypted),
+      BeamVRC.certificateNumberHash = certificateNumber & (.hash),
+      BeamVRC.fitnessExpiry = fitnessExpiry,
+      BeamVRC.permitExpiry = permitExpiry,
+      BeamVRC.pucExpiry = pucExpiry,
+      BeamVRC.insuranceValidity = insuranceValidity,
+      BeamVRC.vehicleClass = vehicleClass,
+      BeamVRC.failedRules = failedRules,
+      BeamVRC.vehicleManufacturer = vehicleManufacturer,
+      BeamVRC.vehicleCapacity = vehicleCapacity,
+      BeamVRC.vehicleModel = vehicleModel,
+      BeamVRC.vehicleColor = vehicleColor,
+      BeamVRC.vehicleEnergyType = vehicleEnergyType,
+      BeamVRC.verificationStatus = verificationStatus,
+      BeamVRC.createdAt = createdAt,
+      BeamVRC.updatedAt = updatedAt
+    }

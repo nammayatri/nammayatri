@@ -84,7 +84,7 @@ data ImageT f = ImageT
     imageType :: B.C f Domain.ImageType,
     isValid :: B.C f Bool,
     failureReason :: B.C f (Maybe Domain.DriverOnboardingError),
-    createdAt :: B.C f Time.LocalTime
+    createdAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
