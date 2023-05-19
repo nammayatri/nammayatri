@@ -1309,7 +1309,11 @@ public class MobilityCommonBridge extends HyperBridge {
             ExecutorManager.runOnMainThread(() -> {
                 try {
                     animationView = bridgeComponents.getActivity().findViewById(Integer.parseInt(id));
-                    animationView.setAnimationFromJson(getJsonFromResources(rawJson), null);
+                    if (rawJson.contains("https") || rawJson.contains("http")) {
+                        animationView.setAnimationFromUrl(rawJson);
+                    } else {
+                        animationView.setAnimationFromJson(getJsonFromResources(rawJson), null);
+                    }
                     animationView.setRepeatCount(ValueAnimator.INFINITE);
                     animationView.setSpeed(speed);
                     animationView.playAnimation();

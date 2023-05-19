@@ -19,20 +19,20 @@ function mergeDeep(target, source) {
     return output;
 }
 
-const defaultConfig = {
-    primaryTextColor : "#FFFFFF",
-    primaryBackground : "#03B9F5",
-    merchantId : "UNKNOWN" ,
-    searchLocationTheme : "#E3F4FC",
-    estimateConfirmText : "Request a NammaYatri Ride",
-    autoConfirmingLoaderColor : "#03B9F5",
-    quoteListModelBackground : "#E3F4FC",
-    quoteListModel : {
-      backgroundColor : "#E3F4FC",
-      textColor : "#2C2F3A",
-      loaderColor : "#03B9F5"
-    }
-};
+// const defaultConfig = {
+//     primaryTextColor : "#FFFFFF",
+//     primaryBackground : "#03B9F5",
+//     merchantId : "UNKNOWN" ,
+//     searchLocationTheme : "#E3F4FC",
+//     estimateConfirmText : "Request a NammaYatri Ride",
+//     autoConfirmingLoaderColor : "#03B9F5",
+//     quoteListModelBackground : "#E3F4FC",
+//     quoteListModel : {
+//       backgroundColor : "#E3F4FC",
+//       textColor : "#2C2F3A",
+//       loaderColor : "#03B9F5"
+//     }
+// };
 
 export const loadConfig = function() {
     if (window.appConfig) {
@@ -55,10 +55,11 @@ export const loadConfig = function() {
                 }
             }
         )();
-        console.log(merchantConfig)
-        window.appConfig = mergeDeep(defaultConfig, merchantConfig);
+        // console.log(merchantConfig)
+        // window.appConfig = mergeDeep(defaultConfig, merchantConfig);
+        window.appConfig = merchantConfig;
     } catch(e){
         console.error("config parse/merge failed", e);
-        window.appConfig = defaultConfig;
+        // window.appConfig = defaultConfig;
     }
 }

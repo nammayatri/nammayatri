@@ -53,12 +53,14 @@ import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
+import Effect.Uncurried (runEffectFn1)
+import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (countDown, flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (decodeErrorMessage, fetchAndUpdateCurrentLocation, getCurrentLocationMarker, getLocationName, getNewTrackingId, getPreviousVersion, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, storeOnResumeCallback, toString, waitingCountdownTimer)
+import Helpers.Utils (decodeErrorMessage, fetchAndUpdateCurrentLocation, getCurrentLocationMarker, getLocationName, getNewTrackingId, getPreviousVersion, consumingBackPress, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, storeOnResumeCallback, toString, waitingCountdownTimer)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
-import JBridge (addMarker, animateCamera, drawRoute, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, toast, updateRoute, getExtendedPath, generateSessionId, initialWebViewSetUp, stopChatListenerService, startChatListenerService, storeCallBackMessageUpdated, isMockLocation)
+import JBridge (addMarker, animateCamera, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getCurrentPosition, getExtendedPath, getHeightFromPercent, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, toast, updateRoute)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -75,7 +77,7 @@ import Screens.AddNewAddressScreen.Controller as AddNewAddress
 import Screens.HomeScreen.Controller (Action(..), ScreenOutput, checkCurrentLocation, checkSavedLocations, dummySelectedQuotes, eval, flowWithoutOffers, getCurrentCustomerLocation)
 import Screens.HomeScreen.Transformer (transformSavedLocations)
 import Screens.RideBookingFlow.HomeScreen.Config (autoAnimConfig, chooseYourRideConfig, menuButtonConfig, cancelRidePopUpConfig, distanceOusideLimitsConfig, driverInfoCardViewState, emergencyHelpModelViewState, estimateChangedPopupConfig, fareBreakUpConfig, logOutPopUpModelConfig, previousRideRatingViewState, primaryButtonConfirmPickupConfig, primaryButtonRequestRideConfig, quoteListModelViewState, rateCardConfig, rateRideButtonConfig, ratingCardViewState, searchLocationModelViewState, shareAppConfig, shortDistanceConfig, skipButtonConfig, sourceUnserviceableConfig, whereToButtonConfig, chatViewConfig, metersToKm, callSupportConfig)
-import Screens.Types (HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CallType(..))
+import Screens.Types (CallType(..), HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..))
 import Services.API (GetDriverLocationResp(..), GetQuotesRes(..), GetRouteResp(..), LatLong(..), RideAPIEntity(..), RideBookingRes(..), Route(..), SavedLocationsListRes(..), SearchReqLocationAPIEntity(..), SelectListRes(..), Snapped(..))
 import Services.Backend (getDriverLocation, getQuotes, getRoute, makeGetRouteReq, rideBooking, selectList, driverTracking, rideTracking, walkCoordinates, walkCoordinate, getSavedLocationList)
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore, updateLocalStage)
@@ -102,6 +104,7 @@ screen initialState =
               pure unit
             else do
               pure unit
+            runEffectFn1 consumingBackPress true
             case initialState.props.currentStage of
               SearchLocationModel -> case initialState.props.isSearchLocation of
                 LocateOnMap -> do
@@ -193,10 +196,10 @@ screen initialState =
         )
       ]
   , eval:
-      \state action -> do
-        let _ = spy "HomeScreen action " state
-        let _ = spy "HomeScreen state " action
-        eval state action
+      \action state -> do
+        let _ = spy "HomeScreen action " action
+        let _ = spy "HomeScreen state " state
+        eval action state
   }
 
 getDelayForLocateOnMap :: Int
@@ -1645,7 +1648,7 @@ lottieLoaderView state push =
     [ id (getNewIDWithTag "lottieLoader")
     , afterRender
         ( \action -> do
-            _ <- pure $ startLottieProcess "ic_vehicle_processing" (getNewIDWithTag "lottieLoader") true 0.6 "Default"
+            _ <- pure $ startLottieProcess ((getAssetStoreLink FunctionCall) <> "lottie/auto_rickshaw_processing.json") (getNewIDWithTag "lottieLoader") true 0.6 "Default"
             pure unit
         )
         (const LottieLoaderAction)
@@ -2012,3 +2015,4 @@ confirmingLottieView push state =
           loaderView push state
           ]
     ]
+

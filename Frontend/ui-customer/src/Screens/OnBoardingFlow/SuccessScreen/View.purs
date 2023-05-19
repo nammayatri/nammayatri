@@ -109,7 +109,7 @@ lottieLoaderView state push =
     [ id (EHC.getNewIDWithTag "SuccessLottieView")
     , afterRender
         ( \action -> do
-            _ <- pure $ startLottieProcess "success_lottie" (EHC.getNewIDWithTag "SuccessLottieView") true 1.0 "default"
+            _ <- pure $ startLottieProcess ((getAssetStoreLink FunctionCall) <> "lottie/success_lottie.json") (EHC.getNewIDWithTag "SuccessLottieView") true 1.0 "default"
             pure unit
         )
         (const CountDown)

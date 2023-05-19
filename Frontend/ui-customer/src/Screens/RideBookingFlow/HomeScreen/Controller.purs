@@ -64,13 +64,16 @@ import Data.String as STR
 import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
+import Effect.Uncurried (runEffectFn1, runEffectFn3)
+import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os)
-import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getExpiryTime, getLocationName, parseNewContacts, saveRecents, setText', updateInputString, withinTimeRange)
-import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage)
+import Helpers.Utils (addToRecentSearches, consumingBackPress, getCurrentLocationMarker, getDistanceBwCordinates, getExpiryTime, getLocationName, parseNewContacts, saveRecents, setText', updateInputString, withinTimeRange)
+import JBridge (addMarker, animateCamera, currentPosition, emitJOSEvent, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, goBackPrevWebPage, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, sendMessage, shareTextMessage, showDialer, stopChatListenerService, toast, toggleBtnLoader)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent)
-import Merchant.Utils (getValueFromConfig)
+import Merchant.Utils (Merchant(..), getMerchant)
+import Merchant.Utils (getMerchant, getValueFromConfig)
 import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/))
 import Presto.Core.Types.API (ErrorResponse)
 import PrestoDOM (Eval, Visibility(..), continue, continueWithCmd, exit, updateAndExit)
@@ -86,7 +89,6 @@ import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, Ge
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
 import Storage (KeyStore(..), isLocalStageOn, updateLocalStage, getValueToLocalStore, getValueToLocalStoreEff, setValueToLocalStore, getValueToLocalNativeStore, setValueToLocalNativeStore)
-import Merchant.Utils (Merchant(..), getMerchant)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -721,8 +723,10 @@ eval BackPressed state = do
                             ]
                           else if state.props.emergencyHelpModal then continue state {props {emergencyHelpModal = false}}
                           else if state.props.callSupportPopUp then continue state {props {callSupportPopUp = false}}
-                          else do
-                            _ <- pure $ minimizeApp ""
+                          else do 
+                            if (getMerchant FunctionCall) == UNKNOWN then
+                              pure $ unsafePerformEffect $ runEffectFn1 consumingBackPress false
+                              else pure $ minimizeApp ""
                             continue state
 
 eval GoBackToSearchLocationModal state = do

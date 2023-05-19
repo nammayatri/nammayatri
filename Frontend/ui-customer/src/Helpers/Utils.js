@@ -606,3 +606,12 @@ export const getMobileNumber = function (signatureAuthData) {
     console.log("Decode mobileNumber from SignatureAuthData Error => " + err);
   }
 }
+
+export const consumingBackPress = function (flag) {
+  console.log("inside consumingBackPress")
+  var jpConsumingBackpress = {
+    event: "jp_consuming_backpress",
+    payload: { jp_consuming_backpress: flag }
+  }
+  JBridge.runInJuspayBrowser("onEvent", JSON.stringify(jpConsumingBackpress), "");
+}

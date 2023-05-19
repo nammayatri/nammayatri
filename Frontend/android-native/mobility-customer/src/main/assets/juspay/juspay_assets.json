@@ -30,7 +30,6 @@
       "ny_ic_location_access" : true,
       "ny_ic_location_unserviceable" : true,
       "ny_ic_past_rides" : true,
-      "ny_ic_profile_image" : true,
       "ny_ic_radio_button" : true,
       "ny_ic_recent_search" : true,
       "ny_ic_recenter_btn" : true,

@@ -1214,15 +1214,9 @@ export const startLottieProcess = function (rawJson) {
       return function (speed) {
         return function (scaleType){
           if (JBridge.startLottieProcess) {
-            try {
-              return JBridge.startLottieProcess(rawJson,lottieId, loop, speed, scaleType);
-            } catch (err) {
-              /*
-              * This Function is deprecated on 12 Jan - 2023
-              * Remove this function once it is not begin used.
-              */
-              return JBridge.startLottieProcess(rawJson,lottieId, loop, speed);
-            }
+            var fileName = rawJson.substr(rawJson.lastIndexOf("/") + 1);
+            var lottieName = JBridge.isFilePresent(fileName) ? (fileName.slice(0,fileName.lastIndexOf("."))) : rawJson;
+            return JBridge.startLottieProcess(lottieName,lottieId, loop, speed, scaleType);
           }
         };
       };

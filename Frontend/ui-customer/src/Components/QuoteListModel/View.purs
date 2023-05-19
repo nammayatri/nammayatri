@@ -78,7 +78,7 @@ paymentView state =
   ][  lottieAnimationView 
         [ id (getNewIDWithTag "lottieLoaderAnimProgress")
         , afterRender (\action-> do
-                      _ <- pure $ startLottieProcess "progress_loader_line" (getNewIDWithTag "lottieLoaderAnimProgress") true 0.6 "CENTER_CROP"
+                      _ <- pure $ startLottieProcess ((getAssetStoreLink FunctionCall) <> "lottie/progress_loader_line.json") (getNewIDWithTag "lottieLoaderAnimProgress") true 0.6 "CENTER_CROP"
                       pure unit)(const NoAction)
         , height WRAP_CONTENT
         , visibility if ( (null state.quoteListModel)  && getValueToLocalStore LOCAL_STAGE == "FindingQuotes") then VISIBLE else GONE
@@ -205,7 +205,7 @@ findingRidesView state push =
     lottieAnimationView 
       [ id (getNewIDWithTag "lottieLoaderAnim")
       , afterRender (\action-> do
-                    _ <- pure $ startLottieProcess "finding_rides_loader_with_text" (getNewIDWithTag "lottieLoaderAnim") true 0.6 "Default"
+                    _ <- pure $ startLottieProcess ((getAssetStoreLink FunctionCall) <> "lottie/finding_rides_loader_with_text.json") (getNewIDWithTag "lottieLoaderAnim") true 0.6 "Default"
                     pure unit)(const NoAction)
       , height $ V 300
       , width $ V 300
