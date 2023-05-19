@@ -105,12 +105,11 @@ onSelect OnSelectValidatedReq {..} = do
     QEstimate.updateStatus estimate.id DEstimate.GOT_DRIVER_QUOTE
   QPFS.clearCache searchRequest.riderId
 
-  if estimate.autoAssignEnabledV2
+  if searchRequest.autoAssignEnabledV2
     then do
       let lowestFareQuote = selectLowestFareQuote quotes
       case lowestFareQuote of
         Just autoAssignQuote -> do
-          DB.runTransaction $ QEstimate.updateQuote estimate.id autoAssignQuote.id
           dConfirmRes <- SConfirm.confirm person.id autoAssignQuote.id
           becknInitReq <- ACL.buildInitReq dConfirmRes
           handle (errHandler dConfirmRes.booking) $ void $ withShortRetry $ CallBPP.init dConfirmRes.providerUrl becknInitReq

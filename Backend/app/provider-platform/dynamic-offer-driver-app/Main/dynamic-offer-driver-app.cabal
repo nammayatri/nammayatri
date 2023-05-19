@@ -188,6 +188,7 @@ library
       Domain.Types.Ride
       Domain.Types.RideDetails
       Domain.Types.RiderDetails
+      Domain.Types.SearchRequest
       Domain.Types.SearchRequest.SearchReqLocation
       Domain.Types.SearchRequestForDriver
       Domain.Types.SearchRequestSpecialZone
@@ -290,6 +291,7 @@ library
       Storage.Queries.Ride
       Storage.Queries.RideDetails
       Storage.Queries.RiderDetails
+      Storage.Queries.SearchRequest
       Storage.Queries.SearchRequestForDriver
       Storage.Queries.SearchRequestSpecialZone
       Storage.Queries.SearchTry
@@ -353,6 +355,7 @@ library
       Storage.Tabular.Ride.Table
       Storage.Tabular.RideDetails
       Storage.Tabular.RiderDetails
+      Storage.Tabular.SearchRequest
       Storage.Tabular.SearchRequest.SearchReqLocation
       Storage.Tabular.SearchRequestForDriver
       Storage.Tabular.SearchRequestSpecialZone

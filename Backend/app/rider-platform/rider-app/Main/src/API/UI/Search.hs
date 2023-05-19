@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE OverloadedLists #-}
 
 module API.UI.Search
   ( SearchReq (..),
@@ -37,7 +36,6 @@ import qualified Domain.Action.UI.Search.Rental as DRentalSearch
 import qualified Domain.Types.Person as Person
 import Domain.Types.SearchRequest (SearchRequest)
 import Environment
-import Kernel.External.Maps
 import qualified Kernel.External.Slack.Flow as SF
 import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Prelude
@@ -56,11 +54,8 @@ import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter
 import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
-import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.PublicTransport as PublicTransport
 import Storage.CachedQueries.CacheConfig
-import qualified Storage.CachedQueries.Merchant as QMerchant
-import qualified Storage.CachedQueries.MerchantConfig as CMC
 import qualified Storage.Queries.Person as Person
 import Tools.Auth
 import qualified Tools.JSON as J
@@ -150,64 +145,15 @@ oneWaySearch ::
   DOneWaySearch.OneWaySearchReq ->
   m (Id SearchRequest, UTCTime, Maybe Maps.RouteInfo)
 oneWaySearch personId bundleVersion clientVersion device req = do
-  person <- Person.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  merchant <- QMerchant.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
-  let sourceLatlong = req.origin.gps
-  let destinationLatLong = req.destination.gps
-  let request =
-        Maps.GetRoutesReq
-          { waypoints = [sourceLatlong, destinationLatLong],
-            calcPoints = True,
-            mode = Just Maps.CAR
-          }
-  routeResponse <- Maps.getRoutes person.merchantId request
-  let shortestRouteInfo = getRouteInfoWithShortestDuration routeResponse
-  let longestRouteDistance = (.distance) =<< getLongestRouteDistance routeResponse
-  let shortestRouteDistance = (.distance) =<< shortestRouteInfo
-  let shortestRouteDuration = (.duration) =<< shortestRouteInfo
-  dSearchRes <- DOneWaySearch.oneWaySearch person merchant req bundleVersion clientVersion longestRouteDistance device shortestRouteDistance shortestRouteDuration
+  dSearchRes <- DOneWaySearch.oneWaySearch personId req bundleVersion clientVersion device
   fork "search cabs" . withShortRetry $ do
-    becknTaxiReq <- TaxiACL.buildOneWaySearchReq dSearchRes device shortestRouteDistance shortestRouteDuration
+    becknTaxiReq <- TaxiACL.buildOneWaySearchReq dSearchRes
     void $ CallBPP.search dSearchRes.gatewayUrl becknTaxiReq
   fork "search metro" . withShortRetry $ do
     becknMetroReq <- MetroACL.buildSearchReq dSearchRes
     CallBPP.searchMetro dSearchRes.gatewayUrl becknMetroReq
   fork "search public-transport" $ PublicTransport.sendPublicTransportSearchRequest personId dSearchRes
-  fork "updating search counters" $ do
-    merchantConfigs <- CMC.findAllByMerchantId person.merchantId
-    SMC.updateSearchFraudCounters personId merchantConfigs
-    mFraudDetected <- SMC.anyFraudDetected personId person.merchantId merchantConfigs
-    whenJust mFraudDetected $ \mc -> SMC.blockCustomer personId (Just mc.id)
-  return (dSearchRes.searchId, dSearchRes.searchRequestExpiry, shortestRouteInfo)
-
-getLongestRouteDistance :: [Maps.RouteInfo] -> Maybe Maps.RouteInfo
-getLongestRouteDistance [] = Nothing
-getLongestRouteDistance (routeInfo : routeInfoArray) =
-  if null routeInfoArray
-    then Just routeInfo
-    else do
-      restRouteresult <- getLongestRouteDistance routeInfoArray
-      Just $ comparator' routeInfo restRouteresult
-  where
-    comparator' route1 route2 =
-      if route1.distance > route2.distance
-        then route1
-        else route2
-
-getRouteInfoWithShortestDuration :: [Maps.RouteInfo] -> Maybe Maps.RouteInfo
-getRouteInfoWithShortestDuration (routeInfo : routeInfoArray) =
-  if null routeInfoArray
-    then Just routeInfo
-    else do
-      restRouteresult <- getRouteInfoWithShortestDuration routeInfoArray
-      Just $ comparator routeInfo restRouteresult
-getRouteInfoWithShortestDuration [] = Nothing
-
-comparator :: Maps.RouteInfo -> Maps.RouteInfo -> Maps.RouteInfo
-comparator route1 route2 =
-  if route1.duration < route2.duration
-    then route1
-    else route2
+  return (dSearchRes.searchId, dSearchRes.searchRequestExpiry, dSearchRes.shortestRouteInfo)
 
 rentalSearch ::
   ( HasCacheConfig r,

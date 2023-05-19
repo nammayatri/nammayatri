@@ -71,7 +71,7 @@ handler :: FlowServer API
 handler = callSelect :<|> callSelectList :<|> callSelectResult :<|> callCancelSearch
 
 callSelect :: Id DP.Person -> Id DEstimate.Estimate -> FlowHandler APISuccess
-callSelect = US.select
+callSelect personId estimateId = US.select2 personId estimateId $ US.DSelectReq {customerExtraFee = Nothing, autoAssignEnabled = False, autoAssignEnabledV2 = Nothing}
 
 callSelectList :: Id DP.Person -> Id DEstimate.Estimate -> FlowHandler DSelect.SelectListRes
 callSelectList = US.selectList

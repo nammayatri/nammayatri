@@ -23,6 +23,7 @@ import Data.Ord (comparing)
 import Domain.Types.Estimate as DEst
 import Domain.Types.FarePolicy
 import qualified Domain.Types.FarePolicy as DFP
+import qualified Domain.Types.SearchRequest as DSR
 import Kernel.Prelude
 import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.Common
@@ -33,12 +34,12 @@ import Storage.CachedQueries.CacheConfig
 
 buildEstimate ::
   (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r) =>
-  Text ->
+  Id DSR.SearchRequest ->
   UTCTime ->
   Meters ->
   FarePolicy ->
   m DEst.Estimate
-buildEstimate transactionId startTime dist farePolicy = do
+buildEstimate searchReqId startTime dist farePolicy = do
   fareParams <-
     calculateFareParameters
       CalculateFareParametersParams
@@ -59,7 +60,7 @@ buildEstimate transactionId startTime dist farePolicy = do
   pure
     DEst.Estimate
       { id = Id uuid,
-        transactionId = transactionId,
+        requestId = searchReqId,
         vehicleVariant = farePolicy.vehicleVariant,
         minFare = baseFare + maybe 0 (.minFee) mbDriverExtraFeeBounds,
         maxFare = baseFare + maybe 0 (.maxFee) mbDriverExtraFeeBounds,

@@ -24,11 +24,10 @@ import qualified Domain.Types.SearchTry as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant (Variant)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
+import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
-import Kernel.Utils.Common hiding (id)
 import Storage.Tabular.Estimate (EstimateTId)
-import Storage.Tabular.Merchant (MerchantTId)
-import Storage.Tabular.SearchRequest.SearchReqLocation (SearchReqLocationT, SearchReqLocationTId, mkDomainSearchReqLocation, mkTabularSearchReqLocation)
+import Storage.Tabular.SearchRequest (SearchRequestTId)
 import Storage.Tabular.Vehicle ()
 
 derivePersistField "Domain.SearchTryStatus"
@@ -38,26 +37,18 @@ mkPersist
   [defaultQQ|
     SearchTryT sql=search_try
       id Text
-      transactionId Text
       messageId Text
+      requestId SearchRequestTId
       estimateId EstimateTId
       startTime UTCTime
       validTill UTCTime
-      providerId MerchantTId
-      fromLocationId SearchReqLocationTId
-      toLocationId SearchReqLocationTId
-      bapId Text
-      bapUri Text
-      estimatedDistance Meters
-      estimatedDuration Seconds
       customerExtraFee Money Maybe
-      device Text Maybe
       status Domain.SearchTryStatus
       vehicleVariant Variant.Variant
       searchRepeatCounter Int
-      autoAssignEnabled Bool
       createdAt UTCTime
       updatedAt UTCTime
+
       Primary id
       deriving Generic
     |]
@@ -67,36 +58,21 @@ instance TEntityKey SearchTryT where
   fromKey (SearchTryTKey _id) = Id _id
   toKey (Id id) = SearchTryTKey id
 
-type FullSearchTryT = (SearchTryT, SearchReqLocationT, SearchReqLocationT)
-
-instance FromTType FullSearchTryT Domain.SearchTry where
-  fromTType (SearchTryT {..}, fromLoc, toLoc) = do
-    pUrl <- parseBaseUrl bapUri
-    let fromLoc_ = mkDomainSearchReqLocation fromLoc
-        toLoc_ = mkDomainSearchReqLocation toLoc
-
+instance FromTType SearchTryT Domain.SearchTry where
+  fromTType SearchTryT {..} = do
     return $
       Domain.SearchTry
         { id = Id id,
+          requestId = fromKey requestId,
           estimateId = fromKey estimateId,
-          providerId = fromKey providerId,
-          fromLocation = fromLoc_,
-          toLocation = toLoc_,
-          bapUri = pUrl,
           ..
         }
 
-instance ToTType FullSearchTryT Domain.SearchTry where
+instance ToTType SearchTryT Domain.SearchTry where
   toTType Domain.SearchTry {..} =
-    ( SearchTryT
-        { id = getId id,
-          estimateId = toKey estimateId,
-          providerId = toKey providerId,
-          fromLocationId = toKey fromLocation.id,
-          toLocationId = toKey toLocation.id,
-          bapUri = showBaseUrl bapUri,
-          ..
-        },
-      mkTabularSearchReqLocation fromLocation,
-      mkTabularSearchReqLocation toLocation
-    )
+    SearchTryT
+      { id = getId id,
+        requestId = toKey requestId,
+        estimateId = toKey estimateId,
+        ..
+      }

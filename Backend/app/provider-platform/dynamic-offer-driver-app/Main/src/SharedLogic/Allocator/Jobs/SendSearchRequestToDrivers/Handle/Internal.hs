@@ -28,7 +28,6 @@ import Domain.Types.SearchTry as DST
 import Kernel.Prelude
 import Kernel.Storage.Hedis (HedisFlow)
 import qualified Kernel.Storage.Hedis as Hedis
-import Kernel.Types.Error (SearchRequestError (SearchRequestDoesNotExist))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool as Reexport
@@ -37,6 +36,7 @@ import Storage.CachedQueries.CacheConfig (HasCacheConfig)
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.SearchTry as QST
+import Tools.Error
 
 ifSearchRequestInvalid ::
   ( HasCacheConfig r,
@@ -46,8 +46,8 @@ ifSearchRequestInvalid ::
   ) =>
   Id SearchTry ->
   m Bool
-ifSearchRequestInvalid searchReqId = do
-  (validTill, status) <- QST.getSearchRequestStatusOrValidTill searchReqId >>= fromMaybeM (SearchRequestDoesNotExist searchReqId.getId)
+ifSearchRequestInvalid searchTryId = do
+  (validTill, status) <- QST.getSearchTryStatusAndValidTill searchTryId >>= fromMaybeM (SearchTryDoesNotExist searchTryId.getId)
   now <- getCurrentTime
   pure $ status == DST.CANCELLED || validTill <= now
 
@@ -59,7 +59,7 @@ isRideAlreadyAssigned ::
   ) =>
   Id SearchTry ->
   m Bool
-isRideAlreadyAssigned searchReqId = isJust <$> QB.findBySearchReq searchReqId
+isRideAlreadyAssigned searchTryId = isJust <$> QB.findBySTId searchTryId
 
 isReceivedMaxDriverQuotes ::
   ( HasCacheConfig r,
@@ -70,8 +70,8 @@ isReceivedMaxDriverQuotes ::
   DriverPoolConfig ->
   Id SearchTry ->
   m Bool
-isReceivedMaxDriverQuotes driverPoolCfg searchReqId = do
-  totalQuotesRecieved <- length <$> QDQ.findAllByRequestId searchReqId
+isReceivedMaxDriverQuotes driverPoolCfg searchTryId = do
+  totalQuotesRecieved <- length <$> QDQ.findAllBySTId searchTryId
   pure (totalQuotesRecieved >= driverPoolCfg.maxDriverQuotesRequired)
 
 getRescheduleTime ::
