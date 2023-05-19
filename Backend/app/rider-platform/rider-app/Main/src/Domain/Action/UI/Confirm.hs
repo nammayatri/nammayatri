@@ -58,5 +58,8 @@ cancelBooking booking = do
             source = DBCR.ByApplication,
             reasonCode = Nothing,
             reasonStage = Nothing,
-            additionalInfo = Nothing
+            additionalInfo = Nothing,
+            driverLat = Nothing,
+            driverLon = Nothing,
+            driverDistToPickup = Nothing
           }

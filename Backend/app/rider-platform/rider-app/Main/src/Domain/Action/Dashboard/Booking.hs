@@ -72,7 +72,10 @@ mkBookingCancellationReason reasonCode mbRideId bookingId = do
       source = DBCR.ByMerchant,
       reasonCode = Just $ coerce @Common.CancellationReasonCode @DCR.CancellationReasonCode reasonCode,
       reasonStage = Nothing,
-      additionalInfo = Nothing
+      additionalInfo = Nothing,
+      driverLat = Nothing,
+      driverLon = Nothing,
+      driverDistToPickup = Nothing
     }
 
 mkStuckBookingsCancelRes :: [Id DBooking.Booking] -> [QRide.StuckRideItem] -> Common.StuckBookingsCancelRes

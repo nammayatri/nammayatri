@@ -19,6 +19,7 @@ import Domain.Types.Booking (Booking)
 import Domain.Types.CancellationReason (CancellationReasonCode, CancellationStage)
 import Domain.Types.Ride (Ride)
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Types.Id
 
 data BookingCancellationReason = BookingCancellationReason
@@ -27,7 +28,10 @@ data BookingCancellationReason = BookingCancellationReason
     source :: CancellationSource,
     reasonCode :: Maybe CancellationReasonCode,
     reasonStage :: Maybe CancellationStage,
-    additionalInfo :: Maybe Text
+    additionalInfo :: Maybe Text,
+    driverLat :: Maybe Double,
+    driverLon :: Maybe Double,
+    driverDistToPickup :: Maybe Meters
   }
   deriving (Generic, Show)
 

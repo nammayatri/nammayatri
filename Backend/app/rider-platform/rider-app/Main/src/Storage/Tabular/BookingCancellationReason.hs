@@ -24,6 +24,7 @@ import qualified Domain.Types.BookingCancellationReason as Domain
 import qualified Domain.Types.CancellationReason as DCR
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
+import Kernel.Types.Common (Meters (..))
 import qualified Storage.Tabular.Booking as SRB
 import qualified Storage.Tabular.CancellationReason as SCR
 import qualified Storage.Tabular.Ride as SRide
@@ -40,6 +41,9 @@ mkPersist
       reasonCode SCR.CancellationReasonTId Maybe
       reasonStage DCR.CancellationStage Maybe
       additionalInfo Text Maybe
+      driverLat Double Maybe
+      driverLon Double Maybe
+      driverDistToPickup Meters Maybe
       Primary bookingId
       UniqueBookingCancellationReasonBookingId bookingId
       deriving Generic
