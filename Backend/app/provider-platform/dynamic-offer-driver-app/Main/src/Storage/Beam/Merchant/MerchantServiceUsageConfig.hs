@@ -119,32 +119,6 @@ instance IsString WhatsappService where
 instance IsString CallService where
   fromString = show
 
-instance FromField SmsService where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be SmsService where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be SmsService
-
-instance FromBackendRow Postgres SmsService
-
-instance IsString SmsService where
-  fromString = show
-
-instance FromField WhatsappService where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be WhatsappService where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be WhatsappService
-
-instance FromBackendRow Postgres WhatsappService
-
-instance IsString WhatsappService where
-  fromString = show
-
 data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
   { merchantId :: B.C f Text,
     initiateCall :: B.C f CallService,
@@ -206,9 +180,6 @@ merchantServiceUsageConfigTMod =
       updatedAt = B.fieldNamed "updated_at",
       createdAt = B.fieldNamed "created_at"
     }
-
-instance IsString CallService where
-  fromString = show
 
 instance IsString MapsService where
   fromString = show

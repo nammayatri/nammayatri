@@ -30,7 +30,6 @@ import Lib.Utils
 import qualified Sequelize as Se
 import Storage.Beam.FareParameters as BeamFP hiding (Id)
 import qualified Storage.Beam.QuoteSpecialZone as BeamQSZ
-import Storage.Queries.FullEntityBuilders (buildFullQuoteSpecialZone)
 import Storage.Queries.FareParameters as BeamQFP
 import Storage.Queries.FullEntityBuilders (buildFullQuoteSpecialZone)
 import qualified Storage.Tabular.FareParameters as Fare

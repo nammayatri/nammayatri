@@ -39,7 +39,7 @@ findAll' = do
   case dbConf of
     -- Just dbCOnf' -> either (pure Nothing) (transformBeamCallStatusToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamCT.id $ Se.Eq callStatusId]
     -- findAllWithKVConnector
-    Just dbCOnf' -> either (pure []) (transformBeamCancReasonToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamCR.enabled $ Se.Eq True]
+    Just dbCOnf' -> either (pure []) (transformBeamCancellationReasonToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamCR.enabled $ Se.Eq True]
     Nothing -> pure []
 
 transformBeamCancellationReasonToDomain :: BeamCR.CancellationReason -> CancellationReason
