@@ -123,42 +123,42 @@ getAlternateNumberAttempts personId =
       where_ $ attempts ^. RegistrationTokenEntityId ==. val (getId personId)
       return $ attempts ^. RegistrationTokenAlternateNumberAttempts
 
--- transformBeamRegistrationTokenToDomain :: BeamRT.RegistrationToken -> RegistrationToken
--- transformBeamRegistrationTokenToDomain BeamRT.RegistrationTokenT {..} = do
---   RegistrationToken
---     { id = Id id,
---       token = token,
---       attempts = attempts,
---       authMedium = authMedium,
---       authType = authType,
---       authValueHash = authValueHash,
---       verified = verified,
---       authExpiry = authExpiry,
---       tokenExpiry = tokenExpiry,
---       entityId = entityId,
---       entityType = entityType,
---       createdAt = createdAt,
---       updatedAt = updatedAt,
---       info = info,
---       alternateNumberAttempts = alternateNumberAttempts
---     }
+transformBeamRegistrationTokenToDomain :: BeamRT.RegistrationToken -> RegistrationToken
+transformBeamRegistrationTokenToDomain BeamRT.RegistrationTokenT {..} = do
+  RegistrationToken
+    { id = Id id,
+      token = token,
+      attempts = attempts,
+      authMedium = authMedium,
+      authType = authType,
+      authValueHash = authValueHash,
+      verified = verified,
+      authExpiry = authExpiry,
+      tokenExpiry = tokenExpiry,
+      entityId = entityId,
+      entityType = entityType,
+      createdAt = createdAt,
+      updatedAt = updatedAt,
+      info = info,
+      alternateNumberAttempts = alternateNumberAttempts
+    }
 
--- transformDomainRegistrationTokenToBeam :: RegistrationToken -> BeamRT.RegistrationToken
--- transformDomainRegistrationTokenToBeam RegistrationToken {..} =
---   BeamRT.defaultRegistrationToken
---     { BeamRT.id = getId id,
---       BeamRT.token = token,
---       BeamRT.attempts = attempts,
---       BeamRT.authMedium = authMedium,
---       BeamRT.authType = authType,
---       BeamRT.authValueHash = authValueHash,
---       BeamRT.verified = verified,
---       BeamRT.authExpiry = authExpiry,
---       BeamRT.tokenExpiry = tokenExpiry,
---       BeamRT.entityId = entityId,
---       BeamRT.entityType = entityType,
---       BeamRT.createdAt = createdAt,
---       BeamRT.updatedAt = updatedAt,
---       BeamRT.info = info,
---       BeamRT.alternateNumberAttempts = alternateNumberAttempts
---     }
+transformDomainRegistrationTokenToBeam :: RegistrationToken -> BeamRT.RegistrationToken
+transformDomainRegistrationTokenToBeam RegistrationToken {..} =
+  BeamRT.defaultRegistrationToken
+    { BeamRT.id = getId id,
+      BeamRT.token = token,
+      BeamRT.attempts = attempts,
+      BeamRT.authMedium = authMedium,
+      BeamRT.authType = authType,
+      BeamRT.authValueHash = authValueHash,
+      BeamRT.verified = verified,
+      BeamRT.authExpiry = authExpiry,
+      BeamRT.tokenExpiry = tokenExpiry,
+      BeamRT.entityId = entityId,
+      BeamRT.entityType = entityType,
+      BeamRT.createdAt = createdAt,
+      BeamRT.updatedAt = updatedAt,
+      BeamRT.info = info,
+      BeamRT.alternateNumberAttempts = alternateNumberAttempts
+    }

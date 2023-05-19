@@ -19,6 +19,7 @@ module Storage.Beam.SearchRequest where
 
 import qualified Data.Aeson as A
 import Data.ByteString.Internal (ByteString, unpackChars)
+import Data.Either.Extra
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
@@ -42,6 +43,7 @@ import Kernel.Utils.Common hiding (id)
 import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
+import Servant.Client
 import Storage.Tabular.Estimate (EstimateTId)
 import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.SearchRequest.SearchReqLocation (SearchReqLocationT, SearchReqLocationTId, mkDomainSearchReqLocation, mkTabularSearchReqLocation)
@@ -213,31 +215,40 @@ searchRequestToPSModifiers =
   M.fromList
     []
 
--- defaultSearchRequest :: SearchRequest
--- defaultSearchRequest =
---   SearchRequestT
---     { id = "",
---       transactionId = "",
---       messageId = "",
---       estimateId = "",
---       startTime = defaultUTCDate,
---       validTill = defaultUTCDate,
---       providerId = "",
---       fromLocationId = "",
---       toLocationId = "",
---       bapId = "",
---       bapUri = "",
---       estimatedDistance = "",
---       estimatedDuration = "",
---       customerExtraFee = Nothing,
---       device = Nothing,
---       status = "",
---       vehicleVariant = "",
---       searchRepeatCounter = 0,
---       autoAssignEnabled = False,
---       createdAt = defaultUTCDate,
---       updatedAt = defaultUTCDate
---     }
+defaultUrl :: BaseUrl
+defaultUrl =
+  BaseUrl
+    { baseUrlScheme = Https,
+      baseUrlHost = "localhost",
+      baseUrlPort = 80,
+      baseUrlPath = ""
+    }
+
+defaultSearchRequest :: SearchRequest
+defaultSearchRequest =
+  SearchRequestT
+    { id = "",
+      transactionId = "",
+      messageId = "",
+      estimateId = "",
+      startTime = defaultUTCDate,
+      validTill = defaultUTCDate,
+      providerId = "",
+      fromLocationId = "",
+      toLocationId = "",
+      bapId = "",
+      bapUri = defaultUrl,
+      estimatedDistance = "",
+      estimatedDuration = "",
+      customerExtraFee = Nothing,
+      device = Nothing,
+      status = "",
+      vehicleVariant = "",
+      searchRepeatCounter = 0,
+      autoAssignEnabled = False,
+      createdAt = defaultUTCDate,
+      updatedAt = defaultUTCDate
+    }
 
 instance Serialize SearchRequest where
   put = error "undefined"

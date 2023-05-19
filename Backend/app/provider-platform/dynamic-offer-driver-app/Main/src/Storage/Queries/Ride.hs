@@ -35,7 +35,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
--- import qualified Storage.Beam.Ride as BeamR
+import qualified Storage.Beam.Ride.Table as BeamR
 import Storage.Queries.Booking (baseBookingTable)
 import Storage.Queries.FullEntityBuilders (buildFullBooking)
 import Storage.Tabular.Booking as Booking

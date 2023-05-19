@@ -53,30 +53,31 @@ findById = Esq.findById
 --     Just dbCOnf' -> either (pure Nothing) (transformBeamRideDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamRD.id $ Se.Eq rideDetailsId]
 --     Nothing -> pure Nothing
 
--- transformBeamRideDetailsToDomain :: BeamRD.RideDetails -> RideDetails
--- transformBeamRideDetailsToDomain BeamRD.RideDetailsT {..} = do
---   RideDetails
---     { id = Id id,
---       driverName = driverName,
---       driverNumber = driverNumber,
---       driverCountryCode = driverCountryCode,
---       vehicleNumber = vehicleNumber,
---       vehicleColor = vehicleColor,
---       vehicleVariant = vehicleVariant,
---       vehicleModel = vehicleModel,
---       vehicleClass = vehicleClass
---     }
+transformBeamRideDetailsToDomain :: BeamRD.RideDetails -> RideDetails
+transformBeamRideDetailsToDomain BeamRD.RideDetailsT {..} = do
+  RideDetails
+    { id = Id id,
+      driverName = driverName,
+      driverNumber = EncryptedHashed <$> (Encrypted <$> driverNumberEncrypted) <*> driverNumberHash,
+      driverCountryCode = driverCountryCode,
+      vehicleNumber = vehicleNumber,
+      vehicleColor = vehicleColor,
+      vehicleVariant = vehicleVariant,
+      vehicleModel = vehicleModel,
+      vehicleClass = vehicleClass
+    }
 
--- transformDomainRideDetailsToBeam :: RideDetails -> BeamRD.RideDetails
--- transformDomainRideDetailsToBeam RideDetails {..} =
---   BeamRD.defaultRideDetails
---     { BeamRD.id = getId id,
---       BeamRD.driverName = driverName,
---       BeamRD.driverNumber = driverNumber,
---       BeamRD.driverCountryCode = driverCountryCode,
---       BeamRD.vehicleNumber = vehicleNumber,
---       BeamRD.vehicleColor = vehicleColor,
---       BeamRD.vehicleVariant = vehicleVariant,
---       BeamRD.vehicleModel = vehicleModel,
---       BeamRD.vehicleClass = vehicleClass
---     }
+transformDomainRideDetailsToBeam :: RideDetails -> BeamRD.RideDetails
+transformDomainRideDetailsToBeam RideDetails {..} =
+  BeamRD.RideDetailsT
+    { BeamRD.id = getId id,
+      BeamRD.driverName = driverName,
+      BeamRD.driverNumberEncrypted = driverNumber <&> unEncrypted . (.encrypted),
+      BeamRD.driverNumberHash = driverNumber <&> (.hash),
+      BeamRD.driverCountryCode = driverCountryCode,
+      BeamRD.vehicleNumber = vehicleNumber,
+      BeamRD.vehicleColor = vehicleColor,
+      BeamRD.vehicleVariant = vehicleVariant,
+      BeamRD.vehicleModel = vehicleModel,
+      BeamRD.vehicleClass = vehicleClass
+    }

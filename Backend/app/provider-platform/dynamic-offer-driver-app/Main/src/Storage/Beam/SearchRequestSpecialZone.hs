@@ -19,6 +19,7 @@ module Storage.Beam.SearchRequestSpecialZone where
 
 import qualified Data.Aeson as A
 import Data.ByteString.Internal (ByteString, unpackChars)
+import Data.Either.Extra
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
@@ -41,6 +42,7 @@ import Kernel.Utils.Common hiding (id)
 import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
+import Servant.Client
 import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.SearchRequest.SearchReqLocation (SearchReqLocationT, SearchReqLocationTId, mkDomainSearchReqLocation, mkTabularSearchReqLocation)
 import Storage.Tabular.Vehicle ()
@@ -159,24 +161,33 @@ searchRequestSpecialZoneToPSModifiers =
   M.fromList
     []
 
--- defaultSearchRequestSpecialZone :: SearchRequestSpecialZone
--- defaultSearchRequestSpecialZone = do
---   SearchRequestSpecialZoneT
---     { id = "",
---       transactionId = "",
---       messageId = "",
---       startTime = defaultUTCDate,
---       validTill = defaultUTCDate,
---       providerId = "",
---       fromLocationId = "",
---       toLocationId = "",
---       bapId = "",
---       bapUri = pUrl,
---       estimatedDistance = "",
---       estimatedDuration = "",
---       createdAt = defaultUTCDate,
---       updatedAt = defaultUTCDate
---     }
+defaultUrl :: BaseUrl
+defaultUrl =
+  BaseUrl
+    { baseUrlScheme = Https,
+      baseUrlHost = "localhost",
+      baseUrlPort = 80,
+      baseUrlPath = ""
+    }
+
+defaultSearchRequestSpecialZone :: SearchRequestSpecialZone
+defaultSearchRequestSpecialZone = do
+  SearchRequestSpecialZoneT
+    { id = "",
+      transactionId = "",
+      messageId = "",
+      startTime = defaultUTCDate,
+      validTill = defaultUTCDate,
+      providerId = "",
+      fromLocationId = "",
+      toLocationId = "",
+      bapId = "",
+      bapUri = defaultUrl,
+      estimatedDistance = "",
+      estimatedDuration = "",
+      createdAt = defaultUTCDate,
+      updatedAt = defaultUTCDate
+    }
 
 instance Serialize SearchRequestSpecialZone where
   put = error "undefined"

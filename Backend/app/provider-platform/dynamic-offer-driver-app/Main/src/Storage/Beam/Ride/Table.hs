@@ -183,18 +183,6 @@ rideTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-instance IsString Domain.RideStatus where
-  fromString = show
-
-instance IsString Money where
-  fromString = show
-
-instance IsString HighPrecMeters where
-  fromString = show
-
-instance IsString Meters where
-  fromString = show
-
 defaultRide :: Ride
 defaultRide =
   RideT
@@ -221,20 +209,20 @@ defaultRide =
       updatedAt = defaultUTCDate
     }
 
-instance Serialize Table where
+instance Serialize Ride where
   put = error "undefined"
   get = error "undefined"
 
 psToHs :: HM.HashMap Text Text
 psToHs = HM.empty
 
-tableToHSModifiers :: M.Map Text (A.Value -> A.Value)
-tableToHSModifiers =
+rideToHSModifiers :: M.Map Text (A.Value -> A.Value)
+rideToHSModifiers =
   M.fromList
     []
 
-tableToPSModifiers :: M.Map Text (A.Value -> A.Value)
-tableToPSModifiers =
+rideToPSModifiers :: M.Map Text (A.Value -> A.Value)
+rideToPSModifiers =
   M.fromList
     []
 

@@ -179,33 +179,37 @@ findAllBookings = do
     booking <- from $ table @GeometryT
     pure $ booking ^. GeometryTId
 
--- transformBeamBookingToDomain :: BeamB.Booking -> Booking
+-- transformBeamBookingToDomain :: L.MonadFlow m => BeamB.Booking -> m Booking
 -- transformBeamBookingToDomain BeamB.BookingT {..} = do
---   Booking
---     { id = Id id,
---       transactionId = transactionId,
---       quoteId = quoteId,
---       status = status,
---       bookingType = bookingType,
---       specialZoneOtpCode = specialZoneOtpCode,
---       providerId = Id providerId,
---       primaryExophone = primaryExophone,
---       bapId = bapId,
---       bapUri = bapUri,
---       startTime = startTime,
---       riderId = Id <$> riderId,
---       fromLocation = fromLocation,
---       toLocation = toLocation,
---       vehicleVariant = vehicleVariant,
---       estimatedDistance = estimatedDistance,
---       maxEstimatedDistance = maxEstimatedDistance,
---       estimatedFare = estimatedFare,
---       estimatedDuration = estimatedDuration,
---       fareParams = fareParams,
---       riderName = riderName,
---       createdAt = createdAt,
---       updatedAt = updatedAt
---     }
+--   fl <- QSRL.findById' (Id fromLocationId)
+--   tl <- QSRL.findById' (Id toLocationId)
+--   pUrl <- parseBaseUrl bapUri
+--   pure
+--     Booking
+--       { id = Id id,
+--         transactionId = transactionId,
+--         quoteId = quoteId,
+--         status = status,
+--         bookingType = bookingType,
+--         specialZoneOtpCode = specialZoneOtpCode,
+--         providerId = Id providerId,
+--         primaryExophone = primaryExophone,
+--         bapId = bapId,
+--         bapUri = pUrl,
+--         startTime = startTime,
+--         riderId = Id <$> riderId,
+--         fromLocation = fromJust fl,
+--         toLocation = fromJust tl,
+--         vehicleVariant = vehicleVariant,
+--         estimatedDistance = estimatedDistance,
+--         maxEstimatedDistance = maxEstimatedDistance,
+--         estimatedFare = estimatedFare,
+--         estimatedDuration = estimatedDuration,
+--         fareParams = fareParams,
+--         riderName = riderName,
+--         createdAt = createdAt,
+--         updatedAt = updatedAt
+--       }
 
 -- transformDomainBookingToBeam :: Booking -> BeamB.Booking
 -- transformDomainBookingToBeam Booking {..} =
@@ -222,14 +226,14 @@ findAllBookings = do
 --       BeamB.bapUri = bapUri,
 --       BeamB.startTime = startTime,
 --       BeamB.riderId = getId <$> riderId,
---       BeamB.fromLocation = fromLocation,
---       BeamB.toLocation = toLocation,
+--       BeamB.fromLocationId = fromLocation,
+--       BeamB.toLocationId = toLocation,
 --       BeamB.vehicleVariant = vehicleVariant,
 --       BeamB.estimatedDistance = estimatedDistance,
 --       BeamB.maxEstimatedDistance = maxEstimatedDistance,
 --       BeamB.estimatedFare = estimatedFare,
 --       BeamB.estimatedDuration = estimatedDuration,
---       BeamB.fareParams = fareParams,
+--       BeamB.fareParametersId = fareParams,
 --       BeamB.riderName = riderName,
 --       BeamB.createdAt = createdAt,
 --       BeamB.updatedAt = updatedAt
