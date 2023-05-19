@@ -14,7 +14,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 
 module Domain.Action.UI.Select
-  ( DEstimateSelectReq (..),
+  ( DSelectReq (..),
     DSelectRes (..),
     SelectListRes (..),
     QuotesResultResponse (..),
@@ -37,7 +37,6 @@ import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.SearchRequest as DSearchReq
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Environment
-import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (runInReplica)
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -47,7 +46,7 @@ import Kernel.Types.Id
 import Kernel.Types.Predicate
 import Kernel.Utils.Common
 import Kernel.Utils.Validation
-import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
@@ -55,7 +54,7 @@ import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
 
-data DEstimateSelectReq = DEstimateSelectReq
+data DSelectReq = DSelectReq
   { customerExtraFee :: Maybe Money,
     autoAssignEnabled :: Bool,
     autoAssignEnabledV2 :: Maybe Bool
@@ -63,8 +62,8 @@ data DEstimateSelectReq = DEstimateSelectReq
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-validateDSelectReq :: Validate DEstimateSelectReq
-validateDSelectReq DEstimateSelectReq {..} =
+validateDSelectReq :: Validate DSelectReq
+validateDSelectReq DSelectReq {..} =
   sequenceA_
     [ validateField "customerExtraFee" customerExtraFee $ InMaybe $ InRange @Money 1 100
     ]
@@ -75,10 +74,8 @@ data DSelectRes = DSelectRes
     providerId :: Text,
     providerUrl :: BaseUrl,
     variant :: VehicleVariant,
-    city :: Text,
-    customerLanguage :: Maybe Maps.Language,
     customerExtraFee :: Maybe Money,
-    autoAssignEnabled :: Bool
+    city :: Text
   }
 
 data QuotesResultResponse = QuotesResultResponse
@@ -113,8 +110,8 @@ instance FromJSON CancelAPIResponse where
       _ -> parseFail "Expected \"Success\" in \"result\" field."
   parseJSON err = typeMismatch "Object APISuccess" err
 
-select :: Id DPerson.Person -> Id DEstimate.Estimate -> DEstimateSelectReq -> Flow DSelectRes
-select personId estimateId req@DEstimateSelectReq {..} = do
+select :: Id DPerson.Person -> Id DEstimate.Estimate -> DSelectReq -> Flow DSelectRes
+select personId estimateId req@DSelectReq {..} = do
   runRequestValidation validateDSelectReq req
   now <- getCurrentTime
   estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
@@ -122,13 +119,12 @@ select personId estimateId req@DEstimateSelectReq {..} = do
   when (DEstimate.isCancelled estimate.status) $ throwError $ EstimateCancelled estimate.id.getId
   let searchRequestId = estimate.requestId
   searchRequest <- QSearchRequest.findByPersonId personId searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist personId.getId)
-  merchant <- CQM.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
+  merchant <- QM.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
   when ((searchRequest.validTill) < now) $
     throwError SearchRequestExpired
   Esq.runTransaction $ do
     QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, validTill = searchRequest.validTill}
     QEstimate.updateStatus estimateId DEstimate.DRIVER_QUOTE_REQUESTED
-    QEstimate.updateAutoAssign estimateId autoAssignEnabled (fromMaybe False autoAssignEnabledV2)
     when (isJust req.customerExtraFee) $ do
       QSearchRequest.updateCustomerExtraFee searchRequest.id req.customerExtraFee
   QPFS.clearCache searchRequest.riderId
@@ -137,11 +133,11 @@ select personId estimateId req@DEstimateSelectReq {..} = do
       { providerId = estimate.providerId,
         providerUrl = estimate.providerUrl,
         variant = estimate.vehicleVariant,
-        customerLanguage = searchRequest.language,
         city = merchant.city,
         ..
       }
 
+--DEPRECATED
 selectList :: (EsqDBReplicaFlow m r) => Id DEstimate.Estimate -> m SelectListRes
 selectList estimateId = do
   estimate <- runInReplica $ QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
@@ -153,9 +149,8 @@ selectResult :: (EsqDBReplicaFlow m r) => Id DEstimate.Estimate -> m QuotesResul
 selectResult estimateId = do
   res <- runMaybeT $ do
     estimate <- MaybeT . runInReplica $ QEstimate.findById estimateId
-    quoteId <- MaybeT $ pure estimate.autoAssignQuoteId
     when (DEstimate.isCancelled estimate.status) $ MaybeT $ throwError $ EstimateCancelled estimate.id.getId
-    booking <- MaybeT . runInReplica $ QBooking.findAssignedByQuoteId (Id quoteId)
+    booking <- MaybeT . runInReplica $ QBooking.findAssignedByEstimateId estimate.id
     return $ QuotesResultResponse {bookingId = Just booking.id, selectedQuotes = Nothing}
   case res of
     Just r -> pure r

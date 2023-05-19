@@ -93,7 +93,9 @@ token: {{app-token}}
           "lon": 76.3388894,
           "lat": 10.0792806
       }
-    }
+    },
+    "autoAssignEnabled" : false,
+    "autoAssignEnabledV2" : false
   }
 }
 
@@ -111,10 +113,15 @@ token: {{app-token}}
 # @name select
 @estimateId = {{quotes.response.body.estimates[0].id}}
 
-POST {{app-host}}/estimate/{{estimateId}}/select HTTP/1.1
+POST {{app-host}}/estimate/{{estimateId}}/select2 HTTP/1.1
 content-type: application/json
 token: {{app-token}}
 
+{
+  "customerExtraFee" : 10,
+  "autoAssignEnabled" : false,
+  "autoAssignEnabledV2" : false
+}
 ###
 
 # @name nearbySearchRequest1
@@ -130,7 +137,7 @@ content-type: application/json
 
 {
     "offeredFare": 30.5,
-    "searchRequestId": "{{nearbySearchRequest1.response.body.searchRequests[0].searchRequestId}}"
+    "searchTryId": "{{nearbySearchRequest1.response.body.searchRequests[0].searchTryId}}"
 }
 
 ###
@@ -188,7 +195,7 @@ content-type: application/json
 
 {
     "offeredFare": 30.5,
-    "searchRequestId": "{{nearbySearchRequest2.response.body.searchRequests[0].searchRequestId}}"
+    "searchTryId": "{{nearbySearchRequest2.response.body.searchRequests[0].searchTryId}}"
 }
 ###
 

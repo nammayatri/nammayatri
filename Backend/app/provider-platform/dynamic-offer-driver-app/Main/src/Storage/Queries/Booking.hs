@@ -46,9 +46,9 @@ findById bookingId = buildDType $ do
       pure rb
   join <$> mapM buildFullBooking res
 
-findBySearchReq :: (Transactionable m) => Id DST.SearchTry -> m (Maybe Booking)
-findBySearchReq searchReqId = buildDType $ do
-  mbDriverQuoteT <- QDQuote.findDriverQuoteBySearchId searchReqId
+findBySTId :: (Transactionable m) => Id DST.SearchTry -> m (Maybe Booking)
+findBySTId searchTryId = buildDType $ do
+  mbDriverQuoteT <- QDQuote.findDriverQuoteBySTId searchTryId
   let mbDriverQuoteId = Id . DriverQuote.id <$> mbDriverQuoteT
   mbBookingT <- (join <$>) $ mapM findBookingByDriverQuoteId' mbDriverQuoteId
 

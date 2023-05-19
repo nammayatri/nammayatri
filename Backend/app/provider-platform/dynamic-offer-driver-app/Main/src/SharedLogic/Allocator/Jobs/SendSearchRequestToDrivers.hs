@@ -17,6 +17,7 @@ module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers where
 import qualified Domain.Types.FarePolicy as DFP
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.DriverPoolConfig
+import Domain.Types.SearchRequest (SearchRequest)
 import Domain.Types.SearchTry (SearchTry)
 import Kernel.Prelude hiding (handle)
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
@@ -31,7 +32,9 @@ import SharedLogic.DriverPool
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import Storage.CachedQueries.CacheConfig (CacheFlow, HasCacheConfig)
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchTry as QST
+import Tools.Error
 import qualified Tools.Metrics as Metrics
 
 sendSearchRequestToDrivers ::
@@ -49,11 +52,12 @@ sendSearchRequestToDrivers ::
   m ExecutionResult
 sendSearchRequestToDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   let jobData = jobInfo.jobData
-  let searchReqId = jobData.requestId
-  searchReq <- QST.findById searchReqId >>= fromMaybeM (SearchRequestNotFound searchReqId.getId)
+  let searchTryId = jobData.searchTryId
+  searchTry <- QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
+  searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound (searchReq.providerId.getId))
   driverPoolConfig <- getDriverPoolConfig merchant.id jobData.estimatedRideDistance
-  sendSearchRequestToDrivers' driverPoolConfig searchReq merchant jobData.baseFare jobData.driverExtraFeeBounds
+  sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant jobData.baseFare jobData.driverExtraFeeBounds
 
 sendSearchRequestToDrivers' ::
   ( EncFlow m r,
@@ -66,23 +70,24 @@ sendSearchRequestToDrivers' ::
     Log m
   ) =>
   DriverPoolConfig ->
+  SearchRequest ->
   SearchTry ->
   Merchant ->
   Money ->
   Maybe DFP.DriverExtraFeeBounds ->
   m ExecutionResult
-sendSearchRequestToDrivers' driverPoolConfig searchReq merchant baseFare driverExtraFeeBounds = do
+sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant baseFare driverExtraFeeBounds = do
   handler handle
   where
     handle =
       Handle
-        { isBatchNumExceedLimit = I.isBatchNumExceedLimit driverPoolConfig searchReq.transactionId,
-          isRideAlreadyAssigned = I.isRideAlreadyAssigned searchReq.id,
-          isReceivedMaxDriverQuotes = I.isReceivedMaxDriverQuotes driverPoolConfig searchReq.id,
-          getNextDriverPoolBatch = I.getNextDriverPoolBatch driverPoolConfig searchReq,
-          sendSearchRequestToDrivers = I.sendSearchRequestToDrivers searchReq baseFare driverExtraFeeBounds driverPoolConfig,
+        { isBatchNumExceedLimit = I.isBatchNumExceedLimit driverPoolConfig searchReq.id,
+          isRideAlreadyAssigned = I.isRideAlreadyAssigned searchTry.id,
+          isReceivedMaxDriverQuotes = I.isReceivedMaxDriverQuotes driverPoolConfig searchTry.id,
+          getNextDriverPoolBatch = I.getNextDriverPoolBatch driverPoolConfig searchReq searchTry,
+          sendSearchRequestToDrivers = I.sendSearchRequestToDrivers searchReq searchTry baseFare driverExtraFeeBounds driverPoolConfig,
           getRescheduleTime = I.getRescheduleTime driverPoolConfig.singleBatchProcessTime,
-          setBatchDurationLock = I.setBatchDurationLock searchReq.id driverPoolConfig.singleBatchProcessTime,
+          setBatchDurationLock = I.setBatchDurationLock searchTry.id driverPoolConfig.singleBatchProcessTime,
           createRescheduleTime = I.createRescheduleTime driverPoolConfig.singleBatchProcessTime,
           metrics =
             MetricsHandle
@@ -90,5 +95,5 @@ sendSearchRequestToDrivers' driverPoolConfig searchReq merchant baseFare driverE
                 incrementFailedTaskCounter = Metrics.incrementFailedTaskCounter merchant.name,
                 putTaskDuration = Metrics.putTaskDuration merchant.name
               },
-          ifSearchRequestIsInvalid = I.ifSearchRequestInvalid searchReq.id
+          ifSearchRequestIsInvalid = I.ifSearchRequestInvalid searchTry.id
         }

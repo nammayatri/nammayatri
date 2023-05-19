@@ -46,15 +46,15 @@ mkPersist
       transactionId Text
       fareProductType DQuote.FareProductType
       bppBookingId Text Maybe sql=bpp_ride_booking_id
+      quoteId SQuote.QuoteTId
+      riderId SPerson.PersonTId
       status Domain.BookingStatus
       providerId Text
-      quoteId SQuote.QuoteTId Maybe
       providerUrl Text
       providerName Text
       providerMobileNumber Text
       primaryExophone Text
       startTime UTCTime
-      riderId SPerson.PersonTId
       fromLocationId SLoc.BookingLocationTId
       toLocationId SLoc.BookingLocationTId Maybe
       estimatedFare HighPrecMoney
@@ -96,7 +96,7 @@ instance FromTType FullBookingT Domain.Booking where
         { id = Id id,
           bppBookingId = Id <$> bppBookingId,
           riderId = fromKey riderId,
-          quoteId = fromKey <$> quoteId,
+          quoteId = fromKey quoteId,
           providerUrl = pUrl,
           merchantId = fromKey merchantId,
           estimatedFare = roundToIntegral estimatedFare,
@@ -143,7 +143,7 @@ instance ToTType FullBookingT Domain.Booking where
             { id = getId id,
               bppBookingId = getId <$> bppBookingId,
               riderId = toKey riderId,
-              quoteId = toKey <$> quoteId,
+              quoteId = toKey quoteId,
               fromLocationId = toKey fromLocation.id,
               providerUrl = showBaseUrl providerUrl,
               tripTermsId = toKey <$> (tripTerms <&> (.id)),

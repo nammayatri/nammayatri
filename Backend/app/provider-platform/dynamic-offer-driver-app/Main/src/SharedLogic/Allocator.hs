@@ -38,7 +38,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SSendSearchRequestToDriver jobData = AnyJobInfo <$> restoreJobInfo SSendSearchRequestToDriver jobData
 
 data SendSearchRequestToDriverJobData = SendSearchRequestToDriverJobData
-  { requestId :: Id DST.SearchTry,
+  { searchTryId :: Id DST.SearchTry,
     baseFare :: Money,
     estimatedRideDistance :: Meters,
     customerExtraFee :: Maybe Money,

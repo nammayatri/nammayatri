@@ -11,10 +11,12 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE DerivingVia #-}
 
 module Domain.Types.Estimate where
 
 import Domain.Types.Common (UsageSafety (..))
+import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.Vehicle as Variant
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -22,7 +24,7 @@ import Kernel.Types.Id
 
 data Estimate = Estimate
   { id :: Id Estimate,
-    transactionId :: Text,
+    requestId :: Id DSR.SearchRequest,
     vehicleVariant :: Variant.Variant,
     minFare :: Money,
     maxFare :: Money,

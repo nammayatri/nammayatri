@@ -30,8 +30,8 @@ create quote =
       OneWayDetailsT oneWayQuoteT -> create' oneWayQuoteT
       RentalDetailsT (rentalQuoteT, _) -> create' rentalQuoteT
 
-findAllByRequestId :: Transactionable m => Id SearchRequest -> m [Quote]
-findAllByRequestId requestId = Esq.buildDType $ do
+findAllBySRId :: Transactionable m => Id SearchRequest -> m [Quote]
+findAllBySRId requestId = Esq.buildDType $ do
   quoteT <- Esq.findAll' $ do
     quote <- from $ table @QuoteT
     where_ $ quote ^. QuoteRequestId ==. val (toKey requestId)

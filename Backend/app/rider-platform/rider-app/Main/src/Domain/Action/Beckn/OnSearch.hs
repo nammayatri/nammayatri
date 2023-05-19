@@ -156,7 +156,7 @@ onSearch ::
 onSearch transactionId ValidatedOnSearchReq {..} = do
   Metrics.finishSearchMetrics merchant.name transactionId
   now <- getCurrentTime
-  estimates <- traverse (buildEstimate requestId providerInfo now _searchRequest) estimatesInfo
+  estimates <- traverse (buildEstimate providerInfo now _searchRequest) estimatesInfo
   quotes <- traverse (buildQuote requestId providerInfo now _searchRequest.merchantId) quotesInfo
   DB.runTransaction do
     QEstimate.createMany estimates
@@ -166,22 +166,19 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
 
 buildEstimate ::
   MonadFlow m =>
-  Id DSearchReq.SearchRequest ->
   ProviderInfo ->
   UTCTime ->
   SearchRequest ->
   EstimateInfo ->
   m DEstimate.Estimate
-buildEstimate requestId providerInfo now _searchRequest EstimateInfo {..} = do
+buildEstimate providerInfo now _searchRequest EstimateInfo {..} = do
   uid <- generateGUID
   tripTerms <- buildTripTerms descriptions
   estimateBreakupList' <- buildEstimateBreakUp estimateBreakupList uid
   pure
     DEstimate.Estimate
       { id = uid,
-        autoAssignEnabled = False,
-        autoAssignQuoteId = Nothing,
-        autoAssignEnabledV2 = False,
+        requestId = _searchRequest.id,
         providerMobileNumber = providerInfo.mobileNumber,
         providerName = providerInfo.name,
         providerCompletedRidesCount = providerInfo.ridesCompleted,

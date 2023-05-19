@@ -20,8 +20,7 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import qualified Domain.Types.Estimate as DEst
-import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
+import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -31,26 +30,17 @@ import Servant hiding (throwError)
 
 data SearchTry = SearchTry
   { id :: Id SearchTry,
+    requestId :: Id DSR.SearchRequest,
     estimateId :: Id DEst.Estimate,
-    transactionId :: Text,
     messageId :: Text,
     startTime :: UTCTime,
     validTill :: UTCTime,
-    providerId :: Id DM.Merchant,
-    fromLocation :: DLoc.SearchReqLocation,
-    toLocation :: DLoc.SearchReqLocation,
-    bapId :: Text,
-    bapUri :: BaseUrl,
-    estimatedDistance :: Meters,
-    estimatedDuration :: Seconds,
-    customerExtraFee :: Maybe Money,
-    device :: Maybe Text,
-    createdAt :: UTCTime,
-    updatedAt :: UTCTime,
     vehicleVariant :: Variant.Variant,
+    customerExtraFee :: Maybe Money,
     status :: SearchTryStatus,
-    autoAssignEnabled :: Bool,
-    searchRepeatCounter :: Int
+    searchRepeatCounter :: Int,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
   }
   deriving (Generic, PrettyShow, Show)
 
