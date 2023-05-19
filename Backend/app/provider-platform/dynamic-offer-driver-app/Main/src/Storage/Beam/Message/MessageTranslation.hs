@@ -85,7 +85,7 @@ instance B.Table MessageTranslationT where
   data PrimaryKey MessageTranslationT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
-  primaryKey = Id . language
+  primaryKey = Id . messageId
 
 instance ModelMeta MessageTranslationT where
   modelFieldModification = messageTranslationTMod
