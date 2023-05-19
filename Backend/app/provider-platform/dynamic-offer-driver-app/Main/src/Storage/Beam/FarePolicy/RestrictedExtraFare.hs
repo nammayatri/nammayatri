@@ -137,16 +137,6 @@ restrictedExtraFareTMod =
       driverMaxExtraFare = B.fieldNamed "driver_max_extra_fare"
     }
 
-
-instance IsString Vehicle.Variant where
-  fromString = show
-
-instance IsString Meters where
-  fromString = show
-
-instance IsString Money where
-  fromString = show
-
 defaultRestrictedExtraFare :: RestrictedExtraFare
 defaultRestrictedExtraFare =
   RestrictedExtraFareT

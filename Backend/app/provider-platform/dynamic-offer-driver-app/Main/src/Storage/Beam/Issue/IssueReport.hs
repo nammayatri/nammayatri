@@ -71,6 +71,16 @@ instance FromBackendRow Postgres Domain.IssueStatus
 instance IsString Domain.IssueStatus where
   fromString = show
 
+instance FromField [Text] where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be [Text] where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be [Text]
+
+instance FromBackendRow Postgres [Text]
+
 data IssueReportT f = IssueReportT
   { id :: B.C f Text,
     driverId :: B.C f Text,
@@ -81,7 +91,7 @@ data IssueReportT f = IssueReportT
     categoryId :: B.C f Text,
     optionId :: B.C f (Maybe Text),
     deleted :: B.C f Bool,
-    mediaFiles :: B.C f Text,
+    mediaFiles :: B.C f [Text],
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime
   }
@@ -125,10 +135,6 @@ issueReportTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-
-instance IsString Domain.IssueStatus where
-  fromString = show
-
 defaultIssueReport :: IssueReport
 defaultIssueReport =
   IssueReportT
@@ -141,7 +147,7 @@ defaultIssueReport =
       categoryId = "",
       optionId = Nothing,
       deleted = False,
-      mediaFiles = "",
+      mediaFiles = [],
       createdAt = defaultUTCDate,
       updatedAt = defaultUTCDate
     }

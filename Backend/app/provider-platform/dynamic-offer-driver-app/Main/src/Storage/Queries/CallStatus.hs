@@ -15,8 +15,8 @@
 module Storage.Queries.CallStatus where
 
 import qualified Data.Text as T
-import qualified Database.Beam.Postgres as DP
 import Database.Beam (insertExpressions)
+import qualified Database.Beam.Postgres as DP
 import qualified Debug.Trace as T
 import Domain.Types.CallStatus as DCS
 import Domain.Types.Ride
@@ -132,7 +132,7 @@ transformBeamCallStatusToDomain BeamCS.CallStatusT {..} = do
 
 transformDomainCallStatusToBeam :: CallStatus -> BeamCS.CallStatus
 transformDomainCallStatusToBeam CallStatus {..} =
-  BeamCS.defaultCallStatus
+  BeamCS.CallStatusT
     { BeamCS.id = getId id,
       BeamCS.callId = callId,
       BeamCS.rideId = getId rideId,

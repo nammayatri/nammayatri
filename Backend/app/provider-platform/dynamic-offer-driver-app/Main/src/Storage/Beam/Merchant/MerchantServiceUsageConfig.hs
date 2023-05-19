@@ -70,9 +70,6 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be VerificationService
 
 instance FromBackendRow Postgres VerificationService
 
-instance IsString VerificationService where
-  fromString = show
-
 instance FromField MapsService where
   fromField = fromFieldEnum
 
@@ -83,9 +80,6 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be MapsService
 
 instance FromBackendRow Postgres MapsService
 
-instance IsString MapsService where
-  fromString = show
-
 instance FromField CallService where
   fromField = fromFieldEnum
 
@@ -95,38 +89,6 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be CallService where
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be CallService
 
 instance FromBackendRow Postgres CallService
-
-instance IsString CallService where
-  fromString = show
-
-instance FromField SmsService where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be SmsService where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be SmsService
-
-instance FromBackendRow Postgres SmsService
-
-instance IsString SmsService where
-  fromString = show
-
-instance FromField WhatsappService where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be WhatsappService where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be WhatsappService
-
-instance FromBackendRow Postgres WhatsappService
-
-instance IsString WhatsappService where
-  fromString = show
-
-instance IsString CallService where
-  fromString = show
 
 instance FromField SmsService where
   fromField = fromFieldEnum
@@ -245,7 +207,6 @@ merchantServiceUsageConfigTMod =
       createdAt = B.fieldNamed "created_at"
     }
 
-
 instance IsString CallService where
   fromString = show
 
@@ -253,12 +214,6 @@ instance IsString MapsService where
   fromString = show
 
 instance IsString VerificationService where
-  fromString = show
-
-instance IsString WhatsappService where
-  fromString = show
-
-instance IsString SmsService where
   fromString = show
 
 defaultMerchantServiceUsageConfig :: MerchantServiceUsageConfig

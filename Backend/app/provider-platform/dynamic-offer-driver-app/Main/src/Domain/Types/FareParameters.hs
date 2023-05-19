@@ -18,7 +18,7 @@ module Domain.Types.FareParameters where
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Utils.GenericPretty (PrettyShow (..))
+import Kernel.Utils.GenericPretty
 
 data FareParameters = FareParameters
   { id :: Id FareParameters,
@@ -41,17 +41,6 @@ data FParamsProgressiveDetails = FParamsProgressiveDetails
     extraKmFare :: Maybe Money
   }
   deriving (Generic, Show, Eq, PrettyShow)
-
-deriving stock instance Read Money
-
-data FareParametersDetails = ProgressiveDetails FParamsProgressiveDetails | SlabDetails FParamsSlabDetails
-  deriving (Generic, Show, Eq, PrettyShow)
-
-data FParamsProgressiveDetails = FParamsProgressiveDetails
-  { deadKmFare :: Money,
-    extraKmFare :: Maybe Money
-  }
-  deriving (Generic, Show, Eq, PrettyShow, Ord, Read)
 
 data FParamsSlabDetails = FParamsSlabDetails
   deriving (Generic, Show, Eq)

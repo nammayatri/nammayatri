@@ -77,28 +77,28 @@ findById dQuoteId = buildDType $ do
     pure (dQuote, farePars)
   join <$> mapM buildFullQuoteSpecialZone res
 
--- transformBeamQuoteSpecialZoneToDomain :: BeamQSZ.QuoteSpecialZone -> QuoteSpecialZone
+-- transformBeamQuoteSpecialZoneToDomain :: L.MonadFlow m => BeamQSZ.QuoteSpecialZone -> m (QuoteSpecialZone)
 -- transformBeamQuoteSpecialZoneToDomain BeamQSZ.QuoteSpecialZoneT {..} = do
---   QuoteSpecialZone
---     {
---       id = Id id,
---       searchRequestId = Id searchRequestId,
---       providerId = Id providerId,
---       vehicleVariant = vehicleVariant,
---       distance = distance,
---       estimatedFinishTime = estimatedFinishTime,
---       createdAt = createdAt,
---       updatedAt = updatedAt,
---       validTill = validTill,
---       estimatedFare = estimatedFare,
---       fareParams = fareParams
---     }
+--   fp <- BeamQFP.findById' (Id fareParametersId)
+--   pure
+--     QuoteSpecialZone
+--       { id = Id id,
+--         searchRequestId = Id searchRequestId,
+--         providerId = Id providerId,
+--         vehicleVariant = vehicleVariant,
+--         distance = distance,
+--         estimatedFinishTime = estimatedFinishTime,
+--         createdAt = createdAt,
+--         updatedAt = updatedAt,
+--         validTill = validTill,
+--         estimatedFare = estimatedFare,
+--         fareParams = fromJust fp -- to take a default value?
+--       }
 
 -- transformDomainQuoteSpecialZoneToBeam :: QuoteSpecialZone -> BeamQSZ.QuoteSpecialZone
 -- transformDomainQuoteSpecialZoneToBeam QuoteSpecialZone {..} =
---   BeamQSZ.defaultQuoteSpecialZone
---     {
---       BeamQSZ.id = getId id,
+--   BeamQSZ.QuoteSpecialZoneT
+--     { BeamQSZ.id = getId id,
 --       BeamQSZ.searchRequestId = getId searchRequestId,
 --       BeamQSZ.providerId = getId providerId,
 --       BeamQSZ.vehicleVariant = vehicleVariant,
@@ -108,5 +108,5 @@ findById dQuoteId = buildDType $ do
 --       BeamQSZ.updatedAt = updatedAt,
 --       BeamQSZ.validTill = validTill,
 --       BeamQSZ.estimatedFare = estimatedFare,
---       BeamQSZ.fareParams = fareParams
+--       BeamQSZ.fareParametersId = getId fareParams.id
 --     }

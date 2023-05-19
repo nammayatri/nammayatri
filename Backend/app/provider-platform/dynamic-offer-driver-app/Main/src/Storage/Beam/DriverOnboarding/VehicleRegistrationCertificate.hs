@@ -82,6 +82,16 @@ instance FromBackendRow Postgres DbHash
 instance IsString DbHash where
   fromString = show
 
+instance FromField [Text] where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be [Text] where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be [Text]
+
+instance FromBackendRow Postgres [Text]
+
 data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
   { id :: B.C f Text,
     documentImageId :: B.C f Text,
@@ -98,7 +108,7 @@ data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
     vehicleColor :: B.C f (Maybe Text),
     vehicleEnergyType :: B.C f (Maybe Text),
     verificationStatus :: B.C f Domain.VerificationStatus,
-    failedRules :: B.C f Text,
+    failedRules :: B.C f [Text],
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime
   }
@@ -168,7 +178,7 @@ defaultVehicleRegistrationCertificate =
       vehicleColor = Nothing,
       vehicleEnergyType = Nothing,
       verificationStatus = "",
-      failedRules = "",
+      failedRules = [],
       createdAt = defaultUTCDate,
       updatedAt = defaultUTCDate
     }

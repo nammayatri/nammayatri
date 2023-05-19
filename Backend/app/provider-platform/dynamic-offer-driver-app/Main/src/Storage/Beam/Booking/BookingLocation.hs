@@ -24,19 +24,12 @@ import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-    ResultError (ConversionFailed, UnexpectedNull),
-  )
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
-import qualified Domain.Types.Booking.BookingLocation as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common hiding (id)
-import Lib.Util
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 
@@ -46,11 +39,11 @@ fromFieldEnum ::
   Maybe ByteString ->
   DPSF.Conversion a
 fromFieldEnum f mbValue = case mbValue of
-  Nothing -> DPSF.returnError UnexpectedNull f mempty
+  Nothing -> DPSF.returnError DPSF.UnexpectedNull f mempty
   Just value' ->
     case (readMaybe (unpackChars value')) of
       Just val -> pure val
-      _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
+      _ -> DPSF.returnError DPSF.ConversionFailed f "Could not 'read' value for 'Rule'."
 
 data BookingLocationT f = BookingLocationT
   { id :: B.C f Text,
@@ -112,8 +105,8 @@ defaultBookingLocation :: BookingLocation
 defaultBookingLocation =
   BookingLocationT
     { id = "",
-      lat = "",
-      lon = "",
+      lat = 0.0,
+      lon = 0.0,
       street = Nothing,
       door = Nothing,
       city = Nothing,

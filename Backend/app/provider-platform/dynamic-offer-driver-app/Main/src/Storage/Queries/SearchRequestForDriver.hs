@@ -108,37 +108,37 @@ updateDriverResponse id response = Esq.update $ \p -> do
   set p [SearchRequestForDriverResponse =. val (Just response)]
   where_ $ p ^. SearchRequestForDriverId ==. val (getId id)
 
-transformBeamSearchRequestForDriverToDomain :: BeamSRFD.SearchRequestForDriver -> SearchRequestForDriver
-transformBeamSearchRequestForDriverToDomain BeamSRFD.SearchRequestForDriverT {..} = do
-  SearchRequestForDriver
-    { id = Id id,
-      transactionId = transactionId,
-      searchRequestId = Id searchRequestId,
-      startTime = startTime,
-      searchRequestValidTill = searchRequestValidTill,
-      driverId = Id driverId,
-      actualDistanceToPickup = actualDistanceToPickup,
-      straightLineDistanceToPickup = straightLineDistanceToPickup,
-      durationToPickup = durationToPickup,
-      vehicleVariant = vehicleVariant,
-      status = status,
-      baseFare = baseFare,
-      batchNumber = batchNumber,
-      lat = lat,
-      lon = lon,
-      createdAt = createdAt,
-      response = response,
-      driverMinExtraFee = driverMinExtraFee,
-      driverMaxExtraFee = driverMaxExtraFee,
-      rideRequestPopupDelayDuration = rideRequestPopupDelayDuration,
-      isPartOfIntelligentPool = isPartOfIntelligentPool,
-      cancellationRatio = cancellationRatio,
-      acceptanceRatio = acceptanceRatio,
-      driverAvailableTime = driverAvailableTime,
-      parallelSearchRequestCount = parallelSearchRequestCount,
-      driverSpeed = driverSpeed,
-      mode = mode
-    }
+-- transformBeamSearchRequestForDriverToDomain :: BeamSRFD.SearchRequestForDriver -> SearchRequestForDriver
+-- transformBeamSearchRequestForDriverToDomain BeamSRFD.SearchRequestForDriverT {..} = do
+--   SearchRequestForDriver
+--     { id = Id id,
+--       transactionId = transactionId,
+--       searchRequestId = Id searchRequestId,
+--       startTime = startTime,
+--       searchRequestValidTill = searchRequestValidTill,
+--       driverId = Id driverId,
+--       actualDistanceToPickup = actualDistanceToPickup,
+--       straightLineDistanceToPickup = straightLineDistanceToPickup,
+--       durationToPickup = durationToPickup,
+--       vehicleVariant = vehicleVariant,
+--       status = status,
+--       baseFare = baseFare,
+--       batchNumber = batchNumber,
+--       lat = lat,
+--       lon = lon,
+--       createdAt = createdAt,
+--       response = response,
+--       driverMinExtraFee = driverMinExtraFee,
+--       driverMaxExtraFee = driverMaxExtraFee,
+--       rideRequestPopupDelayDuration = rideRequestPopupDelayDuration,
+--       isPartOfIntelligentPool = isPartOfIntelligentPool,
+--       cancellationRatio = cancellationRatio,
+--       acceptanceRatio = acceptanceRatio,
+--       driverAvailableTime = driverAvailableTime,
+--       parallelSearchRequestCount = parallelSearchRequestCount,
+--       driverSpeed = driverSpeed,
+--       mode = mode
+--     }
 
 -- transformDomainSearchRequestForDriverToBeam :: SearchRequestForDriver -> BeamSRFD.SearchRequestForDriver
 -- transformDomainSearchRequestForDriverToBeam SearchRequestForDriver {..} =

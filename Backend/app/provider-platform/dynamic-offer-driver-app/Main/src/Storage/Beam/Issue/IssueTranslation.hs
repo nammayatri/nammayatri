@@ -104,10 +104,6 @@ issueTranslationTMod =
       language = B.fieldNamed "language"
     }
 
-
-instance IsString Language where
-  fromString = show
-
 defaultIssueTranslation :: IssueTranslation
 defaultIssueTranslation =
   IssueTranslationT

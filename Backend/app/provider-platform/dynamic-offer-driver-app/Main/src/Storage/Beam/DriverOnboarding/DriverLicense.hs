@@ -39,6 +39,7 @@ import GHC.Generics (Generic)
 import Kernel.External.Encryption
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.DriverOnboarding.Image (ImageTId)
@@ -66,21 +67,20 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.VerificationStatus
 
 instance FromBackendRow Postgres Domain.VerificationStatus
 
-instance IsString Domain.VerificationStatus where
-  fromString = show
-
 instance FromField DbHash where
   fromField = fromFieldEnum
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be DbHash where
   sqlValueSyntax = autoSqlValueSyntax
 
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be [Text] where
+  sqlValueSyntax = autoSqlValueSyntax
+
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be DbHash
 
-instance FromBackendRow Postgres DbHash
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be [Text]
 
-instance IsString DbHash where
-  fromString = show
+instance FromBackendRow Postgres DbHash
 
 data DriverLicenseT f = DriverLicenseT
   { id :: B.C f Text,
@@ -92,8 +92,8 @@ data DriverLicenseT f = DriverLicenseT
     licenseNumberEncrypted :: B.C f Text,
     licenseNumberHash :: B.C f DbHash,
     licenseExpiry :: B.C f Time.UTCTime,
-    classOfVehicles :: B.C f Text,
-    failedRules :: B.C f Text,
+    classOfVehicles :: B.C f [Text],
+    failedRules :: B.C f [Text],
     verificationStatus :: B.C f Domain.VerificationStatus,
     consent :: B.C f Bool,
     consentTimestamp :: B.C f Time.UTCTime,
@@ -123,6 +123,8 @@ instance ToJSON DriverLicense where
 
 deriving stock instance Show DriverLicense
 
+deriving stock instance Ord Domain.VerificationStatus
+
 driverLicenseTMod :: DriverLicenseT (B.FieldModification (B.TableField DriverLicenseT))
 driverLicenseTMod =
   B.tableModification
@@ -144,31 +146,6 @@ driverLicenseTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-defaultDriverLicense :: DriverLicense
-defaultDriverLicense =
-  DriverLicenseT
-    { id = "",
-      driverId = "",
-      documentImageId1 = "",
-      documentImageId2 = Nothing,
-      driverDob = Nothing,
-      driverName = Nothing,
-      licenseNumberEncrypted = "",
-      licenseNumberHash = "",
-      licenseExpiry = defaultUTCDate,
-      classOfVehicles = "",
-      failedRules = "",
-      verificationStatus = "",
-      consent = False,
-      consentTimestamp = defaultUTCDate,
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
-    }
-
-instance Serialize DriverLicense where
-  put = error "undefined"
-  get = error "undefined"
-
 psToHs :: HM.HashMap Text Text
 psToHs = HM.empty
 
@@ -181,5 +158,15 @@ driverLicenseToPSModifiers :: M.Map Text (A.Value -> A.Value)
 driverLicenseToPSModifiers =
   M.fromList
     []
+
+instance IsString DbHash where
+  fromString = show
+
+instance IsString Domain.VerificationStatus where
+  fromString = show
+
+instance Serialize DriverLicense where
+  put = error "undefined"
+  get = error "undefined"
 
 $(enableKVPG ''DriverLicenseT ['id] [])

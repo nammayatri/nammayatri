@@ -159,24 +159,24 @@ searchRequestSpecialZoneToPSModifiers =
   M.fromList
     []
 
-defaultSearchRequestSpecialZone :: SearchRequestSpecialZone
-defaultSearchRequestSpecialZone =
-  SearchRequestSpecialZoneT
-    { id = "",
-      transactionId = "",
-      messageId = "",
-      startTime = defaultUTCDate,
-      validTill = defaultUTCDate,
-      providerId = "",
-      fromLocationId = "",
-      toLocationId = "",
-      bapId = "",
-      bapUri = "",
-      estimatedDistance = "",
-      estimatedDuration = "",
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
-    }
+-- defaultSearchRequestSpecialZone :: SearchRequestSpecialZone
+-- defaultSearchRequestSpecialZone = do
+--   SearchRequestSpecialZoneT
+--     { id = "",
+--       transactionId = "",
+--       messageId = "",
+--       startTime = defaultUTCDate,
+--       validTill = defaultUTCDate,
+--       providerId = "",
+--       fromLocationId = "",
+--       toLocationId = "",
+--       bapId = "",
+--       bapUri = pUrl,
+--       estimatedDistance = "",
+--       estimatedDuration = "",
+--       createdAt = defaultUTCDate,
+--       updatedAt = defaultUTCDate
+--     }
 
 instance Serialize SearchRequestSpecialZone where
   put = error "undefined"

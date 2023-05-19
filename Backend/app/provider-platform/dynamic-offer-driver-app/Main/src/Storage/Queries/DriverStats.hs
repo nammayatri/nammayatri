@@ -97,42 +97,6 @@ transformBeamDriverStatsToDomain BeamDS.DriverStatsT {..} = do
 
 transformDomainDriverStatsToBeam :: DriverStats -> BeamDS.DriverStats
 transformDomainDriverStatsToBeam DriverStats {..} =
-  BeamDS.DriverStatsT
-    { BeamDS.driverId = getId driverId,
-      BeamDS.idleSince = idleSince,
-      BeamDS.totalRides = totalRides,
-      BeamDS.totalDistance = totalDistance
-    }
-
-incrementTotalRidesAndTotalDist :: Id Driver -> Meters -> SqlDB ()
-incrementTotalRidesAndTotalDist driverId rideDist = do
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ DriverStatsTotalRides =. (tbl ^. DriverStatsTotalRides) +. val 1,
-        DriverStatsTotalDistance =. (tbl ^. DriverStatsTotalDistance) +. val rideDist
-      ]
-    where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
-
-getDriversSortedOrder :: Transactionable m => Maybe Integer -> m [DriverStats]
-getDriversSortedOrder mbLimitVal =
-  Esq.findAll $ do
-    driverStats <- from $ table @DriverStatsT
-    orderBy [desc (driverStats ^. DriverStatsTotalRides), desc (driverStats ^. DriverStatsTotalDistance)]
-    limit $ maybe 10 fromIntegral mbLimitVal
-    return driverStats
-
-transformBeamDriverStatsToDomain :: BeamDS.DriverStats -> DriverStats
-transformBeamDriverStatsToDomain BeamDS.DriverStatsT {..} = do
-  DriverStats
-    { driverId = Id driverId,
-      idleSince = idleSince,
-      totalRides = totalRides,
-      totalDistance = totalDistance
-    }
-
-transformDomainDriverStatsToBeam :: DriverStats -> BeamDS.DriverStats
-transformDomainDriverStatsToBeam DriverStats {..} =
   BeamDS.defaultDriverStats
     { BeamDS.driverId = getId driverId,
       BeamDS.idleSince = idleSince,

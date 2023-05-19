@@ -183,7 +183,6 @@ rideTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-
 instance IsString Domain.RideStatus where
   fromString = show
 

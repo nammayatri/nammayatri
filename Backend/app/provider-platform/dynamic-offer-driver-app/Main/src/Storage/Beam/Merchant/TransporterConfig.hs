@@ -180,16 +180,6 @@ transporterConfigTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-
-instance IsString Meters where
-  fromString = show
-
-instance IsString Seconds where
-  fromString = show
-
-instance IsString Centesimal where
-  fromString = show
-
 defaultTransporterConfig :: TransporterConfig
 defaultTransporterConfig =
   TransporterConfigT

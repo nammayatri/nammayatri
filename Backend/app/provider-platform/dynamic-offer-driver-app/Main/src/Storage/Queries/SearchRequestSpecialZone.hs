@@ -100,7 +100,6 @@ transformBeamSearchRequestSpecialZoneToDomain :: L.MonadFlow m => BeamSRSZ.Searc
 transformBeamSearchRequestSpecialZoneToDomain BeamSRSZ.SearchRequestSpecialZoneT {..} = do
   fl <- QSRL.findById' (Id fromLocationId)
   tl <- QSRL.findById' (Id toLocationId)
-  pUrl <- parseBaseUrl bapUri
   pure
     SearchRequestSpecialZone
       { id = Id id,
@@ -112,7 +111,7 @@ transformBeamSearchRequestSpecialZoneToDomain BeamSRSZ.SearchRequestSpecialZoneT
         fromLocation = fromJust fl,
         toLocation = fromJust tl,
         bapId = bapId,
-        bapUri = pUrl,
+        bapUri = bapUri,
         estimatedDistance = estimatedDistance,
         estimatedDuration = estimatedDuration,
         createdAt = createdAt,
@@ -131,7 +130,7 @@ transformDomainSearchRequestSpecialZoneToBeam SearchRequestSpecialZone {..} =
       BeamSRSZ.fromLocationId = getId fromLocation.id,
       BeamSRSZ.toLocationId = getId toLocation.id,
       BeamSRSZ.bapId = bapId,
-      BeamSRSZ.bapUri = showBaseUrl bapUri,
+      BeamSRSZ.bapUri = bapUri,
       BeamSRSZ.estimatedDistance = estimatedDistance,
       BeamSRSZ.estimatedDuration = estimatedDuration,
       BeamSRSZ.createdAt = createdAt,

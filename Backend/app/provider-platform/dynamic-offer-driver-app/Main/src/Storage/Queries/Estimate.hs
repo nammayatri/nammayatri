@@ -26,7 +26,6 @@ import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.Estimate as BeamE
 import Storage.Tabular.Estimate ()
-import Storage.Tabular.VechileNew as VN
 import qualified Storage.Tabular.VechileNew as VN
 
 create :: Estimate -> SqlDB ()
@@ -59,34 +58,16 @@ findById = Esq.findById
 --       createdAt = createdAt
 --     }
 
-transformBeamEstimateToDomain :: BeamE.Estimate -> Estimate
-transformBeamEstimateToDomain BeamE.EstimateT {..} = do
-  Estimate
-    { id = Id id,
-      transactionId = transactionId,
-      vehicleVariant = vehicleVariant,
-      minFare = minFare,
-      maxFare = maxFare,
-      estimateBreakupList = estimateBreakupList,
-      nightShiftRate = NightShiftRate nightShiftMultiplier nightShiftStart nightShiftEnd,
-      waitingCharges = WaitingCharges waitingTimeEstimatedThreshold waitingChargePerMin waitingOrPickupCharges,
-      createdAt = createdAt
-    }
-
--- transformDomainEstimateToBeam :: Estimate -> BeamE.Estimate
--- transformDomainEstimateToBeam Estimate {..} =
---   BeamE.defaultEstimate
---     { BeamE.id = getId id,
---       BeamE.transactionId = transactionId,
---       BeamE.vehicleVariant = vehicleVariant,
---       BeamE.minFare = minFare,
---       BeamE.maxFare = maxFare,
---       BeamE.estimateBreakupList = estimateBreakupList,
---       BeamE.nightShiftMultiplier = nightShiftMultiplier $ nightShiftRate,
---       BeamE.nightShiftStart = nightShiftStart $ nightShiftRate,
---       BeamE.nightShiftEnd = nightShiftEnd $ nightShiftRate,
---       BeamE.waitingTimeEstimatedThreshold = waitingTimeEstimatedThreshold $ waitingCharges,
---       BeamE.waitingChargePerMin = waitingChargePerMin $ waitingCharges,
---       BeamE.waitingOrPickupCharges = waitingOrPickupCharges $ waitingCharges,
---       BeamE.createdAt = createdAt
+-- transformBeamEstimateToDomain :: BeamE.Estimate -> Estimate
+-- transformBeamEstimateToDomain BeamE.EstimateT {..} = do
+--   Estimate
+--     { id = Id id,
+--       transactionId = transactionId,
+--       vehicleVariant = vehicleVariant,
+--       minFare = minFare,
+--       maxFare = maxFare,
+--       estimateBreakupList = estimateBreakupList,
+--       nightShiftRate = NightShiftRate nightShiftMultiplier nightShiftStart nightShiftEnd,
+--       waitingCharges = WaitingCharges waitingTimeEstimatedThreshold waitingChargePerMin waitingOrPickupCharges,
+--       createdAt = createdAt
 --     }

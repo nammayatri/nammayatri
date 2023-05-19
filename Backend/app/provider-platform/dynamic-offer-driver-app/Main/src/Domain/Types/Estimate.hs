@@ -15,7 +15,6 @@
 
 module Domain.Types.Estimate where
 
-import qualified Data.Aeson as A
 import Domain.Types.Common (UsageSafety (..))
 import qualified Domain.Types.Vehicle as Variant
 import Kernel.Prelude

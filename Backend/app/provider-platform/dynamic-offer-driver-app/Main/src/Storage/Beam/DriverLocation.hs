@@ -36,8 +36,6 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Storage.Esqueleto (Point (..))
-import Kernel.Types.Common hiding (id)
-import Kernel.Types.Id hiding (Id)
 import Lib.Utils
 import Lib.UtilsTH
 import Sequelize

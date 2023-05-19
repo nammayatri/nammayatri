@@ -232,13 +232,13 @@ defaultDriverQuote =
       vehicleVariant = "",
       distance = "",
       distanceToPickup = "",
-      durationToPickup = 1.0,
-      validTill = defaultDate,
+      durationToPickup = 1,
+      validTill = defaultUTCDate,
       estimatedFare = "",
       fareParametersId = "",
       providerId = "",
-      createdAt = defaultDate,
-      updatedAt = defaultDate
+      createdAt = defaultUTCDate,
+      updatedAt = defaultUTCDate
     }
 
 instance Serialize DriverQuote where
