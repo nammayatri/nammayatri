@@ -21,7 +21,7 @@ import qualified Data.Aeson as A
 import Data.ByteString.Internal (ByteString, unpackChars)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
-import Data.Serialize
+import qualified Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.Backend
@@ -85,7 +85,7 @@ instance B.Table MessageTranslationT where
   data PrimaryKey MessageTranslationT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
-  primaryKey = Id . language
+  primaryKey = Id . messageId
 
 instance ModelMeta MessageTranslationT where
   modelFieldModification = messageTranslationTMod
@@ -126,7 +126,7 @@ defaultMessageTranslation =
       createdAt = defaultUTCDate
     }
 
-instance Serialize MessageTranslation where
+instance Data.Serialize.Serialize MessageTranslation where
   put = error "undefined"
   get = error "undefined"
 

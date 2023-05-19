@@ -187,6 +187,7 @@ library
       Domain.Types.SearchRequest.SearchReqLocation
       Domain.Types.SearchRequestForDriver
       Domain.Types.SearchRequestSpecialZone
+      Domain.Types.SlabFarePolicy
       Domain.Types.Vehicle
       Domain.Types.Vehicle.Variant
       Environment
@@ -343,8 +344,10 @@ library
       Storage.Queries.RideDetails
       Storage.Queries.RiderDetails
       Storage.Queries.SearchRequest
+      Storage.Queries.SearchRequest.SearchReqLocation
       Storage.Queries.SearchRequestForDriver
       Storage.Queries.SearchRequestSpecialZone
+      Storage.Queries.SlabFarePolicy
       Storage.Queries.Vehicle
       Storage.Tabular.Booking
       Storage.Tabular.Booking.BookingLocation
@@ -410,6 +413,7 @@ library
       Storage.Tabular.SearchRequest.SearchReqLocation
       Storage.Tabular.SearchRequestForDriver
       Storage.Tabular.SearchRequestSpecialZone
+      Storage.Tabular.SlabFarePolicy
       Storage.Tabular.VechileNew
       Storage.Tabular.Vehicle
       Tools.Auth

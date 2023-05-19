@@ -26,6 +26,7 @@ import Kernel.Utils.Common
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequest as BeamSR
+import Storage.Queries.SearchRequest.SearchReqLocation as QSRL
 import Storage.Tabular.SearchRequest
 import Storage.Tabular.SearchRequest.SearchReqLocation
 import qualified Storage.Tabular.VechileNew as VN
@@ -114,31 +115,35 @@ findActiveByTransactionId transactionId = do
         &&. searchT ^. SearchRequestStatus ==. val Domain.ACTIVE
     return $ searchT ^. SearchRequestTId
 
--- transformBeamSearchRequestToDomain :: BeamSR.SearchRequest -> SearchRequest
--- transformBeamSearchRequestToDomain BeamSR.SearchRequestT {..} = do
---   SearchRequest
---     { id = Id id,
---       estimateId = Id estimateId,
---       transactionId = transactionId,
---       messageId = messageId,
---       startTime = startTime,
---       validTill = validTill,
---       providerId = Id providerId,
---       fromLocation = fromLocation,
---       toLocation = toLocation,
---       bapId = bapId,
---       bapUri = pUrl,
---       estimatedDistance = estimatedDistance,
---       estimatedDuration = estimatedDuration,
---       customerExtraFee = customerExtraFee,
---       device = device,
---       createdAt = createdAt,
---       updatedAt = updatedAt,
---       vehicleVariant = vehicleVariant,
---       status = status,
---       autoAssignEnabled = autoAssignEnabled,
---       searchRepeatCounter = searchRepeatCounter
---     }
+transformBeamSearchRequestToDomain :: L.MonadFlow m => BeamSR.SearchRequest -> m (SearchRequest)
+transformBeamSearchRequestToDomain BeamSR.SearchRequestT {..} = do
+  fl <- QSRL.findById' (Id fromLocationId)
+  tl <- QSRL.findById' (Id toLocationId)
+  pUrl <- parseBaseUrl bapUri
+  pure
+    SearchRequest
+      { id = Id id,
+        estimateId = Id estimateId,
+        transactionId = transactionId,
+        messageId = messageId,
+        startTime = startTime,
+        validTill = validTill,
+        providerId = Id providerId,
+        fromLocation = fromJust fl,
+        toLocation = fromJust tl,
+        bapId = bapId,
+        bapUri = pUrl,
+        estimatedDistance = estimatedDistance,
+        estimatedDuration = estimatedDuration,
+        customerExtraFee = customerExtraFee,
+        device = device,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
+        vehicleVariant = vehicleVariant,
+        status = status,
+        autoAssignEnabled = autoAssignEnabled,
+        searchRepeatCounter = searchRepeatCounter
+      }
 
 transformDomainSearchRequestToBeam :: SearchRequest -> BeamSR.SearchRequest
 transformDomainSearchRequestToBeam SearchRequest {..} =

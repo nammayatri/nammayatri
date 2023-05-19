@@ -38,6 +38,7 @@ import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common (HighPrecMeters, Meters, Money)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Booking (BookingTId)
@@ -78,6 +79,8 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be Money where
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Money
 
 instance FromBackendRow Postgres Money
+
+deriving stock instance Read Money
 
 instance IsString Money where
   fromString = show
@@ -180,9 +183,9 @@ rideTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-defaultTable :: Table
-defaultTable =
-  TableT
+defaultRide :: Ride
+defaultRide =
+  RideT
     { id = "",
       bookingId = "",
       shortId = "",
@@ -206,20 +209,20 @@ defaultTable =
       updatedAt = defaultUTCDate
     }
 
-instance Serialize Table where
+instance Serialize Ride where
   put = error "undefined"
   get = error "undefined"
 
 psToHs :: HM.HashMap Text Text
 psToHs = HM.empty
 
-tableToHSModifiers :: M.Map Text (A.Value -> A.Value)
-tableToHSModifiers =
+rideToHSModifiers :: M.Map Text (A.Value -> A.Value)
+rideToHSModifiers =
   M.fromList
     []
 
-tableToPSModifiers :: M.Map Text (A.Value -> A.Value)
-tableToPSModifiers =
+rideToPSModifiers :: M.Map Text (A.Value -> A.Value)
+rideToPSModifiers =
   M.fromList
     []
 

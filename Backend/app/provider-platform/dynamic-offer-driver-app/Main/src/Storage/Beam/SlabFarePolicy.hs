@@ -124,8 +124,8 @@ data SlabFarePolicyT f = SlabFarePolicyT
     serviceCharge :: B.C f Money,
     fareSlabs :: B.C f [Domain.Slab],
     govtChargesPerc :: B.C f (Maybe Int),
-    createdAt :: B.C f Time.LocalTime,
-    updatedAt :: B.C f Time.LocalTime
+    createdAt :: B.C f Time.UTCTime,
+    updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -208,8 +208,8 @@ defaultSlabFarePolicy =
       serviceCharge = "",
       fareSlabs = [""],
       govtChargesPerc = Nothing,
-      createdAt = defaultDate,
-      updatedAt = defaultDate
+      createdAt = defaultUTCDate,
+      updatedAt = defaultUTCDate
     }
 
 instance Serialize SlabFarePolicy where
