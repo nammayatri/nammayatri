@@ -88,7 +88,7 @@ data MerchantServiceConfigT f = MerchantServiceConfigT
 
 instance B.Table MerchantServiceConfigT where
   data PrimaryKey MerchantServiceConfigT f
-    = Id (B.C f Text)
+    = Id (B.C f Domain.ServiceName)
     deriving (Generic, B.Beamable)
   primaryKey = Id . serviceName
 

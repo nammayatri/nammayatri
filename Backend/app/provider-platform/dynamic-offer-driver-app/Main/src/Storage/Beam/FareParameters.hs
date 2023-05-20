@@ -71,6 +71,11 @@ instance FromBackendRow Postgres Centesimal
 instance FromField Money where
   fromField = fromFieldEnum
 
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.FareParametersType where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.FareParametersType
+
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Money where
   sqlValueSyntax = autoSqlValueSyntax
 
@@ -78,19 +83,38 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Money
 
 instance FromBackendRow Postgres Money
 
+-- data FareParametersT f = FareParametersT
+--   { id :: B.C f Text,
+--     baseFare :: B.C f Money,
+--     deadKmFare :: B.C f (Maybe Money),
+--     extraKmFare :: B.C f (Maybe Money),
+--     driverSelectedFare :: B.C f (Maybe Money),
+--     customerExtraFee :: B.C f (Maybe Money),
+--     nightShiftRate :: B.C f (Maybe Centesimal),
+--     nightCoefIncluded :: B.C f Bool,
+--     waitingChargePerMin :: B.C f (Maybe Money),
+--     waitingOrPickupCharges :: B.C f (Maybe Money),
+--     serviceCharge :: B.C f (Maybe Money),
+--     govtChargesPerc :: B.C f (Maybe Int)
+--   }
+--   deriving (Generic, B.Beamable)
+
 data FareParametersT f = FareParametersT
   { id :: B.C f Text,
     baseFare :: B.C f Money,
-    deadKmFare :: B.C f (Maybe Money),
-    extraKmFare :: B.C f (Maybe Money),
+    -- deadKmFare :: B.C f (Maybe Money),
+    -- extraKmFare :: B.C f (Maybe Money),
     driverSelectedFare :: B.C f (Maybe Money),
     customerExtraFee :: B.C f (Maybe Money),
-    nightShiftRate :: B.C f (Maybe Centesimal),
-    nightCoefIncluded :: B.C f Bool,
-    waitingChargePerMin :: B.C f (Maybe Money),
-    waitingOrPickupCharges :: B.C f (Maybe Money),
+    -- nightShiftRate :: B.C f (Maybe Centesimal),
+    -- nightCoefIncluded :: B.C f Bool,
+    -- waitingChargePerMin :: B.C f (Maybe Money),
+    waitingCharge :: B.C f (Maybe Money),
+    nightShiftCharge :: B.C f (Maybe Money),
+    -- waitingOrPickupCharges :: B.C f (Maybe Money),
     serviceCharge :: B.C f (Maybe Money),
-    govtChargesPerc :: B.C f (Maybe Int)
+    fareParametersType :: B.C f Domain.FareParametersType,
+    govtCharges :: B.C f (Maybe Money)
   }
   deriving (Generic, B.Beamable)
 
@@ -116,7 +140,17 @@ instance FromJSON FareParameters where
 instance ToJSON FareParameters where
   toJSON = A.genericToJSON A.defaultOptions
 
+instance FromJSON Domain.FareParametersType where
+  parseJSON = A.genericParseJSON A.defaultOptions
+
+instance ToJSON Domain.FareParametersType where
+  toJSON = A.genericToJSON A.defaultOptions
+
 deriving stock instance Show FareParameters
+
+deriving stock instance Ord Domain.FareParametersType
+
+deriving stock instance Eq Domain.FareParametersType
 
 deriving stock instance Ord Domain.FarePolicyType
 
@@ -127,16 +161,17 @@ fareParametersTMod =
   B.tableModification
     { id = B.fieldNamed "id",
       baseFare = B.fieldNamed "base_fare",
-      deadKmFare = B.fieldNamed "dead_km_fare",
-      extraKmFare = B.fieldNamed "extra_km_fare",
+      -- deadKmFare = B.fieldNamed "dead_km_fare",
+      -- extraKmFare = B.fieldNamed "extra_km_fare",
       driverSelectedFare = B.fieldNamed "driver_selected_fare",
       customerExtraFee = B.fieldNamed "customer_extra_fee",
-      nightShiftRate = B.fieldNamed "night_shift_rate",
-      nightCoefIncluded = B.fieldNamed "night_coef_included",
-      waitingChargePerMin = B.fieldNamed "waiting_charge_per_min",
-      waitingOrPickupCharges = B.fieldNamed "waiting_or_pickup_charges",
+      -- nightShiftRate = B.fieldNamed "night_shift_rate",
+      -- nightCoefIncluded = B.fieldNamed "night_coef_included",
+      -- waitingChargePerMin = B.fieldNamed "waiting_charge_per_min",
+      -- waitingOrPickupCharges = B.fieldNamed "waiting_or_pickup_charges",
       serviceCharge = B.fieldNamed "service_charge",
-      govtChargesPerc = B.fieldNamed "govt_charges_perc"
+      fareParametersType = B.fieldNamed "fare_parameters_type",
+      govtCharges = B.fieldNamed "govt_charges"
     }
 
 psToHs :: HM.HashMap Text Text
@@ -151,23 +186,6 @@ fareParametersToPSModifiers :: M.Map Text (A.Value -> A.Value)
 fareParametersToPSModifiers =
   M.fromList
     []
-
-defaultFareParameters :: FareParameters
-defaultFareParameters =
-  FareParametersT
-    { id = "",
-      baseFare = "",
-      deadKmFare = Nothing,
-      extraKmFare = Nothing,
-      driverSelectedFare = Nothing,
-      customerExtraFee = Nothing,
-      nightShiftRate = Nothing,
-      nightCoefIncluded = False,
-      waitingChargePerMin = Nothing,
-      waitingOrPickupCharges = Nothing,
-      serviceCharge = Nothing,
-      govtChargesPerc = Nothing
-    }
 
 instance Serialize FareParameters where
   put = error "undefined"

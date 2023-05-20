@@ -79,7 +79,7 @@ data MerchantMessageT f = MerchantMessageT
 
 instance B.Table MerchantMessageT where
   data PrimaryKey MerchantMessageT f
-    = Id (B.C f Text)
+    = Id (B.C f Domain.MessageKey)
     deriving (Generic, B.Beamable)
   primaryKey = Id . messageKey
 

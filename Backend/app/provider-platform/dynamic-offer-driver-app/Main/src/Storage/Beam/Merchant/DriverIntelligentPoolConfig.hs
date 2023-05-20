@@ -126,6 +126,12 @@ instance ToJSON DriverIntelligentPoolConfig where
 
 deriving stock instance Show DriverIntelligentPoolConfig
 
+deriving stock instance Ord SWC.SlidingWindowOptions
+
+deriving stock instance Eq SWC.SlidingWindowOptions
+
+deriving stock instance Ord PeriodType
+
 driverIntelligentPoolConfigTMod :: DriverIntelligentPoolConfigT (B.FieldModification (B.TableField DriverIntelligentPoolConfigT))
 driverIntelligentPoolConfigTMod =
   B.tableModification
@@ -148,11 +154,11 @@ driverIntelligentPoolConfigTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-instance IsString SWC.SlidingWindowOptions where
-  fromString = show
+-- instance IsString SWC.SlidingWindowOptions where
+--   fromString = show
 
-instance IsString Minutes where
-  fromString = show
+-- instance IsString Minutes where
+-- fromString = show
 
 defaultDriverIntelligentPoolConfig :: DriverIntelligentPoolConfig
 defaultDriverIntelligentPoolConfig =

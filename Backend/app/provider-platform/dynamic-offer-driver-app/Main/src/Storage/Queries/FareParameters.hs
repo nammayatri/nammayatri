@@ -25,6 +25,7 @@ import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.FareParameters as BeamFP
+import qualified Storage.Beam.FareParameters.FareParametersProgressiveDetails as BeamFPPD
 import Storage.Queries.FullEntityBuilders (buildFullFareParameters)
 import Storage.Tabular.FareParameters (FareParametersT)
 import Storage.Tabular.FareParameters.Instances
@@ -110,3 +111,36 @@ findById fareParametersId = buildDType $ do
 --       farePolicyType = farePolicyType,
 --       govtChargesPerc = govtChargesPerc
 --     }
+
+transformBeamFareParametersToDomain :: L.MonadFlow m => BeamFP.FareParameters -> m (FareParameters)
+transformBeamFareParametersToDomain BeamFP.FareParametersT {..} = do
+  fullFPPD <- BeamFPPD.findById' (Id id)
+  let fPPD = snd $ fromJust fullFPPD
+  pure
+    FareParameters
+      { id = Id id,
+        driverSelectedFare = driverSelectedFare,
+        customerExtraFee = customerExtraFee,
+        serviceCharge = serviceCharge,
+        govtCharges = govtCharges,
+        baseFare = baseFare,
+        waitingCharge = waitingCharge,
+        nightShiftCharge = nightShiftCharge,
+        fareParametersDetails = case fareParametersType of
+          Progressive -> ProgressiveDetails fPPD
+          Slab -> SlabDetails FParamsSlabDetails
+      }
+
+transformDomainFareParametersToBeam :: FareParameters -> BeamFP.FareParameters
+transformDomainFareParametersToBeam FareParameters {..} =
+  BeamFP.FareParametersT
+    { BeamFP.id = getId id,
+      BeamFP.driverSelectedFare = driverSelectedFare,
+      BeamFP.customerExtraFee = customerExtraFee,
+      BeamFP.serviceCharge = serviceCharge,
+      BeamFP.govtCharges = govtCharges,
+      BeamFP.baseFare = baseFare,
+      BeamFP.waitingCharge = waitingCharge,
+      BeamFP.nightShiftCharge = nightShiftCharge,
+      BeamFP.fareParametersType = getFareParametersType $ FareParameters {..}
+    }

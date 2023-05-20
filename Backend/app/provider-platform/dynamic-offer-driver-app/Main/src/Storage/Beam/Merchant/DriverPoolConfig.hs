@@ -42,7 +42,7 @@ import Kernel.Types.Common hiding (id)
 import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
-import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config (PoolSortingType)
+import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config (PoolSortingType (..))
 import Storage.Tabular.Merchant (MerchantTId)
 
 fromFieldEnum ::
@@ -141,6 +141,10 @@ instance ToJSON DriverPoolConfig where
 
 deriving stock instance Show DriverPoolConfig
 
+deriving stock instance Ord PoolSortingType
+
+deriving stock instance Eq PoolSortingType
+
 driverPoolConfigTMod :: DriverPoolConfigT (B.FieldModification (B.TableField DriverPoolConfigT))
 driverPoolConfigTMod =
   B.tableModification
@@ -208,13 +212,13 @@ driverPoolConfigToPSModifiers =
   M.fromList
     []
 
-instance IsString Meters where
-  fromString = show
+-- instance IsString Meters where
+--   fromString = show
 
-instance IsString PoolSortingType where
-  fromString = show
+-- instance IsString PoolSortingType where
+--   fromString = show
 
-instance IsString Seconds where
-  fromString = show
+-- instance IsString Seconds where
+--   fromString = show
 
 $(enableKVPG ''DriverPoolConfigT ['tripDistance] [])
