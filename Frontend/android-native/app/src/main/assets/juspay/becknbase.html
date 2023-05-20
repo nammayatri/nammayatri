@@ -9,22 +9,40 @@
     window.JBridge = top.JBridge;
     window.Android = top.Android;
     window.DUIGatekeeper = JBridge;
-    var renewCount = 5;
-    var loadInDuiCount = 5;
+    top.__BOOT_LOADER = top.__BOOT_LOADER || {};
+    window.loadInDuiBundle = false;
+
+    var renewCount = 5; //download count
+    var loadInDuiCount = 5; //read count
     var interval = 200; //ms
 
+    function cb() {
+        var innerHTML = JBridge.loadFileInDUI('v1-index_bundle.jsa');
+        if (innerHTML !== "" && !window.loadInDuiBundle){
+            console.log("bundle present in cb");
+            window.loadInDuiBundle = true;
+            loadBundle();
+        }else{
+            if (window.loadInDuiBundle){
+                console.log('bundle already loaded');
+            }else{
+                console.log('bundle data null');
+            }
+        }
+    }
+
     function loadBundle() {
-        console.log("Here is the Release file")
+        console.log("Here is the Release file");
         var headID = document.getElementsByTagName("head")[0];
         var newScript = document.createElement('script');
         newScript.type = 'text/javascript';
         newScript.id = 'mystique';
-        newScript.innerHTML = window.DUIGatekeeper.loadFileInDUI('v1-index_bundle.jsa');
+        newScript.innerHTML = JBridge.loadFileInDUI('v1-index_bundle.jsa');
         headID.appendChild(newScript);
     }
 
     function packageUrl(service) {
-      const fileContent = JSON.parse(window.DUIGatekeeper.loadFileInDUI('config.json'));
+      const fileContent = JSON.parse(JBridge.loadFileInDUI('config.json'));
       const url = fileContent.new.package[service];
       return url;
     }
@@ -40,34 +58,41 @@
             }), "");
     }
 
-    function whenAvailable(notPresent, callback, count) {
+    function whenAvailable(notPresent, callback, count, cb) {
         console.log('COUNT',count);
         window.setTimeout(function() {
             count -= 1;
-            if (renewCount <= 0) {
-              onEvent('bundle_load_failed');
-            }else if (count <= 0 && notPresent) {
-              console.log("renew v1-index_bundle.jsa");
-              const filePath = packageUrl('in.yatri.consumer');
-              renewCount -= 1;
-              console.log('RENEW_COUNT',renewCount);
-              window.DUIGatekeeper.renewFile(filePath);
-              whenAvailable(window.DUIGatekeeper.loadFileInDUI('v1-index_bundle.jsa') == "", callback, loadInDuiCount)
-            } else if (notPresent) {
-              console.log("bundle not present");
-              whenAvailable(window.DUIGatekeeper.loadFileInDUI('v1-index_bundle.jsa') == "", callback, count);
-            } else {
-              console.log("bundle present");
-            //   onEvent('hide_loader');
-              callback();
+            if (notPresent){
+                if (renewCount <= 0) {
+                  onEvent('bundle_load_failed');
+                }else if (count <= 0) {
+                  console.log("renew v1-index_bundle.jsa");
+                  const filePath = packageUrl('in.yatri.consumer');
+                  console.log('renew path', filePath);
+                  renewCount -= 1;
+                  console.log('RENEW_COUNT',renewCount);
+
+                  var renewCallback = "fnLoadBundle" + JSON.stringify(count) + JSON.stringify(renewCount);
+                  top.__BOOT_LOADER[renewCallback] = cb;
+                  JBridge.renewFile(filePath, "v1-index_bundle.zip", renewCallback);
+
+                  whenAvailable(JBridge.loadFileInDUI('v1-index_bundle.jsa') == "", callback, loadInDuiCount, cb);
+                }else{
+                  console.log("bundle not present");
+                  whenAvailable(JBridge.loadFileInDUI('v1-index_bundle.jsa') == "", callback, count, cb);
+                }
+            }else{
+                console.log("bundle present");
+                if (!window.loadInDuiBundle) {
+                    window.loadInDuiBundle = true;
+                    callback();
+                }
             }
         }, interval);
     }
 
     console.log(packageUrl('in.yatri.consumer'));
-    whenAvailable(window.DUIGatekeeper.loadFileInDUI('v1-index_bundle.jsa') == "", function() {
-      loadBundle();
-    }, loadInDuiCount);
+    whenAvailable(JBridge.loadFileInDUI('v1-index_bundle.jsa') == "", function(){ loadBundle(); }, loadInDuiCount, function(){ cb(); });
 
     </script>
 </html>
