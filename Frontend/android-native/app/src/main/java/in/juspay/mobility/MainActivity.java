@@ -948,10 +948,8 @@ public class MainActivity extends AppCompatActivity {
             case IMAGE_CAPTURE_REQ_CODE:
                 CommonJsInterface.isUploadPopupOpen = false;
                 if (resultCode == RESULT_OK) {
-                    CommonJsInterface.isUploadPopupOpen = false;
                     captureImage (data);
                 }
-                CommonJsInterface.isUploadPopupOpen = false;
                 break;
             case REQUEST_CODE_UPDATE_APP:
                 if (resultCode != RESULT_OK) {
