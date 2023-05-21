@@ -15,7 +15,7 @@ module Components.ChatView.View where
 import Effect (Effect)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), scrollBarY, alignParentBottom, background, color, cornerRadius, fontStyle, gravity, height, id, imageView, linearLayout, margin, onClick, orientation, padding, stroke, text, textSize, textView, visibility, weight, width, editText, onChange, hint, scrollView, onAnimationEnd, pattern, ellipsize, clickable, singleLine, maxLines, hintColor, imageWithFallback)
 import Engineering.Helpers.Commons (getNewIDWithTag, screenWidth, os)
-import Animation (translateInXForwardAnim, translateInXBackwardAnim)
+import Animation (fadeInWithDelay, translateInXBackwardAnim, translateInXBackwardFadeAnimWithDelay, translateInXForwardAnim, translateInXForwardFadeAnimWithDelay)
 import PrestoDOM.Animation as PrestoAnim
 import Prelude (Unit, bind, const, pure, unit, ($), (&&), (-), (/), (<>), (==), (>), (*), (||), not, ($), negate)
 import PrestoDOM.Properties (alpha, cornerRadii, lineHeight, minWidth)
@@ -287,14 +287,7 @@ emptyChatView config push =
   
 suggestionsView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 suggestionsView config push =
-    PrestoAnim.animationSet [ PrestoAnim.Animation
-                              [ PrestoAnim.duration 250
-                              , PrestoAnim.toAlpha 1.0
-                              , PrestoAnim.fromAlpha 0.0
-                              , PrestoAnim.interpolator $ PrestoAnim.EaseIn
-                              , PrestoAnim.repeatCount PrestoAnim.NoRepeat
-                              , PrestoAnim.delay config.suggestionDelay
-                              ] true]
+    PrestoAnim.animationSet [ fadeInWithDelay config.suggestionDelay true ]
     $ linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -345,18 +338,13 @@ quickMessageView config message isLastItem push =
   ]
 chatComponent :: forall w. Config -> (Action -> Effect Unit) -> ChatComponent -> Boolean -> String -> PrestoDOM (Effect Unit) w
 chatComponent state push config isLastItem userType = 
---  PrestoAnim.animationSet [ if state.userConfig.appType == config.sentBy then (translateInXForwardAnim config.delay (if isLastItem then true else false)) else (translateInXBackwardAnim config.delay (if isLastItem then true else false)) ] $
-  PrestoAnim.animationSet [ PrestoAnim.Animation
-                            [ PrestoAnim.duration 350
-                            , PrestoAnim.toAlpha 1.0
-                            , PrestoAnim.fromX if state.userConfig.appType == config.sentBy then (screenWidth unit / 4) else (negate (screenWidth unit / 5))
-                            , PrestoAnim.toX 0
-                            , PrestoAnim.fromAlpha 0.0
-                            , PrestoAnim.interpolator $ PrestoAnim.EaseIn
-                            , PrestoAnim.repeatCount PrestoAnim.NoRepeat
-                            , PrestoAnim.delay config.delay
-                            ] true] $
-  linearLayout
+  PrestoAnim.animationSet 
+    [ if state.userConfig.appType == config.sentBy then 
+        translateInXForwardFadeAnimWithDelay config.delay true
+      else
+        translateInXBackwardFadeAnimWithDelay config.delay true
+    ]
+  $ linearLayout
   [height WRAP_CONTENT
   , width MATCH_PARENT
   , alpha 0.0

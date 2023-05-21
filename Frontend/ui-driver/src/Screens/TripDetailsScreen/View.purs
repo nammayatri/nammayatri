@@ -25,7 +25,7 @@ import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM (Length(..), Margin(..), Orientation(..), Padding(..), Gravity(..), Visibility(..), PrestoDOM, Screen, linearLayout, frameLayout, gravity, orientation, height, width, imageView, imageUrl, text, textSize, textView, padding, color, margin, fontStyle, background, cornerRadius, stroke, editText, weight, hint, onClick, visibility, pattern, onChange, scrollView, alignParentBottom, relativeLayout, afterRender, onBackPressed, imageWithFallback)
 import Screens.Types as ST
 import Engineering.Helpers.Commons as EHC
-import Screens.TripDetailsScreen.Controller (Action(..), Action(HelpAndSupport), ScreenOutput, eval)
+import Screens.TripDetailsScreen.Controller (Action(..), ScreenOutput, eval)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Styles.Colors as Color

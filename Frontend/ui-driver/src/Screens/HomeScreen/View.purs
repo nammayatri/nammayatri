@@ -67,7 +67,6 @@ import Services.APITypes (Status(..))
 import Components.BottomNavBar.Controller (navData)
 import Screens.HomeScreen.ComponentConfig
 import EN (getEN)
-import PrestoDOM.Properties (orientation, visibility)
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =

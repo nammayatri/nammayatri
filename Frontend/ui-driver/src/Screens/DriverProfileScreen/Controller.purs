@@ -29,7 +29,7 @@ import PrestoDOM (Eval, continue, exit, continueWithCmd)
 import PrestoDOM.Types.Core (class Loggable)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Screens (ScreenName(..), getScreen)
-import Screens.DriverProfileScreen.ScreenData (MenuOptions(..), MenuOptions(LIVE_STATS_DASHBOARD)) as Data
+import Screens.DriverProfileScreen.ScreenData (MenuOptions(..)) as Data
 import Screens.Types (DriverProfileScreenState)
 import Services.APITypes (GetDriverInfoResp(..), Vehicle(..))
 import Services.Backend (dummyVehicleObject)
