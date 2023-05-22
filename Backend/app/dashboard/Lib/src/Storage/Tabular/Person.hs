@@ -45,6 +45,7 @@ mkPersist
       updatedAt UTCTime
       Primary id
       deriving Generic
+
     |]
 
 instance TEntityKey PersonT where

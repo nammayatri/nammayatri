@@ -73,7 +73,9 @@ dependencies:
   - http-types
   - dashboard-helper-api
   - rider-app
-
+  - random
+  - base32
+  - cryptonite
 ghc-options:
   - -Wall
   - -Wcompat
