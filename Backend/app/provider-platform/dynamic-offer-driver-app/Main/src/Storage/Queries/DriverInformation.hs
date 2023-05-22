@@ -131,13 +131,17 @@ updateEnabledState' (Id driverId) isEnabled = do
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        VN.meshConfig
-        [ Se.Set BeamDI.enabled isEnabled,
-          Se.Set BeamDI.updatedAt now
-        ]
-        [Se.Is BeamDI.driverId (Se.Eq driverId)]
+      if isEnabled
+        then
+          KV.updateWoReturningWithKVConnector
+            dbConf'
+            VN.meshConfig
+            [ Se.Set BeamDI.enabled isEnabled,
+              Se.Set BeamDI.updatedAt now,
+              Se.Set BeamDI.lastEnabledOn (Just now)
+            ]
+            [Se.Is BeamDI.driverId (Se.Eq driverId)]
+        else pure (Right ())
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 updateEnabledVerifiedState :: Id Person.Driver -> Bool -> Bool -> SqlDB ()
@@ -159,14 +163,18 @@ updateEnabledVerifiedState' (Id driverId) isEnabled isVerified = do
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        VN.meshConfig
-        [ Se.Set BeamDI.enabled isEnabled,
-          Se.Set BeamDI.verified isVerified,
-          Se.Set BeamDI.updatedAt now
-        ]
-        [Se.Is BeamDI.driverId (Se.Eq driverId)]
+      if isEnabled
+        then
+          KV.updateWoReturningWithKVConnector
+            dbConf'
+            VN.meshConfig
+            [ Se.Set BeamDI.enabled isEnabled,
+              Se.Set BeamDI.verified isVerified,
+              Se.Set BeamDI.updatedAt now,
+              Se.Set BeamDI.lastEnabledOn (Just now)
+            ]
+            [Se.Is BeamDI.driverId (Se.Eq driverId)]
+        else pure (Right ())
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 updateBlockedState :: Id Person.Driver -> Bool -> SqlDB ()
@@ -284,20 +292,20 @@ updateNotOnRideMultiple driverIds = do
       ]
     where_ $ tbl ^. DriverInformationDriverId `in_` valList (toKey . cast <$> driverIds)
 
--- updateNotOnRideMultiple' :: (L.MonadFlow m, MonadTime m) => [Id Person.Driver] -> m (MeshResult ())
--- updateNotOnRideMultiple' driverIds = do
---   dbConf <- L.getOption Extra.EulerPsqlDbCfg
---   now <- getCurrentTime
---   case dbConf of
---     Just dbConf' ->
---       KV.updateWoReturningWithKVConnector
---         dbConf'
---         VN.meshConfig
---         [ Se.Set BeamDI.onRide False,
---           Se.Set BeamDI.updatedAt now
---         ]
---         [Se.Is BeamDI.driverId (Se.In driverIds)]
---     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+updateNotOnRideMultiple' :: (L.MonadFlow m, MonadTime m) => [Id Person.Driver] -> m (MeshResult ())
+updateNotOnRideMultiple' driverIds = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  now <- getCurrentTime
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        VN.meshConfig
+        [ Se.Set BeamDI.onRide False,
+          Se.Set BeamDI.updatedAt now
+        ]
+        [Se.Is BeamDI.driverId (Se.In (getId <$> driverIds))]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 deleteById :: Id Person.Driver -> SqlDB ()
 deleteById = Esq.deleteByKey @DriverInformationT . cast
@@ -366,6 +374,19 @@ addReferralCode personId code = do
       [ DriverInformationReferralCode =. val (Just (code & unEncrypted . (.encrypted)))
       ]
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey personId)
+
+addReferralCode' :: (L.MonadFlow m) => Id Person -> EncryptedHashedField 'AsEncrypted Text -> m (MeshResult ())
+addReferralCode' (Id personId) code = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        VN.meshConfig
+        [ Se.Set BeamDI.referralCode (Just (code & unEncrypted . (.encrypted)))
+        ]
+        [Se.Is BeamDI.driverId (Se.Eq personId)]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 countDrivers :: Transactionable m => Id Merchant -> m (Int, Int)
 countDrivers merchantId =

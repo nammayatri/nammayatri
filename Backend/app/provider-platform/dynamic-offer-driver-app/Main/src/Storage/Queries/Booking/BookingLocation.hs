@@ -54,26 +54,26 @@ findById' (Id bookingLocationId) = do
     Just dbCOnf' -> either (pure Nothing) (transformBeamBookingLocationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamBL.id $ Se.Eq bookingLocationId]
     Nothing -> pure Nothing
 
--- updateAddress' :: (L.MonadFlow m, MonadTime m) => Id BookingLocation -> LocationAddress -> m (MeshResult ())
--- updateAddress' (Id blId) LocationAddress = do
---   dbConf <- L.getOption Extra.EulerPsqlDbCfg
---   now <- getCurrentTime
---   case dbConf of
---     Just dbConf' ->
---       KV.updateWoReturningWithKVConnector
---         dbConf'
---         VN.meshConfig
---         [ Se.Set BeamBL.street street,
---           Se.Set BeamBL.city city,
---           Se.Set BeamBL.state state,
---           Se.Set BeamBL.country country,
---           Se.Set BeamBL.building building,
---           Se.Set BeamBL.areaCode areaCode,
---           Se.Set BeamBL.area area,
---           Se.Set BeamBL.updatedAt now
---         ]
---         [Se.Is BeamBL.id (Se.Eq blId)]
---     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+updateAddress' :: (L.MonadFlow m, MonadTime m) => Id BookingLocation -> LocationAddress -> m (MeshResult ())
+updateAddress' (Id blId) LocationAddress {..} = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  now <- getCurrentTime
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        VN.meshConfig
+        [ Se.Set BeamBL.street street,
+          Se.Set BeamBL.city city,
+          Se.Set BeamBL.state state,
+          Se.Set BeamBL.country country,
+          Se.Set BeamBL.building building,
+          Se.Set BeamBL.areaCode areaCode,
+          Se.Set BeamBL.area area,
+          Se.Set BeamBL.updatedAt now
+        ]
+        [Se.Is BeamBL.id (Se.Eq blId)]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 transformBeamBookingLocationToDomain :: BeamBL.BookingLocation -> BookingLocation
 transformBeamBookingLocationToDomain BeamBL.BookingLocationT {..} = do

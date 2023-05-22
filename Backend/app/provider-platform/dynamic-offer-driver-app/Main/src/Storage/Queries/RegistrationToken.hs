@@ -33,22 +33,22 @@ import qualified Storage.Tabular.VechileNew as VN
 create :: RegistrationToken -> SqlDB ()
 create = Esq.create
 
--- create' :: L.MonadFlow m => DRT.RegistrationToken -> m (MeshResult ())
--- create' registrationToken = do
---   dbConf <- L.getOption Extra.EulerPsqlDbCfg
---   case dbConf of
---     Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainRegistrationTokenToBeam registrationToken)
---     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+create' :: L.MonadFlow m => DRT.RegistrationToken -> m (MeshResult ())
+create' registrationToken = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainRegistrationTokenToBeam registrationToken)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 findById :: Transactionable m => Id RegistrationToken -> m (Maybe RegistrationToken)
 findById = Esq.findById
 
--- findById' :: L.MonadFlow m => Id RegistrationToken -> m (Maybe RegistrationToken)
--- findById' (Id registrationTokenId) = do
---   dbConf <- L.getOption Extra.EulerPsqlDbCfg
---   case dbConf of
---     Just dbCOnf' -> either (pure Nothing) (transformBeamRegistrationTokenToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamRT.id $ Se.Eq registrationTokenId]
---     Nothing -> pure Nothing
+findById' :: L.MonadFlow m => Id RegistrationToken -> m (Maybe RegistrationToken)
+findById' (Id registrationTokenId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure Nothing) (transformBeamRegistrationTokenToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamRT.id $ Se.Eq registrationTokenId]
+    Nothing -> pure Nothing
 
 setVerified :: Id RegistrationToken -> SqlDB ()
 setVerified rtId = do
@@ -68,12 +68,12 @@ findByToken token =
     where_ $ regToken ^. RegistrationTokenToken ==. val token
     return regToken
 
--- findByToken' :: L.MonadFlow m => RegToken -> m (Maybe RegistrationToken)
--- findByToken' token = do
---   dbConf <- L.getOption Extra.EulerPsqlDbCfg
---   case dbConf of
---     Just dbCOnf' -> either (pure Nothing) (transformBeamRegistrationTokenToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamRT.token $ Se.Eq token]
---     Nothing -> pure Nothing
+findByToken' :: L.MonadFlow m => RegToken -> m (Maybe RegistrationToken)
+findByToken' token = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure Nothing) (transformBeamRegistrationTokenToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamRT.token $ Se.Eq token]
+    Nothing -> pure Nothing
 
 updateAttempts :: Int -> Id RegistrationToken -> SqlDB ()
 updateAttempts attemps rtId = do

@@ -76,36 +76,43 @@ findById dQuoteId = buildDType $ do
     pure (dQuote, farePars)
   join <$> mapM buildFullQuoteSpecialZone res
 
--- transformBeamQuoteSpecialZoneToDomain :: L.MonadFlow m => BeamQSZ.QuoteSpecialZone -> m (QuoteSpecialZone)
--- transformBeamQuoteSpecialZoneToDomain BeamQSZ.QuoteSpecialZoneT {..} = do
---   fp <- BeamQFP.findById' (Id fareParametersId)
---   pure
---     QuoteSpecialZone
---       { id = Id id,
---         searchRequestId = Id searchRequestId,
---         providerId = Id providerId,
---         vehicleVariant = vehicleVariant,
---         distance = distance,
---         estimatedFinishTime = estimatedFinishTime,
---         createdAt = createdAt,
---         updatedAt = updatedAt,
---         validTill = validTill,
---         estimatedFare = estimatedFare,
---         fareParams = fromJust fp -- to take a default value?
---       }
+-- findById' :: L.MonadFlow m => Id QuoteSpecialZone -> m (Maybe QuoteSpecialZone)
+-- findById' (Id dQuoteId) = do
+--   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   case dbConf of
+--     Just dbCOnf' -> either (pure Nothing) (transformBeamQuoteSpecialZoneToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamQSZ.id $ Se.Eq dQuoteId]
+--     Nothing -> pure Nothing
 
--- transformDomainQuoteSpecialZoneToBeam :: QuoteSpecialZone -> BeamQSZ.QuoteSpecialZone
--- transformDomainQuoteSpecialZoneToBeam QuoteSpecialZone {..} =
---   BeamQSZ.QuoteSpecialZoneT
---     { BeamQSZ.id = getId id,
---       BeamQSZ.searchRequestId = getId searchRequestId,
---       BeamQSZ.providerId = getId providerId,
---       BeamQSZ.vehicleVariant = vehicleVariant,
---       BeamQSZ.distance = distance,
---       BeamQSZ.estimatedFinishTime = estimatedFinishTime,
---       BeamQSZ.createdAt = createdAt,
---       BeamQSZ.updatedAt = updatedAt,
---       BeamQSZ.validTill = validTill,
---       BeamQSZ.estimatedFare = estimatedFare,
---       BeamQSZ.fareParametersId = getId fareParams.id
---     }
+transformBeamQuoteSpecialZoneToDomain :: L.MonadFlow m => BeamQSZ.QuoteSpecialZone -> m (QuoteSpecialZone)
+transformBeamQuoteSpecialZoneToDomain BeamQSZ.QuoteSpecialZoneT {..} = do
+  fp <- BeamQFP.findById' (Id fareParametersId)
+  pure
+    QuoteSpecialZone
+      { id = Id id,
+        searchRequestId = Id searchRequestId,
+        providerId = Id providerId,
+        vehicleVariant = vehicleVariant,
+        distance = distance,
+        estimatedFinishTime = estimatedFinishTime,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
+        validTill = validTill,
+        estimatedFare = estimatedFare,
+        fareParams = fromJust fp -- to take a default value?
+      }
+
+transformDomainQuoteSpecialZoneToBeam :: QuoteSpecialZone -> BeamQSZ.QuoteSpecialZone
+transformDomainQuoteSpecialZoneToBeam QuoteSpecialZone {..} =
+  BeamQSZ.QuoteSpecialZoneT
+    { BeamQSZ.id = getId id,
+      BeamQSZ.searchRequestId = getId searchRequestId,
+      BeamQSZ.providerId = getId providerId,
+      BeamQSZ.vehicleVariant = vehicleVariant,
+      BeamQSZ.distance = distance,
+      BeamQSZ.estimatedFinishTime = estimatedFinishTime,
+      BeamQSZ.createdAt = createdAt,
+      BeamQSZ.updatedAt = updatedAt,
+      BeamQSZ.validTill = validTill,
+      BeamQSZ.estimatedFare = estimatedFare,
+      BeamQSZ.fareParametersId = getId fareParams.id
+    }

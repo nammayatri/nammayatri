@@ -28,17 +28,18 @@ import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.RideDetails as BeamRD
 import Storage.Tabular.RideDetails ()
-import qualified Storage.Tabular.VechileNew as VN
+
+-- import qualified Storage.Tabular.VechileNew as VN
 
 create :: RideDetails -> SqlDB ()
 create = Esq.create
 
--- create' :: L.MonadFlow m => DRD.RideDetails -> m (MeshResult ())
--- create' rideDetails = do
---   dbConf <- L.getOption Extra.EulerPsqlDbCfg
---   case dbConf of
---     Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainRideDetailsToBeam rideDetails)
---     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+create' :: L.MonadFlow m => DRD.RideDetails -> m (MeshResult ())
+create' rideDetails = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainRideDetailsToBeam rideDetails)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 findById ::
   Transactionable m =>
@@ -46,12 +47,12 @@ findById ::
   m (Maybe RideDetails)
 findById = Esq.findById
 
--- findById' :: L.MonadFlow m => Id SR.Ride -> m (Maybe RideDetails)
--- findById' (Id rideDetailsId) = do
---   dbConf <- L.getOption Extra.EulerPsqlDbCfg
---   case dbConf of
---     Just dbCOnf' -> either (pure Nothing) (transformBeamRideDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamRD.id $ Se.Eq rideDetailsId]
---     Nothing -> pure Nothing
+findById' :: L.MonadFlow m => Id SR.Ride -> m (Maybe RideDetails)
+findById' (Id rideDetailsId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure Nothing) (transformBeamRideDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamRD.id $ Se.Eq rideDetailsId]
+    Nothing -> pure Nothing
 
 transformBeamRideDetailsToDomain :: BeamRD.RideDetails -> RideDetails
 transformBeamRideDetailsToDomain BeamRD.RideDetailsT {..} = do
