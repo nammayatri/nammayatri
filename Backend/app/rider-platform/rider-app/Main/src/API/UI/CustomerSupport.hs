@@ -25,12 +25,12 @@ module API.UI.CustomerSupport
 where
 
 import qualified Domain.Action.UI.CustomerSupport as DCS
-import Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import SharedLogic.Types.Person as SP
 import Tools.Auth
 
 -- Customer Support Flow --

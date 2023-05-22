@@ -22,20 +22,20 @@ module Domain.Action.UI.Cancel
   )
 where
 
-import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.CancellationReason as SCR
-import qualified Domain.Types.Estimate as DEstimate
-import qualified Domain.Types.Person as Person
-import qualified Domain.Types.Person.PersonFlowStatus as DPFS
-import qualified Domain.Types.Ride as Ride
-import Domain.Types.SearchRequest (SearchRequest)
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.Estimate as DEstimate
+import qualified SharedLogic.Types.Booking.Type as SRB
+import qualified SharedLogic.Types.Person as Person
+import qualified SharedLogic.Types.Person.PersonFlowStatus as DPFS
+import qualified SharedLogic.Types.Ride as Ride
+import SharedLogic.Types.SearchRequest (SearchRequest)
 import Storage.CachedQueries.CacheConfig (HasCacheConfig)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS

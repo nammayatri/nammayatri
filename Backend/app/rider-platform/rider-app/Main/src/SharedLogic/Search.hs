@@ -3,11 +3,11 @@ module SharedLogic.Search where
 import Data.Aeson
 import Data.OpenApi hiding (Header)
 import qualified Data.OpenApi as OpenApi hiding (Header)
-import qualified Domain.Action.UI.Search.OneWay as DOneWaySearch
-import qualified Domain.Action.UI.Search.Rental as DRentalSearch
-import Domain.Types.SearchRequest (SearchRequest)
 import Kernel.Prelude
 import Kernel.Types.Id
+import qualified SharedLogic.Search.OneWay as DOneWaySearch
+import qualified SharedLogic.Search.Rental as DRentalSearch
+import SharedLogic.Types.SearchRequest (SearchRequest)
 import qualified Tools.JSON as J
 import qualified Tools.Maps as Maps
 

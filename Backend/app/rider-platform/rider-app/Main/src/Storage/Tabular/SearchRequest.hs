@@ -20,13 +20,13 @@
 
 module Storage.Tabular.SearchRequest where
 
-import qualified Domain.Types.SearchRequest as Domain
 import Kernel.External.Maps (Language)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Version
+import qualified SharedLogic.Types.SearchRequest as Domain
 import qualified Storage.Tabular.Merchant as SMerchant
 import qualified Storage.Tabular.Person as SP
 import qualified Storage.Tabular.SearchRequest.SearchReqLocation as SLoc

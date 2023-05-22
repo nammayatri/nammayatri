@@ -24,7 +24,6 @@ module API.UI.Registration
 where
 
 import qualified Domain.Action.UI.Registration as DRegistration
-import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
 import qualified Domain.Types.RegistrationToken as SRT
 import Environment
@@ -34,6 +33,7 @@ import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common
 import Servant hiding (throwError)
+import qualified SharedLogic.Types.Person as SP
 import Tools.Auth (TokenAuth)
 import Tools.SignatureAuth (PartialSignatureAuth, PartialSignatureAuthResult (..))
 

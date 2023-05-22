@@ -14,11 +14,11 @@
 
 module Storage.Queries.Person.PersonDefaultEmergencyNumber where
 
-import Domain.Types.Person
 import Domain.Types.Person.PersonDefaultEmergencyNumber
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import SharedLogic.Types.Person
 import Storage.Tabular.Person.PersonDefaultEmergencyNumber
 
 replaceAll :: Id Person -> [PersonDefaultEmergencyNumber] -> SqlDB ()

@@ -20,11 +20,11 @@
 
 module Storage.Tabular.Booking.BookingLocation where
 
-import qualified Domain.Types.Booking.BookingLocation as Domain
-import qualified Domain.Types.LocationAddress as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
+import qualified SharedLogic.Types.Booking.BookingLocation as Domain
+import qualified SharedLogic.Types.LocationAddress as Domain
 
 mkPersist
   defaultSqlSettings

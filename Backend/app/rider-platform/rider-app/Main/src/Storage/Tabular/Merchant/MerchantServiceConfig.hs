@@ -21,8 +21,6 @@
 
 module Storage.Tabular.Merchant.MerchantServiceConfig where
 
-import qualified Domain.Types.Merchant as Domain
-import qualified Domain.Types.Merchant.MerchantServiceConfig as Domain
 import qualified Kernel.External.Call as Call
 import qualified Kernel.External.Maps.Interface as Maps
 import qualified Kernel.External.Notification as Notification
@@ -33,6 +31,8 @@ import Kernel.Storage.Esqueleto
 import Kernel.Types.Id (Id)
 import Kernel.Utils.Common (decodeFromText, encodeToText)
 import Kernel.Utils.Error
+import qualified SharedLogic.Types.Merchant as Domain
+import qualified SharedLogic.Types.Merchant.MerchantServiceConfig as Domain
 import Storage.Tabular.Merchant (MerchantTId)
 import Tools.Error
 

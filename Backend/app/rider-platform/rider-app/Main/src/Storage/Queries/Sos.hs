@@ -1,11 +1,11 @@
 module Storage.Queries.Sos where
 
-import Domain.Types.Person as Person ()
 import Domain.Types.Sos as Sos
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
+import SharedLogic.Types.Person as Person ()
 import Storage.Tabular.Sos
 
 create :: Sos.Sos -> SqlDB ()

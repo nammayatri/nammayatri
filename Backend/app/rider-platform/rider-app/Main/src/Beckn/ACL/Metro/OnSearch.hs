@@ -17,7 +17,6 @@ module Beckn.ACL.Metro.OnSearch where
 import qualified Beckn.Types.Core.Metro.API.OnSearch as OnSearch
 import Beckn.Types.Core.Metro.OnSearch
 import qualified Data.List.NonEmpty as NE
-import Domain.Types.SearchRequest (SearchRequest)
 import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Product.Validation.Context
@@ -27,6 +26,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.MetroOffer
+import SharedLogic.Types.SearchRequest (SearchRequest)
 
 buildMetroOffers ::
   ( HasFlowEnv m r '["coreVersion" ::: Text]

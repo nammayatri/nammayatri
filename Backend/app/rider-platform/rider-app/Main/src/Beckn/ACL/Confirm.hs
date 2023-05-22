@@ -16,7 +16,6 @@ module Beckn.ACL.Confirm (buildConfirmReq) where
 
 import qualified Beckn.Types.Core.Taxi.Confirm as Confirm
 import qualified Domain.Action.Beckn.OnInit as DOnInit
-import qualified Domain.Types.LocationAddress as DBL
 import Environment
 import EulerHS.Prelude hiding (id, state)
 import qualified Kernel.Types.Beckn.Context as Context
@@ -24,6 +23,7 @@ import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.Types.LocationAddress as DBL
 
 buildConfirmReq ::
   (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>

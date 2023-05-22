@@ -29,12 +29,8 @@ where
 
 import Data.Text
 import qualified Data.Text as T
-import qualified Domain.Types.Booking as BT
 import Domain.Types.CallStatus
 import qualified Domain.Types.CallStatus as DCS
-import Domain.Types.Merchant (Merchant)
-import Domain.Types.Person as Person
-import qualified Domain.Types.Ride as SRide
 import qualified Kernel.External.Call.Exotel.Types as Call
 import Kernel.External.Call.Interface.Exotel (exotelStatusToInterfaceStatus)
 import qualified Kernel.External.Call.Interface.Types as Call
@@ -46,6 +42,10 @@ import Kernel.Types.Beckn.Ack
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.Types.Booking.Type as BT
+import SharedLogic.Types.Merchant (Merchant)
+import SharedLogic.Types.Person as Person
+import qualified SharedLogic.Types.Ride as SRide
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.Queries.Booking as QB

@@ -14,9 +14,9 @@
 
 module Domain.Types.SavedReqLocation where
 
-import Domain.Types.Person (Person)
 import Kernel.Prelude
 import Kernel.Types.Id
+import SharedLogic.Types.Person (Person)
 
 data SavedReqLocation = SavedReqLocation
   { id :: Id SavedReqLocation,

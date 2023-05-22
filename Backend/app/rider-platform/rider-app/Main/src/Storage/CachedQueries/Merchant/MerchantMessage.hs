@@ -21,13 +21,13 @@ module Storage.CachedQueries.Merchant.MerchantMessage
 where
 
 import Data.Coerce (coerce)
-import Domain.Types.Common
-import Domain.Types.Merchant (Merchant)
-import Domain.Types.Merchant.MerchantMessage
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.Types.Common
+import SharedLogic.Types.Merchant (Merchant)
+import SharedLogic.Types.Merchant.MerchantMessage
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Merchant.MerchantMessage as Queries
 

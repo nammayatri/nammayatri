@@ -20,11 +20,11 @@
 
 module Storage.Tabular.RentalSlab where
 
-import qualified Domain.Types.RentalSlab as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
+import qualified SharedLogic.Types.RentalSlab as Domain
 
 mkPersist
   defaultSqlSettings

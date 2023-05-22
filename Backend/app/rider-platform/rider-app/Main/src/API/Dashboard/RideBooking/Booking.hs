@@ -18,14 +18,14 @@ module API.Dashboard.RideBooking.Booking where
 
 import qualified API.UI.Booking as UB
 import qualified Domain.Action.UI.Booking as DBooking
-import qualified Domain.Types.Booking as SRB
-import qualified Domain.Types.Booking.API as DB
-import qualified Domain.Types.Person as DP
 import Environment
 import EulerHS.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import Servant
+import qualified SharedLogic.Types.Booking.API as DB
+import qualified SharedLogic.Types.Booking.Type as SRB
+import qualified SharedLogic.Types.Person as DP
 
 data RideBookingEndPoint = RideStatusEndPoint
   deriving (Show, Read)

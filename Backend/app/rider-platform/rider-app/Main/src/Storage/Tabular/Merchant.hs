@@ -20,13 +20,13 @@
 
 module Storage.Tabular.Merchant where
 
-import qualified Domain.Types.Merchant as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Base64
 import Kernel.Types.Geofencing (GeoRestriction)
 import qualified Kernel.Types.Geofencing as Geo
 import Kernel.Types.Id
+import qualified SharedLogic.Types.Merchant as Domain
 
 mkPersist
   defaultSqlSettings

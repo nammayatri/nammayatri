@@ -18,10 +18,7 @@ module Domain.Action.UI.Confirm
   )
 where
 
-import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
-import qualified Domain.Types.Person as DP
-import qualified Domain.Types.Quote as DQuote
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Esqueleto.Config
@@ -29,6 +26,9 @@ import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.Confirm as SConfirm
+import qualified SharedLogic.Types.Booking.Type as DRB
+import qualified SharedLogic.Types.Person as DP
+import qualified SharedLogic.Types.Quote as DQuote
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.BookingCancellationReason as QBCR

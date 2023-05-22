@@ -19,12 +19,12 @@ module Storage.CachedQueries.MerchantConfig
   )
 where
 
-import Domain.Types.Merchant
-import Domain.Types.MerchantConfig
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.Types.Merchant
+import SharedLogic.Types.MerchantConfig
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.MerchantConfig as Queries
 

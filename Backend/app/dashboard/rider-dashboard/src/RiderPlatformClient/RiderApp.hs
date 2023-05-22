@@ -35,14 +35,8 @@ import qualified "rider-app" Domain.Action.UI.Profile as DProfile
 import qualified "rider-app" Domain.Action.UI.Quote as DQuote
 import qualified "rider-app" Domain.Action.UI.Registration as DR
 import qualified "rider-app" Domain.Action.UI.Select as DSelect
-import qualified "rider-app" Domain.Types.Booking as SRB
-import qualified "rider-app" Domain.Types.Booking.API as DB
-import qualified "rider-app" Domain.Types.Estimate as DEstimate
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
-import qualified "rider-app" Domain.Types.Person as DP
-import qualified "rider-app" Domain.Types.Quote as Quote
 import qualified "rider-app" Domain.Types.RegistrationToken as DTR
-import qualified "rider-app" Domain.Types.SearchRequest as SSR
 import Domain.Types.ServerName
 import qualified EulerHS.Types as Euler
 import Kernel.Prelude
@@ -51,6 +45,12 @@ import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (callAPI)
 import Servant
+import qualified "rider-app" SharedLogic.Estimate as DEstimate
+import qualified "rider-app" SharedLogic.Types.Booking.API as DB
+import qualified "rider-app" SharedLogic.Types.Booking.Type as SRB
+import qualified "rider-app" SharedLogic.Types.Person as DP
+import qualified "rider-app" SharedLogic.Types.Quote as Quote
+import qualified "rider-app" SharedLogic.Types.SearchRequest as SSR
 import Tools.Auth.Merchant (CheckedShortId)
 import Tools.Client
 

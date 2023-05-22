@@ -1,11 +1,11 @@
 module SharedLogic.Booking where
 
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
-import Domain.Types.Booking.BookingLocation (BookingLocationAPIEntity)
-import qualified Domain.Types.RentalSlab as DRentalSlab
 import EulerHS.Prelude hiding (id)
 import Kernel.Prelude
 import Kernel.Utils.Common
+import SharedLogic.Types.Booking.BookingLocation (BookingLocationAPIEntity)
+import qualified SharedLogic.Types.RentalSlab as DRentalSlab
 import qualified Tools.JSON as J
 import qualified Tools.Schema as S
 

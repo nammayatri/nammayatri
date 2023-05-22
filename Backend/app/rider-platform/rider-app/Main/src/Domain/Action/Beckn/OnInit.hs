@@ -14,9 +14,6 @@
 
 module Domain.Action.Beckn.OnInit where
 
-import Domain.Types.Booking (BPPBooking, Booking)
-import qualified Domain.Types.Booking as DRB
-import qualified Domain.Types.LocationAddress as DBL
 import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
@@ -24,6 +21,9 @@ import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.GenericPretty (PrettyShow)
+import SharedLogic.Types.Booking.Type (BPPBooking, Booking)
+import qualified SharedLogic.Types.Booking.Type as DRB
+import qualified SharedLogic.Types.LocationAddress as DBL
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRideB

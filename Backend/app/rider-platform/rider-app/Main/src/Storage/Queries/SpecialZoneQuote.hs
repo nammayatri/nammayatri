@@ -14,11 +14,11 @@
 
 module Storage.Queries.SpecialZoneQuote where
 
-import Domain.Types.SpecialZoneQuote
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
+import SharedLogic.Types.SpecialZoneQuote
 import Storage.Tabular.SpecialZoneQuote
 
 findById' :: (MonadThrow m, Log m, Transactionable m) => Id SpecialZoneQuote -> DTypeBuilder m (Maybe SpecialZoneQuoteT)

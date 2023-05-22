@@ -22,13 +22,13 @@ module API.UI.Quote
 where
 
 import qualified Domain.Action.UI.Quote as DQuote
-import qualified Domain.Types.Person as Person
-import qualified Domain.Types.SearchRequest as SSR
 import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import qualified SharedLogic.Types.Person as Person
+import qualified SharedLogic.Types.SearchRequest as SSR
 import Tools.Auth
 
 type API =

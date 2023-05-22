@@ -21,7 +21,6 @@ import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.ByteString.UTF8 as B
 import Data.Time.Clock.POSIX
-import qualified "rider-app" Domain.Types.SearchRequest as BSearchRequest
 import EulerHS.Prelude
 import Kernel.Types.Base64
 import Kernel.Types.Id
@@ -29,6 +28,7 @@ import Kernel.Types.Version
 import qualified Kernel.Utils.SignatureAuth as HttpSig
 import Network.HTTP.Types.Status
 import Servant.Client
+import qualified "rider-app" SharedLogic.Types.SearchRequest as BSearchRequest
 import Test.Hspec hiding (context)
 import Utils (defaultManager, runClient')
 

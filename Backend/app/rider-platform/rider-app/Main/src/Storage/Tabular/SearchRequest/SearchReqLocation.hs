@@ -20,11 +20,11 @@
 
 module Storage.Tabular.SearchRequest.SearchReqLocation where
 
-import qualified Domain.Types.LocationAddress as Domain
-import qualified Domain.Types.SearchRequest.SearchReqLocation as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
+import qualified SharedLogic.Types.LocationAddress as Domain
+import qualified SharedLogic.Types.SearchRequest.SearchReqLocation as Domain
 
 mkPersist
   defaultSqlSettings

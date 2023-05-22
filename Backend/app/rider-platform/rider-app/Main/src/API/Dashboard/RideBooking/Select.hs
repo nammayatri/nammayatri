@@ -18,14 +18,14 @@ module API.Dashboard.RideBooking.Select where
 
 import qualified API.UI.Select as US
 import qualified Domain.Action.UI.Select as DSelect
-import qualified Domain.Types.Estimate as DEstimate
-import qualified Domain.Types.Person as DP
 import Environment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Servant
+import qualified SharedLogic.Estimate as DEstimate
+import qualified SharedLogic.Types.Person as DP
 
 data RideEstimatesEndPoint
   = EstimatesEndPoint

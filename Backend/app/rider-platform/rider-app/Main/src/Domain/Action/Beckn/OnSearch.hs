@@ -31,16 +31,6 @@ module Domain.Action.Beckn.OnSearch
   )
 where
 
-import qualified Domain.Types.Estimate as DEstimate
-import qualified Domain.Types.Merchant as DMerchant
-import qualified Domain.Types.Person.PersonFlowStatus as DPFS
-import qualified Domain.Types.Quote as DQuote
-import qualified Domain.Types.RentalSlab as DRentalSlab
-import Domain.Types.SearchRequest
-import qualified Domain.Types.SearchRequest as DSearchReq
-import qualified Domain.Types.SpecialZoneQuote as DSpecialZoneQuote
-import qualified Domain.Types.TripTerms as DTripTerms
-import Domain.Types.VehicleVariant
 import Environment
 import Kernel.External.Maps
 import Kernel.Prelude
@@ -49,6 +39,16 @@ import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.Estimate as DEstimate
+import qualified SharedLogic.Types.Merchant as DMerchant
+import qualified SharedLogic.Types.Person.PersonFlowStatus as DPFS
+import qualified SharedLogic.Types.Quote as DQuote
+import qualified SharedLogic.Types.RentalSlab as DRentalSlab
+import SharedLogic.Types.SearchRequest
+import qualified SharedLogic.Types.SearchRequest as DSearchReq
+import qualified SharedLogic.Types.SpecialZoneQuote as DSpecialZoneQuote
+import qualified SharedLogic.Types.TripTerms as DTripTerms
+import SharedLogic.Types.VehicleVariant
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Estimate as QEstimate

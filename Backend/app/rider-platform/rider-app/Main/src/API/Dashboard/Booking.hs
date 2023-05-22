@@ -16,12 +16,12 @@ module API.Dashboard.Booking where
 
 import qualified "dashboard-helper-api" Dashboard.Common.Booking as Common
 import qualified Domain.Action.Dashboard.Booking as DBooking
-import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant hiding (throwError)
+import qualified SharedLogic.Types.Merchant as DM
 
 type API =
   "booking"

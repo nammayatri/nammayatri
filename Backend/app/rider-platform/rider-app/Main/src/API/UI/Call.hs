@@ -27,8 +27,6 @@ where
 import qualified Domain.Action.UI.Call as DCall
 import Domain.Types.CallStatus
 import qualified Domain.Types.CallStatus as SCS
-import Domain.Types.Person as Person
-import qualified Domain.Types.Ride as SRide
 import Environment
 import Kernel.External.Call.Exotel.Types (ExotelCallStatus)
 import Kernel.Prelude
@@ -36,6 +34,8 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import SharedLogic.Types.Person as Person
+import qualified SharedLogic.Types.Ride as SRide
 import Tools.Auth
 
 type API = BackendBasedCallAPI :<|> FrontendBasedCallAPI

@@ -22,7 +22,6 @@ module Domain.Action.UI.SavedReqLocation
 where
 
 import Data.Text (pack)
-import qualified Domain.Types.Person as Person
 import qualified Domain.Types.SavedReqLocation as SavedReqLocation
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -31,6 +30,7 @@ import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Error
 import Kernel.Types.Id (Id)
 import Kernel.Utils.Common
+import qualified SharedLogic.Types.Person as Person
 import qualified Storage.Queries.SavedReqLocation as QSavedReqLocation
 
 data CreateSavedReqLocationReq = CreateSavedReqLocationReq

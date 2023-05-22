@@ -28,10 +28,10 @@ import qualified API.Dashboard.RideBooking.Quote as Quote
 import qualified API.Dashboard.RideBooking.Registration as Registration
 import qualified API.Dashboard.RideBooking.Search as Search
 import qualified API.Dashboard.RideBooking.Select as Select
-import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Types.Id
 import Servant
+import qualified SharedLogic.Types.Merchant as DM
 
 type API =
   "rideBooking"

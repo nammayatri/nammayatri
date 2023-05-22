@@ -18,13 +18,13 @@ module API.Dashboard.RideBooking.Profile where
 
 import qualified API.UI.Profile as AP
 import qualified Domain.Action.UI.Profile as DProfile
-import qualified Domain.Types.Person as DP
 import Environment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Servant
+import qualified SharedLogic.Types.Person as DP
 
 data ProfileEndPoint = UpdatePersonEndPoint
   deriving (Show, Read)

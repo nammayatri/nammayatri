@@ -20,12 +20,12 @@
 
 module Storage.Tabular.MerchantConfig where
 
-import qualified Domain.Types.MerchantConfig as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import Kernel.Types.SlidingWindowCounters (PeriodType)
 import qualified Kernel.Types.SlidingWindowCounters as SWC
+import qualified SharedLogic.Types.MerchantConfig as Domain
 import Storage.Tabular.Merchant (MerchantTId)
 
 derivePersistField "PeriodType"

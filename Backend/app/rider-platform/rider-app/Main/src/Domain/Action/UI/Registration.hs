@@ -31,11 +31,6 @@ import qualified Data.Aeson as A
 import Data.Aeson.Types ((.:), (.:?))
 import Data.OpenApi hiding (email, info)
 import qualified Data.Text.Encoding as TE
-import Domain.Types.Merchant (Merchant)
-import qualified Domain.Types.Merchant as DMerchant
-import Domain.Types.Person (PersonAPIEntity, PersonE (updatedAt))
-import qualified Domain.Types.Person as SP
-import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import Domain.Types.RegistrationToken (RegistrationToken)
 import qualified Domain.Types.RegistrationToken as SR
 import qualified EulerHS.Language as L
@@ -60,6 +55,11 @@ import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
 import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
+import SharedLogic.Types.Merchant (Merchant)
+import qualified SharedLogic.Types.Merchant as DMerchant
+import SharedLogic.Types.Person (PersonAPIEntity, PersonE (updatedAt))
+import qualified SharedLogic.Types.Person as SP
+import qualified SharedLogic.Types.Person.PersonFlowStatus as DPFS
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QDFS

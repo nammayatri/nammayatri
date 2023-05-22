@@ -1,9 +1,9 @@
 module Domain.Types.Sos where
 
-import Domain.Types.Person (Person)
-import Domain.Types.Ride (Ride)
 import Kernel.Prelude
 import Kernel.Types.Id
+import SharedLogic.Types.Person (Person)
+import SharedLogic.Types.Ride (Ride)
 
 data Sos = Sos
   { id :: Id Sos,

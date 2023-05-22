@@ -120,9 +120,6 @@ library
       Domain.Action.UI.Ride
       Domain.Action.UI.Route
       Domain.Action.UI.SavedReqLocation
-      Domain.Action.UI.Search.Common
-      Domain.Action.UI.Search.OneWay
-      Domain.Action.UI.Search.Rental
       Domain.Action.UI.Select
       Domain.Action.UI.Serviceability
       Domain.Action.UI.Sos
@@ -131,50 +128,26 @@ library
       Domain.Action.UI.Webengage.Webengage
       Domain.Action.UI.Whatsapp
       Domain.Types.BlackListOrg
-      Domain.Types.Booking
-      Domain.Types.Booking.API
-      Domain.Types.Booking.BookingLocation
-      Domain.Types.Booking.Type
       Domain.Types.BookingCancellationReason
       Domain.Types.CallStatus
       Domain.Types.CancellationReason
-      Domain.Types.Common
-      Domain.Types.DriverOffer
-      Domain.Types.Estimate
-      Domain.Types.Exophone
-      Domain.Types.FarePolicy.FareBreakup
       Domain.Types.FarePolicy.FareProductType
       Domain.Types.Geometry
       Domain.Types.Issue
-      Domain.Types.LocationAddress
       Domain.Types.Maps.PlaceNameCache
-      Domain.Types.Merchant
-      Domain.Types.Merchant.MerchantMessage
-      Domain.Types.Merchant.MerchantServiceConfig
-      Domain.Types.Merchant.MerchantServiceUsageConfig
-      Domain.Types.MerchantConfig
       Domain.Types.OnSearchEvent
-      Domain.Types.Person
       Domain.Types.Person.PersonDefaultEmergencyNumber
-      Domain.Types.Person.PersonFlowStatus
-      Domain.Types.Quote
       Domain.Types.RegistrationToken
-      Domain.Types.RentalSlab
-      Domain.Types.Ride
       Domain.Types.SavedReqLocation
-      Domain.Types.SearchRequest
-      Domain.Types.SearchRequest.SearchReqLocation
       Domain.Types.SimulatedFlow.Driver
       Domain.Types.Sos
-      Domain.Types.SpecialZoneQuote
-      Domain.Types.TripTerms
-      Domain.Types.VehicleVariant
       Domain.Types.Webengage
       Environment
       SharedLogic.Booking
       SharedLogic.CallBPP
       SharedLogic.CallBPPInternal
       SharedLogic.Confirm
+      SharedLogic.Estimate
       SharedLogic.GoogleTranslate
       SharedLogic.Merchant
       SharedLogic.MerchantConfig
@@ -182,10 +155,41 @@ library
       SharedLogic.MetroOffer
       SharedLogic.PublicTransport
       SharedLogic.Search
+      SharedLogic.Search.Common
+      SharedLogic.Search.OneWay
+      SharedLogic.Search.Rental
       SharedLogic.SimulatedFlow.Booking
       SharedLogic.SimulatedFlow.Confirm
       SharedLogic.SimulatedFlow.Maps
+      SharedLogic.SimulatedFlow.OneWay
+      SharedLogic.SimulatedFlow.Rental
+      SharedLogic.SimulatedFlow.Ride
+      SharedLogic.SimulatedFlow.Route
       SharedLogic.SimulatedFlow.Search
+      SharedLogic.SimulatedFlow.Select
+      SharedLogic.Types.Booking.API
+      SharedLogic.Types.Booking.BookingLocation
+      SharedLogic.Types.Booking.Type
+      SharedLogic.Types.Common
+      SharedLogic.Types.DriverOffer
+      SharedLogic.Types.Exophone
+      SharedLogic.Types.FarePolicy.FareBreakup
+      SharedLogic.Types.LocationAddress
+      SharedLogic.Types.Merchant
+      SharedLogic.Types.Merchant.MerchantMessage
+      SharedLogic.Types.Merchant.MerchantServiceConfig
+      SharedLogic.Types.Merchant.MerchantServiceUsageConfig
+      SharedLogic.Types.MerchantConfig
+      SharedLogic.Types.Person
+      SharedLogic.Types.Person.PersonFlowStatus
+      SharedLogic.Types.Quote
+      SharedLogic.Types.RentalSlab
+      SharedLogic.Types.Ride
+      SharedLogic.Types.SearchRequest
+      SharedLogic.Types.SearchRequest.SearchReqLocation
+      SharedLogic.Types.SpecialZoneQuote
+      SharedLogic.Types.TripTerms
+      SharedLogic.Types.VehicleVariant
       Storage.CachedQueries.BlackListOrg
       Storage.CachedQueries.CacheConfig
       Storage.CachedQueries.Exophone

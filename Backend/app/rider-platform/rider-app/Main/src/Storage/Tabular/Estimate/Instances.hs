@@ -15,10 +15,10 @@
 
 module Storage.Tabular.Estimate.Instances where
 
-import qualified Domain.Types.Estimate as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
+import qualified SharedLogic.Estimate as Domain
 import qualified Storage.Tabular.Estimate as SEstimate
 import qualified Storage.Tabular.EstimateBreakup as ESB
 import qualified Storage.Tabular.TripTerms as STripTerms

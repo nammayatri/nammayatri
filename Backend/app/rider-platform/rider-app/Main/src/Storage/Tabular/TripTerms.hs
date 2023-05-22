@@ -20,10 +20,10 @@
 
 module Storage.Tabular.TripTerms where
 
-import qualified Domain.Types.TripTerms as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
+import qualified SharedLogic.Types.TripTerms as Domain
 
 mkPersist
   defaultSqlSettings

@@ -14,10 +14,10 @@
 
 module Domain.Types.CallStatus where
 
-import Domain.Types.Ride
 import qualified Kernel.External.Call.Interface.Types as CallTypes
 import Kernel.Prelude
 import Kernel.Types.Id
+import SharedLogic.Types.Ride
 
 data CallStatus = CallStatus
   { id :: Id CallStatus,

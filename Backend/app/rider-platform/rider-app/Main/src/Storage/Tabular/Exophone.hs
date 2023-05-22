@@ -20,10 +20,10 @@
 
 module Storage.Tabular.Exophone where
 
-import qualified Domain.Types.Exophone as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
+import qualified SharedLogic.Types.Exophone as Domain
 import qualified Storage.Tabular.Merchant as SM
 
 mkPersist

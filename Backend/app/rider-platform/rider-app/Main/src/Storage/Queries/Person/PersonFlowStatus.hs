@@ -19,12 +19,12 @@ module Storage.Queries.Person.PersonFlowStatus
     #-}
 where
 
-import Domain.Types.Person
-import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
+import SharedLogic.Types.Person
+import qualified SharedLogic.Types.Person.PersonFlowStatus as DPFS
 import Storage.Tabular.Person.PersonFlowStatus
 
 create :: DPFS.PersonFlowStatus -> SqlDB ()

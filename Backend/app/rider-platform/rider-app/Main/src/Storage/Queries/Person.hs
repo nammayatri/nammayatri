@@ -15,10 +15,6 @@
 module Storage.Queries.Person where
 
 import Control.Applicative ((<|>))
-import Domain.Types.Merchant (Merchant)
-import qualified Domain.Types.MerchantConfig as DMC
-import Domain.Types.Person
-import Domain.Types.Ride as Ride
 import Kernel.External.Encryption
 import Kernel.External.Maps (Language)
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
@@ -27,6 +23,10 @@ import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Types.Version
+import SharedLogic.Types.Merchant (Merchant)
+import qualified SharedLogic.Types.MerchantConfig as DMC
+import SharedLogic.Types.Person
+import SharedLogic.Types.Ride as Ride
 import Storage.Tabular.Booking
 import Storage.Tabular.Person
 import Storage.Tabular.Ride

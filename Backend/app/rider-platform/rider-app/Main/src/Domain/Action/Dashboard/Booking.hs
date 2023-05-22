@@ -19,17 +19,17 @@ where
 
 import qualified "dashboard-helper-api" Dashboard.Common.Booking as Common
 import Data.Coerce (coerce)
-import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.CancellationReason as DCR
-import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Ride as DRide
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified SharedLogic.Types.Booking.Type as DBooking
+import qualified SharedLogic.Types.Merchant as DM
+import qualified SharedLogic.Types.Ride as DRide
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCR

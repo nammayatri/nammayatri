@@ -19,7 +19,6 @@ module Domain.Action.Beckn.OnConfirm
   )
 where
 
-import qualified Domain.Types.Booking as DRB
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -27,6 +26,7 @@ import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.Types.Booking.Type as DRB
 import qualified Storage.Queries.Booking as QRB
 import Tools.Error
 

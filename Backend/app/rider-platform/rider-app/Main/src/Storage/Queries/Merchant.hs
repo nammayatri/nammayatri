@@ -20,13 +20,13 @@ module Storage.Queries.Merchant
     #-}
 where
 
-import Domain.Types.Merchant as DOrg
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (findById)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Types.Registry (Subscriber)
 import Kernel.Utils.Common
+import SharedLogic.Types.Merchant as DOrg
 import Storage.Tabular.Merchant
 
 findById :: Transactionable m => Id Merchant -> m (Maybe Merchant)

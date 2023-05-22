@@ -18,11 +18,11 @@ import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
-import Domain.Types.Common
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Registry (Subscriber)
 import Servant.API
+import SharedLogic.Types.Common
 
 data BlackListOrgType
   = PROVIDER

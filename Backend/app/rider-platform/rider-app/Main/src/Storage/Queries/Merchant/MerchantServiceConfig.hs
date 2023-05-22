@@ -19,13 +19,13 @@ module Storage.Queries.Merchant.MerchantServiceConfig
     #-}
 where
 
-import Domain.Types.Merchant as DOrg
-import Domain.Types.Merchant.MerchantServiceConfig (MerchantServiceConfig, ServiceName)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (findById)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
+import SharedLogic.Types.Merchant as DOrg
+import SharedLogic.Types.Merchant.MerchantServiceConfig (MerchantServiceConfig, ServiceName)
 import Storage.Tabular.Merchant.MerchantServiceConfig
 
 findByMerchantIdAndService :: Transactionable m => Id Merchant -> ServiceName -> m (Maybe MerchantServiceConfig)

@@ -15,11 +15,11 @@
 
 module Domain.Types.BookingCancellationReason where
 
-import Domain.Types.Booking (Booking)
 import Domain.Types.CancellationReason (CancellationReasonCode, CancellationStage)
-import Domain.Types.Ride (Ride)
 import Kernel.Prelude
 import Kernel.Types.Id
+import SharedLogic.Types.Booking.Type (Booking)
+import SharedLogic.Types.Ride (Ride)
 
 data BookingCancellationReason = BookingCancellationReason
   { bookingId :: Id Booking,

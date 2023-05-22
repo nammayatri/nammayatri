@@ -15,12 +15,12 @@
 
 module Storage.Queries.SearchRequest where
 
-import Domain.Types.Person (Person)
-import Domain.Types.SearchRequest
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
+import SharedLogic.Types.Person (Person)
+import SharedLogic.Types.SearchRequest
 import Storage.Tabular.SearchRequest
 import Storage.Tabular.SearchRequest.SearchReqLocation
 

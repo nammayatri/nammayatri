@@ -21,12 +21,12 @@
 module Storage.Tabular.Quote where
 
 import qualified Domain.Types.FarePolicy.FareProductType as Domain
-import qualified Domain.Types.Quote as Domain
-import qualified Domain.Types.VehicleVariant as VehVar
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Common (HighPrecMeters, HighPrecMoney)
 import Kernel.Types.Id
+import qualified SharedLogic.Types.Quote as Domain
+import qualified SharedLogic.Types.VehicleVariant as VehVar
 import qualified Storage.Tabular.DriverOffer as SDriverOffer
 import qualified Storage.Tabular.Merchant as SMerchant
 import qualified Storage.Tabular.RentalSlab as SRentalSlab

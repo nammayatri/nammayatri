@@ -16,7 +16,6 @@ module Mobility.ARDU.SyncRide where
 
 import Common (getAppBaseUrl)
 import qualified "dynamic-offer-driver-app" Domain.Types.Ride as DDriverOfferRide
-import qualified "rider-app" Domain.Types.Ride as DAppBackendRide
 import EulerHS.Prelude
 import HSpec
 import Mobility.ARDU.APICalls (getDriverOfferBppBaseUrl)
@@ -24,6 +23,7 @@ import Mobility.ARDU.Fixtures (arduDriver1, nammaYatriPartnerMerchantShortId)
 import Mobility.ARDU.Utils as Utils
 import Mobility.AppBackend.Fixtures
 import Mobility.Fixtures.Routes
+import qualified "rider-app" SharedLogic.Types.Ride as DAppBackendRide
 import Utils
 
 spec :: Spec

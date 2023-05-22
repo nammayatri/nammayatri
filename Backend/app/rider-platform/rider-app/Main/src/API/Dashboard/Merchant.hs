@@ -16,13 +16,13 @@ module API.Dashboard.Merchant where
 
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Merchant as Common
 import qualified Domain.Action.Dashboard.Merchant as DMerchant
-import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Id
 import Kernel.Utils.Common (withFlowHandlerAPI)
 import Servant hiding (Unauthorized, throwError)
+import qualified SharedLogic.Types.Merchant as DM
 
 type API =
   "merchant"

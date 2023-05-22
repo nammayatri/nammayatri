@@ -14,7 +14,6 @@
 
 module Domain.Action.UI.Webengage.Webengage where
 
-import qualified Domain.Types.Person as Person hiding (id)
 import Domain.Types.Webengage
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Infobip.Flow as IF
@@ -23,6 +22,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.Types.Person as Person hiding (id)
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Webengage as QWeb
 import Tools.Error

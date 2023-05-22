@@ -19,12 +19,12 @@ module Storage.Queries.Merchant.MerchantMessage
     #-}
 where
 
-import Domain.Types.Merchant as DOrg
-import Domain.Types.Merchant.MerchantMessage (MerchantMessage, MessageKey)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (findById)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import SharedLogic.Types.Merchant as DOrg
+import SharedLogic.Types.Merchant.MerchantMessage (MerchantMessage, MessageKey)
 import Storage.Tabular.Merchant.MerchantMessage ()
 
 findByMerchantIdAndMessageKey :: Transactionable m => Id Merchant -> MessageKey -> m (Maybe MerchantMessage)

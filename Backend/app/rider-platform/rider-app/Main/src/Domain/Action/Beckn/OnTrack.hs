@@ -19,12 +19,12 @@ module Domain.Action.Beckn.OnTrack
   )
 where
 
-import Domain.Types.Ride
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.Types.Ride
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error

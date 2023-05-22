@@ -19,11 +19,11 @@ module SharedLogic.MessageBuilder
 where
 
 import qualified Data.Text as T
-import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantMessage as DMM
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.Types.Merchant as DM
+import qualified SharedLogic.Types.Merchant.MerchantMessage as DMM
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import Tools.Error

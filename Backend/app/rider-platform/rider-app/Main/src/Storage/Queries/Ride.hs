@@ -15,15 +15,15 @@
 module Storage.Queries.Ride where
 
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
-import Domain.Types.Booking.Type (Booking)
-import Domain.Types.Merchant
-import Domain.Types.Person
-import Domain.Types.Ride as Ride
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
+import SharedLogic.Types.Booking.Type (Booking)
+import SharedLogic.Types.Merchant
+import SharedLogic.Types.Person
+import SharedLogic.Types.Ride as Ride
 import Storage.Tabular.Booking as Booking
 import Storage.Tabular.Person as Person
 import Storage.Tabular.Ride as Ride

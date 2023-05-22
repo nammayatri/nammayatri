@@ -17,14 +17,14 @@ module API.RiderPlatform.RideBooking.Quote where
 import qualified "rider-app" API.Dashboard.RideBooking.Quote as BAP
 import qualified "rider-app" Domain.Action.UI.Quote as DQuote
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
-import qualified "rider-app" Domain.Types.Person as DP
-import qualified "rider-app" Domain.Types.SearchRequest as SSR
 import "lib-dashboard" Environment
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified RiderPlatformClient.RiderApp as Client
 import Servant
+import qualified "rider-app" SharedLogic.Types.Person as DP
+import qualified "rider-app" SharedLogic.Types.SearchRequest as SSR
 import "lib-dashboard" Tools.Auth
 import Tools.Auth.Merchant
 

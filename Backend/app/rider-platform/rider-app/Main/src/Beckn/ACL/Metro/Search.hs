@@ -18,7 +18,6 @@ module Beckn.ACL.Metro.Search (buildSearchReq) where
 import qualified Beckn.Types.Core.Metro.API.Search as Search
 import qualified Beckn.Types.Core.Metro.Search as Search
 import Control.Lens ((?~))
-import qualified Domain.Action.UI.Search.OneWay as DSearch
 import Environment
 import EulerHS.Prelude hiding (state)
 import Kernel.Types.Beckn.Context
@@ -28,6 +27,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Types.TimeRFC339
 import Kernel.Utils.Common
+import qualified SharedLogic.Search.OneWay as DSearch
 
 buildSearchReq ::
   (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>

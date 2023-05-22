@@ -19,9 +19,6 @@ module SharedLogic.PublicTransport
   )
 where
 
-import qualified Domain.Action.UI.Search.OneWay as DOneWaySearch
-import qualified Domain.Types.Person as Person
-import qualified Domain.Types.SearchRequest as DSR
 import Kernel.Prelude
 import Kernel.Storage.Hedis as Hedis
 import Kernel.Streaming.Kafka.Topic.PublicTransportQuoteList
@@ -29,6 +26,9 @@ import Kernel.Streaming.Kafka.Topic.PublicTransportSearch
 import Kernel.Streaming.MonadProducer
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.Search.OneWay as DOneWaySearch
+import qualified SharedLogic.Types.Person as Person
+import qualified SharedLogic.Types.SearchRequest as DSR
 
 sendPublicTransportSearchRequest ::
   MonadProducer PublicTransportSearch m =>

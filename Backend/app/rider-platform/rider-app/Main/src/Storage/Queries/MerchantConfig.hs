@@ -20,12 +20,12 @@ module Storage.Queries.MerchantConfig
     #-}
 where
 
-import Domain.Types.Merchant (Merchant)
-import Domain.Types.MerchantConfig as DMC
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (findById)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import SharedLogic.Types.Merchant (Merchant)
+import SharedLogic.Types.MerchantConfig as DMC
 import Storage.Tabular.MerchantConfig
 
 findAllByMerchantId :: Transactionable m => Id Merchant -> m [DMC.MerchantConfig]

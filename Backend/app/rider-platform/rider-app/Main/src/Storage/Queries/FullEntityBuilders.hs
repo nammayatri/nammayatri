@@ -15,13 +15,13 @@
 
 module Storage.Queries.FullEntityBuilders where
 
-import Domain.Types.Booking as Booking
-import Domain.Types.Estimate
 import Domain.Types.FarePolicy.FareProductType
-import Domain.Types.Quote as Quote
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import SharedLogic.Estimate
+import SharedLogic.Types.Booking.Type as Booking
+import SharedLogic.Types.Quote as Quote
 import Storage.Queries.EstimateBreakup as QEB
 import Storage.Tabular.Booking as Booking
 import Storage.Tabular.Booking.BookingLocation

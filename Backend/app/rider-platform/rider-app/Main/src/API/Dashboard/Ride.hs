@@ -16,12 +16,12 @@ module API.Dashboard.Ride where
 
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
 import qualified Domain.Action.Dashboard.Ride as DRide
-import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant hiding (throwError)
+import qualified SharedLogic.Types.Merchant as DM
 
 type API =
   "ride"

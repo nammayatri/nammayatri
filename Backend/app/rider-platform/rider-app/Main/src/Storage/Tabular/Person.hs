@@ -20,7 +20,6 @@
 
 module Storage.Tabular.Person where
 
-import qualified Domain.Types.Person as Domain
 import Kernel.External.Encryption (DbHash, Encrypted (..), EncryptedHashed (..))
 import Kernel.External.Maps (Language)
 import Kernel.External.Whatsapp.Interface.Types (OptApiMethods)
@@ -28,6 +27,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import Kernel.Utils.Version
+import qualified SharedLogic.Types.Person as Domain
 import qualified Storage.Tabular.Merchant as SMerchant
 import qualified Storage.Tabular.MerchantConfig as SMC
 

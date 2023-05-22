@@ -20,11 +20,11 @@
 
 module Storage.Tabular.Merchant.MerchantMessage where
 
-import qualified Domain.Types.Merchant as Domain
-import qualified Domain.Types.Merchant.MerchantMessage as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
+import qualified SharedLogic.Types.Merchant as Domain
+import qualified SharedLogic.Types.Merchant.MerchantMessage as Domain
 import Storage.Tabular.Merchant (MerchantTId)
 
 derivePersistField "Domain.MessageKey"

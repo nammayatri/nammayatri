@@ -22,9 +22,6 @@ module Domain.Action.Dashboard.Customer
 where
 
 import qualified Dashboard.RiderPlatform.Customer as Common
-import qualified Domain.Types.Booking.Type as DRB
-import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Person as DP
 import Environment
 import Kernel.External.Encryption (decrypt, getDbHash)
 import Kernel.Prelude
@@ -36,6 +33,9 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import qualified SharedLogic.MerchantConfig as SMC
+import qualified SharedLogic.Types.Booking.Type as DRB
+import qualified SharedLogic.Types.Merchant as DM
+import qualified SharedLogic.Types.Person as DP
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.MerchantConfig as CMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS

@@ -17,13 +17,13 @@
 module API.Dashboard.RideBooking.Confirm where
 
 import qualified API.UI.Confirm as UC
-import qualified Domain.Types.Person as DP
-import qualified Domain.Types.Quote as Quote
 import Environment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import Servant
+import qualified SharedLogic.Types.Person as DP
+import qualified SharedLogic.Types.Quote as Quote
 
 data RideConfirmEndPoint = ConfirmEndPoint
   deriving (Show, Read)

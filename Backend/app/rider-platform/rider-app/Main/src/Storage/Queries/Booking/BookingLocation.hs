@@ -14,12 +14,12 @@
 
 module Storage.Queries.Booking.BookingLocation where
 
-import Domain.Types.Booking.BookingLocation
-import Domain.Types.LocationAddress
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
+import SharedLogic.Types.Booking.BookingLocation
+import SharedLogic.Types.LocationAddress
 import Storage.Tabular.Booking.BookingLocation
 
 findAllByIds :: Transactionable m => [Id BookingLocation] -> m [BookingLocation]

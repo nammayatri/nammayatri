@@ -15,7 +15,6 @@
 module API.UI.Whatsapp where
 
 import qualified Domain.Action.UI.Whatsapp as Whatsapp
-import qualified Domain.Types.Person as Person
 import Environment (FlowHandler, FlowServer)
 import EulerHS.Prelude
 import Kernel.Types.APISuccess
@@ -23,6 +22,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (withFlowHandlerAPI)
 import Kernel.Utils.Logging
 import Servant
+import qualified SharedLogic.Types.Person as Person
 import Tools.Auth
 
 type API =

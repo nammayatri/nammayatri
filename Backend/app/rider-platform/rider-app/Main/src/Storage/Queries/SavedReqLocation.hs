@@ -14,11 +14,11 @@
 
 module Storage.Queries.SavedReqLocation where
 
-import Domain.Types.Person (Person)
 import Domain.Types.SavedReqLocation
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import SharedLogic.Types.Person (Person)
 import Storage.Tabular.SavedReqLocation
 
 create :: SavedReqLocation -> SqlDB ()

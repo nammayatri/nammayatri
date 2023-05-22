@@ -20,14 +20,14 @@
 
 module Storage.Tabular.Estimate where
 
-import qualified Domain.Types.Estimate as Domain
-import qualified Domain.Types.VehicleVariant as VehVar
 import Kernel.External.Maps hiding (status)
 import qualified Kernel.External.Maps as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
+import qualified SharedLogic.Estimate as Domain
+import qualified SharedLogic.Types.VehicleVariant as VehVar
 import qualified Storage.Tabular.SearchRequest as SSearchRequest
 import qualified Storage.Tabular.TripTerms as STripTerms
 

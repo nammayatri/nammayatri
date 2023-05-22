@@ -18,13 +18,13 @@ import Beckn.ACL.Common
 import qualified Beckn.Types.Core.Taxi.API.OnSelect as OnSelect
 import qualified Beckn.Types.Core.Taxi.OnSelect as OnSelect
 import qualified Domain.Action.Beckn.OnSelect as DOnSelect
-import Domain.Types.VehicleVariant
 import Kernel.Prelude
 import Kernel.Product.Validation.Context
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.Types.VehicleVariant
 import Tools.Error
 
 buildOnSelectReq ::

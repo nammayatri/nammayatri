@@ -17,9 +17,6 @@ module Tools.Call
   )
 where
 
-import Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
-import Domain.Types.Merchant.MerchantServiceUsageConfig (MerchantServiceUsageConfig)
 import Kernel.External.Call as Reexport hiding
   ( initiateCall,
   )
@@ -27,6 +24,9 @@ import qualified Kernel.External.Call as Call
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.Types.Merchant
+import qualified SharedLogic.Types.Merchant.MerchantServiceConfig as DMSC
+import SharedLogic.Types.Merchant.MerchantServiceUsageConfig (MerchantServiceUsageConfig)
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC

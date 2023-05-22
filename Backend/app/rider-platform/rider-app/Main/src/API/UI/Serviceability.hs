@@ -21,7 +21,6 @@ module API.UI.Serviceability
 where
 
 import qualified Domain.Action.UI.Serviceability as DServiceability
-import Domain.Types.Person as Person
 import Environment
 import Kernel.External.Maps.Types
 import Kernel.Prelude
@@ -29,6 +28,7 @@ import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import SharedLogic.Types.Person as Person
 import Tools.Auth
 
 -------- Serviceability----------

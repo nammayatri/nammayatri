@@ -15,10 +15,10 @@
 
 module Storage.Queries.EstimateBreakup where
 
-import Domain.Types.Estimate
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import SharedLogic.Estimate
 import Storage.Tabular.EstimateBreakup as SEB
 
 findAllByEstimateId :: (Transactionable m) => Id Estimate -> DTypeBuilder m [EstimateBreakupT]

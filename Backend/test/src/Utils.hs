@@ -16,8 +16,6 @@ module Utils where
 
 import Data.Aeson (decode)
 import Data.String.Conversions
-import qualified "rider-app" Domain.Types.Booking as BDB
-import qualified "rider-app" Domain.Types.Ride as BDRide
 import qualified "dynamic-offer-driver-app" Environment as ARDU
 import qualified "rider-app" Environment as BecknApp
 import qualified "static-offer-driver-app" Environment as BecknTransport
@@ -35,6 +33,8 @@ import qualified Network.HTTP.Client as Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Resources (appBackendEnv, driverOfferBppEnv, transporterAppEnv)
 import Servant.Client hiding (client)
+import qualified "rider-app" SharedLogic.Types.Booking.Type as BDB
+import qualified "rider-app" SharedLogic.Types.Ride as BDRide
 import qualified "rider-app" Storage.Queries.Booking as BQB
 import qualified "rider-app" Storage.Queries.RegistrationToken as BQRegToken
 import qualified "rider-app" Storage.Queries.Ride as BQRide

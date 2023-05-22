@@ -16,14 +16,14 @@
 module Storage.Queries.Quote where
 
 import Data.Tuple.Extra
-import Domain.Types.DriverOffer
-import Domain.Types.Estimate
 import Domain.Types.FarePolicy.FareProductType
-import Domain.Types.Quote
-import Domain.Types.SearchRequest
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import SharedLogic.Estimate
+import SharedLogic.Types.DriverOffer
+import SharedLogic.Types.Quote
+import SharedLogic.Types.SearchRequest
 import Storage.Queries.FullEntityBuilders (buildFullQuote)
 import Storage.Tabular.DriverOffer as DriverOffer
 import Storage.Tabular.Quote

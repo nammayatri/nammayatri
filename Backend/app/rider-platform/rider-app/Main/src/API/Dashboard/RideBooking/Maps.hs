@@ -18,12 +18,12 @@ module API.Dashboard.RideBooking.Maps where
 
 import qualified API.UI.Maps as UM
 import qualified Domain.Action.UI.Maps as DMaps
-import qualified Domain.Types.Person as DP
 import Environment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import Servant
+import qualified SharedLogic.Types.Person as DP
 
 data MapEndPoints
   = AutoCompleteEndPoint

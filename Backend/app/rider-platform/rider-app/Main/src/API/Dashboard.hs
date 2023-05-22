@@ -20,10 +20,10 @@ import qualified API.Dashboard.Exotel as Exotel
 import qualified API.Dashboard.Merchant as Merchant
 import qualified API.Dashboard.Ride as Ride
 import qualified API.Dashboard.RideBooking as RideBookings
-import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Types.Id
 import Servant hiding (throwError)
+import qualified SharedLogic.Types.Merchant as DM
 import Tools.Auth (DashboardTokenAuth)
 
 type API =

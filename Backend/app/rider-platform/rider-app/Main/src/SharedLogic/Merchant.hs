@@ -14,11 +14,11 @@
 
 module SharedLogic.Merchant where
 
-import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.Types.Merchant as DM
 import qualified Storage.CachedQueries.Merchant as CQM
 import Tools.Error
 

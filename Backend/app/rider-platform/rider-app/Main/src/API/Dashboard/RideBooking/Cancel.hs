@@ -18,8 +18,6 @@ module API.Dashboard.RideBooking.Cancel where
 
 import qualified Beckn.ACL.Cancel as ACL
 import qualified Domain.Action.UI.Cancel as DCancel
-import qualified Domain.Types.Booking as SRB
-import qualified Domain.Types.Person as DP
 import Environment
 import EulerHS.Prelude
 import Kernel.Storage.Esqueleto
@@ -28,6 +26,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.Types.Booking.Type as SRB
+import qualified SharedLogic.Types.Person as DP
 
 data RideCancelEndPoint = RideBookingCancelEndPoint
   deriving (Show, Read)

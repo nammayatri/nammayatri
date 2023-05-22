@@ -20,15 +20,6 @@ where
 
 import qualified Beckn.ACL.Init as ACL
 import qualified Domain.Action.UI.Confirm as DConfirm
-import qualified Domain.Types.DriverOffer as DDriverOffer
-import qualified Domain.Types.Estimate as DEstimate
-import qualified Domain.Types.Merchant as DMerchant
-import qualified Domain.Types.Person as DPerson
-import qualified Domain.Types.Person.PersonFlowStatus as DPFS
-import qualified Domain.Types.Quote as DQuote
-import qualified Domain.Types.SearchRequest as DSearchRequest
-import qualified Domain.Types.TripTerms as DTripTerms
-import Domain.Types.VehicleVariant
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
@@ -41,6 +32,15 @@ import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.Confirm as SConfirm
+import qualified SharedLogic.Estimate as DEstimate
+import qualified SharedLogic.Types.DriverOffer as DDriverOffer
+import qualified SharedLogic.Types.Merchant as DMerchant
+import qualified SharedLogic.Types.Person as DPerson
+import qualified SharedLogic.Types.Person.PersonFlowStatus as DPFS
+import qualified SharedLogic.Types.Quote as DQuote
+import qualified SharedLogic.Types.SearchRequest as DSearchRequest
+import qualified SharedLogic.Types.TripTerms as DTripTerms
+import SharedLogic.Types.VehicleVariant
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person as Person

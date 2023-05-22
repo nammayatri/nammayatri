@@ -30,17 +30,17 @@ where
 import Data.Foldable.Extra
 import Data.Monoid
 import qualified Data.Text as T
-import qualified Domain.Types.Booking.Type as BT
-import Domain.Types.LocationAddress
-import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.MerchantConfig as DMC
-import qualified Domain.Types.Person as Person
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
+import qualified SharedLogic.Types.Booking.Type as BT
+import SharedLogic.Types.LocationAddress
+import qualified SharedLogic.Types.Merchant as DM
+import qualified SharedLogic.Types.MerchantConfig as DMC
+import qualified SharedLogic.Types.Person as Person
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CMSUC
 import qualified Storage.Queries.Booking as QB

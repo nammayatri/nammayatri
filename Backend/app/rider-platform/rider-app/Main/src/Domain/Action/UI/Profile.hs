@@ -28,7 +28,6 @@ module Domain.Action.UI.Profile
 where
 
 import Data.List (nubBy)
-import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonDefaultEmergencyNumber as DPDEN
 import Environment
 import Kernel.External.Encryption
@@ -45,6 +44,7 @@ import qualified Kernel.Utils.Predicates as P
 import qualified Kernel.Utils.Text as TU
 import Kernel.Utils.Validation
 import SharedLogic.CallBPPInternal as CallBPPInternal
+import qualified SharedLogic.Types.Person as Person
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.Queries.Person as QPerson

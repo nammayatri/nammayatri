@@ -18,8 +18,6 @@ module API.Dashboard.RideBooking.Registration where
 
 import API.UI.Registration hiding (API)
 import qualified Domain.Action.UI.Registration as DRegistration
-import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
 import qualified Domain.Types.RegistrationToken as SRT
 import Environment
@@ -29,6 +27,8 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant hiding (throwError)
+import qualified SharedLogic.Types.Merchant as DM
+import qualified SharedLogic.Types.Person as SP
 
 -- Customer Registration Flow ------
 data RegistrationEndPoint

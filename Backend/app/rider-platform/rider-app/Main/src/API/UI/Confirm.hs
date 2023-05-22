@@ -23,8 +23,6 @@ where
 
 import qualified Beckn.ACL.Init as ACL
 import qualified Domain.Action.UI.Confirm as DConfirm
-import qualified Domain.Types.Person as SP
-import qualified Domain.Types.Quote as Quote
 import Environment
 import Kernel.Prelude hiding (init)
 import Kernel.Types.Error
@@ -34,6 +32,8 @@ import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import Servant
 import qualified SharedLogic.CallBPP as CallBPP
 import SharedLogic.SimulatedFlow.Confirm
+import qualified SharedLogic.Types.Person as SP
+import qualified SharedLogic.Types.Quote as Quote
 import qualified Storage.Queries.Person as QP
 import Tools.Auth
 

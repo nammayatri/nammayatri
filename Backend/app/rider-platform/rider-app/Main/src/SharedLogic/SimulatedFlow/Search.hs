@@ -2,10 +2,6 @@
 
 module SharedLogic.SimulatedFlow.Search where
 
-import qualified Domain.Action.UI.Search.OneWay as DOneWaySearch
-import qualified Domain.Action.UI.Search.Rental as DRentalSearch
-import qualified Domain.Types.Person as Person
-import Domain.Types.SearchRequest (SearchRequest)
 import Environment
 import Kernel.External.Maps
 import Kernel.Prelude
@@ -20,6 +16,12 @@ import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common
 import SharedLogic.Search
+import qualified SharedLogic.Search.OneWay as DOneWaySearch
+import qualified SharedLogic.Search.Rental as DRentalSearch
+import SharedLogic.SimulatedFlow.OneWay as DOneWaySearch
+import qualified SharedLogic.SimulatedFlow.Rental as DRentalSearch
+import qualified SharedLogic.Types.Person as Person
+import SharedLogic.Types.SearchRequest (SearchRequest)
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import Storage.CachedQueries.SimulatedFlow.SearchRequest

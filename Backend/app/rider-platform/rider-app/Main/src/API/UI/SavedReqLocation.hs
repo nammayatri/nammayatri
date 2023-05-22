@@ -21,7 +21,6 @@ module API.UI.SavedReqLocation
 where
 
 import qualified Domain.Action.UI.SavedReqLocation as DSavedReqLocation
-import qualified Domain.Types.Person as Person
 import Environment
 import EulerHS.Prelude hiding (state)
 import Kernel.Types.APISuccess (APISuccess)
@@ -29,6 +28,7 @@ import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id (Id)
 import Kernel.Utils.Common
 import Servant
+import qualified SharedLogic.Types.Person as Person
 import Tools.Auth
 
 type API =

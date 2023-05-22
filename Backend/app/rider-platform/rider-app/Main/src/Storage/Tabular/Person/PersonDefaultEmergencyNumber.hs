@@ -20,12 +20,12 @@
 
 module Storage.Tabular.Person.PersonDefaultEmergencyNumber where
 
-import qualified Domain.Types.Person as Domain
 import qualified Domain.Types.Person.PersonDefaultEmergencyNumber as Domain
 import Kernel.External.Encryption (DbHash, Encrypted (..), EncryptedHashed (..))
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
+import qualified SharedLogic.Types.Person as Domain
 import Storage.Tabular.Person (PersonTId)
 
 mkPersist

@@ -22,19 +22,14 @@ import Common
 import qualified "rider-app" Domain.Action.UI.Cancel as AppCancel
 import qualified "rider-app" Domain.Action.UI.Select as DSelect
 import qualified "dynamic-offer-driver-app" Domain.Types.Booking as TRB
-import qualified "rider-app" Domain.Types.Booking as AppRB
 import qualified "dynamic-offer-driver-app" Domain.Types.CancellationReason as SCR
 import qualified "rider-app" Domain.Types.CancellationReason as AppCR
 import qualified "dynamic-offer-driver-app" Domain.Types.DriverInformation as TDrInfo
-import qualified "rider-app" Domain.Types.Estimate as AppEstimate
 import qualified "dynamic-offer-driver-app" Domain.Types.Merchant as TDM
 import qualified "dynamic-offer-driver-app" Domain.Types.Merchant.MerchantServiceConfig as TDMSC
 import "dynamic-offer-driver-app" Domain.Types.Person as TPerson
-import qualified "rider-app" Domain.Types.Quote as AppQuote
 import qualified "dynamic-offer-driver-app" Domain.Types.Ride as TRide
-import qualified "rider-app" Domain.Types.Ride as BRide
 import qualified "dynamic-offer-driver-app" Domain.Types.SearchRequest as ArduSReq
-import qualified "rider-app" Domain.Types.SearchRequest as AppSearchReq
 import Domain.Types.SearchRequestForDriver as SearchReqInfo
 import HSpec
 import qualified Kernel.External.Maps as Maps
@@ -50,6 +45,11 @@ import Mobility.ARDU.Queries as Queries
 import Mobility.AppBackend.APICalls as BapAPI
 import Mobility.AppBackend.Fixtures
 import Servant.Client
+import qualified "rider-app" SharedLogic.Estimate as AppEstimate
+import qualified "rider-app" SharedLogic.Types.Booking.Type as AppRB
+import qualified "rider-app" SharedLogic.Types.Quote as AppQuote
+import qualified "rider-app" SharedLogic.Types.Ride as BRide
+import qualified "rider-app" SharedLogic.Types.SearchRequest as AppSearchReq
 import qualified "dynamic-offer-driver-app" Storage.CachedQueries.Merchant.MerchantServiceConfig as TCQMSC
 import qualified "dynamic-offer-driver-app" Storage.Queries.Booking as TQRB
 import qualified "rider-app" Storage.Queries.Booking as BQRB

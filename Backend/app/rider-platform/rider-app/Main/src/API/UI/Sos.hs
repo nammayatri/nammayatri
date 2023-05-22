@@ -19,7 +19,6 @@ module API.UI.Sos
 where
 
 import qualified Domain.Action.UI.Sos as DSos
-import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Sos as Sos
 import Environment
 import EulerHS.Prelude
@@ -27,6 +26,7 @@ import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import qualified SharedLogic.Types.Person as Person
 import Tools.Auth
 
 type API =

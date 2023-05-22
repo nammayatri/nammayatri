@@ -15,10 +15,10 @@
 module Mobility.Transporter.Fixtures where
 
 import "static-offer-driver-app" Domain.Types.Merchant as DM
-import qualified "rider-app" Domain.Types.Person as TPerson
 import EulerHS.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Time (Seconds)
+import qualified "rider-app" SharedLogic.Types.Person as TPerson
 import Utils
 
 timeBetweenLocationUpdates :: Seconds

@@ -14,10 +14,10 @@
 
 module Mobility.AppBackend.Fixtures where
 
-import "rider-app" Domain.Types.Merchant as DM
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Version
+import "rider-app" SharedLogic.Types.Merchant as DM
 
 appRegistrationToken :: Text
 appRegistrationToken = "ea37f941-427a-4085-a7d0-96240f166672"

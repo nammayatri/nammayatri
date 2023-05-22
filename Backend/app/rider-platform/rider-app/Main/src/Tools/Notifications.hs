@@ -16,19 +16,8 @@ module Tools.Notifications where
 
 import Data.Default.Class
 import qualified Data.Text as T
-import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
-import Domain.Types.Estimate (Estimate)
-import qualified Domain.Types.Estimate as DEst
-import Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
-import Domain.Types.Merchant.MerchantServiceUsageConfig (MerchantServiceUsageConfig)
-import Domain.Types.Person as Person
-import Domain.Types.Quote (makeQuoteAPIEntity)
-import qualified Domain.Types.Quote as DQuote
 import Domain.Types.RegistrationToken as RegToken
-import qualified Domain.Types.Ride as SRide
-import Domain.Types.SearchRequest as SearchRequest
 import EulerHS.Prelude
 import qualified Kernel.External.Notification as Notification
 import Kernel.Storage.Esqueleto
@@ -36,6 +25,17 @@ import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.Estimate (Estimate)
+import qualified SharedLogic.Estimate as DEst
+import qualified SharedLogic.Types.Booking.Type as SRB
+import SharedLogic.Types.Merchant
+import qualified SharedLogic.Types.Merchant.MerchantServiceConfig as DMSC
+import SharedLogic.Types.Merchant.MerchantServiceUsageConfig (MerchantServiceUsageConfig)
+import SharedLogic.Types.Person as Person
+import SharedLogic.Types.Quote (makeQuoteAPIEntity)
+import qualified SharedLogic.Types.Quote as DQuote
+import qualified SharedLogic.Types.Ride as SRide
+import SharedLogic.Types.SearchRequest as SearchRequest
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC

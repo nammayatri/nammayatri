@@ -21,8 +21,6 @@ module Domain.Action.UI.Sos
   )
 where
 
-import qualified Domain.Types.Person as Person
-import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Sos as DSos
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -31,6 +29,8 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.Types.Person as Person
+import qualified SharedLogic.Types.Ride as DRide
 import qualified Storage.Queries.Sos as QSos
 import Storage.Tabular.Person ()
 import Tools.Error

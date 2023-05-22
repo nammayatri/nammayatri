@@ -17,11 +17,11 @@ module API.Dashboard.RideBooking.Quote where
 
 import qualified API.UI.Quote as UQ
 import qualified Domain.Action.UI.Quote as DQuote
-import qualified Domain.Types.Person as DP
-import qualified Domain.Types.SearchRequest as SSR
 import Environment
 import Kernel.Types.Id
 import Servant
+import qualified SharedLogic.Types.Person as DP
+import qualified SharedLogic.Types.SearchRequest as SSR
 
 type API =
   "quote"

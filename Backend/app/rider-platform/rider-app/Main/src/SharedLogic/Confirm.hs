@@ -1,18 +1,5 @@
 module SharedLogic.Confirm where
 
-import qualified Domain.Types.Booking as DRB
-import qualified Domain.Types.Booking.BookingLocation as DBL
-import qualified Domain.Types.DriverOffer as DDriverOffer
-import qualified Domain.Types.Estimate as DEstimate
-import qualified Domain.Types.Exophone as DExophone
-import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Person as DP
-import qualified Domain.Types.Person.PersonFlowStatus as DPFS
-import qualified Domain.Types.Quote as DQuote
-import Domain.Types.RentalSlab
-import qualified Domain.Types.SearchRequest as DSReq
-import qualified Domain.Types.SearchRequest.SearchReqLocation as DSRLoc
-import Domain.Types.VehicleVariant (VehicleVariant)
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import Kernel.Randomizer (getRandomElement)
@@ -20,6 +7,19 @@ import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.Estimate as DEstimate
+import qualified SharedLogic.Types.Booking.BookingLocation as DBL
+import qualified SharedLogic.Types.Booking.Type as DRB
+import qualified SharedLogic.Types.DriverOffer as DDriverOffer
+import qualified SharedLogic.Types.Exophone as DExophone
+import qualified SharedLogic.Types.Merchant as DM
+import qualified SharedLogic.Types.Person as DP
+import qualified SharedLogic.Types.Person.PersonFlowStatus as DPFS
+import qualified SharedLogic.Types.Quote as DQuote
+import SharedLogic.Types.RentalSlab
+import qualified SharedLogic.Types.SearchRequest as DSReq
+import qualified SharedLogic.Types.SearchRequest.SearchReqLocation as DSRLoc
+import SharedLogic.Types.VehicleVariant (VehicleVariant)
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as CQM

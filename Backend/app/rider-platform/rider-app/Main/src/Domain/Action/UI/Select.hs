@@ -29,15 +29,6 @@ import Data.Aeson ((.:), (.=))
 import qualified Data.Aeson as A
 import Data.Aeson.Types (parseFail, typeMismatch)
 import qualified Data.List.NonEmpty as NE
-import Domain.Types.Booking.Type
-import qualified Domain.Types.DriverOffer as DDriverOffer
-import qualified Domain.Types.Estimate as DEstimate
-import qualified Domain.Types.Person as DPerson
-import qualified Domain.Types.Person.PersonFlowStatus as DPFS
-import Domain.Types.Quote (QuoteAPIEntity (..))
-import qualified Domain.Types.Quote as DQuote
-import qualified Domain.Types.SearchRequest as DSearchReq
-import Domain.Types.VehicleVariant (VehicleVariant)
 import Environment
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
@@ -50,7 +41,16 @@ import Kernel.Types.Id
 import Kernel.Types.Predicate
 import Kernel.Utils.Common
 import Kernel.Utils.Validation
+import qualified SharedLogic.Estimate as DEstimate
 import qualified SharedLogic.SimulatedFlow.Maps as SM
+import SharedLogic.Types.Booking.Type
+import qualified SharedLogic.Types.DriverOffer as DDriverOffer
+import qualified SharedLogic.Types.Person as DPerson
+import qualified SharedLogic.Types.Person.PersonFlowStatus as DPFS
+import SharedLogic.Types.Quote (QuoteAPIEntity (..))
+import qualified SharedLogic.Types.Quote as DQuote
+import qualified SharedLogic.Types.SearchRequest as DSearchReq
+import SharedLogic.Types.VehicleVariant (VehicleVariant)
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS

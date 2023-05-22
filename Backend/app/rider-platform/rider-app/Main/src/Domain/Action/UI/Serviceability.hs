@@ -18,7 +18,6 @@ module Domain.Action.UI.Serviceability
   )
 where
 
-import Domain.Types.Person as Person
 import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -29,6 +28,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Lib.Types.SpecialLocation as DSpecialLocation
+import SharedLogic.Types.Person as Person
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import Storage.Queries.Geometry (someGeometriesContain)

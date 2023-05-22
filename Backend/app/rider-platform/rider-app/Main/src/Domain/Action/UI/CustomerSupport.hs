@@ -25,9 +25,6 @@ module Domain.Action.UI.CustomerSupport
   )
 where
 
-import qualified Domain.Types.Booking as DRB
-import qualified Domain.Types.Booking.BookingLocation as DBLoc
-import Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
 import qualified EulerHS.Language as L
 import Kernel.External.Encryption (decrypt, getDbHash)
@@ -36,6 +33,10 @@ import Kernel.Storage.Esqueleto
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.Types.Booking.API as DRB
+import qualified SharedLogic.Types.Booking.BookingLocation as DBLoc
+import qualified SharedLogic.Types.Booking.Type as DRB
+import SharedLogic.Types.Person as SP
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.Queries.Booking as QRB
 import Storage.Queries.Person as Person

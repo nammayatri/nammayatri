@@ -18,12 +18,12 @@ module Storage.CachedQueries.SimulatedFlow.Driver
   )
 where
 
-import qualified Domain.Types.Estimate as DE
 import Domain.Types.SimulatedFlow.Driver
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
+import qualified SharedLogic.Estimate as DE
 import Storage.CachedQueries.CacheConfig
 
 allDriversKey :: Text

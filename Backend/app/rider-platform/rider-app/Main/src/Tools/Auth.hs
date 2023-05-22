@@ -14,7 +14,6 @@
 
 module Tools.Auth where
 
-import qualified Domain.Types.Person as Person
 import qualified Domain.Types.RegistrationToken as SR
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Storage.Hedis as Redis
@@ -26,6 +25,7 @@ import qualified Kernel.Utils.Common as Utils
 import Kernel.Utils.Monitoring.Prometheus.Servant
 import Kernel.Utils.Servant.HeaderAuth
 import Servant hiding (Context, throwError)
+import qualified SharedLogic.Types.Person as Person
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import Tools.Error
 

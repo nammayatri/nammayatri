@@ -21,17 +21,13 @@ import qualified "static-offer-driver-app" API.UI.Ride as RideAPI
 import qualified "rider-app" API.UI.Search as AppSearch
 import Common
 import qualified "static-offer-driver-app" Domain.Action.UI.Booking as DUB
-import qualified "rider-app" Domain.Types.Booking as BRB
 import qualified "static-offer-driver-app" Domain.Types.Booking as TBooking
 import qualified "static-offer-driver-app" Domain.Types.Booking as TRB
 import qualified "rider-app" Domain.Types.CancellationReason as AppCR
 import qualified "static-offer-driver-app" Domain.Types.CancellationReason as SCR
 import qualified "static-offer-driver-app" Domain.Types.Merchant.MerchantServiceConfig as TDMSC
 import "static-offer-driver-app" Domain.Types.Person as TPerson
-import qualified "rider-app" Domain.Types.Quote as AppQuote
-import qualified "rider-app" Domain.Types.Ride as BRide
 import qualified "static-offer-driver-app" Domain.Types.Ride as TRide
-import qualified "rider-app" Domain.Types.SearchRequest as AppSearchReq
 import HSpec
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Types
@@ -44,6 +40,10 @@ import qualified Mobility.AppBackend.APICalls as API
 import Mobility.AppBackend.Fixtures
 import qualified Mobility.Transporter.APICalls as API
 import Mobility.Transporter.Fixtures as Fixtures
+import qualified "rider-app" SharedLogic.Types.Booking.Type as BRB
+import qualified "rider-app" SharedLogic.Types.Quote as AppQuote
+import qualified "rider-app" SharedLogic.Types.Ride as BRide
+import qualified "rider-app" SharedLogic.Types.SearchRequest as AppSearchReq
 import qualified "static-offer-driver-app" Storage.CachedQueries.Merchant.MerchantServiceConfig as TCQMSC
 import qualified "rider-app" Storage.Queries.Booking as BQRB
 import qualified "static-offer-driver-app" Storage.Queries.Booking as TQBooking

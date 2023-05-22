@@ -21,13 +21,13 @@ module API.UI.Route
 where
 
 import qualified Domain.Action.UI.Route as DRoute
-import qualified Domain.Types.Person as Person
 import Environment
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import qualified SharedLogic.Types.Person as Person
 import Tools.Auth
 
 type API =

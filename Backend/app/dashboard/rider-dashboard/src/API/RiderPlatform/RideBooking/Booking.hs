@@ -17,10 +17,7 @@ module API.RiderPlatform.RideBooking.Booking where
 import qualified "rider-app" API.Dashboard.RideBooking.Booking as BAP
 import qualified Dashboard.RiderPlatform.Customer as Common
 import qualified "rider-app" Domain.Action.UI.Booking as DBooking
-import qualified "rider-app" Domain.Types.Booking as SRB
-import qualified "rider-app" Domain.Types.Booking.API as DB
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
-import qualified "rider-app" Domain.Types.Person as DP
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import Kernel.Prelude
@@ -29,6 +26,9 @@ import Kernel.Utils.Common
 import qualified RiderPlatformClient.RiderApp as Client
 import Servant
 import qualified SharedLogic.Transaction as T
+import qualified "rider-app" SharedLogic.Types.Booking.API as DB
+import qualified "rider-app" SharedLogic.Types.Booking.Type as SRB
+import qualified "rider-app" SharedLogic.Types.Person as DP
 import "lib-dashboard" Tools.Auth
 import Tools.Auth.Merchant
 

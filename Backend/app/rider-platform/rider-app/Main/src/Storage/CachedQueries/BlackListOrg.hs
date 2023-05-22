@@ -21,12 +21,12 @@ where
 
 import Data.Coerce (coerce)
 import Domain.Types.BlackListOrg
-import Domain.Types.Common
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Types.Registry (Subscriber)
 import Kernel.Utils.Common
+import SharedLogic.Types.Common
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.BlackListOrg as Queries
 

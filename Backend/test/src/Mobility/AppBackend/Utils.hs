@@ -14,10 +14,10 @@
 
 module Mobility.AppBackend.Utils where
 
-import qualified "rider-app" Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Mobility.AppBackend.Fixtures as Fixtures
+import qualified "rider-app" SharedLogic.Types.Merchant.MerchantServiceConfig as DMSC
 import qualified "rider-app" Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import Utils (runAppFlow)
 

@@ -28,13 +28,13 @@ module API.UI.Maps
 where
 
 import qualified Domain.Action.UI.Maps as DMaps
-import qualified Domain.Types.Person as Person
 import Environment (FlowHandler, FlowServer)
 import EulerHS.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common (withFlowHandlerAPI)
 import Kernel.Utils.Logging
 import Servant
+import qualified SharedLogic.Types.Person as Person
 import Tools.Auth
 
 type API =

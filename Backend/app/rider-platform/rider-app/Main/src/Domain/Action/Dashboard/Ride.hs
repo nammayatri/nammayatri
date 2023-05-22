@@ -21,11 +21,6 @@ where
 import qualified "dashboard-helper-api" Dashboard.Common as Common
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
 import Data.Coerce (coerce)
-import Domain.Types.Booking.BookingLocation (BookingLocation (..))
-import qualified Domain.Types.Booking.Type as DB
-import Domain.Types.LocationAddress
-import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Ride as Domain
 import Environment
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -34,6 +29,11 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
+import SharedLogic.Types.Booking.BookingLocation (BookingLocation (..))
+import qualified SharedLogic.Types.Booking.Type as DB
+import SharedLogic.Types.LocationAddress
+import qualified SharedLogic.Types.Merchant as DM
+import qualified SharedLogic.Types.Ride as Domain
 import Storage.CachedQueries.Merchant (findByShortId)
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Person as QP

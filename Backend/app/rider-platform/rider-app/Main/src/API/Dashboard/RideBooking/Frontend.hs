@@ -17,13 +17,13 @@
 module API.Dashboard.RideBooking.Frontend where
 
 import qualified Domain.Action.UI.Frontend as DFrontend
-import qualified Domain.Types.Person as DP
 import Environment
 import EulerHS.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import qualified SharedLogic.Types.Person as DP
 
 data RideNotifyEventEndPoint = NotifyEventEndPoint
   deriving (Show, Read)

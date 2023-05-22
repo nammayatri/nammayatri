@@ -16,10 +16,10 @@
 
 module Domain.Types.Person.PersonDefaultEmergencyNumber where
 
-import Domain.Types.Person (Person)
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Id
+import SharedLogic.Types.Person (Person)
 
 data PersonDefaultEmergencyNumberE e = PersonDefaultEmergencyNumber
   { personId :: Id Person,

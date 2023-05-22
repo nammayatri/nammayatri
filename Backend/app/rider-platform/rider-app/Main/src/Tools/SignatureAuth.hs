@@ -31,7 +31,6 @@ import Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Typeable (typeRep)
 import Data.X509 (PubKey (PubKeyRSA))
-import Domain.Types.Merchant (Merchant)
 import EulerHS.Prelude
 import GHC.Exts (fromList)
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
@@ -57,6 +56,7 @@ import qualified Servant.OpenApi as S
 import qualified Servant.OpenApi.Internal as S
 import Servant.Server.Internal.Delayed (addAuthCheck)
 import Servant.Server.Internal.DelayedIO (DelayedIO, withRequest)
+import SharedLogic.Types.Merchant (Merchant)
 import Storage.CachedQueries.CacheConfig (HasCacheConfig)
 import qualified Storage.CachedQueries.Merchant as QMerchant
 

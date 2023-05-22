@@ -15,7 +15,6 @@
 module Beckn.ACL.Init (buildInitReq) where
 
 import qualified Beckn.Types.Core.Taxi.Init as Init
-import qualified Domain.Types.VehicleVariant as VehVar
 import Environment
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
@@ -26,6 +25,7 @@ import Kernel.Types.Logging
 import Kernel.Utils.Common (HighPrecMeters)
 import Kernel.Utils.Context (buildTaxiContext)
 import qualified SharedLogic.Confirm as SConfirm
+import qualified SharedLogic.Types.VehicleVariant as VehVar
 
 buildInitReq ::
   (HasBapInfo r m, MonadFlow m) =>

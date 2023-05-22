@@ -24,8 +24,6 @@ import Beckn.Types.Core.Taxi.API.Rating as API
 import qualified Beckn.Types.Core.Taxi.API.Search as API
 import Beckn.Types.Core.Taxi.API.Select as API
 import Beckn.Types.Core.Taxi.API.Track as API
-import qualified Domain.Types.Booking as DB
-import qualified Domain.Types.Ride as DRide
 import Environment
 import qualified EulerHS.Types as Euler
 import GHC.Records.Extra
@@ -39,6 +37,8 @@ import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError (IsBecknAPI)
 import Kernel.Utils.Monitoring.Prometheus.Servant (SanitizedUrl)
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
+import qualified SharedLogic.Types.Booking.Type as DB
+import qualified SharedLogic.Types.Ride as DRide
 import Storage.CachedQueries.CacheConfig (HasCacheConfig)
 import qualified Storage.CachedQueries.Merchant as CQM
 import Tools.Error

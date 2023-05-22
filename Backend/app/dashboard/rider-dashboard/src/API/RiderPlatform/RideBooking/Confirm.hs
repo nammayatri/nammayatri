@@ -18,8 +18,6 @@ import qualified "rider-app" API.Dashboard.RideBooking.Confirm as BAP
 import qualified "rider-app" API.UI.Confirm as UC
 import qualified Dashboard.RiderPlatform.Customer as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
-import qualified "rider-app" Domain.Types.Person as DP
-import qualified "rider-app" Domain.Types.Quote as Quote
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import Kernel.Prelude
@@ -28,6 +26,8 @@ import Kernel.Utils.Common
 import qualified RiderPlatformClient.RiderApp as Client
 import Servant
 import qualified SharedLogic.Transaction as T
+import qualified "rider-app" SharedLogic.Types.Person as DP
+import qualified "rider-app" SharedLogic.Types.Quote as Quote
 import "lib-dashboard" Tools.Auth
 import Tools.Auth.Merchant
 

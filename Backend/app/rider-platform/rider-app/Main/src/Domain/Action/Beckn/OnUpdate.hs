@@ -26,15 +26,7 @@ module Domain.Action.Beckn.OnUpdate
   )
 where
 
-import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
-import qualified Domain.Types.Estimate as DEstimate
-import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
-import qualified Domain.Types.Person as DP
-import qualified Domain.Types.Person.PersonFlowStatus as DPFS
-import qualified Domain.Types.Ride as SRide
-import qualified Domain.Types.SearchRequest as DSR
-import Domain.Types.VehicleVariant
 import Environment
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
@@ -45,7 +37,15 @@ import Kernel.Storage.Hedis.Config (HedisFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.Estimate as DEstimate
 import qualified SharedLogic.MerchantConfig as SMC
+import qualified SharedLogic.Types.Booking.Type as SRB
+import qualified SharedLogic.Types.FarePolicy.FareBreakup as DFareBreakup
+import qualified SharedLogic.Types.Person as DP
+import qualified SharedLogic.Types.Person.PersonFlowStatus as DPFS
+import qualified SharedLogic.Types.Ride as SRide
+import qualified SharedLogic.Types.SearchRequest as DSR
+import SharedLogic.Types.VehicleVariant
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.MerchantConfig as CMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS

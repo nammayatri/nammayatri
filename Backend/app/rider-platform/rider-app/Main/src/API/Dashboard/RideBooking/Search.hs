@@ -17,11 +17,11 @@
 module API.Dashboard.RideBooking.Search where
 
 import qualified API.UI.Search as SH
-import qualified Domain.Types.Person as DP
 import Environment
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import Servant
+import qualified SharedLogic.Types.Person as DP
 import Prelude
 
 data RideSearchEndPoint = SearchEndPoint

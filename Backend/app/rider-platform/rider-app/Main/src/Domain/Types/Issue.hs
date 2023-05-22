@@ -14,10 +14,10 @@
 
 module Domain.Types.Issue where
 
-import qualified Domain.Types.Person as DPerson
-import qualified Domain.Types.Quote as DQuote
 import Kernel.Prelude
 import Kernel.Types.Id
+import qualified SharedLogic.Types.Person as DPerson
+import qualified SharedLogic.Types.Quote as DQuote
 
 data Issue = Issue
   { id :: Id Issue,

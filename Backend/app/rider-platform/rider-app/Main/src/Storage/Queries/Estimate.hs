@@ -16,13 +16,13 @@
 module Storage.Queries.Estimate where
 
 import Data.Tuple.Extra
-import Domain.Types.Estimate
-import Domain.Types.Quote
-import Domain.Types.SearchRequest
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id (Id (getId))
+import SharedLogic.Estimate
+import SharedLogic.Types.Quote
+import SharedLogic.Types.SearchRequest
 import Storage.Queries.FullEntityBuilders (buildFullEstimate)
 import Storage.Tabular.Estimate
 import Storage.Tabular.TripTerms

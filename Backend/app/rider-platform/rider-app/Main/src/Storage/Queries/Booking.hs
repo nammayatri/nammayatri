@@ -15,15 +15,15 @@
 
 module Storage.Queries.Booking where
 
-import Domain.Types.Booking as DRB
-import Domain.Types.Booking.BookingLocation as DRBL
-import Domain.Types.Merchant
-import Domain.Types.Person (Person)
-import Domain.Types.Quote
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
+import SharedLogic.Types.Booking.BookingLocation as DRBL
+import SharedLogic.Types.Booking.Type
+import SharedLogic.Types.Merchant
+import SharedLogic.Types.Person (Person)
+import SharedLogic.Types.Quote
 import Storage.Queries.FullEntityBuilders (buildFullBooking)
 import Storage.Tabular.Booking
 import qualified Storage.Tabular.Booking as RB
@@ -158,7 +158,7 @@ findAllByRiderId personId mbLimit mbOffset mbOnlyActive = Esq.buildDType $ do
     (booking :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab) <- from fullBookingTable
     where_ $
       booking ^. RB.BookingRiderId ==. val (toKey personId)
-        &&. whenTrue_ isOnlyActive (not_ (booking ^. RB.BookingStatus `in_` valList [DRB.COMPLETED, DRB.CANCELLED]))
+        &&. whenTrue_ isOnlyActive (not_ (booking ^. RB.BookingStatus `in_` valList [COMPLETED, CANCELLED]))
     limit $ fromIntegral $ fromMaybe 10 mbLimit
     offset $ fromIntegral $ fromMaybe 0 mbOffset
     orderBy [desc $ booking ^. RB.BookingCreatedAt]
@@ -218,7 +218,7 @@ findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus =
           `Esq.on` (\(booking :& _ :& _ :& _ :& _ :& mbRide) -> just (booking ^. RB.BookingTId) ==. mbRide ?. R.RideBookingId)
     where_ $
       booking ^. RB.BookingRiderId ==. val (toKey personId)
-        &&. ( whenTrue_ isOnlyActive (not_ (booking ^. RB.BookingStatus `in_` valList [DRB.COMPLETED, DRB.CANCELLED]))
+        &&. ( whenTrue_ isOnlyActive (not_ (booking ^. RB.BookingStatus `in_` valList [COMPLETED, CANCELLED]))
                 &&. whenJust_ mbBookingStatus (\status -> booking ^. RB.BookingStatus ==. val status)
                 &&. ( not_ (Esq.isNothing (mbRide ?. R.RideTId))
                         ||. (Esq.isNothing (mbRide ?. R.RideTId) &&. not_ (Esq.isNothing (booking ^. RB.BookingOtpCode)))

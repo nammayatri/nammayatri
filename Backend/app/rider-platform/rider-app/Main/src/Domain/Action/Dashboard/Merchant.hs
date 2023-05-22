@@ -22,9 +22,6 @@ module Domain.Action.Dashboard.Merchant
 where
 
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Merchant as Common
-import qualified Domain.Types.Exophone as DExophone
-import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import Environment
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.SMS as SMS
@@ -35,6 +32,9 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified SharedLogic.Types.Exophone as DExophone
+import qualified SharedLogic.Types.Merchant as DM
+import qualified SharedLogic.Types.Merchant.MerchantServiceConfig as DMSC
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC

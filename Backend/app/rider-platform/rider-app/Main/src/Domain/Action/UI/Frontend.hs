@@ -22,10 +22,6 @@ module Domain.Action.UI.Frontend
   )
 where
 
-import qualified Domain.Types.Booking as DRB
-import qualified Domain.Types.Person as DP
-import qualified Domain.Types.Person.PersonFlowStatus as DPFS
-import qualified Domain.Types.Ride as SRide
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -36,6 +32,10 @@ import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.Types.Booking.Type as DRB
+import qualified SharedLogic.Types.Person as DP
+import qualified SharedLogic.Types.Person.PersonFlowStatus as DPFS
+import qualified SharedLogic.Types.Ride as SRide
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QB

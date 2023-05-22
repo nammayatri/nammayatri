@@ -19,14 +19,14 @@ module Domain.Action.UI.Feedback
   )
 where
 
-import qualified Domain.Types.Booking as DBooking
-import qualified Domain.Types.Person.PersonFlowStatus as DPFS
-import qualified Domain.Types.Ride as DRide
 import qualified Environment as App
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.Types.Booking.Type as DBooking
+import qualified SharedLogic.Types.Person.PersonFlowStatus as DPFS
+import qualified SharedLogic.Types.Ride as DRide
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRB

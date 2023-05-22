@@ -24,14 +24,14 @@ module Storage.CachedQueries.Merchant
 where
 
 import Data.Coerce (coerce)
-import Domain.Types.Common
-import Domain.Types.Merchant
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Types.Registry (Subscriber)
 import Kernel.Utils.Common
+import SharedLogic.Types.Common
+import SharedLogic.Types.Merchant
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Merchant as Queries
 

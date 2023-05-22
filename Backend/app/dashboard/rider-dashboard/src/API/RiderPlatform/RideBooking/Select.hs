@@ -17,9 +17,7 @@ module API.RiderPlatform.RideBooking.Select where
 import qualified "rider-app" API.Dashboard.RideBooking.Select as BAP
 import qualified Dashboard.RiderPlatform.Customer as Common
 import qualified "rider-app" Domain.Action.UI.Select as DSelect
-import qualified "rider-app" Domain.Types.Estimate as DEstimate
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
-import qualified "rider-app" Domain.Types.Person as DP
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import Kernel.Prelude
@@ -28,7 +26,9 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified RiderPlatformClient.RiderApp as Client
 import Servant
+import qualified "rider-app" SharedLogic.Estimate as DEstimate
 import qualified SharedLogic.Transaction as T
+import qualified "rider-app" SharedLogic.Types.Person as DP
 import "lib-dashboard" Tools.Auth
 import Tools.Auth.Merchant
 

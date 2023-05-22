@@ -1,10 +1,10 @@
 module SharedLogic.SimulatedFlow.Confirm where
 
-import qualified Domain.Types.Booking as DRB
-import qualified Domain.Types.Quote as Quote
 import Kernel.Prelude hiding (init)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.Types.Booking.Type as DRB
+import qualified SharedLogic.Types.Quote as Quote
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.SimulatedFlow.SearchRequest as CSR
 

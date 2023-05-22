@@ -14,12 +14,12 @@
 
 module Storage.Queries.RegistrationToken where
 
-import Domain.Types.Person
 import Domain.Types.RegistrationToken
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
+import SharedLogic.Types.Person
 import Storage.Tabular.RegistrationToken
 
 create :: RegistrationToken -> SqlDB ()

@@ -20,7 +20,6 @@ import qualified Data.Text as T
 import Domain.Action.UI.QuoteConfirm
 import qualified "public-transport-rider-platform" Domain.Types.Booking as TB
 import Domain.Types.PaymentTransaction (PaymentStatus (FAILED, PENDING, SUCCESS))
-import qualified "rider-app" Domain.Types.SearchRequest as AppBE
 import qualified "public-transport-rider-platform" Environment as Bap
 import HSpec
 import Kernel.Prelude hiding (Proxy)
@@ -32,6 +31,7 @@ import Mobility.AppBackend.Fixtures
 import Mobility.Fixtures.Routes
 import PublicTransport.API
 import PublicTransport.Common
+import qualified "rider-app" SharedLogic.Types.SearchRequest as AppBE
 import qualified "rider-app" Storage.Queries.SearchRequest as AppBE
 import Utils
 

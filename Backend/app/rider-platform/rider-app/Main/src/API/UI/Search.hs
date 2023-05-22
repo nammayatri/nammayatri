@@ -28,11 +28,6 @@ where
 import qualified Beckn.ACL.Metro.Search as MetroACL
 import qualified Beckn.ACL.Search as TaxiACL
 import qualified Data.Text as T
-import qualified Domain.Action.UI.Search.Common as DSearchCommon
-import qualified Domain.Action.UI.Search.OneWay as DOneWaySearch
-import qualified Domain.Action.UI.Search.Rental as DRentalSearch
-import qualified Domain.Types.Person as Person
-import Domain.Types.SearchRequest (SearchRequest)
 import Environment
 import Kernel.External.Maps
 import qualified Kernel.External.Slack.Flow as SF
@@ -56,7 +51,12 @@ import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.PublicTransport as PublicTransport
 import SharedLogic.Search
+import qualified SharedLogic.Search.Common as DSearchCommon
+import qualified SharedLogic.Search.OneWay as DOneWaySearch
+import qualified SharedLogic.Search.Rental as DRentalSearch
 import SharedLogic.SimulatedFlow.Search
+import qualified SharedLogic.Types.Person as Person
+import SharedLogic.Types.SearchRequest (SearchRequest)
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.MerchantConfig as CMC

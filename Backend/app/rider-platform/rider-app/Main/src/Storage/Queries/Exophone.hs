@@ -20,12 +20,12 @@ module Storage.Queries.Exophone
     #-}
 where
 
-import Domain.Types.Exophone
-import qualified Domain.Types.Merchant as DM
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.Types.Exophone
+import qualified SharedLogic.Types.Merchant as DM
 import Storage.Tabular.Exophone
 
 create :: Exophone -> SqlDB ()

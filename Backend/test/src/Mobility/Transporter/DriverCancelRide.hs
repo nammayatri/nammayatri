@@ -15,7 +15,6 @@
 module Mobility.Transporter.DriverCancelRide where
 
 import Common (getAppBaseUrl)
-import qualified "rider-app" Domain.Types.Booking as AppRB
 import EulerHS.Prelude
 import HSpec
 import Mobility.AppBackend.Fixtures
@@ -23,6 +22,7 @@ import Mobility.Fixtures.Routes (route1SearchRequest)
 import qualified Mobility.Transporter.APICalls as API
 import Mobility.Transporter.Fixtures
 import qualified Mobility.Transporter.Utils as Utils
+import qualified "rider-app" SharedLogic.Types.Booking.Type as AppRB
 import Utils
 
 spec :: Spec

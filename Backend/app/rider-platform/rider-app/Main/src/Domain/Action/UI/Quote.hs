@@ -21,15 +21,6 @@ where
 
 import Data.Char (toLower)
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
-import qualified Domain.Types.Booking as DRB
-import Domain.Types.Estimate (EstimateAPIEntity)
-import qualified Domain.Types.Estimate as DEstimate
-import Domain.Types.Quote (QuoteAPIEntity)
-import qualified Domain.Types.Quote as SQuote
-import qualified Domain.Types.SearchRequest as SSR
-import Domain.Types.SearchRequest.SearchReqLocation (SearchReqLocationAPIEntity)
-import qualified Domain.Types.SearchRequest.SearchReqLocation as Location
-import qualified Domain.Types.VehicleVariant as DVehicle
 import EulerHS.Prelude hiding (id)
 import Kernel.Randomizer
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
@@ -40,9 +31,18 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.JSON (objectWithSingleFieldParsing)
 import qualified Kernel.Utils.Schema as S
+import SharedLogic.Estimate (EstimateAPIEntity)
+import qualified SharedLogic.Estimate as DEstimate
 import SharedLogic.MetroOffer (MetroOffer)
 import qualified SharedLogic.MetroOffer as Metro
 import qualified SharedLogic.PublicTransport as PublicTransport
+import qualified SharedLogic.Types.Booking.Type as DRB
+import SharedLogic.Types.Quote (QuoteAPIEntity)
+import qualified SharedLogic.Types.Quote as SQuote
+import qualified SharedLogic.Types.SearchRequest as SSR
+import SharedLogic.Types.SearchRequest.SearchReqLocation (SearchReqLocationAPIEntity)
+import qualified SharedLogic.Types.SearchRequest.SearchReqLocation as Location
+import qualified SharedLogic.Types.VehicleVariant as DVehicle
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.SimulatedFlow.SearchRequest as CSimulated
 import qualified Storage.Queries.Booking as QBooking

@@ -26,13 +26,13 @@ module Storage.CachedQueries.Exophone
   )
 where
 
-import Domain.Types.Exophone
-import qualified Domain.Types.Merchant as DM
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.Types.Exophone
+import qualified SharedLogic.Types.Merchant as DM
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Exophone as Queries
 

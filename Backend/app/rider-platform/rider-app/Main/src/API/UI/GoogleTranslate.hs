@@ -18,7 +18,6 @@ module API.UI.GoogleTranslate
   )
 where
 
-import qualified Domain.Types.Person as Person
 import Environment (FlowHandler, FlowServer)
 import EulerHS.Prelude
 import qualified Kernel.External.GoogleTranslate.Types as GoogleTranslate
@@ -27,6 +26,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (withFlowHandlerAPI, withPersonIdLogTag)
 import Servant
 import qualified SharedLogic.GoogleTranslate as GoogleTranslate
+import qualified SharedLogic.Types.Person as Person
 import Tools.Auth
 import qualified Tools.Maps as Maps
 

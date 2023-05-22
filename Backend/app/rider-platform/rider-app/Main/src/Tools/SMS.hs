@@ -18,8 +18,6 @@ module Tools.SMS
   )
 where
 
-import Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import Kernel.External.SMS as Reexport hiding
   ( sendSMS,
   )
@@ -32,6 +30,8 @@ import Kernel.Utils.Common
     fromMaybeM,
     throwError,
   )
+import SharedLogic.Types.Merchant
+import qualified SharedLogic.Types.Merchant.MerchantServiceConfig as DMSC
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC

@@ -21,7 +21,6 @@ where
 
 import qualified Beckn.ACL.Rating as ACL
 import qualified Domain.Action.UI.Feedback as DFeedback
-import qualified Domain.Types.Person as Person
 import qualified Environment as App
 import EulerHS.Prelude hiding (product)
 import Kernel.Types.APISuccess (APISuccess (Success))
@@ -29,6 +28,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.Types.Person as Person
 import Tools.Auth
 
 -------- Feedback Flow ----------
