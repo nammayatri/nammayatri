@@ -17,6 +17,8 @@ module Storage.Queries.DriverInformation where
 
 import Control.Applicative (liftA2)
 import Domain.Types.DriverInformation
+import Domain.Types.DriverInformation as DriverInfo
+import Domain.Types.DriverLocation as DriverLocation
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person as Person
 import Kernel.External.Encryption
@@ -208,22 +210,54 @@ findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOf
 
 getDriversWithOutdatedLocationsToMakeInactive :: Transactionable m => UTCTime -> m [Person]
 getDriversWithOutdatedLocationsToMakeInactive before = do
-  findAll $ do
-    (driverInformation :& _ :& person) <-
-      from $
-        table @DriverInformationT
-          `innerJoin` table @DriverLocationT
-            `Esq.on` ( \(driverInformation :& drLoc) ->
-                         driverInformation ^. DriverInformationDriverId ==. drLoc ^. DriverLocationDriverId
-                           &&. drLoc ^. DriverLocationUpdatedAt <. val before
-                     )
-          `innerJoin` table @PersonT
-            `Esq.on` ( \(driverInformation :& _ :& person) ->
-                         driverInformation ^. DriverInformationDriverId ==. person ^. PersonTId
-                     )
-    where_ $ driverInformation ^. DriverInformationActive
-    orderBy [asc $ driverInformation ^. DriverInformationUpdatedAt]
-    pure person
+  driverLocations <- getDriverLocs before
+  driverInfos <- getDriverInfos driverLocations
+  drivers <- getDrivers driverInfos
+  return drivers
+
+getDrivers ::
+  Transactionable m =>
+  [DriverInformation] ->
+  m [Person]
+getDrivers driverInfos = do
+  Esq.findAll $ do
+    persons <- from $ table @PersonT
+    where_ $
+      persons ^. PersonTId `in_` valList personsKeys
+    return persons
+  where
+    personsKeys = toKey . cast <$> fetchDriverIDsFromInfo driverInfos
+
+getDriverInfos ::
+  Transactionable m =>
+  [DriverLocation] ->
+  m [DriverInformation]
+getDriverInfos driverLocations = do
+  Esq.findAll $ do
+    driverInfos <- from $ table @DriverInformationT
+    where_ $
+      driverInfos ^. DriverInformationDriverId `in_` valList personsKeys
+        &&. driverInfos ^. DriverInformationActive
+    return driverInfos
+  where
+    personsKeys = toKey . cast <$> fetchDriverIDsFromLocations driverLocations
+
+getDriverLocs ::
+  Transactionable m =>
+  UTCTime ->
+  m [DriverLocation]
+getDriverLocs before = do
+  Esq.findAll $ do
+    driverLocs <- from $ table @DriverLocationT
+    where_ $
+      driverLocs ^. DriverLocationUpdatedAt <. val before
+    return driverLocs
+
+fetchDriverIDsFromLocations :: [DriverLocation] -> [Id Person]
+fetchDriverIDsFromLocations = map DriverLocation.driverId
+
+fetchDriverIDsFromInfo :: [DriverInformation] -> [Id Person]
+fetchDriverIDsFromInfo = map DriverInfo.driverId
 
 addReferralCode :: Id Person -> EncryptedHashedField 'AsEncrypted Text -> SqlDB ()
 addReferralCode personId code = do

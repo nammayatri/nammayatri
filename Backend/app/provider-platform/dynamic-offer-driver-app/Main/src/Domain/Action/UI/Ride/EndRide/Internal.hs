@@ -88,7 +88,8 @@ endRideTransaction driverId bookingId ride mbFareParams mbRiderDetailsId = do
     if driverInfo.active
       then QDFS.updateStatus ride.driverId DDFS.ACTIVE
       else QDFS.updateStatus ride.driverId DDFS.IDLE
-  DLoc.updateOnRide driverId False
+  driver <- Esq.runInReplica $ SQP.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  DLoc.updateOnRide driverId False driver.merchantId
   SRide.clearCache $ cast driverId
 
 putDiffMetric :: (Metrics.HasBPPMetrics m r, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Money -> Meters -> m ()
