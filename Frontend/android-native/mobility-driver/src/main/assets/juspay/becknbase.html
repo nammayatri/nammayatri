@@ -11,33 +11,39 @@
     window.DUIGatekeeper = JBridge;
     top.__BOOT_LOADER = top.__BOOT_LOADER || {};
     window.loadInDuiBundle = false;
+    var count = 5;
 
-    var renewCount = 5; //download count
-    var loadInDuiCount = 5; //read count
-    var interval = 200; //ms
-
-    function cb() {
-        var innerHTML = JBridge.loadFileInDUI('v1-index_bundle.jsa');
-        if (innerHTML !== "" && !window.loadInDuiBundle){
-            console.log("bundle present in cb");
-            window.loadInDuiBundle = true;
-            loadBundle();
-        }else{
-            if (window.loadInDuiBundle){
-                console.log('bundle already loaded');
-            }else{
-                console.log('bundle data null');
+    var checkAndLoadFile = function() {
+        console.log('callback triggered count : ', count);
+        var jsFile = JBridge.loadFileInDUI('v1-index_bundle.jsa');
+        if(jsFile == "" || jsFile == "undefined") {
+            if (count >= 0) {
+                console.log('bundle not present, download');
+                count--;
+                downloadFile("fnLoadBundle" + JSON.stringify(count));
+            } else {
+                console.log('bundle not present, failed');
+                onEvent('bundle_load_failed');
             }
+        } else {
+            console.log('bundle present, load');
+            loadBundle(jsFile);
         }
     }
 
-    function loadBundle() {
+    function downloadFile(fnName) {
+        const filePath = packageUrl('in.yatri.consumer');
+        top.__BOOT_LOADER[fnName] = checkAndLoadFile;
+        JBridge.renewFile(filePath, "v1-index_bundle.zip", fnName);
+    }
+
+    function loadBundle(innerHTML) {
         console.log("Here is the Release file");
         var headID = document.getElementsByTagName("head")[0];
         var newScript = document.createElement('script');
         newScript.type = 'text/javascript';
         newScript.id = 'mystique';
-        newScript.innerHTML = JBridge.loadFileInDUI('v1-index_bundle.jsa');
+        newScript.innerHTML = innerHTML;
         headID.appendChild(newScript);
     }
 
@@ -58,41 +64,7 @@
             }), "");
     }
 
-    function whenAvailable(notPresent, callback, count, cb) {
-        console.log('COUNT',count);
-        window.setTimeout(function() {
-            count -= 1;
-            if (notPresent){
-                if (renewCount <= 0) {
-                  onEvent('bundle_load_failed');
-                }else if (count <= 0) {
-                  console.log("renew v1-index_bundle.jsa");
-                  const filePath = packageUrl('in.yatri.consumer');
-                  console.log('renew path', filePath);
-                  renewCount -= 1;
-                  console.log('RENEW_COUNT',renewCount);
-
-                  var renewCallback = "fnLoadBundle" + JSON.stringify(count) + JSON.stringify(renewCount);
-                  top.__BOOT_LOADER[renewCallback] = cb;
-                  JBridge.renewFile(filePath, "v1-index_bundle.zip", renewCallback);
-
-                  whenAvailable(JBridge.loadFileInDUI('v1-index_bundle.jsa') == "", callback, loadInDuiCount, cb);
-                }else{
-                  console.log("bundle not present");
-                  whenAvailable(JBridge.loadFileInDUI('v1-index_bundle.jsa') == "", callback, count, cb);
-                }
-            }else{
-                console.log("bundle present");
-                if (!window.loadInDuiBundle) {
-                    window.loadInDuiBundle = true;
-                    callback();
-                }
-            }
-        }, interval);
-    }
-
-    console.log(packageUrl('in.yatri.consumer'));
-    whenAvailable(JBridge.loadFileInDUI('v1-index_bundle.jsa') == "", function(){ loadBundle(); }, loadInDuiCount, function(){ cb(); });
+    checkAndLoadFile();
 
     </script>
 </html>
