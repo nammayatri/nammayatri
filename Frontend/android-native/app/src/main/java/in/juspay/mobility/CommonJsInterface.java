@@ -1940,6 +1940,37 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         });
     }
 
+    /*
+     * This function is deprecated on 22 May - 2023
+     * Added only for Backward Compatibility
+     * Remove this function once it is not begin used.
+     */
+
+    @JavascriptInterface
+    public void renderBase64Image(String url, String id) {
+        String base64Image = getAPIResponse(url);
+        if (activity != null) {
+            activity.runOnUiThread(() -> {
+                try {
+                    if (!base64Image.equals("") && id != null) {
+                        LinearLayout layout = activity.findViewById(Integer.parseInt(id));
+                        byte[] decodedString = Base64.decode(base64Image, Base64.DEFAULT);
+                        Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
+                        ImageView imageView = new ImageView(context);
+                        imageView.setImageBitmap(decodedByte);
+                        imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                        imageView.setAdjustViewBounds(true);
+                        imageView.setClipToOutline(true);
+                        layout.removeAllViews();
+                        layout.addView(imageView);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            });
+        }
+    }
+
     @JavascriptInterface
     public void startLottieProcess(String rawJson, String id, boolean repeat, float speed, String scaleType) {
         if (activity != null) activity.runOnUiThread(() -> {
