@@ -101,7 +101,7 @@ cancel req merchant booking = do
       QDFS.updateStatus ride.driverId $ DMode.getDriverStatus driverInfo.mode driverInfo.active
   whenJust mbRide $ \ride -> do
     SRide.clearCache $ cast ride.driverId
-    DLoc.updateOnRide (cast ride.driverId) False
+    DLoc.updateOnRide (cast ride.driverId) False booking.providerId
 
   logTagInfo ("bookingId-" <> getId req.bookingId) ("Cancellation reason " <> show bookingCR.source)
   fork "cancelBooking - Notify BAP" $ do

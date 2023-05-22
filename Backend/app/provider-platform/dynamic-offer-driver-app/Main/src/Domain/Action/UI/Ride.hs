@@ -222,7 +222,7 @@ otpRideCreate driver otpCode booking = do
     QDFS.updateStatus driver.id DDFS.RIDE_ASSIGNED {rideId = ride.id}
     QRideD.create rideDetails
     QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id
-  DLoc.updateOnRide (cast driver.id) True
+  DLoc.updateOnRide (cast driver.id) True booking.providerId
   uBooking <- runInReplica $ QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId) -- in replica db we can have outdated value
   Notify.notifyDriver transporter.id notificationType notificationTitle (message uBooking) driver.id driver.deviceToken
   void $ BP.sendRideAssignedUpdateToBAP uBooking ride

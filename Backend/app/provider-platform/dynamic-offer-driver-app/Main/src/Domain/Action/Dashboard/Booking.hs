@@ -72,7 +72,7 @@ stuckBookingsCancel merchantShortId req = do
     for_ (bcReasons <> bcReasonsWithRides) QBCR.upsert
     for_ driverLocations $ \location -> do
       let latLong = LatLong location.lat location.lon
-      QDrLoc.upsertGpsCoord location.driverId latLong location.coordinatesCalculatedAt
+      QDrLoc.upsertGpsCoord location.driverId latLong location.coordinatesCalculatedAt merchant.id
     CQDrInfo.updateNotOnRideMultiple stuckDriverIds
     for_ stuckRideItems $ \item -> do
       if item.driverActive

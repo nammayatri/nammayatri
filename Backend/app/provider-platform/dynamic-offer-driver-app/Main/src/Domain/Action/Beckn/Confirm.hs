@@ -124,7 +124,7 @@ handler transporter req quote = do
             QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id
             QDQ.setInactiveBySTId driverQuote.searchTryId
             QSRD.setInactiveBySTId driverQuote.searchTryId
-          DLoc.updateOnRide (cast driver.id) True
+          DLoc.updateOnRide (cast driver.id) True booking.providerId
 
           for_ driverSearchReqs $ \driverReq -> do
             let driverId = driverReq.driverId
@@ -308,7 +308,7 @@ cancelBooking booking mbDriver transporter = do
       QDFS.updateStatus ride.driverId $ DMode.getDriverStatus driverInfo.mode driverInfo.active
   whenJust mbRide $ \ride -> do
     SRide.clearCache ride.driverId
-    DLoc.updateOnRide (cast ride.driverId) False
+    DLoc.updateOnRide (cast ride.driverId) False booking.providerId
   fork "cancelBooking - Notify BAP" $ do
     BP.sendBookingCancelledUpdateToBAP booking transporter bookingCancellationReason.source
   whenJust mbRide $ \ride ->
