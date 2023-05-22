@@ -46,17 +46,17 @@ import Storage.Tabular.MediaFile (MediaFileTId)
 import Storage.Tabular.Person (PersonTId)
 import Storage.Tabular.Ride (RideTId)
 
-fromFieldEnum ::
-  (Typeable a, Read a) =>
-  DPSF.Field ->
-  Maybe ByteString ->
-  DPSF.Conversion a
-fromFieldEnum f mbValue = case mbValue of
-  Nothing -> DPSF.returnError UnexpectedNull f mempty
-  Just value' ->
-    case (readMaybe (unpackChars value')) of
-      Just val -> pure val
-      _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
+-- fromFieldEnum ::
+--   (Typeable a, Read a) =>
+--   DPSF.Field ->
+--   Maybe ByteString ->
+--   DPSF.Conversion a
+-- fromFieldEnum f mbValue = case mbValue of
+--   Nothing -> DPSF.returnError UnexpectedNull f mempty
+--   Just value' ->
+--     case (readMaybe (unpackChars value')) of
+--       Just val -> pure val
+--       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
 
 instance FromField Domain.IssueStatus where
   fromField = fromFieldEnum

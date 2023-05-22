@@ -45,17 +45,17 @@ import Storage.Tabular.Booking (BookingTId)
 import qualified Storage.Tabular.FareParameters as Fare
 import Storage.Tabular.Person (PersonTId)
 
-fromFieldEnum ::
-  (Typeable a, Read a) =>
-  DPSF.Field ->
-  Maybe ByteString ->
-  DPSF.Conversion a
-fromFieldEnum f mbValue = case mbValue of
-  Nothing -> DPSF.returnError UnexpectedNull f mempty
-  Just value' ->
-    case (readMaybe (unpackChars value')) of
-      Just val -> pure val
-      _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
+-- fromFieldEnum ::
+--   (Typeable a, Read a) =>
+--   DPSF.Field ->
+--   Maybe ByteString ->
+--   DPSF.Conversion a
+-- fromFieldEnum f mbValue = case mbValue of
+--   Nothing -> DPSF.returnError UnexpectedNull f mempty
+--   Just value' ->
+--     case (readMaybe (unpackChars value')) of
+--       Just val -> pure val
+--       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
 
 instance FromField Meters where
   fromField = fromFieldEnum
@@ -70,17 +70,17 @@ instance FromBackendRow Postgres Meters
 instance IsString Meters where
   fromString = show
 
-instance FromField Money where
-  fromField = fromFieldEnum
+-- instance FromField Money where
+--   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Money where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Money where
+--   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Money
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Money
 
-instance FromBackendRow Postgres Money
+-- instance FromBackendRow Postgres Money
 
-deriving stock instance Read Money
+-- deriving stock instance Read Money
 
 instance IsString Money where
   fromString = show

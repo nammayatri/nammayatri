@@ -31,17 +31,17 @@ import Kernel.Prelude hiding (Generic)
 import Lib.UtilsTH
 import Sequelize as Se
 
-fromFieldEnum ::
-  (Typeable a, Read a) =>
-  DPSF.Field ->
-  Maybe ByteString ->
-  DPSF.Conversion a
-fromFieldEnum f mbValue = case mbValue of
-  Nothing -> DPSF.returnError DPSF.UnexpectedNull f mempty
-  Just value' ->
-    case (readMaybe (unpackChars value')) of
-      Just val -> pure val
-      _ -> DPSF.returnError DPSF.ConversionFailed f "Could not 'read' value for 'Rule'."
+-- fromFieldEnum ::
+--   (Typeable a, Read a) =>
+--   DPSF.Field ->
+--   Maybe ByteString ->
+--   DPSF.Conversion a
+-- fromFieldEnum f mbValue = case mbValue of
+--   Nothing -> DPSF.returnError DPSF.UnexpectedNull f mempty
+--   Just value' ->
+--     case (readMaybe (unpackChars value')) of
+--       Just val -> pure val
+--       _ -> DPSF.returnError DPSF.ConversionFailed f "Could not 'read' value for 'Rule'."
 
 data CancellationReasonT f = CancellationReasonT
   { reasonCode :: B.C f Text,

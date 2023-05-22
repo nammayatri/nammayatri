@@ -45,17 +45,17 @@ import Sequelize
 import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.Vehicle ()
 
-fromFieldEnum ::
-  (Typeable a, Read a) =>
-  DPSF.Field ->
-  Maybe ByteString ->
-  DPSF.Conversion a
-fromFieldEnum f mbValue = case mbValue of
-  Nothing -> DPSF.returnError UnexpectedNull f mempty
-  Just value' ->
-    case (readMaybe (unpackChars value')) of
-      Just val -> pure val
-      _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
+-- fromFieldEnum ::
+--   (Typeable a, Read a) =>
+--   DPSF.Field ->
+--   Maybe ByteString ->
+--   DPSF.Conversion a
+-- fromFieldEnum f mbValue = case mbValue of
+--   Nothing -> DPSF.returnError UnexpectedNull f mempty
+--   Just value' ->
+--     case (readMaybe (unpackChars value')) of
+--       Just val -> pure val
+--       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
 
 instance FromField Variant.Variant where
   fromField = fromFieldEnum
@@ -97,15 +97,15 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Meters
 
 instance FromBackendRow Postgres Meters
 
-instance FromField Money where
-  fromField = fromFieldEnum
+-- instance FromField Money where
+--   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Money where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Money where
+--   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Money
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Money
 
-instance FromBackendRow Postgres Money
+-- instance FromBackendRow Postgres Money
 
 instance FromField Domain.FarePolicyType where
   fromField = fromFieldEnum
@@ -176,7 +176,7 @@ deriving stock instance Show FarePolicy
 
 deriving stock instance Ord Domain.FarePolicyType
 
-deriving stock instance Read Money
+-- deriving stock instance Read Money
 
 farePolicyTMod :: FarePolicyT (B.FieldModification (B.TableField FarePolicyT))
 farePolicyTMod =

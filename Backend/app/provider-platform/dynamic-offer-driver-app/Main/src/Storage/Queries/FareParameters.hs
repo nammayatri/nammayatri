@@ -25,7 +25,8 @@ import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.FareParameters as BeamFP
-import qualified Storage.Beam.FareParameters.FareParametersProgressiveDetails as BeamFPPD
+-- import Storage.Queries.FareParameters.FareParametersProgressiveDetails (findById')
+import qualified Storage.Queries.FareParameters.FareParametersProgressiveDetails as BeamFPPD
 import Storage.Queries.FullEntityBuilders (buildFullFareParameters)
 import Storage.Tabular.FareParameters (FareParametersT)
 import Storage.Tabular.FareParameters.Instances
@@ -87,12 +88,20 @@ findById fareParametersId = buildDType $ do
 --       BeamFP.govtChargesPerc = govtChargesPerc
 --     }
 
--- findById' :: L.MonadFlow m => Id FareParameters -> m (Maybe FareParameters)
--- findById' (Id fareParametersId) = do
---   dbConf <- L.getOption Extra.EulerPsqlDbCfg
---   case dbConf of
---     Just dbCOnf' -> either (pure Nothing) (transformBeamFareParametersToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamFP.id $ Se.Eq fareParametersId]
---     Nothing -> pure Nothing
+findById' :: L.MonadFlow m => Id FareParameters -> m (Maybe FareParameters)
+findById' (Id fareParametersId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> do
+      fp <- KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamFP.id $ Se.Eq fareParametersId]
+      case fp of
+        Left _ -> pure Nothing
+        Right (Just fp') -> do
+          fp'' <- transformBeamFareParametersToDomain fp'
+          pure (Just fp'')
+        Right _ -> pure Nothing
+    -- either (pure Nothing) (transformBeamFareParametersToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamFP.id $ Se.Eq fareParametersId]
+    Nothing -> pure Nothing
 
 -- transformBeamFareParametersToDomain :: BeamFP.FareParameters -> FareParameters
 -- transformBeamFareParametersToDomain BeamFP.FareParametersT {..} = do

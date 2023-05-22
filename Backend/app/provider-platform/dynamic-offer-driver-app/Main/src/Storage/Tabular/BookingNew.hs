@@ -59,6 +59,7 @@ import qualified EulerHS.Language as L
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Beam.Instances
@@ -68,17 +69,17 @@ data A = A | B
   deriving stock (Eq, Generic, Read, Show, Ord)
   deriving anyclass (A.FromJSON, A.ToJSON)
 
-fromFieldEnum ::
-  (Typeable a, Read a) =>
-  DPSF.Field ->
-  Maybe ByteString ->
-  DPSF.Conversion a
-fromFieldEnum f mbValue = case mbValue of
-  Nothing -> DPSF.returnError UnexpectedNull f mempty
-  Just value' ->
-    case (readMaybe (unpackChars value')) of
-      Just val -> pure val
-      _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
+-- fromFieldEnum ::
+--   (Typeable a, Read a) =>
+--   DPSF.Field ->
+--   Maybe ByteString ->
+--   DPSF.Conversion a
+-- fromFieldEnum f mbValue = case mbValue of
+--   Nothing -> DPSF.returnError UnexpectedNull f mempty
+--   Just value' ->
+--     case (readMaybe (unpackChars value')) of
+--       Just val -> pure val
+--       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
 
 instance FromField Domain.BookingStatus where
   fromField = fromFieldEnum
@@ -132,15 +133,15 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Centesimal
 
 instance FromBackendRow Postgres Centesimal
 
-instance FromField Money where
-  fromField = fromFieldEnum
+-- instance FromField Money where
+--   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Money where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Money where
+--   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Money
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Money
 
-instance FromBackendRow Postgres Money
+-- instance FromBackendRow Postgres Money
 
 instance FromField Seconds where
   fromField = fromFieldEnum
@@ -203,7 +204,7 @@ instance ToJSON BookingNew where
 
 deriving stock instance Show BookingNew
 
-deriving stock instance Read Money
+-- deriving stock instance Read Money
 
 instance Serialize BookingNew where
   put = error "undefined"

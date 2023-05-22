@@ -316,6 +316,7 @@ library
       Storage.Queries.Estimate
       Storage.Queries.Exophone
       Storage.Queries.FareParameters
+      Storage.Queries.FareParameters.FareParametersProgressiveDetails
       Storage.Queries.FarePolicy
       Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
       Storage.Queries.FarePolicy.RestrictedExtraFare

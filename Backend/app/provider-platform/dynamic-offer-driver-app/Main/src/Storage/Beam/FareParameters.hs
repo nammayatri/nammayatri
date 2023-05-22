@@ -43,17 +43,17 @@ import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Vehicle ()
 
-fromFieldEnum ::
-  (Typeable a, Read a) =>
-  DPSF.Field ->
-  Maybe ByteString ->
-  DPSF.Conversion a
-fromFieldEnum f mbValue = case mbValue of
-  Nothing -> DPSF.returnError UnexpectedNull f mempty
-  Just value' ->
-    case (readMaybe (unpackChars value')) of
-      Just val -> pure val
-      _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
+-- fromFieldEnum ::
+--   (Typeable a, Read a) =>
+--   DPSF.Field ->
+--   Maybe ByteString ->
+--   DPSF.Conversion a
+-- fromFieldEnum f mbValue = case mbValue of
+--   Nothing -> DPSF.returnError UnexpectedNull f mempty
+--   Just value' ->
+--     case (readMaybe (unpackChars value')) of
+--       Just val -> pure val
+--       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
 
 instance FromField Centesimal where
   fromField = fromFieldEnum
@@ -68,7 +68,12 @@ instance IsString Centesimal where
 
 instance FromBackendRow Postgres Centesimal
 
-instance FromField Money where
+instance FromBackendRow Postgres Domain.FareParametersType
+
+-- instance FromField Money where
+--   fromField = fromFieldEnum
+
+instance FromField Domain.FareParametersType where
   fromField = fromFieldEnum
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.FareParametersType where
@@ -76,12 +81,12 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.FareParamete
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.FareParametersType
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Money where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Money where
+--   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Money
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Money
 
-instance FromBackendRow Postgres Money
+-- instance FromBackendRow Postgres Money
 
 -- data FareParametersT f = FareParametersT
 --   { id :: B.C f Text,
@@ -154,7 +159,7 @@ deriving stock instance Eq Domain.FareParametersType
 
 deriving stock instance Ord Domain.FarePolicyType
 
-deriving stock instance Read Money
+-- deriving stock instance Read Money
 
 fareParametersTMod :: FareParametersT (B.FieldModification (B.TableField FareParametersT))
 fareParametersTMod =

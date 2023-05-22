@@ -49,17 +49,17 @@ import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.SearchRequest.SearchReqLocation (SearchReqLocationT, SearchReqLocationTId, mkDomainSearchReqLocation, mkTabularSearchReqLocation)
 import Storage.Tabular.Vehicle ()
 
-fromFieldEnum ::
-  (Typeable a, Read a) =>
-  DPSF.Field ->
-  Maybe ByteString ->
-  DPSF.Conversion a
-fromFieldEnum f mbValue = case mbValue of
-  Nothing -> DPSF.returnError UnexpectedNull f mempty
-  Just value' ->
-    case (readMaybe (unpackChars value')) of
-      Just val -> pure val
-      _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
+-- fromFieldEnum ::
+--   (Typeable a, Read a) =>
+--   DPSF.Field ->
+--   Maybe ByteString ->
+--   DPSF.Conversion a
+-- fromFieldEnum f mbValue = case mbValue of
+--   Nothing -> DPSF.returnError UnexpectedNull f mempty
+--   Just value' ->
+--     case (readMaybe (unpackChars value')) of
+--       Just val -> pure val
+--       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
 
 instance FromField Variant.Variant where
   fromField = fromFieldEnum
@@ -101,20 +101,20 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Meters
 
 instance FromBackendRow Postgres Meters
 
-instance FromField Money where
-  fromField = fromFieldEnum
+-- instance FromField Money where
+--   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Money where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Money where
+--   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Money
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Money
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be BaseUrl where
   sqlValueSyntax = autoSqlValueSyntax
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be BaseUrl
 
-instance FromBackendRow Postgres Money
+-- instance FromBackendRow Postgres Money
 
 data SearchRequestT f = SearchRequestT
   { id :: B.C f Text,
@@ -174,7 +174,7 @@ instance ToJSON SearchRequest where
 
 deriving stock instance Show SearchRequest
 
-deriving stock instance Read Money
+-- deriving stock instance Read Money
 
 searchRequestTMod :: SearchRequestT (B.FieldModification (B.TableField SearchRequestT))
 searchRequestTMod =

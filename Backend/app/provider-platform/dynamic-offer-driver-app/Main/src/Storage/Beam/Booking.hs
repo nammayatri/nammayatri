@@ -43,17 +43,17 @@ import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Vehicle ()
 
-fromFieldEnum ::
-  (Typeable a, Read a) =>
-  DPSF.Field ->
-  Maybe ByteString ->
-  DPSF.Conversion a
-fromFieldEnum f mbValue = case mbValue of
-  Nothing -> DPSF.returnError UnexpectedNull f mempty
-  Just value' ->
-    case readMaybe (unpackChars value') of
-      Just val -> pure val
-      _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
+-- fromFieldEnum ::
+--   (Typeable a, Read a) =>
+--   DPSF.Field ->
+--   Maybe ByteString ->
+--   DPSF.Conversion a
+-- fromFieldEnum f mbValue = case mbValue of
+--   Nothing -> DPSF.returnError UnexpectedNull f mempty
+--   Just value' ->
+--     case readMaybe (unpackChars value') of
+--       Just val -> pure val
+--       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
 
 instance FromField Centesimal where
   fromField = fromFieldEnum
@@ -105,15 +105,15 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.BookingType
 
 instance FromBackendRow Postgres Domain.BookingType
 
-instance FromField Money where
+instance FromField HighPrecMeters where
   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Money where
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be HighPrecMeters where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Money
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be HighPrecMeters
 
-instance FromBackendRow Postgres Money
+instance FromBackendRow Postgres HighPrecMeters
 
 instance FromField Veh.Variant where
   fromField = fromFieldEnum
@@ -142,7 +142,7 @@ data BookingT f = BookingT
     toLocationId :: B.C f Text,
     vehicleVariant :: B.C f Veh.Variant,
     estimatedDistance :: B.C f Meters,
-    maxEstimatedDistance :: B.C f (Maybe Centesimal),
+    maxEstimatedDistance :: B.C f (Maybe HighPrecMeters),
     estimatedFare :: B.C f Money,
     estimatedDuration :: B.C f Seconds,
     fareParametersId :: B.C f Text,
@@ -191,7 +191,7 @@ instance ToJSON Booking where
 
 deriving stock instance Show Booking
 
-deriving stock instance Read Money
+-- deriving stock instance Read Money
 
 bookingTMod :: BookingT (B.FieldModification (B.TableField BookingT))
 bookingTMod =

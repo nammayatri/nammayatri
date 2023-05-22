@@ -47,23 +47,24 @@ import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.Id as KTI
 import Kernel.Utils.Common
 import qualified Lib.Mesh as Mesh
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize as Se
 import qualified Storage.Tabular.FareParameters.FareParametersProgressiveDetails as DomainFPPD
 import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.Vehicle ()
 
-fromFieldEnum ::
-  (Typeable a, Read a) =>
-  DPSF.Field ->
-  Maybe ByteString ->
-  DPSF.Conversion a
-fromFieldEnum f mbValue = case mbValue of
-  Nothing -> DPSF.returnError UnexpectedNull f mempty
-  Just value' ->
-    case (readMaybe (unpackChars value')) of
-      Just val -> pure val
-      _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
+-- fromFieldEnum ::
+--   (Typeable a, Read a) =>
+--   DPSF.Field ->
+--   Maybe ByteString ->
+--   DPSF.Conversion a
+-- fromFieldEnum f mbValue = case mbValue of
+--   Nothing -> DPSF.returnError UnexpectedNull f mempty
+--   Just value' ->
+--     case (readMaybe (unpackChars value')) of
+--       Just val -> pure val
+--       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
 
 instance FromField Vehicle.Variant where
   fromField = fromFieldEnum
@@ -91,17 +92,17 @@ instance FromBackendRow Postgres Meters
 instance IsString Meters where
   fromString = show
 
-instance FromField Money where
-  fromField = fromFieldEnum
+-- instance FromField Money where
+--   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Money where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Money where
+--   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Money
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Money
 
-instance FromBackendRow Postgres Money
+-- instance FromBackendRow Postgres Money
 
-deriving stock instance Read Money
+-- deriving stock instance Read Money
 
 instance IsString Money where
   fromString = show
@@ -159,28 +160,28 @@ fareParametersProgressiveDetailsToPSModifiers =
   M.fromList
     []
 
-transformBeamFareParametersProgressiveDetailsToDomain :: FareParametersProgressiveDetails -> DomainFPPD.FullFareParametersProgressiveDetails
-transformBeamFareParametersProgressiveDetailsToDomain FareParametersProgressiveDetailsT {..} = do
-  ( (KTI.Id fareParametersId),
-    Domain.FParamsProgressiveDetails
-      { deadKmFare = deadKmFare,
-        extraKmFare = extraKmFare
-      }
-    )
+-- transformBeamFareParametersProgressiveDetailsToDomain :: FareParametersProgressiveDetails -> DomainFPPD.FullFareParametersProgressiveDetails
+-- transformBeamFareParametersProgressiveDetailsToDomain FareParametersProgressiveDetailsT {..} = do
+--   ( (KTI.Id fareParametersId),
+--     Domain.FParamsProgressiveDetails
+--       { deadKmFare = deadKmFare,
+--         extraKmFare = extraKmFare
+--       }
+--     )
 
-transformDomainFareParametersProgressiveDetailsToBeam :: DomainFPPD.FullFareParametersProgressiveDetails -> FareParametersProgressiveDetails
-transformDomainFareParametersProgressiveDetailsToBeam (KTI.Id fareParametersId, Domain.FParamsProgressiveDetails {..}) =
-  FareParametersProgressiveDetailsT
-    { fareParametersId = fareParametersId,
-      deadKmFare = deadKmFare,
-      extraKmFare = extraKmFare
-    }
+-- transformDomainFareParametersProgressiveDetailsToBeam :: DomainFPPD.FullFareParametersProgressiveDetails -> FareParametersProgressiveDetails
+-- transformDomainFareParametersProgressiveDetailsToBeam (KTI.Id fareParametersId, Domain.FParamsProgressiveDetails {..}) =
+--   FareParametersProgressiveDetailsT
+--     { fareParametersId = fareParametersId,
+--       deadKmFare = deadKmFare,
+--       extraKmFare = extraKmFare
+--     }
 
-findById' :: L.MonadFlow m => KTI.Id Domain.FareParameters -> m (Maybe DomainFPPD.FullFareParametersProgressiveDetails)
-findById' (KTI.Id fareParametersId') = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
-  case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamFareParametersProgressiveDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is fareParametersId $ Se.Eq fareParametersId']
-    Nothing -> pure Nothing
+-- findById' :: L.MonadFlow m => KTI.Id Domain.FareParameters -> m (Maybe DomainFPPD.FullFareParametersProgressiveDetails)
+-- findById' (KTI.Id fareParametersId') = do
+--   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   case dbConf of
+--     Just dbCOnf' -> either (pure Nothing) (transformBeamFareParametersProgressiveDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is fareParametersId $ Se.Eq fareParametersId']
+--     Nothing -> pure Nothing
 
 $(enableKVPG ''FareParametersProgressiveDetailsT ['fareParametersId] [])

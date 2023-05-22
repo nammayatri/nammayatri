@@ -48,17 +48,17 @@ import qualified Storage.Tabular.Merchant as SMerchant
 import qualified Storage.Tabular.SearchRequestSpecialZone as SReq
 import Storage.Tabular.Vehicle ()
 
-fromFieldEnum ::
-  (Typeable a, Read a) =>
-  DPSF.Field ->
-  Maybe ByteString ->
-  DPSF.Conversion a
-fromFieldEnum f mbValue = case mbValue of
-  Nothing -> DPSF.returnError UnexpectedNull f mempty
-  Just value' ->
-    case (readMaybe (unpackChars value')) of
-      Just val -> pure val
-      _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
+-- fromFieldEnum ::
+--   (Typeable a, Read a) =>
+--   DPSF.Field ->
+--   Maybe ByteString ->
+--   DPSF.Conversion a
+-- fromFieldEnum f mbValue = case mbValue of
+--   Nothing -> DPSF.returnError UnexpectedNull f mempty
+--   Just value' ->
+--     case (readMaybe (unpackChars value')) of
+--       Just val -> pure val
+--       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
 
 instance FromField Meters where
   fromField = fromFieldEnum
@@ -80,15 +80,15 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Variant.Variant
 
 instance FromBackendRow Postgres Variant.Variant
 
-instance FromField Common.Money where
-  fromField = fromFieldEnum
+-- instance FromField Common.Money where
+--   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Common.Money where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Common.Money where
+--   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Common.Money
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Common.Money
 
-instance FromBackendRow Postgres Common.Money
+-- instance FromBackendRow Postgres Common.Money
 
 data QuoteSpecialZoneT f = QuoteSpecialZoneT
   { id :: B.C f Text,
@@ -135,7 +135,7 @@ instance ToJSON QuoteSpecialZone where
 
 deriving stock instance Show QuoteSpecialZone
 
-deriving stock instance Read Money
+-- deriving stock instance Read Money
 
 quoteSpecialZoneTMod :: QuoteSpecialZoneT (B.FieldModification (B.TableField QuoteSpecialZoneT))
 quoteSpecialZoneTMod =

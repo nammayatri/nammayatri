@@ -47,6 +47,13 @@ updateAddress blId LocationAddress {..} = do
       ]
     where_ $ tbl ^. BookingLocationTId ==. val (toKey blId)
 
+findById' :: L.MonadFlow m => Id BookingLocation -> m (Maybe BookingLocation)
+findById' (Id bookingLocationId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure Nothing) (transformBeamBookingLocationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamBL.id $ Se.Eq bookingLocationId]
+    Nothing -> pure Nothing
+
 -- updateAddress' :: (L.MonadFlow m, MonadTime m) => Id BookingLocation -> LocationAddress -> m (MeshResult ())
 -- updateAddress' (Id blId) LocationAddress = do
 --   dbConf <- L.getOption Extra.EulerPsqlDbCfg
