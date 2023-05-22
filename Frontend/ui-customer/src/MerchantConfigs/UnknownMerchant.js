@@ -63,7 +63,8 @@ export function getMerchantString(key) {
     "CUSTOMER_TIP" : "true",
     "isShareAppEnabled" : "false",
     "apiLoaderLottie" : "Payments-Loader",
-    "isEmergencyContacts" : "false"
+    "isEmergencyContacts" : "false",
+    "isChatEnabled" : "false"
   }
   
   const kannadaStrings = {

@@ -668,6 +668,9 @@ eval (DriverInfoCardActionController (DriverInfoCardController.MessageDriver)) s
   _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (length state.data.messages))
   continue state {props {currentStage = ChatWithDriver, sendMessageActive = false, unReadMessages = false }}
 
+eval (DriverInfoCardActionController (DriverInfoCardController.CallDriver)) state = do
+  continue state {props {showCallPopUp = true }}
+
 eval BackPressed state = do
   _ <- pure $ toggleBtnLoader "" false
   case state.props.currentStage of

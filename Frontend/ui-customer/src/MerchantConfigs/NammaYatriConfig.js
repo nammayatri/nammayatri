@@ -63,7 +63,8 @@ const config = {
   "CUSTOMER_TIP" : "true",
   "isShareAppEnabled" : "true",
   "apiLoaderLottie" : "primary_button_loader",
-  "isEmergencyContacts" : "true"
+  "isEmergencyContacts" : "true",
+  "isChatEnabled" : "true"
 }
 
 const kannadaStrings = {

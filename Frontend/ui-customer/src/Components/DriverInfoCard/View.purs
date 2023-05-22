@@ -18,12 +18,14 @@ module Components.DriverInfoCard.View where
 import Common.Types.App
 
 import Animation (fadeIn)
+import Common.Types.App (LazyCheck(..))
 import Components.DriverInfoCard.Controller (Action(..), DriverInfoCardState)
 import Components.PrimaryButton as PrimaryButton
 import Components.SourceToDestination as SourceToDestination
 import Data.Array as Array
 import Data.Maybe (fromMaybe)
 import Data.String (Pattern(..), split, length, take, drop)
+import Data.String.CodeUnits (fromCharArray, toCharArray)
 import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff_)
@@ -31,9 +33,11 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (flowRunner, os, safeMarginBottom, screenWidth, getExpiryTime)
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Helpers.Utils (secondsToHms, zoneOtpExpiryTimer)
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Merchant.Utils (Merchant(..), getMerchant, getValueFromConfig)
 import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>), (-), (*), bind, pure, discard, (&&), (||), (/=))
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, alignParentLeft, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width)
@@ -41,12 +45,8 @@ import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (Stage(..))
-import Styles.Colors as Color
-import Data.String.CodeUnits (fromCharArray, toCharArray)
 import Storage (isLocalStageOn)
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
-import Common.Types.App (LazyCheck(..))
-import Merchant.Utils (Merchant(..), getMerchant)
+import Styles.Colors as Color
 
 view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit ) w
 view push state =
@@ -485,61 +485,64 @@ cancelRideLayout push state =
 
 ---------------------------------- contactView ---------------------------------------
 contactView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
-contactView push state =
-  linearLayout
-  [ orientation HORIZONTAL
-  , height WRAP_CONTENT
-  , width MATCH_PARENT
-  , gravity CENTER_VERTICAL
-  , padding $ Padding 16 20 16 16
-  , visibility if state.props.currentStage == RideAccepted then VISIBLE else GONE
-  ][  linearLayout
-      [ width (V (((screenWidth unit)/3 * 2)-27))
-      , height WRAP_CONTENT
-      , orientation if length state.data.driverName > 16 then VERTICAL else HORIZONTAL
-      ][  textView (
-          [ text $ state.data.driverName <> " "
-          , color Color.black800
-          , ellipsize true
-          , singleLine true
-          ] <> FontStyle.subHeading1 TypoGraphy)
-        , textView (
-          [ text $"is " <> secondsToHms state.data.eta
-          , color Color.black800
-          , visibility if state.data.distance > 1000 then VISIBLE else GONE
-          ] <> FontStyle.subHeading1 TypoGraphy)
-        , textView (
-          [ text case state.data.distance > 1000 of
-            true -> getString AWAY
-            false -> if state.data.waitingTime == "--" then getString IS_ON_THE_WAY else getString IS_WAITING_FOR_YOU
-          , color Color.black800
-          ] <> FontStyle.subHeading1 TypoGraphy)
-      ]
-    , linearLayout[
-      width MATCH_PARENT
-    , gravity RIGHT
+contactView push state = 
+  let isChatEnabled = (getValueFromConfig "isChatEnabled")
+  in 
+    linearLayout
+    [ orientation HORIZONTAL
     , height WRAP_CONTENT
-    ][linearLayout
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
+    , width MATCH_PARENT
+    , gravity CENTER_VERTICAL
+    , padding $ Padding 16 20 16 16
+    , visibility if state.props.currentStage == RideAccepted then VISIBLE else GONE
+    ][  linearLayout
+        [ width (V (((screenWidth unit)/3 * 2)-27))
+        , height WRAP_CONTENT
+        , orientation if length state.data.driverName > 16 then VERTICAL else HORIZONTAL
+        ][  textView (
+            [ text $ state.data.driverName <> " "
+            , color Color.black800
+            , ellipsize true
+            , singleLine true
+            ] <> FontStyle.subHeading1 TypoGraphy)
+          , textView (
+            [ text $"is " <> secondsToHms state.data.eta
+            , color Color.black800
+            , visibility if state.data.distance > 1000 then VISIBLE else GONE
+            ] <> FontStyle.subHeading1 TypoGraphy)
+          , textView (
+            [ text case state.data.distance > 1000 of
+              true -> getString AWAY
+              false -> if state.data.waitingTime == "--" then getString IS_ON_THE_WAY else getString IS_WAITING_FOR_YOU
+            , color Color.black800
+            ] <> FontStyle.subHeading1 TypoGraphy)
+        ]
+      , linearLayout[
+        width MATCH_PARENT
       , gravity RIGHT
-      ] [ linearLayout
-          [ height $ V 40
-          , width $ V 64
-          , gravity CENTER
-          , cornerRadius 20.0
-          , background Color.green200
-          , onClick push (const MessageDriver)
-          ][ imageView
-              [ imageWithFallback if state.props.unReadMessages then "ic_chat_badge_green," <> (getAssetStoreLink FunctionCall) <> "ic_chat_badge_green.png" else "ic_call_msg," <> (getAssetStoreLink FunctionCall) <> "ic_call_msg.png"
-              , height $ V 24
-              , width $ V 24
-              ]
+      , height WRAP_CONTENT
+      ][linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , gravity RIGHT
+        ] [ linearLayout
+            [ height $ V 40
+            , width $ V 64
+            , gravity CENTER
+            , cornerRadius 20.0
+            , background Color.green200
+            , onClick push if isChatEnabled == "true" then const MessageDriver else const CallDriver
+            ][ imageView
+                [ imageWithFallback $ if (getValueFromConfig "isChatEnabled") == "true" then if state.props.unReadMessages then "ic_chat_badge_green," <> (getAssetStoreLink FunctionCall) <> "ic_chat_badge_green.png" else "ic_call_msg," <> (getAssetStoreLink FunctionCall) <> "ic_call_msg.png"
+                                        else "ny_ic_call," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_call.png"
+                , height $ V 24
+                , width $ V 24
+                ]
+            ]
           ]
         ]
-      ]
-
-  ]
+    ]
+    
 
 ---------------------------------- driverDetailsView ---------------------------------------
 

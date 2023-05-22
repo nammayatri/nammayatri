@@ -58,7 +58,8 @@ const config = {
   "CUSTOMER_TIP" : "false",
   "isShareAppEnabled" : "true",
   "apiLoaderLottie" : "primary_button_loader",
-  "isEmergencyContacts" : "true"
+  "isEmergencyContacts" : "true",
+  "isChatEnabled" : "true"
 }
 
 const bengaliStrings = {

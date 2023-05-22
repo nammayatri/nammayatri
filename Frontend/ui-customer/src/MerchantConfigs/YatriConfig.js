@@ -54,7 +54,8 @@ const config = {
     "APP_LINK" : getAppLink(window.__OS),
     "CUSTOMER_TIP" : "false",
     "isShareAppEnabled" : "true",
-    "apiLoaderLottie" : "primary_button_loader"
+    "apiLoaderLottie" : "primary_button_loader",
+    "isChatEnabled" : "true"
 }
 
 const malayalamStrings = {

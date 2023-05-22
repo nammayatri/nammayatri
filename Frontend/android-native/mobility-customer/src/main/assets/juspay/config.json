@@ -95,7 +95,7 @@
                 "tracker": "https://assets.juspay.in/hyper/bundles/app/tracker/2.0.42/v1-tracker.zip"
             },
             "in.yatri.consumer": {
-                "configuration": "https://assets.juspay.in/hyper/configs/mobilitypaytmconsumer/in.yatri.consumer/1.0.5/v1-configuration.zip"
+                "configuration": "https://assets.juspay.in/hyper/configs/mobilitypaytmconsumer/in.yatri.consumer/1.0.6/v1-configuration.zip"
             }
         },
         "id": "13488357577326828-patch-1.2.14",

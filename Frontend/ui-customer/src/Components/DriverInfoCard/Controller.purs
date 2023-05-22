@@ -32,6 +32,7 @@ data Action = NoAction
             | ShareRide
             | ZoneOTPExpiryAction String String Int
             | OnNavigate
+            | CallDriver
 
 type DriverInfoCardState = 
   { props :: DriverInfoCardProps
