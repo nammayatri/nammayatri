@@ -64,6 +64,18 @@ findByDriverAndSearchReq driverId searchReqId = Esq.findOne $ do
       &&. sReq ^. SearchRequestForDriverStatus ==. val Domain.Active
   pure sReq
 
+findByDriverAndSearchReq' :: L.MonadFlow m => Id Person -> Id SearchRequest -> m (Maybe SearchRequestForDriver)
+findByDriverAndSearchReq' (Id driverId) (Id searchReqId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' ->
+      either (pure Nothing) (transformBeamSearchRequestForDriverToDomain <$>)
+        <$> KV.findWithKVConnector
+          dbCOnf'
+          Mesh.meshConfig
+          [Se.And [Se.Is BeamSRFD.searchRequestId $ Se.Eq searchReqId, Se.Is BeamSRFD.driverId $ Se.Eq driverId]]
+    Nothing -> pure Nothing
+
 findByDriver :: (Transactionable m, MonadTime m) => Id Person -> m [SearchRequestForDriver]
 findByDriver driverId = do
   now <- getCurrentTime

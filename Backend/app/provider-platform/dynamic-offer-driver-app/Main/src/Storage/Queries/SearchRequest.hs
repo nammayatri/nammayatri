@@ -52,29 +52,16 @@ findById searchRequestId = buildDType $
       where_ $ sReq ^. SearchRequestTId ==. val (toKey searchRequestId)
       pure (sReq, sFromLoc, sToLoc)
 
--- findById' :: L.MonadFlow m => Id SearchRequest -> m (Maybe SearchRequest)
--- findById' (Id searchRequestId) = do
---   dbConf <- L.getOption Extra.EulerPsqlDbCfg
---   case dbConf of
---     Just dbCOnf' -> do
---       sR <- KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamSR.id $ Se.Eq searchRequestId]
---       case sR of
---         Left _ -> pure Nothing
---         Right x -> sequence $ transformBeamSearchRequestToDomain <$> x
-
--- findById' :: Transactionable m => Id SearchRequest -> m (Maybe SearchRequest)
--- findById' searchRequestId = Esq.buildDType . runMaybeT $ do
---   searchRequest <- Esq.findByIdM @SearchRequestT $ toKey searchRequestId
---   fetchFullSearchRequestM searchRequest
-
--- fetchFullSearchRequestM ::
---   Transactionable m =>
---   SearchRequestT ->
---   MaybeT (DTypeBuilder m) (SolidType FullSearchRequestT)
--- fetchFullSearchRequestM searchRequest@SearchRequestT {..} = do
---   fromLocation <- Esq.findByIdM @SearchReqLocationT fromLocationId
---   toLocation <- Esq.findByIdM @SearchReqLocationT toLocationId
---   pure $ extractSolidType @SearchRequest (searchRequest, fromLocation, toLocation)
+findById' :: L.MonadFlow m => Id SearchRequest -> m (Maybe SearchRequest)
+findById' (Id searchRequestId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> do
+      sR <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamSR.id $ Se.Eq searchRequestId]
+      case sR of
+        Left _ -> pure Nothing
+        Right x -> sequence $ transformBeamSearchRequestToDomain <$> x
+    Nothing -> pure Nothing
 
 updateStatus ::
   Id SearchRequest ->
