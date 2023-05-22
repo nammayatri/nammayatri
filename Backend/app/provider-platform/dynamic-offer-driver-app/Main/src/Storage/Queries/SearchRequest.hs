@@ -60,7 +60,7 @@ findById' (Id searchRequestId) = do
       sR <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamSR.id $ Se.Eq searchRequestId]
       case sR of
         Left _ -> pure Nothing
-        Right x -> sequence $ transformBeamSearchRequestToDomain <$> x
+        Right x -> traverse transformBeamSearchRequestToDomain x
     Nothing -> pure Nothing
 
 -- findById' :: Transactionable m => Id SearchRequest -> m (Maybe SearchRequest)
@@ -117,6 +117,20 @@ getRequestIdfromTransactionId tId = do
       searchT ^. SearchRequestTransactionId ==. val (getId tId)
     return $ searchT ^. SearchRequestTId
 
+getRequestIdfromTransactionId' :: L.MonadFlow m => Id SearchRequest -> m (Maybe (Id SearchRequest))
+getRequestIdfromTransactionId' (Id tId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> do
+      sr <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamSR.transactionId $ Se.Eq tId]
+      case sr of
+        Left _ -> pure Nothing
+        Right x -> do
+          sr' <- traverse transformBeamSearchRequestToDomain x
+          let srId = Domain.id <$> sr'
+          pure srId
+    Nothing -> pure Nothing
+
 getSearchRequestStatusOrValidTill ::
   (Transactionable m) =>
   Id SearchRequest ->
@@ -127,6 +141,20 @@ getSearchRequestStatusOrValidTill searchRequestId = do
     where_ $
       searchT ^. SearchRequestTId ==. val (toKey searchRequestId)
     return (searchT ^. SearchRequestValidTill, searchT ^. SearchRequestStatus)
+
+getSearchRequestStatusOrValidTill' :: L.MonadFlow m => Id SearchRequest -> m (Maybe (UTCTime, SearchRequestStatus))
+getSearchRequestStatusOrValidTill' (Id searchReqId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> do
+      sr <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamSR.id $ Se.Eq searchReqId]
+      case sr of
+        Left _ -> pure Nothing
+        Right x -> do
+          sr' <- traverse transformBeamSearchRequestToDomain x
+          let srData = (,) <$> (Domain.validTill <$> sr') <*> (Domain.status <$> sr')
+          pure srData
+    Nothing -> pure Nothing
 
 findActiveByTransactionId ::
   (Transactionable m) =>
@@ -139,6 +167,20 @@ findActiveByTransactionId transactionId = do
       searchT ^. SearchRequestTransactionId ==. val transactionId
         &&. searchT ^. SearchRequestStatus ==. val Domain.ACTIVE
     return $ searchT ^. SearchRequestTId
+
+findActiveByTransactionId' :: L.MonadFlow m => Text -> m (Maybe (Id SearchRequest))
+findActiveByTransactionId' transactionId = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> do
+      sr <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamSR.transactionId $ Se.Eq transactionId, Se.Is BeamSR.status $ Se.Eq Domain.ACTIVE]]
+      case sr of
+        Left _ -> pure Nothing
+        Right x -> do
+          sr' <- traverse transformBeamSearchRequestToDomain x
+          let srId = Domain.id <$> sr'
+          pure srId
+    Nothing -> pure Nothing
 
 transformBeamSearchRequestToDomain :: L.MonadFlow m => BeamSR.SearchRequest -> m (SearchRequest)
 transformBeamSearchRequestToDomain BeamSR.SearchRequestT {..} = do

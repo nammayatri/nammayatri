@@ -86,6 +86,13 @@ findAll :: Transactionable m => m [Merchant]
 findAll =
   Esq.findAll $ do from $ table @MerchantT
 
+findAll' :: L.MonadFlow m => m [Merchant]
+findAll' = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure []) (transformBeamMerchantToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig []
+    Nothing -> pure []
+
 update :: Merchant -> SqlDB ()
 update org = do
   now <- getCurrentTime

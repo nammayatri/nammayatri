@@ -45,6 +45,13 @@ findAllActiveBySRId searchReqId = do
         &&. sReq ^. SearchRequestForDriverStatus ==. val Domain.Active
     pure sReq
 
+findAllActiveBySRId' :: L.MonadFlow m => Id SearchRequest -> m [SearchRequestForDriver]
+findAllActiveBySRId' (Id searchReqId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure []) (transformBeamSearchRequestForDriverToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamSRFD.id $ Se.Eq searchReqId]
+    Nothing -> pure []
+
 findAllActiveWithoutRespByRequestId :: (Transactionable m, MonadTime m) => Id SearchRequest -> m [SearchRequestForDriver]
 findAllActiveWithoutRespByRequestId searchReqId = do
   Esq.findAll $ do
@@ -54,6 +61,13 @@ findAllActiveWithoutRespByRequestId searchReqId = do
         &&. sReq ^. SearchRequestForDriverStatus ==. val Domain.Active
         &&. Esq.isNothing (sReq ^. SearchRequestForDriverResponse)
     pure sReq
+
+findAllActiveWithoutRespByRequestId' :: L.MonadFlow m => Id SearchRequest -> m [SearchRequestForDriver]
+findAllActiveWithoutRespByRequestId' (Id searchReqId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure []) (transformBeamSearchRequestForDriverToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamSRFD.id $ Se.Eq searchReqId, Se.Is BeamSRFD.status $ Se.Eq Domain.Active]]
+    Nothing -> pure []
 
 findByDriverAndSearchReq :: Transactionable m => Id Person -> Id SearchRequest -> m (Maybe SearchRequestForDriver)
 findByDriverAndSearchReq driverId searchReqId = Esq.findOne $ do
@@ -87,6 +101,19 @@ findByDriver driverId = do
         &&. sReq ^. SearchRequestForDriverStatus ==. val Domain.Active
     orderBy [desc $ sReq ^. SearchRequestForDriverSearchRequestValidTill]
     pure sReq
+
+findByDriver' :: (L.MonadFlow m, MonadTime m) => Id Person -> m [SearchRequestForDriver]
+findByDriver' (Id driverId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  now <- getCurrentTime
+  case dbConf of
+    Just dbCOnf' ->
+      either (pure []) (transformBeamSearchRequestForDriverToDomain <$>)
+        <$> KV.findAllWithKVConnector
+          dbCOnf'
+          Mesh.meshConfig
+          [Se.And [Se.Is BeamSRFD.driverId $ Se.Eq driverId, Se.Is BeamSRFD.status $ Se.Eq Domain.Active, Se.Is BeamSRFD.searchRequestValidTill $ Se.GreaterThan now]]
+    Nothing -> pure []
 
 removeAllBySearchId :: Id SearchRequest -> SqlDB ()
 removeAllBySearchId searchReqId = Esq.delete $ do

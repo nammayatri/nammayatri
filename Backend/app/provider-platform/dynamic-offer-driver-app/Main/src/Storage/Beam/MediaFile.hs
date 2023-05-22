@@ -82,11 +82,16 @@ instance ToJSON MediaFile where
 
 deriving stock instance Show MediaFile
 
+instance FromField Domain.MediaType where
+  fromField = fromFieldEnum
+
 deriving stock instance Ord Domain.MediaType
 
 deriving stock instance Eq Domain.MediaType
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.MediaType
+
+instance FromBackendRow Postgres Domain.MediaType
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.MediaType where
   sqlValueSyntax = autoSqlValueSyntax

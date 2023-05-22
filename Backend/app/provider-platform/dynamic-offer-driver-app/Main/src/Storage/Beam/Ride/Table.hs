@@ -67,8 +67,8 @@ import Storage.Tabular.Person (PersonTId)
 
 -- instance FromBackendRow Postgres Meters
 
-instance IsString Meters where
-  fromString = show
+-- instance IsString Meters where
+--   fromString = show
 
 -- instance FromField Money where
 --   fromField = fromFieldEnum

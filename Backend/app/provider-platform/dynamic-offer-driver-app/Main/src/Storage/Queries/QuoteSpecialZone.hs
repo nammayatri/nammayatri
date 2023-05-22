@@ -76,6 +76,17 @@ findById dQuoteId = buildDType $ do
     pure (dQuote, farePars)
   join <$> mapM buildFullQuoteSpecialZone res
 
+findById' :: (L.MonadFlow m) => Id QuoteSpecialZone -> m (Maybe QuoteSpecialZone)
+findById' (Id dQuoteId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> do
+      sR <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamQSZ.id $ Se.Eq dQuoteId]
+      case sR of
+        Left _ -> pure Nothing
+        Right x -> traverse transformBeamQuoteSpecialZoneToDomain x
+    Nothing -> pure Nothing
+
 transformBeamQuoteSpecialZoneToDomain :: L.MonadFlow m => BeamQSZ.QuoteSpecialZone -> m (QuoteSpecialZone)
 transformBeamQuoteSpecialZoneToDomain BeamQSZ.QuoteSpecialZoneT {..} = do
   fp <- BeamQFP.findById' (Id fareParametersId)

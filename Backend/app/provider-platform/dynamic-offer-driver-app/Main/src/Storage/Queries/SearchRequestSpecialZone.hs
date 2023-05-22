@@ -88,6 +88,20 @@ getRequestIdfromTransactionId tId = do
       searchT ^. SearchRequestSpecialZoneTransactionId ==. val (getId tId)
     return $ searchT ^. SearchRequestSpecialZoneTId
 
+getRequestIdfromTransactionId' :: L.MonadFlow m => Id SearchRequestSpecialZone -> m (Maybe (Id SearchRequestSpecialZone))
+getRequestIdfromTransactionId' (Id tId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> do
+      srsz <- KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamSRSZ.transactionId $ Se.Eq tId]
+      case srsz of
+        Left _ -> pure Nothing
+        Right x -> do
+          srsz' <- mapM transformBeamSearchRequestSpecialZoneToDomain x
+          let vTill = Domain.id <$> srsz'
+          pure vTill
+    Nothing -> pure Nothing
+
 findByMsgIdAndBapIdAndBppId :: Transactionable m => Text -> Text -> Id Merchant -> m (Maybe SearchRequestSpecialZone)
 findByMsgIdAndBapIdAndBppId txnId bapId merchantId = Esq.buildDType $ do
   mbFullSearchReqT <- Esq.findOne' $ do
@@ -98,6 +112,17 @@ findByMsgIdAndBapIdAndBppId txnId bapId merchantId = Esq.buildDType $ do
         &&. sReq ^. SearchRequestSpecialZoneBapId ==. val bapId
     pure (sReq, sFromLoc, mbSToLoc)
   pure $ extractSolidType @SearchRequestSpecialZone <$> mbFullSearchReqT
+
+findByMsgIdAndBapIdAndBppId' :: L.MonadFlow m => Text -> Text -> Id Merchant -> m (Maybe SearchRequestSpecialZone)
+findByMsgIdAndBapIdAndBppId' txnId bapId (Id merchantId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> do
+      srsz <- KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.And [Se.Is BeamSRSZ.messageId $ Se.Eq txnId, Se.Is BeamSRSZ.providerId $ Se.Eq merchantId, Se.Is BeamSRSZ.bapId $ Se.Eq bapId]]
+      case srsz of
+        Left _ -> pure Nothing
+        Right x -> mapM transformBeamSearchRequestSpecialZoneToDomain x
+    Nothing -> pure Nothing
 
 getValidTill ::
   (Transactionable m) =>
@@ -110,10 +135,25 @@ getValidTill searchRequestId = do
       searchT ^. SearchRequestSpecialZoneTId ==. val (toKey searchRequestId)
     return $ searchT ^. SearchRequestSpecialZoneValidTill
 
+getValidTill' :: L.MonadFlow m => Id SearchRequestSpecialZone -> m (Maybe UTCTime)
+getValidTill' (Id searchRequestId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> do
+      srsz <- KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamSRSZ.id $ Se.Eq searchRequestId]
+      case srsz of
+        Left _ -> pure Nothing
+        Right x -> do
+          srsz' <- sequence $ transformBeamSearchRequestSpecialZoneToDomain <$> x
+          let vTill = Domain.validTill <$> srsz'
+          pure vTill
+    Nothing -> pure Nothing
+
 transformBeamSearchRequestSpecialZoneToDomain :: L.MonadFlow m => BeamSRSZ.SearchRequestSpecialZone -> m (SearchRequestSpecialZone)
 transformBeamSearchRequestSpecialZoneToDomain BeamSRSZ.SearchRequestSpecialZoneT {..} = do
   fl <- QSRL.findById' (Id fromLocationId)
   tl <- QSRL.findById' (Id toLocationId)
+  pUrl <- parseBaseUrl bapUri
   pure
     SearchRequestSpecialZone
       { id = Id id,
@@ -125,7 +165,7 @@ transformBeamSearchRequestSpecialZoneToDomain BeamSRSZ.SearchRequestSpecialZoneT
         fromLocation = fromJust fl,
         toLocation = fromJust tl,
         bapId = bapId,
-        bapUri = bapUri,
+        bapUri = pUrl,
         estimatedDistance = estimatedDistance,
         estimatedDuration = estimatedDuration,
         createdAt = createdAt,
@@ -144,7 +184,7 @@ transformDomainSearchRequestSpecialZoneToBeam SearchRequestSpecialZone {..} =
       BeamSRSZ.fromLocationId = getId fromLocation.id,
       BeamSRSZ.toLocationId = getId toLocation.id,
       BeamSRSZ.bapId = bapId,
-      BeamSRSZ.bapUri = bapUri,
+      BeamSRSZ.bapUri = showBaseUrl bapUri,
       BeamSRSZ.estimatedDistance = estimatedDistance,
       BeamSRSZ.estimatedDuration = estimatedDuration,
       BeamSRSZ.createdAt = createdAt,

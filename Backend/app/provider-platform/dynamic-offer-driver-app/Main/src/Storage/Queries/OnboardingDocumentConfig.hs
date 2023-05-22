@@ -55,6 +55,13 @@ findByMerchantIdAndDocumentType merchantId documentType =
         &&. config ^. OnboardingDocumentConfigDocumentType ==. val documentType
     return config
 
+findByMerchantIdAndDocumentType' :: L.MonadFlow m => Id Merchant -> DocumentType -> m (Maybe OnboardingDocumentConfig)
+findByMerchantIdAndDocumentType' merchantId documentType = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure Nothing) (transformBeamOnboardingDocumentConfigToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.And [Se.Is BeamODC.merchantId $ Se.Eq $ getId merchantId, Se.Is BeamODC.documentType $ Se.Eq documentType]]
+    Nothing -> pure Nothing
+
 update :: OnboardingDocumentConfig -> SqlDB ()
 update config = do
   now <- getCurrentTime

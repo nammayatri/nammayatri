@@ -114,6 +114,13 @@ findAllReferredByDriverId driverId = do
     where_ $ riderDetails ^. RiderDetailsReferredByDriver ==. val (Just $ toKey driverId)
     return riderDetails
 
+findAllReferredByDriverId' :: L.MonadFlow m => Id Person -> m [RiderDetails]
+findAllReferredByDriverId' (Id driverId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure []) (transformBeamRiderDetailsToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamRD.referredByDriver $ Se.Eq (Just driverId)]
+    Nothing -> pure []
+
 findByMobileNumberHashAndMerchant :: Transactionable m => DbHash -> Id Merchant -> m (Maybe RiderDetails)
 findByMobileNumberHashAndMerchant mobileNumberDbHash merchantId = do
   Esq.findOne $ do
@@ -122,6 +129,13 @@ findByMobileNumberHashAndMerchant mobileNumberDbHash merchantId = do
       riderDetails ^. RiderDetailsMobileNumberHash ==. val mobileNumberDbHash
         &&. riderDetails ^. RiderDetailsMerchantId ==. val (toKey merchantId)
     return riderDetails
+
+findByMobileNumberHashAndMerchant' :: L.MonadFlow m => DbHash -> Id Merchant -> m (Maybe RiderDetails)
+findByMobileNumberHashAndMerchant' mobileNumberDbHash (Id merchantId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure Nothing) (transformBeamRiderDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.And [Se.Is BeamRD.mobileNumberHash $ Se.Eq mobileNumberDbHash, Se.Is BeamRD.id $ Se.Eq merchantId]]
+    Nothing -> pure Nothing
 
 updateReferralInfo ::
   DbHash ->
@@ -141,6 +155,22 @@ updateReferralInfo customerNumberHash merchantId referralId driverId = do
     where_ $
       rd ^. RiderDetailsMobileNumberHash ==. val customerNumberHash
         &&. rd ^. RiderDetailsMerchantId ==. val (toKey merchantId)
+
+updateDriverResponse' :: (L.MonadFlow m, MonadTime m) => DbHash -> Id Merchant -> Id DriverReferral -> Id Person -> m (MeshResult ())
+updateDriverResponse' customerNumberHash merchantId referralId driverId = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  now <- getCurrentTime
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        Mesh.meshConfig
+        [ Se.Set BeamRD.referralCode (Just $ getId referralId),
+          Se.Set BeamRD.referredByDriver (Just $ getId driverId),
+          Se.Set BeamRD.referredAt (Just now)
+        ]
+        [Se.And [Se.Is BeamRD.mobileNumberHash (Se.Eq customerNumberHash), Se.Is BeamRD.merchantId (Se.Eq $ getId merchantId)]]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 transformBeamRiderDetailsToDomain :: BeamRD.RiderDetails -> RiderDetails
 transformBeamRiderDetailsToDomain BeamRD.RiderDetailsT {..} = do

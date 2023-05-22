@@ -78,6 +78,13 @@ findAllRatingsForPerson driverId =
     where_ $ rating ^. RatingDriverId ==. val (toKey driverId)
     return rating
 
+findAllRatingsForPerson' :: L.MonadFlow m => Id Person -> m [Rating]
+findAllRatingsForPerson' driverId = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure []) (transformBeamRatingToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamR.driverId $ Se.Eq $ getId driverId]
+    Nothing -> pure []
+
 findRatingForRide :: Transactionable m => Id Ride -> m (Maybe Rating)
 findRatingForRide rideId = findOne $ do
   rating <- from $ table @RatingT

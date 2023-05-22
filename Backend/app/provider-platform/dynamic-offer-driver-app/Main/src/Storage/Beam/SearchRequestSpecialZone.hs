@@ -94,7 +94,7 @@ data SearchRequestSpecialZoneT f = SearchRequestSpecialZoneT
     fromLocationId :: B.C f Text,
     toLocationId :: B.C f Text,
     bapId :: B.C f Text,
-    bapUri :: B.C f BaseUrl,
+    bapUri :: B.C f Text,
     estimatedDistance :: B.C f Meters,
     estimatedDuration :: B.C f Seconds,
     createdAt :: B.C f Time.UTCTime,
@@ -161,15 +161,6 @@ searchRequestSpecialZoneToPSModifiers =
   M.fromList
     []
 
-defaultUrl :: BaseUrl
-defaultUrl =
-  BaseUrl
-    { baseUrlScheme = Https,
-      baseUrlHost = "localhost",
-      baseUrlPort = 80,
-      baseUrlPath = ""
-    }
-
 defaultSearchRequestSpecialZone :: SearchRequestSpecialZone
 defaultSearchRequestSpecialZone = do
   SearchRequestSpecialZoneT
@@ -182,7 +173,7 @@ defaultSearchRequestSpecialZone = do
       fromLocationId = "",
       toLocationId = "",
       bapId = "",
-      bapUri = defaultUrl,
+      bapUri = "",
       estimatedDistance = "",
       estimatedDuration = "",
       createdAt = defaultUTCDate,

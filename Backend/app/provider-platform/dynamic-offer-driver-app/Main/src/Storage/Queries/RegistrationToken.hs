@@ -137,6 +137,13 @@ findAllByPersonId personId =
     where_ $ regToken ^. RegistrationTokenEntityId ==. val (getId personId)
     return regToken
 
+findAllByPersonId' :: L.MonadFlow m => Id Person -> m [RegistrationToken]
+findAllByPersonId' personId = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure []) (transformBeamRegistrationTokenToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamRT.entityId $ Se.Eq $ getId personId]
+    Nothing -> pure []
+
 getAlternateNumberAttempts :: Transactionable m => Id Person -> m Int
 getAlternateNumberAttempts personId =
   fromMaybe 5 . listToMaybe
@@ -144,6 +151,21 @@ getAlternateNumberAttempts personId =
       attempts <- from $ table @RegistrationTokenT
       where_ $ attempts ^. RegistrationTokenEntityId ==. val (getId personId)
       return $ attempts ^. RegistrationTokenAlternateNumberAttempts
+
+getAlternateNumberAttempts' :: L.MonadFlow m => Id Person -> m Int
+getAlternateNumberAttempts' (Id personId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> do
+      rt <- KV.findWithKVConnector dbConf' VN.meshConfig [Se.Is BeamRT.entityId $ Se.Eq personId]
+      case rt of
+        Left _ -> pure 0
+        Right Nothing -> pure 0
+        Right (Just x) -> do
+          let rt' = transformBeamRegistrationTokenToDomain x
+          let attempts = DRT.attempts rt'
+          pure attempts
+    Nothing -> pure 0
 
 transformBeamRegistrationTokenToDomain :: BeamRT.RegistrationToken -> RegistrationToken
 transformBeamRegistrationTokenToDomain BeamRT.RegistrationTokenT {..} = do

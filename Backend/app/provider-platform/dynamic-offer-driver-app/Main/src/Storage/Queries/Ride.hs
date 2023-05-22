@@ -62,6 +62,17 @@ findById rideId = Esq.findOne $ do
   where_ $ ride ^. RideTId ==. val (toKey rideId)
   pure ride
 
+-- findById' :: L.MonadFlow m => Id Ride -> m (Maybe Ride)
+-- findById' (Id rideId) = do
+--   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   case dbConf of
+--     Just dbConf' -> do
+--       result <- KV.findWithKVConnector dbConf' VN.meshConfig [Se.Is BeamR.id $ Se.Eq rideId]
+--       case result of
+--         Right ride -> traverse transformBeamRideToDomain ride
+--         Left _ -> pure Nothing
+--     Nothing -> pure Nothing
+
 findActiveByRBId :: Transactionable m => Id Booking -> m (Maybe Ride)
 findActiveByRBId rbId = Esq.findOne $ do
   ride <- from $ table @RideT
@@ -69,6 +80,13 @@ findActiveByRBId rbId = Esq.findOne $ do
     ride ^. Ride.RideBookingId ==. val (toKey rbId)
       &&. ride ^. RideStatus !=. val Ride.CANCELLED
   pure ride
+
+-- findActiveByRBId' :: L.MonadFlow m => Id Ride -> m (Maybe Ride)
+-- findActiveByRBId' (Id rbId) = do
+--   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   case dbConf of
+--     Just dbCOnf' -> either (pure Nothing) (transformBeamRideToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.And [Se.Is BeamR.bookingId $ Se.Eq  $ Just rbId,Se.Is BeamR.status $ Se.Eq $ Just Ride.CANCELLED ]]
+--     Nothing -> pure Nothing
 
 findAllByDriverId ::
   Transactionable m =>
