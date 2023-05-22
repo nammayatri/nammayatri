@@ -208,6 +208,8 @@ buildMerchantAccess personId merchantId = do
       { id = Id uid,
         personId = personId,
         merchantId = merchantId,
+        secretKey = Nothing,
+        is2faEnabled = False,
         createdAt = now
       }
 

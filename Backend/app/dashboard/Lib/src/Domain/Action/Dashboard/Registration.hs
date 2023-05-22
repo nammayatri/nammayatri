@@ -14,28 +14,46 @@
 
 module Domain.Action.Dashboard.Registration where
 
+import Crypto.OTP (OTP)
 import qualified Domain.Types.Merchant as DMerchant
 import Domain.Types.Person as DP
 import qualified Domain.Types.RegistrationToken as DR
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
+import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Merchant as QMerchant
+import qualified Storage.Queries.MerchantAccess as MA
 import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import Tools.Auth
 import qualified Tools.Auth.Common as Auth
 import qualified Tools.Client as Client
+import qualified Tools.Utils as Utils
 
 data LoginReq = LoginReq
   { email :: Text,
     password :: Text,
+    merchantId :: ShortId DMerchant.Merchant,
+    otp :: Maybe OTP
+  }
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+
+data Enable2FAReq = Enable2FAReq
+  { email :: Text,
+    password :: Text,
     merchantId :: ShortId DMerchant.Merchant
+  }
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+
+newtype Enable2FARes = Enable2FARes
+  { qrcode :: Text
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -64,8 +82,38 @@ login LoginReq {..} = do
     throwError $ InvalidRequest "Server for this merchant is not available"
   person <- QP.findByEmailAndPassword email password >>= fromMaybeM (PersonDoesNotExist email)
   _merchantAccess <- QAccess.findByPersonIdAndMerchantId person.id merchant.id >>= fromMaybeM AccessDenied --FIXME cleanup tokens for this merchantId
+  when (merchant.is2faMandatory && not _merchantAccess.is2faEnabled) $
+    throwError $ InvalidRequest "2 Factor authentication is not enabled, it is mandatory for this merchant"
+  when (merchant.is2faMandatory && _merchantAccess.is2faEnabled) $ do
+    case (_merchantAccess.secretKey, otp) of
+      (Just secretKey, Just userOtp) -> do
+        generatedOtp <- L.runIO (Utils.genTOTP secretKey)
+        logDebug $ "generaTED OTP " <> show generatedOtp
+        unless (generatedOtp == userOtp) $
+          throwError $ InvalidRequest "Google Authenticator OTP does not match"
+      (_, Nothing) -> throwError $ InvalidRequest "Google Authenticator OTP is required"
+      (Nothing, _) -> throwError $ InvalidRequest "Secret key not found for 2FA"
   token <- generateToken person.id merchant.id
   pure $ LoginRes token "Logged in successfully"
+
+enable2fa ::
+  ( EsqDBFlow m r,
+    Redis.HedisFlow m r,
+    HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
+    HasFlowEnv m r '["dataServers" ::: [Client.DataServer]],
+    EncFlow m r
+  ) =>
+  Enable2FAReq ->
+  m Enable2FARes
+enable2fa Enable2FAReq {..} = do
+  person <- QP.findByEmailAndPassword email password >>= fromMaybeM (PersonDoesNotExist email)
+  merchant <- QMerchant.findByShortId merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getShortId)
+  _merchantAccess <- QAccess.findByPersonIdAndMerchantId person.id merchant.id >>= fromMaybeM AccessDenied
+  key <- L.runIO Utils.generateSecretKey
+  Esq.runTransaction $
+    MA.updatePerson2faForMerchant person.id merchant.id key
+  let qrCodeUri = Utils.generateAuthenticatorURI key email merchant.shortId
+  pure $ Enable2FARes qrCodeUri
 
 generateToken ::
   ( EsqDBFlow m r,
