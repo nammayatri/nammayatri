@@ -151,7 +151,7 @@ public class MobilityCommonBridge extends HyperBridge {
     protected static String storeDashboardCallBack = null;
     protected static Marker userPositionMarker;
     private final FusedLocationProviderClient client;
-    protected Polyline polyline = null;
+    protected static Polyline polyline = null;
     protected HashMap<String, JSONObject> markersElement = new HashMap<>();
     //Location
     protected double lastLatitudeValue;
