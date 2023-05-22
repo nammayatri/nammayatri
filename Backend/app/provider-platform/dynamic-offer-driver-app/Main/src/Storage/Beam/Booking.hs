@@ -55,25 +55,25 @@ import Storage.Tabular.Vehicle ()
 --       Just val -> pure val
 --       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
 
-instance FromField Centesimal where
-  fromField = fromFieldEnum
+-- instance FromField Centesimal where
+--   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Centesimal where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Centesimal where
+--   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Centesimal
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Centesimal
 
-instance FromBackendRow Postgres Centesimal
+-- instance FromBackendRow Postgres Centesimal
 
-instance FromField Seconds where
-  fromField = fromFieldEnum
+-- instance FromField Seconds where
+--   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Seconds where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Seconds where
+--   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Seconds
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Seconds
 
-instance FromBackendRow Postgres Seconds
+-- instance FromBackendRow Postgres Seconds
 
 instance FromField Domain.BookingStatus where
   fromField = fromFieldEnum
@@ -85,15 +85,15 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.BookingStatus
 
 instance FromBackendRow Postgres Domain.BookingStatus
 
-instance FromField Meters where
-  fromField = fromFieldEnum
+-- instance FromField Meters where
+--   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Meters where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Meters where
+--   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Meters
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Meters
 
-instance FromBackendRow Postgres Meters
+-- instance FromBackendRow Postgres Meters
 
 instance FromField Domain.BookingType where
   fromField = fromFieldEnum
@@ -105,25 +105,25 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.BookingType
 
 instance FromBackendRow Postgres Domain.BookingType
 
-instance FromField HighPrecMeters where
-  fromField = fromFieldEnum
+-- instance FromField HighPrecMeters where
+--   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be HighPrecMeters where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be HighPrecMeters where
+--   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be HighPrecMeters
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be HighPrecMeters
 
-instance FromBackendRow Postgres HighPrecMeters
+-- instance FromBackendRow Postgres HighPrecMeters
 
-instance FromField Veh.Variant where
-  fromField = fromFieldEnum
+-- instance FromField Veh.Variant where
+--   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Veh.Variant where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Veh.Variant where
+--   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Veh.Variant
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Veh.Variant
 
-instance FromBackendRow Postgres Veh.Variant
+-- instance FromBackendRow Postgres Veh.Variant
 
 data BookingT f = BookingT
   { id :: B.C f Text,

@@ -33,6 +33,7 @@ import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverInformation as BeamDI
+import qualified Storage.Beam.Person as BeamP hiding (Id)
 import Storage.Tabular.DriverInformation
 import Storage.Tabular.DriverLocation
 import Storage.Tabular.Person
@@ -74,6 +75,22 @@ fetchAllByIds merchantId driversIds = Esq.findAll $ do
   where
     personsKeys = toKey . cast <$> driversIds
 
+fetchAllByIds' :: L.MonadFlow m => Id Merchant -> [Id Driver] -> m [DriverInformation]
+fetchAllByIds' merchantId driversIds = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> do
+      -- either (pure []) (transformBeamDriverInformationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDI.driverId $ Se.In driversIds]
+      dInfos <- either (pure []) (transformBeamDriverInformationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDI.driverId $ Se.In (getId <$> driversIds)]
+      foldM (fn' dbCOnf') [] dInfos
+    Nothing -> pure []
+  where
+    fn' dbCOnf' b a = do
+      id' <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamP.id $ Se.Eq (getId a.driverId), Se.Is BeamP.merchantId $ Se.Eq (getId merchantId)]]
+      case id' of
+        Right (Just _) -> pure (a : b)
+        _ -> pure b
+
 fetchAllAvailableByIds :: Transactionable m => [Id Person.Driver] -> m [DriverInformation]
 fetchAllAvailableByIds driversIds = Esq.findAll $ do
   driverInformation <- from $ table @DriverInformationT
@@ -84,6 +101,13 @@ fetchAllAvailableByIds driversIds = Esq.findAll $ do
   return driverInformation
   where
     personsKeys = toKey . cast <$> driversIds
+
+fetchAllAvailableByIds' :: L.MonadFlow m => [Id Person.Driver] -> m [DriverInformation]
+fetchAllAvailableByIds' driversIds = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure []) (transformBeamDriverInformationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDI.driverId $ Se.In (getId <$> driversIds)]
+    Nothing -> pure []
 
 updateActivity :: Id Person.Driver -> Bool -> Maybe DriverMode -> SqlDB ()
 updateActivity driverId isActive mode = do

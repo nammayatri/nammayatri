@@ -63,6 +63,20 @@ findById' (Id searchRequestId) = do
         Right x -> sequence $ transformBeamSearchRequestToDomain <$> x
     Nothing -> pure Nothing
 
+-- findById' :: Transactionable m => Id SearchRequest -> m (Maybe SearchRequest)
+-- findById' searchRequestId = Esq.buildDType . runMaybeT $ do
+--   searchRequest <- Esq.findByIdM @SearchRequestT $ toKey searchRequestId
+--   fetchFullSearchRequestM searchRequest
+
+-- fetchFullSearchRequestM ::
+--   Transactionable m =>
+--   SearchRequestT ->
+--   MaybeT (DTypeBuilder m) (SolidType FullSearchRequestT)
+-- fetchFullSearchRequestM searchRequest@SearchRequestT {..} = do
+--   fromLocation <- Esq.findByIdM @SearchReqLocationT fromLocationId
+--   toLocation <- Esq.findByIdM @SearchReqLocationT toLocationId
+--   pure $ extractSolidType @SearchRequest (searchRequest, fromLocation, toLocation)
+
 updateStatus ::
   Id SearchRequest ->
   SearchRequestStatus ->

@@ -57,15 +57,15 @@ import Storage.Tabular.Person (PersonTId)
 --       Just val -> pure val
 --       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
 
-instance FromField Meters where
-  fromField = fromFieldEnum
+-- instance FromField Meters where
+--   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Meters where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Meters where
+--   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Meters
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Meters
 
-instance FromBackendRow Postgres Meters
+-- instance FromBackendRow Postgres Meters
 
 instance IsString Meters where
   fromString = show
@@ -98,15 +98,15 @@ instance FromBackendRow Postgres Domain.RideStatus
 instance IsString Domain.RideStatus where
   fromString = show
 
-instance FromField HighPrecMeters where
-  fromField = fromFieldEnum
+-- instance FromField HighPrecMeters where
+--   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be HighPrecMeters where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be HighPrecMeters where
+--   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be HighPrecMeters
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be HighPrecMeters
 
-instance FromBackendRow Postgres HighPrecMeters
+-- instance FromBackendRow Postgres HighPrecMeters
 
 instance IsString HighPrecMeters where
   fromString = show

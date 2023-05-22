@@ -57,41 +57,41 @@ import Storage.Tabular.Merchant (MerchantTId)
 --       Just val -> pure val
 --       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
 
-instance FromField Centesimal where
-  fromField = fromFieldEnum
+-- instance FromField Centesimal where
+--   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Centesimal where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Centesimal where
+--   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Centesimal
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Centesimal
 
-instance FromBackendRow Postgres Centesimal
+-- instance FromBackendRow Postgres Centesimal
 
 instance IsString Centesimal where
   fromString = show
 
-instance FromField Seconds where
-  fromField = fromFieldEnum
+-- instance FromField Seconds where
+--   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Seconds where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Seconds where
+--   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Seconds
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Seconds
 
-instance FromBackendRow Postgres Seconds
+-- instance FromBackendRow Postgres Seconds
 
 instance IsString Seconds where
   fromString = show
 
-instance FromField Meters where
-  fromField = fromFieldEnum
+-- instance FromField Meters where
+--   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Meters where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Meters where
+--   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Meters
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Meters
 
-instance FromBackendRow Postgres Meters
+-- instance FromBackendRow Postgres Meters
 
 instance IsString Meters where
   fromString = show

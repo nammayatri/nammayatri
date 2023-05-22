@@ -64,24 +64,25 @@ import qualified EulerHS.Language as L
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 
-data A = A | B
-  deriving stock (Eq, Generic, Read, Show, Ord)
-  deriving anyclass (A.FromJSON, A.ToJSON)
+-- data A = A | B
+--   deriving stock (Eq, Generic, Read, Show, Ord)
+--   deriving anyclass (A.FromJSON, A.ToJSON)
 
-fromFieldEnum ::
-  (Typeable a, Read a) =>
-  DPSF.Field ->
-  Maybe ByteString ->
-  DPSF.Conversion a
-fromFieldEnum f mbValue = case mbValue of
-  Nothing -> DPSF.returnError UnexpectedNull f mempty
-  Just value' ->
-    case (readMaybe (unpackChars value')) of
-      Just val -> pure val
-      _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
+-- fromFieldEnum ::
+--   (Typeable a, Read a) =>
+--   DPSF.Field ->
+--   Maybe ByteString ->
+--   DPSF.Conversion a
+-- fromFieldEnum f mbValue = case mbValue of
+--   Nothing -> DPSF.returnError UnexpectedNull f mempty
+--   Just value' ->
+--     case (readMaybe (unpackChars value')) of
+--       Just val -> pure val
+--       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
 
 instance FromField Domain.RegistrationCategory where
   fromField = fromFieldEnum
@@ -105,15 +106,15 @@ instance FromBackendRow Postgres Domain.Category
 
 -- deriving stock instance Read GeoRestriction
 
-instance FromField Veh.Variant where
-  fromField = fromFieldEnum
+-- instance FromField Veh.Variant where
+--   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Veh.Variant where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Veh.Variant where
+--   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Veh.Variant
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Veh.Variant
 
-instance FromBackendRow Postgres Veh.Variant
+-- instance FromBackendRow Postgres Veh.Variant
 
 -- instance FromField Meters where
 --   fromField = fromFieldEnum

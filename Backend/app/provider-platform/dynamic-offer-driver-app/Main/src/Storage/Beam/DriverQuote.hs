@@ -62,25 +62,25 @@ import Storage.Tabular.Vehicle ()
 --       Just val -> pure val
 --       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
 
-instance FromField Variant.Variant where
-  fromField = fromFieldEnum
+-- instance FromField Variant.Variant where
+--   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Variant.Variant where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Variant.Variant where
+--   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Variant.Variant
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Variant.Variant
 
-instance FromBackendRow Postgres Variant.Variant
+-- instance FromBackendRow Postgres Variant.Variant
 
-instance FromField Centesimal where
-  fromField = fromFieldEnum
+-- instance FromField Centesimal where
+--   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Centesimal where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Centesimal where
+--   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Centesimal
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Centesimal
 
-instance FromBackendRow Postgres Centesimal
+-- instance FromBackendRow Postgres Centesimal
 
 instance FromField Domain.DriverQuoteStatus where
   fromField = fromFieldEnum
@@ -102,20 +102,20 @@ instance FromBackendRow Postgres Domain.DriverQuoteStatus
 
 -- instance FromBackendRow Postgres Common.Money
 
-instance FromField Meters where
-  fromField = fromFieldEnum
+-- instance FromField Meters where
+--   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Meters where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Meters where
+--   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Meters
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Meters
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Seconds where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Seconds where
+--   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Seconds
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Seconds
 
-instance FromBackendRow Postgres Meters
+-- instance FromBackendRow Postgres Meters
 
 data DriverQuoteT f = DriverQuoteT
   { id :: B.C f Text,

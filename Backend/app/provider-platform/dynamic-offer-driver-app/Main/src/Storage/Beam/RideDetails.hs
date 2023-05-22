@@ -58,15 +58,15 @@ import Storage.Tabular.Vehicle ()
 --       Just val -> pure val
 --       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
 
-instance FromField SV.Variant where
-  fromField = fromFieldEnum
+-- instance FromField SV.Variant where
+--   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be SV.Variant where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be SV.Variant where
+--   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be SV.Variant
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be SV.Variant
 
-instance FromBackendRow Postgres SV.Variant
+-- instance FromBackendRow Postgres SV.Variant
 
 instance FromField DbHash where
   fromField = fromFieldEnum

@@ -55,18 +55,18 @@ import Storage.Tabular.Vehicle ()
 --       Just val -> pure val
 --       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
 
-instance FromField Centesimal where
-  fromField = fromFieldEnum
+-- instance FromField Centesimal where
+--   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Centesimal where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Centesimal where
+--   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Centesimal
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Centesimal
 
 instance IsString Centesimal where
   fromString = show
 
-instance FromBackendRow Postgres Centesimal
+-- instance FromBackendRow Postgres Centesimal
 
 instance FromBackendRow Postgres Domain.FareParametersType
 

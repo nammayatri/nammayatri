@@ -57,15 +57,15 @@ import Storage.Tabular.Person (PersonTId)
 --       Just val -> pure val
 --       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
 
-instance FromField Variant.Variant where
-  fromField = fromFieldEnum
+-- instance FromField Variant.Variant where
+--   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Variant.Variant where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Variant.Variant where
+--   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Variant.Variant
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Variant.Variant
 
-instance FromBackendRow Postgres Variant.Variant
+-- instance FromBackendRow Postgres Variant.Variant
 
 instance FromField Domain.RegistrationCategory where
   fromField = fromFieldEnum

@@ -11,8 +11,10 @@ import Database.Beam.MySQL ()
 import Database.Beam.Postgres
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
+import Domain.Types.Vehicle.Variant (Variant (..))
 import Kernel.Prelude
-import Kernel.Types.Common (Money (..))
+import Kernel.Types.Common
+import Kernel.Types.Time (Seconds (..))
 
 defaultDate :: LocalTime
 defaultDate =
@@ -42,6 +44,56 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Money
 instance FromBackendRow Postgres Money
 
 instance FromField Money where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Centesimal where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Centesimal
+
+instance FromBackendRow Postgres Centesimal
+
+instance FromField Centesimal where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Variant where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Variant
+
+instance FromBackendRow Postgres Variant
+
+instance FromField Variant where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be HighPrecMeters where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be HighPrecMeters
+
+instance FromBackendRow Postgres HighPrecMeters
+
+instance FromField HighPrecMeters where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Meters where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Meters
+
+instance FromBackendRow Postgres Meters
+
+instance FromField Meters where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Seconds where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Seconds
+
+instance FromBackendRow Postgres Seconds
+
+instance FromField Seconds where
   fromField = fromFieldEnum
 
 fromFieldEnum ::
