@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -56,24 +56,24 @@ shareAppConfig state = let
       margin = (MarginHorizontal 24 24),
       buttonLayoutMargin = (Margin 16 0 16 20),
       primaryText {
-        text = getString(YOUR_RIDE_HAS_STARTED) 
+        text = getString(YOUR_RIDE_HAS_STARTED)
       , margin = (Margin 16 0 16 0)},
-      secondaryText { 
+      secondaryText {
         text = getString(ENJOY_RIDING_WITH_US)
-      , margin = Margin 0 12 0 24 
+      , margin = Margin 0 12 0 24
       , fontSize = FontSize.a_14
       , color = Color.black700},
       option1 {
-        text = getString(MAYBE_LATER) 
+        text = getString(MAYBE_LATER)
       , fontSize = FontSize.a_16
-      , width = V $ (((EHC.screenWidth unit)-92)/2) 
+      , width = V $ (((EHC.screenWidth unit)-92)/2)
       , background = Color.white900
       , strokeColor = Color.black500
       , color = Color.black700
       , fontStyle = FontStyle.semiBold LanguageStyle
       },
       option2 {
-        text = getString(SHARE_APP) 
+        text = getString(SHARE_APP)
       , fontSize = FontSize.a_16
       , width = V $ (((EHC.screenWidth unit)-92)/2)
       , color = Color.yellow900
@@ -203,7 +203,7 @@ fareBreakUpConfig state =
           , source: state.data.driverInfoCardState.source
           , sourceTitle: (fromMaybe "" ((DS.split (DS.Pattern ",") (state.data.driverInfoCardState.source)) DA.!! 0))
           , rideStartTime: state.data.startedAt
-          , rideStartDate: ((fromMaybe "" ((DS.split (DS.Pattern ",") (HU.convertUTCtoISC (state.data.startedAtUTC) "llll")) DA.!! 0)) <> ", " <> (HU.convertUTCtoISC (state.data.startedAtUTC) "Do MMM"))
+          , rideStartDate: ((fromMaybe "" ((DS.split (DS.Pattern ",") (EHC.convertUTCtoISC (state.data.startedAtUTC) "llll")) DA.!! 0)) <> ", " <> (EHC.convertUTCtoISC (state.data.startedAtUTC) "Do MMM"))
           , estimatedDistance: state.props.estimatedDistance
           }
         }
@@ -214,10 +214,10 @@ whereToButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
 whereToButtonConfig state =
   let
     config = PrimaryButton.config
-    primaryButtonConfig' = config 
+    primaryButtonConfig' = config
       { textConfig
         { text = (getString WHERE_TO)
-        , color = Color.yellow900     
+        , color = Color.yellow900
         , textSize = FontSize.a_16
         , width = MATCH_PARENT
         , gravity = LEFT
@@ -226,14 +226,14 @@ whereToButtonConfig state =
       , gravity = CENTER
       , cornerRadius = 8.0
       , background = Color.black900
-      , margin = (MarginHorizontal 16 16)  
-      , isClickable = true 
+      , margin = (MarginHorizontal 16 16)
+      , isClickable = true
       , isPrefixImage = true
       , prefixImageConfig
         { imageUrl = "ny_ic_bent_right_arrow,https://assets.juspay.in/nammayatri/images/user/ny_ic_bent_right_arrow.png"
         , height = V 16
         , width = V 21
-        , margin = (Margin 17 0 17 0)  
+        , margin = (Margin 17 0 17 0)
         }
       , id = "WheretoButton"
       }
@@ -354,7 +354,7 @@ logOutPopUpModelConfig state =
               text =  if(isLocalStageOn ST.QuoteList)then (getString TRY_AGAIN_WITH_A_TIP) else (getString SEARCH_AGAIN_WITH_A_TIP)
             , fontSize = FontSize.a_22
             },
-          secondaryText { 
+          secondaryText {
             text = (getString BOOST_YOUR_RIDE_CHANCES_AND_HELP_DRIVERS_WITH_TIPS)
           , fontSize = FontSize.a_14
           , color = Color.black650}
@@ -369,7 +369,7 @@ logOutPopUpModelConfig state =
             },
           option1 {
             text = if (state.props.customerTip.tipForDriver == 0) then ( if(isLocalStageOn ST.QuoteList) then (getString TRY_AGAIN_WITHOUT_TIP)else (getString SEARCH_AGAIN_WITHOUT_A_TIP)) else ((if (isLocalStageOn ST.QuoteList) then (getString TRY_AGAIN_WITH)else(getString SEARCH_AGAIN_WITH) ) <> " + ₹"<> (fromMaybe "" (["0", "10", "15", "20"] DA.!! state.props.customerTip.tipActiveIndex))) <>" "<>(getString TIP)
-          , fontSize = FontSize.a_16 
+          , fontSize = FontSize.a_16
           , width = MATCH_PARENT
           , color = Color.yellow900
           , strokeColor = Color.black900
@@ -380,7 +380,7 @@ logOutPopUpModelConfig state =
           option2 {
             text = if (isLocalStageOn ST.QuoteList) then (getString HOME) else  (getString CANCEL_SEARCH)
           , fontSize = FontSize.a_16
-          , width = MATCH_PARENT 
+          , width = MATCH_PARENT
           , background = Color.white900
           , strokeColor = Color.white900
           , margin = MarginTop 14
@@ -401,9 +401,9 @@ logOutPopUpModelConfig state =
             , dismissPopup = true
             , optionButtonOrientation = if(isLocalStageOn ST.QuoteList || isLocalStageOn ST.FindingQuotes) then  "VERTICAL" else "HORIZONTAL"
             , secondaryText { text = if (isLocalStageOn ST.QuoteList) then (getString TRY_LOOKING_FOR_RIDES_AGAIN) else (getString CANCEL_ONGOING_SEARCH)}
-            , option1 { 
+            , option1 {
               text = if (isLocalStageOn ST.QuoteList) then (getString YES_TRY_AGAIN) else (getString YES_CANCEL_SEARCH)
-            , fontSize = FontSize.a_16 
+            , fontSize = FontSize.a_16
             , width = MATCH_PARENT
             , color = Color.yellow900
             , strokeColor = Color.black900
@@ -411,10 +411,10 @@ logOutPopUpModelConfig state =
             , padding = (Padding 0 10 0 10)
             , fontStyle = FontStyle.semiBold LanguageStyle
             }
-            , option2 { 
-               text = if (isLocalStageOn ST.QuoteList) then (getString HOME) else (getString NO_DONT) 
+            , option2 {
+               text = if (isLocalStageOn ST.QuoteList) then (getString HOME) else (getString NO_DONT)
               , fontSize = FontSize.a_16
-              , width = MATCH_PARENT 
+              , width = MATCH_PARENT
               , background = Color.white900
               , strokeColor = Color.white900
               , margin = MarginTop $ if (isLocalStageOn ST.QuoteList || isLocalStageOn ST.FindingQuotes) then 14 else 3
@@ -427,7 +427,7 @@ logOutPopUpModelConfig state =
         popUpConfig'
 
 
-getBottomMargin :: Int 
+getBottomMargin :: Int
 getBottomMargin = if EHC.safeMarginBottom == 0 then 24 else (EHC.safeMarginBottom)
 
 distanceOusideLimitsConfig :: ST.HomeScreenState -> PopUpModal.Config
@@ -564,10 +564,10 @@ chatViewConfig :: ST.HomeScreenState -> ChatView.Config
 chatViewConfig state = let
   config = ChatView.config
   chatViewConfig' = config {
-    userConfig 
+    userConfig
         {
           userName = state.data.driverInfoCardState.driverName
-        , appType = "Customer" 
+        , appType = "Customer"
         }
       , messages = state.data.messages
       , sendMessageActive = state.props.sendMessageActive
@@ -593,7 +593,7 @@ chatViewConfig state = let
   in chatViewConfig'
 
 initialSuggestions :: String -> Array String
-initialSuggestions _ = 
+initialSuggestions _ =
   [
     (getString ARE_YOU_STARING),
     (getString PLEASE_COME_SOON),
@@ -601,7 +601,7 @@ initialSuggestions _ =
   ]
 
 pickupSuggestions :: String -> Array String
-pickupSuggestions _ = 
+pickupSuggestions _ =
   [
     (getString PLEASE_WAIT_I_WILL_BE_THERE),
     (getString LOOKING_FOR_YOU_AT_PICKUP),

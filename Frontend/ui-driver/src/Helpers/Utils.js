@@ -1,5 +1,4 @@
 import { callbackMapper } from 'presto-ui';
-import moment from 'moment';
 
 const { JOS, JBridge } = window;
 
@@ -352,14 +351,6 @@ export const convertKmToM = function (dist) {
   }
 };
 
-export const convertUTCtoISC = function (str) {
-  return function (format) {
-    var localTime1 = moment.utc(str).toDate();
-    localTime1 = moment(localTime1).format(format);
-    return localTime1;
-  };
-};
-
 export const differenceBetweenTwoUTC = function (str1) {
   return function (str2) {
     var curr1 = new Date(str1);
@@ -477,8 +468,7 @@ export const setYoutubePlayer = function (json) {
 
 export const getTimeStampString = function (utcTime){
   var createdDate = new Date(utcTime);
-  var result =  moment(new Date()).utc().format();
-  var currentDate = new Date(result);
+  var currentDate = new Date();
   var diff = (currentDate.getTime() - createdDate.getTime())/ 1000;
   var seconds = (Math.round(diff));
   if (seconds <0) return "";
@@ -486,6 +476,8 @@ export const getTimeStampString = function (utcTime){
   var h = Math.floor(seconds % (3600*24) / 3600);
   var m = Math.floor(seconds % 3600 / 60);
   var s = Math.floor(seconds % 60);
+  console.log('inside moment getTimeStampString args', JSON.stringify(utcTime));
+  console.log('inside moment getTimeStampString', JSON.stringify(d) + ' ' + JSON.stringify(h) + ' ' + JSON.stringify(m));
   if      (d > 0) return d + (d == 1 ? " day " : " days")
   else if (h > 0) return h + (h == 1 ? " hour " : " hours")
   else if (m > 0) return m + (m == 1 ? " minute " : " minutes")

@@ -26,7 +26,8 @@ import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (Pattern(..), split)
 import Engineering.Helpers.Commons (strToBool)
-import Helpers.Utils (convertUTCtoISC, parseFloat, rotateArray, setEnabled, setRefreshing, toString, isHaveFare)
+import Helpers.Utils (parseFloat, rotateArray, setEnabled, setRefreshing, toString, isHaveFare)
+import Engineering.Helpers.Commons (convertUTCtoISC)
 import JBridge (firebaseLogEvent)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
 import Prelude (class Show, pure, unit, bind, map, discard, show, ($), (==), (&&), (+), (/=), (<>), (||), (-), (<), (/), negate, (<<<), not)
@@ -40,7 +41,7 @@ import Services.API (FareBreakupAPIEntity(..), RideAPIEntity(..), RideBookingLis
 import Storage (isLocalStageOn)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import EN (getEN) 
+import EN (getEN)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -195,9 +196,9 @@ myRideListTransformerProp listRes =  filter (\item -> (item.status == (toPropVal
 
 
 myRideListTransformer :: MyRidesScreenState -> Array RideBookingRes -> Array IndividualRideCardState
-myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETED" || item.status == "CANCELLED")) (map (\(RideBookingRes ride) -> 
-  let 
-    fares = getFares ride.fareBreakup 
+myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETED" || item.status == "CANCELLED")) (map (\(RideBookingRes ride) ->
+  let
+    fares = getFares ride.fareBreakup
     (RideAPIEntity rideDetails) = (fromMaybe dummyRideAPIEntity (ride.rideList !!0))
     baseDistanceVal = (getKmMeter (fromMaybe 0.0 (rideDetails.chargeableRideDistance)))
     updatedFareList = getFaresList ride.fareBreakup state baseDistanceVal

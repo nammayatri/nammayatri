@@ -24,7 +24,6 @@ import Components.IndividualRideCard.Controller as IndividualRideCardController
 import Components.ErrorModal as ErrorModalController
 import Services.APITypes (RidesInfo(..), Status(..))
 import PrestoDOM.Types.Core (toPropValue)
-import Helpers.Utils (convertUTCtoISC)
 import Resource.Constants (decodeAddress)
 import Data.Array (union, (!!), filter, length)
 import Data.Maybe (Maybe(..), fromMaybe)
@@ -32,7 +31,7 @@ import Data.Int(fromString, toNumber)
 import Data.Number(fromString) as NUM
 import Data.String (Pattern(..), split)
 import Helpers.Utils (setRefreshing, setEnabled, parseFloat)
-import Engineering.Helpers.Commons (getNewIDWithTag, strToBool)
+import Engineering.Helpers.Commons (getNewIDWithTag, strToBool, convertUTCtoISC)
 import Data.Int (ceil)
 import Styles.Colors as Color
 import Log

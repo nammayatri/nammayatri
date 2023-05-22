@@ -117,8 +117,6 @@ foreign import toString :: forall a. a -> String
 
 foreign import waitingCountdownTimer :: forall action. Int -> (action -> Effect Unit) -> (String -> String -> Int -> action) -> Effect Unit
 
-foreign import convertUTCtoISC :: String -> String -> String
-
 foreign import setRefreshing :: String -> Boolean -> Unit
 
 foreign import setEnabled :: String -> Boolean -> Unit
@@ -136,10 +134,6 @@ fetchFromLocalStoreTemp' :: String -> (String -> Maybe String) -> Maybe String -
 fetchFromLocalStoreTemp' = fetchFromLocalStoreTempImpl
 
 foreign import fetchAndUpdateCurrentLocation :: forall action. (action -> Effect Unit) -> (String -> String -> action) -> action -> Effect Unit
-
-foreign import getCurrentUTC :: String -> String
-
-foreign import getExpiryTime :: String -> String -> Boolean -> Int
 
 foreign import seperateByWhiteSpaces :: String -> String
 

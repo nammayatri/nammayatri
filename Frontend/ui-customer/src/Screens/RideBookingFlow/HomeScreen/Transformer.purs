@@ -25,7 +25,8 @@ import Data.Int (toNumber)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (split, Pattern(..), drop, indexOf, length, trim)
-import Helpers.Utils (convertUTCtoISC, getExpiryTime, parseFloat)
+import Helpers.Utils (parseFloat)
+import Engineering.Helpers.Commons (convertUTCtoISC, getExpiryTime)
 import Data.Number (ceil)
 import PrestoDOM (Visibility(..))
 import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard)
@@ -73,9 +74,9 @@ getQuote :: QuoteAPIEntity -> QuoteListItemState
 getQuote (QuoteAPIEntity quoteEntity) =
   let (DriverOfferAPIEntity quoteDetails) = (quoteEntity.quoteDetails)^._contents
   in {
-    seconds : (getExpiryTime quoteDetails.validTill "" isForLostAndFound) -4
+    seconds : (getExpiryTime quoteDetails.validTill isForLostAndFound) -4
   , id : quoteEntity.id
-  , timer : show $ (getExpiryTime quoteDetails.validTill "" isForLostAndFound) -4
+  , timer : show $ (getExpiryTime quoteDetails.validTill isForLostAndFound) -4
   , timeLeft : if (quoteDetails.durationToPickup<60) then (quoteDetails.durationToPickup/60) else (quoteDetails.durationToPickup/60)
   , driverRating : fromMaybe 0.0 quoteDetails.rating
   , profile : ""

@@ -1,5 +1,4 @@
 import axios from "axios";
-import moment from "moment";
 import { callbackMapper } from 'presto-ui';
 
 const { JBridge, Android } = window;
@@ -326,15 +325,14 @@ export const getExpiryTime = function (str1) {
     return function (reverse) {
       try {
       var expiry = new Date(str1);
-      var date = new Date();
-      var result =  moment(date).utc().format();
-      var current = new Date(result);
+      var current = new Date();
       var diff = (expiry.getTime() - current.getTime())/ 1000;
       if (reverse)
         {
           diff = (current.getTime() - expiry.getTime())/ 1000;
         }
       diff = (Math.round(diff));
+      console.log('inside moment getExpiryTime', diff);
       if (diff >= 0)
           return (diff);
         else
@@ -342,12 +340,244 @@ export const getExpiryTime = function (str1) {
       } catch (err) {
         console.log("error in getExpiryTime " + err);
       }
-    };
+  };
 };
 
 export const getCurrentUTC = function (str) {
-  var d = new Date();
-  var result =  moment(d).utc().format();
+  var result = new Date().toISOString();
   console.log(result);
   return result;
 };
+
+export const convertUTCtoISC = function (str) {
+  return function (format) {
+    var localTime = new Date(str);
+    localTime = formatDates(localTime, format);
+    console.log("inside moment convertUTCtoISC",str + ' ' + format + ' ' + localTime);
+    return localTime;
+  };
+};
+
+// ---------------------------------- moment ---------------------------------------------
+
+function formatDates(date, format) {
+  const mappings = {
+    'h': () => {
+      var hours = date.getHours();
+      hours = hours % 12 || 12;
+      return `${hours}`;
+    },
+    'hh': () => {
+      var hours = ('0' + date.getHours()).slice(-2);
+      hours = hours % 12 || 12;
+      return `${hours}`;
+    },
+    'HH': () => {
+      const hours = ('0' + date.getHours()).slice(-2);
+      return `${hours}`;
+    },
+    'a': () => {
+      const hours = date.getHours();
+      const ampm = hours < 12 ? 'am' : 'pm';
+      return `${ampm}`;
+    },
+    'A': () => {
+      const hours = date.getHours();
+      const ampm = hours < 12 ? 'AM' : 'PM';
+      return `${ampm}`;
+    },
+    'mm': () => {
+      const minutes = ('0' + date.getMinutes()).slice(-2);
+      return `${minutes}`;
+    },
+    'ss': () => {
+      const seconds = ('0' + date.getSeconds()).slice(-2);
+      return `${seconds}`;
+    },
+    'DD': () => {
+      const day = ('0' + date.getDate()).slice(-2);
+      return `${day}`;
+    },
+    'MM': () => {
+      const month = ('0' + (date.getMonth() + 1)).slice(-2);
+      return `${month}`;
+    },
+    'YYYY': () => {
+      const year = date.getFullYear();
+      return `${year}`;
+    },
+    'D': () => {
+      const day = date.getDate();
+      return `${day}`;
+    },
+    'Do': () => {
+      const day = date.getDate();
+      let daySuffix;
+      if (day === 1 || day === 21 || day === 31) {
+        daySuffix = 'st';
+      } else if (day === 2 || day === 22) {
+        daySuffix = 'nd';
+      } else if (day === 3 || day === 23) {
+        daySuffix = 'rd';
+      } else {
+        daySuffix = 'th';
+      }
+      return `${day}${daySuffix}`;
+    },
+    'MMM': () => {
+      const month = date.toLocaleDateString('en-US', { month: 'short' });
+      return `${month}`;
+    },
+    'llll': () => {
+      const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const weekday = weekdays[date.getDay()];
+      const day = date.getDate();
+      const month = months[date.getMonth()];
+      const year = date.getFullYear();
+      const hours = ('0' + date.getHours()).slice(-2);
+      const minutes = ('0' + date.getMinutes()).slice(-2);
+      return `${weekday}, ${month} ${day}, ${year} ${hours}:${minutes}`;
+    }
+  }
+
+  var reg = /(:| |\/|-)/g;
+  var arr = format.split(reg);
+  var result = '';
+  for (const a of arr) {
+    var maps = mappings[a];
+    if (maps) {
+      result += maps();
+    } else {
+      result += a;
+    }
+  }
+  console.log("formatDates", result);
+  return result;
+}
+
+function formatDate(date, format) {
+  const mappings = {
+    'h:mm:ss A': {
+      pattern: 'h:mm:ss A',
+      replacement: () => {
+        const hours = ('0' + date.getHours()).slice(-2);
+        const minutes = ('0' + date.getMinutes()).slice(-2);
+        const seconds = ('0' + date.getSeconds()).slice(-2);
+        const ampm = hours < 12 ? 'AM' : 'PM';
+        return `${hours}:${minutes}:${seconds} ${ampm}`;
+      }
+    },
+    'h:mm A': {
+      pattern: 'h:mm A',
+      replacement: () => {
+        var hours = ('0' + date.getHours()).slice(-2);
+        const minutes = ('0' + date.getMinutes()).slice(-2);
+        const ampm = hours < 12 ? 'AM' : 'PM';
+        hours = hours % 12 || 12;
+        return `${hours}:${minutes} ${ampm}`;
+      }
+    },
+    "DD/MM/YYYY": {
+      pattern: "DD/MM/YYYY",
+      replacement: () => {
+        const month = ('0' + (date.getMonth() + 1)).slice(-2);
+        const day = ('0' + date.getDate()).slice(-2);
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
+      }
+    },
+    'Do MMM': {
+      pattern: 'Do MMM',
+      replacement: () => {
+        const day = date.getDate();
+        const month = date.toLocaleDateString('en-US', { month: 'short' });
+        let daySuffix;
+        if (day === 1 || day === 21 || day === 31) {
+          daySuffix = 'st';
+        } else if (day === 2 || day === 22) {
+          daySuffix = 'nd';
+        } else if (day === 3 || day === 23) {
+          daySuffix = 'rd';
+        } else {
+          daySuffix = 'th';
+        }
+        return `${day}${daySuffix} ${month}`;
+      }
+    },
+    'D MMM': {
+      pattern: 'Do MMM',
+      replacement: () => {
+        const day = date.getDate();
+        const month = date.toLocaleDateString('en-US', { month: 'short' });
+        return `${day}$ ${month}`;
+      }
+    },
+    "DD/MM/yyyy  hh:mm a": {
+      pattern: "DD/MM/yyyy  hh:mm a",
+      replacement: () => {
+        const day = ('0' + date.getDate()).slice(-2);
+        const month = ('0' + (date.getMonth() + 1)).slice(-2);
+        const year = date.getFullYear();
+        const hours = ('0' + date.getHours()).slice(-2);
+        const minutes = ('0' + date.getMinutes()).slice(-2);
+        const ampm = hours < 12 ? 'AM' : 'PM';
+        return `${day}/${month}/${year} ${hours}:${minutes} ${ampm}`;
+      }
+    },
+    "hh:mm a": {
+      pattern: "hh:mm a",
+      replacement: () => {
+        var hours = ('0' + date.getHours()).slice(-2);
+        const minutes = ('0' + date.getMinutes()).slice(-2);
+        const ampm = hours < 12 ? 'AM' : 'PM';
+        hours = hours % 12 || 12;
+        return `${hours}:${minutes} ${ampm}`;
+      }
+    },
+    "llll": {
+      pattern: "llll",
+      replacement: () => {
+        const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const weekday = weekdays[date.getDay()];
+        const day = date.getDate();
+        const month = months[date.getMonth()];
+        const year = date.getFullYear();
+        const hours = ('0' + date.getHours()).slice(-2);
+        const minutes = ('0' + date.getMinutes()).slice(-2);
+        return `${weekday}, ${month} ${day}, ${year} ${hours}:${minutes}`;
+      }
+    },
+    "YYYY-MM-DD HH:mm:ss": {
+      pattern: "YYYY-MM-DD HH:mm:ss",
+      replacement: () => {
+        const year = date.getFullYear();
+        const month = ('0' + (date.getMonth() + 1)).slice(-2);
+        const day = ('0' + date.getDate()).slice(-2);
+        const hours = ('0' + date.getHours()).slice(-2);
+        const minutes = ('0' + date.getMinutes()).slice(-2);
+        const seconds = ('0' + date.getSeconds()).slice(-2);
+        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+      }
+    },
+    "HH:mm:ss": {
+      pattern: "HH:mm:ss",
+      replacement: () => {
+        const hours = ('0' + date.getHours()).slice(-2);
+        const minutes = ('0' + date.getMinutes()).slice(-2);
+        const seconds = ('0' + date.getSeconds()).slice(-2);
+        return `${hours}:${minutes}:${seconds}`;
+      }
+    }
+  };
+
+  let formattedDate = format;
+
+  for (const key in mappings) {
+    const { pattern, replacement } = mappings[key];
+    formattedDate = formattedDate.replace(key, replacement);
+  }
+
+  return formattedDate;
+}
