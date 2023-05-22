@@ -65,6 +65,11 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.VehicleClassCheckT
 
 instance FromBackendRow Postgres Domain.VehicleClassCheckType
 
+instance FromField [Text] where
+  fromField = fromFieldEnum
+
+instance FromBackendRow Postgres [Text]
+
 instance FromField Domain.DocumentType where
   fromField = fromFieldEnum
 

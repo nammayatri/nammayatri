@@ -71,6 +71,14 @@ findByMobileNumberAndMerchant mobileNumber_ merchantId = do
         &&. riderDetails ^. RiderDetailsMerchantId ==. val (toKey merchantId)
     return riderDetails
 
+findByMobileNumberAndMerchant' :: (L.MonadFlow m, EncFlow m r) => Text -> Id Merchant -> m (Maybe RiderDetails)
+findByMobileNumberAndMerchant' mobileNumber_ merchantId = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  mobileNumberDbHash <- getDbHash mobileNumber_
+  case dbConf of
+    Just dbCOnf' -> either (pure Nothing) (transformBeamRiderDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.And [Se.Is BeamRD.mobileNumberHash $ Se.Eq mobileNumberDbHash, Se.Is BeamRD.merchantId $ Se.Eq (getId merchantId)]]
+    Nothing -> pure Nothing
+
 updateHasTakenValidRide :: Id RiderDetails -> SqlDB ()
 updateHasTakenValidRide riderId = do
   now <- getCurrentTime

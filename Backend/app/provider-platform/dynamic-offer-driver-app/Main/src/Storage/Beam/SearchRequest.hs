@@ -127,7 +127,7 @@ data SearchRequestT f = SearchRequestT
     fromLocationId :: B.C f Text,
     toLocationId :: B.C f Text,
     bapId :: B.C f Text,
-    bapUri :: B.C f BaseUrl,
+    bapUri :: B.C f Text,
     estimatedDistance :: B.C f Meters,
     estimatedDuration :: B.C f Seconds,
     customerExtraFee :: B.C f (Maybe Money),
@@ -215,15 +215,6 @@ searchRequestToPSModifiers =
   M.fromList
     []
 
-defaultUrl :: BaseUrl
-defaultUrl =
-  BaseUrl
-    { baseUrlScheme = Https,
-      baseUrlHost = "localhost",
-      baseUrlPort = 80,
-      baseUrlPath = ""
-    }
-
 defaultSearchRequest :: SearchRequest
 defaultSearchRequest =
   SearchRequestT
@@ -237,7 +228,7 @@ defaultSearchRequest =
       fromLocationId = "",
       toLocationId = "",
       bapId = "",
-      bapUri = defaultUrl,
+      bapUri = "",
       estimatedDistance = "",
       estimatedDuration = "",
       customerExtraFee = Nothing,

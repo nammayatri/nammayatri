@@ -29,7 +29,8 @@ import qualified Storage.Beam.SearchRequest as BeamSR
 import Storage.Queries.SearchRequest.SearchReqLocation as QSRL
 import Storage.Tabular.SearchRequest
 import Storage.Tabular.SearchRequest.SearchReqLocation
-import qualified Storage.Tabular.VechileNew as VN
+
+-- import qualified Storage.Tabular.VechileNew as VN
 
 create :: SearchRequest -> SqlDB ()
 create dsReq = Esq.runTransaction $
@@ -79,21 +80,20 @@ updateStatus searchId status_ = do
       ]
     where_ $ tbl ^. SearchRequestTId ==. val (toKey searchId)
 
--- Overlapping instances error
--- updateStatus' :: (L.MonadFlow m, MonadTime m) => Id SearchRequest -> SearchRequestStatus -> m (MeshResult ())
--- updateStatus' (Id searchId) status_ = do
---   dbConf <- L.getOption Extra.EulerPsqlDbCfg
---   now <- getCurrentTime
---   case dbConf of
---     Just dbConf' ->
---       KV.updateWoReturningWithKVConnector
---         dbConf'
---         VN.meshConfig
---         [ Se.Set BeamSR.status status_,
---           Se.Set BeamSR.updatedAt now
---         ]
---         [Se.Is BeamSR.id (Se.Eq searchId)]
---     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+updateStatus' :: (L.MonadFlow m, MonadTime m) => Id SearchRequest -> SearchRequestStatus -> m (MeshResult ())
+updateStatus' (Id searchId) status_ = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  now <- getCurrentTime
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        Mesh.meshConfig
+        [ Se.Set BeamSR.status status_,
+          Se.Set BeamSR.updatedAt now
+        ]
+        [Se.Is BeamSR.id (Se.Eq searchId)]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 getRequestIdfromTransactionId ::
   (Transactionable m) =>
@@ -133,6 +133,7 @@ transformBeamSearchRequestToDomain :: L.MonadFlow m => BeamSR.SearchRequest -> m
 transformBeamSearchRequestToDomain BeamSR.SearchRequestT {..} = do
   fl <- QSRL.findById' (Id fromLocationId)
   tl <- QSRL.findById' (Id toLocationId)
+  pUrl <- parseBaseUrl bapUri
   pure
     SearchRequest
       { id = Id id,
@@ -145,7 +146,7 @@ transformBeamSearchRequestToDomain BeamSR.SearchRequestT {..} = do
         fromLocation = fromJust fl,
         toLocation = fromJust tl,
         bapId = bapId,
-        bapUri = bapUri,
+        bapUri = pUrl,
         estimatedDistance = estimatedDistance,
         estimatedDuration = estimatedDuration,
         customerExtraFee = customerExtraFee,
@@ -171,7 +172,7 @@ transformDomainSearchRequestToBeam SearchRequest {..} =
       BeamSR.fromLocationId = getId fromLocation.id,
       BeamSR.toLocationId = getId toLocation.id,
       BeamSR.bapId = bapId,
-      BeamSR.bapUri = bapUri,
+      BeamSR.bapUri = showBaseUrl bapUri,
       BeamSR.estimatedDistance = estimatedDistance,
       BeamSR.estimatedDuration = estimatedDuration,
       BeamSR.customerExtraFee = customerExtraFee,

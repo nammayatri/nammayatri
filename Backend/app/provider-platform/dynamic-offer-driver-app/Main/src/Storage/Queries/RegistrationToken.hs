@@ -61,6 +61,21 @@ setVerified rtId = do
       ]
     where_ $ tbl ^. RegistrationTokenTId ==. val (toKey rtId)
 
+setVerified' :: (L.MonadFlow m, MonadTime m) => Id RegistrationToken -> m (MeshResult ())
+setVerified' (Id rtId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  now <- getCurrentTime
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        VN.meshConfig
+        [ Se.Set BeamRT.verified True,
+          Se.Set BeamRT.updatedAt now
+        ]
+        [Se.Is BeamRT.id (Se.Eq rtId)]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+
 findByToken :: Transactionable m => RegToken -> m (Maybe RegistrationToken)
 findByToken token =
   findOne $ do

@@ -69,6 +69,24 @@ update config = do
       ]
     where_ $ tbl ^. OnboardingDocumentConfigTId ==. val (toKey (config.merchantId, config.documentType))
 
+update' :: (L.MonadFlow m, MonadTime m) => OnboardingDocumentConfig -> m (MeshResult ())
+update' config = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  now <- getCurrentTime
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        Mesh.meshConfig
+        [ Se.Set BeamODC.checkExtraction config.checkExtraction,
+          Se.Set BeamODC.checkExpiry config.checkExpiry,
+          Se.Set BeamODC.validVehicleClasses config.validVehicleClasses,
+          Se.Set BeamODC.vehicleClassCheckType config.vehicleClassCheckType,
+          Se.Set BeamODC.updatedAt now
+        ]
+        [Se.And [Se.Is BeamODC.merchantId (Se.Eq (getId config.merchantId)), Se.Is BeamODC.documentType (Se.Eq config.documentType)]]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+
 transformBeamOnboardingDocumentConfigToDomain :: BeamODC.OnboardingDocumentConfig -> OnboardingDocumentConfig
 transformBeamOnboardingDocumentConfigToDomain BeamODC.OnboardingDocumentConfigT {..} = do
   OnboardingDocumentConfig

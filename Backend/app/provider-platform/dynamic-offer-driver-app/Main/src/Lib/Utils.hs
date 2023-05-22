@@ -56,4 +56,15 @@ fromFieldEnum f mbValue = case mbValue of
       Just val -> pure val
       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
 
-deriving stock instance Read Money
+-- instance FromField BaseUrl where
+--   fromField = fromFieldEnum
+
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be BaseUrl where
+--   sqlValueSyntax = autoSqlValueSyntax
+
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be BaseUrl
+
+-- instance FromBackendRow Postgres BaseUrl
+
+-- instance IsString BaseUrl where
+--   fromString = show
