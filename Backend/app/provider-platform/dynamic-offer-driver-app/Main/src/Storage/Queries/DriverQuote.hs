@@ -120,30 +120,30 @@ findDriverQuoteBySearchId searchReqId = Esq.findOne' $ do
   where_ $ driverQuote ^. DriverQuoteSearchRequestId ==. val (toKey searchReqId)
   pure driverQuote
 
--- transformBeamDriverQuoteToDomain :: L.MonadFlow m => BeamDQ.DriverQuote -> m (Domain.DriverQuote)
--- transformBeamDriverQuoteToDomain BeamDQ.DriverQuoteT {..} = do
---   fp <- BeamQFP.findById' (Id fareParametersId)
---   pure
---     Domain.DriverQuote
---       { id = Id id,
---         transactionId = transactionId,
---         searchRequestId = Id searchRequestId,
---         searchRequestForDriverId = Id <$> searchRequestForDriverId,
---         driverId = Id driverId,
---         driverName = driverName,
---         driverRating = driverRating,
---         status = status,
---         vehicleVariant = vehicleVariant,
---         distance = distance,
---         distanceToPickup = distanceToPickup,
---         durationToPickup = durationToPickup,
---         createdAt = createdAt,
---         updatedAt = updatedAt,
---         validTill = validTill,
---         estimatedFare = estimatedFare,
---         fareParams = fromJust fp, -- this should take a default value?
---         providerId = Id providerId
---       }
+transformBeamDriverQuoteToDomain :: L.MonadFlow m => BeamDQ.DriverQuote -> m (Domain.DriverQuote)
+transformBeamDriverQuoteToDomain BeamDQ.DriverQuoteT {..} = do
+  fp <- BeamQFP.findById' (Id fareParametersId)
+  pure
+    Domain.DriverQuote
+      { id = Id id,
+        transactionId = transactionId,
+        searchRequestId = Id searchRequestId,
+        searchRequestForDriverId = Id <$> searchRequestForDriverId,
+        driverId = Id driverId,
+        driverName = driverName,
+        driverRating = driverRating,
+        status = status,
+        vehicleVariant = vehicleVariant,
+        distance = distance,
+        distanceToPickup = distanceToPickup,
+        durationToPickup = durationToPickup,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
+        validTill = validTill,
+        estimatedFare = estimatedFare,
+        fareParams = fromJust fp, -- this should take a default value?
+        providerId = Id providerId
+      }
 
 transformDomainDriverQuoteToBeam :: Domain.DriverQuote -> BeamDQ.DriverQuote
 transformDomainDriverQuoteToBeam Domain.DriverQuote {..} =

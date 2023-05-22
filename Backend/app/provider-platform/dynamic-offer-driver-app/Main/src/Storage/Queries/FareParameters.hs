@@ -67,6 +67,18 @@ findById' (Id fareParametersId) = do
     -- either (pure Nothing) (transformBeamFareParametersToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamFP.id $ Se.Eq fareParametersId]
     Nothing -> pure Nothing
 
+-- findById'' :: L.MonadFlow m => Id FareParameters -> m (Maybe FareParameters)
+-- findById'' (Id fareParametersId) = do
+--   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   case dbConf of
+--     Just dbCOnf' -> do
+--       -- either (pure Nothing) (transformBeamFareParametersToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamFP.id $ Se.Eq fareParametersId]
+--       fp <- KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamFP.id $ Se.Eq fareParametersId]
+--       either (\_ -> pure Nothing) (sequence (transformBeamFareParametersToDomain <$>)) fp
+--     Nothing -> pure Nothing
+
+-- fp = Right Just ...
+--
 -- transformBeamFareParametersToDomain :: BeamFP.FareParameters -> FareParameters
 -- transformBeamFareParametersToDomain BeamFP.FareParametersT {..} = do
 --   FareParameters
