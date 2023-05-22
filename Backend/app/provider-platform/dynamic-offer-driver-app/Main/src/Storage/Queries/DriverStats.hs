@@ -14,7 +14,7 @@
 
 module Storage.Queries.DriverStats where
 
-import Domain.Types.DriverStats
+import Domain.Types.DriverStats as Domain
 import Domain.Types.Person (Driver)
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
@@ -40,6 +40,21 @@ createInitialDriverStats driverId = do
         totalDistance = 0
       }
 
+createInitialDriverStats' :: (L.MonadFlow m, MonadTime m) => Id Driver -> m (MeshResult ())
+createInitialDriverStats' driverId = do
+  now <- getCurrentTime
+  let dStats =
+        DriverStats
+          { driverId = driverId,
+            idleSince = now,
+            totalRides = 0,
+            totalDistance = 0
+          }
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainDriverStatsToBeam dStats)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+
 getTopDriversByIdleTime :: Transactionable m => Int -> [Id Driver] -> m [Id Driver]
 getTopDriversByIdleTime count_ ids =
   Esq.findAll $ do
@@ -49,8 +64,22 @@ getTopDriversByIdleTime count_ ids =
     limit $ fromIntegral count_
     return $ driverStats ^. DriverStatsTId
 
+getTopDriversByIdleTime' :: L.MonadFlow m => Int -> [Id Driver] -> m [Id Driver]
+getTopDriversByIdleTime' count_ ids = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> do
+      srsz <- KV.findAllWithOptionsKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDS.driverId $ Se.In (getId <$> ids)] (Se.Asc BeamDS.idleSince) (Just count_) Nothing
+      case srsz of
+        Left _ -> pure []
+        Right x -> pure $ (Domain.driverId . transformBeamDriverStatsToDomain) <$> x
+    Nothing -> pure []
+
 updateIdleTime :: Id Driver -> SqlDB ()
 updateIdleTime driverId = updateIdleTimes [driverId]
+
+updateIdleTime' :: (L.MonadFlow m, MonadTime m) => Id Driver -> m (MeshResult ())
+updateIdleTime' (driverId) = updateIdleTimes' [driverId]
 
 updateIdleTimes :: [Id Driver] -> SqlDB ()
 updateIdleTimes driverIds = do
@@ -61,6 +90,20 @@ updateIdleTimes driverIds = do
       [ DriverStatsIdleSince =. val now
       ]
     where_ $ tbl ^. DriverStatsDriverId `in_` valList (toKey . cast <$> driverIds)
+
+updateIdleTimes' :: (L.MonadFlow m, MonadTime m) => [Id Driver] -> m (MeshResult ())
+updateIdleTimes' driverIds = do
+  now <- getCurrentTime
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        Mesh.meshConfig
+        [ Se.Set BeamDS.idleSince $ now
+        ]
+        [Se.Is BeamDS.driverId (Se.In (getId <$> driverIds))]
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 fetchAll :: Transactionable m => m [DriverStats]
 fetchAll = Esq.findAll $ from $ table @DriverStatsT
@@ -78,6 +121,20 @@ incrementTotalRidesAndTotalDist driverId rideDist = do
       ]
     where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
 
+incrementTotalRidesAndTotalDist' :: (L.MonadFlow m) => Id Driver -> Meters -> m (MeshResult ())
+incrementTotalRidesAndTotalDist' (Id driverId) rideDist = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        Mesh.meshConfig
+        [ Se.Set BeamDS.totalRides $ 1,
+          Se.Set BeamDS.totalDistance rideDist
+        ]
+        [Se.Is BeamDS.driverId (Se.Eq driverId)]
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+
 getDriversSortedOrder :: Transactionable m => Maybe Integer -> m [DriverStats]
 getDriversSortedOrder mbLimitVal =
   Esq.findAll $ do
@@ -85,6 +142,17 @@ getDriversSortedOrder mbLimitVal =
     orderBy [desc (driverStats ^. DriverStatsTotalRides), desc (driverStats ^. DriverStatsTotalDistance)]
     limit $ maybe 10 fromIntegral mbLimitVal
     return driverStats
+
+getDriversSortedOrder' :: L.MonadFlow m => Maybe Integer -> m [DriverStats]
+getDriversSortedOrder' mbLimitVal = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> do
+      srsz <- KV.findAllWithOptionsKVConnector dbCOnf' Mesh.meshConfig [] (Se.Desc BeamDS.totalRides) (Just $ fromMaybe 10 (fromInteger <$> mbLimitVal)) Nothing
+      case srsz of
+        Left _ -> pure []
+        Right x -> pure $ (transformBeamDriverStatsToDomain) <$> x
+    Nothing -> pure []
 
 transformBeamDriverStatsToDomain :: BeamDS.DriverStats -> DriverStats
 transformBeamDriverStatsToDomain BeamDS.DriverStatsT {..} = do

@@ -45,6 +45,13 @@ create dQuote = Esq.runTransaction $
       FareParamsT.SlabDetailsT -> return ()
     Esq.create' dQuoteT
 
+create' :: L.MonadFlow m => Domain.DriverQuote -> m (MeshResult ())
+create' dQuote = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainDriverQuoteToBeam dQuote)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+
 baseDriverQuoteQuery ::
   From
     ( SqlExpr (Entity DriverQuoteT)
@@ -109,6 +116,19 @@ findActiveQuotesByDriverId driverId driverUnlockDelay = do
       pure (dQuote, farePars)
     catMaybes <$> mapM buildFullDriverQuote res
 
+findActiveQuotesByDriverId' :: (L.MonadFlow m, MonadTime m) => Id Person -> Seconds -> m [Domain.DriverQuote]
+findActiveQuotesByDriverId' (Id driverId) driverUnlockDelay = do
+  now <- getCurrentTime
+  let delayToAvoidRaces = secondsToNominalDiffTime . negate $ driverUnlockDelay
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> do
+      srsz <- KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamDQ.status $ Se.Eq Domain.Active, Se.Is BeamDQ.id $ Se.Eq driverId, Se.Is BeamDQ.validTill $ Se.GreaterThan (addUTCTime delayToAvoidRaces now)]]
+      case srsz of
+        Left _ -> pure []
+        Right x -> mapM transformBeamDriverQuoteToDomain x
+    Nothing -> pure []
+
 findAllByRequestId :: Transactionable m => Id DSReq.SearchRequest -> m [Domain.DriverQuote]
 findAllByRequestId searchReqId = do
   buildDType $ do
@@ -120,6 +140,17 @@ findAllByRequestId searchReqId = do
           &&. dQuote ^. DriverQuoteSearchRequestId ==. val (toKey searchReqId)
       pure (dQuote, farePars)
     catMaybes <$> mapM buildFullDriverQuote res
+
+findAllByRequestId' :: L.MonadFlow m => Id DSReq.SearchRequest -> m [Domain.DriverQuote]
+findAllByRequestId' (Id searchReqId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> do
+      srsz <- KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamDQ.status $ Se.Eq Domain.Active, Se.Is BeamDQ.id $ Se.Eq searchReqId]]
+      case srsz of
+        Left _ -> pure []
+        Right x -> mapM transformBeamDriverQuoteToDomain x
+    Nothing -> pure []
 
 countAllByRequestId :: Transactionable m => Id DSReq.SearchRequest -> m Int32
 countAllByRequestId searchReqId = do

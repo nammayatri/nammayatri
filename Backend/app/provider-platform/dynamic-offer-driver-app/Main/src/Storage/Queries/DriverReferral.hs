@@ -28,6 +28,16 @@ create' driverReferral = do
 findByRefferalCode :: Transactionable m => Id DriverReferral -> m (Maybe DriverReferral)
 findByRefferalCode = Esq.findById
 
+findByRefferalCode' ::
+  L.MonadFlow m =>
+  Id SP.Person ->
+  m (Maybe DriverReferral)
+findByRefferalCode' (Id referralId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure Nothing) (transformBeamDriverReferralToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamDR.referralCode $ Se.Eq referralId]
+    Nothing -> pure Nothing
+
 findById ::
   Transactionable m =>
   Id SP.Person ->
@@ -37,6 +47,16 @@ findById driverId = do
     driverReferral <- from $ table @DriverReferralT
     where_ $ driverReferral ^. DriverReferralDriverId ==. val (toKey driverId)
     return driverReferral
+
+findById' ::
+  L.MonadFlow m =>
+  Id SP.Person ->
+  m (Maybe DriverReferral)
+findById' (Id driverId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure Nothing) (transformBeamDriverReferralToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamDR.driverId $ Se.Eq driverId]
+    Nothing -> pure Nothing
 
 transformBeamDriverReferralToDomain :: BeamDR.DriverReferral -> DriverReferral
 transformBeamDriverReferralToDomain BeamDR.DriverReferralT {..} = do

@@ -97,9 +97,9 @@ import Tools.Error
 
 -- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Seconds
 
--- instance FromBackendRow Postgres Seconds
+instance FromBackendRow Postgres [Domain.EstimateBreakup]
 
--- instance FromField Money where
+-- instance FromField [Domain.EstimateBreakup] where
 --   fromField = fromFieldEnum
 
 -- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Money where
@@ -121,10 +121,11 @@ data EstimateT f = EstimateT
     minFare :: B.C f Money,
     maxFare :: B.C f Money,
     estimateBreakupList :: B.C f [Domain.EstimateBreakup],
-    nightShiftMultiplier :: B.C f (Maybe Centesimal),
+    nightShiftCharge :: B.C f (Maybe Money),
+    oldNightShiftCharge :: B.C f (Maybe Centesimal),
     nightShiftStart :: B.C f (Maybe TimeOfDay),
     nightShiftEnd :: B.C f (Maybe TimeOfDay),
-    waitingTimeEstimatedThreshold :: B.C f (Maybe Seconds),
+    -- waitingTimeEstimatedThreshold :: B.C f (Maybe Seconds),
     waitingChargePerMin :: B.C f (Maybe Money),
     waitingOrPickupCharges :: B.C f (Maybe Money),
     createdAt :: B.C f Time.UTCTime
@@ -161,8 +162,6 @@ instance ToJSON Estimate where
 
 deriving stock instance Show Estimate
 
--- deriving stock instance Read Money
-
 estimateTMod :: EstimateT (B.FieldModification (B.TableField EstimateT))
 estimateTMod =
   B.tableModification
@@ -172,10 +171,11 @@ estimateTMod =
       minFare = B.fieldNamed "min_fare",
       maxFare = B.fieldNamed "max_fare",
       estimateBreakupList = B.fieldNamed "estimate_breakup_list",
-      nightShiftMultiplier = B.fieldNamed "night_shift_multiplier",
+      nightShiftCharge = B.fieldNamed "night_shift_charge",
+      oldNightShiftCharge = B.fieldNamed "old_night_shift_charge",
       nightShiftStart = B.fieldNamed "night_shift_start",
       nightShiftEnd = B.fieldNamed "night_shift_end",
-      waitingTimeEstimatedThreshold = B.fieldNamed "waiting_time_estimated_threshold",
+      -- waitingTimeEstimatedThreshold = B.fieldNamed "waiting_time_estimated_threshold",
       waitingChargePerMin = B.fieldNamed "waiting_charge_per_min",
       waitingOrPickupCharges = B.fieldNamed "waiting_or_pickup_charges",
       createdAt = B.fieldNamed "created_at"
@@ -194,23 +194,23 @@ estimateToPSModifiers =
   M.fromList
     []
 
-defaultEstimate :: Estimate
-defaultEstimate =
-  EstimateT
-    { id = "",
-      transactionId = "",
-      vehicleVariant = "",
-      minFare = "",
-      maxFare = "",
-      estimateBreakupList = [""],
-      nightShiftMultiplier = Nothing,
-      nightShiftStart = Nothing,
-      nightShiftEnd = Nothing,
-      waitingTimeEstimatedThreshold = Nothing,
-      waitingChargePerMin = Nothing,
-      waitingOrPickupCharges = Nothing,
-      createdAt = defaultUTCDate
-    }
+-- defaultEstimate :: Estimate
+-- defaultEstimate =
+--   EstimateT
+--     { id = "",
+--       transactionId = "",
+--       vehicleVariant = "",
+--       minFare = "",
+--       maxFare = "",
+--       estimateBreakupList = [""],
+--       nightShiftMultiplier = Nothing,
+--       nightShiftStart = Nothing,
+--       nightShiftEnd = Nothing,
+--       waitingTimeEstimatedThreshold = Nothing,
+--       waitingChargePerMin = Nothing,
+--       waitingOrPickupCharges = Nothing,
+--       createdAt = defaultUTCDate
+--     }
 
 instance Serialize Estimate where
   put = error "undefined"
