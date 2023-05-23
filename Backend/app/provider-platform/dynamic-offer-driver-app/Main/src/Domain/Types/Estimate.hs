@@ -62,7 +62,7 @@ deriving instance FromJSON (EstimateBreakupD 'Safe)
 
 -- deriving instance Read (EstimateBreakupD 'Unsafe)
 
--- deriving instance Read (EstimateBreakupD 'Safe)
+deriving instance Read (EstimateBreakup)
 
 -- deriving instance FromJSON (EstimateBreakup)
 
@@ -89,6 +89,8 @@ type EstimateBreakupPrice = EstimateBreakupPriceD 'Safe
 deriving instance FromJSON (EstimateBreakupPriceD 'Unsafe)
 
 deriving instance ToJSON (EstimateBreakupPriceD 'Unsafe)
+
+deriving instance Read (EstimateBreakupPrice)
 
 deriving instance FromJSON (EstimateBreakupPriceD 'Safe)
 

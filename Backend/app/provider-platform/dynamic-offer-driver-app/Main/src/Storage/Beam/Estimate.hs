@@ -99,8 +99,8 @@ import Tools.Error
 
 instance FromBackendRow Postgres [Domain.EstimateBreakup]
 
--- instance FromField [Domain.EstimateBreakup] where
---   fromField = fromFieldEnum
+instance FromField [Domain.EstimateBreakup] where
+  fromField = fromFieldEnum
 
 -- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Money where
 --   sqlValueSyntax = autoSqlValueSyntax
@@ -161,6 +161,8 @@ instance ToJSON Estimate where
   toJSON = A.genericToJSON A.defaultOptions
 
 deriving stock instance Show Estimate
+
+deriving stock instance Read Estimate
 
 estimateTMod :: EstimateT (B.FieldModification (B.TableField EstimateT))
 estimateTMod =
