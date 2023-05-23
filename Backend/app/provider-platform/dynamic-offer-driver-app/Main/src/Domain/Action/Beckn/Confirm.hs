@@ -327,8 +327,7 @@ cancelBooking booking mbDriver transporter = do
             source = DBCR.ByApplication,
             reasonCode = Nothing,
             additionalInfo = Nothing,
-            driverLat = Nothing,
-            driverLon = Nothing,
+            driverCancellationLocation = Nothing,
             driverDistToPickup = Nothing
           }
 
