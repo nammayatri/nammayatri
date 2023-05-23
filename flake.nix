@@ -11,6 +11,11 @@
 
     easy-purescript-nix.url = "github:justinwoo/easy-purescript-nix";
     easy-purescript-nix.flake = false;
+
+    # Extended backend inputs
+    # ny-example.url = "path:/home/srid/code/ny/ny-example";
+    ny-example.url = "git+ssh://git@github.com/nammayatri/ny-example.git";
+    ny-example.flake = false;
   };
   outputs = inputs:
     inputs.common.lib.mkFlake { inherit inputs; } {
