@@ -7,12 +7,12 @@ let
   ];
 in
 {
-  flake.flakeModules.extended-nammayatri = name: { ... }: {
-    systems = import inputs.systems;
-    imports = [
-      inputs.common.flakeModules.default
-    ];
+  flake.lib.mkNammayatriFlake = args: name:
+    inputs.common.lib.mkFlake
+      args
+      (self.flakeModules.extended-nammayatri name);
 
+  flake.flakeModules.extended-nammayatri = name: {
     perSystem = { self', ... }: {
       # Create a Haskell project that uses nammayatri as a dependency.
       haskellProjects.default = {
