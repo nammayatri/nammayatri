@@ -130,8 +130,6 @@ foreign import waitingCountdownTimer :: forall action. Int -> (action -> Effect 
 
 foreign import zoneOtpExpiryTimer :: forall action. Int -> Int -> (action -> Effect Unit) -> (String -> String -> Int -> action) -> Effect Unit
 
-foreign import convertUTCtoISC :: String -> String -> String
-
 foreign import setRefreshing :: String -> Boolean -> Unit
 
 foreign import setEnabled :: String -> Boolean -> Unit
@@ -149,10 +147,6 @@ fetchFromLocalStoreTemp' :: String -> (String -> Maybe String) -> Maybe String -
 fetchFromLocalStoreTemp' = fetchFromLocalStoreTempImpl
 
 foreign import fetchAndUpdateCurrentLocation :: forall action. (action -> Effect Unit) -> (String -> String -> action) -> action -> Effect Unit
-
-foreign import getCurrentUTC :: String -> String
-
-foreign import getExpiryTime :: String -> String -> Boolean -> Int
 
 foreign import seperateByWhiteSpaces :: String -> String
 
@@ -310,9 +304,9 @@ addSearchOnTop :: LocationListItemState -> Array LocationListItemState -> Array 
 addSearchOnTop prediction predictionArr = cons prediction (filter (\ ( item) -> (item.placeId) /= (prediction.placeId))(predictionArr))
 
 addToRecentSearches :: LocationListItemState -> Array LocationListItemState -> Array LocationListItemState
-addToRecentSearches prediction predictionArr = 
+addToRecentSearches prediction predictionArr =
     let prediction' = prediction {prefixImageUrl = "ny_ic_recent_search," <> (getAssetStoreLink FunctionCall) <> "ny_ic_recent_search.png", locationItemType = Just RECENTS}
-      in (if (checkPrediction prediction' predictionArr) 
+      in (if (checkPrediction prediction' predictionArr)
            then (if length predictionArr == 30 then (fromMaybe [] (deleteAt 30 (cons prediction' predictionArr)))
           else (cons  prediction' predictionArr)) else addSearchOnTop prediction' predictionArr)
 
@@ -341,14 +335,14 @@ toRad n = (n * pi) / 180.0
 getCurrentLocationMarker :: String -> String
 getCurrentLocationMarker currentVersion = if isPreviousVersion currentVersion (getPreviousVersion "") then "ic_customer_current_location" else "ny_ic_customer_current_location"
 
-getPreviousVersion :: String -> String 
-getPreviousVersion _ = 
-  if os == "IOS" then 
-    case getMerchant FunctionCall of 
+getPreviousVersion :: String -> String
+getPreviousVersion _ =
+  if os == "IOS" then
+    case getMerchant FunctionCall of
       NAMMAYATRI -> "1.2.5"
       JATRISAATHI -> "0.0.0"
       _ -> "1.0.0"
-    else case getMerchant FunctionCall of 
+    else case getMerchant FunctionCall of
         JATRISAATHI -> "0.0.0"
         _ -> "1.2.0"
 

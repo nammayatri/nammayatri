@@ -1,0 +1,49 @@
+{
+    "env": {
+        "browser": true,
+        "es2021": true
+    },
+    "extends": "eslint:recommended",
+    "ignorePatterns": ["output","node_modules","dist","/config",".spago","webpack.*","validationExport.js"],
+    "overrides": [
+    ],
+    "parserOptions": {
+        "ecmaVersion": "latest",
+        "sourceType": "module"
+    },
+    "rules": {
+        "block-scoped-var": "error",
+        "no-caller": "error",
+        "no-extra-parens": "off",
+        "no-extend-native": "error",
+        "no-loop-func": "error",
+        "no-new": "error",
+        "no-return-assign": "error",
+        "no-sequences": "error",
+        "no-shadow": ["error", { "builtinGlobals": true }],
+        "no-unused-expressions": "error",
+        "no-undef": "error",
+        "no-eq-null": "error",
+        "indent": ["error", 2, { "SwitchCase": 1 }],
+        "quotes": ["error", "double"],
+        "strict": ["error", "global"],
+        "prefer-const": "error",
+        "no-delete-var": "error",
+        "no-dupe-args": "error",
+        "no-octal": "error",
+        "no-octal-escape": "error",
+        "no-with" : "error",
+        "no-var" : "error",
+        "no-unused-vars": "off",
+        "no-empty": "off",
+        "radix": "off",
+        "no-param-reassign": "off",
+        "eqeqeq": "off",
+        "no-bitwise": "off",
+        "consistent-return": "off",
+        "guard-for-in": "off",
+        "no-mixed-spaces-and-tabs": "off",
+        "no-use-before-define": "error",
+        "no-dupe-keys": "off"
+      }
+}

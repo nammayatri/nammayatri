@@ -66,8 +66,8 @@ import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Uncurried (runEffectFn1, runEffectFn3)
 import Effect.Unsafe (unsafePerformEffect)
-import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os)
-import Helpers.Utils (addToRecentSearches, consumingBackPress, getCurrentLocationMarker, getDistanceBwCordinates, getExpiryTime, getLocationName, parseNewContacts, saveRecents, setText', updateInputString, withinTimeRange)
+import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os, getExpiryTime)
+import Helpers.Utils (addToRecentSearches, consumingBackPress, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, parseNewContacts, saveRecents, setText', updateInputString, withinTimeRange)
 import JBridge (addMarker, animateCamera, currentPosition, emitJOSEvent, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, goBackPrevWebPage, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, sendMessage, shareTextMessage, showDialer, stopChatListenerService, toast, toggleBtnLoader)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
@@ -523,7 +523,7 @@ data Action = NoAction
             | UpdatePickupLocation String String String
             | CloseLocationTracking
             | ShowCallDialer CallType
-            | CloseShowCallDialer 
+            | CloseShowCallDialer
             | StartLocationTracking String
             | ExitLocationSelected LocationListItemState Boolean
             | DistanceOutsideLimitsActionController PopUpModal.Action
@@ -577,7 +577,7 @@ data Action = NoAction
             | IsMockLocation String
             | MenuButtonActionController MenuButtonController.Action
             | ChooseYourRideAction ChooseYourRideController.Action
-          
+
 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
@@ -726,7 +726,7 @@ eval BackPressed state = do
                             ]
                           else if state.props.emergencyHelpModal then continue state {props {emergencyHelpModal = false}}
                           else if state.props.callSupportPopUp then continue state {props {callSupportPopUp = false}}
-                          else do 
+                          else do
                               pure $ unsafePerformEffect $ runEffectFn3 emitJOSEvent "java" "onEvent" "action,terminate"
                               continue state
 
@@ -933,14 +933,14 @@ eval (DriverInfoCardActionController (DriverInfoCardController.PrimaryButtonAC P
     ]
 eval (DriverArrivedAction driverArrivalTime) state = do
   _ <- pure $ setValueToLocalStore DRIVER_ARRIVAL_ACTION "TRIGGER_WAITING_ACTION"
-  exit $ Cancel state { data { driverInfoCardState { driverArrived = true, driverArrivalTime = getExpiryTime driverArrivalTime "" true } } }
+  exit $ Cancel state { data { driverInfoCardState { driverArrived = true, driverArrivalTime = getExpiryTime driverArrivalTime true } } }
 
 eval (WaitingTimeAction timerID timeInMinutes seconds) state = do
   _ <- pure $ setValueToLocalStore DRIVER_ARRIVAL_ACTION "WAITING_ACTION_TRIGGERED"
   continue state { data { driverInfoCardState { waitingTime = timeInMinutes} }, props { waitingTimeTimerIds = union state.props.waitingTimeTimerIds [timerID] } }
 
 eval (DriverInfoCardActionController (DriverInfoCardController.ZoneOTPExpiryAction timerID timeInMinutes seconds)) state = do
-  if seconds <= 0 then do 
+  if seconds <= 0 then do
     _ <- pure $ toast "expired"
     _ <- pure $ clearTimer timerID
     exit $ NotificationHandler "CANCELLED_PRODUCT" state
@@ -961,8 +961,8 @@ eval (DriverInfoCardActionController (DriverInfoCardController.LocationTracking)
 
 eval (DriverInfoCardActionController (DriverInfoCardController.OpenEmergencyHelp)) state = continue state{props{emergencyHelpModal = true}}
 
-eval (DriverInfoCardActionController (DriverInfoCardController.ShareRide)) state = do 
-  continueWithCmd state 
+eval (DriverInfoCardActionController (DriverInfoCardController.ShareRide)) state = do
+  continueWithCmd state
         [ do
             _ <- pure $ shareTextMessage (getValueToLocalStore USER_NAME <> "is on a Namma Yatri Ride") $ "👋 Hey,\n\nI am riding with Namma Driver " <> (state.data.driverInfoCardState.driverName) <> "! Track this ride on: " <> ("https://nammayatri.in/track/?id="<>state.data.driverInfoCardState.rideId) <> "\n\nVehicle number: " <> (state.data.driverInfoCardState.registrationNumber)
             pure NoAction
@@ -1264,7 +1264,7 @@ eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = case state.props.isP
   ConfirmBack -> do
     _ <- pure $ firebaseLogEvent "ny_no_retry"
     case (getValueToLocalStore LOCAL_STAGE) of
-      "QuoteList" -> do 
+      "QuoteList" -> do
         exit $ CheckCurrentStatus
       "FindingQuotes" -> continue state{props{isPopUp = NoPopUp}}
       _ -> continue state
@@ -1320,7 +1320,7 @@ eval (ShowCallDialer item) state = do
             _ <- (firebaseLogEventWithTwoParams "ny_user_direct_call_click" "trip_id" (state.props.bookingId) "user_id" (getValueToLocalStore CUSTOMER_ID))
             pure NoAction
         ]
-    
+
 eval (StartLocationTracking item) state = do
   case item of
     "GOOGLE_MAP" -> do
@@ -1333,13 +1333,13 @@ eval (StartLocationTracking item) state = do
 eval (GetEstimates (GetQuotesRes quotesRes)) state = do
   case state.props.isSpecialZone of
     true -> specialZoneFlow quotesRes.quotes state
-    false -> case (getMerchant FunctionCall) of 
+    false -> case (getMerchant FunctionCall) of
       YATRI -> estimatesListFlow quotesRes.estimates state
       JATRISAATHI -> estimatesListFlow quotesRes.estimates state
-      _ -> do 
+      _ -> do
         _ <- pure $ spy "inside" "estimates"
         estimatesFlow quotesRes.estimates state
-    
+
 
 eval (EstimatesTryAgain (GetQuotesRes quotesRes)) state = do
   case (getMerchant FunctionCall) of
@@ -1496,26 +1496,26 @@ eval (UpdateLocAndLatLong lat lng) state = do
 
 eval GoToEditProfile state = do
   exit $ GoToMyProfile state true
-eval (MenuButtonActionController (MenuButtonController.OnClick config)) state = do 
-  continueWithCmd state{props{defaultPickUpPoint = config.id}} [do 
+eval (MenuButtonActionController (MenuButtonController.OnClick config)) state = do
+  continueWithCmd state{props{defaultPickUpPoint = config.id}} [do
       _ <- animateCamera config.lat config.lng 25
       pure NoAction
     ]
 
-eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.OnSelect config))) state = do 
+eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.OnSelect config))) state = do
   let updatedQuotes = map (\item -> item{activeIndex = config.index}) state.data.specialZoneQuoteList
       newState = state{data{specialZoneQuoteList = updatedQuotes}}
   continue $ if state.props.isSpecialZone then newState{data{specialZoneSelectedQuote = Just config.id }}
               else newState{props{estimateId = config.id }, data {selectedEstimatesObject = config}}
 
-eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state = 
+eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state =
   if state.props.isSpecialZone then do
     _ <- pure $ updateLocalStage ConfirmingRide
     exit $ ConfirmRide state{props{currentStage = ConfirmingRide}}
     else do
       _ <- pure $ updateLocalStage FindingQuotes
       let updatedState = state{props{currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime "LazyCheck")}}
-      updateAndExit (updatedState) (GetQuotes updatedState) 
+      updateAndExit (updatedState) (GetQuotes updatedState)
 
 
 eval _ state = continue state
@@ -1635,7 +1635,7 @@ dummyRideRatingState = {
   offeredFare         : 0,
   distanceDifference  : 0,
   feedback            : "",
-  appConfig : DC.config 
+  appConfig : DC.config
 }
 dummyListItem :: LocationListItemState
 dummyListItem = {

@@ -26,7 +26,8 @@ import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String (Pattern(..), split)
 import Engineering.Helpers.Commons (strToBool)
-import Helpers.Utils (convertUTCtoISC, parseFloat, rotateArray, setEnabled, setRefreshing, toString, isHaveFare)
+import Helpers.Utils (parseFloat, rotateArray, setEnabled, setRefreshing, toString, isHaveFare)
+import Engineering.Helpers.Commons (convertUTCtoISC)
 import JBridge (firebaseLogEvent)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
 import Prelude (class Show, pure, unit, bind, map, discard, show, ($), (==), (&&), (+), (/=), (<>), (||), (-), (<), (/), (*), negate, (<<<), not)
@@ -39,7 +40,7 @@ import Screens.Types (AnimationState(..), FareComponent, Fares, IndividualRideCa
 import Services.API (FareBreakupAPIEntity(..), RideAPIEntity(..), RideBookingListRes, RideBookingRes(..))
 import Storage (isLocalStageOn)
 import Language.Strings (getString, getEN)
-import Language.Types (STR(..)) 
+import Language.Types (STR(..))
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
 
@@ -196,9 +197,9 @@ myRideListTransformerProp listRes =  filter (\item -> (item.status == (toPropVal
 
 
 myRideListTransformer :: MyRidesScreenState -> Array RideBookingRes -> Array IndividualRideCardState
-myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETED" || item.status == "CANCELLED")) (map (\(RideBookingRes ride) -> 
-  let 
-    fares = getFares ride.fareBreakup 
+myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETED" || item.status == "CANCELLED")) (map (\(RideBookingRes ride) ->
+  let
+    fares = getFares ride.fareBreakup
     (RideAPIEntity rideDetails) = (fromMaybe dummyRideAPIEntity (ride.rideList !!0))
     baseDistanceVal = (getKmMeter (fromMaybe 0 (rideDetails.chargeableRideDistance)))
     updatedFareList = getFaresList ride.fareBreakup state baseDistanceVal
@@ -279,7 +280,7 @@ getFaresList fares state baseDistance =
                       "CUSTOMER_SELECTED_FARE" -> getEN CUSTOMER_SELECTED_FARE
                       "WAITING_CHARGES" -> getEN WAITING_CHARGE
                       "EARLY_END_RIDE_PENALTY" -> getEN EARLY_END_RIDE_CHARGES
-                      "WAITING_OR_PICKUP_CHARGES" -> getEN PICKUP_CHARGE 
+                      "WAITING_OR_PICKUP_CHARGES" -> getEN PICKUP_CHARGE
                       "SERVICE_CHARGE" -> getEN SERVICE_CHARGES
                       "FIXED_GOVERNMENT_RATE" -> getEN GOVERNMENT_CHAGRES
                       _ -> getEN BASE_FARES

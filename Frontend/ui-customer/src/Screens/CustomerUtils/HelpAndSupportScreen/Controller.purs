@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -25,7 +25,7 @@ import Components.SourceToDestination as SourceToDestination
 import Data.Array ((!!), null, filter)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe)
-import Helpers.Utils (convertUTCtoISC)
+import Engineering.Helpers.Commons (convertUTCtoISC)
 import JBridge (showDialer)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Prelude (class Show, pure, bind, discard, show, unit, map, ($), (<>), (==), void)
@@ -91,11 +91,11 @@ instance loggableAction :: Loggable Action where
 
 
 data Action = BackPressed Boolean
-            | SourceToDestinationActionController SourceToDestination.Action 
+            | SourceToDestinationActionController SourceToDestination.Action
             | GenericHeaderActionController GenericHeader.Action
-            | ContactUs 
-            | FAQs 
-            | ViewRides 
+            | ContactUs
+            | FAQs
+            | ViewRides
             | ReportIssue
             | RideBookingListAPIResponseAction RideBookingListRes String
             | NoRidesActionController ErrorModal.Action
@@ -104,16 +104,16 @@ data Action = BackPressed Boolean
             | AfterRender
             | CallSupport
 
-data ScreenOutput = GoBack 
+data ScreenOutput = GoBack
                   | GoToSupportScreen String
-                  | GoToTripDetails HelpAndSupportScreenState 
+                  | GoToTripDetails HelpAndSupportScreenState
                   | GoToMyRides
                   | GoHome
                   | UpdateState HelpAndSupportScreenState
 
 eval :: Action -> HelpAndSupportScreenState -> Eval Action ScreenOutput HelpAndSupportScreenState
 
-eval (BackPressed flag ) state = if state.props.isCallConfirmation 
+eval (BackPressed flag ) state = if state.props.isCallConfirmation
   then continue state{props{isCallConfirmation = false}}
   else exit GoBack
 
@@ -127,15 +127,15 @@ eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick )) state = c
 
 eval ViewRides state = exit $ GoToMyRides
 
-eval (RideBookingListAPIResponseAction rideList status) state = do 
-  case status of 
-      "success" -> do 
+eval (RideBookingListAPIResponseAction rideList status) state = do
+  case status of
+      "success" -> do
                     if (null (rideList^._list)) then continue state {data{isNull = true}, props{apiFailure = false}}
-                      else do 
+                      else do
                         let list = myRideListTransform (rideList ^._list)
                         case (null (list)) of
                           true -> continue state {data{isNull = true}, props{apiFailure=false}}
-                          _    -> do  
+                          _    -> do
                                     let newState = (myRideListTransform (rideList ^._list))!!0
                                     updateAndExit (fromMaybe dummyState newState) (UpdateState (fromMaybe dummyState newState))
       "failure"   -> continue state{props{apiFailure = true}}

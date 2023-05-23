@@ -78,7 +78,7 @@ import Merchant.Utils (getMerchant, Merchant(..))
 -- foreign import get5sTimer :: forall action. (action -> Effect Unit) -> (String -> action)  -> Effect Unit
 -- foreign import get10sTimer :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
 -- -- foreign import getCurrentLatLongImpl  :: Effect String
-import Engineering.Helpers.Commons (parseFloat, setText', getCurrentUTC) as ReExport
+import Engineering.Helpers.Commons (parseFloat, setText') as ReExport
 
 
 foreign import shuffle :: forall a. Array a -> Array a
@@ -89,7 +89,6 @@ foreign import countDown :: forall action. Int -> String -> (action -> Effect Un
 foreign import hideSplash :: Effect Unit
 foreign import startTimer :: forall action. Int -> (action -> Effect Unit) -> (String -> action) -> Effect Unit
 foreign import convertKmToM :: String -> String
-foreign import convertUTCtoISC :: String -> String -> String
 foreign import differenceBetweenTwoUTC :: String -> String -> Int
 foreign import clearTimer :: String -> Unit
 foreign import clearPopUpTimer :: String -> Unit

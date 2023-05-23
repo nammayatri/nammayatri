@@ -70,6 +70,7 @@ foreign import countDown :: forall action. Int -> String -> (action -> Effect Un
 foreign import clearTimer :: String -> Unit
 foreign import getExpiryTime :: String -> Boolean -> Int
 foreign import getCurrentUTC :: String -> String
+foreign import convertUTCtoISC :: String -> String -> String
 
 os :: String
 os = getOs unit

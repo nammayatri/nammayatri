@@ -32,7 +32,8 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (liftFlow, getNewIDWithTag, bundleVersion, os, getExpiryTime)
 import Foreign.Class (class Encode, encode, decode)
-import Helpers.Utils (getCurrentUTC, hideSplash, getTime, convertUTCtoISC, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions)
+import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions)
+import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC)
 import JBridge (drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, loaderText, openNavigation, removeAllPolylines, removeMarker, showMarker, startLocationPollingAPI, stopLocationPollingAPI, toast, toggleLoader, generateSessionId, stopChatListenerService, hideKeyboardOnNavigation, metaLogEvent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -99,12 +100,12 @@ checkVersion versioncode = do
     _ <- UI.handleAppUpdatePopUp
     checkVersion versioncode
 
-getLatestAndroidVersion :: Merchant -> Int 
-getLatestAndroidVersion merchant = 
-  case merchant of 
+getLatestAndroidVersion :: Merchant -> Int
+getLatestAndroidVersion merchant =
+  case merchant of
     NAMMAYATRIPARTNER -> 54
-    YATRIPARTNER -> 43 
-    JATRISAATHIDRIVER -> 1 
+    YATRIPARTNER -> 43
+    JATRISAATHIDRIVER -> 1
 
 ifNotRegistered :: Unit -> Boolean
 ifNotRegistered _ = getValueToLocalStore REGISTERATION_TOKEN == "__failed"
@@ -530,7 +531,7 @@ driverProfileFlow = do
       myRidesScreenFlow
     GO_TO_EDIT_BANK_DETAIL_SCREEN -> editBankDetailsFlow
     NOTIFICATIONS_SCREEN -> notificationFlow
-    GO_TO_BOOKING_OPTIONS_SCREEN state-> do 
+    GO_TO_BOOKING_OPTIONS_SCREEN state-> do
       modifyScreenState $ BookingOptionsScreenType (\bookingOptions -> bookingOptions{data{vehicleType = state.data.driverVehicleType, vehicleNumber = state.data.vehicleRegNumber, vehicleName = state.data.vehicleModelName, vehicleCapacity = state.data.capacity, downgradeOptions = ((downgradeOptionsConfig state.data.vehicleSelected) <$> state.data.downgradeOptions)}})
       bookingOptionsFlow
 
@@ -654,7 +655,7 @@ selectLanguageFlow = do
       driverProfileFlow
 
 bookingOptionsFlow :: FlowBT String Unit
-bookingOptionsFlow = do 
+bookingOptionsFlow = do
   action <- UI.bookingOptions
   case action of
     SELECT_CAB state -> do
@@ -864,7 +865,7 @@ homeScreenFlow = do
                                                                                              else getDriverInfoResp.active
                                                                             , driverStatusSet = getDriverStatus "" }
                                                                       , data{vehicleType = linkedVehicle.variant, driverAlternateMobile =getDriverInfoResp.alternateNumber}})
-  
+
   modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen {data {driverName = getDriverInfoResp.firstName, driverVehicleType = linkedVehicle.variant, driverRating = getDriverInfoResp.rating, capacity = fromMaybe 2 linkedVehicle.capacity, downgradeOptions = getDowngradeOptions linkedVehicle.variant, vehicleSelected = getDowngradeOptionsSelected (GetDriverInfoResp getDriverInfoResp)}})
   modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> driverDetailsScreen { data {driverAlternateMobile =getDriverInfoResp.alternateNumber}})
   modifyScreenState $ ReferralScreenStateType (\ referralScreen -> referralScreen{ data { driverInfo  {  driverName = getDriverInfoResp.firstName, driverMobile = getDriverInfoResp.mobileNumber,  vehicleRegNumber = linkedVehicle.registrationNo , referralCode = getDriverInfoResp.referralCode }}})
@@ -922,7 +923,7 @@ homeScreenFlow = do
     GO_TO_START_ZONE_RIDE {otp, lat, lon} -> do
       void $ lift $ lift $ loaderText (getString PLEASE_WAIT) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
       void $ lift $ lift $ toggleLoader true
-      startZoneRideResp <- lift $ lift $ Remote.otpRide "" (Remote.makeOTPRideReq otp (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon))) -- driver's lat long during starting ride      
+      startZoneRideResp <- lift $ lift $ Remote.otpRide "" (Remote.makeOTPRideReq otp (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon))) -- driver's lat long during starting ride
       case startZoneRideResp of
         Right startZoneRideResp -> do
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props {enterOtpModal = false, showDottedRoute = true}, data{ route = [], activeRide{status = INPROGRESS}}})
@@ -969,7 +970,7 @@ homeScreenFlow = do
             },
             rideStartTime = convertUTCtoISC (fromMaybe " " response.tripStartTime) "h:mm a",
             rideEndTime = convertUTCtoISC (fromMaybe " " response.tripEndTime) "h:mm a",
-            bookingDateAndTime = convertUTCtoISC response.createdAt  "DD/MM/yyyy  hh:mm a",
+            bookingDateAndTime = convertUTCtoISC response.createdAt  "DD/MM/YYYY  hh:mm a",
             totalAmount = fromMaybe response.estimatedBaseFare response.computedFare}})
       void $ lift $ lift $ toggleLoader false
       _ <- updateStage $ HomeScreenStage RideCompleted

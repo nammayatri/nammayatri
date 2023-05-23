@@ -1,6 +1,4 @@
 import { callbackMapper } from 'presto-ui';
-import moment from 'moment';
-
 
 var timerIdDebounce = null;
 var driverWaitingTimerId = null;
@@ -315,46 +313,6 @@ export const setEnabled = function (id){
   }
 }
 
-export const convertUTCtoISC = function (str) {
-  return function (format) {
-    var localTime1 = moment.utc(str).toDate();
-    localTime1 = moment(localTime1).format(format);
-    return localTime1;
-  };
-};
-
-
-export const getExpiryTime = function (str1) {
-  return function (str2){
-    return function (forLostAndFound) {
-      var expiry = new Date(str1);
-      var d = new Date();
-      var result =  moment(d).utc().format();
-      var current = new Date(result);
-      console.log(current + " , " + expiry + "STR");
-      var diff = (expiry.getTime() - current.getTime())/ 1000;
-      if (forLostAndFound)
-        {
-          diff = (current.getTime() - expiry.getTime())/ 1000;
-        }
-      diff = (Math.round(diff));
-      console.log("STR ->>>> expiry time "+diff);
-      if (diff >= 0)
-          return (diff);
-        else
-          return 0;
-    };
-  };
-};
-
-
-export const getCurrentUTC = function (str) {
-  var d = new Date();
-  var result =  moment(d).utc().format();
-  console.log(result);
-  return result;
-};
-
   // exports ["debounceFunction"] = function (delay) { NEED TO HANDLE DEBOUNCING IN LOCATEONMAP
   //   return function (cb){
   //     return function (action){
@@ -479,8 +437,11 @@ export const shuffle = function (array) {
 export const withinTimeRange = function (startTime) {
   return function (endTime) {
     try {
-      var currentTimeString = moment(new Date()).format("HH:mm:ss");
-      return startTime < endTime ? between(currentTimeString, startTime, endTime) : between(currentTimeString, startTime, "23:59:59") || between(currentTimeString, "00:00:01", endTime);
+      var currentTimeString = new Date();
+      currentTimeString = formatDates(currentTimeString, "HH:mm:ss");
+      const res = startTime < endTime ? between(currentTimeString, startTime, endTime) : between(currentTimeString, startTime, "23:59:59") || between(currentTimeString, "00:00:01", endTime);
+      console.log('inside moment withinTimeRange util', JSON.stringify(startTime) + ' ' + JSON.stringify(endTime) + ' ' + "HH:mm:ss" + " " + res);
+      return res;
     }catch (err){
       return false;
     }
@@ -614,4 +575,104 @@ export const consumingBackPress = function (flag) {
     payload: { jp_consuming_backpress: flag }
   }
   JBridge.runInJuspayBrowser("onEvent", JSON.stringify(jpConsumingBackpress), "");
+}
+
+// ---------------------------------- moment ---------------------------------------------
+
+function formatDates(date, format) {
+  const mappings = {
+    'h': () => {
+      var hours = date.getHours();
+      hours = hours % 12 || 12;
+      return `${hours}`;
+    },
+    'hh': () => {
+      var hours = ('0' + date.getHours()).slice(-2);
+      hours = hours % 12 || 12;
+      return `${hours}`;
+    },
+    'HH': () => {
+      const hours = ('0' + date.getHours()).slice(-2);
+      return `${hours}`;
+    },
+    'a': () => {
+      const hours = date.getHours();
+      const ampm = hours < 12 ? 'am' : 'pm';
+      return `${ampm}`;
+    },
+    'A': () => {
+      const hours = date.getHours();
+      const ampm = hours < 12 ? 'AM' : 'PM';
+      return `${ampm}`;
+    },
+    'mm': () => {
+      const minutes = ('0' + date.getMinutes()).slice(-2);
+      return `${minutes}`;
+    },
+    'ss': () => {
+      const seconds = ('0' + date.getSeconds()).slice(-2);
+      return `${seconds}`;
+    },
+    'DD': () => {
+      const day = ('0' + date.getDate()).slice(-2);
+      return `${day}`;
+    },
+    'MM': () => {
+      const month = ('0' + (date.getMonth() + 1)).slice(-2);
+      return `${month}`;
+    },
+    'YYYY': () => {
+      const year = date.getFullYear();
+      return `${year}`;
+    },
+    'D': () => {
+      const day = date.getDate();
+      return `${day}`;
+    },
+    'Do': () => {
+      const day = date.getDate();
+      let daySuffix;
+      if (day === 1 || day === 21 || day === 31) {
+        daySuffix = 'st';
+      } else if (day === 2 || day === 22) {
+        daySuffix = 'nd';
+      } else if (day === 3 || day === 23) {
+        daySuffix = 'rd';
+      } else {
+        daySuffix = 'th';
+      }
+      return `${day}${daySuffix}`;
+    },
+    'MMM': () => {
+      const month = date.toLocaleDateString('en-US', { month: 'short' });
+      return `${month}`;
+    },
+    'llll': () => {
+      const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const weekday = weekdays[date.getDay()];
+      const day = date.getDate();
+      const month = months[date.getMonth()];
+      const year = date.getFullYear();
+      var hours = date.getHours();
+      hours = hours % 12 || 12;
+      const ampm = hours < 12 ? 'AM' : 'PM';
+      const minutes = ('0' + date.getMinutes()).slice(-2);
+      return `${weekday}, ${month} ${day}, ${year} ${hours}:${minutes} ${ampm}`;
+    }
+  }
+
+  var reg = /(:| |\/|-)/g;
+  var arr = format.split(reg);
+  var result = '';
+  for (const a of arr) {
+    var maps = mappings[a];
+    if (maps) {
+      result += maps();
+    } else {
+      result += a;
+    }
+  }
+  console.log("formatDates", result);
+  return result;
 }

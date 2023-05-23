@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -69,21 +69,21 @@ shareAppConfig state = let
       margin = (MarginHorizontal 24 24),
       buttonLayoutMargin = (Margin 16 0 16 20),
       primaryText {
-        text = getString(YOUR_RIDE_HAS_STARTED) 
+        text = getString(YOUR_RIDE_HAS_STARTED)
       , margin = (MarginHorizontal 16 16)},
-      secondaryText { 
+      secondaryText {
         text = getString(ENJOY_RIDING_WITH_US)
-      , margin = MarginVertical 12 24  
+      , margin = MarginVertical 12 24
       , color = Color.black700},
       option1 {
-        text = getString(MAYBE_LATER) 
-      , width = V $ (((EHC.screenWidth unit)-92)/2) 
+        text = getString(MAYBE_LATER)
+      , width = V $ (((EHC.screenWidth unit)-92)/2)
       , background = Color.white900
       , strokeColor = Color.black500
       , color = Color.black700
       },
       option2 {
-        text = getString(SHARE_APP) 
+        text = getString(SHARE_APP)
       , width = V $ (((EHC.screenWidth unit)-92)/2)
       , color = state.data.config.primaryTextColor
       , strokeColor = state.data.config.primaryBackground
@@ -200,7 +200,7 @@ fareBreakUpConfig state =
           , source = state.data.driverInfoCardState.source
           , sourceTitle = (fromMaybe "" ((DS.split (DS.Pattern ",") (state.data.driverInfoCardState.source)) DA.!! 0))
           , rideStartTime = state.data.startedAt
-          , rideStartDate = ((fromMaybe "" ((DS.split (DS.Pattern ",") (HU.convertUTCtoISC (state.data.startedAtUTC) "llll")) DA.!! 0)) <> ", " <> (HU.convertUTCtoISC (state.data.startedAtUTC) "Do MMM"))
+          , rideStartDate = ((fromMaybe "" ((DS.split (DS.Pattern ",") (EHC.convertUTCtoISC (state.data.startedAtUTC) "llll")) DA.!! 0)) <> ", " <> (EHC.convertUTCtoISC (state.data.startedAtUTC) "Do MMM"))
           , estimatedDistance = state.props.estimatedDistance
           }
         }
@@ -211,25 +211,25 @@ whereToButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
 whereToButtonConfig state =
   let
     config = PrimaryButton.config
-    primaryButtonConfig' = config 
+    primaryButtonConfig' = config
       { textConfig
         { text = (getString WHERE_TO)
         , width = MATCH_PARENT
         , gravity = LEFT
-        , color = state.data.config.primaryTextColor 
+        , color = state.data.config.primaryTextColor
         }
       , height = V 60
       , gravity = CENTER
       , cornerRadius = 8.0
-      , margin = (MarginHorizontal 16 16)  
-      , isClickable = true 
+      , margin = (MarginHorizontal 16 16)
+      , isClickable = true
       , isPrefixImage = true
       , background = state.data.config.primaryBackground
       , prefixImageConfig
         { imageUrl = if (MU.getMerchant FunctionCall) == MU.UNKNOWN then "ny_ic_bent_right_arrow_white," <> (getAssetStoreLink FunctionCall) <> "ny_ic_bent_right_arrow_white.png" else  "ny_ic_bent_right_arrow," <> (getAssetStoreLink FunctionCall) <> "ny_ic_bent_right_arrow.png"
         , height = V 16
         , width = V 21
-        , margin = (Margin 17 0 17 0)  
+        , margin = (Margin 17 0 17 0)
         }
       , id = "WheretoButton"
       }
@@ -278,7 +278,7 @@ rateRideButtonConfig state =
       config
         { textConfig
           { text = (getString RATE_YOUR_DRIVER)
-          ,  color = state.data.config.primaryTextColor 
+          ,  color = state.data.config.primaryTextColor
           }
         , background = state.data.config.rateCardColor
         , margin = (MarginLeft 12)
@@ -330,13 +330,13 @@ logOutPopUpModelConfig state =
           config'
             { primaryText { text = (getString LOGOUT_) }
             , secondaryText { text = (getString ARE_YOU_SURE_YOU_WANT_TO_LOGOUT) }
-            , option1 { 
+            , option1 {
                 color = state.data.config.primaryTextColor
               , strokeColor = state.data.config.primaryBackground
               , background = state.data.config.primaryBackground
               , text = (getString GO_BACK_)
               }
-            , option2 { 
+            , option2 {
                 background = state.data.config.primaryTextColor
               , strokeColor = state.data.config.primaryBackground
               , color = state.data.config.primaryBackground
@@ -356,7 +356,7 @@ logOutPopUpModelConfig state =
               text =  if(isLocalStageOn ST.QuoteList)then (getString TRY_AGAIN_WITH_A_TIP) else (getString SEARCH_AGAIN_WITH_A_TIP)
             , textStyle = FontStyle.Heading1
             },
-          secondaryText { 
+          secondaryText {
             text = (getString BOOST_YOUR_RIDE_CHANCES_AND_HELP_DRIVERS_WITH_TIPS)
           , color = Color.black650}
           , tipLayoutMargin = (Margin 22 0 22 22)
@@ -378,7 +378,7 @@ logOutPopUpModelConfig state =
           },
           option2 {
             text = if (isLocalStageOn ST.QuoteList) then (getString HOME) else  (getString CANCEL_SEARCH)
-          , width = MATCH_PARENT 
+          , width = MATCH_PARENT
           , background = Color.white900
           , strokeColor = Color.white900
           , margin = MarginTop 14
@@ -398,7 +398,7 @@ logOutPopUpModelConfig state =
             , dismissPopup = true
             , optionButtonOrientation = if(isLocalStageOn ST.QuoteList || isLocalStageOn ST.FindingQuotes) then  "VERTICAL" else "HORIZONTAL"
             , secondaryText { text = if (isLocalStageOn ST.QuoteList) then (getString TRY_LOOKING_FOR_RIDES_AGAIN) else (getString CANCEL_ONGOING_SEARCH)}
-            , option1 { 
+            , option1 {
               text = if (isLocalStageOn ST.QuoteList) then (getString YES_TRY_AGAIN) else (getString YES_CANCEL_SEARCH)
             , width = MATCH_PARENT
             , color = state.data.config.primaryTextColor
@@ -406,9 +406,9 @@ logOutPopUpModelConfig state =
             , background = state.data.config.primaryBackground
             , padding = (Padding 0 10 0 10)
             }
-            , option2 { 
-               text = if (isLocalStageOn ST.QuoteList) then (getString HOME) else (getString NO_DONT) 
-              , width = MATCH_PARENT 
+            , option2 {
+               text = if (isLocalStageOn ST.QuoteList) then (getString HOME) else (getString NO_DONT)
+              , width = MATCH_PARENT
               , background = Color.white900
               , strokeColor = Color.white900
               , margin = MarginTop $ if (isLocalStageOn ST.QuoteList || isLocalStageOn ST.FindingQuotes) then 14 else 3
@@ -420,7 +420,7 @@ logOutPopUpModelConfig state =
         popUpConfig'
 
 
-getBottomMargin :: Int 
+getBottomMargin :: Int
 getBottomMargin = if EHC.safeMarginBottom == 0 then 24 else (EHC.safeMarginBottom)
 
 distanceOusideLimitsConfig :: ST.HomeScreenState -> PopUpModal.Config
@@ -439,7 +439,7 @@ distanceOusideLimitsConfig state =
           , margin = (Margin 0 16 0 20)
           }
         , option1 { visibility = false }
-        , option2 { 
+        , option2 {
             background = state.data.config.primaryTextColor
           , strokeColor = state.data.config.primaryBackground
           , color = state.data.config.primaryBackground
@@ -465,7 +465,7 @@ shortDistanceConfig state =
           { text = (getString YOU_CAN_TAKE_A_WALK_OR_CONTINUE_WITH_RIDE_BOOKING)
           , margin = (Margin 0 16 0 20)
           }
-        , option1 { 
+        , option1 {
             background = state.data.config.primaryTextColor
           , strokeColor = state.data.config.primaryBackground
           , color = state.data.config.primaryBackground
@@ -542,13 +542,13 @@ estimateChangedPopupConfig state =
       config'
         { primaryText { text = (getString ESTIMATES_CHANGED) }
         , secondaryText { text = (getString ESTIMATES_REVISED_TO) <> "₹" <> (show state.data.suggestedAmount) <> "-" <> "₹" <> (show $ (state.data.suggestedAmount + state.data.rateCard.additionalFare)) }
-        , option1 { 
+        , option1 {
             background = state.data.config.primaryTextColor
           , strokeColor = state.data.config.primaryBackground
           , color = state.data.config.primaryBackground
           , text = (getString GO_HOME_)
           }
-        , option2 { 
+        , option2 {
             color = state.data.config.primaryTextColor
           , strokeColor = state.data.config.primaryBackground
           , background = state.data.config.primaryBackground
@@ -574,10 +574,10 @@ chatViewConfig :: ST.HomeScreenState -> ChatView.Config
 chatViewConfig state = let
   config = ChatView.config
   chatViewConfig' = config {
-    userConfig 
+    userConfig
         {
           userName = state.data.driverInfoCardState.driverName
-        , appType = "Customer" 
+        , appType = "Customer"
         }
       , messages = state.data.messages
       , sendMessageActive = state.props.sendMessageActive
@@ -603,7 +603,7 @@ chatViewConfig state = let
   in chatViewConfig'
 
 initialSuggestions :: String -> Array String
-initialSuggestions _ = 
+initialSuggestions _ =
   [
     (getString ARE_YOU_STARING),
     (getString PLEASE_COME_SOON),
@@ -611,7 +611,7 @@ initialSuggestions _ =
   ]
 
 pickupSuggestions :: String -> Array String
-pickupSuggestions _ = 
+pickupSuggestions _ =
   [
     (getString PLEASE_WAIT_I_WILL_BE_THERE),
     (getString LOOKING_FOR_YOU_AT_PICKUP),
@@ -787,7 +787,7 @@ callSupportConfig state = let
   }
   in popUpConfig'
 menuButtonConfig :: ST.HomeScreenState -> ST.Location -> MenuButton.Config
-menuButtonConfig state item = let  
+menuButtonConfig state item = let
     config = MenuButton.config
     menuButtonConfig' = config {
       titleConfig{
@@ -808,14 +808,14 @@ menuButtonConfig state item = let
       , lat = item.lat
       , lng = item.lng
       , leftsidebutton = true
-      , padding = PaddingBottom 10 
+      , padding = PaddingBottom 10
       , isSelected = item.place == state.props.defaultPickUpPoint
     }
     in menuButtonConfig'
 
 chooseYourRideConfig :: ST.HomeScreenState -> ChooseYourRide.Config
 chooseYourRideConfig state = ChooseYourRide.config
-  { 
+  {
     rideDistance = state.data.rideDistance,
     rideDuration = state.data.rideDuration,
     quoteList = state.data.specialZoneQuoteList

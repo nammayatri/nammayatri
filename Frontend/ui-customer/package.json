@@ -52,14 +52,13 @@
     "webpack": "^4.41.5",
     "webpack-cli": "^3.3.10",
     "webpack-dev-server": "^3.10.1",
-    "webpack-merge": "^5.8.0"
+    "webpack-merge": "^5.8.0",
+    "purty": "^7.0.0"
   },
   "dependencies": {
     "axios": "^0.27.1",
     "core-js": "^2.6.11",
-    "moment": "^2.27.0",
     "presto-ui": "git+https://github.com/juspay/presto-ui.git#feature/Added-font-weight-prop",
-    "purty": "^7.0.0",
     "ramda": "^0.26.1",
     "regenerator-runtime": "^0.13.5"
   },

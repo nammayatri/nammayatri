@@ -1,5 +1,4 @@
 import axios from "axios";
-import moment from "moment";
 import { callbackMapper } from 'presto-ui';
 
 const { JBridge, Android } = window;
@@ -326,15 +325,14 @@ export const getExpiryTime = function (str1) {
     return function (reverse) {
       try {
       var expiry = new Date(str1);
-      var date = new Date();
-      var result =  moment(date).utc().format();
-      var current = new Date(result);
+      var current = new Date();
       var diff = (expiry.getTime() - current.getTime())/ 1000;
       if (reverse)
         {
           diff = (current.getTime() - expiry.getTime())/ 1000;
         }
       diff = (Math.round(diff));
+      console.log('inside moment getExpiryTime common', str1 + ' ' + diff);
       if (diff >= 0)
           return (diff);
         else
@@ -342,12 +340,120 @@ export const getExpiryTime = function (str1) {
       } catch (err) {
         console.log("error in getExpiryTime " + err);
       }
-    };
+  };
 };
 
 export const getCurrentUTC = function (str) {
-  var d = new Date();
-  var result =  moment(d).utc().format();
+  var result = new Date().toISOString();
   console.log(result);
   return result;
 };
+
+export const convertUTCtoISC = function (str) {
+  return function (format) {
+    var localTime = new Date(str);
+    localTime = formatDates(localTime, format);
+    console.log("inside moment convertUTCtoISC common",str + ' ' + format + ' ' + localTime);
+    return localTime;
+  };
+};
+
+// ---------------------------------- moment ---------------------------------------------
+
+function formatDates(date, format) {
+  const mappings = {
+    'h': () => {
+      var hours = date.getHours();
+      hours = hours % 12 || 12;
+      return `${hours}`;
+    },
+    'hh': () => {
+      var hours = ('0' + date.getHours()).slice(-2);
+      hours = hours % 12 || 12;
+      return `${hours}`;
+    },
+    'HH': () => {
+      const hours = ('0' + date.getHours()).slice(-2);
+      return `${hours}`;
+    },
+    'a': () => {
+      const hours = date.getHours();
+      const ampm = hours < 12 ? 'am' : 'pm';
+      return `${ampm}`;
+    },
+    'A': () => {
+      const hours = date.getHours();
+      const ampm = hours < 12 ? 'AM' : 'PM';
+      return `${ampm}`;
+    },
+    'mm': () => {
+      const minutes = ('0' + date.getMinutes()).slice(-2);
+      return `${minutes}`;
+    },
+    'ss': () => {
+      const seconds = ('0' + date.getSeconds()).slice(-2);
+      return `${seconds}`;
+    },
+    'DD': () => {
+      const day = ('0' + date.getDate()).slice(-2);
+      return `${day}`;
+    },
+    'MM': () => {
+      const month = ('0' + (date.getMonth() + 1)).slice(-2);
+      return `${month}`;
+    },
+    'YYYY': () => {
+      const year = date.getFullYear();
+      return `${year}`;
+    },
+    'D': () => {
+      const day = date.getDate();
+      return `${day}`;
+    },
+    'Do': () => {
+      const day = date.getDate();
+      let daySuffix;
+      if (day === 1 || day === 21 || day === 31) {
+        daySuffix = 'st';
+      } else if (day === 2 || day === 22) {
+        daySuffix = 'nd';
+      } else if (day === 3 || day === 23) {
+        daySuffix = 'rd';
+      } else {
+        daySuffix = 'th';
+      }
+      return `${day}${daySuffix}`;
+    },
+    'MMM': () => {
+      const month = date.toLocaleDateString('en-US', { month: 'short' });
+      return `${month}`;
+    },
+    'llll': () => {
+      const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const weekday = weekdays[date.getDay()];
+      const day = date.getDate();
+      const month = months[date.getMonth()];
+      const year = date.getFullYear();
+      var hours = date.getHours();
+      hours = hours % 12 || 12;
+      const ampm = hours < 12 ? 'AM' : 'PM';
+      const minutes = ('0' + date.getMinutes()).slice(-2);
+      return `${weekday}, ${month} ${day}, ${year} ${hours}:${minutes} ${ampm}`;
+    }
+  }
+
+  var reg = /(:| |\/|-)/g;
+  var arr = format.split(reg);
+  var result = '';
+  for (const a of arr) {
+    var maps = mappings[a];
+    if (maps) {
+      result += maps();
+    } else {
+      result += a;
+    }
+  }
+  console.log("formatDates", result);
+  return result;
+}
