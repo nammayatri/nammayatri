@@ -56,6 +56,13 @@ findAllIn mfList =
     where_ $ mediaFile ^. MediaFileId `in_` valList (map getId mfList)
     return mediaFile
 
+findAllIn' :: L.MonadFlow m => [Id MediaFile] -> m [MediaFile]
+findAllIn' mfList = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure []) (transformBeamMediaFileToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamMF.id $ Se.In $ getId <$> mfList]
+    Nothing -> pure []
+
 transformBeamMediaFileToDomain :: BeamMF.MediaFile -> MediaFile
 transformBeamMediaFileToDomain BeamMF.MediaFileT {..} = do
   MediaFile

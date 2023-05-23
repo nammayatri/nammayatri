@@ -108,6 +108,13 @@ updateIdleTimes' driverIds = do
 fetchAll :: Transactionable m => m [DriverStats]
 fetchAll = Esq.findAll $ from $ table @DriverStatsT
 
+fetchAll' :: L.MonadFlow m => m [DriverStats]
+fetchAll' = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure []) (transformBeamDriverStatsToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig []
+    Nothing -> pure []
+
 deleteById :: Id Driver -> SqlDB ()
 deleteById = Esq.deleteByKey @DriverStatsT
 

@@ -60,6 +60,13 @@ findAllByPhone phone = do
           ||. exophone1 ^. ExophoneBackupPhone ==. val phone
       return (exophone1 ^. ExophoneMerchantId)
 
+findAllByPhone' :: L.MonadFlow m => Text -> m [Exophone]
+findAllByPhone' phone = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure []) (transformBeamExophoneToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Or [Se.Is BeamE.primaryPhone $ Se.Eq phone, Se.Is BeamE.backupPhone $ Se.Eq phone]]
+    Nothing -> pure []
+
 findAllByMerchantId :: Transactionable m => Id DM.Merchant -> m [Exophone]
 findAllByMerchantId merchantId = do
   findAll $ do
@@ -67,8 +74,22 @@ findAllByMerchantId merchantId = do
     where_ $ exophone ^. ExophoneMerchantId ==. val (toKey merchantId)
     return exophone
 
+findAllByMerchantId' :: L.MonadFlow m => Id DM.Merchant -> m [Exophone]
+findAllByMerchantId' (Id merchantId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure []) (transformBeamExophoneToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamE.merchantId $ Se.Eq merchantId]
+    Nothing -> pure []
+
 findAllExophones :: Transactionable m => m [Exophone]
 findAllExophones = findAll $ from $ table @ExophoneT
+
+findAllExophones' :: L.MonadFlow m => m [Exophone]
+findAllExophones' = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure []) (transformBeamExophoneToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig []
+    Nothing -> pure []
 
 updateAffectedPhones :: [Text] -> SqlDB ()
 updateAffectedPhones primaryPhones = do
@@ -85,6 +106,24 @@ updateAffectedPhones primaryPhones = do
         ExophoneUpdatedAt =. val now
       ]
     where_ $ isPrimaryDown !=. tbl ^. ExophoneIsPrimaryDown
+
+-- updateAffectedPhones' :: (L.MonadFlow m, MonadTime m) => [Text] -> m (MeshResult ())
+-- updateAffectedPhones' primaryPhones = do
+--   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   now <- getCurrentTime
+--   let indianMobileCode = "+91"
+--   -- let isPrimaryDown = Se.Or [ Se.Is BeamE.primaryPhone $ Se.In primaryPhones, Se.Is (indianMobileCode ++ BeamE.primaryPhone) $ Se.In primaryPhones ]
+--   let isPrimaryDown = Se.Or [ Se.Is BeamE.primaryPhone $ Se.In primaryPhones, Se.Is (\eT@BeamE.ExophoneT {..} -> (primaryPhone eT) ++ indianMobileCode) $ Se.In primaryPhones ]
+--   case dbConf of
+--     Just dbConf' ->
+--       KV.updateWoReturningWithKVConnector
+--         dbConf'
+--         Mesh.meshConfig
+--         [ Se.Set BeamE.isPrimaryDown isPrimaryDown,
+--           Se.Set BeamE.updatedAt now
+--         ]
+--         [Se.Is BeamE.isPrimaryDown (Se.Eq isPrimaryDown)]
+--     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 deleteByMerchantId :: Id DM.Merchant -> SqlDB ()
 deleteByMerchantId merchantId = do

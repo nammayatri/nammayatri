@@ -82,6 +82,13 @@ loadAllProviders =
         &&. org ^. MerchantEnabled
     return org
 
+loadAllProviders' :: L.MonadFlow m => m [Merchant]
+loadAllProviders' = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure []) (transformBeamMerchantToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamM.status $ Se.Eq DM.APPROVED, Se.Is BeamM.enabled $ Se.Eq True]]
+    Nothing -> pure []
+
 findAll :: Transactionable m => m [Merchant]
 findAll =
   Esq.findAll $ do from $ table @MerchantT

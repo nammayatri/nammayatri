@@ -76,6 +76,17 @@ findById bookingId = buildDType $ do
       pure rb
   join <$> mapM buildFullBooking res
 
+findById' :: L.MonadFlow m => Id Booking -> m (Maybe Booking)
+findById' (Id bookingId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> do
+      result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamB.id $ Se.Eq bookingId]
+      case result of
+        Right b -> traverse transformBeamBookingToDomain b
+        Left _ -> pure Nothing
+    Nothing -> pure Nothing
+
 findBySearchReq :: (Transactionable m) => Id DSR.SearchRequest -> m (Maybe Booking)
 findBySearchReq searchReqId = buildDType $ do
   mbDriverQuoteT <- QDQuote.findDriverQuoteBySearchId searchReqId
@@ -101,6 +112,21 @@ updateStatus rbId rbStatus = do
       ]
     where_ $ tbl ^. BookingTId ==. val (toKey rbId)
 
+updateStatus' :: (L.MonadFlow m, MonadTime m) => Id Booking -> BookingStatus -> m (MeshResult ())
+updateStatus' rbId rbStatus = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  now <- getCurrentTime
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        Mesh.meshConfig
+        [ Se.Set BeamB.status rbStatus,
+          Se.Set BeamB.updatedAt now
+        ]
+        [Se.Is BeamB.id (Se.Eq $ getId rbId)]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+
 updateRiderId :: Id Booking -> Id RiderDetails -> SqlDB ()
 updateRiderId rbId riderId = do
   now <- getCurrentTime
@@ -111,6 +137,21 @@ updateRiderId rbId riderId = do
         BookingUpdatedAt =. val now
       ]
     where_ $ tbl ^. BookingTId ==. val (toKey rbId)
+
+updateRiderId' :: (L.MonadFlow m, MonadTime m) => Id Booking -> Id RiderDetails -> m (MeshResult ())
+updateRiderId' rbId riderId = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  now <- getCurrentTime
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        Mesh.meshConfig
+        [ Se.Set BeamB.riderId $ Just $ getId riderId,
+          Se.Set BeamB.updatedAt now
+        ]
+        [Se.Is BeamB.id (Se.Eq $ getId rbId)]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 updateRiderName :: Id Booking -> Text -> SqlDB ()
 updateRiderName bookingId riderName = do
@@ -123,6 +164,21 @@ updateRiderName bookingId riderName = do
       ]
     where_ $ tbl ^. BookingTId ==. val (toKey bookingId)
 
+updateRiderName' :: (L.MonadFlow m, MonadTime m) => Id Booking -> Text -> m (MeshResult ())
+updateRiderName' bookingId riderName = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  now <- getCurrentTime
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        Mesh.meshConfig
+        [ Se.Set BeamB.riderName $ Just riderName,
+          Se.Set BeamB.updatedAt now
+        ]
+        [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+
 updateSpecialZoneOtpCode :: Id Booking -> Text -> SqlDB ()
 updateSpecialZoneOtpCode bookingId specialZoneOtpCode = do
   now <- getCurrentTime
@@ -133,6 +189,21 @@ updateSpecialZoneOtpCode bookingId specialZoneOtpCode = do
         BookingUpdatedAt =. val now
       ]
     where_ $ tbl ^. BookingTId ==. val (toKey bookingId)
+
+updateSpecialZoneOtpCode' :: (L.MonadFlow m, MonadTime m) => Id Booking -> Text -> m (MeshResult ())
+updateSpecialZoneOtpCode' bookingId specialZoneOtpCode = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  now <- getCurrentTime
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        Mesh.meshConfig
+        [ Se.Set BeamB.specialZoneOtpCode $ Just specialZoneOtpCode,
+          Se.Set BeamB.updatedAt now
+        ]
+        [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 findStuckBookings :: Transactionable m => Id Merchant -> [Id Booking] -> UTCTime -> m [Id Booking]
 findStuckBookings merchantId bookingIds now = do
@@ -175,6 +246,20 @@ cancelBookings bookingIds now = do
         BookingUpdatedAt =. val now
       ]
     where_ $ tbl ^. BookingTId `in_` valList (toKey <$> bookingIds)
+
+cancelBookings' :: L.MonadFlow m => [Id Booking] -> UTCTime -> m (MeshResult ())
+cancelBookings' bookingIds now = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        Mesh.meshConfig
+        [ Se.Set BeamB.status CANCELLED,
+          Se.Set BeamB.updatedAt now
+        ]
+        [Se.Is BeamB.id (Se.In $ getId <$> bookingIds)]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 findAllBookings :: Transactionable m => m [Id Geometry]
 findAllBookings = do
