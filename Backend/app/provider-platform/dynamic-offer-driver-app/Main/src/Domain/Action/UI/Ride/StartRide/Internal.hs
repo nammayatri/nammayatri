@@ -33,11 +33,11 @@ import qualified Storage.Queries.Ride as QRide
 
 startRideTransaction :: (L.MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SP.Person -> Id SRide.Ride -> Id SRB.Booking -> LatLong -> m ()
 startRideTransaction driverId rideId bookingId firstPoint = do
-  Esq.runTransaction $ do
-    QRide.updateStatus rideId SRide.INPROGRESS
-    QRide.updateStartTimeAndLoc rideId firstPoint
-    QBE.logRideCommencedEvent (cast driverId) bookingId rideId
-    QDFS.updateStatus driverId DDFS.ON_RIDE {rideId}
-    now <- getCurrentTime
-    DrLoc.upsertGpsCoord driverId firstPoint now
+  -- Esq.runTransaction $ do
+  _ <- QRide.updateStatus rideId SRide.INPROGRESS
+  _ <- QRide.updateStartTimeAndLoc rideId firstPoint
+  QBE.logRideCommencedEvent (cast driverId) bookingId rideId
+  QDFS.updateStatus driverId DDFS.ON_RIDE {rideId}
+  now <- getCurrentTime
+  _ <- DrLoc.upsertGpsCoord driverId firstPoint now
   CQRide.clearCache driverId

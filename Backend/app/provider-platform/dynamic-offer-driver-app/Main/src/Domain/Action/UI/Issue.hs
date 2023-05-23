@@ -114,7 +114,7 @@ createFilePath driverId fileType validatedFileExtention = do
 createMediaEntry :: Text -> Common.FileType -> Flow Common.IssueMediaUploadRes
 createMediaEntry url fileType = do
   fileEntity <- mkFile url
-  Esq.runTransaction $ QMF.create fileEntity
+  _ <- QMF.create fileEntity
   return $ Common.IssueMediaUploadRes {fileId = cast $ fileEntity.id}
   where
     mapToMediaFileType = \case
@@ -166,7 +166,8 @@ createIssueReport driverId Common.IssueReportReq {..} = do
   whenJust optionId $ \justOptionId ->
     void $ CQIO.findByIdAndCategoryId (cast justOptionId) (cast categoryId) >>= fromMaybeM (IssueOptionInvalid justOptionId.getId categoryId.getId)
   whenJust rideId $ \justRideId ->
-    void $ Esq.runInReplica (QRide.findById $ cast justRideId) >>= fromMaybeM (RideNotFound justRideId.getId)
+    -- void $ Esq.runInReplica (QRide.findById $ cast justRideId) >>= fromMaybeM (RideNotFound justRideId.getId)
+    void $ (QRide.findById $ cast justRideId) >>= fromMaybeM (RideNotFound justRideId.getId)
   forM_ mediaFiles $ \mediaFile ->
     void $ CQMF.findById (cast mediaFile) >>= fromMaybeM (FileDoNotExist mediaFile.getId)
   issueReport <- mkIssueReport

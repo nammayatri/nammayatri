@@ -200,7 +200,7 @@ enableDriver merchantShortId reqDriverId = do
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
   _vehicle <- QVehicle.findById personId >>= fromMaybeM (VehicleDoesNotExist personId.getId)
-  CQDriverInfo.updateEnabledState driverId True
+  _ <- CQDriverInfo.updateEnabledState driverId True
   logTagInfo "dashboard -> enableDriver : " (show personId)
   pure Success
 
@@ -218,7 +218,7 @@ disableDriver merchantShortId reqDriverId = do
   -- merchant access checking
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  CQDriverInfo.updateEnabledState driverId False
+  _ <- CQDriverInfo.updateEnabledState driverId False
   logTagInfo "dashboard -> disableDriver : " (show personId)
   pure Success
 
@@ -237,7 +237,7 @@ blockDriver merchantShortId reqDriverId = do
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  CQDriverInfo.updateBlockedState driverId True
+  _ <- CQDriverInfo.updateBlockedState driverId True
   logTagInfo "dashboard -> blockDriver : " (show personId)
   pure Success
 
@@ -256,7 +256,7 @@ unblockDriver merchantShortId reqDriverId = do
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  CQDriverInfo.updateBlockedState driverId False
+  _ <- CQDriverInfo.updateBlockedState driverId False
   logTagInfo "dashboard -> unblockDriver : " (show personId)
   pure Success
 
@@ -416,7 +416,7 @@ unlinkVehicle merchantShortId reqDriverId = do
   Esq.runTransaction $ do
     QVehicle.deleteById personId
     QRCAssociation.endAssociation personId
-  CQDriverInfo.updateEnabledVerifiedState driverId False False
+  _ <- CQDriverInfo.updateEnabledVerifiedState driverId False False
   logTagInfo "dashboard -> unlinkVehicle : " (show personId)
   pure Success
 
@@ -550,7 +550,7 @@ unlinkDL merchantShortId driverId = do
 
   Esq.runTransaction $ do
     QDriverLicense.deleteByDriverId personId
-  CQDriverInfo.updateEnabledVerifiedState driverId_ False False
+  _ <- CQDriverInfo.updateEnabledVerifiedState driverId_ False False
   logTagInfo "dashboard -> unlinkDL : " (show personId)
   pure Success
 
@@ -568,6 +568,6 @@ endRCAssociation merchantShortId reqDriverId = do
 
   Esq.runTransaction $ do
     QRCAssociation.endAssociation personId
-  CQDriverInfo.updateEnabledVerifiedState driverId False False
+  _ <- CQDriverInfo.updateEnabledVerifiedState driverId False False
   logTagInfo "dashboard -> endRCAssociation : " (show personId)
   pure Success

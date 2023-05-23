@@ -36,48 +36,48 @@ import qualified Storage.Beam.OnboardingDocumentConfig as BeamODC
 import Storage.Tabular.OnboardingDocumentConfig
 import qualified Storage.Tabular.VechileNew as VN
 
-create :: OnboardingDocumentConfig -> SqlDB ()
-create = Esq.create
+-- create :: OnboardingDocumentConfig -> SqlDB ()
+-- create = Esq.create
 
-create' :: L.MonadFlow m => DODC.OnboardingDocumentConfig -> m (MeshResult ())
-create' onboardingDocumentConfig = do
+create :: L.MonadFlow m => DODC.OnboardingDocumentConfig -> m (MeshResult ())
+create onboardingDocumentConfig = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainOnboardingDocumentConfigToBeam onboardingDocumentConfig)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-findByMerchantIdAndDocumentType :: Transactionable m => Id Merchant -> DocumentType -> m (Maybe OnboardingDocumentConfig)
-findByMerchantIdAndDocumentType merchantId documentType =
-  Esq.findOne $ do
-    config <- from $ table @OnboardingDocumentConfigT
-    where_ $
-      config ^. OnboardingDocumentConfigMerchantId ==. val (toKey merchantId)
-        &&. config ^. OnboardingDocumentConfigDocumentType ==. val documentType
-    return config
+-- findByMerchantIdAndDocumentType :: Transactionable m => Id Merchant -> DocumentType -> m (Maybe OnboardingDocumentConfig)
+-- findByMerchantIdAndDocumentType merchantId documentType =
+--   Esq.findOne $ do
+--     config <- from $ table @OnboardingDocumentConfigT
+--     where_ $
+--       config ^. OnboardingDocumentConfigMerchantId ==. val (toKey merchantId)
+--         &&. config ^. OnboardingDocumentConfigDocumentType ==. val documentType
+--     return config
 
-findByMerchantIdAndDocumentType' :: L.MonadFlow m => Id Merchant -> DocumentType -> m (Maybe OnboardingDocumentConfig)
-findByMerchantIdAndDocumentType' merchantId documentType = do
+findByMerchantIdAndDocumentType :: L.MonadFlow m => Id Merchant -> DocumentType -> m (Maybe OnboardingDocumentConfig)
+findByMerchantIdAndDocumentType merchantId documentType = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamOnboardingDocumentConfigToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.And [Se.Is BeamODC.merchantId $ Se.Eq $ getId merchantId, Se.Is BeamODC.documentType $ Se.Eq documentType]]
     Nothing -> pure Nothing
 
-update :: OnboardingDocumentConfig -> SqlDB ()
-update config = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ OnboardingDocumentConfigCheckExtraction =. val config.checkExtraction,
-        OnboardingDocumentConfigCheckExpiry =. val config.checkExpiry,
-        OnboardingDocumentConfigValidVehicleClasses =. val (PostgresList config.validVehicleClasses),
-        OnboardingDocumentConfigVehicleClassCheckType =. val config.vehicleClassCheckType,
-        OnboardingDocumentConfigUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. OnboardingDocumentConfigTId ==. val (toKey (config.merchantId, config.documentType))
+-- update :: OnboardingDocumentConfig -> SqlDB ()
+-- update config = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ OnboardingDocumentConfigCheckExtraction =. val config.checkExtraction,
+--         OnboardingDocumentConfigCheckExpiry =. val config.checkExpiry,
+--         OnboardingDocumentConfigValidVehicleClasses =. val (PostgresList config.validVehicleClasses),
+--         OnboardingDocumentConfigVehicleClassCheckType =. val config.vehicleClassCheckType,
+--         OnboardingDocumentConfigUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. OnboardingDocumentConfigTId ==. val (toKey (config.merchantId, config.documentType))
 
-update' :: (L.MonadFlow m, MonadTime m) => OnboardingDocumentConfig -> m (MeshResult ())
-update' config = do
+update :: (L.MonadFlow m, MonadTime m) => OnboardingDocumentConfig -> m (MeshResult ())
+update config = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   now <- getCurrentTime
   case dbConf of

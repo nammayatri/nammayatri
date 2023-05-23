@@ -40,9 +40,7 @@ data DRatingReq = DRatingReq
 handler :: DRatingReq -> Flow ()
 handler req = do
   booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
-  ride <-
-    QRide.findActiveByRBId booking.id
-      >>= fromMaybeM (RideNotFound booking.id.getId)
+  ride <- QRide.findActiveByRBId booking.id >>= fromMaybeM (RideNotFound booking.id.getId)
   rating <- QRating.findRatingForRide ride.id
   let driverId = ride.driverId
   unless (ride.status == DRide.COMPLETED) $

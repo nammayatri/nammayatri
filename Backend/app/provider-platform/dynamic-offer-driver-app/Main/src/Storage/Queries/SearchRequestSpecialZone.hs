@@ -77,19 +77,19 @@ fullSearchRequestTable =
     `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& loc1) -> s ^. SearchRequestSpecialZoneFromLocationId ==. loc1 ^. SearchReqLocationTId)
     `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& _ :& loc2) -> s ^. SearchRequestSpecialZoneToLocationId ==. loc2 ^. SearchReqLocationTId)
 
-getRequestIdfromTransactionId ::
-  (Transactionable m) =>
-  Id SearchRequestSpecialZone ->
-  m (Maybe (Id SearchRequestSpecialZone))
-getRequestIdfromTransactionId tId = do
-  findOne $ do
-    searchT <- from $ table @SearchRequestSpecialZoneT
-    where_ $
-      searchT ^. SearchRequestSpecialZoneTransactionId ==. val (getId tId)
-    return $ searchT ^. SearchRequestSpecialZoneTId
+-- getRequestIdfromTransactionId ::
+--   (Transactionable m) =>
+--   Id SearchRequestSpecialZone ->
+--   m (Maybe (Id SearchRequestSpecialZone))
+-- getRequestIdfromTransactionId tId = do
+--   findOne $ do
+--     searchT <- from $ table @SearchRequestSpecialZoneT
+--     where_ $
+--       searchT ^. SearchRequestSpecialZoneTransactionId ==. val (getId tId)
+--     return $ searchT ^. SearchRequestSpecialZoneTId
 
-getRequestIdfromTransactionId' :: L.MonadFlow m => Id SearchRequestSpecialZone -> m (Maybe (Id SearchRequestSpecialZone))
-getRequestIdfromTransactionId' (Id tId) = do
+getRequestIdfromTransactionId :: L.MonadFlow m => Id SearchRequestSpecialZone -> m (Maybe (Id SearchRequestSpecialZone))
+getRequestIdfromTransactionId (Id tId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
@@ -102,19 +102,19 @@ getRequestIdfromTransactionId' (Id tId) = do
           pure vTill
     Nothing -> pure Nothing
 
-findByMsgIdAndBapIdAndBppId :: Transactionable m => Text -> Text -> Id Merchant -> m (Maybe SearchRequestSpecialZone)
-findByMsgIdAndBapIdAndBppId txnId bapId merchantId = Esq.buildDType $ do
-  mbFullSearchReqT <- Esq.findOne' $ do
-    (sReq :& sFromLoc :& mbSToLoc) <- from fullSearchRequestTable
-    where_ $
-      sReq ^. SearchRequestSpecialZoneMessageId ==. val txnId
-        &&. sReq ^. SearchRequestSpecialZoneProviderId ==. val (toKey merchantId)
-        &&. sReq ^. SearchRequestSpecialZoneBapId ==. val bapId
-    pure (sReq, sFromLoc, mbSToLoc)
-  pure $ extractSolidType @SearchRequestSpecialZone <$> mbFullSearchReqT
+-- findByMsgIdAndBapIdAndBppId :: Transactionable m => Text -> Text -> Id Merchant -> m (Maybe SearchRequestSpecialZone)
+-- findByMsgIdAndBapIdAndBppId txnId bapId merchantId = Esq.buildDType $ do
+--   mbFullSearchReqT <- Esq.findOne' $ do
+--     (sReq :& sFromLoc :& mbSToLoc) <- from fullSearchRequestTable
+--     where_ $
+--       sReq ^. SearchRequestSpecialZoneMessageId ==. val txnId
+--         &&. sReq ^. SearchRequestSpecialZoneProviderId ==. val (toKey merchantId)
+--         &&. sReq ^. SearchRequestSpecialZoneBapId ==. val bapId
+--     pure (sReq, sFromLoc, mbSToLoc)
+--   pure $ extractSolidType @SearchRequestSpecialZone <$> mbFullSearchReqT
 
-findByMsgIdAndBapIdAndBppId' :: L.MonadFlow m => Text -> Text -> Id Merchant -> m (Maybe SearchRequestSpecialZone)
-findByMsgIdAndBapIdAndBppId' txnId bapId (Id merchantId) = do
+findByMsgIdAndBapIdAndBppId :: L.MonadFlow m => Text -> Text -> Id Merchant -> m (Maybe SearchRequestSpecialZone)
+findByMsgIdAndBapIdAndBppId txnId bapId (Id merchantId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
@@ -124,19 +124,19 @@ findByMsgIdAndBapIdAndBppId' txnId bapId (Id merchantId) = do
         Right x -> mapM transformBeamSearchRequestSpecialZoneToDomain x
     Nothing -> pure Nothing
 
-getValidTill ::
-  (Transactionable m) =>
-  Id SearchRequestSpecialZone ->
-  m (Maybe UTCTime)
-getValidTill searchRequestId = do
-  findOne $ do
-    searchT <- from $ table @SearchRequestSpecialZoneT
-    where_ $
-      searchT ^. SearchRequestSpecialZoneTId ==. val (toKey searchRequestId)
-    return $ searchT ^. SearchRequestSpecialZoneValidTill
+-- getValidTill ::
+--   (Transactionable m) =>
+--   Id SearchRequestSpecialZone ->
+--   m (Maybe UTCTime)
+-- getValidTill searchRequestId = do
+--   findOne $ do
+--     searchT <- from $ table @SearchRequestSpecialZoneT
+--     where_ $
+--       searchT ^. SearchRequestSpecialZoneTId ==. val (toKey searchRequestId)
+--     return $ searchT ^. SearchRequestSpecialZoneValidTill
 
-getValidTill' :: L.MonadFlow m => Id SearchRequestSpecialZone -> m (Maybe UTCTime)
-getValidTill' (Id searchRequestId) = do
+getValidTill :: L.MonadFlow m => Id SearchRequestSpecialZone -> m (Maybe UTCTime)
+getValidTill (Id searchRequestId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do

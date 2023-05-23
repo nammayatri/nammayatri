@@ -77,15 +77,15 @@ merchantUpdate merchantShortId req = do
       throwError $ InvalidRequest $ "Next phones are already in use: " <> show busyPhones
     pure allExophones
 
-  Esq.runTransaction $ do
-    CQM.update updMerchant
-    whenJust req.exoPhones \exophones -> do
-      CQExophone.deleteByMerchantId merchant.id
-      forM_ exophones $ \exophoneReq -> do
-        exophone <- buildExophone merchant.id now exophoneReq
-        CQExophone.create exophone
-    whenJust req.fcmConfig $
-      \fcmConfig -> CQTC.updateFCMConfig merchant.id fcmConfig.fcmUrl fcmConfig.fcmServiceAccount
+  -- Esq.runTransaction $ do
+  CQM.update updMerchant
+  whenJust req.exoPhones \exophones -> do
+    CQExophone.deleteByMerchantId merchant.id
+    forM_ exophones $ \exophoneReq -> do
+      exophone <- buildExophone merchant.id now exophoneReq
+      CQExophone.create exophone
+  whenJust req.fcmConfig $
+    \fcmConfig -> CQTC.updateFCMConfig merchant.id fcmConfig.fcmUrl fcmConfig.fcmServiceAccount
 
   CQM.clearCache updMerchant
   whenJust mbAllExophones $ \allExophones -> do
@@ -275,8 +275,7 @@ onboardingDocumentConfigUpdate merchantShortId reqDocumentType req = do
                validVehicleClasses = fromMaybe config.validVehicleClasses req.validVehicleClasses,
                vehicleClassCheckType = maybe config.vehicleClassCheckType (castVehicleClassCheckType . (.value)) req.vehicleClassCheckType
               }
-  Esq.runTransaction $ do
-    CQODC.update updConfig
+  CQODC.update updConfig
   CQODC.clearCache merchant.id documentType
   logTagInfo "dashboard -> onboardingDocumentConfigUpdate : " $ show merchant.id <> "documentType : " <> show documentType
   pure Success
@@ -306,8 +305,7 @@ onboardingDocumentConfigCreate merchantShortId reqDocumentType req = do
   mbConfig <- CQODC.findByMerchantIdAndDocumentType merchant.id documentType
   whenJust mbConfig $ \_ -> throwError (OnboardingDocumentConfigAlreadyExists merchant.id.getId $ show documentType)
   newConfig <- buildOnboardingDocumentConfig merchant.id documentType req
-  Esq.runTransaction $ do
-    CQODC.create newConfig
+  CQODC.create newConfig
   logTagInfo "dashboard -> onboardingDocumentConfigCreate : " $ show merchant.id <> "documentType : " <> show documentType
   pure Success
 

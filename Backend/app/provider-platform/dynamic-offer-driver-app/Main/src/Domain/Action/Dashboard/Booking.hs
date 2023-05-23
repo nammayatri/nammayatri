@@ -67,8 +67,8 @@ stuckBookingsCancel merchantShortId req = do
   -- drivers going out of ride, update location from redis to db
   driverLocations <- catMaybes <$> traverse SDrLoc.findById stuckPersonIds
   Esq.runTransaction $ do
-    QRide.updateStatusByIds (stuckRideItems <&> (.rideId)) DRide.CANCELLED
-    QBooking.cancelBookings allStuckBookingIds now
+    (QRide.updateStatusByIds (stuckRideItems <&> (.rideId)) DRide.CANCELLED)
+    (QBooking.cancelBookings allStuckBookingIds now)
     for_ (bcReasons <> bcReasonsWithRides) QBCR.upsert
     for_ driverLocations $ \location -> do
       let latLong = LatLong location.lat location.lon

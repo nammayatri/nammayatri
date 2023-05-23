@@ -166,7 +166,7 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) =
 
 arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CoreMetrics m, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["driverReachedDistance" ::: HighPrecMeters]) => Id DRide.Ride -> LatLong -> m APISuccess
 arrivedAtPickup rideId req = do
-  ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  ride <- (runInReplica $ QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus "The ride has already started."
   booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   let pickupLoc = getCoordinates booking.fromLocation
@@ -210,7 +210,7 @@ otpRideCreate driver otpCode booking = do
   rideDetails <- buildRideDetails ride
   Esq.runTransaction $ do
     QBooking.updateStatus booking.id DRB.TRIP_ASSIGNED
-    QRide.create ride
+    (QRide.create ride)
     QDFS.updateStatus driver.id DDFS.RIDE_ASSIGNED {rideId = ride.id}
     QRideD.create rideDetails
     QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id

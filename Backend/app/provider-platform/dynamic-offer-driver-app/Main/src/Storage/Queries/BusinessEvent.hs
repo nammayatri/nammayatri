@@ -35,6 +35,7 @@ import qualified Storage.Beam.BusinessEvent as BeamBE
 import Storage.Tabular.BusinessEvent ()
 
 logBusinessEvent ::
+  (L.MonadFlow m, MonadGuid m, MonadTime m) =>
   Maybe (Id Driver) ->
   EventType ->
   Maybe (Id Booking) ->
@@ -43,25 +44,56 @@ logBusinessEvent ::
   Maybe Meters ->
   Maybe Seconds ->
   Maybe (Id Ride) ->
-  SqlDB ()
+  m ()
 logBusinessEvent driverId eventType bookingId whenPoolWasComputed variant distance duration rideId = do
   uuid <- generateGUID
   now <- getCurrentTime
-  Esq.create $
-    BusinessEvent
-      { id = uuid,
-        eventType = eventType,
-        timeStamp = now,
-        driverId = driverId,
-        bookingId = bookingId,
-        whenPoolWasComputed = whenPoolWasComputed,
-        vehicleVariant = variant,
-        distance = distance,
-        duration = duration,
-        rideId = rideId
-      }
+  let bE =
+        BusinessEvent
+          { id = uuid,
+            eventType = eventType,
+            timeStamp = now,
+            driverId = driverId,
+            bookingId = bookingId,
+            whenPoolWasComputed = whenPoolWasComputed,
+            vehicleVariant = variant,
+            distance = distance,
+            duration = duration,
+            rideId = rideId
+          }
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> void $ KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainBusinessEventToBeam bE)
+    Nothing -> pure ()
 
-logDriverAssignedEvent :: Id Driver -> Id Booking -> Id Ride -> SqlDB ()
+-- logBusinessEvent ::
+--   Maybe (Id Driver) ->
+--   EventType ->
+--   Maybe (Id Booking) ->
+--   Maybe WhenPoolWasComputed ->
+--   Maybe Variant ->
+--   Maybe Meters ->
+--   Maybe Seconds ->
+--   Maybe (Id Ride) ->
+--   SqlDB ()
+-- logBusinessEvent driverId eventType bookingId whenPoolWasComputed variant distance duration rideId = do
+--   uuid <- generateGUID
+--   now <- getCurrentTime
+--   Esq.create $
+--     BusinessEvent
+--       { id = uuid,
+--         eventType = eventType,
+--         timeStamp = now,
+--         driverId = driverId,
+--         bookingId = bookingId,
+--         whenPoolWasComputed = whenPoolWasComputed,
+--         vehicleVariant = variant,
+--         distance = distance,
+--         duration = duration,
+--         rideId = rideId
+--       }
+
+logDriverAssignedEvent :: (L.MonadFlow m, MonadGuid m, MonadTime m) => Id Driver -> Id Booking -> Id Ride -> m ()
 logDriverAssignedEvent driverId bookingId rideId = do
   logBusinessEvent
     (Just driverId)
@@ -73,7 +105,7 @@ logDriverAssignedEvent driverId bookingId rideId = do
     Nothing
     (Just rideId)
 
-logRideConfirmedEvent :: Id Booking -> SqlDB ()
+logRideConfirmedEvent :: (L.MonadFlow m, MonadGuid m, MonadTime m) => Id Booking -> m ()
 logRideConfirmedEvent bookingId = do
   logBusinessEvent
     Nothing
@@ -85,7 +117,7 @@ logRideConfirmedEvent bookingId = do
     Nothing
     Nothing
 
-logRideCommencedEvent :: Id Driver -> Id Booking -> Id Ride -> SqlDB ()
+logRideCommencedEvent :: (L.MonadFlow m, MonadGuid m, MonadTime m) => Id Driver -> Id Booking -> Id Ride -> m ()
 logRideCommencedEvent driverId bookingId rideId = do
   logBusinessEvent
     (Just driverId)

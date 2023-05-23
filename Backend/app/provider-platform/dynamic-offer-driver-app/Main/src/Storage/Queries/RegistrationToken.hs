@@ -30,39 +30,39 @@ import qualified Storage.Beam.RegistrationToken as BeamRT
 import Storage.Tabular.RegistrationToken
 import qualified Storage.Tabular.VechileNew as VN
 
-create :: RegistrationToken -> SqlDB ()
-create = Esq.create
+-- create :: RegistrationToken -> SqlDB ()
+-- create = Esq.create
 
-create' :: L.MonadFlow m => DRT.RegistrationToken -> m (MeshResult ())
-create' registrationToken = do
+create :: L.MonadFlow m => DRT.RegistrationToken -> m (MeshResult ())
+create registrationToken = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainRegistrationTokenToBeam registrationToken)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-findById :: Transactionable m => Id RegistrationToken -> m (Maybe RegistrationToken)
-findById = Esq.findById
+-- findById :: Transactionable m => Id RegistrationToken -> m (Maybe RegistrationToken)
+-- findById = Esq.findById
 
-findById' :: L.MonadFlow m => Id RegistrationToken -> m (Maybe RegistrationToken)
-findById' (Id registrationTokenId) = do
+findById :: L.MonadFlow m => Id RegistrationToken -> m (Maybe RegistrationToken)
+findById (Id registrationTokenId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamRegistrationTokenToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamRT.id $ Se.Eq registrationTokenId]
     Nothing -> pure Nothing
 
-setVerified :: Id RegistrationToken -> SqlDB ()
-setVerified rtId = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ RegistrationTokenVerified =. val True,
-        RegistrationTokenUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. RegistrationTokenTId ==. val (toKey rtId)
+-- setVerified :: Id RegistrationToken -> SqlDB ()
+-- setVerified rtId = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ RegistrationTokenVerified =. val True,
+--         RegistrationTokenUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. RegistrationTokenTId ==. val (toKey rtId)
 
-setVerified' :: (L.MonadFlow m, MonadTime m) => Id RegistrationToken -> m (MeshResult ())
-setVerified' (Id rtId) = do
+setVerified :: (L.MonadFlow m, MonadTime m) => Id RegistrationToken -> m (MeshResult ())
+setVerified (Id rtId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   now <- getCurrentTime
   case dbConf of
@@ -76,33 +76,33 @@ setVerified' (Id rtId) = do
         [Se.Is BeamRT.id (Se.Eq rtId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-findByToken :: Transactionable m => RegToken -> m (Maybe RegistrationToken)
-findByToken token =
-  findOne $ do
-    regToken <- from $ table @RegistrationTokenT
-    where_ $ regToken ^. RegistrationTokenToken ==. val token
-    return regToken
+-- findByToken :: Transactionable m => RegToken -> m (Maybe RegistrationToken)
+-- findByToken token =
+--   findOne $ do
+--     regToken <- from $ table @RegistrationTokenT
+--     where_ $ regToken ^. RegistrationTokenToken ==. val token
+--     return regToken
 
-findByToken' :: L.MonadFlow m => RegToken -> m (Maybe RegistrationToken)
-findByToken' token = do
+findByToken :: L.MonadFlow m => RegToken -> m (Maybe RegistrationToken)
+findByToken token = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamRegistrationTokenToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamRT.token $ Se.Eq token]
     Nothing -> pure Nothing
 
-updateAttempts :: Int -> Id RegistrationToken -> SqlDB ()
-updateAttempts attemps rtId = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ RegistrationTokenAttempts =. val attemps,
-        RegistrationTokenUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. RegistrationTokenTId ==. val (toKey rtId)
+-- updateAttempts :: Int -> Id RegistrationToken -> SqlDB ()
+-- updateAttempts attemps rtId = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ RegistrationTokenAttempts =. val attemps,
+--         RegistrationTokenUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. RegistrationTokenTId ==. val (toKey rtId)
 
-updateAttempts' :: (L.MonadFlow m, MonadTime m) => Int -> Id RegistrationToken -> m (MeshResult ())
-updateAttempts' attempts (Id rtId) = do
+updateAttempts :: (L.MonadFlow m, MonadTime m) => Int -> Id RegistrationToken -> m (MeshResult ())
+updateAttempts attempts (Id rtId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   now <- getCurrentTime
   case dbConf of
@@ -154,30 +154,30 @@ deleteByPersonIdExceptNew' (Id personId) (Id newRT) = do
           [Se.And [Se.Is BeamRT.entityId (Se.Eq personId), Se.Is BeamRT.id (Se.Eq newRT)]]
     Nothing -> pure ()
 
-findAllByPersonId :: Transactionable m => Id Person -> m [RegistrationToken]
-findAllByPersonId personId =
-  findAll $ do
-    regToken <- from $ table @RegistrationTokenT
-    where_ $ regToken ^. RegistrationTokenEntityId ==. val (getId personId)
-    return regToken
+-- findAllByPersonId :: Transactionable m => Id Person -> m [RegistrationToken]
+-- findAllByPersonId personId =
+--   findAll $ do
+--     regToken <- from $ table @RegistrationTokenT
+--     where_ $ regToken ^. RegistrationTokenEntityId ==. val (getId personId)
+--     return regToken
 
-findAllByPersonId' :: L.MonadFlow m => Id Person -> m [RegistrationToken]
-findAllByPersonId' personId = do
+findAllByPersonId :: L.MonadFlow m => Id Person -> m [RegistrationToken]
+findAllByPersonId personId = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure []) (transformBeamRegistrationTokenToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamRT.entityId $ Se.Eq $ getId personId]
     Nothing -> pure []
 
-getAlternateNumberAttempts :: Transactionable m => Id Person -> m Int
-getAlternateNumberAttempts personId =
-  fromMaybe 5 . listToMaybe
-    <$> Esq.findAll do
-      attempts <- from $ table @RegistrationTokenT
-      where_ $ attempts ^. RegistrationTokenEntityId ==. val (getId personId)
-      return $ attempts ^. RegistrationTokenAlternateNumberAttempts
+-- getAlternateNumberAttempts :: Transactionable m => Id Person -> m Int
+-- getAlternateNumberAttempts personId =
+--   fromMaybe 5 . listToMaybe
+--     <$> Esq.findAll do
+--       attempts <- from $ table @RegistrationTokenT
+--       where_ $ attempts ^. RegistrationTokenEntityId ==. val (getId personId)
+--       return $ attempts ^. RegistrationTokenAlternateNumberAttempts
 
-getAlternateNumberAttempts' :: L.MonadFlow m => Id Person -> m Int
-getAlternateNumberAttempts' (Id personId) = do
+getAlternateNumberAttempts :: L.MonadFlow m => Id Person -> m Int
+getAlternateNumberAttempts (Id personId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> do

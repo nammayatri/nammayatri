@@ -140,15 +140,16 @@ getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus = do
         person <- runInReplica $ QPerson.findByMobileNumberAndMerchant "+91" dtmfMobileHash exophone.merchantId >>= fromMaybeM (PersonWithPhoneNotFound dtmfNumber)
         return (person, Just dtmfNumber)
       Just entity -> return (entity, Nothing)
-  activeRide <- runInReplica $ QRide.getActiveByDriverId driver.id >>= fromMaybeM (RideForDriverNotFound $ getId driver.id)
-  activeBooking <- runInReplica $ QRB.findById activeRide.bookingId >>= fromMaybeM (BookingNotFound $ getId activeRide.bookingId)
+  activeRide <- (runInReplica $ QRide.getActiveByDriverId driver.id) >>= fromMaybeM (RideForDriverNotFound $ getId driver.id)
+  activeBooking <- (runInReplica $ QRB.findById activeRide.bookingId) >>= fromMaybeM (BookingNotFound $ getId activeRide.bookingId)
   riderId <-
     activeBooking.riderId
       & fromMaybeM (BookingFieldNotPresent "riderId")
   riderDetails <-
-    runInReplica $
-      QRD.findById riderId
-        >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
+    ( runInReplica $
+        QRD.findById riderId
+      )
+      >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
   requestorPhone <- decrypt riderDetails.mobileNumber
   callId <- generateGUID
   callStatusObj <- buildCallStatus activeRide.id callId callSid (exotelStatusToInterfaceStatus callStatus) dtmfNumberUsed

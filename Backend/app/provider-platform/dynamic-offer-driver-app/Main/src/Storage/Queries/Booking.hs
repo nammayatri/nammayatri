@@ -269,9 +269,9 @@ findAllBookings = do
 
 transformBeamBookingToDomain :: L.MonadFlow m => BeamB.Booking -> m Booking
 transformBeamBookingToDomain BeamB.BookingT {..} = do
-  fl <- QBBL.findById' (Id fromLocationId)
-  tl <- QBBL.findById' (Id toLocationId)
-  fp <- QueriesFP.findById' (Id fareParametersId)
+  fl <- QBBL.findById (Id fromLocationId)
+  tl <- QBBL.findById (Id toLocationId)
+  fp <- QueriesFP.findById (Id fareParametersId)
   pUrl <- parseBaseUrl bapUri
   pure
     Booking

@@ -325,7 +325,7 @@ cancelBooking booking mbDriver transporter = do
       QDFS.updateStatus ride.driverId $ DMode.getDriverStatus driverInfo.mode driverInfo.active
   whenJust mbRide $ \ride -> do
     SRide.clearCache ride.driverId
-    DLoc.updateOnRide (cast ride.driverId) False
+    void $ DLoc.updateOnRide (cast ride.driverId) False
   fork "cancelBooking - Notify BAP" $ do
     BP.sendBookingCancelledUpdateToBAP booking transporter bookingCancellationReason.source
   whenJust mbRide $ \ride ->

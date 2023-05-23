@@ -26,15 +26,15 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.CancellationReason as BeamCR
 import Storage.Tabular.CancellationReason
 
-findAll :: Transactionable m => m [CancellationReason]
-findAll = Esq.findAll $ do
-  cancellationReason <- from $ table @CancellationReasonT
-  where_ $ cancellationReason ^. CancellationReasonEnabled
-  orderBy [desc $ cancellationReason ^. CancellationReasonPriority]
-  return cancellationReason
+-- findAll :: Transactionable m => m [CancellationReason]
+-- findAll = Esq.findAll $ do
+--   cancellationReason <- from $ table @CancellationReasonT
+--   where_ $ cancellationReason ^. CancellationReasonEnabled
+--   orderBy [desc $ cancellationReason ^. CancellationReasonPriority]
+--   return cancellationReason
 
-findAll' :: L.MonadFlow m => m [CancellationReason]
-findAll' = do
+findAll :: L.MonadFlow m => m [CancellationReason]
+findAll = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure []) (transformBeamCancellationReasonToDomain <$>) <$> KV.findAllWithOptionsKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamCR.enabled $ Se.Eq True] (Se.Desc BeamCR.priority) Nothing Nothing

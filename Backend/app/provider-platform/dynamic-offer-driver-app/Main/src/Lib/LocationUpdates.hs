@@ -45,7 +45,7 @@ buildRideInterpolationHandler orgId isEndRide = do
     DOSC.MapsServiceConfig cfg ->
       return $
         mkRideInterpolationHandler isEndRide cfg $
-          \driverId dist -> Esq.runTransaction $ QRide.updateDistance driverId dist
+          \driverId dist -> void $ (QRide.updateDistance driverId dist)
     _ -> throwError $ InternalError "Unknown Service Config"
 
 whenWithLocationUpdatesLock :: (HedisFlow m r, MonadMask m) => Id DP.Person -> m () -> m ()

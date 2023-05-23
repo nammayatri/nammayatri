@@ -49,7 +49,7 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
     Just _ -> ESQ.runTransaction $ QRD.updateReferralInfo numberHash merchant.id referralCode driverReferralLinkage.driverId
     Nothing -> do
       riderDetails <- mkRiderDetailsObj driverReferralLinkage.driverId
-      ESQ.runTransaction $ QRD.create riderDetails
+      QRD.create riderDetails
   pure Success
   where
     mkRiderDetailsObj driverId = do

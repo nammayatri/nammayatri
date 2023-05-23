@@ -39,21 +39,21 @@ create dsReq = Esq.runTransaction $
     Esq.create' toLoc
     Esq.create' sReq
 
-findById :: Transactionable m => Id SearchRequest -> m (Maybe SearchRequest)
-findById searchRequestId = buildDType $
-  fmap (fmap $ extractSolidType @Domain.SearchRequest) $
-    Esq.findOne' $ do
-      (sReq :& sFromLoc :& sToLoc) <-
-        from
-          ( table @SearchRequestT
-              `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& loc1) -> s ^. SearchRequestFromLocationId ==. loc1 ^. SearchReqLocationTId)
-              `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& _ :& loc2) -> s ^. SearchRequestToLocationId ==. loc2 ^. SearchReqLocationTId)
-          )
-      where_ $ sReq ^. SearchRequestTId ==. val (toKey searchRequestId)
-      pure (sReq, sFromLoc, sToLoc)
+-- findById :: Transactionable m => Id SearchRequest -> m (Maybe SearchRequest)
+-- findById searchRequestId = buildDType $
+--   fmap (fmap $ extractSolidType @Domain.SearchRequest) $
+--     Esq.findOne' $ do
+--       (sReq :& sFromLoc :& sToLoc) <-
+--         from
+--           ( table @SearchRequestT
+--               `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& loc1) -> s ^. SearchRequestFromLocationId ==. loc1 ^. SearchReqLocationTId)
+--               `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& _ :& loc2) -> s ^. SearchRequestToLocationId ==. loc2 ^. SearchReqLocationTId)
+--           )
+--       where_ $ sReq ^. SearchRequestTId ==. val (toKey searchRequestId)
+--       pure (sReq, sFromLoc, sToLoc)
 
-findById' :: L.MonadFlow m => Id SearchRequest -> m (Maybe SearchRequest)
-findById' (Id searchRequestId) = do
+findById :: L.MonadFlow m => Id SearchRequest -> m (Maybe SearchRequest)
+findById (Id searchRequestId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
@@ -77,22 +77,22 @@ findById' (Id searchRequestId) = do
 --   toLocation <- Esq.findByIdM @SearchReqLocationT toLocationId
 --   pure $ extractSolidType @SearchRequest (searchRequest, fromLocation, toLocation)
 
-updateStatus ::
-  Id SearchRequest ->
-  SearchRequestStatus ->
-  SqlDB ()
-updateStatus searchId status_ = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ SearchRequestUpdatedAt =. val now,
-        SearchRequestStatus =. val status_
-      ]
-    where_ $ tbl ^. SearchRequestTId ==. val (toKey searchId)
+-- updateStatus ::
+--   Id SearchRequest ->
+--   SearchRequestStatus ->
+--   SqlDB ()
+-- updateStatus searchId status_ = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ SearchRequestUpdatedAt =. val now,
+--         SearchRequestStatus =. val status_
+--       ]
+--     where_ $ tbl ^. SearchRequestTId ==. val (toKey searchId)
 
-updateStatus' :: (L.MonadFlow m, MonadTime m) => Id SearchRequest -> SearchRequestStatus -> m (MeshResult ())
-updateStatus' (Id searchId) status_ = do
+updateStatus :: (L.MonadFlow m, MonadTime m) => Id SearchRequest -> SearchRequestStatus -> m (MeshResult ())
+updateStatus (Id searchId) status_ = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   now <- getCurrentTime
   case dbConf of
@@ -106,19 +106,19 @@ updateStatus' (Id searchId) status_ = do
         [Se.Is BeamSR.id (Se.Eq searchId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-getRequestIdfromTransactionId ::
-  (Transactionable m) =>
-  Id SearchRequest ->
-  m (Maybe (Id SearchRequest))
-getRequestIdfromTransactionId tId = do
-  findOne $ do
-    searchT <- from $ table @SearchRequestT
-    where_ $
-      searchT ^. SearchRequestTransactionId ==. val (getId tId)
-    return $ searchT ^. SearchRequestTId
+-- getRequestIdfromTransactionId ::
+--   (Transactionable m) =>
+--   Id SearchRequest ->
+--   m (Maybe (Id SearchRequest))
+-- getRequestIdfromTransactionId tId = do
+--   findOne $ do
+--     searchT <- from $ table @SearchRequestT
+--     where_ $
+--       searchT ^. SearchRequestTransactionId ==. val (getId tId)
+--     return $ searchT ^. SearchRequestTId
 
-getRequestIdfromTransactionId' :: L.MonadFlow m => Id SearchRequest -> m (Maybe (Id SearchRequest))
-getRequestIdfromTransactionId' (Id tId) = do
+getRequestIdfromTransactionId :: L.MonadFlow m => Id SearchRequest -> m (Maybe (Id SearchRequest))
+getRequestIdfromTransactionId (Id tId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
@@ -131,19 +131,19 @@ getRequestIdfromTransactionId' (Id tId) = do
           pure srId
     Nothing -> pure Nothing
 
-getSearchRequestStatusOrValidTill ::
-  (Transactionable m) =>
-  Id SearchRequest ->
-  m (Maybe (UTCTime, SearchRequestStatus))
-getSearchRequestStatusOrValidTill searchRequestId = do
-  findOne $ do
-    searchT <- from $ table @SearchRequestT
-    where_ $
-      searchT ^. SearchRequestTId ==. val (toKey searchRequestId)
-    return (searchT ^. SearchRequestValidTill, searchT ^. SearchRequestStatus)
+-- getSearchRequestStatusOrValidTill ::
+--   (Transactionable m) =>
+--   Id SearchRequest ->
+--   m (Maybe (UTCTime, SearchRequestStatus))
+-- getSearchRequestStatusOrValidTill searchRequestId = do
+--   findOne $ do
+--     searchT <- from $ table @SearchRequestT
+--     where_ $
+--       searchT ^. SearchRequestTId ==. val (toKey searchRequestId)
+--     return (searchT ^. SearchRequestValidTill, searchT ^. SearchRequestStatus)
 
-getSearchRequestStatusOrValidTill' :: L.MonadFlow m => Id SearchRequest -> m (Maybe (UTCTime, SearchRequestStatus))
-getSearchRequestStatusOrValidTill' (Id searchReqId) = do
+getSearchRequestStatusOrValidTill :: L.MonadFlow m => Id SearchRequest -> m (Maybe (UTCTime, SearchRequestStatus))
+getSearchRequestStatusOrValidTill (Id searchReqId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
@@ -156,20 +156,20 @@ getSearchRequestStatusOrValidTill' (Id searchReqId) = do
           pure srData
     Nothing -> pure Nothing
 
-findActiveByTransactionId ::
-  (Transactionable m) =>
-  Text ->
-  m (Maybe (Id SearchRequest))
-findActiveByTransactionId transactionId = do
-  findOne $ do
-    searchT <- from $ table @SearchRequestT
-    where_ $
-      searchT ^. SearchRequestTransactionId ==. val transactionId
-        &&. searchT ^. SearchRequestStatus ==. val Domain.ACTIVE
-    return $ searchT ^. SearchRequestTId
+-- findActiveByTransactionId ::
+--   (Transactionable m) =>
+--   Text ->
+--   m (Maybe (Id SearchRequest))
+-- findActiveByTransactionId transactionId = do
+--   findOne $ do
+--     searchT <- from $ table @SearchRequestT
+--     where_ $
+--       searchT ^. SearchRequestTransactionId ==. val transactionId
+--         &&. searchT ^. SearchRequestStatus ==. val Domain.ACTIVE
+--     return $ searchT ^. SearchRequestTId
 
-findActiveByTransactionId' :: L.MonadFlow m => Text -> m (Maybe (Id SearchRequest))
-findActiveByTransactionId' transactionId = do
+findActiveByTransactionId :: L.MonadFlow m => Text -> m (Maybe (Id SearchRequest))
+findActiveByTransactionId transactionId = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do

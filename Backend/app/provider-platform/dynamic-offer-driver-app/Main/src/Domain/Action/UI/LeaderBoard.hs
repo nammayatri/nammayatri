@@ -48,7 +48,8 @@ getDriverLeaderBoard personId mbLimit = do
   driversSortedList <-
     Redis.get makeDriverLeaderBoardKey >>= \case
       Nothing -> do
-        driversSortedList' <- Esq.runInReplica $ QDriverStats.getDriversSortedOrder mbLimit
+        -- driversSortedList' <- Esq.runInReplica $ QDriverStats.getDriversSortedOrder mbLimit
+        driversSortedList' <- QDriverStats.getDriversSortedOrder mbLimit
         drivers' <- forM (zip [1, 2 ..] driversSortedList') $ \(index, driver) -> do
           person' <- Esq.runInReplica $ QPerson.findById (cast driver.driverId) >>= fromMaybeM (PersonDoesNotExist driver.driverId.getId)
           fullName <- getPersonFullName person' >>= fromMaybeM (PersonFieldNotPresent "firstName")

@@ -32,28 +32,28 @@ import Storage.Tabular.FareParameters (FareParametersT)
 import Storage.Tabular.FareParameters.Instances
 import qualified Storage.Tabular.VechileNew as VN
 
-create :: FareParameters -> SqlDB ()
-create fareParams =
-  withFullEntity fareParams $ \(fareParams', fareParamsDetais) -> do
-    Esq.create' fareParams'
-    case fareParamsDetais of
-      ProgressiveDetailsT fppdt -> Esq.create' fppdt
-      SlabDetailsT -> return ()
+-- create :: FareParameters -> SqlDB ()
+-- create fareParams =
+--   withFullEntity fareParams $ \(fareParams', fareParamsDetais) -> do
+--     Esq.create' fareParams'
+--     case fareParamsDetais of
+--       ProgressiveDetailsT fppdt -> Esq.create' fppdt
+--       SlabDetailsT -> return ()
 
-create' :: L.MonadFlow m => DFP.FareParameters -> m (MeshResult ())
-create' fareParameters = do
+create :: L.MonadFlow m => DFP.FareParameters -> m (MeshResult ())
+create fareParameters = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainFareParametersToBeam fareParameters)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-findById :: Transactionable m => Id FareParameters -> m (Maybe FareParameters)
-findById fareParametersId = buildDType $ do
-  res <- Esq.findById' @FareParametersT fareParametersId
-  join <$> mapM buildFullFareParameters res
+-- findById :: Transactionable m => Id FareParameters -> m (Maybe FareParameters)
+-- findById fareParametersId = buildDType $ do
+--   res <- Esq.findById' @FareParametersT fareParametersId
+--   join <$> mapM buildFullFareParameters res
 
-findById' :: L.MonadFlow m => Id FareParameters -> m (Maybe FareParameters)
-findById' (Id fareParametersId) = do
+findById :: L.MonadFlow m => Id FareParameters -> m (Maybe FareParameters)
+findById (Id fareParametersId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do

@@ -67,17 +67,17 @@ baseQuoteSpecialZoneQuery =
                    rb ^. QuoteSpecialZoneFareParametersId ==. farePars ^. Fare.FareParametersTId
                )
 
-findById :: (Transactionable m) => Id QuoteSpecialZone -> m (Maybe QuoteSpecialZone)
-findById dQuoteId = buildDType $ do
-  res <- Esq.findOne' $ do
-    (dQuote :& farePars) <-
-      from baseQuoteSpecialZoneQuery
-    where_ $ dQuote ^. QuoteSpecialZoneTId ==. val (toKey dQuoteId)
-    pure (dQuote, farePars)
-  join <$> mapM buildFullQuoteSpecialZone res
+-- findById :: (Transactionable m) => Id QuoteSpecialZone -> m (Maybe QuoteSpecialZone)
+-- findById dQuoteId = buildDType $ do
+--   res <- Esq.findOne' $ do
+--     (dQuote :& farePars) <-
+--       from baseQuoteSpecialZoneQuery
+--     where_ $ dQuote ^. QuoteSpecialZoneTId ==. val (toKey dQuoteId)
+--     pure (dQuote, farePars)
+--   join <$> mapM buildFullQuoteSpecialZone res
 
-findById' :: (L.MonadFlow m) => Id QuoteSpecialZone -> m (Maybe QuoteSpecialZone)
-findById' (Id dQuoteId) = do
+findById :: (L.MonadFlow m) => Id QuoteSpecialZone -> m (Maybe QuoteSpecialZone)
+findById (Id dQuoteId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
@@ -89,7 +89,7 @@ findById' (Id dQuoteId) = do
 
 transformBeamQuoteSpecialZoneToDomain :: L.MonadFlow m => BeamQSZ.QuoteSpecialZone -> m (QuoteSpecialZone)
 transformBeamQuoteSpecialZoneToDomain BeamQSZ.QuoteSpecialZoneT {..} = do
-  fp <- BeamQFP.findById' (Id fareParametersId)
+  fp <- BeamQFP.findById (Id fareParametersId)
   pure
     QuoteSpecialZone
       { id = Id id,

@@ -77,7 +77,7 @@ addLinkAsMedia merchantShortId req = do
 createMediaEntry :: Common.AddLinkAsMedia -> Flow Common.UploadFileResponse
 createMediaEntry Common.AddLinkAsMedia {..} = do
   fileEntity <- mkFile url
-  Esq.runTransaction $ MFQuery.create fileEntity
+  _ <- MFQuery.create fileEntity
   return $ Common.UploadFileResponse {fileId = cast $ fileEntity.id}
   where
     mapToDomain = \case

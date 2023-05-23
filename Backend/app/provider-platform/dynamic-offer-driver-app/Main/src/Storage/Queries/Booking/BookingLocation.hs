@@ -30,32 +30,32 @@ import qualified Storage.Beam.Booking.BookingLocation as BeamBL
 import Storage.Tabular.Booking.BookingLocation hiding (area, areaCode, building, city, country, door, state, street)
 import qualified Storage.Tabular.VechileNew as VN
 
-updateAddress :: Id BookingLocation -> LocationAddress -> SqlDB ()
-updateAddress blId LocationAddress {..} = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ BookingLocationStreet =. val street,
-        BookingLocationCity =. val city,
-        BookingLocationState =. val state,
-        BookingLocationCountry =. val country,
-        BookingLocationBuilding =. val building,
-        BookingLocationAreaCode =. val areaCode,
-        BookingLocationArea =. val area,
-        BookingLocationUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. BookingLocationTId ==. val (toKey blId)
+-- updateAddress :: Id BookingLocation -> LocationAddress -> SqlDB ()
+-- updateAddress blId LocationAddress {..} = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ BookingLocationStreet =. val street,
+--         BookingLocationCity =. val city,
+--         BookingLocationState =. val state,
+--         BookingLocationCountry =. val country,
+--         BookingLocationBuilding =. val building,
+--         BookingLocationAreaCode =. val areaCode,
+--         BookingLocationArea =. val area,
+--         BookingLocationUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. BookingLocationTId ==. val (toKey blId)
 
-findById' :: L.MonadFlow m => Id BookingLocation -> m (Maybe BookingLocation)
-findById' (Id bookingLocationId) = do
+findById :: L.MonadFlow m => Id BookingLocation -> m (Maybe BookingLocation)
+findById (Id bookingLocationId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamBookingLocationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamBL.id $ Se.Eq bookingLocationId]
     Nothing -> pure Nothing
 
-updateAddress' :: (L.MonadFlow m, MonadTime m) => Id BookingLocation -> LocationAddress -> m (MeshResult ())
-updateAddress' (Id blId) LocationAddress {..} = do
+updateAddress :: (L.MonadFlow m, MonadTime m) => Id BookingLocation -> LocationAddress -> m (MeshResult ())
+updateAddress (Id blId) LocationAddress {..} = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   now <- getCurrentTime
   case dbConf of

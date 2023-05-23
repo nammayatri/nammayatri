@@ -40,4 +40,5 @@ getInProgressOrNewRideIdAndStatusByDriverId driverId =
   Hedis.get (makeAssignedRideIdAndStatusKey driverId) >>= \case
     Just a ->
       return $ Just a
-    Nothing -> flip whenJust (cacheAssignedRideIdAndStatus driverId) /=<< Esq.runInReplica (RQueries.getInProgressOrNewRideIdAndStatusByDriverId driverId)
+    -- Nothing -> flip whenJust (cacheAssignedRideIdAndStatus driverId) /=<< Esq.runInReplica (RQueries.getInProgressOrNewRideIdAndStatusByDriverId driverId)
+    Nothing -> flip whenJust (cacheAssignedRideIdAndStatus driverId) /=<< RQueries.getInProgressOrNewRideIdAndStatusByDriverId driverId

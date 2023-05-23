@@ -33,22 +33,22 @@ import Storage.Tabular.CallStatus
 import qualified Storage.Tabular.CallStatus as CS
 import qualified Storage.Tabular.VechileNew as VN
 
-create :: CallStatus -> SqlDB ()
-create callStatus = void $ Esq.createUnique callStatus
+-- create :: CallStatus -> SqlDB ()
+-- create callStatus = void $ Esq.createUnique callStatus
 
 -- create' :: CallStatus -> SqlDB ()
-create' :: L.MonadFlow m => CallStatus -> m (MeshResult ())
-create' callStatus = do
+create :: L.MonadFlow m => CallStatus -> m (MeshResult ())
+create callStatus = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainCallStatusToBeam callStatus)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-findById :: Transactionable m => Id CallStatus -> m (Maybe CallStatus)
-findById = Esq.findById
+-- findById :: Transactionable m => Id CallStatus -> m (Maybe CallStatus)
+-- findById = Esq.findById
 
-findById' :: L.MonadFlow m => Id CallStatus -> m (Maybe CallStatus)
-findById' (Id callStatusId) = do
+findById :: L.MonadFlow m => Id CallStatus -> m (Maybe CallStatus)
+findById (Id callStatusId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamCallStatusToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamCT.id $ Se.Eq callStatusId]
@@ -68,20 +68,20 @@ findByCallSid' callSid = do
     Just dbCOnf' -> either (pure Nothing) (transformBeamCallStatusToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamCT.callId $ Se.Eq callSid]
     Nothing -> pure Nothing
 
-updateCallStatus :: Id CallStatus -> Call.CallStatus -> Int -> BaseUrl -> SqlDB ()
-updateCallStatus callId status conversationDuration recordingUrl = do
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ CallStatusStatus =. val status,
-        CallStatusConversationDuration =. val conversationDuration,
-        CallStatusRecordingUrl =. val (Just (showBaseUrl recordingUrl))
-      ]
-    where_ $ tbl ^. CallStatusId ==. val (getId callId)
+-- updateCallStatus :: Id CallStatus -> Call.CallStatus -> Int -> BaseUrl -> SqlDB ()
+-- updateCallStatus callId status conversationDuration recordingUrl = do
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ CallStatusStatus =. val status,
+--         CallStatusConversationDuration =. val conversationDuration,
+--         CallStatusRecordingUrl =. val (Just (showBaseUrl recordingUrl))
+--       ]
+--     where_ $ tbl ^. CallStatusId ==. val (getId callId)
 
 -- updateCallStatus' :: Id CallStatus -> Call.CallStatus -> Int -> BaseUrl -> SqlDB ()
-updateCallStatus' :: L.MonadFlow m => Id CallStatus -> Call.CallStatus -> Int -> BaseUrl -> m (MeshResult ())
-updateCallStatus' (Id callId) status conversationDuration recordingUrl = do
+updateCallStatus :: L.MonadFlow m => Id CallStatus -> Call.CallStatus -> Int -> BaseUrl -> m (MeshResult ())
+updateCallStatus (Id callId) status conversationDuration recordingUrl = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' ->

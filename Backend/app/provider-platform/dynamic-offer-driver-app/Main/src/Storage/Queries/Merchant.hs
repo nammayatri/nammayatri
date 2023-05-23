@@ -35,39 +35,39 @@ import qualified Storage.Beam.Merchant as BeamM
 import Storage.Tabular.Merchant
 import qualified Storage.Tabular.VechileNew as VN
 
-findById :: Transactionable m => Id Merchant -> m (Maybe Merchant)
-findById = Esq.findById
+-- findById :: Transactionable m => Id Merchant -> m (Maybe Merchant)
+-- findById = Esq.findById
 
-findById' :: L.MonadFlow m => Id Merchant -> m (Maybe Merchant)
-findById' (Id merchantId) = do
+findById :: L.MonadFlow m => Id Merchant -> m (Maybe Merchant)
+findById (Id merchantId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamMerchantToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamM.id $ Se.Eq merchantId]
     Nothing -> pure Nothing
 
-findBySubscriberId :: Transactionable m => ShortId Subscriber -> m (Maybe Merchant)
-findBySubscriberId subscriberId = Esq.findOne $ do
-  org <- from $ table @MerchantT
-  where_ $
-    org ^. MerchantSubscriberId ==. val (subscriberId.getShortId)
-  return org
+-- findBySubscriberId :: Transactionable m => ShortId Subscriber -> m (Maybe Merchant)
+-- findBySubscriberId subscriberId = Esq.findOne $ do
+--   org <- from $ table @MerchantT
+--   where_ $
+--     org ^. MerchantSubscriberId ==. val (subscriberId.getShortId)
+--   return org
 
-findBySubscriberId' :: L.MonadFlow m => ShortId Subscriber -> m (Maybe Merchant)
-findBySubscriberId' (ShortId subscriberId) = do
+findBySubscriberId :: L.MonadFlow m => ShortId Subscriber -> m (Maybe Merchant)
+findBySubscriberId (ShortId subscriberId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamMerchantToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamM.subscriberId $ Se.Eq subscriberId]
     Nothing -> pure Nothing
 
-findByShortId :: Transactionable m => ShortId Merchant -> m (Maybe Merchant)
-findByShortId shortId = Esq.findOne $ do
-  org <- from $ table @MerchantT
-  where_ $
-    org ^. MerchantShortId ==. val (shortId.getShortId)
-  return org
+-- findByShortId :: Transactionable m => ShortId Merchant -> m (Maybe Merchant)
+-- findByShortId shortId = Esq.findOne $ do
+--   org <- from $ table @MerchantT
+--   where_ $
+--     org ^. MerchantShortId ==. val (shortId.getShortId)
+--   return org
 
-findByShortId' :: L.MonadFlow m => ShortId Subscriber -> m (Maybe Merchant)
-findByShortId' (ShortId shortId) = do
+findByShortId :: L.MonadFlow m => ShortId Merchant -> m (Maybe Merchant)
+findByShortId (ShortId shortId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamMerchantToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamM.shortId $ Se.Eq shortId]
@@ -93,30 +93,30 @@ findAll :: Transactionable m => m [Merchant]
 findAll =
   Esq.findAll $ do from $ table @MerchantT
 
-findAll' :: L.MonadFlow m => m [Merchant]
-findAll' = do
+findAll :: L.MonadFlow m => m [Merchant]
+findAll = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure []) (transformBeamMerchantToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig []
     Nothing -> pure []
 
-update :: Merchant -> SqlDB ()
-update org = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ MerchantName =. val org.name,
-        MerchantDescription =. val org.description,
-        MerchantHeadCount =. val org.headCount,
-        MerchantEnabled =. val org.enabled,
-        MerchantUpdatedAt =. val now,
-        MerchantFromTime =. val org.fromTime
-      ]
-    where_ $ tbl ^. MerchantTId ==. val (toKey org.id)
+-- update :: Merchant -> SqlDB ()
+-- update org = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ MerchantName =. val org.name,
+--         MerchantDescription =. val org.description,
+--         MerchantHeadCount =. val org.headCount,
+--         MerchantEnabled =. val org.enabled,
+--         MerchantUpdatedAt =. val now,
+--         MerchantFromTime =. val org.fromTime
+--       ]
+--     where_ $ tbl ^. MerchantTId ==. val (toKey org.id)
 
-update' :: (L.MonadFlow m, MonadTime m) => Merchant -> m (MeshResult ())
-update' org = do
+update :: (L.MonadFlow m, MonadTime m) => Merchant -> m (MeshResult ())
+update org = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   now <- getCurrentTime
   case dbConf of

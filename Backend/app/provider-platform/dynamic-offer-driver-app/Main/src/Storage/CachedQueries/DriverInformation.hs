@@ -59,7 +59,7 @@ updateBlockedState driverId isBlocked = do
   clearDriverInfoCache driverId
   Queries.updateBlockedState driverId isBlocked
 
-verifyAndEnableDriver :: (CacheFlow m r, L.MonadFlow m, MonadTime m) => Id Person.Driver -> m (MeshResult ())
+verifyAndEnableDriver :: (CacheFlow m r, L.MonadFlow m, MonadTime m) => Id Person -> m (MeshResult ())
 verifyAndEnableDriver driverId = do
   clearDriverInfoCache (cast driverId)
   Queries.verifyAndEnableDriver driverId

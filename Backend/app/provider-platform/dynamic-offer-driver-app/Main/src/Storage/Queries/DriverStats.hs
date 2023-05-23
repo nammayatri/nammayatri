@@ -29,19 +29,19 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.DriverStats as BeamDS
 import Storage.Tabular.DriverStats
 
-createInitialDriverStats :: Id Driver -> SqlDB ()
-createInitialDriverStats driverId = do
-  now <- getCurrentTime
-  Esq.create $
-    DriverStats
-      { driverId = driverId,
-        idleSince = now,
-        totalRides = 0,
-        totalDistance = 0
-      }
+-- createInitialDriverStats :: Id Driver -> SqlDB ()
+-- createInitialDriverStats driverId = do
+--   now <- getCurrentTime
+--   Esq.create $
+--     DriverStats
+--       { driverId = driverId,
+--         idleSince = now,
+--         totalRides = 0,
+--         totalDistance = 0
+--       }
 
-createInitialDriverStats' :: (L.MonadFlow m, MonadTime m) => Id Driver -> m (MeshResult ())
-createInitialDriverStats' driverId = do
+createInitialDriverStats :: (L.MonadFlow m, MonadTime m) => Id Driver -> m (MeshResult ())
+createInitialDriverStats driverId = do
   now <- getCurrentTime
   let dStats =
         DriverStats
@@ -55,17 +55,17 @@ createInitialDriverStats' driverId = do
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainDriverStatsToBeam dStats)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-getTopDriversByIdleTime :: Transactionable m => Int -> [Id Driver] -> m [Id Driver]
-getTopDriversByIdleTime count_ ids =
-  Esq.findAll $ do
-    driverStats <- from $ table @DriverStatsT
-    where_ $ driverStats ^. DriverStatsDriverId `in_` valList (toKey . cast <$> ids)
-    orderBy [asc $ driverStats ^. DriverStatsIdleSince]
-    limit $ fromIntegral count_
-    return $ driverStats ^. DriverStatsTId
+-- getTopDriversByIdleTime :: Transactionable m => Int -> [Id Driver] -> m [Id Driver]
+-- getTopDriversByIdleTime count_ ids =
+--   Esq.findAll $ do
+--     driverStats <- from $ table @DriverStatsT
+--     where_ $ driverStats ^. DriverStatsDriverId `in_` valList (toKey . cast <$> ids)
+--     orderBy [asc $ driverStats ^. DriverStatsIdleSince]
+--     limit $ fromIntegral count_
+--     return $ driverStats ^. DriverStatsTId
 
-getTopDriversByIdleTime' :: L.MonadFlow m => Int -> [Id Driver] -> m [Id Driver]
-getTopDriversByIdleTime' count_ ids = do
+getTopDriversByIdleTime :: L.MonadFlow m => Int -> [Id Driver] -> m [Id Driver]
+getTopDriversByIdleTime count_ ids = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
@@ -75,24 +75,24 @@ getTopDriversByIdleTime' count_ ids = do
         Right x -> pure $ (Domain.driverId . transformBeamDriverStatsToDomain) <$> x
     Nothing -> pure []
 
-updateIdleTime :: Id Driver -> SqlDB ()
-updateIdleTime driverId = updateIdleTimes [driverId]
+-- updateIdleTime :: Id Driver -> SqlDB ()
+-- updateIdleTime driverId = updateIdleTimes [driverId]
 
-updateIdleTime' :: (L.MonadFlow m, MonadTime m) => Id Driver -> m (MeshResult ())
-updateIdleTime' (driverId) = updateIdleTimes' [driverId]
+updateIdleTime :: (L.MonadFlow m, MonadTime m) => Id Driver -> m (MeshResult ())
+updateIdleTime (driverId) = updateIdleTimes [driverId]
 
-updateIdleTimes :: [Id Driver] -> SqlDB ()
+-- updateIdleTimes :: [Id Driver] -> SqlDB ()
+-- updateIdleTimes driverIds = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ DriverStatsIdleSince =. val now
+--       ]
+--     where_ $ tbl ^. DriverStatsDriverId `in_` valList (toKey . cast <$> driverIds)
+
+updateIdleTimes :: (L.MonadFlow m, MonadTime m) => [Id Driver] -> m (MeshResult ())
 updateIdleTimes driverIds = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ DriverStatsIdleSince =. val now
-      ]
-    where_ $ tbl ^. DriverStatsDriverId `in_` valList (toKey . cast <$> driverIds)
-
-updateIdleTimes' :: (L.MonadFlow m, MonadTime m) => [Id Driver] -> m (MeshResult ())
-updateIdleTimes' driverIds = do
   now <- getCurrentTime
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
@@ -130,18 +130,18 @@ deleteById' (Id driverId) = do
           [Se.Is BeamDS.driverId (Se.Eq driverId)]
     Nothing -> pure ()
 
-incrementTotalRidesAndTotalDist :: Id Driver -> Meters -> SqlDB ()
-incrementTotalRidesAndTotalDist driverId rideDist = do
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ DriverStatsTotalRides =. (tbl ^. DriverStatsTotalRides) +. val 1,
-        DriverStatsTotalDistance =. (tbl ^. DriverStatsTotalDistance) +. val rideDist
-      ]
-    where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
+-- incrementTotalRidesAndTotalDist :: Id Driver -> Meters -> SqlDB ()
+-- incrementTotalRidesAndTotalDist driverId rideDist = do
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ DriverStatsTotalRides =. (tbl ^. DriverStatsTotalRides) +. val 1,
+--         DriverStatsTotalDistance =. (tbl ^. DriverStatsTotalDistance) +. val rideDist
+--       ]
+--     where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
 
-incrementTotalRidesAndTotalDist' :: (L.MonadFlow m) => Id Driver -> Meters -> m (MeshResult ())
-incrementTotalRidesAndTotalDist' (Id driverId') rideDist = do
+incrementTotalRidesAndTotalDist :: (L.MonadFlow m) => Id Driver -> Meters -> m (MeshResult ())
+incrementTotalRidesAndTotalDist (Id driverId) rideDist = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' ->
@@ -155,16 +155,16 @@ incrementTotalRidesAndTotalDist' (Id driverId') rideDist = do
         [Se.Is BeamDS.driverId (Se.Eq driverId')]
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-getDriversSortedOrder :: Transactionable m => Maybe Integer -> m [DriverStats]
-getDriversSortedOrder mbLimitVal =
-  Esq.findAll $ do
-    driverStats <- from $ table @DriverStatsT
-    orderBy [desc (driverStats ^. DriverStatsTotalRides), desc (driverStats ^. DriverStatsTotalDistance)]
-    limit $ maybe 10 fromIntegral mbLimitVal
-    return driverStats
+-- getDriversSortedOrder :: Transactionable m => Maybe Integer -> m [DriverStats]
+-- getDriversSortedOrder mbLimitVal =
+--   Esq.findAll $ do
+--     driverStats <- from $ table @DriverStatsT
+--     orderBy [desc (driverStats ^. DriverStatsTotalRides), desc (driverStats ^. DriverStatsTotalDistance)]
+--     limit $ maybe 10 fromIntegral mbLimitVal
+--     return driverStats
 
-getDriversSortedOrder' :: L.MonadFlow m => Maybe Integer -> m [DriverStats]
-getDriversSortedOrder' mbLimitVal = do
+getDriversSortedOrder :: L.MonadFlow m => Maybe Integer -> m [DriverStats]
+getDriversSortedOrder mbLimitVal = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do

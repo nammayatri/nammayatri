@@ -59,24 +59,24 @@ findById (Id driverInformationId) = do
     Just dbCOnf' -> either (pure Nothing) (transformBeamDriverInformationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamDI.driverId $ Se.Eq driverInformationId]
     Nothing -> pure Nothing
 
-fetchAllByIds :: Transactionable m => Id Merchant -> [Id Driver] -> m [DriverInformation]
-fetchAllByIds merchantId driversIds = Esq.findAll $ do
-  (driverInformation :& person) <-
-    from $
-      table @DriverInformationT
-        `innerJoin` table @PersonT
-          `Esq.on` ( \(driverInformation :& person) ->
-                       driverInformation ^. DriverInformationDriverId ==. person ^. PersonTId
-                   )
-  where_ $
-    driverInformation ^. DriverInformationDriverId `in_` valList personsKeys
-      &&. (person ^. PersonMerchantId ==. (val . toKey $ merchantId))
-  return driverInformation
-  where
-    personsKeys = toKey . cast <$> driversIds
+-- fetchAllByIds :: Transactionable m => Id Merchant -> [Id Driver] -> m [DriverInformation]
+-- fetchAllByIds merchantId driversIds = Esq.findAll $ do
+--   (driverInformation :& person) <-
+--     from $
+--       table @DriverInformationT
+--         `innerJoin` table @PersonT
+--           `Esq.on` ( \(driverInformation :& person) ->
+--                        driverInformation ^. DriverInformationDriverId ==. person ^. PersonTId
+--                    )
+--   where_ $
+--     driverInformation ^. DriverInformationDriverId `in_` valList personsKeys
+--       &&. (person ^. PersonMerchantId ==. (val . toKey $ merchantId))
+--   return driverInformation
+--   where
+--     personsKeys = toKey . cast <$> driversIds
 
-fetchAllByIds' :: L.MonadFlow m => Id Merchant -> [Id Driver] -> m [DriverInformation]
-fetchAllByIds' merchantId driversIds = do
+fetchAllByIds :: L.MonadFlow m => Id Merchant -> [Id Driver] -> m [DriverInformation]
+fetchAllByIds merchantId driversIds = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
@@ -187,18 +187,16 @@ updateEnabledVerifiedState (Id driverId) isEnabled isVerified = do
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
-      if isEnabled
-        then
-          KV.updateWoReturningWithKVConnector
-            dbConf'
-            VN.meshConfig
-            [ Se.Set BeamDI.enabled isEnabled,
-              Se.Set BeamDI.verified isVerified,
-              Se.Set BeamDI.updatedAt now,
-              Se.Set BeamDI.lastEnabledOn (Just now)
-            ]
-            [Se.Is BeamDI.driverId (Se.Eq driverId)]
-        else pure (Right ())
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        VN.meshConfig
+        ( [ Se.Set BeamDI.enabled isEnabled,
+            Se.Set BeamDI.verified isVerified,
+            Se.Set BeamDI.updatedAt now
+          ]
+            <> (if isEnabled then [Se.Set BeamDI.lastEnabledOn (Just now)] else [])
+        )
+        [Se.Is BeamDI.driverId (Se.Eq driverId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 -- updateBlockedState :: Id Person.Driver -> Bool -> SqlDB ()
@@ -240,7 +238,7 @@ updateBlockedState (Id driverId) isBlocked = do
 --       ]
 --     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey driverId)
 
-verifyAndEnableDriver :: (L.MonadFlow m, MonadTime m) => Id Person.Driver -> m (MeshResult ())
+verifyAndEnableDriver :: (L.MonadFlow m, MonadTime m) => Id Person -> m (MeshResult ())
 verifyAndEnableDriver (Id driverId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   now <- getCurrentTime
@@ -257,24 +255,31 @@ verifyAndEnableDriver (Id driverId) = do
         [Se.Is BeamDI.driverId (Se.Eq driverId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-updateEnabledStateReturningIds :: EsqDBFlow m r => Id Merchant -> [Id Driver] -> Bool -> m [Id Driver]
-updateEnabledStateReturningIds merchantId driverIds isEnabled =
-  Esq.runTransaction $ do
-    present <- fmap (cast . (.driverId)) <$> fetchAllByIds merchantId driverIds
-    updateEnabledStateForIds present
-    pure present
+updateEnabledStateReturningIds :: (L.MonadFlow m, MonadTime m) => Id Merchant -> [Id Driver] -> Bool -> m [Id Driver]
+updateEnabledStateReturningIds merchantId driverIds isEnabled = do
+  -- Esq.runTransaction $ do
+  present <- fmap (cast . (.driverId)) <$> fetchAllByIds merchantId driverIds
+  updateEnabledStateForIds present
+  pure present
   where
-    updateEnabledStateForIds :: [Id Driver] -> SqlDB ()
+    updateEnabledStateForIds :: (L.MonadFlow m, MonadTime m) => [Id Driver] -> m ()
     updateEnabledStateForIds present = do
+      dbConf <- L.getOption Extra.EulerPsqlDbCfg
       now <- getCurrentTime
-      Esq.update $ \tbl -> do
-        set
-          tbl
-          $ [ DriverInformationEnabled =. val isEnabled,
-              DriverInformationUpdatedAt =. val now
-            ]
-            <> [DriverInformationLastEnabledOn =. val (Just now) | isEnabled]
-        where_ $ tbl ^. DriverInformationDriverId `in_` valList (map (toKey . cast) present)
+      case dbConf of
+        Just dbConf' ->
+          void $
+            KV.updateWoReturningWithKVConnector
+              dbConf'
+              VN.meshConfig
+              ( [ Se.Set BeamDI.enabled isEnabled,
+                  Se.Set BeamDI.updatedAt now,
+                  Se.Set BeamDI.lastEnabledOn (Just now)
+                ]
+                  <> (if isEnabled then [Se.Set BeamDI.lastEnabledOn (Just now)] else [])
+              )
+              [Se.Is BeamDI.driverId (Se.In (getId <$> present))]
+        Nothing -> pure ()
 
 -- updateOnRide ::
 --   Id Person.Driver ->

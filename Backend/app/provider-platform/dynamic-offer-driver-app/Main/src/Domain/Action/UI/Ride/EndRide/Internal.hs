@@ -77,8 +77,8 @@ endRideTransaction driverId bookingId ride mbFareParams mbRiderDetailsId = do
           Nothing -> pure ()
   Esq.runTransaction $ do
     whenJust mbRiderDetails $ \riderDetails ->
-      when shouldUpdateRideComplete (QRD.updateHasTakenValidRide riderDetails.id)
-    whenJust mbFareParams QFare.create
+      when shouldUpdateRideComplete (void $ QRD.updateHasTakenValidRide riderDetails.id)
+    whenJust mbFareParams (void $ QFare.create)
     QRide.updateAll ride.id ride
     QRide.updateStatus ride.id Ride.COMPLETED
     QRB.updateStatus bookingId SRB.COMPLETED

@@ -204,7 +204,7 @@ onVerifyDL verificationReq output = do
           runTransaction $ Query.upsert driverLicense
           case driverLicense.driverName of
             Just name_ -> runTransaction $ Person.updateName person.id name_
-            Nothing -> return ()
+            Nothing -> pure (Left $ MKeyNotFound "")
           return Ack
         Nothing -> return Ack
 

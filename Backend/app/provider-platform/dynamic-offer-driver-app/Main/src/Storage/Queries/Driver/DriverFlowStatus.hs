@@ -29,6 +29,7 @@ import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.Driver.DriverFlowStatus as BeamDFS
 import Storage.Tabular.Driver.DriverFlowStatus
+import qualified Storage.Tabular.VechileNew as VN
 
 create :: DDFS.DriverFlowStatus -> SqlDB ()
 create = Esq.create

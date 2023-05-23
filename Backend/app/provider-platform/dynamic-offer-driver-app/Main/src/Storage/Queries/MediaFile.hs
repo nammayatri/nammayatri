@@ -29,21 +29,21 @@ import qualified Storage.Beam.MediaFile as BeamMF
 import Storage.Tabular.MediaFile
 import qualified Storage.Tabular.VechileNew as VN
 
-create :: MediaFile -> SqlDB ()
-create = Esq.create
+-- create :: MediaFile -> SqlDB ()
+-- create = Esq.create
 
-create' :: L.MonadFlow m => DMF.MediaFile -> m (MeshResult ())
-create' mediaFile = do
+create :: L.MonadFlow m => DMF.MediaFile -> m (MeshResult ())
+create mediaFile = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainMediaFileToBeam mediaFile)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-findById :: Transactionable m => Id MediaFile -> m (Maybe MediaFile)
-findById = Esq.findById
+-- findById :: Transactionable m => Id MediaFile -> m (Maybe MediaFile)
+-- findById = Esq.findById
 
-findById' :: L.MonadFlow m => Id MediaFile -> m (Maybe MediaFile)
-findById' (Id mediaFileId) = do
+findById :: L.MonadFlow m => Id MediaFile -> m (Maybe MediaFile)
+findById (Id mediaFileId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamMediaFileToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamMF.id $ Se.Eq mediaFileId]

@@ -24,6 +24,8 @@ where
 
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.OnboardingDocumentConfig as DTO
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
@@ -32,10 +34,10 @@ import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.OnboardingDocumentConfig as Queries
 
-create :: OnboardingDocumentConfig -> Esq.SqlDB ()
+create :: L.MonadFlow m => OnboardingDocumentConfig -> m (MeshResult ())
 create = Queries.create
 
-findByMerchantIdAndDocumentType :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> DocumentType -> m (Maybe DTO.OnboardingDocumentConfig)
+findByMerchantIdAndDocumentType :: (CacheFlow m r, L.MonadFlow m) => Id Merchant -> DocumentType -> m (Maybe DTO.OnboardingDocumentConfig)
 findByMerchantIdAndDocumentType merchantId documentType =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantDocTypeKey merchantId documentType) >>= \case
     Just a -> return $ Just a
@@ -54,5 +56,5 @@ makeMerchantDocTypeKey merchantId documentType = "driver-offer:CachedQueries:Onb
 clearCache :: Hedis.HedisFlow m r => Id Merchant -> DTO.DocumentType -> m ()
 clearCache merchantId documentType = Hedis.withCrossAppRedis . Hedis.del $ makeMerchantDocTypeKey merchantId documentType
 
-update :: OnboardingDocumentConfig -> Esq.SqlDB ()
+update :: (L.MonadFlow m, MonadTime m) => OnboardingDocumentConfig -> m (MeshResult ())
 update = Queries.update

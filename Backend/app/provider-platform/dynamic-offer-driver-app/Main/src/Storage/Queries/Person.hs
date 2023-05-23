@@ -80,11 +80,11 @@ baseFullPersonQuery =
                  person ^. PersonTId ==. vehicle ^. VehicleDriverId
              )
 
-create :: Person -> SqlDB ()
-create = Esq.create
+-- create :: Person -> SqlDB ()
+-- create = Esq.create
 
-create' :: L.MonadFlow m => Person.Person -> m (MeshResult ())
-create' person = do
+create :: L.MonadFlow m => Person.Person -> m (MeshResult ())
+create person = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainPersonToBeam person)
@@ -511,19 +511,19 @@ updateMerchantIdAndMakeAdmin' (Id personId) (Id merchantId) = do
         [Se.Is BeamP.id (Se.Eq personId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-updateName :: Id Person -> Text -> SqlDB ()
-updateName personId name = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ PersonFirstName =. val name,
-        PersonUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. PersonTId ==. val (toKey personId)
+-- updateName :: Id Person -> Text -> SqlDB ()
+-- updateName personId name = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ PersonFirstName =. val name,
+--         PersonUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. PersonTId ==. val (toKey personId)
 
-updateName' :: (L.MonadFlow m, MonadTime m) => Id Person -> Text -> m (MeshResult ())
-updateName' (Id personId) name = do
+updateName :: (L.MonadFlow m, MonadTime m) => Id Person -> Text -> m (MeshResult ())
+updateName (Id personId) name = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   now <- getCurrentTime
   case dbConf of
@@ -628,19 +628,19 @@ updatePersonVersions' person mbBundleVersion mbClientVersion =
               [Se.Is BeamP.id (Se.Eq $ getId person.id)]
         Nothing -> pure ()
 
-updateDeviceToken :: Id Person -> Maybe FCMRecipientToken -> SqlDB ()
-updateDeviceToken personId mbDeviceToken = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ PersonDeviceToken =. val mbDeviceToken,
-        PersonUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. PersonTId ==. val (toKey personId)
+-- updateDeviceToken :: Id Person -> Maybe FCMRecipientToken -> SqlDB ()
+-- updateDeviceToken personId mbDeviceToken = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ PersonDeviceToken =. val mbDeviceToken,
+--         PersonUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. PersonTId ==. val (toKey personId)
 
-updateDeviceToken' :: (L.MonadFlow m, MonadTime m) => Id Person -> Maybe FCMRecipientToken -> m (MeshResult ())
-updateDeviceToken' (Id personId) mbDeviceToken = do
+updateDeviceToken :: (L.MonadFlow m, MonadTime m) => Id Person -> Maybe FCMRecipientToken -> m (MeshResult ())
+updateDeviceToken (Id personId) mbDeviceToken = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   now <- getCurrentTime
   case dbConf of
@@ -654,19 +654,19 @@ updateDeviceToken' (Id personId) mbDeviceToken = do
         [Se.Is BeamP.id (Se.Eq personId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-updateWhatsappNotificationEnrollStatus :: Id Person -> Maybe Whatsapp.OptApiMethods -> SqlDB ()
-updateWhatsappNotificationEnrollStatus personId enrollStatus = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ PersonWhatsappNotificationEnrollStatus =. val enrollStatus,
-        PersonUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. PersonTId ==. val (toKey personId)
+-- updateWhatsappNotificationEnrollStatus :: Id Person -> Maybe Whatsapp.OptApiMethods -> SqlDB ()
+-- updateWhatsappNotificationEnrollStatus personId enrollStatus = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ PersonWhatsappNotificationEnrollStatus =. val enrollStatus,
+--         PersonUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. PersonTId ==. val (toKey personId)
 
-updateWhatsappNotificationEnrollStatus' :: (L.MonadFlow m, MonadTime m) => Id Person -> Maybe Whatsapp.OptApiMethods -> m (MeshResult ())
-updateWhatsappNotificationEnrollStatus' (Id personId) enrollStatus = do
+updateWhatsappNotificationEnrollStatus :: (L.MonadFlow m, MonadTime m) => Id Person -> Maybe Whatsapp.OptApiMethods -> m (MeshResult ())
+updateWhatsappNotificationEnrollStatus (Id personId) enrollStatus = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   now <- getCurrentTime
   case dbConf of
@@ -724,8 +724,8 @@ setIsNewFalse personId = do
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey personId)
 
-setIsNewFalse' :: (L.MonadFlow m, MonadTime m) => Id Person -> m (MeshResult ())
-setIsNewFalse' (Id personId) = do
+setIsNewFalse :: (L.MonadFlow m, MonadTime m) => Id Person -> m (MeshResult ())
+setIsNewFalse (Id personId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   now <- getCurrentTime
   case dbConf of
@@ -754,19 +754,19 @@ deleteById' (Id personId) = do
           [Se.Is BeamP.id (Se.Eq personId)]
     Nothing -> pure ()
 
-updateAverageRating :: Id Person -> Centesimal -> SqlDB ()
-updateAverageRating personId newAverageRating = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ PersonRating =. val (Just newAverageRating),
-        PersonUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. PersonTId ==. val (toKey personId)
+-- updateAverageRating :: Id Person -> Centesimal -> SqlDB ()
+-- updateAverageRating personId newAverageRating = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ PersonRating =. val (Just newAverageRating),
+--         PersonUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. PersonTId ==. val (toKey personId)
 
-updateAverageRating' :: (L.MonadFlow m, MonadTime m) => Id Person -> Centesimal -> m (MeshResult ())
-updateAverageRating' (Id personId) newAverageRating = do
+updateAverageRating :: (L.MonadFlow m, MonadTime m) => Id Person -> Centesimal -> m (MeshResult ())
+updateAverageRating (Id personId) newAverageRating = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   now <- getCurrentTime
   case dbConf of

@@ -33,66 +33,66 @@ import qualified Storage.Beam.RiderDetails as BeamRD
 import Storage.Tabular.RiderDetails
 import qualified Storage.Tabular.VechileNew as VN
 
-create :: RiderDetails -> SqlDB ()
-create = Esq.create
+-- create :: RiderDetails -> SqlDB ()
+-- create = Esq.create
 
-create' :: L.MonadFlow m => DRDD.RiderDetails -> m (MeshResult ())
-create' riderDetails = do
+create :: L.MonadFlow m => DRDD.RiderDetails -> m ()
+create riderDetails = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainRiderDetailsToBeam riderDetails)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+    Just dbConf' -> void $ (KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainRiderDetailsToBeam riderDetails))
+    Nothing -> pure ()
 
 -- TODO :: write cached query for this
-findById ::
-  Transactionable m =>
-  Id RiderDetails ->
-  m (Maybe RiderDetails)
-findById = Esq.findById
+-- findById ::
+--   Transactionable m =>
+--   Id RiderDetails ->
+--   m (Maybe RiderDetails)
+-- findById = Esq.findById
 
-findById' :: L.MonadFlow m => Id RiderDetails -> m (Maybe RiderDetails)
-findById' (Id riderDetailsId) = do
+findById :: L.MonadFlow m => Id RiderDetails -> m (Maybe RiderDetails)
+findById (Id riderDetailsId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamRiderDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamRD.id $ Se.Eq riderDetailsId]
     Nothing -> pure Nothing
 
-findByMobileNumberAndMerchant ::
-  (MonadThrow m, Log m, Transactionable m, EncFlow m r) =>
-  Text ->
-  Id Merchant ->
-  m (Maybe RiderDetails)
-findByMobileNumberAndMerchant mobileNumber_ merchantId = do
-  mobileNumberDbHash <- getDbHash mobileNumber_
-  Esq.findOne $ do
-    riderDetails <- from $ table @RiderDetailsT
-    where_ $
-      riderDetails ^. RiderDetailsMobileNumberHash ==. val mobileNumberDbHash
-        &&. riderDetails ^. RiderDetailsMerchantId ==. val (toKey merchantId)
-    return riderDetails
+-- findByMobileNumberAndMerchant ::
+--   (MonadThrow m, Log m, Transactionable m, EncFlow m r) =>
+--   Text ->
+--   Id Merchant ->
+--   m (Maybe RiderDetails)
+-- findByMobileNumberAndMerchant mobileNumber_ merchantId = do
+--   mobileNumberDbHash <- getDbHash mobileNumber_
+--   Esq.findOne $ do
+--     riderDetails <- from $ table @RiderDetailsT
+--     where_ $
+--       riderDetails ^. RiderDetailsMobileNumberHash ==. val mobileNumberDbHash
+--         &&. riderDetails ^. RiderDetailsMerchantId ==. val (toKey merchantId)
+--     return riderDetails
 
-findByMobileNumberAndMerchant' :: (L.MonadFlow m, EncFlow m r) => Text -> Id Merchant -> m (Maybe RiderDetails)
-findByMobileNumberAndMerchant' mobileNumber_ merchantId = do
+findByMobileNumberAndMerchant :: (L.MonadFlow m, EncFlow m r) => Text -> Id Merchant -> m (Maybe RiderDetails)
+findByMobileNumberAndMerchant mobileNumber_ merchantId = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   mobileNumberDbHash <- getDbHash mobileNumber_
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamRiderDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.And [Se.Is BeamRD.mobileNumberHash $ Se.Eq mobileNumberDbHash, Se.Is BeamRD.merchantId $ Se.Eq (getId merchantId)]]
     Nothing -> pure Nothing
 
-updateHasTakenValidRide :: Id RiderDetails -> SqlDB ()
-updateHasTakenValidRide riderId = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ RiderDetailsHasTakenValidRide =. val True,
-        RiderDetailsUpdatedAt =. val now,
-        RiderDetailsHasTakenValidRideAt =. val (Just now)
-      ]
-    where_ $ tbl ^. RiderDetailsTId ==. val (toKey riderId)
+-- updateHasTakenValidRide :: Id RiderDetails -> SqlDB ()
+-- updateHasTakenValidRide riderId = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ RiderDetailsHasTakenValidRide =. val True,
+--         RiderDetailsUpdatedAt =. val now,
+--         RiderDetailsHasTakenValidRideAt =. val (Just now)
+--       ]
+--     where_ $ tbl ^. RiderDetailsTId ==. val (toKey riderId)
 
-updateHasTakenValidRide' :: (L.MonadFlow m, MonadTime m) => Id RiderDetails -> m (MeshResult ())
-updateHasTakenValidRide' (Id riderId) = do
+updateHasTakenValidRide :: (L.MonadFlow m, MonadTime m) => Id RiderDetails -> m (MeshResult ())
+updateHasTakenValidRide (Id riderId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   now <- getCurrentTime
   case dbConf of
@@ -107,31 +107,31 @@ updateHasTakenValidRide' (Id riderId) = do
         [Se.Is BeamRD.id (Se.Eq riderId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-findAllReferredByDriverId :: Transactionable m => Id Person -> m [RiderDetails]
-findAllReferredByDriverId driverId = do
-  Esq.findAll $ do
-    riderDetails <- from $ table @RiderDetailsT
-    where_ $ riderDetails ^. RiderDetailsReferredByDriver ==. val (Just $ toKey driverId)
-    return riderDetails
+-- findAllReferredByDriverId :: Transactionable m => Id Person -> m [RiderDetails]
+-- findAllReferredByDriverId driverId = do
+--   Esq.findAll $ do
+--     riderDetails <- from $ table @RiderDetailsT
+--     where_ $ riderDetails ^. RiderDetailsReferredByDriver ==. val (Just $ toKey driverId)
+--     return riderDetails
 
-findAllReferredByDriverId' :: L.MonadFlow m => Id Person -> m [RiderDetails]
-findAllReferredByDriverId' (Id driverId) = do
+findAllReferredByDriverId :: L.MonadFlow m => Id Person -> m [RiderDetails]
+findAllReferredByDriverId (Id driverId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure []) (transformBeamRiderDetailsToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamRD.referredByDriver $ Se.Eq (Just driverId)]
     Nothing -> pure []
 
-findByMobileNumberHashAndMerchant :: Transactionable m => DbHash -> Id Merchant -> m (Maybe RiderDetails)
-findByMobileNumberHashAndMerchant mobileNumberDbHash merchantId = do
-  Esq.findOne $ do
-    riderDetails <- from $ table @RiderDetailsT
-    where_ $
-      riderDetails ^. RiderDetailsMobileNumberHash ==. val mobileNumberDbHash
-        &&. riderDetails ^. RiderDetailsMerchantId ==. val (toKey merchantId)
-    return riderDetails
+-- findByMobileNumberHashAndMerchant :: Transactionable m => DbHash -> Id Merchant -> m (Maybe RiderDetails)
+-- findByMobileNumberHashAndMerchant mobileNumberDbHash merchantId = do
+--   Esq.findOne $ do
+--     riderDetails <- from $ table @RiderDetailsT
+--     where_ $
+--       riderDetails ^. RiderDetailsMobileNumberHash ==. val mobileNumberDbHash
+--         &&. riderDetails ^. RiderDetailsMerchantId ==. val (toKey merchantId)
+--     return riderDetails
 
-findByMobileNumberHashAndMerchant' :: L.MonadFlow m => DbHash -> Id Merchant -> m (Maybe RiderDetails)
-findByMobileNumberHashAndMerchant' mobileNumberDbHash (Id merchantId) = do
+findByMobileNumberHashAndMerchant :: L.MonadFlow m => DbHash -> Id Merchant -> m (Maybe RiderDetails)
+findByMobileNumberHashAndMerchant mobileNumberDbHash (Id merchantId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamRiderDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.And [Se.Is BeamRD.mobileNumberHash $ Se.Eq mobileNumberDbHash, Se.Is BeamRD.id $ Se.Eq merchantId]]
@@ -156,8 +156,8 @@ updateReferralInfo customerNumberHash merchantId referralId driverId = do
       rd ^. RiderDetailsMobileNumberHash ==. val customerNumberHash
         &&. rd ^. RiderDetailsMerchantId ==. val (toKey merchantId)
 
-updateDriverResponse' :: (L.MonadFlow m, MonadTime m) => DbHash -> Id Merchant -> Id DriverReferral -> Id Person -> m (MeshResult ())
-updateDriverResponse' customerNumberHash merchantId referralId driverId = do
+updateDriverResponse :: (L.MonadFlow m, MonadTime m) => DbHash -> Id Merchant -> Id DriverReferral -> Id Person -> m (MeshResult ())
+updateDriverResponse customerNumberHash merchantId referralId driverId = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   now <- getCurrentTime
   case dbConf of

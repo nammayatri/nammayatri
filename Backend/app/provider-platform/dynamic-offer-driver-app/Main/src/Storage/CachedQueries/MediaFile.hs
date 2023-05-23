@@ -18,6 +18,8 @@ module Storage.CachedQueries.MediaFile where
 
 import Domain.Types.Issue.IssueReport (IssueReport)
 import Domain.Types.MediaFile
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
@@ -25,7 +27,7 @@ import Kernel.Types.Id
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.MediaFile as Queries
 
-findById :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id MediaFile -> m (Maybe MediaFile)
+findById :: (CacheFlow m r, L.MonadFlow m) => Id MediaFile -> m (Maybe MediaFile)
 findById mediaFileId =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMediaFileByIdKey mediaFileId) >>= \case
     Just a -> pure a

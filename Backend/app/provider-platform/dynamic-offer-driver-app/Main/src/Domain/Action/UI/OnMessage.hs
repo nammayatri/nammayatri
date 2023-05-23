@@ -43,7 +43,8 @@ data FCMReq = FCMReq
 
 sendMessageFCM :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CoreMetrics m, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c) => Id Person.Person -> FCMReq -> m APISuccess.APISuccess
 sendMessageFCM _personId FCMReq {..} = do
-  ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  ride <- (runInReplica $ QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  -- ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus "The ride has already started."
   booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   BP.sendNewMessageToBAP booking ride message

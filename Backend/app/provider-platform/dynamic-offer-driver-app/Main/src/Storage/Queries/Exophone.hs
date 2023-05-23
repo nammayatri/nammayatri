@@ -36,11 +36,11 @@ import qualified Storage.Beam.Exophone as BeamE
 import Storage.Tabular.Exophone
 import qualified Storage.Tabular.VechileNew as VN
 
-create :: Exophone -> SqlDB ()
-create = Esq.create
+-- create :: Exophone -> SqlDB ()
+-- create = Esq.create
 
-create' :: L.MonadFlow m => DE.Exophone -> m (MeshResult ())
-create' exophone = do
+create :: L.MonadFlow m => DE.Exophone -> m (MeshResult ())
+create exophone = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainExophoneToBeam exophone)

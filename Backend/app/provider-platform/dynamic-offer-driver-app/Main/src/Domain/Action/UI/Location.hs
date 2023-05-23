@@ -48,9 +48,9 @@ data GetLocationRes = GetLocationRes
 getLocation :: (EsqDBReplicaFlow m r, CacheFlow m r, EsqDBFlow m r) => Id SRide.Ride -> m GetLocationRes
 getLocation rideId = do
   ride <-
-    runInReplica $
-      QRide.findById rideId
-        >>= fromMaybeM (RideDoesNotExist rideId.getId)
+    -- runInReplica $
+    QRide.findById rideId
+      >>= fromMaybeM (RideDoesNotExist rideId.getId)
   status <-
     case ride.status of
       SRide.NEW -> pure PreRide

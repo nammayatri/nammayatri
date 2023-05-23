@@ -31,24 +31,24 @@ import Storage.Tabular.RideDetails ()
 
 -- import qualified Storage.Tabular.VechileNew as VN
 
-create :: RideDetails -> SqlDB ()
-create = Esq.create
+-- create :: RideDetails -> SqlDB ()
+-- create = Esq.create
 
-create' :: L.MonadFlow m => DRD.RideDetails -> m (MeshResult ())
-create' rideDetails = do
+create :: L.MonadFlow m => DRD.RideDetails -> m (MeshResult ())
+create rideDetails = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainRideDetailsToBeam rideDetails)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-findById ::
-  Transactionable m =>
-  Id SR.Ride ->
-  m (Maybe RideDetails)
-findById = Esq.findById
+-- findById ::
+--   Transactionable m =>
+--   Id SR.Ride ->
+--   m (Maybe RideDetails)
+-- findById = Esq.findById
 
-findById' :: L.MonadFlow m => Id SR.Ride -> m (Maybe RideDetails)
-findById' (Id rideDetailsId) = do
+findById :: L.MonadFlow m => Id SR.Ride -> m (Maybe RideDetails)
+findById (Id rideDetailsId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamRideDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamRD.id $ Se.Eq rideDetailsId]

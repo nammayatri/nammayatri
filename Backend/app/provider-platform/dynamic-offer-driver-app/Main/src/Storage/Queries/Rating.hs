@@ -31,32 +31,32 @@ import qualified Storage.Beam.Rating as BeamR
 import Storage.Tabular.Rating
 import qualified Storage.Tabular.VechileNew as VN
 
-create :: Rating -> SqlDB ()
-create = Esq.create
+-- create :: Rating -> SqlDB ()
+-- create = Esq.create
 
-create' :: L.MonadFlow m => DR.Rating -> m (MeshResult ())
-create' rating = do
+create :: L.MonadFlow m => DR.Rating -> m (MeshResult ())
+create rating = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainRatingToBeam rating)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-updateRating :: Id Rating -> Id Person -> Int -> Maybe Text -> SqlDB ()
-updateRating ratingId driverId newRatingValue newFeedbackDetails = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ RatingRatingValue =. val newRatingValue,
-        RatingFeedbackDetails =. val newFeedbackDetails,
-        RatingUpdatedAt =. val now
-      ]
-    where_ $
-      tbl ^. RatingTId ==. val (toKey ratingId)
-        &&. tbl ^. RatingDriverId ==. val (toKey driverId)
+-- updateRating :: Id Rating -> Id Person -> Int -> Maybe Text -> SqlDB ()
+-- updateRating ratingId driverId newRatingValue newFeedbackDetails = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ RatingRatingValue =. val newRatingValue,
+--         RatingFeedbackDetails =. val newFeedbackDetails,
+--         RatingUpdatedAt =. val now
+--       ]
+--     where_ $
+--       tbl ^. RatingTId ==. val (toKey ratingId)
+--         &&. tbl ^. RatingDriverId ==. val (toKey driverId)
 
-updateRating' :: (L.MonadFlow m, MonadTime m) => Id Rating -> Id Person -> Int -> Maybe Text -> m (MeshResult ())
-updateRating' (Id ratingId) (Id driverId) newRatingValue newFeedbackDetails = do
+updateRating :: (L.MonadFlow m, MonadTime m) => Id Rating -> Id Person -> Int -> Maybe Text -> m (MeshResult ())
+updateRating (Id ratingId) (Id driverId) newRatingValue newFeedbackDetails = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   now <- getCurrentTime
   case dbConf of
@@ -71,28 +71,28 @@ updateRating' (Id ratingId) (Id driverId) newRatingValue newFeedbackDetails = do
         [Se.And [Se.Is BeamR.id (Se.Eq ratingId), Se.Is BeamR.driverId (Se.Eq driverId)]]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-findAllRatingsForPerson :: Transactionable m => Id Person -> m [Rating]
-findAllRatingsForPerson driverId =
-  findAll $ do
-    rating <- from $ table @RatingT
-    where_ $ rating ^. RatingDriverId ==. val (toKey driverId)
-    return rating
+-- findAllRatingsForPerson :: Transactionable m => Id Person -> m [Rating]
+-- findAllRatingsForPerson driverId =
+--   findAll $ do
+--     rating <- from $ table @RatingT
+--     where_ $ rating ^. RatingDriverId ==. val (toKey driverId)
+--     return rating
 
-findAllRatingsForPerson' :: L.MonadFlow m => Id Person -> m [Rating]
-findAllRatingsForPerson' driverId = do
+findAllRatingsForPerson :: L.MonadFlow m => Id Person -> m [Rating]
+findAllRatingsForPerson driverId = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure []) (transformBeamRatingToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamR.driverId $ Se.Eq $ getId driverId]
     Nothing -> pure []
 
-findRatingForRide :: Transactionable m => Id Ride -> m (Maybe Rating)
-findRatingForRide rideId = findOne $ do
-  rating <- from $ table @RatingT
-  where_ $ rating ^. RatingRideId ==. val (toKey rideId)
-  pure rating
+-- findRatingForRide :: Transactionable m => Id Ride -> m (Maybe Rating)
+-- findRatingForRide rideId = findOne $ do
+--   rating <- from $ table @RatingT
+--   where_ $ rating ^. RatingRideId ==. val (toKey rideId)
+--   pure rating
 
-findRatingForRide' :: L.MonadFlow m => Id Ride -> m (Maybe Rating)
-findRatingForRide' (Id rideId) = do
+findRatingForRide :: L.MonadFlow m => Id Ride -> m (Maybe Rating)
+findRatingForRide (Id rideId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamRatingToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamR.id $ Se.Eq rideId]
