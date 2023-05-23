@@ -16,6 +16,8 @@ module SharedLogic.DriverLocation where
 
 import Domain.Types.DriverLocation
 import Domain.Types.Person as Person
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import Kernel.External.Maps
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -32,12 +34,12 @@ upsertGpsCoord :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Per
 upsertGpsCoord driverId latLong calculationTime = do
   driverInfo <- CDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   if not driverInfo.onRide -- if driver not on ride directly save location updates to DB
-    then void $ Esq.runNoTransaction $ DLQueries.upsertGpsCoord driverId latLong calculationTime
+    then void $ DLQueries.upsertGpsCoord driverId latLong calculationTime
     else do
       mOldLocation <- findById driverId
       case mOldLocation of
         Nothing -> do
-          driverLocation <- Esq.runNoTransaction $ DLQueries.upsertGpsCoord driverId latLong calculationTime
+          driverLocation <- DLQueries.upsertGpsCoord driverId latLong calculationTime
           cacheDriverLocation driverLocation
         Just oldLoc -> do
           now <- getCurrentTime
@@ -46,13 +48,14 @@ upsertGpsCoord driverId latLong calculationTime = do
 makeDriverLocationKey :: Id Person -> Text
 makeDriverLocationKey id = "DriverLocation:PersonId-" <> id.getId
 
-findById :: (CacheFlow m r, EsqDBReplicaFlow m r) => Id Person -> m (Maybe DriverLocation)
+findById :: (CacheFlow m r, L.MonadFlow m) => Id Person -> m (Maybe DriverLocation)
 findById id =
   Hedis.get (makeDriverLocationKey id) >>= \case
     Just a ->
       return $ Just a
     Nothing ->
-      flip whenJust cacheDriverLocation /=<< Esq.runInReplica (DLQueries.findById id)
+      -- flip whenJust cacheDriverLocation /=<< Esq.runInReplica (DLQueries.findById id)
+      flip whenJust cacheDriverLocation /=<< DLQueries.findById id
 
 cacheDriverLocation :: (CacheFlow m r) => DriverLocation -> m ()
 cacheDriverLocation driverLocation = do
@@ -60,7 +63,7 @@ cacheDriverLocation driverLocation = do
   let driverLocationKey = makeDriverLocationKey driverLocation.driverId
   Hedis.setExp driverLocationKey driverLocation expTime
 
-updateOnRide :: (CacheFlow m r, Esq.EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person.Driver -> Bool -> m ()
+updateOnRide :: (CacheFlow m r, L.MonadFlow m, MonadTime m) => Id Person.Driver -> Bool -> m (MeshResult ())
 updateOnRide driverId onRide = do
   if onRide
     then do
@@ -74,7 +77,7 @@ updateOnRide driverId onRide = do
         (pure ())
         ( \loc -> do
             let latLong = LatLong loc.lat loc.lon
-            void $ Esq.runTransaction $ DLQueries.upsertGpsCoord (cast driverId) latLong loc.coordinatesCalculatedAt
+            void $ DLQueries.upsertGpsCoord (cast driverId) latLong loc.coordinatesCalculatedAt
         )
         mDriverLocatation
   CDI.updateOnRide driverId onRide

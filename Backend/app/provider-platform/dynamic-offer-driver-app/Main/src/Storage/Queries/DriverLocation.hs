@@ -74,36 +74,38 @@ findById ::
   m (Maybe DriverLocation)
 findById = Esq.findById
 
-findById' :: L.MonadFlow m => Id Person -> m (Maybe DriverLocation)
-findById' (Id driverLocationId) = do
+findById :: L.MonadFlow m => Id Person -> m (Maybe DriverLocation)
+findById (Id driverLocationId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamDriverLocationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamDL.driverId $ Se.Eq driverLocationId]
     Nothing -> pure Nothing
 
-upsertGpsCoord :: Id Person -> LatLong -> UTCTime -> SqlDB DriverLocation
-upsertGpsCoord drLocationId latLong calculationTime = do
-  now <- getCurrentTime
-  let locationObject =
-        DriverLocation
-          { driverId = drLocationId,
-            lat = latLong.lat,
-            lon = latLong.lon,
-            coordinatesCalculatedAt = calculationTime,
-            createdAt = now,
-            updatedAt = now
-          }
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ DriverLocationLat =. val latLong.lat,
-        DriverLocationLon =. val latLong.lon,
-        DriverLocationCoordinatesCalculatedAt =. val calculationTime,
-        DriverLocationPoint =. Esq.getPoint (val latLong.lat, val latLong.lon),
-        DriverLocationUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. DriverLocationTId ==. val (toKey $ cast drLocationId)
-  return locationObject
+-- upsertGpsCoord :: Id Person -> LatLong -> UTCTime -> SqlDB DriverLocation
+-- upsertGpsCoord drLocationId latLong calculationTime = do
+--   now <- getCurrentTime
+--   let locationObject =
+--         DriverLocation
+--           { driverId = drLocationId,
+--             lat = latLong.lat,
+--             lon = latLong.lon,
+--             coordinatesCalculatedAt = calculationTime,
+--             createdAt = now,
+--             updatedAt = now
+--           }
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ DriverLocationLat =. val latLong.lat,
+--         DriverLocationLon =. val latLong.lon,
+--         DriverLocationCoordinatesCalculatedAt =. val calculationTime,
+--         DriverLocationPoint =. Esq.getPoint (val latLong.lat, val latLong.lon),
+--         DriverLocationUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. DriverLocationTId ==. val (toKey $ cast drLocationId)
+--   return locationObject
+upsertGpsCoord :: (L.MonadFlow m) => Id Person -> LatLong -> UTCTime -> m (DriverLocation)
+upsertGpsCoord _ _ _ = error "Undefined"
 
 -- upsertGpsCoord' :: (L.MonadFlow m, MonadTime m) => Id Person -> LatLong -> UTCTime -> m (MeshResult ())
 -- upsertGpsCoord' drLocationId latLong calculationTime = do

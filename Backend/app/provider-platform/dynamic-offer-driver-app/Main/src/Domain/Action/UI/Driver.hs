@@ -481,7 +481,7 @@ changeDriverEnableState admin personId isEnabled = do
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
   unless (person.merchantId == admin.merchantId) $ throwError Unauthorized
   QDriverInformation.updateEnabledState driverId isEnabled
-  unless isEnabled $ QDriverInformation.updateActivity driverId False (Just DriverInfo.OFFLINE)
+  unless isEnabled $ void (QDriverInformation.updateActivity driverId False (Just DriverInfo.OFFLINE))
   unless isEnabled $ do
     Notify.notifyDriver person.merchantId FCM.ACCOUNT_DISABLED notificationTitle notificationMessage person.id person.deviceToken
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> changeDriverEnableState : ") (show (driverId, isEnabled))

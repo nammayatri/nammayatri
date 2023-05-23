@@ -19,55 +19,58 @@ module Storage.CachedQueries.DriverInformation where
 import Domain.Types.DriverInformation
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person as Person
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Types.Common
 import Kernel.Types.Id
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.DriverInformation as Queries
 
-create :: DriverInformation -> Esq.SqlDB ()
+create :: L.MonadFlow m => DriverInformation -> m (MeshResult ())
 create = Queries.create
 
-findById :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person.Driver -> m (Maybe DriverInformation)
+findById :: (CacheFlow m r, L.MonadFlow m) => Id Person.Driver -> m (Maybe DriverInformation)
 findById id =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeDriverInformationIdKey id) >>= \case
     Just a -> pure $ Just a
     Nothing -> flip whenJust (cacheDriverInformation id) /=<< Queries.findById id
 
-updateActivity :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person.Driver -> Bool -> Maybe DriverMode -> m ()
+updateActivity :: (CacheFlow m r, L.MonadFlow m, MonadTime m) => Id Person.Driver -> Bool -> Maybe DriverMode -> m (MeshResult ())
 updateActivity driverId isActive mode = do
   clearDriverInfoCache driverId
-  Esq.runTransaction $ Queries.updateActivity driverId isActive mode
+  Queries.updateActivity driverId isActive mode
 
-updateEnabledState :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person.Driver -> Bool -> m ()
+updateEnabledState :: (CacheFlow m r, L.MonadFlow m, MonadTime m) => Id Person.Driver -> Bool -> m (MeshResult ())
 updateEnabledState driverId isEnabled = do
   clearDriverInfoCache driverId
-  Esq.runTransaction $ Queries.updateEnabledState driverId isEnabled
+  Queries.updateEnabledState driverId isEnabled
 
-updateEnabledVerifiedState :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person.Driver -> Bool -> Bool -> m ()
+updateEnabledVerifiedState :: (CacheFlow m r, L.MonadFlow m, MonadTime m) => Id Person.Driver -> Bool -> Bool -> m (MeshResult ())
 updateEnabledVerifiedState driverId isEnabled isVerified = do
   clearDriverInfoCache driverId
-  Esq.runTransaction $ Queries.updateEnabledVerifiedState driverId isEnabled isVerified
+  Queries.updateEnabledVerifiedState driverId isEnabled isVerified
 
-updateBlockedState :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person.Driver -> Bool -> m ()
+updateBlockedState :: (CacheFlow m r, L.MonadFlow m, MonadTime m) => Id Person.Driver -> Bool -> m (MeshResult ())
 updateBlockedState driverId isBlocked = do
   clearDriverInfoCache driverId
-  Esq.runTransaction $ Queries.updateBlockedState driverId isBlocked
+  Queries.updateBlockedState driverId isBlocked
 
-verifyAndEnableDriver :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person -> m ()
+verifyAndEnableDriver :: (CacheFlow m r, L.MonadFlow m, MonadTime m) => Id Person.Driver -> m (MeshResult ())
 verifyAndEnableDriver driverId = do
   clearDriverInfoCache (cast driverId)
-  Esq.runTransaction $ Queries.verifyAndEnableDriver driverId
+  Queries.verifyAndEnableDriver driverId
 
-updateOnRide :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person.Driver -> Bool -> m ()
+updateOnRide :: (CacheFlow m r, L.MonadFlow m, MonadTime m) => Id Person.Driver -> Bool -> m (MeshResult ())
 updateOnRide driverId onRide = do
   clearDriverInfoCache driverId
-  Esq.runTransaction $ Queries.updateOnRide driverId onRide
+  Queries.updateOnRide driverId onRide
 
 -- this function created because all queries wishfully should be in one transaction
-updateNotOnRideMultiple :: [Id Person.Driver] -> Esq.SqlDB ()
+updateNotOnRideMultiple :: (L.MonadFlow m, MonadTime m) => [Id Person.Driver] -> m (MeshResult ())
 updateNotOnRideMultiple = Queries.updateNotOnRideMultiple
 
 deleteById :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person.Driver -> m ()
@@ -88,15 +91,15 @@ findAllWithLimitOffsetByMerchantId = Queries.findAllWithLimitOffsetByMerchantId
 getDriversWithOutdatedLocationsToMakeInactive :: Esq.Transactionable m => UTCTime -> m [Person]
 getDriversWithOutdatedLocationsToMakeInactive = Queries.getDriversWithOutdatedLocationsToMakeInactive
 
-addReferralCode :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person -> EncryptedHashedField 'AsEncrypted Text -> m ()
+addReferralCode :: (CacheFlow m r, L.MonadFlow m, MonadTime m) => Id Person -> EncryptedHashedField 'AsEncrypted Text -> m (MeshResult ())
 addReferralCode personId code = do
   clearDriverInfoCache (cast personId)
-  Esq.runTransaction $ Queries.addReferralCode personId code
+  Queries.addReferralCode personId code
 
 countDrivers :: Esq.Transactionable m => Id Merchant -> m (Int, Int)
 countDrivers = Queries.countDrivers
 
-updateDowngradingOptions :: Id Person -> Bool -> Bool -> Bool -> Esq.SqlDB ()
+updateDowngradingOptions :: (L.MonadFlow m, MonadTime m) => Id Person -> Bool -> Bool -> Bool -> m (MeshResult ())
 updateDowngradingOptions = Queries.updateDowngradingOptions
 
 --------- Caching logic -------------------

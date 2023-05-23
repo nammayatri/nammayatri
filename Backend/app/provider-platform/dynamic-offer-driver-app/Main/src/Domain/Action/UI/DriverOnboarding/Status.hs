@@ -118,7 +118,7 @@ verificationStatus onboardingTryLimit imagesNum verificationReq =
         then LIMIT_EXCEED
         else NO_DOC_AVAILABLE
 
-enableDriver :: Id SP.Person -> Id DM.Merchant -> Maybe RC.VehicleRegistrationCertificate -> Maybe DL.DriverLicense -> Flow ()
+enableDriver :: Id SP.Person.Driver -> Id DM.Merchant -> Maybe RC.VehicleRegistrationCertificate -> Maybe DL.DriverLicense -> Flow ()
 enableDriver _ _ Nothing Nothing = return ()
 enableDriver personId merchantId (Just rc) (Just dl) = do
   DIQuery.verifyAndEnableDriver personId
