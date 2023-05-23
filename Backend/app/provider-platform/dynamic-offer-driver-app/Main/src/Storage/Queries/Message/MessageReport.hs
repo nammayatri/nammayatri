@@ -44,6 +44,13 @@ createMany = Esq.createMany
 create :: MessageReport -> SqlDB ()
 create = Esq.create
 
+create' :: L.MonadFlow m => MessageReport -> m (MeshResult ())
+create' messageReport = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainMessageReportToBeam messageReport)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+
 fullMessage ::
   Language ->
   From
@@ -92,6 +99,13 @@ findByMessageIdAndDriverId messageId driverId =
     where_ $
       messageReport ^. MessageReportTId ==. val (toKey (messageId, driverId))
     return messageReport
+
+findByMessageIdAndDriverId' :: L.MonadFlow m => Id Msg.Message -> Id P.Driver -> m (Maybe MessageReport)
+findByMessageIdAndDriverId' (Id messageId) (Id driverId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure Nothing) (transformBeamMessageReportToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamMR.messageId $ Se.Eq messageId, Se.Is BeamMR.driverId $ Se.Eq driverId]]
+    Nothing -> pure Nothing
 
 findByMessageIdAndStatusWithLimitAndOffset ::
   Transactionable m =>
@@ -160,6 +174,22 @@ updateSeenAndReplyByMessageIdAndDriverId messageId driverId readStatus reply = d
       mr ^. MessageReportMessageId ==. val (toKey messageId)
         &&. mr ^. MessageReportDriverId ==. val (toKey $ cast driverId)
 
+updateSeenAndReplyByMessageIdAndDriverId' :: (L.MonadFlow m, MonadTime m) => Id Msg.Message -> Id P.Driver -> Bool -> Maybe Text -> m (MeshResult ())
+updateSeenAndReplyByMessageIdAndDriverId' messageId driverId readStatus reply = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  now <- getCurrentTime
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        Mesh.meshConfig
+        [ Se.Set BeamMR.readStatus readStatus,
+          Se.Set BeamMR.reply reply,
+          Se.Set BeamMR.updatedAt now
+        ]
+        [Se.Is BeamMR.messageId $ Se.Eq $ getId messageId, Se.Is BeamMR.driverId $ Se.Eq $ getId driverId]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+
 updateMessageLikeByMessageIdAndDriverIdAndReadStatus :: Id Msg.Message -> Id P.Driver -> SqlDB ()
 updateMessageLikeByMessageIdAndDriverIdAndReadStatus messageId driverId = do
   now <- getCurrentTime
@@ -174,6 +204,21 @@ updateMessageLikeByMessageIdAndDriverIdAndReadStatus messageId driverId = do
         &&. mr ^. MessageReportDriverId ==. val (toKey $ cast driverId)
         &&. mr ^. MessageReportReadStatus ==. val True
 
+-- updateSeenAndReplyByMessageIdAndDriverId' :: (L.MonadFlow m, MonadTime m)=> Id Msg.Message -> Id P.Driver -> m (MeshResult ())
+-- updateSeenAndReplyByMessageIdAndDriverId' messageId driverId = do
+--   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   now <- getCurrentTime
+--   case dbConf of
+--     Just dbConf' ->
+--       KV.updateWoReturningWithKVConnector
+--         dbConf'
+--         Mesh.meshConfig
+--         [Se.Set BeamMR.likeStatus $ Se.Not BeamMR.likeStatus,
+--          Se.Set BeamMR.updatedAt now
+--          ]
+--         [Se.Is BeamMR.messageId $ Se.Eq $ getId messageId, Se.Is BeamMR.driverId $ Se.Eq $ getId driverId ]
+--     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+
 updateDeliveryStatusByMessageIdAndDriverId :: Id Msg.Message -> Id P.Driver -> DeliveryStatus -> SqlDB ()
 updateDeliveryStatusByMessageIdAndDriverId messageId driverId deliveryStatus = do
   now <- getCurrentTime
@@ -186,6 +231,21 @@ updateDeliveryStatusByMessageIdAndDriverId messageId driverId deliveryStatus = d
     where_ $
       mr ^. MessageReportMessageId ==. val (toKey messageId)
         &&. mr ^. MessageReportDriverId ==. val (toKey $ cast driverId)
+
+updateDeliveryStatusByMessageIdAndDriverId' :: (L.MonadFlow m, MonadTime m) => Id Msg.Message -> Id P.Driver -> DeliveryStatus -> m (MeshResult ())
+updateDeliveryStatusByMessageIdAndDriverId' messageId driverId deliveryStatus = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  now <- getCurrentTime
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        Mesh.meshConfig
+        [ Se.Set BeamMR.deliveryStatus deliveryStatus,
+          Se.Set BeamMR.updatedAt now
+        ]
+        [Se.Is BeamMR.messageId $ Se.Eq $ getId messageId, Se.Is BeamMR.driverId $ Se.Eq $ getId driverId]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 deleteByPersonId :: Id P.Person -> SqlDB ()
 deleteByPersonId personId =

@@ -42,6 +42,13 @@ create msg = Esq.runTransaction $
 findById :: Transactionable m => Id Message -> m (Maybe RawMessage)
 findById = Esq.findById
 
+-- findById' :: L.MonadFlow m => Id Message -> m (Maybe RawMessage)
+-- findById' (Id messageId) = do
+--   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   case dbConf of
+--     Just dbCOnf' -> either (pure Nothing) (transformBeamMessageToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamM.id $ Se.Eq messageId]
+--     Nothing -> pure Nothing
+
 findAllWithLimitOffset ::
   Transactionable m =>
   Maybe Int ->
@@ -68,6 +75,18 @@ updateMessageLikeCount messageId value = do
   Esq.update $ \msg -> do
     set msg [MessageLikeCount =. (msg ^. MessageLikeCount) +. val value]
     where_ $ msg ^. MessageId ==. val (getId messageId)
+
+-- updateMessageLikeCount' :: L.MonadFlow m =>  Id Message -> Int-> m (MeshResult ())
+-- updateMessageLikeCount' messageId value  = do
+--   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   case dbConf of
+--     Just dbConf' ->
+--       KV.updateWoReturningWithKVConnector
+--         dbConf'
+--         Mesh.meshConfig
+--         [Se.Set BeamM.likeCount $ BeamM.likeCount + value ]
+--         [Se.Is BeamM.id (Se.Eq $ getId messageId)]
+--     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 transformBeamMessageToDomain :: L.MonadFlow m => BeamM.Message -> m (Message)
 transformBeamMessageToDomain BeamM.MessageT {..} = do
