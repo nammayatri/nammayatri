@@ -9,8 +9,8 @@ pipeline {
                 when {
                     anyOf {
                         expression { 'x86_64-linux' == env.SYSTEM }
-                        // Enable running macOS builds when on main branch, so
-                        // as to provide Nix cache for people on macOS.
+                        // Enable running macOS builds when on main branch,
+                        // so as to provide Nix cache for people on macOS.
                         branch 'main'
                     }
                 }
@@ -36,7 +36,7 @@ pipeline {
                             allOf {
                                 expression { 'x86_64-linux' == env.SYSTEM }
                                 anyOf {
-                                    branch 'main'; branch 'prodHotPush'
+                                    branch 'main'; branch 'backend/hotPushProd-RiderApp'
                                 }
                             }
                         }
@@ -47,7 +47,7 @@ pipeline {
                     stage ('Cachix push') {
                         when {
                             anyOf {
-                                branch 'main'; branch 'prodHotPush'
+                                branch 'main'; branch 'backend/hotPushProd-RiderApp'
                             }
                         }
                         steps {
