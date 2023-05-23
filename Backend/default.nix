@@ -6,7 +6,9 @@
     ./nix/run-mobility-stack.nix
     ./nix/arion-configuration.nix
     ./nix/osrm.nix
+    ./nix/extended.nix
   ];
+
   perSystem = { config, self', pkgs, lib, ... }: {
     pre-commit.settings.imports = [
       ./nix/pre-commit.nix
@@ -40,9 +42,6 @@
     };
 
     packages = {
-      ny-example = with config.haskellProjects.default.outputs.finalPackages;
-        callCabal2nix "ny-example" inputs.ny-example { };
-
       # The final nammayatri package containing the various executables and
       # configuration files.
       nammayatri =
