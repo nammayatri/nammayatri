@@ -96,12 +96,16 @@ findById ::
   m (Maybe Person)
 findById = Esq.findById
 
--- findById' :: L.MonadFlow m => Id Person -> m (Maybe Person)
--- findById' (Id personId) = do
---   dbConf <- L.getOption Extra.EulerPsqlDbCfg
---   case dbConf of
---     Just dbCOnf' -> either (pure Nothing) (transformBeamPersonToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamP.id $ Se.Eq personId]
---     Nothing -> pure Nothing
+findById' :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Person)
+findById' (Id personId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> do
+      result <- KV.findWithKVConnector dbConf' VN.meshConfig [Se.Is BeamP.id $ Se.Eq personId]
+      case result of
+        Right p -> traverse transformBeamPersonToDomain p
+        Left _ -> pure Nothing
+    Nothing -> pure Nothing
 
 data FullDriver = FullDriver
   { person :: Person,
@@ -268,6 +272,17 @@ findByIdAndRoleAndMerchantId pid role_ merchantId =
         &&. person ^. PersonMerchantId ==. val (toKey merchantId)
     return person
 
+findByIdAndRoleAndMerchantId' :: (L.MonadFlow m, Log m) => Id Person -> Person.Role -> Id Merchant -> m (Maybe Person)
+findByIdAndRoleAndMerchantId' (Id pid) role_ (Id merchantId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> do
+      result <- KV.findWithKVConnector dbConf' VN.meshConfig [Se.And [Se.Is BeamP.id $ Se.Eq pid, Se.Is BeamP.role $ Se.Eq role_, Se.Is BeamP.merchantId $ Se.Eq merchantId]]
+      case result of
+        Right p -> traverse transformBeamPersonToDomain p
+        Left _ -> pure Nothing
+    Nothing -> pure Nothing
+
 findAllByMerchantId ::
   Transactionable m =>
   [Person.Role] ->
@@ -281,6 +296,17 @@ findAllByMerchantId roles merchantId =
         &&. person ^. PersonMerchantId ==. val (toKey merchantId)
     return person
 
+findAllByMerchantId' :: (L.MonadFlow m, Log m) => [Person.Role] -> Id Merchant -> m [Person]
+findAllByMerchantId' roles (Id merchantId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> do
+      result <- KV.findAllWithKVConnector dbConf' VN.meshConfig [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.role $ Se.In roles]]
+      case result of
+        Right p -> traverse transformBeamPersonToDomain p
+        Left _ -> pure []
+    Nothing -> pure []
+
 findAdminsByMerchantId :: Transactionable m => Id Merchant -> m [Person]
 findAdminsByMerchantId merchantId =
   Esq.findAll $ do
@@ -289,6 +315,17 @@ findAdminsByMerchantId merchantId =
       person ^. PersonMerchantId ==. val (toKey merchantId)
         &&. person ^. PersonRole ==. val Person.ADMIN
     return person
+
+findAdminsByMerchantId' :: (L.MonadFlow m, Log m) => Id Merchant -> m [Person]
+findAdminsByMerchantId' (Id merchantId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> do
+      result <- KV.findAllWithKVConnector dbConf' VN.meshConfig [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.role $ Se.Eq Person.ADMIN]]
+      case result of
+        Right p -> traverse transformBeamPersonToDomain p
+        Left _ -> pure []
+    Nothing -> pure []
 
 findByMobileNumberAndMerchant ::
   (Transactionable m) =>
@@ -307,6 +344,26 @@ findByMobileNumberAndMerchant countryCode mobileNumberHash merchantId = do
         &&. person ^. PersonMerchantId ==. val (toKey merchantId)
     return person
 
+findByMobileNumberAndMerchant' :: (L.MonadFlow m, Log m) => Text -> DbHash -> Id Merchant -> m (Maybe Person)
+findByMobileNumberAndMerchant' countryCode mobileNumberHash (Id merchantId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> do
+      result <-
+        KV.findWithKVConnector
+          dbConf'
+          VN.meshConfig
+          [ Se.And
+              [ Se.Is BeamP.mobileCountryCode $ Se.Eq $ Just countryCode,
+                Se.Is BeamP.merchantId $ Se.Eq merchantId,
+                Se.Or [Se.Is BeamP.mobileNumberHash $ Se.Eq $ Just mobileNumberHash, Se.Is BeamP.alternateMobileNumberHash $ Se.Eq $ Just mobileNumberHash]
+              ]
+          ]
+      case result of
+        Right p -> traverse transformBeamPersonToDomain p
+        Left _ -> pure Nothing
+    Nothing -> pure Nothing
+
 findByIdentifierAndMerchant ::
   Transactionable m =>
   Id Merchant ->
@@ -320,6 +377,17 @@ findByIdentifierAndMerchant merchantId identifier_ =
         &&. person ^. PersonMerchantId ==. val (toKey merchantId)
     return person
 
+findByIdentifierAndMerchant' :: (L.MonadFlow m, Log m) => Id Merchant -> Text -> m (Maybe Person)
+findByIdentifierAndMerchant' (Id merchantId) identifier_ = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> do
+      result <- KV.findWithKVConnector dbConf' VN.meshConfig [Se.And [Se.Is BeamP.identifier $ Se.Eq $ Just identifier_, Se.Is BeamP.merchantId $ Se.Eq merchantId]]
+      case result of
+        Right p -> traverse transformBeamPersonToDomain p
+        Left _ -> pure Nothing
+    Nothing -> pure Nothing
+
 findByEmailAndMerchant ::
   Transactionable m =>
   Id Merchant ->
@@ -332,6 +400,17 @@ findByEmailAndMerchant merchantId email_ =
       person ^. PersonEmail ==. val (Just email_)
         &&. person ^. PersonMerchantId ==. val (toKey merchantId)
     return person
+
+findByEmailAndMerchant' :: (L.MonadFlow m, Log m) => Id Merchant -> Text -> m (Maybe Person)
+findByEmailAndMerchant' (Id merchantId) email_ = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> do
+      result <- KV.findWithKVConnector dbConf' VN.meshConfig [Se.And [Se.Is BeamP.email $ Se.Eq $ Just email_, Se.Is BeamP.merchantId $ Se.Eq merchantId]]
+      case result of
+        Right p -> traverse transformBeamPersonToDomain p
+        Left _ -> pure Nothing
+    Nothing -> pure Nothing
 
 findByRoleAndMobileNumberAndMerchantId ::
   (Transactionable m, EncFlow m r) =>
@@ -350,6 +429,28 @@ findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumber_ merchantI
         &&. person ^. PersonMobileNumberHash ==. val (Just mobileNumberDbHash)
         &&. person ^. PersonMerchantId ==. val (toKey merchantId)
     return person
+
+findByRoleAndMobileNumberAndMerchantId' :: (L.MonadFlow m, Log m, EncFlow m r) => Role -> Text -> Text -> Id Merchant -> m (Maybe Person)
+findByRoleAndMobileNumberAndMerchantId' role_ countryCode mobileNumber_ (Id merchantId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  mobileNumberDbHash <- getDbHash mobileNumber_
+  case dbConf of
+    Just dbConf' -> do
+      result <-
+        KV.findWithKVConnector
+          dbConf'
+          VN.meshConfig
+          [ Se.And
+              [ Se.Is BeamP.role $ Se.Eq $ role_,
+                Se.Is BeamP.mobileCountryCode $ Se.Eq $ Just countryCode,
+                Se.Is BeamP.mobileNumberHash $ Se.Eq $ Just mobileNumberDbHash,
+                Se.Is BeamP.merchantId $ Se.Eq merchantId
+              ]
+          ]
+      case result of
+        Right p -> traverse transformBeamPersonToDomain p
+        Left _ -> pure Nothing
+    Nothing -> pure Nothing
 
 personDriverTable ::
   From
@@ -444,32 +545,32 @@ updatePersonRec personId person = do
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey personId)
 
--- updatePersonRec' :: (L.MonadFlow m, MonadTime m) => Id Person -> Text -> m (MeshResult ())
--- updatePersonRec' (Id personId) person = do
---   dbConf <- L.getOption Extra.EulerPsqlDbCfg
---   now <- getCurrentTime
---   case dbConf of
---     Just dbConf' ->
---       KV.updateWoReturningWithKVConnector
---         dbConf'
---         VN.meshConfig
---         [ Se.Set BeamP.firstName person.firstName,
---           Se.Set BeamP.middleName person.middleName,
---           Se.Set BeamP.lastName person.lastName,
---           Se.Set BeamP.gender person.gender,
---           Se.Set BeamP.email person.email,
---           Se.Set BeamP.identifier person.identifier,
---           Se.Set BeamP.rating person.rating,
---           Se.Set BeamP.language person.language,
---           Se.Set BeamP.deviceToken person.deviceToken,
---           Se.Set BeamP.merchantId person.merchantId,
---           Se.Set BeamP.description person.description,
---           Se.Set BeamP.updatedAt now,
---           Se.Set BeamP.clientVersion (versionToText <$> person.clientVersion),
---           Se.Set BeamP.bundleVersion (versionToText <$> person.bundleVersion)
---         ]
---         [Se.Is BeamP.id (Se.Eq personId)]
---     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+updatePersonRec' :: (L.MonadFlow m, MonadTime m) => Id Person -> Person -> m (MeshResult ())
+updatePersonRec' (Id personId) person = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  now <- getCurrentTime
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        VN.meshConfig
+        [ Se.Set BeamP.firstName $ person.firstName,
+          Se.Set BeamP.middleName $ person.middleName,
+          Se.Set BeamP.lastName $ person.lastName,
+          Se.Set BeamP.gender $ person.gender,
+          Se.Set BeamP.email $ person.email,
+          Se.Set BeamP.identifier $ person.identifier,
+          Se.Set BeamP.rating $ person.rating,
+          Se.Set BeamP.language $ person.language,
+          Se.Set BeamP.deviceToken $ person.deviceToken,
+          Se.Set BeamP.merchantId $ getId person.merchantId,
+          Se.Set BeamP.description $ person.description,
+          Se.Set BeamP.updatedAt now,
+          Se.Set BeamP.clientVersion (versionToText <$> person.clientVersion),
+          Se.Set BeamP.bundleVersion (versionToText <$> person.bundleVersion)
+        ]
+        [Se.Is BeamP.id (Se.Eq personId)]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 updatePersonVersions :: Person -> Maybe Version -> Maybe Version -> SqlDB ()
 updatePersonVersions person mbBundleVersion mbClientVersion =
@@ -489,26 +590,27 @@ updatePersonVersions person mbBundleVersion mbClientVersion =
         where_ $
           tbl ^. PersonTId ==. val (toKey person.id)
 
--- updatePersonRec' :: (L.MonadFlow m, MonadTime m) => Person -> Maybe Version -> Maybe Version -> m (MeshResult ())
--- updatePersonRec' person mbBundleVersion mbClientVersion =
---   when
---     ((isJust mbBundleVersion || isJust mbClientVersion) && (person.bundleVersion /= mbBundleVersion || person.clientVersion /= mbClientVersion))
---     do
---       now <- getCurrentTime
---       let mbBundleVersionText = versionToText <$> (mbBundleVersion <|> person.bundleVersion)
---           mbClientVersionText = versionToText <$> (mbClientVersion <|> person.clientVersion)
---       dbConf <- L.getOption Extra.EulerPsqlDbCfg
---       case dbConf of
---         Just dbConf' ->
---           KV.updateWoReturningWithKVConnector
---             dbConf'
---             VN.meshConfig
---             [ Se.Set BeamP.clientVersion mbClientVersionText,
---               Se.Set BeamP.clientVersion mbBundleVersionText,
---               Se.Set BeamP.updatedAt now
---             ]
---             [Se.Is BeamP.id (Se.Eq person.id)]
---         Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+updatePersonVersions' :: (L.MonadFlow m, MonadTime m) => Person -> Maybe Version -> Maybe Version -> m ()
+updatePersonVersions' person mbBundleVersion mbClientVersion =
+  when
+    ((isJust mbBundleVersion || isJust mbClientVersion) && (person.bundleVersion /= mbBundleVersion || person.clientVersion /= mbClientVersion))
+    do
+      now <- getCurrentTime
+      let mbBundleVersionText = versionToText <$> (mbBundleVersion <|> person.bundleVersion)
+          mbClientVersionText = versionToText <$> (mbClientVersion <|> person.clientVersion)
+      dbConf <- L.getOption Extra.EulerPsqlDbCfg
+      case dbConf of
+        Just dbConf' ->
+          void $
+            KV.updateWoReturningWithKVConnector
+              dbConf'
+              VN.meshConfig
+              [ Se.Set BeamP.clientVersion mbClientVersionText,
+                Se.Set BeamP.clientVersion mbBundleVersionText,
+                Se.Set BeamP.updatedAt now
+              ]
+              [Se.Is BeamP.id (Se.Eq $ getId person.id)]
+        Nothing -> pure ()
 
 updateDeviceToken :: Id Person -> Maybe FCMRecipientToken -> SqlDB ()
 updateDeviceToken personId mbDeviceToken = do
@@ -576,6 +678,24 @@ updateMobileNumberAndCode person = do
         PersonUpdatedAt =. val now
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey person.id)
+
+updateMobileNumberAndCode' :: (L.MonadFlow m, MonadTime m, Log m, EncFlow m r) => Person -> m (MeshResult ())
+updateMobileNumberAndCode' person = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  now <- getCurrentTime
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        VN.meshConfig
+        [ Se.Set BeamP.mobileCountryCode $ person.mobileCountryCode,
+          Se.Set BeamP.mobileNumberEncrypted $ person.mobileNumber <&> unEncrypted . (.encrypted),
+          Se.Set BeamP.mobileNumberHash $ person.mobileNumber <&> (.hash),
+          Se.Set BeamP.unencryptedMobileNumber $ person.unencryptedMobileNumber,
+          Se.Set BeamP.updatedAt now
+        ]
+        [Se.Is BeamP.id (Se.Eq $ getId person.id)]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 setIsNewFalse :: Id Person -> SqlDB ()
 setIsNewFalse personId = do
@@ -859,6 +979,22 @@ updateAlternateMobileNumberAndCode person = do
         PersonUpdatedAt =. val now
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey person.id)
+
+updateAlternateMobileNumberAndCode' :: (L.MonadFlow m, MonadTime m) => Person -> m (MeshResult ())
+updateAlternateMobileNumberAndCode' person = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  now <- getCurrentTime
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        VN.meshConfig
+        [ Se.Set BeamP.alternateMobileNumberEncrypted (person.alternateMobileNumber <&> unEncrypted . (.encrypted)),
+          Se.Set BeamP.unencryptedAlternateMobileNumber person.unencryptedAlternateMobileNumber,
+          Se.Set BeamP.updatedAt now
+        ]
+        [Se.Is BeamP.id (Se.Eq $ getId person.id)]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 transformBeamPersonToDomain :: (L.MonadFlow m, Log m) => BeamP.Person -> m Person
 transformBeamPersonToDomain BeamP.PersonT {..} = do
