@@ -12,6 +12,7 @@ pipeline {
                         // Enable running macOS builds when on main branch, so
                         // as to provide Nix cache for people on macOS.
                         branch 'main'
+                        branch 'ny-example'
                     }
                 }
                 axes {
