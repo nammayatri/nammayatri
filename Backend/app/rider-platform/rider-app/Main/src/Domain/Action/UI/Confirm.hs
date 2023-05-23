@@ -59,7 +59,6 @@ cancelBooking booking = do
             reasonCode = Nothing,
             reasonStage = Nothing,
             additionalInfo = Nothing,
-            driverLat = Nothing,
-            driverLon = Nothing,
+            driverCancellationLocation = Nothing,
             driverDistToPickup = Nothing
           }

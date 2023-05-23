@@ -22,7 +22,6 @@ module Domain.Action.UI.Cancel
   )
 where
 
-import qualified Domain.Action.UI.Ride as RLOC
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.CancellationReason as SCR
@@ -32,7 +31,6 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as Ride
 import Domain.Types.SearchRequest (SearchRequest)
-import qualified Environment
 import Kernel.External.Maps
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
@@ -40,6 +38,7 @@ import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.CallBPP as CallBPP
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
@@ -78,8 +77,8 @@ data CancelSearch = CancelSearch
     sendToBpp :: Bool
   }
 
-cancel :: (EncFlow m r, Esq.EsqDBReplicaFlow m r, EsqDBFlow m r, HasCacheConfig r, HedisFlow m r, HasField "rideCfg" r Environment.RideConfig, Metrics.CoreMetrics m) => Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> CancelReq -> m CancelRes
-cancel bookingId personId req = do
+cancel :: (EncFlow m r, Esq.EsqDBReplicaFlow m r, EsqDBFlow m r, HasCacheConfig r, HedisFlow m r, Metrics.CoreMetrics m) => Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> CancelReq -> m CancelRes
+cancel bookingId _ req = do
   booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   when (booking.status == SRB.CANCELLED) $ throwError (BookingInvalidStatus "This booking is already cancelled")
@@ -88,10 +87,16 @@ cancel bookingId personId req = do
     throwError $ RideInvalidStatus "Cannot cancel this ride"
   when (booking.status == SRB.NEW) $ throwError (BookingInvalidStatus "NEW")
   bppBookingId <- fromMaybeM (BookingFieldNotPresent "bppBookingId") booking.bppBookingId
-  ride <- QR.findActiveByRBId booking.id >>= fromMaybeM (RideDoesNotExist $ "BookingId: " <> booking.id.getId)
-  currLocation <- RLOC.getDriverLoc ride.id personId
-  finalDis <- getDistanceBetweenPoints booking.merchantId (getCoordinates currLocation) (getCoordinates booking.fromLocation)
-  cancellationReason <- buildBookingCancelationReason (Just currLocation.lat) (Just currLocation.lon) (Just finalDis)
+  ride <- Esq.runInReplica $ QR.findActiveByRBId booking.id >>= fromMaybeM (RideDoesNotExist $ "BookingId: " <> booking.id.getId)
+  res <- try @_ @SomeException (CallBPP.callGetDriverLocation ride.trackingUrl)
+  cancellationReason <-
+    case res of
+      Right res' -> do
+        disToPickup <- driverDistanceToPickup booking.merchantId (getCoordinates res'.currPoint) (getCoordinates booking.fromLocation)
+        buildBookingCancelationReason (Just res'.currPoint) (Just disToPickup)
+      Left err -> do
+        logTagInfo "DriverLocationFetchFailed" $ show err
+        buildBookingCancelationReason Nothing Nothing
   DB.runTransaction $ QBCR.upsert cancellationReason
   return $
     CancelRes
@@ -103,7 +108,7 @@ cancel bookingId personId req = do
         city = merchant.city
       }
   where
-    buildBookingCancelationReason lat lon finalDis = do
+    buildBookingCancelationReason currentDriverLocation disToPickup = do
       let CancelReq {..} = req
       return $
         SBCR.BookingCancellationReason
@@ -113,9 +118,8 @@ cancel bookingId personId req = do
             reasonCode = Just reasonCode,
             reasonStage = Just reasonStage,
             additionalInfo = additionalInfo,
-            driverLat = lat,
-            driverLon = lon,
-            driverDistToPickup = finalDis,
+            driverCancellationLocation = currentDriverLocation,
+            driverDistToPickup = disToPickup,
             ..
           }
 
@@ -169,24 +173,24 @@ cancelSearch personId dcr = do
         QEstimate.updateStatus dcr.estimateId DEstimate.CANCELLED
   QPFS.clearCache personId
 
-getDistanceBetweenPoints ::
+driverDistanceToPickup ::
   ( EncFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
     Metrics.CoreMetrics m,
-    Maps.HasCoordinates a,
-    Maps.HasCoordinates b
+    Maps.HasCoordinates tripStartPos,
+    Maps.HasCoordinates tripEndPos
   ) =>
   Id Merchant.Merchant ->
-  a ->
-  b ->
+  tripStartPos ->
+  tripEndPos ->
   m Meters
-getDistanceBetweenPoints merchantId a b = do
+driverDistanceToPickup merchantId tripStartPos tripEndPos = do
   distRes <-
-    Maps.getDistance merchantId $
+    Maps.getDistanceForCancelRide merchantId $
       Maps.GetDistanceReq
-        { origin = a,
-          destination = b,
+        { origin = tripStartPos,
+          destination = tripEndPos,
           travelMode = Just Maps.CAR
         }
   return $ distRes.distance

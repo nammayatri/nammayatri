@@ -73,8 +73,7 @@ mkBookingCancellationReason reasonCode mbRideId bookingId = do
       reasonCode = Just $ coerce @Common.CancellationReasonCode @DCR.CancellationReasonCode reasonCode,
       reasonStage = Nothing,
       additionalInfo = Nothing,
-      driverLat = Nothing,
-      driverLon = Nothing,
+      driverCancellationLocation = Nothing,
       driverDistToPickup = Nothing
     }
 

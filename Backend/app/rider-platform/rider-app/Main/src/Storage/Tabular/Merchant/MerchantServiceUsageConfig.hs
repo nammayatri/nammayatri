@@ -46,6 +46,7 @@ mkPersist
       getTripRoutes MapsService
       getPlaceDetails MapsService
       autoComplete MapsService
+      getDistancesForCancelRide MapsService
       notifyPerson NotificationService
       useFraudDetection Bool
       smsProvidersPriorityList (PostgresList SmsService)
