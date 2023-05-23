@@ -11,9 +11,10 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-module SharedLogic.SimulatedFlow.Maps
+module Domain.Action.UI.SimulatedFlow.Maps
   ( autoComplete,
     addMeters,
+    autoCompleteSimulator,
   )
 where
 
@@ -25,6 +26,9 @@ import Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
 import qualified SharedLogic.MerchantConfig as SMC
 import qualified Tools.Maps as Maps
+
+autoCompleteSimulator :: (Redis.HedisFlow m r, MonadFlow m) => Bool -> Maps.AutoCompleteReq -> m Maps.AutoCompleteResp -> m Maps.AutoCompleteResp
+autoCompleteSimulator isSimulated req nonSimulatedAction = if isSimulated then autoComplete req else nonSimulatedAction
 
 autoComplete :: (Redis.HedisFlow m r, MonadFlow m) => Maps.AutoCompleteReq -> m Maps.AutoCompleteResp
 autoComplete req = do

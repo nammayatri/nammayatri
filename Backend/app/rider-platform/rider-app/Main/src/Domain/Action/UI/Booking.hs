@@ -13,166 +13,36 @@
 -}
 
 module Domain.Action.UI.Booking
-  ( BookingListRes (..),
-    bookingStatus,
+  ( bookingStatus,
     bookingList,
   )
 where
 
-import Data.OpenApi (ToSchema (..))
+import qualified Domain.Action.UI.SimulatedFlow.Booking as SSBooking
+import Domain.Types.Booking
 import qualified Domain.Types.Booking as SRB
-import qualified Domain.Types.Booking.BookingLocation as DBL
 import qualified Domain.Types.Person as Person
-import qualified Domain.Types.Ride as Ride
 import EulerHS.Prelude hiding (id)
 import Kernel.Storage.Esqueleto (runInReplica)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import SharedLogic.Booking
-import qualified SharedLogic.SimulatedFlow.Booking as SSBooking
 import Storage.CachedQueries.CacheConfig (CacheFlow, SimluatedCacheFlow)
-import qualified Storage.CachedQueries.SimulatedFlow.Driver as CSD
-import Storage.CachedQueries.SimulatedFlow.SearchRequest
-import qualified Storage.CachedQueries.SimulatedFlow.SearchRequest as CSR
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Person as QP
 import Tools.Error
 
-newtype BookingListRes = BookingListRes
-  { list :: [SRB.BookingAPIEntity]
-  }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
-
 bookingStatus :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, SimluatedCacheFlow m r) => Id SRB.Booking -> Id Person.Person -> m SRB.BookingAPIEntity
 bookingStatus bookingId personId = do
   person <- runInReplica (QP.findById personId) >>= fromMaybeM (PersonNotFound personId.getId)
-  if person.isSimulated
-    then do
-      now <- getCurrentTime
-      CSR.linkBookingWithPerson bookingId personId
-      createSimuatedReponse now bookingId
-    else do
-      booking <- runInReplica (QRB.findById bookingId) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
-      unless (booking.riderId == personId) $ throwError AccessDenied
-      SRB.buildBookingAPIEntity booking
+  SSBooking.bookingStatusSimulator person.isSimulated bookingId personId $ do
+    booking <- runInReplica (QRB.findById bookingId) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+    unless (booking.riderId == personId) $ throwError AccessDenied
+    SRB.buildBookingAPIEntity booking
 
 bookingList :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, SimluatedCacheFlow m r) => Id Person.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> m BookingListRes
 bookingList personId mbLimit mbOffset mbOnlyActive mbBookingStatus = do
   person <- runInReplica (QP.findById personId) >>= fromMaybeM (PersonNotFound personId.getId)
-  if person.isSimulated
-    then do
-      createBookingList mbBookingStatus personId
-    else do
-      rbList <- runInReplica $ QRB.findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus
-      BookingListRes <$> traverse SRB.buildBookingAPIEntity rbList
-
-createBookingList :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, SimluatedCacheFlow m r) => Maybe SRB.BookingStatus -> Id Person.Person -> m BookingListRes
-createBookingList mbBookingStatus personId = do
-  now <- getCurrentTime
-  bookingId <- CSR.getBookingIdByPersonId personId >>= fromMaybeM (InvalidRequest $ "SimulatedFlow:Booking: bookingId not found for personId: " <> personId.getId)
-  quoteId <- CSR.getQuoteIdByBookingId bookingId >>= fromMaybeM (InvalidRequest "SimulatedFlow:Booking: quoteId not found")
-  estimateId <- CSR.getEstimateIdByQuoteId quoteId >>= fromMaybeM (InvalidRequest "SimulatedFlow:Booking: estimateId not found")
-  estimate <- CSR.getEstimateById estimateId >>= fromMaybeM (InvalidRequest "SimulatedFlow:Booking: estimate not found")
-  searchReqId <- CSR.getSearchRequestIdByEstimateId estimateId >>= fromMaybeM (InvalidRequest "SimulatedFlow:Booking: searchReqId not found")
-  searchReq <- CSR.getSearchRequestById searchReqId >>= fromMaybeM (InvalidRequest "SimulatedFlow:Booking: searchReq not found")
-  driverInfo <- CSD.getLinkedDriverByEstimateId estimateId >>= fromMaybeM (InvalidRequest "SimulatedFlow:Booking: driver not found")
-  toLocation <- searchReq.toLocation & fromMaybeM (InvalidRequest "SimulatedFlow:Booking: toLocaiton not found")
-  shortId <- generateShortId
-  guid <- generateGUID
-  CSR.linkBookingStatusBooking SRB.TRIP_ASSIGNED bookingId
-  CSR.linkBookingIdWithRideId bookingId guid
-  bpguid <- generateGUID
-  otp <- generateOTPCode
-  let simulatedRide =
-        Ride.RideAPIEntity
-          { id = guid,
-            shortRideId = shortId,
-            status = Ride.NEW,
-            driverName = driverInfo.driver.driverName,
-            driverNumber = Just driverInfo.driver.driverNumber,
-            driverRatings = driverInfo.driver.driverRating,
-            driverRegisteredAt = now,
-            rideOtp = otp,
-            vehicleNumber = driverInfo.driver.vehicelNumber,
-            vehicleColor = "Black",
-            vehicleModel = "Bajaj",
-            computedPrice = Just estimate.estimatedFare,
-            chargeableRideDistance = searchReq.distance,
-            driverArrivalTime = Nothing,
-            rideStartTime = Nothing,
-            rideEndTime = Nothing,
-            rideRating = Nothing,
-            createdAt = now,
-            updatedAt = now,
-            bppRideId = bpguid,
-            vehicleVariant = estimate.vehicleVariant
-          }
-
-  pure . BookingListRes . (: []) $
-    SRB.BookingAPIEntity
-      { id = bookingId,
-        status = fromMaybe SRB.TRIP_ASSIGNED mbBookingStatus,
-        agencyName = "",
-        agencyNumber = "",
-        estimatedFare = estimate.estimatedFare,
-        discount = Nothing,
-        estimatedTotalFare = estimate.estimatedTotalFare,
-        fromLocation = DBL.makeSimulatedBookingLocationAPIEntity searchReq.fromLocation,
-        rideList = [simulatedRide],
-        tripTerms = [],
-        fareBreakup = [], -- FareBreakupAPIEntity
-        bookingDetails = SSBooking.mkSimulatedBookingAPIDetails toLocation $ fromMaybe 1200 searchReq.distance,
-        rideStartTime = Nothing,
-        rideEndTime = Nothing,
-        duration = Nothing,
-        merchantExoPhone = "0000000000",
-        createdAt = now,
-        updatedAt = now
-      }
-
-createSimuatedReponse :: (MonadFlow m, SimluatedCacheFlow m r) => UTCTime -> Id SRB.Booking -> m SRB.BookingAPIEntity
-createSimuatedReponse now bookingId = do
-  status <- getLinkBookingStatusBooking bookingId
-  let bookingLocation =
-        DBL.BookingLocationAPIEntity
-          { lat = 0,
-            lon = 0,
-            street = Nothing,
-            door = Nothing,
-            city = Nothing,
-            state = Nothing,
-            country = Nothing,
-            building = Nothing,
-            areaCode = Nothing,
-            area = Nothing,
-            ward = Nothing,
-            placeId = Nothing
-          }
-      bookingDetails =
-        DriverOfferAPIDetails $
-          OneWayBookingAPIDetails
-            { toLocation = bookingLocation,
-              estimatedDistance = HighPrecMeters 0
-            }
-  return
-    SRB.BookingAPIEntity
-      { id = bookingId,
-        status = if isNothing status then SRB.TRIP_ASSIGNED else SRB.CANCELLED,
-        agencyName = "",
-        agencyNumber = "",
-        estimatedFare = Money 0,
-        discount = Nothing,
-        estimatedTotalFare = Money 0,
-        fromLocation = bookingLocation,
-        rideList = [],
-        tripTerms = [],
-        fareBreakup = [],
-        bookingDetails = bookingDetails,
-        rideStartTime = Nothing,
-        rideEndTime = Nothing,
-        duration = Nothing,
-        merchantExoPhone = "0000000000",
-        createdAt = now,
-        updatedAt = now
-      }
+  SSBooking.bookingListSimulator person.isSimulated mbBookingStatus personId do
+    rbList <- runInReplica $ QRB.findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus
+    BookingListRes <$> traverse SRB.buildBookingAPIEntity rbList

@@ -1,4 +1,4 @@
-module SharedLogic.SimulatedFlow.Confirm where
+module Domain.Action.UI.SimulatedFlow.Confirm where
 
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Quote as Quote

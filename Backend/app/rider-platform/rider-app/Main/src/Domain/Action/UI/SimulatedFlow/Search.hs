@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedLists #-}
 
-module SharedLogic.SimulatedFlow.Search where
+module Domain.Action.UI.SimulatedFlow.Search where
 
 import qualified Domain.Action.UI.Search.OneWay as DOneWaySearch
 import qualified Domain.Action.UI.Search.Rental as DRentalSearch

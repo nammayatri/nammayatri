@@ -29,6 +29,7 @@ import Data.Aeson ((.:), (.=))
 import qualified Data.Aeson as A
 import Data.Aeson.Types (parseFail, typeMismatch)
 import qualified Data.List.NonEmpty as NE
+import qualified Domain.Action.UI.SimulatedFlow.Maps as SM
 import Domain.Types.Booking.Type
 import qualified Domain.Types.DriverOffer as DDriverOffer
 import qualified Domain.Types.Estimate as DEstimate
@@ -50,7 +51,6 @@ import Kernel.Types.Id
 import Kernel.Types.Predicate
 import Kernel.Utils.Common
 import Kernel.Utils.Validation
-import qualified SharedLogic.SimulatedFlow.Maps as SM
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS

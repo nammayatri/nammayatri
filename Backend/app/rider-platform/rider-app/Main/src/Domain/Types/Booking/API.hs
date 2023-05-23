@@ -56,6 +56,11 @@ data BookingAPIEntity = BookingAPIEntity
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
+newtype BookingListRes = BookingListRes
+  { list :: [BookingAPIEntity]
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
 -- do not change constructor names without changing fareProductConstructorModifier
 
 makeBookingAPIEntity :: Booking -> Maybe Ride -> [Ride] -> [FareBreakup] -> Maybe DExophone.Exophone -> BookingAPIEntity

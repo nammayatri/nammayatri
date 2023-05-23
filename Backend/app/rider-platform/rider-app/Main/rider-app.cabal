@@ -125,6 +125,13 @@ library
       Domain.Action.UI.Search.Rental
       Domain.Action.UI.Select
       Domain.Action.UI.Serviceability
+      Domain.Action.UI.SimulatedFlow.Booking
+      Domain.Action.UI.SimulatedFlow.Confirm
+      Domain.Action.UI.SimulatedFlow.Maps
+      Domain.Action.UI.SimulatedFlow.Ride
+      Domain.Action.UI.SimulatedFlow.Route
+      Domain.Action.UI.SimulatedFlow.Search
+      Domain.Action.UI.SimulatedFlow.Select
       Domain.Action.UI.Sos
       Domain.Action.UI.Support
       Domain.Action.UI.Webengage.InfoBIPWebhook
@@ -182,10 +189,6 @@ library
       SharedLogic.MetroOffer
       SharedLogic.PublicTransport
       SharedLogic.Search
-      SharedLogic.SimulatedFlow.Booking
-      SharedLogic.SimulatedFlow.Confirm
-      SharedLogic.SimulatedFlow.Maps
-      SharedLogic.SimulatedFlow.Search
       Storage.CachedQueries.BlackListOrg
       Storage.CachedQueries.CacheConfig
       Storage.CachedQueries.Exophone

@@ -27,7 +27,6 @@ import qualified Dashboard.Common.Booking as Booking
 import qualified Dashboard.RiderPlatform.Customer as Customer
 import qualified Dashboard.RiderPlatform.Merchant as Merchant
 import qualified Dashboard.RiderPlatform.Ride as Ride
-import qualified "rider-app" Domain.Action.UI.Booking as DBooking
 import qualified "rider-app" Domain.Action.UI.Cancel as DCancel
 import qualified "rider-app" Domain.Action.UI.Frontend as DFrontend
 import qualified "rider-app" Domain.Action.UI.Maps as DMaps
@@ -35,6 +34,7 @@ import qualified "rider-app" Domain.Action.UI.Profile as DProfile
 import qualified "rider-app" Domain.Action.UI.Quote as DQuote
 import qualified "rider-app" Domain.Action.UI.Registration as DR
 import qualified "rider-app" Domain.Action.UI.Select as DSelect
+import qualified "rider-app" Domain.Types.Booking as DBooking
 import qualified "rider-app" Domain.Types.Booking as SRB
 import qualified "rider-app" Domain.Types.Booking.API as DB
 import qualified "rider-app" Domain.Types.Estimate as DEstimate

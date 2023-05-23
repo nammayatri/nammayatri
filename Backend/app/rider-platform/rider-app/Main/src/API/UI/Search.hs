@@ -31,6 +31,7 @@ import qualified Data.Text as T
 import qualified Domain.Action.UI.Search.Common as DSearchCommon
 import qualified Domain.Action.UI.Search.OneWay as DOneWaySearch
 import qualified Domain.Action.UI.Search.Rental as DRentalSearch
+import Domain.Action.UI.SimulatedFlow.Search
 import qualified Domain.Types.Person as Person
 import Domain.Types.SearchRequest (SearchRequest)
 import Environment
@@ -56,7 +57,6 @@ import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.PublicTransport as PublicTransport
 import SharedLogic.Search
-import SharedLogic.SimulatedFlow.Search
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.MerchantConfig as CMC

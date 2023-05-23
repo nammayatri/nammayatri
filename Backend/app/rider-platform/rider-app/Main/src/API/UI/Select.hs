@@ -30,6 +30,7 @@ import qualified Beckn.ACL.Cancel as CACL
 import qualified Beckn.ACL.Select as ACL
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.Select as DSelect
+import Domain.Action.UI.SimulatedFlow.Select
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Person as DPerson
@@ -84,28 +85,24 @@ handler =
 select :: Id DPerson.Person -> Id DEstimate.Estimate -> FlowHandler APISuccess
 select personId estimateId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  if not person.isSimulated
-    then do
-      let autoAssignFlag = False
-      let req = DSelect.DEstimateSelectReq {customerExtraFee = Nothing, autoAssignEnabled = autoAssignFlag, autoAssignEnabledV2 = Nothing}
-      Redis.whenWithLockRedis (selectEstimateLockKey personId) 60 $ do
-        dSelectReq <- DSelect.select personId estimateId req
-        becknReq <- ACL.buildSelectReq dSelectReq
-        void $ withShortRetry $ CallBPP.select dSelectReq.providerUrl becknReq
-      pure Success
-    else pure Success
+  simulateSelect person.isSimulated $ do
+    let autoAssignFlag = False
+    let req = DSelect.DEstimateSelectReq {customerExtraFee = Nothing, autoAssignEnabled = autoAssignFlag, autoAssignEnabledV2 = Nothing}
+    Redis.whenWithLockRedis (selectEstimateLockKey personId) 60 $ do
+      dSelectReq <- DSelect.select personId estimateId req
+      becknReq <- ACL.buildSelectReq dSelectReq
+      void $ withShortRetry $ CallBPP.select dSelectReq.providerUrl becknReq
+    pure Success
 
 select2 :: Id DPerson.Person -> Id DEstimate.Estimate -> DSelect.DEstimateSelectReq -> FlowHandler APISuccess
 select2 personId estimateId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  if not person.isSimulated
-    then do
-      Redis.whenWithLockRedis (selectEstimateLockKey personId) 60 $ do
-        dSelectReq <- DSelect.select personId estimateId req
-        becknReq <- ACL.buildSelectReq dSelectReq
-        void $ withShortRetry $ CallBPP.select dSelectReq.providerUrl becknReq
-      pure Success
-    else pure Success
+  simulateSelect person.isSimulated $ do
+    Redis.whenWithLockRedis (selectEstimateLockKey personId) 60 $ do
+      dSelectReq <- DSelect.select personId estimateId req
+      becknReq <- ACL.buildSelectReq dSelectReq
+      void $ withShortRetry $ CallBPP.select dSelectReq.providerUrl becknReq
+    pure Success
 
 selectList :: Id DPerson.Person -> Id DEstimate.Estimate -> FlowHandler DSelect.SelectListRes
 selectList personId = withFlowHandlerAPI . withPersonIdLogTag personId . DSelect.selectList

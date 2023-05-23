@@ -17,7 +17,7 @@
 module API.Dashboard.RideBooking.Booking where
 
 import qualified API.UI.Booking as UB
-import qualified Domain.Action.UI.Booking as DBooking
+import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Booking.API as DB
 import qualified Domain.Types.Person as DP
