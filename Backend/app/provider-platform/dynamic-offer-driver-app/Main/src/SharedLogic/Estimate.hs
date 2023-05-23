@@ -21,6 +21,7 @@ where
 import qualified Data.List.NonEmpty as NE
 import Data.Ord (comparing)
 import Domain.Types.Estimate as DEst
+import qualified Domain.Types.FareParameters as DFParams
 import Domain.Types.FarePolicy
 import qualified Domain.Types.FarePolicy as DFP
 import Kernel.Prelude
@@ -63,7 +64,9 @@ buildEstimate transactionId startTime dist farePolicy = do
         vehicleVariant = farePolicy.vehicleVariant,
         minFare = baseFare + maybe 0 (.minFee) mbDriverExtraFeeBounds,
         maxFare = baseFare + maybe 0 (.maxFee) mbDriverExtraFeeBounds,
-        estimateBreakupList = estimateBreakups <> additionalBreakups,
+        estimateBreakupList =
+          estimateBreakups <> additionalBreakups
+            & filter (filterRequiredBreakups $ DFParams.getFareParametersType fareParams), -- TODO: Remove after roll out
         nightShiftInfo =
           ((,,) <$> fareParams.nightShiftCharge <*> getOldNightShiftCharge farePolicy.farePolicyDetails <*> farePolicy.nightShiftBounds)
             <&> \(nightShiftCharge, oldNightShiftCharge, nightShiftBounds) ->
@@ -98,6 +101,20 @@ buildEstimate transactionId startTime dist farePolicy = do
       case farePolicyDetails of
         DFP.SlabsDetails det -> getNightShiftChargeValue <$> (DFP.findFPSlabsDetailsSlabByDistance dist det.slabs).nightShiftCharge
         DFP.ProgressiveDetails det -> getNightShiftChargeValue <$> det.nightShiftCharge
+
+    filterRequiredBreakups fParamsType breakup = do
+      case fParamsType of
+        DFParams.Progressive ->
+          breakup.title == "BASE_DISTANCE_FARE"
+            || breakup.title == "EXTRA_PER_KM_FARE"
+            || breakup.title == "DEAD_KILOMETER_FARE"
+            || breakup.title == "DRIVER_MIN_EXTRA_FEE"
+            || breakup.title == "DRIVER_MAX_EXTRA_FEE"
+        DFParams.Slab ->
+          breakup.title == "BASE_DISTANCE_FARE"
+            || breakup.title == "SERVICE_CHARGE"
+            || breakup.title == "WAITING_OR_PICKUP_CHARGES"
+            || breakup.title == "FIXED_GOVERNMENT_RATE"
 
 mkAdditionalBreakups :: (Money -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> Meters -> FarePolicy -> [breakupItem]
 mkAdditionalBreakups mkPrice mkBreakupItem distance farePolicy = do

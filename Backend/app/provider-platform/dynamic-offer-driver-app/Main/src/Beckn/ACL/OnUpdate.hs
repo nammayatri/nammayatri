@@ -30,6 +30,7 @@ import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent a
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Estimate as DEst
+import qualified Domain.Types.FareParameters as DFParams
 import qualified Domain.Types.FareParameters as Fare
 import qualified Domain.Types.Person as SP
 import Domain.Types.Ride as DRide
@@ -139,7 +140,9 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
             value = fare,
             computed_value = fare
           }
-      breakup = mkBreakupList (OnUpdate.BreakupPrice currency . fromIntegral) OnUpdate.BreakupItem req.fareParams
+      breakup =
+        mkBreakupList (OnUpdate.BreakupPrice currency . fromIntegral) OnUpdate.BreakupItem req.fareParams
+          & filter (filterRequiredBreakups $ DFParams.getFareParametersType req.fareParams) -- TODO: Remove after roll out
   return $
     OnUpdate.OnUpdateMessage $
       OnUpdate.RideCompleted
@@ -157,6 +160,22 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
                   chargeable_distance = chargeableDistance
                 }
           }
+  where
+    filterRequiredBreakups fParamsType breakup = do
+      case fParamsType of
+        DFParams.Progressive ->
+          breakup.title == "BASE_FARE"
+            || breakup.title == "DEAD_KILOMETER_FARE"
+            || breakup.title == "EXTRA_DISTANCE_FARE"
+            || breakup.title == "DRIVER_SELECTED_FARE"
+            || breakup.title == "CUSTOMER_SELECTED_FARE"
+            || breakup.title == "TOTAL_FARE"
+        DFParams.Slab ->
+          breakup.title == "BASE_FARE"
+            || breakup.title == "SERVICE_CHARGE"
+            || breakup.title == "WAITING_OR_PICKUP_CHARGES"
+            || breakup.title == "FIXED_GOVERNMENT_RATE"
+            || breakup.title == "TOTAL_FARE"
 buildOnUpdateMessage BookingCancelledBuildReq {..} = do
   return $
     OnUpdate.OnUpdateMessage $
