@@ -18,6 +18,7 @@ import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
 import qualified Data.List.NonEmpty as NE
 import qualified Domain.Types.Booking.Type as DRB
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Ride as Ride
 import Environment
 import Kernel.External.Maps (LatLong (..))
 import qualified Kernel.External.Maps as Maps
@@ -36,6 +37,7 @@ mkGetLocation :: ShortId DM.Merchant -> Id Common.Ride -> Common.TripRouteReq ->
 mkGetLocation shortMerchantId rideId req = do
   merchant <- QMerchant.findByShortId shortMerchantId >>= fromMaybeM (MerchantDoesNotExist shortMerchantId.getShortId)
   ride <- runInReplica $ QRide.findById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  unless (ride.status == Ride.NEW || ride.status == Ride.INPROGRESS) $ throwError (RideInvalidStatus $ show ride.status)
   booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   let mbToLocation = case booking.bookingDetails of
         DRB.RentalDetails _ -> Nothing
