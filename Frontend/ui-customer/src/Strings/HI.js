@@ -447,5 +447,6 @@ const hindiStrings = {
   "DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE": "ध्यान दें: ड्राइवर पार्टनर यह अतिरिक्त किराया चार्ज कर सकते हैं या नहीं भी कर सकते हैं।",
   "YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS": "आप नीचे दिए गए किसी भी कारण से अपडेटेड अंतिम किराया देख सकते हैं:",
   "REASON_CHANGE_IN_ROUTE_A": "1.मार्ग में परिवर्तन: ",
-  "REASON_CHANGE_IN_ROUTE_B": "मार्ग में बदलाव के कारण कुल किराए में बदलाव हो सकता है"
+  "REASON_CHANGE_IN_ROUTE_B": "मार्ग में बदलाव के कारण कुल किराए में बदलाव हो सकता है",
+  "NAVIGATE_TO_PICKUP" : "पिकअप पर नेविगेट करें"
 }
