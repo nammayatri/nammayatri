@@ -33,10 +33,10 @@ instance loggableAction :: Loggable Action where
     AfterRender -> trackAppScreenRender appId "screen" (getScreen APP_UPDATE_POPUP_SCREEN)
     OnAccept -> do
         trackAppActionClick appId (getScreen APP_UPDATE_POPUP_SCREEN) "in_screen" "accept_update"
-        trackAppEndScreen appId (getScreen APP_UPDATE_POPUP_SCREEN)
+        -- trackAppEndScreen appId (getScreen APP_UPDATE_POPUP_SCREEN)
     OnCloseClick -> do
         trackAppActionClick appId (getScreen APP_UPDATE_POPUP_SCREEN) "in_screen" "decline_update"
-        trackAppEndScreen appId (getScreen APP_UPDATE_POPUP_SCREEN)
+        -- trackAppEndScreen appId (getScreen APP_UPDATE_POPUP_SCREEN)
 
 data ScreenOutput = Decline | Accept 
 

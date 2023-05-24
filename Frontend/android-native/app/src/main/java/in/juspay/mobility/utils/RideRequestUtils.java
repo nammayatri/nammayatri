@@ -42,7 +42,7 @@ import in.juspay.mobility.R;
 
 public class RideRequestUtils {
     private final int rideReqNotificationId = 5032023;
-    private final String RIDE_REQUEST_CHANNEL = "com.nammayatripartner.riderequest";
+    private final String RIDE_REQUEST_CHANNEL = "in.juspay.mobility.riderequest";
     private final int rideReqNotificationReqCode = 6032023;
     private FirebaseAnalytics mFirebaseAnalytics;
 

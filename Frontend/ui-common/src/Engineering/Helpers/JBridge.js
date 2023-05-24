@@ -608,6 +608,22 @@ export const scrollToBottom = function(id) {
   }
 }
 
+export const addMediaFile = function (viewID) {
+  return function (source) {
+      return function (actionButtonID) {
+          return function (playIcon) {
+              return function (pauseIcon) {
+                  return function (timerID) {
+                      return function () {
+                          JBridge.addMediaFile(viewID, source, actionButtonID, playIcon, pauseIcon, timerID);
+                      }
+                  }
+              }
+          }
+      }
+  }
+}
+
 export const isCoordOnPath = function (data) {
   return function (lat) {
     return function (lon) {
@@ -1125,13 +1141,21 @@ export const requestKeyboardShow = function(id) {
   JBridge.requestKeyboardShow(id);
 }
 
-export const locateOnMap = function(str){
-  return function (lat){
-    return function (lon){
-      JBridge.locateOnMap(str, lat, lon);
-    }
-  }
-}
+export const locateOnMap = function (str) {
+  return function (lat) {
+    return function (lon) {
+      return function (geoJson) {
+        return function (coodinates) {
+          try {
+            return JBridge.locateOnMap(str, lat, lon, geoJson, JSON.stringify(coodinates));
+          } catch (err) {
+            return JBridge.locateOnMap(str, lat, lon);
+          }s
+        };
+      };
+    };
+  };
+};
 
 export const exitLocateOnMap = function(str){
   JBridge.exitLocateOnMap(str);

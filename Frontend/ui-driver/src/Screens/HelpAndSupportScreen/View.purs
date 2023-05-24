@@ -24,8 +24,8 @@ import Effect (Effect)
 import Language.Strings (getString)
 import Components.IssueListFlow.Controller (getTitle)
 import Language.Types (STR(..))
-import Prelude (Unit, const, map, unit, ($), (*), (/), (<>),bind,pure,(/=),(<<<),(==), discard, (||), (&&), (>))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, color, imageView, lineHeight, linearLayout, onBackPressed, orientation, stroke, text, textSize, textView, visibility, width)
+import Prelude (Unit, const, map, unit, ($), (*), (/), (<>),bind,pure,(/=),(<<<),(==), discard, (||), (&&), (>), void)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, layoutGravity, alpha, scrollView, cornerRadius, onBackPressed, stroke, lineHeight, visibility, afterRender, scrollBarY, imageWithFallback)
 import PrestoDOM.Elements.Elements (scrollView)
 import PrestoDOM.Events (onClick)
 import PrestoDOM.Properties (cornerRadius, fontStyle, gravity, height, imageWithFallback, layoutGravity, margin, padding, scrollBarY, weight)
@@ -158,7 +158,7 @@ reportAnIssueHeader state push leftText =
  , padding (Padding 15 10 10 10)
  , background Color.lightGreyBlue
  ][ textView
-    [ width WRAP_CONTENT
+    [ width $ V (3 * screenWidth unit / 5)
     , height MATCH_PARENT
     , text leftText
     , gravity CENTER_VERTICAL

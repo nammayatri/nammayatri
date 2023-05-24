@@ -31,6 +31,7 @@ import JBridge as JB
 import Components.PopUpModal as PopUpModal
 import Common.Types.App
 import Screens.AboutUsScreen.ComponentConfig
+import MerchantConfigs.Utils (getValueFromMerchant)
 
 screen :: ST.AboutUsScreenState -> Screen Action ST.AboutUsScreenState ScreenOutput
 screen initialState =
@@ -63,20 +64,14 @@ view push state =
          headerLayout  state push
         , linearLayout
           [ width MATCH_PARENT
-          , weight 1.0
+          , height MATCH_PARENT
           , orientation VERTICAL
-          ][ scrollView
-            [ width MATCH_PARENT
-            , height MATCH_PARENT
-            , scrollBarY false
-            ][ linearLayout
-                [ height MATCH_PARENT
-                , width MATCH_PARENT
-                , orientation VERTICAL
-                ][ applicationInformationLayout state push
-                , footerView state
-                ]
-            ]
+          ][  applicationInformationLayout state push
+            , linearLayout
+                [ width MATCH_PARENT
+                , weight 1.0
+                , gravity BOTTOM
+                ][ footerView state ]
           ]]
       ]<> if state.props.demoModePopup then [demoModePopUpView push state] else [])
 
@@ -147,10 +142,9 @@ applicationInformationLayout :: ST.AboutUsScreenState -> (Action -> Effect Unit)
 applicationInformationLayout state push =
  linearLayout
   [ width MATCH_PARENT
-  , height MATCH_PARENT
+  , height WRAP_CONTENT
   , orientation VERTICAL
   , margin (MarginTop 20)
-  , weight 1.0
   ][ imageView
     ([ width $ V 150
     , height $ V 100
@@ -160,7 +154,7 @@ applicationInformationLayout state push =
     , textView
     [ width MATCH_PARENT
     , height WRAP_CONTENT
-    , text (getString ABOUT_APP_DESCRIPTION)
+    , text $ getString ABOUT_TEXT
     , textSize FontSize.a_16
     , fontStyle $ FontStyle.regular LanguageStyle
     , color Color.black800
@@ -182,8 +176,8 @@ underlinedTextView value push  =
   , orientation VERTICAL
   , onClick (\action -> do
               _<- push action
-              _ <- JB.openUrlInApp if (value == (getString T_C)) then "https://docs.google.com/document/d/1K68xvtReD9FVpx-IshtKNMt4baQNgKXt/edit?usp=share_link&ouid=115428839751313950285&rtpof=true&sd=true"
-                else "https://docs.google.com/document/d/1tF96MwtaEiq70y_P40E29Sy3X61moTc9/edit?usp=share_link&ouid=115428839751313950285&rtpof=true&sd=true"
+              _ <- JB.openUrlInApp if (value == (getString T_C)) then (getValueFromMerchant "DOCUMENT_LINK") 
+                else (getValueFromMerchant "PRIVACY_POLICY_LINK")
               pure unit
               ) (const TermsAndConditionAction)
   , margin (Margin 20 30 0 0)

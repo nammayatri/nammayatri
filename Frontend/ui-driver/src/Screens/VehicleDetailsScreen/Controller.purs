@@ -29,6 +29,7 @@ import Effect.Class (liftEffect)
 import JBridge(previewImage, uploadFile)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Screens (ScreenName(..), getScreen)
+import Helpers.Utils(getVehicleType)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -110,7 +111,7 @@ getValue :: ListOptions -> VehicleDetailsScreenState -> String
 getValue listOptions state =
   case listOptions of
     RegistrationNumber -> state.data.vehicleRegNumber
-    VehicleType -> state.data.vehicleType
+    VehicleType -> (getVehicleType state.data.vehicleType)
     VehicleModelName -> state.data.vehicleModel
     VehicleColor -> state.data.vehicleColor
     VehicleRC -> state.data.imageName

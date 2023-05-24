@@ -49,6 +49,7 @@ import Services.APITypes (GetRidesHistoryResp(..), Status(..))
 import Common.Types.App
 import Components.BottomNavBar.Controller (navData)
 import Screens.RideHistoryScreen.ComponentConfig
+import Screens as ScreenNames
 
 
 screen :: ST.RideHistoryScreenState -> PrestoList.ListItem -> Screen Action ST.RideHistoryScreenState ScreenOutput
@@ -115,7 +116,7 @@ view rideListItem push state =
           ] <> FontStyle.subHeading1 TypoGraphy)
         ]
     ]
-    , BottomNavBar.view (push <<< BottomNavBarAction) (navData 1)
+    , BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.RIDE_HISTORY_SCREEN)
     ]
 
 
@@ -128,7 +129,7 @@ headerView push state =
     , gravity CENTER
     , margin (MarginTop 30)
     ][ textView
-        [ text (getString RIDES)
+        [ text (getString TRIPS)
         , gravity CENTER_VERTICAL
         , textSize FontSize.a_20
         , color Color.black900

@@ -24,9 +24,10 @@ import Animation (translateInXForwardAnim, translateInXBackwardAnim)
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Helpers.Utils (Merchant(..), getMerchant)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, ($), const, (<>), (>),(==), (||))
+import Prelude (Unit, ($), const, (<>), (>),(==), (||), (&&))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, color, cornerRadius, imageUrl, fontStyle, gravity, height, imageView, textFromHtml,imageWithFallback, linearLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, weight, width, lineHeight,fontStyle)
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -210,7 +211,7 @@ defaultRateCardView push config =
         , orientation HORIZONTAL
         , margin $ MarginTop 10
         , padding (Padding 20 0 20 0)
-        , visibility if (getAdditionalFare config.additionalFare) > 0 then VISIBLE else GONE
+        , visibility if (getMerchant FunctionCall) == NAMMAYATRI && ((getAdditionalFare config.additionalFare) > 0) then VISIBLE else GONE
         ][ textView
             [ width WRAP_CONTENT
             , height WRAP_CONTENT

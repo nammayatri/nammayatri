@@ -25,10 +25,9 @@ import Font.Style as FontStyle
 import Data.Array (mapWithIndex , (!!), length, null)
 import Data.String (split, Pattern(..), length) as STR
 import Data.Maybe (fromMaybe, Maybe(..))
-import JBridge (renderBase64Image, scrollToBottom)
+import JBridge (renderBase64Image, scrollToBottom, addMediaFile)
 import Components.ChatView.Controller (Action(..), Config(..), ChatComponent)
 import Common.Types.App
-import Helpers.Utils (addMediaFile)
 import Styles.Colors (white900) as Color
 import PrestoDOM.Elements.Elements (progressBar)
 import PrestoDOM.Events (afterRender)

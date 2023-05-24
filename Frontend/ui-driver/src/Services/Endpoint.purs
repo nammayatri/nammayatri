@@ -139,3 +139,5 @@ fetchIssueList dummy = (getBaseUrl "") <> "/issue/list"
 deleteIssue :: String -> String 
 deleteIssue issueId = (getBaseUrl "") <> "/issue/"<> issueId <> "/delete"
 
+otpRide :: String -> String
+otpRide dummyRideOtp = (getBaseUrl "") <> "/driver/otpRide/start"

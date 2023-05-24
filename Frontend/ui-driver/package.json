@@ -1,6 +1,6 @@
 {
   "name": "atlas-ui-driver",
-  "version": "1.8.0",
+  "version": "1.0.0",
   "description": "Atlas Driver",
   "private": true,
   "main": "index.js",
@@ -53,6 +53,7 @@
     "moment": "^2.27.0",
     "presto-ui": "git+https://github.com/juspay/presto-ui.git#master",
     "ramda": "^0.26.1",
+    "purty": "^7.0.0",
     "regenerator-runtime": "^0.13.5"
   },
   "config": {

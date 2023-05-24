@@ -23,7 +23,7 @@ import Engineering.Helpers.Commons (os)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
-import Language.Types (STR(..), VIEW_DETAILS)
+import Language.Types (STR(..))
 import Prelude (Unit, ($), (<>), (<<<), (==))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, background, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, maxLines, orientation, padding, relativeLayout, shimmerFrameLayout, text, textSize, textView, weight, width, stroke, lineHeight, imageWithFallback, alpha)
 import PrestoDOM.List as PrestoList
@@ -71,6 +71,7 @@ cardView push state =
   , orientation VERTICAL
   , margin $ Margin 16 20 16 4
   , cornerRadius 8.0
+  , PrestoList.onClickHolder push $ Screen.IndividualRideCardActionController <<< OnClick
   , stroke $ "1,"<>Color.grey900
   , background Color.white900
   ][  rideDetails state

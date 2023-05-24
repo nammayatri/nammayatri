@@ -475,69 +475,79 @@ bottomBtnsView state push =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , orientation HORIZONTAL
+    , orientation VERTICAL
     , padding (PaddingBottom if os == "IOS" then 24 else 0)
     , alignParentBottom "true,-1"
     , background Color.white900
     , visibility if state.isSearchLocation == LocateOnMap || (not state.isRideServiceable) then GONE else VISIBLE
-    , gravity CENTER_VERTICAL
     , adjustViewWithKeyboard "true"
-    ]
-    ( mapWithIndex
-        ( \idx item ->
-            linearLayout
-              [ height WRAP_CONTENT
-              , width $ V ((screenWidth unit / 2))
-              , orientation HORIZONTAL
-              , gravity CENTER_VERTICAL
-              ]
-              [ linearLayout
+    ][  linearLayout
+        [ height $ V 1
+        , width MATCH_PARENT
+        , background Color.grey900
+        ][]
+      , linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation HORIZONTAL
+        , background Color.white900
+        , gravity CENTER_VERTICAL
+        ]
+        ( mapWithIndex
+            ( \idx item ->
+                linearLayout
                   [ height WRAP_CONTENT
-                  , width $ V 0
-                  , weight 1.0
-                  , gravity CENTER
+                  , width MATCH_PARENT
+                  , orientation HORIZONTAL
+                  , gravity CENTER_VERTICAL
                   ]
-                  [ imageView
-                      [ height $ V 20
-                      , width $ V 20
-                      , imageWithFallback item.imageUrl
+                  [ linearLayout
+                      [ height WRAP_CONTENT
+                      , width $ V 0
+                      , weight 1.0
+                      , gravity CENTER
                       ]
-                  , textView
-                      $ [ height WRAP_CONTENT
-                        , width WRAP_CONTENT
-                        , text item.text
-                        , gravity CENTER
-                        , color Color.black700
-                        , padding (Padding 10 16 10 16)
-                        , onClick
-                            ( \action ->
-                                if item.buttonType == "CurrentLocation" then do
-                                  _ <- push action
-                                  getLocationName push 9.9 9.9 "Current Location" UpdateSource
-                                else do
-                                  _ <- push action
-                                  pure unit
-                            )
-                            (const item.action)
-                        ]
-                      <> FontStyle.body1 TypoGraphy
+                      [ imageView
+                          [ height $ V 20
+                          , width $ V 20
+                          , imageWithFallback item.imageUrl
+                          ]
+                      , textView
+                          $ [ height WRAP_CONTENT
+                            , width WRAP_CONTENT
+                            , text item.text
+                            , gravity CENTER
+                            , color Color.black700
+                            , padding (Padding 10 16 10 16)
+                            , onClick
+                                ( \action ->
+                                    if item.buttonType == "CurrentLocation" then do
+                                      _ <- push action
+                                      getLocationName push 9.9 9.9 "Current Location" UpdateSource
+                                    else do
+                                      _ <- push action
+                                      pure unit
+                                )
+                                (const item.action)
+                            ]
+                          <> FontStyle.body1 TypoGraphy
+                      ]
+                  , linearLayout
+                      [ width $ V 2
+                      , height $ V 20
+                      , background Color.brownishGrey
+                      , alpha 0.25
+                      , visibility if length (btnData state) - 1 == idx then GONE else VISIBLE
+                      ]
+                      []
                   ]
-              , linearLayout
-                  [ width $ V 2
-                  , height $ V 20
-                  , background Color.brownishGrey
-                  , alpha 0.25
-                  , visibility if length (btnData state) - 1 == idx then GONE else VISIBLE
-                  ]
-                  []
-              ]
-        )
-        $ btnData state
-    )
+            )
+            $ btnData state
+        )]
 
 btnData :: SearchLocationModelState -> Array { text :: String, imageUrl :: String, action :: Action, buttonType :: String }
 btnData state =
-  [ { text: (getString SET_LOCATION_ON_MAP), imageUrl: "ny_ic_locate_on_map,https://assets.juspay.in/nammayatri/images/user/ny_ic_locate_on_map.png", action: SetLocationOnMap, buttonType: "LocateOnMap" }
-  , { text: (getString CURRENT_LOCATION), imageUrl: "ny_ic_current_location,https://assets.juspay.in/nammayatri/images/user/ny_ic_current_location.png", action: SetCurrentLocation, buttonType: "CurrentLocation" }
-  ]
+  [ { text: (getString SET_LOCATION_ON_MAP), imageUrl: "ny_ic_locate_on_map,https://assets.juspay.in/nammayatri/images/user/ny_ic_locate_on_map.png", action: SetLocationOnMap, buttonType: "LocateOnMap" }]
+  -- , { text: (getString CURRENT_LOCATION), imageUrl: "ny_ic_current_location,https://assets.juspay.in/nammayatri/images/user/ny_ic_current_location.png", action: SetCurrentLocation, buttonType: "CurrentLocation" }
+  -- ]
 

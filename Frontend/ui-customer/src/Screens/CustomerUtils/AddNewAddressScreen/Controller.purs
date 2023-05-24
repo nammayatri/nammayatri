@@ -134,9 +134,9 @@ eval (AddressChanged input) state = do
           else continue state{props{isLocationServiceable = (input /= state.data.address)}}
     else continue state
 
-eval (MAPREADY key latitude longitude) state = do
-  _ <- pure $ locateOnMap true 0.0 0.0
-  case key of
+eval (MAPREADY key latitude longitude) state = do 
+  _ <- pure $ locateOnMap true 0.0 0.0 "" []
+  case key of 
     _ -> continueWithCmd state[ do
       _ <- checkPermissionAndUpdatePersonMarker state
       pure AfterRender
@@ -146,8 +146,8 @@ eval (ClearEditText) state = do
   void $ pure $ requestKeyboardShow (getNewIDWithTag "SavedLocationEditText")
   continue state{props{isSearchedLocationServiceable = true}}
 
-eval SetLocationOnMap state = do
-  _ <- pure $ locateOnMap true 0.0 0.0
+eval SetLocationOnMap state = do 
+  _ <- pure $ locateOnMap true 0.0 0.0 "" []
   _ <- pure $ currentPosition ""
   _ <- pure $ removeAllPolylines ""
   _ <- pure $ hideKeyboardOnNavigation true

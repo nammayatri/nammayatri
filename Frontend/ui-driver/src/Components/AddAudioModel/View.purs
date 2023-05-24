@@ -30,12 +30,12 @@ import Font.Style (bold)
 import PrestoDOM.Elements.Elements (frameLayout, imageView)
 import Components.PrimaryButton (view) as PrimaryButton
 import Engineering.Helpers.Commons (getNewIDWithTag, screenWidth)
-import Helpers.Utils (addMediaFile)
 import Data.Maybe (Maybe(..), isJust)
 import Data.Int (round, toNumber)
 import Animation (screenAnimationFadeInOut)
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import JBridge (addMediaFile)
 
 view :: forall w . (Action -> Effect Unit) -> AddAudioModelState -> PrestoDOM (Effect Unit) w
 view push state =
