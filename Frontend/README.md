@@ -62,11 +62,11 @@ To update the `juspay_assets.json`, follow these steps:
 # For driver
 
 ```bash
-  bash userJuspayAssets.sh <userMerchantDir>
+  bash driverJuspayAssets.sh <driverMerchantDir>
 ```
 
 ```bash
-   ex : bash userJuspayAssets.sh nammaYatri
+   ex : bash driverJuspayAssets.sh nammaYatri
 ```
 
 **Starting the Server**
