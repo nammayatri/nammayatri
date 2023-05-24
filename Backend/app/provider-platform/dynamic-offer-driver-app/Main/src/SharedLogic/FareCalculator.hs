@@ -156,7 +156,7 @@ calculateFareParameters params = do
             customerExtraFee = mbCustomerExtraFee,
             serviceCharge = fp.serviceCharge,
             waitingCharge = resultWaitingCharge,
-            nightShiftCharge = resultNightShiftCharge,
+            nightShiftCharge = Just $ fromMaybe 0 resultNightShiftCharge,
             ..
           }
   logTagInfo "FareCalculator" $ "Fare parameters calculated: " +|| fareParams ||+ ""
