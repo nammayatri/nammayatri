@@ -190,8 +190,8 @@ public class MainActivity extends AppCompatActivity {
         sharedPref.edit().putString(getResources().getString(in.juspay.mobility.app.R.string.ACTIVITY_STATUS), "onCreate").apply();
         IntentFilter intentFilter = new IntentFilter(LocationManager.PROVIDERS_CHANGED_ACTION);
         networkBroadcastReceiver = new NetworkBroadcastReceiver();
-        registerReceiver(networkBroadcastReceiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
-        registerReceiver(gpsReceiver, intentFilter);
+//        registerReceiver(networkBroadcastReceiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
+//        registerReceiver(gpsReceiver, intentFilter);
         @SuppressLint("HardwareIds") String androidId = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
         Bundle params = new Bundle();
         params.putString("id", androidId);
@@ -334,7 +334,7 @@ public class MainActivity extends AppCompatActivity {
             json.put("requestId", "123");
             json.put("service", getService());
             json.put("betaAssets", false);
-            payload.put("clientId","nammayatri");
+            payload.put("clientId","mobilitypaytmconsumer");
             payload.put("action", "initiate");
             payload.put("service", getService());
             payload.put(PaymentConstants.ENV, "master");
@@ -368,7 +368,7 @@ public class MainActivity extends AppCompatActivity {
                     }
                     Log.e(LOG_TAG, "json_payload" + json);
                     hyperServices.process(json);
-                } else if (event.equals("hide_loader")) {
+                } else if (event.equals("hide_loader") || event.equals("hide_splash")) {
                     String key = getResources().getString(R.string.service);
                     if (key.equals("nammayatri") && isSystemAnimEnabled) {
                         isHideSplashEventCalled = true;
@@ -396,6 +396,17 @@ public class MainActivity extends AppCompatActivity {
                         Log.e(LOG_TAG,"Exception in location_permission");
                     }
                     hyperServices.process(json);
+                } else if (event.equals("process_result")) {
+                    try {
+                        JSONObject payload1 = json.getJSONObject(PaymentConstants.PAYLOAD);
+                        if (payload1.getString("action").equals("terminate")) {
+                            Intent startMain = new Intent(Intent.ACTION_MAIN);
+                            startMain.addCategory(Intent.CATEGORY_HOME);
+                            startMain.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                            context.startActivity(startMain);
+                        }
+                    } catch (Exception ignored) {
+                    }
                 }
             }
         });

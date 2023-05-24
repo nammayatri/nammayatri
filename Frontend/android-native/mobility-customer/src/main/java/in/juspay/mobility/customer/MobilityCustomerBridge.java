@@ -6,20 +6,24 @@ import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
 import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.pdf.PdfDocument;
 import android.location.Location;
+import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.ContactsContract;
+import android.util.Base64;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -471,8 +475,10 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                 if (layer != null) {
                     layer.removeLayerFromMap();
                 }
-                userPositionMarker.setIcon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView("", CURRENT_LOCATION)));
-                userPositionMarker.setTitle("");
+                if (userPositionMarker != null) {
+                    userPositionMarker.setIcon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView("", CURRENT_LOCATION)));
+                    userPositionMarker.setTitle("");
+                }
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -767,13 +773,12 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
         } else {
             fileNameformat = "YATRI_RIDE_";
         }
-        fileNameformat = fileNameformat + selectedItem.getString("date") + selectedItem.getString("rideStartTime") + ".pdf";
-        String removeColon = fileNameformat.replaceAll(":", "_");
-        String removedSpace = removeColon.replaceAll(" ", "_");
-        File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), removedSpace);
+        fileNameformat = fileNameformat + selectedItem.getString("date") + selectedItem.getString("rideStartTime");
+        String removedSpecial = fileNameformat.replaceAll("[^a-zA-Z0-9]", "_");
+        File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), removedSpecial + ".pdf");
         try {
             pdfDocument.writeTo(new FileOutputStream(file));
-            Uri path = FileProvider.getUriForFile(context, context.getPackageName() + ".fileProvider", file);
+            Uri path = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", file);
             showInvoiceNotification(path);
         } catch (IOException e) {
             e.printStackTrace();

@@ -21,21 +21,21 @@ public class NetworkBroadcastReceiver extends BroadcastReceiver {
     Context context;
     private static final ArrayList<CallBack> callBack = new ArrayList<>();
     private static final ArrayList<ProcessCallBack> processCallBack = new ArrayList<>();
-    public static void registerCallback(CallBack notificationCallback)
+    public static void registerCallback(CallBack networkCallback)
     {
-        callBack.add(notificationCallback);
+        callBack.add(networkCallback);
     }
-    public static void deRegisterCallback(CallBack notificationCallback)
+    public static void deRegisterCallback(CallBack networkCallback)
     {
-        callBack.remove(notificationCallback);
+        callBack.remove(networkCallback);
     }
-    public static void registerProcessCallback(ProcessCallBack notificationCallback)
+    public static void registerProcessCallback(ProcessCallBack networkCallback)
     {
-        processCallBack.add(notificationCallback);
+        processCallBack.add(networkCallback);
     }
-    public static void deRegisterProcessCallback(ProcessCallBack notificationCallback)
+    public static void deRegisterProcessCallback(ProcessCallBack networkCallback)
     {
-        processCallBack.remove(notificationCallback);
+        processCallBack.remove(networkCallback);
     }
 
     public interface ProcessCallBack{

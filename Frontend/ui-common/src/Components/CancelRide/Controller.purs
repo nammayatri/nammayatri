@@ -18,6 +18,8 @@ module Components.CancelRide.Controller where
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import Data.Maybe
 import Common.Types.App (CancellationReasons)
+import Config.DefaultConfig as DC
+import Config.Types (AppConfig)
 
 
 data Action = Button1 PrimaryButtonController.Action
@@ -41,6 +43,7 @@ type Config = {
     , showAllOptionsText :: String
     , hint :: String
     , strings :: StringConfig
+    , config :: AppConfig
 }
 
 type StringConfig = {
@@ -76,4 +79,5 @@ config =
         mandatory : "Mandatory"
       , limitReached : "Max character limit reached 100 of 100"
     }
+    , config : DC.config
 }

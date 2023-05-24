@@ -64,7 +64,7 @@ view triggertype push state =
      , padding $ Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom
      , gravity CENTER
      , afterRender push (const AfterRender)
-     ][ if triggertype == "INTERNET_ACTION" then ErrorModal.view (push <<< ErrorModalActionController) (errorModalConfig) else if triggertype == "LOCATION_DISABLED" then locationAccessPermissionView push state else  textView[]]  
+     ][ if triggertype == "INTERNET_ACTION" then ErrorModal.view (push <<< ErrorModalActionController) (errorModalConfig state) else if triggertype == "LOCATION_DISABLED" then locationAccessPermissionView push state else  textView[]]  
    ]
   
 locationAccessPermissionView :: forall w. (Action -> Effect Unit) -> ST.PermissionScreenState -> PrestoDOM (Effect Unit) w 

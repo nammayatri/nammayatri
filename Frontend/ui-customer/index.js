@@ -123,33 +123,14 @@ window.onMerchantEvent = function (event, payload) {
   } else if (event == "process") {
     console.warn("Process called");
     window.__payload.sdkVersion = "2.0.1"
-    if (clientPaylod.action == "location_permission_result") {
-      window.locationRequestCallBack.call();
-    } else if(clientPaylod.action == "location_event") {
-      purescript.onConnectivityEvent("LOCATION_DISABLED")();
-    } else if (clientPaylod.action == "notification") {
-      window.callNotificationCallBack(clientPaylod.notificationType);
+    if (clientPaylod.action == "notification_event") {
+      if (clientPaylod.notification_content && clientPaylod.notification_content.type)
+      window.callNotificationCallBack(clientPaylod.notification_content.type);
     } else {
-    var parsedPayload = JSON.parse(payload);
-    if (parsedPayload && parsedPayload.payload && parsedPayload.payload.action == "showPopup" && parsedPayload.payload.id && parsedPayload.payload.popType)
-    {
-        // window.__payload = Nothing;
-        window.callPopUp(parsedPayload.payload.id,parsedPayload.payload.popType);
-
-    }
-    else {
-      window.__payload = parsedPayload;
+      window.__payload = JSON.parse(payload);
       console.log("window Payload: ", window.__payload);
-      var jpConsumingBackpress = {
-        event: "jp_consuming_backpress",
-        payload: { jp_consuming_backpress: true }
-      }
-      JBridge.runInJuspayBrowser("onEvent", JSON.stringify(jpConsumingBackpress), "");
       purescript.main();
     }
-  }
-  } else {
-    console.error("unknown event: ", event);
   }
 }
 
@@ -223,6 +204,10 @@ window["onEvent'"] = function (event, args) {
     window.onPause();
   } else if (event == "onResume") {
     window.onResume();
+  } else if (event == "onLocationChanged" && !(window.receiverFlag)) {
+    purescript.onConnectivityEvent("LOCATION_DISABLED")();
+  } else if (event == "onInternetChanged") {
+    purescript.onConnectivityEvent("INTERNET_ACTION")();
   }
 }
 

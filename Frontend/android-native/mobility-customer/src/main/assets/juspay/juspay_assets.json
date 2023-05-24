@@ -1,8 +1,7 @@
 {
    "images" : {
-      "ic_50_percent" : true,
-      "ic_75_percent" : true,
       "ic_invoice_border" : true,
+      "ny_ic_offline" : true,
       "ic_line" : true,
       "ic_past_rides" : true,
       "ny_ic_add_address" : true,
@@ -10,7 +9,6 @@
       "ny_ic_briefcase" : true,
       "ny_ic_cancel" : true,
       "ny_ic_change_language" : true,
-      "ny_ic_chevron_left" : true,
       "ny_ic_chevron_left_white" : true,
       "ny_ic_chevron_right" : true,
       "ny_ic_chevron_right_white" : true,

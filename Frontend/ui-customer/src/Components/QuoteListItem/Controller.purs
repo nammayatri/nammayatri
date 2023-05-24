@@ -17,7 +17,7 @@ module Components.QuoteListItem.Controller where
 
 import Config.Types (AppConfig)
 import Data.Maybe (Maybe(..))
-import Config.DefaultConfig as MDC
+import Config.DefaultConfig as DC
 
 data Action = Click QuoteListItemState
               | NoAction 
@@ -52,5 +52,5 @@ config = {
   , vehicleType : "auto"
   , driverName : "Drive_Name"
   , selectedQuote : Nothing
-  , appConfig : MDC.config
+  , appConfig : DC.config
   }

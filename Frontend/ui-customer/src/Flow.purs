@@ -136,7 +136,7 @@ baseAppFlow (GlobalPayload gPayload) = do
                 Nothing -> pure unit
               currentFlowStatus
             Left err -> do
-              _ <- lift $ lift $ liftFlow $ runEffectFn3 emitJOSEvent "java" "onEvent" "signature_auth_failed"
+              _ <- lift $ lift $ liftFlow $ runEffectFn3 emitJOSEvent "java" "onEvent" "event,signature_auth_failed"
               pure unit
         Nothing -> enterMobileNumberScreenFlow
 
@@ -158,7 +158,7 @@ enableForceUpdateIOS = false
 checkVersion :: Int -> String -> FlowBT String Unit
 checkVersion versioncodeAndroid versionName= do
   if os /= "IOS" && versioncodeAndroid < (if isJust (getLatestAndroidVersion (getMerchant FunctionCall)) then fromMaybe 0 (getLatestAndroidVersion (getMerchant FunctionCall)) else versioncodeAndroid) then do
-    _ <- lift $ lift $ liftFlow $ runEffectFn3 emitJOSEvent "java" "onEvent" "hide_loader"
+    _ <- lift $ lift $ liftFlow $ runEffectFn3 emitJOSEvent "java" "onEvent" "event,event,hide_loader"
     _ <- UI.handleAppUpdatePopUp
     _ <- pure $ firebaseLogEvent "ny_user_app_update_pop_up_view"
     checkVersion versioncodeAndroid versionName
@@ -171,7 +171,7 @@ checkVersion versioncodeAndroid versionName= do
 
       if any (_ == -1) [majorUpdateIndex, minorUpdateIndex, patchUpdateIndex] then pure unit
         else if forceIOSupdate majorUpdateIndex minorUpdateIndex patchUpdateIndex  then do
-          _ <- lift $ lift $ liftFlow $ runEffectFn3 emitJOSEvent "java" "onEvent" "hide_loader"
+          _ <- lift $ lift $ liftFlow $ runEffectFn3 emitJOSEvent "java" "onEvent" "event,hide_loader"
           _ <- UI.handleAppUpdatePopUp
           _ <- pure $ firebaseLogEvent "ny_user_app_update_pop_up_view"
           checkVersion versioncodeAndroid versionName
@@ -307,7 +307,7 @@ currentFlowStatus = do
     DRIVER_OFFERED_QUOTE currentStatus      -> goToFindingQuotesStage currentStatus.estimateId true
     RIDE_ASSIGNED _                         -> currentRideFlow true
     _                                       -> currentRideFlow false
-  _ <- lift $ lift $ liftFlow $ runEffectFn3 emitJOSEvent "java" "onEvent" "hide_loader"
+  _ <- lift $ lift $ liftFlow $ runEffectFn3 emitJOSEvent "java" "onEvent" "event,hide_loader"
   permissionConditionA <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
   permissionConditionB <- lift $ lift $ liftFlow $ isLocationEnabled unit
   internetCondition <- lift $ lift $ liftFlow $ isInternetAvailable unit
@@ -332,7 +332,7 @@ currentFlowStatus = do
       setValueToLocalStore HAS_TAKEN_FIRST_RIDE if response.hasTakenRide then "true" else "false"
       if (((fromMaybe "" response.firstName) == "" ) && not (isJust response.firstName)) then do
         _ <- updateLocalStage HomeScreen
-        _ <- lift $ lift $ liftFlow $ runEffectFn3 emitJOSEvent "java" "onEvent" "hide_loader"
+        _ <- lift $ lift $ liftFlow $ runEffectFn3 emitJOSEvent "java" "onEvent" "event,hide_loader"
         accountSetUpScreenFlow
       else do
           modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{data{settingSideBar{name =fromMaybe "" response.firstName}}})
@@ -388,7 +388,7 @@ currentFlowStatus = do
 
 chooseLanguageScreenFlow :: FlowBT String Unit
 chooseLanguageScreenFlow = do
-  _ <- lift $ lift $ liftFlow $ runEffectFn3 emitJOSEvent "java" "onEvent" "hide_loader"
+  _ <- lift $ lift $ liftFlow $ runEffectFn3 emitJOSEvent "java" "onEvent" "event,hide_loader"
   setValueToLocalStore LANGUAGE_KEY "EN_US"
   _ <- pure $ firebaseLogEvent "ny_user_choose_lang_scn_view"
   flow <- UI.chooseLanguageScreen
@@ -401,7 +401,7 @@ chooseLanguageScreenFlow = do
 
 enterMobileNumberScreenFlow :: FlowBT String Unit
 enterMobileNumberScreenFlow = do
-  _ <- lift $ lift $ liftFlow $ runEffectFn3 emitJOSEvent "java" "onEvent" "hide_loader" -- Removed initial choose langauge screen
+  _ <- lift $ lift $ liftFlow $ runEffectFn3 emitJOSEvent "java" "onEvent" "event,hide_loader" -- Removed initial choose langauge screen
   setValueToLocalStore LANGUAGE_KEY "EN_US"
   void $ lift $ lift $ toggleLoader false
   config <- getAppConfig
@@ -954,7 +954,7 @@ homeScreenFlow = do
     GO_TO_INVOICE_ updatedState -> do
       let prevRideState = updatedState.data.previousRideRatingState
       let finalAmount = show prevRideState.finalAmount
-      modifyScreenState $ InvoiceScreenStateType (\invoiceScreen -> invoiceScreen {props{fromHomeScreen= true},data{totalAmount = ("₹ " <> finalAmount), date = prevRideState.dateDDMMYY, tripCharges = ("₹ " <> finalAmount), selectedItem {date = prevRideState.dateDDMMYY, bookingId = prevRideState.bookingId,rideStartTime = prevRideState.rideStartTime, rideEndTime = prevRideState.rideEndTime, rideId = prevRideState.rideId, shortRideId = prevRideState.shortRideId,vehicleNumber = prevRideState.vehicleNumber,time = prevRideState.rideStartTime,source = prevRideState.source,destination = prevRideState.destination,driverName = prevRideState.driverName,totalAmount = ("₹ " <> finalAmount)}}})
+      modifyScreenState $ InvoiceScreenStateType (\invoiceScreen -> invoiceScreen {props{fromHomeScreen= true},data{totalAmount = ("₹ " <> finalAmount), date = prevRideState.dateDDMMYY, tripCharges = ("₹ " <> finalAmount), selectedItem {date = prevRideState.dateDDMMYY, bookingId = prevRideState.bookingId,rideStartTime = prevRideState.rideStartTime, rideEndTime = prevRideState.rideEndTime, rideId = prevRideState.rideId, shortRideId = prevRideState.shortRideId,vehicleNumber = prevRideState.vehicleNumber,time = prevRideState.rideStartTime,source = prevRideState.source,destination = prevRideState.destination,driverName = prevRideState.driverName,totalAmount = ("₹ " <> finalAmount)}, config = updatedState.data.config}})
       invoiceScreenFlow
 
     CHECK_FOR_DUPLICATE_SAVED_LOCATION state -> do
@@ -1167,7 +1167,7 @@ tripDetailsScreenFlow fromMyRides = do
       modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {props{issueReported = true}})
       tripDetailsScreenFlow state.props.fromMyRides
     GO_TO_INVOICE updatedState -> do
-      modifyScreenState $ InvoiceScreenStateType (\invoiceScreen -> invoiceScreen {props{fromHomeScreen = false},data{totalAmount = updatedState.data.totalAmount, date = updatedState.data.date, tripCharges = updatedState.data.totalAmount, selectedItem = updatedState.data.selectedItem}})
+      modifyScreenState $ InvoiceScreenStateType (\invoiceScreen -> invoiceScreen {props{fromHomeScreen = false},data{totalAmount = updatedState.data.totalAmount, date = updatedState.data.date, tripCharges = updatedState.data.totalAmount, selectedItem = updatedState.data.selectedItem, config = updatedState.data.config}})
       invoiceScreenFlow
     GO_TO_HOME -> do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {  data{settingSideBar{opened = SettingSideBarController.CLOSED}}})

@@ -324,9 +324,9 @@ firstPrimaryButtonConfig config = let
     config'
       {textConfig
       { text = config.primaryButtonTextConfig.firstText
-      , color = Color.black700}
-      , background = Color.white900
-      , stroke = "1," <> Color.black500
+      , color = config.config.primaryBackground}
+      , background = config.config.primaryTextColor
+      , stroke = "1," <> config.config.primaryBackground
       , width = V ((screenWidth unit/2)-30)
       , id = "Button1"
       }
@@ -338,11 +338,14 @@ secondPrimaryButtonConfig config = let
   primaryButtonConfig' =
     config'
        {textConfig
-        { text = config.primaryButtonTextConfig.secondText}
+        { text = config.primaryButtonTextConfig.secondText
+        , color = config.config.primaryTextColor}
         , width = V ((screenWidth unit/2)-30)
         , id = "Button2"
         , alpha = if(config.isCancelButtonActive) then 1.0  else 0.5
         , isClickable = config.isCancelButtonActive
+        , background = config.config.primaryBackground
+        , stroke = "1," <> config.config.primaryBackground
        }
   in primaryButtonConfig'
 

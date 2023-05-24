@@ -115,7 +115,7 @@ view push state =
                 , clickable true
                 , margin (Margin 16 20 16 10)
                 , stroke "1,#E5E7EB"
-                ][  sourceDestinationImageView
+                ][  sourceDestinationImageView state
                   , sourceDestinationEditTextView state push
                   ]
             ]<> if state.isSearchLocation == SearchLocation && state.isRideServiceable then [(searchResultsParentView state push )] else  [] )
@@ -184,8 +184,8 @@ locationUnserviceableView state push =
     ]
 
 ---------------------------- sourceDestinationImageView ---------------------------------
-sourceDestinationImageView :: forall w. PrestoDOM (Effect Unit) w
-sourceDestinationImageView =
+sourceDestinationImageView :: forall w. SearchLocationModelState -> PrestoDOM (Effect Unit) w
+sourceDestinationImageView state =
   frameLayout
     [ height $ V 136
     , width $ V 50

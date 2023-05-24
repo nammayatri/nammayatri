@@ -19,7 +19,7 @@ import Components.ErrorModal.Controller as ErrorModalController
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import Effect.Uncurried (EffectFn3, mkEffectFn3, runEffectFn3)
 import Effect.Unsafe (unsafePerformEffect)
-import JBridge (emitJOSEvent, firebaseLogEvent, isInternetAvailable, requestLocation)
+import JBridge (firebaseLogEvent, isInternetAvailable, requestLocation)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
 import Prelude (class Show, Unit, bind, discard, pure, unit, ($), (==))
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)

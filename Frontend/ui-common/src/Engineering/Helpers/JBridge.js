@@ -1321,8 +1321,22 @@ export const goBackPrevWebPage = function (id) {
   }
 }
 
-export const emitJOSEvent = function (mapp,eventType,event) {
-  JOS.emitEvent(mapp)(eventType)(JSON.stringify({ event: event}))()()
+export const emitJOSEvent = function (mapp,eventType,payload) {
+  var event = payload.split(",");
+  var resultPayload = {};
+  if (event[0] == "event") {
+    resultPayload = {
+      event : event[1]
+    }
+  } else if (event[0] == "action") {
+    resultPayload = {
+      event : "process_result",
+      payload : {
+        action : event[1]
+      }
+    }
+  }
+  JOS.emitEvent(mapp)(eventType)(JSON.stringify(resultPayload))()()
 }
 export const locationPermissionCallBack = function (cb,action) {
   var locationRequestCallBack = function (){

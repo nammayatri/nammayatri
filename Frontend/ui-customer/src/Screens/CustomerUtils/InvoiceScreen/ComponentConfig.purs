@@ -56,8 +56,8 @@ primaryButtonConfig :: ST.InvoiceScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let
    config = PrimaryButton.config
    primaryButtonConfig' = config
-     { textConfig
-      { text = (getString DOWNLOAD_PDF)
-      }
+     { textConfig{ text = (getString DOWNLOAD_PDF)
+      , color = state.data.config.primaryTextColor }
+      , background = state.data.config.primaryBackground
      }
    in primaryButtonConfig'

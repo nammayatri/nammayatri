@@ -727,10 +727,8 @@ eval BackPressed state = do
                           else if state.props.emergencyHelpModal then continue state {props {emergencyHelpModal = false}}
                           else if state.props.callSupportPopUp then continue state {props {callSupportPopUp = false}}
                           else do 
-                            if (getMerchant FunctionCall) == UNKNOWN then
-                              pure $ unsafePerformEffect $ runEffectFn1 consumingBackPress false
-                              else pure $ minimizeApp ""
-                            continue state
+                              pure $ unsafePerformEffect $ runEffectFn3 emitJOSEvent "java" "onEvent" "action,terminate"
+                              continue state
 
 eval GoBackToSearchLocationModal state = do
   _ <- pure $ updateLocalStage SearchLocationModel

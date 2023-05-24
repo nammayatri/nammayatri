@@ -11,10 +11,12 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
+import android.content.BroadcastReceiver;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.IntentSender;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
@@ -39,6 +41,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.provider.Settings;
+import android.util.Base64;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -171,6 +174,8 @@ public class MobilityCommonBridge extends HyperBridge {
     // Others
     private LottieAnimationView animationView;
 
+    private static Receivers receivers = new Receivers();
+
 
     public MobilityCommonBridge(BridgeComponents bridgeComponents) {
         super(bridgeComponents);
@@ -195,6 +200,7 @@ public class MobilityCommonBridge extends HyperBridge {
     @JavascriptInterface
     public void storeCallBackInternetAction(String callback) {
         storeInternetActionCallBack = callback;
+        receivers.storeInternetActionCallBack = callback;
     }
 
     public void callInternetActionCallBack(String isPermission) {
@@ -325,11 +331,13 @@ public class MobilityCommonBridge extends HyperBridge {
 
     @JavascriptInterface
     public void initiateLocationServiceClient() {
+        receivers.initReceiver(bridgeComponents);
         if (!isLocationPermissionEnabled()) return;
         resolvableLocationSettingsReq();
     }
 
     private void resolvableLocationSettingsReq() {
+
         LocationRequest locationRequest = createLocReq();
 
         LocationSettingsRequest.Builder lBuilder = new LocationSettingsRequest.Builder()
@@ -386,7 +394,7 @@ public class MobilityCommonBridge extends HyperBridge {
             client.getLastLocation()
                     .addOnSuccessListener(activity, location -> {
                         boolean isMock;
-                        if (location != null){
+                        if (location != null) {
                             if (Build.VERSION.SDK_INT <= 30) {
                                 isMock = location.isFromMockProvider();
                             } else {
@@ -1358,22 +1366,22 @@ public class MobilityCommonBridge extends HyperBridge {
                     bridgeComponents.getContext().getAssets().open(rawJson + ".json") :
                     bridgeComponents.getActivity().getResources().openRawResource(bridgeComponents.getActivity().getResources().getIdentifier(rawJson, "raw", bridgeComponents.getActivity().getPackageName()));
             char[] buffer = new char[1024];
+            try {
+                Reader reader = new BufferedReader(new InputStreamReader(inputStreams, StandardCharsets.UTF_8));
+                int n;
+                while ((n = reader.read(buffer)) != -1) {
+                    writer.write(buffer, 0, n);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
                 try {
-                    Reader reader = new BufferedReader(new InputStreamReader(inputStreams, StandardCharsets.UTF_8));
-                    int n;
-                    while ((n = reader.read(buffer)) != -1) {
-                        writer.write(buffer, 0, n);
-                    }
-                } catch (Exception e) {
+                    inputStreams.close();
+                } catch (IOException e) {
                     e.printStackTrace();
-                } finally {
-                    try {
-                        inputStreams.close();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
                 }
             }
+        }
         return writer.toString();
     }
 
@@ -1564,4 +1572,55 @@ public class MobilityCommonBridge extends HyperBridge {
         private static final String MAX_THIRTY_DAYS_FROM_CURRENT_DATE = "MAX_THIRTY_DAYS_FROM_CURRENT_DATE";
     }
     // endregion
+
+    protected static class Receivers {
+        BridgeComponents bridgeComponents;
+        BroadcastReceiver gpsReceiver ;
+        BroadcastReceiver internetActionReceiver;
+        String storeInternetActionCallBack;
+
+        public void initReceiver(BridgeComponents bridgeComponents) {
+            this.bridgeComponents = bridgeComponents;
+            gpsReceiver = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    LocationManager locationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
+                    boolean isGpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+                    if (!isGpsEnabled) {
+                        invokeOnEvent("onLocationChanged", "{}");
+                    }
+                }
+            };
+            internetActionReceiver = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    if (!isNetworkAvailable()) {
+                        invokeOnEvent("onInternetChanged", "{}");
+                    } else {
+                        callInternetActionCallBack("true");
+                    }
+                }
+            };
+            bridgeComponents.getContext().registerReceiver(gpsReceiver, new IntentFilter(LocationManager.PROVIDERS_CHANGED_ACTION));
+            bridgeComponents.getContext().registerReceiver(internetActionReceiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
+        }
+        protected void invokeOnEvent(String event, String payload) {
+            String encoded = Base64.encodeToString(payload.getBytes(), Base64.NO_WRAP);
+            String command = String.format("window[\"onEvent'\"]('%s',atob('%s'))", event, encoded);
+            bridgeComponents.getJsCallback().addJsToWebView(command);
+        }
+        private boolean isNetworkAvailable() {
+            ConnectivityManager connectivityManager
+                    = (ConnectivityManager) bridgeComponents.getContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+            NetworkInfo activeNetworkInfo = connectivityManager != null ? connectivityManager.getActiveNetworkInfo() : null;
+            return activeNetworkInfo != null && activeNetworkInfo.isConnected();
+        }
+        public void callInternetActionCallBack(String isPermission) {
+            if (storeInternetActionCallBack != null) {
+                String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
+                        storeInternetActionCallBack, isPermission);
+                bridgeComponents.getJsCallback().addJsToWebView(javascript);
+            }
+        }
+    }
 }

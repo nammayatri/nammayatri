@@ -24,7 +24,7 @@ import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Ref (new)
-import Engineering.Helpers.Commons (flowRunner, liftFlow, getWindowVariable)
+import Engineering.Helpers.Commons (flowRunner, liftFlow, getWindowVariable, setWindowVariableImpl)
 import Flow as Flow
 import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Generic (decode)

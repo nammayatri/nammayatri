@@ -249,7 +249,8 @@ type InvoiceScreenData =
     gst :: Number,
     totalAmount :: String,
     date :: String ,
-    selectedItem :: IndividualRideCardState
+    selectedItem :: IndividualRideCardState,
+    config :: AppConfig
   }
 
 type InvoiceScreenProps =

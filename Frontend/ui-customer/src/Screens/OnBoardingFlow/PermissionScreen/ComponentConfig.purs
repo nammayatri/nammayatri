@@ -31,8 +31,8 @@ import Screens.Types (PermissionScreenState)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
 
-errorModalConfig :: ErrorModal.Config 
-errorModalConfig = let 
+errorModalConfig :: PermissionScreenState -> ErrorModal.Config 
+errorModalConfig state = let 
   config = ErrorModal.config 
   errorModalConfig' = config 
     { imageConfig {

@@ -315,6 +315,7 @@ cancelRidePopUpConfig state =
           { mandatory = (getString MANDATORY)
           , limitReached = ((getString MAX_CHAR_LIMIT_REACHED) <> " 100 " <> (getString OF) <> " 100")
           }
+        , config = state.data.config
         }
   in
     cancelRideconfig'
