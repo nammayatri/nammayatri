@@ -1,10 +1,14 @@
 package in.juspay.mobility.customer;
 
+import static in.juspay.mobility.app.NotificationUtils.CHANNEL_ID;
+
 import android.Manifest;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
@@ -18,7 +22,10 @@ import android.graphics.Typeface;
 import android.graphics.pdf.PdfDocument;
 import android.location.Location;
 import android.location.LocationManager;
+import android.media.AudioAttributes;
+import android.media.RingtoneManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
@@ -791,13 +798,25 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
         Intent pdfOpenintent = new Intent(Intent.ACTION_VIEW);
         pdfOpenintent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         pdfOpenintent.setDataAndType(path, "application/pdf");
+        String CHANNEL_ID = "Invoice";
         PendingIntent pendingIntent = PendingIntent.getActivity(context, 234567, pdfOpenintent, PendingIntent.FLAG_IMMUTABLE);
-        NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(context, "General");
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(CHANNEL_ID, "Invoice Download", NotificationManager.IMPORTANCE_HIGH);
+            channel.setDescription("Invoice Download");
+            NotificationManager notificationManager = context.getSystemService(NotificationManager.class);
+            AudioAttributes attributes = new AudioAttributes.Builder()
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                    .build();
+            channel.setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),attributes);
+            notificationManager.createNotificationChannel(channel);
+        }
+        NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(context, CHANNEL_ID);
         mBuilder.setContentTitle("Invoice Downloaded")
                 .setSmallIcon(R.drawable.ny_ic_launcher)
                 .setContentText("Invoice for your ride is downloaded!!!")
                 .setAutoCancel(true)
-                .setPriority(NotificationCompat.PRIORITY_DEFAULT);
+                .setPriority(NotificationCompat.PRIORITY_MAX);
         mBuilder.setContentIntent(pendingIntent);
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
         if (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
