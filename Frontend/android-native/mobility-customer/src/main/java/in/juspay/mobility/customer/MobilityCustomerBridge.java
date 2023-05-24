@@ -810,9 +810,12 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
             notificationManager.createNotificationChannel(channel);
         }
         NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(context, CHANNEL_ID);
+        int launcher = bridgeComponents.getContext().getResources().getIdentifier("ic_launcher", "mipmap", bridgeComponents.getContext().getPackageName());
         mBuilder.setContentTitle("Invoice Downloaded")
+                .setSmallIcon(launcher)
                 .setContentText("Invoice for your ride is downloaded!!!")
                 .setAutoCancel(true)
+                .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
                 .setPriority(NotificationCompat.PRIORITY_MAX);
         mBuilder.setContentIntent(pendingIntent);
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
