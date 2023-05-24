@@ -88,6 +88,18 @@ upsertGpsCoord drLocationId latLong calculationTime = do
 deleteById :: Id Person -> SqlDB ()
 deleteById = deleteByKey @DriverLocationT
 
+deleteById' :: L.MonadFlow m => Id Person -> m ()
+deleteById' (Id driverId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' ->
+      void $
+        KV.deleteWithKVConnector
+          dbConf'
+          Mesh.meshConfig
+          [Se.Is BeamDL.driverId (Se.Eq driverId)]
+    Nothing -> pure ()
+
 transformBeamDriverLocationToDomain :: BeamDL.DriverLocation -> DriverLocation
 transformBeamDriverLocationToDomain BeamDL.DriverLocationT {..} = do
   DriverLocation

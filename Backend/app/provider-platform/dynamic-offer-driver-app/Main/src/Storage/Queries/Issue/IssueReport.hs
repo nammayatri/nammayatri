@@ -71,6 +71,18 @@ deleteByPersonId driverId =
     issueReport <- from $ table @IssueReportT
     where_ $ issueReport ^. IssueReportDriverId ==. val (toKey driverId)
 
+deleteByPersonId' :: L.MonadFlow m => Id SP.Person -> m ()
+deleteByPersonId' (Id driverId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' ->
+      void $
+        KV.deleteWithKVConnector
+          dbConf'
+          Mesh.meshConfig
+          [Se.Is BeamIR.driverId (Se.Eq driverId)]
+    Nothing -> pure ()
+
 updateAsDeleted :: Id IssueReport -> SqlDB ()
 updateAsDeleted issueReportId = do
   now <- getCurrentTime

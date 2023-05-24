@@ -118,6 +118,18 @@ fetchAll' = do
 deleteById :: Id Driver -> SqlDB ()
 deleteById = Esq.deleteByKey @DriverStatsT
 
+deleteById' :: L.MonadFlow m => Id Driver -> m ()
+deleteById' (Id driverId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' ->
+      void $
+        KV.deleteWithKVConnector
+          dbConf'
+          Mesh.meshConfig
+          [Se.Is BeamDS.driverId (Se.Eq driverId)]
+    Nothing -> pure ()
+
 incrementTotalRidesAndTotalDist :: Id Driver -> Meters -> SqlDB ()
 incrementTotalRidesAndTotalDist driverId rideDist = do
   Esq.update $ \tbl -> do

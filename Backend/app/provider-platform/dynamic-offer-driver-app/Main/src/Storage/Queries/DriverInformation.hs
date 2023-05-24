@@ -334,6 +334,18 @@ updateNotOnRideMultiple' driverIds = do
 deleteById :: Id Person.Driver -> SqlDB ()
 deleteById = Esq.deleteByKey @DriverInformationT . cast
 
+deleteById' :: L.MonadFlow m => Id Person.Driver -> m ()
+deleteById' (Id driverId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' ->
+      void $
+        KV.deleteWithKVConnector
+          dbConf'
+          Mesh.meshConfig
+          [Se.Is BeamDI.driverId (Se.Eq driverId)]
+    Nothing -> pure ()
+
 findAllWithLimitOffsetByMerchantId ::
   Transactionable m =>
   Maybe Text ->

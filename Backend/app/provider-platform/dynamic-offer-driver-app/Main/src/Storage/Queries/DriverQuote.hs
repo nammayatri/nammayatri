@@ -168,6 +168,18 @@ deleteByDriverId personId =
     driverQuotes <- from $ table @DriverQuoteT
     where_ $ driverQuotes ^. DriverQuoteDriverId ==. val (toKey personId)
 
+deleteByDriverId' :: L.MonadFlow m => Id Person -> m ()
+deleteByDriverId' (Id driverId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' ->
+      void $
+        KV.deleteWithKVConnector
+          dbConf'
+          Mesh.meshConfig
+          [Se.Is BeamDQ.driverId (Se.Eq driverId)]
+    Nothing -> pure ()
+
 findDriverQuoteBySearchId :: Transactionable m => Id DSReq.SearchRequest -> DTypeBuilder m (Maybe DriverQuoteT)
 findDriverQuoteBySearchId searchReqId = Esq.findOne' $ do
   driverQuote <- from $ table @DriverQuoteT

@@ -122,6 +122,18 @@ deleteByPersonId personId =
     regToken <- from $ table @RegistrationTokenT
     where_ $ regToken ^. RegistrationTokenEntityId ==. val (getId personId)
 
+deleteByPersonId' :: L.MonadFlow m => Id Person -> m ()
+deleteByPersonId' (Id personId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' ->
+      void $
+        KV.deleteWithKVConnector
+          dbConf'
+          Mesh.meshConfig
+          [Se.Is BeamRT.entityId (Se.Eq personId)]
+    Nothing -> pure ()
+
 deleteByPersonIdExceptNew :: Id Person -> Id RegistrationToken -> SqlDB ()
 deleteByPersonIdExceptNew personId newRT =
   Esq.delete $ do
@@ -129,6 +141,18 @@ deleteByPersonIdExceptNew personId newRT =
     where_ $
       regToken ^. RegistrationTokenEntityId ==. val (getId personId)
         &&. not_ (regToken ^. RegistrationTokenTId ==. val (toKey newRT))
+
+deleteByPersonIdExceptNew' :: L.MonadFlow m => Id Person -> Id RegistrationToken -> m ()
+deleteByPersonIdExceptNew' (Id personId) (Id newRT) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' ->
+      void $
+        KV.deleteWithKVConnector
+          dbConf'
+          Mesh.meshConfig
+          [Se.And [Se.Is BeamRT.entityId (Se.Eq personId), Se.Is BeamRT.id (Se.Eq newRT)]]
+    Nothing -> pure ()
 
 findAllByPersonId :: Transactionable m => Id Person -> m [RegistrationToken]
 findAllByPersonId personId =

@@ -742,6 +742,18 @@ setIsNewFalse' (Id personId) = do
 deleteById :: Id Person -> SqlDB ()
 deleteById = Esq.deleteByKey @PersonT
 
+deleteById' :: L.MonadFlow m => Id Person -> m ()
+deleteById' (Id personId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' ->
+      void $
+        KV.deleteWithKVConnector
+          dbConf'
+          Mesh.meshConfig
+          [Se.Is BeamP.id (Se.Eq personId)]
+    Nothing -> pure ()
+
 updateAverageRating :: Id Person -> Centesimal -> SqlDB ()
 updateAverageRating personId newAverageRating = do
   now <- getCurrentTime

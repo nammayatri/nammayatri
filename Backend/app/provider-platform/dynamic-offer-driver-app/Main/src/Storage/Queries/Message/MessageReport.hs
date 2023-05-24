@@ -253,6 +253,18 @@ deleteByPersonId personId =
     messagereport <- from $ table @MessageReportT
     where_ $ messagereport ^. MessageReportDriverId ==. val (toKey personId)
 
+deleteByPersonId' :: L.MonadFlow m => Id P.Person -> m ()
+deleteByPersonId' (Id personId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' ->
+      void $
+        KV.deleteWithKVConnector
+          dbConf'
+          Mesh.meshConfig
+          [Se.Is BeamMR.driverId (Se.Eq personId)]
+    Nothing -> pure ()
+
 transformBeamMessageReportToDomain :: BeamMR.MessageReport -> MessageReport
 transformBeamMessageReportToDomain BeamMR.MessageReportT {..} = do
   MessageReport

@@ -125,6 +125,18 @@ deleteByDriverId personId = Esq.delete $ do
   sReqForDriver <- from $ table @SearchRequestForDriverT
   where_ $ sReqForDriver ^. SearchRequestForDriverDriverId ==. val (toKey personId)
 
+deleteByDriverId' :: L.MonadFlow m => Id Person -> m ()
+deleteByDriverId' (Id personId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' ->
+      void $
+        KV.deleteWithKVConnector
+          dbConf'
+          Mesh.meshConfig
+          [Se.Is BeamSRFD.driverId (Se.Eq personId)]
+    Nothing -> pure ()
+
 setInactiveBySRId :: Id SearchRequest -> SqlDB ()
 setInactiveBySRId searchReqId = Esq.update $ \p -> do
   set p [SearchRequestForDriverStatus =. val Domain.Inactive]

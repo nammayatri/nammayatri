@@ -131,6 +131,18 @@ deleteByMerchantId merchantId = do
     exophone <- from $ table @ExophoneT
     where_ $ exophone ^. ExophoneMerchantId ==. val (toKey merchantId)
 
+deleteById' :: L.MonadFlow m => Id DM.Merchant -> m ()
+deleteById' (Id merchantId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' ->
+      void $
+        KV.deleteWithKVConnector
+          dbConf'
+          Mesh.meshConfig
+          [Se.Is BeamE.merchantId (Se.Eq merchantId)]
+    Nothing -> pure ()
+
 transformBeamExophoneToDomain :: BeamE.Exophone -> Exophone
 transformBeamExophoneToDomain BeamE.ExophoneT {..} = do
   Exophone
