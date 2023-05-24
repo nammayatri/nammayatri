@@ -448,5 +448,6 @@ const englishStrings = {
   "DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE": "Note: Driver may/may not charge this additional fare.",
   "YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS": "You may see an updated final fare due to any of the below reasons:",
   "REASON_CHANGE_IN_ROUTE_A": "1.Change in Route: ",
-  "REASON_CHANGE_IN_ROUTE_B": "Total fare may change due to change in route"
+  "REASON_CHANGE_IN_ROUTE_B": "Total fare may change due to change in route",
+  "NAVIGATE_TO_PICKUP" : "Navigate to pickup"
 }

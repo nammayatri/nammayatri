@@ -241,7 +241,7 @@ mapOptionsView push state =
   , orientation HORIZONTAL
   , gravity CENTER_VERTICAL
   , padding $ PaddingHorizontal 16 16
-  ][  if state.data.isSpecialZone && state.props.currentStage == RideAccepted then linearLayout[height $ V 0, width $ V 0][]  else sosView push state
+  ][  if state.data.isSpecialZone && state.props.currentStage == RideAccepted then navigateView push state  else sosView push state
     , linearLayout 
       [ height WRAP_CONTENT
       , weight 1.0
@@ -328,6 +328,34 @@ sosView push state =
         , width $ V 50
         ]
     ]
+
+navigateView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
+navigateView push state = 
+  linearLayout
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , background Color.blue900
+      , padding $ Padding 10 16 10 16
+      , margin $ MarginRight 16
+      , cornerRadius 25.0
+      , gravity CENTER
+      , orientation HORIZONTAL
+      , onClick push (const OnNavigate)
+      ][  imageView
+          [ width $ V 20
+          , height $ V 20
+          , imageWithFallback "ny_ic_navigation,https://assets.juspay.in/nammayatri/images/driver/ny_ic_navigation.png"
+          ]
+        , textView (
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , margin (MarginLeft 8)
+          , text $ getString NAVIGATE_TO_PICKUP
+          , gravity CENTER
+          , color Color.white900
+          ] <> FontStyle.body1 TypoGraphy
+          )
+      ]
 
 otpAndWaitView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
 otpAndWaitView push state =

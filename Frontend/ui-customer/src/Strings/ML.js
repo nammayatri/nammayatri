@@ -437,5 +437,6 @@ const malayalamStrings = {
   "YOUR_NUMBER_WILL_NOT_BE_SHOWN_TO_THE_DRIVER" : "നിങ്ങളുടെ നമ്പർ ഡ്രൈവർക്ക് കാണിക്കില്ല",
   "YOUR_NUMBER_WILL_BE_VISIBLE_TO_THE_DRIVER_USE_IF_NOT_CALLING_FROM_REGISTERED_NUMBER" : "നിങ്ങളുടെ നമ്പർ ഡ്രൈവർക്ക് ദൃശ്യമാകും. രജിസ്റ്റർ ചെയ്ത നമ്പറിൽ നിന്ന് വിളിക്കുന്നില്ലെങ്കിൽ ഉപയോഗിക്കുക",
   "CALL_DRIVER_USING" : "ഇതുപയോഗിച്ച് ഡ്രൈവറെ വിളിക്കുക:",
-  "WAS_YOUR_CALL_SUCCESSFUL" : "നിങ്ങളുടെ കോൾ വിജയിച്ചോ"
+  "WAS_YOUR_CALL_SUCCESSFUL" : "നിങ്ങളുടെ കോൾ വിജയിച്ചോ",
+  "NAVIGATE_TO_PICKUP" : "പിക്കപ്പിലേക്ക് നാവിഗേറ്റ് ചെയ്യുക"
 }
