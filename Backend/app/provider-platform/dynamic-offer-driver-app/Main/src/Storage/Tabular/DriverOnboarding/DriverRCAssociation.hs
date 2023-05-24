@@ -42,6 +42,8 @@ mkPersist
       deriving Generic
     |]
 
+instance ToJSON DriverRCAssociationT
+
 instance TEntityKey DriverRCAssociationT where
   type DomainKey DriverRCAssociationT = Id Domain.DriverRCAssociation
   fromKey (DriverRCAssociationTKey _id) = Id _id

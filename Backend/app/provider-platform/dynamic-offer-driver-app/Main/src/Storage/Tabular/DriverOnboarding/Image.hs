@@ -47,6 +47,8 @@ mkPersist
       deriving Generic
     |]
 
+instance ToJSON ImageT
+
 instance TEntityKey ImageT where
   type DomainKey ImageT = Id Domain.Image
   fromKey (ImageTKey _id) = Id _id

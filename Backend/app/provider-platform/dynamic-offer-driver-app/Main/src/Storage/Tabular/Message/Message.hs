@@ -47,6 +47,8 @@ mkPersist
       deriving Generic
     |]
 
+instance ToJSON MessageT
+
 instance TEntityKey MessageT where
   type DomainKey MessageT = Id Domain.Message
   fromKey (MessageTKey _id) = Id _id

@@ -24,6 +24,7 @@ import Domain.Types.Merchant
 import Domain.Types.Vehicle.Variant (Variant)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Esqueleto.DeletedEntity as EsqDE
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.FarePolicy.DriverExtraFeeBounds as QFPDriverExtraFeeBounds
@@ -66,8 +67,8 @@ findById farePolicyId = buildDType $ do
   res <- Esq.findById' farePolicyId
   join <$> mapM buildFullFarePolicy res
 
-update :: FarePolicy -> SqlDB ()
-update farePolicy = do
+update :: EsqDE.DeletedBy -> FarePolicy -> SqlDB ()
+update deletedBy farePolicy = do
   now <- getCurrentTime
   withFullEntity farePolicy $ \(FarePolicyT {..}, driverExtraFeeBoundsT, fpDetailsT) -> do
     Esq.update' $ \tbl -> do
@@ -86,7 +87,7 @@ update farePolicy = do
       SlabsDetailsT fsdd -> updateSlabsDetails fsdd
   where
     updateDriverExtraFeeBounds driverExtraFeeBoundsT = do
-      QFPDriverExtraFeeBounds.deleteAll' farePolicy.id
+      QFPDriverExtraFeeBounds.deleteAll' deletedBy farePolicy.id
       Esq.createMany' driverExtraFeeBoundsT
 
     updateProgressiveDetails (FarePolicyProgressiveDetailsT {..}, perExtraKmRateSectionsT) = do
@@ -100,8 +101,8 @@ update farePolicy = do
           ]
         where_ $ tbl ^. FarePolicyProgressiveDetailsTId ==. val (toKey farePolicy.id)
 
-      QFPProgressiveDetPerExtraKmSlabs.deleteAll' farePolicy.id
+      QFPProgressiveDetPerExtraKmSlabs.deleteAll' deletedBy farePolicy.id
       Esq.createMany' perExtraKmRateSectionsT
     updateSlabsDetails dets = do
-      QFPSlabDetSlabs.deleteAll' farePolicy.id
+      QFPSlabDetSlabs.deleteAll' deletedBy farePolicy.id
       Esq.createMany' dets

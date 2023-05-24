@@ -21,6 +21,7 @@ import Domain.Types.Person
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Esqueleto.DeletedEntity as EsqDE
 import Kernel.Types.Common (MonadTime (getCurrentTime))
 import Kernel.Types.Id
 import Storage.Tabular.DriverLocation
@@ -70,5 +71,5 @@ upsertGpsCoord drLocationId latLong calculationTime = do
     where_ $ tbl ^. DriverLocationTId ==. val (toKey $ cast drLocationId)
   return locationObject
 
-deleteById :: Id Person -> SqlDB ()
-deleteById = deleteByKey @DriverLocationT
+deleteById :: EsqDE.DeletedBy -> Id Person -> SqlDB ()
+deleteById = EsqDE.deleteByIdP @DriverLocationT

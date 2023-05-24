@@ -36,6 +36,7 @@ import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (runInReplica, runTransaction)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Storage.Esqueleto.DeletedEntity as EsqDE
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Types.Predicate
@@ -164,7 +165,8 @@ updateDefaultEmergencyNumbers personId req = do
   now <- getCurrentTime
   let uniqueRecords = getUniquePersonByMobileNumber req
   newPersonDENList <- buildPersonDefaultEmergencyNumber now `mapM` uniqueRecords
-  runTransaction $ QPersonDEN.replaceAll personId newPersonDENList
+  let deletedBy = EsqDE.DeletedByPerson $ cast @Person.Person @EsqDE.Person personId
+  runTransaction $ QPersonDEN.replaceAll deletedBy personId newPersonDENList
   pure APISuccess.Success
   where
     buildPersonDefaultEmergencyNumber now defEmNum = do

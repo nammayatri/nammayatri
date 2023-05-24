@@ -57,6 +57,8 @@ mkPersist
       deriving Generic
     |]
 
+instance ToJSON VehicleT
+
 instance TEntityKey VehicleT where
   type DomainKey VehicleT = Id DPers.Person
   fromKey (VehicleTKey _id) = fromKey _id

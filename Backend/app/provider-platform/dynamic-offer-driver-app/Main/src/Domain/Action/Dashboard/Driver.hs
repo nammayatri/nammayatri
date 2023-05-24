@@ -53,6 +53,7 @@ import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Esqueleto.DeletedEntity as EsqDE
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -397,7 +398,7 @@ castVerificationStatus = \case
 
 ---------------------------------------------------------------------
 deleteDriver :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
-deleteDriver merchantShortId = DeleteDriver.deleteDriver merchantShortId . cast
+deleteDriver merchantShortId = DeleteDriver.deleteDriver merchantShortId EsqDE.DeletedByDashboard . cast
 
 ---------------------------------------------------------------------
 unlinkVehicle :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
@@ -414,7 +415,7 @@ unlinkVehicle merchantShortId reqDriverId = do
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
   Esq.runTransaction $ do
-    QVehicle.deleteById personId
+    QVehicle.deleteById EsqDE.DeletedByDashboard personId
     QRCAssociation.endAssociation personId
   CQDriverInfo.updateEnabledVerifiedState driverId False False
   logTagInfo "dashboard -> unlinkVehicle : " (show personId)
@@ -549,7 +550,7 @@ unlinkDL merchantShortId driverId = do
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
   Esq.runTransaction $ do
-    QDriverLicense.deleteByDriverId personId
+    QDriverLicense.deleteByDriverId EsqDE.DeletedByDashboard personId
   CQDriverInfo.updateEnabledVerifiedState driverId_ False False
   logTagInfo "dashboard -> unlinkDL : " (show personId)
   pure Success

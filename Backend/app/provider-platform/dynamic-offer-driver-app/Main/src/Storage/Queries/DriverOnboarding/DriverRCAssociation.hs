@@ -20,6 +20,7 @@ import Domain.Types.DriverOnboarding.VehicleRegistrationCertificate
 import Domain.Types.Person (Person)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Esqueleto.DeletedEntity as EsqDE
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Tabular.DriverOnboarding.DriverRCAssociation
@@ -92,8 +93,9 @@ endAssociation driverId = do
       tbl ^. DriverRCAssociationDriverId ==. val (toKey driverId)
         &&. tbl ^. DriverRCAssociationAssociatedTill >. val (Just now)
 
-deleteByDriverId :: Id Person -> SqlDB ()
-deleteByDriverId driverId =
-  Esq.delete $ do
+deleteByDriverId :: EsqDE.DeletedBy -> Id Person -> SqlDB ()
+deleteByDriverId deletedBy driverId =
+  EsqDE.deleteP deletedBy $ do
     associations <- from $ table @DriverRCAssociationT
     where_ $ associations ^. DriverRCAssociationDriverId ==. val (toKey driverId)
+    pure associations

@@ -30,6 +30,7 @@ import Domain.Types.Exophone
 import qualified Domain.Types.Merchant as DM
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Esqueleto.DeletedEntity as EsqDE
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -101,5 +102,5 @@ create = Queries.create
 updateAffectedPhones :: [Text] -> Esq.SqlDB ()
 updateAffectedPhones = Queries.updateAffectedPhones
 
-deleteByMerchantId :: Id DM.Merchant -> Esq.SqlDB ()
+deleteByMerchantId :: EsqDE.DeletedBy -> Id DM.Merchant -> Esq.SqlDB ()
 deleteByMerchantId = Queries.deleteByMerchantId

@@ -42,6 +42,8 @@ mkPersist
       deriving Generic
     |]
 
+instance ToJSON DriverLocationT
+
 instance TEntityKey DriverLocationT where
   type DomainKey DriverLocationT = Id Person
   fromKey (DriverLocationTKey _id) = fromKey _id

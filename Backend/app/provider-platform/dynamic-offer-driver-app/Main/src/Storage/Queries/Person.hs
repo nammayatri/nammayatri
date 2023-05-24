@@ -30,10 +30,12 @@ import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Esqueleto as Esq hiding (findById)
+import qualified Kernel.Storage.Esqueleto as Esq (findById)
+import qualified Kernel.Storage.Esqueleto.DeletedEntity as EsqDE
+import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Types.Version
-import Kernel.Utils.Common hiding (Value)
 import Kernel.Utils.GenericPretty
 import Storage.Tabular.Booking
 import Storage.Tabular.Booking.BookingLocation
@@ -470,8 +472,8 @@ setIsNewFalse personId = do
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey personId)
 
-deleteById :: Id Person -> SqlDB ()
-deleteById = Esq.deleteByKey @PersonT
+deleteById :: EsqDE.DeletedBy -> Id Person -> SqlDB ()
+deleteById = EsqDE.deleteByIdP @PersonT
 
 updateAverageRating :: Id Person -> Centesimal -> SqlDB ()
 updateAverageRating personId newAverageRating = do

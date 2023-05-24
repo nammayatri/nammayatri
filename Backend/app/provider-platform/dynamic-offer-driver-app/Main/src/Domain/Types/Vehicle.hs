@@ -21,12 +21,12 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.OpenApi (ToParamSchema, ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
-import Data.Time
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DPers
 import Domain.Types.Vehicle.Variant as Reexport
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import Kernel.Utils.GenericPretty
 import Servant.API
 

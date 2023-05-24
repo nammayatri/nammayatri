@@ -52,6 +52,8 @@ mkPersist
       deriving Generic
     |]
 
+instance ToJSON PersonFlowStatusT
+
 instance TEntityKey PersonFlowStatusT where
   type DomainKey PersonFlowStatusT = Id Person
   fromKey (PersonFlowStatusTKey _id) = fromKey _id

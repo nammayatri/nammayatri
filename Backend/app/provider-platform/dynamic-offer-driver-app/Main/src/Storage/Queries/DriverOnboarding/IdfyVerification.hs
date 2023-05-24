@@ -20,6 +20,7 @@ import Domain.Types.DriverOnboarding.Image
 import Domain.Types.Person (Person)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Esqueleto.DeletedEntity as EsqDE
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Tabular.DriverOnboarding.IdfyVerification
@@ -98,8 +99,9 @@ updateExtractValidationStatus requestId status = do
       ]
     where_ $ tbl ^. IdfyVerificationRequestId ==. val requestId
 
-deleteByPersonId :: Id Person -> SqlDB ()
-deleteByPersonId personId =
-  Esq.delete $ do
+deleteByPersonId :: EsqDE.DeletedBy -> Id Person -> SqlDB ()
+deleteByPersonId deletedBy personId =
+  EsqDE.deleteP deletedBy $ do
     verifications <- from $ table @IdfyVerificationT
     where_ $ verifications ^. IdfyVerificationDriverId ==. val (toKey personId)
+    pure verifications

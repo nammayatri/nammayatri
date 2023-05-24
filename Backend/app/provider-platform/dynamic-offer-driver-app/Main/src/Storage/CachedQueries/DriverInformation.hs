@@ -22,6 +22,7 @@ import Domain.Types.Person as Person
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Esqueleto.DeletedEntity as EsqDE
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Storage.CachedQueries.CacheConfig
@@ -70,10 +71,10 @@ updateOnRide driverId onRide = do
 updateNotOnRideMultiple :: [Id Person.Driver] -> Esq.SqlDB ()
 updateNotOnRideMultiple = Queries.updateNotOnRideMultiple
 
-deleteById :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person.Driver -> m ()
-deleteById driverId = do
+deleteById :: (CacheFlow m r, Esq.EsqDBFlow m r) => EsqDE.DeletedBy -> Id Person.Driver -> m ()
+deleteById deletedBy driverId = do
   clearDriverInfoCache driverId
-  Esq.runTransaction $ Queries.deleteById driverId
+  Esq.runTransaction $ Queries.deleteById deletedBy driverId
 
 findAllWithLimitOffsetByMerchantId ::
   Esq.Transactionable m =>

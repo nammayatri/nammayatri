@@ -17,6 +17,7 @@ module Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsS
 import qualified Domain.Types.FarePolicy as DFP
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Esqueleto.DeletedEntity as EsqDE
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Tabular.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
@@ -37,9 +38,10 @@ findAll' farePolicyId = do
     orderBy [asc $ farePolicySlabsDetailsSlab ^. FarePolicySlabsDetailsSlabStartDistance]
     return farePolicySlabsDetailsSlab
 
-deleteAll' :: Id DFP.FarePolicy -> FullEntitySqlDB ()
-deleteAll' farePolicyId =
-  Esq.delete' $ do
+deleteAll' :: EsqDE.DeletedBy -> Id DFP.FarePolicy -> FullEntitySqlDB ()
+deleteAll' deletedBy farePolicyId =
+  Esq.liftToFullEntitySqlDB . EsqDE.deleteP deletedBy $ do
     farePolicySlabsDetailsSlab <- from $ table @FarePolicySlabsDetailsSlabT
     where_ $
       farePolicySlabsDetailsSlab ^. FarePolicySlabsDetailsSlabFarePolicyId ==. val (toKey farePolicyId)
+    pure farePolicySlabsDetailsSlab

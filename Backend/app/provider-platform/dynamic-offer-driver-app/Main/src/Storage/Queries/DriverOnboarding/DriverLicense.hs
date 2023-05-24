@@ -20,6 +20,7 @@ import Domain.Types.Person (Person)
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Esqueleto.DeletedEntity as EsqDE
 import Kernel.Types.Id
 import Storage.Tabular.DriverOnboarding.DriverLicense
 import Storage.Tabular.Person ()
@@ -67,8 +68,9 @@ findByDLNumber dlNumber = do
     where_ $ dl ^. DriverLicenseLicenseNumberHash ==. val dlNumberHash
     return dl
 
-deleteByDriverId :: Id Person -> SqlDB ()
-deleteByDriverId driverId =
-  Esq.delete $ do
+deleteByDriverId :: EsqDE.DeletedBy -> Id Person -> SqlDB ()
+deleteByDriverId deletedBy driverId =
+  EsqDE.deleteP deletedBy $ do
     dl <- from $ table @DriverLicenseT
     where_ $ dl ^. DriverLicenseDriverId ==. val (toKey driverId)
+    pure dl

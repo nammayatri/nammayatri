@@ -40,6 +40,8 @@ mkPersist
       deriving Generic
     |]
 
+instance ToJSON DriverStatsT
+
 instance TEntityKey DriverStatsT where
   type DomainKey DriverStatsT = Id Driver
   fromKey (DriverStatsTKey _id) = cast $ fromKey _id

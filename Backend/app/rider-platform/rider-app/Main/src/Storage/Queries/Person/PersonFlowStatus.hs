@@ -23,6 +23,7 @@ import Domain.Types.Person
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Esqueleto.DeletedEntity as EsqDE
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Storage.Tabular.Person.PersonFlowStatus
@@ -52,11 +53,12 @@ updateStatus personId flowStatus = do
       ]
     where_ $ tbl ^. PersonFlowStatusTId ==. val (toKey personId)
 
-deleteByPersonId :: Id Person -> SqlDB ()
-deleteByPersonId personId = do
-  Esq.delete $ do
+deleteByPersonId :: EsqDE.DeletedBy -> Id Person -> SqlDB ()
+deleteByPersonId deletedBy personId = do
+  EsqDE.deleteP deletedBy $ do
     personFlowStatus <- from $ table @PersonFlowStatusT
     where_ (personFlowStatus ^. PersonFlowStatusTId ==. val (toKey personId))
+    pure personFlowStatus
 
 updateToIdleMultiple :: [Id Person] -> UTCTime -> SqlDB ()
 updateToIdleMultiple personIds now = do

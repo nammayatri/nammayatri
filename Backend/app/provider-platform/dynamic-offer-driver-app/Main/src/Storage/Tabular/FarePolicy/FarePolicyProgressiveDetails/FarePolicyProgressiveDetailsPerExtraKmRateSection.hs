@@ -39,6 +39,9 @@ mkPersist
       deriving Generic
     |]
 
+-- there is no primaryId
+instance ToJSON FarePolicyProgressiveDetailsPerExtraKmRateSectionT
+
 type FullFarePolicyProgressiveDetailsPerExtraKmRateSection = (Id Domain.FarePolicy, Domain.FPProgressiveDetailsPerExtraKmRateSection)
 
 instance FromTType FarePolicyProgressiveDetailsPerExtraKmRateSectionT FullFarePolicyProgressiveDetailsPerExtraKmRateSection where

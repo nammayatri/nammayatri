@@ -40,6 +40,7 @@ import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.SMS as SMS
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Esqueleto.DeletedEntity as EsqDE
 import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -80,7 +81,7 @@ merchantUpdate merchantShortId req = do
   Esq.runTransaction $ do
     CQM.update updMerchant
     whenJust req.exoPhones \exophones -> do
-      CQExophone.deleteByMerchantId merchant.id
+      CQExophone.deleteByMerchantId EsqDE.DeletedByDashboard merchant.id
       forM_ exophones $ \exophoneReq -> do
         exophone <- buildExophone merchant.id now exophoneReq
         CQExophone.create exophone

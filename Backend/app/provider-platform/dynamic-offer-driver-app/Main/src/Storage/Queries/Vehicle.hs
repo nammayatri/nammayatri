@@ -19,7 +19,9 @@ import Domain.Types.Person
 import Domain.Types.Vehicle
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Esqueleto as Esq hiding (findById)
+import qualified Kernel.Storage.Esqueleto as Esq (findById)
+import qualified Kernel.Storage.Esqueleto.DeletedEntity as EsqDE
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Tabular.Vehicle
@@ -70,8 +72,8 @@ updateVehicleRec vehicle = do
       ]
     where_ $ tbl ^. VehicleTId ==. val (toKey vehicle.driverId)
 
-deleteById :: Id Person -> SqlDB ()
-deleteById = Esq.deleteByKey @VehicleT
+deleteById :: EsqDE.DeletedBy -> Id Person -> SqlDB ()
+deleteById = EsqDE.deleteByIdP @VehicleT
 
 findByAnyOf :: Transactionable m => Maybe Text -> Maybe (Id Person) -> m (Maybe Vehicle)
 findByAnyOf registrationNoM vehicleIdM =

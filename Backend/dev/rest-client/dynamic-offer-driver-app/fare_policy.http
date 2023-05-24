@@ -1,5 +1,5 @@
 @driver-offer-bpp-host = http://localhost:8016
-@adminToken = ea37f941-427a-4085-a7d0-96240f166672
+@adminToken = favorit-admin-0000000000000000-token
 
 ###
 # @name profile
@@ -21,11 +21,14 @@ Content-Type: application/json
 token: {{adminToken}}
 
 {
+    "baseFare" : 100,
     "baseDistancePerKmFare": 11,
-    "baseDistance": 3050,
+    "perExtraKmRate" : 111,
+    "baseDistance": 450,
     "extraKmFare": 13,
-    "deadKmFare": 125,
-    "driverExtraFeeList": [10, 20, 40]
+    "deadKmFare": 10,
+    "driverMinExtraFee" : 12,
+    "driverMaxExtraFee" : 15
 }
 
 ###

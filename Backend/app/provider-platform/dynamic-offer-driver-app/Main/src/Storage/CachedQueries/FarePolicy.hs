@@ -31,6 +31,7 @@ import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Vehicle as Vehicle
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Esqueleto.DeletedEntity as EsqDE
 import Kernel.Storage.Hedis
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
@@ -93,5 +94,5 @@ clearCache fp = Hedis.withCrossAppRedis $ do
   Hedis.del (makeMerchantIdVehVarKey fp.merchantId fp.vehicleVariant)
   Hedis.del (makeAllMerchantIdKey fp.merchantId)
 
-update :: FarePolicy -> Esq.SqlDB ()
+update :: EsqDE.DeletedBy -> FarePolicy -> Esq.SqlDB ()
 update = Queries.update

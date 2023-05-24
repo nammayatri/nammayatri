@@ -55,6 +55,8 @@ mkPersist
       deriving Generic
     |]
 
+instance ToJSON IdfyVerificationT
+
 instance TEntityKey IdfyVerificationT where
   type DomainKey IdfyVerificationT = Id Domain.IdfyVerification
   fromKey (IdfyVerificationTKey _id) = Id _id

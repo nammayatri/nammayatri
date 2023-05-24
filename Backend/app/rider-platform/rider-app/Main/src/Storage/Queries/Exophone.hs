@@ -24,6 +24,7 @@ import Domain.Types.Exophone
 import qualified Domain.Types.Merchant as DM
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Esqueleto.DeletedEntity as EsqDE
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Tabular.Exophone
@@ -71,8 +72,9 @@ updateAffectedPhones primaryPhones = do
       ]
     where_ $ isPrimaryDown !=. tbl ^. ExophoneIsPrimaryDown
 
-deleteByMerchantId :: Id DM.Merchant -> SqlDB ()
-deleteByMerchantId merchantId = do
-  Esq.delete $ do
+deleteByMerchantId :: EsqDE.DeletedBy -> Id DM.Merchant -> SqlDB ()
+deleteByMerchantId deletedBy merchantId = do
+  EsqDE.deleteP deletedBy $ do
     exophone <- from $ table @ExophoneT
     where_ $ exophone ^. ExophoneMerchantId ==. val (toKey merchantId)
+    pure exophone

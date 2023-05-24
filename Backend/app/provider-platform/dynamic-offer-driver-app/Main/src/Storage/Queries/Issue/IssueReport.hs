@@ -6,6 +6,7 @@ import Domain.Types.Issue.IssueReport
 import qualified Domain.Types.Person as SP
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Esqueleto.DeletedEntity as EsqDE
 import Kernel.Types.Id
 import Kernel.Utils.Common (getCurrentTime)
 import Storage.Tabular.Issue.IssueReport
@@ -58,11 +59,12 @@ isSafeToDelete issueReportId driverId = do
   findSafeToDelete <- safeToDelete issueReportId driverId
   return $ isJust findSafeToDelete
 
-deleteByPersonId :: Id SP.Person -> SqlDB ()
-deleteByPersonId driverId =
-  Esq.delete $ do
+deleteByPersonId :: EsqDE.DeletedBy -> Id SP.Person -> SqlDB ()
+deleteByPersonId deletedBy driverId =
+  EsqDE.deleteP deletedBy $ do
     issueReport <- from $ table @IssueReportT
     where_ $ issueReport ^. IssueReportDriverId ==. val (toKey driverId)
+    pure issueReport
 
 updateAsDeleted :: Id IssueReport -> SqlDB ()
 updateAsDeleted issueReportId = do

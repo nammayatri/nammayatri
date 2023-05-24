@@ -41,6 +41,9 @@ mkPersist
       deriving Generic
     |]
 
+-- there is no primaryId
+instance ToJSON DriverExtraFeeBoundsT
+
 type FullDriverExtraFeeBounds = (Id DFP.FarePolicy, Domain.DriverExtraFeeBounds)
 
 instance FromTType DriverExtraFeeBoundsT FullDriverExtraFeeBounds where

@@ -22,6 +22,7 @@ import Domain.Types.Merchant
 import Domain.Types.Person (Person)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Esqueleto.DeletedEntity as EsqDE
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -107,8 +108,9 @@ addFailureReason id reason = do
       [ImageFailureReason =. val (Just reason)]
     where_ $ tbl ^. ImageTId ==. val (toKey id)
 
-deleteByPersonId :: Id Person -> SqlDB ()
-deleteByPersonId personId =
-  Esq.delete $ do
+deleteByPersonId :: EsqDE.DeletedBy -> Id Person -> SqlDB ()
+deleteByPersonId deletedBy personId =
+  EsqDE.deleteP deletedBy $ do
     images <- from $ table @ImageT
     where_ $ images ^. ImagePersonId ==. val (toKey personId)
+    pure images

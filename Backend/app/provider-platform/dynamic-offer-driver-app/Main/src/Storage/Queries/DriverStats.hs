@@ -18,6 +18,7 @@ import Domain.Types.DriverStats
 import Domain.Types.Person (Driver)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Esqueleto.DeletedEntity as EsqDE
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Tabular.DriverStats
@@ -58,8 +59,8 @@ updateIdleTimes driverIds = do
 fetchAll :: Transactionable m => m [DriverStats]
 fetchAll = Esq.findAll $ from $ table @DriverStatsT
 
-deleteById :: Id Driver -> SqlDB ()
-deleteById = Esq.deleteByKey @DriverStatsT
+deleteById :: EsqDE.DeletedBy -> Id Driver -> SqlDB ()
+deleteById = EsqDE.deleteByIdP @DriverStatsT
 
 incrementTotalRidesAndTotalDist :: Id Driver -> Meters -> SqlDB ()
 incrementTotalRidesAndTotalDist driverId rideDist = do

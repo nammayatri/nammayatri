@@ -24,6 +24,7 @@ import Kernel.External.Maps (Language)
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Esqueleto.DeletedEntity as EsqDE
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Types.Version
@@ -215,11 +216,12 @@ updatePersonalInfo personId mbFirstName mbMiddleName mbLastName mbReferralCode m
       )
     where_ $ tbl ^. PersonId ==. val (getId personId)
 
-deleteById :: Id Person -> SqlDB ()
-deleteById personId = do
-  Esq.delete $ do
+deleteById :: EsqDE.DeletedBy -> Id Person -> SqlDB ()
+deleteById deletedBy personId = do
+  EsqDE.deleteP deletedBy $ do
     person <- from $ table @PersonT
     where_ (person ^. PersonId ==. val (getId personId))
+    pure person
 
 updateHasTakenValidRide :: Id Person -> SqlDB ()
 updateHasTakenValidRide personId = do

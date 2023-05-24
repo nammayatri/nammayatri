@@ -39,6 +39,8 @@ mkPersist
       deriving Generic
     |]
 
+instance ToJSON IssueReportT
+
 instance TEntityKey IssueReportT where
   type DomainKey IssueReportT = Id Domain.IssueReport
   fromKey (IssueReportTKey _id) = Id _id

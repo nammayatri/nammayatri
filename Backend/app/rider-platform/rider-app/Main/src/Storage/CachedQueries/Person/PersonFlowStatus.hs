@@ -19,6 +19,7 @@ import Domain.Types.Person
 import Domain.Types.Person.PersonFlowStatus
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Esqueleto.DeletedEntity as EsqDE
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Storage.CachedQueries.CacheConfig
@@ -36,7 +37,7 @@ getStatus personId =
 updateStatus :: Id Person -> FlowStatus -> Esq.SqlDB ()
 updateStatus = Queries.updateStatus
 
-deleteByPersonId :: Id Person -> Esq.SqlDB ()
+deleteByPersonId :: EsqDE.DeletedBy -> Id Person -> Esq.SqlDB ()
 deleteByPersonId = Queries.deleteByPersonId
 
 updateToIdleMultiple :: [Id Person] -> UTCTime -> Esq.SqlDB ()

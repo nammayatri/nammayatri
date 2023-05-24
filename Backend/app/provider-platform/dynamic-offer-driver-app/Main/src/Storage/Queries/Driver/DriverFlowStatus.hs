@@ -18,6 +18,7 @@ import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import Domain.Types.Person
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Esqueleto.DeletedEntity as EsqDE
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Storage.Tabular.Driver.DriverFlowStatus
@@ -25,8 +26,8 @@ import Storage.Tabular.Driver.DriverFlowStatus
 create :: DDFS.DriverFlowStatus -> SqlDB ()
 create = Esq.create
 
-deleteById :: Id Person -> SqlDB ()
-deleteById = Esq.deleteByKey @DriverFlowStatusT
+deleteById :: EsqDE.DeletedBy -> Id Person -> SqlDB ()
+deleteById = EsqDE.deleteByIdP @DriverFlowStatusT
 
 getStatus ::
   (Transactionable m) =>

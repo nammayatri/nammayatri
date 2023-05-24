@@ -48,6 +48,8 @@ mkPersist
       deriving Generic
     |]
 
+instance ToJSON MessageReportT
+
 instance TEntityKey MessageReportT where
   type DomainKey MessageReportT = (Id Msg.Message, Id Driver)
   fromKey (MessageReportTKey _messageId _driverId) = (fromKey _messageId, cast (fromKey _driverId))

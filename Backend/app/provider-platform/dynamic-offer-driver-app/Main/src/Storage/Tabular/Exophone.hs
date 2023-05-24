@@ -41,6 +41,8 @@ mkPersist
       deriving Generic
     |]
 
+instance ToJSON ExophoneT
+
 instance TEntityKey ExophoneT where
   type DomainKey ExophoneT = Id Domain.Exophone
   fromKey (ExophoneTKey _id) = Id _id

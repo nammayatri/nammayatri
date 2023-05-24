@@ -18,6 +18,7 @@ module Storage.Queries.FarePolicy.DriverExtraFeeBounds where
 import qualified Domain.Types.FarePolicy as DFP
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Esqueleto.DeletedEntity as EsqDE
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Tabular.FarePolicy.DriverExtraFeeBounds
@@ -38,9 +39,10 @@ findAll' farePolicyId = do
     orderBy [asc $ driverExtraFeeBounds ^. DriverExtraFeeBoundsStartDistance]
     return driverExtraFeeBounds
 
-deleteAll' :: Id DFP.FarePolicy -> FullEntitySqlDB ()
-deleteAll' farePolicyId =
-  Esq.delete' $ do
+deleteAll' :: EsqDE.DeletedBy -> Id DFP.FarePolicy -> FullEntitySqlDB ()
+deleteAll' deletedBy farePolicyId =
+  Esq.liftToFullEntitySqlDB . EsqDE.deleteP deletedBy $ do
     driverExtraFeeBounds <- from $ table @DriverExtraFeeBoundsT
     where_ $
       driverExtraFeeBounds ^. DriverExtraFeeBoundsFarePolicyId ==. val (toKey farePolicyId)
+    pure driverExtraFeeBounds

@@ -28,6 +28,7 @@ import qualified Domain.Types.Person as DP
 import Environment
 import Kernel.External.Encryption (decrypt, getDbHash)
 import Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto.DeletedEntity as EsqDE
 import Kernel.Storage.Esqueleto.Transactionable (Transactionable' (runTransaction), runInReplica)
 import Kernel.Storage.Hedis (withCrossAppRedis)
 import Kernel.Types.APISuccess
@@ -56,9 +57,9 @@ deleteCustomer merchantShortId customerId = do
   bookings <- runInReplica $ QRB.findByRiderIdAndStatus personId [DRB.NEW, DRB.TRIP_ASSIGNED, DRB.AWAITING_REASSIGNMENT, DRB.CONFIRMED, DRB.COMPLETED]
   unless (null bookings) $ throwError (InvalidRequest "Can't delete customer, has a valid booking in past.")
   runTransaction $ do
-    QPFS.deleteByPersonId personId
+    QPFS.deleteByPersonId EsqDE.DeletedByDashboard personId
     QSRL.deleteAllByRiderId personId
-    QP.deleteById personId
+    QP.deleteById EsqDE.DeletedByDashboard personId
   QPFS.clearCache personId
   pure Success
 

@@ -18,14 +18,16 @@ import Domain.Types.Person
 import Domain.Types.Person.PersonDefaultEmergencyNumber
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Esqueleto.DeletedEntity as EsqDE
 import Kernel.Types.Id
 import Storage.Tabular.Person.PersonDefaultEmergencyNumber
 
-replaceAll :: Id Person -> [PersonDefaultEmergencyNumber] -> SqlDB ()
-replaceAll personId pdenList = do
-  Esq.delete $ do
+replaceAll :: EsqDE.DeletedBy -> Id Person -> [PersonDefaultEmergencyNumber] -> SqlDB ()
+replaceAll deletedBy personId pdenList = do
+  EsqDE.deleteP deletedBy $ do
     personENT <- from $ table @PersonDefaultEmergencyNumberT
     where_ $ personENT ^. PersonDefaultEmergencyNumberTId ==. val (toKey personId)
+    pure personENT
   Esq.createMany pdenList
 
 findAllByPersonId ::

@@ -43,6 +43,8 @@ mkPersist
       deriving Generic
     |]
 
+instance ToJSON PersonDefaultEmergencyNumberT
+
 instance TEntityKey PersonDefaultEmergencyNumberT where
   type DomainKey PersonDefaultEmergencyNumberT = Id Domain.Person
   fromKey (PersonDefaultEmergencyNumberTKey _id) = fromKey _id

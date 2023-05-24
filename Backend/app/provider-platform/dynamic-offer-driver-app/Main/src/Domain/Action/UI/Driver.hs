@@ -85,6 +85,7 @@ import Kernel.Prelude (NominalDiffTime)
 import Kernel.Sms.Config
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Storage.Esqueleto.DeletedEntity as EsqDE
 import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
@@ -499,15 +500,16 @@ deleteDriver admin driverId = do
       >>= fromMaybeM (PersonDoesNotExist driverId.getId)
   unless (driver.merchantId == admin.merchantId || driver.role == SP.DRIVER) $ throwError Unauthorized
   -- this function uses tokens from db, so should be called before transaction
+  let deletedBy = EsqDE.DeletedByPerson $ cast @SP.Person @EsqDE.Person admin.id
   Auth.clearDriverSession driverId
-  QDriverInformation.deleteById (cast driverId)
+  QDriverInformation.deleteById deletedBy (cast driverId)
   Esq.runTransaction $ do
-    QDriverStats.deleteById (cast driverId)
+    QDriverStats.deleteById deletedBy (cast driverId)
     QR.deleteByPersonId driverId
-    QVehicle.deleteById driverId
-    QDriverLocation.deleteById driverId
-    QDFS.deleteById driverId
-    QPerson.deleteById driverId
+    QVehicle.deleteById deletedBy driverId
+    QDriverLocation.deleteById deletedBy driverId
+    QDFS.deleteById deletedBy driverId
+    QPerson.deleteById deletedBy driverId
 
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> deleteDriver : ") (show driverId)
   return Success
@@ -991,7 +993,8 @@ verifyAuth personId req = do
     Redis.setExp (makeAlternateNumberVerifiedKey personId) True expTime
     whenJust mbPerson $ \oldPerson -> do
       merchant <- CQM.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
-      void $ DeleteDriverOnCheck.deleteDriver merchant.shortId (cast oldPerson.id)
+      let deletedBy = EsqDE.DeletedByPerson $ cast @SP.Person @EsqDE.Person personId
+      void $ DeleteDriverOnCheck.deleteDriver merchant.shortId deletedBy (cast oldPerson.id)
     invalidateAlternateNoCache personId
   return Success
 

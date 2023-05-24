@@ -17,6 +17,7 @@ module Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgres
 import qualified Domain.Types.FarePolicy as DFP
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Esqueleto.DeletedEntity as EsqDE
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
@@ -37,9 +38,10 @@ findAll' farePolicyId = do
     orderBy [asc $ farePolicyProgressiveDetailsPerExtraKmFareSection ^. FarePolicyProgressiveDetailsPerExtraKmRateSectionStartDistance]
     return farePolicyProgressiveDetailsPerExtraKmFareSection
 
-deleteAll' :: Id DFP.FarePolicy -> FullEntitySqlDB ()
-deleteAll' farePolicyId =
-  Esq.delete' $ do
+deleteAll' :: EsqDE.DeletedBy -> Id DFP.FarePolicy -> FullEntitySqlDB ()
+deleteAll' deletedBy farePolicyId =
+  Esq.liftToFullEntitySqlDB . EsqDE.deleteP deletedBy $ do
     farePolicyProgressiveDetailsPerExtraKmFareSection <- from $ table @FarePolicyProgressiveDetailsPerExtraKmRateSectionT
     where_ $
       farePolicyProgressiveDetailsPerExtraKmFareSection ^. FarePolicyProgressiveDetailsPerExtraKmRateSectionFarePolicyId ==. val (toKey farePolicyId)
+    pure farePolicyProgressiveDetailsPerExtraKmFareSection

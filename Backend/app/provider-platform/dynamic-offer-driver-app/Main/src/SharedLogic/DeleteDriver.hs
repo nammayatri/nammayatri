@@ -20,6 +20,7 @@ import qualified Domain.Types.Person as DP
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Esqueleto.DeletedEntity as EsqDE
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
@@ -47,8 +48,8 @@ import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Tools.Auth as Auth
 import Tools.Error
 
-deleteDriver :: ShortId DM.Merchant -> Id DP.Person -> Flow APISuccess
-deleteDriver merchantShortId reqDriverId = do
+deleteDriver :: ShortId DM.Merchant -> EsqDE.DeletedBy -> Id DP.Person -> Flow APISuccess
+deleteDriver merchantShortId deletedBy reqDriverId = do
   merchant <- findMerchantByShortId merchantShortId
   driver <-
     QPerson.findById reqDriverId
@@ -62,21 +63,21 @@ deleteDriver merchantShortId reqDriverId = do
   -- this function uses tokens from db, so should be called before transaction
   Auth.clearDriverSession reqDriverId
   Esq.runTransaction $ do
-    QIV.deleteByPersonId reqDriverId
-    QImage.deleteByPersonId reqDriverId
-    QDriverLicense.deleteByDriverId reqDriverId
-    QRCAssociation.deleteByDriverId reqDriverId
+    QIV.deleteByPersonId deletedBy reqDriverId
+    QImage.deleteByPersonId deletedBy reqDriverId
+    QDriverLicense.deleteByDriverId deletedBy reqDriverId
+    QRCAssociation.deleteByDriverId deletedBy reqDriverId
     QDriverQuote.deleteByDriverId reqDriverId
     QSearchReqForDriver.deleteByDriverId reqDriverId
-    QDriverStats.deleteById (cast reqDriverId)
-    QDriverLocation.deleteById reqDriverId
+    QDriverStats.deleteById deletedBy (cast reqDriverId)
+    QDriverLocation.deleteById deletedBy reqDriverId
     QR.deleteByPersonId reqDriverId
-    QVehicle.deleteById reqDriverId
-    QDriverInfo.deleteById (cast reqDriverId)
-    QDriverFlowStatus.deleteById reqDriverId
-    QMessage.deleteByPersonId reqDriverId
-    QIssueReport.deleteByPersonId reqDriverId
-    QPerson.deleteById reqDriverId
+    QVehicle.deleteById deletedBy reqDriverId
+    QDriverInfo.deleteById deletedBy (cast reqDriverId)
+    QDriverFlowStatus.deleteById deletedBy reqDriverId
+    QMessage.deleteByPersonId deletedBy reqDriverId
+    QIssueReport.deleteByPersonId deletedBy reqDriverId
+    QPerson.deleteById deletedBy reqDriverId
   CQDriverInfo.clearDriverInfoCache (cast reqDriverId)
   CQIR.invalidateIssueReportCache Nothing (Just reqDriverId)
   mapM_ (\IssueReport {id} -> CQIR.invalidateIssueReportCache (Just id) Nothing) issueReports

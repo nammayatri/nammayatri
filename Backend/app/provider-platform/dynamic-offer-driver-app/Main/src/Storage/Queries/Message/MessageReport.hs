@@ -23,6 +23,7 @@ import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import qualified Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Esqueleto.DeletedEntity as EsqDE
 import Kernel.Types.Common (MonadTime (getCurrentTime))
 import Kernel.Types.Id
 import Storage.Tabular.Message.Instances ()
@@ -180,8 +181,9 @@ updateDeliveryStatusByMessageIdAndDriverId messageId driverId deliveryStatus = d
       mr ^. MessageReportMessageId ==. val (toKey messageId)
         &&. mr ^. MessageReportDriverId ==. val (toKey $ cast driverId)
 
-deleteByPersonId :: Id P.Person -> SqlDB ()
-deleteByPersonId personId =
-  Esq.delete $ do
-    messagereport <- from $ table @MessageReportT
-    where_ $ messagereport ^. MessageReportDriverId ==. val (toKey personId)
+deleteByPersonId :: EsqDE.DeletedBy -> Id P.Person -> SqlDB ()
+deleteByPersonId deletedBy personId =
+  EsqDE.deleteP deletedBy $ do
+    messageReports <- from $ table @MessageReportT
+    where_ $ messageReports ^. MessageReportDriverId ==. val (toKey personId)
+    pure messageReports

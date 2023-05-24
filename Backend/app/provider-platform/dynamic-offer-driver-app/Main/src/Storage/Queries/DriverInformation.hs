@@ -22,6 +22,7 @@ import Domain.Types.Person as Person
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Esqueleto.DeletedEntity as EsqDE
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Storage.Tabular.DriverInformation
@@ -166,8 +167,8 @@ updateNotOnRideMultiple driverIds = do
       ]
     where_ $ tbl ^. DriverInformationDriverId `in_` valList (toKey . cast <$> driverIds)
 
-deleteById :: Id Person.Driver -> SqlDB ()
-deleteById = Esq.deleteByKey @DriverInformationT . cast
+deleteById :: EsqDE.DeletedBy -> Id Driver -> SqlDB ()
+deleteById deletedBy = EsqDE.deleteByIdP @DriverInformationT deletedBy . cast @Driver @Person
 
 findAllWithLimitOffsetByMerchantId ::
   Transactionable m =>

@@ -1040,11 +1040,11 @@
         "wai-middleware-prometheus": "wai-middleware-prometheus"
       },
       "locked": {
-        "lastModified": 1684877136,
-        "narHash": "sha256-+z3j4ON11hr8IFLBavKeZziBdR5HnsTaduSlgruQ4N8=",
+        "lastModified": 1684917111,
+        "narHash": "sha256-e6KlVUbKsCpPtcHBqI1SoI3tf4Yk0ziKyUHRq0Da/Ig=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "6697e946c513b5830333bde5a28d31087ead4b44",
+        "rev": "5032e43a3ea3911c3ec57e4aef4b3a2a366e065a",
         "type": "github"
       },
       "original": {
