@@ -441,7 +441,7 @@ findByRoleAndMobileNumberAndMerchantId' role_ countryCode mobileNumber_ (Id merc
           dbConf'
           VN.meshConfig
           [ Se.And
-              [ Se.Is BeamP.role $ Se.Eq $ role_,
+              [ Se.Is BeamP.role $ Se.Eq role_,
                 Se.Is BeamP.mobileCountryCode $ Se.Eq $ Just countryCode,
                 Se.Is BeamP.mobileNumberHash $ Se.Eq $ Just mobileNumberDbHash,
                 Se.Is BeamP.merchantId $ Se.Eq merchantId
@@ -494,6 +494,22 @@ updateMerchantIdAndMakeAdmin personId merchantId = do
         PersonUpdatedAt =. val now
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey personId)
+
+updateMerchantIdAndMakeAdmin' :: (L.MonadFlow m, MonadTime m) => Id Person -> Id Merchant -> m (MeshResult ())
+updateMerchantIdAndMakeAdmin' (Id personId) (Id merchantId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  now <- getCurrentTime
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        VN.meshConfig
+        [ Se.Set BeamP.merchantId merchantId,
+          Se.Set BeamP.role Person.ADMIN,
+          Se.Set BeamP.updatedAt now
+        ]
+        [Se.Is BeamP.id (Se.Eq personId)]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 updateName :: Id Person -> Text -> SqlDB ()
 updateName personId name = do

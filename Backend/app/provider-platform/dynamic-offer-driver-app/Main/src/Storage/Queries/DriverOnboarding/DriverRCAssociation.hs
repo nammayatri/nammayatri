@@ -35,11 +35,25 @@ import Storage.Tabular.DriverOnboarding.VehicleRegistrationCertificate
 create :: DriverRCAssociation -> SqlDB ()
 create = Esq.create
 
+create' :: L.MonadFlow m => DriverRCAssociation -> m (MeshResult ())
+create' driverRCAssociation = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainDriverRCAssociationToBeam driverRCAssociation)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+
 findById ::
   Transactionable m =>
   Id DriverRCAssociation ->
   m (Maybe DriverRCAssociation)
 findById = Esq.findById
+
+findById' :: L.MonadFlow m => Id DriverRCAssociation -> m (Maybe DriverRCAssociation)
+findById' (Id drcaId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure Nothing) (transformBeamDriverRCAssociationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDRCA.id $ Se.Eq drcaId]
+    Nothing -> pure Nothing
 
 getActiveAssociationByDriver ::
   (Transactionable m, MonadFlow m) =>
@@ -53,6 +67,14 @@ getActiveAssociationByDriver driverId = do
       association ^. DriverRCAssociationDriverId ==. val (toKey driverId)
         &&. association ^. DriverRCAssociationAssociatedTill >. val (Just now)
     return association
+
+getActiveAssociationByDriver' :: (L.MonadFlow m, MonadTime m) => Id Person -> m (Maybe DriverRCAssociation)
+getActiveAssociationByDriver' (Id personId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  now <- getCurrentTime
+  case dbConf of
+    Just dbCOnf' -> either (pure Nothing) (transformBeamDriverRCAssociationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamDRCA.driverId $ Se.Eq personId, Se.Is BeamDRCA.associatedTill $ Se.GreaterThan $ Just now]]
+    Nothing -> pure Nothing
 
 findAllByDriverId ::
   Transactionable m =>
@@ -85,6 +107,14 @@ getActiveAssociationByRC rcId = do
         &&. association ^. DriverRCAssociationAssociatedTill >. val (Just now)
     return association
 
+getActiveAssociationByRC' :: (L.MonadFlow m, MonadTime m) => Id VehicleRegistrationCertificate -> m (Maybe DriverRCAssociation)
+getActiveAssociationByRC' (Id rcId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  now <- getCurrentTime
+  case dbConf of
+    Just dbCOnf' -> either (pure Nothing) (transformBeamDriverRCAssociationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamDRCA.driverId $ Se.Eq rcId, Se.Is BeamDRCA.associatedTill $ Se.GreaterThan $ Just now]]
+    Nothing -> pure Nothing
+
 endAssociation ::
   Id Person ->
   SqlDB ()
@@ -99,11 +129,37 @@ endAssociation driverId = do
       tbl ^. DriverRCAssociationDriverId ==. val (toKey driverId)
         &&. tbl ^. DriverRCAssociationAssociatedTill >. val (Just now)
 
+endAssociation' :: (L.MonadFlow m, MonadTime m) => Id Person -> m (MeshResult ())
+endAssociation' (Id driverId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  now <- getCurrentTime
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        Mesh.meshConfig
+        [ Se.Set BeamDRCA.associatedTill $ Just now
+        ]
+        [Se.And [Se.Is BeamDRCA.id (Se.Eq driverId), Se.Is BeamDRCA.associatedTill (Se.GreaterThan $ Just now)]]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+
 deleteByDriverId :: Id Person -> SqlDB ()
 deleteByDriverId driverId =
   Esq.delete $ do
     associations <- from $ table @DriverRCAssociationT
     where_ $ associations ^. DriverRCAssociationDriverId ==. val (toKey driverId)
+
+deleteByDriverId' :: L.MonadFlow m => Id Person -> m ()
+deleteByDriverId' (Id driverId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' ->
+      void $
+        KV.deleteWithKVConnector
+          dbConf'
+          Mesh.meshConfig
+          [Se.Is BeamDRCA.driverId (Se.Eq driverId)]
+    Nothing -> pure ()
 
 transformBeamDriverRCAssociationToDomain :: BeamDRCA.DriverRCAssociation -> DriverRCAssociation
 transformBeamDriverRCAssociationToDomain BeamDRCA.DriverRCAssociationT {..} = do

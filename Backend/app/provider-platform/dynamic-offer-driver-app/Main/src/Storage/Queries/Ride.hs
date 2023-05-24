@@ -581,7 +581,7 @@ findStuckRideItems merchantId bookingIds now = do
   where
     mkStuckRideItem (rideId, bookingId, driverId, driverActive) = StuckRideItem {..}
 
-transformBeamRideToDomain :: L.MonadFlow m => BeamR.Ride -> m (Ride)
+transformBeamRideToDomain :: L.MonadFlow m => BeamR.Ride -> m Ride
 transformBeamRideToDomain BeamR.RideT {..} = do
   tUrl <- parseBaseUrl trackingUrl
   pure

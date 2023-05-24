@@ -41,11 +41,25 @@ import Storage.Tabular.DriverOnboarding.Image
 create :: Image -> SqlDB ()
 create = Esq.create
 
+create' :: L.MonadFlow m => Image -> m (MeshResult ())
+create' image = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainImageToBeam image)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+
 findById ::
   Transactionable m =>
   Id Image ->
   m (Maybe Image)
 findById = Esq.findById
+
+findById' :: L.MonadFlow m => Id Image -> m (Maybe Image)
+findById' (Id imageid) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure Nothing) (transformBeamImageToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamI.id $ Se.Eq imageid]
+    Nothing -> pure Nothing
 
 findImagesByPersonAndType ::
   (Transactionable m) =>
@@ -61,6 +75,23 @@ findImagesByPersonAndType merchantId personId imgType = do
         &&. images ^. ImageImageType ==. val imgType
         &&. images ^. ImageMerchantId ==. val (toKey merchantId)
     return images
+
+findImagesByPersonAndType' :: L.MonadFlow m => Id Merchant -> Id Person -> ImageType -> m [Image]
+findImagesByPersonAndType' (Id merchantId) (Id personId) imgType = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' ->
+      either (pure []) (transformBeamImageToDomain <$>)
+        <$> KV.findAllWithKVConnector
+          dbCOnf'
+          Mesh.meshConfig
+          [ Se.And
+              [ Se.Is BeamI.personId $ Se.Eq personId,
+                Se.Is BeamI.merchantId $ Se.Eq merchantId,
+                Se.Is BeamI.imageType $ Se.Eq imgType
+              ]
+          ]
+    Nothing -> pure []
 
 findRecentByPersonIdAndImageType ::
   ( Transactionable m,
@@ -96,6 +127,19 @@ updateToValid id = do
       [ImageIsValid =. val True]
     where_ $ tbl ^. ImageTId ==. val (toKey id)
 
+updateToValid' :: L.MonadFlow m => Id Image -> m (MeshResult ())
+updateToValid' (Id id) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        Mesh.meshConfig
+        [ Se.Set BeamI.isValid True
+        ]
+        [Se.Is BeamI.id (Se.Eq id)]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+
 findByMerchantId ::
   Transactionable m =>
   Id Merchant ->
@@ -106,6 +150,19 @@ findByMerchantId merchantId = do
     where_ $ images ^. ImageMerchantId ==. val (toKey merchantId)
     return images
 
+findByMerchantId' :: L.MonadFlow m => Id Merchant -> m [Image]
+findByMerchantId' (Id merchantId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' ->
+      either (pure []) (transformBeamImageToDomain <$>)
+        <$> KV.findAllWithKVConnector
+          dbCOnf'
+          Mesh.meshConfig
+          [ Se.Is BeamI.merchantId $ Se.Eq merchantId
+          ]
+    Nothing -> pure []
+
 addFailureReason :: Id Image -> DriverOnboardingError -> SqlDB ()
 addFailureReason id reason = do
   Esq.update $ \tbl -> do
@@ -114,11 +171,36 @@ addFailureReason id reason = do
       [ImageFailureReason =. val (Just reason)]
     where_ $ tbl ^. ImageTId ==. val (toKey id)
 
+addFailureReason' :: L.MonadFlow m => Id Image -> DriverOnboardingError -> m (MeshResult ())
+addFailureReason' (Id id) reason = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        Mesh.meshConfig
+        [ Se.Set BeamI.failureReason $ Just reason
+        ]
+        [Se.Is BeamI.id (Se.Eq id)]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+
 deleteByPersonId :: Id Person -> SqlDB ()
 deleteByPersonId personId =
   Esq.delete $ do
     images <- from $ table @ImageT
     where_ $ images ^. ImagePersonId ==. val (toKey personId)
+
+deleteByPersonId' :: L.MonadFlow m => Id Person -> m ()
+deleteByPersonId' (Id personId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' ->
+      void $
+        KV.deleteWithKVConnector
+          dbConf'
+          Mesh.meshConfig
+          [Se.Is BeamI.personId (Se.Eq personId)]
+    Nothing -> pure ()
 
 transformBeamImageToDomain :: BeamI.Image -> Image
 transformBeamImageToDomain BeamI.ImageT {..} = do

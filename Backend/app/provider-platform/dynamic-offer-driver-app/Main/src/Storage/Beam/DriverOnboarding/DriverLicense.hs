@@ -70,6 +70,9 @@ instance FromBackendRow Postgres Domain.VerificationStatus
 instance FromField DbHash where
   fromField = fromFieldEnum
 
+instance FromField [Text] where
+  fromField = fromFieldEnum
+
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be DbHash where
   sqlValueSyntax = autoSqlValueSyntax
 
@@ -79,6 +82,8 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be [Text] where
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be DbHash
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be [Text]
+
+instance FromBackendRow Postgres [Text]
 
 instance FromBackendRow Postgres DbHash
 

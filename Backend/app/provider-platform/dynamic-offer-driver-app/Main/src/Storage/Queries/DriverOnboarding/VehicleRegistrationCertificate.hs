@@ -33,6 +33,13 @@ import Storage.Tabular.Person ()
 create :: VehicleRegistrationCertificate -> SqlDB ()
 create = Esq.create
 
+create' :: L.MonadFlow m => VehicleRegistrationCertificate -> m (MeshResult ())
+create' vehicleRegistrationCertificate = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainVehicleRegistrationCertificateToBeam vehicleRegistrationCertificate)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+
 upsert :: VehicleRegistrationCertificate -> SqlDB ()
 upsert a@VehicleRegistrationCertificate {..} =
   Esq.upsert
@@ -57,6 +64,13 @@ findById ::
   m (Maybe VehicleRegistrationCertificate)
 findById = Esq.findById
 
+findById' :: L.MonadFlow m => Id VehicleRegistrationCertificate -> m (Maybe VehicleRegistrationCertificate)
+findById' (Id vrcID) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure Nothing) (transformBeamVehicleRegistrationCertificateToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamVRC.id $ Se.Eq vrcID]
+    Nothing -> pure Nothing
+
 findLastVehicleRC ::
   (Transactionable m, EncFlow m r) =>
   Text ->
@@ -69,6 +83,21 @@ findLastVehicleRC certNumber = do
     orderBy [desc $ rc ^. VehicleRegistrationCertificateFitnessExpiry]
     return rc
   pure $ headMaybe rcs
+  where
+    headMaybe [] = Nothing
+    headMaybe (x : _) = Just x
+
+findLastVehicleRC' :: (L.MonadFlow m, EncFlow m r) => Text -> m (Maybe VehicleRegistrationCertificate)
+findLastVehicleRC' certNumber = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  certNumberHash <- getDbHash certNumber
+  case dbConf of
+    Just dbConf' -> do
+      vrcData <- KV.findAllWithOptionsKVConnector dbConf' Mesh.meshConfig [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certNumberHash] (Se.Desc BeamVRC.fitnessExpiry) Nothing Nothing
+      case vrcData of
+        Left _ -> pure Nothing
+        Right x -> pure $ transformBeamVehicleRegistrationCertificateToDomain <$> headMaybe x
+    Nothing -> pure Nothing
   where
     headMaybe [] = Nothing
     headMaybe (x : _) = Just x
@@ -86,6 +115,19 @@ findByRCAndExpiry certNumber expiry = do
       rc ^. VehicleRegistrationCertificateCertificateNumberHash ==. val certNumberHash
         &&. rc ^. VehicleRegistrationCertificateFitnessExpiry ==. val expiry
     return rc
+
+findByRCAndExpiry' :: L.MonadFlow m => EncryptedHashedField 'AsEncrypted Text -> UTCTime -> m (Maybe VehicleRegistrationCertificate)
+findByRCAndExpiry' certNumber expiry = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  let certNumberHash = certNumber & (.hash)
+  case dbConf of
+    Just dbCOnf' ->
+      either (pure Nothing) (transformBeamVehicleRegistrationCertificateToDomain <$>)
+        <$> KV.findWithKVConnector
+          dbCOnf'
+          Mesh.meshConfig
+          [Se.And [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certNumberHash, Se.Is BeamVRC.fitnessExpiry $ Se.Eq expiry]]
+    Nothing -> pure Nothing
 
 transformBeamVehicleRegistrationCertificateToDomain :: BeamVRC.VehicleRegistrationCertificate -> VehicleRegistrationCertificate
 transformBeamVehicleRegistrationCertificateToDomain BeamVRC.VehicleRegistrationCertificateT {..} = do
