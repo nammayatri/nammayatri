@@ -36,7 +36,7 @@ findAllByIssueReportId' :: L.MonadFlow m => Id IssueReport -> m [Comment]
 findAllByIssueReportId' (Id issueReportId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbCOnf' -> either (pure []) (transformBeamCommentToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamC.issueReportId $ Se.Eq issueReportId]
+    Just dbCOnf' -> either (pure []) (transformBeamCommentToDomain <$>) <$> KV.findAllWithOptionsKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamC.issueReportId $ Se.Eq issueReportId] (Se.Desc BeamC.createdAt) Nothing Nothing
     Nothing -> pure []
 
 transformBeamCommentToDomain :: BeamC.Comment -> Comment
