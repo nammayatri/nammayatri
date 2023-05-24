@@ -1,7 +1,5 @@
 package in.juspay.mobility.customer;
 
-import static in.juspay.mobility.app.NotificationUtils.CHANNEL_ID;
-
 import android.Manifest;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
@@ -813,7 +811,6 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
         }
         NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(context, CHANNEL_ID);
         mBuilder.setContentTitle("Invoice Downloaded")
-                .setSmallIcon(R.drawable.ny_ic_launcher)
                 .setContentText("Invoice for your ride is downloaded!!!")
                 .setAutoCancel(true)
                 .setPriority(NotificationCompat.PRIORITY_MAX);

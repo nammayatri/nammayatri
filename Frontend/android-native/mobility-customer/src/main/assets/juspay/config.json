@@ -66,7 +66,7 @@
         "package": {
             "in.juspay.godel": "https://assets.juspay.in/hyper/bundles/app/in.juspay.godel/1.2.14/android/v1-index_bundle.zip",
             "in.juspay.godel.placeholder": "https://assets.juspay.in/hyper/bundles/app/in.juspay.godel/1.2.14/android/v1-index_bundle.zip",
-            "in.yatri.consumer": "https://assets.juspay.in/hyper/bundles/app/in.yatri.consumer/1.0.4/android/v1-index_bundle.zip"
+            "in.yatri.consumer": "https://assets.juspay.in/hyper/bundles/app/in.yatri.consumer/1.0.7/android/v1-index_bundle.zip"
         },
         "package_version": "05_mobilitypaytmconsumer_android"
     },
@@ -102,7 +102,7 @@
         "package": {
             "in.juspay.godel": "https://assets.juspay.in/hyper/bundles/app/in.juspay.godel/1.2.14/android/v1-index_bundle.zip",
             "in.juspay.godel.placeholder": "https://assets.juspay.in/hyper/bundles/app/in.juspay.godel/1.2.14/android/v1-index_bundle.zip",
-            "in.yatri.consumer": "https://assets.juspay.in/hyper/bundles/app/in.yatri.consumer/1.0.6/android/v1-index_bundle.zip"
+            "in.yatri.consumer": "https://assets.juspay.in/hyper/bundles/app/in.yatri.consumer/1.0.7/android/v1-index_bundle.zip"
         },
         "package_version": "05_mobilitypaytmconsumer_android"
     },
