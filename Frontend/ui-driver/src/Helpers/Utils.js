@@ -512,22 +512,6 @@ export const saveAudioFile = function (source) {
     }
 }
 
-export const addMediaFile = function (viewID) {
-    return function (source) {
-        return function (actionButtonID) {
-            return function (playIcon) {
-                return function (pauseIcon) {
-                    return function (timerID) {
-                        return function () {
-                            JBridge.addMediaFile(viewID, source, actionButtonID, playIcon, pauseIcon, timerID);
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
 export const uploadMultiPartData = function (path) {
     return function (url) {
         return function(fileType) {
@@ -595,3 +579,4 @@ export const getImageUrl = function (url) {
     console.log("error in getImageUrl " + e);
   }
 };
+

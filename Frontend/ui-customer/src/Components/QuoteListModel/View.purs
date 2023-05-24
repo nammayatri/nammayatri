@@ -362,7 +362,7 @@ noQuotesErrorModel state =
       ][imageView
         [ height $ V 115
         , width $ V 137
-        , imageWithFallback "ny_ic_no_quotes,https://assets.juspay.in/nammayatri/images/user/ny_ic_no_quotes.png"
+        , imageWithFallback "ic_no_quotes,https://assets.juspay.in/nammayatri/images/user/ny_ic_no_quotes.png"
         , padding (Padding 0 0 0 0)
         ]
       , textView $

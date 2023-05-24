@@ -35,7 +35,7 @@ import Resources.Constants (DecodeAddress(..), decodeAddress)
 import Screens (ScreenName(..), getScreen)
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity)
 import Screens.Types (HelpAndSupportScreenState)
-import Services.API (RideBookingRes(..), FareBreakupAPIEntity(..), RideAPIEntity(..), BookingLocationAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..))
+import Services.API (RideBookingRes(..), FareBreakupAPIEntity(..), RideAPIEntity(..), BookingLocationAPIEntity(..), RideBookingAPIDetails(..), RideBookingListRes(..))
 import Services.Config (getSupportNumber)
 
 instance showAction :: Show Action where
@@ -170,70 +170,12 @@ myRideListTransform listRes = filter (\item -> (item.data.status == "COMPLETED")
         rideId : ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._id),
         tripId : ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._shortRideId),
         bookingId : ride.id
-
         },
     props : {
       apiFailure : false
     , isCallConfirmation : false
     }
     }) listRes)
-
-
-dummyCard :: RideBookingRes
-dummyCard =RideBookingRes {
-  agencyNumber: "",
-      status: "",
-      fareBreakup: [dummyFareBreakUp],
-      createdAt: "",
-      discount: Nothing,
-      estimatedTotalFare: 0,
-      agencyName: "",
-      rideList: [ dummyRideAPIEntity ],
-      estimatedFare: 0,
-      tripTerms: [
-        ""
-      ],
-      id: "",
-      updatedAt: "",
-      rideStartTime : Nothing,
-      rideEndTime : Nothing,
-      duration : Nothing,
-      merchantExoPhone : "",
-      bookingDetails: RideBookingAPIDetails{
-        contents: RideBookingDetails {
-          toLocation: BookingLocationAPIEntity {
-            area: Just "",
-            state: Just "",
-            country: Just "",
-            building:Just "",
-            door: Just "",
-            street:Just "",
-            lat: 0.0,
-            city: Just "",
-            areaCode: Just "",
-            lon: 0.0,
-            ward : Nothing,
-            placeId : Nothing
-          }
-        , estimatedDistance : Nothing
-        },
-        fareProductType: ""
-      },
-      fromLocation: BookingLocationAPIEntity {
-        area:  Just "",
-        state: Just "",
-        country:Just  "",
-        building:  Just "",
-        door: Just "",
-        street: Just "",
-        lat: 0.0,
-        city: Just "",
-        areaCode: Just "",
-        lon: 0.0,
-        ward : Nothing,
-        placeId : Nothing
-      }
-    }
 
 dummyState :: HelpAndSupportScreenState
 dummyState = {
@@ -262,4 +204,4 @@ dummyState = {
 
 
 dummyFareBreakUp :: FareBreakupAPIEntity
-dummyFareBreakUp = FareBreakupAPIEntity{amount: 0.0,description: ""}
+dummyFareBreakUp = FareBreakupAPIEntity{amount: 0,description: ""}

@@ -35,6 +35,7 @@ import Animation as Anim
 import Animation.Config as AnimConfig
 import Common.Types.App
 import Screens.EnterMobileNumberScreen.ComponentConfig
+import MerchantConfigs.Utils (getValueFromMerchant)
 
 screen :: ST.EnterMobileNumberScreenState -> Screen Action ST.EnterMobileNumberScreenState ScreenOutput
 screen initialState =
@@ -162,7 +163,7 @@ underlinedTextView state push =
       , orientation VERTICAL
       , onClick (\action -> do
                   _<- push action
-                  _ <- JB.openUrlInApp "https://drive.google.com/file/d/1qYXbQUF4DVo2xNOawkHNTR_VVe46nggc/view?usp=sharing"
+                  _ <- JB.openUrlInApp $ getValueFromMerchant "DOCUMENT_LINK" 
                   pure unit
                   ) (const NonDisclosureAgreementAction)
       ][ textView (

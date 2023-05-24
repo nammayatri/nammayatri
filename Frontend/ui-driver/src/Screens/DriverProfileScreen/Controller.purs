@@ -12,9 +12,7 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.DriverProfileScreen.Controller where
-
 
 import Components.BottomNavBar.Controller as BottomNavBar
 import Components.PopUpModal.Controller as PopUpModal
@@ -30,7 +28,7 @@ import PrestoDOM.Types.Core (class Loggable)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Screens (ScreenName(..), getScreen)
 import Screens.DriverProfileScreen.ScreenData (MenuOptions(..)) as Data
-import Screens.Types (DriverProfileScreenState)
+import Screens.Types (DriverProfileScreenState, VehicleP)
 import Services.APITypes (GetDriverInfoResp(..), Vehicle(..))
 import Services.Backend (dummyVehicleObject)
 import Storage (setValueToLocalNativeStore, KeyStore(..))
@@ -69,7 +67,7 @@ instance loggableAction :: Loggable Action where
 
 data ScreenOutput = GoToDriverDetailsScreen DriverProfileScreenState
                     | GoToVehicleDetailsScreen DriverProfileScreenState
-                    | GoToEditBankDetailsScreen
+                    | GoToBookingOptions DriverProfileScreenState
                     | GoToSelectLanguageScreen
                     | GoToHelpAndSupportScreen
                     | GoToDriverHistoryScreen
@@ -120,8 +118,9 @@ eval (OptionClick optionIndex) state = do
     Data.DRIVER_PRESONAL_DETAILS -> exit $ GoToDriverDetailsScreen state
     Data.DRIVER_VEHICLE_DETAILS -> exit $ GoToVehicleDetailsScreen state
     Data.DRIVER_BANK_DETAILS -> continue state
+    Data.DRIVER_BOOKING_OPTIONS -> exit $ GoToBookingOptions state
     Data.MULTI_LANGUAGE -> exit $ GoToSelectLanguageScreen
-    Data.HELP_AND_SUPPORT -> exit $ GoToHelpAndSupportScreen
+    Data.HELP_AND_FAQS -> exit $ GoToHelpAndSupportScreen
     Data.ABOUT_APP -> exit $ GoToAboutUsScreen
     Data.DRIVER_LOGOUT -> continue $ (state {props = state.props {logoutModalView = true}})
     Data.REFER -> exit $ OnBoardingFlow 
@@ -145,7 +144,8 @@ eval (GetDriverInfoResponse (GetDriverInfoResp driverProfileResp)) state = do
                                       vehicleRegNumber = linkedVehicle.registrationNo,
                                       drivingLicenseNo = "",
                                       vehicleModelName = linkedVehicle.model,
-                                      vehicleColor = linkedVehicle.color
+                                      vehicleColor = linkedVehicle.color,
+                                      vehicleSelected = getDowngradeOptionsSelected  (GetDriverInfoResp driverProfileResp)
                                       }})
 
 eval _ state = continue state
@@ -157,9 +157,18 @@ getTitle menuOption =
     Data.DRIVER_VEHICLE_DETAILS -> (getString VEHICLE_DETAILS)
     Data.DRIVER_BANK_DETAILS -> (getString BANK_DETAILS)
     Data.MULTI_LANGUAGE -> (getString LANGUAGES)
-    Data.HELP_AND_SUPPORT -> (getString HELP_AND_SUPPORT)
+    Data.HELP_AND_FAQS -> (getString HELP_AND_FAQ)
     Data.ABOUT_APP -> (getString ABOUT)
     Data.REFER -> (getString ADD_YOUR_FRIEND)
     Data.DRIVER_LOGOUT -> (getString LOGOUT)
     Data.APP_INFO_SETTINGS -> (getString APP_INFO)
     Data.LIVE_STATS_DASHBOARD -> (getString LIVE_DASHBOARD)
+    Data.DRIVER_BOOKING_OPTIONS -> (getString BOOKING_OPTIONS)
+
+getDowngradeOptionsSelected :: GetDriverInfoResp -> Array VehicleP
+getDowngradeOptionsSelected (GetDriverInfoResp driverInfoResponse) =
+  [
+    {vehicleName: "HATCHBACK", isSelected: driverInfoResponse.canDowngradeToHatchback}
+  , {vehicleName: "SEDAN", isSelected: driverInfoResponse.canDowngradeToSedan}
+  , {vehicleName: "TAXI" , isSelected: driverInfoResponse.canDowngradeToTaxi}
+  ]

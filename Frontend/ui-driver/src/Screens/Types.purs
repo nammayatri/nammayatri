@@ -16,6 +16,7 @@
 module Screens.Types where
 
 import Common.Types.App (CancellationReasons)
+import Components.ChooseVehicle.Controller (Config) as ChooseVehicle
 import Data.Generic.Rep (class Generic)
 import Data.Eq.Generic (genericEq)
 import Data.Show.Generic (genericShow)
@@ -248,8 +249,16 @@ type DriverProfileScreenData = {
   vehicleRegNumber :: String,
   vehicleModelName :: String,
   vehicleColor :: String,
-  driverAlternateNumber :: Maybe String
+  driverAlternateNumber :: Maybe String,
+  capacity :: Int,
+  downgradeOptions :: Array String,
+  vehicleSelected :: Array VehicleP
 }
+
+type VehicleP = {
+  vehicleName :: String,
+  isSelected :: Boolean
+} 
 
 type DriverProfileScreenProps = {
   logoutModalView :: Boolean,
@@ -659,7 +668,8 @@ type HomeScreenProps =  {
   unReadMessages :: Boolean,
   updatedArrivalInChat :: Boolean,
   driverStatusSet :: DriverStatus,
-  silentPopUpView :: Boolean
+  silentPopUpView :: Boolean,
+  zoneRideBooking :: Boolean
  }
 
 data DriverStatus = Online | Offline | Silent 
@@ -1132,3 +1142,21 @@ data ReferralType = SuccessScreen | ComingSoonScreen | ReferralFlow | QRScreen
 
 derive instance genericReferralType :: Generic ReferralType _
 instance eqReferralType :: Eq ReferralType where eq = genericEq
+
+
+type BookingOptionsScreenState = {
+  data :: BookingOptionsScreenData,
+  props :: BookingOptionsScreenProps
+}
+
+type BookingOptionsScreenData = {
+  vehicleType :: String,
+  vehicleNumber :: String,
+  vehicleName :: String,
+  vehicleCapacity :: Int,
+  downgradeOptions :: Array ChooseVehicle.Config
+}
+
+type BookingOptionsScreenProps = {
+  isBtnActive :: Boolean
+}

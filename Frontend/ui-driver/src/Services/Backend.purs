@@ -216,12 +216,14 @@ verifyTokenBT payload token = do
     errorHandler (ErrorPayload errorPayload) = do
         let errResp = errorPayload.response
         let codeMessage = decodeErrorCode errResp.errorMessage
-        if ( errorPayload.code == 400 && codeMessage == "TOKEN_EXPIRED") then
+        if ( errorPayload.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
             pure $ toast (getString YOUR_REQUEST_HAS_TIMEOUT_TRY_AGAIN)
+            void $ lift $ lift $ toggleLoader false
             else if ( errorPayload.code == 400 && codeMessage == "INVALID_AUTH_DATA") then do
                 modifyScreenState $ EnterOTPScreenType (\enterOTPScreen -> enterOTPScreen { props {isValid = true} })
                 void $ lift $ lift $ toggleLoader false
-            else if ( errorPayload.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then
+            else if ( errorPayload.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then do
+                void $ lift $ lift $ toggleLoader false
                 pure $ toast (getString LIMIT_EXCEEDED_PLEASE_TRY_AGAIN_AFTER_10MIN)
             else pure $ toast (getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER)
         BackT $ pure GoBack
@@ -399,6 +401,19 @@ makeUpdateDriverInfoReq deviceToken = UpdateDriverInfoReq {
        "deviceToken" : Nothing,
        "canDowngradeToSedan" : Nothing,
        "canDowngradeToHatchback" : Nothing,
+       "canDowngradeToTaxi" : Nothing,
+       "language" : Nothing
+    }
+
+makeUpdateBookingOptions :: Boolean -> Boolean -> Boolean -> UpdateDriverInfoReq
+makeUpdateBookingOptions toSedan toHatchBack toTaxi = UpdateDriverInfoReq {
+       "middleName": Nothing,
+       "firstName" : Nothing,
+       "lastName"  : Nothing,
+       "deviceToken" : Nothing,
+       "canDowngradeToSedan" : Just toSedan,
+       "canDowngradeToHatchback" : Just toHatchBack,
+       "canDowngradeToTaxi" : Just toTaxi,
        "language" : Nothing
     }
 
@@ -410,11 +425,13 @@ makeUpdateDriverLangChange deviceToken = UpdateDriverInfoReq {
         "deviceToken" : Nothing,
         "canDowngradeToSedan" : Nothing,
         "canDowngradeToHatchback" : Nothing,
+        "canDowngradeToTaxi" : Nothing,
         "language" : Just case getValueToLocalNativeStore LANGUAGE_KEY of
             "EN_US" -> "ENGLISH"
             "KN_IN" -> "KANNADA"
             "HI_IN" -> "HINDI"
             "ML_IN" -> "MALAYALAM"
+            "BN_IN" -> "BENGALI"
             "TA_IN" -> "TAMIL"
             _       -> "ENGLISH"
     }
@@ -479,6 +496,23 @@ walkCoordinates (Snapped points) =
   }
 
 --------------------------------- onBoardingFlow  ---------------------------------------------------------------------------------------------------------------------------------
+getCorrespondingErrorMessage :: String -> String
+getCorrespondingErrorMessage errorCode = case errorCode of
+  "IMAGE_VALIDATION_FAILED" -> (getString IMAGE_VALIDATION_FAILED)
+  "IMAGE_NOT_READABLE" -> (getString IMAGE_NOT_READABLE)
+  "IMAGE_LOW_QUALITY" -> (getString IMAGE_LOW_QUALITY)
+  "IMAGE_INVALID_TYPE" -> (getString IMAGE_INVALID_TYPE)
+  "IMAGE_DOCUMENT_NUMBER_MISMATCH" -> (getString IMAGE_DOCUMENT_NUMBER_MISMATCH)
+  "IMAGE_EXTRACTION_FAILED" -> (getString IMAGE_EXTRACTION_FAILED)
+  "IMAGE_NOT_FOUND" -> (getString IMAGE_NOT_FOUND)
+  "IMAGE_NOT_VALID" -> (getString IMAGE_NOT_VALID)
+  "DRIVER_ALREADY_LINKED" -> (getString DRIVER_ALREADY_LINKED)
+  "DL_ALREADY_UPDATED" -> (getString DL_ALREADY_UPDATED)
+  "DL_ALREADY_LINKED"  -> (getString DL_ALREADY_LINKED)
+  "RC_ALREADY_LINKED" -> (getString RC_ALREADY_LINKED)
+  "RC_ALREADY_UPDATED" -> (getString RC_ALREADY_UPDATED)
+  "UNPROCESSABLE_ENTITY" -> (getString PLEASE_CHECK_FOR_IMAGE_IF_VALID_DOCUMENT_IMAGE_OR_NOT)
+  _                      -> (getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER)
 
 registerDriverRCBT :: DriverRCReq -> FlowBT String  DriverRCResp
 registerDriverRCBT payload = do
@@ -665,8 +699,6 @@ makeValidateAlternateNumberRequest number = DriverAlternateNumberReq {
 
  }
 
-
-
 ---------------------------------- ResendAlternateNumberOtp ------------------------------------------
 resendAlternateNumberOTP payload = do
     headers <- getHeaders ""
@@ -679,6 +711,7 @@ makeResendAlternateNumberOtpRequest number = AlternateNumberResendOTPRequest {
     "alternateNumber" : number,
     "mobileCountryCode" : "+91"
  }
+
 ---------------------------verifyAlternateNumber------------------------------------
 verifyAlternateNumberOTP payload = do
     headers <- getHeaders ""
@@ -757,5 +790,19 @@ deleteIssueBT issueId = do
     where
         errorHandler (ErrorPayload errorPayload) =  do
             BackT $ pure GoBack
+---------------------------------------- otpRide ---------------------------------------------
 
+otpRide dummyRideOtp payload = do
+        headers <- getHeaders ""
+        withAPIResult (EP.otpRide dummyRideOtp) unwrapResponse $ callAPI headers ((OTPRideRequest payload))
+    where
+        unwrapResponse (x) = x
 
+makeOTPRideReq :: String -> Number -> Number -> OTPRideReq
+makeOTPRideReq otp lat lon = OTPRideReq {
+    specialZoneOtpCode: otp,
+    point: LatLong {
+        lat : lat,
+        lon : lon
+        }
+}

@@ -111,7 +111,7 @@ noInternetScreenView push state triggertype =
       , orientation VERTICAL
       , clickable false
       ][imageView
-        [ imageWithFallback "ny_ic_offline,https://assets.juspay.in/nammayatri/images/common/ny_ic_offline.png"
+        [ imageWithFallback "ic_offline,https://assets.juspay.in/nammayatri/beckn/merchantcommon/images/ic_offline.png"
         , height $ V 213
         , width $ V 240
         , gravity CENTER

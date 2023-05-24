@@ -15,22 +15,23 @@
 
 module Screens.SelectLanguageScreen.View where
 
-import Prelude (Unit, const, ($), (<<<), (==))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, alpha, background, color, fontStyle, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, weight, width, afterRender, imageWithFallback)
+import Screens.SelectLanguageScreen.ComponentConfig
+import Animation as Anim
+import Common.Types.App (LazyCheck(..))
+import Components.PrimaryButton as PrimaryButton
+import Components.SelectMenuButton.View as MenuButton
+import Data.Array as DA
 import Effect (Effect)
+import Font.Size as FontSize
+import Font.Style as FontStyle
+import Language.Strings (getString)
+import Language.Types (STR(..))
+import MerchantConfigs.Utils (getLanguage)
+import Prelude (Unit, const, ($), (<<<), (==))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, afterRender, alpha, background, color, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, weight, width)
 import Screens.SelectLanguageScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
-import Font.Style as FontStyle
-import Font.Size as FontSize
-import Animation as Anim
-import Components.SelectMenuButton.View as MenuButton
-import Language.Strings (getString)
-import Language.Types (STR(..))
-import Components.PrimaryButton as PrimaryButton
-import Data.Array as DA
-import Common.Types.App
-import Screens.SelectLanguageScreen.ComponentConfig
 
 screen :: ST.SelectLanguageScreenState -> Screen Action ST.SelectLanguageScreenState ScreenOutput
 screen initialState =
@@ -119,6 +120,6 @@ menuButtonsView state push =
           (\ index language ->
           MenuButton.view
               (push <<< (MenuButtonAction))
-              { text: {name: language.name, value: language.value, subtitle: language.subtitle}, isSelected: (state.props.selectedLanguage == language.value), index : index }) state.data.languages
+              { text: {name: language.name, value: language.value, subtitle: language.subtitle}, isSelected: (state.props.selectedLanguage == language.value), index : index }) (getLanguage Language)
       )
   ]
