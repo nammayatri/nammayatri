@@ -61,12 +61,12 @@ findByCallSid callSid =
     where_ $ callStatus ^. CallStatusCallId ==. val callSid
     return callStatus
 
--- findByCallSid' :: Transactionable m => Text -> m (Maybe CallStatus)
--- findByCallSid' callSid =
---   Esq.findOne $ do
---     callStatus <- from $ table @CallStatusT
---     where_ $ callStatus ^. CallStatusCallId ==. val callSid
---     return callStatus
+findByCallSid' :: L.MonadFlow m => Text -> m (Maybe CallStatus)
+findByCallSid' callSid = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure Nothing) (transformBeamCallStatusToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamCT.callId $ Se.Eq callSid]
+    Nothing -> pure Nothing
 
 updateCallStatus :: Id CallStatus -> Call.CallStatus -> Int -> BaseUrl -> SqlDB ()
 updateCallStatus callId status conversationDuration recordingUrl = do
@@ -88,9 +88,9 @@ updateCallStatus' (Id callId) status conversationDuration recordingUrl = do
       KV.updateWoReturningWithKVConnector
         dbConf'
         VN.meshConfig
-        [ Set BeamCT.conversationDuration $ conversationDuration,
+        [ Set BeamCT.conversationDuration conversationDuration,
           Set BeamCT.recordingUrl $ Just (showBaseUrl recordingUrl),
-          Set BeamCT.status $ (status)
+          Set BeamCT.status status
         ]
         [Is BeamCT.callId (Se.Eq callId)]
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
