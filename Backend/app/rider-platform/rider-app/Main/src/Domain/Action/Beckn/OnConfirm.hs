@@ -14,7 +14,6 @@
 
 module Domain.Action.Beckn.OnConfirm
   ( onConfirm,
-    validateRequest,
     OnConfirmReq (..),
   )
 where
@@ -35,21 +34,12 @@ data OnConfirmReq = OnConfirmReq
     specialZoneOtp :: Maybe Text
   }
 
-data ValidatedOnConfirmReq = ValidatedOnConfirmReq
-  { bppBookingId :: Id DRB.BPPBooking,
-    specialZoneOtp :: Maybe Text,
-    booking :: DRB.Booking
-  }
-
-onConfirm :: (EsqDBFlow m r, EsqDBReplicaFlow m r) => ValidatedOnConfirmReq -> m ()
-onConfirm ValidatedOnConfirmReq {..} = do
-  whenJust specialZoneOtp $ \otp ->
+onConfirm :: (EsqDBFlow m r, EsqDBReplicaFlow m r) => OnConfirmReq -> m ()
+onConfirm req = do
+  booking <- runInReplica $ QRB.findByBPPBookingId req.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId" <> req.bppBookingId.getId)
+  fork "onConfirm request processing" $ do
+    whenJust req.specialZoneOtp $ \otp ->
+      DB.runTransaction $ do
+        QRB.updateOtpCodeBookingId booking.id otp
     DB.runTransaction $ do
-      QRB.updateOtpCodeBookingId booking.id otp
-  DB.runTransaction $ do
-    QRB.updateStatus booking.id DRB.CONFIRMED
-
-validateRequest :: (EsqDBFlow m r, EsqDBReplicaFlow m r) => OnConfirmReq -> m ValidatedOnConfirmReq
-validateRequest OnConfirmReq {..} = do
-  booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId" <> bppBookingId.getId)
-  return $ ValidatedOnConfirmReq {..}
+      QRB.updateStatus booking.id DRB.CONFIRMED

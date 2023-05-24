@@ -35,10 +35,8 @@ onUpdate ::
 onUpdate _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   mbDOnUpdateReq <- ACL.buildOnUpdateReq req
   whenJust mbDOnUpdateReq $ \onUpdateReq ->
-    Redis.whenWithLockRedis (onUpdateLockKey req.context.message_id) 60 $ do
-      validatedOnUpdateReq <- DOnUpdate.validateRequest onUpdateReq
-      fork "on update processing" $
-        DOnUpdate.onUpdate validatedOnUpdateReq
+    Redis.whenWithLockRedis (onUpdateLockKey req.context.message_id) 60 $
+      DOnUpdate.onUpdate onUpdateReq
   pure Ack
 
 onUpdateLockKey :: Text -> Text

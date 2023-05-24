@@ -25,8 +25,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.FareCalculator
 
-buildOnConfirmMessage :: MonadFlow m => UTCTime -> DConfirm.DConfirmRes -> m OnConfirm.OnConfirmMessage
-buildOnConfirmMessage now res = do
+buildOnConfirmMessage :: MonadFlow m => DConfirm.DConfirmRes -> m OnConfirm.OnConfirmMessage
+buildOnConfirmMessage res = do
   let booking = res.booking
   let vehicleVariant = Common.castVariant res.booking.vehicleVariant
   let itemCode = OnConfirm.ItemCode OnConfirm.ONE_WAY_TRIP vehicleVariant Nothing Nothing
@@ -36,8 +36,8 @@ buildOnConfirmMessage now res = do
   fulfillmentDetails <- case booking.bookingType of
     DConfirm.SpecialZoneBooking -> do
       otpCode <- booking.specialZoneOtpCode & fromMaybeM (OtpNotFoundForSpecialZoneBooking booking.id.getId)
-      return $ mkSpecialZoneFulfillmentInfo res.fromLocation res.toLocation now otpCode
-    DConfirm.NormalBooking -> return $ mkFulfillmentInfo res.fromLocation res.toLocation now
+      return $ mkSpecialZoneFulfillmentInfo res.fromLocation res.toLocation res.now otpCode
+    DConfirm.NormalBooking -> return $ mkFulfillmentInfo res.fromLocation res.toLocation res.now
   return $
     OnConfirm.OnConfirmMessage
       { order =

@@ -16,7 +16,6 @@
 
 module Domain.Action.Beckn.Select
   ( DSelectReq (..),
-    validateRequest,
     handler,
   )
 where
@@ -58,65 +57,67 @@ data DSelectReq = DSelectReq
     customerExtraFee :: Maybe Money
   }
 
-handler :: DM.Merchant -> DSelectReq -> DEst.Estimate -> Flow ()
-handler merchant sReq estimate = do
-  let merchantId = merchant.id
-  searchReq <- QSR.findById estimate.requestId >>= fromMaybeM (SearchRequestNotFound estimate.requestId.getId)
+handler :: Id DM.Merchant -> DSelectReq -> Flow ()
+handler merchantId sReq = do
+  sessiontoken <- generateGUIDText
+  merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   mbDistRes <- CD.getCacheDistance sReq.transactionId
+  estimate <- QEst.findById sReq.estimateId >>= fromMaybeM (EstimateDoesNotExist sReq.estimateId.getId)
+  searchReq <- QSR.findById estimate.requestId >>= fromMaybeM (SearchRequestNotFound estimate.requestId.getId)
+  fork "select request processing" $ do
+    logInfo $ "Fetching cached distance and duration" <> show mbDistRes
+    (distance, duration) <-
+      case mbDistRes of
+        Nothing -> do
+          res <-
+            Maps.getDistance merchantId $
+              Maps.GetDistanceReq
+                { origin = searchReq.fromLocation,
+                  destination = searchReq.toLocation,
+                  travelMode = Just Maps.CAR
+                }
+          pure (res.distance, res.duration)
+        Just distRes -> pure distRes
+    farePolicy <- FarePolicyS.findByMerchantIdAndVariant merchantId estimate.vehicleVariant >>= fromMaybeM NoFarePolicy
+    fareParams <-
+      calculateFareParameters
+        CalculateFareParametersParams
+          { farePolicy = farePolicy,
+            distance = distance,
+            rideTime = sReq.pickupTime,
+            waitingTime = Nothing,
+            driverSelectedFare = Nothing,
+            customerExtraFee = sReq.customerExtraFee
+          }
+    -- device <- Redis.get (CD.deviceKey sReq.transactionId)
+    searchTry <- buildSearchTry merchantId searchReq.id estimate sReq.customerExtraFee sReq distance duration
+    let estimateFare = fareSum fareParams
+    logDebug $
+      "search try id=" <> show searchTry.id
+        <> "; estimated distance = "
+        <> show distance
+        <> "; estimated base fare:"
+        <> show estimateFare
+    driverPoolConfig <- getDriverPoolConfig merchantId distance
+    let inTime = fromIntegral driverPoolConfig.singleBatchProcessTime
+    Esq.runTransaction $ do
+      QST.create searchTry
 
-  logInfo $ "Fetching cached distance and duration" <> show mbDistRes
-  (distance, duration) <-
-    case mbDistRes of
-      Nothing -> do
-        res <-
-          Maps.getDistance merchantId $
-            Maps.GetDistanceReq
-              { origin = searchReq.fromLocation,
-                destination = searchReq.toLocation,
-                travelMode = Just Maps.CAR
+    let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance distance <$> farePolicy.driverExtraFeeBounds
+    res <- sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant estimateFare driverExtraFeeBounds
+    case res of
+      ReSchedule _ -> do
+        maxShards <- asks (.maxShards)
+        Esq.runTransaction $ do
+          createJobIn @_ @'SendSearchRequestToDriver inTime maxShards $
+            SendSearchRequestToDriverJobData
+              { searchTryId = searchTry.id,
+                baseFare = estimateFare,
+                estimatedRideDistance = distance,
+                customerExtraFee = sReq.customerExtraFee,
+                driverExtraFeeBounds = driverExtraFeeBounds
               }
-        pure (res.distance, res.duration)
-      Just distRes -> pure distRes
-  farePolicy <- FarePolicyS.findByMerchantIdAndVariant merchantId estimate.vehicleVariant >>= fromMaybeM NoFarePolicy
-  fareParams <-
-    calculateFareParameters
-      CalculateFareParametersParams
-        { farePolicy = farePolicy,
-          distance = distance,
-          rideTime = sReq.pickupTime,
-          waitingTime = Nothing,
-          driverSelectedFare = Nothing,
-          customerExtraFee = sReq.customerExtraFee
-        }
-  -- device <- Redis.get (CD.deviceKey sReq.transactionId)
-  searchTry <- buildSearchTry merchantId searchReq.id estimate sReq.customerExtraFee sReq distance duration
-  let estimateFare = fareSum fareParams
-  logDebug $
-    "search try id=" <> show searchTry.id
-      <> "; estimated distance = "
-      <> show distance
-      <> "; estimated base fare:"
-      <> show estimateFare
-  driverPoolConfig <- getDriverPoolConfig merchantId distance
-  let inTime = fromIntegral driverPoolConfig.singleBatchProcessTime
-  Esq.runTransaction $ do
-    QST.create searchTry
-
-  let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance distance <$> farePolicy.driverExtraFeeBounds
-  res <- sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant estimateFare driverExtraFeeBounds
-  case res of
-    ReSchedule _ -> do
-      maxShards <- asks (.maxShards)
-      Esq.runTransaction $ do
-        createJobIn @_ @'SendSearchRequestToDriver inTime maxShards $
-          SendSearchRequestToDriverJobData
-            { searchTryId = searchTry.id,
-              baseFare = estimateFare,
-              estimatedRideDistance = distance,
-              customerExtraFee = sReq.customerExtraFee,
-              driverExtraFeeBounds = driverExtraFeeBounds
-            }
-    _ -> return ()
+      _ -> return ()
 
 buildSearchTry ::
   ( MonadTime m,
@@ -152,9 +153,3 @@ buildSearchTry merchantId searchReqId estimate customerExtraFee sReq distance du
         updatedAt = now,
         ..
       }
-
-validateRequest :: Id DM.Merchant -> DSelectReq -> Flow (DM.Merchant, DEst.Estimate)
-validateRequest merchantId sReq = do
-  merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  estimate <- QEst.findById sReq.estimateId >>= fromMaybeM (EstimateDoesNotExist sReq.estimateId.getId)
-  return (merchant, estimate)

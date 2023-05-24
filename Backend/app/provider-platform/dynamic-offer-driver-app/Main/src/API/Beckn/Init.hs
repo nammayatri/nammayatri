@@ -46,24 +46,21 @@ init ::
   SignatureAuthResult ->
   Init.InitReq ->
   FlowHandler AckResponse
-init transporterId (SignatureAuthResult _ subscriber) req =
+init merchantId (SignatureAuthResult _ subscriber) req =
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
     logTagInfo "Init API Flow" "Reached"
     dInitReq <- ACL.buildInitReq subscriber req
     Redis.whenWithLockRedis (initLockKey dInitReq.driverQuoteId) 60 $ do
       let context = req.context
-      validatedRes <- DInit.validateRequest transporterId dInitReq
-      fork "init request processing" $ do
-        dInitRes <- DInit.handler transporterId dInitReq validatedRes
+      DInit.handler merchantId dInitReq $ \dInitRes ->
         void . handle (errHandler dInitRes.booking) $
-          CallBAP.withCallback dInitRes.transporter Context.INIT OnInit.onInitAPI context context.bap_uri $
+          CallBAP.withCallback dInitRes.merchant Context.INIT OnInit.onInitAPI context context.bap_uri $
             pure $ ACL.mkOnInitMessage dInitRes
-      return ()
     pure Ack
   where
     errHandler booking exc
-      | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = DInit.cancelBooking booking transporterId
-      | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = DInit.cancelBooking booking transporterId
+      | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = DInit.cancelBooking booking merchantId
+      | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = DInit.cancelBooking booking merchantId
       | otherwise = throwM exc
 
 initLockKey :: Text -> Text

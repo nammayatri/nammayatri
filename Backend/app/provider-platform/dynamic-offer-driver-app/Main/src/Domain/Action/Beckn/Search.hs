@@ -18,7 +18,6 @@ module Domain.Action.Beckn.Search
     EstimateInfo (..),
     SpecialZoneQuoteInfo (..),
     handler,
-    validateRequest,
   )
 where
 
@@ -125,12 +124,15 @@ getDistanceAndDuration merchantId fromLocation toLocation _ _ = do
         }
   return DistanceAndDuration {distance = response.distance, duration = response.duration}
 
-handler :: DM.Merchant -> DSearchReq -> Flow DSearchRes
-handler merchant sReq = do
+handler :: Id DM.Merchant -> DSearchReq -> (DSearchRes -> Flow ()) -> Flow ()
+handler merchantId sReq callbackFunc = do
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
+  unless merchant.enabled $ throwError AgencyDisabled
   searchMetricsMVar <- Metrics.startSearchMetrics merchant.name
   let fromLocationLatLong = sReq.pickupLocation
       toLocationLatLong = sReq.dropLocation
-      merchantId = merchant.id
+  unlessM (rideServiceable merchant.geofencingConfig QGeometry.someGeometriesContain fromLocationLatLong (Just toLocationLatLong)) $
+    throwError RideNotServiceable
   result <- getDistanceAndDuration merchantId fromLocationLatLong toLocationLatLong sReq.routeDistance sReq.routeDuration
   CD.cacheDistance sReq.transactionId (result.distance, result.duration)
   Redis.setExp (CD.deviceKey sReq.transactionId) sReq.device 120
@@ -182,7 +184,7 @@ handler merchant sReq = do
           let farePolicies = selectFarePolicy result.distance allFarePolicies
           buildEstimatesInfos fromLocation toLocation driverPoolCfg result farePolicies
         return (Nothing, Just estimateInfos)
-  buildSearchRes merchant fromLocationLatLong toLocationLatLong mbEstimateInfos quotes searchMetricsMVar
+  callbackFunc =<< buildSearchRes merchant fromLocationLatLong toLocationLatLong mbEstimateInfos quotes searchMetricsMVar
   where
     listVehicleVariantHelper farePolicy = catMaybes $ everyPossibleVariant <&> \var -> find ((== var) . (.vehicleVariant)) farePolicy
 
@@ -211,7 +213,6 @@ handler merchant sReq = do
       [DFP.FarePolicy] ->
       Flow [EstimateInfo]
     buildEstimatesInfos fromLocation toLocation driverPoolCfg result farePolicies = do
-      let merchantId = merchant.id
       if null farePolicies
         then do
           logDebug "Trip doesnot match any fare policy constraints."
@@ -359,16 +360,6 @@ mkQuoteInfo fromLoc toLoc startTime DQuoteSpecialZone.QuoteSpecialZone {..} = do
     { quoteId = id,
       ..
     }
-
-validateRequest :: Id DM.Merchant -> DSearchReq -> Flow DM.Merchant
-validateRequest merchantId sReq = do
-  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
-  unless merchant.enabled $ throwError AgencyDisabled
-  let fromLocationLatLong = sReq.pickupLocation
-      toLocationLatLong = sReq.dropLocation
-  unlessM (rideServiceable merchant.geofencingConfig QGeometry.someGeometriesContain fromLocationLatLong (Just toLocationLatLong)) $
-    throwError RideNotServiceable
-  return merchant
 
 buildSearchReqLocation :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DM.Merchant -> Text -> Maybe BA.Address -> Maybe Maps.Language -> LatLong -> m DLoc.SearchReqLocation
 buildSearchReqLocation merchantId sessionToken address customerLanguage latLong@Maps.LatLong {..} = do

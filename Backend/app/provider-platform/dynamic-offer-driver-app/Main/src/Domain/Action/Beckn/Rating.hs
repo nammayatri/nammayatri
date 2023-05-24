@@ -37,24 +37,31 @@ data DRatingReq = DRatingReq
     feedbackDetails :: Maybe Text
   }
 
-handler :: DRatingReq -> DRide.Ride -> Flow ()
-handler req ride = do
+handler :: DRatingReq -> Flow ()
+handler req = do
+  booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
+  ride <-
+    QRide.findActiveByRBId booking.id
+      >>= fromMaybeM (RideNotFound booking.id.getId)
   rating <- QRating.findRatingForRide ride.id
   let driverId = ride.driverId
-  let ratingValue = req.ratingValue
-      feedbackDetails = req.feedbackDetails
-  case rating of
-    Nothing -> do
-      logTagInfo "FeedbackAPI" $
-        "Creating a new record for " +|| ride.id ||+ " with rating " +|| ratingValue ||+ "."
-      newRating <- buildRating ride.id driverId ratingValue feedbackDetails
-      Esq.runTransaction $ QRating.create newRating
-    Just rideRating -> do
-      logTagInfo "FeedbackAPI" $
-        "Updating existing rating for " +|| ride.id ||+ " with new rating " +|| ratingValue ||+ "."
-      Esq.runTransaction $ do
-        QRating.updateRating rideRating.id driverId ratingValue feedbackDetails
-  calculateAverageRating driverId
+  unless (ride.status == DRide.COMPLETED) $
+    throwError $ RideInvalidStatus "Ride is not ready for rating."
+  fork "rating request processing" $ do
+    let ratingValue = req.ratingValue
+        feedbackDetails = req.feedbackDetails
+    case rating of
+      Nothing -> do
+        logTagInfo "FeedbackAPI" $
+          "Creating a new record for " +|| ride.id ||+ " with rating " +|| ratingValue ||+ "."
+        newRating <- buildRating ride.id driverId ratingValue feedbackDetails
+        Esq.runTransaction $ QRating.create newRating
+      Just rideRating -> do
+        logTagInfo "FeedbackAPI" $
+          "Updating existing rating for " +|| ride.id ||+ " with new rating " +|| ratingValue ||+ "."
+        Esq.runTransaction $ do
+          QRating.updateRating rideRating.id driverId ratingValue feedbackDetails
+    calculateAverageRating driverId
 
 calculateAverageRating ::
   (EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["minimumDriverRatesCount" ::: Int]) =>
@@ -80,13 +87,3 @@ buildRating rideId driverId ratingValue feedbackDetails = do
   let createdAt = now
   let updatedAt = now
   pure $ DRating.Rating {..}
-
-validateRequest :: DRatingReq -> Flow DRide.Ride
-validateRequest req = do
-  booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
-  ride <-
-    QRide.findActiveByRBId booking.id
-      >>= fromMaybeM (RideNotFound booking.id.getId)
-  unless (ride.status == DRide.COMPLETED) $
-    throwError $ RideInvalidStatus "Ride is not ready for rating."
-  return ride

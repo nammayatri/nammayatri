@@ -27,7 +27,6 @@ module Domain.Action.Beckn.OnSearch
     NightShiftInfo (..),
     WaitingChargesInfo (..),
     onSearch,
-    validateRequest,
   )
 where
 
@@ -62,15 +61,6 @@ data DOnSearchReq = DOnSearchReq
     providerInfo :: ProviderInfo,
     estimatesInfo :: [EstimateInfo],
     quotesInfo :: [QuoteInfo]
-  }
-
-data ValidatedOnSearchReq = ValidatedOnSearchReq
-  { requestId :: Id DSearchReq.SearchRequest,
-    providerInfo :: ProviderInfo,
-    estimatesInfo :: [EstimateInfo],
-    quotesInfo :: [QuoteInfo],
-    _searchRequest :: SearchRequest,
-    merchant :: DMerchant.Merchant
   }
 
 data ProviderInfo = ProviderInfo
@@ -143,26 +133,30 @@ data RentalQuoteDetails = RentalQuoteDetails
     baseDuration :: Hours
   }
 
-validateRequest :: DOnSearchReq -> Flow ValidatedOnSearchReq
-validateRequest DOnSearchReq {..} = do
-  _searchRequest <- runInReplica $ QSearchReq.findById requestId >>= fromMaybeM (SearchRequestDoesNotExist requestId.getId)
-  merchant <- QMerch.findById _searchRequest.merchantId >>= fromMaybeM (MerchantNotFound _searchRequest.merchantId.getId)
-  return $ ValidatedOnSearchReq {..}
-
 onSearch ::
   Text ->
-  ValidatedOnSearchReq ->
+  Maybe DOnSearchReq ->
   Flow ()
-onSearch transactionId ValidatedOnSearchReq {..} = do
-  Metrics.finishSearchMetrics merchant.name transactionId
-  now <- getCurrentTime
-  estimates <- traverse (buildEstimate providerInfo now _searchRequest) estimatesInfo
-  quotes <- traverse (buildQuote requestId providerInfo now _searchRequest.merchantId) quotesInfo
-  DB.runTransaction do
-    QEstimate.createMany estimates
-    QQuote.createMany quotes
-    QPFS.updateStatus _searchRequest.riderId DPFS.GOT_ESTIMATE {requestId = _searchRequest.id, validTill = _searchRequest.validTill}
-  QPFS.clearCache _searchRequest.riderId
+onSearch transactionId mbReq = do
+  whenJust mbReq (onSearchService transactionId)
+
+onSearchService ::
+  Text ->
+  DOnSearchReq ->
+  Flow ()
+onSearchService transactionId DOnSearchReq {..} = do
+  _searchRequest <- runInReplica $ QSearchReq.findById requestId >>= fromMaybeM (SearchRequestDoesNotExist requestId.getId)
+  merchant <- QMerch.findById _searchRequest.merchantId >>= fromMaybeM (MerchantNotFound _searchRequest.merchantId.getId)
+  fork "on search processing" $ do
+    Metrics.finishSearchMetrics merchant.name transactionId
+    now <- getCurrentTime
+    estimates <- traverse (buildEstimate providerInfo now _searchRequest) estimatesInfo
+    quotes <- traverse (buildQuote requestId providerInfo now _searchRequest.merchantId) quotesInfo
+    DB.runTransaction do
+      QEstimate.createMany estimates
+      QQuote.createMany quotes
+      QPFS.updateStatus _searchRequest.riderId DPFS.GOT_ESTIMATE {requestId = _searchRequest.id, validTill = _searchRequest.validTill}
+    QPFS.clearCache _searchRequest.riderId
 
 buildEstimate ::
   MonadFlow m =>

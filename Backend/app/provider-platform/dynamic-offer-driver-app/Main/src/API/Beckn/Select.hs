@@ -44,10 +44,8 @@ select transporterId (SignatureAuthResult _ subscriber) req =
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
     logTagInfo "Select API Flow" "Reached"
     dSelectReq <- ACL.buildSelectReq subscriber req
-    Redis.whenWithLockRedis (selectLockKey dSelectReq.messageId) 60 $ do
-      (merchant, estimate) <- DSelect.validateRequest transporterId dSelectReq
-      fork "select request processing" $
-        DSelect.handler merchant dSelectReq estimate
+    Redis.whenWithLockRedis (selectLockKey dSelectReq.messageId) 60 $
+      DSelect.handler transporterId dSelectReq
     pure Ack
 
 selectLockKey :: Text -> Text

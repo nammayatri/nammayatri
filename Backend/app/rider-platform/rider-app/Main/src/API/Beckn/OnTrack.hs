@@ -34,8 +34,5 @@ onTrack ::
   FlowHandler AckResponse
 onTrack _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   mbDOnTrackReq <- ACL.buildOnTrackReq req
-  whenJust mbDOnTrackReq \onTrackReq -> do
-    validatedReq <- DOnTrack.validateRequest onTrackReq
-    fork "on track processing" $
-      DOnTrack.onTrack validatedReq
+  whenJust mbDOnTrackReq DOnTrack.onTrack
   pure Ack

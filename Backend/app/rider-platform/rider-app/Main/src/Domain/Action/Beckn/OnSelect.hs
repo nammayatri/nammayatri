@@ -23,10 +23,8 @@ import qualified Domain.Action.UI.Confirm as DConfirm
 import qualified Domain.Types.DriverOffer as DDriverOffer
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant as DMerchant
-import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
-import qualified Domain.Types.SearchRequest as DSearchRequest
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant
 import Environment
@@ -82,41 +80,44 @@ data DriverOfferQuoteDetails = DriverOfferQuoteDetails
   }
   deriving (Generic, Show)
 
-data OnSelectValidatedReq = OnSelectValidatedReq
-  { estimate :: DEstimate.Estimate,
-    searchRequest :: DSearchRequest.SearchRequest,
-    person :: DPerson.Person,
-    bppEstimateId :: Id DEstimate.BPPEstimate,
-    providerInfo :: ProviderInfo,
-    quotesInfo :: [QuoteInfo]
-  }
-  deriving (Generic)
-
 onSelect ::
-  OnSelectValidatedReq ->
+  DOnSelectReq ->
   Flow ()
-onSelect OnSelectValidatedReq {..} = do
-  now <- getCurrentTime
-  quotes <- traverse (buildSelectedQuote estimate providerInfo now searchRequest.merchantId) quotesInfo
-  logPretty DEBUG "quotes" quotes
-  DB.runTransaction $ do
-    QQuote.createMany quotes
-    QPFS.updateStatus searchRequest.riderId DPFS.DRIVER_OFFERED_QUOTE {estimateId = estimate.id, validTill = searchRequest.validTill}
-    QEstimate.updateStatus estimate.id DEstimate.GOT_DRIVER_QUOTE
-  QPFS.clearCache searchRequest.riderId
+onSelect DOnSelectReq {..} = do
+  estimate <- QEstimate.findByBPPEstimateId bppEstimateId >>= fromMaybeM (EstimateDoesNotExist $ "bppEstimateId-" <> bppEstimateId.getId)
+  searchRequest <-
+    QSR.findById estimate.requestId
+      >>= fromMaybeM (SearchRequestDoesNotExist estimate.requestId.getId)
+  let personId = searchRequest.riderId
+  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  whenM (duplicateCheckCond (quotesInfo <&> (.quoteDetails.bppDriverQuoteId)) providerInfo.providerId) $
+    throwError $ InvalidRequest "Duplicate OnSelect quote"
+  fork "on select processing" $ do
+    now <- getCurrentTime
+    quotes <- traverse (buildSelectedQuote estimate providerInfo now searchRequest.merchantId) quotesInfo
+    logPretty DEBUG "quotes" quotes
+    DB.runTransaction $ do
+      QQuote.createMany quotes
+      QPFS.updateStatus searchRequest.riderId DPFS.DRIVER_OFFERED_QUOTE {estimateId = estimate.id, validTill = searchRequest.validTill}
+      QEstimate.updateStatus estimate.id DEstimate.GOT_DRIVER_QUOTE
+    QPFS.clearCache searchRequest.riderId
 
-  if searchRequest.autoAssignEnabledV2
-    then do
-      let lowestFareQuote = selectLowestFareQuote quotes
-      case lowestFareQuote of
-        Just autoAssignQuote -> do
-          dConfirmRes <- SConfirm.confirm person.id autoAssignQuote.id
-          becknInitReq <- ACL.buildInitReq dConfirmRes
-          handle (errHandler dConfirmRes.booking) $ void $ withShortRetry $ CallBPP.init dConfirmRes.providerUrl becknInitReq
-        Nothing -> Notify.notifyOnDriverOfferIncoming estimate.id quotes person
-    else do
-      Notify.notifyOnDriverOfferIncoming estimate.id quotes person
+    if searchRequest.autoAssignEnabledV2
+      then do
+        let lowestFareQuote = selectLowestFareQuote quotes
+        case lowestFareQuote of
+          Just autoAssignQuote -> do
+            dConfirmRes <- SConfirm.confirm personId autoAssignQuote.id
+            becknInitReq <- ACL.buildInitReq dConfirmRes
+            handle (errHandler dConfirmRes.booking) $ void $ withShortRetry $ CallBPP.init dConfirmRes.providerUrl becknInitReq
+          Nothing -> Notify.notifyOnDriverOfferIncoming estimate.id quotes person
+      else do
+        Notify.notifyOnDriverOfferIncoming estimate.id quotes person
   where
+    duplicateCheckCond :: (EsqDBFlow m r, EsqDBReplicaFlow m r) => [Id DDriverOffer.BPPQuote] -> Text -> m Bool
+    duplicateCheckCond [] _ = return False
+    duplicateCheckCond (bppQuoteId_ : _) bppId_ =
+      isJust <$> runInReplica (QQuote.findByBppIdAndBPPQuoteId bppId_ bppQuoteId_)
     errHandler booking exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = DConfirm.cancelBooking booking
       | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = DConfirm.cancelBooking booking
@@ -187,23 +188,3 @@ buildTripTerms [] = pure Nothing
 buildTripTerms descriptions = do
   id <- generateGUID
   pure . Just $ DTripTerms.TripTerms {..}
-
-validateRequest :: DOnSelectReq -> Flow OnSelectValidatedReq
-validateRequest DOnSelectReq {..} = do
-  estimate <- QEstimate.findByBPPEstimateId bppEstimateId >>= fromMaybeM (EstimateDoesNotExist $ "bppEstimateId-" <> bppEstimateId.getId)
-  searchRequest <-
-    QSR.findById estimate.requestId
-      >>= fromMaybeM (SearchRequestDoesNotExist estimate.requestId.getId)
-  let personId = searchRequest.riderId
-  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  whenM (duplicateCheckCond (quotesInfo <&> (.quoteDetails.bppDriverQuoteId)) providerInfo.providerId) $
-    throwError $ InvalidRequest "Duplicate OnSelect quote"
-  return $
-    OnSelectValidatedReq
-      { ..
-      }
-  where
-    duplicateCheckCond :: (EsqDBFlow m r, EsqDBReplicaFlow m r) => [Id DDriverOffer.BPPQuote] -> Text -> m Bool
-    duplicateCheckCond [] _ = return False
-    duplicateCheckCond (bppQuoteId_ : _) bppId_ =
-      isJust <$> runInReplica (QQuote.findByBppIdAndBPPQuoteId bppId_ bppQuoteId_)

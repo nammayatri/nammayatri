@@ -23,7 +23,6 @@ import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Utils.GenericPretty (PrettyShow)
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRideB
@@ -40,8 +39,8 @@ data OnInitReq = OnInitReq
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
 data OnInitRes = OnInitRes
-  { bookingId :: Id DRB.Booking,
-    bppBookingId :: Id DRB.BPPBooking,
+  { booking :: DRB.Booking,
+    bppBookingId :: Id BPPBooking,
     bppId :: Text,
     bppUrl :: BaseUrl,
     fromLocationAddress :: DBL.LocationAddress,
@@ -53,7 +52,7 @@ data OnInitRes = OnInitRes
     transactionId :: Text,
     city :: Text
   }
-  deriving (Generic, Show, PrettyShow)
+  deriving (Generic, Show)
 
 onInit :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HedisFlow m r) => OnInitReq -> m OnInitRes
 onInit req = do
@@ -65,7 +64,6 @@ onInit req = do
   decRider <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId) >>= decrypt
   riderPhoneCountryCode <- decRider.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
   riderPhoneNumber <- decRider.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber")
-  bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
   let fromLocation = booking.fromLocation
   let mbToLocation = case booking.bookingDetails of
         DRB.RentalDetails _ -> Nothing
@@ -74,7 +72,8 @@ onInit req = do
         DRB.OneWaySpecialZoneDetails details -> Just details.toLocation
   return $
     OnInitRes
-      { bookingId = booking.id,
+      { booking = booking,
+        bppBookingId = req.bppBookingId,
         bppId = booking.providerId,
         bppUrl = booking.providerUrl,
         estimatedTotalFare = booking.estimatedTotalFare,
