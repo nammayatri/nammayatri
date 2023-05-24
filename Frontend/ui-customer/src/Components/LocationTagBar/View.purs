@@ -15,19 +15,19 @@
 
 module Components.LocationTagBar.View where
 
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, color, cornerRadius, ellipsize, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, margin, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, background, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, color, cornerRadius, ellipsize, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, margin, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, background, imageWithFallback, singleLine)
 import Components.LocationTagBar.Controller(Action(..))
 import Data.Array (mapWithIndex, filter, findIndex, (!!), null)
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Prelude (Unit, const, ($), (<>), (==))
+import Prelude (Unit, const, unit, ($), (<>), (==), (/), (-))
 import Styles.Colors as Color
 import Screens.Types (LocationTagBarState, CardType(..), LocationListItemState)
 import Language.Strings (getString)
 import Data.Maybe (Maybe(..))
 import Language.Types (STR(..))
-import Engineering.Helpers.Commons(os)
+import Engineering.Helpers.Commons(os, screenWidth)
 import Common.Types.App
 
 view :: forall w. (Action -> Effect Unit) -> LocationTagBarState -> PrestoDOM ( Effect Unit ) w
@@ -37,7 +37,7 @@ view push state =
  , height WRAP_CONTENT
  , orientation VERTICAL
  ][ linearLayout
-    [ width MATCH_PARENT
+    [ width $ V (screenWidth unit - 32)
     , height WRAP_CONTENT 
     ](mapWithIndex (\index item -> 
         linearLayout
@@ -46,7 +46,7 @@ view push state =
         , gravity CENTER
         , weight 1.0
         , background Color.white900
-        , padding $ Padding 8 8 8 8
+        , padding $ Padding 6 8 6 8
         , margin $ MarginRight if index == 2 then 0 else 8
         , onClick push $ const $ TagClick item (getSavedLocationByTag state item)
         , cornerRadius 16.0
@@ -61,8 +61,9 @@ view push state =
           , textView
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
-            , textSize if os == "IOS" then FontSize.a_13 else FontSize.a_14
+            , textSize if os == "IOS" then FontSize.a_13 else FontSize.a_12
             , margin $ MarginLeft 8
+            , singleLine true
             , color Color.black800
             , fontStyle $  FontStyle.medium LanguageStyle
             , gravity CENTER_VERTICAL

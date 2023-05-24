@@ -102,31 +102,31 @@ view push state =
                     , width MATCH_PARENT
                     , orientation VERTICAL
                     , padding $ PaddingVertical 10 10
-                    ][ textView
-                        ([ height WRAP_CONTENT
-                          , width MATCH_PARENT
-                          , text (getString STILL_NOT_RESOLVED)
-                          , color Color.black700
-                          , margin $ MarginBottom 12
-                        ] <> FontStyle.body3 TypoGraphy)
-                      , linearLayout
-                         [ height WRAP_CONTENT
-                         , width MATCH_PARENT
-                         , orientation HORIZONTAL
-                         , onClick push (const CallSupport)
-                          ][ imageView
-                            [ imageWithFallback "ny_ic_support,https://assets.juspay.in/nammayatri/images/driver/ny_ic_support.png"
-                            , height $ V 17
-                            , width $ V 20
-                            , margin $ MarginRight 7
-                            ]
-                            , textView
-                                ([ text (getString CALL_SUPPORT_CENTER)
-                                , color Color.black800
-                                ] <> FontStyle.body1 TypoGraphy)
+                    ][ linearLayout
+                       [ height WRAP_CONTENT
+                       , width MATCH_PARENT
+                       , orientation HORIZONTAL
+                       , onClick push (const HelpAndSupport)
+                        ][ imageView
+                          [ imageWithFallback "ny_ic_support,https://assets.juspay.in/nammayatri/images/driver/ny_ic_support.png"
+                          , height $ V 17
+                          , width $ V 20
+                          , margin $ MarginRight 7
+                          ]
+                          , textView
+                          ([ text (getString HELP_AND_SUPPORT)
+                           , color Color.black800
+                           , weight 1.0
+                           ] <> FontStyle.body1 TypoGraphy
+                          )
+                          , imageView
+                          [ width $ V 18
+                          , height $ V 18
+                          , imageWithFallback "ny_ic_chevron_right_grey,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevron_right_grey.png"
+                          ]
                         ]
-                  ]
-                     ]
+                      ]
+                    ]
                   ]
                 , issueReportedView state push
               ]
@@ -159,7 +159,7 @@ tripDetailsView state =
       , orientation HORIZONTAL
       , gravity CENTER_VERTICAL
       ][ imageView
-          [ imageWithFallback "ny_ic_auto_front,https://assets.juspay.in/nammayatri/images/driver/ny_ic_auto_front.png"
+          [ imageWithFallback "ic_vehicle_front,https://assets.juspay.in/nammayatri/images/driver/ny_ic_auto_front.png"
           , width (V 36)
           , height (V 36)
           ]

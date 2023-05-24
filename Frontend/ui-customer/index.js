@@ -92,6 +92,8 @@ var purescript = require("./output/Main");
 
 window.onMerchantEvent = function (event, payload) {
   console = top.console;
+  console.log(payload);
+  var clientPaylod = JSON.parse(payload);
   if (event == "initiate") {
     let payload = {
       event: "initiate_result"
@@ -101,6 +103,20 @@ window.onMerchantEvent = function (event, payload) {
       , errorMessage: ""
       , errorCode: ""
     }
+    var clientId = clientPaylod.payload.clientId;
+    if (clientId.includes("_ios"))
+    {
+      clientId = clientId.replace("_ios","");
+    }
+    if (clientId == "open-kochi") {
+      window.merchantID = "YATRI"
+    } else if (clientId == "jatrisaathi"){
+      console.log("inside merxchsnt id"+window.merchantID);
+      window.merchantID = "JATRISAATHI"
+    } else {
+      window.merchantID = clientId.toUpperCase();
+    }
+    console.log(window.merchantID);
     JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), null)
   } else if (event == "process") {
     console.warn("Process called");
@@ -237,7 +253,7 @@ if (typeof window.JOS != "undefined") {
 }
 
 var sessionInfo = JSON.parse(JBridge.getDeviceInfo())
-if(sessionInfo.package_name === "in.juspay.nammayatri.debug"){
+if(sessionInfo.package_name.includes("debug")){
   logger.enableLogger();
 }else{
   logger.disableLogger();

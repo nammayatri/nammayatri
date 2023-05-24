@@ -15,6 +15,9 @@
 
 module Screens.EnterMobileNumberScreen.View where
 
+import Common.Types.App
+import Screens.OnBoardingFlow.EnterMobileNumberScreen.ComponentConfig
+
 import Animation as Anim
 import Animation.Config (translateYAnimConfig)
 import Components.GenericHeader as GenericHeader
@@ -43,8 +46,7 @@ import Screens.EnterMobileNumberScreen.Controller (Action(..), ScreenOutput, eva
 import Screens.Types as ST
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
-import Common.Types.App
-import Screens.OnBoardingFlow.EnterMobileNumberScreen.ComponentConfig
+import Merchant.Utils( getValueFromConfig )
 
 screen :: ST.EnterMobileNumberScreenState -> Screen Action ST.EnterMobileNumberScreenState ScreenOutput
 screen initialState =
@@ -150,7 +152,7 @@ enterMobileNumberView  state lang push =
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
             , orientation HORIZONTAL
-            ][ (commonTextView state ((getString TO_THE) <> " " <> (getString TERMS_AND_CONDITIONS)) true (Just "https://docs.google.com/document/d/1-oRR_oI8ncZRPZvFZEJZeCVQjTmXTmHA/edit?usp=share_link&ouid=115428839751313950285&rtpof=true&sd=true") push) ]
+            ][ (commonTextView state ((getString TO_THE) <> " " <> (getString TERMS_AND_CONDITIONS)) true (Just (getValueFromConfig "DOCUMENT_LINK")) push) ]
           ]
     , PrestoAnim.animationSet
       [ Anim.fadeIn $ not state.props.enterOTP

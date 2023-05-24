@@ -70,7 +70,7 @@ view push state =
           _ <- (JB.showMap (EHC.getNewIDWithTag "AddNewAddressHomeScreenMap") true "satellite" (19.0) push MAPREADY)
           _ <- HU.setText' (EHC.getNewIDWithTag "SavedLocationEditText") (state.data.address)
           _ <- HU.setText' (EHC.getNewIDWithTag "SaveAsEditText") (state.data.addressSavedAs)
-          _ <- pure $ JB.locateOnMap true 0.0 0.0
+          _ <- pure $ JB.locateOnMap true 0.0 0.0 "" []
           _ <- if (state.data.activeIndex == Just 2 && state.props.showSavePlaceView) then JB.requestKeyboardShow (EHC.getNewIDWithTag ("SaveAsEditText")) else pure unit
           pure unit
           ) (const AfterRender)
@@ -173,7 +173,7 @@ bottomBtnsView state push =
         , background Color.white900
         ](DA.mapWithIndex (\idx item -> linearLayout
         [ height WRAP_CONTENT
-        , width $ V ((EHC.screenWidth unit/2))
+        , width MATCH_PARENT
         , orientation HORIZONTAL
         , gravity CENTER_VERTICAL
         ][ linearLayout
@@ -217,8 +217,8 @@ bottomBtnsView state push =
         ]) $ btnData state)]
 
 btnData :: ST.AddNewAddressScreenState ->  Array {text :: String, imageUrl :: String, action :: Action, tag :: String}
-btnData state = [ {text : (getString SELECT_ON_MAP), imageUrl : "ny_ic_locate_on_map,https://assets.juspay.in/nammayatri/images/user/ny_ic_locate_on_map.png", action : SetLocationOnMap, tag : "LOCATE_ON_MAP"},
-                  {text : (getString CURRENT_LOCATION), imageUrl : "ny_ic_current_location,https://assets.juspay.in/nammayatri/images/user/ny_ic_current_location.png", action : CurrentLocationAction, tag : "CURRENT_LOCATION"}]
+btnData state = [ {text : (getString SELECT_ON_MAP), imageUrl : "ny_ic_locate_on_map,https://assets.juspay.in/nammayatri/images/user/ny_ic_locate_on_map.png", action : SetLocationOnMap, tag : "LOCATE_ON_MAP"}]
+                  -- {text : (getString CURRENT_LOCATION), imageUrl : "ny_ic_current_location,https://assets.juspay.in/nammayatri/images/user/ny_ic_current_location.png", action : CurrentLocationAction, tag : "CURRENT_LOCATION"}]
 
 addNewScreenView :: forall w. ST.AddNewAddressScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 addNewScreenView state push =
@@ -388,11 +388,11 @@ searchResultsView state push =
                     , background Color.lightGreyShade
                     ][]
               ]
-              )  (if (DA.null state.data.locationList) then (if state.props.selectFromCurrentOrMap then bottomBtnsData else []) else state.data.locationList ))
+              )  (if (DA.null state.data.locationList) then (if state.props.selectFromCurrentOrMap then bottomBtnsData state else []) else state.data.locationList )) 
   ]
 
-bottomBtnsData :: Array ST.LocationListItemState
-bottomBtnsData =
+bottomBtnsData :: ST.AddNewAddressScreenState ->  Array ST.LocationListItemState 
+bottomBtnsData state = 
   [ { prefixImageUrl : "ny_ic_locate_on_map,https://assets.juspay.in/nammayatri/images/user/ny_ic_locate_on_map.png"
     , title : (getString CHOOSE_ON_MAP)
     , subTitle :  (getString DRAG_THE_MAP )
@@ -483,21 +483,20 @@ savePlaceView state push =
                           pure unit)
               $ const ChangeAddress
           ][  textView
-              [ text (state.data.selectedItem).description
+              ([ text (state.data.selectedItem).description 
               , textSize FontSize.a_14
               , fontStyle $ FontStyle.medium LanguageStyle
               , color Color.black600
               , height WRAP_CONTENT
               , gravity CENTER_VERTICAL
               , padding (PaddingRight 8)
-              , width $ V (4 * (EHC.screenWidth unit / 5) - 60)
               , maxLines 1
-              , ellipsize true
-              ]
+              , ellipsize true 
+              ] <> (if EHC.os == "IOS" then [width $ V (4 * (EHC.screenWidth unit / 5) - 75)] else [weight 1.0]) )
             , linearLayout[
               height WRAP_CONTENT
-            , width MATCH_PARENT
-            , gravity RIGHT
+            , width WRAP_CONTENT
+            , gravity RIGHT 
             ][  textView
                 [ text (getString EDIT)
                 , color Color.blue900
@@ -559,7 +558,7 @@ tagView state push =
       , orientation HORIZONTAL
       ](DA.mapWithIndex (\index item ->
           linearLayout
-          [ height $ V 36
+          [ height WRAP_CONTENT
           , width WRAP_CONTENT
           , orientation HORIZONTAL
           , gravity CENTER
@@ -582,7 +581,6 @@ tagView state push =
               [ text  item.text
               , textSize FontSize.a_12
               , lineHeight "16"
-              , height $ V 36
               , gravity CENTER
               , color if (Just index) == state.data.activeIndex then Color.blue900 else Color.black800
               , fontStyle $ FontStyle.medium LanguageStyle

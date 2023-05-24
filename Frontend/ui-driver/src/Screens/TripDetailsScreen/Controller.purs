@@ -60,7 +60,7 @@ instance loggableAction :: Loggable Action where
         ReportIssue -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "report_issue"
         MessageTextChanged str -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "message_text_changed"
         Copy -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "copied"
-        CallSupport -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "call_support_onclick"
+        HelpAndSupport -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "help_and_support_onclick"
         SourceToDestinationActionController action -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "source_to_destination_action"
         NoAction -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "no_action"
 
@@ -71,10 +71,10 @@ data Action = PrimaryButtonActionController TripDetailsScreenState PrimaryButton
             | ReportIssue 
             | MessageTextChanged String
             | Copy
-            | CallSupport
+            | HelpAndSupport
             | NoAction
             | AfterRender
-data ScreenOutput = GoBack | OnSubmit | GoHome 
+data ScreenOutput = GoBack | OnSubmit | GoHome | GoToHelpAndSupport
 
 eval :: Action -> TripDetailsScreenState -> Eval Action ScreenOutput TripDetailsScreenState
 
@@ -98,8 +98,6 @@ eval Copy state = continueWithCmd state [ do
     _ <- pure $ toast (getString COPIED)
     pure NoAction
   ]
-eval CallSupport state = do
-  _ <- pure $ showDialer (getSupportNumber "")
-  continue state
+eval HelpAndSupport state = exit $ GoToHelpAndSupport
 
 eval _ state = continue state

@@ -19,6 +19,7 @@ module Helpers.Utils
     )
     where
 
+import Common.Types.App (LazyCheck(..))
 import Components.LocationListItem.Controller (dummyLocationListState)
 import Control.Monad.Except (runExcept)
 import Data.Array (length, filter, cons, deleteAt, sortWith, drop, head, tail, (!!), null)
@@ -31,6 +32,7 @@ import Data.Show.Generic (genericShow)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Profunctor.Strong (first)
 import Data.String as DS
+import Data.Eq.Generic (genericEq)
 import Data.Traversable (traverse)
 import Debug (spy)
 import Effect (Effect)
@@ -42,12 +44,12 @@ import Effect.Console (logShow)
 import Engineering.Helpers.Commons (liftFlow, os, isPreviousVersion)
 import Engineering.Helpers.Commons (parseFloat, setText') as ReExport
 import Foreign.Class (class Decode, class Encode)
-import Foreign.Generic (decodeJSON, encodeJSON)
+import Foreign.Generic (Foreign, decodeJSON, encodeJSON, decode)
 import Juspay.OTP.Reader (initiateSMSRetriever)
 import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
 import Data.Number (fromString, pi, sin, cos, sqrt, asin)
-import Prelude (class Show, class Ord, Unit, bind, discard, pure, unit, void, identity, not, (<*>), (<#>), (<<<), (>>>), ($), (<>), (>), show, (==), (/=), (/), (*), (-), (+), map, compare, (<), (=<<), (<=), ($))
+import Prelude (class Show, class Ord, class Eq, Unit, bind, discard, pure, unit, void, identity, not, (<*>), (<#>), (<<<), (>>>), ($), (<>), (>), show, (==), (/=), (/), (*), (-), (+), map, compare, (<), (=<<), (<=), ($))
 import Presto.Core.Flow (Flow, doAff)
 import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent)
 import Services.API (Prediction)
@@ -56,6 +58,7 @@ import Data.Array (sortBy)
 import Data.Ord (comparing)
 import Data.Lens ((^.))
 import Accessor (_distance_meters)
+import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 
 -- shuffle' :: forall a. Array a -> Effect (Array a)
 -- shuffle' array = do
@@ -101,6 +104,9 @@ foreign import secondsToHms :: Int -> String
 
 foreign import getTime :: Unit -> Int
 
+foreign import drawPolygon :: String -> String -> Effect Unit
+
+foreign import removeLabelFromMarker :: Unit -> Effect Unit
 -- foreign import generateSessionToken :: String -> String
 foreign import requestKeyboardShow :: String -> Effect Unit
 
@@ -125,6 +131,8 @@ foreign import decodeErrorMessage :: String -> String
 foreign import toString :: forall a. a -> String
 
 foreign import waitingCountdownTimer :: forall action. Int -> (action -> Effect Unit) -> (String -> String -> Int -> action) -> Effect Unit
+
+foreign import zoneOtpExpiryTimer :: forall action. Int -> Int -> (action -> Effect Unit) -> (String -> String -> Int -> action) -> Effect Unit
 
 foreign import convertUTCtoISC :: String -> String -> String
 
@@ -328,8 +336,16 @@ toRad n = (n * pi) / 180.0
 getCurrentLocationMarker :: String -> String
 getCurrentLocationMarker currentVersion = if isPreviousVersion currentVersion (getPreviousVersion "") then "ic_customer_current_location" else "ny_ic_customer_current_location"
 
-getPreviousVersion :: String -> String
-getPreviousVersion _ = if os == "IOS" then "1.2.5" else "1.2.0"
+getPreviousVersion :: String -> String 
+getPreviousVersion _ = 
+  if os == "IOS" then 
+    case getMerchant FunctionCall of 
+      NAMMAYATRI -> "1.2.5"
+      JATRISAATHI -> "0.0.0"
+      _ -> "1.0.0"
+    else case getMerchant FunctionCall of 
+        JATRISAATHI -> "0.0.0"
+        _ -> "1.2.0"
 
 rotateArray :: forall a. Array a -> Int -> Array a
 rotateArray arr times =
@@ -352,3 +368,20 @@ isHaveFare fare = not null <<< filter (\item -> item.fareType == fare)
 
 sortPredctionByDistance :: Array Prediction -> Array Prediction
 sortPredctionByDistance arr = sortBy (comparing (_^._distance_meters)) arr
+
+foreign import getMerchantId :: String -> Foreign
+
+data Merchant = NAMMAYATRI | JATRISAATHI | YATRI
+
+derive instance genericMerchant :: Generic Merchant _
+instance eqMerchant :: Eq Merchant where eq = genericEq
+instance encodeMerchant :: Encode Merchant where encode = defaultEnumEncode
+instance decodeMerchant:: Decode Merchant where decode = defaultEnumDecode
+
+getMerchant :: LazyCheck -> Merchant
+getMerchant lazy = case (decodeMerchantId (getMerchantId "")) of 
+  Just merchant -> merchant
+  Nothing -> NAMMAYATRI
+
+decodeMerchantId :: Foreign -> Maybe Merchant
+decodeMerchantId = hush <<< runExcept <<< decode

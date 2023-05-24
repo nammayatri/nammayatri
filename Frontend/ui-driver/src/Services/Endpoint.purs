@@ -101,6 +101,7 @@ linkReferralCode dummyString = (getBaseUrl "") <> "/driver/linkReferralCode"
 
 getPerformance :: String -> String
 getPerformance dummyString = (getBaseUrl "") <> "/driver/performance"
+
 driverAlternateNumber :: String -> String
 driverAlternateNumber  dummy = (getBaseUrl "" ) <> "/driver/alternateNumber/validate"
 
@@ -112,3 +113,31 @@ verifyAlternateNumberOTP dummy = (getBaseUrl "") <> "/driver/alternateNumber/ver
 
 removeAlternateNumber :: String -> String
 removeAlternateNumber dummy = (getBaseUrl "") <> "/driver/alternateNumber/remove"
+
+getCategories :: String -> String
+getCategories language = (getBaseUrl "") <> "/issue/category?language=" <> language
+
+getOptions :: String -> String -> String
+getOptions categoryId language = (getBaseUrl "") <> "/issue/option?categoryId=" <> categoryId <> "&language=" <> language
+
+uploadFile :: String -> String
+uploadFile dummy = (getBaseUrl "") <> "/issue/upload"
+
+postIssue :: String -> String
+postIssue dummy = (getBaseUrl "") <> "/issue"
+
+issueInfo :: String -> String
+issueInfo issueId = (getBaseUrl "") <> "/issue/" <> issueId <> "/info"
+
+callDriverToCustomer :: String ->  String
+callDriverToCustomer  rideId =  (getBaseUrl "") <> "/driver/ride/" <> rideId <> "/call/customer"
+
+ 
+fetchIssueList :: String -> String 
+fetchIssueList dummy = (getBaseUrl "") <> "/issue/list"
+
+deleteIssue :: String -> String 
+deleteIssue issueId = (getBaseUrl "") <> "/issue/"<> issueId <> "/delete"
+
+otpRide :: String -> String
+otpRide dummyRideOtp = (getBaseUrl "") <> "/driver/otpRide/start"

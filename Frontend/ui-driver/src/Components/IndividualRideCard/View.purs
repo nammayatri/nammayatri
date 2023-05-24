@@ -18,6 +18,7 @@ module Components.IndividualRideCard.View where
 import Prelude (Unit, ($), (<<<) , const, (==))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..),PrestoDOM, linearLayout, clickable,frameLayout, height, width, text, textSize, textView, relativeLayout, orientation, gravity, padding, imageView, imageUrl, background, margin, cornerRadius, shimmerFrameLayout, color, fontStyle, maxLines, ellipsize, layoutGravity, visibility, weight, imageWithFallback)
 import Components.IndividualRideCard.Controller(Action(..)) 
+import Screens.RideSelectionScreen.Controller (Action(..)) as RideSelectionScreen
 import Screens.RideHistoryScreen.Controller (Action(..)) as RideHistoryScreen
 import Effect (Effect)
 import Screens.Types (IndividualRideCardState)
@@ -28,18 +29,28 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Styles.Colors as Color
 import Common.Types.App
+import PrestoDOM.Properties (orientation, visibility, width)
 
 view :: forall w .  (RideHistoryScreen.Action  -> Effect Unit)  -> PrestoDOM (Effect Unit) w
 view push =
   relativeLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  ][  shimmerView
+  ][  shimmerView false
     , cardView push
   ]
 
-shimmerView  :: forall w. PrestoDOM (Effect Unit) w 
-shimmerView =
+selectView :: forall w .  (RideSelectionScreen.Action  -> Effect Unit)  -> PrestoDOM (Effect Unit) w
+selectView push =
+  relativeLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  ][  shimmerView true
+    , selectCardView push
+  ]
+
+shimmerView :: Boolean -> forall w. PrestoDOM (Effect Unit) w 
+shimmerView showTripId =
     linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -47,7 +58,7 @@ shimmerView =
   , orientation VERTICAL
   , PrestoList.visibilityHolder "shimmer_visibility"
   , background Color.white900
-  ][  rideDetailsShimmerView
+  ][  rideDetailsShimmerView showTripId
     , sourceAndDestinationShimmerView
     , separator
    ]
@@ -63,40 +74,72 @@ cardView push =
   , clickable true
   , background Color.white900
   , PrestoList.onClickHolder push $ RideHistoryScreen.IndividualRideCardAction <<< Select
-  ][  rideDetails
+  ][  rideDetails false
     , sourceAndDestination
     , rideWithDetails
     , separator
    ]
 
-rideDetails :: forall w. PrestoDOM (Effect Unit) w 
-rideDetails = 
+selectCardView :: forall w. (RideSelectionScreen.Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
+selectCardView push =
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , padding (Padding 0 20 0 20)
+  , PrestoList.visibilityHolder "card_visibility"
+  , orientation VERTICAL
+  , clickable true
+  , background Color.white900
+  , PrestoList.onClickHolder push $ RideSelectionScreen.IndividualRideCardAction <<< Select
+  ][  rideDetails true
+    , sourceAndDestination
+    , rideWithDetails
+    , separator
+   ]
+
+rideDetails :: Boolean -> forall w. PrestoDOM (Effect Unit) w 
+rideDetails showTripId = 
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation HORIZONTAL
   , gravity CENTER_VERTICAL
-  , padding (Padding 16 5 16 16)
-  ][  textView
-      [ PrestoList.textHolder "date"
-      , textSize FontSize.a_14
-      , color Color.black700
-      , fontStyle $ FontStyle.regular LanguageStyle
-      ]
-    , imageView
-      [ imageWithFallback "ny_ic_circle,https://assets.juspay.in/nammayatri/images/common/ny_ic_circle.png"
-      , height $ V 5
-      , width $ V 5
-      , cornerRadius 2.5
-      , background Color.black700
-      , margin (Margin 6 0 6 0)
-      ]
-    , textView
-      [ PrestoList.textHolder "time"
-      , textSize FontSize.a_14
-      , color Color.black700
-      , fontStyle $ FontStyle.regular LanguageStyle
-      ]
+  , padding (Padding 16 0 16 16)
+  ][  linearLayout 
+      [ orientation VERTICAL
+      ][ textView
+         [ PrestoList.textHolder "shortRideId"
+         , textSize FontSize.a_18
+         , color Color.black900
+         , visibility if showTripId then VISIBLE else GONE
+         , fontStyle $ FontStyle.semiBold LanguageStyle
+         , margin (MarginBottom 8)
+         ]
+       , linearLayout 
+         [ orientation HORIZONTAL
+         , gravity CENTER_VERTICAL
+         ][ textView
+           [ PrestoList.textHolder "date"
+           , textSize FontSize.a_14
+           , color Color.black700
+           , fontStyle $ FontStyle.regular LanguageStyle
+           ]
+         , imageView
+           [ imageWithFallback "ny_ic_circle,https://assets.juspay.in/nammayatri/images/common/ny_ic_circle.png"
+           , height $ V 5
+           , width $ V 5
+           , cornerRadius 2.5
+           , background Color.black700
+           , margin (Margin 6 0 6 0)
+           ]
+         , textView
+           [ PrestoList.textHolder "time"
+           , textSize FontSize.a_14
+           , color Color.black700
+           , fontStyle $ FontStyle.regular LanguageStyle
+           ]
+         ]
+       ]
     , linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
@@ -213,39 +256,53 @@ separator =
   linearLayout
   [ height $ V 1
   , width MATCH_PARENT
+  , margin (MarginTop 20)
   , background Color.separatorViewColor
   ][]
 
 
     
-rideDetailsShimmerView :: forall w. PrestoDOM (Effect Unit) w 
-rideDetailsShimmerView = 
+rideDetailsShimmerView :: Boolean -> forall w. PrestoDOM (Effect Unit) w 
+rideDetailsShimmerView showTripId = 
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation HORIZONTAL
   , gravity CENTER_VERTICAL
   , margin (MarginBottom 16)
-  ][ sfl $ linearLayout[
-      height WRAP_CONTENT
-      , width WRAP_CONTENT
-      , orientation HORIZONTAL
-      , height $ V 17
-      , background Color.borderGreyColor
-      , cornerRadius 5.0
-      , margin (Margin 16 0 6 0)
-  ][
-    textView
-      [ PrestoList.textHolder "date"
-      , textSize FontSize.a_14
-      , color Color.borderGreyColor
+  ][ sfl $ linearLayout 
+      [ orientation VERTICAL
+      , width MATCH_PARENT
+      ][ textView 
+         [ PrestoList.textHolder "shortRideId"
+         , textSize FontSize.a_18
+         , cornerRadius 5.0
+         , background Color.borderGreyColor
+         , visibility if showTripId then VISIBLE else GONE
+         , color Color.borderGreyColor
+         , margin (MarginBottom 8)
+         ]
+       , linearLayout
+         [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , orientation HORIZONTAL
+          , height $ V 17
+          , background Color.borderGreyColor
+          , cornerRadius 5.0
+          , margin (Margin 0 0 6 0)
+         ][ textView
+            [ PrestoList.textHolder "date"
+            , textSize FontSize.a_14
+            , color Color.borderGreyColor
+            ]
+          ,  textView
+            [ PrestoList.textHolder "time"
+            , textSize FontSize.a_14
+            , margin (MarginLeft 46)
+            , color Color.borderGreyColor
+          ]
+        ]
       ]
-    ,  textView
-      [ PrestoList.textHolder "time"
-      , textSize FontSize.a_14
-      , margin (MarginLeft 46)
-      , color Color.borderGreyColor
-      ]]
     , linearLayout
       [
         width MATCH_PARENT
@@ -294,8 +351,7 @@ sourceAndDestinationShimmerView =
           , height WRAP_CONTENT
           , width MATCH_PARENT
           , margin (Margin 20 0 0 26)
-          ][  
-            sfl $  linearLayout[
+          ][ sfl $ linearLayout[
               width MATCH_PARENT
               , height $ V 15
               , background Color.borderGreyColor
@@ -307,7 +363,8 @@ sourceAndDestinationShimmerView =
               , color Color.borderGreyColor
               , cornerRadius 5.0
               ]
-            ]]
+            ]
+          ]
         , linearLayout
           [ orientation HORIZONTAL
           , height WRAP_CONTENT

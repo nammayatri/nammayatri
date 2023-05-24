@@ -24,11 +24,12 @@ import Font.Style as FontStyle
 import JBridge as JB 
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude ((<>))
+import Prelude ((<>), (==))
 import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..))
 import Screens.Types as ST
 import Styles.Colors as Color
 import Common.Types.App
+import Engineering.Helpers.Commons as EHC
 import Data.Maybe 
 
 requestDeletePopUp :: ST.SavedLocationScreenState -> PopUpModal.Config 
@@ -71,7 +72,7 @@ primaryButtonConfig state = let
           text = (getString ADD_NEW_FAVOURITE)
         , fontStyle = FontStyle.semiBold LanguageStyle
         }
-      , margin = (Margin 16 15 16 24)
+      , margin = (Margin 16 15 16 if EHC.os == "IOS" then 0 else 24)
       , height = V 52
       , id = "AddNewAddressSavedLocationScreen"
       , enableLoader = (JB.getBtnLoader "AddNewAddressSavedLocationScreen")
@@ -132,7 +133,7 @@ errorModalConfig state = let
       }
     , buttonConfig {
         text = (getString ADD_NEW_FAVOURITE)
-      , margin = (Margin 16 0 16 24)
+      , margin = (Margin 16 0 16 if EHC.os == "IOS" then 0 else 24)
       , background = Color.black900
       , height = V 52
       , color = Color.yellow900

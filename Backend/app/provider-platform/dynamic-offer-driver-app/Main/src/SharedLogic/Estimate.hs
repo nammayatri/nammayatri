@@ -74,7 +74,7 @@ buildEstimate transactionId startTime dist farePolicy = do
                 { nightShiftCharge = nightShiftCharge,
                   oldNightShiftCharge = oldNightShiftCharge,
                   nightShiftStart = nightShiftBounds.nightShiftStart,
-                  nightShiftEnd = nightShiftBounds.nightShiftStart
+                  nightShiftEnd = nightShiftBounds.nightShiftEnd
                 },
         waitingCharges = makeWaitingCharges,
         createdAt = now

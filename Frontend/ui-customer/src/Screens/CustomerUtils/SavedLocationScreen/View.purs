@@ -75,7 +75,7 @@ view push state =
                     pure unit
                     ) (const AfterRender)
   , orientation VERTICAL
-  , padding $ Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom
+  , padding $ Padding 0 EHC.safeMarginTop 0 (if EHC.safeMarginBottom == 0 && EHC.os == "IOS" then 24 else EHC.safeMarginBottom)
   , onBackPressed push $ const BackPressed state.props.showDeleteLocationModel
   ][  linearLayout
       [ height MATCH_PARENT

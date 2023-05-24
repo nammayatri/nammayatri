@@ -40,12 +40,16 @@ type Config =
     , background :: String
     , isSelected :: Boolean
     , radioButtonConfig :: RadioButtonConfig
+    , leftsidebutton :: Boolean
+    , lat :: Number
+    , lng :: Number
   }
 
 type TextConfig = 
   { text :: String
   , textSize :: Int
-  , fontStyle :: String
+  , selectedFontStyle :: String
+  , unselectedFontStyle :: String
   , color :: String
   , gravity :: Gravity
   , visibility :: Visibility
@@ -73,7 +77,8 @@ config =
   {
       titleConfig :
           { text : ""
-          , fontStyle : FontStyle.regular LanguageStyle
+          , selectedFontStyle : FontStyle.regular LanguageStyle
+          , unselectedFontStyle : FontStyle.regular LanguageStyle
           , textSize :  FontSize.a_16
           , gravity : LEFT
           , visibility : VISIBLE
@@ -82,7 +87,8 @@ config =
           }
     , subTitleConfig :  
           { text : ""
-          , fontStyle : FontStyle.regular LanguageStyle
+          , selectedFontStyle : FontStyle.regular LanguageStyle
+          , unselectedFontStyle : FontStyle.regular LanguageStyle
           , textSize :  FontSize.a_16
           , gravity : LEFT
           , visibility : VISIBLE
@@ -114,5 +120,8 @@ config =
           }
     , index : 0
     , id : ""
+    , leftsidebutton : false
+    , lat : 0.0
+    , lng : 0.0
   }
 

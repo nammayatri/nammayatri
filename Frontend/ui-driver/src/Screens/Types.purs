@@ -16,6 +16,7 @@
 module Screens.Types where
 
 import Common.Types.App (CancellationReasons)
+import Components.ChooseVehicle.Controller (Config) as ChooseVehicle
 import Data.Generic.Rep (class Generic)
 import Data.Eq.Generic (genericEq)
 import Data.Show.Generic (genericShow)
@@ -28,7 +29,8 @@ import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM (Visibility, LetterSpacing)
 import Services.APITypes (Route, Status, MediaType)
 import Styles.Types (FontSize)
-import Components.ChatView.Controller (ChatComponent)
+import Components.ChatView.Controller as ChatView
+import Components.RecordAudioModel.Controller as RecordAudioModel
 
 type EditTextInLabelState =
  {
@@ -247,8 +249,16 @@ type DriverProfileScreenData = {
   vehicleRegNumber :: String,
   vehicleModelName :: String,
   vehicleColor :: String,
-  driverAlternateNumber :: Maybe String
+  driverAlternateNumber :: Maybe String,
+  capacity :: Int,
+  downgradeOptions :: Array String,
+  vehicleSelected :: Array VehicleP
 }
+
+type VehicleP = {
+  vehicleName :: String,
+  isSelected :: Boolean
+} 
 
 type DriverProfileScreenProps = {
   logoutModalView :: Boolean,
@@ -369,6 +379,18 @@ type RideHistoryScreenState =
     recievedResponse :: Boolean
   }
 
+type RideSelectionScreenState =
+  {
+    shimmerLoader :: AnimationState,
+    prestoListArrayItems :: Array ItemState,
+    rideList :: Array IndividualRideCardState,
+    selectedItem :: Maybe IndividualRideCardState,
+    offsetValue :: Int,
+    loaderButtonVisibility :: Boolean,
+    loadMoreDisabled :: Boolean,
+    recievedResponse :: Boolean,
+    selectedCategory :: CategoryListType
+  }
 ------------------------------------------- ReferralScreenState -----------------------------------------
 
 type ReferralScreenState = {
@@ -566,7 +588,7 @@ type HomeScreenData =  {
   totalEarningsOfDay :: Int,
   route :: Array Route,
   cancelRideConfirmationPopUp :: CancelRidePopUpData,
-  messages :: Array ChatComponent,
+  messages :: Array ChatView.ChatComponent,
   suggestionsList :: Array String,
   messageToBeSent :: String,
   driverAlternateMobile :: Maybe String
@@ -646,7 +668,8 @@ type HomeScreenProps =  {
   unReadMessages :: Boolean,
   updatedArrivalInChat :: Boolean,
   driverStatusSet :: DriverStatus,
-  silentPopUpView :: Boolean
+  silentPopUpView :: Boolean,
+  zoneRideBooking :: Boolean
  }
 
 data DriverStatus = Online | Offline | Silent 
@@ -735,24 +758,78 @@ type HelpAndSupportScreenState = {
 }
 
 type HelpAndSupportScreenData = {
-  mapImage :: String,
-  date :: String,
-  time :: String,
-  source :: String,
-  destination :: String,
-  fare :: Int,
-  tripId :: String,
-  customerName :: String,
-  coveredDistance :: String,
-  durationOfTrip :: String,
-  rating :: Int
+  categories :: Array CategoryListType,
+  issueList :: Array IssueInfo,
+  ongoingIssueList :: Array IssueInfo,
+  resolvedIssueList :: Array IssueInfo,
+  issueListType :: IssueModalType
 }
+
+type CategoryListType = {
+    categoryName :: String
+  , categoryImageUrl :: String
+  , categoryAction :: String
+  , categoryId :: String
+  }
 
 type HelpAndSupportScreenProps = {
   isNoRides :: Boolean
 
 }
 
+type ReportIssueChatScreenState = {
+    data :: ReportIssueChatScreenData,
+    props :: ReportIssueChatScreenProps
+}
+
+type ReportIssueChatScreenData = {
+  tripId :: Maybe String,
+  categoryName :: String,
+  messageToBeSent :: String,
+  issueId :: Maybe String,
+  chatConfig :: ChatView.Config,
+  selectedOptionId :: Maybe String,
+  categoryAction :: String,
+  addedImages :: Array { image :: String, imageName :: String },
+  categoryId :: String,
+  recordAudioState :: RecordAudioModel.RecordAudioModelState,
+  addImagesState :: { images :: Array { image :: String, imageName :: String }, stateChanged :: Boolean, isLoading :: Boolean, imageMediaIds :: Array String },
+  viewImageState :: { image :: String, imageName :: Maybe String },
+  recordedAudioUrl :: Maybe String,
+  addAudioState :: { audioFile :: Maybe String, stateChanged :: Boolean },
+  uploadedImagesIds :: Array String,
+  uploadedAudioId :: Maybe String,
+  options :: Array
+             { issueOptionId :: String
+             , option :: String
+             , label :: String
+             }
+}
+
+type ReportIssueChatScreenProps = {
+  showSubmitComp :: Boolean,
+  showImageModel :: Boolean,
+  showAudioModel :: Boolean,
+  showRecordModel :: Boolean,
+  showCallCustomerModel :: Boolean,
+  isReversedFlow :: Boolean,
+  showViewImageModel :: Boolean,
+  isPopupModelOpen :: Boolean
+}
+
+type IssueInfo = {
+
+    issueReportId :: String,
+    status :: String,
+    category :: String,
+    createdAt :: String
+
+}
+
+data IssueModalType = HELP_AND_SUPPORT_SCREEN_MODAL | ONGOING_ISSUES_MODAL | RESOLVED_ISSUES_MODAL | BACKPRESSED_MODAL
+
+derive instance genericIssueModalType :: Generic IssueModalType _
+instance eqIssueModalType :: Eq IssueModalType where eq = genericEq
 --------------------------------------------- AboutUsScreenState ---------------------------
 type WriteToUsScreenState = {
   data :: WriteToUsScreenData,
@@ -1065,3 +1142,21 @@ data ReferralType = SuccessScreen | ComingSoonScreen | ReferralFlow | QRScreen
 
 derive instance genericReferralType :: Generic ReferralType _
 instance eqReferralType :: Eq ReferralType where eq = genericEq
+
+
+type BookingOptionsScreenState = {
+  data :: BookingOptionsScreenData,
+  props :: BookingOptionsScreenProps
+}
+
+type BookingOptionsScreenData = {
+  vehicleType :: String,
+  vehicleNumber :: String,
+  vehicleName :: String,
+  vehicleCapacity :: Int,
+  downgradeOptions :: Array ChooseVehicle.Config
+}
+
+type BookingOptionsScreenProps = {
+  isBtnActive :: Boolean
+}
