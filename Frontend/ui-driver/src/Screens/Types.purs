@@ -1119,6 +1119,7 @@ type YoutubeData = {
   , showDuration :: Boolean
   , showSeekBar :: Boolean
   , videoId :: String
+  , videoType :: String
 }
 
 data YoutubeVideoStatus = PLAY | PAUSE
