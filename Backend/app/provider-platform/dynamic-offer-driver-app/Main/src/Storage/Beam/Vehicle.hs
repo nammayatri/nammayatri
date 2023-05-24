@@ -110,8 +110,8 @@ data VehicleT f = VehicleT
     energyType :: B.C f (Maybe Text),
     registrationCategory :: B.C f (Maybe Domain.RegistrationCategory),
     vehicleClass :: B.C f Text,
-    createdAt :: B.C f Time.LocalTime,
-    updatedAt :: B.C f Time.LocalTime
+    createdAt :: B.C f Time.UTCTime,
+    updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -189,8 +189,8 @@ defaultVehicle =
       energyType = Nothing,
       registrationCategory = Nothing,
       vehicleClass = "",
-      createdAt = defaultDate,
-      updatedAt = defaultDate
+      createdAt = defaultUTCDate,
+      updatedAt = defaultUTCDate
     }
 
 instance Serialize Vehicle where

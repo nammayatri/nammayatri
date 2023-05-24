@@ -55,6 +55,30 @@ upsert a@DriverLicense {..} =
       DriverLicenseUpdatedAt =. val updatedAt
     ]
 
+upsert' :: L.MonadFlow m => DriverLicense -> m ()
+upsert' a@DriverLicense {..} = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> do
+      res <- either (pure Nothing) (transformBeamDriverLicenseToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDL.id $ Se.Eq (getId a.id)]
+      if isJust res
+        then
+          void $
+            KV.updateWoReturningWithKVConnector
+              dbCOnf'
+              Mesh.meshConfig
+              [ Se.Set BeamDL.driverDob driverDob,
+                Se.Set BeamDL.driverName driverName,
+                Se.Set BeamDL.licenseExpiry licenseExpiry,
+                Se.Set BeamDL.classOfVehicles classOfVehicles,
+                Se.Set BeamDL.verificationStatus verificationStatus,
+                Se.Set BeamDL.failedRules failedRules,
+                Se.Set BeamDL.updatedAt updatedAt
+              ]
+              [Se.Is BeamDL.id (Se.Eq $ getId a.id)]
+        else void $ KV.createWoReturingKVConnector dbCOnf' Mesh.meshConfig (transformDomainDriverLicenseToBeam a)
+    Nothing -> pure ()
+
 findById ::
   Transactionable m =>
   Id DriverLicense ->

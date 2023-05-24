@@ -85,6 +85,33 @@ upsertGpsCoord drLocationId latLong calculationTime = do
     where_ $ tbl ^. DriverLocationTId ==. val (toKey $ cast drLocationId)
   return locationObject
 
+-- upsertGpsCoord' :: (L.MonadFlow m, MonadTime m) => Id Person -> LatLong -> UTCTime -> m (MeshResult ())
+-- upsertGpsCoord' drLocationId latLong calculationTime = do
+--   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   now <- getCurrentTime
+--   let locationObject =
+--         DriverLocation
+--           { driverId = drLocationId,
+--             lat = latLong.lat,
+--             lon = latLong.lon,
+--             coordinatesCalculatedAt = calculationTime,
+--             createdAt = now,
+--             updatedAt = now
+--           }
+--   case dbConf of
+--     Just dbConf' ->
+--       KV.updateWoReturningWithKVConnector
+--         dbConf'
+--         Mesh.meshConfig
+--         [ Se.Set BeamDL.lat latLong.lat,
+--           Se.Set BeamDL.lon latLong.lon,
+--           Se.Set BeamDL.coordinatesCalculatedAt calculationTime,
+--           Se.Set BeamDL.point $ getPoint (latLong.lat,latLong.lon),
+--           Se.Set BeamDL.updatedAt  now
+--         ]
+--         [Se.Is BeamDL.driverId (Se.Eq $ getId drLocationId)]
+--     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+
 deleteById :: Id Person -> SqlDB ()
 deleteById = deleteByKey @DriverLocationT
 
@@ -117,6 +144,7 @@ transformDomainDriverLocationToBeam DriverLocation {..} =
     { BeamDL.driverId = getId driverId,
       BeamDL.lat = lat,
       BeamDL.lon = lon,
+      -- BeamDL.point = Point, -- need to change
       BeamDL.coordinatesCalculatedAt = coordinatesCalculatedAt,
       BeamDL.createdAt = createdAt,
       BeamDL.updatedAt = updatedAt

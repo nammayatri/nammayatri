@@ -58,6 +58,35 @@ upsert a@VehicleRegistrationCertificate {..} =
       VehicleRegistrationCertificateUpdatedAt =. val updatedAt
     ]
 
+upsert' :: L.MonadFlow m => VehicleRegistrationCertificate -> m ()
+upsert' a@VehicleRegistrationCertificate {..} = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> do
+      res <- either (pure Nothing) (transformBeamVehicleRegistrationCertificateToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamVRC.id $ Se.Eq (getId a.id)]
+      if isJust res
+        then
+          void $
+            KV.updateWoReturningWithKVConnector
+              dbCOnf'
+              Mesh.meshConfig
+              [ Se.Set BeamVRC.permitExpiry permitExpiry,
+                Se.Set BeamVRC.pucExpiry pucExpiry,
+                Se.Set BeamVRC.insuranceValidity insuranceValidity,
+                Se.Set BeamVRC.vehicleClass vehicleClass,
+                Se.Set BeamVRC.vehicleManufacturer vehicleManufacturer,
+                Se.Set BeamVRC.vehicleCapacity vehicleCapacity,
+                Se.Set BeamVRC.vehicleModel vehicleModel,
+                Se.Set BeamVRC.vehicleColor vehicleColor,
+                Se.Set BeamVRC.vehicleEnergyType vehicleEnergyType,
+                Se.Set BeamVRC.verificationStatus verificationStatus,
+                Se.Set BeamVRC.failedRules failedRules,
+                Se.Set BeamVRC.updatedAt updatedAt
+              ]
+              [Se.Is BeamVRC.id (Se.Eq $ getId a.id)]
+        else void $ KV.createWoReturingKVConnector dbCOnf' Mesh.meshConfig (transformDomainVehicleRegistrationCertificateToBeam a)
+    Nothing -> pure ()
+
 findById ::
   Transactionable m =>
   Id VehicleRegistrationCertificate ->

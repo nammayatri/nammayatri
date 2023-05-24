@@ -14,19 +14,46 @@
 
 module Storage.Queries.Driver.DriverFlowStatus where
 
+import Domain.Types.Driver.DriverFlowStatus
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import Domain.Types.Person
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
+import qualified Lib.Mesh as Mesh
+import qualified Sequelize as Se
+import qualified Storage.Beam.Driver.DriverFlowStatus as BeamDFS
 import Storage.Tabular.Driver.DriverFlowStatus
 
 create :: DDFS.DriverFlowStatus -> SqlDB ()
 create = Esq.create
 
+create' :: L.MonadFlow m => DDFS.DriverFlowStatus -> m (MeshResult ())
+create' driverFlowStatus = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainDriverFlowStatusToBeam driverFlowStatus)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+
 deleteById :: Id Person -> SqlDB ()
 deleteById = Esq.deleteByKey @DriverFlowStatusT
+
+deleteByDriverId' :: L.MonadFlow m => Id Person -> m ()
+deleteByDriverId' (Id driverId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' ->
+      void $
+        KV.deleteWithKVConnector
+          dbConf'
+          Mesh.meshConfig
+          [Se.Is BeamDFS.personId (Se.Eq driverId)]
+    Nothing -> pure ()
 
 getStatus ::
   (Transactionable m) =>
@@ -39,6 +66,20 @@ getStatus personId = do
       driverFlowStatus ^. DriverFlowStatusTId ==. val (toKey personId)
     return $ driverFlowStatus ^. DriverFlowStatusFlowStatus
 
+-- getStatus' :: L.MonadFlow m => Id Person -> m (Maybe DDFS.FlowStatus)
+-- getStatus' (Id personId) = do
+--   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   case dbConf of
+--     Just dbConf' -> do
+--       dfsData <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamDFS.personId $ Se.Eq personId]
+--       case dfsData of
+--         Left _ -> pure Nothing
+--         Right x -> do
+--           dfsData' <- traverse transformBeamDriverFlowStatusToDomain x
+--           let fs = DDFS.flowStatus <$> dfsData'
+--           pure fs
+--     Nothing -> pure Nothing
+
 updateStatus :: Id Person -> DDFS.FlowStatus -> SqlDB ()
 updateStatus personId flowStatus = do
   now <- getCurrentTime
@@ -49,3 +90,34 @@ updateStatus personId flowStatus = do
         DriverFlowStatusFlowStatus =. val flowStatus
       ]
     where_ $ tbl ^. DriverFlowStatusTId ==. val (toKey personId)
+
+updateStatus' :: (L.MonadFlow m, MonadTime m) => Id Person -> DDFS.FlowStatus -> m (MeshResult ())
+updateStatus' (Id personId) flowStatus = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  now <- getCurrentTime
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        Mesh.meshConfig
+        [ Se.Set BeamDFS.flowStatus flowStatus,
+          Se.Set BeamDFS.updatedAt now
+        ]
+        [Se.Is BeamDFS.personId $ Se.Eq personId]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+
+transformBeamDriverFlowStatusToDomain :: BeamDFS.DriverFlowStatus -> DriverFlowStatus
+transformBeamDriverFlowStatusToDomain BeamDFS.DriverFlowStatusT {..} = do
+  DriverFlowStatus
+    { personId = Id personId,
+      flowStatus = flowStatus,
+      updatedAt = updatedAt
+    }
+
+transformDomainDriverFlowStatusToBeam :: DriverFlowStatus -> BeamDFS.DriverFlowStatus
+transformDomainDriverFlowStatusToBeam DriverFlowStatus {..} =
+  BeamDFS.defaultDriverFlowStatus
+    { BeamDFS.personId = getId personId,
+      BeamDFS.flowStatus = flowStatus,
+      BeamDFS.updatedAt = updatedAt
+    }

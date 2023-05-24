@@ -81,6 +81,26 @@ upsert cancellationReason =
       BookingCancellationReasonAdditionalInfo =. val (cancellationReason.additionalInfo)
     ]
 
+upsert' :: L.MonadFlow m => BookingCancellationReason -> m ()
+upsert' cancellationReason = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> do
+      res <- either (pure Nothing) (transformBeamBookingCancellationReasonToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamBCR.bookingId $ Se.Eq (getId cancellationReason.bookingId)]
+      if isJust res
+        then
+          void $
+            KV.updateWoReturningWithKVConnector
+              dbCOnf'
+              Mesh.meshConfig
+              [ Se.Set BeamBCR.rideId (getId <$> cancellationReason.rideId),
+                Se.Set BeamBCR.reasonCode ((\(CancellationReasonCode x) -> x) <$> cancellationReason.reasonCode),
+                Se.Set BeamBCR.additionalInfo cancellationReason.additionalInfo
+              ]
+              [Se.Is BeamBCR.bookingId (Se.Eq $ getId cancellationReason.bookingId)]
+        else void $ KV.createWoReturingKVConnector dbCOnf' Mesh.meshConfig (transformDomainBookingCancellationReasonToBeam cancellationReason)
+    Nothing -> pure ()
+
 transformBeamBookingCancellationReasonToDomain :: BeamBCR.BookingCancellationReason -> BookingCancellationReason
 transformBeamBookingCancellationReasonToDomain BeamBCR.BookingCancellationReasonT {..} = do
   BookingCancellationReason
