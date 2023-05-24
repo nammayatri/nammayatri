@@ -16,27 +16,42 @@ module Domain.Action.UI.Ride.EndRide.Internal
   ( endRideTransaction,
     putDiffMetric,
     getDistanceBetweenPoints,
+    makeDailyDriverLeaderBoardKey,
+    safeMod,
+    makeWeeklyDriverLeaderBoardKey,
+    getCurrentDate,
+    getRidesAndDistancefromZscore,
+    makeCachedDailyDriverLeaderBoardKey,
+    makeCachedWeeklyDriverLeaderBoardKey,
   )
 where
 
+import Data.Time hiding (getCurrentTime)
+import Data.Time.Calendar.OrdinalDate (sundayStartWeek)
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.FareParameters as DFare
+import qualified Domain.Types.LeaderBoardConfig as LConfig
 import Domain.Types.Merchant
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.RiderDetails as RD
-import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (foldr, id, length, null)
+import GHC.Float (double2Int)
 import Kernel.External.Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
+import Kernel.Prelude hiding (whenJust)
 import qualified Kernel.Storage.Esqueleto as Esq
-import Kernel.Types.Common
+import Kernel.Storage.Hedis as Hedis
+import Kernel.Types.Common hiding (getCurrentTime)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.DriverLocation as DLoc
+import SharedLogic.FareCalculator
 import qualified SharedLogic.Ride as SRide
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as CDI
+import Storage.CachedQueries.LeaderBoardConfig as QLeaderConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
@@ -77,20 +92,92 @@ endRideTransaction driverId bookingId ride mbFareParams mbRiderDetailsId merchan
             driver <- SQP.findById referredDriverId >>= fromMaybeM (PersonNotFound referredDriverId.getId)
             sendNotificationToDriver driver.merchantId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage driver.id driver.deviceToken
           Nothing -> pure ()
-  -- Esq.runTransaction $ do
-  whenJust mbRiderDetails $ \riderDetails ->
-    when shouldUpdateRideComplete (void $ QRD.updateHasTakenValidRide riderDetails.id)
-  whenJust mbFareParams QFare.create
-  _ <- QRide.updateAll ride.id ride
-  _ <- QRide.updateStatus ride.id Ride.COMPLETED
-  _ <- QRB.updateStatus bookingId SRB.COMPLETED
-  _ <- DriverStats.updateIdleTime driverId
-  _ <- DriverStats.incrementTotalRidesAndTotalDist (cast ride.driverId) (fromMaybe 0 ride.chargeableDistance)
-  if driverInfo.active
-    then QDFS.updateStatus ride.driverId DDFS.ACTIVE
-    else QDFS.updateStatus ride.driverId DDFS.IDLE
-  _ <- DLoc.updateOnRide driverId False merchantId
+  now <- getCurrentTime
+  let rideDate = getCurrentDate now
+  Esq.runTransaction $ do
+    whenJust mbRiderDetails $ \riderDetails ->
+      when shouldUpdateRideComplete (QRD.updateHasTakenValidRide riderDetails.id)
+    whenJust mbFareParams QFare.create
+    QRide.updateAll ride.id ride
+    QRide.updateStatus ride.id Ride.COMPLETED
+    QRB.updateStatus bookingId SRB.COMPLETED
+    DriverStats.updateIdleTime driverId
+    DriverStats.incrementTotalRidesAndTotalDist (cast ride.driverId) (fromMaybe 0 ride.chargeableDistance)
+    if driverInfo.active
+      then QDFS.updateStatus ride.driverId DDFS.ACTIVE
+      else QDFS.updateStatus ride.driverId DDFS.IDLE
+  DLoc.updateOnRide driverId False merchantId
+  fork "Updating ZScore for driver" . Hedis.withNonCriticalRedis $ do
+    driverZscore <- Hedis.zScore (makeDailyDriverLeaderBoardKey rideDate) $ show ride.driverId
+    updateDriverDailyZscore ride rideDate driverZscore ride.chargeableDistance
+    let (_, currDayIndex) = sundayStartWeek rideDate
+    let weekStartDate = addDays (fromIntegral (- currDayIndex)) rideDate
+    let weekEndDate = addDays (fromIntegral (6 - currDayIndex)) rideDate
+    driverWeeklyZscore <- Hedis.zScore (makeWeeklyDriverLeaderBoardKey weekStartDate weekEndDate) $ show ride.driverId
+    updateDriverWeeklyZscore ride rideDate weekStartDate weekEndDate driverWeeklyZscore ride.chargeableDistance
   SRide.clearCache $ cast driverId
+
+updateDriverDailyZscore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, Metrics.CoreMetrics m, CacheFlow m r, Hedis.HedisFlow m r, MonadFlow m) => Ride.Ride -> Day -> Maybe Double -> Maybe Meters -> m ()
+updateDriverDailyZscore ride rideDate driverZscore chargeableDistance = do
+  dailyLeaderBoardConfig <- QLeaderConfig.findLeaderBoardConfigbyType LConfig.DAILY >>= fromMaybeM (InternalError "Leaderboard configs not present")
+  (LocalTime _ localTime) <- utcToLocalTime timeZoneIST <$> getCurrentTime
+  let lbExpiry = dailyLeaderBoardConfig.leaderBoardExpiry - secondsFromTimeOfDay localTime
+  let currZscore =
+        case driverZscore of
+          Nothing -> dailyLeaderBoardConfig.zScoreBase + getMeters (fromMaybe 0 chargeableDistance)
+          Just zscore -> do
+            let (prevTotalRides, prevTotalDistance) = getRidesAndDistancefromZscore zscore dailyLeaderBoardConfig.zScoreBase
+            let currTotalRides = prevTotalRides + 1
+            let currTotalDist = prevTotalDistance + fromMaybe 0 chargeableDistance
+            currTotalRides * dailyLeaderBoardConfig.zScoreBase + getMeters currTotalDist
+  Hedis.zAddExp (makeDailyDriverLeaderBoardKey rideDate) ride.driverId.getId (fromIntegral currZscore) lbExpiry.getSeconds
+  let limit = dailyLeaderBoardConfig.leaderBoardLengthLimit
+  driversListWithScores' <- Hedis.zrevrangeWithscores (makeDailyDriverLeaderBoardKey rideDate) 0 (limit -1)
+  Hedis.setExp (makeCachedDailyDriverLeaderBoardKey rideDate) driversListWithScores' (dailyLeaderBoardConfig.leaderBoardExpiry.getSeconds * dailyLeaderBoardConfig.numberOfSets)
+
+updateDriverWeeklyZscore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, Metrics.CoreMetrics m, CacheFlow m r, Hedis.HedisFlow m r, MonadFlow m) => Ride.Ride -> Day -> Day -> Day -> Maybe Double -> Maybe Meters -> m ()
+updateDriverWeeklyZscore ride rideDate weekStartDate weekEndDate driverZscore rideChargeableDistance = do
+  weeklyLeaderBoardConfig <- QLeaderConfig.findLeaderBoardConfigbyType LConfig.WEEKLY >>= fromMaybeM (InternalError "Leaderboard configs not present")
+  (LocalTime _ localTime) <- utcToLocalTime timeZoneIST <$> getCurrentTime
+  let (_, currDayIndex) = sundayStartWeek rideDate
+  let lbExpiry = weeklyLeaderBoardConfig.leaderBoardExpiry - Seconds ((currDayIndex + 1) * 86400) + (Seconds 86400 - secondsFromTimeOfDay localTime) -- Calculated as (total_Seconds_in_week - Week_Day_Index * 86400 + Seconds_Remaining_In_This_Week
+  let currZscore =
+        case driverZscore of
+          Nothing -> weeklyLeaderBoardConfig.zScoreBase + getMeters (fromMaybe 0 rideChargeableDistance)
+          Just zscore -> do
+            let (prevTotalRides, prevTotalDistance) = getRidesAndDistancefromZscore zscore weeklyLeaderBoardConfig.zScoreBase
+            let currTotalRides = prevTotalRides + 1
+            let currTotalDist = prevTotalDistance + fromMaybe 0 rideChargeableDistance
+            currTotalRides * weeklyLeaderBoardConfig.zScoreBase + getMeters currTotalDist
+  Hedis.zAddExp (makeWeeklyDriverLeaderBoardKey weekStartDate weekEndDate) ride.driverId.getId (fromIntegral currZscore) (lbExpiry.getSeconds)
+  let limit = weeklyLeaderBoardConfig.leaderBoardLengthLimit
+  driversListWithScores' <- Hedis.zrevrangeWithscores (makeWeeklyDriverLeaderBoardKey weekStartDate weekEndDate) 0 (limit -1)
+  Hedis.setExp (makeCachedWeeklyDriverLeaderBoardKey weekStartDate weekEndDate) driversListWithScores' (weeklyLeaderBoardConfig.leaderBoardExpiry.getSeconds * weeklyLeaderBoardConfig.numberOfSets)
+
+makeCachedDailyDriverLeaderBoardKey :: Day -> Text
+makeCachedDailyDriverLeaderBoardKey rideDate = "DDLBCK:" <> show rideDate
+
+makeDailyDriverLeaderBoardKey :: Day -> Text
+makeDailyDriverLeaderBoardKey rideDate =
+  "DDLBK:" <> show rideDate
+
+makeCachedWeeklyDriverLeaderBoardKey :: Day -> Day -> Text
+makeCachedWeeklyDriverLeaderBoardKey weekStartDate weekEndDate =
+  "DWLBCK:" <> show weekStartDate <> ":" <> show weekEndDate
+
+makeWeeklyDriverLeaderBoardKey :: Day -> Day -> Text
+makeWeeklyDriverLeaderBoardKey weekStartDate weekEndDate =
+  "DWLBK:" <> show weekStartDate <> ":" <> show weekEndDate
+
+getRidesAndDistancefromZscore :: Double -> Int -> (Int, Meters)
+getRidesAndDistancefromZscore dzscore dailyZscoreBase =
+  let (totalRides, totalDistance) = quotRem (double2Int dzscore) dailyZscoreBase
+   in (totalRides, Meters totalDistance)
+
+getCurrentDate :: UTCTime -> Day
+getCurrentDate time =
+  let currentDate = localDay $ utcToLocalTime timeZoneIST time
+   in currentDate
 
 putDiffMetric :: (Metrics.HasBPPMetrics m r, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Money -> Meters -> m ()
 putDiffMetric merchantId money mtrs = do

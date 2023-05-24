@@ -436,6 +436,19 @@ getDrivers vehicles = do
   where
     personsKeys = toKey . cast <$> fetchDriverIDsFromVehicle vehicles
 
+getDriversByIdIn ::
+  Transactionable m =>
+  [Id Person] ->
+  m [Person]
+getDriversByIdIn driverIds = do
+  Esq.findAll $ do
+    persons <- from $ table @PersonT
+    where_ $
+      persons ^. PersonTId `in_` valList personIds
+    return persons
+  where
+    personIds = toKey . cast <$> driverIds
+
 getDrivers' ::
   (L.MonadFlow m, Log m) =>
   [Vehicle] ->

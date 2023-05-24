@@ -19,6 +19,7 @@ module SharedLogic.FareCalculator
     CalculateFareParametersParams (..),
     calculateFareParameters,
     isNightShift,
+    timeZoneIST,
   )
 where
 
