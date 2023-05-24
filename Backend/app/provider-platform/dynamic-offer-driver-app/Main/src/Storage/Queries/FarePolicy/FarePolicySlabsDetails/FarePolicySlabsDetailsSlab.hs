@@ -15,10 +15,19 @@
 module Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab where
 
 import qualified Domain.Types.FarePolicy as DFP
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import qualified Kernel.Types.Id as KTI
 import Kernel.Utils.Common
+import qualified Lib.Mesh as Mesh
+import Lib.UtilsTH
+import qualified Sequelize as Se
+import qualified Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab as BeamFPSS
 import Storage.Tabular.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
 
 findAll' ::
@@ -37,9 +46,58 @@ findAll' farePolicyId = do
     orderBy [asc $ farePolicySlabsDetailsSlab ^. FarePolicySlabsDetailsSlabStartDistance]
     return farePolicySlabsDetailsSlab
 
+findAll'' ::
+  L.MonadFlow m =>
+  Id DFP.FarePolicy ->
+  m [FullFarePolicySlabsDetailsSlab]
+findAll'' (Id farePolicyId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure []) (transformBeamFarePolicyProgressiveDetailsToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamFPSS.farePolicyId $ Se.Eq farePolicyId]
+    Nothing -> pure []
+
+findById'' ::
+  (L.MonadFlow m) =>
+  Id DFP.FarePolicy ->
+  m (Maybe FullFarePolicySlabsDetailsSlab)
+findById'' (Id farePolicyId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure Nothing) (transformBeamFarePolicyProgressiveDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamFPSS.farePolicyId $ Se.Eq farePolicyId]
+    Nothing -> pure Nothing
+
 deleteAll' :: Id DFP.FarePolicy -> FullEntitySqlDB ()
 deleteAll' farePolicyId =
   Esq.delete' $ do
     farePolicySlabsDetailsSlab <- from $ table @FarePolicySlabsDetailsSlabT
     where_ $
       farePolicySlabsDetailsSlab ^. FarePolicySlabsDetailsSlabFarePolicyId ==. val (toKey farePolicyId)
+
+transformBeamFarePolicyProgressiveDetailsToDomain :: BeamFPSS.FarePolicySlabsDetailsSlab -> FullFarePolicySlabsDetailsSlab
+transformBeamFarePolicyProgressiveDetailsToDomain BeamFPSS.FarePolicySlabsDetailsSlabT {..} = do
+  ( (KTI.Id farePolicyId),
+    DFP.FPSlabsDetailsSlab
+      { startDistance = startDistance,
+        baseFare = baseFare,
+        waitingCharge = waitingCharge,
+        nightShiftCharge = nightShiftCharge
+      }
+    )
+
+transformDomainFarePolicyProgressiveDetailsToBeam :: FullFarePolicySlabsDetailsSlab -> BeamFPSS.FarePolicySlabsDetailsSlab
+transformDomainFarePolicyProgressiveDetailsToBeam (KTI.Id farePolicyId, DFP.FPSlabsDetailsSlab {..}) =
+  BeamFPSS.FarePolicySlabsDetailsSlabT
+    { farePolicyId = farePolicyId,
+      startDistance = startDistance,
+      baseFare = baseFare,
+      waitingCharge = waitingCharge,
+      nightShiftCharge = nightShiftCharge
+    }
+
+-- transformDomainFareParametersProgressiveDetailsToBeam :: DomainFPPD.FullFareParametersProgressiveDetails -> FareParametersProgressiveDetails
+-- transformDomainFareParametersProgressiveDetailsToBeam (KTI.Id fareParametersId, Domain.FParamsProgressiveDetails {..}) =
+--   FareParametersProgressiveDetailsT
+--     { fareParametersId = fareParametersId,
+--       deadKmFare = deadKmFare,
+--       extraKmFare = extraKmFare
+--     }

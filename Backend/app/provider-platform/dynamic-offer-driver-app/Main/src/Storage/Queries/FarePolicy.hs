@@ -140,7 +140,8 @@ module Storage.Queries.FarePolicy
     #-}
 where
 
-import Domain.Types.FarePolicy
+import Data.List.NonEmpty
+import Domain.Types.FarePolicy as Domain
 import Domain.Types.Merchant
 import Domain.Types.Vehicle.Variant (Variant)
 import qualified EulerHS.Extra.EulerDB as Extra
@@ -154,7 +155,9 @@ import Kernel.Utils.Common
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.FarePolicy as BeamFP
+import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails as BeamFPPD
 import qualified Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab as QFPSlabDetSlabs
+import qualified Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab as QueriesFPSDS
 import Storage.Queries.FullEntityBuilders (buildFullFarePolicy)
 import Storage.Tabular.FarePolicy
 import Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails (EntityField (FarePolicyProgressiveDetailsBaseDistance, FarePolicyProgressiveDetailsBaseFare, FarePolicyProgressiveDetailsDeadKmFare, FarePolicyProgressiveDetailsNightShiftCharge, FarePolicyProgressiveDetailsPerExtraKmFare, FarePolicyProgressiveDetailsTId), FarePolicyProgressiveDetailsT (..))
@@ -236,47 +239,46 @@ update farePolicy = do
       QFPSlabDetSlabs.deleteAll' farePolicy.id
       Esq.createMany' dets
 
--- transformBeamFarePolicyToDomain :: BeamFP.FarePolicy -> FarePolicy
--- transformBeamFarePolicyToDomain BeamFP.FarePolicyT {..} = do
---   FarePolicy
---     { id = Id id,
---       merchantId = Id merchantId,
---       vehicleVariant = vehicleVariant,
---       baseDistanceFare = baseDistanceFare,
---       baseDistanceMeters = baseDistanceMeters,
---       perExtraKmFare = perExtraKmFare,
---       deadKmFare = deadKmFare,
---       driverExtraFee = ExtraFee driverMinExtraFee driverMaxExtraFee,
---       nightShiftRate = nightShiftRate,
---       nightShiftStart = nightShiftStart,
---       nightShiftEnd = nightShiftEnd,
---       maxAllowedTripDistance = maxAllowedTripDistance,
---       minAllowedTripDistance = minAllowedTripDistance,
---       waitingChargePerMin = waitingChargePerMin,
---       waitingTimeEstimatedThreshold = waitingTimeEstimatedThreshold,
---       createdAt = createdAt,
---       updatedAt = updatedAt
---     }
+transformBeamFarePolicyToDomain :: L.MonadFlow m => BeamFP.FarePolicy -> m (FarePolicy)
+transformBeamFarePolicyToDomain BeamFP.FarePolicyT {..} = do
+  fullFPPD <- BeamFPPD.findById' (Id id)
+  let fPPD = snd $ fromJust fullFPPD
+  -- fullslabs <- QueriesFPSDS.findById'' (Id id)
+  -- let slabs = snd $ fromJust fullslabs
+  fullslabs <- QueriesFPSDS.findAll'' (Id id)
+  let slabs = snd <$> fullslabs
+  pure
+    FarePolicy
+      { id = Id id,
+        merchantId = Id merchantId,
+        vehicleVariant = vehicleVariant,
+        driverExtraFeeBounds = DriverExtraFeeBounds <$> driverMinExtraFee <*> driverMaxExtraFee,
+        serviceCharge = serviceCharge,
+        nightShiftBounds = NightShiftBounds <$> nightShiftStart <*> nightShiftEnd,
+        allowedTripDistanceBounds = AllowedTripDistanceBounds <$> maxAllowedTripDistance <*> minAllowedTripDistance,
+        govtCharges = govtCharges,
+        farePolicyDetails = case farePolicyType of
+          Progressive -> ProgressiveDetails fPPD
+          Slabs -> SlabsDetails (FPSlabsDetails (fromJust $ nonEmpty slabs)),
+        createdAt = createdAt,
+        updatedAt = updatedAt
+      }
 
--- transformDomainFarePolicyToBeam :: FarePolicy -> BeamFP.FarePolicy
--- transformDomainFarePolicyToBeam FarePolicy {..} =
---   BeamFP.defaultFarePolicy
---     { BeamFP.id = getId id,
---       BeamFP.merchantId = getId merchantId,
---       BeamFP.vehicleVariant = vehicleVariant,
---       BeamFP.baseDistanceFare = baseDistanceFare,
---       BeamFP.baseDistanceMeters = baseDistanceMeters,
---       BeamFP.perExtraKmFare = perExtraKmFare,
---       BeamFP.deadKmFare = deadKmFare,
---       BeamFP.driverMinExtraFee = minFee driverExtraFee,
---       BeamFP.driverMaxExtraFee = maxFee driverExtraFee,
---       BeamFP.nightShiftRate = nightShiftRate,
---       BeamFP.nightShiftStart = nightShiftStart,
---       BeamFP.nightShiftEnd = nightShiftEnd,
---       BeamFP.maxAllowedTripDistance = maxAllowedTripDistance,
---       BeamFP.minAllowedTripDistance = minAllowedTripDistance,
---       BeamFP.waitingChargePerMin = waitingChargePerMin,
---       BeamFP.waitingTimeEstimatedThreshold = waitingTimeEstimatedThreshold,
---       BeamFP.createdAt = createdAt,
---       BeamFP.updatedAt = updatedAt
---     }
+transformDomainFarePolicyToBeam :: FarePolicy -> BeamFP.FarePolicy
+transformDomainFarePolicyToBeam FarePolicy {..} =
+  BeamFP.FarePolicyT
+    { BeamFP.id = getId id,
+      BeamFP.merchantId = getId merchantId,
+      BeamFP.vehicleVariant = vehicleVariant,
+      BeamFP.serviceCharge = serviceCharge,
+      BeamFP.driverMinExtraFee = Domain.minFee <$> driverExtraFeeBounds,
+      BeamFP.driverMaxExtraFee = Domain.maxFee <$> driverExtraFeeBounds,
+      BeamFP.nightShiftStart = Domain.nightShiftStart <$> nightShiftBounds,
+      BeamFP.nightShiftEnd = Domain.nightShiftEnd <$> nightShiftBounds,
+      BeamFP.maxAllowedTripDistance = Domain.maxAllowedTripDistance <$> allowedTripDistanceBounds,
+      BeamFP.minAllowedTripDistance = Domain.minAllowedTripDistance <$> allowedTripDistanceBounds,
+      BeamFP.govtCharges = govtCharges,
+      BeamFP.farePolicyType = getFarePolicyType $ FarePolicy {..},
+      BeamFP.createdAt = createdAt,
+      BeamFP.updatedAt = updatedAt
+    }

@@ -129,17 +129,18 @@ incrementTotalRidesAndTotalDist driverId rideDist = do
     where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
 
 incrementTotalRidesAndTotalDist' :: (L.MonadFlow m) => Id Driver -> Meters -> m (MeshResult ())
-incrementTotalRidesAndTotalDist' (Id driverId) rideDist = do
+incrementTotalRidesAndTotalDist' (Id driverId') rideDist = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
         Mesh.meshConfig
-        [ Se.Set BeamDS.totalRides $ 1,
+        --[ Se.Set BeamDS.totalRides $ 1,
+        [ Se.Set (\BeamDS.DriverStatsT {..} -> totalRides) 1,
           Se.Set BeamDS.totalDistance rideDist
         ]
-        [Se.Is BeamDS.driverId (Se.Eq driverId)]
+        [Se.Is BeamDS.driverId (Se.Eq driverId')]
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 getDriversSortedOrder :: Transactionable m => Maybe Integer -> m [DriverStats]

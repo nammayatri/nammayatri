@@ -244,6 +244,8 @@ library
       Storage.Beam.FareParameters
       Storage.Beam.FareParameters.FareParametersProgressiveDetails
       Storage.Beam.FarePolicy
+      Storage.Beam.FarePolicy.FarePolicyProgressiveDetails
+      Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab
       Storage.Beam.FarePolicy.RestrictedExtraFare
       Storage.Beam.Geometry
       Storage.Beam.Instances
@@ -318,6 +320,7 @@ library
       Storage.Queries.FareParameters
       Storage.Queries.FareParameters.FareParametersProgressiveDetails
       Storage.Queries.FarePolicy
+      Storage.Queries.FarePolicy.FarePolicyProgressiveDetails
       Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
       Storage.Queries.FarePolicy.RestrictedExtraFare
       Storage.Queries.FullEntityBuilders
