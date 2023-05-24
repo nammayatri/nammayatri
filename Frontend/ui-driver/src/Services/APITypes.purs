@@ -1039,6 +1039,7 @@ data MediaType = Video
                | AudioLink
                | VideoLink
                | ImageLink
+               | PortraitVideoLink
 
 instance makeMessageListReq :: RestEndpoint MessageListReq MessageListRes where
     makeRequest reqBody@(MessageListReq limit offset) headers = defaultMakeRequest GET (EP.messageList limit offset) headers reqBody

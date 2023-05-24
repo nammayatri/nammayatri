@@ -252,6 +252,7 @@ notificationListTransformer notificationArray =
             , imageUrl:
                 case media.fileType of
                   VideoLink -> getImageUrl $ media.url
+                  PortraitVideoLink -> getImageUrl media.url
                   Video -> ""
                   ImageLink -> ""
                   Image -> ""
@@ -284,13 +285,14 @@ propValueTransformer notificationArray =
             , action1Visibility: toPropValue "visible"
             , action2Visibility: toPropValue "gone"
             , descriptionVisibility: toPropValue "visible"
-            , illustrationVisibility: toPropValue if Array.any (_ == media.fileType) [ VideoLink, Audio, Image ] then "visible" else "gone"
-            , playBtnVisibility: toPropValue $ if media.fileType == VideoLink then "visible" else "gone"
+            , illustrationVisibility: toPropValue if Array.any (_ == media.fileType) [ VideoLink, Audio, Image, PortraitVideoLink ] then "visible" else "gone"
+            , playBtnVisibility: toPropValue $ if media.fileType == VideoLink || media.fileType == PortraitVideoLink then "visible" else "gone"
             , playButton: toPropValue "ny_ic_play_btn"
             , imageUrl:
                 toPropValue
                   $ case media.fileType of
                       VideoLink -> getImageUrl $ media.url
+                      PortraitVideoLink -> getImageUrl media.url
                       Video -> ""
                       ImageLink -> ""
                       Image -> ""
@@ -320,6 +322,7 @@ youtubeData =
   , showDuration: true
   , showSeekBar: true
   , videoId: ""
+  , videoType: ""
   }
 
 splitUrlsAndText :: String -> Array String
