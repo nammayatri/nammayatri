@@ -1,5 +1,6 @@
 module API.UI.LeaderBoard where
 
+import Data.Time
 import qualified Domain.Action.UI.LeaderBoard as DLeaderBoard
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SP
@@ -11,15 +12,25 @@ import Servant
 import Tools.Auth
 
 type API =
-  "driver"
-    :> "leaderBoard"
-    :> TokenAuth
-    :> QueryParam "limit" Integer
-    :> Get '[JSON] DLeaderBoard.LeaderBoardRes
+  "driver" :> "leaderBoard"
+    :> ( TokenAuth
+           :> "daily"
+           :> MandatoryQueryParam "date" Day
+           :> Get '[JSON] DLeaderBoard.LeaderBoardRes
+           :<|> TokenAuth
+           :> "weekly"
+           :> MandatoryQueryParam "fromDate" Day
+           :> MandatoryQueryParam "toDate" Day
+           :> Get '[JSON] DLeaderBoard.LeaderBoardRes
+       )
 
 handler :: FlowServer API
 handler =
-  getDriverLeaderBoard
+  getDailyDriverLeaderBoard
+    :<|> getWeeklyDriverLeaderBoard
 
-getDriverLeaderBoard :: (Id SP.Person, Id DM.Merchant) -> Maybe Integer -> FlowHandler DLeaderBoard.LeaderBoardRes
-getDriverLeaderBoard (personId, merchantid) mbLimit = withFlowHandlerAPI $ DLeaderBoard.getDriverLeaderBoard (personId, merchantid) mbLimit
+getDailyDriverLeaderBoard :: (Id SP.Person, Id DM.Merchant) -> Day -> FlowHandler DLeaderBoard.LeaderBoardRes
+getDailyDriverLeaderBoard (personId, merchantId) date = withFlowHandlerAPI $ DLeaderBoard.getDailyDriverLeaderBoard (personId, merchantId) date
+
+getWeeklyDriverLeaderBoard :: (Id SP.Person, Id DM.Merchant) -> Day -> Day -> FlowHandler DLeaderBoard.LeaderBoardRes
+getWeeklyDriverLeaderBoard (personId, merchantId) fromDate toDate = withFlowHandlerAPI $ DLeaderBoard.getWeeklyDriverLeaderBoard (personId, merchantId) fromDate toDate

@@ -84,7 +84,7 @@ buildOnUpdateMessage ::
   m OnUpdate.OnUpdateMessage
 buildOnUpdateMessage RideAssignedBuildReq {..} = do
   mobileNumber <- SP.getPersonNumber driver >>= fromMaybeM (InternalError "Driver mobile number is not present.")
-  name <- SP.getPersonFullName driver >>= fromMaybeM (PersonFieldNotPresent "firstName")
+  name <- SP.getPersonFullName driver & fromMaybeM (PersonFieldNotPresent "firstName")
   let agent =
         RideAssignedOU.Agent
           { name = name,

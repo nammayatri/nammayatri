@@ -31,7 +31,7 @@ import Kernel.External.Types (Language)
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Types.Id
 import Kernel.Types.Version
-import Kernel.Utils.Common (Centesimal, EsqDBFlow, maskText)
+import Kernel.Utils.Common (Centesimal, maskText)
 import Servant.API
 
 data Driver -- = Person
@@ -150,6 +150,5 @@ getPersonNumber person = do
   decMobileNumber <- mapM decrypt person.mobileNumber
   return $ person.mobileCountryCode <> decMobileNumber
 
-getPersonFullName :: (EsqDBFlow m r, EncFlow m r) => Person -> m (Maybe Text)
-getPersonFullName person = do
-  return ((\fN -> fN <> maybe "" (" " <>) person.lastName) <$> Just person.firstName)
+getPersonFullName :: Person -> Maybe Text
+getPersonFullName person = (\fN -> fN <> maybe "" (" " <>) person.lastName) <$> Just person.firstName
