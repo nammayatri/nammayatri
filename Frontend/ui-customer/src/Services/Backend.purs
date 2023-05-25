@@ -19,6 +19,7 @@ import Services.API
 import Services.Config as SC
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..))
+import Common.Types.App (Version(..))
 import Data.Either (Either(..), either)
 import Data.Maybe (Maybe(..), maybe, fromMaybe)
 import Foreign.Generic (encode)
@@ -453,6 +454,29 @@ makeUpdateProfileRequest name gender referralCode =
             "BN_IN" -> "BENGALI"
             "TA_IN" -> "TAMIL"
             _       -> "ENGLISH"
+        , clientVersion : Nothing
+        , bundleVersion : Nothing
+    }
+
+makeUpdateVersionRequest :: Version -> Version -> UpdateProfileReq
+makeUpdateVersionRequest clientVersion bundleVersion = 
+    UpdateProfileReq{
+          middleName : Nothing
+        , lastName : Nothing
+        , deviceToken : Just (getValueToLocalNativeStore FCM_TOKEN)
+        , firstName : Nothing
+        , email : Nothing
+        , referralCode : Nothing
+        , gender : Nothing
+        , language : Just case getValueToLocalNativeStore LANGUAGE_KEY of
+            "EN_US" -> "ENGLISH"
+            "KN_IN" -> "KANNADA"
+            "HI_IN" -> "HINDI"
+            "ML_IN" -> "MALAYALAM"
+            "TA_IN" -> "TAMIL"
+            _       -> "ENGLISH"
+        , clientVersion : Just clientVersion
+        , bundleVersion : Just bundleVersion
     }
 
 editProfileRequest :: Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe String -> UpdateProfileReq
@@ -473,6 +497,8 @@ editProfileRequest firstName middleName lastName emailID gender =
             "BN_IN" -> "BENGALI"
             "TA_IN" -> "TAMIL"
             _       -> "ENGLISH"
+        , clientVersion : Nothing
+        , bundleVersion : Nothing
     }
 
 makeUpdateLanguageRequest :: String -> UpdateProfileReq
@@ -492,6 +518,8 @@ makeUpdateLanguageRequest _ = UpdateProfileReq{
             "BN_IN" -> "BENGALI"
             "TA_IN" -> "TAMIL"
             _       -> "ENGLISH"
+        , clientVersion : Nothing
+        , bundleVersion : Nothing
     }
 
 placeNameBT :: GetPlaceNameReq -> FlowBT String GetPlaceNameResp

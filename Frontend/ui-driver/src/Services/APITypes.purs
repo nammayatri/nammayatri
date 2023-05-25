@@ -16,6 +16,7 @@
 module Services.APITypes where
 
 import Control.Alt ((<|>))
+import Common.Types.App (Version(..))
 import Data.Generic.Rep (class Generic)
 import Data.Eq.Generic (genericEq)
 import Data.Show.Generic (genericShow)
@@ -387,7 +388,11 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , canDowngradeToHatchback :: Boolean
     , canDowngradeToSedan :: Boolean
     , canDowngradeToTaxi :: Boolean
+    , clientVersion         :: Maybe Version
+    , bundleVersion         :: Maybe Version
     }
+
+
 
 newtype  OrganizationInfo = OrganizationInfo
     {   name          :: String,
@@ -595,6 +600,8 @@ newtype UpdateDriverInfoReq = UpdateDriverInfoReq
     ,   canDowngradeToHatchback :: Maybe Boolean
     ,   canDowngradeToTaxi      :: Maybe Boolean
     ,   language                :: Maybe String
+    ,   clientVersion           :: Maybe Version
+    ,   bundleVersion           :: Maybe Version
     }
 
 newtype UpdateDriverInfoResp = UpdateDriverInfoResp GetDriverInfoResp

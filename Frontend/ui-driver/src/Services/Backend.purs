@@ -18,6 +18,7 @@ module Services.Backend where
 import Services.Config as SC
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..))
+import Common.Types.App (Version(..))
 import Data.Either (Either(..), either)
 import Presto.Core.Types.API (Header(..), Headers(..))
 import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff)
@@ -402,7 +403,9 @@ makeUpdateDriverInfoReq deviceToken = UpdateDriverInfoReq {
        "canDowngradeToSedan" : Nothing,
        "canDowngradeToHatchback" : Nothing,
        "canDowngradeToTaxi" : Nothing,
-       "language" : Nothing
+       "language" : Nothing,
+       "bundleVersion" : Nothing,
+       "clientVersion" : Nothing
     }
 
 makeUpdateBookingOptions :: Boolean -> Boolean -> Boolean -> UpdateDriverInfoReq
@@ -414,7 +417,29 @@ makeUpdateBookingOptions toSedan toHatchBack toTaxi = UpdateDriverInfoReq {
        "canDowngradeToSedan" : Just toSedan,
        "canDowngradeToHatchback" : Just toHatchBack,
        "canDowngradeToTaxi" : Just toTaxi,
-       "language" : Nothing
+       "language" : Nothing,
+       "bundleVersion" : Nothing,
+       "clientVersion" : Nothing
+    }
+
+makeUpdateDriverVersion :: Version -> Version -> UpdateDriverInfoReq
+makeUpdateDriverVersion clientVersion bundleVersion = UpdateDriverInfoReq {
+        "middleName": Nothing,
+        "firstName" : Nothing,
+        "lastName"  : Nothing,
+        "deviceToken" : Nothing,
+        "canDowngradeToSedan" : Nothing,
+        "canDowngradeToHatchback" : Nothing,
+        "canDowngradeToTaxi" : Nothing,
+        "bundleVersion" : Just bundleVersion,
+        "clientVersion" : Just clientVersion,
+        "language" : Just case getValueToLocalNativeStore LANGUAGE_KEY of
+            "EN_US" -> "ENGLISH"
+            "KN_IN" -> "KANNADA"
+            "HI_IN" -> "HINDI"
+            "ML_IN" -> "MALAYALAM"
+            "TA_IN" -> "TAMIL"
+            _       -> "ENGLISH"
     }
 
 makeUpdateDriverLangChange :: String -> UpdateDriverInfoReq
@@ -426,6 +451,8 @@ makeUpdateDriverLangChange deviceToken = UpdateDriverInfoReq {
         "canDowngradeToSedan" : Nothing,
         "canDowngradeToHatchback" : Nothing,
         "canDowngradeToTaxi" : Nothing,
+        "bundleVersion" : Nothing,
+        "clientVersion" : Nothing,
         "language" : Just case getValueToLocalNativeStore LANGUAGE_KEY of
             "EN_US" -> "ENGLISH"
             "KN_IN" -> "KANNADA"
