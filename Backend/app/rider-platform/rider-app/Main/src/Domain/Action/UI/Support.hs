@@ -16,10 +16,12 @@ module Domain.Action.UI.Support
   ( SendIssueReq (..),
     SendIssueRes,
     sendIssue,
+    callbackRequest,
   )
 where
 
 import Data.OpenApi (ToSchema)
+import qualified Domain.Types.CallbackRequest as DCallback
 import qualified Domain.Types.Issue as DIssue
 import Domain.Types.Person as Person
 import Domain.Types.Quote (Quote)
@@ -27,13 +29,16 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Kernel.Storage.Esqueleto (runTransaction)
 import Kernel.Types.APISuccess
-import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Common
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Predicate
+import Kernel.Utils.Common
 import Kernel.Utils.Predicates
 import Kernel.Utils.Validation
+import qualified Storage.Queries.CallbackRequest as QCallback
 import qualified Storage.Queries.Issues as Queries
+import qualified Storage.Queries.Person as QP
 
 data Issue = Issue
   { reason :: Text,
@@ -69,7 +74,7 @@ sendIssue personId request = do
   newIssue <- buildDBIssue personId request
   runTransaction $
     Queries.insertIssue newIssue
-  return APISuccess.Success
+  return Success
 
 buildDBIssue :: MonadFlow m => Id Person.Person -> SendIssueReq -> m DIssue.Issue
 buildDBIssue (Id customerId) SendIssueReq {..} = do
@@ -85,4 +90,30 @@ buildDBIssue (Id customerId) SendIssueReq {..} = do
         description = issue.description,
         createdAt = time,
         updatedAt = time
+      }
+
+callbackRequest :: EsqDBFlow m r => Id Person.Person -> m APISuccess
+callbackRequest personId = do
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  newCallbackRequest <- buildCallbackRequest person
+  runTransaction $
+    QCallback.create newCallbackRequest
+  return Success
+
+buildCallbackRequest :: MonadFlow m => Person.Person -> m DCallback.CallbackRequest
+buildCallbackRequest person = do
+  guid <- L.generateGUID
+  now <- getCurrentTime
+  customerPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber")
+  customerMobileCountryCode <- person.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
+  return $
+    DCallback.CallbackRequest
+      { id = Id guid,
+        merchantId = person.merchantId,
+        customerName = person.firstName,
+        customerPhone,
+        customerMobileCountryCode,
+        status = DCallback.PENDING,
+        createdAt = now,
+        updatedAt = now
       }
