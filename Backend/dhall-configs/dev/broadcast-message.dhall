@@ -32,7 +32,7 @@ let hedisCfg =
 
 let hedisClusterCfg =
       { connectHost = "localhost"
-      , connectPort = 30006
+      , connectPort = 30001
       , connectAuth = None Text
       , connectDatabase = +0
       , connectMaxConnections = +50
@@ -57,7 +57,7 @@ let cacheConfig = { configsExpTime = +86400 }
 in  { hedisCfg
     , hedisClusterCfg
     , hedisMigrationStage = True
-    , cutOffHedisCluster = True
+    , cutOffHedisCluster = False
     , esqDBCfg
     , esqDBReplicaCfg
     , cacheConfig

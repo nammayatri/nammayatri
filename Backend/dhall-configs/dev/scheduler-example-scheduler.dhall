@@ -23,7 +23,7 @@ let rcfg =
 
 let rccfg =
       { connectHost = "localhost"
-      , connectPort = 30006
+      , connectPort = 30001
       , connectAuth = None Text
       , connectDatabase = +0
       , connectMaxConnections = +50
@@ -42,7 +42,7 @@ in  { loggerConfig =
     , hedisCfg = rcfg
     , hedisClusterCfg = rccfg
     , hedisMigrationStage = True
-    , cutOffHedisCluster = True
+    , cutOffHedisCluster = False
     , hedisPrefix = "example-scheduler"
     , port = +8051
     , loopIntervalSec = +5
