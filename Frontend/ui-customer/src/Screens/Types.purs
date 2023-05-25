@@ -548,6 +548,7 @@ type HomeScreenStateProps =
   , showLiveDashboard :: Boolean
   , isbanner :: Boolean
   , callSupportPopUp :: Boolean
+  , fadeVal :: Number
   }
 
 type CustomerTipProps = {

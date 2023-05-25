@@ -29,6 +29,7 @@ data Action = NoAction
             | OpenEmergencyHelp
             | MessageDriver
             | ShareRide
+            | IconFadeOut Number
 
 type DriverInfoCardState = 
   { props :: DriverInfoCardProps
@@ -40,7 +41,8 @@ type DriverInfoCardProps =
     currentStage :: Stage,
     trackingEnabled :: Boolean,
     unReadMessages :: Boolean,
-    showCallPopUp :: Boolean
+    showCallPopUp :: Boolean,
+    fadeVal :: Number
   }
 
 type DriverInfoCardData = 

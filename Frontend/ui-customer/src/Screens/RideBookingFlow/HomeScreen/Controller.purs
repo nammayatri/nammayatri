@@ -653,9 +653,14 @@ eval RemoveChat state = do
 
 eval (DriverInfoCardActionController (DriverInfoCardController.MessageDriver)) state = do
   _ <- pure $ updateLocalStage ChatWithDriver
+  _ <- pure $ spy "ScrollState______" "scrollState"
   _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (length state.data.messages))
   continue state {props {currentStage = ChatWithDriver, sendMessageActive = false, unReadMessages = false }}
 
+eval (DriverInfoCardActionController (DriverInfoCardController.IconFadeOut scrollState)) state = do
+  _ <- pure $ spy "ScrollState______" scrollState
+  continue state {props {fadeVal = 1.0 - scrollState * 1.5}}
+  
 eval BackPressed state = do
   _ <- pure $ toggleBtnLoader "" false
   case state.props.currentStage of

@@ -142,6 +142,7 @@ initData = {
     , isbanner : true
     , callSupportPopUp : false
     , isMockLocation: false
+    , fadeVal: 1.0
     }
 }
 

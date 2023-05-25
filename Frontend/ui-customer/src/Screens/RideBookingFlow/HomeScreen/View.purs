@@ -244,7 +244,7 @@ view push state =
                 , clickable true
                 ]
                 [ linearLayout
-                    [ height if any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver] && os /= "IOS" then (V (((screenHeight unit)/ 15)*10)) else MATCH_PARENT
+                    [ height if any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver] && os /= "IOS" then (V (((screenHeight unit)/ 15)*12)) else MATCH_PARENT
                     , width MATCH_PARENT
                     , id (getNewIDWithTag "CustomerHomeScreenMap")
                     ]
@@ -1571,7 +1571,7 @@ emptyLayout state =
 rideTrackingView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 rideTrackingView push state =
   linearLayout
-    [ height WRAP_CONTENT
+    [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
     , padding (Padding 0 0 0 0)
@@ -1585,43 +1585,11 @@ rideTrackingView push state =
       --   [ translateInXAnim (-30) ( state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted)
       --   , translateOutXAnim (-100) $ not ( state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted)
       --   ] $
-      linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , background Color.transparent
-        -- , gravity BOTTOM -- Check it in Android.
-        ]
-        [ -- TODO Add Animations
-          -- PrestoAnim.animationSet
-          --   [ translateYAnim 900 0 ( state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted)
-          --   , translateYAnim 0 900 $ not ( state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted)
-          --   ] $
-          coordinatorLayout
-            [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            ]
-            [ bottomSheetLayout
-                [ height WRAP_CONTENT
-                , width MATCH_PARENT
-                , background Color.transparent
-                , sheetState COLLAPSED
-                , peakHeight if state.props.currentStage == RideAccepted then getHeightFromPercent 59 else getHeightFromPercent 46
-                , visibility VISIBLE
-                , halfExpandedRatio 0.9
-                ]
-                [ linearLayout
-                    [ height WRAP_CONTENT
-                    , width MATCH_PARENT
-                    ]
-                    [ if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) then
-                        DriverInfoCard.view (push <<< DriverInfoCardActionController) $ driverInfoCardViewState state
-
-                      else
-                        emptyTextView state
-                    ]
-                ]
-            ]
-        ]
+      if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) 
+          then
+              DriverInfoCard.view (push <<< DriverInfoCardActionController) $ driverInfoCardViewState state
+          else
+              emptyTextView state
     ]
 
 previousRideRatingView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w

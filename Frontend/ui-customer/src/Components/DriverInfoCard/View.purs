@@ -23,15 +23,15 @@ import Data.Maybe (fromMaybe)
 import Data.String (Pattern(..), split, length, take, drop)
 import Debug (spy)
 import Effect (Effect)
-import Engineering.Helpers.Commons (screenWidth, safeMarginBottom, os, flowRunner)
+import Engineering.Helpers.Commons (screenWidth, safeMarginBottom, os, flowRunner, screenHeight)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (secondsToHms)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>),(-),(*), bind, pure, discard, (&&), (||))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), alignParentBottom, alignParentLeft, background, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, letterSpacing, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, stroke, text, textSize, textView, visibility, weight, width, singleLine, afterRender, clickable, scrollBarY, scrollView, imageWithFallback)
-import PrestoDOM.Properties (cornerRadii)
+import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), alignParentBottom, alignParentLeft, background, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, letterSpacing, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, stroke, text, textSize, textView, visibility, weight, width, singleLine, afterRender, clickable, scrollBarY, scrollView, imageWithFallback, onSlide, onScrollStateChange, alpha)
+import PrestoDOM.Properties (cornerRadii, sheetState, peakHeight, halfExpandedRatio)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (Stage(..))
 import Styles.Colors as Color
@@ -46,17 +46,52 @@ import Presto.Core.Types.Language.Flow (doAff)
 import Animation (fadeIn)
 import PrestoDOM.Animation as PrestoAnim
 import Data.String.CodeUnits (fromCharArray, toCharArray)
+import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
+import JBridge (getHeightFromPercent)
 
 view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit ) w
 view push state =
   linearLayout
-  [ height WRAP_CONTENT
-  , width MATCH_PARENT
-  , background Color.transparent
-  , orientation VERTICAL
-  ][  mapOptionsView push state
-    , driverInfoView push state
-    ]
+        [ height MATCH_PARENT
+        , width MATCH_PARENT
+        , background Color.transparent
+        ]
+        [ frameLayout
+          [ height MATCH_PARENT
+          , width MATCH_PARENT
+          ][ linearLayout
+                [ height MATCH_PARENT
+                , width MATCH_PARENT
+                , gravity BOTTOM
+                , alpha state.props.fadeVal
+                , margin $ MarginBottom if state.props.currentStage == RideAccepted then (screenHeight unit)/2 else (screenHeight unit)/3
+                ][ mapOptionsView push state ]
+            , linearLayout
+              [ height MATCH_PARENT
+              , width MATCH_PARENT
+              , gravity BOTTOM
+              ]
+              [ coordinatorLayout
+                  [ height WRAP_CONTENT
+                  , width MATCH_PARENT
+                  ][ bottomSheetLayout
+                        [ height WRAP_CONTENT
+                        , width MATCH_PARENT
+                        , background Color.transparent
+                        , sheetState COLLAPSED
+                        , peakHeight if state.props.currentStage == RideAccepted then getHeightFromPercent 53 else getHeightFromPercent 33
+                        , visibility VISIBLE
+                        , halfExpandedRatio 0.9
+                        , onSlide push IconFadeOut
+                        ][ linearLayout
+                              [ height WRAP_CONTENT
+                              , width MATCH_PARENT
+                              ][ driverInfoView push state ]
+                          ]
+                  ]
+              ]
+            ]
+          ]
 
 mapOptionsView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
 mapOptionsView push state =
@@ -147,13 +182,17 @@ sosView push state =
     , visibility if (state.props.currentStage == RideAccepted) || (state.props.currentStage == RideStarted) then VISIBLE else GONE
     , orientation VERTICAL
     , gravity if os == "IOS" then CENTER_VERTICAL else BOTTOM
-    , onClick push $ const OpenEmergencyHelp
-    ][ imageView
-        [ imageWithFallback "ny_ic_sos,https://assets.juspay.in/nammayatri/images/user/ny_ic_sos.png"
-        , height $ V 50
-        , width $ V 50
-        ]
-    ]
+    ][ linearLayout
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , onClick push $ const OpenEmergencyHelp
+          ][ imageView
+                [ imageWithFallback "ny_ic_sos,https://assets.juspay.in/nammayatri/images/user/ny_ic_sos.png"
+                , height $ V 50
+                , width $ V 50
+                ]
+            ]
+      ]
 
 otpAndWaitView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
 otpAndWaitView push state =
