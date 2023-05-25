@@ -114,17 +114,22 @@
       }
     },
     "clickhouse-haskell": {
-      "flake": false,
+      "inputs": {
+        "common": [
+          "shared-kernel",
+          "common"
+        ]
+      },
       "locked": {
-        "lastModified": 1676920142,
-        "narHash": "sha256-uEWtTQU+YIB/BWMf8wf+p8pv34W2Ohhv2xigC8YV1PY=",
-        "owner": "piyushKumar-1",
+        "lastModified": 1684938357,
+        "narHash": "sha256-3Qq80uxcFfatfZmsLM/h/aPZYzv1FZ3EEK35NasGQs0=",
+        "owner": "nammayatri",
         "repo": "clickhouse-haskell",
-        "rev": "5eafcf35b7f2f5619f21dbafb55d98b1e57b1d39",
+        "rev": "773517398ae94ca5ad54491cd70d0a1717926192",
         "type": "github"
       },
       "original": {
-        "owner": "piyushKumar-1",
+        "owner": "nammayatri",
         "repo": "clickhouse-haskell",
         "type": "github"
       }
@@ -1004,6 +1009,27 @@
         "type": "github"
       }
     },
+    "prometheus-haskell": {
+      "inputs": {
+        "flake-parts": "flake-parts_3",
+        "haskell-flake": "haskell-flake_3",
+        "nixpkgs": "nixpkgs_8"
+      },
+      "locked": {
+        "lastModified": 1684305829,
+        "narHash": "sha256-MrM4ZFZuu0e6aVd7ixw5ZNhD4Vcrc6lUL+d1NO7mJ38=",
+        "owner": "juspay",
+        "repo": "prometheus-haskell",
+        "rev": "1104a429745c45f333508c7aa2cd7d6f94b76755",
+        "type": "github"
+      },
+      "original": {
+        "owner": "juspay",
+        "ref": "more-proc-metrics",
+        "repo": "prometheus-haskell",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "beckn-gateway": "beckn-gateway",
@@ -1037,14 +1063,14 @@
         ],
         "euler-hs": "euler-hs",
         "passetto-hs": "passetto-hs",
-        "wai-middleware-prometheus": "wai-middleware-prometheus"
+        "prometheus-haskell": "prometheus-haskell"
       },
       "locked": {
-        "lastModified": 1684877136,
-        "narHash": "sha256-+z3j4ON11hr8IFLBavKeZziBdR5HnsTaduSlgruQ4N8=",
+        "lastModified": 1685039917,
+        "narHash": "sha256-ehRgsew7KUmjqfs2TV+BeUUMvkiW6oqbNnoGcxY0H8k=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "6697e946c513b5830333bde5a28d31087ead4b44",
+        "rev": "a5aa8aab1a669b14a41e3e3f17be012b3fc27557",
         "type": "github"
       },
       "original": {
@@ -1101,27 +1127,6 @@
       "original": {
         "owner": "numtide",
         "repo": "treefmt-nix",
-        "type": "github"
-      }
-    },
-    "wai-middleware-prometheus": {
-      "inputs": {
-        "flake-parts": "flake-parts_3",
-        "haskell-flake": "haskell-flake_3",
-        "nixpkgs": "nixpkgs_8"
-      },
-      "locked": {
-        "lastModified": 1684305829,
-        "narHash": "sha256-MrM4ZFZuu0e6aVd7ixw5ZNhD4Vcrc6lUL+d1NO7mJ38=",
-        "owner": "juspay",
-        "repo": "prometheus-haskell",
-        "rev": "1104a429745c45f333508c7aa2cd7d6f94b76755",
-        "type": "github"
-      },
-      "original": {
-        "owner": "juspay",
-        "ref": "more-proc-metrics",
-        "repo": "prometheus-haskell",
         "type": "github"
       }
     }
