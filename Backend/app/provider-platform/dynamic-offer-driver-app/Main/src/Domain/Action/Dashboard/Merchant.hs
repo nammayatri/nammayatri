@@ -143,7 +143,6 @@ merchantCommonConfigUpdate merchantShortId req = do
                minRidesForCancellationScore = maybe config.minRidesForCancellationScore (.value) req.minRidesForCancellationScore,
                mediaFileUrlPattern = maybe config.mediaFileUrlPattern (.value) req.mediaFileUrlPattern,
                mediaFileSizeUpperLimit = maybe config.mediaFileSizeUpperLimit (.value) req.mediaFileSizeUpperLimit,
-               waitingTimeEstimatedThreshold = maybe config.waitingTimeEstimatedThreshold (.value) req.waitingTimeEstimatedThreshold,
                onboardingTryLimit = maybe config.onboardingTryLimit (.value) req.onboardingTryLimit,
                onboardingRetryTimeInHours = maybe config.onboardingRetryTimeInHours (.value) req.onboardingRetryTimeInHours,
                checkImageExtractionForDashboard = maybe config.checkImageExtractionForDashboard (.value) req.checkImageExtractionForDashboard,

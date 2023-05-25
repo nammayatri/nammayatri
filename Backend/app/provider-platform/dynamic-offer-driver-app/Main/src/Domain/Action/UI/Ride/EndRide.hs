@@ -218,18 +218,14 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance = do
 
   -- maybe compare only distance fare?
   let estimatedFare = Fare.fareSum booking.fareParams
-  thresholdConfig <- findConfig >>= fromMaybeM (InternalError "TransportConfigNotFound")
   farePolicy <- getFarePolicy merchantId booking.vehicleVariant >>= fromMaybeM (FareParametersNotFound merchantId.getId)
-  let waitingTimeMinusThreshold =
-        diffUTCTime <$> ride.tripStartTime <*> ride.driverArrivalTime <&> \waitingTime ->
-          secondsToMinutes (roundToIntegral waitingTime) - thresholdConfig.waitingTimeEstimatedThreshold
   fareParams <-
     calculateFareParameters
       Fare.CalculateFareParametersParams
         { farePolicy = farePolicy,
           distance = recalcDistance,
           rideTime = booking.startTime,
-          waitingTime = waitingTimeMinusThreshold,
+          waitingTime = secondsToMinutes . roundToIntegral <$> (diffUTCTime <$> ride.tripStartTime <*> ride.driverArrivalTime),
           driverSelectedFare = booking.fareParams.driverSelectedFare,
           customerExtraFee = booking.fareParams.customerExtraFee
         }

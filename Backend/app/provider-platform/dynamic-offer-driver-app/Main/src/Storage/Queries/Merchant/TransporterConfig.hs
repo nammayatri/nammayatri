@@ -74,7 +74,6 @@ update config = do
         TransporterConfigMinRidesForCancellationScore =. val config.minRidesForCancellationScore,
         TransporterConfigMediaFileUrlPattern =. val config.mediaFileUrlPattern,
         TransporterConfigMediaFileSizeUpperLimit =. val config.mediaFileSizeUpperLimit,
-        TransporterConfigWaitingTimeEstimatedThreshold =. val config.waitingTimeEstimatedThreshold,
         TransporterConfigOnboardingTryLimit =. val config.onboardingTryLimit,
         TransporterConfigOnboardingRetryTimeInHours =. val config.onboardingRetryTimeInHours,
         TransporterConfigCheckImageExtractionForDashboard =. val config.checkImageExtractionForDashboard,

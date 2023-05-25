@@ -115,8 +115,8 @@ updateFarePolicy admin fpId req = do
                         :| [],
                     deadKmFare = req.deadKmFare,
                     nightShiftCharge = ProgressiveNightShiftCharge <$> req.nightShiftCharge,
-                    waitingCharge = case farePolicy.farePolicyDetails of
-                      ProgressiveDetails det -> det.waitingCharge
+                    waitingChargeInfo = case farePolicy.farePolicyDetails of
+                      ProgressiveDetails det -> det.waitingChargeInfo
                       _ -> Nothing
                   }
           } ::
@@ -128,5 +128,4 @@ updateFarePolicy admin fpId req = do
   let otherCoordinators = filter (\coordinator -> coordinator.id /= admin.id) coordinators
   for_ otherCoordinators $ \cooridinator -> do
     Notify.notifyFarePolicyChange admin.merchantId cooridinator.id cooridinator.deviceToken
-  logTagInfo ("orgAdmin-" <> getId admin.id <> " -> updateFarePolicy : ") (show updatedFarePolicy)
   pure Success
