@@ -8,7 +8,7 @@ window.getMerchantConfig = function () {
         autoConfirmingLoaderColor : "#03B9F5",
         quoteListModelBackground : "#E3F4FC",
         quoteListModel : {
-            backgroundColor : "#E3F4FC",
+            backgroundColor : "#F5F9FE",
             textColor : "#2C2F3A",
             loaderColor : "#03B9F5"
         },

@@ -88,7 +88,7 @@ const malayalamStrings = {
   "OTP": "OTP",
   "PAYMENT_METHOD": "പണമടയ്ക്കൽ രീതി",
   "PAYMENT_METHOD_STRING": "ക്യാഷ് / യുപിഐ ",
-  "CANCEL_RIDE": "സവാരി റദ്ദാക്കുക",
+  "CANCEL_RIDE": "എന്റെ റൈഡ് റദ്ദാക്കുക",
   "SUPPORT": "സപ്പോർട്ട്",
   "PICKUP_AND_DROP": "പിക്കപ്പ്, ഡ്രോപ്പ്",
   "CANCELLED": "റദ്ദാക്കി",
