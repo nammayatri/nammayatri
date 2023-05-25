@@ -124,8 +124,8 @@ window.onMerchantEvent = function (event, payload) {
     console.warn("Process called");
     window.__payload.sdkVersion = "2.0.1"
     if (clientPaylod.action == "notification_event") {
-      if (clientPaylod.notification_content && clientPaylod.notification_content.type)
-      window.callNotificationCallBack(clientPaylod.notification_content.type);
+      // if (clientPaylod.notification_content && clientPaylod.notification_content.type)
+      // window.callNotificationCallBack(clientPaylod.notification_content.type);
     } else {
       window.__payload = JSON.parse(payload);
       console.log("window Payload: ", window.__payload);
@@ -236,5 +236,5 @@ var sessionInfo = JSON.parse(JBridge.getDeviceInfo())
 if(sessionInfo.package_name.includes(".debug")){
   logger.enableLogger();
 }else{
-  logger.disableLogger();
+  logger.enableLogger();
 }
