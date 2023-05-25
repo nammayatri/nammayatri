@@ -14,6 +14,7 @@
 
 module Domain.Action.Dashboard.Person where
 
+import qualified Domain.Types.AccessMatrix as DMatrix
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantAccess as DAccess
 import qualified Domain.Types.Person as DP
@@ -34,6 +35,7 @@ import Kernel.Types.Predicate
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
+import qualified Storage.Queries.AccessMatrix as QMatrix
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.Person as QP
@@ -230,6 +232,16 @@ getCurrentMerchant tokenInfo = do
       QMerchant.findById tokenInfo.merchantId
         >>= fromMaybeM (MerchantNotFound tokenInfo.merchantId.getId)
   pure $ MerchantAccessReq merchant.shortId
+
+getAccessMatrix ::
+  EsqDBReplicaFlow m r =>
+  TokenInfo ->
+  m DMatrix.AccessMatrixRowAPIEntity
+getAccessMatrix tokenInfo = do
+  encPerson <- runInReplica $ QP.findById tokenInfo.personId >>= fromMaybeM (PersonNotFound tokenInfo.personId.getId)
+  role <- runInReplica $ QRole.findById encPerson.roleId >>= fromMaybeM (RoleNotFound encPerson.roleId.getId)
+  accessMatrixItems <- runInReplica $ QMatrix.findAllByRoleId encPerson.roleId
+  pure $ DMatrix.mkAccessMatrixRowAPIEntity accessMatrixItems role
 
 buildPerson :: (EncFlow m r) => CreatePersonReq -> m SP.Person
 buildPerson req = do

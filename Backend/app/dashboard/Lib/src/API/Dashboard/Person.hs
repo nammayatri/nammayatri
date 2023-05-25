@@ -15,6 +15,8 @@
 module API.Dashboard.Person where
 
 import qualified Domain.Action.Dashboard.Person as DPerson
+import Domain.Types.AccessMatrix
+import qualified Domain.Types.AccessMatrix as DMatrix
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Role as DRole
 import Environment
@@ -65,6 +67,9 @@ type API =
                :> "changePassword"
                :> ReqBody '[JSON] DPerson.ChangePasswordReq
                :> Post '[JSON] APISuccess
+             :<|> "getAccessMatrix"
+               :> DashboardAuth 'DASHBOARD_USER
+               :> Get '[JSON] DMatrix.AccessMatrixRowAPIEntity
          )
 
 handler :: FlowServer API
@@ -78,6 +83,7 @@ handler =
     :<|> ( profile
              :<|> getCurrentMerchant
              :<|> changePassword
+             :<|> getAccessMatrix
          )
 
 listPerson :: TokenInfo -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler DPerson.ListPersonRes
@@ -110,3 +116,7 @@ getCurrentMerchant =
 changePassword :: TokenInfo -> DPerson.ChangePasswordReq -> FlowHandler APISuccess
 changePassword req =
   withFlowHandlerAPI . DPerson.changePassword req
+
+getAccessMatrix :: TokenInfo -> FlowHandler AccessMatrixRowAPIEntity
+getAccessMatrix =
+  withFlowHandlerAPI . DPerson.getAccessMatrix
