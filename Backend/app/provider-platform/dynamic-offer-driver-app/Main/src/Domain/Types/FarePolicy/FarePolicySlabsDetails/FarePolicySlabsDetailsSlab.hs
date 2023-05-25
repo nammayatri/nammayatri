@@ -26,7 +26,7 @@ import Kernel.Types.Common
 data FPSlabsDetailsSlabD (s :: UsageSafety) = FPSlabsDetailsSlab
   { startDistance :: Meters,
     baseFare :: Money,
-    waitingCharge :: Maybe WaitingCharge,
+    waitingChargeInfo :: Maybe WaitingChargeInfo,
     nightShiftCharge :: Maybe NightShiftCharge
   }
   deriving (Generic, Show, Eq, ToSchema)
@@ -44,7 +44,7 @@ instance ToJSON (FPSlabsDetailsSlabD 'Unsafe)
 data FPSlabsDetailsSlabAPIEntity = FPSlabsDetailsSlabAPIEntity
   { startDistance :: Meters,
     baseFare :: Money,
-    waitingCharge :: Maybe WaitingCharge,
+    waitingChargeInfo :: Maybe WaitingChargeInfo,
     nightShiftCharge :: Maybe NightShiftCharge
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)

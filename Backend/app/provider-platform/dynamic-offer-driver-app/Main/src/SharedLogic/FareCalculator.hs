@@ -138,14 +138,14 @@ calculateFareParameters params = do
       mbCustomerExtraFee = params.customerExtraFee
   id <- generateGUID
   let isNightShiftChargeIncluded = isNightShift <$> fp.nightShiftBounds <*> Just params.rideTime
-      (baseFare, nightShiftCharge, waitingCharge, fareParametersDetails) = processFarePolicyDetails fp.farePolicyDetails
+      (baseFare, nightShiftCharge, waitingChargeInfo, fareParametersDetails) = processFarePolicyDetails fp.farePolicyDetails
       (partOfNightShiftCharge, notPartOfNightShiftCharge) = countFullFareOfParamsDetails fareParametersDetails
       fullRideCost {-without govtCharges, waitingCharge, notPartOfNightShiftCharge and nightShift-} =
         baseFare
           + fromMaybe 0 fp.serviceCharge
           + partOfNightShiftCharge
   let resultNightShiftCharge = (\isCoefIncluded -> if isCoefIncluded then countNightShiftCharge fullRideCost <$> nightShiftCharge else Nothing) =<< isNightShiftChargeIncluded
-      resultWaitingCharge = countWaitingCharge =<< waitingCharge
+      resultWaitingCharge = countWaitingCharge =<< waitingChargeInfo
       fullRideCostN {-without govtCharges-} =
         fullRideCost
           + fromMaybe 0 resultNightShiftCharge
@@ -160,7 +160,7 @@ calculateFareParameters params = do
             customerExtraFee = mbCustomerExtraFee,
             serviceCharge = fp.serviceCharge,
             waitingCharge = resultWaitingCharge,
-            nightShiftCharge = Just $ fromMaybe 0 resultNightShiftCharge,
+            nightShiftCharge = Just $ fromMaybe 0 resultNightShiftCharge, -- TODO: remove fromMaybe
             nightShiftRateIfApplies = (\isCoefIncluded -> if isCoefIncluded then getNightShiftRate nightShiftCharge else Nothing) =<< isNightShiftChargeIncluded, -- Temp fix :: have to fix properly
             ..
           }
@@ -178,7 +178,7 @@ calculateFareParameters params = do
           mbExtraKmFare = processFPProgressiveDetailsPerExtraKmFare perExtraKmRateSections <$> mbExtraDistance
       ( baseFare,
         nightShiftCharge,
-        waitingCharge,
+        waitingChargeInfo,
         DFParams.ProgressiveDetails $
           DFParams.FParamsProgressiveDetails
             { extraKmFare = mbExtraKmFare,
@@ -201,7 +201,7 @@ calculateFareParameters params = do
         getPerExtraMRate perExtraKmRate = realToFrac @_ @Float perExtraKmRate / 1000
 
     processFPSlabsDetailsSlab DFP.FPSlabsDetailsSlab {..} = do
-      (baseFare, nightShiftCharge, waitingCharge, DFParams.SlabDetails DFParams.FParamsSlabDetails)
+      (baseFare, nightShiftCharge, waitingChargeInfo, DFParams.SlabDetails DFParams.FParamsSlabDetails)
 
     countNightShiftCharge fullRideCost nightShiftCharge = do
       case nightShiftCharge of
@@ -214,11 +214,13 @@ calculateFareParameters params = do
         Just (ProgressiveNightShiftCharge charge) -> (Just . realToFrac) charge
         _ -> Nothing
 
-    countWaitingCharge :: WaitingCharge -> Maybe Money
-    countWaitingCharge waitingCharge = do
-      case waitingCharge of
-        PerMinuteWaitingCharge charge -> (\waitingTime -> roundToIntegral $ fromIntegral waitingTime * charge) <$> params.waitingTime
-        ConstantWaitingCharge charge -> Just charge
+    countWaitingCharge :: WaitingChargeInfo -> Maybe Money
+    countWaitingCharge waitingChargeInfo = do
+      let waitingTimeMinusFreeWatingTime = params.waitingTime <&> (\wt -> (-) wt waitingChargeInfo.freeWaitingTime)
+      let chargedWaitingTime = if waitingTimeMinusFreeWatingTime < Just 0 then Nothing else waitingTimeMinusFreeWatingTime
+      case waitingChargeInfo.waitingCharge of
+        PerMinuteWaitingCharge charge -> (\waitingTime -> roundToIntegral $ fromIntegral waitingTime * charge) <$> chargedWaitingTime
+        ConstantWaitingCharge charge -> if isJust chargedWaitingTime then Just charge else Nothing
 
 countFullFareOfParamsDetails :: DFParams.FareParametersDetails -> (Money, Money)
 countFullFareOfParamsDetails = \case

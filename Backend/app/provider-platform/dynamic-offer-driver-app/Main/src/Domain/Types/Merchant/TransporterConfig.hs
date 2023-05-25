@@ -37,7 +37,6 @@ data TransporterConfigD u = TransporterConfig
     minRidesToUnlist :: Maybe Int,
     mediaFileUrlPattern :: Text,
     mediaFileSizeUpperLimit :: Int,
-    waitingTimeEstimatedThreshold :: Minutes,
     referralLinkPassword :: Text,
     fcmConfig :: FCMConfig,
     onboardingTryLimit :: Int,

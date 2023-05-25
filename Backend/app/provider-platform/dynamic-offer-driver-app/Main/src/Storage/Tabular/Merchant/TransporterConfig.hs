@@ -46,7 +46,6 @@ mkPersist
       minRidesToUnlist Int Maybe
       mediaFileUrlPattern Text
       mediaFileSizeUpperLimit Int
-      waitingTimeEstimatedThreshold Minutes
       referralLinkPassword Text
       fcmUrl Text
       fcmServiceAccount Text

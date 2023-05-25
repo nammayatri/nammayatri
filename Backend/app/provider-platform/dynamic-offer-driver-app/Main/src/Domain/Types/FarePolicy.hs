@@ -37,7 +37,7 @@ data FarePolicyD (s :: UsageSafety) = FarePolicy
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
-  deriving (Generic, Show, Eq)
+  deriving (Generic)
 
 type FarePolicy = FarePolicyD 'Safe
 
@@ -46,7 +46,7 @@ instance FromJSON (FarePolicyD 'Unsafe)
 instance ToJSON (FarePolicyD 'Unsafe)
 
 data FarePolicyDetailsD (s :: UsageSafety) = ProgressiveDetails (FPProgressiveDetailsD s) | SlabsDetails (FPSlabsDetailsD s)
-  deriving (Generic, Show, Eq)
+  deriving (Generic)
 
 type FarePolicyDetails = FarePolicyDetailsD 'Safe
 

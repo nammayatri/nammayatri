@@ -84,10 +84,10 @@ buildEstimate transactionId startTime dist farePolicy = do
     mkPrice = DEst.EstimateBreakupPrice currency
     mkBreakupItem = DEst.EstimateBreakup
     makeWaitingCharges = do
-      let waitingCharge = case farePolicy.farePolicyDetails of
-            SlabsDetails det -> (findFPSlabsDetailsSlabByDistance dist det.slabs).waitingCharge
-            ProgressiveDetails det -> det.waitingCharge
-      let (mbWaitingChargePerMin, mbWaitingOrPickupCharges) = case waitingCharge of
+      let waitingChargeInfo = case farePolicy.farePolicyDetails of
+            SlabsDetails det -> (findFPSlabsDetailsSlabByDistance dist det.slabs).waitingChargeInfo
+            ProgressiveDetails det -> det.waitingChargeInfo
+      let (mbWaitingChargePerMin, mbWaitingOrPickupCharges) = case waitingChargeInfo <&> (.waitingCharge) of
             Just (PerMinuteWaitingCharge charge) -> (Just $ roundToIntegral charge, Nothing)
             Just (ConstantWaitingCharge charge) -> (Nothing, Just charge)
             Nothing -> (Nothing, Nothing)
