@@ -4050,8 +4050,8 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                 String value = fare.getString("price");
                 String fareTypes = fare.getString("title");
                 TextView textViewText = new TextView(context);
-                textViewText.setTextSize(5);
-                textViewText.setTextColor(Color.parseColor("#454545"));
+                textViewText.setTextSize(6);
+                textViewText.setTextColor(Color.parseColor("#6D7280"));
                 textViewText.setPadding(0, 0, 0, 10);
                 Typeface typeface = Typeface.createFromAsset(context.getAssets(), "fonts/PlusJakartaSans-Regular.ttf");
                 textViewText.setTypeface(typeface);
@@ -4060,7 +4060,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                 linearLayout.addView(linearLayoutChild);
 
                 TextView textViewPrice = new TextView(context);
-                textViewPrice.setTextSize(5);
+                textViewPrice.setTextSize(6);
                 textViewPrice.setPadding(0, 0, 0, 10);
                 Typeface font = Typeface.createFromAsset(context.getAssets(), "fonts/PlusJakartaSans-Regular.ttf");
                 textViewPrice.setTypeface(font);

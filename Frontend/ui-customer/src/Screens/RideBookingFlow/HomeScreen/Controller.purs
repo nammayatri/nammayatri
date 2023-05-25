@@ -61,7 +61,7 @@ import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os)
-import Helpers.Utils (Merchant(..), addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getExpiryTime, getLocationName, parseNewContacts, saveRecents, setText', updateInputString, withinTimeRange, getMerchant)
+import Helpers.Utils (Merchant(..), addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getExpiryTime, getLocationName, parseNewContacts, saveRecents, setText', updateInputString, withinTimeRange, getMerchant, convertUTCtoISC, getCurrentUTC)
 import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
@@ -1833,7 +1833,7 @@ estimatesFlow estimatedQuotes state = do
       nightShiftMultiplier = case nightShiftRate of
         Just a -> fromMaybe 0.0 (a ^. _nightShiftMultiplier)
         Nothing -> 0.0
-      nightCharges = withinTimeRange nightShiftStart nightShiftEnd
+      nightCharges = withinTimeRange nightShiftStart nightShiftEnd (convertUTCtoISC(getCurrentUTC "") "HH:mm:ss")
       baseFare = case (head (filter (\a -> a ^. _title == "BASE_DISTANCE_FARE") estimateFareBreakup)) of
         Just a -> round $ (toNumber $ a ^. _price) * (if nightCharges then nightShiftMultiplier else 1.0)
         Nothing -> 0

@@ -95,4 +95,5 @@ dummyIndividualCard = {
   , extraDistance : "0 km"
   , referenceString : ""
   , isSpecialZone : false
+  , nightCharges : false
 }

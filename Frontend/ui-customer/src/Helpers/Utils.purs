@@ -84,7 +84,7 @@ import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 --         Nothing -> pure []
 foreign import shuffle :: forall a. Array a -> Array a
 
-foreign import withinTimeRange :: String -> String -> Boolean
+foreign import withinTimeRange :: String -> String -> String -> Boolean
 
 foreign import getNewTrackingId :: Unit -> String
 
