@@ -66,18 +66,18 @@ stuckBookingsCancel merchantShortId req = do
   let stuckDriverIds = cast @DP.Person @DP.Driver <$> stuckPersonIds
   -- drivers going out of ride, update location from redis to db
   driverLocations <- catMaybes <$> traverse SDrLoc.findById stuckPersonIds
-  Esq.runTransaction $ do
-    (QRide.updateStatusByIds (stuckRideItems <&> (.rideId)) DRide.CANCELLED)
-    (QBooking.cancelBookings allStuckBookingIds now)
-    for_ (bcReasons <> bcReasonsWithRides) QBCR.upsert
-    for_ driverLocations $ \location -> do
-      let latLong = LatLong location.lat location.lon
-      QDrLoc.upsertGpsCoord location.driverId latLong location.coordinatesCalculatedAt
-    CQDrInfo.updateNotOnRideMultiple stuckDriverIds
-    for_ stuckRideItems $ \item -> do
-      if item.driverActive
-        then QDFS.updateStatus item.driverId DDFS.ACTIVE
-        else QDFS.updateStatus item.driverId DDFS.IDLE
+  -- Esq.runTransaction $ do
+  _ <- (QRide.updateStatusByIds (stuckRideItems <&> (.rideId)) DRide.CANCELLED)
+  _ <- (QBooking.cancelBookings allStuckBookingIds now)
+  for_ (bcReasons <> bcReasonsWithRides) QBCR.upsert
+  for_ driverLocations $ \location -> do
+    let latLong = LatLong location.lat location.lon
+    QDrLoc.upsertGpsCoord location.driverId latLong location.coordinatesCalculatedAt
+  _ <- CQDrInfo.updateNotOnRideMultiple stuckDriverIds
+  for_ stuckRideItems $ \item -> do
+    if item.driverActive
+      then QDFS.updateStatus item.driverId DDFS.ACTIVE
+      else QDFS.updateStatus item.driverId DDFS.IDLE
   for_ stuckDriverIds CQDrInfo.clearDriverInfoCache
   for_ stuckPersonIds SRide.clearCache
   logTagInfo "dashboard -> stuckBookingsCancel: " $ show allStuckBookingIds

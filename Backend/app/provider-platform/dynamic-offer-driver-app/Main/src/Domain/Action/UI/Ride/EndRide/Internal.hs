@@ -75,19 +75,20 @@ endRideTransaction driverId bookingId ride mbFareParams mbRiderDetailsId = do
             driver <- SQP.findById referredDriverId >>= fromMaybeM (PersonNotFound referredDriverId.getId)
             sendNotificationToDriver driver.merchantId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage driver.id driver.deviceToken
           Nothing -> pure ()
-  Esq.runTransaction $ do
-    whenJust mbRiderDetails $ \riderDetails ->
-      when shouldUpdateRideComplete (void $ QRD.updateHasTakenValidRide riderDetails.id)
-    whenJust mbFareParams (void $ QFare.create)
-    QRide.updateAll ride.id ride
-    QRide.updateStatus ride.id Ride.COMPLETED
-    QRB.updateStatus bookingId SRB.COMPLETED
-    DriverStats.updateIdleTime driverId
-    DriverStats.incrementTotalRidesAndTotalDist (cast ride.driverId) (fromMaybe 0 ride.chargeableDistance)
+  -- Esq.runTransaction $ do
+  whenJust mbRiderDetails $ \riderDetails ->
+    when shouldUpdateRideComplete (void $ QRD.updateHasTakenValidRide riderDetails.id)
+  whenJust mbFareParams QFare.create
+  _ <- QRide.updateAll ride.id ride
+  _ <- QRide.updateStatus ride.id Ride.COMPLETED
+  _ <- QRB.updateStatus bookingId SRB.COMPLETED
+  _ <- DriverStats.updateIdleTime driverId
+  _ <- DriverStats.incrementTotalRidesAndTotalDist (cast ride.driverId) (fromMaybe 0 ride.chargeableDistance)
+  _ <-
     if driverInfo.active
       then QDFS.updateStatus ride.driverId DDFS.ACTIVE
       else QDFS.updateStatus ride.driverId DDFS.IDLE
-  DLoc.updateOnRide driverId False
+  _ <- DLoc.updateOnRide driverId False
   SRide.clearCache $ cast driverId
 
 putDiffMetric :: (Metrics.HasBPPMetrics m r, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Money -> Meters -> m ()

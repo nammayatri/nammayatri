@@ -36,35 +36,35 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.Vehicle as BeamV
 import Storage.Tabular.Vehicle
 
-create :: Vehicle -> SqlDB ()
-create = Esq.create
+-- create :: Vehicle -> SqlDB ()
+-- create = Esq.create
 
-create' :: L.MonadFlow m => Vehicle -> m (MeshResult ())
-create' vehicle = do
+create :: L.MonadFlow m => Vehicle -> m (MeshResult ())
+create vehicle = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainVehicleToBeam vehicle)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-upsert :: Vehicle -> SqlDB ()
-upsert a@Vehicle {..} =
-  Esq.upsert
-    a
-    [ VehicleDriverId =. val (toKey driverId),
-      VehicleCapacity =. val capacity,
-      VehicleCategory =. val category,
-      VehicleMake =. val make,
-      VehicleModel =. val model,
-      VehicleSize =. val size,
-      VehicleVariant =. val variant,
-      VehicleColor =. val color,
-      VehicleEnergyType =. val energyType,
-      VehicleRegistrationCategory =. val registrationCategory,
-      VehicleUpdatedAt =. val updatedAt
-    ]
+-- upsert :: Vehicle -> SqlDB ()
+-- upsert a@Vehicle {..} =
+--   Esq.upsert
+--     a
+--     [ VehicleDriverId =. val (toKey driverId),
+--       VehicleCapacity =. val capacity,
+--       VehicleCategory =. val category,
+--       VehicleMake =. val make,
+--       VehicleModel =. val model,
+--       VehicleSize =. val size,
+--       VehicleVariant =. val variant,
+--       VehicleColor =. val color,
+--       VehicleEnergyType =. val energyType,
+--       VehicleRegistrationCategory =. val registrationCategory,
+--       VehicleUpdatedAt =. val updatedAt
+--     ]
 
-upsert' :: L.MonadFlow m => Vehicle -> m ()
-upsert' a@Vehicle {..} = do
+upsert :: L.MonadFlow m => Vehicle -> m ()
+upsert a@Vehicle {..} = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
@@ -97,28 +97,28 @@ findById (Id driverId) = do
     Just dbCOnf' -> either (pure Nothing) (transformBeamVehicleToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamV.driverId $ Se.Eq driverId]
     Nothing -> pure Nothing
 
-updateVehicleRec :: Vehicle -> SqlDB ()
-updateVehicleRec vehicle = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ VehicleCapacity =. val vehicle.capacity,
-        VehicleCategory =. val vehicle.category,
-        VehicleMake =. val vehicle.make,
-        VehicleModel =. val vehicle.model,
-        VehicleSize =. val vehicle.size,
-        VehicleVariant =. val vehicle.variant,
-        VehicleColor =. val vehicle.color,
-        VehicleEnergyType =. val vehicle.energyType,
-        VehicleRegistrationNo =. val vehicle.registrationNo,
-        VehicleRegistrationCategory =. val vehicle.registrationCategory,
-        VehicleUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. VehicleTId ==. val (toKey vehicle.driverId)
+-- updateVehicleRec :: Vehicle -> SqlDB ()
+-- updateVehicleRec vehicle = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ VehicleCapacity =. val vehicle.capacity,
+--         VehicleCategory =. val vehicle.category,
+--         VehicleMake =. val vehicle.make,
+--         VehicleModel =. val vehicle.model,
+--         VehicleSize =. val vehicle.size,
+--         VehicleVariant =. val vehicle.variant,
+--         VehicleColor =. val vehicle.color,
+--         VehicleEnergyType =. val vehicle.energyType,
+--         VehicleRegistrationNo =. val vehicle.registrationNo,
+--         VehicleRegistrationCategory =. val vehicle.registrationCategory,
+--         VehicleUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. VehicleTId ==. val (toKey vehicle.driverId)
 
-updateVehicleRec' :: (L.MonadFlow m, MonadTime m) => Vehicle -> m (MeshResult ())
-updateVehicleRec' vehicle = do
+updateVehicleRec :: (L.MonadFlow m, MonadTime m) => Vehicle -> m (MeshResult ())
+updateVehicleRec vehicle = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   now <- getCurrentTime
   case dbConf of
@@ -141,11 +141,11 @@ updateVehicleRec' vehicle = do
         [Se.Is BeamV.driverId (Se.Eq $ getId vehicle.driverId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-deleteById :: Id Person -> SqlDB ()
-deleteById = Esq.deleteByKey @VehicleT
+-- deleteById :: Id Person -> SqlDB ()
+-- deleteById = Esq.deleteByKey @VehicleT
 
-deleteById' :: L.MonadFlow m => Id Person -> m ()
-deleteById' (Id driverId) = do
+deleteById :: L.MonadFlow m => Id Person -> m ()
+deleteById (Id driverId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' ->
@@ -156,17 +156,17 @@ deleteById' (Id driverId) = do
           [Se.Is BeamV.driverId (Se.Eq driverId)]
     Nothing -> pure ()
 
-findByAnyOf :: Transactionable m => Maybe Text -> Maybe (Id Person) -> m (Maybe Vehicle)
-findByAnyOf registrationNoM vehicleIdM =
-  Esq.findOne $ do
-    vehicle <- from $ table @VehicleT
-    where_ $
-      whenJust_ vehicleIdM (\vehicleId -> vehicle ^. VehicleTId ==. val (toKey vehicleId))
-        &&. whenJust_ registrationNoM (\regNum -> vehicle ^. VehicleRegistrationNo ==. val regNum)
-    return vehicle
+-- findByAnyOf :: Transactionable m => Maybe Text -> Maybe (Id Person) -> m (Maybe Vehicle)
+-- findByAnyOf registrationNoM vehicleIdM =
+--   Esq.findOne $ do
+--     vehicle <- from $ table @VehicleT
+--     where_ $
+--       whenJust_ vehicleIdM (\vehicleId -> vehicle ^. VehicleTId ==. val (toKey vehicleId))
+--         &&. whenJust_ registrationNoM (\regNum -> vehicle ^. VehicleRegistrationNo ==. val regNum)
+--     return vehicle
 
-findByAnyOf' :: L.MonadFlow m => Maybe Text -> Maybe (Id Person) -> m (Maybe Vehicle)
-findByAnyOf' registrationNoM vehicleIdM = do
+findByAnyOf :: L.MonadFlow m => Maybe Text -> Maybe (Id Person) -> m (Maybe Vehicle)
+findByAnyOf registrationNoM vehicleIdM = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' ->
@@ -218,18 +218,18 @@ findAllByVariantRegNumMerchantId variantM mbRegNum limit' offset' merchantId = d
 --       [Se.And ([Se.Is BeamV.merchantId $ Se.Eq merchantId] <> if isJust variantM then [Se.Is BeamV.variant $ Se.Eq (fromJust variantM)] else [] <> if isJust mbRegNum then [Se.Is BeamV.registrationNo $ Se.Eq (fromJust mbRegNum)] else [])] (Se.Desc BeamV.createdAt) (Just limitVal) (Just offsetVal)
 --     Nothing -> pure []
 
-findByRegistrationNo ::
-  Transactionable m =>
-  Text ->
-  m (Maybe Vehicle)
-findByRegistrationNo registrationNo =
-  Esq.findOne $ do
-    vehicle <- from $ table @VehicleT
-    where_ $ vehicle ^. VehicleRegistrationNo ==. val registrationNo
-    return vehicle
+-- findByRegistrationNo ::
+--   Transactionable m =>
+--   Text ->
+--   m (Maybe Vehicle)
+-- findByRegistrationNo registrationNo =
+--   Esq.findOne $ do
+--     vehicle <- from $ table @VehicleT
+--     where_ $ vehicle ^. VehicleRegistrationNo ==. val registrationNo
+--     return vehicle
 
-findByRegistrationNo' :: (MonadFlow m) => Text -> m (Maybe Vehicle)
-findByRegistrationNo' registrationNo = do
+findByRegistrationNo :: (MonadFlow m) => Text -> m (Maybe Vehicle)
+findByRegistrationNo registrationNo = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamVehicleToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamV.registrationNo $ Se.Eq registrationNo]

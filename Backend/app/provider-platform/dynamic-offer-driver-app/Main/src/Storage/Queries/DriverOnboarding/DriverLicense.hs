@@ -42,21 +42,21 @@ create driverLicense = do
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainDriverLicenseToBeam driverLicense)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-upsert :: DriverLicense -> SqlDB ()
-upsert a@DriverLicense {..} =
-  Esq.upsert
-    a
-    [ DriverLicenseDriverDob =. val driverDob,
-      DriverLicenseDriverName =. val driverName,
-      DriverLicenseLicenseExpiry =. val licenseExpiry,
-      DriverLicenseClassOfVehicles =. val (PostgresList classOfVehicles),
-      DriverLicenseVerificationStatus =. val verificationStatus,
-      DriverLicenseFailedRules =. val (PostgresList failedRules),
-      DriverLicenseUpdatedAt =. val updatedAt
-    ]
+-- upsert :: DriverLicense -> SqlDB ()
+-- upsert a@DriverLicense {..} =
+--   Esq.upsert
+--     a
+--     [ DriverLicenseDriverDob =. val driverDob,
+--       DriverLicenseDriverName =. val driverName,
+--       DriverLicenseLicenseExpiry =. val licenseExpiry,
+--       DriverLicenseClassOfVehicles =. val (PostgresList classOfVehicles),
+--       DriverLicenseVerificationStatus =. val verificationStatus,
+--       DriverLicenseFailedRules =. val (PostgresList failedRules),
+--       DriverLicenseUpdatedAt =. val updatedAt
+--     ]
 
-upsert' :: L.MonadFlow m => DriverLicense -> m ()
-upsert' a@DriverLicense {..} = do
+upsert :: L.MonadFlow m => DriverLicense -> m ()
+upsert a@DriverLicense {..} = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
@@ -79,11 +79,11 @@ upsert' a@DriverLicense {..} = do
         else void $ KV.createWoReturingKVConnector dbCOnf' Mesh.meshConfig (transformDomainDriverLicenseToBeam a)
     Nothing -> pure ()
 
-findById ::
-  Transactionable m =>
-  Id DriverLicense ->
-  m (Maybe DriverLicense)
-findById = Esq.findById
+-- findById ::
+--   Transactionable m =>
+--   Id DriverLicense ->
+--   m (Maybe DriverLicense)
+-- findById = Esq.findById
 
 findById :: L.MonadFlow m => Id DriverLicense -> m (Maybe DriverLicense)
 findById (Id dlId) = do

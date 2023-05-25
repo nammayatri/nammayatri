@@ -40,12 +40,12 @@ import qualified Storage.Tabular.VechileNew as VN
 --       ProgressiveDetailsT fppdt -> Esq.create' fppdt
 --       SlabDetailsT -> return ()
 
-create :: L.MonadFlow m => DFP.FareParameters -> m (MeshResult ())
+create :: L.MonadFlow m => DFP.FareParameters -> m ()
 create fareParameters = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainFareParametersToBeam fareParameters)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+    Just dbConf' -> void $ KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainFareParametersToBeam fareParameters)
+    Nothing -> pure ()
 
 -- findById :: Transactionable m => Id FareParameters -> m (Maybe FareParameters)
 -- findById fareParametersId = buildDType $ do

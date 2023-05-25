@@ -160,7 +160,7 @@ verifyRCFlow person imageExtraction rcNumber imageId dateOfRegistration = do
     Verification.verifyRCAsync person.merchantId $
       Verification.VerifyRCAsyncReq {rcNumber}
   idfyVerificationEntity <- mkIdfyVerificationEntity verifyRes.requestId now imageExtractionValidation encryptedRC
-  runTransaction $ IVQuery.create idfyVerificationEntity
+  _ <- IVQuery.create idfyVerificationEntity
   where
     mkIdfyVerificationEntity requestId now imageExtractionValidation encryptedRC = do
       id <- generateGUID
@@ -209,9 +209,9 @@ onVerifyRC verificationReq output = do
           mRCAssociation <- DAQuery.getActiveAssociationByRC rc.id
           when (isNothing mRCAssociation) $ do
             currAssoc <- DAQuery.getActiveAssociationByDriver person.id
-            when (isJust currAssoc) $ do runTransaction $ DAQuery.endAssociation person.id
+            when (isJust currAssoc) $ DAQuery.endAssociation person.id
             driverRCAssoc <- mkAssociation person.id rc.id
-            runTransaction $ DAQuery.create driverRCAssoc
+            _ <- DAQuery.create driverRCAssoc
           return Ack
         _ -> return Ack
   where

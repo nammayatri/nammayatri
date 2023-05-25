@@ -128,7 +128,7 @@ updateVehicle admin driverId req = do
                 registrationCategory = req.registrationCategory <|> vehicle.registrationCategory
                }
 
-  Esq.runTransaction $ QV.updateVehicleRec updatedVehicle
+  _ <- QV.updateVehicleRec updatedVehicle
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> updateVehicle : ") (show updatedVehicle)
   return $ SV.makeVehicleAPIEntity updatedVehicle
 
@@ -138,10 +138,8 @@ getVehicle personId registrationNoM vehicleIdM = do
   -- Esq.runInReplica $
   vehicle <- case (registrationNoM, vehicleIdM) of
     (Nothing, Nothing) -> throwError $ InvalidRequest "You should pass registration number and vehicle id."
-    _ ->
-      Esq.runInReplica $
-        QV.findByAnyOf registrationNoM vehicleIdM
-          >>= fromMaybeM (VehicleDoesNotExist personId.getId)
+    _ -> QV.findByAnyOf registrationNoM vehicleIdM >>= fromMaybeM (VehicleDoesNotExist personId.getId)
+  -- Esq.runInReplica $
   hasAccess user vehicle
   return . GetVehicleRes $ SV.makeVehicleAPIEntity vehicle
   where

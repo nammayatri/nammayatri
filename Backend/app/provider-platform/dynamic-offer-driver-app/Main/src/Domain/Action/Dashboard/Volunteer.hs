@@ -36,7 +36,8 @@ bookingInfo :: ShortId DM.Merchant -> Text -> Flow Common.BookingInfoResponse
 bookingInfo merchantShortId otpCode = do
   merchant <- findMerchantByShortId merchantShortId
   now <- getCurrentTime
-  booking <- runInReplica $ QBooking.findBookingBySpecialZoneOTP merchant.id otpCode now >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp otpCode)
+  -- booking <- runInReplica $ QBooking.findBookingBySpecialZoneOTP merchant.id otpCode now >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp otpCode)
+  booking <- QBooking.findBookingBySpecialZoneOTP merchant.id otpCode now >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp otpCode)
   return $ buildMessageInfoResponse booking
   where
     buildMessageInfoResponse Domain.Booking {..} =
@@ -64,7 +65,8 @@ bookingInfo merchantShortId otpCode = do
 assignCreateAndStartOtpRide :: ShortId DM.Merchant -> Common.AssignCreateAndStartOtpRideAPIReq -> Flow APISuccess
 assignCreateAndStartOtpRide _ Common.AssignCreateAndStartOtpRideAPIReq {..} = do
   requestor <- findPerson (cast driverId)
-  booking <- runInReplica $ QBooking.findById (cast bookingId) >>= fromMaybeM (BookingNotFound bookingId.getId)
+  -- booking <- runInReplica $ QBooking.findById (cast bookingId) >>= fromMaybeM (BookingNotFound bookingId.getId)
+  booking <- QBooking.findById (cast bookingId) >>= fromMaybeM (BookingNotFound bookingId.getId)
   rideOtp <- booking.specialZoneOtpCode & fromMaybeM (InternalError "otpCode not found for special zone booking")
 
   ride <- DRide.otpRideCreate requestor rideOtp booking

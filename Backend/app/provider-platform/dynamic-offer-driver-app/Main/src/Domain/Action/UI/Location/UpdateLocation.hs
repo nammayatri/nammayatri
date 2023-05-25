@@ -85,10 +85,8 @@ buildUpdateLocationHandle ::
   Id Person.Person ->
   Flow (UpdateLocationHandle Flow)
 buildUpdateLocationHandle driverId = do
-  driver <-
-    runInReplica $
-      QP.findById driverId
-        >>= fromMaybeM (PersonNotFound driverId.getId)
+  driver <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  -- runInReplica $
   defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler driver.merchantId False
   pure $
     UpdateLocationHandle

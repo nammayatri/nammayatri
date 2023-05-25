@@ -64,8 +64,10 @@ confirm transporterId (SignatureAuthResult _ subscriber) req =
         DBooking.NormalBooking -> do
           ride <- dConfirmRes.ride & fromMaybeM (RideNotFound dConfirmRes.booking.id.getId)
           now <- getCurrentTime
-          driverQuote <- runInReplica $ QDQ.findById (Id dConfirmRes.booking.quoteId) >>= fromMaybeM (QuoteNotFound dConfirmRes.booking.quoteId)
-          driver <- runInReplica $ QPerson.findById driverQuote.driverId >>= fromMaybeM (PersonNotFound driverQuote.driverId.getId)
+          -- driverQuote <- runInReplica $ QDQ.findById (Id dConfirmRes.booking.quoteId) >>= fromMaybeM (QuoteNotFound dConfirmRes.booking.quoteId)
+          driverQuote <- QDQ.findById (Id dConfirmRes.booking.quoteId) >>= fromMaybeM (QuoteNotFound dConfirmRes.booking.quoteId)
+          -- driver <- runInReplica $ QPerson.findById driverQuote.driverId >>= fromMaybeM (PersonNotFound driverQuote.driverId.getId)
+          driver <- QPerson.findById driverQuote.driverId >>= fromMaybeM (PersonNotFound driverQuote.driverId.getId)
           fork "on_confirm/on_update" $ do
             handle (errHandler dConfirmRes transporter (Just driver)) $ do
               onConfirmMessage <- ACL.buildOnConfirmMessage now dConfirmRes

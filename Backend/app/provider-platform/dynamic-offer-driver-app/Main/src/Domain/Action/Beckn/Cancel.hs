@@ -87,13 +87,13 @@ cancel merchantId _ req = do
   unless (merchantId' == merchantId) $ throwError AccessDenied
   mbRide <- QRide.findActiveByRBId req.bookingId
   bookingCR <- buildBookingCancellationReason
-  Esq.runTransaction $ do
-    QBCR.upsert bookingCR
-    QRB.updateStatus booking.id SRB.CANCELLED
-    whenJust mbRide $ \ride -> do
-      QRide.updateStatus ride.id SRide.CANCELLED
-      driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-      QDFS.updateStatus ride.driverId $ DMode.getDriverStatus driverInfo.mode driverInfo.active
+  -- Esq.runTransaction $ do
+  QBCR.upsert bookingCR
+  _ <- QRB.updateStatus booking.id SRB.CANCELLED
+  whenJust mbRide $ \ride -> do
+    _ <- QRide.updateStatus ride.id SRide.CANCELLED
+    driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+    QDFS.updateStatus ride.driverId $ DMode.getDriverStatus driverInfo.mode driverInfo.active
   whenJust mbRide $ \ride -> do
     SRide.clearCache $ cast ride.driverId
     void $ (DLoc.updateOnRide (cast ride.driverId) False)
@@ -135,9 +135,9 @@ cancelSearch merchantId _ req = do
   CS.lockSearchRequest searchRequestId
   driverSearchReqs <- QSRD.findAllActiveBySRId searchRequestId
   logTagInfo ("transactionId-" <> transactionId) "Search Request Cancellation"
-  DB.runTransaction $ do
-    QSR.updateStatus searchRequestId DSR.CANCELLED
-    QSRD.setInactiveBySRId searchRequestId
+  -- DB.runTransaction $ do
+  _ <- QSR.updateStatus searchRequestId DSR.CANCELLED
+  _ <- QSRD.setInactiveBySRId searchRequestId
   for_ driverSearchReqs $ \driverReq -> do
     driver_ <- QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
     Notify.notifyOnCancelSearchRequest merchantId driverReq.driverId driver_.deviceToken searchRequestId

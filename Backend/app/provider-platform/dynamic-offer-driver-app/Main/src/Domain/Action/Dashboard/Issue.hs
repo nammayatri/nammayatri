@@ -83,9 +83,11 @@ issueInfo :: ShortId DM.Merchant -> Id DIR.IssueReport -> Flow Common.IssueInfoR
 issueInfo _merchantShortId issueReportId = do
   issueReport <- Esq.runInReplica $ QIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
   mediaFiles <- CQMF.findAllInForIssueReportId issueReport.mediaFiles issueReportId
-  comments <- Esq.runInReplica (QC.findAllByIssueReportId issueReport.id)
+  -- comments <- Esq.runInReplica (QC.findAllByIssueReportId issueReport.id)
+  comments <- QC.findAllByIssueReportId issueReport.id
   category <- CQIC.findById issueReport.categoryId >>= fromMaybeM (IssueCategoryNotFound issueReport.categoryId.getId)
-  driverDetail <- mapM mkDriverDetail =<< Esq.runInReplica (QP.findById issueReport.driverId)
+  -- driverDetail <- mapM mkDriverDetail =<< Esq.runInReplica (QP.findById issueReport.driverId)
+  driverDetail <- mapM mkDriverDetail =<< QP.findById issueReport.driverId
   option <- mapM (\optionId -> CQIO.findById optionId >>= fromMaybeM (IssueOptionNotFound optionId.getId)) issueReport.optionId
   pure $
     Common.IssueInfoRes
@@ -144,26 +146,27 @@ issueUpdate _merchantShortId issueReportId req = do
     throwError $ InvalidRequest "Empty request, no fields to update."
   issueReport <- CQIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
   Esq.runTransaction $ QIR.updateStatusAssignee issueReportId (toDomainIssueStatus <$> req.status) req.assignee
-  whenJust req.assignee (void $ mkIssueAssigneeUpdateComment)
+  whenJust req.assignee mkIssueAssigneeUpdateComment
   CQIR.invalidateIssueReportCache (Just issueReportId) (Just issueReport.driverId)
   pure Success
   where
     mkIssueAssigneeUpdateComment assignee = do
       id <- generateGUID
       now <- getCurrentTime
-      QC.create $
-        DC.Comment
-          { id,
-            issueReportId,
-            authorId = cast req.userId,
-            comment = "Assignee Updated : " <> assignee,
-            createdAt = now
-          }
+      void $
+        QC.create $
+          DC.Comment
+            { id,
+              issueReportId,
+              authorId = cast req.userId,
+              comment = "Assignee Updated : " <> assignee,
+              createdAt = now
+            }
 
 issueAddComment :: ShortId DM.Merchant -> Id DIR.IssueReport -> Common.IssueAddCommentByUserReq -> Flow APISuccess
 issueAddComment _merchantShortId issueReportId req = do
   void $ CQIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
-  Esq.runTransaction $ QC.create =<< mkComment
+  _ <- QC.create =<< mkComment
   pure Success
   where
     mkComment = do

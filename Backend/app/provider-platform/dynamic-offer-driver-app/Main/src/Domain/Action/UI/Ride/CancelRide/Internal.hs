@@ -122,14 +122,14 @@ cancelRideTransaction ::
   m ()
 cancelRideTransaction bookingId ride bookingCReason = do
   let driverId = cast ride.driverId
-  DLoc.updateOnRide driverId False
+  _ <- DLoc.updateOnRide driverId False
   driverInfo <- CDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-  Esq.runTransaction $ do
-    when (bookingCReason.source == SBCR.ByDriver) $ QDriverStats.updateIdleTime driverId
-    QRide.updateStatus ride.id DRide.CANCELLED
-    QRB.updateStatus bookingId SRB.CANCELLED
-    QBCR.upsert bookingCReason
-    QDFS.updateStatus ride.driverId $ DMode.getDriverStatus driverInfo.mode driverInfo.active
+  -- Esq.runTransaction $ do
+  when (bookingCReason.source == SBCR.ByDriver) $ QDriverStats.updateIdleTime driverId
+  _ <- QRide.updateStatus ride.id DRide.CANCELLED
+  _ <- QRB.updateStatus bookingId SRB.CANCELLED
+  QBCR.upsert bookingCReason
+  _ <- QDFS.updateStatus ride.driverId $ DMode.getDriverStatus driverInfo.mode driverInfo.active
   SRide.clearCache ride.driverId
 
 repeatSearch ::

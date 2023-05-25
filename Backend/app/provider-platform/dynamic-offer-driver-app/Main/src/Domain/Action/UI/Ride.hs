@@ -120,8 +120,10 @@ listDriverRides ::
 listDriverRides driverId mbLimit mbOffset mbOnlyActive mbRideStatus = do
   rides <- runInReplica $ QRide.findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus
   driverRideLis <- forM rides $ \(ride, booking) -> do
-    rideDetail <- runInReplica $ QRD.findById ride.id >>= fromMaybeM (VehicleNotFound driverId.getId)
-    rideRating <- runInReplica $ QR.findRatingForRide ride.id
+    -- rideDetail <- runInReplica $ QRD.findById ride.id >>= fromMaybeM (VehicleNotFound driverId.getId)
+    rideDetail <- QRD.findById ride.id >>= fromMaybeM (VehicleNotFound driverId.getId)
+    -- rideRating <- runInReplica $ QR.findRatingForRide ride.id
+    rideRating <- QR.findRatingForRide ride.id
     driverNumber <- RD.getDriverNumber rideDetail
     mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
     pure $ mkDriverRideRes rideDetail driverNumber rideRating mbExophone (ride, booking)
@@ -166,17 +168,19 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) =
 
 arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CoreMetrics m, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["driverReachedDistance" ::: HighPrecMeters]) => Id DRide.Ride -> LatLong -> m APISuccess
 arrivedAtPickup rideId req = do
-  ride <- (runInReplica $ QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  -- ride <- (runInReplica $ QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  ride <- (QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus "The ride has already started."
-  booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  -- booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   let pickupLoc = getCoordinates booking.fromLocation
   let distance = distanceBetweenInMeters req pickupLoc
   driverReachedDistance <- asks (.driverReachedDistance)
   unless (distance < driverReachedDistance) $ throwError $ DriverNotAtPickupLocation ride.driverId.getId
   unless (isJust ride.driverArrivalTime) $ do
-    Esq.runTransaction $ do
-      QRide.updateArrival rideId
-      QDFS.updateStatus ride.driverId DDFS.WAITING_FOR_CUSTOMER {rideId}
+    -- Esq.runTransaction $ do
+    _ <- QRide.updateArrival rideId
+    _ <- QDFS.updateStatus ride.driverId DDFS.WAITING_FOR_CUSTOMER {rideId}
     BP.sendDriverArrivalUpdateToBAP booking ride ride.driverArrivalTime
   pure Success
   where
@@ -208,14 +212,15 @@ otpRideCreate driver otpCode booking = do
   when driverInfo.onRide $ throwError DriverOnRide
   ride <- buildRide otpCode driver.id
   rideDetails <- buildRideDetails ride
-  Esq.runTransaction $ do
-    QBooking.updateStatus booking.id DRB.TRIP_ASSIGNED
-    (QRide.create ride)
-    QDFS.updateStatus driver.id DDFS.RIDE_ASSIGNED {rideId = ride.id}
-    QRideD.create rideDetails
-    QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id
-  DLoc.updateOnRide (cast driver.id) True
-  uBooking <- runInReplica $ QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId) -- in replica db we can have outdated value
+  -- Esq.runTransaction $ do
+  _ <- QBooking.updateStatus booking.id DRB.TRIP_ASSIGNED
+  _ <- (QRide.create ride)
+  _ <- QDFS.updateStatus driver.id DDFS.RIDE_ASSIGNED {rideId = ride.id}
+  _ <- QRideD.create rideDetails
+  QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id
+  _ <- DLoc.updateOnRide (cast driver.id) True
+  -- uBooking <- runInReplica $ QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId) -- in replica db we can have outdated value
+  uBooking <- QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId) -- in replica db we can have outdated value
   Notify.notifyDriver transporter.id notificationType notificationTitle (message uBooking) driver.id driver.deviceToken
   void $ BP.sendRideAssignedUpdateToBAP uBooking ride
   DS.driverScoreEventHandler DST.OnNewRideAssigned {merchantId = transporter.id, driverId = driver.id}

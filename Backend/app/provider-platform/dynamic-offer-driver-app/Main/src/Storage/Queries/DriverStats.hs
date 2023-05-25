@@ -78,7 +78,7 @@ getTopDriversByIdleTime count_ ids = do
 -- updateIdleTime :: Id Driver -> SqlDB ()
 -- updateIdleTime driverId = updateIdleTimes [driverId]
 
-updateIdleTime :: (L.MonadFlow m, MonadTime m) => Id Driver -> m (MeshResult ())
+updateIdleTime :: (L.MonadFlow m, MonadTime m) => Id Driver -> m ()
 updateIdleTime (driverId) = updateIdleTimes [driverId]
 
 -- updateIdleTimes :: [Id Driver] -> SqlDB ()
@@ -91,19 +91,20 @@ updateIdleTime (driverId) = updateIdleTimes [driverId]
 --       ]
 --     where_ $ tbl ^. DriverStatsDriverId `in_` valList (toKey . cast <$> driverIds)
 
-updateIdleTimes :: (L.MonadFlow m, MonadTime m) => [Id Driver] -> m (MeshResult ())
+updateIdleTimes :: (L.MonadFlow m, MonadTime m) => [Id Driver] -> m ()
 updateIdleTimes driverIds = do
   now <- getCurrentTime
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        Mesh.meshConfig
-        [ Se.Set BeamDS.idleSince $ now
-        ]
-        [Se.Is BeamDS.driverId (Se.In (getId <$> driverIds))]
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+      void $
+        KV.updateWoReturningWithKVConnector
+          dbConf'
+          Mesh.meshConfig
+          [ Se.Set BeamDS.idleSince $ now
+          ]
+          [Se.Is BeamDS.driverId (Se.In (getId <$> driverIds))]
+    Nothing -> pure ()
 
 -- fetchAll :: Transactionable m => m [DriverStats]
 -- fetchAll = Esq.findAll $ from $ table @DriverStatsT

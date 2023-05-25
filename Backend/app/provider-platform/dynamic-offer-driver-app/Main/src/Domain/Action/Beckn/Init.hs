@@ -86,7 +86,7 @@ cancelBooking booking transporterId = do
   unless (transporterId' == transporterId) $ throwError AccessDenied
   bookingCancellationReason <- buildBookingCancellationReason
   transporter <- QM.findById transporterId >>= fromMaybeM (MerchantNotFound transporterId.getId)
-  Esq.runTransaction $ QBCR.upsert bookingCancellationReason
+  _ <- QBCR.upsert bookingCancellationReason
   _ <- QRB.updateStatus booking.id DRB.CANCELLED
   fork "cancelBooking - Notify BAP" $ do
     BP.sendBookingCancelledUpdateToBAP booking transporter bookingCancellationReason.source

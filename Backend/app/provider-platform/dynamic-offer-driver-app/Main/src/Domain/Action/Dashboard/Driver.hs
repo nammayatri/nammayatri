@@ -229,9 +229,8 @@ blockDriver merchantShortId reqDriverId = do
 
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
-  driver <-
-    Esq.runInReplica (QPerson.findById personId)
-      >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  -- Esq.runInReplica (QPerson.findById personId)
 
   -- merchant access checking
   let merchantId = driver.merchantId
@@ -248,9 +247,8 @@ unblockDriver merchantShortId reqDriverId = do
 
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
-  driver <-
-    Esq.runInReplica (QPerson.findById personId)
-      >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  -- Esq.runInReplica (QPerson.findById personId)
 
   -- merchant access checking
   let merchantId = driver.merchantId
@@ -322,7 +320,8 @@ driverInfo merchantShortId mbMobileNumber mbMobileCountryCode mbVehicleNumber mb
           >>= fromMaybeM (InvalidRequest "Registration certificate does not exist.")
     _ -> throwError $ InvalidRequest "Exactly one of query parameters \"mobileNumber\", \"vehicleNumber\", \"dlNumber\", \"rcNumber\" is required"
   let driverId = driverWithRidesCount.person.id
-  mbDriverLicense <- Esq.runInReplica $ QDriverLicense.findByDriverId driverId
+  -- mbDriverLicense <- Esq.runInReplica $ QDriverLicense.findByDriverId driverId
+  mbDriverLicense <- QDriverLicense.findByDriverId driverId
   rcAssociationHistory <- Esq.runInReplica $ QRCAssociation.findAllByDriverId driverId
   buildDriverInfoRes driverWithRidesCount mbDriverLicense rcAssociationHistory
 
@@ -413,9 +412,9 @@ unlinkVehicle merchantShortId reqDriverId = do
   -- merchant access checking
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  Esq.runTransaction $ do
-    QVehicle.deleteById personId
-    QRCAssociation.endAssociation personId
+  -- Esq.runTransaction $ do
+  _ <- QVehicle.deleteById personId
+  _ <- QRCAssociation.endAssociation personId
   _ <- CQDriverInfo.updateEnabledVerifiedState driverId False False
   logTagInfo "dashboard -> unlinkVehicle : " (show personId)
   pure Success
@@ -449,9 +448,9 @@ updatePhoneNumber merchantShortId reqDriverId req = do
           }
   -- this function uses tokens from db, so should be called before transaction
   Auth.clearDriverSession personId
-  Esq.runTransaction $ do
-    QPerson.updateMobileNumberAndCode updDriver
-    QR.deleteByPersonId personId
+  -- Esq.runTransaction $ do
+  _ <- QPerson.updateMobileNumberAndCode updDriver
+  _ <- QR.deleteByPersonId personId
   logTagInfo "dashboard -> updatePhoneNumber : " (show personId)
   pure Success
 
@@ -474,9 +473,9 @@ addVehicle merchantShortId reqDriverId req = do
   whenJust mbLinkedVehicle $ \_ -> throwError VehicleAlreadyLinked
   vehicle <- buildVehicle merchantId personId req
   let updDriver = driver {DP.firstName = req.driverName} :: DP.Person
-  Esq.runTransaction $ do
-    QVehicle.create vehicle
-    QPerson.updatePersonRec personId updDriver
+  -- Esq.runTransaction $ do
+  _ <- QVehicle.create vehicle
+  _ <- QPerson.updatePersonRec personId updDriver
   logTagInfo "dashboard -> addVehicle : " (show personId)
   pure Success
 
@@ -517,9 +516,8 @@ updateDriverName merchantShortId reqDriverId req = do
   merchant <- findMerchantByShortId merchantShortId
 
   let personId = cast @Common.Driver @DP.Person reqDriverId
-  driver <-
-    Esq.runInReplica (QPerson.findById personId)
-      >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  -- Esq.runInReplica (QPerson.findById personId)
 
   -- merchant access checking
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
@@ -530,8 +528,8 @@ updateDriverName merchantShortId reqDriverId req = do
                lastName = if req.lastName == Just "" then Nothing else req.lastName <|> driver.lastName
               }
 
-  Esq.runTransaction $ do
-    QPerson.updatePersonRec personId updDriver
+  -- Esq.runTransaction $ do
+  _ <- QPerson.updatePersonRec personId updDriver
 
   logTagInfo "dashboard -> updateDriverName : " (show personId)
   pure Success
@@ -544,12 +542,13 @@ unlinkDL merchantShortId driverId = do
   let driverId_ = cast @Common.Driver @DP.Driver driverId
   let personId = cast @Common.Driver @DP.Person driverId
 
-  driver <- Esq.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  -- driver <- Esq.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   -- merchant access checking
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  Esq.runTransaction $ do
-    QDriverLicense.deleteByDriverId personId
+  -- Esq.runTransaction $ do
+  _ <- QDriverLicense.deleteByDriverId personId
   _ <- CQDriverInfo.updateEnabledVerifiedState driverId_ False False
   logTagInfo "dashboard -> unlinkDL : " (show personId)
   pure Success
@@ -562,12 +561,13 @@ endRCAssociation merchantShortId reqDriverId = do
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
 
-  driver <- Esq.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  -- driver <- Esq.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   -- merchant access checking
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  Esq.runTransaction $ do
-    QRCAssociation.endAssociation personId
+  -- Esq.runTransaction $ do
+  _ <- QRCAssociation.endAssociation personId
   _ <- CQDriverInfo.updateEnabledVerifiedState driverId False False
   logTagInfo "dashboard -> endRCAssociation : " (show personId)
   pure Success

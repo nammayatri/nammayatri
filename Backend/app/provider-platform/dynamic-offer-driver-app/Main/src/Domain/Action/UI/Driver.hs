@@ -71,6 +71,7 @@ import qualified Domain.Types.Vehicle as SV
 import qualified Domain.Types.Vehicle as Veh
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Environment
+import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
 import Kernel.External.Encryption
@@ -331,11 +332,11 @@ createDriver admin req = do
     "Person with this mobile number already exists"
   person <- buildDriver req.person merchantId
   vehicle <- buildVehicle req.vehicle person.id merchantId
-  Esq.runTransaction $ do
-    QPerson.create person
-    QDFS.create $ makeIdleDriverFlowStatus person
-    createDriverDetails person.id admin.id
-    QVehicle.create vehicle
+  -- Esq.runTransaction $ do
+  QPerson.create person
+  QDFS.create $ makeIdleDriverFlowStatus person
+  createDriverDetails person.id admin.id
+  QVehicle.create vehicle
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> createDriver : ") (show person.id)
   org <-
     CQM.findById merchantId
@@ -363,7 +364,7 @@ createDriver admin req = do
           updatedAt = person.updatedAt
         }
 
-createDriverDetails :: Id SP.Person -> Id SP.Person -> Esq.SqlDB ()
+createDriverDetails :: (L.MonadFlow m) => Id SP.Person -> Id SP.Person -> m ()
 createDriverDetails personId adminId = do
   now <- getCurrentTime
   let driverInfo =
@@ -402,7 +403,8 @@ getInformation ::
   m DriverInformationRes
 getInformation personId = do
   let driverId = cast personId
-  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  -- person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   driverReferralCode <- fmap (.referralCode) <$> QDR.findById (cast driverId)
   driverEntity <- buildDriverEntityRes (person, driverInfo)
@@ -425,9 +427,9 @@ setActivity personId isActive mode = do
   driverStatus <- QDFS.getStatus personId >>= fromMaybeM (PersonNotFound personId.getId)
   logInfo $ "driverStatus " <> show driverStatus
   unless (driverStatus `notElem` [DDFS.IDLE, DDFS.ACTIVE, DDFS.SILENT]) $ do
-    Esq.runTransaction $
-      QDFS.updateStatus personId $
-        DMode.getDriverStatus mode isActive
+    -- Esq.runTransaction $
+    QDFS.updateStatus personId $
+      DMode.getDriverStatus mode isActive
   pure APISuccess.Success
 
 listDriver :: (EsqDBReplicaFlow m r, EncFlow m r) => SP.Person -> Maybe Text -> Maybe Integer -> Maybe Integer -> m ListDriverRes
@@ -500,12 +502,12 @@ deleteDriver admin driverId = do
   -- this function uses tokens from db, so should be called before transaction
   Auth.clearDriverSession driverId
   QDriverInformation.deleteById (cast driverId)
-  Esq.runTransaction $ do
-    QDriverStats.deleteById (cast driverId)
-    QR.deleteByPersonId driverId
-    QVehicle.deleteById driverId
-    QDriverLocation.deleteById driverId
-    QPerson.deleteById driverId
+  -- Esq.runTransaction $ do
+  QDriverStats.deleteById (cast driverId)
+  QR.deleteByPersonId driverId
+  QVehicle.deleteById driverId
+  QDriverLocation.deleteById driverId
+  QPerson.deleteById driverId
 
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> deleteDriver : ") (show driverId)
   return Success
@@ -540,9 +542,9 @@ updateDriver personId req = do
                    canDowngradeToTaxi = fromMaybe driverInfo.canDowngradeToTaxi req.canDowngradeToTaxi
                   }
 
-  Esq.runTransaction $ do
-    QPerson.updatePersonRec personId updPerson
-    QDriverInformation.updateDowngradingOptions person.id updDriverInfo.canDowngradeToSedan updDriverInfo.canDowngradeToHatchback updDriverInfo.canDowngradeToTaxi
+  -- Esq.runTransaction $ do
+  QPerson.updatePersonRec personId updPerson
+  QDriverInformation.updateDowngradingOptions person.id updDriverInfo.canDowngradeToSedan updDriverInfo.canDowngradeToHatchback updDriverInfo.canDowngradeToTaxi
   QDriverInformation.clearDriverInfoCache (cast personId)
   driverEntity <- buildDriverEntityRes (updPerson, driverInfo)
   driverReferralCode <- fmap (.referralCode) <$> QDR.findById personId
@@ -670,8 +672,10 @@ getNearbySearchRequests ::
   Id SP.Person ->
   m GetNearbySearchRequestsRes
 getNearbySearchRequests driverId = do
-  person <- runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  nearbyReqs <- runInReplica $ QSRD.findByDriver driverId
+  -- person <- runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  -- nearbyReqs <- runInReplica $ QSRD.findByDriver driverId
+  nearbyReqs <- QSRD.findByDriver driverId
   transporterConfig <- CQTC.findByMerchantId person.merchantId >>= fromMaybeM (TransporterConfigNotFound person.merchantId.getId)
   let cancellationScoreRelatedConfig = mkCancellationScoreRelatedConfig transporterConfig
   cancellationRatio <- DP.getLatestCancellationRatio cancellationScoreRelatedConfig person.merchantId (cast driverId)
@@ -679,7 +683,8 @@ getNearbySearchRequests driverId = do
   return $ GetNearbySearchRequestsRes searchRequestForDriverAPIEntity
   where
     buildSearchRequestForDriverAPIEntity cancellationRatio cancellationScoreRelatedConfig transporterConfig nearbyReq = do
-      searchRequest <- runInReplica $ QSReq.findById nearbyReq.searchRequestId >>= fromMaybeM (SearchRequestNotFound nearbyReq.searchRequestId.getId)
+      -- searchRequest <- runInReplica $ QSReq.findById nearbyReq.searchRequestId >>= fromMaybeM (SearchRequestNotFound nearbyReq.searchRequestId.getId)
+      searchRequest <- QSReq.findById nearbyReq.searchRequestId >>= fromMaybeM (SearchRequestNotFound nearbyReq.searchRequestId.getId)
       popupDelaySeconds <- DP.getPopupDelay searchRequest.providerId (cast driverId) cancellationRatio cancellationScoreRelatedConfig transporterConfig.defaultPopupDelay
       return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest popupDelaySeconds
 
@@ -775,10 +780,10 @@ respondQuote driverId req = do
               unless (isAllowedExtraFee driverExtraFeeBounds' off) $
                 throwError $ NotAllowedExtraFee $ show off
           driverQuote <- buildDriverQuote driver sReq sReqFD fareParams
-          Esq.runTransaction $ do
-            QDrQt.create driverQuote
-            QSRD.updateDriverResponse sReqFD.id req.response
-            QDFS.updateStatus sReqFD.driverId DDFS.OFFERED_QUOTE {quoteId = driverQuote.id, validTill = driverQuote.validTill}
+          -- Esq.runTransaction $ do
+          QDrQt.create driverQuote
+          QSRD.updateDriverResponse sReqFD.id req.response
+          QDFS.updateStatus sReqFD.driverId DDFS.OFFERED_QUOTE {quoteId = driverQuote.id, validTill = driverQuote.validTill}
           let shouldPullFCMForOthers = (quoteCount + 1) >= quoteLimit || sReq.autoAssignEnabled
           driverFCMPulledList <- if shouldPullFCMForOthers then QSRD.findAllActiveWithoutRespByRequestId req.searchRequestId else pure []
           -- Adding +1 in quoteCount because one more quote added above (QDrQt.create driverQuote)
@@ -786,7 +791,7 @@ respondQuote driverId req = do
           sendDriverOffer organization sReq driverQuote
           pure driverFCMPulledList
         Reject -> do
-          Esq.runTransaction $ QSRD.updateDriverResponse sReqFD.id req.response
+          QSRD.updateDriverResponse sReqFD.id req.response
           pure []
     DS.driverScoreEventHandler $ buildDriverRespondEventPayload sReq.id sReq.providerId driverFCMPulledList
   pure Success
@@ -841,9 +846,10 @@ respondQuote driverId req = do
       pure $ fromIntegral driverPoolCfg.driverQuoteLimit
     sendRemoveRideRequestNotification driverSearchReqs orgId driverQuote = do
       for_ driverSearchReqs $ \driverReq -> do
-        Esq.runNoTransaction $ do
-          QSRD.updateDriverResponse driverReq.id Pulled
-        driver_ <- runInReplica $ QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
+        -- Esq.runNoTransaction $ do
+        QSRD.updateDriverResponse driverReq.id Pulled
+        -- driver_ <- runInReplica $ QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
+        driver_ <- QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
         Notify.notifyDriverClearedFare orgId driverReq.driverId driverReq.searchRequestId driverQuote.estimatedFare driver_.deviceToken
 
 getStats ::
@@ -852,7 +858,8 @@ getStats ::
   Day ->
   m DriverStatsRes
 getStats driverId date = do
-  rides <- runInReplica $ QRide.getRidesForDate driverId date
+  -- rides <- runInReplica $ QRide.getRidesForDate driverId date
+  rides <- QRide.getRidesForDate driverId date
   return $
     DriverStatsRes
       { totalRidesOfDay = length rides,
@@ -914,8 +921,10 @@ validate ::
   DriverAlternateNumberReq ->
   m DriverAlternateNumberRes
 validate personId phoneNumber = do
-  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  altNoAttempt <- runInReplica $ QRegister.getAlternateNumberAttempts personId
+  -- person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  -- altNoAttempt <- runInReplica $ QRegister.getAlternateNumberAttempts personId
+  altNoAttempt <- QRegister.getAlternateNumberAttempts personId
   runRequestValidation validationCheck phoneNumber
   mobileNumberHash <- getDbHash phoneNumber.alternateNumber
   merchant <- CQM.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
@@ -963,7 +972,8 @@ verifyAuth ::
 verifyAuth personId req = do
   Redis.whenWithLockRedis (makeAlternatePhoneNumberKey personId) 60 $ do
     runRequestValidation validateAuthVerifyReq req
-    person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+    -- person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+    person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
     checkSlidingWindowLimit (verifyHitsCountKey personId)
     verified <- Redis.get (makeAlternateNumberVerifiedKey personId) >>= fromMaybeM (InvalidRequest "Verified not found")
     when verified $ throwError $ AuthBlocked "Already verified."
@@ -982,8 +992,8 @@ verifyAuth personId req = do
         mobileCountryCode = fromMaybe "+91" person.mobileCountryCode
     mobileNumberHash <- getDbHash altMobNo
     mbPerson <- QPerson.findByMobileNumberAndMerchant mobileCountryCode mobileNumberHash person.merchantId
-    Esq.runTransaction $ do
-      QPerson.updateAlternateMobileNumberAndCode driver
+    -- Esq.runTransaction $ do
+    QPerson.updateAlternateMobileNumberAndCode driver
     expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
     Redis.setExp (makeAlternateNumberVerifiedKey personId) True expTime
     whenJust mbPerson $ \oldPerson -> do
@@ -1011,7 +1021,8 @@ resendOtp personId req = do
   logDebug $ "attemptsLeft" <> show attemptsLeft
   unless (attemptsLeft > 0) $ throwError $ AuthBlocked "Attempts limit exceed."
   smsCfg <- asks (.smsCfg)
-  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  -- person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let altNumber = req.alternateNumber
       counCode = req.mobileCountryCode
   otpCode <-
@@ -1050,12 +1061,13 @@ remove ::
   Id SP.Person ->
   m APISuccess
 remove personId = do
-  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  -- person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let driver =
         person
           { SP.unencryptedAlternateMobileNumber = Nothing,
             SP.alternateMobileNumber = Nothing
           }
-  Esq.runTransaction $ do
-    QPerson.updateAlternateMobileNumberAndCode driver
+  -- Esq.runTransaction $ do
+  QPerson.updateAlternateMobileNumberAndCode driver
   return Success

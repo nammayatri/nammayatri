@@ -48,7 +48,8 @@ getLanguage driverId mbLanguage = do
     if isJust mbLanguage
       then return mbLanguage
       else runMaybeT $ do
-        driverDetail <- MaybeT . Esq.runInReplica $ QP.findById driverId
+        -- driverDetail <- MaybeT . Esq.runInReplica $ QP.findById driverId
+        driverDetail <- MaybeT $ QP.findById driverId
         MaybeT $ pure driverDetail.language
   return $ fromMaybe ENGLISH extractLanguage
 
@@ -135,7 +136,8 @@ issueMediaUpload :: Id SP.Person -> Common.IssueMediaUploadReq -> Flow Common.Is
 issueMediaUpload driverId Common.IssueMediaUploadReq {..} = do
   contentType <- validateContentType
   fileSize <- L.runIO $ withFile file ReadMode hFileSize
-  person <- Esq.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  -- person <- Esq.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  person <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   transporterConfig <- CQTC.findByMerchantId person.merchantId >>= fromMaybeM (TransporterConfigNotFound person.merchantId.getId)
   when (fileSize > fromIntegral transporterConfig.mediaFileSizeUpperLimit) $
     throwError $ FileSizeExceededError (show fileSize)
@@ -239,7 +241,8 @@ updateIssueOption issueReportId driverId Common.IssueUpdateReq {..} = do
 
 deleteIssue :: Id D.IssueReport -> Id SP.Person -> Flow APISuccess
 deleteIssue issueReportId driverId = do
-  unlessM (Esq.runInReplica (QIR.isSafeToDelete issueReportId driverId)) $
+  -- unlessM (Esq.runInReplica (QIR.isSafeToDelete issueReportId driverId)) $
+  unlessM (QIR.isSafeToDelete issueReportId driverId) $
     throwError (InvalidRequest "This issue is either already deleted, or is not associated to this driver.")
   issueReport <- CQIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
   Esq.runTransaction $ QIR.updateAsDeleted issueReportId

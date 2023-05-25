@@ -64,7 +64,8 @@ data StatusRes = StatusRes
 
 statusHandler :: Id SP.Person -> Flow StatusRes
 statusHandler personId = do
-  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  -- person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   transporterConfig <- findByMerchantId person.merchantId >>= fromMaybeM (TransporterConfigNotFound person.merchantId.getId)
   (dlStatus, mDL) <- getDLAndStatus personId transporterConfig.onboardingTryLimit
   (rcStatus, mRC) <- getRCAndStatus personId transporterConfig.onboardingTryLimit
@@ -125,7 +126,7 @@ enableDriver personId merchantId (Just rc) (Just dl) = do
   rcNumber <- decrypt rc.certificateNumber
   now <- getCurrentTime
   let vehicle = buildVehicle now personId merchantId rcNumber
-  DB.runTransaction $ VQuery.upsert vehicle
+  _ <- VQuery.upsert vehicle
   case dl.driverName of
     Just name -> void $ (Person.updateName personId name)
     Nothing -> return ()

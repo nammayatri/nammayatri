@@ -120,7 +120,7 @@ validateImage isDashboard mbMerchant personId ImageValidateRequest {..} = do
   imagePath <- createPath personId.getId merchantId.getId imageType
   _ <- fork "S3 Put Image" $ S3.put (T.unpack imagePath) image
   imageEntity <- mkImage personId merchantId imagePath imageType False
-  runTransaction $ Query.create imageEntity
+  _ <- Query.create imageEntity
 
   -- skipping validation for rc as validation not available in idfy
   validationOutput <-
@@ -128,7 +128,7 @@ validateImage isDashboard mbMerchant personId ImageValidateRequest {..} = do
       Verification.ValidateImageReq {image, imageType = castImageType imageType}
   when validationOutput.validationAvailable $ do
     checkErrors imageEntity.id imageType validationOutput.detectedImage
-  runTransaction $ Query.updateToValid imageEntity.id
+  _ <- Query.updateToValid imageEntity.id
 
   return $ ImageValidateResponse {imageId = imageEntity.id}
   where

@@ -994,22 +994,22 @@ getNearestDriversCurrentlyOnRide mbVariant LatLong {..} radiusMeters merchantId 
       where
         getResult var cond = [NearestDriversResultCurrentlyOnRide (cast personId) mbDeviceToken mblang onRide dlat dlon var destinationEndLat destinationEndLon (roundToIntegral dist) (roundToIntegral distanceFromDriverToDestination) mode | cond]
 
-updateAlternateMobileNumberAndCode :: Person -> SqlDB ()
-updateAlternateMobileNumberAndCode person = do
-  now <- getCurrentTime
-  let personT = toTType person
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ PersonAlternateMobileNumberEncrypted =. val (TPerson.alternateMobileNumberEncrypted personT),
-        PersonUnencryptedAlternateMobileNumber =. val (TPerson.unencryptedAlternateMobileNumber personT),
-        PersonAlternateMobileNumberHash =. val (TPerson.alternateMobileNumberHash personT),
-        PersonUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. PersonTId ==. val (toKey person.id)
+-- updateAlternateMobileNumberAndCode :: Person -> SqlDB ()
+-- updateAlternateMobileNumberAndCode person = do
+--   now <- getCurrentTime
+--   let personT = toTType person
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ PersonAlternateMobileNumberEncrypted =. val (TPerson.alternateMobileNumberEncrypted personT),
+--         PersonUnencryptedAlternateMobileNumber =. val (TPerson.unencryptedAlternateMobileNumber personT),
+--         PersonAlternateMobileNumberHash =. val (TPerson.alternateMobileNumberHash personT),
+--         PersonUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. PersonTId ==. val (toKey person.id)
 
-updateAlternateMobileNumberAndCode' :: (L.MonadFlow m, MonadTime m) => Person -> m (MeshResult ())
-updateAlternateMobileNumberAndCode' person = do
+updateAlternateMobileNumberAndCode :: (L.MonadFlow m, MonadTime m) => Person -> m (MeshResult ())
+updateAlternateMobileNumberAndCode person = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   now <- getCurrentTime
   case dbConf of

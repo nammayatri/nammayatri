@@ -78,14 +78,15 @@ merchantUpdate merchantShortId req = do
     pure allExophones
 
   -- Esq.runTransaction $ do
-  CQM.update updMerchant
+  _ <- CQM.update updMerchant
   whenJust req.exoPhones \exophones -> do
     CQExophone.deleteByMerchantId merchant.id
     forM_ exophones $ \exophoneReq -> do
       exophone <- buildExophone merchant.id now exophoneReq
       CQExophone.create exophone
-  whenJust req.fcmConfig $
-    \fcmConfig -> CQTC.updateFCMConfig merchant.id fcmConfig.fcmUrl fcmConfig.fcmServiceAccount
+  Esq.runTransaction $ do
+    whenJust req.fcmConfig $
+      \fcmConfig -> CQTC.updateFCMConfig merchant.id fcmConfig.fcmUrl fcmConfig.fcmServiceAccount
 
   CQM.clearCache updMerchant
   whenJust mbAllExophones $ \allExophones -> do
@@ -275,7 +276,7 @@ onboardingDocumentConfigUpdate merchantShortId reqDocumentType req = do
                validVehicleClasses = fromMaybe config.validVehicleClasses req.validVehicleClasses,
                vehicleClassCheckType = maybe config.vehicleClassCheckType (castVehicleClassCheckType . (.value)) req.vehicleClassCheckType
               }
-  CQODC.update updConfig
+  _ <- CQODC.update updConfig
   CQODC.clearCache merchant.id documentType
   logTagInfo "dashboard -> onboardingDocumentConfigUpdate : " $ show merchant.id <> "documentType : " <> show documentType
   pure Success
@@ -305,7 +306,7 @@ onboardingDocumentConfigCreate merchantShortId reqDocumentType req = do
   mbConfig <- CQODC.findByMerchantIdAndDocumentType merchant.id documentType
   whenJust mbConfig $ \_ -> throwError (OnboardingDocumentConfigAlreadyExists merchant.id.getId $ show documentType)
   newConfig <- buildOnboardingDocumentConfig merchant.id documentType req
-  CQODC.create newConfig
+  _ <- CQODC.create newConfig
   logTagInfo "dashboard -> onboardingDocumentConfigCreate : " $ show merchant.id <> "documentType : " <> show documentType
   pure Success
 

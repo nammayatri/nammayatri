@@ -72,18 +72,18 @@ findByRideId (Id rideId) = do
     Just dbCOnf' -> either (pure Nothing) (transformBeamBookingCancellationReasonToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamBCR.rideId $ Se.Eq (Just rideId)]
     Nothing -> pure Nothing
 
-upsert :: BookingCancellationReason -> SqlDB ()
-upsert cancellationReason =
-  Esq.upsert
-    cancellationReason
-    [ BookingCancellationReasonBookingId =. val (toKey cancellationReason.bookingId),
-      BookingCancellationReasonRideId =. val (toKey <$> cancellationReason.rideId),
-      BookingCancellationReasonReasonCode =. val (toKey <$> cancellationReason.reasonCode),
-      BookingCancellationReasonAdditionalInfo =. val (cancellationReason.additionalInfo)
-    ]
+-- upsert :: BookingCancellationReason -> SqlDB ()
+-- upsert cancellationReason =
+--   Esq.upsert
+--     cancellationReason
+--     [ BookingCancellationReasonBookingId =. val (toKey cancellationReason.bookingId),
+--       BookingCancellationReasonRideId =. val (toKey <$> cancellationReason.rideId),
+--       BookingCancellationReasonReasonCode =. val (toKey <$> cancellationReason.reasonCode),
+--       BookingCancellationReasonAdditionalInfo =. val (cancellationReason.additionalInfo)
+--     ]
 
-upsert' :: L.MonadFlow m => BookingCancellationReason -> m ()
-upsert' cancellationReason = do
+upsert :: L.MonadFlow m => BookingCancellationReason -> m ()
+upsert cancellationReason = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do

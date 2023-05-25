@@ -37,7 +37,7 @@ startRideTransaction driverId rideId bookingId firstPoint = do
   _ <- QRide.updateStatus rideId SRide.INPROGRESS
   _ <- QRide.updateStartTimeAndLoc rideId firstPoint
   QBE.logRideCommencedEvent (cast driverId) bookingId rideId
-  QDFS.updateStatus driverId DDFS.ON_RIDE {rideId}
+  _ <- QDFS.updateStatus driverId DDFS.ON_RIDE {rideId}
   now <- getCurrentTime
   _ <- DrLoc.upsertGpsCoord driverId firstPoint now
   CQRide.clearCache driverId

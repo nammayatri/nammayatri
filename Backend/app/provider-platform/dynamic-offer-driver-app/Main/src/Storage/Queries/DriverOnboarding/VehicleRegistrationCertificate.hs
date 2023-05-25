@@ -40,26 +40,26 @@ create vehicleRegistrationCertificate = do
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainVehicleRegistrationCertificateToBeam vehicleRegistrationCertificate)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-upsert :: VehicleRegistrationCertificate -> SqlDB ()
-upsert a@VehicleRegistrationCertificate {..} =
-  Esq.upsert
-    a
-    [ VehicleRegistrationCertificatePermitExpiry =. val permitExpiry,
-      VehicleRegistrationCertificatePucExpiry =. val pucExpiry,
-      VehicleRegistrationCertificateInsuranceValidity =. val insuranceValidity,
-      VehicleRegistrationCertificateVehicleClass =. val vehicleClass,
-      VehicleRegistrationCertificateVehicleManufacturer =. val vehicleManufacturer,
-      VehicleRegistrationCertificateVehicleCapacity =. val vehicleCapacity,
-      VehicleRegistrationCertificateVehicleModel =. val vehicleModel,
-      VehicleRegistrationCertificateVehicleColor =. val vehicleColor,
-      VehicleRegistrationCertificateVehicleEnergyType =. val vehicleEnergyType,
-      VehicleRegistrationCertificateVerificationStatus =. val verificationStatus,
-      VehicleRegistrationCertificateFailedRules =. val (PostgresList failedRules),
-      VehicleRegistrationCertificateUpdatedAt =. val updatedAt
-    ]
+-- upsert :: VehicleRegistrationCertificate -> SqlDB ()
+-- upsert a@VehicleRegistrationCertificate {..} =
+--   Esq.upsert
+--     a
+--     [ VehicleRegistrationCertificatePermitExpiry =. val permitExpiry,
+--       VehicleRegistrationCertificatePucExpiry =. val pucExpiry,
+--       VehicleRegistrationCertificateInsuranceValidity =. val insuranceValidity,
+--       VehicleRegistrationCertificateVehicleClass =. val vehicleClass,
+--       VehicleRegistrationCertificateVehicleManufacturer =. val vehicleManufacturer,
+--       VehicleRegistrationCertificateVehicleCapacity =. val vehicleCapacity,
+--       VehicleRegistrationCertificateVehicleModel =. val vehicleModel,
+--       VehicleRegistrationCertificateVehicleColor =. val vehicleColor,
+--       VehicleRegistrationCertificateVehicleEnergyType =. val vehicleEnergyType,
+--       VehicleRegistrationCertificateVerificationStatus =. val verificationStatus,
+--       VehicleRegistrationCertificateFailedRules =. val (PostgresList failedRules),
+--       VehicleRegistrationCertificateUpdatedAt =. val updatedAt
+--     ]
 
-upsert' :: L.MonadFlow m => VehicleRegistrationCertificate -> m ()
-upsert' a@VehicleRegistrationCertificate {..} = do
+upsert :: L.MonadFlow m => VehicleRegistrationCertificate -> m ()
+upsert a@VehicleRegistrationCertificate {..} = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do

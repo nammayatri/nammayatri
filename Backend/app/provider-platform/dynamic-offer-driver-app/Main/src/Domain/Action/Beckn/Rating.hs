@@ -47,17 +47,17 @@ handler req = do
     throwError $ RideInvalidStatus "Ride is not ready for rating."
   let ratingValue = req.ratingValue
       feedbackDetails = req.feedbackDetails
-  case rating of
+  _ <- case rating of
     Nothing -> do
       logTagInfo "FeedbackAPI" $
         "Creating a new record for " +|| ride.id ||+ " with rating " +|| ratingValue ||+ "."
       newRating <- buildRating ride.id driverId ratingValue feedbackDetails
-      Esq.runTransaction $ QRating.create newRating
+      QRating.create newRating
     Just rideRating -> do
       logTagInfo "FeedbackAPI" $
         "Updating existing rating for " +|| ride.id ||+ " with new rating " +|| ratingValue ||+ "."
-      Esq.runTransaction $ do
-        QRating.updateRating rideRating.id driverId ratingValue feedbackDetails
+      -- Esq.runTransaction $ do
+      QRating.updateRating rideRating.id driverId ratingValue feedbackDetails
   calculateAverageRating driverId
 
 calculateAverageRating ::
@@ -75,7 +75,8 @@ calculateAverageRating personId = do
   when (ratingCount >= minimumDriverRatesCount) $ do
     let newAverage = ratingsSum / fromIntegral ratingCount
     logTagInfo "PersonAPI" $ "New average rating for person " +|| personId ||+ " , rating is " +|| newAverage ||+ ""
-    Esq.runTransaction $ QP.updateAverageRating personId newAverage
+    -- Esq.runTransaction $ QP.updateAverageRating personId newAverage
+    void $ QP.updateAverageRating personId newAverage
 
 buildRating :: MonadFlow m => Id DRide.Ride -> Id DP.Person -> Int -> Maybe Text -> m DRating.Rating
 buildRating rideId driverId ratingValue feedbackDetails = do

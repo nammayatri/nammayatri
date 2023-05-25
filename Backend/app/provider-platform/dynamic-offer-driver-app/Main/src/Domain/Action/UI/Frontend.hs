@@ -53,6 +53,6 @@ getDriverFlowStatus personId = do
         else do
           driverInfo <- CDI.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
           let func status = do
-                QDFS.updateStatus personId status
+                _ <- QDFS.updateStatus personId status
                 return $ GetDriverFlowStatusRes (Just driverStatus) status
           func $ DMode.getDriverStatus driverInfo.mode driverInfo.active
