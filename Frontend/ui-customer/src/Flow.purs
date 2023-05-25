@@ -17,7 +17,7 @@ module Flow where
 
 import Accessor (_computedPrice, _contents, _formattedAddress, _id, _lat, _lon, _status, _toLocation)
 import Common.Types.App (GlobalPayload)
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..),Version(..))
 import Components.LocationListItem.Controller (dummyLocationListState)
 import Components.SavedLocationCard.Controller (getCardType)
 import Components.SettingSideBar.Controller as SettingSideBarController
@@ -35,7 +35,7 @@ import Debug (spy)
 import Effect (Effect)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.BackTrack (getState)
-import Engineering.Helpers.Commons (liftFlow, os, getNewIDWithTag, bundleVersion, getExpiryTime)
+import Engineering.Helpers.Commons (liftFlow, os, getNewIDWithTag, bundleVersion, getExpiryTime,stringToVersion)
 import Foreign.Class (class Encode)
 import Foreign.Class (encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
@@ -297,6 +297,9 @@ currentFlowStatus = do
     verifyProfile :: String -> FlowBT String Unit
     verifyProfile dummy = do
       (GetProfileRes response) <- Remote.getProfileBT ""
+      let dbBundleVersion = response.bundleVersion
+          dbClientVersion = response.clientVersion
+      updateCustomerVersion dbClientVersion dbBundleVersion
       if isJust response.language then do
         when (getKeyByLanguage (fromMaybe "ENGLISH" response.language) /= (getValueToLocalNativeStore LANGUAGE_KEY)) $ do
           resp <- lift $ lift $ Remote.updateProfile (Remote.makeUpdateLanguageRequest "")
@@ -375,6 +378,22 @@ chooseLanguageScreenFlow = do
                             enterMobileNumberScreenFlow
     Refresh state -> chooseLanguageScreenFlow
 
+updateCustomerVersion :: Maybe Version -> Maybe Version -> FlowBT String Unit
+updateCustomerVersion dbClientVersion dbBundleVersion = do
+  if (isJust dbClientVersion && isJust dbBundleVersion) then do
+    let versionName = getValueToLocalStore VERSION_NAME
+        bundle = getValueToLocalStore BUNDLE_VERSION
+        Version clientVersion = stringToVersion versionName
+        Version bundleVersion = stringToVersion bundle
+        Version bundleVersion' = fromMaybe (Version bundleVersion) dbBundleVersion
+        Version clientVersion' = fromMaybe (Version clientVersion) dbClientVersion
+    if any (_ == -1) [clientVersion.minor, clientVersion.major, clientVersion.maintenance,bundleVersion.minor,bundleVersion.major,bundleVersion.maintenance] then pure unit      
+      else if ( bundleVersion' /= bundleVersion || clientVersion' /= clientVersion)  then do 
+      resp <- lift $ lift $ Remote.updateProfile (Remote.makeUpdateVersionRequest (Version clientVersion) (Version bundleVersion))
+      pure unit    
+    else pure unit 
+  else pure unit       
+      
 enterMobileNumberScreenFlow :: FlowBT String Unit
 enterMobileNumberScreenFlow = do
   lift $ lift $ doAff do liftEffect hideSplash -- Removed initial choose langauge screen
