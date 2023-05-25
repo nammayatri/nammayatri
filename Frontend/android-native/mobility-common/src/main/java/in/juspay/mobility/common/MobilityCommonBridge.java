@@ -1244,11 +1244,12 @@ public class MobilityCommonBridge extends HyperBridge {
         if (bridgeComponents.getActivity() != null && ContextCompat.checkSelfPermission(bridgeComponents.getActivity(), Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{Manifest.permission.CALL_PHONE}, REQUEST_CALL);
         } else {
-            phoneNumber = "tel:" + phoneNum;
-            intent.setData(Uri.parse(phoneNumber));
-            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            bridgeComponents.getContext().startActivity(intent);
-
+            if (phoneNum != null) {
+                phoneNumber = "tel:" + phoneNum;
+                intent.setData(Uri.parse(phoneNumber));
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                bridgeComponents.getContext().startActivity(intent);
+            }
         }
     }
 
