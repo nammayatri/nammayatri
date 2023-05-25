@@ -45,7 +45,7 @@ mkBreakupList mkPrice mkBreakupItem fareParams = do
       baseFareCaption = "BASE_FARE"
       baseFareItem = mkBreakupItem baseFareCaption (mkPrice baseFareFinalRounded)
       baseFareDistanceCaption = "BASE_DISTANCE_FARE" --TODO: deprecated, to be removed
-      baseFareDistanceItem = mkBreakupItem baseFareDistanceCaption (mkPrice baseFareFinalRounded)
+      baseFareDistanceItem = mkBreakupItem baseFareDistanceCaption (mkPrice fareParams.baseFare)
 
       serviceChargeCaption = "SERVICE_CHARGE"
       mbServiceChargeItem = fmap (mkBreakupItem serviceChargeCaption) (mkPrice <$> fareParams.serviceCharge)
