@@ -106,7 +106,6 @@ screen initialState =
               pure unit
             else do
               pure unit
-            runEffectFn1 consumingBackPress true
             case initialState.props.currentStage of
               SearchLocationModel -> case initialState.props.isSearchLocation of
                 LocateOnMap -> do
