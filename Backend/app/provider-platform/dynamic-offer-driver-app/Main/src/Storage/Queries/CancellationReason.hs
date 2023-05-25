@@ -37,7 +37,7 @@ findAll' :: L.MonadFlow m => m [CancellationReason]
 findAll' = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbCOnf' -> either (pure []) (transformBeamCancellationReasonToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamCR.enabled $ Se.Eq True]
+    Just dbCOnf' -> either (pure []) (transformBeamCancellationReasonToDomain <$>) <$> KV.findAllWithOptionsKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamCR.enabled $ Se.Eq True] (Se.Desc BeamCR.priority) Nothing Nothing
     Nothing -> pure []
 
 transformBeamCancellationReasonToDomain :: BeamCR.CancellationReason -> CancellationReason
