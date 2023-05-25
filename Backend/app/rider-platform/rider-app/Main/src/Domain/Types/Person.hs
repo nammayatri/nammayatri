@@ -140,7 +140,9 @@ data PersonAPIEntity = PersonAPIEntity
     referralCode :: Maybe Text,
     whatsappNotificationEnrollStatus :: Maybe Whatsapp.OptApiMethods,
     language :: Maybe Maps.Language,
-    gender :: Gender
+    gender :: Gender,
+    bundleVersion :: Maybe Version,
+    clientVersion :: Maybe Version
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 

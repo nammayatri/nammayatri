@@ -94,6 +94,7 @@ import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Types.Predicate
 import Kernel.Types.SlidingWindowLimiter
+import Kernel.Types.Version
 import Kernel.Utils.Common
 import Kernel.Utils.GenericPretty (PrettyShow)
 import qualified Kernel.Utils.Predicates as P
@@ -153,7 +154,9 @@ data DriverInformationRes = DriverInformationRes
     canDowngradeToSedan :: Bool,
     canDowngradeToHatchback :: Bool,
     canDowngradeToTaxi :: Bool,
-    mode :: Maybe DriverInfo.DriverMode
+    mode :: Maybe DriverInfo.DriverMode,
+    clientVersion :: Maybe Version,
+    bundleVersion :: Maybe Version
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -180,7 +183,9 @@ data DriverEntityRes = DriverEntityRes
     canDowngradeToSedan :: Bool,
     canDowngradeToHatchback :: Bool,
     canDowngradeToTaxi :: Bool,
-    mode :: Maybe DriverInfo.DriverMode
+    mode :: Maybe DriverInfo.DriverMode,
+    clientVersion :: Maybe Version,
+    bundleVersion :: Maybe Version
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -249,7 +254,9 @@ data UpdateDriverReq = UpdateDriverReq
     language :: Maybe Maps.Language,
     canDowngradeToSedan :: Maybe Bool,
     canDowngradeToHatchback :: Maybe Bool,
-    canDowngradeToTaxi :: Maybe Bool
+    canDowngradeToTaxi :: Maybe Bool,
+    clientVersion :: Maybe Version,
+    bundleVersion :: Maybe Version
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -468,7 +475,9 @@ buildDriverEntityRes (person, driverInfo) = do
         canDowngradeToSedan = driverInfo.canDowngradeToSedan,
         canDowngradeToHatchback = driverInfo.canDowngradeToHatchback,
         canDowngradeToTaxi = driverInfo.canDowngradeToTaxi,
-        mode = driverInfo.mode
+        mode = driverInfo.mode,
+        clientVersion = person.clientVersion,
+        bundleVersion = person.bundleVersion
       }
 
 changeDriverEnableState ::
@@ -535,7 +544,9 @@ updateDriver (personId, _) req = do
                middleName = req.middleName <|> person.middleName,
                lastName = req.lastName <|> person.lastName,
                deviceToken = req.deviceToken <|> person.deviceToken,
-               language = req.language <|> person.language
+               language = req.language <|> person.language,
+               clientVersion = req.clientVersion <|> person.clientVersion,
+               bundleVersion = req.bundleVersion <|> person.bundleVersion
               }
 
   mVehicle <- QVehicle.findById personId
