@@ -44,7 +44,7 @@ mkPersist
       minRidesForCancellationScore Int Maybe
       mediaFileUrlPattern Text
       mediaFileSizeUpperLimit Int
-      waitingTimeEstimatedThreshold Seconds
+      waitingTimeEstimatedThreshold Minutes
       referralLinkPassword Text
       fcmUrl Text
       fcmServiceAccount Text

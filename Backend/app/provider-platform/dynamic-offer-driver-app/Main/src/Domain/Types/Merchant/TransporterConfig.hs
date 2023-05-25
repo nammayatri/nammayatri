@@ -35,7 +35,7 @@ data TransporterConfigD u = TransporterConfig
     minRidesForCancellationScore :: Maybe Int,
     mediaFileUrlPattern :: Text,
     mediaFileSizeUpperLimit :: Int,
-    waitingTimeEstimatedThreshold :: Seconds,
+    waitingTimeEstimatedThreshold :: Minutes,
     referralLinkPassword :: Text,
     fcmConfig :: FCMConfig,
     onboardingTryLimit :: Int,
