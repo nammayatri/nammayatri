@@ -21,11 +21,19 @@ where
 
 import Domain.Types.Merchant as DOrg
 import Domain.Types.Merchant.MerchantServiceUsageConfig
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (findById)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
+import qualified Lib.Mesh as Mesh
+import Lib.Utils
+import qualified Sequelize as Se
+import qualified Storage.Beam.Merchant.MerchantServiceUsageConfig as BeamMSUC
 import Storage.Tabular.Merchant.MerchantServiceUsageConfig
 
 findByMerchantId :: Transactionable m => Id Merchant -> m (Maybe MerchantServiceUsageConfig)
@@ -35,6 +43,13 @@ findByMerchantId orgId =
     where_ $
       orgMapsCfg ^. MerchantServiceUsageConfigTId ==. val (toKey orgId)
     return orgMapsCfg
+
+findByMerchantId' :: L.MonadFlow m => Id Merchant -> m (Maybe MerchantServiceUsageConfig)
+findByMerchantId' (Id merchantId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure Nothing) (transformBeamMerchantServiceUsageConfigToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamMSUC.merchantId $ Se.Eq merchantId]
+    Nothing -> pure Nothing
 
 updateMerchantServiceUsageConfig ::
   MerchantServiceUsageConfig ->
@@ -56,3 +71,67 @@ updateMerchantServiceUsageConfig MerchantServiceUsageConfig {..} = do
       ]
     where_ $
       tbl ^. MerchantServiceUsageConfigTId ==. val (toKey merchantId)
+
+updateMerchantServiceUsageConfig' :: (L.MonadFlow m, MonadTime m) => MerchantServiceUsageConfig -> m (MeshResult ())
+updateMerchantServiceUsageConfig' MerchantServiceUsageConfig {..} = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  now <- getCurrentTime
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        Mesh.meshConfig
+        [ Se.Set BeamMSUC.getDistances getDistances,
+          Se.Set BeamMSUC.getEstimatedPickupDistances getEstimatedPickupDistances,
+          Se.Set BeamMSUC.getRoutes getRoutes,
+          Se.Set BeamMSUC.snapToRoad snapToRoad,
+          Se.Set BeamMSUC.getPlaceName getPlaceName,
+          Se.Set BeamMSUC.getPlaceDetails getPlaceDetails,
+          Se.Set BeamMSUC.autoComplete autoComplete,
+          Se.Set BeamMSUC.smsProvidersPriorityList smsProvidersPriorityList,
+          Se.Set BeamMSUC.updatedAt now
+        ]
+        [Se.Is BeamMSUC.merchantId (Se.Eq $ getId merchantId)]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+
+transformBeamMerchantServiceUsageConfigToDomain :: BeamMSUC.MerchantServiceUsageConfig -> MerchantServiceUsageConfig
+transformBeamMerchantServiceUsageConfigToDomain BeamMSUC.MerchantServiceUsageConfigT {..} = do
+  MerchantServiceUsageConfig
+    { merchantId = Id merchantId,
+      initiateCall = initiateCall,
+      getDistances = getDistances,
+      getEstimatedPickupDistances = getEstimatedPickupDistances,
+      getRoutes = getRoutes,
+      getPickupRoutes = getPickupRoutes,
+      getTripRoutes = getTripRoutes,
+      snapToRoad = snapToRoad,
+      getPlaceName = getPlaceName,
+      getPlaceDetails = getPlaceDetails,
+      autoComplete = autoComplete,
+      smsProvidersPriorityList = smsProvidersPriorityList,
+      whatsappProvidersPriorityList = whatsappProvidersPriorityList,
+      verificationService = verificationService,
+      updatedAt = updatedAt,
+      createdAt = createdAt
+    }
+
+transformDomainMerchantServiceUsageConfigToBeam :: MerchantServiceUsageConfig -> BeamMSUC.MerchantServiceUsageConfig
+transformDomainMerchantServiceUsageConfigToBeam MerchantServiceUsageConfig {..} =
+  BeamMSUC.MerchantServiceUsageConfigT
+    { BeamMSUC.merchantId = getId merchantId,
+      BeamMSUC.initiateCall = initiateCall,
+      BeamMSUC.getDistances = getDistances,
+      BeamMSUC.getEstimatedPickupDistances = getEstimatedPickupDistances,
+      BeamMSUC.getRoutes = getRoutes,
+      BeamMSUC.getPickupRoutes = getPickupRoutes,
+      BeamMSUC.getTripRoutes = getTripRoutes,
+      BeamMSUC.snapToRoad = snapToRoad,
+      BeamMSUC.getPlaceName = getPlaceName,
+      BeamMSUC.getPlaceDetails = getPlaceDetails,
+      BeamMSUC.autoComplete = autoComplete,
+      BeamMSUC.smsProvidersPriorityList = smsProvidersPriorityList,
+      BeamMSUC.whatsappProvidersPriorityList = whatsappProvidersPriorityList,
+      BeamMSUC.verificationService = verificationService,
+      BeamMSUC.updatedAt = updatedAt,
+      BeamMSUC.createdAt = createdAt
+    }

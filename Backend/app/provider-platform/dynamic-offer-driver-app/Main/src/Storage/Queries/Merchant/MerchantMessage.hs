@@ -20,13 +20,48 @@ module Storage.Queries.Merchant.MerchantMessage
 where
 
 import Domain.Types.Merchant as DOrg
-import Domain.Types.Merchant.MerchantMessage (MerchantMessage, MessageKey)
+-- import Domain.Types.Merchant.MerchantMessage (MerchantMessage, MessageKey)
+import Domain.Types.Merchant.MerchantMessage
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (findById)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import qualified Lib.Mesh as Mesh
+import qualified Sequelize as Se
+import qualified Storage.Beam.Merchant.MerchantMessage as BeamMM
 import Storage.Tabular.Merchant.MerchantMessage ()
 
 findByMerchantIdAndMessageKey :: Transactionable m => Id Merchant -> MessageKey -> m (Maybe MerchantMessage)
 findByMerchantIdAndMessageKey merchantId messageKey =
   Esq.findById (merchantId, messageKey)
+
+findByMerchantIdAndMessageKey' :: L.MonadFlow m => Id Merchant -> MessageKey -> m (Maybe MerchantMessage)
+findByMerchantIdAndMessageKey' (Id merchantId) messageKey = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure Nothing) (transformBeamMerchantMessageToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamMM.merchantId $ Se.Eq merchantId, Se.Is BeamMM.messageKey $ Se.Eq messageKey]]
+    Nothing -> pure Nothing
+
+transformBeamMerchantMessageToDomain :: BeamMM.MerchantMessage -> MerchantMessage
+transformBeamMerchantMessageToDomain BeamMM.MerchantMessageT {..} = do
+  MerchantMessage
+    { merchantId = Id merchantId,
+      messageKey = messageKey,
+      message = message,
+      updatedAt = updatedAt,
+      createdAt = createdAt
+    }
+
+transformDomainMerchantMessageToBeam :: MerchantMessage -> BeamMM.MerchantMessage
+transformDomainMerchantMessageToBeam MerchantMessage {..} =
+  BeamMM.MerchantMessageT
+    { BeamMM.merchantId = getId merchantId,
+      BeamMM.messageKey = messageKey,
+      BeamMM.message = message,
+      BeamMM.updatedAt = updatedAt,
+      BeamMM.createdAt = createdAt
+    }

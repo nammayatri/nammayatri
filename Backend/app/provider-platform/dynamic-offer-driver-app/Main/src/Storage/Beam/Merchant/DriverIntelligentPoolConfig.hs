@@ -160,27 +160,27 @@ driverIntelligentPoolConfigTMod =
 -- instance IsString Minutes where
 -- fromString = show
 
-defaultDriverIntelligentPoolConfig :: DriverIntelligentPoolConfig
-defaultDriverIntelligentPoolConfig =
-  DriverIntelligentPoolConfigT
-    { merchantId = "",
-      availabilityTimeWeightage = 0,
-      availabilityTimeWindowOption = "",
-      acceptanceRatioWeightage = 0,
-      acceptanceRatioWindowOption = "",
-      cancellationRatioWeightage = 0,
-      cancellationRatioWindowOption = "",
-      minQuotesToQualifyForIntelligentPool = 0,
-      minQuotesToQualifyForIntelligentPoolWindowOption = "",
-      intelligentPoolPercentage = Nothing,
-      speedNormalizer = 0.0,
-      driverSpeedWeightage = 0,
-      locationUpdateSampleTime = "",
-      minLocationUpdates = 0,
-      defaultDriverSpeed = 0.0,
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
-    }
+-- defaultDriverIntelligentPoolConfig :: DriverIntelligentPoolConfig
+-- defaultDriverIntelligentPoolConfig =
+--   DriverIntelligentPoolConfigT
+--     { merchantId = "",
+--       availabilityTimeWeightage = 0,
+--       availabilityTimeWindowOption = "",
+--       acceptanceRatioWeightage = 0,
+--       acceptanceRatioWindowOption = "",
+--       cancellationRatioWeightage = 0,
+--       cancellationRatioWindowOption = "",
+--       minQuotesToQualifyForIntelligentPool = 0,
+--       minQuotesToQualifyForIntelligentPoolWindowOption = "",
+--       intelligentPoolPercentage = Nothing,
+--       speedNormalizer = 0.0,
+--       driverSpeedWeightage = 0,
+--       locationUpdateSampleTime = "",
+--       minLocationUpdates = 0,
+--       defaultDriverSpeed = 0.0,
+--       createdAt = defaultUTCDate,
+--       updatedAt = defaultUTCDate
+--     }
 
 instance Serialize DriverIntelligentPoolConfig where
   put = error "undefined"

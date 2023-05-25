@@ -67,7 +67,7 @@ import Storage.Tabular.Merchant (MerchantTId)
 
 -- instance FromBackendRow Postgres Centesimal
 
-instance IsString Centesimal where
+instance IsString HighPrecMeters where
   fromString = show
 
 -- instance FromField Seconds where
@@ -117,9 +117,9 @@ data TransporterConfigT f = TransporterConfigT
     onboardingRetryTimeInHours :: B.C f Int,
     checkImageExtractionForDashboard :: B.C f Bool,
     searchRepeatLimit :: B.C f Int,
-    actualRideDistanceDiffThreshold :: B.C f Centesimal,
-    upwardsRecomputeBuffer :: B.C f Centesimal,
-    approxRideDistanceDiffThreshold :: B.C f Centesimal,
+    actualRideDistanceDiffThreshold :: B.C f HighPrecMeters,
+    upwardsRecomputeBuffer :: B.C f HighPrecMeters,
+    approxRideDistanceDiffThreshold :: B.C f HighPrecMeters,
     driverLeaderBoardExpiry :: B.C f (Maybe Seconds),
     minLocationAccuracy :: B.C f Double,
     createdAt :: B.C f Time.UTCTime,
@@ -180,37 +180,37 @@ transporterConfigTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-defaultTransporterConfig :: TransporterConfig
-defaultTransporterConfig =
-  TransporterConfigT
-    { merchantId = "",
-      pickupLocThreshold = "",
-      dropLocThreshold = "",
-      rideTimeEstimatedThreshold = "",
-      includeDriverCurrentlyOnRide = False,
-      defaultPopupDelay = "",
-      popupDelayToAddAsPenalty = Nothing,
-      thresholdCancellationScore = Nothing,
-      minRidesForCancellationScore = Nothing,
-      mediaFileUrlPattern = "",
-      mediaFileSizeUpperLimit = 0,
-      waitingTimeEstimatedThreshold = "",
-      referralLinkPassword = "",
-      fcmUrl = "",
-      fcmServiceAccount = "",
-      fcmTokenKeyPrefix = "",
-      onboardingTryLimit = 0,
-      onboardingRetryTimeInHours = 0,
-      checkImageExtractionForDashboard = False,
-      searchRepeatLimit = 0,
-      actualRideDistanceDiffThreshold = "",
-      upwardsRecomputeBuffer = "",
-      approxRideDistanceDiffThreshold = "",
-      driverLeaderBoardExpiry = Nothing,
-      minLocationAccuracy = 0.0,
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
-    }
+-- defaultTransporterConfig :: TransporterConfig
+-- defaultTransporterConfig =
+--   TransporterConfigT
+--     { merchantId = "",
+--       pickupLocThreshold = "",
+--       dropLocThreshold = "",
+--       rideTimeEstimatedThreshold = "",
+--       includeDriverCurrentlyOnRide = False,
+--       defaultPopupDelay = "",
+--       popupDelayToAddAsPenalty = Nothing,
+--       thresholdCancellationScore = Nothing,
+--       minRidesForCancellationScore = Nothing,
+--       mediaFileUrlPattern = "",
+--       mediaFileSizeUpperLimit = 0,
+--       waitingTimeEstimatedThreshold = "",
+--       referralLinkPassword = "",
+--       fcmUrl = "",
+--       fcmServiceAccount = "",
+--       fcmTokenKeyPrefix = "",
+--       onboardingTryLimit = 0,
+--       onboardingRetryTimeInHours = 0,
+--       checkImageExtractionForDashboard = False,
+--       searchRepeatLimit = 0,
+--       actualRideDistanceDiffThreshold = "",
+--       upwardsRecomputeBuffer = "",
+--       approxRideDistanceDiffThreshold = "",
+--       driverLeaderBoardExpiry = Nothing,
+--       minLocationAccuracy = 0.0,
+--       createdAt = defaultUTCDate,
+--       updatedAt = defaultUTCDate
+--     }
 
 instance Serialize TransporterConfig where
   put = error "undefined"

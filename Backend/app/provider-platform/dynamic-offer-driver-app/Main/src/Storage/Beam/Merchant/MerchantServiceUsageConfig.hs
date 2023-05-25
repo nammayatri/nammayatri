@@ -90,31 +90,30 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be CallService
 
 instance FromBackendRow Postgres CallService
 
-instance FromField SmsService where
+instance FromField [SmsService] where
   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be SmsService where
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be [SmsService] where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be SmsService
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be [SmsService]
 
-instance FromBackendRow Postgres SmsService
+instance FromBackendRow Postgres [SmsService]
 
-instance IsString SmsService where
-  fromString = show
+-- instance IsString [SmsService] where
+--   fromString = show
+-- instance IsString [WhatsappService] where
+--   fromString = show
 
-instance FromField WhatsappService where
+instance FromField [WhatsappService] where
   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be WhatsappService where
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be [WhatsappService] where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be WhatsappService
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be [WhatsappService]
 
-instance FromBackendRow Postgres WhatsappService
-
-instance IsString WhatsappService where
-  fromString = show
+instance FromBackendRow Postgres [WhatsappService]
 
 instance IsString CallService where
   fromString = show
@@ -131,8 +130,8 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     getPlaceName :: B.C f MapsService,
     getPlaceDetails :: B.C f MapsService,
     autoComplete :: B.C f MapsService,
-    smsProvidersPriorityList :: B.C f SmsService,
-    whatsappProvidersPriorityList :: B.C f WhatsappService,
+    smsProvidersPriorityList :: B.C f [SmsService],
+    whatsappProvidersPriorityList :: B.C f [WhatsappService],
     verificationService :: B.C f VerificationService,
     updatedAt :: B.C f Time.UTCTime,
     createdAt :: B.C f Time.UTCTime
@@ -187,26 +186,26 @@ instance IsString MapsService where
 instance IsString VerificationService where
   fromString = show
 
-defaultMerchantServiceUsageConfig :: MerchantServiceUsageConfig
-defaultMerchantServiceUsageConfig =
-  MerchantServiceUsageConfigT
-    { merchantId = "",
-      initiateCall = "",
-      getDistances = "",
-      getEstimatedPickupDistances = "",
-      getRoutes = "",
-      getPickupRoutes = "",
-      getTripRoutes = "",
-      snapToRoad = "",
-      getPlaceName = "",
-      getPlaceDetails = "",
-      autoComplete = "",
-      smsProvidersPriorityList = "",
-      whatsappProvidersPriorityList = "",
-      verificationService = "",
-      updatedAt = defaultUTCDate,
-      createdAt = defaultUTCDate
-    }
+-- defaultMerchantServiceUsageConfig :: MerchantServiceUsageConfig
+-- defaultMerchantServiceUsageConfig =
+--   MerchantServiceUsageConfigT
+--     { merchantId = "",
+--       initiateCall = "",
+--       getDistances = "",
+--       getEstimatedPickupDistances = "",
+--       getRoutes = "",
+--       getPickupRoutes = "",
+--       getTripRoutes = "",
+--       snapToRoad = "",
+--       getPlaceName = "",
+--       getPlaceDetails = "",
+--       autoComplete = "",
+--       smsProvidersPriorityList = "",
+--       whatsappProvidersPriorityList = "",
+--       verificationService = "",
+--       updatedAt = defaultUTCDate,
+--       createdAt = defaultUTCDate
+--     }
 
 instance Serialize MerchantServiceUsageConfig where
   put = error "undefined"
