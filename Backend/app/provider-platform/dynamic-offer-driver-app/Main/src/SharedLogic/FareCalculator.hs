@@ -111,6 +111,8 @@ fareSum fareParams = do
     + fromMaybe 0 fareParams.customerExtraFee
     + fromMaybe 0 fareParams.serviceCharge
     + fromMaybe 0 fareParams.waitingCharge
+    + fromMaybe 0 fareParams.govtCharges
+    + fromMaybe 0 fareParams.nightShiftCharge
     + partOfNightShiftCharge
     + notPartOfNightShiftCharge
 
@@ -200,7 +202,7 @@ calculateFareParameters params = do
 
     countNightShiftCharge fullRideCost nightShiftCharge = do
       case nightShiftCharge of
-        ProgressiveNightShiftCharge charge -> roundToIntegral $ fromIntegral fullRideCost * charge
+        ProgressiveNightShiftCharge charge -> roundToIntegral $ (fromIntegral fullRideCost * charge) - fromIntegral fullRideCost
         ConstantNightShiftCharge charge -> charge
 
     countWaitingCharge :: WaitingCharge -> Maybe Money
