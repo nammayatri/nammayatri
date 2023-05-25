@@ -19,6 +19,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.provider.Settings;
@@ -445,10 +446,14 @@ public class WidgetService extends Service {
 
                                 //click definition
                                 if (Math.abs(initialTouchX - motionEvent.getRawX()) < 5 && Math.abs(initialTouchY - motionEvent.getRawY()) < 5){
-                                    Intent intent = new Intent(getApplicationContext(), MainActivity.class);
-                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                                    getApplicationContext().startActivity(intent);
-                                    stopSelf();
+                                    if (sharedPref == null) sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+                                    if (sharedPref.getString("MAPS_OPENED", "null").equals("true")){
+                                        if (MainActivity.getInstance()!=null) minimizeApp();
+                                        Handler mainLooper = new Handler(Looper.getMainLooper());
+                                        mainLooper.postDelayed(() -> openMainActivity(), 600);
+                                    } else {
+                                        openMainActivity();
+                                    }
                                 }
                             }
                             return true;
@@ -505,6 +510,21 @@ public class WidgetService extends Service {
             imageClose = null;
         }
     }
+
+    private void openMainActivity(){
+        Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+        getApplicationContext().startActivity(intent);
+        stopSelf();
+    }
+
+    public void minimizeApp() {
+        Intent minimizeIntent = new Intent(Intent.ACTION_MAIN);
+        minimizeIntent.addCategory(Intent.CATEGORY_HOME);
+        minimizeIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        if (MainActivity.getInstance()!=null) MainActivity.getInstance().startActivity(minimizeIntent);
+    }
+
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
