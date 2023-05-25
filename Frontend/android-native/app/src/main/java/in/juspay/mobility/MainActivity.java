@@ -818,6 +818,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         sharedPref.edit().putString(getResources().getString(R.string.ACTIVITY_STATUS),"onResume").apply();
+        sharedPref.edit().putString("MAPS_OPENED", "null").apply();
         appUpdateManager.getAppUpdateInfo().addOnSuccessListener(appUpdateInfo -> {
             if (appUpdateInfo.updateAvailability() == UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS) {
                 // If an in-app update is already running, resume the update.

@@ -333,6 +333,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         super.setActivity(activity);
         this.activity = activity;
         fetchLatLonAndUpdate();
+        sharedPref =  context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
     }
 
     @Override
@@ -344,6 +345,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         this.juspayServices = juspayServices;
         client = LocationServices.getFusedLocationProviderClient(context);
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
+        sharedPref =  context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         fetchLatLonAndUpdate();
     }
 
@@ -1463,11 +1465,13 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     @JavascriptInterface
     public void openNavigation(double slat, double slong, double dlat, double dlong) {
         try {
+            if(sharedPref != null) sharedPref.edit().putString("MAPS_OPENED","true").apply();
             Uri gmmIntentUri = Uri.parse("google.navigation:q=" + String.valueOf(dlat) + "," + String.valueOf(dlong));
             Intent mapIntent = new Intent(Intent.ACTION_VIEW, gmmIntentUri);
             mapIntent.setPackage("com.google.android.apps.maps");
             activity.startActivity(mapIntent);
         } catch (Exception e) {
+            setKeysInSharedPrefs("MAPS_OPENED","null");
             Log.e(LOG_TAG, "Can't open google maps", e);
         }
     }
