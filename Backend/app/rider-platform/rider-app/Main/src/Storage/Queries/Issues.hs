@@ -25,10 +25,32 @@ insertIssue :: Issue -> SqlDB ()
 insertIssue = do
   Esq.create
 
-findByCustomerId :: Transactionable m => Id Person -> m [Issue]
-findByCustomerId customerId = do
+findByCustomerId :: Transactionable m => Id Person -> Maybe Int -> Maybe Int -> UTCTime -> UTCTime -> m [Issue]
+findByCustomerId customerId mbLimit mbOffset fromDate toDate = do
   Esq.findAll $ do
     issues <- from $ table @IssueT
     where_ $
       issues ^. IssueCustomerId ==. val (toKey customerId)
+        &&. issues ^. IssueCreatedAt >=. val fromDate
+        &&. issues ^. IssueCreatedAt <=. val toDate
+    orderBy [desc $ issues ^. IssueCreatedAt]
+    limit limitVal
+    offset offsetVal
     pure issues
+  where
+    limitVal = min (maybe 10 fromIntegral mbLimit) 10
+    offsetVal = maybe 0 fromIntegral mbOffset
+
+findAllIssue :: Transactionable m => Maybe Int -> Maybe Int -> UTCTime -> UTCTime -> m [Issue]
+findAllIssue mbLimit mbOffset fromDate toDate = do
+  Esq.findAll $ do
+    issues <- from $ table @IssueT
+    where_ $
+      issues ^. IssueCreatedAt >=. val fromDate
+        &&. issues ^. IssueCreatedAt <=. val toDate
+    limit limitVal
+    offset offsetVal
+    pure issues
+  where
+    limitVal = min (maybe 10 fromIntegral mbLimit) 10
+    offsetVal = maybe 0 fromIntegral mbOffset

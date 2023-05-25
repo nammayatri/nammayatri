@@ -29,12 +29,16 @@ type API =
 
 type ListCustomerIssue =
   "list"
-    :> Capture "mobileCountryCode" Text
-    :> Capture "mobileNumber" Text
+    :> QueryParam "limit" Int
+    :> QueryParam "offset" Int
+    :> QueryParam "mobileCountryCode" Text
+    :> QueryParam "mobileNumber" Text
+    :> QueryParam "from" UTCTime
+    :> QueryParam "to" UTCTime
     :> Get '[JSON] [DI.Issue]
 
 handler :: ShortId DM.Merchant -> FlowServer API
 handler = listIssue
 
-listIssue :: ShortId DM.Merchant -> Text -> Text -> FlowHandler [DI.Issue]
-listIssue merchantShortId mobileCountryCode mobileNumber = withFlowHandlerAPI $ DDI.getIssueList merchantShortId mobileCountryCode mobileNumber
+listIssue :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> FlowHandler [DI.Issue]
+listIssue merchantShortId mbLimit mbOffset mbMobileCountryCode mbMobileNumber mbFrom mbTo = withFlowHandlerAPI $ DDI.getIssueList merchantShortId mbLimit mbOffset mbMobileCountryCode mbMobileNumber mbFrom mbTo
