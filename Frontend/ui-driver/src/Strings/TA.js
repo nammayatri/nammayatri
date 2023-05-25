@@ -245,7 +245,7 @@ const tamilStrings = {
   CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER: "தற்போது, ​​கர்நாடகா பதிவு செய்யப்பட்ட எண்ணை மட்டுமே அனுமதிக்கிறோம்",
   UPDATED_AT: "புதுப்பிக்கப்பட்டது",
   TRIP_COUNT: "இன்றைய பயணங்கள்",
-  TODAYS_EARNINGS: "இன்றைய வருவாய்",
+  TODAYS_EARNINGS: "வருவாய்",
   DATE_OF_REGISTRATION: "பதிவு செய்த தேதி",
   SELECT_DATE_OF_ISSUE: "வெளியீட்டு தேதியைத் தேர்ந்தெடுக்கவும்",
   DATE_OF_ISSUE: "வெளியீட்டு தேதி",
