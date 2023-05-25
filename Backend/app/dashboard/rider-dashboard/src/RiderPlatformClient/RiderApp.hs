@@ -156,7 +156,7 @@ newtype CancelBookingAPIs = CancelBookingAPIs
   }
 
 newtype ListIssueAPIs = ListIssueAPIs
-  { listIssue :: Text -> Text -> Euler.EulerClient [DI.Issue]
+  { listIssue :: Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Euler.EulerClient [DI.Issue]
   }
 
 mkAppBackendAPIs :: CheckedShortId DM.Merchant -> Text -> AppBackendAPIs

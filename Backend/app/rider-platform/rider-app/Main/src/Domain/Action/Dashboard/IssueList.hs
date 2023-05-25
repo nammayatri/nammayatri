@@ -15,6 +15,7 @@
 
 module Domain.Action.Dashboard.IssueList where
 
+import Data.Time hiding (getCurrentTime)
 import qualified Domain.Types.Issue as DI
 import qualified Domain.Types.Merchant as DM
 import Environment
@@ -32,9 +33,20 @@ newtype IssueListRes = IssueListRes
   { list :: [DI.Issue]
   }
 
-getIssueList :: ShortId DM.Merchant -> Text -> Text -> Flow [DI.Issue]
-getIssueList merchantShortId mobileCountryCode mobileNumber = do
-  mobileNumberDbHash <- getDbHash mobileNumber
+mobileIndianCode :: Text
+mobileIndianCode = "+91"
+
+getIssueList :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Flow [DI.Issue]
+getIssueList merchantShortId mbLimit mbOffset mbmobileCountryCode mbMobileNumber mbFrom mbTo = do
+  now <- getCurrentTime
   merchant <- runInReplica $ QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
-  customer <- runInReplica $ QPerson.findByMobileNumberAndMerchantId mobileCountryCode mobileNumberDbHash merchant.id >>= fromMaybeM (PersonNotFound mobileNumber)
-  runInReplica $ QIssue.findByCustomerId customer.id
+  let toDate = fromMaybe now mbTo
+  let fromDate = fromMaybe (addUTCTime (negate nominalDay) now) mbFrom
+  case mbMobileNumber of
+    Just mobileNumber -> do
+      mobileNumberDbHash <- getDbHash mobileNumber
+      let mobileCountryCode = fromMaybe mobileIndianCode mbmobileCountryCode
+      customer <- runInReplica $ QPerson.findByMobileNumberAndMerchantId mobileCountryCode mobileNumberDbHash merchant.id >>= fromMaybeM (PersonNotFound mobileNumber)
+      runInReplica $ QIssue.findByCustomerId customer.id mbLimit mbOffset fromDate toDate
+    Nothing -> do
+      runInReplica $ QIssue.findAllIssue mbLimit mbOffset fromDate toDate
