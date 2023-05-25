@@ -820,23 +820,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
 
     @JavascriptInterface
     public void toggleLoader(final boolean visible) {
-        activity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                View loader = activity.findViewById(R.id.loaderLayout);
-                if (visible) {
-                    loader.setVisibility(View.VISIBLE);
-                    loader.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) { // Added this to prevent invisible touches through the loader
-                            System.out.println("LOADER CLICKED");
-                        }
-                    });
-                } else {
-                    loader.setVisibility(View.GONE);
-                }
-            }
-        });
+        MainActivity.getInstance().toggleLoader(visible);
     }
 
     @JavascriptInterface

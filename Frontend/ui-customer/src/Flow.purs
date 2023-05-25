@@ -91,7 +91,6 @@ baseAppFlow gPayload = do
   _ <- pure $ setValueToLocalStore RATING_SKIPPED "false"
   _ <- pure $ setValueToLocalStore POINTS_FACTOR "3"
   _ <- pure $ setValueToLocalStore ACCURACY_THRESHOLD "23.0"
-  updateLocalStage InitialStage
   when ((getValueToLocalStore SESSION_ID == "__failed") || (getValueToLocalStore SESSION_ID == "(null)")) $ do
     setValueToLocalStore SESSION_ID (generateSessionId unit)
   _ <- lift $ lift $ setLogField "customer_id" $ encode (customerId)
@@ -100,7 +99,12 @@ baseAppFlow gPayload = do
   _ <- lift $ lift $ setLogField "platform" $ encode (os)
   _ <- UI.splashScreen state.splashScreen
   _ <- lift $ lift $ liftFlow $(firebaseLogEventWithParams "ny_user_app_version" "version" (versionName))
-  if getValueToLocalStore REGISTERATION_TOKEN /= "__failed" && getValueToLocalStore REGISTERATION_TOKEN /= "(null)" then homeScreenFlow else enterMobileNumberScreenFlow -- Removed choose langauge screen
+  if getValueToLocalStore REGISTERATION_TOKEN /= "__failed" && getValueToLocalStore REGISTERATION_TOKEN /= "(null)" then do
+    updateLocalStage InitialStage
+    void $ lift $ lift $ loaderText "Loading..." ""
+    void $ lift $ lift $ toggleLoader true
+    homeScreenFlow
+  else enterMobileNumberScreenFlow -- Removed choose langauge screen
 
 
 concatString :: Array String -> String
@@ -159,7 +163,7 @@ currentRideFlow rideAssigned = do
           void $ pure $ firebaseLogEvent "ny_active_ride_with_idle_state"
         let (RideBookingRes resp) = (fromMaybe dummyRideBooking (listResp.list !! 0))
             status = (fromMaybe dummyRideAPIEntity ((resp.rideList) !! 0))^._status
-            rideStatus = if status == "NEW" then RideAccepted else RideStarted
+            rideStatus = if status == "NEW" then RideAccepted else if status == "INPROGRESS" then RideStarted else HomeScreen
             newState = state{data{driverInfoCardState = getDriverInfo (RideBookingRes resp)
                 , finalAmount = fromMaybe 0 ((fromMaybe dummyRideAPIEntity (resp.rideList !!0) )^. _computedPrice)},
                   props{currentStage = rideStatus
@@ -167,11 +171,15 @@ currentRideFlow rideAssigned = do
                   , ratingModal = false
                   , bookingId = resp.id
                   }}
-        when (not rideAssigned) $ do
-          void $ pure $ firebaseLogEventWithTwoParams "ny_active_ride_with_idle_state" "status" status "bookingId" resp.id
-        _ <- pure $ spy "Active api" listResp
-        modifyScreenState $ HomeScreenStateType (\homeScreen → newState)
-        updateLocalStage rideStatus
+        if rideStatus == HomeScreen then do
+          _ <- pure $ spy "status is : " status
+          updateLocalStage HomeScreen
+        else do
+          when (not rideAssigned) $ do
+            void $ pure $ firebaseLogEventWithTwoParams "ny_active_ride_with_idle_state" "status" status "bookingId" resp.id
+          _ <- pure $ spy "Active api" listResp
+          modifyScreenState $ HomeScreenStateType (\homeScreen → newState)
+          updateLocalStage rideStatus
       else if ((getValueToLocalStore RATING_SKIPPED) == "false") then do
         updateLocalStage HomeScreen
         rideBookingListResponse <- lift $ lift $ Remote.rideBookingList "1" "0" "false"
@@ -229,7 +237,8 @@ currentRideFlow rideAssigned = do
 
 currentFlowStatus :: FlowBT String Unit
 currentFlowStatus = do
-  void $ lift $ lift $ toggleLoader false
+  when (not (isLocalStageOn InitialStage)) $ do
+    void $ lift $ lift $ toggleLoader false
   _ <- pure $ spy "currentFlowStatus" ":::"
   _ <- pure $ setValueToLocalStore DRIVER_ARRIVAL_ACTION "TRIGGER_DRIVER_ARRIVAL"
   verifyProfile "LazyCheck"
@@ -423,7 +432,8 @@ homeScreenFlow = do
 
   -- TODO: HANDLE LOCATION LIST INITIALLY
   _ <- pure $ firebaseUserID (getValueToLocalStore CUSTOMER_ID)
-  void $ lift $ lift $ toggleLoader false
+  when (not (isLocalStageOn InitialStage)) $ do
+    void $ lift $ lift $ toggleLoader false
   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{hasTakenRide = if (getValueToLocalStore REFERRAL_STATUS == "HAS_TAKEN_RIDE") then true else false, isReferred = if (getValueToLocalStore REFERRAL_STATUS == "REFERRED_NOT_TAKEN_RIDE") then true else false }})
   flow <- UI.homeScreen
   case flow of

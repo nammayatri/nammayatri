@@ -65,7 +65,7 @@ import Log (printLog)
 import Prelude (Unit, bind, const, discard, map, negate, not, pure, show, unit, void, when, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<>), (==), (>), (||), (<=))
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
-import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Gradient(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width ,gradient , adjustViewWithKeyboard)
+import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Gradient(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width ,gradient , adjustViewWithKeyboard, shimmerFrameLayout)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import PrestoDOM.Properties (cornerRadii, sheetState)
@@ -223,7 +223,7 @@ view push state =
                     _ <- logEvent "afterRender"
                     _ <- push action
                     pure unit
-                  )(const AfterRender)
+                  )(const UpdateData)
     ]
     [ linearLayout
         [ height MATCH_PARENT
@@ -274,7 +274,7 @@ view push state =
                     ]
                 ]
             , homeScreenView push state
-            , buttonLayoutParentView push state
+            , if (not (isLocalStageOn InitialStage)) then buttonLayoutParentView push state else emptyTextView state
             , if (not state.props.rideRequestFlow) || (state.props.currentStage == FindingEstimate || state.props.currentStage == ConfirmingRide) then emptyTextView state else topLeftIconView state push
             , linearLayout
                 [ width MATCH_PARENT
@@ -306,9 +306,23 @@ view push state =
             , if state.props.showLiveDashboard then showLiveStatsDashboard push state else emptyTextView state
             , if state.props.showCallPopUp then (driverCallPopUp push state) else emptyTextView state
             , if state.props.callSupportPopUp then callSupportPopUpView push state else emptyTextView state
+            -- , shimmerView state
             ]
         ]
     ]
+
+shimmerView :: forall w . HomeScreenState -> PrestoDOM (Effect Unit) w
+shimmerView state =
+  linearLayout
+  [ width MATCH_PARENT
+  , height MATCH_PARENT
+  -- , background Color.black900
+  ][  shimmerFrameLayout
+      [ width MATCH_PARENT
+      , height (V 200)
+      , background Color.white900
+      ][]
+  ]
 
 callSupportPopUpView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 callSupportPopUpView push state =

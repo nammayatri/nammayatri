@@ -175,6 +175,8 @@ public class MainActivity extends AppCompatActivity {
     private NetworkBroadcastReceiver networkBroadcastReceiver;
     private boolean isHideSplashEventCalled = false;
     private boolean isSystemAnimEnabled = true;
+    public boolean animationCycleCompleted = false;
+    public boolean showToggleLoader = false;
     public static MainActivity getInstance() {
         return instance;
     }
@@ -373,7 +375,12 @@ public class MainActivity extends AppCompatActivity {
 
                         @Override
                         public void onAnimationEnd(Animator animation) {
-                            hideSplash();
+                            animationCycleCompleted = true;
+                            if (isHideSplashEventCalled) {
+                                hideSplash();
+                            }else {
+                                splashLottieView.playAnimation();
+                            }
                         }
                         @Override
                         public void onAnimationCancel(Animator animation) {
@@ -680,7 +687,10 @@ public class MainActivity extends AppCompatActivity {
                     System.out.println("Json Data" + json.toString());
                     hyperServices.process(json);
                 } else if (jsonObject.optString("event").equals("hide_splash")) {
-                    hideSplash();
+                    isHideSplashEventCalled = true;
+                    if (animationCycleCompleted) {
+                        hideSplash();
+                    }
                 } else if (jsonObject.optString("event").equals("show_splash")) {
                     View v = findViewById(R.id.splash);
                     if (v != null) {
@@ -1129,6 +1139,9 @@ public class MainActivity extends AppCompatActivity {
       }
       View splashView = findViewById(R.id.splash);
       if (splashView != null) {
+          if (showToggleLoader) {
+              toggleLoader(true);
+          }
           splashView.setVisibility(View.GONE);
       }
   }
@@ -1294,5 +1307,29 @@ public class MainActivity extends AppCompatActivity {
         }catch (Exception e){
             Log.e(TAG, "Exception in checkRideRequest");
         }
+    }
+
+    public void toggleLoader(final boolean visible) {
+        activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                View loader = findViewById(R.id.loaderLayout);
+                if (visible) {
+                    showToggleLoader = true;
+                    if (isHideSplashEventCalled) {
+                    loader.setVisibility(View.VISIBLE);
+                    loader.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) { // Added this to prevent invisible touches through the loader
+                            System.out.println("LOADER CLICKED");
+                        }
+                    });
+                }
+                } else {
+                    showToggleLoader = false;
+                    loader.setVisibility(View.GONE);
+                }
+            }
+        });
     }
 }

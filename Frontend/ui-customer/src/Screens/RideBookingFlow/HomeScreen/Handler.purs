@@ -20,20 +20,23 @@ import Control.Transformers.Back.Trans as App
 import Engineering.Helpers.BackTrack (getState)
 import JBridge (toggleLoader)
 import ModifyScreenState (modifyScreenState)
-import Prelude (bind, discard, ($), (<$>), pure, void)
+import Prelude (bind, discard, ($), (<$>), pure, void, not, when)
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.HomeScreen.Controller (ScreenOutput(..))
 import Screens.HomeScreen.View as HomeScreen
 import Types.App (FlowBT, GlobalState(..), ScreenType(..), HOME_SCREEN_OUTPUT(..))
 import Helpers.Utils (logEvent)
 import Engineering.Helpers.Commons (liftFlow)
+import Storage (isLocalStageOn)
+import Screens.Types (Stage(..))
 
 homeScreen ::FlowBT String HOME_SCREEN_OUTPUT
 homeScreen = do
   _ <- lift $ lift $ liftFlow $ logEvent "runScreen"
   (GlobalState state) <- getState
   act <- lift $ lift $ runScreen $ HomeScreen.screen state.homeScreen
-  void $ lift $ lift $ toggleLoader false
+  when (not (isLocalStageOn InitialStage)) $ do
+    void $ lift $ lift $ toggleLoader false
   case act of
     UpdateLocationName updatedState lat lng-> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
