@@ -27,6 +27,7 @@ import Kernel.Storage.Esqueleto
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
+import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.Message.Message as BeamM
 import qualified Storage.Queries.Message.MessageTranslation as MT
@@ -42,12 +43,33 @@ create msg = Esq.runTransaction $
 findById :: Transactionable m => Id Message -> m (Maybe RawMessage)
 findById = Esq.findById
 
--- findById' :: L.MonadFlow m => Id Message -> m (Maybe RawMessage)
--- findById' (Id messageId) = do
---   dbConf <- L.getOption Extra.EulerPsqlDbCfg
---   case dbConf of
---     Just dbCOnf' -> either (pure Nothing) (transformBeamMessageToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamM.id $ Se.Eq messageId]
---     Nothing -> pure Nothing
+findById' :: L.MonadFlow m => Id Message -> m (Maybe RawMessage)
+findById' (Id messageId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> do
+      result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamM.id $ Se.Eq messageId]
+      case result of
+        Right msg -> do
+          msg' <- traverse transformBeamMessageToDomain msg
+          pure $
+            ( \Message {..} ->
+                RawMessage
+                  { id = id,
+                    _type = _type,
+                    title = title,
+                    description = description,
+                    shortDescription = shortDescription,
+                    label = label,
+                    likeCount = likeCount,
+                    mediaFiles = mediaFiles,
+                    merchantId = merchantId,
+                    createdAt = createdAt
+                  }
+            )
+              <$> msg'
+        Left _ -> pure Nothing
+    Nothing -> pure Nothing
 
 findAllWithLimitOffset ::
   Transactionable m =>
@@ -69,6 +91,38 @@ findAllWithLimitOffset mbLimit mbOffset merchantId = do
   where
     limitVal = min (maybe 10 fromIntegral mbLimit) 10
     offsetVal = maybe 0 fromIntegral mbOffset
+
+findAllWithLimitOffset' :: L.MonadFlow m => Maybe Int -> Maybe Int -> Id Merchant -> m [RawMessage]
+findAllWithLimitOffset' mbLimit mbOffset merchantIdParam = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> do
+      srsz <- KV.findAllWithOptionsKVConnector dbConf' Mesh.meshConfig [Se.Is BeamM.merchantId $ Se.Eq (getId merchantIdParam)] (Se.Asc BeamM.createdAt) (Just limitVal) (Just offsetVal)
+      case srsz of
+        Left _ -> pure []
+        Right x -> do
+          msg <- traverse transformBeamMessageToDomain x
+          pure $
+            map
+              ( \Message {..} ->
+                  RawMessage
+                    { id = id,
+                      _type = _type,
+                      title = title,
+                      description = description,
+                      shortDescription = shortDescription,
+                      label = label,
+                      likeCount = likeCount,
+                      mediaFiles = mediaFiles,
+                      merchantId = merchantId,
+                      createdAt = createdAt
+                    }
+              )
+              msg
+    Nothing -> pure []
+  where
+    limitVal = min (fromMaybe 10 mbLimit) 10
+    offsetVal = fromMaybe 0 mbOffset
 
 updateMessageLikeCount :: Id Message -> Int -> SqlDB ()
 updateMessageLikeCount messageId value = do

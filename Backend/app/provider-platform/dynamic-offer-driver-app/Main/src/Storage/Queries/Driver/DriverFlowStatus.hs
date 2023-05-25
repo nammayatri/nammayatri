@@ -66,19 +66,19 @@ getStatus personId = do
       driverFlowStatus ^. DriverFlowStatusTId ==. val (toKey personId)
     return $ driverFlowStatus ^. DriverFlowStatusFlowStatus
 
--- getStatus' :: L.MonadFlow m => Id Person -> m (Maybe DDFS.FlowStatus)
--- getStatus' (Id personId) = do
---   dbConf <- L.getOption Extra.EulerPsqlDbCfg
---   case dbConf of
---     Just dbConf' -> do
---       dfsData <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamDFS.personId $ Se.Eq personId]
---       case dfsData of
---         Left _ -> pure Nothing
---         Right x -> do
---           dfsData' <- traverse transformBeamDriverFlowStatusToDomain x
---           let fs = DDFS.flowStatus <$> dfsData'
---           pure fs
---     Nothing -> pure Nothing
+getStatus' :: L.MonadFlow m => Id Person -> m (Maybe DDFS.FlowStatus)
+getStatus' (Id personId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> do
+      dfsData <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamDFS.personId $ Se.Eq personId]
+      case dfsData of
+        Left _ -> pure Nothing
+        Right x -> do
+          let dfsData' = transformBeamDriverFlowStatusToDomain <$> x
+          let fs = DDFS.flowStatus <$> dfsData'
+          pure fs
+    Nothing -> pure Nothing
 
 updateStatus :: Id Person -> DDFS.FlowStatus -> SqlDB ()
 updateStatus personId flowStatus = do

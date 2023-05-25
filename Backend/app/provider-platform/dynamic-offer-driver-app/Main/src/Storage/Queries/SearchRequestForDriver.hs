@@ -120,6 +120,18 @@ removeAllBySearchId searchReqId = Esq.delete $ do
   sReqForDriver <- from $ table @SearchRequestForDriverT
   where_ $ sReqForDriver ^. SearchRequestForDriverSearchRequestId ==. val (toKey searchReqId)
 
+removeAllBySearchId' :: L.MonadFlow m => Id SearchRequest -> m ()
+removeAllBySearchId' (Id searchReqId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' ->
+      void $
+        KV.deleteWithKVConnector
+          dbConf'
+          Mesh.meshConfig
+          [Se.Is BeamSRFD.searchRequestId (Se.Eq searchReqId)]
+    Nothing -> pure ()
+
 deleteByDriverId :: Id Person -> SqlDB ()
 deleteByDriverId personId = Esq.delete $ do
   sReqForDriver <- from $ table @SearchRequestForDriverT

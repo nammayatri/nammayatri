@@ -88,15 +88,25 @@ instance FromJSON Message where
 instance ToJSON Message where
   toJSON = A.genericToJSON A.defaultOptions
 
+instance FromField [Text] where
+  fromField = fromFieldEnum
+
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be [Text] where
   sqlValueSyntax = autoSqlValueSyntax
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be [Text]
 
+instance FromBackendRow Postgres [Text]
+
+instance FromField Domain.MessageType where
+  fromField = fromFieldEnum
+
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.MessageType where
   sqlValueSyntax = autoSqlValueSyntax
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.MessageType
+
+instance FromBackendRow Postgres Domain.MessageType
 
 deriving stock instance Show Message
 

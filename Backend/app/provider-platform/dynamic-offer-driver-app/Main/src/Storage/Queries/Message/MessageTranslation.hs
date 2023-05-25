@@ -34,6 +34,13 @@ import Storage.Tabular.Message.MessageTranslation
 create :: MessageTranslation -> SqlDB ()
 create = Esq.create
 
+create' :: L.MonadFlow m => MessageTranslation -> m (MeshResult ())
+create' messageTranslation = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainMessageTranslationToBeam messageTranslation)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+
 findByMessageIdAndLanguage :: Transactionable m => Id Msg.Message -> Language -> m (Maybe MessageTranslation)
 findByMessageIdAndLanguage messageId language =
   Esq.findOne $ do
@@ -41,6 +48,17 @@ findByMessageIdAndLanguage messageId language =
     where_ $
       messageTranslation ^. MessageTranslationTId ==. val (toKey (messageId, language))
     return messageTranslation
+
+findById' :: L.MonadFlow m => Id Msg.Message -> Language -> m (Maybe MessageTranslation)
+findById' (Id messageId) language = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> do
+      result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamMT.messageId $ Se.Eq messageId, Se.Is BeamMT.language $ Se.Eq language]]
+      case result of
+        Right mt -> pure $ transformBeamMessageTranslationToDomain <$> mt
+        Left _ -> pure Nothing
+    Nothing -> pure Nothing
 
 findByMessageId :: Transactionable m => Id Msg.Message -> m [MessageTranslation]
 findByMessageId messageId =
@@ -54,7 +72,7 @@ findByMessageId' :: L.MonadFlow m => Id Msg.Message -> m [MessageTranslation]
 findByMessageId' (Id messageId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    -- Just dbCOnf' -> either (pure Nothing) (transformBeamCallStatusToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamCT.id $ Se.Eq callStatusId]
+    -- Just dbCOnf' -> either (pure Nothing) (transformBeamCallStatusToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamCT.id $ Se.Eq callStatusId]
     -- findAllWithKVConnector
     Just dbCOnf' -> either (pure []) (transformBeamMessageTranslationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamMT.messageId $ Se.Eq messageId]
     Nothing -> pure []

@@ -427,8 +427,8 @@ getRidesForDate' driverId date = do
   let maxDayTime = UTCTime date 66600
   case dbConf of
     Just dbConf' -> do
-      result <-
-        KV.findWithKVConnector
+      ridesResult <-
+        KV.findAllWithKVConnector
           dbConf'
           VN.meshConfig
           [ Se.And
@@ -438,12 +438,9 @@ getRidesForDate' driverId date = do
                 Se.Is BeamR.status $ Se.Eq Ride.COMPLETED
               ]
           ]
-      case result of
+      case ridesResult of
         Left _ -> pure []
-        Right (Just ride) -> do
-          transformedRide <- transformBeamRideToDomain ride
-          pure [transformedRide]
-        _ -> pure []
+        Right rides -> mapM transformBeamRideToDomain rides
     Nothing -> pure []
 
 updateArrival :: Id Ride -> SqlDB ()
