@@ -380,6 +380,7 @@ type IndividualRideCardState =
   , extraDistance :: String
   , referenceString :: String
   , isSpecialZone :: Boolean
+  , nightCharges :: Boolean
   }
 
 type ItemState =

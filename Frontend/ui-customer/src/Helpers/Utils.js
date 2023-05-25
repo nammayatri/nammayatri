@@ -475,11 +475,12 @@ export const shuffle = function (array) {
 
 export const withinTimeRange = function (startTime) {
   return function (endTime) {
-    try {
-      var currentTimeString = moment(new Date()).format("HH:mm:ss");
-      return startTime < endTime ? between(currentTimeString, startTime, endTime) : between(currentTimeString, startTime, "23:59:59") || between(currentTimeString, "00:00:01", endTime);
-    }catch (err){
-      return false;
+    return function(timeStr){
+      try {
+        return startTime < endTime ? between(timeStr, startTime, endTime) : between(timeStr, startTime, "23:59:59") || between(timeStr, "00:00:01", endTime);
+     }catch (err){
+        return false;
+      }
     }
   }
 }
