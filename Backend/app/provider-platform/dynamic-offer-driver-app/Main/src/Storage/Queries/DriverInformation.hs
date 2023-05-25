@@ -42,12 +42,12 @@ import qualified Storage.Tabular.VechileNew as VN
 -- create :: DriverInformation -> SqlDB ()
 -- create = Esq.create
 
-create :: L.MonadFlow m => DDI.DriverInformation -> m (MeshResult ())
+create :: L.MonadFlow m => DDI.DriverInformation -> m ()
 create driverInformation = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainDriverInformationToBeam driverInformation)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+    Just dbConf' -> void $ KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainDriverInformationToBeam driverInformation)
+    Nothing -> pure ()
 
 -- findById :: Transactionable m => Id Person.Driver -> m (Maybe DriverInformation)
 -- findById = Esq.findById . cast

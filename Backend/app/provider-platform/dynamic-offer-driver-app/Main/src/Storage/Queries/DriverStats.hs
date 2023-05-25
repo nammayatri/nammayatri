@@ -40,7 +40,7 @@ import Storage.Tabular.DriverStats
 --         totalDistance = 0
 --       }
 
-createInitialDriverStats :: (L.MonadFlow m, MonadTime m) => Id Driver -> m (MeshResult ())
+createInitialDriverStats :: (L.MonadFlow m, MonadTime m) => Id Driver -> m ()
 createInitialDriverStats driverId = do
   now <- getCurrentTime
   let dStats =
@@ -52,8 +52,8 @@ createInitialDriverStats driverId = do
           }
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainDriverStatsToBeam dStats)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+    Just dbConf' -> void $ KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainDriverStatsToBeam dStats)
+    Nothing -> pure ()
 
 -- getTopDriversByIdleTime :: Transactionable m => Int -> [Id Driver] -> m [Id Driver]
 -- getTopDriversByIdleTime count_ ids =

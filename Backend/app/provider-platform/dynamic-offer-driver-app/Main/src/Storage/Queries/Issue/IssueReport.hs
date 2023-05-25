@@ -18,33 +18,33 @@ import qualified Storage.Beam.Issue.IssueReport as BeamIR
 import Storage.Tabular.Issue.IssueReport
 import qualified Storage.Tabular.VechileNew as VN
 
-create :: IssueReport -> SqlDB ()
-create = Esq.create
+-- create :: IssueReport -> SqlDB ()
+-- create = Esq.create
 
-create' :: L.MonadFlow m => IssueReport.IssueReport -> m (MeshResult ())
-create' issueReport = do
+create :: L.MonadFlow m => IssueReport.IssueReport -> m (MeshResult ())
+create issueReport = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainIssueReportToBeam issueReport)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-findAllWithOptions :: Transactionable m => Maybe Int -> Maybe Int -> Maybe IssueStatus -> Maybe (Id IssueCategory) -> Maybe Text -> m [IssueReport]
-findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee = Esq.findAll $ do
-  issueReport <- from $ table @IssueReportT
-  where_ $
-    whenJust_ mbStatus (\statusVal -> issueReport ^. IssueReportStatus ==. val statusVal)
-      &&. whenJust_ mbAssignee (\assignee -> issueReport ^. IssueReportAssignee ==. just (val assignee))
-      &&. whenJust_ mbCategoryId (\categoryId -> issueReport ^. IssueReportCategoryId ==. val (toKey categoryId))
-  orderBy [desc $ issueReport ^. IssueReportCreatedAt]
-  limit limitVal
-  offset offsetVal
-  return issueReport
-  where
-    limitVal = min (maybe 10 fromIntegral mbLimit) 10
-    offsetVal = maybe 0 fromIntegral mbOffset
+-- findAllWithOptions :: Transactionable m => Maybe Int -> Maybe Int -> Maybe IssueStatus -> Maybe (Id IssueCategory) -> Maybe Text -> m [IssueReport]
+-- findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee = Esq.findAll $ do
+--   issueReport <- from $ table @IssueReportT
+--   where_ $
+--     whenJust_ mbStatus (\statusVal -> issueReport ^. IssueReportStatus ==. val statusVal)
+--       &&. whenJust_ mbAssignee (\assignee -> issueReport ^. IssueReportAssignee ==. just (val assignee))
+--       &&. whenJust_ mbCategoryId (\categoryId -> issueReport ^. IssueReportCategoryId ==. val (toKey categoryId))
+--   orderBy [desc $ issueReport ^. IssueReportCreatedAt]
+--   limit limitVal
+--   offset offsetVal
+--   return issueReport
+--   where
+--     limitVal = min (maybe 10 fromIntegral mbLimit) 10
+--     offsetVal = maybe 0 fromIntegral mbOffset
 
-findAllWithOptions' :: L.MonadFlow m => Maybe Int -> Maybe Int -> Maybe IssueStatus -> Maybe (Id IssueCategory) -> Maybe Text -> m [IssueReport]
-findAllWithOptions' mbLimit mbOffset mbStatus mbCategoryId mbAssignee = do
+findAllWithOptions :: L.MonadFlow m => Maybe Int -> Maybe Int -> Maybe IssueStatus -> Maybe (Id IssueCategory) -> Maybe Text -> m [IssueReport]
+findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> do
@@ -57,47 +57,47 @@ findAllWithOptions' mbLimit mbOffset mbStatus mbCategoryId mbAssignee = do
     limitVal = min (fromMaybe 10 mbLimit) 10
     offsetVal = fromMaybe 0 mbOffset
 
-findById :: Transactionable m => Id IssueReport -> m (Maybe IssueReport)
-findById issueReportId = Esq.findOne $ do
-  issueReport <- from $ table @IssueReportT
-  where_ $
-    issueReport ^. IssueReportTId ==. val (toKey issueReportId)
-      &&. issueReport ^. IssueReportDeleted ==. val False
-  pure issueReport
+-- findById :: Transactionable m => Id IssueReport -> m (Maybe IssueReport)
+-- findById issueReportId = Esq.findOne $ do
+--   issueReport <- from $ table @IssueReportT
+--   where_ $
+--     issueReport ^. IssueReportTId ==. val (toKey issueReportId)
+--       &&. issueReport ^. IssueReportDeleted ==. val False
+--   pure issueReport
 
-findById' :: L.MonadFlow m => Id IssueReport -> m (Maybe IssueReport)
-findById' (Id issueReportId) = do
+findById :: L.MonadFlow m => Id IssueReport -> m (Maybe IssueReport)
+findById (Id issueReportId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> either (pure Nothing) (transformBeamIssueReportToDomain <$>) <$> KV.findWithKVConnector dbConf' VN.meshConfig [Se.Is BeamIR.id $ Se.Eq issueReportId]
     Nothing -> pure Nothing
 
-findAllByDriver :: Id SP.Person -> Transactionable m => m [IssueReport]
-findAllByDriver driverId = Esq.findAll $ do
-  issueReport <- from $ table @IssueReportT
-  where_ $
-    issueReport ^. IssueReportDriverId ==. val (toKey driverId)
-      &&. issueReport ^. IssueReportDeleted ==. val False
-  pure issueReport
+-- findAllByDriver :: Id SP.Person -> Transactionable m => m [IssueReport]
+-- findAllByDriver driverId = Esq.findAll $ do
+--   issueReport <- from $ table @IssueReportT
+--   where_ $
+--     issueReport ^. IssueReportDriverId ==. val (toKey driverId)
+--       &&. issueReport ^. IssueReportDeleted ==. val False
+--   pure issueReport
 
-findAllByDriver' :: L.MonadFlow m => Id SP.Person -> m [IssueReport]
-findAllByDriver' (Id driverId) = do
+findAllByDriver :: L.MonadFlow m => Id SP.Person -> m [IssueReport]
+findAllByDriver (Id driverId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> either (pure []) (transformBeamIssueReportToDomain <$>) <$> KV.findAllWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamIR.driverId $ Se.Eq driverId]
     Nothing -> pure []
 
-safeToDelete :: Transactionable m => Id IssueReport -> Id SP.Person -> m (Maybe IssueReport)
-safeToDelete issueReportId driverId = Esq.findOne $ do
-  issueReport <- from $ table @IssueReportT
-  where_ $
-    issueReport ^. IssueReportTId ==. val (toKey issueReportId)
-      &&. issueReport ^. IssueReportDeleted ==. val False
-      &&. issueReport ^. IssueReportDriverId ==. val (toKey driverId)
-  pure issueReport
+-- safeToDelete :: Transactionable m => Id IssueReport -> Id SP.Person -> m (Maybe IssueReport)
+-- safeToDelete issueReportId driverId = Esq.findOne $ do
+--   issueReport <- from $ table @IssueReportT
+--   where_ $
+--     issueReport ^. IssueReportTId ==. val (toKey issueReportId)
+--       &&. issueReport ^. IssueReportDeleted ==. val False
+--       &&. issueReport ^. IssueReportDriverId ==. val (toKey driverId)
+--   pure issueReport
 
-safeToDelete' :: L.MonadFlow m => Id IssueReport -> Id SP.Person -> m (Maybe IssueReport)
-safeToDelete' (Id issueReportId) (Id driverId) = do
+safeToDelete :: L.MonadFlow m => Id IssueReport -> Id SP.Person -> m (Maybe IssueReport)
+safeToDelete (Id issueReportId) (Id driverId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> do
@@ -107,14 +107,14 @@ safeToDelete' (Id issueReportId) (Id driverId) = do
         Left _ -> pure Nothing
     Nothing -> pure Nothing
 
-isSafeToDelete :: Transactionable m => Id IssueReport -> Id SP.Person -> m Bool
+-- isSafeToDelete :: Transactionable m => Id IssueReport -> Id SP.Person -> m Bool
+-- isSafeToDelete issueReportId driverId = do
+--   findSafeToDelete <- safeToDelete issueReportId driverId
+--   return $ isJust findSafeToDelete
+
+isSafeToDelete :: L.MonadFlow m => Id IssueReport -> Id SP.Person -> m Bool
 isSafeToDelete issueReportId driverId = do
   findSafeToDelete <- safeToDelete issueReportId driverId
-  return $ isJust findSafeToDelete
-
-isSafeToDelete' :: L.MonadFlow m => Id IssueReport -> Id SP.Person -> m Bool
-isSafeToDelete' issueReportId driverId = do
-  findSafeToDelete <- safeToDelete' issueReportId driverId
   return $ isJust findSafeToDelete
 
 -- deleteByPersonId :: Id SP.Person -> SqlDB ()
@@ -135,20 +135,20 @@ deleteByPersonId (Id driverId) = do
           [Se.Is BeamIR.driverId (Se.Eq driverId)]
     Nothing -> pure ()
 
-updateAsDeleted :: Id IssueReport -> SqlDB ()
-updateAsDeleted issueReportId = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ IssueReportDeleted =. val True,
-        IssueReportUpdatedAt =. val now
-      ]
-    where_ $
-      tbl ^. IssueReportTId ==. val (toKey issueReportId)
+-- updateAsDeleted :: Id IssueReport -> SqlDB ()
+-- updateAsDeleted issueReportId = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ IssueReportDeleted =. val True,
+--         IssueReportUpdatedAt =. val now
+--       ]
+--     where_ $
+--       tbl ^. IssueReportTId ==. val (toKey issueReportId)
 
-updateAsDeleted' :: (L.MonadFlow m, MonadTime m) => Id IssueReport -> m ()
-updateAsDeleted' issueReportId = do
+updateAsDeleted :: (L.MonadFlow m, MonadTime m) => Id IssueReport -> m ()
+updateAsDeleted issueReportId = do
   now <- getCurrentTime
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
@@ -163,22 +163,22 @@ updateAsDeleted' issueReportId = do
           [Se.Is BeamIR.id (Se.Eq $ getId issueReportId)]
     Nothing -> pure ()
 
-updateStatusAssignee :: Id IssueReport -> Maybe IssueStatus -> Maybe Text -> SqlDB ()
-updateStatusAssignee issueReportId status assignee = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      ( [IssueReportUpdatedAt =. val now]
-          <> maybe [] (\justStatus -> [IssueReportStatus =. val justStatus]) status
-          <> maybe [] (\justAssignee -> [IssueReportAssignee =. just (val justAssignee)]) assignee
-      )
-    where_ $
-      tbl ^. IssueReportTId ==. val (toKey issueReportId)
-        &&. tbl ^. IssueReportDeleted ==. val False
+-- updateStatusAssignee :: Id IssueReport -> Maybe IssueStatus -> Maybe Text -> SqlDB ()
+-- updateStatusAssignee issueReportId status assignee = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       ( [IssueReportUpdatedAt =. val now]
+--           <> maybe [] (\justStatus -> [IssueReportStatus =. val justStatus]) status
+--           <> maybe [] (\justAssignee -> [IssueReportAssignee =. just (val justAssignee)]) assignee
+--       )
+--     where_ $
+--       tbl ^. IssueReportTId ==. val (toKey issueReportId)
+--         &&. tbl ^. IssueReportDeleted ==. val False
 
-updateStatusAssignee' :: (L.MonadFlow m, MonadTime m) => Id IssueReport -> Maybe IssueStatus -> Maybe Text -> m ()
-updateStatusAssignee' issueReportId status assignee = do
+updateStatusAssignee :: (L.MonadFlow m, MonadTime m) => Id IssueReport -> Maybe IssueStatus -> Maybe Text -> m ()
+updateStatusAssignee issueReportId status assignee = do
   now <- getCurrentTime
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
@@ -191,21 +191,21 @@ updateStatusAssignee' issueReportId status assignee = do
           [Se.Is BeamIR.id (Se.Eq $ getId issueReportId)]
     Nothing -> pure ()
 
-updateOption :: Id IssueReport -> Id IssueOption -> SqlDB ()
-updateOption issueReportId optionId = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ IssueReportOptionId =. just (val (toKey optionId)),
-        IssueReportUpdatedAt =. val now
-      ]
-    where_ $
-      tbl ^. IssueReportTId ==. val (toKey issueReportId)
-        &&. tbl ^. IssueReportDeleted ==. val False
+-- updateOption :: Id IssueReport -> Id IssueOption -> SqlDB ()
+-- updateOption issueReportId optionId = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ IssueReportOptionId =. just (val (toKey optionId)),
+--         IssueReportUpdatedAt =. val now
+--       ]
+--     where_ $
+--       tbl ^. IssueReportTId ==. val (toKey issueReportId)
+--         &&. tbl ^. IssueReportDeleted ==. val False
 
-updateOption' :: (L.MonadFlow m, MonadTime m) => Id IssueReport -> Id IssueOption -> m ()
-updateOption' issueReportId (Id optionId) = do
+updateOption :: (L.MonadFlow m, MonadTime m) => Id IssueReport -> Id IssueOption -> m ()
+updateOption issueReportId (Id optionId) = do
   now <- getCurrentTime
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of

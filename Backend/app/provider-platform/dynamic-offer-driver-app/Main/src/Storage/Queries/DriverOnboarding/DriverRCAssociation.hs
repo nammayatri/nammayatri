@@ -35,12 +35,12 @@ import Storage.Tabular.DriverOnboarding.VehicleRegistrationCertificate
 -- create :: DriverRCAssociation -> SqlDB ()
 -- create = Esq.create
 
-create :: L.MonadFlow m => DriverRCAssociation -> m (MeshResult ())
+create :: L.MonadFlow m => DriverRCAssociation -> m ()
 create driverRCAssociation = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainDriverRCAssociationToBeam driverRCAssociation)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+    Just dbConf' -> void $ KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainDriverRCAssociationToBeam driverRCAssociation)
+    Nothing -> pure ()
 
 -- findById ::
 --   Transactionable m =>
@@ -129,19 +129,20 @@ getActiveAssociationByRC (Id rcId) = do
 --       tbl ^. DriverRCAssociationDriverId ==. val (toKey driverId)
 --         &&. tbl ^. DriverRCAssociationAssociatedTill >. val (Just now)
 
-endAssociation :: (L.MonadFlow m, MonadTime m) => Id Person -> m (MeshResult ())
+endAssociation :: (L.MonadFlow m, MonadTime m) => Id Person -> m ()
 endAssociation (Id driverId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        Mesh.meshConfig
-        [ Se.Set BeamDRCA.associatedTill $ Just now
-        ]
-        [Se.And [Se.Is BeamDRCA.id (Se.Eq driverId), Se.Is BeamDRCA.associatedTill (Se.GreaterThan $ Just now)]]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+      void $
+        KV.updateWoReturningWithKVConnector
+          dbConf'
+          Mesh.meshConfig
+          [ Se.Set BeamDRCA.associatedTill $ Just now
+          ]
+          [Se.And [Se.Is BeamDRCA.id (Se.Eq driverId), Se.Is BeamDRCA.associatedTill (Se.GreaterThan $ Just now)]]
+    Nothing -> pure ()
 
 -- deleteByDriverId :: Id Person -> SqlDB ()
 -- deleteByDriverId driverId =

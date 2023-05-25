@@ -160,7 +160,7 @@ verifyRCFlow person imageExtraction rcNumber imageId dateOfRegistration = do
     Verification.verifyRCAsync person.merchantId $
       Verification.VerifyRCAsyncReq {rcNumber}
   idfyVerificationEntity <- mkIdfyVerificationEntity verifyRes.requestId now imageExtractionValidation encryptedRC
-  _ <- IVQuery.create idfyVerificationEntity
+  IVQuery.create idfyVerificationEntity
   where
     mkIdfyVerificationEntity requestId now imageExtractionValidation encryptedRC = do
       id <- generateGUID
@@ -190,7 +190,7 @@ onVerifyRC verificationReq output = do
     && ( (convertUTCTimetoDate <$> verificationReq.issueDateOnDoc)
            /= (convertUTCTimetoDate <$> (convertTextToUTC output.registration_date))
        )
-    then runTransaction $ IVQuery.updateExtractValidationStatus verificationReq.requestId Domain.Failed >> return Ack
+    then IVQuery.updateExtractValidationStatus verificationReq.requestId Domain.Failed >> return Ack
     else do
       now <- getCurrentTime
       id <- generateGUID
@@ -202,7 +202,7 @@ onVerifyRC verificationReq output = do
 
       case mVehicleRC of
         Just vehicleRC -> do
-          runTransaction $ RCQuery.upsert vehicleRC
+          RCQuery.upsert vehicleRC
 
           -- linking to driver
           rc <- RCQuery.findByRCAndExpiry vehicleRC.certificateNumber vehicleRC.fitnessExpiry >>= fromMaybeM (InternalError "RC not found")
@@ -211,7 +211,7 @@ onVerifyRC verificationReq output = do
             currAssoc <- DAQuery.getActiveAssociationByDriver person.id
             when (isJust currAssoc) $ DAQuery.endAssociation person.id
             driverRCAssoc <- mkAssociation person.id rc.id
-            _ <- DAQuery.create driverRCAssoc
+            DAQuery.create driverRCAssoc
           return Ack
         _ -> return Ack
   where

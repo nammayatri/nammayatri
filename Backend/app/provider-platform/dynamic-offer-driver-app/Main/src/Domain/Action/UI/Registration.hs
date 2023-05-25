@@ -32,6 +32,10 @@ import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.Merchant as DO
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
+-- import qualified Storage.Tabular.BookingNew as BN (findById)
+
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption
 import Kernel.External.FCM.Types (FCMRecipientToken)
@@ -64,7 +68,6 @@ import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Tabular.VechileNew as BN (findById)
--- import qualified Storage.Tabular.BookingNew as BN (findById)
 import Tools.Auth (authTokenCacheKey)
 import Tools.Error
 import Tools.Metrics
@@ -150,9 +153,9 @@ auth req mbBundleVersion mbClientVersion = do
       useFakeOtpM = useFakeSms smsCfg
       scfg = sessionConfig smsCfg
   token <- makeSession scfg entityId SR.USER (show <$> useFakeOtpM)
-  Esq.runTransaction do
-    QR.create token
-    QP.updatePersonVersions person mbBundleVersion mbClientVersion
+  -- Esq.runTransaction do
+  _ <- QR.create token
+  QP.updatePersonVersions person mbBundleVersion mbClientVersion
   whenNothing_ useFakeOtpM $ do
     let otpHash = smsCfg.credConfig.otpHash
     let otpCode = SR.authValueHash token
@@ -171,7 +174,7 @@ auth req mbBundleVersion mbClientVersion = do
       authId = SR.id token
   return $ AuthRes {attempts, authId}
 
-createDriverDetails :: Id SP.Person -> Esq.SqlDB ()
+createDriverDetails :: (L.MonadFlow m, MonadTime m) => Id SP.Person -> m ()
 createDriverDetails personId = do
   now <- getCurrentTime
   let driverInfo =
@@ -194,9 +197,11 @@ createDriverDetails personId = do
           }
   QDriverStats.createInitialDriverStats driverId
   QD.create driverInfo
-  QDriverLocation.create personId initLatLong now
   where
-    initLatLong = LatLong 0 0
+    -- TODO: Uncomment the following
+    -- QDriverLocation.create personId initLatLong now
+
+    -- initLatLong = LatLong 0 0
     driverId = cast personId
 
 makePerson :: EncFlow m r => AuthReq -> Maybe Version -> Maybe Version -> Id DO.Merchant -> m SP.Person
@@ -247,7 +252,8 @@ makeSession SmsSessionConfig {..} entityId entityType fakeOtp = do
   otp <- maybe generateOTPCode return fakeOtp
   rtid <- generateGUID
   token <- generateGUID
-  altNumAttempts <- Esq.runInReplica $ QR.getAlternateNumberAttempts (Id entityId)
+  -- altNumAttempts <- Esq.runInReplica $ QR.getAlternateNumberAttempts (Id entityId)
+  altNumAttempts <- QR.getAlternateNumberAttempts (Id entityId)
   now <- getCurrentTime
   return $
     SR.RegistrationToken
@@ -274,10 +280,10 @@ verifyHitsCountKey id = "BPP:Registration:verify:" <> getId id <> ":hitsCount"
 createDriverWithDetails :: (EncFlow m r, EsqDBFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Id DO.Merchant -> m SP.Person
 createDriverWithDetails req mbBundleVersion mbClientVersion mercahntId = do
   person <- makePerson req mbBundleVersion mbClientVersion mercahntId
-  DB.runTransaction $ do
-    QP.create person
-    QDFS.create $ makeIdleDriverFlowStatus person
-    createDriverDetails (person.id)
+  -- DB.runTransaction $ do
+  _ <- QP.create person
+  _ <- QDFS.create $ makeIdleDriverFlowStatus person
+  createDriverDetails (person.id)
   pure person
   where
     makeIdleDriverFlowStatus person =
@@ -309,12 +315,12 @@ verify tokenId req = do
   let isNewPerson = person.isNew
   let deviceToken = Just req.deviceToken
   cleanCachedTokens person.id
-  Esq.runTransaction $ do
-    QR.deleteByPersonIdExceptNew person.id tokenId
-    QR.setVerified tokenId
-    QP.updateDeviceToken person.id deviceToken
-    when isNewPerson $
-      QP.setIsNewFalse person.id
+  -- Esq.runTransaction $ do
+  QR.deleteByPersonIdExceptNew person.id tokenId
+  _ <- QR.setVerified tokenId
+  _ <- QP.updateDeviceToken person.id deviceToken
+  when isNewPerson $
+    QP.setIsNewFalse person.id
   updPers <- QP.findById (Id entityId) >>= fromMaybeM (PersonNotFound entityId)
   decPerson <- decrypt updPers
   unless (decPerson.whatsappNotificationEnrollStatus == req.whatsappNotificationEnroll && isJust req.whatsappNotificationEnroll) $ do
@@ -343,14 +349,14 @@ callWhatsappOptApi ::
 callWhatsappOptApi mobileNo merchantId personId hasOptedIn = do
   let status = fromMaybe Whatsapp.OPT_IN hasOptedIn
   void $ Whatsapp.whatsAppOptAPI merchantId $ Whatsapp.OptApiReq {phoneNumber = mobileNo, method = status}
-  DB.runTransaction $
-    QP.updateWhatsappNotificationEnrollStatus personId $ Just status
+  -- DB.runTransaction $
+  QP.updateWhatsappNotificationEnrollStatus personId $ Just status
 
-checkRegistrationTokenExists :: (Esq.Transactionable m, MonadThrow m, Log m) => Id SR.RegistrationToken -> m SR.RegistrationToken
+checkRegistrationTokenExists :: (L.MonadFlow m, MonadThrow m, Log m) => Id SR.RegistrationToken -> m SR.RegistrationToken
 checkRegistrationTokenExists tokenId =
   QR.findById tokenId >>= fromMaybeM (TokenNotFound $ getId tokenId)
 
-checkPersonExists :: (Esq.Transactionable m, MonadThrow m, Log m) => Text -> m SP.Person
+checkPersonExists :: (L.MonadFlow m, MonadThrow m, Log m) => Text -> m SP.Person
 checkPersonExists entityId =
   QP.findById (Id entityId) >>= fromMaybeM (PersonNotFound entityId)
 
@@ -383,7 +389,7 @@ resend tokenId = do
           }
     Sms.sendSMS person.merchantId (Sms.SendSMSReq message phoneNumber sender)
       >>= Sms.checkSmsResult
-  Esq.runTransaction $ QR.updateAttempts (attempts - 1) id
+  _ <- QR.updateAttempts (attempts - 1) id
   return $ AuthRes tokenId (attempts - 1)
 
 cleanCachedTokens :: (EsqDBFlow m r, Redis.HedisFlow m r) => Id SP.Person -> m ()
@@ -405,8 +411,8 @@ logout personId = do
   uperson <-
     QP.findById personId
       >>= fromMaybeM (PersonNotFound personId.getId)
-  Esq.runTransaction $ do
-    QP.updateDeviceToken uperson.id Nothing
-    QR.deleteByPersonId personId
+  -- Esq.runTransaction $ do
+  _ <- QP.updateDeviceToken uperson.id Nothing
+  QR.deleteByPersonId personId
   when (uperson.role == SP.DRIVER) $ void (QD.updateActivity (cast uperson.id) False (Just DriverInfo.OFFLINE))
   pure Success

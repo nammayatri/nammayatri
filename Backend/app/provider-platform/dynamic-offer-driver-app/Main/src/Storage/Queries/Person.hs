@@ -665,20 +665,21 @@ updateDeviceToken (Id personId) mbDeviceToken = do
 --       ]
 --     where_ $ tbl ^. PersonTId ==. val (toKey personId)
 
-updateWhatsappNotificationEnrollStatus :: (L.MonadFlow m, MonadTime m) => Id Person -> Maybe Whatsapp.OptApiMethods -> m (MeshResult ())
+updateWhatsappNotificationEnrollStatus :: (L.MonadFlow m, MonadTime m) => Id Person -> Maybe Whatsapp.OptApiMethods -> m ()
 updateWhatsappNotificationEnrollStatus (Id personId) enrollStatus = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        VN.meshConfig
-        [ Se.Set BeamP.whatsappNotificationEnrollStatus enrollStatus,
-          Se.Set BeamP.updatedAt now
-        ]
-        [Se.Is BeamP.id (Se.Eq personId)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+      void $
+        KV.updateWoReturningWithKVConnector
+          dbConf'
+          VN.meshConfig
+          [ Se.Set BeamP.whatsappNotificationEnrollStatus enrollStatus,
+            Se.Set BeamP.updatedAt now
+          ]
+          [Se.Is BeamP.id (Se.Eq personId)]
+    Nothing -> pure ()
 
 -- updateMobileNumberAndCode :: Person -> SqlDB ()
 -- updateMobileNumberAndCode person = do
@@ -724,20 +725,21 @@ updateMobileNumberAndCode person = do
 --       ]
 --     where_ $ tbl ^. PersonTId ==. val (toKey personId)
 
-setIsNewFalse :: (L.MonadFlow m, MonadTime m) => Id Person -> m (MeshResult ())
+setIsNewFalse :: (L.MonadFlow m, MonadTime m) => Id Person -> m ()
 setIsNewFalse (Id personId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        VN.meshConfig
-        [ Se.Set BeamP.isNew False,
-          Se.Set BeamP.updatedAt now
-        ]
-        [Se.Is BeamP.id (Se.Eq personId)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+      void $
+        KV.updateWoReturningWithKVConnector
+          dbConf'
+          VN.meshConfig
+          [ Se.Set BeamP.isNew False,
+            Se.Set BeamP.updatedAt now
+          ]
+          [Se.Is BeamP.id (Se.Eq personId)]
+    Nothing -> pure ()
 
 -- deleteById :: Id Person -> SqlDB ()
 -- deleteById = Esq.deleteByKey @PersonT

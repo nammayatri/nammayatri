@@ -35,12 +35,12 @@ import Storage.Tabular.DriverOnboarding.IdfyVerification
 -- create :: IdfyVerification -> SqlDB ()
 -- create = Esq.create
 
-create :: L.MonadFlow m => IdfyVerification -> m (MeshResult ())
+create :: L.MonadFlow m => IdfyVerification -> m ()
 create idfyVerification = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainIdfyVerificationToBeam idfyVerification)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+    Just dbConf' -> void $ KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainIdfyVerificationToBeam idfyVerification)
+    Nothing -> pure ()
 
 -- findById ::
 --   Transactionable m =>

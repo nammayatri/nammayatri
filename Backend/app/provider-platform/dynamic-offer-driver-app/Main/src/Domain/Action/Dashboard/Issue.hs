@@ -58,7 +58,8 @@ toCommonIssueStatus = \case
 
 issueList :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Common.IssueStatus -> Maybe (Id DIC.IssueCategory) -> Maybe Text -> Flow Common.IssueReportListResponse
 issueList _merchantShortId mbLimit mbOffset mbStatus mbCategoryId mbAssignee = do
-  issueReports <- Esq.runInReplica $ QIR.findAllWithOptions mbLimit mbOffset (toDomainIssueStatus <$> mbStatus) mbCategoryId mbAssignee
+  -- issueReports <- Esq.runInReplica $ QIR.findAllWithOptions mbLimit mbOffset (toDomainIssueStatus <$> mbStatus) mbCategoryId mbAssignee
+  issueReports <- QIR.findAllWithOptions mbLimit mbOffset (toDomainIssueStatus <$> mbStatus) mbCategoryId mbAssignee
   let count = length issueReports
   let summary = Common.Summary {totalCount = count, count}
   issues <- mapM mkIssueReport issueReports
@@ -81,7 +82,8 @@ issueList _merchantShortId mbLimit mbOffset mbStatus mbCategoryId mbAssignee = d
 
 issueInfo :: ShortId DM.Merchant -> Id DIR.IssueReport -> Flow Common.IssueInfoRes
 issueInfo _merchantShortId issueReportId = do
-  issueReport <- Esq.runInReplica $ QIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
+  -- issueReport <- Esq.runInReplica $ QIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
+  issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
   mediaFiles <- CQMF.findAllInForIssueReportId issueReport.mediaFiles issueReportId
   -- comments <- Esq.runInReplica (QC.findAllByIssueReportId issueReport.id)
   comments <- QC.findAllByIssueReportId issueReport.id
@@ -145,7 +147,7 @@ issueUpdate _merchantShortId issueReportId req = do
   unless (isJust req.status || isJust req.assignee) $
     throwError $ InvalidRequest "Empty request, no fields to update."
   issueReport <- CQIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
-  Esq.runTransaction $ QIR.updateStatusAssignee issueReportId (toDomainIssueStatus <$> req.status) req.assignee
+  QIR.updateStatusAssignee issueReportId (toDomainIssueStatus <$> req.status) req.assignee
   whenJust req.assignee mkIssueAssigneeUpdateComment
   CQIR.invalidateIssueReportCache (Just issueReportId) (Just issueReport.driverId)
   pure Success

@@ -80,7 +80,7 @@ idfyWebhookHandler merchantShortId secret val = do
 onVerify :: Idfy.VerificationResponse -> Text -> Flow AckResponse
 onVerify resp respDump = do
   verificationReq <- IVQuery.findByRequestId resp.request_id >>= fromMaybeM (InternalError "Verification request not found")
-  runTransaction $ IVQuery.updateResponse resp.request_id resp.status respDump
+  _ <- IVQuery.updateResponse resp.request_id resp.status respDump
 
   ack_ <- maybe (pure Ack) (verifyDocument verificationReq) resp.result
   -- running statusHandler to enable Driver

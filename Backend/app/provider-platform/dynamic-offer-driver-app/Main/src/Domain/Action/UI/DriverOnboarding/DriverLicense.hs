@@ -38,6 +38,7 @@ import Domain.Types.OnboardingDocumentConfig (OnboardingDocumentConfig)
 import qualified Domain.Types.OnboardingDocumentConfig as DTO
 import qualified Domain.Types.Person as Person
 import Environment
+import EulerHS.KVConnector.Types
 import Kernel.External.Encryption
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
 import Kernel.Prelude
@@ -160,7 +161,7 @@ verifyDLFlow person onboardingDocumentConfig dlNumber driverDateOfBirth imageId1
       Verification.VerifyDLAsyncReq {dlNumber, dateOfBirth = driverDateOfBirth}
   encryptedDL <- encrypt dlNumber
   idfyVerificationEntity <- mkIdfyVerificationEntity verifyRes.requestId now imageExtractionValidation encryptedDL
-  runTransaction $ IVQuery.create idfyVerificationEntity
+  IVQuery.create idfyVerificationEntity
   where
     mkIdfyVerificationEntity requestId now imageExtractionValidation encryptedDL = do
       id <- generateGUID
@@ -190,7 +191,7 @@ onVerifyDL verificationReq output = do
     && ( (convertUTCTimetoDate <$> verificationReq.issueDateOnDoc)
            /= (convertUTCTimetoDate <$> (convertTextToUTC output.date_of_issue))
        )
-    then runTransaction $ IVQuery.updateExtractValidationStatus verificationReq.requestId Domain.Failed >> pure Ack
+    then IVQuery.updateExtractValidationStatus verificationReq.requestId Domain.Failed >> pure Ack
     else do
       now <- getCurrentTime
       id <- generateGUID
@@ -201,9 +202,9 @@ onVerifyDL verificationReq output = do
 
       case mDriverLicense of
         Just driverLicense -> do
-          runTransaction $ Query.upsert driverLicense
+          Query.upsert driverLicense
           case driverLicense.driverName of
-            Just name_ -> runTransaction $ Person.updateName person.id name_
+            Just name_ -> Person.updateName person.id name_
             Nothing -> pure (Left $ MKeyNotFound "")
           return Ack
         Nothing -> return Ack

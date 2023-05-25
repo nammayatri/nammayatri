@@ -173,7 +173,7 @@ createIssueReport driverId Common.IssueReportReq {..} = do
   forM_ mediaFiles $ \mediaFile ->
     void $ CQMF.findById (cast mediaFile) >>= fromMaybeM (FileDoNotExist mediaFile.getId)
   issueReport <- mkIssueReport
-  Esq.runTransaction $ QIR.create issueReport
+  _ <- QIR.create issueReport
   CQIR.invalidateIssueReportCache Nothing (Just driverId)
   pure $ Common.IssueReportRes {issueReportId = cast issueReport.id}
   where
@@ -235,7 +235,7 @@ updateIssueOption :: Id D.IssueReport -> Id SP.Person -> Common.IssueUpdateReq -
 updateIssueOption issueReportId driverId Common.IssueUpdateReq {..} = do
   void $ CQIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
   void $ CQIO.findByIdAndCategoryId (cast optionId) (cast categoryId) >>= fromMaybeM (IssueOptionInvalid optionId.getId categoryId.getId)
-  Esq.runTransaction $ QIR.updateOption issueReportId (cast optionId)
+  _ <- QIR.updateOption issueReportId (cast optionId)
   CQIR.invalidateIssueReportCache (Just issueReportId) (Just driverId)
   pure Success
 
@@ -245,7 +245,7 @@ deleteIssue issueReportId driverId = do
   unlessM (QIR.isSafeToDelete issueReportId driverId) $
     throwError (InvalidRequest "This issue is either already deleted, or is not associated to this driver.")
   issueReport <- CQIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
-  Esq.runTransaction $ QIR.updateAsDeleted issueReportId
+  _ <- QIR.updateAsDeleted issueReportId
   CQIR.invalidateIssueReportCache (Just issueReportId) (Just driverId)
   CQMF.invalidateMediaFileCache issueReport.mediaFiles (Just issueReportId)
   pure Success

@@ -30,7 +30,7 @@ import Kernel.Types.Id
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.DriverInformation as Queries
 
-create :: L.MonadFlow m => DriverInformation -> m (MeshResult ())
+create :: L.MonadFlow m => DriverInformation -> m ()
 create = Queries.create
 
 findById :: (CacheFlow m r, L.MonadFlow m) => Id Person.Driver -> m (Maybe DriverInformation)
