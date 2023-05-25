@@ -29,6 +29,7 @@ data FareParameters = FareParameters
     baseFare :: Money,
     waitingCharge :: Maybe Money,
     nightShiftCharge :: Maybe Money,
+    nightShiftRateIfApplies :: Maybe Double,
     fareParametersDetails :: FareParametersDetails
   }
   deriving (Generic, Show, Eq, PrettyShow)
