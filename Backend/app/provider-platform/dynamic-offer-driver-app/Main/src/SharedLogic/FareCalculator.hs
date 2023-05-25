@@ -40,7 +40,8 @@ import Kernel.Utils.Common
 
 mkBreakupList :: (Money -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> FareParameters -> [breakupItem]
 mkBreakupList mkPrice mkBreakupItem fareParams = do
-  let baseFareFinalRounded = fareParams.baseFare
+  let dayPartRate = fromMaybe 1.0 fareParams.nightShiftRateIfApplies -- Temp fix :: have to fix properly
+      baseFareFinalRounded = roundToIntegral $ fromIntegral fareParams.baseFare * dayPartRate -- Temp fix :: have to fix properly
       baseFareCaption = "BASE_FARE"
       baseFareItem = mkBreakupItem baseFareCaption (mkPrice baseFareFinalRounded)
       baseFareDistanceCaption = "BASE_DISTANCE_FARE" --TODO: deprecated, to be removed
@@ -71,7 +72,7 @@ mkBreakupList mkPrice mkBreakupItem fareParams = do
       mbFixedGovtRateCaption = "FIXED_GOVERNMENT_RATE"
       mbFixedGovtRateItem = mkBreakupItem mbFixedGovtRateCaption . mkPrice <$> fareParams.govtCharges
 
-      detailsBreakups = processFareParamsDetails fareParams.fareParametersDetails
+      detailsBreakups = processFareParamsDetails dayPartRate fareParams.fareParametersDetails
   catMaybes
     [ Just totalFareItem,
       Just baseFareItem,
@@ -85,17 +86,18 @@ mkBreakupList mkPrice mkBreakupItem fareParams = do
     ]
     <> detailsBreakups
   where
-    processFareParamsDetails = \case
-      DFParams.ProgressiveDetails det -> mkFPProgressiveDetailsBreakupList det
+    processFareParamsDetails dayPartRate = \case
+      DFParams.ProgressiveDetails det -> mkFPProgressiveDetailsBreakupList dayPartRate det
       DFParams.SlabDetails det -> mkFPSlabDetailsBreakupList det
 
-    mkFPProgressiveDetailsBreakupList det = do
+    mkFPProgressiveDetailsBreakupList dayPartRate det = do
       let deadKmFareCaption = "DEAD_KILOMETER_FARE"
           deadKmFareItem = mkBreakupItem deadKmFareCaption (mkPrice det.deadKmFare)
 
           extraDistanceFareCaption = "EXTRA_DISTANCE_FARE"
+          mbExtraKmFareRounded = det.extraKmFare <&> roundToIntegral . (* dayPartRate) . fromIntegral -- temp fix :: have to fix properly
           extraDistanceFareItem =
-            det.extraKmFare <&> \extraKmFareRounded ->
+            mbExtraKmFareRounded <&> \extraKmFareRounded ->
               mkBreakupItem extraDistanceFareCaption (mkPrice extraKmFareRounded)
       catMaybes [Just deadKmFareItem, extraDistanceFareItem]
 
@@ -159,6 +161,7 @@ calculateFareParameters params = do
             serviceCharge = fp.serviceCharge,
             waitingCharge = resultWaitingCharge,
             nightShiftCharge = Just $ fromMaybe 0 resultNightShiftCharge,
+            nightShiftRateIfApplies = (\isCoefIncluded -> if isCoefIncluded then getNightShiftRate nightShiftCharge else Nothing) =<< isNightShiftChargeIncluded, -- Temp fix :: have to fix properly
             ..
           }
   logTagInfo "FareCalculator" $ "Fare parameters calculated: " +|| fareParams ||+ ""
@@ -204,6 +207,12 @@ calculateFareParameters params = do
       case nightShiftCharge of
         ProgressiveNightShiftCharge charge -> roundToIntegral $ (fromIntegral fullRideCost * charge) - fromIntegral fullRideCost
         ConstantNightShiftCharge charge -> charge
+
+    getNightShiftRate nightShiftCharge = do
+      -- Temp fix :: have to fix properly
+      case nightShiftCharge of
+        Just (ProgressiveNightShiftCharge charge) -> (Just . realToFrac) charge
+        _ -> Nothing
 
     countWaitingCharge :: WaitingCharge -> Maybe Money
     countWaitingCharge waitingCharge = do
