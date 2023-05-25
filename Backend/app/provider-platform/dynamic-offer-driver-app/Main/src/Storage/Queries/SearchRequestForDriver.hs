@@ -121,13 +121,13 @@ findByDriver (Id driverId) = do
           [Se.And [Se.Is BeamSRFD.driverId $ Se.Eq driverId, Se.Is BeamSRFD.status $ Se.Eq Domain.Active, Se.Is BeamSRFD.searchRequestValidTill $ Se.GreaterThan now]]
     Nothing -> pure []
 
-removeAllBySearchId :: Id SearchRequest -> SqlDB ()
-removeAllBySearchId searchReqId = Esq.delete $ do
-  sReqForDriver <- from $ table @SearchRequestForDriverT
-  where_ $ sReqForDriver ^. SearchRequestForDriverSearchRequestId ==. val (toKey searchReqId)
+-- removeAllBySearchId :: Id SearchRequest -> SqlDB ()
+-- removeAllBySearchId searchReqId = Esq.delete $ do
+--   sReqForDriver <- from $ table @SearchRequestForDriverT
+--   where_ $ sReqForDriver ^. SearchRequestForDriverSearchRequestId ==. val (toKey searchReqId)
 
-removeAllBySearchId' :: L.MonadFlow m => Id SearchRequest -> m ()
-removeAllBySearchId' (Id searchReqId) = do
+removeAllBySearchId :: L.MonadFlow m => Id SearchRequest -> m ()
+removeAllBySearchId (Id searchReqId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' ->

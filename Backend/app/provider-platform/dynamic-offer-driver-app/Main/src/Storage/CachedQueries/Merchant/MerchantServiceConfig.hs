@@ -27,6 +27,8 @@ import Data.Coerce (coerce)
 import Domain.Types.Common
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.MerchantServiceConfig
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
@@ -72,5 +74,5 @@ clearCache merchantId serviceName = do
   Hedis.withCrossAppRedis $ Hedis.del (makeMerchantIdAndServiceKey merchantId serviceName)
   Hedis.withCrossAppRedis $ Hedis.del (makeServiceNameKey serviceName)
 
-upsertMerchantServiceConfig :: MerchantServiceConfig -> Esq.SqlDB ()
+upsertMerchantServiceConfig :: (L.MonadFlow m, Log m, MonadTime m) => MerchantServiceConfig -> m ()
 upsertMerchantServiceConfig = Queries.upsertMerchantServiceConfig

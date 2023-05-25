@@ -40,11 +40,11 @@ create msg = Esq.runTransaction $
     Esq.create' message
     traverse_ Esq.create' messageTranslations
 
-findById :: Transactionable m => Id Message -> m (Maybe RawMessage)
-findById = Esq.findById
+-- findById :: Transactionable m => Id Message -> m (Maybe RawMessage)
+-- findById = Esq.findById
 
-findById' :: L.MonadFlow m => Id Message -> m (Maybe RawMessage)
-findById' (Id messageId) = do
+findById :: L.MonadFlow m => Id Message -> m (Maybe RawMessage)
+findById (Id messageId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> do
@@ -71,29 +71,29 @@ findById' (Id messageId) = do
         Left _ -> pure Nothing
     Nothing -> pure Nothing
 
-findAllWithLimitOffset ::
-  Transactionable m =>
-  Maybe Int ->
-  Maybe Int ->
-  Id Merchant ->
-  m [RawMessage]
-findAllWithLimitOffset mbLimit mbOffset merchantId = do
-  findAll $ do
-    message <-
-      from $
-        table @MessageT
-    where_ $
-      message ^. MessageMerchantId ==. val (toKey merchantId)
-    orderBy [desc $ message ^. MessageCreatedAt]
-    limit limitVal
-    offset offsetVal
-    return message
-  where
-    limitVal = min (maybe 10 fromIntegral mbLimit) 10
-    offsetVal = maybe 0 fromIntegral mbOffset
+-- findAllWithLimitOffset ::
+--   Transactionable m =>
+--   Maybe Int ->
+--   Maybe Int ->
+--   Id Merchant ->
+--   m [RawMessage]
+-- findAllWithLimitOffset mbLimit mbOffset merchantId = do
+--   findAll $ do
+--     message <-
+--       from $
+--         table @MessageT
+--     where_ $
+--       message ^. MessageMerchantId ==. val (toKey merchantId)
+--     orderBy [desc $ message ^. MessageCreatedAt]
+--     limit limitVal
+--     offset offsetVal
+--     return message
+--   where
+--     limitVal = min (maybe 10 fromIntegral mbLimit) 10
+--     offsetVal = maybe 0 fromIntegral mbOffset
 
-findAllWithLimitOffset' :: L.MonadFlow m => Maybe Int -> Maybe Int -> Id Merchant -> m [RawMessage]
-findAllWithLimitOffset' mbLimit mbOffset merchantIdParam = do
+findAllWithLimitOffset :: L.MonadFlow m => Maybe Int -> Maybe Int -> Id Merchant -> m [RawMessage]
+findAllWithLimitOffset mbLimit mbOffset merchantIdParam = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> do

@@ -56,19 +56,19 @@ deleteById (Id driverId) = do
           [Se.Is BeamDFS.personId (Se.Eq driverId)]
     Nothing -> pure ()
 
-getStatus ::
-  (Transactionable m) =>
-  Id Person ->
-  m (Maybe DDFS.FlowStatus)
-getStatus personId = do
-  findOne $ do
-    driverFlowStatus <- from $ table @DriverFlowStatusT
-    where_ $
-      driverFlowStatus ^. DriverFlowStatusTId ==. val (toKey personId)
-    return $ driverFlowStatus ^. DriverFlowStatusFlowStatus
+-- getStatus ::
+--   (Transactionable m) =>
+--   Id Person ->
+--   m (Maybe DDFS.FlowStatus)
+-- getStatus personId = do
+--   findOne $ do
+--     driverFlowStatus <- from $ table @DriverFlowStatusT
+--     where_ $
+--       driverFlowStatus ^. DriverFlowStatusTId ==. val (toKey personId)
+--     return $ driverFlowStatus ^. DriverFlowStatusFlowStatus
 
-getStatus' :: L.MonadFlow m => Id Person -> m (Maybe DDFS.FlowStatus)
-getStatus' (Id personId) = do
+getStatus :: L.MonadFlow m => Id Person -> m (Maybe DDFS.FlowStatus)
+getStatus (Id personId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> do

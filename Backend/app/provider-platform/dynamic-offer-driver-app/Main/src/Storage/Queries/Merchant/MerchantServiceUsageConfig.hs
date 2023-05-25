@@ -36,44 +36,44 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.MerchantServiceUsageConfig as BeamMSUC
 import Storage.Tabular.Merchant.MerchantServiceUsageConfig
 
-findByMerchantId :: Transactionable m => Id Merchant -> m (Maybe MerchantServiceUsageConfig)
-findByMerchantId orgId =
-  Esq.findOne $ do
-    orgMapsCfg <- from $ table @MerchantServiceUsageConfigT
-    where_ $
-      orgMapsCfg ^. MerchantServiceUsageConfigTId ==. val (toKey orgId)
-    return orgMapsCfg
+-- findByMerchantId :: Transactionable m => Id Merchant -> m (Maybe MerchantServiceUsageConfig)
+-- findByMerchantId orgId =
+--   Esq.findOne $ do
+--     orgMapsCfg <- from $ table @MerchantServiceUsageConfigT
+--     where_ $
+--       orgMapsCfg ^. MerchantServiceUsageConfigTId ==. val (toKey orgId)
+--     return orgMapsCfg
 
-findByMerchantId' :: L.MonadFlow m => Id Merchant -> m (Maybe MerchantServiceUsageConfig)
-findByMerchantId' (Id merchantId) = do
+findByMerchantId :: L.MonadFlow m => Id Merchant -> m (Maybe MerchantServiceUsageConfig)
+findByMerchantId (Id merchantId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamMerchantServiceUsageConfigToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamMSUC.merchantId $ Se.Eq merchantId]
     Nothing -> pure Nothing
 
-updateMerchantServiceUsageConfig ::
-  MerchantServiceUsageConfig ->
-  SqlDB ()
-updateMerchantServiceUsageConfig MerchantServiceUsageConfig {..} = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ MerchantServiceUsageConfigGetDistances =. val getDistances,
-        MerchantServiceUsageConfigGetEstimatedPickupDistances =. val getEstimatedPickupDistances,
-        MerchantServiceUsageConfigGetRoutes =. val getRoutes,
-        MerchantServiceUsageConfigSnapToRoad =. val snapToRoad,
-        MerchantServiceUsageConfigGetPlaceName =. val getPlaceName,
-        MerchantServiceUsageConfigGetPlaceDetails =. val getPlaceDetails,
-        MerchantServiceUsageConfigAutoComplete =. val autoComplete,
-        MerchantServiceUsageConfigSmsProvidersPriorityList =. val (PostgresList smsProvidersPriorityList),
-        MerchantServiceUsageConfigUpdatedAt =. val now
-      ]
-    where_ $
-      tbl ^. MerchantServiceUsageConfigTId ==. val (toKey merchantId)
+-- updateMerchantServiceUsageConfig ::
+--   MerchantServiceUsageConfig ->
+--   SqlDB ()
+-- updateMerchantServiceUsageConfig MerchantServiceUsageConfig {..} = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ MerchantServiceUsageConfigGetDistances =. val getDistances,
+--         MerchantServiceUsageConfigGetEstimatedPickupDistances =. val getEstimatedPickupDistances,
+--         MerchantServiceUsageConfigGetRoutes =. val getRoutes,
+--         MerchantServiceUsageConfigSnapToRoad =. val snapToRoad,
+--         MerchantServiceUsageConfigGetPlaceName =. val getPlaceName,
+--         MerchantServiceUsageConfigGetPlaceDetails =. val getPlaceDetails,
+--         MerchantServiceUsageConfigAutoComplete =. val autoComplete,
+--         MerchantServiceUsageConfigSmsProvidersPriorityList =. val (PostgresList smsProvidersPriorityList),
+--         MerchantServiceUsageConfigUpdatedAt =. val now
+--       ]
+--     where_ $
+--       tbl ^. MerchantServiceUsageConfigTId ==. val (toKey merchantId)
 
-updateMerchantServiceUsageConfig' :: (L.MonadFlow m, MonadTime m) => MerchantServiceUsageConfig -> m (MeshResult ())
-updateMerchantServiceUsageConfig' MerchantServiceUsageConfig {..} = do
+updateMerchantServiceUsageConfig :: (L.MonadFlow m, MonadTime m) => MerchantServiceUsageConfig -> m (MeshResult ())
+updateMerchantServiceUsageConfig MerchantServiceUsageConfig {..} = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   now <- getCurrentTime
   case dbConf of

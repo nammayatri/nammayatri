@@ -35,47 +35,47 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.DriverIntelligentPoolConfig as BeamDIPC
 import Storage.Tabular.Merchant.DriverIntelligentPoolConfig
 
-findByMerchantId :: Transactionable m => Id Merchant -> m (Maybe DriverIntelligentPoolConfig)
-findByMerchantId merchantId =
-  Esq.findOne $ do
-    config <- from $ table @DriverIntelligentPoolConfigT
-    where_ $
-      config ^. DriverIntelligentPoolConfigMerchantId ==. val (toKey merchantId)
-    return config
+-- findByMerchantId :: Transactionable m => Id Merchant -> m (Maybe DriverIntelligentPoolConfig)
+-- findByMerchantId merchantId =
+--   Esq.findOne $ do
+--     config <- from $ table @DriverIntelligentPoolConfigT
+--     where_ $
+--       config ^. DriverIntelligentPoolConfigMerchantId ==. val (toKey merchantId)
+--     return config
 
-findByMerchantId' :: L.MonadFlow m => Id Merchant -> m (Maybe DriverIntelligentPoolConfig)
-findByMerchantId' (Id merchantId) = do
+findByMerchantId :: L.MonadFlow m => Id Merchant -> m (Maybe DriverIntelligentPoolConfig)
+findByMerchantId (Id merchantId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamDriverIntelligentPoolConfigToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDIPC.merchantId $ Se.Eq merchantId]
     Nothing -> pure Nothing
 
-update :: DriverIntelligentPoolConfig -> SqlDB ()
-update config = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ DriverIntelligentPoolConfigAvailabilityTimeWeightage =. val config.availabilityTimeWeightage,
-        DriverIntelligentPoolConfigAvailabilityTimeWindowOption =. val config.availabilityTimeWindowOption,
-        DriverIntelligentPoolConfigAcceptanceRatioWeightage =. val config.acceptanceRatioWeightage,
-        DriverIntelligentPoolConfigAcceptanceRatioWindowOption =. val config.acceptanceRatioWindowOption,
-        DriverIntelligentPoolConfigCancellationRatioWeightage =. val config.cancellationRatioWeightage,
-        DriverIntelligentPoolConfigCancellationRatioWindowOption =. val config.cancellationRatioWindowOption,
-        DriverIntelligentPoolConfigMinQuotesToQualifyForIntelligentPool =. val config.minQuotesToQualifyForIntelligentPool,
-        DriverIntelligentPoolConfigMinQuotesToQualifyForIntelligentPoolWindowOption =. val config.minQuotesToQualifyForIntelligentPoolWindowOption,
-        DriverIntelligentPoolConfigIntelligentPoolPercentage =. val config.intelligentPoolPercentage,
-        DriverIntelligentPoolConfigSpeedNormalizer =. val config.speedNormalizer,
-        DriverIntelligentPoolConfigDriverSpeedWeightage =. val config.driverSpeedWeightage,
-        DriverIntelligentPoolConfigMinLocationUpdates =. val config.minLocationUpdates,
-        DriverIntelligentPoolConfigLocationUpdateSampleTime =. val config.locationUpdateSampleTime,
-        DriverIntelligentPoolConfigDefaultDriverSpeed =. val config.defaultDriverSpeed,
-        DriverIntelligentPoolConfigUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. DriverIntelligentPoolConfigMerchantId ==. val (toKey config.merchantId)
+-- update :: DriverIntelligentPoolConfig -> SqlDB ()
+-- update config = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ DriverIntelligentPoolConfigAvailabilityTimeWeightage =. val config.availabilityTimeWeightage,
+--         DriverIntelligentPoolConfigAvailabilityTimeWindowOption =. val config.availabilityTimeWindowOption,
+--         DriverIntelligentPoolConfigAcceptanceRatioWeightage =. val config.acceptanceRatioWeightage,
+--         DriverIntelligentPoolConfigAcceptanceRatioWindowOption =. val config.acceptanceRatioWindowOption,
+--         DriverIntelligentPoolConfigCancellationRatioWeightage =. val config.cancellationRatioWeightage,
+--         DriverIntelligentPoolConfigCancellationRatioWindowOption =. val config.cancellationRatioWindowOption,
+--         DriverIntelligentPoolConfigMinQuotesToQualifyForIntelligentPool =. val config.minQuotesToQualifyForIntelligentPool,
+--         DriverIntelligentPoolConfigMinQuotesToQualifyForIntelligentPoolWindowOption =. val config.minQuotesToQualifyForIntelligentPoolWindowOption,
+--         DriverIntelligentPoolConfigIntelligentPoolPercentage =. val config.intelligentPoolPercentage,
+--         DriverIntelligentPoolConfigSpeedNormalizer =. val config.speedNormalizer,
+--         DriverIntelligentPoolConfigDriverSpeedWeightage =. val config.driverSpeedWeightage,
+--         DriverIntelligentPoolConfigMinLocationUpdates =. val config.minLocationUpdates,
+--         DriverIntelligentPoolConfigLocationUpdateSampleTime =. val config.locationUpdateSampleTime,
+--         DriverIntelligentPoolConfigDefaultDriverSpeed =. val config.defaultDriverSpeed,
+--         DriverIntelligentPoolConfigUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. DriverIntelligentPoolConfigMerchantId ==. val (toKey config.merchantId)
 
-update' :: (L.MonadFlow m, MonadTime m) => DriverIntelligentPoolConfig -> m (MeshResult ())
-update' config = do
+update :: (L.MonadFlow m, MonadTime m) => DriverIntelligentPoolConfig -> m (MeshResult ())
+update config = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   now <- getCurrentTime
   case dbConf of

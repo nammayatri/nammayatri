@@ -31,26 +31,26 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.Message.MessageTranslation as BeamMT
 import Storage.Tabular.Message.MessageTranslation
 
-create :: MessageTranslation -> SqlDB ()
-create = Esq.create
+-- create :: MessageTranslation -> SqlDB ()
+-- create = Esq.create
 
-create' :: L.MonadFlow m => MessageTranslation -> m (MeshResult ())
-create' messageTranslation = do
+create :: L.MonadFlow m => MessageTranslation -> m (MeshResult ())
+create messageTranslation = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainMessageTranslationToBeam messageTranslation)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-findByMessageIdAndLanguage :: Transactionable m => Id Msg.Message -> Language -> m (Maybe MessageTranslation)
-findByMessageIdAndLanguage messageId language =
-  Esq.findOne $ do
-    messageTranslation <- from $ table @MessageTranslationT
-    where_ $
-      messageTranslation ^. MessageTranslationTId ==. val (toKey (messageId, language))
-    return messageTranslation
+-- findByMessageIdAndLanguage :: Transactionable m => Id Msg.Message -> Language -> m (Maybe MessageTranslation)
+-- findByMessageIdAndLanguage messageId language =
+--   Esq.findOne $ do
+--     messageTranslation <- from $ table @MessageTranslationT
+--     where_ $
+--       messageTranslation ^. MessageTranslationTId ==. val (toKey (messageId, language))
+--     return messageTranslation
 
-findById' :: L.MonadFlow m => Id Msg.Message -> Language -> m (Maybe MessageTranslation)
-findById' (Id messageId) language = do
+findByMessageIdAndLanguage :: L.MonadFlow m => Id Msg.Message -> Language -> m (Maybe MessageTranslation)
+findByMessageIdAndLanguage (Id messageId) language = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> do

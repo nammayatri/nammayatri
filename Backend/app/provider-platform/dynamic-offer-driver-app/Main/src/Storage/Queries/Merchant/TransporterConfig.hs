@@ -36,16 +36,16 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.TransporterConfig as BeamTC
 import Storage.Tabular.Merchant.TransporterConfig
 
-findByMerchantId :: Transactionable m => Id Merchant -> m (Maybe TransporterConfig)
-findByMerchantId merchantId =
-  Esq.findOne $ do
-    config <- from $ table @TransporterConfigT
-    where_ $
-      config ^. TransporterConfigMerchantId ==. val (toKey merchantId)
-    return config
+-- findByMerchantId :: Transactionable m => Id Merchant -> m (Maybe TransporterConfig)
+-- findByMerchantId merchantId =
+--   Esq.findOne $ do
+--     config <- from $ table @TransporterConfigT
+--     where_ $
+--       config ^. TransporterConfigMerchantId ==. val (toKey merchantId)
+--     return config
 
-findByMerchantId' :: L.MonadFlow m => Id Merchant -> m (Maybe TransporterConfig)
-findByMerchantId' (Id merchantId) = do
+findByMerchantId :: L.MonadFlow m => Id Merchant -> m (Maybe TransporterConfig)
+findByMerchantId (Id merchantId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> do
@@ -55,47 +55,48 @@ findByMerchantId' (Id merchantId) = do
         Right tc -> sequence $ transformBeamTransporterConfigToDomain <$> tc
     Nothing -> pure Nothing
 
-updateFCMConfig :: Id Merchant -> BaseUrl -> Text -> SqlDB ()
-updateFCMConfig merchantId fcmUrl fcmServiceAccount = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ TransporterConfigFcmUrl =. val (showBaseUrl fcmUrl),
-        TransporterConfigFcmServiceAccount =. val fcmServiceAccount,
-        TransporterConfigUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. TransporterConfigMerchantId ==. val (toKey merchantId)
+-- updateFCMConfig :: Id Merchant -> BaseUrl -> Text -> SqlDB ()
+-- updateFCMConfig merchantId fcmUrl fcmServiceAccount = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ TransporterConfigFcmUrl =. val (showBaseUrl fcmUrl),
+--         TransporterConfigFcmServiceAccount =. val fcmServiceAccount,
+--         TransporterConfigUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. TransporterConfigMerchantId ==. val (toKey merchantId)
 
-updateFCMConfig' :: (L.MonadFlow m, MonadTime m) => Id Merchant -> BaseUrl -> Text -> m (MeshResult ())
-updateFCMConfig' (Id merchantId) fcmUrl fcmServiceAccount = do
+updateFCMConfig :: (L.MonadFlow m, MonadTime m) => Id Merchant -> BaseUrl -> Text -> m ()
+updateFCMConfig (Id merchantId) fcmUrl fcmServiceAccount = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        Mesh.meshConfig
-        [ Se.Set BeamTC.fcmUrl $ showBaseUrl fcmUrl,
-          Se.Set BeamTC.fcmServiceAccount fcmServiceAccount,
-          Se.Set BeamTC.updatedAt now
-        ]
-        [Se.Is BeamTC.merchantId (Se.Eq merchantId)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+      void $
+        KV.updateWoReturningWithKVConnector
+          dbConf'
+          Mesh.meshConfig
+          [ Se.Set BeamTC.fcmUrl $ showBaseUrl fcmUrl,
+            Se.Set BeamTC.fcmServiceAccount fcmServiceAccount,
+            Se.Set BeamTC.updatedAt now
+          ]
+          [Se.Is BeamTC.merchantId (Se.Eq merchantId)]
+    Nothing -> pure ()
 
-updateReferralLinkPassword :: Id Merchant -> Text -> SqlDB ()
-updateReferralLinkPassword merchantId newPassword = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ TransporterConfigReferralLinkPassword =. val newPassword,
-        TransporterConfigUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. TransporterConfigMerchantId ==. val (toKey merchantId)
+-- updateReferralLinkPassword :: Id Merchant -> Text -> SqlDB ()
+-- updateReferralLinkPassword merchantId newPassword = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ TransporterConfigReferralLinkPassword =. val newPassword,
+--         TransporterConfigUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. TransporterConfigMerchantId ==. val (toKey merchantId)
 
-updateReferralLinkPassword' :: (L.MonadFlow m, MonadTime m) => Id Merchant -> Text -> m (MeshResult ())
-updateReferralLinkPassword' (Id merchantId) newPassword = do
+updateReferralLinkPassword :: (L.MonadFlow m, MonadTime m) => Id Merchant -> Text -> m (MeshResult ())
+updateReferralLinkPassword (Id merchantId) newPassword = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   now <- getCurrentTime
   case dbConf of
@@ -109,32 +110,32 @@ updateReferralLinkPassword' (Id merchantId) newPassword = do
         [Se.Is BeamTC.merchantId (Se.Eq merchantId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-update :: TransporterConfig -> SqlDB ()
-update config = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ TransporterConfigPickupLocThreshold =. val config.pickupLocThreshold,
-        TransporterConfigDropLocThreshold =. val config.dropLocThreshold,
-        TransporterConfigRideTimeEstimatedThreshold =. val config.rideTimeEstimatedThreshold,
-        TransporterConfigDefaultPopupDelay =. val config.defaultPopupDelay,
-        TransporterConfigPopupDelayToAddAsPenalty =. val config.popupDelayToAddAsPenalty,
-        TransporterConfigThresholdCancellationScore =. val config.thresholdCancellationScore,
-        TransporterConfigMinRidesForCancellationScore =. val config.minRidesForCancellationScore,
-        TransporterConfigMediaFileUrlPattern =. val config.mediaFileUrlPattern,
-        TransporterConfigMediaFileSizeUpperLimit =. val config.mediaFileSizeUpperLimit,
-        TransporterConfigWaitingTimeEstimatedThreshold =. val config.waitingTimeEstimatedThreshold,
-        TransporterConfigOnboardingTryLimit =. val config.onboardingTryLimit,
-        TransporterConfigOnboardingRetryTimeInHours =. val config.onboardingRetryTimeInHours,
-        TransporterConfigCheckImageExtractionForDashboard =. val config.checkImageExtractionForDashboard,
-        TransporterConfigSearchRepeatLimit =. val config.searchRepeatLimit,
-        TransporterConfigUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. TransporterConfigMerchantId ==. val (toKey config.merchantId)
+-- update :: TransporterConfig -> SqlDB ()
+-- update config = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ TransporterConfigPickupLocThreshold =. val config.pickupLocThreshold,
+--         TransporterConfigDropLocThreshold =. val config.dropLocThreshold,
+--         TransporterConfigRideTimeEstimatedThreshold =. val config.rideTimeEstimatedThreshold,
+--         TransporterConfigDefaultPopupDelay =. val config.defaultPopupDelay,
+--         TransporterConfigPopupDelayToAddAsPenalty =. val config.popupDelayToAddAsPenalty,
+--         TransporterConfigThresholdCancellationScore =. val config.thresholdCancellationScore,
+--         TransporterConfigMinRidesForCancellationScore =. val config.minRidesForCancellationScore,
+--         TransporterConfigMediaFileUrlPattern =. val config.mediaFileUrlPattern,
+--         TransporterConfigMediaFileSizeUpperLimit =. val config.mediaFileSizeUpperLimit,
+--         TransporterConfigWaitingTimeEstimatedThreshold =. val config.waitingTimeEstimatedThreshold,
+--         TransporterConfigOnboardingTryLimit =. val config.onboardingTryLimit,
+--         TransporterConfigOnboardingRetryTimeInHours =. val config.onboardingRetryTimeInHours,
+--         TransporterConfigCheckImageExtractionForDashboard =. val config.checkImageExtractionForDashboard,
+--         TransporterConfigSearchRepeatLimit =. val config.searchRepeatLimit,
+--         TransporterConfigUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. TransporterConfigMerchantId ==. val (toKey config.merchantId)
 
-update' :: (L.MonadFlow m, MonadTime m) => TransporterConfig -> m (MeshResult ())
-update' config = do
+update :: (L.MonadFlow m, MonadTime m) => TransporterConfig -> m (MeshResult ())
+update config = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   now <- getCurrentTime
   case dbConf of

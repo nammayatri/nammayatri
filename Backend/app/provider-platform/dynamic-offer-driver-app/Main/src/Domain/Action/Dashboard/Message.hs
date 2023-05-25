@@ -190,7 +190,8 @@ instance FromNamedRecord CSVRow where
 sendMessage :: ShortId DM.Merchant -> Common.SendMessageRequest -> Flow APISuccess
 sendMessage merchantShortId Common.SendMessageRequest {..} = do
   merchant <- findMerchantByShortId merchantShortId
-  message <- Esq.runInReplica $ MQuery.findById (Id messageId) >>= fromMaybeM (InvalidRequest "Message Not Found")
+  -- message <- Esq.runInReplica $ MQuery.findById (Id messageId) >>= fromMaybeM (InvalidRequest "Message Not Found")
+  message <- MQuery.findById (Id messageId) >>= fromMaybeM (InvalidRequest "Message Not Found")
   allDriverIds <- case _type of
     AllEnabled -> Esq.runInReplica $ QP.findAllDriverIdExceptProvided (merchant.id) []
     Include -> readCsv

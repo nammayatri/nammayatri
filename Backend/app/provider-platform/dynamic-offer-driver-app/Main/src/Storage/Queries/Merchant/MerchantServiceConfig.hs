@@ -47,16 +47,16 @@ import qualified Storage.Beam.Merchant.MerchantServiceConfig as BeamMSC
 import Storage.Tabular.Merchant.MerchantServiceConfig
 import Tools.Error
 
-findByMerchantIdAndService :: Transactionable m => Id Merchant -> ServiceName -> m (Maybe MerchantServiceConfig)
-findByMerchantIdAndService merchantId serviceName =
-  Esq.findOne $ do
-    merchantServiceConfig <- from $ table @MerchantServiceConfigT
-    where_ $
-      merchantServiceConfig ^. MerchantServiceConfigTId ==. val (toKey (merchantId, serviceName))
-    return merchantServiceConfig
+-- findByMerchantIdAndService :: Transactionable m => Id Merchant -> ServiceName -> m (Maybe MerchantServiceConfig)
+-- findByMerchantIdAndService merchantId serviceName =
+--   Esq.findOne $ do
+--     merchantServiceConfig <- from $ table @MerchantServiceConfigT
+--     where_ $
+--       merchantServiceConfig ^. MerchantServiceConfigTId ==. val (toKey (merchantId, serviceName))
+--     return merchantServiceConfig
 
-findByMerchantIdAndService' :: (L.MonadFlow m, Log m) => Id Merchant -> ServiceName -> m (Maybe MerchantServiceConfig)
-findByMerchantIdAndService' (Id merchantId) serviceName = do
+findByMerchantIdAndService :: (L.MonadFlow m, Log m) => Id Merchant -> ServiceName -> m (Maybe MerchantServiceConfig)
+findByMerchantIdAndService (Id merchantId) serviceName = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> do
@@ -67,17 +67,17 @@ findByMerchantIdAndService' (Id merchantId) serviceName = do
     Nothing -> pure Nothing
 
 -- FIXME this query created for backward compatibility
-findOne :: Transactionable m => ServiceName -> m (Maybe MerchantServiceConfig)
-findOne serviceName =
-  Esq.findOne $ do
-    merchantServiceConfig <- from $ table @MerchantServiceConfigT
-    where_ $
-      merchantServiceConfig ^. MerchantServiceConfigServiceName ==. val serviceName
-    limit 1
-    return merchantServiceConfig
+-- findOne :: Transactionable m => ServiceName -> m (Maybe MerchantServiceConfig)
+-- findOne serviceName =
+--   Esq.findOne $ do
+--     merchantServiceConfig <- from $ table @MerchantServiceConfigT
+--     where_ $
+--       merchantServiceConfig ^. MerchantServiceConfigServiceName ==. val serviceName
+--     limit 1
+--     return merchantServiceConfig
 
-findOne' :: (L.MonadFlow m, Log m) => ServiceName -> m (Maybe MerchantServiceConfig)
-findOne' serviceName = do
+findOne :: (L.MonadFlow m, Log m) => ServiceName -> m (Maybe MerchantServiceConfig)
+findOne serviceName = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> do
@@ -87,18 +87,18 @@ findOne' serviceName = do
         Left _ -> pure Nothing
     Nothing -> pure Nothing
 
-upsertMerchantServiceConfig :: MerchantServiceConfig -> SqlDB ()
-upsertMerchantServiceConfig merchantServiceConfig = do
-  now <- getCurrentTime
-  let (_serviceName, configJSON) = getServiceNameConfigJSON merchantServiceConfig.serviceConfig
-  Esq.upsert
-    merchantServiceConfig
-    [ MerchantServiceConfigConfigJSON =. val configJSON,
-      MerchantServiceConfigUpdatedAt =. val now
-    ]
+-- upsertMerchantServiceConfig :: MerchantServiceConfig -> SqlDB ()
+-- upsertMerchantServiceConfig merchantServiceConfig = do
+--   now <- getCurrentTime
+--   let (_serviceName, configJSON) = getServiceNameConfigJSON merchantServiceConfig.serviceConfig
+--   Esq.upsert
+--     merchantServiceConfig
+--     [ MerchantServiceConfigConfigJSON =. val configJSON,
+--       MerchantServiceConfigUpdatedAt =. val now
+--     ]
 
-upsertMerchantServiceConfig' :: (L.MonadFlow m, Log m, MonadTime m) => MerchantServiceConfig -> m ()
-upsertMerchantServiceConfig' merchantServiceConfig = do
+upsertMerchantServiceConfig :: (L.MonadFlow m, Log m, MonadTime m) => MerchantServiceConfig -> m ()
+upsertMerchantServiceConfig merchantServiceConfig = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   now <- getCurrentTime
   let (_serviceName, configJSON) = getServiceNameConfigJSON merchantServiceConfig.serviceConfig

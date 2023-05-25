@@ -84,9 +84,9 @@ merchantUpdate merchantShortId req = do
     forM_ exophones $ \exophoneReq -> do
       exophone <- buildExophone merchant.id now exophoneReq
       CQExophone.create exophone
-  Esq.runTransaction $ do
-    whenJust req.fcmConfig $
-      \fcmConfig -> CQTC.updateFCMConfig merchant.id fcmConfig.fcmUrl fcmConfig.fcmServiceAccount
+  -- Esq.runTransaction $ do
+  whenJust req.fcmConfig $
+    \fcmConfig -> CQTC.updateFCMConfig merchant.id fcmConfig.fcmUrl fcmConfig.fcmServiceAccount
 
   CQM.clearCache updMerchant
   whenJust mbAllExophones $ \allExophones -> do
@@ -150,8 +150,8 @@ merchantCommonConfigUpdate merchantShortId req = do
                checkImageExtractionForDashboard = maybe config.checkImageExtractionForDashboard (.value) req.checkImageExtractionForDashboard,
                searchRepeatLimit = maybe config.searchRepeatLimit (.value) req.searchRepeatLimit
               }
-  Esq.runTransaction $ do
-    CQTC.update updConfig
+  -- Esq.runTransaction $ do
+  _ <- CQTC.update updConfig
   CQTC.clearCache merchant.id
   logTagInfo "dashboard -> merchantCommonConfigUpdate : " (show merchant.id)
   pure Success
@@ -181,8 +181,8 @@ driverPoolConfigUpdate merchantShortId tripDistance req = do
                poolSortingType = maybe config.poolSortingType (castPoolSortingType . (.value)) req.poolSortingType,
                singleBatchProcessTime = maybe config.singleBatchProcessTime (.value) req.singleBatchProcessTime
               }
-  Esq.runTransaction $ do
-    CQDPC.update updConfig
+  -- Esq.runTransaction $ do
+  _ <- CQDPC.update updConfig
   CQDPC.clearCache merchant.id
   logTagInfo "dashboard -> driverPoolConfigUpdate : " $ show merchant.id <> "tripDistance : " <> show tripDistance
   pure Success
@@ -204,8 +204,8 @@ driverPoolConfigCreate merchantShortId tripDistance req = do
   mbConfig <- CQDPC.findByMerchantIdAndTripDistance merchant.id tripDistance
   whenJust mbConfig $ \_ -> throwError (DriverPoolConfigAlreadyExists merchant.id.getId tripDistance)
   newConfig <- buildDriverPoolConfig merchant.id tripDistance req
-  Esq.runTransaction $ do
-    CQDPC.create newConfig
+  -- Esq.runTransaction $ do
+  _ <- CQDPC.create newConfig
   -- We should clear cache here, because cache contains list of all configs for current merchantId
   CQDPC.clearCache merchant.id
   logTagInfo "dashboard -> driverPoolConfigCreate : " $ show merchant.id <> "tripDistance : " <> show tripDistance
@@ -253,8 +253,8 @@ driverIntelligentPoolConfigUpdate merchantShortId req = do
                locationUpdateSampleTime = maybe config.locationUpdateSampleTime (.value) req.locationUpdateSampleTime,
                defaultDriverSpeed = maybe config.defaultDriverSpeed (.value) req.defaultDriverSpeed
               }
-  Esq.runTransaction $ do
-    CQDIPC.update updConfig
+  -- Esq.runTransaction $ do
+  _ <- CQDIPC.update updConfig
   CQDIPC.clearCache merchant.id
   logTagInfo "dashboard -> driverIntelligentPoolConfigUpdate : " (show merchant.id)
   pure Success
@@ -337,8 +337,8 @@ mapsServiceConfigUpdate merchantShortId req = do
   let serviceName = DMSC.MapsService $ Common.getMapsServiceFromReq req
   serviceConfig <- DMSC.MapsServiceConfig <$> Common.buildMapsServiceConfig req
   merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig
-  Esq.runTransaction $ do
-    CQMSC.upsertMerchantServiceConfig merchantServiceConfig
+  -- Esq.runTransaction $ do
+  CQMSC.upsertMerchantServiceConfig merchantServiceConfig
   CQMSC.clearCache merchant.id serviceName
   logTagInfo "dashboard -> mapsServiceConfigUpdate : " (show merchant.id)
   pure Success
@@ -353,8 +353,8 @@ smsServiceConfigUpdate merchantShortId req = do
   let serviceName = DMSC.SmsService $ Common.getSmsServiceFromReq req
   serviceConfig <- DMSC.SmsServiceConfig <$> Common.buildSmsServiceConfig req
   merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig
-  Esq.runTransaction $ do
-    CQMSC.upsertMerchantServiceConfig merchantServiceConfig
+  -- Esq.runTransaction $ do
+  CQMSC.upsertMerchantServiceConfig merchantServiceConfig
   CQMSC.clearCache merchant.id serviceName
   logTagInfo "dashboard -> smsServiceConfigUpdate : " (show merchant.id)
   pure Success
@@ -386,8 +386,8 @@ mapsServiceUsageConfigUpdate merchantShortId req = do
                                    getPlaceDetails = fromMaybe merchantServiceUsageConfig.getPlaceDetails req.getPlaceDetails,
                                    autoComplete = fromMaybe merchantServiceUsageConfig.autoComplete req.autoComplete
                                   }
-  Esq.runTransaction $ do
-    CQMSUC.updateMerchantServiceUsageConfig updMerchantServiceUsageConfig
+  -- Esq.runTransaction $ do
+  _ <- CQMSUC.updateMerchantServiceUsageConfig updMerchantServiceUsageConfig
   CQMSUC.clearCache merchant.id
   logTagInfo "dashboard -> mapsServiceUsageConfigUpdate : " (show merchant.id)
   pure Success
@@ -413,8 +413,8 @@ smsServiceUsageConfigUpdate merchantShortId req = do
   let updMerchantServiceUsageConfig =
         merchantServiceUsageConfig{smsProvidersPriorityList = req.smsProvidersPriorityList
                                   }
-  Esq.runTransaction $ do
-    CQMSUC.updateMerchantServiceUsageConfig updMerchantServiceUsageConfig
+  -- Esq.runTransaction $ do
+  _ <- CQMSUC.updateMerchantServiceUsageConfig updMerchantServiceUsageConfig
   CQMSUC.clearCache merchant.id
   logTagInfo "dashboard -> smsServiceUsageConfigUpdate : " (show merchant.id)
   pure Success
@@ -429,8 +429,8 @@ verificationServiceConfigUpdate merchantShortId req = do
   let serviceName = DMSC.VerificationService $ Common.getVerificationServiceFromReq req
   serviceConfig <- DMSC.VerificationServiceConfig <$> Common.buildVerificationServiceConfig req
   merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig
-  Esq.runTransaction $ do
-    CQMSC.upsertMerchantServiceConfig merchantServiceConfig
+  -- Esq.runTransaction $ do
+  _ <- CQMSC.upsertMerchantServiceConfig merchantServiceConfig
   CQMSC.clearCache merchant.id serviceName
   logTagInfo "dashboard -> verificationServiceConfigUpdate : " (show merchant.id)
   pure Success
