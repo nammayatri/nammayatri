@@ -90,7 +90,7 @@ const hindiStrings = {
   "OTP": "ओटीपी",
   "PAYMENT_METHOD": "भुगतान का तरीका",
   "PAYMENT_METHOD_STRING": "नकद/किसी भी UPI ऐप का उपयोग करें",
-  "CANCEL_RIDE": "सवारी रद्द करें",
+  "CANCEL_RIDE": "मेरी राइड रद्द करें",
   "SUPPORT": "सहायता",
   "PICKUP_AND_DROP": "पिकअप और ड्रॉप",
   "CANCELLED": "रद्द",

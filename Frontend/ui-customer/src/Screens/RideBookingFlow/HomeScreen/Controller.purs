@@ -1850,7 +1850,7 @@ estimatesFlow estimatedQuotes state = do
     exit
       $ SelectEstimate
           state
-            { data { suggestedAmount = estimatedPrice, rateCard = { baseFare: baseFare, extraFare: extraFare, pickUpCharges: pickUpCharges, additionalFare: additionalFare, nightShiftMultiplier: nightShiftMultiplier, nightCharges: nightCharges}, showPreferences = false  }
+            { data { suggestedAmount = estimatedPrice, rateCard = { baseFare: baseFare, extraFare: extraFare, pickUpCharges: pickUpCharges, additionalFare: additionalFare, nightShiftMultiplier: nightShiftMultiplier, nightCharges: nightCharges}, showPreferences = getPreferenceValue "" }
             , props { estimateId = estimateId, currentStage = SettingPrice, showRateCardIcon = showRateCardIcon}
             }
   else do
@@ -1944,3 +1944,6 @@ specialZoneRideFlow  (RideBookingRes response) state = do
           }
         }
   exit $ RideConfirmed newState { props { isInApp = true } }
+
+getPreferenceValue :: String -> Boolean
+getPreferenceValue dummy = (getValueToLocalStore ENABLE_TIPS) /= "true"

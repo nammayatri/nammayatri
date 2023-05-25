@@ -15,7 +15,7 @@ config =
     autoConfirmingLoaderColor : "#03B9F5",
     quoteListModelBackground : Color.black900,
     quoteListModel : {
-      backgroundColor : Color.black900,
+      backgroundColor : "#F5F9FE",
       textColor : Color.black900,
       loaderColor : Color.black900
     },
