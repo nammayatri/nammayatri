@@ -41,6 +41,7 @@ import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Types.Predicate
 import Kernel.Types.Validation
+import Kernel.Types.Version
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import qualified Kernel.Utils.Text as TU
@@ -65,7 +66,9 @@ data UpdateProfileReq = UpdateProfileReq
     notificationToken :: Maybe Text,
     referralCode :: Maybe Text,
     language :: Maybe Maps.Language,
-    gender :: Maybe Person.Gender
+    gender :: Maybe Person.Gender,
+    bundleVersion :: Maybe Version,
+    clientVersion :: Maybe Version
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -129,6 +132,8 @@ updatePerson personId req = do
       req.notificationToken
       req.language
       req.gender
+      req.clientVersion
+      req.bundleVersion
   pure APISuccess.Success
 
 validateRefferalCode :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasBapInfo r m, CoreMetrics m) => Id Person.Person -> Text -> m (Maybe Text)
