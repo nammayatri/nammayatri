@@ -60,16 +60,16 @@ findById' (Id messageId) language = do
         Left _ -> pure Nothing
     Nothing -> pure Nothing
 
-findByMessageId :: Transactionable m => Id Msg.Message -> m [MessageTranslation]
-findByMessageId messageId =
-  Esq.findAll $ do
-    messageTranslations <- from $ table @MessageTranslationT
-    where_ $
-      messageTranslations ^. MessageTranslationMessageId ==. val (toKey messageId)
-    return messageTranslations
+-- findByMessageId :: Transactionable m => Id Msg.Message -> m [MessageTranslation]
+-- findByMessageId messageId =
+--   Esq.findAll $ do
+--     messageTranslations <- from $ table @MessageTranslationT
+--     where_ $
+--       messageTranslations ^. MessageTranslationMessageId ==. val (toKey messageId)
+--     return messageTranslations
 
-findByMessageId' :: L.MonadFlow m => Id Msg.Message -> m [MessageTranslation]
-findByMessageId' (Id messageId) = do
+findByMessageId :: L.MonadFlow m => Id Msg.Message -> m [MessageTranslation]
+findByMessageId (Id messageId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     -- Just dbCOnf' -> either (pure Nothing) (transformBeamCallStatusToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamCT.id $ Se.Eq callStatusId]

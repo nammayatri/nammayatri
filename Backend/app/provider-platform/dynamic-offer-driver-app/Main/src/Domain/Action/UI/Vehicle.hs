@@ -95,7 +95,8 @@ data Driver = Driver
 listVehicles :: EsqDBReplicaFlow m r => SP.Person -> Maybe Variant.Variant -> Maybe Text -> Maybe Int -> Maybe Int -> m ListVehicleRes
 listVehicles admin variantM mbRegNum limitM offsetM = do
   let merchantId = admin.merchantId
-  personList <- Esq.runInReplica $ QP.findAllByMerchantId [SP.DRIVER] merchantId
+  -- personList <- Esq.runInReplica $ QP.findAllByMerchantId [SP.DRIVER] merchantId
+  personList <- QP.findAllByMerchantId [SP.DRIVER] merchantId
   vehicleList <- Esq.runInReplica $ QV.findAllByVariantRegNumMerchantId variantM mbRegNum limit offset merchantId
   respList <- buildVehicleRes personList `traverse` vehicleList
   return $ ListVehicleRes respList
@@ -133,10 +134,8 @@ updateVehicle admin driverId req = do
 
 getVehicle :: EsqDBReplicaFlow m r => Id SP.Person -> Maybe Text -> Maybe (Id SP.Person) -> m GetVehicleRes
 getVehicle personId registrationNoM vehicleIdM = do
-  user <-
-    Esq.runInReplica $
-      QP.findById personId
-        >>= fromMaybeM (PersonNotFound personId.getId)
+  user <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  -- Esq.runInReplica $
   vehicle <- case (registrationNoM, vehicleIdM) of
     (Nothing, Nothing) -> throwError $ InvalidRequest "You should pass registration number and vehicle id."
     _ ->

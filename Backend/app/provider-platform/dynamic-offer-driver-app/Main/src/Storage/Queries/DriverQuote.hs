@@ -162,14 +162,14 @@ countAllByRequestId searchReqId = do
           &&. dQuote ^. DriverQuoteSearchRequestId ==. val (toKey searchReqId)
       pure (countRows @Int32)
 
-deleteByDriverId :: Id Person -> SqlDB ()
-deleteByDriverId personId =
-  Esq.delete $ do
-    driverQuotes <- from $ table @DriverQuoteT
-    where_ $ driverQuotes ^. DriverQuoteDriverId ==. val (toKey personId)
+-- deleteByDriverId :: Id Person -> SqlDB ()
+-- deleteByDriverId personId =
+--   Esq.delete $ do
+--     driverQuotes <- from $ table @DriverQuoteT
+--     where_ $ driverQuotes ^. DriverQuoteDriverId ==. val (toKey personId)
 
-deleteByDriverId' :: L.MonadFlow m => Id Person -> m ()
-deleteByDriverId' (Id driverId) = do
+deleteByDriverId :: L.MonadFlow m => Id Person -> m ()
+deleteByDriverId (Id driverId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' ->

@@ -76,7 +76,7 @@ updateNotOnRideMultiple = Queries.updateNotOnRideMultiple
 deleteById :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person.Driver -> m ()
 deleteById driverId = do
   clearDriverInfoCache driverId
-  Esq.runTransaction $ Queries.deleteById driverId
+  Queries.deleteById driverId
 
 findAllWithLimitOffsetByMerchantId ::
   Esq.Transactionable m =>

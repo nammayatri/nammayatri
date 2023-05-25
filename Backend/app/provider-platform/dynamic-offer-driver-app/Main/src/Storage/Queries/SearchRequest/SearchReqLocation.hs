@@ -29,8 +29,8 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequest.SearchReqLocation as BeamSRL
 import Storage.Tabular.SearchRequest.SearchReqLocation
 
-findById' :: L.MonadFlow m => Id SearchReqLocation -> m (Maybe SearchReqLocation)
-findById' (Id searchReqLocationId) = do
+findById :: L.MonadFlow m => Id SearchReqLocation -> m (Maybe SearchReqLocation)
+findById (Id searchReqLocationId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamSearchReqLocationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamSRL.id $ Se.Eq searchReqLocationId]

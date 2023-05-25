@@ -41,11 +41,11 @@ import qualified Storage.Tabular.Person as PT
 createMany :: [MessageReport] -> SqlDB ()
 createMany = Esq.createMany
 
-create :: MessageReport -> SqlDB ()
-create = Esq.create
+-- create :: MessageReport -> SqlDB ()
+-- create = Esq.create
 
-create' :: L.MonadFlow m => MessageReport -> m (MeshResult ())
-create' messageReport = do
+create :: L.MonadFlow m => MessageReport -> m (MeshResult ())
+create messageReport = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainMessageReportToBeam messageReport)
@@ -92,16 +92,16 @@ findByDriverIdMessageIdAndLanguage driverId messageId language = do
       messageReport ^. MessageReportTId ==. val (toKey (messageId, driverId))
     return (messageReport, message, mbMessageTranslation)
 
-findByMessageIdAndDriverId :: Transactionable m => Id Msg.Message -> Id P.Driver -> m (Maybe MessageReport)
-findByMessageIdAndDriverId messageId driverId =
-  Esq.findOne $ do
-    messageReport <- from $ table @MessageReportT
-    where_ $
-      messageReport ^. MessageReportTId ==. val (toKey (messageId, driverId))
-    return messageReport
+-- findByMessageIdAndDriverId :: Transactionable m => Id Msg.Message -> Id P.Driver -> m (Maybe MessageReport)
+-- findByMessageIdAndDriverId messageId driverId =
+--   Esq.findOne $ do
+--     messageReport <- from $ table @MessageReportT
+--     where_ $
+--       messageReport ^. MessageReportTId ==. val (toKey (messageId, driverId))
+--     return messageReport
 
-findByMessageIdAndDriverId' :: L.MonadFlow m => Id Msg.Message -> Id P.Driver -> m (Maybe MessageReport)
-findByMessageIdAndDriverId' (Id messageId) (Id driverId) = do
+findByMessageIdAndDriverId :: L.MonadFlow m => Id Msg.Message -> Id P.Driver -> m (Maybe MessageReport)
+findByMessageIdAndDriverId (Id messageId) (Id driverId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamMessageReportToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamMR.messageId $ Se.Eq messageId, Se.Is BeamMR.driverId $ Se.Eq driverId]]
@@ -160,22 +160,22 @@ getMessageCountByReadStatus messageId =
     mkCount [counter] = counter
     mkCount _ = 0
 
-updateSeenAndReplyByMessageIdAndDriverId :: Id Msg.Message -> Id P.Driver -> Bool -> Maybe Text -> SqlDB ()
-updateSeenAndReplyByMessageIdAndDriverId messageId driverId readStatus reply = do
-  now <- getCurrentTime
-  Esq.update $ \mr -> do
-    set
-      mr
-      [ MessageReportReadStatus =. val readStatus,
-        MessageReportReply =. val reply,
-        MessageReportUpdatedAt =. val now
-      ]
-    where_ $
-      mr ^. MessageReportMessageId ==. val (toKey messageId)
-        &&. mr ^. MessageReportDriverId ==. val (toKey $ cast driverId)
+-- updateSeenAndReplyByMessageIdAndDriverId :: Id Msg.Message -> Id P.Driver -> Bool -> Maybe Text -> SqlDB ()
+-- updateSeenAndReplyByMessageIdAndDriverId messageId driverId readStatus reply = do
+--   now <- getCurrentTime
+--   Esq.update $ \mr -> do
+--     set
+--       mr
+--       [ MessageReportReadStatus =. val readStatus,
+--         MessageReportReply =. val reply,
+--         MessageReportUpdatedAt =. val now
+--       ]
+--     where_ $
+--       mr ^. MessageReportMessageId ==. val (toKey messageId)
+--         &&. mr ^. MessageReportDriverId ==. val (toKey $ cast driverId)
 
-updateSeenAndReplyByMessageIdAndDriverId' :: (L.MonadFlow m, MonadTime m) => Id Msg.Message -> Id P.Driver -> Bool -> Maybe Text -> m (MeshResult ())
-updateSeenAndReplyByMessageIdAndDriverId' messageId driverId readStatus reply = do
+updateSeenAndReplyByMessageIdAndDriverId :: (L.MonadFlow m, MonadTime m) => Id Msg.Message -> Id P.Driver -> Bool -> Maybe Text -> m (MeshResult ())
+updateSeenAndReplyByMessageIdAndDriverId messageId driverId readStatus reply = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   now <- getCurrentTime
   case dbConf of
@@ -219,21 +219,21 @@ updateMessageLikeByMessageIdAndDriverIdAndReadStatus messageId driverId = do
 --         [Se.Is BeamMR.messageId $ Se.Eq $ getId messageId, Se.Is BeamMR.driverId $ Se.Eq $ getId driverId ]
 --     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-updateDeliveryStatusByMessageIdAndDriverId :: Id Msg.Message -> Id P.Driver -> DeliveryStatus -> SqlDB ()
-updateDeliveryStatusByMessageIdAndDriverId messageId driverId deliveryStatus = do
-  now <- getCurrentTime
-  Esq.update $ \mr -> do
-    set
-      mr
-      [ MessageReportDeliveryStatus =. val deliveryStatus,
-        MessageReportUpdatedAt =. val now
-      ]
-    where_ $
-      mr ^. MessageReportMessageId ==. val (toKey messageId)
-        &&. mr ^. MessageReportDriverId ==. val (toKey $ cast driverId)
+-- updateDeliveryStatusByMessageIdAndDriverId :: Id Msg.Message -> Id P.Driver -> DeliveryStatus -> SqlDB ()
+-- updateDeliveryStatusByMessageIdAndDriverId messageId driverId deliveryStatus = do
+--   now <- getCurrentTime
+--   Esq.update $ \mr -> do
+--     set
+--       mr
+--       [ MessageReportDeliveryStatus =. val deliveryStatus,
+--         MessageReportUpdatedAt =. val now
+--       ]
+--     where_ $
+--       mr ^. MessageReportMessageId ==. val (toKey messageId)
+--         &&. mr ^. MessageReportDriverId ==. val (toKey $ cast driverId)
 
-updateDeliveryStatusByMessageIdAndDriverId' :: (L.MonadFlow m, MonadTime m) => Id Msg.Message -> Id P.Driver -> DeliveryStatus -> m (MeshResult ())
-updateDeliveryStatusByMessageIdAndDriverId' messageId driverId deliveryStatus = do
+updateDeliveryStatusByMessageIdAndDriverId :: (L.MonadFlow m, MonadTime m) => Id Msg.Message -> Id P.Driver -> DeliveryStatus -> m (MeshResult ())
+updateDeliveryStatusByMessageIdAndDriverId messageId driverId deliveryStatus = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   now <- getCurrentTime
   case dbConf of
@@ -247,14 +247,14 @@ updateDeliveryStatusByMessageIdAndDriverId' messageId driverId deliveryStatus = 
         [Se.Is BeamMR.messageId $ Se.Eq $ getId messageId, Se.Is BeamMR.driverId $ Se.Eq $ getId driverId]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-deleteByPersonId :: Id P.Person -> SqlDB ()
-deleteByPersonId personId =
-  Esq.delete $ do
-    messagereport <- from $ table @MessageReportT
-    where_ $ messagereport ^. MessageReportDriverId ==. val (toKey personId)
+-- deleteByPersonId :: Id P.Person -> SqlDB ()
+-- deleteByPersonId personId =
+--   Esq.delete $ do
+--     messagereport <- from $ table @MessageReportT
+--     where_ $ messagereport ^. MessageReportDriverId ==. val (toKey personId)
 
-deleteByPersonId' :: L.MonadFlow m => Id P.Person -> m ()
-deleteByPersonId' (Id personId) = do
+deleteByPersonId :: L.MonadFlow m => Id P.Person -> m ()
+deleteByPersonId (Id personId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' ->

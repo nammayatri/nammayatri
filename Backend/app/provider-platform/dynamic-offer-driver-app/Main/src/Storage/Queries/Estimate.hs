@@ -20,7 +20,7 @@ import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
+-- import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
@@ -28,61 +28,61 @@ import qualified Storage.Beam.Estimate as BeamE
 import Storage.Tabular.Estimate ()
 import qualified Storage.Tabular.VechileNew as VN
 
-create :: Estimate -> SqlDB ()
-create = Esq.create
+-- create :: Estimate -> SqlDB ()
+-- create = Esq.create
 
-create'' :: L.MonadFlow m => Domain.Estimate -> m ()
-create'' estimate = do
+create :: L.MonadFlow m => Domain.Estimate -> m ()
+create estimate = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> void $ KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainEstimateToBeam estimate)
     Nothing -> pure ()
 
-createMany' :: L.MonadFlow m => [Estimate] -> m ()
-createMany' est = void $ traverse create'' est
+createMany :: L.MonadFlow m => [Estimate] -> m ()
+createMany est = void $ traverse create est
 
-createMany :: [Estimate] -> SqlDB ()
-createMany = Esq.createMany
+-- createMany :: [Estimate] -> SqlDB ()
+-- createMany = Esq.createMany
 
-findById :: Transactionable m => Id Estimate -> m (Maybe Estimate)
-findById = Esq.findById
+-- findById :: Transactionable m => Id Estimate -> m (Maybe Estimate)
+-- findById = Esq.findById
 
-findById' :: L.MonadFlow m => Id Estimate -> m (Maybe Estimate)
-findById' (Id estimateId) = do
+findById :: L.MonadFlow m => Id Estimate -> m (Maybe Estimate)
+findById (Id estimateId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamEstimateToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamE.id $ Se.Eq estimateId]
     Nothing -> pure Nothing
 
--- transformBeamEstimateToDomain :: BeamE.Estimate -> Estimate
--- transformBeamEstimateToDomain BeamE.EstimateT {..} = do
---   Estimate
---     { id = Id id,
---       transactionId = transactionId,
---       vehicleVariant = vehicleVariant,
---       minFare = minFare,
---       maxFare = maxFare,
---       estimateBreakupList = estimateBreakupList,
---       -- nightShiftRate = NightShiftRate nightShiftMultiplier nightShiftStart nightShiftEnd,
---       nightShiftInfo = NightShiftInfo <$> nightShiftCharge <*> oldNightShiftCharge <*> nightShiftStart <*> nightShiftEnd,
---       waitingCharges = WaitingCharges waitingChargePerMin waitingOrPickupCharges,
---       createdAt = createdAt
---     }
+transformBeamEstimateToDomain :: BeamE.Estimate -> Estimate
+transformBeamEstimateToDomain BeamE.EstimateT {..} = do
+  Estimate
+    { id = Id id,
+      transactionId = transactionId,
+      vehicleVariant = vehicleVariant,
+      minFare = minFare,
+      maxFare = maxFare,
+      estimateBreakupList = estimateBreakupList,
+      -- nightShiftRate = NightShiftRate nightShiftMultiplier nightShiftStart nightShiftEnd,
+      nightShiftInfo = NightShiftInfo <$> nightShiftCharge <*> oldNightShiftCharge <*> nightShiftStart <*> nightShiftEnd,
+      waitingCharges = WaitingCharges waitingChargePerMin waitingOrPickupCharges,
+      createdAt = createdAt
+    }
 
--- transformDomainEstimateToBeam :: Estimate -> BeamE.Estimate
--- transformDomainEstimateToBeam Estimate {..} = do
---   BeamE.EstimateT
---     { id = getId id,
---       transactionId = transactionId,
---       vehicleVariant = vehicleVariant,
---       minFare = minFare,
---       maxFare = maxFare,
---       estimateBreakupList = estimateBreakupList,
---       nightShiftCharge = nightShiftCharge <$> nightShiftInfo,
---       oldNightShiftCharge = oldNightShiftCharge <$> nightShiftInfo,
---       nightShiftStart = nightShiftStart <$> nightShiftInfo,
---       nightShiftEnd = nightShiftEnd <$> nightShiftInfo,
---       waitingChargePerMin = waitingChargePerMin waitingCharges,
---       waitingOrPickupCharges = waitingOrPickupCharges waitingCharges,
---       createdAt = createdAt
---     }
+transformDomainEstimateToBeam :: Estimate -> BeamE.Estimate
+transformDomainEstimateToBeam Estimate {..} = do
+  BeamE.EstimateT
+    { id = getId id,
+      transactionId = transactionId,
+      vehicleVariant = vehicleVariant,
+      minFare = minFare,
+      maxFare = maxFare,
+      estimateBreakupList = estimateBreakupList,
+      nightShiftCharge = nightShiftCharge <$> nightShiftInfo,
+      oldNightShiftCharge = oldNightShiftCharge <$> nightShiftInfo,
+      nightShiftStart = nightShiftStart <$> nightShiftInfo,
+      nightShiftEnd = nightShiftEnd <$> nightShiftInfo,
+      waitingChargePerMin = waitingChargePerMin waitingCharges,
+      waitingOrPickupCharges = waitingOrPickupCharges waitingCharges,
+      createdAt = createdAt
+    }

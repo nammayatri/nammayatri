@@ -18,16 +18,16 @@ import Storage.Tabular.Issue.IssueOption
 import Storage.Tabular.Issue.IssueTranslation
 import qualified Storage.Tabular.VechileNew as VN
 
-findByIdAndCategoryId :: Transactionable m => Id IssueOption -> Id IssueCategory -> m (Maybe IssueOption)
-findByIdAndCategoryId issueOptionId issueCategoryId = Esq.findOne $ do
-  issueOption <- from $ table @IssueOptionT
-  where_ $
-    issueOption ^. IssueOptionTId ==. val (toKey issueOptionId)
-      &&. issueOption ^. IssueOptionIssueCategoryId ==. val (toKey issueCategoryId)
-  pure issueOption
+-- findByIdAndCategoryId :: Transactionable m => Id IssueOption -> Id IssueCategory -> m (Maybe IssueOption)
+-- findByIdAndCategoryId issueOptionId issueCategoryId = Esq.findOne $ do
+--   issueOption <- from $ table @IssueOptionT
+--   where_ $
+--     issueOption ^. IssueOptionTId ==. val (toKey issueOptionId)
+--       &&. issueOption ^. IssueOptionIssueCategoryId ==. val (toKey issueCategoryId)
+--   pure issueOption
 
-findByIdAndCategoryId' :: L.MonadFlow m => Id IssueOption -> Id IssueCategory -> m (Maybe IssueOption)
-findByIdAndCategoryId' issueOptionId issueCategoryId = do
+findByIdAndCategoryId :: L.MonadFlow m => Id IssueOption -> Id IssueCategory -> m (Maybe IssueOption)
+findByIdAndCategoryId issueOptionId issueCategoryId = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> either (pure Nothing) (transformBeamIssueOptionToDomain <$>) <$> KV.findWithKVConnector dbConf' VN.meshConfig [Se.And [Se.Is BeamIO.id $ Se.Eq $ getId issueOptionId, Se.Is BeamIO.issueCategoryId $ Se.Eq $ getId issueCategoryId]]
@@ -61,15 +61,15 @@ findByIdAndLanguage issueOptionId language = Esq.findOne $ do
     issueOption ^. IssueOptionTId ==. val (toKey issueOptionId)
   pure (issueOption, mbIssueTranslation)
 
-findById :: Transactionable m => Id IssueOption -> m (Maybe IssueOption)
-findById issueOptionId = Esq.findOne $ do
-  issueOption <- from $ table @IssueOptionT
-  where_ $
-    issueOption ^. IssueOptionTId ==. val (toKey issueOptionId)
-  pure issueOption
+-- findById :: Transactionable m => Id IssueOption -> m (Maybe IssueOption)
+-- findById issueOptionId = Esq.findOne $ do
+--   issueOption <- from $ table @IssueOptionT
+--   where_ $
+--     issueOption ^. IssueOptionTId ==. val (toKey issueOptionId)
+--   pure issueOption
 
-findById' :: L.MonadFlow m => Id IssueOption -> m (Maybe IssueOption)
-findById' (Id issueOptionId) = do
+findById :: L.MonadFlow m => Id IssueOption -> m (Maybe IssueOption)
+findById (Id issueOptionId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> do

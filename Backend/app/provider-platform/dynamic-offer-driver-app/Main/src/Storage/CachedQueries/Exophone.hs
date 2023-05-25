@@ -64,7 +64,7 @@ findAllByPhone phone =
         Just a -> return a
         Nothing -> cacheExophones merchantId /=<< Queries.findAllByPhone phone
 
-findAllExophones :: Esq.Transactionable m => m [Exophone]
+findAllExophones :: L.MonadFlow m => m [Exophone]
 findAllExophones = Queries.findAllExophones
 
 -- Call it after any update
@@ -103,5 +103,5 @@ create = Queries.create
 updateAffectedPhones :: [Text] -> Esq.SqlDB ()
 updateAffectedPhones = Queries.updateAffectedPhones
 
-deleteByMerchantId :: Id DM.Merchant -> Esq.SqlDB ()
+deleteByMerchantId :: L.MonadFlow m => Id DM.Merchant -> m ()
 deleteByMerchantId = Queries.deleteByMerchantId

@@ -54,15 +54,15 @@ findById (Id callStatusId) = do
     Just dbCOnf' -> either (pure Nothing) (transformBeamCallStatusToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamCT.id $ Se.Eq callStatusId]
     Nothing -> pure Nothing
 
-findByCallSid :: Transactionable m => Text -> m (Maybe CallStatus)
-findByCallSid callSid =
-  Esq.findOne $ do
-    callStatus <- from $ table @CallStatusT
-    where_ $ callStatus ^. CallStatusCallId ==. val callSid
-    return callStatus
+-- findByCallSid :: Transactionable m => Text -> m (Maybe CallStatus)
+-- findByCallSid callSid =
+--   Esq.findOne $ do
+--     callStatus <- from $ table @CallStatusT
+--     where_ $ callStatus ^. CallStatusCallId ==. val callSid
+--     return callStatus
 
-findByCallSid' :: L.MonadFlow m => Text -> m (Maybe CallStatus)
-findByCallSid' callSid = do
+findByCallSid :: L.MonadFlow m => Text -> m (Maybe CallStatus)
+findByCallSid callSid = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamCallStatusToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamCT.callId $ Se.Eq callSid]

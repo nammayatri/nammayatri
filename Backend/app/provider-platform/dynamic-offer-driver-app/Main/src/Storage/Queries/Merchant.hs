@@ -73,25 +73,25 @@ findByShortId (ShortId shortId) = do
     Just dbCOnf' -> either (pure Nothing) (transformBeamMerchantToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamM.shortId $ Se.Eq shortId]
     Nothing -> pure Nothing
 
-loadAllProviders :: Transactionable m => m [Merchant]
-loadAllProviders =
-  Esq.findAll $ do
-    org <- from $ table @MerchantT
-    where_ $
-      org ^. MerchantStatus ==. val DM.APPROVED
-        &&. org ^. MerchantEnabled
-    return org
+-- loadAllProviders :: Transactionable m => m [Merchant]
+-- loadAllProviders =
+--   Esq.findAll $ do
+--     org <- from $ table @MerchantT
+--     where_ $
+--       org ^. MerchantStatus ==. val DM.APPROVED
+--         &&. org ^. MerchantEnabled
+--     return org
 
-loadAllProviders' :: L.MonadFlow m => m [Merchant]
-loadAllProviders' = do
+loadAllProviders :: L.MonadFlow m => m [Merchant]
+loadAllProviders = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure []) (transformBeamMerchantToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamM.status $ Se.Eq DM.APPROVED, Se.Is BeamM.enabled $ Se.Eq True]]
     Nothing -> pure []
 
-findAll :: Transactionable m => m [Merchant]
-findAll =
-  Esq.findAll $ do from $ table @MerchantT
+-- findAll :: Transactionable m => m [Merchant]
+-- findAll =
+--   Esq.findAll $ do from $ table @MerchantT
 
 findAll :: L.MonadFlow m => m [Merchant]
 findAll = do

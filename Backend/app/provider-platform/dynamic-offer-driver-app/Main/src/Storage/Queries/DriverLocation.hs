@@ -134,11 +134,11 @@ upsertGpsCoord _ _ _ = error "Undefined"
 --         [Se.Is BeamDL.driverId (Se.Eq $ getId drLocationId)]
 --     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-deleteById :: Id Person -> SqlDB ()
-deleteById = deleteByKey @DriverLocationT
+-- deleteById :: Id Person -> SqlDB ()
+-- deleteById = deleteByKey @DriverLocationT
 
-deleteById' :: L.MonadFlow m => Id Person -> m ()
-deleteById' (Id driverId) = do
+deleteById :: L.MonadFlow m => Id Person -> m ()
+deleteById (Id driverId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' ->

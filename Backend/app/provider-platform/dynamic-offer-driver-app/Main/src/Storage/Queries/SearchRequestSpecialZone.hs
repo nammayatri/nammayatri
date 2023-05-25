@@ -151,8 +151,8 @@ getValidTill (Id searchRequestId) = do
 
 transformBeamSearchRequestSpecialZoneToDomain :: L.MonadFlow m => BeamSRSZ.SearchRequestSpecialZone -> m (SearchRequestSpecialZone)
 transformBeamSearchRequestSpecialZoneToDomain BeamSRSZ.SearchRequestSpecialZoneT {..} = do
-  fl <- QSRL.findById' (Id fromLocationId)
-  tl <- QSRL.findById' (Id toLocationId)
+  fl <- QSRL.findById (Id fromLocationId)
+  tl <- QSRL.findById (Id toLocationId)
   pUrl <- parseBaseUrl bapUri
   pure
     SearchRequestSpecialZone

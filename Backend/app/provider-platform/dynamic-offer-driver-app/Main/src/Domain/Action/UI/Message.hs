@@ -118,14 +118,15 @@ fetchMedia driverId filePath = do
 messageSeen :: Id SP.Person -> Id Domain.Message -> Flow APISuccess
 messageSeen driverId messageId = do
   _ <- Esq.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  Esq.runTransaction $ MRQ.updateSeenAndReplyByMessageIdAndDriverId messageId (cast driverId) True Nothing
+  _ <- MRQ.updateSeenAndReplyByMessageIdAndDriverId messageId (cast driverId) True Nothing
 
   return Success
 
 messageLiked :: Id SP.Person -> Id Domain.Message -> Flow APISuccess
 messageLiked driverId messageId = do
   _ <- Esq.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  messageDetails <- Esq.runInReplica $ MRQ.findByMessageIdAndDriverId messageId (cast driverId) >>= fromMaybeM (InvalidRequest "Message not found")
+  -- messageDetails <- Esq.runInReplica $ MRQ.findByMessageIdAndDriverId messageId (cast driverId) >>= fromMaybeM (InvalidRequest "Message not found")
+  messageDetails <- MRQ.findByMessageIdAndDriverId messageId (cast driverId) >>= fromMaybeM (InvalidRequest "Message not found")
   unless (messageDetails.readStatus) $
     throwError $ InvalidRequest "Message is not seen"
   let val = if messageDetails.likeStatus then (-1) else 1
@@ -137,5 +138,5 @@ messageLiked driverId messageId = do
 messageResponse :: Id SP.Person -> Id Domain.Message -> MessageReplyReq -> Flow APISuccess
 messageResponse driverId messageId MessageReplyReq {..} = do
   _ <- Esq.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  Esq.runTransaction $ MRQ.updateSeenAndReplyByMessageIdAndDriverId messageId (cast driverId) True (Just reply)
+  _ <- MRQ.updateSeenAndReplyByMessageIdAndDriverId messageId (cast driverId) True (Just reply)
   return Success

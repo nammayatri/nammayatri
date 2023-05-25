@@ -61,22 +61,22 @@ deleteDriver merchantShortId reqDriverId = do
 
   -- this function uses tokens from db, so should be called before transaction
   Auth.clearDriverSession reqDriverId
-  Esq.runTransaction $ do
-    QIV.deleteByPersonId reqDriverId
-    QImage.deleteByPersonId reqDriverId
-    QDriverLicense.deleteByDriverId reqDriverId
-    QRCAssociation.deleteByDriverId reqDriverId
-    QDriverQuote.deleteByDriverId reqDriverId
-    QSearchReqForDriver.deleteByDriverId reqDriverId
-    QDriverStats.deleteById (cast reqDriverId)
-    QDriverLocation.deleteById reqDriverId
-    QR.deleteByPersonId reqDriverId
-    QVehicle.deleteById reqDriverId
-    QDriverInfo.deleteById (cast reqDriverId)
-    QDriverFlowStatus.deleteById reqDriverId
-    QMessage.deleteByPersonId reqDriverId
-    QIssueReport.deleteByPersonId reqDriverId
-    QPerson.deleteById reqDriverId
+  -- Esq.runTransaction $ do
+  QIV.deleteByPersonId reqDriverId
+  QImage.deleteByPersonId reqDriverId
+  QDriverLicense.deleteByDriverId reqDriverId
+  QRCAssociation.deleteByDriverId reqDriverId
+  QDriverQuote.deleteByDriverId reqDriverId
+  QSearchReqForDriver.deleteByDriverId reqDriverId
+  QDriverStats.deleteById (cast reqDriverId)
+  QDriverLocation.deleteById reqDriverId
+  QR.deleteByPersonId reqDriverId
+  QVehicle.deleteById reqDriverId
+  QDriverInfo.deleteById (cast reqDriverId)
+  QDriverFlowStatus.deleteById reqDriverId
+  QMessage.deleteByPersonId reqDriverId
+  QIssueReport.deleteByPersonId reqDriverId
+  QPerson.deleteById reqDriverId
   CQDriverInfo.clearDriverInfoCache (cast reqDriverId)
   CQIR.invalidateIssueReportCache Nothing (Just reqDriverId)
   mapM_ (\IssueReport {id} -> CQIR.invalidateIssueReportCache (Just id) Nothing) issueReports

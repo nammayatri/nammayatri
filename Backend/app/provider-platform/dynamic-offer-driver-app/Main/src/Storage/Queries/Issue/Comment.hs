@@ -15,25 +15,25 @@ import qualified Storage.Beam.Issue.Comment as BeamC
 import Storage.Tabular.Issue.Comment
 import qualified Storage.Tabular.VechileNew as VN
 
-create :: Comment -> SqlDB ()
-create = Esq.create
+-- create :: Comment -> SqlDB ()
+-- create = Esq.create
 
-create' :: L.MonadFlow m => Comment.Comment -> m (MeshResult ())
-create' comment = do
+create :: L.MonadFlow m => Comment.Comment -> m (MeshResult ())
+create comment = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainCommentToBeam comment)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-findAllByIssueReportId :: Transactionable m => Id IssueReport -> m [Comment]
-findAllByIssueReportId issueReportId = findAll $ do
-  comment <- from $ table @CommentT
-  where_ $ comment ^. CommentIssueReportId ==. val (toKey issueReportId)
-  orderBy [desc $ comment ^. CommentCreatedAt]
-  return comment
+-- findAllByIssueReportId :: Transactionable m => Id IssueReport -> m [Comment]
+-- findAllByIssueReportId issueReportId = findAll $ do
+--   comment <- from $ table @CommentT
+--   where_ $ comment ^. CommentIssueReportId ==. val (toKey issueReportId)
+--   orderBy [desc $ comment ^. CommentCreatedAt]
+--   return comment
 
-findAllByIssueReportId' :: L.MonadFlow m => Id IssueReport -> m [Comment]
-findAllByIssueReportId' (Id issueReportId) = do
+findAllByIssueReportId :: L.MonadFlow m => Id IssueReport -> m [Comment]
+findAllByIssueReportId (Id issueReportId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure []) (transformBeamCommentToDomain <$>) <$> KV.findAllWithOptionsKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamC.issueReportId $ Se.Eq issueReportId] (Se.Desc BeamC.createdAt) Nothing Nothing

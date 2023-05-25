@@ -49,15 +49,15 @@ findById (Id mediaFileId) = do
     Just dbCOnf' -> either (pure Nothing) (transformBeamMediaFileToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamMF.id $ Se.Eq mediaFileId]
     Nothing -> pure Nothing
 
-findAllIn :: Transactionable m => [Id MediaFile] -> m [MediaFile]
-findAllIn mfList =
-  Esq.findAll $ do
-    mediaFile <- from $ table @MediaFileT
-    where_ $ mediaFile ^. MediaFileId `in_` valList (map getId mfList)
-    return mediaFile
+-- findAllIn :: Transactionable m => [Id MediaFile] -> m [MediaFile]
+-- findAllIn mfList =
+--   Esq.findAll $ do
+--     mediaFile <- from $ table @MediaFileT
+--     where_ $ mediaFile ^. MediaFileId `in_` valList (map getId mfList)
+--     return mediaFile
 
-findAllIn' :: L.MonadFlow m => [Id MediaFile] -> m [MediaFile]
-findAllIn' mfList = do
+findAllIn :: L.MonadFlow m => [Id MediaFile] -> m [MediaFile]
+findAllIn mfList = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure []) (transformBeamMediaFileToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamMF.id $ Se.In $ getId <$> mfList]

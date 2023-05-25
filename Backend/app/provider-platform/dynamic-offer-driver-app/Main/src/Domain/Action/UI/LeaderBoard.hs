@@ -43,7 +43,8 @@ newtype LeaderBoardRes = LeaderBoardRes
 
 getDriverLeaderBoard :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, EncFlow m r, Redis.HedisFlow m r, CacheFlow m r) => Id Person -> Maybe Integer -> m LeaderBoardRes
 getDriverLeaderBoard personId mbLimit = do
-  person <- Esq.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  -- person <- Esq.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   config <- CQTC.findByMerchantId person.merchantId >>= fromMaybeM (TransporterConfigNotFound person.merchantId.getId)
   driversSortedList <-
     Redis.get makeDriverLeaderBoardKey >>= \case
@@ -51,7 +52,8 @@ getDriverLeaderBoard personId mbLimit = do
         -- driversSortedList' <- Esq.runInReplica $ QDriverStats.getDriversSortedOrder mbLimit
         driversSortedList' <- QDriverStats.getDriversSortedOrder mbLimit
         drivers' <- forM (zip [1, 2 ..] driversSortedList') $ \(index, driver) -> do
-          person' <- Esq.runInReplica $ QPerson.findById (cast driver.driverId) >>= fromMaybeM (PersonDoesNotExist driver.driverId.getId)
+          -- person' <- Esq.runInReplica $ QPerson.findById (cast driver.driverId) >>= fromMaybeM (PersonDoesNotExist driver.driverId.getId)
+          person' <- QPerson.findById (cast driver.driverId) >>= fromMaybeM (PersonDoesNotExist driver.driverId.getId)
           fullName <- getPersonFullName person' >>= fromMaybeM (PersonFieldNotPresent "firstName")
           pure DriversInfo {rank = index, name = fullName, totalRides = driver.totalRides, totalDistance = driver.totalDistance}
         Redis.setExp makeDriverLeaderBoardKey drivers' $ getSeconds (fromMaybe 3600 config.driverLeaderBoardExpiry)

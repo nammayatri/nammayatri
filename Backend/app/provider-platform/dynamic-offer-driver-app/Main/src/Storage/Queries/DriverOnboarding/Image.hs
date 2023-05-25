@@ -38,46 +38,46 @@ import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.Queries.Person as QP
 import Storage.Tabular.DriverOnboarding.Image
 
-create :: Image -> SqlDB ()
-create = Esq.create
+-- create :: Image -> SqlDB ()
+-- create = Esq.create
 
-create' :: L.MonadFlow m => Image -> m (MeshResult ())
-create' image = do
+create :: L.MonadFlow m => Image -> m (MeshResult ())
+create image = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainImageToBeam image)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-findById ::
-  Transactionable m =>
-  Id Image ->
-  m (Maybe Image)
-findById = Esq.findById
+-- findById ::
+--   Transactionable m =>
+--   Id Image ->
+--   m (Maybe Image)
+-- findById = Esq.findById
 
-findById' :: L.MonadFlow m => Id Image -> m (Maybe Image)
-findById' (Id imageid) = do
+findById :: L.MonadFlow m => Id Image -> m (Maybe Image)
+findById (Id imageid) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamImageToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamI.id $ Se.Eq imageid]
     Nothing -> pure Nothing
 
-findImagesByPersonAndType ::
-  (Transactionable m) =>
-  Id Merchant ->
-  Id Person ->
-  ImageType ->
-  m [Image]
-findImagesByPersonAndType merchantId personId imgType = do
-  findAll $ do
-    images <- from $ table @ImageT
-    where_ $
-      images ^. ImagePersonId ==. val (toKey personId)
-        &&. images ^. ImageImageType ==. val imgType
-        &&. images ^. ImageMerchantId ==. val (toKey merchantId)
-    return images
+-- findImagesByPersonAndType ::
+--   (Transactionable m) =>
+--   Id Merchant ->
+--   Id Person ->
+--   ImageType ->
+--   m [Image]
+-- findImagesByPersonAndType merchantId personId imgType = do
+--   findAll $ do
+--     images <- from $ table @ImageT
+--     where_ $
+--       images ^. ImagePersonId ==. val (toKey personId)
+--         &&. images ^. ImageImageType ==. val imgType
+--         &&. images ^. ImageMerchantId ==. val (toKey merchantId)
+--     return images
 
-findImagesByPersonAndType' :: L.MonadFlow m => Id Merchant -> Id Person -> ImageType -> m [Image]
-findImagesByPersonAndType' (Id merchantId) (Id personId) imgType = do
+findImagesByPersonAndType :: L.MonadFlow m => Id Merchant -> Id Person -> ImageType -> m [Image]
+findImagesByPersonAndType (Id merchantId) (Id personId) imgType = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' ->
@@ -104,7 +104,8 @@ findRecentByPersonIdAndImageType ::
   ImageType ->
   m [Image]
 findRecentByPersonIdAndImageType personId imgtype = do
-  person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  -- person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   transporterConfig <- QTC.findByMerchantId person.merchantId >>= fromMaybeM (TransporterConfigNotFound person.merchantId.getId)
   let onboardingRetryTimeInHours = transporterConfig.onboardingRetryTimeInHours
   let onBoardingRetryTimeInHours = intToNominalDiffTime onboardingRetryTimeInHours
@@ -119,16 +120,16 @@ findRecentByPersonIdAndImageType personId imgtype = do
   where
     hoursAgo i now = negate (3600 * i) `DT.addUTCTime` now
 
-updateToValid :: Id Image -> SqlDB ()
-updateToValid id = do
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ImageIsValid =. val True]
-    where_ $ tbl ^. ImageTId ==. val (toKey id)
+-- updateToValid :: Id Image -> SqlDB ()
+-- updateToValid id = do
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ImageIsValid =. val True]
+--     where_ $ tbl ^. ImageTId ==. val (toKey id)
 
-updateToValid' :: L.MonadFlow m => Id Image -> m (MeshResult ())
-updateToValid' (Id id) = do
+updateToValid :: L.MonadFlow m => Id Image -> m (MeshResult ())
+updateToValid (Id id) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' ->
@@ -140,18 +141,18 @@ updateToValid' (Id id) = do
         [Se.Is BeamI.id (Se.Eq id)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-findByMerchantId ::
-  Transactionable m =>
-  Id Merchant ->
-  m [Image]
-findByMerchantId merchantId = do
-  findAll $ do
-    images <- from $ table @ImageT
-    where_ $ images ^. ImageMerchantId ==. val (toKey merchantId)
-    return images
+-- findByMerchantId ::
+--   Transactionable m =>
+--   Id Merchant ->
+--   m [Image]
+-- findByMerchantId merchantId = do
+--   findAll $ do
+--     images <- from $ table @ImageT
+--     where_ $ images ^. ImageMerchantId ==. val (toKey merchantId)
+--     return images
 
-findByMerchantId' :: L.MonadFlow m => Id Merchant -> m [Image]
-findByMerchantId' (Id merchantId) = do
+findByMerchantId :: L.MonadFlow m => Id Merchant -> m [Image]
+findByMerchantId (Id merchantId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' ->
@@ -163,16 +164,16 @@ findByMerchantId' (Id merchantId) = do
           ]
     Nothing -> pure []
 
-addFailureReason :: Id Image -> DriverOnboardingError -> SqlDB ()
-addFailureReason id reason = do
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ImageFailureReason =. val (Just reason)]
-    where_ $ tbl ^. ImageTId ==. val (toKey id)
+-- addFailureReason :: Id Image -> DriverOnboardingError -> SqlDB ()
+-- addFailureReason id reason = do
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ImageFailureReason =. val (Just reason)]
+--     where_ $ tbl ^. ImageTId ==. val (toKey id)
 
-addFailureReason' :: L.MonadFlow m => Id Image -> DriverOnboardingError -> m (MeshResult ())
-addFailureReason' (Id id) reason = do
+addFailureReason :: L.MonadFlow m => Id Image -> DriverOnboardingError -> m (MeshResult ())
+addFailureReason (Id id) reason = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' ->
@@ -184,14 +185,14 @@ addFailureReason' (Id id) reason = do
         [Se.Is BeamI.id (Se.Eq id)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-deleteByPersonId :: Id Person -> SqlDB ()
-deleteByPersonId personId =
-  Esq.delete $ do
-    images <- from $ table @ImageT
-    where_ $ images ^. ImagePersonId ==. val (toKey personId)
+-- deleteByPersonId :: Id Person -> SqlDB ()
+-- deleteByPersonId personId =
+--   Esq.delete $ do
+--     images <- from $ table @ImageT
+--     where_ $ images ^. ImagePersonId ==. val (toKey personId)
 
-deleteByPersonId' :: L.MonadFlow m => Id Person -> m ()
-deleteByPersonId' (Id personId) = do
+deleteByPersonId :: L.MonadFlow m => Id Person -> m ()
+deleteByPersonId (Id personId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' ->

@@ -11,6 +11,10 @@ import qualified Domain.Types.MediaFile as DMF
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Environment
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Types (Language (..))
 import Kernel.Prelude
@@ -140,22 +144,21 @@ issueUpdate _merchantShortId issueReportId req = do
     throwError $ InvalidRequest "Empty request, no fields to update."
   issueReport <- CQIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
   Esq.runTransaction $ QIR.updateStatusAssignee issueReportId (toDomainIssueStatus <$> req.status) req.assignee
-  whenJust req.assignee mkIssueAssigneeUpdateComment
+  whenJust req.assignee (void $ mkIssueAssigneeUpdateComment)
   CQIR.invalidateIssueReportCache (Just issueReportId) (Just issueReport.driverId)
   pure Success
   where
     mkIssueAssigneeUpdateComment assignee = do
       id <- generateGUID
       now <- getCurrentTime
-      Esq.runTransaction $
-        QC.create $
-          DC.Comment
-            { id,
-              issueReportId,
-              authorId = cast req.userId,
-              comment = "Assignee Updated : " <> assignee,
-              createdAt = now
-            }
+      QC.create $
+        DC.Comment
+          { id,
+            issueReportId,
+            authorId = cast req.userId,
+            comment = "Assignee Updated : " <> assignee,
+            createdAt = now
+          }
 
 issueAddComment :: ShortId DM.Merchant -> Id DIR.IssueReport -> Common.IssueAddCommentByUserReq -> Flow APISuccess
 issueAddComment _merchantShortId issueReportId req = do

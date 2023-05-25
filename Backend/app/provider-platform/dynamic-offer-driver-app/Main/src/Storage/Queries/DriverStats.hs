@@ -105,21 +105,21 @@ updateIdleTimes driverIds = do
         [Se.Is BeamDS.driverId (Se.In (getId <$> driverIds))]
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-fetchAll :: Transactionable m => m [DriverStats]
-fetchAll = Esq.findAll $ from $ table @DriverStatsT
+-- fetchAll :: Transactionable m => m [DriverStats]
+-- fetchAll = Esq.findAll $ from $ table @DriverStatsT
 
-fetchAll' :: L.MonadFlow m => m [DriverStats]
-fetchAll' = do
+fetchAll :: L.MonadFlow m => m [DriverStats]
+fetchAll = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure []) (transformBeamDriverStatsToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig []
     Nothing -> pure []
 
-deleteById :: Id Driver -> SqlDB ()
-deleteById = Esq.deleteByKey @DriverStatsT
+-- deleteById :: Id Driver -> SqlDB ()
+-- deleteById = Esq.deleteByKey @DriverStatsT
 
-deleteById' :: L.MonadFlow m => Id Driver -> m ()
-deleteById' (Id driverId) = do
+deleteById :: L.MonadFlow m => Id Driver -> m ()
+deleteById (Id driverId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' ->
@@ -141,7 +141,7 @@ deleteById' (Id driverId) = do
 --     where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
 
 incrementTotalRidesAndTotalDist :: (L.MonadFlow m) => Id Driver -> Meters -> m (MeshResult ())
-incrementTotalRidesAndTotalDist (Id driverId) rideDist = do
+incrementTotalRidesAndTotalDist (Id driverId') rideDist = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' ->

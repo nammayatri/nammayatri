@@ -184,8 +184,8 @@ findActiveByTransactionId transactionId = do
 
 transformBeamSearchRequestToDomain :: L.MonadFlow m => BeamSR.SearchRequest -> m (SearchRequest)
 transformBeamSearchRequestToDomain BeamSR.SearchRequestT {..} = do
-  fl <- QSRL.findById' (Id fromLocationId)
-  tl <- QSRL.findById' (Id toLocationId)
+  fl <- QSRL.findById (Id fromLocationId)
+  tl <- QSRL.findById (Id toLocationId)
   pUrl <- parseBaseUrl bapUri
   pure
     SearchRequest

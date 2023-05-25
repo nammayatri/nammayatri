@@ -116,14 +116,14 @@ updateAttempts attempts (Id rtId) = do
         [Se.Is BeamRT.id (Se.Eq rtId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-deleteByPersonId :: Id Person -> SqlDB ()
-deleteByPersonId personId =
-  Esq.delete $ do
-    regToken <- from $ table @RegistrationTokenT
-    where_ $ regToken ^. RegistrationTokenEntityId ==. val (getId personId)
+-- deleteByPersonId :: Id Person -> SqlDB ()
+-- deleteByPersonId personId =
+--   Esq.delete $ do
+--     regToken <- from $ table @RegistrationTokenT
+--     where_ $ regToken ^. RegistrationTokenEntityId ==. val (getId personId)
 
-deleteByPersonId' :: L.MonadFlow m => Id Person -> m ()
-deleteByPersonId' (Id personId) = do
+deleteByPersonId :: L.MonadFlow m => Id Person -> m ()
+deleteByPersonId (Id personId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' ->
@@ -134,16 +134,16 @@ deleteByPersonId' (Id personId) = do
           [Se.Is BeamRT.entityId (Se.Eq personId)]
     Nothing -> pure ()
 
-deleteByPersonIdExceptNew :: Id Person -> Id RegistrationToken -> SqlDB ()
-deleteByPersonIdExceptNew personId newRT =
-  Esq.delete $ do
-    regToken <- from $ table @RegistrationTokenT
-    where_ $
-      regToken ^. RegistrationTokenEntityId ==. val (getId personId)
-        &&. not_ (regToken ^. RegistrationTokenTId ==. val (toKey newRT))
+-- deleteByPersonIdExceptNew :: Id Person -> Id RegistrationToken -> SqlDB ()
+-- deleteByPersonIdExceptNew personId newRT =
+--   Esq.delete $ do
+--     regToken <- from $ table @RegistrationTokenT
+--     where_ $
+--       regToken ^. RegistrationTokenEntityId ==. val (getId personId)
+--         &&. not_ (regToken ^. RegistrationTokenTId ==. val (toKey newRT))
 
-deleteByPersonIdExceptNew' :: L.MonadFlow m => Id Person -> Id RegistrationToken -> m ()
-deleteByPersonIdExceptNew' (Id personId) (Id newRT) = do
+deleteByPersonIdExceptNew :: L.MonadFlow m => Id Person -> Id RegistrationToken -> m ()
+deleteByPersonIdExceptNew (Id personId) (Id newRT) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' ->

@@ -204,7 +204,7 @@ sendMessage merchantShortId Common.SendMessageRequest {..} = do
     addToKafka message driverId = do
       topicName <- asks (.broadcastMessageTopic)
       now <- getCurrentTime
-      void $ try @_ @SomeException (Esq.runTransaction $ MRQuery.create (mkMessageReport now driverId)) -- avoid extra DB call to check if driverId exists
+      void $ try @_ @SomeException (MRQuery.create (mkMessageReport now driverId)) -- avoid extra DB call to check if driverId exists
       msg <- createMessageLanguageDict message
       produceMessage
         (topicName, Just (encodeUtf8 $ getId driverId))
@@ -220,7 +220,8 @@ sendMessage merchantShortId Common.SendMessageRequest {..} = do
 
     createMessageLanguageDict :: Domain.RawMessage -> Flow Domain.MessageDict
     createMessageLanguageDict message = do
-      translations <- Esq.runInReplica $ MTQuery.findByMessageId message.id
+      -- translations <- Esq.runInReplica $ MTQuery.findByMessageId message.id
+      translations <- MTQuery.findByMessageId message.id
       pure $ Domain.MessageDict message (M.fromList $ map (addTranslation message) translations)
 
     addTranslation Domain.RawMessage {..} trans =

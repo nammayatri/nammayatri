@@ -24,6 +24,7 @@ where
 import Control.Applicative
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SP
+import qualified EulerHS.Language as L
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.FCM.Types
 import Kernel.Prelude
@@ -64,7 +65,7 @@ getProfile admin = do
   let personAPIEntity = SP.makePersonAPIEntity decAdmin
   return $ makeOrgAdminProfileRes personAPIEntity (DM.makeMerchantAPIEntity org)
 
-updateProfile :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => SP.Person -> UpdateOrgAdminProfileReq -> m UpdateOrgAdminProfileRes
+updateProfile :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, L.MonadFlow m) => SP.Person -> UpdateOrgAdminProfileReq -> m UpdateOrgAdminProfileRes
 updateProfile admin req = do
   let merchantId = admin.merchantId
       updAdmin =
@@ -73,8 +74,8 @@ updateProfile admin req = do
               lastName = req.lastName <|> admin.lastName,
               deviceToken = req.deviceToken <|> admin.deviceToken
              }
-  Esq.runTransaction $
-    QPerson.updatePersonRec updAdmin.id updAdmin
+  -- Esq.runTransaction $
+  _ <- QPerson.updatePersonRec updAdmin.id updAdmin
   org <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   decUpdAdmin <- decrypt updAdmin
   let personAPIEntity = SP.makePersonAPIEntity decUpdAdmin

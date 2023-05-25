@@ -117,14 +117,14 @@ isSafeToDelete' issueReportId driverId = do
   findSafeToDelete <- safeToDelete' issueReportId driverId
   return $ isJust findSafeToDelete
 
-deleteByPersonId :: Id SP.Person -> SqlDB ()
-deleteByPersonId driverId =
-  Esq.delete $ do
-    issueReport <- from $ table @IssueReportT
-    where_ $ issueReport ^. IssueReportDriverId ==. val (toKey driverId)
+-- deleteByPersonId :: Id SP.Person -> SqlDB ()
+-- deleteByPersonId driverId =
+--   Esq.delete $ do
+--     issueReport <- from $ table @IssueReportT
+--     where_ $ issueReport ^. IssueReportDriverId ==. val (toKey driverId)
 
-deleteByPersonId' :: L.MonadFlow m => Id SP.Person -> m ()
-deleteByPersonId' (Id driverId) = do
+deleteByPersonId :: L.MonadFlow m => Id SP.Person -> m ()
+deleteByPersonId (Id driverId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' ->

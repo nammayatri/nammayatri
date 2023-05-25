@@ -30,41 +30,41 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.OperatingCity as BeamOC
 import Storage.Tabular.DriverOnboarding.OperatingCity
 
-create :: OperatingCity -> SqlDB ()
-create = Esq.create
+-- create :: OperatingCity -> SqlDB ()
+-- create = Esq.create
 
-create' :: L.MonadFlow m => OperatingCity -> m (MeshResult ())
-create' operatingCity = do
+create :: L.MonadFlow m => OperatingCity -> m (MeshResult ())
+create operatingCity = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainOperatingCityToBeam operatingCity)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-findById ::
-  Transactionable m =>
-  Id OperatingCity ->
-  m (Maybe OperatingCity)
-findById = Esq.findById
+-- findById ::
+--   Transactionable m =>
+--   Id OperatingCity ->
+--   m (Maybe OperatingCity)
+-- findById = Esq.findById
 
-findById' :: L.MonadFlow m => Id OperatingCity -> m (Maybe OperatingCity)
-findById' (Id ocId) = do
+findById :: L.MonadFlow m => Id OperatingCity -> m (Maybe OperatingCity)
+findById (Id ocId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamOperatingCityToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamOC.id $ Se.Eq ocId]
     Nothing -> pure Nothing
 
-findByMerchantId ::
-  Transactionable m =>
-  Id Merchant ->
-  m (Maybe OperatingCity)
-findByMerchantId personid = do
-  findOne $ do
-    vechileRegCert <- from $ table @OperatingCityT
-    where_ $ vechileRegCert ^. OperatingCityMerchantId ==. val (toKey personid)
-    return vechileRegCert
+-- findByMerchantId ::
+--   Transactionable m =>
+--   Id Merchant ->
+--   m (Maybe OperatingCity)
+-- findByMerchantId personid = do
+--   findOne $ do
+--     vechileRegCert <- from $ table @OperatingCityT
+--     where_ $ vechileRegCert ^. OperatingCityMerchantId ==. val (toKey personid)
+--     return vechileRegCert
 
-findByMerchantId' :: L.MonadFlow m => Id Merchant -> m (Maybe OperatingCity)
-findByMerchantId' (Id merchantId) = do
+findByMerchantId :: L.MonadFlow m => Id Merchant -> m (Maybe OperatingCity)
+findByMerchantId (Id merchantId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamOperatingCityToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamOC.merchantId $ Se.Eq merchantId]

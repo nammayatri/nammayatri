@@ -144,7 +144,7 @@ updateMessageLikeCount messageId value = do
 
 transformBeamMessageToDomain :: L.MonadFlow m => BeamM.Message -> m (Message)
 transformBeamMessageToDomain BeamM.MessageT {..} = do
-  mT' <- MT.findByMessageId' (Id id)
+  mT' <- MT.findByMessageId (Id id)
   -- let mT = MessageTranslation <*> (language <$> mT') <$> (title <$> mT') <$> (description <$> mT') <$> (shortDescription <$> mT') <$> (label <$> mT') <$> (createdAt <$> mT')
   let mT = (\(DomainMT.MessageTranslation _ language_ title_ label_ description_ shortDescription_ createdAt_) -> Domain.Types.Message.Message.MessageTranslation language_ title_ description_ shortDescription_ label_ createdAt_) <$> mT'
   pure

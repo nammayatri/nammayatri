@@ -30,11 +30,11 @@ import qualified Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate as
 import Storage.Tabular.DriverOnboarding.VehicleRegistrationCertificate
 import Storage.Tabular.Person ()
 
-create :: VehicleRegistrationCertificate -> SqlDB ()
-create = Esq.create
+-- create :: VehicleRegistrationCertificate -> SqlDB ()
+-- create = Esq.create
 
-create' :: L.MonadFlow m => VehicleRegistrationCertificate -> m (MeshResult ())
-create' vehicleRegistrationCertificate = do
+create :: L.MonadFlow m => VehicleRegistrationCertificate -> m (MeshResult ())
+create vehicleRegistrationCertificate = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainVehicleRegistrationCertificateToBeam vehicleRegistrationCertificate)
@@ -87,37 +87,37 @@ upsert' a@VehicleRegistrationCertificate {..} = do
         else void $ KV.createWoReturingKVConnector dbCOnf' Mesh.meshConfig (transformDomainVehicleRegistrationCertificateToBeam a)
     Nothing -> pure ()
 
-findById ::
-  Transactionable m =>
-  Id VehicleRegistrationCertificate ->
-  m (Maybe VehicleRegistrationCertificate)
-findById = Esq.findById
+-- findById ::
+--   Transactionable m =>
+--   Id VehicleRegistrationCertificate ->
+--   m (Maybe VehicleRegistrationCertificate)
+-- findById = Esq.findById
 
-findById' :: L.MonadFlow m => Id VehicleRegistrationCertificate -> m (Maybe VehicleRegistrationCertificate)
-findById' (Id vrcID) = do
+findById :: L.MonadFlow m => Id VehicleRegistrationCertificate -> m (Maybe VehicleRegistrationCertificate)
+findById (Id vrcID) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamVehicleRegistrationCertificateToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamVRC.id $ Se.Eq vrcID]
     Nothing -> pure Nothing
 
-findLastVehicleRC ::
-  (Transactionable m, EncFlow m r) =>
-  Text ->
-  m (Maybe VehicleRegistrationCertificate)
-findLastVehicleRC certNumber = do
-  certNumberHash <- getDbHash certNumber
-  rcs <- findAll $ do
-    rc <- from $ table @VehicleRegistrationCertificateT
-    where_ $ rc ^. VehicleRegistrationCertificateCertificateNumberHash ==. val certNumberHash
-    orderBy [desc $ rc ^. VehicleRegistrationCertificateFitnessExpiry]
-    return rc
-  pure $ headMaybe rcs
-  where
-    headMaybe [] = Nothing
-    headMaybe (x : _) = Just x
+-- findLastVehicleRC ::
+--   (Transactionable m, EncFlow m r) =>
+--   Text ->
+--   m (Maybe VehicleRegistrationCertificate)
+-- findLastVehicleRC certNumber = do
+--   certNumberHash <- getDbHash certNumber
+--   rcs <- findAll $ do
+--     rc <- from $ table @VehicleRegistrationCertificateT
+--     where_ $ rc ^. VehicleRegistrationCertificateCertificateNumberHash ==. val certNumberHash
+--     orderBy [desc $ rc ^. VehicleRegistrationCertificateFitnessExpiry]
+--     return rc
+--   pure $ headMaybe rcs
+--   where
+--     headMaybe [] = Nothing
+--     headMaybe (x : _) = Just x
 
-findLastVehicleRC' :: (L.MonadFlow m, EncFlow m r) => Text -> m (Maybe VehicleRegistrationCertificate)
-findLastVehicleRC' certNumber = do
+findLastVehicleRC :: (L.MonadFlow m, EncFlow m r) => Text -> m (Maybe VehicleRegistrationCertificate)
+findLastVehicleRC certNumber = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   certNumberHash <- getDbHash certNumber
   case dbConf of
@@ -131,22 +131,22 @@ findLastVehicleRC' certNumber = do
     headMaybe [] = Nothing
     headMaybe (x : _) = Just x
 
-findByRCAndExpiry ::
-  Transactionable m =>
-  EncryptedHashedField 'AsEncrypted Text ->
-  UTCTime ->
-  m (Maybe VehicleRegistrationCertificate)
-findByRCAndExpiry certNumber expiry = do
-  let certNumberHash = certNumber & (.hash)
-  findOne $ do
-    rc <- from $ table @VehicleRegistrationCertificateT
-    where_ $
-      rc ^. VehicleRegistrationCertificateCertificateNumberHash ==. val certNumberHash
-        &&. rc ^. VehicleRegistrationCertificateFitnessExpiry ==. val expiry
-    return rc
+-- findByRCAndExpiry ::
+--   Transactionable m =>
+--   EncryptedHashedField 'AsEncrypted Text ->
+--   UTCTime ->
+--   m (Maybe VehicleRegistrationCertificate)
+-- findByRCAndExpiry certNumber expiry = do
+--   let certNumberHash = certNumber & (.hash)
+--   findOne $ do
+--     rc <- from $ table @VehicleRegistrationCertificateT
+--     where_ $
+--       rc ^. VehicleRegistrationCertificateCertificateNumberHash ==. val certNumberHash
+--         &&. rc ^. VehicleRegistrationCertificateFitnessExpiry ==. val expiry
+--     return rc
 
-findByRCAndExpiry' :: L.MonadFlow m => EncryptedHashedField 'AsEncrypted Text -> UTCTime -> m (Maybe VehicleRegistrationCertificate)
-findByRCAndExpiry' certNumber expiry = do
+findByRCAndExpiry :: L.MonadFlow m => EncryptedHashedField 'AsEncrypted Text -> UTCTime -> m (Maybe VehicleRegistrationCertificate)
+findByRCAndExpiry certNumber expiry = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   let certNumberHash = certNumber & (.hash)
   case dbConf of

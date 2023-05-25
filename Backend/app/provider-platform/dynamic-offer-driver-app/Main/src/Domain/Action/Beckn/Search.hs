@@ -241,8 +241,8 @@ handler merchantId sReq = do
 
           let onlyFPWithDrivers = filter (\fp -> isJust (find (\dp -> dp.variant == fp.vehicleVariant) driverPool)) farePolicies
           estimates <- mapM (SHEst.buildEstimate sReq.transactionId sReq.pickupTime result.distance) onlyFPWithDrivers
-          Esq.runTransaction $ do
-            QEst.createMany estimates
+          -- Esq.runTransaction $ do
+          QEst.createMany estimates
 
           let mapOfDPRByVariant = foldl (\m dpr -> M.insertWith (<>) dpr.variant (pure dpr) m) mempty driverPool
               tuplesOfEstAndDBR :: [(DEst.Estimate, NonEmpty DriverPoolResult)] = zipMatched estimates mapOfDPRByVariant

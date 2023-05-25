@@ -56,7 +56,8 @@ getLocation rideId = do
       SRide.NEW -> pure PreRide
       SRide.INPROGRESS -> pure ActualRide
       _ -> throwError $ RideInvalidStatus "Cannot track this ride"
-  driver <- runInReplica $ Person.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  -- driver <- runInReplica $ Person.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  driver <- Person.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   currLocation <- DrLoc.findById driver.id >>= fromMaybeM LocationNotFound
   let lastUpdate = currLocation.updatedAt
   let totalDistance = realToFrac ride.traveledDistance.getHighPrecMeters

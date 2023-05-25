@@ -90,14 +90,14 @@ create person = do
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainPersonToBeam person)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-findById ::
-  Transactionable m =>
-  Id Person ->
-  m (Maybe Person)
-findById = Esq.findById
+-- findById ::
+--   Transactionable m =>
+--   Id Person ->
+--   m (Maybe Person)
+-- findById = Esq.findById
 
-findById' :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Person)
-findById' (Id personId) = do
+findById :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Person)
+findById (Id personId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> do
@@ -257,23 +257,23 @@ fetchDriverInfo merchantId mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumb
     -- used only for dl and rc entites, because they are not required for final result, only for filters
     joinOnlyWhenJust mbFilter cond = maybe (val False) (const cond) mbFilter
 
-findByIdAndRoleAndMerchantId ::
-  Transactionable m =>
-  Id Person ->
-  Person.Role ->
-  Id Merchant ->
-  m (Maybe Person)
-findByIdAndRoleAndMerchantId pid role_ merchantId =
-  Esq.findOne $ do
-    person <- from $ table @PersonT
-    where_ $
-      person ^. PersonTId ==. val (toKey pid)
-        &&. person ^. PersonRole ==. val role_
-        &&. person ^. PersonMerchantId ==. val (toKey merchantId)
-    return person
+-- findByIdAndRoleAndMerchantId ::
+--   Transactionable m =>
+--   Id Person ->
+--   Person.Role ->
+--   Id Merchant ->
+--   m (Maybe Person)
+-- findByIdAndRoleAndMerchantId pid role_ merchantId =
+--   Esq.findOne $ do
+--     person <- from $ table @PersonT
+--     where_ $
+--       person ^. PersonTId ==. val (toKey pid)
+--         &&. person ^. PersonRole ==. val role_
+--         &&. person ^. PersonMerchantId ==. val (toKey merchantId)
+--     return person
 
-findByIdAndRoleAndMerchantId' :: (L.MonadFlow m, Log m) => Id Person -> Person.Role -> Id Merchant -> m (Maybe Person)
-findByIdAndRoleAndMerchantId' (Id pid) role_ (Id merchantId) = do
+findByIdAndRoleAndMerchantId :: (L.MonadFlow m, Log m) => Id Person -> Person.Role -> Id Merchant -> m (Maybe Person)
+findByIdAndRoleAndMerchantId (Id pid) role_ (Id merchantId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> do
@@ -283,21 +283,21 @@ findByIdAndRoleAndMerchantId' (Id pid) role_ (Id merchantId) = do
         Left _ -> pure Nothing
     Nothing -> pure Nothing
 
-findAllByMerchantId ::
-  Transactionable m =>
-  [Person.Role] ->
-  Id Merchant ->
-  m [Person]
-findAllByMerchantId roles merchantId =
-  Esq.findAll $ do
-    person <- from $ table @PersonT
-    where_ $
-      (person ^. PersonRole `in_` valList roles ||. val (null roles))
-        &&. person ^. PersonMerchantId ==. val (toKey merchantId)
-    return person
+-- findAllByMerchantId ::
+--   Transactionable m =>
+--   [Person.Role] ->
+--   Id Merchant ->
+--   m [Person]
+-- findAllByMerchantId roles merchantId =
+--   Esq.findAll $ do
+--     person <- from $ table @PersonT
+--     where_ $
+--       (person ^. PersonRole `in_` valList roles ||. val (null roles))
+--         &&. person ^. PersonMerchantId ==. val (toKey merchantId)
+--     return person
 
-findAllByMerchantId' :: (L.MonadFlow m, Log m) => [Person.Role] -> Id Merchant -> m [Person]
-findAllByMerchantId' roles (Id merchantId) = do
+findAllByMerchantId :: (L.MonadFlow m, Log m) => [Person.Role] -> Id Merchant -> m [Person]
+findAllByMerchantId roles (Id merchantId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> do
@@ -307,17 +307,17 @@ findAllByMerchantId' roles (Id merchantId) = do
         Left _ -> pure []
     Nothing -> pure []
 
-findAdminsByMerchantId :: Transactionable m => Id Merchant -> m [Person]
-findAdminsByMerchantId merchantId =
-  Esq.findAll $ do
-    person <- from $ table @PersonT
-    where_ $
-      person ^. PersonMerchantId ==. val (toKey merchantId)
-        &&. person ^. PersonRole ==. val Person.ADMIN
-    return person
+-- findAdminsByMerchantId :: Transactionable m => Id Merchant -> m [Person]
+-- findAdminsByMerchantId merchantId =
+--   Esq.findAll $ do
+--     person <- from $ table @PersonT
+--     where_ $
+--       person ^. PersonMerchantId ==. val (toKey merchantId)
+--         &&. person ^. PersonRole ==. val Person.ADMIN
+--     return person
 
-findAdminsByMerchantId' :: (L.MonadFlow m, Log m) => Id Merchant -> m [Person]
-findAdminsByMerchantId' (Id merchantId) = do
+findAdminsByMerchantId :: (L.MonadFlow m, Log m) => Id Merchant -> m [Person]
+findAdminsByMerchantId (Id merchantId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> do
@@ -327,25 +327,25 @@ findAdminsByMerchantId' (Id merchantId) = do
         Left _ -> pure []
     Nothing -> pure []
 
-findByMobileNumberAndMerchant ::
-  (Transactionable m) =>
-  Text ->
-  DbHash ->
-  Id Merchant ->
-  m (Maybe Person)
-findByMobileNumberAndMerchant countryCode mobileNumberHash merchantId = do
-  findOne $ do
-    person <- from $ table @PersonT
-    where_ $
-      person ^. PersonMobileCountryCode ==. val (Just countryCode)
-        &&. ( person ^. PersonMobileNumberHash ==. val (Just mobileNumberHash)
-                ||. person ^. PersonAlternateMobileNumberHash ==. val (Just mobileNumberHash)
-            )
-        &&. person ^. PersonMerchantId ==. val (toKey merchantId)
-    return person
+-- findByMobileNumberAndMerchant ::
+--   (Transactionable m) =>
+--   Text ->
+--   DbHash ->
+--   Id Merchant ->
+--   m (Maybe Person)
+-- findByMobileNumberAndMerchant countryCode mobileNumberHash merchantId = do
+--   findOne $ do
+--     person <- from $ table @PersonT
+--     where_ $
+--       person ^. PersonMobileCountryCode ==. val (Just countryCode)
+--         &&. ( person ^. PersonMobileNumberHash ==. val (Just mobileNumberHash)
+--                 ||. person ^. PersonAlternateMobileNumberHash ==. val (Just mobileNumberHash)
+--             )
+--         &&. person ^. PersonMerchantId ==. val (toKey merchantId)
+--     return person
 
-findByMobileNumberAndMerchant' :: (L.MonadFlow m, Log m) => Text -> DbHash -> Id Merchant -> m (Maybe Person)
-findByMobileNumberAndMerchant' countryCode mobileNumberHash (Id merchantId) = do
+findByMobileNumberAndMerchant :: (L.MonadFlow m, Log m) => Text -> DbHash -> Id Merchant -> m (Maybe Person)
+findByMobileNumberAndMerchant countryCode mobileNumberHash (Id merchantId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> do
@@ -364,21 +364,21 @@ findByMobileNumberAndMerchant' countryCode mobileNumberHash (Id merchantId) = do
         Left _ -> pure Nothing
     Nothing -> pure Nothing
 
-findByIdentifierAndMerchant ::
-  Transactionable m =>
-  Id Merchant ->
-  Text ->
-  m (Maybe Person)
-findByIdentifierAndMerchant merchantId identifier_ =
-  findOne $ do
-    person <- from $ table @PersonT
-    where_ $
-      person ^. PersonIdentifier ==. val (Just identifier_)
-        &&. person ^. PersonMerchantId ==. val (toKey merchantId)
-    return person
+-- findByIdentifierAndMerchant ::
+--   Transactionable m =>
+--   Id Merchant ->
+--   Text ->
+--   m (Maybe Person)
+-- findByIdentifierAndMerchant merchantId identifier_ =
+--   findOne $ do
+--     person <- from $ table @PersonT
+--     where_ $
+--       person ^. PersonIdentifier ==. val (Just identifier_)
+--         &&. person ^. PersonMerchantId ==. val (toKey merchantId)
+--     return person
 
-findByIdentifierAndMerchant' :: (L.MonadFlow m, Log m) => Id Merchant -> Text -> m (Maybe Person)
-findByIdentifierAndMerchant' (Id merchantId) identifier_ = do
+findByIdentifierAndMerchant :: (L.MonadFlow m, Log m) => Id Merchant -> Text -> m (Maybe Person)
+findByIdentifierAndMerchant (Id merchantId) identifier_ = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> do
@@ -388,21 +388,21 @@ findByIdentifierAndMerchant' (Id merchantId) identifier_ = do
         Left _ -> pure Nothing
     Nothing -> pure Nothing
 
-findByEmailAndMerchant ::
-  Transactionable m =>
-  Id Merchant ->
-  Text ->
-  m (Maybe Person)
-findByEmailAndMerchant merchantId email_ =
-  findOne $ do
-    person <- from $ table @PersonT
-    where_ $
-      person ^. PersonEmail ==. val (Just email_)
-        &&. person ^. PersonMerchantId ==. val (toKey merchantId)
-    return person
+-- findByEmailAndMerchant ::
+--   Transactionable m =>
+--   Id Merchant ->
+--   Text ->
+--   m (Maybe Person)
+-- findByEmailAndMerchant merchantId email_ =
+--   findOne $ do
+--     person <- from $ table @PersonT
+--     where_ $
+--       person ^. PersonEmail ==. val (Just email_)
+--         &&. person ^. PersonMerchantId ==. val (toKey merchantId)
+--     return person
 
-findByEmailAndMerchant' :: (L.MonadFlow m, Log m) => Id Merchant -> Text -> m (Maybe Person)
-findByEmailAndMerchant' (Id merchantId) email_ = do
+findByEmailAndMerchant :: (L.MonadFlow m, Log m) => Id Merchant -> Text -> m (Maybe Person)
+findByEmailAndMerchant (Id merchantId) email_ = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> do
@@ -412,26 +412,26 @@ findByEmailAndMerchant' (Id merchantId) email_ = do
         Left _ -> pure Nothing
     Nothing -> pure Nothing
 
-findByRoleAndMobileNumberAndMerchantId ::
-  (Transactionable m, EncFlow m r) =>
-  Role ->
-  Text ->
-  Text ->
-  Id Merchant ->
-  m (Maybe Person)
-findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumber_ merchantId = do
-  mobileNumberDbHash <- getDbHash mobileNumber_
-  findOne $ do
-    person <- from $ table @PersonT
-    where_ $
-      person ^. PersonRole ==. val role_
-        &&. person ^. PersonMobileCountryCode ==. val (Just countryCode)
-        &&. person ^. PersonMobileNumberHash ==. val (Just mobileNumberDbHash)
-        &&. person ^. PersonMerchantId ==. val (toKey merchantId)
-    return person
+-- findByRoleAndMobileNumberAndMerchantId ::
+--   (Transactionable m, EncFlow m r) =>
+--   Role ->
+--   Text ->
+--   Text ->
+--   Id Merchant ->
+--   m (Maybe Person)
+-- findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumber_ merchantId = do
+--   mobileNumberDbHash <- getDbHash mobileNumber_
+--   findOne $ do
+--     person <- from $ table @PersonT
+--     where_ $
+--       person ^. PersonRole ==. val role_
+--         &&. person ^. PersonMobileCountryCode ==. val (Just countryCode)
+--         &&. person ^. PersonMobileNumberHash ==. val (Just mobileNumberDbHash)
+--         &&. person ^. PersonMerchantId ==. val (toKey merchantId)
+--     return person
 
-findByRoleAndMobileNumberAndMerchantId' :: (L.MonadFlow m, Log m, EncFlow m r) => Role -> Text -> Text -> Id Merchant -> m (Maybe Person)
-findByRoleAndMobileNumberAndMerchantId' role_ countryCode mobileNumber_ (Id merchantId) = do
+findByRoleAndMobileNumberAndMerchantId :: (L.MonadFlow m, Log m, EncFlow m r) => Role -> Text -> Text -> Id Merchant -> m (Maybe Person)
+findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumber_ (Id merchantId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   mobileNumberDbHash <- getDbHash mobileNumber_
   case dbConf of
@@ -483,20 +483,20 @@ findAllDriverIdExceptProvided merchantId driverIdsToBeExcluded = do
     driverIdToPersonId :: Id Driver -> Id Person
     driverIdToPersonId = cast
 
-updateMerchantIdAndMakeAdmin :: Id Person -> Id Merchant -> SqlDB ()
-updateMerchantIdAndMakeAdmin personId merchantId = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ PersonMerchantId =. val (toKey merchantId),
-        PersonRole =. val Person.ADMIN,
-        PersonUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. PersonTId ==. val (toKey personId)
+-- updateMerchantIdAndMakeAdmin :: Id Person -> Id Merchant -> SqlDB ()
+-- updateMerchantIdAndMakeAdmin personId merchantId = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ PersonMerchantId =. val (toKey merchantId),
+--         PersonRole =. val Person.ADMIN,
+--         PersonUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. PersonTId ==. val (toKey personId)
 
-updateMerchantIdAndMakeAdmin' :: (L.MonadFlow m, MonadTime m) => Id Person -> Id Merchant -> m (MeshResult ())
-updateMerchantIdAndMakeAdmin' (Id personId) (Id merchantId) = do
+updateMerchantIdAndMakeAdmin :: (L.MonadFlow m, MonadTime m) => Id Person -> Id Merchant -> m (MeshResult ())
+updateMerchantIdAndMakeAdmin (Id personId) (Id merchantId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   now <- getCurrentTime
   case dbConf of
@@ -537,32 +537,32 @@ updateName (Id personId) name = do
         [Se.Is BeamP.id (Se.Eq personId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-updatePersonRec :: Id Person -> Person -> SqlDB ()
-updatePersonRec personId person = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ PersonFirstName =. val (person.firstName),
-        PersonMiddleName =. val (person.middleName),
-        PersonLastName =. val (person.lastName),
-        PersonRole =. val (person.role),
-        PersonGender =. val (person.gender),
-        PersonEmail =. val (person.email),
-        PersonIdentifier =. val (person.identifier),
-        PersonRating =. val (person.rating),
-        PersonLanguage =. val (person.language),
-        PersonDeviceToken =. val (person.deviceToken),
-        PersonMerchantId =. val (toKey person.merchantId),
-        PersonDescription =. val (person.description),
-        PersonUpdatedAt =. val now,
-        PersonClientVersion =. val (versionToText <$> person.clientVersion),
-        PersonBundleVersion =. val (versionToText <$> person.bundleVersion)
-      ]
-    where_ $ tbl ^. PersonTId ==. val (toKey personId)
+-- updatePersonRec :: Id Person -> Person -> SqlDB ()
+-- updatePersonRec personId person = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ PersonFirstName =. val (person.firstName),
+--         PersonMiddleName =. val (person.middleName),
+--         PersonLastName =. val (person.lastName),
+--         PersonRole =. val (person.role),
+--         PersonGender =. val (person.gender),
+--         PersonEmail =. val (person.email),
+--         PersonIdentifier =. val (person.identifier),
+--         PersonRating =. val (person.rating),
+--         PersonLanguage =. val (person.language),
+--         PersonDeviceToken =. val (person.deviceToken),
+--         PersonMerchantId =. val (toKey person.merchantId),
+--         PersonDescription =. val (person.description),
+--         PersonUpdatedAt =. val now,
+--         PersonClientVersion =. val (versionToText <$> person.clientVersion),
+--         PersonBundleVersion =. val (versionToText <$> person.bundleVersion)
+--       ]
+--     where_ $ tbl ^. PersonTId ==. val (toKey personId)
 
-updatePersonRec' :: (L.MonadFlow m, MonadTime m) => Id Person -> Person -> m (MeshResult ())
-updatePersonRec' (Id personId) person = do
+updatePersonRec :: (L.MonadFlow m, MonadTime m) => Id Person -> Person -> m (MeshResult ())
+updatePersonRec (Id personId) person = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   now <- getCurrentTime
   case dbConf of
@@ -588,26 +588,26 @@ updatePersonRec' (Id personId) person = do
         [Se.Is BeamP.id (Se.Eq personId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-updatePersonVersions :: Person -> Maybe Version -> Maybe Version -> SqlDB ()
-updatePersonVersions person mbBundleVersion mbClientVersion =
-  when
-    ((isJust mbBundleVersion || isJust mbClientVersion) && (person.bundleVersion /= mbBundleVersion || person.clientVersion /= mbClientVersion))
-    do
-      now <- getCurrentTime
-      let mbBundleVersionText = versionToText <$> (mbBundleVersion <|> person.bundleVersion)
-          mbClientVersionText = versionToText <$> (mbClientVersion <|> person.clientVersion)
-      Esq.update $ \tbl -> do
-        set
-          tbl
-          [ PersonUpdatedAt =. val now,
-            PersonClientVersion =. val mbClientVersionText,
-            PersonBundleVersion =. val mbBundleVersionText
-          ]
-        where_ $
-          tbl ^. PersonTId ==. val (toKey person.id)
+-- updatePersonVersions :: Person -> Maybe Version -> Maybe Version -> SqlDB ()
+-- updatePersonVersions person mbBundleVersion mbClientVersion =
+--   when
+--     ((isJust mbBundleVersion || isJust mbClientVersion) && (person.bundleVersion /= mbBundleVersion || person.clientVersion /= mbClientVersion))
+--     do
+--       now <- getCurrentTime
+--       let mbBundleVersionText = versionToText <$> (mbBundleVersion <|> person.bundleVersion)
+--           mbClientVersionText = versionToText <$> (mbClientVersion <|> person.clientVersion)
+--       Esq.update $ \tbl -> do
+--         set
+--           tbl
+--           [ PersonUpdatedAt =. val now,
+--             PersonClientVersion =. val mbClientVersionText,
+--             PersonBundleVersion =. val mbBundleVersionText
+--           ]
+--         where_ $
+--           tbl ^. PersonTId ==. val (toKey person.id)
 
-updatePersonVersions' :: (L.MonadFlow m, MonadTime m) => Person -> Maybe Version -> Maybe Version -> m ()
-updatePersonVersions' person mbBundleVersion mbClientVersion =
+updatePersonVersions :: (L.MonadFlow m, MonadTime m) => Person -> Maybe Version -> Maybe Version -> m ()
+updatePersonVersions person mbBundleVersion mbClientVersion =
   when
     ((isJust mbBundleVersion || isJust mbClientVersion) && (person.bundleVersion /= mbBundleVersion || person.clientVersion /= mbClientVersion))
     do
@@ -680,23 +680,23 @@ updateWhatsappNotificationEnrollStatus (Id personId) enrollStatus = do
         [Se.Is BeamP.id (Se.Eq personId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-updateMobileNumberAndCode :: Person -> SqlDB ()
-updateMobileNumberAndCode person = do
-  let personT = toTType person
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ PersonMobileCountryCode =. val (TPerson.mobileCountryCode personT),
-        PersonMobileNumberEncrypted =. val (TPerson.mobileNumberEncrypted personT),
-        PersonMobileNumberHash =. val (TPerson.mobileNumberHash personT),
-        PersonUnencryptedMobileNumber =. val (TPerson.unencryptedMobileNumber personT),
-        PersonUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. PersonTId ==. val (toKey person.id)
+-- updateMobileNumberAndCode :: Person -> SqlDB ()
+-- updateMobileNumberAndCode person = do
+--   let personT = toTType person
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ PersonMobileCountryCode =. val (TPerson.mobileCountryCode personT),
+--         PersonMobileNumberEncrypted =. val (TPerson.mobileNumberEncrypted personT),
+--         PersonMobileNumberHash =. val (TPerson.mobileNumberHash personT),
+--         PersonUnencryptedMobileNumber =. val (TPerson.unencryptedMobileNumber personT),
+--         PersonUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. PersonTId ==. val (toKey person.id)
 
-updateMobileNumberAndCode' :: (L.MonadFlow m, MonadTime m, Log m, EncFlow m r) => Person -> m (MeshResult ())
-updateMobileNumberAndCode' person = do
+updateMobileNumberAndCode :: (L.MonadFlow m, MonadTime m, Log m, EncFlow m r) => Person -> m (MeshResult ())
+updateMobileNumberAndCode person = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   now <- getCurrentTime
   case dbConf of
@@ -713,16 +713,16 @@ updateMobileNumberAndCode' person = do
         [Se.Is BeamP.id (Se.Eq $ getId person.id)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-setIsNewFalse :: Id Person -> SqlDB ()
-setIsNewFalse personId = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ PersonIsNew =. val False,
-        PersonUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. PersonTId ==. val (toKey personId)
+-- setIsNewFalse :: Id Person -> SqlDB ()
+-- setIsNewFalse personId = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ PersonIsNew =. val False,
+--         PersonUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. PersonTId ==. val (toKey personId)
 
 setIsNewFalse :: (L.MonadFlow m, MonadTime m) => Id Person -> m (MeshResult ())
 setIsNewFalse (Id personId) = do
@@ -739,11 +739,11 @@ setIsNewFalse (Id personId) = do
         [Se.Is BeamP.id (Se.Eq personId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-deleteById :: Id Person -> SqlDB ()
-deleteById = Esq.deleteByKey @PersonT
+-- deleteById :: Id Person -> SqlDB ()
+-- deleteById = Esq.deleteByKey @PersonT
 
-deleteById' :: L.MonadFlow m => Id Person -> m ()
-deleteById' (Id personId) = do
+deleteById :: L.MonadFlow m => Id Person -> m ()
+deleteById (Id personId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' ->

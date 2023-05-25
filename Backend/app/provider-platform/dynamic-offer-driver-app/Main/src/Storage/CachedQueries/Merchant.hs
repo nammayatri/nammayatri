@@ -95,5 +95,5 @@ makeShortIdKey shortId = "driver-offer:CachedQueries:Merchant:ShortId-" <> short
 update :: (L.MonadFlow m, MonadTime m) => Merchant -> m (MeshResult ())
 update = Queries.update
 
-loadAllProviders :: Esq.Transactionable m => m [Merchant]
+loadAllProviders :: L.MonadFlow m => m [Merchant]
 loadAllProviders = Queries.loadAllProviders

@@ -32,66 +32,66 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.IdfyVerification as BeamIV
 import Storage.Tabular.DriverOnboarding.IdfyVerification
 
-create :: IdfyVerification -> SqlDB ()
-create = Esq.create
+-- create :: IdfyVerification -> SqlDB ()
+-- create = Esq.create
 
-create' :: L.MonadFlow m => IdfyVerification -> m (MeshResult ())
-create' idfyVerification = do
+create :: L.MonadFlow m => IdfyVerification -> m (MeshResult ())
+create idfyVerification = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainIdfyVerificationToBeam idfyVerification)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-findById ::
-  Transactionable m =>
-  Id IdfyVerification ->
-  m (Maybe IdfyVerification)
-findById = Esq.findById
+-- findById ::
+--   Transactionable m =>
+--   Id IdfyVerification ->
+--   m (Maybe IdfyVerification)
+-- findById = Esq.findById
 
-findById' :: L.MonadFlow m => Id IdfyVerification -> m (Maybe IdfyVerification)
-findById' (Id idfvId) = do
+findById :: L.MonadFlow m => Id IdfyVerification -> m (Maybe IdfyVerification)
+findById (Id idfvId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamIdfyVerificationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamIV.id $ Se.Eq idfvId]
     Nothing -> pure Nothing
 
-findAllByDriverId ::
-  Transactionable m =>
-  Id Person ->
-  m [IdfyVerification]
-findAllByDriverId driverId = do
-  findAll $ do
-    verifications <- from $ table @IdfyVerificationT
-    where_ $ verifications ^. IdfyVerificationDriverId ==. val (toKey driverId)
-    return verifications
+-- findAllByDriverId ::
+--   Transactionable m =>
+--   Id Person ->
+--   m [IdfyVerification]
+-- findAllByDriverId driverId = do
+--   findAll $ do
+--     verifications <- from $ table @IdfyVerificationT
+--     where_ $ verifications ^. IdfyVerificationDriverId ==. val (toKey driverId)
+--     return verifications
 
-findAllByDriverId' :: L.MonadFlow m => Id Person -> m [IdfyVerification]
-findAllByDriverId' (Id driverId) = do
+findAllByDriverId :: L.MonadFlow m => Id Person -> m [IdfyVerification]
+findAllByDriverId (Id driverId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure []) (transformBeamIdfyVerificationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamIV.driverId $ Se.Eq driverId]
     Nothing -> pure []
 
-findLatestByDriverIdAndDocType ::
-  Transactionable m =>
-  Id Person ->
-  ImageType ->
-  m (Maybe IdfyVerification)
-findLatestByDriverIdAndDocType driverId imgType = do
-  verifications_ <- findAll $ do
-    verifications <- from $ table @IdfyVerificationT
-    where_ $
-      verifications ^. IdfyVerificationDriverId ==. val (toKey driverId)
-        &&. verifications ^. IdfyVerificationDocType ==. val imgType
-    orderBy [desc $ verifications ^. IdfyVerificationCreatedAt]
-    return verifications
-  pure $ headMaybe verifications_
-  where
-    headMaybe [] = Nothing
-    headMaybe (x : _) = Just x
+-- findLatestByDriverIdAndDocType ::
+--   Transactionable m =>
+--   Id Person ->
+--   ImageType ->
+--   m (Maybe IdfyVerification)
+-- findLatestByDriverIdAndDocType driverId imgType = do
+--   verifications_ <- findAll $ do
+--     verifications <- from $ table @IdfyVerificationT
+--     where_ $
+--       verifications ^. IdfyVerificationDriverId ==. val (toKey driverId)
+--         &&. verifications ^. IdfyVerificationDocType ==. val imgType
+--     orderBy [desc $ verifications ^. IdfyVerificationCreatedAt]
+--     return verifications
+--   pure $ headMaybe verifications_
+--   where
+--     headMaybe [] = Nothing
+--     headMaybe (x : _) = Just x
 
-findLatestByDriverIdAndDocType' :: L.MonadFlow m => Id Person -> ImageType -> m (Maybe IdfyVerification)
-findLatestByDriverIdAndDocType' (Id driverId) imgType = do
+findLatestByDriverIdAndDocType :: L.MonadFlow m => Id Person -> ImageType -> m (Maybe IdfyVerification)
+findLatestByDriverIdAndDocType (Id driverId) imgType = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> do
@@ -104,41 +104,41 @@ findLatestByDriverIdAndDocType' (Id driverId) imgType = do
     headMaybe [] = Nothing
     headMaybe (x : _) = Just x
 
-findByRequestId ::
-  Transactionable m =>
-  Text ->
-  m (Maybe IdfyVerification)
-findByRequestId requestId = do
-  findOne $ do
-    verification <- from $ table @IdfyVerificationT
-    where_ $ verification ^. IdfyVerificationRequestId ==. val requestId
-    return verification
+-- findByRequestId ::
+--   Transactionable m =>
+--   Text ->
+--   m (Maybe IdfyVerification)
+-- findByRequestId requestId = do
+--   findOne $ do
+--     verification <- from $ table @IdfyVerificationT
+--     where_ $ verification ^. IdfyVerificationRequestId ==. val requestId
+--     return verification
 
-findByRequestId' :: L.MonadFlow m => Text -> m (Maybe IdfyVerification)
-findByRequestId' requestId = do
+findByRequestId :: L.MonadFlow m => Text -> m (Maybe IdfyVerification)
+findByRequestId requestId = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamIdfyVerificationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamIV.requestId $ Se.Eq requestId]
     Nothing -> pure Nothing
 
-updateResponse ::
-  Text ->
-  Text ->
-  Text ->
-  SqlDB ()
-updateResponse requestId status resp = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ IdfyVerificationStatus =. val status,
-        IdfyVerificationIdfyResponse =. val (Just resp),
-        IdfyVerificationUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. IdfyVerificationRequestId ==. val requestId
+-- updateResponse ::
+--   Text ->
+--   Text ->
+--   Text ->
+--   SqlDB ()
+-- updateResponse requestId status resp = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ IdfyVerificationStatus =. val status,
+--         IdfyVerificationIdfyResponse =. val (Just resp),
+--         IdfyVerificationUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. IdfyVerificationRequestId ==. val requestId
 
-updateResponse' :: (L.MonadFlow m, MonadTime m) => Text -> Text -> Text -> m (MeshResult ())
-updateResponse' requestId status resp = do
+updateResponse :: (L.MonadFlow m, MonadTime m) => Text -> Text -> Text -> m (MeshResult ())
+updateResponse requestId status resp = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   now <- getCurrentTime
   case dbConf of
@@ -153,19 +153,19 @@ updateResponse' requestId status resp = do
         [Se.Is BeamIV.requestId (Se.Eq requestId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-updateExtractValidationStatus :: Text -> ImageExtractionValidation -> SqlDB ()
-updateExtractValidationStatus requestId status = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ IdfyVerificationImageExtractionValidation =. val status,
-        IdfyVerificationUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. IdfyVerificationRequestId ==. val requestId
+-- updateExtractValidationStatus :: Text -> ImageExtractionValidation -> SqlDB ()
+-- updateExtractValidationStatus requestId status = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ IdfyVerificationImageExtractionValidation =. val status,
+--         IdfyVerificationUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. IdfyVerificationRequestId ==. val requestId
 
-updateExtractValidationStatus' :: (L.MonadFlow m, MonadTime m) => Text -> ImageExtractionValidation -> m (MeshResult ())
-updateExtractValidationStatus' requestId status = do
+updateExtractValidationStatus :: (L.MonadFlow m, MonadTime m) => Text -> ImageExtractionValidation -> m (MeshResult ())
+updateExtractValidationStatus requestId status = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   now <- getCurrentTime
   case dbConf of
@@ -179,14 +179,14 @@ updateExtractValidationStatus' requestId status = do
         [Se.Is BeamIV.requestId (Se.Eq requestId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-deleteByPersonId :: Id Person -> SqlDB ()
-deleteByPersonId personId =
-  Esq.delete $ do
-    verifications <- from $ table @IdfyVerificationT
-    where_ $ verifications ^. IdfyVerificationDriverId ==. val (toKey personId)
+-- deleteByPersonId :: Id Person -> SqlDB ()
+-- deleteByPersonId personId =
+--   Esq.delete $ do
+--     verifications <- from $ table @IdfyVerificationT
+--     where_ $ verifications ^. IdfyVerificationDriverId ==. val (toKey personId)
 
-deleteByPersonId' :: L.MonadFlow m => Id Person -> m ()
-deleteByPersonId' (Id personId) = do
+deleteByPersonId :: L.MonadFlow m => Id Person -> m ()
+deleteByPersonId (Id personId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' ->
