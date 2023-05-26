@@ -428,7 +428,7 @@ driverInfoView push state =
                 [ height $ V 19
                 , width $ V 60
                 , margin $ MarginRight 29
-                , imageWithFallback $ "ny_ic_paytm_logo," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_paytm_logo.png" 
+                , imageWithFallback $ "ny_ic_paytm_logo," <> (getAssetStoreLink FunctionCall) <> "ny_ic_paytm_logo.png" 
                 ]
               , linearLayout[
                 weight 1.0
@@ -445,7 +445,7 @@ driverInfoView push state =
               , imageView
                 [ height $ V 30
                 , width $ V 89
-                , imageWithFallback $ "ny_ic_nammayatri_logo," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_nammayatri_logo.png"
+                , imageWithFallback $ "ny_ic_nammayatri_logo," <> (getAssetStoreLink FunctionCall) <> "ny_ic_nammayatri_logo.png"
                 ]
             ]
             , if state.props.isSpecialZone  then headerTextView push state else contactView push state
