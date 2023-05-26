@@ -176,7 +176,7 @@ eval (InAppKeyboardModalMobile (InAppKeyboardModal.OnClickBack text)) state = do
     then continue state
     else do
     let newVal = (if length( text ) > 0 then (take (length ( text ) - 1 ) text) else "" )
-    continue state { data = state.data {driverAlternateMobile = (if (state.props.isEditAlternateMobile == false) then (if newVal=="" then Nothing else Just newVal) else state.data.driverAlternateMobile), driverEditAlternateMobile = (if newVal=="" then Nothing else Just newVal)  } , props = state.props { checkAlternateNumber = if (length newVal) == 0 then true else false, numberExistError = false}}
+    continue state { data = state.data {driverAlternateMobile = (if (state.props.isEditAlternateMobile == false) then (if newVal=="" then Nothing else Just newVal) else state.data.driverAlternateMobile), driverEditAlternateMobile = (if newVal=="" then Nothing else Just newVal)  } , props = state.props { checkAlternateNumber = true, numberExistError = false}}
 
 eval (InAppKeyboardModalMobile (InAppKeyboardModal.OnClickDone text)) state = do
   _ <- pure $ spy "Enter done" ""

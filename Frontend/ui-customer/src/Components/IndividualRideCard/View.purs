@@ -66,28 +66,29 @@ cardView push state =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
-  , padding $ Padding 16 20 16 20
+  , padding $ Padding 0 20 0 20
   , PrestoList.visibilityHolder "cardVisibility"
   , orientation VERTICAL
   , margin $ Margin 16 20 16 4
   , cornerRadius 8.0
-  , PrestoList.onClickHolder push $ Screen.IndividualRideCardActionController <<< OnClick
   , stroke $ "1,"<>Color.grey900
   , background Color.white900
-  ][  rideDetails state
+  ][  rideDetails push state
     , separator
-    , sourceAndDestination  
+    , sourceAndDestination push
     , separator
     , viewDetailsAndRepeatRide push state
    ]
 
-rideDetails :: forall w. IndividualRideCardState ->  PrestoDOM (Effect Unit) w 
-rideDetails state = 
+rideDetails :: forall w. (Screen.Action -> Effect Unit) -> IndividualRideCardState ->  PrestoDOM (Effect Unit) w 
+rideDetails push state = 
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation HORIZONTAL
   , gravity CENTER_VERTICAL
+  , padding $ PaddingHorizontal 16 16 
+  , PrestoList.onClickHolder push $ Screen.IndividualRideCardActionController <<< OnClick
   , margin (MarginBottom 20)
   ][  textView
       ([ PrestoList.textHolder "date"
@@ -153,14 +154,16 @@ rideDetails state =
         ]
     ]
 
-sourceAndDestination :: forall w . PrestoDOM (Effect Unit) w 
-sourceAndDestination =
+sourceAndDestination :: forall w . (Screen.Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
+sourceAndDestination push =
   frameLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , gravity LEFT
   , PrestoList.visibilityHolder "cardVisibility"
+  , PrestoList.onClickHolder push $ Screen.IndividualRideCardActionController <<< OnClick
   , margin $ MarginVertical 20 20
+  , padding $ PaddingHorizontal 16 16
   ][  imageView
       [ imageUrl "ic_line"
       , height MATCH_PARENT
@@ -227,6 +230,7 @@ separator =
   linearLayout
   [ height $ V 1
   , width MATCH_PARENT
+  , padding $ PaddingHorizontal 16 16
   , background Color.grey900
   ][]
 
@@ -345,7 +349,7 @@ viewDetailsAndRepeatRide push state =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , gravity CENTER
-  , margin $ MarginTop 15
+  
   ][ textView
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
@@ -353,13 +357,13 @@ viewDetailsAndRepeatRide push state =
       , color Color.blue900
       , textSize FontSize.a_14
       , fontStyle $ FontStyle.medium LanguageStyle
-      , padding $ Padding 10 3 10 3
+      , padding $ Padding 26 18 50 3
       , PrestoList.onClickHolder push $ Screen.IndividualRideCardActionController <<< OnClick
       ]
     , linearLayout 
       [ width $ V 1
       , height if os == "IOS" then (V 20) else MATCH_PARENT
-      , margin $ MarginHorizontal 40 40
+      , margin $ MarginTop 15
       , background Color.grey900
       ][]
     , textView
@@ -372,7 +376,7 @@ viewDetailsAndRepeatRide push state =
       , PrestoList.alphaHolder "alpha"
       , alpha $ if (isLocalStageOn HomeScreen) then 1.0 else 0.5
       , PrestoList.onClickHolder push $ (if (isLocalStageOn HomeScreen) then Screen.IndividualRideCardActionController <<< RepeatRide else Screen.IndividualRideCardActionController <<< NoAction)
-      , padding $ Padding 10 3 10 3
+      , padding $ Padding 50 18 26 3
       ]
   ]
 

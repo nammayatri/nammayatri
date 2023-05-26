@@ -342,6 +342,7 @@ recenterBtnView state push =
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
   , stroke $ "1," <> Color.black500
+  , visibility if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) then GONE else VISIBLE
   , cornerRadius 24.0
   ][ imageView
     [ width ( V 40 )

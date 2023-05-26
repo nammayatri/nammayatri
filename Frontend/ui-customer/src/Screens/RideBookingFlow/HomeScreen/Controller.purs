@@ -704,8 +704,10 @@ eval BackPressed state = do
                       _ <- pure $ updateLocalStage (if state.props.isSearchLocation == NoView then HomeScreen else SearchLocationModel)
                       continue state { props { currentStage = if state.props.isSearchLocation == NoView then HomeScreen else SearchLocationModel}}
     ChatWithDriver -> do
-                      _ <- pure $ updateLocalStage RideAccepted
-                      continue state {props {currentStage = RideAccepted}}
+                        if state.props.showCallPopUp then continue state {props{showCallPopUp = false}}
+                         else do 
+                            _ <- pure $ updateLocalStage RideAccepted
+                            continue state {props {currentStage = RideAccepted}}
     _               -> do
                         if state.props.isLocationTracking then continue state{props{isLocationTracking = false}}
                           else if state.props.isSaveFavourite then continueWithCmd state [pure $ (SaveFavouriteCardAction (SaveFavouriteCardController.OnClose))]

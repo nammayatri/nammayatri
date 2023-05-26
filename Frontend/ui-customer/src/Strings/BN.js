@@ -385,7 +385,6 @@ const bengaliStrings = {
   "SERVICE_CHARGES" : "সেবা মূল্য",
   "CONFIRM_AND_BOOK" : "নিশ্চিত করুন এবং বুক করুন",
   "PEOPLE" : "মানুষ",
-
   "CANCEL_ONGOING_SEARCH" : "আপনি কি নিশ্চিত যে আপনি চলমান অনুসন্ধান বাতিল করে চালিয়ে যেতে চান?",
   "SEARCH_AGAIN_WITH_A_TIP" : "আবার একটি টিপ দিয়ে অনুসন্ধান করবেন?",
   "TRY_AGAIN_WITH_A_TIP" : "একটি টিপ দিয়ে আবার চেষ্টা করুন?",

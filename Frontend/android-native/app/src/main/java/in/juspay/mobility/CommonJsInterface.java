@@ -3113,13 +3113,14 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                     sendIntent.putExtra(Intent.EXTRA_TEXT, message);
                     sendIntent.putExtra(Intent.EXTRA_TITLE, title);
                     Bitmap thumbnailBitmap = BitmapFactory.decodeResource(context.getResources(), R.drawable.ic_launcher);
-                    if (thumbnailBitmap != null) {
-                        Uri thumbnailUri = getImageUri(context, thumbnailBitmap);
-                        ClipData clipData = ClipData.newUri(context.getContentResolver(), "Thumbnail Image", thumbnailUri);
-                        sendIntent.setClipData(clipData);
-                    }
-                    sendIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                     sendIntent.setType("text/plain");
+                   if (thumbnailBitmap != null &&  Build.VERSION.SDK_INT > 28) {
+                       Uri thumbnailUri = getImageUri(context, thumbnailBitmap);
+                       ClipData clipData = ClipData.newUri(context.getContentResolver(), "Thumbnail Image", thumbnailUri);
+                       sendIntent.setClipData(clipData);
+                       sendIntent.setType("image/*");
+                   }
+                    sendIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                     Intent shareIntent = Intent.createChooser(sendIntent, null);
                     shareIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                     context.startActivity(shareIntent);
@@ -3418,15 +3419,8 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                     }
                     JSONObject sourceCoordinates = (JSONObject) coordinates.get(0);
                     JSONObject destCoordinates = (JSONObject) coordinates.get(coordinates.length()-1);
-                    double sourceLong;
-                    double sourceLat;
-                    if (type == "CUSTOMER_LOCATION_UPDATE"){
-                        sourceLat = lastLatitudeValue;
-                        sourceLong = lastLongitudeValue;
-                    }else {
-                        sourceLat = sourceCoordinates.getDouble("lat");
-                        sourceLong = sourceCoordinates.getDouble("lng");
-                    }
+                    double sourceLong = sourceCoordinates.getDouble("lat");
+                    double sourceLat = sourceCoordinates.getDouble("lng");
                     double destLat = destCoordinates.getDouble("lat");
                     double destLong = destCoordinates.getDouble("lng");
                     if (sourceLat != 0.0 && sourceLong != 0.0 && destLat != 0.0 && destLong != 0.0) {
