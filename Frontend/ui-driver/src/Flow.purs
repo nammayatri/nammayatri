@@ -1123,7 +1123,7 @@ homeScreenFlow = do
       let categories' = sortBy compareByOrder temp
       modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories' } } )
       helpAndSupportFlow 
-    GO_TO_START_RIDE {id, otp , lat, lon} -> do
+    GO_TO_START_RIDE {id, otp , lat, lon} updatedState -> do
       _ <- pure $ printLog "HOME_SCREEN_FLOW GO_TO_START_RIDE" "."
       _ <- pure $ printLog "Lat in Floww: " lat
       _ <- pure $ printLog "Lon in Floww: " lon
@@ -1135,6 +1135,8 @@ homeScreenFlow = do
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props {enterOtpModal = false, showDottedRoute = true}, data{ route = [], activeRide{status = INPROGRESS}}})
           void $ lift $ lift $ toggleLoader false
           _ <- updateStage $ HomeScreenStage RideStarted
+          lift $ lift $ void $ delay $ Milliseconds 2000.0
+          void $ pure $ openNavigation 0.0 0.0 updatedState.data.activeRide.dest_lat updatedState.data.activeRide.dest_lon
           currentRideFlow
         Left errorPayload -> do
           let errResp = errorPayload.response
