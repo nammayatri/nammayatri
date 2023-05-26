@@ -82,7 +82,7 @@ screen initialState =
           _ <- HU.storeCallBackTime push TimeUpdate
           when (getValueToLocalNativeStore IS_RIDE_ACTIVE == "true" && initialState.data.activeRide.status == NOTHING) do
             void $ launchAff $ EHC.flowRunner $ runExceptT $ runBackT $ do
-              (GetRidesHistoryResp activeRideResponse) <- Remote.getRideHistoryReqBT "1" "0" "true"
+              (GetRidesHistoryResp activeRideResponse) <- Remote.getRideHistoryReqBT "1" "0" "true" "null"
               case (activeRideResponse.list DA.!! 0) of
                 Just ride -> lift $ lift $ doAff do liftEffect $ push $ RideActiveAction ride
                 Nothing -> setValueToLocalStore IS_RIDE_ACTIVE "false"
@@ -1067,7 +1067,7 @@ enableCurrentLocation state = if (DA.any (_ == state.props.currentStage) [RideAc
 rideStatusPolling :: forall action. String -> Number -> HomeScreenState -> (action -> Effect Unit) -> (String -> action) -> Flow GlobalState Unit
 rideStatusPolling pollingId duration state push action = do
   if (getValueToLocalStore RIDE_STATUS_POLLING) == "True" && (getValueToLocalStore RIDE_STATUS_POLLING_ID) == pollingId && (DA.any (\stage -> isLocalStageOn stage) [ RideAccepted, ChatWithCustomer]) then do
-    activeRideResponse <- Remote.getRideHistoryReq "1" "0" "true"
+    activeRideResponse <- Remote.getRideHistoryReq "1" "0" "true" "null"
     _ <- pure $ spy "polling inside rideStatusPolling function" activeRideResponse
     case activeRideResponse of
       Right (GetRidesHistoryResp rideList) -> do
@@ -1085,7 +1085,7 @@ rideStatusPolling pollingId duration state push action = do
 rideRequestPolling :: forall action. String -> Int -> Number -> HomeScreenState -> (action -> Effect Unit) -> (String -> action) -> Flow GlobalState Unit
 rideRequestPolling pollingId count duration state push action = do
   if (getValueToLocalStore RIDE_STATUS_POLLING) == "True" && (getValueToLocalStore RIDE_STATUS_POLLING_ID) == pollingId && isLocalStageOn RideRequested then do
-    activeRideResponse <- Remote.getRideHistoryReq "1" "0" "true"
+    activeRideResponse <- Remote.getRideHistoryReq "1" "0" "true" "null"
     _ <- pure $ spy "polling inside rideRequestPolling function" activeRideResponse
     case activeRideResponse of
       Right (GetRidesHistoryResp rideList) -> do
@@ -1102,7 +1102,7 @@ rideRequestPolling pollingId count duration state push action = do
 
 checkCurrentRide :: forall action.(action -> Effect Unit) -> (String -> action) -> Flow GlobalState Unit
 checkCurrentRide push action = do
-  activeRideResponse <- Remote.getRideHistoryReq "1" "0" "true"
+  activeRideResponse <- Remote.getRideHistoryReq "1" "0" "true" "null"
   case activeRideResponse of
       Right (GetRidesHistoryResp rideList) -> do
         if (DA.null rideList.list) then

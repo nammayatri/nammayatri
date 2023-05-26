@@ -18,7 +18,7 @@ module Screens.RideHistoryScreen.Controller where
 import Prelude (class Show, pure, unit, ($), map, (==), not,bind, (&&),(<>) ,(+), (*), (/=), discard, (/))
 import Screens.Types (RideHistoryScreenState, AnimationState(..), ItemState(..), IndividualRideCardState(..))
 import PrestoDOM.Types.Core (class Loggable)
-import PrestoDOM (Eval, continue, exit, ScrollState(..))
+import PrestoDOM (Eval, continue, exit, ScrollState(..), updateAndExit)
 import Components.BottomNavBar.Controller(Action(..)) as BottomNavBar
 import Components.IndividualRideCard.Controller as IndividualRideCardController
 import Components.ErrorModal as ErrorModalController
@@ -80,6 +80,7 @@ data ScreenOutput = GoBack
                     | LoaderOutput RideHistoryScreenState
                     | GoToNotification
                     | GoToReferralScreen
+                    | SelectedTab RideHistoryScreenState
 
 data Action = Dummy
             | OnFadeComplete String
@@ -116,8 +117,7 @@ eval (ScrollStateChanged scrollState) state = do
                pure unit
   continue state
 
-eval (SelectTab tab) state = do
-    continue $ state {currentTab = tab}
+eval (SelectTab tab) state = updateAndExit state $ SelectedTab state{currentTab = tab}
 
 eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
   case screen of

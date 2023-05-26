@@ -49,8 +49,11 @@ logout dummyString = (getBaseUrl "") <> "/auth/logout"
 getDriverInfo :: String -> String
 getDriverInfo dummyString = (getBaseUrl "") <> "/driver/profile"
 
-getRideHistory :: String -> String -> String -> String
-getRideHistory limit offset isActive = (getBaseUrl "") <> "/driver/ride/list?limit="<>limit<>"&offset="<>offset<>"&onlyActive="<>isActive
+getRideHistory :: String -> String -> String -> String -> String
+getRideHistory limit offset isActive status = do
+  case status of
+    "null" -> (getBaseUrl "") <> "/driver/ride/list?limit="<>limit<>"&offset="<>offset<>"&onlyActive="<>isActive
+    _ -> (getBaseUrl "") <> "/driver/ride/list?limit="<>limit<>"&offset="<>offset<>"&onlyActive="<>isActive<>"&status="<>(show status)
 
 offerRide :: String -> String 
 offerRide dummyString = (getBaseUrl "") <> "/driver/searchRequest/quote/offer"
