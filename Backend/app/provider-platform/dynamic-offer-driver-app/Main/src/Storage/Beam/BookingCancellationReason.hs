@@ -82,9 +82,9 @@ instance IsString Domain.CancellationSource where
 
 instance B.Table BookingCancellationReasonT where
   data PrimaryKey BookingCancellationReasonT f
-    = Id (B.C f (Maybe Text))
+    = Id (B.C f (Text))
     deriving (Generic, B.Beamable)
-  primaryKey = Id . driverId
+  primaryKey = Id . bookingId
 
 instance ModelMeta BookingCancellationReasonT where
   modelFieldModification = bookingCancellationReasonTMod

@@ -30,6 +30,7 @@ import Database.Beam.Postgres
   ( Postgres,
     ResultError (ConversionFailed, UnexpectedNull),
   )
+import qualified Database.Beam.Schema.Tables as B
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import qualified Domain.Types.Geometry as Domain
@@ -69,6 +70,7 @@ instance ModelMeta GeometryT where
   modelFieldModification = geometryTMod
   modelTableName = "geometry"
   mkExprWithDefault _ = B.insertExpressions []
+  modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type Geometry = GeometryT Identity
 

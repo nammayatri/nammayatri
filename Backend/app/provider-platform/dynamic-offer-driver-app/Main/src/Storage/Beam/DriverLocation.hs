@@ -13,6 +13,7 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.DriverLocation where
@@ -30,6 +31,9 @@ import Database.Beam.Postgres
   ( Postgres,
     ResultError (ConversionFailed, UnexpectedNull),
   )
+import Database.Beam.Postgres.Syntax
+import qualified Database.Beam.Query as BQ
+import qualified Database.Beam.Schema.Tables as B
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
@@ -140,8 +144,21 @@ defaultDriverLocation =
       updatedAt = defaultUTCDate
     }
 
+toRowExpression personId latLong updateTime now =
+  DriverLocationT
+    (B.val_ personId)
+    (B.val_ latLong.lat)
+    (B.val_ latLong.lon)
+    (getPoint (latLong.lat, latLong.lon))
+    (B.val_ updateTime)
+    (B.val_ now)
+    (B.val_ now)
+
 instance Serialize DriverLocation where
   put = error "undefined"
   get = error "undefined"
+
+getPoint :: (Double, Double) -> BQ.QGenExpr context Postgres s Point
+getPoint (lat, long) = (BQ.QExpr (\_ -> PgExpressionSyntax (emit $ "ST_SetSRID (ST_Point (" <> show long <> " , " <> show lat <> "),4326)")))
 
 $(enableKVPG ''DriverLocationT ['driverId] [])

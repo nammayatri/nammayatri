@@ -82,13 +82,19 @@ findEnabledCityByName city =
         &&. operatingCity ^. OperatingCityEnabled
     return operatingCity
 
--- findEnabledCityByName' :: L.MonadFlow m => Text ->  m [OperatingCity]
--- findEnabledCityByName' city = do
---   dbConf <- L.getOption Extra.EulerPsqlDbCfg
---   case dbConf of
---     Just dbConf' -> either (pure []) (transformBeamOperatingCityToDomain <$>) <$> KV.findAllWithKVConnector dbConf' Mesh.meshConfig [Se.And
---       [Se.Is BeamOC.cityName $ Se.Eq city, Se.Is BeamOC.enabled $ Se.Eq True]]
---     Nothing -> pure []
+findEnabledCityByName' :: L.MonadFlow m => Text -> m [OperatingCity]
+findEnabledCityByName' city = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' ->
+      either (pure []) (transformBeamOperatingCityToDomain <$>)
+        <$> KV.findAllWithKVConnector
+          dbConf'
+          Mesh.meshConfig
+          [ Se.And
+              [Se.Is (BeamOC.cityName) $ Se.Eq city, Se.Is BeamOC.enabled $ Se.Eq True]
+          ]
+    Nothing -> pure []
 
 findEnabledCityByMerchantIdAndName ::
   Transactionable m =>

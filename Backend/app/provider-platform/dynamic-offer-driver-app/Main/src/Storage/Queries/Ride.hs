@@ -16,18 +16,22 @@
 module Storage.Queries.Ride where
 
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Ride as Common
+import Data.Int
 import Data.Text (pack)
 import Data.Time hiding (getCurrentTime)
+import qualified Database.Beam as B
+import Database.Beam.Postgres
+import qualified Database.Beam.Query as B
 import Domain.Types.Booking as Booking
 import Domain.Types.Merchant
 import Domain.Types.Person
-import Domain.Types.Ride as DR
 import Domain.Types.Ride as Ride
 import Domain.Types.RideDetails as RideDetails
 import Domain.Types.RiderDetails as RiderDetails
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
+import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
 import Kernel.External.Encryption
 import Kernel.External.Maps.Types (LatLong (..), lat, lon)
@@ -37,6 +41,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
+import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Beam.Ride.Table as BeamR
 import Storage.Queries.Booking (baseBookingTable)
 import Storage.Queries.FullEntityBuilders (buildFullBooking)
@@ -46,16 +51,23 @@ import Storage.Tabular.Ride as Ride
 import Storage.Tabular.RideDetails as RideDetails
 import Storage.Tabular.RiderDetails as RiderDetails
 import qualified Storage.Tabular.VechileNew as VN
+import qualified Prelude as Prelude
+
+data DatabaseWith2 table1 table2 f = DatabaseWith2
+  { dwTable1 :: f (B.TableEntity table1),
+    dwTable2 :: f (B.TableEntity table2)
+  }
+  deriving (Generic, B.Database be)
 
 create :: Ride -> SqlDB ()
 create = Esq.create
 
-create' :: L.MonadFlow m => Ride.Ride -> m (MeshResult ())
-create' ride = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
-  case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainRideToBeam ride)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+-- create' :: L.MonadFlow m => Ride.Ride -> m (MeshResult ())
+-- create' ride = do
+--   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   case dbConf of
+--     Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainRideToBeam ride)
+--     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 findById :: Transactionable m => Id Ride -> m (Maybe Ride)
 findById rideId = Esq.findOne $ do
@@ -74,6 +86,14 @@ findById' (Id rideId) = do
         Left _ -> pure Nothing
     Nothing -> pure Nothing
 
+-- findById' :: L.MonadFlow m => Id Ride -> m (Maybe Ride)
+-- findById' (Id rideId) = do
+--   dbConf <- ask
+--   result <- KV.findWithKVConnector dbConf' VN.meshConfig [Se.Is BeamR.id $ Se.Eq rideId]
+--   case result of
+--     Right ride -> traverse transformBeamRideToDomain ride
+--     Left _ -> pure Nothing
+
 findActiveByRBId :: Transactionable m => Id Booking -> m (Maybe Ride)
 findActiveByRBId rbId = Esq.findOne $ do
   ride <- from $ table @RideT
@@ -82,16 +102,12 @@ findActiveByRBId rbId = Esq.findOne $ do
       &&. ride ^. RideStatus !=. val Ride.CANCELLED
   pure ride
 
-findActiveByRBId' :: L.MonadFlow m => Id Ride -> m (Maybe Ride)
-findActiveByRBId' (Id rbId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
-  case dbConf of
-    Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' VN.meshConfig [Se.And [Se.Is BeamR.bookingId $ Se.Eq rbId, Se.Is BeamR.status $ Se.Eq Ride.CANCELLED]]
-      case result of
-        Right ride -> traverse transformBeamRideToDomain ride
-        Left _ -> pure Nothing
-    Nothing -> pure Nothing
+-- findActiveByRBId' :: L.MonadFlow m => Id Ride -> m (Maybe Ride)
+-- findActiveByRBId' (Id rbId) = do
+--   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   case dbConf of
+--     Just dbCOnf' -> either (pure Nothing) (transformBeamRideToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.And [Se.Is BeamR.bookingId $ Se.Eq  $ Just rbId,Se.Is BeamR.status $ Se.Eq $ Just Ride.CANCELLED ]]
+--     Nothing -> pure Nothing
 
 findAllByDriverId ::
   Transactionable m =>
@@ -138,17 +154,6 @@ findOneByDriverId driverId = Esq.findOne $ do
   limit 1
   pure ride
 
-findOneByDriverId' :: L.MonadFlow m => Id Person -> m (Maybe Ride)
-findOneByDriverId' (Id personId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
-  case dbConf of
-    Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' VN.meshConfig [Se.Is BeamR.driverId $ Se.Eq personId]
-      case result of
-        Right ride -> traverse transformBeamRideToDomain ride
-        Left _ -> pure Nothing
-    Nothing -> pure Nothing
-
 getInProgressByDriverId :: Transactionable m => Id Person -> m (Maybe Ride)
 getInProgressByDriverId driverId = Esq.findOne $ do
   ride <- from $ table @RideT
@@ -156,17 +161,6 @@ getInProgressByDriverId driverId = Esq.findOne $ do
     ride ^. RideDriverId ==. val (toKey driverId)
       &&. ride ^. RideStatus ==. val Ride.INPROGRESS
   pure ride
-
-getInProgressByDriverId' :: L.MonadFlow m => Id Person -> m (Maybe Ride)
-getInProgressByDriverId' (Id personId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
-  case dbConf of
-    Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' VN.meshConfig [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.Eq Ride.INPROGRESS]]
-      case result of
-        Right ride -> traverse transformBeamRideToDomain ride
-        Left _ -> pure Nothing
-    Nothing -> pure Nothing
 
 getInProgressOrNewRideIdAndStatusByDriverId :: Transactionable m => Id Person -> m (Maybe (Id Ride, RideStatus))
 getInProgressOrNewRideIdAndStatusByDriverId driverId = do
@@ -178,20 +172,6 @@ getInProgressOrNewRideIdAndStatusByDriverId driverId = do
     pure (ride ^. RideId, ride ^. RideStatus)
   pure $ first Id <$> mbTuple
 
-getInProgressOrNewRideIdAndStatusByDriverId' :: L.MonadFlow m => Id Person -> m (Maybe (Id Ride, RideStatus))
-getInProgressOrNewRideIdAndStatusByDriverId' (Id driverId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
-  case dbConf of
-    Just dbCOnf' -> do
-      ride <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamR.driverId $ Se.Eq driverId, Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]]]
-      case ride of
-        Left _ -> pure Nothing
-        Right x -> do
-          ride' <- traverse transformBeamRideToDomain x
-          let rideData = (,) <$> (DR.id <$> ride') <*> (DR.status <$> ride')
-          pure rideData
-    Nothing -> pure Nothing
-
 getActiveByDriverId :: Transactionable m => Id Person -> m (Maybe Ride)
 getActiveByDriverId driverId = Esq.findOne $ do
   ride <- from $ table @RideT
@@ -201,17 +181,6 @@ getActiveByDriverId driverId = Esq.findOne $ do
               ||. ride ^. RideStatus ==. val Ride.NEW
           )
   pure ride
-
-getActiveByDriverId' :: L.MonadFlow m => Id Person -> m (Maybe Ride)
-getActiveByDriverId' (Id personId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
-  case dbConf of
-    Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' VN.meshConfig [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]]]
-      case result of
-        Right ride -> traverse transformBeamRideToDomain ride
-        Left _ -> pure Nothing
-    Nothing -> pure Nothing
 
 updateStatus ::
   Id Ride ->
@@ -226,21 +195,6 @@ updateStatus rideId status = do
         RideUpdatedAt =. val now
       ]
     where_ $ tbl ^. RideTId ==. val (toKey rideId)
-
-updateStatus' :: (L.MonadFlow m, MonadTime m) => Id Ride -> RideStatus -> m (MeshResult ())
-updateStatus' rideId status = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
-  now <- getCurrentTime
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        Mesh.meshConfig
-        [ Se.Set BeamR.status status,
-          Se.Set BeamR.updatedAt now
-        ]
-        [Se.Is BeamR.id (Se.Eq $ getId rideId)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 updateStartTimeAndLoc ::
   Id Ride ->
@@ -258,23 +212,6 @@ updateStartTimeAndLoc rideId point = do
       ]
     where_ $ tbl ^. RideTId ==. val (toKey rideId)
 
-updateStartTimeAndLoc' :: (L.MonadFlow m, MonadTime m) => Id Ride -> LatLong -> m (MeshResult ())
-updateStartTimeAndLoc' rideId point = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
-  now <- getCurrentTime
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        Mesh.meshConfig
-        [ Se.Set BeamR.tripStartTime $ Just now,
-          Se.Set BeamR.tripStartLat $ Just point.lat,
-          Se.Set BeamR.tripStartLon $ Just point.lon,
-          Se.Set BeamR.updatedAt now
-        ]
-        [Se.Is BeamR.id (Se.Eq $ getId rideId)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
-
 updateStatusByIds ::
   [Id Ride] ->
   RideStatus ->
@@ -288,21 +225,6 @@ updateStatusByIds ids status = do
         RideUpdatedAt =. val now
       ]
     where_ $ tbl ^. RideTId `in_` valList (toKey <$> ids)
-
-updateStatusByIds' :: (L.MonadFlow m, MonadTime m) => [Id Ride] -> RideStatus -> m (MeshResult ())
-updateStatusByIds' rideIds status = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
-  now <- getCurrentTime
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        Mesh.meshConfig
-        [ Se.Set BeamR.status status,
-          Se.Set BeamR.updatedAt now
-        ]
-        [Se.Is BeamR.id (Se.In $ getId <$> rideIds)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 updateDistance ::
   Id Person ->
@@ -319,21 +241,6 @@ updateDistance driverId distance = do
     where_ $
       tbl ^. RideDriverId ==. val (toKey driverId)
         &&. tbl ^. RideStatus ==. val Ride.INPROGRESS
-
-updateDistance' :: (L.MonadFlow m, MonadTime m) => Id Person -> HighPrecMeters -> m (MeshResult ())
-updateDistance' driverId distance = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
-  now <- getCurrentTime
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        Mesh.meshConfig
-        [ Se.Set BeamR.traveledDistance distance,
-          Se.Set BeamR.updatedAt now
-        ]
-        [Se.Is BeamR.driverId (Se.Eq $ getId driverId)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 updateAll ::
   Id Ride ->
@@ -355,27 +262,6 @@ updateAll rideId ride = do
       ]
     where_ $ tbl ^. RideTId ==. val (toKey rideId)
 
-updateAll' :: (L.MonadFlow m, MonadTime m) => Id Ride -> Ride -> m (MeshResult ())
-updateAll' rideId ride = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
-  now <- getCurrentTime
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        Mesh.meshConfig
-        [ Se.Set BeamR.chargeableDistance ride.chargeableDistance,
-          Se.Set BeamR.fare ride.fare,
-          Se.Set BeamR.tripEndTime ride.tripEndTime,
-          Se.Set BeamR.tripStartLat (ride.tripEndPos <&> (.lat)),
-          Se.Set BeamR.tripStartLon (ride.tripEndPos <&> (.lon)),
-          Se.Set BeamR.fareParametersId (getId <$> ride.fareParametersId),
-          Se.Set BeamR.distanceCalculationFailed ride.distanceCalculationFailed,
-          Se.Set BeamR.updatedAt now
-        ]
-        [Se.Is BeamR.id (Se.Eq $ getId rideId)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
-
 getCountByStatus :: Transactionable m => Id Merchant -> m [(RideStatus, Int)]
 getCountByStatus merchantId = do
   Esq.findAll $ do
@@ -389,6 +275,37 @@ getCountByStatus merchantId = do
     where_ $ booking ^. BookingProviderId ==. val (toKey merchantId)
     groupBy $ ride ^. RideStatus
     return (ride ^. RideStatus, countRows :: SqlExpr (Esq.Value Int))
+
+getCountByStatus' :: (L.MonadFlow m) => Id Merchant -> m [(RideStatus, Int)]
+getCountByStatus' merchantId = do
+  -- Tricky query to be able to insert meaningful Point
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  conn <- L.getOrInitSqlConn (fromJust dbConf)
+  case conn of
+    Right c -> do
+      resp <- L.runDB c $
+        L.findRows $
+          B.select $
+            B.aggregate_ (\(ride, _) -> (B.group_ (BeamR.status ride), B.as_ @Int B.countAll_)) $
+              (B.filter_' (\(_, BeamB.BookingT {..}) -> (providerId B.==?. (B.val_ (getId merchantId))))) $
+                do
+                  ride <- B.all_ (meshModelTableEntity @BeamR.RideT @Postgres @(DatabaseWith2 BeamR.RideT BeamB.BookingT))
+                  booking <- B.join_' (meshModelTableEntity @BeamB.BookingT @Postgres @(DatabaseWith2 BeamR.RideT BeamB.BookingT)) (\booking -> (BeamB.id booking) B.==?. (BeamR.bookingId ride))
+                  pure (ride, booking)
+      pure (either (const []) Prelude.id resp)
+    Left _ -> pure []
+
+-- Esq.findAll $ do
+--   (ride :& booking) <-
+--     from $
+--       table @RideT
+--         `innerJoin` table @BookingT
+--           `Esq.on` ( \(ride :& booking) ->
+--                        ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
+--                    )
+--   where_ $ booking ^. BookingProviderId ==. val (toKey merchantId)
+--   groupBy $ ride ^. RideStatus
+--   return (ride ^. RideStatus, countRows :: SqlExpr (Esq.Value Int))
 
 -- countRides :: Transactionable m => Id Merchant -> m Int
 -- countRides merchantId =
@@ -453,21 +370,6 @@ updateArrival rideId = do
         RideUpdatedAt =. val now
       ]
     where_ $ tbl ^. RideTId ==. val (toKey rideId)
-
-updateArrival' :: (L.MonadFlow m, MonadTime m) => Id Ride -> m (MeshResult ())
-updateArrival' rideId = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
-  now <- getCurrentTime
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        Mesh.meshConfig
-        [ Se.Set BeamR.driverArrivalTime $ Just now,
-          Se.Set BeamR.updatedAt now
-        ]
-        [Se.Is BeamR.id (Se.Eq $ getId rideId)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 data RideItem = RideItem
   { rideShortId :: ShortId Ride,
@@ -578,7 +480,7 @@ findStuckRideItems merchantId bookingIds now = do
   where
     mkStuckRideItem (rideId, bookingId, driverId, driverActive) = StuckRideItem {..}
 
-transformBeamRideToDomain :: L.MonadFlow m => BeamR.Ride -> m Ride
+transformBeamRideToDomain :: L.MonadFlow m => BeamR.Ride -> m (Ride)
 transformBeamRideToDomain BeamR.RideT {..} = do
   tUrl <- parseBaseUrl trackingUrl
   pure

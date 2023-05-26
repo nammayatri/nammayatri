@@ -16,11 +16,15 @@
 
 module Storage.Queries.DriverLocation where
 
+import qualified Database.Beam as B
+import Database.Beam.Postgres
+import qualified Database.Beam.Query as B
 import Domain.Types.DriverLocation
 import Domain.Types.Person
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
+import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
@@ -47,6 +51,22 @@ create drLocationId latLong updateTime = do
         <#> val updateTime
         <#> val now
         <#> val now
+
+create' :: (L.MonadFlow m, MonadTime m) => Id Person -> LatLong -> UTCTime -> m ()
+create' drLocationId latLong updateTime = do
+  -- Tricky query to be able to insert meaningful Point
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  now <- getCurrentTime
+  -- let B.EntityModification modification =
+  --       B.modifyTableFields BeamG.geometryTMod
+  --         <> B.setEntityName "geometry"
+  --     dbt = appEndo modification $ B.DatabaseEntity $ B.dbEntityAuto "geometry"
+  conn <- L.getOrInitSqlConn (fromJust dbConf)
+  case conn of
+    Right c -> do
+      let
+      void $ L.runDB c $ L.insertRows $ B.insert (meshModelTableEntity @BeamDL.DriverLocationT @Postgres @(Se.DatabaseWith BeamDL.DriverLocationT)) $ B.insertExpressions ([BeamDL.toRowExpression (getId drLocationId) latLong updateTime now])
+    Left _ -> pure ()
 
 findById ::
   Transactionable m =>

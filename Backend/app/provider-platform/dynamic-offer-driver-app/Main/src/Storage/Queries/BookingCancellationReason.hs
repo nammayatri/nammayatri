@@ -22,6 +22,7 @@ import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
+import EulerHS.Prelude as P hiding ((^.))
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
@@ -87,7 +88,7 @@ upsert' cancellationReason = do
   case dbConf of
     Just dbCOnf' -> do
       res <- either (pure Nothing) (transformBeamBookingCancellationReasonToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamBCR.bookingId $ Se.Eq (getId cancellationReason.bookingId)]
-      if isJust res
+      if (isJust res)
         then
           void $
             KV.updateWoReturningWithKVConnector

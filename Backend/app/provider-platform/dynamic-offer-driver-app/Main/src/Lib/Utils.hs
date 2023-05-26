@@ -4,17 +4,28 @@
 module Lib.Utils where
 
 import Data.ByteString.Internal (ByteString, unpackChars)
+import qualified Data.Text.Lazy as TL
+import qualified Data.Text.Lazy.Builder as TL
 import Data.Time
+-- import Database.Esqueleto.Internal.Internal hiding (rand)
+
+import Database.Beam
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
 import Database.Beam.Postgres
+import qualified Database.Esqueleto.Experimental as Esq
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import Domain.Types.Vehicle.Variant (Variant (..))
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Types
 import Kernel.Types.Common
 import Kernel.Types.Time (Seconds (..))
+
+-- checkContains :: BeamSqlBackend be => a -> b -> QExpr be s Bool
+-- checkContains polygonGeometry pointGeometry =
+--   function "ST_Contains" (polygonGeometry, pointGeometry)
 
 defaultDate :: LocalTime
 defaultDate =
@@ -107,3 +118,12 @@ fromFieldEnum f mbValue = case mbValue of
     case (readMaybe (unpackChars value')) of
       Just val -> pure val
       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
+
+-- (<->.) :: SqlExpr (Value Point) -> SqlExpr (Value Point) -> SqlExpr (Value Double)
+-- (<->.) = unsafeSqlBinOp " <-> "
+
+-- getPoint :: (SqlExpr (Value Double), SqlExpr (Value Double)) -> SqlExpr (Value Point)
+-- getPoint (lat, long) = unsafeSqlFunction "ST_SetSRID" (buildSTPoint (long, lat), val (4326 :: Int))
+
+-- buildSTPoint :: (SqlExpr (Value Double), SqlExpr (Value Double)) -> SqlExpr (Value b)
+-- buildSTPoint = unsafeSqlFunction "ST_Point"
