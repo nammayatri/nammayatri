@@ -265,7 +265,7 @@ view push state =
                         [ width $ V 35
                         , height $ V 35
                         , imageWithFallback $ case (state.props.currentStage == ConfirmingLocation) || state.props.isSource == (Just true) of
-                            true  ->  (if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "src_marker" else "ny_ic_src_marker") <> "," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_src_marker.png"
+                            true  ->  (if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "src_marker" else "ny_ic_src_marker") <> "," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_src_marker.png" 
                             false ->  (if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "dest_marker" else "ny_ic_dest_marker") <> "," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_dest_marker.png"
                         , visibility if ((state.props.currentStage == ConfirmingLocation) || state.props.locateOnMap) then VISIBLE else GONE
                         ]
@@ -309,7 +309,7 @@ view push state =
     ]
 
 callSupportPopUpView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-callSupportPopUpView push state =
+callSupportPopUpView push state = 
   linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
@@ -902,9 +902,9 @@ rideRequestFlowView push state =
         ]
         [ PrestoAnim.animationSet [ fadeIn true ]
             $ if (state.props.currentStage == SettingPrice) then
-                if (state.props.isSpecialZone &&  any (_ == getMerchant FunctionCall) [YATRI,JATRISAATHI]) then
+                if (state.props.isSpecialZone &&  any (_ == getMerchant FunctionCall) [YATRI,JATRISAATHI]) then 
                   ChooseYourRide.view (push <<< ChooseYourRideAction) (chooseYourRideConfig state)
-                else
+                else 
                 suggestedPriceView push state
               else if (state.props.currentStage == ConfirmingLocation) then
                 confirmPickUpLocationView push state
@@ -960,7 +960,7 @@ rideCompletedCardView state push =
                 , width WRAP_CONTENT
                 , height WRAP_CONTENT
                 ] <> FontStyle.priceFont LanguageStyle
-            , textView $
+            , textView $ 
                 [ textFromHtml $ "<strike> ₹" <> (show state.data.driverInfoCardState.price) <> "</strike>"
                 , margin $ Margin 8 5 0 0
                 , width WRAP_CONTENT
@@ -1107,7 +1107,7 @@ suggestedPriceView push state =
         , orientation VERTICAL
         , gravity CENTER
         , margin $ MarginTop if os == "IOS" then 10 else 0
-        ][  textView $
+        ][  textView $ 
             [ text $ if state.data.rateCard.additionalFare == 0 then "₹" <> (show state.data.suggestedAmount) else  "₹" <> (show state.data.suggestedAmount) <> "-" <> "₹" <> (show $ (state.data.suggestedAmount + state.data.rateCard.additionalFare))
             , color Color.black800
             , margin $ MarginTop 8
@@ -1550,17 +1550,17 @@ rideTrackingView push state =
             [ height WRAP_CONTENT
             , width MATCH_PARENT
             ]
-            [ linearLayout
+            [ bottomSheetLayout
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
                 , background Color.transparent
-                -- , sheetState COLLAPSED
-                -- , peakHeight if (state.props.currentStage == RideAccepted && state.data.config.nyBrandingVisibility == true) then getHeightFromPercent 63
-                --              else if (state.props.currentStage == RideStarted && state.data.config.nyBrandingVisibility == true) then getHeightFromPercent 50
-                --              else if (state.props.currentStage == RideAccepted) then getHeightFromPercent 59
-                --              else getHeightFromPercent 46
+                , sheetState COLLAPSED
+                , peakHeight if (state.props.currentStage == RideAccepted && state.data.config.nyBrandingVisibility == true) then getHeightFromPercent 63
+                             else if (state.props.currentStage == RideStarted && state.data.config.nyBrandingVisibility == true) then getHeightFromPercent 50
+                             else if (state.props.currentStage == RideAccepted) then getHeightFromPercent 59
+                             else getHeightFromPercent 46
                 , visibility VISIBLE
-                -- , halfExpandedRatio 0.75
+                , halfExpandedRatio 0.75
                 ]
                 [ linearLayout
                     [ height WRAP_CONTENT
@@ -1753,14 +1753,14 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
           else
             pure unit
         Left err -> pure unit
-    if (state.props.isSpecialZone) && (isLocalStageOn RideAccepted) then do
+    if (state.props.isSpecialZone) && (isLocalStageOn RideAccepted) then do 
       _ <- pure $ enableMyLocation true
       _ <- pure $ removeAllPolylines ""
       _ <- doAff $ liftEffect $ animateCamera state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng 17
       _ <- doAff $ liftEffect $ addMarker "ny_ic_src_marker" state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng 160 (0.0) (0.0)
       void $ delay $ Milliseconds duration
       driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState (dynamicDuration+1)
-      else do
+      else do 
         response <- getDriverLocation state.data.driverInfoCardState.rideId
         case response of
           Right (GetDriverLocationResp resp) -> do
@@ -1863,7 +1863,7 @@ checkForLatLongInSavedLocations push action state = do
   pure unit
 
 notinPickUpZoneView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-notinPickUpZoneView push state =
+notinPickUpZoneView push state = 
   linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -1873,7 +1873,7 @@ notinPickUpZoneView push state =
       , cornerRadius 8.0
       , margin $ MarginTop 16
       , padding $ PaddingVertical 2 10
-      ][linearLayout
+      ][linearLayout 
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
         , orientation HORIZONTAL
@@ -1882,7 +1882,7 @@ notinPickUpZoneView push state =
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
         , orientation VERTICAL
-        , gravity CENTER
+        , gravity CENTER 
         , margin $ MarginTop if os == "IOS" then 10 else 0
         ][  textView $
             [ text $ if state.data.rateCard.additionalFare == 0 then "₹" <> (show state.data.suggestedAmount) else  "₹" <> (show state.data.suggestedAmount) <> "-" <> "₹" <> (show $ (state.data.suggestedAmount + state.data.rateCard.additionalFare))
@@ -1926,13 +1926,13 @@ notinPickUpZoneView push state =
                   , gravity CENTER_HORIZONTAL
                   , onClick push $ const PreferencesDropDown
                   , margin $ MarginBottom 8
-                  ][
+                  ][ 
                       textView $
                       [ height $ V 24
                       , width WRAP_CONTENT
                       , color Color.darkDescriptionText
                       , text $ getString BOOKING_PREFERENCE
-
+                      
                       ] <> FontStyle.body5 TypoGraphy,
                       imageView
                       [ width $ V 10
@@ -1945,7 +1945,7 @@ notinPickUpZoneView push state =
                     [ width MATCH_PARENT
                     , height WRAP_CONTENT
                     , margin $ MarginLeft 20
-                    , orientation VERTICAL
+                    , orientation VERTICAL 
                     ][ linearLayout
                        [ width MATCH_PARENT
                        , height WRAP_CONTENT
@@ -1954,7 +1954,7 @@ notinPickUpZoneView push state =
                        ][showMenuButtonView push (getString AUTO_ASSIGN_DRIVER) ("ny_ic_faster," <> (getAssetStoreLink FunctionCall) <> "ny_ic_faster.png") true,
                          showMenuButtonView push (getString CHOOSE_BETWEEN_MULTIPLE_DRIVERS) ("ny_ic_info," <> (getAssetStoreLink FunctionCall) <> "ny_ic_information_grey.png") false]
                   ]
-
+                  
               ]
           ]
       ]
@@ -1990,7 +1990,7 @@ currentLocationView push state =
             ]
 
 nearByPickUpPointsView :: forall w . HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-nearByPickUpPointsView state push =
+nearByPickUpPointsView state push = 
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
