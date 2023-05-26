@@ -22,7 +22,6 @@ import qualified Data.Aeson as A
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Function
-import qualified Data.Map.Strict as Map
 import Environment
 import qualified EulerHS.Runtime as L
 import qualified Kafka.Consumer as Consumer
@@ -55,13 +54,13 @@ availabilityConsumer flowRt appEnv kafkaConsumer =
   readMessages kafkaConsumer
     & S.mapM (\(message, messageKey, cr) -> processRealtimeLocationUpdates message messageKey $> (message, messageKey, cr))
     & S.intervalsOf (fromIntegral appEnv.dumpEvery) (SF.lmap (\(message, messageKey, cr) -> ((messageKey, message.mId), (message, cr))) (SF.classify buildTimeSeries))
-    & S.mapM (Map.traverseWithKey (calculateAvailableTime kafkaConsumer))
+    & S.mapM (calculateAvailableTime kafkaConsumer)
     & S.drain
   where
-    calculateAvailableTime kafkaConsumer_ (driverId, merchantId) (timeSeries, mbCR) =
-      runFlowR flowRt appEnv . withLogTag driverId $
+    calculateAvailableTime kafkaConsumer_ driverLocationUpdatesMap =
+      runFlowR flowRt appEnv $
         generateGUID
-          >>= flip withLogTag (ATProcessor.calculateAvailableTime merchantId driverId kafkaConsumer_ (reverse timeSeries, mbCR))
+          >>= flip withLogTag (ATProcessor.calculateAvailableTime kafkaConsumer_ driverLocationUpdatesMap)
 
     processRealtimeLocationUpdates locationUpdate driverId =
       runFlowR flowRt appEnv . withLogTag driverId $
