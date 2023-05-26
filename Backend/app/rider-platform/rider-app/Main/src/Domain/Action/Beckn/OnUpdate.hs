@@ -84,7 +84,8 @@ data OnUpdateReq
         fare :: Money,
         totalFare :: Money,
         fareBreakups :: [OnUpdateFareBreakup],
-        chargeableDistance :: HighPrecMeters
+        chargeableDistance :: HighPrecMeters,
+        dropLocOutsideOfThreshold :: Maybe Bool
       }
   | BookingCancelledReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -139,6 +140,7 @@ data ValidatedOnUpdateReq
         fare :: Money,
         totalFare :: Money,
         fareBreakups :: [OnUpdateFareBreakup],
+        dropLocOutsideOfThreshold :: Maybe Bool,
         chargeableDistance :: HighPrecMeters,
         booking :: SRB.Booking,
         ride :: SRide.Ride,
@@ -265,6 +267,7 @@ onUpdate ValidatedRideAssignedReq {..} = do
             chargeableDistance = Nothing,
             driverArrivalTime = Nothing,
             vehicleVariant = booking.vehicleVariant,
+            dropLocOutsideOfThreshold = Just False,
             createdAt = now,
             updatedAt = now,
             rideStartTime = Nothing,
@@ -286,11 +289,13 @@ onUpdate ValidatedRideStartedReq {..} = do
   QPFS.clearCache booking.riderId
   Notify.notifyOnRideStarted booking ride
 onUpdate ValidatedRideCompletedReq {..} = do
+  let isDropLocOutsideOfThreshold = dropLocOutsideOfThreshold
   rideEndTime <- getCurrentTime
   let updRide =
         ride{status = SRide.COMPLETED,
              fare = Just fare,
              totalFare = Just totalFare,
+             dropLocOutsideOfThreshold = isDropLocOutsideOfThreshold,
              chargeableDistance = Just chargeableDistance,
              rideEndTime = Just rideEndTime
             }

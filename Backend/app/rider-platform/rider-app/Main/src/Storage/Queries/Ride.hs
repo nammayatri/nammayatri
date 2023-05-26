@@ -93,6 +93,7 @@ updateMultiple rideId ride = do
         RideStatus =. val ride.status,
         RideFare =. val (realToFrac <$> ride.fare),
         RideTotalFare =. val (realToFrac <$> ride.totalFare),
+        RideDropLocOutsideOfThreshold =. val ride.dropLocOutsideOfThreshold,
         RideChargeableDistance =. val ride.chargeableDistance,
         RideRideStartTime =. val ride.rideStartTime,
         RideRideEndTime =. val ride.rideEndTime

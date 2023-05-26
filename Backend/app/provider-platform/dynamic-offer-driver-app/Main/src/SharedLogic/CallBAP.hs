@@ -194,12 +194,13 @@ sendRideCompletedUpdateToBAP ::
   DRB.Booking ->
   SRide.Ride ->
   Fare.FareParameters ->
+  Maybe Bool ->
   m ()
-sendRideCompletedUpdateToBAP booking ride fareParams = do
+sendRideCompletedUpdateToBAP booking ride fareParams dropLocOutsideOfThreshold = do
   transporter <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
-  let rideCompletedBuildReq = ACL.RideCompletedBuildReq {ride, fareParams}
+  let rideCompletedBuildReq = ACL.RideCompletedBuildReq {ride, fareParams, dropLocOutsideOfThreshold}
   rideCompletedMsg <- ACL.buildOnUpdateMessage rideCompletedBuildReq
 
   retryConfig <- asks (.longDurationRetryCfg)

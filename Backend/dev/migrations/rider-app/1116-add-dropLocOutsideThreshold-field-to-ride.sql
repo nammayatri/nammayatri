@@ -1,0 +1,1 @@
+ALTER TABLE atlas_app.ride ADD COLUMN drop_loc_outside_of_threshold boolean NOT NULL DEFAULT FALSE;

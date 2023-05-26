@@ -77,7 +77,7 @@ data ServiceHandle m = ServiceHandle
     findRideById :: Id DRide.Ride -> m (Maybe DRide.Ride),
     getMerchant :: Id DM.Merchant -> m (Maybe DM.Merchant),
     endRideTransaction :: Id DP.Driver -> Id SRB.Booking -> DRide.Ride -> Maybe FareParameters -> Maybe (Id RD.RiderDetails) -> m (),
-    notifyCompleteToBAP :: SRB.Booking -> DRide.Ride -> Fare.FareParameters -> m (),
+    notifyCompleteToBAP :: SRB.Booking -> DRide.Ride -> Fare.FareParameters -> Maybe Bool -> m (),
     getFarePolicy :: Id DM.Merchant -> DVeh.Variant -> m (Maybe DFP.FarePolicy),
     calculateFareParameters :: Fare.CalculateFareParametersParams -> m Fare.FareParameters,
     putDiffMetric :: Id DM.Merchant -> Money -> Meters -> m (),
@@ -190,7 +190,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
     distanceCalculationFailed <- isDistanceCalculationFailed driverId
     when distanceCalculationFailed $ logWarning $ "Failed to calculate distance for this ride: " <> ride.id.getId
 
-    pickupDropOutsideOfThreshold <- isPickupDropOutsideOfThreshold handle booking ride tripEndPoint
+    (pickupDropOutsideOfThreshold, dropLocOutsideOfThreshold) <- isPickupDropOutsideOfThreshold handle booking ride tripEndPoint
     (chargeableDistance, finalFare, mbUpdatedFareParams) <-
       if distanceCalculationFailed
         then calculateFinalValuesForFailedDistanceCalculations handle booking ride tripEndPoint pickupDropOutsideOfThreshold
@@ -208,7 +208,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
     -- we need to store fareParams only when they changed
     endRideTransaction (cast @DP.Person @DP.Driver driverId) booking.id updRide mbUpdatedFareParams booking.riderId
 
-    notifyCompleteToBAP booking updRide newFareParams
+    notifyCompleteToBAP booking updRide newFareParams (Just dropLocOutsideOfThreshold)
   return APISuccess.Success
 
 recalculateFareForDistance :: (MonadThrow m, Log m, MonadTime m, MonadGuid m) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> Meters -> m (Meters, Money, Maybe FareParameters)
@@ -240,18 +240,19 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance = do
   putDiffMetric merchantId fareDiff distanceDiff
   return (recalcDistance, finalFare, Just fareParams)
 
-isPickupDropOutsideOfThreshold :: (MonadThrow m, Log m, MonadTime m, MonadGuid m) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> LatLong -> m Bool
+isPickupDropOutsideOfThreshold :: (MonadThrow m, Log m, MonadTime m, MonadGuid m) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> LatLong -> m (Bool, Bool)
 isPickupDropOutsideOfThreshold ServiceHandle {..} booking ride tripEndPoint = do
   let mbTripStartLoc = ride.tripStartPos
   thresholdConfig <- findConfig >>= fromMaybeM (InternalError "TransportConfigNotFound")
   -- for old trips with mbTripStartLoc = Nothing we always recalculate fare
   case mbTripStartLoc of
-    Nothing -> pure True
+    Nothing -> pure (True, True)
     Just tripStartLoc -> do
       let pickupLocThreshold = metersToHighPrecMeters thresholdConfig.pickupLocThreshold
       let dropLocThreshold = metersToHighPrecMeters thresholdConfig.dropLocThreshold
       let pickupDifference = abs $ distanceBetweenInMeters (getCoordinates booking.fromLocation) tripStartLoc
       let dropDifference = abs $ distanceBetweenInMeters (getCoordinates booking.toLocation) tripEndPoint
+      let dropLocOutsideOfThreshold = dropDifference >= dropLocThreshold
       let pickupDropOutsideOfThreshold = (pickupDifference >= pickupLocThreshold) || (dropDifference >= dropLocThreshold)
 
       logTagInfo "Locations differences" $
@@ -261,7 +262,7 @@ isPickupDropOutsideOfThreshold ServiceHandle {..} booking ride tripEndPoint = do
           <> show dropDifference
           <> ", Locations outside of thresholds: "
           <> show pickupDropOutsideOfThreshold
-      pure pickupDropOutsideOfThreshold
+      pure (pickupDropOutsideOfThreshold, dropLocOutsideOfThreshold)
 
 getDistanceDiff :: (MonadThrow m, Log m, MonadTime m, MonadGuid m) => SRB.Booking -> Meters -> m HighPrecMeters
 getDistanceDiff booking distance = do

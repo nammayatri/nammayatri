@@ -53,7 +53,8 @@ data OnUpdateBuildReq
       }
   | RideCompletedBuildReq
       { ride :: DRide.Ride,
-        fareParams :: Fare.FareParameters
+        fareParams :: Fare.FareParameters,
+        dropLocOutsideOfThreshold :: Maybe Bool
       }
   | BookingCancelledBuildReq
       { booking :: DRB.Booking,
@@ -143,6 +144,7 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
       breakup =
         mkBreakupList (OnUpdate.BreakupPrice currency . fromIntegral) OnUpdate.BreakupItem req.fareParams
           & filter (filterRequiredBreakups $ DFParams.getFareParametersType req.fareParams) -- TODO: Remove after roll out
+      dropLocOutsideOfThreshold = req.dropLocOutsideOfThreshold
   return $
     OnUpdate.OnUpdateMessage $
       OnUpdate.RideCompleted
@@ -152,7 +154,8 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
             quote =
               RideCompletedOU.RideCompletedQuote
                 { price,
-                  breakup
+                  breakup,
+                  dropLocOutsideOfThreshold
                 },
             fulfillment =
               RideCompletedOU.FulfillmentInfo

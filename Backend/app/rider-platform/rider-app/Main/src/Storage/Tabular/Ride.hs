@@ -50,6 +50,7 @@ mkPersist
       otp Text
       trackingUrl Text Maybe
       fare HighPrecMoney Maybe
+      dropLocOutsideOfThreshold Bool Maybe
       totalFare HighPrecMoney Maybe
       chargeableDistance HighPrecMeters Maybe
       driverArrivalTime UTCTime Maybe
