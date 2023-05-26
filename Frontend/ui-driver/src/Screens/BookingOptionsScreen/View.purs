@@ -239,7 +239,7 @@ primaryButtonConfig state = let
     config = PrimaryButton.config
     primaryButtonConfig' = config
       { textConfig
-      { text = "Confirm & Change"
+      { text = (getString CONFIRM_AND_CHANGE)
       }
       , margin = (Margin 16 0 16 0)
       , alpha = if state.props.isBtnActive then 1.0 else 0.4

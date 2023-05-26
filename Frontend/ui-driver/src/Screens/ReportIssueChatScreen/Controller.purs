@@ -306,7 +306,7 @@ eval (ViewImageModelAction (ViewImageModel.BackPressed)) state = do
     ]
 
 ---------------------------------------------------- Record Audio Model ----------------------------------------------------
-eval (RecordAudioModelAction (RecordAudioModel.OnClickRecord push)) state =
+eval (RecordAudioModelAction (RecordAudioModel.OnClickRecord push)) state = do
   continueWithCmd state { data { recordAudioState { timer = "00:00" } } }  [do
     cond <- startAudioRecording ""
     if cond 

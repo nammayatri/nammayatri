@@ -67,6 +67,7 @@ import Screens.ReportIssueChatScreen.ScreenData (initData) as ReportIssueScreenD
 import Data.Ord (compare)
 import Screens.DriverProfileScreen.Controller (getDowngradeOptionsSelected)
 import MerchantConfigs.Utils(getMerchant, Merchant(..))
+import Screens.RideSelectionScreen.View (getCategoryName)
 import Types.App (REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREENOUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), defaultGlobalState)
 
 baseAppFlow :: FlowBT String Unit
@@ -715,12 +716,7 @@ helpAndSupportFlow = do
         , label : x.label
         }
       ) getOptionsRes.options)
-      let categoryName = if language == "en" then do
-                           case selectedCategory.categoryName of 
-                             "Lost And Found" -> "Report Lost Item"
-                             name             -> name <> " Issue"
-                         else 
-                           selectedCategory.categoryName
+      let categoryName = getCategoryName selectedCategory.categoryAction 
       modifyScreenState $ ReportIssueChatScreenStateType (\_ -> ReportIssueScreenData.initData { data { categoryName = categoryName, categoryAction = selectedCategory.categoryAction, categoryId = selectedCategory.categoryId, options = getOptionsRes' }, props { isReversedFlow = selectedCategory.categoryAction == "LOST_AND_FOUND" } })
       issueReportChatScreenFlow
     ISSUE_LIST_GO_BACK_SCREEN updatedState -> do 
@@ -826,12 +822,7 @@ rideSelectionScreenFlow = do
       let tripId' = case state.selectedItem of
                       Just item -> Just item.id
                       _         -> Nothing
-      let categoryName = if language == "en" then do
-                           case state.selectedCategory.categoryName of 
-                             "Lost And Found" -> "Report Lost Item"
-                             name             -> name <> " Issue"
-                         else 
-                           state.selectedCategory.categoryName
+      let categoryName = getCategoryName state.selectedCategory.categoryAction 
       modifyScreenState $ ReportIssueChatScreenStateType (\_ -> ReportIssueScreenData.initData { data { tripId = tripId', categoryName = categoryName, categoryId = state.selectedCategory.categoryId, categoryAction = state.selectedCategory.categoryAction, options = getOptionsRes' }, props { isReversedFlow = (state.selectedCategory.categoryAction == "LOST_AND_FOUND") } } )
       issueReportChatScreenFlow
 
@@ -1092,7 +1083,7 @@ homeScreenFlow = do
     DRIVER_AVAILABILITY_STATUS status -> do
       _ <- setValueToLocalStore DRIVER_STATUS if any( _ == status)[Online, Silent] then "true" else "false" --(show status)
       _ <- setValueToLocalStore DRIVER_STATUS_N $ show status
-      void $ lift $ lift $ loaderText (getString PLEASE_WAIT) if any( _ == status)[Online, Silent] then (getString SETTING_YOU_ONLINE) else (getString SETTING_YOU_OFFLINE)
+      void $ lift $ lift $ loaderText (getString PLEASE_WAIT) if status == Online then (getString SETTING_YOU_ONLINE) else if status == Silent then (getString SETTING_YOU_SILENT) else (getString SETTING_YOU_OFFLINE)
       void $ lift $ lift $ toggleLoader true
       (DriverActiveInactiveResp resp) <- Remote.driverActiveInactiveBT (if any( _ == status)[Online, Silent] then "true" else "false") $ toUpper $ show status
       _ <- setValueToLocalStore RIDE_T_FREQUENCY (if status == Online then "20000" else "30000")

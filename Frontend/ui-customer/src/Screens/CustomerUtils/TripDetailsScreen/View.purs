@@ -166,6 +166,7 @@ tripIdView push state =
   [ orientation VERTICAL
   , height WRAP_CONTENT
   , width WRAP_CONTENT
+  , visibility if state.data.tripId == "" then GONE else VISIBLE
   , margin (MarginBottom 16)
   , gravity LEFT
   ][  textView
@@ -239,6 +240,7 @@ tripDetailsView state =
       ][  textView
           [ text state.data.driverName
           , textSize FontSize.a_14
+          , visibility if state.data.driverName /= "" then VISIBLE else GONE
           , fontStyle $ FontStyle.medium LanguageStyle
           , color Color.darkDescriptionText
           ]

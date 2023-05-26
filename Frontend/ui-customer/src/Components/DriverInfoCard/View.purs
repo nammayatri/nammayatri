@@ -44,6 +44,7 @@ import Screens.Types (Stage(..))
 import Styles.Colors as Color
 import Data.String.CodeUnits (fromCharArray, toCharArray)
 import Storage (isLocalStageOn)
+import Merchant.Utils (getValueFromConfig)
 
 view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit ) w
 view push state =
@@ -272,21 +273,21 @@ supportButton push state =
       , height $ V 18
       , width $ V 18
       , margin $ Margin 10 10 10 4
-      , visibility VISIBLE
+      , visibility (if (getValueFromConfig "enableShareRide") == "true" then VISIBLE else GONE)
       , onClick push $ const ShareRide
       ]
     , linearLayout
       [ height (V 1)
       , width (V 19)
-      , visibility VISIBLE
-      , margin (MarginVertical 8 8)
+      , visibility (if (getValueFromConfig "enableShareRide") == "true" then VISIBLE else GONE)
+      , margin (MarginTop 8 )
       , background Color.lightGreyShade
       ][]
     , imageView
       [ imageWithFallback "ny_ic_contact_support,https://assets.juspay.in/nammayatri/images/user/ny_ic_contact_support.png"
       , height $ V 18
       , width $ V 18
-      , margin $ Margin 10 4 10 10
+      , margin $ Margin 10 12 10 10
       , onClick push $ const Support
       ]
   ]
