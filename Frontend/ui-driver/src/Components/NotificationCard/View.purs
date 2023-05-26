@@ -92,6 +92,14 @@ notificationCardView push =
             , background Color.black9000
             , textSize FontSize.a_20
             ]
+        , imageView
+            [ width MATCH_PARENT
+            , height $ V 159
+            , PrestoList.visibilityHolder "imageWithUrlVisibility"
+            , PrestoList.imageUrlHolder "imageWithUrl"
+            , gravity CENTER
+            , cornerRadius 4.0
+            ]
         ]
     , titleAndLabel push
     , descriptionView push

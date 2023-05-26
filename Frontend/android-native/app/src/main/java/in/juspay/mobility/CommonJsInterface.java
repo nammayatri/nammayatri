@@ -186,6 +186,7 @@ import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -1973,6 +1974,45 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     @JavascriptInterface
+    public void setScaleType (String id, String imageUrl, String scaleType){
+        if (activity == null) return;
+        if (id != null || imageUrl != null){
+            ImageView imageView = activity.findViewById(Integer.parseInt(id));
+            try {
+                URL url = new URL(imageUrl);
+                Bitmap bitmap = BitmapFactory.decodeStream(url.openConnection().getInputStream());
+                Handler mainLooper = new Handler(Looper.getMainLooper());
+                mainLooper.post(() -> {
+                    if (bitmap == null) return;
+                    int calcHeight = (getScreenWidth() * bitmap.getHeight())/bitmap.getWidth();
+                    imageView.getLayoutParams().height = calcHeight;
+                    imageView.setScaleType(getScaleTypes(scaleType));
+                    imageView.setImageBitmap(bitmap);
+                    LinearLayout linearLayout = (LinearLayout) imageView.getParent();
+                    linearLayout.removeAllViews();
+                    linearLayout.addView(imageView);
+                    imageView.setVisibility(View.VISIBLE);
+                });
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
+    public ImageView.ScaleType getScaleTypes(String scale){
+        switch (scale) {
+            case "MATRIX" : return ImageView.ScaleType.MATRIX;
+            case "FIT_XY" : return ImageView.ScaleType.FIT_XY;
+            case "FIT_START" : return ImageView.ScaleType.FIT_START;
+            case "FIT_END" : return ImageView.ScaleType.FIT_END;
+            case "CENTER" : return ImageView.ScaleType.CENTER;
+            case "CENTER_CROP" : return ImageView.ScaleType.CENTER_CROP;
+            case "CENTER_INSIDE" : return ImageView.ScaleType.CENTER_INSIDE;
+            default: return ImageView.ScaleType.FIT_CENTER;
+        }
+    }
+
+    @JavascriptInterface
     public void startLottieProcess(String rawJson, String id, boolean repeat, float speed, String scaleType) {
         if (activity != null) activity.runOnUiThread(() -> {
             try {
@@ -1981,32 +2021,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                 animationView.loop(repeat);
                 animationView.setSpeed(speed);
                 animationView.playAnimation();
-                switch (scaleType) {
-                    case "MATRIX":
-                        animationView.setScaleType(ImageView.ScaleType.MATRIX);
-                        break;
-                    case "FIT_XY":
-                        animationView.setScaleType(ImageView.ScaleType.FIT_XY);
-                        break;
-                    case "FIT_START":
-                        animationView.setScaleType(ImageView.ScaleType.FIT_START);
-                        break;
-                    case "FIT_END":
-                        animationView.setScaleType(ImageView.ScaleType.FIT_END);
-                        break;
-                    case "CENTER":
-                        animationView.setScaleType(ImageView.ScaleType.CENTER);
-                        break;
-                    case "CENTER_CROP":
-                        animationView.setScaleType(ImageView.ScaleType.CENTER_CROP);
-                        break;
-                    case "CENTER_INSIDE":
-                        animationView.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
-                        break;
-                    default:
-                        animationView.setScaleType(ImageView.ScaleType.FIT_CENTER);
-                        break;
-                }
+                animationView.setScaleType(getScaleTypes(scaleType));
             } catch (Exception e) {
                 Log.d("TAG", "exception in startLottieAnimation", e);
             }
