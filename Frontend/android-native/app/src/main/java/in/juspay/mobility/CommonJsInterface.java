@@ -1309,6 +1309,13 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     public boolean isLocationEnabled() {
         System.out.println("CommonJsInterface isLocationEnabled()");
         LocationManager locationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
+        if locationManager != null
+        {
+            // locationManager.getAllProviders();
+            // System.out.println("CommonJsInterface isLocationEnabled()", locationManager.getAllProviders());
+            System.out.println("Location Provider list : ------", locationManager.getAllProviders());
+            return LocationManagerCompat.isLocationEnabled(locationManager);
+        }
         return locationManager != null && LocationManagerCompat.isLocationEnabled(locationManager);
     }
 
@@ -3236,10 +3243,10 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                         boolean isMock = false;
                         if (location == null) return;
                         if (Build.VERSION.SDK_INT <= 30) {
-                            isMock = location.isFromMockProvider() && isMockSettingsON();
+                            isMock = location.isFromMockProvider();
                             //methodName = "isFromMockProvider";
                         } else if (Build.VERSION.SDK_INT >= 31) {
-                            isMock = location.isMock() && isMockSettingsON();
+                            isMock = location.isMock();
                             //methodName = "isMock";
                         }
                         if (callback != null && dynamicUI != null && juspayServices.getDynamicUI() != null) {
