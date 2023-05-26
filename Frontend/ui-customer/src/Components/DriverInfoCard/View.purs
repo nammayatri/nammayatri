@@ -422,27 +422,35 @@ driverInfoView push state =
                 height WRAP_CONTENT
               , width MATCH_PARENT
               , gravity CENTER
-              , margin (MarginTop 12)
+              , margin (Margin 16 12 16 0)
               , visibility if state.data.config.nyBrandingVisibility then VISIBLE else GONE
-            ][
-              imageView
-                [ height $ V 18
-                , width $ V 18
-                , cornerRadius 20.0
-                , imageWithFallback $ "ny_ic_launcher," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_launcher.png"
+            ][ imageView
+                [ height $ V 19
+                , width $ V 60
+                , margin $ MarginRight 29
+                , imageWithFallback $ "ny_ic_paytm_logo," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_paytm_logo.png" 
                 ]
-              , textView (
-                [ text $ "namma yatri"
-                , color Color.black
-                , margin $ Margin 3 0 0 2
-                , ellipsize true
-                , singleLine true
+              , linearLayout[
+                weight 1.0
+                ][]
+              , linearLayout
+                [ height $ V 20
+                , width $ V 2
+                , background Color.transparentGrey
                 , gravity CENTER
-                ] <> FontStyle.body4 TypoGraphy)
+                ][]
+              , linearLayout
+                [ weight 1.0
+                ][]
+              , imageView
+                [ height $ V 30
+                , width $ V 89
+                , imageWithFallback $ "ny_ic_nammayatri_logo," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_nammayatri_logo.png"
+                ]
             ]
             , if state.props.isSpecialZone  then headerTextView push state else contactView push state
             , otpAndWaitView push state
-            , separator (Margin 16 0 16 0) (V 1) Color.grey900 (state.props.currentStage == RideAccepted)
+            , separator (Margin 16 16 16 0) (V 1) Color.grey900 (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted)
             , driverDetailsView push state
             , separator (Margin 16 0 16 0) (V 1) Color.grey900 true
             , paymentMethodView push state (getString RIDE_FARE) true
