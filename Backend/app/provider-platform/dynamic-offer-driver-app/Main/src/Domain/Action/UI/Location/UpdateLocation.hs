@@ -75,6 +75,7 @@ data DriverLocationUpdateStreamData = DriverLocationUpdateStreamData
   { rId :: Maybe Text, -- rideId
     mId :: Text, -- merchantId
     ts :: UTCTime, -- timestamp
+    st :: UTCTime, -- systemtime when location update recieved
     pt :: LatLong, -- lat log
     da :: Bool, -- driver avaiable
     mode :: Maybe DDInfo.DriverMode
@@ -115,9 +116,10 @@ streamLocationUpdates ::
   m ()
 streamLocationUpdates mbRideId merchantId driverId point timestamp isDriverActive mbDriverMode = do
   topicName <- asks (.driverLocationUpdateTopic)
+  now <- getCurrentTime
   produceMessage
     (topicName, Just (encodeUtf8 $ getId driverId))
-    (DriverLocationUpdateStreamData (getId <$> mbRideId) (getId merchantId) timestamp point isDriverActive mbDriverMode)
+    (DriverLocationUpdateStreamData (getId <$> mbRideId) (getId merchantId) timestamp now point isDriverActive mbDriverMode)
 
 updateLocationHandler ::
   ( Redis.HedisFlow m r,
