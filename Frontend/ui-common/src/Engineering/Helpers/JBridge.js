@@ -1128,6 +1128,16 @@ export const isOverlayPermissionEnabled = function (unit) {
   };
 };
 
+export const setScaleType = function (id) {
+  return function (url) {
+    return function (scaleType) {
+      if(JBridge.setScaleType){
+        return JBridge.setScaleType(id, url, scaleType);
+      }
+    }
+  };
+};
+
 export const requestBatteryPermission = function (str) {
   return function () {
     JBridge.requestBatteryPermission();

@@ -31,7 +31,7 @@ import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (addMediaPlayer, getVideoID, setYoutubePlayer)
-import JBridge (renderBase64Image, openUrlInApp)
+import JBridge (renderBase64Image, openUrlInApp, setScaleType)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, pure, show, unit, ($), (<<<), (<>), (==), (&&), (-), void)
@@ -121,6 +121,29 @@ view push state =
                                       [ progressBar
                                           [ width WRAP_CONTENT
                                           , height WRAP_CONTENT
+                                          ]
+                                      ]
+                                    , linearLayout
+                                      [ width MATCH_PARENT
+                                      , height WRAP_CONTENT
+                                      , gravity CENTER
+                                      , visibility if state.mediaType == Just ImageLink then VISIBLE else GONE
+                                      ]
+                                      [ progressBar
+                                          [ width WRAP_CONTENT
+                                          , height WRAP_CONTENT
+                                          , padding $ PaddingVertical 5 5
+                                          ]
+                                        , imageView
+                                          [ width MATCH_PARENT
+                                          , visibility GONE
+                                          , gravity CENTER
+                                          , id $ getNewIDWithTag "imageWithUrl"
+                                          , afterRender
+                                              ( \action -> do
+                                              _ <- pure $ setScaleType (getNewIDWithTag "imageWithUrl") state.mediaUrl "FIT_XY"
+                                              pure unit)
+                                              (const AfterRender)
                                           ]
                                       ]
                                   ]
@@ -249,7 +272,7 @@ headerLayout state push =
         , textView
             $ [ width WRAP_CONTENT
               , height WRAP_CONTENT
-              , text $ getString ALERT
+              , text $ getString MESSAGE
               , textSize FontSize.a_18
               , margin $ MarginLeft 20
               , weight 1.0
