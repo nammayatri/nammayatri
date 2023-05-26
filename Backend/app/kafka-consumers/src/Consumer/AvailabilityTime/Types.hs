@@ -35,6 +35,7 @@ data DriverAvailability = DriverAvailability
 data LocationUpdates = LocationUpdates
   { rId :: Maybe Text,
     ts :: UTCTime,
+    st :: Maybe UTCTime,
     pt :: LatLong,
     mId :: Text
   }
