@@ -16,7 +16,7 @@
 module Screens.HomeScreen.View where
 
 import Screens.RideBookingFlow.HomeScreen.Config (autoAnimConfig,chooseYourRideConfig, menuButtonConfig, cancelRidePopUpConfig, distanceOusideLimitsConfig, driverInfoCardViewState, emergencyHelpModelViewState, estimateChangedPopupConfig, fareBreakUpConfig, logOutPopUpModelConfig, previousRideRatingViewState, primaryButtonConfirmPickupConfig, primaryButtonRequestRideConfig, quoteListModelViewState, rateCardConfig, rateRideButtonConfig, ratingCardViewState, searchLocationModelViewState, shareAppConfig, shortDistanceConfig, skipButtonConfig, sourceUnserviceableConfig, whereToButtonConfig, chatViewConfig, metersToKm, callSupportConfig)
-import Accessor (_lat, _lon, _selectedQuotes)
+import Accessor (_lat, _lon, _selectedQuotes, _fareProductType)
 import Animation (fadeOut, translateYAnimFromTop, scaleAnim, translateYAnimFromTopWithAlpha, fadeIn)
 import Animation.Config (Direction(..), translateFullYAnimWithDurationConfig, translateYAnimHomeConfig)
 import Common.Types.App (LazyCheck(..))
@@ -1850,7 +1850,9 @@ confirmRide action count duration push state = do
       Right response -> do
         _ <- pure $ printLog "api Results " response
         let (RideBookingRes resp) = response
-        if (any (_ == resp.status) ["TRIP_ASSIGNED","CONFIRMED"]) then do
+        let fareProductType = (resp.bookingDetails) ^. _fareProductType
+        let status = if fareProductType == "OneWaySpecialZoneAPIDetails" then "CONFIRMED" else "TRIP_ASSIGNED"
+        if  status == resp.status then do
             doAff do liftEffect $ push $ action response
             _ <- pure $ firebaseLogEvent "ny_user_ride_assigned"
             pure unit
