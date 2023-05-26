@@ -3236,10 +3236,10 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                         boolean isMock = false;
                         if (location == null) return;
                         if (Build.VERSION.SDK_INT <= 30) {
-                            isMock = location.isFromMockProvider();
+                            isMock = location.isFromMockProvider() && isMockSettingsON();
                             //methodName = "isFromMockProvider";
                         } else if (Build.VERSION.SDK_INT >= 31) {
-                            isMock = location.isMock();
+                            isMock = location.isMock() && isMockSettingsON();
                             //methodName = "isMock";
                         }
                         if (callback != null && dynamicUI != null && juspayServices.getDynamicUI() != null) {
@@ -3252,6 +3252,15 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    public static boolean isMockSettingsON() {
+    // returns true if mock location enabled, false if not enabled.
+        if (Settings.Secure.getString(context.getContentResolver(),
+                                    Settings.Secure.ALLOW_MOCK_LOCATION).equals("0"))
+            return false;
+        else
+            return true;
     }
 
     private float bearingBetweenLocations(LatLng latLng1, LatLng latLng2) {
