@@ -788,6 +788,9 @@ myRidesScreenFlow = do
       }})
       tripDetailsScreenFlow
     NOTIFICATION_FLOW -> notificationFlow
+    SELECTED_TAB state -> do
+      modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> state{offsetValue = 0})
+      myRidesScreenFlow
 
 rideSelectionScreenFlow :: FlowBT String Unit
 rideSelectionScreenFlow = do
@@ -980,7 +983,7 @@ currentRideFlow = do
   if isLocalStageOn RideRequested && (getValueToLocalNativeStore IS_RIDE_ACTIVE) == "false" && isRequestExpired then
     homeScreenFlow
     else pure unit
-  (GetRidesHistoryResp activeRideResponse) <- Remote.getRideHistoryReqBT "1" "0" "true"
+  (GetRidesHistoryResp activeRideResponse) <- Remote.getRideHistoryReqBT "1" "0" "true" "null"
   _ <- pure $ spy "activeRideResponse" activeRideResponse
   if not (null activeRideResponse.list) then do
     case (activeRideResponse.list !! 0 ) of
@@ -1178,7 +1181,7 @@ homeScreenFlow = do
       _ <- pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
       (DriverActiveInactiveResp resp) <- Remote.driverActiveInactiveBT "true" $ toUpper $ show Online
       _ <- pure $ firebaseLogEvent "ny_user_ride_completed"
-      (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "1" "0" "false"
+      (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "1" "0" "false" "null"
       case (head rideHistoryResponse.list) of
         Nothing -> pure unit
         Just (RidesInfo response) -> do
