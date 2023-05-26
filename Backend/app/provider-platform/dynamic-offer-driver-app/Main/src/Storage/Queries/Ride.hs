@@ -45,6 +45,16 @@ findById rideId = Esq.findOne $ do
   where_ $ ride ^. RideTId ==. val (toKey rideId)
   pure ride
 
+findAllRidesByDriverId ::
+  Transactionable m =>
+  Id Person ->
+  m [Ride]
+findAllRidesByDriverId driverId =
+  Esq.findAll $ do
+    ride <- from $ table @RideT
+    where_ $ ride ^. RideDriverId ==. val (toKey driverId)
+    return ride
+
 findActiveByRBId :: Transactionable m => Id Booking -> m (Maybe Ride)
 findActiveByRBId rbId = Esq.findOne $ do
   ride <- from $ table @RideT

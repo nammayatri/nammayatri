@@ -23,6 +23,8 @@ data DriverStats = DriverStats
   { driverId :: Id Driver,
     idleSince :: UTCTime,
     totalRides :: Int,
-    totalDistance :: Meters
+    totalDistance :: Meters,
+    ridesCancelled :: Maybe Int,
+    totalRidesAssigned :: Maybe Int
   }
   deriving (Generic)

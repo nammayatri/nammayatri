@@ -33,6 +33,8 @@ data TransporterConfigD u = TransporterConfig
     popupDelayToAddAsPenalty :: Maybe Seconds,
     thresholdCancellationScore :: Maybe Int,
     minRidesForCancellationScore :: Maybe Int,
+    thresholdCancellationPercentageToUnlist :: Maybe Int,
+    minRidesToUnlist :: Maybe Int,
     mediaFileUrlPattern :: Text,
     mediaFileSizeUpperLimit :: Int,
     waitingTimeEstimatedThreshold :: Minutes,
