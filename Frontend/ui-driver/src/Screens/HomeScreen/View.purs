@@ -964,14 +964,14 @@ updateButtonIconAndText push state =
         ) (const RetryTimeUpdate)
   , gravity RIGHT
   ]
-  [ -- PrestoAnim.animationSet [Anim.rotateAnim (AnimConfig.rotateAnimConfig state.props.refreshAnimation)]
-    -- $ imageView
-    -- [ width $ V 20
-    -- , height $ V 20
-    -- , margin $ MarginRight 5
-    -- , imageWithFallback "ny_ic_refresh,https://assets.juspay.in/nammayatri/images/driver/ny_ic_refresh.png"
-    -- , gravity RIGHT
-    -- ]
+  [ PrestoAnim.animationSet [Anim.rotateAnim (AnimConfig.rotateAnimConfig state.props.refreshAnimation)]
+    $ imageView
+    [ width $ V 20
+    , height $ V 20
+    , margin $ MarginRight 5
+    , imageWithFallback "ny_ic_refresh,https://assets.juspay.in/nammayatri/images/driver/ny_ic_refresh.png"
+    , gravity RIGHT
+    ],
     textView
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
