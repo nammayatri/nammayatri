@@ -236,7 +236,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN
                           | GO_TO_RIDES_SCREEN 
                           | GO_TO_REFERRAL_SCREEN_FROM_HOME_SCREEN
                           | GO_TO_HELP_AND_SUPPORT_SCREEN
-                          | GO_TO_START_RIDE {id :: String, otp :: String, lat :: String, lon :: String}
+                          | GO_TO_START_RIDE {id :: String, otp :: String, lat :: String, lon :: String} HomeScreenState
                           | GO_TO_CANCEL_RIDE {id :: String, info :: String , reason :: String} 
                           | GO_TO_END_RIDE {id :: String, lat :: String , lon :: String } 
                           | DRIVER_AVAILABILITY_STATUS DriverStatus
