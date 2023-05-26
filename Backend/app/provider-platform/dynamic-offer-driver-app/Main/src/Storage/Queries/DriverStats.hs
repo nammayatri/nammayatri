@@ -22,6 +22,9 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Tabular.DriverStats
 
+create :: DriverStats -> SqlDB ()
+create = Esq.create
+
 createInitialDriverStats :: Id Driver -> SqlDB ()
 createInitialDriverStats driverId = do
   now <- getCurrentTime
@@ -30,7 +33,9 @@ createInitialDriverStats driverId = do
       { driverId = driverId,
         idleSince = now,
         totalRides = 0,
-        totalDistance = 0
+        totalDistance = 0,
+        ridesCancelled = Just 0,
+        totalRidesAssigned = Just 0
       }
 
 getTopDriversByIdleTime :: Transactionable m => Int -> [Id Driver] -> m [Id Driver]
@@ -58,6 +63,9 @@ updateIdleTimes driverIds = do
 fetchAll :: Transactionable m => m [DriverStats]
 fetchAll = Esq.findAll $ from $ table @DriverStatsT
 
+findById :: Transactionable m => Id Driver -> m (Maybe DriverStats)
+findById = Esq.findById
+
 deleteById :: Id Driver -> SqlDB ()
 deleteById = Esq.deleteByKey @DriverStatsT
 
@@ -68,6 +76,24 @@ incrementTotalRidesAndTotalDist driverId rideDist = do
       tbl
       [ DriverStatsTotalRides =. (tbl ^. DriverStatsTotalRides) +. val 1,
         DriverStatsTotalDistance =. (tbl ^. DriverStatsTotalDistance) +. val rideDist
+      ]
+    where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
+
+incrementTotalRidesAssigned :: Id Driver -> SqlDB ()
+incrementTotalRidesAssigned driverId = do
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ DriverStatsTotalRidesAssigned =. just (Esq.coalesceDefault [tbl ^. DriverStatsTotalRidesAssigned] (val 0) +. val 1)
+      ]
+    where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
+
+setCancelledRidesCount :: Id Driver -> Int -> SqlDB ()
+setCancelledRidesCount driverId cancelledCount = do
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ DriverStatsRidesCancelled =. val (Just cancelledCount)
       ]
     where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
 

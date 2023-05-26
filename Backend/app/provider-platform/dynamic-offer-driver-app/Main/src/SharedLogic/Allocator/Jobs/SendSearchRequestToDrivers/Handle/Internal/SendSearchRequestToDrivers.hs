@@ -47,6 +47,7 @@ type LanguageDictionary = M.Map Maps.Language DSearchReq.SearchRequest
 sendSearchRequestToDrivers ::
   ( Log m,
     EsqDBFlow m r,
+    Esq.EsqDBReplicaFlow m r,
     TranslateFlow m r,
     CacheFlow m r,
     EncFlow m r,
