@@ -52,6 +52,7 @@ mkPersist
       otp Text
       trackingUrl Text Maybe
       fare HighPrecMoney Maybe
+      dropLocOutsideOfThreshold Bool Maybe
       totalFare HighPrecMoney Maybe
       chargeableDistance HighPrecMeters Maybe
       traveledDistance HighPrecMeters Maybe

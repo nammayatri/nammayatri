@@ -312,7 +312,7 @@ syncCompletedRide ride booking = do
   let mbPaymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
 
   handle (errHandler ride.status booking.status "ride completed") $
-    CallBAP.sendRideCompletedUpdateToBAP booking ride fareParameters mbPaymentMethodInfo mbPaymentUrl
+    CallBAP.sendRideCompletedUpdateToBAP booking ride fareParameters mbPaymentMethodInfo mbPaymentUrl Nothing
   pure $ Common.RideSyncRes Common.RIDE_COMPLETED "Success. Sent ride completed update to bap"
 
 ---------------------------------------------------------------------
@@ -383,7 +383,7 @@ syncCompletedMultipleRide ride booking = do
   let mbPaymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
 
   handle (errHandler ride.status booking.status "ride completed") $
-    CallBAP.sendRideCompletedUpdateToBAP booking ride fareParameters mbPaymentMethodInfo mbPaymentUrl
+    CallBAP.sendRideCompletedUpdateToBAP booking ride fareParameters mbPaymentMethodInfo mbPaymentUrl Nothing
   pure $ Common.MultipleRideData {newStatus = Common.RIDE_COMPLETED, message = "Success. Sent ride completed update to bap", rideId = cast @DRide.Ride @Common.Ride ride.id}
 
 errHandler :: DRide.RideStatus -> DBooking.BookingStatus -> Text -> SomeException -> Flow ()

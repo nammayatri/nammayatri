@@ -83,7 +83,8 @@ parseEvent _ (OnUpdate.RideCompleted rcEvent) =
         chargeableDistance = realToFrac rcEvent.fulfillment.chargeable_distance,
         traveledDistance = realToFrac rcEvent.fulfillment.traveled_distance,
         fareBreakups = mkOnUpdateFareBreakup <$> rcEvent.quote.breakup,
-        paymentUrl = rcEvent.payment >>= (.uri)
+        paymentUrl = rcEvent.payment >>= (.uri),
+        dropLocOutsideOfThreshold = rcEvent.quote.dropLocOutsideOfThreshold
       }
   where
     mkOnUpdateFareBreakup breakup =

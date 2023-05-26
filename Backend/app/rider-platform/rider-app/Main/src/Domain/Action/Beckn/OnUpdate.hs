@@ -92,7 +92,8 @@ data OnUpdateReq
         fareBreakups :: [OnUpdateFareBreakup],
         chargeableDistance :: HighPrecMeters,
         traveledDistance :: HighPrecMeters,
-        paymentUrl :: Maybe Text
+        paymentUrl :: Maybe Text,
+        dropLocOutsideOfThreshold :: Maybe Bool
       }
   | BookingCancelledReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -147,6 +148,7 @@ data ValidatedOnUpdateReq
         fare :: Money,
         totalFare :: Money,
         fareBreakups :: [OnUpdateFareBreakup],
+        dropLocOutsideOfThreshold :: Maybe Bool,
         chargeableDistance :: HighPrecMeters,
         booking :: SRB.Booking,
         ride :: SRide.Ride,
@@ -277,6 +279,7 @@ onUpdate ValidatedRideAssignedReq {..} = do
             traveledDistance = Nothing,
             driverArrivalTime = Nothing,
             vehicleVariant = booking.vehicleVariant,
+            dropLocOutsideOfThreshold = Nothing,
             createdAt = now,
             updatedAt = now,
             rideStartTime = Nothing,
@@ -305,6 +308,7 @@ onUpdate ValidatedRideCompletedReq {..} = do
         ride{status = SRide.COMPLETED,
              fare = Just fare,
              totalFare = Just totalFare,
+             dropLocOutsideOfThreshold = dropLocOutsideOfThreshold,
              chargeableDistance = Just chargeableDistance,
              rideEndTime = Just rideEndTime
             }

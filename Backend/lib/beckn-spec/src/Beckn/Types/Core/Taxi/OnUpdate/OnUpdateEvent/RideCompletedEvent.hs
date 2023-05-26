@@ -99,7 +99,8 @@ instance ToSchema RideCompletedEvent where
 
 data RideCompletedQuote = RideCompletedQuote
   { price :: QuotePrice,
-    breakup :: [BreakupItem]
+    breakup :: [BreakupItem],
+    dropLocOutsideOfThreshold :: Maybe Bool
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 

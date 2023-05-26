@@ -80,7 +80,7 @@ data ServiceHandle m = ServiceHandle
     findRideById :: Id DRide.Ride -> m (Maybe DRide.Ride),
     getMerchant :: Id DM.Merchant -> m (Maybe DM.Merchant),
     endRideTransaction :: Id DP.Driver -> Id SRB.Booking -> DRide.Ride -> Maybe FareParameters -> Maybe (Id RD.RiderDetails) -> Id DM.Merchant -> m (),
-    notifyCompleteToBAP :: SRB.Booking -> DRide.Ride -> Fare.FareParameters -> Maybe DMPM.PaymentMethodInfo -> Maybe Text -> m (),
+    notifyCompleteToBAP :: SRB.Booking -> DRide.Ride -> Fare.FareParameters -> Maybe DMPM.PaymentMethodInfo -> Maybe Text -> Maybe Bool -> m (),
     getFarePolicy :: Id DM.Merchant -> DVeh.Variant -> Maybe DFareProduct.Area -> m DFP.FullFarePolicy,
     calculateFareParameters :: Fare.CalculateFareParametersParams -> m Fare.FareParameters,
     putDiffMetric :: Id DM.Merchant -> Money -> Meters -> m (),
@@ -199,7 +199,8 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
     distanceCalculationFailed <- isDistanceCalculationFailed driverId
     when distanceCalculationFailed $ logWarning $ "Failed to calculate distance for this ride: " <> ride.id.getId
 
-    pickupDropOutsideOfThreshold <- isPickupDropOutsideOfThreshold handle booking ride tripEndPoint
+    (pickupOutsideOfThreshold, dropLocOutsideOfThreshold) <- isPickupDropOutsideOfThreshold handle booking ride tripEndPoint
+    let pickupDropOutsideOfThreshold = pickupOutsideOfThreshold || dropLocOutsideOfThreshold
     (chargeableDistance, finalFare, mbUpdatedFareParams) <-
       if distanceCalculationFailed
         then calculateFinalValuesForFailedDistanceCalculations handle booking ride tripEndPoint pickupDropOutsideOfThreshold
@@ -224,7 +225,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
     let mbPaymentUrl = DMPM.getPostpaidPaymentUrl =<< mbPaymentMethod
     let mbPaymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
 
-    notifyCompleteToBAP booking updRide newFareParams mbPaymentMethodInfo mbPaymentUrl
+    notifyCompleteToBAP booking updRide newFareParams mbPaymentMethodInfo mbPaymentUrl (Just dropLocOutsideOfThreshold)
   return APISuccess.Success
 
 recalculateFareForDistance :: (MonadThrow m, Log m, MonadTime m, MonadGuid m) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> Meters -> m (Meters, Money, Maybe FareParameters)
@@ -256,19 +257,21 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance = do
   putDiffMetric merchantId fareDiff distanceDiff
   return (recalcDistance, finalFare, Just fareParams)
 
-isPickupDropOutsideOfThreshold :: (MonadThrow m, Log m, MonadTime m, MonadGuid m) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> LatLong -> m Bool
+isPickupDropOutsideOfThreshold :: (MonadThrow m, Log m, MonadTime m, MonadGuid m) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> LatLong -> m (Bool, Bool)
 isPickupDropOutsideOfThreshold ServiceHandle {..} booking ride tripEndPoint = do
   let mbTripStartLoc = ride.tripStartPos
   thresholdConfig <- findConfig >>= fromMaybeM (InternalError "TransportConfigNotFound")
   -- for old trips with mbTripStartLoc = Nothing we always recalculate fare
   case mbTripStartLoc of
-    Nothing -> pure True
+    Nothing -> pure (True, True)
     Just tripStartLoc -> do
       let pickupLocThreshold = metersToHighPrecMeters thresholdConfig.pickupLocThreshold
       let dropLocThreshold = metersToHighPrecMeters thresholdConfig.dropLocThreshold
       let pickupDifference = abs $ distanceBetweenInMeters (getCoordinates booking.fromLocation) tripStartLoc
       let dropDifference = abs $ distanceBetweenInMeters (getCoordinates booking.toLocation) tripEndPoint
-      let pickupDropOutsideOfThreshold = (pickupDifference >= pickupLocThreshold) || (dropDifference >= dropLocThreshold)
+      let pickupOutsideOfThreshold = pickupDifference >= pickupLocThreshold
+      let dropLocOutsideOfThreshold = dropDifference >= dropLocThreshold
+      let pickupDropOutsideOfThreshold = pickupOutsideOfThreshold || dropLocOutsideOfThreshold
 
       logTagInfo "Locations differences" $
         "Pickup difference: "
@@ -277,7 +280,7 @@ isPickupDropOutsideOfThreshold ServiceHandle {..} booking ride tripEndPoint = do
           <> show dropDifference
           <> ", Locations outside of thresholds: "
           <> show pickupDropOutsideOfThreshold
-      pure pickupDropOutsideOfThreshold
+      pure (pickupOutsideOfThreshold, dropLocOutsideOfThreshold)
 
 getDistanceDiff :: (MonadThrow m, Log m, MonadTime m, MonadGuid m) => SRB.Booking -> Meters -> m HighPrecMeters
 getDistanceDiff booking distance = do

@@ -64,6 +64,7 @@ data Ride = Ride
     otp :: Text,
     trackingUrl :: Maybe BaseUrl,
     fare :: Maybe Money,
+    dropLocOutsideOfThreshold :: Maybe Bool,
     totalFare :: Maybe Money,
     chargeableDistance :: Maybe HighPrecMeters,
     traveledDistance :: Maybe HighPrecMeters,
@@ -90,6 +91,7 @@ data RideAPIEntity = RideAPIEntity
     vehicleModel :: Text,
     rideOtp :: Text,
     computedPrice :: Maybe Money,
+    dropLocOutsideOfThreshold :: Maybe Bool,
     chargeableRideDistance :: Maybe HighPrecMeters,
     driverArrivalTime :: Maybe UTCTime,
     rideStartTime :: Maybe UTCTime,
@@ -109,6 +111,7 @@ makeRideAPIEntity Ride {..} =
           driverNumber = driverMobileNumber',
           driverRatings = driverRating,
           rideOtp = otp,
+          dropLocOutsideOfThreshold = dropLocOutsideOfThreshold,
           computedPrice = totalFare,
           chargeableRideDistance = chargeableDistance,
           ..

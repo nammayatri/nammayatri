@@ -199,12 +199,13 @@ sendRideCompletedUpdateToBAP ::
   Fare.FareParameters ->
   Maybe DMPM.PaymentMethodInfo ->
   Maybe Text ->
+  Maybe Bool ->
   m ()
-sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUrl = do
+sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUrl dropLocOutsideOfThreshold = do
   transporter <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
-  let rideCompletedBuildReq = ACL.RideCompletedBuildReq {ride, fareParams, paymentMethodInfo, paymentUrl}
+  let rideCompletedBuildReq = ACL.RideCompletedBuildReq {ride, fareParams, paymentMethodInfo, paymentUrl, dropLocOutsideOfThreshold}
   rideCompletedMsg <- ACL.buildOnUpdateMessage rideCompletedBuildReq
 
   retryConfig <- asks (.longDurationRetryCfg)
