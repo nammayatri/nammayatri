@@ -50,36 +50,24 @@ INSERT INTO atlas_driver_offer_bpp.search_request_2 (
 ALTER TABLE atlas_driver_offer_bpp.driver_quote ALTER COLUMN search_request_id DROP NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD COLUMN request_id character(36);
 ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD COLUMN search_try_id character(36);
-UPDATE atlas_driver_offer_bpp.driver_quote SET request_id = search_request_id;
-UPDATE atlas_driver_offer_bpp.driver_quote SET search_try_id = search_request_id;
-ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD CONSTRAINT
-  driver_quote_to_search_request_fk FOREIGN KEY (request_id) REFERENCES atlas_driver_offer_bpp.search_request_2 (id);
-ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD CONSTRAINT
-  driver_quote_to_search_try_fk FOREIGN KEY (search_try_id) REFERENCES atlas_driver_offer_bpp.search_try (id);
+UPDATE atlas_driver_offer_bpp.driver_quote AS T1 SET request_id = search_request_id WHERE T1.created_at > now () - interval '6 hour';
+UPDATE atlas_driver_offer_bpp.driver_quote AS T1 SET search_try_id = search_request_id WHERE T1.created_at > now () - interval '6 hour';
 
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ALTER COLUMN search_request_id DROP NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN request_id character(36);
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN search_try_id character(36);
-UPDATE atlas_driver_offer_bpp.search_request_for_driver SET request_id = search_request_id;
-UPDATE atlas_driver_offer_bpp.search_request_for_driver SET search_try_id = search_request_id;
-ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD CONSTRAINT
-  search_request_for_driver_to_search_request_fk FOREIGN KEY (request_id) REFERENCES atlas_driver_offer_bpp.search_request_2 (id);
-ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD CONSTRAINT
-  search_request_for_driver_to_search_try_fk FOREIGN KEY (search_try_id) REFERENCES atlas_driver_offer_bpp.search_try (id);
+UPDATE atlas_driver_offer_bpp.search_request_for_driver AS T1 SET request_id = search_request_id WHERE T1.created_at > now () - interval '6 hour';
+UPDATE atlas_driver_offer_bpp.search_request_for_driver AS T1 SET search_try_id = search_request_id WHERE T1.created_at > now () - interval '6 hour';
 
 ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN request_id character(36);
-UPDATE atlas_driver_offer_bpp.search_try SET request_id = id;
-ALTER TABLE atlas_driver_offer_bpp.search_try ADD CONSTRAINT
-  search_step_to_search_request_fk FOREIGN KEY (request_id) REFERENCES atlas_driver_offer_bpp.search_request_2 (id);
+UPDATE atlas_driver_offer_bpp.search_try AS T1 SET request_id = id;
 
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ALTER COLUMN transaction_id DROP NOT NULL;
 
 ALTER TABLE atlas_driver_offer_bpp.estimate ALTER COLUMN transaction_id DROP NOT NULL;
 
 ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN request_id character(36);
-UPDATE atlas_driver_offer_bpp.estimate AS T1 SET request_id = (SELECT T2.id FROM atlas_driver_offer_bpp.search_try AS T2 WHERE T2.estimate_id = T1.id);
-ALTER TABLE atlas_driver_offer_bpp.estimate ADD CONSTRAINT
-  estimate_to_search_request_fk FOREIGN KEY (request_id) REFERENCES atlas_driver_offer_bpp.search_request_2 (id);
+UPDATE atlas_driver_offer_bpp.estimate AS T1 SET request_id = (SELECT T2.id FROM atlas_driver_offer_bpp.search_try AS T2 WHERE T2.estimate_id = T1.id) WHERE T1.created_at > now () - interval '6 hour';
 
 ALTER TABLE atlas_driver_offer_bpp.driver_quote ALTER COLUMN transaction_id DROP NOT NULL;
 
@@ -98,6 +86,106 @@ ALTER TABLE atlas_driver_offer_bpp.search_try
 -------------------------------------------------------------------------------------------
 -------------------------------AFTER_FULL_ROLL_OUT-----------------------------------------
 -------------------------------------------------------------------------------------------
+UPDATE atlas_driver_offer_bpp.driver_quote AS T1 SET request_id = search_request_id WHERE T1.request_id IS NULL;
+UPDATE atlas_driver_offer_bpp.driver_quote AS T1 SET search_try_id = search_request_id WHERE T1.search_try_id IS NULL;
+UPDATE atlas_driver_offer_bpp.search_request_for_driver AS T1 SET request_id = search_request_id WHERE T1.request_id IS NULL;
+UPDATE atlas_driver_offer_bpp.search_request_for_driver AS T1 SET search_try_id = search_request_id WHERE T1.search_try_id IS NULL;
+UPDATE atlas_driver_offer_bpp.search_try AS T1 SET request_id = id WHERE T1.request_id IS NULL;
+UPDATE atlas_driver_offer_bpp.estimate AS T1 SET request_id = (SELECT T2.id FROM atlas_driver_offer_bpp.search_try AS T2 WHERE T2.estimate_id = T1.id) WHERE T1.request_id IS NULL;
+
+INSERT INTO atlas_driver_offer_bpp.search_try (
+  id,
+  transaction_id,
+  message_id,
+  estimate_id,
+  start_time,
+  valid_till,
+  provider_id,
+  from_location_id,
+  to_location_id,
+  bap_id,
+  bap_uri,
+  estimated_distance,
+  estimated_duration,
+  customer_extra_fee,
+  device,
+  status,
+  vehicle_variant,
+  search_repeat_counter,
+  auto_assign_enabled,
+  created_at,
+  updated_at
+  )
+  (SELECT id,
+    transaction_id,
+    message_id,
+    estimate_id,
+    start_time,
+    valid_till,
+    provider_id,
+    from_location_id,
+    to_location_id,
+    bap_id,
+    bap_uri,
+    estimated_distance,
+    estimated_duration,
+    customer_extra_fee,
+    device,
+    status,
+    vehicle_variant,
+    search_repeat_counter,
+    auto_assign_enabled,
+    created_at,
+    updated_at FROM atlas_driver_offer_bpp.search_request as T1 WHERE NOT EXISTS (SELECT id FROM atlas_driver_offer_bpp.search_try AS T2 WHERE T1.id = T2.id));
+
+WITH SearchRequests AS (
+  SELECT T1.id,
+    T1.transaction_id,
+    T1.provider_id,
+    T1.from_location_id,
+    T1.to_location_id,
+    T1.bap_id,
+    T1.bap_uri,
+    T1.estimated_distance,
+    T1.estimated_duration,
+    T1.auto_assign_enabled,
+    NULL,
+    T1.device,
+    T1.created_at
+  FROM atlas_driver_offer_bpp.search_try AS T1
+  WHERE NOT EXISTS (SELECT id FROM atlas_driver_offer_bpp.search_try AS T2 WHERE T1.id = T2.id)
+)
+INSERT INTO atlas_driver_offer_bpp.search_request_2 (
+  id,
+  transaction_id,
+  provider_id,
+  from_location_id,
+  to_location_id,
+  bap_id,
+  bap_uri,
+  estimated_distance,
+  estimated_duration,
+  auto_assign_enabled,
+  customer_language,
+  device,
+  created_at)
+  (SELECT * FROM SearchRequests);
+
+ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD CONSTRAINT
+  driver_quote_to_search_request_fk FOREIGN KEY (request_id) REFERENCES atlas_driver_offer_bpp.search_request_2 (id);
+ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD CONSTRAINT
+  driver_quote_to_search_try_fk FOREIGN KEY (search_try_id) REFERENCES atlas_driver_offer_bpp.search_try (id);
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD CONSTRAINT
+  search_request_for_driver_to_search_request_fk FOREIGN KEY (request_id) REFERENCES atlas_driver_offer_bpp.search_request_2 (id);
+ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD CONSTRAINT
+  search_request_for_driver_to_search_try_fk FOREIGN KEY (search_try_id) REFERENCES atlas_driver_offer_bpp.search_try (id);
+
+ALTER TABLE atlas_driver_offer_bpp.search_try ADD CONSTRAINT
+  search_step_to_search_request_fk FOREIGN KEY (request_id) REFERENCES atlas_driver_offer_bpp.search_request_2 (id);
+
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD CONSTRAINT
+  estimate_to_search_request_fk FOREIGN KEY (request_id) REFERENCES atlas_driver_offer_bpp.search_request_2 (id);
 
 ALTER TABLE atlas_driver_offer_bpp.driver_quote ALTER COLUMN request_id SET NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.driver_quote ALTER COLUMN search_try_id SET NOT NULL;
