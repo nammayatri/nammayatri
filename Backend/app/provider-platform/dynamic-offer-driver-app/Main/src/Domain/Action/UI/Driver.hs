@@ -365,7 +365,17 @@ createDriver admin req = do
           updatedAt = person.updatedAt
         }
 
-createDriverDetails :: (L.MonadFlow m, MonadTime m) => Id SP.Person -> Id SP.Person -> m ()
+createDriverDetails ::
+  ( HasCacheConfig r,
+    HasFlowEnv m r '["smsCfg" ::: SmsConfig],
+    EsqDBFlow m r,
+    EncFlow m r,
+    Redis.HedisFlow m r,
+    CoreMetrics m
+  ) =>
+  Id SP.Person ->
+  Id SP.Person ->
+  m ()
 createDriverDetails personId adminId = do
   now <- getCurrentTime
   let driverInfo =
@@ -388,11 +398,10 @@ createDriverDetails personId adminId = do
           }
   _ <- QDriverStats.createInitialDriverStats driverId
   QDriverInformation.create driverInfo
+  QDriverLocation.create personId initLatLong now
+  pure ()
   where
-    -- TODO: Uncomment the following
-    -- QDriverLocation.create personId initLatLong now
-
-    -- initLatLong = LatLong 0 0
+    initLatLong = LatLong 0 0
     driverId = cast personId
 
 getInformation ::

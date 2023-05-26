@@ -36,27 +36,23 @@ import Sequelize
 import qualified Storage.Beam.Geometry as BeamG
 import Storage.Tabular.Geometry
 
-findGeometriesContaining :: Transactionable m => LatLong -> [Text] -> m [Geometry]
-findGeometriesContaining gps regions =
-  Esq.findAll $ do
-    geometry <- from $ table @GeometryT
-    where_ $
-      geometry ^. GeometryRegion `in_` valList regions
-        &&. containsPoint (gps.lon, gps.lat) --QExpr (\tbl -> PgCommandSyntax PgCommandTypeQuery (emit $ "st_contains (" <> show gps.lon <> " , " <> show gps.lat <> ")"))
-        -- containsPoint (gps.lon, gps.lat)
-    return geometry
+-- findGeometriesContaining :: Transactionable m => LatLong -> [Text] -> m [Geometry]
+-- findGeometriesContaining gps regions =
+--   Esq.findAll $ do
+--     geometry <- from $ table @GeometryT
+--     where_ $
+--       geometry ^. GeometryRegion `in_` valList regions
+--         &&. containsPoint (gps.lon, gps.lat) --QExpr (\tbl -> PgCommandSyntax PgCommandTypeQuery (emit $ "st_contains (" <> show gps.lon <> " , " <> show gps.lat <> ")"))
+--         -- containsPoint (gps.lon, gps.lat)
+--     return geometry
 
-findGeometriesContaining' :: forall m. (L.MonadFlow m) => LatLong -> [Text] -> m [Geometry]
-findGeometriesContaining' gps regions = do
+findGeometriesContaining :: forall m. (L.MonadFlow m) => LatLong -> [Text] -> m [Geometry]
+findGeometriesContaining gps regions = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
-  -- let B.EntityModification modification =
-  --       B.modifyTableFields BeamG.geometryTMod
-  --         <> B.setEntityName "geometry"
-  --     dbt = appEndo modification $ B.DatabaseEntity $ B.dbEntityAuto "geometry"
   conn <- L.getOrInitSqlConn (fromJust dbConf)
   case conn of
     Right c -> do
-      geoms <- L.runDB c $ L.findRows $ B.select $ (B.filter_' (\BeamG.GeometryT {..} -> (containsPoint' (gps.lat, gps.lon)) B.&&?. (B.sqlBool_ (region `B.in_` (B.val_ <$> regions))))) $ B.all_ (meshModelTableEntity @BeamG.GeometryT @Postgres @(DatabaseWith BeamG.GeometryT))
+      geoms <- L.runDB c $ L.findRows $ B.select $ B.filter_' (\BeamG.GeometryT {..} -> containsPoint' (gps.lat, gps.lon) B.&&?. B.sqlBool_ (region `B.in_` (B.val_ <$> regions))) $ B.all_ (meshModelTableEntity @BeamG.GeometryT @Postgres @(DatabaseWith BeamG.GeometryT))
       pure (either (const []) (transformBeamGeometryToDomain <$>) geoms)
     Left _ -> pure []
 
@@ -101,7 +97,7 @@ findGeometriesContaining' gps regions = do
 
 someGeometriesContain :: forall m. (L.MonadFlow m) => LatLong -> [Text] -> m Bool
 someGeometriesContain gps regions = do
-  geometries <- findGeometriesContaining' gps regions
+  geometries <- findGeometriesContaining gps regions
   pure $ not $ null geometries
 
 transformBeamGeometryToDomain :: BeamG.Geometry -> Geometry

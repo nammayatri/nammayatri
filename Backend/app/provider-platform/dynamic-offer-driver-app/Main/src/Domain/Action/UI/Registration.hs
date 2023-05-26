@@ -174,7 +174,7 @@ auth req mbBundleVersion mbClientVersion = do
       authId = SR.id token
   return $ AuthRes {attempts, authId}
 
-createDriverDetails :: (L.MonadFlow m, MonadTime m) => Id SP.Person -> m ()
+createDriverDetails :: (EncFlow m r, EsqDBFlow m r) => Id SP.Person -> m ()
 createDriverDetails personId = do
   now <- getCurrentTime
   let driverInfo =
@@ -197,11 +197,10 @@ createDriverDetails personId = do
           }
   QDriverStats.createInitialDriverStats driverId
   QD.create driverInfo
+  QDriverLocation.create personId initLatLong now
+  pure ()
   where
-    -- TODO: Uncomment the following
-    -- QDriverLocation.create personId initLatLong now
-
-    -- initLatLong = LatLong 0 0
+    initLatLong = LatLong 0 0
     driverId = cast personId
 
 makePerson :: EncFlow m r => AuthReq -> Maybe Version -> Maybe Version -> Id DO.Merchant -> m SP.Person

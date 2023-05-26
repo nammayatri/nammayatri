@@ -70,20 +70,20 @@ findByMerchantId (Id merchantId) = do
     Just dbCOnf' -> either (pure Nothing) (transformBeamOperatingCityToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamOC.merchantId $ Se.Eq merchantId]
     Nothing -> pure Nothing
 
-findEnabledCityByName ::
-  Transactionable m =>
-  Text ->
-  m [OperatingCity]
-findEnabledCityByName city =
-  Esq.findAll $ do
-    operatingCity <- from $ table @OperatingCityT
-    where_ $
-      lower_ (operatingCity ^. OperatingCityCityName) ==. val city
-        &&. operatingCity ^. OperatingCityEnabled
-    return operatingCity
+-- findEnabledCityByName ::
+--   Transactionable m =>
+--   Text ->
+--   m [OperatingCity]
+-- findEnabledCityByName city =
+--   Esq.findAll $ do
+--     operatingCity <- from $ table @OperatingCityT
+--     where_ $
+--       lower_ (operatingCity ^. OperatingCityCityName) ==. val city
+--         &&. operatingCity ^. OperatingCityEnabled
+--     return operatingCity
 
-findEnabledCityByName' :: L.MonadFlow m => Text -> m [OperatingCity]
-findEnabledCityByName' city = do
+findEnabledCityByName :: L.MonadFlow m => Text -> m [OperatingCity]
+findEnabledCityByName city = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' ->
@@ -92,7 +92,7 @@ findEnabledCityByName' city = do
           dbConf'
           Mesh.meshConfig
           [ Se.And
-              [Se.Is (BeamOC.cityName) $ Se.Eq city, Se.Is BeamOC.enabled $ Se.Eq True]
+              [Se.Is BeamOC.cityName $ Se.Eq city, Se.Is BeamOC.enabled $ Se.Eq True]
           ]
     Nothing -> pure []
 

@@ -28,13 +28,11 @@ import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import qualified Kernel.External.FCM.Types as FCM
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.TransporterConfig as BeamTC
-import Storage.Tabular.Merchant.TransporterConfig
 
 -- findByMerchantId :: Transactionable m => Id Merchant -> m (Maybe TransporterConfig)
 -- findByMerchantId merchantId =

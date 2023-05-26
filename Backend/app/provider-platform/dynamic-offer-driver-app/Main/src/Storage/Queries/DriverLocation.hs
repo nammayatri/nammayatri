@@ -37,42 +37,37 @@ import qualified Storage.Beam.DriverLocation as BeamDL
 import Storage.Tabular.DriverLocation
 import qualified Storage.Tabular.VechileNew as VN
 
-create :: Id Person -> LatLong -> UTCTime -> SqlDB ()
-create drLocationId latLong updateTime = do
-  -- Tricky query to be able to insert meaningful Point
-  now <- getCurrentTime
-  Esq.insertSelect $
-    return $
-      DriverLocationT
-        <# val (toKey drLocationId)
-        <#> val latLong.lat
-        <#> val latLong.lon
-        <#> Esq.getPoint (val latLong.lat, val latLong.lon)
-        <#> val updateTime
-        <#> val now
-        <#> val now
+-- create :: Id Person -> LatLong -> UTCTime -> SqlDB ()
+-- create drLocationId latLong updateTime = do
+--   -- Tricky query to be able to insert meaningful Point
+--   now <- getCurrentTime
+--   Esq.insertSelect $
+--     return $
+--       DriverLocationT
+--         <# val (toKey drLocationId)
+--         <#> val latLong.lat
+--         <#> val latLong.lon
+--         <#> Esq.getPoint (val latLong.lat, val latLong.lon)
+--         <#> val updateTime
+--         <#> val now
+--         <#> val now
 
-create' :: (L.MonadFlow m, MonadTime m) => Id Person -> LatLong -> UTCTime -> m ()
-create' drLocationId latLong updateTime = do
-  -- Tricky query to be able to insert meaningful Point
+create :: (L.MonadFlow m, MonadTime m) => Id Person -> LatLong -> UTCTime -> m ()
+create drLocationId latLong updateTime = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   now <- getCurrentTime
-  -- let B.EntityModification modification =
-  --       B.modifyTableFields BeamG.geometryTMod
-  --         <> B.setEntityName "geometry"
-  --     dbt = appEndo modification $ B.DatabaseEntity $ B.dbEntityAuto "geometry"
   conn <- L.getOrInitSqlConn (fromJust dbConf)
   case conn of
     Right c -> do
       let
-      void $ L.runDB c $ L.insertRows $ B.insert (meshModelTableEntity @BeamDL.DriverLocationT @Postgres @(Se.DatabaseWith BeamDL.DriverLocationT)) $ B.insertExpressions ([BeamDL.toRowExpression (getId drLocationId) latLong updateTime now])
+      void $ L.runDB c $ L.insertRows $ B.insert (meshModelTableEntity @BeamDL.DriverLocationT @Postgres @(Se.DatabaseWith BeamDL.DriverLocationT)) $ B.insertExpressions [BeamDL.toRowExpression (getId drLocationId) latLong updateTime now]
     Left _ -> pure ()
 
-findById ::
-  Transactionable m =>
-  Id Person ->
-  m (Maybe DriverLocation)
-findById = Esq.findById
+-- findById ::
+--   Transactionable m =>
+--   Id Person ->
+--   m (Maybe DriverLocation)
+-- findById = Esq.findById
 
 findById :: L.MonadFlow m => Id Person -> m (Maybe DriverLocation)
 findById (Id driverLocationId) = do
@@ -166,7 +161,7 @@ transformDomainDriverLocationToBeam DriverLocation {..} =
     { BeamDL.driverId = getId driverId,
       BeamDL.lat = lat,
       BeamDL.lon = lon,
-      -- BeamDL.point = Point, -- need to change
+      -- BeamDL.point = BeamDL.getPoint (lat, lon),
       BeamDL.coordinatesCalculatedAt = coordinatesCalculatedAt,
       BeamDL.createdAt = createdAt,
       BeamDL.updatedAt = updatedAt

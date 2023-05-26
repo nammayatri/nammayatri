@@ -25,6 +25,7 @@ import qualified Database.Beam.Query as B
 import Domain.Types.Booking as Booking
 import Domain.Types.Merchant
 import Domain.Types.Person
+import Domain.Types.Ride as DR
 import Domain.Types.Ride as Ride
 import Domain.Types.RideDetails as RideDetails
 import Domain.Types.RiderDetails as RiderDetails
@@ -51,7 +52,7 @@ import Storage.Tabular.Ride as Ride
 import Storage.Tabular.RideDetails as RideDetails
 import Storage.Tabular.RiderDetails as RiderDetails
 import qualified Storage.Tabular.VechileNew as VN
-import qualified Prelude as Prelude
+import qualified Prelude
 
 data DatabaseWith2 table1 table2 f = DatabaseWith2
   { dwTable1 :: f (B.TableEntity table1),
@@ -388,22 +389,22 @@ updateAll rideId ride = do
         [Se.Is BeamR.id (Se.Eq $ getId rideId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-getCountByStatus :: Transactionable m => Id Merchant -> m [(RideStatus, Int)]
-getCountByStatus merchantId = do
-  Esq.findAll $ do
-    (ride :& booking) <-
-      from $
-        table @RideT
-          `innerJoin` table @BookingT
-            `Esq.on` ( \(ride :& booking) ->
-                         ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
-                     )
-    where_ $ booking ^. BookingProviderId ==. val (toKey merchantId)
-    groupBy $ ride ^. RideStatus
-    return (ride ^. RideStatus, countRows :: SqlExpr (Esq.Value Int))
+-- getCountByStatus :: Transactionable m => Id Merchant -> m [(RideStatus, Int)]
+-- getCountByStatus merchantId = do
+--   Esq.findAll $ do
+--     (ride :& booking) <-
+--       from $
+--         table @RideT
+--           `innerJoin` table @BookingT
+--             `Esq.on` ( \(ride :& booking) ->
+--                          ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
+--                      )
+--     where_ $ booking ^. BookingProviderId ==. val (toKey merchantId)
+--     groupBy $ ride ^. RideStatus
+--     return (ride ^. RideStatus, countRows :: SqlExpr (Esq.Value Int))
 
-getCountByStatus' :: (L.MonadFlow m) => Id Merchant -> m [(RideStatus, Int)]
-getCountByStatus' merchantId = do
+getCountByStatus :: (L.MonadFlow m) => Id Merchant -> m [(RideStatus, Int)]
+getCountByStatus merchantId = do
   -- Tricky query to be able to insert meaningful Point
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   conn <- L.getOrInitSqlConn (fromJust dbConf)
@@ -413,10 +414,10 @@ getCountByStatus' merchantId = do
         L.findRows $
           B.select $
             B.aggregate_ (\(ride, _) -> (B.group_ (BeamR.status ride), B.as_ @Int B.countAll_)) $
-              (B.filter_' (\(_, BeamB.BookingT {..}) -> (providerId B.==?. (B.val_ (getId merchantId))))) $
+              B.filter_' (\(_, BeamB.BookingT {..}) -> providerId B.==?. B.val_ (getId merchantId)) $
                 do
                   ride <- B.all_ (meshModelTableEntity @BeamR.RideT @Postgres @(DatabaseWith2 BeamR.RideT BeamB.BookingT))
-                  booking <- B.join_' (meshModelTableEntity @BeamB.BookingT @Postgres @(DatabaseWith2 BeamR.RideT BeamB.BookingT)) (\booking -> (BeamB.id booking) B.==?. (BeamR.bookingId ride))
+                  booking <- B.join_' (meshModelTableEntity @BeamB.BookingT @Postgres @(DatabaseWith2 BeamR.RideT BeamB.BookingT)) (\booking -> BeamB.id booking B.==?. BeamR.bookingId ride)
                   pure (ride, booking)
       pure (either (const []) Prelude.id resp)
     Left _ -> pure []
