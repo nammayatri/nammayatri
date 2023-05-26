@@ -1554,13 +1554,7 @@ rideTrackingView push state =
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
                 , background Color.transparent
-                -- , sheetState COLLAPSED
-                -- , peakHeight if (state.props.currentStage == RideAccepted && state.data.config.nyBrandingVisibility == true) then getHeightFromPercent 63
-                --              else if (state.props.currentStage == RideStarted && state.data.config.nyBrandingVisibility == true) then getHeightFromPercent 50
-                --              else if (state.props.currentStage == RideAccepted) then getHeightFromPercent 59
-                --              else getHeightFromPercent 46
                 , visibility VISIBLE
-                -- , halfExpandedRatio 0.75
                 ]
                 [ linearLayout
                     [ height WRAP_CONTENT
