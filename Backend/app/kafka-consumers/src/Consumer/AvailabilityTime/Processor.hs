@@ -25,7 +25,6 @@ import qualified Data.Map as M
 import Data.Time (UTCTime, addUTCTime, diffUTCTime, getCurrentTime)
 import Environment
 import EulerHS.Prelude
-import qualified Kafka.Consumer as C
 import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Common as C hiding (Offset)
@@ -53,11 +52,9 @@ createOrUpdateDriverAvailability merchantId driverId lastAvailableTimeCacheKey (
   DB.runNoTransaction $ Q.createOrUpdateDriverAvailability newAvailabilityEntry
   Redis.setExp lastAvailableTimeCacheKey (lastAvailableTime, True) 28800 -- 8 hours
 
-calculateAvailableTime :: T.MerchantId -> T.DriverId -> C.KafkaConsumer -> ([UTCTime], Maybe ConsumerRecordD) -> Flow ()
-calculateAvailableTime _ _ _ ([], Nothing) = pure ()
-calculateAvailableTime _ _ _ ([], Just lastCR) = logInfo $ "Should never reach here, no locationupdates but kafka consumer records , last consumer record: " <> show lastCR
-calculateAvailableTime _ _ _ (locationUpdatesTimeSeries, Nothing) = logInfo $ "Should never reach here, locationupdates but no kafka consumer record, time series: " <> show locationUpdatesTimeSeries
-calculateAvailableTime merchantId driverId kc (fstTime : restTimeSeries, Just lastCR) = do
+calculateAvailableTime :: T.MerchantId -> T.DriverId -> [UTCTime] -> Flow ()
+calculateAvailableTime _ _ [] = pure ()
+calculateAvailableTime merchantId driverId (fstTime : restTimeSeries) = do
   cachedLastAvailableTime <- Redis.get mkLastTimeStampKey
   lastAvailableTime <-
     case cachedLastAvailableTime of
@@ -85,7 +82,6 @@ calculateAvailableTime merchantId driverId kc (fstTime : restTimeSeries, Just la
   logInfo $ "ActiveTime pairs " <> show activeTimePairs
   logInfo $ "availabilityInWindow " <> show availabilityInWindow
   void $ M.traverseWithKey (createOrUpdateDriverAvailability merchantId driverId mkLastTimeStampKey) availabilityInWindow
-  void $ C.commitOffsetMessage C.OffsetCommit kc lastCR
   where
     mkLastTimeStampKey = "DA:LAT:" <> driverId
     getBucketPair periodType (startTime, _) = do
