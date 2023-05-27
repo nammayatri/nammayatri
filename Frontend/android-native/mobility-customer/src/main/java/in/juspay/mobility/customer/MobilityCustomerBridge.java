@@ -78,6 +78,7 @@ import java.util.Locale;
 
 import in.juspay.hyper.core.BridgeComponents;
 import in.juspay.hyper.core.ExecutorManager;
+import in.juspay.hyper.core.JuspayLogger;
 import in.juspay.mobility.app.CallBack;
 import in.juspay.mobility.app.NetworkBroadcastReceiver;
 import in.juspay.mobility.app.NotificationUtils;
@@ -748,51 +749,68 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
     public void generatePDF(String str, String format) throws JSONException {
         invoice = str;
         if (isStoragePermissionGiven()) {
+            JuspayLogger.d(OTHERS,"Storage Permission is already there");
             downloadPDF(str, bridgeComponents.getContext());
         } else {
+            JuspayLogger.d(OTHERS,"Storage Permission is not there. requesting permissions");
             requestStoragePermission();
         }
     }
 
     @SuppressLint("MissingPermission")
     public void downloadPDF(String str, Context context) throws JSONException {
-        JSONObject state = new JSONObject(str);
-        JSONObject data = state.getJSONObject("data");
-        String userName = getKeysInSharedPref("USER_NAME");
-        JSONObject selectedItem = data.getJSONObject("selectedItem");
-        JSONArray fares = selectedItem.getJSONArray("faresList");
-        PdfDocument pdfDocument = new PdfDocument();
-        PdfDocument.PageInfo invoicePDF = new PdfDocument.PageInfo.Builder(960, 1338, 1).create();
-        PdfDocument.Page page = pdfDocument.startPage(invoicePDF);
-        View content = getInvoiceLayout(selectedItem, fares, userName, context);
-        content.measure(page.getCanvas().getWidth(), page.getCanvas().getHeight());
-        content.layout(0, 0, page.getCanvas().getWidth(), page.getCanvas().getHeight());
-        content.draw(page.getCanvas());
-        pdfDocument.finishPage(page);
-        String fileNameformat = "";
-        String serviceName = context.getResources().getString(R.string.service);
-        if (serviceName.equals("jatrisaathi")) {
-            fileNameformat = "JS_RIDE_";
-        } else if (serviceName.equals("nammayatri")) {
-            fileNameformat = "NY_RIDE_";
-        } else {
-            fileNameformat = "YATRI_RIDE_";
-        }
-        fileNameformat = fileNameformat + selectedItem.getString("date") + selectedItem.getString("rideStartTime");
-        String removedSpecial = fileNameformat.replaceAll("[^a-zA-Z0-9]", "_");
-        File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), removedSpecial + ".pdf");
-        try {
-            pdfDocument.writeTo(new FileOutputStream(file));
-            Uri path = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", file);
-            showInvoiceNotification(path);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        pdfDocument.close();
+        new Thread(() -> {
+            try {
+                JSONObject state = new JSONObject(str);
+                JSONObject data = state.getJSONObject("data");
+                String userName = getKeysInSharedPref("USER_NAME");
+                JSONObject selectedItem = data.getJSONObject("selectedItem");
+                JSONArray fares = selectedItem.getJSONArray("faresList");
+                PdfDocument pdfDocument = new PdfDocument();
+                PdfDocument.PageInfo invoicePDF = new PdfDocument.PageInfo.Builder(960, 1338, 1).create();
+                PdfDocument.Page page = pdfDocument.startPage(invoicePDF);
+                JuspayLogger.d(OTHERS, "PDF Document Created");
+                View content = getInvoiceLayout(selectedItem, fares, userName, context);
+                JuspayLogger.d(OTHERS, "PDF Layout inflated");
+                content.measure(page.getCanvas().getWidth(), page.getCanvas().getHeight());
+                content.layout(0, 0, page.getCanvas().getWidth(), page.getCanvas().getHeight());
+                content.draw(page.getCanvas());
+                pdfDocument.finishPage(page);
+                JuspayLogger.d(OTHERS, "PDF Document canvas drawn");
+                String fileNameformat = "";
+                String serviceName = context.getResources().getString(R.string.service);
+                if (serviceName.equals("jatrisaathi")) {
+                    fileNameformat = "JS_RIDE_";
+                } else if (serviceName.equals("nammayatri")) {
+                    fileNameformat = "NY_RIDE_";
+                } else {
+                    fileNameformat = "YATRI_RIDE_";
+                }
+                fileNameformat = fileNameformat + selectedItem.getString("date") + selectedItem.getString("rideStartTime");
+                String removedSpecial = fileNameformat.replaceAll("[^a-zA-Z0-9]", "_");
+                JuspayLogger.d(OTHERS, "PDF Document name " + removedSpecial);
+                try {
+                    File file = checkAndGetFileName(removedSpecial);
+                    JuspayLogger.d(OTHERS, "Available File name for PDF" + file.getName());
+                    FileOutputStream fos = new FileOutputStream(file);
+                    pdfDocument.writeTo(fos);
+                    JuspayLogger.d(OTHERS, "PDF Document written to path " + file.getPath());
+                    Uri path = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", file);
+                    showInvoiceNotification(path);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                pdfDocument.close();
+                JuspayLogger.d(OTHERS, "PDF Document closed ");
+            } catch (Exception e) {
+                JuspayLogger.e(OTHERS,e.toString());
+            }
+        }).start();
     }
 
     private void showInvoiceNotification(Uri path) {
         Context context = bridgeComponents.getContext();
+        JuspayLogger.d(OTHERS,"PDF Document inside Show Notification");
         Intent pdfOpenintent = new Intent(Intent.ACTION_VIEW);
         pdfOpenintent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         pdfOpenintent.setDataAndType(path, "application/pdf");
@@ -819,29 +837,32 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                 .setPriority(NotificationCompat.PRIORITY_MAX);
         mBuilder.setContentIntent(pendingIntent);
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
+        JuspayLogger.d(OTHERS,"PDF Document notification is Created");
         if (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            JuspayLogger.d(OTHERS,"PDF Document Notification permission is not given");
             toast("Invoice Downloaded!!!");
         } else {
             notificationManager.notify(234567, mBuilder.build());
+            JuspayLogger.d(OTHERS,"PDF Document notification is notified");
         }
     }
 
     @SuppressLint("SetTextI18n")
     private View getInvoiceLayout(JSONObject selectedRide, JSONArray fares, String user, Context context) throws JSONException {
+        JuspayLogger.d(OTHERS,"PDF Document inside inflate View");
         View invoiceLayout = LayoutInflater.from(context).inflate(R.layout.invoice_template, null, false);
+        JuspayLogger.d(OTHERS,"PDF Document inflated View");
         TextView textView = invoiceLayout.findViewById(R.id.rideDate);
         textView.setText(selectedRide.getString("date"));
         textView = invoiceLayout.findViewById(R.id.userName);
         textView.setText(user.trim());
         textView = invoiceLayout.findViewById(R.id.paymentDetail);
         textView.setText(selectedRide.getString("totalAmount"));
-
-        LinearLayout fareBreakupElements = (LinearLayout) invoiceLayout.findViewById(R.id.fareBreakupElements);
+        LinearLayout fareBreakupElements = invoiceLayout.findViewById(R.id.fareBreakupElements);
         fareBreakupElements.setOrientation(LinearLayout.VERTICAL);
 
         try {
             for (int i = 0; i < fares.length(); i++) {
-
                 LinearLayout.LayoutParams linearParams = new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT,
                         LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -856,6 +877,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                 linearParamsChild.weight = 1.0f;
 
                 JSONObject fare = fares.getJSONObject(i);
+                JuspayLogger.d(OTHERS,"PDF Document updating fares break ups" + fare);
                 String value = fare.getString("price");
                 String fareTypes = fare.getString("title");
                 TextView textViewText = new TextView(context);
@@ -874,7 +896,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                 linearLayout.addView(textViewPrice);
 
                 fareBreakupElements.addView(linearLayout);
-
+                JuspayLogger.d(OTHERS,"PDF Document updated the fare " + fare + "in view");
             }
         } catch (JSONException e) {
             e.printStackTrace();
@@ -897,6 +919,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
         textView.setText(selectedRide.getString("destination"));
         textView = invoiceLayout.findViewById(R.id.referenceText);
         textView.setText(selectedRide.getString("referenceString"));
+        JuspayLogger.d(OTHERS,"PDF Document view updated and returning the view");
         return invoiceLayout;
     }
     //endregion
@@ -926,12 +949,15 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
             case STORAGE_PERMISSION:
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     try {
+                        JuspayLogger.d(OTHERS,"Storage Permission is granted. downloading  PDF");
                         downloadPDF(invoice, bridgeComponents.getContext());
                     } catch (JSONException e) {
                         e.printStackTrace();
                     }
-                } else
+                } else{
+                    JuspayLogger.d(OTHERS,"Storage Permission is denied.");
                     toast("Permission Denied");
+                }
                 break;
             case REQUEST_CONTACTS:
                 boolean flag = ContextCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED;

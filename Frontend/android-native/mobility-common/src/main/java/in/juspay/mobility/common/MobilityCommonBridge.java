@@ -39,6 +39,7 @@ import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.provider.MediaStore;
 import android.provider.Settings;
 import android.util.Base64;
@@ -108,6 +109,7 @@ import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -126,6 +128,7 @@ import java.util.Locale;
 import in.juspay.hyper.bridge.HyperBridge;
 import in.juspay.hyper.core.BridgeComponents;
 import in.juspay.hyper.core.ExecutorManager;
+import in.juspay.hyper.core.JuspayLogger;
 
 public class MobilityCommonBridge extends HyperBridge {
 
@@ -1552,15 +1555,18 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     protected boolean isStoragePermissionGiven() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            JuspayLogger.d(OTHERS,"Storage Permission is required for API less than 29");
             return (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) && (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED);
         } else {
+            JuspayLogger.d(OTHERS,"Storage Permission is not required for API greater than 29");
             return true;
         }
     }
 
     protected void requestStoragePermission() {
         if (bridgeComponents.getActivity() != null) {
+            JuspayLogger.d(OTHERS,"Requesting Storage Permission for API less than 29");
             ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE}, STORAGE_PERMISSION);
         }
     }
@@ -1570,6 +1576,20 @@ public class MobilityCommonBridge extends HyperBridge {
         private static final String MINIMUM_EIGHTEEN_YEARS = "MINIMUM_EIGHTEEN_YEARS";
         private static final String MIN_EIGHTEEN_MAX_SIXTY_YEARS = "MIN_EIGHTEEN_MAX_SIXTY_YEARS";
         private static final String MAX_THIRTY_DAYS_FROM_CURRENT_DATE = "MAX_THIRTY_DAYS_FROM_CURRENT_DATE";
+    }
+
+    public File checkAndGetFileName(String fileName) {
+        File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), fileName + ".pdf");
+        int i = 1;
+        while (file.exists()) {
+            JuspayLogger.d(UTILS,"file already exists " + file.getName());
+            String updatedFile = fileName + "_(" + i + ")" + ".pdf";
+            file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), updatedFile);
+            i++;
+
+        }
+        JuspayLogger.d(UTILS,"final File name " + file.getName());
+        return file;
     }
     // endregion
 
