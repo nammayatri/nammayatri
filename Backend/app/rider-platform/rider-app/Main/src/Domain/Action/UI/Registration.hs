@@ -221,7 +221,7 @@ auth isDirectAuth req mbBundleVersion mbClientVersion = do
         mbEncEmail <- encrypt `mapM` req.email
         DB.runTransaction $ do
           RegistrationToken.setDirectAuth regToken.id
-          Person.updatePersonalInfo person.id (req.firstName <|> Just "User") req.middleName req.lastName Nothing mbEncEmail deviceToken notificationToken (req.language <|> Just Language.ENGLISH) (req.gender <|> Just SP.UNKNOWN)
+          Person.updatePersonalInfo person.id (req.firstName <|> person.firstName <|> Just "User") req.middleName req.lastName Nothing mbEncEmail deviceToken notificationToken (req.language <|> person.language <|> Just Language.ENGLISH) (req.gender <|> Just person.gender)
         personAPIEntity <- verifyFlow person regToken req.whatsappNotificationEnroll deviceToken
         return (Just personAPIEntity, Just regToken.token, SR.DIRECT)
       else return (Nothing, Nothing, regToken.authType)
