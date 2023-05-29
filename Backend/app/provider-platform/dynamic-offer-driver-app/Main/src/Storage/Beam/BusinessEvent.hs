@@ -18,7 +18,6 @@
 module Storage.Beam.BusinessEvent where
 
 import qualified Data.Aeson as A
-import Data.ByteString.Internal (ByteString, unpackChars)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
@@ -28,22 +27,16 @@ import Database.Beam.Backend
 import Database.Beam.MySQL ()
 import Database.Beam.Postgres
   ( Postgres,
-    ResultError (ConversionFailed, UnexpectedNull),
   )
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
-import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import qualified Domain.Types.BusinessEvent as Domain
 import Domain.Types.Vehicle.Variant (Variant)
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common hiding (id)
 import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
-import Storage.Tabular.Booking (BookingTId)
-import Storage.Tabular.Person (PersonTId)
-import Storage.Tabular.Ride (RideTId)
 
 -- fromFieldEnum ::
 --   (Typeable a, Read a) =>
@@ -164,13 +157,11 @@ psToHs = HM.empty
 
 businessEventToHSModifiers :: M.Map Text (A.Value -> A.Value)
 businessEventToHSModifiers =
-  M.fromList
-    []
+  M.empty
 
 businessEventToPSModifiers :: M.Map Text (A.Value -> A.Value)
 businessEventToPSModifiers =
-  M.fromList
-    []
+  M.empty
 
 defaultBusinessEvent :: BusinessEvent
 defaultBusinessEvent =

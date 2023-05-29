@@ -21,13 +21,10 @@ import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.Booking.BookingLocation as BeamBL
-import Storage.Tabular.Booking.BookingLocation hiding (area, areaCode, building, city, country, door, state, street)
 import qualified Storage.Tabular.VechileNew as VN
 
 -- updateAddress :: Id BookingLocation -> LocationAddress -> SqlDB ()

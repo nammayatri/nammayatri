@@ -18,31 +18,18 @@
 module Storage.Beam.Issue.Comment where
 
 import qualified Data.Aeson as A
-import Data.ByteString.Internal (ByteString, unpackChars)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
-import Data.Time
 import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-    ResultError (ConversionFailed, UnexpectedNull),
-  )
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
-import qualified Database.PostgreSQL.Simple.FromField as DPSF
-import qualified Domain.Types.Issue.Comment as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common hiding (id)
 import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
-import Storage.Tabular.Issue.IssueReport (IssueReportTId)
-import Storage.Tabular.Person (PersonTId)
 
 -- fromFieldEnum ::
 --   (Typeable a, Read a) =>
@@ -115,12 +102,10 @@ psToHs = HM.empty
 
 commentToHSModifiers :: M.Map Text (A.Value -> A.Value)
 commentToHSModifiers =
-  M.fromList
-    []
+  M.empty
 
 commentToPSModifiers :: M.Map Text (A.Value -> A.Value)
 commentToPSModifiers =
-  M.fromList
-    []
+  M.empty
 
 $(enableKVPG ''CommentT ['id] [])

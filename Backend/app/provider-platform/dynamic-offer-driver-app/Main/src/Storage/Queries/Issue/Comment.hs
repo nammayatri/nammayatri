@@ -7,12 +7,10 @@ import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.Issue.Comment as BeamC
-import Storage.Tabular.Issue.Comment
 import qualified Storage.Tabular.VechileNew as VN
 
 -- create :: Comment -> SqlDB ()

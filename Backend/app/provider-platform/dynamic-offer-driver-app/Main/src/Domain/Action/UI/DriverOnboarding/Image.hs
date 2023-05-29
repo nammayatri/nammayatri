@@ -29,7 +29,6 @@ import qualified EulerHS.Language as L
 import EulerHS.Types (base64Encode)
 import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto hiding (isNothing)
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id

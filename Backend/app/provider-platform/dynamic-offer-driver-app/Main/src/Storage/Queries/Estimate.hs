@@ -17,7 +17,6 @@ module Storage.Queries.Estimate where
 import Domain.Types.Estimate as Domain
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.Prelude
 -- import Kernel.Storage.Esqueleto as Esq

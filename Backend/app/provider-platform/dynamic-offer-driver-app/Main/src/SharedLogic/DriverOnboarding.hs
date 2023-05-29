@@ -22,7 +22,6 @@ import qualified Domain.Types.Merchant.MerchantMessage as DMM
 import Environment
 import qualified Kernel.External.Slack.Flow as SF
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common

@@ -21,7 +21,6 @@ import Data.Text (pack)
 import Data.Time hiding (getCurrentTime)
 import qualified Database.Beam as B
 import Database.Beam.Postgres
-import qualified Database.Beam.Query as B
 import Domain.Types.Booking as Booking
 import Domain.Types.Merchant
 import Domain.Types.Person
@@ -44,7 +43,6 @@ import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Beam.Ride.Table as BeamR
-import Storage.Queries.Booking (baseBookingTable)
 import Storage.Queries.FullEntityBuilders (buildFullBooking)
 import Storage.Tabular.Booking as Booking
 import Storage.Tabular.DriverInformation as DriverInfo
@@ -622,7 +620,7 @@ findStuckRideItems merchantId bookingIds now = do
   where
     mkStuckRideItem (rideId, bookingId, driverId, driverActive) = StuckRideItem {..}
 
-transformBeamRideToDomain :: L.MonadFlow m => BeamR.Ride -> m (Ride)
+transformBeamRideToDomain :: L.MonadFlow m => BeamR.Ride -> m Ride
 transformBeamRideToDomain BeamR.RideT {..} = do
   tUrl <- parseBaseUrl trackingUrl
   pure

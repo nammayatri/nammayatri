@@ -39,7 +39,6 @@ import qualified Kernel.External.FCM.Types as FCM
 import Kernel.External.Maps (HasCoordinates (getCoordinates))
 import Kernel.External.Maps.Types
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Storage.Hedis as Redis (HedisFlow)
@@ -51,7 +50,6 @@ import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
-import Servant.Client (BaseUrl (..))
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverLocation as DLoc
 import SharedLogic.FareCalculator (fareSum)
@@ -169,7 +167,7 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) =
 arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CoreMetrics m, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["driverReachedDistance" ::: HighPrecMeters]) => Id DRide.Ride -> LatLong -> m APISuccess
 arrivedAtPickup rideId req = do
   -- ride <- (runInReplica $ QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  ride <- (QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus "The ride has already started."
   -- booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
@@ -214,7 +212,7 @@ otpRideCreate driver otpCode booking = do
   rideDetails <- buildRideDetails ride
   -- Esq.runTransaction $ do
   _ <- QBooking.updateStatus booking.id DRB.TRIP_ASSIGNED
-  _ <- (QRide.create ride)
+  _ <- QRide.create ride
   _ <- QDFS.updateStatus driver.id DDFS.RIDE_ASSIGNED {rideId = ride.id}
   _ <- QRideD.create rideDetails
   QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id

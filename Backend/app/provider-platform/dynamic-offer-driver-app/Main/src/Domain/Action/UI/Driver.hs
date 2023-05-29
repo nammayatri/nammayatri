@@ -71,8 +71,6 @@ import qualified Domain.Types.Vehicle as SV
 import qualified Domain.Types.Vehicle as Veh
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Environment
-import EulerHS.KVConnector.Types
-import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
 import Kernel.External.Encryption

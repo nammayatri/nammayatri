@@ -21,12 +21,10 @@ where
 
 import Domain.Types.Merchant as DOrg
 -- import Domain.Types.Merchant.MerchantServiceConfig (MerchantServiceConfig, ServiceName)
-import qualified Domain.Types.Merchant as Domain
 import Domain.Types.Merchant.MerchantServiceConfig
 import qualified Domain.Types.Merchant.MerchantServiceConfig as Domain
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import qualified Kernel.External.Call as Call
 import qualified Kernel.External.Maps.Interface.Types as Maps
@@ -35,11 +33,9 @@ import qualified Kernel.External.SMS.Interface as Sms
 import qualified Kernel.External.Verification.Interface as Verification
 import qualified Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto hiding (findById)
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Utils.Common (decodeFromText, encodeToText)
+import Kernel.Utils.Common (decodeFromText)
 import Kernel.Utils.Error
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se

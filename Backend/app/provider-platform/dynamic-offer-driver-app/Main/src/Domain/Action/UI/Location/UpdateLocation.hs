@@ -31,7 +31,6 @@ import Environment (Flow)
 import GHC.Records.Extra
 import Kernel.External.Maps.Types
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer (produceMessage)
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)

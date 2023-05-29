@@ -17,7 +17,6 @@ module Storage.Queries.Person where
 
 import Control.Applicative ((<|>))
 import qualified Data.Maybe as Mb
-import Data.Text (splitOn)
 import qualified Domain.Types.Booking as Booking
 import Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.DriverLocation
@@ -42,7 +41,6 @@ import Kernel.Utils.Common hiding (Value)
 import Kernel.Utils.GenericPretty
 import Kernel.Utils.Version
 import qualified Lib.Mesh as Mesh
-import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.Person as BeamP
 import Storage.Tabular.Booking

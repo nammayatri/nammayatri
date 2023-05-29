@@ -18,7 +18,6 @@
 module Storage.Beam.SearchRequestForDriver where
 
 import qualified Data.Aeson as A
-import Data.ByteString.Internal (ByteString, unpackChars)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
@@ -28,24 +27,18 @@ import Database.Beam.Backend
 import Database.Beam.MySQL ()
 import Database.Beam.Postgres
   ( Postgres,
-    ResultError (ConversionFailed, UnexpectedNull),
   )
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
-import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import qualified Domain.Types.DriverInformation as D
 import qualified Domain.Types.SearchRequestForDriver as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common (Meters, Money)
 import Kernel.Types.Common hiding (id)
-import Kernel.Types.Time
 import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
-import Storage.Tabular.Person (PersonTId)
-import Storage.Tabular.SearchRequest (SearchRequestTId)
 import Storage.Tabular.Vehicle ()
 
 -- fromFieldEnum ::
@@ -249,13 +242,11 @@ psToHs = HM.empty
 
 searchRequestForDriverToHSModifiers :: M.Map Text (A.Value -> A.Value)
 searchRequestForDriverToHSModifiers =
-  M.fromList
-    []
+  M.empty
 
 searchRequestForDriverToPSModifiers :: M.Map Text (A.Value -> A.Value)
 searchRequestForDriverToPSModifiers =
-  M.fromList
-    []
+  M.empty
 
 defaultSearchRequestForDriver :: SearchRequestForDriver
 defaultSearchRequestForDriver =

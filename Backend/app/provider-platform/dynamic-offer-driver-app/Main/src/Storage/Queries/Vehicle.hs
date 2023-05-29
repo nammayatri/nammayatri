@@ -15,7 +15,6 @@
 module Storage.Queries.Vehicle where
 
 -- import qualified Data.Text as T
-import qualified Debug.Trace as T
 import Domain.Types.Merchant
 import Domain.Types.Person
 import Domain.Types.Vehicle
@@ -32,7 +31,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Mesh as Mesh
 import Sequelize as Se
-import qualified Sequelize as Se
 import qualified Storage.Beam.Vehicle as BeamV
 import Storage.Tabular.Vehicle
 
@@ -178,10 +176,10 @@ findByAnyOf registrationNoM vehicleIdM = do
           [ Se.And
               ( []
                   <> if isJust vehicleIdM
-                    then [Se.Is BeamV.driverId $ Se.Eq (fromJust $ getId <$> (vehicleIdM))]
+                    then [Se.Is BeamV.driverId $ Se.Eq (getId (fromJust vehicleIdM))]
                     else
                       []
-                        <> if isJust registrationNoM then [Se.Is BeamV.registrationNo $ Se.Eq (fromJust registrationNoM)] else []
+                        <> ([Se.Is BeamV.registrationNo $ Se.Eq (fromJust registrationNoM) | isJust registrationNoM])
               )
           ]
     Nothing -> pure Nothing

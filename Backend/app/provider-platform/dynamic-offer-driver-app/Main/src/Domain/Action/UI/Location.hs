@@ -25,7 +25,6 @@ import qualified Kernel.External.Maps.HasCoordinates as GoogleMaps
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)

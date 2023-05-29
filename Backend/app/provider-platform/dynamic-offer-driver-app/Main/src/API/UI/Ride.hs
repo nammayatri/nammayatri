@@ -35,7 +35,7 @@ import qualified Domain.Types.Ride as Ride
 import Environment
 import Kernel.External.Maps.Types
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
+-- import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Kernel.Utils.Common

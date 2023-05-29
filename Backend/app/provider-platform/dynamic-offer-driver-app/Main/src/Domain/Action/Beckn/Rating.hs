@@ -21,7 +21,6 @@ import qualified Domain.Types.Ride as DRide
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common

@@ -18,7 +18,6 @@ module Storage.CachedQueries.MediaFile where
 
 import Domain.Types.Issue.IssueReport (IssueReport)
 import Domain.Types.MediaFile
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq

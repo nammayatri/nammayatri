@@ -35,7 +35,7 @@ import Kernel.External.Call.Interface.Exotel (exotelStatusToInterfaceStatus)
 import Kernel.External.Call.Interface.Types
 import Kernel.External.Encryption (decrypt, getDbHash)
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto (EsqDBReplicaFlow, runInReplica, runTransaction)
+import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
 import Kernel.Types.Beckn.Ack
 import Kernel.Types.Id
 import Kernel.Utils.Common

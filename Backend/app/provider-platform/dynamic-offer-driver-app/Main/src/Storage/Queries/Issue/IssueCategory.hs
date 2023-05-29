@@ -4,13 +4,11 @@ import Domain.Types.Issue.IssueCategory
 import Domain.Types.Issue.IssueTranslation
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
-import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.Issue.IssueCategory as BeamIC
 import Storage.Tabular.Issue.IssueCategory

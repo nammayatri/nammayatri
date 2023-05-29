@@ -18,7 +18,6 @@
 module Storage.Beam.Booking where
 
 import qualified Data.Aeson as A
-import Data.ByteString.Internal (ByteString, unpackChars)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
@@ -26,12 +25,8 @@ import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-    ResultError (ConversionFailed, UnexpectedNull),
-  )
+import Database.Beam.Postgres (Postgres)
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
-import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import qualified Domain.Types.Booking as Domain
 import qualified Domain.Types.Vehicle.Variant as Veh
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
@@ -226,13 +221,11 @@ psToHs = HM.empty
 
 bookingToHSModifiers :: M.Map Text (A.Value -> A.Value)
 bookingToHSModifiers =
-  M.fromList
-    []
+  M.empty
 
 bookingToPSModifiers :: M.Map Text (A.Value -> A.Value)
 bookingToPSModifiers =
-  M.fromList
-    []
+  M.empty
 
 defaultBooking :: Booking
 defaultBooking =

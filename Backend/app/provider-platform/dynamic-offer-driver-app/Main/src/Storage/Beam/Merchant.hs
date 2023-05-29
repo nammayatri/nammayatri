@@ -18,7 +18,6 @@
 module Storage.Beam.Merchant where
 
 import qualified Data.Aeson as A
-import Data.ByteString.Internal (ByteString, unpackChars)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
@@ -28,15 +27,12 @@ import Database.Beam.Backend
 import Database.Beam.MySQL ()
 import Database.Beam.Postgres
   ( Postgres,
-    ResultError (ConversionFailed, UnexpectedNull),
   )
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
-import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import qualified Domain.Types.Merchant as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common hiding (id)
 import Kernel.Types.Geofencing
 import Lib.Utils
 import Lib.UtilsTH
@@ -167,13 +163,11 @@ psToHs = HM.empty
 
 merchantToHSModifiers :: M.Map Text (A.Value -> A.Value)
 merchantToHSModifiers =
-  M.fromList
-    []
+  M.empty
 
 merchantToPSModifiers :: M.Map Text (A.Value -> A.Value)
 merchantToPSModifiers =
-  M.fromList
-    []
+  M.empty
 
 defaultMerchant :: Merchant
 defaultMerchant =

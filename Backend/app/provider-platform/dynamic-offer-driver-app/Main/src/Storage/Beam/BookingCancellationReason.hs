@@ -18,32 +18,21 @@
 module Storage.Beam.BookingCancellationReason where
 
 import qualified Data.Aeson as A
-import Data.ByteString.Internal (ByteString, unpackChars)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-    ResultError (ConversionFailed, UnexpectedNull),
-  )
+import Database.Beam.Postgres (Postgres)
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
-import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import qualified Domain.Types.BookingCancellationReason as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common hiding (id)
 import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
-import Storage.Tabular.Booking (BookingTId)
-import Storage.Tabular.CancellationReason (CancellationReasonTId)
-import Storage.Tabular.Person (PersonTId)
-import Storage.Tabular.Ride (RideTId)
 
 -- fromFieldEnum ::
 --   (Typeable a, Read a) =>
@@ -82,7 +71,7 @@ instance IsString Domain.CancellationSource where
 
 instance B.Table BookingCancellationReasonT where
   data PrimaryKey BookingCancellationReasonT f
-    = Id (B.C f (Text))
+    = Id (B.C f Text)
     deriving (Generic, B.Beamable)
   primaryKey = Id . bookingId
 
@@ -123,13 +112,11 @@ psToHs = HM.empty
 
 bookingCancellationReasonToHSModifiers :: M.Map Text (A.Value -> A.Value)
 bookingCancellationReasonToHSModifiers =
-  M.fromList
-    []
+  M.empty
 
 bookingCancellationReasonToPSModifiers :: M.Map Text (A.Value -> A.Value)
 bookingCancellationReasonToPSModifiers =
-  M.fromList
-    []
+  M.empty
 
 defaultBookingCancellationReason :: BookingCancellationReason
 defaultBookingCancellationReason =

@@ -18,16 +18,12 @@ module Storage.Queries.SearchRequest.SearchReqLocation where
 import Domain.Types.SearchRequest.SearchReqLocation
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
-import Kernel.Utils.Common
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequest.SearchReqLocation as BeamSRL
-import Storage.Tabular.SearchRequest.SearchReqLocation
 
 findById :: L.MonadFlow m => Id SearchReqLocation -> m (Maybe SearchReqLocation)
 findById (Id searchReqLocationId) = do

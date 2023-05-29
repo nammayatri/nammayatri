@@ -18,26 +18,23 @@
 module Storage.Beam.Issue.IssueTranslation where
 
 import qualified Data.Aeson as A
-import Data.ByteString.Internal (ByteString, unpackChars)
+-- import Data.ByteString.Internal (ByteString, unpackChars)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
-import qualified Data.Time as Time
+-- import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-    ResultError (ConversionFailed, UnexpectedNull),
-  )
+import Database.Beam.Postgres (Postgres)
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
-import qualified Database.PostgreSQL.Simple.FromField as DPSF
-import qualified Domain.Types.Issue.IssueTranslation as Domain
+-- import qualified Database.PostgreSQL.Simple.FromField as DPSF
+-- import qualified Domain.Types.Issue.IssueTranslation as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.External.Types (Language)
 import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common hiding (id)
+-- import Kernel.Types.Common hiding (id)
 import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
@@ -123,12 +120,10 @@ psToHs = HM.empty
 
 issueTranslationToHSModifiers :: M.Map Text (A.Value -> A.Value)
 issueTranslationToHSModifiers =
-  M.fromList
-    []
+  M.empty
 
 issueTranslationToPSModifiers :: M.Map Text (A.Value -> A.Value)
 issueTranslationToPSModifiers =
-  M.fromList
-    []
+  M.empty
 
 $(enableKVPG ''IssueTranslationT ['id] [])

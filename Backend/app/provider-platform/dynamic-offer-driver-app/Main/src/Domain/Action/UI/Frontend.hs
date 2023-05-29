@@ -20,9 +20,7 @@ where
 
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.Person as DP
-import EulerHS.KVConnector.Types
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.DriverMode as DMode

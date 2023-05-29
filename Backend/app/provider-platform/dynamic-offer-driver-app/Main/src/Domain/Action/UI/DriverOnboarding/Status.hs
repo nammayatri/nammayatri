@@ -32,8 +32,6 @@ import Domain.Types.Vehicle.Variant
 import Environment
 import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as DB
-import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id (Id)
@@ -128,7 +126,7 @@ enableDriver personId merchantId (Just rc) (Just dl) = do
   let vehicle = buildVehicle now personId merchantId rcNumber
   _ <- VQuery.upsert vehicle
   case dl.driverName of
-    Just name -> void $ (Person.updateName personId name)
+    Just name -> void (Person.updateName personId name)
     Nothing -> return ()
   where
     buildVehicle now personId_ merchantId_ certificateNumber =

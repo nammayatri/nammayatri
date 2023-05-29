@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TypeApplications #-}
 
 module Storage.Queries.Message.MessageTranslation where
 
@@ -23,13 +22,10 @@ import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.External.Types (Language)
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.Message.MessageTranslation as BeamMT
-import Storage.Tabular.Message.MessageTranslation
 
 -- create :: MessageTranslation -> SqlDB ()
 -- create = Esq.create

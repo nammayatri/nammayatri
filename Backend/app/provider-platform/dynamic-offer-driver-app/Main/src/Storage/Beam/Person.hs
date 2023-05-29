@@ -18,7 +18,6 @@
 module Storage.Beam.Person where
 
 import qualified Data.Aeson as A
-import Data.ByteString.Internal (ByteString, unpackChars)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
@@ -28,25 +27,20 @@ import Database.Beam.Backend
 import Database.Beam.MySQL ()
 import Database.Beam.Postgres
   ( Postgres,
-    ResultError (ConversionFailed, UnexpectedNull),
   )
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
-import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import qualified Domain.Types.Person as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.External.Encryption (DbHash (..), Encrypted (..), EncryptedHashed (..))
+import Kernel.External.Encryption (DbHash (..))
 import Kernel.External.FCM.Types (FCMRecipientToken (..))
 import Kernel.External.Types (Language)
 import Kernel.External.Whatsapp.Interface.Types (OptApiMethods (..))
 import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common (Centesimal)
 import Kernel.Types.Common hiding (id)
-import Kernel.Utils.Version
 import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
-import Storage.Tabular.Merchant (MerchantTId)
 
 -- fromFieldEnum ::
 --   (Typeable a, Read a) =>
@@ -250,13 +244,11 @@ psToHs = HM.empty
 
 personToHSModifiers :: M.Map Text (A.Value -> A.Value)
 personToHSModifiers =
-  M.fromList
-    []
+  M.empty
 
 personToPSModifiers :: M.Map Text (A.Value -> A.Value)
 personToPSModifiers =
-  M.fromList
-    []
+  M.empty
 
 defaultPerson :: Person
 defaultPerson =

@@ -35,7 +35,7 @@ module Storage.Tabular.BookingNew where
 -- import           Database.Beam.Schema.Tables (DatabaseEntity, EntityModification)
 
 import qualified Data.Aeson as A
-import Data.ByteString.Internal (ByteString, unpackChars)
+-- import Data.ByteString.Internal (ByteString, unpackChars)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
@@ -43,13 +43,10 @@ import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-    ResultError (ConversionFailed, UnexpectedNull),
-  )
+import Database.Beam.Postgres (Postgres)
 -- import qualified Database.Beam.Schema.Tables as DBST
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
-import qualified Database.PostgreSQL.Simple.FromField as DPSF
+-- import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import qualified Domain.Types.Booking as Domain
 import qualified Domain.Types.Vehicle.Variant as Veh
 import qualified EulerHS.Extra.EulerDB as Extra
@@ -62,7 +59,7 @@ import Kernel.Types.Common hiding (id)
 import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
-import Storage.Beam.Instances
+-- import Storage.Beam.Instances
 import Storage.Tabular.Vehicle ()
 
 data A = A | B
@@ -243,13 +240,11 @@ psToHs = HM.empty
 
 bookingNewToHSModifiers :: M.Map Text (A.Value -> A.Value)
 bookingNewToHSModifiers =
-  M.fromList
-    []
+  M.empty
 
 bookingNewToPSModifiers :: M.Map Text (A.Value -> A.Value)
 bookingNewToPSModifiers =
-  M.fromList
-    []
+  M.empty
 
 meshConfig :: MeshConfig
 meshConfig =
@@ -268,7 +263,7 @@ findById :: (L.MonadFlow m) => Text -> m (Maybe BookingNew)
 findById bookingId = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbCOnf' -> either (const Nothing) (\x -> x) <$> KV.findWithKVConnector dbCOnf' meshConfig ([And [Is id (Eq bookingId)]])
+    Just dbCOnf' -> either (const Nothing) (\x -> x) <$> KV.findWithKVConnector dbCOnf' meshConfig [And [Is id (Eq bookingId)]]
     Nothing -> pure Nothing
 
 -- instance Serialize Domain.BookingStatus where

@@ -18,41 +18,24 @@
 module Storage.Beam.CallStatus where
 
 import qualified Data.Aeson as A
-import Data.ByteString.Internal (ByteString, unpackChars)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
-import Data.Time
-  ( LocalTime (LocalTime),
-    TimeOfDay (TimeOfDay),
-    localDay,
-    localTimeOfDay,
-    localTimeToUTC,
-    todHour,
-    todMin,
-    todSec,
-    utc,
-  )
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
 import Database.Beam.Postgres
   ( Postgres,
-    ResultError (ConversionFailed, UnexpectedNull),
   )
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
-import qualified Database.PostgreSQL.Simple.FromField as DPSF
-import qualified Domain.Types.CallStatus as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import qualified Kernel.External.Call.Interface.Types as Call
 import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common hiding (id)
 import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
-import Storage.Tabular.Ride (RideTId)
 
 -- fromFieldEnum ::
 --   (Typeable a, Read a) =>
@@ -87,7 +70,7 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Call.CallStatus
 instance FromBackendRow Postgres Call.CallStatus
 
 data CallStatusT f = CallStatusT
-  { id :: B.C f (Text),
+  { id :: B.C f Text,
     callId :: B.C f Text,
     rideId :: B.C f Text,
     dtmfNumberUsed :: B.C f (Maybe Text),
@@ -144,13 +127,11 @@ psToHs = HM.empty
 
 callStatusToHSModifiers :: M.Map Text (A.Value -> A.Value)
 callStatusToHSModifiers =
-  M.fromList
-    []
+  M.empty
 
 callStatusToPSModifiers :: M.Map Text (A.Value -> A.Value)
 callStatusToPSModifiers =
-  M.fromList
-    []
+  M.empty
 
 instance Serialize CallStatus where
   put = error "undefined"

@@ -42,7 +42,6 @@ import EulerHS.KVConnector.Types
 import Kernel.External.Encryption
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto hiding (isNothing)
 import Kernel.Types.APISuccess
 import Kernel.Types.Error
 import Kernel.Types.Id

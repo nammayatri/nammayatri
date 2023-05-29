@@ -29,7 +29,7 @@ import Environment
 import qualified Kernel.External.Verification.Idfy.WebhookHandler as Idfy
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto hiding (Value, val)
+-- import Kernel.Storage.Esqueleto hiding (Value, val)
 import Kernel.Types.Beckn.Ack
 import Kernel.Types.Error
 import Kernel.Types.Id

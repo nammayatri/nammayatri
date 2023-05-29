@@ -19,12 +19,10 @@ import Domain.Types.Merchant
 import Domain.Types.SearchRequestSpecialZone as Domain
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
-import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequestSpecialZone as BeamSRSZ
 import Storage.Queries.SearchRequest.SearchReqLocation as QSRL
@@ -149,7 +147,7 @@ getValidTill (Id searchRequestId) = do
           pure vTill
     Nothing -> pure Nothing
 
-transformBeamSearchRequestSpecialZoneToDomain :: L.MonadFlow m => BeamSRSZ.SearchRequestSpecialZone -> m (SearchRequestSpecialZone)
+transformBeamSearchRequestSpecialZoneToDomain :: L.MonadFlow m => BeamSRSZ.SearchRequestSpecialZone -> m SearchRequestSpecialZone
 transformBeamSearchRequestSpecialZoneToDomain BeamSRSZ.SearchRequestSpecialZoneT {..} = do
   fl <- QSRL.findById (Id fromLocationId)
   tl <- QSRL.findById (Id toLocationId)

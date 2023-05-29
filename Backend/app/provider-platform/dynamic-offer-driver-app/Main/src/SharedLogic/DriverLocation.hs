@@ -20,7 +20,6 @@ import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.External.Maps
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Error

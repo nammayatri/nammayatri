@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TypeApplications #-}
 
 module Storage.Queries.DriverOnboarding.IdfyVerification where
 
@@ -24,13 +23,11 @@ import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.IdfyVerification as BeamIV
-import Storage.Tabular.DriverOnboarding.IdfyVerification
 
 -- create :: IdfyVerification -> SqlDB ()
 -- create = Esq.create

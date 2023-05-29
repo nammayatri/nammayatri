@@ -35,7 +35,7 @@ module Storage.Tabular.VechileNew where
 -- import           Database.Beam.Schema.Tables (DatabaseEntity, EntityModification)
 
 import qualified Data.Aeson as A
-import Data.ByteString.Internal (ByteString, unpackChars)
+-- import Data.ByteString.Internal (ByteString, unpackChars)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
@@ -43,18 +43,15 @@ import Data.Serialize
 
 import qualified Data.Text as T
 import Data.Time
-import qualified Data.Time as Time
+-- import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-    ResultError (ConversionFailed, UnexpectedNull),
-  )
+import Database.Beam.Postgres (Postgres)
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
-import qualified Database.PostgreSQL.Simple.FromField as DPSF
+-- import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import qualified Debug.Trace as T
-import qualified Domain.Types.Booking as Domain
+-- import qualified Domain.Types.Booking as Domain
 import qualified Domain.Types.Vehicle as Domain
 import qualified Domain.Types.Vehicle.Variant as Veh
 import qualified EulerHS.Extra.EulerDB as Extra
@@ -63,7 +60,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshConfig (..), MeshMeta (.
 import qualified EulerHS.Language as L
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common hiding (id)
+-- import Kernel.Types.Common hiding (id)
 import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
@@ -231,13 +228,11 @@ psToHs = HM.empty
 
 vechileNewToHSModifiers :: M.Map Text (A.Value -> A.Value)
 vechileNewToHSModifiers =
-  M.fromList
-    []
+  M.empty
 
 vechileNewToPSModifiers :: M.Map Text (A.Value -> A.Value)
 vechileNewToPSModifiers =
-  M.fromList
-    []
+  M.empty
 
 meshConfig :: MeshConfig
 meshConfig =

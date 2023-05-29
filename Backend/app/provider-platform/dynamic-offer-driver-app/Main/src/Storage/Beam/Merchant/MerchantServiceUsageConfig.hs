@@ -18,7 +18,6 @@
 module Storage.Beam.Merchant.MerchantServiceUsageConfig where
 
 import qualified Data.Aeson as A
-import Data.ByteString.Internal (ByteString, unpackChars)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
@@ -28,12 +27,8 @@ import Database.Beam.Backend
 import Database.Beam.MySQL ()
 import Database.Beam.Postgres
   ( Postgres,
-    ResultError (ConversionFailed, UnexpectedNull),
   )
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
-import qualified Database.PostgreSQL.Simple.FromField as DPSF
-import qualified Domain.Types.Merchant as Domain
-import qualified Domain.Types.Merchant.MerchantServiceUsageConfig as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.External.Call (CallService)
@@ -42,11 +37,9 @@ import Kernel.External.SMS.Types
 import Kernel.External.Verification.Types
 import Kernel.External.Whatsapp.Types
 import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common hiding (id)
 import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
-import Storage.Tabular.Merchant (MerchantTId)
 
 -- fromFieldEnum ::
 --   (Typeable a, Read a) =>
@@ -216,12 +209,10 @@ psToHs = HM.empty
 
 merchantServiceUsageConfigToHSModifiers :: M.Map Text (A.Value -> A.Value)
 merchantServiceUsageConfigToHSModifiers =
-  M.fromList
-    []
+  M.empty
 
 merchantServiceUsageConfigToPSModifiers :: M.Map Text (A.Value -> A.Value)
 merchantServiceUsageConfigToPSModifiers =
-  M.fromList
-    []
+  M.empty
 
 $(enableKVPG ''MerchantServiceUsageConfigT ['merchantId] [])

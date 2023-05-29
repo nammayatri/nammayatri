@@ -144,16 +144,11 @@ import Data.List.NonEmpty
 import Domain.Types.FarePolicy as Domain
 import Domain.Types.Merchant
 import Domain.Types.Vehicle.Variant (Variant)
-import qualified EulerHS.Extra.EulerDB as Extra
-import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.Mesh as Mesh
-import qualified Sequelize as Se
 import qualified Storage.Beam.FarePolicy as BeamFP
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails as BeamFPPD
 import qualified Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab as QFPSlabDetSlabs
@@ -163,7 +158,6 @@ import Storage.Tabular.FarePolicy
 import Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails (EntityField (FarePolicyProgressiveDetailsBaseDistance, FarePolicyProgressiveDetailsBaseFare, FarePolicyProgressiveDetailsDeadKmFare, FarePolicyProgressiveDetailsNightShiftCharge, FarePolicyProgressiveDetailsPerExtraKmFare, FarePolicyProgressiveDetailsTId), FarePolicyProgressiveDetailsT (..))
 import Storage.Tabular.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab ()
 import Storage.Tabular.FarePolicy.Instances
-import qualified Storage.Tabular.VechileNew as VN
 
 findAllByMerchantId ::
   Transactionable m =>
@@ -239,7 +233,7 @@ update farePolicy = do
       QFPSlabDetSlabs.deleteAll' farePolicy.id
       Esq.createMany' dets
 
-transformBeamFarePolicyToDomain :: L.MonadFlow m => BeamFP.FarePolicy -> m (FarePolicy)
+transformBeamFarePolicyToDomain :: L.MonadFlow m => BeamFP.FarePolicy -> m FarePolicy
 transformBeamFarePolicyToDomain BeamFP.FarePolicyT {..} = do
   fullFPPD <- BeamFPPD.findById' (Id id)
   let fPPD = snd $ fromJust fullFPPD

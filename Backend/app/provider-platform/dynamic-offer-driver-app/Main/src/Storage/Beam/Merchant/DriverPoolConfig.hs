@@ -18,7 +18,6 @@
 module Storage.Beam.Merchant.DriverPoolConfig where
 
 import qualified Data.Aeson as A
-import Data.ByteString.Internal (ByteString, unpackChars)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
@@ -28,22 +27,16 @@ import Database.Beam.Backend
 import Database.Beam.MySQL ()
 import Database.Beam.Postgres
   ( Postgres,
-    ResultError (ConversionFailed, UnexpectedNull),
   )
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
-import qualified Database.PostgreSQL.Simple.FromField as DPSF
-import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.DriverPoolConfig as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common (Meters, Seconds)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config (PoolSortingType (..))
-import Storage.Tabular.Merchant (MerchantTId)
 
 -- fromFieldEnum ::
 --   (Typeable a, Read a) =>
@@ -204,13 +197,11 @@ psToHs = HM.empty
 
 driverPoolConfigToHSModifiers :: M.Map Text (A.Value -> A.Value)
 driverPoolConfigToHSModifiers =
-  M.fromList
-    []
+  M.empty
 
 driverPoolConfigToPSModifiers :: M.Map Text (A.Value -> A.Value)
 driverPoolConfigToPSModifiers =
-  M.fromList
-    []
+  M.empty
 
 -- instance IsString Meters where
 --   fromString = show

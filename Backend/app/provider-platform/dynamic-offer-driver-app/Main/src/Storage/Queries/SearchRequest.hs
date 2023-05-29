@@ -27,8 +27,8 @@ import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequest as BeamSR
 import Storage.Queries.SearchRequest.SearchReqLocation as QSRL
-import Storage.Tabular.SearchRequest
-import Storage.Tabular.SearchRequest.SearchReqLocation
+import Storage.Tabular.SearchRequest ()
+import Storage.Tabular.SearchRequest.SearchReqLocation ()
 
 -- import qualified Storage.Tabular.VechileNew as VN
 
@@ -182,7 +182,7 @@ findActiveByTransactionId transactionId = do
           pure srId
     Nothing -> pure Nothing
 
-transformBeamSearchRequestToDomain :: L.MonadFlow m => BeamSR.SearchRequest -> m (SearchRequest)
+transformBeamSearchRequestToDomain :: L.MonadFlow m => BeamSR.SearchRequest -> m SearchRequest
 transformBeamSearchRequestToDomain BeamSR.SearchRequestT {..} = do
   fl <- QSRL.findById (Id fromLocationId)
   tl <- QSRL.findById (Id toLocationId)

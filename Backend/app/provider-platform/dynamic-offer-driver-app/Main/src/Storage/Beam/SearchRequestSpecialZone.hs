@@ -18,8 +18,6 @@
 module Storage.Beam.SearchRequestSpecialZone where
 
 import qualified Data.Aeson as A
-import Data.ByteString.Internal (ByteString, unpackChars)
-import Data.Either.Extra
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
@@ -27,24 +25,13 @@ import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-    ResultError (ConversionFailed, UnexpectedNull),
-  )
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
-import qualified Database.PostgreSQL.Simple.FromField as DPSF
-import qualified Domain.Types.SearchRequestSpecialZone as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Kernel.Utils.Common hiding (id)
 import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
-import Servant.Client
-import Storage.Tabular.Merchant (MerchantTId)
-import Storage.Tabular.SearchRequest.SearchReqLocation (SearchReqLocationT, SearchReqLocationTId, mkDomainSearchReqLocation, mkTabularSearchReqLocation)
 import Storage.Tabular.Vehicle ()
 
 -- fromFieldEnum ::
@@ -153,13 +140,11 @@ psToHs = HM.empty
 
 searchRequestSpecialZoneToHSModifiers :: M.Map Text (A.Value -> A.Value)
 searchRequestSpecialZoneToHSModifiers =
-  M.fromList
-    []
+  M.empty
 
 searchRequestSpecialZoneToPSModifiers :: M.Map Text (A.Value -> A.Value)
 searchRequestSpecialZoneToPSModifiers =
-  M.fromList
-    []
+  M.empty
 
 defaultSearchRequestSpecialZone :: SearchRequestSpecialZone
 defaultSearchRequestSpecialZone = do

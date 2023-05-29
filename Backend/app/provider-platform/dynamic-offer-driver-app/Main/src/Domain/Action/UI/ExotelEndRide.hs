@@ -22,7 +22,7 @@ import qualified Domain.Action.UI.Ride.EndRide as EndRide
 import Domain.Types.Merchant
 import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto (EsqDBReplicaFlow, runInReplica)
+import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
 import Kernel.Types.Beckn.Ack
 import Kernel.Types.Id
 import Kernel.Utils.Common

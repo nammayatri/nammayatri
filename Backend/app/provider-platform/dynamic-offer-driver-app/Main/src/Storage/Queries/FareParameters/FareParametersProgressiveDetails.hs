@@ -1,21 +1,13 @@
 module Storage.Queries.FareParameters.FareParametersProgressiveDetails where
 
 import qualified Domain.Types.FareParameters as Domain
-import Domain.Types.Issue.IssueCategory
-import Domain.Types.Issue.IssueTranslation
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
-import Kernel.External.Types (Language)
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
-import Kernel.Types.Id
 import qualified Kernel.Types.Id as KTI
 import qualified Lib.Mesh as Mesh
-import Lib.UtilsTH
 import Sequelize as Se
-import qualified Sequelize as Se
 import Storage.Beam.FareParameters.FareParametersProgressiveDetails
 import qualified Storage.Tabular.FareParameters.FareParametersProgressiveDetails as DomainFPPD
 
@@ -28,7 +20,7 @@ findById' (KTI.Id fareParametersId') = do
 
 transformBeamFareParametersProgressiveDetailsToDomain :: FareParametersProgressiveDetails -> DomainFPPD.FullFareParametersProgressiveDetails
 transformBeamFareParametersProgressiveDetailsToDomain FareParametersProgressiveDetailsT {..} = do
-  ( (KTI.Id fareParametersId),
+  ( KTI.Id fareParametersId,
     Domain.FParamsProgressiveDetails
       { deadKmFare = deadKmFare,
         extraKmFare = extraKmFare

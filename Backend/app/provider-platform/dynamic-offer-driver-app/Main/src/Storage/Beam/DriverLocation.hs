@@ -19,7 +19,6 @@
 module Storage.Beam.DriverLocation where
 
 import qualified Data.Aeson as A
-import Data.ByteString.Internal (ByteString, unpackChars)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
@@ -27,15 +26,10 @@ import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-    ResultError (ConversionFailed, UnexpectedNull),
-  )
+import Database.Beam.Postgres (Postgres)
 import Database.Beam.Postgres.Syntax
 import qualified Database.Beam.Query as BQ
-import qualified Database.Beam.Schema.Tables as B
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
-import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
@@ -124,13 +118,11 @@ psToHs = HM.empty
 
 driverLocationToHSModifiers :: M.Map Text (A.Value -> A.Value)
 driverLocationToHSModifiers =
-  M.fromList
-    []
+  M.empty
 
 driverLocationToPSModifiers :: M.Map Text (A.Value -> A.Value)
 driverLocationToPSModifiers =
-  M.fromList
-    []
+  M.empty
 
 defaultDriverLocation :: DriverLocation
 defaultDriverLocation =
@@ -157,5 +149,8 @@ toRowExpression personId latLong updateTime now =
 instance Serialize DriverLocation where
   put = error "undefined"
   get = error "undefined"
+
+getPoint :: (Double, Double) -> BQ.QGenExpr context Postgres s Point
+getPoint (lat, long) = BQ.QExpr (\_ -> PgExpressionSyntax (emit $ "ST_SetSRID (ST_Point (" <> show long <> " , " <> show lat <> "),4326)"))
 
 $(enableKVPG ''DriverLocationT ['driverId] [])

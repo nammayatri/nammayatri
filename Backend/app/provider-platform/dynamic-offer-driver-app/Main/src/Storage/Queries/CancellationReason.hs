@@ -17,21 +17,11 @@ module Storage.Queries.CancellationReason where
 import Domain.Types.CancellationReason
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.Prelude hiding (isNothing)
-import Kernel.Storage.Esqueleto as Esq
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.CancellationReason as BeamCR
-import Storage.Tabular.CancellationReason
-
--- findAll :: Transactionable m => m [CancellationReason]
--- findAll = Esq.findAll $ do
---   cancellationReason <- from $ table @CancellationReasonT
---   where_ $ cancellationReason ^. CancellationReasonEnabled
---   orderBy [desc $ cancellationReason ^. CancellationReasonPriority]
---   return cancellationReason
 
 findAll :: L.MonadFlow m => m [CancellationReason]
 findAll = do
@@ -43,7 +33,7 @@ findAll = do
 transformBeamCancellationReasonToDomain :: BeamCR.CancellationReason -> CancellationReason
 transformBeamCancellationReasonToDomain BeamCR.CancellationReasonT {..} = do
   CancellationReason
-    { reasonCode = CancellationReasonCode $ reasonCode,
+    { reasonCode = CancellationReasonCode reasonCode,
       description = description,
       enabled = enabled,
       priority = priority

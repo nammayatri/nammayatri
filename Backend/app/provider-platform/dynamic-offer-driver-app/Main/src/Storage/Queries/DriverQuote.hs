@@ -31,19 +31,11 @@ import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverQuote as BeamDQ
 import Storage.Queries.FareParameters as BeamQFP
-import Storage.Queries.FullEntityBuilders (buildFullDriverQuote)
+-- import Storage.Queries.FullEntityBuilders (buildFullDriverQuote)
 import Storage.Tabular.DriverQuote
 import qualified Storage.Tabular.FareParameters as Fare
-import qualified Storage.Tabular.FareParameters.Instances as FareParamsT
 
--- create :: Domain.DriverQuote -> SqlDB ()
--- create dQuote = Esq.runTransaction $
---   withFullEntity dQuote $ \(dQuoteT, (fareParams', fareParamsDetais)) -> do
---     Esq.create' fareParams'
---     case fareParamsDetais of
---       FareParamsT.ProgressiveDetailsT fppdt -> Esq.create' fppdt
---       FareParamsT.SlabDetailsT -> return ()
---     Esq.create' dQuoteT
+-- import qualified Storage.Tabular.FareParameters.Instances as FareParamsT
 
 create :: L.MonadFlow m => Domain.DriverQuote -> m (MeshResult ())
 create dQuote = do
@@ -64,15 +56,6 @@ baseDriverQuoteQuery =
                    rb ^. DriverQuoteFareParametersId ==. farePars ^. Fare.FareParametersTId
                )
 
--- findById :: (Transactionable m) => Id Domain.DriverQuote -> m (Maybe Domain.DriverQuote)
--- findById dQuoteId = buildDType $ do
---   res <- Esq.findOne' $ do
---     (dQuote :& farePars) <-
---       from baseDriverQuoteQuery
---     where_ $ dQuote ^. DriverQuoteTId ==. val (toKey dQuoteId)
---     pure (dQuote, farePars)
---   join <$> mapM buildFullDriverQuote res
-
 findById :: (L.MonadFlow m) => Id Domain.DriverQuote -> m (Maybe Domain.DriverQuote)
 findById (Id driverQuoteId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
@@ -81,7 +64,7 @@ findById (Id driverQuoteId) = do
       sR <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDQ.id $ Se.Eq driverQuoteId]
       case sR of
         Left _ -> pure Nothing
-        Right x -> sequence $ transformBeamDriverQuoteToDomain <$> x
+        Right x -> mapM transformBeamDriverQuoteToDomain x
     Nothing -> pure Nothing
 
 -- setInactiveByRequestId :: Id DSReq.SearchRequest -> SqlDB ()
@@ -101,21 +84,6 @@ setInactiveByRequestId (Id searchReqId) = do
         [Se.Is BeamDQ.searchRequestId $ Se.Eq searchReqId]
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
--- findActiveQuotesByDriverId :: (Transactionable m, MonadTime m) => Id Person -> Seconds -> m [Domain.DriverQuote]
--- findActiveQuotesByDriverId driverId driverUnlockDelay = do
---   now <- getCurrentTime
---   buildDType $ do
---     let delayToAvoidRaces = secondsToNominalDiffTime . negate $ driverUnlockDelay
---     res <- Esq.findAll' $ do
---       (dQuote :& farePars) <-
---         from baseDriverQuoteQuery
---       where_ $
---         dQuote ^. DriverQuoteDriverId ==. val (toKey driverId)
---           &&. dQuote ^. DriverQuoteStatus ==. val Domain.Active
---           &&. dQuote ^. DriverQuoteValidTill >. val (addUTCTime delayToAvoidRaces now)
---       pure (dQuote, farePars)
---     catMaybes <$> mapM buildFullDriverQuote res
-
 findActiveQuotesByDriverId :: (L.MonadFlow m, MonadTime m) => Id Person -> Seconds -> m [Domain.DriverQuote]
 findActiveQuotesByDriverId (Id driverId) driverUnlockDelay = do
   now <- getCurrentTime
@@ -128,18 +96,6 @@ findActiveQuotesByDriverId (Id driverId) driverUnlockDelay = do
         Left _ -> pure []
         Right x -> mapM transformBeamDriverQuoteToDomain x
     Nothing -> pure []
-
--- findAllByRequestId :: Transactionable m => Id DSReq.SearchRequest -> m [Domain.DriverQuote]
--- findAllByRequestId searchReqId = do
---   buildDType $ do
---     res <- Esq.findAll' $ do
---       (dQuote :& farePars) <-
---         from baseDriverQuoteQuery
---       where_ $
---         dQuote ^. DriverQuoteStatus ==. val Domain.Active
---           &&. dQuote ^. DriverQuoteSearchRequestId ==. val (toKey searchReqId)
---       pure (dQuote, farePars)
---     catMaybes <$> mapM buildFullDriverQuote res
 
 findAllByRequestId :: L.MonadFlow m => Id DSReq.SearchRequest -> m [Domain.DriverQuote]
 findAllByRequestId (Id searchReqId) = do
@@ -162,12 +118,6 @@ countAllByRequestId searchReqId = do
           &&. dQuote ^. DriverQuoteSearchRequestId ==. val (toKey searchReqId)
       pure (countRows @Int32)
 
--- deleteByDriverId :: Id Person -> SqlDB ()
--- deleteByDriverId personId =
---   Esq.delete $ do
---     driverQuotes <- from $ table @DriverQuoteT
---     where_ $ driverQuotes ^. DriverQuoteDriverId ==. val (toKey personId)
-
 deleteByDriverId :: L.MonadFlow m => Id Person -> m ()
 deleteByDriverId (Id driverId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
@@ -186,7 +136,7 @@ findDriverQuoteBySearchId searchReqId = Esq.findOne' $ do
   where_ $ driverQuote ^. DriverQuoteSearchRequestId ==. val (toKey searchReqId)
   pure driverQuote
 
-transformBeamDriverQuoteToDomain :: L.MonadFlow m => BeamDQ.DriverQuote -> m (Domain.DriverQuote)
+transformBeamDriverQuoteToDomain :: L.MonadFlow m => BeamDQ.DriverQuote -> m Domain.DriverQuote
 transformBeamDriverQuoteToDomain BeamDQ.DriverQuoteT {..} = do
   fp <- BeamQFP.findById (Id fareParametersId)
   pure

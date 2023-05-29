@@ -18,7 +18,6 @@
 module Storage.Beam.Issue.IssueReport where
 
 import qualified Data.Aeson as A
-import Data.ByteString.Internal (ByteString, unpackChars)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
@@ -28,23 +27,15 @@ import Database.Beam.Backend
 import Database.Beam.MySQL ()
 import Database.Beam.Postgres
   ( Postgres,
-    ResultError (ConversionFailed, UnexpectedNull),
   )
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
-import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import qualified Domain.Types.Issue.IssueReport as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common hiding (id)
 import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
-import Storage.Tabular.Issue.IssueCategory (IssueCategoryTId)
-import Storage.Tabular.Issue.IssueOption (IssueOptionTId)
-import Storage.Tabular.MediaFile (MediaFileTId)
-import Storage.Tabular.Person (PersonTId)
-import Storage.Tabular.Ride (RideTId)
 
 -- fromFieldEnum ::
 --   (Typeable a, Read a) =>
@@ -161,12 +152,10 @@ psToHs = HM.empty
 
 issueReportToHSModifiers :: M.Map Text (A.Value -> A.Value)
 issueReportToHSModifiers =
-  M.fromList
-    []
+  M.empty
 
 issueReportToPSModifiers :: M.Map Text (A.Value -> A.Value)
 issueReportToPSModifiers =
-  M.fromList
-    []
+  M.empty
 
 $(enableKVPG ''IssueReportT ['id] [])

@@ -18,24 +18,17 @@ import qualified Database.Beam as B
 import Database.Beam.Postgres
 import Database.Beam.Postgres.Syntax
 import qualified Database.Beam.Query as BQ
-import qualified Database.Beam.Schema.Tables as B
 import Domain.Types.Geometry
 import qualified EulerHS.Extra.EulerDB as Extra
-import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
-import EulerHS.Prelude (appEndo)
-import qualified EulerHS.SqlDB.Language as DB
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
 import Lib.Utils
 import Sequelize
 import qualified Storage.Beam.Geometry as BeamG
-import Storage.Tabular.Geometry
 
 -- findGeometriesContaining :: Transactionable m => LatLong -> [Text] -> m [Geometry]
 -- findGeometriesContaining gps regions =

@@ -18,7 +18,6 @@
 module Storage.Beam.RegistrationToken where
 
 import qualified Data.Aeson as A
-import Data.ByteString.Internal (ByteString, unpackChars)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
@@ -28,15 +27,12 @@ import Database.Beam.Backend
 import Database.Beam.MySQL ()
 import Database.Beam.Postgres
   ( Postgres,
-    ResultError (ConversionFailed, UnexpectedNull),
   )
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
-import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import qualified Domain.Types.RegistrationToken as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
-import Kernel.Types.App (RegToken)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils
 import Lib.UtilsTH
@@ -174,13 +170,11 @@ psToHs = HM.empty
 
 registrationTokenToHSModifiers :: M.Map Text (A.Value -> A.Value)
 registrationTokenToHSModifiers =
-  M.fromList
-    []
+  M.empty
 
 registrationTokenToPSModifiers :: M.Map Text (A.Value -> A.Value)
 registrationTokenToPSModifiers =
-  M.fromList
-    []
+  M.empty
 
 defaultRegistrationToken :: RegistrationToken
 defaultRegistrationToken =

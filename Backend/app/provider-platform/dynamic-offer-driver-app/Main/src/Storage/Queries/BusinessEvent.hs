@@ -21,16 +21,11 @@ import Domain.Types.Ride
 import Domain.Types.Vehicle.Variant (Variant)
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Time (getSeconds)
-import Kernel.Utils.Common
 import qualified Lib.Mesh as Mesh
-import qualified Sequelize as Se
 import qualified Storage.Beam.BusinessEvent as BeamBE
 import Storage.Tabular.BusinessEvent ()
 
@@ -65,33 +60,6 @@ logBusinessEvent driverId eventType bookingId whenPoolWasComputed variant distan
   case dbConf of
     Just dbConf' -> void $ KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainBusinessEventToBeam bE)
     Nothing -> pure ()
-
--- logBusinessEvent ::
---   Maybe (Id Driver) ->
---   EventType ->
---   Maybe (Id Booking) ->
---   Maybe WhenPoolWasComputed ->
---   Maybe Variant ->
---   Maybe Meters ->
---   Maybe Seconds ->
---   Maybe (Id Ride) ->
---   SqlDB ()
--- logBusinessEvent driverId eventType bookingId whenPoolWasComputed variant distance duration rideId = do
---   uuid <- generateGUID
---   now <- getCurrentTime
---   Esq.create $
---     BusinessEvent
---       { id = uuid,
---         eventType = eventType,
---         timeStamp = now,
---         driverId = driverId,
---         bookingId = bookingId,
---         whenPoolWasComputed = whenPoolWasComputed,
---         vehicleVariant = variant,
---         distance = distance,
---         duration = duration,
---         rideId = rideId
---       }
 
 logDriverAssignedEvent :: (L.MonadFlow m, MonadGuid m, MonadTime m) => Id Driver -> Id Booking -> Id Ride -> m ()
 logDriverAssignedEvent driverId bookingId rideId = do

@@ -184,13 +184,11 @@ psToHs = HM.empty
 
 slabFarePolicyToHSModifiers :: M.Map Text (A.Value -> A.Value)
 slabFarePolicyToHSModifiers =
-  M.fromList
-    []
+  M.empty
 
 slabFarePolicyToPSModifiers :: M.Map Text (A.Value -> A.Value)
 slabFarePolicyToPSModifiers =
-  M.fromList
-    []
+  M.empty
 
 defaultSlabFarePolicy :: SlabFarePolicy
 defaultSlabFarePolicy =

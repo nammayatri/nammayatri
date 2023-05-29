@@ -18,41 +18,27 @@
 module Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab where
 
 import qualified Data.Aeson as A
-import Data.ByteString.Internal (ByteString, unpackChars)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
 import Database.Beam.Postgres
   ( Postgres,
-    ResultError (ConversionFailed, UnexpectedNull),
   )
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
-import qualified Database.PostgreSQL.Simple.FromField as DPSF
 -- import qualified Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Domain
 
-import qualified Domain.Types.FareParameters as Domain
 import qualified Domain.Types.FarePolicy as Domain
 import qualified Domain.Types.Vehicle.Variant as Vehicle
-import qualified EulerHS.Extra.EulerDB as Extra
-import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import qualified EulerHS.Language as L
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common (Meters, Money)
 import Kernel.Types.Common hiding (id)
-import qualified Kernel.Types.Id as KTI
-import Kernel.Utils.Common
-import qualified Lib.Mesh as Mesh
 import Lib.Utils
 import Lib.UtilsTH
 import Sequelize as Se
-import qualified Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails as DomainFPPD
-import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.Vehicle ()
 
 instance IsString Vehicle.Variant where
@@ -151,12 +137,10 @@ psToHs = HM.empty
 
 farePolicySlabsDetailsSlabToHSModifiers :: M.Map Text (A.Value -> A.Value)
 farePolicySlabsDetailsSlabToHSModifiers =
-  M.fromList
-    []
+  M.empty
 
 farePolicySlabsDetailsSlabToPSModifiers :: M.Map Text (A.Value -> A.Value)
 farePolicySlabsDetailsSlabToPSModifiers =
-  M.fromList
-    []
+  M.empty
 
 $(enableKVPG ''FarePolicySlabsDetailsSlabT ['farePolicyId] [])

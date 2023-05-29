@@ -17,7 +17,6 @@ module Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsS
 import qualified Domain.Types.FarePolicy as DFP
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
@@ -25,7 +24,6 @@ import Kernel.Types.Id
 import qualified Kernel.Types.Id as KTI
 import Kernel.Utils.Common
 import qualified Lib.Mesh as Mesh
-import Lib.UtilsTH
 import qualified Sequelize as Se
 import qualified Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab as BeamFPSS
 import Storage.Tabular.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
@@ -75,7 +73,7 @@ deleteAll' farePolicyId =
 
 transformBeamFarePolicyProgressiveDetailsToDomain :: BeamFPSS.FarePolicySlabsDetailsSlab -> FullFarePolicySlabsDetailsSlab
 transformBeamFarePolicyProgressiveDetailsToDomain BeamFPSS.FarePolicySlabsDetailsSlabT {..} = do
-  ( (KTI.Id farePolicyId),
+  ( KTI.Id farePolicyId,
     DFP.FPSlabsDetailsSlab
       { startDistance = startDistance,
         baseFare = baseFare,

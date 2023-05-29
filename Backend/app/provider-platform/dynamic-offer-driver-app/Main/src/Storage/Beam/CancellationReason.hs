@@ -18,13 +18,11 @@
 module Storage.Beam.CancellationReason where
 
 import qualified Data.Aeson as A
-import Data.ByteString.Internal (ByteString, unpackChars)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
-import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
@@ -86,13 +84,11 @@ psToHs = HM.empty
 
 cancellationReasonToHSModifiers :: M.Map Text (A.Value -> A.Value)
 cancellationReasonToHSModifiers =
-  M.fromList
-    []
+  M.empty
 
 cancellationReasonToPSModifiers :: M.Map Text (A.Value -> A.Value)
 cancellationReasonToPSModifiers =
-  M.fromList
-    []
+  M.empty
 
 instance Serialize CancellationReason where
   put = error "undefined"

@@ -31,7 +31,7 @@ import qualified Domain.Types.DriverOnboarding.Image as Domain
 import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
+-- import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import SharedLogic.Merchant (findMerchantByShortId)

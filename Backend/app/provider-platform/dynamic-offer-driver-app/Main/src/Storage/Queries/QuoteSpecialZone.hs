@@ -20,22 +20,17 @@ import Domain.Types.QuoteSpecialZone
 import Domain.Types.SearchRequestSpecialZone
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
-import Lib.Utils
 import qualified Sequelize as Se
-import Storage.Beam.FareParameters as BeamFP hiding (Id)
 import qualified Storage.Beam.QuoteSpecialZone as BeamQSZ
 import Storage.Queries.FareParameters as BeamQFP
-import Storage.Queries.FullEntityBuilders (buildFullQuoteSpecialZone)
 import qualified Storage.Tabular.FareParameters as Fare
 import qualified Storage.Tabular.FareParameters.Instances as FareParamsT
 import Storage.Tabular.QuoteSpecialZone
-import qualified Storage.Tabular.VechileNew as VN
 
 create :: QuoteSpecialZone -> SqlDB ()
 create quote = Esq.runTransaction $
@@ -87,7 +82,7 @@ findById (Id dQuoteId) = do
         Right x -> traverse transformBeamQuoteSpecialZoneToDomain x
     Nothing -> pure Nothing
 
-transformBeamQuoteSpecialZoneToDomain :: L.MonadFlow m => BeamQSZ.QuoteSpecialZone -> m (QuoteSpecialZone)
+transformBeamQuoteSpecialZoneToDomain :: L.MonadFlow m => BeamQSZ.QuoteSpecialZone -> m QuoteSpecialZone
 transformBeamQuoteSpecialZoneToDomain BeamQSZ.QuoteSpecialZoneT {..} = do
   fp <- BeamQFP.findById (Id fareParametersId)
   pure

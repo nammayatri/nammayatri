@@ -9,13 +9,11 @@ import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common (MonadTime (..), getCurrentTime)
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.Issue.IssueReport as BeamIR
-import Storage.Tabular.Issue.IssueReport
 import qualified Storage.Tabular.VechileNew as VN
 
 -- create :: IssueReport -> SqlDB ()
@@ -187,7 +185,7 @@ updateStatusAssignee issueReportId status assignee = do
         KV.updateWoReturningWithKVConnector
           dbConf'
           Mesh.meshConfig
-          ([Se.Set BeamIR.updatedAt now] <> if isJust status then [Se.Set BeamIR.status (fromJust status)] else [] <> if isJust assignee then [Se.Set BeamIR.assignee assignee] else [])
+          ([Se.Set BeamIR.updatedAt now] <> if isJust status then [Se.Set BeamIR.status (fromJust status)] else [] <> ([Se.Set BeamIR.assignee assignee | isJust assignee]))
           [Se.Is BeamIR.id (Se.Eq $ getId issueReportId)]
     Nothing -> pure ()
 

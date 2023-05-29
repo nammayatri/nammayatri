@@ -22,7 +22,7 @@ import qualified Domain.Types.Booking.BookingLocation as Domain
 import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
+-- import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Common (MonadTime (getCurrentTime))
 import Kernel.Types.Id

@@ -28,7 +28,6 @@ import qualified EulerHS.Language as L
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.FCM.Types
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig

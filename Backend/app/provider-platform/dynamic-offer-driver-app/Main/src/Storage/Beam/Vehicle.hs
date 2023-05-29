@@ -18,7 +18,6 @@
 module Storage.Beam.Vehicle where
 
 import qualified Data.Aeson as A
-import Data.ByteString.Internal (ByteString, unpackChars)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
@@ -26,24 +25,16 @@ import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-    ResultError (ConversionFailed, UnexpectedNull),
-  )
+import Database.Beam.Postgres (Postgres)
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
-import qualified Database.PostgreSQL.Simple.FromField as DPSF
-import qualified Domain.Types.Person as DPers
 import qualified Domain.Types.Vehicle as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common hiding (id)
 import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
-import qualified Storage.Tabular.Merchant as TM
-import Storage.Tabular.Person (PersonTId)
 
 -- fromFieldEnum ::
 --   (Typeable a, Read a) =>
@@ -165,13 +156,11 @@ psToHs = HM.empty
 
 vehicleToHSModifiers :: M.Map Text (A.Value -> A.Value)
 vehicleToHSModifiers =
-  M.fromList
-    []
+  M.empty
 
 vehicleToPSModifiers :: M.Map Text (A.Value -> A.Value)
 vehicleToPSModifiers =
-  M.fromList
-    []
+  M.empty
 
 defaultVehicle :: Vehicle
 defaultVehicle =

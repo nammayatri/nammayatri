@@ -20,7 +20,6 @@ import GHC.IO.Handle (hFileSize)
 import GHC.IO.IOMode (IOMode (..))
 import Kernel.External.Types (Language (ENGLISH))
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -169,7 +168,7 @@ createIssueReport driverId Common.IssueReportReq {..} = do
     void $ CQIO.findByIdAndCategoryId (cast justOptionId) (cast categoryId) >>= fromMaybeM (IssueOptionInvalid justOptionId.getId categoryId.getId)
   whenJust rideId $ \justRideId ->
     -- void $ Esq.runInReplica (QRide.findById $ cast justRideId) >>= fromMaybeM (RideNotFound justRideId.getId)
-    void $ (QRide.findById $ cast justRideId) >>= fromMaybeM (RideNotFound justRideId.getId)
+    void $ QRide.findById (cast justRideId) >>= fromMaybeM (RideNotFound justRideId.getId)
   forM_ mediaFiles $ \mediaFile ->
     void $ CQMF.findById (cast mediaFile) >>= fromMaybeM (FileDoNotExist mediaFile.getId)
   issueReport <- mkIssueReport

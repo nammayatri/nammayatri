@@ -14,9 +14,6 @@
 
 module Storage.Queries.CallStatus where
 
-import qualified Data.Text as T
-import Database.Beam (insertExpressions)
-import qualified Debug.Trace as T
 import Domain.Types.CallStatus
 import Domain.Types.Ride
 import qualified EulerHS.Extra.EulerDB as Extra
@@ -30,22 +27,14 @@ import Kernel.Types.Id
 import Sequelize as Se
 import qualified Storage.Beam.CallStatus as BeamCT
 import Storage.Tabular.CallStatus
-import qualified Storage.Tabular.CallStatus as CS
 import qualified Storage.Tabular.VechileNew as VN
 
--- create :: CallStatus -> SqlDB ()
--- create callStatus = void $ Esq.createUnique callStatus
-
--- create' :: CallStatus -> SqlDB ()
 create :: L.MonadFlow m => CallStatus -> m (MeshResult ())
 create callStatus = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainCallStatusToBeam callStatus)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
-
--- findById :: Transactionable m => Id CallStatus -> m (Maybe CallStatus)
--- findById = Esq.findById
 
 findById :: L.MonadFlow m => Id CallStatus -> m (Maybe CallStatus)
 findById (Id callStatusId) = do
@@ -54,13 +43,6 @@ findById (Id callStatusId) = do
     Just dbCOnf' -> either (pure Nothing) (transformBeamCallStatusToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamCT.id $ Se.Eq callStatusId]
     Nothing -> pure Nothing
 
--- findByCallSid :: Transactionable m => Text -> m (Maybe CallStatus)
--- findByCallSid callSid =
---   Esq.findOne $ do
---     callStatus <- from $ table @CallStatusT
---     where_ $ callStatus ^. CallStatusCallId ==. val callSid
---     return callStatus
-
 findByCallSid :: L.MonadFlow m => Text -> m (Maybe CallStatus)
 findByCallSid callSid = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
@@ -68,18 +50,6 @@ findByCallSid callSid = do
     Just dbCOnf' -> either (pure Nothing) (transformBeamCallStatusToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamCT.callId $ Se.Eq callSid]
     Nothing -> pure Nothing
 
--- updateCallStatus :: Id CallStatus -> Call.CallStatus -> Int -> BaseUrl -> SqlDB ()
--- updateCallStatus callId status conversationDuration recordingUrl = do
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ CallStatusStatus =. val status,
---         CallStatusConversationDuration =. val conversationDuration,
---         CallStatusRecordingUrl =. val (Just (showBaseUrl recordingUrl))
---       ]
---     where_ $ tbl ^. CallStatusId ==. val (getId callId)
-
--- updateCallStatus' :: Id CallStatus -> Call.CallStatus -> Int -> BaseUrl -> SqlDB ()
 updateCallStatus :: L.MonadFlow m => Id CallStatus -> Call.CallStatus -> Int -> BaseUrl -> m (MeshResult ())
 updateCallStatus (Id callId) status conversationDuration recordingUrl = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg

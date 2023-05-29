@@ -19,9 +19,7 @@ import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as SRide
 import EulerHS.Language as L
-import EulerHS.Prelude hiding (id)
 import Kernel.External.Maps.Types (LatLong)
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
 import qualified SharedLogic.Ride as CQRide

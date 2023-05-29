@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TypeApplications #-}
 
 module Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate where
 
@@ -22,12 +21,10 @@ import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate as BeamVRC
-import Storage.Tabular.DriverOnboarding.VehicleRegistrationCertificate
 import Storage.Tabular.Person ()
 
 -- create :: VehicleRegistrationCertificate -> SqlDB ()

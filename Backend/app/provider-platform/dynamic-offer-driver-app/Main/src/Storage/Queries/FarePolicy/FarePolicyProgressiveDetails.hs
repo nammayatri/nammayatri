@@ -1,21 +1,13 @@
 module Storage.Queries.FarePolicy.FarePolicyProgressiveDetails where
 
 import qualified Domain.Types.FarePolicy as Domain
-import Domain.Types.Issue.IssueCategory
-import Domain.Types.Issue.IssueTranslation
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
-import Kernel.External.Types (Language)
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
-import Kernel.Types.Id
 import qualified Kernel.Types.Id as KTI
 import qualified Lib.Mesh as Mesh
-import Lib.UtilsTH
 import Sequelize as Se
-import qualified Sequelize as Se
 import Storage.Beam.FarePolicy.FarePolicyProgressiveDetails
 import qualified Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails as DomainFPPD
 
@@ -28,7 +20,7 @@ findById' (KTI.Id farePolicyId') = do
 
 transformBeamFarePolicyProgressiveDetailsToDomain :: FarePolicyProgressiveDetails -> DomainFPPD.FullFarePolicyProgressiveDetails
 transformBeamFarePolicyProgressiveDetailsToDomain FarePolicyProgressiveDetailsT {..} = do
-  ( (KTI.Id farePolicyId),
+  ( KTI.Id farePolicyId,
     Domain.FPProgressiveDetails
       { baseDistance = baseDistance,
         baseFare = baseFare,

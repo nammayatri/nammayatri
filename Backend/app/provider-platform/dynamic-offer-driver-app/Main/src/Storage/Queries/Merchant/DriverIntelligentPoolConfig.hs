@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TypeApplications #-}
 
 module Storage.Queries.Merchant.DriverIntelligentPoolConfig
   {-# WARNING
@@ -27,13 +26,11 @@ import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common (MonadTime (getCurrentTime))
 import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.DriverIntelligentPoolConfig as BeamDIPC
-import Storage.Tabular.Merchant.DriverIntelligentPoolConfig
 
 -- findByMerchantId :: Transactionable m => Id Merchant -> m (Maybe DriverIntelligentPoolConfig)
 -- findByMerchantId merchantId =

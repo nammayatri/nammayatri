@@ -18,8 +18,6 @@
 module Storage.Beam.Estimate where
 
 import qualified Data.Aeson as A
-import Data.ByteString.Internal (ByteString, unpackChars)
-import Data.Coerce (coerce)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
@@ -29,23 +27,18 @@ import Database.Beam.Backend
 import Database.Beam.MySQL ()
 import Database.Beam.Postgres
   ( Postgres,
-    ResultError (ConversionFailed, UnexpectedNull),
   )
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
-import qualified Database.PostgreSQL.Simple.FromField as DPSF
-import Domain.Types.Common (UsageSafety (..))
 import qualified Domain.Types.Estimate as Domain
 import qualified Domain.Types.Vehicle as Variant
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Kernel.Utils.Common hiding (id)
 import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Vehicle ()
-import Tools.Error
 
 -- fromFieldEnum ::
 --   (Typeable a, Read a) =>
@@ -188,13 +181,11 @@ psToHs = HM.empty
 
 estimateToHSModifiers :: M.Map Text (A.Value -> A.Value)
 estimateToHSModifiers =
-  M.fromList
-    []
+  M.empty
 
 estimateToPSModifiers :: M.Map Text (A.Value -> A.Value)
 estimateToPSModifiers =
-  M.fromList
-    []
+  M.empty
 
 -- defaultEstimate :: Estimate
 -- defaultEstimate =

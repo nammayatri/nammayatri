@@ -40,7 +40,7 @@ create :: L.MonadFlow m => DRDD.RiderDetails -> m ()
 create riderDetails = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbConf' -> void $ (KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainRiderDetailsToBeam riderDetails))
+    Just dbConf' -> void (KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainRiderDetailsToBeam riderDetails))
     Nothing -> pure ()
 
 -- TODO :: write cached query for this

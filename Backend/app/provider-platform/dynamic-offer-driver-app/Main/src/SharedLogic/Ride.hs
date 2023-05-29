@@ -18,7 +18,6 @@ import Domain.Types.Person (Person)
 import Domain.Types.Ride
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import qualified Kernel.Storage.Esqueleto.Transactionable as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Storage.CachedQueries.CacheConfig

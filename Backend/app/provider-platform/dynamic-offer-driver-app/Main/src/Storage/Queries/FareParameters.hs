@@ -17,19 +17,13 @@ module Storage.Queries.FareParameters where
 import Domain.Types.FareParameters as DFP
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
-import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.FareParameters as BeamFP
 -- import Storage.Queries.FareParameters.FareParametersProgressiveDetails (findById')
 import qualified Storage.Queries.FareParameters.FareParametersProgressiveDetails as BeamFPPD
-import Storage.Queries.FullEntityBuilders (buildFullFareParameters)
-import Storage.Tabular.FareParameters (FareParametersT)
-import Storage.Tabular.FareParameters.Instances
 import qualified Storage.Tabular.VechileNew as VN
 
 -- create :: FareParameters -> SqlDB ()

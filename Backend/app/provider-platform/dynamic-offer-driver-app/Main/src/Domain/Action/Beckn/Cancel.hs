@@ -26,7 +26,6 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchRequest as DSR
 import EulerHS.Prelude
-import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.Common
@@ -96,7 +95,7 @@ cancel merchantId _ req = do
     QDFS.updateStatus ride.driverId $ DMode.getDriverStatus driverInfo.mode driverInfo.active
   whenJust mbRide $ \ride -> do
     SRide.clearCache $ cast ride.driverId
-    void $ (DLoc.updateOnRide (cast ride.driverId) False)
+    void (DLoc.updateOnRide (cast ride.driverId) False)
 
   logTagInfo ("bookingId-" <> getId req.bookingId) ("Cancellation reason " <> show bookingCR.source)
   fork "cancelBooking - Notify BAP" $ do

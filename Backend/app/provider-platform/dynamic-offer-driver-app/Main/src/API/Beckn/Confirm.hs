@@ -23,7 +23,7 @@ import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
+-- import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Ack
 import Kernel.Types.Error

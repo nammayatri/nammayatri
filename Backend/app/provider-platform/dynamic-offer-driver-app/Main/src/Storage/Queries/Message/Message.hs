@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TypeApplications #-}
 
 module Storage.Queries.Message.Message where
 
@@ -20,14 +19,12 @@ import Domain.Types.Message.Message
 import Domain.Types.Message.MessageTranslation as DomainMT
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
-import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.Message.Message as BeamM
 import qualified Storage.Queries.Message.MessageTranslation as MT
@@ -142,7 +139,7 @@ updateMessageLikeCount messageId value = do
 --         [Se.Is BeamM.id (Se.Eq $ getId messageId)]
 --     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-transformBeamMessageToDomain :: L.MonadFlow m => BeamM.Message -> m (Message)
+transformBeamMessageToDomain :: L.MonadFlow m => BeamM.Message -> m Message
 transformBeamMessageToDomain BeamM.MessageT {..} = do
   mT' <- MT.findByMessageId (Id id)
   -- let mT = MessageTranslation <*> (language <$> mT') <$> (title <$> mT') <$> (description <$> mT') <$> (shortDescription <$> mT') <$> (label <$> mT') <$> (createdAt <$> mT')

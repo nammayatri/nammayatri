@@ -18,39 +18,20 @@ module Storage.Queries.DriverLocation where
 
 import qualified Database.Beam as B
 import Database.Beam.Postgres
-import qualified Database.Beam.Query as B
+-- import qualified Database.Beam.Query as B
 import Domain.Types.DriverLocation
 import Domain.Types.Person
 import qualified EulerHS.Extra.EulerDB as Extra
-import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
+-- import qualified EulerHS.KVConnector.Flow as KV
+-- import EulerHS.KVConnector.Types
 import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common (MonadTime (getCurrentTime))
 import Kernel.Types.Id
-import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverLocation as BeamDL
-import Storage.Tabular.DriverLocation
-import qualified Storage.Tabular.VechileNew as VN
-
--- create :: Id Person -> LatLong -> UTCTime -> SqlDB ()
--- create drLocationId latLong updateTime = do
---   -- Tricky query to be able to insert meaningful Point
---   now <- getCurrentTime
---   Esq.insertSelect $
---     return $
---       DriverLocationT
---         <# val (toKey drLocationId)
---         <#> val latLong.lat
---         <#> val latLong.lon
---         <#> Esq.getPoint (val latLong.lat, val latLong.lon)
---         <#> val updateTime
---         <#> val now
---         <#> val now
 
 create :: (L.MonadFlow m, MonadTime m) => Id Person -> LatLong -> UTCTime -> m ()
 create drLocationId latLong updateTime = do
@@ -63,21 +44,8 @@ create drLocationId latLong updateTime = do
       void $ L.runDB c $ L.insertRows $ B.insert (meshModelTableEntity @BeamDL.DriverLocationT @Postgres @(Se.DatabaseWith BeamDL.DriverLocationT)) $ B.insertExpressions [BeamDL.toRowExpression (getId drLocationId) latLong updateTime now]
     Left _ -> pure ()
 
--- findById ::
---   Transactionable m =>
---   Id Person ->
---   m (Maybe DriverLocation)
--- findById = Esq.findById
-
 findById :: L.MonadFlow m => Id Person -> m (Maybe DriverLocation)
 findById (Id driverLocationId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
-  case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamDriverLocationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamDL.driverId $ Se.Eq driverLocationId]
-    Nothing -> pure Nothing
-
-findById' :: L.MonadFlow m => Id Person -> m (Maybe DriverLocation)
-findById' (Id driverLocationId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   conn <- L.getOrInitSqlConn (fromJust dbConf)
   case conn of
@@ -87,7 +55,7 @@ findById' (Id driverLocationId) = do
           L.findRow $
             B.select $
               B.limit_ 1 $
-                B.filter_' (\BeamDL.DriverLocationT {..} -> (driverId B.==?. B.val_ driverLocationId)) $
+                B.filter_' (\BeamDL.DriverLocationT {..} -> driverId B.==?. B.val_ driverLocationId) $
                   B.all_ (meshModelTableEntity @BeamDL.DriverLocationT @Postgres @(Se.DatabaseWith BeamDL.DriverLocationT))
       pure (either (const Nothing) (transformBeamDriverLocationToDomain <$>) geoms)
     Left _ -> pure Nothing
@@ -118,7 +86,7 @@ findById' (Id driverLocationId) = do
 --       ]
 --     where_ $ tbl ^. DriverLocationTId ==. val (toKey $ cast drLocationId)
 --   return locationObject
-upsertGpsCoord :: (L.MonadFlow m) => Id Person -> LatLong -> UTCTime -> m (DriverLocation)
+upsertGpsCoord :: (L.MonadFlow m) => Id Person -> LatLong -> UTCTime -> m DriverLocation
 upsertGpsCoord _ _ _ = error "Undefined"
 
 -- upsertGpsCoord' :: (L.MonadFlow m, MonadTime m) => Id Person -> LatLong -> UTCTime -> m (MeshResult ())
@@ -148,23 +116,8 @@ upsertGpsCoord _ _ _ = error "Undefined"
 --         [Se.Is BeamDL.driverId (Se.Eq $ getId drLocationId)]
 --     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
--- deleteById :: Id Person -> SqlDB ()
--- deleteById = deleteByKey @DriverLocationT
-
 deleteById :: L.MonadFlow m => Id Person -> m ()
-deleteById (Id driverId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
-  case dbConf of
-    Just dbConf' ->
-      void $
-        KV.deleteWithKVConnector
-          dbConf'
-          Mesh.meshConfig
-          [Se.Is BeamDL.driverId (Se.Eq driverId)]
-    Nothing -> pure ()
-
-deleteById' :: L.MonadFlow m => Id Person -> m ()
-deleteById' (Id driverId') = do
+deleteById (Id driverId') = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   conn <- L.getOrInitSqlConn (fromJust dbConf)
   case conn of
@@ -174,7 +127,7 @@ deleteById' (Id driverId') = do
           L.deleteRows
             ( B.delete
                 (meshModelTableEntity @BeamDL.DriverLocationT @Postgres @(Se.DatabaseWith BeamDL.DriverLocationT))
-                (\BeamDL.DriverLocationT {..} -> (driverId B.==. B.val_ driverId'))
+                (\BeamDL.DriverLocationT {..} -> driverId B.==. B.val_ driverId')
             )
     Left _ -> pure ()
 

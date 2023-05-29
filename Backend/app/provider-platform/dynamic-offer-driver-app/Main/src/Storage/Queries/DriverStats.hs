@@ -21,13 +21,11 @@ import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverStats as BeamDS
-import Storage.Tabular.DriverStats
 
 -- createInitialDriverStats :: Id Driver -> SqlDB ()
 -- createInitialDriverStats driverId = do
@@ -72,14 +70,14 @@ getTopDriversByIdleTime count_ ids = do
       srsz <- KV.findAllWithOptionsKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDS.driverId $ Se.In (getId <$> ids)] (Se.Asc BeamDS.idleSince) (Just count_) Nothing
       case srsz of
         Left _ -> pure []
-        Right x -> pure $ (Domain.driverId . transformBeamDriverStatsToDomain) <$> x
+        Right x -> pure $ Domain.driverId . transformBeamDriverStatsToDomain <$> x
     Nothing -> pure []
 
 -- updateIdleTime :: Id Driver -> SqlDB ()
 -- updateIdleTime driverId = updateIdleTimes [driverId]
 
 updateIdleTime :: (L.MonadFlow m, MonadTime m) => Id Driver -> m ()
-updateIdleTime (driverId) = updateIdleTimes [driverId]
+updateIdleTime driverId = updateIdleTimes [driverId]
 
 -- updateIdleTimes :: [Id Driver] -> SqlDB ()
 -- updateIdleTimes driverIds = do
@@ -101,7 +99,7 @@ updateIdleTimes driverIds = do
         KV.updateWoReturningWithKVConnector
           dbConf'
           Mesh.meshConfig
-          [ Se.Set BeamDS.idleSince $ now
+          [ Se.Set BeamDS.idleSince now
           ]
           [Se.Is BeamDS.driverId (Se.In (getId <$> driverIds))]
     Nothing -> pure ()
@@ -172,7 +170,7 @@ getDriversSortedOrder mbLimitVal = do
       srsz <- KV.findAllWithOptionsKVConnector dbCOnf' Mesh.meshConfig [] (Se.Desc BeamDS.totalRides) (Just $ fromMaybe 10 (fromInteger <$> mbLimitVal)) Nothing
       case srsz of
         Left _ -> pure []
-        Right x -> pure $ (transformBeamDriverStatsToDomain) <$> x
+        Right x -> pure $ transformBeamDriverStatsToDomain <$> x
     Nothing -> pure []
 
 transformBeamDriverStatsToDomain :: BeamDS.DriverStats -> DriverStats

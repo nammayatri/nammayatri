@@ -41,7 +41,7 @@ fromFieldEnum ::
 fromFieldEnum f mbValue = case mbValue of
   Nothing -> DPSF.returnError DPSF.UnexpectedNull f mempty
   Just value' ->
-    case (readMaybe (unpackChars value')) of
+    case readMaybe (unpackChars value') of
       Just val -> pure val
       _ -> DPSF.returnError DPSF.ConversionFailed f "Could not 'read' value for 'Rule'."
 
@@ -128,12 +128,10 @@ psToHs = HM.empty
 
 bookingLocationToHSModifiers :: M.Map Text (A.Value -> A.Value)
 bookingLocationToHSModifiers =
-  M.fromList
-    []
+  M.empty
 
 bookingLocationToPSModifiers :: M.Map Text (A.Value -> A.Value)
 bookingLocationToPSModifiers =
-  M.fromList
-    []
+  M.empty
 
 $(enableKVPG ''BookingLocationT ['id] [])

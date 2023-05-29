@@ -6,10 +6,8 @@ where
 
 import qualified Domain.Types.DriverReferral as D
 import qualified Domain.Types.Person as SP
-import EulerHS.KVConnector.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
-import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
@@ -57,7 +55,7 @@ createDriverReferral driverId isDashboard ReferralLinkReq {..} = do
     unless (referralCodeAlreadyLinked.driverId == driverId) $ throwError (InvalidRequest $ "RefferalCode: " <> referralCode <> " already linked with some other account.")
   driverRefferalRecord <- mkDriverRefferalType referralCode
   when (all isNothing [mbReferralCodeAlreadyLinked, mbLastReferralCodeWithDriver]) $
-    void $ (QRD.create driverRefferalRecord)
+    void (QRD.create driverRefferalRecord)
   pure Success
   where
     mkDriverRefferalType rc = do

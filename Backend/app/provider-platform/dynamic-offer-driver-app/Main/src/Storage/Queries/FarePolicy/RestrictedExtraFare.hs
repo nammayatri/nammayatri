@@ -18,15 +18,9 @@ module Storage.Queries.FarePolicy.RestrictedExtraFare where
 import qualified Domain.Types.FarePolicy.RestrictedExtraFare as Domain
 import Domain.Types.Merchant
 import qualified Domain.Types.Vehicle.Variant as Vehicle
-import qualified EulerHS.Extra.EulerDB as Extra
-import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
-import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
-import qualified Lib.Mesh as Mesh
-import qualified Sequelize as Se
 import qualified Storage.Beam.FarePolicy.RestrictedExtraFare as BeamREF
 import Storage.Tabular.FarePolicy.RestrictedExtraFare
 
