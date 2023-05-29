@@ -20,7 +20,7 @@ import Domain.Types.Merchant.DriverPoolConfig
 import Domain.Types.SearchRequest (SearchRequest)
 import Domain.Types.SearchTry (SearchTry)
 import Kernel.Prelude hiding (handle)
-import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
+import Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.Error
 import Kernel.Utils.Common
@@ -53,8 +53,8 @@ sendSearchRequestToDrivers ::
 sendSearchRequestToDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   let jobData = jobInfo.jobData
   let searchTryId = jobData.searchTryId
-  searchTry <- QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
-  searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
+  searchTry <- Esq.runInReplica $ QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
+  searchReq <- Esq.runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound (searchReq.providerId.getId))
   driverPoolConfig <- getDriverPoolConfig merchant.id jobData.estimatedRideDistance
   sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant jobData.baseFare jobData.driverExtraFeeBounds

@@ -33,7 +33,8 @@ data FlowStatus
   | ACTIVE
   | SILENT
   | GOT_SEARCH_REQUEST
-      { searchTryId :: Id DST.SearchTry,
+      { requestId :: Id DST.SearchTry, -- TODO: deprecated, to be removed
+        searchTryId :: Id DST.SearchTry,
         validTill :: UTCTime
       }
   | OFFERED_QUOTE

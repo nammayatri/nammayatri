@@ -15,6 +15,8 @@ CREATE TABLE atlas_driver_offer_bpp.search_request_2 (
 );
 ALTER TABLE atlas_driver_offer_bpp.search_request_2 OWNER TO atlas_driver_offer_bpp_user;
 
+CREATE INDEX idx_search_req_trn_id ON atlas_driver_offer_bpp.search_request_2 USING btree (transaction_id);
+
 WITH SearchRequests AS (
   SELECT T1.id,
     T1.transaction_id,
@@ -50,16 +52,21 @@ INSERT INTO atlas_driver_offer_bpp.search_request_2 (
 ALTER TABLE atlas_driver_offer_bpp.driver_quote ALTER COLUMN search_request_id DROP NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD COLUMN request_id character(36);
 ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD COLUMN search_try_id character(36);
+CREATE INDEX idx_driver_quote_s_req_id ON atlas_driver_offer_bpp.driver_quote USING btree (request_id);
+CREATE INDEX idx_driver_quote_s_try_id ON atlas_driver_offer_bpp.driver_quote USING btree (search_try_id);
 UPDATE atlas_driver_offer_bpp.driver_quote AS T1 SET request_id = search_request_id WHERE T1.created_at > now () - interval '6 hour';
 UPDATE atlas_driver_offer_bpp.driver_quote AS T1 SET search_try_id = search_request_id WHERE T1.created_at > now () - interval '6 hour';
 
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ALTER COLUMN search_request_id DROP NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN request_id character(36);
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN search_try_id character(36);
+CREATE INDEX idx_search_request_for_driver_s_req_id ON atlas_driver_offer_bpp.search_request_for_driver USING btree (request_id);
+CREATE INDEX idx_search_request_for_driver_s_try_id ON atlas_driver_offer_bpp.search_request_for_driver USING btree (search_try_id);
 UPDATE atlas_driver_offer_bpp.search_request_for_driver AS T1 SET request_id = search_request_id WHERE T1.created_at > now () - interval '6 hour';
 UPDATE atlas_driver_offer_bpp.search_request_for_driver AS T1 SET search_try_id = search_request_id WHERE T1.created_at > now () - interval '6 hour';
 
 ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN request_id character(36);
+CREATE INDEX idx_search_try_s_req_id ON atlas_driver_offer_bpp.search_try USING btree (request_id);
 UPDATE atlas_driver_offer_bpp.search_try AS T1 SET request_id = id;
 
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ALTER COLUMN transaction_id DROP NOT NULL;
@@ -82,6 +89,14 @@ ALTER TABLE atlas_driver_offer_bpp.search_try
     ALTER COLUMN transaction_id DROP NOT NULL,
     ALTER COLUMN auto_assign_enabled DROP NOT NULL,
     ALTER COLUMN device DROP NOT NULL;
+
+UPDATE atlas_driver_offer_bpp.driver_flow_status AS T1 SET
+  flow_status = CAST (CAST (T1.flow_status AS jsonb) || jsonb_build_object ('searchTryId', T1.flow_status->>'requestId') AS json)
+  WHERE (T1.flow_status->>'status') = 'GOT_SEARCH_REQUEST';
+
+UPDATE atlas_driver_offer_bpp.scheduler_job AS T1 SET
+  job_data = CAST (CAST (T1.job_data AS jsonb) || jsonb_build_object ('searchTryId', CAST (T1.job_data AS jsonb)->>'requestId') AS json)
+  WHERE T1.job_type = 'SendSearchRequestToDriver';
 
 -------------------------------------------------------------------------------------------
 -------------------------------AFTER_FULL_ROLL_OUT-----------------------------------------

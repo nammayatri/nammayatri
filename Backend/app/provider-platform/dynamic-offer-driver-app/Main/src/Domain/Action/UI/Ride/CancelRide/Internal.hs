@@ -96,21 +96,20 @@ cancelRideImpl rideId bookingCReason = do
     searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
     transpConf <- QTC.findByMerchantId merchant.id >>= fromMaybeM (TransporterConfigNotFound merchant.id.getId)
     let searchRepeatLimit = transpConf.searchRepeatLimit
-    driverPoolCfg <- getDriverPoolConfig merchant.id searchReq.estimatedDistance
-    driverPool <- calculateDriverPool DP.Estimate driverPoolCfg (Just searchTry.vehicleVariant) searchReq.fromLocation merchant.id True Nothing
     now <- getCurrentTime
     farePolicy <- QFP.findByMerchantIdAndVariant searchReq.providerId searchTry.vehicleVariant >>= fromMaybeM NoFarePolicy
     let isRepeatSearch =
           searchTry.searchRepeatCounter < searchRepeatLimit
             && bookingCReason.source == SBCR.ByDriver
             && maybe True (`isNightShift` now) farePolicy.nightShiftBounds
-            && not (null driverPool)
-    cancelBooking isRepeatSearch ride merchant driverPoolCfg farePolicy now booking searchReq searchTry
-  where
-    cancelBooking isRepeatSearch ride merchant driverPoolCfg farePolicy now booking searchReq searchTry = do
-      if isRepeatSearch
-        then repeatSearch merchant farePolicy searchReq searchTry booking ride SBCR.ByDriver now driverPoolCfg
-        else BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source
+    if isRepeatSearch
+      then do
+        driverPoolCfg <- getDriverPoolConfig merchant.id searchReq.estimatedDistance
+        driverPool <- calculateDriverPool DP.Estimate driverPoolCfg (Just searchTry.vehicleVariant) searchReq.fromLocation merchant.id True Nothing
+        if not (null driverPool)
+          then repeatSearch merchant farePolicy searchReq searchTry booking ride SBCR.ByDriver now driverPoolCfg
+          else BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source
+      else BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source
 
 cancelRideTransaction ::
   ( EsqDBFlow m r,
