@@ -60,6 +60,10 @@ buildTestInterpolationHandler config = do
       getWaypointsNumber = getWaypointsNumberImplementation,
       getFirstNwaypoints = getFirstNwaypointsImplementation,
       deleteFirstNwaypoints = deleteFirstNwaypointsImplementation,
+      addInterpolatedPoints = addInterpolatedPointsImplementation,
+      clearInterpolatedPoints = clearInterpolatedPointsImplementation,
+      getInterpolatedPoints = getInterpolatedPointsImplementation,
+      expireInterpolatedPoints = expireInterpolatedPointsImplementation,
       interpolatePointsAndCalculateDistance = \req -> do
         res <- Maps.snapToRoad config $ SnapToRoadReq req
         pure (res.distance, res.snappedPoints),

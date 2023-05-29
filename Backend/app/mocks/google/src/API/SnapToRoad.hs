@@ -38,21 +38,26 @@ handler key interpolate path = withFlowHandlerAPI $ do
   route <-
     mkRoute places
       & fromMaybeM (NotImplemented "snapToRoad is not implemented: path should only contain coordinates, not addresses")
-
-  availableRoutes <- QSnapToRoad.getAvailableRoutes
-  let mbSavedRouteId = DRoute.lookupRoute route availableRoutes
-  case mbSavedRouteId of
-    Nothing -> do
-      googleCfg <-
-        asks (.googleCfg)
-          >>= fromMaybeM (NotImplemented $ "snapToRoad is not implemented: path: " <> show route)
-      logWarning "Using real google for caching snapToRoad results"
-      snapToRoadResponse <- Client.snapToRoad googleCfg.googleRoadsUrl googleCfg.googleKey path
-      QSnapToRoad.saveNewResponse route snapToRoadResponse availableRoutes
-      pure snapToRoadResponse
-    Just savedRouteId -> do
-      logInfo "Using cached snapToRoad result from file"
-      QSnapToRoad.findResponseByRouteId savedRouteId
+  snapToRoadIdentityMode <- asks (.snapToRoadIdentityMode)
+  if snapToRoadIdentityMode
+    then do
+      logInfo "Using identical snap to road response"
+      pure $ QSnapToRoad.mkIdenticalResponse route
+    else do
+      availableRoutes <- QSnapToRoad.getAvailableRoutes
+      let mbSavedRouteId = DRoute.lookupRoute route availableRoutes
+      case mbSavedRouteId of
+        Nothing -> do
+          googleCfg <-
+            asks (.googleCfg)
+              >>= fromMaybeM (NotImplemented $ "snapToRoad is not implemented: path: " <> show route)
+          logWarning "Using real google for caching snapToRoad results"
+          snapToRoadResponse <- Client.snapToRoad googleCfg.googleRoadsUrl googleCfg.googleKey path
+          QSnapToRoad.saveNewResponse route snapToRoadResponse availableRoutes
+          pure snapToRoadResponse
+        Just savedRouteId -> do
+          logInfo "Using cached snapToRoad result from file"
+          QSnapToRoad.findResponseByRouteId savedRouteId
 
 parseRoute :: Text -> Either Text [GoogleMaps.Place]
 parseRoute = parseUrlPiece

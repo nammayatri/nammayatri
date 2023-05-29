@@ -21,6 +21,10 @@ module Lib.LocationUpdates.Internal
     deleteFirstNwaypointsImplementation,
     interpolatePointsAndCalculateDistanceImplementation,
     clearLocationUpdatesImplementation,
+    addInterpolatedPointsImplementation,
+    clearInterpolatedPointsImplementation,
+    expireInterpolatedPointsImplementation,
+    getInterpolatedPointsImplementation,
     isDistanceCalculationFailedImplementation,
     wrapDistanceCalculationImplementation,
     processWaypoints,
@@ -46,6 +50,10 @@ data RideInterpolationHandler person m = RideInterpolationHandler
     getWaypointsNumber :: Id person -> m Integer,
     getFirstNwaypoints :: Id person -> Integer -> m [LatLong],
     deleteFirstNwaypoints :: Id person -> Integer -> m (),
+    addInterpolatedPoints :: Id person -> NonEmpty LatLong -> m (),
+    clearInterpolatedPoints :: Id person -> m (),
+    expireInterpolatedPoints :: Id person -> m (),
+    getInterpolatedPoints :: Id person -> m [LatLong],
     interpolatePointsAndCalculateDistance :: [LatLong] -> m (HighPrecMeters, [LatLong]),
     wrapDistanceCalculation :: Id person -> m () -> m (),
     isDistanceCalculationFailed :: Id person -> m Bool,
@@ -118,6 +126,8 @@ recalcDistanceBatchStep ::
 recalcDistanceBatchStep RideInterpolationHandler {..} driverId = do
   batchWaypoints <- getFirstNwaypoints driverId (batchSize + 1)
   (distance, interpolatedWps) <- interpolatePointsAndCalculateDistance batchWaypoints
+  whenJust (nonEmpty interpolatedWps) $ \nonEmptyInterpolatedWps -> do
+    addInterpolatedPoints driverId nonEmptyInterpolatedWps
   logInfo $ mconcat ["points interpolation: input=", show batchWaypoints, "; output=", show interpolatedWps]
   logInfo $ mconcat ["calculated distance for ", show (length interpolatedWps), " points, ", "distance is ", show distance]
   deleteFirstNwaypoints driverId batchSize
@@ -144,6 +154,10 @@ mkRideInterpolationHandler isEndRide mapsCfg updateDistance =
       getWaypointsNumber = getWaypointsNumberImplementation,
       getFirstNwaypoints = getFirstNwaypointsImplementation,
       deleteFirstNwaypoints = deleteFirstNwaypointsImplementation,
+      addInterpolatedPoints = addInterpolatedPointsImplementation,
+      clearInterpolatedPoints = clearInterpolatedPointsImplementation,
+      getInterpolatedPoints = getInterpolatedPointsImplementation,
+      expireInterpolatedPoints = expireInterpolatedPointsImplementation,
       interpolatePointsAndCalculateDistance = interpolatePointsAndCalculateDistanceImplementation isEndRide mapsCfg,
       updateDistance,
       isDistanceCalculationFailed = isDistanceCalculationFailedImplementation,
@@ -175,6 +189,30 @@ getFirstNwaypointsImplementation driverId num = lRange (makeWaypointsRedisKey dr
 
 deleteFirstNwaypointsImplementation :: (HedisFlow m env) => Id person -> Integer -> m ()
 deleteFirstNwaypointsImplementation driverId numToDel = lTrim (makeWaypointsRedisKey driverId) numToDel (-1)
+
+makeInterpolatedPointsRedisKey :: Id person -> Text
+makeInterpolatedPointsRedisKey driverId = mconcat ["interpolatedPoints", ":", driverId.getId]
+
+addInterpolatedPointsImplementation :: (HedisFlow m env) => Id person -> NonEmpty LatLong -> m ()
+addInterpolatedPointsImplementation driverId waypoints = do
+  let key = makeInterpolatedPointsRedisKey driverId
+      numPoints = length waypoints
+  rPush key waypoints
+  logInfo $ mconcat ["added ", show numPoints, " interpolated points for driverId = ", driverId.getId]
+
+clearInterpolatedPointsImplementation :: HedisFlow m env => Id person -> m ()
+clearInterpolatedPointsImplementation driverId = do
+  let key = makeInterpolatedPointsRedisKey driverId
+  clearList key
+  logInfo $ mconcat ["cleared interpolated location updates for driverId = ", driverId.getId]
+
+getInterpolatedPointsImplementation :: HedisFlow m env => Id person -> m [LatLong]
+getInterpolatedPointsImplementation = Hedis.getList . makeInterpolatedPointsRedisKey
+
+expireInterpolatedPointsImplementation :: HedisFlow m env => Id person -> m ()
+expireInterpolatedPointsImplementation driverId = do
+  let key = makeInterpolatedPointsRedisKey driverId
+  Hedis.expire key 86400 -- 24 hours
 
 interpolatePointsAndCalculateDistanceImplementation ::
   ( HasCallStack,
