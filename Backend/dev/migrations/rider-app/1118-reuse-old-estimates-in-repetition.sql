@@ -6,6 +6,8 @@ ALTER TABLE atlas_app.search_request ADD COLUMN auto_assign_enabled_v2 boolean;
 UPDATE atlas_app.search_request AS T1 SET auto_assign_enabled_v2 = (SELECT auto_assign_enabled_v2 AS T2 FROM atlas_app.estimate AS T2 WHERE T1.id = T2.request_id)
   WHERE T1.created_at > now () - interval '6 hour';
 
+CREATE INDEX idx_driver_offer_s_req_id ON atlas_app.driver_offer USING btree (estimate_id);
+
 -------------------------------------------------------------------------------------------
 -------------------------------AFTER_FULL_ROLL_OUT-----------------------------------------
 -------------------------------------------------------------------------------------------

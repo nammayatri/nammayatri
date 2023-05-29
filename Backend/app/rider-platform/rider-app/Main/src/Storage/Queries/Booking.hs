@@ -197,7 +197,7 @@ findAssignedByEstimateId estimateId = Esq.buildDType $ do
         fullBookingTable
           `innerJoin` table @Quote.QuoteT
             `Esq.on` ( \(rb :& _ :& _ :& _ :& _ :& quote) ->
-                         rb ^. RB.BookingQuoteId ==. quote ^. Quote.QuoteTId
+                         rb ^. RB.BookingQuoteId ==. Esq.just (quote ^. Quote.QuoteTId)
                      )
           `innerJoin` table @DrOff.DriverOfferT
             `Esq.on` ( \(_ :& _ :& _ :& _ :& _ :& quote :& driverOffer) ->

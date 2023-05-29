@@ -59,7 +59,7 @@ data Booking = Booking
   { id :: Id Booking,
     transactionId :: Text,
     bppBookingId :: Maybe (Id BPPBooking),
-    quoteId :: Id DQuote.Quote,
+    quoteId :: Maybe (Id DQuote.Quote),
     status :: BookingStatus,
     providerId :: Text,
     providerUrl :: BaseUrl,

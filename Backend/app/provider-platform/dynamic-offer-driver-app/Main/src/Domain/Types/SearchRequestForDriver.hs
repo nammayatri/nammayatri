@@ -70,7 +70,8 @@ data SearchRequestForDriver = SearchRequestForDriver
   deriving (Generic, Show, PrettyShow)
 
 data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
-  { searchTryId :: Id DST.SearchTry,
+  { searchRequestId :: Id DST.SearchTry, -- TODO: Deprecated, to be removed
+    searchTryId :: Id DST.SearchTry,
     startTime :: UTCTime,
     searchRequestValidTill :: UTCTime,
     distanceToPickup :: Meters,
@@ -90,7 +91,8 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
 makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Seconds -> SearchRequestForDriverAPIEntity
 makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry delayDuration =
   SearchRequestForDriverAPIEntity
-    { searchTryId = nearbyReq.searchTryId,
+    { searchRequestId = nearbyReq.searchTryId,
+      searchTryId = nearbyReq.searchTryId,
       startTime = nearbyReq.startTime,
       searchRequestValidTill = nearbyReq.searchRequestValidTill,
       distanceToPickup = nearbyReq.actualDistanceToPickup,

@@ -269,14 +269,15 @@ newtype GetNearbySearchRequestsRes = GetNearbySearchRequestsRes
 
 data DriverOfferReq = DriverOfferReq
   { offeredFare :: Maybe Money,
-    searchTryId :: Id DST.SearchTry
+    searchRequestId :: Id DST.SearchTry
   }
   deriving stock (Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 data DriverRespondReq = DriverRespondReq
   { offeredFare :: Maybe Money,
-    searchTryId :: Id DST.SearchTry,
+    searchRequestId :: Maybe (Id DST.SearchTry), -- TODO: Deprecated, to be removed
+    searchTryId :: Maybe (Id DST.SearchTry),
     response :: SearchRequestForDriverResponse
   }
   deriving stock (Generic)
@@ -683,7 +684,7 @@ getNearbySearchRequests (driverId, merchantId) = do
     buildSearchRequestForDriverAPIEntity cancellationRatio cancellationScoreRelatedConfig transporterConfig nearbyReq = do
       let searchTryId = nearbyReq.searchTryId
       searchTry <- runInReplica $ QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
-      searchRequest <- runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchTryNotFound searchTry.requestId.getId)
+      searchRequest <- runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
       popupDelaySeconds <- DP.getPopupDelay searchRequest.providerId (cast driverId) cancellationRatio cancellationScoreRelatedConfig transporterConfig.defaultPopupDelay
       return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry popupDelaySeconds
 
@@ -718,7 +719,7 @@ offerQuote ::
   m APISuccess
 offerQuote (driverId, merchantId) DriverOfferReq {..} = do
   let response = Accept
-  respondQuote (driverId, merchantId) DriverRespondReq {..}
+  respondQuote (driverId, merchantId) DriverRespondReq {searchRequestId = Nothing, searchTryId = Just searchRequestId, ..}
 
 respondQuote ::
   ( HasCacheConfig r,
@@ -741,10 +742,11 @@ respondQuote ::
   m APISuccess
 respondQuote (driverId, _) req = do
   Redis.whenWithLockRedis (offerQuoteLockKey driverId) 60 $ do
-    searchTry <- QST.findById req.searchTryId >>= fromMaybeM (SearchTryNotFound req.searchTryId.getId)
+    searchTryId <- req.searchRequestId <|> req.searchTryId & fromMaybeM (InvalidRequest "searchTryId field is not present.")
+    searchTry <- QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
     now <- getCurrentTime
     when (searchTry.validTill < now) $ throwError SearchRequestExpired
-    searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchTryNotFound req.searchTryId.getId)
+    searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
     let mbOfferedFare = req.offeredFare
     organization <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantDoesNotExist searchReq.providerId.getId)
     driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
@@ -762,7 +764,7 @@ respondQuote (driverId, _) req = do
           whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
           when (sReqFD.response == Just Reject) (throwError QuoteAlreadyRejected)
           quoteLimit <- getQuoteLimit searchReq.providerId searchReq.estimatedDistance
-          quoteCount <- QDrQt.countAllBySTId searchTry.id
+          quoteCount <- Esq.runInReplica $ QDrQt.countAllBySTId searchTry.id
           when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)
           farePolicy <- FarePolicyS.findByMerchantIdAndVariant organization.id sReqFD.vehicleVariant >>= fromMaybeM NoFarePolicy
           let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance searchReq.estimatedDistance <$> farePolicy.driverExtraFeeBounds
@@ -786,7 +788,7 @@ respondQuote (driverId, _) req = do
             QSRD.updateDriverResponse sReqFD.id req.response
             QDFS.updateStatus sReqFD.driverId DDFS.OFFERED_QUOTE {quoteId = driverQuote.id, validTill = driverQuote.validTill}
           let shouldPullFCMForOthers = (quoteCount + 1) >= quoteLimit || searchReq.autoAssignEnabled
-          driverFCMPulledList <- if shouldPullFCMForOthers then QSRD.findAllActiveWithoutRespBySearchTryId req.searchTryId else pure []
+          driverFCMPulledList <- if shouldPullFCMForOthers then QSRD.findAllActiveWithoutRespBySearchTryId searchTryId else pure []
           -- Adding +1 in quoteCount because one more quote added above (QDrQt.create driverQuote)
           sendRemoveRideRequestNotification driverFCMPulledList organization.id driverQuote
           sendDriverOffer organization searchReq searchTry driverQuote
@@ -848,9 +850,8 @@ respondQuote (driverId, _) req = do
     sendRemoveRideRequestNotification driverSearchReqs orgId driverQuote = do
       for_ driverSearchReqs $ \driverReq -> do
         Esq.runNoTransaction $ do
-          --TODO: Why?
           QSRD.updateDriverResponse driverReq.id Pulled
-        driver_ <- QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
+        driver_ <- Esq.runInReplica $ QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
         Notify.notifyDriverClearedFare orgId driverReq.driverId driverReq.searchTryId driverQuote.estimatedFare driver_.deviceToken
 
 getStats ::

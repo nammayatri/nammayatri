@@ -146,7 +146,7 @@ content-type: application/json
 
 {
     "offeredFare": 10,
-    "searchTryId": "{{nearbySearchRequest.response.body.searchRequestsForDriver[0].searchTryId}}"
+    "searchRequestId": "{{nearbySearchRequest.response.body.searchRequestsForDriver[0].searchTryId}}"
 }
 
 ###

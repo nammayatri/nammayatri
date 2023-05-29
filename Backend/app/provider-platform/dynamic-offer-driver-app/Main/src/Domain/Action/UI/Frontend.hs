@@ -42,7 +42,7 @@ getDriverFlowStatus (personId, _) = do
   -- should not be run in replica
   driverStatus <- QDFS.getStatus personId >>= fromMaybeM (PersonNotFound personId.getId)
   case driverStatus of
-    DDFS.GOT_SEARCH_REQUEST _ _ -> expireDriverStatusIfNeeded driverStatus
+    DDFS.GOT_SEARCH_REQUEST {} -> expireDriverStatusIfNeeded driverStatus
     DDFS.OFFERED_QUOTE _ _ -> expireDriverStatusIfNeeded driverStatus
     a -> return $ GetDriverFlowStatusRes Nothing a
   where
