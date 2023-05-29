@@ -267,6 +267,7 @@ supportButton push state =
   , gravity CENTER
   , background Color.white900
   , stroke $ "1,"<> Color.grey900
+  , margin $ MarginTop 10
   , cornerRadius 20.0
   ][ imageView
       [ imageWithFallback "ny_ic_share_icon,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_share_icon.png"
