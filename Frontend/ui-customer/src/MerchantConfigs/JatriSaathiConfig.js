@@ -1,5 +1,5 @@
 export function getMerchantString(key) {
-  var selectedLanguage = JBridge.getKeysInSharedPrefs("LANGUAGE_KEY");
+  var selectedLanguage = JBridge.getKeysInSharedPref("LANGUAGE_KEY");
   switch (selectedLanguage) {
     case "HI_IN":
       return getStringHIValue(key);
@@ -56,7 +56,11 @@ const config = {
   "DOCUMENT_LINK" : "https://docs.google.com/document/d/19pQUgTWXBqcM7bjy4SU1-z33r-iXsdPMfZggBTXbdR4",
   "APP_LINK" : "",
   "PRIVACY_POLICY_LINK" : "https://docs.google.com/document/d/1-bcjLOZ_gR0Rda2BNmkKnqVds8Pm23v1e7JbSDdM70E",
-  "CUSTOMER_TIP" : "false"
+  "CUSTOMER_TIP" : "false",
+  "isShareAppEnabled" : "true",
+  "apiLoaderLottie" : "primary_button_loader",
+  "isEmergencyContacts" : "true",
+  "isChatEnabled" : "true"
 }
 
 const bengaliStrings = {

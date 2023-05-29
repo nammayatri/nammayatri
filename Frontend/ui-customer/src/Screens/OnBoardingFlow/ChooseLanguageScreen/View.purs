@@ -25,7 +25,7 @@ import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import JBridge as JB 
-import Prelude (Unit, bind, const, pure, unit, ($), (&&), (/=), (<<<))
+import Prelude (Unit, bind, const, pure, unit, ($), (&&), (/=), (<<<),(<>))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, afterRender, background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, orientation, padding, scrollView, text, textSize, textView, weight, width, imageWithFallback)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.ChooseLanguageScreen.Controller (Action(..), ScreenOutput, eval)
@@ -33,6 +33,7 @@ import Screens.Types as ST
 import Styles.Colors as Color
 import Common.Types.App
 import Screens.OnBoardingFlow.ChooseLanguageScreen.ComponentConfig 
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 
 screen :: ST.ChooseLanguageScreenState -> Screen Action ST.ChooseLanguageScreenState ScreenOutput
 screen initialState =
@@ -95,7 +96,7 @@ scrollLanguageView state push =
             ] $ imageView
             [ width ( V 270)
             , height ( V 270)
-            , imageWithFallback "ny_ic_welcome_customer,https://assets.juspay.in/nammayatri/images/user/ny_ic_welcome_customer.png"
+            , imageWithFallback $ "ny_ic_welcome_customer," <> (getAssetStoreLink FunctionCall) <> "ny_ic_welcome_customer.png"
             ]]
         , PrestoAnim.animationSet 
           [ Anim.translateYAnimFromTopWithAlpha translateYAnimConfig --300 10 0 0 true $ PrestoAnim.Bezier 0.37 0.0 0.63 1.0
@@ -111,15 +112,13 @@ scrollLanguageView state push =
         ]
         , PrestoAnim.animationSet 
           [ Anim.translateYAnimFromTopWithAlpha translateYAnimConfig --300 10 0 0 true $ PrestoAnim.Bezier 0.37 0.0 0.63 1.0
-          ] $ textView 
+          ] $ textView $
           [ height WRAP_CONTENT
           , width WRAP_CONTENT
-          , textSize FontSize.a_17
           , text "Choose language"
           , color Color.inactive
-          , fontStyle $ FontStyle.medium LanguageStyle
           , margin $ MarginTop 50
-          ]
+          ] <> FontStyle.subHeading2 TypoGraphy
         , listLanguageView state push
     ]
     ]

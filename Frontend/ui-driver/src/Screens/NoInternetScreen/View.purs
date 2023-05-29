@@ -30,6 +30,8 @@ import Language.Strings (getString)
 import Language.Types(STR(..))
 import Common.Types.App
 import Screens.NoInternetScreen.ComponentConfig
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
 
 screen :: ST.NoInternetScreenState -> String -> ScopedScreen Action ST.NoInternetScreenState ScreenOutput
 screen initialState triggertype = 
@@ -69,27 +71,23 @@ locationAccessPermissionView push state triggertype =
       , width MATCH_PARENT
       , orientation VERTICAL
       , padding (Padding 16 16 0 0)
-      ][  textView 
+      ][  textView $
           [ text (getString WE_NEED_ACCESS_TO_YOUR_LOCATION)
-          , textSize FontSize.a_22
           , color Color.black800
           , gravity LEFT
           , margin (MarginVertical 22 16)
-          , fontStyle $ FontStyle.bold LanguageStyle
-          ]
-        , textView
+          ] <> FontStyle.h1 LanguageStyle
+        , textView $
           [ text (getString YOUR_LOCATION_HELPS_OUR_SYSTEM)
-          , textSize FontSize.a_16
           , color Color.black800
-          , fontStyle $ FontStyle.regular LanguageStyle
-          ]
+          ] <> FontStyle.body5 TypoGraphy
         ]
         , linearLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
         , gravity CENTER
         ][  imageView
-            [ imageWithFallback "ny_ic_location_access,https://assets.juspay.in/nammayatri/images/common/ny_ic_location_access.png"
+            [ imageWithFallback $ "ny_ic_location_access," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_location_access.png"
             , height $ V 213
             , width $ V 240
             , gravity CENTER
@@ -111,25 +109,21 @@ noInternetScreenView push state triggertype =
       , orientation VERTICAL
       , clickable false
       ][imageView
-        [ imageWithFallback "ic_offline,https://assets.juspay.in/nammayatri/beckn/merchantcommon/images/ic_offline.png"
+        [ imageWithFallback $ "ny_ic_offline," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_offline.png"
         , height $ V 213
         , width $ V 240
         , gravity CENTER
         ],
-        textView 
+        textView $
         [ text (getString NO_INTERNET_CONNECTION)
-        , textSize FontSize.a_22
         , color Color.black800
         , gravity LEFT
-        , fontStyle $ FontStyle.bold LanguageStyle
-        ],
-        textView
+        ] <> FontStyle.h1 LanguageStyle,
+        textView $
         [ text (getString PLEASE_CHECK_YOUR_INTERNET_CONNECTION_AND_TRY_AGAIN)
-        , textSize FontSize.a_16
         , color Color.black800
-        , fontStyle $ FontStyle.regular LanguageStyle
         , margin (MarginTop 10)
-        ]
+        ] <> FontStyle.body5 TypoGraphy
       ]
       , buttonView push state triggertype
   ]

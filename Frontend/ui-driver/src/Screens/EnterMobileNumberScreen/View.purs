@@ -35,7 +35,10 @@ import Animation as Anim
 import Animation.Config as AnimConfig
 import Common.Types.App
 import Screens.EnterMobileNumberScreen.ComponentConfig
-import MerchantConfigs.Utils (getValueFromMerchant)
+import Merchant.Utils (getValueFromMerchant)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
 
 screen :: ST.EnterMobileNumberScreenState -> Screen Action ST.EnterMobileNumberScreenState ScreenOutput
 screen initialState =
@@ -97,7 +100,7 @@ backArrow state push =
       [ width ( V 25 )
       , height ( V 25 )
       , margin (MarginTop 20)
-      , imageWithFallback "ny_ic_back,https://assets.juspay.in/nammayatri/images/driver/ny_ic_back.png"
+      , imageWithFallback $ "ny_ic_back," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_back.png"
       , onClick push (const BackPressed)
       ]
   ]

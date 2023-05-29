@@ -23,16 +23,18 @@ import Effect (Effect)
 import Engineering.Helpers.Commons (screenWidth, safeMarginBottom, safeMarginTop, os, isPreviousVersion)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getMerchant, Merchant(..))
+import Merchant.Utils (getMerchant, Merchant(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Merchant.Utils (getValueFromConfig)
-import Prelude (Unit, const, unit, ($), (*), (/), (<>), (==), (||), (&&), (/=))
+import Prelude (Unit, const, unit, ($), (*), (/), (<>), (==), (||), (&&), (/=), map)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, visibility, background, clickable, color, disableClickFeedback, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, orientation, padding, text, textSize, textView, width, weight, ellipsize, maxLines, imageWithFallback, scrollView, scrollBarY)
 import PrestoDOM.Animation as PrestoAnim
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import Data.Maybe (Maybe(..))
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
 
 view :: forall w .  (Action  -> Effect Unit) -> SettingSideBarState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -52,7 +54,7 @@ view push state =
       ] $ linearLayout
           [ height MATCH_PARENT
           , width WRAP_CONTENT
-          , background Color.black900
+          , background state.appConfig.profileBackground
           , orientation VERTICAL
           , onAnimationEnd push $ if state.opened == CLOSING then const OnClosed else const NoAction
           , padding ( Padding 0 safeMarginTop 0 0 )
@@ -84,26 +86,23 @@ settingsView state push =
   , width MATCH_PARENT
   , padding (Padding 18 24 18 8)
   , orientation VERTICAL
-  ][
-     settingsMenuView {imageUrl : "ic_past_rides,https://assets.juspay.in/nammayatri/images/user/ic_past_rides.png", text : (getString MY_RIDES), tag : SETTINGS_RIDES, iconUrl : ""} push
-    , settingsMenuView {imageUrl : "ic_fav,https://assets.juspay.in/nammayatri/images/user/ic_fav.png", text : (getString FAVOURITES)  , tag : SETTINGS_FAVOURITES, iconUrl : ""} push
-    , if (isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "")) then emptyLayout
-      else settingsMenuView {imageUrl : "ny_ic_emergency_contacts,https://assets.juspay.in/nammayatri/images/user/ny_ic_emergency_contacts.png" , text : (getString EMERGENCY_CONTACTS)  , tag : SETTINGS_EMERGENCY_CONTACTS, iconUrl : ""} push
-    , settingsMenuView {imageUrl : "ic_help,https://assets.juspay.in/nammayatri/images/user/ic_help.png", text : (getString HELP_AND_SUPPORT), tag : SETTINGS_HELP, iconUrl : ""} push
-    , settingsMenuView {imageUrl : "ic_change_language,https://assets.juspay.in/nammayatri/images/user/ic_change_language.png", text : (getString LANGUAGE), tag : SETTINGS_LANGUAGE, iconUrl : ""} push
-    , linearLayout
-      [ width MATCH_PARENT
-      , height (V 1)
-      , background Color.grey900
-      , margin ( MarginVertical 8 8 )
-      ][]
-    , settingsMenuView {imageUrl : "ic_share,https://assets.juspay.in/nammayatri/images/user/ic_share.png", text : (getString SHARE_APP), tag : SETTINGS_SHARE_APP, iconUrl : ""} push
-    , if ((getValueFromConfig "showDashboard") == "false") || (isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "")) then emptyLayout 
-      else settingsMenuView {imageUrl : "ic_graph_black,https://assets.juspay.in/nammayatri/images/common/ic_graph_black.png", text : (getString LIVE_STATS_DASHBOARD), tag : SETTINGS_LIVE_DASHBOARD, iconUrl : "ic_red_icon,https://assets.juspay.in/nammayatri/images/user/ic_red_icon.png"} push
-    , settingsMenuView {imageUrl : "ic_info,https://assets.juspay.in/nammayatri/images/user/ic_info.png", text : (getString ABOUT), tag : SETTINGS_ABOUT, iconUrl : ""} push
-    , logoutView state push
-  ]
-  
+  ](map (\item -> 
+        case item of
+        "MyRides" -> settingsMenuView {imageUrl : "ic_past_rides," <> (getAssetStoreLink FunctionCall) <> "ic_past_rides.png", text : (getString MY_RIDES), tag : SETTINGS_RIDES, iconUrl : ""} push
+        "Favorites" -> settingsMenuView {imageUrl : "ic_fav," <> (getAssetStoreLink FunctionCall) <> "ic_fav.png", text : (getString FAVOURITES)  , tag : SETTINGS_FAVOURITES, iconUrl : ""} push
+        "EmergencyContacts" ->  if (isPreviousVersion (getValueToLocalStore VERSION_NAME) (if os == "IOS" then "1.2.5" else "1.2.1")) then emptyLayout
+                                else settingsMenuView {imageUrl : "ny_ic_emergency_contacts," <> (getAssetStoreLink FunctionCall) <> "ny_ic_emergency_contacts.png" , text : (getString EMERGENCY_CONTACTS)  , tag : SETTINGS_EMERGENCY_CONTACTS, iconUrl : ""} push
+        "HelpAndSupport" -> settingsMenuView {imageUrl : "ic_help," <> (getAssetStoreLink FunctionCall) <> "ic_help.png", text : (getString HELP_AND_SUPPORT), tag : SETTINGS_HELP, iconUrl : ""} push
+        "Language" -> settingsMenuView {imageUrl : "ic_change_language," <> (getAssetStoreLink FunctionCall) <> "ic_change_language.png", text : (getString LANGUAGE), tag : SETTINGS_LANGUAGE, iconUrl : ""} push
+        "ShareApp" -> settingsMenuView {imageUrl : "ic_share," <> (getAssetStoreLink FunctionCall) <> "ic_share.png", text : (getString SHARE_APP), tag : SETTINGS_SHARE_APP, iconUrl : ""} push
+        "LiveStatsDashboard" -> if (isPreviousVersion (getValueToLocalStore VERSION_NAME) (if os == "IOS" then "1.2.5" else "1.2.1")) then emptyLayout
+                                else settingsMenuView {imageUrl : "ic_graph_black," <> (getAssetStoreLink FunctionCall) <> "ic_graph_black.png", text : (getString LIVE_STATS_DASHBOARD), tag : SETTINGS_LIVE_DASHBOARD, iconUrl : "ic_red_icon," <> (getAssetStoreLink FunctionCall) <> "ic_red_icon.png"} push
+        "About" -> settingsMenuView {imageUrl : "ic_info," <> (getAssetStoreLink FunctionCall) <> "ic_info.png", text : (getString ABOUT), tag : SETTINGS_ABOUT, iconUrl : ""} push
+        "Logout" -> logoutView state push
+        "Separator" -> separator
+        _ -> emptyLayout
+      ) state.appConfig.sideBarList
+    )
 getPreviousVersion :: String -> String 
 getPreviousVersion _ = 
   if os == "IOS" then 
@@ -116,6 +115,13 @@ getPreviousVersion _ =
         JATRISAATHI -> "0.0.0"
         _ -> "1.2.1"
 
+separator :: forall w. PrestoDOM (Effect Unit) w
+separator = linearLayout
+      [ width MATCH_PARENT
+      , height (V 1)
+      , background Color.grey900
+      , margin ( MarginVertical 8 8 )
+      ][]
 ------------------------------ emptylayout --------------------------------
 emptyLayout = linearLayout
               [ height $ V 0
@@ -136,7 +142,7 @@ logoutView state push =
       , background Color.grey900
       , margin ( MarginVertical 8 8 )
       ][]
-  , settingsMenuView {imageUrl : "ic_logout,https://assets.juspay.in/nammayatri/images/user/ic_logout.png", text : (getString LOGOUT_), tag : SETTINGS_LOGOUT, iconUrl : ""} push
+  , settingsMenuView {imageUrl : "ic_logout," <> (getAssetStoreLink FunctionCall) <> "ic_logout.png", text : (getString LOGOUT_), tag : SETTINGS_LOGOUT, iconUrl : ""} push
     ]
 
 ------------------------------ profileView --------------------------------
@@ -145,14 +151,15 @@ profileView state push =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  , background Color.black900
+  , background state.appConfig.profileBackground
   , gravity CENTER_VERTICAL
   , padding (Padding 18 24 0 24)
   -- , onClick push (const EditProfile) TODO :: add profile view in future
   ][ imageView
       [ width ( V 48 )
       , height ( V 48 )
-      , imageWithFallback "ny_ic_user,https://assets.juspay.in/nammayatri/images/user/ny_ic_user.png"
+      , color state.appConfig.profileImage
+      ,imageWithFallback $ "ny_ic_user," <> (getAssetStoreLink FunctionCall) <> "ny_ic_user.png"
       ]
     , linearLayout
       [ width WRAP_CONTENT
@@ -169,27 +176,24 @@ profileView state push =
           ][ textView
               ([ height WRAP_CONTENT
               , text if ((getValueToLocalStore USER_NAME) == "__failed" || (getValueToLocalStore USER_NAME) == "") then (getString USER) else (getValueToLocalStore USER_NAME)
-              , textSize FontSize.a_18
-              , color Color.white900
-              , fontStyle $ FontStyle.medium LanguageStyle
+              , color state.appConfig.profileName
               , margin (MarginRight 5)
               , ellipsize true
               , maxLines 1
-              ] <> (if os == "IOS" then [ width (V (screenWidth unit /2))]else [weight 1.0]))
+              ] <> (if os == "IOS" then [ width (V (screenWidth unit /2))]else [weight 1.0]) <> FontStyle.body13 TypoGraphy)
             , imageView
-              [ width $ V 12
-              , height (V 12)
-              , imageWithFallback "ny_ic_chevron_right_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_right_white.png"
+              [ width $ V 22
+              , height (V 22)
+              , color state.appConfig.profileName
+              , imageWithFallback $ "ny_ic_chevron_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
               ]
           ]
-        , textView
+        , textView $
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , text ("+91 " <> (getValueToLocalStore MOBILE_NUMBER))
-          , textSize FontSize.a_14
-          , color Color.profilePhoneNumber
-          , fontStyle $ FontStyle.regular LanguageStyle
-          ]
+          , color state.appConfig.profileName
+          ] <> FontStyle.paragraphText TypoGraphy
         , linearLayout[
           height WRAP_CONTENT
         , width WRAP_CONTENT
@@ -199,32 +203,27 @@ profileView state push =
         , visibility case profileCompleteValue state of
             "100" -> GONE
             _ -> VISIBLE
-        ][textView
+        ][textView $
           [ text $ (getString PROFILE_COMPLETION) <> ":"
-          , textSize FontSize.a_12
-          , fontStyle $ FontStyle.regular LanguageStyle
           , width WRAP_CONTENT
           , height WRAP_CONTENT
-          , color Color.yellow900
-          ]
+          , color state.appConfig.profileName
+          ] <> FontStyle.body3 TypoGraphy
         , imageView
           [ imageWithFallback case profileCompleteValue state of
-              "50" -> "ic_50_percent,https://assets.juspay.in/nammayatri/images/user/ic_50_percent.png"
-              "75" -> "ic_75_percent,https://assets.juspay.in/nammayatri/images/user/ic_75_percent.png"
+              "50" -> "ic_50_percent," <> (getAssetStoreLink FunctionCall) <> "ic_50_percent.png"
+              "75" -> "ic_75_percent," <> (getAssetStoreLink FunctionCall) <> "ic_75_percent.png"
               _    -> ""
           , height $ V 10
           , width $ V 10
           , margin $ Margin 4 4 4 2
           ]
-        , textView
-          [ textSize FontSize.a_12
-          , fontStyle $ FontStyle.regular LanguageStyle
-          , width WRAP_CONTENT
+        , textView $
+          [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , color Color.yellow900
           , text $ (profileCompleteValue state) <> " %"
-
-          ]
+          ] <> FontStyle.body3 TypoGraphy
         ]
       ]]
 
@@ -252,15 +251,13 @@ settingsMenuView item push  =
       , height ( V 25 )
       , imageWithFallback item.imageUrl
       ]
-    , textView
+    , textView $
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , text item.text
-      , textSize FontSize.a_18
       , color Color.charcoalGrey
-      , fontStyle $ FontStyle.medium LanguageStyle
       , padding (PaddingLeft 20)
-      ]
+      ] <> FontStyle.body13 TypoGraphy
     , imageView
       [ width ( V 8 )
       , height ( V 8 )

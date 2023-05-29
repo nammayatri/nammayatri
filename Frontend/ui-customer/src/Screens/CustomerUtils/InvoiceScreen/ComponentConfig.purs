@@ -25,6 +25,9 @@ import Components.PrimaryButton as PrimaryButton
 import Components.GenericHeader as GenericHeader
 import Styles.Colors as Color
 import Common.Types.App
+import Prelude ((<>))
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
 
 genericHeaderConfig :: ST.InvoiceScreenState -> GenericHeader.Config
 genericHeaderConfig state = let
@@ -34,15 +37,13 @@ genericHeaderConfig state = let
        , prefixImageConfig
        { height = V 25
        , width = V 25
-       , imageUrl = "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
+       , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
        , margin = (Margin 12 12 12 12)
        , visibility = VISIBLE
        }
     , textConfig
       { text = (getString INVOICE)
-      , textSize = FontSize.a_18
       , color = Color.darkDescriptionText
-      , fontStyle = FontStyle.bold LanguageStyle
       }
     , suffixImageConfig
       { visibility = GONE
@@ -55,8 +56,8 @@ primaryButtonConfig :: ST.InvoiceScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let
    config = PrimaryButton.config
    primaryButtonConfig' = config
-     { textConfig
-      { text = (getString DOWNLOAD_PDF)
-      }
+     { textConfig{ text = (getString DOWNLOAD_PDF)
+      , color = state.data.config.primaryTextColor }
+      , background = state.data.config.primaryBackground
      }
    in primaryButtonConfig'

@@ -39,6 +39,8 @@ import Log (printLog)
 import Data.String as DS
 import Common.Types.App
 import Screens.UploadDrivingLicenseScreen.ComponentConfig
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
 
 screen :: ST.UploadDrivingLicenseState -> Screen Action ST.UploadDrivingLicenseState ScreenOutput
 screen initialState =
@@ -123,12 +125,12 @@ linearLayout
       linearLayout[
       width MATCH_PARENT
     , height MATCH_PARENT
-      ] [TutorialModal.view (push <<< TutorialModalAction) {imageUrl : "ny_ic_driver_license_card,https://assets.juspay.in/nammayatri/images/driver/ny_ic_driver_license_card.png"}] else linearLayout [][]
+      ] [TutorialModal.view (push <<< TutorialModalAction) {imageUrl : "ny_ic_driver_license_card," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_driver_license_card.png"}] else linearLayout [][]
     , if state.props.openDateOfIssueManual then 
       linearLayout[
       width MATCH_PARENT
     , height MATCH_PARENT
-      ] [TutorialModal.view (push <<< TutorialModalAction) {imageUrl : "ny_ic_date_of_issue,https://assets.juspay.in/nammayatri/images/driver/ny_ic_date_of_issue.png"}] else linearLayout [][]
+      ] [TutorialModal.view (push <<< TutorialModalAction) {imageUrl : "ny_ic_date_of_issue," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_date_of_issue.png"}] else linearLayout [][]
     , if state.props.openGenericMessageModal then 
       linearLayout[
       width MATCH_PARENT
@@ -231,7 +233,7 @@ frontUploadSection state push =
     ][ imageView
       [ width MATCH_PARENT
       , height ( V 166 )
-      , imageWithFallback "ny_ic_dl_demo,https://assets.juspay.in/nammayatri/images/driver/ny_ic_dl_demo.png"
+      , imageWithFallback $ "ny_ic_dl_demo," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_dl_demo.png"
       ]
     ]
   , linearLayout
@@ -254,7 +256,7 @@ frontUploadSection state push =
       imageView
       [ width ( V 20 )
       , height ( V 20 )
-      , imageWithFallback "ny_ic_camera_front,https://assets.juspay.in/nammayatri/images/driver/ny_ic_camera_front.png"
+      , imageWithFallback $ "ny_ic_camera_front," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_camera_front.png"
       ]
     ]
   ]
@@ -293,7 +295,7 @@ backUploadSection state push =
       imageView
       [ width ( V 20 )
       , height ( V 20 )
-      , imageWithFallback "ny_ic_camera_front,https://assets.juspay.in/nammayatri/images/driver/ny_ic_camera_front.png"
+      , imageWithFallback $ "ny_ic_camera_front," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_camera_front.png"
       ]
     ]
   ]
@@ -317,7 +319,7 @@ previewIcon state push previewType =
           [ height (V 10)
           , width (V 10)
           , margin (MarginLeft 10)
-          , imageWithFallback "ny_ic_close,https://assets.juspay.in/nammayatri/images/common/ny_ic_close.png"
+          , imageWithFallback $ "ny_ic_close," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_close.png"
           , onClick push (const( RemoveUploadedFile previewType))
           ]
     ]
@@ -338,7 +340,7 @@ headerLayout state push =
     ][ imageView
         [ width $ V 25
         , height MATCH_PARENT
-        , imageWithFallback "ny_ic_back,https://assets.juspay.in/nammayatri/images/driver/ny_ic_back.png"
+        , imageWithFallback $ "ny_ic_back," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_back.png"
         , layoutGravity "center_vertical"
         , padding (PaddingHorizontal 2 2)
         , margin (MarginLeft 5)
@@ -408,7 +410,7 @@ dateOfBirth push state =
       , imageView
         [ width ( V 20 )
         , height ( V 20 )
-        , imageWithFallback "ny_ic_calendar,https://assets.juspay.in/nammayatri/images/driver/ny_ic_calendar.png"
+        , imageWithFallback $ "ny_ic_calendar," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_calendar.png"
         ]
       ]
     ]
@@ -450,7 +452,7 @@ dateOfIssue push state =
       , imageView
         [ width $ V 20
         , height $ V 20
-        , imageWithFallback "ny_ic_calendar,https://assets.juspay.in/nammayatri/images/driver/ny_ic_calendar.png"
+        , imageWithFallback $ "ny_ic_calendar," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_calendar.png"
         ]
       ]
     ]

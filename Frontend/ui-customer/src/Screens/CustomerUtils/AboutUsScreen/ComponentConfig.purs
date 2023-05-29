@@ -24,25 +24,24 @@ import PrestoDOM ( Length(..), Margin(..), Padding(..), Visibility(..))
 import Screens.Types as ST
 import Styles.Colors as Color
 import Common.Types.App
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
 
 genericHeaderConfig :: ST.AboutUsScreenState -> GenericHeader.Config
 genericHeaderConfig state = let 
-  config = GenericHeader.config
+  config = if state.appConfig.nyBrandingVisibility then GenericHeader.merchantConfig else GenericHeader.config
   genericHeaderConfig' = config 
     {
       height = WRAP_CONTENT
     , prefixImageConfig {
         height = V 25
       , width = V 25
-      , imageUrl = "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
-      , margin = (Margin 12 12 12 12)
+      , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
       } 
-    , padding = (Padding 0 5 0 5)
     , textConfig {
         text = (getString ABOUT)
-      , textSize = FontSize.a_18
       , color = Color.darkDescriptionText
-      , fontStyle = FontStyle.semiBold LanguageStyle
       }
     , suffixImageConfig {
         visibility = GONE

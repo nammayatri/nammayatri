@@ -18,9 +18,11 @@ module Components.UpdateErrorModal.Controller where
 import PrestoDOM ( Length(..), Margin(..), Visibility(..), Padding(..), Gravity(..))
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Font.Size as FontSize
-import Font.Style as FontStyle
+import Font.Style (Style (..))
 import Styles.Colors as Color
 import Common.Types.App
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Prelude ((<>))
 
 data Action = OnCloseClick
 
@@ -41,8 +43,7 @@ type ImageConfig =
 
 type TextConfig =
   { height :: Length
-  , textSize :: Int
-  , fontStyle :: String
+  , textStyle :: Style
   , text :: String
   , color :: String 
   , padding :: Padding
@@ -64,7 +65,7 @@ type StarterLayoutConfig =
 config :: Config 
 config = 
   { imageConfig : 
-    { imageUrl : "ny_ic_close,https://assets.juspay.in/nammayatri/images/common/ny_ic_close.png"
+    { imageUrl : "ny_ic_close," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_close.png"
     , height : V 25
     , width : V 25
     , margin : (MarginRight 15)
@@ -74,14 +75,13 @@ config =
     textConfig :
     { height : WRAP_CONTENT
     , text : ""
-    , textSize : 16
-    , fontStyle : FontStyle.medium LanguageStyle
     , color : Color.black800
     , padding : (Padding 10 10 10 10)
     , margin : (Margin 0 0 0 0)
     , visibility : VISIBLE
     , gravity : CENTER
     , weight : 1.0
+    , textStyle : SubHeading2
     },
     starterLayout :
     { height : MATCH_PARENT

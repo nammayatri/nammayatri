@@ -19,6 +19,7 @@ import Components.PrimaryButton as PrimaryButtonController
 import Components.SourceToDestination as SourceToDestinationController
 import Screens.Types(Stage)
 import Data.Maybe(Maybe)
+import Config.Types
 
 data Action = NoAction
             | Support 
@@ -31,6 +32,7 @@ data Action = NoAction
             | ShareRide
             | ZoneOTPExpiryAction String String Int
             | OnNavigate
+            | CallDriver
 
 type DriverInfoCardState = 
   { props :: DriverInfoCardProps
@@ -78,4 +80,5 @@ type DriverInfoCardData =
   , isSpecialZone :: Boolean
   , isLocationTracking :: Boolean
   , bookingCreatedAt :: String
+  , config :: AppConfig
   }

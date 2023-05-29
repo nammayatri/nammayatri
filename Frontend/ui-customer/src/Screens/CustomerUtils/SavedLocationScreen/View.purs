@@ -82,11 +82,14 @@ view push state =
       , width MATCH_PARENT
       , orientation VERTICAL
       ][GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
-    , linearLayout
-      [ height $ V 1
-      , width MATCH_PARENT
-      , background Color.greySmoke
-      ][]
+    , if (not state.data.config.nyBrandingVisibility) then 
+        linearLayout
+        [ height $ V 1
+        , width MATCH_PARENT
+        , background Color.greySmoke
+        ][]
+      else
+        linearLayout[][]
     , frameLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT

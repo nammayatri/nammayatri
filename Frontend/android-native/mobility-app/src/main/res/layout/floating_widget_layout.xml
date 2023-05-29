@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/root_container"
+    android:layout_width="match_parent"
+    android:layout_height="90dp"
+    android:orientation="vertical"
+
+    android:layout_margin="16dp">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/dismiss_silent_reqID"
+        android:visibility="gone">
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/dismiss_silent_request"
+            android:layout_marginBottom="5dp"
+            />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="54dp"
+        android:orientation="horizontal"
+        >
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:id="@+id/message_view_left"
+            android:orientation="horizontal">
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="54dp"
+                    android:background="@drawable/silent_popup_background"
+                    android:orientation="vertical"
+                    android:visibility="gone"
+                    android:id="@+id/silent_ride_request_background"
+                    >
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:orientation="horizontal"
+                        android:gravity="center">
+
+
+
+                        <TextView
+                            android:layout_width="50dp"
+                            android:layout_height="wrap_content"
+                            android:text="$120"
+                            android:gravity="end"
+                            android:textColor="#FFFFFF"
+                            android:layout_marginLeft="54dp"
+                            android:textSize="20dp"
+                            android:id="@+id/ride_fare"/>
+
+                        <ImageView
+                            android:layout_width="4dp"
+                            android:layout_height="4dp"
+                            android:layout_marginHorizontal="6dp"
+                            android:src="@drawable/separator_silent_mode"
+                            ></ImageView>
+
+                        <TextView
+                            android:layout_width="100dp"
+                            android:layout_height="wrap_content"
+                            android:text="900m pickup"
+                            android:textSize="16dp"
+                            android:textColor="#FFFFFF"
+                            android:id="@+id/distance_to_pickup"/>
+
+                        <TextView
+                            android:layout_width="80dp"
+                            android:layout_height="wrap_content"
+                            android:gravity="end"
+                            android:text="View now"
+                            android:textSize="18sp"
+                            android:textColor="#FCC32C"></TextView>
+                    </LinearLayout>
+
+
+
+                </LinearLayout>
+
+
+                <com.google.android.material.progressindicator.LinearProgressIndicator
+                    android:layout_width="match_parent"
+                    android:layout_gravity="bottom"
+                    android:layout_height="wrap_content"
+                    app:trackColor="@color/grey900"
+                    android:theme="@style/MaterialTheme"
+                    app:trackCornerRadius="20dp"
+                    app:indicatorColor="@color/green900"
+                    app:trackThickness="4dp"
+                    android:id="@+id/silent_progress_indicator"
+                    android:visibility="gone"
+                    android:progress="100"
+                    android:layout_marginHorizontal="25dp"
+                    android:indeterminate="false"/>
+                <ImageView
+                    android:layout_width="54dp"
+                    android:layout_height="54dp"
+                    android:src="@drawable/ny_ic_floating_widget"
+                    android:id="@+id/floating_logo"/>
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:paddingVertical="5dp"
+                    android:layout_marginLeft="55dp"
+                    android:background="@drawable/bubble_message_shape_right"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:visibility="gone"
+                    android:id="@+id/message_view_right">
+                    <TextView
+                        android:id="@+id/messageTextView_right_header"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:paddingLeft="20dp"
+                        android:paddingRight="10dp"
+                        android:text="New Ride assigned"
+                        android:textColor="@color/white" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:text="New Ride assigned"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:ellipsize="end"
+                        android:textColor="@color/white"
+                        android:paddingRight="10dp"
+                        android:paddingLeft="20dp"
+                        android:id="@+id/messageTextView_right" />
+                </LinearLayout>
+            </FrameLayout>
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

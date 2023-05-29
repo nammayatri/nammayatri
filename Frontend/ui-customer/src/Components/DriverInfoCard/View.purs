@@ -18,12 +18,14 @@ module Components.DriverInfoCard.View where
 import Common.Types.App
 
 import Animation (fadeIn)
+import Common.Types.App (LazyCheck(..))
 import Components.DriverInfoCard.Controller (Action(..), DriverInfoCardState)
 import Components.PrimaryButton as PrimaryButton
 import Components.SourceToDestination as SourceToDestination
 import Data.Array as Array
 import Data.Maybe (fromMaybe)
 import Data.String (Pattern(..), split, length, take, drop)
+import Data.String.CodeUnits (fromCharArray, toCharArray)
 import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff_)
@@ -31,9 +33,11 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (flowRunner, os, safeMarginBottom, screenWidth, getExpiryTime)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (secondsToHms, zoneOtpExpiryTimer, Merchant(..), getMerchant)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (secondsToHms, zoneOtpExpiryTimer)
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Merchant.Utils (Merchant(..), getMerchant, getValueFromConfig)
 import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>), (-), (*), bind, pure, discard, (&&), (||), (/=))
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, alignParentLeft, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width)
@@ -41,10 +45,8 @@ import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (Stage(..))
-import Styles.Colors as Color
-import Data.String.CodeUnits (fromCharArray, toCharArray)
 import Storage (isLocalStageOn)
-import Merchant.Utils (getValueFromConfig)
+import Styles.Colors as Color
 
 view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit ) w
 view push state =
@@ -111,15 +113,13 @@ titleAndETA push state =
   , gravity CENTER_VERTICAL
   , padding $ Padding 16 20 16 16
   , visibility $ if ((state.props.currentStage /= RideAccepted && (secondsToHms state.data.eta) == "") || (state.props.currentStage == RideStarted && (spy "estimatedTimeABCD" state.props.estimatedTime == "--"))) then GONE else VISIBLE
-  ][ textView 
+  ][ textView (
       [ width MATCH_PARENT 
       , height WRAP_CONTENT
       , text $ if state.props.currentStage == RideAccepted then getString BOARD_THE_FIRST_TAXI else "ETA: " <> if state.props.isSpecialZone then (state.props.estimatedTime) else (secondsToHms state.data.eta)
       , color Color.black800
-      , fontStyle $ FontStyle.bold LanguageStyle
-      , textSize FontSize.a_18
       -- , fontSize FontSize.a_22
-      ]
+      ] <> FontStyle.h2 TypoGraphy)
   ]
 
 dropPointView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w 
@@ -129,12 +129,10 @@ dropPointView push state =
   , width MATCH_PARENT
   , orientation VERTICAL
   , padding $ Padding 0 10 16 if (os == "IOS") then if safeMarginBottom == 0 then 16 else safeMarginBottom else 16
-  ][  textView
+  ][  textView (
       [ text $ getString DROP <> " :-"
-      , fontStyle $ FontStyle.regular LanguageStyle
       , margin $ Margin 16 0 0 5
-      , textSize $ FontSize.a_12
-      ]
+      ] <> FontStyle.body3 TypoGraphy)
     , textView $
       [ text state.data.destination
       , color Color.black800
@@ -150,15 +148,13 @@ estimatedTimeAndDistanceView push state =
   , height WRAP_CONTENT
   , gravity CENTER
   , margin $ Margin 16 4 16 0
-  ][ textView
+  ][ textView (
       [ text $ state.data.estimatedDistance <> "km " <> getString AWAY
-      , textSize FontSize.a_14
       , width MATCH_PARENT
       , gravity CENTER
       , color Color.black650
       , height WRAP_CONTENT
-      , fontStyle $ FontStyle.regular LanguageStyle
-      ]
+      ] <> FontStyle.paragraphText TypoGraphy)
     -- , linearLayout
     --   [height $ V 4
     --   , width $ V 4
@@ -178,26 +174,23 @@ estimatedTimeAndDistanceView push state =
   ]
 
 otpView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w 
-otpView push state = 
-  linearLayout
+otpView push state = linearLayout
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
-  ] (map(\item -> 
+  ] (map(\item ->
       linearLayout
         [ height $ V 32
         , width $ V 32
         , gravity CENTER
         , cornerRadius 4.0
-        , background Color.black900
+        , background state.data.config.primaryTextColor
         , margin $ MarginLeft 7
-        ][ textView
+        ][ textView (
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
             , text item
-            , textSize FontSize.a_18
-            , color Color.white900
-            , fontStyle $ FontStyle.bold LanguageStyle
-            ]
+            , color state.data.config.otpTextColor
+            ] <> FontStyle.h2 TypoGraphy)
         ]) $ split (Pattern "")  state.data.otp)
 
 expiryTimeView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w 
@@ -218,15 +211,12 @@ expiryTimeView push state =
           , height WRAP_CONTENT
           , padding $ Padding 10 14 10 14
           , weight 1.0
-          ][ textView
+          ][ textView (
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
               , text $ getString OTP <> ":"
               , color Color.black700
-              , textSize FontSize.a_14
-              , lineHeight "18"
-              , fontStyle $ FontStyle.bold LanguageStyle
-              ]
+              ] <> FontStyle.body4 TypoGraphy)
             , otpView push state
           ]
         , waitTimeView push state
@@ -284,7 +274,7 @@ supportButton push state =
       , background Color.lightGreyShade
       ][]
     , imageView
-      [ imageWithFallback "ny_ic_contact_support,https://assets.juspay.in/nammayatri/images/user/ny_ic_contact_support.png"
+      [ imageWithFallback $ "ny_ic_contact_support," <> (getAssetStoreLink FunctionCall) <> "ny_ic_contact_support.png"
       , height $ V 18
       , width $ V 18
       , margin $ Margin 10 12 10 10
@@ -307,7 +297,7 @@ locationTrackButton push state =
   , onClick push (const $ LocationTracking)
   , margin $ MarginTop 8
   ][  imageView
-      [ imageWithFallback "ny_ic_location_track,https://assets.juspay.in/nammayatri/images/common/ny_ic_location_track.png"
+      [ imageWithFallback $ "ny_ic_location_track," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_location_track.png"
       , height $ V 18
       , width $ V 18
       , margin $ Margin 10 10 10 10
@@ -324,7 +314,7 @@ sosView push state =
     , gravity if os == "IOS" then CENTER_VERTICAL else BOTTOM
     , onClick push $ const OpenEmergencyHelp
     ][ imageView
-        [ imageWithFallback "ny_ic_sos,https://assets.juspay.in/nammayatri/images/user/ny_ic_sos.png"
+        [ imageWithFallback $ "ny_ic_sos," <> (getAssetStoreLink FunctionCall) <> "ny_ic_sos.png"
         , height $ V 50
         , width $ V 50
         ]
@@ -374,19 +364,16 @@ otpAndWaitView push state =
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , cornerRadius 9.0
-          , background Color.grey800
+          , background state.data.config.otpBackground
           , gravity CENTER
           , padding $ Padding 10 14 10 14
           , weight 1.0
-          ][ textView
+          ][ textView (
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
               , text $ getString OTP <> ":"
-              , color Color.black700
-              , textSize FontSize.a_14
-              , lineHeight "18"
-              , fontStyle $ FontStyle.bold LanguageStyle
-              ]
+              , color state.data.config.otpTextColor
+              ] <> FontStyle.body4 TypoGraphy)
             , otpView push state
           ]
         , waitTimeView push state
@@ -409,22 +396,16 @@ waitTimeView push state =
   , visibility case state.data.isSpecialZone of
       true -> VISIBLE
       false -> if state.data.driverArrived then VISIBLE else GONE
-  ][ textView
+  ][ textView (
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , text $ if state.data.isSpecialZone then getString EXPIRES_IN else  getString WAIT_TIME <> ":"
-      , textSize FontSize.a_14
-      , fontStyle $ FontStyle.medium LanguageStyle
-      , lineHeight "18"
       , color Color.black700
-
-      ]
-    , textView
+      ] <> FontStyle.body1 TypoGraphy)
+    , textView (
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , text state.data.waitingTime
-      , textSize FontSize.a_18
-      , fontStyle $ FontStyle.bold LanguageStyle
       , lineHeight "24"
       , color Color.black800
       , afterRender
@@ -435,7 +416,7 @@ waitTimeView push state =
                   else pure unit
             )
             (const NoAction)
-      ]
+      ] <> FontStyle.h2 TypoGraphy)
   ]
 
 driverInfoView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w 
@@ -465,6 +446,28 @@ driverInfoView push state =
             , margin (MarginTop 8)
             , cornerRadius 4.0
             ][]
+          , linearLayout [
+                height WRAP_CONTENT
+              , width MATCH_PARENT
+              , gravity CENTER
+              , margin (MarginTop 12)
+              , visibility if state.data.config.nyBrandingVisibility then VISIBLE else GONE
+            ][
+              imageView
+                [ height $ V 18
+                , width $ V 18
+                , cornerRadius 20.0
+                , imageWithFallback $ "ny_ic_launcher," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_launcher.png"
+                ]
+              , textView (
+                [ text $ "namma yatri"
+                , color Color.black
+                , margin $ Margin 3 0 0 2
+                , ellipsize true
+                , singleLine true
+                , gravity CENTER
+                ] <> FontStyle.body4 TypoGraphy)
+            ]
             , if state.props.isSpecialZone  then headerTextView push state else contactView push state
             , otpAndWaitView push state
             , separator (Margin 16 0 16 0) (V 1) Color.grey900 (state.props.currentStage == RideAccepted)
@@ -499,80 +502,75 @@ cancelRideLayout push state =
   , padding $ Padding 5 5 5 5
   , margin $ MarginBottom if os == "IOS" then 24 else 0
   , onClick push $ const $ CancelRide state
-  ][ textView
+  ][ textView (
      [ width WRAP_CONTENT
      , height WRAP_CONTENT
      , text $ getString CANCEL_RIDE
-     , textSize FontSize.a_14
      , color Color.red
-     , fontStyle $ FontStyle.regular LanguageStyle
-     ]
+     ] <> FontStyle.paragraphText TypoGraphy)
    ]
  ]
 
 ---------------------------------- contactView ---------------------------------------
 contactView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
-contactView push state =
-  linearLayout
-  [ orientation HORIZONTAL
-  , height WRAP_CONTENT
-  , width MATCH_PARENT
-  , gravity CENTER_VERTICAL
-  , padding $ Padding 16 20 16 16
-  , visibility if state.props.currentStage == RideAccepted then VISIBLE else GONE
-  ][  linearLayout
-      [ width (V (((screenWidth unit)/3 * 2)-27))
-      , height WRAP_CONTENT
-      , orientation if length state.data.driverName > 16 then VERTICAL else HORIZONTAL
-      ][  textView
-          [ text $ state.data.driverName <> " "
-          , textSize FontSize.a_16
-          , fontStyle $ FontStyle.semiBold LanguageStyle
-          , color Color.black800
-          , ellipsize true
-          , singleLine true
-          ]
-        , textView
-          [ text $"is " <> secondsToHms state.data.eta
-          , textSize FontSize.a_16
-          , fontStyle $ FontStyle.semiBold LanguageStyle
-          , color Color.black800
-          , visibility if state.data.distance > 1000 then VISIBLE else GONE
-          ]
-        , textView
-          [ text case state.data.distance > 1000 of
-            true -> getString AWAY
-            false -> if state.data.waitingTime == "--" then getString IS_ON_THE_WAY else getString IS_WAITING_FOR_YOU
-          , textSize FontSize.a_16
-          , fontStyle $ FontStyle.semiBold LanguageStyle
-          , color Color.black800
-          ]
-      ]
-    , linearLayout[
-      width MATCH_PARENT
-    , gravity RIGHT
+contactView push state = 
+  let isChatEnabled = (getValueFromConfig "isChatEnabled")
+  in 
+    linearLayout
+    [ orientation HORIZONTAL
     , height WRAP_CONTENT
-    ][linearLayout
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
+    , width MATCH_PARENT
+    , gravity CENTER_VERTICAL
+    , padding $ Padding 16 20 16 16
+    , visibility if state.props.currentStage == RideAccepted then VISIBLE else GONE
+    ][  linearLayout
+        [ width (V (((screenWidth unit)/3 * 2)-27))
+        , height WRAP_CONTENT
+        , orientation if length state.data.driverName > 16 then VERTICAL else HORIZONTAL
+        ][  textView (
+            [ text $ state.data.driverName <> " "
+            , color Color.black800
+            , ellipsize true
+            , singleLine true
+            ] <> FontStyle.subHeading1 TypoGraphy)
+          , textView (
+            [ text $"is " <> secondsToHms state.data.eta
+            , color Color.black800
+            , visibility if state.data.distance > 1000 then VISIBLE else GONE
+            ] <> FontStyle.subHeading1 TypoGraphy)
+          , textView (
+            [ text case state.data.distance > 1000 of
+              true -> getString AWAY
+              false -> if state.data.waitingTime == "--" then getString IS_ON_THE_WAY else getString IS_WAITING_FOR_YOU
+            , color Color.black800
+            ] <> FontStyle.subHeading1 TypoGraphy)
+        ]
+      , linearLayout[
+        width MATCH_PARENT
       , gravity RIGHT
-      ] [ linearLayout
-          [ height $ V 40
-          , width $ V 64
-          , gravity CENTER
-          , cornerRadius 20.0
-          , background Color.green200
-          , onClick push (const MessageDriver)
-          ][ imageView
-              [ imageWithFallback if state.props.unReadMessages then "ic_chat_badge_green,https://assets.juspay.in/nammayatri/images/user/ic_chat_badge_green.png" else "ic_call_msg,https://assets.juspay.in/nammayatri/images/user/ic_call_msg.png"
-              , height $ V 24
-              , width $ V 24
-              ]
+      , height WRAP_CONTENT
+      ][linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , gravity RIGHT
+        ] [ linearLayout
+            [ height $ V 40
+            , width $ V 64
+            , gravity CENTER
+            , cornerRadius 20.0
+            , background Color.green200
+            , onClick push if isChatEnabled == "true" then const MessageDriver else const CallDriver
+            ][ imageView
+                [ imageWithFallback $ if (getValueFromConfig "isChatEnabled") == "true" then if state.props.unReadMessages then "ic_chat_badge_green," <> (getAssetStoreLink FunctionCall) <> "ic_chat_badge_green.png" else "ic_call_msg," <> (getAssetStoreLink FunctionCall) <> "ic_call_msg.png"
+                                        else "ny_ic_call," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_call.png"
+                , height $ V 24
+                , width $ V 24
+                ]
+            ]
           ]
         ]
-      ]
-
-  ]
+    ]
+    
 
 ---------------------------------- driverDetailsView ---------------------------------------
 
@@ -600,30 +598,26 @@ driverDetailsView push state =
               [ height $ V 50
               , width $ V 50
               , padding $ Padding 2 3 2 1
-              , imageWithFallback "ny_ic_user,https://assets.juspay.in/nammayatri/images/user/ny_ic_user.png"
-              ]
+              , imageWithFallback $ "ny_ic_user," <> (getAssetStoreLink FunctionCall) <> "ny_ic_user.png"
+              ]  
           ]
-        , textView
+        , textView $
           [ text state.data.driverName
-          , textSize FontSize.a_16
           , maxLines 1
           , ellipsize true
-          , fontStyle $ FontStyle.bold LanguageStyle
           , color Color.black800
           , width MATCH_PARENT
           , height WRAP_CONTENT
           , gravity LEFT
-          ]
-        , textView
+          ] <> FontStyle.body7 TypoGraphy
+        , textView (
           [ text state.data.vehicleDetails
-          , textSize FontSize.a_12
           , color Color.black700
-          , fontStyle $ FontStyle.regular LanguageStyle
           , width MATCH_PARENT
           , height WRAP_CONTENT
           , margin $ Margin 0 4 0 13
           , gravity LEFT
-          ]
+          ] <> FontStyle.body3 TypoGraphy)
         , ratingView push state
       ]
     , linearLayout
@@ -636,7 +630,7 @@ driverDetailsView push state =
           , width $ V 172
           , gravity BOTTOM
           ][  imageView
-              [ imageWithFallback "ic_driver_vehicle,https://assets.juspay.in/nammayatri/images/user/ny_ic_driver_auto.png"
+              [ imageWithFallback $ "ic_driver_vehicle," <> (getAssetStoreLink FunctionCall) <> "ic_driver_vehicle.png"
               , height $ V 120
               , gravity RIGHT
               , width MATCH_PARENT
@@ -663,23 +657,21 @@ driverDetailsView push state =
                     , cornerRadius 4.0
                     , orientation HORIZONTAL
                     ][  imageView
-                        [ imageWithFallback "ny_ic_number_plate,https://assets.juspay.in/nammayatri/images/user/ny_ic_number_plate.png"
+                        [ imageWithFallback $ "ny_ic_number_plate," <> (getAssetStoreLink FunctionCall) <> "ny_ic_number_plate.png"
                         , gravity LEFT
                         , background "#1C4188"
                         , height MATCH_PARENT
                         , width $ V 22
                         ]
-                        , textView
+                        , textView $
                         [ margin $ Margin 2 2 2 2
                         , width MATCH_PARENT
                         , height MATCH_PARENT
                         , text $ (makeNumber state.data.registrationNumber)
                         , color Color.black
-                        , fontStyle $ FontStyle.bold LanguageStyle
-                        , textSize FontSize.a_16
                         , gravity CENTER
                         , cornerRadius 4.0
-                        ]
+                        ] <> FontStyle.body7 TypoGraphy
                       ]
                     ]
                 ]
@@ -707,21 +699,18 @@ ratingView push state =
   , gravity CENTER_VERTICAL
   , cornerRadius 6.0
   ][  imageView
-      [ imageWithFallback "ny_ic_star_active,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_active.png"
+      [ imageWithFallback $ "ny_ic_star_active," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_star_active.png"
       , height $ V 13
       , width $ V 13
       ]
-    , textView
+    , textView (
       [ text $ if state.data.rating == 0.0 then "New" else show state.data.rating
-      , textSize FontSize.a_12
       , color Color.black800
       , gravity CENTER
-      , fontStyle $ FontStyle.medium LanguageStyle
       , margin (Margin 8 0 2 0)
       , width $ V 26
       , height $ V 30
-      , lineHeight "15"
-      ]
+      ] <> FontStyle.tags TypoGraphy)
     ]
 
 ---------------------------------- paymentMethodView ---------------------------------------
@@ -759,7 +748,7 @@ paymentMethodView push state title shouldShowIcon =
           , gravity CENTER
           , visibility if shouldShowIcon then VISIBLE else GONE
           ][  imageView
-              [ imageWithFallback "ny_ic_wallet,https://assets.juspay.in/nammayatri/images/user/ny_ic_wallet.png"
+              [ imageWithFallback $ "ny_ic_wallet," <> (getAssetStoreLink FunctionCall) <> "ny_ic_wallet.png"
               , height $ V 20
               , width $ V 20
               ]
@@ -780,12 +769,10 @@ sourceDistanceView push state =
   , width MATCH_PARENT
   , orientation VERTICAL
   , padding $ Padding 0 10 0 if (os == "IOS" && state.props.currentStage == RideStarted) then safeMarginBottom else 16
-  ][  textView
+  ][  textView (
       [ text $ getString PICKUP_AND_DROP
-      , fontStyle $ FontStyle.regular LanguageStyle
       , margin $ Margin 16 0 0 10
-      , textSize $ FontSize.a_12
-      ]
+      ] <> FontStyle.body3 TypoGraphy)
     , SourceToDestination.view (push <<< SourceToDestinationAC) (sourceToDestinationConfig state)
   ]
 
@@ -815,7 +802,7 @@ primaryButtonConfig = let
       , prefixImageConfig {
           height = V 18
         , width = V 18
-        , imageUrl = "ny_ic_call,https://assets.juspay.in/nammayatri/images/common/ny_ic_call.png"
+        , imageUrl = "ny_ic_call," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_call.png"
         , margin = Margin 20 10 20 10
         }
       }
@@ -833,33 +820,31 @@ sourceToDestinationConfig state = let
     , lineMargin = Margin 19 7 0 0
     , destinationMargin = MarginTop 16
     , sourceImageConfig {
-        imageUrl = "ny_ic_pickup,https://assets.juspay.in/nammayatri/images/user/ny_ic_pickup.png"
+        imageUrl = "ny_ic_pickup," <> (getAssetStoreLink FunctionCall) <> "ny_ic_pickup.png"
       , height = V 14
       , width = V 14
       , margin = Margin 13 4 0 0
       }
     , sourceTextConfig {
         text = state.data.source
-      , textSize = FontSize.a_14
+      , textStyle = FontStyle.Body1
       , padding = Padding 2 0 2 2
       , margin = Margin 12 0 15 0
-      , fontStyle = FontStyle.medium LanguageStyle
       , ellipsize = true
       , maxLines = 1
       }
     , destinationImageConfig {
-        imageUrl = "ny_ic_drop,https://assets.juspay.in/nammayatri/images/user/ny_ic_drop.png"
+        imageUrl = "ny_ic_drop," <> (getAssetStoreLink FunctionCall) <> "ny_ic_drop.png"
       , height = V 17
       , width = V 14
       , margin = Margin 13 2 0 0
       }
     , destinationTextConfig {
         text = state.data.destination
-      , textSize = FontSize.a_14
       , padding = Padding 2 0 2 2
       , margin = MarginVertical 12 15 
       , maxLines = 1
-      , fontStyle = FontStyle.medium LanguageStyle
+      , textStyle = FontStyle.Tags
       , ellipsize = true
       }
     , distanceConfig {
@@ -879,14 +864,12 @@ headerTextView push state =
   , width MATCH_PARENT
   , gravity CENTER_VERTICAL
   , padding $ Padding 16 20 16 16
-  ][ textView
+  ][ textView $
       [ text if state.props.currentStage == RideStarted then "ETA :" <> state.props.estimatedTime else  getString BOARD_THE_FIRST_TAXI
-      , textSize FontSize.a_20
-      , fontStyle $ FontStyle.bold LanguageStyle
       , color Color.black800
       , padding $ PaddingBottom 16
       , ellipsize true
-      ]
+      ] <> FontStyle.body8 TypoGraphy
     ,  separator (MarginHorizontal 16 16) (V 1) Color.grey900 (state.props.currentStage == RideStarted)
     , if state.props.currentStage == RideStarted then  contactView push state else linearLayout[][]
   ]
@@ -913,15 +896,13 @@ destinationView push state=
             , height WRAP_CONTENT
             , gravity CENTER
             , margin $ MarginTop 4
-            ][ textView
+            ][ textView (
                 [ text $ state.data.estimatedDistance <> " km"
-                , textSize FontSize.a_14
                 , width MATCH_PARENT
                 , gravity CENTER
                 , color Color.black650
                 , height WRAP_CONTENT
-                , fontStyle $ FontStyle.regular LanguageStyle
-                ]
+                ] <> FontStyle.paragraphText TypoGraphy)
               , linearLayout
                 [height $ V 4
                 , width $ V 4
@@ -929,15 +910,13 @@ destinationView push state=
                 , background Color.black600
                 , margin (Margin 6 2 6 0)
                 ][]
-              , textView
+              , textView (
                 [ text state.props.estimatedTime
-                , textSize FontSize.a_14
                 , width MATCH_PARENT
                 , gravity CENTER
                 , color Color.black650
                 , height WRAP_CONTENT
-                , fontStyle $ FontStyle.regular LanguageStyle
-                ]
+                ] <> FontStyle.paragraphText TypoGraphy)
             ]
       ]
 openGoogleMap :: forall w . (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
@@ -968,7 +947,7 @@ openGoogleMap push state =
           [ width $ V 20
           , height $ V 20
           , margin (MarginLeft 6)
-          , imageWithFallback "ny_ic_navigation,https://assets.juspay.in/nammayatri/images/driver/ny_ic_navigation.png"
+          , imageWithFallback $ "ny_ic_navigation," <> (getCommonAssetStoreLink FunctionCall) <> "driver/images/ny_ic_navigation.png"
           ]
       ]
   ] 

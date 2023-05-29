@@ -31,7 +31,7 @@ import Styles.Colors as Color
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Common.Types.App
-import MerchantConfigs.Utils (getValueFromMerchant)
+import Merchant.Utils (getValueFromMerchant)
 
 
 screen :: ST.AppUpdatePopUpScreenState -> ScopedScreen Action ST.AppUpdatePopUpScreenState ScreenOutput
@@ -87,16 +87,15 @@ view push state =
           , margin (Margin 10 0 0 0)
           ]
         ]
-      , textView [
+      , textView $ [
           width MATCH_PARENT
           ,height WRAP_CONTENT
           ,fontStyle $ FontStyle.medium LanguageStyle
           ,color "#474955"
-          ,textSize FontSize.a_15
           ,margin (MarginLeft 10)
           ,text (getString PLEASE_UPDATE_APP_TO_CONTINUE_SERVICE)
           ,padding (PaddingBottom 30)
-        ]
+        ] <> FontStyle.paragraphText LanguageStyle
         , linearLayout 
           [ width MATCH_PARENT 
           , height WRAP_CONTENT
@@ -115,20 +114,18 @@ view push state =
                 , alpha 0.6
                 , visibility GONE
                 ][
-                    textView
+                    textView $
                     [ width WRAP_CONTENT
                     , height WRAP_CONTENT
                     , text (getString NOT_NOW)
                     , color Color.textSecondary
                     , alpha 0.6
-                    , fontStyle $ FontStyle.bold LanguageStyle
-                    , textSize FontSize.a_14
                     , clickable true
                     , onClick (\action -> do
                                 _<- push action
                                 pure unit
                                 ) (const OnCloseClick)
-                    ]
+                    ] <> FontStyle.body4 LanguageStyle
                 ]
             , linearLayout
               [ width WRAP_CONTENT
@@ -137,19 +134,17 @@ view push state =
               , margin (MarginLeft 12)
               , background Color.charcoalGrey
               , cornerRadius 10.0
-              ][ textView 
+              ][ textView $
                   [ width WRAP_CONTENT
                   , height WRAP_CONTENT
                   , text (getString UPDATE)
                   , color Color.yellowText
-                  , fontStyle $ FontStyle.bold LanguageStyle
-                  , textSize FontSize.a_14
                   , onClick (\action -> do
                               _<- push action
                               _ <- JB.openUrlInApp $ getValueFromMerchant "APP_LINK"
                               pure unit
                               ) (const OnAccept)
-              ] 
+              ] <> FontStyle.body4 LanguageStyle
             ]
           ]
         ]

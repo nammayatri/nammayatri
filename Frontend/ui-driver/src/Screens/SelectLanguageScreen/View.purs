@@ -26,12 +26,15 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import MerchantConfigs.Utils (getLanguage)
+import Merchant.Utils (getLanguage)
 import Prelude (Unit, const, ($), (<<<), (==))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, afterRender, alpha, background, color, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, weight, width)
 import Screens.SelectLanguageScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
 
 screen :: ST.SelectLanguageScreenState -> Screen Action ST.SelectLanguageScreenState ScreenOutput
 screen initialState =
@@ -77,23 +80,21 @@ headerLayout push state =
     ][ imageView
         [ width $ V 25
         , height MATCH_PARENT
-        , imageWithFallback "ny_ic_back,https://assets.juspay.in/nammayatri/images/driver/ny_ic_back.png"
+        , imageWithFallback $ "ny_ic_back," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_back.png"
         , gravity CENTER_VERTICAL
         , onClick push (const BackPressed)
         , padding (Padding 2 2 2 2)
         , margin (MarginLeft 5)
         ]
-      , textView
+      , textView $
         [ width WRAP_CONTENT
         , height MATCH_PARENT
         , text (getString SELECT_LANGUAGE)
-        , textSize FontSize.a_19
         , margin (MarginLeft 20)
         , color Color.black
-        , fontStyle $ FontStyle.semiBold LanguageStyle
         , weight 1.0
         , gravity CENTER_VERTICAL
-        ]
+        ] <> FontStyle.body14 TypoGraphy
     ]
   , linearLayout
     [ width MATCH_PARENT

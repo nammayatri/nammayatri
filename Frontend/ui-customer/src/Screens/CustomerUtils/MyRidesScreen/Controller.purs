@@ -40,6 +40,8 @@ import Services.API (FareBreakupAPIEntity(..), RideAPIEntity(..), RideBookingLis
 import Storage (isLocalStageOn)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..)) 
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -178,7 +180,7 @@ myRideListTransformerProp listRes =  filter (\item -> (item.status == (toPropVal
     totalAmount : toPropValue ("₹ " <> show (fromMaybe 0 ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _computedPrice))),
     cardVisibility : toPropValue "visible",
     shimmerVisibility : toPropValue "gone",
-    driverImage : toPropValue "ny_ic_user,https://assets.juspay.in/nammayatri/images/user/ny_ic_user.png",
+    driverImage : toPropValue $ "ny_ic_user," <> (getAssetStoreLink FunctionCall) <> "ny_ic_user.png",
     isCancelled : toPropValue (if ride.status == "CANCELLED" then "visible" else "gone"),
     isSuccessfull : toPropValue (if ride.status == "COMPLETED" then "visible" else "gone"),
     rating : toPropValue (fromMaybe 0 ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _rideRating)),
@@ -210,7 +212,7 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
     totalAmount :  ("₹ " <> show (fromMaybe (0) rideDetails.computedPrice)),
     cardVisibility :  "visible",
     shimmerVisibility :  "gone",
-    driverImage :  "ny_ic_user,https://assets.juspay.in/nammayatri/images/user/ny_ic_user.png",
+    driverImage :  "ny_ic_user," <> (getAssetStoreLink FunctionCall) <> "ny_ic_user.png",
     isCancelled :  (if ride.status == "CANCELLED" then "visible" else "gone"),
     isSuccessfull :  (if ride.status == "COMPLETED" then "visible" else "gone"),
     rating : (fromMaybe 0 rideDetails.rideRating),

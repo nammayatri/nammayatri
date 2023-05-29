@@ -93,7 +93,6 @@ earningsView config push =
             , gravity config.earningsTextConfig.gravity
             , color config.earningsTextConfig.color
             -- , weight config.earningsTextConfig.weight
-            , textSize FontSize.a_12
             ]<> FontStyle.tags TypoGraphy
          , textView $ 
             [ height config.textConfig.height

@@ -8,6 +8,7 @@ import Font.Style as FontStyle
 import Prelude (Unit, const, ($), (<>), (==), (&&), not)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, relativeLayout, stroke, text, textView, visibility, weight, width)
 import Styles.Colors as Color
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -111,7 +112,7 @@ priceDetailsView push config =
         , imageView
             [ width (V 18)
             , height (V 18)
-            , imageWithFallback "ny_ic_check_box,https://assets.juspay.in/nammayatri/images/driver/ny_ic_check_box.png"
+            , imageWithFallback $ "ny_ic_check_box," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_check_box.png"
             , visibility if config.isSelected then VISIBLE else GONE
             ]
         ]
