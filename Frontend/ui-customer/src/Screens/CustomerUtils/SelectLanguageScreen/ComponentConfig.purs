@@ -28,20 +28,23 @@ import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..))
 import Screens.Types as ST 
 import Styles.Colors as Color
 import Common.Types.App
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Prelude ((<>))
 
 primaryButtonConfig :: ST.SelectLanguageScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
     config = PrimaryButton.config
     primaryButtonConfig' = config 
       {   textConfig
-         {
-          text = (getString UPDATE)
+         { text = (getString UPDATE)
+         , color = state.data.config.primaryTextColor
          } 
         , isClickable = state.props.btnActive
         , alpha = if state.props.btnActive then 1.0 else 0.6
         , margin = (Margin 0 0 0 0)
         , id = "UpdateLanguageButton"
         , enableLoader = (JB.getBtnLoader "UpdateLanguageButton")
+        , background = state.data.config.primaryBackground
       }
   in primaryButtonConfig'
 
@@ -63,22 +66,17 @@ menuButtonConfig state language = let
 
 genericHeaderConfig :: ST.SelectLanguageScreenState -> GenericHeader.Config 
 genericHeaderConfig state = let 
-  config = GenericHeader.config
+  config = if state.data.config.nyBrandingVisibility then GenericHeader.merchantConfig else GenericHeader.config
   genericHeaderConfig' = config 
     {
       height = WRAP_CONTENT
     , prefixImageConfig {
         height = V 25
       , width = V 25
-      , imageUrl = "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
-      , margin = (Margin 12 12 12 12)
+      , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
       } 
-    , padding = (Padding 0 5 0 5)
     , textConfig {
         text = (getString LANGUAGE)
-      , textSize = FontSize.a_18
-      , color = Color.black
-      , fontStyle = FontStyle.semiBold LanguageStyle
       }
     , suffixImageConfig {
         visibility = GONE

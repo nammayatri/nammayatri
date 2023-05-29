@@ -14,7 +14,7 @@ export const getNewTrackingId = function (unit) {
 };
 
 export const getKeyInSharedPrefKeysConfigEff = function (key) {
-    return window.JBridge.getKeysInSharedPrefs(key);
+    return (JBridge.getKeysInSharedPref ? JBridge.getKeysInSharedPref(key) : window.JBridge.getKeysInSharedPrefs(key));
   };
 
 export const validateInputPattern = function (input, pattern){
@@ -41,7 +41,6 @@ export const getLocationName = function(cb){
         }
     }
 }
-export const hideSplash = window.JOS.emitEvent("java")("onEvent")(JSON.stringify({event:"hide_splash"}))()
 
 
 export const getCurrentDate = function (string) {
@@ -137,6 +136,10 @@ export const storeCallBackCustomer = function (cb) {
             var callback = callbackMapper.map(function (notificationType) {
                 cb(action (notificationType))();
             });
+            var notificationCallBack = function (notificationType) {
+              cb(action (notificationType))();
+          };
+            window.callNotificationCallBack = notificationCallBack;
             console.log("In storeCallBackCustomer ---------- + " + action);
             window.JBridge.storeCallBackCustomer(callback);
         }
@@ -399,7 +402,7 @@ export const fetchFromLocalStoreImpl = function(key) {
     return function (just) {
         return function (nothing) {
           return function () {
-            var state = window.JBridge.getKeysInSharedPrefs(key);
+            var state = window.JBridge.getKeysInSharedPref ? window.JBridge.getKeysInSharedPref(key) : window.JBridge.getKeysInSharedPrefs(key);
             if (state != "__failed" && state != "(null)") {
               return just(state);
             }
@@ -413,7 +416,7 @@ export const fetchFromLocalStoreTempImpl = function(key) {
   return function (just) {
       return function (nothing) {
         return function () {
-          var state = window.JBridge.getKeysInSharedPrefs(key);
+          var state = window.JBridge.getKeysInSharedPref ? window.JBridge.getKeysInSharedPref(key) : window.JBridge.getKeysInSharedPrefs(key);
           var newState = JSON.parse(state);
           var predictionArray = newState.predictionArray;
           try {
@@ -566,9 +569,6 @@ export const storeOnResumeCallback = function (cb) {
   }
 }
 
-export const getMerchantId = function(id) {
-  return window.merchantID;
-}
 
 export const drawPolygon = function(geoJson) {
   return function (locationName) {
@@ -586,4 +586,32 @@ export const removeLabelFromMarker = function(unit){
       return JBridge.removeLabelFromMarker();
     }
   }
+}
+
+export const getMerchantConfig = function (just) {
+  return function (nothing) {
+    return function () {
+      if (typeof window.appConfig !== "undefined") {
+        return just(window.appConfig);
+      }
+      return nothing;
+    }
+  }
+}
+
+export const getMobileNumber = function (signatureAuthData) {
+  try {
+    return JSON.parse(signatureAuthData).mobileNumber
+  } catch (err) {
+    console.log("Decode mobileNumber from SignatureAuthData Error => " + err);
+  }
+}
+
+export const consumingBackPress = function (flag) {
+  console.log("inside consumingBackPress")
+  var jpConsumingBackpress = {
+    event: "jp_consuming_backpress",
+    payload: { jp_consuming_backpress: flag }
+  }
+  JBridge.runInJuspayBrowser("onEvent", JSON.stringify(jpConsumingBackpress), "");
 }

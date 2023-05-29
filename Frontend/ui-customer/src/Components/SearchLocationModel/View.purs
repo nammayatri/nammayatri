@@ -31,7 +31,7 @@ import Effect (Effect)
 import Engineering.Helpers.Commons (getNewIDWithTag, os, safeMarginBottom, safeMarginTop, screenHeight, screenWidth, isPreviousVersion)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getLocationName, debounceFunction, getPreviousVersion)
+import Helpers.Utils ( debounceFunction, getLocationName, getPreviousVersion)
 import JBridge (getBtnLoader, requestKeyboardShow, getCurrentPosition, firebaseLogEvent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -42,6 +42,10 @@ import Resources.Constants (getDelayForAutoComplete)
 import Screens.Types (SearchLocationModelType(..), LocationListItemState)
 import Storage (KeyStore(..), getValueToLocalStoreEff, getValueToLocalStore)
 import Styles.Colors as Color
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Merchant.Utils (Merchant(..), getMerchant)
+import Prelude ((<>))
 
 view :: forall w. (Action -> Effect Unit) -> SearchLocationModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -59,10 +63,10 @@ view push state =
           linearLayout
           [ height $ V ((screenHeight unit)/ 7)
           , width MATCH_PARENT
-          , background Color.black900
-          , clickable case state.isSearchLocation of
-              LocateOnMap -> false
-              _ -> true
+          , background state.homeScreenConfig.searchLocationTheme
+          , clickable case state.isSearchLocation of 
+              LocateOnMap -> false 
+              _ -> true 
           , onClick push (const NoAction)
           , padding (Padding 0 safeMarginTop 0 0)
           ][]
@@ -99,7 +103,7 @@ view push state =
                   [ imageView
                       [ height $ V 25
                       , width $ V 25
-                      , imageWithFallback "ny_ic_chevron_left_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_left_white.png"
+                      , imageWithFallback if (getMerchant FunctionCall) == UNKNOWN then "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png" else "ny_ic_chevron_left_white," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_left_white.png"
                       ]
                   ]
               , linearLayout
@@ -111,7 +115,7 @@ view push state =
                 , clickable true
                 , margin (Margin 16 20 16 10)
                 , stroke "1,#E5E7EB"
-                ][  sourceDestinationImageView
+                ][  sourceDestinationImageView state
                   , sourceDestinationEditTextView state push
                   ]
             ]<> if state.isSearchLocation == SearchLocation && state.isRideServiceable then [(searchResultsParentView state push )] else  [] )
@@ -149,7 +153,7 @@ locationUnserviceableView state push =
     , gravity CENTER_HORIZONTAL
     ]
     [ imageView
-        [ imageWithFallback "ny_ic_location_unserviceable,https://assets.juspay.in/nammayatri/images/user/ny_ic_location_unserviceable.png"
+        [ imageWithFallback $ "ny_ic_location_unserviceable," <> (getAssetStoreLink FunctionCall) <> "ny_ic_location_unserviceable.png"
         , height $ V 99
         , width $ V 133
         , margin $ (MarginBottom 20)
@@ -160,32 +164,28 @@ locationUnserviceableView state push =
         , gravity CENTER
         , margin (MarginBottom 10)
         ]
-        [ textView
+        [ textView $
             [ text (getString LOCATION_UNSERVICEABLE)
-            , textSize FontSize.a_18
             , color Color.black800
             , gravity CENTER
-            , fontStyle $ FontStyle.bold LanguageStyle
-            ]
+            ] <> FontStyle.h2 LanguageStyle
         ]
     , linearLayout
         [ width (V (screenWidth unit - 40))
         , height WRAP_CONTENT
         , gravity CENTER
         ]
-        [ textView
+        [ textView $
             [ text (getString CURRENTLY_WE_ARE_LIVE_IN_)
-            , textSize FontSize.a_14
             , gravity CENTER
             , color Color.black700
-            , fontStyle $ FontStyle.regular LanguageStyle
-            ]
+            ] <> FontStyle.paragraphText LanguageStyle
         ]
     ]
 
 ---------------------------- sourceDestinationImageView ---------------------------------
-sourceDestinationImageView :: forall w. PrestoDOM (Effect Unit) w
-sourceDestinationImageView =
+sourceDestinationImageView :: forall w. SearchLocationModelState -> PrestoDOM (Effect Unit) w
+sourceDestinationImageView state =
   frameLayout
     [ height $ V 136
     , width $ V 50
@@ -199,7 +199,7 @@ sourceDestinationImageView =
         ][  imageView
             [ height $ V 25
             , width $ V 25
-            , imageWithFallback "ny_ic_source_dot,https://assets.juspay.in/nammayatri/images/common/ny_ic_source_dot.png"
+            , imageWithFallback $ "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_source_dot.png"
             ]
           ]
       , imageView
@@ -216,7 +216,7 @@ sourceDestinationImageView =
         ][  imageView
             [ height $ V 25
             , width $ V 25
-            , imageWithFallback "ny_ic_loc_red,https://assets.juspay.in/nammayatri/images/common/ny_ic_loc_red.png"
+            , imageWithFallback $ "ny_ic_loc_red," <> (getAssetStoreLink FunctionCall) <> "ny_ic_loc_red.png"
             ]
         ]
     ]
@@ -241,20 +241,18 @@ sourceDestinationEditTextView state push =
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation HORIZONTAL
-      ][ editText
+      ][ editText $
             [ height $ V 45
             , weight 1.0
             , text state.source
             , color Color.black800
             , stroke if state.isSource == Just true && state.isSearchLocation == LocateOnMap then "1,#FDD836" else "0,#FDD836"
             , background Color.white900
-            , fontStyle $ FontStyle.semiBold LanguageStyle
             , singleLine true
             , ellipsize true
             , cornerRadius 10.0
             , padding (Padding 5 0 5 0)
             , margin (Margin 0 10 0 0)
-            , textSize FontSize.a_16
             , lineHeight "24"
             , hint (getString START_)
             , hintColor "#A7A7A7"
@@ -269,7 +267,7 @@ sourceDestinationEditTextView state push =
             , inputTypeI if state.isSearchLocation == LocateOnMap then 0 else 1
             , onFocus push $ const $ EditTextFocusChanged "S"
             , autoCorrectionType 1
-            ]
+            ] <> FontStyle.subHeading1 LanguageStyle
         , linearLayout
             [ height $ V 45
             , width WRAP_CONTENT
@@ -281,7 +279,7 @@ sourceDestinationEditTextView state push =
             [ imageView
                 [ height $ V 16
                 , width $ V 16
-                , imageWithFallback "ny_ic_clear,https://assets.juspay.in/nammayatri/images/user/ny_ic_clear.png"
+                , imageWithFallback $ "ny_ic_clear," <> (getAssetStoreLink FunctionCall) <> "ny_ic_clear.png"
                 ]
             ]
         ]
@@ -342,7 +340,7 @@ sourceDestinationEditTextView state push =
             [ imageView
                 [ height $ V 16
                 , width $ V 16
-                , imageWithFallback "ny_ic_clear,https://assets.juspay.in/nammayatri/images/user/ny_ic_clear.png"
+                , imageWithFallback $ "ny_ic_clear," <> (getAssetStoreLink FunctionCall) <> "ny_ic_clear.png"
                 ]
             ]
         ]
@@ -401,13 +399,12 @@ primaryButtonConfig state =
     primaryButtonConfig' = config
       { textConfig
         { text = if state.isSearchLocation == LocateOnMap then if state.isSource == Just true then (getString CONFIRM_PICKUP_LOCATION) else (getString CONFIRM_DROP_LOCATION) else ""
-        , color = Color.yellow900
-        , textSize = FontSize.a_16
+        , color = state.homeScreenConfig.primaryTextColor
         }
       , height = V 60
       , gravity = CENTER
       , cornerRadius = 8.0
-      , background = Color.black900
+      , background = state.homeScreenConfig.primaryBackground
       , margin = (MarginHorizontal 16 16)
       , isClickable = true
       , id = "SelectLocationFromMap"
@@ -458,7 +455,7 @@ recenterButtonView push state =
   , disableClickFeedback true
   ][
       imageView
-        [ imageWithFallback "ny_ic_recenter_btn,https://assets.juspay.in/nammayatri/images/common/ny_ic_recenter_btn.png"
+        [ imageWithFallback $ "ny_ic_recenter_btn," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_recenter_btn.png"
         , onClick (\action -> do
             _ <- push action
             _ <- getCurrentPosition push UpdateCurrentLocation
@@ -547,7 +544,7 @@ bottomBtnsView state push =
 
 btnData :: SearchLocationModelState -> Array { text :: String, imageUrl :: String, action :: Action, buttonType :: String }
 btnData state =
-  [ { text: (getString SET_LOCATION_ON_MAP), imageUrl: "ny_ic_locate_on_map,https://assets.juspay.in/nammayatri/images/user/ny_ic_locate_on_map.png", action: SetLocationOnMap, buttonType: "LocateOnMap" }]
-  -- , { text: (getString CURRENT_LOCATION), imageUrl: "ny_ic_current_location,https://assets.juspay.in/nammayatri/images/user/ny_ic_current_location.png", action: SetCurrentLocation, buttonType: "CurrentLocation" }
-  -- ]
+  [ { text: (getString SET_LOCATION_ON_MAP), imageUrl: "ny_ic_locate_on_map," <> (getAssetStoreLink FunctionCall) <> "ny_ic_locate_on_map.png", action: SetLocationOnMap, buttonType: "LocateOnMap" }
+  -- , { text: (getString CURRENT_LOCATION), imageUrl: "ny_ic_current_location," <> (getAssetStoreLink FunctionCall) <> "ny_ic_current_location.png", action: SetCurrentLocation, buttonType: "CurrentLocation" }
+  ]
 

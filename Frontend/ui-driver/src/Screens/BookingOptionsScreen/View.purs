@@ -17,6 +17,9 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(
 import Screens.BookingOptionsScreen.Controller (Action(..), ScreenOutput, eval, getVehicleCapacity)
 import Screens.Types as ST
 import Styles.Colors as Color
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
 
 screen :: ST.BookingOptionsScreenState -> Screen Action ST.BookingOptionsScreenState ScreenOutput
 screen initialState =
@@ -106,12 +109,10 @@ vehicleDetailsView push state =
               , padding $ Padding 5 3 5 3
               , text state.data.vehicleNumber
               , color Color.black800
-              , fontStyle $ FontStyle.bold LanguageStyle
-              , textSize FontSize.a_20
               , gravity CENTER
               , cornerRadius 3.0
               , stroke $ "2," <> Color.black800
-              ]
+              ] <> FontStyle.body8 TypoGraphy
         ]
     ]
 
@@ -127,7 +128,7 @@ vehicleLogoAndType push state =
         , height WRAP_CONTENT
         ]
         [ imageView
-            [ imageWithFallback "ic_suv_ac,https://assets.juspay.in/nammayatri/images/driver/ic_suv_ac.png"
+            [ imageWithFallback $ "ic_suv_ac," <> (getAssetStoreLink FunctionCall) <> "ic_suv_ac.png"
             , gravity LEFT
             , height $ V 48
             , width $ V 60
@@ -162,24 +163,22 @@ headerLayout push state =
         [ imageView
             [ width $ V 30
             , height $ V 30
-            , imageWithFallback "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
+            , imageWithFallback $ "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_chevron_left.png"
             , gravity CENTER_VERTICAL
             , onClick push $ const BackPressed
             , padding $ Padding 2 2 2 2
             , margin $ MarginLeft 5
             ]
-        , textView
+        , textView $
             [ width WRAP_CONTENT
             , height MATCH_PARENT
             , text $ getString BOOKING_OPTIONS
-            , textSize FontSize.a_19
             , margin $ MarginLeft 20
             , color Color.black
-            , fontStyle $ FontStyle.semiBold LanguageStyle
             , weight 1.0
             , gravity CENTER_VERTICAL
             , alpha 0.8
-            ]
+            ] <> FontStyle.h3 TypoGraphy
         ]
     , linearLayout
         [ width MATCH_PARENT

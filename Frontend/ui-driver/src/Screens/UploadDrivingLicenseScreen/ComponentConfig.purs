@@ -35,7 +35,7 @@ primaryButtonConfig :: ST.UploadDrivingLicenseState -> PrimaryButton.Config
 primaryButtonConfig state = let 
     config = PrimaryButton.config
     primaryButtonConfig' = config 
-      { textConfig{ text = (getString NEXT), textSize = FontSize.a_16}
+      { textConfig{ text = (getString NEXT)}
       , width = MATCH_PARENT
       , background = Color.black900
       , margin = (Margin 0 0 0 0)
@@ -54,14 +54,11 @@ primaryEditTextConfig state = let
       { editText
         { singleLine = true
           , pattern = Just "[A-Z0-9]*,16"
-          , fontStyle = FontStyle.bold LanguageStyle
-          , textSize = FontSize.a_16
           , placeholder = (getString ENTER_DL_NUMBER)
           , capsLock = true
         }
       , topLabel
-        { textSize = FontSize.a_12
-        , text = (getString DRIVING_LICENSE_NUMBER)
+        { text = (getString DRIVING_LICENSE_NUMBER)
         , color = Color.greyTextColor
         }
       , margin = (MarginBottom 15)
@@ -78,16 +75,13 @@ primaryEditTextConfigReEnterDl state = let
       { editText
         { singleLine = true
           , pattern = Just "[A-Z0-9]*,16"
-          , fontStyle = FontStyle.bold LanguageStyle
-          , textSize = FontSize.a_16
           , placeholder = (getString ENTER_DL_NUMBER)
           , capsLock = true
           , color = Color.black800
         }
       , stroke = if (DS.toLower(state.data.driver_license_number) /= DS.toLower(state.data.reEnterDriverLicenseNumber)) then ("1," <> Color.red) else ("1," <> Color.borderColorLight)
       , topLabel
-        { textSize = FontSize.a_12
-        , text = (getString RE_ENTER_DRIVING_LICENSE_NUMBER)
+        { text = (getString RE_ENTER_DRIVING_LICENSE_NUMBER)
         , color = Color.greyTextColor
         }
       , margin = (MarginBottom 15)

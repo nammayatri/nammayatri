@@ -18,6 +18,7 @@ module Screens.HomeScreen.Controller where
 import Accessor (_estimatedFare, _estimateId, _vehicleVariant, _status, _estimateFareBreakup, _title, _price, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _selectedQuotes)
 import Common.Types.App (CancellationReasons, LazyCheck(..))
 import Components.CancelRide.Controller as CancelRidePopUp
+import Components.ChatView as ChatView
 import Components.ChooseVehicle as ChooseVehicleController
 import Components.ChooseYourRide as ChooseYourRide
 import Components.ChooseYourRide.Controller as ChooseYourRideController
@@ -34,7 +35,6 @@ import Components.MenuButton as MenuButton
 import Components.MenuButton.Controller (Action(..)) as MenuButtonController
 import Components.PopUpModal.Controller as PopUpModal
 import Components.PricingTutorialModel.Controller as PricingTutorialModelController
-import Components.ChatView as ChatView
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Components.QuoteListItem.Controller as QuoteListItemController
@@ -48,10 +48,14 @@ import Components.SavedLocationCard.Controller as SavedLocationCardController
 import Components.SearchLocationModel.Controller as SearchLocationModelController
 import Components.SettingSideBar.Controller as SettingSideBarController
 import Components.SourceToDestination.Controller as SourceToDestinationController
+import Config.DefaultConfig as DC
 import Control.Monad.Except.Trans (runExceptT)
+import Control.Monad.Except.Trans (runExceptT)
+import Control.Transformers.Back.Trans (runBackT)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array ((!!), filter, null, snoc, length, head, last, sortBy, union)
 import Data.Int (toNumber, round)
+import Data.Int (toNumber, round, fromString)
 import Data.Int (toNumber, round, fromString)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
@@ -60,13 +64,16 @@ import Data.String as STR
 import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
+import Effect.Uncurried (runEffectFn1, runEffectFn3)
+import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os)
-import Helpers.Utils (Merchant(..), addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getExpiryTime, getLocationName, parseNewContacts, saveRecents, setText', updateInputString, withinTimeRange, getMerchant)
-import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage)
+import Helpers.Utils (addToRecentSearches, consumingBackPress, getCurrentLocationMarker, getDistanceBwCordinates, getExpiryTime, getLocationName, parseNewContacts, saveRecents, setText', updateInputString, withinTimeRange)
+import JBridge (addMarker, animateCamera, currentPosition, emitJOSEvent, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, goBackPrevWebPage, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, sendMessage, shareTextMessage, showDialer, stopChatListenerService, toast, toggleBtnLoader)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent)
-import Merchant.Utils (getValueFromConfig)
+import Merchant.Utils (Merchant(..), getMerchant)
+import Merchant.Utils (getMerchant, getValueFromConfig)
 import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/))
 import Presto.Core.Types.API (ErrorResponse)
 import PrestoDOM (Eval, Visibility(..), continue, continueWithCmd, exit, updateAndExit)
@@ -661,6 +668,9 @@ eval (DriverInfoCardActionController (DriverInfoCardController.MessageDriver)) s
   _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (length state.data.messages))
   continue state {props {currentStage = ChatWithDriver, sendMessageActive = false, unReadMessages = false }}
 
+eval (DriverInfoCardActionController (DriverInfoCardController.CallDriver)) state = do
+  continue state {props {showCallPopUp = true }}
+
 eval BackPressed state = do
   _ <- pure $ toggleBtnLoader "" false
   case state.props.currentStage of
@@ -716,9 +726,9 @@ eval BackPressed state = do
                             ]
                           else if state.props.emergencyHelpModal then continue state {props {emergencyHelpModal = false}}
                           else if state.props.callSupportPopUp then continue state {props {callSupportPopUp = false}}
-                          else do
-                            _ <- pure $ minimizeApp ""
-                            continue state
+                          else do 
+                              pure $ unsafePerformEffect $ runEffectFn3 emitJOSEvent "java" "onEvent" "action,terminate"
+                              continue state
 
 eval GoBackToSearchLocationModal state = do
   _ <- pure $ updateLocalStage SearchLocationModel
@@ -1310,7 +1320,6 @@ eval (ShowCallDialer item) state = do
             _ <- (firebaseLogEventWithTwoParams "ny_user_direct_call_click" "trip_id" (state.props.bookingId) "user_id" (getValueToLocalStore CUSTOMER_ID))
             pure NoAction
         ]
-    _ -> continue state
     
 eval (StartLocationTracking item) state = do
   case item of
@@ -1325,13 +1334,18 @@ eval (GetEstimates (GetQuotesRes quotesRes)) state = do
   case state.props.isSpecialZone of
     true -> specialZoneFlow quotesRes.quotes state
     false -> case (getMerchant FunctionCall) of 
-      NAMMAYATRI -> estimatesFlow quotesRes.estimates state
-      _ -> estimatesListFlow quotesRes.estimates state
+      YATRI -> estimatesListFlow quotesRes.estimates state
+      JATRISAATHI -> estimatesListFlow quotesRes.estimates state
+      _ -> do 
+        _ <- pure $ spy "inside" "estimates"
+        estimatesFlow quotesRes.estimates state
     
 
 eval (EstimatesTryAgain (GetQuotesRes quotesRes)) state = do
-  case (getMerchant FunctionCall) of 
-    NAMMAYATRI -> do
+  case (getMerchant FunctionCall) of
+    YATRI -> estimatesListTryAgainFlow (GetQuotesRes quotesRes) state
+    JATRISAATHI -> estimatesListTryAgainFlow (GetQuotesRes quotesRes) state
+    _ -> do
       _ <- pure $ firebaseLogEvent "ny_user_estimate_try_again"
       let
         estimatedQuotes = quotesRes.estimates
@@ -1354,7 +1368,6 @@ eval (EstimatesTryAgain (GetQuotesRes quotesRes)) state = do
             let
               updatedState = state { data { suggestedAmount = estimatedPrice }, props { estimateId = estimateId, currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime "LazyCheck") } }
             updateAndExit updatedState $ GetQuotes updatedState
-    _ -> estimatesListTryAgainFlow (GetQuotesRes quotesRes) state
 
 eval (GetQuotesList (SelectListRes resp)) state = do
   case flowWithoutOffers WithoutOffers of
@@ -1621,7 +1634,8 @@ dummyRideRatingState = {
   dateDDMMYY          : "",
   offeredFare         : 0,
   distanceDifference  : 0,
-  feedback            : ""
+  feedback            : "",
+  appConfig : DC.config 
 }
 dummyListItem :: LocationListItemState
 dummyListItem = {

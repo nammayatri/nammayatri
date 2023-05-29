@@ -17,6 +17,7 @@ module Screens.MyProfileScreen.ScreenData where
 
 import Screens.Types (MyProfileScreenState, DeleteStatus(..))
 import Data.Maybe(Maybe(..))
+import Config.DefaultConfig as DC
 
 initData :: MyProfileScreenState
 initData = {
@@ -38,6 +39,7 @@ initData = {
         gender : Nothing,
         editedGender : Nothing,
         editedEmailId  : Nothing,
-        errorMessage : Nothing
+        errorMessage : Nothing,
+        config : DC.config
     }
 }

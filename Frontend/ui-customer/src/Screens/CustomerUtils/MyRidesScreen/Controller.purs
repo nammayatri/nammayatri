@@ -40,6 +40,8 @@ import Services.API (FareBreakupAPIEntity(..), RideAPIEntity(..), RideBookingLis
 import Storage (isLocalStageOn)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..)) 
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -178,7 +180,7 @@ myRideListTransformerProp listRes =  filter (\item -> (item.status == (toPropVal
     totalAmount : toPropValue ("₹ " <> show (fromMaybe 0 ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _computedPrice))),
     cardVisibility : toPropValue "visible",
     shimmerVisibility : toPropValue "gone",
-    driverImage : toPropValue "ny_ic_user,https://assets.juspay.in/nammayatri/images/user/ny_ic_user.png",
+    driverImage : toPropValue $ "ny_ic_user," <> (getAssetStoreLink FunctionCall) <> "ny_ic_user.png",
     isCancelled : toPropValue (if ride.status == "CANCELLED" then "visible" else "gone"),
     isSuccessfull : toPropValue (if ride.status == "COMPLETED" then "visible" else "gone"),
     rating : toPropValue (fromMaybe 0 ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _rideRating)),
@@ -198,7 +200,7 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
   let 
     fares = getFares ride.fareBreakup 
     (RideAPIEntity rideDetails) = (fromMaybe dummyRideAPIEntity (ride.rideList !!0))
-    baseDistanceVal = (getKmMeter (fromMaybe 0.0 (rideDetails.chargeableRideDistance)))
+    baseDistanceVal = (getKmMeter (fromMaybe 0 (rideDetails.chargeableRideDistance)))
     updatedFareList = getFaresList ride.fareBreakup state baseDistanceVal
      in {
     date : (( (fromMaybe "" ((split (Pattern ",") (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "llll")) !!0 )) <> ", " <>  (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "Do MMM") )),
@@ -208,7 +210,7 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
     totalAmount :  ("₹ " <> show (fromMaybe (0) rideDetails.computedPrice)),
     cardVisibility :  "visible",
     shimmerVisibility :  "gone",
-    driverImage :  "ny_ic_user,https://assets.juspay.in/nammayatri/images/user/ny_ic_user.png",
+    driverImage :  "ny_ic_user," <> (getAssetStoreLink FunctionCall) <> "ny_ic_user.png",
     isCancelled :  (if ride.status == "CANCELLED" then "visible" else "gone"),
     isSuccessfull :  (if ride.status == "COMPLETED" then "visible" else "gone"),
     rating : (fromMaybe 0 rideDetails.rideRating),
@@ -231,7 +233,7 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
   , extraFare : "₹ " <> show (getFareFromArray ride.fareBreakup "EXTRA_DISTANCE_FARE")
   , waitingCharges : fares.waitingCharges
   , baseDistance : baseDistanceVal
-  , extraDistance : getKmMeter $  (\a -> if a < 0.0 then - a else a) ((fromMaybe 0.0 (rideDetails.chargeableRideDistance)) - toNumber (fromMaybe 0 (((ride.bookingDetails)^._contents)^._estimatedDistance)))
+  , extraDistance : getKmMeter $  (\a -> if a < 0 then - a else a) ((fromMaybe 0 (rideDetails.chargeableRideDistance)) - (fromMaybe 0 (((ride.bookingDetails)^._contents)^._estimatedDistance)))
   , referenceString : "1.5" <> (getEN DAYTIME_CHARGES_APPLICABLE_AT_NIGHT)
                         <> if (isHaveFare "DRIVER_SELECTED_FARE" updatedFareList) then "\n\n" <> (getEN DRIVERS_CAN_CHARGE_AN_ADDITIONAL_FARE_UPTO) <> "\n\n" else ""
                         <> if (isHaveFare "WAITING_CHARGES" updatedFareList) then "\n\n" <> (getEN WAITING_CHARGE_DESCRIPTION) else ""

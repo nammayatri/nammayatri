@@ -62,7 +62,7 @@ getConfig = do
         }
 
 getMerchantId :: String
-getMerchantId = "NA"
+getMerchantId = "NAMMA_YATRI"
 getEndpoint :: String -> String
 getEndpoint dummy = do
   if ((getKeyInSharedPrefKeysConfig "MOBILE_NUMBER") == "5000500050") then

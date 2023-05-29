@@ -35,6 +35,8 @@ import Screens.SuccessScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types (SuccessScreenState)
 import Styles.Colors as Color
 import Storage (getValueToLocalStore, KeyStore(..))
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
 
 screen :: SuccessScreenState -> ScopedScreen Action SuccessScreenState ScreenOutput
 screen initialState =
@@ -79,7 +81,7 @@ view push state =
             imageView
             [ height $ V 160
             , width $ V 280
-            , imageUrl "https://assets.juspay.in/nammayatri/images/user/ny_ic_success_lottie_placeholder.png"]
+            , imageUrl $ "ny_ic_success_lottie_placeholder" <> (getAssetStoreLink FunctionCall) <> "ny_ic_success_lottie_placeholder.png"] 
             else lottieLoaderView state push
         , textView
             $ [ width MATCH_PARENT
@@ -107,7 +109,7 @@ lottieLoaderView state push =
     [ id (EHC.getNewIDWithTag "SuccessLottieView")
     , afterRender
         ( \action -> do
-            _ <- pure $ startLottieProcess "success_lottie" (EHC.getNewIDWithTag "SuccessLottieView") true 1.0 "default"
+            _ <- pure $ startLottieProcess ((getAssetStoreLink FunctionCall) <> "lottie/success_lottie.json") (EHC.getNewIDWithTag "SuccessLottieView") true 1.0 "default"
             pure unit
         )
         (const CountDown)

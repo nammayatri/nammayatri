@@ -1,7 +1,20 @@
 export const getKeyInSharedPrefKeysConfig = function (key) {
-    return window.JBridge.getKeysInSharedPrefs(key);
-  };
+  if (JBridge.getKeysInSharedPref) {
+    return JBridge.getKeysInSharedPref(key);
+  }
+  return JBridge.getKeyInNativeSharedPrefKeys(key);
+};
+
+export const getKeyInSharedPrefKeysConfigEff = function (key) {
+if (JBridge.getKeysInSharedPref) {
+  return JBridge.getKeysInSharedPref(key);
+}
+return JBridge.getKeyInNativeSharedPrefKeys(key);
+};
 
 export const getValueToLocalNativeStoreConfig = function (key) {
-  return window.JBridge.getKeyInNativeSharedPrefKeys(key);
+if (JBridge.getKeysInSharedPref) {
+  return JBridge.getKeysInSharedPref(key);
+}
+return JBridge.getKeyInNativeSharedPrefKeys(key);
 }

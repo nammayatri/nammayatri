@@ -37,6 +37,9 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Engineering.Helpers.Commons (safeMarginTop, safeMarginBottom, os, isPreviousVersion)
 import Helpers.Utils (getPreviousVersion)
 import Storage (getValueToLocalStore, KeyStore(..))
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Merchant.Utils (getValueFromConfig)
 
 view :: forall w .  (Action  -> Effect Unit) -> EmergencyHelpModelState  -> PrestoDOM (Effect Unit) w
 view push state = 
@@ -112,22 +115,17 @@ supportButtonViewContent state push item index =  linearLayout
            [ height WRAP_CONTENT
            , width WRAP_CONTENT
            , orientation VERTICAL
-           ][ textView
+           ][ textView (
               [ text item.title
               , color Color.black800
-              , textSize FontSize.a_14
-              , fontStyle $ FontStyle.medium LanguageStyle
               , lineHeight "20"
               , gravity CENTER
-              ]
-            , textView
+              ] <> FontStyle.body1 LanguageStyle)
+            , textView (
               [ text item.secondaryTitle
               , margin $ MarginTop 4
-              , color Color.black700 
-              , textSize FontSize.a_12
-              , lineHeight "16"
-              , fontStyle $ FontStyle.regular LanguageStyle
-              ]
+              , color Color.black700
+              ] <> FontStyle.body3 LanguageStyle)
             ]
           , linearLayout
             [ width MATCH_PARENT
@@ -135,10 +133,9 @@ supportButtonViewContent state push item index =  linearLayout
             ][  imageView
                 [ height $ V 12
                 , width $ V 12
-                , imageWithFallback "ny_ic_chevron_right,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_right.png"
+                , imageWithFallback $ "ny_ic_chevron_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
                 , margin $ MarginTop 4
                 , color Color.black900
-                , fontStyle $ FontStyle.semiBold LanguageStyle
                 ]
               ]
          ] 
@@ -162,19 +159,16 @@ emergencyHelpLogoContainer state =
     ][  imageView
         [ height $ V 128
         , width MATCH_PARENT
-        , imageWithFallback "ny_ic_emergency_shield,https://assets.juspay.in/nammayatri/images/user/ny_ic_emergency_shield.png"
+        , imageWithFallback $ "ny_ic_emergency_shield," <> (getAssetStoreLink FunctionCall) <> "ny_ic_emergency_shield.png"
         , margin (MarginBottom 24)
         ]
-      , textView
+      , textView (
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , text $ getString DO_YOU_NEED_EMERGENCY_HELP
         , gravity CENTER
         , color Color.black800
-        , fontStyle $ FontStyle.bold LanguageStyle
-        , textSize FontSize.a_18
-        , lineHeight "20"
-        ]
+        ] <> FontStyle.h2 LanguageStyle)
       ]
 
 callPoliceConfig :: EmergencyHelpModelState -> PopUpModalConfig.Config
@@ -185,14 +179,19 @@ callPoliceConfig state  =
     primaryText { 
       text = getString DAIL_100
     , margin = (Margin 40 23 40 12)
-    , fontStyle = FontStyle.semiBold LanguageStyle 
     }
     , option1 {
       text = getString CANCEL_
-    , fontSize = FontSize.a_16 }
+    , strokeColor = state.config.primaryBackground
+    , background = state.config.primaryTextColor
+    , color = state.config.primaryBackground
+    }
     , option2 {
       text = getString CALL_POLICE
-    , fontSize = FontSize.a_16 }
+    , strokeColor = state.config.primaryBackground
+    , background = state.config.primaryBackground
+    , color = state.config.primaryTextColor
+    }
     , backgroundClickable = true
     , secondaryText {
       text = getString YOU_ARE_ABOUT_TO_CALL_POLICE
@@ -211,14 +210,18 @@ contactSupportConfig state  =
     primaryText { 
       text = (<>) (getString CONTACT_SUPPORT) "?"
     , margin = (Margin 40 23 40 12)
-    , fontStyle = FontStyle.semiBold LanguageStyle }
+    }
     , option1 {
       text = getString CANCEL_
-    , fontSize = FontSize.a_16
+    , strokeColor = state.config.primaryBackground
+    , background = state.config.primaryTextColor
+    , color = state.config.primaryBackground
     }
     , option2 {
       text = getString CALL_SUPPORT
-    , fontSize = FontSize.a_16
+    , strokeColor = state.config.primaryBackground
+    , background = state.config.primaryBackground
+    , color = state.config.primaryTextColor
     }
     , backgroundClickable = true
     , secondaryText {
@@ -237,15 +240,19 @@ callEmergencyContactConfig state  =
   popUpConfig' = config' {
     primaryText { 
       text = (<>) (getString CALL_EMERGENCY_CONTACTS) "?"
-    , margin = (Margin 40 23 40 12)
-    , fontStyle = FontStyle.semiBold LanguageStyle }
+    , margin = (Margin 40 23 40 12) 
+    }
     , option1 {
       text = getString CANCEL_
-    , fontSize = FontSize.a_16
+    , strokeColor = state.config.primaryBackground
+    , background = state.config.primaryTextColor
+    , color = state.config.primaryBackground
     }
     , option2 {
       text = getString PLACE_CALL
-    , fontSize = FontSize.a_16
+    , strokeColor = state.config.primaryBackground
+    , background = state.config.primaryBackground
+    , color = state.config.primaryTextColor
     }
     , backgroundClickable = true
     , secondaryText {
@@ -270,15 +277,21 @@ callSuccessfulConfig state  =
     primaryText { 
       text = (<>) "Was Your Call Successful" "?"
     , margin = (Margin 40 23 40 46)
-    , fontStyle = FontStyle.semiBold LanguageStyle }
+    }
     , option1 {
       text = "No"
-    , fontSize = FontSize.a_16
-    , margin = (MarginHorizontal 16 16) }
+    , margin = (MarginHorizontal 16 16) 
+    , strokeColor = state.config.primaryBackground
+    , background = state.config.primaryTextColor
+    , color = state.config.primaryBackground
+    }
     , option2 {
       text = "Yes"
-    , fontSize = FontSize.a_16
-    , margin = (MarginHorizontal 12 0) }
+    , margin = (MarginHorizontal 12 0) 
+    , strokeColor = state.config.primaryBackground
+    , background = state.config.primaryBackground
+    , color = state.config.primaryTextColor
+    }
     , backgroundClickable = true
     , secondaryText {
       visibility = GONE }
@@ -332,18 +345,16 @@ showEmergencyContact state push =
     , width MATCH_PARENT
     , orientation VERTICAL
     , margin $ Margin 16 20 16 12
-    , visibility if(isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "")) then GONE else VISIBLE
+    , visibility if(getValueFromConfig "isEmergencyContacts" == "false") then GONE else VISIBLE
     , onClick push $ const (if (DA.null state.emergencyContactData) then  AddedEmergencyContacts else NoAction)
     ][  linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
-        ][  textView
+        ][  textView (
             [ text $ getString CALL_EMERGENCY_CONTACTS
-            , fontStyle $ FontStyle.medium LanguageStyle
             , color Color.black800
-            , textSize FontSize.a_14
             , lineHeight "20"
-            ]
+            ] <> FontStyle.body1 LanguageStyle)
           , linearLayout
             [ width MATCH_PARENT
             , gravity RIGHT
@@ -351,10 +362,9 @@ showEmergencyContact state push =
             ][  imageView
                 [ height $ V 12
                 , width $ V 12
-                , imageWithFallback "ny_ic_chevron_right,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_right.png"
+                , imageWithFallback $ "ny_ic_chevron_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
                 , margin $ MarginTop 6
                 , color Color.black900
-                , fontStyle $ FontStyle.semiBold LanguageStyle
                 ]
              ] 
           ]
@@ -368,15 +378,12 @@ showEmergencyContact state push =
 
 noContactsAvailableView :: forall w .(Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
 noContactsAvailableView push = 
-  textView
+  textView (
   [ text $ getString YOU_WILL_BE_ASKED_TO_SELECT_CONTACTS
   , margin $ MarginTop 4 
   , color Color.black700 
-  , textSize FontSize.a_12
-  , lineHeight "16"
-  , fontStyle $ FontStyle.regular LanguageStyle
   , onClick push $ const AddedEmergencyContacts
-  ]
+  ] <> FontStyle.body3 LanguageStyle)
  
 
 allContactsView :: forall w . EmergencyHelpModelState -> (Action  -> Effect Unit)  -> Array(PrestoDOM (Effect Unit) w)
@@ -399,23 +406,19 @@ allContactsView state push =
             , background (fromMaybe "" (fromMaybe [] (contactColorsList !! index) !! 0))
             , cornerRadius 12.0
             , gravity CENTER
-            ][  textView
+            ][  textView $
                 [text (DS.toUpper((<>) (getFirstChar item.name) (getLastChar item.name) ))
                 , color (fromMaybe "" (fromMaybe [] (contactColorsList !! index) !! 1))
-                , textSize FontSize.a_12
-                ]
+                ] <> FontStyle.body3 TypoGraphy
               ]
               ,  linearLayout 
                  [ height  WRAP_CONTENT
                  , width  WRAP_CONTENT
                  , padding (PaddingLeft 8)
-                 ][  textView
+                 ][  textView (
                    [text (item.name)
                    , color Color.black800
-                   , textSize FontSize.a_16
-                   , lineHeight "20"
-                   , fontStyle $ FontStyle.semiBold LanguageStyle
-                   ]
+                   ] <> FontStyle.subHeading1 LanguageStyle)
                   ]
               , 
               linearLayout
@@ -427,15 +430,12 @@ allContactsView state push =
                   [ height  WRAP_CONTENT
                   , width  WRAP_CONTENT
                   , onClick push $ const $ CallContactPopUp item
-                  ][ textView
+                  ][ textView (
                     [ text $ (getString CALL)
                     , color Color.green900
-                    , textSize FontSize.a_14
-                    , lineHeight "18"
-                    , fontStyle $ FontStyle.regular LanguageStyle
                     , margin $ MarginLeft 5
                     , padding $ Padding 20 10 20 10
-                    ]
+                    ] <> FontStyle.paragraphText LanguageStyle)
                   ]
               ]
           ]
@@ -443,20 +443,13 @@ allContactsView state push =
 
 genericHeaderConfig :: EmergencyHelpModelState -> GenericHeaderConfig.Config
 genericHeaderConfig state = let 
-  config = GenericHeaderConfig.config
+  config = if state.config.nyBrandingVisibility then GenericHeaderConfig.merchantConfig else  GenericHeaderConfig.config
   genericHeaderConfig' = config 
     { height = WRAP_CONTENT
-    , prefixImageConfig {
-        height = V 25
-      , width = V 25
-      , imageUrl = "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
-      , margin = (Margin 12 12 12 12) } 
     , padding = (PaddingVertical 5 5)
     , textConfig {
         text = getString EMERGENCY_HELP
-      , textSize = FontSize.a_18
-      , color = Color.darkDescriptionText
-      , fontStyle = FontStyle.semiBold LanguageStyle }
+      , color = Color.darkDescriptionText }
     , suffixImageConfig {
         visibility = GONE }
     }

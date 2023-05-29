@@ -16,6 +16,7 @@
 module Screens.HelpAndSupportScreen.ScreenData where
 
 import Screens.Types (HelpAndSupportScreenState)
+import Config.DefaultConfig as DC
 
 initData :: HelpAndSupportScreenState
 initData = {
@@ -34,7 +35,8 @@ initData = {
     vehicleNumber : "",
     rideId : "",
     tripId : "",
-    bookingId : ""
+    bookingId : "",
+    config : DC.config
   },
   props:{
     apiFailure : false

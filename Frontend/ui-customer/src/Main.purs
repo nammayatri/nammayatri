@@ -12,7 +12,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Main where
 
 import Common.Types.App (GlobalPayload)
@@ -25,7 +24,7 @@ import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Ref (new)
-import Engineering.Helpers.Commons (flowRunner, liftFlow, getWindowVariable)
+import Engineering.Helpers.Commons (flowRunner, liftFlow, getWindowVariable, setWindowVariableImpl)
 import Flow as Flow
 import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Generic (decode)
@@ -43,7 +42,6 @@ main = do
   case payload of
     Right payload'  -> do
        _ <- launchAff $ flowRunner $ do
-          -- _ <- pure $ JBridge._addCertificates (Config.getFingerPrint "")
           resp ← runExceptT $ runBackT $ Flow.baseAppFlow payload'
           case resp of
                 Right x → pure unit
@@ -61,6 +59,7 @@ onEvent :: String -> Effect Unit
 onEvent "onBackPressed" = do
   _ <- pure $ toggleBtnLoader "" false
   PrestoDom.processEvent "onBackPressedEvent" unit
+
 onEvent _ = pure unit
 
 onConnectivityEvent :: String -> Effect Unit
@@ -70,7 +69,6 @@ onConnectivityEvent triggertype = do
   case payload of
     Right payload'  -> do
         _ <- launchAff $ flowRunner $ do
-          -- _ <- pure $ JBridge._addCertificates (Config.getFingerPrint "")
           _ ← runExceptT $ runBackT $ Flow.permissionScreenFlow triggertype
           pure unit
         pure unit

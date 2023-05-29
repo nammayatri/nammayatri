@@ -37,6 +37,8 @@ import Accessor (_list)
 import Data.Lens ((^.))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppBackPress, trackAppScreenRender, trackAppScreenEvent, trackAppTextInput)
 import Screens (ScreenName(..), getScreen)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
 
 instance showAction :: Show Action where 
   show _ = ""
@@ -159,7 +161,7 @@ getSavedLocation (savedLocation) = (map (\(SavedReqLocationAPIEntity item) ->
 
 getSavedLocationForAddNewAddressScreen :: (Array LocationListItemState) -> Array LocationListItemState 
 getSavedLocationForAddNewAddressScreen (savedLocation) = (map (\ (item) -> 
-  { prefixImageUrl : "ny_ic_loc_grey,https://assets.juspay.in/nammayatri/images/user/ny_ic_loc_grey.png"
+  { prefixImageUrl : "ny_ic_loc_grey," <> (getAssetStoreLink FunctionCall) <> "ny_ic_loc_grey.png"
   , postfixImageUrl : ""
   , postfixImageVisibility : false
   , title : (fromMaybe "" ((split (Pattern ",") (item.address)) !! 0))

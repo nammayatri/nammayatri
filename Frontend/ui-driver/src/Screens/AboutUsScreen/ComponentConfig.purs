@@ -43,8 +43,6 @@ demoModePopUpConfig state = let
       },
     eTextConfig { 
       editText{placeholder = (getString ENTER_DEMO_MODE_PASSWORD),
-      fontStyle = FontStyle.medium LanguageStyle,
-      textSize = FontSize.a_14,
       pattern = Just "[^\n]*,7"
       },
     topLabel { 
@@ -70,8 +68,7 @@ demoModePopUpConfig state = let
       color=Color.blue800, 
       strokeColor = Color.white900, 
       padding = (Padding 16 0 16 0), 
-      fontSize = FontSize.a_16
-    , isClickable = state.props.enableConfirmPassword
+      isClickable = state.props.enableConfirmPassword
     },
     cornerRadius = (PTD.Corners 15.0 true true true true)
   }

@@ -20,7 +20,9 @@ import Effect (Effect)
 import Components.SourceToDestination.Controller (Action,Config)
 import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Margin(..), Padding(..), background, color, ellipsize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, maxLines, orientation, padding, text, textSize, textView, visibility, width, cornerRadius, stroke, margin, imageWithFallback)
 import Styles.Colors as Color
+import Font.Style as FontStyle
 import Font.Size as FontSize
+import Common.Types.App (LazyCheck(..))
 
 view :: forall w .  (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = 
@@ -64,28 +66,24 @@ sourceLayout config =
       , width MATCH_PARENT
       , orientation VERTICAL
       , gravity CENTER_VERTICAL
-      ][  textView
+      ][  textView $
           [ text config.sourceTextConfig.text
-          , textSize config.sourceTextConfig.textSize
           , width MATCH_PARENT
           , padding config.sourceTextConfig.padding
           , margin config.sourceTextConfig.margin
-          , fontStyle config.sourceTextConfig.fontStyle
           , color config.sourceTextConfig.color
           , ellipsize config.sourceTextConfig.ellipsize
           , maxLines config.sourceTextConfig.maxLines
-          ]
-        , textView
+          ] <> (FontStyle.getFontStyle config.sourceTextConfig.textStyle LanguageStyle)
+        , textView $
           [ text config.rideStartedAtConfig.text
-          , textSize config.rideStartedAtConfig.textSize
-          , fontStyle config.rideStartedAtConfig.fontStyle
           , color config.rideStartedAtConfig.color
           , visibility config.rideStartedAtConfig.visibility
           , margin config.rideStartedAtConfig.margin 
           , padding config.rideStartedAtConfig.padding
           , maxLines config.rideStartedAtConfig.maxLines
           , ellipsize config.rideStartedAtConfig.ellipsize
-          ]
+          ] <> (FontStyle.getFontStyle config.rideStartedAtConfig.textStyle LanguageStyle)
         ]
     
     ]
@@ -113,29 +111,25 @@ destinationLayout config =
       , width MATCH_PARENT
       , orientation VERTICAL
       , gravity CENTER_VERTICAL
-      ][  textView
+      ][  textView $
           [ text config.destinationTextConfig.text
-          , textSize config.destinationTextConfig.textSize
           , layoutGravity "center_vertical"
           , padding config.destinationTextConfig.padding
           , width MATCH_PARENT
           , margin config.destinationTextConfig.margin
-          , fontStyle config.destinationTextConfig.fontStyle
           , color config.destinationTextConfig.color
           , maxLines config.destinationTextConfig.maxLines
           , ellipsize config.destinationTextConfig.ellipsize
-          ]
-        , textView
+          ] <> (FontStyle.getFontStyle config.destinationTextConfig.textStyle LanguageStyle)
+        , textView $
           [ text config.rideEndedAtConfig.text
-          , textSize config.rideEndedAtConfig.textSize
-          , fontStyle config.rideEndedAtConfig.fontStyle
           , color config.rideEndedAtConfig.color
           , visibility config.rideEndedAtConfig.visibility
           , margin config.rideEndedAtConfig.margin 
           , padding config.rideEndedAtConfig.padding
           , maxLines config.rideEndedAtConfig.maxLines
           , ellipsize config.rideEndedAtConfig.ellipsize
-          ]
+          ] <> (FontStyle.getFontStyle config.rideEndedAtConfig.textStyle LanguageStyle)
         ]
     ]
 
@@ -149,13 +143,12 @@ distanceLayout config =
   , margin config.distanceConfig.margin
   , background config.distanceConfig.background
   , visibility config.distanceConfig.distanceVisibility
-  ][ textView
+  ][ textView $
       [ width MATCH_PARENT
       , height MATCH_PARENT
       , gravity CENTER
       , text config.distanceConfig.distanceValue
-      , textSize FontSize.a_12
       , color Color.black900
       , padding $ Padding 6 4 6 4
-      ]
+      ] <> FontStyle.tags LanguageStyle
   ]

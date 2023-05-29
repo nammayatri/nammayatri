@@ -16,6 +16,7 @@
 module Screens.ContactUsScreen.ScreenData where
 
 import Screens.Types(ContactUsScreenState)
+import Config.DefaultConfig as DC
 
 initData :: ContactUsScreenState
 initData = {
@@ -23,7 +24,8 @@ initData = {
     email : "",
     subject : "",
     description : "",
-    bookingId : ""
+    bookingId : "",
+    config : DC.config
   },
   props: {
     btnActive : false,

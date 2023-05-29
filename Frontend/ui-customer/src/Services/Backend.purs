@@ -16,11 +16,15 @@
 module Services.Backend where
 
 import Services.API
-import Services.Config as SC
+
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..))
+import Common.Types.App (SignatureAuthData(..))
+import Data.Array ((!!), take)
 import Data.Either (Either(..), either)
 import Data.Maybe (Maybe(..), maybe, fromMaybe)
+import Debug (spy)
+import Engineering.Helpers.Commons (liftFlow, os, bundleVersion)
 import Foreign.Generic (encode)
 import Helpers.Utils (decodeErrorCode, decodeErrorMessage, toString, getTime, getPreviousVersion)
 import JBridge (Locations, factoryResetApp, setKeyInSharedPrefKeys, toast, toggleLoader, drawRoute, toggleBtnLoader)
@@ -30,7 +34,8 @@ import ModifyScreenState (modifyScreenState)
 import Screens.Types (AccountSetUpScreenState(..), HomeScreenState(..), NewContacts)
 import Types.App (GlobalState(..), FlowBT, ScreenType(..))
 import Tracker (trackApiCallFlow, trackExceptionFlow)
-import Presto.Core.Types.API (Header(..), Headers(..))
+import Presto.Core.Types.API (Header(..), Headers(..), ErrorResponse)
+-- import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, ErrorPayload, Method(..), defaultDecodeResponse, defaultMakeRequest, standardEncode)
 import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff)
 import Screens.Types (Address, Stage(..))
 import JBridge (factoryResetApp, setKeyInSharedPrefKeys, toast, toggleLoader, removeAllPolylines, stopChatListenerService)
@@ -44,6 +49,7 @@ import Engineering.Helpers.Commons (liftFlow, os, bundleVersion, isPreviousVersi
 import Data.Array ((!!), take)
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Services.Config as SC
 import Debug (spy)
 
 getHeaders :: String -> Flow GlobalState Headers
@@ -143,10 +149,9 @@ withAPIResultBT' url enableCache key f errorHandler flow = do
             (lift $ lift $ (trackApiCallFlow Tracker.Network Tracker.Info NETWORK_CALL start end (err.code) (codeMessage) url "" "")) *> (errorHandler err)
 
 ---------------------------------------------------------------TriggerOTPBT Function---------------------------------------------------------------------------------------------------
-
 triggerOTPBT :: TriggerOTPReq → FlowBT String TriggerOTPResp
 triggerOTPBT payload = do
-    _ <- lift $ lift $ doAff Readers.initiateSMSRetriever
+    -- _ <- lift $ lift $ doAff Readers.initiateSMSRetriever
     headers <- getHeaders' ""
     withAPIResultBT (EP.triggerOTP "") (\x → x) errorHandler (lift $ lift $ callAPI headers payload)
     where
@@ -165,8 +170,17 @@ makeTriggerOTPReq mobileNumber = TriggerOTPReq
     {
       "mobileNumber"      : mobileNumber,
       "mobileCountryCode" : "+91",
-      "merchantId" : if SC.getMerchantId == "NA" then getValueToLocalNativeStore MERCHANT_ID else SC.getMerchantId
+      "merchantId" : "MOBILITY_PAYTM"--if SC.getMerchantId == "NA" then getValueToLocalNativeStore MERCHANT_ID else SC.getMerchantId
     }
+
+---------------------------------------------------------------TriggerSignatureOTPBT Function---------------------------------------------------------------------------------------------------
+
+triggerSignatureBasedOTP :: SignatureAuthData → Flow GlobalState (Either ErrorResponse TriggerSignatureOTPResp)
+triggerSignatureBasedOTP (SignatureAuthData signatureAuthData) = do
+    Headers headers <- getHeaders ""
+    withAPIResult (EP.triggerSignatureOTP "") unwrapResponse $ callAPI (Headers (headers <> [Header "x-sdk-authorization" signatureAuthData.signature])) (TriggerSignatureOTPReq signatureAuthData.authData)
+    where
+        unwrapResponse (x) = x
 
 ----------------------------------------------------------- ResendOTPBT Function ------------------------------------------------------------------------------------------------------
 
@@ -215,7 +229,7 @@ verifyToken payload token = do
 makeVerifyOTPReq :: String -> VerifyTokenReq
 makeVerifyOTPReq otp = VerifyTokenReq {
       "otp": otp,
-      "deviceToken": if getValueToLocalNativeStore FCM_TOKEN == "__failed" then "" else (getValueToLocalNativeStore FCM_TOKEN),
+      "deviceToken": if getValueToLocalNativeStore FCM_TOKEN == "__failed" then "generated-xxxx-xxxx-xxxx" else (getValueToLocalNativeStore FCM_TOKEN),
       "whatsappNotificationEnroll": OPT_IN
     }
 
@@ -679,13 +693,13 @@ type Markers = {
 
 driverTracking :: String -> Markers
 driverTracking _ = {
-    srcMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_auto_map" else "ic_vehicle_nav_on_map",
+    srcMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_auto_map" else "ny_ic_vehicle_nav_on_map",
     destMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "src_marker" else "ny_ic_src_marker"
 }
 
 rideTracking :: String -> Markers
 rideTracking _ = {
-    srcMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_auto_map" else "ic_vehicle_nav_on_map",
+    srcMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_auto_map" else "ny_ic_vehicle_nav_on_map",
     destMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "dest_marker" else "ny_ic_dest_marker"
 }
 

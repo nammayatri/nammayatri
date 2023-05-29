@@ -31,7 +31,8 @@ import Screens.MyRidesScreen.Controller (Action(..)) as Screen
 import Screens.Types (IndividualRideCardState, Stage(..))
 import Storage
 import Styles.Colors as Color
-import Storage
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
 
 view :: forall w .  (Screen.Action  -> Effect Unit) -> IndividualRideCardState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -91,11 +92,9 @@ rideDetails state =
   , margin (MarginBottom 20)
   ][  textView
       ([ PrestoList.textHolder "date"
-      , textSize FontSize.a_14
       , color Color.black800
       , lineHeight "20"
-      , fontStyle $ FontStyle.semiBold LanguageStyle
-      ])
+      ] <> FontStyle.body6 LanguageStyle)
     , linearLayout
       [ 
        height $ V 5
@@ -107,10 +106,7 @@ rideDetails state =
     , textView
       ([ PrestoList.textHolder "time"
       , color Color.black800
-      , textSize FontSize.a_14 
-      , lineHeight "20"
-      , fontStyle $ FontStyle.semiBold LanguageStyle
-      ] )
+      ] <> FontStyle.body6 LanguageStyle)
     , linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
@@ -123,15 +119,13 @@ rideDetails state =
           , gravity CENTER_VERTICAL
     
           , layoutGravity "center_vertical"
-          ][  textView
+          ][  textView (
               [ PrestoList.textHolder "totalAmount"
-              , textSize FontSize.a_18
               , color Color.black800
               , PrestoList.visibilityHolder "isSuccessfull"
               , gravity CENTER_VERTICAL
-              , fontStyle $ FontStyle.semiBold LanguageStyle
               , height WRAP_CONTENT
-              ]
+              ] <> FontStyle.h3 LanguageStyle)
             , linearLayout[
               height WRAP_CONTENT
               , width WRAP_CONTENT
@@ -139,16 +133,13 @@ rideDetails state =
               , PrestoList.visibilityHolder "isCancelled"
               , cornerRadius 3.0
               , background Color.cancelledBg
-            ][textView
+            ][textView (
               [ text (getString CANCELLED)
               , PrestoList.visibilityHolder "isCancelled"
               , height WRAP_CONTENT
               , gravity CENTER_VERTICAL
-              , textSize FontSize.a_12
-              , lineHeight "16"
               , color Color.red
-              , fontStyle $ FontStyle.medium LanguageStyle
-              ]]
+              ] <> FontStyle.tags LanguageStyle)]
             ]
         ]
     ]
@@ -178,22 +169,20 @@ sourceAndDestination =
           , width MATCH_PARENT
           , margin (MarginBottom 20)
           ][  imageView
-              [ imageWithFallback "ny_ic_source_dot,https://assets.juspay.in/nammayatri/images/common/ny_ic_source_dot.png"
+              [ imageWithFallback $ "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_source_dot.png"
               , height $ V 16
               , width $ V 16
               , margin (MarginTop 2)
               ]
-            , textView
+            , textView (
               [ PrestoList.textHolder "source"
-              , textSize FontSize.a_14
               , padding (PaddingHorizontal 12 2)
-              , fontStyle $ FontStyle.regular LanguageStyle
               , width MATCH_PARENT
               , color Color.black700
               , width MATCH_PARENT
               , maxLines 1
               , ellipsize true
-              ]
+              ] <> FontStyle.paragraphText LanguageStyle)
             ]
         , linearLayout
           [ orientation HORIZONTAL
@@ -201,22 +190,20 @@ sourceAndDestination =
           , width MATCH_PARENT
           , background if os == "IOS" then Color.transparent else Color.white900
           ][  imageView
-              [ imageWithFallback "ny_ic_loc_red,https://assets.juspay.in/nammayatri/images/common/ny_ic_loc_red.png"
+              [ imageWithFallback $ "ny_ic_loc_red," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_loc_red.png"
               , height $ V 16
               , width $ V 16
               , margin (MarginTop 2)
               ]
-            , textView
+            , textView (
               [ PrestoList.textHolder "destination"
-              , textSize FontSize.a_14
               , layoutGravity "center_vertical"
               , width MATCH_PARENT
               , padding (PaddingHorizontal 12 2)
               , maxLines 1
               , ellipsize true
-              , fontStyle $ FontStyle.regular LanguageStyle
               , color Color.black700
-              ]
+              ] <> FontStyle.paragraphText LanguageStyle)
             ]
         ]
     ]
@@ -249,32 +236,29 @@ rideDetailsShimmerView state =
       , cornerRadius 5.0
       , margin (MarginRight 6)
   ][
-    textView
+    textView $
       [ PrestoList.textHolder "date"
-      , textSize FontSize.a_14
       , color Color.borderGreyColor
       ]
-    ,  textView
+    ,  textView $
       [ PrestoList.textHolder "time"
-      , textSize FontSize.a_14
       , margin (MarginLeft 46)
       , color Color.borderGreyColor
-      ]]
+      ] <> FontStyle.paragraphText TypoGraphy]
   
     , linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , gravity RIGHT
       , orientation HORIZONTAL
-      ][  sfl $ textView
+      ][  sfl $ textView $
           [ PrestoList.textHolder "totalAmount"
-          , textSize FontSize.a_14
           , color Color.borderGreyColor
           , background Color.borderGreyColor
           , cornerRadius 5.0
           , width MATCH_PARENT
           , gravity RIGHT
-          ]
+          ] <> FontStyle.paragraphText TypoGraphy
         ]
     ]
 
@@ -289,7 +273,7 @@ sourceAndDestinationShimmerView state =
   , PrestoList.visibilityHolder "shimmerVisibility"
   , margin $ MarginVertical 20 20
   ][sfl $  imageView[
-    imageWithFallback "ny_ic_shimmer_img,https://assets.juspay.in/nammayatri/images/common/ny_ic_shimmer_img.png"
+    imageWithFallback $ "ny_ic_shimmer_img," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_shimmer_img.png"
   , height $ V 57
   , margin (MarginLeft 4)
   , weight 1.0
@@ -346,34 +330,30 @@ viewDetailsAndRepeatRide push state =
   , height WRAP_CONTENT
   , gravity CENTER
   , margin $ MarginTop 15
-  ][ textView
+  ][ textView $
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , text $ getString VIEW_DETAILS
       , color Color.blue900
-      , textSize FontSize.a_14
-      , fontStyle $ FontStyle.medium LanguageStyle
       , padding $ Padding 10 3 10 3
       , PrestoList.onClickHolder push $ Screen.IndividualRideCardActionController <<< OnClick
-      ]
+      ] <> FontStyle.body1 LanguageStyle
     , linearLayout 
       [ width $ V 1
       , height if os == "IOS" then (V 20) else MATCH_PARENT
       , margin $ MarginHorizontal 40 40
       , background Color.grey900
       ][]
-    , textView
+    , textView (
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , text $ getString REPEAT_RIDE
       , color Color.blue900
-      , textSize FontSize.a_14
-      , fontStyle $ FontStyle.medium LanguageStyle
       , PrestoList.alphaHolder "alpha"
       , alpha $ if (isLocalStageOn HomeScreen) then 1.0 else 0.5
       , PrestoList.onClickHolder push $ (if (isLocalStageOn HomeScreen) then Screen.IndividualRideCardActionController <<< RepeatRide else Screen.IndividualRideCardActionController <<< NoAction)
       , padding $ Padding 10 3 10 3
-      ]
+      ] <> FontStyle.body1 LanguageStyle)
   ]
 
 viewDetailsAndRepeatRideShimmer :: forall w. IndividualRideCardState -> PrestoDOM (Effect Unit) w 
@@ -383,34 +363,30 @@ viewDetailsAndRepeatRideShimmer state =
   , height WRAP_CONTENT
   , gravity CENTER_HORIZONTAL
   , margin $ MarginTop 15
-  ][  sfl $ textView
+  ][  sfl $ textView (
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , text $ getString VIEW_DETAILS
       , color Color.grey900
       , background Color.grey900
-      , textSize FontSize.a_14
-      , fontStyle $ FontStyle.medium LanguageStyle
       , padding $ Padding 10 3 10 3
       , PrestoList.visibilityHolder "shimmerVisibility"
-      ]
+      ] <> FontStyle.body1 LanguageStyle)
     , linearLayout 
       [ width $ V 1
       , height if os == "IOS" then (V 10) else MATCH_PARENT
       , margin $ MarginHorizontal 40 40
       , background Color.grey900
       ][]
-    , sfl $ textView
+    , sfl $ textView (
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , text $ getString REPEAT_RIDE
       , PrestoList.visibilityHolder "shimmerVisibility"
       , color Color.grey900
       , background Color.grey900
-      , textSize FontSize.a_14
-      , fontStyle $ FontStyle.medium LanguageStyle
       , padding $ Padding 10 3 10 3
-      ]
+      ] <> FontStyle.body1 LanguageStyle)
   ]
 
 sfl :: forall w. PrestoDOM (Effect Unit) w -> PrestoDOM (Effect Unit) w

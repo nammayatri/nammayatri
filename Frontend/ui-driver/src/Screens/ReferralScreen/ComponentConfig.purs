@@ -45,11 +45,11 @@ passwordPopUpConfig state = let
     buttonLayoutMargin = (Margin 0 16 16 0),
     editTextVisibility = VISIBLE,
     dismissPopupConfig {visibility = VISIBLE, height = V 12 , width = V 12, margin = (Margin 0 26 22 0)},
-    eTextConfig { editText{text = "" ,placeholder= (getString ENTER_PASSWORD), fontStyle = FontStyle.medium LanguageStyle, textSize = FontSize.a_14, pattern = Just "[^\n]*,5"}, topLabel{ text = (getString PASSWORD) ,  color = Color.black900}, margin = (Margin 16 16 16 0), type = ""},
+    eTextConfig { editText{text = "" ,placeholder= (getString ENTER_PASSWORD), pattern = Just "[^\n]*,5"}, topLabel{ text = (getString PASSWORD) ,  color = Color.black900}, margin = (Margin 16 16 16 0), type = ""},
     primaryText {text = (getString REFERRAL_CODE_LINKING) , gravity = LEFT ,margin = (Margin 16 21 0 0)},
     secondaryText {visibility = GONE},
     option1 {visibility = false},
-    option2 {text = (getString CONFIRM_PASSWORD), background = Color.white900, color=Color.blue800, strokeColor = Color.white900, padding = (PaddingHorizontal 16 16), fontSize = FontSize.a_16
+    option2 {text = (getString CONFIRM_PASSWORD), background = Color.white900, color=Color.blue800, strokeColor = Color.white900, padding = (PaddingHorizontal 16 16)
     ,  isClickable = state.props.confirmBtnActive},
     cornerRadius = (Corners 15.0 true true true true)
   }
@@ -63,14 +63,12 @@ contactSupportConfig state  =
     primaryText { 
       text = (getString CONTACT_SUPPORT)<>"?"
     , margin = (Margin 40 23 40 12)
-    , fontStyle = FontStyle.semiBold LanguageStyle }
+    }
     , option1 {
       text = (getString CANCEL)
-    , fontSize = FontSize.a_16
     , margin = (MarginHorizontal 16 16) }
     , option2 {
       text = (getString CALL_SUPPORT)
-    , fontSize = FontSize.a_16
     , margin = (MarginHorizontal 12 0) }
     , backgroundClickable = true
     , secondaryText {
@@ -100,9 +98,7 @@ genericHeaderConfig state = let
     , padding = if state.props.stage == ST.ReferralFlow then (Padding 0 5 0 5) else (Padding 16 16 0 16)
     , textConfig {
         text = if state.props.stage == ST.ReferralFlow then (getString REFERRAL_ENROLMENT) else (getString REFERRALS)
-      , textSize = FontSize.a_18
       , color = Color.darkDescriptionText
-      , fontStyle = FontStyle.semiBold LanguageStyle
       }
     , suffixImageConfig {
         visibility = GONE
