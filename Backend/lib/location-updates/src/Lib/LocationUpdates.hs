@@ -19,6 +19,8 @@ module Lib.LocationUpdates
     initializeDistanceCalculation,
     finalDistanceCalculation,
     addIntermediateRoutePoints,
+    getInterpolatedPoints,
+    clearInterpolatedPoints,
   )
 where
 
@@ -39,10 +41,18 @@ withRideIdLogTag rideId = withLogTag ("locupd-rideId-" <> rideId.getId)
 initializeDistanceCalculation :: (Monad m, Log m) => I.RideInterpolationHandler person m -> Id ride -> Id person -> LatLong -> m ()
 initializeDistanceCalculation ih rideId driverId pt = withRideIdLogTag rideId $ do
   ih.clearLocationUpdates driverId
+  ih.clearInterpolatedPoints driverId
+  ih.expireInterpolatedPoints driverId
   ih.addPoints driverId $ pt :| []
 
 finalDistanceCalculation :: (Monad m, Log m, MonadThrow m) => I.RideInterpolationHandler person m -> Id ride -> Id person -> LatLong -> m ()
 finalDistanceCalculation ih rideId driverId pt = withRideIdLogTag rideId $ I.processWaypoints ih driverId True $ pt :| []
+
+getInterpolatedPoints :: I.RideInterpolationHandler person m -> Id person -> m [LatLong]
+getInterpolatedPoints ih = ih.getInterpolatedPoints
+
+clearInterpolatedPoints :: I.RideInterpolationHandler person m -> Id person -> m ()
+clearInterpolatedPoints ih = ih.clearInterpolatedPoints
 
 addIntermediateRoutePoints :: (Log m, MonadThrow m) => I.RideInterpolationHandler person m -> Id ride -> Id person -> NonEmpty LatLong -> m ()
 addIntermediateRoutePoints ih rideId driverId = withRideIdLogTag rideId . I.processWaypoints ih driverId False

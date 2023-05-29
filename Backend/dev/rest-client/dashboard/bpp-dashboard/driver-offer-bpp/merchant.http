@@ -107,7 +107,10 @@ content-type: application/json
     "maxNumberOfBatches" : 50,
     "maxParallelSearchRequests" : 51,
     "poolSortingType" : "Random",
-    "singleBatchProcessTime" : 52
+    "singleBatchProcessTime" : 52,
+    "radiusShrinkValueForDriversOnRide" : 53,
+    "driverToDestinationDistanceThreshold" : 54,
+    "driverToDestinationDuration" : 55
   }
 
 ###

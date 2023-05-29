@@ -11,4 +11,5 @@ in  { port = +8019
     , graceTerminationPeriod = +90
     , mockDataPath = "./app/mocks/google/mock-data/"
     , googleCfg = doNotUseRealGoogle
+    , snapToRoadIdentityMode = False
     }
