@@ -18,14 +18,26 @@ module Storage.Queries.FarePolicy.RestrictedExtraFare where
 import qualified Domain.Types.FarePolicy.RestrictedExtraFare as Domain
 import Domain.Types.Merchant
 import qualified Domain.Types.Vehicle.Variant as Vehicle
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import qualified Lib.Mesh as Mesh
+import qualified Sequelize as Se
 import qualified Storage.Beam.FarePolicy.RestrictedExtraFare as BeamREF
 import Storage.Tabular.FarePolicy.RestrictedExtraFare
 
 create :: Domain.RestrictedExtraFare -> SqlDB ()
 create = Esq.create
+
+create' :: L.MonadFlow m => Domain.RestrictedExtraFare -> m ()
+create' restrictedExtraFare = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> void $ KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainRestrictedExtraFareToBeam restrictedExtraFare)
+    Nothing -> pure ()
 
 findMaxExtraFareByMerchantAndVehicle :: (Transactionable m) => Id Merchant -> Vehicle.Variant -> m [Domain.RestrictedExtraFare]
 findMaxExtraFareByMerchantAndVehicle merchantId vehicleVariant = do
@@ -37,6 +49,21 @@ findMaxExtraFareByMerchantAndVehicle merchantId vehicleVariant = do
     orderBy [desc (restrictedExtraFare ^. RestrictedExtraFareMinTripDistance)]
     return restrictedExtraFare
 
+findMaxExtraFareByMerchantAndVehicle' :: L.MonadFlow m => Id Merchant -> Vehicle.Variant -> m [Domain.RestrictedExtraFare]
+findMaxExtraFareByMerchantAndVehicle' (Id merchantId) vehicleVariant = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' ->
+      either (pure []) (transformBeamRestrictedExtraFareToDomain <$>)
+        <$> KV.findAllWithOptionsKVConnector
+          dbCOnf'
+          Mesh.meshConfig
+          [Se.And [Se.Is BeamREF.merchantId $ Se.Eq merchantId, Se.Is BeamREF.vehicleVariant $ Se.Eq vehicleVariant]]
+          (Se.Desc BeamREF.minTripDistance)
+          Nothing
+          Nothing
+    Nothing -> pure []
+
 findMaxExtraFareByMerchant :: (Transactionable m) => Id Merchant -> m [Domain.RestrictedExtraFare]
 findMaxExtraFareByMerchant merchantId = do
   findAll $ do
@@ -45,6 +72,21 @@ findMaxExtraFareByMerchant merchantId = do
       restrictedExtraFare ^. RestrictedExtraFareMerchantId ==. val (toKey merchantId)
     orderBy [desc (restrictedExtraFare ^. RestrictedExtraFareMinTripDistance)]
     return restrictedExtraFare
+
+findMaxExtraFareByMerchant' :: L.MonadFlow m => Id Merchant -> m [Domain.RestrictedExtraFare]
+findMaxExtraFareByMerchant' (Id merchantId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' ->
+      either (pure []) (transformBeamRestrictedExtraFareToDomain <$>)
+        <$> KV.findAllWithOptionsKVConnector
+          dbCOnf'
+          Mesh.meshConfig
+          [Se.Is BeamREF.merchantId $ Se.Eq merchantId]
+          (Se.Desc BeamREF.minTripDistance)
+          Nothing
+          Nothing
+    Nothing -> pure []
 
 transformBeamRestrictedExtraFareToDomain :: BeamREF.RestrictedExtraFare -> Domain.RestrictedExtraFare
 transformBeamRestrictedExtraFareToDomain BeamREF.RestrictedExtraFareT {..} = do

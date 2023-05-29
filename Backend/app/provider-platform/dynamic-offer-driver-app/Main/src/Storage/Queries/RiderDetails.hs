@@ -156,8 +156,8 @@ updateReferralInfo customerNumberHash merchantId referralId driverId = do
       rd ^. RiderDetailsMobileNumberHash ==. val customerNumberHash
         &&. rd ^. RiderDetailsMerchantId ==. val (toKey merchantId)
 
-updateDriverResponse :: (L.MonadFlow m, MonadTime m) => DbHash -> Id Merchant -> Id DriverReferral -> Id Person -> m (MeshResult ())
-updateDriverResponse customerNumberHash merchantId referralId driverId = do
+updateReferralInfo' :: (L.MonadFlow m, MonadTime m) => DbHash -> Id Merchant -> Id DriverReferral -> Id Person -> m (MeshResult ())
+updateReferralInfo' customerNumberHash merchantId referralId driverId = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   now <- getCurrentTime
   case dbConf of

@@ -41,8 +41,8 @@ import qualified Storage.Tabular.Person as PT
 createMany :: [MessageReport] -> SqlDB ()
 createMany = Esq.createMany
 
--- create :: MessageReport -> SqlDB ()
--- create = Esq.create
+-- createMany' :: L.MonadFlow m => [MessageReport] -> m ()
+-- createMany' msr = void $ traverse create msr
 
 create :: L.MonadFlow m => MessageReport -> m (MeshResult ())
 create messageReport = do
