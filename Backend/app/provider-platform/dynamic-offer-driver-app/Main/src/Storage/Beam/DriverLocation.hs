@@ -150,7 +150,4 @@ instance Serialize DriverLocation where
   put = error "undefined"
   get = error "undefined"
 
-getPoint :: (Double, Double) -> BQ.QGenExpr context Postgres s Point
-getPoint (lat, long) = BQ.QExpr (\_ -> PgExpressionSyntax (emit $ "ST_SetSRID (ST_Point (" <> show long <> " , " <> show lat <> "),4326)"))
-
 $(enableKVPG ''DriverLocationT ['driverId] [])

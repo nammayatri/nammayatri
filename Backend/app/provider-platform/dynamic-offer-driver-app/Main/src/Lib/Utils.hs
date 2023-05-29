@@ -21,7 +21,7 @@ import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import Domain.Types.Vehicle.Variant (Variant (..))
 import Kernel.Prelude
--- import Kernel.Storage.Esqueleto.Types
+import Kernel.Storage.Esqueleto.Types
 import Kernel.Types.Common
 
 -- import Kernel.Types.Time (Seconds (..))
