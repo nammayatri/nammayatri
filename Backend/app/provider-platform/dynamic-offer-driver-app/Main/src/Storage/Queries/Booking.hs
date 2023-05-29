@@ -16,9 +16,10 @@
 module Storage.Queries.Booking where
 
 import Data.Text (pack)
+import Data.Time.Clock (NominalDiffTime, UTCTime, addUTCTime)
 import Domain.Types.Booking
 import Domain.Types.DriverQuote (DriverQuote)
-import Domain.Types.Geometry (Geometry)
+import Domain.Types.Geometry
 import Domain.Types.Merchant
 import Domain.Types.RiderDetails (RiderDetails)
 import qualified Domain.Types.SearchRequest as DSR
@@ -27,9 +28,10 @@ import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq hiding (findById, isNothing)
+import Kernel.Storage.Esqueleto as Esq hiding (findById, findById', isNothing)
 import Kernel.Types.Id
 import Kernel.Types.Time
+import Kernel.Utils.Common (MonadTime (..), addUTCTime, getCurrentTime, secondsToNominalDiffTime)
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.Booking as BeamB
@@ -37,11 +39,12 @@ import qualified Storage.Queries.Booking.BookingLocation as QBBL
 import qualified Storage.Queries.DriverQuote as QDQuote
 import qualified Storage.Queries.FareParameters as QueriesFP
 import Storage.Queries.FullEntityBuilders
+import Storage.Queries.Geometry
 import Storage.Tabular.Booking
 import Storage.Tabular.Booking.BookingLocation
 import Storage.Tabular.DriverQuote as DriverQuote
 import qualified Storage.Tabular.FareParameters as Fare
-import Storage.Tabular.Geometry (EntityField (..), GeometryT)
+import Storage.Tabular.Geometry (EntityField (..), GeometryT (id))
 
 baseBookingTable ::
   From
@@ -218,13 +221,45 @@ findStuckBookings merchantId bookingIds now = do
         &&. (booking ^. BookingStatus ==. val NEW &&. upcoming6HrsCond)
     pure $ booking ^. BookingTId
 
-findBookingBySpecialZoneOTP :: (L.MonadFlow m, Transactionable m) => Id Merchant -> Text -> UTCTime -> m (Maybe Booking)
+findStuckBookings' :: (L.MonadFlow m, MonadTime m) => Id Merchant -> [Id Booking] -> UTCTime -> m [Id Booking]
+findStuckBookings' (Id merchantId) bookingIds now = do
+  let updatedTimestamp = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> do
+      result <-
+        KV.findAllWithKVConnector
+          dbConf'
+          Mesh.meshConfig
+          [ Se.And
+              [ Se.Is BeamB.providerId $ Se.Eq merchantId,
+                Se.Is BeamB.id (Se.In $ getId <$> bookingIds),
+                Se.Is BeamB.status $ Se.Eq NEW,
+                Se.Is BeamB.createdAt $ Se.LessThanOrEq updatedTimestamp
+              ]
+          ]
+      case result of
+        Left _ -> pure []
+        Right booking -> do
+          bookingD <- mapM transformBeamBookingToDomain booking
+          pure $ Domain.Types.Booking.id <$> bookingD
+    Nothing -> pure []
+
+findBookingBySpecialZoneOTP :: Transactionable m => Id Merchant -> Text -> UTCTime -> m (Maybe Booking)
 findBookingBySpecialZoneOTP merchantId otpCode now = do
   bookingId <- findBookingIdBySpecialZoneOTP merchantId otpCode now
   maybe
     (return Nothing)
     findById
     bookingId
+
+findBookingBySpecialZoneOTP' :: L.MonadFlow m => Id Merchant -> Text -> UTCTime -> m (Maybe Booking)
+findBookingBySpecialZoneOTP' merchantId otpCode now = do
+  bookingId' <- findBookingIdBySpecialZoneOTP' merchantId otpCode now
+  maybe
+    (return Nothing)
+    findById'
+    bookingId'
 
 findBookingIdBySpecialZoneOTP :: Transactionable m => Id Merchant -> Text -> UTCTime -> m (Maybe (Id Booking))
 findBookingIdBySpecialZoneOTP merchantId otpCode now = do
@@ -238,6 +273,21 @@ findBookingIdBySpecialZoneOTP merchantId otpCode now = do
         &&. booking ^. BookingProviderId ==. val (toKey merchantId)
     pure $ booking ^. BookingTId
 
+findBookingIdBySpecialZoneOTP' :: L.MonadFlow m => Id Merchant -> Text -> UTCTime -> m (Maybe (Id Booking))
+findBookingIdBySpecialZoneOTP' (Id merchantId) otpCode now = do
+  let otpExpiryCondition = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> do
+      result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamB.specialZoneOtpCode $ Se.Eq (Just otpCode), Se.Is BeamB.providerId $ Se.Eq merchantId, Se.Is BeamB.createdAt $ Se.LessThanOrEq otpExpiryCondition]]
+      case result of
+        Right booking -> do
+          bookingId <- mapM transformBeamBookingToDomain booking
+          pure $ Domain.Types.Booking.id <$> bookingId
+        Left _ -> pure Nothing
+    Nothing -> pure Nothing
+
+-- cancelBookings :: [Id Booking] -> UTCTime -> SqlDB ()
 -- cancelBookings :: [Id Booking] -> UTCTime -> SqlDB ()
 -- cancelBookings bookingIds now = do
 --   Esq.update $ \tbl -> do
@@ -267,6 +317,19 @@ findAllBookings = do
   Esq.findAll $ do
     booking <- from $ table @GeometryT
     pure $ booking ^. GeometryTId
+
+findAllBookings' :: L.MonadFlow m => m [Id Geometry]
+findAllBookings' = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> do
+      result <- KV.findAllWithKVConnector dbConf' Mesh.meshConfig []
+      case result of
+        Left _ -> pure []
+        Right geometries -> do
+          let booking = transformBeamGeometryToDomain <$> geometries
+          pure $ Domain.Types.Geometry.id <$> booking
+    Nothing -> pure []
 
 transformBeamBookingToDomain :: L.MonadFlow m => BeamB.Booking -> m Booking
 transformBeamBookingToDomain BeamB.BookingT {..} = do
