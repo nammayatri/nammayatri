@@ -450,5 +450,6 @@ const englishStrings = {
   "REASON_CHANGE_IN_ROUTE_A": "1.Change in Route: ",
   "REASON_CHANGE_IN_ROUTE_B": "Total fare may change due to change in route",
   "NAVIGATE_TO_PICKUP" : "Navigate to pickup",
-  "REQUEST_RECEIVED_WE_WILL_CALL_YOU_BACK_SOON" : "Request received. We will call you back soon"
+  "REQUEST_RECEIVED_WE_WILL_CALL_YOU_BACK_SOON" : "Request received. We will call you back soon",
+  "CONTACT_REMOVED_SUCCESSFULLY" : "Contact Removed Successfully"
 }

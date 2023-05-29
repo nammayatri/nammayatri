@@ -111,7 +111,6 @@ window.onMerchantEvent = function (event, payload) {
     if (clientId == "open-kochi") {
       window.merchantID = "YATRI"
     } else if (clientId == "jatrisaathi"){
-      console.log("inside merxchsnt id"+window.merchantID);
       window.merchantID = "JATRISAATHI"
     } else {
       window.merchantID = clientId.toUpperCase();

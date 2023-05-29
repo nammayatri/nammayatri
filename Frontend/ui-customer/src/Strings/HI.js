@@ -449,5 +449,6 @@ const hindiStrings = {
   "REASON_CHANGE_IN_ROUTE_A": "1.मार्ग में परिवर्तन: ",
   "REASON_CHANGE_IN_ROUTE_B": "मार्ग में बदलाव के कारण कुल किराए में बदलाव हो सकता है",
   "NAVIGATE_TO_PICKUP" : "पिकअप पर नेविगेट करें",
-  "REQUEST_RECEIVED_WE_WILL_CALL_YOU_BACK_SOON" : "अनुरोध प्राप्त हुआ है। हम जल्द ही आपसे संपर्क करेंगे"
+  "REQUEST_RECEIVED_WE_WILL_CALL_YOU_BACK_SOON" : "अनुरोध प्राप्त हुआ है। हम जल्द ही आपसे संपर्क करेंगे",
+  "CONTACT_REMOVED_SUCCESSFULLY" : "संपर्क सफलतापूर्वक निकाला गया"
 }
