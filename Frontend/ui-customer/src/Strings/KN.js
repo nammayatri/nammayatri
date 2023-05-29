@@ -442,5 +442,6 @@ const kannadaStrings = {
   "YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS": "ಕೆಳಗಿನ ಯಾವುದೇ ಕಾರಣಗಳಿಂದ ನೀವು ನವೀಕರಿಸಿದ ಅಂತಿಮ ದರವನ್ನು ನೋಡಬಹುದು:",
   "REASON_CHANGE_IN_ROUTE_A": "1.ಮಾರ್ಗದಲ್ಲಿ ಬದಲಾವಣೆ: ",
   "REASON_CHANGE_IN_ROUTE_B": "ಮಾರ್ಗದಲ್ಲಿನ ಬದಲಾವಣೆಯಿಂದಾಗಿ ಒಟ್ಟು ದರ ಬದಲಾಗಬಹುದು",
-  "NAVIGATE_TO_PICKUP" : "ಪಿಕಪ್ ಮಾಡಲು ನ್ಯಾವಿಗೇಟ್ ಮಾಡಿ"
+  "NAVIGATE_TO_PICKUP" : "ಪಿಕಪ್ ಮಾಡಲು ನ್ಯಾವಿಗೇಟ್ ಮಾಡಿ",
+  "CONTACT_REMOVED_SUCCESSFULLY" : "ಸಂಪರ್ಕವನ್ನು ಯಶಸ್ವಿಯಾಗಿ ತೆಗೆದುಹಾಕಲಾಗಿದೆ"
 }

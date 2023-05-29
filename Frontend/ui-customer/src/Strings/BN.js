@@ -436,5 +436,6 @@ const bengaliStrings = {
   "YOUR_NUMBER_WILL_BE_VISIBLE_TO_THE_DRIVER_USE_IF_NOT_CALLING_FROM_REGISTERED_NUMBER" : "আপনার নম্বরটি ড্রাইভারের কাছে দৃশ্যমান হবে। নিবন্ধিত নম্বর থেকে কল না করলে ব্যবহার করুন",
   "CALL_DRIVER_USING" : "ব্যবহার করে ড্রাইভারকে কল করুন:",
   "WAS_YOUR_CALL_SUCCESSFUL" : "আপনার কল সফল ছিল" ,
-  "NAVIGATE_TO_PICKUP" : "পিকআপে নেভিগেট করুন"
+  "NAVIGATE_TO_PICKUP" : "পিকআপে নেভিগেট করুন",
+  "CONTACT_REMOVED_SUCCESSFULLY" : "যোগাযোগ সফলভাবে সরানো হয়েছে"
 }

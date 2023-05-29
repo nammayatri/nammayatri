@@ -448,5 +448,6 @@ const hindiStrings = {
   "YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS": "आप नीचे दिए गए किसी भी कारण से अपडेटेड अंतिम किराया देख सकते हैं:",
   "REASON_CHANGE_IN_ROUTE_A": "1.मार्ग में परिवर्तन: ",
   "REASON_CHANGE_IN_ROUTE_B": "मार्ग में बदलाव के कारण कुल किराए में बदलाव हो सकता है",
-  "NAVIGATE_TO_PICKUP" : "पिकअप पर नेविगेट करें"
+  "NAVIGATE_TO_PICKUP" : "पिकअप पर नेविगेट करें",
+  "CONTACT_REMOVED_SUCCESSFULLY" : "संपर्क सफलतापूर्वक निकाला गया"
 }

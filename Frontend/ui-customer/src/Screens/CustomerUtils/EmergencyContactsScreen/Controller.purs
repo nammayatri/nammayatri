@@ -100,7 +100,7 @@ eval (PopUpModalAction PopUpModal.OnButton2Click) state = do
   let newContacts = filter (\x -> x.number <> x.name /= state.data.removedContactDetail.number <> state.data.removedContactDetail.name) state.data.contactsList
   contactsInString <- pure $ toString newContacts
   _ <- pure $ setValueToLocalStore CONTACTS contactsInString
-  updateAndExit state $ PostContacts state{data{contactsList = newContacts}, props{showInfoPopUp = false}}
+  exit $ PostContacts state{data{contactsList = newContacts}}
 
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state{props{showInfoPopUp = false}}
 
@@ -221,7 +221,6 @@ eval (ContactListAction(ContactListController.PrimaryButtonActionController Prim
   ) selectedContacts)
   contactsInString <- pure $ toString validSelectedContacts
   _ <- pure $ setValueToLocalStore CONTACTS contactsInString
-  _ <- pure $ toast (getString EMERGENCY_CONTACS_ADDED_SUCCESSFULLY)
   updateAndExit state $ PostContacts state{data{editedText = "", contactsList = validSelectedContacts}, props{showContactList = false}}
 
 eval CheckingContactList state = do
