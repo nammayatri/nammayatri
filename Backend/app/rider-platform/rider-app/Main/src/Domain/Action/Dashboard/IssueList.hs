@@ -21,7 +21,7 @@ import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto
+import Kernel.Storage.Esqueleto hiding (count)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -29,14 +29,22 @@ import qualified Storage.Queries.Issues as QIssue
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.Person as QPerson
 
-newtype IssueListRes = IssueListRes
-  { list :: [DI.Issue]
+data IssueListRes = IssueListRes
+  { list :: [DI.Issue],
+    summary :: Summary
   }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
+data Summary = Summary
+  { totalCount :: Int,
+    count :: Int
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 mobileIndianCode :: Text
 mobileIndianCode = "+91"
 
-getIssueList :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Flow [DI.Issue]
+getIssueList :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Flow IssueListRes
 getIssueList merchantShortId mbLimit mbOffset mbmobileCountryCode mbMobileNumber mbFrom mbTo = do
   now <- getCurrentTime
   merchant <- runInReplica $ QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
@@ -47,6 +55,12 @@ getIssueList merchantShortId mbLimit mbOffset mbmobileCountryCode mbMobileNumber
       mobileNumberDbHash <- getDbHash mobileNumber
       let mobileCountryCode = fromMaybe mobileIndianCode mbmobileCountryCode
       customer <- runInReplica $ QPerson.findByMobileNumberAndMerchantId mobileCountryCode mobileNumberDbHash merchant.id >>= fromMaybeM (PersonNotFound mobileNumber)
-      runInReplica $ QIssue.findByCustomerId customer.id mbLimit mbOffset fromDate toDate
+      issueList <- runInReplica $ QIssue.findByCustomerId customer.id mbLimit mbOffset fromDate toDate
+      let count = length issueList
+      let summary = Summary {totalCount = count, count}
+      return $ IssueListRes {list = issueList, summary = summary}
     Nothing -> do
-      runInReplica $ QIssue.findAllIssue mbLimit mbOffset fromDate toDate
+      issueList <- runInReplica $ QIssue.findAllIssue mbLimit mbOffset fromDate toDate
+      let count = length issueList
+      let summary = Summary {totalCount = count, count}
+      return $ IssueListRes {list = issueList, summary = summary}

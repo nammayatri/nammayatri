@@ -27,6 +27,7 @@ import qualified Dashboard.Common.Booking as Booking
 import qualified Dashboard.RiderPlatform.Customer as Customer
 import qualified Dashboard.RiderPlatform.Merchant as Merchant
 import qualified Dashboard.RiderPlatform.Ride as Ride
+import qualified "rider-app" Domain.Action.Dashboard.IssueList as DI
 import qualified "rider-app" Domain.Action.UI.Booking as DBooking
 import qualified "rider-app" Domain.Action.UI.Cancel as DCancel
 import qualified "rider-app" Domain.Action.UI.Frontend as DFrontend
@@ -38,7 +39,6 @@ import qualified "rider-app" Domain.Action.UI.Select as DSelect
 import qualified "rider-app" Domain.Types.Booking as SRB
 import qualified "rider-app" Domain.Types.Booking.API as DB
 import qualified "rider-app" Domain.Types.Estimate as DEstimate
-import qualified "rider-app" Domain.Types.Issue as DI
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "rider-app" Domain.Types.Person as DP
 import qualified "rider-app" Domain.Types.Quote as Quote
@@ -156,7 +156,7 @@ newtype CancelBookingAPIs = CancelBookingAPIs
   }
 
 newtype ListIssueAPIs = ListIssueAPIs
-  { listIssue :: Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Euler.EulerClient [DI.Issue]
+  { listIssue :: Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Euler.EulerClient DI.IssueListRes
   }
 
 mkAppBackendAPIs :: CheckedShortId DM.Merchant -> Text -> AppBackendAPIs
