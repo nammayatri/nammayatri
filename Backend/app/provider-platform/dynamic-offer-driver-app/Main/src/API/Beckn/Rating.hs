@@ -47,8 +47,12 @@ rating _ (SignatureAuthResult _ subscriber) req = withFlowHandlerBecknAPI $
     Redis.whenWithLockRedis (ratingLockKey dRatingReq.bookingId.getId) 60 $ do
       ride <- DRating.validateRequest dRatingReq
       fork "rating request processing" $
-        DRating.handler dRatingReq ride
+        Redis.whenWithLockRedis (ratingProcessingLockKey dRatingReq.bookingId.getId) 60 $
+          DRating.handler dRatingReq ride
     pure Ack
 
 ratingLockKey :: Text -> Text
 ratingLockKey id = "Driver:Rating:BookingId-" <> id
+
+ratingProcessingLockKey :: Text -> Text
+ratingProcessingLockKey id = "Driver:Rating:Processing:BookingId-" <> id
