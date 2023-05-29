@@ -16,7 +16,6 @@
 module Storage.Queries.Booking where
 
 import Data.Text (pack)
-import Data.Time.Clock (NominalDiffTime, UTCTime, addUTCTime)
 import Domain.Types.Booking
 import Domain.Types.DriverQuote (DriverQuote)
 import Domain.Types.Geometry
@@ -31,7 +30,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq hiding (findById, isNothing)
 import Kernel.Types.Id
 import Kernel.Types.Time
-import Kernel.Utils.Common (MonadTime (..), addUTCTime, getCurrentTime, secondsToNominalDiffTime)
+import Kernel.Utils.Common
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.Booking as BeamB
@@ -44,7 +43,7 @@ import Storage.Tabular.Booking
 import Storage.Tabular.Booking.BookingLocation
 import Storage.Tabular.DriverQuote as DriverQuote
 import qualified Storage.Tabular.FareParameters as Fare
-import Storage.Tabular.Geometry (EntityField (..), GeometryT (id))
+import Storage.Tabular.Geometry (EntityField (..), GeometryT ())
 
 baseBookingTable ::
   From

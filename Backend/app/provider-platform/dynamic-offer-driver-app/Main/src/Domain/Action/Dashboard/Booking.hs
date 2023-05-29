@@ -29,7 +29,6 @@ import qualified Domain.Types.Ride as DRide
 import Environment
 import Kernel.External.Maps (LatLong (..))
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.DriverLocation as SDrLoc
