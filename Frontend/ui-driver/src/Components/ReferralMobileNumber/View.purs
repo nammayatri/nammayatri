@@ -32,7 +32,9 @@ import Components.PrimaryButton as PrimaryButton
 import Data.String.CodeUnits (charAt)
 import Data.String (length)
 import Common.Types.App
-
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
 
 view :: forall w .(Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push state = 
@@ -60,7 +62,7 @@ view push state =
             ][  imageView
                 [ width (V 25)
                 , height (V 25)
-                , imageWithFallback "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
+                , imageWithFallback $ "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_chevron_left.png"
                 , margin (MarginLeft 14)
                 , onClick push (const OnBackClick)
                 ]
@@ -122,8 +124,6 @@ primaryEditTextConfig state = let
             editText
             {   singleLine = true
                 , pattern = state.pattern
-                , fontStyle = FontStyle.bold LanguageStyle
-                , textSize = FontSize.a_16
                 , color = Color.black800
                 , letterSpacing = state.letterSpacing
                 , placeholder = state.placeholder
@@ -144,7 +144,7 @@ primaryButtonConfig state = let
       { textConfig
       { text = state.primaryButtonText
       , color = Color.primaryButtonColor
-      , textSize = FontSize.a_18}
+      }
       , margin = (Margin 16 0 16 10)
       , cornerRadius = 8.0
       , background = Color.black900

@@ -14,13 +14,17 @@
 -}
 
 module Components.EmergencyHelp.Controller where
-import Components.PopUpModal.Controller as PopUpModalController
-import Components.GenericHeader.Controller (Action(..)) as GenericHeaderController
-import Screens.Types (Contact)
+
 import Prelude
-import PrestoDOM (Eval, continue, exit, continueWithCmd)
 import Styles.Types
+
+import Components.GenericHeader.Controller (Action(..)) as GenericHeaderController
+import Components.PopUpModal.Controller as PopUpModalController
+import Config.Types (AppConfig)
+import PrestoDOM (Eval, continue, exit, continueWithCmd)
+import Screens.Types (Contact)
 import Styles.Colors as Color
+import Config.DefaultConfig as DC
 
 data Action = NoAction 
             | CallPolicePopup
@@ -41,7 +45,8 @@ type EmergencyHelpModelState = {
      showCallContactPopUp :: Boolean,
      showCallSuccessfulPopUp :: Boolean,
      emergencyContactData :: Array Contact,
-     currentlySelectedContact :: Contact
+     currentlySelectedContact :: Contact,
+     config :: AppConfig
 }
 
 config :: EmergencyHelpModelState 
@@ -52,6 +57,7 @@ config = {
    , showCallSuccessfulPopUp : false
    , emergencyContactData : []
    , currentlySelectedContact : selectedContactData
+   , config : DC.config
 }
 
 selectedContactData ::  Contact

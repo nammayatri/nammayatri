@@ -38,6 +38,7 @@ import Screens.Types (HelpAndSupportScreenState)
 import Services.API (RideBookingRes(..), FareBreakupAPIEntity(..), RideAPIEntity(..), BookingLocationAPIEntity(..), RideBookingAPIDetails(..), RideBookingListRes(..))
 import Services.Config (getSupportNumber)
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
+import Config.DefaultConfig as DC
 
 instance showAction :: Show Action where
     show _ = ""
@@ -176,7 +177,8 @@ myRideListTransform listRes = filter (\item -> (item.data.status == "COMPLETED")
           rideId : ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._id),
           tripId : ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._shortRideId),
           bookingId : ride.id,
-          faresList :  getFaresList ride.fareBreakup baseDistanceVal
+          faresList : updatedFareList,
+          config : DC.config
           },
       props : {
         apiFailure : false
@@ -203,6 +205,7 @@ dummyState = {
     tripId : "",
     bookingId : "",
     faresList : []
+    config : DC.config
   },
   props:{
     apiFailure : false

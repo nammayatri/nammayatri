@@ -28,6 +28,8 @@ import Components.GenericHeader as GenericHeader
 import Components.SourceToDestination as SourceToDestination
 import Styles.Colors as Color
 import Common.Types.App
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Prelude ((<>))
 
 genericHeaderConfig :: ST.TripDetailsScreenState -> GenericHeader.Config 
 genericHeaderConfig state= let 
@@ -38,15 +40,13 @@ genericHeaderConfig state= let
      , prefixImageConfig {
         height = V 25
       , width = V 25
-      , imageUrl = "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
+      , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
       , margin = (Margin 12 12 12 12)
       , visibility = if state.props.issueReported then GONE else VISIBLE
       }
     , textConfig {
         text = if state.props.issueReported then "" else (getString RIDE_DETAILS)
-      , textSize = FontSize.a_18
       , color = Color.darkDescriptionText
-      , fontStyle = FontStyle.bold LanguageStyle
       }
     , suffixImageConfig {
         visibility = GONE
@@ -62,9 +62,20 @@ confirmLostAndFoundConfig state = let
       primaryText { text = (getString LOST_SOMETHING)},
       secondaryText {
         text = (getString TRY_CONNECTING_WITH_THE_DRIVER)
-      , margin = (Margin 0 4 0 20)},
-      option1 {text = (getString CANCEL_)},
-      option2 {text = (getString REQUEST_CALLBACK),margin = MarginLeft 12}
+      , margin = (Margin 0 4 0 20)}
+      , option1 { 
+          background = state.data.config.primaryTextColor
+        , strokeColor = state.data.config.primaryBackground
+        , color = state.data.config.primaryBackground
+        , text = (getString CANCEL_)
+        }
+      , option2 { 
+          color = state.data.config.primaryTextColor
+        , strokeColor = state.data.config.primaryBackground
+        , background = state.data.config.primaryBackground
+        , text = (getString REQUEST_CALLBACK)
+        , margin = MarginLeft 12
+        }
     }
     in popUpConfig'
 
@@ -77,29 +88,25 @@ sourceToDestinationConfig state = let
     , sourceMargin = (Margin 0 0 0 25)
     , lineMargin = (Margin 4 4 0 0)
     , sourceImageConfig {
-        imageUrl = "ny_ic_green_circle,https://assets.juspay.in/nammayatri/images/common/ny_ic_green_circle.png"
+        imageUrl = "ny_ic_green_circle," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_green_circle.png"
       , margin = (MarginTop 3)
       }
     , sourceTextConfig {
         text = state.data.source
-      , textSize = FontSize.a_12
       , padding = (Padding 2 0 2 2)
       , margin = (Margin 12 0 15 0)
-      , fontStyle = FontStyle.regular LanguageStyle
       , color = Color.greyDavy
       , ellipsize = false
       }
     , destinationImageConfig {
-        imageUrl = "ny_ic_red_circle,https://assets.juspay.in/nammayatri/images/common/ny_ic_red_circle.png"
+        imageUrl = "ny_ic_red_circle," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_red_circle.png"
       , margin = (MarginTop 3)
       }
     , destinationBackground = Color.blue600
     , destinationTextConfig {
         text = state.data.destination
-      , textSize = FontSize.a_12
       , padding = (Padding 2 0 2 2)
       , margin = (Margin 12 0 15 0)
-      , fontStyle = FontStyle.regular LanguageStyle
       , color = Color.greyDavy
       , ellipsize = false
       }
@@ -112,13 +119,11 @@ primaryButtonConfig state = let
     primaryButtonConfig' = config 
       { textConfig { 
           text = if state.props.issueReported then (getString GO_HOME_) else (getString SUBMIT)
-        , color = if (state.props.activateSubmit) || (state.props.issueReported ) then Color.yellow900 else "#FEEBB9"
-        , fontStyle = FontStyle.bold LanguageStyle
-        , textSize = FontSize.a_16
+        , color = state.data.config.primaryTextColor
         }
       , height = V 48
       , width = MATCH_PARENT
-      , background = if (state.props.activateSubmit || state.props.issueReported)  then Color.black900 else "#B9BABE"
+      , background = state.data.config.primaryBackground
       , alpha = if (state.props.activateSubmit || state.props.issueReported)  then 1.0 else 0.5 
       , isClickable = (state.props.activateSubmit || state.props.issueReported) 
       , margin = (Margin 16 0 16 16 ) 

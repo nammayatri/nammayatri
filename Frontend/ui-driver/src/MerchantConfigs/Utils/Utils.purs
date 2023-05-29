@@ -16,6 +16,7 @@ import Data.Either (hush)
 import Control.Monad.Except (runExcept)
 
 foreign import getStringFromConfig :: String -> String
+foreign import getValueFromConfig :: String -> String
 
 foreign import getValueFromConfig :: String -> String
 

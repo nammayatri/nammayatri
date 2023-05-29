@@ -30,6 +30,7 @@ import PrestoDOM (LetterSpacing)
 import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import Services.API (AddressComponents, BookingLocationAPIEntity, QuoteAPIEntity, Route)
+import Config.Types
 
 type Contacts = {
   name :: String,
@@ -160,6 +161,7 @@ type EnterMobileNumberScreenStateData = {
   , otp :: String
   , timer :: String
   , timerID :: String
+  , config :: AppConfig
 }
 -- ################################################ AccountSetUpScreenState ##################################################
 
@@ -187,6 +189,7 @@ type AccountSetUpScreenStateData =
   {   name :: String
     , email :: String
     , gender :: Maybe Gender
+    , config :: AppConfig
   }
 
  -- ######################################  TripDetailsScreenState   ######################################
@@ -216,7 +219,8 @@ type TripDetailsScreenData =
     paymentMode :: PaymentMode,
     rating :: Int,
     selectedItem :: IndividualRideCardState,
-    tripId :: String
+    tripId :: String,
+    config :: AppConfig
     -- bookingId :: String
   }
 
@@ -245,7 +249,8 @@ type InvoiceScreenData =
     gst :: Number,
     totalAmount :: String,
     date :: String ,
-    selectedItem :: IndividualRideCardState
+    selectedItem :: IndividualRideCardState,
+    config :: AppConfig
   }
 
 type InvoiceScreenProps =
@@ -267,7 +272,8 @@ type ContactUsScreenData =
     email :: String,
     subject :: String,
     description :: String,
-    bookingId :: String
+    bookingId :: String,
+    config :: AppConfig
   }
 
 type ContactUsScreenProps =
@@ -301,7 +307,8 @@ type HelpAndSupportScreenData =
     rideId :: String,
     vehicleNumber :: String,
     tripId :: String,
-    bookingId :: String
+    bookingId :: String,
+    config :: AppConfig
   }
 
 type HelpAndSuportScreenProps =
@@ -334,7 +341,8 @@ type MyRidesScreenState =
 type MyRideScreenData = {
     selectedItem :: IndividualRideCardState,
     offsetValue :: Int,
-    loadMoreText :: String
+    loadMoreText :: String,
+    config :: AppConfig
   }
 
 type MyRideScreenProps = {
@@ -409,8 +417,9 @@ type ItemState =
 
 -- ################################################ PermissionScreenState ##################################################
 
-type PermissionScreenState =
-  {}
+type PermissionScreenState = {
+    appConfig :: AppConfig
+}
 -- ######################################  HomeScreenState   ######################################
 
 data Stage = HomeScreen
@@ -497,6 +506,7 @@ type HomeScreenStateData =
   , specialZoneQuoteList :: Array ChooseVehicle.Config
   , specialZoneSelectedQuote :: Maybe String
   , selectedEstimatesObject :: ChooseVehicle.Config
+  , config :: AppConfig
   }
 
 type HomeScreenStateProps =
@@ -626,6 +636,7 @@ type ReferralScreenState =
     , showThanks :: Boolean
     , isInvalidCode :: Boolean
     , isExpandReference :: Boolean
+    , config :: AppConfig
   }
 
 -- ################################## SelectLanguageScreenState ###############################
@@ -636,7 +647,8 @@ type SelectLanguageScreenState = {
 }
 
 type SelectLanguageScreenData =  {
-  isSelected :: Boolean
+  isSelected :: Boolean,
+  config :: AppConfig
  }
 
 type SelectLanguageScreenProps =  {
@@ -673,7 +685,9 @@ type ContactDetail = {
 
 -- ############################################## AboutUsScreenState #############################
 
-type AboutUsScreenState = {}
+type AboutUsScreenState = {
+    appConfig :: AppConfig
+}
 
 -- ############################################## MyProfileScreenState #############################
 
@@ -714,7 +728,8 @@ type MyProfileScreenData = {
   gender :: Maybe Gender,
   editedEmailId :: Maybe String,
   editedGender :: Maybe Gender,
-  errorMessage :: Maybe EmailErrorType
+  errorMessage :: Maybe EmailErrorType,
+  config :: AppConfig
 }
 
 data EmailErrorType = INVALID_EMAIL | EMAIL_EXISTS
@@ -756,6 +771,7 @@ type DriverInfoCard =
   , driverNumber :: Maybe String
   , merchantExoPhone :: String
   , createdAt :: String
+  , config :: AppConfig
   }
 
 type RatingCard =
@@ -778,6 +794,7 @@ type RatingCard =
   , offeredFare :: Int
   , distanceDifference :: Int
   , feedback :: String
+  , appConfig :: AppConfig
   }
 
 type Address =
@@ -810,6 +827,7 @@ type SavedLocationScreenData =
   {
     savedLocations :: Array LocationListItemState
   , deleteTag :: Maybe String
+  , config :: AppConfig
   }
 
 type DistInfo =
@@ -872,6 +890,7 @@ type AddNewAddressScreenData =
   , latSelectedFromMap :: Number
   , lonSelectedFromMap :: Number
   , addressComponents :: Array AddressComponents
+  , config :: AppConfig
   }
 
 type AddNewAddressScreenProps =

@@ -190,27 +190,22 @@ descriptionText push state =
                       linkTitle = trim $ fromMaybe "" (titleAndUrl Array.!! 0)
                       linkUrl = trim $ fromMaybe "" (titleAndUrl Array.!! 1)
                       in
-                      textView
+                      textView $
                         [ width WRAP_CONTENT
                         , height WRAP_CONTENT
-                        , fontStyle $ FontStyle.regular LanguageStyle
-                        , textSize FontSize.a_14
                         , color Color.blue900
                         , textFromHtml linkTitle
-                        , textSize FontSize.a_14
                         , onClick (\action -> do
                                           _ <- openUrlInApp linkUrl
                                           pure unit
                                     ) (const $ NoAction)
-                        ]
+                        ] <> FontStyle.paragraphText LanguageStyle
                   else
-                    textView
+                    textView $
                       [ width WRAP_CONTENT
                       , height WRAP_CONTENT
                       , textFromHtml item
-                      , fontStyle $ FontStyle.regular LanguageStyle
-                      , textSize FontSize.a_14
-                      ]
+                      ] <> FontStyle.paragraphText LanguageStyle
             ) state.description
       )
 
@@ -223,16 +218,14 @@ descriptionAndComment state push =
     , margin $ Margin 16 0 16 16
     ]
     [ descriptionText push state
-    , textView
+    , textView $
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
-        , fontStyle $ FontStyle.bold LanguageStyle
-        , textSize FontSize.a_12
         , color Color.blue800
         , margin $ MarginTop 16
         , visibility GONE -- TODO :: Change the visibility in next iteration
         , text state.actionText
-        ]
+        ] <> FontStyle.body15 TypoGraphy
     , if isJust state.comment then customTextView (getString YOUR_COMMENT) FontSize.a_14 Color.black900 (MarginTop 16) $ FontStyle.medium LanguageStyle else textView []
     , linearLayout
         [ height WRAP_CONTENT
@@ -274,7 +267,6 @@ headerLayout state push =
             $ [ width WRAP_CONTENT
               , height WRAP_CONTENT
               , text $ getString MESSAGE
-              , textSize FontSize.a_18
               , margin $ MarginLeft 20
               , weight 1.0
               , gravity CENTER_VERTICAL
@@ -331,7 +323,7 @@ addCommentModelConfig state =
         , buttonLayoutMargin = (Margin 0 16 16 0)
         , editTextVisibility = VISIBLE
         , dismissPopupConfig { visibility = VISIBLE, height = V 12, width = V 12, margin = (Margin 0 21 22 0), padding = (Padding 8 8 8 8) }
-        , eTextConfig { editText { placeholder = (getString ENTER_YOUR_COMMENT), fontStyle = FontStyle.medium LanguageStyle, textSize = FontSize.a_14 }, topLabel { visibility = GONE, fontStyle = FontStyle.medium LanguageStyle, text = (getString ENTER_YOUR_COMMENT), color = Color.black900 }, margin = (Margin 16 16 16 0) }
+        , eTextConfig { editText { placeholder = (getString ENTER_YOUR_COMMENT) }, topLabel { visibility = GONE, text = (getString ENTER_YOUR_COMMENT), color = Color.black900 }, margin = (Margin 16 16 16 0) }
         , primaryText { text = (getString ADD_A_COMMENT), gravity = LEFT, margin = (Margin 16 21 0 0) }
         , secondaryText { visibility = GONE }
         , option1 { visibility = false }
@@ -341,8 +333,6 @@ addCommentModelConfig state =
           , color = Color.blue800
           , strokeColor = Color.white900
           , padding = (Padding 16 0 16 0)
-          , fontSize = FontSize.a_16
-          , fontStyle = FontStyle.medium LanguageStyle
           , isClickable = state.commentBtnActive
           }
         , cornerRadius = (Corners 15.0 true true true true)

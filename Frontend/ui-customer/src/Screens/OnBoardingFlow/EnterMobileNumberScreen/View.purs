@@ -167,18 +167,16 @@ enterMobileNumberView  state lang push =
 
 commonTextView :: ST.EnterMobileNumberScreenState -> String -> Boolean -> Maybe String -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 commonTextView state textValue isLink link push =
-  textView
+  textView $
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
     , text textValue--(getString TERMS_AND_CONDITIONS)
     , color if isLink then Color.blue900 else Color.black700
-    , textSize FontSize.a_12
-    , fontStyle $ FontStyle.medium LanguageStyle
     , onClick (\action -> do
                 when isLink $ JB.openUrlInApp (fromMaybe "www.nammayatri.in" link)--"https://drive.google.com/file/d/1qYXbQUF4DVo2xNOawkHNTR_VVe46nggc/view?usp=sharing"
                 pure unit
               ) (const TermsAndConditions)
-    ]
+    ] <> FontStyle.tags TypoGraphy
 
 ------------------------------------- enterOTPView --------------------------------------------
 enterOTPView:: ST.EnterMobileNumberScreenState -> String -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
@@ -215,31 +213,26 @@ enterOTPView state lang push=
       , height WRAP_CONTENT
       , orientation VERTICAL
       , alpha if state.props.resendEnable then 1.0 else 0.5
-      ][  textView
+      ][  textView $
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , text (getString RESEND)
-        , textSize FontSize.a_12
-        , fontStyle $ FontStyle.semiBold LanguageStyle
         , color Color.blue900
         , onClick push (const Resend)
-        ]
+        ] <> FontStyle.body9 TypoGraphy
         , linearLayout
           [ width MATCH_PARENT
           , height (V 1)
           , background Color.blue900
           ][]
       ]
-      , textView
+      , textView $
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , text if lang == "HI_IN" then ("  "<> state.data.timer <> "s  "<> getString IN) else ("  " <> getString IN <> "  "<> state.data.timer <> "  s")
-        , textSize FontSize.a_12
-        , lineHeight "22"
-        , fontStyle $ FontStyle.semiBold LanguageStyle
         , color Color.blue900
         , visibility if state.props.resendEnable then GONE else VISIBLE
-        ]]
+        ] <> FontStyle.body9 TypoGraphy]
       ,linearLayout
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
@@ -250,31 +243,25 @@ enterOTPView state lang push=
       , height WRAP_CONTENT
       , orientation VERTICAL
       , alpha if state.props.resendEnable then 1.0 else 0.5
-      ][  textView
+      ][  textView $
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , text (getString RESEND)
-        , textSize FontSize.a_12
-        , fontStyle $FontStyle.semiBold LanguageStyle
-
         , color Color.blue900
-        ]
+        ] <> FontStyle.body9 TypoGraphy
         , linearLayout
           [ width MATCH_PARENT
           , height (V 1)
           , background Color.blue900
           ][]
       ]
-      , textView
+      , textView $
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , text if lang == "HI_IN" then ("  "<> state.data.timer <> "s  "<> getString IN) else ("  " <> getString IN <> "  "<> state.data.timer <> "  s")
-        , textSize FontSize.a_12
-        , lineHeight "22"
-        , fontStyle $ FontStyle.semiBold LanguageStyle
         , color Color.blue900
         , visibility if state.props.resendEnable then GONE else VISIBLE
-        ]]
+        ] <> FontStyle.body9 TypoGraphy]
     , linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT

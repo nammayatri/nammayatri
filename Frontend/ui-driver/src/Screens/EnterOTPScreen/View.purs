@@ -103,7 +103,7 @@ backArrow state push =
       [ width (V 25)
       , height (V 25)
       , margin (MarginTop 20)
-      , imageWithFallback "ny_ic_back,https://assets.juspay.in/nammayatri/images/driver/ny_ic_back.png"
+      , imageWithFallback $ "ny_ic_back," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_back.png"
       , onClick push (const BackPressed)
       ]
   ]
@@ -163,24 +163,20 @@ underlinedTextView state push =
   , margin (MarginTop 18)
   , orientation VERTICAL
   , onClick push (const ResendOTP)
-  ][  textView
+  ][  textView $
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
       , text (getString RESEND_OTP)
-      , textSize FontSize.a_14
-      , fontStyle $ FontStyle.semiBold LanguageStyle
       , color Color.mainPrimary
       , visibility if state.props.resendEnabled then VISIBLE else GONE
-      ]
-    , textView
+      ] <> FontStyle.body6 LanguageStyle
+    , textView $
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
       , text $  (getString RESEND_OTP_IN) <> "  " <> state.data.timer
-      , textSize FontSize.a_14
-      , fontStyle $ FontStyle.semiBold LanguageStyle
       , visibility if state.props.resendEnabled then GONE else VISIBLE
       , color if state.props.resendEnabled then Color.mainPrimary else Color.black700
-      ]
+      ] <> FontStyle.body6 LanguageStyle
     , textView
       [ height $ V 1
       , width MATCH_PARENT

@@ -5,7 +5,7 @@ import Components.MenuButton.Controller as MenuButtonConfig
 import Components.MenuButton.View as MenuButton
 import Components.GenericHeader.Controller as GenericHeaderConfig
 import Components.GenericHeader.View as GenericHeader
-import Helpers.Utils (storeCallBackContacts, contactPermission)
+import Helpers.Utils (storeCallBackContacts, contactPermission, getAssetStoreLink, getCommonAssetStoreLink)
 import Prelude
 import Effect (Effect)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Gradient(..), background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, relativeLayout, frameLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, weight, width, textFromHtml, onBackPressed, scrollView, afterRender, stroke, alignParentBottom, gradient, editText, id, hint, pattern, onChange, imageWithFallback)
@@ -31,6 +31,7 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Engineering.Helpers.Commons (safeMarginTop, safeMarginBottom, os, getNewIDWithTag)
+import Prelude ((<>))
 
 view :: forall w. (Action -> Effect Unit) -> ContactsState -> PrestoDOM (Effect Unit) w
 view push config =
@@ -59,26 +60,24 @@ view push config =
         , gravity LEFT
         , stroke ("1," <> Color.borderColorLight)
         ]
-        [ editText
+        [ editText $ 
             [ height MATCH_PARENT
             , width WRAP_CONTENT
             , weight 1.0
-            , textSize FontSize.a_16
             , padding (Padding 14 10 0 10)
             , color Color.black800
             , gravity LEFT
             , id (getNewIDWithTag "contactEditText")
             , background Color.white900
-            , fontStyle $ FontStyle.semiBold LanguageStyle
             , text ""
             , hint $ getString SEARCH_CONTACTS
             , pattern "[^\n]*,255"
             , onChange push $ ContactTextChanged
-            ]
+            ] <> FontStyle.subHeading1 LanguageStyle
         , imageView
             [ height $ V 17
             , width $ V 17
-            , imageWithFallback "ny_ic_cancel,https://assets.juspay.in/nammayatri/images/user/ny_ic_cancel.png"
+            , imageWithFallback $ "ny_ic_cancel," <> (getAssetStoreLink FunctionCall) <> "ny_ic_cancel.png"
             , gravity RIGHT
             , margin (Margin 0 10 18 10)
             , onClick push $ const ClearText
@@ -117,15 +116,13 @@ genericHeaderConfig state =
         , prefixImageConfig
           { height = V 25
           , width = V 25
-          , imageUrl = "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
+          , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
           , margin = (Margin 12 12 12 12)
           }
         , padding = (Padding 0 5 0 5)
         , textConfig
           { text = ((show (state.count)) <> "/" <> show (3 - (length state.contactList)) <> " " <> (getString CONTACTS_SELECTED))
-          , textSize = FontSize.a_18
           , color = Color.darkDescriptionText
-          , fontStyle = FontStyle.semiBold LanguageStyle
           }
         , suffixImageConfig
           { visibility = GONE
@@ -185,11 +182,10 @@ showEmergencyContactData push config =
                   , background Color.blue600
                   , visibility if (((filter (\contact -> DS.take 1 contact.name == letter) config.contactsData) /= []) && (config.editedText == "")) then VISIBLE else GONE
                   ]
-                  [ textView
+                  [ textView $
                       [ text (letter)
-                      , textSize FontSize.a_12
                       , color Color.black700
-                      ]
+                      ] <> FontStyle.body3 TypoGraphy
                   ]
               , linearLayout
                   [ height MATCH_PARENT
@@ -228,21 +224,16 @@ showEmergencyContactData push config =
                                     , gravity CENTER_VERTICAL
                                     , weight 1.0
                                     ]
-                                    [ textView
+                                    [ textView (
                                         [ text (item.name)
                                         , color Color.black900
-                                        , textSize FontSize.a_14
                                         , margin (Margin 0 0 4 0)
-                                        , lineHeight "16"
-                                        , fontStyle $ FontStyle.medium LanguageStyle
-                                        ]
-                                    , textView
+                                        ] <> FontStyle.body1 TypoGraphy)
+                                    , textView (
                                         [ text ((item.number))
                                         , color Color.black700
-                                        , textSize FontSize.a_14
                                         , margin (Margin 0 0 0 0)
-                                        , fontStyle $ FontStyle.regular LanguageStyle
-                                        ]
+                                        ] <> FontStyle.paragraphText TypoGraphy)
                                     ]
                                 , linearLayout
                                     [ height $ V 24
@@ -254,7 +245,7 @@ showEmergencyContactData push config =
                                     [ imageView
                                         [ height if item.isSelected then V 24 else V 17
                                         , width if item.isSelected then V 24 else V 17
-                                        , imageWithFallback if item.isSelected then "ny_ic_selected_icon,https://assets.juspay.in/nammayatri/images/user/ny_ic_selected_icon.png" else "ny_ic_outer_circle,https://assets.juspay.in/nammayatri/images/user/ny_ic_outer_circle.png"
+                                        , imageWithFallback if item.isSelected then "ny_ic_selected_icon," <> (getAssetStoreLink FunctionCall) <> "ny_ic_selected_icon.png" else "ny_ic_outer_circle," <> (getAssetStoreLink FunctionCall) <> "ny_ic_outer_circle.png"
                                         ]
                                     ]
                                 ]

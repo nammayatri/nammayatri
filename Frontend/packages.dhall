@@ -167,8 +167,8 @@ in  upstream
       , "web-dom"
       , "web-events"
       ]
-    , repo = "https://github.com/belevy/purescript-presto-dom.git"
-    , version = "nammaYatri-p-0.15"
+    , repo = "https://github.com/Vignesh-772/purescript-presto-dom.git"
+    , version = "Add-font-weight"
     }
   with halogen-vdom =
     { dependencies =

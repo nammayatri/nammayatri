@@ -17,6 +17,8 @@ module Screens.RideHistoryScreen.ScreenData where
 
 import Screens.Types (AnimationState(..), RideHistoryScreenState, BottomNavBarState)
 import PrestoDOM.Types.Core (toPropValue)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
 
 initData :: RideHistoryScreenState
 initData = {

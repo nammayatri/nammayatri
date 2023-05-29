@@ -15,6 +15,7 @@
 
 module Screens.ReferralScreen.ScreenData where
 
+import Config.DefaultConfig as DC
 import Screens.Types (ReferralScreenState)
 
 initData :: ReferralScreenState
@@ -24,4 +25,5 @@ initData =
   , showThanks: false
   , isInvalidCode: false
   , isExpandReference: false
+  , config : DC.config
   }

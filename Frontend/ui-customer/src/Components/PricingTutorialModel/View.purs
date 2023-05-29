@@ -27,6 +27,7 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(
 import Styles.Colors as Color
 import Debug (spy)
 import Common.Types.App
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 
 view :: forall w .  (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
 view push =
@@ -38,16 +39,14 @@ view push =
       , background Color.white900
       , padding $ Padding 16 16 16 16
       ][  closeBtnView push
-        , textView
+        , textView $
             [ height WRAP_CONTENT
             , width MATCH_PARENT
-            , textSize FontSize.a_20
             , text (getString HOW_THE_PRICING_WORKS)
             , color Color.black800
-            , fontStyle $ FontStyle.bold LanguageStyle
             , gravity CENTER
             , margin (Margin 0 12 0 14)
-            ]
+            ] <> FontStyle.body8 TypoGraphy
         , listComponentView ""
       ]
 
@@ -65,7 +64,7 @@ closeBtnView push =
         ][  imageView
             [ height $ V 25
             , width $ V 25
-            , imageWithFallback "ny_ic_close,https://assets.juspay.in/nammayatri/images/common/ny_ic_close.png"
+            , imageWithFallback $ "ny_ic_close," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_close.png"
             , margin (Margin 12 12 12 12)
             ]
           ]
@@ -99,32 +98,28 @@ listComponentView dummy =
                 , weight 1.0
                 , orientation VERTICAL
                 , margin (Margin 16 20 10 9)
-                ][textView
+                ][textView (
                   [ height WRAP_CONTENT
                   , width WRAP_CONTENT
-                  , textSize FontSize.a_16
                   , text item.heading
                   , color Color.black800
-                  , fontStyle $ FontStyle.semiBold LanguageStyle
                   , margin (Margin 0 0 0 9)
-                  ]
+                  ] <> FontStyle.subHeading1 TypoGraphy)
                 , textView $
                   [ height WRAP_CONTENT
                   , width WRAP_CONTENT
                   , textFromHtml item.subHeading
                   , color Color.black700
                   ]<> FontStyle.paragraphText TypoGraphy
-                , textView
+                , textView (
                   [ height WRAP_CONTENT
                   , width WRAP_CONTENT
-                  , textSize FontSize.a_12
                   , text (fromMaybe "" item.note)
                   , color Color.black700
-                  , fontStyle $ FontStyle.medium LanguageStyle
                   , lineHeight "13"
                   , margin (MarginTop 6)
                   , visibility if item.note /= Nothing then VISIBLE else GONE
-                  ]
+                  ] <> FontStyle.tags TypoGraphy)
                 ]
                 , imageView
                       [height $ V 110
@@ -141,17 +136,17 @@ cardData dummy =
     { heading : (getString GET_ESTIMATE_FARE),
       subHeading : (getString ASK_FOR_PRICE_INFO),
       note : Nothing,
-      image : "ny_ic_ask_price,https://assets.juspay.in/nammayatri/images/user/ny_ic_ask_price.png"
+      image : "ny_ic_ask_price," <> (getCommonAssetStoreLink FunctionCall) <> "user/images/ny_ic_ask_price.png"
     },
     { heading : (getString SELECT_AN_OFFER_FROM_OUR_DRIVERS),
       subHeading : (getString SELECT_AN_OFFER_FROM_OUR_DRIVERS_INFO),
       note : Nothing,
-      image : "ny_ic_select_offer,https://assets.juspay.in/nammayatri/images/user/ny_ic_select_offer.png"
+      image : "ny_ic_select_offer," <> (getCommonAssetStoreLink FunctionCall) <> "user/images/ny_ic_select_offer.png"
     },
     { heading : (getString PAY_THE_DRIVER),
       subHeading : (getString PAY_THE_DRIVER_INFO),
       note : Just (getString PAY_THE_DRIVER_NOTE),
-      image : "ny_ic_pay_driver,https://assets.juspay.in/nammayatri/images/user/ny_ic_pay_driver.png"
+      image : "ny_ic_pay_driver," <> (getCommonAssetStoreLink FunctionCall) <> "user/images/ny_ic_pay_driver.png"
     }
   ]
 

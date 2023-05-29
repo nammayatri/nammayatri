@@ -403,10 +403,12 @@ export const datePicker = function (label)
 export const setFCMToken = function (cb) {
   return function (action) {
     return function () {
-      var callback = callbackMapper.map(function (id) {
-        cb(action(id))();
-      });
-      return window.JBridge.setFCMToken(callback);
+      if (window.JBridge.setFCMToken) {
+        var callback = callbackMapper.map(function (id) {
+          cb(action(id))();
+        });
+        return window.JBridge.setFCMToken(callback);
+      }
     };
   };
   // JBridge.setFCMToken();
@@ -909,14 +911,20 @@ export const _onEventWithCB = function (payload) {
 // exports.getSessionInfo = JSON.parse(JBridge.getDeviceInfo());
 
 export const getKeyInSharedPrefKeys = function (key) {
-  return window.JBridge.getKeysInSharedPrefs(key);
+  if (JBridge.getKeysInSharedPref){
+    return JBridge.getKeysInSharedPref(key);
+  }
+  return JBridge.getKeysInSharedPrefs(key);
 };
 
 export const getKeyInNativeSharedPrefKeys = function (key) {
+  if (JBridge.getKeysInSharedPref) {
+    return JBridge.getKeysInSharedPref(key);
+  }
   if (window.__OS == "IOS") {
-    return window.JBridge.getKeysInSharedPrefs(key);
-  } else {
-    return window.JBridge.getKeyInNativeSharedPrefKeys(key);
+    return JBridge.getKeysInSharedPrefs(key);
+  } else { 
+    return JBridge.getKeyInNativeSharedPrefKeys(key);
   }
 };
 
@@ -928,11 +936,7 @@ export const setKeyInSharedPrefKeysImpl = function (key) {
 
 export const setEnvInNativeSharedPrefKeysImpl = function (key) {
   return function (value) {
-    if (window.__OS == "IOS") {
-      window.JBridge.setKeysInSharedPrefs(key, value);
-    } else {
-      window.JBridge.setEnvInNativeSharedPrefKeys(key, value);
-    }
+      JBridge.setKeysInSharedPrefs(key, value);
   };
 };
 
@@ -943,19 +947,11 @@ export const setEnvInNativeSharedPrefKeysImpl = function (key) {
 // };
 
 export const removeKeysInSharedPrefs = function (key) {
-  if (window.__OS == "IOS") {
-    return window.JBridge.removeFromSharedPrefs(key);
-  } else {
-    return window.JBridge.removeKeysInSharedPrefs(key);
-  }
+    return JBridge.removeFromSharedPrefs(key);
 };
 
 export const removeKeysInNativeSharedPrefs = function (key) {
-  if (window.__OS == "IOS") {
-    window.JBridge.removeFromSharedPrefs(key);
-  } else {
-    window.JBridge.removeKeysInNativeSharedPrefs(key);
-  }
+    JBridge.removeFromSharedPrefs(key);
 };
 
 export const toggleLoaderImpl = function (showLoader) {
@@ -1017,11 +1013,17 @@ export const storeCallBackDriverLocationPermission = function (cb) {
   return function (action) {
       return function () {
           var callback = callbackMapper.map(function (isLocationPermissionGranted) {
-              cb(action (isLocationPermissionGranted))();
+            cb(action (isLocationPermissionGranted))();
           });
+          var locationCallBack = function () {
+            var isPermissionEnabled = JBridge.isLocationPermissionEnabled()
+            cb(action (isPermissionEnabled))();
+          };
+          if (window.onResumeListeners){
+            window.onResumeListeners.push(locationCallBack);
+          };
           console.log("In storeCallBackDriverLocationPermission ---------- + " + action);
-          window.JBridge.storeCallBackDriverLocationPermission(callback);
-      }
+      }    
   }}
   catch (error){
       console.log("Error occurred in storeCallBackDriverLocationPermission ------", error);
@@ -1066,12 +1068,18 @@ export const storeCallBackOverlayPermission = function (cb) {
           var callback = callbackMapper.map(function (isOverlayPermission) {
               cb(action (isOverlayPermission))();
           });
-          console.log("In storeCallBackOverlapPermission ---------- + " + action);
-          window.JBridge.storeCallBackOverlayPermission(callback);
-      }
+          var overlayCallBack = function () {
+            var isPermissionEnabled = JBridge.isOverlayPermissionEnabled()
+            cb(action (isPermissionEnabled))();
+          }
+          if (window.onResumeListeners){
+            window.onResumeListeners.push(overlayCallBack);
+          }
+          console.log("In storeCallBackOverlayPermission ---------- + " + action);
+      }    
   }}
   catch (error){
-      console.log("Error occurred in storeCallBackOverlapPermission ------", error);
+      console.log("Error occurred in storeCallBackOverlayPermission ------", error);
   }
 }
 
@@ -1082,9 +1090,15 @@ export const storeCallBackBatteryUsagePermission = function (cb) {
           var callback = callbackMapper.map(function (isPermissionEnabled) {
               cb(action (isPermissionEnabled))();
           });
+          var batteryCallBack = function () {
+            var isPermissionEnabled = JBridge.isBatteryPermissionEnabled()
+            cb(action (isPermissionEnabled))();
+          }
+          if (window.onResumeListeners){
+            window.onResumeListeners.push(batteryCallBack);
+          }
           console.log("In storeCallBackBatteryUsagePermission ---------- + " + action);
-          window.JBridge.storeCallBackBatteryUsagePermission(callback);
-      }
+      }    
   }}
   catch (error){
       console.log("Error occurred in storeCallBackBatteryUsagePermission ------", error);
@@ -1290,15 +1304,9 @@ export const startLottieProcess = function (rawJson) {
       return function (speed) {
         return function (scaleType){
           if (JBridge.startLottieProcess) {
-            try {
-              return JBridge.startLottieProcess(rawJson,lottieId, loop, speed, scaleType);
-            } catch (err) {
-              /*
-              * This Function is deprecated on 12 Jan - 2023
-              * Remove this function once it is not begin used.
-              */
-              return JBridge.startLottieProcess(rawJson,lottieId, loop, speed);
-            }
+            var fileName = rawJson.substr(rawJson.lastIndexOf("/") + 1);
+            var lottieName = JBridge.isFilePresent(fileName) ? (fileName.slice(0,fileName.lastIndexOf("."))) : rawJson;
+            return JBridge.startLottieProcess(lottieName,lottieId, loop, speed, scaleType);
           }
         };
       };
@@ -1401,4 +1409,28 @@ export const goBackPrevWebPage = function (id) {
   } catch (err) {
     console.log("goBackPrevWebPage error " + err);
   }
+}
+
+export const emitJOSEvent = function (mapp,eventType,payload) {
+  var event = payload.split(",");
+  var resultPayload = {};
+  if (event[0] == "event") {
+    resultPayload = {
+      event : event[1]
+    }
+  } else if (event[0] == "action") {
+    resultPayload = {
+      event : "process_result",
+      payload : {
+        action : event[1]
+      }
+    }
+  }
+  JOS.emitEvent(mapp)(eventType)(JSON.stringify(resultPayload))()()
+}
+export const locationPermissionCallBack = function (cb,action) {
+  var locationRequestCallBack = function (){
+    cb(action)();
+  }
+  window.locationRequestCallBack = locationRequestCallBack;
 }

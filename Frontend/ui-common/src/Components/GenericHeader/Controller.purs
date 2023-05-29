@@ -16,10 +16,12 @@
 module Components.GenericHeader.Controller where
 
 import Font.Size as FontSize
-import Font.Style as FontStyle
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), padding)
+import Font.Style (Style(..))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), Orientation(..), padding)
 import Common.Styles.Colors as Color
 import Common.Types.App
+import Prelude ((<>))
+import Helpers.Utils (getCommonAssetStoreLink)
 
 data Action = SuffixImgOnClick | PrefixImgOnClick
 
@@ -30,6 +32,7 @@ type Config =
   , margin :: Margin
   , padding :: Padding
   , background :: String
+  , orientation :: Orientation
   , isClickable :: Boolean
   , gravity :: Gravity
   , prefixImageConfig :: ImageConfig
@@ -50,10 +53,9 @@ type ImageConfig =
 type TextConfig =
   {
     text :: String
-  , textSize :: Int
   , margin :: Margin
-  , fontStyle :: String
   , color :: String
+  , textStyle :: Style
   }
 
 config :: Config
@@ -61,24 +63,59 @@ config = {
     height : V 56
   , width : MATCH_PARENT
   , margin : (Margin 0 0 0 0)
-  , padding : (Padding 0 0 0 0)
+  , padding : (Padding 0 5 0 5)
   , background : Color.white900
   , gravity : CENTER_VERTICAL
   , isClickable : true
+  , orientation : HORIZONTAL
   , prefixImageConfig : {
+      height : V 25
+    , width : V 25
+    , imageUrl : "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
+    , padding : (Padding 0 0 0 0)
+    , margin : (Margin 12 12 12 12)
+    , visibility : VISIBLE
+    }
+  , textConfig : {
+      text : ""
+    , textStyle : Heading3
+    , margin : (Margin 0 0 0 0)
+    , color : Color.black800
+    }
+  , suffixImageConfig : {
       height : V 25
     , width : V 25
     , imageUrl : ""
     , padding : (Padding 0 0 0 0)
     , margin : (Margin 0 0 0 0)
+    , visibility : GONE
+    }
+
+}
+
+merchantConfig :: Config
+merchantConfig = {
+    height : V 56
+  , width : MATCH_PARENT
+  , margin : (Margin 0 0 0 0)
+  , padding : (Padding 0 0 0 0)
+  , background : Color.white900
+  , gravity : CENTER_VERTICAL
+  , isClickable : true
+  , orientation : VERTICAL
+  , prefixImageConfig : {
+      height : V 25
+    , width : V 25
+    , imageUrl : "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
+    , padding : (Padding 0 0 0 0)
+    , margin : (Margin 16 16 16 12)
     , visibility : VISIBLE
     }
   , textConfig : {
       text : ""
-    , textSize : FontSize.a_18
-    , margin : (Margin 0 0 0 0)
-    , fontStyle : FontStyle.semiBold LanguageStyle
-    , color : Color.black
+    , textStyle : Heading0
+    , margin : (Margin 16 0 16 10)
+    , color : "#101010"
     }
   , suffixImageConfig : {
       height : V 25

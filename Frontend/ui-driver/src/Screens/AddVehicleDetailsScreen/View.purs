@@ -41,6 +41,9 @@ import PrestoDOM.Types.DomAttributes as PTD
 import Screens.AddVehicleDetailsScreen.Controller (Action(..), eval, ScreenOutput)
 import Screens.Types (AddVehicleDetailsScreenState)
 import Styles.Colors as Color
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
 
 screen :: AddVehicleDetailsScreenState -> Screen Action AddVehicleDetailsScreenState ScreenOutput
 screen initialState =
@@ -127,12 +130,12 @@ view push state =
         linearLayout
         [ width MATCH_PARENT
         , height MATCH_PARENT
-        ] [TutorialModal.view (push <<< TutorialModalAction) {imageUrl : "ny_ic_vehicle_registration_card,https://assets.juspay.in/nammayatri/images/driver/ny_ic_vehicle_registration_card.png"}] else linearLayout [][]
+        ] [TutorialModal.view (push <<< TutorialModalAction) {imageUrl : "ny_ic_vehicle_registration_card," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_vehicle_registration_card.png"}] else linearLayout [][]
     , if state.props.openRegistrationDateManual then 
         linearLayout
         [ width MATCH_PARENT
         , height MATCH_PARENT
-        ] [TutorialModal.view (push <<< TutorialModalAction) {imageUrl : "ny_ic_date_of_registration,https://assets.juspay.in/nammayatri/images/driver/ny_ic_date_of_registration.png"}] else linearLayout [][]
+        ] [TutorialModal.view (push <<< TutorialModalAction) {imageUrl : "ny_ic_date_of_registration," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_date_of_registration.png"}] else linearLayout [][]
     , if state.props.limitExceedModal then 
         linearLayout
         [ width MATCH_PARENT
@@ -158,20 +161,16 @@ applyReferralView state push =
   , margin (MarginBottom 40)
   , visibility if(state.props.referralViewstatus == true) then GONE else VISIBLE
   , cornerRadius 8.0
-  ][  textView 
+  ][  textView $
       [ text (getString HAVE_A_REFERRAL)
       , color Color.black700
-      , textSize FontSize.a_14
-      , fontStyle $ FontStyle.medium LanguageStyle
       , margin (MarginRight 8)
-      ]
-    , textView
+      ] <> FontStyle.body1 TypoGraphy
+    , textView $
       [ text (getString ADD_HERE)
       , color Color.blue900
-      , textSize FontSize.a_14
       , onClick push (const ReferralMobileNumber)
-      , fontStyle $ FontStyle.medium LanguageStyle
-      ]]
+      ] <> FontStyle.body1 TypoGraphy]
 
 referralAppliedView :: AddVehicleDetailsScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w 
 referralAppliedView state push = 
@@ -195,37 +194,31 @@ referralAppliedView state push =
           , gravity CENTER
           , orientation HORIZONTAL
           ][  imageView
-              [ imageWithFallback  "ny_ic_check_green,https://assets.juspay.in/nammayatri/images/driver/ny_ic_check_green.png"
+              [ imageWithFallback $ "ny_ic_check_green," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_check_green.png"
               , width (V 11)
               , height (V 8)
               ]
-            , textView
+            , textView $
               [ margin (MarginLeft 11)
               , text (getString REFERRAL_APPLIED)
-              , textSize FontSize.a_14
               , color Color.darkMint
-              , fontStyle $ FontStyle.medium LanguageStyle
-              ]
+              ] <> FontStyle.body1 TypoGraphy
             ]
         , linearLayout
           [ height WRAP_CONTENT
           , width WRAP_CONTENT
           , orientation HORIZONTAL
           , alignParentRight "true,-1"
-          ][  textView 
+          ][  textView $
               [ margin (MarginRight 8)
               , text state.data.referral_mobile_number
-              , textSize FontSize.a_14
               , color Color.black800
-              , fontStyle $ FontStyle.medium LanguageStyle
-              ]
-            , textView
+              ] <> FontStyle.body1 TypoGraphy
+            , textView $
               [ text (getString SMALLEDIT)
               , color Color.blue900
-              , textSize FontSize.a_14
-              , fontStyle $ FontStyle.medium LanguageStyle
               , onClick push (const ReferralMobileNumber)
-              ]
+              ] <> FontStyle.body1 TypoGraphy
             ]
         ]
     ]
@@ -256,17 +249,15 @@ vehicleRegistrationNumber state push =
               , color Color.greyTextColor
               , margin (MarginBottom 10)
               ] <> FontStyle.body3 TypoGraphy)
-          ,   textView -- (Required Field Indication)
+          ,   textView $ -- (Required Field Indication)
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
               , text "*"
               , color Color.warningRed
-              , textSize FontSize.a_18
-              , fontStyle $ FontStyle.bold LanguageStyle
               , alpha 0.8
               , visibility GONE
               , margin (MarginBottom 10)
-              ]
+              ] <> FontStyle.h2 TypoGraphy
             ] 
         , linearLayout
           [ width MATCH_PARENT
@@ -285,7 +276,6 @@ vehicleRegistrationNumber state push =
               , color Color.greyTextColor
               , text state.props.input_data
               , hint (getString ENTER_VEHICLE_NO)
-              , textSize FontSize.a_16
               , weight 1.0
               , cornerRadius 4.0
               , pattern "[0-9A-Z]*,11"
@@ -295,11 +285,10 @@ vehicleRegistrationNumber state push =
               , inputTypeI 4097
               ] <> FontStyle.subHeading1 TypoGraphy)
             ]
-          , textView  -- (Error Indication)
+          , textView $ -- (Error Indication)
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
             , text (getString CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER)
-            , textSize FontSize.a_14
             , color Color.warningRed
             , fontStyle $ FontStyle.regular LanguageStyle
             , margin (MarginTop 10)
@@ -321,17 +310,16 @@ vehicleRegistrationNumber state push =
                   , color Color.greyTextColor
                   , margin (MarginVertical 10 10)
                   ] <> FontStyle.body3 TypoGraphy)
-              ,   textView -- (Required Field Indication)
+              ,   textView $ -- (Required Field Indication)
                   [ width WRAP_CONTENT
                   , height WRAP_CONTENT
                   , text "*"
                   , color Color.warningRed
-                  , textSize FontSize.a_18
-                  , fontStyle $ FontStyle.bold LanguageStyle
                   , alpha 0.8
                   , visibility GONE
                   , margin (MarginBottom 10)
-                  ]
+                  ] <> FontStyle.h2 TypoGraphy
+                
                 ] 
               , linearLayout
                 [ width MATCH_PARENT
@@ -350,7 +338,6 @@ vehicleRegistrationNumber state push =
                     , color Color.greyTextColor
                     , text state.props.input_data
                     , hint  (getString ENTER_VEHICLE_NO)
-                    , textSize FontSize.a_16
                     , weight 1.0
                     , cornerRadius 4.0
                     , pattern "[0-9A-Z]*,11"
@@ -401,17 +388,15 @@ uploadRC state push =
             , color Color.greyTextColor
             , margin (MarginBottom 10)
             ] <> FontStyle.body3 TypoGraphy)
-          , textView -- (Required Field Indication)
+          , textView $ -- (Required Field Indication)
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
             , text "*"
             , color Color.warningRed
-            , textSize FontSize.a_18
-            , fontStyle $ FontStyle.bold LanguageStyle
             , alpha 0.8
             , visibility GONE
             , margin (MarginBottom 10)
-            ]
+            ] <> FontStyle.h2 TypoGraphy
             ]
         , linearLayout
           [ width MATCH_PARENT
@@ -422,7 +407,7 @@ uploadRC state push =
           ][ imageView
             [ width ( V 328 )
             , height ( V 166 )
-            , imageWithFallback  "ny_ic_rc_demo,https://assets.juspay.in/nammayatri/images/driver/ny_ic_rc_demo.png"
+            , imageWithFallback $ "ny_ic_rc_demo," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_rc_demo.png"
             ]
           ]
         , linearLayout
@@ -443,7 +428,6 @@ uploadRC state push =
               , color if state.props.rcAvailable then Color.greyTextColor else Color.darkGrey
               , fontStyle $ FontStyle.semiBold LanguageStyle
               , text if state.props.rcAvailable then state.props.rc_name else (getString UPLOAD_RC)
-              , textSize FontSize.a_16
               , maxLines 1
               , ellipsize true
               , weight 1.0
@@ -460,16 +444,14 @@ uploadRC state push =
                 , previewIcon state push
                 ]
              ]
-        , textView  -- (Error Indication)
+        , textView $ -- (Error Indication)
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , text "some_text"
-          , textSize FontSize.a_14
           , color Color.warningRed
-          , fontStyle $ FontStyle.regular LanguageStyle
           , margin (MarginTop 10)
           , visibility GONE
-          ]
+          ] <> FontStyle.paragraphText TypoGraphy
         ]
      ]
 
@@ -482,7 +464,7 @@ uploadIcon state push =
     , gravity CENTER
     , visibility if (state.props.rcAvailable ) then GONE else VISIBLE
     ][  imageView
-        [ imageWithFallback "ny_ic_camera_front,https://assets.juspay.in/nammayatri/images/driver/ny_ic_camera_front.png"
+        [ imageWithFallback $ "ny_ic_camera_front," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_camera_front.png"
           , height (V 20)
           , width (V 20)
         ]
@@ -509,7 +491,7 @@ previewIcon state push =
         [ height (V 10)
         , width (V 10)
         , margin (Margin 10 0 0 0)
-        , imageWithFallback "ny_ic_close,https://assets.juspay.in/nammayatri/images/common/ny_ic_close.png"
+        , imageWithFallback $ "ny_ic_close," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_close.png"
         , onClick push (const RemoveUploadedFile)
         ]
     ]
@@ -579,7 +561,7 @@ dateOfRCRegistrationView push state =
       , imageView
         [ width $ V 20
         , height $ V 20
-        , imageWithFallback "ny_ic_calendar,https://assets.juspay.in/nammayatri/images/driver/ny_ic_calendar.png"
+        , imageWithFallback $ "ny_ic_calendar," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_calendar.png"
         ]
       ]
     ]
@@ -610,7 +592,7 @@ headerLayout state push =
   ][  imageView
       [ width $ V 25
       , height $ V 25
-      , imageWithFallback "ny_ic_back,https://assets.juspay.in/nammayatri/images/driver/ny_ic_back.png"
+      , imageWithFallback $ "ny_ic_back," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_back.png"
       , layoutGravity "center_vertical"
       , padding $ PaddingHorizontal 2 2
       , margin $ MarginLeft 5

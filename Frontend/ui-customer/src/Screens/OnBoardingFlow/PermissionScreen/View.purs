@@ -15,23 +15,27 @@
 
 module Screens.PermissionScreen.View where
 
+import Common.Types.App
 import Data.Maybe
+import Screens.OnBoardingFlow.PermissionScreen.ComponentConfig
+
+import Common.Types.App (LazyCheck(..))
 import Components.ErrorModal as ErrorModal
 import Components.PrimaryButton as PrimaryButton
 import Effect (Effect)
-import Engineering.Helpers.Commons as EHC 
+import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Prelude ((<>))
 import Prelude (Unit, bind, const, pure, unit, (<<<), ($), (==))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, ScopedScreen, afterRender, alignParentBottom, background, clickable, color, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, margin, orientation, padding, relativeLayout, text, textSize, textView, width, imageWithFallback)
 import Screens.PermissionScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
-import Common.Types.App
-import Screens.OnBoardingFlow.PermissionScreen.ComponentConfig 
 
 screen :: ST.PermissionScreenState -> String -> ScopedScreen Action ST.PermissionScreenState ScreenOutput
 screen initialState triggertype = 
@@ -60,7 +64,7 @@ view triggertype push state =
      , padding $ Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom
      , gravity CENTER
      , afterRender push (const AfterRender)
-     ][ if triggertype == "INTERNET_ACTION" then ErrorModal.view (push <<< ErrorModalActionController) (errorModalConfig) else if triggertype == "LOCATION_DISABLED" then locationAccessPermissionView push state else  textView[]]  
+     ][ if triggertype == "INTERNET_ACTION" then ErrorModal.view (push <<< ErrorModalActionController) (errorModalConfig state) else if triggertype == "LOCATION_DISABLED" then locationAccessPermissionView push state else  textView[]]  
    ]
   
 locationAccessPermissionView :: forall w. (Action -> Effect Unit) -> ST.PermissionScreenState -> PrestoDOM (Effect Unit) w 
@@ -86,29 +90,25 @@ locationAccessPermissionView push state =
         --   , imageUrl "ic_close"
         --   ]
         -- ]
-      textView 
+      textView $
       [ text (getString WE_NEED_ACCESS_TO_YOUR_LOCATION)
-      , textSize FontSize.a_22
       , color Color.black800
       , gravity LEFT
       , lineHeight "27"
       , margin (Margin 0 22 0 16)
-      , fontStyle $ FontStyle.bold LanguageStyle
-      ]
-    , textView
+      ] <> FontStyle.h1 TypoGraphy
+    , textView $
       [ text (getString YOUR_LOCATION_HELPS_OUR_SYSTEM)
-      , textSize FontSize.a_16
       , color Color.black800
-      , fontStyle $ FontStyle.regular LanguageStyle
       , lineHeight "22"
-      ]
+      ] <> FontStyle.body5 TypoGraphy
     ]
     , linearLayout[
       height MATCH_PARENT
     , width MATCH_PARENT
     , gravity CENTER
     ][imageView
-      [ imageWithFallback "ny_ic_location_access,https://assets.juspay.in/nammayatri/images/common/ny_ic_location_access.png"
+      [ imageWithFallback $ "ny_ic_location_access," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_location_access.png"
       , height $ V 213
       , width $ V 240
       , gravity CENTER
@@ -124,7 +124,7 @@ buttonView push state  =
   , height WRAP_CONTENT
   , width MATCH_PARENT
   , alignParentBottom "true,-1"
-  ][  PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig)
+  ][  PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)
   -- ,  textView $
   --     [ text (getString DENY_ACCESS)
   --     , width MATCH_PARENT

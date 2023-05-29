@@ -1,5 +1,5 @@
 export function getMerchantString(key){
-    var selectedLanguage = JBridge.getKeysInSharedPrefs("LANGUAGE_KEY");
+    var selectedLanguage = JBridge.getKeysInSharedPref("LANGUAGE_KEY");
     switch(selectedLanguage) {
         case "ML_IN" :
             return getStringMLValue(key);
@@ -53,7 +53,10 @@ const config = {
     "DOCUMENT_LINK" : "https://docs.google.com/document/d/1zmQWO_L4EjyCXC3xSlp1f3DS2wI4HfbHxg42tXelWe0",
     "PRIVACY_POLICY_LINK" : "https://docs.google.com/document/d/1gI_P4oZnVwE0O71rI4Mi8rpZbL9rsIRkyewbql85Np8",
     "APP_LINK" : getAppLink(window.__OS),
-    "CUSTOMER_TIP" : "false"
+    "CUSTOMER_TIP" : "false",
+    "isShareAppEnabled" : "true",
+    "apiLoaderLottie" : "primary_button_loader",
+    "isChatEnabled" : "true"
 }
 
 const malayalamStrings = {

@@ -41,6 +41,9 @@ import Animation (translateYAnimFromTop)
 import Animation.Config (translateFullYAnimWithDurationConfig)
 import JBridge(getHeightFromPercent)
 import Common.Types.App
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
 
 view :: forall w. (Action -> Effect Unit) -> Array LocationListItemState -> PrestoDOM ( Effect Unit ) w
 view push state =
@@ -80,14 +83,11 @@ view push state =
             , width MATCH_PARENT
             , padding $ Padding 16 12 16 16
             , gravity CENTER
-            ][  textView
+            ][  textView $
                 [ text (getString ADD_SAVED_LOCATION_FROM_SETTINGS)
-                , textSize FontSize.a_12
-                , lineHeight "16"
-                , fontStyle $ FontStyle.regular LanguageStyle
                 , gravity CENTER
                 , color Color.black700
-                ]
+                ] <> FontStyle.body3 TypoGraphy
               ]
           ]
          ]
@@ -124,7 +124,7 @@ errorModalConfig state = let
   config = ErrorModalConfig.config
   errorModalConfig' = config
     { imageConfig {
-        imageUrl = "ny_ic_no_saved_address,https://assets.juspay.in/nammayatri/images/user/ny_ic_no_saved_address.png"
+        imageUrl = "ny_ic_no_saved_address," <> (getAssetStoreLink FunctionCall) <> "ny_ic_no_saved_address.png"
       , height = V 110
       , width = V 124
       , margin = (MarginBottom 31)
@@ -133,16 +133,13 @@ errorModalConfig state = let
         text = (getString NO_FAVOURITES_SAVED_YET)
       , margin = (MarginBottom 7)
       , color = Color.black900
-      , textSize = FontSize.a_18
-      , fontStyle = FontStyle.bold LanguageStyle
       }
     , errorDescriptionConfig {
         text = (getString SAVED_ADDRESS_HELPS_YOU_KEEP_YOUR_FAVOURITE_PLACES_HANDY)
       , color = Color.black700
-      , textSize = FontSize.a_14
       , margin = (Margin 33 0 33 0)
       , padding = (Padding 16 0 16 16)
-      , fontStyle =  FontStyle.regular LanguageStyle
+      , textStyle =  FontStyle.ParagraphText
       }
     , buttonConfig {
       visibility = GONE
@@ -162,14 +159,12 @@ genericHeaderConfig state = let
     , prefixImageConfig {
         height = V 25
       , width = V 25
-      , imageUrl = "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
+      , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
       , margin = (Margin 12 12 12 12)
       }
     , textConfig {
         text = (getString SELECT_FAVOURITE)
-      , textSize = FontSize.a_18
       , color = Color.black800
-      , fontStyle = FontStyle.semiBold LanguageStyle
       }
     , suffixImageConfig {
         visibility = GONE

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="select_date">तारीख़ चुनें</string>
+    <string name="open_settings">1. सेटिंग्स खोलें</string>
+    <string name="tap_on_permission">2. अनुमतियों पर टैप करें</string>
+    <string name="required_permission">3. आवश्यक अनुमति पर टैप करें</string>
+    <string name="select_allow">4. अनुमति दें चुनें</string>
+    <string name="tap_on">3. Tap on </string>
+    <string name="location">Location</string>
+    <string name="phone">फ़ोन </string>
+</resources>

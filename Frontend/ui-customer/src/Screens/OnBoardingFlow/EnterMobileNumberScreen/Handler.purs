@@ -18,12 +18,12 @@ module Screens.EnterMobileNumberScreen.Handler where
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans as App
 import Engineering.Helpers.BackTrack (getState)
+import ModifyScreenState (modifyScreenState)
 import Prelude (bind, discard, ($), pure, (<$>))
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.EnterMobileNumberScreen.Controller (ScreenOutput(..))
 import Screens.EnterMobileNumberScreen.View as EnterMobileNumberScreen
-import Types.App (GlobalState(..), FlowBT, ScreenType(..),defaultGlobalState)
-import ModifyScreenState (modifyScreenState)
+import Types.App (GlobalState(..), FlowBT, ScreenType(..), defaultGlobalState)
 
 
 enterMobileNumberScreen ::FlowBT String ScreenOutput

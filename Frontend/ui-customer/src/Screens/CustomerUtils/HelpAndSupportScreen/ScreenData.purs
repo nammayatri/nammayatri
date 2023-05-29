@@ -16,7 +16,7 @@
 module Screens.HelpAndSupportScreen.ScreenData where
 
 import Screens.Types (HelpAndSupportScreenState)
-import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
+import Config.DefaultConfig as DC
 
 initData :: HelpAndSupportScreenState
 initData = {
@@ -37,6 +37,7 @@ initData = {
     tripId : "",
     bookingId : "",
     faresList : []
+    config : DC.config
   },
   props:{
     apiFailure : false

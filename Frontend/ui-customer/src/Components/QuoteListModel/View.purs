@@ -17,7 +17,6 @@ module Components.QuoteListModel.View where
 
 import Animation (translateYAnimFromTop)
 import Animation.Config (translateFullYAnimWithDurationConfig)
-import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Components.QuoteListItem as QuoteListItem
 import Components.QuoteListModel.Controller (Action(..), QuoteListModelState)
@@ -37,6 +36,8 @@ import Storage (KeyStore(..), getValueToLocalStore)
 import Helpers.Utils (getPreviousVersion)
 import Styles.Colors as Color
 import Common.Types.App
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Prelude ((<>))
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -109,9 +110,7 @@ paymentView state =
           , text (getString PAY_DRIVER_USING_CASH_OR_UPI)
           , gravity CENTER_HORIZONTAL
           , color Color.black800
-          , textSize FontSize.a_14
-          , fontStyle $ FontStyle.medium LanguageStyle
-          ]
+          ] <> FontStyle.body1 TypoGraphy
         ]
     ]
 
@@ -120,10 +119,10 @@ imageData :: { height :: Length
 , width :: Length
 , imageUrl :: String
 }
-imageData =
-  if os == "IOS" then {imageUrl : "ny_ic_wallet_rect,https://assets.juspay.in/nammayatri/images/user/ny_ic_wallet_rect.png", height : (V 15), width : (V 15)}
-    else {imageUrl : "ny_ic_wallet,https://assets.juspay.in/nammayatri/images/user/ny_ic_wallet.png", height : (V 24) , width : (V 24)}
-
+imageData = 
+  if os == "IOS" then {imageUrl : "ny_ic_wallet_rect," <> (getAssetStoreLink FunctionCall) <> "ny_ic_wallet_rect.png", height : (V 15), width : (V 15)}
+    else {imageUrl : "ny_ic_wallet," <> (getAssetStoreLink FunctionCall) <> "ny_ic_wallet.png", height : (V 24) , width : (V 24)}
+    
 ---------------------------- sourceDestinationImageView ---------------------------------
 sourceDestinationImageView :: forall w . PrestoDOM (Effect Unit) w
 sourceDestinationImageView  =
@@ -136,7 +135,7 @@ sourceDestinationImageView  =
     ][ imageView
         [ height $ V 15
         , width $ V 15
-        , imageWithFallback "ny_ic_pickup,https://assets.juspay.in/nammayatri/images/user/ny_ic_pickup.png"
+        , imageWithFallback $ "ny_ic_pickup," <> (getAssetStoreLink FunctionCall) <> "ny_ic_pickup.png"
         ]
       , imageView
         [ height $ V 27
@@ -147,7 +146,7 @@ sourceDestinationImageView  =
       , imageView
         [ height $ V 15
         , width $ V 15
-        , imageWithFallback "ny_ic_drop,https://assets.juspay.in/nammayatri/images/user/ny_ic_drop.png"
+        , imageWithFallback $ "ny_ic_drop," <> (getAssetStoreLink FunctionCall) <> "ny_ic_drop.png"  
         ]
       ]
 
@@ -159,33 +158,29 @@ sourceDestinationTextView state push =
     , orientation VERTICAL
     , height WRAP_CONTENT
     , margin (MarginTop 5)
-    ][
-      textView
+    ][   
+      textView (
         [ height WRAP_CONTENT
         , weight 1.0
         , text state.source
-        , color Color.white900
-        , fontStyle $ FontStyle.regular LanguageStyle
+        , color state.appConfig.quoteListModel.textColor
         , padding (PaddingHorizontal 5 5)
         , margin (MarginBottom 12)
-        , textSize FontSize.a_14
         , ellipsize true
         , singleLine true
-        ]
-      , textView
+        ] <> FontStyle.paragraphText TypoGraphy)
+      , textView (
         [ height WRAP_CONTENT
         , weight 1.0
         , text state.destination
-        , color Color.white900
-        , fontStyle $ FontStyle.regular LanguageStyle
+        , color state.appConfig.quoteListModel.textColor
         , padding (PaddingHorizontal 5 5)
         , margin (MarginTop 12)
-        , textSize FontSize.a_14
         , ellipsize true
         , singleLine true
-        ]
-    ]
-
+        ] <> FontStyle.paragraphText TypoGraphy)
+    ]   
+      
 ---------------------------- quotesView ---------------------------------
 quotesView :: forall w . QuoteListModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
 quotesView state push =
@@ -212,7 +207,7 @@ findingRidesView state push =
     lottieAnimationView
       [ id (getNewIDWithTag "lottieLoaderAnim")
       , afterRender (\action-> do
-                    _ <- pure $ startLottieProcess "finding_rides_loader_with_text" (getNewIDWithTag "lottieLoaderAnim") true 0.6 "Default"
+                    _ <- pure $ startLottieProcess ((getAssetStoreLink FunctionCall) <> "lottie/finding_rides_loader_with_text.json") (getNewIDWithTag "lottieLoaderAnim") true 0.6 "Default"
                     pure unit)(const NoAction)
       , height $ V 300
       , width $ V 300
@@ -231,18 +226,16 @@ selectRideAndConfirmView state push =
     height WRAP_CONTENT
   , weight 1.0
   , padding (Padding 16 16 0 16)
-  ][textView
+  ][textView (
     [ height WRAP_CONTENT
-    , color Color.black900
-    , textSize FontSize.a_16
-    , fontStyle $ FontStyle.medium LanguageStyle
+    , color state.appConfig.quoteListModel.textColor
     , text case getValueToLocalStore AUTO_SELECTING of
        "CANCELLED_AUTO_ASSIGN" -> "Select a Ride"
        "false"                 -> "Select a Ride"
        _                       -> case (getValueToLocalStore LANGUAGE_KEY) of
-                                    _ -> "Confirming selected ride in" <> " : " <> (fromMaybe configDummy ((filter (\item -> item.id == (fromMaybe "" state.selectedQuote)) state.quoteListModel) !! 0)).timer <> "s"
+                                    _ -> "Confirming selected ride in" <> " : " <> (fromMaybe dummyQuoteList ((filter (\item -> item.id == (fromMaybe "" state.selectedQuote)) state.quoteListModel) !! 0)).timer <> "s"
                                     -- _ -> "state.timer" <> "s " <> (getString AUTO_ACCEPTING_SELECTED_RIDE) TODO :: NEED TO UPDATE LANGUAGE
-    ]]
+    ] <> FontStyle.subHeading2 TypoGraphy)]
    , linearLayout
     [ height MATCH_PARENT
     , width WRAP_CONTENT
@@ -252,9 +245,9 @@ selectRideAndConfirmView state push =
     ][ imageView
       [ height $ V 24
       , width $ V 24
-      , imageWithFallback "ny_ic_close,https://assets.juspay.in/nammayatri/images/common/ny_ic_close.png"
-      , visibility if getValueToLocalStore AUTO_SELECTING == "false" || getValueToLocalStore AUTO_SELECTING == "CANCELLED_AUTO_ASSIGN" then GONE else VISIBLE
-
+      , imageWithFallback $ "ny_ic_close," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_close.png"
+      , visibility if getValueToLocalStore AUTO_SELECTING == "false" || getValueToLocalStore AUTO_SELECTING == "CANCELLED_AUTO_ASSIGN" then GONE else VISIBLE 
+     
       ]
     ]
   ]
@@ -273,29 +266,25 @@ paymentMethodView push state =
   , padding (Padding 16 6 16 16)
   , width WRAP_CONTENT
   , gravity LEFT
-  ][  textView
+  ][  textView (
       [ text (getString PAYMENT_METHOD)
-      , textSize FontSize.a_12
       , color Color.black700
-      , fontStyle $ FontStyle.regular LanguageStyle
-      ]
+      ] <> FontStyle.body3 TypoGraphy)
     , linearLayout
       [ orientation HORIZONTAL
       , width WRAP_CONTENT
       , height WRAP_CONTENT
       , margin (MarginTop 7)
       ][  imageView
-          [ imageWithFallback "ny_ic_wallet,https://assets.juspay.in/nammayatri/images/user/ny_ic_wallet.png"
+          [ imageWithFallback $ "ny_ic_wallet," <> (getAssetStoreLink FunctionCall) <> "ny_ic_wallet.png"
           , height $ V 20
           , width $ V 20
           ]
-        , textView
+        , textView $
           [ text (getString PAYMENT_METHOD_STRING)
           , margin (MarginLeft 8)
-          , textSize FontSize.a_14
           , color Color.black800
-          , fontStyle $ FontStyle.medium LanguageStyle
-          ]
+          ] <> FontStyle.body1 TypoGraphy
       ]
   ] -- TODO ADD PAYMENT OPTIONS
   -- , linearLayout[
@@ -317,7 +306,7 @@ quoteListTopSheetView state push =
    linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
-      , background Color.black900
+      , background state.appConfig.quoteListModel.backgroundColor
       , padding $ PaddingTop safeMarginTop
       ][  linearLayout
           [ height MATCH_PARENT
@@ -336,7 +325,7 @@ quoteListTopSheetView state push =
                   ][  imageView
                       [ height $ V 24
                       , width $ V 24
-                      , imageWithFallback "ny_ic_close_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_close_white.png"
+                      , imageWithFallback $ if state.appConfig.nyBrandingVisibility then  "ny_ic_close," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_close.png" else "ny_ic_close_white," <> (getAssetStoreLink FunctionCall) <> "ny_ic_close_white.png"
                       , margin $ MarginTop 7
                       ]
                   ]
@@ -364,7 +353,7 @@ noQuotesErrorModel state =
       ][imageView
         [ height $ V 115
         , width $ V 137
-        , imageWithFallback "ic_no_quotes,https://assets.juspay.in/nammayatri/images/user/ny_ic_no_quotes.png"
+        , imageWithFallback $ "ic_no_quotes," <> (getAssetStoreLink FunctionCall) <> "ic_no_quotes.png"
         , padding (Padding 0 0 0 0)
         ]
       , textView $
@@ -455,7 +444,6 @@ homeButtonConfig state = let
       { textConfig
         { text = (getString HOME)
         , color = Color.black900
-        , textSize = FontSize.a_16
         }
       , margin =( Margin 16 0 8 0)
       , width = V $ (screenWidth unit/4)
@@ -473,29 +461,15 @@ tryAgainButtonConfig state = let
     tryAgainButtonConfig' = config
       { textConfig
         { text = (getString TRY_AGAIN)
-        , color = Color.yellow900
-        , textSize = FontSize.a_16
+        ,  color = state.appConfig.primaryTextColor 
         }
       , margin =( Margin 8 0 16 0)
       , width = MATCH_PARENT
       , id = "TryAgainButtonQuoteList"
       , enableLoader = (getBtnLoader "TryAgainButtonQuoteList")
+      , background = state.appConfig.primaryBackground
       }
   in tryAgainButtonConfig'
-
-configDummy :: QuoteListItem.QuoteListItemState
-configDummy = {
-   seconds : 15
-  , id : ""
-  , timer : "-"
-  , timeLeft : 0
-  , driverRating : 4.0
-  , profile : ""
-  , price : "0"
-  , vehicleType : "auto"
-  , driverName : "Drive_Name"
-  , selectedQuote : Nothing
-  }
 
 
 getPrice :: QuoteListModelState -> String
@@ -507,17 +481,17 @@ getPrice state =
 
 
 dummyQuoteList :: QuoteListItem.QuoteListItemState
-dummyQuoteList = {
-   seconds : 15
-  , id : ""
-  , timer : ""
-  , timeLeft : 15
-  , driverRating : 0.0
-  , profile : ""
-  , price : ""
-  , vehicleType : "auto"
-  , driverName : ""
-  , selectedQuote : Nothing
+dummyQuoteList = QuoteListItem.config{
+   seconds = 15
+  , id = ""  
+  , timer = ""
+  , timeLeft = 15
+  , driverRating = 0.0
+  , profile = ""
+  , price = ""
+  , vehicleType = "auto"
+  , driverName = ""
+  , selectedQuote = Nothing
   }
 
 
