@@ -24,6 +24,8 @@ import ConfigJBridge (getKeyInSharedPrefKeysConfig, getValueToLocalNativeStoreCo
 
 foreign import environment :: String -> String
 
+foreign import getMerchant :: String -> String
+
 data Env = LOCAL | DEV | UAT | PROD
 derive instance genericEnv :: Generic Env _
 instance eqEnv :: Eq Env where eq = genericEq
