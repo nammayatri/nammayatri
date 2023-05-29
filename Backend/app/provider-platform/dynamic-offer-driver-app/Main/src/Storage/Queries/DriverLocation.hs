@@ -76,6 +76,22 @@ findById (Id driverLocationId) = do
     Just dbCOnf' -> either (pure Nothing) (transformBeamDriverLocationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamDL.driverId $ Se.Eq driverLocationId]
     Nothing -> pure Nothing
 
+findById' :: L.MonadFlow m => Id Person -> m (Maybe DriverLocation)
+findById' (Id driverLocationId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  conn <- L.getOrInitSqlConn (fromJust dbConf)
+  case conn of
+    Right c -> do
+      geoms <-
+        L.runDB c $
+          L.findRow $
+            B.select $
+              B.limit_ 1 $
+                B.filter_' (\BeamDL.DriverLocationT {..} -> (driverId B.==?. B.val_ driverLocationId)) $
+                  B.all_ (meshModelTableEntity @BeamDL.DriverLocationT @Postgres @(Se.DatabaseWith BeamDL.DriverLocationT))
+      pure (either (const Nothing) (transformBeamDriverLocationToDomain <$>) geoms)
+    Left _ -> pure Nothing
+
 -- upsertGpsCoord :: Id Person -> LatLong -> UTCTime -> SqlDB DriverLocation
 -- upsertGpsCoord drLocationId latLong calculationTime = do
 --   now <- getCurrentTime
@@ -87,6 +103,9 @@ findById (Id driverLocationId) = do
 --             coordinatesCalculatedAt = calculationTime,
 --             createdAt = now,
 --             updatedAt = now
+
+-- L.findRow $ B.select $ B.aggregate_ sumPredicate $ B.filter_' predicate $ B.all_ dbTable
+
 --           }
 --   Esq.update $ \tbl -> do
 --     set
@@ -143,6 +162,21 @@ deleteById (Id driverId) = do
           Mesh.meshConfig
           [Se.Is BeamDL.driverId (Se.Eq driverId)]
     Nothing -> pure ()
+
+deleteById' :: L.MonadFlow m => Id Person -> m ()
+deleteById' (Id driverId') = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  conn <- L.getOrInitSqlConn (fromJust dbConf)
+  case conn of
+    Right c -> do
+      void $
+        L.runDB c $
+          L.deleteRows
+            ( B.delete
+                (meshModelTableEntity @BeamDL.DriverLocationT @Postgres @(Se.DatabaseWith BeamDL.DriverLocationT))
+                (\BeamDL.DriverLocationT {..} -> (driverId B.==. B.val_ driverId'))
+            )
+    Left _ -> pure ()
 
 transformBeamDriverLocationToDomain :: BeamDL.DriverLocation -> DriverLocation
 transformBeamDriverLocationToDomain BeamDL.DriverLocationT {..} = do
