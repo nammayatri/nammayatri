@@ -243,7 +243,6 @@ library
       Storage.Beam.Exophone
       Storage.Beam.FareParameters
       Storage.Beam.FareParameters.FareParametersProgressiveDetails
-    
       Storage.Beam.FarePolicy
       Storage.Beam.FarePolicy.FarePolicyProgressiveDetails
       Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab
@@ -257,10 +256,10 @@ library
       Storage.Beam.Issue.IssueTranslation
       Storage.Beam.MediaFile
       Storage.Beam.Merchant
-      -- Storage.Beam.Merchant.DriverIntelligentPoolConfig
-      -- Storage.Beam.Merchant.DriverPoolConfig
-      -- Storage.Beam.Merchant.MerchantMessage
-      -- Storage.Beam.Merchant.MerchantServiceConfig
+      Storage.Beam.Merchant.DriverIntelligentPoolConfig
+      Storage.Beam.Merchant.DriverPoolConfig
+      Storage.Beam.Merchant.MerchantMessage
+      Storage.Beam.Merchant.MerchantServiceConfig
       Storage.Beam.Merchant.MerchantServiceUsageConfig
       Storage.Beam.Merchant.TransporterConfig
       Storage.Beam.Message.Message
@@ -278,7 +277,7 @@ library
       Storage.Beam.SearchRequest.SearchReqLocation
       Storage.Beam.SearchRequestForDriver
       Storage.Beam.SearchRequestSpecialZone
-      -- Storage.Beam.SlabFarePolicy
+      Storage.Beam.SlabFarePolicy
       Storage.Beam.Vehicle
       Storage.CachedQueries.CacheConfig
       Storage.CachedQueries.DriverInformation
@@ -473,7 +472,7 @@ library
       PackageImports
       TemplateHaskell
       TemplateHaskell
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wno-unused-imports
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -529,7 +528,6 @@ library
     , vector
     , wai
     , warp
-    , postgresql-simple
   default-language: Haskell2010
 
 executable dynamic-offer-driver-app-exe
@@ -572,7 +570,7 @@ executable dynamic-offer-driver-app-exe
       PackageImports
       TemplateHaskell
       TemplateHaskell
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T" -Wno-unused-imports
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -627,5 +625,4 @@ executable dynamic-offer-driver-app-exe
     , vector
     , wai
     , warp
-    , postgresql-simple
   default-language: Haskell2010

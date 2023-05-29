@@ -28,7 +28,7 @@ import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq hiding (findById, findById', isNothing)
+import Kernel.Storage.Esqueleto as Esq hiding (findById, isNothing)
 import Kernel.Types.Id
 import Kernel.Types.Time
 import Kernel.Utils.Common (MonadTime (..), addUTCTime, getCurrentTime, secondsToNominalDiffTime)
@@ -70,15 +70,6 @@ create dBooking =
     Esq.create' toLoc
     Esq.create' booking
 
--- findById :: Transactionable m => Id Booking -> m (Maybe Booking)
--- findById bookingId = buildDType $ do
---   res <-
---     Esq.findOne' $ do
---       rb <- from $ table @BookingT
---       where_ $ rb ^. BookingTId ==. val (toKey bookingId)
---       pure rb
---   join <$> mapM buildFullBooking res
-
 findById :: L.MonadFlow m => Id Booking -> m (Maybe Booking)
 findById (Id bookingId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
@@ -104,17 +95,6 @@ findBookingByDriverQuoteId' driverQuoteId = Esq.findOne' $ do
   where_ $ booking ^. BookingQuoteId ==. val driverQuoteId.getId
   pure booking
 
--- updateStatus :: Id Booking -> BookingStatus -> SqlDB ()
--- updateStatus rbId rbStatus = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ BookingStatus =. val rbStatus,
---         BookingUpdatedAt =. val now
---       ]
---     where_ $ tbl ^. BookingTId ==. val (toKey rbId)
-
 updateStatus :: (L.MonadFlow m, MonadTime m) => Id Booking -> BookingStatus -> m (MeshResult ())
 updateStatus rbId rbStatus = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
@@ -130,17 +110,6 @@ updateStatus rbId rbStatus = do
         [Se.Is BeamB.id (Se.Eq $ getId rbId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
--- updateRiderId :: Id Booking -> Id RiderDetails -> SqlDB ()
--- updateRiderId rbId riderId = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ BookingRiderId =. val (Just $ toKey riderId),
---         BookingUpdatedAt =. val now
---       ]
---     where_ $ tbl ^. BookingTId ==. val (toKey rbId)
-
 updateRiderId :: (L.MonadFlow m, MonadTime m) => Id Booking -> Id RiderDetails -> m (MeshResult ())
 updateRiderId rbId riderId = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
@@ -155,17 +124,6 @@ updateRiderId rbId riderId = do
         ]
         [Se.Is BeamB.id (Se.Eq $ getId rbId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
-
--- updateRiderName :: Id Booking -> Text -> SqlDB ()
--- updateRiderName bookingId riderName = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ BookingRiderName =. val (Just riderName),
---         BookingUpdatedAt =. val now
---       ]
---     where_ $ tbl ^. BookingTId ==. val (toKey bookingId)
 
 updateRiderName :: (L.MonadFlow m, MonadTime m) => Id Booking -> Text -> m ()
 updateRiderName bookingId riderName = do
@@ -183,17 +141,6 @@ updateRiderName bookingId riderName = do
           [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
     Nothing -> pure ()
 
--- updateSpecialZoneOtpCode :: Id Booking -> Text -> SqlDB ()
--- updateSpecialZoneOtpCode bookingId specialZoneOtpCode = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ BookingSpecialZoneOtpCode =. val (Just specialZoneOtpCode),
---         BookingUpdatedAt =. val now
---       ]
---     where_ $ tbl ^. BookingTId ==. val (toKey bookingId)
-
 updateSpecialZoneOtpCode :: (L.MonadFlow m, MonadTime m) => Id Booking -> Text -> m (MeshResult ())
 updateSpecialZoneOtpCode bookingId specialZoneOtpCode = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
@@ -209,20 +156,8 @@ updateSpecialZoneOtpCode bookingId specialZoneOtpCode = do
         [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-findStuckBookings :: Transactionable m => Id Merchant -> [Id Booking] -> UTCTime -> m [Id Booking]
-findStuckBookings merchantId bookingIds now = do
-  Esq.findAll $ do
-    booking <- from $ table @BookingT
-    let upcoming6HrsCond =
-          booking ^. BookingCreatedAt +. Esq.interval [Esq.HOUR 6] <=. val now
-    where_ $
-      booking ^. BookingProviderId ==. val (toKey merchantId)
-        &&. booking ^. BookingTId `in_` valList (toKey <$> bookingIds)
-        &&. (booking ^. BookingStatus ==. val NEW &&. upcoming6HrsCond)
-    pure $ booking ^. BookingTId
-
-findStuckBookings' :: (L.MonadFlow m, MonadTime m) => Id Merchant -> [Id Booking] -> UTCTime -> m [Id Booking]
-findStuckBookings' (Id merchantId) bookingIds now = do
+findStuckBookings :: (L.MonadFlow m, MonadTime m) => Id Merchant -> [Id Booking] -> UTCTime -> m [Id Booking]
+findStuckBookings (Id merchantId) bookingIds now = do
   let updatedTimestamp = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
@@ -245,7 +180,7 @@ findStuckBookings' (Id merchantId) bookingIds now = do
           pure $ Domain.Types.Booking.id <$> bookingD
     Nothing -> pure []
 
-findBookingBySpecialZoneOTP :: Transactionable m => Id Merchant -> Text -> UTCTime -> m (Maybe Booking)
+findBookingBySpecialZoneOTP :: L.MonadFlow m => Id Merchant -> Text -> UTCTime -> m (Maybe Booking)
 findBookingBySpecialZoneOTP merchantId otpCode now = do
   bookingId <- findBookingIdBySpecialZoneOTP merchantId otpCode now
   maybe
@@ -253,28 +188,8 @@ findBookingBySpecialZoneOTP merchantId otpCode now = do
     findById
     bookingId
 
-findBookingBySpecialZoneOTP' :: L.MonadFlow m => Id Merchant -> Text -> UTCTime -> m (Maybe Booking)
-findBookingBySpecialZoneOTP' merchantId otpCode now = do
-  bookingId' <- findBookingIdBySpecialZoneOTP' merchantId otpCode now
-  maybe
-    (return Nothing)
-    findById'
-    bookingId'
-
-findBookingIdBySpecialZoneOTP :: Transactionable m => Id Merchant -> Text -> UTCTime -> m (Maybe (Id Booking))
-findBookingIdBySpecialZoneOTP merchantId otpCode now = do
-  Esq.findOne $ do
-    booking <- from $ table @BookingT
-    let otpExpiryCondition =
-          booking ^. BookingCreatedAt +. Esq.interval [Esq.MINUTE 30] >=. val now
-    where_ $
-      booking ^. BookingSpecialZoneOtpCode ==. val (Just otpCode)
-        &&. (booking ^. BookingStatus ==. val NEW &&. otpExpiryCondition)
-        &&. booking ^. BookingProviderId ==. val (toKey merchantId)
-    pure $ booking ^. BookingTId
-
-findBookingIdBySpecialZoneOTP' :: L.MonadFlow m => Id Merchant -> Text -> UTCTime -> m (Maybe (Id Booking))
-findBookingIdBySpecialZoneOTP' (Id merchantId) otpCode now = do
+findBookingIdBySpecialZoneOTP :: L.MonadFlow m => Id Merchant -> Text -> UTCTime -> m (Maybe (Id Booking))
+findBookingIdBySpecialZoneOTP (Id merchantId) otpCode now = do
   let otpExpiryCondition = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
@@ -286,17 +201,6 @@ findBookingIdBySpecialZoneOTP' (Id merchantId) otpCode now = do
           pure $ Domain.Types.Booking.id <$> bookingId
         Left _ -> pure Nothing
     Nothing -> pure Nothing
-
--- cancelBookings :: [Id Booking] -> UTCTime -> SqlDB ()
--- cancelBookings :: [Id Booking] -> UTCTime -> SqlDB ()
--- cancelBookings bookingIds now = do
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ BookingStatus =. val CANCELLED,
---         BookingUpdatedAt =. val now
---       ]
---     where_ $ tbl ^. BookingTId `in_` valList (toKey <$> bookingIds)
 
 cancelBookings :: L.MonadFlow m => [Id Booking] -> UTCTime -> m (MeshResult ())
 cancelBookings bookingIds now = do

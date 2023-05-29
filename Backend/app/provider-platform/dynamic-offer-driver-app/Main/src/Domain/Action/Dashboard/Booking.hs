@@ -57,8 +57,10 @@ stuckBookingsCancel merchantShortId req = do
   let reqBookingIds = cast @Common.Booking @DBooking.Booking <$> req.bookingIds
 
   now <- getCurrentTime
-  stuckBookingIds <- Esq.runInReplica $ QBooking.findStuckBookings merchant.id reqBookingIds now
-  stuckRideItems <- Esq.runInReplica $ QRide.findStuckRideItems merchant.id reqBookingIds now
+  -- stuckBookingIds <- Esq.runInReplica $ QBooking.findStuckBookings merchant.id reqBookingIds now
+  stuckBookingIds <- QBooking.findStuckBookings merchant.id reqBookingIds now
+  -- stuckRideItems <- Esq.runInReplica $ QRide.findStuckRideItems merchant.id reqBookingIds now
+  stuckRideItems <- QRide.findStuckRideItems merchant.id reqBookingIds now
   let bcReasons = mkBookingCancellationReason Common.bookingStuckCode Nothing <$> stuckBookingIds
   let bcReasonsWithRides = (\item -> mkBookingCancellationReason Common.rideStuckCode (Just item.rideId) item.bookingId) <$> stuckRideItems
   let allStuckBookingIds = stuckBookingIds <> (stuckRideItems <&> (.bookingId))
