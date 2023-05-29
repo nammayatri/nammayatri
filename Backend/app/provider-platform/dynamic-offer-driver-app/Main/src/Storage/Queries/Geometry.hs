@@ -32,6 +32,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
+import Lib.Utils
 import Sequelize
 import qualified Storage.Beam.Geometry as BeamG
 import Storage.Tabular.Geometry
@@ -113,6 +114,3 @@ transformDomainGeometryToBeam Geometry {..} =
     { BeamG.id = getId id,
       BeamG.region = region
     }
-
-containsPoint' :: (Double, Double) -> BQ.QGenExpr context Postgres s BQ.SqlBool
-containsPoint' (lon, lat) = B.sqlBool_ (BQ.QExpr (\_ -> PgExpressionSyntax (emit $ "st_contains (" <> show lon <> " , " <> show lat <> ")")))

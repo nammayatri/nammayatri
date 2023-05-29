@@ -14,6 +14,8 @@ import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
 import Database.Beam.Postgres
+import Database.Beam.Postgres.Syntax
+import qualified Database.Beam.Query as BQ
 import qualified Database.Esqueleto.Experimental as Esq
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
@@ -115,15 +117,23 @@ fromFieldEnum ::
 fromFieldEnum f mbValue = case mbValue of
   Nothing -> DPSF.returnError UnexpectedNull f mempty
   Just value' ->
-    case (readMaybe (unpackChars value')) of
+    case readMaybe (unpackChars value') of
       Just val -> pure val
       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
 
--- (<->.) :: SqlExpr (Value Point) -> SqlExpr (Value Point) -> SqlExpr (Value Double)
--- (<->.) = unsafeSqlBinOp " <-> "
+-- writing shared kernel Esqueleto.Functions in utils
 
--- getPoint :: (SqlExpr (Value Double), SqlExpr (Value Double)) -> SqlExpr (Value Point)
--- getPoint (lat, long) = unsafeSqlFunction "ST_SetSRID" (buildSTPoint (long, lat), val (4326 :: Int))
+getPoint :: (Double, Double) -> BQ.QGenExpr context Postgres s Point
+getPoint (lat, lon) = BQ.QExpr (\_ -> PgExpressionSyntax (emit $ "ST_SetSRID (ST_Point (" <> show lon <> " , " <> show lat <> "),4326)"))
 
--- buildSTPoint :: (SqlExpr (Value Double), SqlExpr (Value Double)) -> SqlExpr (Value b)
--- buildSTPoint = unsafeSqlFunction "ST_Point"
+containsPoint' :: (Double, Double) -> BQ.QGenExpr context Postgres s BQ.SqlBool
+containsPoint' (lon, lat) = B.sqlBool_ (BQ.QExpr (\_ -> PgExpressionSyntax (emit $ "st_contains (" <> show lon <> " , " <> show lat <> ")")))
+
+buildRadiusWithin' :: Point -> (Double, Double) -> Int -> BQ.QGenExpr context Postgres s BQ.SqlBool
+buildRadiusWithin' pnt (lat, lon) rad =
+  BQ.QExpr (\_ -> PgExpressionSyntax (emit $ "ST_DWithin(" <> show pnt <> " , " <> getPoint' <> " , " <> show rad <> ")"))
+  where
+    getPoint' = "(SRID=4326;POINT(" <> show lon <> " " <> show lat <> "))"
+
+-- (<->.) :: Point -> Point -> Double
+-- (<->.) = " <-> "
