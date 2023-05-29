@@ -14,7 +14,7 @@
 
 module Domain.Action.Dashboard.Registration where
 
-import Crypto.OTP (OTP)
+import qualified Data.Text as T
 import qualified Domain.Types.Merchant as DMerchant
 import Domain.Types.Person as DP
 import qualified Domain.Types.RegistrationToken as DR
@@ -41,7 +41,7 @@ data LoginReq = LoginReq
   { email :: Text,
     password :: Text,
     merchantId :: ShortId DMerchant.Merchant,
-    otp :: Maybe OTP
+    otp :: Maybe Text
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -59,6 +59,8 @@ newtype Enable2FARes = Enable2FARes
 
 data LoginRes = LoginRes
   { authToken :: Text,
+    is2faMandatory :: Bool,
+    is2faEnabled :: Bool,
     message :: Text
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
@@ -88,13 +90,12 @@ login LoginReq {..} = do
     case (_merchantAccess.secretKey, otp) of
       (Just secretKey, Just userOtp) -> do
         generatedOtp <- L.runIO (Utils.genTOTP secretKey)
-        logDebug $ "generaTED OTP " <> show generatedOtp
-        unless (generatedOtp == userOtp) $
+        unless (generatedOtp == read (T.unpack userOtp)) $
           throwError $ InvalidRequest "Google Authenticator OTP does not match"
       (_, Nothing) -> throwError $ InvalidRequest "Google Authenticator OTP is required"
       (Nothing, _) -> throwError $ InvalidRequest "Secret key not found for 2FA"
   token <- generateToken person.id merchant.id
-  pure $ LoginRes token "Logged in successfully"
+  pure $ LoginRes token merchant.is2faMandatory _merchantAccess.is2faEnabled "Logged in successfully"
 
 enable2fa ::
   ( EsqDBFlow m r,
