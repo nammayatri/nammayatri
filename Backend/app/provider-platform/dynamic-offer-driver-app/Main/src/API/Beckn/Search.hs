@@ -52,13 +52,18 @@ search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ g
     dSearchReq <- ACL.buildSearchReq subscriber req
     Redis.whenWithLockRedis (searchLockKey dSearchReq.messageId transporterId.getId) 60 $ do
       merchant <- DSearch.validateRequest transporterId dSearchReq
-      dSearchRes <- DSearch.handler merchant dSearchReq
-      let context = req.context
-      let callbackUrl = gateway.subscriber_url
-      void $
-        CallBAP.withCallback dSearchRes.provider Context.SEARCH OnSearch.onSearchAPI context callbackUrl $ do
-          pure $ ACL.mkOnSearchMessage dSearchRes
+      fork "search request processing" $
+        Redis.whenWithLockRedis (searchProcessingLockKey dSearchReq.messageId transporterId.getId) 60 $ do
+          dSearchRes <- DSearch.handler merchant dSearchReq
+          let context = req.context
+          let callbackUrl = gateway.subscriber_url
+          void $
+            CallBAP.withCallback dSearchRes.provider Context.SEARCH OnSearch.onSearchAPI context callbackUrl $ do
+              pure $ ACL.mkOnSearchMessage dSearchRes
     pure Ack
 
 searchLockKey :: Text -> Text -> Text
 searchLockKey id mId = "Driver:Search:MessageId-" <> id <> ":" <> mId
+
+searchProcessingLockKey :: Text -> Text -> Text
+searchProcessingLockKey id mId = "Driver:Search:Processing:MessageId-" <> id <> ":" <> mId
