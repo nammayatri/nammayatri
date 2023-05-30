@@ -21,6 +21,7 @@ export const getStringFromConfig = function (constructorKey){
             if (nammaYatriConfig.isCurrentMerchantString(key)){
                 return nammaYatriConfig.currentMerchantString(key);
             }
+            console.log("before getStringFromConfig",getStringFromCommon(key))
             break;
         case "YATRIPARTNER" :
             if (yatriConfig.isCurrentMerchantString(key)){
@@ -73,7 +74,7 @@ export const getValueFromMerchant = function (constructorKey){
 }
 
 function getStringFromCommon(key){
-    var selectedLanguage = JBridge.getKeysInSharedPref("LANGUAGE_KEY");
+    var selectedLanguage = window.JBridge.getKeysInSharedPref("LANGUAGE_KEY");
     switch(selectedLanguage) {
         case "HI_IN" :
             return hiString.getStringValue(key);

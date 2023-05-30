@@ -74,7 +74,7 @@ savedLocationView state push =
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       ][  linearLayout
-          [ orientation HORIZONTAL
+          ([ orientation HORIZONTAL
           , height WRAP_CONTENT
           , weight 1.0
           , onClick push $ if (not state.isEditEnabled) then const (CardClicked state) else const (EditLocation state)

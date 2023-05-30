@@ -21,6 +21,6 @@ window.getMerchantConfig = function () {
         otpTextColor : "#101010",
         rateCardColor : "#00B8F5",
         nyBrandingVisibility: true,
-        fontType : "System"
+        fontType : "Assets"
     })
 }

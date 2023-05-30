@@ -7,26 +7,29 @@
  *  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package in.juspay.mobility.utils;
+package in.juspay.mobility.app;
 
 import android.Manifest;
+import android.content.Context;
 import android.media.MediaRecorder;
 import android.util.Log;
 import androidx.core.app.ActivityCompat;
-import in.juspay.mobility.MainActivity;
 
 public class AudioRecorder {
     private static final String LOG_TAG = "AudioRecordTest";
     public static final int REQUEST_RECORD_AUDIO_PERMISSION = 200;
     private static boolean permissionToRecordAccepted = false;
     private static String fileName = null;
-    private MainActivity mainActivity;
+    private Context context;
     private MediaRecorder recorder = null;
+
+    public AudioRecorder(Context context) {
+        this.context = context;
+    }
 
     public void startRecording() {
         Log.d(LOG_TAG, "Recording in audio recorder");
-        mainActivity = MainActivity.getInstance();
-        fileName = mainActivity.getFilesDir().getAbsolutePath() + "namma_yatri_audio_record.mp3";
+        fileName = context.getFilesDir().getAbsolutePath() + "namma_yatri_audio_record.mp3";
         recorder = new MediaRecorder();
         recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
         recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);

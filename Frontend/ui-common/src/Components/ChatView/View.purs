@@ -31,6 +31,7 @@ import Common.Types.App
 import Styles.Colors (white900) as Color
 import PrestoDOM.Elements.Elements (progressBar)
 import PrestoDOM.Events (afterRender)
+import Helpers.Utils (getCommonAssetStoreLink)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 view push config = 
@@ -262,7 +263,7 @@ emptyChatView config push =
      , width MATCH_PARENT
      , orientation VERTICAL
      , background config.white900
-     ]([ textView (
+     ]([ textView $
        [ text $ if config.userConfig.appType == "Customer" && null config.suggestionsList && null config.messages then config.emptyChatHeader else config.suggestionHeader
        , color config.black700
        , width MATCH_PARENT
@@ -311,11 +312,11 @@ quickMessageView config message isLastItem push =
   , gravity LEFT
   , orientation VERTICAL
   , onClick push (if config.enableSuggestionClick then const (SendSuggestion message) else (const NoAction))
-  ][ textView
+  ][ textView $
      [ text (message)
      , color config.blue800
      , padding (Padding 12 16 12 16)
-     ] <> FontStyle.body1 TypoGraphy)
+     ] <> FontStyle.body1 TypoGraphy
    , linearLayout
      [ width MATCH_PARENT
      , height $ V 1

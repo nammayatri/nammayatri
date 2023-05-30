@@ -37,6 +37,7 @@ import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Data.Either (Either(..))
 import Engineering.Helpers.Commons (screenHeight, screenWidth)
 import Effect.Uncurried (EffectFn3, EffectFn2)
+import Data.Maybe (Maybe(..))
 -- -- import Control.Monad.Except.Trans (lift)
 -- -- foreign import _keyStoreEntryPresent :: String -> Effect Boolean
 -- -- foreign import _createKeyStoreEntry :: String -> String -> (Effect Unit) -> (String -> Effect Unit) -> Effect Unit
@@ -184,7 +185,7 @@ foreign import goBackPrevWebPage ::  String -> Effect Unit
 
 foreign import emitJOSEvent ::  EffectFn3 String String String Unit
 
-foreign import locationPermissionCallBack :: forall action. EffectFn2 (action -> Effect Unit) action Unit
+foreign import getMerchantConfig :: forall a. (a -> Maybe a) -> (Maybe a) -> Effect (Maybe a)
 
 -- -- keyStoreEntryPresent :: String -> Flow Boolean
 -- -- keyStoreEntryPresent = liftFlow <<< _keyStoreEntryPresent
@@ -317,6 +318,9 @@ type IsLocationOnPath = {
   , eta :: Int
   , distance :: Int
 }
+
+getConfig :: forall  a. Effect (Maybe a)
+getConfig = getMerchantConfig Just Nothing
 
 type Location = {
   lat :: Number,

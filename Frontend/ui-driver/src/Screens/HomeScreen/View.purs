@@ -963,7 +963,7 @@ updateButtonIconAndText push state =
     , imageWithFallback $ "ny_ic_refresh," <> (getAssetStoreLink FunctionCall) <> "ny_ic_refresh.png"
     , gravity RIGHT
     ],
-    textView
+    textView $
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
     , text (getString UPDATE)

@@ -51,7 +51,7 @@
     "axios": "^0.27.1",
     "core-js": "^2.6.11",
     "moment": "^2.27.0",
-    "presto-ui": "git+https://github.com/juspay/presto-ui.git#master",
+    "presto-ui": "git+https://github.com/juspay/presto-ui.git#feature/Added-font-weight-prop",
     "ramda": "^0.26.1",
     "purty": "^7.0.0",
     "regenerator-runtime": "^0.13.5"

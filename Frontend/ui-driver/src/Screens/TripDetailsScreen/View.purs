@@ -111,7 +111,7 @@ view push state =
                        , orientation HORIZONTAL
                        , onClick push (const HelpAndSupport)
                         ][ imageView
-                          [ imageWithFallback "ny_ic_support," <> (getAssetStoreLink FunctionCall) <> "ny_ic_support.png"
+                          [ imageWithFallback $ "ny_ic_support," <> (getAssetStoreLink FunctionCall) <> "ny_ic_support.png"
                           , height $ V 17
                           , width $ V 20
                           , margin $ MarginRight 7

@@ -40,8 +40,8 @@ import Language.Types (STR(..))
 import Prelude (Unit, ($), const, map, (==), (||), (/), unit, bind, (-), (<>), (<<<), pure, discard, show, (&&), void)
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable)
-import Screens.DriverProfileScreen.Controller (Action(..), ScreenOutput, eval, getTitle, optionList)
-import Screens.DriverProfileScreen.ScreenData (MenuOptions(..))
+import Screens.DriverProfileScreen.Controller (Action(..), ScreenOutput, eval, getTitle)
+import Screens.DriverProfileScreen.ScreenData (MenuOptions(..), optionList)
 import Screens.Types as ST
 import Services.APITypes (GetDriverInfoReq(..), GetDriverInfoResp(..))
 import Services.Backend as Remote

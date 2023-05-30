@@ -34,7 +34,7 @@ import Screens.HelpAndSupportScreen.ScreenData (otherIssueList,IssueOptions(..))
 import Services.APITypes (FetchIssueListResp(..),FetchIssueListReq(..))
 import Services.Backend as Remote
 import Effect.Aff (launchAff)
-import Helpers.Utils (toString)
+import Helpers.Utils (toString, getCommonAssetStoreLink, getAssetStoreLink)
 import Engineering.Helpers.Commons (flowRunner, screenWidth)
 import Effect.Class (liftEffect)
 import Language.Types(STR(..))
@@ -125,7 +125,7 @@ headerLayout state push =
         [ imageView
             [ width $ V 30
             , height $ V 30
-            , imageWithFallback "ny_ic_chevron_left," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
+            , imageWithFallback $ "ny_ic_chevron_left," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
             , onClick push $ const BackPressed
             , padding $ Padding 2 2 2 2
             , margin $ MarginLeft 5
@@ -157,7 +157,7 @@ reportAnIssueHeader state push leftText =
  , height WRAP_CONTENT
  , padding (Padding 15 10 10 10)
  , background Color.lightGreyBlue
- ][ textView
+ ][ textView $
     [ width $ V (3 * screenWidth unit / 5)
     , height MATCH_PARENT
     , text leftText
@@ -282,7 +282,7 @@ allOtherTopics state push =
               , orientation HORIZONTAL
               , gravity CENTER_VERTICAL
               , padding (Padding 15 17 15 17)
-              ][  textView
+              ][  textView $
                   [ height WRAP_CONTENT
                   , weight 1.0
                   , text  (if (optionItem.menuOptions) == OngoingIssues then ((getIssueTitle optionItem.menuOptions) <> " : " <> (toString (length (state.data.ongoingIssueList)))) else if (optionItem.menuOptions) == ResolvedIssues then (getIssueTitle optionItem.menuOptions)  else (getIssueTitle optionItem.menuOptions))

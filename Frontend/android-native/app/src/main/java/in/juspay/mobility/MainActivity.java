@@ -10,6 +10,7 @@
 package in.juspay.mobility;
 
 import static in.juspay.mobility.BuildConfig.MERCHANT_TYPE;
+import static in.juspay.mobility.app.Utils.minimizeApp;
 
 import android.Manifest;
 import android.animation.Animator;
@@ -19,17 +20,12 @@ import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.IntentSender;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.location.LocationManager;
 import android.media.Ringtone;
 import android.media.RingtoneManager;
-import android.net.ConnectivityManager;
-import android.net.Network;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.provider.Settings;
@@ -62,11 +58,9 @@ import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.dynamiclinks.FirebaseDynamicLinks;
 import com.google.firebase.messaging.FirebaseMessaging;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.ObjectOutputStream;
 import java.util.Date;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -79,7 +73,6 @@ import in.juspay.hypersdk.ui.HyperPaymentsCallbackAdapter;
 import in.juspay.mobility.app.BootUpReceiver;
 import in.juspay.mobility.app.LocationUpdateService;
 import in.juspay.mobility.app.MyFirebaseMessagingService;
-import in.juspay.mobility.app.NetworkBroadcastReceiver;
 import in.juspay.mobility.app.NotificationUtils;
 import in.juspay.mobility.app.RideRequestActivity;
 import in.juspay.mobility.app.Utils;
@@ -92,8 +85,6 @@ public class MainActivity extends AppCompatActivity {
     private static final String LOG_TAG = "MAIN_ACTIVITY";
     private static final int REQUEST_CODE_UPDATE_APP = 587;
     private static int updateType;
-    @SuppressLint("StaticFieldLeak")
-    NetworkBroadcastReceiver.ProcessCallBack processCallBack;
     MyFirebaseMessagingService.BundleUpdateCallBack bundleUpdateCallBack;
     private HyperServices hyperServices;
     private Context context;
@@ -146,23 +137,8 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     };
-    BroadcastReceiver gpsReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            LocationManager locationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
-            boolean isGpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
-            String token = "null";
-            if (sharedPref != null) {
-                token = sharedPref.getString("REGISTERATION_TOKEN", "null");
-            }
-            if (!isGpsEnabled && !token.equals("null")) {
-                triggerPopUPMain("true", "LOCATION_DISABLED");
-            }
-        }
-    };
     private Intent widgetService;
     private AppUpdateManager appUpdateManager;
-    private NetworkBroadcastReceiver networkBroadcastReceiver;
     private boolean isHideSplashEventCalled = false;
     private boolean isSystemAnimEnabled = true;
 
@@ -188,10 +164,6 @@ public class MainActivity extends AppCompatActivity {
         sharedPref = getSharedPreferences(this.getString(in.juspay.mobility.app.R.string.preference_file_key), Context.MODE_PRIVATE);
         sharedPref.registerOnSharedPreferenceChangeListener(mListener);
         sharedPref.edit().putString(getResources().getString(in.juspay.mobility.app.R.string.ACTIVITY_STATUS), "onCreate").apply();
-        IntentFilter intentFilter = new IntentFilter(LocationManager.PROVIDERS_CHANGED_ACTION);
-        networkBroadcastReceiver = new NetworkBroadcastReceiver();
-//        registerReceiver(networkBroadcastReceiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
-//        registerReceiver(gpsReceiver, intentFilter);
         @SuppressLint("HardwareIds") String androidId = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
         Bundle params = new Bundle();
         params.putString("id", androidId);
@@ -248,8 +220,6 @@ public class MainActivity extends AppCompatActivity {
                 isSystemAnimEnabled = false;
             }
         }
-        processCallBack = this::triggerPopUPMain;
-        NetworkBroadcastReceiver.registerProcessCallback(processCallBack);
         bundleUpdateCallBack = this::showAlertForUpdate;
         MyFirebaseMessagingService.registerBundleUpdateCallback(bundleUpdateCallBack);
         appUpdateManager = AppUpdateManagerFactory.create(this);
@@ -317,7 +287,15 @@ public class MainActivity extends AppCompatActivity {
 
         try {
             Log.i(LOG_TAG, "Triggering the process");
-            hyperServices.process(new JSONObject().put("service", "in.yatri.consumer").put("requestId", UUID.randomUUID()).put("payload", new JSONObject().put("action", "showPopup").put("id", id).put("popType", type)));
+            JSONObject payload = new JSONObject()
+                    .put("service", getService())
+                    .put("requestId", UUID.randomUUID());
+            JSONObject innerPayload = new JSONObject()
+                    .put("action", "showPopup")
+                    .put("id", id)
+                    .put("popType", type);
+            payload.put("payload", innerPayload);
+            hyperServices.process(payload);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -331,19 +309,13 @@ public class MainActivity extends AppCompatActivity {
 
         try {
 
-            json.put("requestId", "123");
+            json.put("requestId", UUID.randomUUID());
             json.put("service", getService());
             json.put("betaAssets", false);
-            payload.put("clientId","mobilitypaytmconsumer");
+            payload.put("clientId", getResources().getString(R.string.client_id));
             payload.put("action", "initiate");
             payload.put("service", getService());
             payload.put(PaymentConstants.ENV, "master");
-
-//            JSONObject signatureAuthData = new JSONObject();
-//            signatureAuthData.put("signature", "Tz8ew9MYewcXBKIkjT7U+Tu3bPN06RZHBIKKbaJjMQ+e5uTaI4Hz0Ktu2KAXITR+7xBhBaLkMZ4Fb6HyaEOUjZES/qid/cVghyi1rJn3A0mI4VmMGt50IOep0b+5Ae2N1yCz58SwWvIRunv345amE0URHD6uca71rk2Rijva5XGjwgNrqOWXpzrHT0y0FRrvEr4u3du8QS2q0Wu4fZ2Ps9RSh04iPVNNuuMcUgkGSktxFP5vJLVYllYJDUzrOxi7nq3R11utNlSQMu18+ATSO5HyMTLxpndjhFlUJqn4QGxYovpp7amztJYjvoEnG9itPp2WdYamVeRAEcJnqRon2w==");
-//            signatureAuthData.put("authData", "{\"mobileNumber\":\"9642429378\",\"mobileCountryCode\":\"+91\",\"merchantId\":\"NAMMA_YATRI\",\"timestamp\":\"2023-04-13T07:28:40+00:00\"}");
-//            payload.put("signatureAuthData", signatureAuthData);
-
             json.put(PaymentConstants.PAYLOAD, payload);
         } catch (JSONException e) {
             e.printStackTrace();
@@ -353,60 +325,52 @@ public class MainActivity extends AppCompatActivity {
             public void onEvent(JSONObject jsonObject, JuspayResponseHandler juspayResponseHandler) {
                 Log.d(LOG_TAG, "onEvent: " + jsonObject.toString());
                 String event = jsonObject.optString("event");
-                if (event.equals("initiate_result")) {
-                    //Getting Notification Data from Bundle and attaching to process payload
-                    if (getIntent().hasExtra("NOTIFICATION_DATA") || (getIntent().hasExtra("notification_type") && getIntent().hasExtra("entity_ids") && getIntent().hasExtra("entity_type"))) {
+                switch (event) {
+                    case "initiate_result":
+                        if (getIntent().hasExtra("NOTIFICATION_DATA") || (getIntent().hasExtra("notification_type") && getIntent().hasExtra("entity_ids") && getIntent().hasExtra("entity_type"))) {
+                            try {
+                                JSONObject innerPayload = json.getJSONObject(PaymentConstants.PAYLOAD);
+                                innerPayload.put("action", "process");
+                                json.put(PaymentConstants.PAYLOAD, innerPayload);
+                            } catch (JSONException e) {
+                                Log.e(LOG_TAG, e.toString());
+                            }
+                        }
+                        hyperServices.process(json);
+                        break;
+                    case "hide_loader":
+                    case "hide_splash":
+                        String key = getResources().getString(R.string.service);
+                        if (key.equals("nammayatri") && isSystemAnimEnabled) {
+                            isHideSplashEventCalled = true;
+                        } else {
+                            hideSplash();
+                        }
+                        break;
+                    case "show_splash":
+                        View v = findViewById(in.juspay.mobility.app.R.id.splash);
+                        if (v != null) {
+                            findViewById(in.juspay.mobility.app.R.id.splash).setVisibility(View.VISIBLE);
+                        }
+                        break;
+                    case "reboot":
+                        Log.i(LOG_TAG, "event reboot");
+                        hyperServices.terminate();
+                        hyperServices = null;
+                        initApp();
+                        break;
+                    case "in_app_notification":
+                        showInAppNotifiation(jsonObject.optString("title"), jsonObject.optString("message"));
+                        break;
+                    case "process_result":
                         try {
-                            System.out.println("It has entered if statment");
-                            JSONObject payload1 = json.getJSONObject(PaymentConstants.PAYLOAD);
-                            payload1.put("action", "process");
-                            payload1.put("notificationData", getNotificationDataFromIntent());
-                            json.put(PaymentConstants.PAYLOAD, payload1);
-                        } catch (JSONException e) {
-                            Log.e("NOTIFICATIONDATA", e.toString());
+                            JSONObject innerPayload = json.getJSONObject(PaymentConstants.PAYLOAD);
+                            if (innerPayload.getString("action").equals("terminate")) {
+                                minimizeApp(context);
+                            }
+                        } catch (Exception ignored) {
                         }
-                    }
-                    Log.e(LOG_TAG, "json_payload" + json);
-                    hyperServices.process(json);
-                } else if (event.equals("hide_loader") || event.equals("hide_splash")) {
-                    String key = getResources().getString(R.string.service);
-                    if (key.equals("nammayatri") && isSystemAnimEnabled) {
-                        isHideSplashEventCalled = true;
-                    } else {
-                        hideSplash();
-                    }
-                } else if (event.equals("show_splash")) {
-                    View v = findViewById(in.juspay.mobility.app.R.id.splash);
-                    if (v != null) {
-                        findViewById(in.juspay.mobility.app.R.id.splash).setVisibility(View.VISIBLE);
-                    }
-                } else if (event.equals("reboot")) {
-                    Log.i(LOG_TAG, "event reboot");
-                    hyperServices.terminate();
-                    hyperServices = null;
-                    initApp();
-                } else if (event.equals("in_app_notification")) {
-                    showInAppNotifiation(jsonObject.optString("title"), jsonObject.optString("message"));
-                } else if (event.equals("location_permission")) {
-                    try {
-                        JSONObject payload1 = json.getJSONObject(PaymentConstants.PAYLOAD);
-                        payload1.put("action", "location_permission_result");
-                        json.put(PaymentConstants.PAYLOAD, payload1);
-                    } catch (Exception e) {
-                        Log.e(LOG_TAG,"Exception in location_permission");
-                    }
-                    hyperServices.process(json);
-                } else if (event.equals("process_result")) {
-                    try {
-                        JSONObject payload1 = json.getJSONObject(PaymentConstants.PAYLOAD);
-                        if (payload1.getString("action").equals("terminate")) {
-                            Intent startMain = new Intent(Intent.ACTION_MAIN);
-                            startMain.addCategory(Intent.CATEGORY_HOME);
-                            startMain.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                            context.startActivity(startMain);
-                        }
-                    } catch (Exception ignored) {
-                    }
+                        break;
                 }
             }
         });
@@ -434,25 +398,6 @@ public class MainActivity extends AppCompatActivity {
             AlertDialog alertDialog = builder.create();
             alertDialog.show();
         });
-    }
-
-    private JSONObject getNotificationDataFromIntent() throws JSONException {
-        Bundle bundle = getIntent().getExtras();
-        JSONObject data;
-        //Handling local and foreground notifications
-        if (getIntent().hasExtra("NOTIFICATION_DATA")) {
-            data = new JSONObject(bundle.getString("NOTIFICATION_DATA"));
-        }
-        //Handling background notifications
-        else if (getIntent().hasExtra("notification_type") && getIntent().hasExtra("entity_ids") && getIntent().hasExtra("entity_type")) {
-            data = new JSONObject();
-            data.put("notification_type", bundle.getString("notification_type"));
-            data.put("entity_ids", bundle.getString("entity_ids"));
-            data.put("entity_type", bundle.getString("entity_type"));
-        } else {
-            data = new JSONObject();
-        }
-        return data;
     }
 
     @Override
@@ -534,191 +479,8 @@ public class MainActivity extends AppCompatActivity {
         if (hyperServices != null) {
             hyperServices.terminate();
         }
-        unregisterReceiver(gpsReceiver);
-        unregisterReceiver(networkBroadcastReceiver);
-        NetworkBroadcastReceiver.deRegisterProcessCallback(processCallBack);
         MyFirebaseMessagingService.deRegisterBundleUpdateCallback(bundleUpdateCallBack);
         super.onDestroy();
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        switch (requestCode) {
-            case IMAGE_CAPTURE_REQ_CODE:
-                CommonJsInterface.isUploadPopupOpen = false;
-                if (resultCode == RESULT_OK) {
-                    captureImage (data);
-                }
-                break;
-            case REQUEST_CODE_UPDATE_APP:
-                if (resultCode != RESULT_OK) {
-                    Log.i(TAG,"Update flow failed! Result code: " + resultCode);
-                    if(updateType == AppUpdateType.IMMEDIATE){
-                        finishAndRemoveTask();
-                    }
-                }
-                break;
-            case CropImage.CROP_IMAGE_ACTIVITY_REQUEST_CODE:
-                if (resultCode == RESULT_OK) {
-                    new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                            encodeImageToBase64 (data);
-                        }
-                    }).start();
-                } else if (resultCode == CropImage.CROP_IMAGE_ACTIVITY_RESULT_ERROR_CODE) {
-                    CropImage.ActivityResult result = CropImage.getActivityResult(data);
-                    Log.e(TAG,result.getError().toString());
-                }
-                break;
-            default:return;
-        }
-    }
-
-  @Override
-  public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-      super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-      switch (requestCode) {
-          case IMAGE_PERMISSION_REQ_CODE :
-              if ((ActivityCompat.checkSelfPermission(this, WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) && (ActivityCompat.checkSelfPermission(this, CAMERA) == PackageManager.PERMISSION_GRANTED) && (ActivityCompat.checkSelfPermission(this, READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)){
-                  Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                  String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", new Locale("en","US")).format(new Date());
-                  sharedPref.edit().putString(getResources().getString(R.string.TIME_STAMP_FILE_UPLOAD), timeStamp).apply();
-                  Uri photoFile = FileProvider.getUriForFile(this.getApplicationContext(), getApplicationInfo().packageName + ".fileProvider", new File(this.getApplicationContext().getFilesDir(), "IMG_" + timeStamp+".jpg"));
-                  takePicture.putExtra(MediaStore.EXTRA_OUTPUT, photoFile);
-                  Intent chooseFromFile = new Intent(Intent.ACTION_GET_CONTENT);
-                  chooseFromFile.setType("image/*");
-                  Intent chooser = Intent.createChooser(takePicture, getString(R.string.upload_image));
-                  chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[] { chooseFromFile });
-                  this.startActivityForResult(chooser,IMAGE_CAPTURE_REQ_CODE);
-              } else {
-                  Toast.makeText(this, getString(R.string.please_allow_permission_to_capture_the_image), Toast.LENGTH_SHORT).show();
-              }
-              break;
-          case CommonJsInterface.REQUEST_CALL :
-              if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                  Intent intent = new Intent(Intent.ACTION_CALL,Uri.parse("tel:"+CommonJsInterface.phoneNumber));
-                  this.startActivity(intent);
-              }else{
-                  enablePermissionFromSettings(Manifest.permission.CALL_PHONE, "Phone");
-              }
-              break;
-          case CommonJsInterface.LOCATION_PERMISSION_REQ_CODE:
-              if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                  System.out.println("Location Permission Granted");
-              }else{
-                  enablePermissionFromSettings(Manifest.permission.ACCESS_FINE_LOCATION, "Location");
-              }
-              break;
-          case CommonJsInterface.STORAGE_PERMISSION:
-              if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                  try {
-                      CommonJsInterface.downloadPDF(CommonJsInterface.invoice , (Activity) this,this);
-                  } catch (JSONException e) {
-                      e.printStackTrace();
-                  }
-              }else {
-                  Toast.makeText(this, "Permission Denied", Toast.LENGTH_SHORT).show();
-              }
-              break;
-          case AudioRecorder.REQUEST_RECORD_AUDIO_PERMISSION:
-              if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                  AudioRecorder.recordPermissionAccepted();
-              } else {
-                  Toast.makeText(this, "Permission Denied", Toast.LENGTH_SHORT).show();
-              }
-              break;
-          case CommonJsInterface.REQUEST_CONTACTS:
-              boolean flag = ContextCompat.checkSelfPermission(MainActivity.getInstance(), Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED;
-              String contacts = null;
-              try {
-                  if (flag){
-                      contacts = getPhoneContacts();
-                  } else {
-                      JSONArray flagArray = new JSONArray();
-                      contacts = flagArray.toString();
-                  }
-                  if (juspayServicesGlobal.getDynamicUI() != null) {
-                      CommonJsInterface.contactsStoreCall(juspayServicesGlobal.getDuiCallback(), contacts);
-                  }
-              } catch (JSONException e) {
-                  e.printStackTrace();
-              }
-              break;
-          default: return;
-      }
-  }
-
-    public String getPhoneContacts() throws JSONException {
-        ContentResolver contentResolver = getContentResolver();
-        Uri uri = ContactsContract.CommonDataKinds.Phone.CONTENT_URI;
-        Cursor cursor = contentResolver.query(uri,null,null,null,null);
-
-        JSONArray contacts = new JSONArray();
-
-        if(cursor.getCount()>0){
-            while(cursor.moveToNext()){
-                String contactNameStr = cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME));
-                String contactStr = cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.NUMBER));
-                String contactNumber = contactStr.replaceAll("[^0-9]", "");
-                String contactName = contactNameStr.replaceAll("'","");
-                JSONObject tempPoints = new JSONObject();
-                tempPoints.put("name",contactName);
-                tempPoints.put("number",contactNumber);
-                contacts.put(tempPoints);
-            }
-        }
-
-        JSONObject flagObject = new JSONObject();
-        flagObject.put("name","beckn_contacts_flag");
-        flagObject.put("number","true");
-        contacts.put(flagObject);
-        System.out.print("Contacts " + contacts);
-        return contacts.toString();
-    }
-
-    public void firstTimeAskingPermission(Context context, String permission){
-        SharedPreferences sharedPreference = context.getSharedPreferences(activity.getString(R.string.preference_file_key), MODE_PRIVATE);
-        sharedPreference.edit().putString(permission, "false").apply();
-    }
-
-    public String isFirstTimeAskingPermission(Context context, String permission){
-        return context.getSharedPreferences(activity.getString(R.string.preference_file_key), MODE_PRIVATE).getString(permission, "true");
-    }
-
-    public void enablePermissionFromSettings(@NonNull String permission, String permissionName){
-//        if(!isFirstTimeAskingPermission(this, Manifest.permission.ACCESS_FINE_LOCATION))
-
-        if (ActivityCompat.shouldShowRequestPermissionRationale(this, permission)){
-            firstTimeAskingPermission(this, permission);
-        }else{
-            if(isFirstTimeAskingPermission(this, permission).equals("false")){
-                try {
-                    LayoutInflater inflater = (this).getLayoutInflater();
-                    View permissionStepsView = ((LayoutInflater) this.getSystemService(Context.LAYOUT_INFLATER_SERVICE)).inflate(R.layout.permission_steps_layout, null);
-                    TextView stepText = permissionStepsView.findViewById(R.id.step_text);
-
-                    AlertDialog.Builder builder = new AlertDialog.Builder(this);
-                    stepText.setText("3. Tap on "+permissionName);
-                    builder.setTitle("Permission Required")
-                            .setCancelable(true)
-                            .setView(permissionStepsView)
-                            .setPositiveButton("Go to settings", new DialogInterface.OnClickListener() {
-                                public void onClick(DialogInterface dialog, int which) {
-                                    Intent settingsIntent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-                                    Uri uri = Uri.fromParts("package", getPackageName(), null);
-                                    settingsIntent.setData(uri);
-                                    startActivity(settingsIntent);
-                                }
-                            });
-                    AlertDialog alert = builder.create();
-                    alert.show();
-                } catch (Exception e) {
-                    Log.d("error", e.toString());
-                }
-            }
-        }
     }
 
     @Override
@@ -755,76 +517,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void captureImage (@Nullable Intent data) {
-        try {
-            Uri imageUri;
-            if (data == null || data.getData() == null) { //Camera
-                File image = new File(this.getApplicationContext().getFilesDir(), "IMG_" + sharedPref.getString(getResources().getString(R.string.TIME_STAMP_FILE_UPLOAD), "null") + ".jpg");
-                imageUri = FileProvider.getUriForFile(this.getApplicationContext(), getApplicationInfo().packageName + ".fileProvider", image);
-            }
-            else { // storage
-                imageUri = data.getData();
-            }
-            startCropImageActivity(imageUri);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void startCropImageActivity(Uri imageUri){
-        CropImage.activity(imageUri)
-                .setAllowFlipping(false)
-                .start(this);
-    }
-
-    private void encodeImageToBase64(@Nullable Intent data) {
-        try {
-            CropImage.ActivityResult result = CropImage.getActivityResult(data);
-            Uri fileUri = result.getUri();
-            InputStream imageStream = getContentResolver().openInputStream(fileUri);
-            Bitmap selectedImage = BitmapFactory.decodeStream(imageStream);
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-
-            byte[] b;
-            String encImage;
-
-            selectedImage.compress(Bitmap.CompressFormat.JPEG, 100, baos);
-            b = baos.toByteArray();
-            encImage = Base64.encodeToString(b, Base64.NO_WRAP);
-
-            Log.d(TAG, "camera image size : " + String.valueOf((Math.ceil(encImage.length() / 4) * 3) / 1000));
-
-            if ((Math.ceil(encImage.length() / 4) * 3) / 1000 > 400) {
-                Integer reduceQuality = 10;
-                selectedImage.compress(Bitmap.CompressFormat.JPEG, 100 - reduceQuality, baos);
-                b = baos.toByteArray();
-                encImage = Base64.encodeToString(b, Base64.NO_WRAP);
-                while ((Math.ceil(encImage.length() / 4) * 3) / 1000 > 400) {
-                    if (reduceQuality >= 90) {
-                        break;
-                    }
-                    reduceQuality += 10;
-                    baos.reset();
-                    selectedImage.compress(Bitmap.CompressFormat.JPEG, 100 - reduceQuality, baos);
-                    b = baos.toByteArray();
-                    encImage = Base64.encodeToString(b, Base64.NO_WRAP);
-                }
-            }
-
-            Log.d(TAG, "encoded image size camera : " + String.valueOf((Math.ceil(encImage.length() / 4) * 3) / 1000));
-            if (juspayServicesGlobal.getDynamicUI() != null) {
-                String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", new Locale("en","US")).format(new Date());
-                CommonJsInterface.callingStoreCallImageUpload(juspayServicesGlobal.getDuiCallback(), encImage, "IMG_" + timeStamp +".jpg", result.getUri().getPath());
-            }
-        }
-        catch (Exception e){
-            e.printStackTrace();
-            Bundle params = new Bundle();
-            mFirebaseAnalytics.logEvent("exception_crop_image", params);
-        }
-    }
-
-    public  void showInAppNotifiation(String title , String desc){
+    public void showInAppNotifiation(String title, String desc) {
         // getting the main Layout as a Container to add the notification .
         ConstraintLayout mainLayout = findViewById(in.juspay.mobility.app.R.id.main_layout);
 
@@ -899,15 +592,12 @@ public class MainActivity extends AppCompatActivity {
             Log.e("In Main activity", context.toString());
         }
     }
-    public String getService () {
-        return "in.yatri.consumer";
-//        StringBuilder key = new StringBuilder();
-//        if (in.juspay.mobility.BuildConfig.MERCHANT.equals("KL")) {
-//            key.append("net.openkochi.");
-//        } else {
-//            key.append("in.juspay.");
-//        }
-//        key.append(getResources().getString(R.string.service));
-//        return key.toString();
+
+    public String getService() {
+        if (MERCHANT_TYPE.equals("USER")) {
+            return "in.yatri.consumer";
+        } else {
+            return "in.yatri.provider";
+        }
     }
 }

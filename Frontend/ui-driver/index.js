@@ -107,6 +107,8 @@ window.onMerchantEvent = function (event, payload) {
       window.merchantID = clientPaylod.payload.clientId.toUpperCase();
     }
     console.log(window.merchantID);
+    var header = {"x-client-id" : "nammayatri"};
+    JBridge.setAnalyticsHeader(JSON.stringify(header));
     JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), null)
   } else if (event == "process") {
     window.__payload.sdkVersion = "2.0.1"

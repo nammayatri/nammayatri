@@ -76,7 +76,7 @@ view push config =
               , fontStyle $ FontStyle.bold LanguageStyle
               , margin (MarginVertical 4 4)
               ]
-            , textView
+            , textView $
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
               , textSize FontSize.a_14
