@@ -33,8 +33,8 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
 import Tools.Maps (getTripRoutes)
 
-mkGetLocation :: ShortId DM.Merchant -> Id Common.Ride -> Common.TripRouteReq -> Flow GetRoutesResp
-mkGetLocation shortMerchantId rideId req = do
+mkGetLocation :: ShortId DM.Merchant -> Id Common.Ride -> Double -> Double -> Flow GetRoutesResp
+mkGetLocation shortMerchantId rideId pickupLocationLat pickupLocationLon = do
   merchant <- QMerchant.findByShortId shortMerchantId >>= fromMaybeM (MerchantDoesNotExist shortMerchantId.getShortId)
   ride <- runInReplica $ QRide.findById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (ride.status == Ride.NEW || ride.status == Ride.INPROGRESS) $ throwError (RideInvalidStatus $ show ride.status)
@@ -45,7 +45,7 @@ mkGetLocation shortMerchantId rideId req = do
         DRB.DriverOfferDetails details -> Just details.toLocation
         DRB.OneWaySpecialZoneDetails details -> Just details.toLocation
   bookingLocation <- mbToLocation & fromMaybeM (InvalidRequest "Drop location does not exist for this ride")
-  let fromLocation = LatLong req.pickupLocation.lat req.pickupLocation.lon
+  let fromLocation = LatLong pickupLocationLat pickupLocationLon
   let toLocation = LatLong bookingLocation.lat bookingLocation.lon
   let listOfLatLong = [fromLocation, toLocation]
   let waypointsList = NE.fromList listOfLatLong

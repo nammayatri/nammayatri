@@ -150,10 +150,6 @@ type TripRouteAPI =
   "trip"
     :> "route"
     :> Capture "rideId" (Id DP.Ride)
-    :> ReqBody '[JSON] TripRouteReq
+    :> MandatoryQueryParam "lat" Double
+    :> MandatoryQueryParam "lon" Double
     :> Get '[JSON] Maps.GetRoutesResp
-
-newtype TripRouteReq = TripRouteReq
-  { pickupLocation :: Maps.LatLong
-  }
-  deriving (Show, ToJSON, FromJSON, Generic, ToSchema)

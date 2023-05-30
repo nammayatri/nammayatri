@@ -79,8 +79,9 @@ rideList merchantShortId mbLimit mbOffset mbBookingStatus mbShortRideId mbCustom
 tripRoute ::
   ShortId DM.Merchant ->
   Id Common.Ride ->
-  Common.TripRouteReq ->
+  Double ->
+  Double ->
   FlowHandler Maps.GetRoutesResp
-tripRoute merchantShortId rideId req = withFlowHandlerAPI $ do
+tripRoute merchantShortId rideId pickupLocationLat pickupLocationLon = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId merchantShortId
-  Client.callRiderApp checkedMerchantId (.rides.tripRoute) rideId req
+  Client.callRiderApp checkedMerchantId (.rides.tripRoute) rideId pickupLocationLat pickupLocationLon

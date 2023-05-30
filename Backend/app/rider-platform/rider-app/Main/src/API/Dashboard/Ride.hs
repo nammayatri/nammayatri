@@ -58,5 +58,5 @@ rideList ::
 rideList merchantShortId mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbDriverPhone =
   withFlowHandlerAPI $ DRide.rideList merchantShortId mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbDriverPhone
 
-callGetTripRoute :: ShortId DM.Merchant -> Id Common.Ride -> Common.TripRouteReq -> FlowHandler Maps.GetRoutesResp
-callGetTripRoute merchantShortId rideId req = withFlowHandlerAPI $ mkGetLocation merchantShortId rideId req
+callGetTripRoute :: ShortId DM.Merchant -> Id Common.Ride -> Double -> Double -> FlowHandler Maps.GetRoutesResp
+callGetTripRoute merchantShortId rideId pickupLocationLat pickupLocationLon = withFlowHandlerAPI $ mkGetLocation merchantShortId rideId pickupLocationLat pickupLocationLon
