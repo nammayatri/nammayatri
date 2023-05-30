@@ -351,3 +351,13 @@ export const getCurrentUTC = function (str) {
   console.log(result);
   return result;
 };
+
+export const storeHideLoaderCallback = function (cb,action) {
+  var callback = function (val) {
+    console.log("storeHideLoaderCallback");
+    cb(action(val))();
+  };
+  if (window.loaderCallBack) {
+    window.loaderCallBack.push(callback);
+  }
+}

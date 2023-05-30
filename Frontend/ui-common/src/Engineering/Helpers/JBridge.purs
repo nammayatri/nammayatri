@@ -35,9 +35,15 @@ import Foreign.Class (class Decode, class Encode)
 import Foreign.Generic (decodeJSON)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Data.Either (Either(..))
-import Engineering.Helpers.Commons (screenHeight, screenWidth)
+import Engineering.Helpers.Commons (screenHeight, screenWidth, flowRunnerWithState)
 import Effect.Uncurried (EffectFn3, EffectFn2)
 import Data.Maybe (Maybe(..))
+import Screens.LoaderScreen.Handler as UI
+import Effect.Aff (launchAff)
+import Presto.Core.Types.Language.Flow (doAff)
+import Effect.Class (liftEffect)
+import PrestoDOM.Core(terminateUI)
+import Presto.Core.Types.Language.Flow as Flow
 -- -- import Control.Monad.Except.Trans (lift)
 -- -- foreign import _keyStoreEntryPresent :: String -> Effect Boolean
 -- -- foreign import _createKeyStoreEntry :: String -> String -> (Effect Unit) -> (String -> Effect Unit) -> Effect Unit
@@ -271,7 +277,12 @@ showMap :: forall action. String -> Boolean -> String -> Number -> (action -> Ef
 showMap = showMapImpl --liftFlow (showMapImpl id mapType)
 
 toggleLoader :: Boolean -> Flow GlobalState Unit
-toggleLoader flag = liftFlow (toggleLoaderImpl flag)
+toggleLoader flag = if flag then do
+  state <- Flow.getState
+  _ <- liftFlow $ launchAff $ flowRunnerWithState state UI.loaderScreen
+  pure unit
+  else
+    doAff $ liftEffect $ terminateUI $ Just "LoaderOverlay"
 
 loaderText :: String -> String -> Flow GlobalState Unit
 loaderText mainTxt subTxt = liftFlow (loaderTextImpl mainTxt subTxt)
@@ -352,3 +363,7 @@ getWidthFromPercent :: Int -> Int
 getWidthFromPercent percent =
   let scrWidth = (screenWidth unit)
     in ((scrWidth / 100) * percent)
+
+
+-- loaderFlow :: forall a. Flow GlobalState Unit
+-- loaderFlow = 

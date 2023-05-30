@@ -118,7 +118,7 @@ window.onMerchantEvent = function (event, payload) {
     }
     console.log(window.merchantID);
     var header = {"x-client-id" : "nammayatri"};
-    console.log(JBridge.setAnalyticsHeader(JSON.stringify(header)));
+    JBridge.setAnalyticsHeader(JSON.stringify(header));
     JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), null)
   } else if (event == "process") {
     console.warn("Process called");
@@ -158,6 +158,7 @@ window.callUICallback = function () {
 }
 
 window.onResumeListeners = [];
+window.loaderCallBack =[];
 
 window.onPause = function () {
   console.error("onEvent onPause");
@@ -209,17 +210,6 @@ window["onEvent'"] = function (event, args) {
   } else if (event == "onInternetChanged") {
     purescript.onConnectivityEvent("INTERNET_ACTION")();
   }
-}
-
-// if(__OS == "ANDROID") {
-//   // JBridge.trackEvent("app_id", "in.juspay.arya");
-//   // JBridge.trackEvent("app_version", window.version);
-// }
-
-function disableConsoleLogs() {
-  window.console["log"] = function () { };
-  window.console["error"] = function () { };
-  window.console["warn"] = function () { };
 }
 
 if (typeof window.JOS != "undefined") {

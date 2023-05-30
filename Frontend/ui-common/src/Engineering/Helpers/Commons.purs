@@ -44,6 +44,7 @@ import Effect.Aff.AVar (new)
 import Data.String as DS
 import Data.Int as INT
 import Data.Array ((!!))
+import Effect.Uncurried (EffectFn2)
 
 
 foreign import showUIImpl :: Fn2 (String -> Effect  Unit) String (Effect Unit)
@@ -70,6 +71,7 @@ foreign import countDown :: forall action. Int -> String -> (action -> Effect Un
 foreign import clearTimer :: String -> Unit
 foreign import getExpiryTime :: String -> Boolean -> Int
 foreign import getCurrentUTC :: String -> String
+foreign import storeHideLoaderCallback :: forall action. EffectFn2 (action -> Effect Unit) action Unit
 
 os :: String
 os = getOs unit
@@ -139,6 +141,12 @@ flowRunner flow = do
   let runtime  = Runtime pure permissionRunner apiRunner
   let freeFlow = S.evalStateT (run runtime flow)
   try $ new (defaultState defaultGlobalState) >>= freeFlow
+
+flowRunnerWithState :: forall a st. st -> (Flow st a) -> Aff (Either Error a)
+flowRunnerWithState state flow = do
+  let runtime  = Runtime pure permissionRunner apiRunner
+  let freeFlow = S.evalStateT (run runtime flow)
+  try $ new (defaultState state) >>= freeFlow
 
 permissionCheckRunner :: PermissionCheckRunner
 permissionCheckRunner = checkIfPermissionsGranted
