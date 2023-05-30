@@ -14,6 +14,7 @@
 
 module API.Types where
 
+import Data.Maybe
 import Domain.Types.SpecialZone
 import Kernel.External.Maps (LatLong)
 import Kernel.Types.APISuccess
@@ -47,7 +48,7 @@ type DeleteSpecialZoneAPI =
     :> MandatoryQueryParam "id" (Id SpecialZone)
     :> Delete '[JSON] APISuccess
 
-type API = SpecialZoneAPIs :<|> SpecialZoneDashboardAPIs
+type API = SpecialZoneAPI :<|> SpecialZoneDashboardAPIs
 
 type SpecialZoneDashboardAPIs =
   DashboardTokenAuth
@@ -58,8 +59,8 @@ type SpecialZoneDashboardAPIs =
            :<|> DeleteSpecialZoneAPI
        )
 
-type SpecialZoneAPIs =
+type SpecialZoneAPI =
   "specialZone"
     :> "lookup"
     :> MandatoryQueryParam "latLng" LatLong
-    :> Get '[JSON] SpecialZone
+    :> Get '[JSON] (Maybe SpecialZone)

@@ -155,4 +155,5 @@ in  { esqDBCfg
     , maxEmergencyNumberCount = +3
     , minTripDistanceForReferralCfg = Some +1000
     , registryMap
+    , specialZoneUrl = "http://localhost:8032"
     }

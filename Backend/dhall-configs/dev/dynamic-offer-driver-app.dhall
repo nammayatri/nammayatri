@@ -136,4 +136,5 @@ in  { esqDBCfg
     , snapToRoadSnippetThreshold = +300
     , minTripDistanceForReferralCfg = Some +1000
     , maxShards = +5
+    , specialZoneUrl = "http://localhost:8032"
     }

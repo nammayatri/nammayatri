@@ -32,13 +32,13 @@ dashboardHandler _dashboard =
     :<|> updateSpecialZone
     :<|> deleteSpecialZone
 
-specialZoneHandler :: FlowServer API.SpecialZoneAPIs
+specialZoneHandler :: FlowServer API.SpecialZoneAPI
 specialZoneHandler = lookupSpecialZone
 
 handler :: FlowServer API.API
 handler = specialZoneHandler :<|> dashboardHandler
 
-lookupSpecialZone :: LatLong -> FlowHandler Domain.SpecialZone
+lookupSpecialZone :: LatLong -> FlowHandler (Maybe Domain.SpecialZone)
 lookupSpecialZone latLng = withFlowHandlerAPI $ DSpecialZone.lookupSpecialZone latLng
 
 lookupSpecialZonesByRegion :: LatLong -> LatLong -> FlowHandler [Domain.SpecialZone]

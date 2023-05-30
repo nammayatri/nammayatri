@@ -175,6 +175,7 @@ library
       Environment
       SharedLogic.CallBPP
       SharedLogic.CallBPPInternal
+      SharedLogic.CallSpecialZone
       SharedLogic.Confirm
       SharedLogic.GoogleTranslate
       SharedLogic.Merchant
@@ -346,7 +347,6 @@ library
     , servant-openapi3
     , servant-server
     , special-zone
-    , special-zone-a
     , text
     , text-conversions
     , time

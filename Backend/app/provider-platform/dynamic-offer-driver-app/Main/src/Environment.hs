@@ -93,7 +93,8 @@ data AppCfg = AppCfg
     broadcastMessageTopic :: Text,
     snapToRoadSnippetThreshold :: HighPrecMeters,
     minTripDistanceForReferralCfg :: Maybe HighPrecMeters,
-    maxShards :: Int
+    maxShards :: Int,
+    specialZoneUrl :: BaseUrl
   }
   deriving (Generic, FromDhall)
 
@@ -149,7 +150,8 @@ data AppEnv = AppEnv
     snapToRoadSnippetThreshold :: HighPrecMeters,
     minTripDistanceForReferralCfg :: Maybe HighPrecMeters,
     maxShards :: Int,
-    version :: Metrics.DeploymentVersion
+    version :: Metrics.DeploymentVersion,
+    specialZoneUrl :: BaseUrl
   }
   deriving (Generic)
 

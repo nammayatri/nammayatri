@@ -26,8 +26,8 @@ import Kernel.Utils.Common
 import Storage.Queries.EntryExit
 import Storage.Queries.SpecialZone
 
-lookupSpecialZone :: EsqDBFlow m r => LatLong -> m Domain.SpecialZone
-lookupSpecialZone latLon = findSpecialZoneByLatLong latLon >>= fromMaybeM SpecialZoneNotFound
+lookupSpecialZone :: EsqDBFlow m r => LatLong -> m (Maybe Domain.SpecialZone)
+lookupSpecialZone = findSpecialZoneByLatLong
 
 lookupSpecialZonesByRegion :: EsqDBFlow m r => LatLong -> LatLong -> m [Domain.SpecialZone]
 lookupSpecialZonesByRegion minLatLng maxLatLng = do

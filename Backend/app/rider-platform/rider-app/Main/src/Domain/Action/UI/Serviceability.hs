@@ -19,16 +19,17 @@ module Domain.Action.UI.Serviceability
 where
 
 import Domain.Types.Person as Person
+import Domain.Types.SpecialZone (SpecialZone)
 import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Storage.Hedis
+import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.Queries.SpecialLocation as QSpecialLocation
-import qualified Lib.Types.SpecialLocation as DSpecialLocation
+import SharedLogic.CallSpecialZone
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import Storage.Queries.Geometry (someGeometriesContain)
@@ -37,8 +38,7 @@ import Tools.Error
 
 data ServiceabilityRes = ServiceabilityRes
   { serviceable :: Bool,
-    specialLocation :: Maybe DSpecialLocation.SpecialLocation,
-    geoJson :: Maybe Text
+    specialLocation :: Maybe SpecialZone
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
@@ -46,7 +46,9 @@ checkServiceability ::
   ( HasCacheConfig r,
     EsqDBReplicaFlow m r,
     HedisFlow m r,
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    CoreMetrics m,
+    HasField "specialZoneUrl" r BaseUrl
   ) =>
   (GeofencingConfig -> GeoRestriction) ->
   Id Person.Person ->
@@ -59,15 +61,13 @@ checkServiceability settingAccessor personId location = do
   let merchId = person.merchantId
   geoConfig <- fmap (.geofencingConfig) $ QMerchant.findById merchId >>= fromMaybeM (MerchantNotFound merchId.getId)
   let geoRestriction = settingAccessor geoConfig
+  baseUrl <- getSpecialZoneUrl
+  specialLocationBody <- szLookup baseUrl location
   case geoRestriction of
-    Unrestricted -> do
-      let serviceable = True
-      specialLocationBody <- QSpecialLocation.findSpecialLocationByLatLong location
-      pure ServiceabilityRes {serviceable = serviceable, specialLocation = fst <$> specialLocationBody, geoJson = snd <$> specialLocationBody}
+    Unrestricted -> pure ServiceabilityRes {serviceable = True, specialLocation = specialLocationBody}
     Regions regions -> do
       serviceable <- runInReplica $ someGeometriesContain location regions
-      if serviceable
-        then do
-          specialLocationBody <- QSpecialLocation.findSpecialLocationByLatLong location
-          pure ServiceabilityRes {serviceable = serviceable, specialLocation = fst <$> specialLocationBody, geoJson = snd <$> specialLocationBody}
-        else pure ServiceabilityRes {serviceable = serviceable, specialLocation = Nothing, geoJson = Nothing}
+      pure ServiceabilityRes {serviceable = serviceable, specialLocation = specialLocationBody}
+  where
+    getSpecialZoneUrl :: (MonadReader r m, HasField "specialZoneUrl" r BaseUrl) => m BaseUrl
+    getSpecialZoneUrl = asks (.specialZoneUrl)

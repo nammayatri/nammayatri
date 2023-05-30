@@ -43,8 +43,8 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified SharedLogic.CacheDistance as CD
+import SharedLogic.CallSpecialZone (szLookup)
 import SharedLogic.DriverPool hiding (lat, lon)
 import qualified SharedLogic.Estimate as SHEst
 import SharedLogic.FareCalculator
@@ -124,8 +124,8 @@ handler org sReq = do
   CD.cacheDistance sReq.transactionId (result.distance, result.duration)
   Redis.setExp (CD.deviceKey sReq.transactionId) sReq.device 120
   logDebug $ "distance: " <> show result.distance
-  mbSpecialLocation <- QSpecialLocation.findSpecialLocationByLatLong fromLocationLatLong
-
+  baseUrl <- getSpecialZoneUrl
+  mbSpecialLocation <- szLookup baseUrl fromLocationLatLong
   (quotes, mbEstimateInfos) <-
     if isJust mbSpecialLocation
       then do
@@ -254,6 +254,9 @@ handler org sReq = do
       EstimateInfo
         { ..
         }
+
+    getSpecialZoneUrl :: (MonadReader r m, HasField "specialZoneUrl" r BaseUrl) => m BaseUrl
+    getSpecialZoneUrl = asks (.specialZoneUrl)
 
 buildSearchRes ::
   (MonadTime m) =>

@@ -104,7 +104,6 @@ library:
   dependencies:
     - mobility-core
     - beckn-spec
-    - special-zone-a
     - special-zone
 executables:
   rider-app-exe:

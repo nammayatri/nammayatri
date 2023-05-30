@@ -207,6 +207,7 @@ library
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.SendSearchRequestToDrivers
       SharedLogic.CacheDistance
       SharedLogic.CallBAP
+      SharedLogic.CallSpecialZone
       SharedLogic.CancelSearch
       SharedLogic.DeleteDriver
       SharedLogic.DriverLocation
@@ -447,7 +448,7 @@ library
     , servant-server
     , shared-services
     , singletons
-    , special-zone-a
+    , special-zone
     , stm
     , string-conversions
     , text
