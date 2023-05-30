@@ -70,6 +70,7 @@ library
     , bytestring
     , containers
     , cryptonite
+    , dynamic-offer-driver-app
     , either
     , euler-hs
     , exceptions
@@ -86,7 +87,6 @@ library
     , servant-client-core
     , servant-openapi3
     , servant-server
-    , static-offer-driver-app
     , stm
     , string-conversions
     , text

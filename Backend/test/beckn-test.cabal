@@ -41,18 +41,6 @@ library
       Mobility.ARDU.SyncRide
       Mobility.ARDU.Utils
       Mobility.Fixtures.Routes
-      Mobility.Transporter.APICalls
-      Mobility.Transporter.AppCancelRide
-      Mobility.Transporter.DriverCancelRide
-      Mobility.Transporter.DriversRejectRide
-      Mobility.Transporter.Fixtures
-      Mobility.Transporter.HealthCheck
-      Mobility.Transporter.LocationUpdates
-      Mobility.Transporter.MapsConfig
-      Mobility.Transporter.NearestDrivers
-      Mobility.Transporter.Serviceability
-      Mobility.Transporter.Spec
-      Mobility.Transporter.Utils
       PublicTransport.API
       PublicTransport.Common
       PublicTransport.HealthCheck
@@ -138,8 +126,6 @@ library
     , servant
     , servant-client
     , servant-server
-    , static-offer-driver-app
-    , static-offer-driver-app-allocator
     , string-conversions
     , tasty
     , tasty-hspec
@@ -231,8 +217,6 @@ test-suite beckn-integ-test
     , servant
     , servant-client
     , servant-server
-    , static-offer-driver-app
-    , static-offer-driver-app-allocator
     , string-conversions
     , tasty
     , tasty-hspec

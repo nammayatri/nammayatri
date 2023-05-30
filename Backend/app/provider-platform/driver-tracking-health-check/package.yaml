@@ -93,9 +93,9 @@ library:
     - -fhide-source-paths
     - -Werror
   dependencies:
-    - static-offer-driver-app
     - mobility-core
     - beckn-spec
+    - dynamic-offer-driver-app
 
 executables:
   driver-tracking-healthcheck-exe:
