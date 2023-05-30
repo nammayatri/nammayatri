@@ -136,6 +136,17 @@ findDriverQuoteBySearchId searchReqId = Esq.findOne' $ do
   where_ $ driverQuote ^. DriverQuoteSearchRequestId ==. val (toKey searchReqId)
   pure driverQuote
 
+findDriverQuoteBySearchId' :: (L.MonadFlow m) => Id DSReq.SearchRequest -> m (Maybe Domain.DriverQuote)
+findDriverQuoteBySearchId' (Id searchReqId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> do
+      sR <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDQ.searchRequestId $ Se.Eq searchReqId]
+      case sR of
+        Left _ -> pure Nothing
+        Right x -> mapM transformBeamDriverQuoteToDomain x
+    Nothing -> pure Nothing
+
 transformBeamDriverQuoteToDomain :: L.MonadFlow m => BeamDQ.DriverQuote -> m Domain.DriverQuote
 transformBeamDriverQuoteToDomain BeamDQ.DriverQuoteT {..} = do
   fp <- BeamQFP.findById (Id fareParametersId)

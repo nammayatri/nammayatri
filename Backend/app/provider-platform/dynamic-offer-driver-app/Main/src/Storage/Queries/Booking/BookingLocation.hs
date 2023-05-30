@@ -44,6 +44,13 @@ import qualified Storage.Beam.Booking.BookingLocation as BeamBL
 --       ]
 --     where_ $ tbl ^. BookingLocationTId ==. val (toKey blId)
 
+create :: L.MonadFlow m => BookingLocation -> m (MeshResult ())
+create bl = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainBookingLocationToBeam bl)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+
 findById :: L.MonadFlow m => Id BookingLocation -> m (Maybe BookingLocation)
 findById (Id bookingLocationId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg

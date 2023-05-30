@@ -25,7 +25,7 @@ import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.External.Types
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto
+import Kernel.Storage.Esqueleto hiding (create)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common (MonadTime (getCurrentTime))
 import Kernel.Types.Id
@@ -38,11 +38,11 @@ import Storage.Tabular.Message.MessageReport
 import qualified Storage.Tabular.Message.MessageTranslation as MT
 import qualified Storage.Tabular.Person as PT
 
-createMany :: [MessageReport] -> SqlDB ()
-createMany = Esq.createMany
+-- createMany :: [MessageReport] -> SqlDB ()
+-- createMany = Esq.createMany
 
--- createMany' :: L.MonadFlow m => [MessageReport] -> m ()
--- createMany' msr = void $ traverse create msr
+createMany :: L.MonadFlow m => [MessageReport] -> m ()
+createMany msr = void $ traverse create msr
 
 create :: L.MonadFlow m => MessageReport -> m (MeshResult ())
 create messageReport = do

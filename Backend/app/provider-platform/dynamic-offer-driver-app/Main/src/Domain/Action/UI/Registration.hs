@@ -42,7 +42,6 @@ import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.External.Whatsapp.Interface.Types as Whatsapp
 import Kernel.Sms.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.Common as BC
@@ -130,8 +129,8 @@ auth ::
   Maybe Version ->
   m AuthRes
 auth req mbBundleVersion mbClientVersion = do
-  res' <- runInReplica $ do
-    findAllBookings
+  -- res' <- runInReplica $ do
+  res' <- findAllBookings
   res <- BN.findById "ND-driver-with-old-location-00000000"
   runRequestValidation validateInitiateLoginReq req
   smsCfg <- T.trace (show res') $ T.trace (show res) $ asks (.smsCfg)

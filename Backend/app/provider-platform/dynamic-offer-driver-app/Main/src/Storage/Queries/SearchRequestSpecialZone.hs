@@ -19,6 +19,7 @@ import Domain.Types.Merchant
 import Domain.Types.SearchRequestSpecialZone as Domain
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
@@ -36,6 +37,19 @@ create dsReq = Esq.runTransaction $
     Esq.create' fromLoc
     Esq.create' toLoc
     Esq.create' sReq
+
+createSearchRequestSpecialZone :: L.MonadFlow m => SearchRequestSpecialZone -> m (MeshResult ())
+createSearchRequestSpecialZone srsz = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainSearchRequestSpecialZoneToBeam srsz)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+
+create' :: L.MonadFlow m => SearchRequestSpecialZone -> m (MeshResult ())
+create' srsz = do
+  _ <- createSearchRequestSpecialZone srsz
+  _ <- QSRL.create srsz.fromLocation
+  QSRL.create srsz.toLocation
 
 findById :: Transactionable m => Id SearchRequestSpecialZone -> m (Maybe SearchRequestSpecialZone)
 findById searchRequestSpecialZoneId = buildDType $

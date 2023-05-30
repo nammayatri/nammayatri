@@ -115,8 +115,8 @@ handler merchantId req = do
       searchRequest <- QSR.findById driverQuote.searchRequestId >>= fromMaybeM (SearchRequestNotFound driverQuote.searchRequestId.getId)
       -- do we need to check searchRequest.validTill?
       booking <- buildBooking searchRequest driverQuote DRB.NormalBooking now
-      Esq.runTransaction $
-        QRB.create booking
+      -- Esq.runTransaction $
+      _ <- QRB.create booking
       pure InitRes {..}
     InitSpecialZoneReq -> do
       specialZoneQuote <- QSZoneQuote.findById (Id req.driverQuoteId) >>= fromMaybeM (QuoteNotFound req.driverQuoteId)
@@ -124,8 +124,8 @@ handler merchantId req = do
         throwError $ QuoteExpired specialZoneQuote.id.getId
       searchRequest <- QSRSpecialZone.findById specialZoneQuote.searchRequestId >>= fromMaybeM (SearchRequestNotFound specialZoneQuote.searchRequestId.getId)
       booking <- buildBooking searchRequest specialZoneQuote DRB.SpecialZoneBooking now
-      Esq.runTransaction $
-        QRB.create booking
+      -- Esq.runTransaction $
+      _ <- QRB.create booking
       pure InitRes {..}
   where
     buildBooking ::

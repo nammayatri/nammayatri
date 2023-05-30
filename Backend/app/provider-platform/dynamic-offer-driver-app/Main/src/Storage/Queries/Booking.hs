@@ -11,13 +11,12 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TypeApplications #-}
 
 module Storage.Queries.Booking where
 
 import Data.Text (pack)
 import Domain.Types.Booking
-import Domain.Types.DriverQuote (DriverQuote)
+import Domain.Types.DriverQuote as DDQ
 import Domain.Types.Geometry
 import Domain.Types.Merchant
 import Domain.Types.RiderDetails (RiderDetails)
@@ -27,7 +26,6 @@ import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq hiding (findById, isNothing)
 import Kernel.Types.Id
 import Kernel.Types.Time
 import Kernel.Utils.Common
@@ -37,37 +35,45 @@ import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Queries.Booking.BookingLocation as QBBL
 import qualified Storage.Queries.DriverQuote as QDQuote
 import qualified Storage.Queries.FareParameters as QueriesFP
-import Storage.Queries.FullEntityBuilders
 import Storage.Queries.Geometry
-import Storage.Tabular.Booking
-import Storage.Tabular.Booking.BookingLocation
-import Storage.Tabular.DriverQuote as DriverQuote
-import qualified Storage.Tabular.FareParameters as Fare
-import Storage.Tabular.Geometry (EntityField (..), GeometryT ())
 
-baseBookingTable ::
-  From
-    ( Table BookingT
-        :& Table BookingLocationT
-        :& Table BookingLocationT
-        :& Table Fare.FareParametersT
-    )
-baseBookingTable =
-  table @BookingT
-    `innerJoin` table @BookingLocationT `Esq.on` (\(rb :& loc1) -> rb ^. BookingFromLocationId ==. loc1 ^. BookingLocationTId)
-    `innerJoin` table @BookingLocationT `Esq.on` (\(rb :& _ :& loc2) -> rb ^. BookingToLocationId ==. loc2 ^. BookingLocationTId)
-    `innerJoin` table @Fare.FareParametersT
-      `Esq.on` ( \(rb :& _ :& _ :& farePars) ->
-                   rb ^. BookingFareParametersId ==. farePars ^. Fare.FareParametersTId
-               )
+-- baseBookingTable ::
+--   From
+--     ( Table BookingT
+--         :& Table BookingLocationT
+--         :& Table BookingLocationT
+--         :& Table Fare.FareParametersT
+--     )
+-- baseBookingTable =
+--   table @BookingT
+--     `innerJoin` table @BookingLocationT `Esq.on` (\(rb :& loc1) -> rb ^. BookingFromLocationId ==. loc1 ^. BookingLocationTId)
+--     `innerJoin` table @BookingLocationT `Esq.on` (\(rb :& _ :& loc2) -> rb ^. BookingToLocationId ==. loc2 ^. BookingLocationTId)
+--     `innerJoin` table @Fare.FareParametersT
+--       `Esq.on` ( \(rb :& _ :& _ :& farePars) ->
+--                    rb ^. BookingFareParametersId ==. farePars ^. Fare.FareParametersTId
+--                )
 
 -- fareParams already created with driverQuote
-create :: Booking -> SqlDB ()
-create dBooking =
-  withFullEntity dBooking $ \(booking, fromLoc, toLoc, _fareParams) -> do
-    Esq.create' fromLoc
-    Esq.create' toLoc
-    Esq.create' booking
+
+-- create :: Booking -> SqlDB ()
+-- create dBooking =
+--   withFullEntity dBooking $ \(booking, fromLoc, toLoc, _fareParams) -> do
+--     Esq.create' fromLoc
+--     Esq.create' toLoc
+--     Esq.create' booking
+
+createBooking :: L.MonadFlow m => Booking -> m (MeshResult ())
+createBooking booking = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainBookingToBeam booking)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+
+create :: L.MonadFlow m => Booking -> m (MeshResult ())
+create dBooking = do
+  _ <- createBooking dBooking
+  _ <- QBBL.create dBooking.fromLocation
+  QBBL.create dBooking.toLocation
 
 findById :: L.MonadFlow m => Id Booking -> m (Maybe Booking)
 findById (Id bookingId) = do
@@ -80,19 +86,35 @@ findById (Id bookingId) = do
         Left _ -> pure Nothing
     Nothing -> pure Nothing
 
-findBySearchReq :: (Transactionable m) => Id DSR.SearchRequest -> m (Maybe Booking)
-findBySearchReq searchReqId = buildDType $ do
-  mbDriverQuoteT <- QDQuote.findDriverQuoteBySearchId searchReqId
-  let mbDriverQuoteId = Id . DriverQuote.id <$> mbDriverQuoteT
-  mbBookingT <- (join <$>) $ mapM findBookingByDriverQuoteId' mbDriverQuoteId
+-- findBySearchReq :: (Transactionable m) => Id DSR.SearchRequest -> m (Maybe Booking)
+-- findBySearchReq searchReqId = buildDType $ do
+--   mbDriverQuoteT <- QDQuote.findDriverQuoteBySearchId searchReqId
+--   let mbDriverQuoteId = Id . DriverQuote.id <$> mbDriverQuoteT
+--   mbBookingT <- (join <$>) $ mapM findBookingByDriverQuoteId' mbDriverQuoteId
 
-  join <$> mapM buildFullBooking mbBookingT
+-- join <$> mapM buildFullBooking mbBookingT
 
-findBookingByDriverQuoteId' :: Transactionable m => Id DriverQuote -> DTypeBuilder m (Maybe BookingT)
-findBookingByDriverQuoteId' driverQuoteId = Esq.findOne' $ do
-  booking <- from $ table @BookingT
-  where_ $ booking ^. BookingQuoteId ==. val driverQuoteId.getId
-  pure booking
+findBySearchReq :: L.MonadFlow m => Id DSR.SearchRequest -> m (Maybe Booking)
+findBySearchReq searchReqId = do
+  mbDriverQuote <- QDQuote.findDriverQuoteBySearchId' searchReqId
+  case mbDriverQuote of
+    Nothing -> pure Nothing
+    Just mbDriverQuote' -> do
+      let quoteId = DDQ.id mbDriverQuote'
+      dbConf <- L.getOption Extra.EulerPsqlDbCfg
+      case dbConf of
+        Just dbCOnf' -> do
+          result <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamB.quoteId $ Se.Eq $ getId quoteId]
+          case result of
+            Right booking -> traverse transformBeamBookingToDomain booking
+            Left _ -> pure Nothing
+        Nothing -> pure Nothing
+
+-- findBookingByDriverQuoteId' :: Transactionable m => Id DriverQuote -> DTypeBuilder m (Maybe BookingT)
+-- findBookingByDriverQuoteId' driverQuoteId = Esq.findOne' $ do
+--   booking <- from $ table @BookingT
+--   where_ $ booking ^. BookingQuoteId ==. val driverQuoteId.getId
+--   pure booking
 
 updateStatus :: (L.MonadFlow m, MonadTime m) => Id Booking -> BookingStatus -> m (MeshResult ())
 updateStatus rbId rbStatus = do
@@ -215,14 +237,14 @@ cancelBookings bookingIds now = do
         [Se.Is BeamB.id (Se.In $ getId <$> bookingIds)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-findAllBookings :: Transactionable m => m [Id Geometry]
-findAllBookings = do
-  Esq.findAll $ do
-    booking <- from $ table @GeometryT
-    pure $ booking ^. GeometryTId
+-- findAllBookings :: Transactionable m => m [Id Geometry]
+-- findAllBookings = do
+--   Esq.findAll $ do
+--     booking <- from $ table @GeometryT
+--     pure $ booking ^. GeometryTId
 
-findAllBookings' :: L.MonadFlow m => m [Id Geometry]
-findAllBookings' = do
+findAllBookings :: L.MonadFlow m => m [Id Geometry]
+findAllBookings = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> do

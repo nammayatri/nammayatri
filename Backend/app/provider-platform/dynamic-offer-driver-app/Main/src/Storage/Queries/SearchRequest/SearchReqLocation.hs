@@ -18,12 +18,20 @@ module Storage.Queries.SearchRequest.SearchReqLocation where
 import Domain.Types.SearchRequest.SearchReqLocation
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequest.SearchReqLocation as BeamSRL
+
+create :: L.MonadFlow m => SearchReqLocation -> m (MeshResult ())
+create bl = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainSearchReqLocationToBeam bl)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 findById :: L.MonadFlow m => Id SearchReqLocation -> m (Maybe SearchReqLocation)
 findById (Id searchReqLocationId) = do
