@@ -104,6 +104,7 @@ import com.google.firebase.dynamiclinks.PendingDynamicLinkData;
 import com.google.firebase.messaging.BuildConfig;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.theartofdev.edmodo.cropper.CropImage;
+import com.scottyab.rootbeer.RootBeer;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -139,6 +140,7 @@ import in.juspay.hypersdk.data.JuspayResponseHandler;
 import in.juspay.hypersdk.ui.HyperPaymentsCallbackAdapter;
 import in.juspay.hypersdk.core.DuiCallback;
 import in.juspay.services.HyperServices;
+import in.juspay.mobility.utils.RootDetection;
 
 //import com.facebook.LoggingBehavior;
 //import com.facebook.applinks.AppLinkData;
@@ -295,6 +297,28 @@ public class MainActivity extends AppCompatActivity {
 //                Log.w(TAG, "Failed to read value.", error.toException());
 //            }
 //        });
+
+        RootDetection rootDetection = new RootDetection();
+        RootBeer rootBeer = new RootBeer(getApplicationContext());
+        Handler handler = new Handler();
+        
+        if(rootDetection.basicRootCheck() || rootBeer.isRooted() || rootDetection.isQEmuEnvDetected(MainActivity.this) || rootDetection.isEmulator() || rootDetection.hookDetected(MainActivity.this) || rootDetection.isDebugged() || rootDetection.advancedHookDetection(MainActivity.this) || rootDetection.checkActivityProcessors(MainActivity.this) || rootDetection.checkJarFiles()){
+        
+            AlertDialog.Builder alertBuilder = new AlertDialog.Builder(MainActivity.this);
+            alertBuilder.setTitle("Root Device Detected");
+            alertBuilder.setMessage("This application is not supported on rooted devices. Please contact your system provider to restore an official Android release to your device.");
+            alertBuilder.setPositiveButton("Okay", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    finish();
+                    System.exit(0);
+                }
+            });
+            alertBuilder.setCancelable(false);
+            alertBuilder.show();
+            return;
+        }
+        
         this.activity = this;
         sharedPref = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         sharedPref.registerOnSharedPreferenceChangeListener(mListener);
@@ -817,22 +841,26 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        sharedPref.edit().putString(getResources().getString(R.string.ACTIVITY_STATUS),"onResume").apply();
-        appUpdateManager.getAppUpdateInfo().addOnSuccessListener(appUpdateInfo -> {
-            if (appUpdateInfo.updateAvailability() == UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS) {
-                // If an in-app update is already running, resume the update.
-                try {
-                    appUpdateManager.startUpdateFlowForResult(
-                            appUpdateInfo,
-                            AppUpdateType.IMMEDIATE,
-                            this,
-                            getResources().getInteger(REQUEST_CODE_UPDATE_APP)
-                    );
-                } catch (IntentSender.SendIntentException e) {
-                    e.printStackTrace();
+
+        if(sharedPref != null){
+            sharedPref.edit().putString(getResources().getString(R.string.ACTIVITY_STATUS),"onResume").apply();
+            appUpdateManager.getAppUpdateInfo().addOnSuccessListener(appUpdateInfo -> {
+                if (appUpdateInfo.updateAvailability() == UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS) {
+                    // If an in-app update is already running, resume the update.
+                    try {
+                        appUpdateManager.startUpdateFlowForResult(
+                                appUpdateInfo,
+                                AppUpdateType.IMMEDIATE,
+                                this,
+                                getResources().getInteger(REQUEST_CODE_UPDATE_APP)
+                        );
+                    } catch (IntentSender.SendIntentException e) {
+                        e.printStackTrace();
+                    }
                 }
-            }
-        });
+            });
+        }
+
         MainActivity.this.callingDriverLocationPermission();
         MainActivity.this.callingOverlayPermission();
         MainActivity.this.callingCheckBatteryOptimization();
