@@ -84,18 +84,30 @@ login LoginReq {..} = do
     throwError $ InvalidRequest "Server for this merchant is not available"
   person <- QP.findByEmailAndPassword email password >>= fromMaybeM (PersonDoesNotExist email)
   _merchantAccess <- QAccess.findByPersonIdAndMerchantId person.id merchant.id >>= fromMaybeM AccessDenied --FIXME cleanup tokens for this merchantId
-  when (merchant.is2faMandatory && not _merchantAccess.is2faEnabled) $
-    throwError $ InvalidRequest "2 Factor authentication is not enabled, it is mandatory for this merchant"
-  when (merchant.is2faMandatory && _merchantAccess.is2faEnabled) $ do
-    case (_merchantAccess.secretKey, otp) of
-      (Just secretKey, Just userOtp) -> do
-        generatedOtp <- L.runIO (Utils.genTOTP secretKey)
-        unless (generatedOtp == read (T.unpack userOtp)) $
-          throwError $ InvalidRequest "Google Authenticator OTP does not match"
-      (_, Nothing) -> throwError $ InvalidRequest "Google Authenticator OTP is required"
-      (Nothing, _) -> throwError $ InvalidRequest "Secret key not found for 2FA"
-  token <- generateToken person.id merchant.id
-  pure $ LoginRes token merchant.is2faMandatory _merchantAccess.is2faEnabled "Logged in successfully"
+  if merchant.is2faMandatory && not _merchantAccess.is2faEnabled
+    then pure $ LoginRes "" merchant.is2faMandatory _merchantAccess.is2faEnabled "2 Factor authentication is not enabled, it is mandatory for this merchant"
+    else do
+      (isToken, msg) <-
+        if merchant.is2faMandatory && _merchantAccess.is2faEnabled
+          then handle2FA _merchantAccess.secretKey otp
+          else pure (True, "Logged in successfully")
+      token <- if isToken then generateToken person.id merchant.id else pure ""
+      pure $ LoginRes token merchant.is2faMandatory _merchantAccess.is2faEnabled msg
+
+handle2FA ::
+  ( EncFlow m r
+  ) =>
+  Maybe Text ->
+  Maybe Text ->
+  m (Bool, Text)
+handle2FA secretKey otp = case (secretKey, otp) of
+  (Just key, Just userOtp) -> do
+    generatedOtp <- L.runIO (Utils.genTOTP key)
+    if generatedOtp == read (T.unpack userOtp)
+      then pure (True, "Logged in successfully")
+      else pure (False, "Google Authenticator OTP does not match")
+  (_, Nothing) -> pure (False, "Google Authenticator OTP is required")
+  (Nothing, _) -> pure (False, "Secret key not found for 2FA")
 
 enable2fa ::
   ( EsqDBFlow m r,
