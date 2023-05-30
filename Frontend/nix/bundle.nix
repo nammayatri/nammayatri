@@ -26,6 +26,7 @@
             cp ${ ../${target}/package.json } package.json
             cp ${ ../${target}/webpack.config.js } webpack.config.js
             cp ${ ../${target}/${webpack-config} } ${webpack-config}
+            cp -r ${ ../${target}/src } src
             node node_modules/.bin/webpack --env ${env} --mode=${mode} --progress --config ${webpack-config}
           '';
           installPhase = ''
