@@ -88,7 +88,7 @@ data MerchantAPIs = MerchantAPIs
 data RidesAPIs = RidesAPIs
   { shareRideInfo :: Id Ride.Ride -> Euler.EulerClient Ride.ShareRideInfoRes,
     rideList :: Maybe Int -> Maybe Int -> Maybe Ride.BookingStatus -> Maybe (ShortId Ride.Ride) -> Maybe Text -> Maybe Text -> Euler.EulerClient Ride.RideListRes,
-    tripRoute :: Id Ride.Ride -> Ride.TripRouteReq -> Euler.EulerClient Maps.GetRoutesResp
+    tripRoute :: Id Ride.Ride -> Double -> Double -> Euler.EulerClient Maps.GetRoutesResp
   }
 
 data RideBookingAPIs = RideBookingAPIs
