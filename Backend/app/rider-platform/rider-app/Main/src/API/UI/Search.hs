@@ -25,7 +25,6 @@ module API.UI.Search
   )
 where
 
-import qualified Beckn.ACL.Metro.Search as MetroACL
 import qualified Beckn.ACL.Search as TaxiACL
 import Data.Aeson
 import Data.OpenApi hiding (Header)
@@ -57,7 +56,6 @@ import Kernel.Utils.SlidingWindowLimiter
 import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.MerchantConfig as SMC
-import qualified SharedLogic.PublicTransport as PublicTransport
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.MerchantConfig as CMC
@@ -169,10 +167,11 @@ oneWaySearch personId bundleVersion clientVersion device req = do
   fork "search cabs" . withShortRetry $ do
     becknTaxiReq <- TaxiACL.buildOneWaySearchReq dSearchRes device shortestRouteDistance shortestRouteDuration
     void $ CallBPP.search dSearchRes.gatewayUrl becknTaxiReq
-  fork "search metro" . withShortRetry $ do
-    becknMetroReq <- MetroACL.buildSearchReq dSearchRes
-    CallBPP.searchMetro dSearchRes.gatewayUrl becknMetroReq
-  fork "search public-transport" $ PublicTransport.sendPublicTransportSearchRequest personId dSearchRes
+  ---------------------removed as currently not being used anywhere-----------------
+  -- fork "search metro" . withShortRetry $ do
+  --   becknMetroReq <- MetroACL.buildSearchReq dSearchRes
+  --   CallBPP.searchMetro dSearchRes.gatewayUrl becknMetroReq
+  -- fork "search public-transport" $ PublicTransport.sendPublicTransportSearchRequest personId dSearchRes
   fork "updating search counters" $ do
     merchantConfigs <- CMC.findAllByMerchantId person.merchantId
     SMC.updateSearchFraudCounters personId merchantConfigs
