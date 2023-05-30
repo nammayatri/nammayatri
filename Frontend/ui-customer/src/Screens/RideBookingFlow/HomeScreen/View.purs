@@ -143,7 +143,7 @@ screen initialState =
                   _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
                   void $ launchAff $ flowRunner $ driverLocationTracking push UpdateCurrentStage DriverArrivedAction UpdateETA 5000.0 (getValueToLocalStore TRACKING_ID) initialState "pickup" 0
                 else pure unit
-                if(not initialState.props.chatcallbackInitiated) then do
+                if(not initialState.props.chatcallbackInitiated && (getMerchant FunctionCall) /= UNKNOWN) then do
                   _ <- storeCallBackMessageUpdated push initialState.data.driverInfoCardState.bppRideId "Customer" UpdateMessages
                   _ <- startChatListenerService
                   push InitializeChat
