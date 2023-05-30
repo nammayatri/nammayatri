@@ -30,6 +30,7 @@ type API =
     :> ( ShareRideInfoAPI
            :<|> Common.RideListAPI
            :<|> Common.TripRouteAPI
+           :<|> Common.RideInfoAPI
        )
 
 type ShareRideInfoAPI = Common.ShareRideInfoAPI
@@ -39,6 +40,7 @@ handler merchantId =
   shareRideInfo merchantId
     :<|> rideList merchantId
     :<|> callGetTripRoute merchantId
+    :<|> callrideInfo merchantId
 
 shareRideInfo ::
   ShortId DM.Merchant ->
@@ -60,3 +62,9 @@ rideList merchantShortId mbLimit mbOffset mbBookingStatus mbShortRideId mbCustom
 
 callGetTripRoute :: ShortId DM.Merchant -> Id Common.Ride -> Double -> Double -> FlowHandler Maps.GetRoutesResp
 callGetTripRoute merchantShortId rideId pickupLocationLat pickupLocationLon = withFlowHandlerAPI $ mkGetLocation merchantShortId rideId pickupLocationLat pickupLocationLon
+
+callrideInfo ::
+  ShortId DM.Merchant ->
+  Id Common.Ride ->
+  FlowHandler Common.RideInfoRes
+callrideInfo merchantShortId rideId = withFlowHandlerAPI $ DRide.rideInfo merchantShortId rideId

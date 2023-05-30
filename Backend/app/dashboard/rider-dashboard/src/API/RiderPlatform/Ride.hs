@@ -19,7 +19,9 @@ module API.RiderPlatform.Ride
 where
 
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
+import "lib-dashboard" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
+import "lib-dashboard" Domain.Types.ServerName
 import "lib-dashboard" Environment
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
@@ -28,6 +30,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter
 import qualified RiderPlatformClient.RiderApp as Client
 import Servant
+import "lib-dashboard" Tools.Auth
 import Tools.Auth.Merchant
 
 type API =
@@ -35,6 +38,7 @@ type API =
     :> ( ShareRideInfoAPI
            :<|> RideListAPI
            :<|> TripRouteAPI
+           :<|> RideInfoAPI
        )
 
 type RideListAPI = Common.RideListAPI
@@ -43,11 +47,16 @@ type ShareRideInfoAPI = Common.ShareRideInfoAPI
 
 type TripRouteAPI = Common.TripRouteAPI
 
+type RideInfoAPI =
+  ApiAuth 'APP_BACKEND 'CUSTOMERS 'RIDE_INFO_CUSTOMER
+    :> Common.RideInfoAPI
+
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   shareRideInfo merchantId
     :<|> rideList merchantId
     :<|> tripRoute merchantId
+    :<|> rideInfo merchantId
 
 rideInfoHitsCountKey :: Id Common.Ride -> Text
 rideInfoHitsCountKey rideId = "RideInfoHits:" <> getId rideId <> ":hitsCount"
@@ -85,3 +94,12 @@ tripRoute ::
 tripRoute merchantShortId rideId pickupLocationLat pickupLocationLon = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId merchantShortId
   Client.callRiderApp checkedMerchantId (.rides.tripRoute) rideId pickupLocationLat pickupLocationLon
+
+rideInfo ::
+  ShortId DM.Merchant ->
+  ApiTokenInfo ->
+  Id Common.Ride ->
+  FlowHandler Common.RideInfoRes
+rideInfo merchantShortId apiTokenInfo rideId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  Client.callRiderApp checkedMerchantId (.rides.rideInfo) rideId
