@@ -77,10 +77,10 @@ type API =
     :> Servant.Header "x-bundle-version" Version
     :> Servant.Header "x-client-version" Version
     :> Header "x-device" Text
-    :> Post '[JSON] SearchRes
+    :> Post '[JSON] (Servant.Headers '[Servant.Header "x-deployment-version" DeploymentVersion] SearchRes)
 
 handler :: FlowServer API
-handler = search
+handler = searchWithDeploymentVersion
 
 data SearchReq = OneWaySearch DOneWaySearch.OneWaySearchReq | RentalSearch DRentalSearch.RentalSearchReq
   deriving (Generic, Show)
@@ -121,8 +121,36 @@ fareProductConstructorModifier = \case
   "RentalSearch" -> "RENTAL"
   x -> x
 
-search :: (Id Person.Person, Id Merchant.Merchant) -> SearchReq -> Maybe Version -> Maybe Version -> Maybe Text -> FlowHandler SearchRes
+searchWithDeploymentVersion ::
+  (Id Person.Person, Id Merchant.Merchant) ->
+  SearchReq ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Text ->
+  FlowHandler (Headers '[Servant.Header "x-deployment-version" DeploymentVersion] SearchRes)
+searchWithDeploymentVersion (personId, _) req mbBundleVersion mbClientVersion mbDevice = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+  searchRes <- search' personId req mbBundleVersion mbClientVersion mbDevice
+  deploymentVersion <- asks (.version)
+  return $ addHeader deploymentVersion searchRes
+
+search ::
+  (Id Person.Person, Id Merchant.Merchant) ->
+  SearchReq ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Text ->
+  FlowHandler SearchRes
 search (personId, _) req mbBundleVersion mbClientVersion mbDevice = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+  search' personId req mbBundleVersion mbClientVersion mbDevice
+
+search' ::
+  Id Person.Person ->
+  SearchReq ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Text ->
+  Flow SearchRes
+search' personId req mbBundleVersion mbClientVersion mbDevice = do
   checkSearchRateLimit personId
   updateVersions personId mbBundleVersion mbClientVersion
   (searchId, searchExpiry, routeInfo) <- case req of

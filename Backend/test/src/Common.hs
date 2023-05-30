@@ -28,6 +28,7 @@ import Kernel.Types.Id
 import Kernel.Types.Version
 import qualified Kernel.Utils.SignatureAuth as HttpSig
 import Network.HTTP.Types.Status
+import qualified Servant
 import Servant.Client
 import Test.Hspec hiding (context)
 import Utils (defaultManager, runClient')
@@ -54,7 +55,7 @@ searchServices ::
   Maybe Version ->
   Maybe Text ->
   ClientM AppBESearch.SearchRes
-searchServices = client (Proxy :: Proxy AppBESearch.API)
+searchServices a b c d = (Servant.getResponse <$>) . client (Proxy :: Proxy AppBESearch.API) a b c d
 
 getQuotes :: Id BSearchRequest.SearchRequest -> Text -> ClientM AbeQuoteAPI.GetQuotesRes
 getQuotes = client (Proxy :: Proxy AbeQuoteAPI.API)
