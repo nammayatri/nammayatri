@@ -24,7 +24,6 @@ import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.MediaFile as BeamMF
-import qualified Storage.Tabular.VechileNew as VN
 
 -- create :: MediaFile -> SqlDB ()
 -- create = Esq.create
@@ -33,7 +32,7 @@ create :: L.MonadFlow m => DMF.MediaFile -> m (MeshResult ())
 create mediaFile = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainMediaFileToBeam mediaFile)
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainMediaFileToBeam mediaFile)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 -- findById :: Transactionable m => Id MediaFile -> m (Maybe MediaFile)
@@ -43,7 +42,7 @@ findById :: L.MonadFlow m => Id MediaFile -> m (Maybe MediaFile)
 findById (Id mediaFileId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamMediaFileToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamMF.id $ Se.Eq mediaFileId]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamMediaFileToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamMF.id $ Se.Eq mediaFileId]
     Nothing -> pure Nothing
 
 -- findAllIn :: Transactionable m => [Id MediaFile] -> m [MediaFile]

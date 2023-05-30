@@ -16,8 +16,6 @@ module Storage.Queries.Geometry where
 
 import qualified Database.Beam as B
 import Database.Beam.Postgres
-import Database.Beam.Postgres.Syntax
-import qualified Database.Beam.Query as BQ
 import Domain.Types.Geometry
 import qualified EulerHS.Extra.EulerDB as Extra
 import EulerHS.KVConnector.Utils (meshModelTableEntity)
@@ -25,7 +23,6 @@ import qualified EulerHS.Language as L
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import Kernel.Types.Id
-import qualified Lib.Mesh as Mesh
 import Lib.Utils
 import Sequelize
 import qualified Storage.Beam.Geometry as BeamG

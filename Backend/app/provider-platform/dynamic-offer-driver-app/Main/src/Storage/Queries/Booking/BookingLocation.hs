@@ -23,9 +23,9 @@ import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.Booking.BookingLocation as BeamBL
-import qualified Storage.Tabular.VechileNew as VN
 
 -- updateAddress :: Id BookingLocation -> LocationAddress -> SqlDB ()
 -- updateAddress blId LocationAddress {..} = do
@@ -48,7 +48,7 @@ findById :: L.MonadFlow m => Id BookingLocation -> m (Maybe BookingLocation)
 findById (Id bookingLocationId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamBookingLocationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamBL.id $ Se.Eq bookingLocationId]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamBookingLocationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamBL.id $ Se.Eq bookingLocationId]
     Nothing -> pure Nothing
 
 updateAddress :: (L.MonadFlow m, MonadTime m) => Id BookingLocation -> LocationAddress -> m (MeshResult ())
@@ -59,7 +59,7 @@ updateAddress (Id blId) LocationAddress {..} = do
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        VN.meshConfig
+        Mesh.meshConfig
         [ Se.Set BeamBL.street street,
           Se.Set BeamBL.city city,
           Se.Set BeamBL.state state,

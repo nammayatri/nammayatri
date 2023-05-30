@@ -14,7 +14,6 @@ import Kernel.Utils.Common (MonadTime (..), getCurrentTime)
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.Issue.IssueReport as BeamIR
-import qualified Storage.Tabular.VechileNew as VN
 
 -- create :: IssueReport -> SqlDB ()
 -- create = Esq.create
@@ -23,7 +22,7 @@ create :: L.MonadFlow m => IssueReport.IssueReport -> m (MeshResult ())
 create issueReport = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainIssueReportToBeam issueReport)
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainIssueReportToBeam issueReport)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 -- findAllWithOptions :: Transactionable m => Maybe Int -> Maybe Int -> Maybe IssueStatus -> Maybe (Id IssueCategory) -> Maybe Text -> m [IssueReport]
@@ -67,7 +66,7 @@ findById :: L.MonadFlow m => Id IssueReport -> m (Maybe IssueReport)
 findById (Id issueReportId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbConf' -> either (pure Nothing) (transformBeamIssueReportToDomain <$>) <$> KV.findWithKVConnector dbConf' VN.meshConfig [Se.Is BeamIR.id $ Se.Eq issueReportId]
+    Just dbConf' -> either (pure Nothing) (transformBeamIssueReportToDomain <$>) <$> KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamIR.id $ Se.Eq issueReportId]
     Nothing -> pure Nothing
 
 -- findAllByDriver :: Id SP.Person -> Transactionable m => m [IssueReport]

@@ -27,7 +27,6 @@ import Kernel.Utils.Common
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.Rating as BeamR
-import qualified Storage.Tabular.VechileNew as VN
 
 -- create :: Rating -> SqlDB ()
 -- create = Esq.create
@@ -36,7 +35,7 @@ create :: L.MonadFlow m => DR.Rating -> m (MeshResult ())
 create rating = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainRatingToBeam rating)
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainRatingToBeam rating)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 -- updateRating :: Id Rating -> Id Person -> Int -> Maybe Text -> SqlDB ()
@@ -61,7 +60,7 @@ updateRating (Id ratingId) (Id driverId) newRatingValue newFeedbackDetails = do
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        VN.meshConfig
+        Mesh.meshConfig
         [ Se.Set BeamR.ratingValue newRatingValue,
           Se.Set BeamR.feedbackDetails newFeedbackDetails,
           Se.Set BeamR.updatedAt now
@@ -93,7 +92,7 @@ findRatingForRide :: L.MonadFlow m => Id Ride -> m (Maybe Rating)
 findRatingForRide (Id rideId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamRatingToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamR.id $ Se.Eq rideId]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamRatingToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamR.id $ Se.Eq rideId]
     Nothing -> pure Nothing
 
 transformBeamRatingToDomain :: BeamR.Rating -> Rating

@@ -32,7 +32,6 @@ import Kernel.Utils.Common
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.OnboardingDocumentConfig as BeamODC
-import qualified Storage.Tabular.VechileNew as VN
 
 -- create :: OnboardingDocumentConfig -> SqlDB ()
 -- create = Esq.create
@@ -41,7 +40,7 @@ create :: L.MonadFlow m => DODC.OnboardingDocumentConfig -> m (MeshResult ())
 create onboardingDocumentConfig = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainOnboardingDocumentConfigToBeam onboardingDocumentConfig)
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainOnboardingDocumentConfigToBeam onboardingDocumentConfig)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 -- findByMerchantIdAndDocumentType :: Transactionable m => Id Merchant -> DocumentType -> m (Maybe OnboardingDocumentConfig)
@@ -57,7 +56,7 @@ findByMerchantIdAndDocumentType :: L.MonadFlow m => Id Merchant -> DocumentType 
 findByMerchantIdAndDocumentType merchantId documentType = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamOnboardingDocumentConfigToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.And [Se.Is BeamODC.merchantId $ Se.Eq $ getId merchantId, Se.Is BeamODC.documentType $ Se.Eq documentType]]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamOnboardingDocumentConfigToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamODC.merchantId $ Se.Eq $ getId merchantId, Se.Is BeamODC.documentType $ Se.Eq documentType]]
     Nothing -> pure Nothing
 
 -- update :: OnboardingDocumentConfig -> SqlDB ()

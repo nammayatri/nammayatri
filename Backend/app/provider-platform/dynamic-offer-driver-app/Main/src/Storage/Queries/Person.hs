@@ -53,7 +53,6 @@ import Storage.Tabular.DriverOnboarding.VehicleRegistrationCertificate
 import Storage.Tabular.DriverQuote
 import Storage.Tabular.Person as TPerson
 import Storage.Tabular.Ride
-import qualified Storage.Tabular.VechileNew as VN
 import Storage.Tabular.Vehicle as Vehicle
 
 baseFullPersonQuery ::
@@ -85,7 +84,7 @@ create :: L.MonadFlow m => Person.Person -> m (MeshResult ())
 create person = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainPersonToBeam person)
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainPersonToBeam person)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 -- findById ::
@@ -99,7 +98,7 @@ findById (Id personId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' VN.meshConfig [Se.Is BeamP.id $ Se.Eq personId]
+      result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamP.id $ Se.Eq personId]
       case result of
         Right p -> traverse transformBeamPersonToDomain p
         Left _ -> pure Nothing
@@ -275,7 +274,7 @@ findByIdAndRoleAndMerchantId (Id pid) role_ (Id merchantId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' VN.meshConfig [Se.And [Se.Is BeamP.id $ Se.Eq pid, Se.Is BeamP.role $ Se.Eq role_, Se.Is BeamP.merchantId $ Se.Eq merchantId]]
+      result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamP.id $ Se.Eq pid, Se.Is BeamP.role $ Se.Eq role_, Se.Is BeamP.merchantId $ Se.Eq merchantId]]
       case result of
         Right p -> traverse transformBeamPersonToDomain p
         Left _ -> pure Nothing
@@ -299,7 +298,7 @@ findAllByMerchantId roles (Id merchantId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> do
-      result <- KV.findAllWithKVConnector dbConf' VN.meshConfig [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.role $ Se.In roles]]
+      result <- KV.findAllWithKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.role $ Se.In roles]]
       case result of
         Right p -> traverse transformBeamPersonToDomain p
         Left _ -> pure []
@@ -319,7 +318,7 @@ findAdminsByMerchantId (Id merchantId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> do
-      result <- KV.findAllWithKVConnector dbConf' VN.meshConfig [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.role $ Se.Eq Person.ADMIN]]
+      result <- KV.findAllWithKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.role $ Se.Eq Person.ADMIN]]
       case result of
         Right p -> traverse transformBeamPersonToDomain p
         Left _ -> pure []
@@ -350,7 +349,7 @@ findByMobileNumberAndMerchant countryCode mobileNumberHash (Id merchantId) = do
       result <-
         KV.findWithKVConnector
           dbConf'
-          VN.meshConfig
+          Mesh.meshConfig
           [ Se.And
               [ Se.Is BeamP.mobileCountryCode $ Se.Eq $ Just countryCode,
                 Se.Is BeamP.merchantId $ Se.Eq merchantId,
@@ -380,7 +379,7 @@ findByIdentifierAndMerchant (Id merchantId) identifier_ = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' VN.meshConfig [Se.And [Se.Is BeamP.identifier $ Se.Eq $ Just identifier_, Se.Is BeamP.merchantId $ Se.Eq merchantId]]
+      result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamP.identifier $ Se.Eq $ Just identifier_, Se.Is BeamP.merchantId $ Se.Eq merchantId]]
       case result of
         Right p -> traverse transformBeamPersonToDomain p
         Left _ -> pure Nothing
@@ -404,7 +403,7 @@ findByEmailAndMerchant (Id merchantId) email_ = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' VN.meshConfig [Se.And [Se.Is BeamP.email $ Se.Eq $ Just email_, Se.Is BeamP.merchantId $ Se.Eq merchantId]]
+      result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamP.email $ Se.Eq $ Just email_, Se.Is BeamP.merchantId $ Se.Eq merchantId]]
       case result of
         Right p -> traverse transformBeamPersonToDomain p
         Left _ -> pure Nothing
@@ -437,7 +436,7 @@ findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumber_ (Id merch
       result <-
         KV.findWithKVConnector
           dbConf'
-          VN.meshConfig
+          Mesh.meshConfig
           [ Se.And
               [ Se.Is BeamP.role $ Se.Eq role_,
                 Se.Is BeamP.mobileCountryCode $ Se.Eq $ Just countryCode,
@@ -501,7 +500,7 @@ updateMerchantIdAndMakeAdmin (Id personId) (Id merchantId) = do
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        VN.meshConfig
+        Mesh.meshConfig
         [ Se.Set BeamP.merchantId merchantId,
           Se.Set BeamP.role Person.ADMIN,
           Se.Set BeamP.updatedAt now
@@ -528,7 +527,7 @@ updateName (Id personId) name = do
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        VN.meshConfig
+        Mesh.meshConfig
         [ Se.Set BeamP.firstName name,
           Se.Set BeamP.updatedAt now
         ]
@@ -567,7 +566,7 @@ updatePersonRec (Id personId) person = do
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        VN.meshConfig
+        Mesh.meshConfig
         [ Se.Set BeamP.firstName $ person.firstName,
           Se.Set BeamP.middleName $ person.middleName,
           Se.Set BeamP.lastName $ person.lastName,
@@ -618,7 +617,7 @@ updatePersonVersions person mbBundleVersion mbClientVersion =
           void $
             KV.updateWoReturningWithKVConnector
               dbConf'
-              VN.meshConfig
+              Mesh.meshConfig
               [ Se.Set BeamP.clientVersion mbClientVersionText,
                 Se.Set BeamP.clientVersion mbBundleVersionText,
                 Se.Set BeamP.updatedAt now
@@ -645,7 +644,7 @@ updateDeviceToken (Id personId) mbDeviceToken = do
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        VN.meshConfig
+        Mesh.meshConfig
         [ Se.Set BeamP.deviceToken mbDeviceToken,
           Se.Set BeamP.updatedAt now
         ]
@@ -672,7 +671,7 @@ updateWhatsappNotificationEnrollStatus (Id personId) enrollStatus = do
       void $
         KV.updateWoReturningWithKVConnector
           dbConf'
-          VN.meshConfig
+          Mesh.meshConfig
           [ Se.Set BeamP.whatsappNotificationEnrollStatus enrollStatus,
             Se.Set BeamP.updatedAt now
           ]
@@ -702,7 +701,7 @@ updateMobileNumberAndCode person = do
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        VN.meshConfig
+        Mesh.meshConfig
         [ Se.Set BeamP.mobileCountryCode $ person.mobileCountryCode,
           Se.Set BeamP.mobileNumberEncrypted $ person.mobileNumber <&> unEncrypted . (.encrypted),
           Se.Set BeamP.mobileNumberHash $ person.mobileNumber <&> (.hash),
@@ -732,7 +731,7 @@ setIsNewFalse (Id personId) = do
       void $
         KV.updateWoReturningWithKVConnector
           dbConf'
-          VN.meshConfig
+          Mesh.meshConfig
           [ Se.Set BeamP.isNew False,
             Se.Set BeamP.updatedAt now
           ]
@@ -773,7 +772,7 @@ updateAverageRating (Id personId) newAverageRating = do
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        VN.meshConfig
+        Mesh.meshConfig
         [ Se.Set BeamP.rating (Just newAverageRating),
           Se.Set BeamP.updatedAt now
         ]
@@ -1016,7 +1015,7 @@ updateAlternateMobileNumberAndCode person = do
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        VN.meshConfig
+        Mesh.meshConfig
         [ Se.Set BeamP.alternateMobileNumberEncrypted (person.alternateMobileNumber <&> unEncrypted . (.encrypted)),
           Se.Set BeamP.unencryptedAlternateMobileNumber person.unencryptedAlternateMobileNumber,
           Se.Set BeamP.updatedAt now

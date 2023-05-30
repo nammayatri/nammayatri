@@ -10,11 +10,11 @@ import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.Issue.IssueOption as BeamIO
 import Storage.Tabular.Issue.IssueOption
 import Storage.Tabular.Issue.IssueTranslation
-import qualified Storage.Tabular.VechileNew as VN
 
 -- findByIdAndCategoryId :: Transactionable m => Id IssueOption -> Id IssueCategory -> m (Maybe IssueOption)
 -- findByIdAndCategoryId issueOptionId issueCategoryId = Esq.findOne $ do
@@ -28,7 +28,7 @@ findByIdAndCategoryId :: L.MonadFlow m => Id IssueOption -> Id IssueCategory -> 
 findByIdAndCategoryId issueOptionId issueCategoryId = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbConf' -> either (pure Nothing) (transformBeamIssueOptionToDomain <$>) <$> KV.findWithKVConnector dbConf' VN.meshConfig [Se.And [Se.Is BeamIO.id $ Se.Eq $ getId issueOptionId, Se.Is BeamIO.issueCategoryId $ Se.Eq $ getId issueCategoryId]]
+    Just dbConf' -> either (pure Nothing) (transformBeamIssueOptionToDomain <$>) <$> KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamIO.id $ Se.Eq $ getId issueOptionId, Se.Is BeamIO.issueCategoryId $ Se.Eq $ getId issueCategoryId]]
     Nothing -> pure Nothing
 
 fullOptionTable ::
@@ -71,7 +71,7 @@ findById (Id issueOptionId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' VN.meshConfig [Se.Is BeamIO.id $ Se.Eq issueOptionId]
+      result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamIO.id $ Se.Eq issueOptionId]
       case result of
         Right issueOption -> pure $ transformBeamIssueOptionToDomain <$> issueOption
         Left _ -> pure Nothing

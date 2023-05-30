@@ -25,7 +25,6 @@ import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.Estimate as BeamE
 import Storage.Tabular.Estimate ()
-import qualified Storage.Tabular.VechileNew as VN
 
 -- create :: Estimate -> SqlDB ()
 -- create = Esq.create
@@ -34,7 +33,7 @@ create :: L.MonadFlow m => Domain.Estimate -> m ()
 create estimate = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbConf' -> void $ KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainEstimateToBeam estimate)
+    Just dbConf' -> void $ KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainEstimateToBeam estimate)
     Nothing -> pure ()
 
 createMany :: L.MonadFlow m => [Estimate] -> m ()

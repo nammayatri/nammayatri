@@ -194,7 +194,7 @@ findById farePolicyId = buildDType $ do
 -- findById' (Id farePolicyId) = do
 --   dbConf <- L.getOption Extra.EulerPsqlDbCfg
 --   case dbConf of
---     Just dbCOnf' -> either (pure Nothing) (transformBeamFarePolicyToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamFP.id $ Se.Eq farePolicyId]
+--     Just dbCOnf' -> either (pure Nothing) (transformBeamFarePolicyToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamFP.id $ Se.Eq farePolicyId]
 --     Nothing -> pure Nothing
 
 update :: FarePolicy -> SqlDB ()

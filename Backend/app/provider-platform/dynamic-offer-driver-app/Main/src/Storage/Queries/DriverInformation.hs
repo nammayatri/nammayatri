@@ -19,7 +19,6 @@ import Control.Applicative (liftA2)
 import qualified Data.ByteString as BS
 import qualified Database.Beam as B
 import Database.Beam.Postgres hiding ((++.))
-import qualified Database.Beam.Query as B
 import Domain.Types.DriverInformation as DDI
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person as Person
@@ -43,20 +42,19 @@ import qualified Storage.Queries.Person as QueriesP
 import Storage.Tabular.DriverInformation
 import Storage.Tabular.DriverLocation
 import Storage.Tabular.Person
-import qualified Storage.Tabular.VechileNew as VN
 
 create :: L.MonadFlow m => DDI.DriverInformation -> m ()
 create driverInformation = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbConf' -> void $ KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainDriverInformationToBeam driverInformation)
+    Just dbConf' -> void $ KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainDriverInformationToBeam driverInformation)
     Nothing -> pure ()
 
 findById :: L.MonadFlow m => Id Person.Driver -> m (Maybe DriverInformation)
 findById (Id driverInformationId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamDriverInformationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamDI.driverId $ Se.Eq driverInformationId]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamDriverInformationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDI.driverId $ Se.Eq driverInformationId]
     Nothing -> pure Nothing
 
 fetchAllByIds :: L.MonadFlow m => Id Merchant -> [Id Driver] -> m [DriverInformation]
@@ -89,7 +87,7 @@ updateActivity (Id driverId) isActive mode = do
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        VN.meshConfig
+        Mesh.meshConfig
         [ Se.Set BeamDI.active isActive,
           Se.Set BeamDI.mode mode,
           Se.Set BeamDI.updatedAt now
@@ -105,7 +103,7 @@ updateEnabledState (Id driverId) isEnabled = do
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        VN.meshConfig
+        Mesh.meshConfig
         ( [ Se.Set BeamDI.enabled isEnabled,
             Se.Set BeamDI.updatedAt now
           ]
@@ -122,7 +120,7 @@ updateEnabledVerifiedState (Id driverId) isEnabled isVerified = do
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        VN.meshConfig
+        Mesh.meshConfig
         ( [ Se.Set BeamDI.enabled isEnabled,
             Se.Set BeamDI.verified isVerified,
             Se.Set BeamDI.updatedAt now
@@ -140,7 +138,7 @@ updateBlockedState (Id driverId) isBlocked = do
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        VN.meshConfig
+        Mesh.meshConfig
         [ Se.Set BeamDI.blocked isBlocked,
           Se.Set BeamDI.updatedAt now
         ]
@@ -155,7 +153,7 @@ verifyAndEnableDriver (Id driverId) = do
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        VN.meshConfig
+        Mesh.meshConfig
         [ Se.Set BeamDI.enabled True,
           Se.Set BeamDI.verified True,
           Se.Set BeamDI.lastEnabledOn $ Just now,
@@ -180,7 +178,7 @@ updateEnabledStateReturningIds merchantId driverIds isEnabled = do
           void $
             KV.updateWoReturningWithKVConnector
               dbConf'
-              VN.meshConfig
+              Mesh.meshConfig
               ( [ Se.Set BeamDI.enabled isEnabled,
                   Se.Set BeamDI.updatedAt now,
                   Se.Set BeamDI.lastEnabledOn (Just now)
@@ -198,7 +196,7 @@ updateOnRide (Id driverId) onRide = do
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        VN.meshConfig
+        Mesh.meshConfig
         [ Se.Set BeamDI.onRide onRide,
           Se.Set BeamDI.updatedAt now
         ]
@@ -213,7 +211,7 @@ updateNotOnRideMultiple driverIds = do
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        VN.meshConfig
+        Mesh.meshConfig
         [ Se.Set BeamDI.onRide False,
           Se.Set BeamDI.updatedAt now
         ]
@@ -341,7 +339,7 @@ addReferralCode (Id personId) code = do
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        VN.meshConfig
+        Mesh.meshConfig
         [ Se.Set BeamDI.referralCode (Just (code & unEncrypted . (.encrypted)))
         ]
         [Se.Is BeamDI.driverId (Se.Eq personId)]
@@ -377,7 +375,7 @@ updateDowngradingOptions (Id driverId) canDowngradeToSedan canDowngradeToHatchba
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        VN.meshConfig
+        Mesh.meshConfig
         [ Se.Set BeamDI.canDowngradeToSedan canDowngradeToSedan,
           Se.Set BeamDI.canDowngradeToHatchback canDowngradeToHatchback,
           Se.Set BeamDI.canDowngradeToTaxi canDowngradeToTaxi,

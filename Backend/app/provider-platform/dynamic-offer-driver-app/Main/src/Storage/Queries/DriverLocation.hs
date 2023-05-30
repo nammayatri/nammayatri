@@ -18,7 +18,6 @@ module Storage.Queries.DriverLocation where
 
 import qualified Database.Beam as B
 import Database.Beam.Postgres
-import qualified Database.Beam.Query as B
 -- import qualified Database.Beam.Query as B
 import Domain.Types.DriverLocation
 import Domain.Types.Person
@@ -31,7 +30,6 @@ import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import Kernel.Types.Common (MonadTime (getCurrentTime))
 import Kernel.Types.Id
-import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverLocation as BeamDL
 
@@ -62,42 +60,23 @@ findById (Id driverLocationId) = do
       pure (either (const Nothing) (transformBeamDriverLocationToDomain <$>) geoms)
     Left _ -> pure Nothing
 
--- upsertGpsCoord :: Id Person -> LatLong -> UTCTime -> SqlDB DriverLocation
--- upsertGpsCoord drLocationId latLong calculationTime = do
---   now <- getCurrentTime
---   let locationObject =
---         DriverLocation
---           { driverId = drLocationId,
---             lat = latLong.lat,
---             lon = latLong.lon,
---             coordinatesCalculatedAt = calculationTime,
---             createdAt = now,
---             updatedAt = now
-
--- L.findRow $ B.select $ B.aggregate_ sumPredicate $ B.filter_' predicate $ B.all_ dbTable
-
---           }
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ DriverLocationLat =. val latLong.lat,
---         DriverLocationLon =. val latLong.lon,
---         DriverLocationCoordinatesCalculatedAt =. val calculationTime,
---         DriverLocationPoint =. Esq.getPoint (val latLong.lat, val latLong.lon),
---         DriverLocationUpdatedAt =. val now
---       ]
---     where_ $ tbl ^. DriverLocationTId ==. val (toKey $ cast drLocationId)
---   return locationObject
-upsertGpsCoord :: (L.MonadFlow m) => Id Person -> LatLong -> UTCTime -> m DriverLocation
-upsertGpsCoord _ _ _ = error "Undefined"
-
-upsertGpsCoord' :: (L.MonadFlow m, MonadTime m) => Id Person -> LatLong -> UTCTime -> m ()
-upsertGpsCoord' drLocationId latLong calculationTime = do
+upsertGpsCoord :: (L.MonadFlow m, MonadTime m) => Id Person -> LatLong -> UTCTime -> m DriverLocation
+upsertGpsCoord drLocationId latLong calculationTime = do
   now <- getCurrentTime
   res <- findById drLocationId
   case res of
     Just _ -> updateRecords (getId drLocationId) latLong calculationTime now
     Nothing -> create drLocationId latLong calculationTime
+  let updatedRecord =
+        DriverLocation
+          { driverId = drLocationId,
+            lat = latLong.lat,
+            lon = latLong.lon,
+            coordinatesCalculatedAt = calculationTime,
+            createdAt = now,
+            updatedAt = now
+          }
+  return updatedRecord
   where
     updateRecords :: L.MonadFlow m => Text -> LatLong -> UTCTime -> UTCTime -> m ()
     updateRecords drLocationId' latLong' calculationTime' now' = do
@@ -114,7 +93,7 @@ upsertGpsCoord' drLocationId latLong calculationTime = do
                       (driverId B.<-. B.val_ drLocationId') <> (lat B.<-. B.val_ latLong'.lat)
                         <> (lon B.<-. (B.val_ latLong'.lon))
                         <> (coordinatesCalculatedAt B.<-. B.val_ calculationTime')
-                        <> (updatedAt B.<-. (B.val_ now'))
+                        <> (updatedAt B.<-. B.val_ now')
                   )
                   (\BeamDL.DriverLocationT {..} -> driverId B.==. B.val_ drLocationId')
         Left _ -> pure ()

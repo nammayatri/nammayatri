@@ -21,7 +21,7 @@ import Domain.Types.Vehicle
 import qualified Domain.Types.Vehicle.Variant as Variant
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
--- import qualified Storage.Tabular.VechileNew as VN
+--
 
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L

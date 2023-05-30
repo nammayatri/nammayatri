@@ -27,7 +27,6 @@ import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequestForDriver as BeamSRFD
-import qualified Storage.Tabular.VechileNew as VN
 
 createMany :: L.MonadFlow m => [SearchRequestForDriver] -> m ()
 createMany srfd = void $ traverse createOne srfd
@@ -36,7 +35,7 @@ createMany srfd = void $ traverse createOne srfd
     createOne searchRequestForDriver = do
       dbConf <- L.getOption Extra.EulerPsqlDbCfg
       case dbConf of
-        Just dbConf' -> void $ KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainSearchRequestForDriverToBeam searchRequestForDriver)
+        Just dbConf' -> void $ KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainSearchRequestForDriverToBeam searchRequestForDriver)
         Nothing -> pure ()
 
 -- findAllActiveBySRId :: (Transactionable m, MonadTime m) => Id SearchRequest -> m [SearchRequestForDriver]

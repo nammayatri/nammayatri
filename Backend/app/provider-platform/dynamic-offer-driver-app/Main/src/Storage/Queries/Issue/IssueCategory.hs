@@ -9,11 +9,11 @@ import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.Issue.IssueCategory as BeamIC
 import Storage.Tabular.Issue.IssueCategory
 import Storage.Tabular.Issue.IssueTranslation
-import qualified Storage.Tabular.VechileNew as VN
 
 fullCategoryTable ::
   Language ->
@@ -44,7 +44,7 @@ findById :: L.MonadFlow m => Id IssueCategory -> m (Maybe IssueCategory)
 findById (Id issueCategoryId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamIssueCategoryToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamIC.id $ Se.Eq issueCategoryId]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamIssueCategoryToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamIC.id $ Se.Eq issueCategoryId]
     Nothing -> pure Nothing
 
 findByIdAndLanguage :: Transactionable m => Id IssueCategory -> Language -> m (Maybe (IssueCategory, Maybe IssueTranslation))

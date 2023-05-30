@@ -28,7 +28,7 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.RideDetails as BeamRD
 import Storage.Tabular.RideDetails ()
 
--- import qualified Storage.Tabular.VechileNew as VN
+--
 
 -- create :: RideDetails -> SqlDB ()
 -- create = Esq.create

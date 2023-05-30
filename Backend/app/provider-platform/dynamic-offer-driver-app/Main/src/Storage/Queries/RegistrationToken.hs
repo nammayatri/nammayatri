@@ -26,7 +26,6 @@ import Kernel.Utils.Common
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.RegistrationToken as BeamRT
-import qualified Storage.Tabular.VechileNew as VN
 
 -- create :: RegistrationToken -> SqlDB ()
 -- create = Esq.create
@@ -35,7 +34,7 @@ create :: L.MonadFlow m => DRT.RegistrationToken -> m (MeshResult ())
 create registrationToken = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainRegistrationTokenToBeam registrationToken)
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainRegistrationTokenToBeam registrationToken)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 -- findById :: Transactionable m => Id RegistrationToken -> m (Maybe RegistrationToken)
@@ -45,7 +44,7 @@ findById :: L.MonadFlow m => Id RegistrationToken -> m (Maybe RegistrationToken)
 findById (Id registrationTokenId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamRegistrationTokenToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamRT.id $ Se.Eq registrationTokenId]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamRegistrationTokenToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamRT.id $ Se.Eq registrationTokenId]
     Nothing -> pure Nothing
 
 -- setVerified :: Id RegistrationToken -> SqlDB ()
@@ -67,7 +66,7 @@ setVerified (Id rtId) = do
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        VN.meshConfig
+        Mesh.meshConfig
         [ Se.Set BeamRT.verified True,
           Se.Set BeamRT.updatedAt now
         ]
@@ -85,7 +84,7 @@ findByToken :: L.MonadFlow m => RegToken -> m (Maybe RegistrationToken)
 findByToken token = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamRegistrationTokenToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamRT.token $ Se.Eq token]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamRegistrationTokenToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamRT.token $ Se.Eq token]
     Nothing -> pure Nothing
 
 -- updateAttempts :: Int -> Id RegistrationToken -> SqlDB ()
@@ -107,7 +106,7 @@ updateAttempts attempts (Id rtId) = do
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        VN.meshConfig
+        Mesh.meshConfig
         [ Se.Set BeamRT.attempts attempts,
           Se.Set BeamRT.updatedAt now
         ]
@@ -179,7 +178,7 @@ getAlternateNumberAttempts (Id personId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> do
-      rt <- KV.findWithKVConnector dbConf' VN.meshConfig [Se.Is BeamRT.entityId $ Se.Eq personId]
+      rt <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamRT.entityId $ Se.Eq personId]
       case rt of
         Left _ -> pure 0
         Right Nothing -> pure 0

@@ -16,7 +16,6 @@ import Database.Beam.MySQL ()
 import Database.Beam.Postgres
 import Database.Beam.Postgres.Syntax
 import qualified Database.Beam.Query as BQ
-import qualified Database.Esqueleto.Experimental as Esq
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import Domain.Types.Vehicle.Variant (Variant (..))

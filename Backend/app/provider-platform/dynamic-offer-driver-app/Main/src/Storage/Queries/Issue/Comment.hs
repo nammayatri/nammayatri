@@ -11,7 +11,6 @@ import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.Issue.Comment as BeamC
-import qualified Storage.Tabular.VechileNew as VN
 
 -- create :: Comment -> SqlDB ()
 -- create = Esq.create
@@ -20,7 +19,7 @@ create :: L.MonadFlow m => Comment.Comment -> m (MeshResult ())
 create comment = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainCommentToBeam comment)
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainCommentToBeam comment)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 -- findAllByIssueReportId :: Transactionable m => Id IssueReport -> m [Comment]

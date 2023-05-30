@@ -8,9 +8,9 @@ import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Types.Id
+import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverReferral as BeamDR
-import qualified Storage.Tabular.VechileNew as VN
 
 -- create :: DriverReferral -> SqlDB ()
 -- create = Esq.create
@@ -19,7 +19,7 @@ create :: L.MonadFlow m => DDR.DriverReferral -> m (MeshResult ())
 create driverReferral = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainDriverReferralToBeam driverReferral)
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainDriverReferralToBeam driverReferral)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 -- findByRefferalCode :: Transactionable m => Id DriverReferral -> m (Maybe DriverReferral)
@@ -32,7 +32,7 @@ findByRefferalCode ::
 findByRefferalCode (Id referralId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamDriverReferralToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamDR.referralCode $ Se.Eq referralId]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamDriverReferralToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDR.referralCode $ Se.Eq referralId]
     Nothing -> pure Nothing
 
 -- findById ::
@@ -52,7 +52,7 @@ findById ::
 findById (Id driverId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamDriverReferralToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamDR.driverId $ Se.Eq driverId]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamDriverReferralToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDR.driverId $ Se.Eq driverId]
     Nothing -> pure Nothing
 
 transformBeamDriverReferralToDomain :: BeamDR.DriverReferral -> DriverReferral

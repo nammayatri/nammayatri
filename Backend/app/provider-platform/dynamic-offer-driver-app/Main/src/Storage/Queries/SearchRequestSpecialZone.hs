@@ -23,12 +23,12 @@ import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequestSpecialZone as BeamSRSZ
 import Storage.Queries.SearchRequest.SearchReqLocation as QSRL
 import Storage.Tabular.SearchRequest.SearchReqLocation
 import Storage.Tabular.SearchRequestSpecialZone
-import qualified Storage.Tabular.VechileNew as VN
 
 create :: SearchRequestSpecialZone -> SqlDB ()
 create dsReq = Esq.runTransaction $
@@ -91,7 +91,7 @@ getRequestIdfromTransactionId (Id tId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
-      srsz <- KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamSRSZ.transactionId $ Se.Eq tId]
+      srsz <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamSRSZ.transactionId $ Se.Eq tId]
       case srsz of
         Left _ -> pure Nothing
         Right x -> do
@@ -116,7 +116,7 @@ findByMsgIdAndBapIdAndBppId txnId bapId (Id merchantId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
-      srsz <- KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.And [Se.Is BeamSRSZ.messageId $ Se.Eq txnId, Se.Is BeamSRSZ.providerId $ Se.Eq merchantId, Se.Is BeamSRSZ.bapId $ Se.Eq bapId]]
+      srsz <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamSRSZ.messageId $ Se.Eq txnId, Se.Is BeamSRSZ.providerId $ Se.Eq merchantId, Se.Is BeamSRSZ.bapId $ Se.Eq bapId]]
       case srsz of
         Left _ -> pure Nothing
         Right x -> mapM transformBeamSearchRequestSpecialZoneToDomain x
@@ -138,7 +138,7 @@ getValidTill (Id searchRequestId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
-      srsz <- KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamSRSZ.id $ Se.Eq searchRequestId]
+      srsz <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamSRSZ.id $ Se.Eq searchRequestId]
       case srsz of
         Left _ -> pure Nothing
         Right x -> do

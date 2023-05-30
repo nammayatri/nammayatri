@@ -30,7 +30,7 @@ import Storage.Queries.SearchRequest.SearchReqLocation as QSRL
 import Storage.Tabular.SearchRequest ()
 import Storage.Tabular.SearchRequest.SearchReqLocation ()
 
--- import qualified Storage.Tabular.VechileNew as VN
+--
 
 create :: SearchRequest -> SqlDB ()
 create dsReq = Esq.runTransaction $

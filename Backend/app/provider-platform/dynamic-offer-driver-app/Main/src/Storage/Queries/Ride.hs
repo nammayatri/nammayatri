@@ -49,7 +49,6 @@ import Storage.Tabular.DriverInformation as DriverInfo
 import Storage.Tabular.Ride as Ride
 import Storage.Tabular.RideDetails as RideDetails
 import Storage.Tabular.RiderDetails as RiderDetails
-import qualified Storage.Tabular.VechileNew as VN
 import qualified Prelude
 
 data DatabaseWith2 table1 table2 f = DatabaseWith2
@@ -65,7 +64,7 @@ create :: L.MonadFlow m => Ride.Ride -> m (MeshResult ())
 create ride = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainRideToBeam ride)
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainRideToBeam ride)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 -- findById :: Transactionable m => Id Ride -> m (Maybe Ride)
@@ -79,7 +78,7 @@ findById (Id rideId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' VN.meshConfig [Se.Is BeamR.id $ Se.Eq rideId]
+      result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamR.id $ Se.Eq rideId]
       case result of
         Right ride -> traverse transformBeamRideToDomain ride
         Left _ -> pure Nothing
@@ -98,7 +97,7 @@ findActiveByRBId (Id rbId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' VN.meshConfig [Se.And [Se.Is BeamR.bookingId $ Se.Eq rbId, Se.Is BeamR.status $ Se.Eq Ride.CANCELLED]]
+      result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamR.bookingId $ Se.Eq rbId, Se.Is BeamR.status $ Se.Eq Ride.CANCELLED]]
       case result of
         Right ride -> traverse transformBeamRideToDomain ride
         Left _ -> pure Nothing
@@ -154,7 +153,7 @@ findOneByDriverId (Id personId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' VN.meshConfig [Se.Is BeamR.driverId $ Se.Eq personId]
+      result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamR.driverId $ Se.Eq personId]
       case result of
         Right ride -> traverse transformBeamRideToDomain ride
         Left _ -> pure Nothing
@@ -173,7 +172,7 @@ getInProgressByDriverId (Id personId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' VN.meshConfig [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.Eq Ride.INPROGRESS]]
+      result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.Eq Ride.INPROGRESS]]
       case result of
         Right ride -> traverse transformBeamRideToDomain ride
         Left _ -> pure Nothing
@@ -218,7 +217,7 @@ getActiveByDriverId (Id personId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' VN.meshConfig [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]]]
+      result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]]]
       case result of
         Right ride -> traverse transformBeamRideToDomain ride
         Left _ -> pure Nothing
@@ -472,7 +471,7 @@ getRidesForDate driverId date = do
       ridesResult <-
         KV.findAllWithKVConnector
           dbConf'
-          VN.meshConfig
+          Mesh.meshConfig
           [ Se.And
               [ Se.Is BeamR.driverId $ Se.Eq $ getId driverId,
                 Se.Is BeamR.tripEndTime $ Se.GreaterThanOrEq $ Just minDayTime,

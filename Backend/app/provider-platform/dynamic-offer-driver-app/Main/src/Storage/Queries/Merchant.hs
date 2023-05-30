@@ -31,7 +31,6 @@ import Kernel.Utils.Common
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant as BeamM
-import qualified Storage.Tabular.VechileNew as VN
 
 -- findById :: Transactionable m => Id Merchant -> m (Maybe Merchant)
 -- findById = Esq.findById
@@ -40,7 +39,7 @@ findById :: L.MonadFlow m => Id Merchant -> m (Maybe Merchant)
 findById (Id merchantId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamMerchantToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamM.id $ Se.Eq merchantId]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamMerchantToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamM.id $ Se.Eq merchantId]
     Nothing -> pure Nothing
 
 -- findBySubscriberId :: Transactionable m => ShortId Subscriber -> m (Maybe Merchant)
@@ -54,7 +53,7 @@ findBySubscriberId :: L.MonadFlow m => ShortId Subscriber -> m (Maybe Merchant)
 findBySubscriberId (ShortId subscriberId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamMerchantToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamM.subscriberId $ Se.Eq subscriberId]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamMerchantToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamM.subscriberId $ Se.Eq subscriberId]
     Nothing -> pure Nothing
 
 -- findByShortId :: Transactionable m => ShortId Merchant -> m (Maybe Merchant)
@@ -68,7 +67,7 @@ findByShortId :: L.MonadFlow m => ShortId Merchant -> m (Maybe Merchant)
 findByShortId (ShortId shortId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamMerchantToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamM.shortId $ Se.Eq shortId]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamMerchantToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamM.shortId $ Se.Eq shortId]
     Nothing -> pure Nothing
 
 -- loadAllProviders :: Transactionable m => m [Merchant]
@@ -121,7 +120,7 @@ update org = do
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        VN.meshConfig
+        Mesh.meshConfig
         [ Se.Set BeamM.name org.name,
           Se.Set BeamM.description org.description,
           Se.Set BeamM.headCount org.headCount,

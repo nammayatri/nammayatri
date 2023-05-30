@@ -31,7 +31,6 @@ import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.RiderDetails as BeamRD
 import Storage.Tabular.RiderDetails
-import qualified Storage.Tabular.VechileNew as VN
 
 -- create :: RiderDetails -> SqlDB ()
 -- create = Esq.create
@@ -40,7 +39,7 @@ create :: L.MonadFlow m => DRDD.RiderDetails -> m ()
 create riderDetails = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbConf' -> void (KV.createWoReturingKVConnector dbConf' VN.meshConfig (transformDomainRiderDetailsToBeam riderDetails))
+    Just dbConf' -> void (KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainRiderDetailsToBeam riderDetails))
     Nothing -> pure ()
 
 -- TODO :: write cached query for this
@@ -54,7 +53,7 @@ findById :: L.MonadFlow m => Id RiderDetails -> m (Maybe RiderDetails)
 findById (Id riderDetailsId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamRiderDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamRD.id $ Se.Eq riderDetailsId]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamRiderDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamRD.id $ Se.Eq riderDetailsId]
     Nothing -> pure Nothing
 
 -- findByMobileNumberAndMerchant ::
@@ -76,7 +75,7 @@ findByMobileNumberAndMerchant mobileNumber_ merchantId = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   mobileNumberDbHash <- getDbHash mobileNumber_
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamRiderDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.And [Se.Is BeamRD.mobileNumberHash $ Se.Eq mobileNumberDbHash, Se.Is BeamRD.merchantId $ Se.Eq (getId merchantId)]]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamRiderDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamRD.mobileNumberHash $ Se.Eq mobileNumberDbHash, Se.Is BeamRD.merchantId $ Se.Eq (getId merchantId)]]
     Nothing -> pure Nothing
 
 -- updateHasTakenValidRide :: Id RiderDetails -> SqlDB ()
@@ -99,7 +98,7 @@ updateHasTakenValidRide (Id riderId) = do
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        VN.meshConfig
+        Mesh.meshConfig
         [ Se.Set BeamRD.hasTakenValidRide True,
           Se.Set BeamRD.hasTakenValidRideAt (Just now),
           Se.Set BeamRD.updatedAt now
@@ -118,7 +117,7 @@ findAllReferredByDriverId :: L.MonadFlow m => Id Person -> m [RiderDetails]
 findAllReferredByDriverId (Id driverId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbCOnf' -> either (pure []) (transformBeamRiderDetailsToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' VN.meshConfig [Se.Is BeamRD.referredByDriver $ Se.Eq (Just driverId)]
+    Just dbCOnf' -> either (pure []) (transformBeamRiderDetailsToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamRD.referredByDriver $ Se.Eq (Just driverId)]
     Nothing -> pure []
 
 -- findByMobileNumberHashAndMerchant :: Transactionable m => DbHash -> Id Merchant -> m (Maybe RiderDetails)
@@ -134,7 +133,7 @@ findByMobileNumberHashAndMerchant :: L.MonadFlow m => DbHash -> Id Merchant -> m
 findByMobileNumberHashAndMerchant mobileNumberDbHash (Id merchantId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamRiderDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' VN.meshConfig [Se.And [Se.Is BeamRD.mobileNumberHash $ Se.Eq mobileNumberDbHash, Se.Is BeamRD.id $ Se.Eq merchantId]]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamRiderDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamRD.mobileNumberHash $ Se.Eq mobileNumberDbHash, Se.Is BeamRD.id $ Se.Eq merchantId]]
     Nothing -> pure Nothing
 
 updateReferralInfo ::

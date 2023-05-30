@@ -27,8 +27,8 @@ import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
 import Database.Beam.Postgres (Postgres)
-import Database.Beam.Postgres.Syntax
-import qualified Database.Beam.Query as BQ
+-- import Database.Beam.Postgres.Syntax
+-- import qualified Database.Beam.Query as BQ
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
