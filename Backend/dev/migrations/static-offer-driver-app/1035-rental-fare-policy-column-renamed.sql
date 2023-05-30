@@ -1,1 +1,0 @@
-ALTER TABLE atlas_transporter.rental_fare_policy RENAME COLUMN base_duration_hr TO base_duration;

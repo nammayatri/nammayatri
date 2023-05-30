@@ -29,8 +29,6 @@ import qualified "public-transport-rider-platform" App as PublicTransport
 import qualified "public-transport-search-consumer" App as PublicTransportSearchConsumer
 import qualified "rider-app" App as AppBackend
 import qualified "search-result-aggregator" App as SearchResultAggregator
-import qualified "static-offer-driver-app" App as TransporterBackend
-import qualified "static-offer-driver-app-allocator" App as YatriAllocator
 import qualified Data.Text as T (replace, toUpper, unpack)
 import EulerHS.Prelude
 import qualified Kernel.External.Maps as Maps
@@ -42,8 +40,6 @@ import qualified Mobility.ARDU.Utils as DriverOfferBppUtils
 import qualified Mobility.AppBackend.Fixtures as Fixtures
 import Mobility.AppBackend.Queries
 import qualified Mobility.AppBackend.Utils as AppBackendUtils
-import qualified Mobility.Transporter.Spec as Transporter.Mobility
-import qualified Mobility.Transporter.Utils as TransporterUtils
 import PublicTransport.Common
 import qualified PublicTransport.Spec as PublicTransport
 import Resources
@@ -63,7 +59,6 @@ main = do
     [ "allocation-service",
       "rider-app",
       "beckn-gateway",
-      "static-offer-driver-app",
       "driver-tracking-healthcheck-service",
       "mock-registry",
       "public-transport-rider-platform",
@@ -94,8 +89,7 @@ specs :: Maps.MapsServiceConfig -> IO TestTree
 specs googleCfg =
   specs'
     googleCfg
-    [ Transporter.Mobility.mkTestTree,
-      Mobility.ARDU.mkTestTree,
+    [ Mobility.ARDU.mkTestTree,
       PublicTransport.mkTestTree
     ]
 
@@ -134,7 +128,6 @@ specs' googleCfg trees = do
 
     cleanupServers _ = do
       AppBackendUtils.clearCachedMapsConfig
-      TransporterUtils.clearCachedMapsConfig
       DriverOfferBppUtils.clearCachedMapsConfig
       releaseTestResources
       signalProcess sigINT =<< getProcessID
@@ -147,10 +140,7 @@ specs' googleCfg trees = do
       ]
 
     secondWaveServers =
-      [ YatriAllocator.runAllocator \cfg ->
-          cfg & hideLogging
-            & #driverNotificationExpiry .~ 18,
-        DriverHC.runDriverHealthcheck hideLogging,
+      [ DriverHC.runDriverHealthcheck hideLogging,
         Gateway.runGateway hideLogging,
         do
           AppBackendUtils.changeCachedMapsConfig googleCfg
@@ -158,11 +148,7 @@ specs' googleCfg trees = do
             \cfg ->
               cfg & hideLogging,
         do
-          TransporterUtils.changeCachedMapsConfig googleCfg
-          TransporterBackend.runStaticOfferDriverApp $
-            \cfg ->
-              cfg & hideLogging,
-        MockSms.runMockSms hideLogging,
+          MockSms.runMockSms hideLogging,
         MockFcm.runMockFcm hideLogging,
         MockRegistry.runRegistryService hideLogging,
         MockPublicTransportBpp.runMock $ \cfg ->
