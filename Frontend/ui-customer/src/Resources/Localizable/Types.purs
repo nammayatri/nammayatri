@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 module Language.Types where
@@ -448,7 +448,7 @@ data STR
  | YOUR_RIDES
  | YOUR_TRIP_IS_TOO_SHORT_YOU_ARE_JUST
  | DOWNLOAD_INVOICE
- | WAS_YOUR_CALL_SUCCESSFUL        
+ | WAS_YOUR_CALL_SUCCESSFUL
  | DRIVER_ADDITIONS
  | FARE_UPDATE_POLICY
  | DRIVER_ADDITIONS_OPTIONAL
@@ -459,6 +459,7 @@ data STR
  | REASON_CHANGE_IN_ROUTE_A
  | REASON_CHANGE_IN_ROUTE_B
  | NAVIGATE_TO_PICKUP
+ | REQUEST_RECEIVED_WE_WILL_CALL_YOU_BACK_SOON
 
 getKeyString :: STR -> String
 getKeyString key = case key of
@@ -891,7 +892,7 @@ getKeyString key = case key of
   FIXED_GOVERNMENT_RATE -> "FIXED_GOVERNMENT_RATE"
   PLACE_CALL -> "PLACE_CALL"
   ANONYMOUS_CALL -> "ANONYMOUS_CALL"
-  CALL_DRIVER_USING -> "CALL_DRIVER_USING" 
+  CALL_DRIVER_USING -> "CALL_DRIVER_USING"
   DIRECT_CALL -> "DIRECT_CALL"
   WELCOME_TO_NAMMA_YATRI -> "WELCOME_TO_NAMMA_YATRI"
   YOUR_NUMBER_WILL_BE_VISIBLE_TO_THE_DRIVER_USE_IF_NOT_CALLING_FROM_REGISTERED_NUMBER -> "YOUR_NUMBER_WILL_BE_VISIBLE_TO_THE_DRIVER_USE_IF_NOT_CALLING_FROM_REGISTERED_NUMBER"
@@ -906,3 +907,4 @@ getKeyString key = case key of
   REASON_CHANGE_IN_ROUTE_A -> "REASON_CHANGE_IN_ROUTE_A"
   REASON_CHANGE_IN_ROUTE_B -> "REASON_CHANGE_IN_ROUTE_B"
   NAVIGATE_TO_PICKUP -> "NAVIGATE_TO_PICKUP"
+  REQUEST_RECEIVED_WE_WILL_CALL_YOU_BACK_SOON -> "REQUEST_RECEIVED_WE_WILL_CALL_YOU_BACK_SOON"

@@ -449,5 +449,6 @@ const englishStrings = {
   "YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS": "You may see an updated final fare due to any of the below reasons:",
   "REASON_CHANGE_IN_ROUTE_A": "1.Change in Route: ",
   "REASON_CHANGE_IN_ROUTE_B": "Total fare may change due to change in route",
-  "NAVIGATE_TO_PICKUP" : "Navigate to pickup"
+  "NAVIGATE_TO_PICKUP" : "Navigate to pickup",
+  "REQUEST_RECEIVED_WE_WILL_CALL_YOU_BACK_SOON" : "Request received. We will call you back soon"
 }

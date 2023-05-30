@@ -389,7 +389,7 @@ const malayalamStrings = {
   "CANCEL_ONGOING_SEARCH": "ഇപ്പോൾ പുരോഗമിച്ചുകൊണ്ടിരിക്കുന്ന സെർച്ച് റദ്ദു ചെയ്യണമെന്ന് ഉറപ്പാണോ?",
   "SEARCH_AGAIN_WITH_A_TIP": "ടിപ്പ് ഉൾപ്പെടുത്തി സെർച്ച് ചെയ്യണമോ?",
   "TRY_AGAIN_WITH_A_TIP": "ടിപ്പ് ഉൾപ്പെടുത്തി വീണ്ടും ശ്രമിക്കണമോ?",
-  "BOOST_YOUR_RIDE_CHANCES_AND_HELP_DRIVERS_WITH_TIPS":  "ടിപ്പ്, റൈഡ് ലഭിക്കാനുള്ള സാധ്യത വർധിപ്പിച്ചേക്കാം. ഇത്, ഒഴിഞ്ഞ റിട്ടേൺ ട്രിപ്പുകളിലും പീക്ക് ടൈമിലെ തിരക്കിലും ഡ്രൈവർക്കുണ്ടായേക്കാവുന്ന നഷ്ടം നികത്താൻ സഹായകമാകും", 
+  "BOOST_YOUR_RIDE_CHANCES_AND_HELP_DRIVERS_WITH_TIPS":  "ടിപ്പ്, റൈഡ് ലഭിക്കാനുള്ള സാധ്യത വർധിപ്പിച്ചേക്കാം. ഇത്, ഒഴിഞ്ഞ റിട്ടേൺ ട്രിപ്പുകളിലും പീക്ക് ടൈമിലെ തിരക്കിലും ഡ്രൈവർക്കുണ്ടായേക്കാവുന്ന നഷ്ടം നികത്താൻ സഹായകമാകും",
   "TRY_AGAIN_WITHOUT_TIP" : "ടിപ്പ് ഉൾപ്പെടുത്താതെ വീണ്ടും ശ്രമിക്കുക",
   "SEARCH_AGAIN_WITHOUT_A_TIP" : "ടിപ്പ് ഉൾപ്പെടുത്താതെ വീണ്ടും തിരയുക",
   "TRY_AGAIN_WITH" : "വീണ്ടും ശ്രമിക്കുക:",
@@ -406,7 +406,7 @@ const malayalamStrings = {
   "PLEASE_COME_SOON" : "ദയവായി വേഗം വരിക",
   "OK_I_WILL_WAIT" : "ഒക്കെ, ഞാൻ കാത്തിരിക്കാം",
   "I_HAVE_ARRIVED" : "ഞാൻ എത്തി",
-  "PLEASE_COME_FAST_I_AM_WAITING" : "ദയവായി വേഗം വരിക, ഞാൻ കാത്തിരിക്കുകയാണ്",  
+  "PLEASE_COME_FAST_I_AM_WAITING" : "ദയവായി വേഗം വരിക, ഞാൻ കാത്തിരിക്കുകയാണ്",
   "PLEASE_WAIT_I_WILL_BE_THERE" : "ദയവായി കാത്തിരിക്കൂ, ഞാൻ അവിടെ ഉണ്ടാകും",
   "LOOKING_FOR_YOU_AT_PICKUP" : "പിക്കപ്പിൽ നിങ്ങളെ തിരയുന്നു",
   "MOBILE" : "മൊബൈൽ",
@@ -436,5 +436,6 @@ const malayalamStrings = {
   "YOUR_NUMBER_WILL_BE_VISIBLE_TO_THE_DRIVER_USE_IF_NOT_CALLING_FROM_REGISTERED_NUMBER" : "നിങ്ങളുടെ നമ്പർ ഡ്രൈവർക്ക് ദൃശ്യമാകും. രജിസ്റ്റർ ചെയ്ത നമ്പറിൽ നിന്ന് വിളിക്കുന്നില്ലെങ്കിൽ ഉപയോഗിക്കുക",
   "CALL_DRIVER_USING" : "ഇതുപയോഗിച്ച് ഡ്രൈവറെ വിളിക്കുക:",
   "WAS_YOUR_CALL_SUCCESSFUL" : "നിങ്ങളുടെ കോൾ വിജയിച്ചോ",
-  "NAVIGATE_TO_PICKUP" : "പിക്കപ്പിലേക്ക് നാവിഗേറ്റ് ചെയ്യുക"
+  "NAVIGATE_TO_PICKUP" : "പിക്കപ്പിലേക്ക് നാവിഗേറ്റ് ചെയ്യുക",
+  "REQUEST_RECEIVED_WE_WILL_CALL_YOU_BACK_SOON" : "അഭ്യർത്ഥന ലഭിച്ചു. ഞങ്ങൾ നിങ്ങളെ ഉടൻ ബന്ധപ്പെടും"
 }

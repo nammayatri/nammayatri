@@ -178,7 +178,7 @@ const bengaliStrings = {
   "BY_CASH": "নগদে",
   "ONLINE_": "অনলাইন",
   "USER": "ব্যবহারকারী",
-  "EMAIL_ALREADY_EXISTS": "ইমেল আপডেট করতে ব্যর্থ। ই - মেইল ​​টি টি আগে থেকেই আছে আছে আছে",
+  "EMAIL_ALREADY_EXISTS": "ইমেল আপডেট করতে ব্যর্থ। ই - মেইল   টি টি আগে থেকেই আছে আছে আছে",
   "IN": "ভিতরে",
   "VERIFYING_OTP": "ওটিপি যাচাই করা হচ্ছে",
   "TRACK_LIVE_LOCATION_USING": "ব্যবহার করে লাইভ অবস্থান ট্র্যাক করুন",
@@ -436,5 +436,6 @@ const bengaliStrings = {
   "YOUR_NUMBER_WILL_BE_VISIBLE_TO_THE_DRIVER_USE_IF_NOT_CALLING_FROM_REGISTERED_NUMBER" : "আপনার নম্বরটি ড্রাইভারের কাছে দৃশ্যমান হবে। নিবন্ধিত নম্বর থেকে কল না করলে ব্যবহার করুন",
   "CALL_DRIVER_USING" : "ব্যবহার করে ড্রাইভারকে কল করুন:",
   "WAS_YOUR_CALL_SUCCESSFUL" : "আপনার কল সফল ছিল" ,
-  "NAVIGATE_TO_PICKUP" : "পিকআপে নেভিগেট করুন"
+  "NAVIGATE_TO_PICKUP" : "পিকআপে নেভিগেট করুন",
+  "REQUEST_RECEIVED_WE_WILL_CALL_YOU_BACK_SOON" : "অনুরোধ পেয়েছি. আমরা তোমার সাথে শীঘ্রই যোগাযোগ করবো"
 }
