@@ -137,8 +137,8 @@ handler merchantId sReq = do
         fromLocation <- buildSearchReqLocation fromLocationLatLong
         toLocation <- buildSearchReqLocation toLocationLatLong
         searchRequestSpecialZone <- buildSearchRequestSpecialZone sReq merchantId fromLocation toLocation result.distance result.duration
-        Esq.runTransaction $ do
-          QSearchRequestSpecialZone.create searchRequestSpecialZone
+        -- Esq.runTransaction $ do
+        _ <- QSearchRequestSpecialZone.create searchRequestSpecialZone
         now <- getCurrentTime
         listOfSpecialZoneQuotes <- do
           allFarePolicies <- FarePolicyS.findAllByMerchantId org.id (Just result.distance)

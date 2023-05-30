@@ -100,26 +100,6 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.BookingType
 
 instance FromBackendRow Postgres Domain.BookingType
 
--- instance FromField HighPrecMeters where
---   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be HighPrecMeters where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be HighPrecMeters
-
--- instance FromBackendRow Postgres HighPrecMeters
-
--- instance FromField Veh.Variant where
---   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Veh.Variant where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Veh.Variant
-
--- instance FromBackendRow Postgres Veh.Variant
-
 data BookingT f = BookingT
   { id :: B.C f Text,
     transactionId :: B.C f Text,

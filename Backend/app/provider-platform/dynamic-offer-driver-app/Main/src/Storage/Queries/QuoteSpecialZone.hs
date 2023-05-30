@@ -79,17 +79,17 @@ countAllByRequestId searchReqID = do
       pure (either (const 0) (fromMaybe 0) resp)
     Left _ -> pure 0
 
-baseQuoteSpecialZoneQuery ::
-  From
-    ( SqlExpr (Entity QuoteSpecialZoneT)
-        :& SqlExpr (Entity Fare.FareParametersT)
-    )
-baseQuoteSpecialZoneQuery =
-  table @QuoteSpecialZoneT
-    `innerJoin` table @Fare.FareParametersT
-      `Esq.on` ( \(rb :& farePars) ->
-                   rb ^. QuoteSpecialZoneFareParametersId ==. farePars ^. Fare.FareParametersTId
-               )
+-- baseQuoteSpecialZoneQuery ::
+--   From
+--     ( SqlExpr (Entity QuoteSpecialZoneT)
+--         :& SqlExpr (Entity Fare.FareParametersT)
+--     )
+-- baseQuoteSpecialZoneQuery =
+--   table @QuoteSpecialZoneT
+--     `innerJoin` table @Fare.FareParametersT
+--       `Esq.on` ( \(rb :& farePars) ->
+--                    rb ^. QuoteSpecialZoneFareParametersId ==. farePars ^. Fare.FareParametersTId
+--                )
 
 findById :: (L.MonadFlow m) => Id QuoteSpecialZone -> m (Maybe QuoteSpecialZone)
 findById (Id dQuoteId) = do

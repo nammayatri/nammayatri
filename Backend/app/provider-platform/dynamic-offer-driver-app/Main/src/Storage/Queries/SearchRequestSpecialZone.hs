@@ -31,12 +31,12 @@ import Storage.Queries.SearchRequest.SearchReqLocation as QSRL
 import Storage.Tabular.SearchRequest.SearchReqLocation
 import Storage.Tabular.SearchRequestSpecialZone
 
-create :: SearchRequestSpecialZone -> SqlDB ()
-create dsReq = Esq.runTransaction $
-  withFullEntity dsReq $ \(sReq, fromLoc, toLoc) -> do
-    Esq.create' fromLoc
-    Esq.create' toLoc
-    Esq.create' sReq
+-- create :: SearchRequestSpecialZone -> SqlDB ()
+-- create dsReq = Esq.runTransaction $
+--   withFullEntity dsReq $ \(sReq, fromLoc, toLoc) -> do
+--     Esq.create' fromLoc
+--     Esq.create' toLoc
+--     Esq.create' sReq
 
 createSearchRequestSpecialZone :: L.MonadFlow m => SearchRequestSpecialZone -> m (MeshResult ())
 createSearchRequestSpecialZone srsz = do
@@ -45,8 +45,8 @@ createSearchRequestSpecialZone srsz = do
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainSearchRequestSpecialZoneToBeam srsz)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-create' :: L.MonadFlow m => SearchRequestSpecialZone -> m (MeshResult ())
-create' srsz = do
+create :: L.MonadFlow m => SearchRequestSpecialZone -> m (MeshResult ())
+create srsz = do
   _ <- createSearchRequestSpecialZone srsz
   _ <- QSRL.create srsz.fromLocation
   QSRL.create srsz.toLocation
