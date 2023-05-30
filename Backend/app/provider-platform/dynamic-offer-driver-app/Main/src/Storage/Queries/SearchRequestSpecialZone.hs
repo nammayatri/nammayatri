@@ -156,7 +156,7 @@ getValidTill (Id searchRequestId) = do
       case srsz of
         Left _ -> pure Nothing
         Right x -> do
-          srsz' <- sequence $ transformBeamSearchRequestSpecialZoneToDomain <$> x
+          srsz' <- mapM transformBeamSearchRequestSpecialZoneToDomain x
           let vTill = Domain.validTill <$> srsz'
           pure vTill
     Nothing -> pure Nothing

@@ -33,7 +33,6 @@ import qualified Storage.Beam.DriverQuote as BeamDQ
 import Storage.Queries.FareParameters as BeamQFP
 -- import Storage.Queries.FullEntityBuilders (buildFullDriverQuote)
 import Storage.Tabular.DriverQuote
-import qualified Storage.Tabular.FareParameters as Fare
 
 -- import qualified Storage.Tabular.FareParameters.Instances as FareParamsT
 
@@ -44,17 +43,17 @@ create dQuote = do
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainDriverQuoteToBeam dQuote)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-baseDriverQuoteQuery ::
-  From
-    ( SqlExpr (Entity DriverQuoteT)
-        :& SqlExpr (Entity Fare.FareParametersT)
-    )
-baseDriverQuoteQuery =
-  table @DriverQuoteT
-    `innerJoin` table @Fare.FareParametersT
-      `Esq.on` ( \(rb :& farePars) ->
-                   rb ^. DriverQuoteFareParametersId ==. farePars ^. Fare.FareParametersTId
-               )
+-- baseDriverQuoteQuery ::
+--   From
+--     ( SqlExpr (Entity DriverQuoteT)
+--         :& SqlExpr (Entity Fare.FareParametersT)
+--     )
+-- baseDriverQuoteQuery =
+--   table @DriverQuoteT
+--     `innerJoin` table @Fare.FareParametersT
+--       `Esq.on` ( \(rb :& farePars) ->
+--                    rb ^. DriverQuoteFareParametersId ==. farePars ^. Fare.FareParametersTId
+--                )
 
 findById :: (L.MonadFlow m) => Id Domain.DriverQuote -> m (Maybe Domain.DriverQuote)
 findById (Id driverQuoteId) = do
@@ -130,14 +129,14 @@ deleteByDriverId (Id driverId) = do
           [Se.Is BeamDQ.driverId (Se.Eq driverId)]
     Nothing -> pure ()
 
-findDriverQuoteBySearchId :: Transactionable m => Id DSReq.SearchRequest -> DTypeBuilder m (Maybe DriverQuoteT)
-findDriverQuoteBySearchId searchReqId = Esq.findOne' $ do
-  driverQuote <- from $ table @DriverQuoteT
-  where_ $ driverQuote ^. DriverQuoteSearchRequestId ==. val (toKey searchReqId)
-  pure driverQuote
+-- findDriverQuoteBySearchId :: Transactionable m => Id DSReq.SearchRequest -> DTypeBuilder m (Maybe DriverQuoteT)
+-- findDriverQuoteBySearchId searchReqId = Esq.findOne' $ do
+--   driverQuote <- from $ table @DriverQuoteT
+--   where_ $ driverQuote ^. DriverQuoteSearchRequestId ==. val (toKey searchReqId)
+--   pure driverQuote
 
-findDriverQuoteBySearchId' :: (L.MonadFlow m) => Id DSReq.SearchRequest -> m (Maybe Domain.DriverQuote)
-findDriverQuoteBySearchId' (Id searchReqId) = do
+findDriverQuoteBySearchId :: (L.MonadFlow m) => Id DSReq.SearchRequest -> m (Maybe Domain.DriverQuote)
+findDriverQuoteBySearchId (Id searchReqId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do

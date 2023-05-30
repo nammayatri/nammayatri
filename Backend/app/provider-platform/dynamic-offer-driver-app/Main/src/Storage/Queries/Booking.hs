@@ -96,7 +96,7 @@ findById (Id bookingId) = do
 
 findBySearchReq :: L.MonadFlow m => Id DSR.SearchRequest -> m (Maybe Booking)
 findBySearchReq searchReqId = do
-  mbDriverQuote <- QDQuote.findDriverQuoteBySearchId' searchReqId
+  mbDriverQuote <- QDQuote.findDriverQuoteBySearchId searchReqId
   case mbDriverQuote of
     Nothing -> pure Nothing
     Just mbDriverQuote' -> do
