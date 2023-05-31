@@ -30,6 +30,8 @@ import Database.Beam.Postgres
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 -- import qualified Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Domain
 
+import qualified Domain.Types.FareParameters as Domain
+import qualified Domain.Types.FarePolicy
 import qualified Domain.Types.FarePolicy as Domain
 import qualified Domain.Types.Vehicle.Variant as Vehicle
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
@@ -49,36 +51,6 @@ instance IsString Meters where
 
 instance IsString Money where
   fromString = show
-
-instance FromField Domain.WaitingCharge where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.WaitingCharge where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.WaitingCharge
-
-instance FromBackendRow Postgres Domain.WaitingCharge
-
-instance FromField HighPrecMoney where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be HighPrecMoney where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be HighPrecMoney
-
-instance FromBackendRow Postgres HighPrecMoney
-
-instance FromField Domain.NightShiftCharge where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.NightShiftCharge where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.NightShiftCharge
-
-instance FromBackendRow Postgres Domain.NightShiftCharge
 
 data FarePolicyProgressiveDetailsT f = FarePolicyProgressiveDetailsT
   { farePolicyId :: B.C f Text,
@@ -116,9 +88,9 @@ deriving stock instance Ord Domain.WaitingCharge
 
 deriving stock instance Ord Domain.NightShiftCharge
 
-deriving stock instance Read Domain.NightShiftCharge
+-- deriving stock instance Read Domain.NightShiftCharge
 
-deriving stock instance Read Domain.WaitingCharge
+-- deriving stock instance Read Domain.WaitingCharge
 
 farePolicyProgressiveDetailsTMod :: FarePolicyProgressiveDetailsT (B.FieldModification (B.TableField FarePolicyProgressiveDetailsT))
 farePolicyProgressiveDetailsTMod =

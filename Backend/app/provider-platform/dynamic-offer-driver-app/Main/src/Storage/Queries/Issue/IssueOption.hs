@@ -1,7 +1,7 @@
 module Storage.Queries.Issue.IssueOption where
 
 import Domain.Types.Issue.IssueCategory
-import Domain.Types.Issue.IssueOption
+import Domain.Types.Issue.IssueOption as DomainIO
 import Domain.Types.Issue.IssueTranslation
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
@@ -13,6 +13,8 @@ import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.Issue.IssueOption as BeamIO
+import qualified Storage.Beam.Issue.IssueTranslation as BeamIT
+import qualified Storage.Queries.Issue.IssueTranslation as QueriesIT
 import Storage.Tabular.Issue.IssueOption
 import Storage.Tabular.Issue.IssueTranslation
 
@@ -52,12 +54,49 @@ findAllByCategoryAndLanguage issueCategoryId language = Esq.findAll $ do
     issueOption ^. IssueOptionIssueCategoryId ==. val (toKey issueCategoryId)
   pure (issueOption, mbIssueTranslation)
 
+findAllByCategoryAndLanguage' :: L.MonadFlow m => Id IssueCategory -> Language -> m [(IssueOption, Maybe IssueTranslation)]
+findAllByCategoryAndLanguage' (Id issueCategoryId) language = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> do
+      iOptions <- either (pure []) (transformBeamIssueOptionToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamIO.issueCategoryId $ Se.Eq (issueCategoryId)]
+      iTranslations <- either (pure []) (QueriesIT.transformBeamIssueTranslationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamIT.language $ Se.Eq language, Se.Is BeamIT.sentence $ Se.In (DomainIO.option <$> iOptions)]]
+      let dInfosWithTranslations = foldl' (getIssueOptionsWithTranslations iTranslations) [] iOptions
+      pure dInfosWithTranslations
+    Nothing -> pure []
+  where
+    getIssueOptionsWithTranslations iTranslations dInfosWithTranslations iOption =
+      let iTranslations' = filter (\iTranslation -> iTranslation.sentence == iOption.option) iTranslations
+       in dInfosWithTranslations <> if not (null iTranslations') then ((\iTranslation'' -> (iOption, Just iTranslation'')) <$> iTranslations') else [(iOption, Nothing)]
+
+-- getDriverInfoWithDL drLocs dInfosWithLocs dInfo =
+--   let drLocs' = filter (\drLoc -> drLoc.driverId == dInfo.driverId) drLocs
+--    in dInfosWithLocs <> ((\drLoc -> (dInfo, drLoc)) <$> drLocs')
+
 findByIdAndLanguage :: Transactionable m => Id IssueOption -> Language -> m (Maybe (IssueOption, Maybe IssueTranslation))
 findByIdAndLanguage issueOptionId language = Esq.findOne $ do
   (issueOption :& mbIssueTranslation) <- from $ fullOptionTable language
   where_ $
     issueOption ^. IssueOptionTId ==. val (toKey issueOptionId)
   pure (issueOption, mbIssueTranslation)
+
+findByIdAndLanguage' :: L.MonadFlow m => Id IssueOption -> Language -> m (Maybe (IssueOption, Maybe IssueTranslation))
+findByIdAndLanguage' issueOptionId language = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> do
+      iOptions <- either (pure []) (transformBeamIssueOptionToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamIO.id $ Se.Eq (getId issueOptionId)]
+      iTranslations <- either (pure []) (QueriesIT.transformBeamIssueTranslationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamIT.language $ Se.Eq language, Se.Is BeamIT.sentence $ Se.In (DomainIO.option <$> iOptions)]]
+      let dInfosWithTranslations' = foldl' (getIssueOptionsWithTranslations iTranslations) [] iOptions
+          dInfosWithTranslations = headMaybe dInfosWithTranslations'
+      pure dInfosWithTranslations
+    Nothing -> pure Nothing
+  where
+    getIssueOptionsWithTranslations iTranslations dInfosWithTranslations iOption =
+      let iTranslations' = filter (\iTranslation -> iTranslation.sentence == iOption.option) iTranslations
+       in dInfosWithTranslations <> if not (null iTranslations') then ((\iTranslation'' -> (iOption, Just iTranslation'')) <$> iTranslations') else [(iOption, Nothing)]
+
+    headMaybe dInfosWithTranslations' = if null dInfosWithTranslations' then Nothing else Just (head dInfosWithTranslations')
 
 -- findById :: Transactionable m => Id IssueOption -> m (Maybe IssueOption)
 -- findById issueOptionId = Esq.findOne $ do

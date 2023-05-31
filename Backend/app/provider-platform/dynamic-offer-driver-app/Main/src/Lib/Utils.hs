@@ -106,6 +106,16 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Seconds
 
 instance FromBackendRow Postgres Seconds
 
+instance FromField HighPrecMoney where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be HighPrecMoney where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be HighPrecMoney
+
+instance FromBackendRow Postgres HighPrecMoney
+
 instance FromField Seconds where
   fromField = fromFieldEnum
 

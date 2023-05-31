@@ -105,24 +105,6 @@ updateAffectedPhones primaryPhones = do
       ]
     where_ $ isPrimaryDown !=. tbl ^. ExophoneIsPrimaryDown
 
--- updateAffectedPhones' :: (L.MonadFlow m, MonadTime m) => [Text] -> m (MeshResult ())
--- updateAffectedPhones' primaryPhones = do
---   dbConf <- L.getOption Extra.EulerPsqlDbCfg
---   now <- getCurrentTime
---   let indianMobileCode = "+91"
---   -- let isPrimaryDown = Se.Or [ Se.Is BeamE.primaryPhone $ Se.In primaryPhones, Se.Is (indianMobileCode ++ BeamE.primaryPhone) $ Se.In primaryPhones ]
---   let isPrimaryDown = Se.Or [ Se.Is BeamE.primaryPhone $ Se.In primaryPhones, Se.Is (\eT@BeamE.ExophoneT {..} -> (primaryPhone eT) ++ indianMobileCode) $ Se.In primaryPhones ]
---   case dbConf of
---     Just dbConf' ->
---       KV.updateWoReturningWithKVConnector
---         dbConf'
---         Mesh.meshConfig
---         [ Se.Set BeamE.isPrimaryDown isPrimaryDown,
---           Se.Set BeamE.updatedAt now
---         ]
---         [Se.Is BeamE.isPrimaryDown (Se.Eq isPrimaryDown)]
---     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
-
 -- deleteByMerchantId :: Id DM.Merchant -> SqlDB ()
 -- deleteByMerchantId merchantId = do
 --   Esq.delete $ do

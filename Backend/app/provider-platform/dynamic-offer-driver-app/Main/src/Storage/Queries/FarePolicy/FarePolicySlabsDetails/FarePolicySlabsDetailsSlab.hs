@@ -71,6 +71,13 @@ deleteAll' farePolicyId =
     where_ $
       farePolicySlabsDetailsSlab ^. FarePolicySlabsDetailsSlabFarePolicyId ==. val (toKey farePolicyId)
 
+deleteAll'' :: L.MonadFlow m => Id DFP.FarePolicy -> m ()
+deleteAll'' (Id farePolicyId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> void $ KV.deleteAllReturningWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamFPSS.farePolicyId $ Se.Eq farePolicyId]
+    Nothing -> pure ()
+
 transformBeamFarePolicyProgressiveDetailsToDomain :: BeamFPSS.FarePolicySlabsDetailsSlab -> FullFarePolicySlabsDetailsSlab
 transformBeamFarePolicyProgressiveDetailsToDomain BeamFPSS.FarePolicySlabsDetailsSlabT {..} = do
   ( KTI.Id farePolicyId,

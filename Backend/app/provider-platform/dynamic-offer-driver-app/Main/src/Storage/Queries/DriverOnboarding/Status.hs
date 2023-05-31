@@ -15,6 +15,9 @@
 module Storage.Queries.DriverOnboarding.Status where
 
 import Data.Coerce
+import qualified Database.Beam as B
+import Database.Beam.Postgres
+import qualified Database.Beam.Query as B
 import Domain.Types.DriverInformation
 import Domain.Types.DriverOnboarding.DriverLicense
 import Domain.Types.DriverOnboarding.DriverRCAssociation
@@ -23,9 +26,16 @@ import qualified Domain.Types.DriverOnboarding.Image as Image
 import Domain.Types.DriverOnboarding.VehicleRegistrationCertificate (VehicleRegistrationCertificate)
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Utils (meshModelTableEntity)
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import qualified Lib.Mesh as Mesh
+import Sequelize as Se
+import qualified Storage.Beam.DriverOnboarding.Image as BeamI
 import Storage.Tabular.DriverInformation
 import Storage.Tabular.DriverOnboarding.DriverLicense
 import Storage.Tabular.DriverOnboarding.DriverRCAssociation
@@ -33,6 +43,7 @@ import Storage.Tabular.DriverOnboarding.IdfyVerification
 import Storage.Tabular.DriverOnboarding.Image
 import Storage.Tabular.DriverOnboarding.VehicleRegistrationCertificate
 import Storage.Tabular.Person
+import qualified Prelude
 
 data DriverDocsInfo = DriverDocsInfo
   { person :: Person,
@@ -51,6 +62,22 @@ imagesAggTableCTEbyDoctype imageType = with $ do
   where_ $ image ^. ImageImageType ==. val imageType
   groupBy $ image ^. ImagePersonId
   pure (image ^. ImagePersonId, count @Int $ image ^. ImageId)
+
+imagesAggTableCTEbyDoctype' :: L.MonadFlow m => Image.ImageType -> m (Maybe (Text, Int))
+imagesAggTableCTEbyDoctype' imageType' = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  conn <- L.getOrInitSqlConn (fromJust dbConf)
+  case conn of
+    Right c -> do
+      resp <-
+        L.runDB c $
+          L.findRow $
+            B.select $
+              B.aggregate_ (\image' -> (B.group_ (BeamI.personId image'), B.as_ @Int B.countAll_)) $
+                B.filter_' (\(BeamI.ImageT {..}) -> imageType B.==?. B.val_ imageType') $
+                  B.all_ (meshModelTableEntity @BeamI.ImageT @Postgres @(Se.DatabaseWith BeamI.ImageT))
+      pure (either (const Nothing) Prelude.id resp)
+    Left _ -> pure (Nothing)
 
 baseDriverDocumentsInfoQuery ::
   From (SqlExpr (Value PersonTId), SqlExpr (Value Int)) ->
@@ -89,6 +116,22 @@ baseDriverDocumentsInfoQuery licenseImagesAggTable vehicleRegistrationImagesAggT
       `Esq.on` (\(p :& _ :& _ :& _ :& _ :& _ :& _ :& (licImgPersonId, _)) -> just (p ^. PersonTId) ==. licImgPersonId)
     `Esq.leftJoin` vehicleRegistrationImagesAggTable
       `Esq.on` (\(p :& _ :& _ :& _ :& _ :& _ :& _ :& _ :& (vehRegImgPersonId, _)) -> just (p ^. PersonTId) ==. vehRegImgPersonId)
+
+-- fetchDriverDocsInfo' :: (L.MonadFlow m) => Id Merchant -> Maybe (NonEmpty (Id Driver)) -> m [DriverDocsInfo]
+-- fetchDriverDocsInfo' merchantId mbDriverIds = do
+--   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   case dbConf of
+--     Just dbCOnf' -> do
+--       persons <- either (pure []) (QueriesIT.transformBeamIssueTranslationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamIT.language $ Se.Eq language]
+--       dLicenses <- either (pure []) (QueriesIT.transformBeamIssueTranslationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamIT.language $ Se.Eq language]
+--       iCategorys <- either (pure []) (transformBeamIssueCategoryToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamIC.category $ Se.In (DomainIT.sentence <$> iTranslations)]
+--       let dCategoriesWithTranslations = foldl' (getIssueCategoryWithTranslations iTranslations) [] iCategorys
+--       pure dCategoriesWithTranslations
+--     Nothing -> pure []
+--   where
+--     getIssueCategoryWithTranslations iTranslations dInfosWithTranslations iCategory =
+--       let iTranslations' = filter (\iTranslation -> iTranslation.sentence == iCategory.category) iTranslations
+--         in dInfosWithTranslations <> if not (null iTranslations') then ((\iTranslation'' -> (iCategory, Just iTranslation'')) <$> iTranslations') else [(iCategory, Nothing)]
 
 fetchDriverDocsInfo :: (Transactionable m) => Id Merchant -> Maybe (NonEmpty (Id Driver)) -> m [DriverDocsInfo]
 fetchDriverDocsInfo merchantId mbDriverIds = fmap (map mkDriverDocsInfo) $

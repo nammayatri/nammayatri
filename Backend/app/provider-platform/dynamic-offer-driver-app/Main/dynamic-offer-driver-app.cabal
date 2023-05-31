@@ -329,6 +329,7 @@ library
       Storage.Queries.Issue.IssueCategory
       Storage.Queries.Issue.IssueOption
       Storage.Queries.Issue.IssueReport
+      Storage.Queries.Issue.IssueTranslation
       Storage.Queries.MediaFile
       Storage.Queries.Merchant
       Storage.Queries.Merchant.DriverIntelligentPoolConfig

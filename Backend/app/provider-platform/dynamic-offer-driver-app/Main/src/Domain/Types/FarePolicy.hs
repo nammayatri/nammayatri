@@ -16,12 +16,17 @@ module Domain.Types.FarePolicy where
 
 import qualified Data.List.NonEmpty as NE
 import Data.Ord
+import qualified Database.Beam as B
+import Database.Beam.Backend
+import Database.Beam.Postgres
+import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import Domain.Types.Common
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id (Id)
+import Lib.Utils
 
 data FarePolicyD (s :: UsageSafety) = FarePolicy
   { id :: Id FarePolicy,
@@ -100,6 +105,26 @@ instance FromJSON (FPSlabsDetailsSlabD 'Unsafe)
 
 instance ToJSON (FPSlabsDetailsSlabD 'Unsafe)
 
+instance FromField WaitingCharge where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be WaitingCharge where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be WaitingCharge
+
+instance FromBackendRow Postgres WaitingCharge
+
+instance FromField NightShiftCharge where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be NightShiftCharge where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be NightShiftCharge
+
+instance FromBackendRow Postgres NightShiftCharge
+
 data DriverExtraFeeBounds = DriverExtraFeeBounds
   { minFee :: Money,
     maxFee :: Money
@@ -119,10 +144,10 @@ data AllowedTripDistanceBounds = AllowedTripDistanceBounds
   deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
 
 data WaitingCharge = PerMinuteWaitingCharge HighPrecMoney | ConstantWaitingCharge Money
-  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema, Read)
 
 data NightShiftCharge = ProgressiveNightShiftCharge Float | ConstantNightShiftCharge Money
-  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema, Read)
 
 data FarePolicyType = Progressive | Slabs deriving (Show, Read, Eq, Generic)
 
