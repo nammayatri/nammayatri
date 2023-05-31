@@ -76,12 +76,12 @@ data ServiceHandle m = ServiceHandle
   { findBookingById :: Id SRB.Booking -> m (Maybe SRB.Booking),
     findRideById :: Id DRide.Ride -> m (Maybe DRide.Ride),
     getMerchant :: Id DM.Merchant -> m (Maybe DM.Merchant),
-    endRideTransaction :: Id DP.Driver -> Id SRB.Booking -> DRide.Ride -> Maybe FareParameters -> Maybe (Id RD.RiderDetails) -> m (),
+    endRideTransaction :: Id DP.Driver -> Id SRB.Booking -> DRide.Ride -> Maybe FareParameters -> Maybe (Id RD.RiderDetails) -> Id DM.Merchant -> m (),
     notifyCompleteToBAP :: SRB.Booking -> DRide.Ride -> Fare.FareParameters -> m (),
     getFarePolicy :: Id DM.Merchant -> DVeh.Variant -> m (Maybe DFP.FarePolicy),
     calculateFareParameters :: Fare.CalculateFareParametersParams -> m Fare.FareParameters,
     putDiffMetric :: Id DM.Merchant -> Money -> Meters -> m (),
-    findDriverLoc :: Id DP.Person -> m (Maybe DrLoc.DriverLocation),
+    findDriverLoc :: Id DM.Merchant -> Id DP.Person -> m (Maybe DrLoc.DriverLocation),
     isDistanceCalculationFailed :: Id DP.Person -> m Bool,
     finalDistanceCalculation :: Id DRide.Ride -> Id DP.Person -> LatLong -> m (),
     getInterpolatedPoints :: Id DP.Person -> m [LatLong],
@@ -179,7 +179,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
       case dashboardReq.point of
         Just point -> pure point
         Nothing -> do
-          driverLocation <- findDriverLoc driverId >>= fromMaybeM LocationNotFound
+          driverLocation <- findDriverLoc booking.providerId driverId >>= fromMaybeM LocationNotFound
           pure $ getCoordinates driverLocation
     CallBasedReq _ -> do
       pure $ getCoordinates booking.toLocation
@@ -210,7 +210,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
                pickupDropOutsideOfThreshold = Just pickupDropOutsideOfThreshold
               }
     -- we need to store fareParams only when they changed
-    endRideTransaction (cast @DP.Person @DP.Driver driverId) booking.id updRide mbUpdatedFareParams booking.riderId
+    endRideTransaction (cast @DP.Person @DP.Driver driverId) booking.id updRide mbUpdatedFareParams booking.riderId booking.providerId
     clearInterpolatedPoints driverId
     notifyCompleteToBAP booking updRide newFareParams
   return APISuccess.Success

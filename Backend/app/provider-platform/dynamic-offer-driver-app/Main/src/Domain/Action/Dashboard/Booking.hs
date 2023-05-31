@@ -65,7 +65,7 @@ stuckBookingsCancel merchantShortId req = do
   let stuckPersonIds = stuckRideItems <&> (.driverId)
   let stuckDriverIds = cast @DP.Person @DP.Driver <$> stuckPersonIds
   -- drivers going out of ride, update location from redis to db
-  driverLocations <- catMaybes <$> traverse SDrLoc.findById stuckPersonIds
+  driverLocations <- catMaybes <$> traverse (SDrLoc.findById merchant.id) stuckPersonIds
   Esq.runTransaction $ do
     QRide.updateStatusByIds (stuckRideItems <&> (.rideId)) DRide.CANCELLED
     QBooking.cancelBookings allStuckBookingIds now

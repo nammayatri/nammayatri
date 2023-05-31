@@ -57,8 +57,9 @@ endRideTransaction ::
   Ride.Ride ->
   Maybe DFare.FareParameters ->
   Maybe (Id RD.RiderDetails) ->
+  Id Merchant ->
   m ()
-endRideTransaction driverId bookingId ride mbFareParams mbRiderDetailsId = do
+endRideTransaction driverId bookingId ride mbFareParams mbRiderDetailsId merchantId = do
   driverInfo <- CDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   mbRiderDetails <- join <$> QRD.findById `mapM` mbRiderDetailsId
   minTripDistanceForReferralCfg <- asks (.minTripDistanceForReferralCfg)
@@ -88,8 +89,7 @@ endRideTransaction driverId bookingId ride mbFareParams mbRiderDetailsId = do
     if driverInfo.active
       then QDFS.updateStatus ride.driverId DDFS.ACTIVE
       else QDFS.updateStatus ride.driverId DDFS.IDLE
-  driver <- Esq.runInReplica $ SQP.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-  DLoc.updateOnRide driverId False driver.merchantId
+  DLoc.updateOnRide driverId False merchantId
   SRide.clearCache $ cast driverId
 
 putDiffMetric :: (Metrics.HasBPPMetrics m r, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Money -> Meters -> m ()

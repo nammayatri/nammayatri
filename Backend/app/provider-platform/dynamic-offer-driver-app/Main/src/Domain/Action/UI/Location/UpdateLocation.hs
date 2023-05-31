@@ -105,7 +105,7 @@ buildUpdateLocationHandle driverId = do
   pure $
     UpdateLocationHandle
       { driver,
-        findDriverLocation = DrLoc.findById driverId,
+        findDriverLocation = DrLoc.findById driver.merchantId driverId,
         upsertDriverLocation = DrLoc.upsertGpsCoord driverId,
         getAssignedRide = SRide.getInProgressOrNewRideIdAndStatusByDriverId driverId,
         addIntermediateRoutePoints = \rideId ->
