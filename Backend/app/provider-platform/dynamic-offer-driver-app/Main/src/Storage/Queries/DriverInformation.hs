@@ -36,14 +36,10 @@ import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverInformation as BeamDI
-import qualified Storage.Beam.DriverLocation as BeamDL
 import qualified Storage.Beam.Person as BeamP hiding (Id)
-import qualified Storage.Queries.DriverLocation as QueriesDL
-import qualified Storage.Queries.Person as QueriesP
 import Storage.Tabular.DriverInformation
 import Storage.Tabular.DriverLocation
 import Storage.Tabular.Person
-import qualified Storage.Tabular.VechileNew as VN
 import qualified Prelude
 
 data DatabaseWith2 table1 table2 f = DatabaseWith2
@@ -294,43 +290,6 @@ getDriversWithOutdatedLocationsToMakeInactive before = do
     where_ $ driverInformation ^. DriverInformationActive
     orderBy [asc $ driverInformation ^. DriverInformationUpdatedAt]
     pure person
-
-getDriversWithOutdatedLocationsToMakeInactive' :: (L.MonadFlow m, Log m) => UTCTime -> m [Person]
-getDriversWithOutdatedLocationsToMakeInactive' before = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
-  case dbConf of
-    Just dbCOnf' -> do
-      -- KV.findAllWithOptionsKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDS.driverId $ Se.In (getId <$> ids)] (Se.Asc BeamDS.idleSince) (Just count_) Nothing
-      dInfos <- either (pure []) (transformBeamDriverInformationToDomain <$>) <$> KV.findAllWithOptionsKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDI.active $ Se.Eq (True)] (Se.Asc BeamDI.updatedAt) Nothing Nothing
-      drLocs <- findAllDriverLocations' dbCOnf' (getId . DDI.driverId <$> dInfos)
-      persons <- do
-        persons' <- KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamP.id $ Se.In (getId . DDI.driverId <$> dInfos)]
-        either (pure . const []) (mapM QueriesP.transformBeamPersonToDomain) persons'
-      let dInfosWithLocs = foldl' (getDriverInfoWithDL drLocs) [] dInfos
-          dInfosWithLocsAndPersons = foldl' (getDriverInfoWithDLAndPerson persons) [] dInfosWithLocs
-      pure ((\(_, _, person) -> person) <$> dInfosWithLocsAndPersons)
-    Nothing -> pure []
-  where
-    findAllDriverLocations' dbCOnf' driverIds = do
-      conn <- L.getOrInitSqlConn dbCOnf'
-      case conn of
-        Right c -> do
-          geoms <-
-            L.runDB c $
-              L.findRows $
-                B.select $
-                  B.filter_' (\BeamDL.DriverLocationT {..} -> B.sqlBool_ (driverId `B.in_` (B.val_ <$> driverIds)) B.&&?. (updatedAt B.==?. B.val_ before)) $
-                    B.all_ (meshModelTableEntity @BeamDL.DriverLocationT @Postgres @(Se.DatabaseWith BeamDL.DriverLocationT))
-          pure (either (const []) (QueriesDL.transformBeamDriverLocationToDomain <$>) geoms)
-        Left _ -> pure []
-
-    getDriverInfoWithDL drLocs dInfosWithLocs dInfo =
-      let drLocs' = filter (\drLoc -> drLoc.driverId == dInfo.driverId) drLocs
-       in dInfosWithLocs <> ((\drLoc -> (dInfo, drLoc)) <$> drLocs')
-
-    getDriverInfoWithDLAndPerson persons dInfosWithLocsAndPersons (dInfo, drLoc) =
-      let persons'' = filter (\person -> person.id == dInfo.driverId) persons
-       in dInfosWithLocsAndPersons <> ((\person -> (dInfo, drLoc, person)) <$> persons'')
 
 -- addReferralCode :: Id Person -> EncryptedHashedField 'AsEncrypted Text -> SqlDB ()
 -- addReferralCode personId code = do

@@ -206,15 +206,22 @@ findAllByVariantRegNumMerchantId variantM mbRegNum limit' offset' merchantId = d
     offset offsetVal
     return vehicle
 
--- findAllByVariantRegNumMerchantId' :: L.MonadFlow m => Maybe Variant.Variant -> Maybe Text -> Integer -> Integer -> Id Merchant -> m [Vehicle]
--- findAllByVariantRegNumMerchantId' variantM mbRegNum limit' offset' (Id merchantId)= do
---   dbConf <- L.getOption Extra.EulerPsqlDbCfg
---   let limitVal = fromIntegral limit'
---       offsetVal = fromIntegral offset'
---   case dbConf of
---     Just dbCOnf' -> either (pure []) (transformBeamVehicleToDomain <$>) <$> KV.findAllWithOptionsKVConnector dbCOnf' Mesh.meshConfig
---       [Se.And ([Se.Is BeamV.merchantId $ Se.Eq merchantId] <> if isJust variantM then [Se.Is BeamV.variant $ Se.Eq (fromJust variantM)] else [] <> if isJust mbRegNum then [Se.Is BeamV.registrationNo $ Se.Eq (fromJust mbRegNum)] else [])] (Se.Desc BeamV.createdAt) (Just limitVal) (Just offsetVal)
---     Nothing -> pure []
+findAllByVariantRegNumMerchantId' :: L.MonadFlow m => Maybe Variant.Variant -> Maybe Text -> Integer -> Integer -> Id Merchant -> m [Vehicle]
+findAllByVariantRegNumMerchantId' variantM mbRegNum limit' offset' (Id merchantId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  let limitVal = fromIntegral limit'
+      offsetVal = fromIntegral offset'
+  case dbConf of
+    Just dbCOnf' ->
+      either (pure []) (transformBeamVehicleToDomain <$>)
+        <$> KV.findAllWithOptionsKVConnector
+          dbCOnf'
+          Mesh.meshConfig
+          [Se.And ([Se.Is BeamV.merchantId $ Se.Eq merchantId] <> if isJust variantM then [Se.Is BeamV.variant $ Se.Eq (fromJust variantM)] else [] <> ([Se.Is BeamV.registrationNo $ Se.Eq (fromJust mbRegNum) | isJust mbRegNum]))]
+          (Se.Desc BeamV.createdAt)
+          (Just limitVal)
+          (Just offsetVal)
+    Nothing -> pure []
 
 -- findByRegistrationNo ::
 --   Transactionable m =>

@@ -12,6 +12,9 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Use tuple-section" #-}
 
 module Storage.Queries.Ride where
 
@@ -42,8 +45,15 @@ import Kernel.Utils.Common
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.Booking as BeamB
+import qualified Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Beam.Ride.Table as BeamR
+import qualified Storage.Beam.RideDetails as BeamRD
+import qualified Storage.Beam.RiderDetails as BeamRRD
+import qualified Storage.Queries.Booking as QB
+import qualified Storage.Queries.DriverInformation as QDI
 import Storage.Queries.FullEntityBuilders (buildFullBooking)
+import qualified Storage.Queries.RideDetails as QRD
+import qualified Storage.Queries.RiderDetails as QRRD
 import Storage.Tabular.Booking as Booking
 import Storage.Tabular.DriverInformation as DriverInfo
 import Storage.Tabular.Ride as Ride
@@ -139,6 +149,48 @@ findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus = Esq.buil
           booking <- MaybeT $ buildFullBooking bookingT
           return (extractSolidType @Ride rideT, booking)
       )
+
+findAllByDriverId' :: L.MonadFlow m => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe Ride.RideStatus -> m [(Ride, Booking)]
+findAllByDriverId' (Id driverId) mbLimit mbOffset mbOnlyActive mbRideStatus = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> do
+      let limitVal = maybe 10 fromInteger mbLimit
+          offsetVal = maybe 10 fromInteger mbOffset
+          isOnlyActive = Just True == mbOnlyActive
+      rides <- do
+        ride' <-
+          KV.findAllWithOptionsKVConnector
+            dbCOnf'
+            Mesh.meshConfig
+            [ Se.And
+                ( [Se.Is BeamR.driverId $ Se.Eq driverId]
+                    <> if isOnlyActive
+                      then [Se.Is BeamR.status $ Se.In [Ride.COMPLETED, Ride.CANCELLED]]
+                      else
+                        []
+                          <> ([Se.Is BeamR.status $ Se.Eq (fromJust mbRideStatus) | isJust mbRideStatus])
+                )
+            ]
+            (Se.Desc BeamR.createdAt)
+            Nothing
+            Nothing
+        case ride' of
+          Left _ -> pure []
+          Right x -> traverse transformBeamRideToDomain x
+      bookings <- do
+        booking' <- KV.findAllWithOptionsKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamB.id $ Se.In $ getId . DR.bookingId <$> rides]] (Se.Desc BeamB.createdAt) Nothing Nothing
+        case booking' of
+          Left _ -> pure []
+          Right x -> traverse QB.transformBeamBookingToDomain x
+
+      let rideWithBooking = foldl' (getRideWithBooking bookings) [] rides
+      pure $ take limitVal (drop offsetVal rideWithBooking)
+    Nothing -> pure []
+  where
+    getRideWithBooking bookings acc ride =
+      let bookings' = filter (\b -> b.id == ride.bookingId) bookings
+       in acc <> ((\b -> (ride, b)) <$> bookings')
 
 -- findOneByDriverId :: Transactionable m => Id Person -> m (Maybe Ride)
 -- findOneByDriverId driverId = Esq.findOne $ do
@@ -586,6 +638,24 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
     mkRideItem (rideShortId, rideCreatedAt, rideDetails, riderDetails, customerName, fareDiff, bookingStatus) = do
       RideItem {rideShortId = ShortId rideShortId, ..}
 
+-- where condition implementation remaining
+-- findAllRideItems' :: MonadFlow m => Id Merchant -> Int -> Int -> Maybe Common.BookingStatus -> Maybe (ShortId Ride) -> Maybe DbHash -> Maybe DbHash -> Maybe Money -> UTCTime -> m [RideItem]
+-- findAllRideItems' (Id merchantId) limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbFareDiff now = do
+--   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   case dbConf of
+--     Just dbCOnf' -> do
+--       rides <- do
+--         ride' <- KV.findAllWithOptionsKVConnector dbCOnf' Mesh.meshConfig [Se.And [] <> ([Se.Is BeamR.shortId $ Se.Eq mbRideShortId.getShortId | isJust mbRideShortId]) ]
+--               (Se.Desc BeamR.createdAt) Nothing Nothing
+--         case ride' of
+--           Left _ -> pure []
+--           Right x -> traverse transformBeamRideToDomain x
+--       bookings <- do
+--         booking' <- KV.findAllWithOptionsKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamB.id $ Se.In $ getId . DR.bookingId <> rides ]] (Se.Desc BeamB.createdAt) Nothing Nothing
+--         case booking' of
+--           Left _ -> pure []
+--           Right x -> traverse QB.transformBeamBookingToDomain x
+
 upcoming6HrsCond :: SqlExpr (Entity RideT) -> UTCTime -> SqlExpr (Esq.Value Bool)
 upcoming6HrsCond ride now = ride ^. Ride.RideCreatedAt +. Esq.interval [Esq.HOUR 6] <=. val now
 
@@ -595,6 +665,10 @@ data StuckRideItem = StuckRideItem
     driverId :: Id Person,
     driverActive :: Bool
   }
+
+-- mkStuckRideItem :: (Id Ride, Id Booking, Id Person, Bool) -> StuckRideItem
+-- mkStuckRideItem (rideId, bookingId, driverId, driverActive) =
+--   StuckRideItem {..}
 
 findStuckRideItems :: Transactionable m => Id Merchant -> [Id Booking] -> UTCTime -> m [StuckRideItem]
 findStuckRideItems merchantId bookingIds now = do
@@ -617,6 +691,56 @@ findStuckRideItems merchantId bookingIds now = do
     pure (ride ^. RideTId, booking ^. BookingTId, driverInfo ^. DriverInformationDriverId, driverInfo ^. DriverInformationActive)
   pure $ mkStuckRideItem <$> res
   where
+    mkStuckRideItem (rideId, bookingId, driverId, driverActive) = StuckRideItem {..}
+
+findStuckRideItems' :: (L.MonadFlow m, MonadTime m) => Id Merchant -> [Id Booking] -> UTCTime -> m [StuckRideItem]
+findStuckRideItems' (Id merchantId) bookingIds now = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  let now6HrBefore = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
+  case dbConf of
+    Just dbCOnf' -> do
+      rides <- do
+        res <-
+          KV.findAllWithKVConnector
+            dbCOnf'
+            Mesh.meshConfig
+            [ Se.And
+                [ Se.Is BeamR.status $ Se.Eq Ride.NEW,
+                  Se.Is BeamR.createdAt $ Se.LessThanOrEq now6HrBefore
+                ]
+            ]
+        case res of
+          Left _ -> pure []
+          Right x -> traverse transformBeamRideToDomain x
+      bookings <- do
+        res <-
+          KV.findAllWithKVConnector
+            dbCOnf'
+            Mesh.meshConfig
+            [ Se.And
+                [ Se.Is BeamB.id $ Se.In $ getId . DR.bookingId <$> rides,
+                  Se.Is BeamB.providerId $ Se.Eq merchantId,
+                  Se.Is BeamB.id $ Se.In $ getId <$> bookingIds
+                ]
+            ]
+        case res of
+          Left _ -> pure []
+          Right x -> traverse QB.transformBeamBookingToDomain x
+      driverInfos <- either (pure []) (QDI.transformBeamDriverInformationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamDI.driverId $ Se.In $ getId . DR.driverId <$> rides]]
+      let rideBooking = foldl' (getRideWithBooking bookings) [] rides
+      let rideBookingDriverInfo = foldl' (getRideWithBookingDriverInfo driverInfos) [] rideBooking
+
+      pure $ mkStuckRideItem <$> rideBookingDriverInfo
+    Nothing -> pure []
+  where
+    getRideWithBooking bookings acc ride' =
+      let bookings' = filter (\x -> x.id == ride'.bookingId) bookings
+       in acc <> ((\x -> (ride', x.id)) <$> bookings')
+
+    getRideWithBookingDriverInfo driverInfos acc (ride', booking') =
+      let driverInfos' = filter (\x -> x.driverId == ride'.driverId) driverInfos
+       in acc <> ((\x -> (ride'.id, booking', x.driverId, x.active)) <$> driverInfos')
+
     mkStuckRideItem (rideId, bookingId, driverId, driverActive) = StuckRideItem {..}
 
 transformBeamRideToDomain :: L.MonadFlow m => BeamR.Ride -> m Ride

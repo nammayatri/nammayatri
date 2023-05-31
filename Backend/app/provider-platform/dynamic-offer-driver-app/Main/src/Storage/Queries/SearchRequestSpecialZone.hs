@@ -64,30 +64,16 @@ findById searchRequestSpecialZoneId = buildDType $
       where_ $ sReq ^. SearchRequestSpecialZoneTId ==. val (toKey searchRequestSpecialZoneId)
       pure (sReq, sFromLoc, sToLoc)
 
--- findById' :: Transactionable m => Id SearchRequestSpecialZone -> m (Maybe SearchRequestSpecialZone)
--- findById' searchRequestSpecialZoneId = Esq.buildDType . runMaybeT $ do
---   searchRequestSpecialZone <- Esq.findByIdM @SearchRequestSpecialZoneT $ toKey searchRequestSpecialZoneId
---   fetchFullSearchRequestSpecialZoneM searchRequestSpecialZone
-
--- fetchFullSearchRequestSpecialZoneM ::
---   Transactionable m =>
---   SearchRequestSpecialZoneT ->
---   MaybeT (DTypeBuilder m) (SolidType FullSearchRequestSpecialZoneT)
--- fetchFullSearchRequestSpecialZoneM searchRequestSpecialZone@SearchRequestSpecialZoneT {..} = do
---   fromLocation <- Esq.findByIdM @SearchReqLocationT fromLocationId
---   toLocation <- Esq.findByIdM @SearchReqLocationT toLocationId
---   pure $ extractSolidType @SearchRequestSpecialZone (searchRequestSpecialZone, fromLocation, toLocation)
-
-fullSearchRequestTable ::
-  From
-    ( Table SearchRequestSpecialZoneT
-        :& Table SearchReqLocationT
-        :& Table SearchReqLocationT
-    )
-fullSearchRequestTable =
-  table @SearchRequestSpecialZoneT
-    `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& loc1) -> s ^. SearchRequestSpecialZoneFromLocationId ==. loc1 ^. SearchReqLocationTId)
-    `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& _ :& loc2) -> s ^. SearchRequestSpecialZoneToLocationId ==. loc2 ^. SearchReqLocationTId)
+-- fullSearchRequestTable ::
+--   From
+--     ( Table SearchRequestSpecialZoneT
+--         :& Table SearchReqLocationT
+--         :& Table SearchReqLocationT
+--     )
+-- fullSearchRequestTable =
+--   table @SearchRequestSpecialZoneT
+--     `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& loc1) -> s ^. SearchRequestSpecialZoneFromLocationId ==. loc1 ^. SearchReqLocationTId)
+--     `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& _ :& loc2) -> s ^. SearchRequestSpecialZoneToLocationId ==. loc2 ^. SearchReqLocationTId)
 
 -- getRequestIdfromTransactionId ::
 --   (Transactionable m) =>
