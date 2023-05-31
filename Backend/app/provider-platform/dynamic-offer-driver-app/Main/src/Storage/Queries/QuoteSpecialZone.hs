@@ -31,18 +31,28 @@ import Sequelize
 import qualified Sequelize as Se
 import qualified Storage.Beam.QuoteSpecialZone as BeamQSZ
 import Storage.Queries.FareParameters as BeamQFP
+import qualified Storage.Queries.FareParameters as SQFP
 import qualified Storage.Tabular.FareParameters as Fare
 import qualified Storage.Tabular.FareParameters.Instances as FareParamsT
 import Storage.Tabular.QuoteSpecialZone
 
-create :: QuoteSpecialZone -> SqlDB ()
-create quote = Esq.runTransaction $
-  withFullEntity quote $ \(quoteT, (fareParams', fareParamsDetais)) -> do
-    Esq.create' fareParams'
-    case fareParamsDetais of
-      FareParamsT.ProgressiveDetailsT fppdt -> Esq.create' fppdt
-      FareParamsT.SlabDetailsT -> return ()
-    Esq.create' quoteT
+-- create :: QuoteSpecialZone -> SqlDB ()
+-- create quote = Esq.runTransaction $
+--   withFullEntity quote $ \(quoteT, (fareParams', fareParamsDetais)) -> do
+--     Esq.create' fareParams'
+--     case fareParamsDetais of
+--       FareParamsT.ProgressiveDetailsT fppdt -> Esq.create' fppdt
+--       FareParamsT.SlabDetailsT -> return ()
+--     Esq.create' quoteT
+
+create :: L.MonadFlow m => QuoteSpecialZone -> m ()
+create quote = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> do
+      void $ KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainQuoteSpecialZoneToBeam quote)
+      void $ SQFP.create quote.fareParams
+    Nothing -> pure ()
 
 -- countAllByRequestId :: Transactionable m => Id SearchRequestSpecialZone -> m Int32
 -- countAllByRequestId searchReqId = do

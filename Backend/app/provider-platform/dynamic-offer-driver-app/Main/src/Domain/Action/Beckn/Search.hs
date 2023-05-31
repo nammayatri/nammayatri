@@ -162,8 +162,8 @@ handler merchantId sReq = do
               result.distance
               farePolicy.vehicleVariant
               result.duration
-        Esq.runTransaction $
-          for_ listOfSpecialZoneQuotes QQuoteSpecialZone.create
+        -- Esq.runTransaction $
+        for_ listOfSpecialZoneQuotes QQuoteSpecialZone.create
         return (Just (mkQuoteInfo fromLocation toLocation now <$> listOfSpecialZoneQuotes), Nothing)
       else do
         driverPoolCfg <- getDriverPoolConfig merchantId result.distance
