@@ -50,3 +50,15 @@ findByTransactionId transactionId = do
     where_ $
       searchReqT ^. SearchRequestTransactionId ==. val transactionId
     return $ searchReqT ^. SearchRequestTId
+
+updateAutoAssign ::
+  Id SearchRequest ->
+  Bool ->
+  SqlDB ()
+updateAutoAssign searchRequestId autoAssignedEnabled = do
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ SearchRequestAutoAssignEnabled =. val autoAssignedEnabled
+      ]
+    where_ $ tbl ^. SearchRequestTId ==. val (toKey searchRequestId)

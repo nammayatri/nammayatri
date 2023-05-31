@@ -53,6 +53,7 @@ data DSelectReq = DSelectReq
     bapUri :: BaseUrl,
     pickupTime :: UTCTime,
     estimateId :: Id DEst.Estimate,
+    autoAssignEnabled :: Maybe Bool,
     customerExtraFee :: Maybe Money
   }
 
@@ -91,6 +92,7 @@ handler merchant sReq estimate = do
     ReSchedule _ -> do
       maxShards <- asks (.maxShards)
       Esq.runTransaction $ do
+        whenJust sReq.autoAssignEnabled $ QSR.updateAutoAssign searchReq.id
         createJobIn @_ @'SendSearchRequestToDriver inTime maxShards $
           SendSearchRequestToDriverJobData
             { searchTryId = searchTry.id,

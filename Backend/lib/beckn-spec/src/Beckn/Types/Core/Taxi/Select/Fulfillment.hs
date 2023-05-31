@@ -19,16 +19,39 @@ where
 
 import Beckn.Types.Core.Taxi.Select.StartInfo
 import Data.Aeson
-import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
+import Data.OpenApi (ToSchema (..), defaultSchemaOptions, fromAesonOptions)
 import Kernel.Prelude
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 -- If end = Nothing, then bpp sends quotes only for RENTAL
 -- If end is Just, then bpp sends quotes both for RENTAL and ONE_WAY
-newtype FulfillmentInfo = FulfillmentInfo
-  { start :: StartInfo
+data FulfillmentInfo = FulfillmentInfo
+  { start :: StartInfo,
+    tags :: Tags
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
 instance ToSchema FulfillmentInfo where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+newtype Tags = Tags
+  { auto_assign_enabled :: Maybe Bool
+  }
+  deriving (Generic, Show)
+
+instance ToJSON Tags where
+  toJSON = genericToJSON tagsJSONOptions
+
+instance FromJSON Tags where
+  parseJSON = genericParseJSON tagsJSONOptions
+
+instance ToSchema Tags where
+  declareNamedSchema = genericDeclareUnNamedSchema $ fromAesonOptions tagsJSONOptions
+
+tagsJSONOptions :: Options
+tagsJSONOptions =
+  defaultOptions
+    { fieldLabelModifier = \case
+        "auto_assign_enabled" -> "./komn/auto_assign_enabled"
+        a -> a
+    }
