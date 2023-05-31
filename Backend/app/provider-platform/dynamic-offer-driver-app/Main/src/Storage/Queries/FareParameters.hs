@@ -39,7 +39,12 @@ create :: L.MonadFlow m => DFP.FareParameters -> m ()
 create fareParameters = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbConf' -> void $ KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainFareParametersToBeam fareParameters)
+    Just dbConf' -> do
+      void $ KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainFareParametersToBeam fareParameters)
+      case fareParameters.fareParametersDetails of
+        ProgressiveDetails fppdt -> do
+          void $ KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (BeamFPPD.transformDomainFareParametersProgressiveDetailsToBeam (fareParameters.id, fppdt))
+        _ -> pure ()
     Nothing -> pure ()
 
 -- findById :: Transactionable m => Id FareParameters -> m (Maybe FareParameters)
