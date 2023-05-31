@@ -462,5 +462,6 @@ const mlStrings = {
   APP_RELATED : "ആപ്പ് ബന്ധപ്പെട്ട",
   FARE_RELATED : "യാത്രാക്കൂലിയുമായി ബന്ധപ്പെട്ടത്",
   RIDE_RELATED : "റൈഡ് ബന്ധപ്പെട്ട",
-  LOST_AND_FOUND : "നഷ്ടപ്പെട്ടതും കണ്ടെത്തി"
+  LOST_AND_FOUND : "നഷ്ടപ്പെട്ടതും കണ്ടെത്തി",
+  REPORT_LOST_ITEM : "നഷ്ടപ്പെട്ട ഇനം റിപ്പോർട്ട് ചെയ്യുക"
 }
