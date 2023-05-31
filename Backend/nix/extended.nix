@@ -36,10 +36,19 @@ in
     };
   };
 
-  perSystem = { config, lib, ... }: {
-    packages = lib.genAttrs extensions (name:
-      with config.haskellProjects.default.outputs.finalPackages;
-      callCabal2nix name inputs.${name} { }
-    );
-  };
+  perSystem = { pkgs, config, lib, ... }:
+    let
+      build-haskell-package = import "${inputs.common.inputs.haskell-flake}/nix/build-haskell-package.nix" {
+        inherit pkgs lib;
+        inherit (config.haskellProjects.default) log;
+        self = config.haskellProjects.default.outputs.finalPackages;
+        super = null;
+      };
+    in
+    {
+      # To build all extensions in our CI.
+      packages = lib.genAttrs extensions (name:
+        build-haskell-package name inputs.${name}
+      );
+    };
 }
