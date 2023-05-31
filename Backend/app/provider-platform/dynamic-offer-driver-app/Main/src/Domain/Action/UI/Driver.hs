@@ -839,7 +839,7 @@ respondQuote (driverId, _) req = do
           { id = guid,
             requestId = searchReq.id,
             searchTryId = sd.searchTryId,
-            searchRequestForDriverId = sd.id,
+            searchRequestForDriverId = Just sd.id,
             driverId,
             driverName = driver.firstName,
             driverRating = driver.rating,

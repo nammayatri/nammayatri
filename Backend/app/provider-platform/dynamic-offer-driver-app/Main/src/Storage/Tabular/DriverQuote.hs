@@ -45,7 +45,7 @@ mkPersist
       id Text
       requestId SearchRequestTId
       searchTryId SearchTryTId
-      searchRequestForDriverId SRFD.SearchRequestForDriverTId
+      searchRequestForDriverId SRFD.SearchRequestForDriverTId Maybe
       driverId PersonTId
       driverName Text
       driverRating Centesimal Maybe
@@ -80,7 +80,7 @@ instance FromTType FullDriverQuoteT Domain.DriverQuote where
         { id = Id id,
           requestId = fromKey requestId,
           searchTryId = fromKey searchTryId,
-          searchRequestForDriverId = fromKey searchRequestForDriverId,
+          searchRequestForDriverId = fromKey <$> searchRequestForDriverId,
           driverId = fromKey driverId,
           durationToPickup = roundToIntegral durationToPickup,
           providerId = fromKey providerId,
@@ -93,7 +93,7 @@ instance ToTType FullDriverQuoteT Domain.DriverQuote where
         { id = getId id,
           requestId = toKey requestId,
           searchTryId = toKey searchTryId,
-          searchRequestForDriverId = toKey searchRequestForDriverId,
+          searchRequestForDriverId = toKey <$> searchRequestForDriverId,
           driverId = toKey driverId,
           durationToPickup = realToFrac durationToPickup,
           fareParametersId = toKey fareParams.id,
