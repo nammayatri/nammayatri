@@ -15,27 +15,34 @@
 module Storage.Queries.Message.Message where
 
 import Domain.Types.Merchant (Merchant)
+-- import qualified Kernel.Storage.Esqueleto as Esq
+
 import Domain.Types.Message.Message
 import Domain.Types.Message.MessageTranslation as DomainMT
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.Message.Message as BeamM
 import qualified Storage.Queries.Message.MessageTranslation as MT
 import Storage.Tabular.Message.Instances ()
-import Storage.Tabular.Message.Message
 
-create :: Message -> SqlDB ()
-create msg = Esq.runTransaction $
-  withFullEntity msg $ \(message, messageTranslations) -> do
-    Esq.create' message
-    traverse_ Esq.create' messageTranslations
+createMessage :: L.MonadFlow m => Message -> m (MeshResult ())
+createMessage message = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainMessageToBeam message)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+
+create :: L.MonadFlow m => Message -> m ()
+create msg = do
+  _ <- createMessage msg
+  let mT' = map (\(Domain.Types.Message.Message.MessageTranslation language_ title_ description_ shortDescription_ label_ createdAt_) -> DomainMT.MessageTranslation msg.id language_ title_ label_ description_ shortDescription_ createdAt_) msg.messageTranslations
+  traverse_ MT.create mT'
 
 -- findById :: Transactionable m => Id Message -> m (Maybe RawMessage)
 -- findById = Esq.findById
@@ -121,23 +128,35 @@ findAllWithLimitOffset mbLimit mbOffset merchantIdParam = do
     limitVal = min (fromMaybe 10 mbLimit) 10
     offsetVal = fromMaybe 0 mbOffset
 
-updateMessageLikeCount :: Id Message -> Int -> SqlDB ()
-updateMessageLikeCount messageId value = do
-  Esq.update $ \msg -> do
-    set msg [MessageLikeCount =. (msg ^. MessageLikeCount) +. val value]
-    where_ $ msg ^. MessageId ==. val (getId messageId)
+-- updateMessageLikeCount :: Id Message -> Int -> SqlDB ()
+-- updateMessageLikeCount messageId value = do
+--   Esq.update $ \msg -> do
+--     set msg [MessageLikeCount =. (msg ^. MessageLikeCount) +. val value]
+--     where_ $ msg ^. MessageId ==. val (getId messageId)
 
--- updateMessageLikeCount' :: L.MonadFlow m =>  Id Message -> Int-> m (MeshResult ())
--- updateMessageLikeCount' messageId value  = do
---   dbConf <- L.getOption Extra.EulerPsqlDbCfg
---   case dbConf of
---     Just dbConf' ->
---       KV.updateWoReturningWithKVConnector
---         dbConf'
---         Mesh.meshConfig
---         [Se.Set BeamM.likeCount $ BeamM.likeCount + value ]
---         [Se.Is BeamM.id (Se.Eq $ getId messageId)]
---     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+-- updateMessageLikeCount :: L.MonadFlow m => Id Message -> Int -> m (MeshResult())
+-- updateMessageLikeCount :: messageId value = do
+--   messageObject <- findById messageId
+--   likeCount <- mapM DTMM.likeCount messageObject
+
+-- helper
+updateMessageLikeCount :: L.MonadFlow m => Id Message -> Int -> m ()
+updateMessageLikeCount messageId value = do
+  messageObject <- findById messageId
+  case messageObject of
+    Just msg -> do
+      let likeCount = msg.likeCount
+      dbConf <- L.getOption Extra.EulerPsqlDbCfg
+      case dbConf of
+        Just dbConf' ->
+          void $
+            KV.updateWoReturningWithKVConnector
+              dbConf'
+              Mesh.meshConfig
+              [Se.Set BeamM.likeCount $ likeCount + value]
+              [Se.Is BeamM.id (Se.Eq $ getId messageId)]
+        Nothing -> pure ()
+    Nothing -> pure ()
 
 transformBeamMessageToDomain :: L.MonadFlow m => BeamM.Message -> m Message
 transformBeamMessageToDomain BeamM.MessageT {..} = do

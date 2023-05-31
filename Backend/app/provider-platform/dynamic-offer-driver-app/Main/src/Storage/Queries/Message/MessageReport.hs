@@ -190,34 +190,40 @@ updateSeenAndReplyByMessageIdAndDriverId messageId driverId readStatus reply = d
         [Se.Is BeamMR.messageId $ Se.Eq $ getId messageId, Se.Is BeamMR.driverId $ Se.Eq $ getId driverId]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-updateMessageLikeByMessageIdAndDriverIdAndReadStatus :: Id Msg.Message -> Id P.Driver -> SqlDB ()
-updateMessageLikeByMessageIdAndDriverIdAndReadStatus messageId driverId = do
-  now <- getCurrentTime
-  Esq.update $ \mr -> do
-    set
-      mr
-      [ MessageReportLikeStatus =. not_ (mr ^. MessageReportLikeStatus),
-        MessageReportUpdatedAt =. val now
-      ]
-    where_ $
-      mr ^. MessageReportMessageId ==. val (toKey messageId)
-        &&. mr ^. MessageReportDriverId ==. val (toKey $ cast driverId)
-        &&. mr ^. MessageReportReadStatus ==. val True
-
--- updateSeenAndReplyByMessageIdAndDriverId' :: (L.MonadFlow m, MonadTime m)=> Id Msg.Message -> Id P.Driver -> m (MeshResult ())
--- updateSeenAndReplyByMessageIdAndDriverId' messageId driverId = do
---   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+-- updateMessageLikeByMessageIdAndDriverIdAndReadStatus :: Id Msg.Message -> Id P.Driver -> SqlDB ()
+-- updateMessageLikeByMessageIdAndDriverIdAndReadStatus messageId driverId = do
 --   now <- getCurrentTime
---   case dbConf of
---     Just dbConf' ->
---       KV.updateWoReturningWithKVConnector
---         dbConf'
---         Mesh.meshConfig
---         [Se.Set BeamMR.likeStatus $ Se.Not BeamMR.likeStatus,
---          Se.Set BeamMR.updatedAt now
---          ]
---         [Se.Is BeamMR.messageId $ Se.Eq $ getId messageId, Se.Is BeamMR.driverId $ Se.Eq $ getId driverId ]
---     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+--   Esq.update $ \mr -> do
+--     set
+--       mr
+--       [ MessageReportLikeStatus =. not_ (mr ^. MessageReportLikeStatus),
+--         MessageReportUpdatedAt =. val now
+--       ]
+--     where_ $
+--       mr ^. MessageReportMessageId ==. val (toKey messageId)
+--         &&. mr ^. MessageReportDriverId ==. val (toKey $ cast driverId)
+--         &&. mr ^. MessageReportReadStatus ==. val True
+
+updateMessageLikeByMessageIdAndDriverIdAndReadStatus :: (L.MonadFlow m, MonadTime m) => Id Msg.Message -> Id P.Driver -> m ()
+updateMessageLikeByMessageIdAndDriverIdAndReadStatus messageId driverId = do
+  messageReport <- findByMessageIdAndDriverId messageId driverId
+  case messageReport of
+    Just report -> do
+      let likeStatus = not report.likeStatus
+      dbConf <- L.getOption Extra.EulerPsqlDbCfg
+      now <- getCurrentTime
+      case dbConf of
+        Just dbConf' ->
+          void $
+            KV.updateWoReturningWithKVConnector
+              dbConf'
+              Mesh.meshConfig
+              [ Se.Set BeamMR.likeStatus likeStatus,
+                Se.Set BeamMR.updatedAt now
+              ]
+              [Se.And [Se.Is BeamMR.messageId $ Se.Eq $ getId messageId, Se.Is BeamMR.driverId $ Se.Eq $ getId driverId, Se.Is BeamMR.readStatus $ Se.Eq True]]
+        Nothing -> pure ()
+    Nothing -> pure ()
 
 -- updateDeliveryStatusByMessageIdAndDriverId :: Id Msg.Message -> Id P.Driver -> DeliveryStatus -> SqlDB ()
 -- updateDeliveryStatusByMessageIdAndDriverId messageId driverId deliveryStatus = do

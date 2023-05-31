@@ -23,7 +23,6 @@ import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Types (Language (ENGLISH))
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -134,9 +133,9 @@ messageLiked driverId messageId = do
   unless (messageDetails.readStatus) $
     throwError $ InvalidRequest "Message is not seen"
   let val = if messageDetails.likeStatus then (-1) else 1
-  Esq.runTransaction $ do
-    when messageDetails.readStatus $ MQ.updateMessageLikeCount messageId val
-    MRQ.updateMessageLikeByMessageIdAndDriverIdAndReadStatus messageId (cast driverId)
+  -- Esq.runTransaction $ do
+  when messageDetails.readStatus $ MQ.updateMessageLikeCount messageId val
+  MRQ.updateMessageLikeByMessageIdAndDriverIdAndReadStatus messageId (cast driverId)
   return Success
 
 messageResponse :: Id SP.Person -> Id Domain.Message -> MessageReplyReq -> Flow APISuccess

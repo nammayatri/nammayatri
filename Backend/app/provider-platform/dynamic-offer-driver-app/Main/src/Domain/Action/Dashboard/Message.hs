@@ -161,7 +161,8 @@ addMessage :: ShortId DM.Merchant -> Common.AddMessageRequest -> Flow Common.Add
 addMessage merchantShortId Common.AddMessageRequest {..} = do
   merchant <- findMerchantByShortId merchantShortId
   message <- mkMessage merchant
-  Esq.runTransaction $ MQuery.create message
+  -- Esq.runTransaction $
+  _ <- MQuery.create message
   return $ Common.AddMessageResponse {messageId = cast $ message.id}
   where
     mkMessage merchant = do
