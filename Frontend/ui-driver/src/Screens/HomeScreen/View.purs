@@ -69,6 +69,7 @@ import Components.BottomNavBar.Controller (navData)
 import Screens.HomeScreen.ComponentConfig
 import Screens as ScreenNames
 import MerchantConfigs.Utils (getValueFromMerchant)
+import Engineering.Helpers.Commons (flowRunner)
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -124,6 +125,7 @@ screen initialState =
                                 _ <- pure $ setValueToLocalStore RIDE_G_FREQUENCY "50000"
                                 _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "25.0"
                                 _ <- push RemoveChat
+                                _ <- launchAff $ flowRunner $ launchMaps push TriggerMaps
                                 if (not initialState.props.routeVisible) && initialState.props.mapRendered then do
                                   _ <- JB.getCurrentPosition push $ ModifyRoute
                                   _ <- JB.removeMarker "ic_vehicle_side" -- TODO : remove if we dont require "ic_auto" icon on homescreen
@@ -1126,3 +1128,11 @@ getDriverStatusResult index driverStatus currentStatus= case (getValueToLocalSto
                             else DEFAULT
                   _ -> if (driverStatus == currentStatus) then ACTIVE
                        else DEFAULT
+
+launchMaps :: forall action. (action -> Effect Unit) ->  action -> Flow GlobalState Unit
+launchMaps push action = do
+  void $ delay $ Milliseconds 2000.0
+  if (getValueToLocalStore TRIGGER_MAPS == "true") then
+    doAff do liftEffect $ push $ action
+    else pure unit
+  pure unit

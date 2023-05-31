@@ -162,6 +162,7 @@ instance loggableAction :: Loggable Action where
       -- PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "popup_dismissed"
     ClickAddAlternateButton -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "add-alternate_btn"
     ZoneOtpAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "zone_otp"
+    TriggerMaps -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "trigger_maps"
 
 
 
@@ -220,6 +221,7 @@ data Action = NoAction
             | GoToProfile
             | ClickAddAlternateButton
             | ZoneOtpAction
+            | TriggerMaps
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
@@ -240,7 +242,11 @@ eval BackPressed state = do
                 _ <- pure $ minimizeApp ""
                 continue state
 
-
+eval TriggerMaps state = continueWithCmd state[ do
+  _ <- pure $ openNavigation 0.0 0.0 state.data.activeRide.dest_lat state.data.activeRide.dest_lon
+  _ <- pure $ setValueToLocalStore TRIGGER_MAPS "false"
+  pure NoAction
+  ]
 -- eval (ChangeStatus status) state = -- TODO:: DEPRECATE AFTER 19th April
 --   if (getValueToLocalStore IS_DEMOMODE_ENABLED == "true") then
 --         continueWithCmd state [ do
@@ -308,6 +314,7 @@ eval (RideActionModalAction (RideActionModal.StartRide)) state = do
 eval (RideActionModalAction (RideActionModal.EndRide)) state = do 
   continue $ (state {props {endRidePopUp = true}, data {route = []}})
 eval (RideActionModalAction (RideActionModal.OnNavigate)) state = do
+  _ <- pure $ setValueToLocalStore TRIGGER_MAPS "false"
   let lat = if (state.props.currentStage == ST.RideAccepted || state.props.currentStage == ST.ChatWithCustomer) then state.data.activeRide.src_lat else state.data.activeRide.dest_lat
       lon = if (state.props.currentStage == ST.RideAccepted || state.props.currentStage == ST.ChatWithCustomer) then state.data.activeRide.src_lon else state.data.activeRide.dest_lon
   void $ pure $ openNavigation 0.0 0.0 lat lon

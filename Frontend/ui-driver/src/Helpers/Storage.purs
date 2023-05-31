@@ -65,6 +65,7 @@ data KeyStore = USER_NAME
                 | SESSION_ID
                 | PROFILE_DEMO
                 | SET_ALTERNATE_TIME
+                | TRIGGER_MAPS
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where
