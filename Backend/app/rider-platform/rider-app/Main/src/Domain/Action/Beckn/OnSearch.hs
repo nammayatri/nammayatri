@@ -156,6 +156,11 @@ onSearch ::
 onSearch transactionId ValidatedOnSearchReq {..} = do
   Metrics.finishSearchMetrics merchant.name transactionId
   now <- getCurrentTime
+
+  existingEstimates <- QEstimate.findAllByBPPEstimateIds (estimatesInfo <&> (.bppEstimateId))
+  unless (null existingEstimates) $
+    throwError $ InvalidRequest "Estimates already received"
+
   estimates <- traverse (buildEstimate providerInfo now _searchRequest) estimatesInfo
   quotes <- traverse (buildQuote requestId providerInfo now _searchRequest.merchantId) quotesInfo
   DB.runTransaction do

@@ -80,6 +80,12 @@ findByBPPEstimateId bppEstimateId_ = Esq.buildDType $ do
     pure (estimate, mbTripTerms)
   mapM buildFullEstimate mbFullEstimateT
 
+findAllByBPPEstimateIds :: Transactionable m => [Id BPPEstimate] -> m [Id Estimate]
+findAllByBPPEstimateIds bppEstimateIds = Esq.findAll $ do
+  estimate <- from $ table @EstimateT
+  where_ $ estimate ^. EstimateBppEstimateId `in_` valList (getId <$> bppEstimateIds)
+  pure $ estimate ^. EstimateTId
+
 updateStatus ::
   Id Estimate ->
   EstimateStatus ->

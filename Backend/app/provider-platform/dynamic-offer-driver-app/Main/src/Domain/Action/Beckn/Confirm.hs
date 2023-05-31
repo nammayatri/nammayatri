@@ -103,6 +103,8 @@ handler transporter req quote = do
   booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
   now <- getCurrentTime
   (riderDetails, isNewRider) <- getRiderDetails transporter.id req.customerMobileCountryCode req.customerPhoneNumber now
+  unless (booking.status == DRB.NEW) $
+    throwError (BookingInvalidStatus $ show booking.status)
   case booking.bookingType of
     DRB.NormalBooking -> do
       case quote of
