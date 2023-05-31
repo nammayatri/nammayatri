@@ -109,8 +109,8 @@ handler merchantId sReq = do
       <> show estimateFare
   driverPoolConfig <- getDriverPoolConfig merchantId distance
   let inTime = fromIntegral driverPoolConfig.singleBatchProcessTime
-  Esq.runTransaction $ do
-    QSReq.create searchReq
+  -- Esq.runTransaction $ do
+  _ <- QSReq.create searchReq
 
   res <- sendSearchRequestToDrivers' driverPoolConfig searchReq merchant estimateFare farePolicy.driverExtraFeeBounds
   case res of

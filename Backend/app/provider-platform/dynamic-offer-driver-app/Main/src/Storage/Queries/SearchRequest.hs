@@ -30,14 +30,25 @@ import Storage.Queries.SearchRequest.SearchReqLocation as QSRL
 import Storage.Tabular.SearchRequest ()
 import Storage.Tabular.SearchRequest.SearchReqLocation ()
 
---
+-- create :: SearchRequest -> SqlDB ()
+-- create dsReq = Esq.runTransaction $
+--   withFullEntity dsReq $ \(sReq, fromLoc, toLoc) -> do
+--     Esq.create' fromLoc
+--     Esq.create' toLoc
+--     Esq.create' sReq
 
-create :: SearchRequest -> SqlDB ()
-create dsReq = Esq.runTransaction $
-  withFullEntity dsReq $ \(sReq, fromLoc, toLoc) -> do
-    Esq.create' fromLoc
-    Esq.create' toLoc
-    Esq.create' sReq
+createDSReq :: L.MonadFlow m => SearchRequest -> m (MeshResult ())
+createDSReq sReq = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainSearchRequestToBeam sReq)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+
+create :: L.MonadFlow m => SearchRequest -> m (MeshResult ())
+create dsReq = do
+  _ <- createDSReq dsReq
+  _ <- QSRL.create dsReq.fromLocation
+  QSRL.create dsReq.toLocation
 
 -- findById :: Transactionable m => Id SearchRequest -> m (Maybe SearchRequest)
 -- findById searchRequestId = buildDType $

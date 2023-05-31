@@ -167,8 +167,8 @@ repeatSearch merchant farePolicy searchReq booking ride cancellationSource now d
         }
 
   let baseFare = fareSum fareParams
-  Esq.runTransaction $ do
-    QSR.create newSearchReq
+  -- Esq.runTransaction $ do
+  _ <- QSR.create newSearchReq
 
   res <-
     sendSearchRequestToDrivers'
