@@ -59,6 +59,7 @@ library
       API.UI.Feedback
       API.UI.Frontend
       API.UI.GoogleTranslate
+      API.UI.LocationUpdates
       API.UI.Maps
       API.UI.Profile
       API.UI.Quote
@@ -114,6 +115,7 @@ library
       Domain.Action.UI.CustomerSupport
       Domain.Action.UI.Feedback
       Domain.Action.UI.Frontend
+      Domain.Action.UI.LocationUpdates
       Domain.Action.UI.Maps
       Domain.Action.UI.Profile
       Domain.Action.UI.Quote

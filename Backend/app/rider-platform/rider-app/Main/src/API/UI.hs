@@ -27,6 +27,7 @@ import qualified API.UI.CustomerSupport as CustomerSupport
 import qualified API.UI.Feedback as Feedback
 import qualified API.UI.Frontend as Frontend
 import qualified API.UI.GoogleTranslate as GoogleTranslateProxy
+import qualified API.UI.LocationUpdates as LocationUpdates
 import qualified API.UI.Maps as MapsProxy
 import qualified API.UI.Profile as Profile
 import qualified API.UI.Quote as Quote
@@ -73,6 +74,7 @@ type API =
            :<|> Frontend.API
            :<|> Whatsapp.API
            :<|> Sos.API
+           :<|> LocationUpdates.API
        )
 
 handler :: FlowServer API
@@ -102,3 +104,4 @@ handler =
     :<|> Frontend.handler
     :<|> Whatsapp.handler
     :<|> Sos.handler
+    :<|> LocationUpdates.handler

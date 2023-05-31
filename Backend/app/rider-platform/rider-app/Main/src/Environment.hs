@@ -102,7 +102,9 @@ data AppCfg = AppCfg
     cacheTranslationConfig :: CacheTranslationConfig,
     maxEmergencyNumberCount :: Int,
     minTripDistanceForReferralCfg :: Maybe HighPrecMeters,
-    registryMap :: M.Map Text BaseUrl
+    registryMap :: M.Map Text BaseUrl,
+    riderLocationUpdateTopic :: Text,
+    minAccuracy :: Double
   }
   deriving (Generic, FromDhall)
 
@@ -152,7 +154,9 @@ data AppEnv = AppEnv
     maxEmergencyNumberCount :: Int,
     minTripDistanceForReferralCfg :: Maybe HighPrecMeters,
     registryMap :: M.Map Text BaseUrl,
-    version :: DeploymentVersion
+    version :: DeploymentVersion,
+    riderLocationUpdateTopic :: Text,
+    minAccuracy :: Double
   }
   deriving (Generic)
 
