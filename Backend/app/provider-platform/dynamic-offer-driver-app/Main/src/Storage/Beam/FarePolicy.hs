@@ -155,11 +155,11 @@ instance ModelMeta FarePolicyT where
 
 type FarePolicy = FarePolicyT Identity
 
--- instance FromJSON FarePolicy where
---   parseJSON = A.genericParseJSON A.defaultOptions
+instance FromJSON FarePolicy where
+  parseJSON = A.genericParseJSON A.defaultOptions
 
--- instance ToJSON FarePolicy where
---   toJSON = A.genericToJSON A.defaultOptions
+instance ToJSON FarePolicy where
+  toJSON = A.genericToJSON A.defaultOptions
 
 instance FromJSON Domain.FarePolicyType where
   parseJSON = A.genericParseJSON A.defaultOptions

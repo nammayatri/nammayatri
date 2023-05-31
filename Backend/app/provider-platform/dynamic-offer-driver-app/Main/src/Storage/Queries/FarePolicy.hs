@@ -144,11 +144,15 @@ import Data.List.NonEmpty
 import Domain.Types.FarePolicy as Domain
 import Domain.Types.Merchant
 import Domain.Types.Vehicle.Variant (Variant)
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Mesh as Mesh
+import qualified Sequelize as Se
 import qualified Storage.Beam.FarePolicy as BeamFP
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails as BeamFPPD
 import qualified Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab as QFPSlabDetSlabs
@@ -171,6 +175,17 @@ findAllByMerchantId merchantId = buildDType $ do
     return farePolicy
   catMaybes <$> mapM buildFullFarePolicy res
 
+findAllByMerchantId' :: (L.MonadFlow m) => Id Merchant -> m [FarePolicy]
+findAllByMerchantId' (Id merchantId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> do
+      result <- KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamFP.merchantId $ Se.Eq merchantId]
+      case result of
+        Right x -> traverse transformBeamFarePolicyToDomain x
+        Left _ -> pure []
+    Nothing -> pure []
+
 findByMerchantIdAndVariant ::
   Transactionable m =>
   Id Merchant ->
@@ -185,17 +200,32 @@ findByMerchantIdAndVariant merchantId variant = buildDType $ do
     return farePolicy
   join <$> mapM buildFullFarePolicy res
 
+findByMerchantIdAndVariant' :: (L.MonadFlow m) => Id Merchant -> Variant -> m (Maybe FarePolicy)
+findByMerchantIdAndVariant' (Id merchantId) variant = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> do
+      result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamFP.merchantId $ Se.Eq merchantId, Se.Is BeamFP.vehicleVariant $ Se.Eq variant]
+      case result of
+        Left _ -> pure Nothing
+        Right x -> mapM transformBeamFarePolicyToDomain x
+    Nothing -> pure Nothing
+
 findById :: Transactionable m => Id FarePolicy -> m (Maybe FarePolicy)
 findById farePolicyId = buildDType $ do
   res <- Esq.findById' farePolicyId
   join <$> mapM buildFullFarePolicy res
 
--- findById' :: L.MonadFlow m => Id FarePolicy -> m (Maybe FarePolicy)
--- findById' (Id farePolicyId) = do
---   dbConf <- L.getOption Extra.EulerPsqlDbCfg
---   case dbConf of
---     Just dbCOnf' -> either (pure Nothing) (transformBeamFarePolicyToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamFP.id $ Se.Eq farePolicyId]
---     Nothing -> pure Nothing
+findById' :: (L.MonadFlow m) => Id FarePolicy -> m (Maybe FarePolicy)
+findById' (Id farePolicyId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> do
+      result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamFP.id $ Se.Eq farePolicyId]
+      case result of
+        Left _ -> pure Nothing
+        Right x -> mapM transformBeamFarePolicyToDomain x
+    Nothing -> pure Nothing
 
 update :: FarePolicy -> SqlDB ()
 update farePolicy = do
