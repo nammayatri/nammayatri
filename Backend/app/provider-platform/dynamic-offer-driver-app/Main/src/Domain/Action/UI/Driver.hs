@@ -58,6 +58,7 @@ import Domain.Types.DriverInformation (DriverInformation)
 import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.DriverQuote as DDrQuote
 import qualified Domain.Types.DriverReferral as DR
+import Domain.Types.DriverStats
 import qualified Domain.Types.FareParameters as Fare
 import Domain.Types.FarePolicy (DriverExtraFeeBounds (..))
 import qualified Domain.Types.FarePolicy as DFarePolicy
@@ -136,6 +137,7 @@ data DriverInformationRes = DriverInformationRes
     firstName :: Text,
     middleName :: Maybe Text,
     lastName :: Maybe Text,
+    numberOfRides :: Int,
     mobileNumber :: Maybe Text,
     linkedVehicle :: Maybe VehicleAPIEntity,
     rating :: Maybe Int,
@@ -407,6 +409,7 @@ getInformation ::
 getInformation (personId, merchantId) = do
   let driverId = cast personId
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  driverStats <- runInReplica $ QDriverStats.findById driverId >>= fromMaybeM DriverInfoNotFound
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   driverReferralCode <- fmap (.referralCode) <$> QDR.findById (cast driverId)
   driverEntity <- buildDriverEntityRes (person, driverInfo)
@@ -414,7 +417,7 @@ getInformation (personId, merchantId) = do
   organization <-
     CQM.findById merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  pure $ makeDriverInformationRes driverEntity organization driverReferralCode
+  pure $ makeDriverInformationRes driverEntity organization driverReferralCode driverStats
 
 setActivity :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant) -> Bool -> Maybe DriverInfo.DriverMode -> m APISuccess.APISuccess
 setActivity (personId, _) isActive mode = do
@@ -548,13 +551,14 @@ updateDriver (personId, _) req = do
     QPerson.updatePersonRec personId updPerson
     QDriverInformation.updateDowngradingOptions person.id updDriverInfo.canDowngradeToSedan updDriverInfo.canDowngradeToHatchback updDriverInfo.canDowngradeToTaxi
   QDriverInformation.clearDriverInfoCache (cast personId)
+  driverStats <- runInReplica $ QDriverStats.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
   driverEntity <- buildDriverEntityRes (updPerson, driverInfo)
   driverReferralCode <- fmap (.referralCode) <$> QDR.findById personId
   let merchantId = person.merchantId
   org <-
     CQM.findById merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  return $ makeDriverInformationRes driverEntity org driverReferralCode
+  return $ makeDriverInformationRes driverEntity org driverReferralCode driverStats
   where
     checkIfCanDowngrade mVehicle = do
       case mVehicle of
@@ -657,11 +661,12 @@ buildVehicle req personId merchantId = do
         SV.updatedAt = now
       }
 
-makeDriverInformationRes :: DriverEntityRes -> DM.Merchant -> Maybe (Id DR.DriverReferral) -> DriverInformationRes
-makeDriverInformationRes DriverEntityRes {..} org referralCode =
+makeDriverInformationRes :: DriverEntityRes -> DM.Merchant -> Maybe (Id DR.DriverReferral) -> DriverStats -> DriverInformationRes
+makeDriverInformationRes DriverEntityRes {..} org referralCode driverStats =
   DriverInformationRes
     { organization = DM.makeMerchantAPIEntity org,
       referralCode = referralCode <&> (.getId),
+      numberOfRides = driverStats.totalRides,
       ..
     }
 
