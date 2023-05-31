@@ -33,6 +33,7 @@ import qualified Domain.Types.Ride as SRide
 import Kernel.External.Call.Exotel.Types
 import Kernel.External.Call.Interface.Exotel (exotelStatusToInterfaceStatus)
 import Kernel.External.Call.Interface.Types
+import qualified Kernel.External.Call.Interface.Types as CallTypes
 import Kernel.External.Encryption (decrypt, getDbHash)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow, runInReplica, runTransaction)
@@ -115,15 +116,31 @@ callStatusCallback :: EsqDBFlow m r => CallCallbackReq -> m CallCallbackRes
 callStatusCallback req = do
   let callStatusId = req.customField.callStatusId
   _ <- QCallStatus.findById callStatusId >>= fromMaybeM CallStatusDoesNotExist
-  runTransaction $ QCallStatus.updateCallStatus callStatusId (exotelStatusToInterfaceStatus req.status) req.conversationDuration req.recordingUrl
+  runTransaction $ QCallStatus.updateCallStatus callStatusId (exotelStatusToInterfaceStatus req.status) req.conversationDuration (Just req.recordingUrl)
   return Ack
 
-directCallStatusCallback :: EsqDBFlow m r => Text -> ExotelCallStatus -> Text -> Maybe Int -> m CallCallbackRes
+directCallStatusCallback :: EsqDBFlow m r => Text -> ExotelCallStatus -> Maybe Text -> Maybe Int -> m CallCallbackRes
 directCallStatusCallback callSid dialCallStatus recordingUrl_ callDuration = do
   callStatus <- QCallStatus.findByCallSid callSid >>= fromMaybeM CallStatusDoesNotExist
-  recordingUrl <- parseBaseUrl recordingUrl_
-  runTransaction $ QCallStatus.updateCallStatus callStatus.id (exotelStatusToInterfaceStatus dialCallStatus) (fromMaybe 0 callDuration) recordingUrl
+  let newCallStatus = exotelStatusToInterfaceStatus dialCallStatus
+  case recordingUrl_ of
+    Just recordUrl -> do
+      if recordUrl == ""
+        then do
+          updateCallStatus callStatus.id newCallStatus Nothing
+          throwError CallStatusDoesNotExist
+        else do
+          baseUrl <- parseBaseUrl recordUrl
+          updateCallStatus callStatus.id newCallStatus (Just baseUrl)
+    Nothing -> do
+      if newCallStatus == CallTypes.COMPLETED
+        then do
+          updateCallStatus callStatus.id newCallStatus Nothing
+          throwError CallStatusDoesNotExist
+        else updateCallStatus callStatus.id newCallStatus Nothing
   return Ack
+  where
+    updateCallStatus id callStatus url = runTransaction $ QCallStatus.updateCallStatus id callStatus (fromMaybe 0 callDuration) url
 
 getCustomerMobileNumber :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Text -> Text -> Text -> Maybe Text -> ExotelCallStatus -> m GetCustomerMobileNumberResp
 getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus = do
