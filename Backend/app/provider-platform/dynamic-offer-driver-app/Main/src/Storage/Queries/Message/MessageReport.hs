@@ -36,6 +36,8 @@ import qualified Lib.Mesh as Mesh
 import Sequelize
 import qualified Sequelize as Se
 import qualified Storage.Beam.Message.MessageReport as BeamMR
+import Storage.Queries.Message.Message as QMM hiding (create)
+import Storage.Queries.Message.MessageTranslation as QMMT hiding (create)
 import Storage.Tabular.Message.Instances ()
 import qualified Storage.Tabular.Message.Message as M
 import Storage.Tabular.Message.MessageReport
@@ -88,13 +90,32 @@ findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
     offset $ fromIntegral offsetVal
     return (messageReport, message, mbMessageTranslation)
 
-findByDriverIdMessageIdAndLanguage :: Transactionable m => Id P.Driver -> Id Msg.Message -> Language -> m (Maybe (MessageReport, Msg.RawMessage, Maybe MTD.MessageTranslation))
+-- findByDriverIdMessageIdAndLanguage :: Transactionable m => Id P.Driver -> Id Msg.Message -> Language -> m (Maybe (MessageReport, Msg.RawMessage, Maybe MTD.MessageTranslation))
+-- findByDriverIdMessageIdAndLanguage driverId messageId language = do
+--   Esq.findOne $ do
+--     (messageReport :& message :& mbMessageTranslation) <- from (fullMessage language)
+--     where_ $
+--       messageReport ^. MessageReportTId ==. val (toKey (messageId, driverId))
+--     return (messageReport, message, mbMessageTranslation)
+
+findByDriverIdMessageIdAndLanguage :: L.MonadFlow m => Id P.Driver -> Id Msg.Message -> Language -> m (Maybe (MessageReport, Msg.RawMessage, Maybe MTD.MessageTranslation))
 findByDriverIdMessageIdAndLanguage driverId messageId language = do
-  Esq.findOne $ do
-    (messageReport :& message :& mbMessageTranslation) <- from (fullMessage language)
-    where_ $
-      messageReport ^. MessageReportTId ==. val (toKey (messageId, driverId))
-    return (messageReport, message, mbMessageTranslation)
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just _ -> do
+      messageReport <- findByMessageIdAndDriverId messageId driverId
+      case messageReport of
+        Just report -> do
+          rawMessage <- QMM.findById messageId
+          case rawMessage of
+            Just message -> do
+              messageTranslation <- QMMT.findByMessageIdAndLanguage messageId language
+              pure $ Just (report, message, messageTranslation)
+            Nothing -> pure Nothing
+        Nothing -> pure Nothing
+    Nothing -> pure Nothing
+
+-- either (pure Nothing) ((transformBeamMessageReportToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamMR.messageId $ Se.Eq messageId, Se.Is BeamMR.driverId $ Se.Eq driverId]],)
 
 -- findByMessageIdAndDriverId :: Transactionable m => Id Msg.Message -> Id P.Driver -> m (Maybe MessageReport)
 -- findByMessageIdAndDriverId messageId driverId =

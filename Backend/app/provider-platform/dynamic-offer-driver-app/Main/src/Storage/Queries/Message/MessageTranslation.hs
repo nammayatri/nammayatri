@@ -68,8 +68,6 @@ findByMessageId :: L.MonadFlow m => Id Msg.Message -> m [MessageTranslation]
 findByMessageId (Id messageId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    -- Just dbCOnf' -> either (pure Nothing) (transformBeamCallStatusToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamCT.id $ Se.Eq callStatusId]
-    -- findAllWithKVConnector
     Just dbCOnf' -> either (pure []) (transformBeamMessageTranslationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamMT.messageId $ Se.Eq messageId]
     Nothing -> pure []
 
