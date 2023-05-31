@@ -38,6 +38,7 @@ mkPersist
       baseFare Money
       deadKmFare Money
       waitingCharge Domain.WaitingCharge Maybe
+      freeWatingTime Minutes Maybe
       nightShiftCharge Domain.NightShiftCharge Maybe
 
       Primary farePolicyId
@@ -63,6 +64,13 @@ instance FromTType FullFarePolicyProgressiveDetailsT FullFarePolicyProgressiveDe
       throwError (InternalError "Unable to decode progressive FarePolicy details. Fare policy ids are not the same.")
     unless (any (\(_, farePolicySlab) -> farePolicySlab.startDistance <= 0) perExtraKmRateSectionsFullDTypes) $
       throwError (InternalError "Unable to decode progressive FarePolicy details. At least one slab must have startDistance <= 0")
+
+    let waitingChargeInfo =
+          ((,) <$> waitingCharge <*> freeWatingTime) <&> \(waitingCharge', freeWaitingTime') ->
+            Domain.WaitingChargeInfo
+              { waitingCharge = waitingCharge',
+                freeWaitingTime = freeWaitingTime'
+              }
     return
       ( fromKey farePolicyId,
         Domain.FPProgressiveDetails
@@ -75,6 +83,8 @@ instance ToTType FullFarePolicyProgressiveDetailsT FullFarePolicyProgressiveDeta
   toTType (farePolicyId, Domain.FPProgressiveDetails {..}) = do
     ( FarePolicyProgressiveDetailsT
         { farePolicyId = toKey farePolicyId,
+          waitingCharge = waitingChargeInfo <&> (.waitingCharge),
+          freeWatingTime = waitingChargeInfo <&> (.freeWaitingTime),
           ..
         },
       toTType . (farePolicyId,) <$> toList perExtraKmRateSections

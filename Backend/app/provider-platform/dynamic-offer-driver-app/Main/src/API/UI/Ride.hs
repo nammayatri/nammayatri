@@ -30,6 +30,7 @@ import qualified Domain.Action.UI.Ride.CancelRide as RideCancel
 import qualified Domain.Action.UI.Ride.EndRide as RideEnd
 import qualified Domain.Action.UI.Ride.StartRide as RideStart
 import Domain.Types.CancellationReason (CancellationReasonCode (..))
+import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as Ride
 import Environment
@@ -112,45 +113,45 @@ handler =
              :<|> cancelRide
          )
 
-startRide :: Id SP.Person -> Id Ride.Ride -> StartRideReq -> FlowHandler APISuccess
-startRide requestorId rideId StartRideReq {rideOtp, point} = withFlowHandlerAPI $ do
+startRide :: (Id SP.Person, Id Merchant.Merchant) -> Id Ride.Ride -> StartRideReq -> FlowHandler APISuccess
+startRide (requestorId, merchantId) rideId StartRideReq {rideOtp, point} = withFlowHandlerAPI $ do
   requestor <- findPerson requestorId
   let driverReq = RideStart.DriverStartRideReq {rideOtp, point, requestor}
-  shandle <- RideStart.buildStartRideHandle requestor.merchantId
+  shandle <- RideStart.buildStartRideHandle merchantId
   RideStart.driverStartRide shandle rideId driverReq
 
-otpRideCreateAndStart :: Id SP.Person -> DRide.OTPRideReq -> FlowHandler DRide.DriverRideRes
-otpRideCreateAndStart requestorId req@DRide.OTPRideReq {..} = withFlowHandlerAPI $ do
+otpRideCreateAndStart :: (Id SP.Person, Id Merchant.Merchant) -> DRide.OTPRideReq -> FlowHandler DRide.DriverRideRes
+otpRideCreateAndStart (requestorId, merchantId) req@DRide.OTPRideReq {..} = withFlowHandlerAPI $ do
   requestor <- findPerson requestorId
   now <- getCurrentTime
   let rideOtp = req.specialZoneOtpCode
   booking <- runInReplica $ QBooking.findBookingBySpecialZoneOTP requestor.merchantId rideOtp now >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp rideOtp)
   ride <- DRide.otpRideCreate requestor rideOtp booking
   let driverReq = RideStart.DriverStartRideReq {rideOtp, point, requestor}
-  shandle <- RideStart.buildStartRideHandle requestor.merchantId
+  shandle <- RideStart.buildStartRideHandle merchantId
   void $ RideStart.driverStartRide shandle ride.id driverReq
   return ride
 
-endRide :: Id SP.Person -> Id Ride.Ride -> EndRideReq -> FlowHandler APISuccess
-endRide requestorId rideId EndRideReq {point} = withFlowHandlerAPI $ do
+endRide :: (Id SP.Person, Id Merchant.Merchant) -> Id Ride.Ride -> EndRideReq -> FlowHandler APISuccess
+endRide (requestorId, merchantId) rideId EndRideReq {point} = withFlowHandlerAPI $ do
   requestor <- findPerson requestorId
   let driverReq = RideEnd.DriverEndRideReq {point, requestor}
-  shandle <- RideEnd.buildEndRideHandle requestor.merchantId
+  shandle <- RideEnd.buildEndRideHandle merchantId
   RideEnd.driverEndRide shandle rideId driverReq
 
-cancelRide :: Id SP.Person -> Id Ride.Ride -> CancelRideReq -> FlowHandler APISuccess
-cancelRide personId rideId CancelRideReq {reasonCode, additionalInfo} = withFlowHandlerAPI $ do
+cancelRide :: (Id SP.Person, Id Merchant.Merchant) -> Id Ride.Ride -> CancelRideReq -> FlowHandler APISuccess
+cancelRide (personId, _) rideId CancelRideReq {reasonCode, additionalInfo} = withFlowHandlerAPI $ do
   let driverReq = RideCancel.CancelRideReq {reasonCode, additionalInfo}
   RideCancel.driverCancelRideHandler RideCancel.cancelRideHandle personId rideId driverReq
 
 listDriverRides ::
-  Id SP.Person ->
+  (Id SP.Person, Id Merchant.Merchant) ->
   Maybe Integer ->
   Maybe Integer ->
   Maybe Bool ->
   Maybe Ride.RideStatus ->
   FlowHandler DRide.DriverRideListRes
-listDriverRides driverId mbLimit mbOffset mbRideStatus = withFlowHandlerAPI . DRide.listDriverRides driverId mbLimit mbOffset mbRideStatus
+listDriverRides (driverId, _) mbLimit mbOffset mbRideStatus = withFlowHandlerAPI . DRide.listDriverRides driverId mbLimit mbOffset mbRideStatus
 
-arrivedAtPickup :: Id SP.Person -> Id Ride.Ride -> LatLong -> FlowHandler APISuccess
-arrivedAtPickup _ rideId req = withFlowHandlerAPI $ DRide.arrivedAtPickup rideId req
+arrivedAtPickup :: (Id SP.Person, Id Merchant.Merchant) -> Id Ride.Ride -> LatLong -> FlowHandler APISuccess
+arrivedAtPickup (_, _) rideId req = withFlowHandlerAPI $ DRide.arrivedAtPickup rideId req

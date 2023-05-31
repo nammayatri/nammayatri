@@ -67,6 +67,7 @@ import Screens.ReportIssueChatScreen.ScreenData (initData) as ReportIssueScreenD
 import Data.Ord (compare)
 import Screens.DriverProfileScreen.Controller (getDowngradeOptionsSelected)
 import MerchantConfigs.Utils(getMerchant, Merchant(..))
+import Screens.RideSelectionScreen.View (getCategoryName)
 import Types.App (REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREENOUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), defaultGlobalState)
 
 baseAppFlow :: FlowBT String Unit
@@ -188,6 +189,12 @@ getDriverInfoFlow = do
       let (GetDriverInfoResp getDriverInfoResp) = getDriverInfoResp
       modifyScreenState $ ApplicationStatusScreenType (\applicationStatusScreen -> applicationStatusScreen {props{alternateNumberAdded = isJust getDriverInfoResp.alternateNumber}})
       if getDriverInfoResp.enabled then do
+        if(getValueToLocalStore IS_DRIVER_ENABLED == "false") then do
+          _ <- pure $ firebaseLogEvent "ny_driver_enabled"
+          _ <- pure $ metaLogEvent "ny_driver_enabled"
+          pure unit
+        else
+          pure unit
         setValueToLocalStore IS_DRIVER_ENABLED "true"
         let (Vehicle linkedVehicle) = (fromMaybe dummyVehicleObject getDriverInfoResp.linkedVehicle)
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data = homeScreen.data {driverName = getDriverInfoResp.firstName, vehicleType = linkedVehicle.variant ,  driverAlternateMobile =getDriverInfoResp.alternateNumber   }
@@ -715,12 +722,7 @@ helpAndSupportFlow = do
         , label : x.label
         }
       ) getOptionsRes.options)
-      let categoryName = if language == "en" then do
-                           case selectedCategory.categoryName of 
-                             "Lost And Found" -> "Report Lost Item"
-                             name             -> name <> " Issue"
-                         else 
-                           selectedCategory.categoryName
+      let categoryName = getCategoryName selectedCategory.categoryAction 
       modifyScreenState $ ReportIssueChatScreenStateType (\_ -> ReportIssueScreenData.initData { data { categoryName = categoryName, categoryAction = selectedCategory.categoryAction, categoryId = selectedCategory.categoryId, options = getOptionsRes' }, props { isReversedFlow = selectedCategory.categoryAction == "LOST_AND_FOUND" } })
       issueReportChatScreenFlow
     ISSUE_LIST_GO_BACK_SCREEN updatedState -> do 
@@ -788,6 +790,9 @@ myRidesScreenFlow = do
       }})
       tripDetailsScreenFlow
     NOTIFICATION_FLOW -> notificationFlow
+    SELECTED_TAB state -> do
+      modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> state{offsetValue = 0})
+      myRidesScreenFlow
 
 rideSelectionScreenFlow :: FlowBT String Unit
 rideSelectionScreenFlow = do
@@ -823,12 +828,7 @@ rideSelectionScreenFlow = do
       let tripId' = case state.selectedItem of
                       Just item -> Just item.id
                       _         -> Nothing
-      let categoryName = if language == "en" then do
-                           case state.selectedCategory.categoryName of 
-                             "Lost And Found" -> "Report Lost Item"
-                             name             -> name <> " Issue"
-                         else 
-                           state.selectedCategory.categoryName
+      let categoryName = getCategoryName state.selectedCategory.categoryAction 
       modifyScreenState $ ReportIssueChatScreenStateType (\_ -> ReportIssueScreenData.initData { data { tripId = tripId', categoryName = categoryName, categoryId = state.selectedCategory.categoryId, categoryAction = state.selectedCategory.categoryAction, options = getOptionsRes' }, props { isReversedFlow = (state.selectedCategory.categoryAction == "LOST_AND_FOUND") } } )
       issueReportChatScreenFlow
 
@@ -980,7 +980,7 @@ currentRideFlow = do
   if isLocalStageOn RideRequested && (getValueToLocalNativeStore IS_RIDE_ACTIVE) == "false" && isRequestExpired then
     homeScreenFlow
     else pure unit
-  (GetRidesHistoryResp activeRideResponse) <- Remote.getRideHistoryReqBT "1" "0" "true"
+  (GetRidesHistoryResp activeRideResponse) <- Remote.getRideHistoryReqBT "1" "0" "true" "null"
   _ <- pure $ spy "activeRideResponse" activeRideResponse
   if not (null activeRideResponse.list) then do
     case (activeRideResponse.list !! 0 ) of
@@ -1089,7 +1089,7 @@ homeScreenFlow = do
     DRIVER_AVAILABILITY_STATUS status -> do
       _ <- setValueToLocalStore DRIVER_STATUS if any( _ == status)[Online, Silent] then "true" else "false" --(show status)
       _ <- setValueToLocalStore DRIVER_STATUS_N $ show status
-      void $ lift $ lift $ loaderText (getString PLEASE_WAIT) if any( _ == status)[Online, Silent] then (getString SETTING_YOU_ONLINE) else (getString SETTING_YOU_OFFLINE)
+      void $ lift $ lift $ loaderText (getString PLEASE_WAIT) if status == Online then (getString SETTING_YOU_ONLINE) else if status == Silent then (getString SETTING_YOU_SILENT) else (getString SETTING_YOU_OFFLINE)
       void $ lift $ lift $ toggleLoader true
       (DriverActiveInactiveResp resp) <- Remote.driverActiveInactiveBT (if any( _ == status)[Online, Silent] then "true" else "false") $ toUpper $ show status
       _ <- setValueToLocalStore RIDE_T_FREQUENCY (if status == Online then "20000" else "30000")
@@ -1123,7 +1123,7 @@ homeScreenFlow = do
       let categories' = sortBy compareByOrder temp
       modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories' } } )
       helpAndSupportFlow 
-    GO_TO_START_RIDE {id, otp , lat, lon} -> do
+    GO_TO_START_RIDE {id, otp , lat, lon} updatedState -> do
       _ <- pure $ printLog "HOME_SCREEN_FLOW GO_TO_START_RIDE" "."
       _ <- pure $ printLog "Lat in Floww: " lat
       _ <- pure $ printLog "Lon in Floww: " lon
@@ -1135,6 +1135,8 @@ homeScreenFlow = do
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props {enterOtpModal = false, showDottedRoute = true}, data{ route = [], activeRide{status = INPROGRESS}}})
           void $ lift $ lift $ toggleLoader false
           _ <- updateStage $ HomeScreenStage RideStarted
+          lift $ lift $ void $ delay $ Milliseconds 2000.0
+          void $ pure $ openNavigation 0.0 0.0 updatedState.data.activeRide.dest_lat updatedState.data.activeRide.dest_lon
           currentRideFlow
         Left errorPayload -> do
           let errResp = errorPayload.response
@@ -1178,7 +1180,7 @@ homeScreenFlow = do
       _ <- pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
       (DriverActiveInactiveResp resp) <- Remote.driverActiveInactiveBT "true" $ toUpper $ show Online
       _ <- pure $ firebaseLogEvent "ny_user_ride_completed"
-      (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "1" "0" "false"
+      (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "1" "0" "false" "null"
       case (head rideHistoryResponse.list) of
         Nothing -> pure unit
         Just (RidesInfo response) -> do

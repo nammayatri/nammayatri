@@ -294,6 +294,7 @@ type HelpAndSupportScreenData =
     driverName :: String,
     totalAmount :: String,
     isNull :: Boolean,
+    faresList :: Array FareComponent,
     status :: String,
     rideStartTime :: String,
     rideEndTime :: String,
@@ -380,6 +381,7 @@ type IndividualRideCardState =
   , extraDistance :: String
   , referenceString :: String
   , isSpecialZone :: Boolean
+  , nightCharges :: Boolean
   }
 
 type ItemState =

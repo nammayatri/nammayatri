@@ -1,0 +1,442 @@
+@token1 = {{driver-offer-bpp-auto-token1}}
+@token2 = {{driver-offer-bpp-auto-token2}}
+@driver-offer-bpp-host = http://localhost:8016
+
+# @name healthcheck
+GET {{driver-offer-bpp-host}}/ui
+
+###
+
+# @name healthcheck
+GET {{app-host}}
+
+###
+
+# @name updateInitial1
+POST {{driver-offer-bpp-host}}/ui/driver/location
+token: {{token1}}
+content-type: application/json
+
+[
+    {
+        "pt": {
+            "lat": 14.445332,
+            "lon": 75.919028
+        },
+        "ts": "{{$localDatetime iso8601}}"
+    }
+]
+
+###
+
+# @name updateInitial2
+POST {{driver-offer-bpp-host}}/ui/driver/location
+token: {{token2}}
+content-type: application/json
+
+[
+    {
+        "pt": {
+            "lat": 14.445332,
+            "lon": 75.919028
+        },
+        "ts": "{{$localDatetime iso8601}}"
+    }
+]
+###
+
+# @name setActive1
+POST {{driver-offer-bpp-host}}/ui/driver/setActivity?active=true
+content-type: application/json
+token: {{token1}}
+###
+
+# @name setActive2
+POST {{driver-offer-bpp-host}}/ui/driver/setActivity?active=true
+content-type: application/json
+token: {{token2}}
+###
+
+# @name createDriver
+POST {{driver-offer-bpp-host}}/ui/org/driver
+content-type: application/json
+token: ea37f941-427a-4085-a7d0-96240f166672
+
+{
+  "person" : {
+    "firstName": "Jonh",
+    "middleName": " Maybeext",
+    "lastName": "Maybext",
+    "mobileNumber": "9602580675",
+    "mobileCountryCode": "+7"
+  },
+  "vehicle" : {
+    "category": "CAR",
+    "model": "Ford",
+    "variant": "SEDAN",
+    "color": "White",
+    "registrationNo": "6001",
+    "capacity": 120
+  }
+}
+
+###
+
+# @name search
+POST {{app-host}}/rideSearch
+content-type: application/json
+token: {{app-token}}
+
+{
+  "fareProductType" : "ONE_WAY",
+  "contents" : {
+    "origin": {
+      "address": {
+          "street": "60 Feet Rd",
+          "state": "Karnataka",
+          "door": "",
+          "country": "India",
+          "city": "Davanagere",
+          "building": " ",
+          "areaCode": "",
+          "area": "Vidyanagar"
+      },
+      "gps": {
+          "lat": 14.445332,
+          "lon": 75.919028
+      }
+    },
+    "destination": {
+      "address": {
+              "street": "Hadadi Rd",
+              "state": "Karnataka",
+              "door": "",
+              "country": "India",
+              "city": "Davanagere",
+              "building": "207",
+              "areaCode": "",
+              "area": "Nituvalli"
+          },
+      "gps": {
+          "lat": 14.441555,
+          "lon": 75.922259
+      }
+    },
+    "autoAssignEnabled" : false,
+    "autoAssignEnabledV2" : false
+  }
+}
+
+###
+
+@searchId = {{search.response.body.searchId}}
+
+# @name quotes
+GET {{app-host}}/rideSearch/{{searchId}}/results
+content-type: application/json
+token: {{app-token}}
+
+###
+
+# @name select
+@estimateId = {{quotes.response.body.estimates[0].id}}
+
+POST {{app-host}}/estimate/{{estimateId}}/select2 HTTP/1.1
+content-type: application/json
+token: {{app-token}}
+
+{
+  "customerExtraFee" : 10,
+  "autoAssignEnabled" : false,
+  "autoAssignEnabledV2" : false
+}
+###
+
+# @name nearbySearchRequest1
+GET {{driver-offer-bpp-host}}/ui/driver/nearbyRideRequest
+token: {{token1}}
+
+###
+
+# @name offerQuote1
+POST {{driver-offer-bpp-host}}/ui/driver/searchRequest/quote/offer
+token: {{token1}}
+content-type: application/json
+
+{
+    "offeredFare": 10,
+    "searchTryId": "{{nearbySearchRequest1.response.body.searchRequestsForDriver[0].searchTryId}}"
+}
+
+###
+
+# @name selectedQuotes1
+GET {{app-host}}/estimate/{{estimateId}}/quotes
+content-type: application/json
+token: {{app-token}}
+
+###
+
+@selectedQuoteId1 = {{selectedQuotes1.response.body.selectedQuotes[0].id}}
+
+# @name confirmQuote1
+
+POST {{app-host}}/rideSearch/quotes/{{selectedQuoteId1}}/confirm
+content-type: application/json
+token: {{app-token}}
+
+{
+  "selected": true,
+  "fromLocation": {
+    "door": "2"
+  },
+  "toLocation": {
+    "door": "3"
+  }
+}
+
+###
+@bookingId1 = {{confirmQuote1.response.body.bookingId}}
+
+# @name list1
+GET {{app-host}}/rideBooking/list
+  ?offset=0
+  &limit=50
+  &onlyActive=false
+content-type: application/json
+token: {{app-token}}
+
+###
+
+# @name driverList1
+GET {{driver-offer-bpp-host}}/ui/driver/ride/list?limit=100&offset=0
+token: {{token1}}
+
+###
+
+# @name rideCancelByDriver1
+POST {{driver-offer-bpp-host}}/ui/driver/ride/{{rideId}}/cancel
+token: {{token1}}
+content-type: application/json
+
+{
+  "reasonCode": "OTHER",
+  "additionalInfo" : "Rider is too cute"
+}
+
+###
+
+@rideId = {{driverList1.response.body.list[0].id}}
+@otp = {{list1.response.body.list[0].rideList[0].rideOtp}}
+
+# @name nearbySearchRequest2
+GET {{driver-offer-bpp-host}}/ui/driver/nearbyRideRequest
+token: {{token2}}
+
+###
+
+# @name offerQuote2
+POST {{driver-offer-bpp-host}}/ui/driver/searchRequest/quote/offer
+token: {{token2}}
+content-type: application/json
+
+{
+    "offeredFare": 10,
+    "searchTryId": "{{nearbySearchRequest2.response.body.searchRequestsForDriver[0].searchTryId}}"
+}
+
+###
+
+# @name selectedQuotes2
+GET {{app-host}}/estimate/{{estimateId}}/quotes
+content-type: application/json
+token: {{app-token}}
+
+###
+
+@selectedQuoteId2 = {{selectedQuotes2.response.body.selectedQuotes[0].id}}
+
+# @name confirmQuote2
+
+POST {{app-host}}/rideSearch/quotes/{{selectedQuoteId2}}/confirm
+content-type: application/json
+token: {{app-token}}
+
+{
+  "selected": true,
+  "fromLocation": {
+    "door": "2"
+  },
+  "toLocation": {
+    "door": "3"
+  }
+}
+
+###
+@bookingId2 = {{confirmQuote2.response.body.bookingId}}
+
+# @name list2
+GET {{app-host}}/rideBooking/list
+  ?offset=0
+  &limit=50
+  &onlyActive=false
+content-type: application/json
+token: {{app-token}}
+
+###
+
+# @name driverList2
+GET {{driver-offer-bpp-host}}/ui/driver/ride/list?limit=100&offset=0
+token: {{token2}}
+
+###
+
+@rideId2 = {{driverList2.response.body.list[0].id}}
+@otp2 = {{list2.response.body.list[0].rideList[0].rideOtp}}
+
+# @name startRide
+POST {{driver-offer-bpp-host}}/ui/driver/ride/{{rideId}}/start
+token: {{token2}}
+content-type: application/json
+
+{
+    "rideOtp": "{{otp2}}",
+    "point": {
+            "lat": 14.445332,
+            "lon": 75.919028
+    }
+}
+
+###
+
+# location updates taken from karnatakaLocationUpdates, so mock-google could handle it
+
+# @name update1
+POST {{driver-offer-bpp-host}}/ui/driver/location
+token: {{token2}}
+content-type: application/json
+
+[
+    {
+        "pt": {
+            "lat": 14.445332,
+            "lon": 75.919028
+
+        },
+        "ts": "{{$localDatetime iso8601}}"
+    },
+    {
+        "pt": {
+            "lat": 14.445488,
+            "lon": 75.919687
+
+        },
+        "ts": "{{$localDatetime iso8601}}",
+        "aux": "Tharalabalu Badavane"
+    },
+    {
+        "pt": {
+            "lat": 14.445093,
+            "lon": 75.919955
+
+        },
+        "ts": "{{$localDatetime iso8601}}"
+    },
+    {
+        "pt": {
+            "lat": 14.444636,
+            "lon": 75.920288
+        },
+        "ts": "{{$localDatetime iso8601}}",
+        "aux": "1st Main Rd"
+    }
+]
+
+###
+
+# @name update2
+POST {{driver-offer-bpp-host}}/ui/driver/location
+token: {{token2}}
+content-type: application/json
+
+[
+    {
+        "pt": {
+            "lat": 14.444491,
+            "lon": 75.920846
+        },
+        "ts": "{{$localDatetime iso8601}}",
+        "aux": "2nd Cross Rd"
+    },
+    {
+        "pt": {
+            "lat": 14.443816,
+            "lon": 75.921533
+        },
+        "ts": "{{$localDatetime iso8601}}",
+        "aux": "1, Hadadi Rd"
+    },
+    {
+        "pt": {
+            "lat": 14.441555,
+            "lon": 75.922259
+        },
+        "ts": "{{$localDatetime iso8601}}",
+        "aux": "1, Hadadi Rd"
+    }
+]
+
+###
+
+# @name rideEnd
+POST {{driver-offer-bpp-host}}/ui/driver/ride/{{rideId}}/end
+token: {{token2}}
+content-type: application/json
+
+{
+  "point": {
+    "lat": 14.441555,
+    "lon": 75.922259
+  }
+}
+
+###
+
+# @name rideCancelByDriver2
+POST {{driver-offer-bpp-host}}/ui/driver/ride/{{rideId2}}/cancel
+token: {{token2}}
+content-type: application/json
+
+{
+  "reasonCode": "OTHER",
+  "additionalInfo" : "Rider is too cute"
+}
+
+###
+
+# @name rideCancelByUser
+POST {{app-host}}/rideBooking/{{bookingId2}}/cancel
+content-type: application/json
+token: {{app-token}}
+
+{
+  "reasonCode": "OTHER",
+  "reasonStage": "OnAssign",
+  "additionalInfo": "driver is late"
+}
+
+### OnSearch | OnConfirm | OnAssign
+###
+
+@bapRideId = {{list2.response.body.list[0].rideList[0].id}}
+
+# @name feedback
+POST {{app-host}}/feedback/rateRide
+token: {{app-token}}
+content-type: application/json
+
+{
+  "rideId": "{{bapRideId}}",
+  "rating" : 5,
+  "feedbackDetails": "The ride was good"
+}

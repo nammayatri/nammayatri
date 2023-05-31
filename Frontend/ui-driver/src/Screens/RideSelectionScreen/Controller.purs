@@ -16,7 +16,7 @@
 module Screens.RideSelectionScreen.Controller where
 
 import Log
-import Data.Array (length, union, (!!))
+import Data.Array (length, union, filter, (!!))
 import Data.Int (fromString, toNumber)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (Pattern(..), split)
@@ -24,7 +24,7 @@ import Engineering.Helpers.Commons (strToBool)
 import Helpers.Utils (convertUTCtoISC, parseFloat, setEnabled, setRefreshing)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (class Show, bind, discard, map, not, pure, unit, ($), (&&), (+), (/), (/=), (<>), (==))
+import Prelude (class Show, bind, discard, map, not, pure, unit, ($), (&&), (+), (/), (/=), (<>), (==), (||))
 import PrestoDOM (Eval, ScrollState(..), continue, exit)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import Resource.Constants (decodeAddress)
@@ -128,8 +128,8 @@ eval Loader state = do
   exit $ LoaderOutput state
 
 eval (RideHistoryAPIResponseAction rideList) state = do
-  let bufferCardDataPrestoList = (rideHistoryListTransformer rideList)
-  let filteredRideList         = (rideListResponseTransformer rideList)
+  let bufferCardDataPrestoList = (rideHistoryListTransformer rideList state.selectedCategory.categoryAction)
+  let filteredRideList         = (rideListResponseTransformer rideList state.selectedCategory.categoryAction)
   _ <- pure $ setRefreshing "2000030" false
   let loadBtnDisabled          = length rideList == 0
   continue state {
@@ -154,8 +154,8 @@ eval (Scroll value) state = do
 eval _ state =
   continue state
 
-rideHistoryListTransformer :: Array RidesInfo -> Array ItemState
-rideHistoryListTransformer list =
+rideHistoryListTransformer :: Array RidesInfo -> String -> Array ItemState
+rideHistoryListTransformer list categoryAction = 
   ( map (\ (RidesInfo ride) ->
     { id     : toPropValue ride.id
     , date   : toPropValue (convertUTCtoISC (ride.createdAt) "D MMM")
@@ -165,7 +165,7 @@ rideHistoryListTransformer list =
     , updatedAt  : toPropValue ride.updatedAt
     , driverName : toPropValue ride.driverName
     , destination  : toPropValue (decodeAddress (ride.toLocation) false)
-    , shortRideId  : toPropValue ("Trip Id: " <> ride.shortRideId)
+    , shortRideId  : toPropValue ((getString TRIP_ID )<> ": " <> ride.shortRideId)
     , rideDistance : toPropValue ((parseFloat (toNumber (fromMaybe 0 ride.chargeableDistance) / 1000.0) 2) <> " km " <> (getString RIDE))
     , vehicleColor : toPropValue ride.vehicleColor
     , vehicleModel : toPropValue ride.vehicleModel
@@ -188,10 +188,11 @@ rideHistoryListTransformer list =
                                      _           -> "visible"
                                    )
     }
-  ) list)
+  ) (filter (\(RidesInfo ride) -> ((ride.status /= "CANCELLED" && categoryAction == "LOST_AND_FOUND") || (categoryAction /= "LOST_AND_FOUND"))) list))
 
-rideListResponseTransformer :: Array RidesInfo -> Array IndividualRideCardState
-rideListResponseTransformer list =
+
+rideListResponseTransformer :: Array RidesInfo -> String -> Array IndividualRideCardState
+rideListResponseTransformer list categoryAction =
   (map (\ (RidesInfo ride) ->
     { id   : ride.id
     , date : (convertUTCtoISC (ride.createdAt) "D MMM")
@@ -217,5 +218,5 @@ rideListResponseTransformer list =
     , shimmer_visibility : "gone"
     , driverSelectedFare : ride.driverSelectedFare
     }
-  ) list )
+  ) (filter (\(RidesInfo ride) -> ((ride.status /= "CANCELLED" && categoryAction == "LOST_AND_FOUND") || (categoryAction /= "LOST_AND_FOUND"))) list))
 

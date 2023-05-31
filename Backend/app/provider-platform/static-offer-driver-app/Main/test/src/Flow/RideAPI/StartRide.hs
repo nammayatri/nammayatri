@@ -38,7 +38,7 @@ handle =
             then Just booking
             else Nothing,
       findLocationByDriverId = \_driverId -> pure $ Just Fixtures.defaultDriverLocation,
-      startRideAndUpdateLocation = \_driverId _rideId _bookingId _pt -> pure (),
+      startRideAndUpdateLocation = \_driverId _rideId _bookingId _pt _merchantId -> pure (),
       notifyBAPRideStarted = \_booking _ride -> pure (),
       rateLimitStartRide = \_driverId _rideId -> pure (),
       initializeDistanceCalculation = \_rideId _personId _pt -> pure (),

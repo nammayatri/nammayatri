@@ -159,7 +159,6 @@ library
       Beckn.Types.Core.Taxi.Rating
       Beckn.Types.Core.Taxi.Rating.FeedbackForm
       Beckn.Types.Core.Taxi.Search
-      Beckn.Types.Core.Taxi.Search.Address
       Beckn.Types.Core.Taxi.Search.Fulfillment
       Beckn.Types.Core.Taxi.Search.Intent
       Beckn.Types.Core.Taxi.Search.Location
@@ -169,12 +168,9 @@ library
       Beckn.Types.Core.Taxi.Select
       Beckn.Types.Core.Taxi.Select.BreakupItem
       Beckn.Types.Core.Taxi.Select.Fulfillment
-      Beckn.Types.Core.Taxi.Select.Location
       Beckn.Types.Core.Taxi.Select.Order
-      Beckn.Types.Core.Taxi.Select.Payment
       Beckn.Types.Core.Taxi.Select.Quote
       Beckn.Types.Core.Taxi.Select.StartInfo
-      Beckn.Types.Core.Taxi.Select.StopInfo
       Beckn.Types.Core.Taxi.Track
       Beckn.Types.Core.Taxi.Track.Order
   other-modules:

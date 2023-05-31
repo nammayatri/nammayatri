@@ -21,9 +21,11 @@ module API.UI.Support
 where
 
 import qualified Domain.Action.UI.Support as DSupport
+import qualified Domain.Types.Merchant as Merchant
 import Domain.Types.Person as Person
 import qualified Environment as App
 import EulerHS.Prelude hiding (length)
+import Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
@@ -36,10 +38,18 @@ type API =
            :> TokenAuth
            :> ReqBody '[JSON] DSupport.SendIssueReq
            :> Post '[JSON] DSupport.SendIssueRes
+           :<|> "callbackRequest"
+             :> TokenAuth
+             :> Post '[JSON] APISuccess
        )
 
 handler :: App.FlowServer API
-handler = sendIssue
+handler =
+  sendIssue
+    :<|> callbackRequest
 
-sendIssue :: Id Person.Person -> DSupport.SendIssueReq -> App.FlowHandler DSupport.SendIssueRes
-sendIssue personId = withFlowHandlerAPI . withPersonIdLogTag personId . DSupport.sendIssue personId
+sendIssue :: (Id Person.Person, Id Merchant.Merchant) -> DSupport.SendIssueReq -> App.FlowHandler DSupport.SendIssueRes
+sendIssue (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . DSupport.sendIssue personId
+
+callbackRequest :: (Id Person.Person, Id Merchant.Merchant) -> App.FlowHandler APISuccess
+callbackRequest (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId $ DSupport.callbackRequest personId

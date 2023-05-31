@@ -4,7 +4,6 @@
 
     # Backend inputs
     shared-kernel.url = "github:nammayatri/shared-kernel";
-    shared-kernel.inputs.common.follows = "common";
     beckn-gateway.url = "github:nammayatri/beckn-gateway";
     beckn-gateway.inputs.common.follows = "common";
     beckn-gateway.inputs.shared-kernel.follows = "shared-kernel";

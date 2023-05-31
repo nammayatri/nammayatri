@@ -40,6 +40,7 @@ type API =
            :<|> RideCancelAPI
            :<|> RideInfoAPI
            :<|> RideSyncAPI
+           :<|> MultipleRideSyncAPI
            :<|> RideRouteAPI
        )
 
@@ -71,6 +72,10 @@ type RideSyncAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'RIDES 'RIDE_SYNC
     :> Common.RideSyncAPI
 
+type MultipleRideSyncAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'RIDES 'MULTIPLE_RIDE_SYNC
+    :> Common.MultipleRideSyncAPI
+
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   rideList merchantId
@@ -79,6 +84,7 @@ handler merchantId =
     :<|> rideCancel merchantId
     :<|> rideInfo merchantId
     :<|> rideSync merchantId
+    :<|> multipleRideSync merchantId
     :<|> rideRoute merchantId
 
 buildTransaction ::
@@ -87,11 +93,11 @@ buildTransaction ::
   ) =>
   Common.RideEndpoint ->
   ApiTokenInfo ->
-  Id Common.Ride ->
+  Maybe (Id Common.Ride) ->
   Maybe request ->
   m DT.Transaction
 buildTransaction endpoint apiTokenInfo rideId =
-  T.buildTransaction (DT.RideAPI endpoint) (Just DRIVER_OFFER_BPP) (Just apiTokenInfo) Nothing (Just rideId)
+  T.buildTransaction (DT.RideAPI endpoint) (Just DRIVER_OFFER_BPP) (Just apiTokenInfo) Nothing rideId
 
 rideList ::
   ShortId DM.Merchant ->
@@ -113,21 +119,21 @@ rideList merchantShortId apiTokenInfo mbLimit mbOffset mbBookingStatus mbShortRi
 rideStart :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Ride -> Common.StartRideReq -> FlowHandler APISuccess
 rideStart merchantShortId apiTokenInfo rideId req = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-  transaction <- buildTransaction Common.RideStartEndpoint apiTokenInfo rideId (Just req)
+  transaction <- buildTransaction Common.RideStartEndpoint apiTokenInfo (Just rideId) (Just req)
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId (.rides.rideStart) rideId req
 
 rideEnd :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Ride -> Common.EndRideReq -> FlowHandler APISuccess
 rideEnd merchantShortId apiTokenInfo rideId req = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-  transaction <- buildTransaction Common.RideEndEndpoint apiTokenInfo rideId (Just req)
+  transaction <- buildTransaction Common.RideEndEndpoint apiTokenInfo (Just rideId) (Just req)
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId (.rides.rideEnd) rideId req
 
 rideCancel :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Ride -> Common.CancelRideReq -> FlowHandler APISuccess
 rideCancel merchantShortId apiTokenInfo rideId req = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-  transaction <- buildTransaction Common.RideCancelEndpoint apiTokenInfo rideId (Just req)
+  transaction <- buildTransaction Common.RideCancelEndpoint apiTokenInfo (Just rideId) (Just req)
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId (.rides.rideCancel) rideId req
 
@@ -139,9 +145,16 @@ rideInfo merchantShortId apiTokenInfo rideId = withFlowHandlerAPI $ do
 rideSync :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Ride -> FlowHandler Common.RideSyncRes
 rideSync merchantShortId apiTokenInfo rideId = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-  transaction <- buildTransaction Common.RideSyncEndpoint apiTokenInfo rideId T.emptyRequest
+  transaction <- buildTransaction Common.RideSyncEndpoint apiTokenInfo (Just rideId) T.emptyRequest
   T.withResponseTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId (.rides.rideSync) rideId
+
+multipleRideSync :: ShortId DM.Merchant -> ApiTokenInfo -> Common.MultipleRideSyncReq -> FlowHandler Common.MultipleRideSyncRes
+multipleRideSync merchantShortId apiTokenInfo rideSyncReq = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  transaction <- buildTransaction Common.MultipleRideSyncEndpoint apiTokenInfo Nothing (Just rideSyncReq)
+  T.withResponseTransactionStoring transaction $
+    Client.callDriverOfferBPP checkedMerchantId (.rides.multipleRideSync) rideSyncReq
 
 rideRoute ::
   ShortId DM.Merchant ->

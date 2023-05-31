@@ -14,7 +14,7 @@ let rcfg =
 
 let rccfg =
       { connectHost = "localhost"
-      , connectPort = 30006
+      , connectPort = 30001
       , connectAuth = None Text
       , connectDatabase = +0
       , connectMaxConnections = +50
@@ -25,7 +25,7 @@ let rccfg =
 in  { hedisCfg = rcfg
     , hedisClusterCfg = rccfg
     , hedisMigrationStage = True
-    , cutOffHedisCluster = True
+    , cutOffHedisCluster = False
     , port = +8015
     , metricsPort = +9998
     , selfId = "JUSPAY.BG.1"

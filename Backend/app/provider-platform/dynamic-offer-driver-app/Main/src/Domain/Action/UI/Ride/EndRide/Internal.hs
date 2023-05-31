@@ -27,6 +27,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.RiderDetails as RD
 import EulerHS.Prelude hiding (id)
+import Kernel.External.Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
@@ -87,7 +88,8 @@ endRideTransaction driverId bookingId ride mbFareParams mbRiderDetailsId = do
     if driverInfo.active
       then QDFS.updateStatus ride.driverId DDFS.ACTIVE
       else QDFS.updateStatus ride.driverId DDFS.IDLE
-  DLoc.updateOnRide driverId False
+  driver <- Esq.runInReplica $ SQP.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  DLoc.updateOnRide driverId False driver.merchantId
   SRide.clearCache $ cast driverId
 
 putDiffMetric :: (Metrics.HasBPPMetrics m r, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Money -> Meters -> m ()
@@ -99,20 +101,49 @@ getDistanceBetweenPoints ::
   ( EncFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    Metrics.CoreMetrics m,
-    Maps.HasCoordinates a,
-    Maps.HasCoordinates b
+    Metrics.CoreMetrics m
   ) =>
   Id Merchant ->
-  a ->
-  b ->
+  LatLong ->
+  LatLong ->
+  [LatLong] ->
   m Meters
-getDistanceBetweenPoints merchantId a b = do
-  distRes <-
-    Maps.getDistance merchantId $
-      Maps.GetDistanceReq
-        { origin = a,
-          destination = b,
-          travelMode = Just Maps.CAR
+getDistanceBetweenPoints merchantId origin destination interpolatedPoints = do
+  -- somehow interpolated points pushed to redis in reversed order, so we need to reverse it back
+  let pickedWaypoints = origin :| (pickWaypoints (reverse interpolatedPoints) <> [destination])
+  logTagInfo "endRide" $ "pickedWaypoints: " <> show pickedWaypoints
+  routeResponse <-
+    Maps.getRoutes merchantId $
+      Maps.GetRoutesReq
+        { waypoints = pickedWaypoints,
+          mode = Just Maps.CAR,
+          calcPoints = True
         }
-  return $ distRes.distance
+  let mbShortestRouteDistance = (.distance) =<< getRouteInfoWithShortestDuration routeResponse
+  -- Next error is impossible, because we never receive empty list from directions api
+  mbShortestRouteDistance & fromMaybeM (InvalidRequest "Couldn't calculate route distance")
+
+-- TODO reuse code from rider-app
+getRouteInfoWithShortestDuration :: [Maps.RouteInfo] -> Maybe Maps.RouteInfo
+getRouteInfoWithShortestDuration [] = Nothing
+getRouteInfoWithShortestDuration (routeInfo : routeInfoArray) =
+  if null routeInfoArray
+    then Just routeInfo
+    else do
+      restRouteResult <- getRouteInfoWithShortestDuration routeInfoArray
+      Just $ comparator routeInfo restRouteResult
+  where
+    comparator route1 route2 =
+      if route1.duration < route2.duration
+        then route1
+        else route2
+
+-- for distance api we can't pick more than 10 waypoints
+pickWaypoints :: [a] -> [a]
+pickWaypoints waypoints = do
+  let step = length waypoints `div` 10
+  take 10 $ foldr (\(n, waypoint) list -> if n `safeMod` step == 0 then waypoint : list else list) [] $ zip [1 ..] waypoints
+
+safeMod :: Int -> Int -> Int
+_ `safeMod` 0 = 0
+a `safeMod` b = a `mod` b

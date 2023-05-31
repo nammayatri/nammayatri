@@ -89,10 +89,10 @@ validateDriverDLReq now DriverDLReq {..} =
 verifyDL ::
   Bool ->
   Maybe DM.Merchant ->
-  Id Person.Person ->
+  (Id Person.Person, Id DM.Merchant) ->
   DriverDLReq ->
   Flow DriverDLRes
-verifyDL isDashboard mbMerchant personId req@DriverDLReq {..} = do
+verifyDL isDashboard mbMerchant (personId, _) req@DriverDLReq {..} = do
   now <- getCurrentTime
   runRequestValidation (validateDriverDLReq now) req
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)

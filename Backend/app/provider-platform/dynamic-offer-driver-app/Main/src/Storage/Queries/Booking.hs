@@ -19,7 +19,7 @@ import Domain.Types.Booking
 import Domain.Types.DriverQuote (DriverQuote)
 import Domain.Types.Merchant
 import Domain.Types.RiderDetails (RiderDetails)
-import qualified Domain.Types.SearchRequest as DSR
+import qualified Domain.Types.SearchTry as DST
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq hiding (findById, isNothing)
 import Kernel.Types.Id
@@ -46,9 +46,9 @@ findById bookingId = buildDType $ do
       pure rb
   join <$> mapM buildFullBooking res
 
-findBySearchReq :: (Transactionable m) => Id DSR.SearchRequest -> m (Maybe Booking)
-findBySearchReq searchReqId = buildDType $ do
-  mbDriverQuoteT <- QDQuote.findDriverQuoteBySearchId searchReqId
+findBySTId :: (Transactionable m) => Id DST.SearchTry -> m (Maybe Booking)
+findBySTId searchTryId = buildDType $ do
+  mbDriverQuoteT <- QDQuote.findDriverQuoteBySTId searchTryId
   let mbDriverQuoteId = Id . DriverQuote.id <$> mbDriverQuoteT
   mbBookingT <- (join <$>) $ mapM findBookingByDriverQuoteId' mbDriverQuoteId
 

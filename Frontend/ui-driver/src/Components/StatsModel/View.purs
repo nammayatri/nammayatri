@@ -55,14 +55,14 @@ earningsView config push =
   , padding (Padding 0 5 0 5)
   , cornerRadius 9.0
   ][ linearLayout
-        [ width $ V ((screenWidth unit) /2 - 10)
+        [ width $ V ((screenWidth unit) /2 - 16)
         , height WRAP_CONTENT
         , orientation HORIZONTAL
         , gravity CENTER
         ][ textView $ 
             [ height config.countTextConfig.height
             , text config.countTextConfig.text
-            , margin $ MarginRight 5
+            , margin $ MarginRight 10
             , gravity config.countTextConfig.gravity
             , color config.countTextConfig.color
             -- , weight config.countTextConfig.weight
@@ -70,8 +70,8 @@ earningsView config push =
          , textView $
             [ height config.textConfig.height
             , text $ show $ config.totalRidesOfDay
-            , margin $ MarginLeft 5
             , gravity config.textConfig.gravity
+            , width WRAP_CONTENT
             , color config.textConfig.color
             -- , weight config.textConfig.weight
             ] <> FontStyle.h2 TypoGraphy
@@ -82,14 +82,14 @@ earningsView config push =
         , background Color.grey900
         ][]
     , linearLayout
-        [ width $ V ((screenWidth unit) /2 - 10)
+        [ width $ V ((screenWidth unit) /2 - 16)
         , height WRAP_CONTENT
         , orientation HORIZONTAL
         , gravity CENTER
         ][ textView $ 
             [ height config.earningsTextConfig.height
             , text config.earningsTextConfig.text
-            , margin $ MarginRight 5
+            , margin $ MarginRight 10
             , gravity config.earningsTextConfig.gravity
             , color config.earningsTextConfig.color
             -- , weight config.earningsTextConfig.weight
@@ -98,7 +98,6 @@ earningsView config push =
          , textView $ 
             [ height config.textConfig.height
             , text  $ "₹" <> (show  $ config.totalEarningsOfDay)
-            , margin $ MarginLeft 5
             , gravity config.textConfig.gravity
             , color config.textConfig.color
             -- , weight config.textConfig.weight

@@ -15,27 +15,17 @@
 
 module Domain.Types.SearchRequest where
 
-import Data.Aeson
-import qualified Data.ByteString.Lazy as BSL
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as DT
-import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
-import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
-import Servant hiding (throwError)
+import qualified Tools.Maps as Maps
 
 data SearchRequest = SearchRequest
   { id :: Id SearchRequest,
-    estimateId :: Id DEst.Estimate,
     transactionId :: Text,
-    messageId :: Text,
-    startTime :: UTCTime,
-    validTill :: UTCTime,
     providerId :: Id DM.Merchant,
     fromLocation :: DLoc.SearchReqLocation,
     toLocation :: DLoc.SearchReqLocation,
@@ -43,27 +33,9 @@ data SearchRequest = SearchRequest
     bapUri :: BaseUrl,
     estimatedDistance :: Meters,
     estimatedDuration :: Seconds,
-    customerExtraFee :: Maybe Money,
-    device :: Maybe Text,
-    createdAt :: UTCTime,
-    updatedAt :: UTCTime,
-    vehicleVariant :: Variant.Variant,
-    status :: SearchRequestStatus,
     autoAssignEnabled :: Bool,
-    searchRepeatCounter :: Int
+    device :: Maybe Text,
+    customerLanguage :: Maybe Maps.Language,
+    createdAt :: UTCTime
   }
   deriving (Generic, PrettyShow, Show)
-
-data SearchRequestStatus = ACTIVE | CANCELLED | REPEATITION
-  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
-  deriving (PrettyShow) via Showable SearchRequestStatus
-
-instance FromHttpApiData SearchRequestStatus where
-  parseUrlPiece = parseHeader . DT.encodeUtf8
-  parseQueryParam = parseUrlPiece
-  parseHeader = left T.pack . eitherDecode . BSL.fromStrict
-
-instance ToHttpApiData SearchRequestStatus where
-  toUrlPiece = DT.decodeUtf8 . toHeader
-  toQueryParam = toUrlPiece
-  toHeader = BSL.toStrict . encode

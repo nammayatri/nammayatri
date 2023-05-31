@@ -18,12 +18,15 @@ module API.Dashboard.RideBooking.Maps where
 
 import qualified API.UI.Maps as UM
 import qualified Domain.Action.UI.Maps as DMaps
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Environment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
+import Kernel.Utils.Error.FlowHandling
 import Servant
+import SharedLogic.Merchant
 
 data MapEndPoints
   = AutoCompleteEndPoint
@@ -58,17 +61,23 @@ type RideGetPlaceNameAPI =
     :> ReqBody '[JSON] DMaps.GetPlaceNameReq
     :> Post '[JSON] DMaps.GetPlaceNameResp
 
-handler :: FlowServer API
-handler =
-  callAutoComplete
-    :<|> callGetPlaceDetails
-    :<|> callGetPlaceName
+handler :: ShortId DM.Merchant -> FlowServer API
+handler merchantId =
+  callAutoComplete merchantId
+    :<|> callGetPlaceDetails merchantId
+    :<|> callGetPlaceName merchantId
 
-callAutoComplete :: Id DP.Person -> DMaps.AutoCompleteReq -> FlowHandler DMaps.AutoCompleteResp
-callAutoComplete = UM.autoComplete
+callAutoComplete :: ShortId DM.Merchant -> Id DP.Person -> DMaps.AutoCompleteReq -> FlowHandler DMaps.AutoCompleteResp
+callAutoComplete merchantId personId req = do
+  m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
+  UM.autoComplete (personId, m.id) req
 
-callGetPlaceDetails :: Id DP.Person -> DMaps.GetPlaceDetailsReq -> FlowHandler DMaps.GetPlaceDetailsResp
-callGetPlaceDetails = UM.getPlaceDetails
+callGetPlaceDetails :: ShortId DM.Merchant -> Id DP.Person -> DMaps.GetPlaceDetailsReq -> FlowHandler DMaps.GetPlaceDetailsResp
+callGetPlaceDetails merchantId personId req = do
+  m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
+  UM.getPlaceDetails (personId, m.id) req
 
-callGetPlaceName :: Id DP.Person -> DMaps.GetPlaceNameReq -> FlowHandler DMaps.GetPlaceNameResp
-callGetPlaceName = UM.getPlaceName
+callGetPlaceName :: ShortId DM.Merchant -> Id DP.Person -> DMaps.GetPlaceNameReq -> FlowHandler DMaps.GetPlaceNameResp
+callGetPlaceName merchantId personId req = do
+  m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
+  UM.getPlaceName (personId, m.id) req

@@ -31,8 +31,9 @@ import qualified Storage.Tabular.FareParameters as Fare
 import qualified Storage.Tabular.FareParameters.Instances as Fare
 import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.Person (PersonTId)
-import qualified Storage.Tabular.SearchRequest as SReq
+import Storage.Tabular.SearchRequest (SearchRequestTId)
 import qualified Storage.Tabular.SearchRequestForDriver as SRFD
+import Storage.Tabular.SearchTry (SearchTryTId)
 import Storage.Tabular.Vehicle ()
 
 derivePersistField "Domain.DriverQuoteStatus"
@@ -42,9 +43,9 @@ mkPersist
   [defaultQQ|
     DriverQuoteT sql=driver_quote
       id Text
-      transactionId Text
-      searchRequestId SReq.SearchRequestTId
-      searchRequestForDriverId SRFD.SearchRequestForDriverTId Maybe
+      requestId SearchRequestTId
+      searchTryId SearchTryTId
+      searchRequestForDriverId SRFD.SearchRequestForDriverTId
       driverId PersonTId
       driverName Text
       driverRating Centesimal Maybe
@@ -77,8 +78,9 @@ instance FromTType FullDriverQuoteT Domain.DriverQuote where
     return $
       Domain.DriverQuote
         { id = Id id,
-          searchRequestId = fromKey searchRequestId,
-          searchRequestForDriverId = fromKey <$> searchRequestForDriverId,
+          requestId = fromKey requestId,
+          searchTryId = fromKey searchTryId,
+          searchRequestForDriverId = fromKey searchRequestForDriverId,
           driverId = fromKey driverId,
           durationToPickup = roundToIntegral durationToPickup,
           providerId = fromKey providerId,
@@ -89,8 +91,9 @@ instance ToTType FullDriverQuoteT Domain.DriverQuote where
   toTType Domain.DriverQuote {..} =
     ( DriverQuoteT
         { id = getId id,
-          searchRequestId = toKey searchRequestId,
-          searchRequestForDriverId = toKey <$> searchRequestForDriverId,
+          requestId = toKey requestId,
+          searchTryId = toKey searchTryId,
+          searchRequestForDriverId = toKey searchRequestForDriverId,
           driverId = toKey driverId,
           durationToPickup = realToFrac durationToPickup,
           fareParametersId = toKey fareParams.id,

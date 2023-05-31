@@ -61,7 +61,7 @@ import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os)
-import Helpers.Utils (Merchant(..), addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getExpiryTime, getLocationName, parseNewContacts, saveRecents, setText', updateInputString, withinTimeRange, getMerchant)
+import Helpers.Utils (Merchant(..), addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getExpiryTime, getLocationName, parseNewContacts, saveRecents, setText', updateInputString, withinTimeRange, getMerchant, convertUTCtoISC, getCurrentUTC)
 import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
@@ -704,8 +704,10 @@ eval BackPressed state = do
                       _ <- pure $ updateLocalStage (if state.props.isSearchLocation == NoView then HomeScreen else SearchLocationModel)
                       continue state { props { currentStage = if state.props.isSearchLocation == NoView then HomeScreen else SearchLocationModel}}
     ChatWithDriver -> do
-                      _ <- pure $ updateLocalStage RideAccepted
-                      continue state {props {currentStage = RideAccepted}}
+                        if state.props.showCallPopUp then continue state {props{showCallPopUp = false}}
+                         else do 
+                            _ <- pure $ updateLocalStage RideAccepted
+                            continue state {props {currentStage = RideAccepted}}
     _               -> do
                         if state.props.isLocationTracking then continue state{props{isLocationTracking = false}}
                           else if state.props.isSaveFavourite then continueWithCmd state [pure $ (SaveFavouriteCardAction (SaveFavouriteCardController.OnClose))]
@@ -1070,7 +1072,7 @@ eval (TagClick savedAddressType arrItem) state = tagClickEvent savedAddressType 
 eval (SearchLocationModelActionController (SearchLocationModelController.LocationListItemActionController (LocationListItemController.OnClick item))) state = do
   _ <- pure $ firebaseLogEvent "ny_user_location_list_item"
   let condition = state.props.isSource == Just true && item.locationItemType == Just RECENTS
-  locationSelected item{tag=if condition then "RECENT" else item.tag} true state{ props { sourceSelectedOnMap = if condition then true else state.props.sourceSelectedOnMap }}
+  locationSelected item{tag=if condition then "" else item.tag} true state{ props { sourceSelectedOnMap = if condition then false else state.props.sourceSelectedOnMap }}
 
 eval (ExitLocationSelected item addToRecents)state = exit $ LocationSelected item  addToRecents state
 
@@ -1833,7 +1835,7 @@ estimatesFlow estimatedQuotes state = do
       nightShiftMultiplier = case nightShiftRate of
         Just a -> fromMaybe 0.0 (a ^. _nightShiftMultiplier)
         Nothing -> 0.0
-      nightCharges = withinTimeRange nightShiftStart nightShiftEnd
+      nightCharges = withinTimeRange nightShiftStart nightShiftEnd (convertUTCtoISC(getCurrentUTC "") "HH:mm:ss")
       baseFare = case (head (filter (\a -> a ^. _title == "BASE_DISTANCE_FARE") estimateFareBreakup)) of
         Just a -> round $ (toNumber $ a ^. _price) * (if nightCharges then nightShiftMultiplier else 1.0)
         Nothing -> 0

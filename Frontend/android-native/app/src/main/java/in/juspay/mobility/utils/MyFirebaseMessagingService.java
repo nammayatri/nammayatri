@@ -140,7 +140,11 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                         SharedPreferences.Editor editor = sharedPref.edit();
                         editor.putString("READ_MESSAGES", "0");
                         editor.apply();
-                        startWidgetService(getString(R.string.ride_cancelled), payload, entity_payload);
+                        if (sharedPref.getString("MAPS_OPENED", "null").equals("true")){
+                            startMainActivity();
+                        } else {
+                            startWidgetService(getString(R.string.ride_cancelled), payload, entity_payload);
+                        }
                         break;
 
                     case NotificationTypes.DRIVER_QUOTE_INCOMING :

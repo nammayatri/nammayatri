@@ -64,8 +64,12 @@ screen initialState rideListItem =
     globalOnScroll "RideHistoryScreen",
         ( \push -> do
             _ <- launchAff $ flowRunner $ runExceptT $ runBackT $ do
-              (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "8" (show initialState.offsetValue) "false"
-              lift $ lift $ doAff do liftEffect $ push $ RideHistoryAPIResponseAction rideHistoryResponse.list
+              if initialState.currentTab == "COMPLETED" then do
+                (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "8" (show initialState.offsetValue) "false" "COMPLETED"
+                lift $ lift $ doAff do liftEffect $ push $ RideHistoryAPIResponseAction rideHistoryResponse.list
+                else do
+                  (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "8" (show initialState.offsetValue) "false" "CANCELLED"
+                  lift $ lift $ doAff do liftEffect $ push $ RideHistoryAPIResponseAction rideHistoryResponse.list
             pure $ pure unit
         )
   ]

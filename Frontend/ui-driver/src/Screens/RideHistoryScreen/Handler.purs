@@ -53,6 +53,9 @@ rideHistory = do
     RefreshScreen updatedState -> App.BackT $ App.BackPoint <$> (pure $ REFRESH updatedState)
     GoToFilter currentTab -> App.BackT $ App.BackPoint <$> (pure $ FILTER currentTab)
     GoToNotification -> App.BackT $ App.BackPoint <$> (pure $ NOTIFICATION_FLOW)
+    SelectedTab updatedState -> do
+      modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> rideHistoryScreen{currentTab = updatedState.currentTab, offsetValue = 0})
+      App.BackT $ App.BackPoint <$> (pure $ SELECTED_TAB updatedState)
 rideHistoryItem :: IndividualRideCardState
 rideHistoryItem = {
     date : "31/05/2022",

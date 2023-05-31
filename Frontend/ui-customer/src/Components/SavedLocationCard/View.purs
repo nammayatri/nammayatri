@@ -71,16 +71,11 @@ savedLocationView state push =
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       ][  linearLayout
-          ([ orientation HORIZONTAL
+          [ orientation HORIZONTAL
           , height WRAP_CONTENT
+          , weight 1.0
           , onClick push $ if (not state.isEditEnabled) then const (CardClicked state) else const (EditLocation state)
-          ] <> (if EHC.os == "ANDROID" then 
-                [ width WRAP_CONTENT ] 
-                else 
-                [weight 1.0]
-                )
-          ) $ 
-          [ textView
+          ] [ textView
               [ text case (getCardType (fromMaybe "" state.cardType)) of 
                     Just tag -> case tag of 
                       HOME_TAG -> (getString HOME)
@@ -91,13 +86,14 @@ savedLocationView state push =
               , maxLines 2
               , lineHeight "20"
               , textSize FontSize.a_16
+              , weight 1.0
               , color Color.black800
               , fontStyle $ FontStyle.semiBold LanguageStyle
               ]
             ]
         , linearLayout
         [ orientation HORIZONTAL
-        , width MATCH_PARENT
+        , width WRAP_CONTENT
         , height WRAP_CONTENT
         , gravity RIGHT
         , visibility if state.isEditEnabled then VISIBLE else GONE
@@ -110,6 +106,7 @@ savedLocationView state push =
             , margin (MarginRight 12)
             ][  textView
                 [ text (getString EDIT)
+                , width WRAP_CONTENT
                 , textSize FontSize.a_14
                 , color Color.blue900
                 , fontStyle $ FontStyle.medium LanguageStyle
@@ -125,6 +122,7 @@ savedLocationView state push =
                 [ text (getString REMOVE)
                 , textSize FontSize.a_14
                 , color Color.blue900
+                , width WRAP_CONTENT
                 , fontStyle $ FontStyle.medium LanguageStyle
                 ]
               ]

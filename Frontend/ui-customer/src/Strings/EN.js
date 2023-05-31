@@ -397,7 +397,7 @@ const englishStrings = {
   "TRY_AGAIN_WITH": "Try Again With",
   "SEARCH_AGAIN_WITH": "Search Again With",
   "TIP": "Tip",
-  "CUSTOMER_SELECTED_FARE": "Customer Tip*",
+  "CUSTOMER_SELECTED_FARE": "Customer Tip#",
   "START_YOUR_CHAT_USING_THESE_QUICK_CHAT_SUGGESTIONS": "Start your chat using these quick chat suggestions",
   "MESSAGE": "Message",
   "START_YOUR_CHAT_WITH_THE_DRIVER": "Start your chat with the driver",
@@ -430,7 +430,7 @@ const englishStrings = {
   "YES_CANCEL_SEARCH": "Yes, Cancel Search",
   "TRY_LOOKING_FOR_RIDES_AGAIN": "It seems to be a very busy day. You may try looking for rides again",
   "NO_TIP": "No Tip",
-  "CUSTOMER_TIP_DESCRIPTION": "*Extra amount added by the customer to increase the chances of getting a ride.",
+  "CUSTOMER_TIP_DESCRIPTION": "#Extra amount added by the customer to increase the chances of getting a ride.",
   "PLEASE_WAIT_I_WILL_BE_THERE": "Please wait, I'll be there",
   "UNREACHABLE_PLEASE_CALL_BACK": "Unreachable, Please call back",
   "PLACE_CALL": "Place Call",
@@ -449,5 +449,6 @@ const englishStrings = {
   "YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS": "You may see an updated final fare due to any of the below reasons:",
   "REASON_CHANGE_IN_ROUTE_A": "1.Change in Route: ",
   "REASON_CHANGE_IN_ROUTE_B": "Total fare may change due to change in route",
-  "NAVIGATE_TO_PICKUP" : "Navigate to pickup"
+  "NAVIGATE_TO_PICKUP" : "Navigate to pickup",
+  "REQUEST_RECEIVED_WE_WILL_CALL_YOU_BACK_SOON" : "Request received. We will call you back soon"
 }

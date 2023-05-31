@@ -68,8 +68,8 @@ const kannadaStrings = {
   YOUR_REQUEST_HAS_TIMEOUT_TRY_AGAIN: "ನಿಮ್ಮ ವಿನಂತಿಯ ಅವಧಿ ಮೀರಿದೆ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
   ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER: "ದೋಷ ಸಂಭವಿಸಿದೆ ದಯವಿಟ್ಟು ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
   LIMIT_EXCEEDED_PLEASE_TRY_AGAIN_AFTER_10MIN: "ಮಿತಿ ಮೀರಿದೆ ದಯವಿಟ್ಟು ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
-  ENTER_OTP_SENT_TO: "",
-  OTP_SENT_TO: " ಗೆ ಕಳುಹಿಸಲಾದ OTP ಅನ್ನು ನಮೂದಿಸಿ",
+  ENTER_OTP_SENT_TO: " ಗೆ ಕಳುಹಿಸಲಾದ ಒಟಿಪಿಯನ್ನು ನಮೂದಿಸಿ",
+  OTP_SENT_TO: " ಗೆ OTP ಕಳುಹಿಸಲಾಗಿದೆ",
   COUNTRY_CODE_INDIA: "+91",
   ENTER_ACCOUNT_NUMBER: "ಖಾತೆ ಸಂಖ್ಯೆ ನಮೂದಿಸಿ.",
   ADD_BANK_DETAILS: "ಬ್ಯಾಂಕ್ ವಿವರಗಳನ್ನು ಸೇರಿಸಿ",
@@ -283,6 +283,7 @@ const kannadaStrings = {
   PLEASE_WAIT: "ದಯಮಾಡಿ ನಿರೀಕ್ಷಿಸಿ",
   SETTING_YOU_OFFLINE: "ನಾವು ನಿಮ್ಮ ಆಫ್‌ಲೈನ್ ಅನ್ನು ಹೊಂದಿಸುತ್ತಿದ್ದೇವೆ",
   SETTING_YOU_ONLINE: "ನಾವು ನಿಮ್ಮನ್ನು ಆನ್‌ಲೈನ್‌ನಲ್ಲಿ ಹೊಂದಿಸುತ್ತಿದ್ದೇವೆ",
+  SETTING_YOU_SILENT: "ನಾವು ನಿಮ್ಮನ್ನು ಸೈಲೆಂಟ್  ಹೊಂದಿಸುತ್ತಿದ್ದೇವೆ",
   VIEW_BREAKDOWN: "ವಿಭಜನೆಯನ್ನು ವೀಕ್ಷಿಸಿ",
   APP_INFO: "ಅಪ್ಲಿಕೇಶನ್ ಮಾಹಿತಿ",
   OTHER: "ಬೇರೆ",
@@ -451,6 +452,11 @@ const kannadaStrings = {
   HOURS_AGO : "ಗಂಟೆಗಳ ಹಿಂದೆ",
   MIN_AGO : "ನಿಮಿಷದ ಹಿಂದೆ",
   SEC_AGO : "ಎರಡನೇ ಹಿಂದೆ",
-  ISSUE_REMOVED : "ಸಮಸ್ಯೆಯನ್ನು ತೆಗೆದುಹಾಕಲಾಗಿದೆ"
+  ISSUE_REMOVED : "ಸಮಸ್ಯೆಯನ್ನು ತೆಗೆದುಹಾಕಲಾಗಿದೆ",
+  APP_RELATED : "ಅಪ್ಲಿಕೇಶನ್ ಸಂಬಂಧಿತ",
+  FARE_RELATED : "ಶುಲ್ಕ ಸಂಬಂಧಿತ",
+  RIDE_RELATED : "ಸವಾರಿ ಸಂಬಂಧಿತ",
+  LOST_AND_FOUND : "ಕಳೆದು ಮತ್ತೆ ದೊರಕಿದ",
+  REPORT_LOST_ITEM : "ಕಳೆದುಹೋದ ಐಟಂ ಅನ್ನು ವರದಿ ಮಾಡಿ"
 
 }

@@ -34,6 +34,8 @@ mkPersist
       id Text
       personId PersonTId
       merchantId MerchantTId
+      secretKey Text Maybe
+      is2faEnabled Bool
       createdAt UTCTime
       Primary id
       Unique (MerchantAccessPersonId, MerchantAccessMerchantId)

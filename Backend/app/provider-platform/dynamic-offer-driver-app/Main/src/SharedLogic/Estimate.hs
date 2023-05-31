@@ -24,6 +24,7 @@ import Domain.Types.Estimate as DEst
 import qualified Domain.Types.FareParameters as DFParams
 import Domain.Types.FarePolicy
 import qualified Domain.Types.FarePolicy as DFP
+import qualified Domain.Types.SearchRequest as DSR
 import Kernel.Prelude
 import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.Common
@@ -34,12 +35,12 @@ import Storage.CachedQueries.CacheConfig
 
 buildEstimate ::
   (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r) =>
-  Text ->
+  Id DSR.SearchRequest ->
   UTCTime ->
   Meters ->
   FarePolicy ->
   m DEst.Estimate
-buildEstimate transactionId startTime dist farePolicy = do
+buildEstimate searchReqId startTime dist farePolicy = do
   fareParams <-
     calculateFareParameters
       CalculateFareParametersParams
@@ -60,7 +61,7 @@ buildEstimate transactionId startTime dist farePolicy = do
   pure
     DEst.Estimate
       { id = Id uuid,
-        transactionId = transactionId,
+        requestId = searchReqId,
         vehicleVariant = farePolicy.vehicleVariant,
         minFare = baseFare + maybe 0 (.minFee) mbDriverExtraFeeBounds,
         maxFare = baseFare + maybe 0 (.maxFee) mbDriverExtraFeeBounds,
@@ -84,10 +85,10 @@ buildEstimate transactionId startTime dist farePolicy = do
     mkPrice = DEst.EstimateBreakupPrice currency
     mkBreakupItem = DEst.EstimateBreakup
     makeWaitingCharges = do
-      let waitingCharge = case farePolicy.farePolicyDetails of
-            SlabsDetails det -> (findFPSlabsDetailsSlabByDistance dist det.slabs).waitingCharge
-            ProgressiveDetails det -> det.waitingCharge
-      let (mbWaitingChargePerMin, mbWaitingOrPickupCharges) = case waitingCharge of
+      let waitingChargeInfo = case farePolicy.farePolicyDetails of
+            SlabsDetails det -> (findFPSlabsDetailsSlabByDistance dist det.slabs).waitingChargeInfo
+            ProgressiveDetails det -> det.waitingChargeInfo
+      let (mbWaitingChargePerMin, mbWaitingOrPickupCharges) = case waitingChargeInfo <&> (.waitingCharge) of
             Just (PerMinuteWaitingCharge charge) -> (Just $ roundToIntegral charge, Nothing)
             Just (ConstantWaitingCharge charge) -> (Nothing, Just charge)
             Nothing -> (Nothing, Nothing)

@@ -51,7 +51,7 @@ import Tools.Metrics (CoreMetrics)
 data Handler m = Handler
   { driver :: Person.Person,
     findDriverLocation :: m (Maybe DriverLocation),
-    upsertDriverLocation :: LatLong -> UTCTime -> m (),
+    upsertDriverLocation :: LatLong -> UTCTime -> Id DM.Merchant -> m (),
     getInProgress :: m (Maybe (Id DRide.Ride)),
     addIntermediateRoutePoints :: Id DRide.Ride -> NonEmpty LatLong -> m ()
   }
@@ -133,7 +133,7 @@ updateLocationHandler Handler {..} waypoints = withLogTag "driverLocationUpdate"
       (a : ax) -> do
         let newWaypoints = a :| ax
             currPoint = NE.last newWaypoints
-        upsertDriverLocation currPoint.pt currPoint.ts
+        upsertDriverLocation currPoint.pt currPoint.ts driver.merchantId
         mbRideId <- getInProgress
         mapM_ (\point -> streamLocationUpdates mbRideId driver.merchantId driver.id point.pt point.ts) (a : ax)
         maybe

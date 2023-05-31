@@ -45,8 +45,10 @@ buildSearchRequest ::
   Maybe Version ->
   Maybe Text ->
   Maybe Seconds ->
+  Bool ->
+  Bool ->
   m SearchRequest.SearchRequest
-buildSearchRequest person pickup mbDrop mbMaxDistance mbDistance now bundleVersion clientVersion device duration = do
+buildSearchRequest person pickup mbDrop mbMaxDistance mbDistance now bundleVersion clientVersion device duration autoAssignEnabled autoAssignEnabledV2 = do
   searchRequestId <- generateGUID
   validTill <- getSearchRequestExpiry now
   return
@@ -66,7 +68,9 @@ buildSearchRequest person pickup mbDrop mbMaxDistance mbDistance now bundleVersi
         bundleVersion = bundleVersion,
         clientVersion = clientVersion,
         language = person.language,
-        customerExtraFee = Nothing
+        customerExtraFee = Nothing,
+        autoAssignEnabled,
+        autoAssignEnabledV2
       }
   where
     getSearchRequestExpiry :: (HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds]) => UTCTime -> m UTCTime
@@ -74,7 +78,7 @@ buildSearchRequest person pickup mbDrop mbMaxDistance mbDistance now bundleVersi
       searchRequestExpiry <- maybe 7200 fromIntegral <$> asks (.searchRequestExpiry)
       let minExpiry = 300 -- 5 minutes
           timeToRide = startTime `diffUTCTime` now
-          validTill = addUTCTime (minimum [fromInteger searchRequestExpiry, maximum [minExpiry, timeToRide]]) now
+          validTill = addUTCTime (min (fromInteger searchRequestExpiry) (max minExpiry timeToRide)) now
       pure validTill
 
 data SearchReqLocation = SearchReqLocation

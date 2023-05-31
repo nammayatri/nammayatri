@@ -21,6 +21,7 @@ where
 
 import qualified Domain.Action.UI.CancellationReason as DCancellationReason
 import qualified Domain.Types.CancellationReason as DCR
+import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import Environment
 import EulerHS.Prelude hiding (id)
@@ -42,5 +43,5 @@ type ListRes = [DCR.CancellationReasonAPIEntity]
 handler :: FlowServer API
 handler = list
 
-list :: Id Person.Person -> DCR.CancellationStage -> FlowHandler ListRes
+list :: (Id Person.Person, Id Merchant.Merchant) -> DCR.CancellationStage -> FlowHandler ListRes
 list _ = withFlowHandlerAPI . DCancellationReason.list

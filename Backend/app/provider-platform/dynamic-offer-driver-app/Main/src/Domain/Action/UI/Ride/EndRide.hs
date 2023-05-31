@@ -84,9 +84,11 @@ data ServiceHandle m = ServiceHandle
     findDriverLoc :: Id DP.Person -> m (Maybe DrLoc.DriverLocation),
     isDistanceCalculationFailed :: Id DP.Person -> m Bool,
     finalDistanceCalculation :: Id DRide.Ride -> Id DP.Person -> LatLong -> m (),
+    getInterpolatedPoints :: Id DP.Person -> m [LatLong],
+    clearInterpolatedPoints :: Id DP.Person -> m (),
     findConfig :: m (Maybe DTConf.TransporterConfig),
     whenWithLocationUpdatesLock :: Id DP.Person -> m () -> m (),
-    getDistanceBetweenPoints :: LatLong -> LatLong -> m Meters
+    getDistanceBetweenPoints :: LatLong -> LatLong -> [LatLong] -> m Meters
   }
 
 buildEndRideHandle :: Id DM.Merchant -> Flow (ServiceHandle Flow)
@@ -105,6 +107,8 @@ buildEndRideHandle merchantId = do
         findDriverLoc = DrLoc.findById,
         isDistanceCalculationFailed = LocUpd.isDistanceCalculationFailed defaultRideInterpolationHandler,
         finalDistanceCalculation = LocUpd.finalDistanceCalculation defaultRideInterpolationHandler,
+        getInterpolatedPoints = LocUpd.getInterpolatedPoints defaultRideInterpolationHandler,
+        clearInterpolatedPoints = LocUpd.clearInterpolatedPoints defaultRideInterpolationHandler,
         findConfig = QTConf.findByMerchantId merchantId,
         whenWithLocationUpdatesLock = LocUpd.whenWithLocationUpdatesLock,
         getDistanceBetweenPoints = RideEndInt.getDistanceBetweenPoints merchantId
@@ -207,7 +211,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
               }
     -- we need to store fareParams only when they changed
     endRideTransaction (cast @DP.Person @DP.Driver driverId) booking.id updRide mbUpdatedFareParams booking.riderId
-
+    clearInterpolatedPoints driverId
     notifyCompleteToBAP booking updRide newFareParams
   return APISuccess.Success
 
@@ -276,7 +280,7 @@ calculateFinalValuesForCorrectDistanceCalculations ::
 calculateFinalValuesForCorrectDistanceCalculations handle booking ride mbMaxDistance pickupDropOutsideOfThreshold = do
   distanceDiff <- getDistanceDiff booking (highPrecMetersToMeters ride.traveledDistance)
   thresholdConfig <- handle.findConfig >>= fromMaybeM (InternalError "TransportConfigNotFound")
-  let maxDistance = fromMaybe ride.traveledDistance mbMaxDistance + thresholdConfig.upwardsRecomputeBuffer
+  let maxDistance = fromMaybe ride.traveledDistance mbMaxDistance + thresholdConfig.actualRideDistanceDiffThreshold
   if not pickupDropOutsideOfThreshold
     then
       if distanceDiff > thresholdConfig.actualRideDistanceDiffThreshold
@@ -296,7 +300,9 @@ calculateFinalValuesForFailedDistanceCalculations handle@ServiceHandle {..} book
   let tripStartPoint = case ride.tripStartPos of
         Nothing -> getCoordinates booking.fromLocation
         Just tripStartPos -> tripStartPos
-  approxTraveledDistance <- getDistanceBetweenPoints tripStartPoint tripEndPoint
+  interpolatedPoints <- getInterpolatedPoints ride.driverId
+  approxTraveledDistance <- getDistanceBetweenPoints tripStartPoint tripEndPoint interpolatedPoints
+  logTagInfo "endRide" $ "approxTraveledDistance: " <> show approxTraveledDistance
   distanceDiff <- getDistanceDiff booking approxTraveledDistance
   thresholdConfig <- findConfig >>= fromMaybeM (InternalError "TransportConfigNotFound")
 

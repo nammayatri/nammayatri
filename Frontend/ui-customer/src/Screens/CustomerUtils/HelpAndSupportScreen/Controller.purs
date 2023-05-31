@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -31,12 +31,13 @@ import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackA
 import Prelude (class Show, pure, bind, discard, show, unit, map, ($), (<>), (==), void)
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
-import Resources.Constants (DecodeAddress(..), decodeAddress)
+import Resources.Constants (DecodeAddress(..), decodeAddress, getFaresList, getKmMeter)
 import Screens (ScreenName(..), getScreen)
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity)
 import Screens.Types (HelpAndSupportScreenState)
 import Services.API (RideBookingRes(..), FareBreakupAPIEntity(..), RideAPIEntity(..), BookingLocationAPIEntity(..), RideBookingAPIDetails(..), RideBookingListRes(..))
 import Services.Config (getSupportNumber)
+import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
 
 instance showAction :: Show Action where
     show _ = ""
@@ -90,11 +91,11 @@ instance loggableAction :: Loggable Action where
 
 
 data Action = BackPressed Boolean
-            | SourceToDestinationActionController SourceToDestination.Action 
+            | SourceToDestinationActionController SourceToDestination.Action
             | GenericHeaderActionController GenericHeader.Action
-            | ContactUs 
-            | FAQs 
-            | ViewRides 
+            | ContactUs
+            | FAQs
+            | ViewRides
             | ReportIssue
             | RideBookingListAPIResponseAction RideBookingListRes String
             | NoRidesActionController ErrorModal.Action
@@ -103,16 +104,16 @@ data Action = BackPressed Boolean
             | AfterRender
             | CallSupport
 
-data ScreenOutput = GoBack 
+data ScreenOutput = GoBack
                   | GoToSupportScreen String
-                  | GoToTripDetails HelpAndSupportScreenState 
+                  | GoToTripDetails HelpAndSupportScreenState
                   | GoToMyRides
                   | GoHome
                   | UpdateState HelpAndSupportScreenState
 
 eval :: Action -> HelpAndSupportScreenState -> Eval Action ScreenOutput HelpAndSupportScreenState
 
-eval (BackPressed flag ) state = if state.props.isCallConfirmation 
+eval (BackPressed flag ) state = if state.props.isCallConfirmation
   then continue state{props{isCallConfirmation = false}}
   else exit GoBack
 
@@ -126,15 +127,15 @@ eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick )) state = c
 
 eval ViewRides state = exit $ GoToMyRides
 
-eval (RideBookingListAPIResponseAction rideList status) state = do 
-  case status of 
-      "success" -> do 
+eval (RideBookingListAPIResponseAction rideList status) state = do
+  case status of
+      "success" -> do
                     if (null (rideList^._list)) then continue state {data{isNull = true}, props{apiFailure = false}}
-                      else do 
+                      else do
                         let list = myRideListTransform (rideList ^._list)
                         case (null (list)) of
                           true -> continue state {data{isNull = true}, props{apiFailure=false}}
-                          _    -> do  
+                          _    -> do
                                     let newState = (myRideListTransform (rideList ^._list))!!0
                                     updateAndExit (fromMaybe dummyState newState) (UpdateState (fromMaybe dummyState newState))
       "failure"   -> continue state{props{apiFailure = true}}
@@ -153,29 +154,35 @@ eval (NoRidesActionController (ErrorModal.PrimaryButtonActionController PrimaryB
 eval _ state = continue state
 
 myRideListTransform :: Array RideBookingRes -> Array HelpAndSupportScreenState
-myRideListTransform listRes = filter (\item -> (item.data.status == "COMPLETED")) (map(\(RideBookingRes ride) -> {
-    data:{
-        date : (convertUTCtoISC (ride.createdAt) "DD/MM/YYYY"),
-        time : (convertUTCtoISC (fromMaybe (ride.createdAt) ride.rideStartTime ) "h:mm A"),
-        source: decodeAddress (Booking ride.fromLocation),
-        destination: (decodeAddress (Booking (ride.bookingDetails ^._contents^._toLocation))),
-        rating: (fromMaybe 0 ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _rideRating)),
-        driverName :((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _driverName) ,
-        totalAmount : ("₹ " <> show (fromMaybe (0) ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _computedPrice))),
-        status : (ride.status),
-        isNull : false,
-        rideStartTime : (convertUTCtoISC (fromMaybe "" ride.rideStartTime )"h:mm A"),
-        rideEndTime : (convertUTCtoISC (fromMaybe "" ride.rideEndTime )"h:mm A"),
-        vehicleNumber : ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._vehicleNumber),
-        rideId : ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._id),
-        tripId : ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._shortRideId),
-        bookingId : ride.id
-        },
-    props : {
-      apiFailure : false
-    , isCallConfirmation : false
-    }
-    }) listRes)
+myRideListTransform listRes = filter (\item -> (item.data.status == "COMPLETED")) (map(\(RideBookingRes ride) -> 
+    let 
+    (RideAPIEntity rideDetails) = (fromMaybe dummyRideAPIEntity (ride.rideList !!0))
+    baseDistanceVal = (getKmMeter (fromMaybe 0 (rideDetails.chargeableRideDistance)))
+    updatedFareList = getFaresList ride.fareBreakup baseDistanceVal
+      in  {
+        data:{
+          date : (convertUTCtoISC (ride.createdAt) "DD/MM/YYYY"),
+          time : (convertUTCtoISC (fromMaybe (ride.createdAt) ride.rideStartTime ) "h:mm A"),
+          source: decodeAddress (Booking ride.fromLocation),
+          destination: (decodeAddress (Booking (ride.bookingDetails ^._contents^._toLocation))),
+          rating: (fromMaybe 0 ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _rideRating)),
+          driverName :((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _driverName) ,
+          totalAmount : ("₹ " <> show (fromMaybe (0) ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _computedPrice))),
+          status : (ride.status),
+          isNull : false,
+          rideStartTime : (convertUTCtoISC (fromMaybe "" ride.rideStartTime )"h:mm A"),
+          rideEndTime : (convertUTCtoISC (fromMaybe "" ride.rideEndTime )"h:mm A"),
+          vehicleNumber : ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._vehicleNumber),
+          rideId : ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._id),
+          tripId : ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._shortRideId),
+          bookingId : ride.id,
+          faresList :  getFaresList ride.fareBreakup baseDistanceVal
+          },
+      props : {
+        apiFailure : false
+      , isCallConfirmation : false
+      }
+      }) listRes)
 
 dummyState :: HelpAndSupportScreenState
 dummyState = {
@@ -194,7 +201,8 @@ dummyState = {
     vehicleNumber:"",
     rideId : "",
     tripId : "",
-    bookingId : ""
+    bookingId : "",
+    faresList : []
   },
   props:{
     apiFailure : false

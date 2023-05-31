@@ -16,6 +16,7 @@ module Storage.Queries.BookingCancellationReason where
 
 import Domain.Types.Booking
 import Domain.Types.BookingCancellationReason
+import Domain.Types.Person
 import Domain.Types.Ride
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
@@ -24,6 +25,22 @@ import Storage.Tabular.BookingCancellationReason
 
 create :: BookingCancellationReason -> SqlDB ()
 create = Esq.create
+
+findAllCancelledByDriverId ::
+  Transactionable m =>
+  Id Person ->
+  m Int
+findAllCancelledByDriverId driverId = do
+  mkCount <$> do
+    Esq.findAll $ do
+      rideBookingCancellationReason <- from $ table @BookingCancellationReasonT
+      where_ $
+        rideBookingCancellationReason ^. BookingCancellationReasonDriverId ==. val (Just $ toKey driverId)
+          &&. rideBookingCancellationReason ^. BookingCancellationReasonSource ==. val ByDriver
+      return (countRows :: SqlExpr (Esq.Value Int))
+  where
+    mkCount [counter] = counter
+    mkCount _ = 0
 
 findByRideBookingId ::
   Transactionable m =>

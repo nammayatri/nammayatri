@@ -14,7 +14,7 @@ let hcfg =
 
 let hccfg =
       { connectHost = "localhost"
-      , connectPort = 30006
+      , connectPort = 30001
       , connectAuth = None Text
       , connectDatabase = +0
       , connectMaxConnections = +50
@@ -29,7 +29,7 @@ in  { port = +8091
     , hedisCfg = hcfg
     , hedisClusterCfg = hccfg
     , hedisMigrationStage = True
-    , cutOffHedisCluster = True
+    , cutOffHedisCluster = False
     , statusWaitTimeSec = +25
     , callbackWaitTimeMilliSec = +500
     , loggerConfig =

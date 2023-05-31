@@ -50,12 +50,12 @@ homeScreen = do
     DriverAvailabilityStatus state status -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → state)
       App.BackT $ App.BackPoint <$> pure (DRIVER_AVAILABILITY_STATUS status)
-    StartRide  state -> do
+    StartRide state -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → state)
       (Location startRideCurrentLat startRideCurrentLong) <- (lift $ lift $ doAff $ makeAff \cb -> getCurrentPosition (cb <<< Right) Location $> nonCanceler)
       _ <- pure $ printLog "lat handler" startRideCurrentLat
       _ <- pure $ printLog "lon handler" startRideCurrentLong
-      App.BackT $ App.NoBack <$> (pure $ GO_TO_START_RIDE {id: state.data.activeRide.id, otp : state.props.rideOtp , lat : startRideCurrentLat, lon : startRideCurrentLong})
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_START_RIDE {id: state.data.activeRide.id, otp : state.props.rideOtp , lat : startRideCurrentLat, lon : startRideCurrentLong} state)
     StartZoneRide  state -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → state)
       (Location startZoneRideCurrentLat startZoneRideCurrentLong) <- (lift $ lift $ doAff $ makeAff \cb -> getCurrentPosition (cb <<< Right) Location $> nonCanceler)

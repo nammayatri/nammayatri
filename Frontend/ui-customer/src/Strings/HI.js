@@ -430,8 +430,8 @@ const hindiStrings = {
   "YES_CANCEL_SEARCH": "हाँ, खोज रद्द करें",
   "TRY_LOOKING_FOR_RIDES_AGAIN": "ऐसा लगता है कि यह बहुत ही व्यस्त दिन है। आप फिर से राइड खोजने की कोशिश कर सकते हैं",
   "NO_TIP": "कोई टिप नहीं",
-  "CUSTOMER_SELECTED_FARE": "ग्राहक टिप*",
-  "CUSTOMER_TIP_DESCRIPTION": "*राइड मिलने की संभावना बढ़ाने के लिए ग्राहक द्वारा जोड़ी गई अतिरिक्त राशि।",
+  "CUSTOMER_SELECTED_FARE": "ग्राहक टिप#",
+  "CUSTOMER_TIP_DESCRIPTION": "#राइड मिलने की संभावना बढ़ाने के लिए ग्राहक द्वारा जोड़ी गई अतिरिक्त राशि।",
   "PLACE_CALL": "फोन करें",
   "DIRECT_CALL": "प्रत्यक्ष कॉल",
   "ANONYMOUS_CALL": "अनाम कॉल",
@@ -448,5 +448,6 @@ const hindiStrings = {
   "YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS": "आप नीचे दिए गए किसी भी कारण से अपडेटेड अंतिम किराया देख सकते हैं:",
   "REASON_CHANGE_IN_ROUTE_A": "1.मार्ग में परिवर्तन: ",
   "REASON_CHANGE_IN_ROUTE_B": "मार्ग में बदलाव के कारण कुल किराए में बदलाव हो सकता है",
-  "NAVIGATE_TO_PICKUP" : "पिकअप पर नेविगेट करें"
+  "NAVIGATE_TO_PICKUP" : "पिकअप पर नेविगेट करें",
+  "REQUEST_RECEIVED_WE_WILL_CALL_YOU_BACK_SOON" : "अनुरोध प्राप्त हुआ है। हम जल्द ही आपसे संपर्क करेंगे"
 }

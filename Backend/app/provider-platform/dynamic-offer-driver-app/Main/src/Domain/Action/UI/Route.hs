@@ -21,27 +21,22 @@ module Domain.Action.UI.Route
   )
 where
 
+import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as DP
-import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig (CacheFlow)
-import qualified Storage.Queries.Person as QP
-import Tools.Error
 import qualified Tools.Maps as Maps
 import Tools.Metrics (CoreMetrics)
 
-getRoutes :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DP.Person -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
-getRoutes personId req = do
-  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  Maps.getRoutes person.merchantId req
+getRoutes :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => (Id DP.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
+getRoutes (_, merchantId) req = do
+  Maps.getRoutes merchantId req
 
-getPickupRoutes :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DP.Person -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
-getPickupRoutes personId req = do
-  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  Maps.getPickupRoutes person.merchantId req
+getPickupRoutes :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => (Id DP.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
+getPickupRoutes (_, merchantId) req = do
+  Maps.getPickupRoutes merchantId req
 
-getTripRoutes :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DP.Person -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
-getTripRoutes personId req = do
-  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  Maps.getTripRoutes person.merchantId req
+getTripRoutes :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => (Id DP.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
+getTripRoutes (_, merchantId) req = do
+  Maps.getTripRoutes merchantId req

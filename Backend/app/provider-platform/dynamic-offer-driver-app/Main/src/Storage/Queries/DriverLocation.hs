@@ -17,6 +17,7 @@
 module Storage.Queries.DriverLocation where
 
 import Domain.Types.DriverLocation
+import Domain.Types.Merchant
 import Domain.Types.Person
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
@@ -25,8 +26,8 @@ import Kernel.Types.Common (MonadTime (getCurrentTime))
 import Kernel.Types.Id
 import Storage.Tabular.DriverLocation
 
-create :: Id Person -> LatLong -> UTCTime -> SqlDB ()
-create drLocationId latLong updateTime = do
+create :: Id Person -> LatLong -> UTCTime -> Id Merchant -> SqlDB ()
+create drLocationId latLong updateTime merchantId = do
   -- Tricky query to be able to insert meaningful Point
   now <- getCurrentTime
   Esq.insertSelect $
@@ -39,6 +40,7 @@ create drLocationId latLong updateTime = do
         <#> val updateTime
         <#> val now
         <#> val now
+        <#> val (toKey merchantId)
 
 findById ::
   Transactionable m =>
@@ -46,8 +48,8 @@ findById ::
   m (Maybe DriverLocation)
 findById = Esq.findById
 
-upsertGpsCoord :: Id Person -> LatLong -> UTCTime -> SqlDB DriverLocation
-upsertGpsCoord drLocationId latLong calculationTime = do
+upsertGpsCoord :: Id Person -> LatLong -> UTCTime -> Id Merchant -> SqlDB DriverLocation
+upsertGpsCoord drLocationId latLong calculationTime merchantId = do
   now <- getCurrentTime
   let locationObject =
         DriverLocation
@@ -56,7 +58,8 @@ upsertGpsCoord drLocationId latLong calculationTime = do
             lon = latLong.lon,
             coordinatesCalculatedAt = calculationTime,
             createdAt = now,
-            updatedAt = now
+            updatedAt = now,
+            merchantId
           }
   Esq.update $ \tbl -> do
     set

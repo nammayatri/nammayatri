@@ -30,7 +30,8 @@ data AppCfg = AppCfg
     loggerConfig :: LoggerConfig,
     graceTerminationPeriod :: Seconds,
     mockDataPath :: FilePath,
-    googleCfg :: Maybe GoogleCfgUnencrypted
+    googleCfg :: Maybe GoogleCfgUnencrypted,
+    snapToRoadIdentityMode :: Bool
   }
   deriving (Generic, FromDhall)
 
@@ -43,7 +44,8 @@ data AppEnv = AppEnv
     coreMetrics :: CoreMetricsContainer,
     mockDataPath :: FilePath,
     googleCfg :: Maybe GoogleCfgUnencrypted,
-    version :: DeploymentVersion
+    version :: DeploymentVersion,
+    snapToRoadIdentityMode :: Bool
   }
   deriving (Generic)
 

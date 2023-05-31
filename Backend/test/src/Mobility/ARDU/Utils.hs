@@ -20,7 +20,6 @@ import qualified "rider-app" API.UI.Search as AppSearch
 import qualified API.UI.Select as AppSelect
 import Common
 import qualified "rider-app" Domain.Action.UI.Cancel as AppCancel
-import qualified "rider-app" Domain.Action.UI.Select as DSelect
 import qualified "dynamic-offer-driver-app" Domain.Types.Booking as TRB
 import qualified "rider-app" Domain.Types.Booking as AppRB
 import qualified "dynamic-offer-driver-app" Domain.Types.CancellationReason as SCR
@@ -33,9 +32,9 @@ import "dynamic-offer-driver-app" Domain.Types.Person as TPerson
 import qualified "rider-app" Domain.Types.Quote as AppQuote
 import qualified "dynamic-offer-driver-app" Domain.Types.Ride as TRide
 import qualified "rider-app" Domain.Types.Ride as BRide
-import qualified "dynamic-offer-driver-app" Domain.Types.SearchRequest as ArduSReq
 import qualified "rider-app" Domain.Types.SearchRequest as AppSearchReq
 import Domain.Types.SearchRequestForDriver as SearchReqInfo
+import qualified "dynamic-offer-driver-app" Domain.Types.SearchTry as ArduSStep
 import HSpec
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Types
@@ -58,7 +57,7 @@ import "dynamic-offer-driver-app" Storage.Queries.DriverLocation
 import qualified Storage.Queries.DriverQuote as TDQ
 import qualified "dynamic-offer-driver-app" Storage.Queries.Ride as TQRide
 import qualified "rider-app" Storage.Queries.Ride as BQRide
-import qualified "dynamic-offer-driver-app" Storage.Queries.SearchRequest as QSReq
+import qualified "dynamic-offer-driver-app" Storage.Queries.SearchTry as QST
 import Utils
 
 -- database calls
@@ -144,7 +143,7 @@ resetDriver driver = runARDUFlow "" $ do
       TQRide.updateStatus ride.id TRide.CANCELLED
       TQRB.updateStatus booking.id TRB.CANCELLED
     void . forM activeQuotes $ \activeQuote ->
-      TDQ.setInactiveByRequestId activeQuote.searchRequestId
+      TDQ.setInactiveBySTId activeQuote.searchTryId
     QTDrInfo.updateActivity (cast driver.driverId) False (Just TDrInfo.OFFLINE)
     QTDrInfo.updateOnRide (cast driver.driverId) False
 
@@ -164,32 +163,38 @@ getOnSearchTaxiEstimatesByTransporterName appToken searchId transporterName =
     $ callBAP (getQuotes searchId appToken)
       <&> (.estimates)
 
-select :: Text -> Id AppEstimate.Estimate -> DSelect.DEstimateSelectReq -> ClientsM ()
-select bapToken quoteId req = void $ callBAP $ selectQuote2 bapToken quoteId req
+select :: Text -> Id AppEstimate.Estimate -> ClientsM ()
+select bapToken quoteId =
+  void . callBAP . selectQuote2 bapToken quoteId $
+    AppSelect.DSelectReq
+      { customerExtraFee = Just 10,
+        autoAssignEnabled = False,
+        autoAssignEnabledV2 = Nothing
+      }
 
 getNearbySearchRequestForDriver :: DriverTestData -> Id AppEstimate.Estimate -> ClientsM (NonEmpty SearchRequestForDriverAPIEntity)
 getNearbySearchRequestForDriver driver estimateId =
   pollFilteredMList
     "get at least one nearby search request for driver"
     ( \p -> do
-        mbSReq <- liftIO $ runARDUFlow "" $ QSReq.findById p.searchRequestId
+        mbSReq <- liftIO $ runARDUFlow "" $ QST.findById p.searchTryId
         pure $ fmap (.messageId) mbSReq == Just estimateId.getId
     )
     ((.searchRequestsForDriver) <$> callBPP (API.ui.driver.getNearbySearchRequests driver.token))
 
-respondQuote :: DriverTestData -> Money -> Id ArduSReq.SearchRequest -> SearchReqInfo.SearchRequestForDriverResponse -> ClientsM ()
+respondQuote :: DriverTestData -> Money -> Id ArduSStep.SearchTry -> SearchReqInfo.SearchRequestForDriverResponse -> ClientsM ()
 respondQuote driver fare bppSearchRequestId response =
-  void $ callBPP $ API.ui.driver.respondQuote driver.token $ TDriver.DriverRespondReq (Just fare) bppSearchRequestId response
+  void $ callBPP $ API.ui.driver.respondQuote driver.token $ TDriver.DriverRespondReq (Just fare) Nothing (Just bppSearchRequestId) response
 
-offerQuote :: DriverTestData -> Money -> Id ArduSReq.SearchRequest -> ClientsM ()
+offerQuote :: DriverTestData -> Money -> Id ArduSStep.SearchTry -> ClientsM ()
 offerQuote driver fare bppSearchRequestId =
   void $ callBPP $ API.ui.driver.offerQuote driver.token $ TDriver.DriverOfferReq (Just fare) bppSearchRequestId
 
-respondQuoteEither :: DriverTestData -> Money -> Id ArduSReq.SearchRequest -> SearchReqInfo.SearchRequestForDriverResponse -> ClientsM (Either ClientError APISuccess)
+respondQuoteEither :: DriverTestData -> Money -> Id ArduSStep.SearchTry -> SearchReqInfo.SearchRequestForDriverResponse -> ClientsM (Either ClientError APISuccess)
 respondQuoteEither driver fare bppSearchRequestId response =
-  callBppEither $ API.ui.driver.respondQuote driver.token $ TDriver.DriverRespondReq (Just fare) bppSearchRequestId response
+  callBppEither $ API.ui.driver.respondQuote driver.token $ TDriver.DriverRespondReq (Just fare) Nothing (Just bppSearchRequestId) response
 
-offerQuoteEither :: DriverTestData -> Money -> Id ArduSReq.SearchRequest -> ClientsM (Either ClientError APISuccess)
+offerQuoteEither :: DriverTestData -> Money -> Id ArduSStep.SearchTry -> ClientsM (Either ClientError APISuccess)
 offerQuoteEither driver fare bppSearchRequestId =
   callBppEither $ API.ui.driver.offerQuote driver.token $ TDriver.DriverOfferReq (Just fare) bppSearchRequestId
 
@@ -318,7 +323,7 @@ search'Select appToken searchReq' = do
   appSearchId <- search appToken searchReq'
   (bapQuoteAPIEntity :| _) <- getOnSearchTaxiEstimatesByTransporterName appToken appSearchId bapTransporterName
   let quoteId = bapQuoteAPIEntity.id
-  select appToken quoteId DSelect.DEstimateSelectReq {customerExtraFee = Just 15, autoAssignEnabled = False, autoAssignEnabledV2 = Nothing}
+  select appToken quoteId
   pure quoteId
 
 data SearchConfirmResult = SearchConfirmResult
@@ -333,7 +338,7 @@ search'Confirm appToken driver searchReq' = do
 
   (searchReqForDriver :| _) <- getNearbySearchRequestForDriver driver estimateId
 
-  offerQuote driver defaultAllowedDriverFee searchReqForDriver.searchRequestId
+  offerQuote driver defaultAllowedDriverFee searchReqForDriver.searchTryId
 
   (quoteAPIEntity :| _) <- getQuotesByEstimateId appToken estimateId
   let quoteId = quoteAPIEntity.id

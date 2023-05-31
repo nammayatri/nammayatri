@@ -12,14 +12,11 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Action.Auth (auth) where
+module Storage.Queries.CallbackRequest where
 
-import EulerHS.Prelude
-import Kernel.InternalAPI.Auth.API
-import Kernel.Storage.Hedis (HedisFlow)
-import Kernel.Utils.Common
-import Tools.Auth
+import Domain.Types.CallbackRequest
+import Kernel.Storage.Esqueleto as Esq
+import Storage.Tabular.CallbackRequest ()
 
-auth :: (EsqDBFlow m r, HedisFlow m r, HasField "authTokenCacheExpiry" r Seconds) => Token -> m PersonId
-auth token = do
-  verifyPerson token <&> (.getId)
+create :: CallbackRequest -> SqlDB ()
+create = Esq.create

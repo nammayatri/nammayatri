@@ -18,16 +18,14 @@ import Domain.Types.SearchRequest as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
-import Kernel.Utils.Common
 import Storage.Tabular.SearchRequest
 import Storage.Tabular.SearchRequest.SearchReqLocation
 
 create :: SearchRequest -> SqlDB ()
-create dsReq = Esq.runTransaction $
-  withFullEntity dsReq $ \(sReq, fromLoc, toLoc) -> do
-    Esq.create' fromLoc
-    Esq.create' toLoc
-    Esq.create' sReq
+create dsReq = withFullEntity dsReq $ \(sReq, fromLoc, toLoc) -> do
+  Esq.create' fromLoc
+  Esq.create' toLoc
+  Esq.create' sReq
 
 findById :: Transactionable m => Id SearchRequest -> m (Maybe SearchRequest)
 findById searchRequestId = buildDType $
@@ -42,50 +40,13 @@ findById searchRequestId = buildDType $
       where_ $ sReq ^. SearchRequestTId ==. val (toKey searchRequestId)
       pure (sReq, sFromLoc, sToLoc)
 
-updateStatus ::
-  Id SearchRequest ->
-  SearchRequestStatus ->
-  SqlDB ()
-updateStatus searchId status_ = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ SearchRequestUpdatedAt =. val now,
-        SearchRequestStatus =. val status_
-      ]
-    where_ $ tbl ^. SearchRequestTId ==. val (toKey searchId)
-
-getRequestIdfromTransactionId ::
-  (Transactionable m) =>
-  Id SearchRequest ->
-  m (Maybe (Id SearchRequest))
-getRequestIdfromTransactionId tId = do
-  findOne $ do
-    searchT <- from $ table @SearchRequestT
-    where_ $
-      searchT ^. SearchRequestTransactionId ==. val (getId tId)
-    return $ searchT ^. SearchRequestTId
-
-getSearchRequestStatusOrValidTill ::
-  (Transactionable m) =>
-  Id SearchRequest ->
-  m (Maybe (UTCTime, SearchRequestStatus))
-getSearchRequestStatusOrValidTill searchRequestId = do
-  findOne $ do
-    searchT <- from $ table @SearchRequestT
-    where_ $
-      searchT ^. SearchRequestTId ==. val (toKey searchRequestId)
-    return (searchT ^. SearchRequestValidTill, searchT ^. SearchRequestStatus)
-
-findActiveByTransactionId ::
+findByTransactionId ::
   (Transactionable m) =>
   Text ->
   m (Maybe (Id SearchRequest))
-findActiveByTransactionId transactionId = do
+findByTransactionId transactionId = do
   findOne $ do
-    searchT <- from $ table @SearchRequestT
+    searchReqT <- from $ table @SearchRequestT
     where_ $
-      searchT ^. SearchRequestTransactionId ==. val transactionId
-        &&. searchT ^. SearchRequestStatus ==. val Domain.ACTIVE
-    return $ searchT ^. SearchRequestTId
+      searchReqT ^. SearchRequestTransactionId ==. val transactionId
+    return $ searchReqT ^. SearchRequestTId

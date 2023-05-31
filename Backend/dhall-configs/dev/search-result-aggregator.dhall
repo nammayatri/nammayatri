@@ -20,7 +20,7 @@ let kafkaConsumerCfgs =
 
 let rccfg =
       { connectHost = "localhost"
-      , connectPort = 30006
+      , connectPort = 30001
       , connectAuth = None Text
       , connectDatabase = +0
       , connectMaxConnections = +50
@@ -33,7 +33,7 @@ in  { port = +8025
     , hedisCfg = hcfg
     , hedisClusterCfg = rccfg
     , hedisMigrationStage = True
-    , cutOffHedisCluster = True
+    , cutOffHedisCluster = False
     , kafkaConsumerCfgs
     , loggerConfig =
             common.loggerConfig

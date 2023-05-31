@@ -17,6 +17,12 @@ module Domain.Types.FarePolicy.Common where
 import Kernel.Prelude
 import Kernel.Types.Common
 
+data WaitingChargeInfo = WaitingChargeInfo
+  { freeWaitingTime :: Minutes,
+    waitingCharge :: WaitingCharge
+  }
+  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
+
 data WaitingCharge = PerMinuteWaitingCharge HighPrecMoney | ConstantWaitingCharge Money
   deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
 

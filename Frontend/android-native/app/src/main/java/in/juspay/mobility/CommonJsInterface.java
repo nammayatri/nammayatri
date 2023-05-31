@@ -333,6 +333,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         super.setActivity(activity);
         this.activity = activity;
         fetchLatLonAndUpdate();
+        sharedPref =  context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
     }
 
     @Override
@@ -344,6 +345,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         this.juspayServices = juspayServices;
         client = LocationServices.getFusedLocationProviderClient(context);
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
+        sharedPref =  context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         fetchLatLonAndUpdate();
     }
 
@@ -1463,11 +1465,13 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     @JavascriptInterface
     public void openNavigation(double slat, double slong, double dlat, double dlong) {
         try {
+            if(sharedPref != null) sharedPref.edit().putString("MAPS_OPENED","true").apply();
             Uri gmmIntentUri = Uri.parse("google.navigation:q=" + String.valueOf(dlat) + "," + String.valueOf(dlong));
             Intent mapIntent = new Intent(Intent.ACTION_VIEW, gmmIntentUri);
             mapIntent.setPackage("com.google.android.apps.maps");
             activity.startActivity(mapIntent);
         } catch (Exception e) {
+            setKeysInSharedPrefs("MAPS_OPENED","null");
             Log.e(LOG_TAG, "Can't open google maps", e);
         }
     }
@@ -3113,13 +3117,14 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                     sendIntent.putExtra(Intent.EXTRA_TEXT, message);
                     sendIntent.putExtra(Intent.EXTRA_TITLE, title);
                     Bitmap thumbnailBitmap = BitmapFactory.decodeResource(context.getResources(), R.drawable.ic_launcher);
-                    if (thumbnailBitmap != null) {
-                        Uri thumbnailUri = getImageUri(context, thumbnailBitmap);
-                        ClipData clipData = ClipData.newUri(context.getContentResolver(), "Thumbnail Image", thumbnailUri);
-                        sendIntent.setClipData(clipData);
-                    }
-                    sendIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                     sendIntent.setType("text/plain");
+                   if (thumbnailBitmap != null &&  Build.VERSION.SDK_INT > 28) {
+                       Uri thumbnailUri = getImageUri(context, thumbnailBitmap);
+                       ClipData clipData = ClipData.newUri(context.getContentResolver(), "Thumbnail Image", thumbnailUri);
+                       sendIntent.setClipData(clipData);
+                       sendIntent.setType("image/*");
+                   }
+                    sendIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                     Intent shareIntent = Intent.createChooser(sendIntent, null);
                     shareIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                     context.startActivity(shareIntent);
@@ -3418,15 +3423,8 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                     }
                     JSONObject sourceCoordinates = (JSONObject) coordinates.get(0);
                     JSONObject destCoordinates = (JSONObject) coordinates.get(coordinates.length()-1);
-                    double sourceLong;
-                    double sourceLat;
-                    if (type == "CUSTOMER_LOCATION_UPDATE"){
-                        sourceLat = lastLatitudeValue;
-                        sourceLong = lastLongitudeValue;
-                    }else {
-                        sourceLat = sourceCoordinates.getDouble("lat");
-                        sourceLong = sourceCoordinates.getDouble("lng");
-                    }
+                    double sourceLong = sourceCoordinates.getDouble("lat");
+                    double sourceLat = sourceCoordinates.getDouble("lng");
                     double destLat = destCoordinates.getDouble("lat");
                     double destLong = destCoordinates.getDouble("lng");
                     if (sourceLat != 0.0 && sourceLong != 0.0 && destLat != 0.0 && destLong != 0.0) {
@@ -4050,8 +4048,8 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                 String value = fare.getString("price");
                 String fareTypes = fare.getString("title");
                 TextView textViewText = new TextView(context);
-                textViewText.setTextSize(5);
-                textViewText.setTextColor(Color.parseColor("#454545"));
+                textViewText.setTextSize(6);
+                textViewText.setTextColor(Color.parseColor("#6D7280"));
                 textViewText.setPadding(0, 0, 0, 10);
                 Typeface typeface = Typeface.createFromAsset(context.getAssets(), "fonts/PlusJakartaSans-Regular.ttf");
                 textViewText.setTypeface(typeface);
@@ -4060,7 +4058,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                 linearLayout.addView(linearLayoutChild);
 
                 TextView textViewPrice = new TextView(context);
-                textViewPrice.setTextSize(5);
+                textViewPrice.setTextSize(6);
                 textViewPrice.setPadding(0, 0, 0, 10);
                 Typeface font = Typeface.createFromAsset(context.getAssets(), "fonts/PlusJakartaSans-Regular.ttf");
                 textViewPrice.setTypeface(font);

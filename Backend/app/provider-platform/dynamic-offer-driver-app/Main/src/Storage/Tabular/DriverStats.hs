@@ -36,6 +36,8 @@ mkPersist
       idleSince UTCTime
       totalRides Int
       totalDistance Meters
+      ridesCancelled Int Maybe
+      totalRidesAssigned Int Maybe
       Primary driverId
       deriving Generic
     |]

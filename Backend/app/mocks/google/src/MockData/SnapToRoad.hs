@@ -20,6 +20,7 @@ import qualified Domain.Types.MockPlace as DPlace
 import qualified Domain.Types.MockRoute as DRoute
 import Environment
 import Kernel.External.Maps.Google.MapsClient
+import Kernel.External.Maps.Google.RoadsClient as Roads
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Utils.Common
@@ -51,3 +52,25 @@ saveNewResponse route response oldRoutes = do
   responsePath <- getResponsePath routeId
   liftIO $ A.encodeFile requestsPath (oldRoutes <> [mockRoute])
   liftIO $ A.encodeFile responsePath response
+
+mkIdenticalResponse :: [LocationS] -> DPlace.SnapToRoadResponse
+mkIdenticalResponse route =
+  Roads.SnapToRoadResponse
+    { snappedPoints = mkIdenticalPoint <$> route,
+      warningMessage = Nothing
+    }
+
+mkIdenticalPoint :: LocationS -> DPlace.SnappedPoint
+mkIdenticalPoint point =
+  Roads.SnappedPoint
+    { location = mkSPLocation point,
+      originalIndex = Nothing,
+      placeId = "placeId"
+    }
+
+mkSPLocation :: LocationS -> SPLocation
+mkSPLocation location =
+  SPLocation
+    { latitude = location.lat,
+      longitude = location.lng
+    }

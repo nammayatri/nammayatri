@@ -12,9 +12,26 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.Select.StopInfo
-  ( module Reexport,
-  )
-where
+module Domain.Types.CallbackRequest where
 
-import Beckn.Types.Core.Taxi.Search.StopInfo as Reexport
+import qualified Domain.Types.Merchant as DM
+import Kernel.External.Encryption
+import Kernel.Prelude
+import Kernel.Types.Id
+
+data CallbackRequestE e = CallbackRequest
+  { id :: Id CallbackRequest,
+    merchantId :: Id DM.Merchant,
+    customerName :: Maybe Text,
+    customerPhone :: EncryptedHashedField e Text,
+    customerMobileCountryCode :: Text,
+    status :: CallbackRequestStatus,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
+  }
+  deriving (Generic)
+
+type CallbackRequest = CallbackRequestE 'AsEncrypted
+
+data CallbackRequestStatus = PENDING | RESOLVED | CLOSED
+  deriving (Show, Read)

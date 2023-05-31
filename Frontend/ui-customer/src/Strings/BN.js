@@ -178,7 +178,7 @@ const bengaliStrings = {
   "BY_CASH": "নগদে",
   "ONLINE_": "অনলাইন",
   "USER": "ব্যবহারকারী",
-  "EMAIL_ALREADY_EXISTS": "ইমেল আপডেট করতে ব্যর্থ। ই - মেইল ​​টি টি আগে থেকেই আছে আছে আছে",
+  "EMAIL_ALREADY_EXISTS": "ইমেল আপডেট করতে ব্যর্থ। ই - মেইল   টি টি আগে থেকেই আছে আছে আছে",
   "IN": "ভিতরে",
   "VERIFYING_OTP": "ওটিপি যাচাই করা হচ্ছে",
   "TRACK_LIVE_LOCATION_USING": "ব্যবহার করে লাইভ অবস্থান ট্র্যাক করুন",
@@ -385,7 +385,6 @@ const bengaliStrings = {
   "SERVICE_CHARGES" : "সেবা মূল্য",
   "CONFIRM_AND_BOOK" : "নিশ্চিত করুন এবং বুক করুন",
   "PEOPLE" : "মানুষ",
-
   "CANCEL_ONGOING_SEARCH" : "আপনি কি নিশ্চিত যে আপনি চলমান অনুসন্ধান বাতিল করে চালিয়ে যেতে চান?",
   "SEARCH_AGAIN_WITH_A_TIP" : "আবার একটি টিপ দিয়ে অনুসন্ধান করবেন?",
   "TRY_AGAIN_WITH_A_TIP" : "একটি টিপ দিয়ে আবার চেষ্টা করুন?",
@@ -395,7 +394,7 @@ const bengaliStrings = {
   "TRY_AGAIN_WITH" : "আবার চেষ্টা করুন",
   "SEARCH_AGAIN_WITH" : "সাথে আবার অনুসন্ধান করুন",
   "TIP" : "টিপ",
-  "CUSTOMER_SELECTED_FARE" : "গ্রাহক টিপ*",
+  "CUSTOMER_SELECTED_FARE" : "গ্রাহক টিপ#",
   "START_YOUR_CHAT_USING_THESE_QUICK_CHAT_SUGGESTIONS" : "এই দ্রুত চ্যাট পরামর্শগুলি ব্যবহার করে আপনার চ্যাট শুরু করুন" ,
   "MESSAGE" : "বার্তা",
   "START_YOUR_CHAT_WITH_THE_DRIVER" : "ড্রাইভারের সাথে আপনার চ্যাট শুরু করুন",
@@ -428,7 +427,7 @@ const bengaliStrings = {
   "YES_CANCEL_SEARCH" : "হ্যাঁ, অনুসন্ধান বাতিল করুন",
   "TRY_LOOKING_FOR_RIDES_AGAIN" : "এটি খুব ব্যস্ত দিন বলে মনে হচ্ছে। আপনি আবার রাইড খুঁজছেন চেষ্টা করতে পারেন",
   "NO_TIP" : "কোন টিপ নেই",
-  "CUSTOMER_TIP_DESCRIPTION" : "*যাত্রা পাওয়ার সম্ভাবনা বাড়ানোর জন্য গ্রাহক কর্তৃক অতিরিক্ত পরিমাণ যুক্ত করা হয়েছে।",
+  "CUSTOMER_TIP_DESCRIPTION" : "#যাত্রা পাওয়ার সম্ভাবনা বাড়ানোর জন্য গ্রাহক কর্তৃক অতিরিক্ত পরিমাণ যুক্ত করা হয়েছে।",
   "PLACE_CALL" : "একটি কল করুন",
   "REQUEST_CALLBACK" : "কলব্যাকের অনুরোধ করুন",
   "DIRECT_CALL" : "সরাসরি কল",
@@ -437,5 +436,6 @@ const bengaliStrings = {
   "YOUR_NUMBER_WILL_BE_VISIBLE_TO_THE_DRIVER_USE_IF_NOT_CALLING_FROM_REGISTERED_NUMBER" : "আপনার নম্বরটি ড্রাইভারের কাছে দৃশ্যমান হবে। নিবন্ধিত নম্বর থেকে কল না করলে ব্যবহার করুন",
   "CALL_DRIVER_USING" : "ব্যবহার করে ড্রাইভারকে কল করুন:",
   "WAS_YOUR_CALL_SUCCESSFUL" : "আপনার কল সফল ছিল" ,
-  "NAVIGATE_TO_PICKUP" : "পিকআপে নেভিগেট করুন"
+  "NAVIGATE_TO_PICKUP" : "পিকআপে নেভিগেট করুন",
+  "REQUEST_RECEIVED_WE_WILL_CALL_YOU_BACK_SOON" : "অনুরোধ পেয়েছি. আমরা তোমার সাথে শীঘ্রই যোগাযোগ করবো"
 }

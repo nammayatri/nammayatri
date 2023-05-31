@@ -24,6 +24,8 @@ import Kernel.Prelude
 
 type SnapToRoadResponse = Roads.SnapToRoadResponse' Roads.SPLocation
 
+type SnappedPoint = Roads.SnappedPoint' Roads.SPLocation
+
 newtype PlaceId = PlaceId Int deriving newtype (Eq, Ord, Num)
 
 type PlaceName = Text

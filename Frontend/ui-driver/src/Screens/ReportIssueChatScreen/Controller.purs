@@ -170,7 +170,6 @@ eval AddImage state =
                           , data  { addImagesState { images = state.data.addedImages, stateChanged = false } } } [do
       _ <- pure $ clearFocus (getNewIDWithTag "submit_chat_edit_text")
       _ <- pure $ startLottieProcess "primary_button_loader" (getNewIDWithTag "add_images_model_done_button") true 0.6 "CENTER_CROP"
-      _ <- liftEffect $ uploadFile unit
       pure NoAction
     ]
 
@@ -306,7 +305,7 @@ eval (ViewImageModelAction (ViewImageModel.BackPressed)) state = do
     ]
 
 ---------------------------------------------------- Record Audio Model ----------------------------------------------------
-eval (RecordAudioModelAction (RecordAudioModel.OnClickRecord push)) state =
+eval (RecordAudioModelAction (RecordAudioModel.OnClickRecord push)) state = do
   continueWithCmd state { data { recordAudioState { timer = "00:00" } } }  [do
     cond <- startAudioRecording ""
     if cond 

@@ -29,10 +29,10 @@ data FPProgressiveDetailsD (s :: UsageSafety) = FPProgressiveDetails
     baseDistance :: Meters,
     perExtraKmRateSections :: NonEmpty (FPProgressiveDetailsPerExtraKmRateSectionD s),
     deadKmFare :: Money,
-    waitingCharge :: Maybe WaitingCharge,
+    waitingChargeInfo :: Maybe WaitingChargeInfo,
     nightShiftCharge :: Maybe NightShiftCharge
   }
-  deriving (Generic, Show, Eq)
+  deriving (Generic)
 
 type FPProgressiveDetails = FPProgressiveDetailsD 'Safe
 
@@ -49,7 +49,7 @@ data FPProgressiveDetailsAPIEntity = FPProgressiveDetailsAPIEntity
     baseDistance :: Meters,
     perExtraKmRateSections :: NonEmpty FPProgressiveDetailsPerExtraKmRateSectionAPIEntity,
     deadKmFare :: Money,
-    waitingCharge :: Maybe WaitingCharge,
+    waitingChargeInfo :: Maybe WaitingChargeInfo,
     nightShiftCharge :: Maybe NightShiftCharge
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

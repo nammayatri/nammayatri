@@ -15,7 +15,7 @@
 module API.Dashboard.IssueList where
 
 import qualified Domain.Action.Dashboard.IssueList as DDI
-import qualified Domain.Types.Issue as DI
+import qualified Domain.Action.Dashboard.IssueList as DI
 import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Prelude
@@ -29,12 +29,16 @@ type API =
 
 type ListCustomerIssue =
   "list"
-    :> Capture "mobileCountryCode" Text
-    :> Capture "mobileNumber" Text
-    :> Get '[JSON] [DI.Issue]
+    :> QueryParam "limit" Int
+    :> QueryParam "offset" Int
+    :> QueryParam "mobileCountryCode" Text
+    :> QueryParam "mobileNumber" Text
+    :> QueryParam "from" UTCTime
+    :> QueryParam "to" UTCTime
+    :> Get '[JSON] DI.IssueListRes
 
 handler :: ShortId DM.Merchant -> FlowServer API
 handler = listIssue
 
-listIssue :: ShortId DM.Merchant -> Text -> Text -> FlowHandler [DI.Issue]
-listIssue merchantShortId mobileCountryCode mobileNumber = withFlowHandlerAPI $ DDI.getIssueList merchantShortId mobileCountryCode mobileNumber
+listIssue :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> FlowHandler DI.IssueListRes
+listIssue merchantShortId mbLimit mbOffset mbMobileCountryCode mbMobileNumber mbFrom mbTo = withFlowHandlerAPI $ DDI.getIssueList merchantShortId mbLimit mbOffset mbMobileCountryCode mbMobileNumber mbFrom mbTo

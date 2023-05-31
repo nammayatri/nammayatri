@@ -26,7 +26,7 @@ in  { appCfg
     , hedisCfg = appCfg.hedisCfg
     , hedisClusterCfg = appCfg.hedisClusterCfg
     , hedisMigrationStage = True
-    , cutOffHedisCluster = True
+    , cutOffHedisCluster = False
     , loggerConfig =
             appCfg.loggerConfig
         //  { logFilePath = "/tmp/allocation-service.log", logRawSql = False }

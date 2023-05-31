@@ -192,8 +192,8 @@ auth isDirectAuth req mbBundleVersion mbClientVersion = do
   let entityId = getId $ person.id
       useFakeOtpM = useFakeSms smsCfg
       scfg = sessionConfig smsCfg
-
-  regToken <- makeSession scfg entityId (show <$> useFakeOtpM)
+  let mkId = getId $ merchant.id
+  regToken <- makeSession scfg entityId mkId (show <$> useFakeOtpM)
 
   if person.enabled && not person.blocked
     then do
@@ -221,7 +221,7 @@ auth isDirectAuth req mbBundleVersion mbClientVersion = do
         mbEncEmail <- encrypt `mapM` req.email
         DB.runTransaction $ do
           RegistrationToken.setDirectAuth regToken.id
-          Person.updatePersonalInfo person.id (req.firstName <|> Just "User") req.middleName req.lastName Nothing mbEncEmail deviceToken notificationToken (req.language <|> Just Language.ENGLISH) (req.gender <|> Just SP.UNKNOWN)
+          Person.updatePersonalInfo person.id (req.firstName <|> person.firstName <|> Just "User") req.middleName req.lastName Nothing mbEncEmail deviceToken notificationToken (req.language <|> person.language <|> Just Language.ENGLISH) (req.gender <|> Just person.gender)
         personAPIEntity <- verifyFlow person regToken req.whatsappNotificationEnroll deviceToken
         return (Just personAPIEntity, Just regToken.token, SR.DIRECT)
       else return (Nothing, Nothing, regToken.authType)
@@ -282,9 +282,10 @@ makeSession ::
   MonadFlow m =>
   SmsSessionConfig ->
   Text ->
+  Text ->
   Maybe Text ->
   m SR.RegistrationToken
-makeSession SmsSessionConfig {..} entityId fakeOtp = do
+makeSession SmsSessionConfig {..} entityId merchantId fakeOtp = do
   otp <- maybe generateOTPCode return fakeOtp
   rtid <- L.generateGUID
   token <- L.generateGUID
@@ -301,6 +302,7 @@ makeSession SmsSessionConfig {..} entityId fakeOtp = do
         authExpiry = authExpiry,
         tokenExpiry = tokenExpiry,
         entityId = entityId,
+        merchantId = merchantId,
         entityType = SR.USER,
         createdAt = now,
         updatedAt = now,

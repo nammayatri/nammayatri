@@ -189,9 +189,11 @@ callPoliceConfig state  =
     }
     , option1 {
       text = getString CANCEL_
+    , width = (V 140)
     , fontSize = FontSize.a_16 }
     , option2 {
       text = getString CALL_POLICE
+    , width = (V 140)
     , fontSize = FontSize.a_16 }
     , backgroundClickable = true
     , secondaryText {
@@ -215,10 +217,12 @@ contactSupportConfig state  =
     , option1 {
       text = getString CANCEL_
     , fontSize = FontSize.a_16
+    , width = (V 140)
     }
     , option2 {
       text = getString CALL_SUPPORT
     , fontSize = FontSize.a_16
+    , width = (V 140)
     }
     , backgroundClickable = true
     , secondaryText {
@@ -237,15 +241,16 @@ callEmergencyContactConfig state  =
   popUpConfig' = config' {
     primaryText { 
       text = (<>) (getString CALL_EMERGENCY_CONTACTS) "?"
-    , margin = (Margin 40 23 40 12)
     , fontStyle = FontStyle.semiBold LanguageStyle }
     , option1 {
       text = getString CANCEL_
     , fontSize = FontSize.a_16
+    , width = (V 140)
     }
     , option2 {
       text = getString PLACE_CALL
     , fontSize = FontSize.a_16
+    , width = (V 140)
     }
     , backgroundClickable = true
     , secondaryText {
@@ -274,11 +279,12 @@ callSuccessfulConfig state  =
     , option1 {
       text = (getString NO)
     , fontSize = FontSize.a_16
-    , margin = (MarginHorizontal 16 16) }
+    , width = (V 140)}
     , option2 {
       text = (getString YES)
     , fontSize = FontSize.a_16
-    , margin = (MarginHorizontal 12 0) }
+    , width = (V 140)
+    , margin = (MarginLeft 12) }
     , backgroundClickable = true
     , secondaryText {
       visibility = GONE }

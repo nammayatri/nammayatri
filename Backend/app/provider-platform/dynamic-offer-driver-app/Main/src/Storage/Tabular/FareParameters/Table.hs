@@ -42,6 +42,7 @@ mkPersist
       baseFare Money
       waitingCharge Money Maybe
       nightShiftCharge Money Maybe
+      nightShiftRateIfApplies Double Maybe
 
       Primary id
       deriving Generic

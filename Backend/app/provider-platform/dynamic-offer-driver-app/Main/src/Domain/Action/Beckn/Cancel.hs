@@ -51,6 +51,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
+import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
 import Tools.Metrics
 import qualified Tools.Notifications as Notify
@@ -100,7 +101,7 @@ cancel req merchant booking = do
       QDFS.updateStatus ride.driverId $ DMode.getDriverStatus driverInfo.mode driverInfo.active
   whenJust mbRide $ \ride -> do
     SRide.clearCache $ cast ride.driverId
-    DLoc.updateOnRide (cast ride.driverId) False
+    DLoc.updateOnRide (cast ride.driverId) False booking.providerId
 
   logTagInfo ("bookingId-" <> getId req.bookingId) ("Cancellation reason " <> show bookingCR.source)
   fork "cancelBooking - Notify BAP" $ do
@@ -138,7 +139,7 @@ cancelSearch merchantId req searchRequestId = do
   driverSearchReqs <- QSRD.findAllActiveBySRId searchRequestId
   logTagInfo ("transactionId-" <> req.transactionId) "Search Request Cancellation"
   DB.runTransaction $ do
-    QSR.updateStatus searchRequestId DSR.CANCELLED
+    QST.cancelActiveTriesByRequestId searchRequestId
     QSRD.setInactiveBySRId searchRequestId
   for_ driverSearchReqs $ \driverReq -> do
     driver_ <- QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
@@ -153,7 +154,7 @@ validateCancelSearchRequest ::
   m (Id DSR.SearchRequest)
 validateCancelSearchRequest _ _ req = do
   let transactionId = req.transactionId
-  QSR.findActiveByTransactionId transactionId >>= fromMaybeM (SearchRequestNotFound $ "transactionId-" <> transactionId)
+  QSR.findByTransactionId transactionId >>= fromMaybeM (SearchRequestNotFound $ "transactionId-" <> transactionId)
 
 validateCancelRequest ::
   ( HasCacheConfig r,

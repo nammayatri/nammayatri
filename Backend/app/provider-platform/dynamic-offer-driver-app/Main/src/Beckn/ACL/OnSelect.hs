@@ -20,7 +20,7 @@ import Beckn.Types.Core.Taxi.Common.TimeTimestamp as Common
 import qualified Beckn.Types.Core.Taxi.OnSelect as OS
 import qualified Domain.Types.DriverQuote as DQuote
 import qualified Domain.Types.Merchant as DM
-import Domain.Types.SearchRequest
+import Domain.Types.SearchRequest (SearchRequest)
 import Kernel.Prelude
 import Kernel.Types.Id (ShortId)
 

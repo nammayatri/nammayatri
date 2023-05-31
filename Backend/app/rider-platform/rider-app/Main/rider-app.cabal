@@ -22,7 +22,6 @@ source-repository head
 library
   exposed-modules:
       API
-      API.Auth
       API.Beckn
       API.Beckn.OnConfirm
       API.Beckn.OnInit
@@ -94,7 +93,6 @@ library
       Beckn.ACL.Select
       Beckn.ACL.Track
       Beckn.Core
-      Domain.Action.Auth
       Domain.Action.Beckn.OnConfirm
       Domain.Action.Beckn.OnInit
       Domain.Action.Beckn.OnSearch
@@ -139,6 +137,7 @@ library
       Domain.Types.Booking.BookingLocation
       Domain.Types.Booking.Type
       Domain.Types.BookingCancellationReason
+      Domain.Types.CallbackRequest
       Domain.Types.CallStatus
       Domain.Types.CancellationReason
       Domain.Types.Common
@@ -196,6 +195,7 @@ library
       Storage.Queries.Booking
       Storage.Queries.Booking.BookingLocation
       Storage.Queries.BookingCancellationReason
+      Storage.Queries.CallbackRequest
       Storage.Queries.CallStatus
       Storage.Queries.CancellationReason
       Storage.Queries.Estimate
@@ -229,6 +229,7 @@ library
       Storage.Tabular.Booking
       Storage.Tabular.Booking.BookingLocation
       Storage.Tabular.BookingCancellationReason
+      Storage.Tabular.CallbackRequest
       Storage.Tabular.CallStatus
       Storage.Tabular.CancellationReason
       Storage.Tabular.DriverOffer

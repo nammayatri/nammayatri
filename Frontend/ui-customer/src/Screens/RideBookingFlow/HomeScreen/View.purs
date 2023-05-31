@@ -16,7 +16,7 @@
 module Screens.HomeScreen.View where
 
 import Screens.RideBookingFlow.HomeScreen.Config (autoAnimConfig,chooseYourRideConfig, menuButtonConfig, cancelRidePopUpConfig, distanceOusideLimitsConfig, driverInfoCardViewState, emergencyHelpModelViewState, estimateChangedPopupConfig, fareBreakUpConfig, logOutPopUpModelConfig, previousRideRatingViewState, primaryButtonConfirmPickupConfig, primaryButtonRequestRideConfig, quoteListModelViewState, rateCardConfig, rateRideButtonConfig, ratingCardViewState, searchLocationModelViewState, shareAppConfig, shortDistanceConfig, skipButtonConfig, sourceUnserviceableConfig, whereToButtonConfig, chatViewConfig, metersToKm, callSupportConfig)
-import Accessor (_lat, _lon, _selectedQuotes)
+import Accessor (_lat, _lon, _selectedQuotes, _fareProductType)
 import Animation (fadeOut, translateYAnimFromTop, scaleAnim, translateYAnimFromTopWithAlpha, fadeIn)
 import Animation.Config (Direction(..), translateFullYAnimWithDurationConfig, translateYAnimHomeConfig)
 import Common.Types.App (LazyCheck(..))
@@ -137,7 +137,7 @@ screen initialState =
                 if ((getValueToLocalStore TRACKING_DRIVER) == "False") then do
                   _ <- removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                   _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
-                  void $ launchAff $ flowRunner $ driverLocationTracking push UpdateCurrentStage DriverArrivedAction UpdateETA 5000.0 (getValueToLocalStore TRACKING_ID) initialState "pickup" 0
+                  void $ launchAff $ flowRunner $ driverLocationTracking push UpdateCurrentStage DriverArrivedAction UpdateETA 3000.0 (getValueToLocalStore TRACKING_ID) initialState "pickup"
                 else pure unit
                 if(not initialState.props.chatcallbackInitiated) then do
                   _ <- storeCallBackMessageUpdated push initialState.data.driverInfoCardState.bppRideId "Customer" UpdateMessages
@@ -151,7 +151,7 @@ screen initialState =
                 if ((getValueToLocalStore TRACKING_DRIVER) == "False") then do
                   _ <- removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                   _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
-                  _ <- launchAff $ flowRunner $ driverLocationTracking push UpdateCurrentStage DriverArrivedAction UpdateETA 20000.0 (getValueToLocalStore TRACKING_ID) initialState "trip" 0
+                  _ <- launchAff $ flowRunner $ driverLocationTracking push UpdateCurrentStage DriverArrivedAction UpdateETA 20000.0 (getValueToLocalStore TRACKING_ID) initialState "trip"
                   pure unit
                 else
                   pure unit
@@ -281,7 +281,7 @@ view push state =
             , if state.props.currentStage == PricingTutorial then (pricingTutorialView push state) else emptyTextView state
             , if state.props.currentStage == ChatWithDriver then (chatView push state) else emptyTextView state
             , rideTrackingView push state
-            , if ((not state.props.ratingModal) && (state.props.showlocUnserviceablePopUp || state.props.isMockLocation) && state.props.currentStage == HomeScreen) then (sourceUnserviceableView push state) else emptyTextView state
+            , if ((not state.props.ratingModal) && (state.props.showlocUnserviceablePopUp || (state.props.isMockLocation && (getMerchant FunctionCall == NAMMAYATRI))) && state.props.currentStage == HomeScreen) then (sourceUnserviceableView push state) else emptyTextView state
             , if state.data.settingSideBar.opened /= SettingSideBar.CLOSED then settingSideBarView push state else emptyTextView state
             , if (state.props.currentStage == SearchLocationModel || state.props.currentStage == FavouriteLocationModel) then searchLocationView push state else emptyTextView state
             , if (any (_ == state.props.currentStage) [ FindingQuotes, QuoteList ]) then (quoteListModelView push state) else emptyTextView state
@@ -1761,8 +1761,8 @@ getQuotesPolling pollingId action retryAction count duration push state = do
         _ <- pure $ updateLocalStage QuoteList
         doAff do liftEffect $ push $ action response
 
-driverLocationTracking :: forall action. (action -> Effect Unit) -> (String -> action) -> (String -> action) -> (Int -> Int -> action) -> Number -> String -> HomeScreenState -> String -> Int -> Flow GlobalState Unit
-driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState dynamicDuration = do
+driverLocationTracking :: forall action. (action -> Effect Unit) -> (String -> action) -> (String -> action) -> (Int -> Int -> action) -> Number -> String -> HomeScreenState -> String -> Flow GlobalState Unit
+driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState = do
   _ <- pure $ printLog "trackDriverLocation2_function" trackingId
   if (any (\stage -> isLocalStageOn stage) [ RideAccepted, RideStarted, ChatWithDriver]) && ((getValueToLocalStore TRACKING_ID) == trackingId) then do
     when (state.props.bookingId /= "") $ do
@@ -1786,7 +1786,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
       _ <- doAff $ liftEffect $ animateCamera state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng 17
       _ <- doAff $ liftEffect $ addMarker "ny_ic_src_marker" state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng 160 (0.0) (0.0)
       void $ delay $ Milliseconds duration
-      driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState (dynamicDuration+1)
+      driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState
       else do 
         response <- getDriverLocation state.data.driverInfoCardState.rideId
         case response of
@@ -1802,8 +1802,8 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
               _ <- pure $ setValueToLocalStore TRACKING_DRIVER "True"
               _ <- pure $ removeAllPolylines ""
               _ <- liftFlow $ drawRoute (walkCoordinate srcLat srcLon dstLat dstLon) "DOT" "#323643" false markers.srcMarker markers.destMarker 8 "DRIVER_LOCATION_UPDATE" "" ""
-              void $ delay $ Milliseconds  (if dynamicDuration > 20 && routeState == "pickup" then duration + 1000.0 else if dynamicDuration > 40 && routeState == "pickup" then duration + 2000.0 else duration)
-              driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState (dynamicDuration+1)
+              void $ delay $ Milliseconds duration
+              driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState
               pure unit
             else if ((getValueToLocalStore TRACKING_DRIVER) == "False" || not (isJust state.data.route)) then do
               _ <- pure $ setValueToLocalStore TRACKING_DRIVER "True"
@@ -1817,8 +1817,8 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                           newRoute = routes { points = Snapped (map (\item -> LatLong { lat: item.lat, lon: item.lng }) newPoints.points) }
                       liftFlow $ drawRoute newPoints "LineString" "#323643" true markers.srcMarker markers.destMarker 8 "DRIVER_LOCATION_UPDATE" "" (metersToKm routes.distance state)
                       _ <- doAff do liftEffect $ push $ updateState routes.duration routes.distance
-                      void $ delay $ Milliseconds (if dynamicDuration > 20 && routeState == "pickup" then duration + 1000.0 else if dynamicDuration > 40 && routeState == "pickup" then duration + 2000.0 else duration)
-                      driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Just (Route newRoute), speed = routes.distance / routes.duration } } routeState (dynamicDuration+1)
+                      void $ delay $ Milliseconds duration
+                      driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Just (Route newRoute), speed = routes.distance / routes.duration } } routeState
                     Nothing -> pure unit
                 Left err -> pure unit
             else do
@@ -1829,14 +1829,14 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                         let newPoints = { points : locationResp.points}
                         liftFlow $ updateRoute newPoints markers.destMarker (metersToKm locationResp.distance state)
                         _ <- doAff do liftEffect $ push $ updateState locationResp.eta locationResp.distance
-                        void $ delay $ Milliseconds (if dynamicDuration > 20 && routeState == "pickup" then duration + 1000.0 else if dynamicDuration > 40 && routeState == "pickup" then duration + 2000.0 else duration)
-                        driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState (dynamicDuration+1)
+                        void $ delay $ Milliseconds duration
+                        driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState
                       else do
-                        driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } } routeState (dynamicDuration + 1)
-                Nothing -> driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } } routeState (dynamicDuration + 1)
+                        driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } } routeState
+                Nothing -> driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } } routeState
           Left err -> do
-            void $ delay $ Milliseconds  (if dynamicDuration > 20 && routeState == "pickup" then duration + 1000.0 else if dynamicDuration > 40 && routeState == "pickup" then duration + 2000.0 else duration)
-            driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } } routeState (dynamicDuration + 1)
+            void $ delay $ Milliseconds duration
+            driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } } routeState
   else do
     pure unit
 
@@ -1850,7 +1850,9 @@ confirmRide action count duration push state = do
       Right response -> do
         _ <- pure $ printLog "api Results " response
         let (RideBookingRes resp) = response
-        if (any (_ == resp.status) ["TRIP_ASSIGNED","CONFIRMED"]) then do
+        let fareProductType = (resp.bookingDetails) ^. _fareProductType
+        let status = if fareProductType == "OneWaySpecialZoneAPIDetails" then "CONFIRMED" else "TRIP_ASSIGNED"
+        if  status == resp.status then do
             doAff do liftEffect $ push $ action response
             _ <- pure $ firebaseLogEvent "ny_user_ride_assigned"
             pure unit

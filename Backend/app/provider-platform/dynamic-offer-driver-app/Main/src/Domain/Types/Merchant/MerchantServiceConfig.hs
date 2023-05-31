@@ -48,7 +48,7 @@ instance Show ServiceName where
   show (CallService s) = "Call_" <> show s
 
 instance Read ServiceName where
-  readsPrec d' r' =
+  readsPrec d' =
     readParen
       (d' > app_prec)
       ( \r ->
@@ -73,7 +73,6 @@ instance Read ServiceName where
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
       )
-      r'
     where
       app_prec = 10
       stripPrefix pref r = bool [] [List.drop (length pref) r] $ List.isPrefixOf pref r

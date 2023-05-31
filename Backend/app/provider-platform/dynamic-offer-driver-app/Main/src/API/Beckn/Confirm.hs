@@ -59,27 +59,28 @@ confirm transporterId (SignatureAuthResult _ subscriber) req =
       let context = req.context
       (transporter, eitherQuote) <- DConfirm.validateRequest subscriber transporterId dConfirmReq
       fork "confirm" $ do
-        dConfirmRes <- DConfirm.handler transporter dConfirmReq eitherQuote
-        now <- getCurrentTime
-        case dConfirmRes.booking.bookingType of
-          DBooking.NormalBooking -> do
-            ride <- dConfirmRes.ride & fromMaybeM (RideNotFound dConfirmRes.booking.id.getId)
-            driverQuote <- runInReplica $ QDQ.findById (Id dConfirmRes.booking.quoteId) >>= fromMaybeM (QuoteNotFound dConfirmRes.booking.quoteId)
-            driver <- runInReplica $ QPerson.findById driverQuote.driverId >>= fromMaybeM (PersonNotFound driverQuote.driverId.getId)
-            fork "on_confirm/on_update" $ do
-              handle (errHandler dConfirmRes transporter (Just driver)) $ do
-                onConfirmMessage <- ACL.buildOnConfirmMessage now dConfirmRes
-                void $
-                  BP.callOnConfirm dConfirmRes.transporter context onConfirmMessage
-                void $
-                  BP.sendRideAssignedUpdateToBAP dConfirmRes.booking ride
-            DS.driverScoreEventHandler DST.OnNewRideAssigned {merchantId = transporterId, driverId = driverQuote.driverId}
-          DBooking.SpecialZoneBooking -> do
-            fork "on_confirm/on_update" $ do
-              handle (errHandler' dConfirmRes transporter) $ do
-                onConfirmMessage <- ACL.buildOnConfirmMessage now dConfirmRes
-                void $
-                  BP.callOnConfirm dConfirmRes.transporter context onConfirmMessage
+        Redis.whenWithLockRedis (confirmProcessingLockKey dConfirmReq.bookingId.getId) 60 $ do
+          dConfirmRes <- DConfirm.handler transporter dConfirmReq eitherQuote
+          now <- getCurrentTime
+          case dConfirmRes.booking.bookingType of
+            DBooking.NormalBooking -> do
+              ride <- dConfirmRes.ride & fromMaybeM (RideNotFound dConfirmRes.booking.id.getId)
+              driverQuote <- runInReplica $ QDQ.findById (Id dConfirmRes.booking.quoteId) >>= fromMaybeM (QuoteNotFound dConfirmRes.booking.quoteId)
+              driver <- runInReplica $ QPerson.findById driverQuote.driverId >>= fromMaybeM (PersonNotFound driverQuote.driverId.getId)
+              fork "on_confirm/on_update" $ do
+                handle (errHandler dConfirmRes transporter (Just driver)) $ do
+                  onConfirmMessage <- ACL.buildOnConfirmMessage now dConfirmRes
+                  void $
+                    BP.callOnConfirm dConfirmRes.transporter context onConfirmMessage
+                  void $
+                    BP.sendRideAssignedUpdateToBAP dConfirmRes.booking ride
+              DS.driverScoreEventHandler DST.OnNewRideAssigned {merchantId = transporterId, driverId = driverQuote.driverId}
+            DBooking.SpecialZoneBooking -> do
+              fork "on_confirm/on_update" $ do
+                handle (errHandler' dConfirmRes transporter) $ do
+                  onConfirmMessage <- ACL.buildOnConfirmMessage now dConfirmRes
+                  void $
+                    BP.callOnConfirm dConfirmRes.transporter context onConfirmMessage
     pure Ack
   where
     errHandler dConfirmRes transporter driver exc
@@ -94,3 +95,6 @@ confirm transporterId (SignatureAuthResult _ subscriber) req =
 
 confirmLockKey :: Text -> Text
 confirmLockKey id = "Driver:Confirm:BookingId-" <> id
+
+confirmProcessingLockKey :: Text -> Text
+confirmProcessingLockKey id = "Driver:Confirm:Processing:BookingId-" <> id

@@ -45,6 +45,16 @@ findById rideId = Esq.findOne $ do
   where_ $ ride ^. RideTId ==. val (toKey rideId)
   pure ride
 
+findAllRidesByDriverId ::
+  Transactionable m =>
+  Id Person ->
+  m [Ride]
+findAllRidesByDriverId driverId =
+  Esq.findAll $ do
+    ride <- from $ table @RideT
+    where_ $ ride ^. RideDriverId ==. val (toKey driverId)
+    return ride
+
 findActiveByRBId :: Transactionable m => Id Booking -> m (Maybe Ride)
 findActiveByRBId rbId = Esq.findOne $ do
   ride <- from $ table @RideT
@@ -81,6 +91,29 @@ findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus = Esq.buil
     limit limitVal
     offset offsetVal
     return (booking, ride)
+
+  catMaybes
+    <$> forM
+      res
+      ( \(bookingT, rideT) -> runMaybeT do
+          booking <- MaybeT $ buildFullBooking bookingT
+          return (extractSolidType @Ride rideT, booking)
+      )
+
+findAllRidesBookingsByRideId :: Transactionable m => Id Merchant -> [Id Ride] -> m [(Ride, Booking)]
+findAllRidesBookingsByRideId merchantId rideIds = Esq.buildDType $ do
+  res <- Esq.findAll' $ do
+    (booking :& ride) <-
+      from $
+        table @BookingT
+          `innerJoin` table @RideT
+            `Esq.on` ( \(booking :& ride) ->
+                         ride ^. Ride.RideBookingId ==. booking ^. BookingTId
+                     )
+    where_ $
+      booking ^. BookingProviderId ==. val (toKey merchantId)
+        &&. ride ^. RideTId `Esq.in_` valList (map toKey rideIds)
+    pure (booking, ride)
 
   catMaybes
     <$> forM

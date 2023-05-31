@@ -39,8 +39,12 @@ onConfirm _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
     Redis.whenWithLockRedis (onConfirmLockKey onConfirmReq.bppBookingId.getId) 60 $ do
       validatedReq <- DOnConfirm.validateRequest onConfirmReq
       fork "onConfirm request processing" $
-        DOnConfirm.onConfirm validatedReq
+        Redis.whenWithLockRedis (onConfirmProcessingLockKey onConfirmReq.bppBookingId.getId) 60 $
+          DOnConfirm.onConfirm validatedReq
   pure Ack
 
 onConfirmLockKey :: Text -> Text
 onConfirmLockKey id = "Customer:OnConfirm:BppBookingId-" <> id
+
+onConfirmProcessingLockKey :: Text -> Text
+onConfirmProcessingLockKey id = "Customer:OnConfirm:Processing:BppBookingId-" <> id

@@ -11,6 +11,7 @@ import qualified Domain.Types.Issue.IssueOption as D
 import qualified Domain.Types.Issue.IssueReport as D
 import qualified Domain.Types.Issue.IssueTranslation as D
 import qualified Domain.Types.MediaFile as D
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SP
 import Environment
 import qualified EulerHS.Language as L
@@ -52,8 +53,8 @@ getLanguage driverId mbLanguage = do
         MaybeT $ pure driverDetail.language
   return $ fromMaybe ENGLISH extractLanguage
 
-getIssueCategory :: Id SP.Person -> Maybe Language -> Flow Common.IssueCategoryListRes
-getIssueCategory driverId mbLanguage = do
+getIssueCategory :: (Id SP.Person, Id DM.Merchant) -> Maybe Language -> Flow Common.IssueCategoryListRes
+getIssueCategory (driverId, _) mbLanguage = do
   language <- getLanguage driverId mbLanguage
   issueCategoryTranslationList <- CQIC.findAllByLanguage language
   pure $ Common.IssueCategoryListRes {categories = mkIssueCategory <$> issueCategoryTranslationList}
@@ -67,8 +68,8 @@ getIssueCategory driverId mbLanguage = do
           logoUrl = issueCategory.logoUrl
         }
 
-getIssueOption :: Id SP.Person -> Id D.IssueCategory -> Maybe Language -> Flow Common.IssueOptionListRes
-getIssueOption driverId issueCategoryId mbLanguage = do
+getIssueOption :: (Id SP.Person, Id DM.Merchant) -> Id D.IssueCategory -> Maybe Language -> Flow Common.IssueOptionListRes
+getIssueOption (driverId, _) issueCategoryId mbLanguage = do
   language <- getLanguage driverId mbLanguage
   issueOptionTranslationList <- CQIO.findAllByCategoryAndLanguage issueCategoryId language
   pure $ Common.IssueOptionListRes {options = mkIssueOptionList <$> issueOptionTranslationList}
@@ -81,8 +82,8 @@ getIssueOption driverId issueCategoryId mbLanguage = do
           option = fromMaybe issueOption.option $ issueTranslation <&> (.translation)
         }
 
-issueReportDriverList :: Id SP.Person -> Maybe Language -> Flow Common.IssueReportDriverListRes
-issueReportDriverList driverId language = do
+issueReportDriverList :: (Id SP.Person, Id DM.Merchant) -> Maybe Language -> Flow Common.IssueReportDriverListRes
+issueReportDriverList (driverId, _) language = do
   issueReports <- CQIR.findAllByDriver driverId
   issues <- mapM mkIssueReport issueReports
   return $ Common.IssueReportDriverListRes {issues}
@@ -131,12 +132,11 @@ createMediaEntry url fileType = do
             createdAt = now
           }
 
-issueMediaUpload :: Id SP.Person -> Common.IssueMediaUploadReq -> Flow Common.IssueMediaUploadRes
-issueMediaUpload driverId Common.IssueMediaUploadReq {..} = do
+issueMediaUpload :: (Id SP.Person, Id DM.Merchant) -> Common.IssueMediaUploadReq -> Flow Common.IssueMediaUploadRes
+issueMediaUpload (driverId, merchantId) Common.IssueMediaUploadReq {..} = do
   contentType <- validateContentType
   fileSize <- L.runIO $ withFile file ReadMode hFileSize
-  person <- Esq.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  transporterConfig <- CQTC.findByMerchantId person.merchantId >>= fromMaybeM (TransporterConfigNotFound person.merchantId.getId)
+  transporterConfig <- CQTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   when (fileSize > fromIntegral transporterConfig.mediaFileSizeUpperLimit) $
     throwError $ FileSizeExceededError (show fileSize)
   mediaFile <- L.runIO $ base64Encode <$> BS.readFile file
@@ -156,12 +156,12 @@ issueMediaUpload driverId Common.IssueMediaUploadReq {..} = do
         Common.Image | reqContentType == "image/jpeg" -> pure "jpg"
         _ -> throwError $ FileFormatNotSupported reqContentType
 
-fetchMedia :: Id SP.Person -> Text -> Flow Text
+fetchMedia :: (Id SP.Person, Id DM.Merchant) -> Text -> Flow Text
 fetchMedia _driverId filePath =
   S3.get $ T.unpack filePath
 
-createIssueReport :: Id SP.Person -> Common.IssueReportReq -> Flow Common.IssueReportRes
-createIssueReport driverId Common.IssueReportReq {..} = do
+createIssueReport :: (Id SP.Person, Id DM.Merchant) -> Common.IssueReportReq -> Flow Common.IssueReportRes
+createIssueReport (driverId, _) Common.IssueReportReq {..} = do
   void $ CQIC.findById (cast categoryId) >>= fromMaybeM (IssueCategoryDoNotExist categoryId.getId)
   whenJust optionId $ \justOptionId ->
     void $ CQIO.findByIdAndCategoryId (cast justOptionId) (cast categoryId) >>= fromMaybeM (IssueOptionInvalid justOptionId.getId categoryId.getId)
@@ -193,8 +193,8 @@ createIssueReport driverId Common.IssueReportReq {..} = do
             description
           }
 
-issueInfo :: Id D.IssueReport -> Id SP.Person -> Maybe Language -> Flow Common.IssueInfoRes
-issueInfo issueReportId driverId mbLanguage = do
+issueInfo :: Id D.IssueReport -> (Id SP.Person, Id DM.Merchant) -> Maybe Language -> Flow Common.IssueInfoRes
+issueInfo issueReportId (driverId, _) mbLanguage = do
   language <- getLanguage driverId mbLanguage
   issueReport <- CQIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
   mediaFiles <- CQMF.findAllInForIssueReportId issueReport.mediaFiles issueReportId
@@ -228,16 +228,16 @@ issueInfo issueReportId driverId mbLanguage = do
         )
         []
 
-updateIssueOption :: Id D.IssueReport -> Id SP.Person -> Common.IssueUpdateReq -> Flow APISuccess
-updateIssueOption issueReportId driverId Common.IssueUpdateReq {..} = do
+updateIssueOption :: Id D.IssueReport -> (Id SP.Person, Id DM.Merchant) -> Common.IssueUpdateReq -> Flow APISuccess
+updateIssueOption issueReportId (driverId, _) Common.IssueUpdateReq {..} = do
   void $ CQIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
   void $ CQIO.findByIdAndCategoryId (cast optionId) (cast categoryId) >>= fromMaybeM (IssueOptionInvalid optionId.getId categoryId.getId)
   Esq.runTransaction $ QIR.updateOption issueReportId (cast optionId)
   CQIR.invalidateIssueReportCache (Just issueReportId) (Just driverId)
   pure Success
 
-deleteIssue :: Id D.IssueReport -> Id SP.Person -> Flow APISuccess
-deleteIssue issueReportId driverId = do
+deleteIssue :: Id D.IssueReport -> (Id SP.Person, Id DM.Merchant) -> Flow APISuccess
+deleteIssue issueReportId (driverId, _) = do
   unlessM (Esq.runInReplica (QIR.isSafeToDelete issueReportId driverId)) $
     throwError (InvalidRequest "This issue is either already deleted, or is not associated to this driver.")
   issueReport <- CQIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)

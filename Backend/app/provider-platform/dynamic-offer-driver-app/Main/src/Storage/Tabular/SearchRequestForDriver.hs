@@ -31,6 +31,7 @@ import Kernel.Types.Id
 import Kernel.Types.Time
 import Storage.Tabular.Person (PersonTId)
 import Storage.Tabular.SearchRequest (SearchRequestTId)
+import Storage.Tabular.SearchTry (SearchTryTId)
 import Storage.Tabular.Vehicle ()
 
 derivePersistField "Domain.DriverSearchRequestStatus"
@@ -41,8 +42,8 @@ mkPersist
   [defaultQQ|
     SearchRequestForDriverT sql=search_request_for_driver
       id Text
-      transactionId Text
-      searchRequestId SearchRequestTId
+      requestId SearchRequestTId
+      searchTryId SearchTryTId
       startTime UTCTime
       actualDistanceToPickup Meters
       straightLineDistanceToPickup Meters
@@ -83,7 +84,8 @@ instance FromTType SearchRequestForDriverT Domain.SearchRequestForDriver where
       Domain.SearchRequestForDriver
         { id = Id id,
           driverId = fromKey driverId,
-          searchRequestId = fromKey searchRequestId,
+          requestId = fromKey requestId,
+          searchTryId = fromKey searchTryId,
           ..
         }
 
@@ -93,6 +95,7 @@ instance ToTType SearchRequestForDriverT Domain.SearchRequestForDriver where
     SearchRequestForDriverT
       { id = getId id,
         driverId = toKey driverId,
-        searchRequestId = toKey searchRequestId,
+        requestId = toKey requestId,
+        searchTryId = toKey searchTryId,
         ..
       }

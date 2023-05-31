@@ -424,8 +424,8 @@ const kannadaStrings = {
   "YES_CANCEL_SEARCH": "ಹೌದು, ಹುಡುಕಾಟ ರದ್ದುಮಾಡಿ",
   "TRY_LOOKING_FOR_RIDES_AGAIN": "ಇದು ತುಂಬಾ ಬಿಡುವಿಲ್ಲದ ದಿನವಾಗಿದೆ ಎಂದು ತೋರುತ್ತದೆ. ನೀವು ಮತ್ತೆ ಸವಾರಿಗಳನ್ನು ಹುಡುಕಲು ಪ್ರಯತ್ನಿಸಬಹುದು",
   "NO_TIP": "ಯಾವುದೇ ಸಲಹೆ ಇಲ್ಲ",
-  "CUSTOMER_SELECTED_FARE": "ಗ್ರಾಹಕ ಸಲಹೆ*",
-  "CUSTOMER_TIP_DESCRIPTION": "*ರೈಡ್ ಪಡೆಯುವ ಸಾಧ್ಯತೆಗಳನ್ನು ಹೆಚ್ಚಿಸಲು ಗ್ರಾಹಕರು ಹೆಚ್ಚುವರಿ ಮೊತ್ತವನ್ನು ಸೇರಿಸಿದ್ದಾರೆ.",
+  "CUSTOMER_SELECTED_FARE": "ಗ್ರಾಹಕ ಸಲಹೆ#",
+  "CUSTOMER_TIP_DESCRIPTION": "#ರೈಡ್ ಪಡೆಯುವ ಸಾಧ್ಯತೆಗಳನ್ನು ಹೆಚ್ಚಿಸಲು ಗ್ರಾಹಕರು ಹೆಚ್ಚುವರಿ ಮೊತ್ತವನ್ನು ಸೇರಿಸಿದ್ದಾರೆ.",
   "PLACE_CALL": "ಕರೆ ಮಾಡಿ",
   "DIRECT_CALL": "ನೇರ ಕರೆ",
   "ANONYMOUS_CALL": "ಅನಾಮಧೇಯ ಕರೆ",
@@ -442,5 +442,6 @@ const kannadaStrings = {
   "YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS": "ಕೆಳಗಿನ ಯಾವುದೇ ಕಾರಣಗಳಿಂದ ನೀವು ನವೀಕರಿಸಿದ ಅಂತಿಮ ದರವನ್ನು ನೋಡಬಹುದು:",
   "REASON_CHANGE_IN_ROUTE_A": "1.ಮಾರ್ಗದಲ್ಲಿ ಬದಲಾವಣೆ: ",
   "REASON_CHANGE_IN_ROUTE_B": "ಮಾರ್ಗದಲ್ಲಿನ ಬದಲಾವಣೆಯಿಂದಾಗಿ ಒಟ್ಟು ದರ ಬದಲಾಗಬಹುದು",
-  "NAVIGATE_TO_PICKUP" : "ಪಿಕಪ್ ಮಾಡಲು ನ್ಯಾವಿಗೇಟ್ ಮಾಡಿ"
+  "NAVIGATE_TO_PICKUP" : "ಪಿಕಪ್ ಮಾಡಲು ನ್ಯಾವಿಗೇಟ್ ಮಾಡಿ",
+  "REQUEST_RECEIVED_WE_WILL_CALL_YOU_BACK_SOON" : "ವಿನಂತಿಯನ್ನು ಸ್ವೀಕರಿಸಲಾಗಿದೆ. ನಾವು ಶೀಘ್ರದಲ್ಲೇ ನಿಮ್ಮನ್ನು ಸಂಪರ್ಕಿಸುತ್ತೇವೆ"
 }

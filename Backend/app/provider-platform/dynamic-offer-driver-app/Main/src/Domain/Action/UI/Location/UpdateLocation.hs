@@ -66,7 +66,7 @@ data Waypoint = Waypoint
 data UpdateLocationHandle m = UpdateLocationHandle
   { driver :: Person.Person,
     findDriverLocation :: m (Maybe DriverLocation),
-    upsertDriverLocation :: LatLong -> UTCTime -> m (),
+    upsertDriverLocation :: LatLong -> UTCTime -> Id DM.Merchant -> m (),
     getAssignedRide :: m (Maybe (Id DRide.Ride, DRide.RideStatus)),
     addIntermediateRoutePoints :: Id DRide.Ride -> NonEmpty LatLong -> m ()
   }
@@ -75,6 +75,7 @@ data DriverLocationUpdateStreamData = DriverLocationUpdateStreamData
   { rId :: Maybe Text, -- rideId
     mId :: Text, -- merchantId
     ts :: UTCTime, -- timestamp
+    st :: UTCTime, -- systemtime when location update recieved
     pt :: LatLong, -- lat log
     da :: Bool, -- driver avaiable
     mode :: Maybe DDInfo.DriverMode
@@ -115,9 +116,10 @@ streamLocationUpdates ::
   m ()
 streamLocationUpdates mbRideId merchantId driverId point timestamp isDriverActive mbDriverMode = do
   topicName <- asks (.driverLocationUpdateTopic)
+  now <- getCurrentTime
   produceMessage
     (topicName, Just (encodeUtf8 $ getId driverId))
-    (DriverLocationUpdateStreamData (getId <$> mbRideId) (getId merchantId) timestamp point isDriverActive mbDriverMode)
+    (DriverLocationUpdateStreamData (getId <$> mbRideId) (getId merchantId) timestamp now point isDriverActive mbDriverMode)
 
 updateLocationHandler ::
   ( Redis.HedisFlow m r,
@@ -152,7 +154,7 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
         (a : ax) -> do
           let newWaypoints = a :| ax
               currPoint = NE.last newWaypoints
-          upsertDriverLocation currPoint.pt currPoint.ts
+          upsertDriverLocation currPoint.pt currPoint.ts driver.merchantId
           fork "updating in kafka" $
             forM_ (a : ax) $ \point -> do
               streamLocationUpdates (fst <$> mbRideIdAndStatus) driver.merchantId driver.id point.pt point.ts driverInfo.active driverInfo.mode

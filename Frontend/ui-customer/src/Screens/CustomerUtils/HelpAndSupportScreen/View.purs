@@ -114,10 +114,12 @@ view push state =
       , allTopicsView state push
       , apiFailureView state push
       ]
-    , if state.props.isCallConfirmation
-        then PopUpModal.view (push <<< PopupModelActionController) (callConfirmationPopup state)
-        else
-          linearLayout [][]
+    , linearLayout
+      [ width MATCH_PARENT
+      , height MATCH_PARENT
+      , visibility if state.props.isCallConfirmation then VISIBLE else GONE
+      ][PopUpModal.view (push <<< PopupModelActionController) (callConfirmationPopup state)]
+
   ]
 
 ------------------------------- recentRide --------------------------

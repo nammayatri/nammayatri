@@ -15,7 +15,7 @@
 module API.RiderPlatform.IssueList where
 
 import qualified "rider-app" API.Dashboard.IssueList as BAP
-import qualified "rider-app" Domain.Types.Issue as DI
+import qualified "rider-app" Domain.Action.Dashboard.IssueList as DI
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import "lib-dashboard" Environment
 import Kernel.Prelude
@@ -34,7 +34,7 @@ type API =
 handler :: ShortId DM.Merchant -> FlowServer API
 handler = listIssue
 
-listIssue :: ShortId DM.Merchant -> ApiTokenInfo -> Text -> Text -> FlowHandler [DI.Issue]
-listIssue merchantShortId apiTokenInfo mobileCountryCode mobileNumber = withFlowHandlerAPI $ do
+listIssue :: ShortId DM.Merchant -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> FlowHandler DI.IssueListRes
+listIssue merchantShortId apiTokenInfo mbLimit mbOffset mbMobileCountryCode mbMobileNumber mbFrom mbTo = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-  Client.callRiderApp checkedMerchantId (.issues.listIssue) mobileCountryCode mobileNumber
+  Client.callRiderApp checkedMerchantId (.issues.listIssue) mbLimit mbOffset mbMobileCountryCode mbMobileNumber mbFrom mbTo

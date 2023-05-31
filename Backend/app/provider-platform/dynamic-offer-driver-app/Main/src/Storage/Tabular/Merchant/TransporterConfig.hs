@@ -42,9 +42,10 @@ mkPersist
       popupDelayToAddAsPenalty Seconds Maybe
       thresholdCancellationScore Int Maybe
       minRidesForCancellationScore Int Maybe
+      thresholdCancellationPercentageToUnlist Int Maybe
+      minRidesToUnlist Int Maybe
       mediaFileUrlPattern Text
       mediaFileSizeUpperLimit Int
-      waitingTimeEstimatedThreshold Seconds
       referralLinkPassword Text
       fcmUrl Text
       fcmServiceAccount Text

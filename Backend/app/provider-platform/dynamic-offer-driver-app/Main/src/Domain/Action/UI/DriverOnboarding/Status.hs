@@ -33,7 +33,6 @@ import Environment
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
-import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id (Id)
@@ -46,7 +45,6 @@ import qualified Storage.Queries.DriverOnboarding.IdfyVerification as IVQuery
 import qualified Storage.Queries.DriverOnboarding.Image as IQuery
 import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as RCQuery
 import Storage.Queries.Person as Person
-import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as VQuery
 
 -- PENDING means "pending verification"
@@ -62,15 +60,14 @@ data StatusRes = StatusRes
   }
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-statusHandler :: Id SP.Person -> Flow StatusRes
-statusHandler personId = do
-  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  transporterConfig <- findByMerchantId person.merchantId >>= fromMaybeM (TransporterConfigNotFound person.merchantId.getId)
+statusHandler :: (Id SP.Person, Id DM.Merchant) -> Flow StatusRes
+statusHandler (personId, merchantId) = do
+  transporterConfig <- findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   (dlStatus, mDL) <- getDLAndStatus personId transporterConfig.onboardingTryLimit
   (rcStatus, mRC) <- getRCAndStatus personId transporterConfig.onboardingTryLimit
 
   when (dlStatus == VALID && rcStatus == VALID) $
-    enableDriver personId person.merchantId mRC mDL
+    enableDriver personId merchantId mRC mDL
   return $ StatusRes {dlVerificationStatus = dlStatus, rcVerificationStatus = rcStatus}
 
 getDLAndStatus :: Id SP.Person -> Int -> Flow (ResponseStatus, Maybe DL.DriverLicense)

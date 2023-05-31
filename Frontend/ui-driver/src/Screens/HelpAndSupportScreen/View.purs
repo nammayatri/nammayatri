@@ -245,12 +245,22 @@ categoryView categoryGroup marginLeft marginRight state push =
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
       , margin (Margin 0 10 0 0)
-      , text categoryGroup.categoryName
+      , text $ getCategoryName categoryGroup.categoryAction
       , gravity CENTER
       , color Color.black800
       , textSize FontSize.a_17
       ]
   ]
+
+
+
+getCategoryName :: String -> String 
+getCategoryName categoryName = case categoryName of 
+  "LOST_AND_FOUND" -> (getString LOST_AND_FOUND)
+  "RIDE_RELATED" -> (getString RIDE_RELATED)
+  "APP_RELATED" -> (getString APP_RELATED)
+  "FARE_RELATED" -> (getString FARE_RELATED)
+  _ -> ""
 
 ------------------------------------------------- allOtherTopics ------------------------------
 allOtherTopics :: ST.HelpAndSupportScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w

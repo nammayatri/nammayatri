@@ -43,6 +43,11 @@ type ShareRideInfoAPI =
     :> "info"
     :> Get '[JSON] ShareRideInfoRes
 
+type RideInfoAPI =
+  "rideinfo"
+    :> Capture "rideId" (Id DP.Ride)
+    :> Get '[JSON] RideInfoRes
+
 data ShareRideInfoRes = ShareRideInfoRes
   { id :: Id Ride,
     bookingId :: Id Booking,
@@ -62,6 +67,42 @@ data ShareRideInfoRes = ShareRideInfoRes
     toLocation :: Maybe BookingLocation
   }
   deriving (Generic, Show, ToSchema, FromJSON, ToJSON)
+
+data RideInfoRes = RideInfoRes
+  { rideId :: Id Ride,
+    bookingId :: Id Booking,
+    rideStatus :: RideStatus,
+    customerName :: Maybe Text,
+    customerPhoneNo :: Maybe Text,
+    rideOtp :: Text,
+    fromLocation :: BookingLocation,
+    toLocation :: Maybe BookingLocation,
+    driverName :: Text,
+    driverPhoneNo :: Maybe Text,
+    driverRegisteredAt :: UTCTime,
+    vehicleNumber :: Text,
+    vehicleModel :: Text,
+    rideBookingTime :: UTCTime,
+    driverArrivalTime :: Maybe UTCTime,
+    rideStartTime :: Maybe UTCTime,
+    rideEndTime :: Maybe UTCTime,
+    chargeableDistance :: Maybe HighPrecMeters,
+    estimatedFare :: Money,
+    actualFare :: Maybe Money,
+    rideDuration :: Maybe Minutes,
+    cancelledTime :: Maybe UTCTime,
+    cancelledBy :: Maybe CancellationSource
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
+data CancellationSource
+  = ByUser
+  | ByDriver
+  | ByMerchant
+  | ByAllocator
+  | ByApplication
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data RideStatus
   = NEW
@@ -150,10 +191,6 @@ type TripRouteAPI =
   "trip"
     :> "route"
     :> Capture "rideId" (Id DP.Ride)
-    :> ReqBody '[JSON] TripRouteReq
+    :> MandatoryQueryParam "lat" Double
+    :> MandatoryQueryParam "lon" Double
     :> Get '[JSON] Maps.GetRoutesResp
-
-newtype TripRouteReq = TripRouteReq
-  { pickupLocation :: Maps.LatLong
-  }
-  deriving (Show, ToJSON, FromJSON, Generic, ToSchema)

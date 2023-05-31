@@ -38,7 +38,7 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
-import Prelude (Unit, bind, const, discard, not, pure, unit, when, ($), (&&), (/=), (<<<), (<>), (==))
+import Prelude (Unit, bind, const, discard, not, pure, unit, when, ($), (&&), (/=), (<<<), (<>), (==), (>=))
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, clickable, color, fontStyle, frameLayout, gravity, height, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, singleLine, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
@@ -57,7 +57,7 @@ screen initialState =
     do
       _ <- JB.setFCMToken push $ SetToken
       if initialState.data.timerID == "" then pure unit else pure $ EHC.clearTimer initialState.data.timerID
-      if not initialState.props.resendEnable && initialState.data.attempts /=0 then do
+      if not initialState.props.resendEnable && initialState.data.attempts >= 0 then do
           _ <- launchAff $ EHC.flowRunner $ runExceptT $ runBackT $ lift $ lift $ doAff do liftEffect $ EHC.countDown 15 "otp" push CountDown
           pure unit
         else pure unit

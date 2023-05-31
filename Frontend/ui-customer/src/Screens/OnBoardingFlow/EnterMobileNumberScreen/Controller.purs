@@ -143,6 +143,7 @@ eval Resend state = do
     let newState = state {data{attempts = if (state.data.attempts > 0) then state.data.attempts - 1 else state.data.attempts},props{resendEnable = false}}
     if state.data.attempts == 0 then do
         _ <- pure $ toast (getString LIMIT_REACHED)
+        _ <- pure $ toggleBtnLoader "" false
         continue newState{props{enterOTP = false}}
       else exit $ ResendOTP newState
 
