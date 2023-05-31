@@ -189,6 +189,12 @@ getDriverInfoFlow = do
       let (GetDriverInfoResp getDriverInfoResp) = getDriverInfoResp
       modifyScreenState $ ApplicationStatusScreenType (\applicationStatusScreen -> applicationStatusScreen {props{alternateNumberAdded = isJust getDriverInfoResp.alternateNumber}})
       if getDriverInfoResp.enabled then do
+        if(getValueToLocalStore IS_DRIVER_ENABLED == "false") then do
+          _ <- pure $ firebaseLogEvent "ny_driver_enabled"
+          _ <- pure $ metaLogEvent "ny_driver_enabled"
+          pure unit
+        else
+          pure unit
         setValueToLocalStore IS_DRIVER_ENABLED "true"
         let (Vehicle linkedVehicle) = (fromMaybe dummyVehicleObject getDriverInfoResp.linkedVehicle)
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data = homeScreen.data {driverName = getDriverInfoResp.firstName, vehicleType = linkedVehicle.variant ,  driverAlternateMobile =getDriverInfoResp.alternateNumber   }
