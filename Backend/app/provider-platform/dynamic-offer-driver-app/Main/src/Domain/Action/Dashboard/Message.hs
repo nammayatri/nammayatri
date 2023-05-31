@@ -278,11 +278,16 @@ messageInfo merchantShortId messageId = do
 messageDeliveryInfo :: ShortId DM.Merchant -> Id Domain.Message -> Flow Common.MessageDeliveryInfoResponse
 messageDeliveryInfo merchantShortId messageId = do
   _ <- findMerchantByShortId merchantShortId
-  success <- Esq.runInReplica $ MRQuery.getMessageCountByStatus messageId Domain.Success
-  failed <- Esq.runInReplica $ MRQuery.getMessageCountByStatus messageId Domain.Failed
-  queued <- Esq.runInReplica $ MRQuery.getMessageCountByStatus messageId Domain.Queued
-  sending <- Esq.runInReplica $ MRQuery.getMessageCountByStatus messageId Domain.Sending
-  seen <- Esq.runInReplica $ MRQuery.getMessageCountByReadStatus messageId
+  --success <- Esq.runInReplica $ MRQuery.getMessageCountByStatus messageId Domain.Success
+  success <- MRQuery.getMessageCountByStatus messageId Domain.Success
+  --failed <- Esq.runInReplica $ MRQuery.getMessageCountByStatus messageId Domain.Failed
+  failed <- MRQuery.getMessageCountByStatus messageId Domain.Failed
+  --queued <- Esq.runInReplica $ MRQuery.getMessageCountByStatus messageId Domain.Queued
+  queued <- MRQuery.getMessageCountByStatus messageId Domain.Queued
+  --sending <- Esq.runInReplica $ MRQuery.getMessageCountByStatus messageId Domain.Sending
+  sending <- MRQuery.getMessageCountByStatus messageId Domain.Sending
+  --seen <- Esq.runInReplica $ MRQuery.getMessageCountByReadStatus messageId
+  seen <- MRQuery.getMessageCountByReadStatus messageId
   message <- MQuery.findById messageId >>= fromMaybeM (InvalidRequest "Message Not Found")
   return $ Common.MessageDeliveryInfoResponse {messageId = cast messageId, success, failed, queued, sending, seen, liked = message.likeCount}
 

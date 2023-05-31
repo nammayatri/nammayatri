@@ -15,16 +15,19 @@
 
 module Storage.Queries.QuoteSpecialZone where
 
-import Data.Int (Int32)
+import qualified Database.Beam as B
+import Database.Beam.Postgres
 import Domain.Types.QuoteSpecialZone
 import Domain.Types.SearchRequestSpecialZone
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
+import Sequelize
 import qualified Sequelize as Se
 import qualified Storage.Beam.QuoteSpecialZone as BeamQSZ
 import Storage.Queries.FareParameters as BeamQFP
@@ -41,14 +44,30 @@ create quote = Esq.runTransaction $
       FareParamsT.SlabDetailsT -> return ()
     Esq.create' quoteT
 
-countAllByRequestId :: Transactionable m => Id SearchRequestSpecialZone -> m Int32
-countAllByRequestId searchReqId = do
-  fmap (fromMaybe 0) $
-    Esq.findOne $ do
-      dQuote <- from $ table @QuoteSpecialZoneT
-      where_ $
-        dQuote ^. QuoteSpecialZoneSearchRequestId ==. val (toKey searchReqId)
-      pure (countRows @Int32)
+-- countAllByRequestId :: Transactionable m => Id SearchRequestSpecialZone -> m Int32
+-- countAllByRequestId searchReqId = do
+--   fmap (fromMaybe 0) $
+--     Esq.findOne $ do
+--       dQuote <- from $ table @QuoteSpecialZoneT
+--       where_ $
+--         dQuote ^. QuoteSpecialZoneSearchRequestId ==. val (toKey searchReqId)
+--       pure (countRows @Int32)
+
+countAllByRequestId :: L.MonadFlow m => Id SearchRequestSpecialZone -> m Int
+countAllByRequestId searchReqID = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  conn <- L.getOrInitSqlConn (fromJust dbConf)
+  case conn of
+    Right c -> do
+      resp <-
+        L.runDB c $
+          L.findRow $
+            B.select $
+              B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
+                B.filter_' (\(BeamQSZ.QuoteSpecialZoneT {..}) -> searchRequestId B.==?. B.val_ (getId searchReqID)) $
+                  B.all_ (meshModelTableEntity @BeamQSZ.QuoteSpecialZoneT @Postgres @(DatabaseWith BeamQSZ.QuoteSpecialZoneT))
+      pure (either (const 0) (fromMaybe 0) resp)
+    Left _ -> pure 0
 
 baseQuoteSpecialZoneQuery ::
   From
@@ -61,15 +80,6 @@ baseQuoteSpecialZoneQuery =
       `Esq.on` ( \(rb :& farePars) ->
                    rb ^. QuoteSpecialZoneFareParametersId ==. farePars ^. Fare.FareParametersTId
                )
-
--- findById :: (Transactionable m) => Id QuoteSpecialZone -> m (Maybe QuoteSpecialZone)
--- findById dQuoteId = buildDType $ do
---   res <- Esq.findOne' $ do
---     (dQuote :& farePars) <-
---       from baseQuoteSpecialZoneQuery
---     where_ $ dQuote ^. QuoteSpecialZoneTId ==. val (toKey dQuoteId)
---     pure (dQuote, farePars)
---   join <$> mapM buildFullQuoteSpecialZone res
 
 findById :: (L.MonadFlow m) => Id QuoteSpecialZone -> m (Maybe QuoteSpecialZone)
 findById (Id dQuoteId) = do

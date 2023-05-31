@@ -96,7 +96,7 @@ addReferralCode personId code = do
   clearDriverInfoCache (cast personId)
   Queries.addReferralCode personId code
 
-countDrivers :: Esq.Transactionable m => Id Merchant -> m (Int, Int)
+countDrivers :: L.MonadFlow m => Id Merchant -> m (Int, Int)
 countDrivers = Queries.countDrivers
 
 updateDowngradingOptions :: (L.MonadFlow m, MonadTime m) => Id Person -> Bool -> Bool -> Bool -> m (MeshResult ())

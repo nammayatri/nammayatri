@@ -84,7 +84,6 @@ import Kernel.Prelude (NominalDiffTime)
 import Kernel.Sms.Config
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.APISuccess as APISuccess
@@ -772,7 +771,8 @@ respondQuote driverId req = do
           whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
           when (sReqFD.response == Just Reject) (throwError QuoteAlreadyRejected)
           quoteLimit <- getQuoteLimit sReq.providerId sReq.estimatedDistance
-          quoteCount <- runInReplica $ QDrQt.countAllByRequestId sReq.id
+          --quoteCount <- runInReplica $ QDrQt.countAllByRequestId sReq.id
+          quoteCount <- QDrQt.countAllByRequestId sReq.id
           when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)
           farePolicy <- FarePolicyS.findByMerchantIdAndVariant organization.id sReqFD.vehicleVariant (Just sReq.estimatedDistance) >>= fromMaybeM NoFarePolicy
           fareParams <-

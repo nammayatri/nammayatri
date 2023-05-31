@@ -15,6 +15,8 @@
 
 module Storage.Queries.Message.MessageReport where
 
+import qualified Database.Beam as B
+import Database.Beam.Postgres
 import qualified Domain.Types.Message.Message as Msg
 import Domain.Types.Message.MessageReport
 import qualified Domain.Types.Message.MessageTranslation as MTD
@@ -22,6 +24,7 @@ import qualified Domain.Types.Person as P
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
+import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
 import Kernel.External.Types
 import Kernel.Prelude
@@ -30,6 +33,7 @@ import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common (MonadTime (getCurrentTime))
 import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
+import Sequelize
 import qualified Sequelize as Se
 import qualified Storage.Beam.Message.MessageReport as BeamMR
 import Storage.Tabular.Message.Instances ()
@@ -134,31 +138,63 @@ findByMessageIdAndStatusWithLimitAndOffset mbLimit mbOffset messageId mbDelivery
     limitVal = min (maybe 10 fromIntegral mbLimit) 20
     offsetVal = maybe 0 fromIntegral mbOffset
 
-getMessageCountByStatus :: Transactionable m => Id Msg.Message -> DeliveryStatus -> m Int
-getMessageCountByStatus messageId status =
-  mkCount <$> do
-    Esq.findAll $ do
-      messageReport <- from $ table @MessageReportT
-      where_ $
-        messageReport ^. MessageReportMessageId ==. val (toKey messageId)
-          &&. messageReport ^. MessageReportDeliveryStatus ==. val status
-      return (countRows :: SqlExpr (Esq.Value Int))
-  where
-    mkCount [counter] = counter
-    mkCount _ = 0
+-- getMessageCountByStatus :: Transactionable m => Id Msg.Message -> DeliveryStatus -> m Int
+-- getMessageCountByStatus messageId status =
+--   mkCount <$> do
+--     Esq.findAll $ do
+--       messageReport <- from $ table @MessageReportT
+--       where_ $
+--         messageReport ^. MessageReportMessageId ==. val (toKey messageId)
+--           &&. messageReport ^. MessageReportDeliveryStatus ==. val status
+--       return (countRows :: SqlExpr (Esq.Value Int))
+--   where
+--     mkCount [counter] = counter
+--     mkCount _ = 0
 
-getMessageCountByReadStatus :: Transactionable m => Id Msg.Message -> m Int
-getMessageCountByReadStatus messageId =
-  mkCount <$> do
-    Esq.findAll $ do
-      messageReport <- from $ table @MessageReportT
-      where_ $
-        messageReport ^. MessageReportMessageId ==. val (toKey messageId)
-          &&. messageReport ^. MessageReportReadStatus
-      return (countRows :: SqlExpr (Esq.Value Int))
-  where
-    mkCount [counter] = counter
-    mkCount _ = 0
+getMessageCountByStatus :: L.MonadFlow m => Id Msg.Message -> DeliveryStatus -> m Int
+getMessageCountByStatus (Id messageID) status = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  conn <- L.getOrInitSqlConn (fromJust dbConf)
+  case conn of
+    Right c -> do
+      resp <-
+        L.runDB c $
+          L.findRow $
+            B.select $
+              B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
+                B.filter_' (\(BeamMR.MessageReportT {..}) -> messageId B.==?. B.val_ messageID B.&&?. (deliveryStatus B.==?. B.val_ status)) $
+                  B.all_ (meshModelTableEntity @BeamMR.MessageReportT @Postgres @(DatabaseWith BeamMR.MessageReportT))
+      pure (either (const 0) (fromMaybe 0) resp)
+    Left _ -> pure 0
+
+-- getMessageCountByReadStatus :: Transactionable m => Id Msg.Message -> m Int
+-- getMessageCountByReadStatus messageId =
+--   mkCount <$> do
+--     Esq.findAll $ do
+--       messageReport <- from $ table @MessageReportT
+--       where_ $
+--         messageReport ^. MessageReportMessageId ==. val (toKey messageId)
+--           &&. messageReport ^. MessageReportReadStatus
+--       return (countRows :: SqlExpr (Esq.Value Int))
+--   where
+--     mkCount [counter] = counter
+--     mkCount _ = 0
+
+getMessageCountByReadStatus :: L.MonadFlow m => Id Msg.Message -> m Int
+getMessageCountByReadStatus (Id messageID) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  conn <- L.getOrInitSqlConn (fromJust dbConf)
+  case conn of
+    Right c -> do
+      resp <-
+        L.runDB c $
+          L.findRow $
+            B.select $
+              B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
+                B.filter_' (\(BeamMR.MessageReportT {..}) -> messageId B.==?. B.val_ messageID B.&&?. readStatus B.==?. B.val_ True) $
+                  B.all_ (meshModelTableEntity @BeamMR.MessageReportT @Postgres @(DatabaseWith BeamMR.MessageReportT))
+      pure (either (const 0) (fromMaybe 0) resp)
+    Left _ -> pure 0
 
 -- updateSeenAndReplyByMessageIdAndDriverId :: Id Msg.Message -> Id P.Driver -> Bool -> Maybe Text -> SqlDB ()
 -- updateSeenAndReplyByMessageIdAndDriverId messageId driverId readStatus reply = do

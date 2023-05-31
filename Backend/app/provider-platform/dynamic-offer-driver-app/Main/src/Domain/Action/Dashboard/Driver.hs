@@ -183,7 +183,8 @@ buildDriverListItem (person, driverInformation, mbVehicle) = do
 driverActivity :: ShortId DM.Merchant -> Flow Common.DriverActivityRes
 driverActivity merchantShortId = do
   merchant <- findMerchantByShortId merchantShortId
-  Common.mkDriverActivityRes <$> Esq.runInReplica (CQDriverInfo.countDrivers merchant.id)
+  --Common.mkDriverActivityRes <$> Esq.runInReplica (CQDriverInfo.countDrivers merchant.id)
+  Common.mkDriverActivityRes <$> (CQDriverInfo.countDrivers merchant.id)
 
 ---------------------------------------------------------------------
 enableDriver :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess

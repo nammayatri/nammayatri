@@ -19,6 +19,7 @@ import Control.Applicative (liftA2)
 import qualified Data.ByteString as BS
 import qualified Database.Beam as B
 import Database.Beam.Postgres hiding ((++.))
+import qualified Database.Beam.Query ()
 import Domain.Types.DriverInformation as DDI
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person as Person
@@ -42,6 +43,14 @@ import qualified Storage.Queries.Person as QueriesP
 import Storage.Tabular.DriverInformation
 import Storage.Tabular.DriverLocation
 import Storage.Tabular.Person
+import qualified Storage.Tabular.VechileNew as VN
+import qualified Prelude
+
+data DatabaseWith2 table1 table2 f = DatabaseWith2
+  { dwTable1 :: f (B.TableEntity table1),
+    dwTable2 :: f (B.TableEntity table2)
+  }
+  deriving (Generic, B.Database be)
 
 create :: L.MonadFlow m => DDI.DriverInformation -> m ()
 create driverInformation = do
@@ -345,21 +354,46 @@ addReferralCode (Id personId) code = do
         [Se.Is BeamDI.driverId (Se.Eq personId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-countDrivers :: Transactionable m => Id Merchant -> m (Int, Int)
-countDrivers merchantId =
+-- countDrivers :: Transactionable m => Id Merchant -> m (Int, Int)
+-- countDrivers merchantId =
+--   getResults <$> do
+--     findAll $ do
+--       (driverInformation :& person) <-
+--         from $
+--           table @DriverInformationT
+--             `innerJoin` table @PersonT
+--               `Esq.on` ( \(driverInformation :& person) ->
+--                            driverInformation ^. DriverInformationDriverId ==. person ^. PersonTId
+--                        )
+--       where_ $
+--         person ^. PersonMerchantId ==. (val . toKey $ merchantId)
+--       groupBy (driverInformation ^. DriverInformationActive)
+--       pure (driverInformation ^. DriverInformationActive, count @Int $ person ^. PersonId)
+--   where
+--     getResults :: [(Bool, Int)] -> (Int, Int)
+--     getResults = foldl func (0, 0)
+
+--     func (active, inactive) (activity, counter) =
+--       if activity then (active + counter, inactive) else (active, inactive + counter)
+
+countDrivers :: L.MonadFlow m => Id Merchant -> m (Int, Int)
+countDrivers merchantID =
   getResults <$> do
-    findAll $ do
-      (driverInformation :& person) <-
-        from $
-          table @DriverInformationT
-            `innerJoin` table @PersonT
-              `Esq.on` ( \(driverInformation :& person) ->
-                           driverInformation ^. DriverInformationDriverId ==. person ^. PersonTId
-                       )
-      where_ $
-        person ^. PersonMerchantId ==. (val . toKey $ merchantId)
-      groupBy (driverInformation ^. DriverInformationActive)
-      pure (driverInformation ^. DriverInformationActive, count @Int $ person ^. PersonId)
+    dbConf <- L.getOption Extra.EulerPsqlDbCfg
+    conn <- L.getOrInitSqlConn (fromJust dbConf)
+    case conn of
+      Right c -> do
+        resp <- L.runDB c $
+          L.findRows $
+            B.select $
+              B.aggregate_ (\(driverInformation, _) -> (B.group_ (BeamDI.active driverInformation), B.as_ @Int B.countAll_)) $
+                B.filter_' (\(_, BeamP.PersonT {..}) -> merchantId B.==?. B.val_ (getId merchantID)) $
+                  do
+                    driverInformation <- B.all_ (meshModelTableEntity @BeamDI.DriverInformationT @Postgres @(DatabaseWith2 BeamDI.DriverInformationT BeamP.PersonT))
+                    person <- B.join_' (meshModelTableEntity @BeamP.PersonT @Postgres @(DatabaseWith2 BeamDI.DriverInformationT BeamP.PersonT)) (\person -> BeamP.id person B.==?. BeamDI.driverId driverInformation)
+                    pure (driverInformation, person)
+        pure (either (const []) Prelude.id resp)
+      Left _ -> pure []
   where
     getResults :: [(Bool, Int)] -> (Int, Int)
     getResults = foldl func (0, 0)

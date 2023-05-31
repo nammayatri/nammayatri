@@ -14,20 +14,21 @@
 
 module Storage.Queries.CallStatus where
 
+import qualified Database.Beam as B
+import Database.Beam.Postgres
 import Domain.Types.CallStatus
 import Domain.Types.Ride
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
+import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
 import qualified Kernel.External.Call.Interface.Types as Call
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
 import Sequelize as Se
 import qualified Storage.Beam.CallStatus as BeamCT
-import Storage.Tabular.CallStatus
 
 create :: L.MonadFlow m => CallStatus -> m (MeshResult ())
 create callStatus = do
@@ -65,13 +66,31 @@ updateCallStatus (Id callId) status conversationDuration recordingUrl = do
         [Is BeamCT.callId (Se.Eq callId)]
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-countCallsByRideId :: Transactionable m => Id Ride -> m Int
-countCallsByRideId rideId = (fromMaybe 0 <$>) $
-  Esq.findOne $ do
-    callStatus <- from $ table @CallStatusT
-    where_ $ callStatus ^. CallStatusRideId ==. val (toKey rideId)
-    groupBy $ callStatus ^. CallStatusRideId
-    pure $ count @Int $ callStatus ^. CallStatusTId
+-- countCallsByRideId :: Transactionable m => Id Ride -> m Int
+-- countCallsByRideId rideId = (fromMaybe 0 <$>) $
+--   Esq.findOne $ do
+--     callStatus <- from $ table @CallStatusT
+--     where_ $ callStatus ^. CallStatusRideId ==. val (toKey rideId)
+--     groupBy $ callStatus ^. CallStatusRideId
+--     pure $ count @Int $ callStatus ^. CallStatusTId
+
+countCallsByRideId :: L.MonadFlow m => Id Ride -> m Int
+countCallsByRideId rideID = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  conn <- L.getOrInitSqlConn (fromJust dbConf)
+  case conn of
+    Right c -> do
+      resp <-
+        L.runDB c $
+          L.findRow $
+            B.select $
+              B.aggregate_ (\ride -> (B.group_ (BeamCT.rideId ride), B.as_ @Int B.countAll_)) $
+                B.filter_' (\(BeamCT.CallStatusT {..}) -> rideId B.==?. B.val_ (getId rideID)) $
+                  B.all_ (meshModelTableEntity @BeamCT.CallStatusT @Postgres @(DatabaseWith BeamCT.CallStatusT))
+      case resp of
+        Right (Just resp') -> pure (snd resp')
+        _ -> pure 0
+    Left _ -> pure 0
 
 transformBeamCallStatusToDomain :: BeamCT.CallStatus -> CallStatus
 transformBeamCallStatusToDomain BeamCT.CallStatusT {..} = do
