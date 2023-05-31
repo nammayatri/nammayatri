@@ -83,3 +83,17 @@ updateCustomerExtraFee searchReqId customerExtraFee = do
       [ SearchRequestCustomerExtraFee =. val customerExtraFee
       ]
     where_ $ tbl ^. SearchRequestId ==. val (getId searchReqId)
+
+updateAutoAssign ::
+  Id SearchRequest ->
+  Bool ->
+  Bool ->
+  SqlDB ()
+updateAutoAssign searchRequestId autoAssignedEnabled autoAssignedEnabledV2 = do
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ SearchRequestAutoAssignEnabled =. val autoAssignedEnabled,
+        SearchRequestAutoAssignEnabledV2 =. val autoAssignedEnabledV2
+      ]
+    where_ $ tbl ^. SearchRequestTId ==. val (toKey searchRequestId)

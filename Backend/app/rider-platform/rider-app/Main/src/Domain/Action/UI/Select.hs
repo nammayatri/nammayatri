@@ -56,7 +56,7 @@ import Tools.Error
 
 data DSelectReq = DSelectReq
   { customerExtraFee :: Maybe Money,
-    autoAssignEnabled :: Bool,
+    autoAssignEnabled :: Maybe Bool, --TODO: deprecated, to be removed
     autoAssignEnabledV2 :: Maybe Bool
   }
   deriving stock (Generic, Show)
@@ -75,7 +75,8 @@ data DSelectRes = DSelectRes
     providerUrl :: BaseUrl,
     variant :: VehicleVariant,
     customerExtraFee :: Maybe Money,
-    city :: Text
+    city :: Text,
+    autoAssignEnabled :: Maybe Bool
   }
 
 data QuotesResultResponse = QuotesResultResponse
@@ -123,6 +124,7 @@ select personId estimateId req@DSelectReq {..} = do
   when ((searchRequest.validTill) < now) $
     throwError SearchRequestExpired
   Esq.runTransaction $ do
+    whenJust autoAssignEnabled $ \autoAssignEnabled' -> QSearchRequest.updateAutoAssign searchRequestId autoAssignEnabled' (fromMaybe False autoAssignEnabledV2)
     QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, validTill = searchRequest.validTill}
     QEstimate.updateStatus estimateId DEstimate.DRIVER_QUOTE_REQUESTED
     when (isJust req.customerExtraFee) $ do
