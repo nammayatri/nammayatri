@@ -32,7 +32,6 @@ import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackA
 import Prelude (class Show, pure, unit, bind, map, discard, show, ($), (==), (&&), (+), (/=), (<>), (||), (-), (<), (/), (*), negate, (<<<), not)
 import PrestoDOM (Eval, ScrollState(..), continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
-import Resources.Constants (DecodeAddress(..), decodeAddress)
 import Screens (ScreenName(..), getScreen)
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity)
 import Screens.Types (AnimationState(..), FareComponent, Fares, IndividualRideCardState, ItemState, MyRidesScreenState, Stage(..))
@@ -40,6 +39,7 @@ import Services.API (FareBreakupAPIEntity(..), RideAPIEntity(..), RideBookingLis
 import Storage (isLocalStageOn)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..)) 
+import Resources.Constants (DecodeAddress(..), decodeAddress, getFaresList, getFareFromArray, getFilteredFares, getKmMeter)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -201,7 +201,7 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
     baseDistanceVal = (getKmMeter (fromMaybe 0 (rideDetails.chargeableRideDistance)))
     timeVal = (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "HH:mm:ss")
     nightChargesVal = (withinTimeRange "22:00:00" "5:00:00" timeVal)
-    updatedFareList = getFaresList ride.fareBreakup state baseDistanceVal
+    updatedFareList = getFaresList ride.fareBreakup baseDistanceVal
      in {
     date : (( (fromMaybe "" ((split (Pattern ",") (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "llll")) !!0 )) <> ", " <>  (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "Do MMM") )),
     time :  (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "h:mm A"),
@@ -257,34 +257,5 @@ getFares fares = {
 , waitingCharges : "₹ " <> show (getFareFromArray fares "WAITING_CHARGES")
 , nominalFare : "₹ " <> show (getFareFromArray fares "DRIVER_SELECTED_FARE")
 }
-getFareFromArray :: Array FareBreakupAPIEntity -> String -> Int
-getFareFromArray fareBreakUp fareType = (fromMaybe dummyFareBreakUp (head (filter (\fare -> fare^._description == (fareType)) fareBreakUp)))^._amount
 
-getKmMeter :: Int -> String
-getKmMeter distance = if (distance < 1000) then toString distance <> " m" else (parseFloat ((toNumber distance)/ 1000.0)) 2 <> " km"
 
-getFaresList :: Array FareBreakupAPIEntity -> MyRidesScreenState -> String -> Array FareComponent
-getFaresList fares state baseDistance =
-  map
-    ( \(FareBreakupAPIEntity item) ->
-          { fareType : item.description
-          , price : if item.description == "BASE_FARE" then (item.amount + getFareFromArray fares "EXTRA_DISTANCE_FARE") else item.amount
-          , title : case item.description of
-                      "BASE_FARE" -> (getEN BASE_FARES) <> " (" <> baseDistance <> ")"
-                      "EXTRA_DISTANCE_FARE" -> getEN NOMINAL_FARE
-                      "DRIVER_SELECTED_FARE" -> getEN NOMINAL_FARE
-                      "TOTAL_FARE" -> getEN TOTAL_PAID
-                      "DEAD_KILOMETER_FARE" -> getEN PICKUP_CHARGE
-                      "PICKUP_CHARGES" -> getEN PICKUP_CHARGE
-                      "CUSTOMER_SELECTED_FARE" -> getEN CUSTOMER_SELECTED_FARE
-                      "WAITING_CHARGES" -> getEN WAITING_CHARGE
-                      "EARLY_END_RIDE_PENALTY" -> getEN EARLY_END_RIDE_CHARGES
-                      "WAITING_OR_PICKUP_CHARGES" -> getEN PICKUP_CHARGE 
-                      "SERVICE_CHARGE" -> getEN SERVICE_CHARGES
-                      "FIXED_GOVERNMENT_RATE" -> getEN GOVERNMENT_CHAGRES
-                      _ -> getEN BASE_FARES
-          }
-    )
-    (getFilteredFares fares)
-getFilteredFares :: Array FareBreakupAPIEntity -> Array FareBreakupAPIEntity
-getFilteredFares = filter (\(FareBreakupAPIEntity item) -> (all (_ /=  item.description) ["EXTRA_DISTANCE_FARE", "TOTAL_FARE", "BASE_DISTANCE_FARE"]) )

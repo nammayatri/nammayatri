@@ -170,7 +170,6 @@ eval AddImage state =
                           , data  { addImagesState { images = state.data.addedImages, stateChanged = false } } } [do
       _ <- pure $ clearFocus (getNewIDWithTag "submit_chat_edit_text")
       _ <- pure $ startLottieProcess "primary_button_loader" (getNewIDWithTag "add_images_model_done_button") true 0.6 "CENTER_CROP"
-      _ <- liftEffect $ uploadFile unit
       pure NoAction
     ]
 

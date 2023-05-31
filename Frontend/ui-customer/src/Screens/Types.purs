@@ -294,6 +294,7 @@ type HelpAndSupportScreenData =
     driverName :: String,
     totalAmount :: String,
     isNull :: Boolean,
+    faresList :: Array FareComponent,
     status :: String,
     rideStartTime :: String,
     rideEndTime :: String,

@@ -35,7 +35,7 @@ import PrestoDOM.Events (afterRender)
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 view push config = 
   linearLayout
-  [ height if config.spanParent then MATCH_PARENT else (V 396)
+  [ height if config.spanParent then MATCH_PARENT else (V 404)
   , width MATCH_PARENT
   , orientation VERTICAL
   , alignParentBottom "true,-1"
