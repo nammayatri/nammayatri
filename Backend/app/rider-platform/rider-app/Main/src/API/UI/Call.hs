@@ -85,7 +85,7 @@ type FrontendBasedCallAPI =
            :<|> "statusCallback"
            :> MandatoryQueryParam "CallSid" Text
            :> MandatoryQueryParam "DialCallStatus" ExotelCallStatus
-           :> MandatoryQueryParam "RecordingUrl" Text
+           :> QueryParam "RecordingUrl" Text
            :> QueryParam "Legs[0][OnCallDuration]" Int
            :> Get '[JSON] DCall.CallCallbackRes
        )
@@ -102,7 +102,7 @@ initiateCallToDriver rideId (personId, _) = withFlowHandlerAPI . withPersonIdLog
 callStatusCallback :: DCall.CallCallbackReq -> FlowHandler DCall.CallCallbackRes
 callStatusCallback = withFlowHandlerAPI . DCall.callStatusCallback
 
-directCallStatusCallback :: Text -> ExotelCallStatus -> Text -> Maybe Int -> FlowHandler DCall.CallCallbackRes
+directCallStatusCallback :: Text -> ExotelCallStatus -> Maybe Text -> Maybe Int -> FlowHandler DCall.CallCallbackRes
 directCallStatusCallback callSid dialCallStatus_ recordingUrl_ = withFlowHandlerAPI . DCall.directCallStatusCallback callSid dialCallStatus_ recordingUrl_
 
 getDriverMobileNumber :: Text -> Text -> Text -> Maybe Text -> ExotelCallStatus -> FlowHandler DCall.GetDriverMobileNumberResp
