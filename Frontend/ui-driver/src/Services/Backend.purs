@@ -49,15 +49,44 @@ import Debug (spy)
 getHeaders :: String -> Flow GlobalState Headers
 getHeaders dummy = do
     _ <- pure $ printLog "dummy" dummy
-    if ((getValueToLocalStore REGISTERATION_TOKEN) == "__failed") then pure $ (Headers [Header "Content-Type" "application/json", Header "x-client-version" (getValueToLocalStore VERSION_NAME), Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION), Header "session_id" (getValueToLocalStore SESSION_ID)])
-        else pure $ (Headers [Header "Content-Type" "application/json", Header "token" (getValueToLocalStore REGISTERATION_TOKEN), Header "x-client-version" (getValueToLocalStore VERSION_NAME), Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION), Header "session_id" (getValueToLocalStore SESSION_ID)])
+    if ((getValueToLocalStore REGISTERATION_TOKEN) == "__failed") 
+        then pure $ (Headers [  Header "Content-Type" "application/json", 
+                                Header "x-client-version" (getValueToLocalStore VERSION_NAME), 
+                                Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION), 
+                                Header "session_id" (getValueToLocalStore SESSION_ID),
+                                Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
+                                ]
+                    )
+        else pure $ (Headers [  Header "Content-Type" "application/json", 
+                                Header "token" (getValueToLocalStore REGISTERATION_TOKEN), 
+                                Header "x-client-version" (getValueToLocalStore VERSION_NAME), 
+                                Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION), 
+                                Header "session_id" (getValueToLocalStore SESSION_ID),
+                                Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
+                                ]
+                    )
+
+
 
 getHeaders' :: String -> FlowBT String Headers
 getHeaders' dummy = do
         _ <- pure $ printLog "dummy" dummy
-        if ((getValueToLocalStore REGISTERATION_TOKEN) == "__failed") then
-          lift $ lift $ pure $ (Headers [Header "Content-Type" "application/json", Header "x-client-version" (getValueToLocalStore VERSION_NAME), Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION), Header "session_id" (getValueToLocalStore SESSION_ID)])
-          else lift $ lift $ pure $ (Headers [Header "Content-Type" "application/json",Header "token" (getValueToLocalStore REGISTERATION_TOKEN), Header "x-client-version" (getValueToLocalStore VERSION_NAME), Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION), Header "session_id" (getValueToLocalStore SESSION_ID)])
+        if ((getValueToLocalStore REGISTERATION_TOKEN) == "__failed") 
+        then lift $ lift $ pure $ (Headers [Header "Content-Type" "application/json", 
+                                            Header "x-client-version" (getValueToLocalStore VERSION_NAME), 
+                                            Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION), 
+                                            Header "session_id" (getValueToLocalStore SESSION_ID),
+                                            Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
+                                            ]
+                                    ) 
+        else lift $ lift $ pure $ (Headers [Header "Content-Type" "application/json",
+                                            Header "token" (getValueToLocalStore REGISTERATION_TOKEN), 
+                                            Header "x-client-version" (getValueToLocalStore VERSION_NAME), 
+                                            Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION), 
+                                            Header "session_id" (getValueToLocalStore SESSION_ID),
+                                            Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
+                                            ]
+                                    )
 
 withAPIResult url f flow = do
     let start = getTime unit

@@ -48,7 +48,9 @@ import android.provider.ContactsContract;
 import android.provider.MediaStore;
 import android.provider.OpenableColumns;
 import android.provider.Settings;
+import android.system.Os;
 import android.util.Base64;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -265,6 +267,74 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    public String getDeviceRAM()
+    {
+        String deviceRAM = sharedPref.getString("DEVICE_RAM", "__failed");
+        if(deviceRAM != "__failed")
+            return deviceRAM;
+        long memory=0;
+        try {
+            ActivityManager activityManager = (ActivityManager) getApplicationContext().getSystemService(Context.ACTIVITY_SERVICE);
+            ActivityManager.MemoryInfo memInfo = new ActivityManager.MemoryInfo();
+            activityManager.getMemoryInfo(memInfo);
+            memory = 1 + memInfo.totalMem / (1024 * 1024 * 1024);
+            deviceRAM = memory == 0 ? "null" : memory+" GB" ;
+            sharedPref.edit().putString("DEVICE_RAM", deviceRAM).apply();
+        } catch(Exception e){
+            System.out.println("In getDeviceRAM error: ");
+            e.printStackTrace();
+        }
+        return deviceRAM;
+    }
+    public String[] getScreenDimensions()
+    {
+        String[] res= {sharedPref.getString("DEVICE_RESOLUTION", "__failed"),sharedPref.getString("DEVICE_SIZE", "__failed")};
+        if(res[0] != "__failed" && res[1] != "__failed")
+            return res;
+        int height = 0;
+        int width  = 0;
+        float size = 0;
+        try {
+            DisplayMetrics displayMetrics = new DisplayMetrics();
+            getWindowManager().getDefaultDisplay().getRealMetrics(displayMetrics);
+            height = displayMetrics.heightPixels;
+            width = displayMetrics.widthPixels;
+            float x = height / displayMetrics.ydpi;
+            float y = width / displayMetrics.xdpi;
+            size = (float) Math.sqrt(x * x + y * y);
+            size = Math.round(size * 100) / 100;
+            res[0] = height != 0 && width != 0 ? height+"x"+width+"px" : "null" ;
+            res[1] = size!=0 ? size + " Inches" : "null" ;
+            sharedPref.edit().putString("DEVICE_RESOLUTION", res[0]).apply();
+            sharedPref.edit().putString("DEVICE_SIZE", res[1]).apply();
+        }catch(Exception e){
+            System.out.println("In getScreenDimensions error: ");
+            e.printStackTrace();
+        }
+        return res;
+    }
+
+    public String getDeviceDetails()
+    {
+        String deviceDetails = "";
+        try {
+            String bVersion = Build.VERSION.RELEASE;
+            String bModel = Build.MODEL;
+            String bBrand = Build.BRAND;
+            String[] dim = getScreenDimensions();
+            String deviceRAM = getDeviceRAM();
+            if(bModel == null || bModel == "")
+                bModel="null";
+            if(bBrand == null || bBrand == "")
+                bBrand="null";
+            bVersion = bVersion == null || bVersion == "" ? "null" : "Android v"+bVersion ;
+            deviceDetails = bBrand+"/" + bModel+"/" + bVersion+"/" + deviceRAM + "/" + dim[1]+"/" + dim[0];
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return deviceDetails;
+    }
+
     @SuppressLint("SetJavaScriptEnabled")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -278,6 +348,11 @@ public class MainActivity extends AppCompatActivity {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
+
+
+        sharedPref = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        sharedPref.edit().putString("DEVICE_DETAILS", getDeviceDetails()).apply();
+
         // TODO :- Discuss on the approach for handling realtime database
 //        FirebaseDatabase database = FirebaseDatabase.getInstance();
 //        DatabaseReference myRef = database.getReference("app");

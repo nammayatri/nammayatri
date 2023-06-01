@@ -2575,6 +2575,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         regToken = sharedPref.getString(context.getResources().getString(R.string.REGISTERATION_TOKEN), "null");
         baseUrl = sharedPref.getString("BASE_URL", "null");
         String version = sharedPref.getString("VERSION_NAME", "null");
+        String deviceDetails = sharedPref.getString("DEVICE_DETAILS", "null");
         System.out.println("BaseUrl" + baseUrl);
         try {
             String url = baseUrl + "/serviceability/origin";
@@ -2583,6 +2584,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
             connection.setRequestProperty("Content-Type", "application/json");
             connection.setRequestProperty("token", regToken);
             connection.setRequestProperty("x-client-version", version);
+            connection.setRequestProperty("x-device",deviceDetails);
 
             JSONObject payload = new JSONObject();
 
@@ -4243,10 +4245,12 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     private String getAPIResponse(String url) {
         if (url.equals("") || url == null) return "";
         StringBuilder result = new StringBuilder();
+        String deviceDetails = sharedPref.getString("DEVICE_DETAILS", "null");
         try {
             HttpURLConnection connection = (HttpURLConnection) (new URL(url).openConnection());
             connection.setRequestMethod("GET");
             connection.setRequestProperty("token", getKeyInNativeSharedPrefKeys("REGISTERATION_TOKEN"));
+            connection.setRequestProperty("x-device",deviceDetails);
             connection.connect();
             int respCode = connection.getResponseCode();
             InputStreamReader respReader;
