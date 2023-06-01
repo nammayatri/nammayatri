@@ -199,6 +199,10 @@
             android:exported="false"
             android:foregroundServiceType="dataSync"
             android:stopWithTask="false" />
+        <service android:name=".utils.OverlayMessagingService"
+            android:enabled="true"
+            android:exported="true"
+            android:largeHeap="true" />
         <activity android:name="com.theartofdev.edmodo.cropper.CropImageActivity"
             android:theme="@style/Base.Theme.AppCompat"/>
     </application>
