@@ -262,7 +262,9 @@ buildBookingCancellationReason bookingId mbRideId = do
       source = DBCReason.ByMerchant,
       reasonCode = Just $ CancellationReasonCode "BOOKING_NEW_STATUS_MORE_THAN_6HRS",
       reasonStage = Nothing,
-      additionalInfo = Nothing
+      additionalInfo = Nothing,
+      driverCancellationLocation = Nothing,
+      driverDistToPickup = Nothing
     }
 
 multipleRideCancel ::
