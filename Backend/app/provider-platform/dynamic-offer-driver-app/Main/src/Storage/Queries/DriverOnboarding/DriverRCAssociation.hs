@@ -12,10 +12,13 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Use tuple-section" #-}
 
 module Storage.Queries.DriverOnboarding.DriverRCAssociation where
 
-import Domain.Types.DriverOnboarding.DriverRCAssociation
+import Domain.Types.DriverOnboarding.DriverRCAssociation as DRCA
 import Domain.Types.DriverOnboarding.VehicleRegistrationCertificate
 import Domain.Types.Person (Person)
 import qualified EulerHS.Extra.EulerDB as Extra
@@ -28,8 +31,13 @@ import Kernel.Utils.Common
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.DriverRCAssociation as BeamDRCA
+import qualified Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate as BeamVRCT
+import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as QVRC
 import Storage.Tabular.DriverOnboarding.DriverRCAssociation
 import Storage.Tabular.DriverOnboarding.VehicleRegistrationCertificate
+
+-- create :: DriverRCAssociation -> SqlDB ()
+-- create = Esq.create
 
 create :: L.MonadFlow m => DriverRCAssociation -> m ()
 create driverRCAssociation = do
@@ -70,6 +78,34 @@ findAllByDriverId driverId = do
       rcAssoc ^. DriverRCAssociationDriverId ==. val (toKey driverId)
     orderBy [desc $ rcAssoc ^. DriverRCAssociationAssociatedOn]
     return (rcAssoc, regCert)
+
+findAllByDriverId' :: L.MonadFlow m => Id Person -> m [(DriverRCAssociation, VehicleRegistrationCertificate)]
+findAllByDriverId' (Id driverId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> do
+      driverRCA <- either (pure []) (transformBeamDriverRCAssociationToDomain <$>) <$> KV.findAllWithOptionsKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDRCA.driverId $ Se.Eq driverId] (Se.Desc BeamDRCA.associatedOn) Nothing Nothing
+      vehicleRC <- either (pure []) (QVRC.transformBeamVehicleRegistrationCertificateToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamVRCT.id $ Se.In $ getId . DRCA.rcId <$> driverRCA]
+      let rcAWithrc = foldl' (getRCAWithRC vehicleRC) [] driverRCA
+      pure rcAWithrc
+    Nothing -> pure []
+  where
+    getRCAWithRC vrc acc driverRCA' =
+      let vrc' = filter (\v -> v.id == driverRCA'.rcId) vrc
+       in acc <> ((\v -> (driverRCA', v)) <$> vrc')
+
+-- getActiveAssociationByRC ::
+--   (Transactionable m, MonadFlow m) =>
+--   Id VehicleRegistrationCertificate ->
+--   m (Maybe DriverRCAssociation)
+-- getActiveAssociationByRC rcId = do
+--   now <- getCurrentTime
+--   findOne $ do
+--     association <- from $ table @DriverRCAssociationT
+--     where_ $
+--       association ^. DriverRCAssociationRcId ==. val (toKey rcId)
+--         &&. association ^. DriverRCAssociationAssociatedTill >. val (Just now)
+--     return association
 
 getActiveAssociationByRC :: (L.MonadFlow m, MonadTime m) => Id VehicleRegistrationCertificate -> m (Maybe DriverRCAssociation)
 getActiveAssociationByRC (Id rcId) = do
