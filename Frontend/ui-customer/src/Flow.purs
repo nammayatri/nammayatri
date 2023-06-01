@@ -269,6 +269,7 @@ currentRideFlow rideAssigned = do
       else do
         updateLocalStage HomeScreen
     Left err -> updateLocalStage HomeScreen
+  if state.props.currentStage /= RideAccepted then removeChatService "" else pure unit
 
 currentFlowStatus :: FlowBT String Unit
 currentFlowStatus = do
