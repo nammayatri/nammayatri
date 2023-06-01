@@ -154,6 +154,7 @@ public class GpsListeningService extends Service {
             String token = sharedPref.getString("REGISTERATION_TOKEN", "null");
             String bundle_version = sharedPref.getString("BUNDLE_VERSION","null");
             String baseUrl = sharedPref.getString("BASE_URL", "null");
+            String deviceDetails = sharedPref.getString("DEVICE_DETAILS", "null");
             try {
                 String orderUrl = baseUrl + "/driver/setActivity?active=" + status;
                 HttpURLConnection connection = (HttpURLConnection) (new URL(orderUrl).openConnection());
@@ -164,6 +165,7 @@ public class GpsListeningService extends Service {
                 connection.setRequestProperty("x-client-version", BuildConfig.VERSION_NAME);
                 connection.setRequestProperty("token", token);
                 connection.setRequestProperty("x-bundle-version", bundle_version);
+                connection.setRequestProperty("x-device",deviceDetails);
                 connection.setDoOutput(true);
                 connection.connect();
 

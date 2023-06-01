@@ -203,6 +203,7 @@ public class NotificationUtils extends AppCompatActivity {
             String token = sharedPref.getString("REGISTERATION_TOKEN", "null");
             String bundle_version = sharedPref.getString("BUNDLE_VERSION","null");
             String baseUrl = sharedPref.getString("BASE_URL", "null");
+            String deviceDetails = sharedPref.getString("DEVICE_DETAILS", "null");
             try
             {
                 //endPoint for driver status
@@ -217,6 +218,7 @@ public class NotificationUtils extends AppCompatActivity {
                 connection.setRequestProperty("x-client-version", versionName);
                 connection.setRequestProperty("token", token);
                 connection.setRequestProperty("x-bundle-version", bundle_version);
+                connection.setRequestProperty("x-device", deviceDetails);
                 connection.setDoOutput(true);
                 connection.connect();
 

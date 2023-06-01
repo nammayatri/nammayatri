@@ -52,6 +52,7 @@ public class RideRequestUtils {
         SharedPreferences sharedPref = context.getApplicationContext().getSharedPreferences(context.getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         String bundle_version = sharedPref.getString("BUNDLE_VERSION", "null");
         String version = sharedPref.getString("VERSION_NAME", "null");
+        String deviceDetails = sharedPref.getString("DEVICE_DETAILS","null");
         try {
             String orderUrl = sharedPref.getString("BASE_URL", "null") + "/driver/searchRequest/quote/respond";
             HttpURLConnection connection = (HttpURLConnection) (new URL(orderUrl).openConnection());
@@ -62,6 +63,7 @@ public class RideRequestUtils {
             connection.setRequestProperty("x-client-version", version);
             connection.setRequestProperty("token", sharedPref.getString(context.getResources().getString(R.string.REGISTERATION_TOKEN), "null"));
             connection.setRequestProperty("x-bundle-version", bundle_version);
+            connection.setRequestProperty("x-device", deviceDetails);
             connection.setDoOutput(true);
             connection.setConnectTimeout(20000);
             connection.setReadTimeout(20000);
