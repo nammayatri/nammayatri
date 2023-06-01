@@ -3676,7 +3676,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     @JavascriptInterface
-    public static void sendMessage(final String message) {
+    public static void sendMessage(final String message){
         ChatService.sendMessage(message);
     }
 
@@ -3698,6 +3698,21 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         setKeysInSharedPrefs("CHAT_CHANNEL_ID", channelId);
         ChatService.chatChannelID = channelId;
         ChatService.chatUserId = uuid;
+    }
+
+    public static String storeCallBackOpenChatScreen = null;
+    @JavascriptInterface
+    public void storeCallBackOpenChatScreen(final String callback){
+        storeCallBackOpenChatScreen = callback;
+    }
+
+    @JavascriptInterface
+    public static void openChatScreen() {
+        DuiCallback dynamicUII = MainActivity.getInstance().getJuspayServices().getDuiCallback();
+        if (dynamicUII != null && storeCallBackOpenChatScreen != null) {
+            String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s');", storeCallBackOpenChatScreen);
+            dynamicUII.addJsToWebView(javascript);
+        }
     }
 
     public static void addDynamicView(DuiCallback dynamicUII) {
@@ -3727,8 +3742,12 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
 
     @JavascriptInterface
     public void stopChatListenerService() {
-        Intent chatListenerService = new Intent(activity, ChatService.class);
-        activity.stopService(chatListenerService);
+        try {
+            Intent chatListenerService = new Intent(activity, ChatService.class);
+            activity.stopService(chatListenerService);
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "Error in stopChatListenerService : " + e);
+        }
     }
 
     private void showLocationOnMap() {

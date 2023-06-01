@@ -28,6 +28,7 @@ data Action = SendMessage
 type Config = 
   { userConfig :: UserConfig
   , messages :: Array ChatComponent
+  , messagesSize :: String
   , sendMessageActive :: Boolean
   , distance :: String
   , suggestionsList :: Array String
@@ -77,6 +78,7 @@ config =
         , appType : ""
         }
     , messages : []
+    , messagesSize : ""
     , sendMessageActive : false
     , distance : ""
     , suggestionsList : []

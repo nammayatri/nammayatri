@@ -34,28 +34,30 @@ import Log (printLog)
 import Prelude (Unit, bind, pure, show, unit, ($), (<$>), (<<<))
 import Presto.Core.Types.Language.Flow (throwErr)
 import PrestoDOM.Core (processEvent) as PrestoDom
-import Types.App (defaultGlobalState)
+import Types.App (defaultGlobalState,FlowBT, ScreenType(..))
+import ModifyScreenState (modifyScreenState)
 
-main :: Effect Unit
-main = do
+main :: Event -> Effect Unit
+main event = do
   epassRef ← new defaultGlobalState
   payload  ::  Either MultipleErrors GlobalPayload  <- runExcept <<< decode <<< fromMaybe (unsafeToForeign {}) <$> (liftEffect $ getWindowVariable "__payload" Just Nothing)
   case payload of
     Right payload'  -> do
-       _ <- launchAff $ flowRunner $ do
-          -- _ <- pure $ JBridge._addCertificates (Config.getFingerPrint "")
-          resp ← runExceptT $ runBackT $ Flow.baseAppFlow payload'
-          case resp of
-                Right x → pure unit
-                Left err → do
-                  _ <- pure $ printLog "printLog error in main is : " err
-                  _ <- liftFlow $ main
-                  pure unit
-       pure unit
+      _ <- launchAff $ flowRunner $ do
+        -- _ <- pure $ JBridge._addCertificates (Config.getFingerPrint "")
+        _ <- runExceptT $ runBackT $ updateEventData event
+        resp ← runExceptT $ runBackT $ Flow.baseAppFlow payload'
+        case resp of
+              Right x → pure unit
+              Left err → do
+                _ <- pure $ printLog "printLog error in main is : " err
+                _ <- liftFlow $ main event
+                pure unit
+      pure unit          
     Left e -> do
-        _ <- launchAff $ flowRunner $ do
-            throwErr $ show e
-        pure unit
+      _ <- launchAff $ flowRunner $ do
+          throwErr $ show e
+      pure unit
 
 onEvent :: String -> Effect Unit
 onEvent "onBackPressed" = do
@@ -69,12 +71,24 @@ onConnectivityEvent triggertype = do
   payload  ::  Either MultipleErrors GlobalPayload  <- runExcept <<< decode <<< fromMaybe (unsafeToForeign {}) <$> (liftEffect $ getWindowVariable "__payload" Just Nothing)
   case payload of
     Right payload'  -> do
-        _ <- launchAff $ flowRunner $ do
-          -- _ <- pure $ JBridge._addCertificates (Config.getFingerPrint "")
-          _ ← runExceptT $ runBackT $ Flow.permissionScreenFlow triggertype
-          pure unit
+      _ <- launchAff $ flowRunner $ do
+        -- _ <- pure $ JBridge._addCertificates (Config.getFingerPrint "")
+        _ ← runExceptT $ runBackT $ Flow.permissionScreenFlow triggertype
         pure unit
+      pure unit
     Left e -> do
-        _ <- launchAff $ flowRunner $ do
-            throwErr $ show e
-        pure unit
+      _ <- launchAff $ flowRunner $ do
+         throwErr $ show e
+      pure unit           
+
+type Event = {
+    type :: String
+  , data :: String
+}
+
+updateEventData :: Event -> FlowBT String Unit 
+updateEventData event = do
+    case event.type of
+      "CHAT_MESSAGE" -> do
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props{ openChatScreen = true } })
+      _ -> pure unit            

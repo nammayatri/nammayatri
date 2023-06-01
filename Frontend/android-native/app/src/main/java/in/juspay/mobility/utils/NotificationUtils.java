@@ -677,7 +677,7 @@ public class NotificationUtils extends AppCompatActivity {
         return 0;
     }
 
-    private static void startMediaPlayer(Context context, int mediaFile, boolean increaseVolume){
+    public static void startMediaPlayer(Context context, int mediaFile, boolean increaseVolume){
         if (mediaPlayer != null){
             mediaPlayer.stop();
             mediaPlayer = null;
@@ -691,5 +691,45 @@ public class NotificationUtils extends AppCompatActivity {
     public static boolean overlayFeatureNotAvailable(Context context){
         ActivityManager activityManager = (ActivityManager) context.getSystemService(ACTIVITY_SERVICE);
         return activityManager.isLowRamDevice();
+    }
+
+    public static void createChatNotification(String sentBy, String message, Context context) {
+        final int chatNotificationId = 18012023;
+        createChatNotificationChannel(context);
+        Intent notificationIntent = new Intent(context, MainActivity.class);
+        JSONObject payload = new JSONObject();
+        try{
+            payload.put("notification_type", "CHAT_MESSAGE");
+        } catch (JSONException e) {
+            Log.e(LOG_TAG,"Error in adding data to jsonObject");
+        }
+        notificationIntent.putExtra("NOTIFICATION_DATA", payload.toString());
+        notificationIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        PendingIntent pendingIntent = PendingIntent.getActivity(context, chatNotificationId, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
+        Notification notification =
+                new NotificationCompat.Builder(context, "MessageUpdates")
+                        .setContentTitle(sentBy)
+                        .setAutoCancel(true)
+                        .setContentText(message)
+                        .setSmallIcon(R.drawable.ny_ic_launcher)
+                        .setDefaults(Notification.DEFAULT_ALL)
+                        .setPriority(NotificationCompat.PRIORITY_HIGH)
+                        .setContentIntent(pendingIntent)
+                        .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
+                        .build();
+
+        NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
+        notificationManager.notify(chatNotificationId, notification);
+    }
+
+    private static void createChatNotificationChannel(Context context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            CharSequence name = "MessageUpdates" ;
+            String description = "Chat Notification Channel";
+            NotificationChannel channel = new NotificationChannel("MessageUpdates", name, NotificationManager.IMPORTANCE_HIGH);
+            channel.setDescription(description);
+            NotificationManager notificationManager = context.getSystemService(NotificationManager.class);
+            notificationManager.createNotificationChannel(channel);
+        }
     }
 }
