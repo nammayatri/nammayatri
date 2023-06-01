@@ -21,28 +21,21 @@
 module Storage.Tabular.SearchRequest where
 
 import qualified Domain.Types.SearchRequest as Domain
-import qualified Domain.Types.Vehicle.Variant as Variant (Variant)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)
-import Storage.Tabular.Estimate (EstimateTId)
 import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.SearchRequest.SearchReqLocation (SearchReqLocationT, SearchReqLocationTId, mkDomainSearchReqLocation, mkTabularSearchReqLocation)
 import Storage.Tabular.Vehicle ()
-
-derivePersistField "Domain.SearchRequestStatus"
+import qualified Tools.Maps as Maps
 
 mkPersist
   defaultSqlSettings
   [defaultQQ|
-    SearchRequestT sql=search_request
+    SearchRequestT sql=search_request_2
       id Text
       transactionId Text
-      messageId Text
-      estimateId EstimateTId
-      startTime UTCTime
-      validTill UTCTime
       providerId MerchantTId
       fromLocationId SearchReqLocationTId
       toLocationId SearchReqLocationTId
@@ -50,14 +43,11 @@ mkPersist
       bapUri Text
       estimatedDistance Meters
       estimatedDuration Seconds
-      customerExtraFee Money Maybe
       device Text Maybe
-      status Domain.SearchRequestStatus
-      vehicleVariant Variant.Variant
-      searchRepeatCounter Int
       autoAssignEnabled Bool
+      customerLanguage Maps.Language Maybe
       createdAt UTCTime
-      updatedAt UTCTime
+
       Primary id
       deriving Generic
     |]
@@ -78,7 +68,6 @@ instance FromTType FullSearchRequestT Domain.SearchRequest where
     return $
       Domain.SearchRequest
         { id = Id id,
-          estimateId = fromKey estimateId,
           providerId = fromKey providerId,
           fromLocation = fromLoc_,
           toLocation = toLoc_,
@@ -90,7 +79,6 @@ instance ToTType FullSearchRequestT Domain.SearchRequest where
   toTType Domain.SearchRequest {..} =
     ( SearchRequestT
         { id = getId id,
-          estimateId = toKey estimateId,
           providerId = toKey providerId,
           fromLocationId = toKey fromLocation.id,
           toLocationId = toKey toLocation.id,

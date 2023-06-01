@@ -27,6 +27,7 @@ where
 
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DBLoc
+import qualified Domain.Types.Merchant as Merchant
 import Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
 import qualified EulerHS.Language as L
@@ -89,25 +90,26 @@ login LoginReq {..} = do
 
 generateToken :: EsqDBFlow m r => SP.Person -> m Text
 generateToken SP.Person {..} = do
-  let personId = id
-  regToken <- createSupportRegToken $ getId personId
+  let personId = getId id
+  let mkId = getId merchantId
+  regToken <- createSupportRegToken personId mkId
   -- Clean Old Login Session
   -- FIXME We should also cleanup old token from Redis
   runTransaction $ do
-    RegistrationToken.deleteByPersonId personId
+    RegistrationToken.deleteByPersonId id
     RegistrationToken.create regToken
   pure $ regToken.token
 
-logout :: (EsqDBFlow m r) => Id SP.Person -> m LogoutRes
-logout personId = do
+logout :: (EsqDBFlow m r) => (Id SP.Person, Id Merchant.Merchant) -> m LogoutRes
+logout (personId, _) = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   unless (person.role == SP.CUSTOMER_SUPPORT) $ throwError Unauthorized
   -- FIXME We should also cleanup old token from Redis
   runTransaction (RegistrationToken.deleteByPersonId person.id)
   pure $ LogoutRes "Logged out successfully"
 
-createSupportRegToken :: MonadFlow m => Text -> m SR.RegistrationToken
-createSupportRegToken entityId = do
+createSupportRegToken :: MonadFlow m => Text -> Text -> m SR.RegistrationToken
+createSupportRegToken entityId merchantId = do
   rtid <- L.generateGUID
   token <- L.generateGUID
   now <- getCurrentTime
@@ -123,6 +125,7 @@ createSupportRegToken entityId = do
         authExpiry = 0,
         tokenExpiry = 30, -- Need to Make this Configuable
         entityId = entityId,
+        merchantId = merchantId,
         entityType = SR.CUSTOMER,
         createdAt = now,
         updatedAt = now,

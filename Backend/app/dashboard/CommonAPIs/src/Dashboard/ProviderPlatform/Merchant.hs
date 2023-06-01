@@ -120,7 +120,7 @@ data MerchantCommonConfigUpdateReq = MerchantCommonConfigUpdateReq
     minRidesForCancellationScore :: Maybe (OptionalValue Int),
     mediaFileUrlPattern :: Maybe (MandatoryValue Text),
     mediaFileSizeUpperLimit :: Maybe (MandatoryValue Int),
-    waitingTimeEstimatedThreshold :: Maybe (MandatoryValue Seconds),
+    waitingTimeEstimatedThreshold :: Maybe (MandatoryValue Minutes),
     onboardingTryLimit :: Maybe (MandatoryValue Int),
     onboardingRetryTimeInHours :: Maybe (MandatoryValue Int),
     checkImageExtractionForDashboard :: Maybe (MandatoryValue Bool),
@@ -143,7 +143,7 @@ validateMerchantCommonConfigUpdateReq MerchantCommonConfigUpdateReq {..} =
       validateField "mediaFileUrlPattern" mediaFileUrlPattern $ InMaybe $ InValue $ MinLength 1,
       validateField "mediaFileSizeUpperLimit" mediaFileSizeUpperLimit $ InMaybe $ InValue $ Min @Int 1,
       validateField "minRidesForCancellationScore" minRidesForCancellationScore $ InMaybe $ InValue $ Min @Int 0,
-      validateField "waitingTimeEstimatedThreshold" waitingTimeEstimatedThreshold $ InMaybe $ InValue $ Min @Seconds 0,
+      validateField "waitingTimeEstimatedThreshold" waitingTimeEstimatedThreshold $ InMaybe $ InValue $ Min @Minutes 0,
       validateField "onboardingTryLimit" onboardingTryLimit $ InMaybe $ InValue $ Min @Int 0,
       validateField "onboardingRetryTimeInHours" onboardingRetryTimeInHours $ InMaybe $ InValue $ Min @Int 0,
       validateField "searchRepeatLimit" searchRepeatLimit $ InMaybe $ InValue $ Min @Int 0

@@ -157,7 +157,12 @@ library
       Domain.Types.Exophone
       Domain.Types.FareParameters
       Domain.Types.FarePolicy
-      Domain.Types.FarePolicy.RestrictedExtraFare
+      Domain.Types.FarePolicy.Common
+      Domain.Types.FarePolicy.DriverExtraFeeBounds
+      Domain.Types.FarePolicy.FarePolicyProgressiveDetails
+      Domain.Types.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
+      Domain.Types.FarePolicy.FarePolicySlabsDetails
+      Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
       Domain.Types.Geometry
       Domain.Types.Issue.Comment
       Domain.Types.Issue.IssueCategory
@@ -187,6 +192,7 @@ library
       Domain.Types.SearchRequest.SearchReqLocation
       Domain.Types.SearchRequestForDriver
       Domain.Types.SearchRequestSpecialZone
+      Domain.Types.SearchTry
       Domain.Types.Vehicle
       Domain.Types.Vehicle.Variant
       Environment
@@ -203,7 +209,6 @@ library
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.SendSearchRequestToDrivers
-      SharedLogic.CacheDistance
       SharedLogic.CallBAP
       SharedLogic.CancelSearch
       SharedLogic.DeleteDriver
@@ -283,7 +288,6 @@ library
       Storage.CachedQueries.DriverInformation
       Storage.CachedQueries.Exophone
       Storage.CachedQueries.FarePolicy
-      Storage.CachedQueries.FarePolicy.RestrictedExtraFare
       Storage.CachedQueries.Issue.IssueCategory
       Storage.CachedQueries.Issue.IssueOption
       Storage.CachedQueries.Issue.IssueReport
@@ -320,9 +324,10 @@ library
       Storage.Queries.FareParameters
       Storage.Queries.FareParameters.FareParametersProgressiveDetails
       Storage.Queries.FarePolicy
+      Storage.Queries.FarePolicy.DriverExtraFeeBounds
       Storage.Queries.FarePolicy.FarePolicyProgressiveDetails
+      Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
       Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
-      Storage.Queries.FarePolicy.RestrictedExtraFare
       Storage.Queries.FullEntityBuilders
       Storage.Queries.Geometry
       Storage.Queries.Issue.Comment
@@ -353,6 +358,7 @@ library
       Storage.Queries.SearchRequest.SearchReqLocation
       Storage.Queries.SearchRequestForDriver
       Storage.Queries.SearchRequestSpecialZone
+      Storage.Queries.SearchTry
       Storage.Queries.Vehicle
       Storage.Tabular.Booking
       Storage.Tabular.Booking.BookingLocation
@@ -380,10 +386,11 @@ library
       Storage.Tabular.FareParameters.Instances
       Storage.Tabular.FareParameters.Table
       Storage.Tabular.FarePolicy
+      Storage.Tabular.FarePolicy.DriverExtraFeeBounds
       Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails
+      Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
       Storage.Tabular.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
       Storage.Tabular.FarePolicy.Instances
-      Storage.Tabular.FarePolicy.RestrictedExtraFare
       Storage.Tabular.FarePolicy.Table
       Storage.Tabular.Geometry
       Storage.Tabular.GeometryNew
@@ -418,6 +425,7 @@ library
       Storage.Tabular.SearchRequest.SearchReqLocation
       Storage.Tabular.SearchRequestForDriver
       Storage.Tabular.SearchRequestSpecialZone
+      Storage.Tabular.SearchTry
       Storage.Tabular.VechileNew
       Storage.Tabular.Vehicle
       Tools.Auth

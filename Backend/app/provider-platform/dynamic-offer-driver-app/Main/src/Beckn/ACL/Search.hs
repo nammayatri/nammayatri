@@ -50,7 +50,11 @@ buildSearchReq subscriber req = do
         pickupLocation = LatLong {lat = pickup.location.gps.lat, lon = pickup.location.gps.lon},
         pickupTime = pickup.time.timestamp,
         dropLocation = LatLong {lat = dropOff.location.gps.lat, lon = dropOff.location.gps.lon},
+        pickupAddress = pickup.location.address,
+        dropAddrress = dropOff.location.address,
         routeDistance = (.distance) =<< req.message.routeInfo,
         routeDuration = (.duration) =<< req.message.routeInfo,
-        device = req.message.device
+        device = req.message.device,
+        autoAssignEnabled = intent.fulfillment.tags.auto_assign_enabled,
+        customerLanguage = intent.fulfillment.tags.customer_language
       }

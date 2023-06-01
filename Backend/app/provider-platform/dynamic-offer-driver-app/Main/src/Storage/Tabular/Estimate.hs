@@ -1,9 +1,14 @@
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
+
  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
+
  as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
+
  is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+
  or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
+
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
@@ -23,6 +28,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)
+import Storage.Tabular.SearchRequest (SearchRequestTId)
 import Storage.Tabular.Vehicle ()
 import Tools.Error
 
@@ -31,7 +37,7 @@ mkPersist
   [defaultQQ|
     EstimateT sql=estimate
       id Text
-      transactionId Text
+      requestId SearchRequestTId
       vehicleVariant Variant.Variant
       minFare Money
       maxFare Money
@@ -69,6 +75,7 @@ instance FromTType EstimateT Domain.Estimate where
     return $
       Domain.Estimate
         { id = Id id,
+          requestId = fromKey requestId,
           estimateBreakupList = coerce @[Domain.EstimateBreakupD 'Unsafe] @[Domain.EstimateBreakup] $ estimateBreakupListDec,
           ..
         }
@@ -79,6 +86,7 @@ instance ToTType EstimateT Domain.Estimate where
         unsafeEstimateBreakupList = coerce @[Domain.EstimateBreakup] @[Domain.EstimateBreakupD 'Unsafe] $ estimateBreakupList
     EstimateT
       { id = getId id,
+        requestId = toKey requestId,
         estimateBreakupList = PostgresList $ encodeToText <$> unsafeEstimateBreakupList,
         nightShiftCharge = nightShiftInfo <&> (.nightShiftCharge),
         oldNightShiftCharge = nightShiftInfo <&> (.oldNightShiftCharge),

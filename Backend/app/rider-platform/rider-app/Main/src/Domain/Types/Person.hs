@@ -23,7 +23,6 @@ import qualified Data.Text.Encoding as DT
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantConfig as DMC
 import Kernel.External.Encryption
-import qualified Kernel.External.FCM.Types as FCM
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
@@ -91,7 +90,8 @@ data PersonE e = Person
     isNew :: Bool,
     enabled :: Bool,
     blocked :: Bool,
-    deviceToken :: Maybe FCM.FCMRecipientToken,
+    deviceToken :: Maybe Text,
+    notificationToken :: Maybe Text,
     description :: Maybe Text,
     merchantId :: Id DMerchant.Merchant,
     whatsappNotificationEnrollStatus :: Maybe Whatsapp.OptApiMethods,
@@ -125,7 +125,7 @@ instance EncryptedItem Person where
 instance EncryptedItem' Person where
   type UnencryptedItem Person = DecryptedPerson
   toUnencrypted a salt = (a, salt)
-  fromUnencrypted a = fst a
+  fromUnencrypted = fst
 
 data PersonAPIEntity = PersonAPIEntity
   { id :: Id Person,
@@ -134,7 +134,7 @@ data PersonAPIEntity = PersonAPIEntity
     lastName :: Maybe Text,
     email :: Maybe Text,
     maskedMobileNumber :: Maybe Text,
-    maskedDeviceToken :: Maybe FCM.FCMRecipientToken,
+    maskedDeviceToken :: Maybe Text,
     hasTakenRide :: Bool,
     hasTakenValidRide :: Bool,
     referralCode :: Maybe Text,
@@ -148,7 +148,7 @@ makePersonAPIEntity :: DecryptedPerson -> PersonAPIEntity
 makePersonAPIEntity Person {..} =
   PersonAPIEntity
     { maskedMobileNumber = maskText <$> mobileNumber,
-      maskedDeviceToken = FCM.FCMRecipientToken . maskText . (.getFCMRecipientToken) <$> deviceToken,
+      maskedDeviceToken = maskText <$> deviceToken,
       hasTakenRide = hasTakenValidRide,
       ..
     }

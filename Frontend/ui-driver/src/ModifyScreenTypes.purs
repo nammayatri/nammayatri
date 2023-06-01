@@ -39,6 +39,8 @@ modifyScreenState st =
     UploadAdhaarScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { uploadAdhaarScreen = a state.uploadAdhaarScreen})
     AddVehicleDetailsScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { addVehicleDetailsScreen = a state.addVehicleDetailsScreen})
     RideHistoryScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { rideHistoryScreen = a state.rideHistoryScreen})
+    ReportIssueChatScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { reportIssueChatScreen = a state.reportIssueChatScreen})
+    RideSelectionScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {rideSelectionScreen = a state.rideSelectionScreen})
     BankDetailScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { bankDetailsScreen = a state.bankDetailsScreen})
     DriverDetailsScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { driverDetailsScreen = a state.driverDetailsScreen})
     VehicleDetailsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {vehicleDetailsScreen = a state.vehicleDetailsScreen})
@@ -56,6 +58,7 @@ modifyScreenState st =
     DriverRideRatingScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { driverRideRatingScreen = a state.driverRideRatingScreen})
     NotificationsScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { notificationScreen = a state.notificationScreen})
     ReferralScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state { referralScreen = a state.referralScreen })
+    BookingOptionsScreenType a -> modifyState (\(GlobalState state) -> GlobalState $ state { bookingOptionsScreen = a state.bookingOptionsScreen })
 
 
 updateStage :: ScreenStage -> FlowBT String Unit
@@ -125,6 +128,7 @@ updateStage stage = do
                 })
         HomeScreen -> do
           _ <- pure $ removeAllPolylines ""
+          _ <- pure $ spy "Inside HomeScreen" "removeAllPolyLines"
           modifyScreenState $ HomeScreenStateType (\state -> HomeScreenData.initData)
         ChatWithCustomer -> do
           pure unit

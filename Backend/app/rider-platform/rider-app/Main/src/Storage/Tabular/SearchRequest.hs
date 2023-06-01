@@ -46,11 +46,13 @@ mkPersist
       estimatedRideDuration Seconds Maybe
       device Text Maybe
       merchantId SMerchant.MerchantTId
-      createdAt UTCTime
       bundleVersion Text Maybe
       clientVersion Text Maybe
       language Language Maybe
       customerExtraFee Money Maybe
+      autoAssignEnabled Bool
+      autoAssignEnabledV2 Bool
+      createdAt UTCTime
       Primary id
       deriving Generic
     |]

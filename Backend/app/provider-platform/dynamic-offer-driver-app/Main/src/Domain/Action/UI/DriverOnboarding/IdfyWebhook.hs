@@ -38,6 +38,7 @@ import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.Queries.DriverOnboarding.IdfyVerification as IVQuery
+import Storage.Queries.Person as QP
 import qualified Tools.Verification as Verification
 
 -- FIXME this is temprorary solution for backward compatibility
@@ -83,8 +84,9 @@ onVerify resp respDump = do
   _ <- IVQuery.updateResponse resp.request_id resp.status respDump
 
   ack_ <- maybe (pure Ack) (verifyDocument verificationReq) resp.result
+  person <- runInReplica $ QP.findById verificationReq.driverId >>= fromMaybeM (PersonDoesNotExist verificationReq.driverId.getId)
   -- running statusHandler to enable Driver
-  _ <- Status.statusHandler verificationReq.driverId
+  _ <- Status.statusHandler (verificationReq.driverId, person.merchantId)
 
   return ack_
   where

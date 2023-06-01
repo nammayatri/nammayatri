@@ -36,9 +36,15 @@ onSelect ::
 onSelect _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   mbDOnSelectReq <- ACL.buildOnSelectReq req
   whenJust mbDOnSelectReq $ \onSelectReq ->
-    Redis.whenWithLockRedis (onSelectLockKey req.context.message_id) 60 $
-      DOnSelect.onSelect onSelectReq
+    Redis.whenWithLockRedis (onSelectLockKey req.context.message_id) 60 $ do
+      validatedOnSelectReq <- DOnSelect.validateRequest onSelectReq
+      fork "on select processing" $ do
+        Redis.whenWithLockRedis (onSelectProcessingLockKey req.context.message_id) 60 $
+          DOnSelect.onSelect validatedOnSelectReq
   pure Ack
 
 onSelectLockKey :: Text -> Text
 onSelectLockKey id = "Customer:OnSelect:MessageId-" <> id
+
+onSelectProcessingLockKey :: Text -> Text
+onSelectProcessingLockKey id = "Customer:OnSelect:Processing:MessageId-" <> id

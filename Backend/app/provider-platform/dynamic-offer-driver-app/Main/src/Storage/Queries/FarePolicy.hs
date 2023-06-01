@@ -169,63 +169,42 @@ update' farePolicy = do
 update :: FarePolicy -> SqlDB ()
 update farePolicy = do
   now <- getCurrentTime
-  withFullEntity farePolicy $ \(FarePolicyT {..}, fpDetailsT) -> do
-    void $
-      Esq.update' $ \tbl -> do
-        set
-          tbl
-          [ FarePolicyDriverMinExtraFee =. val driverMinExtraFee,
-            FarePolicyDriverMaxExtraFee =. val driverMaxExtraFee,
-            FarePolicyNightShiftStart =. val nightShiftStart,
-            FarePolicyNightShiftEnd =. val nightShiftEnd,
-            FarePolicyUpdatedAt =. val now
-          ]
-        where_ $ tbl ^. FarePolicyTId ==. val (toKey farePolicy.id)
+  withFullEntity farePolicy $ \(FarePolicyT {..}, driverExtraFeeBoundsT, fpDetailsT) -> do
+    Esq.update' $ \tbl -> do
+      set
+        tbl
+        [ FarePolicyNightShiftStart =. val nightShiftStart,
+          FarePolicyNightShiftEnd =. val nightShiftEnd,
+          FarePolicyUpdatedAt =. val now
+        ]
+      where_ $ tbl ^. FarePolicyTId ==. val (toKey farePolicy.id)
+
+    updateDriverExtraFeeBounds driverExtraFeeBoundsT
 
     case fpDetailsT of
       ProgressiveDetailsT fpdd -> updateProgressiveDetails fpdd
       SlabsDetailsT fsdd -> updateSlabsDetails fsdd
   where
-    updateProgressiveDetails FarePolicyProgressiveDetailsT {..} = do
-      void $
-        Esq.update' $ \tbl -> do
-          set
-            tbl
-            [ FarePolicyProgressiveDetailsBaseFare =. val baseFare,
-              FarePolicyProgressiveDetailsBaseDistance =. val baseDistance,
-              FarePolicyProgressiveDetailsPerExtraKmFare =. val perExtraKmFare,
-              FarePolicyProgressiveDetailsDeadKmFare =. val deadKmFare,
-              FarePolicyProgressiveDetailsNightShiftCharge =. val nightShiftCharge
-            ]
-          where_ $ tbl ^. FarePolicyProgressiveDetailsTId ==. val (toKey farePolicy.id)
+    updateDriverExtraFeeBounds driverExtraFeeBoundsT = do
+      QFPDriverExtraFeeBounds.deleteAll' farePolicy.id
+      Esq.createMany' driverExtraFeeBoundsT
+
+    updateProgressiveDetails (FarePolicyProgressiveDetailsT {..}, perExtraKmRateSectionsT) = do
+      Esq.update' $ \tbl -> do
+        set
+          tbl
+          [ FarePolicyProgressiveDetailsBaseFare =. val baseFare,
+            FarePolicyProgressiveDetailsBaseDistance =. val baseDistance,
+            FarePolicyProgressiveDetailsDeadKmFare =. val deadKmFare,
+            FarePolicyProgressiveDetailsNightShiftCharge =. val nightShiftCharge
+          ]
+        where_ $ tbl ^. FarePolicyProgressiveDetailsTId ==. val (toKey farePolicy.id)
+
+      QFPProgressiveDetPerExtraKmSlabs.deleteAll' farePolicy.id
+      Esq.createMany' perExtraKmRateSectionsT
     updateSlabsDetails dets = do
       QFPSlabDetSlabs.deleteAll' farePolicy.id
       Esq.createMany' dets
-
-transformBeamFarePolicyToDomain :: L.MonadFlow m => BeamFP.FarePolicy -> m FarePolicy
-transformBeamFarePolicyToDomain BeamFP.FarePolicyT {..} = do
-  fullFPPD <- QueriesFPPD.findById' (Id id)
-  let fPPD = snd $ fromJust fullFPPD
-  -- fullslabs <- QueriesFPSDS.findById'' (Id id)
-  -- let slabs = snd $ fromJust fullslabs
-  fullslabs <- QueriesFPSDS.findAll'' (Id id)
-  let slabs = snd <$> fullslabs
-  pure
-    FarePolicy
-      { id = Id id,
-        merchantId = Id merchantId,
-        vehicleVariant = vehicleVariant,
-        driverExtraFeeBounds = DriverExtraFeeBounds <$> driverMinExtraFee <*> driverMaxExtraFee,
-        serviceCharge = serviceCharge,
-        nightShiftBounds = NightShiftBounds <$> nightShiftStart <*> nightShiftEnd,
-        allowedTripDistanceBounds = AllowedTripDistanceBounds <$> maxAllowedTripDistance <*> minAllowedTripDistance,
-        govtCharges = govtCharges,
-        farePolicyDetails = case farePolicyType of
-          Progressive -> ProgressiveDetails fPPD
-          Slabs -> SlabsDetails (FPSlabsDetails (fromJust $ nonEmpty slabs)),
-        createdAt = createdAt,
-        updatedAt = updatedAt
-      }
 
 transformDomainFarePolicyToBeam :: FarePolicy -> BeamFP.FarePolicy
 transformDomainFarePolicyToBeam FarePolicy {..} =

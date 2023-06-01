@@ -20,6 +20,7 @@ where
 
 import qualified API.RiderPlatform.Booking as Booking
 import qualified API.RiderPlatform.Customer as Customer
+import qualified API.RiderPlatform.IssueList as IssueList
 import qualified API.RiderPlatform.Merchant as Merchant
 import qualified API.RiderPlatform.Ride as Ride
 import qualified API.RiderPlatform.RideBooking as RideBooking
@@ -36,6 +37,7 @@ type API =
            :<|> Merchant.API
            :<|> Ride.API
            :<|> RideBooking.API
+           :<|> IssueList.API
        )
 
 handler :: FlowServer API
@@ -45,3 +47,4 @@ handler merchantId =
     :<|> Merchant.handler merchantId
     :<|> Ride.handler merchantId
     :<|> RideBooking.handler merchantId
+    :<|> IssueList.handler merchantId

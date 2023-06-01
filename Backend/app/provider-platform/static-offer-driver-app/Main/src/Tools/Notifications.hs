@@ -20,8 +20,8 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 import Domain.Types.Person as Person
 import Domain.Types.RegistrationToken as RegToken
 import EulerHS.Prelude
-import qualified Kernel.External.FCM.Flow as FCM
-import Kernel.External.FCM.Types as FCM
+import qualified Kernel.External.Notification.FCM.Flow as FCM
+import Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Error

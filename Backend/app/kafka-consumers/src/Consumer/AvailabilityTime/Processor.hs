@@ -20,24 +20,24 @@ where
 
 import qualified Consumer.AvailabilityTime.Storage.Queries as Q
 import qualified Consumer.AvailabilityTime.Types as T
+import Data.List (nub)
 import qualified Data.Map as M
 import Data.Time (UTCTime, addUTCTime, diffUTCTime, getCurrentTime)
 import Environment
 import EulerHS.Prelude
-import qualified Kafka.Consumer as C
 import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Common as C hiding (Offset)
 import qualified Kernel.Types.SlidingWindowCounters as SWT
-import Kernel.Utils.Logging (logInfo)
+import Kernel.Utils.Logging (logInfo, logTagDebug)
 import qualified Kernel.Utils.SlidingWindowCounters as SW
 import qualified SharedLogic.DriverPool as DP
 
 getTimeDiffInteger :: SWT.TimePair -> Integer
 getTimeDiffInteger (startTime, endTime) = floor $ diffUTCTime endTime startTime
 
-createOrUpdateDriverAvailability :: T.MerchantId -> T.DriverId -> SWT.TimePair -> (Integer, T.LastAvailableTime) -> Flow ()
-createOrUpdateDriverAvailability merchantId driverId (bucketStartTime, bucketEndTime) (valToAdd, lastAvailableTime) = do
+createOrUpdateDriverAvailability :: T.MerchantId -> T.DriverId -> Text -> SWT.TimePair -> (Integer, T.LastAvailableTime) -> Flow ()
+createOrUpdateDriverAvailability merchantId driverId lastAvailableTimeCacheKey (bucketStartTime, bucketEndTime) (valToAdd, lastAvailableTime) = do
   daId <- C.generateGUID
   currTime <- liftIO getCurrentTime
   let newAvailabilityEntry =
@@ -48,18 +48,25 @@ createOrUpdateDriverAvailability merchantId driverId (bucketStartTime, bucketEnd
             totalAvailableTime = fromInteger valToAdd,
             ..
           }
-  DB.runTransaction $ Q.createOrUpdateDriverAvailability newAvailabilityEntry
+  Redis.setExp lastAvailableTimeCacheKey (lastAvailableTime, False) 28800 -- 8 hours
+  DB.runNoTransaction $ Q.createOrUpdateDriverAvailability newAvailabilityEntry
+  Redis.setExp lastAvailableTimeCacheKey (lastAvailableTime, True) 28800 -- 8 hours
 
-calculateAvailableTime :: T.MerchantId -> T.DriverId -> C.KafkaConsumer -> ([UTCTime], Maybe ConsumerRecordD) -> Flow ()
-calculateAvailableTime _ _ _ ([], Nothing) = pure ()
-calculateAvailableTime _ _ _ ([], Just lastCR) = logInfo $ "Should never reach here, no locationupdates but kafka consumer records , last consumer record: " <> show lastCR
-calculateAvailableTime _ _ _ (locationUpdatesTimeSeries, Nothing) = logInfo $ "Should never reach here, locationupdates but no kafka consumer record, time series: " <> show locationUpdatesTimeSeries
-calculateAvailableTime merchantId driverId kc (fstTime : restTimeSeries, Just lastCR) = do
-  mbLatestAvailabilityRecord <- Q.findLatestByDriverIdAndMerchantId driverId merchantId
+calculateAvailableTime :: T.MerchantId -> T.DriverId -> [UTCTime] -> Flow ()
+calculateAvailableTime _ _ [] = pure ()
+calculateAvailableTime merchantId driverId (fstTime : restTimeSeries) = do
+  cachedLastAvailableTime <- Redis.get mkLastTimeStampKey
+  lastAvailableTime <-
+    case cachedLastAvailableTime of
+      Just (unsureLastCommitedTime, True) -> pure unsureLastCommitedTime
+      _ -> do
+        whenJust cachedLastAvailableTime $ \_ -> logTagDebug "DRIVER_AVAILABILITY:LAT" "not commited to Redis in previous iteration"
+        lstAvalTime <- maybe fstTime (.lastAvailableTime) <$> DB.runInReplica (Q.findLatestByDriverIdAndMerchantId driverId merchantId)
+        Redis.setExp mkLastTimeStampKey (lstAvalTime, True) 28800 -- 8 hours
+        pure lstAvalTime
   timeBetweenUpdates <- asks (.timeBetweenUpdates)
   granualityPeriodType <- asks (.granualityPeriodType)
-  let lastAvailableTime = fromMaybe fstTime $ mbLatestAvailabilityRecord <&> (.lastAvailableTime)
-      activeTimePairs = mkPairsWithLessThenThreshold timeBetweenUpdates lastAvailableTime granualityPeriodType $ filter (> lastAvailableTime) (fstTime : restTimeSeries)
+  let activeTimePairs = mkPairsWithLessThenThreshold timeBetweenUpdates lastAvailableTime granualityPeriodType $ sort $ nub $ filter (> lastAvailableTime) (fstTime : restTimeSeries)
       availabilityInWindow =
         foldl
           ( \acc timePair -> do
@@ -71,11 +78,12 @@ calculateAvailableTime merchantId driverId kc (fstTime : restTimeSeries, Just la
           )
           M.empty
           activeTimePairs
+  logInfo $ "Location Updates Timeseries: " <> show (fstTime : restTimeSeries)
   logInfo $ "ActiveTime pairs " <> show activeTimePairs
   logInfo $ "availabilityInWindow " <> show availabilityInWindow
-  void $ M.traverseWithKey (createOrUpdateDriverAvailability merchantId driverId) availabilityInWindow
-  void $ C.commitOffsetMessage C.OffsetCommit kc lastCR
+  void $ M.traverseWithKey (createOrUpdateDriverAvailability merchantId driverId mkLastTimeStampKey) availabilityInWindow
   where
+    mkLastTimeStampKey = "DA:LAT:" <> driverId
     getBucketPair periodType (startTime, _) = do
       let bucketEndTime = SW.incrementPeriod periodType startTime
       let bucketStartTime = flip addUTCTime bucketEndTime . fromInteger $ -1 * SW.convertPeriodTypeToSeconds periodType
@@ -99,7 +107,7 @@ processData T.LocationUpdates {..} driverId = do
   availabilityTimeWindowOption <- asks (.availabilityTimeWindowOption)
   lastUpdatedAt <- fromMaybe newUpdatedAt <$> Redis.get (mkLastTimeStampKey driverId)
   unless (lastUpdatedAt > newUpdatedAt) $ do
-    Redis.setExp (mkLastTimeStampKey driverId) newUpdatedAt 14400 -- 4 hours
+    Redis.setExp (mkLastTimeStampKey driverId) newUpdatedAt 28800 -- 8 hours
     let activeTimePairs = mkPairsWithLessThenThreshold timeBetweenUpdates lastUpdatedAt availabilityTimeWindowOption.periodType [lastUpdatedAt, newUpdatedAt]
     mapM_
       ( \(startTime, endTime) -> do

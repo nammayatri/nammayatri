@@ -102,6 +102,16 @@ findById (Id rideId) = do
 --       &&. ride ^. RideStatus !=. val Ride.CANCELLED
 --   pure ride
 
+findAllRidesByDriverId ::
+  Transactionable m =>
+  Id Person ->
+  m [Ride]
+findAllRidesByDriverId driverId =
+  Esq.findAll $ do
+    ride <- from $ table @RideT
+    where_ $ ride ^. RideDriverId ==. val (toKey driverId)
+    return ride
+
 findActiveByRBId :: L.MonadFlow m => Id Booking -> m (Maybe Ride)
 findActiveByRBId (Id rbId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
@@ -141,6 +151,29 @@ findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus = Esq.buil
     limit limitVal
     offset offsetVal
     return (booking, ride)
+
+  catMaybes
+    <$> forM
+      res
+      ( \(bookingT, rideT) -> runMaybeT do
+          booking <- MaybeT $ buildFullBooking bookingT
+          return (extractSolidType @Ride rideT, booking)
+      )
+
+findAllRidesBookingsByRideId :: Transactionable m => Id Merchant -> [Id Ride] -> m [(Ride, Booking)]
+findAllRidesBookingsByRideId merchantId rideIds = Esq.buildDType $ do
+  res <- Esq.findAll' $ do
+    (booking :& ride) <-
+      from $
+        table @BookingT
+          `innerJoin` table @RideT
+            `Esq.on` ( \(booking :& ride) ->
+                         ride ^. Ride.RideBookingId ==. booking ^. BookingTId
+                     )
+    where_ $
+      booking ^. BookingProviderId ==. val (toKey merchantId)
+        &&. ride ^. RideTId `Esq.in_` valList (map toKey rideIds)
+    pure (booking, ride)
 
   catMaybes
     <$> forM
@@ -433,6 +466,7 @@ updateAll rideId ride = do
           Se.Set BeamR.tripStartLon (ride.tripEndPos <&> (.lon)),
           Se.Set BeamR.fareParametersId (getId <$> ride.fareParametersId),
           Se.Set BeamR.distanceCalculationFailed ride.distanceCalculationFailed,
+          Se.Set BeamR.pickupDropOutsideOfThreshold ride.pickupDropOutsideOfThreshold,
           Se.Set BeamR.updatedAt now
         ]
         [Se.Is BeamR.id (Se.Eq $ getId rideId)]
@@ -583,8 +617,10 @@ findAllRideItems ::
   Maybe DbHash ->
   Maybe Money ->
   UTCTime ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
   m [RideItem]
-findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbFareDiff now = do
+findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbFareDiff now mbFrom mbTo = do
   res <- Esq.findAll $ do
     booking :& ride :& rideDetails :& riderDetails <-
       from $
@@ -604,6 +640,8 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
     let bookingStatusVal = mkBookingStatusVal ride
     where_ $
       booking ^. BookingProviderId ==. val (toKey merchantId)
+        &&. whenJust_ mbFrom (\defaultFrom -> ride ^. RideCreatedAt >=. val defaultFrom)
+        &&. whenJust_ mbTo (\defaultTo -> ride ^. RideCreatedAt <=. val defaultTo)
         &&. whenJust_ mbBookingStatus (\bookingStatus -> bookingStatusVal ==. val bookingStatus)
         &&. whenJust_ mbRideShortId (\rideShortId -> ride ^. Ride.RideShortId ==. val rideShortId.getShortId)
         &&. whenJust_ mbDriverPhoneDBHash (\hash -> rideDetails ^. RideDetailsDriverNumberHash ==. val (Just hash))

@@ -90,7 +90,7 @@ instance ToMultipart Tmp UploadFileRequest where
       [Input "fileType" (show uploadFileRequest.fileType)]
       [FileData "file" (T.pack uploadFileRequest.file) "" (uploadFileRequest.file)]
 
-data FileType = Audio | Video | Image | AudioLink | VideoLink | ImageLink
+data FileType = Audio | Video | Image | AudioLink | VideoLink | ImageLink | PortraitVideoLink
   deriving stock (Eq, Show, Read, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

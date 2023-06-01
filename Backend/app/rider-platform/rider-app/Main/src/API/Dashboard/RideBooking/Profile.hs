@@ -18,13 +18,16 @@ module API.Dashboard.RideBooking.Profile where
 
 import qualified API.UI.Profile as AP
 import qualified Domain.Action.UI.Profile as DProfile
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Environment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import Servant
+import SharedLogic.Merchant
 
 data ProfileEndPoint = UpdatePersonEndPoint
   deriving (Show, Read)
@@ -48,13 +51,17 @@ type CustomerUpdateProfileAPI =
     :> ReqBody '[JSON] DProfile.UpdateProfileReq
     :> Post '[JSON] APISuccess
 
-handler :: FlowServer API
-handler =
-  callGetPersonDetails
-    :<|> callUpdatePerson
+handler :: ShortId DM.Merchant -> FlowServer API
+handler merchantId =
+  callGetPersonDetails merchantId
+    :<|> callUpdatePerson merchantId
 
-callGetPersonDetails :: Id DP.Person -> FlowHandler DProfile.ProfileRes
-callGetPersonDetails = AP.getPersonDetails
+callGetPersonDetails :: ShortId DM.Merchant -> Id DP.Person -> FlowHandler DProfile.ProfileRes
+callGetPersonDetails merchantId personId = do
+  m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
+  AP.getPersonDetails (personId, m.id)
 
-callUpdatePerson :: Id DP.Person -> DProfile.UpdateProfileReq -> FlowHandler APISuccess
-callUpdatePerson = AP.updatePerson
+callUpdatePerson :: ShortId DM.Merchant -> Id DP.Person -> DProfile.UpdateProfileReq -> FlowHandler APISuccess
+callUpdatePerson merchantId personId req = do
+  m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
+  AP.updatePerson (personId, m.id) req

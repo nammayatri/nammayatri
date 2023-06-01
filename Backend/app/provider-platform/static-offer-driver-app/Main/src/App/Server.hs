@@ -30,7 +30,7 @@ run = withModifiedEnv $ \modifiedEnv ->
   BU.run transporterAPI transporterServer context modifiedEnv
     & logRequestAndResponse modifiedEnv
     & logBecknRequest modifiedEnv.appEnv
-    & addServantInfo transporterAPI
+    & addServantInfo modifiedEnv.appEnv.version transporterAPI
     & hashBodyForSignature
     & supportProxyAuthorization
   where

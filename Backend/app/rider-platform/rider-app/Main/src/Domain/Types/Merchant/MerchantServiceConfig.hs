@@ -22,6 +22,8 @@ import qualified Kernel.External.Call as Call
 import Kernel.External.Call.Interface.Types
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Interface.Types
+import qualified Kernel.External.Notification as Notification
+import Kernel.External.Notification.Interface.Types
 import Kernel.External.SMS as Sms
 import Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude
@@ -29,7 +31,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import qualified Text.Show as Show
 
-data ServiceName = MapsService Maps.MapsService | SmsService Sms.SmsService | WhatsappService Whatsapp.WhatsappService | CallService Call.CallService
+data ServiceName = MapsService Maps.MapsService | SmsService Sms.SmsService | WhatsappService Whatsapp.WhatsappService | CallService Call.CallService | NotificationService Notification.NotificationService
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -38,6 +40,7 @@ instance Show ServiceName where
   show (SmsService s) = "Sms_" <> show s
   show (WhatsappService s) = "Whatsapp_" <> show s
   show (CallService s) = "Call_" <> show s
+  show (NotificationService s) = "Notification_" <> show s
 
 instance Read ServiceName where
   readsPrec d' r' =
@@ -60,6 +63,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "Call_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (NotificationService v1, r2)
+                 | r1 <- stripPrefix "Notification_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
       r'
     where
@@ -71,6 +78,7 @@ data ServiceConfigD (s :: UsageSafety)
   | SmsServiceConfig !SmsServiceConfig
   | WhatsappServiceConfig !WhatsappServiceConfig
   | CallServiceConfig !CallServiceConfig
+  | NotificationServiceConfig !NotificationServiceConfig
   deriving (Generic, Eq)
 
 type ServiceConfig = ServiceConfigD 'Safe
@@ -106,6 +114,9 @@ getServiceName msc = case msc.serviceConfig of
     Whatsapp.GupShupConfig _ -> WhatsappService Whatsapp.GupShup
   CallServiceConfig callCfg -> case callCfg of
     Call.ExotelConfig _ -> CallService Call.Exotel
+  NotificationServiceConfig notificationCfg -> case notificationCfg of
+    Notification.FCMConfig _ -> NotificationService Notification.FCM
+    Notification.PayTMConfig _ -> NotificationService Notification.PayTM
 
 buildMerchantServiceConfig ::
   MonadTime m =>

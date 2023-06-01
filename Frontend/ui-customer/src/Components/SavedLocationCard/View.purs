@@ -18,16 +18,15 @@ module Components.SavedLocationCard.View where
 import Components.SavedLocationCard.Controller( Action(..), getCardType)
 import Screens.Types (LocationListItemState, CardType(..))
 import Effect (Effect)
-import Prelude (Unit, ($), const, unit, not,(<>),(/),(-))
+import Prelude (Unit, ($), const, unit, not,(<>),(/),(-), (==))
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Styles.Colors as Color
-import PrestoDOM (PrestoDOM, Orientation(..), Gravity(..), Length(..), Padding(..), Margin(..), Visibility(..), margin, padding, orientation, height, width, linearLayout, imageView, imageUrl, text, textView, textSize, fontStyle, gravity, clickable, onClick, color, background, lineHeight, visibility, cornerRadius, stroke, ellipsize, maxLines, imageWithFallback)
-import Debug (spy)
+import PrestoDOM (PrestoDOM, Orientation(..), Gravity(..), Length(..), Padding(..), Margin(..), Visibility(..), margin, padding, orientation, height, width, linearLayout, imageView, imageUrl, text, textView, textSize, fontStyle, gravity, clickable, onClick, color, background, lineHeight, visibility, cornerRadius, stroke, ellipsize, maxLines, imageWithFallback, weight)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Common.Types.App
-import Engineering.Helpers.Commons(screenWidth)
+import Engineering.Helpers.Commons as EHC
 import Data.Maybe(Maybe(..), fromMaybe)
 
 view :: forall w. (Action -> Effect Unit) -> LocationListItemState -> PrestoDOM (Effect Unit) w
@@ -74,11 +73,11 @@ savedLocationView state push =
       ][  linearLayout
           [ orientation HORIZONTAL
           , height WRAP_CONTENT
-          , width $ V ((screenWidth unit / 2) - 28)
+          , weight 1.0
           , onClick push $ if (not state.isEditEnabled) then const (CardClicked state) else const (EditLocation state)
-          ][  textView
-              [ text case (getCardType (fromMaybe "" state.cardType)) of
-                    Just tag -> case tag of
+          ] [ textView
+              [ text case (getCardType (fromMaybe "" state.cardType)) of 
+                    Just tag -> case tag of 
                       HOME_TAG -> (getString HOME)
                       WORK_TAG -> (getString WORK)
                       OTHER_TAG -> state.tagName
@@ -87,13 +86,14 @@ savedLocationView state push =
               , maxLines 2
               , lineHeight "20"
               , textSize FontSize.a_16
+              , weight 1.0
               , color Color.black800
               , fontStyle $ FontStyle.semiBold LanguageStyle
               ]
             ]
         , linearLayout
         [ orientation HORIZONTAL
-        , width MATCH_PARENT
+        , width WRAP_CONTENT
         , height WRAP_CONTENT
         , gravity RIGHT
         , visibility if state.isEditEnabled then VISIBLE else GONE
@@ -106,6 +106,7 @@ savedLocationView state push =
             , margin (MarginRight 12)
             ][  textView
                 [ text (getString EDIT)
+                , width WRAP_CONTENT
                 , textSize FontSize.a_14
                 , color Color.blue900
                 , fontStyle $ FontStyle.medium LanguageStyle
@@ -121,6 +122,7 @@ savedLocationView state push =
                 [ text (getString REMOVE)
                 , textSize FontSize.a_14
                 , color Color.blue900
+                , width WRAP_CONTENT
                 , fontStyle $ FontStyle.medium LanguageStyle
                 ]
               ]

@@ -132,6 +132,16 @@ findByMsgIdAndBapIdAndBppId txnId bapId (Id merchantId) = do
 --     where_ $
 --       searchT ^. SearchRequestSpecialZoneTId ==. val (toKey searchRequestId)
 --     return $ searchT ^. SearchRequestSpecialZoneValidTill
+findByTransactionId ::
+  (Transactionable m) =>
+  Id SearchRequestSpecialZone ->
+  m (Maybe (Id SearchRequestSpecialZone))
+findByTransactionId tId = do
+  findOne $ do
+    searchT <- from $ table @SearchRequestSpecialZoneT
+    where_ $
+      searchT ^. SearchRequestSpecialZoneTransactionId ==. val (getId tId)
+    return $ searchT ^. SearchRequestSpecialZoneTId
 
 getValidTill :: L.MonadFlow m => Id SearchRequestSpecialZone -> m (Maybe UTCTime)
 getValidTill (Id searchRequestId) = do

@@ -76,17 +76,19 @@ data ServiceHandle m = ServiceHandle
   { findBookingById :: Id SRB.Booking -> m (Maybe SRB.Booking),
     findRideById :: Id DRide.Ride -> m (Maybe DRide.Ride),
     getMerchant :: Id DM.Merchant -> m (Maybe DM.Merchant),
-    endRideTransaction :: Id DP.Driver -> Id SRB.Booking -> DRide.Ride -> Maybe FareParameters -> Maybe (Id RD.RiderDetails) -> m (),
+    endRideTransaction :: Id DP.Driver -> Id SRB.Booking -> DRide.Ride -> Maybe FareParameters -> Maybe (Id RD.RiderDetails) -> Id DM.Merchant -> m (),
     notifyCompleteToBAP :: SRB.Booking -> DRide.Ride -> Fare.FareParameters -> m (),
-    getFarePolicy :: Id DM.Merchant -> DVeh.Variant -> Maybe Meters -> m (Maybe DFP.FarePolicy),
+    getFarePolicy :: Id DM.Merchant -> DVeh.Variant -> m (Maybe DFP.FarePolicy),
     calculateFareParameters :: Fare.CalculateFareParametersParams -> m Fare.FareParameters,
     putDiffMetric :: Id DM.Merchant -> Money -> Meters -> m (),
-    findDriverLoc :: Id DP.Person -> m (Maybe DrLoc.DriverLocation),
+    findDriverLoc :: Id DM.Merchant -> Id DP.Person -> m (Maybe DrLoc.DriverLocation),
     isDistanceCalculationFailed :: Id DP.Person -> m Bool,
     finalDistanceCalculation :: Id DRide.Ride -> Id DP.Person -> LatLong -> m (),
+    getInterpolatedPoints :: Id DP.Person -> m [LatLong],
+    clearInterpolatedPoints :: Id DP.Person -> m (),
     findConfig :: m (Maybe DTConf.TransporterConfig),
     whenWithLocationUpdatesLock :: Id DP.Person -> m () -> m (),
-    getDistanceBetweenPoints :: LatLong -> LatLong -> m Meters
+    getDistanceBetweenPoints :: LatLong -> LatLong -> [LatLong] -> m Meters
   }
 
 buildEndRideHandle :: Id DM.Merchant -> Flow (ServiceHandle Flow)
@@ -105,6 +107,8 @@ buildEndRideHandle merchantId = do
         findDriverLoc = DrLoc.findById,
         isDistanceCalculationFailed = LocUpd.isDistanceCalculationFailed defaultRideInterpolationHandler,
         finalDistanceCalculation = LocUpd.finalDistanceCalculation defaultRideInterpolationHandler,
+        getInterpolatedPoints = LocUpd.getInterpolatedPoints defaultRideInterpolationHandler,
+        clearInterpolatedPoints = LocUpd.clearInterpolatedPoints defaultRideInterpolationHandler,
         findConfig = QTConf.findByMerchantId merchantId,
         whenWithLocationUpdatesLock = LocUpd.whenWithLocationUpdatesLock,
         getDistanceBetweenPoints = RideEndInt.getDistanceBetweenPoints merchantId
@@ -175,7 +179,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
       case dashboardReq.point of
         Just point -> pure point
         Nothing -> do
-          driverLocation <- findDriverLoc driverId >>= fromMaybeM LocationNotFound
+          driverLocation <- findDriverLoc booking.providerId driverId >>= fromMaybeM LocationNotFound
           pure $ getCoordinates driverLocation
     CallBasedReq _ -> do
       pure $ getCoordinates booking.toLocation
@@ -202,11 +206,12 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
                fare = Just finalFare,
                tripEndPos = Just tripEndPoint,
                fareParametersId = Just newFareParams.id,
-               distanceCalculationFailed = Just distanceCalculationFailed
+               distanceCalculationFailed = Just distanceCalculationFailed,
+               pickupDropOutsideOfThreshold = Just pickupDropOutsideOfThreshold
               }
     -- we need to store fareParams only when they changed
-    endRideTransaction (cast @DP.Person @DP.Driver driverId) booking.id updRide mbUpdatedFareParams booking.riderId
-
+    endRideTransaction (cast @DP.Person @DP.Driver driverId) booking.id updRide mbUpdatedFareParams booking.riderId booking.providerId
+    clearInterpolatedPoints driverId
     notifyCompleteToBAP booking updRide newFareParams
   return APISuccess.Success
 
@@ -217,7 +222,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance = do
 
   -- maybe compare only distance fare?
   let estimatedFare = Fare.fareSum booking.fareParams
-  farePolicy <- getFarePolicy merchantId booking.vehicleVariant (Just booking.estimatedDistance) >>= fromMaybeM (FareParametersNotFound merchantId.getId)
+  farePolicy <- getFarePolicy merchantId booking.vehicleVariant >>= fromMaybeM (FareParametersNotFound merchantId.getId)
   fareParams <-
     calculateFareParameters
       Fare.CalculateFareParametersParams
@@ -275,7 +280,7 @@ calculateFinalValuesForCorrectDistanceCalculations ::
 calculateFinalValuesForCorrectDistanceCalculations handle booking ride mbMaxDistance pickupDropOutsideOfThreshold = do
   distanceDiff <- getDistanceDiff booking (highPrecMetersToMeters ride.traveledDistance)
   thresholdConfig <- handle.findConfig >>= fromMaybeM (InternalError "TransportConfigNotFound")
-  let maxDistance = fromMaybe ride.traveledDistance mbMaxDistance + thresholdConfig.upwardsRecomputeBuffer
+  let maxDistance = fromMaybe ride.traveledDistance mbMaxDistance + thresholdConfig.actualRideDistanceDiffThreshold
   if not pickupDropOutsideOfThreshold
     then
       if distanceDiff > thresholdConfig.actualRideDistanceDiffThreshold
@@ -295,7 +300,9 @@ calculateFinalValuesForFailedDistanceCalculations handle@ServiceHandle {..} book
   let tripStartPoint = case ride.tripStartPos of
         Nothing -> getCoordinates booking.fromLocation
         Just tripStartPos -> tripStartPos
-  approxTraveledDistance <- getDistanceBetweenPoints tripStartPoint tripEndPoint
+  interpolatedPoints <- getInterpolatedPoints ride.driverId
+  approxTraveledDistance <- getDistanceBetweenPoints tripStartPoint tripEndPoint interpolatedPoints
+  logTagInfo "endRide" $ "approxTraveledDistance: " <> show approxTraveledDistance
   distanceDiff <- getDistanceDiff booking approxTraveledDistance
   thresholdConfig <- findConfig >>= fromMaybeM (InternalError "TransportConfigNotFound")
 
@@ -309,6 +316,8 @@ calculateFinalValuesForFailedDistanceCalculations handle@ServiceHandle {..} book
             then do
               recalculateFareForDistance handle booking ride booking.estimatedDistance
             else do
-              if distanceDiff < thresholdConfig.approxRideDistanceDiffThreshold
+              if distanceDiff < thresholdConfig.upwardsRecomputeBuffer
                 then recalculateFareForDistance handle booking ride approxTraveledDistance
-                else recalculateFareForDistance handle booking ride (booking.estimatedDistance + highPrecMetersToMeters thresholdConfig.approxRideDistanceDiffThreshold)
+                else do
+                  logTagInfo "Inaccurate Location Updates and Pickup/Drop Deviated." ("DistanceDiff: " <> show distanceDiff)
+                  recalculateFareForDistance handle booking ride (booking.estimatedDistance + highPrecMetersToMeters thresholdConfig.upwardsRecomputeBuffer)

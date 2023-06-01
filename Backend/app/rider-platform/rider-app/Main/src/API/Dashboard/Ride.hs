@@ -16,9 +16,12 @@ module API.Dashboard.Ride where
 
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
 import qualified Domain.Action.Dashboard.Ride as DRide
+import Domain.Action.Dashboard.Route (mkGetLocation)
 import qualified Domain.Types.Merchant as DM
 import Environment
+import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
+import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant hiding (throwError)
@@ -27,14 +30,25 @@ type API =
   "ride"
     :> ( ShareRideInfoAPI
            :<|> Common.RideListAPI
+           :<|> Common.TripRouteAPI
+           :<|> Common.RideInfoAPI
+           :<|> MultipleRideCancelAPI
        )
 
 type ShareRideInfoAPI = Common.ShareRideInfoAPI
+
+type MultipleRideCancelAPI =
+  "cancel"
+    :> ReqBody '[JSON] DRide.MultipleRideCancelReq
+    :> Post '[JSON] APISuccess
 
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   shareRideInfo merchantId
     :<|> rideList merchantId
+    :<|> callGetTripRoute merchantId
+    :<|> callrideInfo merchantId
+    :<|> multipleRideCancel
 
 shareRideInfo ::
   ShortId DM.Merchant ->
@@ -53,3 +67,17 @@ rideList ::
   FlowHandler Common.RideListRes
 rideList merchantShortId mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbDriverPhone =
   withFlowHandlerAPI $ DRide.rideList merchantShortId mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbDriverPhone
+
+callGetTripRoute :: ShortId DM.Merchant -> Id Common.Ride -> Double -> Double -> FlowHandler Maps.GetRoutesResp
+callGetTripRoute merchantShortId rideId pickupLocationLat pickupLocationLon = withFlowHandlerAPI $ mkGetLocation merchantShortId rideId pickupLocationLat pickupLocationLon
+
+callrideInfo ::
+  ShortId DM.Merchant ->
+  Id Common.Ride ->
+  FlowHandler Common.RideInfoRes
+callrideInfo merchantShortId rideId = withFlowHandlerAPI $ DRide.rideInfo merchantShortId rideId
+
+multipleRideCancel ::
+  DRide.MultipleRideCancelReq ->
+  FlowHandler APISuccess
+multipleRideCancel = withFlowHandlerAPI . DRide.multipleRideCancel

@@ -19,32 +19,37 @@
 module Storage.Queries.Person where
 
 import Control.Applicative ((<|>))
+import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Maybe as Mb
 import qualified Database.Beam as B
 import Database.Beam.Postgres hiding ((++.))
 import qualified Database.Beam.Query ()
 import qualified Domain.Types.Booking as Booking
+-- import Domain.Type.Booking
+import Domain.Types.Booking.BookingLocation
 import Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.DriverInformation as DDI
-import Domain.Types.DriverLocation
+import Domain.Types.DriverLocation as DriverLocation
+import Domain.Types.DriverQuote as DriverQuote
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
 import Domain.Types.Ride as Ride
-import Domain.Types.Vehicle as Vehicle
+import Domain.Types.Vehicle as DV
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
 import Kernel.External.Encryption
-import Kernel.External.FCM.Types (FCMRecipientToken)
-import qualified Kernel.External.FCM.Types as FCM
 import Kernel.External.Maps as Maps
+import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
+import qualified Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Types.Version
+import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common hiding (Value)
 import Kernel.Utils.GenericPretty
 import Kernel.Utils.Version
@@ -56,6 +61,8 @@ import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Beam.Vehicle as BeamV
 import qualified Storage.Queries.DriverInformation as QueriesDI
 import qualified Storage.Queries.DriverLocation as QDL
+import Storage.Queries.DriverQuote (baseDriverQuoteQuery)
+import Storage.Queries.FullEntityBuilders (buildFullBooking, buildFullDriverQuote)
 import qualified Storage.Queries.Vehicle as QV
 import Storage.Tabular.Booking
 import Storage.Tabular.Booking.BookingLocation
@@ -68,28 +75,6 @@ import Storage.Tabular.DriverQuote
 import Storage.Tabular.Person as TPerson
 import Storage.Tabular.Ride
 import Storage.Tabular.Vehicle as Vehicle
-
-baseFullPersonQuery ::
-  From
-    ( Table PersonT
-        :& Table DriverLocationT
-        :& Table DriverInformationT
-        :& Table VehicleT
-    )
-baseFullPersonQuery =
-  table @PersonT
-    `innerJoin` table @DriverLocationT
-    `Esq.on` ( \(person :& location) ->
-                 person ^. PersonTId ==. location ^. DriverLocationDriverId
-             )
-    `innerJoin` table @DriverInformationT
-    `Esq.on` ( \(person :& _ :& driverInfo) ->
-                 person ^. PersonTId ==. driverInfo ^. DriverInformationDriverId
-             )
-    `innerJoin` table @VehicleT
-    `Esq.on` ( \(person :& _ :& _ :& vehicle) ->
-                 person ^. PersonTId ==. vehicle ^. VehicleDriverId
-             )
 
 -- create :: Person -> SqlDB ()
 -- create = Esq.create
@@ -219,16 +204,252 @@ findAllDriversByIdsFirstNameAsc ::
   Id Merchant ->
   [Id Person] ->
   m [FullDriver]
-findAllDriversByIdsFirstNameAsc merchantId driverIds = fmap (map mkFullDriver) $
+findAllDriversByIdsFirstNameAsc merchantId driverIds = do
+  driverLocs <- getDriverLocs driverIds merchantId
+  driverInfos <- getDriverInfos driverLocs
+  vehicle <- getVehicles driverInfos
+  drivers <- getDrivers vehicle
+  return (linkArrays driverLocs driverInfos vehicle drivers)
+
+linkArrays :: [DriverLocation] -> [DriverInformation] -> [Vehicle] -> [Person] -> [FullDriver]
+linkArrays driverLocations driverInformations vehicles persons =
+  let locationHashMap = buildLocationHashMap driverLocations
+      vehicleHashMap = buildVehicleHashMap vehicles
+      driverInfoHashMap = buildDriverInfoHashMap driverInformations
+   in map (buildFullDriver locationHashMap vehicleHashMap driverInfoHashMap) persons
+
+linkArrayList :: [DriverLocation] -> [DriverInformation] -> [Vehicle] -> [Person] -> LatLong -> Maybe Variant -> [(Id Person, Maybe FCM.FCMRecipientToken, Maybe Maps.Language, Bool, Bool, Bool, Bool, Double, Double, Double, Variant, Maybe DriverInfo.DriverMode)]
+linkArrayList driverLocations driverInformations vehicles persons LatLong {..} mbVariant =
+  let locationHashMap = buildLocationHashMap driverLocations
+      driverInfoHashMap = buildDriverInfoHashMap driverInformations
+      vehicleHashMap = buildVehicleHashMap vehicles
+   in mapMaybe (buildFullDriverList locationHashMap vehicleHashMap driverInfoHashMap LatLong {..} mbVariant) persons
+
+buildLocationHashMap :: [DriverLocation] -> HashMap.HashMap Text DriverLocation
+buildLocationHashMap driverLocations =
+  HashMap.fromList $ map (\loc -> (loc.driverId.getId, loc)) driverLocations
+
+buildPersonHashMap :: [Person] -> HashMap.HashMap Text Person
+buildPersonHashMap persons =
+  HashMap.fromList $ map (\p -> (p.id.getId, p)) persons
+
+buildVehicleHashMap :: [Vehicle] -> HashMap.HashMap Text Vehicle
+buildVehicleHashMap vehicles =
+  HashMap.fromList $ map (\v -> (v.driverId.getId, v)) vehicles
+
+buildFullDriver :: HashMap.HashMap Text DriverLocation -> HashMap.HashMap Text Vehicle -> HashMap.HashMap Text DriverInformation -> Person -> FullDriver
+buildFullDriver locationHashMap vehicleHashMap driverInfoHashMap person =
+  let driverId' = person.id.getId
+      location = HashMap.lookupDefault (error "Location not found") driverId' locationHashMap
+      vehicle = HashMap.lookupDefault (error "Vehicle not found") driverId' vehicleHashMap
+      info = HashMap.lookupDefault (error "Person not found") driverId' driverInfoHashMap
+   in mkFullDriver (person, location, info, vehicle)
+
+getDriverLocs ::
+  Transactionable m =>
+  [Id Person] ->
+  Id Merchant ->
+  m [DriverLocation]
+getDriverLocs driverIds merchantId = do
   Esq.findAll $ do
-    (person :& driverLocation :& driverInfo :& vehicle) <-
-      from baseFullPersonQuery
+    driverLocs <- from $ table @DriverLocationT
     where_ $
-      person ^. PersonRole ==. val Person.DRIVER
-        &&. person ^. PersonTId `in_` valList (map toKey driverIds)
-        &&. person ^. PersonMerchantId ==. (val . toKey $ merchantId)
-    orderBy [asc (person ^. PersonFirstName)]
-    return (person, driverLocation, driverInfo, vehicle)
+      driverLocs ^. DriverLocationDriverId `in_` valList personsKeys
+        &&. driverLocs ^. DriverLocationMerchantId ==. (val . toKey $ merchantId)
+    return driverLocs
+  where
+    personsKeys = toKey . cast <$> driverIds
+
+getDriverInfos ::
+  Transactionable m =>
+  [DriverLocation] ->
+  m [DriverInformation]
+getDriverInfos driverLocs = do
+  Esq.findAll $ do
+    driverInfos <- from $ table @DriverInformationT
+    where_ $
+      driverInfos ^. DriverInformationDriverId `in_` valList personsKeys
+    return driverInfos
+  where
+    personsKeys = toKey . cast <$> fetchDriverIDsFromLocations driverLocs
+
+getVehicles ::
+  Transactionable m =>
+  [DriverInformation] ->
+  m [Vehicle]
+getVehicles driverInfo = do
+  Esq.findAll $ do
+    vehicles <- from $ table @VehicleT
+    where_ $
+      vehicles ^. VehicleDriverId `in_` valList personsKeys
+    return vehicles
+  where
+    personsKeys = toKey . cast <$> fetchDriverIDsFromInfo driverInfo
+
+getDrivers ::
+  Transactionable m =>
+  [Vehicle] ->
+  m [Person]
+getDrivers vehicles = do
+  Esq.findAll $ do
+    persons <- from $ table @PersonT
+    where_ $
+      persons ^. PersonTId `in_` valList personsKeys
+        &&. persons ^. PersonRole ==. val Person.DRIVER
+    return persons
+  where
+    personsKeys = toKey . cast <$> fetchDriverIDsFromVehicle vehicles
+
+getDriversWithMerchID ::
+  Transactionable m =>
+  Id Merchant ->
+  m [Person]
+getDriversWithMerchID merchantId = do
+  Esq.findAll $ do
+    persons <- from $ table @PersonT
+    where_ $
+      persons ^. PersonMerchantId ==. val (toKey merchantId)
+        &&. persons ^. PersonRole ==. val Person.DRIVER
+    return persons
+
+getDriverQuote ::
+  Transactionable m =>
+  [Person] ->
+  m [DriverQuote]
+getDriverQuote persons =
+  buildDType $ do
+    res <- Esq.findAll' $ do
+      (dQuote :& farePars) <-
+        from baseDriverQuoteQuery
+      where_ $
+        dQuote ^. DriverQuoteDriverId `in_` valList personsKeys
+          &&. dQuote ^. DriverQuoteStatus ==. val DriverQuote.Active
+      pure (dQuote, farePars)
+    catMaybes <$> mapM buildFullDriverQuote res
+  where
+    personsKeys = toKey . cast <$> fetchDriverIDsFromPersons persons
+
+getBookingInfo ::
+  Transactionable m =>
+  [DriverQuote] ->
+  m [Booking.Booking]
+getBookingInfo driverQuote = buildDType $ do
+  res <-
+    Esq.findAll' $ do
+      booking <- from $ table @BookingT
+      where_ $
+        booking ^. BookingQuoteId `in_` valList personsKeys
+          &&. booking ^. BookingStatus ==. val Booking.TRIP_ASSIGNED
+      return booking
+  catMaybes <$> mapM buildFullBooking res
+  where
+    personsKeys = fetchDriverIDsTextFromQuote driverQuote
+
+getBookingLocs ::
+  Transactionable m =>
+  [Booking.Booking] ->
+  m [BookingLocation]
+getBookingLocs bookings = do
+  Esq.findAll $ do
+    bookingLoc <- from $ table @BookingLocationT
+    where_ $
+      bookingLoc ^. BookingLocationTId `in_` valList toLocKeys
+    return bookingLoc
+  where
+    toLocKeys = toKey . cast <$> fetchToLocationIDFromBooking bookings
+
+getDriverLocsFromMerchId ::
+  (Transactionable m, MonadTime m) =>
+  Maybe Seconds ->
+  LatLong ->
+  Int ->
+  Id Merchant ->
+  m [DriverLocation]
+getDriverLocsFromMerchId mbDriverPositionInfoExpiry LatLong {..} radiusMeters merchantId = do
+  now <- getCurrentTime
+  Esq.findAll $ do
+    driverLoc <- from $ table @DriverLocationT
+    where_ $
+      driverLoc ^. DriverLocationMerchantId ==. (val . toKey $ merchantId)
+        &&. ( val (Mb.isNothing mbDriverPositionInfoExpiry)
+                ||. (driverLoc ^. DriverLocationCoordinatesCalculatedAt +. Esq.interval [Esq.SECOND $ maybe 0 getSeconds mbDriverPositionInfoExpiry] >=. val now)
+            )
+        &&. buildRadiusWithin (driverLoc ^. DriverLocationPoint) (lat, lon) (val radiusMeters)
+    orderBy [asc (driverLoc ^. DriverLocationPoint <->. Esq.getPoint (val lat, val lon))]
+    return driverLoc
+
+fetchDriverIDsFromDriverQuotes :: [DriverQuote] -> [Id Person]
+fetchDriverIDsFromDriverQuotes = map DriverQuote.driverId
+
+fetchToLocationIDFromBooking :: [Booking.Booking] -> [Id BookingLocation]
+fetchToLocationIDFromBooking = map (.toLocation.id)
+
+fetchQuoteIdFromDriverQuotes :: [DriverQuote] -> [Text]
+fetchQuoteIdFromDriverQuotes = map (.id.getId)
+
+fetchDriverIDsFromPersons :: [Person] -> [Id Person]
+fetchDriverIDsFromPersons = map (.id)
+
+fetchDriverIDsFromLocations :: [DriverLocation] -> [Id Person]
+fetchDriverIDsFromLocations = map DriverLocation.driverId
+
+fetchDriverIDsFromInfo :: [DriverInformation] -> [Id Person]
+fetchDriverIDsFromInfo = map DriverInfo.driverId
+
+fetchDriverIDsFromVehicle :: [Vehicle] -> [Id Person]
+fetchDriverIDsFromVehicle = map (.driverId)
+
+fetchDriverIDsTextFromQuote :: [DriverQuote] -> [Text]
+fetchDriverIDsTextFromQuote = map (.driverId.getId)
+
+findAllDriversByIdsFirstNameAsc' ::
+  (L.MonadFlow m, Log m) =>
+  Id Merchant ->
+  [Id Person] ->
+  m [FullDriver]
+findAllDriversByIdsFirstNameAsc' (Id merchantId) driverIds = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> do
+      personList <- do
+        p <-
+          KV.findAllWithOptionsKVConnector
+            dbCOnf'
+            Mesh.meshConfig
+            [ Se.And
+                [ Se.Is BeamP.role $ Se.Eq Person.DRIVER,
+                  Se.Is BeamP.id $ Se.In $ getId <$> driverIds,
+                  Se.Is BeamP.merchantId $ Se.Eq merchantId
+                ]
+            ]
+            (Se.Asc BeamP.firstName)
+            Nothing
+            Nothing
+        case p of
+          Left _ -> pure []
+          Right x -> traverse transformBeamPersonToDomain x
+      -- either (pure []) (transformBeamPersonToDomain <$>) <$> KV.findAllWithOptionsKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamP.role $ Se.Eq Person.DRIVER,
+      --               Se.Is BeamP.id $ Se.In $ getId <$> driverIds, Se.Is BeamP.merchantId $ Se.Eq merchantId ]] (Se.Asc BeamP.firstName) Nothing Nothing
+      dlList <- either (pure []) (QDL.transformBeamDriverLocationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDL.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> personList]
+      infoList <- either (pure []) (QueriesDI.transformBeamDriverInformationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDI.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> personList]
+      vehicleList <- either (pure []) (QV.transformBeamVehicleToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamV.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> personList]
+      let pDl = foldl' (getPersonWithlocation dlList) [] personList
+      let pDlInfo = foldl' (getPersonWithInfo infoList) [] pDl
+      let pDlInfoVeh = foldl' (getPersonWithVehicle vehicleList) [] pDlInfo
+      pure $ map mkFullDriver pDlInfoVeh
+    Nothing -> pure []
+  where
+    getPersonWithlocation dlList acc person' =
+      let dlList' = filter (\dl -> dl.driverId == person'.id) dlList
+       in acc <> ((\dl -> (person', dl)) <$> dlList')
+
+    getPersonWithInfo infoList acc (person', dl') =
+      let infoList' = filter (\info -> info.driverId == person'.id) infoList
+       in acc <> ((\info -> (person', dl', info)) <$> infoList')
+
+    getPersonWithVehicle vehicleList acc (person', dl', info') =
+      let vehicleList' = filter (\vehicle -> vehicle.driverId == person'.id) vehicleList
+       in acc <> ((\vehicle -> (person', dl', info', vehicle)) <$> vehicleList')
 
 findAllDriversByIdsFirstNameAsc' ::
   (L.MonadFlow m, Log m) =>
@@ -885,7 +1106,7 @@ data NearestDriversResult = NearestDriversResult
     language :: Maybe Maps.Language,
     onRide :: Bool,
     distanceToDriver :: Meters,
-    variant :: Vehicle.Variant,
+    variant :: DV.Variant,
     lat :: Double,
     lon :: Double,
     mode :: Maybe DriverInfo.DriverMode
@@ -902,49 +1123,13 @@ getNearestDrivers ::
   Maybe Seconds ->
   m [NearestDriversResult]
 getNearestDrivers mbVariant LatLong {..} radiusMeters merchantId onlyNotOnRide mbDriverPositionInfoExpiry = do
-  now <- getCurrentTime
-  res <- Esq.findAll $ do
-    (person :& location :& driverInfo :& vehicle) <-
-      from baseFullPersonQuery
-    where_ $
-      person ^. PersonRole ==. val Person.DRIVER
-        &&. person ^. PersonMerchantId ==. val (toKey merchantId)
-        &&. ((Esq.isNothing (driverInfo ^. DriverInformationMode) &&. driverInfo ^. DriverInformationActive) ||. (not_ (Esq.isNothing (driverInfo ^. DriverInformationMode)) &&. (driverInfo ^. DriverInformationMode ==. val (Just DriverInfo.SILENT) ||. driverInfo ^. DriverInformationMode ==. val (Just DriverInfo.ONLINE))))
-        &&. (if onlyNotOnRide then not_ (driverInfo ^. DriverInformationOnRide) else val True)
-        &&. not_ (driverInfo ^. DriverInformationBlocked)
-        &&. ( val (Mb.isNothing mbDriverPositionInfoExpiry)
-                ||. (location ^. DriverLocationCoordinatesCalculatedAt +. Esq.interval [Esq.SECOND $ maybe 0 getSeconds mbDriverPositionInfoExpiry] >=. val now)
-            )
-        &&. ( Esq.isNothing (val mbVariant) ||. just (vehicle ^. VehicleVariant) ==. val mbVariant -- when mbVariant = Nothing, we use all variants, is it correct?
-                ||. ( case mbVariant of
-                        Just SEDAN ->
-                          driverInfo ^. DriverInformationCanDowngradeToSedan ==. val True
-                            &&. vehicle ^. VehicleVariant ==. val SUV
-                        Just HATCHBACK ->
-                          driverInfo ^. DriverInformationCanDowngradeToHatchback ==. val True
-                            &&. (vehicle ^. VehicleVariant ==. val SUV ||. vehicle ^. VehicleVariant ==. val SEDAN)
-                        Just TAXI ->
-                          driverInfo ^. DriverInformationCanDowngradeToTaxi ==. val True
-                            &&. vehicle ^. VehicleVariant ==. val TAXI_PLUS
-                        _ -> val False
-                    )
-            )
-        &&. buildRadiusWithin (location ^. DriverLocationPoint) (lat, lon) (val radiusMeters)
-    orderBy [asc (location ^. DriverLocationPoint <->. Esq.getPoint (val lat, val lon))]
-    return
-      ( person ^. PersonTId,
-        person ^. PersonDeviceToken,
-        person ^. PersonLanguage,
-        driverInfo ^. DriverInformationOnRide,
-        driverInfo ^. DriverInformationCanDowngradeToSedan,
-        driverInfo ^. DriverInformationCanDowngradeToHatchback,
-        driverInfo ^. DriverInformationCanDowngradeToTaxi,
-        location ^. DriverLocationPoint <->. Esq.getPoint (val lat, val lon),
-        location ^. DriverLocationLat,
-        location ^. DriverLocationLon,
-        vehicle ^. VehicleVariant,
-        driverInfo ^. DriverInformationMode
-      )
+  res <- do
+    driverLocs <- getDriverLocsWithCond merchantId mbDriverPositionInfoExpiry LatLong {..} radiusMeters
+    driverInfos <- getDriverInfosWithCond driverLocs onlyNotOnRide False
+    vehicle <- getVehiclesWithCond driverInfos
+    drivers <- getDrivers vehicle
+    return (linkArrayList driverLocs driverInfos vehicle drivers LatLong {..} mbVariant)
+
   return (makeNearestDriversResult =<< res)
   where
     makeNearestDriversResult :: (Id Person, Maybe FCM.FCMRecipientToken, Maybe Maps.Language, Bool, Bool, Bool, Bool, Double, Double, Double, Variant, Maybe DriverInfo.DriverMode) -> [NearestDriversResult]
@@ -962,6 +1147,80 @@ getNearestDrivers mbVariant LatLong {..} radiusMeters merchantId onlyNotOnRide m
       where
         getResult var cond = [NearestDriversResult (cast personId) mbDeviceToken mblang onRide (roundToIntegral dist) var dlat dlon mode | cond]
 
+buildFullDriverList :: HashMap.HashMap Text DriverLocation -> HashMap.HashMap Text Vehicle -> HashMap.HashMap Text DriverInformation -> LatLong -> Maybe Variant -> Person -> Maybe (Id Person, Maybe FCM.FCMRecipientToken, Maybe Maps.Language, Bool, Bool, Bool, Bool, Double, Double, Double, Variant, Maybe DriverInfo.DriverMode)
+buildFullDriverList locationHashMap vehicleHashMap driverInfoHashMap LatLong {..} mbVariant person =
+  let driverId' = person.id.getId
+      location = HashMap.lookupDefault (error "Location not found") driverId' locationHashMap
+      vehicle = HashMap.lookupDefault (error "Vehicle not found") driverId' vehicleHashMap
+      info = HashMap.lookupDefault (error "Person not found") driverId' driverInfoHashMap
+      dist = realToFrac $ distanceBetweenInMeters LatLong {..} LatLong {lat = location.lat, lon = location.lon}
+   in if Mb.isNothing mbVariant || Just vehicle.variant == mbVariant
+        || ( case mbVariant of
+               Just SEDAN ->
+                 info.canDowngradeToSedan
+                   && vehicle.variant == SUV
+               Just HATCHBACK ->
+                 info.canDowngradeToHatchback
+                   && (vehicle.variant == SUV || vehicle.variant == SEDAN)
+               Just TAXI ->
+                 info.canDowngradeToTaxi
+                   && vehicle.variant == TAXI_PLUS
+               _ -> False
+           )
+        then Just (person.id, person.deviceToken, person.language, info.onRide, info.canDowngradeToSedan, info.canDowngradeToHatchback, info.canDowngradeToTaxi, dist, location.lat, location.lon, vehicle.variant, info.mode)
+        else Nothing
+
+getDriverLocsWithCond ::
+  (Transactionable m, MonadTime m) =>
+  Id Merchant ->
+  Maybe Seconds ->
+  LatLong ->
+  Int ->
+  m [DriverLocation]
+getDriverLocsWithCond merchantId mbDriverPositionInfoExpiry LatLong {..} radiusMeters = do
+  now <- getCurrentTime
+  Esq.findAll $ do
+    driverLocs <- from $ table @DriverLocationT
+    where_ $
+      driverLocs ^. DriverLocationMerchantId ==. (val . toKey $ merchantId)
+        &&. ( val (Mb.isNothing mbDriverPositionInfoExpiry)
+                ||. (driverLocs ^. DriverLocationCoordinatesCalculatedAt +. Esq.interval [Esq.SECOND $ maybe 0 getSeconds mbDriverPositionInfoExpiry] >=. val now)
+            )
+        &&. buildRadiusWithin (driverLocs ^. DriverLocationPoint) (lat, lon) (val radiusMeters)
+    orderBy [asc (driverLocs ^. DriverLocationPoint <->. Esq.getPoint (val lat, val lon))]
+    return driverLocs
+
+getDriverInfosWithCond ::
+  Transactionable m =>
+  [DriverLocation] ->
+  Bool ->
+  Bool ->
+  m [DriverInformation]
+getDriverInfosWithCond driverLocs onlyNotOnRide onlyOnRide = do
+  Esq.findAll $ do
+    driverInfos <- from $ table @DriverInformationT
+    where_ $
+      driverInfos ^. DriverInformationDriverId `in_` valList personsKeys
+        &&. ((Esq.isNothing (driverInfos ^. DriverInformationMode) &&. driverInfos ^. DriverInformationActive) ||. (not_ (Esq.isNothing (driverInfos ^. DriverInformationMode)) &&. (driverInfos ^. DriverInformationMode ==. val (Just DriverInfo.SILENT) ||. driverInfos ^. DriverInformationMode ==. val (Just DriverInfo.ONLINE))))
+        &&. (if onlyNotOnRide then not_ (driverInfos ^. DriverInformationOnRide) else if onlyOnRide then driverInfos ^. DriverInformationOnRide else val True)
+        &&. not_ (driverInfos ^. DriverInformationBlocked)
+    return driverInfos
+  where
+    personsKeys = toKey . cast <$> fetchDriverIDsFromLocations driverLocs
+
+getVehiclesWithCond ::
+  Transactionable m =>
+  [DriverInformation] ->
+  m [Vehicle]
+getVehiclesWithCond driverInfo = do
+  Esq.findAll $ do
+    vehicles <- from $ table @VehicleT
+    where_ $
+      vehicles ^. VehicleDriverId `in_` valList personsKeys
+    return vehicles
+  where
+    personsKeys = toKey . cast <$> fetchDriverIDsFromInfo driverInfo
+
 data NearestDriversResultCurrentlyOnRide = NearestDriversResultCurrentlyOnRide
   { driverId :: Id Driver,
     driverDeviceToken :: Maybe FCM.FCMRecipientToken,
@@ -969,7 +1228,7 @@ data NearestDriversResultCurrentlyOnRide = NearestDriversResultCurrentlyOnRide
     onRide :: Bool,
     lat :: Double,
     lon :: Double,
-    variant :: Vehicle.Variant,
+    variant :: DV.Variant,
     destinationLat :: Double,
     destinationLon :: Double,
     distanceToDriver :: Meters,
@@ -977,44 +1236,6 @@ data NearestDriversResultCurrentlyOnRide = NearestDriversResultCurrentlyOnRide
     mode :: Maybe DriverInfo.DriverMode
   }
   deriving (Generic, Show, PrettyShow, HasCoordinates)
-
-baseFullPersonQueryWithRideInfo ::
-  From
-    ( Table PersonT
-        :& Table DriverLocationT
-        :& Table DriverInformationT
-        :& Table VehicleT
-        :& Table DriverQuoteT
-        :& Table BookingT
-        :& Table BookingLocationT
-    )
-baseFullPersonQueryWithRideInfo =
-  table @PersonT
-    `innerJoin` table @DriverLocationT
-    `Esq.on` ( \(person :& location) ->
-                 person ^. PersonTId ==. location ^. DriverLocationDriverId
-             )
-    `innerJoin` table @DriverInformationT
-    `Esq.on` ( \(person :& _ :& driverInfo) ->
-                 person ^. PersonTId ==. driverInfo ^. DriverInformationDriverId
-             )
-    `innerJoin` table @VehicleT
-    `Esq.on` ( \(person :& _ :& _ :& vehicle) ->
-                 person ^. PersonTId ==. vehicle ^. VehicleDriverId
-             )
-    `innerJoin` table @DriverQuoteT
-    `Esq.on` ( \(person :& _ :& _ :& _ :& driverQuoteInfo) ->
-                 person ^. PersonTId ==. driverQuoteInfo ^. DriverQuoteDriverId
-             )
-    `innerJoin` table @BookingT
-    `Esq.on` ( \(_ :& _ :& _ :& _ :& driverQuoteInfo :& bookingInfo) ->
-                 driverQuoteInfo ^. DriverQuoteId ==. bookingInfo ^. BookingQuoteId
-                   &&. bookingInfo ^. BookingStatus ==. val Booking.TRIP_ASSIGNED
-             )
-    `innerJoin` table @BookingLocationT
-    `Esq.on` ( \(_ :& _ :& _ :& _ :& _ :& bookingInfo :& bookingLocationInfo) ->
-                 bookingInfo ^. BookingToLocationId ==. bookingLocationInfo ^. BookingLocationTId
-             )
 
 getNearestDriversCurrentlyOnRide ::
   (Transactionable m, MonadTime m) =>
@@ -1026,56 +1247,16 @@ getNearestDriversCurrentlyOnRide ::
   Int ->
   m [NearestDriversResultCurrentlyOnRide]
 getNearestDriversCurrentlyOnRide mbVariant LatLong {..} radiusMeters merchantId mbDriverPositionInfoExpiry reduceRadiusValue = do
-  now <- getCurrentTime
-  res <- Esq.findAll $ do
-    (personInfo :& locationInfo :& driverInfo :& vehicleInfo :& _ :& _ :& bookingLocationInfo) <-
-      from baseFullPersonQueryWithRideInfo
-    let destinationPoint = Esq.getPoint (bookingLocationInfo ^. BookingLocationLat, bookingLocationInfo ^. BookingLocationLon)
-        distanceFromDriverToDestination = locationInfo ^. DriverLocationPoint <->. destinationPoint
-        onRideRadius = val (fromIntegral (radiusMeters - reduceRadiusValue) :: Double)
-        distanceFromDestinationToPickup = Esq.getPoint (val lat, val lon) <->. destinationPoint
-    where_ $
-      personInfo ^. PersonRole ==. val Person.DRIVER
-        &&. personInfo ^. PersonMerchantId ==. val (toKey merchantId)
-        &&. ((Esq.isNothing (driverInfo ^. DriverInformationMode) &&. driverInfo ^. DriverInformationActive) ||. (not_ (Esq.isNothing (driverInfo ^. DriverInformationMode)) &&. (driverInfo ^. DriverInformationMode ==. val (Just DriverInfo.SILENT) ||. driverInfo ^. DriverInformationMode ==. val (Just DriverInfo.ONLINE))))
-        &&. driverInfo ^. DriverInformationOnRide
-        &&. not_ (driverInfo ^. DriverInformationBlocked)
-        &&. ( val (Mb.isNothing mbDriverPositionInfoExpiry)
-                ||. (locationInfo ^. DriverLocationCoordinatesCalculatedAt +. Esq.interval [Esq.SECOND $ maybe 0 getSeconds mbDriverPositionInfoExpiry] >=. val now)
-            )
-        &&. ( Esq.isNothing (val mbVariant) ||. just (vehicleInfo ^. VehicleVariant) ==. val mbVariant -- when mbVariant = Nothing, we use all variants, is it correct?
-                ||. ( case mbVariant of
-                        Just SEDAN ->
-                          driverInfo ^. DriverInformationCanDowngradeToSedan ==. val True
-                            &&. vehicleInfo ^. VehicleVariant ==. val SUV
-                        Just HATCHBACK ->
-                          driverInfo ^. DriverInformationCanDowngradeToHatchback ==. val True
-                            &&. (vehicleInfo ^. VehicleVariant ==. val SUV ||. vehicleInfo ^. VehicleVariant ==. val SEDAN)
-                        Just TAXI ->
-                          driverInfo ^. DriverInformationCanDowngradeToTaxi ==. val True
-                            &&. vehicleInfo ^. VehicleVariant ==. val TAXI_PLUS
-                        _ -> val False
-                    )
-            )
-        &&. (distanceFromDriverToDestination +. distanceFromDestinationToPickup) <. onRideRadius
-    orderBy [asc (distanceFromDestinationToPickup +. distanceFromDriverToDestination)]
-    pure
-      ( personInfo ^. PersonTId,
-        personInfo ^. PersonDeviceToken,
-        personInfo ^. PersonLanguage,
-        driverInfo ^. DriverInformationOnRide,
-        driverInfo ^. DriverInformationCanDowngradeToSedan,
-        driverInfo ^. DriverInformationCanDowngradeToHatchback,
-        driverInfo ^. DriverInformationCanDowngradeToTaxi,
-        locationInfo ^. DriverLocationLat,
-        locationInfo ^. DriverLocationLon,
-        vehicleInfo ^. VehicleVariant,
-        bookingLocationInfo ^. BookingLocationLat,
-        bookingLocationInfo ^. BookingLocationLon,
-        distanceFromDriverToDestination +. distanceFromDestinationToPickup,
-        distanceFromDriverToDestination,
-        driverInfo ^. DriverInformationMode
-      )
+  let onRideRadius = fromIntegral (radiusMeters - reduceRadiusValue) :: Double
+  res <- do
+    driverLocs <- getDriverLocsFromMerchId mbDriverPositionInfoExpiry LatLong {..} radiusMeters merchantId
+    driverInfos <- getDriverInfosWithCond driverLocs False True
+    vehicles <- getVehicles driverInfos
+    drivers <- getDrivers vehicles
+    driverQuote <- getDriverQuote drivers
+    bookingInfo <- getBookingInfo driverQuote
+    bookingLocation <- getBookingLocs bookingInfo
+    return (linkArrayListForOnRide driverQuote bookingInfo bookingLocation driverLocs driverInfos vehicles drivers LatLong {..} onRideRadius mbVariant)
   return (makeNearestDriversResult =<< res)
   where
     makeNearestDriversResult :: (Id Person, Maybe FCM.FCMRecipientToken, Maybe Maps.Language, Bool, Bool, Bool, Bool, Double, Double, Variant, Double, Double, Double, Double, Maybe DriverInfo.DriverMode) -> [NearestDriversResultCurrentlyOnRide]
@@ -1093,21 +1274,64 @@ getNearestDriversCurrentlyOnRide mbVariant LatLong {..} radiusMeters merchantId 
       where
         getResult var cond = [NearestDriversResultCurrentlyOnRide (cast personId) mbDeviceToken mblang onRide dlat dlon var destinationEndLat destinationEndLon (roundToIntegral dist) (roundToIntegral distanceFromDriverToDestination) mode | cond]
 
--- updateAlternateMobileNumberAndCode :: Person -> SqlDB ()
--- updateAlternateMobileNumberAndCode person = do
---   now <- getCurrentTime
---   let personT = toTType person
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ PersonAlternateMobileNumberEncrypted =. val (TPerson.alternateMobileNumberEncrypted personT),
---         PersonUnencryptedAlternateMobileNumber =. val (TPerson.unencryptedAlternateMobileNumber personT),
---         PersonAlternateMobileNumberHash =. val (TPerson.alternateMobileNumberHash personT),
---         PersonUpdatedAt =. val now
---       ]
---     where_ $ tbl ^. PersonTId ==. val (toKey person.id)
+linkArrayListForOnRide :: [DriverQuote] -> [Booking.Booking] -> [BookingLocation] -> [DriverLocation] -> [DriverInformation] -> [Vehicle] -> [Person] -> LatLong -> Double -> Maybe Variant -> [(Id Person, Maybe FCM.FCMRecipientToken, Maybe Maps.Language, Bool, Bool, Bool, Bool, Double, Double, Variant, Double, Double, Double, Double, Maybe DriverInfo.DriverMode)]
+linkArrayListForOnRide driverQuotes bookings bookingLocs driverLocations driverInformations vehicles persons LatLong {..} onRideRadius mbVariant =
+  let locationHashMap = buildLocationHashMap driverLocations
+      personHashMap = buildPersonHashMap persons
+      quotesHashMap = buildQuotesHashMap driverQuotes
+      bookingHashMap = buildBookingHashMap bookings
+      bookingLocsHashMap = buildBookingLocsHashMap bookingLocs
+      driverInfoHashMap = buildDriverInfoHashMap driverInformations
+   in mapMaybe (buildFullDriverListOnRide quotesHashMap bookingHashMap bookingLocsHashMap locationHashMap driverInfoHashMap personHashMap LatLong {..} onRideRadius mbVariant) vehicles
 
-updateAlternateMobileNumberAndCode :: (L.MonadFlow m, MonadTime m) => Person -> m (MeshResult ())
+buildDriverInfoHashMap :: [DriverInformation] -> HashMap.HashMap Text DriverInformation
+buildDriverInfoHashMap driverInfo =
+  HashMap.fromList $ map (\info -> (info.driverId.getId, info)) driverInfo
+
+buildQuotesHashMap :: [DriverQuote] -> HashMap.HashMap Text DriverQuote
+buildQuotesHashMap driverQuote =
+  HashMap.fromList $ map (\quote -> (quote.driverId.getId, quote)) driverQuote
+
+buildBookingHashMap :: [Booking.Booking] -> HashMap.HashMap Text Booking.Booking
+buildBookingHashMap bookings =
+  HashMap.fromList $ map (\booking -> (booking.quoteId, booking)) bookings
+
+buildBookingLocsHashMap :: [BookingLocation] -> HashMap.HashMap Text BookingLocation
+buildBookingLocsHashMap bookinglocs =
+  HashMap.fromList $ map (\loc -> (loc.id.getId, loc)) bookinglocs
+
+buildFullDriverListOnRide :: HashMap.HashMap Text DriverQuote -> HashMap.HashMap Text Booking.Booking -> HashMap.HashMap Text BookingLocation -> HashMap.HashMap Text DriverLocation -> HashMap.HashMap Text DriverInformation -> HashMap.HashMap Text Person -> LatLong -> Double -> Maybe Variant -> Vehicle -> Maybe (Id Person, Maybe FCM.FCMRecipientToken, Maybe Maps.Language, Bool, Bool, Bool, Bool, Double, Double, Variant, Double, Double, Double, Double, Maybe DriverInfo.DriverMode)
+buildFullDriverListOnRide quotesHashMap bookingHashMap bookingLocsHashMap locationHashMap driverInfoHashMap personHashMap latLon onRideRadius mbVariant vehicle =
+  let driverId' = vehicle.driverId.getId
+      location = HashMap.lookupDefault (error "Location not found") driverId' locationHashMap
+      quote = HashMap.lookupDefault (error "Quote not found") driverId' quotesHashMap
+      booking = HashMap.lookupDefault (error "Booking not found") quote.id.getId bookingHashMap
+      bookingLocation = HashMap.lookupDefault (error "Booking Location not found") booking.toLocation.id.getId bookingLocsHashMap
+      info = HashMap.lookupDefault (error "Info not found") driverId' driverInfoHashMap
+      person = HashMap.lookupDefault (error "Person not found") driverId' personHashMap
+      driverLocationPoint = LatLong {lat = location.lat, lon = location.lon}
+      destinationPoint = LatLong {lat = bookingLocation.lat, lon = bookingLocation.lon}
+      distanceFromDriverToDestination = realToFrac $ distanceBetweenInMeters driverLocationPoint destinationPoint
+      distanceFromDestinationToPickup = realToFrac $ distanceBetweenInMeters latLon destinationPoint
+      onRideRadiusValidity = (distanceFromDriverToDestination + distanceFromDestinationToPickup) < onRideRadius
+   in if onRideRadiusValidity
+        && Mb.isNothing mbVariant || Just vehicle.variant == mbVariant
+          || ( case mbVariant of
+                 Just SEDAN ->
+                   info.canDowngradeToSedan
+                     && vehicle.variant == SUV
+                 Just HATCHBACK ->
+                   info.canDowngradeToHatchback
+                     && (vehicle.variant == SUV || vehicle.variant == SEDAN)
+                 Just TAXI ->
+                   info.canDowngradeToTaxi
+                     && vehicle.variant == TAXI_PLUS
+                 _ -> False
+             )
+        then Just (person.id, person.deviceToken, person.language, info.onRide, info.canDowngradeToSedan, info.canDowngradeToHatchback, info.canDowngradeToTaxi, location.lat, location.lon, vehicle.variant, bookingLocation.lat, bookingLocation.lon, distanceFromDriverToDestination + distanceFromDestinationToPickup, distanceFromDriverToDestination, info.mode)
+        else Nothing
+
+updateAlternateMobileNumberAndCode :: Person -> SqlDB ()
 updateAlternateMobileNumberAndCode person = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   now <- getCurrentTime

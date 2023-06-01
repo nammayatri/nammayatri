@@ -43,6 +43,7 @@ mkPersist
       docType Image.ImageType
       status Text
       issueDateOnDoc UTCTime Maybe
+      driverDateOfBirth UTCTime Maybe
       documentNumberEncrypted Text
       documentNumberHash DbHash
       imageExtractionValidation Domain.ImageExtractionValidation

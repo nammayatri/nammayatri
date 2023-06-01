@@ -57,3 +57,15 @@ findAllByPersonId personId = findAll $ do
 
 deleteById :: Id DAccess.MerchantAccess -> SqlDB ()
 deleteById = Esq.deleteByKey @MerchantAccessT
+
+updatePerson2faForMerchant :: Id DP.Person -> Id DMerchant.Merchant -> Text -> SqlDB ()
+updatePerson2faForMerchant personId merchantId secretKey = do
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ MerchantAccessSecretKey =. val (Just secretKey),
+        MerchantAccessIs2faEnabled =. val True
+      ]
+    where_ $
+      tbl ^. MerchantAccessPersonId ==. val (toKey personId)
+        &&. tbl ^. MerchantAccessMerchantId ==. val (toKey merchantId)

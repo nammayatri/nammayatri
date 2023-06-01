@@ -15,6 +15,7 @@
 module API.UI.Message where
 
 import qualified Domain.Action.UI.Message as DMessage
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Message.Message as Message
 import qualified Domain.Types.Person as SP
 import Environment
@@ -63,20 +64,20 @@ handler =
     :<|> fetchMedia
     :<|> getMessage
 
-messageList :: Id SP.Person -> Maybe Int -> Maybe Int -> FlowHandler [DMessage.MessageAPIEntityResponse]
-messageList driverId mbLimit = withFlowHandlerAPI . DMessage.messageList driverId mbLimit
+messageList :: (Id SP.Person, Id DM.Merchant) -> Maybe Int -> Maybe Int -> FlowHandler [DMessage.MessageAPIEntityResponse]
+messageList (driverId, merchantId) mbLimit = withFlowHandlerAPI . DMessage.messageList (driverId, merchantId) mbLimit
 
-getMessage :: Id Message.Message -> Id SP.Person -> FlowHandler DMessage.MessageAPIEntityResponse
-getMessage msgId driverId = withFlowHandlerAPI $ DMessage.getMessage driverId msgId
+getMessage :: Id Message.Message -> (Id SP.Person, Id DM.Merchant) -> FlowHandler DMessage.MessageAPIEntityResponse
+getMessage msgId (driverId, merchantId) = withFlowHandlerAPI $ DMessage.getMessage (driverId, merchantId) msgId
 
-messageSeen :: Id Message.Message -> Id SP.Person -> FlowHandler APISuccess
-messageSeen msgId driverId = withFlowHandlerAPI $ DMessage.messageSeen driverId msgId
+messageSeen :: Id Message.Message -> (Id SP.Person, Id DM.Merchant) -> FlowHandler APISuccess
+messageSeen msgId (driverId, merchantId) = withFlowHandlerAPI $ DMessage.messageSeen (driverId, merchantId) msgId
 
-messageLiked :: Id Message.Message -> Id SP.Person -> FlowHandler APISuccess
-messageLiked msgId driverId = withFlowHandlerAPI $ DMessage.messageLiked driverId msgId
+messageLiked :: Id Message.Message -> (Id SP.Person, Id DM.Merchant) -> FlowHandler APISuccess
+messageLiked msgId (driverId, merchantId) = withFlowHandlerAPI $ DMessage.messageLiked (driverId, merchantId) msgId
 
-messageResponse :: Id Message.Message -> Id SP.Person -> DMessage.MessageReplyReq -> FlowHandler APISuccess
-messageResponse msgId driverId = withFlowHandlerAPI . DMessage.messageResponse driverId msgId
+messageResponse :: Id Message.Message -> (Id SP.Person, Id DM.Merchant) -> DMessage.MessageReplyReq -> FlowHandler APISuccess
+messageResponse msgId (driverId, merchantId) = withFlowHandlerAPI . DMessage.messageResponse (driverId, merchantId) msgId
 
-fetchMedia :: Text -> Id SP.Person -> FlowHandler Text
-fetchMedia filePath driverId = withFlowHandlerAPI $ DMessage.fetchMedia driverId filePath
+fetchMedia :: Text -> (Id SP.Person, Id DM.Merchant) -> FlowHandler Text
+fetchMedia filePath (driverId, merchantId) = withFlowHandlerAPI $ DMessage.fetchMedia (driverId, merchantId) filePath

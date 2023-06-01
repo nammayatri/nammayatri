@@ -23,6 +23,7 @@ module Tools.Maps
     snapToRoad,
     getPickupRoutes,
     getTripRoutes,
+    getDistanceForCancelRide,
   )
 where
 
@@ -60,6 +61,19 @@ getDistance ::
   GetDistanceReq a b ->
   m (GetDistanceResp a b)
 getDistance = runWithServiceConfig Maps.getDistance (.getDistances)
+
+getDistanceForCancelRide ::
+  ( EncFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    CoreMetrics m,
+    HasCoordinates a,
+    HasCoordinates b
+  ) =>
+  Id Merchant ->
+  GetDistanceReq a b ->
+  m (GetDistanceResp a b)
+getDistanceForCancelRide = runWithServiceConfig Maps.getDistance (.getDistancesForCancelRide)
 
 getDistances ::
   ( EncFlow m r,

@@ -21,7 +21,6 @@
 module Storage.Tabular.Merchant where
 
 import qualified Domain.Types.Merchant as Domain
-import qualified Kernel.External.FCM.Types as FCM
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Base64
@@ -38,9 +37,6 @@ mkPersist
       subscriberId Text
       name Text
       city Text
-      fcmUrl Text
-      fcmServiceAccount Text
-      fcmRedisTokenKeyPrefix Text
       originRestriction GeoRestriction
       destinationRestriction GeoRestriction
       gatewayUrl Text
@@ -65,14 +61,7 @@ instance TEntityKey MerchantT where
 
 instance FromTType MerchantT Domain.Merchant where
   fromTType MerchantT {..} = do
-    fcmUrl_ <- parseBaseUrl fcmUrl
-    let fcmConfig =
-          FCM.FCMConfig
-            { fcmUrl = fcmUrl_,
-              fcmTokenKeyPrefix = fcmRedisTokenKeyPrefix,
-              ..
-            }
-        geofencingConfig =
+    let geofencingConfig =
           Geo.GeofencingConfig
             { origin = originRestriction,
               destination = destinationRestriction
@@ -93,14 +82,11 @@ instance FromTType MerchantT Domain.Merchant where
 
 instance ToTType MerchantT Domain.Merchant where
   toTType Domain.Merchant {..} = do
-    let FCM.FCMConfig {..} = fcmConfig
-        Geo.GeofencingConfig {..} = geofencingConfig
+    let Geo.GeofencingConfig {..} = geofencingConfig
     MerchantT
       { id = getId id,
         shortId = getShortId shortId,
         subscriberId = getShortId subscriberId,
-        fcmUrl = showBaseUrl fcmUrl,
-        fcmRedisTokenKeyPrefix = fcmTokenKeyPrefix,
         originRestriction = origin,
         destinationRestriction = destination,
         gatewayUrl = showBaseUrl gatewayUrl,

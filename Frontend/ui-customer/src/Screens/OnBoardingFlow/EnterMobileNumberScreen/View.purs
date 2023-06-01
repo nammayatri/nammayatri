@@ -15,6 +15,9 @@
 
 module Screens.EnterMobileNumberScreen.View where
 
+import Common.Types.App
+import Screens.OnBoardingFlow.EnterMobileNumberScreen.ComponentConfig
+
 import Animation as Anim
 import Animation.Config (translateYAnimConfig)
 import Components.GenericHeader as GenericHeader
@@ -35,7 +38,7 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
-import Prelude (Unit, bind, const, discard, not, pure, unit, when, ($), (&&), (/=), (<<<), (<>), (==))
+import Prelude (Unit, bind, const, discard, not, pure, unit, when, ($), (&&), (/=), (<<<), (<>), (==), (>=))
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, clickable, color, fontStyle, frameLayout, gravity, height, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, singleLine, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
@@ -43,8 +46,7 @@ import Screens.EnterMobileNumberScreen.Controller (Action(..), ScreenOutput, eva
 import Screens.Types as ST
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
-import Common.Types.App
-import Screens.OnBoardingFlow.EnterMobileNumberScreen.ComponentConfig
+import Merchant.Utils( getValueFromConfig )
 
 screen :: ST.EnterMobileNumberScreenState -> Screen Action ST.EnterMobileNumberScreenState ScreenOutput
 screen initialState =
@@ -55,7 +57,7 @@ screen initialState =
     do
       _ <- JB.setFCMToken push $ SetToken
       if initialState.data.timerID == "" then pure unit else pure $ EHC.clearTimer initialState.data.timerID
-      if not initialState.props.resendEnable && initialState.data.attempts /=0 then do
+      if not initialState.props.resendEnable && initialState.data.attempts >= 0 then do
           _ <- launchAff $ EHC.flowRunner $ runExceptT $ runBackT $ lift $ lift $ doAff do liftEffect $ EHC.countDown 15 "otp" push CountDown
           pure unit
         else pure unit
@@ -150,7 +152,7 @@ enterMobileNumberView  state lang push =
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
             , orientation HORIZONTAL
-            ][ (commonTextView state ((getString TO_THE) <> " " <> (getString TERMS_AND_CONDITIONS)) true (Just "https://docs.google.com/document/d/1-oRR_oI8ncZRPZvFZEJZeCVQjTmXTmHA/edit?usp=share_link&ouid=115428839751313950285&rtpof=true&sd=true") push) ]
+            ][ (commonTextView state ((getString TO_THE) <> " " <> (getString TERMS_AND_CONDITIONS)) true (Just (getValueFromConfig "DOCUMENT_LINK")) push) ]
           ]
     , PrestoAnim.animationSet
       [ Anim.fadeIn $ not state.props.enterOTP

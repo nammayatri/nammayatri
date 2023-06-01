@@ -20,12 +20,15 @@ import qualified API.UI.Booking as UB
 import qualified Domain.Action.UI.Booking as DBooking
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Booking.API as DB
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Environment
 import EulerHS.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import Servant
+import SharedLogic.Merchant
 
 data RideBookingEndPoint = RideStatusEndPoint
   deriving (Show, Read)
@@ -53,13 +56,17 @@ type CustomerBookingListAPI =
     :> QueryParam "status" SRB.BookingStatus
     :> Get '[JSON] DBooking.BookingListRes
 
-handler :: FlowServer API
-handler =
-  callBookingStatus
-    :<|> callBookingList
+handler :: ShortId DM.Merchant -> FlowServer API
+handler merchantId =
+  callBookingStatus merchantId
+    :<|> callBookingList merchantId
 
-callBookingStatus :: Id SRB.Booking -> Id DP.Person -> FlowHandler DB.BookingAPIEntity
-callBookingStatus = UB.bookingStatus
+callBookingStatus :: ShortId DM.Merchant -> Id SRB.Booking -> Id DP.Person -> FlowHandler DB.BookingAPIEntity
+callBookingStatus merchantId bookingId personId = do
+  m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
+  UB.bookingStatus bookingId (personId, m.id)
 
-callBookingList :: Id DP.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> FlowHandler DBooking.BookingListRes
-callBookingList = UB.bookingList
+callBookingList :: ShortId DM.Merchant -> Id DP.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> FlowHandler DBooking.BookingListRes
+callBookingList merchantId personId mbLimit mbOffset mbOnlyActive bkngStatus = do
+  m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
+  UB.bookingList (personId, m.id) mbLimit mbOffset mbOnlyActive bkngStatus

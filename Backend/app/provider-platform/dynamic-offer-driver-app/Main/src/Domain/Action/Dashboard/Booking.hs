@@ -66,14 +66,14 @@ stuckBookingsCancel merchantShortId req = do
   let stuckPersonIds = stuckRideItems <&> (.driverId)
   let stuckDriverIds = cast @DP.Person @DP.Driver <$> stuckPersonIds
   -- drivers going out of ride, update location from redis to db
-  driverLocations <- catMaybes <$> traverse SDrLoc.findById stuckPersonIds
+  driverLocations <- catMaybes <$> traverse (SDrLoc.findById merchant.id) stuckPersonIds
   -- Esq.runTransaction $ do
   _ <- (QRide.updateStatusByIds (stuckRideItems <&> (.rideId)) DRide.CANCELLED)
   _ <- (QBooking.cancelBookings allStuckBookingIds now)
   for_ (bcReasons <> bcReasonsWithRides) QBCR.upsert
   for_ driverLocations $ \location -> do
     let latLong = LatLong location.lat location.lon
-    QDrLoc.upsertGpsCoord location.driverId latLong location.coordinatesCalculatedAt
+    QDrLoc.upsertGpsCoord location.driverId latLong location.coordinatesCalculatedAt merchant.id
   _ <- CQDrInfo.updateNotOnRideMultiple stuckDriverIds
   for_ stuckRideItems $ \item -> do
     if item.driverActive
@@ -92,7 +92,9 @@ mkBookingCancellationReason reasonCode mbRideId bookingId = do
       source = DBCR.ByMerchant,
       reasonCode = Just $ coerce @Common.CancellationReasonCode @DCR.CancellationReasonCode reasonCode,
       driverId = Nothing,
-      additionalInfo = Nothing
+      additionalInfo = Nothing,
+      driverCancellationLocation = Nothing,
+      driverDistToPickup = Nothing
     }
 
 mkStuckBookingsCancelRes :: [Id DBooking.Booking] -> [QRide.StuckRideItem] -> Common.StuckBookingsCancelRes

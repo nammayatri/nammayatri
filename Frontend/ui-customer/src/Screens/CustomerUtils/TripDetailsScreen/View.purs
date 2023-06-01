@@ -22,8 +22,8 @@ import Effect (Effect)
 import Language.Types (STR(..))
 import Language.Strings (getString)
 import Prelude (Unit, const, map, ($), (&&), (/=), (<<<), (<=), (<>), (==))
-import PrestoDOM (Length(..), Margin(..), Orientation(..), Padding(..), Gravity(..), Visibility(..), PrestoDOM, Screen, linearLayout, frameLayout, gravity, orientation, height, width, imageView, imageUrl, text, textSize, textView, padding, color, margin, fontStyle, background, cornerRadius, stroke, editText, weight, hint, onClick, visibility, pattern, onChange, scrollView, relativeLayout, alignParentBottom, onBackPressed, afterRender, multiLineEditText, disableClickFeedback, imageWithFallback)
-import Screens.Types as ST
+import PrestoDOM (Length(..), Margin(..), Orientation(..), Padding(..), Gravity(..), Visibility(..), PrestoDOM, Screen, linearLayout, frameLayout, gravity, orientation, height, width, imageView, imageUrl, text, textSize, textView, padding, color, margin, fontStyle, background, cornerRadius, stroke, editText, weight, hint, onClick, visibility, pattern, onChange, scrollView, relativeLayout, alignParentBottom, onBackPressed, afterRender, multiLineEditText, disableClickFeedback, imageWithFallback, hintColor)
+import Screens.Types as ST 
 import Screens.Types (PaymentMode(..))
 import Screens.TripDetailsScreen.Controller (Action(..), ScreenOutput, eval)
 import Font.Size as FontSize
@@ -166,6 +166,7 @@ tripIdView push state =
   [ orientation VERTICAL
   , height WRAP_CONTENT
   , width WRAP_CONTENT
+  , visibility if state.data.tripId == "" then GONE else VISIBLE
   , margin (MarginBottom 16)
   , gravity LEFT
   ][  textView
@@ -225,9 +226,9 @@ tripDetailsView state =
               , imageWithFallback "ny_ic_user,https://assets.juspay.in/nammayatri/images/user/ny_ic_user.png"
               ]
             , imageView
-              [ imageWithFallback "ny_ic_auto,https://assets.juspay.in/nammayatri/images/common/ny_ic_auto.png"
-              , width (V 36)
-              , height (V 36)
+              [ imageWithFallback "ic_hatchback,https://assets.juspay.in/nammayatri/images/user/ic_hatchback.png"
+              , width (V 40)
+              , height (V 40)
               ]
             ]
 
@@ -239,6 +240,7 @@ tripDetailsView state =
       ][  textView
           [ text state.data.driverName
           , textSize FontSize.a_14
+          , visibility if state.data.driverName /= "" then VISIBLE else GONE
           , fontStyle $ FontStyle.medium LanguageStyle
           , color Color.darkDescriptionText
           ]
@@ -442,6 +444,7 @@ reportIssueView state push =
                       , fontStyle $ FontStyle.semiBold LanguageStyle
                       , text ""
                       , hint $ getString YOU_CAN_DESCRIBE_THE_ISSUE_YOU_FACED_HERE
+                      , hintColor $ Color.blueGrey
                       , pattern "[^\n]*,255"
                       , onChange push $ MessageTextChanged
                       ]

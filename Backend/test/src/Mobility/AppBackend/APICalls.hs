@@ -22,7 +22,6 @@ import qualified "rider-app" API.UI.Registration as Reg
 import qualified "rider-app" API.UI.Select as AppSelect
 import qualified "rider-app" API.UI.Serviceability as AppServ
 import qualified "rider-app" Domain.Action.UI.Cancel as CancelAPI
-import qualified "rider-app" Domain.Action.UI.Select as DSelect
 import qualified "rider-app" Domain.Types.Booking as AbeBooking
 import qualified "rider-app" Domain.Types.Booking as BRB
 import qualified "rider-app" Domain.Types.CancellationReason as AbeCRC
@@ -31,7 +30,6 @@ import qualified "rider-app" Domain.Types.Quote as AbeQuote
 import qualified "rider-app" Domain.Types.RegistrationToken as AppSRT
 import qualified "rider-app" Domain.Types.Ride as BRide
 import EulerHS.Prelude
-import Kernel.External.FCM.Types
 import Kernel.External.Whatsapp.Interface.Types (OptApiMethods (..))
 import Kernel.Types.APISuccess
 import Kernel.Types.App
@@ -41,12 +39,11 @@ import Mobility.AppBackend.Fixtures
 import Servant hiding (Context)
 import Servant.Client
 
-selectQuote :: RegToken -> Id AbeEstimate.Estimate -> ClientM APISuccess
-selectQuote2 :: RegToken -> Id AbeEstimate.Estimate -> DSelect.DEstimateSelectReq -> ClientM APISuccess
+selectQuote2 :: RegToken -> Id AbeEstimate.Estimate -> AppSelect.DSelectReq -> ClientM APISuccess
 selectList :: RegToken -> Id AbeEstimate.Estimate -> ClientM AppSelect.SelectListRes
 selectResult :: RegToken -> Id AbeEstimate.Estimate -> ClientM AppSelect.QuotesResultResponse
-cancelSearch :: RegToken -> Id AbeEstimate.Estimate -> ClientM DSelect.CancelAPIResponse
-selectQuote :<|> selectQuote2 :<|> selectList :<|> selectResult :<|> cancelSearch = client (Proxy :: Proxy AppSelect.API)
+cancelSearch :: RegToken -> Id AbeEstimate.Estimate -> ClientM AppSelect.CancelAPIResponse
+selectQuote2 :<|> selectList :<|> selectResult :<|> cancelSearch = client (Proxy :: Proxy AppSelect.API)
 
 cancelRide :: Id BRB.Booking -> Text -> CancelAPI.CancelReq -> ClientM APISuccess
 cancelRide = client (Proxy :: Proxy CancelAPI.API)
@@ -104,6 +101,7 @@ mkAuthReq =
       mobileCountryCode = "+91",
       merchantId = "FIXME",
       deviceToken = Nothing,
+      notificationToken = Nothing,
       whatsappNotificationEnroll = Nothing,
       firstName = Nothing,
       middleName = Nothing,
@@ -117,7 +115,7 @@ mkAuthVerifyReq :: Reg.AuthVerifyReq
 mkAuthVerifyReq =
   Reg.AuthVerifyReq
     { otp = "7891",
-      deviceToken = FCMRecipientToken "AN_DEV_TOKEN",
+      deviceToken = "AN_DEV_TOKEN",
       whatsappNotificationEnroll = Just OPT_IN
     }
 

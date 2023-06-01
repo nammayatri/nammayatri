@@ -22,21 +22,14 @@
         inherit (self'.packages)
           arion;
       };
-      source-overrides = {
-        cryptostore = "0.2.3.0";
+      packages = {
+        cryptostore.source = "0.3.0.0";
       };
       # Some tests fail under Nix. We shoud probably run them in CI directly.
-      overrides = self: super:
-        with pkgs.haskell.lib.compose;
-        let
-          defaultOverrides = import ./nix/default-overrides.nix { inherit config pkgs lib; };
-        in
-        lib.mapAttrs (k: lib.pipe super.${k}) (defaultOverrides // {
-          # location-updates-tests: Network.Socket.connect: <socket: 6>: does not exist (Connection refused)
-          location-updates = defaultOverrides.location-updates ++ [ dontCheck ];
-          # tries to find dhall files from wrong CWD
-          beckn-test = defaultOverrides.beckn-test ++ [ dontCheck ];
-        });
+      settings = {
+        location-updates.check = false;
+        beckn-test.check = false;
+      };
     };
 
     packages = {

@@ -19,6 +19,7 @@ module API.Dashboard.RideBooking.Cancel where
 import qualified Beckn.ACL.Cancel as ACL
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Types.Booking as SRB
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Environment
 import EulerHS.Prelude
@@ -28,6 +29,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import qualified SharedLogic.CallBPP as CallBPP
+import SharedLogic.Merchant
 
 data RideCancelEndPoint = RideBookingCancelEndPoint
   deriving (Show, Read)
@@ -45,11 +47,12 @@ type CancelBookingAPI =
     :> ReqBody '[JSON] DCancel.CancelReq
     :> Post '[JSON] APISuccess
 
-handler :: FlowServer API
+handler :: ShortId DM.Merchant -> FlowServer API
 handler = callBookingCancel
 
-callBookingCancel :: Id SRB.Booking -> Id DP.Person -> DCancel.CancelReq -> FlowHandler APISuccess
-callBookingCancel bookingId personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
-  dCancelRes <- DCancel.cancel bookingId personId req
+callBookingCancel :: ShortId DM.Merchant -> Id SRB.Booking -> Id DP.Person -> DCancel.CancelReq -> FlowHandler APISuccess
+callBookingCancel merchantId bookingId personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+  m <- findMerchantByShortId merchantId
+  dCancelRes <- DCancel.cancel bookingId (personId, m.id) req
   void $ withShortRetry $ CallBPP.cancel dCancelRes.bppUrl =<< ACL.buildCancelReq dCancelRes
   return Success

@@ -29,4 +29,4 @@ data Issue = Issue
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)

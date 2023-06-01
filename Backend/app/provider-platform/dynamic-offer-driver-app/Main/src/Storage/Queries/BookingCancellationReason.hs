@@ -17,6 +17,7 @@ module Storage.Queries.BookingCancellationReason where
 import Domain.Types.Booking
 import Domain.Types.BookingCancellationReason as DBCR
 import Domain.Types.CancellationReason (CancellationReasonCode (..))
+import Domain.Types.Person
 import Domain.Types.Ride
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
@@ -34,6 +35,22 @@ create bookingCancellationReason = do
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainBookingCancellationReasonToBeam bookingCancellationReason)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+
+findAllCancelledByDriverId ::
+  Transactionable m =>
+  Id Person ->
+  m Int
+findAllCancelledByDriverId driverId = do
+  mkCount <$> do
+    Esq.findAll $ do
+      rideBookingCancellationReason <- from $ table @BookingCancellationReasonT
+      where_ $
+        rideBookingCancellationReason ^. BookingCancellationReasonDriverId ==. val (Just $ toKey driverId)
+          &&. rideBookingCancellationReason ^. BookingCancellationReasonSource ==. val ByDriver
+      return (countRows :: SqlExpr (Esq.Value Int))
+  where
+    mkCount [counter] = counter
+    mkCount _ = 0
 
 findByRideBookingId :: L.MonadFlow m => Id Booking -> m (Maybe BookingCancellationReason)
 findByRideBookingId (Id rideBookingId) = do

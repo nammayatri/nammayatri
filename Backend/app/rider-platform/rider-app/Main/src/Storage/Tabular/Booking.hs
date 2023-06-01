@@ -46,15 +46,15 @@ mkPersist
       transactionId Text
       fareProductType DQuote.FareProductType
       bppBookingId Text Maybe sql=bpp_ride_booking_id
+      quoteId SQuote.QuoteTId Maybe
+      riderId SPerson.PersonTId
       status Domain.BookingStatus
       providerId Text
-      quoteId SQuote.QuoteTId Maybe
       providerUrl Text
       providerName Text
       providerMobileNumber Text
       primaryExophone Text
       startTime UTCTime
-      riderId SPerson.PersonTId
       fromLocationId SLoc.BookingLocationTId
       toLocationId SLoc.BookingLocationTId Maybe
       estimatedFare HighPrecMoney

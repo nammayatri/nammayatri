@@ -57,8 +57,6 @@ update merchant = do
     set
       tbl
       [ MerchantName =. val merchant.name,
-        MerchantFcmUrl =. val (showBaseUrl merchant.fcmConfig.fcmUrl),
-        MerchantFcmServiceAccount =. val merchant.fcmConfig.fcmServiceAccount,
         MerchantGatewayUrl =. val (showBaseUrl merchant.gatewayUrl),
         MerchantRegistryUrl =. val (showBaseUrl merchant.registryUrl),
         MerchantUpdatedAt =. val now

@@ -17,13 +17,16 @@
 module API.Dashboard.RideBooking.Confirm where
 
 import qualified API.UI.Confirm as UC
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Quote as Quote
 import Environment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import Servant
+import SharedLogic.Merchant
 
 data RideConfirmEndPoint = ConfirmEndPoint
   deriving (Show, Read)
@@ -42,9 +45,11 @@ type CustomerConfirmAPI =
     :> "confirm"
     :> Post '[JSON] UC.ConfirmRes
 
-handler :: FlowServer API
+handler :: ShortId DM.Merchant -> FlowServer API
 handler =
   callConfirm
 
-callConfirm :: Id DP.Person -> Id Quote.Quote -> FlowHandler UC.ConfirmRes
-callConfirm = UC.confirm
+callConfirm :: ShortId DM.Merchant -> Id DP.Person -> Id Quote.Quote -> FlowHandler UC.ConfirmRes
+callConfirm merchantId personId quote = do
+  m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
+  UC.confirm (personId, m.id) quote

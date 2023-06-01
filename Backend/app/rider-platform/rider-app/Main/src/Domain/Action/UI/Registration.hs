@@ -41,7 +41,6 @@ import qualified Domain.Types.RegistrationToken as SR
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
-import Kernel.External.FCM.Types (FCMRecipientToken)
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Types as Language
 import Kernel.External.Whatsapp.Interface.Types as Whatsapp
@@ -63,6 +62,7 @@ import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
+import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QDFS
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
@@ -77,7 +77,8 @@ data AuthReq = AuthReq
   { mobileNumber :: Text,
     mobileCountryCode :: Text,
     merchantId :: ShortId Merchant,
-    deviceToken :: Maybe FCMRecipientToken,
+    deviceToken :: Maybe Text,
+    notificationToken :: Maybe Text,
     whatsappNotificationEnroll :: Maybe Whatsapp.OptApiMethods,
     firstName :: Maybe Text,
     middleName :: Maybe Text,
@@ -96,6 +97,7 @@ instance A.FromJSON AuthReq where
         <*> obj .: "mobileCountryCode"
         <*> obj .: "merchantId"
         <*> obj .:? "deviceToken"
+        <*> obj .:? "userId" -- TODO :: This needs to be changed to notificationToken
         <*> obj .:? "whatsappNotificationEnroll"
         <*> obj .:? "firstName"
         <*> obj .:? "middleName"
@@ -137,7 +139,7 @@ type ResendAuthRes = AuthRes
 ---------- Verify Login --------
 data AuthVerifyReq = AuthVerifyReq
   { otp :: Text,
-    deviceToken :: FCMRecipientToken,
+    deviceToken :: Text,
     whatsappNotificationEnroll :: Maybe Whatsapp.OptApiMethods
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
@@ -177,6 +179,7 @@ auth isDirectAuth req mbBundleVersion mbClientVersion = do
   let mobileNumber = req.mobileNumber
       countryCode = req.mobileCountryCode
       deviceToken = req.deviceToken
+      notificationToken = req.notificationToken
   -- otpChannel = fromMaybe defaultOTPChannel req.otpChannel
   merchant <-
     QMerchant.findByShortId req.merchantId
@@ -185,12 +188,12 @@ auth isDirectAuth req mbBundleVersion mbClientVersion = do
   person <-
     Person.findByRoleAndMobileNumberAndMerchantId SP.USER countryCode mobileNumberHash merchant.id
       >>= maybe (createPerson req mbBundleVersion mbClientVersion merchant.id) return
-  checkSlidingWindowLimit (authHitsCountKey person)
+  unless isDirectAuth $ checkSlidingWindowLimit (authHitsCountKey person)
   let entityId = getId $ person.id
       useFakeOtpM = useFakeSms smsCfg
       scfg = sessionConfig smsCfg
-
-  regToken <- makeSession scfg entityId (show <$> useFakeOtpM)
+  let mkId = getId $ merchant.id
+  regToken <- makeSession scfg entityId mkId (show <$> useFakeOtpM)
 
   if person.enabled && not person.blocked
     then do
@@ -213,23 +216,29 @@ auth isDirectAuth req mbBundleVersion mbClientVersion = do
     else logInfo $ "Person " <> getId person.id <> " is not enabled. Skipping send OTP"
 
   (personApiEntity, token, authType) <-
-    if person.enabled && isDirectAuth
+    if person.enabled && not person.blocked && isDirectAuth
       then do
         mbEncEmail <- encrypt `mapM` req.email
         DB.runTransaction $ do
           RegistrationToken.setDirectAuth regToken.id
-          Person.updatePersonalInfo person.id (req.firstName <|> Just "User") req.middleName req.lastName Nothing mbEncEmail deviceToken (req.language <|> Just Language.ENGLISH) (req.gender <|> Just SP.UNKNOWN)
+          Person.updatePersonalInfo person.id (req.firstName <|> person.firstName <|> Just "User") req.middleName req.lastName Nothing mbEncEmail deviceToken notificationToken (req.language <|> person.language <|> Just Language.ENGLISH) (req.gender <|> Just person.gender)
         personAPIEntity <- verifyFlow person regToken req.whatsappNotificationEnroll deviceToken
         return (Just personAPIEntity, Just regToken.token, SR.DIRECT)
       else return (Nothing, Nothing, regToken.authType)
   return $ AuthRes regToken.id regToken.attempts authType token personApiEntity
 
-buildPerson :: (EncFlow m r, DB.EsqDBReplicaFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Id DMerchant.Merchant -> m SP.Person
+buildPerson :: (EncFlow m r, DB.EsqDBReplicaFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, CacheFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Id DMerchant.Merchant -> m SP.Person
 buildPerson req bundleVersion clientVersion merchantId = do
   pid <- BC.generateGUID
   now <- getCurrentTime
   personWithSameDeviceToken <- listToMaybe <$> DB.runInReplica (Person.findBlockedByDeviceToken req.deviceToken)
   let isBlockedBySameDeviceToken = maybe False (.blocked) personWithSameDeviceToken
+  useFraudDetection <- do
+    if isBlockedBySameDeviceToken
+      then do
+        merchantConfig <- QMSUC.findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
+        return merchantConfig.useFraudDetection
+      else return False
   encMobNum <- encrypt req.mobileNumber
   encEmail <- mapM encrypt req.email
   return $
@@ -250,9 +259,10 @@ buildPerson req bundleVersion clientVersion merchantId = do
         rating = Nothing,
         language = req.language,
         isNew = True,
-        enabled = not isBlockedBySameDeviceToken,
-        blocked = isBlockedBySameDeviceToken,
+        enabled = not (useFraudDetection && isBlockedBySameDeviceToken),
+        blocked = useFraudDetection && isBlockedBySameDeviceToken,
         deviceToken = req.deviceToken,
+        notificationToken = req.notificationToken,
         description = Nothing,
         merchantId = merchantId,
         referralCode = Nothing,
@@ -260,8 +270,8 @@ buildPerson req bundleVersion clientVersion merchantId = do
         hasTakenValidRide = False,
         createdAt = now,
         updatedAt = now,
-        blockedAt = personWithSameDeviceToken >>= (.blockedAt),
-        blockedByRuleId = personWithSameDeviceToken >>= (.blockedByRuleId),
+        blockedAt = if useFraudDetection then personWithSameDeviceToken >>= (.blockedAt) else Nothing,
+        blockedByRuleId = if useFraudDetection then personWithSameDeviceToken >>= (.blockedByRuleId) else Nothing,
         bundleVersion = bundleVersion,
         clientVersion = clientVersion,
         whatsappNotificationEnrollStatus = Nothing
@@ -272,9 +282,10 @@ makeSession ::
   MonadFlow m =>
   SmsSessionConfig ->
   Text ->
+  Text ->
   Maybe Text ->
   m SR.RegistrationToken
-makeSession SmsSessionConfig {..} entityId fakeOtp = do
+makeSession SmsSessionConfig {..} entityId merchantId fakeOtp = do
   otp <- maybe generateOTPCode return fakeOtp
   rtid <- L.generateGUID
   token <- L.generateGUID
@@ -291,6 +302,7 @@ makeSession SmsSessionConfig {..} entityId fakeOtp = do
         authExpiry = authExpiry,
         tokenExpiry = tokenExpiry,
         entityId = entityId,
+        merchantId = merchantId,
         entityType = SR.USER,
         createdAt = now,
         updatedAt = now,
@@ -300,7 +312,7 @@ makeSession SmsSessionConfig {..} entityId fakeOtp = do
 verifyHitsCountKey :: Id SP.Person -> Text
 verifyHitsCountKey id = "BAP:Registration:verify:" <> getId id <> ":hitsCount"
 
-verifyFlow :: (EsqDBFlow m r, EncFlow m r, CoreMetrics m, CacheFlow m r) => SP.Person -> SR.RegistrationToken -> Maybe Whatsapp.OptApiMethods -> Maybe FCMRecipientToken -> m PersonAPIEntity
+verifyFlow :: (EsqDBFlow m r, EncFlow m r, CoreMetrics m, CacheFlow m r) => SP.Person -> SR.RegistrationToken -> Maybe Whatsapp.OptApiMethods -> Maybe Text -> m PersonAPIEntity
 verifyFlow person regToken whatsappNotificationEnroll deviceToken = do
   let isNewPerson = person.isNew
   DB.runTransaction $ do
@@ -344,7 +356,9 @@ verify tokenId req = do
   personWithSameDeviceToken <- listToMaybe <$> DB.runInReplica (Person.findBlockedByDeviceToken deviceToken)
   let isBlockedBySameDeviceToken = maybe False (.blocked) personWithSameDeviceToken
   cleanCachedTokens person.id
-  when isBlockedBySameDeviceToken $ SMC.blockCustomer person.id ((.blockedByRuleId) =<< personWithSameDeviceToken)
+  when isBlockedBySameDeviceToken $ do
+    merchantConfig <- QMSUC.findByMerchantId person.merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound person.merchantId.getId)
+    when merchantConfig.useFraudDetection $ SMC.blockCustomer person.id ((.blockedByRuleId) =<< personWithSameDeviceToken)
   DB.runTransaction $ do
     RegistrationToken.setVerified tokenId
     Person.updateDeviceToken person.id deviceToken
@@ -377,7 +391,7 @@ getRegistrationTokenE :: EsqDBFlow m r => Id SR.RegistrationToken -> m SR.Regist
 getRegistrationTokenE tokenId =
   RegistrationToken.findById tokenId >>= fromMaybeM (TokenNotFound $ getId tokenId)
 
-createPerson :: (EncFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Id DMerchant.Merchant -> m SP.Person
+createPerson :: (EncFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, Redis.HedisFlow m r, CacheFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Id DMerchant.Merchant -> m SP.Person
 createPerson req mbBundleVersion mbClientVersion merchantId = do
   person <- buildPerson req mbBundleVersion mbClientVersion merchantId
   DB.runTransaction $ do

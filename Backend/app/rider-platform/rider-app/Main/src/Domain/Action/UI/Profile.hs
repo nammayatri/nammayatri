@@ -28,11 +28,11 @@ module Domain.Action.UI.Profile
 where
 
 import Data.List (nubBy)
+import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonDefaultEmergencyNumber as DPDEN
 import Environment
 import Kernel.External.Encryption
-import qualified Kernel.External.FCM.Types as FCM
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (runInReplica, runTransaction)
@@ -61,7 +61,8 @@ data UpdateProfileReq = UpdateProfileReq
     middleName :: Maybe Text,
     lastName :: Maybe Text,
     email :: Maybe Text,
-    deviceToken :: Maybe FCM.FCMRecipientToken,
+    deviceToken :: Maybe Text,
+    notificationToken :: Maybe Text,
     referralCode :: Maybe Text,
     language :: Maybe Maps.Language,
     gender :: Maybe Person.Gender
@@ -103,8 +104,8 @@ newtype GetProfileDefaultEmergencyNumbersResp = GetProfileDefaultEmergencyNumber
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-getPersonDetails :: (EsqDBReplicaFlow m r, EncFlow m r) => Id Person.Person -> m ProfileRes
-getPersonDetails personId = do
+getPersonDetails :: (EsqDBReplicaFlow m r, EncFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> m ProfileRes
+getPersonDetails (personId, _) = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   decPerson <- decrypt person
   return $ Person.makePersonAPIEntity decPerson
@@ -125,6 +126,7 @@ updatePerson personId req = do
       refCode
       mbEncEmail
       req.deviceToken
+      req.notificationToken
       req.language
       req.gender
   pure APISuccess.Success
@@ -177,8 +179,8 @@ updateDefaultEmergencyNumbers personId req = do
             ..
           }
 
-getDefaultEmergencyNumbers :: (EsqDBReplicaFlow m r, EncFlow m r) => Id Person.Person -> m GetProfileDefaultEmergencyNumbersResp
-getDefaultEmergencyNumbers personId = do
+getDefaultEmergencyNumbers :: (EsqDBReplicaFlow m r, EncFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> m GetProfileDefaultEmergencyNumbersResp
+getDefaultEmergencyNumbers (personId, _) = do
   personENList <- runInReplica $ QPersonDEN.findAllByPersonId personId
   decPersonENList <- decrypt `mapM` personENList
   return . GetProfileDefaultEmergencyNumbersResp $ DPDEN.makePersonDefaultEmergencyNumberAPIEntity <$> decPersonENList

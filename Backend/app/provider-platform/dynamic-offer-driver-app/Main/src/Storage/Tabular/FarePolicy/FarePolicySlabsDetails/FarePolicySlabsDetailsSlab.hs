@@ -23,7 +23,7 @@ module Storage.Tabular.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsS
 import qualified Domain.Types.FarePolicy as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
-import Kernel.Types.Common (Meters, Money)
+import Kernel.Types.Common (Meters, Minutes, Money)
 import Kernel.Types.Id
 import Storage.Tabular.FarePolicy.Table (FarePolicyTId)
 
@@ -36,6 +36,7 @@ mkPersist
       startDistance Meters
       baseFare Money
       waitingCharge Domain.WaitingCharge Maybe
+      freeWatingTime Minutes Maybe
       nightShiftCharge Domain.NightShiftCharge Maybe
 
       deriving Generic
@@ -45,6 +46,12 @@ type FullFarePolicySlabsDetailsSlab = (Id Domain.FarePolicy, Domain.FPSlabsDetai
 
 instance FromTType FarePolicySlabsDetailsSlabT FullFarePolicySlabsDetailsSlab where
   fromTType FarePolicySlabsDetailsSlabT {..} = do
+    let waitingChargeInfo =
+          ((,) <$> waitingCharge <*> freeWatingTime) <&> \(waitingCharge', freeWaitingTime') ->
+            Domain.WaitingChargeInfo
+              { waitingCharge = waitingCharge',
+                freeWaitingTime = freeWaitingTime'
+              }
     return
       ( fromKey farePolicyId,
         Domain.FPSlabsDetailsSlab
@@ -56,5 +63,7 @@ instance ToTType FarePolicySlabsDetailsSlabT FullFarePolicySlabsDetailsSlab wher
   toTType (farePolicyId, Domain.FPSlabsDetailsSlab {..}) = do
     FarePolicySlabsDetailsSlabT
       { farePolicyId = toKey farePolicyId,
+        waitingCharge = waitingChargeInfo <&> (.waitingCharge),
+        freeWatingTime = waitingChargeInfo <&> (.freeWaitingTime),
         ..
       }

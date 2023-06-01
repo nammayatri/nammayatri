@@ -6,12 +6,6 @@ let
     docker-compose.raw.volumes = {
       prometheus-volume = null;
       pgadmin-data = null;
-      redis-cluster_data-0 = null;
-      redis-cluster_data-1 = null;
-      redis-cluster_data-2 = null;
-      redis-cluster_data-3 = null;
-      redis-cluster_data-4 = null;
-      redis-cluster_data-5 = null;
     };
     services = {
       db-primary.service = {
@@ -173,84 +167,12 @@ let
         ];
       };
 
-      redis-node-0.service = {
-        image = "docker.io/bitnami/redis-cluster:7.0";
-        volumes = [
-          "redis-cluster_data-0:/bitnami/redis/data"
-        ];
-        ports = [ "30001:6379" ];
+      redis-cluster.service = {
+        image = "shubham399/redis-cluster:latest";
+        ports = [ "30001-30007:30001-30007" ];
         environment = {
-          REDIS_NODES = "redis-node-0 redis-node-1 redis-node-2 redis-node-3 redis-node-4 redis-node-5";
-          ALLOW_EMPTY_PASSWORD = "yes";
-        };
-      };
-
-      redis-node-1.service = {
-        image = "docker.io/bitnami/redis-cluster:7.0";
-        volumes = [
-          "redis-cluster_data-1:/bitnami/redis/data"
-        ];
-        ports = [ "30002:6379" ];
-        environment = {
-          REDIS_NODES = "redis-node-0 redis-node-1 redis-node-2 redis-node-3 redis-node-4 redis-node-5";
-          ALLOW_EMPTY_PASSWORD = "yes";
-        };
-      };
-
-      redis-node-2.service = {
-        image = "docker.io/bitnami/redis-cluster:7.0";
-        volumes = [
-          "redis-cluster_data-2:/bitnami/redis/data"
-        ];
-        ports = [ "30003:6379" ];
-        environment = {
-          REDIS_NODES = "redis-node-0 redis-node-1 redis-node-2 redis-node-3 redis-node-4 redis-node-5";
-          ALLOW_EMPTY_PASSWORD = "yes";
-        };
-      };
-
-      redis-node-3.service = {
-        image = "docker.io/bitnami/redis-cluster:7.0";
-        volumes = [
-          "redis-cluster_data-3:/bitnami/redis/data"
-        ];
-        ports = [ "30004:6379" ];
-        environment = {
-          REDIS_NODES = "redis-node-0 redis-node-1 redis-node-2 redis-node-3 redis-node-4 redis-node-5";
-          ALLOW_EMPTY_PASSWORD = "yes";
-        };
-      };
-
-      redis-node-4.service = {
-        image = "docker.io/bitnami/redis-cluster:7.0";
-        volumes = [
-          "redis-cluster_data-4:/bitnami/redis/data"
-        ];
-        ports = [ "30005:6379" ];
-        environment = {
-          REDIS_NODES = "redis-node-0 redis-node-1 redis-node-2 redis-node-3 redis-node-4 redis-node-5";
-          ALLOW_EMPTY_PASSWORD = "yes";
-        };
-      };
-
-      redis-node-5.service = {
-        image = "docker.io/bitnami/redis-cluster:7.0";
-        volumes = [
-          "redis-cluster_data-5:/bitnami/redis/data"
-        ];
-        depends_on = [
-          "redis-node-0"
-          "redis-node-1"
-          "redis-node-2"
-          "redis-node-3"
-          "redis-node-4"
-        ];
-        ports = [ "30006:6379" ];
-        environment = {
-          ALLOW_EMPTY_PASSWORD = "yes";
-          REDIS_NODES = "redis-node-0 redis-node-1 redis-node-2 redis-node-3 redis-node-4 redis-node-5";
-          REDIS_CLUSTER_CREATOR = "yes";
-          REDIS_CLUSTER_REPLICAS = 1;
+          IP = "0.0.0.0";
+          INITIAL_PORT = "30001";
         };
       };
     };

@@ -11,9 +11,11 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE DerivingStrategies #-}
 
 module Domain.Action.UI.Location.UpdateLocation
   ( UpdateLocationReq,
+    RideStatus,
     Waypoint (..),
     UpdateLocationHandle (..),
     buildUpdateLocationHandle,
@@ -62,10 +64,17 @@ data Waypoint = Waypoint
   }
   deriving (Generic, ToJSON, Show, FromJSON, ToSchema, PrettyShow)
 
+data RideStatus
+  = ON_RIDE
+  | ON_PICKUP
+  | IDLE
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data UpdateLocationHandle m = UpdateLocationHandle
   { driver :: Person.Person,
     findDriverLocation :: m (Maybe DriverLocation),
-    upsertDriverLocation :: LatLong -> UTCTime -> m (),
+    upsertDriverLocation :: LatLong -> UTCTime -> Id DM.Merchant -> m (),
     getAssignedRide :: m (Maybe (Id DRide.Ride, DRide.RideStatus)),
     addIntermediateRoutePoints :: Id DRide.Ride -> NonEmpty LatLong -> m ()
   }
@@ -74,7 +83,10 @@ data DriverLocationUpdateStreamData = DriverLocationUpdateStreamData
   { rId :: Maybe Text, -- rideId
     mId :: Text, -- merchantId
     ts :: UTCTime, -- timestamp
+    st :: UTCTime, -- systemtime when location update recieved
     pt :: LatLong, -- lat log
+    acc :: Maybe Double, -- accuracy
+    rideStatus :: RideStatus, -- ride status
     da :: Bool, -- driver avaiable
     mode :: Maybe DDInfo.DriverMode
   }
@@ -90,7 +102,7 @@ buildUpdateLocationHandle driverId = do
   pure $
     UpdateLocationHandle
       { driver,
-        findDriverLocation = DrLoc.findById driverId,
+        findDriverLocation = DrLoc.findById driver.merchantId driverId,
         upsertDriverLocation = DrLoc.upsertGpsCoord driverId,
         getAssignedRide = SRide.getInProgressOrNewRideIdAndStatusByDriverId driverId,
         addIntermediateRoutePoints = \rideId ->
@@ -107,14 +119,17 @@ streamLocationUpdates ::
   Id Person.Person ->
   LatLong ->
   UTCTime ->
+  Maybe Double ->
+  RideStatus ->
   Bool ->
   Maybe DDInfo.DriverMode ->
   m ()
-streamLocationUpdates mbRideId merchantId driverId point timestamp isDriverActive mbDriverMode = do
+streamLocationUpdates mbRideId merchantId driverId point timestamp accuracy status isDriverActive mbDriverMode = do
   topicName <- asks (.driverLocationUpdateTopic)
+  now <- getCurrentTime
   produceMessage
     (topicName, Just (encodeUtf8 $ getId driverId))
-    (DriverLocationUpdateStreamData (getId <$> mbRideId) (getId merchantId) timestamp point isDriverActive mbDriverMode)
+    (DriverLocationUpdateStreamData (getId <$> mbRideId) (getId merchantId) timestamp now point accuracy status isDriverActive mbDriverMode)
 
 updateLocationHandler ::
   ( Redis.HedisFlow m r,
@@ -140,30 +155,38 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
     unless (driver.role == Person.DRIVER) $ throwError AccessDenied
     LocUpd.whenWithLocationUpdatesLock driver.id $ do
       mbOldLoc <- findDriverLocation
-      case filterNewWaypoints mbOldLoc minLocationAccuracy of
+      let sortedWaypoint = toList $ NE.sortWith (.ts) waypoints
+          filteredWaypoint = maybe sortedWaypoint (\oldLoc -> filter ((oldLoc.coordinatesCalculatedAt <) . (.ts)) sortedWaypoint) mbOldLoc
+      mbRideIdAndStatus <- getAssignedRide
+
+      case filteredWaypoint of
         [] -> logWarning "Incoming points are older than current one, ignoring"
         (a : ax) -> do
           let newWaypoints = a :| ax
               currPoint = NE.last newWaypoints
-          upsertDriverLocation currPoint.pt currPoint.ts
-          mbRideIdAndStatus <- getAssignedRide
+          upsertDriverLocation currPoint.pt currPoint.ts driver.merchantId
           fork "updating in kafka" $
-            mapM_
-              ( \point -> do
-                  updateDriverSpeedInRedis driver.merchantId driver.id point.pt point.ts
-                  streamLocationUpdates (fst <$> mbRideIdAndStatus) driver.merchantId driver.id point.pt point.ts driverInfo.active driverInfo.mode
-              )
-              (a : ax)
+            forM_ (a : ax) $ \point -> do
+              status <- case mbRideIdAndStatus of
+                Just (_, DRide.INPROGRESS) -> pure ON_RIDE
+                Just (_, DRide.NEW) -> pure ON_PICKUP
+                _ -> pure IDLE
+              streamLocationUpdates (fst <$> mbRideIdAndStatus) driver.merchantId driver.id point.pt point.ts point.acc status driverInfo.active driverInfo.mode
+
+      let filteredWaypointWithAccuracy = filter (\val -> fromMaybe 0.0 val.acc <= minLocationAccuracy) filteredWaypoint
+      case filteredWaypointWithAccuracy of
+        [] -> logWarning "Accuracy of the points is low, ignoring"
+        (a : ax) -> do
+          let newWaypoints = a :| ax
+          fork "update driver speed in redis" $
+            forM_ (a : ax) $ \point -> do
+              updateDriverSpeedInRedis driver.merchantId driver.id point.pt point.ts
           maybe
             (logInfo "No ride is assigned to driver, ignoring")
             (\(rideId, rideStatus) -> when (rideStatus == DRide.INPROGRESS) $ addIntermediateRoutePoints rideId $ NE.map (.pt) newWaypoints)
             mbRideIdAndStatus
+
     pure Success
-  where
-    filterNewWaypoints mbOldLoc minLocationAccuracy = do
-      let sortedWaypoint = toList $ NE.sortWith (.ts) waypoints
-      let filteredWaypoint = filter (\val -> fromMaybe 0.0 val.acc <= minLocationAccuracy) sortedWaypoint
-      maybe filteredWaypoint (\oldLoc -> filter ((oldLoc.coordinatesCalculatedAt <) . (.ts)) filteredWaypoint) mbOldLoc
 
 checkLocationUpdatesRateLimit ::
   ( Redis.HedisFlow m r,

@@ -19,9 +19,11 @@ data Action = SendMessage
             | SendSuggestion String
             | BackPressed
             | TextChanged String
+            | EnableSuggestions
             | Call
             | Navigate
             | NoAction
+            | OnImageClick String
 
 type Config = 
   { userConfig :: UserConfig
@@ -29,14 +31,20 @@ type Config =
   , sendMessageActive :: Boolean
   , distance :: String
   , suggestionsList :: Array String
+  , suggestionDelay :: Int
+  , spanParent :: Boolean
+  , showTextEdit :: Boolean
   , hint :: String
   , suggestionHeader :: String
   , emptyChatHeader :: String
+  , showHeader :: Boolean
+  , showStroke :: Boolean
   , languageKey :: String
   , mapsText :: String
   , grey700 :: String
   , blue600 :: String
   , blue900 :: String
+  , enableSuggestionClick :: Boolean
   , transparentGrey :: String
   , green200 :: String
   , grey900 :: String
@@ -56,6 +64,8 @@ type ChatComponent = {
     message :: String 
   , sentBy :: String 
   , timeStamp :: String
+  , type :: String
+  , delay :: Int
 }
 
 config :: Config
@@ -72,13 +82,19 @@ config =
     , suggestionsList : []
     , hint : ""
     , suggestionHeader : ""
+    , suggestionDelay : 0
+    , spanParent : false
     , emptyChatHeader : ""
     , languageKey : ""
     , mapsText : ""
     , grey700 : ""
+    , enableSuggestionClick : true
     , blue900 : ""
+    , showHeader : true
+    , showStroke : true
     , blue600 : ""
     , transparentGrey : ""
+    , showTextEdit : true
     , green200 : ""
     , grey800 : ""
     , blue800 : ""
@@ -88,10 +104,20 @@ config =
     , black700 : ""
   }
 
+makeChatComponent' :: String -> String -> String -> String -> Int -> ChatComponent
+makeChatComponent' message sender timeStamp type' delay =  {
+  "message" : message 
+, "sentBy" : sender
+, "timeStamp" : timeStamp
+, "type" : type'
+, delay : delay
+}
+
 makeChatComponent :: String -> String -> String -> ChatComponent
-makeChatComponent message sender timeStamp =  
-  {
-    "message" : message 
-  , "sentBy" : sender
-  , "timeStamp" : timeStamp
-  }
+makeChatComponent message sender timeStamp =  {
+  "message" : message
+, "sentBy" : sender
+, "timeStamp" : timeStamp
+, "type" : "Text"
+, delay : 0
+}

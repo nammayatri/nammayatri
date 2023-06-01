@@ -38,6 +38,9 @@ import qualified Storage.Beam.DriverStats as BeamDS
 --         totalDistance = 0
 --       }
 
+create :: DriverStats -> SqlDB ()
+create = Esq.create
+
 createInitialDriverStats :: (L.MonadFlow m, MonadTime m) => Id Driver -> m ()
 createInitialDriverStats driverId = do
   now <- getCurrentTime
@@ -46,7 +49,11 @@ createInitialDriverStats driverId = do
           { driverId = driverId,
             idleSince = now,
             totalRides = 0,
-            totalDistance = 0
+            totalDistance = 0,
+            totalRides = 0,
+            totalDistance = 0,
+            ridesCancelled = Just 0,
+            totalRidesAssigned = Just 0
           }
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
@@ -114,6 +121,9 @@ fetchAll = do
     Just dbCOnf' -> either (pure []) (transformBeamDriverStatsToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig []
     Nothing -> pure []
 
+findById :: Transactionable m => Id Driver -> m (Maybe DriverStats)
+findById = Esq.findById
+
 -- deleteById :: Id Driver -> SqlDB ()
 -- deleteById = Esq.deleteByKey @DriverStatsT
 
@@ -153,6 +163,24 @@ incrementTotalRidesAndTotalDist (Id driverId') rideDist = do
         ]
         [Se.Is BeamDS.driverId (Se.Eq driverId')]
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+
+incrementTotalRidesAssigned :: Id Driver -> SqlDB ()
+incrementTotalRidesAssigned driverId = do
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ DriverStatsTotalRidesAssigned =. just (Esq.coalesceDefault [tbl ^. DriverStatsTotalRidesAssigned] (val 0) +. val 1)
+      ]
+    where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
+
+setCancelledRidesCount :: Id Driver -> Int -> SqlDB ()
+setCancelledRidesCount driverId cancelledCount = do
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ DriverStatsRidesCancelled =. val (Just cancelledCount)
+      ]
+    where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
 
 -- getDriversSortedOrder :: Transactionable m => Maybe Integer -> m [DriverStats]
 -- getDriversSortedOrder mbLimitVal =

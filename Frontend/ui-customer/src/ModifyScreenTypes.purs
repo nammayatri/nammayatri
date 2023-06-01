@@ -18,8 +18,8 @@ module ModifyScreenState where
 import Accessor (_lat, _lon)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..))
-import Engineering.Helpers.BackTrack (modifyState)
-import Prelude (Unit, ($))
+import Engineering.Helpers.BackTrack (modifyState, getState)
+import Prelude (Unit, bind, ($))
 import Resources.Constants (encodeAddress, getAddressFromBooking)
 import Screens.HomeScreen.ScreenData (initData) as HomeScreen
 import Screens.Types (MyRidesScreenState, Stage(..))
@@ -47,6 +47,7 @@ modifyScreenState st =
 
 updateRideDetails :: MyRidesScreenState -> FlowBT String Unit
 updateRideDetails state = do 
+  (GlobalState globalState) <- getState
   modifyScreenState $ HomeScreenStateType 
     (\homeScreen -> HomeScreen.initData{ 
     data {
@@ -56,6 +57,10 @@ updateRideDetails state = do
     , sourceAddress = getAddressFromBooking state.data.selectedItem.sourceLocation
     , savedLocations = homeScreen.data.savedLocations
     , destinationAddress = getAddressFromBooking state.data.selectedItem.destinationLocation 
+    , settingSideBar {
+        gender = globalState.homeScreen.data.settingSideBar.gender 
+      , email = globalState.homeScreen.data.settingSideBar.email
+    }
     }
     , props{
       sourceSelectedOnMap = true
@@ -65,5 +70,7 @@ updateRideDetails state = do
     , destinationLong = state.data.selectedItem.destinationLocation^._lon
     , currentStage = FindingEstimate
     , rideRequestFlow = true
+    , isSpecialZone = state.data.selectedItem.isSpecialZone
+    , isbanner = globalState.homeScreen.props.isbanner
     }
     })

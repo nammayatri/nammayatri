@@ -18,6 +18,7 @@ import qualified AWS.S3 as S3
 import Data.OpenApi hiding (description, info, title, url)
 import qualified Data.Text as T
 import qualified Domain.Types.MediaFile as MF
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Message.Message as Domain
 import qualified Domain.Types.Person as SP
 import Environment
@@ -60,8 +61,8 @@ instance ToJSON MessageAPIEntityResponse where
 newtype MessageReplyReq = MessageReplyReq {reply :: Text}
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
-messageList :: Id SP.Person -> Maybe Int -> Maybe Int -> Flow [MessageAPIEntityResponse]
-messageList driverId mbLimit mbOffset = do
+messageList :: (Id SP.Person, Id DM.Merchant) -> Maybe Int -> Maybe Int -> Flow [MessageAPIEntityResponse]
+messageList (driverId, _) mbLimit mbOffset = do
   -- person <- Esq.runInReplica (QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId))
   person <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   -- messageDetails <- Esq.runInReplica $ MRQ.findByDriverIdAndLanguage (cast driverId) (fromMaybe ENGLISH person.language) mbLimit mbOffset
@@ -85,8 +86,8 @@ messageList driverId mbLimit mbOffset = do
             mediaFiles = mediaFilesApiType
           }
 
-getMessage :: Id SP.Person -> Id Domain.Message -> Flow MessageAPIEntityResponse
-getMessage driverId messageId = do
+getMessage :: (Id SP.Person, Id DM.Merchant) -> Id Domain.Message -> Flow MessageAPIEntityResponse
+getMessage (driverId, _) messageId = do
   -- person <- Esq.runInReplica (QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId))
   person <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   messageDetails <- MRQ.findByDriverIdMessageIdAndLanguage (cast driverId) messageId (fromMaybe ENGLISH person.language) >>= fromMaybeM (InvalidRequest "Message not found")
@@ -110,22 +111,22 @@ getMessage driverId messageId = do
             mediaFiles = mediaFilesApiType
           }
 
-fetchMedia :: Id SP.Person -> Text -> Flow Text
-fetchMedia driverId filePath = do
+fetchMedia :: (Id SP.Person, Id DM.Merchant) -> Text -> Flow Text
+fetchMedia (driverId, _) filePath = do
   -- _ <- Esq.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   _ <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   S3.get $ T.unpack filePath
 
-messageSeen :: Id SP.Person -> Id Domain.Message -> Flow APISuccess
-messageSeen driverId messageId = do
+messageSeen :: (Id SP.Person, Id DM.Merchant) -> Id Domain.Message -> Flow APISuccess
+messageSeen (driverId, _) messageId = do
   -- _ <- Esq.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   _ <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   _ <- MRQ.updateSeenAndReplyByMessageIdAndDriverId messageId (cast driverId) True Nothing
 
   return Success
 
-messageLiked :: Id SP.Person -> Id Domain.Message -> Flow APISuccess
-messageLiked driverId messageId = do
+messageLiked :: (Id SP.Person, Id DM.Merchant) -> Id Domain.Message -> Flow APISuccess
+messageLiked (driverId, _) messageId = do
   -- _ <- Esq.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   _ <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   -- messageDetails <- Esq.runInReplica $ MRQ.findByMessageIdAndDriverId messageId (cast driverId) >>= fromMaybeM (InvalidRequest "Message not found")
@@ -138,8 +139,8 @@ messageLiked driverId messageId = do
   MRQ.updateMessageLikeByMessageIdAndDriverIdAndReadStatus messageId (cast driverId)
   return Success
 
-messageResponse :: Id SP.Person -> Id Domain.Message -> MessageReplyReq -> Flow APISuccess
-messageResponse driverId messageId MessageReplyReq {..} = do
+messageResponse :: (Id SP.Person, Id DM.Merchant) -> Id Domain.Message -> MessageReplyReq -> Flow APISuccess
+messageResponse (driverId, _) messageId MessageReplyReq {..} = do
   -- _ <- Esq.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   _ <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   _ <- MRQ.updateSeenAndReplyByMessageIdAndDriverId messageId (cast driverId) True (Just reply)

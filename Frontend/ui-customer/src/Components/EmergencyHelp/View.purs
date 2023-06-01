@@ -189,12 +189,12 @@ callPoliceConfig state  =
     }
     , option1 {
       text = getString CANCEL_
-    , fontSize = FontSize.a_16
-    }
+    , width = (V 140)
+    , fontSize = FontSize.a_16 }
     , option2 {
       text = getString CALL_POLICE
-    , fontSize = FontSize.a_16 
-    }
+    , width = (V 140)
+    , fontSize = FontSize.a_16 }
     , backgroundClickable = true
     , secondaryText {
       text = getString YOU_ARE_ABOUT_TO_CALL_POLICE
@@ -217,10 +217,12 @@ contactSupportConfig state  =
     , option1 {
       text = getString CANCEL_
     , fontSize = FontSize.a_16
+    , width = (V 140)
     }
     , option2 {
       text = getString CALL_SUPPORT
     , fontSize = FontSize.a_16
+    , width = (V 140)
     }
     , backgroundClickable = true
     , secondaryText {
@@ -239,15 +241,16 @@ callEmergencyContactConfig state  =
   popUpConfig' = config' {
     primaryText { 
       text = (<>) (getString CALL_EMERGENCY_CONTACTS) "?"
-    , margin = (Margin 40 23 40 12)
     , fontStyle = FontStyle.semiBold LanguageStyle }
     , option1 {
       text = getString CANCEL_
     , fontSize = FontSize.a_16
+    , width = (V 140)
     }
     , option2 {
-      text = "Place Call"
+      text = getString PLACE_CALL
     , fontSize = FontSize.a_16
+    , width = (V 140)
     }
     , backgroundClickable = true
     , secondaryText {
@@ -270,17 +273,18 @@ callSuccessfulConfig state  =
   config' = PopUpModalConfig.config 
   popUpConfig' = config' {
     primaryText { 
-      text = (<>) "Was Your Call Successful" "?"
+      text = (<>) (getString WAS_YOUR_CALL_SUCCESSFUL) "?"
     , margin = (Margin 40 23 40 46)
     , fontStyle = FontStyle.semiBold LanguageStyle }
     , option1 {
-      text = "No"
+      text = (getString NO)
     , fontSize = FontSize.a_16
-    , margin = (MarginHorizontal 16 16) }
+    , width = (V 140)}
     , option2 {
-      text = "Yes"
+      text = (getString YES)
     , fontSize = FontSize.a_16
-    , margin = (MarginHorizontal 12 0) }
+    , width = (V 140)
+    , margin = (MarginLeft 12) }
     , backgroundClickable = true
     , secondaryText {
       visibility = GONE }
@@ -334,7 +338,7 @@ showEmergencyContact state push =
     , width MATCH_PARENT
     , orientation VERTICAL
     , margin $ Margin 16 20 16 12
-    , visibility if(isPreviousVersion (getValueToLocalStore VERSION_NAME) (if os == "IOS" then "1.2.5" else "1.2.1")) then GONE else VISIBLE
+    , visibility if(isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "")) then GONE else VISIBLE
     , onClick push $ const (if (DA.null state.emergencyContactData) then  AddedEmergencyContacts else NoAction)
     ][  linearLayout
         [ width MATCH_PARENT

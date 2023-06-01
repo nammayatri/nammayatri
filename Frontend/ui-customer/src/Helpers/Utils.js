@@ -1,6 +1,12 @@
 import { callbackMapper } from 'presto-ui';
 import moment from 'moment';
 
+
+var timerIdDebounce = null;
+var driverWaitingTimerId = null;
+var zoneOtpExpiryTimerId = null;
+var inputForDebounce;
+var timerIdForTimeout;
 var tracking_id = 0;
 export const getNewTrackingId = function (unit) {
   tracking_id += 1;
@@ -242,7 +248,39 @@ export const waitingCountdownTimer = function (startingTime) {
   };
 };
 
+export const zoneOtpExpiryTimer = function (startingTime) {
+  return function(endingTime) {
+    return function (cb) {
+      return function (action) {
+        return function () {
+          if (startingTime >= endingTime){
+            cb(action(zoneOtpExpiryTimerId)("")(0))();
+          } else {
+            var callback = callbackMapper.map(function () {
+              var sec = endingTime - startingTime;
+              if (zoneOtpExpiryTimerId) clearInterval(zoneOtpExpiryTimerId);
+              zoneOtpExpiryTimerId = setInterval(
+                convertInMinutesFromat,
+                1000
+              );
+              function convertInMinutesFromat() {
+                sec--;
+                var minutes = getTwoDigitsNumber(Math.floor(sec / 60));
+                var seconds = getTwoDigitsNumber(sec - minutes * 60);
+                var timeInMinutesFormat = minutes + " : " + seconds;
+                cb(action(zoneOtpExpiryTimerId)(timeInMinutesFormat)(sec))();
+              }
+            });
+          }
+          window.callUICallback(callback);
+        };
+      };
+    };
+  }
+};
+
 export const clearWaitingTimer = function (id){
+  console.log("clearWaitingTimer" + id);
   if(__OS == "IOS" && id=="countUpTimerId") {
     if (window.JBridge.clearCountUpTimer) {
       window.JBridge.clearCountUpTimer();
@@ -437,11 +475,12 @@ export const shuffle = function (array) {
 
 export const withinTimeRange = function (startTime) {
   return function (endTime) {
-    try {
-      var currentTimeString = moment(new Date()).format("HH:mm:ss");
-      return startTime < endTime ? between(currentTimeString, startTime, endTime) : between(currentTimeString, startTime, "23:59:59") || between(currentTimeString, "00:00:01", endTime);
-    }catch (err){
-      return false;
+    return function(timeStr){
+      try {
+        return startTime < endTime ? between(timeStr, startTime, endTime) : between(timeStr, startTime, "23:59:59") || between(timeStr, "00:00:01", endTime);
+     }catch (err){
+        return false;
+      }
     }
   }
 }
@@ -517,11 +556,35 @@ export const storeOnResumeCallback = function (cb) {
         var callback = callbackMapper.map(function () {
           cb(action)();
         });
-        window.JBridge.storeOnResumeCallback(callback);
+        if (window.JBridge.storeOnResumeCallback){
+          window.JBridge.storeOnResumeCallback(callback);
+        }
       }
       catch (error) {
         console.log("Error occurred in storeOnResumeCallback ------", error);
       }
+    }
+  }
+}
+
+export const getMerchantId = function(id) {
+  return window.merchantID;
+}
+
+export const drawPolygon = function(geoJson) {
+  return function (locationName) {
+    return function() {
+      if (JBridge.drawPolygon) {
+        JBridge.drawPolygon(geoJson, locationName);
+      }
+    }
+  }
+}
+
+export const removeLabelFromMarker = function(unit){
+  return function () {
+    if (JBridge.removeLabelFromMarker){
+      return JBridge.removeLabelFromMarker();
     }
   }
 }

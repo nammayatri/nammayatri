@@ -16,6 +16,7 @@
 module Screens.Types where
 
 import Common.Types.App (CancellationReasons)
+import Components.ChooseVehicle.Controller as ChooseVehicle
 import Components.QuoteListItem.Controller (QuoteListItemState)
 import Components.SettingSideBar.Controller (SettingSideBarState)
 import Components.ChatView.Controller (ChatComponent)
@@ -293,6 +294,7 @@ type HelpAndSupportScreenData =
     driverName :: String,
     totalAmount :: String,
     isNull :: Boolean,
+    faresList :: Array FareComponent,
     status :: String,
     rideStartTime :: String,
     rideEndTime :: String,
@@ -378,6 +380,8 @@ type IndividualRideCardState =
   , baseDistance :: String
   , extraDistance :: String
   , referenceString :: String
+  , isSpecialZone :: Boolean
+  , nightCharges :: Boolean
   }
 
 type ItemState =
@@ -485,6 +489,11 @@ type HomeScreenStateData =
   , suggestionsList :: Array String
   , messageToBeSent :: String
   , bannerViewState :: BannerViewState
+  , nearByPickUpPoints :: Array Location
+  , polygonCoordinates :: String
+  , specialZoneQuoteList :: Array ChooseVehicle.Config
+  , specialZoneSelectedQuote :: Maybe String
+  , selectedEstimatesObject :: ChooseVehicle.Config
   }
 
 type HomeScreenStateProps =
@@ -535,7 +544,7 @@ type HomeScreenStateProps =
   , sendMessageActive :: Boolean
   , chatcallbackInitiated :: Boolean
   , estimatedDistance :: Maybe Int
-  , waitingTimeTimerId :: String
+  , waitingTimeTimerIds :: Array String
   , tagType :: Maybe CardType
   , isSaveFavourite :: Boolean
   , showShareAppPopUp :: Boolean
@@ -548,6 +557,8 @@ type HomeScreenStateProps =
   , showLiveDashboard :: Boolean
   , isbanner :: Boolean
   , callSupportPopUp :: Boolean
+  , defaultPickUpPoint :: String
+  , isSpecialZone :: Boolean
   }
 
 type CustomerTipProps = {
@@ -571,6 +582,10 @@ type Contact = {
      phoneNo :: String
 }
 
+data RateCardType = DefaultRateCard | DriverAddition | FareUpdate
+derive instance genericRateCardType :: Generic RateCardType _
+instance eqRateCardType :: Eq RateCardType where eq = genericEq
+
 type RateCard =
   {
     baseFare :: Int,
@@ -578,7 +593,9 @@ type RateCard =
     pickUpCharges :: Int,
     additionalFare :: Int,
     nightShiftMultiplier :: Number,
-    nightCharges :: Boolean
+    nightCharges :: Boolean,
+    currentRateCardType :: RateCardType,
+    onFirstPage :: Boolean
   }
 
 type EmergencyHelpModelState = {
@@ -615,7 +632,6 @@ type SelectLanguageScreenState = {
 }
 
 type SelectLanguageScreenData =  {
-  languages :: Array Language,
   isSelected :: Boolean
  }
 
@@ -735,6 +751,7 @@ type DriverInfoCard =
   , bppRideId :: String 
   , driverNumber :: Maybe String
   , merchantExoPhone :: String
+  , createdAt :: String
   }
 
 type RatingCard =
@@ -938,7 +955,7 @@ type Fares = {
 
 type FareComponent = {
   fareType :: String
-, price :: Number
+, price :: Int
 , title :: String
 }
 

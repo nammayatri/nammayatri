@@ -24,6 +24,7 @@ import qualified Domain.Types.Merchant as Domain
 import qualified Domain.Types.Merchant.MerchantServiceUsageConfig as Domain
 import Kernel.External.Call.Types (CallService)
 import Kernel.External.Maps.Types
+import Kernel.External.Notification.Types (NotificationService)
 import Kernel.External.SMS (SmsService)
 import Kernel.External.Whatsapp.Types (WhatsappService)
 import Kernel.Prelude
@@ -45,6 +46,8 @@ mkPersist
       getTripRoutes MapsService
       getPlaceDetails MapsService
       autoComplete MapsService
+      getDistancesForCancelRide MapsService
+      notifyPerson NotificationService
       useFraudDetection Bool
       smsProvidersPriorityList (PostgresList SmsService)
       whatsappProvidersPriorityList (PostgresList WhatsappService)

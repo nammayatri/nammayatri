@@ -36,6 +36,8 @@ import Animation as Anim
 import Animation.Config as AnimConfig
 import Common.Types.App
 import Screens.EnterOTPScreen.ComponentConfig
+import Data.Ring ((-))
+import Storage (getValueToLocalStore, KeyStore(..))
 
 screen :: ST.EnterOTPScreenState -> Screen Action ST.EnterOTPScreenState ScreenOutput
 screen initialState =
@@ -44,7 +46,7 @@ screen initialState =
   , name : "EnterOTPScreen"
   , globalEvents : [ (\push -> do
                       _ <- pure $ HU.clearTimer ""
-                      _ <- HU.startTimer 10 push TIMERACTION
+                      _ <- HU.startTimer 10 true push TIMERACTION
                       pure (pure unit)) ] <> if (DS.length initialState.data.otp) > 0 then [] else [ HU.startOtpReciever AutoFill ]
   , eval
   }
@@ -133,7 +135,9 @@ primaryEditTextView state push =
   ][  PrestoAnim.animationSet
         [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig
         ] $ PrimaryEditText.view(push <<< PrimaryEditTextAction) ({
-        title: (getString ENTER_OTP_SENT_TO) <> state.data.mobileNo <> (getString OTP_SENT_TO) ,
+        title: case (getValueToLocalStore LANGUAGE_KEY) of 
+                  "EN_US" -> (getString ENTER_OTP_SENT_TO) <> state.data.mobileNo
+                  _ -> state.data.mobileNo <> (getString ENTER_OTP_SENT_TO) ,
         type: "number",
         hint: (getString AUTO_READING_OTP),
         text: state.data.capturedOtp,

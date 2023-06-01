@@ -15,6 +15,7 @@
 module Domain.Action.Beckn.OnTrack
   ( onTrack,
     OnTrackReq (..),
+    validateRequest,
   )
 where
 
@@ -33,8 +34,21 @@ data OnTrackReq = OnTrackReq
     trackUrl :: BaseUrl
   }
 
-onTrack :: (CacheFlow m r, EsqDBFlow m r) => OnTrackReq -> m ()
-onTrack req = do
-  ride <- QRide.findByBPPRideId req.bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId:" <> req.bppRideId.getId)
+data ValidatedOnTrackReq = ValidatedOnTrackReq
+  { bppRideId :: Id BPPRide,
+    trackUrl :: BaseUrl,
+    ride :: Ride
+  }
+
+onTrack :: (CacheFlow m r, EsqDBFlow m r) => ValidatedOnTrackReq -> m ()
+onTrack ValidatedOnTrackReq {..} = do
   DB.runTransaction $ do
-    QRide.updateTrackingUrl ride.id req.trackUrl
+    QRide.updateTrackingUrl ride.id trackUrl
+
+validateRequest :: (CacheFlow m r, EsqDBFlow m r) => OnTrackReq -> m ValidatedOnTrackReq
+validateRequest OnTrackReq {..} = do
+  ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId:" <> bppRideId.getId)
+  return $
+    ValidatedOnTrackReq
+      { ..
+      }

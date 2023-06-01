@@ -22,7 +22,7 @@ module Storage.Tabular.Person where
 
 import qualified Domain.Types.Person as Domain
 import Kernel.External.Encryption (DbHash (..), Encrypted (..), EncryptedHashed (..))
-import Kernel.External.FCM.Types (FCMRecipientToken)
+import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
 import Kernel.External.Types (Language)
 import Kernel.External.Whatsapp.Interface.Types (OptApiMethods)
 import Kernel.Prelude

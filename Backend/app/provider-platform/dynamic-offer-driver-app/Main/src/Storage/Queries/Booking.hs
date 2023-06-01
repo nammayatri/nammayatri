@@ -16,11 +16,12 @@ module Storage.Queries.Booking where
 
 import Data.Text (pack)
 import Domain.Types.Booking
+import Domain.Types.DriverQuote (DriverQuote)
 import Domain.Types.DriverQuote as DDQ
 import Domain.Types.Geometry
 import Domain.Types.Merchant
 import Domain.Types.RiderDetails (RiderDetails)
-import qualified Domain.Types.SearchRequest as DSR
+import qualified Domain.Types.SearchTry as DST
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
@@ -35,7 +36,10 @@ import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Queries.Booking.BookingLocation as QBBL
 import qualified Storage.Queries.DriverQuote as QDQuote
 import qualified Storage.Queries.FareParameters as QueriesFP
+import Storage.Queries.FullEntityBuilders
 import Storage.Queries.Geometry
+import Storage.Tabular.Booking
+import Storage.Tabular.DriverQuote as DriverQuote
 
 -- baseBookingTable ::
 --   From
@@ -86,13 +90,12 @@ findById (Id bookingId) = do
         Left _ -> pure Nothing
     Nothing -> pure Nothing
 
--- findBySearchReq :: (Transactionable m) => Id DSR.SearchRequest -> m (Maybe Booking)
--- findBySearchReq searchReqId = buildDType $ do
---   mbDriverQuoteT <- QDQuote.findDriverQuoteBySearchId searchReqId
---   let mbDriverQuoteId = Id . DriverQuote.id <$> mbDriverQuoteT
---   mbBookingT <- (join <$>) $ mapM findBookingByDriverQuoteId' mbDriverQuoteId
-
--- join <$> mapM buildFullBooking mbBookingT
+findBySTId :: (Transactionable m) => Id DST.SearchTry -> m (Maybe Booking)
+findBySTId searchTryId = buildDType $ do
+  mbDriverQuoteT <- QDQuote.findDriverQuoteBySTId searchTryId
+  let mbDriverQuoteId = Id . DriverQuote.id <$> mbDriverQuoteT
+  mbBookingT <- (join <$>) $ mapM findBookingByDriverQuoteId' mbDriverQuoteId
+  join <$> mapM buildFullBooking mbBookingT
 
 findBySearchReq :: L.MonadFlow m => Id DSR.SearchRequest -> m (Maybe Booking)
 findBySearchReq searchReqId = do
@@ -109,6 +112,12 @@ findBySearchReq searchReqId = do
             Right booking -> traverse transformBeamBookingToDomain booking
             Left _ -> pure Nothing
         Nothing -> pure Nothing
+
+findBookingByDriverQuoteId' :: Transactionable m => Id DriverQuote -> DTypeBuilder m (Maybe BookingT)
+findBookingByDriverQuoteId' driverQuoteId = Esq.findOne' $ do
+  booking <- from $ table @BookingT
+  where_ $ booking ^. BookingQuoteId ==. val driverQuoteId.getId
+  pure booking
 
 -- findBookingByDriverQuoteId' :: Transactionable m => Id DriverQuote -> DTypeBuilder m (Maybe BookingT)
 -- findBookingByDriverQuoteId' driverQuoteId = Esq.findOne' $ do

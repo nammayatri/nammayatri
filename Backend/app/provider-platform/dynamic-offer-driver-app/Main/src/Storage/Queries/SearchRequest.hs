@@ -248,3 +248,26 @@ transformDomainSearchRequestToBeam SearchRequest {..} =
       BeamSR.autoAssignEnabled = autoAssignEnabled,
       BeamSR.searchRepeatCounter = searchRepeatCounter
     }
+
+findByTransactionId ::
+  (Transactionable m) =>
+  Text ->
+  m (Maybe (Id SearchRequest))
+findByTransactionId transactionId = do
+  findOne $ do
+    searchReqT <- from $ table @SearchRequestT
+    where_ $
+      searchReqT ^. SearchRequestTransactionId ==. val transactionId
+    return $ searchReqT ^. SearchRequestTId
+
+updateAutoAssign ::
+  Id SearchRequest ->
+  Bool ->
+  SqlDB ()
+updateAutoAssign searchRequestId autoAssignedEnabled = do
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ SearchRequestAutoAssignEnabled =. val autoAssignedEnabled
+      ]
+    where_ $ tbl ^. SearchRequestTId ==. val (toKey searchRequestId)

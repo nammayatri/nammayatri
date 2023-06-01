@@ -30,6 +30,8 @@ import qualified Domain.Types.QuoteSpecialZone as QuoteSpecialZone
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq hiding (findById, isNothing)
 import Kernel.Types.Id
+import qualified Storage.Queries.FarePolicy.DriverExtraFeeBounds as FarePolicyDriverExtraFeeBounds
+import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as QFarePolicyProgressiveDetailsPerExtraKmRateSection
 import qualified Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab as FarePolicySlabsDetailsSlab
 import Storage.Tabular.Booking
 import Storage.Tabular.Booking.BookingLocation
@@ -79,14 +81,15 @@ buildFullFarePolicy ::
   FarePolicy.FarePolicyT ->
   DTypeBuilder m (Maybe (SolidType FarePolicy.FullFarePolicyT))
 buildFullFarePolicy farePolicyT@FarePolicy.FarePolicyT {..} = do
+  driverExtraFeeBoundsT <- FarePolicyDriverExtraFeeBounds.findAll' (Id id)
   runMaybeT $ do
     farePolicyDet <- case farePolicyType of
-      FarePolicy.Progressive ->
-        MaybeT $
-          fmap FarePolicy.ProgressiveDetailsT
-            <$> Esq.findById' @FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsT (Id id)
+      FarePolicy.Progressive -> do
+        fpDetT <- MaybeT $ Esq.findById' @FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsT (Id id)
+        fpDetPerExtraKmRateT <- MaybeT $ Just <$> QFarePolicyProgressiveDetailsPerExtraKmRateSection.findAll' (Id id)
+        return $ FarePolicy.ProgressiveDetailsT (fpDetT, fpDetPerExtraKmRateT)
       FarePolicy.Slabs -> MaybeT $ Just . FarePolicy.SlabsDetailsT <$> FarePolicySlabsDetailsSlab.findAll' (Id id)
-    return $ extractSolidType @FarePolicy.FarePolicy (farePolicyT, farePolicyDet)
+    return $ extractSolidType @FarePolicy.FarePolicy (farePolicyT, driverExtraFeeBoundsT, farePolicyDet)
 
 buildFullDriverQuote ::
   Transactionable m =>

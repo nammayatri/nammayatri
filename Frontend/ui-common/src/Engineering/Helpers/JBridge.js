@@ -294,6 +294,10 @@ export const isLocationPermissionEnabled = function (unit) {
   };
 };
 
+export const isMicrophonePermissionEnabled = function (unit) {
+    return window.JBridge.isMicrophonePermissionEnabled();
+};
+
 export const getPackageName = function () {
   if (window.__OS == "IOS") {
     var sessionDetails = JSON.parse(window.JBridge.getSessionDetails())
@@ -601,6 +605,22 @@ export const sendMessage = function (message) {
 export const scrollToBottom = function(id) {
   if (JBridge.scrollToBottom){
     JBridge.scrollToBottom(id)
+  }
+}
+
+export const addMediaFile = function (viewID) {
+  return function (source) {
+      return function (actionButtonID) {
+          return function (playIcon) {
+              return function (pauseIcon) {
+                  return function (timerID) {
+                      return function () {
+                          JBridge.addMediaFile(viewID, source, actionButtonID, playIcon, pauseIcon, timerID);
+                      }
+                  }
+              }
+          }
+      }
   }
 }
 
@@ -1003,8 +1023,8 @@ export const storeCallBackImageUpload = function (cb) {
   try {
   return function (action) {
       return function () {
-          var callback = callbackMapper.map(function (imgStr, imageName) {
-              cb(action (imgStr)(imageName))();
+          var callback = callbackMapper.map(function (imgStr, imageName, imagePath) {
+              cb(action (imgStr)(imageName)(imagePath))();
           });
           window.JBridge.storeCallBackImageUpload(callback);
       }
@@ -1085,7 +1105,20 @@ export const previewImage = function (base64Image) {
 
 export const renderBase64Image = function (image) {
   return function (id) {
-      return JBridge.renderBase64Image(image, id);
+    return function (fitCenter) {
+      try {
+        if (JBridge.renderBase64Image) {
+          return JBridge.renderBase64Image(image, id, fitCenter);
+        }
+      } catch (err) {
+    /*
+     * This function is deprecated on 22 May - 2023
+     * Added only for Backward Compability
+     * Remove this function once it is not begin used.
+     */
+        return JBridge.renderBase64Image(image, id);
+      }
+    };
   };
 };
 
@@ -1108,13 +1141,21 @@ export const requestKeyboardShow = function(id) {
   JBridge.requestKeyboardShow(id);
 }
 
-export const locateOnMap = function(str){
-  return function (lat){
-    return function (lon){
-      JBridge.locateOnMap(str, lat, lon);
-    }
-  }
-}
+export const locateOnMap = function (str) {
+  return function (lat) {
+    return function (lon) {
+      return function (geoJson) {
+        return function (coodinates) {
+          try {
+            return JBridge.locateOnMap(str, lat, lon, geoJson, JSON.stringify(coodinates));
+          } catch (err) {
+            return JBridge.locateOnMap(str, lat, lon);
+          }s
+        };
+      };
+    };
+  };
+};
 
 export const exitLocateOnMap = function(str){
   JBridge.exitLocateOnMap(str);

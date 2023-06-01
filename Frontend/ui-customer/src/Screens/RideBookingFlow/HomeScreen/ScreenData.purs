@@ -19,9 +19,12 @@ import Components.LocationListItem.Controller (dummyLocationListState)
 import Components.QuoteListItem.Controller (QuoteListItemState)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Data.Maybe (Maybe(..))
-import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState)
-import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..))
 import Styles.Colors as Color
+import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState,Location,RateCardType(..))
+import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..))
+import Prelude (($))
+import Data.Array (head)
+
 initData :: HomeScreenState
 initData = {
     data: {
@@ -48,7 +51,7 @@ initData = {
     , destinationAddress : dummyAddress
     , route : Nothing
     , startedAtUTC : ""
-    , rateCard : { baseFare : 0, extraFare : 0, pickUpCharges : 0, additionalFare : 0, nightShiftMultiplier : 0.0, nightCharges : false }
+    , rateCard : { baseFare : 0, extraFare : 0, pickUpCharges : 0, additionalFare : 0, nightShiftMultiplier : 0.0, nightCharges : false,currentRateCardType : DefaultRateCard,onFirstPage:false}
     , speed : 0
     , selectedLocationListItem : Nothing
     , saveFavouriteCard : {
@@ -73,10 +76,24 @@ initData = {
       , actionTextColor : Color.elfGreen
       , imageUrl : "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png" 
       }
+    , nearByPickUpPoints : dummyPickUpPoints
+    , polygonCoordinates : ""
+    , specialZoneQuoteList : []
+    , specialZoneSelectedQuote : Nothing
+    , selectedEstimatesObject : { 
+      vehicleImage: ""
+      , isSelected: false
+      , vehicleVariant: ""
+      , vehicleType: ""
+      , capacity: ""
+      , price: ""
+      , isCheckBox: false
+      , isEnabled: true
+      , activeIndex: 0
+      , index: 0
+      , id: ""
+      }
     },
-  --   rating :: Int
-  -- , isRated :: Boolean
-  -- , driverName :: String
     props: {
       rideRequestFlow : false
     , isSearchLocation : NoView
@@ -128,7 +145,7 @@ initData = {
     , chatcallbackInitiated : false
     , emergencyHelpModal : false
     , estimatedDistance : Nothing
-    , waitingTimeTimerId : "-1"
+    , waitingTimeTimerIds : []
     , tagType : Nothing
     , isSaveFavourite : false
     , showShareAppPopUp : false
@@ -142,8 +159,11 @@ initData = {
     , isbanner : true
     , callSupportPopUp : false
     , isMockLocation: false
+    , isSpecialZone : false
+    , defaultPickUpPoint : ""
     }
 }
+    
 
 
 dummyContactData :: Array Contact
@@ -258,6 +278,7 @@ dummyDriverInfo =
   , bppRideId : ""
   , driverNumber : Nothing
   , merchantExoPhone : ""
+  , createdAt : ""
   }
 
 dummySettingBar :: SettingSideBarState
@@ -298,14 +319,16 @@ dummyQuoteAPIEntity = QuoteAPIEntity {
   quoteDetails : QuoteAPIDetails {fareProductType : "", contents : dummyDriverOfferAPIEntity}
 }
 
-dummyDriverOfferAPIEntity :: DriverOfferAPIEntity 
-dummyDriverOfferAPIEntity = DriverOfferAPIEntity{
-  rating : Nothing
-  , validTill : ""
-  , driverName : ""
-  , distanceToPickup : 0.0
-  , durationToPickup : 0
-  }
+dummyDriverOfferAPIEntity :: QuoteAPIContents
+dummyDriverOfferAPIEntity =
+  DRIVER_OFFER
+    $ DriverOfferAPIEntity
+        { rating: Nothing
+        , validTill: ""
+        , driverName: ""
+        , distanceToPickup: 0.0
+        , durationToPickup: 0
+        }
 
 dummyLocationName :: PlaceName
 dummyLocationName = PlaceName {
@@ -317,3 +340,23 @@ dummyLocationName = PlaceName {
   "plusCode" : Nothing,
   "addressComponents" : []
 }
+dummyPickUpPoints :: Array Location
+dummyPickUpPoints = [ 
+  {place : "Kolkata airport arrival gate 1 ", lat : 12.941156, lng : 77.623510 }, 
+  {place : "Kolkata airport arrival gate 2 ", lat : 12.940696, lng : 77.622877 }
+]
+
+specialLocation :: SpecialLocation
+specialLocation = SpecialLocation{
+    "category" :"",
+     "gates": [],
+     "locationName" : ""
+ }
+
+dummyLocation :: Location
+dummyLocation = {
+   place : "",
+   lat : 0.0,
+   lng : 0.0
+ }
+

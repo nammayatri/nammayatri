@@ -34,6 +34,7 @@ import Styles.Colors as Color
 import Engineering.Helpers.Commons (screenWidth)
 import Screens.Types (HomeScreenStage(..))
 import JBridge (getVersionCode)
+import MerchantConfigs.Utils(getMerchant, Merchant(..))
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = 
@@ -81,7 +82,7 @@ messageButton push config =
   , height WRAP_CONTENT
   , orientation HORIZONTAL
   , gravity CENTER
-  , visibility if config.currentStage == RideAccepted && checkVersionForChat 56 then VISIBLE else GONE
+  , visibility if config.currentStage == RideAccepted && checkVersionForChat (getCurrentAndroidVersion (getMerchant unit)) then VISIBLE else GONE
   , padding $ Padding 20 16 20 16
   , margin $ MarginLeft 16
   , background Color.white900
@@ -94,6 +95,13 @@ messageButton push config =
       , width $ V 20
       ]
   ]
+
+getCurrentAndroidVersion :: Merchant -> Int 
+getCurrentAndroidVersion merchant = 
+  case merchant of 
+    NAMMAYATRIPARTNER -> 54
+    YATRIPARTNER -> 47 
+    JATRISAATHIDRIVER -> 1
 
 checkVersionForChat :: Int -> Boolean
 checkVersionForChat reqVersion =

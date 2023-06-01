@@ -59,7 +59,7 @@ primaryButtonConfig state =
           }
         , isClickable = true
         , width = if os == "IOS" then (V 360) else (MATCH_PARENT)
-        , margin = if os == "IOS" then (Margin 0 0 0 70) else (Margin 0 0 0 24)
+        , margin = if os == "IOS" then (MarginBottom 0) else (MarginBottom 24)
         , visibility = if ((length state.data.contactsList) == 3) then GONE else VISIBLE
         }
   in

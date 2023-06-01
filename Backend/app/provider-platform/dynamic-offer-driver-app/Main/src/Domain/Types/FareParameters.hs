@@ -18,7 +18,7 @@ module Domain.Types.FareParameters where
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Utils.GenericPretty
+import Kernel.Utils.GenericPretty (PrettyShow (..))
 
 data FareParameters = FareParameters
   { id :: Id FareParameters,
@@ -29,6 +29,7 @@ data FareParameters = FareParameters
     baseFare :: Money,
     waitingCharge :: Maybe Money,
     nightShiftCharge :: Maybe Money,
+    nightShiftRateIfApplies :: Maybe Double,
     fareParametersDetails :: FareParametersDetails
   }
   deriving (Generic, Show, Eq, PrettyShow)
@@ -48,13 +49,9 @@ data FParamsSlabDetails = FParamsSlabDetails
 instance PrettyShow FParamsSlabDetails where
   prettyShow _ = prettyShow ()
 
-data FareParametersType = Progressive | Slab deriving (Show, Read, Generic)
+data FareParametersType = Progressive | Slab deriving (Show, Read)
 
 getFareParametersType :: FareParameters -> FareParametersType
 getFareParametersType fareParams = case fareParams.fareParametersDetails of
   ProgressiveDetails _ -> Progressive
   SlabDetails _ -> Slab
-
-data FarePolicyType = SLAB | NORMAL
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
-  deriving (PrettyShow) via Showable FarePolicyType
