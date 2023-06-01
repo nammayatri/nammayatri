@@ -95,7 +95,8 @@ data DriverRideRes = DriverRideRes
     chargeableDistance :: Maybe Meters,
     exoPhone :: Text,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    customerExtraFee :: Maybe Money
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -167,7 +168,8 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) =
       tripEndTime = ride.tripEndTime,
       rideRating = rideRating <&> (.ratingValue),
       chargeableDistance = ride.chargeableDistance,
-      exoPhone = maybe booking.primaryExophone (\exophone -> if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone) mbExophone
+      exoPhone = maybe booking.primaryExophone (\exophone -> if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone) mbExophone,
+      customerExtraFee = fareParams.customerExtraFee
     }
 
 arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CoreMetrics m, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["driverReachedDistance" ::: HighPrecMeters]) => Id DRide.Ride -> LatLong -> m APISuccess
