@@ -131,10 +131,10 @@ notifyOnCancel merchantId booking personId mbDeviceToken cancellationSource = do
       SBCR.ByApplication ->
         return $
           unwords
-            [ "The ride for",
+            [ "Sorry your ride for",
               showTimeIst (booking.startTime),
-              "was cancelled because quote was not confirmed.",
-              "Please book again to get another ride."
+              "was cancelled.",
+              "Please try to book again"
             ]
       _ -> throwError (InternalError "Unexpected cancellation reason.")
 

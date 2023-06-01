@@ -17,7 +17,7 @@ ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ALTER COLUMN base_f
 -------------------------------AFTER_FULL_ROLL_OUT-----------------------------------------
 -------------------------------------------------------------------------------------------
 
-UPDATE atlas_driver_offer_bpp.search_try AS T1 SET search_repeat_type = 'INITIAL' WHERE T1.search_repeat_counter = 0 AND T1.search_repeat_counter IS NULL;
+UPDATE atlas_driver_offer_bpp.search_try AS T1 SET search_repeat_type = 'INITIAL' WHERE T1.search_repeat_counter = 0;
 UPDATE atlas_driver_offer_bpp.search_try AS T1 SET search_repeat_type = 'REALLOCATION' WHERE T1.search_repeat_counter IS NULL;
 
 UPDATE atlas_driver_offer_bpp.search_try AS T1 SET base_fare = (
