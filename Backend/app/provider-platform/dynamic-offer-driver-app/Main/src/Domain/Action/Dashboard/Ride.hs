@@ -132,10 +132,9 @@ rideRoute merchantShortId reqRideId = do
   unless (merchant.id == booking.providerId) $ throwError (RideDoesNotExist rideId.getId)
   let rideQId = T.unpack rideId.getId
       driverQId = T.unpack ride.driverId.getId
-  (rQStart, rQEnd) <- case (ride.tripStartTime, ride.tripEndTime) of
-    (Just x, Just y) -> pure (fetchDate $ show x, fetchDate $ show y)
-    _ -> throwError $ InvalidRequest "The ride has not ended yet."
-  ckhTbl <- CH.findAll (Proxy @Common.DriverEdaKafka) ((("partition_date" =.= rQStart) |.| ("partition_date" =.= rQEnd)) &.& ("driver_id" =.= driverQId) &.& ("rid" =.= rideQId)) Nothing Nothing (Just $ CH.Asc "ts")
+  let rQFst = fetchDate $ show ride.createdAt
+  let rQLst = fetchDate $ show (addUTCTime (intToNominalDiffTime 86400) ride.createdAt)
+  ckhTbl <- CH.findAll (Proxy @Common.DriverEdaKafka) ((("partition_date" =.= rQFst) |.| ("partition_date" =.= rQLst)) &.& ("driver_id" =.= driverQId) &.& ("rid" =.= rideQId)) Nothing Nothing (Just $ CH.Asc "ts")
   actualRoute <- case ckhTbl of
     Left err -> do
       logError $ "Clickhouse error: " <> show err
