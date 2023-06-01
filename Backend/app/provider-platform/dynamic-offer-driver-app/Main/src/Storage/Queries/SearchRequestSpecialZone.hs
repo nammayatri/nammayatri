@@ -51,18 +51,29 @@ create srsz = do
   _ <- QSRL.create srsz.fromLocation
   QSRL.create srsz.toLocation
 
-findById :: Transactionable m => Id SearchRequestSpecialZone -> m (Maybe SearchRequestSpecialZone)
-findById searchRequestSpecialZoneId = buildDType $
-  fmap (fmap $ extractSolidType @Domain.SearchRequestSpecialZone) $
-    Esq.findOne' $ do
-      (sReq :& sFromLoc :& sToLoc) <-
-        from
-          ( table @SearchRequestSpecialZoneT
-              `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& loc1) -> s ^. SearchRequestSpecialZoneFromLocationId ==. loc1 ^. SearchReqLocationTId)
-              `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& _ :& loc2) -> s ^. SearchRequestSpecialZoneToLocationId ==. loc2 ^. SearchReqLocationTId)
-          )
-      where_ $ sReq ^. SearchRequestSpecialZoneTId ==. val (toKey searchRequestSpecialZoneId)
-      pure (sReq, sFromLoc, sToLoc)
+-- findById :: Transactionable m => Id SearchRequestSpecialZone -> m (Maybe SearchRequestSpecialZone)
+-- findById searchRequestSpecialZoneId = buildDType $
+--   fmap (fmap $ extractSolidType @Domain.SearchRequestSpecialZone) $
+--     Esq.findOne' $ do
+--       (sReq :& sFromLoc :& sToLoc) <-
+--         from
+--           ( table @SearchRequestSpecialZoneT
+--               `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& loc1) -> s ^. SearchRequestSpecialZoneFromLocationId ==. loc1 ^. SearchReqLocationTId)
+--               `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& _ :& loc2) -> s ^. SearchRequestSpecialZoneToLocationId ==. loc2 ^. SearchReqLocationTId)
+--           )
+--       where_ $ sReq ^. SearchRequestSpecialZoneTId ==. val (toKey searchRequestSpecialZoneId)
+--       pure (sReq, sFromLoc, sToLoc)
+-- We are already finding SearchRequestLocation in Domain transform function.
+findById :: L.MonadFlow m => Id SearchRequestSpecialZone -> m (Maybe SearchRequestSpecialZone)
+findById (Id searchRequestSpecialZoneId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> do
+      sR <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamSRSZ.id $ Se.Eq searchRequestSpecialZoneId]
+      case sR of
+        Left _ -> pure Nothing
+        Right x -> traverse transformBeamSearchRequestSpecialZoneToDomain x
+    Nothing -> pure Nothing
 
 -- fullSearchRequestTable ::
 --   From

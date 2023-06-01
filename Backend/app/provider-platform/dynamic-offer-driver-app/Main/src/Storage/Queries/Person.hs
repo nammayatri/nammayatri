@@ -59,6 +59,7 @@ import qualified Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Beam.DriverLocation as BeamDL
 import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Beam.Vehicle as BeamV
+import qualified Storage.Queries.DriverInformation as DIQ
 import qualified Storage.Queries.DriverInformation as QueriesDI
 import qualified Storage.Queries.DriverLocation as QDL
 import Storage.Queries.DriverQuote (baseDriverQuoteQuery)
@@ -800,6 +801,44 @@ findAllDriverIdExceptProvided merchantId driverIdsToBeExcluded = do
 
     driverIdToPersonId :: Id Driver -> Id Person
     driverIdToPersonId = cast
+
+findAllDriverIdExceptProvided' :: (L.MonadFlow m, Log m) => Id Merchant -> [Id Driver] -> m [Id Driver]
+findAllDriverIdExceptProvided' (Id merchantId) driverIdsToBeExcluded = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> do
+      person <- do
+        person' <-
+          KV.findAllWithKVConnector
+            dbConf'
+            Mesh.meshConfig
+            [Se.Is BeamP.merchantId $ Se.Eq merchantId]
+        case person' of
+          Left _ -> pure []
+          Right x -> traverse transformBeamPersonToDomain x
+
+      infoList <-
+        either (pure []) (QueriesDI.transformBeamDriverInformationToDomain <$>)
+          <$> KV.findAllWithKVConnector
+            dbConf'
+            Mesh.meshConfig
+            [ Se.And
+                ( [Se.Is BeamDI.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> person]
+                    <> [Se.Is BeamDI.verified $ Se.Eq True]
+                    <> [Se.Is BeamDI.enabled $ Se.Eq True]
+                    <> [Se.Is BeamDI.driverId $ Se.Not $ Se.In $ getId <$> driverIdsToBeExcluded]
+                )
+            ]
+
+      pure (map (personIdToDrivrId . DDI.driverId) infoList)
+    Nothing -> pure []
+  where
+    personIdToDrivrId :: Id Person -> Id Driver
+    personIdToDrivrId = cast
+
+-- where
+
+-- Nothing -> pure []
 
 -- updateMerchantIdAndMakeAdmin :: Id Person -> Id Merchant -> SqlDB ()
 -- updateMerchantIdAndMakeAdmin personId merchantId = do
