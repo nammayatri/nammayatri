@@ -104,12 +104,11 @@ window.onMerchantEvent = function (event, payload) {
     }
     if (clientPaylod.payload.clientId == "open-kochi") {
       window.merchantID = "YATRIPARTNER"
-    } else if(clientPaylod.payload.clientId == "jatrisaathiprovider" || clientPaylod.payload.clientId == "jatrisaathidriver"){
-      window.merchantID = "JATRISAATHIDRIVER"
-    }else {
+    } else if (clientPaylod.payload.clientId == "jatrisaathiprovider" || clientPaylod.payload.clientId == "jatrisaathidriver")  {
+      window.merchantID = "YATRISATHIDRIVER";
+    } else {
       window.merchantID = clientPaylod.payload.clientId.toUpperCase();
     }
-    console.log(window.merchantID);
     JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), null)
   } else if (event == "process") {
     window.__payload.sdkVersion = "2.0.1"

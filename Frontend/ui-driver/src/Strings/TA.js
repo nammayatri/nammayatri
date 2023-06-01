@@ -487,5 +487,15 @@ const tamilStrings = {
   CONGRATULATIONS_YOU_ARE_RANK : "வாழ்த்துகள் ! உங்கள் ரேங்க் ",
   YOU : " (நீங்கள்)",
   DAILY : "தினசரி",
-  WEEKLY : "வாரந்தோறும்"
+  WEEKLY : "வாரந்தோறும்",
+  ENTER_AADHAAR_NUMBER : "ஆதார் எண்/யுஐடியை உள்ளிடவும்",
+  ENTER_AADHAAR_OTP_ : "ஆதார் OTP ஐ உள்ளிடவும்",
+  AADHAAR_LINKING_REQUIRED : "ஆதார் இணைப்பு தேவை",
+   AADHAAR_LINKING_REQUIRED_DESCRIPTION : "யாத்ரி சதிக்கு வாகனம் ஓட்டத் தொடங்க, தயவுசெய்து \n உங்கள் ஆதார் ஐடியை இணைக்கவும்",
+   BY_CLICKING_THIS_YOU_WILL_BE_AGREEING_TO_OUR_TC : "தொடரவும் என்பதைக் கிளிக் செய்வதன் மூலம், எங்களின் ",
+   TERMS_AND_CONDITIONS_SHORT : "T&C",
+   TC_TAIL : "ஐ ஏற்கிறீர்கள்",
+   OTP_SENT_TO_AADHAAR_NUMBER: "OTP உங்கள் ஆதாருடன் இணைக்கப்பட்ட மொபைல் எண்ணுக்கு அனுப்பப்பட்டது",
+   ENTER_SIX_DIGIT_OTP : "ஆறு இலக்க OTP ஐ உள்ளிடவும்",
+   LINK_AADHAAR_ID : "ஆதார் ஐடியை இணைக்கவும்"
 }

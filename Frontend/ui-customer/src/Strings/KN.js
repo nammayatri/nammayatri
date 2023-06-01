@@ -498,5 +498,7 @@ const kannadaStrings = {
   "DRIVER_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION" : "ಚಾಲಕ ನಿಮ್ಮ ಸ್ಥಳಕ್ಕೆ ಬರುತ್ತಿದ್ದಾರೆ.",
   "ALLOW_LOCATION_ACCESS": "ಸ್ಥಳ ಪ್ರವೇಶವನ್ನು ಅನುಮತಿಸಿ",
   "MESSAGE_FROM_DRIVER": "ಚಾಲಕನಿಂದ ಸಂದೇಶ" ,
-  "REPLY": "ಉತ್ತರಿಸು"
+  "REPLY": "ಉತ್ತರಿಸು",
+  "PLATFORM_FEE" : "ಪ್ಲಾಟ್‌ಫಾರ್ಮ್ ಶುಲ್ಕ",
+  "SGST" : "SGST"
 }

@@ -12,7 +12,7 @@ const yatriConfig = require("./../../src/MerchantConfigs/YatriPartnerConfig.js")
 export const getStringFromConfig = function (constructorKey){
     let key = constructorKey.trim(); 
     switch(window.merchantID) {
-        case "JATRISAATHIDRIVER" :
+        case "YATRISATHIDRIVER" :
             if (jatriConfig.isCurrentMerchantString(key)){
                 return jatriConfig.currentMerchantString(key);
             }
@@ -36,7 +36,7 @@ export const getStringFromConfig = function (constructorKey){
 export const getValueFromConfig = function (constructorKey){
     let key = constructorKey.trim(); 
     switch(window.merchantID) {
-        case "JATRISAATHIDRIVER" :
+        case "YATRISATHIDRIVER" :
             return jatriConfig.getMerchantConfig(key);
         case "NAMMAYATRIPARTNER" :
             return nammaYatriConfig.getMerchantConfig(key);

@@ -58,6 +58,17 @@ infoComponentView item =
             , color Color.black650
             ]
           <> (FontStyle.body3 TypoGraphy)
+          <> ( if contains (Pattern "<u>") item.subTitle then
+                [ onClick
+                    ( \_ -> do
+                        _ <- openUrlInMailApp (slice ((fromMaybe 0 $ indexOf (Pattern (">")) item.subTitle) + 1) (fromMaybe 0 $ lastIndexOf (Pattern ("<")) item.subTitle) item.subTitle)
+                        pure unit
+                    )
+                    (const unit)
+                ]
+              else
+                []
+            )
       ]
         <> if isJust item.addtionalData then
             [ textView

@@ -705,7 +705,8 @@ type HomeScreenProps =  {
   zoneRideBooking :: Boolean,
   showGenderBanner :: Boolean,
   notRemoveBanner :: Boolean,
-  showBonusInfo :: Boolean
+  showBonusInfo :: Boolean,
+  showlinkAadhaarPopup :: Boolean
  }
 
 data DriverStatus = Online | Offline | Silent
@@ -1239,3 +1240,29 @@ type RankCardData = {
   , rank :: Int
   , rides :: Int
 }
+--------------------------------------------------------------- AadhaarVerificationScreenState -----------------------------------------------------------------------------
+type AadhaarVerificationScreenState = {
+  data :: EnterAadhaarNumberScreenStateData,
+  props :: EnterAadhaarNumberScreenStateProps
+}
+
+type EnterAadhaarNumberScreenStateData = {
+    aadhaarNumber :: String
+  , timer :: String
+  , otp :: String
+}
+
+type EnterAadhaarNumberScreenStateProps = {
+  btnActive :: Boolean
+, isValid :: Boolean
+, resendEnabled :: Boolean
+, currentStage :: AadhaarStage
+, showErrorAadhaar :: Boolean
+, fromHomeScreen :: Boolean
+, showLogoutPopup :: Boolean
+}
+
+data AadhaarStage = EnterAadhaar | VerifyAadhaar
+
+derive instance genericAadhaarStage :: Generic AadhaarStage _
+instance eqAadhaarStage :: Eq AadhaarStage where eq = genericEq

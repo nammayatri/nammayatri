@@ -31,6 +31,7 @@ import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -593,7 +594,12 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         floatyView = inflater.inflate(R.layout.viewpager_layout_view,null);
         TextView merchantLogo = (TextView) floatyView.findViewById(R.id.merchantLogo);
         if (key != null && key.equals("jatrisaathidriver")){
-            merchantLogo.setText("Jatri Sathi");
+            merchantLogo.setText("yatri\nsathi");
+            ImageView merchantLogoIcon = (ImageView) floatyView.findViewById(R.id.merchantLogoIcon);
+            LinearLayout.LayoutParams  layoutParams = new LinearLayout.LayoutParams(100,100);
+            layoutParams.rightMargin = 12;
+            merchantLogoIcon.setLayoutParams(layoutParams);
+            merchantLogo.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT , ViewGroup.LayoutParams.WRAP_CONTENT ));
         } else if (key != null && key.equals("yatripartner")){
             merchantLogo.setText("Yatri Partner");
         }

@@ -156,3 +156,8 @@ leaderBoardDaily date = (getBaseUrl "") <> "/driver/leaderBoard/daily?date=" <> 
 
 leaderBoardWeekly :: String -> String -> String
 leaderBoardWeekly fromDate toDate = (getBaseUrl "") <> "/driver/leaderBoard/weekly?fromDate=" <> fromDate <> "&toDate=" <> toDate
+triggerAadhaarOTP :: String -> String
+triggerAadhaarOTP _ = (getBaseUrl "") <> "/driver/register/generateAadhaarOtp"
+
+verifyAadhaarOTP :: String -> String
+verifyAadhaarOTP _ = (getBaseUrl "") <> "/driver/register/verifyAadhaarOtp"

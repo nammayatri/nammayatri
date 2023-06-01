@@ -23,10 +23,9 @@ import Effect (Effect)
 import Engineering.Helpers.Commons (screenWidth, safeMarginBottom, safeMarginTop, os, isPreviousVersion)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getMerchant, Merchant(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Merchant.Utils (getValueFromConfig)
+import Merchant.Utils (getValueFromConfig, getMerchant, Merchant(..))
 import Prelude (Unit, const, unit, ($), (*), (/), (<>), (==), (||), (&&), (/=))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, visibility, background, clickable, color, disableClickFeedback, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, orientation, padding, text, textSize, textView, width, weight, ellipsize, maxLines, imageWithFallback, scrollView, scrollBarY)
 import PrestoDOM.Animation as PrestoAnim
@@ -109,11 +108,11 @@ getPreviousVersion _ =
   if os == "IOS" then 
     case getMerchant FunctionCall of 
       NAMMAYATRI -> "1.2.5"
-      JATRISAATHI -> "0.0.0"
+      YATRISATHI -> "0.0.0"
       _ -> "1.0.0"
     else do 
       case getMerchant FunctionCall of 
-        JATRISAATHI -> "0.0.0"
+        YATRISATHI -> "0.0.0"
         _ -> "1.2.1"
 
 ------------------------------ emptylayout --------------------------------

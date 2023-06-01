@@ -35,6 +35,7 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(
 import PrestoDOM.Animation as PrestoAnim
 import Storage (KeyStore(..), getValueToLocalStore)
 import Helpers.Utils (getPreviousVersion)
+import Merchant.Utils (getMerchant, Merchant(..))
 import Styles.Colors as Color
 import Common.Types.App
 import Storage (isLocalStageOn)
@@ -451,7 +452,7 @@ noQuotesErrorModel state =
       ][imageView
         [ height $ V 115
         , width $ V 161
-        , imageWithFallback "ic_no_quotes_color,https://assets.juspay.in/nammayatri/images/user/ic_no_quotes_color.png"
+        , imageWithFallback $ "ic_no_quotes_color," <> if (getMerchant FunctionCall == YATRISATHI) then "https://assets.juspay.in/beckn/jatrisaathi/user/images/ny_ic_no_quotes_color.png" else "https://assets.juspay.in/nammayatri/images/user/ic_no_quotes_color.png"
         ]
       , textView $
         [ height WRAP_CONTENT

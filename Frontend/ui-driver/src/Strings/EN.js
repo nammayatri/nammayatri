@@ -490,5 +490,15 @@ const englishStrings = {
   CONGRATULATIONS_YOU_ARE_RANK : "Congratulations! You are RANK ",
   YOU : " (you)",
   DAILY : "Daily",
-  WEEKLY : "Weekly"
+  WEEKLY : "Weekly",
+  ENTER_AADHAAR_NUMBER : "Enter Aadhaar Number/UID",
+  ENTER_AADHAAR_OTP_ : "Enter Aadhaar OTP",
+  AADHAAR_LINKING_REQUIRED : "Aadhaar linking required",
+  AADHAAR_LINKING_REQUIRED_DESCRIPTION : "To start driving for Yatri Sathi, please \n link your Aadhaar ID",
+  BY_CLICKING_THIS_YOU_WILL_BE_AGREEING_TO_OUR_TC : "By clicking Continue, you agree to our ",
+  TERMS_AND_CONDITIONS_SHORT : "T&C",
+  TC_TAIL : "",
+  OTP_SENT_TO_AADHAAR_NUMBER: "OTP sent to mobile number linked with your aadhar",
+  ENTER_SIX_DIGIT_OTP : "Enter six digit OTP",
+  LINK_AADHAAR_ID : "Link Aadhaar ID"
 }

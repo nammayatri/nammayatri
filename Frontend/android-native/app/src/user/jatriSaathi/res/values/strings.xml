@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name" translatable="false">Jatri Sathi</string>
+    <string name="app_name" translatable="false">Yatri Sathi</string>
     <string name="client_id" translatable="false">jatrisaathi</string>
     <string name="service" translatable="false">jatrisaathi</string>
     <string name="dev_port" translatable="false">8081</string>

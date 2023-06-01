@@ -72,7 +72,7 @@ import Services.APITypes (Status(..))
 import Components.BottomNavBar.Controller (navData)
 import Screens.HomeScreen.ComponentConfig
 import Screens as ScreenNames
-import Merchant.Utils (getValueFromConfig)
+import Merchant.Utils (getValueFromConfig, getMerchant, Merchant(..))
 import Engineering.Helpers.Commons (flowRunner)
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
@@ -117,7 +117,7 @@ screen initialState =
                                 else pure unit
                                 if (not initialState.props.routeVisible) && initialState.props.mapRendered then do
                                   _ <- JB.getCurrentPosition push $ ModifyRoute
-                                  _ <- JB.removeMarker "ic_vehicle_side" -- TODO : remove if we dont require "ic_auto" icon on homescreen
+                                  pure $ JB.removeMarker "ic_vehicle_side" -- TODO : remove if we dont require "ic_auto" icon on homescreen
                                   pure unit
                                   else pure unit
                                 if (getValueToLocalStore RIDE_STATUS_POLLING) == "False" then do
@@ -133,7 +133,7 @@ screen initialState =
                                 _ <- launchAff $ flowRunner defaultGlobalState $ launchMaps push TriggerMaps
                                 if (not initialState.props.routeVisible) && initialState.props.mapRendered then do
                                   _ <- JB.getCurrentPosition push $ ModifyRoute
-                                  _ <- JB.removeMarker "ic_vehicle_side" -- TODO : remove if we dont require "ic_auto" icon on homescreen
+                                  pure $ JB.removeMarker "ic_vehicle_side" -- TODO : remove if we dont require "ic_auto" icon on homescreen
                                   pure unit
                                   else pure unit
             "ChatWithCustomer" -> do
@@ -192,6 +192,7 @@ view push state =
       , if state.props.currentStage == ChatWithCustomer then chatView push state else dummyTextView
       , if state.props.showBonusInfo then requestInfoCardView push state else dummyTextView
       , if state.props.silentPopUpView then popupModelSilentAsk push state else dummyTextView
+      , if state.props.showlinkAadhaarPopup then linkAadhaarPopup push state else dummyTextView
   ]
 
 driverMapsHeaderView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -336,6 +337,13 @@ cancelConfirmation push state =
   , width MATCH_PARENT
   , background Color.blackLessTrans
   ][PopUpModal.view (push <<< PopUpModalCancelConfirmationAction) (cancelConfirmationConfig state )]
+
+linkAadhaarPopup :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+linkAadhaarPopup push state =
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  ][PopUpModal.view (push <<< LinkAadhaarPopupAC) (linkAadhaarPopupConfig state )]
 
 googleMap :: forall w . HomeScreenState -> PrestoDOM (Effect Unit) w
 googleMap state =
@@ -492,7 +500,7 @@ driverDetail push state =
          [ width $ V 42
          , height $ V 42
          , onClick push $ const GoToProfile
-         , imageWithFallback "ic_new_avatar,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_new_avatar.png"
+         , imageWithFallback $ "ny_ic_new_avatar," <> (if (getMerchant unit == YATRISATHIDRIVER) then "https://assets.juspay.in/beckn/jatrisaathi/driver/images/ny_ic_new_avatar.png" else "https://assets.juspay.in/beckn/nammayatri/driver/images/ic_new_avatar.png")
          ]
       ]
     , linearLayout

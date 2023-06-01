@@ -1365,7 +1365,15 @@ public class MainActivity extends AppCompatActivity {
         StringBuilder key = new StringBuilder();
         if (in.juspay.mobility.BuildConfig.MERCHANT.equals("KL")) {
             key.append("net.openkochi.");
-        } else {
+        }   else if (in.juspay.mobility.BuildConfig.MERCHANT.equals("WB")){
+            if (in.juspay.mobility.BuildConfig.MERCHANT_TYPE.equals("USER")){
+                key.append("in.yatri.consumer");
+            } else{
+                key.append("in.yatri.provider");
+            }
+            return key.toString();
+        }
+        else {
             key.append("in.juspay.");
         }
         key.append(getResources().getString(R.string.service));

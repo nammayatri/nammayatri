@@ -373,9 +373,9 @@ const hindiStrings = {
   "PERMISSION_DENIED": "अनुमति नहीं दी गई",
   "PERCENTAGE_OF_NOMINAL_FARE": "~ बेस फेयर का 10%",
   "PAY_VIA_CASH_OR_UPI": "नकद / यूपीआई के माध्यम से भुगतान करें",
-  "BOARD_THE_FIRST_TAXI": "जात्री साथी अंचल से पहली टैक्सी में सवार हों",
+  "BOARD_THE_FIRST_TAXI": "यात्री साथी अंचल से पहली टैक्सी में सवार हों",
   "REQUEST_CALLBACK": "कॉलबैक का अनुरोध करें",
-  "BOARD_THE_FIRST_TAXI": "जात्री साथी अंचल से पहली टैक्सी में सवार हों",
+  "BOARD_THE_FIRST_TAXI": "यात्री साथी अंचल से पहली टैक्सी में सवार हों",
   "CHOOSE_YOUR_RIDE": "अपनी सवारी चुनें",
   "PAY_VIA_CASH_OR_UPI": "नकद / यूपीआई के माध्यम से भुगतान करें",
   "ECONOMICAL": "किफ़ायती",
@@ -492,8 +492,6 @@ const hindiStrings = {
   "DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST": "ड्राइवर ने आपके विशेष अनुरोध को प्राथमिकता दी और पहले ही ",
   "AND_HAS_TRAVELLED": " की यात्रा कर चुका है।",
   "PLEASE_FIND_REVISED_FARE_ESTIMATE": "कृपया संशोधित अनुमानित किराया ज्ञात करें। रात का शुल्क दिन के शुल्क का 1.5 गुना है।",
-  "REGISTERED_ADDRESS_DESCRIPTION" : "Juspay Technologies Private Limited <br> Stallion Business Centre, No. 444, 3rd & 4th Floor, 18th Main, 6th Block, Koramangala Bengaluru, Karnataka- 560095, India.",
-  "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "Website: <u>https://nammayatri.in/</u>",
   "NAVIGATE_TO_PICKUP" : "पिकअप पर नेविगेट करें" ,
   "FARE_ESTIMATE" : "किराया अनुमान" ,
   "TIP_SELECTED" : "टिप चयनित",
@@ -506,5 +504,7 @@ const hindiStrings = {
   "DRIVER_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION" : "ड्राइवर आपके स्थान के रास्ते पर है।",
   "ALLOW_LOCATION_ACCESS": "स्थान पहुंच की अनुमति दें",
   "MESSAGE_FROM_DRIVER": "ड्राइवर का संदेश",
-  "REPLY": "जवाब"
+  "REPLY": "जवाब",
+  "PLATFORM_FEE" : "प्लेटफ़ॉर्म शुल्क",
+  "SGST" : "एसजीएसटी"
 }

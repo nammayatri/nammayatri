@@ -279,7 +279,7 @@ const bengaliStrings = {
   "DO_YOU_NEED_EMERGENCY_HELP": "আপনার কি জরুরি সহায়তা দরকার?",
   "CALL_SUPPORT": "সাপোর্টে কল করুন",
   "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT": "আপনি নাম্মা ইয়াত্রি সমর্থন দলকে কল করতে চলেছেন। আপনি কি এগিয়ে যেতে চান?",
-  "YOU_ARE_ABOUT_TO_CALL_JATRI_SATHI_SUPPORT": "You are about to place a call to the Jatri Sathi Support Team. Do you want to proceed?",
+  "YOU_ARE_ABOUT_TO_CALL_YATRI_SATHI_SUPPORT": "You are about to place a call to the Yatri Sathi Support Team. Do you want to proceed?",
   "YOU_ARE_ABOUT_TO_CALL_YATRI_SUPPORT": "You are about to place a call to the Yatri Support Team. Do you want to proceed?",
   "YOU_ARE_ABOUT_TO_CALL_POLICE": "আপনি পুলিশকে কল করতে চলেছেন। আপনি কি এগিয়ে যেতে চান?",
   "DAIL_100": "ডায়াল 100?",
@@ -480,5 +480,7 @@ const bengaliStrings = {
   "THE_DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST_AND_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION" : "ড্রাইভার আপনার বিশেষ অবস্থান পছন্দ করেছে এবং ইতিমধ্যেই আপনার অবস্থানের পথে রয়েছে৷",
   "ALLOW_LOCATION_ACCESS": "অবস্থান অ্যাক্সেসের অনুমতি দিন",
   "MESSAGE_FROM_DRIVER": "ড্রাইভার থেকে বার্তা",
-  "REPLY": "উত্তর দিন"
+  "REPLY": "উত্তর দিন",
+  "PLATFORM_FEE" : "প্ল্যাটফর্ম ফি",
+  "SGST" : "SGST"
 }

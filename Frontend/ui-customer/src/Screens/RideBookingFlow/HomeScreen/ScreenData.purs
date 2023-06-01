@@ -300,6 +300,7 @@ dummyDriverInfo =
   , merchantExoPhone : ""
   , createdAt : ""
   , initDistance : Nothing
+  , vehicleVariant : ""
   }
 
 dummySettingBar :: SettingSideBarState

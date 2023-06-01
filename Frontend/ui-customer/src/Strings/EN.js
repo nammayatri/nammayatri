@@ -374,10 +374,10 @@ const englishStrings = {
   "PERMISSION_DENIED": "Permission Denied",
   "PERCENTAGE_OF_NOMINAL_FARE": "10% of base fare",
   "PAY_VIA_CASH_OR_UPI": "Pay via Cash / UPI",
-  "BOARD_THE_FIRST_TAXI": "Board the first taxi from Jatri Sathi zone",
+  "BOARD_THE_FIRST_TAXI": "Board the first taxi from Yatri Sathi zone",
   "REQUEST_CALLBACK": "Request Callback",
   "CHOOSE_YOUR_RIDE": "Choose Your Ride",
-  "BOARD_THE_FIRST_TAXI": "Board the first taxi from Jatri Sathi \nzone",
+  "BOARD_THE_FIRST_TAXI": "Board the first taxi from Yatri Sathi \nzone",
   "ECONOMICAL": "Economical",
   "COMFY": "Comfy",
   "NAVIGATE": "Navigate",
@@ -503,5 +503,7 @@ const englishStrings = {
   "DRIVER_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION" : "Driver is already on the way to your location.",
   "ALLOW_LOCATION_ACCESS": "Allow Location Access",
   "MESSAGE_FROM_DRIVER": "Message from Driver",
-  "REPLY": "Reply"
+  "REPLY": "Reply",
+  "PLATFORM_FEE" : "Platform Fee",
+  "SGST" : "SGST"
 }

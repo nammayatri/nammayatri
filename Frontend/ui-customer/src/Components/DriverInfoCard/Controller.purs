@@ -83,4 +83,5 @@ type DriverInfoCardData =
   , isLocationTracking :: Boolean
   , bookingCreatedAt :: String
   , lastMessage :: ChatView.ChatComponent
+  , vehicleVariant :: String
   }

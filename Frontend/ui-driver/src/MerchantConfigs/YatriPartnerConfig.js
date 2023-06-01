@@ -44,7 +44,8 @@ const yatriPartnerConfigs = {
     APP_LINK : "https://play.google.com/store/apps/details?id=net.openkochi.yatripartner",
     PRIVACY_POLICY_LINK : "https://docs.google.com/document/d/1gI_P4oZnVwE0O71rI4Mi8rpZbL9rsIRkyewbql85Np8",
     SPECIAL_ZONE_OTP_VIEW : "false",
-    BONUS_EARNED : "false"
+    BONUS_EARNED : "false",
+    OTP_MESSAGE_REGEX : "is your OTP for login to [A-Za-z]+ [A-Za-z]+"
 }
 
 const malayalamStrings = {

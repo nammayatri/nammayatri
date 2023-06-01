@@ -491,5 +491,15 @@ const bengaliStrings = {
 	CONGRATULATIONS_YOU_ARE_RANK : "অভিনন্দন! আপনার র্যাঙ্ক হল ",
 	YOU : " (আপনি)",
 	DAILY : "দৈনিক",
-	WEEKLY : "সাপ্তাহিক"
+	WEEKLY : "সাপ্তাহিক",
+	ENTER_AADHAAR_NUMBER : "আধার নম্বর/ইউআইডি লিখুন",
+	ENTER_AADHAAR_OTP_ : "আধার ওটিপি লিখুন",
+	AADHAAR_LINKING_REQUIRED : "আধার লিঙ্ক করা আবশ্যক",
+	AADHAAR_LINKING_REQUIRED_DESCRIPTION : "যাত্রী সাথীর জন্য গাড়ি চালানো শুরু করতে, দয়া করে \n আপনার আধার আইডি লিঙ্ক করুন",
+	BY_CLICKING_THIS_YOU_WILL_BE_AGREEING_TO_OUR_TC : "চালিয়ে যান ক্লিক করে, আপনি আমাদের সাথে সম্মত হন ",
+	TERMS_AND_CONDITIONS_SHORT : "T&C",
+	TC_TAIL : "",
+	OTP_SENT_TO_AADHAAR_NUMBER: "আপনার আধারের সাথে লিঙ্ক করা মোবাইল নম্বরে OTP পাঠানো হয়েছে",
+	ENTER_SIX_DIGIT_OTP : "ছয় সংখ্যার ওটিপি লিখুন",
+	LINK_AADHAAR_ID : "আধার আইডি লিঙ্ক করুন"
 	}
