@@ -43,7 +43,7 @@ mkPersist
   [defaultQQ|
     DriverQuoteT sql=driver_quote
       id Text
-      requestId SearchRequestTId
+      requestId SearchRequestTId sql=search_request_id
       searchTryId SearchTryTId
       searchRequestForDriverId SRFD.SearchRequestForDriverTId Maybe
       driverId PersonTId
