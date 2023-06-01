@@ -52,7 +52,14 @@ view push config =
       ][ messageButton push config
        , callButton push config
        , openGoogleMap push config 
-      ]
+      ],
+    linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    , cornerRadii $ Corners 25.0 true true false false
+    , background "#03B9F5"
+    ][ paytmView push config 
     , linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -73,6 +80,7 @@ view push config =
             endRide push config
         , cancelRide push config
       ]
+    ]
     ]
 
 messageButton :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -162,6 +170,39 @@ openGoogleMap push config =
           )
       ]
   ] 
+
+
+paytmView :: forall w. (Action -> Effect Unit) -> Config ->  PrestoDOM (Effect Unit) w
+paytmView push config =
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , background "#03B9F5"
+  , padding (PaddingVertical 5 5)
+  , orientation HORIZONTAL
+  , gravity CENTER
+  , cornerRadii $ Corners 25.0 true true false false
+  ][ 
+    textView
+     [ width WRAP_CONTENT
+     , height WRAP_CONTENT
+     , textSize FontSize.a_14
+     , text "This is a  "
+     , color Color.white900
+     ]
+   , imageView
+     [ width (V 44)
+     , height (V 14)
+     , imageWithFallback "ny_ic_paytm_white_logo,https://assets.juspay.in/nammayatri/images/common/ny_ic_paytm_white_logo.png"
+     ]
+   , textView
+     [ width WRAP_CONTENT
+     , height WRAP_CONTENT
+     , textSize FontSize.a_14
+     , text "  Ride"
+     , color Color.white900
+     ]
+  ]
 
 rideActionDataView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 rideActionDataView push config = 
