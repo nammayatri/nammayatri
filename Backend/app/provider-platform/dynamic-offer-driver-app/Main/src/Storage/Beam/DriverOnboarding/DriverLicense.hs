@@ -60,25 +60,25 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.VerificationStatus
 
 instance FromBackendRow Postgres Domain.VerificationStatus
 
-instance FromField DbHash where
-  fromField = fromFieldEnum
+-- instance FromField DbHash where
+--   fromField = fromFieldEnum
 
 instance FromField [Text] where
   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be DbHash where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be DbHash where
+--   sqlValueSyntax = autoSqlValueSyntax
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be [Text] where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be DbHash
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be DbHash
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be [Text]
 
 instance FromBackendRow Postgres [Text]
 
-instance FromBackendRow Postgres DbHash
+-- instance FromBackendRow Postgres DbHash
 
 data DriverLicenseT f = DriverLicenseT
   { id :: B.C f Text,
@@ -155,8 +155,8 @@ driverLicenseToPSModifiers :: M.Map Text (A.Value -> A.Value)
 driverLicenseToPSModifiers =
   M.empty
 
-instance IsString DbHash where
-  fromString = show
+-- instance IsString DbHash where
+--   fromString = show
 
 instance IsString Domain.VerificationStatus where
   fromString = show

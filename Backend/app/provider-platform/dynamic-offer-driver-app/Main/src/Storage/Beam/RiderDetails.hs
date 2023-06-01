@@ -23,12 +23,7 @@ import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-  )
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.External.Encryption
@@ -49,15 +44,18 @@ import Sequelize
 --       Just val -> pure val
 --       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
 
-instance FromField DbHash where
-  fromField = fromFieldEnum
+-- instance FromField DbHash where
+--   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be DbHash where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be DbHash where
+--   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be DbHash
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be DbHash
 
-instance FromBackendRow Postgres DbHash
+-- instance FromBackendRow Postgres DbHash
+
+-- instance IsString DbHash where
+--   fromString = show
 
 data RiderDetailsT f = RiderDetailsT
   { id :: B.C f Text,
@@ -95,9 +93,6 @@ instance ToJSON RiderDetails where
   toJSON = A.genericToJSON A.defaultOptions
 
 deriving stock instance Show RiderDetails
-
-instance IsString DbHash where
-  fromString = show
 
 riderDetailsTMod :: RiderDetailsT (B.FieldModification (B.TableField RiderDetailsT))
 riderDetailsTMod =

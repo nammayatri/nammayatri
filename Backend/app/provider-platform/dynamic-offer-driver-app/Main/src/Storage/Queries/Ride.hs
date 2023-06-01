@@ -15,6 +15,7 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Use tuple-section" #-}
+{-# HLINT ignore "Use fromRight" #-}
 
 module Storage.Queries.Ride where
 
@@ -25,6 +26,7 @@ import Data.Time hiding (getCurrentTime)
 import qualified Database.Beam as B
 import Database.Beam.Postgres
 import Domain.Types.Booking as Booking
+-- import Domain.Types.Booking as DB
 import Domain.Types.Merchant
 import Domain.Types.Person
 import Domain.Types.Ride as DR
@@ -166,7 +168,7 @@ findAllByDriverId' (Id driverId) mbLimit mbOffset mbOnlyActive mbRideStatus = do
             [ Se.And
                 ( [Se.Is BeamR.driverId $ Se.Eq driverId]
                     <> if isOnlyActive
-                      then [Se.Is BeamR.status $ Se.In [Ride.COMPLETED, Ride.CANCELLED]]
+                      then [Se.Is BeamR.status $ Se.Not $ Se.In [Ride.COMPLETED, Ride.CANCELLED]]
                       else
                         []
                           <> ([Se.Is BeamR.status $ Se.Eq (fromJust mbRideStatus) | isJust mbRideStatus])
@@ -572,6 +574,7 @@ data RideItem = RideItem
     bookingStatus :: Common.BookingStatus
   }
 
+-- being used in dashboard so need to create a beam query for this
 findAllRideItems ::
   Transactionable m =>
   Id Merchant ->
@@ -639,22 +642,50 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
       RideItem {rideShortId = ShortId rideShortId, ..}
 
 -- where condition implementation remaining
--- findAllRideItems' :: MonadFlow m => Id Merchant -> Int -> Int -> Maybe Common.BookingStatus -> Maybe (ShortId Ride) -> Maybe DbHash -> Maybe DbHash -> Maybe Money -> UTCTime -> m [RideItem]
+-- findAllRideItems' ::( MonadFlow m, MonadTime m) => Id Merchant -> Int -> Int -> Maybe Common.BookingStatus -> Maybe (ShortId Ride) -> Maybe DbHash -> Maybe DbHash -> Maybe Money -> UTCTime -> m [RideItem]
 -- findAllRideItems' (Id merchantId) limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbFareDiff now = do
 --   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   let now6HrBefore = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
 --   case dbConf of
 --     Just dbCOnf' -> do
 --       rides <- do
---         ride' <- KV.findAllWithOptionsKVConnector dbCOnf' Mesh.meshConfig [Se.And [] <> ([Se.Is BeamR.shortId $ Se.Eq mbRideShortId.getShortId | isJust mbRideShortId]) ]
---               (Se.Desc BeamR.createdAt) Nothing Nothing
+--         ride' <- KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig ([] <> ([Se.Is BeamR.shortId $ Se.Eq $ maybe "" getShortId mbRideShortId | isJust mbRideShortId]))
 --         case ride' of
 --           Left _ -> pure []
 --           Right x -> traverse transformBeamRideToDomain x
+
 --       bookings <- do
---         booking' <- KV.findAllWithOptionsKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamB.id $ Se.In $ getId . DR.bookingId <> rides ]] (Se.Desc BeamB.createdAt) Nothing Nothing
+--         booking' <- KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamB.id $ Se.In $ getId . DR.bookingId <$> rides,
+--           Se.Is BeamB.providerId $ Se.Eq merchantId ]]
 --         case booking' of
 --           Left _ -> pure []
 --           Right x -> traverse QB.transformBeamBookingToDomain x
+
+--       rideDetails <- either (pure []) (QRD.transformBeamRideDetailsToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.And ([Se.Is BeamRD.id $ Se.In $ getId . DR.id <$> rides]
+--         <> ([Se.Is BeamRD.driverNumberHash $ Se.Eq mbDriverPhoneDBHash | isJust mbDriverPhoneDBHash]))]
+
+--       riderDetails <- either (pure []) (QRRD.transformBeamRiderDetailsToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.And ([Se.Is BeamRRD.id $ Se.In $ maybe "" getId . DB.riderId <$> bookings]
+--         <> ([Se.Is BeamRRD.mobileNumberHash $ Se.Eq (fromJust mbCustomerPhoneDBHash) | isJust mbCustomerPhoneDBHash]))]
+
+--       let rideWithBooking = foldl' (getRideWithBooking bookings) [] rides
+--       -- let filteredRideWithBooking = if isJust mbFareDiff then filter (\(ride, booking) -> ((\fareDiff_ -> (((-) <$> (ride.fare) <*> Just (booking.estimatedFare)) > fareDiff_ || ((Just booking.estimatedFare -) <*> ride.fare) > fareDiff_) mbFareDiff)) rideWithBooking else rideWithBooking
+--       let filteredRideWithBooking = if isJust mbFareDiff then filter (\(ride, booking) -> ( ( (fromJust ride.fare) - booking.estimatedFare) > fromJust mbFareDiff) || ((booking.estimatedFare - (fromJust ride.fare)) > fromJust mbFareDiff) ) rideWithBooking else rideWithBooking
+--       let filterRideBookingStatus = if isJust mbBookingStatus then filter (\(ride, booking) ->
+--               booking.status == fromJust mbBookingStatus) filteredRideWithBooking else filteredRideWithBooking
+
+--       pure []
+
+--     Nothing -> pure []
+
+--   where
+--   getRideWithBooking bookings acc ride =
+--       let bookings' = filter (\b -> b.id == ride.bookingId) bookings
+--        in acc <> ((\b -> (ride, b)) <$> bookings')
+--   getStatus ride bookingStatus = case ride.status of
+--     Ride.NEW -> if ride.tripStartTime < Just now6HrBefore then Common.UPCOMING_6HRS else Common.UPCOMING
+--     Ride.INPROGRESS -> Common.ONGOING
+--     Ride.COMPLETED -> Common.COMPLETED
+--     Ride.CANCELLED -> Common.CANCELLED
 
 upcoming6HrsCond :: SqlExpr (Entity RideT) -> UTCTime -> SqlExpr (Esq.Value Bool)
 upcoming6HrsCond ride now = ride ^. Ride.RideCreatedAt +. Esq.interval [Esq.HOUR 6] <=. val now
