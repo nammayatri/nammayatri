@@ -64,6 +64,9 @@ mkBreakupList mkPrice mkBreakupItem fareParams = do
       totalFareCaption = "TOTAL_FARE"
       totalFareItem = mkBreakupItem totalFareCaption $ mkPrice totalFareFinalRounded
 
+      nightShiftCaption = "NIGHT_SHIFT_CHARGE"
+      mbNightShiftChargeItem = fmap (mkBreakupItem nightShiftCaption) (mkPrice <$> fareParams.nightShiftCharge)
+
       waitingOrPickupChargesCaption = "WAITING_OR_PICKUP_CHARGES" --TODO: deprecated, to be removed
       mbWaitingOrPickupChargesItem = mkBreakupItem waitingOrPickupChargesCaption . mkPrice <$> fareParams.waitingCharge
       waitingChargesCaption = "WAITING_CHARGE"
@@ -77,6 +80,7 @@ mkBreakupList mkPrice mkBreakupItem fareParams = do
     [ Just totalFareItem,
       Just baseFareItem,
       Just baseFareDistanceItem,
+      mbNightShiftChargeItem,
       mbWaitingOrPickupChargesItem,
       mbWaitingChargesItem,
       mbFixedGovtRateItem,
@@ -160,7 +164,7 @@ calculateFareParameters params = do
             customerExtraFee = mbCustomerExtraFee,
             serviceCharge = fp.serviceCharge,
             waitingCharge = resultWaitingCharge,
-            nightShiftCharge = Just $ fromMaybe 0 resultNightShiftCharge, -- TODO: remove fromMaybe
+            nightShiftCharge = resultNightShiftCharge,
             nightShiftRateIfApplies = (\isCoefIncluded -> if isCoefIncluded then getNightShiftRate nightShiftCharge else Nothing) =<< isNightShiftChargeIncluded, -- Temp fix :: have to fix properly
             ..
           }
