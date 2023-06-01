@@ -52,7 +52,7 @@ type MonadHandler m = (MonadThrow m, Log m, MonadGuid m)
 data ServiceHandle m = ServiceHandle
   { findRideById :: Id DRide.Ride -> m (Maybe DRide.Ride),
     findById :: Id DP.Person -> m (Maybe DP.Person),
-    findDriverLocationId :: Id DP.Person -> m (Maybe DDriverLocation.DriverLocation),
+    findDriverLocationId :: Id Merchant -> Id DP.Person -> m (Maybe DDriverLocation.DriverLocation),
     cancelRide :: Id DRide.Ride -> DBCR.BookingCancellationReason -> m (),
     findBookingByIdInReplica :: Id SRB.Booking -> m (Maybe SRB.Booking),
     pickUpDistance :: Id DM.Merchant -> LatLong -> LatLong -> m Meters
@@ -97,16 +97,16 @@ cancelRideHandler ServiceHandle {..} requestorId rideId req = withLogTag ("rideI
       authPerson <-
         findById personId
           >>= fromMaybeM (PersonNotFound personId.getId)
+      driver <- findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
       case authPerson.role of
         DP.ADMIN -> do
-          driver <- findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
           unless (authPerson.merchantId == driver.merchantId) $ throwError (RideDoesNotExist rideId.getId)
           logTagInfo "admin -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
           buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride
         DP.DRIVER -> do
           unless (authPerson.id == driverId) $ throwError NotAnExecutor
           logTagInfo "driver -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
-          mbLocation <- findDriverLocationId driverId
+          mbLocation <- findDriverLocationId driver.merchantId driverId
           booking <- findBookingByIdInReplica ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
           disToPickup <- forM mbLocation $ \location -> do
             pickUpDistance booking.providerId (getCoordinates location) (getCoordinates booking.fromLocation)
