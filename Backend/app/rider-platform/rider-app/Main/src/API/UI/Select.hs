@@ -52,7 +52,7 @@ type API =
   "estimate"
     :> ( TokenAuth
            :> Capture "estimateId" (Id DEstimate.Estimate)
-           :> "select2" -- TODO will replace "select" once 100% rolled out
+           :> "select2"
            :> ReqBody '[JSON] DSelect.DSelectReq
            :> Post '[JSON] APISuccess
            :<|> TokenAuth
