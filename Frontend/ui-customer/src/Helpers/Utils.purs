@@ -39,7 +39,7 @@ import Data.String as DS
 import Data.Traversable (traverse)
 import Debug (spy)
 import Effect (Effect)
-import Effect.Aff (error, killFiber, launchAff, launchAff_)
+import Effect.Aff (error, killFiber, launchAff, launchAff_, makeAff, nonCanceler)
 import Effect.Aff.Compat (EffectFn1, EffectFnAff, fromEffectFnAff, runEffectFn1, runEffectFn2, runEffectFn3)
 import Effect.Class (liftEffect)
 import Effect.Console (logShow)
@@ -51,13 +51,22 @@ import Foreign.Generic (decode)
 import Juspay.OTP.Reader (initiateSMSRetriever)
 import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
-import Prelude (class Eq, class Ord, class Show, Unit, bind, compare, comparing, discard, identity, map, not, pure, show, unit, void, ($), (*), (+), (-), (/), (/=), (<), (<#>), (<*>), (<<<), (<=), (<>), (=<<), (==), (>), (>>>), (||))
+import Prelude (class Eq, class Ord, class Show, Unit, bind, compare, comparing, discard, identity, map, not, pure, show, unit, void, ($), (*), (+), (-), (/), (/=), (<), (<#>), (<*>), (<<<), (<=), (<>), (=<<), (==), (>), (>>>), (||), (*>))
 import Presto.Core.Flow (Flow, doAff)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..))
-import Services.API (Prediction)
+import Services.API (Prediction, PaymentPagePayload)
 import Types.App (GlobalState)
 import Data.Lens ((^.))
+
+import Presto.Core.Types.Language.Flow (Flow, doAff)
+import Foreign(Foreign, unsafeToForeign)
+import Data.Newtype(class Newtype)
+import Foreign.Class (class Decode, class Encode)
+import Presto.Core.Utils.Encoding (defaultEncode,defaultDecode)
+import Types.App (FlowBT)
+import Control.Monad.Except.Trans (lift)
+import Debug (spy)
 
 -- shuffle' :: forall a. Array a -> Effect (Array a)
 -- shuffle' array = do
@@ -383,3 +392,55 @@ getCommonAssetStoreLink lazy = case (getMerchant lazy) of
   JATRISAATHI -> "https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/"
   YATRI -> "https://assets.juspay.in/beckn/yatri/yatricommon/images/"
   UNKNOWN -> "https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/"
+
+
+type AffSuccess s = (s -> Effect Unit)
+type MicroAPPInvokeSignature = String -> (AffSuccess String) ->  Effect Unit
+
+
+foreign import startPP1 :: MicroAPPInvokeSignature
+
+startPP'' :: forall a. PaymentPagePayload -> Flow a String
+startPP'' payload = do
+  response <- doAff $ makeAff (\cb -> (startPP1 (encodeJSON payload) (Right >>> cb) ) *> pure nonCanceler)
+  pure $ response
+
+
+startPP :: PaymentPagePayload -> FlowBT String String
+startPP payload = do
+  action <- lift $ lift $ startPP'' payload
+  pure action
+
+-- newtype PaymentPagePayload =
+--     PaymentPagePayload
+--     { requestId :: String
+--     , service :: String
+--     , payload :: PayPayload
+--     }
+
+-- newtype PayPayload = PayPayload {
+--   clientId :: String,
+--   amount :: String ,
+--   merchantId :: String ,
+--   clientAuthToken:: String,
+--   clientAuthTokenExpiry:: String,
+--   environment:: String,
+--   lastName:: String,
+--   action :: String,
+--   customerId:: String,
+--   currency :: String,
+--   firstName :: String,
+--   customerPhone:: String,
+--   customerEmail :: String,
+--   orderId :: String,
+--   description :: String
+-- }
+    
+-- derive instance genericPaymentPagePayload :: Generic PaymentPagePayload _
+-- derive instance newtypePaymentPagePayload :: Newtype PaymentPagePayload _
+-- instance encodePaymentPagePayload :: Encode PaymentPagePayload where encode = defaultEncode
+
+    
+-- derive instance genericPayPayload :: Generic PayPayload _
+-- derive instance newtypePayPayload :: Newtype PayPayload _
+-- instance encodePayPayload :: Encode PayPayload where encode = defaultEncode

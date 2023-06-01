@@ -1866,3 +1866,70 @@ instance standardEncodeSosStatus :: StandardEncode SosStatus where standardEncod
 instance showSosStatus :: Show SosStatus where show = genericShow
 instance decodeSosStatus:: Decode SosStatus where decode = defaultDecode
 instance encodeSosStatus :: Encode SosStatus where encode = defaultEncode
+
+
+-------------------------------------------------- Payment Page API Types --------------------------------------------
+
+newtype PaymentPagePayload =
+    PaymentPagePayload
+    { requestId :: String
+    , service :: String
+    , payload :: PayPayload
+    }
+
+newtype PayPayload = PayPayload {
+  clientId :: String,
+  amount :: String ,
+  merchantId :: String ,
+  clientAuthToken:: String,
+  clientAuthTokenExpiry:: String,
+  environment:: String,
+  lastName:: String,
+  action :: String,
+  customerId:: String,
+  currency :: String,
+  firstName :: String,
+  customerPhone:: String,
+  customerEmail :: String,
+  orderId :: String,
+  description :: String
+}
+    
+
+newtype PPPayloadResp = PPPayloadResp {
+    signature :: String
+  , signaturePayload :: String
+  , orderDetails :: String
+}
+
+-- Payload SEND TO BECKN SERVER TO GENERATE PP Payload
+newtype PPPayloadReq = PPPayloadReq {
+    amount :: String
+    }
+
+instance makeFetchSignatureReq :: RestEndpoint PPPayloadReq PaymentPagePayload where
+  makeRequest reqBody headers = defaultMakeRequest POST (EP.getPayload) headers reqBody
+  decodeResponse = decodeJSON
+  encodeRequest req = standardEncode req
+
+
+derive instance genericPayPayload :: Generic PayPayload _
+derive instance newtypePayPayload :: Newtype PayPayload _
+instance standardEncodePayPayload :: StandardEncode PayPayload where standardEncode (PayPayload id) = standardEncode id
+instance showPayPayload :: Show PayPayload where show = genericShow
+instance decodePayPayload :: Decode PayPayload where decode = defaultDecode
+instance encodePayPayload :: Encode PayPayload where encode = defaultEncode
+
+derive instance genericPaymentPagePayload :: Generic PaymentPagePayload _
+derive instance newtypePaymentPagePayload :: Newtype PaymentPagePayload _
+instance standardEncodePaymentPagePayload :: StandardEncode PaymentPagePayload where standardEncode (PaymentPagePayload id) = standardEncode id
+instance showPaymentPagePayload :: Show PaymentPagePayload where show = genericShow
+instance decodePaymentPagePayload :: Decode PaymentPagePayload where decode = defaultDecode
+instance encodePaymentPagePayload :: Encode PaymentPagePayload where encode = defaultEncode
+
+derive instance genericFetchSignatureReq :: Generic PPPayloadReq _
+derive instance newtypeFetchSignatureReq :: Newtype PPPayloadReq _
+instance standardEncodeFetchSignatureReq :: StandardEncode PPPayloadReq where standardEncode (PPPayloadReq reqBody) = standardEncode reqBody
+instance showFetchSignatureReq :: Show PPPayloadReq where show = genericShow
+instance decodeFetchSignatureReq :: Decode PPPayloadReq where decode = defaultDecode
+instance encodeFetchSignatureReq :: Encode PPPayloadReq where encode = defaultEncode

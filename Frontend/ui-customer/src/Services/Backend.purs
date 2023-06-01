@@ -830,3 +830,50 @@ makeSosStatus :: String -> SosStatus
 makeSosStatus sosStatus = SosStatus {
      "status" : sosStatus
 }
+
+-- Response for the session API call
+
+makePayloadFromState :: HomeScreenState -> PPPayloadReq
+makePayloadFromState state =
+    PPPayloadReq $ {
+      amount : "1"
+    }
+
+
+getPaymentPagePayload :: PPPayloadReq -> FlowBT String PaymentPagePayload
+getPaymentPagePayload req = do
+    headers <- getHeaders' ""
+    pure payload1
+
+    {-
+    UNCOMMENT FOR HITTING SERVER TO GET PAYLOAD
+    withAPIResultBT EP.getPayload (\x → x) errorHandler (lift $ lift $ callAPI headers req)
+    where
+    errorHandler (errorPayload) =  do
+            BackT $ pure GoBack
+    -}
+
+
+payload2 = PayPayload {
+        clientId:"nammayatri",
+        amount:"1.18",
+        merchantId:"nammayatri",
+        clientAuthToken:"tkn_69fb25ccd0884d069d38ed076d247b4b",
+        clientAuthTokenExpiry:"2023-05-31T08:04:57Z",
+        environment:"prod",
+        lastName:"wick",
+        action:"paymentPage",
+        customerId:"9876543210",
+        currency:"INR",
+        firstName:"john",
+        customerPhone:"9876543201",
+        customerEmail:"test@mail.com",
+        orderId:"test-994360745699",
+        description:"Order Description"
+      }
+      
+payload1 = PaymentPagePayload {
+    requestId:"ca5b57f622aa470b9667fe678702de08",
+    service:"in.juspay.hyperpay",
+    payload : payload2
+    }
