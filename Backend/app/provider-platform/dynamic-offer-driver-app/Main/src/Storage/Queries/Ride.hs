@@ -47,13 +47,13 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Beam.Ride.Table as BeamR
-import qualified Storage.Beam.RideDetails as BeamRD
-import qualified Storage.Beam.RiderDetails as BeamRRD
+-- import qualified Storage.Beam.RideDetails as BeamRD
+-- import qualified Storage.Beam.RiderDetails as BeamRRD
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.DriverInformation as QDI
 import Storage.Queries.FullEntityBuilders (buildFullBooking)
-import qualified Storage.Queries.RideDetails as QRD
-import qualified Storage.Queries.RiderDetails as QRRD
+-- import qualified Storage.Queries.RideDetails as QRD
+-- import qualified Storage.Queries.RiderDetails as QRRD
 import Storage.Tabular.Booking as Booking
 import Storage.Tabular.DriverInformation as DriverInfo
 import Storage.Tabular.Ride as Ride

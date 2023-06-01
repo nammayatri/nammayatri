@@ -22,15 +22,15 @@ import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Database.Beam as B
-import Database.Beam.Backend
+-- import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-  )
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
--- import qualified Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Domain
+-- import Database.Beam.Postgres
+--   ( Postgres,
+--   )
+-- import Database.PostgreSQL.Simple.FromField (FromField, fromField)
+-- -- import qualified Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Domain
 
-import qualified Domain.Types.FareParameters as Domain
+-- import qualified Domain.Types.FareParameters as Domain
 import qualified Domain.Types.FarePolicy
 import qualified Domain.Types.FarePolicy as Domain
 import qualified Domain.Types.Vehicle.Variant as Vehicle
@@ -38,7 +38,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
+-- import Lib.Utils
 import Lib.UtilsTH
 import Sequelize as Se
 import Storage.Tabular.Vehicle ()

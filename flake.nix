@@ -7,7 +7,7 @@
 
     # Backend inputs
     shared-kernel.url = "github:nammayatri/shared-kernel/updatedEulerHS";
-    #shared-kernel.url = "/home/juspay/Documents/code/shared-kernel/";
+    #shared-kernel.url = "/Users/apoorv.agarwal/Documents/projects/shared-kernel";
     shared-kernel.inputs.nixpkgs.follows = "nixpkgs";
     beckn-gateway.url = "github:nammayatri/beckn-gateway/updatedEulerHS";
     beckn-gateway.inputs.shared-kernel.follows = "shared-kernel";

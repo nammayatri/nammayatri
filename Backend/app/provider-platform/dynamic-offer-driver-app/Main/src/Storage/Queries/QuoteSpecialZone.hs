@@ -24,7 +24,6 @@ import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
 import Sequelize
@@ -32,9 +31,6 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.QuoteSpecialZone as BeamQSZ
 import Storage.Queries.FareParameters as BeamQFP
 import qualified Storage.Queries.FareParameters as SQFP
-import qualified Storage.Tabular.FareParameters as Fare
-import qualified Storage.Tabular.FareParameters.Instances as FareParamsT
-import Storage.Tabular.QuoteSpecialZone
 
 -- create :: QuoteSpecialZone -> SqlDB ()
 -- create quote = Esq.runTransaction $

@@ -29,7 +29,7 @@ import Domain.Types.Common
 import Domain.Types.FarePolicy
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Vehicle as Vehicle
-import qualified EulerHS.Language as L
+-- import qualified EulerHS.Language as L
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis

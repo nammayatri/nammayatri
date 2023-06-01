@@ -28,28 +28,12 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.DriverLicense as BeamDL
 import Storage.Tabular.Person ()
 
--- create :: DriverLicense -> SqlDB ()
--- create = Esq.create
-
 create :: L.MonadFlow m => DriverLicense -> m (MeshResult ())
 create driverLicense = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainDriverLicenseToBeam driverLicense)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
-
--- upsert :: DriverLicense -> SqlDB ()
--- upsert a@DriverLicense {..} =
---   Esq.upsert
---     a
---     [ DriverLicenseDriverDob =. val driverDob,
---       DriverLicenseDriverName =. val driverName,
---       DriverLicenseLicenseExpiry =. val licenseExpiry,
---       DriverLicenseClassOfVehicles =. val (PostgresList classOfVehicles),
---       DriverLicenseVerificationStatus =. val verificationStatus,
---       DriverLicenseFailedRules =. val (PostgresList failedRules),
---       DriverLicenseUpdatedAt =. val updatedAt
---     ]
 
 upsert :: L.MonadFlow m => DriverLicense -> m ()
 upsert a@DriverLicense {..} = do
@@ -75,28 +59,12 @@ upsert a@DriverLicense {..} = do
         else void $ KV.createWoReturingKVConnector dbCOnf' Mesh.meshConfig (transformDomainDriverLicenseToBeam a)
     Nothing -> pure ()
 
--- findById ::
---   Transactionable m =>
---   Id DriverLicense ->
---   m (Maybe DriverLicense)
--- findById = Esq.findById
-
 findById :: L.MonadFlow m => Id DriverLicense -> m (Maybe DriverLicense)
 findById (Id dlId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamDriverLicenseToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDL.id $ Se.Eq dlId]
     Nothing -> pure Nothing
-
--- findByDriverId ::
---   Transactionable m =>
---   Id Person ->
---   m (Maybe DriverLicense)
--- findByDriverId driverId = do
---   findOne $ do
---     dl <- from $ table @DriverLicenseT
---     where_ $ dl ^. DriverLicenseDriverId ==. val (toKey driverId)
---     return dl
 
 findByDriverId :: L.MonadFlow m => Id Person -> m (Maybe DriverLicense)
 findByDriverId (Id personId) = do
@@ -105,17 +73,6 @@ findByDriverId (Id personId) = do
     Just dbCOnf' -> either (pure Nothing) (transformBeamDriverLicenseToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDL.driverId $ Se.Eq personId]
     Nothing -> pure Nothing
 
--- findByDLNumber ::
---   (Transactionable m, EncFlow m r) =>
---   Text ->
---   m (Maybe DriverLicense)
--- findByDLNumber dlNumber = do
---   dlNumberHash <- getDbHash dlNumber
---   findOne $ do
---     dl <- from $ table @DriverLicenseT
---     where_ $ dl ^. DriverLicenseLicenseNumberHash ==. val dlNumberHash
---     return dl
-
 findByDLNumber :: (L.MonadFlow m, EncFlow m r) => Text -> m (Maybe DriverLicense)
 findByDLNumber dlNumber = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
@@ -123,12 +80,6 @@ findByDLNumber dlNumber = do
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamDriverLicenseToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDL.licenseNumberHash $ Se.Eq dlNumberHash]
     Nothing -> pure Nothing
-
--- deleteByDriverId :: Id Person -> SqlDB ()
--- deleteByDriverId driverId =
---   Esq.delete $ do
---     dl <- from $ table @DriverLicenseT
---     where_ $ dl ^. DriverLicenseDriverId ==. val (toKey driverId)
 
 deleteByDriverId :: L.MonadFlow m => Id Person -> m ()
 deleteByDriverId (Id driverId) = do

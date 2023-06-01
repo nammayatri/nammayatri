@@ -27,23 +27,6 @@ import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.Booking.BookingLocation as BeamBL
 
--- updateAddress :: Id BookingLocation -> LocationAddress -> SqlDB ()
--- updateAddress blId LocationAddress {..} = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ BookingLocationStreet =. val street,
---         BookingLocationCity =. val city,
---         BookingLocationState =. val state,
---         BookingLocationCountry =. val country,
---         BookingLocationBuilding =. val building,
---         BookingLocationAreaCode =. val areaCode,
---         BookingLocationArea =. val area,
---         BookingLocationUpdatedAt =. val now
---       ]
---     where_ $ tbl ^. BookingLocationTId ==. val (toKey blId)
-
 create :: L.MonadFlow m => BookingLocation -> m (MeshResult ())
 create bl = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg

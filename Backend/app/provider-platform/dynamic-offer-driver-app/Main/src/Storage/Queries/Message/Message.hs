@@ -75,27 +75,6 @@ findById (Id messageId) = do
         Left _ -> pure Nothing
     Nothing -> pure Nothing
 
--- findAllWithLimitOffset ::
---   Transactionable m =>
---   Maybe Int ->
---   Maybe Int ->
---   Id Merchant ->
---   m [RawMessage]
--- findAllWithLimitOffset mbLimit mbOffset merchantId = do
---   findAll $ do
---     message <-
---       from $
---         table @MessageT
---     where_ $
---       message ^. MessageMerchantId ==. val (toKey merchantId)
---     orderBy [desc $ message ^. MessageCreatedAt]
---     limit limitVal
---     offset offsetVal
---     return message
---   where
---     limitVal = min (maybe 10 fromIntegral mbLimit) 10
---     offsetVal = maybe 0 fromIntegral mbOffset
-
 findAllWithLimitOffset :: L.MonadFlow m => Maybe Int -> Maybe Int -> Id Merchant -> m [RawMessage]
 findAllWithLimitOffset mbLimit mbOffset merchantIdParam = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
@@ -161,7 +140,6 @@ updateMessageLikeCount messageId value = do
 transformBeamMessageToDomain :: L.MonadFlow m => BeamM.Message -> m Message
 transformBeamMessageToDomain BeamM.MessageT {..} = do
   mT' <- MT.findByMessageId (Id id)
-  -- let mT = MessageTranslation <*> (language <$> mT') <$> (title <$> mT') <$> (description <$> mT') <$> (shortDescription <$> mT') <$> (label <$> mT') <$> (createdAt <$> mT')
   let mT = (\(DomainMT.MessageTranslation _ language_ title_ label_ description_ shortDescription_ createdAt_) -> Domain.Types.Message.Message.MessageTranslation language_ title_ description_ shortDescription_ label_ createdAt_) <$> mT'
   pure
     Message

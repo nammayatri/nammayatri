@@ -17,7 +17,6 @@ module Storage.Queries.DriverOnboarding.Status where
 import Data.Coerce
 import qualified Database.Beam as B
 import Database.Beam.Postgres
-import qualified Database.Beam.Query as B
 import Domain.Types.DriverInformation
 import Domain.Types.DriverOnboarding.DriverLicense
 import Domain.Types.DriverOnboarding.DriverRCAssociation
@@ -27,13 +26,11 @@ import Domain.Types.DriverOnboarding.VehicleRegistrationCertificate (VehicleRegi
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person
 import qualified EulerHS.Extra.EulerDB as Extra
-import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
-import qualified Lib.Mesh as Mesh
 import Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.Image as BeamI
 import Storage.Tabular.DriverInformation
@@ -77,7 +74,7 @@ imagesAggTableCTEbyDoctype' imageType' = do
                 B.filter_' (\(BeamI.ImageT {..}) -> imageType B.==?. B.val_ imageType') $
                   B.all_ (meshModelTableEntity @BeamI.ImageT @Postgres @(Se.DatabaseWith BeamI.ImageT))
       pure (either (const Nothing) Prelude.id resp)
-    Left _ -> pure (Nothing)
+    Left _ -> pure Nothing
 
 baseDriverDocumentsInfoQuery ::
   From (SqlExpr (Value PersonTId), SqlExpr (Value Int)) ->
