@@ -358,8 +358,8 @@ logOutPopUpModelConfig state =
           , backgroundClickable = true
           , customerTipAvailable = true
           , dismissPopup = true
-          , customerTipArray = [(getString NO_TIP), "₹10 🙂", "₹15 😄", "₹20 🤩"]
-          , customerTipArrayWithValues = [0,10, 15, 20]
+          , customerTipArray = [(getString NO_TIP), "₹10 🙂", "₹20 😄", "₹30 🤩"]
+          , customerTipArrayWithValues = [0,10, 20, 30]
           , primaryText {
               text =  if(isLocalStageOn ST.QuoteList)then (getString TRY_AGAIN_WITH_A_TIP) else (getString SEARCH_AGAIN_WITH_A_TIP)
             , fontSize = FontSize.a_22
@@ -378,7 +378,7 @@ logOutPopUpModelConfig state =
               , padding = (Padding 16 12 16 12)
             },
           option1 {
-            text = if (state.props.customerTip.tipForDriver == 0) then ( if(isLocalStageOn ST.QuoteList) then (getString TRY_AGAIN_WITHOUT_TIP)else (getString SEARCH_AGAIN_WITHOUT_A_TIP)) else ((if (isLocalStageOn ST.QuoteList) then (getString TRY_AGAIN_WITH)else(getString SEARCH_AGAIN_WITH) ) <> " + ₹"<> (fromMaybe "" (["0", "10", "15", "20"] DA.!! state.props.customerTip.tipActiveIndex))) <>" "<>(getString TIP)
+            text = if (state.props.customerTip.tipForDriver == 0) then ( if(isLocalStageOn ST.QuoteList) then (getString TRY_AGAIN_WITHOUT_TIP)else (getString SEARCH_AGAIN_WITHOUT_A_TIP)) else ((if (isLocalStageOn ST.QuoteList) then (getString TRY_AGAIN_WITH)else(getString SEARCH_AGAIN_WITH) ) <> " + ₹"<> (fromMaybe "" (["0", "10", "20", "30"] DA.!! state.props.customerTip.tipActiveIndex))) <>" "<>(getString TIP)
           , fontSize = FontSize.a_16 
           , width = MATCH_PARENT
           , color = Color.yellow900
@@ -584,6 +584,7 @@ chatViewConfig state = let
         , appType = "Customer" 
         }
       , messages = state.data.messages
+      , messagesSize = state.data.messagesSize
       , sendMessageActive = state.props.sendMessageActive
       , distance = metersToKm state.data.driverInfoCardState.distance state
       , suggestionsList = if (metersToKm state.data.driverInfoCardState.distance state) == (getString AT_PICKUP) then pickupSuggestions ""  else initialSuggestions ""

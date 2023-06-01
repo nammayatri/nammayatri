@@ -18,9 +18,10 @@ module Flow where
 import Log
 
 import Control.Monad.Except.Trans (lift)
+import Common.Types.App (Version(..))
 import Data.Array (concat, filter, cons, elemIndex, head, length, mapWithIndex, null, snoc, sortBy, (!!), any)
 import Data.Either (Either(..))
-import Data.Int (round, toNumber, ceil)
+import Data.Int (round, toNumber, ceil,fromString)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.Number (fromString) as Number
@@ -30,13 +31,13 @@ import Debug (spy)
 import Effect (Effect)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
-import Engineering.Helpers.Commons (liftFlow, getNewIDWithTag, bundleVersion, os, getExpiryTime)
+import Engineering.Helpers.Commons (liftFlow, getNewIDWithTag, bundleVersion, os, getExpiryTime,stringToVersion)
 import Foreign.Class (class Encode, encode, decode)
 import Helpers.Utils (getCurrentUTC, hideSplash, getTime, convertUTCtoISC, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions)
 import JBridge (drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, loaderText, openNavigation, removeAllPolylines, removeMarker, showMarker, startLocationPollingAPI, stopLocationPollingAPI, toast, toggleLoader, generateSessionId, stopChatListenerService, hideKeyboardOnNavigation, metaLogEvent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, discard, pure, unit, unless, void, when, ($), (==), (/=), (&&), (||), (/), when, (+), show, (>), not, (<), (*), (-), (<=), (<$>))
+import Prelude (Unit, bind, discard, pure, unit, unless, negate,void, when, ($), (==), (/=), (&&), (||), (/), when, (+), show, (>), not, (<), (*), (-), (<=), (<$>))
 import Presto.Core.Types.Language.Flow (delay, setLogField)
 import Presto.Core.Types.Language.Flow (doAff, fork)
 import Resource.Constants (decodeAddress)
@@ -50,7 +51,7 @@ import Screens.Types (ActiveRide, AllocationData, HomeScreenStage(..), Location,
 import Screens.Types as ST
 import Services.APITypes (AlternateNumberResendOTPResp(..), Category(Category), DriverActiveInactiveResp(..), DriverAlternateNumberOtpResp(..), DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GetCategoriesRes(GetCategoriesRes), GetDriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), LogOutRes(..), OfferRideResp(..), Option(Option), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes), ReferDriverResp(..), RemoveAlternateNumberRequest(..), RemoveAlternateNumberResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), TriggerOTPResp(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyTokenResp(..))
 import Services.Accessor (_lat, _lon, _id)
-import Services.Backend (makeTriggerOTPReq, makeGetRouteReq, walkCoordinates, walkCoordinate, makeVerifyOTPReq, makeUpdateDriverInfoReq, makeOfferRideReq, makeDriverRCReq, makeDriverDLReq, makeValidateImageReq, makeReferDriverReq, dummyVehicleObject, driverRegistrationStatusBT, makeUpdateDriverLangChange, makeValidateAlternateNumberRequest, makeResendAlternateNumberOtpRequest, makeVerifyAlternateNumberOtpRequest, makeLinkReferralCodeReq, makeUpdateBookingOptions)
+import Services.Backend (makeTriggerOTPReq, makeGetRouteReq, walkCoordinates, walkCoordinate, makeVerifyOTPReq, makeUpdateDriverInfoReq, makeOfferRideReq, makeDriverRCReq, makeDriverDLReq, makeValidateImageReq, makeReferDriverReq, dummyVehicleObject, driverRegistrationStatusBT, makeUpdateDriverLangChange,makeUpdateDriverVersion, makeValidateAlternateNumberRequest, makeResendAlternateNumberOtpRequest, makeVerifyAlternateNumberOtpRequest, makeLinkReferralCodeReq, makeUpdateBookingOptions)
 import Services.Backend as Remote
 import Services.Config (getBaseUrl)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore)
@@ -178,7 +179,6 @@ driverRegistrationStatus :: Boolean
 driverRegistrationStatus = do
   (getValueToLocalStore TEST_FLOW_FOR_REGISTRATOION) == "COMPLETED"
 
-
 getDriverInfoFlow :: FlowBT String Unit
 getDriverInfoFlow = do
   _ <- pure $ delay $ Milliseconds 1.0
@@ -188,6 +188,9 @@ getDriverInfoFlow = do
     Right getDriverInfoResp -> do
       let (GetDriverInfoResp getDriverInfoResp) = getDriverInfoResp
       modifyScreenState $ ApplicationStatusScreenType (\applicationStatusScreen -> applicationStatusScreen {props{alternateNumberAdded = isJust getDriverInfoResp.alternateNumber}})
+      let dbClientVersion = getDriverInfoResp.clientVersion
+      let dbBundleVersion = getDriverInfoResp.bundleVersion
+      updateDriverVersion dbClientVersion dbBundleVersion
       if getDriverInfoResp.enabled then do
         if(getValueToLocalStore IS_DRIVER_ENABLED == "false") then do
           _ <- pure $ firebaseLogEvent "ny_driver_enabled"
@@ -258,6 +261,23 @@ onBoardingFlow = do
       uploadDrivingLicenseFlow
       else if (resp.rcVerificationStatus == "NO_DOC_AVAILABLE") then addVehicleDetailsflow
         else applicationSubmittedFlow "StatusScreen"
+
+updateDriverVersion :: Maybe Version -> Maybe Version -> FlowBT String Unit
+updateDriverVersion dbClientVersion dbBundleVersion = do
+  if (isJust dbClientVersion && isJust dbBundleVersion) then do
+    let versionName = getValueToLocalStore VERSION_NAME
+        bundle = getValueToLocalStore BUNDLE_VERSION
+        Version clientVersion = stringToVersion versionName
+        Version bundleVersion = stringToVersion bundle
+        Version bundleVersion' = fromMaybe (Version bundleVersion) dbBundleVersion
+        Version clientVersion' = fromMaybe (Version clientVersion) dbClientVersion
+    if any (_ == -1) [clientVersion.minor, clientVersion.major, clientVersion.maintenance,bundleVersion.minor,bundleVersion.major,bundleVersion.maintenance] then pure unit      
+      else if ( bundleVersion' /= bundleVersion || clientVersion' /= clientVersion)  then do 
+      (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT (makeUpdateDriverVersion (Version clientVersion) (Version bundleVersion))
+      pure unit    
+    else pure unit 
+  else pure unit
+        
 
 uploadDrivingLicenseFlow :: FlowBT String Unit
 uploadDrivingLicenseFlow = do
@@ -1135,8 +1155,7 @@ homeScreenFlow = do
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props {enterOtpModal = false, showDottedRoute = true}, data{ route = [], activeRide{status = INPROGRESS}}})
           void $ lift $ lift $ toggleLoader false
           _ <- updateStage $ HomeScreenStage RideStarted
-          lift $ lift $ void $ delay $ Milliseconds 2000.0
-          void $ pure $ openNavigation 0.0 0.0 updatedState.data.activeRide.dest_lat updatedState.data.activeRide.dest_lon
+          _ <- pure $ setValueToLocalStore TRIGGER_MAPS "true"
           currentRideFlow
         Left errorPayload -> do
           let errResp = errorPayload.response

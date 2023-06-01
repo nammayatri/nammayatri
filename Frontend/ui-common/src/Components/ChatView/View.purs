@@ -17,7 +17,7 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(
 import Engineering.Helpers.Commons (getNewIDWithTag, screenWidth, os)
 import Animation (fadeInWithDelay, translateInXBackwardAnim, translateInXBackwardFadeAnimWithDelay, translateInXForwardAnim, translateInXForwardFadeAnimWithDelay)
 import PrestoDOM.Animation as PrestoAnim
-import Prelude (Unit, bind, const, pure, unit, ($), (&&), (-), (/), (<>), (==), (>), (*), (||), not, ($), negate)
+import Prelude (Unit, bind, const, pure, unit, show, ($), (&&), (-), (/), (<>), (==), (>), (*), (/=), (||), not, ($), negate)
 import PrestoDOM.Properties (alpha, cornerRadii, lineHeight, minWidth)
 import Font.Size as FontSize
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -35,7 +35,7 @@ import PrestoDOM.Events (afterRender)
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 view push config = 
   linearLayout
-  [ height if config.spanParent then MATCH_PARENT else (V 404)
+  [ height if config.spanParent then MATCH_PARENT else (V 410)
   , width MATCH_PARENT
   , orientation VERTICAL
   , alignParentBottom "true,-1"
@@ -200,7 +200,7 @@ chatView config push =
          , width MATCH_PARENT
          , orientation VERTICAL 
          , padding (PaddingHorizontal 16 16)
-         ](mapWithIndex (\index item -> chatComponent config push item (index == (length config.messages - 1)) (config.userConfig.appType)) (config.messages))
+         ](mapWithIndex (\index item -> chatComponent config push item (if (config.messagesSize /= "-1") then (show index == config.messagesSize ) else (index == (length config.messages - 1))) (config.userConfig.appType)) (config.messages))
          , if (length config.suggestionsList) > 0 then suggestionsView config push else dummyTextView
         ]
       ]
@@ -286,14 +286,14 @@ emptyChatView config push =
   
 suggestionsView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 suggestionsView config push =
-    PrestoAnim.animationSet [ fadeInWithDelay config.suggestionDelay true ]
+    PrestoAnim.animationSet [ fadeInWithDelay config.suggestionDelay if config.spanParent then true else false ]
     $ linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , gravity RIGHT
-    , margin (Margin 0 0 16 20)
+    , margin if config.spanParent then (Margin 0 0 16 20) else (Margin 0 4 16 0)
     , onAnimationEnd push (const EnableSuggestions)
-    , alpha 0.0
+    , alpha if config.spanParent then 0.0 else 1.0
     , visibility if (length config.suggestionsList == 0 ) then GONE else VISIBLE
     ][ linearLayout
       [ height WRAP_CONTENT
@@ -339,14 +339,14 @@ chatComponent :: forall w. Config -> (Action -> Effect Unit) -> ChatComponent ->
 chatComponent state push config isLastItem userType = 
   PrestoAnim.animationSet 
     [ if state.userConfig.appType == config.sentBy then 
-        translateInXForwardFadeAnimWithDelay config.delay true
+        translateInXForwardFadeAnimWithDelay config.delay if state.spanParent || isLastItem then true else false
       else
-        translateInXBackwardFadeAnimWithDelay config.delay true
+        translateInXBackwardFadeAnimWithDelay config.delay if state.spanParent || isLastItem then true else false
     ]
   $ linearLayout
   [height WRAP_CONTENT
   , width MATCH_PARENT
-  , alpha 0.0
+  , alpha if state.spanParent || isLastItem then 0.0 else 1.0
   , margin (getChatConfig state config.sentBy isLastItem (STR.length config.timeStamp > 0)).margin
   , gravity (getChatConfig state config.sentBy isLastItem (STR.length config.timeStamp > 0)).gravity
   , orientation VERTICAL
@@ -451,14 +451,14 @@ getChatConfig :: Config -> String -> Boolean -> Boolean -> {margin :: Margin, gr
 getChatConfig state sentBy isLastItem hasTimeStamp = 
   if state.userConfig.appType == sentBy then 
     { 
-      margin : (Margin ((screenWidth unit)/4) 6 0 (if (os == "IOS" && isLastItem) && (hasTimeStamp) then 24 else 0)),
+      margin : (Margin ((screenWidth unit)/4) 24 0 (if state.spanParent then 24 else if hasTimeStamp && isLastItem then 12 else 0)),
       gravity : RIGHT,
       background : state.blue800,
       cornerRadii : (Corners 16.0 true true false true),
       textColor :  state.white900
     }
   else 
-    { margin : (Margin 0 6 ((screenWidth unit)/4) (if (os == "IOS" && isLastItem) && (hasTimeStamp) then 24 else 0)),
+    { margin : (Margin 0 24 ((screenWidth unit)/4) (if state.spanParent then 24 else if hasTimeStamp && isLastItem then 12 else 0)),
       gravity :  LEFT,
       background : state.grey900,
       cornerRadii : (Corners 16.0 true true true false ),

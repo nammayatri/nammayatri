@@ -589,6 +589,7 @@ type HomeScreenData =  {
   route :: Array Route,
   cancelRideConfirmationPopUp :: CancelRidePopUpData,
   messages :: Array ChatView.ChatComponent,
+  messagesSize :: String,
   suggestionsList :: Array String,
   messageToBeSent :: String,
   driverAlternateMobile :: Maybe String
@@ -666,6 +667,7 @@ type HomeScreenProps =  {
   chatcallbackInitiated :: Boolean,
   sendMessageActive :: Boolean,
   unReadMessages :: Boolean,
+  openChatScreen :: Boolean,
   updatedArrivalInChat :: Boolean,
   driverStatusSet :: DriverStatus,
   silentPopUpView :: Boolean,
@@ -1103,7 +1105,9 @@ type NotificationCardPropState = {
   previewImage :: PropValue,
   previewImageTitle :: PropValue,
   imageVisibility :: PropValue,
-  messageId :: PropValue
+  messageId :: PropValue,
+  imageWithUrl :: PropValue,
+  imageWithUrlVisibility :: PropValue
 }
 
 type NotificationDetailModelState = {

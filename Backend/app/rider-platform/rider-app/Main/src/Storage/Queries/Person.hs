@@ -192,8 +192,10 @@ updatePersonalInfo ::
   Maybe Text ->
   Maybe Language ->
   Maybe Gender ->
+  Maybe Version ->
+  Maybe Version ->
   SqlDB ()
-updatePersonalInfo personId mbFirstName mbMiddleName mbLastName mbReferralCode mbEncEmail mbDeviceToken mbNotificationToken mbLanguage mbGender = do
+updatePersonalInfo personId mbFirstName mbMiddleName mbLastName mbReferralCode mbEncEmail mbDeviceToken mbNotificationToken mbLanguage mbGender mbCVersion mbBVersion = do
   now <- getCurrentTime
   let mbEmailEncrypted = mbEncEmail <&> unEncrypted . (.encrypted)
   let mbEmailHash = mbEncEmail <&> (.hash)
@@ -212,6 +214,8 @@ updatePersonalInfo personId mbFirstName mbMiddleName mbLastName mbReferralCode m
           <> updateWhenJust_ (\_ -> PersonReferredAt =. val (Just now)) mbReferralCode
           <> updateWhenJust_ (\x -> PersonLanguage =. val (Just x)) mbLanguage
           <> updateWhenJust_ (\x -> PersonGender =. val x) mbGender
+          <> updateWhenJust_ (\x -> PersonClientVersion =. val (versionToText <$> Just x)) mbCVersion
+          <> updateWhenJust_ (\x -> PersonBundleVersion =. val (versionToText <$> Just x)) mbBVersion
       )
     where_ $ tbl ^. PersonId ==. val (getId personId)
 

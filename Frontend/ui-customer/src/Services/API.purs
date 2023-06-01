@@ -17,6 +17,7 @@ module Services.API where
 
 import Control.Alt ((<|>))
 import Control.Monad.Except (runExcept)
+import Common.Types.App (Version(..))
 import Data.Either (Either(..))
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
@@ -1193,8 +1194,9 @@ newtype GetProfileRes = GetProfileRes
   , referralCode :: Maybe String
   , language :: Maybe String
   , gender :: Maybe String
+  , bundleVersion :: Maybe Version
+  , clientVersion :: Maybe Version
   }
-
 
 
 newtype UpdateProfileReq = UpdateProfileReq
@@ -1207,7 +1209,10 @@ newtype UpdateProfileReq = UpdateProfileReq
   , referralCode :: Maybe String
   , language :: Maybe String
   , gender :: Maybe String
+  , bundleVersion :: Maybe Version
+  , clientVersion :: Maybe Version
   }
+
 
 newtype UpdateProfileRes = UpdateProfileRes
   {

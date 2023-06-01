@@ -58,6 +58,7 @@ import Domain.Types.DriverInformation (DriverInformation)
 import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.DriverQuote as DDrQuote
 import qualified Domain.Types.DriverReferral as DR
+import Domain.Types.DriverStats
 import qualified Domain.Types.FareParameters as Fare
 import Domain.Types.FarePolicy (DriverExtraFeeBounds (..))
 import qualified Domain.Types.FarePolicy as DFarePolicy
@@ -92,6 +93,7 @@ import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Types.Predicate
 import Kernel.Types.SlidingWindowLimiter
+import Kernel.Types.Version
 import Kernel.Utils.Common
 import Kernel.Utils.GenericPretty (PrettyShow)
 import qualified Kernel.Utils.Predicates as P
@@ -135,6 +137,7 @@ data DriverInformationRes = DriverInformationRes
     firstName :: Text,
     middleName :: Maybe Text,
     lastName :: Maybe Text,
+    numberOfRides :: Int,
     mobileNumber :: Maybe Text,
     linkedVehicle :: Maybe VehicleAPIEntity,
     rating :: Maybe Int,
@@ -150,7 +153,9 @@ data DriverInformationRes = DriverInformationRes
     canDowngradeToSedan :: Bool,
     canDowngradeToHatchback :: Bool,
     canDowngradeToTaxi :: Bool,
-    mode :: Maybe DriverInfo.DriverMode
+    mode :: Maybe DriverInfo.DriverMode,
+    clientVersion :: Maybe Version,
+    bundleVersion :: Maybe Version
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -177,7 +182,9 @@ data DriverEntityRes = DriverEntityRes
     canDowngradeToSedan :: Bool,
     canDowngradeToHatchback :: Bool,
     canDowngradeToTaxi :: Bool,
-    mode :: Maybe DriverInfo.DriverMode
+    mode :: Maybe DriverInfo.DriverMode,
+    clientVersion :: Maybe Version,
+    bundleVersion :: Maybe Version
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -246,7 +253,9 @@ data UpdateDriverReq = UpdateDriverReq
     language :: Maybe Maps.Language,
     canDowngradeToSedan :: Maybe Bool,
     canDowngradeToHatchback :: Maybe Bool,
-    canDowngradeToTaxi :: Maybe Bool
+    canDowngradeToTaxi :: Maybe Bool,
+    clientVersion :: Maybe Version,
+    bundleVersion :: Maybe Version
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -419,6 +428,8 @@ getInformation (personId, merchantId) = do
   let driverId = cast personId
   -- person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  -- driverStats <- runInReplica $ QDriverStats.findById driverId >>= fromMaybeM DriverInfoNotFound
+  driverStats <- QDriverStats.findById driverId >>= fromMaybeM DriverInfoNotFound
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   driverReferralCode <- fmap (.referralCode) <$> QDR.findById (cast driverId)
   driverEntity <- buildDriverEntityRes (person, driverInfo)
@@ -426,7 +437,7 @@ getInformation (personId, merchantId) = do
   organization <-
     CQM.findById merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  pure $ makeDriverInformationRes driverEntity organization driverReferralCode
+  pure $ makeDriverInformationRes driverEntity organization driverReferralCode driverStats
 
 setActivity :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant) -> Bool -> Maybe DriverInfo.DriverMode -> m APISuccess.APISuccess
 setActivity (personId, _) isActive mode = do
@@ -477,7 +488,9 @@ buildDriverEntityRes (person, driverInfo) = do
         canDowngradeToSedan = driverInfo.canDowngradeToSedan,
         canDowngradeToHatchback = driverInfo.canDowngradeToHatchback,
         canDowngradeToTaxi = driverInfo.canDowngradeToTaxi,
-        mode = driverInfo.mode
+        mode = driverInfo.mode,
+        clientVersion = person.clientVersion,
+        bundleVersion = person.bundleVersion
       }
 
 changeDriverEnableState ::
@@ -544,7 +557,9 @@ updateDriver (personId, _) req = do
                middleName = req.middleName <|> person.middleName,
                lastName = req.lastName <|> person.lastName,
                deviceToken = req.deviceToken <|> person.deviceToken,
-               language = req.language <|> person.language
+               language = req.language <|> person.language,
+               clientVersion = req.clientVersion <|> person.clientVersion,
+               bundleVersion = req.bundleVersion <|> person.bundleVersion
               }
 
   mVehicle <- QVehicle.findById personId
@@ -560,13 +575,14 @@ updateDriver (personId, _) req = do
   _ <- QPerson.updatePersonRec personId updPerson
   _ <- QDriverInformation.updateDowngradingOptions person.id updDriverInfo.canDowngradeToSedan updDriverInfo.canDowngradeToHatchback updDriverInfo.canDowngradeToTaxi
   QDriverInformation.clearDriverInfoCache (cast personId)
+  driverStats <- runInReplica $ QDriverStats.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
   driverEntity <- buildDriverEntityRes (updPerson, driverInfo)
   driverReferralCode <- fmap (.referralCode) <$> QDR.findById personId
   let merchantId = person.merchantId
   org <-
     CQM.findById merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  return $ makeDriverInformationRes driverEntity org driverReferralCode
+  return $ makeDriverInformationRes driverEntity org driverReferralCode driverStats
   where
     checkIfCanDowngrade mVehicle = do
       case mVehicle of
@@ -669,11 +685,12 @@ buildVehicle req personId merchantId = do
         SV.updatedAt = now
       }
 
-makeDriverInformationRes :: DriverEntityRes -> DM.Merchant -> Maybe (Id DR.DriverReferral) -> DriverInformationRes
-makeDriverInformationRes DriverEntityRes {..} org referralCode =
+makeDriverInformationRes :: DriverEntityRes -> DM.Merchant -> Maybe (Id DR.DriverReferral) -> DriverStats -> DriverInformationRes
+makeDriverInformationRes DriverEntityRes {..} org referralCode driverStats =
   DriverInformationRes
     { organization = DM.makeMerchantAPIEntity org,
       referralCode = referralCode <&> (.getId),
+      numberOfRides = driverStats.totalRides,
       ..
     }
 

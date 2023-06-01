@@ -486,6 +486,7 @@ type HomeScreenStateData =
   , showPreferences :: Boolean
   , previousCurrentLocations:: PreviousCurrentLocations
   , messages :: Array ChatComponent
+  , messagesSize :: String
   , suggestionsList :: Array String
   , messageToBeSent :: String
   , bannerViewState :: BannerViewState
@@ -553,6 +554,7 @@ type HomeScreenStateProps =
   , isReferred :: Boolean
   , storeCurrentLocs :: Boolean
   , unReadMessages :: Boolean
+  , openChatScreen :: Boolean
   , emergencyHelpModelState :: EmergencyHelpModelState
   , showLiveDashboard :: Boolean
   , isbanner :: Boolean

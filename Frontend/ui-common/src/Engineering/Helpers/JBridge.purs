@@ -65,7 +65,7 @@ foreign import locateOnMap :: Boolean -> Number -> Number -> String-> Array Loca
 foreign import exitLocateOnMap :: String -> Unit
 foreign import shareTextMessage :: String -> String -> Unit
 foreign import shareImageMessage :: String -> String -> Unit
-
+foreign import showInAppNotification :: String -> String -> String -> String -> String -> String -> String -> String -> Int -> Effect Unit
 foreign import enableMyLocation :: Boolean -> Unit
 foreign import isLocationPermissionEnabled :: Unit -> Effect Boolean
 foreign import isMicrophonePermissionEnabled :: Unit -> Effect Boolean
@@ -92,6 +92,7 @@ foreign import uploadFile :: Unit -> Effect Unit
 foreign import previewImage :: String -> Effect Unit
 foreign import storeCallBackImageUpload :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action) -> Effect Unit
 foreign import renderBase64Image :: String -> String -> Boolean -> Effect Unit
+foreign import setScaleType :: String -> String -> String -> Effect Unit 
 foreign import copyToClipboard :: String -> Unit
 foreign import drawRoute :: Locations -> String -> String -> Boolean -> String -> String -> Int -> String -> String -> String -> Effect Unit
 foreign import isCoordOnPath :: Locations -> Number -> Number -> Int -> Effect IsLocationOnPath
@@ -147,7 +148,8 @@ foreign import stopLocationPollingAPI :: Effect Unit
 foreign import startLocationPollingAPI :: Effect Unit
 foreign import startChatListenerService :: Effect Unit
 foreign import stopChatListenerService :: Effect Unit
-foreign import storeCallBackMessageUpdated :: forall action. (action -> Effect Unit) -> String -> String  -> (String -> String -> String -> action) -> Effect Unit
+foreign import storeCallBackMessageUpdated :: forall action. (action -> Effect Unit) -> String -> String  -> (String -> String -> String -> String -> action) -> Effect Unit
+foreign import storeCallBackOpenChatScreen :: forall action. (action -> Effect Unit) -> (action) -> Effect Unit
 foreign import sendMessage :: String -> Unit
 foreign import scrollToBottom :: String -> Effect Unit
 foreign import metaLogEvent :: String -> Unit

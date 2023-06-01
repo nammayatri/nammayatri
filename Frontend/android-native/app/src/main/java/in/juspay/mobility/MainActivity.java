@@ -122,6 +122,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import in.juspay.mobility.utils.ConnectionStateMonitor;
+import in.juspay.mobility.utils.InAppNotification;
 import in.juspay.mobility.utils.LocationUpdateService;
 import in.juspay.mobility.utils.MediaPlayerView;
 import in.juspay.mobility.utils.MyFirebaseMessagingService;
@@ -175,6 +176,7 @@ public class MainActivity extends AppCompatActivity {
     private NetworkBroadcastReceiver networkBroadcastReceiver;
     private boolean isHideSplashEventCalled = false;
     private boolean isSystemAnimEnabled = true;
+    private static InAppNotification inAppNotification ;
     public static MainActivity getInstance() {
         return instance;
     }
@@ -423,6 +425,9 @@ public class MainActivity extends AppCompatActivity {
         });
         updateConfigURL();
         initApp();
+
+        // getting the main Layout as a Container to add the notification .
+        inAppNotification = new InAppNotification(this);
 
        NotificationUtils.createNotificationChannel(this, NotificationUtils.CHANNEL_ID);
        NotificationUtils.createNotificationChannel(this, NotificationUtils.FLOATING_NOTIFICATION);
@@ -691,7 +696,16 @@ public class MainActivity extends AppCompatActivity {
                     hyperServices = null;
                     initApp();
                 } else if(jsonObject.optString("event").equals("in_app_notification")){
-                    showInAppNotifiation(jsonObject.optString("title") , jsonObject.optString("message"));
+                    String title = jsonObject.optString("title");
+                    String message = jsonObject.optString("message");
+                    String channelId = jsonObject.optString("channelId");
+                    String action1Text = jsonObject.optString("action1Text") ;
+                    String action2Text = jsonObject.optString("action2Text");
+                    String action1Image = jsonObject.optString("action1Image") ;
+                    String action2Image = jsonObject.optString("action2Image");
+                    String onTapAction = jsonObject.optString("onTapAction");
+                    int durationInMilliSeconds = Integer.parseInt(jsonObject.optString("durationInMilliSeconds"));
+                    showInAppNotification(title, message, onTapAction, action1Text,action2Text , action1Image,action2Image , channelId , durationInMilliSeconds, context);
                 }
             }
         });
@@ -800,6 +814,9 @@ public class MainActivity extends AppCompatActivity {
             String data = pendingIntent.getExtras().getString("NOTIFICATION_DATA");
             try {
                 JSONObject jsonData = new JSONObject(data);
+                if(jsonData.has("notification_type") && jsonData.getString("notification_type").equals("CHAT_MESSAGE")){
+                    hyperServices.process(new JSONObject().put("service", "in.juspay." + getResources().getString(R.string.service)).put("requestId", UUID.randomUUID()).put("payload", new JSONObject().put("action", "OpenChatScreen").put("notification_type", "CHAT_MESSAGE")));
+                }
                 if (jsonData.has("notification_type") && jsonData.has("entity_ids")) {
                     String id = jsonData.getString("entity_ids");
                     String type = jsonData.getString("notification_type");
@@ -1223,68 +1240,19 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public  void showInAppNotifiation(String title , String desc){
-        // getting the main Layout as a Container to add the notification .
-        ConstraintLayout mainLayout = (ConstraintLayout) findViewById(R.id.main_layout);
-
-        // inflating the app_notification as view to append in main layout .
-        View notification= getLayoutInflater().inflate(R.layout.app_notification,null);
-        notification.setLayoutParams(new ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.WRAP_CONTENT,ConstraintLayout.LayoutParams.WRAP_CONTENT));
-        notification.bringToFront();
-
-
-        // adding animation to the notification
-        notification.startAnimation(AnimationUtils.loadAnimation(this , R.anim.top_to_bottom));
-
-        // setting the title and description to the notification
-        TextView Title = notification.findViewById(R.id.title);
-        TextView Desc = notification.findViewById(R.id.desc);
-        Title.setText(title);
-        Desc.setText(desc);
-
-        // adding the evenListener to the cross button
-        notification.findViewById(R.id.cross).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                notification.startAnimation(AnimationUtils.loadAnimation(getApplicationContext() , R.anim.bottom_to_top));
-                mainLayout.removeView(notification);
-            }
-        });
-
-        // ring the notification bell
+    public static void showInAppNotification(String title, String message, String onTapAction, String action1Text, String action2Text, String action1Image, String action2Image, String channelId, int durationInMilliSeconds, Context context) {
         try {
-            Uri notify = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-            Ringtone r = RingtoneManager.getRingtone(getApplicationContext(), notify);
-            r.play();
+            Handler handler = new Handler(context.getMainLooper());
+            handler.postDelayed(() -> {
+                try {
+                    inAppNotification.generateNotification(title, message, onTapAction, action1Text, action2Text, action1Image, action2Image, channelId, durationInMilliSeconds);
+                } catch (JSONException e) {
+                    Log.e(TAG, "Error in In App Notification Handler " + e);
+                }
+            }, 0);
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.e(TAG, "Error in In App Notification " + e);
         }
-
-        // adding the notification to the main layout
-        mainLayout.addView(notification);
-
-
-        // adding a timer task to automatically remove the notification after 5 second
-        Timer timer;
-        TimerTask timerTask;
-        Handler timerHandler = new Handler();
-        timer = new Timer();
-        timerTask = new TimerTask() {
-            public void run() {
-                timerHandler.post(new Runnable() {
-                    public void run(){
-                        notification.startAnimation(AnimationUtils.loadAnimation(getApplicationContext() , R.anim.bottom_to_top));
-                        mainLayout.removeView(notification);
-                        if(timer != null){
-                            timer.cancel();
-                            timer.purge();
-                        }
-                    }
-                });
-            }
-        };
-
-        timer.schedule(timerTask, 5000);
     }
 
     private void checkRideRequest(){

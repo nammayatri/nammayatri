@@ -58,7 +58,7 @@ import Engineering.Helpers.Commons (countDown, flowRunner, getNewIDWithTag, lift
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (Merchant(..), decodeErrorMessage, fetchAndUpdateCurrentLocation, getCurrentLocationMarker, getLocationName, getMerchant, getNewTrackingId, getPreviousVersion, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, storeOnResumeCallback, toString, waitingCountdownTimer)
-import JBridge (addMarker, animateCamera, drawRoute, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, toast, updateRoute, getExtendedPath, generateSessionId, initialWebViewSetUp, stopChatListenerService, startChatListenerService, storeCallBackMessageUpdated, isMockLocation)
+import JBridge (addMarker, animateCamera, drawRoute, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, toast, updateRoute, getExtendedPath, generateSessionId, initialWebViewSetUp, stopChatListenerService, startChatListenerService, storeCallBackMessageUpdated, isMockLocation, storeCallBackOpenChatScreen)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -75,11 +75,14 @@ import Screens.AddNewAddressScreen.Controller as AddNewAddress
 import Screens.HomeScreen.Controller (Action(..), ScreenOutput, checkCurrentLocation, checkSavedLocations, dummySelectedQuotes, eval, flowWithoutOffers, getCurrentCustomerLocation)
 import Screens.HomeScreen.Transformer (transformSavedLocations)
 import Screens.Types (HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CallType(..))
-import Services.API (GetDriverLocationResp(..), GetQuotesRes(..), GetRouteResp(..), LatLong(..), RideAPIEntity(..), RideBookingRes(..), Route(..), SavedLocationsListRes(..), SearchReqLocationAPIEntity(..), SelectListRes(..), Snapped(..))
+import Services.API (GetDriverLocationResp(..), GetQuotesRes(..), GetRouteResp(..), LatLong(..), RideAPIEntity(..), RideBookingRes(..), Route(..), SavedLocationsListRes(..), SearchReqLocationAPIEntity(..), SelectListRes(..), Snapped(..), GetPlaceNameResp(..), PlaceName(..))
 import Services.Backend (getDriverLocation, getQuotes, getRoute, makeGetRouteReq, rideBooking, selectList, driverTracking, rideTracking, walkCoordinates, walkCoordinate, getSavedLocationList)
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore, updateLocalStage)
 import Styles.Colors as Color
 import Types.App (GlobalState)
+import Services.Backend as Remote
+import Screens.HomeScreen.ScreenData as HomeScreenData
+import Control.Monad.Trans.Class (lift)
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -141,6 +144,7 @@ screen initialState =
                 else pure unit
                 if(not initialState.props.chatcallbackInitiated) then do
                   _ <- storeCallBackMessageUpdated push initialState.data.driverInfoCardState.bppRideId "Customer" UpdateMessages
+                  _ <- storeCallBackOpenChatScreen push OpenChatScreen
                   _ <- startChatListenerService
                   push InitializeChat
                   pure unit
@@ -184,7 +188,19 @@ screen initialState =
                         if (checkCurrentLocation initialState.props.sourceLat initialState.props.sourceLong initialState.data.previousCurrentLocations.pastCurrentLocations  && initialState.props.storeCurrentLocs )|| checkSavedLocations initialState.props.sourceLat initialState.props.sourceLong initialState.data.savedLocations
                           then push $ UpdateSourceFromPastLocations
                         else do
-                          getLocationName push initialState.props.sourceLat initialState.props.sourceLong "Current Location" (if src == "Current Location" then UpdateSourceName else UpdateSource)
+                          _ <- launchAff $ flowRunner $ runExceptT $ runBackT $ do
+                            (GetPlaceNameResp locationName) <- Remote.placeNameBT (Remote.makePlaceNameReq initialState.props.sourceLat initialState.props.sourceLong (case (getValueToLocalStore LANGUAGE_KEY) of
+                                                                                                                            "HI_IN" -> "HINDI"
+                                                                                                                            "KN_IN" -> "KANNADA"
+                                                                                                                            "BN_IN" -> "BENGALI"
+                                                                                                                            "ML_IN" -> "MALAYALAM"
+                                                                                                                            _      -> "ENGLISH"))
+
+                            let (PlaceName address) = (fromMaybe HomeScreenData.dummyLocationName (locationName !! 0))
+
+                            if src == "Current Location" then lift $ lift $ doAff do liftEffect $ push $ UpdateSourceName initialState.props.sourceLat initialState.props.sourceLong address.formattedAddress
+                              else lift $ lift $ doAff do liftEffect $ push $ UpdateSource initialState.props.sourceLat initialState.props.sourceLong address.formattedAddress
+                          pure unit
                         pure (pure unit)
                     else  pure (pure unit)
             else
@@ -229,7 +245,7 @@ view push state =
             (  \action -> do
                 _ <- push action
                 _ <- showMap (getNewIDWithTag "CustomerHomeScreenMap") isCurrentLocationEnabled "satellite" (17.0) push MAPREADY
-                pure unit
+                if(state.props.openChatScreen == true && state.props.currentStage == RideAccepted) then push OpenChatScreen else pure unit
             )
             (const MapReadyAction)
         ]
@@ -1585,7 +1601,7 @@ rideTrackingView push state =
                 , width MATCH_PARENT
                 , background Color.transparent
                 , sheetState COLLAPSED
-                , peakHeight if state.props.currentStage == RideAccepted then getHeightFromPercent 59 else getHeightFromPercent 46
+                , peakHeight if state.props.currentStage == RideAccepted then getHeightFromPercent 64 else getHeightFromPercent 51
                 , visibility VISIBLE
                 , halfExpandedRatio 0.75
                 ]

@@ -66,6 +66,7 @@ initData = {
     , rideDuration : "--"
     , showPreferences : false
     , messages : []
+    , messagesSize : ""
     , suggestionsList : []
     , messageToBeSent : ""
     , bannerViewState : {
@@ -154,6 +155,7 @@ initData = {
     , isReferred : false
     , storeCurrentLocs : false
     , unReadMessages : false
+    , openChatScreen : false
     , emergencyHelpModelState : emergencyHelpModalData
     , showLiveDashboard : false
     , isbanner : true

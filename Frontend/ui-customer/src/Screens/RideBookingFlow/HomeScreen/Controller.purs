@@ -62,7 +62,7 @@ import Effect (Effect)
 import Effect.Aff (launchAff)
 import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os)
 import Helpers.Utils (Merchant(..), addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getExpiryTime, getLocationName, parseNewContacts, saveRecents, setText', updateInputString, withinTimeRange, getMerchant, convertUTCtoISC, getCurrentUTC)
-import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage)
+import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent)
@@ -78,10 +78,15 @@ import Screens.HomeScreen.ScreenData (dummyAddress, dummyQuoteAPIEntity)
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getSpecialZoneQuotes, transformContactList)
 import Screens.SuccessScreen.Handler as UI
 import Screens.Types (HomeScreenState, Location, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CardType(..), RatingCard, CurrentLocationDetailsWithDistance(..), CurrentLocationDetails, LocationItemType(..), RateCardType(..), CallType(..))
-import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..))
+import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
 import Storage (KeyStore(..), isLocalStageOn, updateLocalStage, getValueToLocalStore, getValueToLocalStoreEff, setValueToLocalStore, getValueToLocalNativeStore, setValueToLocalNativeStore)
+-- import Data.Array ((!!))
+import Control.Monad.Trans.Class (lift)
+import Presto.Core.Types.Language.Flow (doAff)
+import Effect.Class (liftEffect)
+import Screens.HomeScreen.ScreenData as HomeScreenData
 
 instance showAction :: Show Action where
   show _ = ""
@@ -561,9 +566,10 @@ data Action = NoAction
             | UpdateSourceFromPastLocations
             | UpdateLocAndLatLong String String
             | UpdateSavedLoc (Array LocationListItemState)
-            | UpdateMessages String String String
+            | UpdateMessages String String String String
             | InitializeChat
             | RemoveChat
+            | OpenChatScreen
             | ChatViewActionController ChatView.Action
             | HideLiveDashboard String
             | LiveDashboardAction
@@ -603,17 +609,22 @@ eval OnResumeCallback state =
 
 eval (UpdateSavedLoc savedLoc) state = continue state{data{savedLocations = savedLoc}}
 
-eval (UpdateMessages message sender timeStamp) state = do
+eval (UpdateMessages message sender timeStamp size) state = do
   let newMessage = [(ChatView.makeChatComponent message sender timeStamp)]
   let messages = state.data.messages <> [((ChatView.makeChatComponent (getMessage message) sender timeStamp))]
   case (last newMessage) of
     Just value -> if value.sentBy == "Customer"
-                    then updateMessagesWithCmd state {data {messages = messages}}
+                    then updateMessagesWithCmd state {data {messages = messages, messagesSize = size}}
                   else do
                     let readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
                     let unReadMessages = (if readMessages == 0 then true else (if (readMessages < (length messages) && state.props.currentStage /= ChatWithDriver) then true else false))
-                    updateMessagesWithCmd state {data {messages = messages}, props {unReadMessages = unReadMessages}}
+                    updateMessagesWithCmd state {data {messages = messages, messagesSize = size}, props {unReadMessages = unReadMessages}}
     Nothing -> continue state
+
+eval (OpenChatScreen) state = do
+  continueWithCmd state{props{openChatScreen = false}} [do
+    pure $ (DriverInfoCardActionController (DriverInfoCardController.MessageDriver))
+  ]
 
 eval (ChatViewActionController (ChatView.TextChanged value)) state = do
   let sendMessageActive = if (STR.length (STR.trim value)) >= 1 then
@@ -1562,7 +1573,18 @@ showPersonMarker state marker location = do
 
 getCurrentCustomerLocation :: forall t44 t51. Applicative t51 => (Action -> Effect Unit) -> t44 -> Effect (t51 Unit)
 getCurrentCustomerLocation push state = do
-  _ <- getLocationName push 9.9 9.9 "Current Location" UpdateSource
+  location <- getCurrentLatLong
+  _ <- launchAff $ flowRunner $ runExceptT $ runBackT $ do
+    (GetPlaceNameResp locationName) <- Remote.placeNameBT (Remote.makePlaceNameReq location.lat location.lng (case (getValueToLocalStore LANGUAGE_KEY) of
+                                                                                                                            "HI_IN" -> "HINDI"
+                                                                                                                            "KN_IN" -> "KANNADA"
+                                                                                                                            "BN_IN" -> "BENGALI"
+                                                                                                                            "ML_IN" -> "MALAYALAM"
+                                                                                                                            _      -> "ENGLISH"))
+    let (PlaceName address) = (fromMaybe HomeScreenData.dummyLocationName (locationName !! 0))
+
+    lift $ lift $ doAff do liftEffect $ push $ UpdateSource location.lat location.lng address.formattedAddress
+    pure unit
   pure (pure unit)
 
 dummyEstimateEntity :: EstimateAPIEntity

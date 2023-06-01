@@ -135,7 +135,8 @@ instance loggableAction :: Loggable Action where
     RecenterButtonAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "recenter_btn"
     HelpAndSupportScreen -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "help_and_support_btn"
     NoAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "no_action"
-    UpdateMessages msg sender timeStamp -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_messages"
+    UpdateMessages msg sender timeStamp size -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_messages"
+    OpenChatScreen -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "open_chat"
     InitializeChat -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "initialize_chat"
     RemoveChat -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "remove_chat"
     UpdateInChat -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_in_chat"
@@ -162,6 +163,7 @@ instance loggableAction :: Loggable Action where
       -- PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "popup_dismissed"
     ClickAddAlternateButton -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "add-alternate_btn"
     ZoneOtpAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "zone_otp"
+    TriggerMaps -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "trigger_maps"
 
 
 
@@ -210,8 +212,9 @@ data Action = NoAction
             | RideActiveAction RidesInfo
             | RecenterButtonAction
             | ChatViewActionController ChatView.Action
-            | UpdateMessages String String String
+            | UpdateMessages String String String String
             | InitializeChat
+            | OpenChatScreen
             | RemoveChat
             | UpdateInChat
             | HelpAndSupportScreen
@@ -220,6 +223,7 @@ data Action = NoAction
             | GoToProfile
             | ClickAddAlternateButton
             | ZoneOtpAction
+            | TriggerMaps
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
@@ -240,7 +244,11 @@ eval BackPressed state = do
                 _ <- pure $ minimizeApp ""
                 continue state
 
-
+eval TriggerMaps state = continueWithCmd state[ do
+  _ <- pure $ openNavigation 0.0 0.0 state.data.activeRide.dest_lat state.data.activeRide.dest_lon
+  _ <- pure $ setValueToLocalStore TRIGGER_MAPS "false"
+  pure NoAction
+  ]
 -- eval (ChangeStatus status) state = -- TODO:: DEPRECATE AFTER 19th April
 --   if (getValueToLocalStore IS_DEMOMODE_ENABLED == "true") then
 --         continueWithCmd state [ do
@@ -308,6 +316,7 @@ eval (RideActionModalAction (RideActionModal.StartRide)) state = do
 eval (RideActionModalAction (RideActionModal.EndRide)) state = do 
   continue $ (state {props {endRidePopUp = true}, data {route = []}})
 eval (RideActionModalAction (RideActionModal.OnNavigate)) state = do
+  _ <- pure $ setValueToLocalStore TRIGGER_MAPS "false"
   let lat = if (state.props.currentStage == ST.RideAccepted || state.props.currentStage == ST.ChatWithCustomer) then state.data.activeRide.src_lat else state.data.activeRide.dest_lat
       lon = if (state.props.currentStage == ST.RideAccepted || state.props.currentStage == ST.ChatWithCustomer) then state.data.activeRide.src_lon else state.data.activeRide.dest_lon
   void $ pure $ openNavigation 0.0 0.0 lat lon
@@ -318,6 +327,11 @@ eval (RideActionModalAction (RideActionModal.CallCustomer)) state = continueWith
   _ <- pure $ showDialer (if (take 1 state.data.activeRide.exoPhone) == "0" then state.data.activeRide.exoPhone else "0" <> state.data.activeRide.exoPhone)
   _ <- (firebaseLogEventWithTwoParams "call_customer" "trip_id" (state.data.activeRide.id) "user_id" (getValueToLocalStore DRIVER_ID))
   pure NoAction
+  ]
+
+eval (OpenChatScreen) state = do
+  continueWithCmd state{props{openChatScreen = false}} [do
+    pure $ (RideActionModalAction (RideActionModal.MessageCustomer))
   ]
 
 eval (RideActionModalAction (RideActionModal.MessageCustomer)) state = do
@@ -420,17 +434,17 @@ eval RemoveChat state = do
     pure $ NoAction
   ]
 
-eval (UpdateMessages message sender timeStamp) state = do
+eval (UpdateMessages message sender timeStamp size) state = do
   let newMessage = [(ChatView.makeChatComponent message sender timeStamp)]
   let messages = state.data.messages <> [((ChatView.makeChatComponent (getMessage message) sender timeStamp))]
   case (Array.last newMessage) of
     Just value -> do
                   if (value.sentBy == "Driver") then
-                    updateMessagesWithCmd state { data { messages = messages}}
+                    updateMessagesWithCmd state { data { messages = messages, messagesSize = size}}
                   else do
                     let readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
                     let unReadMessages = (if (readMessages == 0 && state.props.currentStage /= ST.ChatWithCustomer) then true else (if (readMessages < (Array.length messages) && state.props.currentStage /= ST.ChatWithCustomer) then true else false))
-                    updateMessagesWithCmd state { data {messages = messages}, props {unReadMessages = unReadMessages}}
+                    updateMessagesWithCmd state { data {messages = messages, messagesSize = size}, props {unReadMessages = unReadMessages}}
     Nothing -> continue state
 
 eval (ChatViewActionController (ChatView.TextChanged value)) state = do

@@ -164,12 +164,12 @@ incrementTotalRidesAndTotalDist (Id driverId') rideDist = do
         [Se.Is BeamDS.driverId (Se.Eq driverId')]
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-incrementTotalRidesAssigned :: Id Driver -> SqlDB ()
-incrementTotalRidesAssigned driverId = do
+incrementTotalRidesAssigned :: Id Driver -> Int -> SqlDB ()
+incrementTotalRidesAssigned driverId number = do
   Esq.update $ \tbl -> do
     set
       tbl
-      [ DriverStatsTotalRidesAssigned =. just (Esq.coalesceDefault [tbl ^. DriverStatsTotalRidesAssigned] (val 0) +. val 1)
+      [ DriverStatsTotalRidesAssigned =. just (Esq.coalesceDefault [tbl ^. DriverStatsTotalRidesAssigned] (val 0) +. val number)
       ]
     where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
 

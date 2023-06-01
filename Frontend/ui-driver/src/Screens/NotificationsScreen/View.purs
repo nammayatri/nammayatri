@@ -263,7 +263,7 @@ headerLayout state push =
         , textView
             $ [ width WRAP_CONTENT
               , height WRAP_CONTENT
-              , text $ getString ALL_ALERTS
+              , text $ getString ALL_MESSAGES
               , textSize FontSize.a_18
               , margin $ MarginLeft 20
               , weight 1.0
@@ -335,4 +335,6 @@ shimmerData i =
   , previewImageTitle: toPropValue "Preview Image"
   , imageVisibility : toPropValue "gone"
   , messageId: toPropValue ""
+  , imageWithUrl : toPropValue ""
+  , imageWithUrlVisibility : toPropValue ""
   }
