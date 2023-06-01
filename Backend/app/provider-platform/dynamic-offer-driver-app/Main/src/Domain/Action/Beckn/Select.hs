@@ -73,8 +73,8 @@ handler merchant sReq estimate = do
           driverSelectedFare = Nothing,
           customerExtraFee = sReq.customerExtraFee
         }
-  searchTry <- buildSearchTry merchantId searchReq.id estimate sReq.customerExtraFee sReq searchReq.estimatedDistance searchReq.estimatedDuration
   let estimateFare = fareSum fareParams
+  searchTry <- createNewSearchTry searchReq
   logDebug $
     "search try id=" <> show searchTry.id
       <> "; estimated distance = "
@@ -83,8 +83,6 @@ handler merchant sReq estimate = do
       <> show estimateFare
   driverPoolConfig <- getDriverPoolConfig merchantId searchReq.estimatedDistance
   let inTime = fromIntegral driverPoolConfig.singleBatchProcessTime
-  Esq.runTransaction $ do
-    QST.create searchTry
 
   let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance searchReq.estimatedDistance <$> farePolicy.driverExtraFeeBounds
   res <- sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant estimateFare driverExtraFeeBounds
@@ -102,6 +100,23 @@ handler merchant sReq estimate = do
               driverExtraFeeBounds = driverExtraFeeBounds
             }
     _ -> return ()
+  where
+    createNewSearchTry :: DSR.SearchRequest -> Flow DST.SearchTry
+    createNewSearchTry searchReq = do
+      mbLastSearchTry <- QST.findLastByRequestId searchReq.id
+      case mbLastSearchTry of
+        Nothing -> do
+          searchTry <- buildSearchTry merchant.id searchReq.id estimate sReq searchReq.estimatedDistance searchReq.estimatedDuration 0 DST.INITIAL
+          Esq.runTransaction $ do
+            QST.create searchTry
+          return searchTry
+        Just oldSearchTry -> do
+          let searchRepeatType = if oldSearchTry.status == DST.ACTIVE then DST.CANCELLED_AND_RETRIED else DST.RETRIED
+          searchTry <- buildSearchTry merchant.id searchReq.id estimate sReq searchReq.estimatedDistance searchReq.estimatedDuration (oldSearchTry.searchRepeatCounter + 1) searchRepeatType
+          Esq.runTransaction $ do
+            when (oldSearchTry.status == DST.ACTIVE) $ QST.updateStatus oldSearchTry.id DST.CANCELLED
+            QST.create searchTry
+          return searchTry
 
 buildSearchTry ::
   ( MonadTime m,
@@ -112,16 +127,18 @@ buildSearchTry ::
   Id DM.Merchant ->
   Id DSR.SearchRequest ->
   DEst.Estimate ->
-  Maybe Money ->
   DSelectReq ->
   Meters ->
   Seconds ->
+  Int ->
+  DST.SearchRepeatType ->
   m DST.SearchTry
-buildSearchTry merchantId searchReqId estimate customerExtraFee sReq distance duration = do
+buildSearchTry merchantId searchReqId estimate sReq distance duration searchRepeatCounter searchRepeatType = do
   now <- getCurrentTime
   id_ <- Id <$> generateGUID
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
   let validTill_ = searchRequestExpirationSeconds `addUTCTime` now
+      customerExtraFee = sReq.customerExtraFee
   pure
     DST.SearchTry
       { id = id_,
@@ -132,7 +149,6 @@ buildSearchTry merchantId searchReqId estimate customerExtraFee sReq distance du
         validTill = validTill_,
         vehicleVariant = estimate.vehicleVariant,
         status = DST.ACTIVE,
-        searchRepeatCounter = 0,
         createdAt = now,
         updatedAt = now,
         ..

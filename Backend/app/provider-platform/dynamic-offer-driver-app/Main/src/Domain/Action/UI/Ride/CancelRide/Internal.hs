@@ -101,7 +101,7 @@ cancelRideImpl rideId bookingCReason = do
     let isRepeatSearch =
           searchTry.searchRepeatCounter < searchRepeatLimit
             && bookingCReason.source == SBCR.ByDriver
-            && maybe True (`isNightShift` now) farePolicy.nightShiftBounds
+            && maybe True (\nsBounds -> isJust booking.fareParams.nightShiftCharge == isNightShift nsBounds now) farePolicy.nightShiftBounds
     if isRepeatSearch
       then do
         driverPoolCfg <- getDriverPoolConfig merchant.id searchReq.estimatedDistance
@@ -216,6 +216,7 @@ repeatSearch merchant farePolicy searchReq searchTry booking ride cancellationSo
             validTill = validTill_,
             status = DST.ACTIVE,
             searchRepeatCounter = searchRepeatCounter + 1,
+            searchRepeatType = DST.REALLOCATION,
             updatedAt = now,
             createdAt = now,
             ..

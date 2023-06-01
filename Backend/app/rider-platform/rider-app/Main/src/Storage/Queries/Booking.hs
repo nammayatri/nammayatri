@@ -192,16 +192,32 @@ findAssignedByRiderId personId = Esq.buildDType $ do
 findAssignedByEstimateId :: Transactionable m => Id Estimate -> m (Maybe Booking)
 findAssignedByEstimateId estimateId = Esq.buildDType $ do
   fullBookingsT <- Esq.findOne' $ do
-    (booking :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab :& _ :& driverOffer) <-
+    (booking :& _ :& driverOffer :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab) <-
       from $
-        fullBookingTable
+        table @BookingT
           `innerJoin` table @Quote.QuoteT
-            `Esq.on` ( \(rb :& _ :& _ :& _ :& _ :& quote) ->
+            `Esq.on` ( \(rb :& quote) ->
                          rb ^. RB.BookingQuoteId ==. Esq.just (quote ^. Quote.QuoteTId)
                      )
           `innerJoin` table @DrOff.DriverOfferT
-            `Esq.on` ( \(_ :& _ :& _ :& _ :& _ :& quote :& driverOffer) ->
+            `Esq.on` ( \(_ :& quote :& driverOffer) ->
                          quote ^. Quote.QuoteDriverOfferId ==. Esq.just (driverOffer ^. DrOff.DriverOfferTId)
+                     )
+          `innerJoin` table @Loc.BookingLocationT
+            `Esq.on` ( \(s :& _ :& _ :& loc1) ->
+                         s ^. RB.BookingFromLocationId ==. loc1 ^. Loc.BookingLocationTId
+                     )
+          `leftJoin` table @Loc.BookingLocationT
+            `Esq.on` ( \(s :& _ :& _ :& _ :& mbLoc2) ->
+                         s ^. RB.BookingToLocationId ==. mbLoc2 ?. Loc.BookingLocationTId
+                     )
+          `leftJoin` table @TripTerms.TripTermsT
+            `Esq.on` ( \(s :& _ :& _ :& _ :& _ :& mbTripTerms) ->
+                         s ^. RB.BookingTripTermsId ==. mbTripTerms ?. TripTerms.TripTermsTId
+                     )
+          `leftJoin` table @RentalSlab.RentalSlabT
+            `Esq.on` ( \(s :& _ :& _ :& _ :& _ :& _ :& mbRentalSlab) ->
+                         s ^. RB.BookingRentalSlabId ==. mbRentalSlab ?. RentalSlab.RentalSlabTId
                      )
     where_ $
       driverOffer ^. DrOff.DriverOfferEstimateId ==. val (toKey estimateId)
