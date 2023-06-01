@@ -50,6 +50,8 @@ mkPersist
       primaryExophone Text
       bapId Text
       bapUri Text
+      bapImageUrl Text Maybe
+      bapName Text Maybe
       startTime UTCTime
       riderId RiderDetailsTId Maybe
       fromLocationId BookingLocationTId
@@ -78,6 +80,7 @@ type FullBookingT = (BookingT, BookingLocationT, BookingLocationT, Fare.FullFare
 instance FromTType FullBookingT Domain.Booking where
   fromTType (BookingT {..}, fromLoc, toLoc, fareParametersT) = do
     pUrl <- parseBaseUrl bapUri
+    imageUrl <- mapM parseBaseUrl bapImageUrl
     let fromLoc_ = mkDomainBookingLocation fromLoc
         toLoc_ = mkDomainBookingLocation toLoc
     fareParams <- fromTType fareParametersT
@@ -88,6 +91,7 @@ instance FromTType FullBookingT Domain.Booking where
           fromLocation = fromLoc_,
           toLocation = toLoc_,
           bapUri = pUrl,
+          bapImageUrl = imageUrl,
           maxEstimatedDistance = HighPrecMeters <$> maxEstimatedDistance,
           riderId = fromKey <$> riderId,
           ..
@@ -101,6 +105,7 @@ instance ToTType FullBookingT Domain.Booking where
           fromLocationId = toKey fromLocation.id,
           toLocationId = toKey toLocation.id,
           bapUri = showBaseUrl bapUri,
+          bapImageUrl = showBaseUrl <$> bapImageUrl,
           riderId = toKey <$> riderId,
           maxEstimatedDistance = getHighPrecMeters <$> maxEstimatedDistance,
           fareParametersId = toKey fareParams.id,

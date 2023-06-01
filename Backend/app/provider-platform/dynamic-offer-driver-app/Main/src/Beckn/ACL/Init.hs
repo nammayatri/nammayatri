@@ -53,6 +53,8 @@ buildInitReq subscriber req = do
       { driverQuoteId = itemId,
         bapId = subscriber.subscriber_id,
         bapUri = subscriber.subscriber_url,
+        bapImageUrl = subscriber.image_url,
+        bapName = subscriber.name,
         maxEstimatedDistance = order.fulfillment.tags.max_estimated_distance,
         ..
       }

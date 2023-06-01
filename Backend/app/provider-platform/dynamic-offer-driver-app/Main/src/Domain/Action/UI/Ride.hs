@@ -72,6 +72,8 @@ import qualified Tools.Notifications as Notify
 
 data DriverRideRes = DriverRideRes
   { id :: Id DRide.Ride,
+    bapName :: Maybe Text,
+    bapImageUrl :: Maybe BaseUrl,
     shortRideId :: ShortId DRide.Ride,
     status :: DRide.RideStatus,
     fromLocation :: DBLoc.BookingLocationAPIEntity,
@@ -144,6 +146,8 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) =
   let initial = "" :: Text
   DriverRideRes
     { id = ride.id,
+      bapName = booking.bapName,
+      bapImageUrl = booking.bapImageUrl,
       shortRideId = ride.shortId,
       status = ride.status,
       fromLocation = DBLoc.makeBookingLocationAPIEntity booking.fromLocation,

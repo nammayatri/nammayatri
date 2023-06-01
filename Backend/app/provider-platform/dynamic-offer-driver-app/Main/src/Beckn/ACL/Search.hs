@@ -46,6 +46,8 @@ buildSearchReq subscriber req = do
       { messageId = messageId,
         transactionId = transactionId,
         bapId = subscriber.subscriber_id,
+        bapImageUrl = subscriber.image_url,
+        bapName = subscriber.name,
         bapUri = subscriber.subscriber_url,
         pickupLocation = LatLong {lat = pickup.location.gps.lat, lon = pickup.location.gps.lon},
         pickupTime = pickup.time.timestamp,

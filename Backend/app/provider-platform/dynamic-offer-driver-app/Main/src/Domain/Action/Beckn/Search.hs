@@ -68,6 +68,8 @@ data DSearchReq = DSearchReq
   { messageId :: Text,
     transactionId :: Text,
     bapId :: Text,
+    bapImageUrl :: Maybe BaseUrl,
+    bapName :: Maybe Text,
     bapUri :: BaseUrl,
     pickupLocation :: LatLong,
     pickupTime :: UTCTime,

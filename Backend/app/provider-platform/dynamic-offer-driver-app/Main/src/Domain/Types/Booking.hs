@@ -58,6 +58,8 @@ data Booking = Booking
     primaryExophone :: Text,
     bapId :: Text,
     bapUri :: BaseUrl,
+    bapImageUrl :: Maybe BaseUrl,
+    bapName :: Maybe Text,
     startTime :: UTCTime,
     riderId :: Maybe (Id DRD.RiderDetails),
     fromLocation :: DLoc.BookingLocation,

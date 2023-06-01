@@ -41,6 +41,8 @@ mkPersist
       toLocationId SearchReqLocationTId
       bapId Text
       bapUri Text
+      bapImageUrl Text Maybe
+      bapName Text Maybe
       estimatedDistance Meters
       estimatedDuration Seconds
       device Text Maybe
@@ -62,6 +64,7 @@ type FullSearchRequestT = (SearchRequestT, SearchReqLocationT, SearchReqLocation
 instance FromTType FullSearchRequestT Domain.SearchRequest where
   fromTType (SearchRequestT {..}, fromLoc, toLoc) = do
     pUrl <- parseBaseUrl bapUri
+    imageUrl <- mapM parseBaseUrl bapImageUrl
     let fromLoc_ = mkDomainSearchReqLocation fromLoc
         toLoc_ = mkDomainSearchReqLocation toLoc
 
@@ -72,6 +75,7 @@ instance FromTType FullSearchRequestT Domain.SearchRequest where
           fromLocation = fromLoc_,
           toLocation = toLoc_,
           bapUri = pUrl,
+          bapImageUrl = imageUrl,
           ..
         }
 
@@ -83,6 +87,7 @@ instance ToTType FullSearchRequestT Domain.SearchRequest where
           fromLocationId = toKey fromLocation.id,
           toLocationId = toKey toLocation.id,
           bapUri = showBaseUrl bapUri,
+          bapImageUrl = showBaseUrl <$> bapImageUrl,
           ..
         },
       mkTabularSearchReqLocation fromLocation,

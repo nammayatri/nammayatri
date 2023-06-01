@@ -31,6 +31,8 @@ data SearchRequest = SearchRequest
     toLocation :: DLoc.SearchReqLocation,
     bapId :: Text,
     bapUri :: BaseUrl,
+    bapImageUrl :: Maybe BaseUrl,
+    bapName :: Maybe Text,
     estimatedDistance :: Meters,
     estimatedDuration :: Seconds,
     autoAssignEnabled :: Bool,

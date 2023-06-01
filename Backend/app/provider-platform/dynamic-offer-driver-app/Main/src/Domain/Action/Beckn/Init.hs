@@ -52,6 +52,8 @@ data InitReq = InitReq
   { driverQuoteId :: Text,
     bapId :: Text,
     bapUri :: BaseUrl,
+    bapImageUrl :: Maybe BaseUrl,
+    bapName :: Maybe Text,
     initTypeReq :: InitTypeReq,
     maxEstimatedDistance :: Maybe HighPrecMeters
   }
@@ -166,6 +168,8 @@ handler merchantId req eitherReq = do
             primaryExophone = exophone.primaryPhone,
             bapId = req.bapId,
             bapUri = req.bapUri,
+            bapName = req.bapName,
+            bapImageUrl = req.bapImageUrl,
             riderId = Nothing,
             vehicleVariant = driverQuote.vehicleVariant,
             estimatedDistance = driverQuote.distance,

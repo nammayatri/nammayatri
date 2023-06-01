@@ -43,6 +43,8 @@ mkPersist
       toLocationId SearchReqLocationTId
       bapId Text
       bapUri Text
+      bapImageUrl Text Maybe
+      bapName Text Maybe
       estimatedDistance Meters
       estimatedDuration Seconds
       createdAt UTCTime
@@ -59,6 +61,7 @@ instance TEntityKey SearchRequestSpecialZoneT where
 instance FromTType (SearchRequestSpecialZoneT, SearchReqLocationT, SearchReqLocationT) Domain.SearchRequestSpecialZone where
   fromTType (SearchRequestSpecialZoneT {..}, fromLoc, toLoc) = do
     pUrl <- parseBaseUrl bapUri
+    imageUrl <- mapM parseBaseUrl bapImageUrl
     let fromLoc_ = mkDomainSearchReqLocation fromLoc
         toLoc_ = mkDomainSearchReqLocation toLoc
 
@@ -69,6 +72,7 @@ instance FromTType (SearchRequestSpecialZoneT, SearchReqLocationT, SearchReqLoca
           fromLocation = fromLoc_,
           toLocation = toLoc_,
           bapUri = pUrl,
+          bapImageUrl = imageUrl,
           ..
         }
 
@@ -80,6 +84,7 @@ instance ToTType (SearchRequestSpecialZoneT, SearchReqLocationT, SearchReqLocati
           fromLocationId = toKey fromLocation.id,
           toLocationId = toKey toLocation.id,
           bapUri = showBaseUrl bapUri,
+          bapImageUrl = showBaseUrl <$> bapImageUrl,
           ..
         },
       mkTabularSearchReqLocation fromLocation,
