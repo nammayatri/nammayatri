@@ -55,12 +55,11 @@ sendSearchRequestToDrivers ::
   ) =>
   DSR.SearchRequest ->
   DST.SearchTry ->
-  Money ->
   Maybe DFP.DriverExtraFeeBounds ->
   DriverPoolConfig ->
   [DriverPoolWithActualDistResult] ->
   m ()
-sendSearchRequestToDrivers searchReq searchTry baseFare driverExtraFeeBounds driverPoolConfig driverPool = do
+sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolConfig driverPool = do
   logInfo $ "Send search requests to driver pool batch-" <> show driverPool
   validTill <- getSearchRequestValidTill
   batchNumber <- getPoolBatchNum searchReq.id
@@ -74,7 +73,7 @@ sendSearchRequestToDrivers searchReq searchTry baseFare driverExtraFeeBounds dri
         validTill = validTill,
         batchProcessTime = fromIntegral driverPoolConfig.singleBatchProcessTime
       }
-  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver batchNumber baseFare validTill) driverPool
+  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver batchNumber validTill) driverPool
   let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
   Esq.runTransaction $ do
     QSRD.setInactiveBySTId searchTry.id -- inactive previous request by drivers so that they can make new offers.
@@ -98,11 +97,10 @@ sendSearchRequestToDrivers searchReq searchTry baseFare driverExtraFeeBounds dri
         MonadReader r m
       ) =>
       Int ->
-      Money ->
       UTCTime ->
       DriverPoolWithActualDistResult ->
       m SearchRequestForDriver
-    buildSearchRequestForDriver batchNumber baseFare_ validTill dpwRes = do
+    buildSearchRequestForDriver batchNumber validTill dpwRes = do
       guid <- generateGUID
       now <- getCurrentTime
       let dpRes = dpwRes.driverPoolResult
@@ -122,7 +120,6 @@ sendSearchRequestToDrivers searchReq searchTry baseFare driverExtraFeeBounds dri
                 status = Active,
                 lat = Just dpRes.lat,
                 lon = Just dpRes.lon,
-                baseFare = baseFare_,
                 createdAt = now,
                 response = Nothing,
                 driverMinExtraFee = driverExtraFeeBounds <&> (.minFee),

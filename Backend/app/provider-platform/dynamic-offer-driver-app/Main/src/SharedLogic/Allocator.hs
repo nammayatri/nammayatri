@@ -22,7 +22,7 @@ import Data.Singletons.TH
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.SearchTry as DST
 import Kernel.Prelude
-import Kernel.Types.Common (Meters, Money)
+import Kernel.Types.Common (Meters)
 import Kernel.Types.Id
 import Kernel.Utils.Dhall (FromDhall)
 import Lib.Scheduler
@@ -39,9 +39,7 @@ instance JobProcessor AllocatorJobType where
 
 data SendSearchRequestToDriverJobData = SendSearchRequestToDriverJobData
   { searchTryId :: Id DST.SearchTry,
-    baseFare :: Money,
     estimatedRideDistance :: Meters,
-    customerExtraFee :: Maybe Money,
     driverExtraFeeBounds :: Maybe DFP.DriverExtraFeeBounds
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)

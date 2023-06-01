@@ -117,7 +117,6 @@ select personId estimateId req@DSelectReq {..} = do
   now <- getCurrentTime
   estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
   when (estimate.status == DEstimate.DRIVER_QUOTE_REQUESTED) $ throwError (InvalidRequest "Estimate already offered")
-  when (DEstimate.isCancelled estimate.status) $ throwError $ EstimateCancelled estimate.id.getId
   let searchRequestId = estimate.requestId
   searchRequest <- QSearchRequest.findByPersonId personId searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist personId.getId)
   merchant <- QM.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
@@ -152,8 +151,8 @@ selectResult estimateId = do
   res <- runMaybeT $ do
     estimate <- MaybeT . runInReplica $ QEstimate.findById estimateId
     when (DEstimate.isCancelled estimate.status) $ MaybeT $ throwError $ EstimateCancelled estimate.id.getId
-    booking <- MaybeT . runInReplica $ QBooking.findAssignedByEstimateId estimate.id
-    return $ QuotesResultResponse {bookingId = Just booking.id, selectedQuotes = Nothing}
+    bookingId <- MaybeT . runInReplica $ QBooking.findBookingIdAssignedByEstimateId estimate.id
+    return $ QuotesResultResponse {bookingId = Just bookingId, selectedQuotes = Nothing}
   case res of
     Just r -> pure r
     Nothing -> do

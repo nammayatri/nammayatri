@@ -50,7 +50,6 @@ mkPersist
       durationToPickup Seconds
       vehicleVariant Variant.Variant
       batchNumber Int
-      baseFare Money
       lat Double Maybe
       lon Double Maybe
       searchRequestValidTill UTCTime

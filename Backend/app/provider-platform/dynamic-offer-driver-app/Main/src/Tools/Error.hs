@@ -419,28 +419,32 @@ data SearchTryError
   | SearchTryDoesNotExist Text
   | SearchTryExpired
   | SearchTryCancelled Text
+  | SearchTryEstimatedFareChanged
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''SearchTryError
 
 instance IsBaseError SearchTryError where
   toMessage = \case
-    SearchTryNotFound searchTryId -> Just $ "Search step with searchTryId \"" <> show searchTryId <> "\"not found. "
-    SearchTryDoesNotExist searchTryId -> Just $ "No search step matches passed data \"<>" <> show searchTryId <> "\"."
-    SearchTryCancelled searchTryId -> Just $ "Search step with searchTryId \"<>" <> show searchTryId <> "\" was cancelled. "
+    SearchTryNotFound searchTryId -> Just $ "Search try with searchTryId \"" <> show searchTryId <> "\"not found. "
+    SearchTryDoesNotExist searchTryId -> Just $ "No search try matches passed data \"<>" <> show searchTryId <> "\"."
+    SearchTryCancelled searchTryId -> Just $ "Search try with searchTryId \"<>" <> show searchTryId <> "\" was cancelled."
+    SearchTryEstimatedFareChanged -> Just "Search try estimated fare changed."
     _ -> Nothing
 
 instance IsHTTPError SearchTryError where
   toErrorCode = \case
-    SearchTryNotFound _ -> "SEARCH_STEP_NOT_FOUND"
-    SearchTryDoesNotExist _ -> "SEARCH_STEP_DOES_NOT_EXIST"
-    SearchTryExpired -> "SEARCH_STEP_EXPIRED"
-    SearchTryCancelled _ -> "SEARCH_STEP_CANCELLED"
+    SearchTryNotFound _ -> "SEARCH_TRY_NOT_FOUND"
+    SearchTryDoesNotExist _ -> "SEARCH_TRY_DOES_NOT_EXIST"
+    SearchTryExpired -> "SEARCH_TRY_EXPIRED"
+    SearchTryCancelled _ -> "SEARCH_TRY_CANCELLED"
+    SearchTryEstimatedFareChanged -> "SEARCH_TRY_ESTIMATED_FARE_CHANGED"
   toHttpCode = \case
     SearchTryNotFound _ -> E500
     SearchTryDoesNotExist _ -> E400
     SearchTryExpired -> E400
     SearchTryCancelled _ -> E403
+    SearchTryEstimatedFareChanged -> E503
 
 instance IsAPIError SearchTryError
 
