@@ -32,7 +32,7 @@ getLanguagesList lazy = case (getMerchant FunctionCall) of
       , subTitle: "Hindi"
       }
     ]
-  JATRISAATHI ->
+  YATRISATHI ->
     [ { name: "English"
       , value: "EN_US"
       , subTitle: ""

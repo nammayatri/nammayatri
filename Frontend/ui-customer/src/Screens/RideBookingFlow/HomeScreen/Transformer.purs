@@ -35,9 +35,9 @@ import Data.Number (ceil)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import PrestoDOM (Visibility(..))
-import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard)
+import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard, getVehicleCapacity, getVehicleImage)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySettingBar)
-import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact)
+import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..))
 import Services.API (AddressComponents(..), BookingLocationAPIEntity, DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..))
 import Services.Backend as Remote
 import Types.App(FlowBT)
@@ -135,6 +135,7 @@ getDriverInfo (RideBookingRes resp) isSpecialZone =
       , driverNumber : rideList.driverNumber
       , merchantExoPhone : resp.merchantExoPhone
       , initDistance : Nothing
+      , vehicleVariant : rideList.vehicleVariant
         }
 
 encodeAddressDescription :: String -> String -> Maybe String -> Maybe Number -> Maybe Number -> Array AddressComponents -> SavedReqLocationAPIEntity
@@ -302,27 +303,15 @@ getSpecialZoneQuote :: OfferRes -> Int -> ChooseVehicle.Config
 getSpecialZoneQuote quote index =
   case quote of
     Quotes body -> let (QuoteAPIEntity quoteEntity) = body.onDemandCab
-      in ChooseVehicle.config {
-        vehicleImage = case quoteEntity.vehicleVariant of
-          "TAXI" -> "ic_sedan_non_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_non_ac.png"
-          "TAXI_PLUS" -> "ic_sedan_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_ac.png"
-          "SEDAN" -> "ic_sedan,https://assets.juspay.in/nammayatri/images/user/ic_sedan.png"
-          "SUV" -> "ic_suv,https://assets.juspay.in/nammayatri/images/user/ic_suv.png"
-          "HATCHBACK" -> "ic_hatchback,https://assets.juspay.in/nammayatri/images/user/ic_hatchback.png"
-          _ -> "ic_sedan_non_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_non_ac.png"
+      in ChooseVehicle.config { 
+        vehicleImage = getVehicleImage quoteEntity.vehicleVariant
       , isSelected = (index == 0)
       , vehicleVariant = quoteEntity.vehicleVariant
       , price = show quoteEntity.estimatedTotalFare
       , activeIndex = 0
       , index = index
       , id = trim quoteEntity.id
-      , capacity = case quoteEntity.vehicleVariant of
-          "TAXI" -> (getString ECONOMICAL) <> ", 4 " <> (getString PEOPLE)
-          "TAXI_PLUS" -> (getString COMFY) <> ", 4 " <> (getString PEOPLE)
-          "SEDAN" -> (getString COMFY) <> ", " <>(getString UPTO) <>" 4 " <> (getString PEOPLE)
-          "SUV" -> (getString SPACIOUS) <> ", " <> (getString UPTO)<>" 6 " <> (getString PEOPLE)
-          "HATCHBACK" -> (getString EASY_ON_WALLET) <> ", "<> (getString UPTO) <> " 4 " <> (getString PEOPLE)
-          _ -> (getString ECONOMICAL) <> ", 4 " <> (getString PEOPLE)
+      , capacity = getVehicleCapacity quoteEntity.vehicleVariant
       }
     Metro body -> ChooseVehicle.config
     Public body -> ChooseVehicle.config
@@ -331,24 +320,12 @@ getEstimateList :: Array EstimateAPIEntity -> Array ChooseVehicle.Config
 getEstimateList quotes = mapWithIndex (\index item -> getEstimates item index) quotes
 
 getEstimates :: EstimateAPIEntity -> Int -> ChooseVehicle.Config
-getEstimates (EstimateAPIEntity estimate) index = ChooseVehicle.config {
-        vehicleImage = case estimate.vehicleVariant of
-          "TAXI" -> "ic_sedan_non_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_non_ac.png"
-          "TAXI_PLUS" -> "ic_sedan_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_ac.png"
-          "SEDAN" -> "ic_sedan,https://assets.juspay.in/nammayatri/images/user/ic_sedan.png"
-          "SUV" -> "ic_suv,https://assets.juspay.in/nammayatri/images/user/ic_suv.png"
-          "HATCHBACK" -> "ic_hatchback,https://assets.juspay.in/nammayatri/images/user/ic_hatchback.png"
-          _ -> "ic_sedan_non_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_non_ac.png"
+getEstimates (EstimateAPIEntity estimate) index = ChooseVehicle.config { 
+        vehicleImage = getVehicleImage estimate.vehicleVariant
       , vehicleVariant = estimate.vehicleVariant
       , price = show estimate.estimatedTotalFare
       , activeIndex = 0
       , index = index
       , id = trim estimate.id
-      , capacity = case estimate.vehicleVariant of
-          "TAXI" -> (getString ECONOMICAL) <> ", 4 " <> (getString PEOPLE)
-          "TAXI_PLUS" -> (getString COMFY) <> ", 4 " <> (getString PEOPLE)
-          "SEDAN" -> (getString COMFY) <> ", " <>(getString UPTO) <>" 4 " <> (getString PEOPLE)
-          "SUV" -> (getString SPACIOUS) <> ", " <> (getString UPTO)<>" 6 " <> (getString PEOPLE)
-          "HATCHBACK" -> (getString EASY_ON_WALLET) <> ", "<> (getString UPTO) <> " 4 " <> (getString PEOPLE)
-          _ -> (getString ECONOMICAL) <> ", 4 " <> (getString PEOPLE)
+      , capacity = getVehicleCapacity estimate.vehicleVariant
       }

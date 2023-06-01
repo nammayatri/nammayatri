@@ -753,6 +753,7 @@ driverInfoTransformer state =
     , bppRideId : ""
     , driverNumber : cardState.driverNumber
     , merchantExoPhone : cardState.merchantExoPhone
+    , vehicleVariant : cardState.vehicleVariant
     }
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState

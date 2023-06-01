@@ -252,6 +252,7 @@ mapOptionsView push state =
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
       , orientation VERTICAL
+      , margin $ MarginTop 5
       ][ supportButton push state
        , locationTrackButton push state
       ]
@@ -669,7 +670,7 @@ driverDetailsView push state =
           , width $ V 172
           , gravity BOTTOM
           ][  imageView
-              [ imageWithFallback "ic_driver_vehicle,https://assets.juspay.in/nammayatri/images/user/ny_ic_driver_auto.png"
+              [ imageWithFallback (getVehicleImage state.data.vehicleVariant)
               , height $ V 120
               , gravity RIGHT
               , width MATCH_PARENT
@@ -1017,3 +1018,10 @@ configurations =
               , letterSpacing : 3.0
               , paddingOTP : Padding 11 0 11 7
               }
+
+getVehicleImage :: String -> String 
+getVehicleImage variant = case variant of 
+  "TAXI" -> "ic_yellow_ambassador,https://assets.juspay.in/beckn/merchantcommon/images/ic_yellow_ambassador.png"
+  "TAXI_PLUS" -> "ic_yellow_ambassador,https://assets.juspay.in/beckn/merchantcommon/images/ic_yellow_ambassador.png"
+  "AUTO_RICKSHAW" -> "ic_auto_rickshaw,https://assets.juspay.in/beckn/merchantcommon/images/ic_auto_rickshaw.png"
+  _ ->  "ic_white_taxi,https://assets.juspay.in/beckn/merchantcommon/images/ic_white_taxi.png"

@@ -15,7 +15,7 @@
 
 module Screens.HelpAndSupportScreen.Controller where
 
-import Accessor (_driverRatings, _contents, _toLocation, _amount, _driverName, _list, _vehicleNumber, _id, _computedPrice, _shortRideId, _rideRating)
+import Accessor (_driverRatings, _contents, _toLocation, _amount, _driverName, _list, _vehicleNumber, _id, _computedPrice, _shortRideId, _rideRating, _vehicleVariant)
 import Components.ErrorModal as ErrorModal
 import Components.GenericHeader as GenericHeader
 import Components.IndividualRideCard as IndividualRideCard
@@ -32,7 +32,7 @@ import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackA
 import Prelude (class Show, pure, bind, discard, show, unit, map, ($), (<>), (==), void, (&&), (>), (||), not)
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
-import Resources.Constants (DecodeAddress(..), decodeAddress, getFaresList, getKmMeter)
+import Resources.Constants (DecodeAddress(..), decodeAddress, getFaresList, getKmMeter, fetchVehicleVariant)
 import Screens (ScreenName(..), getScreen)
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity)
 import Screens.Types (HelpAndSupportScreenState, DeleteStatus(..))
@@ -255,7 +255,8 @@ myRideListTransform listRes = filter (\item -> (item.data.status == "COMPLETED")
           faresList :  getFaresList ride.fareBreakup baseDistanceVal,
           email : "",
           description : "",
-          accountStatus : ACTIVE
+          accountStatus : ACTIVE,
+          vehicleVariant : fetchVehicleVariant ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._vehicleVariant)
           },
       props : {
         apiFailure : false

@@ -79,4 +79,5 @@ type DriverInfoCardData =
   , isSpecialZone :: Boolean
   , isLocationTracking :: Boolean
   , bookingCreatedAt :: String
+  , vehicleVariant :: String
   }

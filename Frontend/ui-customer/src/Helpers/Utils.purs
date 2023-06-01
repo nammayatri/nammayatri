@@ -332,10 +332,10 @@ getPreviousVersion _ =
   if os == "IOS" then
     case getMerchant FunctionCall of
       NAMMAYATRI -> "1.2.5"
-      JATRISAATHI -> "0.0.0"
+      YATRISATHI -> "0.0.0"
       _ -> "1.0.0"
-    else case getMerchant FunctionCall of
-        JATRISAATHI -> "0.0.0"
+    else case getMerchant FunctionCall of 
+        YATRISATHI -> "0.0.0"
         _ -> "1.2.0"
 
 rotateArray :: forall a. Array a -> Int -> Array a
@@ -362,7 +362,7 @@ sortPredctionByDistance arr = sortBy (comparing (_^._distance_meters)) arr
 
 foreign import getMerchantId :: String -> Foreign
 
-data Merchant = NAMMAYATRI | JATRISAATHI | YATRI
+data Merchant = NAMMAYATRI | YATRISATHI | YATRI
 
 derive instance genericMerchant :: Generic Merchant _
 instance eqMerchant :: Eq Merchant where eq = genericEq

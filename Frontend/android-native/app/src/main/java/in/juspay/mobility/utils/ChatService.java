@@ -245,7 +245,7 @@ public class ChatService extends Service {
                 String appName = getApplicationContext().getResources().getString(R.string.app_name);
                 if (appName.equals("Yatri Partner"))
                     sentBy = "yatripartner";
-                else if(appName.equals("Jatri Sathi Driver"))
+                else if(appName.equals("Yatri Sathi Driver"))
                     sentBy = "jatrisaathidriver";
                 else
                     sentBy = "nammayatripartner";
@@ -253,7 +253,7 @@ public class ChatService extends Service {
                 String appName = getApplicationContext().getResources().getString(R.string.app_name);
                 if (appName.equals("Yatri"))
                     sentBy = "yatri";
-                else if(appName.equals("Jatri Sathi"))
+                else if(appName.equals("Yatri Sathi"))
                     sentBy = "jatrisaathi";
                 else
                     sentBy = "nammayatri";

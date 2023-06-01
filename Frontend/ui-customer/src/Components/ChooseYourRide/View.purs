@@ -12,7 +12,7 @@ import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, ($), (<>), const, pure, unit, not, (<<<))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, onClick, orientation, padding, stroke, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, onClick, orientation, padding, stroke, text, textSize, textView, visibility, weight, width, scrollView)
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Styles.Colors as Color
@@ -24,6 +24,7 @@ view push config =
     , height WRAP_CONTENT
     , width MATCH_PARENT
     , background Color.white900
+    , margin $ MarginTop 10
     , clickable true
     , padding $ PaddingVertical 16 24
     , stroke $ "1," <> Color.grey900
@@ -79,16 +80,16 @@ estimatedTimeAndDistanceView push config =
 quoteListView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 quoteListView push config =
   linearLayout
-    [ height WRAP_CONTENT
+    [ weight 1.0
     , width MATCH_PARENT
     , orientation VERTICAL
     , margin $ MarginTop 16
-    ]
+    ][scrollView[width MATCH_PARENT][linearLayout[height WRAP_CONTENT, width MATCH_PARENT, orientation VERTICAL]
     ( mapWithIndex
         ( \index item ->
             ChooseVehicle.view (push <<< ChooseVehicleAC) (item)
         ) config.quoteList
-    )
+    )]]
 
 primaryButtonRequestRideConfig :: Config -> PrimaryButton.Config
 primaryButtonRequestRideConfig config = PrimaryButton.config

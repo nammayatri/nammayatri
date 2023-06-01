@@ -53,8 +53,6 @@ getVehicleCapacity vehicleType capacity = case vehicleType of
   "TAXI" -> "Economical, upto " <> (show (fromMaybe 4 capacity)) <> " people"
   _ -> "Comfy, upto " <> (show (fromMaybe 4 capacity)) <> " people"
 
-
-
 getVehicleImage :: String -> String
 getVehicleImage vehicleType = case vehicleType of
   "SEDAN" -> "ic_sedan,https://assets.juspay.in/nammayatri/images/user/ic_sedan.png"

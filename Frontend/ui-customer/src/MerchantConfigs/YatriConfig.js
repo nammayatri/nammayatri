@@ -63,7 +63,8 @@ const config = {
     "DOCUMENT_LINK" : "https://docs.google.com/document/d/1zmQWO_L4EjyCXC3xSlp1f3DS2wI4HfbHxg42tXelWe0",
     "PRIVACY_POLICY_LINK" : "https://docs.google.com/document/d/1gI_P4oZnVwE0O71rI4Mi8rpZbL9rsIRkyewbql85Np8",
     "APP_LINK" : getAppLink(window.__OS),
-    "CUSTOMER_TIP" : "false"
+    "CUSTOMER_TIP" : "false",
+    "SUPPORT_EMAIL" : "nammayatri.support@juspay.in"
 }
 
 const malayalamStrings = {

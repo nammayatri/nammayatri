@@ -902,7 +902,7 @@ rideRequestFlowView push state =
         ]
         [ PrestoAnim.animationSet [ fadeIn true ]
             $ if (state.props.currentStage == SettingPrice) then
-                if (state.props.isSpecialZone && (getMerchant FunctionCall == JATRISAATHI))  || ((getMerchant FunctionCall) /= NAMMAYATRI) then
+                if (state.props.isSpecialZone && (getMerchant FunctionCall == YATRISATHI))  || ((getMerchant FunctionCall) /= NAMMAYATRI) then 
                   ChooseYourRide.view (push <<< ChooseYourRideAction) (chooseYourRideConfig state)
                 else
                 suggestedPriceView push state
@@ -1486,8 +1486,8 @@ confirmPickUpLocationView push state =
             , height WRAP_CONTENT
             , width MATCH_PARENT
             , fontStyle $ FontStyle.bold LanguageStyle
-            ]
-        , if  ((getMerchant FunctionCall == JATRISAATHI) && state.props.isSpecialZone ) then  nearByPickUpPointsView state push else currentLocationView push state
+            ] 
+        , if  ((getMerchant FunctionCall == YATRISATHI) && state.props.isSpecialZone ) then  nearByPickUpPointsView state push else currentLocationView push state
         , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfirmPickupConfig state)
         ]
     ]

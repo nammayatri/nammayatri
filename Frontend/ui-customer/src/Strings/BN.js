@@ -279,7 +279,7 @@ const bengaliStrings = {
   "DO_YOU_NEED_EMERGENCY_HELP": "আপনার কি জরুরি সহায়তা দরকার?",
   "CALL_SUPPORT": "সাপোর্টে কল করুন",
   "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT": "আপনি নাম্মা ইয়াত্রি সমর্থন দলকে কল করতে চলেছেন। আপনি কি এগিয়ে যেতে চান?",
-  "YOU_ARE_ABOUT_TO_CALL_JATRI_SATHI_SUPPORT": "You are about to place a call to the Jatri Sathi Support Team. Do you want to proceed?",
+  "YOU_ARE_ABOUT_TO_CALL_YATRI_SATHI_SUPPORT": "You are about to place a call to the Yatri Sathi Support Team. Do you want to proceed?",
   "YOU_ARE_ABOUT_TO_CALL_YATRI_SUPPORT": "You are about to place a call to the Yatri Support Team. Do you want to proceed?",
   "YOU_ARE_ABOUT_TO_CALL_POLICE": "আপনি পুলিশকে কল করতে চলেছেন। আপনি কি এগিয়ে যেতে চান?",
   "DAIL_100": "ডায়াল 100?",

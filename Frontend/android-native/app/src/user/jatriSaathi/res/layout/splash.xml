@@ -12,22 +12,11 @@
         android:gravity="center"
         android:orientation="vertical">
         <ImageView
-            android:layout_width="100dp"
-            android:layout_height="100dp"
+            android:layout_width="match_parent"
+            android:layout_height="90dp"
             android:layout_gravity="center"
-            android:src="@drawable/ic_launcher"/>
+            android:src="@drawable/ic_launcher_with_name"/>
 
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:paddingHorizontal="70dp"
-            android:layout_marginTop="1dp"
-            android:layout_gravity="center"
-            android:fontFamily="@font/plus_jakarta_sans_bold"
-            android:textSize="20dp"
-            android:textColor="#BC3A1D"
-            android:text="jatri sathi"/>
     </LinearLayout>
 
     <LinearLayout

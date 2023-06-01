@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+<<<<<<< HEAD
     <color name="ic_launcher_background">#13131A</color>
+=======
+    <color name="ic_launcher_background">#FFFFFF</color>
+>>>>>>> 092290c11 (frontend/fix/1062- updated logo and images for jatri sathi)
 </resources>

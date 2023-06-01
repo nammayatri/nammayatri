@@ -63,7 +63,8 @@ const config = {
   "DOCUMENT_LINK" : "https://docs.google.com/document/d/1-oRR_oI8ncZRPZvFZEJZeCVQjTmXTmHA",
   "APP_LINK" : getAppLink(window.__OS),
   "PRIVACY_POLICY_LINK" : "https://docs.google.com/document/d/128VU80K5E1iz-x6QnP1R127m_lwmDO3F",
-  "CUSTOMER_TIP" : "true"
+  "CUSTOMER_TIP" : "true",
+  "SUPPORT_EMAIL" : "nammayatri.support@juspay.in"
 }
 
 const kannadaStrings = {
