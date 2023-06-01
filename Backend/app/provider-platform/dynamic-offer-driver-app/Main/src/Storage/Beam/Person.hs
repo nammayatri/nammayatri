@@ -97,15 +97,15 @@ instance FromBackendRow Postgres Domain.Gender
 instance IsString Domain.Gender where
   fromString = show
 
-instance FromField DbHash where
-  fromField = fromFieldEnum
+-- instance FromField DbHash where
+--   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be DbHash where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be DbHash where
+--   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be DbHash
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be DbHash
 
-instance FromBackendRow Postgres DbHash
+-- instance FromBackendRow Postgres DbHash
 
 instance FromField Domain.Role where
   fromField = fromFieldEnum

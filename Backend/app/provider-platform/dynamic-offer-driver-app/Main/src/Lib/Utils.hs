@@ -19,6 +19,7 @@ import qualified Database.Beam.Query as BQ
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import Domain.Types.Vehicle.Variant (Variant (..))
+import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Types
 import Kernel.Types.Common
@@ -118,6 +119,19 @@ instance FromBackendRow Postgres HighPrecMoney
 
 instance FromField Seconds where
   fromField = fromFieldEnum
+
+instance FromField DbHash where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be DbHash where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be DbHash
+
+instance FromBackendRow Postgres DbHash
+
+instance IsString DbHash where
+  fromString = show
 
 fromFieldEnum ::
   (Typeable a, Read a) =>

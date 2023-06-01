@@ -71,15 +71,15 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.ImageExtractionVal
 
 instance FromBackendRow Postgres Domain.ImageExtractionValidation
 
-instance FromField DbHash where
-  fromField = fromFieldEnum
+-- instance FromField DbHash where
+--   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be DbHash where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be DbHash where
+--   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be DbHash
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be DbHash
 
-instance FromBackendRow Postgres DbHash
+-- instance FromBackendRow Postgres DbHash
 
 data IdfyVerificationT f = IdfyVerificationT
   { id :: B.C f Text,
@@ -157,8 +157,8 @@ idfyVerificationToPSModifiers =
 instance IsString Image.ImageType where
   fromString = show
 
-instance IsString DbHash where
-  fromString = show
+-- instance IsString DbHash where
+--   fromString = show
 
 instance IsString Domain.ImageExtractionValidation where
   fromString = show
