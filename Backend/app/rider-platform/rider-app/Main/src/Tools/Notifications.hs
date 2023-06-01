@@ -369,10 +369,10 @@ notifyOnBookingCancelled booking cancellationSource = do
           ]
       SBCR.ByApplication ->
         unwords
-          [ "The ride for",
+          [ "Sorry your ride for",
             showTimeIst (booking.startTime),
-            "was cancelled because quote was not confirmed.",
-            "Please book again to get another ride."
+            "was cancelled.",
+            "Please try to book again"
           ]
 
 notifyOnBookingReallocated ::

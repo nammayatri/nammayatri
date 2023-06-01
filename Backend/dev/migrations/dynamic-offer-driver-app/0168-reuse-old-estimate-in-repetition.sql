@@ -58,7 +58,7 @@ UPDATE atlas_driver_offer_bpp.scheduler_job AS T1 SET
 UPDATE atlas_driver_offer_bpp.driver_quote AS T1 SET search_try_id = search_request_id WHERE T1.search_try_id IS NULL;
 UPDATE atlas_driver_offer_bpp.search_request_for_driver AS T1 SET search_try_id = search_request_id WHERE T1.search_try_id IS NULL;
 UPDATE atlas_driver_offer_bpp.search_try AS T1 SET request_id = id WHERE T1.request_id IS NULL;
-UPDATE atlas_driver_offer_bpp.estimate AS T1 SET request_id = (SELECT T2.id FROM atlas_driver_offer_bpp.search_try AS T2 WHERE T2.estimate_id = T1.id) WHERE T1.request_id IS NULL;
+UPDATE atlas_driver_offer_bpp.estimate AS T1 SET request_id = (SELECT T2.id FROM atlas_driver_offer_bpp.search_try AS T2 WHERE T2.estimate_id = T1.id limit 1) WHERE T1.request_id IS NULL;
 
 INSERT INTO atlas_driver_offer_bpp.search_try (
   id,
@@ -108,7 +108,7 @@ INSERT INTO atlas_driver_offer_bpp.search_try (
 ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD CONSTRAINT
   driver_quote_to_search_try_fk FOREIGN KEY (search_try_id) REFERENCES atlas_driver_offer_bpp.search_try (id);
 
-ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD CONSTRAINT
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD CONSTRAINT
   search_request_for_driver_to_search_try_fk FOREIGN KEY (search_try_id) REFERENCES atlas_driver_offer_bpp.search_try (id);
 
 ALTER TABLE atlas_driver_offer_bpp.search_try ADD CONSTRAINT
