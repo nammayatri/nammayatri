@@ -36,6 +36,7 @@ data SearchTry = SearchTry
     startTime :: UTCTime,
     validTill :: UTCTime,
     vehicleVariant :: Variant.Variant,
+    baseFare :: Money,
     customerExtraFee :: Maybe Money,
     status :: SearchTryStatus,
     searchRepeatCounter :: Int,

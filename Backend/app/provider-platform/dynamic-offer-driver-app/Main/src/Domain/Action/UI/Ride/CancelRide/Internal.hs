@@ -157,18 +157,6 @@ repeatSearch ::
 repeatSearch merchant farePolicy searchReq searchTry booking ride cancellationSource now driverPoolConfig = do
   newSearchTry <- buildSearchTry searchTry
 
-  fareParams <-
-    calculateFareParameters
-      CalculateFareParametersParams
-        { farePolicy = farePolicy,
-          distance = searchReq.estimatedDistance,
-          rideTime = now,
-          waitingTime = Nothing,
-          driverSelectedFare = Nothing,
-          customerExtraFee = newSearchTry.customerExtraFee
-        }
-
-  let baseFare = fareSum fareParams
   Esq.runTransaction $ do
     QST.create newSearchTry
 
@@ -179,7 +167,6 @@ repeatSearch merchant farePolicy searchReq searchTry booking ride cancellationSo
       searchReq
       newSearchTry
       merchant
-      baseFare
       driverExtraFeeBounds
 
   case res of
@@ -190,10 +177,8 @@ repeatSearch merchant farePolicy searchReq searchTry booking ride cancellationSo
         createJobIn @_ @'SendSearchRequestToDriver inTime maxShards $
           SendSearchRequestToDriverJobData
             { searchTryId = newSearchTry.id,
-              baseFare = baseFare,
               estimatedRideDistance = searchReq.estimatedDistance,
-              driverExtraFeeBounds = driverExtraFeeBounds,
-              customerExtraFee = newSearchTry.customerExtraFee
+              driverExtraFeeBounds = driverExtraFeeBounds
             }
     _ -> return ()
 

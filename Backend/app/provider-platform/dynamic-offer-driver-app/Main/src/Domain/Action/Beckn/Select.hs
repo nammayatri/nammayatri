@@ -22,6 +22,7 @@ module Domain.Action.Beckn.Select
 where
 
 import qualified Domain.Types.Estimate as DEst
+import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.FarePolicy as DFarePolicy
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest as DSR
@@ -31,7 +32,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Utils.Common (addUTCTime, fromMaybeM, logDebug)
+import Kernel.Utils.Common (addUTCTime, fromMaybeM, logDebug, throwError)
 import Lib.Scheduler.JobStorageType.DB.Queries (createJobIn)
 import Lib.Scheduler.Types (ExecutionResult (ReSchedule))
 import SharedLogic.Allocator
@@ -61,31 +62,14 @@ handler :: DM.Merchant -> DSelectReq -> DEst.Estimate -> Flow ()
 handler merchant sReq estimate = do
   let merchantId = merchant.id
   searchReq <- QSR.findById estimate.requestId >>= fromMaybeM (SearchRequestNotFound estimate.requestId.getId)
+  farePolicy <- FarePolicyS.findByMerchantIdAndVariant merchant.id estimate.vehicleVariant >>= fromMaybeM NoFarePolicy
 
-  farePolicy <- FarePolicyS.findByMerchantIdAndVariant merchantId estimate.vehicleVariant >>= fromMaybeM NoFarePolicy
-  fareParams <-
-    calculateFareParameters
-      CalculateFareParametersParams
-        { farePolicy = farePolicy,
-          distance = searchReq.estimatedDistance,
-          rideTime = sReq.pickupTime,
-          waitingTime = Nothing,
-          driverSelectedFare = Nothing,
-          customerExtraFee = sReq.customerExtraFee
-        }
-  let estimateFare = fareSum fareParams
-  searchTry <- createNewSearchTry searchReq
-  logDebug $
-    "search try id=" <> show searchTry.id
-      <> "; estimated distance = "
-      <> show searchReq.estimatedDistance
-      <> "; estimated base fare:"
-      <> show estimateFare
+  searchTry <- createNewSearchTry farePolicy searchReq
   driverPoolConfig <- getDriverPoolConfig merchantId searchReq.estimatedDistance
   let inTime = fromIntegral driverPoolConfig.singleBatchProcessTime
 
   let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance searchReq.estimatedDistance <$> farePolicy.driverExtraFeeBounds
-  res <- sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant estimateFare driverExtraFeeBounds
+  res <- sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant driverExtraFeeBounds
   case res of
     ReSchedule _ -> do
       maxShards <- asks (.maxShards)
@@ -94,29 +78,50 @@ handler merchant sReq estimate = do
         createJobIn @_ @'SendSearchRequestToDriver inTime maxShards $
           SendSearchRequestToDriverJobData
             { searchTryId = searchTry.id,
-              baseFare = estimateFare,
               estimatedRideDistance = searchReq.estimatedDistance,
-              customerExtraFee = sReq.customerExtraFee,
               driverExtraFeeBounds = driverExtraFeeBounds
             }
     _ -> return ()
   where
-    createNewSearchTry :: DSR.SearchRequest -> Flow DST.SearchTry
-    createNewSearchTry searchReq = do
+    createNewSearchTry :: DFP.FarePolicy -> DSR.SearchRequest -> Flow DST.SearchTry
+    createNewSearchTry farePolicy searchReq = do
       mbLastSearchTry <- QST.findLastByRequestId searchReq.id
-      case mbLastSearchTry of
+      fareParams <-
+        calculateFareParameters
+          CalculateFareParametersParams
+            { farePolicy = farePolicy,
+              distance = searchReq.estimatedDistance,
+              rideTime = sReq.pickupTime,
+              waitingTime = Nothing,
+              driverSelectedFare = Nothing,
+              customerExtraFee = sReq.customerExtraFee
+            }
+      let estimatedFare = fareSum fareParams
+          pureEstimatedFare = pureFareSum fareParams
+      searchTry <- case mbLastSearchTry of
         Nothing -> do
-          searchTry <- buildSearchTry merchant.id searchReq.id estimate sReq searchReq.estimatedDistance searchReq.estimatedDuration 0 DST.INITIAL
+          searchTry <- buildSearchTry merchant.id searchReq.id estimate sReq estimatedFare searchReq.estimatedDistance searchReq.estimatedDuration 0 DST.INITIAL
           Esq.runTransaction $ do
             QST.create searchTry
           return searchTry
         Just oldSearchTry -> do
           let searchRepeatType = if oldSearchTry.status == DST.ACTIVE then DST.CANCELLED_AND_RETRIED else DST.RETRIED
-          searchTry <- buildSearchTry merchant.id searchReq.id estimate sReq searchReq.estimatedDistance searchReq.estimatedDuration (oldSearchTry.searchRepeatCounter + 1) searchRepeatType
+          -- hack check, i think we should store whole breakup instead of  single baseFare value
+          unless (pureEstimatedFare == oldSearchTry.baseFare - fromMaybe 0 oldSearchTry.customerExtraFee) $
+            throwError SearchTryEstimatedFareChanged
+          searchTry <- buildSearchTry merchant.id searchReq.id estimate sReq estimatedFare searchReq.estimatedDistance searchReq.estimatedDuration (oldSearchTry.searchRepeatCounter + 1) searchRepeatType
           Esq.runTransaction $ do
             when (oldSearchTry.status == DST.ACTIVE) $ QST.updateStatus oldSearchTry.id DST.CANCELLED
             QST.create searchTry
           return searchTry
+
+      logDebug $
+        "search try id=" <> show searchTry.id
+          <> "; estimated distance = "
+          <> show searchReq.estimatedDistance
+          <> "; estimated base fare:"
+          <> show estimatedFare
+      return searchTry
 
 buildSearchTry ::
   ( MonadTime m,
@@ -128,12 +133,13 @@ buildSearchTry ::
   Id DSR.SearchRequest ->
   DEst.Estimate ->
   DSelectReq ->
+  Money ->
   Meters ->
   Seconds ->
   Int ->
   DST.SearchRepeatType ->
   m DST.SearchTry
-buildSearchTry merchantId searchReqId estimate sReq distance duration searchRepeatCounter searchRepeatType = do
+buildSearchTry merchantId searchReqId estimate sReq baseFare distance duration searchRepeatCounter searchRepeatType = do
   now <- getCurrentTime
   id_ <- Id <$> generateGUID
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)

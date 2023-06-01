@@ -43,6 +43,7 @@ mkPersist
       estimateId EstimateTId
       startTime UTCTime
       validTill UTCTime
+      baseFare Money
       customerExtraFee Money Maybe
       status Domain.SearchTryStatus
       vehicleVariant Variant.Variant

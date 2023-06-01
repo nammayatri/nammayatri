@@ -15,6 +15,7 @@
 module SharedLogic.FareCalculator
   ( mkBreakupList,
     fareSum,
+    pureFareSum,
     CalculateFareParametersParams (..),
     calculateFareParameters,
     isNightShift,
@@ -111,10 +112,15 @@ mkBreakupList mkPrice mkBreakupItem fareParams = do
 
 fareSum :: FareParameters -> Money
 fareSum fareParams = do
-  let (partOfNightShiftCharge, notPartOfNightShiftCharge) = countFullFareOfParamsDetails fareParams.fareParametersDetails
-  fareParams.baseFare
+  pureFareSum fareParams
     + fromMaybe 0 fareParams.driverSelectedFare
     + fromMaybe 0 fareParams.customerExtraFee
+
+-- Pure fare without customerExtraFee and driverSelectedFare
+pureFareSum :: FareParameters -> Money
+pureFareSum fareParams = do
+  let (partOfNightShiftCharge, notPartOfNightShiftCharge) = countFullFareOfParamsDetails fareParams.fareParametersDetails
+  fareParams.baseFare
     + fromMaybe 0 fareParams.serviceCharge
     + fromMaybe 0 fareParams.waitingCharge
     + fromMaybe 0 fareParams.govtCharges
@@ -138,8 +144,6 @@ calculateFareParameters ::
 calculateFareParameters params = do
   logTagInfo "FareCalculator" $ "Initiating fare calculation for organization " +|| params.farePolicy.merchantId ||+ " and vehicle variant " +|| params.farePolicy.vehicleVariant ||+ ""
   let fp = params.farePolicy
-      mbDriverSelectedFare = params.driverSelectedFare
-      mbCustomerExtraFee = params.customerExtraFee
   id <- generateGUID
   let isNightShiftChargeIncluded = isNightShift <$> fp.nightShiftBounds <*> Just params.rideTime
       (baseFare, nightShiftCharge, waitingChargeInfo, fareParametersDetails) = processFarePolicyDetails fp.farePolicyDetails
@@ -160,8 +164,8 @@ calculateFareParameters params = do
       fareParams =
         FareParameters
           { id,
-            driverSelectedFare = mbDriverSelectedFare,
-            customerExtraFee = mbCustomerExtraFee,
+            driverSelectedFare = params.driverSelectedFare,
+            customerExtraFee = params.customerExtraFee,
             serviceCharge = fp.serviceCharge,
             waitingCharge = resultWaitingCharge,
             nightShiftCharge = resultNightShiftCharge,
