@@ -9,6 +9,7 @@
 
 package in.juspay.mobility.utils;
 
+import static in.juspay.mobility.utils.NotificationUtils.rand;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
@@ -34,6 +35,7 @@ import java.net.URL;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import javax.net.ssl.HttpsURLConnection;
+import in.juspay.mobility.CommonJsInterface;
 
 import in.juspay.mobility.BuildConfig;
 import in.juspay.mobility.MainActivity;
@@ -228,7 +230,24 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                         }catch (Exception e) {
 
                         }
-
+                    case NotificationTypes.CHAT_MESSAGE :
+                        try{
+                            String appState = null;
+                            String stage = null;
+                            if(sharedPref != null) appState = sharedPref.getString("ACTIVITY_STATUS", "null");
+                            if(sharedPref != null) stage = sharedPref.getString("LOCAL_STAGE", "null");
+                            final boolean condition = appState.equals("onResume") && !(stage.equals("ChatWithDriver")) && !BuildConfig.MERCHANT_TYPE.equals("DRIVER");
+                            if(condition) {
+                                getApplicationContext().getMainLooper();
+                                String notificationId = String.valueOf(rand.nextInt(1000000));
+                                MainActivity.showInAppNotification(title, body, CommonJsInterface.storeCallBackOpenChatScreen,"", "", "", "", notificationId, 5000, getApplicationContext());
+                            }
+                            if(appState.equals("onDestroy") || appState.equals("onPause")) {
+                                NotificationUtils.createChatNotification(title,body,getApplicationContext());
+                            }
+                        } catch (Exception e) {
+                            Log.e("MyFirebaseMessagingService", "Error in CHAT_MESSAGE " + e);
+                        }
                         break;
 
                     default:
@@ -427,7 +446,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         private static final String REGISTRATION_APPROVED = "REGISTRATION_APPROVED";
         private static final String REFERRAL_ACTIVATED = "REFERRAL_ACTIVATED";
         private static final String UPDATE_STORAGE = "UPDATE_STORAGE";
-
         private static final String CALL_API = "CALL_API";
+        private static final String CHAT_MESSAGE = "CHAT_MESSAGE";
     }
 }

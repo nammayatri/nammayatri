@@ -571,17 +571,39 @@ export const storeCallBackMessageUpdated = function (cb) {
         return function(chatUserId) {
           return function(action) {
               return function (){
-                  var callback = callbackMapper.map(function (message, sentBy, timeStamp){
-                    cb(action (message) (sentBy) (timeStamp))();
-                  });
-                  if(JBridge.storeCallBackMessageUpdated) {
-                    JBridge.storeCallBackMessageUpdated(chatChannelID, chatUserId, callback);
+                var callback = callbackMapper.map(function (message, sentBy, timeStamp, messagesSize){
+                  if(messagesSize == undefined) {
+                    messagesSize = "-1"
                   }
+                  cb(action (message) (sentBy) (timeStamp) (messagesSize))();
+                });
+                if(JBridge.storeCallBackMessageUpdated) {
+                  JBridge.storeCallBackMessageUpdated(chatChannelID, chatUserId, callback);
+                }
               };
             };
           };
         };
       };
+
+export const storeCallBackOpenChatScreen = function (cb) {
+    return function(action) {
+        return function (){
+            var callback = callbackMapper.map(function(){
+              cb(action)();
+            });
+            if(window.JBridge.storeCallBackOpenChatScreen) {
+              window.JBridge.storeCallBackOpenChatScreen(callback);
+            }
+        };
+      };
+  };
+
+export const openChatScreen = function() {
+  if (window.JBridge.openChatScreen) {
+    window.JBridge.openChatScreen();
+  }
+}
 
 export const startChatListenerService = function() {
   if (JBridge.startChatListenerService) {
@@ -1173,6 +1195,26 @@ export const shareImageMessage = function(message){
   return function (imageName){
     if(JBridge.shareTextMessage){
       JBridge.shareImageMessage(message,imageName);
+    }
+  }
+}
+
+export const showInAppNotification = function(title){
+  return function(message){
+    return function(onTapAction){
+      return function(action1Text){
+        return function(action2Text){
+          return function(action1Image){
+            return function(action2Image){
+              return function(channelId){
+                return function(duration){
+                  return window.JOS.emitEvent("java")("onEvent")(JSON.stringify({event:"in_app_notification" , title:title ,message:message ,onTapAction:onTapAction, action1Text:action1Text,action2Text:action2Text , action1Image : action1Image ,action2Image :action2Image , channelId:channelId , durationInMilliSeconds:duration}))()
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

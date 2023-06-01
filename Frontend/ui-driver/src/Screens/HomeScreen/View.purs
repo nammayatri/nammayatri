@@ -106,6 +106,7 @@ screen initialState =
                                 _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "5.0"
                                 if (not initialState.props.chatcallbackInitiated) then do
                                   _ <- JB.storeCallBackMessageUpdated push initialState.data.activeRide.id "Driver" UpdateMessages
+                                  _ <- JB.storeCallBackOpenChatScreen push OpenChatScreen
                                   _ <- JB.startChatListenerService
                                   push InitializeChat
                                   pure unit
@@ -188,7 +189,7 @@ view push state =
                 [ width MATCH_PARENT
                 , height $ V 2
                 , background Color.greyTextColor
-                , visibility if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) then GONE else VISIBLE
+                , visibility if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) then GONE else VISIBLE
                 , alpha 0.1
                 ][]
               , frameLayout
@@ -212,7 +213,7 @@ view push state =
                       , orientation VERTICAL
                       , PP.cornerRadii $ PTD.Corners 24.0  false false true true
                       , background $ Color.white900
-                      , stroke $ (if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) then "0," else "1,") <> "#E5E7EB"
+                      , stroke $ (if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) then "0," else "1,") <> "#E5E7EB"
                       ][
                         driverDetail2 push state
                         , driverActivityStatus state
@@ -518,7 +519,7 @@ driverDetail2 push state =
                else if state.props.driverStatusSet == Online then ("2," <> Color.darkMint)
                else ("2," <> Color.blue800)
       , cornerRadius 50.0
-      , alpha if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted || state.props.currentStage == ChatWithCustomer) then 0.5 else 1.0
+      , alpha if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer])then 0.5 else 1.0
       , margin (Margin 20 10 20 10)--padding (Padding 10 10 10 10)
       ](DA.mapWithIndex (\index item ->
           driverStatusPill item push state index
@@ -546,7 +547,7 @@ driverStatusPill pillConfig push state index =
       , gravity CENTER
       , orientation HORIZONTAL
       , onClick push (const $ SwitchDriverStatus pillConfig.status)
-      , clickable if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted || state.props.currentStage == ChatWithCustomer) then false else true
+      , clickable if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) then false else true
       ][ imageView
         [ width $ V 15
         , height $ V 15
@@ -605,7 +606,7 @@ statsModel2 push state =
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation HORIZONTAL
-    , visibility if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) then GONE else VISIBLE
+    , visibility if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) then GONE else VISIBLE
     , gravity CENTER
     , padding (Padding 16 10 16 10)
     ][  StatsModel.view (push <<< StatsModelAction) (statsModelConfig state)

@@ -561,9 +561,10 @@ data Action = NoAction
             | UpdateSourceFromPastLocations
             | UpdateLocAndLatLong String String
             | UpdateSavedLoc (Array LocationListItemState)
-            | UpdateMessages String String String
+            | UpdateMessages String String String String
             | InitializeChat
             | RemoveChat
+            | OpenChatScreen
             | ChatViewActionController ChatView.Action
             | HideLiveDashboard String
             | LiveDashboardAction
@@ -603,17 +604,22 @@ eval OnResumeCallback state =
 
 eval (UpdateSavedLoc savedLoc) state = continue state{data{savedLocations = savedLoc}}
 
-eval (UpdateMessages message sender timeStamp) state = do
+eval (UpdateMessages message sender timeStamp size) state = do
   let newMessage = [(ChatView.makeChatComponent message sender timeStamp)]
   let messages = state.data.messages <> [((ChatView.makeChatComponent (getMessage message) sender timeStamp))]
   case (last newMessage) of
     Just value -> if value.sentBy == "Customer"
-                    then updateMessagesWithCmd state {data {messages = messages}}
+                    then updateMessagesWithCmd state {data {messages = messages, messagesSize = size}}
                   else do
                     let readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
                     let unReadMessages = (if readMessages == 0 then true else (if (readMessages < (length messages) && state.props.currentStage /= ChatWithDriver) then true else false))
-                    updateMessagesWithCmd state {data {messages = messages}, props {unReadMessages = unReadMessages}}
+                    updateMessagesWithCmd state {data {messages = messages, messagesSize = size}, props {unReadMessages = unReadMessages}}
     Nothing -> continue state
+
+eval (OpenChatScreen) state = do
+  continueWithCmd state{props{openChatScreen = false}} [do
+    pure $ (DriverInfoCardActionController (DriverInfoCardController.MessageDriver))
+  ]
 
 eval (ChatViewActionController (ChatView.TextChanged value)) state = do
   let sendMessageActive = if (STR.length (STR.trim value)) >= 1 then

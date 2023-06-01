@@ -170,7 +170,8 @@ chatViewConfig state = let
       userName = state.data.activeRide.riderName,
       appType = "Driver"
     }
-    ,messages = state.data.messages
+    , messages = state.data.messages
+    , messagesSize = state.data.messagesSize
     , sendMessageActive = state.props.sendMessageActive
     , distance = ""
     , suggestionsList = (if (state.data.activeRide.isDriverArrived || state.data.activeRide.notifiedCustomer) then pickupSuggestions "" else initialSuggestions "")

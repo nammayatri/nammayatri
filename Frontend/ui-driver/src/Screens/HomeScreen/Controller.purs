@@ -135,7 +135,8 @@ instance loggableAction :: Loggable Action where
     RecenterButtonAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "recenter_btn"
     HelpAndSupportScreen -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "help_and_support_btn"
     NoAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "no_action"
-    UpdateMessages msg sender timeStamp -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_messages"
+    UpdateMessages msg sender timeStamp size -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_messages"
+    OpenChatScreen -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "open_chat"
     InitializeChat -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "initialize_chat"
     RemoveChat -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "remove_chat"
     UpdateInChat -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_in_chat"
@@ -211,8 +212,9 @@ data Action = NoAction
             | RideActiveAction RidesInfo
             | RecenterButtonAction
             | ChatViewActionController ChatView.Action
-            | UpdateMessages String String String
+            | UpdateMessages String String String String
             | InitializeChat
+            | OpenChatScreen
             | RemoveChat
             | UpdateInChat
             | HelpAndSupportScreen
@@ -327,6 +329,11 @@ eval (RideActionModalAction (RideActionModal.CallCustomer)) state = continueWith
   pure NoAction
   ]
 
+eval (OpenChatScreen) state = do
+  continueWithCmd state{props{openChatScreen = false}} [do
+    pure $ (RideActionModalAction (RideActionModal.MessageCustomer))
+  ]
+
 eval (RideActionModalAction (RideActionModal.MessageCustomer)) state = do
   _ <- pure $ setValueToLocalStore LOCAL_STAGE (show ST.ChatWithCustomer)
   _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (Array.length state.data.messages))
@@ -427,17 +434,17 @@ eval RemoveChat state = do
     pure $ NoAction
   ]
 
-eval (UpdateMessages message sender timeStamp) state = do
+eval (UpdateMessages message sender timeStamp size) state = do
   let newMessage = [(ChatView.makeChatComponent message sender timeStamp)]
   let messages = state.data.messages <> [((ChatView.makeChatComponent (getMessage message) sender timeStamp))]
   case (Array.last newMessage) of
     Just value -> do
                   if (value.sentBy == "Driver") then
-                    updateMessagesWithCmd state { data { messages = messages}}
+                    updateMessagesWithCmd state { data { messages = messages, messagesSize = size}}
                   else do
                     let readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
                     let unReadMessages = (if (readMessages == 0 && state.props.currentStage /= ST.ChatWithCustomer) then true else (if (readMessages < (Array.length messages) && state.props.currentStage /= ST.ChatWithCustomer) then true else false))
-                    updateMessagesWithCmd state { data {messages = messages}, props {unReadMessages = unReadMessages}}
+                    updateMessagesWithCmd state { data {messages = messages, messagesSize = size}, props {unReadMessages = unReadMessages}}
     Nothing -> continue state
 
 eval (ChatViewActionController (ChatView.TextChanged value)) state = do

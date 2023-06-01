@@ -584,6 +584,7 @@ chatViewConfig state = let
         , appType = "Customer" 
         }
       , messages = state.data.messages
+      , messagesSize = state.data.messagesSize
       , sendMessageActive = state.props.sendMessageActive
       , distance = metersToKm state.data.driverInfoCardState.distance state
       , suggestionsList = if (metersToKm state.data.driverInfoCardState.distance state) == (getString AT_PICKUP) then pickupSuggestions ""  else initialSuggestions ""
