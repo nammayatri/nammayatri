@@ -103,6 +103,7 @@ dependencies:
   - template-haskell
   - sequelize
   - casing
+  - postgresql-simple
 
 ghc-options:
   - -fwrite-ide-info
