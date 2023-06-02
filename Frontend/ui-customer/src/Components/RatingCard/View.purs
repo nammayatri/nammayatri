@@ -49,70 +49,35 @@ view push state =
     , height MATCH_PARENT
     , orientation VERTICAL
     , clickable true
+    , onClick push $ const BackPressed
   ][  linearLayout
       [ orientation VERTICAL
       , height MATCH_PARENT
       , width MATCH_PARENT
       , alignParentBottom "true,-1"
-      , clickable true
-      , visibility VISIBLE
       , gravity BOTTOM
-      , background Color.transparent
-      ][ linearLayout
-        [ width MATCH_PARENT
-        , height WRAP_CONTENT
-        , padding (Padding 16 24 16 30)
-        , background Color.white900
-        , cornerRadii $ Corners 20.0 true true false false
-        ][ (if os == "IOS" && state.props.enableFeedback then scrollView else linearLayout)
-            [ width MATCH_PARENT
-            , height if os == "IOS" && state.props.enableFeedback then (V 400) else WRAP_CONTENT
-            , orientation VERTICAL
-            ]([ linearLayout
-                [ width MATCH_PARENT
-                , height WRAP_CONTENT
-                , gravity CENTER
-                , orientation HORIZONTAL
-                ][  textView
-                    [ height WRAP_CONTENT
-                    , width WRAP_CONTENT
-                    , textSize FontSize.a_22
-                    , text (getString RIDE_COMPLETED)
-                    , color Color.black800
-                    , fontStyle $ FontStyle.bold LanguageStyle
-                    , gravity CENTER
-                    , lineHeight "28"
-                    ]
-                  ]
-              , textView
-                  [ height WRAP_CONTENT
-                  , width MATCH_PARENT
-                  , textSize FontSize.a_14
-                  , text (getString HOPE_YOUR_RIDE_WAS_HASSLE_FREE)
-                  , color Color.black700
-                  , fontStyle $ FontStyle.regular LanguageStyle
-                  , gravity CENTER
-                  , lineHeight "18"
-                  , margin (MarginVertical 2 24)
-                  ]
-                ] <> (if (state.props.showFareBreakUp) then [tripDetailsView state push]  else [])
-                  <> (if (not state.props.showFareBreakUp) then [horizontalLine state] else [])
-                  <> ([starRatingView state push])
-                  <> (if state.props.enableFeedback then [editTextView state push] else [])
-                  <> ([buttonView push state])
-                  )
-          ]
+      , background Color.black9000
+      ][ currentRatingView push state 
         ] 
       ]
+  
 
-buttonView :: forall w. (Action -> Effect Unit) -> RatingCardState -> PrestoDOM (Effect Unit) w
-buttonView push state = 
+currentRatingView :: forall w. (Action -> Effect Unit) -> RatingCardState -> PrestoDOM (Effect Unit) w
+currentRatingView push state = 
   linearLayout
-  [ height WRAP_CONTENT
-  , width MATCH_PARENT
-  , alignParentBottom "true,-1"
-  ][ if state.props.currentStage /= HomeScreen then PrimaryButton.view (push <<< SkipButtonAC ) (skipButtonConfig state) else emptyLayout state
-    , PrimaryButton.view (push <<< PrimaryButtonAC ) (rideRatingButtonConfig state)]
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , padding $ Padding 16 24 16 30
+  , background Color.white900
+  , cornerRadii $ Corners 20.0 true true false false
+  , clickable true
+  , onClick push $ const NoAction
+  ][  starRatingView state push
+    , editTextView state push
+    , PrimaryButton.view (push <<< PrimaryButtonAC ) (rideRatingButtonConfig state)
+  ]
+
 
 --------------------------------------------------- horizontalLine ---------------------------------------------------
 
@@ -169,21 +134,6 @@ editTextView state push =
 
   ]
 
---------------------------------------------------- tripDetailsView ---------------------------------------------------
-
-tripDetailsView :: forall w . RatingCardState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
-tripDetailsView state push = 
-  linearLayout 
-  [ height WRAP_CONTENT
-  , width MATCH_PARENT
-  , orientation VERTICAL
-  , stroke ("1,"<>Color.grey900)
-  , clickable true
-  , cornerRadius 8.0 
-  , padding (Padding 16 24 16 24)
-  , margin (MarginBottom 16)
-  ][( FareBreakUp.view (push <<< FareBreakUpAC ) (fareBreakUpConfig state))]
-
 --------------------------------------------------- rideRatingButtonConfig ---------------------------------------------------
 
 rideRatingButtonConfig :: RatingCardState -> PrimaryButton.Config
@@ -208,27 +158,6 @@ rideRatingButtonConfig state = let
       }
   in primaryButtonConfig'
 
---------------------------------------------------- skipRatingButtonConfig ---------------------------------------------------
-
-skipButtonConfig :: RatingCardState -> PrimaryButton.Config 
-skipButtonConfig state = let 
-  config = PrimaryButton.config 
-  skipButtonConfig' = config 
-    { textConfig 
-      { text = (getString SKIP)
-      , color = Color.black700 
-      , fontStyle = FontStyle.bold LanguageStyle
-      , textSize = FontSize.a_16 
-      }
-    , width = V ( screenWidth unit / 4)
-    , background = Color.white900 
-    , stroke = ("1," <> Color.black500)
-    , margin = (MarginRight 12)
-    , id = "SkipCurrentRatingButton"
-    , enableLoader = (getBtnLoader "SkipCurrentRatingButton")
-    }
-  in skipButtonConfig'
-  
 ------------------------starRatingView--------------------------
 
 starRatingView :: forall w . RatingCardState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -241,12 +170,11 @@ starRatingView state push =
     , gravity CENTER
     , padding (PaddingVertical 16 16)
     , cornerRadius 8.0
-    , stroke if state.props.showFareBreakUp then ("1,"<>Color.grey900) else ("0,"<>Color.grey900)
     ][textView
         [ height WRAP_CONTENT
         , width $ V (screenWidth unit - 64)
         , textSize FontSize.a_16
-        , text (getText state)
+        , text $ getString RATE_YOUR_EXPERIENCE
         , color Color.black800
         , maxLines 2
         , fontStyle $ FontStyle.semiBold LanguageStyle
@@ -271,102 +199,3 @@ starRatingView state push =
                               ]
                           ]) [1,2,3,4,5])
     ]
-
---------------------------------------------------- fareBreakUpConfig ---------------------------------------------------
-
-fareBreakUpConfig :: RatingCardState -> FareBreakUp.Config 
-fareBreakUpConfig state = let 
-    config = FareBreakUp.config 
-    fareBreakUpConfig' = config 
-      {
-          fareDetails = [] -- ToDo :: send the fareDetails from the View file which is using this component.
-        , headingText = (getString VIEW_BREAKDOWN)
-        , totalAmount = { 
-            text : (getString TOTAL_AMOUNT)
-            , textSize : FontSize.a_16 
-            , fontStyle : FontStyle.semiBold LanguageStyle
-            , color : Color.black800
-            , margin : (Margin 0 0 0 12)
-            , visibility : VISIBLE
-            , priceDetails : {
-                text : state.data.finalAmount
-              , textSize : FontSize.a_16
-              , fontStyle : FontStyle.semiBold LanguageStyle
-              , offeredFare : state.data.offeredFare
-              , distanceDifference : state.data.distanceDifference
-              }
-            }
-        , rideDetails = {
-              destination : state.data.destination
-            , destinationTitle :(fromMaybe "" ((split (Pattern ",") (state.data.destination)) !! 0)) 
-            , source :state.data.source   
-            , sourceTitle : (fromMaybe "" ((split (Pattern ",") (state.data.source)) !! 0))
-            , rideStartTime : state.data.rideStartTime
-            , rideStartDate : state.data.rideStartDate
-            , estimatedDistance : state.props.estimatedDistance
-        }
-      }
-  in fareBreakUpConfig' 
-
---------------------------------------------------- sourceToDestinationConfig ---------------------------------------------------
-
-sourceToDestinationConfig :: RatingCardState -> SourceToDestination.Config 
-sourceToDestinationConfig state = let 
-  config = SourceToDestination.config 
-  sourceToDestinationConfig' = config 
-    {
-      margin = (Margin 2 0 40 0)
-    , sourceMargin = (Margin 0 0 0 14)
-    , lineMargin = (Margin 19 7 0 0)
-    , sourceImageConfig {
-        imageUrl = "ny_ic_source_dot,https://assets.juspay.in/nammayatri/images/common/ny_ic_source_dot.png"
-      , height = V 33 
-      , width = V 33 
-      , margin = (Margin 4 0 0 0)
-      }
-    , rideStartedAtConfig {
-        text = state.data.rideStartTime
-      , textSize = FontSize.a_12
-      , visibility = VISIBLE
-      , padding = (Padding 1 1 1 1)
-      , margin = (Margin 5 2 0 0)
-      }
-    , sourceTextConfig {
-        text = state.data.source
-      , textSize = FontSize.a_14
-      , padding = (Padding 2 0 2 2)
-      , margin = (Margin 5 0 15 0)
-      , fontStyle = FontStyle.medium LanguageStyle
-      , ellipsize = true
-      , maxLines = 1
-      }
-    , destinationImageConfig {
-        imageUrl = "ic_location_marker,https://assets.juspay.in/nammayatri/images/user/ic_location_marker.png"
-      , height = V 17
-      , width = V 14
-      , margin = (Margin 13 2 0 0)
-      }
-    , destinationTextConfig {
-        text = state.data.destination
-      , textSize = FontSize.a_14
-      , padding = (Padding 2 0 2 2)
-      , margin = (Margin 14 0 15 0)
-      , maxLines = 1
-      , fontStyle = FontStyle.medium LanguageStyle
-      , ellipsize = true
-      }
-    , rideEndedAtConfig {
-        text  = state.data.rideEndTime
-      , textSize = FontSize.a_12
-      , visibility = VISIBLE
-      , padding = (Padding 1 1 1 1)
-      , margin = (Margin 13 2 0 0)
-      }
-    }
-  in sourceToDestinationConfig'
-
-getText ::  RatingCardState -> String
-getText state = let language = getKey $ getKeyInSharedPrefKeys "LANGUAGE_KEY"
-              in case language of
-                          EN_US -> ((getString RATE_YOUR_RIDE_WITH) <> state.data.driverName )
-                          _     ->( state.data.driverName <> (getString RATE_YOUR_RIDE_WITH) )

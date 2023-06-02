@@ -29,7 +29,7 @@ import Prelude (class Show, pure, unit, not, bind, ($), (>), discard)
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
-import Screens.Types (TripDetailsScreenState)
+import Screens.Types (TripDetailsScreenState, TripDetailsGoBackType)
 
 instance showAction :: Show Action where
     show _ = ""
@@ -80,7 +80,7 @@ data Action = PrimaryButtonActionController PrimaryButtonController.Action
             | ShowPopUp
             | PopUpModalAction PopUpModalController.Action
 
-data ScreenOutput = GoBack Boolean | OnSubmit TripDetailsScreenState | GoToInvoice TripDetailsScreenState | GoHome | ConnectWithDriver TripDetailsScreenState
+data ScreenOutput = GoBack TripDetailsGoBackType | OnSubmit TripDetailsScreenState | GoToInvoice TripDetailsScreenState | GoHome | ConnectWithDriver TripDetailsScreenState
 
 eval :: Action -> TripDetailsScreenState -> Eval Action ScreenOutput TripDetailsScreenState
 

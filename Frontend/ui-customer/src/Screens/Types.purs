@@ -29,7 +29,7 @@ import Halogen.VDom.DOM.Prop (PropValue)
 import PrestoDOM (LetterSpacing)
 import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
-import Services.API (AddressComponents, BookingLocationAPIEntity, QuoteAPIEntity, Route)
+import Services.API (AddressComponents, BookingLocationAPIEntity, QuoteAPIEntity, Route, RideBookingRes)
 
 type Contacts = {
   name :: String,
@@ -225,10 +225,12 @@ type TripDetailsScreenProps =
     reportIssue :: Boolean,
     issueReported :: Boolean,
     activateSubmit :: Boolean,
-    fromMyRides :: Boolean,
+    fromMyRides :: TripDetailsGoBackType,
     showConfirmationPopUp :: Boolean,
     canConnectWithDriver :: Boolean
   }
+
+data TripDetailsGoBackType = Home | MyRides | HelpAndSupport
 
 -- ######################################  InvoiceScreenState   ######################################
 
@@ -479,7 +481,7 @@ type HomeScreenStateData =
   , selectList :: Array QuoteAPIEntity
   , quoteListModelState :: Array QuoteListItemState
   , driverInfoCardState :: DriverInfoCard
-  , previousRideRatingState :: RatingCard
+  , rideRatingState :: RatingCard
   , settingSideBar :: SettingSideBarState
   , sourceAddress :: Address
   , destinationAddress :: Address
@@ -503,6 +505,7 @@ type HomeScreenStateData =
   , specialZoneQuoteList :: Array ChooseVehicle.Config
   , specialZoneSelectedQuote :: Maybe String
   , selectedEstimatesObject :: ChooseVehicle.Config
+  , ratingViewState :: RatingViewState
   }
 
 type HomeScreenStateProps =
@@ -532,7 +535,6 @@ type HomeScreenStateProps =
   , cancelReasonCode :: String
   , isPopUp :: PopupType
   , forFirst :: Boolean
-  , ratingModal :: Boolean
   , callbackInitiated :: Boolean
   , isLocationTracking :: Boolean
   , isInApp :: Boolean
@@ -570,6 +572,19 @@ type HomeScreenStateProps =
   , defaultPickUpPoint :: String
   , isSpecialZone :: Boolean
   }
+
+type RatingViewState = {
+    selectedYesNoButton :: Int,
+    selectedRating :: Int,
+    issueReportActiveIndex :: Maybe Int,
+    issueReasonCode :: Maybe String,
+    openReportIssue :: Boolean,
+    issueFacedView :: Boolean,
+    doneButtonVisibility :: Boolean,
+    issueReason :: Maybe String,
+    issueDescription :: String,
+    rideBookingRes :: RideBookingRes
+}
 
 type CustomerTipProps = {
     enableTips :: Boolean

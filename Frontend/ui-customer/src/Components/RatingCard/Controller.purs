@@ -31,16 +31,7 @@ data Action = NoAction
             | FeedbackChanged String
 
 type RatingCardState = 
-  { props :: RatingCardProps
-  , data :: RatingCardData
-  }
-
-type RatingCardProps = 
-  {
-    currentStage :: Stage
-  , estimatedDistance :: Maybe Int
-  , enableFeedback :: Boolean 
-  , showFareBreakUp :: Boolean 
+  { data :: RatingCardData
   }
 
 type RatingCardData = 

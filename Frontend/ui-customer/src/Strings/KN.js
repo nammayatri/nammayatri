@@ -455,5 +455,18 @@ const kannadaStrings = {
   "WE_WOULD_APPRECIATE_YOUR_FEEDBACK" : "ಖಾತೆ ಅಳಿಸುವಿಕೆಯ ಹಿಂದಿನ ನಿಮ್ಮ ತಾರ್ಕಿಕತೆಯನ್ನು ನಾವು ಪ್ರಶಂಸಿಸುತ್ತೇವೆ",
   "REASON_FOR_DELETING_ACCOUNT" : "ಖಾತೆಯನ್ನು ಅಳಿಸಲು ಕಾರಣ*",
   "SUBMIT_REQUEST" : "ವಿನಂತಿಯನ್ನು ಸಲ್ಲಿಸಿ",
-  "PLEASE_ENTER_A_VALID_EMAIL" : "ದಯವಿಟ್ಟು ಮಾನ್ಯವಾದ ಇಮೇಲ್ ಅನ್ನು ನಮೂದಿಸಿ"
+  "PLEASE_ENTER_A_VALID_EMAIL" : "ದಯವಿಟ್ಟು ಮಾನ್ಯವಾದ ಇಮೇಲ್ ಅನ್ನು ನಮೂದಿಸಿ",
+  "RATE_YOUR_EXPERIENCE" : "ನಿಮ್ಮ ಅನುಭವವನ್ನು ರೇಟ್ ಮಾಡಿ",
+  "REPORT_ISSUE_" : "ಸಮಸ್ಯೆಯನ್ನು ವರದಿ ಮಾಡಿ",
+  "DONE" : "ಮುಗಿದಿದೆ",
+  "PLEASE_TELL_US_WHAT_WENT_WRONG" : "ಏನು ತಪ್ಪಾಗಿದೆ ಎಂದು ದಯವಿಟ್ಟು ನಮಗೆ ತಿಳಿಸಿ",
+  "YOUR_FEEDBACK_HELPS_US" : "ನಿಮ್ಮ ಪ್ರತಿಕ್ರಿಯೆ ನಮ್ಮ ಯಾತ್ರಿ ಅನುಭವವನ್ನು ಸುಧಾರಿಸಲು ನಮಗೆ ಸಹಾಯ ಮಾಡುತ್ತದೆ",
+  "DID_YOU_FACE_ANY_ISSUE" : "ನೀವು ಯಾವುದೇ ಸಮಸ್ಯೆಯನ್ನು ಎದುರಿಸಿದ್ದೀರಾ?",
+  "WE_NOTICED_YOUR_RIDE_ENDED_AWAY" : "ನಿಮ್ಮ ರೈಡ್ ನಿಮ್ಮ ಮೂಲ ಗಮ್ಯಸ್ಥಾನದಿಂದ ದೂರದಲ್ಲಿದೆ ಎಂದು ನಾವು ಗಮನಿಸಿದ್ದೇವೆ",
+  "GET_CALLBACK_FROM_US" : "ನಮ್ಮಿಂದ ಕಾಲ್ಬ್ಯಾಕ್ ಪಡೆಯಿರಿ",
+  "DRIVER_WAS_NOT_READY_TO_GO" : "ಚಾಲಕ ಹೋಗಲು ಸಿದ್ಧನಿರಲಿಲ್ಲ",
+  "ASKING_FOR_MORE_MONEY" : "ಚಾಲಕ ಹೆಚ್ಚಿನ ಹಣ ಕೇಳುತ್ತಿದ್ದ",
+  "AUTO_BROKEN" : "ಆಟೋ ಕೆಟ್ಟು ನಿಂತಿತು",
+  "WE_WILL_GIVE_YOU_CALLBACK" : "ನಾವು ನಿಮಗೆ 24 ಗಂಟೆಗಳ ಒಳಗೆ ಕಾಲ್‌ಬ್ಯಾಕ್ ನೀಡುತ್ತೇವೆ",
+  "YOUR_ISSUE_HAS_BEEN_REPORTED" : "ನಿಮ್ಮ ಸಮಸ್ಯೆಯನ್ನು ಯಶಸ್ವಿಯಾಗಿ ವರದಿ ಮಾಡಲಾಗಿದೆ"
 }

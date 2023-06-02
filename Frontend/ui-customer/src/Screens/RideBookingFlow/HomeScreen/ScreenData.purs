@@ -21,9 +21,11 @@ import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Data.Maybe (Maybe(..))
 import Styles.Colors as Color
 import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState,Location,RateCardType(..))
-import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..))
+import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..),  RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..))
 import Prelude (($))
 import Data.Array (head)
+import Prelude(negate)
+import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 
 initData :: HomeScreenState
 initData = {
@@ -45,7 +47,7 @@ initData = {
     , selectList : []
     , quoteListModelState : []
     , driverInfoCardState : dummyDriverInfo
-    , previousRideRatingState : dummyPreviousRiderating
+    , rideRatingState : dummyPreviousRiderating
     , settingSideBar : dummySettingBar
     , sourceAddress : dummyAddress
     , destinationAddress : dummyAddress
@@ -94,6 +96,18 @@ initData = {
       , index: 0
       , id: ""
       }
+    , ratingViewState : {
+        selectedYesNoButton : -1,
+        selectedRating : -1,
+        issueReportActiveIndex : Nothing ,
+        issueReasonCode : Nothing,
+        openReportIssue : false,
+        doneButtonVisibility : false,
+        issueFacedView : false,
+        issueReason : Nothing,
+        issueDescription : "",
+        rideBookingRes : dummyRideBooking
+    }
     },
     props: {
       rideRequestFlow : false
@@ -126,7 +140,6 @@ initData = {
     , cancelReasonCode : ""
     , isPopUp : NoPopUp
     , forFirst : true
-    , ratingModal : false
     , callbackInitiated : false
     , isLocationTracking : false
     , isInApp : true
@@ -362,3 +375,39 @@ dummyLocation = {
    lng : 0.0
  }
 
+
+dummyRideBooking :: RideBookingRes
+dummyRideBooking = RideBookingRes
+  {
+  agencyNumber : "",
+  status : "",
+  rideStartTime : Nothing,
+  rideEndTime : Nothing,
+  duration : Nothing,
+  fareBreakup :[],
+  createdAt : "",
+  discount : Nothing ,
+  estimatedTotalFare : 0,
+  agencyName : "",
+  rideList :[] ,
+  estimatedFare : 0,
+  tripTerms : [],
+  id : "",
+  updatedAt : "",
+  bookingDetails : dummyRideBookingAPIDetails ,
+  fromLocation :  dummyBookingDetails,
+  merchantExoPhone : ""
+  }
+
+dummyRideBookingAPIDetails ::RideBookingAPIDetails
+dummyRideBookingAPIDetails= RideBookingAPIDetails{
+  contents : dummyRideBookingDetails,
+  fareProductType : ""
+}
+
+dummyRideBookingDetails :: RideBookingDetails
+dummyRideBookingDetails = RideBookingDetails {
+  toLocation : dummyBookingDetails,
+  estimatedDistance : Nothing,
+  otpCode : Nothing
+}

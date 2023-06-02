@@ -881,6 +881,14 @@ userSosStatusBT sosId requestBody = do
     where
     errorHandler errorPayload = BackT $ pure GoBack
 
+callbackRequestBT :: String -> FlowBT String RequestCallbackRes
+callbackRequestBT _ = do
+        headers <- getHeaders' ""
+        withAPIResultBT (EP.callbackRequest "") (\x → x) errorHandler (lift $ lift $ callAPI headers RequestCallbackReq)
+    where
+      errorHandler errorPayload = do
+            BackT $ pure GoBack
+
 makeUserSosReq :: UserSosFlow -> String -> UserSosReq
 makeUserSosReq flow rideId = UserSosReq {
      "flow" : flow,

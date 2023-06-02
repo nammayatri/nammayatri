@@ -82,12 +82,12 @@ import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, Ge
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
 import Storage (KeyStore(..), isLocalStageOn, updateLocalStage, getValueToLocalStore, getValueToLocalStoreEff, setValueToLocalStore, getValueToLocalNativeStore, setValueToLocalNativeStore)
--- import Data.Array ((!!))
 import Control.Monad.Trans.Class (lift)
 import Presto.Core.Types.Language.Flow (doAff)
 import Effect.Class (liftEffect)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Types.App (defaultGlobalState)
+import Screens.RideBookingFlow.HomeScreen.Config(reportIssueOptions)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -491,6 +491,8 @@ data ScreenOutput = LogoutUser
                   | CheckCurrentStatus
                   | CheckFlowStatus HomeScreenState
                   | RetryFindingQuotes HomeScreenState
+                  | ReportIssue HomeScreenState
+                  | RideDetailsScreen HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -519,7 +521,6 @@ data Action = NoAction
             | DriverInfoCardActionController DriverInfoCardController.Action
             | RatingCardAC RatingCard.Action
             | UpdateLocation String String String
-            | RateRideButtonActionController PrimaryButtonController.Action
             | CancelRidePopUpAction CancelRidePopUp.Action
             | PopUpModalAction PopUpModal.Action
             | TrackDriver GetDriverLocationResp
@@ -583,7 +584,12 @@ data Action = NoAction
             | MenuButtonActionController MenuButtonController.Action
             | ChooseYourRideAction ChooseYourRideController.Action
             | SearchForSelectedLocation
-
+            | SelectButton Int
+            | RateClick Int
+            | Support
+            | IssueReportPopUpAC CancelRidePopUp.Action
+            | IssueReportIndex Int
+            | RideDetails
 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
@@ -615,6 +621,34 @@ eval OnResumeCallback state =
   else continue state
 
 eval (UpdateSavedLoc savedLoc) state = continue state{data{savedLocations = savedLoc}}
+
+eval (SelectButton index) state = continue state { data { ratingViewState { selectedYesNoButton = index, doneButtonVisibility = index == 1}}}
+
+eval (RateClick index) state = do
+  _ <- pure $ setValueToLocalStore REFERRAL_STATUS "HAS_TAKEN_RIDE"
+  continue
+    state
+      { props { currentStage = RideRating }
+      , data
+        { rideRatingState =
+          dummyRideRatingState
+            { driverName = state.data.driverInfoCardState.driverName
+            , rideId = state.data.driverInfoCardState.rideId
+            , rating = index
+            }
+          , ratingViewState { selectedRating = index }
+        }
+      }
+
+eval (IssueReportIndex index) state = 
+  case index of 
+    0 -> continue state { data { ratingViewState { openReportIssue = true }}}
+    1 -> exit $ ReportIssue state { data {  ratingViewState { issueReason = Nothing }}}
+    _ -> continue state
+
+eval Support state = continue state {props {callSupportPopUp = true}}
+
+eval RideDetails state = exit $ RideDetailsScreen state -- TODO needs to fill the data
 
 eval (UpdateMessages message sender timeStamp size) state = do
   let newMessage = [(ChatView.makeChatComponent message sender timeStamp)]
@@ -740,6 +774,9 @@ eval BackPressed state = do
                          else do
                             _ <- pure $ updateLocalStage RideAccepted
                             continue state {props {currentStage = RideAccepted}}
+    RideRating ->     do
+                      _ <- pure $ updateLocalStage RideCompleted
+                      continue state {props {currentStage = RideCompleted}}
     _               -> do
                         if state.props.isLocationTracking then continue state{props{isLocationTracking = false}}
                           else if state.props.isSaveFavourite then continueWithCmd state [pure $ (SaveFavouriteCardAction (SaveFavouriteCardController.OnClose))]
@@ -754,6 +791,7 @@ eval BackPressed state = do
                             ]
                           else if state.props.emergencyHelpModal then continue state {props {emergencyHelpModal = false}}
                           else if state.props.callSupportPopUp then continue state {props {callSupportPopUp = false}}
+                          else if state.data.ratingViewState.openReportIssue then continue state {data {ratingViewState {openReportIssue = false}}}
                           else do
                             _ <- pure $ minimizeApp ""
                             continue state
@@ -822,7 +860,7 @@ eval (OnIconClick autoAssign) state = do
 eval PreferencesDropDown state = do
   continue state { data { showPreferences = not state.data.showPreferences}}
 
-eval (RatingCardAC (RatingCard.Rating index)) state = continue state { data { previousRideRatingState { rating = index } } }
+eval (RatingCardAC (RatingCard.Rating index)) state = continue state { data { rideRatingState { rating = index }, ratingViewState { selectedRating = index} } }
 
 eval (RatingCardAC (RatingCard.PrimaryButtonAC PrimaryButtonController.OnClick)) state = do
   _ <- pure $ firebaseLogEvent "ny_user_ride_give_feedback"
@@ -834,7 +872,11 @@ eval (RatingCardAC (RatingCard.SkipButtonAC PrimaryButtonController.OnClick)) st
   _ <- pure $ firebaseLogEvent "ny_user_ride_skip_feedback"
   updateAndExit state GoToHome
 
-eval (RatingCardAC (RatingCard.FeedbackChanged value)) state = continue state { data { previousRideRatingState { feedback = value } } }
+eval (RatingCardAC (RatingCard.FeedbackChanged value)) state = continue state { data { rideRatingState { feedback = value } } }
+
+eval (RatingCardAC (RatingCard.BackPressed)) state = do
+  _ <- pure $ updateLocalStage RideCompleted
+  continue state {props {currentStage = RideCompleted}}
 
 eval (SettingSideBarActionController (SettingSideBarController.PastRides)) state = exit $ PastRides state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
 
@@ -916,24 +958,27 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = d
                         updateAndExit (updatedState) (GetQuotes updatedState)
       _            -> continue state
 
-eval (RateRideButtonActionController (PrimaryButtonController.OnClick)) state = do
-  _ <- pure $ setValueToLocalStore REFERRAL_STATUS "HAS_TAKEN_RIDE"
-  continue
-    state
-      { props { currentStage = RideRating }
-      , data
-        { previousRideRatingState =
-          dummyRideRatingState
-            { driverName = state.data.driverInfoCardState.driverName
-            , rideId = state.data.driverInfoCardState.rideId
-            }
-        }
-      }
 
-eval (SkipButtonActionController (PrimaryButtonController.OnClick)) state = do
-  _ <- pure $ setValueToLocalStore REFERRAL_STATUS "HAS_TAKEN_RIDE"
-  _ <- pure $ setValueToLocalStore RATING_SKIPPED "true"
-  updateAndExit state GoToHome
+eval (SkipButtonActionController (PrimaryButtonController.OnClick)) state =
+  case state.data.ratingViewState.issueFacedView of 
+    true -> do
+            _ <- pure $ setValueToLocalStore REFERRAL_STATUS "HAS_TAKEN_RIDE"
+            continue
+              state
+                { props { currentStage = RideRating }
+                , data
+                  { rideRatingState =
+                    dummyRideRatingState
+                      { driverName = state.data.driverInfoCardState.driverName
+                      , rideId = state.data.driverInfoCardState.rideId
+                      }
+                  }
+                }    
+    _ ->  if state.data.ratingViewState.selectedRating > 0 then updateAndExit state $ SubmitRating state{ data {rideRatingState {rating = state.data.ratingViewState.selectedRating }}}
+          else do 
+            _ <- pure $ firebaseLogEvent "ny_user_ride_skip_feedback"
+            _ <- pure $ setValueToLocalStore RATING_SKIPPED "true"
+            updateAndExit state GoToHome
 
 eval OpenSettings state = do
   _ <- pure $ hideKeyboardOnNavigation true
@@ -1076,6 +1121,20 @@ eval (CancelRidePopUpAction (CancelRidePopUp.Button2 PrimaryButtonController.OnC
       Just index -> if ( (fromMaybe dummyCancelReason (state.props.cancellationReasons !! index)).reasonCode == "OTHER" || (fromMaybe dummyCancelReason (state.props.cancellationReasons !! index)).reasonCode == "TECHNICAL_GLITCH" ) then exit $ CancelRide newState{props{cancelDescription = if (newState.props.cancelDescription == "") then (fromMaybe dummyCancelReason (state.props.cancellationReasons !!index)).description else newState.props.cancelDescription }}
                       else exit $ CancelRide newState{props{cancelDescription = (fromMaybe dummyCancelReason (state.props.cancellationReasons !!index)).description , cancelReasonCode = (fromMaybe dummyCancelReason (state.props.cancellationReasons !! index)).reasonCode }}
       Nothing    -> continue state
+
+eval (IssueReportPopUpAC (CancelRidePopUp.Button1 PrimaryButtonController.OnClick)) state = continue state { data { ratingViewState { openReportIssue = false } } }
+
+eval (IssueReportPopUpAC (CancelRidePopUp.OnGoBack)) state = continue state { data { ratingViewState { openReportIssue = false } } }
+
+eval (IssueReportPopUpAC (CancelRidePopUp.UpdateIndex index)) state = continue state { data { ratingViewState { issueReportActiveIndex = Just index} } }
+
+eval (IssueReportPopUpAC (CancelRidePopUp.Button2 PrimaryButtonController.OnClick)) state = do
+  let issue = reportIssueOptions!!(fromMaybe 1 state.data.ratingViewState.issueReportActiveIndex)
+  let reason = (fromMaybe dummyCancelReason issue).description
+  exit $ ReportIssue state { data { 
+    ratingViewState { issueReason = Just reason, issueDescription = reason},
+    rideRatingState {rideId = state.data.driverInfoCardState.rideId, feedback = ""}
+    }}
 
 eval (PredictionClickedAction (LocationListItemController.OnClick item)) state = do
   _ <- pure $ firebaseLogEvent "ny_user_prediction_list_item"

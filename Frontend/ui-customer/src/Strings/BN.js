@@ -458,5 +458,18 @@ const bengaliStrings = {
   "WE_WOULD_APPRECIATE_YOUR_FEEDBACK" : "আমরা অ্যাকাউন্ট মুছে ফেলার পিছনে আপনার যুক্তির প্রশংসা করব",
   "REASON_FOR_DELETING_ACCOUNT" : "অ্যাকাউন্ট মুছে ফেলার কারণ*",
   "SUBMIT_REQUEST" : "অনুরোধ জমা দিন",
-  "PLEASE_ENTER_A_VALID_EMAIL" : "একটি বৈধ ইমেইল প্রবেশ করুন"
+  "PLEASE_ENTER_A_VALID_EMAIL" : "একটি বৈধ ইমেইল প্রবেশ করুন",
+  "RATE_YOUR_EXPERIENCE" : "আপনার অভিজ্ঞতা রেট",
+  "REPORT_ISSUE_" : "রিপোর্ট সমস্যা",
+  "DONE" : "সম্পন্ন",
+  "PLEASE_TELL_US_WHAT_WENT_WRONG" : "কি ভুল হয়েছে আমাদের বলুন",
+  "YOUR_FEEDBACK_HELPS_US" : "আপনার প্রতিক্রিয়া আমাদের নম্মা যাত্রী অভিজ্ঞতা উন্নত করতে সাহায্য করে",
+  "DID_YOU_FACE_ANY_ISSUE" : "আপনি কোন সমস্যা সম্মুখীন?",
+  "WE_NOTICED_YOUR_RIDE_ENDED_AWAY" : "আমরা লক্ষ্য করেছি যে আপনার রাইড আপনার আসল গন্তব্য থেকে দূরে শেষ হয়েছে৷",
+  "GET_CALLBACK_FROM_US" : "আমাদের কাছ থেকে একটি কলব্যাক পান",
+  "DRIVER_WAS_NOT_READY_TO_GO" : "ড্রাইভার যেতে প্রস্তুত ছিল না",
+  "ASKING_FOR_MORE_MONEY" : "চালক আরও টাকা চাইছিলেন",
+  "AUTO_BROKEN" : "অটো ভেঙে পড়ে",
+  "WE_WILL_GIVE_YOU_CALLBACK" : "আমরা আপনাকে 24 ঘন্টার মধ্যে একটি কলব্যাক দেব",
+  "YOUR_ISSUE_HAS_BEEN_REPORTED" : "আপনার সমস্যা সফলভাবে রিপোর্ট করা হয়েছে"
 }

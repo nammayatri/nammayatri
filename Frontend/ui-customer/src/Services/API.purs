@@ -1718,6 +1718,32 @@ instance showNotifyFlowEventRes :: Show NotifyFlowEventRes where show = genericS
 instance decodeNotifyFlowEventRes :: Decode NotifyFlowEventRes where decode = defaultDecode
 instance encodeNotifyFlowEventRes :: Encode NotifyFlowEventRes where encode = defaultEncode
 
+
+----------------------------------------------------------------------- RequestCallback api -------------------------------------------------------------------
+
+data RequestCallbackReq = RequestCallbackReq
+
+newtype RequestCallbackRes = RequestCallbackRes {
+  result :: String
+}
+
+instance makeRequestCallbackReq :: RestEndpoint RequestCallbackReq RequestCallbackRes where
+    makeRequest reqBody@(RequestCallbackReq) headers = defaultMakeRequest POST (EP.callbackRequest "") headers reqBody
+    decodeResponse = decodeJSON
+    encodeRequest req = defaultEncode req
+
+derive instance genericRequestCallbackReq :: Generic RequestCallbackReq _
+instance standardEncodeRequestCallbackReq :: StandardEncode RequestCallbackReq where standardEncode (RequestCallbackReq ) = standardEncode {}
+instance decodeRequestCallbackReq :: Decode RequestCallbackReq where decode = defaultDecode
+instance encodeRequestCallbackReq :: Encode RequestCallbackReq where encode = defaultEncode
+
+derive instance genericRequestCallbackRes :: Generic RequestCallbackRes _
+derive instance newtypeRequestCallbackRes :: Newtype RequestCallbackRes _
+instance showRequestCallbackRes :: Show RequestCallbackRes where show = genericShow
+instance standardEncodeRequestCallbackRes :: StandardEncode RequestCallbackRes where standardEncode (RequestCallbackRes res) = standardEncode res
+instance decodeRequestCallbackRes :: Decode RequestCallbackRes where decode = defaultDecode
+instance encodeRequestCallbackRes :: Encode RequestCallbackRes where encode = defaultEncode
+
 ----------------------------------------------------------------------- cancelEstimate api -------------------------------------------------------------------
 
 data CancelEstimateReq = CancelEstimateReq String

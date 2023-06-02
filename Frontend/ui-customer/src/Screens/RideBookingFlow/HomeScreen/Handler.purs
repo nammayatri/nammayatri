@@ -25,6 +25,7 @@ import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.HomeScreen.Controller (ScreenOutput(..))
 import Screens.HomeScreen.View as HomeScreen
 import Types.App (FlowBT, GlobalState(..), ScreenType(..), HOME_SCREEN_OUTPUT(..))
+import Screens.HomeScreen.Transformer(getTripDetailsState)
 
 homeScreen ::FlowBT String HOME_SCREEN_OUTPUT
 homeScreen = do
@@ -154,5 +155,11 @@ homeScreen = do
     CallDriver updatedState callType-> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ ON_CALL updatedState callType)
-
-
+    ReportIssue updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ REPORT_ISSUE updatedState)
+    RideDetailsScreen updatedState -> do  
+      (GlobalState globalState) <- getState
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+      modifyScreenState $ TripDetailsScreenStateType (\_ -> getTripDetailsState updatedState.data.ratingViewState.rideBookingRes globalState.tripDetailsScreen)
+      App.BackT $ App.BackPoint <$> (pure $ RIDE_DETAILS_SCREEN updatedState)
