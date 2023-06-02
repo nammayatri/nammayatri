@@ -176,23 +176,20 @@ skipButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
 skipButtonConfig state =
   let
     config = PrimaryButton.config
-    skipButtonConfig' =
+    primaryButtonConfig' =
       config
         { textConfig
-          { text = (getString SKIP)
-          , color = Color.black700
-          , fontStyle = FontStyle.bold LanguageStyle
+          { text = getString DONE
+          , color = Color.yellow900
           , textSize = FontSize.a_16
+          , fontStyle = FontStyle.regular LanguageStyle
           }
-        , width = V (EHC.screenWidth unit / 4)
-        , background = Color.white900
-        , stroke = ("1," <> Color.black500)
-        , margin = (Margin 0 0 0 0)
-        , id = "SkipRatingButton"
-        , enableLoader = (JB.getBtnLoader "SkipRatingButton")
+        , background = Color.black900
+        , margin = MarginTop 22
+        , id = "SkipButton"
         }
   in
-    skipButtonConfig'
+    primaryButtonConfig'
 
 sourceToDestinationConfig :: ST.HomeScreenState -> SourceToDestination.Config
 sourceToDestinationConfig state =
@@ -272,7 +269,7 @@ fareBreakUpConfig state =
               , textSize: FontSize.a_16
               , fontStyle: FontStyle.semiBold LanguageStyle
               , offeredFare: state.data.driverInfoCardState.price
-              , distanceDifference: state.data.previousRideRatingState.distanceDifference
+              , distanceDifference: state.data.rideRatingState.distanceDifference
               }
           }
         , rideDetails =
@@ -426,6 +423,41 @@ genderBannerConfig state =
       , isBanner = state.props.isBanner
       }
   in config'
+
+reportIssuePopUpConfig :: ST.HomeScreenState -> CancelRidePopUpConfig.Config
+reportIssuePopUpConfig state =
+  let
+    reportIssueConfig = CancelRidePopUpConfig.config
+    lastIndex = (DA.length reportIssueOptions) - 1
+    reportIssueConfig' =
+      reportIssueConfig
+        { selectionOptions = reportIssueOptions
+        , primaryButtonTextConfig
+          { firstText = getString GO_BACK_
+          , secondText = getString SUBMIT
+          }
+        , activeIndex = state.data.ratingViewState.issueReportActiveIndex
+        , activeReasonCode = state.data.ratingViewState.issueReasonCode
+        , isLimitExceeded = false
+        , isSelectButtonActive =
+          ( case state.data.ratingViewState.issueReportActiveIndex of
+              Just issueReportActiveIndex -> true
+              Nothing -> false
+          )
+        , headingTextConfig{
+          text = getString REPORT_ISSUE_
+        }
+        , subHeadingTextConfig{
+          text = getString PLEASE_TELL_US_WHAT_WENT_WRONG
+        }
+        , hint = getString HELP_US_WITH_YOUR_REASON
+        , strings
+          { mandatory = getString MANDATORY
+          , limitReached = ((getString MAX_CHAR_LIMIT_REACHED) <> " 100 " <> (getString OF) <> " 100")
+          }
+        }
+  in
+    reportIssueConfig'
 
 logOutPopUpModelConfig :: ST.HomeScreenState -> PopUpModal.Config
 logOutPopUpModelConfig state =
@@ -773,15 +805,7 @@ emergencyHelpModelViewState state = { showContactSupportPopUp: state.props.emerg
                                 }
 
 ratingCardViewState :: ST.HomeScreenState -> RatingCard.RatingCardState
-ratingCardViewState state = { props:
-                            { currentStage: state.props.currentStage
-                            , estimatedDistance: state.props.estimatedDistance
-                            , showFareBreakUp: false
-                            , enableFeedback: true
-                            , zoneType: state.props.zoneType.priorityTag
-                            }
-                        , data: state.data.previousRideRatingState
-                        }
+ratingCardViewState state = { data: state.data.rideRatingState {rating = state.data.ratingViewState.selectedRating}}
 
 searchLocationModelViewState :: ST.HomeScreenState -> SearchLocationModel.SearchLocationModelState
 searchLocationModelViewState state = { isSearchLocation: state.props.isSearchLocation
@@ -806,17 +830,6 @@ quoteListModelViewState state = { source: state.data.source
                             , tipViewProps : getTipViewProps state.props.tipViewProps
                             , findingRidesAgain : state.props.findingRidesAgain
                             }
-
-previousRideRatingViewState :: ST.HomeScreenState -> RatingCard.RatingCardState
-previousRideRatingViewState state = { props:
-                                        { currentStage: state.props.currentStage
-                                        , estimatedDistance: state.props.estimatedDistance
-                                        , enableFeedback: false
-                                        , showFareBreakUp: true
-                                        , zoneType: state.props.zoneType.priorityTag
-                                        }
-                                    , data: state.data.previousRideRatingState
-                                    }
 
 rideRequestAnimConfig :: AnimConfig.AnimConfig
 rideRequestAnimConfig =
@@ -1002,3 +1015,27 @@ requestInfoCardConfig _ = let
     }
   }
   in requestInfoCardConfig'
+
+reportIssueOptions :: Array OptionButtonList -- need to modify
+reportIssueOptions =
+  [ { reasonCode: "DRIVER_WAS_NOT_READY_TO_GO"
+    , description: getString DRIVER_WAS_NOT_READY_TO_GO
+    , textBoxRequired : false
+    , subtext : Nothing
+    }
+  , { reasonCode: "ASKING_FOR_MORE_MONEY"
+    , description: getString ASKING_FOR_MORE_MONEY
+    , textBoxRequired : false
+    , subtext : Nothing
+    }
+  , { reasonCode: "AUTO_BROKEN"
+    , description: getString AUTO_BROKEN
+    , textBoxRequired : false
+    , subtext : Nothing
+    }
+  , { reasonCode: "OTHER"
+    , description: getString OTHER
+    , textBoxRequired : false
+    , subtext : Nothing
+    }
+  ]

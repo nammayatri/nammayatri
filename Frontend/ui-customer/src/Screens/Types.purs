@@ -29,7 +29,7 @@ import Halogen.VDom.DOM.Prop (PropValue)
 import PrestoDOM (LetterSpacing)
 import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
-import Services.API (AddressComponents, BookingLocationAPIEntity, QuoteAPIEntity, Route)
+import Services.API (AddressComponents, BookingLocationAPIEntity, QuoteAPIEntity, Route, RideBookingRes)
 
 type Contacts = {
   name :: String,
@@ -268,10 +268,15 @@ type TripDetailsScreenProps =
     reportIssue :: Boolean,
     issueReported :: Boolean,
     activateSubmit :: Boolean,
-    fromMyRides :: Boolean,
+    fromMyRides :: TripDetailsGoBackType,
     showConfirmationPopUp :: Boolean,
     canConnectWithDriver :: Boolean
   }
+
+data TripDetailsGoBackType = Home | MyRides | HelpAndSupport
+derive instance genericTripDetailsGoBackType :: Generic TripDetailsGoBackType _
+instance showTripDetailsGoBackType :: Show TripDetailsGoBackType where show = genericShow
+instance eqTripDetailsGoBackType :: Eq TripDetailsGoBackType where eq = genericEq
 
 -- ######################################  InvoiceScreenState   ######################################
 
@@ -524,7 +529,7 @@ type HomeScreenStateData =
   , selectList :: Array QuoteAPIEntity
   , quoteListModelState :: Array QuoteListItemState
   , driverInfoCardState :: DriverInfoCard
-  , previousRideRatingState :: RatingCard
+  , rideRatingState :: RatingCard
   , settingSideBar :: SettingSideBarState
   , sourceAddress :: Address
   , destinationAddress :: Address
@@ -550,6 +555,7 @@ type HomeScreenStateData =
   , lastMessage :: ChatComponent
   , cancelRideConfirmationData :: CancelRideConfirmationData
   , pickUpCharges :: Int
+  , ratingViewState :: RatingViewState
   }
 
 type HomeScreenStateProps =
@@ -579,7 +585,6 @@ type HomeScreenStateProps =
   , cancelReasonCode :: String
   , isPopUp :: PopupType
   , forFirst :: Boolean
-  , ratingModal :: Boolean
   , callbackInitiated :: Boolean
   , isLocationTracking :: Boolean
   , isInApp :: Boolean
@@ -643,6 +648,18 @@ type CancelRideConfirmationData = {
   timerID :: String,
   enableTimer :: Boolean,
   continueEnabled :: Boolean
+}
+type RatingViewState = {
+    selectedYesNoButton :: Int,
+    selectedRating :: Int,
+    issueReportActiveIndex :: Maybe Int,
+    issueReasonCode :: Maybe String,
+    openReportIssue :: Boolean,
+    issueFacedView :: Boolean,
+    doneButtonVisibility :: Boolean,
+    issueReason :: Maybe String,
+    issueDescription :: String,
+    rideBookingRes :: RideBookingRes
 }
 
 type CustomerTipProps = {

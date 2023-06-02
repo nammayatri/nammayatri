@@ -60,11 +60,11 @@ import Screens.HomeScreen.Controller (flowWithoutOffers, getSearchExpiryTime, is
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (getLocationList, getDriverInfo, dummyRideAPIEntity, encodeAddressDescription, getPlaceNameResp, getUpdatedLocationList, transformContactList)
 import Screens.InvoiceScreen.Controller (ScreenOutput(..)) as InvoiceScreenOutput
-import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
+import Screens.HomeScreen.ScreenData (dummyRideBooking)
 import Screens.ReferralScreen.ScreenData as ReferralScreen
 import Screens.SavedLocationScreen.Controller (getSavedLocationForAddNewAddressScreen)
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
-import Screens.Types (CardType(..), AddNewAddressScreenState(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), ErrorType(..), ZoneType(..), TipViewData(..))
+import Screens.Types (CardType(..), AddNewAddressScreenState(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), ErrorType(..), ZoneType(..), TipViewData(..),TripDetailsGoBackType(..))
 import Services.API (AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..), SelectEstimateRes(..),UpdateProfileReq(..), OnCallRes(..), Snapped(..))
 import Services.Backend as Remote
 import Screens.Types (Gender(..)) as Gender
@@ -211,7 +211,6 @@ currentRideFlow rideAssigned = do
                 , finalAmount = fromMaybe 0 ((fromMaybe dummyRideAPIEntity (resp.rideList !!0) )^. _computedPrice)},
                   props{currentStage = rideStatus
                   , rideRequestFlow = true
-                  , ratingModal = false
                   , bookingId = resp.id
                   , isPopUp = NoPopUp
                   , zoneType = getSpecialTag resp.specialLocationTag
@@ -262,10 +261,10 @@ currentRideFlow rideAssigned = do
             when (isNothing currRideListItem.rideRating) $ do
               when (resp.status /= "CANCELLED" && length listResp.list > 0) $ do
                 modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{
-                    props { ratingModal= true
-                          , estimatedDistance = contents.estimatedDistance
-                          , zoneType = getSpecialTag resp.specialLocationTag }
-                  , data { previousRideRatingState
+                    props { currentStage = RideCompleted
+                          , estimatedDistance = contents.estimatedDistance 
+                          , zoneType = getSpecialTag resp.specialLocationTag}
+                  , data { rideRatingState
                           { driverName = currRideListItem.driverName
                           , rideId = currRideListItem.id
                           , finalAmount = (fromMaybe 0 currRideListItem.computedPrice)
@@ -290,8 +289,16 @@ currentRideFlow rideAssigned = do
                           , dateDDMMYY =  case currRideListItem.rideStartTime of
                                             Just startTime -> (convertUTCtoISC startTime "DD/MM/YYYY")
                                             Nothing        -> ""
-                          }}
+                          }
+                          , finalAmount = (fromMaybe 0 currRideListItem.computedPrice)
+                          , driverInfoCardState {
+                            price = resp.estimatedTotalFare,
+                            rideId = currRideListItem.id
+                          }
+                          , ratingViewState { rideBookingRes = (RideBookingRes resp)}
+                          }
                 })
+                updateLocalStage RideCompleted
           Left err -> updateLocalStage HomeScreen
       else do
         updateLocalStage HomeScreen
@@ -883,8 +890,7 @@ homeScreenFlow = do
                                         let (RideAPIEntity ride) = fromMaybe dummyRideAPIEntity (resp.rideList !! 0)
                                         let finalAmount =  INT.round $ fromMaybe 0.0 (fromString (getFinalAmount (RideBookingRes resp)))
                                         let differenceOfDistance = fromMaybe 0 contents.estimatedDistance - (fromMaybe 0 ride.chargeableRideDistance)
-                                        setValueToLocalStore PICKUP_DISTANCE "0"
-                                        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{startedAt = convertUTCtoISC (fromMaybe "" resp.rideStartTime ) "h:mm A", startedAtUTC = fromMaybe "" resp.rideStartTime ,endedAt = convertUTCtoISC (fromMaybe "" resp.rideEndTime ) "h:mm A", finalAmount = finalAmount, previousRideRatingState {distanceDifference = differenceOfDistance}, driverInfoCardState {initDistance = Nothing}},props {currentStage = RideCompleted, estimatedDistance = contents.estimatedDistance}})
+                                        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{startedAt = convertUTCtoISC (fromMaybe "" resp.rideStartTime ) "h:mm A", startedAtUTC = fromMaybe "" resp.rideStartTime ,endedAt = convertUTCtoISC (fromMaybe "" resp.rideEndTime ) "h:mm A", finalAmount = finalAmount, rideRatingState {distanceDifference = differenceOfDistance} , ratingViewState { rideBookingRes = (RideBookingRes resp)}, driverInfoCardState {initDistance = Nothing}},props{currentStage = RideCompleted, estimatedDistance = contents.estimatedDistance}})
                                         homeScreenFlow
                                         else homeScreenFlow
             "CANCELLED_PRODUCT"   -> do -- REMOVE POLYLINES
@@ -918,10 +924,10 @@ homeScreenFlow = do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData)
       enterMobileNumberScreenFlow -- Removed choose langauge screen
     SUBMIT_RATING state -> do
-      _ <- Remote.rideFeedbackBT (Remote.makeFeedBackReq (state.data.previousRideRatingState.rating) (state.data.previousRideRatingState.rideId) (state.data.previousRideRatingState.feedback))
+      _ <- Remote.rideFeedbackBT (Remote.makeFeedBackReq (state.data.rideRatingState.rating) (state.data.rideRatingState.rideId) (state.data.rideRatingState.feedback))
       _ <- updateLocalStage HomeScreen
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{settingSideBar{gender = state.data.settingSideBar.gender , email = state.data.settingSideBar.email}},props { isBanner = state.props.isBanner}})
-      if state.data.previousRideRatingState.rating == 5 then do
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{settingSideBar{gender = state.data.settingSideBar.gender , email = state.data.settingSideBar.email}}})
+      if state.data.rideRatingState.rating == 5 then do
         _ <- pure $ launchInAppRatingPopup unit
         pure unit
         else pure unit
@@ -989,8 +995,7 @@ homeScreenFlow = do
       PlaceName placeDetails <- getPlaceName lat lon
       _ <- pure $ firebaseLogEvent "ny_user_placename_api_lom_onDrag"
       modifyScreenState $ HomeScreenStateType (\homeScreen ->
-      homeScreen {
-        data {
+      homeScreen { data {
           destination = if state.props.isSource == Just false && state.props.currentStage /= ConfirmingLocation then placeDetails.formattedAddress else homeScreen.data.destination,
           source = if state.props.isSource == Just true then placeDetails.formattedAddress else homeScreen.data.source,
           sourceAddress = case state.props.isSource , (state.props.currentStage /= ConfirmingLocation) of
@@ -1015,8 +1020,7 @@ homeScreenFlow = do
       PlaceName address <- getPlaceName lat lon
       _ <- pure $ firebaseLogEvent "ny_user_placename_api_cpu_onDrag"
       modifyScreenState $ HomeScreenStateType (\homeScreen ->
-      homeScreen {
-        data {
+      homeScreen { data {
           source = address.formattedAddress ,
           sourceAddress = encodeAddress address.formattedAddress address.addressComponents Nothing },
         props {
@@ -1078,7 +1082,7 @@ homeScreenFlow = do
         Left (err) -> homeScreenFlow
 
     GO_TO_INVOICE_ updatedState -> do
-      let prevRideState = updatedState.data.previousRideRatingState
+      let prevRideState = updatedState.data.rideRatingState
       let finalAmount = show prevRideState.finalAmount
       modifyScreenState $ InvoiceScreenStateType (\invoiceScreen -> invoiceScreen {props{fromHomeScreen= true},data{totalAmount = ("₹ " <> finalAmount), date = prevRideState.dateDDMMYY, tripCharges = ("₹ " <> finalAmount), selectedItem {date = prevRideState.dateDDMMYY, bookingId = prevRideState.bookingId,rideStartTime = prevRideState.rideStartTime, rideEndTime = prevRideState.rideEndTime, rideId = prevRideState.rideId, shortRideId = prevRideState.shortRideId,vehicleNumber = prevRideState.vehicleNumber,time = prevRideState.rideStartTime,source = prevRideState.source,destination = prevRideState.destination,driverName = prevRideState.driverName,totalAmount = ("₹ " <> finalAmount)}}})
       invoiceScreenFlow
@@ -1188,6 +1192,19 @@ homeScreenFlow = do
       (OnCallRes res) <- Remote.onCallBT (Remote.makeOnCallReq state.data.driverInfoCardState.rideId (show callType))
       homeScreenFlow
     TRIGGER_PERMISSION_FLOW flowType -> permissionScreenFlow flowType
+    REPORT_ISSUE state -> do
+       if isNothing state.data.ratingViewState.issueReason then do 
+        _ <- Remote.callbackRequestBT FunctionCall
+        _ <- pure $ toast $ getString WE_WILL_GIVE_YOU_CALLBACK
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> state{ data {ratingViewState { issueFacedView = false} }})
+        homeScreenFlow
+       else do 
+        _ <- Remote.sendIssueBT (Remote.makeSendIssueReq  Nothing (Just state.props.bookingId) (fromMaybe "" state.data.ratingViewState.issueReason) state.data.ratingViewState.issueDescription )
+        _ <- pure $ toast $ getString YOUR_ISSUE_HAS_BEEN_REPORTED
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> state{ data {ratingViewState { issueFacedView = false, openReportIssue = false} }})
+        homeScreenFlow
+    RIDE_DETAILS_SCREEN state -> do
+      tripDetailsScreenFlow Home
     _ -> homeScreenFlow
 
 getDistanceDiff :: HomeScreenState -> Number -> Number -> FlowBT String Unit
@@ -1289,7 +1306,7 @@ getFinalAmount (RideBookingRes resp) =
         (RideAPIEntity ride) = (fromMaybe dummyRideAPIEntity (rideList !! 0))
     in (show (fromMaybe 0 ride.computedPrice))
 
-tripDetailsScreenFlow :: Boolean ->  FlowBT String Unit
+tripDetailsScreenFlow :: TripDetailsGoBackType ->  FlowBT String Unit
 tripDetailsScreenFlow fromMyRides = do
   (GlobalState state) <- getState
   expiryTime <- pure $ (getExpiryTime state.tripDetailsScreen.data.selectedItem.rideEndTimeUTC isForLostAndFound)
@@ -1307,8 +1324,10 @@ tripDetailsScreenFlow fromMyRides = do
     GO_TO_INVOICE updatedState -> do
       modifyScreenState $ InvoiceScreenStateType (\invoiceScreen -> invoiceScreen {props{fromHomeScreen = false},data{totalAmount = updatedState.data.totalAmount, date = updatedState.data.date, tripCharges = updatedState.data.totalAmount, selectedItem = updatedState.data.selectedItem}})
       invoiceScreenFlow
-    GO_TO_HOME -> do
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {  data{settingSideBar{opened = SettingSideBarController.CLOSED}}})
+    GO_TO_HOME state -> do
+      if state.props.fromMyRides == Home then 
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData)
+        else modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {  data{settingSideBar{opened = SettingSideBarController.CLOSED}}})
       homeScreenFlow
     CONNECT_WITH_DRIVER updatedState -> do
       void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
@@ -1349,7 +1368,7 @@ helpAndSupportScreenFlow = do
       contactUsScreenFlow
     GO_TO_TRIP_DETAILS state -> do
       modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {data {tripId = state.data.tripId, selectedItem {faresList = state.data.faresList ,date = state.data.date, bookingId = state.data.bookingId,rideStartTime = state.data.rideStartTime, rideEndTime = state.data.rideEndTime, rideId = state.data.rideId, vehicleNumber = state.data.vehicleNumber,time = state.data.time,source = state.data.source,destination = state.data.destination,driverName = state.data.driverName,totalAmount = state.data.totalAmount, rating = state.data.rating},date = state.data.date, time = state.data.time, source = state.data.source, destination = state.data.destination, driverName = state.data.driverName, totalAmount = state.data.totalAmount,rating = state.data.rating}})
-      tripDetailsScreenFlow false
+      tripDetailsScreenFlow HelpAndSupport
     VIEW_RIDES -> do
       modifyScreenState $ MyRideScreenStateType (\myRidesScreen -> myRidesScreen { data{offsetValue = 0}})
       myRidesScreenFlow false
@@ -1368,7 +1387,7 @@ myRidesScreenFlow fromNavBar = do
   case flow of
     REFRESH state -> myRidesScreenFlow state.props.fromNavBar
     TRIP_DETAILS state -> do
-      tripDetailsScreenFlow true
+      tripDetailsScreenFlow MyRides
     LOADER_OUTPUT state -> do
       modifyScreenState $ MyRideScreenStateType (\myRidesScreen -> state{data{offsetValue = state.data.offsetValue + 8}})
       myRidesScreenFlow state.props.fromNavBar
@@ -1520,44 +1539,6 @@ myProfileScreenFlow = do
     GO_TO_HOME_ -> do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{settingSideBar{opened = SettingSideBarController.CLOSED}}})
       homeScreenFlow
-
-
-dummyRideBooking :: RideBookingRes
-dummyRideBooking = RideBookingRes
-  {
-  agencyNumber : "",
-  status : "",
-  rideStartTime : Nothing,
-  rideEndTime : Nothing,
-  duration : Nothing,
-  fareBreakup :[],
-  createdAt : "",
-  discount : Nothing ,
-  estimatedTotalFare : 0,
-  agencyName : "",
-  rideList :[] ,
-  estimatedFare : 0,
-  tripTerms : [],
-  id : "",
-  updatedAt : "",
-  bookingDetails : dummyRideBookingAPIDetails ,
-  fromLocation :  dummyBookingDetails,
-  merchantExoPhone : "",
-  specialLocationTag : Nothing
-  }
-
-dummyRideBookingAPIDetails ::RideBookingAPIDetails
-dummyRideBookingAPIDetails= RideBookingAPIDetails{
-  contents : dummyRideBookingDetails,
-  fareProductType : ""
-}
-
-dummyRideBookingDetails :: RideBookingDetails
-dummyRideBookingDetails =  RideBookingDetails{
-  toLocation : dummyBookingDetails,
-  estimatedDistance : Nothing,
-  otpCode : Nothing
-}
 
 savedLocationFlow :: FlowBT String Unit
 savedLocationFlow = do
