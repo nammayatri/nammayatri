@@ -273,7 +273,6 @@ onUpdate ValidatedRideAssignedReq {..} = do
             ..
           }
 onUpdate ValidatedRideStartedReq {..} = do
-  SMC.updateTotalRidesCounters booking.riderId
   rideStartTime <- getCurrentTime
   let updRideForStartReq =
         ride{status = SRide.INPROGRESS,
@@ -286,6 +285,9 @@ onUpdate ValidatedRideStartedReq {..} = do
   QPFS.clearCache booking.riderId
   Notify.notifyOnRideStarted booking ride
 onUpdate ValidatedRideCompletedReq {..} = do
+  SMC.updateTotalRidesCounters booking.riderId
+  merchantConfigs <- CMC.findAllByMerchantId person.merchantId
+  SMC.updateTotalRidesInWindowCounters booking.riderId merchantConfigs
   rideEndTime <- getCurrentTime
   let updRide =
         ride{status = SRide.COMPLETED,
