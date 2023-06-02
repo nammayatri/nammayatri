@@ -425,7 +425,7 @@ const englishStrings = {
   CALL_CUSTOMER_TITLE : "Call Customer?",
   CALL_CUSTOMER_DESCRIPTION : "You are about to place a call to the Customer. Do you want to proceed?",
   PLACE_CALL : "Place Call",
-  ADD_IMAGE : "Add Image",
+  ADD_IMAGE : "Add Image(s)",
   ADD_ANOTHER : "Add Another",
   IMAGES_ADDED : "Images Added",
   ISSUE_SUBMITTED_TEXT : "Hold on! We are working on solving your issue",

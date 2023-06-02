@@ -351,7 +351,7 @@ chatComponent state push config isLastItem userType =
   , gravity (getChatConfig state config.sentBy isLastItem (STR.length config.timeStamp > 0)).gravity
   , orientation VERTICAL
   , onAnimationEnd (\action ->
-      if isLastItem then do
+      if isLastItem || state.spanParent then do
         _ <- scrollToBottom (getNewIDWithTag "ChatScrollView")
         pure unit
       else
