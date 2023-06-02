@@ -19,6 +19,7 @@ module Domain.Action.UI.Registration
     AuthVerifyReq (..),
     AuthVerifyRes (..),
     auth,
+    signatureAuth,
     verify,
     resend,
     logout,
@@ -66,7 +67,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QM
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QDFS
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
-import Tools.Auth (authTokenCacheKey)
+import Tools.Auth (authTokenCacheKey, decryptAES128)
 import Tools.Error
 import Tools.Metrics
 import qualified Tools.Notifications as Notify
@@ -116,6 +117,12 @@ validateAuthReq AuthReq {..} =
   sequenceA_
     [ validateField "mobileNumber" mobileNumber P.mobileNumber,
       validateField "mobileCountryCode" mobileCountryCode P.mobileIndianCode
+    ]
+
+validateSignatureAuthReq :: Validate AuthReq
+validateSignatureAuthReq AuthReq {..} =
+  sequenceA_
+    [ validateField "mobileCountryCode" mobileCountryCode P.mobileIndianCode
     ]
 
 data AuthRes = AuthRes
@@ -168,17 +175,15 @@ auth ::
     EncFlow m r,
     CoreMetrics m
   ) =>
-  Bool ->
   AuthReq ->
   Maybe Version ->
   Maybe Version ->
   m AuthRes
-auth isDirectAuth req mbBundleVersion mbClientVersion = do
+auth req mbBundleVersion mbClientVersion = do
   runRequestValidation validateAuthReq req
   smsCfg <- asks (.smsCfg)
-  let mobileNumber = req.mobileNumber
-      countryCode = req.mobileCountryCode
-      deviceToken = req.deviceToken
+  let countryCode = req.mobileCountryCode
+      mobileNumber = req.mobileNumber
       notificationToken = req.notificationToken
   -- otpChannel = fromMaybe defaultOTPChannel req.otpChannel
   merchant <-
@@ -187,8 +192,8 @@ auth isDirectAuth req mbBundleVersion mbClientVersion = do
   mobileNumberHash <- getDbHash mobileNumber
   person <-
     Person.findByRoleAndMobileNumberAndMerchantId SP.USER countryCode mobileNumberHash merchant.id
-      >>= maybe (createPerson req mbBundleVersion mbClientVersion merchant.id) return
-  unless isDirectAuth $ checkSlidingWindowLimit (authHitsCountKey person)
+      >>= maybe (createPerson req mobileNumber notificationToken mbBundleVersion mbClientVersion merchant.id) return
+  checkSlidingWindowLimit (authHitsCountKey person)
   let entityId = getId $ person.id
       useFakeOtpM = useFakeSms smsCfg
       scfg = sessionConfig smsCfg
@@ -199,7 +204,7 @@ auth isDirectAuth req mbBundleVersion mbClientVersion = do
     then do
       DB.runTransaction $ Person.updatePersonVersions person mbBundleVersion mbClientVersion
       DB.runTransaction (RegistrationToken.create regToken)
-      when (isNothing useFakeOtpM && not isDirectAuth) $ do
+      when (isNothing useFakeOtpM) $ do
         let otpCode = SR.authValueHash regToken
         let otpHash = smsCfg.credConfig.otpHash
             phoneNumber = countryCode <> mobileNumber
@@ -214,21 +219,54 @@ auth isDirectAuth req mbBundleVersion mbClientVersion = do
           Sms.sendSMS person.merchantId (Sms.SendSMSReq message phoneNumber sender)
             >>= Sms.checkSmsResult
     else logInfo $ "Person " <> getId person.id <> " is not enabled. Skipping send OTP"
+  return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing
 
-  (personApiEntity, token, authType) <-
-    if person.enabled && not person.blocked && isDirectAuth
-      then do
-        mbEncEmail <- encrypt `mapM` req.email
-        DB.runTransaction $ do
-          RegistrationToken.setDirectAuth regToken.id
-          Person.updatePersonalInfo person.id (req.firstName <|> person.firstName <|> Just "User") req.middleName req.lastName Nothing mbEncEmail deviceToken notificationToken (req.language <|> person.language <|> Just Language.ENGLISH) (req.gender <|> Just person.gender) (mbClientVersion <|> Nothing) (mbBundleVersion <|> Nothing)
-        personAPIEntity <- verifyFlow person regToken req.whatsappNotificationEnroll deviceToken
-        return (Just personAPIEntity, Just regToken.token, SR.DIRECT)
-      else return (Nothing, Nothing, regToken.authType)
-  return $ AuthRes regToken.id regToken.attempts authType token personApiEntity
+signatureAuth ::
+  ( HasFlowEnv m r '["smsCfg" ::: SmsConfig],
+    HasCacheConfig r,
+    DB.EsqDBReplicaFlow m r,
+    EsqDBFlow m r,
+    Redis.HedisFlow m r,
+    EncFlow m r,
+    CoreMetrics m
+  ) =>
+  AuthReq ->
+  Maybe Version ->
+  Maybe Version ->
+  m AuthRes
+signatureAuth req mbBundleVersion mbClientVersion = do
+  runRequestValidation validateSignatureAuthReq req
+  smsCfg <- asks (.smsCfg)
+  let countryCode = req.mobileCountryCode
+      deviceToken = req.deviceToken
+  merchant <-
+    QMerchant.findByShortId req.merchantId
+      >>= fromMaybeM (MerchantNotFound $ getShortId req.merchantId)
+  mobileNumber <- decryptAES128 merchant.cipherText req.mobileNumber
+  notificationToken <- mapM (decryptAES128 merchant.cipherText) req.notificationToken
+  mobileNumberHash <- getDbHash mobileNumber
+  person <-
+    Person.findByRoleAndMobileNumberAndMerchantId SP.USER countryCode mobileNumberHash merchant.id
+      >>= maybe (createPerson req mobileNumber notificationToken mbBundleVersion mbClientVersion merchant.id) return
+  let entityId = getId $ person.id
+      useFakeOtpM = useFakeSms smsCfg
+      scfg = sessionConfig smsCfg
+  let mkId = getId $ merchant.id
+  regToken <- makeSession scfg entityId mkId (show <$> useFakeOtpM)
+  if person.enabled && not person.blocked
+    then do
+      DB.runTransaction $ Person.updatePersonVersions person mbBundleVersion mbClientVersion
+      DB.runTransaction (RegistrationToken.create regToken)
+      mbEncEmail <- encrypt `mapM` req.email
+      DB.runTransaction $ do
+        RegistrationToken.setDirectAuth regToken.id
+        Person.updatePersonalInfo person.id (req.firstName <|> person.firstName <|> Just "User") req.middleName req.lastName Nothing mbEncEmail deviceToken notificationToken (req.language <|> person.language <|> Just Language.ENGLISH) (req.gender <|> Just person.gender) (mbClientVersion <|> Nothing) (mbBundleVersion <|> Nothing)
+      personAPIEntity <- verifyFlow person regToken req.whatsappNotificationEnroll deviceToken
+      return $ AuthRes regToken.id regToken.attempts SR.DIRECT (Just regToken.token) (Just personAPIEntity)
+    else return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing
 
-buildPerson :: (EncFlow m r, DB.EsqDBReplicaFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, CacheFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Id DMerchant.Merchant -> m SP.Person
-buildPerson req bundleVersion clientVersion merchantId = do
+buildPerson :: (EncFlow m r, DB.EsqDBReplicaFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, CacheFlow m r) => AuthReq -> Text -> Maybe Text -> Maybe Version -> Maybe Version -> Id DMerchant.Merchant -> m SP.Person
+buildPerson req mobileNumber notificationToken bundleVersion clientVersion merchantId = do
   pid <- BC.generateGUID
   now <- getCurrentTime
   personWithSameDeviceToken <- listToMaybe <$> DB.runInReplica (Person.findBlockedByDeviceToken req.deviceToken)
@@ -239,7 +277,7 @@ buildPerson req bundleVersion clientVersion merchantId = do
         merchantConfig <- QMSUC.findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
         return merchantConfig.useFraudDetection
       else return False
-  encMobNum <- encrypt req.mobileNumber
+  encMobNum <- encrypt mobileNumber
   encEmail <- mapM encrypt req.email
   return $
     SP.Person
@@ -252,7 +290,7 @@ buildPerson req bundleVersion clientVersion merchantId = do
         identifierType = SP.MOBILENUMBER,
         email = encEmail,
         passwordHash = Nothing,
-        unencryptedMobileNumber = Just req.mobileNumber,
+        unencryptedMobileNumber = Just mobileNumber,
         mobileNumber = Just encMobNum,
         mobileCountryCode = Just $ req.mobileCountryCode,
         identifier = Nothing,
@@ -262,7 +300,7 @@ buildPerson req bundleVersion clientVersion merchantId = do
         enabled = not (useFraudDetection && isBlockedBySameDeviceToken),
         blocked = useFraudDetection && isBlockedBySameDeviceToken,
         deviceToken = req.deviceToken,
-        notificationToken = req.notificationToken,
+        notificationToken = notificationToken,
         description = Nothing,
         merchantId = merchantId,
         referralCode = Nothing,
@@ -391,9 +429,9 @@ getRegistrationTokenE :: EsqDBFlow m r => Id SR.RegistrationToken -> m SR.Regist
 getRegistrationTokenE tokenId =
   RegistrationToken.findById tokenId >>= fromMaybeM (TokenNotFound $ getId tokenId)
 
-createPerson :: (EncFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, Redis.HedisFlow m r, CacheFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Id DMerchant.Merchant -> m SP.Person
-createPerson req mbBundleVersion mbClientVersion merchantId = do
-  person <- buildPerson req mbBundleVersion mbClientVersion merchantId
+createPerson :: (EncFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, Redis.HedisFlow m r, CacheFlow m r) => AuthReq -> Text -> Maybe Text -> Maybe Version -> Maybe Version -> Id DMerchant.Merchant -> m SP.Person
+createPerson req mobileNumber notificationToken mbBundleVersion mbClientVersion merchantId = do
+  person <- buildPerson req mobileNumber notificationToken mbBundleVersion mbClientVersion merchantId
   DB.runTransaction $ do
     Person.create person
     QDFS.create $ makeIdlePersonFlowStatus person
