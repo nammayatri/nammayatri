@@ -24,23 +24,21 @@ import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.RiderDetails as BeamRD
-import Storage.Tabular.RiderDetails
 
 -- create :: RiderDetails -> SqlDB ()
 -- create = Esq.create
 
-create :: L.MonadFlow m => DRDD.RiderDetails -> m ()
+create :: L.MonadFlow m => DRDD.RiderDetails -> m (MeshResult ())
 create riderDetails = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
-    Just dbConf' -> void (KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainRiderDetailsToBeam riderDetails))
-    Nothing -> pure ()
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainRiderDetailsToBeam riderDetails)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 -- TODO :: write cached query for this
 -- findById ::

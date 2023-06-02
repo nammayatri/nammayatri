@@ -28,7 +28,7 @@ import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
+-- import Kernel.Storage.Esqueleto ()
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Mesh as Mesh
@@ -39,11 +39,11 @@ import qualified Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDet
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails as QueriesFPPD
 import qualified Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab as QFPSlabDetSlabs
 import qualified Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab as QueriesFPSDS
-import Storage.Queries.FullEntityBuilders (buildFullFarePolicy)
-import Storage.Tabular.FarePolicy
-import Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails (EntityField (FarePolicyProgressiveDetailsBaseDistance, FarePolicyProgressiveDetailsBaseFare, FarePolicyProgressiveDetailsDeadKmFare, FarePolicyProgressiveDetailsNightShiftCharge, FarePolicyProgressiveDetailsPerExtraKmFare, FarePolicyProgressiveDetailsTId), FarePolicyProgressiveDetailsT (..))
+-- import Storage.Queries.FullEntityBuilders (buildFullFarePolicy)
+-- import Storage.Tabular.FarePolicy
+-- import Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails (EntityField (FarePolicyProgressiveDetailsBaseDistance, FarePolicyProgressiveDetailsBaseFare, FarePolicyProgressiveDetailsDeadKmFare, FarePolicyProgressiveDetailsNightShiftCharge, FarePolicyProgressiveDetailsPerExtraKmFare, FarePolicyProgressiveDetailsTId), FarePolicyProgressiveDetailsT (..))
 import Storage.Tabular.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab ()
-import Storage.Tabular.FarePolicy.Instances
+-- import Storage.Tabular.FarePolicy.Instances
 import qualified Storage.Tabular.VechileNew as VN
 
 -- findAllByMerchantId ::
@@ -124,7 +124,7 @@ update farePolicy = do
             Se.Set BeamFP.driverMaxExtraFee $ Domain.maxFee <$> farePolicy.driverExtraFeeBounds,
             Se.Set BeamFP.nightShiftStart $ Domain.nightShiftStart <$> farePolicy.nightShiftBounds,
             Se.Set BeamFP.nightShiftEnd $ Domain.nightShiftStart <$> farePolicy.nightShiftBounds,
-            Se.Set BeamFP.updatedAt $ now
+            Se.Set BeamFP.updatedAt now
           ]
           [Se.Is BeamFP.id (Se.Eq $ getId farePolicy.id)]
       case farePolicy.farePolicyDetails of
@@ -142,9 +142,9 @@ update farePolicy = do
               [Se.Is BeamFPPD.farePolicyId (Se.Eq $ getId farePolicy.id)]
         -- SlabsDetails (slabs :: (FPSlabsDetailsD 'Safe)) -> pure ()
         -- SlabsDetails (slabs :: (FPSlabsDetailsD Safe)) -> do
-        SlabsDetails (FPSlabsDetails (slabs)) -> do
+        SlabsDetails (FPSlabsDetails slabs) -> do
           _ <- QFPSlabDetSlabs.deleteAll'' farePolicy.id
-          void $ mapM (create'' farePolicy.id) (slabs)
+          mapM_ (create'' farePolicy.id) slabs
     Nothing -> pure ()
   where
     -- create'' :: L.MonadFlow m => Id FarePolicy -> FPSlabsDetailsSlab -> m ()

@@ -25,7 +25,6 @@ import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Mesh as Mesh
@@ -33,8 +32,6 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.DriverRCAssociation as BeamDRCA
 import qualified Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate as BeamVRCT
 import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as QVRC
-import Storage.Tabular.DriverOnboarding.DriverRCAssociation
-import Storage.Tabular.DriverOnboarding.VehicleRegistrationCertificate
 
 -- create :: DriverRCAssociation -> SqlDB ()
 -- create = Esq.create

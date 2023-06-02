@@ -119,7 +119,7 @@ handler subscriber transporterId req = do
       rideDetails <- buildRideDetails ride driver
       driverSearchReqs <- QSRD.findAllActiveBySRId driverQuote.searchRequestId
       -- Esq.runTransaction $ do
-      when isNewRider $ QRD.create riderDetails
+      when isNewRider $ void $ QRD.create riderDetails
       _ <- QRB.updateRiderId booking.id riderDetails.id
       _ <- QRB.updateStatus booking.id DRB.TRIP_ASSIGNED
       _ <- QBL.updateAddress booking.fromLocation.id req.fromAddress
@@ -172,7 +172,7 @@ handler subscriber transporterId req = do
       (riderDetails, isNewRider) <- getRiderDetails transporter.id req.customerMobileCountryCode req.customerPhoneNumber now
       otpCode <- generateOTPCode
       -- Esq.runTransaction $ do
-      when isNewRider $ QRD.create riderDetails
+      when isNewRider $ void $ QRD.create riderDetails
       _ <- QRB.updateRiderId booking.id riderDetails.id
       _ <- QRB.updateSpecialZoneOtpCode booking.id otpCode
       _ <- QBL.updateAddress booking.fromLocation.id req.fromAddress

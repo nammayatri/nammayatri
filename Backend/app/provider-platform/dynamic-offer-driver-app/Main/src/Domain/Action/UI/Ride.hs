@@ -40,7 +40,7 @@ import Kernel.External.Maps (HasCoordinates (getCoordinates))
 import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
+-- import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Storage.Hedis as Redis (HedisFlow)
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.APISuccess
@@ -116,7 +116,8 @@ listDriverRides ::
   Maybe DRide.RideStatus ->
   m DriverRideListRes
 listDriverRides driverId mbLimit mbOffset mbOnlyActive mbRideStatus = do
-  rides <- runInReplica $ QRide.findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus
+  -- rides <- runInReplica $ QRide.findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus
+  rides <- QRide.findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus
   driverRideLis <- forM rides $ \(ride, booking) -> do
     -- rideDetail <- runInReplica $ QRD.findById ride.id >>= fromMaybeM (VehicleNotFound driverId.getId)
     rideDetail <- QRD.findById ride.id >>= fromMaybeM (VehicleNotFound driverId.getId)

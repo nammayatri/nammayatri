@@ -26,13 +26,14 @@ import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
+-- import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Mesh as Mesh
 import Sequelize as Se
 import qualified Storage.Beam.Vehicle as BeamV
-import Storage.Tabular.Vehicle
+
+-- import Storage.Tabular.Vehicle
 
 -- create :: Vehicle -> SqlDB ()
 -- create = Esq.create
