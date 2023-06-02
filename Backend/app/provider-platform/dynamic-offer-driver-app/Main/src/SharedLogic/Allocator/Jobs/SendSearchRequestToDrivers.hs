@@ -57,7 +57,7 @@ sendSearchRequestToDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
   searchReq <- Esq.runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound (searchReq.providerId.getId))
   driverPoolConfig <- getDriverPoolConfig merchant.id jobData.estimatedRideDistance
-  sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant jobData.baseFare jobData.driverExtraFeeBounds
+  sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant jobData.driverExtraFeeBounds
 
 sendSearchRequestToDrivers' ::
   ( EncFlow m r,
@@ -73,10 +73,9 @@ sendSearchRequestToDrivers' ::
   SearchRequest ->
   SearchTry ->
   Merchant ->
-  Money ->
   Maybe DFP.DriverExtraFeeBounds ->
   m ExecutionResult
-sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant baseFare driverExtraFeeBounds = do
+sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant driverExtraFeeBounds = do
   handler handle
   where
     handle =
@@ -85,7 +84,7 @@ sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant baseFa
           isRideAlreadyAssigned = I.isRideAlreadyAssigned searchTry.id,
           isReceivedMaxDriverQuotes = I.isReceivedMaxDriverQuotes driverPoolConfig searchTry.id,
           getNextDriverPoolBatch = I.getNextDriverPoolBatch driverPoolConfig searchReq searchTry,
-          sendSearchRequestToDrivers = I.sendSearchRequestToDrivers searchReq searchTry baseFare driverExtraFeeBounds driverPoolConfig,
+          sendSearchRequestToDrivers = I.sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolConfig,
           getRescheduleTime = I.getRescheduleTime driverPoolConfig.singleBatchProcessTime,
           setBatchDurationLock = I.setBatchDurationLock searchTry.id driverPoolConfig.singleBatchProcessTime,
           createRescheduleTime = I.createRescheduleTime driverPoolConfig.singleBatchProcessTime,

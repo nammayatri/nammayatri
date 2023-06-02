@@ -28,6 +28,19 @@ create = Esq.create
 findById :: Transactionable m => Id SearchTry -> m (Maybe SearchTry)
 findById = Esq.findById
 
+findLastByRequestId ::
+  (Transactionable m) =>
+  Id SearchRequest ->
+  m (Maybe SearchTry)
+findLastByRequestId searchReqId = do
+  Esq.findOne $ do
+    searchTryT <- from $ table @SearchTryT
+    where_ $
+      searchTryT ^. SearchTryRequestId ==. val (toKey searchReqId)
+    Esq.orderBy [Esq.desc $ searchTryT ^. SearchTrySearchRepeatCounter]
+    Esq.limit 1
+    return searchTryT
+
 cancelActiveTriesByRequestId ::
   Id SearchRequest ->
   SqlDB ()

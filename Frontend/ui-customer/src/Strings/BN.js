@@ -437,5 +437,6 @@ const bengaliStrings = {
   "CALL_DRIVER_USING" : "ব্যবহার করে ড্রাইভারকে কল করুন:",
   "WAS_YOUR_CALL_SUCCESSFUL" : "আপনার কল সফল ছিল" ,
   "NAVIGATE_TO_PICKUP" : "পিকআপে নেভিগেট করুন",
-  "REQUEST_RECEIVED_WE_WILL_CALL_YOU_BACK_SOON" : "অনুরোধ পেয়েছি. আমরা তোমার সাথে শীঘ্রই যোগাযোগ করবো"
+  "REQUEST_RECEIVED_WE_WILL_CALL_YOU_BACK_SOON" : "অনুরোধ পেয়েছি. আমরা তোমার সাথে শীঘ্রই যোগাযোগ করবো",
+  "CONTACT_REMOVED_SUCCESSFULLY" : "যোগাযোগ সফলভাবে সরানো হয়েছে"
 }

@@ -443,5 +443,6 @@ const kannadaStrings = {
   "REASON_CHANGE_IN_ROUTE_A": "1.ಮಾರ್ಗದಲ್ಲಿ ಬದಲಾವಣೆ: ",
   "REASON_CHANGE_IN_ROUTE_B": "ಮಾರ್ಗದಲ್ಲಿನ ಬದಲಾವಣೆಯಿಂದಾಗಿ ಒಟ್ಟು ದರ ಬದಲಾಗಬಹುದು",
   "NAVIGATE_TO_PICKUP" : "ಪಿಕಪ್ ಮಾಡಲು ನ್ಯಾವಿಗೇಟ್ ಮಾಡಿ",
-  "REQUEST_RECEIVED_WE_WILL_CALL_YOU_BACK_SOON" : "ವಿನಂತಿಯನ್ನು ಸ್ವೀಕರಿಸಲಾಗಿದೆ. ನಾವು ಶೀಘ್ರದಲ್ಲೇ ನಿಮ್ಮನ್ನು ಸಂಪರ್ಕಿಸುತ್ತೇವೆ"
+  "REQUEST_RECEIVED_WE_WILL_CALL_YOU_BACK_SOON" : "ವಿನಂತಿಯನ್ನು ಸ್ವೀಕರಿಸಲಾಗಿದೆ. ನಾವು ಶೀಘ್ರದಲ್ಲೇ ನಿಮ್ಮನ್ನು ಸಂಪರ್ಕಿಸುತ್ತೇವೆ",
+  "CONTACT_REMOVED_SUCCESSFULLY" : "ಸಂಪರ್ಕವನ್ನು ಯಶಸ್ವಿಯಾಗಿ ತೆಗೆದುಹಾಕಲಾಗಿದೆ"
 }

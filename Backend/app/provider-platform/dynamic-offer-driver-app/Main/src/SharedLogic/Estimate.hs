@@ -69,7 +69,7 @@ buildEstimate searchReqId startTime dist farePolicy = do
           estimateBreakups <> additionalBreakups
             & filter (filterRequiredBreakups $ DFParams.getFareParametersType fareParams), -- TODO: Remove after roll out
         nightShiftInfo =
-          ((,,) <$> fareParams.nightShiftCharge <*> getOldNightShiftCharge farePolicy.farePolicyDetails <*> farePolicy.nightShiftBounds)
+          ((fromMaybe 0 fareParams.nightShiftCharge,,) <$> getOldNightShiftCharge farePolicy.farePolicyDetails <*> farePolicy.nightShiftBounds)
             <&> \(nightShiftCharge, oldNightShiftCharge, nightShiftBounds) ->
               NightShiftInfo
                 { nightShiftCharge = nightShiftCharge,

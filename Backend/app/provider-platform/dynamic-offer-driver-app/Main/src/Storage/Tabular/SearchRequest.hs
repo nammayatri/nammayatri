@@ -33,7 +33,7 @@ import qualified Tools.Maps as Maps
 mkPersist
   defaultSqlSettings
   [defaultQQ|
-    SearchRequestT sql=search_request_2
+    SearchRequestT sql=search_request
       id Text
       transactionId Text
       providerId MerchantTId

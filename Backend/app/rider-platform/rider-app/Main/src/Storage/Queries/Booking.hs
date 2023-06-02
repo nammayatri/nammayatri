@@ -189,25 +189,24 @@ findAssignedByRiderId personId = Esq.buildDType $ do
     pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
   join <$> mapM buildFullBooking fullBookingsT
 
-findAssignedByEstimateId :: Transactionable m => Id Estimate -> m (Maybe Booking)
-findAssignedByEstimateId estimateId = Esq.buildDType $ do
-  fullBookingsT <- Esq.findOne' $ do
-    (booking :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab :& _ :& driverOffer) <-
+findBookingIdAssignedByEstimateId :: Transactionable m => Id Estimate -> m (Maybe (Id Booking))
+findBookingIdAssignedByEstimateId estimateId =
+  Esq.findOne $ do
+    (booking :& _ :& driverOffer) <-
       from $
-        fullBookingTable
+        table @BookingT
           `innerJoin` table @Quote.QuoteT
-            `Esq.on` ( \(rb :& _ :& _ :& _ :& _ :& quote) ->
+            `Esq.on` ( \(rb :& quote) ->
                          rb ^. RB.BookingQuoteId ==. Esq.just (quote ^. Quote.QuoteTId)
                      )
           `innerJoin` table @DrOff.DriverOfferT
-            `Esq.on` ( \(_ :& _ :& _ :& _ :& _ :& quote :& driverOffer) ->
+            `Esq.on` ( \(_ :& quote :& driverOffer) ->
                          quote ^. Quote.QuoteDriverOfferId ==. Esq.just (driverOffer ^. DrOff.DriverOfferTId)
                      )
     where_ $
       driverOffer ^. DrOff.DriverOfferEstimateId ==. val (toKey estimateId)
         &&. booking ^. RB.BookingStatus ==. val TRIP_ASSIGNED
-    pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
-  join <$> mapM buildFullBooking fullBookingsT
+    pure (booking ^. BookingTId)
 
 findAllByRiderIdAndRide :: Transactionable m => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BookingStatus -> m [Booking]
 findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus = Esq.buildDType $ do

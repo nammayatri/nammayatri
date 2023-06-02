@@ -101,7 +101,7 @@ cancelRideImpl rideId bookingCReason = do
     let isRepeatSearch =
           searchTry.searchRepeatCounter < searchRepeatLimit
             && bookingCReason.source == SBCR.ByDriver
-            && maybe True (`isNightShift` now) farePolicy.nightShiftBounds
+            && maybe True (\nsBounds -> isJust booking.fareParams.nightShiftCharge == isNightShift nsBounds now) farePolicy.nightShiftBounds
     if isRepeatSearch
       then do
         driverPoolCfg <- getDriverPoolConfig merchant.id searchReq.estimatedDistance
@@ -157,18 +157,6 @@ repeatSearch ::
 repeatSearch merchant farePolicy searchReq searchTry booking ride cancellationSource now driverPoolConfig = do
   newSearchTry <- buildSearchTry searchTry
 
-  fareParams <-
-    calculateFareParameters
-      CalculateFareParametersParams
-        { farePolicy = farePolicy,
-          distance = searchReq.estimatedDistance,
-          rideTime = now,
-          waitingTime = Nothing,
-          driverSelectedFare = Nothing,
-          customerExtraFee = newSearchTry.customerExtraFee
-        }
-
-  let baseFare = fareSum fareParams
   -- Esq.runTransaction $ do
   _ <- QST.create newSearchTry
 
@@ -179,7 +167,6 @@ repeatSearch merchant farePolicy searchReq searchTry booking ride cancellationSo
       searchReq
       newSearchTry
       merchant
-      baseFare
       driverExtraFeeBounds
 
   case res of
@@ -190,10 +177,8 @@ repeatSearch merchant farePolicy searchReq searchTry booking ride cancellationSo
         createJobIn @_ @'SendSearchRequestToDriver inTime maxShards $
           SendSearchRequestToDriverJobData
             { searchTryId = newSearchTry.id,
-              baseFare = baseFare,
               estimatedRideDistance = searchReq.estimatedDistance,
-              driverExtraFeeBounds = driverExtraFeeBounds,
-              customerExtraFee = newSearchTry.customerExtraFee
+              driverExtraFeeBounds = driverExtraFeeBounds
             }
     _ -> return ()
 
@@ -216,6 +201,7 @@ repeatSearch merchant farePolicy searchReq searchTry booking ride cancellationSo
             validTill = validTill_,
             status = DST.ACTIVE,
             searchRepeatCounter = searchRepeatCounter + 1,
+            searchRepeatType = DST.REALLOCATION,
             updatedAt = now,
             createdAt = now,
             ..

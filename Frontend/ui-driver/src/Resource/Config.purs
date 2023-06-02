@@ -24,6 +24,8 @@ import Debug (spy)
 
 foreign import environment :: String -> String
 
+foreign import getMerchant :: String -> String
+
 data Env = LOCAL | DEV | UAT | PROD
 derive instance genericEnv :: Generic Env _
 instance eqEnv :: Eq Env where eq = genericEq
@@ -41,8 +43,8 @@ getEnv = case spy "Selected Environment :- " (environment "") of
   "prod"        -> PROD
   _             -> PROD
 
-getMerchantId :: String
-getMerchantId = "NA"
+getMerchantId :: String ->  String
+getMerchantId dummy = "NA"
 
 getConfig :: Config
 getConfig = do

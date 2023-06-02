@@ -437,5 +437,6 @@ const malayalamStrings = {
   "CALL_DRIVER_USING" : "ഇതുപയോഗിച്ച് ഡ്രൈവറെ വിളിക്കുക:",
   "WAS_YOUR_CALL_SUCCESSFUL" : "നിങ്ങളുടെ കോൾ വിജയിച്ചോ",
   "NAVIGATE_TO_PICKUP" : "പിക്കപ്പിലേക്ക് നാവിഗേറ്റ് ചെയ്യുക",
-  "REQUEST_RECEIVED_WE_WILL_CALL_YOU_BACK_SOON" : "അഭ്യർത്ഥന ലഭിച്ചു. ഞങ്ങൾ നിങ്ങളെ ഉടൻ ബന്ധപ്പെടും"
+  "REQUEST_RECEIVED_WE_WILL_CALL_YOU_BACK_SOON" : "അഭ്യർത്ഥന ലഭിച്ചു. ഞങ്ങൾ നിങ്ങളെ ഉടൻ ബന്ധപ്പെടും",
+  "CONTACT_REMOVED_SUCCESSFULLY" : "കോൺടാക്‌റ്റ് നീക്കം ചെയ്‌തു"
 }

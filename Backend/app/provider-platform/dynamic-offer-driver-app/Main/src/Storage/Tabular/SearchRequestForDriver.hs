@@ -42,7 +42,7 @@ mkPersist
   [defaultQQ|
     SearchRequestForDriverT sql=search_request_for_driver
       id Text
-      requestId SearchRequestTId
+      requestId SearchRequestTId sql=search_request_id
       searchTryId SearchTryTId
       startTime UTCTime
       actualDistanceToPickup Meters
@@ -50,7 +50,6 @@ mkPersist
       durationToPickup Seconds
       vehicleVariant Variant.Variant
       batchNumber Int
-      baseFare Money
       lat Double Maybe
       lon Double Maybe
       searchRequestValidTill UTCTime

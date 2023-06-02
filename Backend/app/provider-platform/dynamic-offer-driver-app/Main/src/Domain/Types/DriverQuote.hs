@@ -35,7 +35,7 @@ data DriverQuote = DriverQuote
   { id :: Id DriverQuote,
     requestId :: Id SearchRequest,
     searchTryId :: Id SearchTry,
-    searchRequestForDriverId :: Id SearchRequestForDriver,
+    searchRequestForDriverId :: Maybe (Id SearchRequestForDriver),
     driverId :: Id Person,
     driverName :: Text,
     driverRating :: Maybe Centesimal,

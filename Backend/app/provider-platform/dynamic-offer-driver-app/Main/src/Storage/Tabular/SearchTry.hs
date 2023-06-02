@@ -31,6 +31,7 @@ import Storage.Tabular.SearchRequest (SearchRequestTId)
 import Storage.Tabular.Vehicle ()
 
 derivePersistField "Domain.SearchTryStatus"
+derivePersistField "Domain.SearchRepeatType"
 
 mkPersist
   defaultSqlSettings
@@ -42,10 +43,12 @@ mkPersist
       estimateId EstimateTId
       startTime UTCTime
       validTill UTCTime
+      baseFare Money
       customerExtraFee Money Maybe
       status Domain.SearchTryStatus
       vehicleVariant Variant.Variant
       searchRepeatCounter Int
+      searchRepeatType Domain.SearchRepeatType
       createdAt UTCTime
       updatedAt UTCTime
 

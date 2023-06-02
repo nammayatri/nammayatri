@@ -36,17 +36,23 @@ data SearchTry = SearchTry
     startTime :: UTCTime,
     validTill :: UTCTime,
     vehicleVariant :: Variant.Variant,
+    baseFare :: Money,
     customerExtraFee :: Maybe Money,
     status :: SearchTryStatus,
     searchRepeatCounter :: Int,
+    searchRepeatType :: SearchRepeatType,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
   deriving (Generic, PrettyShow, Show)
 
-data SearchTryStatus = ACTIVE | CANCELLED | REPEATITION
+data SearchTryStatus = ACTIVE | CANCELLED
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
   deriving (PrettyShow) via Showable SearchTryStatus
+
+data SearchRepeatType = INITIAL | RETRIED | REALLOCATION | CANCELLED_AND_RETRIED
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (PrettyShow) via Showable SearchRepeatType
 
 instance FromHttpApiData SearchTryStatus where
   parseUrlPiece = parseHeader . DT.encodeUtf8

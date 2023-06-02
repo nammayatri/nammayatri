@@ -111,6 +111,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             if (notification_payload != null || notification != null) {
                 SharedPreferences sharedPref = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
                 String notificationType = (String) payload.get("notification_type");
+                stopChatService(notificationType,sharedPref);
                 switch (notificationType) {
                     case NotificationTypes.TRIGGER_SERVICE :
                         if (merchantType.equals("DRIVER")) {
@@ -137,11 +138,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                     case NotificationTypes.CANCELLED_PRODUCT :
                         NotificationUtils.showNotification(this, title, body, payload, imageUrl);
                         sharedPref.edit().putString(getResources().getString(R.string.IS_RIDE_ACTIVE), "false").apply();
-                        Intent chatListenerService = new Intent(this, ChatService.class);
-                        this.stopService(chatListenerService);
-                        SharedPreferences.Editor editor = sharedPref.edit();
-                        editor.putString("READ_MESSAGES", "0");
-                        editor.apply();
                         if (sharedPref.getString("MAPS_OPENED", "null").equals("true")){
                             startMainActivity();
                         } else {
@@ -430,6 +426,20 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         params.putString(paramKey,paramValue);
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
         mFirebaseAnalytics.logEvent(event, params);
+    }
+
+    private void stopChatService(String notificationType, SharedPreferences sharedPref){
+        if(notificationType.equals("TRIP_FINISHED") || notificationType.equals("CANCELLED_PRODUCT") || notificationType.equals("TRIP_STARTED")) {
+            try{
+                Intent chatListenerService = new Intent(this, ChatService.class);
+                this.stopService(chatListenerService);
+                SharedPreferences.Editor editor = sharedPref.edit();
+                editor.putString("READ_MESSAGES", "0");
+                editor.apply();
+            } catch (Exception e){
+                Log.e("MyFirebaseMessagingService", "Error in stopChatService : " + e);
+            }
+        }
     }
 
     private class NotificationTypes {

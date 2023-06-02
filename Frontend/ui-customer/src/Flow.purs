@@ -269,6 +269,7 @@ currentRideFlow rideAssigned = do
       else do
         updateLocalStage HomeScreen
     Left err -> updateLocalStage HomeScreen
+  if state.props.currentStage /= RideAccepted then removeChatService "" else pure unit
 
 currentFlowStatus :: FlowBT String Unit
 currentFlowStatus = do
@@ -1265,6 +1266,9 @@ emergencyScreenFlow = do
     GO_TO_HOME_FROM_EMERGENCY_CONTACTS -> homeScreenFlow
     POST_CONTACTS state -> do
       _ <- Remote.emergencyContactsBT (Remote.postContactsReq state.data.contactsList)
+      if state.props.showInfoPopUp then pure $ toast $ getString CONTACT_REMOVED_SUCCESSFULLY
+        else pure $ toast $ getString EMERGENCY_CONTACS_ADDED_SUCCESSFULLY
+      modifyScreenState $  EmergencyContactsScreenStateType (\emergencyContactsScreen -> state{props{showInfoPopUp = false}})
       (GlobalState globalState) <- getState
       if globalState.homeScreen.props.emergencyHelpModelState.isSelectEmergencyContact
       then do
