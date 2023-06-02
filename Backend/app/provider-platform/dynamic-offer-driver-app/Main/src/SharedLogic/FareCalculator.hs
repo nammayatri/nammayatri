@@ -68,8 +68,6 @@ mkBreakupList mkPrice mkBreakupItem fareParams = do
       nightShiftCaption = "NIGHT_SHIFT_CHARGE"
       mbNightShiftChargeItem = fmap (mkBreakupItem nightShiftCaption) (mkPrice <$> fareParams.nightShiftCharge)
 
-      waitingOrPickupChargesCaption = "WAITING_OR_PICKUP_CHARGES" --TODO: deprecated, to be removed
-      mbWaitingOrPickupChargesItem = mkBreakupItem waitingOrPickupChargesCaption . mkPrice <$> fareParams.waitingCharge
       waitingChargesCaption = "WAITING_CHARGE"
       mbWaitingChargesItem = mkBreakupItem waitingChargesCaption . mkPrice <$> fareParams.waitingCharge
 
@@ -82,7 +80,6 @@ mkBreakupList mkPrice mkBreakupItem fareParams = do
       Just baseFareItem,
       Just baseFareDistanceItem,
       mbNightShiftChargeItem,
-      mbWaitingOrPickupChargesItem,
       mbWaitingChargesItem,
       mbFixedGovtRateItem,
       mbServiceChargeItem,
