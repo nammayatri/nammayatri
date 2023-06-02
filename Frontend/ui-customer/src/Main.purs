@@ -51,7 +51,7 @@ main event = do
                 Right x → pure unit
                 Left err → do
                   _ <- pure $ printLog "printLog error in main is : " err
-                  _ <- liftFlow $ main
+                  _ <- liftFlow $ main event
                   pure unit
        pure unit
     Left e -> do
@@ -76,11 +76,10 @@ onConnectivityEvent triggertype = do
           _ ← runExceptT $ runBackT $ Flow.permissionScreenFlow triggertype
           pure unit
         pure unit
-      pure unit
     Left e -> do
-      _ <- launchAff $ flowRunner defaultGlobalState $ do
-         throwErr $ show e
-      pure unit           
+        _ <- launchAff $ flowRunner defaultGlobalState $ do
+          throwErr $ show e
+        pure unit        
 
 type Event = {
     type :: String

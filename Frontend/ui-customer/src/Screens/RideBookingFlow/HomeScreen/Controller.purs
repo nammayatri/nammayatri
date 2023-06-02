@@ -1575,7 +1575,7 @@ showPersonMarker state marker location = do
 getCurrentCustomerLocation :: forall t44 t51. Applicative t51 => (Action -> Effect Unit) -> t44 -> Effect (t51 Unit)
 getCurrentCustomerLocation push state = do
   location <- getCurrentLatLong
-  _ <- launchAff $ flowRunner $ runExceptT $ runBackT $ do
+  _ <- launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
     (GetPlaceNameResp locationName) <- Remote.placeNameBT (Remote.makePlaceNameReq location.lat location.lng (case (getValueToLocalStore LANGUAGE_KEY) of
                                                                                                                             "HI_IN" -> "HINDI"
                                                                                                                             "KN_IN" -> "KANNADA"

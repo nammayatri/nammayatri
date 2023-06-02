@@ -127,7 +127,7 @@ screen initialState =
                                 _ <- pure $ setValueToLocalStore RIDE_G_FREQUENCY "50000"
                                 _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "25.0"
                                 _ <- push RemoveChat
-                                _ <- launchAff $ flowRunner $ launchMaps push TriggerMaps
+                                _ <- launchAff $ flowRunner defaultGlobalState $ launchMaps push TriggerMaps
                                 if (not initialState.props.routeVisible) && initialState.props.mapRendered then do
                                   _ <- JB.getCurrentPosition push $ ModifyRoute
                                   _ <- JB.removeMarker "ic_vehicle_side" -- TODO : remove if we dont require "ic_auto" icon on homescreen
