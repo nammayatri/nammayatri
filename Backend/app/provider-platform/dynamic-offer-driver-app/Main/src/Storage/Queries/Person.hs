@@ -870,19 +870,20 @@ buildFullDriverListOnRide quotesHashMap bookingHashMap bookingLocsHashMap locati
       distanceFromDestinationToPickup = realToFrac $ distanceBetweenInMeters latLon destinationPoint
       onRideRadiusValidity = (distanceFromDriverToDestination + distanceFromDestinationToPickup) < onRideRadius
   if onRideRadiusValidity
-    && Mb.isNothing mbVariant || Just vehicle.variant == mbVariant
-      || ( case mbVariant of
-             Just SEDAN ->
-               info.canDowngradeToSedan
-                 && vehicle.variant == SUV
-             Just HATCHBACK ->
-               info.canDowngradeToHatchback
-                 && (vehicle.variant == SUV || vehicle.variant == SEDAN)
-             Just TAXI ->
-               info.canDowngradeToTaxi
-                 && vehicle.variant == TAXI_PLUS
-             _ -> False
-         )
+    && ( Mb.isNothing mbVariant || Just vehicle.variant == mbVariant
+           || ( case mbVariant of
+                  Just SEDAN ->
+                    info.canDowngradeToSedan
+                      && vehicle.variant == SUV
+                  Just HATCHBACK ->
+                    info.canDowngradeToHatchback
+                      && (vehicle.variant == SUV || vehicle.variant == SEDAN)
+                  Just TAXI ->
+                    info.canDowngradeToTaxi
+                      && vehicle.variant == TAXI_PLUS
+                  _ -> False
+              )
+       )
     then Just (person.id, person.deviceToken, person.language, info.onRide, info.canDowngradeToSedan, info.canDowngradeToHatchback, info.canDowngradeToTaxi, location.lat, location.lon, vehicle.variant, bookingLocation.lat, bookingLocation.lon, distanceFromDriverToDestination + distanceFromDestinationToPickup, distanceFromDriverToDestination, info.mode)
     else Nothing
 
