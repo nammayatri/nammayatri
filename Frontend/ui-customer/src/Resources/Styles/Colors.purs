@@ -486,5 +486,9 @@ elfGreen = "#269574"
 
 transparentBlue :: Color
 transparentBlue = "#100066FF"
+
 pink :: Color
 pink = "#FEF1E5"
+
+pickledBlue :: Color 
+pickledBlue = "#29334A"

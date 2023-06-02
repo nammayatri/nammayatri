@@ -16,7 +16,7 @@
 module Screens.TripDetailsScreen.ScreenData where
 
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
-import Screens.Types (TripDetailsScreenState, PaymentMode(..))
+import Screens.Types (TripDetailsScreenState, PaymentMode(..), TripDetailsGoBackType(..))
 
 
 initData :: TripDetailsScreenState
@@ -38,7 +38,7 @@ initData = {
     reportIssue : true,
     issueReported : false,
     activateSubmit : false,
-    fromMyRides : false,
+    fromMyRides : Home,
     showConfirmationPopUp : false,
     canConnectWithDriver : true
   }

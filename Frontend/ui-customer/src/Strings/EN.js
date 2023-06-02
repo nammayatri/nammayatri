@@ -522,5 +522,18 @@ const englishStrings = {
   "PLEASE_ENABLE_CONTACTS_PERMISSION_TO_PROCEED" : "Please enable contacts permission to proceed",
   "LIMIT_REACHED_3_OF_3_EMERGENCY_CONTACTS_ALREADY_ADDED" : "Limit reached! 3 of 3 Emergency contacts already added",
   "INVALID_CONTACT_FORMAT" : "Invalid contact format",
-  "OTP_RESENT_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER" : "OTP resend limit exhausted, please try again later"
+  "OTP_RESENT_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER" : "OTP resend limit exhausted, please try again later",
+  "RATE_YOUR_EXPERIENCE" : "Rate your experience ✨",
+  "REPORT_ISSUE_" : "Report Issue",
+  "DONE" : "Done",
+  "PLEASE_TELL_US_WHAT_WENT_WRONG" : "Please tell us what went wrong",
+  "YOUR_FEEDBACK_HELPS_US" : "Your feedback helps us improve the Namma Yatri experience",
+  "DID_YOU_FACE_ANY_ISSUE" : "Did you face any issue?",
+  "WE_NOTICED_YOUR_RIDE_ENDED_AWAY" : "We noticed  that your ride ended away from your original destination.",
+  "GET_CALLBACK_FROM_US" : "Get a callback from us",
+  "DRIVER_WAS_NOT_READY_TO_GO" : "The driver was not to ready to go",
+  "ASKING_FOR_MORE_MONEY" : "Driver was asking for more money",
+  "AUTO_BROKEN" : "Auto broke down",
+  "WE_WILL_GIVE_YOU_CALLBACK" : "We will give you a callback within 24 hrs",
+  "YOUR_ISSUE_HAS_BEEN_REPORTED" : "Your issue has been reported successfully"
 }

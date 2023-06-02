@@ -19,7 +19,7 @@ import Services.API
 import Services.Config as SC
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..))
-import Common.Types.App (Version(..))
+import Common.Types.App (Version(..), LazyCheck(..))
 import Data.Either (Either(..), either)
 import Data.Maybe (Maybe(..), maybe, fromMaybe)
 import Foreign.Generic (encode)
@@ -838,6 +838,14 @@ userSosStatusBT sosId requestBody = do
      withAPIResultBT (EP.userSosStatus sosId) (\x → x) errorHandler (lift $ lift $ callAPI headers (UserSosStatusReq sosId requestBody))
     where
     errorHandler errorPayload = BackT $ pure GoBack
+
+callbackRequestBT :: LazyCheck -> FlowBT String RequestCallbackRes
+callbackRequestBT lazyCheck = do
+        headers <- getHeaders' ""
+        withAPIResultBT (EP.callbackRequest "") (\x → x) errorHandler (lift $ lift $ callAPI headers RequestCallbackReq)
+    where
+      errorHandler errorPayload = do
+            BackT $ pure GoBack
 
 makeUserSosReq :: UserSosFlow -> String -> UserSosReq
 makeUserSosReq flow rideId = UserSosReq {
