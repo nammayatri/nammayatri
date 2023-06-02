@@ -1727,6 +1727,8 @@ getNearestDriversCurrentlyOnRide' mbVariant radiusMeters (Id merchantId') mbDriv
           pure (either (const []) (QDL.transformBeamDriverLocationToDomain <$>) geoms)
         Left _ -> pure []
 
+    
+
     makeNearestDriversResult :: (Id Person, Maybe FCM.FCMRecipientToken, Maybe Maps.Language, Bool, Bool, Bool, Bool, Double, Double, Variant, Double, Double, Double, Double, Maybe DriverInfo.DriverMode) -> [NearestDriversResultCurrentlyOnRide]
     makeNearestDriversResult (personId, mbDeviceToken, mblang, onRide, canDowngradeToSedan, canDowngradeToHatchback, canDowngradeToTaxi, dlat, dlon, variant, destinationEndLat, destinationEndLon, dist :: Double, distanceFromDriverToDestination :: Double, mode) =
       case mbVariant of
