@@ -913,7 +913,9 @@ eval OpenSettings state = do
 eval (SearchExpireCountDown seconds id status timerID) state = do
   if status == "EXPIRED" then do
     _ <- pure $ clearTimer timerID
-    continue state { props { searchExpire = seconds } }
+    _ <- pure $ updateLocalStage QuoteList
+    let updatedState = if state.props.customerTip.enableTips then tipEnabledState state{props{isPopUp = TipsPopUp}} else state{props{isPopUp = ConfirmBack}}
+    exit $ GetSelectList updatedState { props { searchExpire = seconds , isSearchLocation = NoView, isSource = Nothing,currentStage = QuoteList} }
   else
     continue state { props { searchExpire = seconds } }
 

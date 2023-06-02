@@ -643,6 +643,7 @@ homeScreenFlow = do
         homeScreenFlow
     GET_SELECT_LIST state -> do
       when (isLocalStageOn QuoteList) $ do
+        cancelEstimate state.props.estimateId
         updateFlowStatus SEARCH_CANCELLED
       homeScreenFlow
     CONFIRM_RIDE state -> do
