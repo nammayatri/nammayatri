@@ -138,3 +138,6 @@ userSosStatus sosId = (getBaseUrl "37") <> "/sos/" <> sosId <>"/status"
 
 getPayload :: String
 getPayload = (getBaseUrl "10") <> "/payments"
+
+orderStatus :: String -> String
+orderStatus _ = (getBaseUrl "10") <> "/paymentOrderStatus"

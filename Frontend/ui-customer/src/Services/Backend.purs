@@ -858,8 +858,8 @@ payload2 = PayPayload {
         clientId:"nammayatri",
         amount:"1.18",
         merchantId:"nammayatri",
-        clientAuthToken:"tkn_69fb25ccd0884d069d38ed076d247b4b",
-        clientAuthTokenExpiry:"2023-05-31T08:04:57Z",
+        clientAuthToken:"tkn_3e38b793d2854d5792b548b7c10aa5fb",
+        clientAuthTokenExpiry:"2023-06-02T07:11:50Z",
         environment:"prod",
         lastName:"wick",
         action:"paymentPage",
@@ -868,12 +868,20 @@ payload2 = PayPayload {
         firstName:"john",
         customerPhone:"9876543201",
         customerEmail:"test@mail.com",
-        orderId:"test-994360745699",
+        orderId:"test-346347495279",
         description:"Order Description"
       }
       
 payload1 = PaymentPagePayload {
-    requestId:"ca5b57f622aa470b9667fe678702de08",
+    requestId:"75195ba66106423a90f80450881fc9d9",
     service:"in.juspay.hyperpay",
     payload : payload2
     }
+
+
+-- OREDER STATUS API FOR FINAL OREDR STATUS CHECK
+paymentOrderStatus requestBody = do
+    headers <- getHeaders ""
+    withAPIResult (EP.orderStatus "") unwrapResponse $ callAPI headers requestBody
+    where
+        unwrapResponse (x) = x

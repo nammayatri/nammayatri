@@ -1895,13 +1895,6 @@ newtype PayPayload = PayPayload {
   description :: String
 }
     
-
-newtype PPPayloadResp = PPPayloadResp {
-    signature :: String
-  , signaturePayload :: String
-  , orderDetails :: String
-}
-
 -- Payload SEND TO BECKN SERVER TO GENERATE PP Payload
 newtype PPPayloadReq = PPPayloadReq {
     amount :: String
@@ -1933,3 +1926,30 @@ instance standardEncodeFetchSignatureReq :: StandardEncode PPPayloadReq where st
 instance showFetchSignatureReq :: Show PPPayloadReq where show = genericShow
 instance decodeFetchSignatureReq :: Decode PPPayloadReq where decode = defaultDecode
 instance encodeFetchSignatureReq :: Encode PPPayloadReq where encode = defaultEncode
+
+
+-- oredr status response
+ 
+data OrderStatusReq = OrderStatusReq
+
+newtype OrderStatusRes = OrderStatusRes
+  {
+    status :: String
+  }
+
+instance orderStatusReq :: RestEndpoint OrderStatusReq OrderStatusRes where
+ makeRequest reqBody headers = defaultMakeRequest GET (EP.orderStatus "") headers reqBody
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericOrderStatusReq :: Generic OrderStatusReq _
+instance standardEncodeOrderStatusReq :: StandardEncode OrderStatusReq where standardEncode (OrderStatusReq) = standardEncode {}
+instance decodeOrderStatusReq :: Decode OrderStatusReq where decode = defaultDecode
+instance encodeOrderStatusReq :: Encode OrderStatusReq where encode = defaultEncode
+
+derive instance genericOrderStatusRes:: Generic OrderStatusRes _
+derive instance newtypeOrderStatusRes :: Newtype OrderStatusRes _
+instance standardEncodeOrderStatusRes :: StandardEncode OrderStatusRes where standardEncode (OrderStatusRes id) = standardEncode id
+instance showOrderStatusRes:: Show OrderStatusRes where show = genericShow
+instance decodeOrderStatusRes :: Decode OrderStatusRes where decode = defaultDecode
+instance encodeOrderStatusRes :: Encode OrderStatusRes where encode = defaultEncode

@@ -410,37 +410,3 @@ startPP :: PaymentPagePayload -> FlowBT String String
 startPP payload = do
   action <- lift $ lift $ startPP'' payload
   pure action
-
--- newtype PaymentPagePayload =
---     PaymentPagePayload
---     { requestId :: String
---     , service :: String
---     , payload :: PayPayload
---     }
-
--- newtype PayPayload = PayPayload {
---   clientId :: String,
---   amount :: String ,
---   merchantId :: String ,
---   clientAuthToken:: String,
---   clientAuthTokenExpiry:: String,
---   environment:: String,
---   lastName:: String,
---   action :: String,
---   customerId:: String,
---   currency :: String,
---   firstName :: String,
---   customerPhone:: String,
---   customerEmail :: String,
---   orderId :: String,
---   description :: String
--- }
-    
--- derive instance genericPaymentPagePayload :: Generic PaymentPagePayload _
--- derive instance newtypePaymentPagePayload :: Newtype PaymentPagePayload _
--- instance encodePaymentPagePayload :: Encode PaymentPagePayload where encode = defaultEncode
-
-    
--- derive instance genericPayPayload :: Generic PayPayload _
--- derive instance newtypePayPayload :: Newtype PayPayload _
--- instance encodePayPayload :: Encode PayPayload where encode = defaultEncode
