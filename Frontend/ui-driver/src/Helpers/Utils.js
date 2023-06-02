@@ -580,3 +580,16 @@ export const getImageUrl = function (url) {
   }
 };
 
+export const addRideHistoryToDB = function (state) {
+  var data = JSON.stringify(state)
+  if(JBridge.addRideHistoryToDB){
+    JBridge.addRideHistoryToDB(data);
+  }
+};
+
+export const getRideHistoryFromDB = function(status){
+  if(JBridge.getRideHistoryFromDB){
+    var stringifyJson = JBridge.getRideHistoryFromDB(status);
+    return JSON.parse(stringifyJson);
+  }
+};

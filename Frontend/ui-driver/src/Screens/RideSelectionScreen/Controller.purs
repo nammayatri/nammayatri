@@ -206,7 +206,7 @@ rideListResponseTransformer list categoryAction =
     , vehicleColor : ride.vehicleColor
     , rideDistance : parseFloat (toNumber (fromMaybe 0 ride.chargeableDistance) / 1000.0) 2
     , vehicleModel : ride.vehicleModel
-    , total_amount : (case (ride.status) of
+    , totalAmount : (case (ride.status) of
                         "CANCELLED" -> 0
                         _ -> fromMaybe ride.estimatedBaseFare ride.computedFare
                      )

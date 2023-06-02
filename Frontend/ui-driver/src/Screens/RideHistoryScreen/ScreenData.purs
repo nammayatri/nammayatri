@@ -29,7 +29,7 @@ initData = {
   selectedItem: {
     date : "",
     time : "",
-    total_amount : 0,
+    totalAmount : 0,
     card_visibility : "",
     shimmer_visibility : "",
     rideDistance : "",

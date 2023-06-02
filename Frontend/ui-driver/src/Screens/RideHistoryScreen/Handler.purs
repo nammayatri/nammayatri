@@ -56,24 +56,3 @@ rideHistory = do
     SelectedTab updatedState -> do
       modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> rideHistoryScreen{currentTab = updatedState.currentTab, offsetValue = 0})
       App.BackT $ App.BackPoint <$> (pure $ SELECTED_TAB updatedState)
-rideHistoryItem :: IndividualRideCardState
-rideHistoryItem = {
-    date : "31/05/2022",
-    time : "7:35pm",
-    total_amount : 0,
-    card_visibility : "gone",
-    shimmer_visibility : "visible",
-    rideDistance : "",
-    status : "COMPLETED",
-    vehicleModel : "",
-    shortRideId : "",
-    vehicleNumber : "",
-    driverName : "",
-    driverSelectedFare : 0,
-    vehicleColor : "",
-    id : "",
-    updatedAt : "",
-    source : "",
-    destination : ""
-}
-

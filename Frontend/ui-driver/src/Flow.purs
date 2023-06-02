@@ -804,7 +804,7 @@ myRidesScreenFlow = do
       time = selectedCard.time,
       source = selectedCard.source,
       destination = selectedCard.destination,
-      totalAmount = selectedCard.total_amount,
+      totalAmount = selectedCard.totalAmount,
       distance = selectedCard.rideDistance,
       status = selectedCard.status
       }})

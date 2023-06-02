@@ -15,8 +15,8 @@
 
 module Screens.RideHistoryScreen.Controller where
 
-import Prelude (class Show, pure, unit, ($), map, (==), not,bind, (&&),(<>) ,(+), (*), (/=), discard, (/))
-import Screens.Types (RideHistoryScreenState, AnimationState(..), ItemState(..), IndividualRideCardState(..))
+import Prelude (class Show, pure, unit, ($), map, (==), not,bind, (&&),(<>) ,(+), (*), (/=), discard, (/), void)
+import Screens.Types (RideHistoryScreenState, AnimationState(..), ItemState(..), IndividualRideCardState)
 import PrestoDOM.Types.Core (class Loggable)
 import PrestoDOM (Eval, continue, exit, ScrollState(..), updateAndExit)
 import Components.BottomNavBar.Controller(Action(..)) as BottomNavBar
@@ -26,12 +26,12 @@ import Services.APITypes (RidesInfo(..), Status(..))
 import PrestoDOM.Types.Core (toPropValue)
 import Helpers.Utils (convertUTCtoISC)
 import Resource.Constants (decodeAddress)
-import Data.Array (union, (!!), filter, length)
+import Data.Array (union, (!!), filter, length, null)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Int(fromString, toNumber)
 import Data.Number(fromString) as NUM
 import Data.String (Pattern(..), split)
-import Helpers.Utils (setRefreshing, setEnabled, parseFloat)
+import Helpers.Utils (setRefreshing, setEnabled, parseFloat,  addRideHistoryToDB, getRideHistoryFromDB)
 import Engineering.Helpers.Commons (getNewIDWithTag, strToBool)
 import Data.Int (ceil)
 import Styles.Colors as Color
@@ -141,10 +141,12 @@ eval Loader state = do
   exit $ LoaderOutput state
 
 eval (RideHistoryAPIResponseAction rideList) state = do
-  let bufferCardDataPrestoList = (rideHistoryListTransformer rideList)
-  let filteredRideList = (rideListResponseTransformer rideList)
-  _ <- pure $ setRefreshing "2000030" false
+  rideHistoryArray <- pure $ getRideHistoryFromDB if state.currentTab == "COMPLETED" then "Completed" else "Cancelled"
+  let bufferCardDataPrestoList = if (null rideList) then (rideListTransformerForDB rideHistoryArray) else (rideHistoryListTransformer rideList)
+  let filteredRideList = if (null rideList)  then rideHistoryArray else (rideListResponseTransformer rideList)
+  if (null rideList) then pure unit else void $ pure $ addRideHistoryToDB filteredRideList
   let loadBtnDisabled = if(length rideList == 0) then true else false
+  _ <- pure $ setRefreshing "2000030" false
   continue $ state {shimmerLoader = AnimatedOut, recievedResponse = true,rideList = union(state.rideList) (filteredRideList) ,prestoListArrayItems =  union (state.prestoListArrayItems) (bufferCardDataPrestoList), loadMoreDisabled = loadBtnDisabled}
 
 eval (Scroll value) state = do
@@ -192,7 +194,7 @@ rideListResponseTransformer :: Array RidesInfo -> Array IndividualRideCardState
 rideListResponseTransformer list = (map (\(RidesInfo ride) -> {
     date : (convertUTCtoISC (ride.createdAt) "D MMM"),
     time : (convertUTCtoISC (ride.createdAt )"h:mm A"),
-    total_amount : (case (ride.status) of
+    totalAmount : (case (ride.status) of
                     "CANCELLED" -> 0
                     _ -> fromMaybe ride.estimatedBaseFare ride.computedFare),
     card_visibility : (case (ride.status) of
@@ -214,6 +216,34 @@ rideListResponseTransformer list = (map (\(RidesInfo ride) -> {
 
 }) list )
 
+rideListTransformerForDB :: Array IndividualRideCardState -> Array ItemState
+rideListTransformerForDB list = (map (\ride -> {
+    date : toPropValue ride.date,
+    time : toPropValue ride.time,
+    total_amount : toPropValue ride.totalAmount,
+    card_visibility : toPropValue "visible",
+    shimmer_visibility : toPropValue "gone",
+    rideDistance : toPropValue $ ride.rideDistance <> " km " <> (getString RIDE),
+    ride_distance_visibility : toPropValue (case (ride.status) of
+                            "CANCELLED" -> "gone"
+                            _ -> "visible"),
+    status :  toPropValue ride.status,
+    shortRideId : toPropValue ride.shortRideId  ,
+    vehicleNumber :  toPropValue ride.vehicleNumber  ,
+    driverName : toPropValue ride.driverName  ,
+    driverSelectedFare : toPropValue ride.driverSelectedFare  ,
+    id : toPropValue ride.shortRideId,
+    updatedAt : toPropValue ride.updatedAt,
+    source : toPropValue ride.source,
+    destination : toPropValue ride.destination,
+    amountColor: toPropValue (case (ride.status) of
+                  "COMPLETED" -> Color.black800
+                  "CANCELLED" -> Color.red
+                  _ -> Color.black800),
+    vehicleModel : toPropValue ride.vehicleModel ,
+    vehicleColor : toPropValue ride.vehicleColor
+
+}) list )
 
 prestoListFilter :: String -> Array ItemState -> Array ItemState
 prestoListFilter statusType list = (filter (\(ride) -> (ride.status == (toPropValue statusType)) ) list )
@@ -225,7 +255,7 @@ dummyCard :: IndividualRideCardState
 dummyCard =  {
     date : "",
     time : "",
-    total_amount : 0,
+    totalAmount : 0,
     card_visibility : "",
     shimmer_visibility : "",
     rideDistance : "",

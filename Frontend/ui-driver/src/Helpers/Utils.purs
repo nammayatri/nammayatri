@@ -19,7 +19,7 @@ module Helpers.Utils
     ) where
 
 -- import Prelude (Unit, bind, discard, identity, pure, show, unit, void, ($), (<#>), (<$>), (<*>), (<<<), (<>), (>>=))
-import Screens.Types (AllocationData, YoutubeData)
+import Screens.Types (AllocationData, YoutubeData, IndividualRideCardState)
 import Language.Strings (getString)
 import Language.Types(STR(..))
 import Data.Array ((!!)) as DA
@@ -48,6 +48,7 @@ import Prelude (Unit, bind, pure, discard, unit, void, ($), identity, (<*>), (<#
 import Prelude (class Eq, class Show, (<<<))
 import Prelude (map, (*), (-), (/))
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
+import Services.APITypes (RidesInfo)
 
 -- import Control.Monad.Except (runExcept)
 -- import Data.Array.NonEmpty (fromArray)
@@ -113,6 +114,9 @@ foreign import renderBase64ImageFile :: String -> String -> Boolean -> Effect Un
 foreign import removeMediaPlayer :: String -> Effect Unit
 foreign import getVideoID :: String -> String
 foreign import getImageUrl :: String -> String
+-- foreign import addRideHistoryToDB :: Array RidesInfo -> Unit
+foreign import addRideHistoryToDB :: Array IndividualRideCardState -> Unit
+foreign import getRideHistoryFromDB :: String -> Array IndividualRideCardState
 
 -- -- ####### MAP FFI ######## -----
 foreign import currentPosition  :: String -> Effect Unit

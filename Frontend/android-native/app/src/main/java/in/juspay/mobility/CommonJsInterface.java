@@ -153,6 +153,7 @@ import com.google.android.play.core.review.ReviewManager;
 import com.google.android.play.core.review.ReviewManagerFactory;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.messaging.FirebaseMessaging;
+import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.maps.android.PolyUtil;
@@ -216,6 +217,8 @@ import in.juspay.mobility.utils.LocationUpdateService;
 import in.juspay.mobility.utils.MediaPlayerView;
 import in.juspay.mobility.utils.NotificationUtils;
 import in.juspay.mobility.utils.OtpUtils;
+import in.juspay.mobility.utils.database.AtlasDatabaseHelper;
+import in.juspay.mobility.utils.database.RideHistoryModel;
 import in.juspay.mobility.utils.mediaPlayer.DefaultMediaPlayerControl;
 import in.juspay.hypersdk.core.HyperFragment;
 import in.juspay.hypersdk.core.JBridge;
@@ -4307,5 +4310,56 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
             dynamicUII.addJsToWebView(javascript);
         }
     }
+
+    public ArrayList<ArrayList<String>> recentSearchMigration(){
+        String stringJson = getKeysInSharedPrefs("RECENT_SEARCHES");
+        try {
+            JSONObject obj = new JSONObject(stringJson);
+            ArrayList<ArrayList<String>> recentSearch = new ArrayList<ArrayList<String>>();
+            JSONArray array = obj.getJSONArray("predictionArray");
+            for(int i = 0 ; i < array.length() ; i++){
+                ArrayList<String> placeInfo = new ArrayList<String>();
+                placeInfo.add(array.getJSONObject(i).getString("placeId"));
+                placeInfo.add(array.getJSONObject(i).getString("title"));
+                placeInfo.add(array.getJSONObject(i).getString("subTitle"));
+                placeInfo.add(array.getJSONObject(i).getString("description"));
+                recentSearch.add(placeInfo);
+            }
+            System.out.println("Print list" + recentSearch.toString());
+            return recentSearch ;
+        }
+        catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    @JavascriptInterface
+    public void addRideHistoryToDB(String arrayObject) {
+        try {
+            JSONArray jsonArray = new JSONArray(arrayObject);
+            AtlasDatabaseHelper db = new AtlasDatabaseHelper(context);
+            for (int i =0 ; i<jsonArray.length() ; i++){
+                JSONObject jsonObject = jsonArray.getJSONObject(i);
+                Gson gson = new Gson();
+                RideHistoryModel rideHistoryModel = gson.fromJson(String.valueOf(jsonObject), RideHistoryModel.class);
+                db.addRideHistoryToDB(rideHistoryModel);
+            }
+        }catch (Exception e){
+            System.out.println("exception: " +e);
+        }
+    }
+
+    @JavascriptInterface
+    public String getRideHistoryFromDB(String status){
+        AtlasDatabaseHelper db = new AtlasDatabaseHelper(context);
+        List<RideHistoryModel> rideHistoryModelList = db.getRideHistoryFromDB();
+        Gson gson = new Gson();
+        String jsonArray = gson.toJson(rideHistoryModelList);
+        System.out.println("jsonArray gson " + jsonArray);
+        return jsonArray;
+    }
+
+
 
 }

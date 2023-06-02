@@ -434,7 +434,7 @@ type IndividualRideCardState =
   {
     date :: String,
     time :: String,
-    total_amount :: Int,
+    totalAmount :: Int,
     card_visibility :: String,
     shimmer_visibility :: String,
     rideDistance :: String,

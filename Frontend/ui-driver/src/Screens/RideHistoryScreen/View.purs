@@ -50,6 +50,7 @@ import Common.Types.App
 import Components.BottomNavBar.Controller (navData)
 import Screens.RideHistoryScreen.ComponentConfig
 import Screens as ScreenNames
+import Data.Either (Either(..))
 
 
 screen :: ST.RideHistoryScreenState -> PrestoList.ListItem -> Screen Action ST.RideHistoryScreenState ScreenOutput
@@ -63,13 +64,12 @@ screen initialState rideListItem =
   , globalEvents : [
     globalOnScroll "RideHistoryScreen",
         ( \push -> do
-            _ <- launchAff $ flowRunner $ runExceptT $ runBackT $ do
-              if initialState.currentTab == "COMPLETED" then do
-                (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "8" (show initialState.offsetValue) "false" "COMPLETED"
-                lift $ lift $ doAff do liftEffect $ push $ RideHistoryAPIResponseAction rideHistoryResponse.list
-                else do
-                  (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "8" (show initialState.offsetValue) "false" "CANCELLED"
-                  lift $ lift $ doAff do liftEffect $ push $ RideHistoryAPIResponseAction rideHistoryResponse.list
+            _ <- launchAff $ flowRunner $ do
+              resp <- Remote.getRideHistoryReq "8" (show initialState.offsetValue) "false" initialState.currentTab
+              case resp of 
+                Right (GetRidesHistoryResp rideHistoryResponse) -> doAff do liftEffect $ push $ RideHistoryAPIResponseAction rideHistoryResponse.list
+                Left err -> doAff do liftEffect $ push $ RideHistoryAPIResponseAction []
+              pure unit
             pure $ pure unit
         )
   ]
