@@ -78,13 +78,11 @@ import qualified Storage.Beam.DriverQuote as BeamDQ
 import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Beam.Vehicle as BeamV
 import qualified Storage.Queries.Booking as QB
-import qualified Storage.Queries.Booking as QueriesB
 import qualified Storage.Queries.Booking.BookingLocation as QueriesBL
 import qualified Storage.Queries.DriverInformation as QueriesDI
 import qualified Storage.Queries.DriverLocation as QDL
 import qualified Storage.Queries.DriverLocation as QueriesDL
 import qualified Storage.Queries.DriverQuote as QDQ
-import qualified Storage.Queries.DriverQuote as QueriesDQ
 import Storage.Queries.FullEntityBuilders
 import qualified Storage.Queries.Vehicle as QV
 import qualified Storage.Queries.Vehicle as QueriesV
