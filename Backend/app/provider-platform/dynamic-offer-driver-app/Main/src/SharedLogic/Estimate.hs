@@ -143,5 +143,19 @@ mkAdditionalBreakups mkPrice mkBreakupItem distance farePolicy = do
       let (perExtraKmFareSection :| _) = NE.sortBy (comparing (.startDistance)) det.perExtraKmRateSections
           perExtraKmFareCaption = "EXTRA_PER_KM_FARE"
           perExtraKmFareItem = mkBreakupItem perExtraKmFareCaption (mkPrice $ roundToIntegral perExtraKmFareSection.perExtraKmRate)
-      [perExtraKmFareItem]
-    mkAdditionalSlabBreakups _ = []
+
+      let waitingOrPickupChargesCaption = "WAITING_OR_PICKUP_CHARGES"
+          mbWatingChargeValue =
+            (det.waitingChargeInfo <&> (.waitingCharge)) <&> \case
+              PerMinuteWaitingCharge hpm -> roundToIntegral hpm
+              ConstantWaitingCharge mo -> mo
+          mbWaitingOrPickupChargesItem = mkBreakupItem waitingOrPickupChargesCaption . mkPrice <$> mbWatingChargeValue
+      [perExtraKmFareItem] <> catMaybes [mbWaitingOrPickupChargesItem]
+    mkAdditionalSlabBreakups det = do
+      let waitingOrPickupChargesCaption = "WAITING_OR_PICKUP_CHARGES"
+          mbWatingChargeValue =
+            (det.waitingChargeInfo <&> (.waitingCharge)) <&> \case
+              PerMinuteWaitingCharge hpm -> roundToIntegral hpm
+              ConstantWaitingCharge mo -> mo
+          mbWaitingOrPickupChargesItem = mkBreakupItem waitingOrPickupChargesCaption . mkPrice <$> mbWatingChargeValue
+      catMaybes [mbWaitingOrPickupChargesItem]
