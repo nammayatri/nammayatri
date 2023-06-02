@@ -17,10 +17,10 @@ module SharedLogic.MerchantConfig
     updateCancelledByDriverFraudCounters,
     updateSearchFraudCounters,
     updateTotalRidesCounters,
+    updateTotalRidesInWindowCounters,
     anyFraudDetected,
     mkCancellationKey,
     mkCancellationByDriverKey,
-    searchFraudDetected,
     blockCustomer,
   )
 where
@@ -43,7 +43,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as RT
 import Tools.Auth (authTokenCacheKey)
 
-data Factors = MoreCancelling | MoreSearching | MoreCancelledByDriver | TotalRides
+data Factors = MoreCancelling | MoreSearching | MoreCancelledByDriver | TotalRides | TotalRidesInWindow
 
 mkCancellationKey :: Text -> Text -> Text
 mkCancellationKey ind idtxt = "Customer:CancellationCount:" <> idtxt <> ":" <> ind
@@ -56,6 +56,9 @@ mkTotalRidesKey idtxt = "Customer:TotalRidesCount:" <> idtxt
 
 mkSearchCounterKey :: Text -> Text -> Text
 mkSearchCounterKey ind idtxt = "Customer:SearchCounter:" <> idtxt <> ":" <> ind
+
+mkRideWindowCountKey :: Text -> Text -> Text
+mkRideWindowCountKey ind idtxt = "Customer:RidesCount:" <> idtxt <> ":" <> ind
 
 updateSearchFraudCounters :: (HasCacheConfig r, HedisFlow m r, MonadFlow m) => Id Person.Person -> [DMC.MerchantConfig] -> m ()
 updateSearchFraudCounters riderId merchantConfigs = Redis.withCrossAppRedis $ do
@@ -81,6 +84,12 @@ updateTotalRidesCounters riderId = Redis.withCrossAppRedis $ do
   let key = mkTotalRidesKey riderId.getId
   void $ Redis.incr key
 
+updateTotalRidesInWindowCounters :: (HasCacheConfig r, HedisFlow m r, MonadFlow m) => Id Person.Person -> [DMC.MerchantConfig] -> m ()
+updateTotalRidesInWindowCounters riderId merchantConfigs = Redis.withCrossAppRedis $ do
+  mapM_ (\mc -> incrementCount mc.id.getId mc.fraudRideCountWindow) merchantConfigs
+  where
+    incrementCount ind = SWC.incrementWindowCount (mkRideWindowCountKey ind riderId.getId)
+
 getTotalRidesCount :: (HedisFlow m r, EsqDBReplicaFlow m r) => Id Person.Person -> m Int
 getTotalRidesCount riderId = Redis.withCrossAppRedis $ do
   let key = mkTotalRidesKey riderId.getId
@@ -92,11 +101,21 @@ getTotalRidesCount riderId = Redis.withCrossAppRedis $ do
       Redis.setExp key totalCount 14400
       pure totalCount
 
-searchFraudDetected :: (HedisFlow m r, HasCacheConfig r, MonadFlow m, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person.Person -> Id DM.Merchant -> [DMC.MerchantConfig] -> m (Maybe DMC.MerchantConfig)
-searchFraudDetected riderId merchantId = checkFraudDetected riderId merchantId [MoreSearching]
+getRidesCountInWindow ::
+  (HedisFlow m r, EsqDBReplicaFlow m r) =>
+  Id Person.Person ->
+  Int ->
+  Int ->
+  UTCTime ->
+  m Int
+getRidesCountInWindow riderId start window currTime =
+  Redis.withCrossAppRedis $ do
+    let startTime = addUTCTime (fromIntegral (- start)) currTime
+        endTime = addUTCTime (fromIntegral window) startTime
+    runInReplica $ QB.findCountByRideIdStatusAndTime riderId BT.COMPLETED startTime endTime
 
 anyFraudDetected :: (HedisFlow m r, HasCacheConfig r, MonadFlow m, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person.Person -> Id DM.Merchant -> [DMC.MerchantConfig] -> m (Maybe DMC.MerchantConfig)
-anyFraudDetected riderId merchantId = checkFraudDetected riderId merchantId [MoreCancelling, MoreCancelledByDriver, MoreSearching, TotalRides]
+anyFraudDetected riderId merchantId = checkFraudDetected riderId merchantId [MoreCancelling, MoreCancelledByDriver, MoreSearching, TotalRides, TotalRidesInWindow]
 
 checkFraudDetected :: (HedisFlow m r, HasCacheConfig r, MonadFlow m, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person.Person -> Id DM.Merchant -> [Factors] -> [DMC.MerchantConfig] -> m (Maybe DMC.MerchantConfig)
 checkFraudDetected riderId merchantId factors merchantConfigs = Redis.withCrossAppRedis $ do
@@ -114,11 +133,34 @@ checkFraudDetected riderId merchantId factors merchantConfigs = Redis.withCrossA
           cancelledBookingByDriverCount :: Int <- sum . catMaybes <$> SWC.getCurrentWindowValues (mkCancellationByDriverKey mc.id.getId riderId.getId) mc.fraudBookingCancelledByDriverCountWindow
           pure $ cancelledBookingByDriverCount >= mc.fraudBookingCancelledByDriverCountThreshold
         MoreSearching -> do
-          sreachCount :: Int <- sum . catMaybes <$> SWC.getCurrentWindowValues (mkSearchCounterKey mc.id.getId riderId.getId) mc.fraudSearchCountWindow
-          pure $ sreachCount >= mc.fraudSearchCountThreshold
+          searchCount :: Int <- sum . catMaybes <$> SWC.getCurrentWindowValues (mkSearchCounterKey mc.id.getId riderId.getId) mc.fraudSearchCountWindow
+          pure $ searchCount >= mc.fraudSearchCountThreshold
         TotalRides -> do
           totalRidesCount :: Int <- getTotalRidesCount riderId
           pure $ totalRidesCount <= mc.fraudBookingTotalCountThreshold
+        TotalRidesInWindow -> do
+          windowValueList <- SWC.getCurrentWindowValues (mkRideWindowCountKey mc.id.getId riderId.getId) mc.fraudRideCountWindow
+          let timeInterval = SWC.convertPeriodTypeToSeconds mc.fraudRideCountWindow.periodType
+          let intervals = [0, (fromIntegral timeInterval) .. ((length windowValueList -1) * fromIntegral timeInterval)]
+          currTime <- getCurrentTime
+          let roundedTime = SWC.incrementPeriod mc.fraudRideCountWindow.periodType currTime
+              actualTime = addUTCTime (- fromIntegral timeInterval) roundedTime
+              swo = mc.fraudRideCountWindow
+              keyList = SWC.getkeysForLastPeriods swo actualTime $ SWC.makeSlidingWindowKey mc.fraudRideCountWindow.periodType (mkRideWindowCountKey mc.id.getId riderId.getId)
+              list = zip3 windowValueList intervals keyList
+          rideCount <-
+            mapM
+              ( \(key, value, windowKey) -> case key of
+                  Just res -> return res
+                  Nothing -> do
+                    rideCount <- getRidesCountInWindow riderId value (fromIntegral timeInterval) actualTime
+                    Redis.setExp windowKey rideCount 2592000
+                    return rideCount
+              )
+              list
+
+          let totalRideCount = sum rideCount
+          return $ totalRideCount <= mc.fraudRideCountThreshold
 
 blockCustomer :: (HedisFlow m r, HasCacheConfig r, MonadFlow m, EsqDBFlow m r) => Id Person.Person -> Maybe (Id DMC.MerchantConfig) -> m ()
 blockCustomer riderId mcId = do

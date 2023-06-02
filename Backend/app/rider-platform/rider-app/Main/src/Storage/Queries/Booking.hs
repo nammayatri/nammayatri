@@ -169,6 +169,20 @@ findCountByRideIdAndStatus personId status = do
     mkCount [counter] = counter
     mkCount _ = 0
 
+findCountByRideIdStatusAndTime :: Transactionable m => Id Person -> BookingStatus -> UTCTime -> UTCTime -> m Int
+findCountByRideIdStatusAndTime personId status startTime endTime = do
+  mkCount <$> do
+    Esq.findAll $ do
+      booking <- from $ table @BookingT
+      where_ $
+        booking ^. BookingRiderId ==. val (toKey personId)
+          &&. booking ^. BookingStatus ==. val status
+          &&. (booking ^. BookingCreatedAt >=. val startTime &&. booking ^. BookingCreatedAt <. val endTime)
+      return (countRows :: SqlExpr (Esq.Value Int))
+  where
+    mkCount [counter] = counter
+    mkCount _ = 0
+
 findByRiderIdAndStatus :: Transactionable m => Id Person -> [BookingStatus] -> m [Booking]
 findByRiderIdAndStatus personId statusList = Esq.buildDType $ do
   fullBookingsT <- Esq.findAll' $ do
