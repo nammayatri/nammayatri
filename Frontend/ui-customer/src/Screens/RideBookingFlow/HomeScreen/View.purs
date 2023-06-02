@@ -188,7 +188,7 @@ screen initialState =
                         if (checkCurrentLocation initialState.props.sourceLat initialState.props.sourceLong initialState.data.previousCurrentLocations.pastCurrentLocations  && initialState.props.storeCurrentLocs )|| checkSavedLocations initialState.props.sourceLat initialState.props.sourceLong initialState.data.savedLocations
                           then push $ UpdateSourceFromPastLocations
                         else do
-                          _ <- launchAff $ flowRunner $ runExceptT $ runBackT $ do
+                          _ <- launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
                             (GetPlaceNameResp locationName) <- Remote.placeNameBT (Remote.makePlaceNameReq initialState.props.sourceLat initialState.props.sourceLong (case (getValueToLocalStore LANGUAGE_KEY) of
                                                                                                                             "HI_IN" -> "HINDI"
                                                                                                                             "KN_IN" -> "KANNADA"
