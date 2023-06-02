@@ -31,13 +31,13 @@ fullCategoryTable language =
                      &&. translation ?. IssueTranslationLanguage ==. just (val language)
                )
 
-findAllByLanguage :: Transactionable m => Language -> m [(IssueCategory, Maybe IssueTranslation)]
-findAllByLanguage language = Esq.findAll $ do
-  (issueCategory :& mbIssueTranslation) <- from $ fullCategoryTable language
-  return (issueCategory, mbIssueTranslation)
+-- findAllByLanguage :: Transactionable m => Language -> m [(IssueCategory, Maybe IssueTranslation)]
+-- findAllByLanguage language = Esq.findAll $ do
+--   (issueCategory :& mbIssueTranslation) <- from $ fullCategoryTable language
+--   return (issueCategory, mbIssueTranslation)
 
-findAllByLanguage' :: L.MonadFlow m => Language -> m [(IssueCategory, Maybe IssueTranslation)]
-findAllByLanguage' language = do
+findAllByLanguage :: L.MonadFlow m => Language -> m [(IssueCategory, Maybe IssueTranslation)]
+findAllByLanguage language = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do

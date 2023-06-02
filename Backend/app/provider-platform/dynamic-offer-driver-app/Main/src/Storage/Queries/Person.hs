@@ -214,21 +214,21 @@ getDriversWithOutdatedLocationsToMakeInactive' before = do
       let persons'' = filter (\person -> person.id == dInfo.driverId) persons
        in dInfosWithLocsAndPersons <> ((\person -> (dInfo, drLoc, person)) <$> persons'')
 
-findAllDriversByIdsFirstNameAsc ::
-  (Transactionable m, Functor m) =>
-  Id Merchant ->
-  [Id Person] ->
-  m [FullDriver]
-findAllDriversByIdsFirstNameAsc merchantId driverIds = fmap (map mkFullDriver) $
-  Esq.findAll $ do
-    (person :& driverLocation :& driverInfo :& vehicle) <-
-      from baseFullPersonQuery
-    where_ $
-      person ^. PersonRole ==. val Person.DRIVER
-        &&. person ^. PersonTId `in_` valList (map toKey driverIds)
-        &&. person ^. PersonMerchantId ==. (val . toKey $ merchantId)
-    orderBy [asc (person ^. PersonFirstName)]
-    return (person, driverLocation, driverInfo, vehicle)
+-- findAllDriversByIdsFirstNameAsc ::
+--   (Transactionable m, Functor m) =>
+--   Id Merchant ->
+--   [Id Person] ->
+--   m [FullDriver]
+-- findAllDriversByIdsFirstNameAsc merchantId driverIds = fmap (map mkFullDriver) $
+--   Esq.findAll $ do
+--     (person :& driverLocation :& driverInfo :& vehicle) <-
+--       from baseFullPersonQuery
+--     where_ $
+--       person ^. PersonRole ==. val Person.DRIVER
+--         &&. person ^. PersonTId `in_` valList (map toKey driverIds)
+--         &&. person ^. PersonMerchantId ==. (val . toKey $ merchantId)
+--     orderBy [asc (person ^. PersonFirstName)]
+--     return (person, driverLocation, driverInfo, vehicle)
 
 -- lets not use this as of now
 findAllDriversByIdsFirstNameAsc' ::
@@ -236,7 +236,7 @@ findAllDriversByIdsFirstNameAsc' ::
   Id Merchant ->
   [Id Person] ->
   m [FullDriver]
-findAllDriversByIdsFirstNameAsc' (Id merchantId) driverIds = do
+findAllDriversByIdsFirstNameAsc (Id merchantId) driverIds = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do

@@ -136,27 +136,27 @@ findByMobileNumberHashAndMerchant mobileNumberDbHash (Id merchantId) = do
     Just dbCOnf' -> either (pure Nothing) (transformBeamRiderDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamRD.mobileNumberHash $ Se.Eq mobileNumberDbHash, Se.Is BeamRD.id $ Se.Eq merchantId]]
     Nothing -> pure Nothing
 
-updateReferralInfo ::
-  DbHash ->
-  Id Merchant ->
-  Id DriverReferral ->
-  Id Person ->
-  SqlDB ()
-updateReferralInfo customerNumberHash merchantId referralId driverId = do
-  now <- getCurrentTime
-  Esq.update $ \rd -> do
-    set
-      rd
-      [ RiderDetailsReferralCode =. val (Just $ toKey referralId),
-        RiderDetailsReferredByDriver =. val (Just $ toKey driverId),
-        RiderDetailsReferredAt =. val (Just now)
-      ]
-    where_ $
-      rd ^. RiderDetailsMobileNumberHash ==. val customerNumberHash
-        &&. rd ^. RiderDetailsMerchantId ==. val (toKey merchantId)
+-- updateReferralInfo ::
+--   DbHash ->
+--   Id Merchant ->
+--   Id DriverReferral ->
+--   Id Person ->
+--   SqlDB ()
+-- updateReferralInfo customerNumberHash merchantId referralId driverId = do
+--   now <- getCurrentTime
+--   Esq.update $ \rd -> do
+--     set
+--       rd
+--       [ RiderDetailsReferralCode =. val (Just $ toKey referralId),
+--         RiderDetailsReferredByDriver =. val (Just $ toKey driverId),
+--         RiderDetailsReferredAt =. val (Just now)
+--       ]
+--     where_ $
+--       rd ^. RiderDetailsMobileNumberHash ==. val customerNumberHash
+--         &&. rd ^. RiderDetailsMerchantId ==. val (toKey merchantId)
 
-updateReferralInfo' :: (L.MonadFlow m, MonadTime m) => DbHash -> Id Merchant -> Id DriverReferral -> Id Person -> m (MeshResult ())
-updateReferralInfo' customerNumberHash merchantId referralId driverId = do
+updateReferralInfo :: (L.MonadFlow m, MonadTime m) => DbHash -> Id Merchant -> Id DriverReferral -> Id Person -> m (MeshResult ())
+updateReferralInfo customerNumberHash merchantId referralId driverId = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   now <- getCurrentTime
   case dbConf of

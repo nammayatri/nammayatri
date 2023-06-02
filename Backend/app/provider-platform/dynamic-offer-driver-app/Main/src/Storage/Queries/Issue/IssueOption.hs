@@ -47,15 +47,15 @@ fullOptionTable language =
                      &&. translation ?. IssueTranslationLanguage ==. just (val language)
                )
 
-findAllByCategoryAndLanguage :: Transactionable m => Id IssueCategory -> Language -> m [(IssueOption, Maybe IssueTranslation)]
-findAllByCategoryAndLanguage issueCategoryId language = Esq.findAll $ do
-  (issueOption :& mbIssueTranslation) <- from $ fullOptionTable language
-  where_ $
-    issueOption ^. IssueOptionIssueCategoryId ==. val (toKey issueCategoryId)
-  pure (issueOption, mbIssueTranslation)
+-- findAllByCategoryAndLanguage :: Transactionable m => Id IssueCategory -> Language -> m [(IssueOption, Maybe IssueTranslation)]
+-- findAllByCategoryAndLanguage issueCategoryId language = Esq.findAll $ do
+--   (issueOption :& mbIssueTranslation) <- from $ fullOptionTable language
+--   where_ $
+--     issueOption ^. IssueOptionIssueCategoryId ==. val (toKey issueCategoryId)
+--   pure (issueOption, mbIssueTranslation)
 
-findAllByCategoryAndLanguage' :: L.MonadFlow m => Id IssueCategory -> Language -> m [(IssueOption, Maybe IssueTranslation)]
-findAllByCategoryAndLanguage' (Id issueCategoryId) language = do
+findAllByCategoryAndLanguage :: L.MonadFlow m => Id IssueCategory -> Language -> m [(IssueOption, Maybe IssueTranslation)]
+findAllByCategoryAndLanguage (Id issueCategoryId) language = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
@@ -73,15 +73,15 @@ findAllByCategoryAndLanguage' (Id issueCategoryId) language = do
 --   let drLocs' = filter (\drLoc -> drLoc.driverId == dInfo.driverId) drLocs
 --    in dInfosWithLocs <> ((\drLoc -> (dInfo, drLoc)) <$> drLocs')
 
-findByIdAndLanguage :: Transactionable m => Id IssueOption -> Language -> m (Maybe (IssueOption, Maybe IssueTranslation))
-findByIdAndLanguage issueOptionId language = Esq.findOne $ do
-  (issueOption :& mbIssueTranslation) <- from $ fullOptionTable language
-  where_ $
-    issueOption ^. IssueOptionTId ==. val (toKey issueOptionId)
-  pure (issueOption, mbIssueTranslation)
+-- findByIdAndLanguage :: Transactionable m => Id IssueOption -> Language -> m (Maybe (IssueOption, Maybe IssueTranslation))
+-- findByIdAndLanguage issueOptionId language = Esq.findOne $ do
+--   (issueOption :& mbIssueTranslation) <- from $ fullOptionTable language
+--   where_ $
+--     issueOption ^. IssueOptionTId ==. val (toKey issueOptionId)
+--   pure (issueOption, mbIssueTranslation)
 
-findByIdAndLanguage' :: L.MonadFlow m => Id IssueOption -> Language -> m (Maybe (IssueOption, Maybe IssueTranslation))
-findByIdAndLanguage' issueOptionId language = do
+findByIdAndLanguage :: L.MonadFlow m => Id IssueOption -> Language -> m (Maybe (IssueOption, Maybe IssueTranslation))
+findByIdAndLanguage issueOptionId language = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do

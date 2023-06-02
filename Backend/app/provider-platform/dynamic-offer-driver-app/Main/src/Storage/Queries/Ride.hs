@@ -115,45 +115,45 @@ findActiveByRBId (Id rbId) = do
         Left _ -> pure Nothing
     Nothing -> pure Nothing
 
-findAllByDriverId ::
-  Transactionable m =>
-  Id Person ->
-  Maybe Integer ->
-  Maybe Integer ->
-  Maybe Bool ->
-  Maybe Ride.RideStatus ->
-  m [(Ride, Booking)]
-findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus = Esq.buildDType $ do
-  let limitVal = fromIntegral $ fromMaybe 10 mbLimit
-      offsetVal = fromIntegral $ fromMaybe 0 mbOffset
-      isOnlyActive = Just True == mbOnlyActive
-  res <- Esq.findAll' $ do
-    (booking :& ride) <-
-      from $
-        table @BookingT
-          `innerJoin` table @RideT
-            `Esq.on` ( \(booking :& ride) ->
-                         ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
-                     )
-    where_ $
-      ride ^. RideDriverId ==. val (toKey driverId)
-        &&. whenTrue_ isOnlyActive (not_ $ ride ^. RideStatus `in_` valList [Ride.COMPLETED, Ride.CANCELLED])
-        &&. whenJust_ mbRideStatus (\status -> ride ^. RideStatus ==. val status)
-    orderBy [desc $ ride ^. RideCreatedAt]
-    limit limitVal
-    offset offsetVal
-    return (booking, ride)
+-- findAllByDriverId ::
+--   Transactionable m =>
+--   Id Person ->
+--   Maybe Integer ->
+--   Maybe Integer ->
+--   Maybe Bool ->
+--   Maybe Ride.RideStatus ->
+--   m [(Ride, Booking)]
+-- findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus = Esq.buildDType $ do
+--   let limitVal = fromIntegral $ fromMaybe 10 mbLimit
+--       offsetVal = fromIntegral $ fromMaybe 0 mbOffset
+--       isOnlyActive = Just True == mbOnlyActive
+--   res <- Esq.findAll' $ do
+--     (booking :& ride) <-
+--       from $
+--         table @BookingT
+--           `innerJoin` table @RideT
+--             `Esq.on` ( \(booking :& ride) ->
+--                          ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
+--                      )
+--     where_ $
+--       ride ^. RideDriverId ==. val (toKey driverId)
+--         &&. whenTrue_ isOnlyActive (not_ $ ride ^. RideStatus `in_` valList [Ride.COMPLETED, Ride.CANCELLED])
+--         &&. whenJust_ mbRideStatus (\status -> ride ^. RideStatus ==. val status)
+--     orderBy [desc $ ride ^. RideCreatedAt]
+--     limit limitVal
+--     offset offsetVal
+--     return (booking, ride)
 
-  catMaybes
-    <$> forM
-      res
-      ( \(bookingT, rideT) -> runMaybeT do
-          booking <- MaybeT $ buildFullBooking bookingT
-          return (extractSolidType @Ride rideT, booking)
-      )
+--   catMaybes
+--     <$> forM
+--       res
+--       ( \(bookingT, rideT) -> runMaybeT do
+--           booking <- MaybeT $ buildFullBooking bookingT
+--           return (extractSolidType @Ride rideT, booking)
+--       )
 
-findAllByDriverId' :: L.MonadFlow m => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe Ride.RideStatus -> m [(Ride, Booking)]
-findAllByDriverId' (Id driverId) mbLimit mbOffset mbOnlyActive mbRideStatus = do
+findAllByDriverId :: L.MonadFlow m => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe Ride.RideStatus -> m [(Ride, Booking)]
+findAllByDriverId (Id driverId) mbLimit mbOffset mbOnlyActive mbRideStatus = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
@@ -701,31 +701,31 @@ data StuckRideItem = StuckRideItem
 -- mkStuckRideItem (rideId, bookingId, driverId, driverActive) =
 --   StuckRideItem {..}
 
-findStuckRideItems :: Transactionable m => Id Merchant -> [Id Booking] -> UTCTime -> m [StuckRideItem]
-findStuckRideItems merchantId bookingIds now = do
-  res <- Esq.findAll $ do
-    ride :& booking :& driverInfo <-
-      from $
-        table @RideT
-          `innerJoin` table @BookingT
-            `Esq.on` ( \(ride :& booking) ->
-                         ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
-                     )
-          `innerJoin` table @DriverInformationT
-            `Esq.on` ( \(ride :& _ :& driverInfo) ->
-                         ride ^. Ride.RideDriverId ==. driverInfo ^. DriverInfo.DriverInformationDriverId
-                     )
-    where_ $
-      booking ^. BookingProviderId ==. val (toKey merchantId)
-        &&. booking ^. BookingTId `in_` valList (toKey <$> bookingIds)
-        &&. (ride ^. Ride.RideStatus ==. val Ride.NEW &&. upcoming6HrsCond ride now)
-    pure (ride ^. RideTId, booking ^. BookingTId, driverInfo ^. DriverInformationDriverId, driverInfo ^. DriverInformationActive)
-  pure $ mkStuckRideItem <$> res
-  where
-    mkStuckRideItem (rideId, bookingId, driverId, driverActive) = StuckRideItem {..}
+-- findStuckRideItems :: Transactionable m => Id Merchant -> [Id Booking] -> UTCTime -> m [StuckRideItem]
+-- findStuckRideItems merchantId bookingIds now = do
+--   res <- Esq.findAll $ do
+--     ride :& booking :& driverInfo <-
+--       from $
+--         table @RideT
+--           `innerJoin` table @BookingT
+--             `Esq.on` ( \(ride :& booking) ->
+--                          ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
+--                      )
+--           `innerJoin` table @DriverInformationT
+--             `Esq.on` ( \(ride :& _ :& driverInfo) ->
+--                          ride ^. Ride.RideDriverId ==. driverInfo ^. DriverInfo.DriverInformationDriverId
+--                      )
+--     where_ $
+--       booking ^. BookingProviderId ==. val (toKey merchantId)
+--         &&. booking ^. BookingTId `in_` valList (toKey <$> bookingIds)
+--         &&. (ride ^. Ride.RideStatus ==. val Ride.NEW &&. upcoming6HrsCond ride now)
+--     pure (ride ^. RideTId, booking ^. BookingTId, driverInfo ^. DriverInformationDriverId, driverInfo ^. DriverInformationActive)
+--   pure $ mkStuckRideItem <$> res
+--   where
+--     mkStuckRideItem (rideId, bookingId, driverId, driverActive) = StuckRideItem {..}
 
-findStuckRideItems' :: (L.MonadFlow m, MonadTime m) => Id Merchant -> [Id Booking] -> UTCTime -> m [StuckRideItem]
-findStuckRideItems' (Id merchantId) bookingIds now = do
+findStuckRideItems :: (L.MonadFlow m, MonadTime m) => Id Merchant -> [Id Booking] -> UTCTime -> m [StuckRideItem]
+findStuckRideItems (Id merchantId) bookingIds now = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   let now6HrBefore = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
   case dbConf of

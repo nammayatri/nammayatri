@@ -61,26 +61,26 @@ getActiveAssociationByDriver (Id personId) = do
     Just dbCOnf' -> either (pure Nothing) (transformBeamDriverRCAssociationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamDRCA.driverId $ Se.Eq personId, Se.Is BeamDRCA.associatedTill $ Se.GreaterThan $ Just now]]
     Nothing -> pure Nothing
 
-findAllByDriverId ::
-  Transactionable m =>
-  Id Person ->
-  m [(DriverRCAssociation, VehicleRegistrationCertificate)]
-findAllByDriverId driverId = do
-  findAll $ do
-    rcAssoc :& regCert <-
-      from $
-        table @DriverRCAssociationT
-          `Esq.innerJoin` table @VehicleRegistrationCertificateT
-            `Esq.on` ( \(rcAssoc :& regCert) ->
-                         rcAssoc ^. DriverRCAssociationRcId ==. regCert ^. VehicleRegistrationCertificateTId
-                     )
-    where_ $
-      rcAssoc ^. DriverRCAssociationDriverId ==. val (toKey driverId)
-    orderBy [desc $ rcAssoc ^. DriverRCAssociationAssociatedOn]
-    return (rcAssoc, regCert)
+-- findAllByDriverId ::
+--   Transactionable m =>
+--   Id Person ->
+--   m [(DriverRCAssociation, VehicleRegistrationCertificate)]
+-- findAllByDriverId driverId = do
+--   findAll $ do
+--     rcAssoc :& regCert <-
+--       from $
+--         table @DriverRCAssociationT
+--           `Esq.innerJoin` table @VehicleRegistrationCertificateT
+--             `Esq.on` ( \(rcAssoc :& regCert) ->
+--                          rcAssoc ^. DriverRCAssociationRcId ==. regCert ^. VehicleRegistrationCertificateTId
+--                      )
+--     where_ $
+--       rcAssoc ^. DriverRCAssociationDriverId ==. val (toKey driverId)
+--     orderBy [desc $ rcAssoc ^. DriverRCAssociationAssociatedOn]
+--     return (rcAssoc, regCert)
 
-findAllByDriverId' :: L.MonadFlow m => Id Person -> m [(DriverRCAssociation, VehicleRegistrationCertificate)]
-findAllByDriverId' (Id driverId) = do
+findAllByDriverId :: L.MonadFlow m => Id Person -> m [(DriverRCAssociation, VehicleRegistrationCertificate)]
+findAllByDriverId (Id driverId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do

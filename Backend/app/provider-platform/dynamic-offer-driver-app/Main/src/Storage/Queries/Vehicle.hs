@@ -184,30 +184,30 @@ findByAnyOf registrationNoM vehicleIdM = do
           ]
     Nothing -> pure Nothing
 
-findAllByVariantRegNumMerchantId ::
-  Transactionable m =>
-  Maybe Variant.Variant ->
-  Maybe Text ->
-  Integer ->
-  Integer ->
-  Id Merchant ->
-  m [Vehicle]
-findAllByVariantRegNumMerchantId variantM mbRegNum limit' offset' merchantId = do
-  let limitVal = fromIntegral limit'
-      offsetVal = fromIntegral offset'
-  Esq.findAll $ do
-    vehicle <- from $ table @VehicleT
-    where_ $
-      vehicle ^. VehicleMerchantId ==. val (toKey merchantId)
-        &&. whenJust_ variantM (\variant -> vehicle ^. VehicleVariant ==. val variant)
-        &&. whenJust_ mbRegNum (\regNum -> vehicle ^. VehicleRegistrationNo `ilike` (%) ++. val regNum ++. (%))
-    orderBy [desc $ vehicle ^. VehicleCreatedAt]
-    limit limitVal
-    offset offsetVal
-    return vehicle
+-- findAllByVariantRegNumMerchantId ::
+--   Transactionable m =>
+--   Maybe Variant.Variant ->
+--   Maybe Text ->
+--   Integer ->
+--   Integer ->
+--   Id Merchant ->
+--   m [Vehicle]
+-- findAllByVariantRegNumMerchantId variantM mbRegNum limit' offset' merchantId = do
+--   let limitVal = fromIntegral limit'
+--       offsetVal = fromIntegral offset'
+--   Esq.findAll $ do
+--     vehicle <- from $ table @VehicleT
+--     where_ $
+--       vehicle ^. VehicleMerchantId ==. val (toKey merchantId)
+--         &&. whenJust_ variantM (\variant -> vehicle ^. VehicleVariant ==. val variant)
+--         &&. whenJust_ mbRegNum (\regNum -> vehicle ^. VehicleRegistrationNo `ilike` (%) ++. val regNum ++. (%))
+--     orderBy [desc $ vehicle ^. VehicleCreatedAt]
+--     limit limitVal
+--     offset offsetVal
+--     return vehicle
 
-findAllByVariantRegNumMerchantId' :: L.MonadFlow m => Maybe Variant.Variant -> Maybe Text -> Integer -> Integer -> Id Merchant -> m [Vehicle]
-findAllByVariantRegNumMerchantId' variantM mbRegNum limit' offset' (Id merchantId) = do
+findAllByVariantRegNumMerchantId :: L.MonadFlow m => Maybe Variant.Variant -> Maybe Text -> Integer -> Integer -> Id Merchant -> m [Vehicle]
+findAllByVariantRegNumMerchantId variantM mbRegNum limit' offset' (Id merchantId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   let limitVal = fromIntegral limit'
       offsetVal = fromIntegral offset'
