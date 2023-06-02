@@ -53,15 +53,15 @@ data DriverDocsInfo = DriverDocsInfo
     numVehRegImages :: Int
   }
 
--- imagesAggTableCTEbyDoctype :: Image.ImageType -> SqlQuery (From (SqlExpr (Value PersonTId), SqlExpr (Value Int)))
--- imagesAggTableCTEbyDoctype imageType = with $ do
---   image <- from $ table @ImageT
---   where_ $ image ^. ImageImageType ==. val imageType
---   groupBy $ image ^. ImagePersonId
---   pure (image ^. ImagePersonId, count @Int $ image ^. ImageId)
+imagesAggTableCTEbyDoctype :: Image.ImageType -> SqlQuery (From (SqlExpr (Value PersonTId), SqlExpr (Value Int)))
+imagesAggTableCTEbyDoctype imageType = with $ do
+  image <- from $ table @ImageT
+  where_ $ image ^. ImageImageType ==. val imageType
+  groupBy $ image ^. ImagePersonId
+  pure (image ^. ImagePersonId, count @Int $ image ^. ImageId)
 
-imagesAggTableCTEbyDoctype :: L.MonadFlow m => Image.ImageType -> m (Maybe (Text, Int))
-imagesAggTableCTEbyDoctype imageType' = do
+imagesAggTableCTEbyDoctype' :: L.MonadFlow m => Image.ImageType -> m (Maybe (Text, Int))
+imagesAggTableCTEbyDoctype' imageType' = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   conn <- L.getOrInitSqlConn (fromJust dbConf)
   case conn of

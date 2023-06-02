@@ -26,7 +26,7 @@ import Domain.Types.FarePolicy
 import qualified Domain.Types.FarePolicy as DFarePolicy
 import qualified Domain.Types.Person as SP
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
+-- import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.APISuccess
 import Kernel.Types.Id (Id (..))
@@ -122,8 +122,8 @@ updateFarePolicy admin fpId req = do
           } ::
           DFarePolicy.FarePolicy
   coordinators <- QP.findAdminsByMerchantId admin.merchantId
-  Esq.runTransaction $
-    SFarePolicy.update updatedFarePolicy
+  -- Esq.runTransaction $
+  _ <- SFarePolicy.update updatedFarePolicy
   SFarePolicy.clearCache updatedFarePolicy
   let otherCoordinators = filter (\coordinator -> coordinator.id /= admin.id) coordinators
   for_ otherCoordinators $ \cooridinator -> do

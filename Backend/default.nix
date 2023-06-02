@@ -23,9 +23,8 @@
           arion;
       };
       packages = {
-        cryptostore.source = "0.3.0.0";
+        cryptostore.source = "0.2.3.0";
       };
-      # Some tests fail under Nix. We shoud probably run them in CI directly.
       settings = {
         location-updates.check = false;
         beckn-test.check = false;

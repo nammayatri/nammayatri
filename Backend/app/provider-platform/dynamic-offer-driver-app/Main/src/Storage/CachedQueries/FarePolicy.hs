@@ -29,15 +29,31 @@ import Domain.Types.Common
 import Domain.Types.FarePolicy
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Vehicle as Vehicle
--- import qualified EulerHS.Language as L
+import qualified EulerHS.Language as L
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
+-- import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.FarePolicy as Queries
+
+-- import EulerHS.KVConnector.Types
+
+getUpdatedFarePolicy :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Maybe Vehicle.Variant -> Meters -> FarePolicy -> m FarePolicy
+getUpdatedFarePolicy mId varId distance farePolicy = do
+  restrictedPolicy <-
+    case varId of
+      Just var -> findRestrictedFareListByMerchantAndVehicle mId var
+      Nothing -> findRestrictedFareListByMerchant mId
+  pure $ maybe farePolicy (updateMaxExtraFare farePolicy) (restrictedFair restrictedPolicy)
+  where
+    updateMaxExtraFare FarePolicy {..} maxFee = FarePolicy {driverExtraFeeBounds = driverExtraFeeBounds <&> \b -> b {maxFee}, ..}
+    restrictedFair fares =
+      case find (\fare -> fare.minTripDistance <= distance) fares of
+        Just fare -> Just (fare.driverMaxExtraFare)
+        Nothing -> Nothing
 
 findById :: (CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> m (Maybe FarePolicy)
 findById id =
@@ -94,5 +110,5 @@ clearCache fp = Hedis.withCrossAppRedis $ do
   Hedis.del (makeMerchantIdVehVarKey fp.merchantId fp.vehicleVariant)
   Hedis.del (makeAllMerchantIdKey fp.merchantId)
 
-update :: FarePolicy -> Esq.SqlDB ()
+update :: (L.MonadFlow m, MonadTime m) => FarePolicy -> m ()
 update = Queries.update

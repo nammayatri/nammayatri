@@ -457,8 +457,7 @@ findAllDriversByIdsFirstNameAsc' ::
   Id Merchant ->
   [Id Person] ->
   m [FullDriver]
-
-findAllDriversByIdsFirstNameAsc (Id merchantId) driverIds = do
+findAllDriversByIdsFirstNameAsc' (Id merchantId) driverIds = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do

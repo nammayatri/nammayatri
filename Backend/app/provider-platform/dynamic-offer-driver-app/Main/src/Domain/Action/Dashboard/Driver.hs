@@ -323,7 +323,8 @@ driverInfo merchantShortId mbMobileNumber mbMobileCountryCode mbVehicleNumber mb
   let driverId = driverWithRidesCount.person.id
   -- mbDriverLicense <- Esq.runInReplica $ QDriverLicense.findByDriverId driverId
   mbDriverLicense <- QDriverLicense.findByDriverId driverId
-  rcAssociationHistory <- Esq.runInReplica $ QRCAssociation.findAllByDriverId driverId
+  -- rcAssociationHistory <- Esq.runInReplica $ QRCAssociation.findAllByDriverId driverId
+  rcAssociationHistory <- QRCAssociation.findAllByDriverId driverId
   buildDriverInfoRes driverWithRidesCount mbDriverLicense rcAssociationHistory
 
 buildDriverInfoRes ::

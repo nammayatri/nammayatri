@@ -110,7 +110,7 @@ handler transporter req quote = do
           rideDetails <- buildRideDetails ride driver
           driverSearchReqs <- QSRD.findAllActiveBySTId driverQuote.searchTryId
           -- Esq.runTransaction $ do
-          when isNewRider $ QRD.create riderDetails
+          when isNewRider $ void $ QRD.create riderDetails
           _ <- QRB.updateRiderId booking.id riderDetails.id
           _ <- QRB.updateStatus booking.id DRB.TRIP_ASSIGNED
           _ <- QBL.updateAddress booking.fromLocation.id req.fromAddress
@@ -154,7 +154,7 @@ handler transporter req quote = do
         Right _ -> do
           otpCode <- generateOTPCode
           -- Esq.runTransaction $ do
-          when isNewRider $ QRD.create riderDetails
+          when isNewRider $ void $ QRD.create riderDetails
           _ <- QRB.updateRiderId booking.id riderDetails.id
           _ <- QRB.updateSpecialZoneOtpCode booking.id otpCode
           _ <- QBL.updateAddress booking.fromLocation.id req.fromAddress
