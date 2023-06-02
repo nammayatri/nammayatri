@@ -14,12 +14,12 @@
 
 module Domain.Types.FarePolicy (module Reexport, module Domain.Types.FarePolicy) where
 
-import qualified Data.List.NonEmpty as NE
-import Data.Ord
-import qualified Database.Beam as B
-import Database.Beam.Backend
-import Database.Beam.Postgres
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
+-- import qualified Data.List.NonEmpty as NE
+-- import Data.Ord
+-- import qualified Database.Beam as B
+-- import Database.Beam.Backend
+-- import Database.Beam.Postgres
+-- import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import Domain.Types.Common
 import Domain.Types.FarePolicy.DriverExtraFeeBounds as Reexport
 import Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Reexport
@@ -29,7 +29,8 @@ import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id (Id)
-import Lib.Utils
+
+-- import Lib.Utils
 
 data FarePolicyD (s :: UsageSafety) = FarePolicy
   { id :: Id FarePolicy,

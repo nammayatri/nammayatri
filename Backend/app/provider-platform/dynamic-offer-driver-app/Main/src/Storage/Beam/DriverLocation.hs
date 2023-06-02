@@ -73,7 +73,8 @@ data DriverLocationT f = DriverLocationT
     point :: B.C f Point,
     coordinatesCalculatedAt :: B.C f Time.UTCTime,
     createdAt :: B.C f Time.UTCTime,
-    updatedAt :: B.C f Time.UTCTime
+    updatedAt :: B.C f Time.UTCTime,
+    merchantId :: B.C f Text
   }
   deriving (Generic, B.Beamable)
 
@@ -110,7 +111,8 @@ driverLocationTMod =
       point = B.fieldNamed "point",
       coordinatesCalculatedAt = B.fieldNamed "coordinates_calculated_at",
       createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at"
+      updatedAt = B.fieldNamed "updated_at",
+      merchantId = B.fieldNamed "merchant_id"
     }
 
 psToHs :: HM.HashMap Text Text
@@ -133,10 +135,11 @@ defaultDriverLocation =
       point = "",
       coordinatesCalculatedAt = defaultUTCDate,
       createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
+      updatedAt = defaultUTCDate,
+      merchantId = ""
     }
 
-toRowExpression personId latLong updateTime now =
+toRowExpression personId latLong updateTime now merchantId =
   DriverLocationT
     (B.val_ personId)
     (B.val_ latLong.lat)
@@ -145,6 +148,7 @@ toRowExpression personId latLong updateTime now =
     (B.val_ updateTime)
     (B.val_ now)
     (B.val_ now)
+    (B.val_ merchantId)
 
 instance Serialize DriverLocation where
   put = error "undefined"

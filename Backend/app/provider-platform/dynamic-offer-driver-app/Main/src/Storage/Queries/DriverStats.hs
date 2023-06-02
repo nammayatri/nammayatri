@@ -21,11 +21,13 @@ import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverStats as BeamDS
+import Storage.Tabular.DriverStats
 
 -- createInitialDriverStats :: Id Driver -> SqlDB ()
 -- createInitialDriverStats driverId = do
@@ -48,8 +50,6 @@ createInitialDriverStats driverId = do
         DriverStats
           { driverId = driverId,
             idleSince = now,
-            totalRides = 0,
-            totalDistance = 0,
             totalRides = 0,
             totalDistance = 0,
             ridesCancelled = Just 0,
@@ -207,7 +207,9 @@ transformBeamDriverStatsToDomain BeamDS.DriverStatsT {..} = do
     { driverId = Id driverId,
       idleSince = idleSince,
       totalRides = totalRides,
-      totalDistance = totalDistance
+      totalDistance = totalDistance,
+      ridesCancelled = ridesCancelled,
+      totalRidesAssigned = totalRidesAssigned
     }
 
 transformDomainDriverStatsToBeam :: DriverStats -> BeamDS.DriverStats
@@ -216,5 +218,7 @@ transformDomainDriverStatsToBeam DriverStats {..} =
     { BeamDS.driverId = getId driverId,
       BeamDS.idleSince = idleSince,
       BeamDS.totalRides = totalRides,
-      BeamDS.totalDistance = totalDistance
+      BeamDS.totalDistance = totalDistance,
+      BeamDS.ridesCancelled = ridesCancelled,
+      BeamDS.totalRidesAssigned = totalRidesAssigned
     }

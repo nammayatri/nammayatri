@@ -33,7 +33,7 @@ import qualified Domain.Types.Person as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.External.Encryption (DbHash (..))
-import Kernel.External.FCM.Types (FCMRecipientToken (..))
+import Kernel.External.Notification.FCM.Types (FCMRecipientToken (..))
 import Kernel.External.Types (Language)
 import Kernel.External.Whatsapp.Interface.Types (OptApiMethods (..))
 import Kernel.Prelude hiding (Generic)

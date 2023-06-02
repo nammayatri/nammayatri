@@ -25,7 +25,7 @@ import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
-import qualified Kernel.External.FCM.Types as FCM
+import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -147,9 +147,10 @@ update config = do
           Se.Set BeamTC.popupDelayToAddAsPenalty config.popupDelayToAddAsPenalty,
           Se.Set BeamTC.thresholdCancellationScore config.thresholdCancellationScore,
           Se.Set BeamTC.minRidesForCancellationScore config.minRidesForCancellationScore,
+          Se.Set BeamTC.thresholdCancellationPercentageToUnlist config.thresholdCancellationPercentageToUnlist,
+          Se.Set BeamTC.minRidesToUnlist config.minRidesToUnlist,
           Se.Set BeamTC.mediaFileUrlPattern config.mediaFileUrlPattern,
           Se.Set BeamTC.mediaFileSizeUpperLimit config.mediaFileSizeUpperLimit,
-          Se.Set BeamTC.waitingTimeEstimatedThreshold config.waitingTimeEstimatedThreshold,
           Se.Set BeamTC.onboardingTryLimit config.onboardingTryLimit,
           Se.Set BeamTC.onboardingRetryTimeInHours config.onboardingRetryTimeInHours,
           Se.Set BeamTC.checkImageExtractionForDashboard config.checkImageExtractionForDashboard,
@@ -173,9 +174,10 @@ transformBeamTransporterConfigToDomain BeamTC.TransporterConfigT {..} = do
         popupDelayToAddAsPenalty = popupDelayToAddAsPenalty,
         thresholdCancellationScore = thresholdCancellationScore,
         minRidesForCancellationScore = minRidesForCancellationScore,
+        thresholdCancellationPercentageToUnlist = thresholdCancellationPercentageToUnlist,
+        minRidesToUnlist = minRidesToUnlist,
         mediaFileUrlPattern = mediaFileUrlPattern,
         mediaFileSizeUpperLimit = mediaFileSizeUpperLimit,
-        waitingTimeEstimatedThreshold = waitingTimeEstimatedThreshold,
         referralLinkPassword = referralLinkPassword,
         fcmConfig =
           FCM.FCMConfig
@@ -208,9 +210,10 @@ transformDomainTransporterConfigToBeam TransporterConfig {..} =
       BeamTC.popupDelayToAddAsPenalty = popupDelayToAddAsPenalty,
       BeamTC.thresholdCancellationScore = thresholdCancellationScore,
       BeamTC.minRidesForCancellationScore = minRidesForCancellationScore,
+      BeamTC.thresholdCancellationPercentageToUnlist = thresholdCancellationPercentageToUnlist,
+      BeamTC.minRidesToUnlist = minRidesToUnlist,
       BeamTC.mediaFileUrlPattern = mediaFileUrlPattern,
       BeamTC.mediaFileSizeUpperLimit = mediaFileSizeUpperLimit,
-      BeamTC.waitingTimeEstimatedThreshold = waitingTimeEstimatedThreshold,
       BeamTC.referralLinkPassword = referralLinkPassword,
       BeamTC.fcmUrl = showBaseUrl $ FCM.fcmUrl fcmConfig,
       BeamTC.fcmServiceAccount = FCM.fcmServiceAccount fcmConfig,

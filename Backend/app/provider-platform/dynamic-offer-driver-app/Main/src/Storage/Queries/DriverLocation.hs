@@ -62,12 +62,12 @@ findById (Id driverLocationId) = do
     Left _ -> pure Nothing
 
 upsertGpsCoord :: (L.MonadFlow m, MonadTime m) => Id Person -> LatLong -> UTCTime -> Id Merchant -> m DriverLocation
-upsertGpsCoord drLocationId latLong calculationTime merchantId = do
+upsertGpsCoord drLocationId latLong calculationTime merchantId' = do
   now <- getCurrentTime
   res <- findById drLocationId
   case res of
     Just _ -> updateRecords (getId drLocationId) latLong calculationTime now
-    Nothing -> create drLocationId latLong calculationTime
+    Nothing -> create drLocationId latLong calculationTime merchantId'
   let updatedRecord =
         DriverLocation
           { driverId = drLocationId,
@@ -76,7 +76,7 @@ upsertGpsCoord drLocationId latLong calculationTime merchantId = do
             coordinatesCalculatedAt = calculationTime,
             createdAt = now,
             updatedAt = now,
-            merchantId
+            merchantId = merchantId'
           }
   return updatedRecord
   where
@@ -123,7 +123,8 @@ transformBeamDriverLocationToDomain BeamDL.DriverLocationT {..} = do
       lon = lon,
       coordinatesCalculatedAt = coordinatesCalculatedAt,
       createdAt = createdAt,
-      updatedAt = updatedAt
+      updatedAt = updatedAt,
+      merchantId = Id merchantId
     }
 
 -- transformDomainDriverLocationToBeam :: DriverLocation -> BeamDL.DriverLocation

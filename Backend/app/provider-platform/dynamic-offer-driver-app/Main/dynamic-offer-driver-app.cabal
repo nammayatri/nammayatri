@@ -511,6 +511,7 @@ library
     , mobility-core
     , openapi3
     , persistent
+    , postgresql-simple
     , prometheus-client
     , record-dot-preprocessor
     , record-hasfield
@@ -609,6 +610,7 @@ executable dynamic-offer-driver-app-exe
     , mobility-core
     , openapi3
     , persistent
+    , postgresql-simple
     , prometheus-client
     , record-dot-preprocessor
     , record-hasfield

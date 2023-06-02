@@ -21,7 +21,7 @@ import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.External.Maps
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+-- import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -30,11 +30,11 @@ import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.DriverInformation as CDI
 import qualified Storage.Queries.DriverLocation as DLQueries
 
-upsertGpsCoord :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person -> LatLong -> UTCTime -> Id Merchant -> m ()
+upsertGpsCoord :: (CacheFlow m r, L.MonadFlow m, MonadTime m) => Id Person -> LatLong -> UTCTime -> Id Merchant -> m ()
 upsertGpsCoord driverId latLong calculationTime merchantId = do
   driverInfo <- CDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   if not driverInfo.onRide -- if driver not on ride directly save location updates to DB
-    then void $ DLQueries.upsertGpsCoord driverId latLong calculationTime
+    then void $ DLQueries.upsertGpsCoord driverId latLong calculationTime merchantId
     else do
       mOldLocation <- findById merchantId driverId
       case mOldLocation of
@@ -48,7 +48,7 @@ upsertGpsCoord driverId latLong calculationTime merchantId = do
 makeDriverLocationKey :: Id Person -> Text
 makeDriverLocationKey id = "DriverLocation:PersonId-" <> id.getId
 
-findById :: (CacheFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r) => Id Merchant -> Id Person -> m (Maybe DriverLocation)
+findById :: (CacheFlow m r, L.MonadFlow m, MonadTime m) => Id Merchant -> Id Person -> m (Maybe DriverLocation)
 findById merchantId id =
   Hedis.safeGet (makeDriverLocationKey id) >>= \case
     Just a ->
@@ -62,7 +62,7 @@ findById merchantId id =
           -- flip whenJust cacheDriverLocation /=<< Esq.runInReplica (DLQueries.findById id)
           flip whenJust cacheDriverLocation /=<< DLQueries.findById id
 
-getDriverLocationWithoutMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe DriverLocationWithoutMerchantId)
+getDriverLocationWithoutMerchantId :: (CacheFlow m r, L.MonadFlow m) => Id Person -> m (Maybe DriverLocationWithoutMerchantId)
 getDriverLocationWithoutMerchantId = Hedis.safeGet . makeDriverLocationKey
 
 mkDriverLocation :: DriverLocationWithoutMerchantId -> Id Merchant -> DriverLocation

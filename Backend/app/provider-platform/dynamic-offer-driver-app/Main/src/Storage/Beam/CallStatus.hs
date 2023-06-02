@@ -102,7 +102,7 @@ instance ToJSON CallStatus where
 
 deriving stock instance Ord Call.CallStatus
 
-deriving stock instance Eq Call.CallStatus
+-- deriving stock instance Eq Call.CallStatus
 
 deriving stock instance Show CallStatus
 
