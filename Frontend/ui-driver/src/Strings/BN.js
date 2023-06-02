@@ -461,5 +461,10 @@ const bengaliStrings = {
   FARE_RELATED : "ভাড়া সম্পর্কিত",
   RIDE_RELATED : "রাইড সম্পর্কিত",
   LOST_AND_FOUND : "হারানো এবং প্রাপ্তি",
-	REPORT_LOST_ITEM : "হারানো আইটেম রিপোর্ট করুন"
- }
+  REPORT_LOST_ITEM : "হারানো আইটেম রিপোর্ট করুন",
+  COMPLAINTS_GRIEVANCES : "অভিযোগ এবং অভিযোগ",
+  COMPLAINTS_DESCRIPTION : "কোনো অভিযোগের জন্য, অনুগ্রহ করে আমাদের সাথে <u>yatrisathi.support@wb.gov.in</u> এ যোগাযোগ করুন;",
+  COMPLAINTS_DESCRIPTION_ADDITIONAL : "অভিযোগের প্রতিকারের জন্য, অনুগ্রহ করে আমাদের <u>গোপনীয়তা নীতি</u> পড়ুন",
+  REGISTERED_ADDRESS : "নিবন্ধিত ঠিকানা",
+  REGISTERED_ADDRESS_DESCRIPTION : "Stallion Business Centre, No. 444, 3rd & 4th Floor, 18th Main, 6th Block, Koramangala, Bengaluru, Karnataka- 560095, India"
+}

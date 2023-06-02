@@ -31,7 +31,9 @@ import JBridge as JB
 import Components.PopUpModal as PopUpModal
 import Common.Types.App
 import Screens.AboutUsScreen.ComponentConfig
-import MerchantConfigs.Utils (getValueFromMerchant)
+import Merchant.Utils (getValueFromConfig)
+import Components.ComplaintsModel as ComplaintsModel
+import Data.Maybe (Maybe(..))
 
 screen :: ST.AboutUsScreenState -> Screen Action ST.AboutUsScreenState ScreenOutput
 screen initialState =
@@ -145,6 +147,7 @@ applicationInformationLayout state push =
   , height WRAP_CONTENT
   , orientation VERTICAL
   , margin (MarginTop 20)
+  , padding (PaddingHorizontal 20 20)
   ][ imageView
     ([ width $ V 150
     , height $ V 100
@@ -159,10 +162,10 @@ applicationInformationLayout state push =
     , fontStyle $ FontStyle.regular LanguageStyle
     , color Color.black800
     , gravity LEFT
-    , margin (MarginTop 20)
-    , padding (Padding 20 0 20 0)
+    , margin (MarginVertical 20 32)
     , lineHeight "20"
     ]
+    , ComplaintsModel.view (ComplaintsModel.config{cardData = contactUsData state})
     , underlinedTextView (getString T_C) push
     , underlinedTextView (getString PRIVACY_POLICY) push
   ]
@@ -176,8 +179,8 @@ underlinedTextView value push  =
   , orientation VERTICAL
   , onClick (\action -> do
               _<- push action
-              _ <- JB.openUrlInApp if (value == (getString T_C)) then (getValueFromMerchant "DOCUMENT_LINK") 
-                else (getValueFromMerchant "PRIVACY_POLICY_LINK")
+              _ <- JB.openUrlInApp if (value == (getString T_C)) then (getValueFromConfig "DOCUMENT_LINK") 
+                else (getValueFromConfig "PRIVACY_POLICY_LINK")
               pure unit
               ) (const TermsAndConditionAction)
   , margin (Margin 20 30 0 0)
@@ -206,3 +209,15 @@ horizontalLine marginLeft marginRight =
   , background Color.greyBackDarkColor
   , margin (Margin marginLeft 0 marginRight 15)
   ][]
+
+contactUsData :: ST.AboutUsScreenState -> Array ComplaintsModel.CardData
+contactUsData state = [
+  { title : (getString COMPLAINTS_GRIEVANCES)
+  , subTitle : (getString COMPLAINTS_DESCRIPTION)
+  , addtionalData : Just (getString COMPLAINTS_DESCRIPTION_ADDITIONAL)
+  }
+, { title : (getString REGISTERED_ADDRESS)
+  , subTitle : (getString REGISTERED_ADDRESS_DESCRIPTION)
+  , addtionalData : Nothing
+  }
+]

@@ -459,5 +459,10 @@ const englishStrings = {
   FARE_RELATED : "Fare Related",
   RIDE_RELATED : "Ride Related",
   LOST_AND_FOUND : "Lost and Found",
-  REPORT_LOST_ITEM : "Report Lost Item"
+  REPORT_LOST_ITEM : "Report Lost Item",
+  COMPLAINTS_GRIEVANCES : "Complaints & Grievances",
+  COMPLAINTS_DESCRIPTION : "For any complaints, please reach out to us at <u>nammayatri.support@juspay.in</u>;",
+  COMPLAINTS_DESCRIPTION_ADDITIONAL : "For Redressal of grievances, please refer to our <u>Privacy Policy</u>",
+  REGISTERED_ADDRESS : "Registered Address",
+  REGISTERED_ADDRESS_DESCRIPTION : "Stallion Business Centre, No. 444, 3rd & 4th Floor, 18th Main, 6th Block, Koramangala, Bengaluru, Karnataka- 560095, India"
 }
