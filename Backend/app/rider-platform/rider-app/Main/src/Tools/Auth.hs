@@ -14,12 +14,19 @@
 
 module Tools.Auth where
 
+import Crypto.Cipher.AES (AES128)
+import Crypto.Cipher.Types (cipherInit, ctrCombine, ivAdd, nullIV)
+import Crypto.Error (CryptoFailable (..), maybeCryptoError)
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Base64 as Base64
+import qualified Data.Text.Encoding as TE
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.RegistrationToken as SR
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.App
+import Kernel.Types.Base64
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -123,3 +130,11 @@ verifyDashboard incomingToken = do
   if incomingToken == dashboardToken
     then pure Dashboard
     else throwError (InvalidToken "dashboard token") -- we shouldn't show to dashboard user incoming token
+
+decryptAES128 :: (Monad m, MonadThrow m, Log m) => Base64 -> Text -> m Text
+decryptAES128 (Base64 cipherText) encryptedText = do
+  aes <- fromMaybeM (InternalError "Failed to decode CipherText") $ maybeCryptoError (cipherInit cipherText :: CryptoFailable AES128)
+  let (_nonce, encrypted) = BS.splitAt 12 $ Base64.decodeLenient $ TE.encodeUtf8 encryptedText
+  let iv = ivAdd nullIV 12
+  let decrypted = ctrCombine aes iv encrypted
+  return $ TE.decodeUtf8 decrypted
