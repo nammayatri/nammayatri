@@ -28,27 +28,27 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab as BeamFPSS
 import Storage.Tabular.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
 
-findAll' ::
-  ( Transactionable m,
-    Monad m,
-    MonadThrow m,
-    Log m
-  ) =>
-  Id DFP.FarePolicy ->
-  DTypeBuilder m [FarePolicySlabsDetailsSlabT]
-findAll' farePolicyId = do
-  Esq.findAll' $ do
-    farePolicySlabsDetailsSlab <- from $ table @FarePolicySlabsDetailsSlabT
-    where_ $
-      farePolicySlabsDetailsSlab ^. FarePolicySlabsDetailsSlabFarePolicyId ==. val (toKey farePolicyId)
-    orderBy [asc $ farePolicySlabsDetailsSlab ^. FarePolicySlabsDetailsSlabStartDistance]
-    return farePolicySlabsDetailsSlab
+-- findAll' ::
+--   ( Transactionable m,
+--     Monad m,
+--     MonadThrow m,
+--     Log m
+--   ) =>
+--   Id DFP.FarePolicy ->
+--   DTypeBuilder m [FarePolicySlabsDetailsSlabT]
+-- findAll' farePolicyId = do
+--   Esq.findAll' $ do
+--     farePolicySlabsDetailsSlab <- from $ table @FarePolicySlabsDetailsSlabT
+--     where_ $
+--       farePolicySlabsDetailsSlab ^. FarePolicySlabsDetailsSlabFarePolicyId ==. val (toKey farePolicyId)
+--     orderBy [asc $ farePolicySlabsDetailsSlab ^. FarePolicySlabsDetailsSlabStartDistance]
+--     return farePolicySlabsDetailsSlab
 
-findAll'' ::
+findAll' ::
   L.MonadFlow m =>
   Id DFP.FarePolicy ->
   m [FullFarePolicySlabsDetailsSlab]
-findAll'' (Id farePolicyId) = do
+findAll' (Id farePolicyId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure []) (transformBeamFarePolicyProgressiveDetailsToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamFPSS.farePolicyId $ Se.Eq farePolicyId]
@@ -64,15 +64,15 @@ findById'' (Id farePolicyId) = do
     Just dbCOnf' -> either (pure Nothing) (transformBeamFarePolicyProgressiveDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamFPSS.farePolicyId $ Se.Eq farePolicyId]
     Nothing -> pure Nothing
 
-deleteAll' :: Id DFP.FarePolicy -> FullEntitySqlDB ()
-deleteAll' farePolicyId =
-  Esq.delete' $ do
-    farePolicySlabsDetailsSlab <- from $ table @FarePolicySlabsDetailsSlabT
-    where_ $
-      farePolicySlabsDetailsSlab ^. FarePolicySlabsDetailsSlabFarePolicyId ==. val (toKey farePolicyId)
+-- deleteAll' :: Id DFP.FarePolicy -> FullEntitySqlDB ()
+-- deleteAll' farePolicyId =
+--   Esq.delete' $ do
+--     farePolicySlabsDetailsSlab <- from $ table @FarePolicySlabsDetailsSlabT
+--     where_ $
+--       farePolicySlabsDetailsSlab ^. FarePolicySlabsDetailsSlabFarePolicyId ==. val (toKey farePolicyId)
 
-deleteAll'' :: L.MonadFlow m => Id DFP.FarePolicy -> m ()
-deleteAll'' (Id farePolicyId) = do
+deleteAll' :: L.MonadFlow m => Id DFP.FarePolicy -> m ()
+deleteAll' (Id farePolicyId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> void $ KV.deleteAllReturningWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamFPSS.farePolicyId $ Se.Eq farePolicyId]

@@ -59,7 +59,6 @@ import qualified Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Beam.DriverLocation as BeamDL
 import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Beam.Vehicle as BeamV
-import qualified Storage.Queries.DriverInformation as DIQ
 import qualified Storage.Queries.DriverInformation as QueriesDI
 import qualified Storage.Queries.DriverLocation as QDL
 import Storage.Queries.DriverQuote (baseDriverQuoteQuery)
@@ -452,12 +451,14 @@ findAllDriversByIdsFirstNameAsc' (Id merchantId) driverIds = do
       let vehicleList' = filter (\vehicle -> vehicle.driverId == person'.id) vehicleList
        in acc <> ((\vehicle -> (person', dl', info', vehicle)) <$> vehicleList')
 
+-- lets not use this as of now
 findAllDriversByIdsFirstNameAsc' ::
   (L.MonadFlow m, Log m) =>
   Id Merchant ->
   [Id Person] ->
   m [FullDriver]
-findAllDriversByIdsFirstNameAsc' (Id merchantId) driverIds = do
+
+findAllDriversByIdsFirstNameAsc (Id merchantId) driverIds = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
@@ -480,7 +481,7 @@ findAllDriversByIdsFirstNameAsc' (Id merchantId) driverIds = do
           Right x -> traverse transformBeamPersonToDomain x
       -- either (pure []) (transformBeamPersonToDomain <$>) <$> KV.findAllWithOptionsKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamP.role $ Se.Eq Person.DRIVER,
       --               Se.Is BeamP.id $ Se.In $ getId <$> driverIds, Se.Is BeamP.merchantId $ Se.Eq merchantId ]] (Se.Asc BeamP.firstName) Nothing Nothing
-      dlList <- either (pure []) (QDL.transformBeamDriverLocationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDL.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> personList]
+      dlList <- findAllDriverLocations' dbCOnf' (getId . (Person.id :: PersonE e -> Id Person) <$> personList)
       infoList <- either (pure []) (QueriesDI.transformBeamDriverInformationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDI.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> personList]
       vehicleList <- either (pure []) (QV.transformBeamVehicleToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamV.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> personList]
       let pDl = foldl' (getPersonWithlocation dlList) [] personList
@@ -500,6 +501,19 @@ findAllDriversByIdsFirstNameAsc' (Id merchantId) driverIds = do
     getPersonWithVehicle vehicleList acc (person', dl', info') =
       let vehicleList' = filter (\vehicle -> vehicle.driverId == person'.id) vehicleList
        in acc <> ((\vehicle -> (person', dl', info', vehicle)) <$> vehicleList')
+
+    findAllDriverLocations' dbCOnf' driverIdList = do
+      conn <- L.getOrInitSqlConn dbCOnf'
+      case conn of
+        Right c -> do
+          geoms <-
+            L.runDB c $
+              L.findRows $
+                B.select $
+                  B.filter_' (\BeamDL.DriverLocationT {..} -> B.sqlBool_ (driverId `B.in_` (B.val_ <$> driverIdList))) $
+                    B.all_ (meshModelTableEntity @BeamDL.DriverLocationT @Postgres @(Se.DatabaseWith BeamDL.DriverLocationT))
+          pure (either (const []) (QDL.transformBeamDriverLocationToDomain <$>) geoms)
+        Left _ -> pure []
 
 data DriverWithRidesCount = DriverWithRidesCount
   { person :: Person,
