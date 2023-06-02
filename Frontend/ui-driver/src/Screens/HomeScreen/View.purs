@@ -40,7 +40,7 @@ import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils as HU
-import MerchantConfigs.Utils as MU
+import Merchant.Utils as MU
 import JBridge as JB
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
@@ -69,7 +69,7 @@ import Services.APITypes (Status(..))
 import Components.BottomNavBar.Controller (navData)
 import Screens.HomeScreen.ComponentConfig
 import Screens as ScreenNames
-import MerchantConfigs.Utils (getValueFromMerchant)
+import Merchant.Utils (getValueFromConfig)
 import Engineering.Helpers.Commons (flowRunner)
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
@@ -264,7 +264,7 @@ alternateNumberOrOTPView state push =
       , orientation HORIZONTAL
       , gravity CENTER
       ][  addAlternateNumber push state
-        , if (getValueFromMerchant "SPECIAL_ZONE_OTP_VIEW") == "true"  then otpButtonView state push else dummyTextView
+        , if (getValueFromConfig "SPECIAL_ZONE_OTP_VIEW") == "true"  then otpButtonView state push else dummyTextView
         ]
       ]
 

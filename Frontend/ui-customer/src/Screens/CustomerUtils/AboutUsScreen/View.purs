@@ -15,24 +15,27 @@
 
 module Screens.AboutUsScreen.View where
 
-import Animation as Anim 
+import Common.Types.App (LazyCheck(..))
+import Screens.CustomerUtils.AboutUsScreen.ComponentConfig (genericHeaderConfig)
+
+import Animation as Anim
+import Components.ComplaintsModel as ComplaintsModel
 import Components.GenericHeader as GenericHeader
+import Data.Maybe (Maybe(..))
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import JBridge as JB 
+import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, imageView, imageUrl, cornerRadius, onClick, afterRender, visibility, imageWithFallback)
+import Merchant.Utils (getValueFromConfig)
+import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (<>), (==))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, text, textSize, textView, visibility, weight, width)
 import Screens.AboutUsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
-import Common.Types.App
-import Screens.CustomerUtils.AboutUsScreen.ComponentConfig 
-import Merchant.Utils (getValueFromConfig)
 
 screen :: ST.AboutUsScreenState -> Screen Action ST.AboutUsScreenState ScreenOutput
 screen initialState =
@@ -61,18 +64,17 @@ view push state =
         , width MATCH_PARENT
         , background Color.greySmoke
         ][]
-      , topTextView state
+      , topTextView push state
       , linearLayout
         [ orientation VERTICAL
         , weight 1.0
         ][]
-      
       , bottomLinksView state
       ]
 
 --------------------------------------------------- topTextView -----------------------------------------------------
-topTextView :: ST.AboutUsScreenState -> forall w . PrestoDOM (Effect Unit) w
-topTextView state =
+topTextView :: (Action -> Effect Unit)  -> ST.AboutUsScreenState -> forall w . PrestoDOM (Effect Unit) w
+topTextView push state =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -90,6 +92,7 @@ topTextView state =
         , lineHeight "22"
         , margin (Margin 0 40 0 32)
         ]
+      , ComplaintsModel.view (ComplaintsModel.config{cardData = contactUsData state})
       , linearLayout
         [ gravity LEFT
         , width WRAP_CONTENT
@@ -220,3 +223,15 @@ privacyPolicyView state =
         , background Color.blue900
         ][]
       ]
+
+contactUsData :: ST.AboutUsScreenState -> Array ComplaintsModel.CardData
+contactUsData state = [
+  { title : (getString COMPLAINTS_GRIEVANCES)
+  , subTitle : (getString COMPLAINTS_DESCRIPTION)
+  , addtionalData : Just (getString COMPLAINTS_DESCRIPTION_ADDITIONAL)
+  }
+, { title : (getString REGISTERED_ADDRESS)
+  , subTitle : (getString REGISTERED_ADDRESS_DESCRIPTION)
+  , addtionalData : Nothing
+  }
+]

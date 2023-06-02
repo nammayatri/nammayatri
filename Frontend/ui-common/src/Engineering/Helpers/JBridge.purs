@@ -81,7 +81,7 @@ foreign import setFCMToken :: forall action. (action -> Effect Unit) -> (String 
 -- foreign import getNearbyPlaces :: forall action. (action -> Effect Unit) -> (Place -> action) -> Effect Unit
 -- foreign import isNetworkAvailable :: Unit -> Boolean
 foreign import openUrlInApp  :: String -> Effect Unit
--- foreign import openUrlInMailApp  :: String -> Effect Unit
+foreign import openUrlInMailApp  :: String -> Effect Unit
 foreign import addMarkerImpl :: String -> Number -> Number -> Int -> Number -> Number -> Effect Boolean
 foreign import removeMarker :: String -> Effect Unit
 -- foreign import parseAddress      :: String -> Address

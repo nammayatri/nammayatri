@@ -444,5 +444,10 @@ const kannadaStrings = {
   "REASON_CHANGE_IN_ROUTE_B": "ಮಾರ್ಗದಲ್ಲಿನ ಬದಲಾವಣೆಯಿಂದಾಗಿ ಒಟ್ಟು ದರ ಬದಲಾಗಬಹುದು",
   "NAVIGATE_TO_PICKUP" : "ಪಿಕಪ್ ಮಾಡಲು ನ್ಯಾವಿಗೇಟ್ ಮಾಡಿ",
   "REQUEST_RECEIVED_WE_WILL_CALL_YOU_BACK_SOON" : "ವಿನಂತಿಯನ್ನು ಸ್ವೀಕರಿಸಲಾಗಿದೆ. ನಾವು ಶೀಘ್ರದಲ್ಲೇ ನಿಮ್ಮನ್ನು ಸಂಪರ್ಕಿಸುತ್ತೇವೆ",
-  "CONTACT_REMOVED_SUCCESSFULLY" : "ಸಂಪರ್ಕವನ್ನು ಯಶಸ್ವಿಯಾಗಿ ತೆಗೆದುಹಾಕಲಾಗಿದೆ"
+  "CONTACT_REMOVED_SUCCESSFULLY" : "ಸಂಪರ್ಕವನ್ನು ಯಶಸ್ವಿಯಾಗಿ ತೆಗೆದುಹಾಕಲಾಗಿದೆ",
+  "COMPLAINTS_GRIEVANCES" : "ದೂರುಗಳು ಮತ್ತು ಕುಂದುಕೊರತೆಗಳು",
+  "COMPLAINTS_DESCRIPTION" : "ಯಾವುದೇ ದೂರುಗಳಿಗಾಗಿ, ದಯವಿಟ್ಟು ನಮ್ಮನ್ನು ಸಂಪರ್ಕಿಸಿ <u>nammayatri.support@juspay.in</u>;",
+  "COMPLAINTS_DESCRIPTION_ADDITIONAL" : "ಕುಂದುಕೊರತೆಗಳ ಪರಿಹಾರಕ್ಕಾಗಿ, ದಯವಿಟ್ಟು ನಮ್ಮ <u>ಗೌಪ್ಯತಾ ನೀತಿಯನ್ನು</u> ಉಲ್ಲೇಖಿಸಿ",
+  "REGISTERED_ADDRESS" : "ನೋಂದಾಯಿಸಿದ ವಿಳಾಸ",
+  "REGISTERED_ADDRESS_DESCRIPTION" : "Stallion Business Centre, No. 444, 3rd & 4th Floor, 18th Main, 6th Block, Koramangala, Bengaluru, Karnataka- 560095, India"
 }
