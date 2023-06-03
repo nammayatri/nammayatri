@@ -103,7 +103,7 @@ window.onMerchantEvent = function (event, payload) {
     }
     if (clientPaylod.payload.clientId == "open-kochi") {
       window.merchantID = "YATRIPARTNER"
-    } else if(clientPaylod.payload.clientId == "jatrisaathiprovider"){
+    } else if(clientPaylod.payload.clientId == "jatrisaathiprovider" || clientPaylod.payload.clientId == "jatrisaathidriver"){
       window.merchantID = "JATRISAATHIDRIVER"
     }else {
       window.merchantID = clientPaylod.payload.clientId.toUpperCase();
