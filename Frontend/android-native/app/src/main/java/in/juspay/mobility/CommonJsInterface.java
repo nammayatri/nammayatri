@@ -3440,8 +3440,8 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                     }
                     JSONObject sourceCoordinates = (JSONObject) coordinates.get(0);
                     JSONObject destCoordinates = (JSONObject) coordinates.get(coordinates.length()-1);
-                    double sourceLong = sourceCoordinates.getDouble("lat");
-                    double sourceLat = sourceCoordinates.getDouble("lng");
+                    double sourceLong = sourceCoordinates.getDouble("lng");
+                    double sourceLat = sourceCoordinates.getDouble("lat");
                     double destLat = destCoordinates.getDouble("lat");
                     double destLong = destCoordinates.getDouble("lng");
                     if (sourceLat != 0.0 && sourceLong != 0.0 && destLat != 0.0 && destLong != 0.0) {

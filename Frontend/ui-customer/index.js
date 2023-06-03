@@ -115,7 +115,7 @@ window.onMerchantEvent = function (event, payload) {
     }
     if (clientId == "open-kochi") {
       window.merchantID = "YATRI"
-    } else if (clientId == "jatrisaathi"){
+    } else if (clientId == "jatrisaathi" || clientId == "jatrisaathiconsumer"){
       window.merchantID = "JATRISAATHI"
     } else {
       window.merchantID = clientId.toUpperCase();
