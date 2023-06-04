@@ -49,37 +49,37 @@ import Debug (spy)
 
 getHeaders :: String -> Flow GlobalState Headers
 getHeaders _ = do
-    if ((getValueToLocalStore REGISTERATION_TOKEN) == "__failed") 
-                        then pure $ (Headers [  Header "Content-Type" "application/json", 
-                                                Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),  
-                                                Header "x-client-version" (getValueToLocalStore VERSION_NAME), 
+    if ((getValueToLocalStore REGISTERATION_TOKEN) == "__failed")
+                        then pure $ (Headers [  Header "Content-Type" "application/json",
+                                                Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
+                                                Header "x-client-version" (getValueToLocalStore VERSION_NAME),
                                                 Header "session_id" (getValueToLocalStore SESSION_ID),
                                                 Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
                                             ]
-                                    ) 
-                        else pure $ (Headers [  Header "Content-Type" "application/json", 
-                                                Header "token" (getValueToLocalStore REGISTERATION_TOKEN) , 
-                                                Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),  
-                                                Header "x-client-version" (getValueToLocalStore VERSION_NAME), 
+                                    )
+                        else pure $ (Headers [  Header "Content-Type" "application/json",
+                                                Header "token" (getValueToLocalStore REGISTERATION_TOKEN) ,
+                                                Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
+                                                Header "x-client-version" (getValueToLocalStore VERSION_NAME),
                                                 Header "session_id" (getValueToLocalStore SESSION_ID),
                                                 Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
                                             ]
                                     )
 
 getHeaders' :: String -> FlowBT String Headers
-getHeaders' _ = do 
-        if ((getValueToLocalStore REGISTERATION_TOKEN) == "__failed") 
-            then lift $ lift $ pure $ (Headers [Header "Content-Type" "application/json", 
-                                                Header "x-client-version" (getValueToLocalStore VERSION_NAME), 
-                                                Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION), 
+getHeaders' _ = do
+        if ((getValueToLocalStore REGISTERATION_TOKEN) == "__failed")
+            then lift $ lift $ pure $ (Headers [Header "Content-Type" "application/json",
+                                                Header "x-client-version" (getValueToLocalStore VERSION_NAME),
+                                                Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
                                                 Header "session_id" (getValueToLocalStore SESSION_ID),
                                                 Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
                                                 ]
-                                        ) 
+                                        )
             else lift $ lift $ pure $ (Headers [Header "Content-Type" "application/json",
-                                                Header "token" (getValueToLocalStore REGISTERATION_TOKEN),  
-                                                Header "x-client-version" (getValueToLocalStore VERSION_NAME), 
-                                                Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION), 
+                                                Header "token" (getValueToLocalStore REGISTERATION_TOKEN),
+                                                Header "x-client-version" (getValueToLocalStore VERSION_NAME),
+                                                Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
                                                 Header "session_id" (getValueToLocalStore SESSION_ID),
                                                 Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
                                                 ]
@@ -371,10 +371,16 @@ selectEstimateBT payload estimateId = do
       errorHandler errorPayload = do
             BackT $ pure GoBack
 
+selectEstimate payload estimateId = do
+        headers <- getHeaders ""
+        withAPIResult (EP.selectEstimate estimateId) unwrapResponse $ callAPI headers (SelectEstimateReq estimateId payload)
+    where
+        unwrapResponse (x) = x
+
 makeEstimateSelectReq :: Boolean -> Maybe Int -> DEstimateSelect
 makeEstimateSelectReq isAutoAssigned tipForDriver= DEstimateSelect {
       "customerExtraFee": tipForDriver,
-      "autoAssignEnabled": isAutoAssigned, 
+      "autoAssignEnabled": isAutoAssigned,
       "autoAssignEnabledV2": isAutoAssigned
     }
 
@@ -491,7 +497,7 @@ makeUpdateProfileRequest name gender referralCode =
     }
 
 makeUpdateVersionRequest :: Version -> Version -> UpdateProfileReq
-makeUpdateVersionRequest clientVersion bundleVersion = 
+makeUpdateVersionRequest clientVersion bundleVersion =
     UpdateProfileReq{
           middleName : Nothing
         , lastName : Nothing
@@ -780,7 +786,7 @@ originServiceabilityBT req = do
             BackT $ pure GoBack
 
 destServiceabilityBT :: DestinationServiceabilityReq -> FlowBT String ServiceabilityResDestination
-destServiceabilityBT req = do 
+destServiceabilityBT req = do
     headers <- getHeaders' ""
     withAPIResultBT ((EP.serviceabilityDest "" )) (\x → x) errorHandler (lift $ lift $ callAPI headers req)
     where
