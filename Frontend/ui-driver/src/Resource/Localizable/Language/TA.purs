@@ -403,3 +403,8 @@ getTA script = case script of
   COMPLETE_ONBOARDING -> "ஆன்போர்டிங்கை முடிக்கவும்"
   PERSON_WITH_THIS_NUMBER_ALREADY_EXISTS -> "இந்த மொபைல் எண்ணைக் கொண்ட நபர் ஏற்கனவே இருக்கிறார்."
   DEMO -> "டெமோ"
+  COMPLAINTS_GRIEVANCES -> "புகார்கள் மற்றும் குறைகள்"
+  COMPLAINTS_DESCRIPTION -> "ஏதேனும் புகார்களுக்கு, தயவுசெய்து எங்களைத் தொடர்பு கொள்ளவும் <u>nammayatri.support@juspay.in</u>;"
+  COMPLAINTS_DESCRIPTION_ADDITIONAL -> "குறைகளைத் தீர்ப்பதற்கு, எங்கள் <u>தனியுரிமைக் கொள்கையைப்</u> பார்க்கவும்"
+  REGISTERED_ADDRESS -> "பதிவு செய்யப்பட்ட முகவரி"
+  REGISTERED_ADDRESS_DESCRIPTION -> "Stallion Business Centre, No. 444, 3rd & 4th Floor, 18th Main, 6th Block, Koramangala, Bengaluru, Karnataka- 560095, India"

@@ -31,6 +31,8 @@ import JBridge as JB
 import Components.PopUpModal as PopUpModal
 import Common.Types.App
 import Screens.AboutUsScreen.ComponentConfig
+import Components.ComplaintsModel as ComplaintsModel
+import Data.Maybe (Maybe(..))
 
 screen :: ST.AboutUsScreenState -> Screen Action ST.AboutUsScreenState ScreenOutput
 screen initialState =
@@ -150,6 +152,7 @@ applicationInformationLayout state push =
   , height MATCH_PARENT
   , orientation VERTICAL
   , margin (MarginTop 20)
+  , padding (PaddingHorizontal 20 20)
   , weight 1.0
   ][ imageView
     ([ width $ V 150
@@ -165,10 +168,10 @@ applicationInformationLayout state push =
     , fontStyle $ FontStyle.regular LanguageStyle
     , color Color.black800
     , gravity LEFT
-    , margin (MarginTop 20)
-    , padding (Padding 20 0 20 0)
+    , margin (MarginVertical 20 20)
     , lineHeight "20"
     ]
+    , ComplaintsModel.view (getContactUsData state)
     , underlinedTextView (getString T_C) push
     , underlinedTextView (getString PRIVACY_POLICY) push
   ]
@@ -212,3 +215,17 @@ horizontalLine marginLeft marginRight =
   , background Color.greyBackDarkColor
   , margin (Margin marginLeft 0 marginRight 15)
   ][]
+
+getContactUsData :: ST.AboutUsScreenState -> ComplaintsModel.Config
+getContactUsData state = {
+  cardData : [
+  { title : (getString COMPLAINTS_GRIEVANCES)
+  , subTitle : (getString COMPLAINTS_DESCRIPTION)
+  , addtionalData : Just (getString COMPLAINTS_DESCRIPTION_ADDITIONAL)
+  }
+, { title : (getString REGISTERED_ADDRESS)
+  , subTitle : (getString REGISTERED_ADDRESS_DESCRIPTION)
+  , addtionalData : Nothing
+  }
+],
+privacyPolicyLink : "https://docs.google.com/document/d/1tF96MwtaEiq70y_P40E29Sy3X61moTc9/edit?usp=share_link&ouid=115428839751313950285&rtpof=true&sd=true"}

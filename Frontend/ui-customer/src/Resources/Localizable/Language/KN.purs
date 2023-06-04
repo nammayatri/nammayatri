@@ -433,3 +433,8 @@ getKN script = case script of
   NO_TIP -> "ಯಾವುದೇ ಸಲಹೆ ಇಲ್ಲ"
   CUSTOMER_SELECTED_FARE -> "ಗ್ರಾಹಕ ಸಲಹೆ*"
   CUSTOMER_TIP_DESCRIPTION -> "*ರೈಡ್ ಪಡೆಯುವ ಸಾಧ್ಯತೆಗಳನ್ನು ಹೆಚ್ಚಿಸಲು ಗ್ರಾಹಕರು ಹೆಚ್ಚುವರಿ ಮೊತ್ತವನ್ನು ಸೇರಿಸಿದ್ದಾರೆ."
+  COMPLAINTS_GRIEVANCES -> "ದೂರುಗಳು ಮತ್ತು ಕುಂದುಕೊರತೆಗಳು"
+  COMPLAINTS_DESCRIPTION -> "ಯಾವುದೇ ದೂರುಗಳಿಗಾಗಿ, ದಯವಿಟ್ಟು ನಮ್ಮನ್ನು ಸಂಪರ್ಕಿಸಿ <u>nammayatri.support@juspay.in</u>;"
+  COMPLAINTS_DESCRIPTION_ADDITIONAL -> "ಕುಂದುಕೊರತೆಗಳ ಪರಿಹಾರಕ್ಕಾಗಿ, ದಯವಿಟ್ಟು ನಮ್ಮ <u>ಗೌಪ್ಯತಾ ನೀತಿಯನ್ನು</u> ಉಲ್ಲೇಖಿಸಿ"
+  REGISTERED_ADDRESS -> "ನೋಂದಾಯಿಸಿದ ವಿಳಾಸ"
+  REGISTERED_ADDRESS_DESCRIPTION -> "Stallion Business Centre, No. 444, 3rd & 4th Floor, 18th Main, 6th Block, Koramangala, Bengaluru, Karnataka- 560095, India"

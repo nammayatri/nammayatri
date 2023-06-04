@@ -471,7 +471,9 @@ export const openUrlInApp = function (str) {
 
 export const openUrlInMailApp = function (str) {
   return function (unit) {
-    return window.JBridge.openUrlInMailApp(str);
+    if (window.JBridge.openUrlInMailApp) {
+      return window.JBridge.openUrlInMailApp(str);
+    }
   };
 };
 

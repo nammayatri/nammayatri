@@ -403,3 +403,8 @@ getHI script = case script of
   ADD_ALTERNATE_NUMBER_IN_MEANTIME ->  "इस प्रोसेस को पूरा होने में 2 कामकाजी दिन \n तक लग सकते हैं। इस बीच, आप \nएक वैकल्पिक मोबाइल नंबर जोड़ सकते हैं।"
   PERSON_WITH_THIS_NUMBER_ALREADY_EXISTS -> "इस मोबाइल नंबर वाला व्यक्ति पहले से मौजूद है।"
   DEMO -> "DEMO"
+  COMPLAINTS_GRIEVANCES -> "शिकायतें और परिवेदना"
+  COMPLAINTS_DESCRIPTION -> "किसी भी शिकायत के लिए, कृप्या हम से  <u>nammayatri.support@juspay.in</u> पर संपर्क करें;"
+  COMPLAINTS_DESCRIPTION_ADDITIONAL -> "शिकायतों के निवारण के लिए, कृप्या हमारी <u> प्राइवेसी पॉलिसी </u> देखे"
+  REGISTERED_ADDRESS -> "पंजीकृत पता"
+  REGISTERED_ADDRESS_DESCRIPTION -> "Stallion Business Centre, No. 444, 3rd & 4th Floor, 18th Main, 6th Block, Koramangala, Bengaluru, Karnataka- 560095, India"

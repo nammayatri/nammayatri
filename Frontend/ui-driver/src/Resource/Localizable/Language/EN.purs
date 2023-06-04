@@ -403,3 +403,8 @@ getEN script = case script of
   COMPLETE_ONBOARDING -> "Complete Onboarding"
   PERSON_WITH_THIS_NUMBER_ALREADY_EXISTS -> "Person with this mobile number already exists."
   DEMO -> "DEMO"
+  COMPLAINTS_GRIEVANCES -> "Complaints & Grievances"
+  COMPLAINTS_DESCRIPTION -> "For any complaints, please reach out to us at <u>nammayatri.support@juspay.in</u>;"
+  COMPLAINTS_DESCRIPTION_ADDITIONAL -> "For Redressal of grievances, please refer to our <u>Privacy Policy</u>"
+  REGISTERED_ADDRESS -> "Registered Address"
+  REGISTERED_ADDRESS_DESCRIPTION -> "Stallion Business Centre, No. 444, 3rd & 4th Floor, 18th Main, 6th Block, Koramangala, Bengaluru, Karnataka- 560095, India"

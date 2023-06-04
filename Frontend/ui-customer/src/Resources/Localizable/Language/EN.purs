@@ -434,3 +434,8 @@ getEN script = case script of
   TRY_LOOKING_FOR_RIDES_AGAIN -> "It seems to be a very busy day. You may try looking for rides again"
   NO_TIP -> "No Tip"
   CUSTOMER_TIP_DESCRIPTION -> "*Extra amount added by the customer to increase the chances of getting a ride."
+  COMPLAINTS_GRIEVANCES -> "Complaints & Grievances"
+  COMPLAINTS_DESCRIPTION -> "For any complaints, please reach out to us at <u>nammayatri.support@juspay.in</u>;"
+  COMPLAINTS_DESCRIPTION_ADDITIONAL -> "For Redressal of grievances, please refer to our <u>Privacy Policy</u>"
+  REGISTERED_ADDRESS -> "Registered Address"
+  REGISTERED_ADDRESS_DESCRIPTION -> "Stallion Business Centre, No. 444, 3rd & 4th Floor, 18th Main, 6th Block, Koramangala, Bengaluru, Karnataka- 560095, India"
