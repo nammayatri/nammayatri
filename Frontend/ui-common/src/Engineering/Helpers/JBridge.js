@@ -470,7 +470,9 @@ exports["openUrlInApp"] = function (str) {
 
 exports["openUrlInMailApp"] = function (str) {
   return function (unit) {
-    return JBridge.openUrlInMailApp(str);
+    if (window.JBridge.openUrlInMailApp) {
+      return window.JBridge.openUrlInMailApp(str);
+    }
   };
 };
 
