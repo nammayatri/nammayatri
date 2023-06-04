@@ -170,6 +170,9 @@ screen initialState =
               TryAgain -> do
                 _ <- launchAff $ flowRunner defaultGlobalState $ getEstimate EstimatesTryAgain CheckFlowStatusAction 10 1000.0 push initialState
                 pure unit
+              FindEstimateAndSearch -> do
+                push $ SearchForSelectedLocation
+                pure unit
               _ -> pure unit
             if ((initialState.props.sourceLat /= (-0.1)) && (initialState.props.sourceLong /= (-0.1))) then do
               case initialState.props.sourceLat, initialState.props.sourceLong of

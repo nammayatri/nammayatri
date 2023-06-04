@@ -489,6 +489,7 @@ data ScreenOutput = LogoutUser
                   | OnResumeApp HomeScreenState
                   | CheckCurrentStatus
                   | CheckFlowStatus HomeScreenState
+                  | RetryFindingQuotes HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -580,10 +581,14 @@ data Action = NoAction
             | IsMockLocation String
             | MenuButtonActionController MenuButtonController.Action
             | ChooseYourRideAction ChooseYourRideController.Action
+            | SearchForSelectedLocation
 
 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
+
+eval SearchForSelectedLocation state =
+  updateAndExit state{props{isPopUp = NoPopUp}} $ LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false state{props{currentStage = TryAgain, sourceSelectedOnMap = true, isPopUp = NoPopUp}}
 
 eval CheckFlowStatusAction state = exit $ CheckFlowStatus state
 
@@ -1304,19 +1309,19 @@ eval (PopUpModalAction (PopUpModal.OnButton1Click)) state =   case state.props.i
   TipsPopUp -> do
     _ <- pure $ performHapticFeedback unit
     _ <- pure $ firebaseLogEvent if state.props.customerTip.isTipSelected then ("ny_added_tip_for_" <> (show state.props.currentStage)) else "ny_no_tip_added"
-    updateAndExit state{props{isPopUp = NoPopUp}} $ LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false state{props{currentStage = TryAgain, sourceSelectedOnMap = true, isPopUp = NoPopUp}}
+    updateAndExit state{props{isPopUp = NoPopUp, currentStage = RetryFindingQuote}} $ RetryFindingQuotes state{props{currentStage = RetryFindingQuote, sourceSelectedOnMap = true, isPopUp = NoPopUp}}
   Logout -> continue state{props{isPopUp = NoPopUp}}
   _ -> do
     _ <- pure $ performHapticFeedback unit
     _ <- pure $ firebaseLogEvent "ny_tip_not_applicable"
-    if (isLocalStageOn FindingQuotes ) then exit $ CheckCurrentStatus else updateAndExit state{props{isPopUp = NoPopUp}} $ LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false state{props{currentStage = TryAgain, sourceSelectedOnMap = true, isPopUp = NoPopUp}}
+    if (isLocalStageOn FindingQuotes ) then exit $ CheckCurrentStatus else updateAndExit state{props{isPopUp = NoPopUp, currentStage = RetryFindingQuote}} $ RetryFindingQuotes state{props{currentStage = RetryFindingQuote, sourceSelectedOnMap = true, isPopUp = NoPopUp}}
 
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = case state.props.isPopUp of
   TipsPopUp -> case state.props.currentStage of
     QuoteList -> do
       _ <- pure $ performHapticFeedback unit
       updateAndExit state CheckCurrentStatus
-    FindingQuotes -> do 
+    FindingQuotes -> do
       _ <- pure $ performHapticFeedback unit
       exit $ CheckCurrentStatus
     _ -> continue state
@@ -1324,7 +1329,7 @@ eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = case state.props.isP
   ConfirmBack -> do
     _ <- pure $ firebaseLogEvent "ny_no_retry"
     case (getValueToLocalStore LOCAL_STAGE) of
-      "QuoteList" -> do 
+      "QuoteList" -> do
         _ <- pure $ performHapticFeedback unit
         exit $ CheckCurrentStatus
       "FindingQuotes" -> do

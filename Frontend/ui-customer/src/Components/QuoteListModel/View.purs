@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -39,8 +39,8 @@ import Styles.Colors as Color
 import Common.Types.App
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListModelState -> PrestoDOM (Effect Unit) w
-view push state = 
-  PrestoAnim.animationSet [translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ] $ 
+view push state =
+  PrestoAnim.animationSet [translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ] $
   relativeLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
@@ -48,10 +48,10 @@ view push state =
       [ height MATCH_PARENT
       , width MATCH_PARENT
       , orientation VERTICAL
-      , background Color.white900 
+      , background Color.white900
       , clickable true
       ][ quoteListTopSheetView state push
-        , selectRideAndConfirmView state push  
+        , selectRideAndConfirmView state push
         , linearLayout
           [ height $ V 1
           , width MATCH_PARENT
@@ -60,13 +60,13 @@ view push state =
           ][]
         , quotesView state push
         ]
-      --, primaryButtonView state push 
+      --, primaryButtonView state push
       , paymentView state
     ]
 
 
 paymentView :: forall w . QuoteListModelState -> PrestoDOM (Effect Unit) w
-paymentView state = 
+paymentView state =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -74,15 +74,17 @@ paymentView state =
   , alignParentBottom "true,-1"
   , background Color.white900
   , orientation VERTICAL
-  ][  lottieAnimationView 
-        [ id (getNewIDWithTag "lottieLoaderAnimProgress")
-        , afterRender (\action-> do
-                      _ <- pure $ startLottieProcess "progress_loader_line" (getNewIDWithTag "lottieLoaderAnimProgress") true 0.6 "CENTER_CROP"
-                      pure unit)(const NoAction)
-        , height WRAP_CONTENT
-        , visibility if ( (null state.quoteListModel)  && getValueToLocalStore LOCAL_STAGE == "FindingQuotes") then VISIBLE else GONE
-        , width MATCH_PARENT
-        ]
+  ][  if state.showProgress then
+        lottieAnimationView
+          [ id (getNewIDWithTag "lottieLoaderAnimProgress")
+          , afterRender (\action-> do
+                        _ <- pure $ startLottieProcess "progress_loader_line" (getNewIDWithTag "lottieLoaderAnimProgress") true 0.6 "CENTER_CROP"
+                        pure unit)(const NoAction)
+          , height WRAP_CONTENT
+          , width MATCH_PARENT
+          ]
+      else
+        linearLayout[][]
     , linearLayout
         [ background Color.grey900
         , height $ V 1
@@ -100,14 +102,14 @@ paymentView state =
           , height imageData.height
           , width imageData.width
           , margin (MarginRight 8)
-          ] 
+          ]
         , textView $
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , text (getString PAY_DRIVER_USING_CASH_OR_UPI)
           , gravity CENTER_HORIZONTAL
           , color Color.black800
-          , textSize FontSize.a_14 
+          , textSize FontSize.a_14
           , fontStyle $ FontStyle.medium LanguageStyle
           ]
         ]
@@ -118,18 +120,18 @@ imageData :: { height :: Length
 , width :: Length
 , imageUrl :: String
 }
-imageData = 
+imageData =
   if os == "IOS" then {imageUrl : "ny_ic_wallet_rect,https://assets.juspay.in/nammayatri/images/user/ny_ic_wallet_rect.png", height : (V 15), width : (V 15)}
     else {imageUrl : "ny_ic_wallet,https://assets.juspay.in/nammayatri/images/user/ny_ic_wallet.png", height : (V 24) , width : (V 24)}
-    
+
 ---------------------------- sourceDestinationImageView ---------------------------------
 sourceDestinationImageView :: forall w . PrestoDOM (Effect Unit) w
-sourceDestinationImageView  = 
+sourceDestinationImageView  =
   linearLayout
     [ height MATCH_PARENT
     , width WRAP_CONTENT
     , margin (MarginTop 7)
-    , gravity CENTER 
+    , gravity CENTER
     , orientation VERTICAL
     ][ imageView
         [ height $ V 15
@@ -145,19 +147,19 @@ sourceDestinationImageView  =
       , imageView
         [ height $ V 15
         , width $ V 15
-        , imageWithFallback "ny_ic_drop,https://assets.juspay.in/nammayatri/images/user/ny_ic_drop.png"  
+        , imageWithFallback "ny_ic_drop,https://assets.juspay.in/nammayatri/images/user/ny_ic_drop.png"
         ]
       ]
 
 ---------------------------- sourceDestinationEditTextView ---------------------------------
 sourceDestinationTextView :: forall w . QuoteListModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
 sourceDestinationTextView state push =
-  linearLayout 
-    [ width MATCH_PARENT 
-    , orientation VERTICAL 
+  linearLayout
+    [ width MATCH_PARENT
+    , orientation VERTICAL
     , height WRAP_CONTENT
     , margin (MarginTop 5)
-    ][   
+    ][
       textView
         [ height WRAP_CONTENT
         , weight 1.0
@@ -182,12 +184,12 @@ sourceDestinationTextView state push =
         , ellipsize true
         , singleLine true
         ]
-    ]   
-      
+    ]
+
 ---------------------------- quotesView ---------------------------------
 quotesView :: forall w . QuoteListModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
-quotesView state push = 
-  linearLayout 
+quotesView state push =
+  linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
@@ -198,16 +200,16 @@ quotesView state push =
     ]
 
 findingRidesView :: forall w . QuoteListModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
-findingRidesView state push = 
+findingRidesView state push =
   linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
   , gravity CENTER_HORIZONTAL
-  , visibility if null state.quoteListModel && getValueToLocalStore LOCAL_STAGE == "FindingQuotes" then VISIBLE else GONE 
+  , visibility if null state.quoteListModel && getValueToLocalStore LOCAL_STAGE == "FindingQuotes" then VISIBLE else GONE
   , margin $ MarginTop 100
   , clickable true
   ][
-    lottieAnimationView 
+    lottieAnimationView
       [ id (getNewIDWithTag "lottieLoaderAnim")
       , afterRender (\action-> do
                     _ <- pure $ startLottieProcess "finding_rides_loader_with_text" (getNewIDWithTag "lottieLoaderAnim") true 0.6 "Default"
@@ -219,7 +221,7 @@ findingRidesView state push =
 
 
 selectRideAndConfirmView :: forall w . QuoteListModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
-selectRideAndConfirmView state push = 
+selectRideAndConfirmView state push =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -251,13 +253,13 @@ selectRideAndConfirmView state push =
       [ height $ V 24
       , width $ V 24
       , imageWithFallback "ny_ic_close,https://assets.juspay.in/nammayatri/images/common/ny_ic_close.png"
-      , visibility if getValueToLocalStore AUTO_SELECTING == "false" || getValueToLocalStore AUTO_SELECTING == "CANCELLED_AUTO_ASSIGN" then GONE else VISIBLE 
-     
+      , visibility if getValueToLocalStore AUTO_SELECTING == "false" || getValueToLocalStore AUTO_SELECTING == "CANCELLED_AUTO_ASSIGN" then GONE else VISIBLE
+
       ]
     ]
   ]
 
-paymentMethodView :: forall w.(Action -> Effect Unit) ->  QuoteListModelState -> PrestoDOM (Effect Unit) w 
+paymentMethodView :: forall w.(Action -> Effect Unit) ->  QuoteListModelState -> PrestoDOM (Effect Unit) w
 paymentMethodView push state =
   linearLayout[
     orientation HORIZONTAL
@@ -308,10 +310,10 @@ paymentMethodView push state =
   --   , gravity RIGHT
   --   ]]
   ]
- 
+
 ---------------------------- quoteListTopSheetView ---------------------------------
 quoteListTopSheetView :: forall w . QuoteListModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
-quoteListTopSheetView state push = 
+quoteListTopSheetView state push =
    linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
@@ -331,21 +333,21 @@ quoteListTopSheetView state push =
                   [ height $ V 40
                   , width $ V 40
                   , onClick push $ const GoBack
-                  ][  imageView 
+                  ][  imageView
                       [ height $ V 24
                       , width $ V 24
                       , imageWithFallback "ny_ic_close_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_close_white.png"
                       , margin $ MarginTop 7
                       ]
                   ]
-                , sourceDestinationImageView 
+                , sourceDestinationImageView
                 , sourceDestinationTextView state push
                 ]
             ]
-        ]  
-        
+        ]
+
 noQuotesErrorModel :: forall w . QuoteListModelState -> PrestoDOM (Effect Unit) w
-noQuotesErrorModel state = 
+noQuotesErrorModel state =
   linearLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
@@ -380,13 +382,13 @@ noQuotesErrorModel state =
         , color Color.black700
         , gravity CENTER
         ] <> FontStyle.paragraphText TypoGraphy
-    ] 
+    ]
     ]
 
 
 ---------------------------- quoteListView ---------------------------------
 quoteListView :: forall w . QuoteListModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
-quoteListView state push = 
+quoteListView state push =
   scrollView
     [ height MATCH_PARENT
     , width MATCH_PARENT
@@ -396,27 +398,27 @@ quoteListView state push =
         [ height MATCH_PARENT
         , width MATCH_PARENT
         , orientation VERTICAL
-        ](map (\item -> 
+        ](map (\item ->
             QuoteListItem.view (push <<< QuoteListItemActionController) item) state.quoteListModel)
     ]
 
 ---------------------------- primaryButtonView ---------------------------------
 primaryButtonView :: forall w . QuoteListModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
-primaryButtonView state push = 
+primaryButtonView state push =
   linearLayout
     [ height WRAP_CONTENT
-    , width MATCH_PARENT  
+    , width MATCH_PARENT
     , orientation VERTICAL
     , weight 1.0
     , alignParentBottom "true,-1"
     , background Color.white900 -- TODO : change to white900 once shadow is fixed
     -- --, visibility GONE-- $ checkVisibility state
     , padding (Padding 0 16 0 30)
-    ][ homeOrTryAgain state push ] 
+    ][ homeOrTryAgain state push ]
 
 ---------------------------- homeOrTryAgainView ---------------------------------
 homeOrTryAgain :: forall w . QuoteListModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
-homeOrTryAgain state push = 
+homeOrTryAgain state push =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -426,8 +428,8 @@ homeOrTryAgain state push =
      , PrimaryButton.view (push <<< TryAgainButtonActionController) (tryAgainButtonConfig state)
     ]
 
--- buttonView :: forall w. QuoteListModelState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
--- buttonView state push = 
+-- buttonView :: forall w. QuoteListModelState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+-- buttonView state push =
 --   linearLayout
 --   [ height WRAP_CONTENT
 --   , width MATCH_PARENT
@@ -436,9 +438,9 @@ homeOrTryAgain state push =
 --   , padding (PaddingHorizontal 14 14)
 --   , gravity CENTER
 --   , onClick push (const HidePopUp)
---   ][ textView 
+--   ][ textView
 --       [ text "Got It!"
---       , textSize FontSize.a_16 
+--       , textSize FontSize.a_16
 --       , color Color.yellow900
 --       , gravity CENTER
 --       ]
@@ -447,13 +449,13 @@ homeOrTryAgain state push =
 
 ---------------------------- homeButtonConfig ---------------------------------
 homeButtonConfig :: QuoteListModelState -> PrimaryButton.Config
-homeButtonConfig state = let 
+homeButtonConfig state = let
     config = PrimaryButton.config
-    homeButtonConfig' = config 
+    homeButtonConfig' = config
       { textConfig
         { text = (getString HOME)
         , color = Color.black900
-        , textSize = FontSize.a_16  
+        , textSize = FontSize.a_16
         }
       , margin =( Margin 16 0 8 0)
       , width = V $ (screenWidth unit/4)
@@ -466,13 +468,13 @@ homeButtonConfig state = let
 
 ---------------------------- tryAgainButtonConfig ---------------------------------
 tryAgainButtonConfig :: QuoteListModelState -> PrimaryButton.Config
-tryAgainButtonConfig state = let 
+tryAgainButtonConfig state = let
     config = PrimaryButton.config
-    tryAgainButtonConfig' = config 
+    tryAgainButtonConfig' = config
       { textConfig
         { text = (getString TRY_AGAIN)
-        , color = Color.yellow900      
-        , textSize = FontSize.a_16  
+        , color = Color.yellow900
+        , textSize = FontSize.a_16
         }
       , margin =( Margin 8 0 16 0)
       , width = MATCH_PARENT
@@ -484,7 +486,7 @@ tryAgainButtonConfig state = let
 configDummy :: QuoteListItem.QuoteListItemState
 configDummy = {
    seconds : 15
-  , id : ""  
+  , id : ""
   , timer : "-"
   , timeLeft : 0
   , driverRating : 4.0
@@ -497,17 +499,17 @@ configDummy = {
 
 
 getPrice :: QuoteListModelState -> String
-getPrice state =  
+getPrice state =
   let selectQuoteArray = (filter (\x -> state.selectedQuote == Just x.id) state.quoteListModel)
       price = (fromMaybe dummyQuoteList (head selectQuoteArray)).price
-    in price 
+    in price
 
 
 
 dummyQuoteList :: QuoteListItem.QuoteListItemState
 dummyQuoteList = {
    seconds : 15
-  , id : ""  
+  , id : ""
   , timer : ""
   , timeLeft : 15
   , driverRating : 0.0
@@ -520,21 +522,21 @@ dummyQuoteList = {
 
 
 checkVisibility :: QuoteListModelState -> Visibility
-checkVisibility state = 
+checkVisibility state =
   case state.selectedQuote ,(null state.quoteListModel) of
     Just _ ,_                           -> VISIBLE
     Nothing , true                      -> VISIBLE
     Nothing , false                     -> GONE
 
 setText :: QuoteListModelState -> String
-setText state = 
+setText state =
   case state.selectedQuote ,(null state.quoteListModel) of
     Just _ ,_                           -> (getString CONFIRM_FOR) <> "₹ " <> getPrice state
     Nothing , true                      -> (getString GO_HOME_)
     _,_                                 -> ""
 
 getSelectedItemTimer :: QuoteListModelState -> String
-getSelectedItemTimer state =  
+getSelectedItemTimer state =
   let selectQuoteArray = (filter (\x -> state.selectedQuote == Just x.id) state.quoteListModel)
       timer = (fromMaybe dummyQuoteList (head selectQuoteArray)).timer
-    in timer 
+    in timer
