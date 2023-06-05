@@ -26,6 +26,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common (logDebug)
 import Storage.Tabular.DriverInformation
 import Storage.Tabular.DriverLocation
 import Storage.Tabular.Person
@@ -213,6 +214,7 @@ getDriversWithOutdatedLocationsToMakeInactive before = do
   driverLocations <- getDriverLocs before
   driverInfos <- getDriverInfos driverLocations
   drivers <- getDrivers driverInfos
+  logDebug $ "GetDriversWithOutdatedLocationsToMakeInactive - DLoc:- " <> show (length driverLocations) <> " DInfo:- " <> show (length driverInfos) <> " Drivers:- " <> show (length drivers)
   return drivers
 
 getDrivers ::
