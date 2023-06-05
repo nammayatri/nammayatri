@@ -117,8 +117,6 @@ data FarePolicyT f = FarePolicyT
     merchantId :: B.C f Text,
     vehicleVariant :: B.C f Variant.Variant,
     farePolicyType :: B.C f Domain.FarePolicyType,
-    driverMinExtraFee :: B.C f (Maybe Money),
-    driverMaxExtraFee :: B.C f (Maybe Money),
     serviceCharge :: B.C f (Maybe Money),
     nightShiftStart :: B.C f (Maybe TimeOfDay),
     nightShiftEnd :: B.C f (Maybe TimeOfDay),
@@ -171,6 +169,8 @@ deriving stock instance Show FarePolicy
 
 deriving stock instance Ord Domain.FarePolicyType
 
+deriving stock instance Eq Domain.FarePolicyType
+
 -- deriving stock instance Read Money
 
 farePolicyTMod :: FarePolicyT (B.FieldModification (B.TableField FarePolicyT))
@@ -180,8 +180,6 @@ farePolicyTMod =
       merchantId = B.fieldNamed "merchant_id",
       vehicleVariant = B.fieldNamed "vehicle_variant",
       farePolicyType = B.fieldNamed "fare_policy_type",
-      driverMinExtraFee = B.fieldNamed "driver_min_extra_fee",
-      driverMaxExtraFee = B.fieldNamed "driver_max_extra_fee",
       serviceCharge = B.fieldNamed "service_charge",
       nightShiftStart = B.fieldNamed "night_shift_start",
       nightShiftEnd = B.fieldNamed "night_shift_end",
@@ -210,8 +208,6 @@ defaultFarePolicy =
       merchantId = "",
       vehicleVariant = "",
       farePolicyType = "",
-      driverMinExtraFee = Nothing,
-      driverMaxExtraFee = Nothing,
       serviceCharge = Nothing,
       nightShiftStart = Nothing,
       nightShiftEnd = Nothing,

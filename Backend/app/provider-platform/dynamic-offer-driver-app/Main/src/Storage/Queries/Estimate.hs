@@ -56,7 +56,7 @@ transformBeamEstimateToDomain :: BeamE.Estimate -> Estimate
 transformBeamEstimateToDomain BeamE.EstimateT {..} = do
   Estimate
     { id = Id id,
-      transactionId = transactionId,
+      requestId = Id requestId,
       vehicleVariant = vehicleVariant,
       minFare = minFare,
       maxFare = maxFare,
@@ -71,7 +71,7 @@ transformDomainEstimateToBeam :: Estimate -> BeamE.Estimate
 transformDomainEstimateToBeam Estimate {..} = do
   BeamE.EstimateT
     { id = getId id,
-      transactionId = transactionId,
+      requestId = getId requestId,
       vehicleVariant = vehicleVariant,
       minFare = minFare,
       maxFare = maxFare,

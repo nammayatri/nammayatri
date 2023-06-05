@@ -14,11 +14,18 @@
 
 module Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection where
 
+import Data.Text (pack)
 import qualified Domain.Types.FarePolicy as DFP
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
-import Kernel.Types.Id
+import Kernel.Types.Id as KTI
 import Kernel.Utils.Common
+import qualified Lib.Mesh as Mesh
+import Sequelize as Se
+import qualified Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as BeamFPPDP
 import Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
 
 findAll' ::
@@ -37,9 +44,46 @@ findAll' farePolicyId = do
     orderBy [asc $ farePolicyProgressiveDetailsPerExtraKmFareSection ^. FarePolicyProgressiveDetailsPerExtraKmRateSectionStartDistance]
     return farePolicyProgressiveDetailsPerExtraKmFareSection
 
+findById' :: L.MonadFlow m => KTI.Id DFP.FarePolicy -> m (Maybe FullFarePolicyProgressiveDetailsPerExtraKmRateSection)
+findById' farePolicyId' = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure Nothing) (transformBeamFarePolicyProgressiveDetailsPerExtraKmRateSectionToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamFPPDP.farePolicyId $ Se.Eq (getId farePolicyId')]
+    Nothing -> pure Nothing
+
+findAll ::
+  ( L.MonadFlow m
+  ) =>
+  -- Id DFP.FarePolicy ->
+  Id DFP.FarePolicy ->
+  m [FullFarePolicyProgressiveDetailsPerExtraKmRateSection]
+findAll farePolicyId = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure []) (transformBeamFarePolicyProgressiveDetailsPerExtraKmRateSectionToDomain <$>) <$> KV.findAllWithOptionsKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamFPPDP.farePolicyId $ Se.Eq (getId farePolicyId)] (Se.Asc BeamFPPDP.startDistance) Nothing Nothing
+    Nothing -> pure []
+
 deleteAll' :: Id DFP.FarePolicy -> FullEntitySqlDB ()
 deleteAll' farePolicyId =
   Esq.delete' $ do
     farePolicyProgressiveDetailsPerExtraKmFareSection <- from $ table @FarePolicyProgressiveDetailsPerExtraKmRateSectionT
     where_ $
       farePolicyProgressiveDetailsPerExtraKmFareSection ^. FarePolicyProgressiveDetailsPerExtraKmRateSectionFarePolicyId ==. val (toKey farePolicyId)
+
+transformBeamFarePolicyProgressiveDetailsPerExtraKmRateSectionToDomain :: BeamFPPDP.FarePolicyProgressiveDetailsPerExtraKmRateSection -> FullFarePolicyProgressiveDetailsPerExtraKmRateSection
+transformBeamFarePolicyProgressiveDetailsPerExtraKmRateSectionToDomain BeamFPPDP.FarePolicyProgressiveDetailsPerExtraKmRateSectionT {..} = do
+  ( KTI.Id farePolicyId,
+    DFP.FPProgressiveDetailsPerExtraKmRateSection
+      { startDistance = startDistance,
+        perExtraKmRate = perExtraKmRate
+      }
+    )
+
+transformDomainFarePolicyProgressiveDetailsPerExtraKmRateSectionToBeam :: FullFarePolicyProgressiveDetailsPerExtraKmRateSection -> BeamFPPDP.FarePolicyProgressiveDetailsPerExtraKmRateSection
+transformDomainFarePolicyProgressiveDetailsPerExtraKmRateSectionToBeam (KTI.Id farePolicyId, DFP.FPProgressiveDetailsPerExtraKmRateSection {..}) =
+  BeamFPPDP.FarePolicyProgressiveDetailsPerExtraKmRateSectionT
+    { -- id = id,
+      farePolicyId = farePolicyId,
+      startDistance = startDistance,
+      perExtraKmRate = perExtraKmRate
+    }

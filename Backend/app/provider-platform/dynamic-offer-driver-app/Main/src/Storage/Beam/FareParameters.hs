@@ -102,16 +102,11 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.FareParametersType
 data FareParametersT f = FareParametersT
   { id :: B.C f Text,
     baseFare :: B.C f Money,
-    -- deadKmFare :: B.C f (Maybe Money),
-    -- extraKmFare :: B.C f (Maybe Money),
     driverSelectedFare :: B.C f (Maybe Money),
     customerExtraFee :: B.C f (Maybe Money),
-    -- nightShiftRate :: B.C f (Maybe Centesimal),
-    -- nightCoefIncluded :: B.C f Bool,
-    -- waitingChargePerMin :: B.C f (Maybe Money),
     waitingCharge :: B.C f (Maybe Money),
     nightShiftCharge :: B.C f (Maybe Money),
-    -- waitingOrPickupCharges :: B.C f (Maybe Money),
+    nightShiftRateIfApplies :: B.C f (Maybe Double),
     serviceCharge :: B.C f (Maybe Money),
     fareParametersType :: B.C f Domain.FareParametersType,
     govtCharges :: B.C f (Maybe Money)
@@ -152,8 +147,6 @@ deriving stock instance Ord Domain.FareParametersType
 
 deriving stock instance Eq Domain.FareParametersType
 
-deriving stock instance Ord Domain.FarePolicyType
-
 -- deriving stock instance Read Money
 
 fareParametersTMod :: FareParametersT (B.FieldModification (B.TableField FareParametersT))
@@ -165,6 +158,7 @@ fareParametersTMod =
       -- extraKmFare = B.fieldNamed "extra_km_fare",
       driverSelectedFare = B.fieldNamed "driver_selected_fare",
       customerExtraFee = B.fieldNamed "customer_extra_fee",
+      nightShiftRateIfApplies = B.fieldNamed "night_shift_rate_if_applies",
       -- nightShiftRate = B.fieldNamed "night_shift_rate",
       -- nightCoefIncluded = B.fieldNamed "night_coef_included",
       -- waitingChargePerMin = B.fieldNamed "waiting_charge_per_min",

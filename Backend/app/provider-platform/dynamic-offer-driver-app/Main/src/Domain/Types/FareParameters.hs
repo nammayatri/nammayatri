@@ -49,7 +49,7 @@ data FParamsSlabDetails = FParamsSlabDetails
 instance PrettyShow FParamsSlabDetails where
   prettyShow _ = prettyShow ()
 
-data FareParametersType = Progressive | Slab deriving (Show, Read)
+data FareParametersType = Progressive | Slab deriving (Show, Read, Generic)
 
 getFareParametersType :: FareParameters -> FareParametersType
 getFareParametersType fareParams = case fareParams.fareParametersDetails of

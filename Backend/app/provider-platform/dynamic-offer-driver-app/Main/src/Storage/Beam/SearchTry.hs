@@ -15,7 +15,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Beam.SearchRequest where
+module Storage.Beam.SearchTry where
 
 import qualified Data.Aeson as A
 import qualified Data.HashMap.Internal as HM
@@ -29,7 +29,7 @@ import Database.Beam.Postgres
   ( Postgres,
   )
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
-import qualified Domain.Types.SearchRequest as Domain
+import qualified Domain.Types.SearchTry as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant (Variant)
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
@@ -73,15 +73,15 @@ import qualified Tools.Maps as Maps
 
 -- instance FromBackendRow Postgres Seconds
 
--- instance FromField Domain.SearchRequestStatus where
+-- instance FromField Domain.SearchTryStatus where
 --   fromField = fromFieldEnum
 
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.SearchRequestStatus where
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.SearchTryStatus where
 --   sqlValueSyntax = autoSqlValueSyntax
 
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.SearchRequestStatus
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.SearchTryStatus
 
--- instance FromBackendRow Postgres Domain.SearchRequestStatus
+-- instance FromBackendRow Postgres Domain.SearchTryStatus
 
 -- instance FromField Meters where
 --   fromField = fromFieldEnum
@@ -108,32 +108,25 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be BaseUrl
 
 -- instance FromBackendRow Postgres Money
 
-data SearchRequestT f = SearchRequestT
+data SearchTryT f = SearchTryT
   { id :: B.C f Text,
-    transactionId :: B.C f Text,
-    -- messageId :: B.C f Text,
-    -- estimateId :: B.C f Text,
-    -- startTime :: B.C f Time.UTCTime,
-    -- validTill :: B.C f Time.UTCTime,
-    providerId :: B.C f Text,
-    fromLocationId :: B.C f Text,
-    toLocationId :: B.C f Text,
-    bapId :: B.C f Text,
-    bapUri :: B.C f Text,
-    estimatedDistance :: B.C f Meters,
-    estimatedDuration :: B.C f Seconds,
-    customerLanguage :: B.C f (Maybe Maps.Language),
-    device :: B.C f (Maybe Text),
-    -- status :: B.C f Domain.SearchRequestStatus,
+    messageId :: B.C f Text,
+    requestId :: B.C f Text,
+    startTime :: B.C f Time.UTCTime,
+    validTill :: B.C f Time.UTCTime,
+    estimateId :: B.C f Text,
+    baseFare :: B.C f Money,
+    customerExtraFee :: B.C f (Maybe Money),
+    status :: B.C f Domain.SearchTryStatus,
     vehicleVariant :: B.C f Variant.Variant,
     searchRepeatCounter :: B.C f Int,
-    autoAssignEnabled :: B.C f Bool,
-    createdAt :: B.C f Time.UTCTime
-    -- updatedAt :: B.C f Time.UTCTime
+    searchRepeatType :: B.C f Domain.SearchRepeatType,
+    createdAt :: B.C f Time.UTCTime,
+    updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
--- instance IsString Domain.SearchRequestStatus where
+-- instance IsString Domain.SearchTryStatus where
 --   fromString = show
 
 instance IsString Variant.Variant where
@@ -145,26 +138,26 @@ instance IsString Meters where
 instance IsString Seconds where
   fromString = show
 
-instance B.Table SearchRequestT where
-  data PrimaryKey SearchRequestT f
+instance B.Table SearchTryT where
+  data PrimaryKey SearchTryT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta SearchRequestT where
-  modelFieldModification = searchRequestTMod
+instance ModelMeta SearchTryT where
+  modelFieldModification = searchTryTMod
   modelTableName = "search_request"
   mkExprWithDefault _ = B.insertExpressions []
 
-type SearchRequest = SearchRequestT Identity
+type SearchTry = SearchTryT Identity
 
-instance FromJSON SearchRequest where
+instance FromJSON SearchTry where
   parseJSON = A.genericParseJSON A.defaultOptions
 
-instance ToJSON SearchRequest where
+instance ToJSON SearchTry where
   toJSON = A.genericToJSON A.defaultOptions
 
-deriving stock instance Show SearchRequest
+deriving stock instance Show SearchTry
 
 instance FromField Maps.Language where
   fromField = fromFieldEnum
@@ -178,46 +171,39 @@ instance FromBackendRow Postgres Maps.Language
 
 -- deriving stock instance Read Money
 
-searchRequestTMod :: SearchRequestT (B.FieldModification (B.TableField SearchRequestT))
-searchRequestTMod =
+searchTryTMod :: SearchTryT (B.FieldModification (B.TableField SearchTryT))
+searchTryTMod =
   B.tableModification
     { id = B.fieldNamed "id",
-      transactionId = B.fieldNamed "transaction_id",
-      -- messageId = B.fieldNamed "message_id",
-      -- estimateId = B.fieldNamed "estimate_id",
-      -- startTime = B.fieldNamed "start_time",
-      -- validTill = B.fieldNamed "valid_till",
-      providerId = B.fieldNamed "provider_id",
-      fromLocationId = B.fieldNamed "from_location_id",
-      toLocationId = B.fieldNamed "to_location_id",
-      bapId = B.fieldNamed "bap_id",
-      bapUri = B.fieldNamed "bap_uri",
-      estimatedDistance = B.fieldNamed "estimated_distance",
-      estimatedDuration = B.fieldNamed "estimated_duration",
-      customerLanguage = B.fieldNamed "customer_language",
-      device = B.fieldNamed "device",
-      -- status = B.fieldNamed "status",
+      messageId = B.fieldNamed "message_id",
+      requestId = B.fieldNamed "request_id",
+      estimateId = B.fieldNamed "estimate_id",
+      startTime = B.fieldNamed "start_time",
+      validTill = B.fieldNamed "valid_till",
+      baseFare = B.fieldNamed "base_fare",
+      customerExtraFee = B.fieldNamed "customer_extra_fee",
+      status = B.fieldNamed "status",
       vehicleVariant = B.fieldNamed "vehicle_variant",
       searchRepeatCounter = B.fieldNamed "search_repeat_counter",
-      autoAssignEnabled = B.fieldNamed "auto_assign_enabled",
-      createdAt = B.fieldNamed "created_at"
-      -- updatedAt = B.fieldNamed "updated_at"
+      searchRepeatType = B.fieldNamed "search_repeat_type",
+      createdAt = B.fieldNamed "created_at",
+      updatedAt = B.fieldNamed "updated_at"
     }
 
 psToHs :: HM.HashMap Text Text
 psToHs = HM.empty
 
-searchRequestToHSModifiers :: M.Map Text (A.Value -> A.Value)
-searchRequestToHSModifiers =
+searchTryToHSModifiers :: M.Map Text (A.Value -> A.Value)
+searchTryToHSModifiers =
   M.empty
 
-searchRequestToPSModifiers :: M.Map Text (A.Value -> A.Value)
-searchRequestToPSModifiers =
+searchTryToPSModifiers :: M.Map Text (A.Value -> A.Value)
+searchTryToPSModifiers =
   M.empty
 
--- defaultSearchRequest :: SearchRequest
--- defaultSearchRequest =
---   SearchRequestT
+-- defaultSearchTry :: SearchTry
+-- defaultSearchTry =
+--   SearchTryT
 --     { id = "",
 --       transactionId = "",
 --       messageId = "",
@@ -241,8 +227,8 @@ searchRequestToPSModifiers =
 --       updatedAt = defaultUTCDate
 --     }
 
-instance Serialize SearchRequest where
+instance Serialize SearchTry where
   put = error "undefined"
   get = error "undefined"
 
-$(enableKVPG ''SearchRequestT ['id] [])
+$(enableKVPG ''SearchTryT ['id] [])

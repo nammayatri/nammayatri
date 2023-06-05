@@ -110,8 +110,8 @@ instance FromBackendRow Postgres Domain.DriverQuoteStatus
 
 data DriverQuoteT f = DriverQuoteT
   { id :: B.C f Text,
-    transactionId :: B.C f Text,
-    searchRequestId :: B.C f Text,
+    requestId :: B.C f Text,
+    searchTryId :: B.C f Text,
     searchRequestForDriverId :: B.C f (Maybe Text),
     driverId :: B.C f Text,
     driverName :: B.C f Text,
@@ -177,8 +177,8 @@ driverQuoteTMod :: DriverQuoteT (B.FieldModification (B.TableField DriverQuoteT)
 driverQuoteTMod =
   B.tableModification
     { id = B.fieldNamed "id",
-      transactionId = B.fieldNamed "transaction_id",
-      searchRequestId = B.fieldNamed "search_request_id",
+      requestId = B.fieldNamed "request_id",
+      searchTryId = B.fieldNamed "search_try_id",
       searchRequestForDriverId = B.fieldNamed "search_request_for_driver_id",
       driverId = B.fieldNamed "driver_id",
       driverName = B.fieldNamed "driver_name",
@@ -206,29 +206,6 @@ driverQuoteToHSModifiers =
 driverQuoteToPSModifiers :: M.Map Text (A.Value -> A.Value)
 driverQuoteToPSModifiers =
   M.empty
-
-defaultDriverQuote :: DriverQuote
-defaultDriverQuote =
-  DriverQuoteT
-    { id = "",
-      transactionId = "",
-      searchRequestId = "",
-      searchRequestForDriverId = Nothing,
-      driverId = "",
-      driverName = "",
-      driverRating = Nothing,
-      status = "",
-      vehicleVariant = "",
-      distance = "",
-      distanceToPickup = "",
-      durationToPickup = 1,
-      validTill = defaultUTCDate,
-      estimatedFare = "",
-      fareParametersId = "",
-      providerId = "",
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
-    }
 
 instance Serialize DriverQuote where
   put = error "undefined"

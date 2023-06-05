@@ -20,6 +20,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Storage.Beam.SearchTry as BeamST
 import Storage.Tabular.SearchTry
 
 create :: SearchTry -> SqlDB ()
@@ -80,3 +81,41 @@ getSearchTryStatusAndValidTill searchRequestId = do
     where_ $
       searchT ^. SearchTryTId ==. val (toKey searchRequestId)
     return (searchT ^. SearchTryValidTill, searchT ^. SearchTryStatus)
+
+transformBeamSearchTryToDomain :: BeamST.SearchTry -> SearchTry
+transformBeamSearchTryToDomain BeamST.SearchTryT {..} = do
+  SearchTry
+    { id = Id driverId,
+      requestId = Id merchantId,
+      estimateId = Id estimateId,
+      messageId = Id messageId,
+      startTime = startTime,
+      validTill = validTill,
+      vehicleVariant = vehicleVariant,
+      baseFare = baseFare,
+      customerExtraFee = customerExtraFee,
+      status = status,
+      searchRepeatCounter = searchRepeatCounter,
+      searchRepeatType = searchRepeatType,
+      createdAt = createdAt,
+      updatedAt = updatedAt
+    }
+
+transformDomainSearchTryToBeam :: SearchTry -> BeamST.SearchTry
+transformDomainSearchTryToBeam SearchTry {..} =
+  BeamST.SearchTryT
+    { id = Id driverId,
+      requestId = Id merchantId,
+      estimateId = Id estimateId,
+      messageId = Id messageId,
+      startTime = startTime,
+      validTill = validTill,
+      vehicleVariant = vehicleVariant,
+      baseFare = baseFare,
+      customerExtraFee = customerExtraFee,
+      status = status,
+      searchRepeatCounter = searchRepeatCounter,
+      searchRepeatType = searchRepeatType,
+      createdAt = createdAt,
+      updatedAt = updatedAt
+    }

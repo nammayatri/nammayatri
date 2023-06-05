@@ -51,15 +51,15 @@ import Sequelize
 --       Just val -> pure val
 --       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
 
-instance FromField Minutes where
-  fromField = fromFieldEnum
+-- instance FromField Minutes where
+--   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Minutes where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Minutes where
+--   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Minutes
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Minutes
 
-instance FromBackendRow Postgres Minutes
+-- instance FromBackendRow Postgres Minutes
 
 instance IsString Minutes where
   fromString = show

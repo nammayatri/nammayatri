@@ -249,7 +249,9 @@ library
       Storage.Beam.FareParameters
       Storage.Beam.FareParameters.FareParametersProgressiveDetails
       Storage.Beam.FarePolicy
+      Storage.Beam.FarePolicy.DriverExtraFeeBounds
       Storage.Beam.FarePolicy.FarePolicyProgressiveDetails
+      Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
       Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab
       Storage.Beam.FarePolicy.RestrictedExtraFare
       Storage.Beam.Geometry
@@ -282,6 +284,7 @@ library
       Storage.Beam.SearchRequest.SearchReqLocation
       Storage.Beam.SearchRequestForDriver
       Storage.Beam.SearchRequestSpecialZone
+      Storage.Beam.SearchTry
       Storage.Beam.SlabFarePolicy
       Storage.Beam.Vehicle
       Storage.CachedQueries.CacheConfig

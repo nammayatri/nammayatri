@@ -32,7 +32,7 @@ import Kernel.Storage.Esqueleto as Esq hiding (findById, isNothing)
 import Kernel.Types.Id
 import qualified Storage.Queries.FarePolicy.DriverExtraFeeBounds as FarePolicyDriverExtraFeeBounds
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as QFarePolicyProgressiveDetailsPerExtraKmRateSection
-import qualified Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab as FarePolicySlabsDetailsSlab
+-- import qualified Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab as FarePolicySlabsDetailsSlab
 import Storage.Tabular.Booking
 import Storage.Tabular.Booking.BookingLocation
 import qualified Storage.Tabular.DriverQuote as DriverQuote

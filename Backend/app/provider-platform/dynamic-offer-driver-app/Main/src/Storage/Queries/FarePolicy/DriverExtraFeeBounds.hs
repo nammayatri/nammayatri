@@ -16,11 +16,18 @@
 module Storage.Queries.FarePolicy.DriverExtraFeeBounds where
 
 import qualified Domain.Types.FarePolicy as DFP
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
-import Kernel.Types.Id
+import Kernel.Types.Id as KTI
 import Kernel.Utils.Common
+import qualified Lib.Mesh as Mesh
+import qualified Sequelize as Se
+import qualified Storage.Beam.FarePolicy.DriverExtraFeeBounds as BeamDEFB
 import Storage.Tabular.FarePolicy.DriverExtraFeeBounds
+import qualified Storage.Tabular.FarePolicy.DriverExtraFeeBounds as Domain
 
 findAll' ::
   ( Transactionable m,
@@ -38,9 +45,43 @@ findAll' farePolicyId = do
     orderBy [asc $ driverExtraFeeBounds ^. DriverExtraFeeBoundsStartDistance]
     return driverExtraFeeBounds
 
+findAll ::
+  ( L.MonadFlow m
+  -- , Log m
+  ) =>
+  Id DFP.FarePolicy ->
+  m [Domain.FullDriverExtraFeeBounds]
+findAll farePolicyId = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure []) (transformBeamDriverExtraFeeBoundsToDomain <$>) <$> KV.findAllWithOptionsKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDEFB.farePolicyId $ Se.Eq (getId farePolicyId)] (Se.Asc BeamDEFB.startDistance) Nothing Nothing
+    Nothing -> pure []
+
 deleteAll' :: Id DFP.FarePolicy -> FullEntitySqlDB ()
 deleteAll' farePolicyId =
   Esq.delete' $ do
     driverExtraFeeBounds <- from $ table @DriverExtraFeeBoundsT
     where_ $
       driverExtraFeeBounds ^. DriverExtraFeeBoundsFarePolicyId ==. val (toKey farePolicyId)
+
+transformBeamDriverExtraFeeBoundsToDomain :: BeamDEFB.DriverExtraFeeBounds -> Domain.FullDriverExtraFeeBounds
+transformBeamDriverExtraFeeBoundsToDomain BeamDEFB.DriverExtraFeeBoundsT {..} = do
+  ( KTI.Id farePolicyId,
+    DFP.DriverExtraFeeBounds
+      { -- id = id,
+        -- farePolicyId = getId farePolicyId,
+        startDistance = startDistance,
+        minFee = minFee,
+        maxFee = maxFee
+      }
+    )
+
+transformDomainDriverExtraFeeBoundsToBeam :: Domain.FullDriverExtraFeeBounds -> BeamDEFB.DriverExtraFeeBounds
+transformDomainDriverExtraFeeBoundsToBeam (KTI.Id farePolicyId, DFP.DriverExtraFeeBounds {..}) =
+  BeamDEFB.DriverExtraFeeBoundsT
+    { -- id = id,
+      farePolicyId = farePolicyId,
+      startDistance = startDistance,
+      minFee = minFee,
+      maxFee = maxFee
+    }

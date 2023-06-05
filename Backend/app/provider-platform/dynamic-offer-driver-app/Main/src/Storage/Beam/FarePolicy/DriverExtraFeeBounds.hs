@@ -15,7 +15,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Beam.FarePolicy.FarePolicyProgressiveDetails where
+module Storage.Beam.FarePolicy.DriverExtraFeeBounds where
 
 import qualified Data.Aeson as A
 import qualified Data.HashMap.Internal as HM
@@ -28,7 +28,7 @@ import qualified Database.Beam as B
 --   ( Postgres,
 --   )
 -- import Database.PostgreSQL.Simple.FromField (FromField, fromField)
--- -- import qualified Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Domain
+-- -- import qualified Domain.Types.FarePolicy.DriverExtraFeeBounds as Domain
 
 -- import qualified Domain.Types.FareParameters as Domain
 
@@ -59,42 +59,35 @@ instance IsString Meters where
 instance IsString Money where
   fromString = show
 
-data FarePolicyProgressiveDetailsT f = FarePolicyProgressiveDetailsT
-  { farePolicyId :: B.C f Text,
-    baseDistance :: B.C f Meters,
-    baseFare :: B.C f Money,
-    -- perExtraKmFare :: B.C f HighPrecMoney,
-    deadKmFare :: B.C f Money,
-    waitingCharge :: B.C f (Maybe Domain.WaitingCharge),
-    freeWatingTime :: B.C f (Maybe Minutes),
-    nightShiftCharge :: B.C f (Maybe Domain.NightShiftCharge)
+data DriverExtraFeeBoundsT f = DriverExtraFeeBoundsT
+  { -- id :: B.C f Text,
+    farePolicyId :: B.C f Text,
+    startDistance :: B.C f Meters,
+    minFee :: B.C f Money,
+    maxFee :: B.C f Money
   }
   deriving (Generic, B.Beamable)
 
-instance B.Table FarePolicyProgressiveDetailsT where
-  data PrimaryKey FarePolicyProgressiveDetailsT f
+instance B.Table DriverExtraFeeBoundsT where
+  data PrimaryKey DriverExtraFeeBoundsT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
   primaryKey = Id . farePolicyId
 
-instance ModelMeta FarePolicyProgressiveDetailsT where
-  modelFieldModification = farePolicyProgressiveDetailsTMod
+instance ModelMeta DriverExtraFeeBoundsT where
+  modelFieldModification = driverExtraFeeBoundsTMod
   modelTableName = "fare_parameters_progressive_details"
   mkExprWithDefault _ = B.insertExpressions []
 
-type FarePolicyProgressiveDetails = FarePolicyProgressiveDetailsT Identity
+type DriverExtraFeeBounds = DriverExtraFeeBoundsT Identity
 
-instance FromJSON FarePolicyProgressiveDetails where
+instance FromJSON DriverExtraFeeBounds where
   parseJSON = A.genericParseJSON A.defaultOptions
 
-instance ToJSON FarePolicyProgressiveDetails where
+instance ToJSON DriverExtraFeeBounds where
   toJSON = A.genericToJSON A.defaultOptions
 
-deriving stock instance Show FarePolicyProgressiveDetails
-
-deriving stock instance Ord Domain.WaitingCharge
-
-deriving stock instance Ord Domain.NightShiftCharge
+deriving stock instance Show DriverExtraFeeBounds
 
 -- instance FromField Domain.NightShiftCharge where
 --   fromField = fromFieldEnum
@@ -110,32 +103,29 @@ deriving stock instance Ord Domain.NightShiftCharge
 
 -- deriving stock instance Read Domain.WaitingCharge
 
-farePolicyProgressiveDetailsTMod :: FarePolicyProgressiveDetailsT (B.FieldModification (B.TableField FarePolicyProgressiveDetailsT))
-farePolicyProgressiveDetailsTMod =
+driverExtraFeeBoundsTMod :: DriverExtraFeeBoundsT (B.FieldModification (B.TableField DriverExtraFeeBoundsT))
+driverExtraFeeBoundsTMod =
   B.tableModification
-    { farePolicyId = B.fieldNamed "fare_policy_id",
-      baseDistance = B.fieldNamed "base_distance",
-      baseFare = B.fieldNamed "base_fare",
-      -- perExtraKmFare = B.fieldNamed "per_km_extra_fare",
-      deadKmFare = B.fieldNamed "dead_km_fare",
-      waitingCharge = B.fieldNamed "waiting_charge",
-      freeWatingTime = B.fieldNamed "free_waiting_time",
-      nightShiftCharge = B.fieldNamed "night_shift_charge"
+    { -- id = B.fieldNamed "id",
+      farePolicyId = B.fieldNamed "fare_policy_id",
+      startDistance = B.fieldNamed "start_distance",
+      minFee = B.fieldNamed "min_fee",
+      maxFee = B.fieldNamed "max_fee"
     }
 
-instance Serialize FarePolicyProgressiveDetails where
+instance Serialize DriverExtraFeeBounds where
   put = error "undefined"
   get = error "undefined"
 
 psToHs :: HM.HashMap Text Text
 psToHs = HM.empty
 
-farePolicyProgressiveDetailsToHSModifiers :: M.Map Text (A.Value -> A.Value)
-farePolicyProgressiveDetailsToHSModifiers =
+driverExtraFeeBoundsToHSModifiers :: M.Map Text (A.Value -> A.Value)
+driverExtraFeeBoundsToHSModifiers =
   M.empty
 
-farePolicyProgressiveDetailsToPSModifiers :: M.Map Text (A.Value -> A.Value)
-farePolicyProgressiveDetailsToPSModifiers =
+driverExtraFeeBoundsToPSModifiers :: M.Map Text (A.Value -> A.Value)
+driverExtraFeeBoundsToPSModifiers =
   M.empty
 
-$(enableKVPG ''FarePolicyProgressiveDetailsT ['farePolicyId] [])
+$(enableKVPG ''DriverExtraFeeBoundsT ['farePolicyId] [])

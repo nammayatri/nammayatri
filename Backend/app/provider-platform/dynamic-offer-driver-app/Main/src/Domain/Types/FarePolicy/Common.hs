@@ -21,10 +21,10 @@ data WaitingChargeInfo = WaitingChargeInfo
   { freeWaitingTime :: Minutes,
     waitingCharge :: WaitingCharge
   }
-  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema, Read)
 
 data WaitingCharge = PerMinuteWaitingCharge HighPrecMoney | ConstantWaitingCharge Money
-  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema, Read)
 
 data NightShiftCharge = ProgressiveNightShiftCharge Float | ConstantNightShiftCharge Money
-  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema, Read)

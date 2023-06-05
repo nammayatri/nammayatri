@@ -36,7 +36,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
--- import Lib.Utils
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize as Se
 import Storage.Tabular.Vehicle ()
@@ -84,7 +84,7 @@ data FarePolicySlabsDetailsSlabT f = FarePolicySlabsDetailsSlabT
   { farePolicyId :: B.C f Text,
     startDistance :: B.C f Meters,
     baseFare :: B.C f Money,
-    waitingCharge :: B.C f (Maybe Domain.WaitingCharge),
+    waitingChargeInfo :: B.C f (Maybe Domain.WaitingChargeInfo),
     nightShiftCharge :: B.C f (Maybe Domain.NightShiftCharge)
   }
   deriving (Generic, B.Beamable)
@@ -112,6 +112,8 @@ deriving stock instance Show FarePolicySlabsDetailsSlab
 
 deriving stock instance Ord Domain.WaitingCharge
 
+deriving stock instance Ord Domain.WaitingChargeInfo
+
 deriving stock instance Ord Domain.NightShiftCharge
 
 -- deriving stock instance Read Domain.NightShiftCharge
@@ -124,7 +126,7 @@ farePolicySlabsDetailsSlabTMod =
     { farePolicyId = B.fieldNamed "fare_policy_id",
       startDistance = B.fieldNamed "start_distance",
       baseFare = B.fieldNamed "base_fare",
-      waitingCharge = B.fieldNamed "waiting_charge",
+      waitingChargeInfo = B.fieldNamed "waiting_charge_info",
       nightShiftCharge = B.fieldNamed "night_shift_charge"
     }
 
