@@ -42,6 +42,7 @@ import Kernel.External.Encryption
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (isNothing)
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -123,6 +124,7 @@ verifyDL isDashboard mbMerchant (personId, _) req@DriverDLReq {..} = do
           let extractDLNumber = removeSpaceAndDash <$> extractedDL.dlNumber
           let dlNumber = removeSpaceAndDash <$> Just driverLicenseNumber
           -- disable this check for debugging with mock-idfy
+          cacheExtractedDl person.id extractDLNumber operatingCity
           unless (extractDLNumber == dlNumber) $
             throwImageError imageId1 $ ImageDocumentNumberMismatch (maybe "null" maskText extractDLNumber) (maybe "null" maskText dlNumber)
         Nothing -> throwImageError imageId1 ImageExtractionFailed
@@ -185,29 +187,44 @@ verifyDLFlow person onboardingDocumentConfig dlNumber driverDateOfBirth imageId1
 onVerifyDL :: Domain.IdfyVerification -> Idfy.DLVerificationOutput -> Flow AckResponse
 onVerifyDL verificationReq output = do
   person <- Person.findById verificationReq.driverId >>= fromMaybeM (PersonNotFound verificationReq.driverId.getId)
+  let key = dlCacheKey person.id
+  extractedDlAndOperatingCity <- Redis.safeGet key
+  case (output.status, verificationReq.issueDateOnDoc, extractedDlAndOperatingCity, verificationReq.driverDateOfBirth) of
+    (Just status, Just issueDate, Just (extractedDL, operatingCity), Just dob) | status == "id_not_found" -> dlNotFoundFallback issueDate (extractedDL, operatingCity) dob verificationReq person
+    _ -> do
+      void $ Redis.del key
+      linkDl person
+  where
+    linkDl :: Person.Person -> Flow AckResponse
+    linkDl person = do
+      if verificationReq.imageExtractionValidation == Domain.Skipped
+        && isJust verificationReq.issueDateOnDoc
+        && ( (convertUTCTimetoDate <$> verificationReq.issueDateOnDoc)
+               /= (convertUTCTimetoDate <$> (convertTextToUTC output.date_of_issue))
+           )
+        then do
+          runTransaction $ IVQuery.updateExtractValidationStatus verificationReq.requestId Domain.Failed
+          pure Ack
+        else do
+          now <- getCurrentTime
+          id <- generateGUID
+          onboardingDocumentConfig <- QODC.findByMerchantIdAndDocumentType person.merchantId DTO.DL >>= fromMaybeM (OnboardingDocumentConfigNotFound person.merchantId.getId (show DTO.DL))
+          mEncryptedDL <- encrypt `mapM` output.id_number
+          let mLicenseExpiry = convertTextToUTC (output.t_validity_to <|> output.nt_validity_to)
+          let mDriverLicense = createDL onboardingDocumentConfig person.id output id verificationReq.documentImageId1 verificationReq.documentImageId2 now <$> mEncryptedDL <*> mLicenseExpiry
 
-  if verificationReq.imageExtractionValidation == Domain.Skipped
-    && isJust verificationReq.issueDateOnDoc
-    && ( (convertUTCTimetoDate <$> verificationReq.issueDateOnDoc)
-           /= (convertUTCTimetoDate <$> (convertTextToUTC output.date_of_issue))
-       )
-    then runTransaction $ IVQuery.updateExtractValidationStatus verificationReq.requestId Domain.Failed >> pure Ack
-    else do
-      now <- getCurrentTime
-      id <- generateGUID
-      onboardingDocumentConfig <- QODC.findByMerchantIdAndDocumentType person.merchantId DTO.DL >>= fromMaybeM (OnboardingDocumentConfigNotFound person.merchantId.getId (show DTO.DL))
-      mEncryptedDL <- encrypt `mapM` output.id_number
-      let mLicenseExpiry = convertTextToUTC (output.t_validity_to <|> output.nt_validity_to)
-      let mDriverLicense = createDL onboardingDocumentConfig person.id output id verificationReq.documentImageId1 verificationReq.documentImageId2 now <$> mEncryptedDL <*> mLicenseExpiry
+          case mDriverLicense of
+            Just driverLicense -> do
+              runTransaction $ Query.upsert driverLicense
+              case driverLicense.driverName of
+                Just name_ -> runTransaction $ Person.updateName person.id name_
+                Nothing -> return ()
+              return Ack
+            Nothing -> return Ack
 
-      case mDriverLicense of
-        Just driverLicense -> do
-          runTransaction $ Query.upsert driverLicense
-          case driverLicense.driverName of
-            Just name_ -> runTransaction $ Person.updateName person.id name_
-            Nothing -> return ()
-          return Ack
-        Nothing -> return Ack
+dlCacheKey :: Id Person.Person -> Text
+dlCacheKey personId =
+  "providerPlatform:dlCacheKey:" <> personId.getId
 
 createDL ::
   DTO.OnboardingDocumentConfig ->
@@ -271,3 +288,24 @@ removeSpaceAndDash = T.replace "-" "" . T.replace " " ""
 
 convertUTCTimetoDate :: UTCTime -> Text
 convertUTCTimetoDate utctime = T.pack (DT.formatTime DT.defaultTimeLocale "%d/%m/%Y" utctime)
+
+cacheExtractedDl :: Id Person.Person -> Maybe Text -> Text -> Flow ()
+cacheExtractedDl _ Nothing _ = return ()
+cacheExtractedDl personId extractedDL operatingCity = do
+  let key = dlCacheKey personId
+  authTokenCacheExpiry <- getSeconds <$> asks (.authTokenCacheExpiry)
+  Redis.setExp key (extractedDL, operatingCity) authTokenCacheExpiry
+
+dlNotFoundFallback :: UTCTime -> (Text, Text) -> UTCTime -> Domain.IdfyVerification -> Person.Person -> Flow AckResponse
+dlNotFoundFallback issueDate (extractedDL, operatingCity) dob verificationReq person = do
+  let dlreq =
+        DriverDLReq
+          { driverLicenseNumber = extractedDL,
+            operatingCity = operatingCity,
+            driverDateOfBirth = dob,
+            imageId1 = verificationReq.documentImageId1,
+            imageId2 = verificationReq.documentImageId2,
+            dateOfIssue = Just issueDate
+          }
+  void $ verifyDL False Nothing (person.id, person.merchantId) dlreq
+  return Ack
