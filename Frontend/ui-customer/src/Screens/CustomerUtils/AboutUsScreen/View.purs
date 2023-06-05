@@ -15,10 +15,8 @@
 
 module Screens.AboutUsScreen.View where
 
-import Common.Types.App (LazyCheck(..))
-import Screens.CustomerUtils.AboutUsScreen.ComponentConfig (genericHeaderConfig)
-
 import Animation as Anim
+import Common.Types.App (LazyCheck(..))
 import Components.ComplaintsModel as ComplaintsModel
 import Components.GenericHeader as GenericHeader
 import Data.Maybe (Maybe(..))
@@ -33,6 +31,7 @@ import Merchant.Utils (getValueFromConfig)
 import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (<>), (==))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, text, textSize, textView, visibility, weight, width)
 import Screens.AboutUsScreen.Controller (Action(..), ScreenOutput, eval)
+import Screens.CustomerUtils.AboutUsScreen.ComponentConfig (genericHeaderConfig)
 import Screens.Types as ST
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
@@ -226,12 +225,12 @@ privacyPolicyView state =
 
 contactUsData :: ST.AboutUsScreenState -> Array ComplaintsModel.CardData
 contactUsData state = [
-  { title : (getString COMPLAINTS_GRIEVANCES)
-  , subTitle : (getString COMPLAINTS_DESCRIPTION)
-  , addtionalData : Just (getString COMPLAINTS_DESCRIPTION_ADDITIONAL)
+  { title : (getString CORPORATE_ADDRESS)
+  , subTitle : (getString CORPORATE_ADDRESS_DESCRIPTION)
+  , addtionalData : Just (getString CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL)
   }
 , { title : (getString REGISTERED_ADDRESS)
   , subTitle : (getString REGISTERED_ADDRESS_DESCRIPTION)
-  , addtionalData : Nothing
+  , addtionalData : Just (getString REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL)
   }
 ]

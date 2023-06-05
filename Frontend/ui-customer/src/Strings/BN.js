@@ -439,9 +439,10 @@ const bengaliStrings = {
   "NAVIGATE_TO_PICKUP" : "পিকআপে নেভিগেট করুন",
   "REQUEST_RECEIVED_WE_WILL_CALL_YOU_BACK_SOON" : "অনুরোধ পেয়েছি. আমরা তোমার সাথে শীঘ্রই যোগাযোগ করবো",
   "CONTACT_REMOVED_SUCCESSFULLY" : "যোগাযোগ সফলভাবে সরানো হয়েছে",
-  "COMPLAINTS_GRIEVANCES" : "অভিযোগ এবং অভিযোগ",
-  "COMPLAINTS_DESCRIPTION" : "কোনো অভিযোগের জন্য, অনুগ্রহ করে আমাদের সাথে <u>yatrisathi.support@wb.gov.in</u> এ যোগাযোগ করুন;",
-  "COMPLAINTS_DESCRIPTION_ADDITIONAL" : "অভিযোগের প্রতিকারের জন্য, অনুগ্রহ করে আমাদের <u>গোপনীয়তা নীতি</u> পড়ুন",
+  "CORPORATE_ADDRESS" : "অভিযোগ এবং অভিযোগ",
+  "CORPORATE_ADDRESS_DESCRIPTION" : "কোনো অভিযোগের জন্য, অনুগ্রহ করে আমাদের সাথে <u>yatrisathi.support@wb.gov.in</u> এ যোগাযোগ করুন;",
+  "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL" : "অভিযোগের প্রতিকারের জন্য, অনুগ্রহ করে আমাদের <u>গোপনীয়তা নীতি</u> পড়ুন",
   "REGISTERED_ADDRESS" : "নিবন্ধিত ঠিকানা",
-  "REGISTERED_ADDRESS_DESCRIPTION" : "Stallion Business Centre, No. 444, 3rd & 4th Floor, 18th Main, 6th Block, Koramangala, Bengaluru, Karnataka- 560095, India"
+  "REGISTERED_ADDRESS_DESCRIPTION" : "Stallion Business Centre, No. 444, 3rd & 4th Floor, 18th Main, 6th Block, Koramangala, Bengaluru, Karnataka- 560095, India",
+  "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : ""
 }

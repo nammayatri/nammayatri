@@ -211,13 +211,13 @@ horizontalLine marginLeft marginRight =
   ][]
 
 contactUsData :: ST.AboutUsScreenState -> Array ComplaintsModel.CardData
-contactUsData state = [
-  { title : (getString COMPLAINTS_GRIEVANCES)
-  , subTitle : (getString COMPLAINTS_DESCRIPTION)
-  , addtionalData : Just (getString COMPLAINTS_DESCRIPTION_ADDITIONAL)
+contactUsData state =[
+  { title : (getString CORPORATE_ADDRESS)
+  , subTitle : (getString CORPORATE_ADDRESS_DESCRIPTION)
+  , addtionalData : Just (getString CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL)
   }
 , { title : (getString REGISTERED_ADDRESS)
   , subTitle : (getString REGISTERED_ADDRESS_DESCRIPTION)
-  , addtionalData : Nothing
+  , addtionalData : Just (getString REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL)
   }
 ]

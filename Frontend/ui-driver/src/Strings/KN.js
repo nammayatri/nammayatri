@@ -458,9 +458,10 @@ const kannadaStrings = {
   RIDE_RELATED : "ಸವಾರಿ ಸಂಬಂಧಿತ",
   LOST_AND_FOUND : "ಕಳೆದು ಮತ್ತೆ ದೊರಕಿದ",
   REPORT_LOST_ITEM : "ಕಳೆದುಹೋದ ಐಟಂ ಅನ್ನು ವರದಿ ಮಾಡಿ",
-  COMPLAINTS_GRIEVANCES : "ದೂರುಗಳು ಮತ್ತು ಕುಂದುಕೊರತೆಗಳು",
-  COMPLAINTS_DESCRIPTION : "ಯಾವುದೇ ದೂರುಗಳಿಗಾಗಿ, ದಯವಿಟ್ಟು ನಮ್ಮನ್ನು ಸಂಪರ್ಕಿಸಿ <u>nammayatri.support@juspay.in</u>;",
-  COMPLAINTS_DESCRIPTION_ADDITIONAL : "ಕುಂದುಕೊರತೆಗಳ ಪರಿಹಾರಕ್ಕಾಗಿ, ದಯವಿಟ್ಟು ನಮ್ಮ <u>ಗೌಪ್ಯತಾ ನೀತಿಯನ್ನು</u> ಉಲ್ಲೇಖಿಸಿ",
+  CORPORATE_ADDRESS : "ಕಾರ್ಪೊರೇಟ್ ವಿಳಾಸ",
+  CORPORATE_ADDRESS_DESCRIPTION : "ಜಸ್ಪೇ ಟೆಕ್ನಾಲಜೀಸ್ ಪ್ರೈವೇಟ್ ಲಿಮಿಟೆಡ್ <br> ಗಿರಿಜಾ ಬಿಲ್ಡಿಂಗ್, ಸಂಖ್ಯೆ 817, ಗಣಪತಿ ದೇವಸ್ಥಾನ ರಸ್ತೆ, 8ನೇ ಬ್ಲಾಕ್, ಕೋರಮಂಗಲ, ಬೆಂಗಳೂರು, ಕರ್ನಾಟಕ 560095, ಭಾರತ.",
+  CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL : "ವೆಬ್‌ಸೈಟ್ : <u>https://nammayatri.in/</u>",
   REGISTERED_ADDRESS : "ನೋಂದಾಯಿಸಿದ ವಿಳಾಸ",
-  REGISTERED_ADDRESS_DESCRIPTION : "Stallion Business Centre, No. 444, 3rd & 4th Floor, 18th Main, 6th Block, Koramangala, Bengaluru, Karnataka- 560095, India"
+  REGISTERED_ADDRESS_DESCRIPTION : "ಜಸ್ಪೇ ಟೆಕ್ನಾಲಜೀಸ್ ಪ್ರೈವೇಟ್ ಲಿಮಿಟೆಡ್ <br> ಸ್ಟಾಲಿಯನ್ ಬಿಸಿನೆಸ್ ಸೆಂಟರ್, ನಂ. 444, 3ನೇ ಮತ್ತು 4ನೇ ಮಹಡಿ, 18ನೇ ಮುಖ್ಯ ರಸ್ತೆ, 6ನೇ ಬ್ಲಾಕ್, ಕೋರಮಂಗಲ ಬೆಂಗಳೂರು, ಕರ್ನಾಟಕ- 560095, ಭಾರತ",
+  REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL : "ವೆಬ್‌ಸೈಟ್ : <u>https://nammayatri.in/</u>"
 }
