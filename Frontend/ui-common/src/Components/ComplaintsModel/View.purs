@@ -58,17 +58,6 @@ infoComponentView item =
             , color Color.black650
             ]
           <> (FontStyle.body3 TypoGraphy)
-          <> ( if contains (Pattern "<u>") item.subTitle then
-                [ onClick
-                    ( \_ -> do
-                        _ <- openUrlInMailApp (slice ((fromMaybe 0 $ indexOf (Pattern (">")) item.subTitle) + 1) (fromMaybe 0 $ lastIndexOf (Pattern ("<")) item.subTitle) item.subTitle)
-                        pure unit
-                    )
-                    (const unit)
-                ]
-              else
-                []
-            )
       ]
         <> if isJust item.addtionalData then
             [ textView
@@ -78,10 +67,10 @@ infoComponentView item =
                   , color Color.black650
                   ]
                 <> (FontStyle.body3 TypoGraphy)
-                <> ( if contains (Pattern "<u>") item.subTitle then
+                <> ( if contains (Pattern "<u>") (fromMaybe "" item.addtionalData) then
                       [ onClick
                           ( \_ -> do
-                              _ <- JB.openUrlInApp $ getValueFromConfig "PRIVACY_POLICY_LINK"
+                              _ <- JB.openUrlInApp $ (slice ((fromMaybe 0 $ indexOf (Pattern (">")) (fromMaybe "" item.addtionalData)) + 1) (fromMaybe 0 $ lastIndexOf (Pattern ("<")) (fromMaybe "" item.addtionalData)) (fromMaybe "" item.addtionalData))
                               pure unit
                           )
                           (const unit)

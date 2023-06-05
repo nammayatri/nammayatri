@@ -452,9 +452,10 @@ const englishStrings = {
   "NAVIGATE_TO_PICKUP" : "Navigate to pickup",
   "REQUEST_RECEIVED_WE_WILL_CALL_YOU_BACK_SOON" : "Request received. We will call you back soon",
   "CONTACT_REMOVED_SUCCESSFULLY" : "Contact Removed Successfully",
-  "COMPLAINTS_GRIEVANCES" : "Complaints & Grievances",
-  "COMPLAINTS_DESCRIPTION" : "For any complaints, please reach out to us at <u>nammayatri.support@juspay.in</u>;",
-  "COMPLAINTS_DESCRIPTION_ADDITIONAL" : "For Redressal of grievances, please refer to our <u>Privacy Policy</u>",
+  "CORPORATE_ADDRESS" : "Corporate Address",
+  "CORPORATE_ADDRESS_DESCRIPTION" : "Juspay Technologies Private Limited <br> Girija Building, Number 817, Ganapathi Temple Rd, 8th Block, Koramangala, Bengaluru, Karnataka 560095, India.",
+  "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL" :  "Website: <u>https://nammayatri.in/</u>",
   "REGISTERED_ADDRESS" : "Registered Address",
-  "REGISTERED_ADDRESS_DESCRIPTION" : "Stallion Business Centre, No. 444, 3rd & 4th Floor, 18th Main, 6th Block, Koramangala, Bengaluru, Karnataka- 560095, India"
+  "REGISTERED_ADDRESS_DESCRIPTION" : "Juspay Technologies Private Limited <br> Stallion Business Centre, No. 444, 3rd & 4th Floor, 18th Main, 6th Block, Koramangala Bengaluru, Karnataka- 560095, India.",
+  "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "Website: <u>https://nammayatri.in/</u>"
 }

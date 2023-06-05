@@ -462,9 +462,10 @@ const hindiStrings = {
   LOST_AND_FOUND : "लॉस्ट एंड फाउंड ",
   REPORT_LOST_ITEM : "खोई हुई वस्तु की सूचना दें",
   MAKE_YOURSELF_AVAILABLE_FOR : "निम्नलिखित के लिए स्वयं को उपलब्ध कराएं",
-  COMPLAINTS_GRIEVANCES : "शिकायतें और परिवेदना",
-  COMPLAINTS_DESCRIPTION : "किसी भी शिकायत के लिए, कृप्या हम से  <u>nammayatri.support@juspay.in</u> पर संपर्क करें;",
-  COMPLAINTS_DESCRIPTION_ADDITIONAL : "शिकायतों के निवारण के लिए, कृप्या हमारी <u> प्राइवेसी पॉलिसी </u> देखे",
+  CORPORATE_ADDRESS : "कॉर्पोरेट पता",
+  CORPORATE_ADDRESS_DESCRIPTION : "जसपे टेक्नोलॉजीज प्राइवेट लिमिटेड <br> गिरिजा बिल्डिंग, नंबर 817, गणपति मंदिर रोड, 8वां ब्लॉक, कोरमंगला, बेंगलुरु, कर्नाटक 560095, भारत।",
+  CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL : "वेबसाइट : <u>https://nammayatri.in/</u>",
   REGISTERED_ADDRESS : "पंजीकृत पता",
-  REGISTERED_ADDRESS_DESCRIPTION : "Stallion Business Centre, No. 444, 3rd & 4th Floor, 18th Main, 6th Block, Koramangala, Bengaluru, Karnataka- 560095, India"
+  REGISTERED_ADDRESS_DESCRIPTION : "जस्पे टेक्नोलॉजीज प्राइवेट लिमिटेड <br> स्टैलियन बिजनेस सेंटर, नंबर 444, तीसरी और चौथी मंजिल, 18वीं मेन, 6वां ब्लॉक, कोरमंगला बेंगलुरु, कर्नाटक- 560095, भारत।",
+  REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL : "वेबसाइट : <u>https://nammayatri.in/</u>"
 }

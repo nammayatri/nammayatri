@@ -445,9 +445,10 @@ const kannadaStrings = {
   "NAVIGATE_TO_PICKUP" : "ಪಿಕಪ್ ಮಾಡಲು ನ್ಯಾವಿಗೇಟ್ ಮಾಡಿ",
   "REQUEST_RECEIVED_WE_WILL_CALL_YOU_BACK_SOON" : "ವಿನಂತಿಯನ್ನು ಸ್ವೀಕರಿಸಲಾಗಿದೆ. ನಾವು ಶೀಘ್ರದಲ್ಲೇ ನಿಮ್ಮನ್ನು ಸಂಪರ್ಕಿಸುತ್ತೇವೆ",
   "CONTACT_REMOVED_SUCCESSFULLY" : "ಸಂಪರ್ಕವನ್ನು ಯಶಸ್ವಿಯಾಗಿ ತೆಗೆದುಹಾಕಲಾಗಿದೆ",
-  "COMPLAINTS_GRIEVANCES" : "ದೂರುಗಳು ಮತ್ತು ಕುಂದುಕೊರತೆಗಳು",
-  "COMPLAINTS_DESCRIPTION" : "ಯಾವುದೇ ದೂರುಗಳಿಗಾಗಿ, ದಯವಿಟ್ಟು ನಮ್ಮನ್ನು ಸಂಪರ್ಕಿಸಿ <u>nammayatri.support@juspay.in</u>;",
-  "COMPLAINTS_DESCRIPTION_ADDITIONAL" : "ಕುಂದುಕೊರತೆಗಳ ಪರಿಹಾರಕ್ಕಾಗಿ, ದಯವಿಟ್ಟು ನಮ್ಮ <u>ಗೌಪ್ಯತಾ ನೀತಿಯನ್ನು</u> ಉಲ್ಲೇಖಿಸಿ",
+  "CORPORATE_ADDRESS" : "ಕಾರ್ಪೊರೇಟ್ ವಿಳಾಸ",
+  "CORPORATE_ADDRESS_DESCRIPTION" : "Juspay Technologies Private Limited <br> Girija Building, Number 817, Ganapathi Temple Rd, 8th Block, Koramangala, Bengaluru, Karnataka 560095, India.",
+  "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL" : "Website: <u>https://nammayatri.in/</u>",
   "REGISTERED_ADDRESS" : "ನೋಂದಾಯಿಸಿದ ವಿಳಾಸ",
-  "REGISTERED_ADDRESS_DESCRIPTION" : "Stallion Business Centre, No. 444, 3rd & 4th Floor, 18th Main, 6th Block, Koramangala, Bengaluru, Karnataka- 560095, India"
+  "REGISTERED_ADDRESS_DESCRIPTION" : "Juspay Technologies Private Limited <br> Stallion Business Centre, No. 444, 3rd & 4th Floor, 18th Main, 6th Block, Koramangala Bengaluru, Karnataka- 560095, India.",
+  "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "Website: <u>https://nammayatri.in/</u>"
 }
