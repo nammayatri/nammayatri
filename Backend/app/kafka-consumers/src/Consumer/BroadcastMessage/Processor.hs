@@ -23,7 +23,7 @@ import qualified Domain.Types.Message.MessageReport as Types
 import Environment
 import EulerHS.Prelude
 import qualified Kernel.External.Notification.FCM.Types as FCM
-import qualified Kernel.Storage.Esqueleto as Esq
+-- import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import qualified Storage.Queries.Message.MessageReport as MRQuery
 import qualified Storage.Queries.Person as Person
