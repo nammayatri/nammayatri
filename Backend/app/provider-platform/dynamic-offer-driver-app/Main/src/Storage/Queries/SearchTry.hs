@@ -61,6 +61,13 @@ findById (Id searchTry) = do
 --     Esq.limit 1
 --     return searchTryT
 
+findById' :: L.MonadFlow m => Id SearchTry -> m (Maybe SearchTry)
+findById' (Id searchTry) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> either (pure Nothing) (transformBeamSearchTryToDomain <$>) <$> KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamST.id $ Se.Eq searchTry]
+    Nothing -> pure Nothing
+
 findLastByRequestId ::
   L.MonadFlow m =>
   Id SearchRequest ->
