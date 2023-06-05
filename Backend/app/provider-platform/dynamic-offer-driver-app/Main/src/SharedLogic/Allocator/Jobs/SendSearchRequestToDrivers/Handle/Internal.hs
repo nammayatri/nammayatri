@@ -13,12 +13,12 @@
 -}
 
 module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal
-  ( isRideAlreadyAssigned,
-    getRescheduleTime,
+  ( getRescheduleTime,
     isReceivedMaxDriverQuotes,
     setBatchDurationLock,
     createRescheduleTime,
-    ifSearchRequestInvalid,
+    isSearchTryValid,
+    cancelSearchTry,
     module Reexport,
   )
 where
@@ -26,6 +26,7 @@ where
 import Domain.Types.Merchant.DriverPoolConfig
 import Domain.Types.SearchTry as DST
 import Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis (HedisFlow)
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
@@ -33,12 +34,11 @@ import Kernel.Utils.Common
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool as Reexport
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.SendSearchRequestToDrivers as Reexport
 import Storage.CachedQueries.CacheConfig (HasCacheConfig)
-import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
 
-ifSearchRequestInvalid ::
+isSearchTryValid ::
   ( HasCacheConfig r,
     HedisFlow m r,
     EsqDBFlow m r,
@@ -46,20 +46,10 @@ ifSearchRequestInvalid ::
   ) =>
   Id SearchTry ->
   m Bool
-ifSearchRequestInvalid searchTryId = do
+isSearchTryValid searchTryId = do
   (validTill, status) <- QST.getSearchTryStatusAndValidTill searchTryId >>= fromMaybeM (SearchTryDoesNotExist searchTryId.getId)
   now <- getCurrentTime
-  pure $ status == DST.CANCELLED || validTill <= now
-
-isRideAlreadyAssigned ::
-  ( HasCacheConfig r,
-    HedisFlow m r,
-    EsqDBFlow m r,
-    Log m
-  ) =>
-  Id SearchTry ->
-  m Bool
-isRideAlreadyAssigned searchTryId = isJust <$> QB.findBySTId searchTryId
+  pure $ status == DST.ACTIVE && validTill > now
 
 isReceivedMaxDriverQuotes ::
   ( HasCacheConfig r,
@@ -107,3 +97,6 @@ createRescheduleTime ::
   m UTCTime
 createRescheduleTime singleBatchProcessTime lastProcTime = do
   return $ fromIntegral singleBatchProcessTime `addUTCTime` lastProcTime
+
+cancelSearchTry :: (EsqDBFlow m r) => Id SearchTry -> m ()
+cancelSearchTry searchTryId = Esq.runTransaction $ QST.updateStatus searchTryId DST.CANCELLED

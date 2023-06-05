@@ -86,7 +86,6 @@ sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant driver
     handle =
       Handle
         { isBatchNumExceedLimit = I.isBatchNumExceedLimit driverPoolConfig searchTry.id,
-          isRideAlreadyAssigned = I.isRideAlreadyAssigned searchTry.id,
           isReceivedMaxDriverQuotes = I.isReceivedMaxDriverQuotes driverPoolConfig searchTry.id,
           getNextDriverPoolBatch = I.getNextDriverPoolBatch driverPoolConfig searchReq searchTry,
           sendSearchRequestToDrivers = I.sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolConfig,
@@ -99,5 +98,6 @@ sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant driver
                 incrementFailedTaskCounter = Metrics.incrementFailedTaskCounter merchant.name,
                 putTaskDuration = Metrics.putTaskDuration merchant.name
               },
-          ifSearchRequestIsInvalid = I.ifSearchRequestInvalid searchTry.id
+          isSearchTryValid = I.isSearchTryValid searchTry.id,
+          cancelSearchTry = I.cancelSearchTry searchTry.id
         }
