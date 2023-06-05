@@ -145,7 +145,7 @@ cancelSearch merchantId req searchRequestId = do
     QSRD.setInactiveBySRId searchRequestId
   for_ driverSearchReqs $ \driverReq -> do
     driver_ <- QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
-    Notify.notifyOnCancelSearchRequest merchantId driverReq.driverId driver_.deviceToken searchRequestId
+    Notify.notifyOnCancelSearchRequest merchantId driverReq.driverId driver_.deviceToken driverReq.searchTryId
 
 validateCancelSearchRequest ::
   ( EsqDBFlow m r
