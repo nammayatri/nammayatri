@@ -61,7 +61,7 @@ import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os)
-import Helpers.Utils (Merchant(..), addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getExpiryTime, getLocationName, parseNewContacts, saveRecents, setText', updateInputString, withinTimeRange, getMerchant, convertUTCtoISC, getCurrentUTC)
+import Helpers.Utils (Merchant(..), addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getExpiryTime, getLocationName, parseNewContacts, saveRecents, setText', updateInputString, withinTimeRange, getMerchant, convertUTCtoISC, getCurrentUTC, performHapticFeedback)
 import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
@@ -634,7 +634,9 @@ eval (ChatViewActionController (ChatView.TextChanged value)) state = do
                           false
   continue state{data{messageToBeSent = (STR.trim value)},props{sendMessageActive = sendMessageActive}}
 
-eval(ChatViewActionController (ChatView.Call)) state = continue state { props { showCallPopUp = true } }
+eval(ChatViewActionController (ChatView.Call)) state = do
+  _ <- pure $ performHapticFeedback unit
+  continue state { props { showCallPopUp = true } }
 
 eval (ChatViewActionController (ChatView.SendMessage)) state = do
   if state.data.messageToBeSent /= ""
@@ -656,6 +658,7 @@ eval (ChatViewActionController (ChatView.SendSuggestion chatSuggestion)) state =
   continue state
 
 eval (ChatViewActionController (ChatView.BackPressed)) state = do
+  _ <- pure $ performHapticFeedback unit
   _ <- pure $ hideKeyboardOnNavigation true
   continueWithCmd state [do
       pure $ BackPressed
@@ -673,6 +676,7 @@ eval RemoveChat state = do
   ]
 
 eval (DriverInfoCardActionController (DriverInfoCardController.MessageDriver)) state = do
+  _ <- pure $ performHapticFeedback unit
   _ <- pure $ updateLocalStage ChatWithDriver
   _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (length state.data.messages))
   continue state {props {currentStage = ChatWithDriver, sendMessageActive = false, unReadMessages = false }}
@@ -687,32 +691,42 @@ eval BackPressed state = do
                                 _ <- pure $ hideKeyboardOnNavigation true
                                 exit $ GoToHome
     SettingPrice    -> do
+                      _ <- pure $ performHapticFeedback unit
                       if state.props.showRateCard then continue state{props{showRateCard = false}}
                       else if state.props.showMultipleRideInfo then continue state{props{showMultipleRideInfo=false}}
                         else do
                         _ <- pure $ updateLocalStage SearchLocationModel
                         continue state{props{rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation}}
     ConfirmingLocation -> do
+                      _ <- pure $ performHapticFeedback unit
                       _ <- pure $ exitLocateOnMap ""
                       _ <- pure $ updateLocalStage SearchLocationModel
                       continue state{props{rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation},data{polygonCoordinates = "", nearByPickUpPoints = []}}
     FindingEstimate -> do
+                      _ <- pure $ performHapticFeedback unit
                       _ <- pure $ updateLocalStage SearchLocationModel
                       continue state{props{rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation}}
     QuoteList       -> do
+                      _ <- pure $ performHapticFeedback unit
                       let newState = if state.props.customerTip.enableTips then (tipEnabledState state) else state
                       if newState.props.customerTip.enableTips then continue ( newState{props { isPopUp = TipsPopUp} } )else continue newState{ props{isPopUp = if ( not null (filter (\a -> a.seconds > 0) state.data.quoteListModelState)) then ActiveQuotePopUp else ConfirmBack}}
-    PricingTutorial -> continue state { props { currentStage = SettingPrice}}
+    PricingTutorial -> do
+                      _ <- pure $ performHapticFeedback unit
+                      continue state { props { currentStage = SettingPrice}}
     DistanceOutsideLimits -> do
+                      _ <- pure $ performHapticFeedback unit
                       _ <- pure $ updateLocalStage SearchLocationModel
                       continue state{props{rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation }}
     ShortDistance -> do
+                      _ <- pure $ performHapticFeedback unit
                       _ <- pure $ updateLocalStage SearchLocationModel
                       continue state{props{isSource = Just false,isPopUp = NoPopUp, rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSearchLocation = SearchLocation}}
     FindingQuotes ->  do
+                      _ <- pure $ performHapticFeedback unit
                       let newState = if state.props.customerTip.enableTips then (tipEnabledState state) else state
                       continue $ newState { props{isPopUp = if state.props.customerTip.enableTips then TipsPopUp else ConfirmBack}}
     FavouriteLocationModel -> do
+                      _ <- pure $ performHapticFeedback unit
                       _ <- pure $ updateLocalStage (if state.props.isSearchLocation == NoView then HomeScreen else SearchLocationModel)
                       continue state { props { currentStage = if state.props.isSearchLocation == NoView then HomeScreen else SearchLocationModel}}
     ChatWithDriver -> do
@@ -769,7 +783,9 @@ eval (MAPREADY key latitude longitude) state =
       pure AfterRender
     ]
 
-eval OpenSearchLocation state = exit $ UpdateSavedLocation state { props { isSource = Just true, currentStage = SearchLocationModel, isSearchLocation = SearchLocation } }
+eval OpenSearchLocation state = do
+  _ <- pure $ performHapticFeedback unit
+  exit $ UpdateSavedLocation state { props { isSource = Just true, currentStage = SearchLocationModel, isSearchLocation = SearchLocation } }
 
 eval (SourceUnserviceableActionController (ErrorModalController.PrimaryButtonActionController PrimaryButtonController.OnClick)) state = continueWithCmd state [ do pure $ OpenSearchLocation ]
 
@@ -787,6 +803,7 @@ eval (UpdatePickupLocation  key lat lon) state =
             else continue state
 
 eval (CheckBoxClick autoAssign) state = do
+  _ <- pure $ performHapticFeedback unit
   let event = if autoAssign then "ny_user_pref_autoassigned" else "ny_user_pref_driveroffers"
   _ <- pure $ firebaseLogEvent event
   _ <- pure $ setValueToLocalStore FLOW_WITHOUT_OFFERS (show autoAssign)
@@ -865,6 +882,7 @@ eval (SettingSideBarActionController (SettingSideBarController.LiveStatsDashboar
   else continue state {props {showLiveDashboard = true}}
 
 eval (SearchLocationModelActionController (SearchLocationModelController.PrimaryButtonActionController PrimaryButtonController.OnClick)) state = do
+  _ <- pure $ performHapticFeedback unit
   _ <- pure $ exitLocateOnMap ""
   let newState = state{props{isSource = Just false, sourceSelectedOnMap = if (state.props.isSource == Just true) then true else state.props.sourceSelectedOnMap, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, locateOnMap = false}}
   updateAndExit newState $ LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false newState
@@ -873,9 +891,11 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = d
     _ <- pure $ spy "state homeScreen" state
     case state.props.currentStage of
       HomeScreen   -> do
+        _ <- pure $ performHapticFeedback unit
         _ <- pure $ firebaseLogEvent "ny_user_where_to_btn"
         exit $ UpdateSavedLocation state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel}}
       ConfirmingLocation -> do
+        _ <- pure $ performHapticFeedback unit
         _ <- pure $ exitLocateOnMap ""
         _ <- pure $ updateLocalStage FindingEstimate
         _ <- pure $ firebaseLogEvent "ny_user_confirm_pickup"
@@ -883,6 +903,7 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = d
         -- updateAndExit (updatedState) (UpdatedSource updatedState)
         updateAndExit updatedState $  (UpdatedSource updatedState)
       SettingPrice -> do
+                        _ <- pure $ performHapticFeedback unit
                         _ <- pure $ updateLocalStage FindingQuotes
                         let updatedState = state{props{currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime "LazyCheck")}}
                         updateAndExit (updatedState) (GetQuotes updatedState)
@@ -920,10 +941,13 @@ eval (SearchExpireCountDown seconds id status timerID) state = do
 
 eval CancelSearch state = case state.props.currentStage of
   FindingEstimate -> do
+    _ <- pure $ performHapticFeedback unit
     _ <- pure $ updateLocalStage SearchLocationModel
     _ <- pure $ firebaseLogEvent "ny_user_estimate_cancel_search"
     continue state { props { currentStage = SearchLocationModel, rideRequestFlow = false, isSearchLocation = SearchLocation } }
-  ConfirmingRide -> continue state { props { currentStage = SettingPrice, isSearchLocation = NoView } }
+  ConfirmingRide -> do
+    _ <- pure $ performHapticFeedback unit
+    continue state { props { currentStage = SettingPrice, isSearchLocation = NoView } }
   _ -> continue state
 
 eval SidebarCloseAnimationCompleted state = continue state --{props{sideBarStatus = SettingSideBarController.CLOSED}}
@@ -932,7 +956,8 @@ eval OpenPricingTutorial state = continue state { props { currentStage = Pricing
 
 eval (PricingTutorialModelActionController (PricingTutorialModelController.Close)) state = continue state { props { currentStage = SettingPrice } }
 
-eval (DriverInfoCardActionController (DriverInfoCardController.PrimaryButtonAC PrimaryButtonController.OnClick)) state =
+eval (DriverInfoCardActionController (DriverInfoCardController.PrimaryButtonAC PrimaryButtonController.OnClick)) state = do
+  _ <- pure $ performHapticFeedback unit
   continueWithCmd state
     [ do
         _ <- pure $ showDialer (getDriverNumber "")
@@ -960,14 +985,20 @@ eval (DriverInfoCardActionController (DriverInfoCardController.OnNavigate)) stat
   continue state
 
 eval (DriverInfoCardActionController (DriverInfoCardController.Support)) state = do
+  _ <- pure $ performHapticFeedback unit
   continue state{props{callSupportPopUp = true}}
 
 eval (DriverInfoCardActionController (DriverInfoCardController.CancelRide infoCard)) state = do
+  _ <- pure $ performHapticFeedback unit
   continue state { props { isCancelRide = true, cancellationReasons = cancelReasons "", cancelRideActiveIndex = Nothing, cancelReasonCode = "", cancelDescription = "" } }
 
-eval (DriverInfoCardActionController (DriverInfoCardController.LocationTracking)) state = continue state { props { isLocationTracking = true } }
+eval (DriverInfoCardActionController (DriverInfoCardController.LocationTracking)) state = do
+  _ <- pure $ performHapticFeedback unit
+  continue state { props { isLocationTracking = true } }
 
-eval (DriverInfoCardActionController (DriverInfoCardController.OpenEmergencyHelp)) state = continue state{props{emergencyHelpModal = true}}
+eval (DriverInfoCardActionController (DriverInfoCardController.OpenEmergencyHelp)) state = do
+  _ <- pure $ performHapticFeedback unit
+  continue state{props{emergencyHelpModal = true}}
 
 eval (DriverInfoCardActionController (DriverInfoCardController.ShareRide)) state = do
   continueWithCmd state
@@ -1017,7 +1048,9 @@ eval (EmergencyHelpModalAC (EmergencyHelpController.ContactSupport PopUpModal.On
     void $ pure $  showDialer $ getSupportNumber ""
     updateAndExit state{props{emergencyHelpModelState{showContactSupportPopUp = false}}} $ CallSupport state {props {emergencyHelpModelState{showContactSupportPopUp = false}}}
 
-eval (CancelRidePopUpAction (CancelRidePopUp.Button1 PrimaryButtonController.OnClick)) state = continue state { props { isCancelRide = false } }
+eval (CancelRidePopUpAction (CancelRidePopUp.Button1 PrimaryButtonController.OnClick)) state = do
+      _ <- pure $ performHapticFeedback unit
+      continue state { props { isCancelRide = false } }
 
 eval (CancelRidePopUpAction (CancelRidePopUp.OnGoBack)) state = continue state { props { isCancelRide = false } }
 
@@ -1030,6 +1063,7 @@ eval (CancelRidePopUpAction (CancelRidePopUp.ClearOptions)) state = do
   continue state { props { cancelDescription = "", cancelReasonCode = "", cancelRideActiveIndex = Nothing } }
 
 eval (CancelRidePopUpAction (CancelRidePopUp.Button2 PrimaryButtonController.OnClick)) state = do
+    _ <- pure $ performHapticFeedback unit
     let newState = state{props{isCancelRide = false,currentStage = HomeScreen, rideRequestFlow = false, isSearchLocation = NoView }}
     case state.props.cancelRideActiveIndex of
       Just index -> if ( (fromMaybe dummyCancelReason (state.props.cancellationReasons !! index)).reasonCode == "OTHER" || (fromMaybe dummyCancelReason (state.props.cancellationReasons !! index)).reasonCode == "TECHNICAL_GLITCH" ) then exit $ CancelRide newState{props{cancelDescription = if (newState.props.cancelDescription == "") then (fromMaybe dummyCancelReason (state.props.cancellationReasons !!index)).description else newState.props.cancelDescription }}
@@ -1157,6 +1191,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.EditTex
 eval (SearchLocationModelActionController (SearchLocationModelController.NoAction)) state = continue state
 
 eval (SearchLocationModelActionController (SearchLocationModelController.SourceClear)) state = do
+  _ <- pure $ performHapticFeedback unit
   if (state.props.isSearchLocation /= LocateOnMap) then do
     _ <- pure $ requestKeyboardShow (getNewIDWithTag "SourceEditText")
     pure unit
@@ -1165,6 +1200,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SourceC
   continue state { data { source = "" }, props { sourceLat = -0.1, sourceLong = -0.1, sourcePlaceId = Nothing, isSource = Just true, isSrcServiceable = true, isRideServiceable = true } }
 
 eval (SearchLocationModelActionController (SearchLocationModelController.DestinationClear)) state = do
+  _ <- pure $ performHapticFeedback unit
   if (state.props.isSearchLocation /= LocateOnMap) then do
     _ <- pure $ requestKeyboardShow (getNewIDWithTag "DestinationEditText")
     pure unit
@@ -1172,7 +1208,8 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Destina
     pure unit
   continue state { data { destination = "" }, props { destinationLat = -0.1, destinationLong = -0.1, destinationPlaceId = Nothing, isSource = Just false, isDestServiceable = true, isRideServiceable = true } }
 
-eval (SearchLocationModelActionController (SearchLocationModelController.GoBack)) state =
+eval (SearchLocationModelActionController (SearchLocationModelController.GoBack)) state = do
+  _ <- pure $ performHapticFeedback unit
   continueWithCmd state
     [ do
         _ <- pure $ hideKeyboardOnNavigation true
@@ -1185,6 +1222,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SetCurr
   continue state{props{ sourceSelectedOnMap = if (state.props.isSource == Just true) then false else state.props.sourceSelectedOnMap}}
 
 eval (SearchLocationModelActionController (SearchLocationModelController.SetLocationOnMap)) state = do
+  _ <- pure $ performHapticFeedback unit
   _ <- pure $ locateOnMap true 0.0 0.0 "" []
   _ <- pure $ removeAllPolylines ""
   _ <- pure $ hideKeyboardOnNavigation true
@@ -1202,6 +1240,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.UpdateS
       updateAndExit newState $ LocationSelected (fromMaybe dummyListItem newState.data.selectedLocationListItem) false newState
 
 eval (QuoteListModelActionController (QuoteListModelController.QuoteListItemActionController (QuoteListItemController.Click quote))) state = do
+  _ <- pure $ performHapticFeedback unit
   continueWithCmd (state { data { quoteListModelState = map (\x -> x { selectedQuote = (Just quote.id) }) state.data.quoteListModelState }, props { selectedQuote = Just quote.id } })
     [ do
         if (getValueToLocalStore AUTO_SELECTING) == "CANCELLED_AUTO_ASSIGN" then
@@ -1213,10 +1252,12 @@ eval (QuoteListModelActionController (QuoteListModelController.QuoteListItemActi
 
 
 eval (QuoteListModelActionController (QuoteListModelController.CancelAutoAssigning)) state = do
+  _ <- pure $ performHapticFeedback unit
   _ <- pure $ setValueToLocalStore AUTO_SELECTING "CANCELLED_AUTO_ASSIGN"
   continue state
 
 eval (QuoteListModelActionController (QuoteListModelController.QuoteListItemActionController QuoteListItemController.ConfirmRide)) state = do
+  _ <- pure $ performHapticFeedback unit
   _ <- pure $ firebaseLogEvent "ny_user_quote_confirm"
   exit $ ConfirmRide state
 
@@ -1238,6 +1279,7 @@ eval (QuoteListModelActionController (QuoteListModelController.QuoteListItemActi
     continue newState { props { selectedQuote = if newState.data.quoteListModelState == [] then Nothing else newState.props.selectedQuote } }
 
 eval (QuoteListModelActionController (QuoteListModelController.PrimaryButtonActionController PrimaryButtonController.OnClick)) state = do
+  _ <- pure $ performHapticFeedback unit
   case state.props.selectedQuote, (null state.data.quoteListModelState) of
     Just _, false -> do
       _ <- pure $ updateLocalStage ConfirmingRide
@@ -1246,40 +1288,57 @@ eval (QuoteListModelActionController (QuoteListModelController.PrimaryButtonActi
       updateAndExit newState $ ConfirmRide newState
     _, _ -> continue state
 
-eval (QuoteListModelActionController (QuoteListModelController.GoBack)) state = continueWithCmd state [ do pure $ BackPressed ]
+eval (QuoteListModelActionController (QuoteListModelController.GoBack)) state = do
+  _ <- pure $ performHapticFeedback unit
+  continueWithCmd state [ do pure $ BackPressed ]
 
 eval (QuoteListModelActionController (QuoteListModelController.TryAgainButtonActionController  PrimaryButtonController.OnClick)) state = updateAndExit state $ LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false state{props{currentStage = TryAgain, sourceSelectedOnMap = true}}
 
-eval (QuoteListModelActionController (QuoteListModelController.HomeButtonActionController PrimaryButtonController.OnClick)) state = updateAndExit state CheckCurrentStatus
+eval (QuoteListModelActionController (QuoteListModelController.HomeButtonActionController PrimaryButtonController.OnClick)) state = do
+  _ <- pure $ performHapticFeedback unit
+  updateAndExit state CheckCurrentStatus
 
 eval (Restart err) state = exit $ (LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false state)
 
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state =   case state.props.isPopUp of
   TipsPopUp -> do
+    _ <- pure $ performHapticFeedback unit
     _ <- pure $ firebaseLogEvent if state.props.customerTip.isTipSelected then ("ny_added_tip_for_" <> (show state.props.currentStage)) else "ny_no_tip_added"
     updateAndExit state{props{isPopUp = NoPopUp}} $ LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false state{props{currentStage = TryAgain, sourceSelectedOnMap = true, isPopUp = NoPopUp}}
   Logout -> continue state{props{isPopUp = NoPopUp}}
   _ -> do
+    _ <- pure $ performHapticFeedback unit
     _ <- pure $ firebaseLogEvent "ny_tip_not_applicable"
     if (isLocalStageOn FindingQuotes ) then exit $ CheckCurrentStatus else updateAndExit state{props{isPopUp = NoPopUp}} $ LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false state{props{currentStage = TryAgain, sourceSelectedOnMap = true, isPopUp = NoPopUp}}
 
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = case state.props.isPopUp of
   TipsPopUp -> case state.props.currentStage of
-    QuoteList -> updateAndExit state CheckCurrentStatus
-    FindingQuotes -> exit $ CheckCurrentStatus
+    QuoteList -> do
+      _ <- pure $ performHapticFeedback unit
+      updateAndExit state CheckCurrentStatus
+    FindingQuotes -> do 
+      _ <- pure $ performHapticFeedback unit
+      exit $ CheckCurrentStatus
     _ -> continue state
   Logout -> exit LogoutUser
   ConfirmBack -> do
     _ <- pure $ firebaseLogEvent "ny_no_retry"
     case (getValueToLocalStore LOCAL_STAGE) of
-      "QuoteList" -> do
+      "QuoteList" -> do 
+        _ <- pure $ performHapticFeedback unit
         exit $ CheckCurrentStatus
-      "FindingQuotes" -> continue state{props{isPopUp = NoPopUp}}
+      "FindingQuotes" -> do
+        _ <- pure $ performHapticFeedback unit
+        continue state{props{isPopUp = NoPopUp}}
       _ -> continue state
   NoPopUp -> continue state
-  ActiveQuotePopUp -> exit $ CheckCurrentStatus
+  ActiveQuotePopUp -> do
+    _ <- pure $ performHapticFeedback unit
+    exit $ CheckCurrentStatus
 
-eval (PopUpModalAction (PopUpModal.Tipbtnclick index value)) state = case state.props.isPopUp of
+eval (PopUpModalAction (PopUpModal.Tipbtnclick index value)) state = do
+  _ <- pure $ performHapticFeedback unit
+  case state.props.isPopUp of
     TipsPopUp -> continue state{props{customerTip{tipActiveIndex = index, tipForDriver= value, isTipSelected = not (index == 0)}}}
     _ -> continue state
 
@@ -1288,14 +1347,17 @@ eval (PopUpModalAction (PopUpModal.DismissPopup)) state = do
   continue newState
 
 eval (DistanceOutsideLimitsActionController (PopUpModal.OnButton2Click)) state = do
+  _ <- pure $ performHapticFeedback unit
   _ <- pure $ updateLocalStage SearchLocationModel
   continue state { props { isPopUp = NoPopUp, rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSearchLocation = SearchLocation, isSource = Just false, isSrcServiceable = true, isDestServiceable = true, isRideServiceable = true } }
 
 eval (ShortDistanceActionController (PopUpModal.OnButton2Click)) state = do
+  _ <- pure $ performHapticFeedback unit
   _ <- pure $ exitLocateOnMap ""
   exit $ UpdatedSource state
 
 eval (ShortDistanceActionController (PopUpModal.OnButton1Click)) state = do
+  _ <- pure $ performHapticFeedback unit
   _ <- pure $ updateLocalStage SearchLocationModel
   continue state{props{isSource = Just false, isPopUp = NoPopUp, rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSearchLocation = SearchLocation}}
 
@@ -1331,6 +1393,7 @@ eval (ShowCallDialer item) state = do
     _ -> continue state
 
 eval (StartLocationTracking item) state = do
+  _ <- pure $ performHapticFeedback unit
   case item of
     "GOOGLE_MAP" -> do
       let
@@ -1463,9 +1526,12 @@ eval (PopUpModalShareAppAction PopUpModal.OnButton2Click) state= do
   _ <- pure $ shareTextMessage (getValueFromConfig "shareAppTitle") (getValueFromConfig "shareAppContent")
   continue state{props{showShareAppPopUp=false}}
 
-eval (CallSupportAction PopUpModal.OnButton1Click) state= continue state{props{callSupportPopUp=false}}
+eval (CallSupportAction PopUpModal.OnButton1Click) state= do
+  _ <- pure $ performHapticFeedback unit
+  continue state{props{callSupportPopUp=false}}
 
 eval (CallSupportAction PopUpModal.OnButton2Click) state= do
+  _ <- pure $ performHapticFeedback unit
   _ <- pure $ showDialer (getSupportNumber "")
   _ <- pure $ firebaseLogEvent "ny_user_ride_support_click"
   continue state{props{callSupportPopUp=false}}

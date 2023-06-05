@@ -61,6 +61,8 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.PowerManager;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
 import android.provider.MediaStore;
 import android.provider.Settings;
 import android.util.Base64;
@@ -4305,6 +4307,16 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
             String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
                     storeCallBContact, contacts);
             dynamicUII.addJsToWebView(javascript);
+        }
+    }
+
+    @JavascriptInterface
+    public void performHapticFeedback() {
+        Vibrator vibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
+
+        if (vibrator != null && vibrator.hasVibrator()) {
+            VibrationEffect effect = VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE);
+            vibrator.vibrate(effect);
         }
     }
 
