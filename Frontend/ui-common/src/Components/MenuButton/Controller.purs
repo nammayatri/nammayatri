@@ -60,16 +60,17 @@ type TextConfig =
 type RadioButtonConfig = 
   { height :: Length
   , width :: Length
-  , imageHeight :: Length
-  , imageWidth :: Length
-  , imageUrl :: String
-  , imageMargin :: Margin
-  , imagePadding :: Padding
+  , buttonHeight :: Length
+  , buttonWidth :: Length
+  , buttonMargin :: Margin
+  , buttonPadding :: Padding
   , activeStroke :: String
   , inActiveStroke :: String
   , cornerRadius :: Number
-  , buttonMargin :: Margin
-  , buttonPadding :: Padding
+  , margin :: Margin
+  , padding :: Padding
+  , buttonColor :: String
+  , buttonCornerRadius :: Number
   }
 
 config :: Config
@@ -105,16 +106,17 @@ config =
     , radioButtonConfig :
           { height : V 20
           , width : V 20
-          , imageHeight : V 10
-          , imageWidth : V 10
-          , imageUrl : "ny_ic_radio_button," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_radio_button.png"
-          , imageMargin : (Margin 0 0 0 0)
-          , imagePadding : (Padding 0 0 0 0)
+          , buttonHeight : V 10
+          , buttonWidth : V 10
+          , buttonMargin : (Margin 0 0 0 0)
+          , buttonPadding : (Padding 0 0 0 0)
           , activeStroke :("2," <> Color.black800)
           , inActiveStroke :("2," <> Color.black600)
           , cornerRadius : 10.0
-          , buttonMargin : (Margin 0 10 0 10)
-          , buttonPadding : (Padding 0 0 0 0)
+          , margin : (Margin 0 10 0 10)
+          , padding : (Padding 0 0 0 0)
+          , buttonColor : Color.black800
+          , buttonCornerRadius : 5.0
           }
     , index : 0
     , id : ""

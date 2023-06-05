@@ -241,6 +241,7 @@ sourceDestinationEditTextView state push =
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation HORIZONTAL
+      , margin (Margin 0 10 0 0)
       ][ editText $
             [ height $ V 45
             , weight 1.0
@@ -252,7 +253,6 @@ sourceDestinationEditTextView state push =
             , ellipsize true
             , cornerRadius 10.0
             , padding (Padding 5 0 5 0)
-            , margin (Margin 0 10 0 0)
             , lineHeight "24"
             , hint (getString START_)
             , hintColor "#A7A7A7"
@@ -272,7 +272,7 @@ sourceDestinationEditTextView state push =
             [ height $ V 45
             , width WRAP_CONTENT
             , gravity CENTER
-            , padding (Padding 0 10 0 5)
+            , padding (Padding 5 10 5 5)
             , onClick push (const $ SourceClear)
             , visibility if state.source /= "" then VISIBLE else GONE
             ]
@@ -334,6 +334,7 @@ sourceDestinationEditTextView state push =
             [ height $ V 45
             , width WRAP_CONTENT
             , gravity CENTER
+            , padding (PaddingHorizontal 5 5)
             , visibility if state.destination /= "" then VISIBLE else GONE
             , onClick push (const $ DestinationClear)
             ]

@@ -579,7 +579,7 @@ driverDetailsView push state =
               [ height $ V 50
               , width $ V 50
               , padding $ Padding 2 3 2 1
-              , imageWithFallback $ "ny_ic_user," <> (getAssetStoreLink FunctionCall) <> "ny_ic_user.png"
+              , imageWithFallback $ "ny_ic_profile_image," <> (getAssetStoreLink FunctionCall) <> "ny_ic_profile_image.png"
               ]  
           ]
         , textView $

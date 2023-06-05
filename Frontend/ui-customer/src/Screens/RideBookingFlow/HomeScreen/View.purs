@@ -640,7 +640,7 @@ buttonLayout state push =
             , padding (PaddingTop 16)
             ]
             [ PrimaryButton.view (push <<< PrimaryButtonActionController) (whereToButtonConfig state)
-            , if (((state.data.savedLocations == []) && state.data.recentSearchs.predictionArray == [] && true == false) || state.props.isSearchLocation == LocateOnMap) then emptyLayout state else recentSearchesAndFavourites state push
+            , if (((state.data.savedLocations == []) && state.data.recentSearchs.predictionArray == [] && state.props.isbanner == false) || state.props.isSearchLocation == LocateOnMap) then emptyLayout state else recentSearchesAndFavourites state push
             ]
         ]
 
@@ -665,7 +665,7 @@ bannerView state push =
     , cornerRadius 12.0
     , margin $ MarginTop 15
     , background state.data.bannerViewState.backgroundColor
-    , visibility VISIBLE --if (state.props.isbanner) then VISIBLE else GONE
+    , visibility if (state.props.isbanner) then VISIBLE else GONE
     , onClick push $ const GoToEditProfile
     ]
     [  linearLayout
@@ -759,14 +759,14 @@ recentSearchesView state push =
                   [ width MATCH_PARENT
                   , height WRAP_CONTENT
                   , orientation VERTICAL
-                  , visibility if (true && index >0) then GONE else VISIBLE
+                  , visibility if (state.props.isbanner && index >0) then GONE else VISIBLE
                   ]
                   [ LocationListItem.view (push <<< PredictionClickedAction) item
                   , linearLayout
                       [ height $ V 1
                       , width MATCH_PARENT
                       , background Color.lightGreyShade
-                      , visibility if (index == (length state.data.recentSearchs.predictionArray) - 1) || (true) then GONE else VISIBLE
+                      , visibility if (index == (length state.data.recentSearchs.predictionArray) - 1) || (state.props.isbanner) then GONE else VISIBLE
                       ]
                       []
                   ]

@@ -20,7 +20,7 @@ import Effect (Effect)
 import Font.Style as FontStyle
 import Styles.Colors as Color
 import Components.MenuButton.Controller (Action(..), Config)
-import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), clickable, color, cornerRadius, fontStyle, gravity, height, imageView, lineHeight, linearLayout, margin, onClick, orientation, padding, singleLine, stroke, text, textSize, textView, visibility, width, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, fontStyle, gravity, height, imageView, lineHeight, linearLayout, margin, onClick, orientation, padding, singleLine, stroke, text, textSize, textView, visibility, width, imageWithFallback)
 import Common.Types.App
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -79,21 +79,22 @@ buttonLayout config =
     [ height WRAP_CONTENT
     , width if config.leftsidebutton then WRAP_CONTENT  else MATCH_PARENT
     , gravity if config.leftsidebutton then LEFT else  RIGHT
-    , margin config.radioButtonConfig.buttonMargin 
-    , padding config.radioButtonConfig.buttonPadding
+    , margin config.radioButtonConfig.margin 
+    , padding config.radioButtonConfig.padding
     ][  linearLayout
         [ height config.radioButtonConfig.height
         , width config.radioButtonConfig.width
         , stroke if config.isSelected then config.radioButtonConfig.activeStroke else config.radioButtonConfig.inActiveStroke
         , cornerRadius config.radioButtonConfig.cornerRadius
         , gravity CENTER
-        ][  imageView
-            [ width config.radioButtonConfig.imageWidth
-            , height config.radioButtonConfig.imageHeight
-            , margin config.radioButtonConfig.imageMargin
-            , padding config.radioButtonConfig.imagePadding
+        ][  linearLayout
+            [ width config.radioButtonConfig.buttonWidth
+            , height config.radioButtonConfig.buttonHeight
+            , margin config.radioButtonConfig.buttonMargin
+            , padding config.radioButtonConfig.buttonPadding
             , visibility if config.isSelected then VISIBLE else GONE
-            , imageWithFallback config.radioButtonConfig.imageUrl
-            ]
+            , background config.radioButtonConfig.buttonColor
+            , cornerRadius config.radioButtonConfig.buttonCornerRadius
+            ][]
           ]
       ]

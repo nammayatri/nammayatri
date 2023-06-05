@@ -796,10 +796,8 @@ menuButtonConfig state item = let
     , radioButtonConfig {
         height = V 16
         , width = V 16
-        , imageHeight = V 10
-        , imageWidth = V 10
-        , imageUrl = "ny_ic_pickup"
         , cornerRadius = 10.0
+        , buttonColor = Color.positive
         , buttonMargin = (MarginRight 15)
         , activeStroke = ("2," <> Color.positive)
       }
