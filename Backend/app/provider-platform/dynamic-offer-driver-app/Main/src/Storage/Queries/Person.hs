@@ -131,6 +131,7 @@ findAllDriversByIdsFirstNameAsc merchantId driverIds = do
   driverInfos <- getDriverInfos driverLocs
   vehicle <- getVehicles driverInfos
   drivers <- getDrivers vehicle
+  logDebug $ "FindAllDriversByIdsFirstNameAsc - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos) <> " Vec:- " <> show (length vehicle) <> " Drivers:- " <> show (length drivers)
   return (linkArrays driverLocs driverInfos vehicle drivers)
 
 linkArrays :: [DriverLocation] -> [DriverInformation] -> [Vehicle] -> [Person] -> [FullDriver]
@@ -685,8 +686,9 @@ getNearestDrivers mbVariant LatLong {..} radiusMeters merchantId onlyNotOnRide m
     driverInfos <- getDriverInfosWithCond driverLocs onlyNotOnRide False
     vehicle <- getVehiclesWithCond driverInfos
     drivers <- getDrivers vehicle
+    logDebug $ "GetNearestDriver - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos) <> " Vehicles:- " <> show (length vehicle) <> " Drivers:- " <> show (length drivers)
     return (linkArrayList driverLocs driverInfos vehicle drivers LatLong {..} mbVariant)
-
+  logDebug $ "GetNearestDrivers Result:- " <> show (length res)
   return (makeNearestDriversResult =<< res)
   where
     makeNearestDriversResult :: (Id Person, Maybe FCM.FCMRecipientToken, Maybe Maps.Language, Bool, Bool, Bool, Bool, Double, Double, Double, Variant, Maybe DriverInfo.DriverMode) -> [NearestDriversResult]
@@ -813,7 +815,9 @@ getNearestDriversCurrentlyOnRide mbVariant LatLong {..} radiusMeters merchantId 
     driverQuote <- getDriverQuote drivers
     bookingInfo <- getBookingInfo driverQuote
     bookingLocation <- getBookingLocs bookingInfo
+    logDebug $ "GetNearestDriversCurrentlyOnRide - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos) <> " Vehicle:- " <> show (length vehicles) <> " Drivers:- " <> show (length drivers) <> " Dquotes:- " <> show (length driverQuote) <> " BInfos:- " <> show (length bookingInfo) <> " BLocs:- " <> show (length bookingLocation)
     return (linkArrayListForOnRide driverQuote bookingInfo bookingLocation driverLocs driverInfos vehicles drivers LatLong {..} onRideRadius mbVariant)
+  logDebug $ "GetNearestDriversCurrentlyOnRide Result:- " <> show (length res)
   return (makeNearestDriversResult =<< res)
   where
     makeNearestDriversResult :: (Id Person, Maybe FCM.FCMRecipientToken, Maybe Maps.Language, Bool, Bool, Bool, Bool, Double, Double, Variant, Double, Double, Double, Double, Maybe DriverInfo.DriverMode) -> [NearestDriversResultCurrentlyOnRide]
