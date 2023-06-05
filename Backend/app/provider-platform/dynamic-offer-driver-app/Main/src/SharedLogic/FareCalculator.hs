@@ -225,7 +225,7 @@ calculateFareParameters params = do
       let chargedWaitingTime = if waitingTimeMinusFreeWatingTime < Just 0 then Nothing else waitingTimeMinusFreeWatingTime
       case waitingChargeInfo.waitingCharge of
         PerMinuteWaitingCharge charge -> (\waitingTime -> roundToIntegral $ fromIntegral waitingTime * charge) <$> chargedWaitingTime
-        ConstantWaitingCharge charge -> if isJust chargedWaitingTime then Just charge else Nothing
+        ConstantWaitingCharge charge -> Just charge -- Always charged, freeWaitingTime doesn't make sense in this case
 
 countFullFareOfParamsDetails :: DFParams.FareParametersDetails -> (Money, Money)
 countFullFareOfParamsDetails = \case
