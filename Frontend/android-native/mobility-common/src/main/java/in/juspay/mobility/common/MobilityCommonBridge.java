@@ -128,6 +128,7 @@ import java.util.Locale;
 import in.juspay.hyper.bridge.HyperBridge;
 import in.juspay.hyper.core.BridgeComponents;
 import in.juspay.hyper.core.ExecutorManager;
+import in.juspay.hyper.core.JsCallback;
 import in.juspay.hyper.core.JuspayLogger;
 
 public class MobilityCommonBridge extends HyperBridge {
@@ -144,7 +145,7 @@ public class MobilityCommonBridge extends HyperBridge {
     private static final int DATEPICKER_SPINNER_COUNT = 3;
     //Maps
     protected static JSONObject markers = new JSONObject();
-    protected static GoogleMap googleMap;
+    protected GoogleMap googleMap;
     protected static ArrayList<Marker> pickupPointsZoneMarkers = new ArrayList<>();
     protected static GeoJsonLayer layer;
     protected static List<LatLng> zoneLatLngPoints = new ArrayList<LatLng>();
@@ -177,7 +178,7 @@ public class MobilityCommonBridge extends HyperBridge {
     // Others
     private LottieAnimationView animationView;
 
-    private static Receivers receivers = new Receivers();
+    protected static Receivers receivers = new Receivers();
 
 
     public MobilityCommonBridge(BridgeComponents bridgeComponents) {
@@ -261,54 +262,15 @@ public class MobilityCommonBridge extends HyperBridge {
     @SuppressLint("MissingPermission")
     protected void updateLastKnownLocation(String callback, boolean animate) {
         if (!isLocationPermissionEnabled()) return;
-        if (bridgeComponents.getActivity() != null) {
-            client.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cancellationTokenSource.getToken())
-                    .addOnSuccessListener(bridgeComponents.getActivity(), location -> {
-                        if (location != null) {
-                            Double lat = location.getLatitude();
-                            Double lng = location.getLongitude();
-                            lastLatitudeValue = lat;
-                            lastLongitudeValue = lng;
-                            setKeysInSharedPrefs("LAST_KNOWN_LON", String.valueOf(lastLongitudeValue));
-                            if (callback != null) {
-                                String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s');",
-                                        callback, lat, lng);
-                                bridgeComponents.getJsCallback().addJsToWebView(javascript);
-                            }
-                            if (animate && googleMap != null) {
-                                LatLng latLng = new LatLng(lat, lng);
-                                if (userPositionMarker == null) {
-                                    upsertMarker(CURRENT_LOCATION, String.valueOf(lat), String.valueOf(lng), 160, 0.5f, 0.9f); //TODO this function will be removed
-                                } else {
-                                    if (storeLocateOnMapCallBack == null)
-                                        userPositionMarker.setVisible(true);
-                                    userPositionMarker.setPosition(latLng);
-                                }
-                                googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, zoom));
-                            }
-                        } else getLastKnownLocationFromClientFallback(callback, animate);
-                    })
-                    .addOnFailureListener(bridgeComponents.getActivity(), e -> {
-                        Log.e(LOCATION, "Current position not known");
-                        getLastKnownLocationFromClientFallback(callback, animate);
-                    });
-        }
-
-    }
-
-    @SuppressLint("MissingPermission")
-    private void getLastKnownLocationFromClientFallback(String callback, boolean animate) {
-        if (!isLocationPermissionEnabled()) return;
-        if (bridgeComponents.getActivity() != null) {
-            if (client != null)
-                client.getLastLocation()
+        if(googleMap != null) {
+            if (bridgeComponents.getActivity() != null) {
+                client.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cancellationTokenSource.getToken())
                         .addOnSuccessListener(bridgeComponents.getActivity(), location -> {
                             if (location != null) {
                                 Double lat = location.getLatitude();
                                 Double lng = location.getLongitude();
                                 lastLatitudeValue = lat;
                                 lastLongitudeValue = lng;
-                                setKeysInSharedPrefs("LAST_KNOWN_LAT", String.valueOf(lastLatitudeValue));
                                 setKeysInSharedPrefs("LAST_KNOWN_LON", String.valueOf(lastLongitudeValue));
                                 if (callback != null) {
                                     String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s');",
@@ -324,11 +286,54 @@ public class MobilityCommonBridge extends HyperBridge {
                                             userPositionMarker.setVisible(true);
                                         userPositionMarker.setPosition(latLng);
                                     }
-                                    googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 17.0f));
+                                    googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, zoom));
                                 }
-                            }
+                            } else getLastKnownLocationFromClientFallback(callback, animate);
                         })
-                        .addOnFailureListener(bridgeComponents.getActivity(), e -> Log.e(LOCATION, "Last and current position not known"));
+                        .addOnFailureListener(bridgeComponents.getActivity(), e -> {
+                            Log.e(LOCATION, "Current position not known");
+                            getLastKnownLocationFromClientFallback(callback, animate);
+                        });
+            }
+        }
+
+    }
+
+    @SuppressLint("MissingPermission")
+    private void getLastKnownLocationFromClientFallback(String callback, boolean animate) {
+        if (!isLocationPermissionEnabled()) return;
+        if(googleMap != null){
+            if (bridgeComponents.getActivity() != null) {
+                if (client != null)
+                    client.getLastLocation()
+                            .addOnSuccessListener(bridgeComponents.getActivity(), location -> {
+                                if (location != null) {
+                                    Double lat = location.getLatitude();
+                                    Double lng = location.getLongitude();
+                                    lastLatitudeValue = lat;
+                                    lastLongitudeValue = lng;
+                                    setKeysInSharedPrefs("LAST_KNOWN_LAT", String.valueOf(lastLatitudeValue));
+                                    setKeysInSharedPrefs("LAST_KNOWN_LON", String.valueOf(lastLongitudeValue));
+                                    if (callback != null) {
+                                        String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s');",
+                                                callback, lat, lng);
+                                        bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                                    }
+                                    if (animate && googleMap != null) {
+                                        LatLng latLng = new LatLng(lat, lng);
+                                        if (userPositionMarker == null) {
+                                            upsertMarker(CURRENT_LOCATION, String.valueOf(lat), String.valueOf(lng), 160, 0.5f, 0.9f); //TODO this function will be removed
+                                        } else {
+                                            if (storeLocateOnMapCallBack == null)
+                                                userPositionMarker.setVisible(true);
+                                            userPositionMarker.setPosition(latLng);
+                                        }
+                                        googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 17.0f));
+                                    }
+                                }
+                            })
+                            .addOnFailureListener(bridgeComponents.getActivity(), e -> Log.e(LOCATION, "Last and current position not known"));
+            }
         }
     }
 
@@ -449,33 +454,35 @@ public class MobilityCommonBridge extends HyperBridge {
     public void upsertMarker(final String title, final String lat, final String lng, final int markerSize, final float anchorV, final float anchorV1) {
         ExecutorManager.runOnMainThread(() -> {
             try {
-                if (lat != null && lng != null) {
-                    double latitude = lat.equals("9.9") ? lastLatitudeValue : Double.parseDouble(lat);
-                    double longitude = lat.equals("9.9") ? lastLatitudeValue : Double.parseDouble(lng);
-                    LatLng latLngObj = new LatLng(latitude, longitude);
-                    Marker markerObject;
-                    if (markers.has(title)) {
-                        markerObject = (Marker) markers.get(title);
-                        markerObject.setPosition(latLngObj);
-                        markerObject.setFlat(true);
-                        markerObject.setVisible(true);
-                        markerObject.hideInfoWindow();
-                        Log.i(MAPS, "Marker position updated for " + title);
-                    } else {
-                        MarkerOptions markerOptionsObj = makeMarkerObject(title, latitude, longitude, markerSize, anchorV, anchorV1);
-                        if (markerOptionsObj != null && googleMap != null) {
-                            markerObject = googleMap.addMarker(markerOptionsObj);
-                            markers.put(title, markerObject);
-                            if (markerObject != null) {
-                                markerObject.setPosition(latLngObj);
-                                markerObject.setVisible(true);
-                                markerObject.setFlat(true);
-                                markerObject.hideInfoWindow();
+                if(googleMap !=null){
+                    if (lat != null && lng != null) {
+                        double latitude = lat.equals("9.9") ? lastLatitudeValue : Double.parseDouble(lat);
+                        double longitude = lat.equals("9.9") ? lastLatitudeValue : Double.parseDouble(lng);
+                        LatLng latLngObj = new LatLng(latitude, longitude);
+                        Marker markerObject;
+                        if (markers.has(title)) {
+                            markerObject = (Marker) markers.get(title);
+                            markerObject.setPosition(latLngObj);
+                            markerObject.setFlat(true);
+                            markerObject.setVisible(true);
+                            markerObject.hideInfoWindow();
+                            Log.i(MAPS, "Marker position updated for " + title);
+                        } else {
+                            MarkerOptions markerOptionsObj = makeMarkerObject(title, latitude, longitude, markerSize, anchorV, anchorV1);
+                            if (markerOptionsObj != null && googleMap != null) {
+                                markerObject = googleMap.addMarker(markerOptionsObj);
+                                markers.put(title, markerObject);
+                                if (markerObject != null) {
+                                    markerObject.setPosition(latLngObj);
+                                    markerObject.setVisible(true);
+                                    markerObject.setFlat(true);
+                                    markerObject.hideInfoWindow();
+                                }
+                                if (title.equals(CURRENT_LOCATION)) {
+                                    userPositionMarker = markerObject;
+                                }
+                                Log.i(MAPS, "New marker created and updated for " + title);
                             }
-                            if (title.equals(CURRENT_LOCATION)) {
-                                userPositionMarker = markerObject;
-                            }
-                            Log.i(MAPS, "New marker created and updated for " + title);
                         }
                     }
                 }
@@ -572,69 +579,73 @@ public class MobilityCommonBridge extends HyperBridge {
 
     @SuppressLint({"MissingPermission", "PotentialBehaviorOverride"})
     private void getMapAsync(SupportMapFragment mapFragment, boolean isEnableCurrentLocation, final String mapType, final String callback, final String pureScriptId, final float zoom) {
-        if (bridgeComponents.getActivity() != null) {
-            mapFragment.getMapAsync(googleMap -> {
-                MobilityCommonBridge.googleMap = googleMap;
-                googleMap.setMinZoomPreference(7.0f);
-                googleMap.setMaxZoomPreference(googleMap.getMaxZoomLevel());
-                googleMap.getUiSettings().setRotateGesturesEnabled(false);
-                googleMap.getUiSettings().setMyLocationButtonEnabled(false);
-                if (isLocationPermissionEnabled()) {
-                    googleMap.setMyLocationEnabled(isEnableCurrentLocation);
-                }
-                markers = new JSONObject();
-                markersElement.put(pureScriptId, markers);
-                googleMap.setOnMarkerClickListener(marker -> {
-                    marker.hideInfoWindow();
-                    return true;
+        if(googleMap != null){
+            if (bridgeComponents.getActivity() != null) {
+                mapFragment.getMapAsync(googleMap -> {
+                    this.googleMap = googleMap;
+                    googleMap.setMinZoomPreference(7.0f);
+                    googleMap.setMaxZoomPreference(googleMap.getMaxZoomLevel());
+                    googleMap.getUiSettings().setRotateGesturesEnabled(false);
+                    googleMap.getUiSettings().setMyLocationButtonEnabled(false);
+                    if (isLocationPermissionEnabled()) {
+                        googleMap.setMyLocationEnabled(isEnableCurrentLocation);
+                    }
+                    markers = new JSONObject();
+                    markersElement.put(pureScriptId, markers);
+                    googleMap.setOnMarkerClickListener(marker -> {
+                        marker.hideInfoWindow();
+                        return true;
+                    });
+                    try {
+                        if (mapType.equals(LOCATE_ON_MAP)) {
+                            upsertMarker(LOCATE_ON_MAP, String.valueOf(lastLatitudeValue), String.valueOf(lastLongitudeValue), 160, 0.5f, 0.9f);
+                            this.googleMap.setOnCameraMoveListener(() -> {
+                                try {
+                                    double lat = (googleMap.getCameraPosition().target.latitude);
+                                    double lng = (googleMap.getCameraPosition().target.longitude);
+                                    upsertMarker(LOCATE_ON_MAP, String.valueOf(lat), String.valueOf(lng), 160, 0.5f, 0.9f);
+                                } catch (Exception e) {
+                                    Log.i(MAPS, "Marker creation error for ", e);
+                                }
+                            });
+                            this.googleMap.setOnCameraIdleListener(() -> {
+                                if (callback != null) {
+                                    double lat = (googleMap.getCameraPosition().target.latitude);
+                                    double lng = (googleMap.getCameraPosition().target.longitude);
+                                    String javascript = String.format("window.callUICallback('%s','%s','%s','%s');", callback, "LatLon", lat, lng);
+                                    Log.e(MAPS, javascript);
+                                    bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                                }
+                            });
+                        }
+                        setMapCustomTheme();
+                        if (lastLatitudeValue != 0.0 && lastLongitudeValue != 0.0) {
+                            LatLng latLngObjMain = new LatLng(lastLatitudeValue, lastLongitudeValue);
+                            this.googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLngObjMain, zoom));
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    if (callback != null) {
+                        String javascript = String.format("window.callUICallback('%s','%s','%s','%s');", callback, "MAP", "READY", "LOADED");
+                        Log.e(MAPS, javascript);
+                        bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                    }
                 });
-                try {
-                    if (mapType.equals(LOCATE_ON_MAP)) {
-                        upsertMarker(LOCATE_ON_MAP, String.valueOf(lastLatitudeValue), String.valueOf(lastLongitudeValue), 160, 0.5f, 0.9f);
-                        MobilityCommonBridge.googleMap.setOnCameraMoveListener(() -> {
-                            try {
-                                double lat = (googleMap.getCameraPosition().target.latitude);
-                                double lng = (googleMap.getCameraPosition().target.longitude);
-                                upsertMarker(LOCATE_ON_MAP, String.valueOf(lat), String.valueOf(lng), 160, 0.5f, 0.9f);
-                            } catch (Exception e) {
-                                Log.i(MAPS, "Marker creation error for ", e);
-                            }
-                        });
-                        MobilityCommonBridge.googleMap.setOnCameraIdleListener(() -> {
-                            if (callback != null) {
-                                double lat = (googleMap.getCameraPosition().target.latitude);
-                                double lng = (googleMap.getCameraPosition().target.longitude);
-                                String javascript = String.format("window.callUICallback('%s','%s','%s','%s');", callback, "LatLon", lat, lng);
-                                Log.e(MAPS, javascript);
-                                bridgeComponents.getJsCallback().addJsToWebView(javascript);
-                            }
-                        });
-                    }
-                    setMapCustomTheme();
-                    if (lastLatitudeValue != 0.0 && lastLongitudeValue != 0.0) {
-                        LatLng latLngObjMain = new LatLng(lastLatitudeValue, lastLongitudeValue);
-                        MobilityCommonBridge.googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLngObjMain, zoom));
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-                if (callback != null) {
-                    String javascript = String.format("window.callUICallback('%s','%s','%s','%s');", callback, "MAP", "READY", "LOADED");
-                    Log.e(MAPS, javascript);
-                    bridgeComponents.getJsCallback().addJsToWebView(javascript);
-                }
-            });
+            }
         }
     }
 
     public void setMapCustomTheme() { // TODO Check for grey boxes and update the json for the same -- SHAILESH GAHLAWAT
         boolean success;
         try {
-            success = googleMap.setMapStyle(
-                    MapStyleOptions.loadRawResourceStyle(
-                            bridgeComponents.getContext(), R.raw.map_style_retro));
-            if (!success) {
-                Log.e(MAPS, "Style parsing failed.");
+            if(googleMap != null){
+                success = googleMap.setMapStyle(
+                        MapStyleOptions.loadRawResourceStyle(
+                                bridgeComponents.getContext(), R.raw.map_style_retro));
+                if (!success) {
+                    Log.e(MAPS, "Style parsing failed.");
+                }
             }
         } catch (Resources.NotFoundException e) {
             Log.e(MAPS, "Can't find style. Error: ", e);
@@ -645,11 +656,13 @@ public class MobilityCommonBridge extends HyperBridge {
     @SuppressLint("MissingPermission")
     public void enableMyLocation(boolean isEnableCurrentLocation) {
         try {
-            ExecutorManager.runOnMainThread((() -> {
-                if (googleMap != null && isLocationPermissionEnabled()) {
-                    googleMap.setMyLocationEnabled(isEnableCurrentLocation);
-                }
-            }));
+            if(googleMap != null){
+                ExecutorManager.runOnMainThread((() -> {
+                    if (googleMap != null && isLocationPermissionEnabled()) {
+                        googleMap.setMyLocationEnabled(isEnableCurrentLocation);
+                    }
+                }));
+            }
         } catch (Exception e) {
             Log.i(MAPS, "Enable My Location on GoogleMap error", e);
         }
@@ -659,16 +672,18 @@ public class MobilityCommonBridge extends HyperBridge {
     public void reallocateMapFragment(final String pureScriptId) {
         ExecutorManager.runOnMainThread(() -> {
             try {
-                if (bridgeComponents.getActivity() != null) {
-                    SupportMapFragment mapFragment = (SupportMapFragment) ((FragmentActivity) bridgeComponents.getActivity()).getSupportFragmentManager()
-                            .findFragmentById(Integer.parseInt(pureScriptId));
-                    if (mapFragment != null) {
-                        mapFragment.getMapAsync(googleMap -> {
-                            MobilityCommonBridge.googleMap = googleMap;
-                            googleMap.getUiSettings().setRotateGesturesEnabled(false);
-                            googleMap.getUiSettings().setMyLocationButtonEnabled(false);
-                            markers = markersElement.get(pureScriptId);
-                        });
+                if(googleMap != null){
+                    if (bridgeComponents.getActivity() != null) {
+                        SupportMapFragment mapFragment = (SupportMapFragment) ((FragmentActivity) bridgeComponents.getActivity()).getSupportFragmentManager()
+                                .findFragmentById(Integer.parseInt(pureScriptId));
+                        if (mapFragment != null) {
+                            mapFragment.getMapAsync(googleMap -> {
+                                this.googleMap = googleMap;
+                                googleMap.getUiSettings().setRotateGesturesEnabled(false);
+                                googleMap.getUiSettings().setMyLocationButtonEnabled(false);
+                                markers = markersElement.get(pureScriptId);
+                            });
+                        }
                     }
                 }
             } catch (Exception e) {
@@ -822,70 +837,73 @@ public class MobilityCommonBridge extends HyperBridge {
         ExecutorManager.runOnMainThread(() -> {
             double source_lat, source_lng, destination_lat, destination_lng;
 
-            Log.i(MAPS, "json_coordinates" + json_coordinates);
-            ArrayList<Double> all_latitudes = new ArrayList<>();
-            ArrayList<Double> all_longitudes = new ArrayList<>();
-            for (int i = 0; i < json_coordinates.length(); i++) {
-                JSONObject each_json_coordinates;
-                try {
-                    each_json_coordinates = (JSONObject) json_coordinates.get(i);
-                    double lon = each_json_coordinates.getDouble("lng");
-                    double lat = each_json_coordinates.getDouble("lat");
-                    all_latitudes.add(lat);
-                    all_longitudes.add(lon);
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-            }
-            Log.i(MAPS, "all_latitudes" + (all_latitudes));
-            Log.i(MAPS, "all_longitudes" + (all_longitudes));
-            double minimum_latitude = Collections.min(all_latitudes);
-            double maximum_latitude = Collections.max(all_latitudes);
-            double minimum_longitude = Collections.min(all_longitudes);
-            double maximum_longitude = Collections.max(all_longitudes);
-            Log.i(MAPS, String.valueOf(minimum_latitude));
-            Log.i(MAPS, String.valueOf(maximum_latitude));
-
-            if (source_latitude <= destination_latitude) {
-                source_lat = minimum_latitude - 1.3 * (maximum_latitude - minimum_latitude);
-                destination_lat = maximum_latitude + 0.1 * (maximum_latitude - minimum_latitude);
-            } else {
-                source_lat = maximum_latitude + 0.1 * (maximum_latitude - minimum_latitude);
-                destination_lat = minimum_latitude - 1.3 * (maximum_latitude - minimum_latitude);
-            }
-            if (source_longitude <= destination_longitude) {
-                source_lng = minimum_longitude - 0.09 * (maximum_longitude - minimum_longitude);
-                destination_lng = maximum_longitude + 0.09 * (maximum_longitude - minimum_longitude);
-            } else {
-                source_lng = maximum_longitude + 0.09 * (maximum_longitude - minimum_longitude);
-                destination_lng = minimum_longitude - 0.09 * (maximum_longitude - minimum_longitude);
-            }
-            Log.i(MAPS, "Coordinates Points" + json_coordinates);
             if (googleMap != null) {
-                try {
-                    LatLng pickupLatLng = new LatLng(source_lat, source_lng);
-                    LatLng destinationLatLng = new LatLng(destination_lat, destination_lng);
-                    LatLngBounds bounds = LatLngBounds.builder().include(pickupLatLng).include(destinationLatLng).build();
-                    if (json_coordinates.length() < 5) {
-                        googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 400));
-                    } else {
-                        googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 150));
+                Log.i(MAPS, "json_coordinates" + json_coordinates);
+                ArrayList<Double> all_latitudes = new ArrayList<>();
+                ArrayList<Double> all_longitudes = new ArrayList<>();
+                for (int i = 0; i < json_coordinates.length(); i++) {
+                    JSONObject each_json_coordinates;
+                    try {
+                        each_json_coordinates = (JSONObject) json_coordinates.get(i);
+                        double lon = each_json_coordinates.getDouble("lng");
+                        double lat = each_json_coordinates.getDouble("lat");
+                        all_latitudes.add(lat);
+                        all_longitudes.add(lon);
+                    } catch (JSONException e) {
+                        e.printStackTrace();
                     }
-                } catch (IllegalArgumentException e) {
-                    Log.i(MAPS, "Exception in Move camera" + e);
-                    LatLng pickupLatLng = new LatLng(source_lat, source_lng);
-                    LatLng destinationLatLng = new LatLng(destination_lat, destination_lng);
-                    LatLngBounds bounds = LatLngBounds.builder().include(destinationLatLng).include(pickupLatLng).build();
-                    if (json_coordinates.length() < 5) {
-                        googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 400));
-                    } else {
-                        googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 150));
+                }
+                Log.i(MAPS, "all_latitudes" + (all_latitudes));
+                Log.i(MAPS, "all_longitudes" + (all_longitudes));
+                double minimum_latitude = Collections.min(all_latitudes);
+                double maximum_latitude = Collections.max(all_latitudes);
+                double minimum_longitude = Collections.min(all_longitudes);
+                double maximum_longitude = Collections.max(all_longitudes);
+                Log.i(MAPS, String.valueOf(minimum_latitude));
+                Log.i(MAPS, String.valueOf(maximum_latitude));
+
+                if (source_latitude <= destination_latitude) {
+                    source_lat = minimum_latitude - 1.3 * (maximum_latitude - minimum_latitude);
+                    destination_lat = maximum_latitude + 0.1 * (maximum_latitude - minimum_latitude);
+                } else {
+                    source_lat = maximum_latitude + 0.1 * (maximum_latitude - minimum_latitude);
+                    destination_lat = minimum_latitude - 1.3 * (maximum_latitude - minimum_latitude);
+                }
+                if (source_longitude <= destination_longitude) {
+                    source_lng = minimum_longitude - 0.09 * (maximum_longitude - minimum_longitude);
+                    destination_lng = maximum_longitude + 0.09 * (maximum_longitude - minimum_longitude);
+                } else {
+                    source_lng = maximum_longitude + 0.09 * (maximum_longitude - minimum_longitude);
+                    destination_lng = minimum_longitude - 0.09 * (maximum_longitude - minimum_longitude);
+                }
+                Log.i(MAPS, "Coordinates Points" + json_coordinates);
+                if (googleMap != null) {
+                    try {
+                        LatLng pickupLatLng = new LatLng(source_lat, source_lng);
+                        LatLng destinationLatLng = new LatLng(destination_lat, destination_lng);
+                        LatLngBounds bounds = LatLngBounds.builder().include(pickupLatLng).include(destinationLatLng).build();
+                        if (json_coordinates.length() < 5) {
+                            googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 400));
+                        } else {
+                            googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 150));
+                        }
+                    } catch (IllegalArgumentException e) {
+                        Log.i(MAPS, "Exception in Move camera" + e);
+                        LatLng pickupLatLng = new LatLng(source_lat, source_lng);
+                        LatLng destinationLatLng = new LatLng(destination_lat, destination_lng);
+                        LatLngBounds bounds = LatLngBounds.builder().include(destinationLatLng).include(pickupLatLng).build();
+                        if (json_coordinates.length() < 5) {
+                            googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 400));
+                        } else {
+                            googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 150));
+                        }
+                    } catch (Exception e) {
+                        Log.i(MAPS, "Exception in Move camera" + e);
                     }
-                } catch (Exception e) {
-                    Log.i(MAPS, "Exception in Move camera" + e);
                 }
             }
         });
+
     }
 
     public Polyline setRouteCustomTheme(PolylineOptions options, int color, String style, final int width) {
@@ -1594,53 +1612,55 @@ public class MobilityCommonBridge extends HyperBridge {
     // endregion
 
     protected static class Receivers {
-        BridgeComponents bridgeComponents;
         BroadcastReceiver gpsReceiver ;
         BroadcastReceiver internetActionReceiver;
         String storeInternetActionCallBack;
 
         public void initReceiver(BridgeComponents bridgeComponents) {
-            this.bridgeComponents = bridgeComponents;
             gpsReceiver = new BroadcastReceiver() {
                 @Override
                 public void onReceive(Context context, Intent intent) {
                     LocationManager locationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
                     boolean isGpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
                     if (!isGpsEnabled) {
-                        invokeOnEvent("onLocationChanged", "{}");
+                        invokeOnEvent(bridgeComponents.getJsCallback(), "onLocationChanged", "{}");
                     }
                 }
             };
             internetActionReceiver = new BroadcastReceiver() {
                 @Override
                 public void onReceive(Context context, Intent intent) {
-                    if (!isNetworkAvailable()) {
-                        invokeOnEvent("onInternetChanged", "{}");
+                    if (!isNetworkAvailable(bridgeComponents.getContext())) {
+                        invokeOnEvent(bridgeComponents.getJsCallback(),"onInternetChanged", "{}");
                     } else {
-                        callInternetActionCallBack("true");
+                        callInternetActionCallBack(bridgeComponents.getJsCallback(),"true");
                     }
                 }
             };
             bridgeComponents.getContext().registerReceiver(gpsReceiver, new IntentFilter(LocationManager.PROVIDERS_CHANGED_ACTION));
             bridgeComponents.getContext().registerReceiver(internetActionReceiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
         }
-        protected void invokeOnEvent(String event, String payload) {
+        protected void invokeOnEvent(JsCallback callback, String event, String payload) {
             String encoded = Base64.encodeToString(payload.getBytes(), Base64.NO_WRAP);
             String command = String.format("window[\"onEvent'\"]('%s',atob('%s'))", event, encoded);
-            bridgeComponents.getJsCallback().addJsToWebView(command);
+            callback.addJsToWebView(command);
         }
-        private boolean isNetworkAvailable() {
+        private boolean isNetworkAvailable(Context context) {
             ConnectivityManager connectivityManager
-                    = (ConnectivityManager) bridgeComponents.getContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+                    = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
             NetworkInfo activeNetworkInfo = connectivityManager != null ? connectivityManager.getActiveNetworkInfo() : null;
             return activeNetworkInfo != null && activeNetworkInfo.isConnected();
         }
-        public void callInternetActionCallBack(String isPermission) {
+        public void callInternetActionCallBack(JsCallback callback, String isPermission) {
             if (storeInternetActionCallBack != null) {
                 String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
                         storeInternetActionCallBack, isPermission);
-                bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                callback.addJsToWebView(javascript);
             }
+        }
+        public void deRegister(Context context) {
+            context.unregisterReceiver(gpsReceiver);
+            context.unregisterReceiver(internetActionReceiver);
         }
     }
 }
