@@ -35,6 +35,7 @@ module SharedLogic.DriverPool
     removeSearchReqIdFromMap,
     updateDriverSpeedInRedis,
     getDriverAverageSpeed,
+    aquireLockOnDriverForSearch,
     mkAvailableTimeKey,
     PoolCalculationStage (..),
     module Reexport,
@@ -58,6 +59,7 @@ import EulerHS.Prelude hiding (id)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Storage.Hedis.Queries as HQ
 import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.SlidingWindowCounters as SWC
@@ -318,6 +320,45 @@ getCurrentWindowAvailability ::
   Id DP.Driver ->
   m [Maybe a]
 getCurrentWindowAvailability merchantId driverId = Redis.withCrossAppRedis . withAvailabilityTimeWindowOption merchantId $ SWC.getCurrentWindowValues (mkAvailableTimeKey driverId.getId)
+
+mkDriverLockSearchRequestKey :: Id DM.Merchant -> Id DP.Driver -> Text
+mkDriverLockSearchRequestKey mId dId = "driver-offer:DriverPool:Driver-Lock-Search-Req-Validity-Array-" <> mId.getId <> dId.getId
+
+aquireLockOnDriverForSearch ::
+  ( Redis.HedisFlow m r,
+    CacheFlow m r
+  ) =>
+  Id DM.Merchant ->
+  Id DP.Driver ->
+  Double ->
+  Double ->
+  Int ->
+  Int ->
+  m Bool
+aquireLockOnDriverForSearch merchantId driverId time valueToSetForTheDriver expirationTime n = do
+  HQ.eval
+    " local validRequest = {}; \
+    \ local lengthValidRequest = 0; \
+    \ local currentTime = tonumber(ARGV[1]); \
+    \ for index,value in ipairs(redis.call('LRANGE',KEYS[1],0,-1)) do \
+    \   if tonumber(value) >= currentTime \
+    \     then \
+    \       table.insert(validRequest,value); \
+    \       lengthValidRequest = lengthValidRequest + 1; \
+    \   end; \
+    \ end; \
+    \ if lengthValidRequest >= tonumber(ARGV[4]) \
+    \   then \
+    \     return false; \
+    \   else \
+    \     table.insert(validRequest,ARGV[2]); \
+    \ end; \
+    \ redis.call('DEL',tostring(KEYS[1])); \
+    \ redis.call('LPUSH',tostring(KEYS[1]),unpack(validRequest)); \
+    \ redis.call('EXPIRE',tostring(KEYS[1]),tonumber(ARGV[3])); \
+    \ return true; "
+    [mkDriverLockSearchRequestKey merchantId driverId]
+    [show time, show valueToSetForTheDriver, show expirationTime, show n]
 
 mkQuotesCountKey :: Text -> Text
 mkQuotesCountKey driverId = "driver-offer:DriverPool:Total-quotes-sent:DriverId-" <> driverId

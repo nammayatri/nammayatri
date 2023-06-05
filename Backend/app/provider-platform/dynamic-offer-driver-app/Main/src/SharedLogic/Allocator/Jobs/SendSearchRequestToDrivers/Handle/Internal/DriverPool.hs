@@ -24,6 +24,7 @@ where
 import qualified Control.Monad as CM
 import qualified Data.HashMap as HM
 import qualified Data.List as DL
+import qualified Data.Time.Clock.POSIX as DTCP
 import qualified Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.DriverIntelligentPoolConfig
@@ -38,6 +39,7 @@ import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Types.Time
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowCounters
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as Reexport
@@ -73,7 +75,8 @@ prepareDriverPoolBatch ::
     EsqDBReplicaFlow m r,
     CoreMetrics m,
     EsqDBFlow m r,
-    Redis.HedisFlow m r
+    Redis.HedisFlow m r,
+    CacheFlow m r
   ) =>
   DriverPoolConfig ->
   DSR.SearchRequest ->
@@ -134,24 +137,42 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum = withLogTag (
               =<< splitDriverPoolForSorting merchantId intelligentPoolConfig.minQuotesToQualifyForIntelligentPool onlyNewDrivers
           let sortedDriverPoolWithSilentSort = splitSilentDrivers sortedDriverPool
           let randomizedDriverPoolWithSilentSort = splitSilentDrivers randomizedDriverPool
-          takeDriversUsingPoolPercentage (sortedDriverPoolWithSilentSort, randomizedDriverPoolWithSilentSort) batchSize intelligentPoolConfig
+          takeDriversUsingPoolPercentage merchantId (sortedDriverPoolWithSilentSort, randomizedDriverPoolWithSilentSort) batchSize intelligentPoolConfig driverPoolCfg
 
         makeRandomDriverPool batchSize onlyNewDrivers = take batchSize <$> randomizeAndLimitSelection onlyNewDrivers
 
-    takeDriversUsingPoolPercentage :: (MonadFlow m) => ([a], [a]) -> Int -> DriverIntelligentPoolConfig -> m [a]
-    takeDriversUsingPoolPercentage (sortedDriverPool, randomizedDriverPool) driversCount intelligentPoolConfig = do
-      let intelligentPoolPercentage = fromMaybe 50 intelligentPoolConfig.intelligentPoolPercentage
+    takeDriversUsingPoolPercentage :: (MonadFlow m, Redis.HedisFlow m r, CacheFlow m r) => Id Merchant -> ([DriverPoolWithActualDistResult], [DriverPoolWithActualDistResult]) -> Int -> DriverIntelligentPoolConfig -> DriverPoolConfig -> m [DriverPoolWithActualDistResult]
+    takeDriversUsingPoolPercentage merchantId (sortedDriverPool, randomizedDriverPool) driversCount intelligentPoolConfig driverPoolConfig = do
+      now <- getCurrentTime
+      let nowMilliseconds = utcToDouble now
+          expirationTime = fromIntegral driverPoolConfig.singleBatchProcessTime
+          valueToSetForTheDriver = utcToDouble $ fromIntegral driverPoolConfig.singleBatchProcessTime `addUTCTime` now
+          numberOfValidRequestPerDriver = driverPoolCfg.driverRequestCountLimit
+          intelligentPoolPercentage = fromMaybe 50 intelligentPoolConfig.intelligentPoolPercentage
           intelligentCount = min (length sortedDriverPool) ((driversCount + 1) * intelligentPoolPercentage `div` 100)
           randomCount = driversCount - intelligentCount
-          (sortedPart, restSorted) = splitAt intelligentCount sortedDriverPool
-          (randomPart, restRandom) = splitAt randomCount randomizedDriverPool
-          poolBatch = sortedPart <> randomPart
-          driversFromRestCount = take (driversCount - length poolBatch) (restRandom <> restSorted) -- taking rest of drivers if poolBatch length is less then driverCount requried.
-          finalPoolBatch = poolBatch <> driversFromRestCount
+      (sortedPart, restSorted) <- splitAt' valueToSetForTheDriver nowMilliseconds numberOfValidRequestPerDriver expirationTime intelligentCount sortedDriverPool []
+      (randomPart, restRandom) <- splitAt' valueToSetForTheDriver nowMilliseconds numberOfValidRequestPerDriver expirationTime randomCount randomizedDriverPool []
+      let poolBatch = sortedPart <> randomPart
+      (driversFromRestCount, _) <- splitAt' valueToSetForTheDriver nowMilliseconds numberOfValidRequestPerDriver expirationTime (driversCount - length poolBatch) (restRandom <> restSorted) [] -- taking rest of drivers if poolBatch length is less then driverCount requried.
+      let finalPoolBatch = poolBatch <> driversFromRestCount
       logDebug $ "IntelligentDriverPool - SortedDriversCount " <> show (length sortedPart)
       logDebug $ "IntelligentDriverPool - RandomizedDriversCount " <> show (length randomPart)
       logDebug $ "IntelligentDriverPool - finalPoolBatch " <> show (length finalPoolBatch)
       pure finalPoolBatch
+      where
+        splitAt' _ _ _ _ _ [] acc = pure (acc, [])
+        splitAt' _ _ _ _ 0 x acc = pure (acc, x)
+        splitAt' valueToSetForTheDriver time numberOfValidRequestPerDriver expirationTime count (x : xs) acc = do
+          result <- aquireLockOnDriverForSearch merchantId (x.driverPoolResult.driverId) time valueToSetForTheDriver expirationTime numberOfValidRequestPerDriver
+          logDebug $ "DriverPool Driver id " <> show (x.driverPoolResult.driverId) <> "included or not " <> show result
+          if result
+            then do
+              (actual, rest) <- splitAt' valueToSetForTheDriver time numberOfValidRequestPerDriver expirationTime (count - 1) xs acc
+              pure (x : actual, rest)
+            else splitAt' valueToSetForTheDriver time numberOfValidRequestPerDriver expirationTime count xs acc
+        utcToDouble :: UTCTime -> Double
+        utcToDouble = realToFrac . DTCP.utcTimeToPOSIXSeconds
 
     calcDriverPool radiusStep = do
       let vehicleVariant = searchTry.vehicleVariant
@@ -183,7 +204,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum = withLogTag (
                 =<< splitDriverPoolForSorting merchantId intelligentPoolConfig.minQuotesToQualifyForIntelligentPool driversWithValidReqAmount -- snd means taking drivers who recieved less then X(config- minQuotesToQualifyForIntelligentPool) quotes
             let sortedDriverPoolWithSilentSort = splitSilentDrivers sortedDriverPool
             let randomizedDriverPoolWithSilentSort = splitSilentDrivers randomizedDriverPool
-            takeDriversUsingPoolPercentage (sortedDriverPoolWithSilentSort, randomizedDriverPoolWithSilentSort) fillSize intelligentPoolConfig
+            takeDriversUsingPoolPercentage merchantId (sortedDriverPoolWithSilentSort, randomizedDriverPoolWithSilentSort) fillSize intelligentPoolConfig driverPoolCfg
           Random -> pure $ take fillSize driversWithValidReqAmount
     cacheBatch batch = do
       logDebug $ "Caching batch-" <> show batch
@@ -379,7 +400,8 @@ getNextDriverPoolBatch ::
     EsqDBReplicaFlow m r,
     CoreMetrics m,
     EsqDBFlow m r,
-    Redis.HedisFlow m r
+    Redis.HedisFlow m r,
+    CacheFlow m r
   ) =>
   DriverPoolConfig ->
   DSR.SearchRequest ->
