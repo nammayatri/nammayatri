@@ -294,28 +294,45 @@ primaryButtons push config =
     , PrimaryButton.view (push <<< Button2) (secondPrimaryButtonConfig config)]
 
 
-radioButton :: forall w .  Config -> (Action  -> Effect Unit) -> Int -> CancellationReasons -> PrestoDOM (Effect Unit) w
-radioButton config push index item = 
- linearLayout
-  [ height MATCH_PARENT
-  , width MATCH_PARENT
-  , gravity CENTER_VERTICAL
-  , padding (Padding 0 12 0 12)
-  ][ imageView
-      [ width (V 24)
-      , height (V 24)
-      , imageWithFallback case config.activeIndex of 
-                    Just activeIndex' -> if ( index == activeIndex') then "ny_ic_radio_selected," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_radio_selected.png" else "ny_ic_radio_unselected," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_radio_unselected.png"
-                    Nothing           -> "ny_ic_radio_unselected," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_radio_unselected.png"
-      ],
-      textView $
-      [ text item.description
-      , margin (MarginLeft 10)
-      , color Color.black900
-      ] <> case config.activeIndex of 
-                    Just activeIndex' -> if index == activeIndex' then FontStyle.body4 LanguageStyle else FontStyle.paragraphText LanguageStyle
-                    Nothing           -> FontStyle.paragraphText LanguageStyle
-  ]
+radioButton :: forall w. Config -> (Action -> Effect Unit) -> Int -> CancellationReasons -> PrestoDOM (Effect Unit) w
+radioButton config push index item =
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , gravity CENTER_VERTICAL
+    , padding (Padding 0 12 0 12)
+    ]
+    [ linearLayout
+        [ width (V 17)
+        , height (V 17)
+        , stroke $ "1,"
+            <> case config.activeIndex of
+                Just activeIndex' -> if (index == activeIndex') then Color.black800 else Color.black600
+                Nothing -> Color.black600
+        , cornerRadius 8.5
+        , gravity CENTER
+        ]
+        [ linearLayout
+            [ width $ V 10
+            , height $ V 10
+            , cornerRadius 5.0
+            , background Color.black800
+            , visibility
+                $ case config.activeIndex of
+                    Just activeIndex' -> if (index == activeIndex') then VISIBLE else GONE
+                    Nothing -> GONE
+            ]
+            []
+        ]
+    , textView
+        $ [ text item.description
+          , margin (MarginLeft 10)
+          , color Color.black900
+          ]
+        <> case config.activeIndex of
+            Just activeIndex' -> if index == activeIndex' then FontStyle.body4 LanguageStyle else FontStyle.paragraphText LanguageStyle
+            Nothing -> FontStyle.paragraphText LanguageStyle
+    ]
 
 firstPrimaryButtonConfig :: Config -> PrimaryButtonConfig.Config
 firstPrimaryButtonConfig config = let

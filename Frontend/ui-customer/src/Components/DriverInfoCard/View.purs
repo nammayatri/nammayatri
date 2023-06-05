@@ -486,7 +486,7 @@ cancelRideLayout push state =
      [ width WRAP_CONTENT
      , height WRAP_CONTENT
      , text $ getString CANCEL_RIDE
-     , color state.data.config.profileName
+     , color state.data.config.confirmPickUpLocationBorder
      , alpha 0.6
      ] <> FontStyle.body1 TypoGraphy)
    ]

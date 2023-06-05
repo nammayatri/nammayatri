@@ -8,11 +8,11 @@ config :: AppConfig
 config =
   {
     primaryTextColor :  "#FFFFFF",
-    primaryBackground : "#03B9F5",
+    primaryBackground : "#00B8F5",
     merchantId : "UNKNOWN",
     searchLocationTheme : Color.black900,
     estimateConfirmText : "Request a NammaYatri Ride",
-    autoConfirmingLoaderColor : "#03B9F5",
+    autoConfirmingLoaderColor : "#00B8F5",
     quoteListModelBackground : Color.black900,
     quoteListModel : {
       backgroundColor : "#F5F9FE",
@@ -28,5 +28,6 @@ config =
     otpTextColor : "#101010",
     rateCardColor : "#00B8F5",
     nyBrandingVisibility : true,
-    fontType : "System"
+    fontType : "System",
+    confirmPickUpLocationBorder : "#101010"
   } 

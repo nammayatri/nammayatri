@@ -1,19 +1,19 @@
 window.getMerchantConfig = function () {
     return JSON.stringify({
         primaryTextColor : "#FFFFFF",
-        primaryBackground : "#03B9F5",
+        primaryBackground : "#00B8F5",
         merchantId : "PAYTM" ,
-        searchLocationTheme : "#E3F4FC",
+        searchLocationTheme : "#F5F9FE",
         estimateConfirmText : "Request a NammaYatri Ride",
         autoConfirmingLoaderColor : "#03B9F5",
-        quoteListModelBackground : "#E3F4FC",
+        quoteListModelBackground : "#F5F9FE",
         quoteListModel : {
             backgroundColor : "#F5F9FE",
             textColor : "#2C2F3A",
             loaderColor : "#03B9F5"
         },
-        profileBackground : "#81DFFA",
-        profileName : "#101010",
+        profileBackground : "#00B8F5",
+        profileName : "#FFFFFF",
         profileImage : "#012A72",
         feedbackBackground : "#D3D3D3",
         sideBarList : ["MyRides", "Favorites", "HelpAndSupport", "Language", "About"],
@@ -21,6 +21,7 @@ window.getMerchantConfig = function () {
         otpTextColor : "#101010",
         rateCardColor : "#00B8F5",
         nyBrandingVisibility: true,
-        fontType : "System"
+        fontType : "System",
+        confirmPickUpLocationBorder : "#101010"
     })
 }

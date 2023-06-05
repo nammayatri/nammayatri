@@ -23,7 +23,8 @@ type AppConfig =
     otpTextColor :: String,
     rateCardColor :: String,
     nyBrandingVisibility :: Boolean,
-    fontType :: String
+    fontType :: String,
+    confirmPickUpLocationBorder ::String
   } 
 
 type QuoteListConfig = {
