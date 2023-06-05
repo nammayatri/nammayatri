@@ -48,7 +48,7 @@ data SearchTry = SearchTry
   }
   deriving (Generic, PrettyShow, Show)
 
-data SearchTryStatus = ACTIVE | CANCELLED
+data SearchTryStatus = ACTIVE | CANCELLED | COMPLETED
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
   deriving (PrettyShow) via Showable SearchTryStatus
 

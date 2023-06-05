@@ -134,18 +134,23 @@ handler merchantId req eitherReq = do
     InitNormalReq -> do
       case eitherReq of
         Left (driverQuote, searchRequest, searchTry) -> do
-          buildBooking searchRequest driverQuote searchTry.startTime DRB.NormalBooking now (mbPaymentMethod <&> (.id))
+          booking <- buildBooking searchRequest driverQuote searchTry.startTime DRB.NormalBooking now (mbPaymentMethod <&> (.id))
+          Esq.runTransaction $ do
+            QST.updateStatus searchTry.id DST.COMPLETED
+            QRB.create booking
+          return booking
         Right _ -> throwError $ InvalidRequest "Can't have specialZoneQuote in normal booking"
     InitSpecialZoneReq -> do
       case eitherReq of
         Right (specialZoneQuote, searchRequest) -> do
-          buildBooking searchRequest specialZoneQuote searchRequest.startTime DRB.SpecialZoneBooking now (mbPaymentMethod <&> (.id))
+          booking <- buildBooking searchRequest specialZoneQuote searchRequest.startTime DRB.SpecialZoneBooking now (mbPaymentMethod <&> (.id))
+          Esq.runTransaction $
+            QRB.create booking
+          return booking
         Left _ -> throwError $ InvalidRequest "Can't have driverQuote in specialZone booking"
 
   let paymentUrl = DMPM.getPrepaidPaymentUrl =<< mbPaymentMethod
   let paymentMethodInfo = req.paymentMethodInfo
-  Esq.runTransaction $
-    QRB.create booking
   pure InitRes {..}
   where
     buildBooking ::

@@ -35,7 +35,6 @@ data MetricsHandle m = MetricsHandle
 
 data Handle m = Handle
   { isBatchNumExceedLimit :: m Bool,
-    isRideAlreadyAssigned :: m Bool,
     isReceivedMaxDriverQuotes :: m Bool,
     getNextDriverPoolBatch :: m [DriverPoolWithActualDistResult],
     sendSearchRequestToDrivers :: [DriverPoolWithActualDistResult] -> m (),
@@ -43,7 +42,8 @@ data Handle m = Handle
     metrics :: MetricsHandle m,
     setBatchDurationLock :: m (Maybe UTCTime),
     createRescheduleTime :: UTCTime -> m UTCTime,
-    ifSearchRequestIsInvalid :: m Bool
+    isSearchTryValid :: m Bool,
+    cancelSearchTry :: m ()
   }
 
 handler :: HandleMonad m => Handle m -> m ExecutionResult
@@ -51,24 +51,18 @@ handler h@Handle {..} = do
   logInfo "Starting job execution"
   metrics.incrementTaskCounter
   measuringDuration (\ms _ -> metrics.putTaskDuration ms) $ do
-    isSearchRequestInvalid <- ifSearchRequestIsInvalid
-    if isSearchRequestInvalid
+    isSearchTryValid' <- isSearchTryValid
+    if not isSearchTryValid'
       then do
-        logInfo "Search request is either cancelled or expired."
+        logInfo "Search request is either assigned, cancelled or expired."
         return Complete
       else do
-        isRideAssigned <- isRideAlreadyAssigned
-        if isRideAssigned
+        isReceivedMaxDriverQuotes' <- isReceivedMaxDriverQuotes
+        if isReceivedMaxDriverQuotes'
           then do
-            logInfo "Ride already assigned."
+            logInfo "Received enough quotes from drivers."
             return Complete
-          else do
-            isReceivedMaxDriverQuotes' <- isReceivedMaxDriverQuotes
-            if isReceivedMaxDriverQuotes'
-              then do
-                logInfo "Received enough quotes from drivers."
-                return Complete
-              else processRequestSending h
+          else processRequestSending h
 
 processRequestSending :: HandleMonad m => Handle m -> m ExecutionResult
 processRequestSending Handle {..} = do
@@ -81,6 +75,7 @@ processRequestSending Handle {..} = do
         then do
           metrics.incrementFailedTaskCounter
           logInfo "No driver accepted"
+          cancelSearchTry
           return Complete
         else do
           driverPool <- getNextDriverPoolBatch
@@ -88,6 +83,7 @@ processRequestSending Handle {..} = do
             then do
               metrics.incrementFailedTaskCounter
               logInfo "No driver available"
+              cancelSearchTry
               return Complete
             else do
               sendSearchRequestToDrivers driverPool
