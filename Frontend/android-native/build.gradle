@@ -2,13 +2,18 @@
 
 
 buildscript {
-    
-    repositories {
-        google()
-        jcenter()
-        mavenCentral()
-        maven {
-            url 'https://maven.fabric.io/public'
+
+    if(project.hasProperty("nixMavenRepo")) {
+        repositories {
+            maven { url = nixMavenRepo }
+        }
+    } else {
+        repositories {
+            google()
+            mavenCentral()
+            maven {
+                url 'https://maven.fabric.io/public'
+            }
         }
     }
     dependencies {
@@ -28,14 +33,28 @@ buildscript {
 }
 
 allprojects {
-    repositories {
-        google()
-        jcenter()
-        mavenCentral()
-        maven {
-            url "https://maven.juspay.in/jp-build-packages/hyper-sdk/"
+    if(project.hasProperty("nixMavenRepo")) {
+        repositories {
+            maven { url = nixMavenRepo }
         }
-        maven { url "https://maven.getsimpl.com"}
+    } else {
+        repositories {
+            mavenCentral()
+            google()
+            maven {
+                url "https://maven.juspay.in/jp-build-packages/hyper-sdk/"
+            }
+            maven { url "https://maven.getsimpl.com"}
+            jcenter() {
+                content {
+                    includeModule("com.theartofdev.edmodo", "android-image-cropper")
+                }
+            }
+        }
+    }
+
+    dependencyLocking {
+        lockAllConfigurations()
     }
 }
 

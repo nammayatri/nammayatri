@@ -25,17 +25,23 @@ static InetAddress getLocalAddress() throws SocketException {
     }
     return null
 }
-repositories {
-    mavenCentral()
-    google()
-    maven {
-        url "https://maven.juspay.in/jp-build-packages/release/"
+if(project.hasProperty("nixMavenRepo")) {
+    repositories {
+        maven { url = nixMavenRepo }
     }
-    maven {
-        url "https://maven.juspay.in/jp-build-packages/beta/"
-    }
-    maven {
-        url "https://maven.juspay.in/jp-build-packages/hyper-sdk/"
+} else {
+    repositories {
+        mavenCentral()
+        google()
+        maven {
+          url "https://maven.juspay.in/jp-build-packages/release/"
+        }
+        maven {
+          url "https://maven.juspay.in/jp-build-packages/beta/"
+        }
+        maven {
+          url "https://maven.juspay.in/jp-build-packages/hyper-sdk/"
+        }
     }
 }
 

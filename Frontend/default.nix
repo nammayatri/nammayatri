@@ -1,9 +1,10 @@
 { inputs, ... }:
 {
   imports = [
-    ./node
+    ./android-native
     ./nix/watch.nix
     ./nix/bundle.nix
+    ./node
   ];
 
   perSystem = { config, self', lib, system, ... }:
