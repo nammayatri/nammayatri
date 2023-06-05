@@ -55,11 +55,11 @@ import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter
 import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
-import qualified SharedLogic.MerchantConfig as SMC
+-- import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.PublicTransport as PublicTransport
 import Storage.CachedQueries.CacheConfig
-import qualified Storage.CachedQueries.Merchant as QMerchant
-import qualified Storage.CachedQueries.MerchantConfig as CMC
+-- import qualified Storage.CachedQueries.Merchant as QMerchant
+-- import qualified Storage.CachedQueries.MerchantConfig as CMC
 import qualified Storage.Queries.Person as Person
 import Tools.Auth
 import qualified Tools.JSON as J
