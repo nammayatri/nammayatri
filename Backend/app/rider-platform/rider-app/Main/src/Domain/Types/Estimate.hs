@@ -37,9 +37,6 @@ data Estimate = Estimate
     requestId :: Id DSearchRequest.SearchRequest,
     bppEstimateId :: Id BPPEstimate,
     estimatedFare :: Money,
-    autoAssignEnabled :: Bool,
-    autoAssignEnabledV2 :: Bool,
-    autoAssignQuoteId :: Maybe Text,
     discount :: Maybe Money,
     estimatedTotalFare :: Money,
     totalFareRange :: FareRange,
@@ -121,7 +118,7 @@ data EstimateAPIEntity = EstimateAPIEntity
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data NightShiftRateAPIEntity = NightShiftRateAPIEntity
-  { nightShiftMultuplier :: Centesimal, -- TODO: this field works wrong, value in it not always make sense, it have to be removed later
+  { nightShiftMultiplier :: Centesimal, -- TODO: this field works wrong, value in it not always make sense, it have to be removed later
     nightShiftStart :: TimeOfDay,
     nightShiftEnd :: TimeOfDay
   }
@@ -149,7 +146,7 @@ mkEstimateAPIEntity Estimate {..} = do
 mkNightShiftRateAPIEntity :: NightShiftInfo -> NightShiftRateAPIEntity
 mkNightShiftRateAPIEntity NightShiftInfo {..} = do
   NightShiftRateAPIEntity
-    { nightShiftMultuplier = oldNightShiftCharge,
+    { nightShiftMultiplier = oldNightShiftCharge,
       ..
     }
 

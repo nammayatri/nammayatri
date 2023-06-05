@@ -29,7 +29,7 @@ import Database.Beam.Postgres
   ( Postgres,
   )
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
-import qualified Domain.Types.SearchRequest as Domain
+-- import qualified Domain.Types.SearchRequest as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant (Variant)
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
@@ -39,6 +39,7 @@ import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Vehicle ()
+import qualified Tools.Maps as Maps
 
 -- fromFieldEnum ::
 --   (Typeable a, Read a) =>
@@ -72,15 +73,15 @@ import Storage.Tabular.Vehicle ()
 
 -- instance FromBackendRow Postgres Seconds
 
-instance FromField Domain.SearchRequestStatus where
-  fromField = fromFieldEnum
+-- instance FromField Domain.SearchRequestStatus where
+--   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.SearchRequestStatus where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.SearchRequestStatus where
+--   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.SearchRequestStatus
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.SearchRequestStatus
 
-instance FromBackendRow Postgres Domain.SearchRequestStatus
+-- instance FromBackendRow Postgres Domain.SearchRequestStatus
 
 -- instance FromField Meters where
 --   fromField = fromFieldEnum
@@ -110,10 +111,6 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be BaseUrl
 data SearchRequestT f = SearchRequestT
   { id :: B.C f Text,
     transactionId :: B.C f Text,
-    messageId :: B.C f Text,
-    estimateId :: B.C f Text,
-    startTime :: B.C f Time.UTCTime,
-    validTill :: B.C f Time.UTCTime,
     providerId :: B.C f Text,
     fromLocationId :: B.C f Text,
     toLocationId :: B.C f Text,
@@ -121,19 +118,15 @@ data SearchRequestT f = SearchRequestT
     bapUri :: B.C f Text,
     estimatedDistance :: B.C f Meters,
     estimatedDuration :: B.C f Seconds,
-    customerExtraFee :: B.C f (Maybe Money),
+    customerLanguage :: B.C f (Maybe Maps.Language),
     device :: B.C f (Maybe Text),
-    status :: B.C f Domain.SearchRequestStatus,
-    vehicleVariant :: B.C f Variant.Variant,
-    searchRepeatCounter :: B.C f Int,
     autoAssignEnabled :: B.C f Bool,
-    createdAt :: B.C f Time.UTCTime,
-    updatedAt :: B.C f Time.UTCTime
+    createdAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
-instance IsString Domain.SearchRequestStatus where
-  fromString = show
+-- instance IsString Domain.SearchRequestStatus where
+--   fromString = show
 
 instance IsString Variant.Variant where
   fromString = show
@@ -165,6 +158,16 @@ instance ToJSON SearchRequest where
 
 deriving stock instance Show SearchRequest
 
+instance FromField Maps.Language where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Maps.Language where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Maps.Language
+
+instance FromBackendRow Postgres Maps.Language
+
 -- deriving stock instance Read Money
 
 searchRequestTMod :: SearchRequestT (B.FieldModification (B.TableField SearchRequestT))
@@ -172,10 +175,6 @@ searchRequestTMod =
   B.tableModification
     { id = B.fieldNamed "id",
       transactionId = B.fieldNamed "transaction_id",
-      messageId = B.fieldNamed "message_id",
-      estimateId = B.fieldNamed "estimate_id",
-      startTime = B.fieldNamed "start_time",
-      validTill = B.fieldNamed "valid_till",
       providerId = B.fieldNamed "provider_id",
       fromLocationId = B.fieldNamed "from_location_id",
       toLocationId = B.fieldNamed "to_location_id",
@@ -183,14 +182,10 @@ searchRequestTMod =
       bapUri = B.fieldNamed "bap_uri",
       estimatedDistance = B.fieldNamed "estimated_distance",
       estimatedDuration = B.fieldNamed "estimated_duration",
-      customerExtraFee = B.fieldNamed "customer_extra_fee",
+      customerLanguage = B.fieldNamed "customer_language",
       device = B.fieldNamed "device",
-      status = B.fieldNamed "status",
-      vehicleVariant = B.fieldNamed "vehicle_variant",
-      searchRepeatCounter = B.fieldNamed "search_repeat_counter",
       autoAssignEnabled = B.fieldNamed "auto_assign_enabled",
-      createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at"
+      createdAt = B.fieldNamed "created_at"
     }
 
 psToHs :: HM.HashMap Text Text
@@ -204,31 +199,31 @@ searchRequestToPSModifiers :: M.Map Text (A.Value -> A.Value)
 searchRequestToPSModifiers =
   M.empty
 
-defaultSearchRequest :: SearchRequest
-defaultSearchRequest =
-  SearchRequestT
-    { id = "",
-      transactionId = "",
-      messageId = "",
-      estimateId = "",
-      startTime = defaultUTCDate,
-      validTill = defaultUTCDate,
-      providerId = "",
-      fromLocationId = "",
-      toLocationId = "",
-      bapId = "",
-      bapUri = "",
-      estimatedDistance = "",
-      estimatedDuration = "",
-      customerExtraFee = Nothing,
-      device = Nothing,
-      status = "",
-      vehicleVariant = "",
-      searchRepeatCounter = 0,
-      autoAssignEnabled = False,
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
-    }
+-- defaultSearchRequest :: SearchRequest
+-- defaultSearchRequest =
+--   SearchRequestT
+--     { id = "",
+--       transactionId = "",
+--       messageId = "",
+--       estimateId = "",
+--       startTime = defaultUTCDate,
+--       validTill = defaultUTCDate,
+--       providerId = "",
+--       fromLocationId = "",
+--       toLocationId = "",
+--       bapId = "",
+--       bapUri = "",
+--       estimatedDistance = "",
+--       estimatedDuration = "",
+--       customerExtraFee = Nothing,
+--       device = Nothing,
+--       status = "",
+--       vehicleVariant = "",
+--       searchRepeatCounter = 0,
+--       autoAssignEnabled = False,
+--       createdAt = defaultUTCDate,
+--       updatedAt = defaultUTCDate
+--     }
 
 instance Serialize SearchRequest where
   put = error "undefined"

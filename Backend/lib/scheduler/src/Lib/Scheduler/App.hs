@@ -41,6 +41,7 @@ runSchedulerService ::
   IO ()
 runSchedulerService SchedulerConfig {..} handle_ = do
   hostname <- getPodName
+  version <- lookupDeploymentVersion
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   hedisEnv <- connectHedis hedisCfg (\k -> hedisPrefix <> ":" <> k)

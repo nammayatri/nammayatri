@@ -113,6 +113,26 @@ findAllByDriverId driverId mbLimit mbOffset mbOnlyActive = Esq.buildDType $ do
       let ride = extractSolidType @Ride fullRideT
       return $ mbFullBooking <&> (ride,)
 
+findAllRidesBookingsByRideId :: Transactionable m => Id Merchant -> [Id Ride] -> m [(Ride, Booking)]
+findAllRidesBookingsByRideId merchantId rideIds = Esq.buildDType $ do
+  res <- Esq.findAll' $ do
+    ((ride :& mbRating) :& (booking :& fromLoc :& mbOneWayBooking :& mbToLoc :& mbRentalBooking)) <-
+      from $
+        fullRideTable
+          `innerJoin` fullBookingTable
+            `Esq.on` ( \((ride :& _) :& (booking :& _ :& _ :& _ :& _)) ->
+                         ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
+                     )
+    where_ $
+      booking ^. BookingProviderId ==. val (toKey merchantId)
+        &&. (ride ^. RideTId) `Esq.in_` valList (map toKey rideIds)
+    return ((ride, mbRating), (booking, fromLoc, mbOneWayBooking, mbToLoc, mbRentalBooking))
+  fmap catMaybes $
+    for res $ \(fullRideT, fullBookingT) -> do
+      mbFullBooking <- buildFullBooking fullBookingT
+      let ride = extractSolidType @Ride fullRideT
+      return $ mbFullBooking <&> (ride,)
+
 findOneByDriverId :: Transactionable m => Id Person -> m (Maybe Ride)
 findOneByDriverId driverId = Esq.buildDType $ do
   mbFullRideT <- Esq.findOne' $ do
@@ -315,8 +335,10 @@ findAllRideItems ::
   Maybe DbHash ->
   Maybe Money ->
   UTCTime ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
   m [RideItem]
-findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbFareDiff now = do
+findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbFareDiff now mbFrom mbTo = do
   res <- Esq.findAll $ do
     booking :& ride :& rideDetails :& riderDetails <-
       from $
@@ -336,6 +358,8 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
     let bookingStatusVal = mkBookingStatusVal ride
     where_ $
       booking ^. BookingProviderId ==. val (toKey merchantId)
+        &&. whenJust_ mbFrom (\defaultFrom -> ride ^. RideCreatedAt >=. val defaultFrom)
+        &&. whenJust_ mbTo (\defaultTo -> ride ^. RideCreatedAt <=. val defaultTo)
         &&. whenJust_ mbBookingStatus (\bookingStatus -> bookingStatusVal ==. val bookingStatus)
         &&. whenJust_ mbRideShortId (\rideShortId -> ride ^. Ride.RideShortId ==. val rideShortId.getShortId)
         &&. whenJust_ mbDriverPhoneDBHash (\hash -> rideDetails ^. RideDetailsDriverNumberHash ==. val (Just hash))

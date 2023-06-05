@@ -19,6 +19,7 @@ import Services.API
 import Services.Config as SC
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..))
+import Common.Types.App (Version(..))
 import Data.Either (Either(..), either)
 import Data.Maybe (Maybe(..), maybe, fromMaybe)
 import Foreign.Generic (encode)
@@ -165,7 +166,7 @@ makeTriggerOTPReq mobileNumber = TriggerOTPReq
     {
       "mobileNumber"      : mobileNumber,
       "mobileCountryCode" : "+91",
-      "merchantId" : if SC.getMerchantId == "NA" then getValueToLocalNativeStore MERCHANT_ID else SC.getMerchantId
+      "merchantId" : if ( SC.getMerchantId "")== "NA" then getValueToLocalNativeStore MERCHANT_ID else (SC.getMerchantId "")
     }
 
 ----------------------------------------------------------- ResendOTPBT Function ------------------------------------------------------------------------------------------------------
@@ -215,7 +216,7 @@ verifyToken payload token = do
 makeVerifyOTPReq :: String -> VerifyTokenReq
 makeVerifyOTPReq otp = VerifyTokenReq {
       "otp": otp,
-      "deviceToken": if getValueToLocalNativeStore FCM_TOKEN == "__failed" then "" else (getValueToLocalNativeStore FCM_TOKEN),
+      "deviceToken": if getValueToLocalNativeStore FCM_TOKEN == "__failed" then "generated_xxxx_xxxx_xxxx" else (getValueToLocalNativeStore FCM_TOKEN),
       "whatsappNotificationEnroll": OPT_IN
     }
 
@@ -450,8 +451,32 @@ makeUpdateProfileRequest name gender referralCode =
             "KN_IN" -> "KANNADA"
             "HI_IN" -> "HINDI"
             "ML_IN" -> "MALAYALAM"
+            "BN_IN" -> "BENGALI"
             "TA_IN" -> "TAMIL"
             _       -> "ENGLISH"
+        , clientVersion : Nothing
+        , bundleVersion : Nothing
+    }
+
+makeUpdateVersionRequest :: Version -> Version -> UpdateProfileReq
+makeUpdateVersionRequest clientVersion bundleVersion = 
+    UpdateProfileReq{
+          middleName : Nothing
+        , lastName : Nothing
+        , deviceToken : Just (getValueToLocalNativeStore FCM_TOKEN)
+        , firstName : Nothing
+        , email : Nothing
+        , referralCode : Nothing
+        , gender : Nothing
+        , language : Just case getValueToLocalNativeStore LANGUAGE_KEY of
+            "EN_US" -> "ENGLISH"
+            "KN_IN" -> "KANNADA"
+            "HI_IN" -> "HINDI"
+            "ML_IN" -> "MALAYALAM"
+            "TA_IN" -> "TAMIL"
+            _       -> "ENGLISH"
+        , clientVersion : Just clientVersion
+        , bundleVersion : Just bundleVersion
     }
 
 editProfileRequest :: Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe String -> UpdateProfileReq
@@ -469,8 +494,11 @@ editProfileRequest firstName middleName lastName emailID gender =
             "KN_IN" -> "KANNADA"
             "HI_IN" -> "HINDI"
             "ML_IN" -> "MALAYALAM"
+            "BN_IN" -> "BENGALI"
             "TA_IN" -> "TAMIL"
             _       -> "ENGLISH"
+        , clientVersion : Nothing
+        , bundleVersion : Nothing
     }
 
 makeUpdateLanguageRequest :: String -> UpdateProfileReq
@@ -487,8 +515,11 @@ makeUpdateLanguageRequest _ = UpdateProfileReq{
             "KN_IN" -> "KANNADA"
             "HI_IN" -> "HINDI"
             "ML_IN" -> "MALAYALAM"
+            "BN_IN" -> "BENGALI"
             "TA_IN" -> "TAMIL"
             _       -> "ENGLISH"
+        , clientVersion : Nothing
+        , bundleVersion : Nothing
     }
 
 placeNameBT :: GetPlaceNameReq -> FlowBT String GetPlaceNameResp
@@ -681,13 +712,13 @@ type Markers = {
 
 driverTracking :: String -> Markers
 driverTracking _ = {
-    srcMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_auto_map" else "ny_ic_auto_map",
+    srcMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_auto_map" else "ic_vehicle_nav_on_map",
     destMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "src_marker" else "ny_ic_src_marker"
 }
 
 rideTracking :: String -> Markers
 rideTracking _ = {
-    srcMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_auto_map" else "ny_ic_auto_map",
+    srcMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_auto_map" else "ic_vehicle_nav_on_map",
     destMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "dest_marker" else "ny_ic_dest_marker"
 }
 
@@ -716,8 +747,8 @@ originServiceabilityBT req = do
     errorHandler (errorPayload) =  do
             BackT $ pure GoBack
 
-destServiceabilityBT :: ServiceabilityReq -> FlowBT String ServiceabilityRes
-destServiceabilityBT req = do
+destServiceabilityBT :: DestinationServiceabilityReq -> FlowBT String ServiceabilityResDestination
+destServiceabilityBT req = do 
     headers <- getHeaders' ""
     withAPIResultBT ((EP.serviceabilityDest "" )) (\x → x) errorHandler (lift $ lift $ callAPI headers req)
     where
@@ -726,6 +757,14 @@ destServiceabilityBT req = do
 
 makeServiceabilityReq :: Number -> Number -> ServiceabilityReq
 makeServiceabilityReq latitude longitude = ServiceabilityReq {
+    "location" : LatLong {
+                "lat" : latitude,
+                "lon" : longitude
+            }
+    }
+
+makeServiceabilityReqForDest :: Number -> Number -> DestinationServiceabilityReq
+makeServiceabilityReqForDest latitude longitude = DestinationServiceabilityReq {
     "location" : LatLong {
                 "lat" : latitude,
                 "lon" : longitude

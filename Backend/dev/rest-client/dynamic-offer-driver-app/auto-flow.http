@@ -101,7 +101,9 @@ token: {{app-token}}
           "lat": 14.441555,
           "lon": 75.922259
       }
-    }
+    },
+    "autoAssignEnabled" : false,
+    "autoAssignEnabledV2" : false
   }
 }
 
@@ -119,9 +121,15 @@ token: {{app-token}}
 # @name select
 @estimateId = {{quotes.response.body.estimates[0].id}}
 
-POST {{app-host}}/estimate/{{estimateId}}/select HTTP/1.1
+POST {{app-host}}/estimate/{{estimateId}}/select2 HTTP/1.1
 content-type: application/json
 token: {{app-token}}
+
+{
+  "customerExtraFee" : 10,
+  "autoAssignEnabled" : false,
+  "autoAssignEnabledV2" : false
+}
 
 ###
 
@@ -138,7 +146,7 @@ content-type: application/json
 
 {
     "offeredFare": 10,
-    "searchRequestId": "{{nearbySearchRequest.response.body.searchRequestsForDriver[0].searchRequestId}}"
+    "searchRequestId": "{{nearbySearchRequest.response.body.searchRequestsForDriver[0].searchTryId}}"
 }
 
 ###

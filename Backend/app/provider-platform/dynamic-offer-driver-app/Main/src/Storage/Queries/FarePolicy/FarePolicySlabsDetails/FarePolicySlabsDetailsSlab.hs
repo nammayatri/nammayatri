@@ -84,7 +84,7 @@ transformBeamFarePolicyProgressiveDetailsToDomain BeamFPSS.FarePolicySlabsDetail
     DFP.FPSlabsDetailsSlab
       { startDistance = startDistance,
         baseFare = baseFare,
-        waitingCharge = waitingCharge,
+        waitingChargeInfo = waitingChargeInfo,
         nightShiftCharge = nightShiftCharge
       }
     )
@@ -95,7 +95,7 @@ transformDomainFarePolicyProgressiveDetailsToBeam (KTI.Id farePolicyId, DFP.FPSl
     { farePolicyId = farePolicyId,
       startDistance = startDistance,
       baseFare = baseFare,
-      waitingCharge = waitingCharge,
+      waitingChargeInfo = waitingChargeInfo,
       nightShiftCharge = nightShiftCharge
     }
 

@@ -23,6 +23,8 @@ data MerchantAccess = MerchantAccess
   { id :: Id MerchantAccess,
     merchantId :: Id DMerchant.Merchant,
     personId :: Id DPerson.Person,
+    secretKey :: Maybe Text,
+    is2faEnabled :: Bool,
     createdAt :: UTCTime
   }
   deriving (Generic, Show)

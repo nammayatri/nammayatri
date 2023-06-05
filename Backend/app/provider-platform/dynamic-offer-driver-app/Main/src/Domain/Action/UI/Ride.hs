@@ -35,9 +35,9 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as DRD
 import qualified Domain.Types.RideDetails as RD
 import qualified Domain.Types.Vehicle as DVeh
-import qualified Kernel.External.FCM.Types as FCM
 import Kernel.External.Maps (HasCoordinates (getCoordinates))
 import Kernel.External.Maps.Types
+import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 -- import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
@@ -77,6 +77,7 @@ data DriverRideRes = DriverRideRes
     driverName :: Text,
     driverNumber :: Maybe Text,
     vehicleVariant :: DVeh.Variant,
+    pickupDropOutsideOfThreshold :: Maybe Bool,
     vehicleModel :: Text,
     vehicleColor :: Text,
     vehicleNumber :: Text,
@@ -92,7 +93,8 @@ data DriverRideRes = DriverRideRes
     chargeableDistance :: Maybe Meters,
     exoPhone :: Text,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    customerExtraFee :: Maybe Money
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -137,6 +139,10 @@ mkDriverRideRes ::
   DriverRideRes
 mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) = do
   let fareParams = booking.fareParams
+      estimatedBaseFare =
+        fareSum $
+          fareParams{driverSelectedFare = Nothing -- it should not be part of estimatedBaseFare
+                    }
   let initial = "" :: Text
   DriverRideRes
     { id = ride.id,
@@ -151,18 +157,20 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) =
       vehicleVariant = fromMaybe DVeh.SEDAN rideDetails.vehicleVariant,
       vehicleModel = fromMaybe initial rideDetails.vehicleModel,
       computedFare = ride.fare,
-      estimatedBaseFare = fareSum fareParams,
+      estimatedBaseFare = estimatedBaseFare,
       estimatedDistance = booking.estimatedDistance,
       driverSelectedFare = fromMaybe 0 fareParams.driverSelectedFare,
       actualRideDistance = ride.traveledDistance,
       createdAt = ride.createdAt,
       updatedAt = ride.updatedAt,
       riderName = booking.riderName,
+      pickupDropOutsideOfThreshold = ride.pickupDropOutsideOfThreshold,
       tripStartTime = ride.tripStartTime,
       tripEndTime = ride.tripEndTime,
       rideRating = rideRating <&> (.ratingValue),
       chargeableDistance = ride.chargeableDistance,
-      exoPhone = maybe booking.primaryExophone (\exophone -> if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone) mbExophone
+      exoPhone = maybe booking.primaryExophone (\exophone -> if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone) mbExophone,
+      customerExtraFee = fareParams.customerExtraFee
     }
 
 arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CoreMetrics m, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["driverReachedDistance" ::: HighPrecMeters]) => Id DRide.Ride -> LatLong -> m APISuccess
@@ -206,6 +214,8 @@ otpRideCreate driver otpCode booking = do
   transporter <-
     QM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
+  vehicle <- QVeh.findById driver.id >>= fromMaybeM (VehicleNotFound driver.id.getId)
+  when (booking.vehicleVariant /= vehicle.variant) $ throwError $ InvalidRequest "Wrong Vehcile Variant"
 
   driverInfo <- QDriverInformation.findById (cast driver.id) >>= fromMaybeM DriverInfoNotFound
   when driverInfo.onRide $ throwError DriverOnRide
@@ -217,7 +227,7 @@ otpRideCreate driver otpCode booking = do
   _ <- QDFS.updateStatus driver.id DDFS.RIDE_ASSIGNED {rideId = ride.id}
   _ <- QRideD.create rideDetails
   QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id
-  _ <- DLoc.updateOnRide (cast driver.id) True
+  _ <- DLoc.updateOnRide (cast driver.id) True booking.providerId
   -- uBooking <- runInReplica $ QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId) -- in replica db we can have outdated value
   uBooking <- QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId) -- in replica db we can have outdated value
   Notify.notifyDriver transporter.id notificationType notificationTitle (message uBooking) driver.id driver.deviceToken
@@ -244,6 +254,7 @@ otpRideCreate driver otpCode booking = do
       return
         DRide.Ride
           { id = guid,
+            pickupDropOutsideOfThreshold = Nothing,
             bookingId = booking.id,
             shortId = shortId,
             status = DRide.NEW,

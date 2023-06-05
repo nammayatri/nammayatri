@@ -14,9 +14,8 @@
 -}
 module Screens.InvoiceScreen.View where
 
-import Common.Types.App (LazyCheck(..))
-import Screens.CustomerUtils.InvoiceScreen.ComponentConfig (genericHeaderConfig, primaryButtonConfig)
 import Animation as Anim
+import Common.Types.App (LazyCheck(..))
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Data.Array as DA
@@ -28,6 +27,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, const, map, not, show, ($), (<<<), (<>), (==))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, afterRender, alignParentRight, background, color, cornerRadius, fontStyle, gravity, height, layoutGravity, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width)
+import Screens.CustomerUtils.InvoiceScreen.ComponentConfig (genericHeaderConfig, primaryButtonConfig)
 import Screens.InvoiceScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
@@ -102,7 +102,7 @@ view push state =
 
 referenceList :: ST.InvoiceScreenState -> Array String
 referenceList state =
-  [ "1.5" <> (getString DAYTIME_CHARGES_APPLICABLE_AT_NIGHT) ]
+  (if (state.data.selectedItem.nightCharges) then [ "1.5" <> (getString DAYTIME_CHARGES_APPLICABLE_AT_NIGHT) ] else [])
     <> (if (isHaveFare "DRIVER_SELECTED_FARE" state.data.selectedItem.faresList) then [(getString DRIVERS_CAN_CHARGE_AN_ADDITIONAL_FARE_UPTO) ] else [])
     <> (if (isHaveFare "WAITING_CHARGES" state.data.selectedItem.faresList) then [ (getString WAITING_CHARGE_DESCRIPTION) ] else [])
     <> (if (isHaveFare "EARLY_END_RIDE_PENALTY" state.data.selectedItem.faresList) then [ (getString EARLY_END_RIDE_CHARGES_DESCRIPTION) ] else [])
@@ -136,6 +136,9 @@ amountBreakupView state =
                       "WAITING_CHARGES" -> getString WAITING_CHARGE
                       "EARLY_END_RIDE_PENALTY" -> getString EARLY_END_RIDE_CHARGES
                       "CUSTOMER_SELECTED_FARE" -> getString CUSTOMER_SELECTED_FARE
+                      "SERVICE_CHARGE" -> getString SERVICE_CHARGES
+                      "FIXED_GOVERNMENT_RATE" -> getString GOVERNMENT_CHAGRES
+                      "WAITING_OR_PICKUP_CHARGES"  -> getString PICKUP_CHARGE
                       _ -> "BASE_FARE"
                   , textSize FontSize.a_14
                   , color Color.black800

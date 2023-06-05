@@ -31,11 +31,11 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (Pattern(..), split, length, take, drop, joinWith, trim)
 import Data.String.CodeUnits (charAt)
 import Effect.Aff (launchAff)
-import Language.Strings (getString)
-import Language.Types(STR(..))
 import Engineering.Helpers.Commons (getNewIDWithTag, strToBool, flowRunner)
 import Helpers.Utils (getImageUrl, getTimeStampString, removeMediaPlayer, setEnabled, setRefreshing, setYoutubePlayer)
 import JBridge (hideKeyboardOnNavigation, requestKeyboardShow)
+import Language.Strings (getString)
+import Language.Types (STR(..))
 import PrestoDOM (Eval, ScrollState(..), Visibility(..), continue, exit, toPropValue, continueWithCmd)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types (AnimationState(..), NotificationCardState, NotificationDetailModelState, NotificationsScreenState, NotificationCardPropState, YoutubeData, YoutubeVideoStatus(..))
@@ -252,8 +252,9 @@ notificationListTransformer notificationArray =
             , imageUrl:
                 case media.fileType of
                   VideoLink -> getImageUrl $ media.url
+                  PortraitVideoLink -> getImageUrl media.url
                   Video -> ""
-                  ImageLink -> ""
+                  ImageLink -> media.url
                   Image -> ""
                   AudioLink -> "ny_ic_audio_file"
                   Audio -> "ny_ic_audio_file"
@@ -284,13 +285,14 @@ propValueTransformer notificationArray =
             , action1Visibility: toPropValue "visible"
             , action2Visibility: toPropValue "gone"
             , descriptionVisibility: toPropValue "visible"
-            , illustrationVisibility: toPropValue if Array.any (_ == media.fileType) [ VideoLink, Audio, Image ] then "visible" else "gone"
-            , playBtnVisibility: toPropValue $ if media.fileType == VideoLink then "visible" else "gone"
+            , illustrationVisibility: toPropValue if Array.any (_ == media.fileType) [ VideoLink, Audio, Image, PortraitVideoLink, ImageLink ] then "visible" else "gone"
+            , playBtnVisibility: toPropValue $ if media.fileType == VideoLink || media.fileType == PortraitVideoLink then "visible" else "gone"
             , playButton: toPropValue "ny_ic_play_btn"
             , imageUrl:
                 toPropValue
                   $ case media.fileType of
                       VideoLink -> getImageUrl $ media.url
+                      PortraitVideoLink -> getImageUrl media.url
                       Video -> ""
                       ImageLink -> ""
                       Image -> ""
@@ -300,6 +302,8 @@ propValueTransformer notificationArray =
             , imageVisibility : toPropValue $ if media.fileType /= Image then "visible" else "gone"
             , previewImageTitle: toPropValue "Preview Image"
             , messageId: toPropValue notificationItem.messageId
+            , imageWithUrl : toPropValue media.url
+            , imageWithUrlVisibility : toPropValue $ if media.fileType == ImageLink then "visible" else "gone"
             }
       )
       notificationArray
@@ -320,6 +324,7 @@ youtubeData =
   , showDuration: true
   , showSeekBar: true
   , videoId: ""
+  , videoType: ""
   }
 
 splitUrlsAndText :: String -> Array String

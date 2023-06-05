@@ -23,9 +23,11 @@ module Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails where
 import qualified Domain.Types.FarePolicy as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
-import Kernel.Types.Common (HighPrecMoney, Meters, Money)
 import Kernel.Types.Id
+import Kernel.Utils.Common
+import Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection (FarePolicyProgressiveDetailsPerExtraKmRateSectionT, FullFarePolicyProgressiveDetailsPerExtraKmRateSection)
 import Storage.Tabular.FarePolicy.Table (FarePolicyTId)
+import Tools.Error
 
 mkPersist
   defaultSqlSettings
@@ -34,9 +36,9 @@ mkPersist
       farePolicyId FarePolicyTId
       baseDistance Meters
       baseFare Money
-      perExtraKmFare HighPrecMoney
       deadKmFare Money
       waitingCharge Domain.WaitingCharge Maybe
+      freeWatingTime Minutes Maybe
       nightShiftCharge Domain.NightShiftCharge Maybe
 
       Primary farePolicyId
@@ -50,18 +52,40 @@ instance TEntityKey FarePolicyProgressiveDetailsT where
 
 type FullFarePolicyProgressiveDetails = (Id Domain.FarePolicy, Domain.FPProgressiveDetails)
 
-instance FromTType FarePolicyProgressiveDetailsT FullFarePolicyProgressiveDetails where
-  fromTType FarePolicyProgressiveDetailsT {..} = do
+type FullFarePolicyProgressiveDetailsT = (FarePolicyProgressiveDetailsT, [FarePolicyProgressiveDetailsPerExtraKmRateSectionT])
+
+instance FromTType FullFarePolicyProgressiveDetailsT FullFarePolicyProgressiveDetails where
+  fromTType (FarePolicyProgressiveDetailsT {..}, perExtraKmRateSectionsT) = do
+    nonEmptyPerExtraKmFareSectionsT <- case perExtraKmRateSectionsT of
+      [] -> throwError (InternalError "Unable to decode progressive FarePolicy details. PerExtraKmFareSections list is emtpy.")
+      a : xs -> return $ a :| xs
+    perExtraKmRateSectionsFullDTypes <- fromTType @_ @FullFarePolicyProgressiveDetailsPerExtraKmRateSection `mapM` nonEmptyPerExtraKmFareSectionsT
+    unless (all (\(farePolicyId', _) -> fromKey farePolicyId == farePolicyId') perExtraKmRateSectionsFullDTypes) $
+      throwError (InternalError "Unable to decode progressive FarePolicy details. Fare policy ids are not the same.")
+    unless (any (\(_, farePolicySlab) -> farePolicySlab.startDistance <= 0) perExtraKmRateSectionsFullDTypes) $
+      throwError (InternalError "Unable to decode progressive FarePolicy details. At least one slab must have startDistance <= 0")
+
+    let waitingChargeInfo =
+          ((,) <$> waitingCharge <*> freeWatingTime) <&> \(waitingCharge', freeWaitingTime') ->
+            Domain.WaitingChargeInfo
+              { waitingCharge = waitingCharge',
+                freeWaitingTime = freeWaitingTime'
+              }
     return
       ( fromKey farePolicyId,
         Domain.FPProgressiveDetails
-          { ..
+          { perExtraKmRateSections = perExtraKmRateSectionsFullDTypes <&> (._2),
+            ..
           }
       )
 
-instance ToTType FarePolicyProgressiveDetailsT FullFarePolicyProgressiveDetails where
+instance ToTType FullFarePolicyProgressiveDetailsT FullFarePolicyProgressiveDetails where
   toTType (farePolicyId, Domain.FPProgressiveDetails {..}) = do
-    FarePolicyProgressiveDetailsT
-      { farePolicyId = toKey farePolicyId,
-        ..
-      }
+    ( FarePolicyProgressiveDetailsT
+        { farePolicyId = toKey farePolicyId,
+          waitingCharge = waitingChargeInfo <&> (.waitingCharge),
+          freeWatingTime = waitingChargeInfo <&> (.freeWaitingTime),
+          ..
+        },
+      toTType . (farePolicyId,) <$> toList perExtraKmRateSections
+      )

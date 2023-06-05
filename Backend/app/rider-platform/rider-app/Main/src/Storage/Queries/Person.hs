@@ -20,7 +20,6 @@ import qualified Domain.Types.MerchantConfig as DMC
 import Domain.Types.Person
 import Domain.Types.Ride as Ride
 import Kernel.External.Encryption
-import Kernel.External.FCM.Types (FCMRecipientToken)
 import Kernel.External.Maps (Language)
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
@@ -149,7 +148,7 @@ updatePersonVersions person mbBundleVersion mbClientVersion =
         where_ $
           tbl ^. PersonTId ==. val (toKey person.id)
 
-updateDeviceToken :: Id Person -> Maybe FCMRecipientToken -> SqlDB ()
+updateDeviceToken :: Id Person -> Maybe Text -> SqlDB ()
 updateDeviceToken personId mbDeviceToken = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -189,11 +188,14 @@ updatePersonalInfo ::
   Maybe Text ->
   Maybe Text ->
   Maybe (EncryptedHashed Text) ->
-  Maybe FCMRecipientToken ->
+  Maybe Text ->
+  Maybe Text ->
   Maybe Language ->
   Maybe Gender ->
+  Maybe Version ->
+  Maybe Version ->
   SqlDB ()
-updatePersonalInfo personId mbFirstName mbMiddleName mbLastName mbReferralCode mbEncEmail mbDeviceToken mbLanguage mbGender = do
+updatePersonalInfo personId mbFirstName mbMiddleName mbLastName mbReferralCode mbEncEmail mbDeviceToken mbNotificationToken mbLanguage mbGender mbCVersion mbBVersion = do
   now <- getCurrentTime
   let mbEmailEncrypted = mbEncEmail <&> unEncrypted . (.encrypted)
   let mbEmailHash = mbEncEmail <&> (.hash)
@@ -207,10 +209,13 @@ updatePersonalInfo personId mbFirstName mbMiddleName mbLastName mbReferralCode m
           <> updateWhenJust_ (\x -> PersonEmailEncrypted =. val (Just x)) mbEmailEncrypted
           <> updateWhenJust_ (\x -> PersonEmailHash =. val (Just x)) mbEmailHash
           <> updateWhenJust_ (\x -> PersonDeviceToken =. val (Just x)) mbDeviceToken
+          <> updateWhenJust_ (\x -> PersonNotificationToken =. val (Just x)) mbNotificationToken
           <> updateWhenJust_ (\x -> PersonReferralCode =. val (Just x)) mbReferralCode
           <> updateWhenJust_ (\_ -> PersonReferredAt =. val (Just now)) mbReferralCode
           <> updateWhenJust_ (\x -> PersonLanguage =. val (Just x)) mbLanguage
           <> updateWhenJust_ (\x -> PersonGender =. val x) mbGender
+          <> updateWhenJust_ (\x -> PersonClientVersion =. val (versionToText <$> Just x)) mbCVersion
+          <> updateWhenJust_ (\x -> PersonBundleVersion =. val (versionToText <$> Just x)) mbBVersion
       )
     where_ $ tbl ^. PersonId ==. val (getId personId)
 
@@ -254,7 +259,7 @@ findByReferralCode referralCode = do
       person ^. PersonReferralCode ==. val (Just referralCode)
     return person
 
-findBlockedByDeviceToken :: Transactionable m => Maybe FCMRecipientToken -> m [Person]
+findBlockedByDeviceToken :: Transactionable m => Maybe Text -> m [Person]
 findBlockedByDeviceToken deviceToken = do
   findAll $ do
     person <- from $ table @PersonT

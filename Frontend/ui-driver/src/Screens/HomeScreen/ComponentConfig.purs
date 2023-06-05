@@ -153,7 +153,7 @@ cancelConfirmationConfig state = let
     backgroundClickable = false,
     cornerRadius = (PTD.Corners 15.0 true true true true),
     coverImageConfig {
-      imageUrl = "ny_ic_cancel_prevention,https://assets.juspay.in/nammayatri/images/driver/ny_ic_cancel_prevention.png"
+      imageUrl = "ic_cancel_prevention,https://assets.juspay.in/nammayatri/images/driver/ny_ic_cancel_prevention.png"
     , visibility = VISIBLE
     , margin = Margin 16 20 16 0
     , height = V 178
@@ -170,7 +170,8 @@ chatViewConfig state = let
       userName = state.data.activeRide.riderName,
       appType = "Driver"
     }
-    ,messages = state.data.messages
+    , messages = state.data.messages
+    , messagesSize = state.data.messagesSize
     , sendMessageActive = state.props.sendMessageActive
     , distance = ""
     , suggestionsList = (if (state.data.activeRide.isDriverArrived || state.data.activeRide.notifiedCustomer) then pickupSuggestions "" else initialSuggestions "")
@@ -253,7 +254,7 @@ enterOtpStateConfig state = let
         text = getString (ENTER_OTP)
       },
       errorConfig {
-        text = if (state.props.otpIncorrect) then (getString ENTERED_WRONG_OTP) else (getString OTP_LIMIT_EXCEED),
+        text = if (state.props.otpIncorrect) then (getString ENTERED_WRONG_OTP) else (getString OTP_LIMIT_EXCEEDED),
         visibility = if (state.props.otpIncorrect || state.props.otpAttemptsExceeded) then VISIBLE else GONE
       },
       subHeadingConfig {

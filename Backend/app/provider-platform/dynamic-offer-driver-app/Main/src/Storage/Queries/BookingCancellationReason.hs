@@ -17,16 +17,20 @@ module Storage.Queries.BookingCancellationReason where
 import Domain.Types.Booking
 import Domain.Types.BookingCancellationReason as DBCR
 import Domain.Types.CancellationReason (CancellationReasonCode (..))
+import Domain.Types.Person
 import Domain.Types.Ride
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import EulerHS.Prelude as P hiding ((^.))
+import Kernel.External.Maps.Types (LatLong (..), lat, lon)
+import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.BookingCancellationReason as BeamBCR
+import Storage.Tabular.BookingCancellationReason
 
 create :: L.MonadFlow m => DBCR.BookingCancellationReason -> m (MeshResult ())
 create bookingCancellationReason = do
@@ -34,6 +38,23 @@ create bookingCancellationReason = do
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainBookingCancellationReasonToBeam bookingCancellationReason)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+
+-- TODO: Convert this function
+findAllCancelledByDriverId ::
+  Transactionable m =>
+  Id Person ->
+  m Int
+findAllCancelledByDriverId driverId = do
+  mkCount <$> do
+    Esq.findAll $ do
+      rideBookingCancellationReason <- from $ table @BookingCancellationReasonT
+      where_ $
+        rideBookingCancellationReason ^. BookingCancellationReasonDriverId ==. val (Just $ toKey driverId)
+          &&. rideBookingCancellationReason ^. BookingCancellationReasonSource ==. val ByDriver
+      return (countRows :: SqlExpr (Esq.Value Int))
+  where
+    mkCount [counter] = counter
+    mkCount _ = 0
 
 findByRideBookingId :: L.MonadFlow m => Id Booking -> m (Maybe BookingCancellationReason)
 findByRideBookingId (Id rideBookingId) = do
@@ -77,7 +98,9 @@ transformBeamBookingCancellationReasonToDomain BeamBCR.BookingCancellationReason
       rideId = Id <$> rideId,
       source = source,
       reasonCode = CancellationReasonCode <$> reasonCode,
-      additionalInfo = additionalInfo
+      additionalInfo = additionalInfo,
+      driverCancellationLocation = LatLong <$> driverCancellationLocationLat <*> driverCancellationLocationLon,
+      driverDistToPickup = driverDistToPickup
     }
 
 transformDomainBookingCancellationReasonToBeam :: BookingCancellationReason -> BeamBCR.BookingCancellationReason
@@ -88,5 +111,8 @@ transformDomainBookingCancellationReasonToBeam BookingCancellationReason {..} =
       BeamBCR.rideId = getId <$> rideId,
       BeamBCR.source = source,
       BeamBCR.reasonCode = (\(CancellationReasonCode x) -> x) <$> reasonCode,
-      BeamBCR.additionalInfo = additionalInfo
+      BeamBCR.additionalInfo = additionalInfo,
+      BeamBCR.driverCancellationLocationLat = lat <$> driverCancellationLocation,
+      BeamBCR.driverCancellationLocationLon = lon <$> driverCancellationLocation,
+      BeamBCR.driverDistToPickup = driverDistToPickup
     }

@@ -1,6 +1,7 @@
 module API.UI.DriverReferral where
 
 import qualified Domain.Action.UI.DriverReferral as Domain
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id)
@@ -22,5 +23,5 @@ handler :: FlowServer API
 handler =
   createDriverReferral
 
-createDriverReferral :: Id SP.Person -> Domain.ReferralLinkReq -> FlowHandler APISuccess
-createDriverReferral driverId = withFlowHandlerAPI . Domain.createDriverReferral driverId False
+createDriverReferral :: (Id SP.Person, Id DM.Merchant) -> Domain.ReferralLinkReq -> FlowHandler APISuccess
+createDriverReferral (driverId, merchantId) = withFlowHandlerAPI . Domain.createDriverReferral (driverId, merchantId) False

@@ -18,9 +18,13 @@ module SharedLogic.Estimate
   )
 where
 
+import qualified Data.List.NonEmpty as NE
+import Data.Ord (comparing)
 import Domain.Types.Estimate as DEst
+import qualified Domain.Types.FareParameters as DFParams
 import Domain.Types.FarePolicy
 import qualified Domain.Types.FarePolicy as DFP
+import qualified Domain.Types.SearchRequest as DSR
 import Kernel.Prelude
 import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.Common
@@ -31,12 +35,12 @@ import Storage.CachedQueries.CacheConfig
 
 buildEstimate ::
   (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r) =>
-  Text ->
+  Id DSR.SearchRequest ->
   UTCTime ->
   Meters ->
   FarePolicy ->
   m DEst.Estimate
-buildEstimate transactionId startTime dist farePolicy = do
+buildEstimate searchReqId startTime dist farePolicy = do
   fareParams <-
     calculateFareParameters
       CalculateFareParametersParams
@@ -53,22 +57,25 @@ buildEstimate transactionId startTime dist farePolicy = do
   logDebug $ "baseFare: " <> show baseFare
   uuid <- generateGUID
   now <- getCurrentTime
+  let mbDriverExtraFeeBounds = findDriverExtraFeeBoundsByDistance dist <$> farePolicy.driverExtraFeeBounds
   pure
     DEst.Estimate
       { id = Id uuid,
-        transactionId = transactionId,
+        requestId = searchReqId,
         vehicleVariant = farePolicy.vehicleVariant,
-        minFare = baseFare + maybe 0 (.minFee) farePolicy.driverExtraFeeBounds,
-        maxFare = baseFare + maybe 0 (.maxFee) farePolicy.driverExtraFeeBounds,
-        estimateBreakupList = estimateBreakups <> additionalBreakups,
+        minFare = baseFare + maybe 0 (.minFee) mbDriverExtraFeeBounds,
+        maxFare = baseFare + maybe 0 (.maxFee) mbDriverExtraFeeBounds,
+        estimateBreakupList =
+          estimateBreakups <> additionalBreakups
+            & filter (filterRequiredBreakups $ DFParams.getFareParametersType fareParams), -- TODO: Remove after roll out
         nightShiftInfo =
-          ((,,) <$> fareParams.nightShiftCharge <*> getOldNightShiftCharge farePolicy.farePolicyDetails <*> farePolicy.nightShiftBounds)
+          ((fromMaybe 0 fareParams.nightShiftCharge,,) <$> getOldNightShiftCharge farePolicy.farePolicyDetails <*> farePolicy.nightShiftBounds)
             <&> \(nightShiftCharge, oldNightShiftCharge, nightShiftBounds) ->
               NightShiftInfo
                 { nightShiftCharge = nightShiftCharge,
                   oldNightShiftCharge = oldNightShiftCharge,
                   nightShiftStart = nightShiftBounds.nightShiftStart,
-                  nightShiftEnd = nightShiftBounds.nightShiftStart
+                  nightShiftEnd = nightShiftBounds.nightShiftEnd
                 },
         waitingCharges = makeWaitingCharges,
         createdAt = now
@@ -78,10 +85,10 @@ buildEstimate transactionId startTime dist farePolicy = do
     mkPrice = DEst.EstimateBreakupPrice currency
     mkBreakupItem = DEst.EstimateBreakup
     makeWaitingCharges = do
-      let waitingCharge = case farePolicy.farePolicyDetails of
-            SlabsDetails det -> (findFPSlabsDetailsSlabByDistance dist det.slabs).waitingCharge
-            ProgressiveDetails det -> det.waitingCharge
-      let (mbWaitingChargePerMin, mbWaitingOrPickupCharges) = case waitingCharge of
+      let waitingChargeInfo = case farePolicy.farePolicyDetails of
+            SlabsDetails det -> (findFPSlabsDetailsSlabByDistance dist det.slabs).waitingChargeInfo
+            ProgressiveDetails det -> det.waitingChargeInfo
+      let (mbWaitingChargePerMin, mbWaitingOrPickupCharges) = case waitingChargeInfo <&> (.waitingCharge) of
             Just (PerMinuteWaitingCharge charge) -> (Just $ roundToIntegral charge, Nothing)
             Just (ConstantWaitingCharge charge) -> (Nothing, Just charge)
             Nothing -> (Nothing, Nothing)
@@ -96,13 +103,28 @@ buildEstimate transactionId startTime dist farePolicy = do
         DFP.SlabsDetails det -> getNightShiftChargeValue <$> (DFP.findFPSlabsDetailsSlabByDistance dist det.slabs).nightShiftCharge
         DFP.ProgressiveDetails det -> getNightShiftChargeValue <$> det.nightShiftCharge
 
+    filterRequiredBreakups fParamsType breakup = do
+      case fParamsType of
+        DFParams.Progressive ->
+          breakup.title == "BASE_DISTANCE_FARE"
+            || breakup.title == "EXTRA_PER_KM_FARE"
+            || breakup.title == "DEAD_KILOMETER_FARE"
+            || breakup.title == "DRIVER_MIN_EXTRA_FEE"
+            || breakup.title == "DRIVER_MAX_EXTRA_FEE"
+        DFParams.Slab ->
+          breakup.title == "BASE_DISTANCE_FARE"
+            || breakup.title == "SERVICE_CHARGE"
+            || breakup.title == "WAITING_OR_PICKUP_CHARGES"
+            || breakup.title == "FIXED_GOVERNMENT_RATE"
+
 mkAdditionalBreakups :: (Money -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> Meters -> FarePolicy -> [breakupItem]
 mkAdditionalBreakups mkPrice mkBreakupItem distance farePolicy = do
-  let driverMinExtraFee = farePolicy.driverExtraFeeBounds <&> (.minFee)
+  let driverExtraFeeBounds = findDriverExtraFeeBoundsByDistance distance <$> farePolicy.driverExtraFeeBounds
+  let driverMinExtraFee = driverExtraFeeBounds <&> (.minFee)
       driverMinExtraFeeCaption = "DRIVER_MIN_EXTRA_FEE"
       driverMinExtraFeeItem = mkBreakupItem driverMinExtraFeeCaption . mkPrice <$> driverMinExtraFee
 
-      driverMaxExtraFee = farePolicy.driverExtraFeeBounds <&> (.maxFee)
+      driverMaxExtraFee = driverExtraFeeBounds <&> (.maxFee)
       driverMaxExtraFeeCaption = "DRIVER_MAX_EXTRA_FEE"
       driverMaxExtraFeeItem = mkBreakupItem driverMaxExtraFeeCaption . mkPrice <$> driverMaxExtraFee
 
@@ -118,9 +140,8 @@ mkAdditionalBreakups mkPrice mkBreakupItem distance farePolicy = do
       DFP.SlabsDetails det -> mkAdditionalSlabBreakups $ DFP.findFPSlabsDetailsSlabByDistance distance det.slabs
 
     mkAdditionalProgressiveBreakups det = do
-      let perExtraKmFare = roundToIntegral det.perExtraKmFare
+      let (perExtraKmFareSection :| _) = NE.sortBy (comparing (.startDistance)) det.perExtraKmRateSections
           perExtraKmFareCaption = "EXTRA_PER_KM_FARE"
-          perExtraKmFareItem = mkBreakupItem perExtraKmFareCaption (mkPrice perExtraKmFare)
+          perExtraKmFareItem = mkBreakupItem perExtraKmFareCaption (mkPrice $ roundToIntegral perExtraKmFareSection.perExtraKmRate)
       [perExtraKmFareItem]
-
     mkAdditionalSlabBreakups _ = []

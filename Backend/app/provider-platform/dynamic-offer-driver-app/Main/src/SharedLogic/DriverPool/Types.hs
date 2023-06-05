@@ -26,8 +26,8 @@ import Domain.Types.Merchant.DriverIntelligentPoolConfig (IntelligentScores)
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.Prelude hiding (id)
-import qualified Kernel.External.FCM.Types as FCM
 import qualified Kernel.External.Maps as Maps
+import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Tools.Maps as Google

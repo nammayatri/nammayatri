@@ -26,5 +26,6 @@ defaultDriverLocation =
       lon = 10,
       coordinatesCalculatedAt = Fixtures.defaultTime,
       createdAt = Fixtures.defaultTime,
-      updatedAt = Fixtures.defaultTime
+      updatedAt = Fixtures.defaultTime,
+      merchantId = Id "MERCHANT_ID"
     }

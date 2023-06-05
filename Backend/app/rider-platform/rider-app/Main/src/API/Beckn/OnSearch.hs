@@ -38,9 +38,16 @@ onSearch ::
   FlowHandler AckResponse
 onSearch _ _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   mbDOnSearchReq <- TaxiACL.buildOnSearchReq req
-  Redis.whenWithLockRedis (onSearchLockKey req.context.message_id) 60 $
-    DOnSearch.onSearch req.context.message_id mbDOnSearchReq
+  whenJust mbDOnSearchReq $ \request -> do
+    Redis.whenWithLockRedis (onSearchLockKey req.context.message_id) 60 $ do
+      validatedRequest <- DOnSearch.validateRequest request
+      fork "on search processing" $ do
+        Redis.whenWithLockRedis (onSearchProcessingLockKey req.context.message_id) 60 $
+          DOnSearch.onSearch req.context.message_id validatedRequest
   pure Ack
 
 onSearchLockKey :: Text -> Text
 onSearchLockKey id = "Customer:OnSearch:MessageId-" <> id
+
+onSearchProcessingLockKey :: Text -> Text
+onSearchProcessingLockKey id = "Customer:OnSearch:Processing:MessageId-" <> id

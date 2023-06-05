@@ -19,12 +19,16 @@ import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode, defaultEnumDecode, defaultEnumEncode)
 
 import Data.Generic.Rep (class Generic)
+import Data.Show.Generic (genericShow)
+import Data.Newtype (class Newtype)
 import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype)
 import Data.Eq.Generic (genericEq)
+import Presto.Core.Types.API (standardEncode,class StandardEncode)
+import Presto.Core.Utils.Encoding (defaultDecode,defaultEncode) 
 import Foreign.Generic (class Decode, class Encode)
 data VehicalTypes = Sedan | Hatchback | SUV | Auto
-data LazyCheck = LanguageStyle | EndPoint | BaseUrl | TypoGraphy | WithoutOffers
+data LazyCheck = LanguageStyle | EndPoint | BaseUrl | TypoGraphy | WithoutOffers | FunctionCall | Config | Language
 
 newtype Place = Place {
   id :: String
@@ -104,6 +108,20 @@ type CancellationReasons = {
     reasonCode :: String,
     description :: String
 }
+
+newtype Version = Version
+  { 
+    major :: Int,
+    minor :: Int,
+    maintenance :: Int
+  }
+
+derive instance genericVersion :: Generic Version _
+derive instance newtypeVersion :: Newtype Version _
+instance standardEncodeVersion :: StandardEncode Version where standardEncode (Version body) = standardEncode body
+instance showVersion :: Show Version where show = genericShow
+instance decodeVersion :: Decode Version where decode = defaultDecode
+instance encodeVersion  :: Encode Version where encode = defaultEncode
 
 -- newtype LocationLatLong = LocationLatLong
 --   { lat :: String

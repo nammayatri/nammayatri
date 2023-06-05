@@ -39,10 +39,12 @@ data SearchRequest = SearchRequest
     estimatedRideDuration :: Maybe Seconds,
     device :: Maybe Text,
     merchantId :: Id DMerchant.Merchant, -- remove when searchRequest will not be used in CustomerSupport
-    createdAt :: UTCTime,
     bundleVersion :: Maybe Version,
     clientVersion :: Maybe Version,
     language :: Maybe Maps.Language,
-    customerExtraFee :: Maybe Money
+    customerExtraFee :: Maybe Money,
+    autoAssignEnabled :: Bool,
+    autoAssignEnabledV2 :: Bool,
+    createdAt :: UTCTime
   }
   deriving (Generic, Show)

@@ -17,6 +17,7 @@
 module Storage.Queries.DriverLocation where
 
 import Domain.Types.DriverLocation
+import Domain.Types.Merchant
 import Domain.Types.Person
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
@@ -25,8 +26,8 @@ import Kernel.Types.Common (MonadTime (getCurrentTime))
 import Kernel.Types.Id
 import Storage.Tabular.DriverLocation
 
-create :: Id Person -> LatLong -> UTCTime -> SqlDB ()
-create drLocationId latLong coordinatesUpdatedAt = do
+create :: Id Person -> LatLong -> UTCTime -> Id Merchant -> SqlDB ()
+create drLocationId latLong coordinatesUpdatedAt merchantId = do
   now <- getCurrentTime
   -- Tricky query to be able to insert meaningful Point
   Esq.insertSelect $
@@ -39,6 +40,7 @@ create drLocationId latLong coordinatesUpdatedAt = do
         <#> val coordinatesUpdatedAt
         <#> val now
         <#> val now
+        <#> val (toKey merchantId)
 
 findById ::
   Transactionable m =>
@@ -46,14 +48,14 @@ findById ::
   m (Maybe DriverLocation)
 findById = Esq.findById
 
-upsertGpsCoord :: Id Person -> LatLong -> UTCTime -> SqlDB DriverLocation
-upsertGpsCoord drLocationId latLong calculationTime = do
+upsertGpsCoord :: Id Person -> LatLong -> UTCTime -> Id Merchant -> SqlDB DriverLocation
+upsertGpsCoord drLocationId latLong calculationTime merchantId = do
   mbDrLoc <- Esq.findById @DriverLocation @DriverLocationT drLocationId
   now <- getCurrentTime
   case mbDrLoc of
     Nothing -> do
-      Storage.Queries.DriverLocation.create drLocationId latLong calculationTime
-      return $ DriverLocation drLocationId latLong.lat latLong.lon calculationTime now now
+      Storage.Queries.DriverLocation.create drLocationId latLong calculationTime merchantId
+      return $ DriverLocation drLocationId latLong.lat latLong.lon calculationTime now now merchantId
     Just oldLocation -> do
       Esq.update $ \tbl -> do
         set

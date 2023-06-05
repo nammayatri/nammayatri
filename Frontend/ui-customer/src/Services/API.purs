@@ -16,6 +16,9 @@
 module Services.API where
 
 import Control.Alt ((<|>))
+import Control.Monad.Except (runExcept)
+import Common.Types.App (Version(..))
+import Data.Either (Either(..))
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
 import Data.Maybe (Maybe)
@@ -563,11 +566,10 @@ newtype SearchReqLocationAPIEntity = SearchReqLocationAPIEntity {
   lon :: Number
 }
 
-newtype OfferRes = OfferRes {
-  onDemandCab :: QuoteAPIEntity,
-  metro ::  MetroOffer,
-  publicTransport :: PublicTransportQuote
-}
+data OfferRes 
+  = Quotes {onDemandCab :: QuoteAPIEntity}
+  | Metro {metro :: MetroOffer}  
+  | Public {publicTransport :: PublicTransportQuote}  
 
 newtype QuoteAPIEntity = QuoteAPIEntity {
   agencyNumber :: String,
@@ -584,11 +586,25 @@ newtype QuoteAPIEntity = QuoteAPIEntity {
 }
 
 newtype QuoteAPIDetails = QuoteAPIDetails {
-  contents :: DriverOfferAPIEntity,
+  contents :: QuoteAPIContents,
   fareProductType :: String
 }
 
-newtype DriverOfferAPIEntity = DriverOfferAPIEntity
+data QuoteAPIContents 
+  = ONE_WAY OneWayQuoteAPIDetails
+  -- | RENTAL TODO ADD RENTAL WHEN NEEDED
+  | DRIVER_OFFER DriverOfferAPIEntity
+  | SPECIAL_ZONE SpecialZoneQuoteAPIDetails
+
+newtype OneWayQuoteAPIDetails = OneWayQuoteAPIDetails {
+  distanceToNearestDriver :: String
+}
+
+newtype SpecialZoneQuoteAPIDetails = SpecialZoneQuoteAPIDetails {
+  quoteId :: String
+}
+
+newtype DriverOfferAPIEntity = DriverOfferAPIEntity 
   {
     rating :: Maybe Number
   , validTill :: String
@@ -693,12 +709,48 @@ instance showSearchReqLocationAPIEntity :: Show SearchReqLocationAPIEntity where
 instance decodeSearchReqLocationAPIEntity :: Decode SearchReqLocationAPIEntity where decode = defaultDecode
 instance encodeSearchReqLocationAPIEntity  :: Encode SearchReqLocationAPIEntity where encode = defaultEncode
 
+derive instance genericOneWayQuoteAPIDetails :: Generic OneWayQuoteAPIDetails _
+derive instance newtypeOneWayQuoteAPIDetails :: Newtype OneWayQuoteAPIDetails _
+instance standardEncodeOneWayQuoteAPIDetails :: StandardEncode OneWayQuoteAPIDetails where standardEncode (OneWayQuoteAPIDetails body) = standardEncode body
+instance showOneWayQuoteAPIDetails :: Show OneWayQuoteAPIDetails where show = genericShow
+instance decodeOneWayQuoteAPIDetails :: Decode OneWayQuoteAPIDetails where decode = defaultDecode
+instance encodeOneWayQuoteAPIDetails  :: Encode OneWayQuoteAPIDetails where encode = defaultEncode
+
+derive instance genericSpecialZoneQuoteAPIDetails :: Generic SpecialZoneQuoteAPIDetails _
+derive instance newtypeSpecialZoneQuoteAPIDetails :: Newtype SpecialZoneQuoteAPIDetails _
+instance standardEncodeSpecialZoneQuoteAPIDetails :: StandardEncode SpecialZoneQuoteAPIDetails where standardEncode (SpecialZoneQuoteAPIDetails body) = standardEncode body
+instance showSpecialZoneQuoteAPIDetails :: Show SpecialZoneQuoteAPIDetails where show = genericShow
+instance decodeSpecialZoneQuoteAPIDetails :: Decode SpecialZoneQuoteAPIDetails where decode = defaultDecode
+instance encodeSpecialZoneQuoteAPIDetails  :: Encode SpecialZoneQuoteAPIDetails where encode = defaultEncode
+
 derive instance genericOfferRes :: Generic OfferRes _
-derive instance newtypeOfferRes :: Newtype OfferRes _
-instance standardEncodeOfferRes :: StandardEncode OfferRes where standardEncode (OfferRes body) = standardEncode body
+instance standardEncodeOfferRes :: StandardEncode OfferRes where 
+  standardEncode (Quotes body) = standardEncode body
+  standardEncode (Metro body) = standardEncode body
+  standardEncode (Public body) = standardEncode body
 instance showOfferRes :: Show OfferRes where show = genericShow
-instance decodeOfferRes :: Decode OfferRes where decode = defaultDecode
-instance encodeOfferRes  :: Encode OfferRes where encode = defaultEncode
+instance decodeOfferRes :: Decode OfferRes  
+  where
+    decode body = (Quotes <$> decode body) <|> (Metro <$> decode body) <|> (Public <$> decode body) <|> (fail $ ForeignError "Unknown response")
+instance encodeOfferRes  :: Encode OfferRes where 
+  encode (Quotes body) = encode body
+  encode (Metro body) = encode body
+  encode (Public body) = encode body
+
+derive instance genericQuoteAPIContents :: Generic QuoteAPIContents _
+instance standardEncodeQuoteAPIContents :: StandardEncode QuoteAPIContents where 
+  standardEncode (ONE_WAY body) = standardEncode body
+  standardEncode (DRIVER_OFFER body) = standardEncode body
+  standardEncode (SPECIAL_ZONE body) = standardEncode body
+instance showQuoteAPIContents :: Show QuoteAPIContents where show = genericShow
+instance decodeQuoteAPIContents :: Decode QuoteAPIContents 
+  where
+    decode body = (ONE_WAY <$> decode body) <|> (DRIVER_OFFER <$> decode body) <|> (SPECIAL_ZONE <$> decode body) <|> (fail $ ForeignError "Unknown response")
+instance encodeQuoteAPIContents  :: Encode QuoteAPIContents where 
+  encode (ONE_WAY body) = encode body
+  encode (DRIVER_OFFER body) = encode body
+  encode (SPECIAL_ZONE body) = encode body
+
 
 derive instance genericQuoteAPIEntity :: Generic QuoteAPIEntity _
 derive instance newtypeQuoteAPIEntity :: Newtype QuoteAPIEntity _
@@ -817,7 +869,7 @@ newtype RideBookingRes = RideBookingRes {
 }
 
 newtype FareBreakupAPIEntity = FareBreakupAPIEntity {
-  amount :: Number,
+  amount :: Int,
   description :: String
 }
 
@@ -832,7 +884,7 @@ newtype RideAPIEntity = RideAPIEntity {
   vehicleNumber :: String,
   rideOtp :: String,
   driverName :: String,
-  chargeableRideDistance :: Maybe Number,
+  chargeableRideDistance :: Maybe Int,
   vehicleVariant :: String,
   driverRatings :: Maybe Number,
   vehicleColor :: String,
@@ -852,7 +904,8 @@ newtype RideBookingAPIDetails = RideBookingAPIDetails {
 
 newtype RideBookingDetails = RideBookingDetails {
   toLocation :: BookingLocationAPIEntity,
-  estimatedDistance :: Maybe Int
+  estimatedDistance :: Maybe Int,
+  otpCode :: Maybe String
 }
 
 newtype BookingLocationAPIEntity = BookingLocationAPIEntity {
@@ -1141,8 +1194,9 @@ newtype GetProfileRes = GetProfileRes
   , referralCode :: Maybe String
   , language :: Maybe String
   , gender :: Maybe String
+  , bundleVersion :: Maybe Version
+  , clientVersion :: Maybe Version
   }
-
 
 
 newtype UpdateProfileReq = UpdateProfileReq
@@ -1155,7 +1209,10 @@ newtype UpdateProfileReq = UpdateProfileReq
   , referralCode :: Maybe String
   , language :: Maybe String
   , gender :: Maybe String
+  , bundleVersion :: Maybe Version
+  , clientVersion :: Maybe Version
   }
+
 
 newtype UpdateProfileRes = UpdateProfileRes
   {
@@ -1478,13 +1535,36 @@ instance showSendIssueRes :: Show SendIssueRes where show = genericShow
 instance decodeSendIssueRes :: Decode SendIssueRes where decode = defaultDecode
 instance encodeSendIssueRes :: Encode SendIssueRes where encode = defaultEncode
 
-newtype ServiceabilityReq = ServiceabilityReq
+newtype DestinationServiceabilityReq = DestinationServiceabilityReq
   { location  :: LatLong
   }
 
-newtype ServiceabilityRes = ServiceabilityRes
-  { serviceable :: Boolean
+newtype ServiceabilityReq = ServiceabilityReq 
+  { location  :: LatLong
   }
+
+newtype ServiceabilityRes = ServiceabilityRes 
+  { serviceable :: Boolean,
+    geoJson :: Maybe String,
+    specialLocation :: Maybe SpecialLocation 
+  }
+
+newtype ServiceabilityResDestination = ServiceabilityResDestination 
+  { serviceable :: Boolean,
+    geoJson :: Maybe String,
+    specialLocation :: Maybe SpecialLocation 
+  }
+newtype SpecialLocation = SpecialLocation
+  {
+    category :: String,
+    gates :: Array GatesInfo,
+    locationName :: String
+  }
+
+newtype GatesInfo = GatesInfo {
+  name :: String,
+  point :: LatLong
+}
 
 instance makeOriginServiceabilityReq :: RestEndpoint ServiceabilityReq ServiceabilityRes where
     makeRequest reqBody headers = defaultMakeRequest POST (EP.serviceabilityOrigin "") headers reqBody
@@ -1498,12 +1578,46 @@ instance showServiceabilityReq :: Show ServiceabilityReq where show = genericSho
 instance decodeServiceabilityReq :: Decode ServiceabilityReq where decode = defaultDecode
 instance encodeServiceabilityReq :: Encode ServiceabilityReq where encode = defaultEncode
 
+instance makeDestinationServiceabilityReq :: RestEndpoint DestinationServiceabilityReq ServiceabilityResDestination where
+    makeRequest reqBody headers = defaultMakeRequest POST (EP.serviceabilityDest "") headers reqBody
+    decodeResponse = decodeJSON
+    encodeRequest req = defaultEncode req
+
+derive instance genericDestinationServiceabilityReq :: Generic DestinationServiceabilityReq _
+derive instance newtypeDestinationServiceabilityReq:: Newtype DestinationServiceabilityReq _
+instance standardEncodeDestinationServiceabilityReq :: StandardEncode DestinationServiceabilityReq where standardEncode (DestinationServiceabilityReq req) = standardEncode req
+instance showDestinationServiceabilityReq :: Show DestinationServiceabilityReq where show = genericShow
+instance decodeDestinationServiceabilityReq :: Decode DestinationServiceabilityReq where decode = defaultDecode
+instance encodeDestinationServiceabilityReq :: Encode DestinationServiceabilityReq where encode = defaultEncode
+
 derive instance genericServiceabilityRes :: Generic ServiceabilityRes _
 derive instance newtypeServiceabilityRes:: Newtype ServiceabilityRes _
 instance standardEncodeServiceabilityRes :: StandardEncode ServiceabilityRes where standardEncode (ServiceabilityRes req) = standardEncode req
 instance showServiceabilityRes :: Show ServiceabilityRes where show = genericShow
 instance decodeServiceabilityRes :: Decode ServiceabilityRes where decode = defaultDecode
 instance encodeServiceabilityRes :: Encode ServiceabilityRes where encode = defaultEncode
+
+derive instance genericServiceabilityResDestination :: Generic ServiceabilityResDestination _
+derive instance newtypeServiceabilityResDestination :: Newtype ServiceabilityResDestination _
+instance standardEncodeServiceabilityResDestination :: StandardEncode ServiceabilityResDestination where standardEncode (ServiceabilityResDestination req) = standardEncode req
+instance showServiceabilityResDestination :: Show ServiceabilityResDestination where show = genericShow
+instance decodeServiceabilityResDestination :: Decode ServiceabilityResDestination where decode = defaultDecode
+instance encodeServiceabilityResDestination :: Encode ServiceabilityResDestination where encode = defaultEncode
+
+derive instance genericSpecialLocation :: Generic SpecialLocation _
+derive instance newtypeSpecialLocation:: Newtype SpecialLocation _
+instance standardEncodeSpecialLocation :: StandardEncode SpecialLocation where standardEncode (SpecialLocation req) = standardEncode req
+instance showSpecialLocation :: Show SpecialLocation where show = genericShow
+instance decodeSpecialLocation :: Decode SpecialLocation where decode = defaultDecode
+instance encodeSpecialLocation :: Encode SpecialLocation where encode = defaultEncode
+
+derive instance genericGatesInfo :: Generic GatesInfo _
+derive instance newtypeGatesInfo:: Newtype GatesInfo _
+instance standardEncodeGatesInfo :: StandardEncode GatesInfo where standardEncode (GatesInfo req) = standardEncode req
+instance showGatesInfo :: Show GatesInfo where show = genericShow
+instance decodeGatesInfo :: Decode GatesInfo where decode = defaultDecode
+instance encodeGatesInfo :: Encode GatesInfo where encode = defaultEncode
+
 
 ----------------------------------------------------------------------- flowStatus api -------------------------------------------------------------------
 

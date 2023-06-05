@@ -27,6 +27,7 @@ module Domain.Action.Beckn.OnSearch
     NightShiftInfo (..),
     WaitingChargesInfo (..),
     onSearch,
+    validateRequest,
   )
 where
 
@@ -61,6 +62,15 @@ data DOnSearchReq = DOnSearchReq
     providerInfo :: ProviderInfo,
     estimatesInfo :: [EstimateInfo],
     quotesInfo :: [QuoteInfo]
+  }
+
+data ValidatedOnSearchReq = ValidatedOnSearchReq
+  { requestId :: Id DSearchReq.SearchRequest,
+    providerInfo :: ProviderInfo,
+    estimatesInfo :: [EstimateInfo],
+    quotesInfo :: [QuoteInfo],
+    _searchRequest :: SearchRequest,
+    merchant :: DMerchant.Merchant
   }
 
 data ProviderInfo = ProviderInfo
@@ -133,23 +143,20 @@ data RentalQuoteDetails = RentalQuoteDetails
     baseDuration :: Hours
   }
 
-onSearch ::
-  Text ->
-  Maybe DOnSearchReq ->
-  Flow ()
-onSearch transactionId mbReq = do
-  whenJust mbReq (onSearchService transactionId)
-
-onSearchService ::
-  Text ->
-  DOnSearchReq ->
-  Flow ()
-onSearchService transactionId DOnSearchReq {..} = do
+validateRequest :: DOnSearchReq -> Flow ValidatedOnSearchReq
+validateRequest DOnSearchReq {..} = do
   _searchRequest <- runInReplica $ QSearchReq.findById requestId >>= fromMaybeM (SearchRequestDoesNotExist requestId.getId)
   merchant <- QMerch.findById _searchRequest.merchantId >>= fromMaybeM (MerchantNotFound _searchRequest.merchantId.getId)
+  return $ ValidatedOnSearchReq {..}
+
+onSearch ::
+  Text ->
+  ValidatedOnSearchReq ->
+  Flow ()
+onSearch transactionId ValidatedOnSearchReq {..} = do
   Metrics.finishSearchMetrics merchant.name transactionId
   now <- getCurrentTime
-  estimates <- traverse (buildEstimate requestId providerInfo now _searchRequest) estimatesInfo
+  estimates <- traverse (buildEstimate providerInfo now _searchRequest) estimatesInfo
   quotes <- traverse (buildQuote requestId providerInfo now _searchRequest.merchantId) quotesInfo
   DB.runTransaction do
     QEstimate.createMany estimates
@@ -159,22 +166,19 @@ onSearchService transactionId DOnSearchReq {..} = do
 
 buildEstimate ::
   MonadFlow m =>
-  Id DSearchReq.SearchRequest ->
   ProviderInfo ->
   UTCTime ->
   SearchRequest ->
   EstimateInfo ->
   m DEstimate.Estimate
-buildEstimate requestId providerInfo now _searchRequest EstimateInfo {..} = do
+buildEstimate providerInfo now _searchRequest EstimateInfo {..} = do
   uid <- generateGUID
   tripTerms <- buildTripTerms descriptions
   estimateBreakupList' <- buildEstimateBreakUp estimateBreakupList uid
   pure
     DEstimate.Estimate
       { id = uid,
-        autoAssignEnabled = False,
-        autoAssignQuoteId = Nothing,
-        autoAssignEnabledV2 = False,
+        requestId = _searchRequest.id,
         providerMobileNumber = providerInfo.mobileNumber,
         providerName = providerInfo.name,
         providerCompletedRidesCount = providerInfo.ridesCompleted,

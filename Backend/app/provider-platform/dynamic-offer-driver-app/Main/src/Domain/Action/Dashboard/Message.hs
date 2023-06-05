@@ -87,6 +87,7 @@ createMediaEntry Common.AddLinkAsMedia {..} = do
       Common.AudioLink -> Domain.AudioLink
       Common.VideoLink -> Domain.VideoLink
       Common.ImageLink -> Domain.ImageLink
+      Common.PortraitVideoLink -> Domain.PortraitVideoLink
 
     mkFile fileUrl = do
       id <- generateGUID
@@ -153,6 +154,7 @@ toCommonMediaFileType = \case
   Domain.ImageLink -> Common.ImageLink
   Domain.VideoLink -> Common.VideoLink
   Domain.AudioLink -> Common.AudioLink
+  Domain.PortraitVideoLink -> Common.PortraitVideoLink
 
 translationToDomainType :: UTCTime -> Common.MessageTranslation -> Domain.MessageTranslation
 translationToDomainType createdAt Common.MessageTranslation {..} = Domain.MessageTranslation {..}

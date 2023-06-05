@@ -18,7 +18,7 @@ import Data.Time (UTCTime)
 import Domain.Types.Common
 import Domain.Types.Merchant (Merchant)
 import EulerHS.Prelude hiding (id)
-import Kernel.External.FCM.Types (FCMConfig)
+import Kernel.External.Notification.FCM.Types (FCMConfig)
 import Kernel.Types.Common
 import Kernel.Types.Id
 
@@ -33,9 +33,10 @@ data TransporterConfigD u = TransporterConfig
     popupDelayToAddAsPenalty :: Maybe Seconds,
     thresholdCancellationScore :: Maybe Int,
     minRidesForCancellationScore :: Maybe Int,
+    thresholdCancellationPercentageToUnlist :: Maybe Int,
+    minRidesToUnlist :: Maybe Int,
     mediaFileUrlPattern :: Text,
     mediaFileSizeUpperLimit :: Int,
-    waitingTimeEstimatedThreshold :: Seconds,
     referralLinkPassword :: Text,
     fcmConfig :: FCMConfig,
     onboardingTryLimit :: Int,

@@ -17,11 +17,14 @@
 module API.Dashboard.RideBooking.Search where
 
 import qualified API.UI.Search as SH
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Environment
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import Servant
+import SharedLogic.Merchant
 import Prelude
 
 data RideSearchEndPoint = SearchEndPoint
@@ -39,8 +42,10 @@ type CustomerRideSearchAPI =
     :> ReqBody '[JSON] SH.SearchReq
     :> Post '[JSON] SH.SearchRes
 
-handler :: FlowServer API
+handler :: ShortId DM.Merchant -> FlowServer API
 handler = callSearch
 
-callSearch :: Id DP.Person -> SH.SearchReq -> FlowHandler SH.SearchRes
-callSearch personId req = SH.search personId req Nothing Nothing Nothing
+callSearch :: ShortId DM.Merchant -> Id DP.Person -> SH.SearchReq -> FlowHandler SH.SearchRes
+callSearch merchantId personId req = do
+  m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
+  SH.search (personId, m.id) req Nothing Nothing Nothing

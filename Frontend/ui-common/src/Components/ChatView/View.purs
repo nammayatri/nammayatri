@@ -1,5 +1,4 @@
-{-
- 
+{- 
   Copyright 2022-23, Juspay India Pvt Ltd
  
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
@@ -16,42 +15,48 @@ module Components.ChatView.View where
 import Effect (Effect)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), scrollBarY, alignParentBottom, background, color, cornerRadius, fontStyle, gravity, height, id, imageView, linearLayout, margin, onClick, orientation, padding, stroke, text, textSize, textView, visibility, weight, width, editText, onChange, hint, scrollView, onAnimationEnd, pattern, ellipsize, clickable, singleLine, maxLines, hintColor, imageWithFallback)
 import Engineering.Helpers.Commons (getNewIDWithTag, screenWidth, os)
-import Animation (translateInXForwardAnim, translateInXBackwardAnim)
+import Animation (fadeInWithDelay, translateInXBackwardAnim, translateInXBackwardFadeAnimWithDelay, translateInXForwardAnim, translateInXForwardFadeAnimWithDelay)
 import PrestoDOM.Animation as PrestoAnim
-import Prelude (Unit, bind, const, pure, unit, ($), (&&), (-), (/), (<>), (==), (>), (*))
-import PrestoDOM.Properties (cornerRadii, lineHeight)
+import Prelude (Unit, bind, const, pure, unit, show, ($), (&&), (-), (/), (<>), (==), (>), (*), (/=), (||), not, ($), negate)
+import PrestoDOM.Properties (alpha, cornerRadii, lineHeight, minWidth)
 import Font.Size as FontSize
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Font.Style as FontStyle
 import Data.Array (mapWithIndex , (!!), length, null)
 import Data.String (split, Pattern(..), length) as STR
 import Data.Maybe (fromMaybe, Maybe(..))
-import JBridge (scrollToBottom)
+import JBridge (renderBase64Image, scrollToBottom, addMediaFile)
 import Components.ChatView.Controller (Action(..), Config(..), ChatComponent)
 import Common.Types.App
+import Styles.Colors (white900) as Color
+import PrestoDOM.Elements.Elements (progressBar)
+import PrestoDOM.Events (afterRender)
+
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 view push config = 
   linearLayout
-  [ height $ V 396
+  [ height if config.spanParent then MATCH_PARENT else (V 410)
   , width MATCH_PARENT
   , orientation VERTICAL
   , alignParentBottom "true,-1"
   , clickable true
   , cornerRadii $ Corners 24.0 true true false false 
   , gravity BOTTOM
-  , stroke ("1," <> config.grey800)
+  , stroke if config.showStroke then ("1," <> config.grey800) else ""
   , background config.white900
   ]
   [ chatHeaderView config push
   , chatBodyView config push
   , chatFooterView config push
   ]
+
 chatHeaderView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 chatHeaderView config push =
   linearLayout
   [ orientation VERTICAL
   , height WRAP_CONTENT
   , width MATCH_PARENT
+  , visibility if config.showHeader then VISIBLE else GONE
   ][ linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -177,11 +182,11 @@ chatBodyView config push =
 chatView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 chatView config push =
   linearLayout
-  [ height $ V 224
+  [ height if config.spanParent then MATCH_PARENT else (V 240)
   , width MATCH_PARENT
   , orientation VERTICAL
   ] ([ scrollView
-      [ height $ V 224
+      [ height if config.spanParent then MATCH_PARENT else (V 240)
       , width MATCH_PARENT
       , id (getNewIDWithTag "ChatScrollView")
       , scrollBarY false
@@ -195,11 +200,11 @@ chatView config push =
          , width MATCH_PARENT
          , orientation VERTICAL 
          , padding (PaddingHorizontal 16 16)
-         ](mapWithIndex (\index item -> chatComponent config item (index == (length config.messages - 1)) (config.userConfig.appType)) (config.messages))
-       , suggestionsView config push
+         ](mapWithIndex (\index item -> chatComponent config push item (if (config.messagesSize /= "-1") then (show index == config.messagesSize ) else (index == (length config.messages - 1))) (config.userConfig.appType)) (config.messages))
+         , if (length config.suggestionsList) > 0 then suggestionsView config push else dummyTextView
         ]
       ]
-    ])
+    ] )
 
 chatFooterView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 chatFooterView config push =
@@ -209,6 +214,7 @@ chatFooterView config push =
   , orientation VERTICAL
   , alignParentBottom "true,-1"
   , background config.white900
+  , visibility if config.showTextEdit then VISIBLE else GONE
   ][ linearLayout
      [ width (V (screenWidth unit))
      , height $ V 1
@@ -256,7 +262,7 @@ chatFooterView config push =
 emptyChatView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 emptyChatView config push =
   linearLayout
-  [ height $ V 224
+  [ height if config.spanParent then MATCH_PARENT else (V 240)
   , width MATCH_PARENT
   ] 
   [ linearLayout
@@ -275,26 +281,37 @@ emptyChatView config push =
        , gravity CENTER
        , fontStyle $ FontStyle.medium LanguageStyle
        ]
-     ] <> [suggestionsView config push])
+     ] <> if (length config.suggestionsList) > 0 then [suggestionsView config push] else [])
   ] 
   
 suggestionsView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 suggestionsView config push =
-  linearLayout
-  [ height WRAP_CONTENT
-  , width MATCH_PARENT
-  , gravity RIGHT
-  , margin (Margin 0 4 16 0)
-  , visibility VISIBLE
-  ][ linearLayout
+    PrestoAnim.animationSet [ fadeInWithDelay config.suggestionDelay if config.spanParent then true else false ]
+    $ linearLayout
     [ height WRAP_CONTENT
-    , width WRAP_CONTENT
-    , gravity LEFT
-    , stroke ("1,"<> config.grey900)
-    , cornerRadius 8.0
-    , orientation VERTICAL
-    ] (mapWithIndex (\index item -> quickMessageView config item (if index == (length config.suggestionsList-1) then true else false) push) (config.suggestionsList))
+    , width MATCH_PARENT
+    , gravity RIGHT
+    , margin if config.spanParent then (Margin 0 0 16 20) else (Margin 0 4 16 0)
+    , onAnimationEnd push (const EnableSuggestions)
+    , alpha if config.spanParent then 0.0 else 1.0
+    , visibility if (length config.suggestionsList == 0 ) then GONE else VISIBLE
+    ][ linearLayout
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , gravity LEFT
+      , stroke ("1,"<> config.grey900)
+      , cornerRadius 8.0
+      , orientation VERTICAL
+      ] (mapWithIndex (\index item -> quickMessageView config item (if index == (length config.suggestionsList-1) then true else false) push) (config.suggestionsList))
+    ]
+    
+dummyTextView :: forall w . PrestoDOM (Effect Unit) w
+dummyTextView = 
+  textView
+  [ width WRAP_CONTENT
+  , height WRAP_CONTENT
   ]
+  
 quickMessageView :: forall w. Config -> String -> Boolean -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 quickMessageView config message isLastItem push =
   linearLayout
@@ -302,7 +319,7 @@ quickMessageView config message isLastItem push =
   , width (V (((screenWidth unit)/100)* 80))
   , gravity LEFT
   , orientation VERTICAL
-  , onClick push (const (SendSuggestion message))
+  , onClick push (if config.enableSuggestionClick then const (SendSuggestion message) else (const NoAction))
   ][ textView
      [ text (message)
      , color config.blue800
@@ -318,14 +335,20 @@ quickMessageView config message isLastItem push =
      , background config.grey900
      ][]
   ]
-chatComponent :: forall w. Config -> ChatComponent -> Boolean -> String -> PrestoDOM (Effect Unit) w
-chatComponent state config isLastItem userType = 
-  PrestoAnim.animationSet [ if state.userConfig.appType == config.sentBy then (translateInXForwardAnim $ if isLastItem then true else false) else (translateInXBackwardAnim $ if isLastItem then true else false) ] $
-  linearLayout
+chatComponent :: forall w. Config -> (Action -> Effect Unit) -> ChatComponent -> Boolean -> String -> PrestoDOM (Effect Unit) w
+chatComponent state push config isLastItem userType = 
+  PrestoAnim.animationSet 
+    [ if state.userConfig.appType == config.sentBy then 
+        translateInXForwardFadeAnimWithDelay config.delay if state.spanParent || isLastItem then true else false
+      else
+        translateInXBackwardFadeAnimWithDelay config.delay if state.spanParent || isLastItem then true else false
+    ]
+  $ linearLayout
   [height WRAP_CONTENT
   , width MATCH_PARENT
-  , margin (getChatConfig state config.sentBy isLastItem).margin
-  , gravity (getChatConfig state config.sentBy isLastItem).gravity
+  , alpha if state.spanParent || isLastItem then 0.0 else 1.0
+  , margin (getChatConfig state config.sentBy isLastItem (STR.length config.timeStamp > 0)).margin
+  , gravity (getChatConfig state config.sentBy isLastItem (STR.length config.timeStamp > 0)).gravity
   , orientation VERTICAL
   , onAnimationEnd (\action ->
       if isLastItem then do
@@ -338,24 +361,75 @@ chatComponent state config isLastItem userType =
      , margin (MarginBottom 4)
      , height WRAP_CONTENT
      , width $ if (os == "IOS" && (STR.length config.message) > (if state.languageKey == "HI_IN" then 50 else 30) ) then MATCH_PARENT else WRAP_CONTENT
-     , background (getChatConfig state config.sentBy isLastItem).background
-     , cornerRadii (getChatConfig state config.sentBy isLastItem).cornerRadii
-     , gravity (getChatConfig state config.sentBy isLastItem).gravity
-     ][ textView
-        [ text (config.message)
-        , textSize FontSize.a_14
-        , singleLine false
-        , lineHeight "18"
-        , color (getChatConfig state config.sentBy isLastItem).textColor
-        , fontStyle $ FontStyle.medium LanguageStyle
-        ]
+     , background (getChatConfig state config.sentBy isLastItem (STR.length config.timeStamp > 0)).background
+     , cornerRadii (getChatConfig state config.sentBy isLastItem (STR.length config.timeStamp > 0)).cornerRadii
+     , gravity (getChatConfig state config.sentBy isLastItem (STR.length config.timeStamp > 0)).gravity
+     ][ case config.type of
+        "Image" -> linearLayout
+                 [ cornerRadius 12.0
+                 , background Color.white900
+                 , width $ V 180
+                 , id (getNewIDWithTag config.message)
+                 , afterRender (\action -> do
+                                renderBase64Image config.message (getNewIDWithTag config.message) true
+                 ) (const NoAction)
+                 , onClick push (const $ OnImageClick config.message)
+                 , height $ V 180
+                 , gravity CENTER
+                 ][ progressBar
+                    [ width WRAP_CONTENT
+                    , height WRAP_CONTENT
+                    ]
+                  ]
+        "Audio" -> linearLayout
+                   [ width MATCH_PARENT
+                   , height WRAP_CONTENT
+                   , orientation HORIZONTAL
+                   ][ imageView
+                    [ width $ V 48
+                    , height $ V 48
+                    , imageWithFallback "ny_ic_add_audio,https://assets.juspay.in/nammayatri/images/driver/ny_ic_add_audio"
+                    , margin (MarginRight 8)
+                    ]
+                    , linearLayout
+                    [ width $ V 32
+                    , height $ V 32
+                    , id (getNewIDWithTag "ChatAudioPlayerLoader")
+                    , margin (MarginRight 8)
+                    ] []
+                    , linearLayout
+                    [ orientation VERTICAL
+                    ][ linearLayout
+                     [ id (getNewIDWithTag "ChatAudioPlayer")
+                     , height $ V 32
+                     , minWidth 180
+                     , afterRender (\action -> do
+                                     _ <- addMediaFile (getNewIDWithTag "ChatAudioPlayer") config.message (getNewIDWithTag "ChatAudioPlayerLoader") "ny_ic_play_no_background" "ny_ic_pause_no_background" (getNewIDWithTag "ChatAudioPlayerTimer")
+                                     pure unit
+                                   ) (const NoAction)
+                     ] []
+                     , linearLayout
+                     [ id (getNewIDWithTag "ChatAudioPlayerTimer")
+                     , color Color.white900
+                     ] []
+                    ]
+                   ]
+        _ -> textView
+          [ text (config.message)
+          , textSize FontSize.a_14
+          , singleLine false
+          , lineHeight "18"
+          , color (getChatConfig state config.sentBy isLastItem (STR.length config.timeStamp > 0)).textColor
+          , fontStyle $ FontStyle.medium LanguageStyle
+          ]
       ]
-    , textView
-      [ text config.timeStamp
-      , textSize FontSize.a_10
-      , color state.black800
-      , fontStyle $ FontStyle.regular LanguageStyle
-      ]
+     , textView
+       [ text config.timeStamp
+       , textSize FontSize.a_10
+       , visibility if STR.length config.timeStamp > 0 then VISIBLE else GONE
+       , color state.black800
+       , fontStyle $ FontStyle.regular LanguageStyle
+       ]
   ]
   
 getConfig :: String -> {margin :: Int, customerVisibility :: Visibility, driverVisibility :: Visibility}
@@ -373,18 +447,18 @@ getConfig appType =
       driverVisibility : VISIBLE 
     }
 
-getChatConfig :: Config -> String -> Boolean -> {margin :: Margin, gravity :: Gravity, background :: String, cornerRadii :: Corners, textColor :: String}
-getChatConfig state sentBy isLastItem = 
+getChatConfig :: Config -> String -> Boolean -> Boolean -> {margin :: Margin, gravity :: Gravity, background :: String, cornerRadii :: Corners, textColor :: String}
+getChatConfig state sentBy isLastItem hasTimeStamp = 
   if state.userConfig.appType == sentBy then 
     { 
-      margin : (Margin ((screenWidth unit)/4) 24 0 (if os == "IOS" && isLastItem then 12 else 0)),
-      gravity : RIGHT ,
+      margin : (Margin ((screenWidth unit)/4) 24 0 (if state.spanParent then 24 else if hasTimeStamp && isLastItem then 12 else 0)),
+      gravity : RIGHT,
       background : state.blue800,
       cornerRadii : (Corners 16.0 true true false true),
       textColor :  state.white900
     }
   else 
-    { margin : (Margin 0 24 ((screenWidth unit)/4) (if os == "IOS" && isLastItem then 12 else 0)),
+    { margin : (Margin 0 24 ((screenWidth unit)/4) (if state.spanParent then 24 else if hasTimeStamp && isLastItem then 12 else 0)),
       gravity :  LEFT,
       background : state.grey900,
       cornerRadii : (Corners 16.0 true true true false ),

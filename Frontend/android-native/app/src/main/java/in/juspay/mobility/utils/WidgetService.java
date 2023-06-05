@@ -19,6 +19,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.provider.Settings;
@@ -53,6 +54,7 @@ import java.util.TimeZone;
 
 import in.juspay.mobility.MainActivity;
 import in.juspay.mobility.R;
+import android.media.MediaPlayer;
 
 
 public class WidgetService extends Service {
@@ -61,7 +63,7 @@ public class WidgetService extends Service {
     private ImageView imageClose;
     private float height, width;
     private String widgetMessage;
-
+    private MediaPlayer mediaPlayer;
     private int calculatedTime =0;
     private JSONObject entity_payload, data;
     private SharedPreferences sharedPref;
@@ -123,6 +125,9 @@ public class WidgetService extends Service {
 
             if(entity_payload!=null && entity_payload.has("baseFare")) {
                 System.out.println("PAYLOAD + PAYLIAD " + entity_payload); // TODO:: REMOVE
+                mediaPlayer = MediaPlayer.create(getApplicationContext(), R.raw.silent_mode_notification_sound);
+                if (mediaPlayer != null)
+                    mediaPlayer.start();
                 // Fetch data from entity_payload
                 int fare = entity_payload.getInt("baseFare");
                 int distanceToPickup = entity_payload.getInt("distanceToPickup");
@@ -441,10 +446,14 @@ public class WidgetService extends Service {
 
                                 //click definition
                                 if (Math.abs(initialTouchX - motionEvent.getRawX()) < 5 && Math.abs(initialTouchY - motionEvent.getRawY()) < 5){
-                                    Intent intent = new Intent(getApplicationContext(), MainActivity.class);
-                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                                    getApplicationContext().startActivity(intent);
-                                    stopSelf();
+                                    if (sharedPref == null) sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+                                    if (sharedPref.getString("MAPS_OPENED", "null").equals("true")){
+                                        if (MainActivity.getInstance()!=null) minimizeApp();
+                                        Handler mainLooper = new Handler(Looper.getMainLooper());
+                                        mainLooper.postDelayed(() -> openMainActivity(), 600);
+                                    } else {
+                                        openMainActivity();
+                                    }
                                 }
                             }
                             return true;
@@ -501,6 +510,21 @@ public class WidgetService extends Service {
             imageClose = null;
         }
     }
+
+    private void openMainActivity(){
+        Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT); // Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP
+        getApplicationContext().startActivity(intent);
+        stopSelf();
+    }
+
+    public void minimizeApp() {
+        Intent minimizeIntent = new Intent(Intent.ACTION_MAIN);
+        minimizeIntent.addCategory(Intent.CATEGORY_HOME);
+        minimizeIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        if (MainActivity.getInstance()!=null) MainActivity.getInstance().startActivity(minimizeIntent);
+    }
+
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {

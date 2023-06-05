@@ -26,21 +26,41 @@ import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Tools.Maps as Maps
 
 buildOneWaySearchReq ::
   (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
   DOneWaySearch.OneWaySearchRes ->
-  Maybe Text ->
-  Maybe Meters ->
-  Maybe Seconds ->
   m (BecknReq Search.SearchMessage)
-buildOneWaySearchReq DOneWaySearch.OneWaySearchRes {..} = buildSearchReq origin (Just destination) searchId now city
+buildOneWaySearchReq DOneWaySearch.OneWaySearchRes {..} =
+  buildSearchReq
+    origin
+    (Just destination)
+    searchId
+    now
+    city
+    device
+    (shortestRouteInfo >>= (.distance))
+    (shortestRouteInfo >>= (.duration))
+    autoAssignEnabled
+    customerLanguage
 
 buildRentalSearchReq ::
   (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
   DRentalSearch.RentalSearchRes ->
   m (BecknReq Search.SearchMessage)
-buildRentalSearchReq DRentalSearch.RentalSearchRes {..} = buildSearchReq origin Nothing searchId startTime city Nothing Nothing Nothing
+buildRentalSearchReq DRentalSearch.RentalSearchRes {..} =
+  buildSearchReq
+    origin
+    Nothing
+    searchId
+    startTime
+    city
+    Nothing
+    Nothing
+    Nothing
+    False
+    Nothing
 
 buildSearchReq ::
   (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
@@ -52,24 +72,29 @@ buildSearchReq ::
   Maybe Text ->
   Maybe Meters ->
   Maybe Seconds ->
+  Bool ->
+  Maybe Maps.Language ->
   m (BecknReq Search.SearchMessage)
-buildSearchReq origin mbDestination searchId startTime city device distance duration = do
+buildSearchReq origin mbDestination searchId startTime city device distance duration autoAssignEnabled customerLanguage = do
   let transactionId = getId searchId
       messageId = transactionId
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
   context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) bapIDs.cabs bapURIs.cabs Nothing Nothing city
-  let intent = mkIntent origin mbDestination startTime
+  let intent = mkIntent origin mbDestination startTime autoAssignEnabled customerLanguage
   let mbRouteInfo = Search.RouteInfo {distance, duration}
   let searchMessage = Search.SearchMessage intent (Just mbRouteInfo) device
+
   pure $ BecknReq context searchMessage
 
 mkIntent ::
   DSearchCommon.SearchReqLocation ->
   Maybe DSearchCommon.SearchReqLocation ->
   UTCTime ->
+  Bool ->
+  Maybe Maps.Language ->
   Search.Intent
-mkIntent origin mbDestination startTime = do
+mkIntent origin mbDestination startTime autoAssignEnabled customerLanguage = do
   let startLocation =
         Search.StartInfo
           { location = mkLocation origin,
@@ -84,7 +109,12 @@ mkIntent origin mbDestination startTime = do
       fulfillment =
         Search.FulfillmentInfo
           { start = startLocation,
-            end = mbEndLocation
+            end = mbEndLocation,
+            tags =
+              Search.Tags
+                { auto_assign_enabled = autoAssignEnabled,
+                  customer_language = customerLanguage
+                }
           }
   Search.Intent
     { ..

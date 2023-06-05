@@ -78,9 +78,12 @@ data UserActionType
   | RIDE_ROUTE
   | RIDE_START
   | RIDE_END
+  | MULTIPLE_RIDE_END
   | RIDE_CANCEL
+  | MULTIPLE_RIDE_CANCEL
   | RIDE_INFO
   | RIDE_SYNC
+  | MULTIPLE_RIDE_SYNC
   | CUSTOMER_LIST
   | CUSTOMER_BLOCK
   | CUSTOMER_UNBLOCK
@@ -118,6 +121,9 @@ data UserActionType
   | SPECIAL_ZONE_DELETE
   | SPECIAL_ZONE_UPDATE
   | SPECIAL_ZONE_LOOKUP
+  | LIST_ISSUE
+  | TRIP_ROUTE
+  | RIDE_INFO_CUSTOMER
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 genSingletons [''UserActionType]

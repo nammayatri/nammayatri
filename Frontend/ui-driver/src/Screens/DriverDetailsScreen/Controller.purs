@@ -50,7 +50,7 @@ instance loggableAction :: Loggable Action where
     BackPressed -> do
       trackAppBackPress appId (getScreen DRIVER_DETAILS_SCREEN)
       trackAppEndScreen appId (getScreen DRIVER_DETAILS_SCREEN)
-    CallBackImageUpload str imageName -> trackAppScreenEvent appId (getScreen DRIVER_DETAILS_SCREEN) "in_screen" "upload_callback_image"
+    CallBackImageUpload str imageName imagePath -> trackAppScreenEvent appId (getScreen DRIVER_DETAILS_SCREEN) "in_screen" "upload_callback_image"
     RenderBase64Image -> trackAppScreenEvent appId (getScreen DRIVER_DETAILS_SCREEN) "in_screen" "render_base_image"
     UploadFileAction -> trackAppActionClick appId (getScreen DRIVER_DETAILS_SCREEN) "in_screen" "upload_file"
     NoAction -> trackAppScreenEvent appId (getScreen DRIVER_DETAILS_SCREEN) "in_screen" "no_action"
@@ -82,7 +82,7 @@ data ScreenOutput = GoBack DriverDetailsScreenState
 
 data Action = NoAction
               | BackPressed
-              | CallBackImageUpload String String
+              | CallBackImageUpload String String String
               | RenderBase64Image
               | AfterRender
               | UploadFileAction
@@ -98,22 +98,25 @@ data Action = NoAction
 eval :: Action -> DriverDetailsScreenState -> Eval Action ScreenOutput DriverDetailsScreenState
 
 eval BackPressed state = do
-    exit (GoBack state {data = state.data {driverEditAlternateMobile = Nothing} ,props = state.props { keyboardModalType = NONE,
-    otpAttemptsExceeded = false,
-    enterOtpFocusIndex = 0,
-    otpIncorrect = false,
-    alternateMobileOtp = "",
-    removeNumberPopup = false,
-    isEditAlternateMobile = false,
-    numberExistError = false}})
+  if state.props.keyboardModalType /= NONE then continueWithCmd state[do 
+    pure $ InAppKeyboardModalMobile (InAppKeyboardModal.BackPressed)
+    ] 
+    else exit (GoBack state {data = state.data {driverEditAlternateMobile = Nothing} ,props = state.props { keyboardModalType = NONE,
+      otpAttemptsExceeded = false,
+      enterOtpFocusIndex = 0,
+      otpIncorrect = false,
+      alternateMobileOtp = "",
+      removeNumberPopup = false,
+      isEditAlternateMobile = false,
+      numberExistError = false}})
 
-eval (CallBackImageUpload image imageName) state = if (image /= "") then
+eval (CallBackImageUpload image imageName imagePath) state = if (image /= "") then
                                             continueWithCmd (state { data { base64Image = image}}) [do pure RenderBase64Image]
                                             else
                                               continue state
 
 eval RenderBase64Image state = continueWithCmd state [do
-  _ <- liftEffect $ renderBase64Image state.data.base64Image (getNewIDWithTag "EditProfileImage")
+  _ <- liftEffect $ renderBase64Image state.data.base64Image (getNewIDWithTag "EditProfileImage") true
   pure NoAction]
 eval AfterRender state = continue state
 
@@ -173,7 +176,7 @@ eval (InAppKeyboardModalMobile (InAppKeyboardModal.OnClickBack text)) state = do
     then continue state
     else do
     let newVal = (if length( text ) > 0 then (take (length ( text ) - 1 ) text) else "" )
-    continue state { data = state.data {driverAlternateMobile = (if (state.props.isEditAlternateMobile == false) then (if newVal=="" then Nothing else Just newVal) else state.data.driverAlternateMobile), driverEditAlternateMobile = (if newVal=="" then Nothing else Just newVal)  } , props = state.props { checkAlternateNumber = if (length newVal) == 0 then true else false, numberExistError = false}}
+    continue state { data = state.data {driverAlternateMobile = (if (state.props.isEditAlternateMobile == false) then (if newVal=="" then Nothing else Just newVal) else state.data.driverAlternateMobile), driverEditAlternateMobile = (if newVal=="" then Nothing else Just newVal)  } , props = state.props { checkAlternateNumber = true, numberExistError = false}}
 
 eval (InAppKeyboardModalMobile (InAppKeyboardModal.OnClickDone text)) state = do
   _ <- pure $ spy "Enter done" ""

@@ -28,7 +28,6 @@ import Control.Monad.State (state)
 import Data.Array as Array
 import Data.Int (round, toNumber, fromString)
 import Data.Lens ((^.))
-import EN (getEN)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Number (fromString) as Number
 import Data.String (Pattern(..), Replacement(..), drop, length, take, trim, replaceAll, toLower)
@@ -37,7 +36,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (clearTimer)
 import Helpers.Utils (convertUTCtoISC, currentPosition, differenceBetweenTwoUTC, getDistanceBwCordinates, parseFloat,setText',getTime, getCurrentUTC, differenceBetweenTwoUTC)
 import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, scrollToBottom, stopChatListenerService)
-import Language.Strings (getString)
+import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Prelude (class Show, Unit, bind, discard, map, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<>), (==), (>), (||), (<=),(>=), when)
@@ -134,8 +133,10 @@ instance loggableAction :: Loggable Action where
     CurrentLocation lat lng -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "current_location"
     ActiveRideAPIResponseAction resp -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "active_ride_api_response"
     RecenterButtonAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "recenter_btn"
+    HelpAndSupportScreen -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "help_and_support_btn"
     NoAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "no_action"
-    UpdateMessages msg sender timeStamp -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_messages"
+    UpdateMessages msg sender timeStamp size -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_messages"
+    OpenChatScreen -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "open_chat"
     InitializeChat -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "initialize_chat"
     RemoveChat -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "remove_chat"
     UpdateInChat -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_in_chat"
@@ -161,12 +162,15 @@ instance loggableAction :: Loggable Action where
       -- PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "tip_clicked"
       -- PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "popup_dismissed"
     ClickAddAlternateButton -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "add-alternate_btn"
+    ZoneOtpAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "zone_otp"
+    TriggerMaps -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "trigger_maps"
 
 
 
 data ScreenOutput =   Refresh ST.HomeScreenState
-                    | GoToProfileScreen
-                    | GoToRidesScreen
+                    | GoToHelpAndSupportScreen
+                    | GoToProfileScreen ST.HomeScreenState
+                    | GoToRidesScreen ST.HomeScreenState
                     | GoToReferralScreen
                     | StartRide ST.HomeScreenState
                     | EndRide ST.HomeScreenState
@@ -177,8 +181,9 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | FcmNotification String ST.HomeScreenState
                     | NotifyDriverArrived ST.HomeScreenState
                     | UpdateStage ST.HomeScreenStage ST.HomeScreenState
-                    | GoToNotifications
+                    | GoToNotifications ST.HomeScreenState
                     | AddAlternateNumber ST.HomeScreenState
+                    | StartZoneRide ST.HomeScreenState 
 
 data Action = NoAction
             | BackPressed
@@ -207,14 +212,18 @@ data Action = NoAction
             | RideActiveAction RidesInfo
             | RecenterButtonAction
             | ChatViewActionController ChatView.Action
-            | UpdateMessages String String String
+            | UpdateMessages String String String String
             | InitializeChat
+            | OpenChatScreen
             | RemoveChat
             | UpdateInChat
+            | HelpAndSupportScreen
             | SwitchDriverStatus ST.DriverStatus
             | PopUpModalSilentAction PopUpModal.Action
             | GoToProfile
             | ClickAddAlternateButton
+            | ZoneOtpAction
+            | TriggerMaps
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
@@ -235,7 +244,11 @@ eval BackPressed state = do
                 _ <- pure $ minimizeApp ""
                 continue state
 
-
+eval TriggerMaps state = continueWithCmd state[ do
+  _ <- pure $ openNavigation 0.0 0.0 state.data.activeRide.dest_lat state.data.activeRide.dest_lon
+  _ <- pure $ setValueToLocalStore TRIGGER_MAPS "false"
+  pure NoAction
+  ]
 -- eval (ChangeStatus status) state = -- TODO:: DEPRECATE AFTER 19th April
 --   if (getValueToLocalStore IS_DEMOMODE_ENABLED == "true") then
 --         continueWithCmd state [ do
@@ -268,12 +281,12 @@ eval (ShowMap key lat lon) state = continueWithCmd state [ do
   ]
 eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
   case item of
-    "Rides" -> exit GoToRidesScreen
-    "Profile" -> exit $ GoToProfileScreen
+    "Rides" -> exit $ GoToRidesScreen state
+    "Profile" -> exit $ GoToProfileScreen state
     "Alert" -> do
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       _ <- pure $ firebaseLogEvent "ny_driver_alert_click"
-      exit $ GoToNotifications
+      exit $ GoToNotifications state
     "Contest" -> do
       _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
       exit $ GoToReferralScreen
@@ -296,12 +309,14 @@ eval (InAppKeyboardModalAction (InAppKeyboardModal.OnclickTextBox index)) state 
 eval (InAppKeyboardModalAction (InAppKeyboardModal.BackPressed)) state = do
   continue state { props = state.props { rideOtp = "", enterOtpFocusIndex = 0, enterOtpModal = false} }
 eval (InAppKeyboardModalAction (InAppKeyboardModal.OnClickDone text)) state = do
-    exit $ StartRide state
-eval (RideActionModalAction (RideActionModal.StartRide)) state = do
-  continue state { props = state.props { enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, otpIncorrect = false } }
-eval (RideActionModalAction (RideActionModal.EndRide)) state = do
+    let exitState = if state.props.zoneRideBooking then StartZoneRide state else StartRide state
+    exit exitState
+eval (RideActionModalAction (RideActionModal.StartRide)) state = do 
+  continue state { props = state.props { enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, otpIncorrect = false, zoneRideBooking = false } }
+eval (RideActionModalAction (RideActionModal.EndRide)) state = do 
   continue $ (state {props {endRidePopUp = true}, data {route = []}})
 eval (RideActionModalAction (RideActionModal.OnNavigate)) state = do
+  _ <- pure $ setValueToLocalStore TRIGGER_MAPS "false"
   let lat = if (state.props.currentStage == ST.RideAccepted || state.props.currentStage == ST.ChatWithCustomer) then state.data.activeRide.src_lat else state.data.activeRide.dest_lat
       lon = if (state.props.currentStage == ST.RideAccepted || state.props.currentStage == ST.ChatWithCustomer) then state.data.activeRide.src_lon else state.data.activeRide.dest_lon
   void $ pure $ openNavigation 0.0 0.0 lat lon
@@ -312,6 +327,11 @@ eval (RideActionModalAction (RideActionModal.CallCustomer)) state = continueWith
   _ <- pure $ showDialer (if (take 1 state.data.activeRide.exoPhone) == "0" then state.data.activeRide.exoPhone else "0" <> state.data.activeRide.exoPhone)
   _ <- (firebaseLogEventWithTwoParams "call_customer" "trip_id" (state.data.activeRide.id) "user_id" (getValueToLocalStore DRIVER_ID))
   pure NoAction
+  ]
+
+eval (OpenChatScreen) state = do
+  continueWithCmd state{props{openChatScreen = false}} [do
+    pure $ (RideActionModalAction (RideActionModal.MessageCustomer))
   ]
 
 eval (RideActionModalAction (RideActionModal.MessageCustomer)) state = do
@@ -339,7 +359,7 @@ eval (RideActionModalAction (RideActionModal.ButtonTimer seconds id status timer
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue $ (state {props {endRidePopUp = false}})
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = do
   _ <- pure $ removeAllPolylines ""
-  updateAndExit state {props {endRidePopUp = false, rideActionModal = false}} $ EndRide state {props {endRidePopUp = false, rideActionModal = false}}
+  updateAndExit state {props {endRidePopUp = false, rideActionModal = false}} $ EndRide state {props {endRidePopUp = false, rideActionModal = false, zoneRideBooking = true}}
 
 eval (CancelRideModalAction (CancelRide.UpdateIndex indexValue)) state = continue state { data = state.data { cancelRideModal  { activeIndex = Just indexValue, selectedReasonCode =  (fromMaybe {reasonCode : "", description : ""} (((state.data.cancelRideModal).cancelRideReasons)Array.!!indexValue) ).reasonCode } } }
 eval (CancelRideModalAction (CancelRide.TextChanged  valId newVal)) state = continue state { data {cancelRideModal { selectedReasonDescription = newVal, selectedReasonCode = "OTHER"}}}
@@ -357,8 +377,8 @@ eval (CancelRideModalAction (CancelRide.Button2 PrimaryButtonController.OnClick)
     case cancelReasonSelected of
       Just reason -> do
         _ <- pure $ printLog "inside Just" reason.reasonCode
-        if (reason.reasonCode == "OTHER") then exit $ CancelRide state { props = state.props { cancelRideModalShow = false , cancelConfirmationPopup = false } } else do
-          let newState = state { data = state.data {cancelRideModal = state.data.cancelRideModal { selectedReasonCode = reason.reasonCode , selectedReasonDescription = reason.description  } }, props = state.props { cancelRideModalShow = false, otpAttemptsExceeded = false, cancelConfirmationPopup = false } }
+        if (reason.reasonCode == "OTHER") then exit $ CancelRide state { props = state.props { cancelRideModalShow = false , cancelConfirmationPopup = false, zoneRideBooking = true} } else do
+          let newState = state { data = state.data {cancelRideModal = state.data.cancelRideModal { selectedReasonCode = reason.reasonCode , selectedReasonDescription = reason.description  } }, props = state.props { cancelRideModalShow = false, otpAttemptsExceeded = false, cancelConfirmationPopup = false, zoneRideBooking = true } }
           exit $ CancelRide newState
       Nothing -> do
         _ <- pure $ printLog "inside Nothing" "."
@@ -414,17 +434,17 @@ eval RemoveChat state = do
     pure $ NoAction
   ]
 
-eval (UpdateMessages message sender timeStamp) state = do
+eval (UpdateMessages message sender timeStamp size) state = do
   let newMessage = [(ChatView.makeChatComponent message sender timeStamp)]
   let messages = state.data.messages <> [((ChatView.makeChatComponent (getMessage message) sender timeStamp))]
   case (Array.last newMessage) of
     Just value -> do
                   if (value.sentBy == "Driver") then
-                    updateMessagesWithCmd state { data { messages = messages}}
+                    updateMessagesWithCmd state { data { messages = messages, messagesSize = size}}
                   else do
                     let readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
                     let unReadMessages = (if (readMessages == 0 && state.props.currentStage /= ST.ChatWithCustomer) then true else (if (readMessages < (Array.length messages) && state.props.currentStage /= ST.ChatWithCustomer) then true else false))
-                    updateMessagesWithCmd state { data {messages = messages}, props {unReadMessages = unReadMessages}}
+                    updateMessagesWithCmd state { data {messages = messages, messagesSize = size}, props {unReadMessages = unReadMessages}}
     Nothing -> continue state
 
 eval (ChatViewActionController (ChatView.TextChanged value)) state = do
@@ -499,7 +519,8 @@ eval (PopUpModalSilentAction (PopUpModal.OnButton2Click)) state = exit (DriverAv
 
 eval GoToProfile state =  do
   _ <- pure $ setValueToLocalNativeStore PROFILE_DEMO "false"
-  exit $ GoToProfileScreen
+  _ <- pure $ hideKeyboardOnNavigation true
+  exit $ GoToProfileScreen state
 eval ClickAddAlternateButton state = do
   let curr_time = getCurrentUTC ""
   let last_attempt_time = getValueToLocalStore SET_ALTERNATE_TIME
@@ -509,10 +530,14 @@ eval ClickAddAlternateButton state = do
     continue state
   else do
     exit $ AddAlternateNumber state
+   
+  
+eval ZoneOtpAction state = do
+  continue state { props = state.props { enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, otpIncorrect = false } }
 
+eval HelpAndSupportScreen state = exit $ GoToHelpAndSupportScreen
+eval _ state = continue state 
 
-
-eval _ state = continue state
 
 checkPermissionAndUpdateDriverMarker :: ST.HomeScreenState -> Effect Unit
 checkPermissionAndUpdateDriverMarker state = do
@@ -520,7 +545,7 @@ checkPermissionAndUpdateDriverMarker state = do
   conditionB <- isLocationEnabled unit
   if conditionA && conditionB then do
     _ <- pure $ printLog "update driver location" "."
-    _ <- getCurrentPosition (showDriverMarker state "ny_ic_auto") constructLatLong
+    _ <- getCurrentPosition (showDriverMarker state "ic_vehicle_side") constructLatLong
     pure unit
     else do
       _ <- requestLocation unit
@@ -539,7 +564,7 @@ showDriverMarker state marker location = do
 
 updateAutoIcon :: Number -> Number -> Effect Unit
 updateAutoIcon lat lng = do
-  _ <- showMarker "ny_ic_auto" lat lng 100 0.5 0.5
+  _ <- showMarker "ic_vehicle_side" lat lng 100 0.5 0.5
   _ <- pure $ enableMyLocation true
   animateCamera lat lng 17
 

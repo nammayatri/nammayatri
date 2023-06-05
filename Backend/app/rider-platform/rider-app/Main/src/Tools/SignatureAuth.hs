@@ -61,34 +61,32 @@ import Servant.Server.Internal.DelayedIO (DelayedIO, withRequest)
 import Storage.CachedQueries.CacheConfig (HasCacheConfig)
 import qualified Storage.CachedQueries.Merchant as QMerchant
 
--- | Adds partial authentication via a signature in the API, this does not fail an API,
--- | but the business logic can be handled inside the API based on it's result
+-- | Adds authentication via a signature in the API
 --
 -- The lookup argument defines how keys can be looked up for performing
 -- signature matches.
-data PartialSignatureAuth (req :: Type) (header :: Symbol)
+data SignatureAuth (req :: Type) (header :: Symbol)
 
-data PartialSignatureAuthResult req = PartialSignatureAuthResult
-  { isValid :: Bool,
-    requestBody :: req
+newtype SignatureAuthResult req = SignatureAuthResult
+  { requestBody :: req
   }
 
-data PartialSignatureAuthReq = PartialSignatureAuthReq
+data SignatureAuthReq = SignatureAuthReq
   { merchantId :: ShortId Merchant,
     timestamp :: UTCTime
   }
   deriving (Generic, Show)
 
-instance A.FromJSON PartialSignatureAuthReq where
+instance A.FromJSON SignatureAuthReq where
   parseJSON v = case v of
     A.Object obj ->
-      PartialSignatureAuthReq <$> obj .: "merchantId"
+      SignatureAuthReq <$> obj .: "merchantId"
         <*> obj .: "timestamp"
     A.String s ->
       case A.eitherDecodeStrict (TE.encodeUtf8 s) of
         Left err -> fail err
         Right req -> return req
-    _ -> fail "Invalid JSON format for PartialSignatureAuthReq"
+    _ -> fail "Invalid JSON format for SignatureAuthReq"
 
 -- | This server part implementation accepts a signature in @header@ and
 -- verifies it using registry
@@ -105,43 +103,37 @@ instance
     HasCoreMetrics r,
     HasCacheConfig r
   ) =>
-  HasServer (PartialSignatureAuth req header :> api) ctx
+  HasServer (SignatureAuth req header :> api) ctx
   where
   type
-    ServerT (PartialSignatureAuth req header :> api) m =
-      PartialSignatureAuthResult req -> ServerT api m
+    ServerT (SignatureAuth req header :> api) m =
+      SignatureAuthResult req -> ServerT api m
 
   route _ ctx subserver =
     route (Proxy @api) ctx $
       subserver `addAuthCheck` withRequest authCheck
     where
-      authCheck :: Wai.Request -> DelayedIO (PartialSignatureAuthResult req)
+      authCheck :: Wai.Request -> DelayedIO (SignatureAuthResult req)
       authCheck req = runFlowRDelayedIO env . withLogTag "authCheck" $ do
         rawReq <- liftIO $ Wai.strictRequestBody req <&> BSL.toStrict
         signature <-
           Wai.requestHeaders req
             & (lookup headerName >>> fromMaybeM (MissingHeader headerName))
             >>= (parseHeader >>> fromEitherM (InvalidHeader headerName))
-        let mbSignatureAuthReq :: Either String PartialSignatureAuthReq = A.eitherDecodeStrict rawReq
+        signatureAuthReq :: SignatureAuthReq <- rawReq & A.eitherDecodeStrict & fromEitherM (InvalidRequest . T.pack)
         request :: req <- rawReq & A.eitherDecodeStrict & fromEitherM (InvalidRequest . T.pack)
-        case mbSignatureAuthReq of
-          Right signatureAuthReq -> do
-            mbMerchant <- QMerchant.findByShortId signatureAuthReq.merchantId
-            case mbMerchant of
-              Just merchant -> do
-                let nominal = realToFrac merchant.signatureExpiry
-                expired <- isExpired nominal signatureAuthReq.timestamp
-                let decodedSignature = B64.decodeLenient . TE.encodeUtf8 $ signature
-                    publicKeys = getRSAPublicKey merchant.signingPublicKey
-                case publicKeys of
-                  [PubKeyRSA publicKey] -> do
-                    let isVerified = RSA.verify (Just Hash.SHA256) publicKey rawReq decodedSignature
-                    if isVerified && not expired
-                      then return $ PartialSignatureAuthResult True request
-                      else return $ PartialSignatureAuthResult False request
-                  _ -> return $ PartialSignatureAuthResult False request
-              Nothing -> return $ PartialSignatureAuthResult False request
-          Left _ -> return $ PartialSignatureAuthResult False request
+        merchant <- QMerchant.findByShortId signatureAuthReq.merchantId >>= fromMaybeM (MerchantDoesNotExist signatureAuthReq.merchantId.getShortId)
+        let nominal = realToFrac merchant.signatureExpiry
+        expired <- isExpired nominal signatureAuthReq.timestamp
+        let decodedSignature = B64.decodeLenient . TE.encodeUtf8 $ signature
+            publicKeys = getRSAPublicKey merchant.signingPublicKey
+        case publicKeys of
+          [PubKeyRSA publicKey] -> do
+            let isVerified = RSA.verify (Just Hash.SHA256) publicKey rawReq decodedSignature
+            if isVerified && not expired
+              then return $ SignatureAuthResult request
+              else throwError Unauthorized
+          _ -> throwError (InternalError "Could not find valid credentials for the merchant.")
       headerName = fromString $ symbolVal (Proxy @header)
       headerName :: IsString a => a
       env = getEnvEntry ctx
@@ -151,9 +143,9 @@ instance
 
 instance
   (HasClient m api, KnownSymbol header) =>
-  HasClient m (PartialSignatureAuth req header :> api)
+  HasClient m (SignatureAuth req header :> api)
   where
-  type Client m (PartialSignatureAuth req header :> api) = Client m api
+  type Client m (SignatureAuth req header :> api) = Client m api
 
   clientWithRoute mp _ = clientWithRoute mp (Proxy @api)
 
@@ -163,7 +155,7 @@ instance
   ( S.HasOpenApi api,
     KnownSymbol header
   ) =>
-  S.HasOpenApi (PartialSignatureAuth req header :> api)
+  S.HasOpenApi (SignatureAuth req header :> api)
   where
   toOpenApi _ =
     S.toOpenApi (Proxy @api)
@@ -172,7 +164,7 @@ instance
       & addResponse401
     where
       headerName = toText $ symbolVal (Proxy @header)
-      methodName = show $ typeRep (Proxy @PartialSignatureAuthReq)
+      methodName = show $ typeRep (Proxy @SignatureAuthReq)
 
       addSecurityRequirement :: Text -> DS.OpenApi -> DS.OpenApi
       addSecurityRequirement description = execState $ do
@@ -204,6 +196,6 @@ instance
 
 instance
   SanitizedUrl (subroute :: Type) =>
-  SanitizedUrl (PartialSignatureAuth r h :> subroute)
+  SanitizedUrl (SignatureAuth r h :> subroute)
   where
   getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy subroute)

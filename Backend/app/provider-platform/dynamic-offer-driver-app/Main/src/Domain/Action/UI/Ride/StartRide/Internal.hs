@@ -16,6 +16,7 @@ module Domain.Action.UI.Ride.StartRide.Internal (startRideTransaction) where
 
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
+import qualified Domain.Types.Merchant as Dmerch
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as SRide
 import EulerHS.Language as L
@@ -29,13 +30,13 @@ import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverLocation as DrLoc
 import qualified Storage.Queries.Ride as QRide
 
-startRideTransaction :: (L.MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SP.Person -> Id SRide.Ride -> Id SRB.Booking -> LatLong -> m ()
-startRideTransaction driverId rideId bookingId firstPoint = do
+startRideTransaction :: (L.MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SP.Person -> Id SRide.Ride -> Id SRB.Booking -> LatLong -> Id Dmerch.Merchant -> m ()
+startRideTransaction driverId rideId bookingId firstPoint merchantId = do
   -- Esq.runTransaction $ do
   _ <- QRide.updateStatus rideId SRide.INPROGRESS
   _ <- QRide.updateStartTimeAndLoc rideId firstPoint
   QBE.logRideCommencedEvent (cast driverId) bookingId rideId
   _ <- QDFS.updateStatus driverId DDFS.ON_RIDE {rideId}
   now <- getCurrentTime
-  _ <- DrLoc.upsertGpsCoord driverId firstPoint now
+  _ <- DrLoc.upsertGpsCoord driverId firstPoint now merchantId
   CQRide.clearCache driverId

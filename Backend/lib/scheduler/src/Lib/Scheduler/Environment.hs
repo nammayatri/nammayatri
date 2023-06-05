@@ -22,6 +22,7 @@ import Kernel.Mock.App
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis (HedisCfg, HedisEnv, disconnectHedis)
+import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Common
 import Kernel.Utils.App (Shutdown)
 import Kernel.Utils.Dhall (FromDhall)
@@ -61,7 +62,8 @@ data SchedulerEnv = SchedulerEnv
     tasksPerIteration :: Int,
     graceTerminationPeriod :: Seconds,
     port :: Int,
-    isShuttingDown :: Shutdown
+    isShuttingDown :: Shutdown,
+    version :: Metrics.DeploymentVersion
   }
   deriving (Generic)
 

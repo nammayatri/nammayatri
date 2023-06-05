@@ -17,9 +17,9 @@ module Domain.Types.SearchRequestForDriver where
 
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.Person
-import Domain.Types.SearchRequest
-import qualified Domain.Types.SearchRequest as DSReq
+import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
+import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.External.Maps.Google.PolyLinePoints
 import Kernel.Prelude
@@ -40,8 +40,8 @@ data SearchRequestForDriverResponse
 
 data SearchRequestForDriver = SearchRequestForDriver
   { id :: Id SearchRequestForDriver,
-    transactionId :: Text,
-    searchRequestId :: Id SearchRequest,
+    requestId :: Id DSR.SearchRequest,
+    searchTryId :: Id DST.SearchTry,
     startTime :: UTCTime,
     searchRequestValidTill :: UTCTime,
     driverId :: Id Person,
@@ -50,7 +50,6 @@ data SearchRequestForDriver = SearchRequestForDriver
     durationToPickup :: Seconds,
     vehicleVariant :: Variant.Variant,
     status :: DriverSearchRequestStatus,
-    baseFare :: Money,
     batchNumber :: Int,
     lat :: Maybe Double,
     lon :: Maybe Double,
@@ -70,7 +69,8 @@ data SearchRequestForDriver = SearchRequestForDriver
   deriving (Generic, Show, PrettyShow)
 
 data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
-  { searchRequestId :: Id SearchRequest,
+  { searchRequestId :: Id DST.SearchTry, -- TODO: Deprecated, to be removed
+    searchTryId :: Id DST.SearchTry,
     startTime :: UTCTime,
     searchRequestValidTill :: UTCTime,
     distanceToPickup :: Meters,
@@ -87,16 +87,17 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show, PrettyShow)
 
-makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSReq.SearchRequest -> Seconds -> SearchRequestForDriverAPIEntity
-makeSearchRequestForDriverAPIEntity nearbyReq searchRequest delayDuration =
+makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Seconds -> SearchRequestForDriverAPIEntity
+makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry delayDuration =
   SearchRequestForDriverAPIEntity
-    { searchRequestId = searchRequest.id,
+    { searchRequestId = nearbyReq.searchTryId,
+      searchTryId = nearbyReq.searchTryId,
       startTime = nearbyReq.startTime,
       searchRequestValidTill = nearbyReq.searchRequestValidTill,
       distanceToPickup = nearbyReq.actualDistanceToPickup,
       durationToPickup = nearbyReq.durationToPickup,
-      baseFare = nearbyReq.baseFare,
-      customerExtraFee = searchRequest.customerExtraFee,
+      baseFare = searchTry.baseFare,
+      customerExtraFee = searchTry.customerExtraFee,
       fromLocation = searchRequest.fromLocation,
       toLocation = searchRequest.toLocation,
       distance = searchRequest.estimatedDistance,

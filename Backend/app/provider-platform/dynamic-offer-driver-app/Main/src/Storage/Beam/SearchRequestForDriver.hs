@@ -125,21 +125,19 @@ instance FromBackendRow Postgres Domain.SearchRequestForDriverResponse
 
 data SearchRequestForDriverT f = SearchRequestForDriverT
   { id :: B.C f Text,
-    transactionId :: B.C f Text,
-    searchRequestId :: B.C f Text,
+    requestId :: B.C f Text,
+    searchTryId :: B.C f Text,
     startTime :: B.C f Time.UTCTime,
     actualDistanceToPickup :: B.C f Meters,
     straightLineDistanceToPickup :: B.C f Meters,
     durationToPickup :: B.C f Seconds,
     vehicleVariant :: B.C f Variant.Variant,
     batchNumber :: B.C f Int,
-    baseFare :: B.C f Money,
     lat :: B.C f (Maybe Double),
     lon :: B.C f (Maybe Double),
     searchRequestValidTill :: B.C f Time.UTCTime,
     driverId :: B.C f Text,
     status :: B.C f Domain.DriverSearchRequestStatus,
-    createdAt :: B.C f Time.UTCTime,
     response :: B.C f (Maybe Domain.SearchRequestForDriverResponse),
     driverMinExtraFee :: B.C f (Maybe Money),
     driverMaxExtraFee :: B.C f (Maybe Money),
@@ -150,7 +148,8 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     driverAvailableTime :: B.C f (Maybe Double),
     parallelSearchRequestCount :: B.C f (Maybe Int),
     driverSpeed :: B.C f (Maybe Double),
-    mode :: B.C f (Maybe D.DriverMode)
+    mode :: B.C f (Maybe D.DriverMode),
+    createdAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -209,21 +208,19 @@ searchRequestForDriverTMod :: SearchRequestForDriverT (B.FieldModification (B.Ta
 searchRequestForDriverTMod =
   B.tableModification
     { id = B.fieldNamed "id",
-      transactionId = B.fieldNamed "transaction_id",
-      searchRequestId = B.fieldNamed "search_request_id",
+      requestId = B.fieldNamed "request_id",
+      searchTryId = B.fieldNamed "search_try_id",
       startTime = B.fieldNamed "start_time",
       actualDistanceToPickup = B.fieldNamed "actual_distance_to_pickup",
       straightLineDistanceToPickup = B.fieldNamed "straight_line_distance_to_pickup",
       durationToPickup = B.fieldNamed "duration_to_pickup",
       vehicleVariant = B.fieldNamed "vehicle_variant",
       batchNumber = B.fieldNamed "batch_number",
-      baseFare = B.fieldNamed "base_fare",
       lat = B.fieldNamed "lat",
       lon = B.fieldNamed "lon",
       searchRequestValidTill = B.fieldNamed "search_request_valid_till",
       driverId = B.fieldNamed "driver_id",
       status = B.fieldNamed "status",
-      createdAt = B.fieldNamed "created_at",
       response = B.fieldNamed "response",
       driverMinExtraFee = B.fieldNamed "driver_min_extra_fee",
       driverMaxExtraFee = B.fieldNamed "driver_max_extra_fee",
@@ -234,7 +231,8 @@ searchRequestForDriverTMod =
       driverAvailableTime = B.fieldNamed "driver_available_time",
       parallelSearchRequestCount = B.fieldNamed "parallel_search_request_count",
       driverSpeed = B.fieldNamed "driver_speed",
-      mode = B.fieldNamed "mode"
+      mode = B.fieldNamed "mode",
+      createdAt = B.fieldNamed "created_at"
     }
 
 psToHs :: HM.HashMap Text Text
@@ -252,15 +250,14 @@ defaultSearchRequestForDriver :: SearchRequestForDriver
 defaultSearchRequestForDriver =
   SearchRequestForDriverT
     { id = "",
-      transactionId = "",
-      searchRequestId = "",
+      requestId = "",
+      searchTryId = "",
       startTime = defaultUTCDate,
       actualDistanceToPickup = "",
       straightLineDistanceToPickup = "",
       durationToPickup = "",
       vehicleVariant = "",
       batchNumber = 0,
-      baseFare = "",
       lat = Nothing,
       lon = Nothing,
       searchRequestValidTill = defaultUTCDate,

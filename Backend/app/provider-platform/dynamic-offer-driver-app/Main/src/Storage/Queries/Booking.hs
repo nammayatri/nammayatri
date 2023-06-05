@@ -16,16 +16,18 @@ module Storage.Queries.Booking where
 
 import Data.Text (pack)
 import Domain.Types.Booking
+-- import Domain.Types.DriverQuote (DriverQuote)
 import Domain.Types.DriverQuote as DDQ
 import Domain.Types.Geometry
 import Domain.Types.Merchant
 import Domain.Types.RiderDetails (RiderDetails)
-import qualified Domain.Types.SearchRequest as DSR
+import qualified Domain.Types.SearchTry as DST
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.Prelude
+-- import qualified Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import Kernel.Types.Time
 import Kernel.Utils.Common
@@ -35,7 +37,11 @@ import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Queries.Booking.BookingLocation as QBBL
 import qualified Storage.Queries.DriverQuote as QDQuote
 import qualified Storage.Queries.FareParameters as QueriesFP
+-- import Storage.Queries.FullEntityBuilders
 import Storage.Queries.Geometry
+
+-- import Storage.Tabular.Booking
+-- import Storage.Tabular.DriverQuote as DriverQuote
 
 -- baseBookingTable ::
 --   From
@@ -82,21 +88,20 @@ findById (Id bookingId) = do
     Just dbConf' -> do
       result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamB.id $ Se.Eq bookingId]
       case result of
-        Right b -> traverse transformBeamBookingToDomain b
+        Right result' -> traverse transformBeamBookingToDomain result'
         Left _ -> pure Nothing
     Nothing -> pure Nothing
 
--- findBySearchReq :: (Transactionable m) => Id DSR.SearchRequest -> m (Maybe Booking)
--- findBySearchReq searchReqId = buildDType $ do
---   mbDriverQuoteT <- QDQuote.findDriverQuoteBySearchId searchReqId
+-- findBySTId :: (Transactionable m) => Id DST.SearchTry -> m (Maybe Booking)
+-- findBySTId searchTryId = buildDType $ do
+--   mbDriverQuoteT <- QDQuote.findDriverQuoteBySTId searchTryId
 --   let mbDriverQuoteId = Id . DriverQuote.id <$> mbDriverQuoteT
 --   mbBookingT <- (join <$>) $ mapM findBookingByDriverQuoteId' mbDriverQuoteId
+--   join <$> mapM buildFullBooking mbBookingT
 
--- join <$> mapM buildFullBooking mbBookingT
-
-findBySearchReq :: L.MonadFlow m => Id DSR.SearchRequest -> m (Maybe Booking)
-findBySearchReq searchReqId = do
-  mbDriverQuote <- QDQuote.findDriverQuoteBySearchId searchReqId
+findBySTId :: L.MonadFlow m => Id DST.SearchTry -> m (Maybe Booking)
+findBySTId searchTryId = do
+  mbDriverQuote <- QDQuote.findDriverQuoteBySTId searchTryId
   case mbDriverQuote of
     Nothing -> pure Nothing
     Just mbDriverQuote' -> do

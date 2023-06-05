@@ -72,7 +72,7 @@ instance loggableAction :: Loggable Action where
       PrimaryEditText.TextChanged valId newVal -> trackAppTextInput appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "dl_number_text_changed" "primary_edit_text"
     PrimaryEditTextActionControllerReEnter act -> case act of
       PrimaryEditText.TextChanged valId newVal -> trackAppTextInput appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "reenter_dl_number_text_changed" "primary_edit_text"
-    CallBackImageUpload str imageName -> trackAppScreenEvent appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "in_screen" "call_back_image_upload"
+    CallBackImageUpload str imageName imagePath -> trackAppScreenEvent appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "in_screen" "call_back_image_upload"
     DatePicker (label) year month date -> do
       if label == "DATE_OF_BIRTH" then trackAppScreenEvent appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "in_screen" "date_of_birth"
         else if label == "DATE_OF_ISSUE" then trackAppScreenEvent appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "in_screen" "date_of_issue"
@@ -98,7 +98,7 @@ data Action = BackPressed Boolean
             | TutorialModalAction TutorialModalController.Action
             | TutorialModal String
             | RemoveUploadedFile String
-            | CallBackImageUpload String String 
+            | CallBackImageUpload String String String
             | UploadFileAction String
             | UploadImage
             | DatePicker String Int Int Int
@@ -146,7 +146,7 @@ eval (UploadImage) state = continueWithCmd state [do
   pure NoAction]
 eval (GenericMessageModalAction (GenericMessageModal.PrimaryButtonActionController (PrimaryButton.OnClick))) state = exit AddVehicleDetailsScreen
 
-eval (CallBackImageUpload image imageName) state = if(state.props.clickedButtonType == "front") then
+eval (CallBackImageUpload image imageName imagePath) state = if(state.props.clickedButtonType == "front") then
                                                       updateAndExit  state {data {imageFrontUrl = image, imageFront = image, imageNameFront = imageName}} $ ValidateImageAPICall $ state {data {imageFrontUrl = image, imageFront = image, imageNameFront = imageName}}
                                                         else if(state.props.clickedButtonType == "back") then do
                                                           updateAndExit state {data {imageBack = image, imageNameBack = imageName}} $ ValidateImageAPICall $ state {data {imageBack = image, imageNameBack = imageName}}

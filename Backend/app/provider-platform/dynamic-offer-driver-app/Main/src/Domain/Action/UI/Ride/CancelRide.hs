@@ -22,27 +22,40 @@ module Domain.Action.UI.Ride.CancelRide
 where
 
 import qualified Domain.Action.UI.Ride.CancelRide.Internal as CInternal
+import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import Domain.Types.CancellationReason (CancellationReasonCode (..))
+import qualified Domain.Types.DriverLocation as DDriverLocation
+import Domain.Types.Merchant
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Environment
+import Kernel.External.Maps
 import Kernel.Prelude
+-- import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.DriverLocation as QDrLoc
+import Storage.CachedQueries.CacheConfig
+import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import qualified Tools.Maps as Maps
+import qualified Tools.Metrics as Metrics
 
 type MonadHandler m = (MonadThrow m, Log m, MonadGuid m)
 
 data ServiceHandle m = ServiceHandle
   { findRideById :: Id DRide.Ride -> m (Maybe DRide.Ride),
     findById :: Id DP.Person -> m (Maybe DP.Person),
-    cancelRide :: Id DRide.Ride -> DBCR.BookingCancellationReason -> m ()
+    findDriverLocationId :: Id Merchant -> Id DP.Person -> m (Maybe DDriverLocation.DriverLocation),
+    cancelRide :: Id DRide.Ride -> DBCR.BookingCancellationReason -> m (),
+    findBookingByIdInReplica :: Id SRB.Booking -> m (Maybe SRB.Booking),
+    pickUpDistance :: Id DM.Merchant -> LatLong -> LatLong -> m Meters
   }
 
 cancelRideHandle :: ServiceHandle Flow
@@ -50,7 +63,11 @@ cancelRideHandle =
   ServiceHandle
     { findRideById = QRide.findById,
       findById = QPerson.findById,
-      cancelRide = CInternal.cancelRideImpl
+      cancelRide = CInternal.cancelRideImpl,
+      findDriverLocationId = QDrLoc.findById,
+      -- findBookingByIdInReplica = Esq.runInReplica . QRB.findById,
+      findBookingByIdInReplica = QRB.findById,
+      pickUpDistance = driverDistanceToPickup
     }
 
 data CancelRideReq = CancelRideReq
@@ -81,27 +98,32 @@ cancelRideHandler ServiceHandle {..} requestorId rideId req = withLogTag ("rideI
       authPerson <-
         findById personId
           >>= fromMaybeM (PersonNotFound personId.getId)
+      driver <- findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
       case authPerson.role of
         DP.ADMIN -> do
-          driver <- findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
           unless (authPerson.merchantId == driver.merchantId) $ throwError (RideDoesNotExist rideId.getId)
           logTagInfo "admin -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
-          buildRideCancelationReason Nothing DBCR.ByMerchant ride
+          buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride
         DP.DRIVER -> do
           unless (authPerson.id == driverId) $ throwError NotAnExecutor
           logTagInfo "driver -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
-          buildRideCancelationReason (Just driverId) DBCR.ByDriver ride
+          mbLocation <- findDriverLocationId driver.merchantId driverId
+          booking <- findBookingByIdInReplica ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+          disToPickup <- forM mbLocation $ \location -> do
+            pickUpDistance booking.providerId (getCoordinates location) (getCoordinates booking.fromLocation)
+          let currentDriverLocation = getCoordinates <$> mbLocation
+          buildRideCancelationReason currentDriverLocation disToPickup (Just driverId) DBCR.ByDriver ride
     DashboardRequestorId reqMerchantId -> do
       driver <- findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
       unless (driver.merchantId == reqMerchantId) $ throwError (RideDoesNotExist rideId.getId)
       logTagInfo "dashboard -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
-      buildRideCancelationReason Nothing DBCR.ByMerchant ride -- is it correct DBCR.ByMerchant?
+      buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride -- is it correct DBCR.ByMerchant?
   cancelRide rideId rideCancelationReason
   pure APISuccess.Success
   where
     isValidRide ride =
       ride.status == DRide.NEW
-    buildRideCancelationReason mbDriverId source ride = do
+    buildRideCancelationReason currentDriverLocation disToPickup mbDriverId source ride = do
       let CancelRideReq {..} = req
       return $
         DBCR.BookingCancellationReason
@@ -110,5 +132,29 @@ cancelRideHandler ServiceHandle {..} requestorId rideId req = withLogTag ("rideI
             source = source,
             reasonCode = Just reasonCode,
             driverId = mbDriverId,
+            driverCancellationLocation = currentDriverLocation,
+            driverDistToPickup = disToPickup,
             ..
           }
+
+driverDistanceToPickup ::
+  ( EncFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    Metrics.CoreMetrics m,
+    Maps.HasCoordinates tripStartPos,
+    Maps.HasCoordinates tripEndPos
+  ) =>
+  Id Merchant ->
+  tripStartPos ->
+  tripEndPos ->
+  m Meters
+driverDistanceToPickup merchantId tripStartPos tripEndPos = do
+  distRes <-
+    Maps.getDistanceForCancelRide merchantId $
+      Maps.GetDistanceReq
+        { origin = tripStartPos,
+          destination = tripEndPos,
+          travelMode = Just Maps.CAR
+        }
+  return $ distRes.distance

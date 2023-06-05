@@ -18,30 +18,26 @@ module Beckn.Types.Core.Taxi.Select.Fulfillment
 where
 
 import Beckn.Types.Core.Taxi.Select.StartInfo
-import Beckn.Types.Core.Taxi.Select.StopInfo
 import Data.Aeson
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions, fromAesonOptions)
-import EulerHS.Prelude hiding (id)
-import Kernel.External.Types (Language)
+import Kernel.Prelude
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 -- If end = Nothing, then bpp sends quotes only for RENTAL
 -- If end is Just, then bpp sends quotes both for RENTAL and ONE_WAY
 data FulfillmentInfo = FulfillmentInfo
   { start :: StartInfo,
-    tags :: Tags,
-    end :: Maybe StopInfo
+    tags :: Tags
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
-data Tags = Tags
-  { auto_assign_enabled :: Bool,
-    customer_language :: Maybe Language
-  }
-  deriving (Generic, Show)
-
 instance ToSchema FulfillmentInfo where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+newtype Tags = Tags
+  { auto_assign_enabled :: Maybe Bool
+  }
+  deriving (Generic, Show)
 
 instance ToJSON Tags where
   toJSON = genericToJSON tagsJSONOptions

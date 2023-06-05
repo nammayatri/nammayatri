@@ -122,13 +122,14 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import in.juspay.mobility.utils.ConnectionStateMonitor;
+import in.juspay.mobility.utils.InAppNotification;
 import in.juspay.mobility.utils.LocationUpdateService;
 import in.juspay.mobility.utils.MediaPlayerView;
 import in.juspay.mobility.utils.MyFirebaseMessagingService;
+import in.juspay.mobility.utils.AudioRecorder;
 import in.juspay.mobility.utils.NetworkBroadcastReceiver;
 import in.juspay.mobility.utils.NotificationUtils;
 import in.juspay.mobility.utils.RideRequestActivity;
-import in.juspay.mobility.utils.RideRequestUtils;
 import in.juspay.mobility.utils.WidgetService;
 import in.juspay.mobility.utils.mediaPlayer.DefaultMediaPlayerControl;
 import in.juspay.hypersdk.core.JuspayServices;
@@ -175,6 +176,7 @@ public class MainActivity extends AppCompatActivity {
     private NetworkBroadcastReceiver networkBroadcastReceiver;
     private boolean isHideSplashEventCalled = false;
     private boolean isSystemAnimEnabled = true;
+    private static InAppNotification inAppNotification ;
     public static MainActivity getInstance() {
         return instance;
     }
@@ -356,9 +358,7 @@ public class MainActivity extends AppCompatActivity {
         webView.getSettings().setLoadWithOverviewMode(true);
         webView.getSettings().setUseWideViewPort(true);
         CommonJsInterface.updateLocaleResource(sharedPref.getString(getResources().getString(R.string.LANGUAGE_KEY), "null"));
-        if (key != null && key.equals("nammayatripartner")) {
-            getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        } else {
+        if (key != null && key.equals("nammayatri")) {
             LottieAnimationView splashLottieView = findViewById(R.id.splash_lottie);
             try {
                 if (Settings.Global.getFloat(getContentResolver(), Settings.Global.ANIMATOR_DURATION_SCALE) == 0f){
@@ -391,6 +391,9 @@ public class MainActivity extends AppCompatActivity {
             } catch (Settings.SettingNotFoundException e) {
                 isSystemAnimEnabled = false;
             }
+        } else if (in.juspay.mobility.BuildConfig.MERCHANT_TYPE.equals("DRIVER")) {
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            CommonJsInterface.updateLocaleResource(sharedPref.getString(getResources().getString(R.string.LANGUAGE_KEY), "null"));
         }
 //        mobileNetworkCheck();
         appUpdateManager = AppUpdateManagerFactory.create(this);
@@ -422,6 +425,9 @@ public class MainActivity extends AppCompatActivity {
         });
         updateConfigURL();
         initApp();
+
+        // getting the main Layout as a Container to add the notification .
+        inAppNotification = new InAppNotification(this);
 
        NotificationUtils.createNotificationChannel(this, NotificationUtils.CHANNEL_ID);
        NotificationUtils.createNotificationChannel(this, NotificationUtils.FLOATING_NOTIFICATION);
@@ -488,8 +494,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void updateConfigURL() {
-        String merchantId = getResources().getString(R.string.service).equals("nammayatri") ? in.juspay.mobility.BuildConfig.MERCHANT_ID_USER : in.juspay.mobility.BuildConfig.MERCHANT_ID_DRIVER;
-        String baseUrl = getResources().getString(R.string.service).equals("nammayatri") ? in.juspay.mobility.BuildConfig.CONFIG_URL_USER : in.juspay.mobility.BuildConfig.CONFIG_URL_DRIVER;
+        String key = in.juspay.mobility.BuildConfig.MERCHANT_TYPE;
+        String merchantId = key.equals("USER") ? in.juspay.mobility.BuildConfig.MERCHANT_ID_USER : in.juspay.mobility.BuildConfig.MERCHANT_ID_DRIVER;
+        String baseUrl = key.equals("USER") ? in.juspay.mobility.BuildConfig.CONFIG_URL_USER : in.juspay.mobility.BuildConfig.CONFIG_URL_DRIVER;
         SharedPreferences sharedPreff = this.getSharedPreferences(
                 activity.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPreff.edit();
@@ -503,7 +510,9 @@ public class MainActivity extends AppCompatActivity {
         try {
             System.out.println("Calling function triggerPopUP1 from main to main try");
 //            CommonJsInterface.callingStoreCall(juspayServicesGlobal.getDuiCallback()());
-                hyperServices.process(new JSONObject().put("service", "in.juspay." + getResources().getString(R.string.service)).put("requestId", UUID.randomUUID()).put("payload", new JSONObject().put("action", "showPopup").put("id", id).put("popType", type)));
+            JSONObject payload = new JSONObject().put("service", getService()).put("requestId", UUID.randomUUID()).put("payload", new JSONObject().put("action", "showPopup").put("id", id).put("popType", type));
+            System.out.println("payload internet " + payload);
+                hyperServices.process(payload);
             System.out.println("Calling function triggerPopUP1 from main to main try after");
         } catch (Exception e) {
             System.out.println("Calling function triggerPopUP1 from main to main catch : " + e);
@@ -524,7 +533,7 @@ public class MainActivity extends AppCompatActivity {
             {
                 CommonJsInterface.callingStoreCallBackPopUp(juspayServicesGlobal.getDuiCallback(), entity_payload);
             }else {
-                hyperServices.process(new JSONObject().put("service", "in.juspay." + getResources().getString(R.string.service)).put("requestId", UUID.randomUUID()).put("payload", new JSONObject().put("action", "showPopup").put("id", id).put("popType", type).put("entityPayload", entity_payload)));
+                hyperServices.process(new JSONObject().put("service", getService()).put("requestId", UUID.randomUUID()).put("payload", new JSONObject().put("action", "showPopup").put("id", id).put("popType", type).put("entityPayload", entity_payload)));
                 System.out.println("Calling function triggerAllocationPopUpMain from main to main try after");
             }
         } catch (Exception e) {
@@ -621,33 +630,19 @@ public class MainActivity extends AppCompatActivity {
         JSONObject payload = new JSONObject();
 
         try {
-            String key = "in.juspay." + getResources().getString(R.string.service);
+
             json.put("requestId", "123");
-            json.put("service", key);
+            json.put("service", getService());
             json.put("betaAssets", false);
-            payload.put("clientId", getResources().getString(R.string.client_id));
+            payload.put("clientId",getResources().getString(R.string.client_id));
             payload.put("action", "initiate");
-            payload.put("service", key);
+            payload.put("service", getService());
             payload.put(PaymentConstants.ENV, "prod");
 
             json.put(PaymentConstants.PAYLOAD, payload);
         } catch (JSONException e) {
             e.printStackTrace();
         }
-//        try {
-//            String key = "net.openkochi." + getResources().getString(R.string.service);
-//            json.put("requestId", "123");
-//            json.put("service", key);
-//            json.put("betaAssets", false);
-//            payload.put("clientId", "open-kochi");
-//            payload.put("action", "initiate");
-//            payload.put("service", key);
-//            payload.put(PaymentConstants.ENV, "prod");
-//
-//            json.put(PaymentConstants.PAYLOAD, payload);
-//        } catch (JSONException e) {
-//            e.printStackTrace();
-//        }
 
         hyperServices.initiate(json, new HyperPaymentsCallbackAdapter() {
             @Override
@@ -701,7 +696,16 @@ public class MainActivity extends AppCompatActivity {
                     hyperServices = null;
                     initApp();
                 } else if(jsonObject.optString("event").equals("in_app_notification")){
-                    showInAppNotifiation(jsonObject.optString("title") , jsonObject.optString("message"));
+                    String title = jsonObject.optString("title");
+                    String message = jsonObject.optString("message");
+                    String channelId = jsonObject.optString("channelId");
+                    String action1Text = jsonObject.optString("action1Text") ;
+                    String action2Text = jsonObject.optString("action2Text");
+                    String action1Image = jsonObject.optString("action1Image") ;
+                    String action2Image = jsonObject.optString("action2Image");
+                    String onTapAction = jsonObject.optString("onTapAction");
+                    int durationInMilliSeconds = Integer.parseInt(jsonObject.optString("durationInMilliSeconds"));
+                    showInAppNotification(title, message, onTapAction, action1Text,action2Text , action1Image,action2Image , channelId , durationInMilliSeconds, context);
                 }
             }
         });
@@ -810,11 +814,14 @@ public class MainActivity extends AppCompatActivity {
             String data = pendingIntent.getExtras().getString("NOTIFICATION_DATA");
             try {
                 JSONObject jsonData = new JSONObject(data);
+                if(jsonData.has("notification_type") && jsonData.getString("notification_type").equals("CHAT_MESSAGE")){
+                    hyperServices.process(new JSONObject().put("service", "in.juspay." + getResources().getString(R.string.service)).put("requestId", UUID.randomUUID()).put("payload", new JSONObject().put("action", "OpenChatScreen").put("notification_type", "CHAT_MESSAGE")));
+                }
                 if (jsonData.has("notification_type") && jsonData.has("entity_ids")) {
                     String id = jsonData.getString("entity_ids");
                     String type = jsonData.getString("notification_type");
                     if (type.equals("NEW_MESSAGE")) {
-                        hyperServices.process(new JSONObject().put("service", "in.juspay." + getResources().getString(R.string.service)).put("requestId", UUID.randomUUID()).put("payload", new JSONObject().put("action", "callDriverAlert").put("id", id).put("popType", type)));
+                        hyperServices.process(new JSONObject().put("service", getService()).put("requestId", UUID.randomUUID()).put("payload", new JSONObject().put("action", "callDriverAlert").put("id", id).put("popType", type)));
                     }
                 }
             } catch (Exception e) {
@@ -828,6 +835,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         sharedPref.edit().putString(getResources().getString(R.string.ACTIVITY_STATUS),"onResume").apply();
+        sharedPref.edit().putString("MAPS_OPENED", "null").apply();
         appUpdateManager.getAppUpdateInfo().addOnSuccessListener(appUpdateInfo -> {
             if (appUpdateInfo.updateAvailability() == UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS) {
                 // If an in-app update is already running, resume the update.
@@ -858,13 +866,12 @@ public class MainActivity extends AppCompatActivity {
             new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    String key = "in.juspay." + getResources().getString(R.string.service);
-                    sdkTracker.trackLifecycle(PaymentConstants.SubCategory.LifeCycle.ANDROID, PaymentConstants.LogLevel.INFO, Labels.Android.ON_RESUME, "class", key);
+                    sdkTracker.trackLifecycle(PaymentConstants.SubCategory.LifeCycle.ANDROID, PaymentConstants.LogLevel.INFO, Labels.Android.ON_RESUME, "class", getService());
                 }
             }).start();
             stateMonitor.enable(this);
         }
-        if (getResources().getString(R.string.service).equals("nammayatripartner")){
+        if (in.juspay.mobility.BuildConfig.MERCHANT_TYPE.equals("DRIVER")){
             if (NotificationUtils.overlayFeatureNotAvailable(this)){
                 checkRideRequest();
             }
@@ -887,13 +894,12 @@ public class MainActivity extends AppCompatActivity {
             new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    String key = "in.juspay." + getResources().getString(R.string.service);
-                    sdkTracker.trackLifecycle(PaymentConstants.SubCategory.LifeCycle.ANDROID, PaymentConstants.LogLevel.INFO, Labels.Android.ON_PAUSE, "class", key);
+                    sdkTracker.trackLifecycle(PaymentConstants.SubCategory.LifeCycle.ANDROID, PaymentConstants.LogLevel.INFO, Labels.Android.ON_PAUSE, "class", getService());
                 }
             }).start();
             stateMonitor.disable(this);
         }
-        if (getResources().getString(R.string.service).equals("nammayatripartner") && widgetService != null && Settings.canDrawOverlays(this)  && !sharedPref.getString(getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null")) {
+        if (in.juspay.mobility.BuildConfig.MERCHANT_TYPE.equals("DRIVER") && widgetService != null && Settings.canDrawOverlays(this)  && !sharedPref.getString(getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null")) {
             widgetService.putExtra("payload","{}");
             widgetService.putExtra("data", "{}");
             startService(widgetService);
@@ -906,13 +912,13 @@ public class MainActivity extends AppCompatActivity {
         String role = sharedPref.getString("ROLE_KEY", "null");
         String location_status = sharedPref.getString("LOCATION_STATUS", "PAUSE");
         System.out.println("Outside onDestroy Driver" + role);
-       if (role.equals("DRIVER") && location_status.equals("START") && !(ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)) {
-           System.out.println("Inside onDestroy Driver" + role);
-           Intent broadcastIntent = new Intent();
-           broadcastIntent.setAction("restartservice");
-           broadcastIntent.setClass(this, BootUpReceiver.class);
-           this.sendBroadcast(broadcastIntent);
-       }
+        if (role.equals("DRIVER") && location_status.equals("START") && !(ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)) {
+            System.out.println("Inside onDestroy Driver" + role);
+            Intent broadcastIntent = new Intent();
+            broadcastIntent.setAction("restartservice");
+            broadcastIntent.setClass(this, BootUpReceiver.class);
+            this.sendBroadcast(broadcastIntent);
+        }
         if (hyperServices != null) {
             JuspayServices juspayServices = this.hyperServices.getJuspayServices();
             if (juspayServices!= null){
@@ -921,8 +927,7 @@ public class MainActivity extends AppCompatActivity {
             new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    String key = "in.juspay." + getResources().getString(R.string.service);
-                    sdkTracker.trackLifecycle(PaymentConstants.SubCategory.LifeCycle.ANDROID, PaymentConstants.LogLevel.INFO, Labels.Android.ON_DESTROY, "class", key);
+                    sdkTracker.trackLifecycle(PaymentConstants.SubCategory.LifeCycle.ANDROID, PaymentConstants.LogLevel.INFO, Labels.Android.ON_DESTROY, "class", getService());
                 }
             }).start();
             }
@@ -945,6 +950,7 @@ public class MainActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
         switch (requestCode) {
             case IMAGE_CAPTURE_REQ_CODE:
+                CommonJsInterface.isUploadPopupOpen = false;
                 if (resultCode == RESULT_OK) {
                     captureImage (data);
                 }
@@ -981,9 +987,9 @@ public class MainActivity extends AppCompatActivity {
           case IMAGE_PERMISSION_REQ_CODE :
               if ((ActivityCompat.checkSelfPermission(this, WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) && (ActivityCompat.checkSelfPermission(this, CAMERA) == PackageManager.PERMISSION_GRANTED) && (ActivityCompat.checkSelfPermission(this, READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)){
                   Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                  String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
+                  String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", new Locale("en","US")).format(new Date());
                   sharedPref.edit().putString(getResources().getString(R.string.TIME_STAMP_FILE_UPLOAD), timeStamp).apply();
-                  Uri photoFile = FileProvider.getUriForFile(this.getApplicationContext(),this.getResources().getString(R.string.fileProviderPath), new File(this.getApplicationContext().getFilesDir(), "IMG_" + timeStamp+".jpg"));
+                  Uri photoFile = FileProvider.getUriForFile(this.getApplicationContext(), getApplicationInfo().packageName + ".fileProvider", new File(this.getApplicationContext().getFilesDir(), "IMG_" + timeStamp+".jpg"));
                   takePicture.putExtra(MediaStore.EXTRA_OUTPUT, photoFile);
                   Intent chooseFromFile = new Intent(Intent.ACTION_GET_CONTENT);
                   chooseFromFile.setType("image/*");
@@ -1017,6 +1023,13 @@ public class MainActivity extends AppCompatActivity {
                       e.printStackTrace();
                   }
               }else {
+                  Toast.makeText(this, "Permission Denied", Toast.LENGTH_SHORT).show();
+              }
+              break;
+          case AudioRecorder.REQUEST_RECORD_AUDIO_PERMISSION:
+              if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                  AudioRecorder.recordPermissionAccepted();
+              } else {
                   Toast.makeText(this, "Permission Denied", Toast.LENGTH_SHORT).show();
               }
               break;
@@ -1112,34 +1125,34 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-  private String getImageName(Uri uri){
-      Cursor returnCursor = getContentResolver().query(uri, null, null, null, null);
-      int nameIndex = returnCursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
-      returnCursor.moveToFirst();
-      return returnCursor.getString(nameIndex);
-  }
+    private String getImageName(Uri uri){
+        Cursor returnCursor = getContentResolver().query(uri, null, null, null, null);
+        int nameIndex = returnCursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+        returnCursor.moveToFirst();
+        return returnCursor.getString(nameIndex);
+    }
 
-  private long getImageSizeKB(Uri uri){
-      Cursor returnCursor = getContentResolver().query(uri, null, null, null, null);
-      int sizeIndex = returnCursor.getColumnIndex(OpenableColumns.SIZE);
-      returnCursor.moveToFirst();
-      return returnCursor.getLong(sizeIndex)/1000;
-  }
+    private long getImageSizeKB(Uri uri){
+        Cursor returnCursor = getContentResolver().query(uri, null, null, null, null);
+        int sizeIndex = returnCursor.getColumnIndex(OpenableColumns.SIZE);
+        returnCursor.moveToFirst();
+        return returnCursor.getLong(sizeIndex)/1000;
+    }
 
-  public JuspayServices getJuspayServices(){
+    public JuspayServices getJuspayServices(){
         return juspayServicesGlobal;
-  }
+    }
 
-  public void hideSplash (){
-      View v = findViewById(R.id.cl_dui_container);
-      if (v != null) {
-          findViewById(R.id.cl_dui_container).setVisibility(View.VISIBLE);
-      }
-      View splashView = findViewById(R.id.splash);
-      if (splashView != null) {
-          splashView.setVisibility(View.GONE);
-      }
-  }
+    public void hideSplash (){
+        View v = findViewById(R.id.cl_dui_container);
+        if (v != null) {
+            findViewById(R.id.cl_dui_container).setVisibility(View.VISIBLE);
+        }
+        View splashView = findViewById(R.id.splash);
+        if (splashView != null) {
+            splashView.setVisibility(View.GONE);
+        }
+    }
 
     private void countAppUsageDays() {
         Date currentDate = new Date();
@@ -1163,7 +1176,7 @@ public class MainActivity extends AppCompatActivity {
             Uri imageUri;
             if (data == null || data.getData() == null) { //Camera
                 File image = new File(this.getApplicationContext().getFilesDir(), "IMG_" + sharedPref.getString(getResources().getString(R.string.TIME_STAMP_FILE_UPLOAD), "null") + ".jpg");
-                imageUri = FileProvider.getUriForFile(this.getApplicationContext(), this.getResources().getString(R.string.fileProviderPath), image);
+                imageUri = FileProvider.getUriForFile(this.getApplicationContext(), getApplicationInfo().packageName + ".fileProvider", image);
             }
             else { // storage
                 imageUri = data.getData();
@@ -1216,8 +1229,8 @@ public class MainActivity extends AppCompatActivity {
 
             Log.d(TAG, "encoded image size camera : " + String.valueOf((Math.ceil(encImage.length() / 4) * 3) / 1000));
             if (juspayServicesGlobal.getDynamicUI() != null) {
-                String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
-                CommonJsInterface.callingStoreCallImageUpload(juspayServicesGlobal.getDuiCallback(), encImage, "IMG_" + timeStamp +".jpg");
+                String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", new Locale("en","US")).format(new Date());
+                CommonJsInterface.callingStoreCallImageUpload(juspayServicesGlobal.getDuiCallback(), encImage, "IMG_" + timeStamp +".jpg", result.getUri().getPath());
             }
         }
         catch (Exception e){
@@ -1227,68 +1240,19 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public  void showInAppNotifiation(String title , String desc){
-        // getting the main Layout as a Container to add the notification .
-        ConstraintLayout mainLayout = (ConstraintLayout) findViewById(R.id.main_layout);
-
-        // inflating the app_notification as view to append in main layout .
-        View notification= getLayoutInflater().inflate(R.layout.app_notification,null);
-        notification.setLayoutParams(new ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.WRAP_CONTENT,ConstraintLayout.LayoutParams.WRAP_CONTENT));
-        notification.bringToFront();
-
-
-        // adding animation to the notification
-        notification.startAnimation(AnimationUtils.loadAnimation(this , R.anim.top_to_bottom));
-
-        // setting the title and description to the notification
-        TextView Title = notification.findViewById(R.id.title);
-        TextView Desc = notification.findViewById(R.id.desc);
-        Title.setText(title);
-        Desc.setText(desc);
-
-        // adding the evenListener to the cross button
-        notification.findViewById(R.id.cross).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                notification.startAnimation(AnimationUtils.loadAnimation(getApplicationContext() , R.anim.bottom_to_top));
-                mainLayout.removeView(notification);
-            }
-        });
-
-        // ring the notification bell
+    public static void showInAppNotification(String title, String message, String onTapAction, String action1Text, String action2Text, String action1Image, String action2Image, String channelId, int durationInMilliSeconds, Context context) {
         try {
-            Uri notify = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-            Ringtone r = RingtoneManager.getRingtone(getApplicationContext(), notify);
-            r.play();
+            Handler handler = new Handler(context.getMainLooper());
+            handler.postDelayed(() -> {
+                try {
+                    inAppNotification.generateNotification(title, message, onTapAction, action1Text, action2Text, action1Image, action2Image, channelId, durationInMilliSeconds);
+                } catch (JSONException e) {
+                    Log.e(TAG, "Error in In App Notification Handler " + e);
+                }
+            }, 0);
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.e(TAG, "Error in In App Notification " + e);
         }
-
-        // adding the notification to the main layout
-        mainLayout.addView(notification);
-
-
-        // adding a timer task to automatically remove the notification after 5 second
-        Timer timer;
-        TimerTask timerTask;
-        Handler timerHandler = new Handler();
-        timer = new Timer();
-        timerTask = new TimerTask() {
-            public void run() {
-                timerHandler.post(new Runnable() {
-                    public void run(){
-                        notification.startAnimation(AnimationUtils.loadAnimation(getApplicationContext() , R.anim.bottom_to_top));
-                        mainLayout.removeView(notification);
-                        if(timer != null){
-                            timer.cancel();
-                            timer.purge();
-                        }
-                    }
-                });
-            }
-        };
-
-        timer.schedule(timerTask, 5000);
     }
 
     private void checkRideRequest(){
@@ -1302,5 +1266,15 @@ public class MainActivity extends AppCompatActivity {
         }catch (Exception e){
             Log.e(TAG, "Exception in checkRideRequest");
         }
+    }
+    public String getService () {
+        StringBuilder key = new StringBuilder();
+        if (in.juspay.mobility.BuildConfig.MERCHANT.equals("KL")) {
+            key.append("net.openkochi.");
+        } else {
+            key.append("in.juspay.");
+        }
+        key.append(getResources().getString(R.string.service));
+        return key.toString();
     }
 }

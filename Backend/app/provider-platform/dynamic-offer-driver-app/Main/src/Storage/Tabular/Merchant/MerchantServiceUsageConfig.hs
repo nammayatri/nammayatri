@@ -47,6 +47,7 @@ mkPersist
       getPlaceName MapsService
       getPlaceDetails MapsService
       autoComplete MapsService
+      getDistancesForCancelRide MapsService
       smsProvidersPriorityList (PostgresList SmsService)
       whatsappProvidersPriorityList (PostgresList WhatsappService)
       verificationService VerificationService

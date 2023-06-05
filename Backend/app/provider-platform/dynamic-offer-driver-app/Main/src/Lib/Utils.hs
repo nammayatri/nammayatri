@@ -18,6 +18,7 @@ import Database.Beam.Postgres.Syntax
 import qualified Database.Beam.Query as BQ
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
+import qualified Domain.Types.FarePolicy as DomainFP
 import Domain.Types.Vehicle.Variant (Variant (..))
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -58,6 +59,16 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Money
 instance FromBackendRow Postgres Money
 
 instance FromField Money where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Minutes where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Minutes
+
+instance FromBackendRow Postgres Minutes
+
+instance FromField Minutes where
   fromField = fromFieldEnum
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Centesimal where
@@ -132,6 +143,36 @@ instance FromBackendRow Postgres DbHash
 
 instance IsString DbHash where
   fromString = show
+
+instance FromField DomainFP.WaitingCharge where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be DomainFP.WaitingCharge where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be DomainFP.WaitingCharge
+
+instance FromBackendRow Postgres DomainFP.WaitingCharge
+
+instance FromField DomainFP.WaitingChargeInfo where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be DomainFP.WaitingChargeInfo where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be DomainFP.WaitingChargeInfo
+
+instance FromBackendRow Postgres DomainFP.WaitingChargeInfo
+
+instance FromField DomainFP.NightShiftCharge where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be DomainFP.NightShiftCharge where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be DomainFP.NightShiftCharge
+
+instance FromBackendRow Postgres DomainFP.NightShiftCharge
 
 fromFieldEnum ::
   (Typeable a, Read a) =>

@@ -16,6 +16,7 @@ module SharedLogic.DriverLocation where
 
 import Domain.Types.DriverInformation
 import Domain.Types.DriverLocation
+import Domain.Types.Merchant
 import Domain.Types.Person as Person
 import Kernel.External.Maps
 import Kernel.Prelude
@@ -29,16 +30,16 @@ import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.DriverInformation as Queries
 import qualified Storage.Queries.DriverLocation as DLQueries
 
-upsertGpsCoord :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person -> LatLong -> UTCTime -> m ()
-upsertGpsCoord driverId latLong calculationTime = do
+upsertGpsCoord :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person -> LatLong -> UTCTime -> Id Merchant -> m ()
+upsertGpsCoord driverId latLong calculationTime merchantId = do
   driverInfo <- findDriverInfoById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   if not driverInfo.onRide -- if driver not on ride directly save location updates to DB
-    then void $ Esq.runTransaction $ DLQueries.upsertGpsCoord driverId latLong calculationTime
+    then void $ Esq.runTransaction $ DLQueries.upsertGpsCoord driverId latLong calculationTime merchantId
     else do
       mOldLocation <- findById driverId
       case mOldLocation of
         Nothing -> do
-          driverLocation <- Esq.runTransaction $ DLQueries.upsertGpsCoord driverId latLong calculationTime
+          driverLocation <- Esq.runTransaction $ DLQueries.upsertGpsCoord driverId latLong calculationTime merchantId
           cacheDriverLocation driverLocation
         Just oldLoc -> do
           now <- getCurrentTime

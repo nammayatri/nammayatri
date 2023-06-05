@@ -33,6 +33,7 @@ mkPersist
       id Text
       shortId Text
       serverName Domain.ServerName
+      is2faMandatory Bool
       createdAt UTCTime
       Primary id
       UniqueMerchantShortId shortId

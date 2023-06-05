@@ -294,6 +294,10 @@ export const isLocationPermissionEnabled = function (unit) {
   };
 };
 
+export const isMicrophonePermissionEnabled = function (unit) {
+    return window.JBridge.isMicrophonePermissionEnabled();
+};
+
 export const getPackageName = function () {
   if (window.__OS == "IOS") {
     var sessionDetails = JSON.parse(window.JBridge.getSessionDetails())
@@ -567,17 +571,39 @@ export const storeCallBackMessageUpdated = function (cb) {
         return function(chatUserId) {
           return function(action) {
               return function (){
-                  var callback = callbackMapper.map(function (message, sentBy, timeStamp){
-                    cb(action (message) (sentBy) (timeStamp))();
-                  });
-                  if(JBridge.storeCallBackMessageUpdated) {
-                    JBridge.storeCallBackMessageUpdated(chatChannelID, chatUserId, callback);
+                var callback = callbackMapper.map(function (message, sentBy, timeStamp, messagesSize){
+                  if(messagesSize == undefined) {
+                    messagesSize = "-1"
                   }
+                  cb(action (message) (sentBy) (timeStamp) (messagesSize))();
+                });
+                if(JBridge.storeCallBackMessageUpdated) {
+                  JBridge.storeCallBackMessageUpdated(chatChannelID, chatUserId, callback);
+                }
               };
             };
           };
         };
       };
+
+export const storeCallBackOpenChatScreen = function (cb) {
+    return function(action) {
+        return function (){
+            var callback = callbackMapper.map(function(){
+              cb(action)();
+            });
+            if(window.JBridge.storeCallBackOpenChatScreen) {
+              window.JBridge.storeCallBackOpenChatScreen(callback);
+            }
+        };
+      };
+  };
+
+export const openChatScreen = function() {
+  if (window.JBridge.openChatScreen) {
+    window.JBridge.openChatScreen();
+  }
+}
 
 export const startChatListenerService = function() {
   if (JBridge.startChatListenerService) {
@@ -601,6 +627,22 @@ export const sendMessage = function (message) {
 export const scrollToBottom = function(id) {
   if (JBridge.scrollToBottom){
     JBridge.scrollToBottom(id)
+  }
+}
+
+export const addMediaFile = function (viewID) {
+  return function (source) {
+      return function (actionButtonID) {
+          return function (playIcon) {
+              return function (pauseIcon) {
+                  return function (timerID) {
+                      return function () {
+                          JBridge.addMediaFile(viewID, source, actionButtonID, playIcon, pauseIcon, timerID);
+                      }
+                  }
+              }
+          }
+      }
   }
 }
 
@@ -1003,8 +1045,8 @@ export const storeCallBackImageUpload = function (cb) {
   try {
   return function (action) {
       return function () {
-          var callback = callbackMapper.map(function (imgStr, imageName) {
-              cb(action (imgStr)(imageName))();
+          var callback = callbackMapper.map(function (imgStr, imageName, imagePath) {
+              cb(action (imgStr)(imageName)(imagePath))();
           });
           window.JBridge.storeCallBackImageUpload(callback);
       }
@@ -1085,13 +1127,36 @@ export const previewImage = function (base64Image) {
 
 export const renderBase64Image = function (image) {
   return function (id) {
-      return JBridge.renderBase64Image(image, id);
+    return function (fitCenter) {
+      try {
+        if (JBridge.renderBase64Image) {
+          return JBridge.renderBase64Image(image, id, fitCenter);
+        }
+      } catch (err) {
+    /*
+     * This function is deprecated on 22 May - 2023
+     * Added only for Backward Compability
+     * Remove this function once it is not begin used.
+     */
+        return JBridge.renderBase64Image(image, id);
+      }
+    };
   };
 };
 
 export const isOverlayPermissionEnabled = function (unit) {
   return function () {
     return JBridge.isOverlayPermissionEnabled();
+  };
+};
+
+export const setScaleType = function (id) {
+  return function (url) {
+    return function (scaleType) {
+      if(JBridge.setScaleType){
+        return JBridge.setScaleType(id, url, scaleType);
+      }
+    }
   };
 };
 
@@ -1108,13 +1173,21 @@ export const requestKeyboardShow = function(id) {
   JBridge.requestKeyboardShow(id);
 }
 
-export const locateOnMap = function(str){
-  return function (lat){
-    return function (lon){
-      JBridge.locateOnMap(str, lat, lon);
-    }
-  }
-}
+export const locateOnMap = function (str) {
+  return function (lat) {
+    return function (lon) {
+      return function (geoJson) {
+        return function (coodinates) {
+          try {
+            return JBridge.locateOnMap(str, lat, lon, geoJson, JSON.stringify(coodinates));
+          } catch (err) {
+            return JBridge.locateOnMap(str, lat, lon);
+          }s
+        };
+      };
+    };
+  };
+};
 
 export const exitLocateOnMap = function(str){
   JBridge.exitLocateOnMap(str);
@@ -1132,6 +1205,26 @@ export const shareImageMessage = function(message){
   return function (imageName){
     if(JBridge.shareTextMessage){
       JBridge.shareImageMessage(message,imageName);
+    }
+  }
+}
+
+export const showInAppNotification = function(title){
+  return function(message){
+    return function(onTapAction){
+      return function(action1Text){
+        return function(action2Text){
+          return function(action1Image){
+            return function(action2Image){
+              return function(channelId){
+                return function(duration){
+                  return window.JOS.emitEvent("java")("onEvent")(JSON.stringify({event:"in_app_notification" , title:title ,message:message ,onTapAction:onTapAction, action1Text:action1Text,action2Text:action2Text , action1Image : action1Image ,action2Image :action2Image , channelId:channelId , durationInMilliSeconds:duration}))()
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

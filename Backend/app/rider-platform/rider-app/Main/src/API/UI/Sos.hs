@@ -19,6 +19,7 @@ module API.UI.Sos
 where
 
 import qualified Domain.Action.UI.Sos as DSos
+import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Sos as Sos
 import Environment
@@ -47,8 +48,8 @@ handler =
   createSosDetails
     :<|> updateSosDetails
 
-createSosDetails :: Id Person.Person -> DSos.SosReq -> FlowHandler DSos.SosRes
-createSosDetails personId = withFlowHandlerAPI . withPersonIdLogTag personId . DSos.createSosDetails personId
+createSosDetails :: (Id Person.Person, Id Merchant.Merchant) -> DSos.SosReq -> FlowHandler DSos.SosRes
+createSosDetails (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . DSos.createSosDetails personId
 
-updateSosDetails :: Id Sos.Sos -> Id Person.Person -> DSos.SosFeedbackReq -> FlowHandler APISuccess.APISuccess
-updateSosDetails sosId personId = withFlowHandlerAPI . withPersonIdLogTag personId . DSos.updateSosDetails sosId personId
+updateSosDetails :: Id Sos.Sos -> (Id Person.Person, Id Merchant.Merchant) -> DSos.SosFeedbackReq -> FlowHandler APISuccess.APISuccess
+updateSosDetails sosId (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . DSos.updateSosDetails sosId personId

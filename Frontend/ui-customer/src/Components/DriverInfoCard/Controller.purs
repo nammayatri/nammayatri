@@ -29,6 +29,8 @@ data Action = NoAction
             | OpenEmergencyHelp
             | MessageDriver
             | ShareRide
+            | ZoneOTPExpiryAction String String Int
+            | OnNavigate
 
 type DriverInfoCardState = 
   { props :: DriverInfoCardProps
@@ -40,7 +42,9 @@ type DriverInfoCardProps =
     currentStage :: Stage,
     trackingEnabled :: Boolean,
     unReadMessages :: Boolean,
-    showCallPopUp :: Boolean
+    showCallPopUp :: Boolean,
+    isSpecialZone :: Boolean,
+    estimatedTime :: String
   }
 
 type DriverInfoCardData = 
@@ -70,4 +74,8 @@ type DriverInfoCardData =
   , bppRideId :: String
   , driverNumber :: Maybe String
   , merchantExoPhone :: String
+  , estimatedDropTime :: String
+  , isSpecialZone :: Boolean
+  , isLocationTracking :: Boolean
+  , bookingCreatedAt :: String
   }

@@ -52,6 +52,7 @@ mkPersist
       tripStartLon Double Maybe
       tripEndLat Double Maybe
       tripEndLon Double Maybe
+      pickupDropOutsideOfThreshold Bool Maybe
       fareParametersId Fare.FareParametersTId Maybe
       distanceCalculationFailed Bool Maybe
       createdAt UTCTime

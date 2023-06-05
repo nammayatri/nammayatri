@@ -20,9 +20,12 @@ import Prelude
 import Control.Monad.Except (runExcept)
 import Control.Monad.Except.Trans (lift)
 import Control.Monad.State as S
+import Common.Types.App (Version(..))
 import Data.Either (Either(..))
 import Data.Function.Uncurried (Fn2)
 import Data.Maybe (fromMaybe, Maybe(..))
+import Data.String (Pattern(..),split)
+import Data.Int (fromString)
 import Data.Number.Format (toStringWith, fixed) as Number
 import Effect (Effect)
 import Effect.Aff (Aff, makeAff, nonCanceler, try)
@@ -191,3 +194,14 @@ numericVersion versionName = do
 
 parseFloat :: Number -> Int -> String
 parseFloat num prec = Number.toStringWith (Number.fixed prec) num
+
+stringToVersion :: String -> Version
+stringToVersion reqVersion =
+  let versionArray = split (Pattern ".") reqVersion
+      madeVersion = Version {
+    major : fromMaybe (-1) (fromString $ fromMaybe "NA" $ versionArray !! 0),
+    minor : fromMaybe (-1) (fromString $ fromMaybe "NA" $ versionArray !! 1),
+    maintenance : fromMaybe (-1) (fromString $ fromMaybe "NA" $ versionArray !! 2)
+  }
+  in
+    madeVersion

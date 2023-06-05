@@ -21,6 +21,7 @@ module API.UI.Route
 where
 
 import qualified Domain.Action.UI.Route as DRoute
+import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import Environment
 import qualified Kernel.External.Maps as Maps
@@ -49,11 +50,11 @@ type API =
 handler :: FlowServer API
 handler = getRoute :<|> getPickupRoute :<|> getTripRoute
 
-getRoute :: Id Person.Person -> Maps.GetRoutesReq -> FlowHandler Maps.GetRoutesResp
-getRoute personId = withFlowHandlerAPI . withPersonIdLogTag personId . DRoute.getRoutes personId
+getRoute :: (Id Person.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> FlowHandler Maps.GetRoutesResp
+getRoute (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DRoute.getRoutes (personId, merchantId)
 
-getPickupRoute :: Id Person.Person -> Maps.GetRoutesReq -> FlowHandler Maps.GetRoutesResp
-getPickupRoute personId = withFlowHandlerAPI . withPersonIdLogTag personId . DRoute.getPickupRoutes personId
+getPickupRoute :: (Id Person.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> FlowHandler Maps.GetRoutesResp
+getPickupRoute (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DRoute.getPickupRoutes (personId, merchantId)
 
-getTripRoute :: Id Person.Person -> Maps.GetRoutesReq -> FlowHandler Maps.GetRoutesResp
-getTripRoute personId = withFlowHandlerAPI . withPersonIdLogTag personId . DRoute.getTripRoutes personId
+getTripRoute :: (Id Person.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> FlowHandler Maps.GetRoutesResp
+getTripRoute (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DRoute.getTripRoutes (personId, merchantId)

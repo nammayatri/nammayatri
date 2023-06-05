@@ -16,6 +16,7 @@ module Beckn.ACL.OnInit where
 
 import Beckn.Types.Core.Taxi.OnInit as OnInit
 import Domain.Action.Beckn.Init as DInit
+import qualified Domain.Types.FareParameters as DFParams
 import Kernel.Prelude
 import SharedLogic.FareCalculator
 
@@ -24,8 +25,9 @@ mkOnInitMessage res = do
   let rb = res.booking
       fareDecimalValue = fromIntegral rb.estimatedFare
       currency = "INR"
-      breakup_ = mkBreakupList (OnInit.BreakupItemPrice currency . fromIntegral) OnInit.BreakupItem rb.fareParams
-
+      breakup_ =
+        mkBreakupList (OnInit.BreakupItemPrice currency . fromIntegral) OnInit.BreakupItem rb.fareParams
+          & filter (filterRequiredBreakups $ DFParams.getFareParametersType rb.fareParams) -- TODO: Remove after roll out
   OnInit.OnInitMessage
     { order =
         OnInit.Order
@@ -54,3 +56,19 @@ mkOnInitMessage res = do
                 }
           }
     }
+  where
+    filterRequiredBreakups fParamsType breakup = do
+      case fParamsType of
+        DFParams.Progressive ->
+          breakup.title == "BASE_FARE"
+            || breakup.title == "DEAD_KILOMETER_FARE"
+            || breakup.title == "EXTRA_DISTANCE_FARE"
+            || breakup.title == "DRIVER_SELECTED_FARE"
+            || breakup.title == "CUSTOMER_SELECTED_FARE"
+            || breakup.title == "TOTAL_FARE"
+        DFParams.Slab ->
+          breakup.title == "BASE_FARE"
+            || breakup.title == "SERVICE_CHARGE"
+            || breakup.title == "WAITING_OR_PICKUP_CHARGES"
+            || breakup.title == "FIXED_GOVERNMENT_RATE"
+            || breakup.title == "TOTAL_FARE"

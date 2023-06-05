@@ -24,6 +24,7 @@ import qualified Kernel.Storage.Hedis.Queries as Hedis
 import qualified Kernel.Tools.Metrics.CoreMetrics.Types as Metrics
 import Kernel.Types.Flow
 import Kernel.Types.Id
+import Kernel.Utils.App (lookupDeploymentVersion)
 import Kernel.Utils.Common
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.SignatureAuth
@@ -44,7 +45,8 @@ data AppEnv = AppEnv
     encTools :: EncTools,
     coreMetrics :: Metrics.CoreMetricsContainer,
     httpClientOptions :: HttpClientOptions,
-    snapToRoadSnippetThreshold :: HighPrecMeters
+    snapToRoadSnippetThreshold :: HighPrecMeters,
+    version :: Metrics.DeploymentVersion
   }
   deriving (Generic)
 
@@ -74,6 +76,7 @@ wrapTests func = do
       coreMetrics <- Metrics.registerCoreMetricsContainer
       -- fetch google configs for using mock-google or real google
       appCfg <- Environment.readConfig "../"
+      version <- lookupDeploymentVersion
       let appEnv =
             AppEnv
               { httpClientOptions = defaultHttpClientOptions,

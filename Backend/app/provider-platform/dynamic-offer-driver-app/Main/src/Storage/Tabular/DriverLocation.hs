@@ -25,6 +25,7 @@ import Domain.Types.Person (Person)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
+import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.Person (PersonTId)
 
 mkPersist
@@ -40,6 +41,7 @@ mkPersist
       updatedAt UTCTime
       Primary driverId
       deriving Generic
+      merchantId MerchantTId
     |]
 
 instance TEntityKey DriverLocationT where
@@ -52,6 +54,7 @@ instance FromTType DriverLocationT Domain.DriverLocation where
     return $
       Domain.DriverLocation
         { driverId = fromKey driverId,
+          merchantId = fromKey merchantId,
           ..
         }
 
@@ -60,5 +63,6 @@ instance ToTType DriverLocationT Domain.DriverLocation where
     DriverLocationT
       { driverId = toKey driverId,
         point = Point,
+        merchantId = toKey merchantId,
         ..
       }

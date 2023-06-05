@@ -22,8 +22,10 @@ module Storage.Tabular.BookingCancellationReason where
 
 import qualified Domain.Types.BookingCancellationReason as Domain
 import qualified Domain.Types.CancellationReason as DCR
+import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
+import Kernel.Types.Common (Meters (..))
 import qualified Storage.Tabular.Booking as SRB
 import qualified Storage.Tabular.CancellationReason as SCR
 import qualified Storage.Tabular.Ride as SRide
@@ -40,6 +42,9 @@ mkPersist
       reasonCode SCR.CancellationReasonTId Maybe
       reasonStage DCR.CancellationStage Maybe
       additionalInfo Text Maybe
+      driverCancellationLocationLat Double Maybe
+      driverCancellationLocationLon Double Maybe
+      driverDistToPickup Meters Maybe
       Primary bookingId
       UniqueBookingCancellationReasonBookingId bookingId
       deriving Generic
@@ -47,11 +52,13 @@ mkPersist
 
 instance FromTType BookingCancellationReasonT Domain.BookingCancellationReason where
   fromTType BookingCancellationReasonT {..} = do
+    let mbDriverCancellationLocation = LatLong <$> driverCancellationLocationLat <*> driverCancellationLocationLon
     return $
       Domain.BookingCancellationReason
         { bookingId = fromKey bookingId,
           rideId = fromKey <$> rideId,
           reasonCode = fromKey <$> reasonCode,
+          driverCancellationLocation = mbDriverCancellationLocation,
           ..
         }
 
@@ -61,5 +68,7 @@ instance ToTType BookingCancellationReasonT Domain.BookingCancellationReason whe
       { bookingId = toKey bookingId,
         rideId = toKey <$> rideId,
         reasonCode = toKey <$> reasonCode,
+        driverCancellationLocationLat = driverCancellationLocation <&> (.lat),
+        driverCancellationLocationLon = driverCancellationLocation <&> (.lon),
         ..
       }

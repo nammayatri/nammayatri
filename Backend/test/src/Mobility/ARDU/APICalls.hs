@@ -111,8 +111,14 @@ newtype DashboardAPIs = DashboardAPIs
   { ride :: DashboardRideAPIs
   }
 
-newtype DashboardRideAPIs = DashboardRideAPIs
-  { rideSync :: Id Dashboard.Ride -> ClientM Dashboard.RideSyncRes
+data DashboardRideAPIs = DashboardRideAPIs
+  { rideSync :: Id Dashboard.Ride -> ClientM Dashboard.RideSyncRes,
+    multipleRideEnd :: Dashboard.MultipleRideEndReq -> ClientM APISuccess,
+    multipleRideCancel :: Dashboard.MultipleRideCancelReq -> ClientM APISuccess
+  }
+
+newtype DashboardMultipleRideAPIs = DashboardMultipleRideAPIs
+  { multipleRideSync :: Dashboard.MultipleRideSyncReq -> ClientM Dashboard.MultipleRideSyncRes
   }
 
 dashboard :: ShortId TDM.Merchant -> Text -> DashboardAPIs
@@ -124,7 +130,7 @@ dashboard merchantId token = do
 
     _ :<|> rideClient :<|> _ :<|> _ = helperAPIClient merchantId token
 
-    _ :<|> _ :<|> _ :<|> _ :<|> _ :<|> rideSync :<|> _ = rideClient
+    _ :<|> _ :<|> _ :<|> multipleRideEnd :<|> _ :<|> multipleRideCancel :<|> _ :<|> rideSync :<|> _ = rideClient
 
 buildStartRideReq :: Text -> LatLong -> RideAPI.StartRideReq
 buildStartRideReq otp initialPoint =

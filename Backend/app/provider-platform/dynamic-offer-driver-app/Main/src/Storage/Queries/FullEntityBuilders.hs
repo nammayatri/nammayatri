@@ -16,7 +16,7 @@
 module Storage.Queries.FullEntityBuilders
   ( buildFullBooking,
     buildFullFareParameters,
-    buildFullFarePolicy,
+    -- buildFullFarePolicy,
     buildFullDriverQuote,
     buildFullQuoteSpecialZone,
   )
@@ -25,21 +25,23 @@ where
 import Domain.Types.Booking
 import qualified Domain.Types.DriverQuote as DriverQuote
 import qualified Domain.Types.FareParameters as FareParams
-import qualified Domain.Types.FarePolicy as FarePolicy
+-- import qualified Domain.Types.FarePolicy as FarePolicy
 import qualified Domain.Types.QuoteSpecialZone as QuoteSpecialZone
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq hiding (findById, isNothing)
 import Kernel.Types.Id
-import qualified Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab as FarePolicySlabsDetailsSlab
+-- import qualified Storage.Queries.FarePolicy.DriverExtraFeeBounds as FarePolicyDriverExtraFeeBounds
+-- import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as QFarePolicyProgressiveDetailsPerExtraKmRateSection
+-- import qualified Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab as FarePolicySlabsDetailsSlab
 import Storage.Tabular.Booking
 import Storage.Tabular.Booking.BookingLocation
 import qualified Storage.Tabular.DriverQuote as DriverQuote
 import qualified Storage.Tabular.FareParameters as FareParams
 import qualified Storage.Tabular.FareParameters.FareParametersProgressiveDetails as FareParametersProgressiveDetails
 import qualified Storage.Tabular.FareParameters.Instances as FareParams
-import qualified Storage.Tabular.FarePolicy as FarePolicy
-import qualified Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails as FarePolicyProgressiveDetails
-import qualified Storage.Tabular.FarePolicy.Instances as FarePolicy
+-- import qualified Storage.Tabular.FarePolicy as FarePolicy
+-- import qualified Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails as FarePolicyProgressiveDetails
+-- import qualified Storage.Tabular.FarePolicy.Instances as FarePolicy
 import qualified Storage.Tabular.QuoteSpecialZone as QuoteSpecialZone
 
 buildFullBooking ::
@@ -74,19 +76,20 @@ buildFullFareParameters ::
 buildFullFareParameters fareParamsT = do
   fmap (extractSolidType @FareParams.FareParameters) <$> getFullFareParamsData fareParamsT
 
-buildFullFarePolicy ::
-  Transactionable m =>
-  FarePolicy.FarePolicyT ->
-  DTypeBuilder m (Maybe (SolidType FarePolicy.FullFarePolicyT))
-buildFullFarePolicy farePolicyT@FarePolicy.FarePolicyT {..} = do
-  runMaybeT $ do
-    farePolicyDet <- case farePolicyType of
-      FarePolicy.Progressive ->
-        MaybeT $
-          fmap FarePolicy.ProgressiveDetailsT
-            <$> Esq.findById' @FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsT (Id id)
-      FarePolicy.Slabs -> MaybeT $ Just . FarePolicy.SlabsDetailsT <$> FarePolicySlabsDetailsSlab.findAll' (Id id)
-    return $ extractSolidType @FarePolicy.FarePolicy (farePolicyT, farePolicyDet)
+-- buildFullFarePolicy ::
+--   Transactionable m =>
+--   FarePolicy.FarePolicyT ->
+--   DTypeBuilder m (Maybe (SolidType FarePolicy.FullFarePolicyT))
+-- buildFullFarePolicy farePolicyT@FarePolicy.FarePolicyT {..} = do
+--   driverExtraFeeBoundsT <- FarePolicyDriverExtraFeeBounds.findAll' (Id id)
+--   runMaybeT $ do
+--     farePolicyDet <- case farePolicyType of
+--       FarePolicy.Progressive -> do
+--         fpDetT <- MaybeT $ Esq.findById' @FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsT (Id id)
+--         fpDetPerExtraKmRateT <- MaybeT $ Just <$> QFarePolicyProgressiveDetailsPerExtraKmRateSection.findAll' (Id id)
+--         return $ FarePolicy.ProgressiveDetailsT (fpDetT, fpDetPerExtraKmRateT)
+--       FarePolicy.Slabs -> MaybeT $ Just . FarePolicy.SlabsDetailsT <$> FarePolicySlabsDetailsSlab.findAll' (Id id)
+--     return $ extractSolidType @FarePolicy.FarePolicy (farePolicyT, driverExtraFeeBoundsT, farePolicyDet)
 
 buildFullDriverQuote ::
   Transactionable m =>

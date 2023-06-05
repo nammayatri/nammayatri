@@ -105,10 +105,12 @@ public class SoundVisualizerBarView extends View{
 
     public void setPlayedStateColor(@ColorRes int playedStateColor) {
         this.playedStateColor = playedStateColor;
+        init();
     }
 
     public void setNonPlayedStateColor(@ColorRes int nonPlayedStateColor) {
         this.nonPlayedStateColor = nonPlayedStateColor;
+        init();
     }
 
     private void init() {

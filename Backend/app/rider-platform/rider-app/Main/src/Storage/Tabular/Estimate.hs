@@ -41,9 +41,6 @@ mkPersist
       id Text
       requestId SSearchRequest.SearchRequestTId
       bppEstimateId Text
-      autoAssignEnabled Bool
-      autoAssignEnabledV2 Bool
-      autoAssignQuoteId Text Maybe
       estimatedFare HighPrecMoney
       discount HighPrecMoney Maybe
       estimatedTotalFare HighPrecMoney

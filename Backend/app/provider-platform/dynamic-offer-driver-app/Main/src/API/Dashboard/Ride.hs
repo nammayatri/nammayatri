@@ -28,7 +28,7 @@ import Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Id
-import Kernel.Utils.Common (Money, withFlowHandlerAPI)
+import Kernel.Utils.Common (Forkable (fork), Money, withFlowHandlerAPI)
 import Servant hiding (Unauthorized, throwError)
 import SharedLogic.Merchant (findMerchantByShortId)
 
@@ -37,9 +37,12 @@ type API =
     :> ( Common.RideListAPI
            :<|> Common.RideStartAPI
            :<|> Common.RideEndAPI
+           :<|> Common.MultipleRideEndAPI
            :<|> Common.RideCancelAPI
+           :<|> Common.MultipleRideCancelAPI
            :<|> Common.RideInfoAPI
            :<|> Common.RideSyncAPI
+           :<|> Common.MultipleRideSyncAPI
            :<|> Common.RideRouteAPI
        )
 
@@ -48,9 +51,12 @@ handler merchantId =
   rideList merchantId
     :<|> rideStart merchantId
     :<|> rideEnd merchantId
+    :<|> multipleRideEnd merchantId
     :<|> rideCancel merchantId
+    :<|> multipleRideCancel merchantId
     :<|> rideInfo merchantId
     :<|> rideSync merchantId
+    :<|> multipleRideSync merchantId
     :<|> rideRoute merchantId
 
 rideList ::
@@ -62,9 +68,11 @@ rideList ::
   Maybe Text ->
   Maybe Text ->
   Maybe Money ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
   FlowHandler Common.RideListRes
-rideList merchantShortId mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbFareDiff =
-  withFlowHandlerAPI . DRide.rideList merchantShortId mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbFareDiff
+rideList merchantShortId mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbFareDiff mbfrom mbto =
+  withFlowHandlerAPI . DRide.rideList merchantShortId mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbFareDiff mbfrom mbto
 
 rideStart :: ShortId DM.Merchant -> Id Common.Ride -> Common.StartRideReq -> FlowHandler APISuccess
 rideStart merchantShortId reqRideId Common.StartRideReq {point} = withFlowHandlerAPI $ do
@@ -84,6 +92,22 @@ rideEnd merchantShortId reqRideId Common.EndRideReq {point} = withFlowHandlerAPI
   shandle <- EHandler.buildEndRideHandle merchantId
   EHandler.dashboardEndRide shandle rideId dashboardReq
 
+endMultipleRide :: ShortId DM.Merchant -> Id Common.Ride -> Common.EndRideReq -> FlowHandler APISuccess
+endMultipleRide merchantShortId reqRideId Common.EndRideReq {point} = withFlowHandlerAPI $ do
+  fork "multipleRideEnd - BPP Side" $ do
+    merchant <- findMerchantByShortId merchantShortId
+    let rideId = cast @Common.Ride @DRide.Ride reqRideId
+    let merchantId = merchant.id
+    let dashboardReq = EHandler.DashboardEndRideReq {point, merchantId}
+    shandle <- EHandler.buildEndRideHandle merchantId
+    void $ EHandler.dashboardEndRide shandle rideId dashboardReq
+  return Success
+
+multipleRideEnd :: ShortId DM.Merchant -> Common.MultipleRideEndReq -> FlowHandler APISuccess
+multipleRideEnd merchantShortId Common.MultipleRideEndReq {rides} = do
+  mapM_ (\rideItem -> endMultipleRide merchantShortId rideItem.rideId Common.EndRideReq {point = rideItem.point}) rides
+  return Success
+
 rideCancel :: ShortId DM.Merchant -> Id Common.Ride -> Common.CancelRideReq -> FlowHandler APISuccess
 rideCancel merchantShortId reqRideId Common.CancelRideReq {reasonCode, additionalInfo} = withFlowHandlerAPI $ do
   merchant <- findMerchantByShortId merchantShortId
@@ -95,11 +119,32 @@ rideCancel merchantShortId reqRideId Common.CancelRideReq {reasonCode, additiona
           }
   CHandler.dashboardCancelRideHandler CHandler.cancelRideHandle merchant.id rideId dashboardReq
 
+cancelMultipleRide :: ShortId DM.Merchant -> Id Common.Ride -> Common.CancelRideReq -> FlowHandler APISuccess
+cancelMultipleRide merchantShortId reqRideId Common.CancelRideReq {reasonCode, additionalInfo} = withFlowHandlerAPI $ do
+  fork "multipleRideCancel - BPP Side" $ do
+    merchant <- findMerchantByShortId merchantShortId
+    let rideId = cast @Common.Ride @DRide.Ride reqRideId
+    let dashboardReq =
+          CHandler.CancelRideReq
+            { reasonCode = coerce @Common.CancellationReasonCode @DCReason.CancellationReasonCode reasonCode,
+              additionalInfo
+            }
+    void $ CHandler.dashboardCancelRideHandler CHandler.cancelRideHandle merchant.id rideId dashboardReq
+  return Success
+
+multipleRideCancel :: ShortId DM.Merchant -> Common.MultipleRideCancelReq -> FlowHandler APISuccess
+multipleRideCancel merchantShortId req = do
+  mapM_ (\info -> cancelMultipleRide merchantShortId info.rideId Common.CancelRideReq {reasonCode = info.reasonCode, additionalInfo = info.additionalInfo}) req.multiRideCancelReason
+  return Success
+
 rideInfo :: ShortId DM.Merchant -> Id Common.Ride -> FlowHandler Common.RideInfoRes
 rideInfo merchantShortId = withFlowHandlerAPI . DRide.rideInfo merchantShortId
 
 rideSync :: ShortId DM.Merchant -> Id Common.Ride -> FlowHandler Common.RideSyncRes
 rideSync merchantShortId = withFlowHandlerAPI . DRide.rideSync merchantShortId
+
+multipleRideSync :: ShortId DM.Merchant -> Common.MultipleRideSyncReq -> FlowHandler Common.MultipleRideSyncRes
+multipleRideSync merchantShortId = withFlowHandlerAPI . DRide.multipleRideSync merchantShortId
 
 rideRoute :: ShortId DM.Merchant -> Id Common.Ride -> FlowHandler Common.RideRouteRes
 rideRoute merchantShortId rideId = withFlowHandlerAPI $ DRide.rideRoute merchantShortId rideId

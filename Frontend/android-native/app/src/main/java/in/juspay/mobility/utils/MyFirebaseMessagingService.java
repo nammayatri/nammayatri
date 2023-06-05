@@ -9,6 +9,7 @@
 
 package in.juspay.mobility.utils;
 
+import static in.juspay.mobility.utils.NotificationUtils.rand;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
@@ -34,12 +35,16 @@ import java.net.URL;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import javax.net.ssl.HttpsURLConnection;
+import in.juspay.mobility.CommonJsInterface;
+
+import in.juspay.mobility.BuildConfig;
 import in.juspay.mobility.MainActivity;
 import in.juspay.mobility.R;
 import com.google.firebase.analytics.FirebaseAnalytics;
 
 public class MyFirebaseMessagingService extends FirebaseMessagingService {
     private FirebaseAnalytics mFirebaseAnalytics;
+    String merchantType = BuildConfig.MERCHANT_TYPE;
 
     @Override
     public void onNewToken(@NonNull String newToken){
@@ -106,10 +111,10 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             if (notification_payload != null || notification != null) {
                 SharedPreferences sharedPref = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
                 String notificationType = (String) payload.get("notification_type");
-
+                stopChatService(notificationType,sharedPref);
                 switch (notificationType) {
                     case NotificationTypes.TRIGGER_SERVICE :
-                        if (getString(R.string.service).equals(getString(R.string.nammayatripartner))) {
+                        if (merchantType.equals("DRIVER")) {
                             FirebaseAnalytics.getInstance(this).logEvent("notification_trigger_service", new Bundle());
                             restartLocationService();
                         }
@@ -133,12 +138,11 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                     case NotificationTypes.CANCELLED_PRODUCT :
                         NotificationUtils.showNotification(this, title, body, payload, imageUrl);
                         sharedPref.edit().putString(getResources().getString(R.string.IS_RIDE_ACTIVE), "false").apply();
-                        Intent chatListenerService = new Intent(this, ChatService.class);
-                        this.stopService(chatListenerService);
-                        SharedPreferences.Editor editor = sharedPref.edit();
-                        editor.putString("READ_MESSAGES", "0");
-                        editor.apply();
-                        startWidgetService(getString(R.string.ride_cancelled), payload, entity_payload);
+                        if (sharedPref.getString("MAPS_OPENED", "null").equals("true")){
+                            startMainActivity();
+                        } else {
+                            startWidgetService(getString(R.string.ride_cancelled), payload, entity_payload);
+                        }
                         break;
 
                     case NotificationTypes.DRIVER_QUOTE_INCOMING :
@@ -149,7 +153,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
                     case NotificationTypes.TRIP_FINISHED :
                         NotificationUtils.showNotification(this, title, body, payload, imageUrl);
-                        if (getResources().getString(R.string.service).equals("nammayatri")) {
+                        if (merchantType.equals("USER")){
                             sharedPref.edit().putInt("RIDE_COUNT", sharedPref.getInt("RIDE_COUNT", 0) + 1).apply();
                             sharedPref.edit().putString("COMPLETED_RIDE_COUNT", String.valueOf(sharedPref.getInt("RIDE_COUNT", 0))).apply();
                         }
@@ -222,7 +226,24 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                         }catch (Exception e) {
 
                         }
-
+                    case NotificationTypes.CHAT_MESSAGE :
+                        try{
+                            String appState = null;
+                            String stage = null;
+                            if(sharedPref != null) appState = sharedPref.getString("ACTIVITY_STATUS", "null");
+                            if(sharedPref != null) stage = sharedPref.getString("LOCAL_STAGE", "null");
+                            final boolean condition = appState.equals("onResume") && !(stage.equals("ChatWithDriver")) && !BuildConfig.MERCHANT_TYPE.equals("DRIVER");
+                            if(condition) {
+                                getApplicationContext().getMainLooper();
+                                String notificationId = String.valueOf(rand.nextInt(1000000));
+                                MainActivity.showInAppNotification(title, body, CommonJsInterface.storeCallBackOpenChatScreen,"", "", "", "", notificationId, 5000, getApplicationContext());
+                            }
+                            if(appState.equals("onDestroy") || appState.equals("onPause")) {
+                                NotificationUtils.createChatNotification(title,body,getApplicationContext());
+                            }
+                        } catch (Exception e) {
+                            Log.e("MyFirebaseMessagingService", "Error in CHAT_MESSAGE " + e);
+                        }
                         break;
 
                     default:
@@ -308,7 +329,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 StringBuilder result = new StringBuilder();
                 try {
                     String orderUrl ;
-                    if (getString(R.string.service).equals("nammayatripartner")) {
+                    if (merchantType.equals("DRIVER")) {
                         orderUrl = baseUrl + "/driver/profile";
                     } 
                     else {
@@ -375,7 +396,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     private void startWidgetService(String widgetMessage, JSONObject data, JSONObject payload){
         SharedPreferences sharedPref = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         Intent widgetService = new Intent(getApplicationContext(), WidgetService.class);
-        if (getResources().getString(R.string.service).equals(getString(R.string.nammayatripartner)) && Settings.canDrawOverlays(getApplicationContext())  && !sharedPref.getString(getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && (sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"))) {
+        if (merchantType.equals("DRIVER") && Settings.canDrawOverlays(getApplicationContext())  && !sharedPref.getString(getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && (sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"))) {
             widgetService.putExtra(getResources().getString(R.string.WIDGET_MESSAGE),widgetMessage);
             widgetService.putExtra("payload", payload!=null ? payload.toString(): null);
             widgetService.putExtra("data", data!=null ? data.toString(): null);
@@ -389,7 +410,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
     private void startMainActivity() {
         SharedPreferences sharedPref = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-        if (getResources().getString(R.string.service).equals(getString(R.string.nammayatripartner)) && !sharedPref.getString(getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && (sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"))) {
+        if (merchantType.equals("DRIVER") && !sharedPref.getString(getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && (sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"))) {
             Intent intent = new Intent(getApplicationContext(), MainActivity.class);
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
             try {
@@ -407,6 +428,20 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         mFirebaseAnalytics.logEvent(event, params);
     }
 
+    private void stopChatService(String notificationType, SharedPreferences sharedPref){
+        if(notificationType.equals("TRIP_FINISHED") || notificationType.equals("CANCELLED_PRODUCT") || notificationType.equals("TRIP_STARTED")) {
+            try{
+                Intent chatListenerService = new Intent(this, ChatService.class);
+                this.stopService(chatListenerService);
+                SharedPreferences.Editor editor = sharedPref.edit();
+                editor.putString("READ_MESSAGES", "0");
+                editor.apply();
+            } catch (Exception e){
+                Log.e("MyFirebaseMessagingService", "Error in stopChatService : " + e);
+            }
+        }
+    }
+
     private class NotificationTypes {
         private static final String TRIGGER_SERVICE = "TRIGGER_SERVICE";
         private static final String NEW_RIDE_AVAILABLE = "NEW_RIDE_AVAILABLE";
@@ -421,7 +456,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         private static final String REGISTRATION_APPROVED = "REGISTRATION_APPROVED";
         private static final String REFERRAL_ACTIVATED = "REFERRAL_ACTIVATED";
         private static final String UPDATE_STORAGE = "UPDATE_STORAGE";
-
         private static final String CALL_API = "CALL_API";
+        private static final String CHAT_MESSAGE = "CHAT_MESSAGE";
     }
 }

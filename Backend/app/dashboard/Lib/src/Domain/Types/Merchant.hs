@@ -22,6 +22,7 @@ data Merchant = Merchant
   { id :: Id Merchant,
     shortId :: ShortId Merchant,
     serverName :: DSN.ServerName,
+    is2faMandatory :: Bool,
     createdAt :: UTCTime
   }
   deriving (Generic, Show)

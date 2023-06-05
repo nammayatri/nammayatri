@@ -19,23 +19,36 @@ module Helpers.Utils
     ) where
 
 -- import Prelude (Unit, bind, discard, identity, pure, show, unit, void, ($), (<#>), (<$>), (<*>), (<<<), (<>), (>>=))
-import Effect (Effect)
-import Prelude (Unit, bind, pure, discard, unit, void, ($), identity, (<*>), (<#>), (+), (<>))
-import Data.Traversable (traverse)
-import Effect.Aff (error, killFiber, launchAff, launchAff_)
-import Juspay.OTP.Reader (initiateSMSRetriever)
-import Juspay.OTP.Reader.Flow as Reader
-import Data.Maybe (Maybe(..), fromMaybe)
-import Juspay.OTP.Reader as Readers
-import Data.Array.NonEmpty (fromArray)
-import Effect.Class (liftEffect)
 import Screens.Types (AllocationData, YoutubeData)
 import Language.Strings (getString)
 import Language.Types(STR(..))
-import Prelude ((/),(*),(-))
 import Data.Array ((!!)) as DA
 import Data.String (Pattern(..), split) as DS
 import Data.Number (pi, sin, cos, asin, sqrt)
+
+-- import Math
+import Data.Eq.Generic (genericEq)
+import Control.Monad.Except (runExcept)
+import Data.Array.NonEmpty (fromArray)
+import Data.Either (hush)
+import Data.Generic.Rep (class Generic)
+import Data.Show.Generic (genericShow)
+import Data.Maybe (Maybe(..))
+import Data.String as DS
+import Data.Traversable (traverse)
+import Effect (Effect)
+import Effect.Aff (error, killFiber, launchAff, launchAff_)
+import Effect.Class (liftEffect)
+import Foreign (Foreign)
+import Foreign.Class (class Decode, class Encode, decode)
+import Juspay.OTP.Reader (initiateSMSRetriever)
+import Juspay.OTP.Reader as Readers
+import Juspay.OTP.Reader.Flow as Reader
+import Prelude (Unit, bind, pure, discard, unit, void, ($), identity, (<*>), (<#>), (+), (<>))
+import Prelude (class Eq, class Show, (<<<))
+import Prelude (map, (*), (-), (/))
+import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
+
 -- import Control.Monad.Except (runExcept)
 -- import Data.Array.NonEmpty (fromArray)
 -- import Data.DateTime (Date, DateTime)
@@ -70,7 +83,7 @@ foreign import storeCallBackTime :: forall action. (action -> Effect Unit) -> (S
 foreign import getTime :: Unit -> Int
 foreign import countDown :: forall action. Int -> String -> (action -> Effect Unit) -> (Int -> String -> String -> String-> action)  -> Effect Unit
 foreign import hideSplash :: Effect Unit
-foreign import startTimer :: forall action. Int -> (action -> Effect Unit) -> (String -> action) -> Effect Unit
+foreign import startTimer :: forall action. Int -> Boolean -> (action -> Effect Unit) -> (String -> action) -> Effect Unit
 foreign import convertKmToM :: String -> String
 foreign import convertUTCtoISC :: String -> String -> String
 foreign import differenceBetweenTwoUTC :: String -> String -> Int
@@ -91,6 +104,12 @@ foreign import launchAppSettings :: Unit -> Effect Unit
 foreign import setYoutubePlayer :: YoutubeData -> String -> String -> Unit
 foreign import getTimeStampString :: String -> String
 foreign import addMediaPlayer :: String -> String -> Effect Unit
+foreign import saveAudioFile :: String -> Effect String
+foreign import clearFocus :: String -> Effect Unit
+foreign import uploadMultiPartData :: String -> String -> String -> Effect String
+foreign import startAudioRecording :: String -> Effect Boolean
+foreign import stopAudioRecording :: String -> Effect String
+foreign import renderBase64ImageFile :: String -> String -> Boolean -> Effect Unit
 foreign import removeMediaPlayer :: String -> Effect Unit
 foreign import getVideoID :: String -> String
 foreign import getImageUrl :: String -> String
@@ -120,25 +139,6 @@ startOtpReciever action push = do
     void $ initiateSMSRetriever
     liftEffect $ startOtpReciever action push
   pure $ launchAff_ $ killFiber (error "Failed to Cancel") fiber
-
-
-getCorrespondingErrorMessage :: String -> String
-getCorrespondingErrorMessage errorCode = case errorCode of
-  "IMAGE_VALIDATION_FAILED" -> (getString IMAGE_VALIDATION_FAILED)
-  "IMAGE_NOT_READABLE" -> (getString IMAGE_NOT_READABLE)
-  "IMAGE_LOW_QUALITY" -> (getString IMAGE_LOW_QUALITY)
-  "IMAGE_INVALID_TYPE" -> (getString IMAGE_INVALID_TYPE)
-  "IMAGE_DOCUMENT_NUMBER_MISMATCH" -> (getString IMAGE_DOCUMENT_NUMBER_MISMATCH)
-  "IMAGE_EXTRACTION_FAILED" -> (getString IMAGE_EXTRACTION_FAILED)
-  "IMAGE_NOT_FOUND" -> (getString IMAGE_NOT_FOUND)
-  "IMAGE_NOT_VALID" -> (getString IMAGE_NOT_VALID)
-  "DRIVER_ALREADY_LINKED" -> (getString DRIVER_ALREADY_LINKED)
-  "DL_ALREADY_UPDATED" -> (getString DL_ALREADY_UPDATED)
-  "DL_ALREADY_LINKED"  -> (getString DL_ALREADY_LINKED)
-  "RC_ALREADY_LINKED" -> (getString RC_ALREADY_LINKED)
-  "RC_ALREADY_UPDATED" -> (getString RC_ALREADY_UPDATED)
-  "UNPROCESSABLE_ENTITY" -> (getString PLEASE_CHECK_FOR_IMAGE_IF_VALID_DOCUMENT_IMAGE_OR_NOT)
-  _                      -> (getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER)
 
 -- -- type Locations = {
 -- --     paths :: Array Paths
@@ -191,3 +191,29 @@ getDistanceBwCordinates lat1 long1 lat2 long2 = do
 
 toRad :: Number -> Number
 toRad n = (n * pi) / 180.0
+
+
+
+capitalizeFirstChar :: String -> String
+capitalizeFirstChar inputStr = 
+  let splitedArray = DS.split (DS.Pattern " ") (inputStr)
+      output = map (\item -> (DS.toUpper (DS.take 1 item)) <> (DS.toLower (DS.drop 1 item))) splitedArray
+    in DS.joinWith " " output
+
+getDowngradeOptions :: String -> Array String
+getDowngradeOptions vehicleType = case vehicleType of 
+  "SEDAN" -> ["HATCHBACK"]
+  "SUV" -> ["HATCHBACK", "SEDAN"]
+  "TAXI_PLUS" -> ["TAXI"]
+  _ -> []
+
+getVehicleType :: String -> String 
+getVehicleType vehicleType = 
+  case vehicleType of 
+    "SEDAN" -> "Sedan" 
+    "SUV"   -> "Suv"
+    "HATCHBACK" -> "Hatchback"
+    "AUTO_RICKSHAW" -> "Auto Rickshaw"
+    "TAXI" -> "Non AC Taxi"
+    "TAXI_PLUS" -> "AC Taxi"
+    _ -> ""

@@ -50,7 +50,7 @@ instance loggableAction :: Loggable Action where
     RemoveUploadedFile str -> trackAppActionClick appId (getScreen UPLOAD_AADHAR_SCREEN) "in_screen" "remove_uploaded_file"
     UploadFileAction str -> trackAppActionClick appId (getScreen UPLOAD_AADHAR_SCREEN) "'in_screen" "upload_file_action"
     UploadImage -> trackAppActionClick appId (getScreen UPLOAD_AADHAR_SCREEN) "in_screen" "upload_image_onclick"
-    CallBackImageUpload str imageName -> trackAppScreenEvent appId (getScreen UPLOAD_AADHAR_SCREEN) "in_screen" "call_back_image_upload"
+    CallBackImageUpload str imageName imagePath -> trackAppScreenEvent appId (getScreen UPLOAD_AADHAR_SCREEN) "in_screen" "call_back_image_upload"
     PreviewImageAction -> trackAppActionClick appId (getScreen UPLOAD_AADHAR_SCREEN) "in_screen" "preview"
     NoAction -> trackAppScreenEvent appId (getScreen UPLOAD_AADHAR_SCREEN) "in_screen" "no_action"
 
@@ -62,7 +62,7 @@ data Action = BackPressed
             | OnboardingHeaderAction OnboardingHeaderController.Action
             | PrimaryButtonAction PrimaryButton.Action
             | RemoveUploadedFile String
-            | CallBackImageUpload String String
+            | CallBackImageUpload String String String
             | UploadFileAction String
             | UploadImage
             | PreviewImageAction
@@ -79,7 +79,7 @@ eval (UploadFileAction clickedType) state = continueWithCmd (state {props {click
 eval (UploadImage) state = continueWithCmd state [do
   _ <- liftEffect $ uploadFile unit
   pure NoAction]
-eval (CallBackImageUpload image imageName) state = if(state.props.clickedButtonType == "front") then continue $ state {data {imageFront = image}}
+eval (CallBackImageUpload image imageName imagePath) state = if(state.props.clickedButtonType == "front") then continue $ state {data {imageFront = image}}
                                             else if(state.props.clickedButtonType == "back") then continue $ state {data {imageBack = image}}
                                               else continue state
                                               

@@ -8,6 +8,11 @@ window.version = __VERSION__;
 // JBridge.setSessionId(window.session_id);
 console.warn("Hello World MASTER ONE");
 
+let eventObject = {
+  type : ""
+, data : ""
+}
+
 var jpConsumingBackpress = {
   event: "jp_consuming_backpress",
   payload: { jp_consuming_backpress: true }
@@ -92,6 +97,8 @@ var purescript = require("./output/Main");
 
 window.onMerchantEvent = function (event, payload) {
   console = top.console;
+  console.log(payload);
+  var clientPaylod = JSON.parse(payload);
   if (event == "initiate") {
     let payload = {
       event: "initiate_result"
@@ -101,12 +108,28 @@ window.onMerchantEvent = function (event, payload) {
       , errorMessage: ""
       , errorCode: ""
     }
+    var clientId = clientPaylod.payload.clientId;
+    if (clientId.includes("_ios"))
+    {
+      clientId = clientId.replace("_ios","");
+    }
+    if (clientId == "open-kochi") {
+      window.merchantID = "YATRI"
+    } else if (clientId == "jatrisaathi"){
+      window.merchantID = "JATRISAATHI"
+    } else {
+      window.merchantID = clientId.toUpperCase();
+    }
+    console.log(window.merchantID);
     JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), null)
   } else if (event == "process") {
     console.warn("Process called");
     window.__payload.sdkVersion = "2.0.1"
     var parsedPayload = JSON.parse(payload);
-    if (parsedPayload && parsedPayload.payload && parsedPayload.payload.action == "showPopup" && parsedPayload.payload.id && parsedPayload.payload.popType)
+    if (parsedPayload && parsedPayload.payload && parsedPayload.payload.action == "OpenChatScreen") {
+      window.JBridge.openChatScreen();
+    }
+    else if (parsedPayload && parsedPayload.payload && parsedPayload.payload.action == "showPopup" && parsedPayload.payload.id && parsedPayload.payload.popType)
     {
         // window.__payload = Nothing;
         window.callPopUp(parsedPayload.payload.id,parsedPayload.payload.popType);
@@ -120,7 +143,12 @@ window.onMerchantEvent = function (event, payload) {
         payload: { jp_consuming_backpress: true }
       }
       JBridge.runInJuspayBrowser("onEvent", JSON.stringify(jpConsumingBackpress), "");
-      purescript.main();
+      eventObject["type"] = "";
+      eventObject["data"] = "";
+      if(parsedPayload.payload.notificationData && parsedPayload.payload.notificationData.notification_type == "CHAT_MESSAGE"){
+        eventObject["type"] = "CHAT_MESSAGE";
+       }
+      purescript.main(eventObject)();
     }
   } else {
     console.error("unknown event: ", event);
@@ -135,7 +163,9 @@ window.callPopUp = function(id, type){
   }
   else
   {
-    purescript.main();
+    eventObject["type"] = "";
+    eventObject["data"] = "";
+    purescript.main(eventObject)();
   }
 }
 window.callUICallback = function () {
@@ -237,7 +267,7 @@ if (typeof window.JOS != "undefined") {
 }
 
 var sessionInfo = JSON.parse(JBridge.getDeviceInfo())
-if(sessionInfo.package_name === "in.juspay.nammayatri.debug"){
+if(sessionInfo.package_name.includes("debug")){
   logger.enableLogger();
 }else{
   logger.disableLogger();

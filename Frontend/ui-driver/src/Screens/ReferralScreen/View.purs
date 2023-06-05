@@ -47,6 +47,7 @@ import Control.Transformers.Back.Trans (runBackT)
 import Presto.Core.Types.Language.Flow (doAff)
 import Helpers.Utils (countDown)
 import Screens.ReferralScreen.ComponentConfig
+import Screens as ScreenNames
 
 screen :: ST.ReferralScreenState -> Screen Action ST.ReferralScreenState ScreenOutput
 screen initialState =
@@ -101,7 +102,7 @@ bottomNavBarView push state =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  ][BottomNavBar.view (push <<< BottomNavBarAction) (navData 2)]
+  ][BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.REFERRAL_SCREEN)]
 
 
 commonView :: forall w . (Action -> Effect Unit) -> String -> String -> String -> ST.ReferralScreenState -> PrestoDOM (Effect Unit) w

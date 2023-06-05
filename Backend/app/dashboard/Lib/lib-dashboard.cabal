@@ -65,6 +65,7 @@ library
       Tools.Error
       Tools.Metrics
       Tools.Servant.HeaderAuth
+      Tools.Utils
   other-modules:
       Paths_lib_dashboard
   hs-source-dirs:
@@ -107,8 +108,10 @@ library
   build-depends:
       aeson
     , base >=4.7 && <5
+    , base32
     , beckn-spec
     , bytestring
+    , cryptonite
     , dashboard-helper-api
     , esqueleto
     , euler-hs
@@ -116,6 +119,7 @@ library
     , mobility-core
     , persistent
     , persistent-postgresql
+    , random
     , record-dot-preprocessor
     , record-hasfield
     , rider-app

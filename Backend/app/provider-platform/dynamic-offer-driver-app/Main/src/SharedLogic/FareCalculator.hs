@@ -15,12 +15,14 @@
 module SharedLogic.FareCalculator
   ( mkBreakupList,
     fareSum,
+    pureFareSum,
     CalculateFareParametersParams (..),
     calculateFareParameters,
     isNightShift,
   )
 where
 
+import qualified Data.List.NonEmpty as NE
 import Data.Time
   ( LocalTime (localTimeOfDay),
     TimeOfDay (..),
@@ -39,11 +41,12 @@ import Kernel.Utils.Common
 
 mkBreakupList :: (Money -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> FareParameters -> [breakupItem]
 mkBreakupList mkPrice mkBreakupItem fareParams = do
-  let baseFareFinalRounded = fareParams.baseFare
+  let dayPartRate = fromMaybe 1.0 fareParams.nightShiftRateIfApplies -- Temp fix :: have to fix properly
+      baseFareFinalRounded = roundToIntegral $ fromIntegral fareParams.baseFare * dayPartRate -- Temp fix :: have to fix properly
       baseFareCaption = "BASE_FARE"
       baseFareItem = mkBreakupItem baseFareCaption (mkPrice baseFareFinalRounded)
       baseFareDistanceCaption = "BASE_DISTANCE_FARE" --TODO: deprecated, to be removed
-      baseFareDistanceItem = mkBreakupItem baseFareDistanceCaption (mkPrice baseFareFinalRounded)
+      baseFareDistanceItem = mkBreakupItem baseFareDistanceCaption (mkPrice fareParams.baseFare)
 
       serviceChargeCaption = "SERVICE_CHARGE"
       mbServiceChargeItem = fmap (mkBreakupItem serviceChargeCaption) (mkPrice <$> fareParams.serviceCharge)
@@ -62,6 +65,9 @@ mkBreakupList mkPrice mkBreakupItem fareParams = do
       totalFareCaption = "TOTAL_FARE"
       totalFareItem = mkBreakupItem totalFareCaption $ mkPrice totalFareFinalRounded
 
+      nightShiftCaption = "NIGHT_SHIFT_CHARGE"
+      mbNightShiftChargeItem = fmap (mkBreakupItem nightShiftCaption) (mkPrice <$> fareParams.nightShiftCharge)
+
       waitingOrPickupChargesCaption = "WAITING_OR_PICKUP_CHARGES" --TODO: deprecated, to be removed
       mbWaitingOrPickupChargesItem = mkBreakupItem waitingOrPickupChargesCaption . mkPrice <$> fareParams.waitingCharge
       waitingChargesCaption = "WAITING_CHARGE"
@@ -70,11 +76,12 @@ mkBreakupList mkPrice mkBreakupItem fareParams = do
       mbFixedGovtRateCaption = "FIXED_GOVERNMENT_RATE"
       mbFixedGovtRateItem = mkBreakupItem mbFixedGovtRateCaption . mkPrice <$> fareParams.govtCharges
 
-      detailsBreakups = processFareParamsDetails fareParams.fareParametersDetails
+      detailsBreakups = processFareParamsDetails dayPartRate fareParams.fareParametersDetails
   catMaybes
     [ Just totalFareItem,
       Just baseFareItem,
       Just baseFareDistanceItem,
+      mbNightShiftChargeItem,
       mbWaitingOrPickupChargesItem,
       mbWaitingChargesItem,
       mbFixedGovtRateItem,
@@ -84,17 +91,18 @@ mkBreakupList mkPrice mkBreakupItem fareParams = do
     ]
     <> detailsBreakups
   where
-    processFareParamsDetails = \case
-      DFParams.ProgressiveDetails det -> mkFPProgressiveDetailsBreakupList det
+    processFareParamsDetails dayPartRate = \case
+      DFParams.ProgressiveDetails det -> mkFPProgressiveDetailsBreakupList dayPartRate det
       DFParams.SlabDetails det -> mkFPSlabDetailsBreakupList det
 
-    mkFPProgressiveDetailsBreakupList det = do
+    mkFPProgressiveDetailsBreakupList dayPartRate det = do
       let deadKmFareCaption = "DEAD_KILOMETER_FARE"
           deadKmFareItem = mkBreakupItem deadKmFareCaption (mkPrice det.deadKmFare)
 
           extraDistanceFareCaption = "EXTRA_DISTANCE_FARE"
+          mbExtraKmFareRounded = det.extraKmFare <&> roundToIntegral . (* dayPartRate) . fromIntegral -- temp fix :: have to fix properly
           extraDistanceFareItem =
-            det.extraKmFare <&> \extraKmFareRounded ->
+            mbExtraKmFareRounded <&> \extraKmFareRounded ->
               mkBreakupItem extraDistanceFareCaption (mkPrice extraKmFareRounded)
       catMaybes [Just deadKmFareItem, extraDistanceFareItem]
 
@@ -104,12 +112,19 @@ mkBreakupList mkPrice mkBreakupItem fareParams = do
 
 fareSum :: FareParameters -> Money
 fareSum fareParams = do
-  let (partOfNightShiftCharge, notPartOfNightShiftCharge) = countFullFareOfParamsDetails fareParams.fareParametersDetails
-  fareParams.baseFare
+  pureFareSum fareParams
     + fromMaybe 0 fareParams.driverSelectedFare
     + fromMaybe 0 fareParams.customerExtraFee
+
+-- Pure fare without customerExtraFee and driverSelectedFare
+pureFareSum :: FareParameters -> Money
+pureFareSum fareParams = do
+  let (partOfNightShiftCharge, notPartOfNightShiftCharge) = countFullFareOfParamsDetails fareParams.fareParametersDetails
+  fareParams.baseFare
     + fromMaybe 0 fareParams.serviceCharge
     + fromMaybe 0 fareParams.waitingCharge
+    + fromMaybe 0 fareParams.govtCharges
+    + fromMaybe 0 fareParams.nightShiftCharge
     + partOfNightShiftCharge
     + notPartOfNightShiftCharge
 
@@ -129,18 +144,16 @@ calculateFareParameters ::
 calculateFareParameters params = do
   logTagInfo "FareCalculator" $ "Initiating fare calculation for organization " +|| params.farePolicy.merchantId ||+ " and vehicle variant " +|| params.farePolicy.vehicleVariant ||+ ""
   let fp = params.farePolicy
-      mbDriverSelectedFare = params.driverSelectedFare
-      mbCustomerExtraFee = params.customerExtraFee
   id <- generateGUID
   let isNightShiftChargeIncluded = isNightShift <$> fp.nightShiftBounds <*> Just params.rideTime
-      (baseFare, nightShiftCharge, waitingCharge, fareParametersDetails) = processFarePolicyDetails fp.farePolicyDetails
+      (baseFare, nightShiftCharge, waitingChargeInfo, fareParametersDetails) = processFarePolicyDetails fp.farePolicyDetails
       (partOfNightShiftCharge, notPartOfNightShiftCharge) = countFullFareOfParamsDetails fareParametersDetails
       fullRideCost {-without govtCharges, waitingCharge, notPartOfNightShiftCharge and nightShift-} =
         baseFare
           + fromMaybe 0 fp.serviceCharge
           + partOfNightShiftCharge
   let resultNightShiftCharge = (\isCoefIncluded -> if isCoefIncluded then countNightShiftCharge fullRideCost <$> nightShiftCharge else Nothing) =<< isNightShiftChargeIncluded
-      resultWaitingCharge = countWaitingCharge <$> params.waitingTime <*> waitingCharge
+      resultWaitingCharge = countWaitingCharge =<< waitingChargeInfo
       fullRideCostN {-without govtCharges-} =
         fullRideCost
           + fromMaybe 0 resultNightShiftCharge
@@ -151,11 +164,12 @@ calculateFareParameters params = do
       fareParams =
         FareParameters
           { id,
-            driverSelectedFare = mbDriverSelectedFare,
-            customerExtraFee = mbCustomerExtraFee,
+            driverSelectedFare = params.driverSelectedFare,
+            customerExtraFee = params.customerExtraFee,
             serviceCharge = fp.serviceCharge,
             waitingCharge = resultWaitingCharge,
             nightShiftCharge = resultNightShiftCharge,
+            nightShiftRateIfApplies = (\isCoefIncluded -> if isCoefIncluded then getNightShiftRate nightShiftCharge else Nothing) =<< isNightShiftChargeIncluded, -- Temp fix :: have to fix properly
             ..
           }
   logTagInfo "FareCalculator" $ "Fare parameters calculated: " +|| fareParams ||+ ""
@@ -169,30 +183,52 @@ calculateFareParameters params = do
       let mbExtraDistance =
             params.distance - baseDistance
               & (\dist -> if dist > 0 then Just dist else Nothing)
-          mbExtraKmFare = mbExtraDistance <&> \extDist -> roundToIntegral $ fromIntegral @_ @Centesimal (metersToKilometers extDist) * realToFrac perExtraKmFare
+          mbExtraKmFare = processFPProgressiveDetailsPerExtraKmFare perExtraKmRateSections <$> mbExtraDistance
       ( baseFare,
         nightShiftCharge,
-        waitingCharge,
+        waitingChargeInfo,
         DFParams.ProgressiveDetails $
           DFParams.FParamsProgressiveDetails
             { extraKmFare = mbExtraKmFare,
               ..
             }
         )
+    processFPProgressiveDetailsPerExtraKmFare perExtraKmRateSections (extraDistance :: Meters) = do
+      let sortedPerExtraKmFareSections = NE.sortBy (comparing (.startDistance)) perExtraKmRateSections
+      processFPProgressiveDetailsPerExtraKmFare' sortedPerExtraKmFareSections extraDistance
+      where
+        processFPProgressiveDetailsPerExtraKmFare' _ 0 = 0 :: Money
+        processFPProgressiveDetailsPerExtraKmFare' sortedPerExtraKmFareSectionsLeft (extraDistanceLeft :: Meters) =
+          case sortedPerExtraKmFareSectionsLeft of
+            aSection :| [] -> roundToIntegral $ fromIntegral @_ @Float extraDistanceLeft * getPerExtraMRate aSection.perExtraKmRate
+            aSection :| bSection : leftSections -> do
+              let sectionDistance = bSection.startDistance - aSection.startDistance
+                  extraDistanceWithinSection = min sectionDistance extraDistanceLeft
+              roundToIntegral (fromIntegral @_ @Float extraDistanceWithinSection * getPerExtraMRate aSection.perExtraKmRate)
+                + processFPProgressiveDetailsPerExtraKmFare' (bSection :| leftSections) (extraDistanceLeft - extraDistanceWithinSection)
+        getPerExtraMRate perExtraKmRate = realToFrac @_ @Float perExtraKmRate / 1000
 
     processFPSlabsDetailsSlab DFP.FPSlabsDetailsSlab {..} = do
-      (baseFare, nightShiftCharge, waitingCharge, DFParams.SlabDetails DFParams.FParamsSlabDetails)
+      (baseFare, nightShiftCharge, waitingChargeInfo, DFParams.SlabDetails DFParams.FParamsSlabDetails)
 
     countNightShiftCharge fullRideCost nightShiftCharge = do
       case nightShiftCharge of
-        ProgressiveNightShiftCharge charge -> roundToIntegral $ fromIntegral fullRideCost * charge
+        ProgressiveNightShiftCharge charge -> roundToIntegral $ (fromIntegral fullRideCost * charge) - fromIntegral fullRideCost
         ConstantNightShiftCharge charge -> charge
 
-    countWaitingCharge :: Minutes -> WaitingCharge -> Money
-    countWaitingCharge waitingTime waitingCharge = do
-      case waitingCharge of
-        PerMinuteWaitingCharge charge -> roundToIntegral $ fromIntegral waitingTime * charge
-        ConstantWaitingCharge charge -> charge
+    getNightShiftRate nightShiftCharge = do
+      -- Temp fix :: have to fix properly
+      case nightShiftCharge of
+        Just (ProgressiveNightShiftCharge charge) -> (Just . realToFrac) charge
+        _ -> Nothing
+
+    countWaitingCharge :: WaitingChargeInfo -> Maybe Money
+    countWaitingCharge waitingChargeInfo = do
+      let waitingTimeMinusFreeWatingTime = params.waitingTime <&> (\wt -> (-) wt waitingChargeInfo.freeWaitingTime)
+      let chargedWaitingTime = if waitingTimeMinusFreeWatingTime < Just 0 then Nothing else waitingTimeMinusFreeWatingTime
+      case waitingChargeInfo.waitingCharge of
+        PerMinuteWaitingCharge charge -> (\waitingTime -> roundToIntegral $ fromIntegral waitingTime * charge) <$> chargedWaitingTime
+        ConstantWaitingCharge charge -> if isJust chargedWaitingTime then Just charge else Nothing
 
 countFullFareOfParamsDetails :: DFParams.FareParametersDetails -> (Money, Money)
 countFullFareOfParamsDetails = \case

@@ -36,6 +36,7 @@ data IdfyVerificationE e = IdfyVerification
     docType :: ImageType,
     status :: Text,
     issueDateOnDoc :: Maybe UTCTime,
+    driverDateOfBirth :: Maybe UTCTime,
     documentNumber :: EncryptedHashedField e Text,
     imageExtractionValidation :: ImageExtractionValidation,
     idfyResponse :: Maybe Text,

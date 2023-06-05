@@ -72,10 +72,10 @@ view push state =
              , color if index == state.activeIndex then Color.black else Color.black600
              , text case item.text of 
                       "Home"          -> getString HOME
-                      "Rides"         -> getString RIDES
+                      "Rides"         -> getString TRIPS
                       "Contest"       -> getString CONTEST
                       "Profile"       -> getString PROFILE
-                      "Alert"         -> getString ALERTS
+                      "Alert"         -> getString MESSAGES
                       _               -> ""
              ] <> FontStyle.tags TypoGraphy)
            ]

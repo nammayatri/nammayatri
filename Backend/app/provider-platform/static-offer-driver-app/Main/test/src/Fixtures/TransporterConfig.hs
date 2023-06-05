@@ -19,7 +19,7 @@ import EulerHS.Prelude
 import qualified Fixtures.BaseUrl as Fixtures
 import qualified Fixtures.Person as Fixtures
 import qualified Fixtures.Time as Fixtures
-import qualified Kernel.External.FCM.Types as FCM (FCMConfig (..))
+import qualified Kernel.External.Notification.FCM.Types as FCM (FCMConfig (..))
 import Kernel.Types.Common (Meters (..))
 import Kernel.Types.Time (Minutes (..), Seconds (..))
 

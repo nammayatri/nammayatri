@@ -38,14 +38,11 @@ buildSelectReq dSelectRes = do
   pure $ BecknReq context $ Select.SelectMessage order
 
 mkOrder :: DSelect.DSelectRes -> Select.Order
-mkOrder dSelectRes = do
-  let from = dSelectRes.searchRequest.fromLocation
-      mbTo = dSelectRes.searchRequest.toLocation
-      autoAssignEnabled = dSelectRes.autoAssignEnabled
-      items =
+mkOrder res = do
+  let items =
         (: []) $
           Select.OrderItem
-            { id = dSelectRes.estimate.bppEstimateId.getId
+            { id = res.estimate.bppEstimateId.getId
             }
       breakups =
         catMaybes
@@ -59,59 +56,17 @@ mkOrder dSelectRes = do
                         }
                   }
             )
-              <$> dSelectRes.customerExtraFee
+              <$> res.customerExtraFee
           ]
   Select.Order
     { items,
       fulfillment =
         Select.FulfillmentInfo
-          { tags =
-              Select.Tags
-                { auto_assign_enabled = autoAssignEnabled,
-                  customer_language = dSelectRes.customerLanguage
-                },
-            start =
+          { start =
               Select.StartInfo
-                { location =
-                    Select.Location
-                      { gps = Select.Gps {lat = from.lat, lon = from.lon},
-                        address =
-                          Just
-                            Select.Address
-                              { locality = from.address.area,
-                                state = from.address.state,
-                                country = from.address.country,
-                                building = from.address.building,
-                                street = from.address.street,
-                                city = from.address.city,
-                                area_code = from.address.areaCode,
-                                door = from.address.door,
-                                ward = from.address.ward
-                              }
-                      },
-                  time = Select.TimeTimestamp dSelectRes.searchRequest.startTime
+                { time = Select.TimeTimestamp res.searchRequest.startTime
                 },
-            end =
-              mbTo <&> \to ->
-                Select.StopInfo
-                  { location =
-                      Select.Location
-                        { gps = Select.Gps {lat = to.lat, lon = to.lon},
-                          address =
-                            Just
-                              Select.Address
-                                { locality = to.address.area,
-                                  state = to.address.state,
-                                  country = to.address.country,
-                                  building = to.address.building,
-                                  street = to.address.street,
-                                  city = to.address.city,
-                                  area_code = to.address.areaCode,
-                                  door = to.address.door,
-                                  ward = to.address.ward
-                                }
-                        }
-                  }
+            tags = Select.Tags res.autoAssignEnabled
           },
       quote =
         Select.Quote

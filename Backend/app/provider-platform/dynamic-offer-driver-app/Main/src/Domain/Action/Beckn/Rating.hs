@@ -36,14 +36,10 @@ data DRatingReq = DRatingReq
     feedbackDetails :: Maybe Text
   }
 
-handler :: DRatingReq -> Flow ()
-handler req = do
-  booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
-  ride <- QRide.findActiveByRBId booking.id >>= fromMaybeM (RideNotFound booking.id.getId)
+handler :: DRatingReq -> DRide.Ride -> Flow ()
+handler req ride = do
   rating <- QRating.findRatingForRide ride.id
   let driverId = ride.driverId
-  unless (ride.status == DRide.COMPLETED) $
-    throwError $ RideInvalidStatus "Ride is not ready for rating."
   let ratingValue = req.ratingValue
       feedbackDetails = req.feedbackDetails
   _ <- case rating of
@@ -84,3 +80,13 @@ buildRating rideId driverId ratingValue feedbackDetails = do
   let createdAt = now
   let updatedAt = now
   pure $ DRating.Rating {..}
+
+validateRequest :: DRatingReq -> Flow DRide.Ride
+validateRequest req = do
+  booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
+  ride <-
+    QRide.findActiveByRBId booking.id
+      >>= fromMaybeM (RideNotFound booking.id.getId)
+  unless (ride.status == DRide.COMPLETED) $
+    throwError $ RideInvalidStatus "Ride is not ready for rating."
+  return ride

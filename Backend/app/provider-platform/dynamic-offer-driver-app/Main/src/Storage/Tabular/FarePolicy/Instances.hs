@@ -21,18 +21,29 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Storage.Tabular.FarePolicy.DriverExtraFeeBounds (DriverExtraFeeBoundsT, FullDriverExtraFeeBounds)
 import Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails
 import Storage.Tabular.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
 import Storage.Tabular.FarePolicy.Table
 import Storage.Tabular.Vehicle ()
 import Tools.Error
 
-type FullFarePolicyT = (FarePolicyT, FarePolicyDetailsT)
+type FullFarePolicyT = (FarePolicyT, [DriverExtraFeeBoundsT], FarePolicyDetailsT)
 
-data FarePolicyDetailsT = ProgressiveDetailsT FarePolicyProgressiveDetailsT | SlabsDetailsT [FarePolicySlabsDetailsSlabT]
+data FarePolicyDetailsT = ProgressiveDetailsT FullFarePolicyProgressiveDetailsT | SlabsDetailsT [FarePolicySlabsDetailsSlabT]
 
 instance FromTType FullFarePolicyT Domain.FarePolicy where
-  fromTType (FarePolicyT {..}, farePolicyDetails) = do
+  fromTType (FarePolicyT {..}, driverExtraFareBoundsTList, farePolicyDetails) = do
+    driverExtraFeeBounds <- do
+      driverExtraFeeBoundsList <- fromTType @_ @FullDriverExtraFeeBounds `mapM` driverExtraFareBoundsTList
+      case driverExtraFeeBoundsList of
+        [] -> return Nothing
+        a : xs -> do
+          unless (all (\(farePolicyId, _) -> Id id == farePolicyId) driverExtraFeeBoundsList) $
+            throwError (InternalError "Unable to decode FullDriverExtraFeeBounds of FarePolicy. Fare policy ids are not the same.")
+          unless (any (\(_, driverExtraFareBounds) -> driverExtraFareBounds.startDistance <= 0) driverExtraFeeBoundsList) $
+            throwError (InternalError "Unable to decode FullDriverExtraFeeBounds of  FarePolicy. At least one slab must have startDistance <= 0")
+          return . Just . fmap (._2) $ a :| xs
     det <- case farePolicyDetails of
       ProgressiveDetailsT detT -> do
         (farePolicyId, det) <- fromTType @_ @FullFarePolicyProgressiveDetails detT
@@ -48,13 +59,7 @@ instance FromTType FullFarePolicyT Domain.FarePolicy where
         unless (any (\(_, farePolicySlab) -> farePolicySlab.startDistance <= 0) slabsFullDTypes) $
           throwError (InternalError "Unable to decode slab FarePolicy. At least one slab must have startDistance <= 0")
         return . Domain.SlabsDetails . Domain.FPSlabsDetails $ slabsFullDTypes <&> (._2)
-    let driverExtraFeeBounds =
-          ((,) <$> driverMinExtraFee <*> driverMaxExtraFee) <&> \(driverMinExtraFee', driverMaxExtraFee') ->
-            Domain.DriverExtraFeeBounds
-              { minFee = driverMinExtraFee',
-                maxFee = driverMaxExtraFee'
-              }
-        nightShiftBounds =
+    let nightShiftBounds =
           ((,) <$> nightShiftStart <*> nightShiftEnd) <&> \(nightShiftStart', nightShiftEnd') ->
             Domain.NightShiftBounds
               { nightShiftStart = nightShiftStart',
@@ -83,13 +88,12 @@ instance ToTType FullFarePolicyT Domain.FarePolicy where
         { id = getId id,
           merchantId = toKey merchantId,
           farePolicyType = Domain.getFarePolicyType farePolicy,
-          driverMinExtraFee = driverExtraFeeBounds <&> (.minFee),
-          driverMaxExtraFee = driverExtraFeeBounds <&> (.maxFee),
           nightShiftStart = nightShiftBounds <&> (.nightShiftStart),
           nightShiftEnd = nightShiftBounds <&> (.nightShiftEnd),
           maxAllowedTripDistance = allowedTripDistanceBounds <&> (.maxAllowedTripDistance),
           minAllowedTripDistance = allowedTripDistanceBounds <&> (.minAllowedTripDistance),
           ..
         },
+      maybe [] (fmap (toTType . (id,)) . toList) driverExtraFeeBounds,
       detT
       )

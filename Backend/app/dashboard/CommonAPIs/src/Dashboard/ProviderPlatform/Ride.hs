@@ -22,6 +22,7 @@ where
 
 import Dashboard.Common as Reexport
 import Dashboard.Common.Booking as Reexport (CancellationReasonCode (..))
+import Dashboard.Common.Ride as Reexport
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
@@ -35,14 +36,15 @@ import Kernel.Types.Id
 import Servant hiding (Summary)
 
 -- we need to save endpoint transactions only for POST, PUT, DELETE APIs
-data RideEndpoint
-  = RideStartEndpoint
-  | RideEndEndpoint
-  | RideCancelEndpoint
-  | RideSyncEndpoint
-  deriving (Show, Read)
+-- data RideEndpoint
+--   = RideStartEndpoint
+--   | RideEndEndpoint
+--   | RideCancelEndpoint
+--   | RideSyncEndpoint
+--   | MultipleRideSyncEndpoint
+--   deriving (Show, Read)
 
-derivePersistField "RideEndpoint"
+-- derivePersistField "RideEndpoint"
 
 ---------------------------------------------------------
 -- ride list --------------------------------------------
@@ -56,6 +58,8 @@ type RideListAPI =
     :> QueryParam "customerPhoneNo" Text
     :> QueryParam "driverPhoneNo" Text
     :> QueryParam "fareDiff" Money
+    :> QueryParam "from" UTCTime
+    :> QueryParam "to" UTCTime
     :> Get '[JSON] RideListRes
 
 data RideListRes = RideListRes
@@ -134,7 +138,28 @@ newtype EndRideReq = EndRideReq
 instance HideSecrets EndRideReq where
   hideSecrets = identity
 
----------------------------------------------------------
+--------------------------- MultipleRideEndAPI -----------------------------
+type MultipleRideEndAPI =
+  "end"
+    :> ReqBody '[JSON] MultipleRideEndReq
+    :> Post '[JSON] APISuccess
+
+newtype MultipleRideEndReq = MultipleRideEndReq
+  { rides :: [MultipleRideItem]
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data MultipleRideItem = MultipleRideItem
+  { rideId :: Id Ride,
+    point :: Maybe LatLong
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets MultipleRideEndReq where
+  hideSecrets = identity
+
 -- ride cancel ------------------------------------------
 
 type RideCancelAPI =
@@ -151,6 +176,30 @@ data CancelRideReq = CancelRideReq
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 instance HideSecrets CancelRideReq where
+  hideSecrets = identity
+
+-- Multipleride cancel ------------------------------------------
+
+type MultipleRideCancelAPI =
+  "cancel"
+    :> ReqBody '[JSON] MultipleRideCancelReq
+    :> Post '[JSON] APISuccess
+
+data MultipleRideCancelInfo = MultipleRideCancelInfo
+  { rideId :: Id Ride,
+    reasonCode :: CancellationReasonCode,
+    additionalInfo :: Maybe Text
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+newtype MultipleRideCancelReq = MultipleRideCancelReq
+  { multiRideCancelReason :: [MultipleRideCancelInfo]
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets MultipleRideCancelReq where
   hideSecrets = identity
 
 ---------------------------------------------------------
@@ -185,6 +234,7 @@ data RideInfoRes = RideInfoRes
     chargeableDistance :: Maybe Meters,
     maxEstimatedDistance :: Maybe Meters,
     estimatedRideDuration :: Maybe Minutes,
+    pickupDropOutsideOfThreshold :: Maybe Bool,
     estimatedFare :: Money,
     actualFare :: Maybe Money,
     driverOfferedFare :: Maybe Money,
@@ -226,7 +276,6 @@ data CancellationSource
 
 ---------------------------------------------------------
 -- ride sync ---------------------------------------------
-
 type RideSyncAPI =
   Capture "rideId" (Id Ride)
     :> "sync"
@@ -250,8 +299,48 @@ data RideStatus
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+--------------------------- multipleRideSyncApi -----------------------------
+
+type MultipleRideSyncAPI =
+  "sync"
+    :> ReqBody '[JSON] MultipleRideSyncReq
+    :> Post '[JSON] MultipleRideSyncRes
+
+newtype MultipleRideSyncReq = MultipleRideSyncReq
+  { rideIds :: [Id Ride]
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets MultipleRideSyncReq where
+  hideSecrets = identity
+
+newtype MultipleRideSyncRes = MultipleRideSyncRes
+  { list :: [MultipleRideData]
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data MultipleRideData = MultipleRideData
+  { rideId :: Id Ride,
+    newStatus :: RideStatus,
+    message :: Text
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets MultipleRideSyncRes where
+  hideSecrets = identity
+
 ---------------------------------------------------------
 -- ride route -------------------------------------------
+
+data Status
+  = ON_RIDE
+  | ON_PICKUP
+  | IDLE
+  deriving stock (Show, Generic, Read)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 type RideRouteAPI =
   Capture "rideId" (Id Ride)
@@ -261,7 +350,9 @@ type RideRouteAPI =
 data ActualRoute = ActualRoute
   { lat :: Double,
     lon :: Double,
-    timestamp :: UTCTime
+    timestamp :: UTCTime,
+    accuracy :: Maybe Double,
+    rideStatus :: Status
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -276,6 +367,8 @@ data DriverEdaKafka = DriverEdaKafka
   { driver_id :: String,
     rid :: Maybe String,
     ts :: String,
+    acc :: Maybe String,
+    rideStatus :: Maybe String,
     lat :: Maybe String,
     lon :: Maybe String,
     mid :: Maybe String,

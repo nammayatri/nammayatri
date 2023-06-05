@@ -25,6 +25,7 @@ library
       API.RiderPlatform
       API.RiderPlatform.Booking
       API.RiderPlatform.Customer
+      API.RiderPlatform.IssueList
       API.RiderPlatform.Merchant
       API.RiderPlatform.Ride
       API.RiderPlatform.RideBooking

@@ -16,6 +16,8 @@ module Domain.Action.Beckn.Cancel
   ( cancel,
     CancelReq (..),
     CancelSearchReq (..),
+    validateCancelRequest,
+    validateCancelSearchRequest,
     cancelSearch,
   )
 where
@@ -48,6 +50,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
+import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
 import Tools.Metrics
 import qualified Tools.Notifications as Notify
@@ -73,17 +76,19 @@ cancel ::
     HasLongDurationRetryCfg r c,
     CoreMetrics m
   ) =>
-  Id DM.Merchant ->
-  SignatureAuthResult ->
+  -- Id DM.Merchant ->
+  -- SignatureAuthResult ->
   CancelReq ->
+  DM.Merchant ->
+  SRB.Booking ->
   m ()
-cancel merchantId _ req = do
-  merchant <-
-    QM.findById merchantId
-      >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
-  let merchantId' = booking.providerId
-  unless (merchantId' == merchantId) $ throwError AccessDenied
+cancel req merchant booking = do
+  -- merchant <-
+  --   QM.findById merchantId
+  --     >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  -- booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
+  -- let merchantId' = booking.providerId
+  -- unless (merchantId' == merchantId) $ throwError AccessDenied
   mbRide <- QRide.findActiveByRBId req.bookingId
   bookingCR <- buildBookingCancellationReason
   -- Esq.runTransaction $ do
@@ -95,7 +100,7 @@ cancel merchantId _ req = do
     QDFS.updateStatus ride.driverId $ DMode.getDriverStatus driverInfo.mode driverInfo.active
   whenJust mbRide $ \ride -> do
     SRide.clearCache $ cast ride.driverId
-    void (DLoc.updateOnRide (cast ride.driverId) False)
+    void (DLoc.updateOnRide (cast ride.driverId) False booking.providerId)
 
   logTagInfo ("bookingId-" <> getId req.bookingId) ("Cancellation reason " <> show bookingCR.source)
   fork "cancelBooking - Notify BAP" $ do
@@ -114,6 +119,8 @@ cancel merchantId _ req = do
             reasonCode = Nothing,
             driverId = Nothing,
             additionalInfo = Nothing,
+            driverCancellationLocation = Nothing,
+            driverDistToPickup = Nothing,
             ..
           }
 
@@ -125,18 +132,45 @@ cancelSearch ::
     CoreMetrics m
   ) =>
   Id DM.Merchant ->
-  SignatureAuthResult ->
   CancelSearchReq ->
+  Id DSR.SearchRequest ->
   m ()
-cancelSearch merchantId _ req = do
-  let transactionId = req.transactionId
-  searchRequestId <- QSR.findActiveByTransactionId transactionId >>= fromMaybeM (SearchRequestNotFound $ "transactionId-" <> transactionId)
+cancelSearch merchantId req searchRequestId = do
   CS.lockSearchRequest searchRequestId
   driverSearchReqs <- QSRD.findAllActiveBySRId searchRequestId
-  logTagInfo ("transactionId-" <> transactionId) "Search Request Cancellation"
+  logTagInfo ("transactionId-" <> req.transactionId) "Search Request Cancellation"
   -- DB.runTransaction $ do
-  _ <- QSR.updateStatus searchRequestId DSR.CANCELLED
+  Esq.runTransaction $ QST.cancelActiveTriesByRequestId searchRequestId
   _ <- QSRD.setInactiveBySRId searchRequestId
   for_ driverSearchReqs $ \driverReq -> do
     driver_ <- QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
     Notify.notifyOnCancelSearchRequest merchantId driverReq.driverId driver_.deviceToken searchRequestId
+
+validateCancelSearchRequest ::
+  ( EsqDBFlow m r
+  ) =>
+  Id DM.Merchant ->
+  SignatureAuthResult ->
+  CancelSearchReq ->
+  m (Id DSR.SearchRequest)
+validateCancelSearchRequest _ _ req = do
+  let transactionId = req.transactionId
+  QSR.findByTransactionId transactionId >>= fromMaybeM (SearchRequestNotFound $ "transactionId-" <> transactionId)
+
+validateCancelRequest ::
+  ( HasCacheConfig r,
+    EsqDBFlow m r,
+    CacheFlow m r
+  ) =>
+  Id DM.Merchant ->
+  SignatureAuthResult ->
+  CancelReq ->
+  m (DM.Merchant, SRB.Booking)
+validateCancelRequest merchantId _ req = do
+  merchant <-
+    QM.findById merchantId
+      >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
+  let merchantId' = booking.providerId
+  unless (merchantId' == merchantId) $ throwError AccessDenied
+  return (merchant, booking)

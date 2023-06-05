@@ -20,6 +20,7 @@ import qualified Database.Beam as B
 import Database.Beam.Postgres
 -- import qualified Database.Beam.Query as B
 import Domain.Types.DriverLocation
+import Domain.Types.Merchant
 import Domain.Types.Person
 import qualified EulerHS.Extra.EulerDB as Extra
 -- import qualified EulerHS.KVConnector.Flow as KV
@@ -33,15 +34,15 @@ import Kernel.Types.Id
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverLocation as BeamDL
 
-create :: (L.MonadFlow m, MonadTime m) => Id Person -> LatLong -> UTCTime -> m ()
-create drLocationId latLong updateTime = do
+create :: (L.MonadFlow m, MonadTime m) => Id Person -> LatLong -> UTCTime -> Id Merchant -> m ()
+create drLocationId latLong updateTime merchantId = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   now <- getCurrentTime
   conn <- L.getOrInitSqlConn (fromJust dbConf)
   case conn of
     Right c -> do
       let
-      void $ L.runDB c $ L.insertRows $ B.insert (meshModelTableEntity @BeamDL.DriverLocationT @Postgres @(Se.DatabaseWith BeamDL.DriverLocationT)) $ B.insertExpressions [BeamDL.toRowExpression (getId drLocationId) latLong updateTime now]
+      void $ L.runDB c $ L.insertRows $ B.insert (meshModelTableEntity @BeamDL.DriverLocationT @Postgres @(Se.DatabaseWith BeamDL.DriverLocationT)) $ B.insertExpressions [BeamDL.toRowExpression (getId drLocationId) latLong updateTime now (getId merchantId)]
     Left _ -> pure ()
 
 findById :: L.MonadFlow m => Id Person -> m (Maybe DriverLocation)
@@ -60,13 +61,13 @@ findById (Id driverLocationId) = do
       pure (either (const Nothing) (transformBeamDriverLocationToDomain <$>) geoms)
     Left _ -> pure Nothing
 
-upsertGpsCoord :: (L.MonadFlow m, MonadTime m) => Id Person -> LatLong -> UTCTime -> m DriverLocation
-upsertGpsCoord drLocationId latLong calculationTime = do
+upsertGpsCoord :: (L.MonadFlow m, MonadTime m) => Id Person -> LatLong -> UTCTime -> Id Merchant -> m DriverLocation
+upsertGpsCoord drLocationId latLong calculationTime merchantId' = do
   now <- getCurrentTime
   res <- findById drLocationId
   case res of
     Just _ -> updateRecords (getId drLocationId) latLong calculationTime now
-    Nothing -> create drLocationId latLong calculationTime
+    Nothing -> create drLocationId latLong calculationTime merchantId'
   let updatedRecord =
         DriverLocation
           { driverId = drLocationId,
@@ -74,7 +75,8 @@ upsertGpsCoord drLocationId latLong calculationTime = do
             lon = latLong.lon,
             coordinatesCalculatedAt = calculationTime,
             createdAt = now,
-            updatedAt = now
+            updatedAt = now,
+            merchantId = merchantId'
           }
   return updatedRecord
   where
@@ -121,7 +123,8 @@ transformBeamDriverLocationToDomain BeamDL.DriverLocationT {..} = do
       lon = lon,
       coordinatesCalculatedAt = coordinatesCalculatedAt,
       createdAt = createdAt,
-      updatedAt = updatedAt
+      updatedAt = updatedAt,
+      merchantId = Id merchantId
     }
 
 -- transformDomainDriverLocationToBeam :: DriverLocation -> BeamDL.DriverLocation

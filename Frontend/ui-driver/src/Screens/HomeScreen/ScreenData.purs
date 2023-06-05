@@ -65,6 +65,7 @@ initData = {
           enableTimer : true
         },
         messages : [],
+        messagesSize : "",
         suggestionsList : [],
         messageToBeSent : ""
     },
@@ -92,6 +93,8 @@ initData = {
         chatcallbackInitiated : false,
         sendMessageActive : false,
         unReadMessages : false,
-        silentPopUpView : false
+        openChatScreen : false,
+        silentPopUpView : false,
+        zoneRideBooking : true
     }
 }

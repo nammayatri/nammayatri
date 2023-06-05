@@ -49,7 +49,9 @@ data DriverStatsT f = DriverStatsT
   { driverId :: B.C f Text,
     idleSince :: B.C f Time.UTCTime,
     totalRides :: B.C f Int,
-    totalDistance :: B.C f Meters
+    totalDistance :: B.C f Meters,
+    ridesCancelled :: B.C f (Maybe Int),
+    totalRidesAssigned :: B.C f (Maybe Int)
   }
   deriving (Generic, B.Beamable)
 
@@ -80,7 +82,9 @@ driverStatsTMod =
     { driverId = B.fieldNamed "driver_id",
       idleSince = B.fieldNamed "idle_since",
       totalRides = B.fieldNamed "total_rides",
-      totalDistance = B.fieldNamed "total_distance"
+      totalDistance = B.fieldNamed "total_distance",
+      ridesCancelled = B.fieldNamed "rides_cancelled",
+      totalRidesAssigned = B.fieldNamed "total_rides_assigned"
     }
 
 psToHs :: HM.HashMap Text Text
@@ -100,7 +104,9 @@ defaultDriverStats =
     { driverId = "",
       idleSince = defaultUTCDate,
       totalRides = 0,
-      totalDistance = 0
+      totalDistance = 0,
+      ridesCancelled = Just 0,
+      totalRidesAssigned = Just 0
     }
 
 instance Serialize DriverStats where

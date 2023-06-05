@@ -38,6 +38,7 @@ where
 import Data.Time (Day)
 import qualified Domain.Action.UI.Driver as DDriver
 import Domain.Types.DriverInformation as DI
+import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id, state)
@@ -143,11 +144,11 @@ handler =
 createDriver :: SP.Person -> DDriver.OnboardDriverReq -> FlowHandler DDriver.OnboardDriverRes
 createDriver admin = withFlowHandlerAPI . DDriver.createDriver admin
 
-getInformation :: Id SP.Person -> FlowHandler DDriver.DriverInformationRes
+getInformation :: (Id SP.Person, Id Merchant.Merchant) -> FlowHandler DDriver.DriverInformationRes
 getInformation = withFlowHandlerAPI . DDriver.getInformation
 
-setActivity :: Id SP.Person -> Bool -> Maybe DI.DriverMode -> FlowHandler APISuccess
-setActivity personId mode = withFlowHandlerAPI . DDriver.setActivity personId mode
+setActivity :: (Id SP.Person, Id Merchant.Merchant) -> Bool -> Maybe DI.DriverMode -> FlowHandler APISuccess
+setActivity (personId, driverId) mode = withFlowHandlerAPI . DDriver.setActivity (personId, driverId) mode
 
 listDriver :: SP.Person -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler DDriver.ListDriverRes
 listDriver admin mbSearchString mbLimit = withFlowHandlerAPI . DDriver.listDriver admin mbSearchString mbLimit
@@ -158,37 +159,37 @@ changeDriverEnableState admin personId = withFlowHandlerAPI . DDriver.changeDriv
 deleteDriver :: SP.Person -> Id SP.Person -> FlowHandler APISuccess
 deleteDriver admin = withFlowHandlerAPI . DDriver.deleteDriver admin
 
-updateDriver :: Id SP.Person -> DDriver.UpdateDriverReq -> FlowHandler DDriver.UpdateDriverRes
+updateDriver :: (Id SP.Person, Id Merchant.Merchant) -> DDriver.UpdateDriverReq -> FlowHandler DDriver.UpdateDriverRes
 updateDriver personId = withFlowHandlerAPI . DDriver.updateDriver personId
 
 getNearbySearchRequests ::
-  Id SP.Person ->
+  (Id SP.Person, Id Merchant.Merchant) ->
   FlowHandler DDriver.GetNearbySearchRequestsRes
 getNearbySearchRequests = withFlowHandlerAPI . DDriver.getNearbySearchRequests
 
 offerQuote ::
-  Id SP.Person ->
+  (Id SP.Person, Id Merchant.Merchant) ->
   DDriver.DriverOfferReq ->
   FlowHandler APISuccess
-offerQuote driverId = withFlowHandlerAPI . DDriver.offerQuote driverId
+offerQuote (personId, driverId) = withFlowHandlerAPI . DDriver.offerQuote (personId, driverId)
 
 respondQuote ::
-  Id SP.Person ->
+  (Id SP.Person, Id Merchant.Merchant) ->
   DDriver.DriverRespondReq ->
   FlowHandler APISuccess
-respondQuote driverId = withFlowHandlerAPI . DDriver.respondQuote driverId
+respondQuote (personId, driverId) = withFlowHandlerAPI . DDriver.respondQuote (personId, driverId)
 
-getStats :: Id SP.Person -> Day -> FlowHandler DDriver.DriverStatsRes
+getStats :: (Id SP.Person, Id Merchant.Merchant) -> Day -> FlowHandler DDriver.DriverStatsRes
 getStats day = withFlowHandlerAPI . DDriver.getStats day
 
-validate :: Id SP.Person -> DDriver.DriverAlternateNumberReq -> FlowHandler DDriver.DriverAlternateNumberRes
+validate :: (Id SP.Person, Id Merchant.Merchant) -> DDriver.DriverAlternateNumberReq -> FlowHandler DDriver.DriverAlternateNumberRes
 validate alternateNumber = withFlowHandlerAPI . DDriver.validate alternateNumber
 
-verifyAuth :: Id SP.Person -> DDriver.DriverAlternateNumberOtpReq -> FlowHandler APISuccess
+verifyAuth :: (Id SP.Person, Id Merchant.Merchant) -> DDriver.DriverAlternateNumberOtpReq -> FlowHandler APISuccess
 verifyAuth otp = withFlowHandlerAPI . DDriver.verifyAuth otp
 
-resendOtp :: Id SP.Person -> DDriver.DriverAlternateNumberReq -> FlowHandler DDriver.ResendAuth
+resendOtp :: (Id SP.Person, Id Merchant.Merchant) -> DDriver.DriverAlternateNumberReq -> FlowHandler DDriver.ResendAuth
 resendOtp req = withFlowHandlerAPI . DDriver.resendOtp req
 
-remove :: Id SP.Person -> FlowHandler APISuccess
+remove :: (Id SP.Person, Id Merchant.Merchant) -> FlowHandler APISuccess
 remove = withFlowHandlerAPI . DDriver.remove

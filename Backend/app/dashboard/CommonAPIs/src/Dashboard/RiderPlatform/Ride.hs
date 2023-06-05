@@ -22,11 +22,13 @@ where
 
 import Dashboard.Common as Reexport
 import qualified Dashboard.Common as DP
+import Dashboard.Common.Ride as Reexport
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Kernel.External.Maps
+import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Centesimal
@@ -41,6 +43,11 @@ type ShareRideInfoAPI =
   Capture "rideId" (Id DP.Ride)
     :> "info"
     :> Get '[JSON] ShareRideInfoRes
+
+type RideInfoAPI =
+  "rideinfo"
+    :> Capture "rideId" (Id DP.Ride)
+    :> Get '[JSON] RideInfoRes
 
 data ShareRideInfoRes = ShareRideInfoRes
   { id :: Id Ride,
@@ -61,6 +68,42 @@ data ShareRideInfoRes = ShareRideInfoRes
     toLocation :: Maybe BookingLocation
   }
   deriving (Generic, Show, ToSchema, FromJSON, ToJSON)
+
+data RideInfoRes = RideInfoRes
+  { rideId :: Id Ride,
+    bookingId :: Id Booking,
+    rideStatus :: RideStatus,
+    customerName :: Maybe Text,
+    customerPhoneNo :: Maybe Text,
+    rideOtp :: Text,
+    fromLocation :: BookingLocation,
+    toLocation :: Maybe BookingLocation,
+    driverName :: Text,
+    driverPhoneNo :: Maybe Text,
+    driverRegisteredAt :: UTCTime,
+    vehicleNumber :: Text,
+    vehicleModel :: Text,
+    rideBookingTime :: UTCTime,
+    driverArrivalTime :: Maybe UTCTime,
+    rideStartTime :: Maybe UTCTime,
+    rideEndTime :: Maybe UTCTime,
+    chargeableDistance :: Maybe HighPrecMeters,
+    estimatedFare :: Money,
+    actualFare :: Maybe Money,
+    rideDuration :: Maybe Minutes,
+    cancelledTime :: Maybe UTCTime,
+    cancelledBy :: Maybe CancellationSource
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
+data CancellationSource
+  = ByUser
+  | ByDriver
+  | ByMerchant
+  | ByAllocator
+  | ByApplication
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data RideStatus
   = NEW
@@ -141,3 +184,14 @@ instance ToHttpApiData BookingStatus where
   toUrlPiece = DT.decodeUtf8 . toHeader
   toQueryParam = toUrlPiece
   toHeader = BSL.toStrict . encode
+
+---------------------------------------------------------
+-- Trip Route--------------------------------------
+
+type TripRouteAPI =
+  "trip"
+    :> "route"
+    :> Capture "rideId" (Id DP.Ride)
+    :> MandatoryQueryParam "lat" Double
+    :> MandatoryQueryParam "lon" Double
+    :> Get '[JSON] Maps.GetRoutesResp

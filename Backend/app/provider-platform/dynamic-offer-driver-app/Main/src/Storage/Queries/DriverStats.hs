@@ -21,11 +21,13 @@ import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverStats as BeamDS
+import Storage.Tabular.DriverStats
 
 -- createInitialDriverStats :: Id Driver -> SqlDB ()
 -- createInitialDriverStats driverId = do
@@ -38,6 +40,9 @@ import qualified Storage.Beam.DriverStats as BeamDS
 --         totalDistance = 0
 --       }
 
+create :: DriverStats -> SqlDB ()
+create = Esq.create
+
 createInitialDriverStats :: (L.MonadFlow m, MonadTime m) => Id Driver -> m ()
 createInitialDriverStats driverId = do
   now <- getCurrentTime
@@ -46,7 +51,9 @@ createInitialDriverStats driverId = do
           { driverId = driverId,
             idleSince = now,
             totalRides = 0,
-            totalDistance = 0
+            totalDistance = 0,
+            ridesCancelled = Just 0,
+            totalRidesAssigned = Just 0
           }
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
@@ -114,6 +121,9 @@ fetchAll = do
     Just dbCOnf' -> either (pure []) (transformBeamDriverStatsToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig []
     Nothing -> pure []
 
+findById :: Transactionable m => Id Driver -> m (Maybe DriverStats)
+findById = Esq.findById
+
 -- deleteById :: Id Driver -> SqlDB ()
 -- deleteById = Esq.deleteByKey @DriverStatsT
 
@@ -154,6 +164,24 @@ incrementTotalRidesAndTotalDist (Id driverId') rideDist = do
         [Se.Is BeamDS.driverId (Se.Eq driverId')]
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
+incrementTotalRidesAssigned :: Id Driver -> Int -> SqlDB ()
+incrementTotalRidesAssigned driverId number = do
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ DriverStatsTotalRidesAssigned =. just (Esq.coalesceDefault [tbl ^. DriverStatsTotalRidesAssigned] (val 0) +. val number)
+      ]
+    where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
+
+setCancelledRidesCount :: Id Driver -> Int -> SqlDB ()
+setCancelledRidesCount driverId cancelledCount = do
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ DriverStatsRidesCancelled =. val (Just cancelledCount)
+      ]
+    where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
+
 -- getDriversSortedOrder :: Transactionable m => Maybe Integer -> m [DriverStats]
 -- getDriversSortedOrder mbLimitVal =
 --   Esq.findAll $ do
@@ -179,7 +207,9 @@ transformBeamDriverStatsToDomain BeamDS.DriverStatsT {..} = do
     { driverId = Id driverId,
       idleSince = idleSince,
       totalRides = totalRides,
-      totalDistance = totalDistance
+      totalDistance = totalDistance,
+      ridesCancelled = ridesCancelled,
+      totalRidesAssigned = totalRidesAssigned
     }
 
 transformDomainDriverStatsToBeam :: DriverStats -> BeamDS.DriverStats
@@ -188,5 +218,7 @@ transformDomainDriverStatsToBeam DriverStats {..} =
     { BeamDS.driverId = getId driverId,
       BeamDS.idleSince = idleSince,
       BeamDS.totalRides = totalRides,
-      BeamDS.totalDistance = totalDistance
+      BeamDS.totalDistance = totalDistance,
+      BeamDS.ridesCancelled = ridesCancelled,
+      BeamDS.totalRidesAssigned = totalRidesAssigned
     }

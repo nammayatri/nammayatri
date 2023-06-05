@@ -15,6 +15,7 @@
 module API.UI.Whatsapp where
 
 import qualified Domain.Action.UI.Whatsapp as Whatsapp
+import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import Environment (FlowHandler, FlowServer)
 import EulerHS.Prelude
@@ -36,5 +37,5 @@ type API =
 handler :: FlowServer API
 handler = whatsAppOptAPI
 
-whatsAppOptAPI :: Id Person.Person -> Whatsapp.OptAPIRequest -> FlowHandler APISuccess
-whatsAppOptAPI personId = withFlowHandlerAPI . withPersonIdLogTag personId . Whatsapp.whatsAppOptAPI personId
+whatsAppOptAPI :: (Id Person.Person, Id Merchant.Merchant) -> Whatsapp.OptAPIRequest -> FlowHandler APISuccess
+whatsAppOptAPI (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . Whatsapp.whatsAppOptAPI personId

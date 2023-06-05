@@ -11,11 +11,14 @@ package in.juspay.mobility.utils;
 
 import android.app.Activity;
 import android.content.Context;
-import android.media.MediaPlayer;
+import android.content.res.Resources;
+import android.graphics.Color;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.util.AttributeSet;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -56,11 +59,36 @@ public class MediaPlayerView extends FrameLayout implements MediaPlayerOnPlayLis
     private ImageView actionButton;
     private ProgressBar progressLoader;
     private Activity activity;
+    private int frameID = -1;
+    private int timerID = -1;
+    private String playIcon = "ic_play";
+    private String pauseIcon = "ic_pause";
 
     public MediaPlayerView(Context context, Activity activity) {
         super(context);
         this.context = context;
         this.activity = activity;
+        init(context);
+    }
+
+    public MediaPlayerView(Context context, Activity activity, int frameID, String playIcon, String pauseIcon) {
+        super(context);
+        this.context = context;
+        this.activity = activity;
+        this.frameID = frameID;
+        this.playIcon = playIcon;
+        this.pauseIcon = pauseIcon;
+        init(context);
+    }
+
+    public MediaPlayerView(Context context, Activity activity, int frameID, String playIcon, String pauseIcon, int timerID) {
+        super(context);
+        this.context = context;
+        this.activity = activity;
+        this.frameID = frameID;
+        this.playIcon = playIcon;
+        this.pauseIcon = pauseIcon;
+        this.timerID = timerID;
         init(context);
     }
 
@@ -143,10 +171,51 @@ public class MediaPlayerView extends FrameLayout implements MediaPlayerOnPlayLis
         progressLoader = view.findViewById(R.id.audio_loader);
         actionButton = view.findViewById(R.id.vActionButton);
         visualizerBar.setOnTaskCompleteListener(this);
+        if (frameID != -1) {
+            FrameLayout loader = view.findViewById(R.id.vLoaderPlayer);
+            ProgressBar progressBar = view.findViewById(R.id.audio_loader);
+            progressBar.setBackgroundColor(Color.TRANSPARENT);
+            ((ViewGroup) loader.getParent()).removeView(loader);
+            LinearLayout linearLayout = MainActivity.getInstance().findViewById(frameID);
+            linearLayout.removeAllViews();
+            linearLayout.addView(loader);
+            actionButton.setImageDrawable(getDrawable(context, playIcon));
+            actionButton.getLayoutParams().height = linearLayout.getLayoutParams().height;
+            actionButton.getLayoutParams().width = linearLayout.getLayoutParams().width;
+        } else {
+            int marginInPixels = (int) (8 * getResources().getDisplayMetrics().density + 0.5f);
+            ViewGroup.MarginLayoutParams actionLayoutParams = (ViewGroup.MarginLayoutParams) actionButton.getLayoutParams();
+            actionButton.setLayoutParams(actionLayoutParams);
+            actionLayoutParams.setMargins(marginInPixels, 0, marginInPixels, 0);
+        }
+        if (timerID != -1) {
+            TextView timer = view.findViewById(R.id.vTimer);
+            ((ViewGroup) timer.getParent()).removeView(timer);
+            LinearLayout linearLayout = MainActivity.getInstance().findViewById(timerID);
+            linearLayout.removeAllViews();
+            linearLayout.addView(timer);
+        } else {
+            TextView timer = view.findViewById(R.id.vTimer);
+            ViewGroup.MarginLayoutParams timerParams = (ViewGroup.MarginLayoutParams) timer.getLayoutParams();
+            int marginInPixels = (int) (8 * getResources().getDisplayMetrics().density + 0.5f);
+            timerParams.setMargins(marginInPixels, 0, marginInPixels, 0);
+            timer.setLayoutParams(timerParams);
+        }
         actionButton.setOnClickListener(runner -> player.toggle());
     }
 
+    public void setTimerId (int viewId) {
+        View view = MainActivity.getInstance().findViewById(viewId);
+        TextView timer = view.findViewById(R.id.vTimer);
+    }
+    public void setTimerColorAndSize (int color, float size) {
+        timer.setTextSize(size);
+        timer.setTextColor(color);
+    }
 
+    public void setVisualizerBarPlayedColor (int color) {
+        visualizerBar.setNonPlayedStateColor(color);
+    }
 
     public void inflateView (int id) throws IOException {
         try {
@@ -174,9 +243,9 @@ public class MediaPlayerView extends FrameLayout implements MediaPlayerOnPlayLis
             activity.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    actionButton.setImageDrawable(ContextCompat.getDrawable(context, R.drawable.ic_play));
+                    actionButton.setImageDrawable(getDrawable(context, playIcon));
                     visualizerBar.updatePlayerPercent(0);
-                    timer.setText("00.00");
+                    timer.setText(getTime(player.getDuration()));
                 }
             });
         }
@@ -189,7 +258,7 @@ public class MediaPlayerView extends FrameLayout implements MediaPlayerOnPlayLis
                 @Override
                 public void run() {
                     visualizerBar.updatePlayerPercent(currentTimestamp / (float) duration);
-                    timer.setText(getTime(duration - currentTimestamp));
+                    timer.setText(getTime(Math.max(0, duration - currentTimestamp)));
                 }
             });
         }
@@ -201,7 +270,7 @@ public class MediaPlayerView extends FrameLayout implements MediaPlayerOnPlayLis
             activity.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    actionButton.setImageDrawable(ContextCompat.getDrawable(context, R.drawable.ic_play));
+                    actionButton.setImageDrawable(getDrawable(context, playIcon));
                 }
             });
         }
@@ -213,10 +282,17 @@ public class MediaPlayerView extends FrameLayout implements MediaPlayerOnPlayLis
             activity.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    actionButton.setImageDrawable(ContextCompat.getDrawable(context, R.drawable.ic_pause));
+                    actionButton.setImageDrawable(getDrawable(context, pauseIcon));
                 }
             });
         }
+    }
+
+    public Drawable getDrawable(Context context, String name) {
+        Resources resources = context.getResources();
+        final int resourceId = resources.getIdentifier(name, "drawable",
+                context.getPackageName());
+        return resources.getDrawable(resourceId);
     }
 
     @Override

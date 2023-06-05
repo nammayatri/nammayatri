@@ -54,7 +54,7 @@ instance loggableAction :: Loggable Action where
     PrimarySelectItemAction (PrimarySelectItem.OnClick item) -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "primary_select_item" "vehicle_type_on_click"
     VehicleRegistrationNumber str -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "vehicle_registration_number_on_click"
     UploadFile -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "upload_file_on_click"
-    CallBackImageUpload str imageName -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "callback_image_upload"
+    CallBackImageUpload str imageName imagePath -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "callback_image_upload"
     SelectVehicleTypeModalAction act -> case act of
       SelectVehicleTypeModal.OnCloseClick -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "select_vehicle_type_modal" "on_close_click"
       SelectVehicleTypeModal.OnSelect item -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "select_vehicle_type_modal" "vehicle_type_on_select"
@@ -110,7 +110,7 @@ data Action =   WhatsAppSupport | BackPressed Boolean | PrimarySelectItemAction 
   | VehicleRegistrationNumber String
   | ReEnterVehicleRegistrationNumber String
   | UploadFile
-  | CallBackImageUpload String String
+  | CallBackImageUpload String String String
   | SelectVehicleTypeModalAction SelectVehicleTypeModal.Action
   | VehicleModelName String
   | VehicleColour String
@@ -166,7 +166,7 @@ eval (VehicleColour val) state = do
   _ <- pure $ disableActionEditText (getNewIDWithTag "VehicleColour")
   let newState = state {data = state.data { vehicle_color = val }}
   continue newState
-eval (CallBackImageUpload base_64 imageName) state = do
+eval (CallBackImageUpload base_64 imageName imagePath) state = do
   _ <- pure $ printLog "base_64 CallBackImageUpload" base_64
   _ <- pure $ printLog "imageName" imageName
   if base_64 /= "" then do

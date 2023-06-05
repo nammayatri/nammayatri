@@ -14,12 +14,8 @@
 
 module Tools.Auth where
 
-import Kernel.InternalAPI.Auth.Client
 import Kernel.Prelude
-import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
-import Kernel.Types.App
 import Kernel.Types.Id
-import Kernel.Utils.Common
 import Kernel.Utils.Monitoring.Prometheus.Servant
 import Kernel.Utils.Servant.HeaderAuth
 import Servant hiding (Context)
@@ -45,11 +41,3 @@ instance VerificationMethod VerifyToken where
   verificationDescription =
     "Checks whether token is registered.\
     \If you don't have a token, use registration endpoints."
-
-verifyPersonAction ::
-  forall m r.
-  ( CoreMetrics m,
-    HasFlowEnv m r '["authServiceUrl" ::: BaseUrl]
-  ) =>
-  VerificationAction VerifyToken m
-verifyPersonAction = VerificationAction (fmap Id . auth)

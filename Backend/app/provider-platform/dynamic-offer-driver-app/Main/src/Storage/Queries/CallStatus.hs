@@ -51,7 +51,7 @@ findByCallSid callSid = do
     Just dbCOnf' -> either (pure Nothing) (transformBeamCallStatusToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamCT.callId $ Se.Eq callSid]
     Nothing -> pure Nothing
 
-updateCallStatus :: L.MonadFlow m => Id CallStatus -> Call.CallStatus -> Int -> BaseUrl -> m (MeshResult ())
+updateCallStatus :: L.MonadFlow m => Id CallStatus -> Call.CallStatus -> Int -> Maybe BaseUrl -> m (MeshResult ())
 updateCallStatus (Id callId) status conversationDuration recordingUrl = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
@@ -60,7 +60,7 @@ updateCallStatus (Id callId) status conversationDuration recordingUrl = do
         dbConf'
         Mesh.meshConfig
         [ Set BeamCT.conversationDuration conversationDuration,
-          Set BeamCT.recordingUrl $ Just (showBaseUrl recordingUrl),
+          Set BeamCT.recordingUrl $ showBaseUrl <$> recordingUrl,
           Set BeamCT.status status
         ]
         [Is BeamCT.callId (Se.Eq callId)]

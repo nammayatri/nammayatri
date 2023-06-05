@@ -32,4 +32,5 @@ tripDetailsScreen = do
         GoBack -> App.BackT $ pure App.GoBack 
         OnSubmit -> App.BackT $ App.BackPoint <$> (pure $ ON_SUBMIT)
         GoHome  -> App.BackT $ App.BackPoint <$> (pure $ GO_TO_HOME_SCREEN)
+        GoToHelpAndSupport -> App.BackT $ App.BackPoint <$> (pure $ OPEN_HELP_AND_SUPPORT)
         

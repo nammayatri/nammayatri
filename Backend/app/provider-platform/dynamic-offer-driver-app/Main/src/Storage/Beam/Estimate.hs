@@ -109,7 +109,7 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be [Domain.EstimateBreakup]
 
 data EstimateT f = EstimateT
   { id :: B.C f Text,
-    transactionId :: B.C f Text,
+    requestId :: B.C f Text,
     vehicleVariant :: B.C f Variant.Variant,
     minFare :: B.C f Money,
     maxFare :: B.C f Money,
@@ -161,7 +161,7 @@ estimateTMod :: EstimateT (B.FieldModification (B.TableField EstimateT))
 estimateTMod =
   B.tableModification
     { id = B.fieldNamed "id",
-      transactionId = B.fieldNamed "transaction_id",
+      requestId = B.fieldNamed "transaction_id",
       vehicleVariant = B.fieldNamed "vehicle_variant",
       minFare = B.fieldNamed "min_fare",
       maxFare = B.fieldNamed "max_fare",

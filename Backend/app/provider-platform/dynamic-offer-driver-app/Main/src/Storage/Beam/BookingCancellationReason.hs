@@ -30,6 +30,7 @@ import qualified Domain.Types.BookingCancellationReason as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
+import Kernel.Types.Common hiding (id)
 import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
@@ -62,7 +63,10 @@ data BookingCancellationReasonT f = BookingCancellationReasonT
     rideId :: B.C f (Maybe Text),
     source :: B.C f Domain.CancellationSource,
     reasonCode :: B.C f (Maybe Text),
-    additionalInfo :: B.C f (Maybe Text)
+    additionalInfo :: B.C f (Maybe Text),
+    driverCancellationLocationLat :: B.C f (Maybe Double),
+    driverCancellationLocationLon :: B.C f (Maybe Double),
+    driverDistToPickup :: B.C f (Maybe Meters)
   }
   deriving (Generic, B.Beamable)
 
@@ -104,7 +108,10 @@ bookingCancellationReasonTMod =
       rideId = B.fieldNamed "ride_id",
       source = B.fieldNamed "source",
       reasonCode = B.fieldNamed "reason_code",
-      additionalInfo = B.fieldNamed "additional_info"
+      additionalInfo = B.fieldNamed "additional_info",
+      driverCancellationLocationLat = B.fieldNamed "driver_cancellation_location_lat",
+      driverCancellationLocationLon = B.fieldNamed "driver_cancellation_location_lon",
+      driverDistToPickup = B.fieldNamed "driver_dist_to_pickup"
     }
 
 psToHs :: HM.HashMap Text Text
@@ -126,7 +133,10 @@ defaultBookingCancellationReason =
       rideId = Nothing,
       source = "",
       reasonCode = Nothing,
-      additionalInfo = Nothing
+      additionalInfo = Nothing,
+      driverCancellationLocationLat = Nothing,
+      driverCancellationLocationLon = Nothing,
+      driverDistToPickup = Nothing
     }
 
 instance Serialize BookingCancellationReason where

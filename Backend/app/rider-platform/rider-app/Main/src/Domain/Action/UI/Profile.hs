@@ -28,11 +28,11 @@ module Domain.Action.UI.Profile
 where
 
 import Data.List (nubBy)
+import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonDefaultEmergencyNumber as DPDEN
 import Environment
 import Kernel.External.Encryption
-import qualified Kernel.External.FCM.Types as FCM
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (runInReplica, runTransaction)
@@ -41,6 +41,7 @@ import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Types.Predicate
 import Kernel.Types.Validation
+import Kernel.Types.Version
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import qualified Kernel.Utils.Text as TU
@@ -61,10 +62,13 @@ data UpdateProfileReq = UpdateProfileReq
     middleName :: Maybe Text,
     lastName :: Maybe Text,
     email :: Maybe Text,
-    deviceToken :: Maybe FCM.FCMRecipientToken,
+    deviceToken :: Maybe Text,
+    notificationToken :: Maybe Text,
     referralCode :: Maybe Text,
     language :: Maybe Maps.Language,
-    gender :: Maybe Person.Gender
+    gender :: Maybe Person.Gender,
+    bundleVersion :: Maybe Version,
+    clientVersion :: Maybe Version
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -103,8 +107,8 @@ newtype GetProfileDefaultEmergencyNumbersResp = GetProfileDefaultEmergencyNumber
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-getPersonDetails :: (EsqDBReplicaFlow m r, EncFlow m r) => Id Person.Person -> m ProfileRes
-getPersonDetails personId = do
+getPersonDetails :: (EsqDBReplicaFlow m r, EncFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> m ProfileRes
+getPersonDetails (personId, _) = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   decPerson <- decrypt person
   return $ Person.makePersonAPIEntity decPerson
@@ -125,8 +129,11 @@ updatePerson personId req = do
       refCode
       mbEncEmail
       req.deviceToken
+      req.notificationToken
       req.language
       req.gender
+      req.clientVersion
+      req.bundleVersion
   pure APISuccess.Success
 
 validateRefferalCode :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasBapInfo r m, CoreMetrics m) => Id Person.Person -> Text -> m (Maybe Text)
@@ -177,8 +184,8 @@ updateDefaultEmergencyNumbers personId req = do
             ..
           }
 
-getDefaultEmergencyNumbers :: (EsqDBReplicaFlow m r, EncFlow m r) => Id Person.Person -> m GetProfileDefaultEmergencyNumbersResp
-getDefaultEmergencyNumbers personId = do
+getDefaultEmergencyNumbers :: (EsqDBReplicaFlow m r, EncFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> m GetProfileDefaultEmergencyNumbersResp
+getDefaultEmergencyNumbers (personId, _) = do
   personENList <- runInReplica $ QPersonDEN.findAllByPersonId personId
   decPersonENList <- decrypt `mapM` personENList
   return . GetProfileDefaultEmergencyNumbersResp $ DPDEN.makePersonDefaultEmergencyNumberAPIEntity <$> decPersonENList

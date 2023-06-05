@@ -164,6 +164,30 @@ translateInXBackwardAnim =
     -- , PrestoAnim.interpolator $ PrestoAnim.EaseIn
     , PrestoAnim.repeatCount PrestoAnim.NoRepeat
     ]
+translateInXForwardFadeAnimWithDelay :: Int -> Boolean -> PrestoAnim.Animation
+translateInXForwardFadeAnimWithDelay delay = 
+  PrestoAnim.Animation
+    [ PrestoAnim.duration 350
+    , PrestoAnim.toAlpha 1.0
+    , PrestoAnim.fromX $ screenWidth unit / 4
+    , PrestoAnim.toX 0
+    , PrestoAnim.fromAlpha 0.0
+    , PrestoAnim.interpolator $ PrestoAnim.EaseIn
+    , PrestoAnim.repeatCount PrestoAnim.NoRepeat
+    , PrestoAnim.delay delay
+    ]
+translateInXBackwardFadeAnimWithDelay :: Int -> Boolean -> PrestoAnim.Animation
+translateInXBackwardFadeAnimWithDelay delay = 
+  PrestoAnim.Animation
+    [ PrestoAnim.duration 350
+    , PrestoAnim.toAlpha 1.0
+    , PrestoAnim.fromX $ - screenWidth unit / 5
+    , PrestoAnim.toX 0
+    , PrestoAnim.fromAlpha 0.0
+    , PrestoAnim.interpolator $ PrestoAnim.EaseIn
+    , PrestoAnim.repeatCount PrestoAnim.NoRepeat
+    , PrestoAnim.delay delay
+    ]
 translateOutXForwardAnim :: Boolean -> PrestoAnim.Animation
 translateOutXForwardAnim = 
   PrestoAnim.Animation
@@ -181,6 +205,16 @@ translateOutXBackwardAnim =
     , PrestoAnim.toX $ screenWidth unit / 5
     -- , PrestoAnim.interpolator PrestoAnim.EaseOut
     , PrestoAnim.repeatCount PrestoAnim.NoRepeat
+    ]
+fadeInWithDelay :: Int -> Boolean -> PrestoAnim.Animation
+fadeInWithDelay dalay = 
+  PrestoAnim.Animation
+    [ PrestoAnim.duration 250
+    , PrestoAnim.toAlpha 1.0
+    , PrestoAnim.fromAlpha 0.0
+    , PrestoAnim.interpolator $ PrestoAnim.EaseIn
+    , PrestoAnim.repeatCount PrestoAnim.NoRepeat
+    , PrestoAnim.delay delay
     ]
 
 translateYAnimFromTopWithAlpha:: AnimConfig -> PrestoAnim.Animation

@@ -58,14 +58,17 @@ import Engineering.Helpers.Commons (screenHeight, screenWidth)
 -- foreign import _renewFile :: String -> Effect Unit
 -- foreign import readFileImpl      :: String -> Effect String
 foreign import showLoaderImpl      :: String -> Effect Unit
-foreign import locateOnMap :: Boolean -> Number -> Number -> Unit
+-- foreign import readFile'      :: String -> Effect String
+-- foreign import showLoader'      :: String -> Effect Unit
+foreign import locateOnMap :: Boolean -> Number -> Number -> String-> Array Location -> Unit
 
 foreign import exitLocateOnMap :: String -> Unit
 foreign import shareTextMessage :: String -> String -> Unit
 foreign import shareImageMessage :: String -> String -> Unit
-
+foreign import showInAppNotification :: String -> String -> String -> String -> String -> String -> String -> String -> Int -> Effect Unit
 foreign import enableMyLocation :: Boolean -> Unit
 foreign import isLocationPermissionEnabled :: Unit -> Effect Boolean
+foreign import isMicrophonePermissionEnabled :: Unit -> Effect Boolean
 -- foreign import getPackageName   :: Effect String
 foreign import getVersionCode   :: Effect Int
 foreign import getVersionName   :: Effect String
@@ -87,8 +90,9 @@ foreign import removeMarker :: String -> Effect Unit
 foreign import disableActionEditText :: String -> Unit
 foreign import uploadFile :: Unit -> Effect Unit
 foreign import previewImage :: String -> Effect Unit
-foreign import storeCallBackImageUpload :: forall action. (action -> Effect Unit) -> (String -> String -> action) -> Effect Unit
-foreign import renderBase64Image :: String -> String -> Effect Unit
+foreign import storeCallBackImageUpload :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action) -> Effect Unit
+foreign import renderBase64Image :: String -> String -> Boolean -> Effect Unit
+foreign import setScaleType :: String -> String -> String -> Effect Unit 
 foreign import copyToClipboard :: String -> Unit
 foreign import drawRoute :: Locations -> String -> String -> Boolean -> String -> String -> Int -> String -> String -> String -> Effect Unit
 foreign import isCoordOnPath :: Locations -> Number -> Number -> Int -> Effect IsLocationOnPath
@@ -144,7 +148,8 @@ foreign import stopLocationPollingAPI :: Effect Unit
 foreign import startLocationPollingAPI :: Effect Unit
 foreign import startChatListenerService :: Effect Unit
 foreign import stopChatListenerService :: Effect Unit
-foreign import storeCallBackMessageUpdated :: forall action. (action -> Effect Unit) -> String -> String  -> (String -> String -> String -> action) -> Effect Unit
+foreign import storeCallBackMessageUpdated :: forall action. (action -> Effect Unit) -> String -> String  -> (String -> String -> String -> String -> action) -> Effect Unit
+foreign import storeCallBackOpenChatScreen :: forall action. (action -> Effect Unit) -> (action) -> Effect Unit
 foreign import sendMessage :: String -> Unit
 foreign import scrollToBottom :: String -> Effect Unit
 foreign import metaLogEvent :: String -> Unit
@@ -167,6 +172,7 @@ foreign import openWhatsAppSupport :: String -> Effect Unit
 
 foreign import startLottieProcess :: String -> String -> Boolean -> Number -> String -> Unit
 foreign import generateSessionToken :: String -> String
+foreign import addMediaFile :: String -> String -> String -> String -> String -> String -> Effect Unit
 
 foreign import toggleBtnLoader :: String -> Boolean -> Unit
 foreign import getBtnLoader :: String -> Boolean
@@ -309,6 +315,11 @@ type IsLocationOnPath = {
   , distance :: Int
 }
 
+type Location = {
+  lat :: Number,
+  lng :: Number,
+  place :: String
+}
 -- type Point = Array Number
 
 -- type Markers = {

@@ -23,14 +23,17 @@ import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.Prelude
 -- import Kernel.Storage.Esqueleto as Esq
+
+import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequestSpecialZone as BeamSRSZ
 import Storage.Queries.SearchRequest.SearchReqLocation as QSRL
+-- import Storage.Tabular.SearchRequestSpecialZone
 
 -- import Storage.Tabular.SearchRequest.SearchReqLocation
--- import Storage.Tabular.SearchRequestSpecialZone
+import Storage.Tabular.SearchRequestSpecialZone
 
 -- create :: SearchRequestSpecialZone -> SqlDB ()
 -- create dsReq = Esq.runTransaction $
@@ -144,6 +147,16 @@ findByMsgIdAndBapIdAndBppId txnId bapId (Id merchantId) = do
 --     where_ $
 --       searchT ^. SearchRequestSpecialZoneTId ==. val (toKey searchRequestId)
 --     return $ searchT ^. SearchRequestSpecialZoneValidTill
+findByTransactionId ::
+  (Transactionable m) =>
+  Id SearchRequestSpecialZone ->
+  m (Maybe (Id SearchRequestSpecialZone))
+findByTransactionId tId = do
+  findOne $ do
+    searchT <- from $ table @SearchRequestSpecialZoneT
+    where_ $
+      searchT ^. SearchRequestSpecialZoneTransactionId ==. val (getId tId)
+    return $ searchT ^. SearchRequestSpecialZoneTId
 
 getValidTill :: L.MonadFlow m => Id SearchRequestSpecialZone -> m (Maybe UTCTime)
 getValidTill (Id searchRequestId) = do

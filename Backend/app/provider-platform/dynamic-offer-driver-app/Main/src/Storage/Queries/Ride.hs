@@ -53,7 +53,7 @@ import qualified Storage.Beam.Ride.Table as BeamR
 -- import qualified Storage.Beam.RiderDetails as BeamRRD
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.DriverInformation as QDI
--- import Storage.Queries.FullEntityBuilders (buildFullBooking)
+import Storage.Queries.FullEntityBuilders (buildFullBooking)
 -- import qualified Storage.Queries.RideDetails as QRD
 -- import qualified Storage.Queries.RiderDetails as QRRD
 import Storage.Tabular.Booking as Booking
@@ -104,6 +104,16 @@ findById (Id rideId) = do
 --       &&. ride ^. RideStatus !=. val Ride.CANCELLED
 --   pure ride
 
+findAllRidesByDriverId ::
+  Transactionable m =>
+  Id Person ->
+  m [Ride]
+findAllRidesByDriverId driverId =
+  Esq.findAll $ do
+    ride <- from $ table @RideT
+    where_ $ ride ^. RideDriverId ==. val (toKey driverId)
+    return ride
+
 findActiveByRBId :: L.MonadFlow m => Id Booking -> m (Maybe Ride)
 findActiveByRBId (Id rbId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
@@ -151,6 +161,29 @@ findActiveByRBId (Id rbId) = do
 --           booking <- MaybeT $ buildFullBooking bookingT
 --           return (extractSolidType @Ride rideT, booking)
 --       )
+
+findAllRidesBookingsByRideId :: Transactionable m => Id Merchant -> [Id Ride] -> m [(Ride, Booking)]
+findAllRidesBookingsByRideId merchantId rideIds = Esq.buildDType $ do
+  res <- Esq.findAll' $ do
+    (booking :& ride) <-
+      from $
+        table @BookingT
+          `innerJoin` table @RideT
+            `Esq.on` ( \(booking :& ride) ->
+                         ride ^. Ride.RideBookingId ==. booking ^. BookingTId
+                     )
+    where_ $
+      booking ^. BookingProviderId ==. val (toKey merchantId)
+        &&. ride ^. RideTId `Esq.in_` valList (map toKey rideIds)
+    pure (booking, ride)
+
+  catMaybes
+    <$> forM
+      res
+      ( \(bookingT, rideT) -> runMaybeT do
+          booking <- MaybeT $ buildFullBooking bookingT
+          return (extractSolidType @Ride rideT, booking)
+      )
 
 findAllByDriverId :: L.MonadFlow m => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe Ride.RideStatus -> m [(Ride, Booking)]
 findAllByDriverId (Id driverId) mbLimit mbOffset mbOnlyActive mbRideStatus = do
@@ -435,6 +468,7 @@ updateAll rideId ride = do
           Se.Set BeamR.tripStartLon (ride.tripEndPos <&> (.lon)),
           Se.Set BeamR.fareParametersId (getId <$> ride.fareParametersId),
           Se.Set BeamR.distanceCalculationFailed ride.distanceCalculationFailed,
+          Se.Set BeamR.pickupDropOutsideOfThreshold ride.pickupDropOutsideOfThreshold,
           Se.Set BeamR.updatedAt now
         ]
         [Se.Is BeamR.id (Se.Eq $ getId rideId)]
@@ -586,8 +620,10 @@ findAllRideItems ::
   Maybe DbHash ->
   Maybe Money ->
   UTCTime ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
   m [RideItem]
-findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbFareDiff now = do
+findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbFareDiff now mbFrom mbTo = do
   res <- Esq.findAll $ do
     booking :& ride :& rideDetails :& riderDetails <-
       from $
@@ -607,6 +643,8 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
     let bookingStatusVal = mkBookingStatusVal ride
     where_ $
       booking ^. BookingProviderId ==. val (toKey merchantId)
+        &&. whenJust_ mbFrom (\defaultFrom -> ride ^. RideCreatedAt >=. val defaultFrom)
+        &&. whenJust_ mbTo (\defaultTo -> ride ^. RideCreatedAt <=. val defaultTo)
         &&. whenJust_ mbBookingStatus (\bookingStatus -> bookingStatusVal ==. val bookingStatus)
         &&. whenJust_ mbRideShortId (\rideShortId -> ride ^. Ride.RideShortId ==. val rideShortId.getShortId)
         &&. whenJust_ mbDriverPhoneDBHash (\hash -> rideDetails ^. RideDetailsDriverNumberHash ==. val (Just hash))
@@ -794,6 +832,7 @@ transformBeamRideToDomain BeamR.RideT {..} = do
         tripEndTime = tripEndTime,
         tripStartPos = LatLong <$> tripStartLat <*> tripStartLon,
         tripEndPos = LatLong <$> tripEndLat <*> tripEndLon,
+        pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
         fareParametersId = Id <$> fareParametersId,
         distanceCalculationFailed = distanceCalculationFailed,
         createdAt = createdAt,
@@ -820,6 +859,7 @@ transformDomainRideToBeam Ride {..} =
       BeamR.tripEndLat = lat <$> tripEndPos,
       BeamR.tripStartLon = lon <$> tripStartPos,
       BeamR.tripEndLon = lon <$> tripEndPos,
+      pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
       BeamR.fareParametersId = getId <$> fareParametersId,
       BeamR.distanceCalculationFailed = distanceCalculationFailed,
       BeamR.createdAt = createdAt,

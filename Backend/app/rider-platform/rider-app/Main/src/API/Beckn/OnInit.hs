@@ -43,19 +43,20 @@ onInit ::
 onInit _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   mbDOnInitReq <- TaxiACL.buildOnInitReq req
   whenJust mbDOnInitReq $ \onInitReq ->
-    Redis.whenWithLockRedis (onInitLockKey onInitReq.bppBookingId.getId) 60 $ do
-      onInitRes <- DOnInit.onInit onInitReq
-      booking <- QRideB.findById onInitRes.bookingId >>= fromMaybeM (BookingDoesNotExist onInitRes.bookingId.getId)
-      handle (errHandler booking) $
-        void $ withShortRetry $ CallBPP.confirm onInitRes.bppUrl =<< ACL.buildConfirmReq onInitRes
+    Redis.whenWithLockRedis (onInitLockKey onInitReq.bppBookingId.getId) 60 $
+      fork "oninit request processing" $ do
+        onInitRes <- DOnInit.onInit onInitReq
+        booking <- QRideB.findById onInitRes.bookingId >>= fromMaybeM (BookingDoesNotExist onInitRes.bookingId.getId)
+        handle (errHandler booking) $
+          void $ withShortRetry $ CallBPP.confirm onInitRes.bppUrl =<< ACL.buildConfirmReq onInitRes
   pure Ack
   where
     errHandler booking exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = do
-        dCancelRes <- DCancel.cancel booking.id booking.riderId cancelReq
+        dCancelRes <- DCancel.cancel booking.id (booking.riderId, booking.merchantId) cancelReq
         void . withShortRetry $ CallBPP.cancel dCancelRes.bppUrl =<< CancelACL.buildCancelReq dCancelRes
       | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = do
-        dCancelRes <- DCancel.cancel booking.id booking.riderId cancelReq
+        dCancelRes <- DCancel.cancel booking.id (booking.riderId, booking.merchantId) cancelReq
         void . withShortRetry $ CallBPP.cancel dCancelRes.bppUrl =<< CancelACL.buildCancelReq dCancelRes
       | otherwise = throwM exc
 

@@ -103,8 +103,8 @@ buildTransaction endpoint apiTokenInfo =
 addLinkAsMedia :: ShortId DM.Merchant -> ApiTokenInfo -> Common.AddLinkAsMedia -> FlowHandler Common.UploadFileResponse
 addLinkAsMedia merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-  unless (req.fileType == Common.VideoLink && checkIfYoutubeLink req.url) $
-    throwError $ InvalidRequest "Only support youtube video links. For Audio/Image use uploadFile API."
+  unless (((req.fileType == Common.VideoLink || req.fileType == Common.PortraitVideoLink) && checkIfYoutubeLink req.url) || req.fileType == Common.ImageLink) $
+    throwError $ InvalidRequest "Only support youtube video links and image links. For Audio use uploadFile API."
   transaction <- buildTransaction Common.AddLinkEndpoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId (.message.addLinkAsMedia) req

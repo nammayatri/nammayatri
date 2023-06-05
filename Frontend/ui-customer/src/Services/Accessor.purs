@@ -133,3 +133,9 @@ _chargeableRideDistance = lens (unwrap >>> _.chargeableRideDistance) (\oldRec ne
 
 _selectedQuotes :: forall a b c. Newtype a { selectedQuotes :: b | c } => Lens' a b
 _selectedQuotes = lens (unwrap >>> _.selectedQuotes) (\oldRec newVal -> wrap ((unwrap oldRec) { selectedQuotes = newVal }))
+
+_otpCode :: forall a b c. Newtype a { otpCode :: b | c } => Lens' a b
+_otpCode = lens (unwrap >>> _.otpCode) (\oldRec newVal -> wrap ((unwrap oldRec) { otpCode = newVal }))
+
+_fareProductType :: forall a b c. Newtype a { fareProductType :: b | c } => Lens' a b
+_fareProductType = lens (unwrap >>> _.fareProductType) (\oldRec newVal -> wrap ((unwrap oldRec) { fareProductType = newVal }))
