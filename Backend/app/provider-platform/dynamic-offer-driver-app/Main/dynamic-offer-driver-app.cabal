@@ -285,7 +285,6 @@ library
       Storage.Beam.SearchRequestForDriver
       Storage.Beam.SearchRequestSpecialZone
       Storage.Beam.SearchTry
-      Storage.Beam.SlabFarePolicy
       Storage.Beam.Vehicle
       Storage.CachedQueries.CacheConfig
       Storage.CachedQueries.DriverInformation
