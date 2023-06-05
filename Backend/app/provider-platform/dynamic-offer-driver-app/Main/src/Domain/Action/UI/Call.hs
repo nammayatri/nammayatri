@@ -123,11 +123,11 @@ directCallStatusCallback :: EsqDBFlow m r => Text -> ExotelCallStatus -> Maybe T
 directCallStatusCallback callSid dialCallStatus recordingUrl_ callDuration = do
   callStatus <- QCallStatus.findByCallSid callSid >>= fromMaybeM CallStatusDoesNotExist
   let newCallStatus = exotelStatusToInterfaceStatus dialCallStatus
-  case recordingUrl_ of
+  _ <- case recordingUrl_ of
     Just recordUrl -> do
       if recordUrl == ""
         then do
-          updateCallStatus callStatus.id newCallStatus Nothing
+          _ <- updateCallStatus callStatus.id newCallStatus Nothing
           throwError CallStatusDoesNotExist
         else do
           baseUrl <- parseBaseUrl recordUrl
@@ -135,12 +135,12 @@ directCallStatusCallback callSid dialCallStatus recordingUrl_ callDuration = do
     Nothing -> do
       if newCallStatus == CallTypes.COMPLETED
         then do
-          updateCallStatus callStatus.id newCallStatus Nothing
+          _ <- updateCallStatus callStatus.id newCallStatus Nothing
           throwError CallStatusDoesNotExist
         else updateCallStatus callStatus.id newCallStatus Nothing
   return Ack
   where
-    updateCallStatus id callStatus url = runTransaction $ QCallStatus.updateCallStatus id callStatus (fromMaybe 0 callDuration) url
+    updateCallStatus id callStatus url = QCallStatus.updateCallStatus id callStatus (fromMaybe 0 callDuration) url
 
 getCustomerMobileNumber :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Text -> Text -> Text -> Maybe Text -> ExotelCallStatus -> m GetCustomerMobileNumberResp
 getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus = do

@@ -74,6 +74,7 @@ import qualified Domain.Types.Vehicle as SV
 import qualified Domain.Types.Vehicle as Veh
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Environment
+import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
 import Kernel.External.Encryption
@@ -575,7 +576,8 @@ updateDriver (personId, _) req = do
   _ <- QPerson.updatePersonRec personId updPerson
   _ <- QDriverInformation.updateDowngradingOptions person.id updDriverInfo.canDowngradeToSedan updDriverInfo.canDowngradeToHatchback updDriverInfo.canDowngradeToTaxi
   QDriverInformation.clearDriverInfoCache (cast personId)
-  driverStats <- runInReplica $ QDriverStats.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
+  -- driverStats <- runInReplica $ QDriverStats.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
+  driverStats <- QDriverStats.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
   driverEntity <- buildDriverEntityRes (updPerson, driverInfo)
   driverReferralCode <- fmap (.referralCode) <$> QDR.findById personId
   let merchantId = person.merchantId
@@ -763,11 +765,13 @@ respondQuote ::
     HasField "coreVersion" r Text,
     HasField "nwAddress" r BaseUrl,
     HasField "driverUnlockDelay" r Seconds,
+    -- HasField "searchRequestId" r (Id DST.SearchTry),
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     CoreMetrics m,
-    HasPrettyLogger m r
+    HasPrettyLogger m r,
+    L.MonadFlow m
   ) =>
   (Id SP.Person, Id DM.Merchant) ->
   DriverRespondReq ->
@@ -886,7 +890,7 @@ respondQuote (driverId, _) req = do
         _ <- QSRD.updateDriverResponse driverReq.id Pulled
         -- driver_ <- runInReplica $ QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
         driver_ <- QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
-        Notify.notifyDriverClearedFare orgId driverReq.driverId driverReq.searchRequestId driverQuote.estimatedFare driver_.deviceToken
+        Notify.notifyDriverClearedFare orgId driverReq.driverId driverReq.searchTryId driverQuote.estimatedFare driver_.deviceToken
 
 getStats ::
   (EsqDBReplicaFlow m r, EncFlow m r) =>

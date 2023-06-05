@@ -16,7 +16,7 @@ module Storage.Queries.Booking where
 
 import Data.Text (pack)
 import Domain.Types.Booking
-import Domain.Types.DriverQuote (DriverQuote)
+-- import Domain.Types.DriverQuote (DriverQuote)
 import Domain.Types.DriverQuote as DDQ
 import Domain.Types.Geometry
 import Domain.Types.Merchant
@@ -27,7 +27,7 @@ import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto
+-- import qualified Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import Kernel.Types.Time
 import Kernel.Utils.Common
@@ -37,10 +37,11 @@ import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Queries.Booking.BookingLocation as QBBL
 import qualified Storage.Queries.DriverQuote as QDQuote
 import qualified Storage.Queries.FareParameters as QueriesFP
-import Storage.Queries.FullEntityBuilders
+-- import Storage.Queries.FullEntityBuilders
 import Storage.Queries.Geometry
-import Storage.Tabular.Booking
-import Storage.Tabular.DriverQuote as DriverQuote
+
+-- import Storage.Tabular.Booking
+-- import Storage.Tabular.DriverQuote as DriverQuote
 
 -- baseBookingTable ::
 --   From
@@ -87,7 +88,7 @@ findById (Id bookingId) = do
     Just dbConf' -> do
       result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamB.id $ Se.Eq bookingId]
       case result of
-        Right b -> traverse transformBeamBookingToDomain b
+        Right result' -> traverse transformBeamBookingToDomain result'
         Left _ -> pure Nothing
     Nothing -> pure Nothing
 

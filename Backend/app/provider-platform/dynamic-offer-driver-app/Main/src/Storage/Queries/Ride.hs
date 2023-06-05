@@ -53,7 +53,7 @@ import qualified Storage.Beam.Ride.Table as BeamR
 -- import qualified Storage.Beam.RiderDetails as BeamRRD
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.DriverInformation as QDI
--- import Storage.Queries.FullEntityBuilders (buildFullBooking)
+import Storage.Queries.FullEntityBuilders (buildFullBooking)
 -- import qualified Storage.Queries.RideDetails as QRD
 -- import qualified Storage.Queries.RiderDetails as QRRD
 import Storage.Tabular.Booking as Booking
@@ -185,8 +185,8 @@ findAllRidesBookingsByRideId merchantId rideIds = Esq.buildDType $ do
           return (extractSolidType @Ride rideT, booking)
       )
 
-findAllByDriverId' :: L.MonadFlow m => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe Ride.RideStatus -> m [(Ride, Booking)]
-findAllByDriverId' (Id driverId) mbLimit mbOffset mbOnlyActive mbRideStatus = do
+findAllByDriverId :: L.MonadFlow m => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe Ride.RideStatus -> m [(Ride, Booking)]
+findAllByDriverId (Id driverId) mbLimit mbOffset mbOnlyActive mbRideStatus = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
@@ -832,6 +832,7 @@ transformBeamRideToDomain BeamR.RideT {..} = do
         tripEndTime = tripEndTime,
         tripStartPos = LatLong <$> tripStartLat <*> tripStartLon,
         tripEndPos = LatLong <$> tripEndLat <*> tripEndLon,
+        pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
         fareParametersId = Id <$> fareParametersId,
         distanceCalculationFailed = distanceCalculationFailed,
         createdAt = createdAt,
@@ -858,6 +859,7 @@ transformDomainRideToBeam Ride {..} =
       BeamR.tripEndLat = lat <$> tripEndPos,
       BeamR.tripStartLon = lon <$> tripStartPos,
       BeamR.tripEndLon = lon <$> tripEndPos,
+      pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
       BeamR.fareParametersId = getId <$> fareParametersId,
       BeamR.distanceCalculationFailed = distanceCalculationFailed,
       BeamR.createdAt = createdAt,

@@ -362,7 +362,8 @@ syncInProgressMultipleRide ride booking = do
 
 syncCancelledMultipleRide :: DRide.Ride -> DBooking.Booking -> DM.Merchant -> Flow Common.MultipleRideData
 syncCancelledMultipleRide ride booking merchant = do
-  mbBookingCReason <- runInReplica $ QBCReason.findByRideId ride.id
+  -- mbBookingCReason <- runInReplica $ QBCReason.findByRideId ride.id
+  mbBookingCReason <- QBCReason.findByRideId ride.id
   -- rides cancelled by bap no need to sync, and have mbBookingCReason = Nothing
   case mbBookingCReason of
     Nothing -> pure $ Common.MultipleRideData {newStatus = Common.RIDE_CANCELLED, message = "No cancellation reason found for ride. Nothing to sync, ignoring", rideId = cast @DRide.Ride @Common.Ride ride.id}
@@ -380,7 +381,8 @@ syncCompletedMultipleRide ride booking = do
     -- only for old rides
     logWarning "No fare params linked to ride. Using fare params linked to booking, they may be not actual"
   let fareParametersId = fromMaybe booking.fareParams.id ride.fareParametersId
-  fareParameters <- runInReplica $ QFareParams.findById fareParametersId >>= fromMaybeM (FareParametersNotFound fareParametersId.getId)
+  -- fareParameters <- runInReplica $ QFareParams.findById fareParametersId >>= fromMaybeM (FareParametersNotFound fareParametersId.getId)
+  fareParameters <- QFareParams.findById fareParametersId >>= fromMaybeM (FareParametersNotFound fareParametersId.getId)
   handle (errHandler ride.status booking.status "ride completed") $
     CallBAP.sendRideCompletedUpdateToBAP booking ride fareParameters
   pure $ Common.MultipleRideData {newStatus = Common.RIDE_COMPLETED, message = "Success. Sent ride completed update to bap", rideId = cast @DRide.Ride @Common.Ride ride.id}

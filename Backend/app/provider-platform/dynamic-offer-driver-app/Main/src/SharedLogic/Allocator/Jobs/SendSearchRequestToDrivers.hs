@@ -19,6 +19,7 @@ import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.DriverPoolConfig
 import Domain.Types.SearchRequest (SearchRequest)
 import Domain.Types.SearchTry (SearchTry)
+import qualified EulerHS.Language as L
 import Kernel.Prelude hiding (handle)
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis (HedisFlow)
@@ -46,7 +47,8 @@ sendSearchRequestToDrivers ::
     HasCacheConfig r,
     HedisFlow m r,
     EsqDBFlow m r,
-    Log m
+    Log m,
+    L.MonadFlow m
   ) =>
   Job 'SendSearchRequestToDriver ->
   m ExecutionResult
@@ -54,7 +56,8 @@ sendSearchRequestToDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
   let jobData = jobInfo.jobData
   let searchTryId = jobData.searchTryId
   searchTry <- Esq.runInReplica $ QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
-  searchReq <- Esq.runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
+  -- searchReq <- Esq.runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
+  searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound (searchReq.providerId.getId))
   driverPoolConfig <- getDriverPoolConfig merchant.id jobData.estimatedRideDistance
   sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant jobData.driverExtraFeeBounds

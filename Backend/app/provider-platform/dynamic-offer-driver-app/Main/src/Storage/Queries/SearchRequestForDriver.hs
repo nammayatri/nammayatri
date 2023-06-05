@@ -15,7 +15,7 @@
 module Storage.Queries.SearchRequestForDriver where
 
 import Domain.Types.Person
--- import Domain.Types.SearchRequest (SearchRequest)
+import Domain.Types.SearchRequest (SearchRequest)
 import Domain.Types.SearchRequestForDriver as Domain
 import Domain.Types.SearchTry
 import qualified EulerHS.Extra.EulerDB as Extra
@@ -52,6 +52,22 @@ findAllActiveBySTId (Id searchTryId) = do
           Mesh.meshConfig
           [ Se.And
               [ Se.Is BeamSRFD.id $ Se.Eq searchTryId,
+                Se.Is BeamSRFD.status $ Se.Eq Domain.Active
+              ]
+          ]
+    Nothing -> pure []
+
+findAllActiveBySRId :: L.MonadFlow m => Id SearchRequest -> m [SearchRequestForDriver]
+findAllActiveBySRId (Id searchReqId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' ->
+      either (pure []) (transformBeamSearchRequestForDriverToDomain <$>)
+        <$> KV.findAllWithKVConnector
+          dbCOnf'
+          Mesh.meshConfig
+          [ Se.And
+              [ Se.Is BeamSRFD.requestId $ Se.Eq searchReqId,
                 Se.Is BeamSRFD.status $ Se.Eq Domain.Active
               ]
           ]
@@ -125,6 +141,18 @@ setInactiveBySTId (Id searchTryId) = do
         Mesh.meshConfig
         [Se.Set BeamSRFD.status Domain.Inactive]
         [Se.Is BeamSRFD.searchTryId (Se.Eq searchTryId)]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+
+setInactiveBySRId :: L.MonadFlow m => Id SearchRequest -> m (MeshResult ())
+setInactiveBySRId (Id searchReqId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        Mesh.meshConfig
+        [Se.Set BeamSRFD.status Domain.Inactive]
+        [Se.Is BeamSRFD.requestId (Se.Eq searchReqId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 updateDriverResponse :: L.MonadFlow m => Id SearchRequestForDriver -> SearchRequestForDriverResponse -> m (MeshResult ())

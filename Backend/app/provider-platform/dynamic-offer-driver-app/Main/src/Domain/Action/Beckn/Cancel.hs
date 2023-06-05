@@ -140,7 +140,7 @@ cancelSearch merchantId req searchRequestId = do
   driverSearchReqs <- QSRD.findAllActiveBySRId searchRequestId
   logTagInfo ("transactionId-" <> req.transactionId) "Search Request Cancellation"
   -- DB.runTransaction $ do
-  _ <- QST.cancelActiveTriesByRequestId searchRequestId
+  Esq.runTransaction $ QST.cancelActiveTriesByRequestId searchRequestId
   _ <- QSRD.setInactiveBySRId searchRequestId
   for_ driverSearchReqs $ \driverReq -> do
     driver_ <- QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)

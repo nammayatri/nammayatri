@@ -123,7 +123,7 @@ cancelRideTransaction ::
   m ()
 cancelRideTransaction bookingId ride bookingCReason merchantId = do
   let driverId = cast ride.driverId
-  DLoc.updateOnRide driverId False merchantId
+  _ <- DLoc.updateOnRide driverId False merchantId
   driverInfo <- CDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   -- Esq.runTransaction $ do
   when (bookingCReason.source == SBCR.ByDriver) $ QDriverStats.updateIdleTime driverId
@@ -157,8 +157,8 @@ repeatSearch ::
 repeatSearch merchant farePolicy searchReq searchTry booking ride cancellationSource now driverPoolConfig = do
   newSearchTry <- buildSearchTry searchTry
 
-  -- Esq.runTransaction $ do
-  _ <- QST.create newSearchTry
+  Esq.runTransaction $ do
+    QST.create newSearchTry
 
   let driverExtraFeeBounds = DFP.findDriverExtraFeeBoundsByDistance searchReq.estimatedDistance <$> farePolicy.driverExtraFeeBounds
   res <-

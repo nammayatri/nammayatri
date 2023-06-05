@@ -29,9 +29,9 @@ import qualified Domain.Types.Booking as Booking
 import Domain.Types.Booking.BookingLocation
 import Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.DriverInformation as DDI
-import Domain.Types.DriverLocation
+import Domain.Types.DriverLocation as DriverLocation
 -- import qualified Lib.Utils as Utils
-import qualified Domain.Types.DriverQuote as DQ
+import Domain.Types.DriverQuote as DriverQuote
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
 import Domain.Types.Ride as Ride
@@ -66,6 +66,7 @@ import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.DriverInformation as QueriesDI
 import qualified Storage.Queries.DriverLocation as QDL
 import qualified Storage.Queries.DriverQuote as QDQ
+import Storage.Queries.FullEntityBuilders
 import qualified Storage.Queries.Vehicle as QV
 import Storage.Tabular.Booking
 import Storage.Tabular.Booking.BookingLocation
@@ -323,7 +324,7 @@ getDriverQuote persons =
   buildDType $ do
     res <- Esq.findAll' $ do
       (dQuote :& farePars) <-
-        from baseDriverQuoteQuery
+        from QDQ.baseDriverQuoteQuery
       where_ $
         dQuote ^. DriverQuoteDriverId `in_` valList personsKeys
           &&. dQuote ^. DriverQuoteStatus ==. val DriverQuote.Active
@@ -455,67 +456,67 @@ findAllDriversByIdsFirstNameAsc' (Id merchantId) driverIds = do
        in acc <> ((\vehicle -> (person', dl', info', vehicle)) <$> vehicleList')
 
 -- lets not use this as of now
-findAllDriversByIdsFirstNameAsc' ::
-  (L.MonadFlow m, Log m) =>
-  Id Merchant ->
-  [Id Person] ->
-  m [FullDriver]
-findAllDriversByIdsFirstNameAsc' (Id merchantId) driverIds = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
-  case dbConf of
-    Just dbCOnf' -> do
-      personList <- do
-        p <-
-          KV.findAllWithOptionsKVConnector
-            dbCOnf'
-            Mesh.meshConfig
-            [ Se.And
-                [ Se.Is BeamP.role $ Se.Eq Person.DRIVER,
-                  Se.Is BeamP.id $ Se.In $ getId <$> driverIds,
-                  Se.Is BeamP.merchantId $ Se.Eq merchantId
-                ]
-            ]
-            (Se.Asc BeamP.firstName)
-            Nothing
-            Nothing
-        case p of
-          Left _ -> pure []
-          Right x -> traverse transformBeamPersonToDomain x
-      -- either (pure []) (transformBeamPersonToDomain <$>) <$> KV.findAllWithOptionsKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamP.role $ Se.Eq Person.DRIVER,
-      --               Se.Is BeamP.id $ Se.In $ getId <$> driverIds, Se.Is BeamP.merchantId $ Se.Eq merchantId ]] (Se.Asc BeamP.firstName) Nothing Nothing
-      dlList <- findAllDriverLocations' dbCOnf' (getId . (Person.id :: PersonE e -> Id Person) <$> personList)
-      infoList <- either (pure []) (QueriesDI.transformBeamDriverInformationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDI.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> personList]
-      vehicleList <- either (pure []) (QV.transformBeamVehicleToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamV.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> personList]
-      let pDl = foldl' (getPersonWithlocation dlList) [] personList
-      let pDlInfo = foldl' (getPersonWithInfo infoList) [] pDl
-      let pDlInfoVeh = foldl' (getPersonWithVehicle vehicleList) [] pDlInfo
-      pure $ map mkFullDriver pDlInfoVeh
-    Nothing -> pure []
-  where
-    getPersonWithlocation dlList acc person' =
-      let dlList' = filter (\dl -> dl.driverId == person'.id) dlList
-       in acc <> ((\dl -> (person', dl)) <$> dlList')
+-- findAllDriversByIdsFirstNameAsc' ::
+--   (L.MonadFlow m, Log m) =>
+--   Id Merchant ->
+--   [Id Person] ->
+--   m [FullDriver]
+-- findAllDriversByIdsFirstNameAsc' (Id merchantId) driverIds = do
+--   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   case dbConf of
+--     Just dbCOnf' -> do
+--       personList <- do
+--         p <-
+--           KV.findAllWithOptionsKVConnector
+--             dbCOnf'
+--             Mesh.meshConfig
+--             [ Se.And
+--                 [ Se.Is BeamP.role $ Se.Eq Person.DRIVER,
+--                   Se.Is BeamP.id $ Se.In $ getId <$> driverIds,
+--                   Se.Is BeamP.merchantId $ Se.Eq merchantId
+--                 ]
+--             ]
+--             (Se.Asc BeamP.firstName)
+--             Nothing
+--             Nothing
+--         case p of
+--           Left _ -> pure []
+--           Right x -> traverse transformBeamPersonToDomain x
+--       -- either (pure []) (transformBeamPersonToDomain <$>) <$> KV.findAllWithOptionsKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamP.role $ Se.Eq Person.DRIVER,
+--       --               Se.Is BeamP.id $ Se.In $ getId <$> driverIds, Se.Is BeamP.merchantId $ Se.Eq merchantId ]] (Se.Asc BeamP.firstName) Nothing Nothing
+--       dlList <- findAllDriverLocations' dbCOnf' (getId . (Person.id :: PersonE e -> Id Person) <$> personList)
+--       infoList <- either (pure []) (QueriesDI.transformBeamDriverInformationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDI.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> personList]
+--       vehicleList <- either (pure []) (QV.transformBeamVehicleToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamV.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> personList]
+--       let pDl = foldl' (getPersonWithlocation dlList) [] personList
+--       let pDlInfo = foldl' (getPersonWithInfo infoList) [] pDl
+--       let pDlInfoVeh = foldl' (getPersonWithVehicle vehicleList) [] pDlInfo
+--       pure $ map mkFullDriver pDlInfoVeh
+--     Nothing -> pure []
+--   where
+--     getPersonWithlocation dlList acc person' =
+--       let dlList' = filter (\dl -> dl.driverId == person'.id) dlList
+--        in acc <> ((\dl -> (person', dl)) <$> dlList')
 
-    getPersonWithInfo infoList acc (person', dl') =
-      let infoList' = filter (\info -> info.driverId == person'.id) infoList
-       in acc <> ((\info -> (person', dl', info)) <$> infoList')
+--     getPersonWithInfo infoList acc (person', dl') =
+--       let infoList' = filter (\info -> info.driverId == person'.id) infoList
+--        in acc <> ((\info -> (person', dl', info)) <$> infoList')
 
-    getPersonWithVehicle vehicleList acc (person', dl', info') =
-      let vehicleList' = filter (\vehicle -> vehicle.driverId == person'.id) vehicleList
-       in acc <> ((\vehicle -> (person', dl', info', vehicle)) <$> vehicleList')
+--     getPersonWithVehicle vehicleList acc (person', dl', info') =
+--       let vehicleList' = filter (\vehicle -> vehicle.driverId == person'.id) vehicleList
+--        in acc <> ((\vehicle -> (person', dl', info', vehicle)) <$> vehicleList')
 
-    findAllDriverLocations' dbCOnf' driverIdList = do
-      conn <- L.getOrInitSqlConn dbCOnf'
-      case conn of
-        Right c -> do
-          geoms <-
-            L.runDB c $
-              L.findRows $
-                B.select $
-                  B.filter_' (\BeamDL.DriverLocationT {..} -> B.sqlBool_ (driverId `B.in_` (B.val_ <$> driverIdList))) $
-                    B.all_ (meshModelTableEntity @BeamDL.DriverLocationT @Postgres @(Se.DatabaseWith BeamDL.DriverLocationT))
-          pure (either (const []) (QDL.transformBeamDriverLocationToDomain <$>) geoms)
-        Left _ -> pure []
+--     findAllDriverLocations' dbCOnf' driverIdList = do
+--       conn <- L.getOrInitSqlConn dbCOnf'
+--       case conn of
+--         Right c -> do
+--           geoms <-
+--             L.runDB c $
+--               L.findRows $
+--                 B.select $
+--                   B.filter_' (\BeamDL.DriverLocationT {..} -> B.sqlBool_ (driverId `B.in_` (B.val_ <$> driverIdList))) $
+--                     B.all_ (meshModelTableEntity @BeamDL.DriverLocationT @Postgres @(Se.DatabaseWith BeamDL.DriverLocationT))
+--           pure (either (const []) (QDL.transformBeamDriverLocationToDomain <$>) geoms)
+--         Left _ -> pure []
 
 data DriverWithRidesCount = DriverWithRidesCount
   { person :: Person,
@@ -1329,9 +1330,19 @@ getNearestDriversCurrentlyOnRide mbVariant LatLong {..} radiusMeters merchantId 
       where
         getResult var cond = [NearestDriversResultCurrentlyOnRide (cast personId) mbDeviceToken mblang onRide dlat dlon var destinationEndLat destinationEndLon (roundToIntegral dist) (roundToIntegral distanceFromDriverToDestination) mode | cond]
 
+linkArrayListForOnRide :: [DriverQuote] -> [Booking.Booking] -> [BookingLocation] -> [DriverLocation] -> [DriverInformation] -> [Vehicle] -> [Person] -> LatLong -> Double -> Maybe Variant -> [(Id Person, Maybe FCM.FCMRecipientToken, Maybe Maps.Language, Bool, Bool, Bool, Bool, Double, Double, Variant, Double, Double, Double, Double, Maybe DriverInfo.DriverMode)]
+linkArrayListForOnRide driverQuotes bookings bookingLocs driverLocations driverInformations vehicles persons LatLong {..} onRideRadius mbVariant =
+  let locationHashMap = buildLocationHashMap driverLocations
+      personHashMap = buildPersonHashMap persons
+      quotesHashMap = buildQuotesHashMap driverQuotes
+      bookingHashMap = buildBookingHashMap bookings
+      bookingLocsHashMap = buildBookingLocsHashMap bookingLocs
+      driverInfoHashMap = buildDriverInfoHashMap driverInformations
+   in mapMaybe (buildFullDriverListOnRide quotesHashMap bookingHashMap bookingLocsHashMap locationHashMap driverInfoHashMap personHashMap LatLong {..} onRideRadius mbVariant) vehicles
+
 -- this query is incomplete and not being used currently -- don't forget to add argument LatLong {..} and datatype while completing the query -- TODO
 getNearestDriversCurrentlyOnRide' :: (L.MonadFlow m, Log m, MonadTime m) => Maybe Variant -> Int -> Id Merchant -> Maybe Seconds -> Int -> m [NearestDriversResultCurrentlyOnRide]
-getNearestDriversCurrentlyOnRide' mbVariant radiusMeters (Id merchantId) mbDriverPositionInfoExpiry reduceRadiusValue = do
+getNearestDriversCurrentlyOnRide' mbVariant radiusMeters (Id merchantId') mbDriverPositionInfoExpiry reduceRadiusValue = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   now <- getCurrentTime
   -- let distanceFromDestinationToPickup = Utils.getPoint (lat, lon)
@@ -1345,7 +1356,7 @@ getNearestDriversCurrentlyOnRide' mbVariant radiusMeters (Id merchantId) mbDrive
             Mesh.meshConfig
             [ Se.And
                 [ Se.Is BeamP.role $ Se.Eq Person.DRIVER,
-                  Se.Is BeamP.merchantId $ Se.Eq merchantId
+                  Se.Is BeamP.merchantId $ Se.Eq merchantId'
                 ]
             ]
             (Se.Asc BeamP.firstName)
@@ -1405,7 +1416,7 @@ getNearestDriversCurrentlyOnRide' mbVariant radiusMeters (Id merchantId) mbDrive
             dbCOnf'
             Mesh.meshConfig
             [ Se.And
-                [ Se.Is BeamB.quoteId $ Se.In $ getId . DQ.id <$> driverQuoteList,
+                [ Se.Is BeamB.quoteId $ Se.In $ getId . DriverQuote.id <$> driverQuoteList,
                   Se.Is BeamB.status $ Se.Eq Booking.TRIP_ASSIGNED
                 ] -- Se.Is Se.LessThan $ Utils.getPoint( BeamB.toLocation.lat, BeamB.toLocation.lon) <->. DDL. <$> dlList
             ]
@@ -1553,7 +1564,7 @@ buildFullDriverListOnRide quotesHashMap bookingHashMap bookingLocsHashMap locati
         then Just (person.id, person.deviceToken, person.language, info.onRide, info.canDowngradeToSedan, info.canDowngradeToHatchback, info.canDowngradeToTaxi, location.lat, location.lon, vehicle.variant, bookingLocation.lat, bookingLocation.lon, distanceFromDriverToDestination + distanceFromDestinationToPickup, distanceFromDriverToDestination, info.mode)
         else Nothing
 
-updateAlternateMobileNumberAndCode :: Person -> SqlDB ()
+updateAlternateMobileNumberAndCode :: (L.MonadFlow m, MonadTime m) => Person -> m (MeshResult ())
 updateAlternateMobileNumberAndCode person = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   now <- getCurrentTime

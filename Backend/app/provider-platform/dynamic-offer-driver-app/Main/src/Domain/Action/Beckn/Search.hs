@@ -37,13 +37,19 @@ import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import qualified Domain.Types.SearchRequestSpecialZone as DSRSZ
 import qualified Domain.Types.Vehicle as DVeh
 import Environment
+-- import Kernel.Serviceability
+-- import qualified Kernel.Storage.Esqueleto as Esq
+-- import qualified Kernel.Storage.Hedis as Redis
+
+-- import Lib.Utils
+
+-- import Kernel.External.Maps.Types
+import qualified EulerHS.Language as L
 import EulerHS.Prelude (Alternative (empty), whenJustM)
 import Kernel.External.Maps.Google.PolyLinePoints
 import Kernel.Prelude
-import Kernel.Serviceability
-import qualified Kernel.Storage.Esqueleto as Esq
-import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
+import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
@@ -169,8 +175,8 @@ handler merchant sReq = do
               result.distance
               farePolicy.vehicleVariant
               result.duration
-          -- Esq.runTransaction $
-          for_ listOfSpecialZoneQuotes QQuoteSpecialZone.create
+        -- Esq.runTransaction $
+        for_ listOfSpecialZoneQuotes QQuoteSpecialZone.create
         return (Just (mkQuoteInfo fromLocation toLocation now <$> listOfSpecialZoneQuotes), Nothing)
       else do
         driverPoolCfg <- getDriverPoolConfig merchantId result.distance
@@ -363,9 +369,32 @@ validateRequest merchantId sReq = do
   unless merchant.enabled $ throwError AgencyDisabled
   let fromLocationLatLong = sReq.pickupLocation
       toLocationLatLong = sReq.dropLocation
-  unlessM (rideServiceable merchant.geofencingConfig QGeometry.someGeometriesContain fromLocationLatLong (Just toLocationLatLong)) $
+  -- res <- QGeometry.someGeometriesContain fromLocationLatLong (Just toLocationLatLong)
+  unlessM (rideServiceable' merchant.geofencingConfig QGeometry.someGeometriesContain fromLocationLatLong (Just toLocationLatLong)) $
     throwError RideNotServiceable
   return merchant
+  where
+    rideServiceable' ::
+      ( -- EsqDBFlow m r,
+        --   EsqDBReplicaFlow m r,
+        L.MonadFlow m
+      ) =>
+      GeofencingConfig ->
+      (LatLong -> [Text] -> m Bool) ->
+      LatLong ->
+      Maybe LatLong ->
+      m Bool
+    rideServiceable' geofencingConfig someGeometriesContain origin mbDestination = do
+      originServiceable <-
+        case geofencingConfig.origin of
+          Unrestricted -> pure True
+          Regions regions -> someGeometriesContain origin regions
+      destinationServiceable <-
+        case geofencingConfig.destination of
+          Unrestricted -> pure True
+          Regions regions -> do
+            maybe (pure True) ((flip someGeometriesContain) regions) mbDestination
+      pure $ originServiceable && destinationServiceable
 
 buildSearchReqLocation :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DM.Merchant -> Text -> Maybe BA.Address -> Maybe Maps.Language -> LatLong -> m DLoc.SearchReqLocation
 buildSearchReqLocation merchantId sessionToken address customerLanguage latLong@Maps.LatLong {..} = do

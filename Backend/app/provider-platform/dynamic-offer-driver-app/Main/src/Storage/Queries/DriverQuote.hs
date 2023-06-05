@@ -67,10 +67,10 @@ findById (Id driverQuoteId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
-      sR <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDQ.id $ Se.Eq driverQuoteId]
-      case sR of
+      driverQuote <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDQ.id $ Se.Eq driverQuoteId]
+      case driverQuote of
         Left _ -> pure Nothing
-        Right x -> mapM transformBeamDriverQuoteToDomain x
+        Right driverQuote' -> mapM transformBeamDriverQuoteToDomain driverQuote'
     Nothing -> pure Nothing
 
 -- setInactiveByRequestId :: Id DSReq.SearchRequest -> SqlDB ()
@@ -95,6 +95,22 @@ findActiveQuotesByDriverId (Id driverId) driverUnlockDelay = do
         Left _ -> pure []
         Right x -> mapM transformBeamDriverQuoteToDomain x
     Nothing -> pure []
+
+findDriverQuoteBySTId :: L.MonadFlow m => Id DST.SearchTry -> m (Maybe Domain.DriverQuote)
+findDriverQuoteBySTId (Id searchTryId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> do
+      driverQuote <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDQ.searchTryId $ Se.Eq searchTryId]
+      case driverQuote of
+        Left _ -> pure Nothing
+        Right driverQuote' -> mapM transformBeamDriverQuoteToDomain driverQuote'
+    Nothing -> pure Nothing
+
+-- = Esq.findOne' $ do
+--   driverQuote <- from $ table @DriverQuoteT
+--   where_ $ driverQuote ^. DriverQuoteSearchTryId ==. val (toKey searchTryId)
+--   pure driverQuote
 
 -- findAllByRequestId :: L.MonadFlow m => Id DSReq.SearchRequest -> m [Domain.DriverQuote]
 -- findAllByRequestId (Id searchReqId) = do
@@ -214,9 +230,3 @@ transformDomainDriverQuoteToBeam Domain.DriverQuote {..} =
       BeamDQ.fareParametersId = getId fareParams.id,
       BeamDQ.providerId = getId providerId
     }
-
-findDriverQuoteBySTId :: Transactionable m => Id DST.SearchTry -> DTypeBuilder m (Maybe DriverQuoteT)
-findDriverQuoteBySTId searchTryId = Esq.findOne' $ do
-  driverQuote <- from $ table @DriverQuoteT
-  where_ $ driverQuote ^. DriverQuoteSearchTryId ==. val (toKey searchTryId)
-  pure driverQuote
