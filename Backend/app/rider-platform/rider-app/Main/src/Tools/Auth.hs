@@ -131,10 +131,11 @@ verifyDashboard incomingToken = do
     then pure Dashboard
     else throwError (InvalidToken "dashboard token") -- we shouldn't show to dashboard user incoming token
 
-decryptAES128 :: (Monad m, MonadThrow m, Log m) => Base64 -> Text -> m Text
-decryptAES128 (Base64 cipherText) encryptedText = do
+decryptAES128 :: (Monad m, MonadThrow m, Log m) => Maybe Base64 -> Text -> m Text
+decryptAES128 (Just (Base64 cipherText)) encryptedText = do
   aes <- fromMaybeM (InternalError "Failed to decode CipherText") $ maybeCryptoError (cipherInit cipherText :: CryptoFailable AES128)
   let (_nonce, encrypted) = BS.splitAt 12 $ Base64.decodeLenient $ TE.encodeUtf8 encryptedText
   let iv = ivAdd nullIV 12
   let decrypted = ctrCombine aes iv encrypted
   return $ TE.decodeUtf8 decrypted
+decryptAES128 Nothing encryptedText = return encryptedText
