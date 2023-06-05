@@ -22,12 +22,10 @@ import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Database.Beam as B
-import Database.Beam.Backend
+import Database.Beam.Backend ()
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-  )
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
+-- import Database.Beam.Postgres (Postgres)
+-- import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 -- import qualified Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Domain
 
 import qualified Domain.Types.FarePolicy as Domain
@@ -36,7 +34,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize as Se
 import Storage.Tabular.Vehicle ()
@@ -50,15 +48,15 @@ instance IsString Meters where
 instance IsString Money where
   fromString = show
 
-instance FromField Domain.WaitingCharge where
-  fromField = fromFieldEnum
+-- instance FromField Domain.WaitingCharge where
+--   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.WaitingCharge where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.WaitingCharge where
+--   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.WaitingCharge
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.WaitingCharge
 
-instance FromBackendRow Postgres Domain.WaitingCharge
+-- instance FromBackendRow Postgres Domain.WaitingCharge
 
 -- instance FromField HighPrecMoney where
 --   fromField = fromFieldEnum
@@ -70,15 +68,15 @@ instance FromBackendRow Postgres Domain.WaitingCharge
 
 -- instance FromBackendRow Postgres HighPrecMoney
 
-instance FromField Domain.NightShiftCharge where
-  fromField = fromFieldEnum
+-- instance FromField Domain.NightShiftCharge where
+--   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.NightShiftCharge where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.NightShiftCharge where
+--   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.NightShiftCharge
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.NightShiftCharge
 
-instance FromBackendRow Postgres Domain.NightShiftCharge
+-- instance FromBackendRow Postgres Domain.NightShiftCharge
 
 data FarePolicySlabsDetailsSlabT f = FarePolicySlabsDetailsSlabT
   { farePolicyId :: B.C f Text,
@@ -116,9 +114,9 @@ deriving stock instance Ord Domain.WaitingChargeInfo
 
 deriving stock instance Ord Domain.NightShiftCharge
 
-deriving stock instance Read Domain.NightShiftCharge
+-- deriving stock instance Read Domain.NightShiftCharge
 
-deriving stock instance Read Domain.WaitingCharge
+-- deriving stock instance Read Domain.WaitingCharge
 
 farePolicySlabsDetailsSlabTMod :: FarePolicySlabsDetailsSlabT (B.FieldModification (B.TableField FarePolicySlabsDetailsSlabT))
 farePolicySlabsDetailsSlabTMod =

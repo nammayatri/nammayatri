@@ -14,7 +14,7 @@
 
 module Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection where
 
-import Data.Text (pack)
+-- import Data.Text (pack)
 import qualified Domain.Types.FarePolicy as DFP
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV

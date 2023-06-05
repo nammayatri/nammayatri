@@ -20,7 +20,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.Beam.SearchTry as BeamST
+import qualified Storage.Beam.SearchTry as BeamST
 import Storage.Tabular.SearchTry
 
 create :: SearchTry -> SqlDB ()
@@ -85,10 +85,10 @@ getSearchTryStatusAndValidTill searchRequestId = do
 transformBeamSearchTryToDomain :: BeamST.SearchTry -> SearchTry
 transformBeamSearchTryToDomain BeamST.SearchTryT {..} = do
   SearchTry
-    { id = Id driverId,
-      requestId = Id merchantId,
+    { id = Id id,
+      requestId = Id requestId,
       estimateId = Id estimateId,
-      messageId = Id messageId,
+      messageId = messageId,
       startTime = startTime,
       validTill = validTill,
       vehicleVariant = vehicleVariant,
@@ -104,10 +104,10 @@ transformBeamSearchTryToDomain BeamST.SearchTryT {..} = do
 transformDomainSearchTryToBeam :: SearchTry -> BeamST.SearchTry
 transformDomainSearchTryToBeam SearchTry {..} =
   BeamST.SearchTryT
-    { id = Id driverId,
-      requestId = Id merchantId,
-      estimateId = Id estimateId,
-      messageId = Id messageId,
+    { id = getId id,
+      requestId = getId requestId,
+      estimateId = getId estimateId,
+      messageId = messageId,
       startTime = startTime,
       validTill = validTill,
       vehicleVariant = vehicleVariant,

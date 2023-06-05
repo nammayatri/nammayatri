@@ -41,19 +41,19 @@ import qualified Storage.Queries.FarePolicy as Queries
 
 -- import EulerHS.KVConnector.Types
 
-getUpdatedFarePolicy :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Maybe Vehicle.Variant -> Meters -> FarePolicy -> m FarePolicy
-getUpdatedFarePolicy mId varId distance farePolicy = do
-  restrictedPolicy <-
-    case varId of
-      Just var -> findRestrictedFareListByMerchantAndVehicle mId var
-      Nothing -> findRestrictedFareListByMerchant mId
-  pure $ maybe farePolicy (updateMaxExtraFare farePolicy) (restrictedFair restrictedPolicy)
-  where
-    updateMaxExtraFare FarePolicy {..} maxFee = FarePolicy {driverExtraFeeBounds = driverExtraFeeBounds <&> \b -> b {maxFee}, ..}
-    restrictedFair fares =
-      case find (\fare -> fare.minTripDistance <= distance) fares of
-        Just fare -> Just (fare.driverMaxExtraFare)
-        Nothing -> Nothing
+-- getUpdatedFarePolicy :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Maybe Vehicle.Variant -> Meters -> FarePolicy -> m FarePolicy
+-- getUpdatedFarePolicy mId varId distance farePolicy = do
+--   restrictedPolicy <-
+--     case varId of
+--       Just var -> findRestrictedFareListByMerchantAndVehicle mId var
+--       Nothing -> findRestrictedFareListByMerchant mId
+--   pure $ maybe farePolicy (updateMaxExtraFare farePolicy) (restrictedFair restrictedPolicy)
+--   where
+--     updateMaxExtraFare FarePolicy {..} maxFee = FarePolicy {driverExtraFeeBounds = driverExtraFeeBounds <&> \b -> b {maxFee}, ..}
+--     restrictedFair fares =
+--       case find (\fare -> fare.minTripDistance <= distance) fares of
+--         Just fare -> Just (fare.driverMaxExtraFare)
+--         Nothing -> Nothing
 
 findById :: (CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> m (Maybe FarePolicy)
 findById id =

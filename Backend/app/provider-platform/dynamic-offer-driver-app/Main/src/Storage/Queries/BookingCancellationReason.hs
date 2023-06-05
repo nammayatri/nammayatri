@@ -24,6 +24,7 @@ import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import EulerHS.Prelude as P hiding ((^.))
+import Kernel.External.Maps.Types (LatLong (..), lat, lon)
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
@@ -97,7 +98,9 @@ transformBeamBookingCancellationReasonToDomain BeamBCR.BookingCancellationReason
       rideId = Id <$> rideId,
       source = source,
       reasonCode = CancellationReasonCode <$> reasonCode,
-      additionalInfo = additionalInfo
+      additionalInfo = additionalInfo,
+      driverCancellationLocation = LatLong <$> driverCancellationLocationLat <*> driverCancellationLocationLon,
+      driverDistToPickup = driverDistToPickup
     }
 
 transformDomainBookingCancellationReasonToBeam :: BookingCancellationReason -> BeamBCR.BookingCancellationReason
@@ -108,5 +111,8 @@ transformDomainBookingCancellationReasonToBeam BookingCancellationReason {..} =
       BeamBCR.rideId = getId <$> rideId,
       BeamBCR.source = source,
       BeamBCR.reasonCode = (\(CancellationReasonCode x) -> x) <$> reasonCode,
-      BeamBCR.additionalInfo = additionalInfo
+      BeamBCR.additionalInfo = additionalInfo,
+      BeamBCR.driverCancellationLocationLat = lat <$> driverCancellationLocation,
+      BeamBCR.driverCancellationLocationLon = lon <$> driverCancellationLocation,
+      BeamBCR.driverDistToPickup = driverDistToPickup
     }

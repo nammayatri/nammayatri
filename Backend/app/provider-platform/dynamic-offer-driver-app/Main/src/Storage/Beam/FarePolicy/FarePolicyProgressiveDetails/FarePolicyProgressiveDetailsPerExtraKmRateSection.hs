@@ -34,18 +34,18 @@ import qualified Database.Beam as B
 
 -- import Lib.Utils
 
-import Database.Beam.Backend
+-- import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
-import qualified Domain.Types.FarePolicy
-import qualified Domain.Types.FarePolicy as Domain
+-- import Database.Beam.Postgres
+-- import Database.PostgreSQL.Simple.FromField (FromField, fromField)
+-- import qualified Domain.Types.FarePolicy
+-- import qualified Domain.Types.FarePolicy as Domain
 import qualified Domain.Types.Vehicle.Variant as Vehicle
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize as Se
 import Storage.Tabular.Vehicle ()

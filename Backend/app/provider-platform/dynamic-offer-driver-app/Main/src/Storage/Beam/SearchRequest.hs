@@ -29,7 +29,7 @@ import Database.Beam.Postgres
   ( Postgres,
   )
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
-import qualified Domain.Types.SearchRequest as Domain
+-- import qualified Domain.Types.SearchRequest as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant (Variant)
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
@@ -111,10 +111,6 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be BaseUrl
 data SearchRequestT f = SearchRequestT
   { id :: B.C f Text,
     transactionId :: B.C f Text,
-    -- messageId :: B.C f Text,
-    -- estimateId :: B.C f Text,
-    -- startTime :: B.C f Time.UTCTime,
-    -- validTill :: B.C f Time.UTCTime,
     providerId :: B.C f Text,
     fromLocationId :: B.C f Text,
     toLocationId :: B.C f Text,
@@ -124,12 +120,8 @@ data SearchRequestT f = SearchRequestT
     estimatedDuration :: B.C f Seconds,
     customerLanguage :: B.C f (Maybe Maps.Language),
     device :: B.C f (Maybe Text),
-    -- status :: B.C f Domain.SearchRequestStatus,
-    vehicleVariant :: B.C f Variant.Variant,
-    searchRepeatCounter :: B.C f Int,
     autoAssignEnabled :: B.C f Bool,
     createdAt :: B.C f Time.UTCTime
-    -- updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -183,10 +175,6 @@ searchRequestTMod =
   B.tableModification
     { id = B.fieldNamed "id",
       transactionId = B.fieldNamed "transaction_id",
-      -- messageId = B.fieldNamed "message_id",
-      -- estimateId = B.fieldNamed "estimate_id",
-      -- startTime = B.fieldNamed "start_time",
-      -- validTill = B.fieldNamed "valid_till",
       providerId = B.fieldNamed "provider_id",
       fromLocationId = B.fieldNamed "from_location_id",
       toLocationId = B.fieldNamed "to_location_id",
@@ -196,12 +184,8 @@ searchRequestTMod =
       estimatedDuration = B.fieldNamed "estimated_duration",
       customerLanguage = B.fieldNamed "customer_language",
       device = B.fieldNamed "device",
-      -- status = B.fieldNamed "status",
-      vehicleVariant = B.fieldNamed "vehicle_variant",
-      searchRepeatCounter = B.fieldNamed "search_repeat_counter",
       autoAssignEnabled = B.fieldNamed "auto_assign_enabled",
       createdAt = B.fieldNamed "created_at"
-      -- updatedAt = B.fieldNamed "updated_at"
     }
 
 psToHs :: HM.HashMap Text Text

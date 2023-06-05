@@ -73,15 +73,25 @@ import qualified Tools.Maps as Maps
 
 -- instance FromBackendRow Postgres Seconds
 
--- instance FromField Domain.SearchTryStatus where
---   fromField = fromFieldEnum
+instance FromField Domain.SearchTryStatus where
+  fromField = fromFieldEnum
 
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.SearchTryStatus where
---   sqlValueSyntax = autoSqlValueSyntax
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.SearchTryStatus where
+  sqlValueSyntax = autoSqlValueSyntax
 
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.SearchTryStatus
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.SearchTryStatus
 
--- instance FromBackendRow Postgres Domain.SearchTryStatus
+instance FromBackendRow Postgres Domain.SearchTryStatus
+
+instance FromField Domain.SearchRepeatType where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.SearchRepeatType where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.SearchRepeatType
+
+instance FromBackendRow Postgres Domain.SearchRepeatType
 
 -- instance FromField Meters where
 --   fromField = fromFieldEnum

@@ -24,7 +24,7 @@ import Kernel.Prelude
 
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
-import Kernel.Utils.Common
+-- import Kernel.Utils.Common
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequest as BeamSR
@@ -203,11 +203,7 @@ transformBeamSearchRequestToDomain BeamSR.SearchRequestT {..} = do
   pure
     SearchRequest
       { id = Id id,
-        -- estimateId = Id estimateId,
         transactionId = transactionId,
-        -- messageId = messageId,
-        -- startTime = startTime,
-        -- validTill = validTill,
         providerId = Id providerId,
         fromLocation = fromJust fl,
         toLocation = fromJust tl,
@@ -218,22 +214,14 @@ transformBeamSearchRequestToDomain BeamSR.SearchRequestT {..} = do
         customerLanguage = customerLanguage,
         device = device,
         createdAt = createdAt,
-        -- updatedAt = updatedAt,
-        -- vehicleVariant = vehicleVariant,
-        -- status = status,
         autoAssignEnabled = autoAssignEnabled
-        -- searchRepeatCounter = searchRepeatCounter
       }
 
 transformDomainSearchRequestToBeam :: SearchRequest -> BeamSR.SearchRequest
 transformDomainSearchRequestToBeam SearchRequest {..} =
   BeamSR.SearchRequestT
     { BeamSR.id = getId id,
-      -- BeamSR.estimateId = getId estimateId,
       BeamSR.transactionId = transactionId,
-      -- BeamSR.messageId = messageId,
-      -- BeamSR.startTime = startTime,
-      -- BeamSR.validTill = validTill,
       BeamSR.providerId = getId providerId,
       BeamSR.fromLocationId = getId fromLocation.id,
       BeamSR.toLocationId = getId toLocation.id,
@@ -241,14 +229,10 @@ transformDomainSearchRequestToBeam SearchRequest {..} =
       BeamSR.bapUri = showBaseUrl bapUri,
       BeamSR.estimatedDistance = estimatedDistance,
       BeamSR.estimatedDuration = estimatedDuration,
-      -- BeamSR.customerExtraFee = customerExtraFee,
+      BeamSR.customerLanguage = customerLanguage,
       BeamSR.device = device,
       BeamSR.createdAt = createdAt,
-      -- BeamSR.updatedAt = updatedAt,
-      -- BeamSR.vehicleVariant = vehicleVariant,
-      -- BeamSR.status = status,
       BeamSR.autoAssignEnabled = autoAssignEnabled
-      -- BeamSR.searchRepeatCounter = searchRepeatCounter
     }
 
 -- findByTransactionId ::

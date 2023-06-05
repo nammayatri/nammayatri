@@ -30,7 +30,7 @@ import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequestSpecialZone as BeamSRSZ
 import Storage.Queries.SearchRequest.SearchReqLocation as QSRL
-import Storage.Tabular.SearchRequestSpecialZone
+-- import Storage.Tabular.SearchRequestSpecialZone
 
 -- import Storage.Tabular.SearchRequest.SearchReqLocation
 import Storage.Tabular.SearchRequestSpecialZone

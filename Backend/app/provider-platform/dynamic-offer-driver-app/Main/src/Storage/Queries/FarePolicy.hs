@@ -33,7 +33,7 @@ import Data.List.NonEmpty
 
 -- import Storage.Tabular.FarePolicy.Instances
 
-import Data.List.NonEmpty (NonEmpty (..), nonEmpty, toList)
+-- import Data.List.NonEmpty (NonEmpty (..), nonEmpty, toList)
 import Domain.Types.FarePolicy as Domain
 import Domain.Types.Merchant
 import Domain.Types.Vehicle.Variant (Variant)

@@ -17,15 +17,15 @@ module Storage.Queries.DriverQuote where
 -- import Storage.Queries.FullEntityBuilders (buildFullDriverQuote)
 
 import Data.Int (Int32)
-import qualified Database.Beam as B
-import Database.Beam.Postgres
+-- import qualified Database.Beam as B
+-- import Database.Beam.Postgres
 import qualified Domain.Types.DriverQuote as Domain
 import Domain.Types.Person
 import qualified Domain.Types.SearchTry as DST
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
-import EulerHS.KVConnector.Utils (meshModelTableEntity)
+-- import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
@@ -33,12 +33,13 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common (addUTCTime, secondsToNominalDiffTime)
 import qualified Lib.Mesh as Mesh
-import Sequelize
+-- import Sequelize
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverQuote as BeamDQ
 import Storage.Queries.FareParameters as BeamQFP
 import Storage.Queries.FullEntityBuilders (buildFullDriverQuote)
 import Storage.Tabular.DriverQuote
+import qualified Storage.Tabular.FareParameters as Fare
 
 -- import qualified Storage.Tabular.FareParameters.Instances as FareParamsT
 
