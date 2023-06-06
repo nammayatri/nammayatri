@@ -121,7 +121,8 @@ handler transporter req quote = do
           _ <- QRideD.create rideDetails
           QBE.logRideConfirmedEvent booking.id
           QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id
-          Esq.runTransaction $ QDQ.setInactiveBySTId driverQuote.searchTryId
+          -- Esq.runTransaction $
+          _ <- QDQ.setInactiveBySTId driverQuote.searchTryId
           _ <- QSRD.setInactiveBySTId driverQuote.searchTryId
           _ <- DLoc.updateOnRide (cast driver.id) True booking.providerId
 
