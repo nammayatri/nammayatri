@@ -57,12 +57,14 @@ import Kernel.Utils.Version
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.Booking as BeamB
+import qualified Storage.Beam.Booking.BookingLocation as BeamBBL
 import qualified Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Beam.DriverLocation as BeamDL
 import qualified Storage.Beam.DriverQuote as BeamDQ
 import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Beam.Vehicle as BeamV
 import qualified Storage.Queries.Booking as QB
+import qualified Storage.Queries.Booking.BookingLocation as QueriesBBL
 import qualified Storage.Queries.DriverInformation as QueriesDI
 import qualified Storage.Queries.DriverLocation as QDL
 import qualified Storage.Queries.DriverLocation as QueriesDL
@@ -481,6 +483,22 @@ getBookingLocs bookings = do
     return bookingLoc
   where
     toLocKeys = toKey . cast <$> fetchToLocationIDFromBooking bookings
+
+getBookingLocs' ::
+  L.MonadFlow m =>
+  [Booking.Booking] ->
+  m [BookingLocation]
+getBookingLocs' bookings = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> do
+      bookingLoc <- KV.findAllWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamBBL.id $ Se.In toLocKeys]
+      case bookingLoc of
+        Left _ -> pure []
+        Right bookingLoc' -> pure $ QueriesBBL.transformBeamBookingLocationToDomain <$> bookingLoc'
+    Nothing -> pure []
+  where
+    toLocKeys = getId <$> fetchToLocationIDFromBooking bookings
 
 getDriverLocsFromMerchId ::
   (Transactionable m, MonadTime m) =>
