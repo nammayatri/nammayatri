@@ -58,18 +58,27 @@ import Kernel.Utils.Version
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.Booking as BeamB
-import qualified Storage.Beam.Booking.BookingLocation as BeamBBL
+-- import qualified Storage.Beam.DriverLocation as BeamDL
+
+-- import Domain.Types.DriverQuote as DDQ
+
+-- import qualified Storage.Queries.FareParameters as QueriesFP
+-- import qualified Storage.Beam.FareParameters as BeamFP
+import qualified Storage.Beam.Booking.BookingLocation as BeamBL
 import qualified Storage.Beam.DriverInformation as BeamDI
+-- import qualified Kernel.Prelude
 import qualified Storage.Beam.DriverLocation as BeamDL
 import qualified Storage.Beam.DriverQuote as BeamDQ
 import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Beam.Vehicle as BeamV
 import qualified Storage.Queries.Booking as QB
-import qualified Storage.Queries.Booking.BookingLocation as QueriesBBL
+import qualified Storage.Queries.Booking as QueriesB
+import qualified Storage.Queries.Booking.BookingLocation as QueriesBL
 import qualified Storage.Queries.DriverInformation as QueriesDI
 import qualified Storage.Queries.DriverLocation as QDL
 import qualified Storage.Queries.DriverLocation as QueriesDL
 import qualified Storage.Queries.DriverQuote as QDQ
+import qualified Storage.Queries.DriverQuote as QueriesDQ
 import Storage.Queries.FullEntityBuilders
 import qualified Storage.Queries.Vehicle as QV
 import qualified Storage.Queries.Vehicle as QueriesV
@@ -84,6 +93,8 @@ import Storage.Tabular.DriverQuote
 import Storage.Tabular.Person as TPerson
 import Storage.Tabular.Ride
 import Storage.Tabular.Vehicle as Vehicle
+
+-- import Lib.Utils as Utils
 
 -- create :: Person -> SqlDB ()
 -- create = Esq.create
@@ -456,6 +467,44 @@ getDriverQuote persons =
   where
     personsKeys = toKey . cast <$> fetchDriverIDsFromPersons persons
 
+getDriverQuote' ::
+  (L.MonadFlow m, Log m) =>
+  [Person] ->
+  m [DriverQuote]
+getDriverQuote' persons = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> do
+      do
+        res <-
+          KV.findAllWithKVConnector
+            dbConf'
+            Mesh.meshConfig
+            [ Se.And [Se.Is BeamDQ.driverId $ Se.In personKeys, Se.Is BeamDQ.status $ Se.Eq DriverQuote.Active]
+            ]
+        case res of
+          Left _ -> pure []
+          Right res' -> traverse QueriesDQ.transformBeamDriverQuoteToDomain res'
+
+    -- fareParam <- do
+    --   res <- KV.findAllWithKVConnector
+    --       dbConf'
+    --       Mesh.meshConfig
+    --       [ Se.And [Se.Is BeamFP.id $ Se.In $ getId . DDQ.fareParams.id <$> driverQuotes ]
+    --       ]
+    --   case res of
+    --     Left _ -> pure []
+    --     Right res' -> traverse QueriesFP.transformBeamFareParametersToDomain res'
+    -- let dqWithFP = foldl' (getDriverQuoteWithFareParam fareParam) [] driverQuotes
+    -- pure dqWithFP
+    Nothing -> pure []
+  where
+    personKeys = getId <$> fetchDriverIDsFromPersons persons
+
+-- getDriverQuoteWithFareParam fareParams acc dq' =
+--   let fareParams' = filter(\x -> x.id == dq'.fareParams.id) fareParams
+--    in acc <> dq' <$> fareParams'
+
 getBookingInfo ::
   Transactionable m =>
   [DriverQuote] ->
@@ -469,6 +518,27 @@ getBookingInfo driverQuote = buildDType $ do
           &&. booking ^. BookingStatus ==. val Booking.TRIP_ASSIGNED
       return booking
   catMaybes <$> mapM buildFullBooking res
+  where
+    personsKeys = fetchDriverIDsTextFromQuote driverQuote
+
+getBookingInfo' ::
+  (L.MonadFlow m, Log m) =>
+  [DriverQuote] ->
+  m [Booking.Booking]
+getBookingInfo' driverQuote = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> do
+      res <-
+        KV.findAllWithKVConnector
+          dbConf'
+          Mesh.meshConfig
+          [ Se.And [Se.Is BeamB.quoteId $ Se.In personsKeys, Se.Is BeamB.status $ Se.Eq Booking.TRIP_ASSIGNED]
+          ]
+      case res of
+        Left _ -> pure []
+        Right res' -> traverse QueriesB.transformBeamBookingToDomain res'
+    Nothing -> pure []
   where
     personsKeys = fetchDriverIDsTextFromQuote driverQuote
 
@@ -486,20 +556,24 @@ getBookingLocs bookings = do
     toLocKeys = toKey . cast <$> fetchToLocationIDFromBooking bookings
 
 getBookingLocs' ::
-  L.MonadFlow m =>
+  (L.MonadFlow m, Log m) =>
   [Booking.Booking] ->
   m [BookingLocation]
 getBookingLocs' bookings = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> do
-      bookingLoc <- KV.findAllWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamBBL.id $ Se.In toLocKeys]
-      case bookingLoc of
+      res <-
+        KV.findAllWithKVConnector
+          dbConf'
+          Mesh.meshConfig
+          [Se.Is BeamBL.id $ Se.In bookingKeys]
+      case res of
         Left _ -> pure []
-        Right bookingLoc' -> pure $ QueriesBBL.transformBeamBookingLocationToDomain <$> bookingLoc'
+        Right res' -> pure $ QueriesBL.transformBeamBookingLocationToDomain <$> res'
     Nothing -> pure []
   where
-    toLocKeys = getId <$> fetchToLocationIDFromBooking bookings
+    bookingKeys = getId <$> fetchToLocationIDFromBooking bookings
 
 getDriverLocsFromMerchId ::
   (Transactionable m, MonadTime m) =>
@@ -520,6 +594,26 @@ getDriverLocsFromMerchId mbDriverPositionInfoExpiry LatLong {..} radiusMeters me
         &&. buildRadiusWithin (driverLoc ^. DriverLocationPoint) (lat, lon) (val radiusMeters)
     orderBy [asc (driverLoc ^. DriverLocationPoint <->. Esq.getPoint (val lat, val lon))]
     return driverLoc
+
+-- getDriverLocsFromMerchId' :: (L.MonadFlow m, Log m, MonadTime m) =>
+--   Maybe Seconds ->
+--   LatLong ->
+--   Int ->
+--   Id Merchant ->
+--   m [DriverLocation]
+-- getDriverLocsFromMerchId' mbDriverPositionInfoExpiry LatLong {..} radiusMeters (Id merchantId) = do
+--   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   case dbConf of
+--     Just dbConf' -> do
+--       res <- KV.findAllWithKVConnector
+--           dbConf'
+--           Mesh.meshConfig
+--           [ Se.And [Se.Is BeamDL.merchantId $ Se.Eq  merchantId,Se.Is Utils.buildRadiusWithin' (lat, lon) (radiusMeters)]
+--             ]
+--       case res of
+--         Left _ -> pure []
+--         Right res' -> pure $ QueriesDL.transformBeamDriverLocationToDomain<$> res'
+--     Nothing -> pure []
 
 fetchDriverIDsFromDriverQuotes :: [DriverQuote] -> [Id Person]
 fetchDriverIDsFromDriverQuotes = map DriverQuote.driverId
