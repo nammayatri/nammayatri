@@ -22,13 +22,11 @@ import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchTry as BeamST
-import Storage.Tabular.SearchTry
 
 -- create :: SearchTry -> SqlDB ()
 -- create = Esq.create
@@ -84,20 +82,42 @@ findLastByRequestId (Id searchRequest) = do
     headMaybe [] = Nothing
     headMaybe (a : _) = Just a
 
+-- cancelActiveTriesByRequestId ::
+--   Id SearchRequest ->
+--   SqlDB ()
+-- cancelActiveTriesByRequestId searchId = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ SearchTryUpdatedAt =. val now,
+--         SearchTryStatus =. val CANCELLED
+--       ]
+--     where_ $
+--       tbl ^. SearchTryRequestId ==. val (toKey searchId)
+--         &&. tbl ^. SearchTryStatus ==. val ACTIVE
+
 cancelActiveTriesByRequestId ::
+  (L.MonadFlow m, MonadTime m) =>
   Id SearchRequest ->
-  SqlDB ()
-cancelActiveTriesByRequestId searchId = do
+  m (MeshResult ())
+cancelActiveTriesByRequestId (Id searchId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
   now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ SearchTryUpdatedAt =. val now,
-        SearchTryStatus =. val CANCELLED
-      ]
-    where_ $
-      tbl ^. SearchTryRequestId ==. val (toKey searchId)
-        &&. tbl ^. SearchTryStatus ==. val ACTIVE
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        Mesh.meshConfig
+        [ Se.Set BeamST.status CANCELLED,
+          Se.Set BeamST.updatedAt now
+        ]
+        [ Se.And
+            [ Se.Is BeamST.requestId $ Se.Eq searchId,
+              Se.Is BeamST.status $ Se.Eq ACTIVE
+            ]
+        ]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 -- updateStatus ::
 --   Id SearchTry ->
@@ -133,16 +153,34 @@ updateStatus (Id searchId) status_ = do
           [Se.Is BeamST.id $ Se.Eq searchId]
     Nothing -> pure ()
 
+-- getSearchTryStatusAndValidTill ::
+--   (Transactionable m) =>
+--   Id SearchTry ->
+--   m (Maybe (UTCTime, SearchTryStatus))
+-- getSearchTryStatusAndValidTill searchRequestId = do
+--   findOne $ do
+--     searchT <- from $ table @SearchTryT
+--     where_ $
+--       searchT ^. SearchTryTId ==. val (toKey searchRequestId)
+--     return (searchT ^. SearchTryValidTill, searchT ^. SearchTryStatus)
+
 getSearchTryStatusAndValidTill ::
-  (Transactionable m) =>
+  (L.MonadFlow m) =>
   Id SearchTry ->
   m (Maybe (UTCTime, SearchTryStatus))
-getSearchTryStatusAndValidTill searchRequestId = do
-  findOne $ do
-    searchT <- from $ table @SearchTryT
-    where_ $
-      searchT ^. SearchTryTId ==. val (toKey searchRequestId)
-    return (searchT ^. SearchTryValidTill, searchT ^. SearchTryStatus)
+getSearchTryStatusAndValidTill (Id searchRequestId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> do
+      result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamST.id $ Se.Eq searchRequestId]
+      case result of
+        Left _ -> pure Nothing
+        Right val' -> do
+          let searchTries = transformBeamSearchTryToDomain <$> val'
+          let validTill = Domain.validTill <$> searchTries
+          let status = Domain.status <$> searchTries
+          pure $ (,) <$> validTill <*> status
+    Nothing -> pure Nothing
 
 transformBeamSearchTryToDomain :: BeamST.SearchTry -> SearchTry
 transformBeamSearchTryToDomain BeamST.SearchTryT {..} = do

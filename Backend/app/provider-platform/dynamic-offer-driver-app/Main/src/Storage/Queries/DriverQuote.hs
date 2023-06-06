@@ -80,10 +80,22 @@ findById (Id driverQuoteId) = do
 --   set p [DriverQuoteStatus =. val Domain.Inactive]
 --   where_ $ p ^. DriverQuoteSearchRequestId ==. val (toKey searchReqId)
 
-setInactiveBySTId :: Id DST.SearchTry -> SqlDB ()
-setInactiveBySTId searchTryId = Esq.update $ \p -> do
-  set p [DriverQuoteStatus =. val Domain.Inactive]
-  where_ $ p ^. DriverQuoteSearchTryId ==. val (toKey searchTryId)
+-- setInactiveBySTId :: Id DST.SearchTry -> SqlDB ()
+-- setInactiveBySTId searchTryId = Esq.update $ \p -> do
+--   set p [DriverQuoteStatus =. val Domain.Inactive]
+--   where_ $ p ^. DriverQuoteSearchTryId ==. val (toKey searchTryId)
+
+setInactiveBySTId :: L.MonadFlow m => Id DST.SearchTry -> m (MeshResult ())
+setInactiveBySTId (Id searchTryId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' ->
+      KV.updateWoReturningWithKVConnector
+        dbCOnf'
+        Mesh.meshConfig
+        [Se.Set BeamDQ.status Domain.Inactive]
+        [Se.Is BeamDQ.searchTryId $ Se.Eq searchTryId]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 findActiveQuotesByDriverId :: (L.MonadFlow m, MonadTime m) => Id Person -> Seconds -> m [Domain.DriverQuote]
 findActiveQuotesByDriverId (Id driverId) driverUnlockDelay = do
