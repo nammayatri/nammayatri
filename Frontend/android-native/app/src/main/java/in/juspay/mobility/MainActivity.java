@@ -534,8 +534,6 @@ public class MainActivity extends AppCompatActivity {
         if (hyperServices != null) {
             hyperServices.terminate();
         }
-        unregisterReceiver(gpsReceiver);
-        unregisterReceiver(networkBroadcastReceiver);
         NetworkBroadcastReceiver.deRegisterProcessCallback(processCallBack);
         MyFirebaseMessagingService.deRegisterBundleUpdateCallback(bundleUpdateCallBack);
         super.onDestroy();
