@@ -133,20 +133,6 @@ cancelActiveTriesByRequestId (Id searchId) = do
 --       ]
 --     where_ $ tbl ^. SearchTryTId ==. val (toKey searchId)
 
--- updateStatus ::
---   Id SearchTry ->
---   SearchTryStatus ->
---   SqlDB ()
--- updateStatus searchId status_ = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ SearchTryUpdatedAt =. val now,
---         SearchTryStatus =. val status_
---       ]
---     where_ $ tbl ^. SearchTryTId ==. val (toKey searchId)
-
 updateStatus ::
   (L.MonadFlow m, MonadTime m) =>
   Id SearchTry ->
