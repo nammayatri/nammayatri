@@ -61,54 +61,11 @@ findById (Id searchTry) = do
 --     Esq.limit 1
 --     return searchTryT
 
-findById' :: L.MonadFlow m => Id SearchTry -> m (Maybe SearchTry)
-findById' (Id searchTry) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
-  case dbConf of
-    Just dbConf' -> either (pure Nothing) (transformBeamSearchTryToDomain <$>) <$> KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamST.id $ Se.Eq searchTry]
-    Nothing -> pure Nothing
-
 findLastByRequestId ::
   L.MonadFlow m =>
   Id SearchRequest ->
   m (Maybe SearchTry)
 findLastByRequestId (Id searchRequest) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
-  case dbConf of
-    Just dbConf' -> do
-      _ <- do
-        result <- KV.findAllWithOptionsKVConnector dbConf' Mesh.meshConfig [Se.Is BeamST.id $ Se.Eq searchRequest] (Se.Desc BeamST.searchRepeatCounter) (Just 1) Nothing
-        case result of
-          Left _ -> pure Nothing
-          Right val' ->
-            let searchtries = transformBeamSearchTryToDomain <$> val'
-             in pure $ headMaybe searchtries
-      pure Nothing
-    Nothing -> pure Nothing
-  where
-    headMaybe [] = Nothing
-    headMaybe (a : _) = Just a
-
--- cancelActiveTriesByRequestId ::
---   Id SearchRequest ->
---   SqlDB ()
--- cancelActiveTriesByRequestId searchId = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ SearchTryUpdatedAt =. val now,
---         SearchTryStatus =. val CANCELLED
---       ]
---     where_ $
---       tbl ^. SearchTryRequestId ==. val (toKey searchId)
---         &&. tbl ^. SearchTryStatus ==. val ACTIVE
-
-findLastByRequestId' ::
-  L.MonadFlow m =>
-  Id SearchRequest ->
-  m (Maybe SearchTry)
-findLastByRequestId' (Id searchRequest) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> do
