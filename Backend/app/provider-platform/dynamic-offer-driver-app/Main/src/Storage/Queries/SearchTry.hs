@@ -99,19 +99,39 @@ cancelActiveTriesByRequestId searchId = do
       tbl ^. SearchTryRequestId ==. val (toKey searchId)
         &&. tbl ^. SearchTryStatus ==. val ACTIVE
 
+-- updateStatus ::
+--   Id SearchTry ->
+--   SearchTryStatus ->
+--   SqlDB ()
+-- updateStatus searchId status_ = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ SearchTryUpdatedAt =. val now,
+--         SearchTryStatus =. val status_
+--       ]
+--     where_ $ tbl ^. SearchTryTId ==. val (toKey searchId)
+
 updateStatus ::
+  (L.MonadFlow m, MonadTime m) =>
   Id SearchTry ->
   SearchTryStatus ->
-  SqlDB ()
-updateStatus searchId status_ = do
+  m ()
+updateStatus (Id searchId) status_ = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
   now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ SearchTryUpdatedAt =. val now,
-        SearchTryStatus =. val status_
-      ]
-    where_ $ tbl ^. SearchTryTId ==. val (toKey searchId)
+  case dbConf of
+    Just dbConf' ->
+      void $
+        KV.updateWoReturningWithKVConnector
+          dbConf'
+          Mesh.meshConfig
+          [ Se.Set BeamST.status status_,
+            Se.Set BeamST.updatedAt now
+          ]
+          [Se.Is BeamST.id $ Se.Eq searchId]
+    Nothing -> pure ()
 
 getSearchTryStatusAndValidTill ::
   (Transactionable m) =>
