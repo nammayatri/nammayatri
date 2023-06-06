@@ -334,6 +334,7 @@ library
     , http-media
     , http-types
     , lens
+    , memory
     , mobility-core
     , openapi3
     , persistent
@@ -418,6 +419,7 @@ executable rider-app-exe
     , http-media
     , http-types
     , lens
+    , memory
     , mobility-core
     , openapi3
     , persistent
