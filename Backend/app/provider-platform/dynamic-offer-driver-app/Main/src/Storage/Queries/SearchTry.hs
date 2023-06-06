@@ -30,44 +30,44 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.SearchTry as BeamST
 import Storage.Tabular.SearchTry
 
-create :: SearchTry -> SqlDB ()
-create = Esq.create
+-- create :: SearchTry -> SqlDB ()
+-- create = Esq.create
 
-create' :: L.MonadFlow m => SearchTry -> m (MeshResult ())
-create' searchTry = do
+create :: L.MonadFlow m => SearchTry -> m (MeshResult ())
+create searchTry = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainSearchTryToBeam searchTry)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-findById :: Transactionable m => Id SearchTry -> m (Maybe SearchTry)
-findById = Esq.findById
+-- findById :: Transactionable m => Id SearchTry -> m (Maybe SearchTry)
+-- findById = Esq.findById
 
-findById' :: L.MonadFlow m => Id SearchTry -> m (Maybe SearchTry)
-findById' (Id searchTry) = do
+findById :: L.MonadFlow m => Id SearchTry -> m (Maybe SearchTry)
+findById (Id searchTry) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> either (pure Nothing) (transformBeamSearchTryToDomain <$>) <$> KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamST.id $ Se.Eq searchTry]
     Nothing -> pure Nothing
 
-findLastByRequestId ::
-  (Transactionable m) =>
-  Id SearchRequest ->
-  m (Maybe SearchTry)
-findLastByRequestId searchReqId = do
-  Esq.findOne $ do
-    searchTryT <- from $ table @SearchTryT
-    where_ $
-      searchTryT ^. SearchTryRequestId ==. val (toKey searchReqId)
-    Esq.orderBy [Esq.desc $ searchTryT ^. SearchTrySearchRepeatCounter]
-    Esq.limit 1
-    return searchTryT
+-- findLastByRequestId ::
+--   (Transactionable m) =>
+--   Id SearchRequest ->
+--   m (Maybe SearchTry)
+-- findLastByRequestId searchReqId = do
+--   Esq.findOne $ do
+--     searchTryT <- from $ table @SearchTryT
+--     where_ $
+--       searchTryT ^. SearchTryRequestId ==. val (toKey searchReqId)
+--     Esq.orderBy [Esq.desc $ searchTryT ^. SearchTrySearchRepeatCounter]
+--     Esq.limit 1
+--     return searchTryT
 
-findLastByRequestId' ::
+findLastByRequestId ::
   L.MonadFlow m =>
   Id SearchRequest ->
   m (Maybe SearchTry)
-findLastByRequestId' (Id searchRequest) = do
+findLastByRequestId (Id searchRequest) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> do

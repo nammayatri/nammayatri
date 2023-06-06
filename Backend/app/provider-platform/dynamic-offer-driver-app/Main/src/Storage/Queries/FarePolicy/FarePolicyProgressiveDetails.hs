@@ -41,11 +41,11 @@ findById' (KTI.Id farePolicyId') = do
 
 --type FullFarePolicyProgressiveDetailsT = (FarePolicyProgressiveDetailsT, [FarePolicyProgressiveDetailsPerExtraKmRateSectionT])
 
-transformBeamFarePolicyProgressiveDetailsToDomain :: (L.MonadFlow m) => BeamFPPD.FarePolicyProgressiveDetails -> m (DomainFPPD.FullFarePolicyProgressiveDetails)
+transformBeamFarePolicyProgressiveDetailsToDomain :: (L.MonadFlow m) => BeamFPPD.FarePolicyProgressiveDetails -> m DomainFPPD.FullFarePolicyProgressiveDetails
 transformBeamFarePolicyProgressiveDetailsToDomain BeamFPPD.FarePolicyProgressiveDetailsT {..} = do
   fullFPPDP <- QueriesFPPDP.findAll (KTI.Id farePolicyId)
   let fPPDP = snd <$> fullFPPDP
-  pure $
+  pure
     ( KTI.Id farePolicyId,
       Domain.FPProgressiveDetails
         { baseDistance = baseDistance,
