@@ -65,14 +65,15 @@ docker load -i $(nix build .#dockerImage --no-link --print-out-paths)
 
 **🚨 Attention 🚨**: If you were using *stack* to develop Nammayatri in the past, you must **completely erase** that git working copy, and start from a fresh clone of this repository before working with Nix. You might also want to remove your cache folders `~/.cache/cabal` and `~/.cabal/hie-bios`.
 
-To set up your development environment, you should run `direnv allow`[^de-ns] from the project root. If you do not have nix-direnv setup (as per the pre-requisites above), run instead:
-
-[^de-ns]: If you are not using `direnv` and if you know what you are doing, you could manually start the [nix shell][nix-shell] using `nix develop`.
+To set up your development environment for backend, you should setup and use direnv[^de-ns] by running the following from repository root:
 
 ```sh
 cd ~/Projects/nammayatri
-direnv allow   # Need to run this only once
+ln -sf .envrc.backend .envrc  # Run this only once.
+direnv allow                 # Run this only once.
 ```
+
+[^de-ns]: If you are not using `direnv` and if you know what you are doing, you could manually start the [nix shell][nix-shell] using `nix develop .#backend`.
 
 **🚧 Warning 🚧**: Entering the nix develop shell (using `direnv allow`, for example) should not compile anything and it should finish in a matter of minutes (after downloading the binaries from nammayatri.cachix.org). If not, you must not have setup the Nix cache properly. Consult [the steps further above](#nix).
 
