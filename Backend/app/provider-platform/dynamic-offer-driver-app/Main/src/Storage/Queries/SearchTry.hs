@@ -68,6 +68,19 @@ findById' (Id searchTry) = do
     Just dbConf' -> either (pure Nothing) (transformBeamSearchTryToDomain <$>) <$> KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamST.id $ Se.Eq searchTry]
     Nothing -> pure Nothing
 
+-- findLastByRequestId ::
+--   (Transactionable m) =>
+--   Id SearchRequest ->
+--   m (Maybe SearchTry)
+-- findLastByRequestId searchReqId = do
+--   Esq.findOne $ do
+--     searchTryT <- from $ table @SearchTryT
+--     where_ $
+--       searchTryT ^. SearchTryRequestId ==. val (toKey searchReqId)
+--     Esq.orderBy [Esq.desc $ searchTryT ^. SearchTrySearchRepeatCounter]
+--     Esq.limit 1
+--     return searchTryT
+
 findLastByRequestId ::
   L.MonadFlow m =>
   Id SearchRequest ->
