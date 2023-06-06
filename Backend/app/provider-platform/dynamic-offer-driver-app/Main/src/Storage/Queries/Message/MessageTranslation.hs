@@ -20,6 +20,7 @@ import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -32,7 +33,7 @@ import qualified Storage.Beam.Message.MessageTranslation as BeamMT
 
 create :: L.MonadFlow m => MessageTranslation -> m (MeshResult ())
 create messageTranslation = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainMessageTranslationToBeam messageTranslation)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -47,7 +48,7 @@ create messageTranslation = do
 
 findByMessageIdAndLanguage :: L.MonadFlow m => Id Msg.Message -> Language -> m (Maybe MessageTranslation)
 findByMessageIdAndLanguage (Id messageId) language = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamMT.messageId $ Se.Eq messageId, Se.Is BeamMT.language $ Se.Eq language]]
@@ -66,7 +67,7 @@ findByMessageIdAndLanguage (Id messageId) language = do
 
 findByMessageId :: L.MonadFlow m => Id Msg.Message -> m [MessageTranslation]
 findByMessageId (Id messageId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure []) (transformBeamMessageTranslationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamMT.messageId $ Se.Eq messageId]
     Nothing -> pure []

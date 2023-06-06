@@ -19,6 +19,7 @@ import qualified Domain.Types.FarePolicy as DFP
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id as KTI
@@ -46,7 +47,7 @@ findAll' farePolicyId = do
 
 findById' :: L.MonadFlow m => KTI.Id DFP.FarePolicy -> m (Maybe FullFarePolicyProgressiveDetailsPerExtraKmRateSection)
 findById' farePolicyId' = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamFarePolicyProgressiveDetailsPerExtraKmRateSectionToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamFPPDP.farePolicyId $ Se.Eq (getId farePolicyId')]
     Nothing -> pure Nothing
@@ -58,7 +59,7 @@ findAll ::
   Id DFP.FarePolicy ->
   m [FullFarePolicyProgressiveDetailsPerExtraKmRateSection]
 findAll farePolicyId = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure []) (transformBeamFarePolicyProgressiveDetailsPerExtraKmRateSectionToDomain <$>) <$> KV.findAllWithOptionsKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamFPPDP.farePolicyId $ Se.Eq (getId farePolicyId)] (Se.Asc BeamFPPDP.startDistance) Nothing Nothing
     Nothing -> pure []

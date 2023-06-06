@@ -41,6 +41,7 @@ import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Encryption
 import Kernel.External.Maps as Maps
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
@@ -85,7 +86,7 @@ import Storage.Tabular.Vehicle as Vehicle
 
 create :: L.MonadFlow m => Person.Person -> m (MeshResult ())
 create person = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainPersonToBeam person)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -98,7 +99,7 @@ create person = do
 
 findById :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Person)
 findById (Id personId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamP.id $ Se.Eq personId]
@@ -168,7 +169,7 @@ findAllDriversWithInfoAndVehicle merchantId limitVal offsetVal mbVerified mbEnab
 
 getDriversWithOutdatedLocationsToMakeInactive' :: (L.MonadFlow m, Log m) => UTCTime -> m [Person]
 getDriversWithOutdatedLocationsToMakeInactive' before = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
       -- KV.findAllWithOptionsKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDS.driverId $ Se.In (getId <$> ids)] (Se.Asc BeamDS.idleSince) (Just count_) Nothing
@@ -412,7 +413,7 @@ findAllDriversByIdsFirstNameAsc' ::
   [Id Person] ->
   m [FullDriver]
 findAllDriversByIdsFirstNameAsc' (Id merchantId) driverIds = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
       personList <- do
@@ -462,7 +463,7 @@ findAllDriversByIdsFirstNameAsc' (Id merchantId) driverIds = do
 --   [Id Person] ->
 --   m [FullDriver]
 -- findAllDriversByIdsFirstNameAsc' (Id merchantId) driverIds = do
---   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   dbConf <- L.getOption KBT.PsqlDbCfg
 --   case dbConf of
 --     Just dbCOnf' -> do
 --       personList <- do
@@ -610,7 +611,7 @@ fetchDriverInfo merchantId mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumb
 
 findByIdAndRoleAndMerchantId :: (L.MonadFlow m, Log m) => Id Person -> Person.Role -> Id Merchant -> m (Maybe Person)
 findByIdAndRoleAndMerchantId (Id pid) role_ (Id merchantId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamP.id $ Se.Eq pid, Se.Is BeamP.role $ Se.Eq role_, Se.Is BeamP.merchantId $ Se.Eq merchantId]]
@@ -634,7 +635,7 @@ findByIdAndRoleAndMerchantId (Id pid) role_ (Id merchantId) = do
 
 findAllByMerchantId :: (L.MonadFlow m, Log m) => [Person.Role] -> Id Merchant -> m [Person]
 findAllByMerchantId roles (Id merchantId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       result <- KV.findAllWithKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.role $ Se.In roles]]
@@ -654,7 +655,7 @@ findAllByMerchantId roles (Id merchantId) = do
 
 findAdminsByMerchantId :: (L.MonadFlow m, Log m) => Id Merchant -> m [Person]
 findAdminsByMerchantId (Id merchantId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       result <- KV.findAllWithKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.role $ Se.Eq Person.ADMIN]]
@@ -682,7 +683,7 @@ findAdminsByMerchantId (Id merchantId) = do
 
 findByMobileNumberAndMerchant :: (L.MonadFlow m, Log m) => Text -> DbHash -> Id Merchant -> m (Maybe Person)
 findByMobileNumberAndMerchant countryCode mobileNumberHash (Id merchantId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       result <-
@@ -715,7 +716,7 @@ findByMobileNumberAndMerchant countryCode mobileNumberHash (Id merchantId) = do
 
 findByIdentifierAndMerchant :: (L.MonadFlow m, Log m) => Id Merchant -> Text -> m (Maybe Person)
 findByIdentifierAndMerchant (Id merchantId) identifier_ = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamP.identifier $ Se.Eq $ Just identifier_, Se.Is BeamP.merchantId $ Se.Eq merchantId]]
@@ -739,7 +740,7 @@ findByIdentifierAndMerchant (Id merchantId) identifier_ = do
 
 findByEmailAndMerchant :: (L.MonadFlow m, Log m) => Id Merchant -> Text -> m (Maybe Person)
 findByEmailAndMerchant (Id merchantId) email_ = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamP.email $ Se.Eq $ Just email_, Se.Is BeamP.merchantId $ Se.Eq merchantId]]
@@ -768,7 +769,7 @@ findByEmailAndMerchant (Id merchantId) email_ = do
 
 findByRoleAndMobileNumberAndMerchantId :: (L.MonadFlow m, Log m, EncFlow m r) => Role -> Text -> Text -> Id Merchant -> m (Maybe Person)
 findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumber_ (Id merchantId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   mobileNumberDbHash <- getDbHash mobileNumber_
   case dbConf of
     Just dbConf' -> do
@@ -821,7 +822,7 @@ findAllDriverIdExceptProvided merchantId driverIdsToBeExcluded = do
 
 findAllDriverIdExceptProvided' :: (L.MonadFlow m, Log m) => Id Merchant -> [Id Driver] -> m [Id Driver]
 findAllDriverIdExceptProvided' (Id merchantId) driverIdsToBeExcluded = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       person <- do
@@ -871,7 +872,7 @@ findAllDriverIdExceptProvided' (Id merchantId) driverIdsToBeExcluded = do
 
 updateMerchantIdAndMakeAdmin :: (L.MonadFlow m, MonadTime m) => Id Person -> Id Merchant -> m (MeshResult ())
 updateMerchantIdAndMakeAdmin (Id personId) (Id merchantId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -898,7 +899,7 @@ updateMerchantIdAndMakeAdmin (Id personId) (Id merchantId) = do
 
 updateName :: (L.MonadFlow m, MonadTime m) => Id Person -> Text -> m (MeshResult ())
 updateName (Id personId) name = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -937,7 +938,7 @@ updateName (Id personId) name = do
 
 updatePersonRec :: (L.MonadFlow m, MonadTime m) => Id Person -> Person -> m (MeshResult ())
 updatePersonRec (Id personId) person = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -988,7 +989,7 @@ updatePersonVersions person mbBundleVersion mbClientVersion =
       now <- getCurrentTime
       let mbBundleVersionText = versionToText <$> (mbBundleVersion <|> person.bundleVersion)
           mbClientVersionText = versionToText <$> (mbClientVersion <|> person.clientVersion)
-      dbConf <- L.getOption Extra.EulerPsqlDbCfg
+      dbConf <- L.getOption KBT.PsqlDbCfg
       case dbConf of
         Just dbConf' ->
           void $
@@ -1015,7 +1016,7 @@ updatePersonVersions person mbBundleVersion mbClientVersion =
 
 updateDeviceToken :: (L.MonadFlow m, MonadTime m) => Id Person -> Maybe FCMRecipientToken -> m (MeshResult ())
 updateDeviceToken (Id personId) mbDeviceToken = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -1041,7 +1042,7 @@ updateDeviceToken (Id personId) mbDeviceToken = do
 
 updateWhatsappNotificationEnrollStatus :: (L.MonadFlow m, MonadTime m) => Id Person -> Maybe Whatsapp.OptApiMethods -> m ()
 updateWhatsappNotificationEnrollStatus (Id personId) enrollStatus = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -1072,7 +1073,7 @@ updateWhatsappNotificationEnrollStatus (Id personId) enrollStatus = do
 
 updateMobileNumberAndCode :: (L.MonadFlow m, MonadTime m, Log m, EncFlow m r) => Person -> m (MeshResult ())
 updateMobileNumberAndCode person = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -1101,7 +1102,7 @@ updateMobileNumberAndCode person = do
 
 setIsNewFalse :: (L.MonadFlow m, MonadTime m) => Id Person -> m ()
 setIsNewFalse (Id personId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -1120,7 +1121,7 @@ setIsNewFalse (Id personId) = do
 
 deleteById :: L.MonadFlow m => Id Person -> m ()
 deleteById (Id personId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' ->
       void $
@@ -1143,7 +1144,7 @@ deleteById (Id personId) = do
 
 updateAverageRating :: (L.MonadFlow m, MonadTime m) => Id Person -> Centesimal -> m (MeshResult ())
 updateAverageRating (Id personId) newAverageRating = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -1343,7 +1344,7 @@ linkArrayListForOnRide driverQuotes bookings bookingLocs driverLocations driverI
 -- this query is incomplete and not being used currently -- don't forget to add argument LatLong {..} and datatype while completing the query -- TODO
 getNearestDriversCurrentlyOnRide' :: (L.MonadFlow m, Log m, MonadTime m) => Maybe Variant -> Int -> Id Merchant -> Maybe Seconds -> Int -> m [NearestDriversResultCurrentlyOnRide]
 getNearestDriversCurrentlyOnRide' mbVariant radiusMeters (Id merchantId') mbDriverPositionInfoExpiry reduceRadiusValue = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   now <- getCurrentTime
   -- let distanceFromDestinationToPickup = Utils.getPoint (lat, lon)
   let onRideRadius = (fromIntegral (radiusMeters - reduceRadiusValue) :: Double)
@@ -1566,7 +1567,7 @@ buildFullDriverListOnRide quotesHashMap bookingHashMap bookingLocsHashMap locati
 
 updateAlternateMobileNumberAndCode :: (L.MonadFlow m, MonadTime m) => Person -> m (MeshResult ())
 updateAlternateMobileNumberAndCode person = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->

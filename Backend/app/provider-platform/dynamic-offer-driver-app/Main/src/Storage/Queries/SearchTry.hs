@@ -16,6 +16,7 @@ module Storage.Queries.SearchTry where
 
 import Domain.Types.SearchRequest (SearchRequest)
 import Domain.Types.SearchTry as Domain
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id

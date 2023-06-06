@@ -18,6 +18,7 @@ import qualified Domain.Types.FarePolicy as DFP
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
@@ -49,7 +50,7 @@ findAll'' ::
   Id DFP.FarePolicy ->
   m [FullFarePolicySlabsDetailsSlab]
 findAll'' (Id farePolicyId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure []) (transformBeamFarePolicyProgressiveDetailsToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamFPSS.farePolicyId $ Se.Eq farePolicyId]
     Nothing -> pure []
@@ -59,7 +60,7 @@ findById'' ::
   Id DFP.FarePolicy ->
   m (Maybe FullFarePolicySlabsDetailsSlab)
 findById'' (Id farePolicyId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamFarePolicyProgressiveDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamFPSS.farePolicyId $ Se.Eq farePolicyId]
     Nothing -> pure Nothing
@@ -73,7 +74,7 @@ deleteAll' farePolicyId =
 
 deleteAll'' :: L.MonadFlow m => Id DFP.FarePolicy -> m ()
 deleteAll'' (Id farePolicyId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> void $ KV.deleteAllReturningWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamFPSS.farePolicyId $ Se.Eq farePolicyId]
     Nothing -> pure ()

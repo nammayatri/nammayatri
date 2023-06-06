@@ -20,6 +20,7 @@ import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -35,7 +36,7 @@ import Storage.Tabular.RideDetails ()
 
 create :: L.MonadFlow m => DRD.RideDetails -> m (MeshResult ())
 create rideDetails = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainRideDetailsToBeam rideDetails)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -48,7 +49,7 @@ create rideDetails = do
 
 findById :: L.MonadFlow m => Id SR.Ride -> m (Maybe RideDetails)
 findById (Id rideDetailsId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamRideDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamRD.id $ Se.Eq rideDetailsId]
     Nothing -> pure Nothing

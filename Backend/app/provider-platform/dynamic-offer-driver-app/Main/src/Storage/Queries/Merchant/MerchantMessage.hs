@@ -25,6 +25,7 @@ import Domain.Types.Merchant.MerchantMessage
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
@@ -38,7 +39,7 @@ import Storage.Tabular.Merchant.MerchantMessage ()
 
 findByMerchantIdAndMessageKey :: L.MonadFlow m => Id Merchant -> MessageKey -> m (Maybe MerchantMessage)
 findByMerchantIdAndMessageKey (Id merchantId) messageKey = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamMerchantMessageToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamMM.merchantId $ Se.Eq merchantId, Se.Is BeamMM.messageKey $ Se.Eq messageKey]]
     Nothing -> pure Nothing

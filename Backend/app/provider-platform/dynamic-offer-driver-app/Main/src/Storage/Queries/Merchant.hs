@@ -24,6 +24,7 @@ import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
@@ -37,7 +38,7 @@ import qualified Storage.Beam.Merchant as BeamM
 
 findById :: L.MonadFlow m => Id Merchant -> m (Maybe Merchant)
 findById (Id merchantId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamMerchantToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamM.id $ Se.Eq merchantId]
     Nothing -> pure Nothing
@@ -51,7 +52,7 @@ findById (Id merchantId) = do
 
 findBySubscriberId :: L.MonadFlow m => ShortId Subscriber -> m (Maybe Merchant)
 findBySubscriberId (ShortId subscriberId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamMerchantToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamM.subscriberId $ Se.Eq subscriberId]
     Nothing -> pure Nothing
@@ -65,7 +66,7 @@ findBySubscriberId (ShortId subscriberId) = do
 
 findByShortId :: L.MonadFlow m => ShortId Merchant -> m (Maybe Merchant)
 findByShortId (ShortId shortId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamMerchantToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamM.shortId $ Se.Eq shortId]
     Nothing -> pure Nothing
@@ -81,7 +82,7 @@ findByShortId (ShortId shortId) = do
 
 loadAllProviders :: L.MonadFlow m => m [Merchant]
 loadAllProviders = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure []) (transformBeamMerchantToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamM.status $ Se.Eq DM.APPROVED, Se.Is BeamM.enabled $ Se.Eq True]]
     Nothing -> pure []
@@ -92,7 +93,7 @@ loadAllProviders = do
 
 findAll :: L.MonadFlow m => m [Merchant]
 findAll = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure []) (transformBeamMerchantToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig []
     Nothing -> pure []
@@ -114,7 +115,7 @@ findAll = do
 
 update :: (L.MonadFlow m, MonadTime m) => Merchant -> m (MeshResult ())
 update org = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->

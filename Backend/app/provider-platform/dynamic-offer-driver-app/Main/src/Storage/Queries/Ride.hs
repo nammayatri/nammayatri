@@ -38,6 +38,15 @@ import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
+-- import qualified Storage.Beam.RideDetails as BeamRD
+-- import qualified Storage.Beam.RiderDetails as BeamRRD
+
+-- import qualified Storage.Queries.RideDetails as QRD
+-- import qualified Storage.Queries.RiderDetails as QRRD
+
+-- import Storage.Tabular.DriverInformation as DriverInfo
+
+import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Encryption
 import Kernel.External.Maps.Types (LatLong (..), lat, lon)
 import Kernel.Prelude
@@ -49,15 +58,10 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Beam.Ride.Table as BeamR
--- import qualified Storage.Beam.RideDetails as BeamRD
--- import qualified Storage.Beam.RiderDetails as BeamRRD
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.DriverInformation as QDI
 import Storage.Queries.FullEntityBuilders (buildFullBooking)
--- import qualified Storage.Queries.RideDetails as QRD
--- import qualified Storage.Queries.RiderDetails as QRRD
 import Storage.Tabular.Booking as Booking
--- import Storage.Tabular.DriverInformation as DriverInfo
 import Storage.Tabular.Ride as Ride
 import Storage.Tabular.RideDetails as RideDetails
 import Storage.Tabular.RiderDetails as RiderDetails
@@ -74,7 +78,7 @@ data DatabaseWith2 table1 table2 f = DatabaseWith2
 
 create :: L.MonadFlow m => Ride.Ride -> m (MeshResult ())
 create ride = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainRideToBeam ride)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -87,7 +91,7 @@ create ride = do
 
 findById :: L.MonadFlow m => Id Ride -> m (Maybe Ride)
 findById (Id rideId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamR.id $ Se.Eq rideId]
@@ -116,7 +120,7 @@ findAllRidesByDriverId driverId =
 
 findActiveByRBId :: L.MonadFlow m => Id Booking -> m (Maybe Ride)
 findActiveByRBId (Id rbId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamR.bookingId $ Se.Eq rbId, Se.Is BeamR.status $ Se.Eq Ride.CANCELLED]]
@@ -187,7 +191,7 @@ findAllRidesBookingsByRideId merchantId rideIds = Esq.buildDType $ do
 
 findAllByDriverId :: L.MonadFlow m => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe Ride.RideStatus -> m [(Ride, Booking)]
 findAllByDriverId (Id driverId) mbLimit mbOffset mbOnlyActive mbRideStatus = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
       let limitVal = maybe 10 fromInteger mbLimit
@@ -237,7 +241,7 @@ findAllByDriverId (Id driverId) mbLimit mbOffset mbOnlyActive mbRideStatus = do
 
 findOneByDriverId :: L.MonadFlow m => Id Person -> m (Maybe Ride)
 findOneByDriverId (Id personId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamR.driverId $ Se.Eq personId]
@@ -256,7 +260,7 @@ findOneByDriverId (Id personId) = do
 
 getInProgressByDriverId :: L.MonadFlow m => Id Person -> m (Maybe Ride)
 getInProgressByDriverId (Id personId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.Eq Ride.INPROGRESS]]
@@ -277,7 +281,7 @@ getInProgressByDriverId (Id personId) = do
 
 getInProgressOrNewRideIdAndStatusByDriverId :: L.MonadFlow m => Id Person -> m (Maybe (Id Ride, RideStatus))
 getInProgressOrNewRideIdAndStatusByDriverId (Id driverId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
       ride <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamR.driverId $ Se.Eq driverId, Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]]]
@@ -301,7 +305,7 @@ getInProgressOrNewRideIdAndStatusByDriverId (Id driverId) = do
 
 getActiveByDriverId :: L.MonadFlow m => Id Person -> m (Maybe Ride)
 getActiveByDriverId (Id personId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]]]
@@ -326,7 +330,7 @@ getActiveByDriverId (Id personId) = do
 
 updateStatus :: (L.MonadFlow m, MonadTime m) => Id Ride -> RideStatus -> m (MeshResult ())
 updateStatus rideId status = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -357,7 +361,7 @@ updateStatus rideId status = do
 
 updateStartTimeAndLoc :: (L.MonadFlow m, MonadTime m) => Id Ride -> LatLong -> m (MeshResult ())
 updateStartTimeAndLoc rideId point = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -388,7 +392,7 @@ updateStartTimeAndLoc rideId point = do
 
 updateStatusByIds :: (L.MonadFlow m, MonadTime m) => [Id Ride] -> RideStatus -> m (MeshResult ())
 updateStatusByIds rideIds status = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -419,7 +423,7 @@ updateStatusByIds rideIds status = do
 
 updateDistance :: (L.MonadFlow m, MonadTime m) => Id Person -> HighPrecMeters -> m (MeshResult ())
 updateDistance driverId distance = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -454,7 +458,7 @@ updateDistance driverId distance = do
 
 updateAll :: (L.MonadFlow m, MonadTime m) => Id Ride -> Ride -> m (MeshResult ())
 updateAll rideId ride = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -491,7 +495,7 @@ updateAll rideId ride = do
 getCountByStatus :: (L.MonadFlow m) => Id Merchant -> m [(RideStatus, Int)]
 getCountByStatus merchantId = do
   -- Tricky query to be able to insert meaningful Point
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   conn <- L.getOrInitSqlConn (fromJust dbConf)
   case conn of
     Right c -> do
@@ -551,7 +555,7 @@ getCountByStatus merchantId = do
 
 getRidesForDate :: (L.MonadFlow m, MonadTime m) => Id Person -> Day -> m [Ride]
 getRidesForDate driverId date = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   let minDayTime = UTCTime (addDays (-1) date) 66600
   let maxDayTime = UTCTime date 66600
   case dbConf of
@@ -585,7 +589,7 @@ getRidesForDate driverId date = do
 
 updateArrival :: (L.MonadFlow m, MonadTime m) => Id Ride -> m (MeshResult ())
 updateArrival rideId = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -682,7 +686,7 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
 -- where condition implementation remaining
 -- findAllRideItems' ::( MonadFlow m, MonadTime m) => Id Merchant -> Int -> Int -> Maybe Common.BookingStatus -> Maybe (ShortId Ride) -> Maybe DbHash -> Maybe DbHash -> Maybe Money -> UTCTime -> m [RideItem]
 -- findAllRideItems' (Id merchantId) limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbFareDiff now = do
---   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   dbConf <- L.getOption KBT.PsqlDbCfg
 --   let now6HrBefore = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
 --   case dbConf of
 --     Just dbCOnf' -> do
@@ -764,7 +768,7 @@ data StuckRideItem = StuckRideItem
 
 findStuckRideItems :: (L.MonadFlow m, MonadTime m) => Id Merchant -> [Id Booking] -> UTCTime -> m [StuckRideItem]
 findStuckRideItems (Id merchantId) bookingIds now = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   let now6HrBefore = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
   case dbConf of
     Just dbCOnf' -> do

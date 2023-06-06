@@ -26,6 +26,7 @@ import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (create)
@@ -52,7 +53,7 @@ createMany msr = void $ traverse create msr
 
 create :: L.MonadFlow m => MessageReport -> m (MeshResult ())
 create messageReport = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainMessageReportToBeam messageReport)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -100,7 +101,7 @@ findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
 
 findByDriverIdMessageIdAndLanguage :: L.MonadFlow m => Id P.Driver -> Id Msg.Message -> Language -> m (Maybe (MessageReport, Msg.RawMessage, Maybe MTD.MessageTranslation))
 findByDriverIdMessageIdAndLanguage driverId messageId language = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just _ -> do
       messageReport <- findByMessageIdAndDriverId messageId driverId
@@ -127,7 +128,7 @@ findByDriverIdMessageIdAndLanguage driverId messageId language = do
 
 findByMessageIdAndDriverId :: L.MonadFlow m => Id Msg.Message -> Id P.Driver -> m (Maybe MessageReport)
 findByMessageIdAndDriverId (Id messageId) (Id driverId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamMessageReportToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamMR.messageId $ Se.Eq messageId, Se.Is BeamMR.driverId $ Se.Eq driverId]]
     Nothing -> pure Nothing
@@ -174,7 +175,7 @@ findByMessageIdAndStatusWithLimitAndOffset mbLimit mbOffset messageId mbDelivery
 
 getMessageCountByStatus :: L.MonadFlow m => Id Msg.Message -> DeliveryStatus -> m Int
 getMessageCountByStatus (Id messageID) status = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   conn <- L.getOrInitSqlConn (fromJust dbConf)
   case conn of
     Right c -> do
@@ -203,7 +204,7 @@ getMessageCountByStatus (Id messageID) status = do
 
 getMessageCountByReadStatus :: L.MonadFlow m => Id Msg.Message -> m Int
 getMessageCountByReadStatus (Id messageID) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   conn <- L.getOrInitSqlConn (fromJust dbConf)
   case conn of
     Right c -> do
@@ -233,7 +234,7 @@ getMessageCountByReadStatus (Id messageID) = do
 
 updateSeenAndReplyByMessageIdAndDriverId :: (L.MonadFlow m, MonadTime m) => Id Msg.Message -> Id P.Driver -> Bool -> Maybe Text -> m (MeshResult ())
 updateSeenAndReplyByMessageIdAndDriverId messageId driverId readStatus reply = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -267,7 +268,7 @@ updateMessageLikeByMessageIdAndDriverIdAndReadStatus messageId driverId = do
   case messageReport of
     Just report -> do
       let likeStatus = not report.likeStatus
-      dbConf <- L.getOption Extra.EulerPsqlDbCfg
+      dbConf <- L.getOption KBT.PsqlDbCfg
       now <- getCurrentTime
       case dbConf of
         Just dbConf' ->
@@ -297,7 +298,7 @@ updateMessageLikeByMessageIdAndDriverIdAndReadStatus messageId driverId = do
 
 updateDeliveryStatusByMessageIdAndDriverId :: (L.MonadFlow m, MonadTime m) => Id Msg.Message -> Id P.Driver -> DeliveryStatus -> m (MeshResult ())
 updateDeliveryStatusByMessageIdAndDriverId messageId driverId deliveryStatus = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -318,7 +319,7 @@ updateDeliveryStatusByMessageIdAndDriverId messageId driverId deliveryStatus = d
 
 deleteByPersonId :: L.MonadFlow m => Id P.Person -> m ()
 deleteByPersonId (Id personId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' ->
       void $

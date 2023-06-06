@@ -59,8 +59,10 @@ import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types (KVConnector (..), MeshConfig (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import qualified EulerHS.Language as L
 import GHC.Generics (Generic)
-import Kernel.Prelude hiding (Generic)
 -- import Kernel.Types.Common hiding (id)
+
+import qualified Kernel.Beam.Types as KBT
+import Kernel.Prelude hiding (Generic)
 import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
@@ -249,7 +251,7 @@ meshConfig =
 
 findById :: (L.MonadFlow m) => Text -> m (Maybe VechileNew)
 findById bookingId = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> T.trace (T.unpack bookingId) $ either (\x -> T.trace (show x) Nothing) (\x -> x) <$> KV.findWithKVConnector dbCOnf' meshConfig [Is driverId $ Eq bookingId]
     Nothing -> T.trace "Rahull Nothing" $ pure Nothing

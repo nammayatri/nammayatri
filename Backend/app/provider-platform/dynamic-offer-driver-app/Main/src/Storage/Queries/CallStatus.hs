@@ -23,6 +23,7 @@ import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import qualified Kernel.External.Call.Interface.Types as Call
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -32,28 +33,28 @@ import qualified Storage.Beam.CallStatus as BeamCT
 
 create :: L.MonadFlow m => CallStatus -> m (MeshResult ())
 create callStatus = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainCallStatusToBeam callStatus)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 findById :: L.MonadFlow m => Id CallStatus -> m (Maybe CallStatus)
 findById (Id callStatusId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamCallStatusToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamCT.id $ Se.Eq callStatusId]
     Nothing -> pure Nothing
 
 findByCallSid :: L.MonadFlow m => Text -> m (Maybe CallStatus)
 findByCallSid callSid = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamCallStatusToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamCT.callId $ Se.Eq callSid]
     Nothing -> pure Nothing
 
 updateCallStatus :: L.MonadFlow m => Id CallStatus -> Call.CallStatus -> Int -> Maybe BaseUrl -> m (MeshResult ())
 updateCallStatus (Id callId) status conversationDuration recordingUrl = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
@@ -76,7 +77,7 @@ updateCallStatus (Id callId) status conversationDuration recordingUrl = do
 
 countCallsByRideId :: L.MonadFlow m => Id Ride -> m Int
 countCallsByRideId rideID = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   conn <- L.getOrInitSqlConn (fromJust dbConf)
   case conn of
     Right c -> do

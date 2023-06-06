@@ -25,8 +25,10 @@ import qualified EulerHS.KVConnector.Flow as KV
 
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
-import Kernel.Prelude
 -- import Kernel.Storage.Esqueleto as Esq
+
+import qualified Kernel.Beam.Types as KBT
+import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Mesh as Mesh
@@ -40,7 +42,7 @@ import qualified Storage.Beam.Vehicle as BeamV
 
 create :: L.MonadFlow m => Vehicle -> m (MeshResult ())
 create vehicle = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainVehicleToBeam vehicle)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -64,7 +66,7 @@ create vehicle = do
 
 upsert :: L.MonadFlow m => Vehicle -> m ()
 upsert a@Vehicle {..} = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
       res <- either (pure Nothing) (transformBeamVehicleToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamV.driverId $ Se.Eq (getId a.driverId)]
@@ -91,7 +93,7 @@ upsert a@Vehicle {..} = do
 
 findById :: (MonadFlow m) => Id Person -> m (Maybe Vehicle)
 findById (Id driverId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamVehicleToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamV.driverId $ Se.Eq driverId]
     Nothing -> pure Nothing
@@ -118,7 +120,7 @@ findById (Id driverId) = do
 
 updateVehicleRec :: (L.MonadFlow m, MonadTime m) => Vehicle -> m (MeshResult ())
 updateVehicleRec vehicle = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -145,7 +147,7 @@ updateVehicleRec vehicle = do
 
 deleteById :: L.MonadFlow m => Id Person -> m ()
 deleteById (Id driverId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' ->
       void $
@@ -166,7 +168,7 @@ deleteById (Id driverId) = do
 
 findByAnyOf :: L.MonadFlow m => Maybe Text -> Maybe (Id Person) -> m (Maybe Vehicle)
 findByAnyOf registrationNoM vehicleIdM = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' ->
       either (pure Nothing) (transformBeamVehicleToDomain <$>)
@@ -209,7 +211,7 @@ findByAnyOf registrationNoM vehicleIdM = do
 
 findAllByVariantRegNumMerchantId :: L.MonadFlow m => Maybe Variant.Variant -> Maybe Text -> Integer -> Integer -> Id Merchant -> m [Vehicle]
 findAllByVariantRegNumMerchantId variantM mbRegNum limit' offset' (Id merchantId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   let limitVal = fromIntegral limit'
       offsetVal = fromIntegral offset'
   case dbConf of
@@ -236,7 +238,7 @@ findAllByVariantRegNumMerchantId variantM mbRegNum limit' offset' (Id merchantId
 
 findByRegistrationNo :: (MonadFlow m) => Text -> m (Maybe Vehicle)
 findByRegistrationNo registrationNo = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamVehicleToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamV.registrationNo $ Se.Eq registrationNo]
     Nothing -> pure Nothing

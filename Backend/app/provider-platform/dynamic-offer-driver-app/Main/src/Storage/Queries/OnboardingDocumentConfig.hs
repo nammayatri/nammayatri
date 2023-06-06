@@ -26,6 +26,7 @@ import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -38,7 +39,7 @@ import qualified Storage.Beam.OnboardingDocumentConfig as BeamODC
 
 create :: L.MonadFlow m => DODC.OnboardingDocumentConfig -> m (MeshResult ())
 create onboardingDocumentConfig = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainOnboardingDocumentConfigToBeam onboardingDocumentConfig)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -54,7 +55,7 @@ create onboardingDocumentConfig = do
 
 findByMerchantIdAndDocumentType :: L.MonadFlow m => Id Merchant -> DocumentType -> m (Maybe OnboardingDocumentConfig)
 findByMerchantIdAndDocumentType merchantId documentType = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamOnboardingDocumentConfigToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamODC.merchantId $ Se.Eq $ getId merchantId, Se.Is BeamODC.documentType $ Se.Eq documentType]]
     Nothing -> pure Nothing
@@ -75,7 +76,7 @@ findByMerchantIdAndDocumentType merchantId documentType = do
 
 update :: (L.MonadFlow m, MonadTime m) => OnboardingDocumentConfig -> m (MeshResult ())
 update config = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->

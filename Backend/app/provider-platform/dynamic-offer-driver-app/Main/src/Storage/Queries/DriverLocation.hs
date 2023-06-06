@@ -27,6 +27,7 @@ import qualified EulerHS.Extra.EulerDB as Extra
 -- import EulerHS.KVConnector.Types
 import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import Kernel.Types.Common (MonadTime (getCurrentTime))
@@ -36,7 +37,7 @@ import qualified Storage.Beam.DriverLocation as BeamDL
 
 create :: (L.MonadFlow m, MonadTime m) => Id Person -> LatLong -> UTCTime -> Id Merchant -> m ()
 create drLocationId latLong updateTime merchantId = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   now <- getCurrentTime
   conn <- L.getOrInitSqlConn (fromJust dbConf)
   case conn of
@@ -47,7 +48,7 @@ create drLocationId latLong updateTime merchantId = do
 
 findById :: L.MonadFlow m => Id Person -> m (Maybe DriverLocation)
 findById (Id driverLocationId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   conn <- L.getOrInitSqlConn (fromJust dbConf)
   case conn of
     Right c -> do
@@ -82,7 +83,7 @@ upsertGpsCoord drLocationId latLong calculationTime merchantId' = do
   where
     updateRecords :: L.MonadFlow m => Text -> LatLong -> UTCTime -> UTCTime -> m ()
     updateRecords drLocationId' latLong' calculationTime' now' = do
-      dbConf <- L.getOption Extra.EulerPsqlDbCfg
+      dbConf <- L.getOption KBT.PsqlDbCfg
       conn <- L.getOrInitSqlConn (fromJust dbConf)
       case conn of
         Right c -> do
@@ -102,7 +103,7 @@ upsertGpsCoord drLocationId latLong calculationTime merchantId' = do
 
 deleteById :: L.MonadFlow m => Id Person -> m ()
 deleteById (Id driverId') = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   conn <- L.getOrInitSqlConn (fromJust dbConf)
   case conn of
     Right c -> do

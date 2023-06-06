@@ -20,6 +20,7 @@ import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -30,14 +31,14 @@ import Storage.Tabular.Person ()
 
 create :: L.MonadFlow m => DriverLicense -> m (MeshResult ())
 create driverLicense = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainDriverLicenseToBeam driverLicense)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 upsert :: L.MonadFlow m => DriverLicense -> m ()
 upsert a@DriverLicense {..} = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
       res <- either (pure Nothing) (transformBeamDriverLicenseToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDL.id $ Se.Eq (getId a.id)]
@@ -61,21 +62,21 @@ upsert a@DriverLicense {..} = do
 
 findById :: L.MonadFlow m => Id DriverLicense -> m (Maybe DriverLicense)
 findById (Id dlId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamDriverLicenseToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDL.id $ Se.Eq dlId]
     Nothing -> pure Nothing
 
 findByDriverId :: L.MonadFlow m => Id Person -> m (Maybe DriverLicense)
 findByDriverId (Id personId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamDriverLicenseToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDL.driverId $ Se.Eq personId]
     Nothing -> pure Nothing
 
 findByDLNumber :: (L.MonadFlow m, EncFlow m r) => Text -> m (Maybe DriverLicense)
 findByDLNumber dlNumber = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   dlNumberHash <- getDbHash dlNumber
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamDriverLicenseToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDL.licenseNumberHash $ Se.Eq dlNumberHash]
@@ -83,7 +84,7 @@ findByDLNumber dlNumber = do
 
 deleteByDriverId :: L.MonadFlow m => Id Person -> m ()
 deleteByDriverId (Id driverId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' ->
       void $

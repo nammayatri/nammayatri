@@ -20,6 +20,7 @@ import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
@@ -28,14 +29,14 @@ import qualified Storage.Beam.SearchRequest.SearchReqLocation as BeamSRL
 
 create :: L.MonadFlow m => SearchReqLocation -> m (MeshResult ())
 create bl = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainSearchReqLocationToBeam bl)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 findById :: L.MonadFlow m => Id SearchReqLocation -> m (Maybe SearchReqLocation)
 findById (Id searchReqLocationId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamSearchReqLocationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamSRL.id $ Se.Eq searchReqLocationId]
     Nothing -> pure Nothing

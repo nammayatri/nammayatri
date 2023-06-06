@@ -40,6 +40,7 @@ import Domain.Types.Vehicle.Variant (Variant)
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude hiding (toList)
 import Kernel.Types.Id as KTI
 import Kernel.Utils.Common
@@ -69,7 +70,7 @@ import qualified Storage.Tabular.VechileNew as VN
 
 findAllByMerchantId :: (L.MonadFlow m) => Id Merchant -> m [FarePolicy]
 findAllByMerchantId (Id merchantId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
       result <- KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamFP.merchantId $ Se.Eq merchantId]
@@ -94,7 +95,7 @@ findAllByMerchantId (Id merchantId) = do
 
 findByMerchantIdAndVariant :: (L.MonadFlow m) => Id Merchant -> Variant -> m (Maybe FarePolicy)
 findByMerchantIdAndVariant (Id merchantId) variant = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamFP.merchantId $ Se.Eq merchantId, Se.Is BeamFP.vehicleVariant $ Se.Eq variant]
@@ -110,7 +111,7 @@ findByMerchantIdAndVariant (Id merchantId) variant = do
 
 findById :: (L.MonadFlow m) => Id FarePolicy -> m (Maybe FarePolicy)
 findById (Id farePolicyId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamFP.id $ Se.Eq farePolicyId]
@@ -122,7 +123,7 @@ findById (Id farePolicyId) = do
 update :: (L.MonadFlow m, MonadTime m) => FarePolicy -> m ()
 update farePolicy = do
   now <- getCurrentTime
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       _ <-
@@ -159,7 +160,7 @@ update farePolicy = do
     -- create'' :: L.MonadFlow m => Id FarePolicy -> FPSlabsDetailsSlab -> m ()
     create'' :: L.MonadFlow m => Id FarePolicy -> FPSlabsDetailsSlab -> m ()
     create'' id' slab = do
-      dbConf <- L.getOption Extra.EulerPsqlDbCfg
+      dbConf <- L.getOption KBT.PsqlDbCfg
       case dbConf of
         Just dbConf' ->
           void $ KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainFarePolicyProgressiveDetailsToBeam' (id', slab))

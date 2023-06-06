@@ -22,6 +22,7 @@ import Domain.Types.Vehicle.Variant (Variant)
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -56,7 +57,7 @@ logBusinessEvent driverId eventType bookingId whenPoolWasComputed variant distan
             duration = duration,
             rideId = rideId
           }
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> void $ KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainBusinessEventToBeam bE)
     Nothing -> pure ()

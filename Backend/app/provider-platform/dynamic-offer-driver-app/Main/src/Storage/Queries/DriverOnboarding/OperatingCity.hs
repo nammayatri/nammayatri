@@ -22,6 +22,7 @@ import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
@@ -35,7 +36,7 @@ import Storage.Tabular.DriverOnboarding.OperatingCity
 
 create :: L.MonadFlow m => OperatingCity -> m (MeshResult ())
 create operatingCity = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainOperatingCityToBeam operatingCity)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -48,7 +49,7 @@ create operatingCity = do
 
 findById :: L.MonadFlow m => Id OperatingCity -> m (Maybe OperatingCity)
 findById (Id ocId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamOperatingCityToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamOC.id $ Se.Eq ocId]
     Nothing -> pure Nothing
@@ -65,7 +66,7 @@ findById (Id ocId) = do
 
 findByMerchantId :: L.MonadFlow m => Id Merchant -> m (Maybe OperatingCity)
 findByMerchantId (Id merchantId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamOperatingCityToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamOC.merchantId $ Se.Eq merchantId]
     Nothing -> pure Nothing
@@ -84,7 +85,7 @@ findByMerchantId (Id merchantId) = do
 
 findEnabledCityByName :: L.MonadFlow m => Text -> m [OperatingCity]
 findEnabledCityByName city = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' ->
       either (pure []) (transformBeamOperatingCityToDomain <$>)
@@ -112,7 +113,7 @@ findEnabledCityByMerchantIdAndName merchantId city =
 
 -- findEnabledCityByMerchantIdAndName' :: L.MonadFlow m => Id Merchant -> Text ->  m [OperatingCity]
 -- findEnabledCityByMerchantIdAndName'(Id merchantId) city = do
---   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   dbConf <- L.getOption KBT.PsqlDbCfg
 --   case dbConf of
 --     Just dbConf' -> either (pure []) (transformBeamOperatingCityToDomain <$>) <$> KV.findAllWithKVConnector dbConf' Mesh.meshConfig [Se.And
 --       [Se.Is BeamOC.cityName  $ Se.Eq city, Se.Is BeamOC.enabled $ Se.Eq True, Se.Is BeamOC.merchantId $ Se.Eq merchantId]]

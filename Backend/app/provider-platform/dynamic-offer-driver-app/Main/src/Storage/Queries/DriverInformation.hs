@@ -30,6 +30,7 @@ import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
@@ -52,21 +53,21 @@ data DatabaseWith2 table1 table2 f = DatabaseWith2
 
 create :: L.MonadFlow m => DDI.DriverInformation -> m ()
 create driverInformation = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> void $ KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainDriverInformationToBeam driverInformation)
     Nothing -> pure ()
 
 findById :: L.MonadFlow m => Id Person.Driver -> m (Maybe DriverInformation)
 findById (Id driverInformationId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamDriverInformationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDI.driverId $ Se.Eq driverInformationId]
     Nothing -> pure Nothing
 
 fetchAllByIds :: L.MonadFlow m => Id Merchant -> [Id Driver] -> m [DriverInformation]
 fetchAllByIds merchantId driversIds = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
       dInfos <- either (pure []) (transformBeamDriverInformationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDI.driverId $ Se.In (getId <$> driversIds)]
@@ -81,14 +82,14 @@ fetchAllByIds merchantId driversIds = do
 
 fetchAllAvailableByIds :: L.MonadFlow m => [Id Person.Driver] -> m [DriverInformation]
 fetchAllAvailableByIds driversIds = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure []) (transformBeamDriverInformationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDI.driverId $ Se.In (getId <$> driversIds)]
     Nothing -> pure []
 
 updateActivity :: (L.MonadFlow m, MonadTime m) => Id Person.Driver -> Bool -> Maybe DriverMode -> m (MeshResult ())
 updateActivity (Id driverId) isActive mode = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -104,7 +105,7 @@ updateActivity (Id driverId) isActive mode = do
 
 updateEnabledState :: (L.MonadFlow m, MonadTime m) => Id Driver -> Bool -> m (MeshResult ())
 updateEnabledState (Id driverId) isEnabled = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -121,7 +122,7 @@ updateEnabledState (Id driverId) isEnabled = do
 
 updateEnabledVerifiedState :: (L.MonadFlow m, MonadTime m) => Id Driver -> Bool -> Bool -> m (MeshResult ())
 updateEnabledVerifiedState (Id driverId) isEnabled isVerified = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -139,7 +140,7 @@ updateEnabledVerifiedState (Id driverId) isEnabled isVerified = do
 
 updateBlockedState :: (L.MonadFlow m, MonadTime m) => Id Person.Driver -> Bool -> m (MeshResult ())
 updateBlockedState (Id driverId) isBlocked = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -154,7 +155,7 @@ updateBlockedState (Id driverId) isBlocked = do
 
 verifyAndEnableDriver :: (L.MonadFlow m, MonadTime m) => Id Person -> m (MeshResult ())
 verifyAndEnableDriver (Id driverId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -178,7 +179,7 @@ updateEnabledStateReturningIds merchantId driverIds isEnabled = do
   where
     updateEnabledStateForIds :: (L.MonadFlow m, MonadTime m) => [Id Driver] -> m ()
     updateEnabledStateForIds present = do
-      dbConf <- L.getOption Extra.EulerPsqlDbCfg
+      dbConf <- L.getOption KBT.PsqlDbCfg
       now <- getCurrentTime
       case dbConf of
         Just dbConf' ->
@@ -197,7 +198,7 @@ updateEnabledStateReturningIds merchantId driverIds isEnabled = do
 
 updateOnRide :: (L.MonadFlow m, MonadTime m) => Id Person.Driver -> Bool -> m (MeshResult ())
 updateOnRide (Id driverId) onRide = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -212,7 +213,7 @@ updateOnRide (Id driverId) onRide = do
 
 updateNotOnRideMultiple :: (L.MonadFlow m, MonadTime m) => [Id Person.Driver] -> m (MeshResult ())
 updateNotOnRideMultiple driverIds = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -227,7 +228,7 @@ updateNotOnRideMultiple driverIds = do
 
 deleteById :: L.MonadFlow m => Id Person.Driver -> m ()
 deleteById (Id driverId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' ->
       void $
@@ -336,7 +337,7 @@ fetchDriverIDsFromInfo = map DriverInfo.driverId
 
 addReferralCode :: (L.MonadFlow m) => Id Person -> EncryptedHashedField 'AsEncrypted Text -> m (MeshResult ())
 addReferralCode (Id personId) code = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
@@ -372,7 +373,7 @@ addReferralCode (Id personId) code = do
 countDrivers :: L.MonadFlow m => Id Merchant -> m (Int, Int)
 countDrivers merchantID =
   getResults <$> do
-    dbConf <- L.getOption Extra.EulerPsqlDbCfg
+    dbConf <- L.getOption KBT.PsqlDbCfg
     conn <- L.getOrInitSqlConn (fromJust dbConf)
     case conn of
       Right c -> do
@@ -396,7 +397,7 @@ countDrivers merchantID =
 
 updateDowngradingOptions :: (L.MonadFlow m, MonadTime m) => Id Person -> Bool -> Bool -> Bool -> m (MeshResult ())
 updateDowngradingOptions (Id driverId) canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->

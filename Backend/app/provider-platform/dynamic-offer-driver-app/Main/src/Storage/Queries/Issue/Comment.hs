@@ -6,6 +6,7 @@ import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
@@ -17,7 +18,7 @@ import qualified Storage.Beam.Issue.Comment as BeamC
 
 create :: L.MonadFlow m => Comment.Comment -> m (MeshResult ())
 create comment = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainCommentToBeam comment)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -31,7 +32,7 @@ create comment = do
 
 findAllByIssueReportId :: L.MonadFlow m => Id IssueReport -> m [Comment]
 findAllByIssueReportId (Id issueReportId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure []) (transformBeamCommentToDomain <$>) <$> KV.findAllWithOptionsKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamC.issueReportId $ Se.Eq issueReportId] (Se.Desc BeamC.createdAt) Nothing Nothing
     Nothing -> pure []

@@ -28,6 +28,7 @@ import Domain.Types.Person
 import qualified EulerHS.Extra.EulerDB as Extra
 import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
@@ -62,7 +63,7 @@ imagesAggTableCTEbyDoctype imageType = with $ do
 
 imagesAggTableCTEbyDoctype' :: L.MonadFlow m => Image.ImageType -> m (Maybe (Text, Int))
 imagesAggTableCTEbyDoctype' imageType' = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   conn <- L.getOrInitSqlConn (fromJust dbConf)
   case conn of
     Right c -> do
@@ -116,7 +117,7 @@ baseDriverDocumentsInfoQuery licenseImagesAggTable vehicleRegistrationImagesAggT
 
 -- fetchDriverDocsInfo' :: (L.MonadFlow m) => Id Merchant -> Maybe (NonEmpty (Id Driver)) -> m [DriverDocsInfo]
 -- fetchDriverDocsInfo' merchantId mbDriverIds = do
---   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   dbConf <- L.getOption KBT.PsqlDbCfg
 --   case dbConf of
 --     Just dbCOnf' -> do
 --       persons <- either (pure []) (QueriesIT.transformBeamIssueTranslationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamIT.language $ Se.Eq language]

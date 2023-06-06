@@ -23,6 +23,7 @@ import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
@@ -43,7 +44,7 @@ import qualified Storage.Queries.FareParameters as SQFP
 
 create :: L.MonadFlow m => QuoteSpecialZone -> m ()
 create quote = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       void $ KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainQuoteSpecialZoneToBeam quote)
@@ -61,7 +62,7 @@ create quote = do
 
 countAllByRequestId :: L.MonadFlow m => Id SearchRequestSpecialZone -> m Int
 countAllByRequestId searchReqID = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   conn <- L.getOrInitSqlConn (fromJust dbConf)
   case conn of
     Right c -> do
@@ -89,7 +90,7 @@ countAllByRequestId searchReqID = do
 
 findById :: (L.MonadFlow m) => Id QuoteSpecialZone -> m (Maybe QuoteSpecialZone)
 findById (Id dQuoteId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
       sR <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamQSZ.id $ Se.Eq dQuoteId]

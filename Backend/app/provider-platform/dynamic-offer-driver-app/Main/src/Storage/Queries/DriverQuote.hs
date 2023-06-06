@@ -27,13 +27,15 @@ import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 -- import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
+-- import Sequelize
+
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common (addUTCTime, secondsToNominalDiffTime)
 import qualified Lib.Mesh as Mesh
--- import Sequelize
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverQuote as BeamDQ
 import Storage.Queries.FareParameters as BeamQFP
@@ -45,7 +47,7 @@ import qualified Storage.Tabular.FareParameters as Fare
 
 create :: L.MonadFlow m => Domain.DriverQuote -> m (MeshResult ())
 create dQuote = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainDriverQuoteToBeam dQuote)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -64,7 +66,7 @@ baseDriverQuoteQuery =
 
 findById :: (L.MonadFlow m) => Id Domain.DriverQuote -> m (Maybe Domain.DriverQuote)
 findById (Id driverQuoteId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
       driverQuote <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDQ.id $ Se.Eq driverQuoteId]
@@ -87,7 +89,7 @@ findActiveQuotesByDriverId :: (L.MonadFlow m, MonadTime m) => Id Person -> Secon
 findActiveQuotesByDriverId (Id driverId) driverUnlockDelay = do
   now <- getCurrentTime
   let delayToAvoidRaces = secondsToNominalDiffTime . negate $ driverUnlockDelay
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
       srsz <- KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamDQ.status $ Se.Eq Domain.Active, Se.Is BeamDQ.id $ Se.Eq driverId, Se.Is BeamDQ.validTill $ Se.GreaterThan (addUTCTime delayToAvoidRaces now)]]
@@ -98,7 +100,7 @@ findActiveQuotesByDriverId (Id driverId) driverUnlockDelay = do
 
 findDriverQuoteBySTId :: L.MonadFlow m => Id DST.SearchTry -> m (Maybe Domain.DriverQuote)
 findDriverQuoteBySTId (Id searchTryId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
       driverQuote <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDQ.searchTryId $ Se.Eq searchTryId]
@@ -114,7 +116,7 @@ findDriverQuoteBySTId (Id searchTryId) = do
 
 -- findAllByRequestId :: L.MonadFlow m => Id DSReq.SearchRequest -> m [Domain.DriverQuote]
 -- findAllByRequestId (Id searchReqId) = do
---   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   dbConf <- L.getOption KBT.PsqlDbCfg
 --   case dbConf of
 --     Just dbCOnf' -> do
 --       srsz <- KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamDQ.status $ Se.Eq Domain.Active, Se.Is BeamDQ.id $ Se.Eq searchReqId]]
@@ -135,7 +137,7 @@ findDriverQuoteBySTId (Id searchTryId) = do
 
 -- countAllByRequestId :: L.MonadFlow m => Id DSReq.SearchRequest -> m Int
 -- countAllByRequestId searchReqID = do
---   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   dbConf <- L.getOption KBT.PsqlDbCfg
 --   conn <- L.getOrInitSqlConn (fromJust dbConf)
 --   case conn of
 --     Right c -> do
@@ -151,7 +153,7 @@ findDriverQuoteBySTId (Id searchTryId) = do
 
 deleteByDriverId :: L.MonadFlow m => Id Person -> m ()
 deleteByDriverId (Id driverId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' ->
       void $

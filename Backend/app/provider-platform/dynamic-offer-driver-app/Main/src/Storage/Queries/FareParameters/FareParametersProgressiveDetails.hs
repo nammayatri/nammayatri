@@ -4,6 +4,7 @@ import qualified Domain.Types.FareParameters as Domain
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import qualified Kernel.Types.Id as KTI
 import qualified Lib.Mesh as Mesh
@@ -13,7 +14,7 @@ import qualified Storage.Tabular.FareParameters.FareParametersProgressiveDetails
 
 findById' :: L.MonadFlow m => KTI.Id Domain.FareParameters -> m (Maybe DomainFPPD.FullFareParametersProgressiveDetails)
 findById' (KTI.Id fareParametersId') = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamFareParametersProgressiveDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is fareParametersId $ Se.Eq fareParametersId']
     Nothing -> pure Nothing

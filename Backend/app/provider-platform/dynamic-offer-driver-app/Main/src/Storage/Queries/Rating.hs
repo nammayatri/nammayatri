@@ -21,6 +21,7 @@ import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -33,7 +34,7 @@ import qualified Storage.Beam.Rating as BeamR
 
 create :: L.MonadFlow m => DR.Rating -> m (MeshResult ())
 create rating = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainRatingToBeam rating)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -54,7 +55,7 @@ create rating = do
 
 updateRating :: (L.MonadFlow m, MonadTime m) => Id Rating -> Id Person -> Int -> Maybe Text -> m (MeshResult ())
 updateRating (Id ratingId) (Id driverId) newRatingValue newFeedbackDetails = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -77,7 +78,7 @@ updateRating (Id ratingId) (Id driverId) newRatingValue newFeedbackDetails = do
 
 findAllRatingsForPerson :: L.MonadFlow m => Id Person -> m [Rating]
 findAllRatingsForPerson driverId = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure []) (transformBeamRatingToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamR.driverId $ Se.Eq $ getId driverId]
     Nothing -> pure []
@@ -90,7 +91,7 @@ findAllRatingsForPerson driverId = do
 
 findRatingForRide :: L.MonadFlow m => Id Ride -> m (Maybe Rating)
 findRatingForRide (Id rideId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamRatingToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamR.id $ Se.Eq rideId]
     Nothing -> pure Nothing

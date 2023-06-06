@@ -20,6 +20,7 @@ import Domain.Types.FarePolicy.Common as Common
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import qualified Kernel.Types.Id as KTI
 import qualified Lib.Mesh as Mesh
@@ -30,7 +31,7 @@ import qualified Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails as Doma
 
 findById' :: L.MonadFlow m => KTI.Id Domain.FarePolicy -> m (Maybe DomainFPPD.FullFarePolicyProgressiveDetails)
 findById' (KTI.Id farePolicyId') = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
       res <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamFPPD.farePolicyId $ Se.Eq farePolicyId']

@@ -25,6 +25,7 @@ import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
@@ -39,7 +40,7 @@ import Storage.Tabular.Exophone
 
 create :: L.MonadFlow m => DE.Exophone -> m (MeshResult ())
 create exophone = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainExophoneToBeam exophone)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -60,7 +61,7 @@ create exophone = do
 
 findAllByPhone :: L.MonadFlow m => Text -> m [Exophone]
 findAllByPhone phone = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure []) (transformBeamExophoneToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Or [Se.Is BeamE.primaryPhone $ Se.Eq phone, Se.Is BeamE.backupPhone $ Se.Eq phone]]
     Nothing -> pure []
@@ -74,7 +75,7 @@ findAllByPhone phone = do
 
 findAllByMerchantId :: L.MonadFlow m => Id DM.Merchant -> m [Exophone]
 findAllByMerchantId (Id merchantId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure []) (transformBeamExophoneToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamE.merchantId $ Se.Eq merchantId]
     Nothing -> pure []
@@ -84,7 +85,7 @@ findAllByMerchantId (Id merchantId) = do
 
 findAllExophones :: L.MonadFlow m => m [Exophone]
 findAllExophones = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure []) (transformBeamExophoneToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig []
     Nothing -> pure []
@@ -113,7 +114,7 @@ updateAffectedPhones primaryPhones = do
 
 deleteByMerchantId :: L.MonadFlow m => Id DM.Merchant -> m ()
 deleteByMerchantId (Id merchantId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' ->
       void $

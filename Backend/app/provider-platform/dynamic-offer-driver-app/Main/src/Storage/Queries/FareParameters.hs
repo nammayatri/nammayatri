@@ -18,10 +18,11 @@ import Domain.Types.FareParameters as DFP
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
-import Kernel.Prelude
-import Kernel.Types.Id
 -- import Storage.Queries.FareParameters.FareParametersProgressiveDetails (findById')
 
+import qualified Kernel.Beam.Types as KBT
+import Kernel.Prelude
+import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.FareParameters as BeamFP
@@ -37,7 +38,7 @@ import qualified Storage.Queries.FareParameters.FareParametersProgressiveDetails
 
 create :: L.MonadFlow m => DFP.FareParameters -> m ()
 create fareParameters = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       void $ KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainFareParametersToBeam fareParameters)
@@ -54,7 +55,7 @@ create fareParameters = do
 
 findById :: L.MonadFlow m => Id FareParameters -> m (Maybe FareParameters)
 findById (Id fareParametersId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
       fp <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamFP.id $ Se.Eq fareParametersId]
@@ -69,7 +70,7 @@ findById (Id fareParametersId) = do
 
 -- findById'' :: L.MonadFlow m => Id FareParameters -> m (Maybe FareParameters)
 -- findById'' (Id fareParametersId) = do
---   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   dbConf <- L.getOption KBT.PsqlDbCfg
 --   case dbConf of
 --     Just dbCOnf' -> do
 --       -- either (pure Nothing) (transformBeamFareParametersToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamFP.id $ Se.Eq fareParametersId]

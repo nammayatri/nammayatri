@@ -5,6 +5,7 @@ import Domain.Types.Issue.IssueTranslation as DomainIT
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
@@ -38,7 +39,7 @@ fullCategoryTable language =
 
 findAllByLanguage :: L.MonadFlow m => Language -> m [(IssueCategory, Maybe IssueTranslation)]
 findAllByLanguage language = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
       iTranslations <- either (pure []) (QueriesIT.transformBeamIssueTranslationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamIT.language $ Se.Eq language]
@@ -59,7 +60,7 @@ findAllByLanguage language = do
 
 findById :: L.MonadFlow m => Id IssueCategory -> m (Maybe IssueCategory)
 findById (Id issueCategoryId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamIssueCategoryToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamIC.id $ Se.Eq issueCategoryId]
     Nothing -> pure Nothing

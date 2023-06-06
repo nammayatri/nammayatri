@@ -6,6 +6,7 @@ import Domain.Types.Issue.IssueTranslation
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
@@ -28,7 +29,7 @@ import Storage.Tabular.Issue.IssueTranslation
 
 findByIdAndCategoryId :: L.MonadFlow m => Id IssueOption -> Id IssueCategory -> m (Maybe IssueOption)
 findByIdAndCategoryId issueOptionId issueCategoryId = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> either (pure Nothing) (transformBeamIssueOptionToDomain <$>) <$> KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamIO.id $ Se.Eq $ getId issueOptionId, Se.Is BeamIO.issueCategoryId $ Se.Eq $ getId issueCategoryId]]
     Nothing -> pure Nothing
@@ -56,7 +57,7 @@ fullOptionTable language =
 
 findAllByCategoryAndLanguage :: L.MonadFlow m => Id IssueCategory -> Language -> m [(IssueOption, Maybe IssueTranslation)]
 findAllByCategoryAndLanguage (Id issueCategoryId) language = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
       iOptions <- either (pure []) (transformBeamIssueOptionToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamIO.issueCategoryId $ Se.Eq (issueCategoryId)]
@@ -82,7 +83,7 @@ findAllByCategoryAndLanguage (Id issueCategoryId) language = do
 
 findByIdAndLanguage :: L.MonadFlow m => Id IssueOption -> Language -> m (Maybe (IssueOption, Maybe IssueTranslation))
 findByIdAndLanguage issueOptionId language = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
       iOptions <- either (pure []) (transformBeamIssueOptionToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamIO.id $ Se.Eq (getId issueOptionId)]
@@ -107,7 +108,7 @@ findByIdAndLanguage issueOptionId language = do
 
 findById :: L.MonadFlow m => Id IssueOption -> m (Maybe IssueOption)
 findById (Id issueOptionId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamIO.id $ Se.Eq issueOptionId]

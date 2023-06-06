@@ -21,6 +21,7 @@ import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -30,14 +31,14 @@ import qualified Storage.Beam.Driver.DriverFlowStatus as BeamDFS
 
 create :: L.MonadFlow m => DDFS.DriverFlowStatus -> m (MeshResult ())
 create driverFlowStatus = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainDriverFlowStatusToBeam driverFlowStatus)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 deleteById :: L.MonadFlow m => Id Person -> m ()
 deleteById (Id driverId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' ->
       void $
@@ -49,7 +50,7 @@ deleteById (Id driverId) = do
 
 getStatus :: L.MonadFlow m => Id Person -> m (Maybe DDFS.FlowStatus)
 getStatus (Id personId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       dfsData <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamDFS.personId $ Se.Eq personId]
@@ -63,7 +64,7 @@ getStatus (Id personId) = do
 
 updateStatus :: (L.MonadFlow m, MonadTime m) => Id Person -> DDFS.FlowStatus -> m ()
 updateStatus (Id personId) flowStatus = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->

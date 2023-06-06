@@ -54,12 +54,14 @@ import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types (KVConnector (..), MeshConfig (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import qualified EulerHS.Language as L
 import GHC.Generics (Generic)
+-- import Storage.Beam.Instances
+
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
--- import Storage.Beam.Instances
 import Storage.Tabular.Vehicle ()
 
 data A = A | B
@@ -261,7 +263,7 @@ meshConfig =
 
 findById :: (L.MonadFlow m) => Text -> m (Maybe BookingNew)
 findById bookingId = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (const Nothing) (\x -> x) <$> KV.findWithKVConnector dbCOnf' meshConfig [And [Is id (Eq bookingId)]]
     Nothing -> pure Nothing

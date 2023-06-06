@@ -8,6 +8,7 @@ import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common (MonadTime (..), getCurrentTime)
@@ -20,7 +21,7 @@ import qualified Storage.Beam.Issue.IssueReport as BeamIR
 
 create :: L.MonadFlow m => IssueReport.IssueReport -> m (MeshResult ())
 create issueReport = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainIssueReportToBeam issueReport)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -42,7 +43,7 @@ create issueReport = do
 
 findAllWithOptions :: L.MonadFlow m => Maybe Int -> Maybe Int -> Maybe IssueStatus -> Maybe (Id IssueCategory) -> Maybe Text -> m [IssueReport]
 findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       result <- KV.findAllWithOptionsKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamIR.status $ Se.Eq (fromJust mbStatus), Se.Is BeamIR.categoryId $ Se.Eq (fromJust (getId <$> mbCategoryId)), Se.Is BeamIR.assignee $ Se.Eq mbAssignee]] (Se.Desc BeamIR.createdAt) (Just limitVal) (Just offsetVal)
@@ -64,7 +65,7 @@ findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee = do
 
 findById :: L.MonadFlow m => Id IssueReport -> m (Maybe IssueReport)
 findById (Id issueReportId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> either (pure Nothing) (transformBeamIssueReportToDomain <$>) <$> KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamIR.id $ Se.Eq issueReportId]
     Nothing -> pure Nothing
@@ -79,7 +80,7 @@ findById (Id issueReportId) = do
 
 findAllByDriver :: L.MonadFlow m => Id SP.Person -> m [IssueReport]
 findAllByDriver (Id driverId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> either (pure []) (transformBeamIssueReportToDomain <$>) <$> KV.findAllWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamIR.driverId $ Se.Eq driverId]
     Nothing -> pure []
@@ -95,7 +96,7 @@ findAllByDriver (Id driverId) = do
 
 safeToDelete :: L.MonadFlow m => Id IssueReport -> Id SP.Person -> m (Maybe IssueReport)
 safeToDelete (Id issueReportId) (Id driverId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamIR.id $ Se.Eq issueReportId, Se.Is BeamIR.driverId $ Se.Eq driverId]]
@@ -122,7 +123,7 @@ isSafeToDelete issueReportId driverId = do
 
 deleteByPersonId :: L.MonadFlow m => Id SP.Person -> m ()
 deleteByPersonId (Id driverId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' ->
       void $
@@ -147,7 +148,7 @@ deleteByPersonId (Id driverId) = do
 updateAsDeleted :: (L.MonadFlow m, MonadTime m) => Id IssueReport -> m ()
 updateAsDeleted issueReportId = do
   now <- getCurrentTime
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' ->
       void $
@@ -177,7 +178,7 @@ updateAsDeleted issueReportId = do
 updateStatusAssignee :: (L.MonadFlow m, MonadTime m) => Id IssueReport -> Maybe IssueStatus -> Maybe Text -> m ()
 updateStatusAssignee issueReportId status assignee = do
   now <- getCurrentTime
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' ->
       void $
@@ -204,7 +205,7 @@ updateStatusAssignee issueReportId status assignee = do
 updateOption :: (L.MonadFlow m, MonadTime m) => Id IssueReport -> Id IssueOption -> m ()
 updateOption issueReportId (Id optionId) = do
   now <- getCurrentTime
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' ->
       void $

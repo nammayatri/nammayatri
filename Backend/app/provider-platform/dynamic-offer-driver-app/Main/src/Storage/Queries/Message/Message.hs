@@ -23,6 +23,7 @@ import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
@@ -33,7 +34,7 @@ import Storage.Tabular.Message.Instances ()
 
 createMessage :: L.MonadFlow m => Message -> m (MeshResult ())
 createMessage message = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainMessageToBeam message)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -49,7 +50,7 @@ create msg = do
 
 findById :: L.MonadFlow m => Id Message -> m (Maybe RawMessage)
 findById (Id messageId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamM.id $ Se.Eq messageId]
@@ -77,7 +78,7 @@ findById (Id messageId) = do
 
 findAllWithLimitOffset :: L.MonadFlow m => Maybe Int -> Maybe Int -> Id Merchant -> m [RawMessage]
 findAllWithLimitOffset mbLimit mbOffset merchantIdParam = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       srsz <- KV.findAllWithOptionsKVConnector dbConf' Mesh.meshConfig [Se.Is BeamM.merchantId $ Se.Eq (getId merchantIdParam)] (Se.Asc BeamM.createdAt) (Just limitVal) (Just offsetVal)
@@ -125,7 +126,7 @@ updateMessageLikeCount messageId value = do
   case messageObject of
     Just msg -> do
       let likeCount = msg.likeCount
-      dbConf <- L.getOption Extra.EulerPsqlDbCfg
+      dbConf <- L.getOption KBT.PsqlDbCfg
       case dbConf of
         Just dbConf' ->
           void $

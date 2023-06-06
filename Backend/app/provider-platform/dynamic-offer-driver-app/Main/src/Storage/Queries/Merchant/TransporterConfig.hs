@@ -25,6 +25,7 @@ import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -43,7 +44,7 @@ import qualified Storage.Beam.Merchant.TransporterConfig as BeamTC
 
 findByMerchantId :: L.MonadFlow m => Id Merchant -> m (Maybe TransporterConfig)
 findByMerchantId (Id merchantId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamTC.merchantId $ Se.Eq merchantId]
@@ -66,7 +67,7 @@ findByMerchantId (Id merchantId) = do
 
 updateFCMConfig :: (L.MonadFlow m, MonadTime m) => Id Merchant -> BaseUrl -> Text -> m ()
 updateFCMConfig (Id merchantId) fcmUrl fcmServiceAccount = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -94,7 +95,7 @@ updateFCMConfig (Id merchantId) fcmUrl fcmServiceAccount = do
 
 updateReferralLinkPassword :: (L.MonadFlow m, MonadTime m) => Id Merchant -> Text -> m (MeshResult ())
 updateReferralLinkPassword (Id merchantId) newPassword = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -133,7 +134,7 @@ updateReferralLinkPassword (Id merchantId) newPassword = do
 
 update :: (L.MonadFlow m, MonadTime m) => TransporterConfig -> m (MeshResult ())
 update config = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->

@@ -20,6 +20,7 @@ import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -32,7 +33,7 @@ import qualified Storage.Beam.RegistrationToken as BeamRT
 
 create :: L.MonadFlow m => DRT.RegistrationToken -> m (MeshResult ())
 create registrationToken = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainRegistrationTokenToBeam registrationToken)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -42,7 +43,7 @@ create registrationToken = do
 
 findById :: L.MonadFlow m => Id RegistrationToken -> m (Maybe RegistrationToken)
 findById (Id registrationTokenId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamRegistrationTokenToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamRT.id $ Se.Eq registrationTokenId]
     Nothing -> pure Nothing
@@ -60,7 +61,7 @@ findById (Id registrationTokenId) = do
 
 setVerified :: (L.MonadFlow m, MonadTime m) => Id RegistrationToken -> m (MeshResult ())
 setVerified (Id rtId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -82,7 +83,7 @@ setVerified (Id rtId) = do
 
 findByToken :: L.MonadFlow m => RegToken -> m (Maybe RegistrationToken)
 findByToken token = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamRegistrationTokenToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamRT.token $ Se.Eq token]
     Nothing -> pure Nothing
@@ -100,7 +101,7 @@ findByToken token = do
 
 updateAttempts :: (L.MonadFlow m, MonadTime m) => Int -> Id RegistrationToken -> m (MeshResult ())
 updateAttempts attempts (Id rtId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -121,7 +122,7 @@ updateAttempts attempts (Id rtId) = do
 
 deleteByPersonId :: L.MonadFlow m => Id Person -> m ()
 deleteByPersonId (Id personId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' ->
       void $
@@ -141,7 +142,7 @@ deleteByPersonId (Id personId) = do
 
 deleteByPersonIdExceptNew :: L.MonadFlow m => Id Person -> Id RegistrationToken -> m ()
 deleteByPersonIdExceptNew (Id personId) (Id newRT) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' ->
       void $
@@ -160,7 +161,7 @@ deleteByPersonIdExceptNew (Id personId) (Id newRT) = do
 
 findAllByPersonId :: L.MonadFlow m => Id Person -> m [RegistrationToken]
 findAllByPersonId personId = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure []) (transformBeamRegistrationTokenToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamRT.entityId $ Se.Eq $ getId personId]
     Nothing -> pure []
@@ -175,7 +176,7 @@ findAllByPersonId personId = do
 
 getAlternateNumberAttempts :: L.MonadFlow m => Id Person -> m Int
 getAlternateNumberAttempts (Id personId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       rt <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamRT.entityId $ Se.Eq personId]

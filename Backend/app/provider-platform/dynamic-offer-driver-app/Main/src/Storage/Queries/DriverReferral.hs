@@ -6,6 +6,7 @@ import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
@@ -17,7 +18,7 @@ import qualified Storage.Beam.DriverReferral as BeamDR
 
 create :: L.MonadFlow m => DDR.DriverReferral -> m (MeshResult ())
 create driverReferral = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainDriverReferralToBeam driverReferral)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -30,7 +31,7 @@ findByRefferalCode ::
   Id DriverReferral ->
   m (Maybe DriverReferral)
 findByRefferalCode (Id referralId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamDriverReferralToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDR.referralCode $ Se.Eq referralId]
     Nothing -> pure Nothing
@@ -50,7 +51,7 @@ findById ::
   Id SP.Person ->
   m (Maybe DriverReferral)
 findById (Id driverId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamDriverReferralToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDR.driverId $ Se.Eq driverId]
     Nothing -> pure Nothing

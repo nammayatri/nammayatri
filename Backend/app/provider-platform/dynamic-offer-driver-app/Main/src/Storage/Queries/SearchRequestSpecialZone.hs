@@ -21,9 +21,10 @@ import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
-import Kernel.Prelude
 -- import Kernel.Storage.Esqueleto as Esq
 
+import qualified Kernel.Beam.Types as KBT
+import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
@@ -44,7 +45,7 @@ import Storage.Tabular.SearchRequestSpecialZone
 
 createSearchRequestSpecialZone :: L.MonadFlow m => SearchRequestSpecialZone -> m (MeshResult ())
 createSearchRequestSpecialZone srsz = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainSearchRequestSpecialZoneToBeam srsz)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -70,7 +71,7 @@ create srsz = do
 -- We are already finding SearchRequestLocation in Domain transform function.
 findById :: L.MonadFlow m => Id SearchRequestSpecialZone -> m (Maybe SearchRequestSpecialZone)
 findById (Id searchRequestSpecialZoneId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
       sR <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamSRSZ.id $ Se.Eq searchRequestSpecialZoneId]
@@ -103,7 +104,7 @@ findById (Id searchRequestSpecialZoneId) = do
 
 getRequestIdfromTransactionId :: L.MonadFlow m => Id SearchRequestSpecialZone -> m (Maybe (Id SearchRequestSpecialZone))
 getRequestIdfromTransactionId (Id tId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
       srsz <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamSRSZ.transactionId $ Se.Eq tId]
@@ -128,7 +129,7 @@ getRequestIdfromTransactionId (Id tId) = do
 
 findByMsgIdAndBapIdAndBppId :: L.MonadFlow m => Text -> Text -> Id Merchant -> m (Maybe SearchRequestSpecialZone)
 findByMsgIdAndBapIdAndBppId txnId bapId (Id merchantId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
       srsz <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamSRSZ.messageId $ Se.Eq txnId, Se.Is BeamSRSZ.providerId $ Se.Eq merchantId, Se.Is BeamSRSZ.bapId $ Se.Eq bapId]]
@@ -160,7 +161,7 @@ findByTransactionId tId = do
 
 getValidTill :: L.MonadFlow m => Id SearchRequestSpecialZone -> m (Maybe UTCTime)
 getValidTill (Id searchRequestId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
       srsz <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamSRSZ.id $ Se.Eq searchRequestId]

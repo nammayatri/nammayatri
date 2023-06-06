@@ -19,6 +19,7 @@ import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
@@ -30,7 +31,7 @@ import qualified Storage.Beam.MediaFile as BeamMF
 
 create :: L.MonadFlow m => DMF.MediaFile -> m (MeshResult ())
 create mediaFile = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainMediaFileToBeam mediaFile)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -40,7 +41,7 @@ create mediaFile = do
 
 findById :: L.MonadFlow m => Id MediaFile -> m (Maybe MediaFile)
 findById (Id mediaFileId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamMediaFileToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamMF.id $ Se.Eq mediaFileId]
     Nothing -> pure Nothing
@@ -54,7 +55,7 @@ findById (Id mediaFileId) = do
 
 findAllIn :: L.MonadFlow m => [Id MediaFile] -> m [MediaFile]
 findAllIn mfList = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure []) (transformBeamMediaFileToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamMF.id $ Se.In $ getId <$> mfList]
     Nothing -> pure []

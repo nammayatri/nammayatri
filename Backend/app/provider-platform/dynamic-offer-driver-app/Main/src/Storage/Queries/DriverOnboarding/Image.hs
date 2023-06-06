@@ -24,6 +24,7 @@ import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
@@ -43,7 +44,7 @@ import Storage.Tabular.DriverOnboarding.Image
 
 create :: L.MonadFlow m => Image -> m (MeshResult ())
 create image = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainImageToBeam image)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -56,7 +57,7 @@ create image = do
 
 findById :: L.MonadFlow m => Id Image -> m (Maybe Image)
 findById (Id imageid) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamImageToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamI.id $ Se.Eq imageid]
     Nothing -> pure Nothing
@@ -78,7 +79,7 @@ findById (Id imageid) = do
 
 findImagesByPersonAndType :: L.MonadFlow m => Id Merchant -> Id Person -> ImageType -> m [Image]
 findImagesByPersonAndType (Id merchantId) (Id personId) imgType = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' ->
       either (pure []) (transformBeamImageToDomain <$>)
@@ -130,7 +131,7 @@ findRecentByPersonIdAndImageType personId imgtype = do
 
 updateToValid :: L.MonadFlow m => Id Image -> m (MeshResult ())
 updateToValid (Id id) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
@@ -153,7 +154,7 @@ updateToValid (Id id) = do
 
 findByMerchantId :: L.MonadFlow m => Id Merchant -> m [Image]
 findByMerchantId (Id merchantId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' ->
       either (pure []) (transformBeamImageToDomain <$>)
@@ -174,7 +175,7 @@ findByMerchantId (Id merchantId) = do
 
 addFailureReason :: L.MonadFlow m => Id Image -> DriverOnboardingError -> m (MeshResult ())
 addFailureReason (Id id) reason = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
@@ -193,7 +194,7 @@ addFailureReason (Id id) reason = do
 
 deleteByPersonId :: L.MonadFlow m => Id Person -> m ()
 deleteByPersonId (Id personId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' ->
       void $

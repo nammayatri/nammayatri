@@ -20,6 +20,7 @@ import Domain.Types.Geometry
 import qualified EulerHS.Extra.EulerDB as Extra
 import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -39,7 +40,7 @@ import qualified Storage.Beam.Geometry as BeamG
 
 findGeometriesContaining :: forall m. (L.MonadFlow m) => LatLong -> [Text] -> m [Geometry]
 findGeometriesContaining gps regions = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   conn <- L.getOrInitSqlConn (fromJust dbConf)
   case conn of
     Right c -> do

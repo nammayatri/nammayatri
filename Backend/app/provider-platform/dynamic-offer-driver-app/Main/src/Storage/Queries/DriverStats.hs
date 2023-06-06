@@ -20,6 +20,7 @@ import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
@@ -55,7 +56,7 @@ createInitialDriverStats driverId = do
             ridesCancelled = Just 0,
             totalRidesAssigned = Just 0
           }
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> void $ KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainDriverStatsToBeam dStats)
     Nothing -> pure ()
@@ -71,7 +72,7 @@ createInitialDriverStats driverId = do
 
 getTopDriversByIdleTime :: L.MonadFlow m => Int -> [Id Driver] -> m [Id Driver]
 getTopDriversByIdleTime count_ ids = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
       srsz <- KV.findAllWithOptionsKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDS.driverId $ Se.In (getId <$> ids)] (Se.Asc BeamDS.idleSince) (Just count_) Nothing
@@ -99,7 +100,7 @@ updateIdleTime driverId = updateIdleTimes [driverId]
 updateIdleTimes :: (L.MonadFlow m, MonadTime m) => [Id Driver] -> m ()
 updateIdleTimes driverIds = do
   now <- getCurrentTime
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' ->
       void $
@@ -116,7 +117,7 @@ updateIdleTimes driverIds = do
 
 fetchAll :: L.MonadFlow m => m [DriverStats]
 fetchAll = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure []) (transformBeamDriverStatsToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig []
     Nothing -> pure []
@@ -129,7 +130,7 @@ findById = Esq.findById
 
 deleteById :: L.MonadFlow m => Id Driver -> m ()
 deleteById (Id driverId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' ->
       void $
@@ -151,7 +152,7 @@ deleteById (Id driverId) = do
 
 incrementTotalRidesAndTotalDist :: (L.MonadFlow m) => Id Driver -> Meters -> m (MeshResult ())
 incrementTotalRidesAndTotalDist (Id driverId') rideDist = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
@@ -192,7 +193,7 @@ setCancelledRidesCount driverId cancelledCount = do
 
 getDriversSortedOrder :: L.MonadFlow m => Maybe Integer -> m [DriverStats]
 getDriversSortedOrder mbLimitVal = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
       srsz <- KV.findAllWithOptionsKVConnector dbCOnf' Mesh.meshConfig [] (Se.Desc BeamDS.totalRides) (Just $ fromMaybe 10 (fromInteger <$> mbLimitVal)) Nothing

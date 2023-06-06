@@ -19,12 +19,14 @@ import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
-import Kernel.Prelude
 -- import Kernel.Storage.Esqueleto as Esq
 
+-- import Kernel.Utils.Common
+
+import qualified Kernel.Beam.Types as KBT
+import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
--- import Kernel.Utils.Common
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequest as BeamSR
@@ -41,7 +43,7 @@ import Storage.Tabular.SearchRequest.SearchReqLocation ()
 
 createDSReq :: L.MonadFlow m => SearchRequest -> m (MeshResult ())
 createDSReq sReq = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainSearchRequestToBeam sReq)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -67,7 +69,7 @@ create dsReq = do
 
 findById :: L.MonadFlow m => Id SearchRequest -> m (Maybe SearchRequest)
 findById (Id searchRequestId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
       sR <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamSR.id $ Se.Eq searchRequestId]
@@ -106,7 +108,7 @@ findById (Id searchRequestId) = do
 
 -- updateStatus :: (L.MonadFlow m, MonadTime m) => Id SearchRequest -> SearchRequestStatus -> m (MeshResult ())
 -- updateStatus (Id searchId) status_ = do
---   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   dbConf <- L.getOption KBT.PsqlDbCfg
 --   now <- getCurrentTime
 --   case dbConf of
 --     Just dbConf' ->
@@ -132,7 +134,7 @@ findById (Id searchRequestId) = do
 
 getRequestIdfromTransactionId :: L.MonadFlow m => Id SearchRequest -> m (Maybe (Id SearchRequest))
 getRequestIdfromTransactionId (Id tId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
       sr <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamSR.transactionId $ Se.Eq tId]
@@ -157,7 +159,7 @@ getRequestIdfromTransactionId (Id tId) = do
 
 -- getSearchRequestStatusOrValidTill :: L.MonadFlow m => Id SearchRequest -> m (Maybe (UTCTime, SearchRequestStatus))
 -- getSearchRequestStatusOrValidTill (Id searchReqId) = do
---   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   dbConf <- L.getOption KBT.PsqlDbCfg
 --   case dbConf of
 --     Just dbCOnf' -> do
 --       sr <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamSR.id $ Se.Eq searchReqId]
@@ -183,7 +185,7 @@ getRequestIdfromTransactionId (Id tId) = do
 
 findByTransactionId :: L.MonadFlow m => Text -> m (Maybe (Id SearchRequest))
 findByTransactionId transactionId = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
       sr <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamSR.transactionId $ Se.Eq transactionId]]

@@ -25,6 +25,7 @@ import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Common (Meters, MonadTime (getCurrentTime))
 import Kernel.Types.Id
@@ -37,7 +38,7 @@ import qualified Storage.Beam.Merchant.DriverPoolConfig as BeamDPC
 
 create :: L.MonadFlow m => DriverPoolConfig -> m (MeshResult ())
 create driverPoolConfig = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainDriverPoolConfigToBeam driverPoolConfig)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -53,7 +54,7 @@ create driverPoolConfig = do
 
 findAllByMerchantId :: L.MonadFlow m => Id Merchant -> m [DriverPoolConfig]
 findAllByMerchantId (Id merchantId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure []) (transformBeamDriverPoolConfigToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDPC.merchantId $ Se.Eq merchantId]
     Nothing -> pure []
@@ -68,7 +69,7 @@ findAllByMerchantId (Id merchantId) = do
 
 findByMerchantIdAndTripDistance :: L.MonadFlow m => Id Merchant -> Meters -> m (Maybe DriverPoolConfig)
 findByMerchantIdAndTripDistance (Id merchantId) tripDistance = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamDriverPoolConfigToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamDPC.merchantId $ Se.Eq merchantId, Se.Is BeamDPC.tripDistance $ Se.Eq tripDistance]]
     Nothing -> pure Nothing
@@ -98,7 +99,7 @@ findByMerchantIdAndTripDistance (Id merchantId) tripDistance = do
 
 update :: (L.MonadFlow m, MonadTime m) => DriverPoolConfig -> m (MeshResult ())
 update config = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->

@@ -1,6 +1,7 @@
 module Storage.Queries.Issue.IssueTranslation where
 
 import Domain.Types.Issue.IssueTranslation
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Types.Id
 import qualified Storage.Beam.Issue.IssueTranslation as BeamIT
 

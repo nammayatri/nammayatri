@@ -22,6 +22,7 @@ import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
@@ -36,14 +37,14 @@ createMany srfd = void $ traverse createOne srfd
   where
     createOne :: L.MonadFlow m => SearchRequestForDriver -> m ()
     createOne searchRequestForDriver = do
-      dbConf <- L.getOption Extra.EulerPsqlDbCfg
+      dbConf <- L.getOption KBT.PsqlDbCfg
       case dbConf of
         Just dbConf' -> void $ KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainSearchRequestForDriverToBeam searchRequestForDriver)
         Nothing -> pure ()
 
 findAllActiveBySTId :: L.MonadFlow m => Id SearchTry -> m [SearchRequestForDriver]
 findAllActiveBySTId (Id searchTryId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' ->
       either (pure []) (transformBeamSearchRequestForDriverToDomain <$>)
@@ -59,7 +60,7 @@ findAllActiveBySTId (Id searchTryId) = do
 
 findAllActiveBySRId :: L.MonadFlow m => Id SearchRequest -> m [SearchRequestForDriver]
 findAllActiveBySRId (Id searchReqId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' ->
       either (pure []) (transformBeamSearchRequestForDriverToDomain <$>)
@@ -103,7 +104,7 @@ findByDriverAndSearchTryId driverId searchTryId = Esq.findOne $ do
 
 findByDriver :: (L.MonadFlow m, MonadTime m) => Id Person -> m [SearchRequestForDriver]
 findByDriver (Id driverId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   now <- getCurrentTime
   case dbConf of
     Just dbCOnf' ->
@@ -116,7 +117,7 @@ findByDriver (Id driverId) = do
 
 deleteByDriverId :: L.MonadFlow m => Id Person -> m ()
 deleteByDriverId (Id personId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' ->
       void $
@@ -133,7 +134,7 @@ deleteByDriverId (Id personId) = do
 
 setInactiveBySTId :: L.MonadFlow m => Id SearchTry -> m (MeshResult ())
 setInactiveBySTId (Id searchTryId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
@@ -145,7 +146,7 @@ setInactiveBySTId (Id searchTryId) = do
 
 setInactiveBySRId :: L.MonadFlow m => Id SearchRequest -> m (MeshResult ())
 setInactiveBySRId (Id searchReqId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
@@ -157,7 +158,7 @@ setInactiveBySRId (Id searchReqId) = do
 
 updateDriverResponse :: L.MonadFlow m => Id SearchRequestForDriver -> SearchRequestForDriverResponse -> m (MeshResult ())
 updateDriverResponse (Id id) response = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector

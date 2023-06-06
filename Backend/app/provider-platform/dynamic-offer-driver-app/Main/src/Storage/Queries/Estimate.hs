@@ -18,8 +18,10 @@ import Domain.Types.Estimate as Domain
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
-import Kernel.Prelude
 -- import Kernel.Storage.Esqueleto as Esq
+
+import qualified Kernel.Beam.Types as KBT
+import Kernel.Prelude
 import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
@@ -31,7 +33,7 @@ import Storage.Tabular.Estimate ()
 
 create :: L.MonadFlow m => Domain.Estimate -> m ()
 create estimate = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> void $ KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainEstimateToBeam estimate)
     Nothing -> pure ()
@@ -47,7 +49,7 @@ createMany est = void $ traverse create est
 
 findById :: L.MonadFlow m => Id Estimate -> m (Maybe Estimate)
 findById (Id estimateId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamEstimateToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamE.id $ Se.Eq estimateId]
     Nothing -> pure Nothing

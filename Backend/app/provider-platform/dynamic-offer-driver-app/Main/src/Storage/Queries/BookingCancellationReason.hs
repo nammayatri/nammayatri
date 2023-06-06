@@ -24,6 +24,7 @@ import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import EulerHS.Prelude as P hiding ((^.))
+import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Maps.Types (LatLong (..), lat, lon)
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
@@ -34,7 +35,7 @@ import Storage.Tabular.BookingCancellationReason
 
 create :: L.MonadFlow m => DBCR.BookingCancellationReason -> m (MeshResult ())
 create bookingCancellationReason = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainBookingCancellationReasonToBeam bookingCancellationReason)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -58,21 +59,21 @@ findAllCancelledByDriverId driverId = do
 
 findByRideBookingId :: L.MonadFlow m => Id Booking -> m (Maybe BookingCancellationReason)
 findByRideBookingId (Id rideBookingId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamBookingCancellationReasonToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamBCR.bookingId $ Se.Eq rideBookingId]
     Nothing -> pure Nothing
 
 findByRideId :: L.MonadFlow m => Id Ride -> m (Maybe BookingCancellationReason)
 findByRideId (Id rideId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamBookingCancellationReasonToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamBCR.rideId $ Se.Eq (Just rideId)]
     Nothing -> pure Nothing
 
 upsert :: L.MonadFlow m => BookingCancellationReason -> m ()
 upsert cancellationReason = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
       res <- either (pure Nothing) (transformBeamBookingCancellationReasonToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamBCR.bookingId $ Se.Eq (getId cancellationReason.bookingId)]
