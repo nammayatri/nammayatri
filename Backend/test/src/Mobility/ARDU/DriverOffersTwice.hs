@@ -62,7 +62,8 @@ driverOffersTwice clients = withBecknClients clients $ do
   eithRes <- Utils.offerQuoteEither arduDriver1 defaultAllowedDriverFee searchReqForDriver2.searchTryId
   shouldReturnErrorCode "error on active quotes found" "FOUND_ACTIVE_QUOTES" eithRes
 
-  liftIO $ runARDUFlow "" $ Esq.runTransaction $ QDrQuote.setInactiveBySTId searchReqForDriver1.searchTryId
+  -- liftIO $ runARDUFlow "" $ Esq.runTransaction $ QDrQuote.setInactiveBySTId searchReqForDriver1.searchTryId
+  void $ liftIO $ runARDUFlow "" $ QDrQuote.setInactiveBySTId searchReqForDriver1.searchTryId
 
 driverOffersOnRide :: ClientEnvs -> IO ()
 driverOffersOnRide clients = withBecknClients clients $ do
@@ -83,6 +84,7 @@ driverOffersOnRide clients = withBecknClients clients $ do
   eithRes <- Utils.offerQuoteEither arduDriver1 defaultAllowedDriverFee searchReqForDriver1.searchTryId
   shouldReturnErrorCode "error: driver is on ride" "DRIVER_ON_RIDE" eithRes
 
-  liftIO $ runARDUFlow "" $ Esq.runTransaction $ QDrQuote.setInactiveBySTId searchReqForDriver1.searchTryId
+  -- liftIO $ runARDUFlow "" $ Esq.runTransaction $ QDrQuote.setInactiveBySTId searchReqForDriver1.searchTryId
+  liftIO $ runARDUFlow "" $ QDrQuote.setInactiveBySTId searchReqForDriver1.searchTryId
 
   Utils.endRide arduDriver1 destination tRide bBookingId
