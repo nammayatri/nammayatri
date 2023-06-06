@@ -99,7 +99,8 @@ hatchbackDriver :: Text
 hatchbackDriver = "ND-hatchback-driver-0000000000000000"
 
 setDriversActive :: Bool -> Maybe DI.DriverMode -> FlowR ARDUEnv.AppEnv ()
-setDriversActive isActive mode = Esq.runTransaction $ do
+setDriversActive isActive mode = do
+  -- Esq.runTransaction $ do
   let drivers = [furthestDriver, closestDriver, suvDriver, sedanDriver, hatchbackDriver, driverWithOldLocation]
   forM_ drivers (\driver -> Q.updateActivity (Id driver) isActive mode)
 
@@ -107,5 +108,5 @@ setDriversActive isActive mode = Esq.runTransaction $ do
 setDriverWithOldLocation :: FlowR ARDUEnv.AppEnv ()
 setDriverWithOldLocation = do
   now <- getCurrentTime
-  Esq.runTransaction $
-    void $ QL.upsertGpsCoord (Id driverWithOldLocation) (LatLong 13.005432 77.59336) ((-86400) `addUTCTime` now) (Id "MERCHANT_ID") -- one day ago
+  -- Esq.runTransaction $
+  void $ QL.upsertGpsCoord (Id driverWithOldLocation) (LatLong 13.005432 77.59336) ((-86400) `addUTCTime` now) (Id "MERCHANT_ID") -- one day ago
