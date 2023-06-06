@@ -82,6 +82,21 @@ findLastByRequestId (Id searchRequest) = do
     headMaybe [] = Nothing
     headMaybe (a : _) = Just a
 
+-- cancelActiveTriesByRequestId ::
+--   Id SearchRequest ->
+--   SqlDB ()
+-- cancelActiveTriesByRequestId searchId = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ SearchTryUpdatedAt =. val now,
+--         SearchTryStatus =. val CANCELLED
+--       ]
+--     where_ $
+--       tbl ^. SearchTryRequestId ==. val (toKey searchId)
+--         &&. tbl ^. SearchTryStatus ==. val ACTIVE
+
 cancelActiveTriesByRequestId ::
   (L.MonadFlow m, MonadTime m) =>
   Id SearchRequest ->
@@ -118,34 +133,6 @@ cancelActiveTriesByRequestId (Id searchId) = do
 --       ]
 --     where_ $ tbl ^. SearchTryTId ==. val (toKey searchId)
 
--- updateStatus ::
---   Id SearchTry ->
---   SearchTryStatus ->
---   SqlDB ()
--- updateStatus searchId status_ = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ SearchTryUpdatedAt =. val now,
---         SearchTryStatus =. val status_
---       ]
---     where_ $ tbl ^. SearchTryTId ==. val (toKey searchId)
-
--- updateStatus ::
---   Id SearchTry ->
---   SearchTryStatus ->
---   SqlDB ()
--- updateStatus searchId status_ = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ SearchTryUpdatedAt =. val now,
---         SearchTryStatus =. val status_
---       ]
---     where_ $ tbl ^. SearchTryTId ==. val (toKey searchId)
-
 updateStatus ::
   (L.MonadFlow m, MonadTime m) =>
   Id SearchTry ->
@@ -165,6 +152,17 @@ updateStatus (Id searchId) status_ = do
           ]
           [Se.Is BeamST.id $ Se.Eq searchId]
     Nothing -> pure ()
+
+-- getSearchTryStatusAndValidTill ::
+--   (Transactionable m) =>
+--   Id SearchTry ->
+--   m (Maybe (UTCTime, SearchTryStatus))
+-- getSearchTryStatusAndValidTill searchRequestId = do
+--   findOne $ do
+--     searchT <- from $ table @SearchTryT
+--     where_ $
+--       searchT ^. SearchTryTId ==. val (toKey searchRequestId)
+--     return (searchT ^. SearchTryValidTill, searchT ^. SearchTryStatus)
 
 getSearchTryStatusAndValidTill ::
   (L.MonadFlow m) =>
