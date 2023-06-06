@@ -39,9 +39,8 @@ import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverInformation as BeamDI
-import qualified Storage.Beam.Person as BeamP hiding (Id)
+import qualified Storage.Beam.Person as BeamP
 import Storage.Tabular.DriverInformation
-import Storage.Tabular.DriverLocation
 import Storage.Tabular.Person
 import qualified Prelude
 
@@ -275,49 +274,96 @@ findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOf
         ||. person ^. PersonMobileNumberHash ==. val (Just searchStrDBHash)
     unMaybe = maybe_ (val "") identity
 
-getDriversWithOutdatedLocationsToMakeInactive :: Transactionable m => UTCTime -> m [Person]
-getDriversWithOutdatedLocationsToMakeInactive before = do
-  driverLocations <- getDriverLocs before
-  driverInfos <- getDriverInfos driverLocations
-  getDrivers driverInfos
+-- getDriversWithOutdatedLocationsToMakeInactive :: Transactionable m => UTCTime -> m [Person]
+-- getDriversWithOutdatedLocationsToMakeInactive before = do
+--   driverLocations <- getDriverLocs before
+--   driverInfos <- getDriverInfos driverLocations
+--   getDrivers driverInfos
 
-getDrivers ::
-  Transactionable m =>
-  [DriverInformation] ->
-  m [Person]
-getDrivers driverInfos = do
-  Esq.findAll $ do
-    persons <- from $ table @PersonT
-    where_ $
-      persons ^. PersonTId `in_` valList personsKeys
-    return persons
-  where
-    personsKeys = toKey . cast <$> fetchDriverIDsFromInfo driverInfos
+-- getDrivers ::
+--   Transactionable m =>
+--   [DriverInformation] ->
+--   m [Person]
+-- getDrivers driverInfos = do
+--   Esq.findAll $ do
+--     persons <- from $ table @PersonT
+--     where_ $
+--       persons ^. PersonTId `in_` valList personsKeys
+--     return persons
+--   where
+--     personsKeys = toKey . cast <$> fetchDriverIDsFromInfo driverInfos
 
-getDriverInfos ::
-  Transactionable m =>
-  [DriverLocation] ->
-  m [DriverInformation]
-getDriverInfos driverLocations = do
-  Esq.findAll $ do
-    driverInfos <- from $ table @DriverInformationT
-    where_ $
-      driverInfos ^. DriverInformationDriverId `in_` valList personsKeys
-        &&. driverInfos ^. DriverInformationActive
-    return driverInfos
-  where
-    personsKeys = toKey . cast <$> fetchDriverIDsFromLocations driverLocations
+-- getDrivers' ::
+--   L.MonadFlow m =>
+--   [DriverInformation] ->
+--   m [Person]
+-- getDrivers' driverInfos = do
+--   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   case dbConf of
+--     Just dbConf' -> do
+--       result <- KV.findAllWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamP.id $ Se.In personsKeys]
+--       case result of
+--         Left _ -> pure []
+--         Right result' -> pure $ QueriesP.transformBeamPersonToDomain <$> result'
+--     Nothing -> pure []
+--   where
+--     personsKeys = fetchDriverIDsFromInfo driverInfos
 
-getDriverLocs ::
-  Transactionable m =>
-  UTCTime ->
-  m [DriverLocation]
-getDriverLocs before = do
-  Esq.findAll $ do
-    driverLocs <- from $ table @DriverLocationT
-    where_ $
-      driverLocs ^. DriverLocationUpdatedAt <. val before
-    return driverLocs
+-- getDriverInfos ::
+--   Transactionable m =>
+--   [DriverLocation] ->
+--   m [DriverInformation]
+-- getDriverInfos driverLocations = do
+--   Esq.findAll $ do
+--     driverInfos <- from $ table @DriverInformationT
+--     where_ $
+--       driverInfos ^. DriverInformationDriverId `in_` valList personsKeys
+--         &&. driverInfos ^. DriverInformationActive
+--     return driverInfos
+--   where
+--     personsKeys = toKey . cast <$> fetchDriverIDsFromLocations driverLocations
+
+-- getDriverInfos' ::
+--   L.MonadFlow m =>
+--   [DriverLocation] ->
+--   m [DriverInformation]
+-- getDriverInfos' driverLocations = do
+--   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   case dbConf of
+--     Just dbConf' -> do
+--       result <- KV.findAllWithKVConnector dbConf' Mesh.meshConfig [Se.And([Se.Is BeamDI.active $ Se.Eq True]<>
+--                                                                           [Se.Is BeamDI.driverId $ Se.In personKeys])]
+--       case result of
+--         Left _ -> pure []
+--         Right result' -> pure $ transformBeamDriverInformationToDomain <$> result'
+--     Nothing -> pure []
+--   where
+--     personKeys = getId <$> fetchDriverIDsFromLocations driverLocations
+
+-- getDriverLocs ::
+--   Transactionable m =>
+--   UTCTime ->
+--   m [DriverLocation]
+-- getDriverLocs before = do
+--   Esq.findAll $ do
+--     driverLocs <- from $ table @DriverLocationT
+--     where_ $
+--       driverLocs ^. DriverLocationUpdatedAt <. val before
+--     return driverLocs
+
+-- getDriverLocs' ::
+--   L.MonadFlow m =>
+--   UTCTime ->
+--   m [DriverLocation]
+-- getDriverLocs' before = do
+--   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   case dbConf of
+--     Just dbConf' -> do
+--       result <- KV.findAllWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamDL.updatedAt $ Se.LessThan before]
+--       case result of
+--         Left _ -> pure []
+--         Right result' -> pure $ QueriesDL.transformBeamDriverLocationToDomain <$> result'
+--     Nothing -> pure []
 
 fetchDriverIDsFromLocations :: [DriverLocation] -> [Id Person]
 fetchDriverIDsFromLocations = map DriverLocation.driverId
