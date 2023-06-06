@@ -17,7 +17,7 @@ module Mobility.ARDU.DriverOffersTwice where
 import Common
 import EulerHS.Prelude
 import HSpec
-import qualified Kernel.Storage.Esqueleto as Esq
+-- import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Mobility.ARDU.APICalls as API
 import Mobility.ARDU.Fixtures
 import qualified Mobility.ARDU.Utils as Utils
@@ -85,6 +85,6 @@ driverOffersOnRide clients = withBecknClients clients $ do
   shouldReturnErrorCode "error: driver is on ride" "DRIVER_ON_RIDE" eithRes
 
   -- liftIO $ runARDUFlow "" $ Esq.runTransaction $ QDrQuote.setInactiveBySTId searchReqForDriver1.searchTryId
-  liftIO $ runARDUFlow "" $ QDrQuote.setInactiveBySTId searchReqForDriver1.searchTryId
+  _ <- liftIO $ runARDUFlow "" $ QDrQuote.setInactiveBySTId searchReqForDriver1.searchTryId
 
   Utils.endRide arduDriver1 destination tRide bBookingId

@@ -143,7 +143,7 @@ resetDriver driver = runARDUFlow "" $ do
     _ <- TQRide.updateStatus ride.id TRide.CANCELLED
     void $ TQRB.updateStatus booking.id TRB.CANCELLED
   _ <- forM activeQuotes $ \activeQuote ->
-    Esq.runTransaction $ TDQ.setInactiveBySTId activeQuote.searchTryId
+    TDQ.setInactiveBySTId activeQuote.searchTryId
   void $ QTDrInfo.updateActivity (cast driver.driverId) False (Just TDrInfo.OFFLINE)
   void $ QTDrInfo.updateOnRide (cast driver.driverId) False
 
