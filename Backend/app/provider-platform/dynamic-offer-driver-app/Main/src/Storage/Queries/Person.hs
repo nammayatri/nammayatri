@@ -83,6 +83,7 @@ import qualified Storage.Queries.DriverInformation as QueriesDI
 import qualified Storage.Queries.DriverLocation as QDL
 import qualified Storage.Queries.DriverLocation as QueriesDL
 import qualified Storage.Queries.DriverQuote as QDQ
+import qualified Storage.Queries.DriverQuote as QueriesDQ
 import Storage.Queries.FullEntityBuilders
 import qualified Storage.Queries.Vehicle as QV
 import qualified Storage.Queries.Vehicle as QueriesV
@@ -562,7 +563,7 @@ getBookingLocs bookings = do
     toLocKeys = toKey . cast <$> fetchToLocationIDFromBooking bookings
 
 getBookingLocs' ::
-  L.MonadFlow m =>
+  (L.MonadFlow m, Log m) =>
   [Booking.Booking] ->
   m [BookingLocation]
 getBookingLocs' bookings = do
