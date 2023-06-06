@@ -1,0 +1,4 @@
+nix_direnv_watch_file \
+    Frontend/*.nix \
+    Frontend/nix/*.nix
+use flake .#frontend
