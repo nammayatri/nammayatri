@@ -156,7 +156,8 @@ data DriverInformationRes = DriverInformationRes
     canDowngradeToTaxi :: Bool,
     mode :: Maybe DriverInfo.DriverMode,
     clientVersion :: Maybe Version,
-    bundleVersion :: Maybe Version
+    bundleVersion :: Maybe Version,
+    gender :: Maybe SP.Gender
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -185,7 +186,8 @@ data DriverEntityRes = DriverEntityRes
     canDowngradeToTaxi :: Bool,
     mode :: Maybe DriverInfo.DriverMode,
     clientVersion :: Maybe Version,
-    bundleVersion :: Maybe Version
+    bundleVersion :: Maybe Version,
+    gender :: Maybe SP.Gender
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -256,7 +258,8 @@ data UpdateDriverReq = UpdateDriverReq
     canDowngradeToHatchback :: Maybe Bool,
     canDowngradeToTaxi :: Maybe Bool,
     clientVersion :: Maybe Version,
-    bundleVersion :: Maybe Version
+    bundleVersion :: Maybe Version,
+    gender :: Maybe SP.Gender
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -477,7 +480,8 @@ buildDriverEntityRes (person, driverInfo) = do
         canDowngradeToTaxi = driverInfo.canDowngradeToTaxi,
         mode = driverInfo.mode,
         clientVersion = person.clientVersion,
-        bundleVersion = person.bundleVersion
+        bundleVersion = person.bundleVersion,
+        gender = Just person.gender
       }
 
 changeDriverEnableState ::
@@ -546,7 +550,8 @@ updateDriver (personId, _) req = do
                deviceToken = req.deviceToken <|> person.deviceToken,
                language = req.language <|> person.language,
                clientVersion = req.clientVersion <|> person.clientVersion,
-               bundleVersion = req.bundleVersion <|> person.bundleVersion
+               bundleVersion = req.bundleVersion <|> person.bundleVersion,
+               gender = fromMaybe person.gender req.gender
               }
 
   mVehicle <- QVehicle.findById personId
