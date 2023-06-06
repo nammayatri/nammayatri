@@ -115,6 +115,7 @@ buildEstimate searchReqId startTime dist farePolicy = do
           breakup.title == "BASE_DISTANCE_FARE"
             || breakup.title == "SERVICE_CHARGE"
             || breakup.title == "WAITING_OR_PICKUP_CHARGES"
+            || breakup.title == "PLATFORM_FEE"
             || breakup.title == "FIXED_GOVERNMENT_RATE"
 
 mkAdditionalBreakups :: (Money -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> Meters -> FarePolicy -> [breakupItem]

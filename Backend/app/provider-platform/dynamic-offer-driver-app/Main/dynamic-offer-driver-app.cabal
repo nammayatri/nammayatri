@@ -317,6 +317,7 @@ library
       Storage.Tabular.Exophone
       Storage.Tabular.FareParameters
       Storage.Tabular.FareParameters.FareParametersProgressiveDetails
+      Storage.Tabular.FareParameters.FareParametersSlabDetails
       Storage.Tabular.FareParameters.Instances
       Storage.Tabular.FareParameters.Table
       Storage.Tabular.FarePolicy
