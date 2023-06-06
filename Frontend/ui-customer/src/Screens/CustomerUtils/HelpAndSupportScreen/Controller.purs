@@ -161,7 +161,7 @@ myRideListTransform listRes = filter (\item -> (item.data.status == "COMPLETED")
     updatedFareList = getFaresList ride.fareBreakup baseDistanceVal
       in  {
         data:{
-          date : (convertUTCtoISC (ride.createdAt) "DD/MM/YYYY"),
+          date : (convertUTCtoISC (ride.createdAt) "ddd, Do MMM"),
           time : (convertUTCtoISC (fromMaybe (ride.createdAt) ride.rideStartTime ) "h:mm A"),
           source: decodeAddress (Booking ride.fromLocation),
           destination: (decodeAddress (Booking (ride.bookingDetails ^._contents^._toLocation))),
