@@ -29,6 +29,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.DriverInformation as Queries
+import qualified Storage.Queries.Person as QueriesPerson
 
 create :: L.MonadFlow m => DriverInformation -> m ()
 create = Queries.create
@@ -88,8 +89,12 @@ findAllWithLimitOffsetByMerchantId ::
   m [(Person, DriverInformation)]
 findAllWithLimitOffsetByMerchantId = Queries.findAllWithLimitOffsetByMerchantId
 
-getDriversWithOutdatedLocationsToMakeInactive :: Esq.Transactionable m => UTCTime -> m [Person]
-getDriversWithOutdatedLocationsToMakeInactive = Queries.getDriversWithOutdatedLocationsToMakeInactive
+-- Shifted this to person.hs as seen below because of cyclic dependency.
+-- getDriversWithOutdatedLocationsToMakeInactive :: Esq.Transactionable m => UTCTime -> m [Person]
+-- getDriversWithOutdatedLocationsToMakeInactive = Queries.getDriversWithOutdatedLocationsToMakeInactive
+
+getDriversWithOutdatedLocationsToMakeInactive :: (L.MonadFlow m, Log m) => UTCTime -> m [Person]
+getDriversWithOutdatedLocationsToMakeInactive = QueriesPerson.getDriversWithOutdatedLocationsToMakeInactive
 
 addReferralCode :: (CacheFlow m r, L.MonadFlow m, MonadTime m) => Id Person -> EncryptedHashedField 'AsEncrypted Text -> m (MeshResult ())
 addReferralCode personId code = do
