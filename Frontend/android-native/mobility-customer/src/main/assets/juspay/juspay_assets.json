@@ -24,6 +24,7 @@
       "ny_ic_info" : true,
       "ny_ic_launcher" : true,
       "ny_ic_loc_grey" : true,
+      "ny_ic_loc_red" : true,
       "ny_ic_locate_on_map" : true,
       "ny_ic_location_access" : true,
       "ny_ic_location_unserviceable" : true,
