@@ -356,9 +356,11 @@ validateRequest subscriber transporterId req = do
     QM.findById transporterId'
       >>= fromMaybeM (MerchantNotFound transporterId'.getId)
   unless (transporterId' == transporterId) $ throwError AccessDenied
-  now <- getCurrentTime
   let bapMerchantId = booking.bapId
   unless (subscriber.subscriber_id == bapMerchantId) $ throwError AccessDenied
+  unless (booking.status == DRB.NEW) $
+    throwError (BookingInvalidStatus $ show booking.status)
+  now <- getCurrentTime
   case booking.bookingType of
     DRB.NormalBooking -> do
       driverQuote <- QDQ.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)

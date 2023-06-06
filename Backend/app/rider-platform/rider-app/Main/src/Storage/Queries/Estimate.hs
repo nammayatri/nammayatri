@@ -118,3 +118,9 @@ updateStatusbyRequestId searchId status_ = do
         EstimateStatus =. val status_
       ]
     where_ $ tbl ^. EstimateRequestId ==. val (toKey searchId)
+
+findAllByBPPEstimateIds :: Transactionable m => [Id BPPEstimate] -> m [Id Estimate]
+findAllByBPPEstimateIds bppEstimateIds = Esq.findAll $ do
+  estimate <- from $ table @EstimateT
+  where_ $ estimate ^. EstimateBppEstimateId `in_` valList (getId <$> bppEstimateIds)
+  pure $ estimate ^. EstimateTId

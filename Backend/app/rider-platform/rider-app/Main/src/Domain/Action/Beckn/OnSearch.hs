@@ -147,6 +147,9 @@ validateRequest :: DOnSearchReq -> Flow ValidatedOnSearchReq
 validateRequest DOnSearchReq {..} = do
   _searchRequest <- runInReplica $ QSearchReq.findById requestId >>= fromMaybeM (SearchRequestDoesNotExist requestId.getId)
   merchant <- QMerch.findById _searchRequest.merchantId >>= fromMaybeM (MerchantNotFound _searchRequest.merchantId.getId)
+  existingEstimates <- runInReplica $ QEstimate.findAllByBPPEstimateIds (estimatesInfo <&> (.bppEstimateId))
+  unless (null existingEstimates) $
+    throwError $ InvalidRequest "Estimates already received"
   return $ ValidatedOnSearchReq {..}
 
 onSearch ::
