@@ -30,7 +30,7 @@ create quote = Esq.runTransaction $
     Esq.create' fareParams'
     case fareParamsDetais of
       FareParamsT.ProgressiveDetailsT fppdt -> Esq.create' fppdt
-      FareParamsT.SlabDetailsT -> return ()
+      FareParamsT.SlabDetailsT fpsdt -> Esq.create' fpsdt
     Esq.create' quoteT
 
 baseQuoteSpecialZoneQuery ::

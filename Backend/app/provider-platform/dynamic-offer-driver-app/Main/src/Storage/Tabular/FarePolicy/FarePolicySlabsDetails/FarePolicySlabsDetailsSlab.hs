@@ -27,6 +27,8 @@ import Kernel.Types.Common (Meters, Minutes, Money)
 import Kernel.Types.Id
 import Storage.Tabular.FarePolicy.Table (FarePolicyTId)
 
+derivePersistFieldJSON "Domain.PlatformFeeCharge"
+
 mkPersist
   defaultSqlSettings
   [defaultQQ|
@@ -35,6 +37,9 @@ mkPersist
       farePolicyId FarePolicyTId
       startDistance Meters
       baseFare Money
+      platformFeeCharge Domain.PlatformFeeCharge Maybe
+      platformFeeCgst Double Maybe
+      platformFeeSgst Double Maybe
       waitingCharge Domain.WaitingCharge Maybe
       freeWatingTime Minutes Maybe
       nightShiftCharge Domain.NightShiftCharge Maybe
@@ -52,6 +57,13 @@ instance FromTType FarePolicySlabsDetailsSlabT FullFarePolicySlabsDetailsSlab wh
               { waitingCharge = waitingCharge',
                 freeWaitingTime = freeWaitingTime'
               }
+        platformFeeInfo =
+          ((,,) <$> platformFeeCharge <*> platformFeeCgst <*> platformFeeSgst) <&> \(platformFeeCharge', platformFeeCgst', platformFeeSgst') ->
+            Domain.PlatformFeeInfo
+              { platformFeeCharge = platformFeeCharge',
+                cgst = platformFeeCgst',
+                sgst = platformFeeSgst'
+              }
     return
       ( fromKey farePolicyId,
         Domain.FPSlabsDetailsSlab
@@ -65,5 +77,8 @@ instance ToTType FarePolicySlabsDetailsSlabT FullFarePolicySlabsDetailsSlab wher
       { farePolicyId = toKey farePolicyId,
         waitingCharge = waitingChargeInfo <&> (.waitingCharge),
         freeWatingTime = waitingChargeInfo <&> (.freeWaitingTime),
+        platformFeeCharge = platformFeeInfo <&> (.platformFeeCharge),
+        platformFeeCgst = platformFeeInfo <&> (.cgst),
+        platformFeeSgst = platformFeeInfo <&> (.sgst),
         ..
       }

@@ -103,7 +103,10 @@ mkBreakupList mkPrice mkBreakupItem fareParams = do
               mkBreakupItem extraDistanceFareCaption (mkPrice extraKmFareRounded)
       catMaybes [Just deadKmFareItem, extraDistanceFareItem]
 
-    mkFPSlabDetailsBreakupList _ = []
+    mkFPSlabDetailsBreakupList det = do
+      let platformFeeCaption = "PLATFORM_FEE"
+          mbPlatformFeeItem = mkBreakupItem platformFeeCaption . mkPrice <$> det.platformFee
+      catMaybes [mbPlatformFeeItem]
 
 -- TODO: make some tests for it
 
@@ -145,19 +148,23 @@ calculateFareParameters params = do
   let isNightShiftChargeIncluded = isNightShift <$> fp.nightShiftBounds <*> Just params.rideTime
       (baseFare, nightShiftCharge, waitingChargeInfo, fareParametersDetails) = processFarePolicyDetails fp.farePolicyDetails
       (partOfNightShiftCharge, notPartOfNightShiftCharge) = countFullFareOfParamsDetails fareParametersDetails
-      fullRideCost {-without govtCharges, waitingCharge, notPartOfNightShiftCharge and nightShift-} =
+      fullRideCost {-without govtCharges, platformFee, waitingCharge, notPartOfNightShiftCharge and nightShift-} =
         baseFare
           + fromMaybe 0 fp.serviceCharge
           + partOfNightShiftCharge
   let resultNightShiftCharge = (\isCoefIncluded -> if isCoefIncluded then countNightShiftCharge fullRideCost <$> nightShiftCharge else Nothing) =<< isNightShiftChargeIncluded
       resultWaitingCharge = countWaitingCharge =<< waitingChargeInfo
-      fullRideCostN {-without govtCharges-} =
+      fullRideCostN {-without govtCharges and platformFee-} =
         fullRideCost
           + fromMaybe 0 resultNightShiftCharge
           + fromMaybe 0 resultWaitingCharge
           + notPartOfNightShiftCharge
       govtCharges =
         roundToIntegral . (fromIntegral fullRideCostN *) <$> (fp.govtCharges)
+      fullCompleteRideCost =
+        {- without platformFee -}
+        fullRideCostN
+          + fromMaybe 0 govtCharges
       fareParams =
         FareParameters
           { id,
@@ -167,6 +174,13 @@ calculateFareParameters params = do
             waitingCharge = resultWaitingCharge,
             nightShiftCharge = resultNightShiftCharge,
             nightShiftRateIfApplies = (\isCoefIncluded -> if isCoefIncluded then getNightShiftRate nightShiftCharge else Nothing) =<< isNightShiftChargeIncluded, -- Temp fix :: have to fix properly
+            fareParametersDetails = case fp.farePolicyDetails of
+              DFP.ProgressiveDetails _ -> fareParametersDetails
+              DFP.SlabsDetails det ->
+                countPlatformFee -- Mb change platformFee from Nothing to proper value
+                  fullCompleteRideCost
+                  (DFP.findFPSlabsDetailsSlabByDistance params.distance det.slabs & (.platformFeeInfo))
+                  fareParametersDetails,
             ..
           }
   logTagInfo "FareCalculator" $ "Fare parameters calculated: " +|| fareParams ||+ ""
@@ -206,7 +220,14 @@ calculateFareParameters params = do
         getPerExtraMRate perExtraKmRate = realToFrac @_ @Float perExtraKmRate / 1000
 
     processFPSlabsDetailsSlab DFP.FPSlabsDetailsSlab {..} = do
-      (baseFare, nightShiftCharge, waitingChargeInfo, DFParams.SlabDetails DFParams.FParamsSlabDetails)
+      ( baseFare,
+        nightShiftCharge,
+        waitingChargeInfo,
+        DFParams.SlabDetails
+          DFParams.FParamsSlabDetails
+            { platformFee = Nothing -- Nothing for now, can be counted only after everything else
+            }
+        )
 
     countNightShiftCharge fullRideCost nightShiftCharge = do
       case nightShiftCharge of
@@ -226,6 +247,17 @@ calculateFareParameters params = do
       case waitingChargeInfo.waitingCharge of
         PerMinuteWaitingCharge charge -> (\waitingTime -> roundToIntegral $ fromIntegral waitingTime * charge) <$> chargedWaitingTime
         ConstantWaitingCharge charge -> Just charge -- Always charged, freeWaitingTime doesn't make sense in this case
+    countPlatformFee :: Money -> Maybe PlatformFeeInfo -> FareParametersDetails -> FareParametersDetails
+    countPlatformFee fullCompleteRideCost platformFeeInfo = \case
+      (DFParams.ProgressiveDetails det) -> DFParams.ProgressiveDetails det -- should be impossible anyway
+      (DFParams.SlabDetails det) ->
+        DFParams.SlabDetails det {platformFee = countPlatformFeeMath <$> platformFeeInfo}
+      where
+        countPlatformFeeMath platformFeeInfo' = do
+          let baseFee = case platformFeeInfo'.platformFeeCharge of
+                ProgressivePlatformFee charge -> fromIntegral fullCompleteRideCost * realToFrac charge
+                ConstantPlatformFee charge -> fromIntegral charge
+          roundToIntegral (baseFee + baseFee * platformFeeInfo'.cgst + baseFee * platformFeeInfo'.sgst)
 
 countFullFareOfParamsDetails :: DFParams.FareParametersDetails -> (Money, Money)
 countFullFareOfParamsDetails = \case

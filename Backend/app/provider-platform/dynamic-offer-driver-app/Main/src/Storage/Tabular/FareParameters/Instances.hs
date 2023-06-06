@@ -22,13 +22,14 @@ import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Tabular.FareParameters.FareParametersProgressiveDetails
+import Storage.Tabular.FareParameters.FareParametersSlabDetails
 import Storage.Tabular.FareParameters.Table
 import Storage.Tabular.Vehicle ()
 import Tools.Error
 
 type FullFareParametersT = (FareParametersT, FareParametersDetailsT)
 
-data FareParametersDetailsT = ProgressiveDetailsT FareParametersProgressiveDetailsT | SlabDetailsT
+data FareParametersDetailsT = ProgressiveDetailsT FareParametersProgressiveDetailsT | SlabDetailsT FareParametersSlabDetailsT
 
 instance FromTType FullFareParametersT Domain.FareParameters where
   fromTType (FareParametersT {..}, fareParametersDetails) = do
@@ -37,7 +38,10 @@ instance FromTType FullFareParametersT Domain.FareParameters where
         (fareParametersId, det) <- fromTType @_ @FullFareParametersProgressiveDetails detT
         unless (fareParametersId == Id id) $ throwError (InternalError "Unable to decode progressive FareParameters. Fare parameters ids are not the same.")
         return $ Domain.ProgressiveDetails det
-      SlabDetailsT -> return $ Domain.SlabDetails Domain.FParamsSlabDetails
+      SlabDetailsT detT -> do
+        (fareParametersId, det) <- fromTType @_ @FullFareParametersSlabDetails detT
+        unless (fareParametersId == Id id) $ throwError (InternalError "Unable to decode slab FareParameters. Fare parameters ids are not the same.")
+        return $ Domain.SlabDetails det
     return $
       Domain.FareParameters
         { id = Id id,
@@ -49,7 +53,7 @@ instance ToTType FullFareParametersT Domain.FareParameters where
   toTType fareParameters@Domain.FareParameters {..} = do
     let detT = case fareParametersDetails of
           Domain.ProgressiveDetails det -> ProgressiveDetailsT $ toTType (id, det)
-          Domain.SlabDetails _ -> SlabDetailsT
+          Domain.SlabDetails det -> SlabDetailsT $ toTType (id, det)
     ( FareParametersT
         { id = getId id,
           fareParametersType = Domain.getFareParametersType fareParameters,

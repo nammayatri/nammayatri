@@ -70,5 +70,6 @@ mkOnInitMessage res = do
           breakup.title == "BASE_FARE"
             || breakup.title == "SERVICE_CHARGE"
             || breakup.title == "WAITING_OR_PICKUP_CHARGES"
+            || breakup.title == "PLATFORM_FEE"
             || breakup.title == "FIXED_GOVERNMENT_RATE"
             || breakup.title == "TOTAL_FARE"

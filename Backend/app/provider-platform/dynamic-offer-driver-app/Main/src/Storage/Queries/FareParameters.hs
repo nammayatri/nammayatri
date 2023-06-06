@@ -28,7 +28,7 @@ create fareParams =
     Esq.create' fareParams'
     case fareParamsDetais of
       ProgressiveDetailsT fppdt -> Esq.create' fppdt
-      SlabDetailsT -> return ()
+      SlabDetailsT fpsdt -> Esq.create' fpsdt
 
 findById :: Transactionable m => Id FareParameters -> m (Maybe FareParameters)
 findById fareParametersId = buildDType $ do
