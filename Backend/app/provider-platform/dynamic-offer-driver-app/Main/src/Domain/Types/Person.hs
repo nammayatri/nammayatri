@@ -66,8 +66,8 @@ instance ToHttpApiData IdentifierType where
   toHeader = BSL.toStrict . encode
 
 --------------------------------------------------------------------------------------------------
-data Gender = MALE | FEMALE | OTHER | UNKNOWN
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
+data Gender = MALE | FEMALE | OTHER | UNKNOWN | PREFER_NOT_TO_SAY
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance FromHttpApiData Gender where
   parseUrlPiece = parseHeader . DT.encodeUtf8
