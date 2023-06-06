@@ -101,8 +101,8 @@ handler merchant sReq estimate = do
       searchTry <- case mbLastSearchTry of
         Nothing -> do
           searchTry <- buildSearchTry merchant.id searchReq.id estimate sReq estimatedFare searchReq.estimatedDistance searchReq.estimatedDuration 0 DST.INITIAL
-          Esq.runTransaction $ do
-            QST.create searchTry
+          -- Esq.runTransaction $ do
+          _ <- QST.create searchTry
           return searchTry
         Just oldSearchTry -> do
           let searchRepeatType = if oldSearchTry.status == DST.ACTIVE then DST.CANCELLED_AND_RETRIED else DST.RETRIED
@@ -110,9 +110,9 @@ handler merchant sReq estimate = do
           unless (pureEstimatedFare == oldSearchTry.baseFare - fromMaybe 0 oldSearchTry.customerExtraFee) $
             throwError SearchTryEstimatedFareChanged
           searchTry <- buildSearchTry merchant.id searchReq.id estimate sReq estimatedFare searchReq.estimatedDistance searchReq.estimatedDuration (oldSearchTry.searchRepeatCounter + 1) searchRepeatType
-          Esq.runTransaction $ do
-            when (oldSearchTry.status == DST.ACTIVE) $ QST.updateStatus oldSearchTry.id DST.CANCELLED
-            QST.create searchTry
+          -- Esq.runTransaction $ do
+          when (oldSearchTry.status == DST.ACTIVE) $ QST.updateStatus oldSearchTry.id DST.CANCELLED
+          _ <- QST.create searchTry
           return searchTry
 
       logDebug $

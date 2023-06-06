@@ -279,8 +279,7 @@ getDriversWithOutdatedLocationsToMakeInactive :: Transactionable m => UTCTime ->
 getDriversWithOutdatedLocationsToMakeInactive before = do
   driverLocations <- getDriverLocs before
   driverInfos <- getDriverInfos driverLocations
-  drivers <- getDrivers driverInfos
-  return drivers
+  getDrivers driverInfos
 
 getDrivers ::
   Transactionable m =>
