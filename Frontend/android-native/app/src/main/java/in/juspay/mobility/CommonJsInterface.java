@@ -3139,7 +3139,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                     sendIntent.setType("text/plain");
                    if (thumbnailBitmap != null &&  Build.VERSION.SDK_INT > 28) {
                        Uri thumbnailUri = getImageUri(context, thumbnailBitmap);
-                       ClipData clipData = ClipData.newUri(context.getContentResolver(), "Thumbnail Image", thumbnailUri);
+                       ClipData clipData = ClipData.newUri(context.getContentResolver(), "ThumbnailImage", thumbnailUri);
                        sendIntent.setClipData(clipData);
                        sendIntent.setType("image/*");
                    }
@@ -3160,7 +3160,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         try {
             ByteArrayOutputStream bytes = new ByteArrayOutputStream();
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, bytes);
-            String path = MediaStore.Images.Media.insertImage(context.getContentResolver(), bitmap, "Thumbnail Image", null);
+            String path = MediaStore.Images.Media.insertImage(context.getContentResolver(), bitmap, "ThumbnailImage", null);
             return Uri.parse(path);
         } catch (Exception e) {
             return null;

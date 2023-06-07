@@ -444,5 +444,14 @@ const bengaliStrings = {
   "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL" : "অভিযোগের প্রতিকারের জন্য, অনুগ্রহ করে আমাদের <u>গোপনীয়তা নীতি</u> পড়ুন",
   "REGISTERED_ADDRESS" : "নিবন্ধিত ঠিকানা",
   "REGISTERED_ADDRESS_DESCRIPTION" : "Stallion Business Centre, No. 444, 3rd & 4th Floor, 18th Main, 6th Block, Koramangala, Bengaluru, Karnataka- 560095, India",
-  "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : ""
+  "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "",
+  "DRIVER_ADDITIONS": "ড্রাইভার সংযোজন*",
+  "FARE_UPDATE_POLICY": "ভাড়া আপডেট নীতি",
+  "DRIVER_ADDITIONS_OPTIONAL": "ড্রাইভার সংযোজন (ঐচ্ছিক)",
+  "THE_DRIVER_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC" : "ড্রাইভার ট্রাফিক কভার করার জন্য অতিরিক্ত উদ্ধৃত করতে পারে, ফিরতি ট্রিপের সুযোগ ইত্যাদি।",
+  "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE" : "ড্রাইভার সংযোজনের সীমা বেস ভাড়ার 10% এ গণনা করা হয় নিকটতম ₹10 এ রাউন্ড অফ",
+  "DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE" : "দ্রষ্টব্য: ড্রাইভার এই অতিরিক্ত ভাড়া নিতে পারে/নাও পারে",
+  "YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS": "নিচের যেকোনো কারণে আপনি একটি আপডেট করা চূড়ান্ত ভাড়া দেখতে পারেন:",
+  "REASON_CHANGE_IN_ROUTE_A": "1. রুটে পরিবর্তন: ",
+  "REASON_CHANGE_IN_ROUTE_B": "রুট পরিবর্তনের কারণে মোট ভাড়া পরিবর্তন হতে পারে"
 }

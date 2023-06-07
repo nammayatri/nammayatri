@@ -444,5 +444,14 @@ const malayalamStrings = {
   "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL" : "പരാതികൾ പരിഹരിക്കുന്നതിന്, ഞങ്ങളുടെ <u>സ്വകാര്യതാ നയം</u> പരിശോധിക്കുക",
   "REGISTERED_ADDRESS" : "രേഖപ്പെടുത്തിയ വിലാസം",
   "REGISTERED_ADDRESS_DESCRIPTION" : "Stallion Business Centre, No. 444, 3rd & 4th Floor, 18th Main, 6th Block, Koramangala, Bengaluru, Karnataka- 560095, India",
-  "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "Stallion Business Centre, No. 444, 3rd & 4th Floor, 18th Main, 6th Block, Koramangala, Bengaluru, Karnataka- 560095, India"
+  "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "Stallion Business Centre, No. 444, 3rd & 4th Floor, 18th Main, 6th Block, Koramangala, Bengaluru, Karnataka- 560095, India",
+  "DRIVER_ADDITIONS": "ഡ്രൈവർ കൂട്ടിച്ചേർക്കലുകൾ*",
+  "FARE_UPDATE_POLICY": "നിരക്ക് അപ്ഡേറ്റ് നയം",
+  "DRIVER_ADDITIONS_OPTIONAL" : "ഡ്രൈവർ കൂട്ടിച്ചേർക്കലുകൾ (ഓപ്ഷണൽ)",
+  "THE_DRIVER_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC" : "ഡ്രൈവർ ട്രാഫിക്ക്, റിട്ടേൺ ട്രിപ്പിനുള്ള സാധ്യത തുടങ്ങിയവയ്ക്കായി അധികമായി ഉദ്ധരിക്കാം.",
+  "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE" : "ഡ്രൈവർ കൂട്ടിച്ചേർക്കൽ പരിധികൾ അടിസ്ഥാന നിരക്കിന്റെ 10% കണക്കാക്കി, ഏറ്റവും അടുത്തുള്ള ₹10 ആയി കണക്കാക്കുന്നു",
+  "DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE" : "ശ്രദ്ധിക്കുക: ഡ്രൈവർ ഈ അധിക നിരക്ക് ഈടാക്കാം/അല്ലായിരിക്കാം",
+  "YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS": "ചുവടെയുള്ള ഏതെങ്കിലും കാരണത്താൽ നിങ്ങൾക്ക് അപ്‌ഡേറ്റ് ചെയ്‌ത അന്തിമ നിരക്ക് കണ്ടേക്കാം:",
+  "REASON_CHANGE_IN_ROUTE_A": "1. റൂട്ടിലെ മാറ്റം: ",
+  "REASON_CHANGE_IN_ROUTE_B": "റൂട്ടിലെ മാറ്റം കാരണം മൊത്തം നിരക്ക് മാറിയേക്കാം"
 }
