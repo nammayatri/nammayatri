@@ -14,6 +14,7 @@
 
 module Utils.Time where
 
+import Data.Maybe (fromJust)
 import qualified Data.Time as Time
 import EulerHS.Prelude
 
