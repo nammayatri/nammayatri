@@ -66,7 +66,7 @@ genericHeaderConfig state = let
       }
     , textConfig {
         text = if state.props.showSavePlaceView then (getString FAVOURITE_LOCATION) else if state.props.editLocation then (getString EDIT_FAVOURITE) else (getString ADD_FAVOURITE)
-      , color = state.data.config.profileName
+      , color = state.data.config.confirmPickUpLocationBorder
       }
     , suffixImageConfig {
         visibility = GONE

@@ -303,20 +303,20 @@ radioButton config push index item =
     , padding (Padding 0 12 0 12)
     ]
     [ linearLayout
-        [ width (V 17)
-        , height (V 17)
+        [ width (V 18)
+        , height (V 18)
         , stroke $ "1,"
             <> case config.activeIndex of
-                Just activeIndex' -> if (index == activeIndex') then Color.black800 else Color.black600
+                Just activeIndex' -> if (index == activeIndex') then config.config.primaryBackground else Color.black600
                 Nothing -> Color.black600
-        , cornerRadius 8.5
+        , cornerRadius 9.0
         , gravity CENTER
         ]
         [ linearLayout
             [ width $ V 10
             , height $ V 10
             , cornerRadius 5.0
-            , background Color.black800
+            , background config.config.primaryBackground
             , visibility
                 $ case config.activeIndex of
                     Just activeIndex' -> if (index == activeIndex') then VISIBLE else GONE

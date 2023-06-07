@@ -280,14 +280,14 @@ callSuccessfulConfig state  =
     }
     , option1 {
       text = "No"
-    , margin = (MarginHorizontal 16 16) 
+    , margin = (MarginRight 8) 
     , strokeColor = state.config.primaryBackground
     , background = state.config.primaryTextColor
     , color = state.config.primaryBackground
     }
     , option2 {
       text = "Yes"
-    , margin = (MarginHorizontal 12 0) 
+    , margin = (MarginLeft 8)
     , strokeColor = state.config.primaryBackground
     , background = state.config.primaryBackground
     , color = state.config.primaryTextColor

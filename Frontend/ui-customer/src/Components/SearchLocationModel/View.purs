@@ -36,7 +36,7 @@ import JBridge (getBtnLoader, requestKeyboardShow, getCurrentPosition, firebaseL
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (+), (-), (/), (/=), (<<<), (<>), (==), (||), not)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, autoCorrectionType, background, color, cornerRadius, disableClickFeedback, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onChange, onClick, onFocus, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, inputTypeI, clickable, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, autoCorrectionType, background, color, cornerRadius, cursorColor, disableClickFeedback, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onChange, onClick, onFocus, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, inputTypeI, clickable, imageWithFallback)
 import PrestoDOM.Animation as PrestoAnim
 import Resources.Constants (getDelayForAutoComplete)
 import Screens.Types (SearchLocationModelType(..), LocationListItemState)
@@ -254,6 +254,7 @@ sourceDestinationEditTextView state push =
             , cornerRadius 10.0
             , padding (Padding 5 0 5 0)
             , lineHeight "24"
+            , cursorColor state.homeScreenConfig.primaryBackground
             , hint (getString START_)
             , hintColor "#A7A7A7"
             , id $ getNewIDWithTag "SourceEditText"
@@ -288,7 +289,7 @@ sourceDestinationEditTextView state push =
         , width MATCH_PARENT
         , margin (MarginBottom 5)
         , background if state.isSrcServiceable then "#FDD836" else Color.textDanger
-        , visibility if state.isSource == Just true && state.isSearchLocation /= LocateOnMap then VISIBLE else GONE
+        , visibility GONE-- if state.isSource == Just true && state.isSearchLocation /= LocateOnMap then VISIBLE else GONE
         ]
         []
     , linearLayout
@@ -316,6 +317,7 @@ sourceDestinationEditTextView state push =
               , hintColor "#A7A7A7"
               , singleLine true
               , ellipsize true
+              , cursorColor state.homeScreenConfig.primaryBackground
               , id $ getNewIDWithTag "DestinationEditText"
               , onChange
                   ( \action -> do
@@ -350,7 +352,7 @@ sourceDestinationEditTextView state push =
         , width MATCH_PARENT
         , margin (MarginBottom 5)
         , background if state.isDestServiceable then "#FDD836" else Color.textDanger
-        , visibility if state.isSource == Just false && state.isSearchLocation /= LocateOnMap then VISIBLE else GONE
+        , visibility GONE--if state.isSource == Just false && state.isSearchLocation /= LocateOnMap then VISIBLE else GONE
         ]
         []
     ]
