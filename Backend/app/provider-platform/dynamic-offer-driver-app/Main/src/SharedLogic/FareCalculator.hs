@@ -119,7 +119,7 @@ fareSum fareParams = do
 -- Pure fare without customerExtraFee and driverSelectedFare
 pureFareSum :: FareParameters -> Money
 pureFareSum fareParams = do
-  let (partOfNightShiftCharge, notPartOfNightShiftCharge, platformFee) = countFullFareOfParamsDetails fareParams.fareParametersDetails
+  let (partOfNightShiftCharge, notPartOfNightShiftCharge) = countFullFareOfParamsDetails fareParams.fareParametersDetails
   fareParams.baseFare
     + fromMaybe 0 fareParams.serviceCharge
     + fromMaybe 0 fareParams.waitingCharge
@@ -127,7 +127,6 @@ pureFareSum fareParams = do
     + fromMaybe 0 fareParams.nightShiftCharge
     + partOfNightShiftCharge
     + notPartOfNightShiftCharge
-    + platformFee
 
 data CalculateFareParametersParams = CalculateFareParametersParams
   { farePolicy :: FarePolicy,
@@ -148,7 +147,7 @@ calculateFareParameters params = do
   id <- generateGUID
   let isNightShiftChargeIncluded = isNightShift <$> fp.nightShiftBounds <*> Just params.rideTime
       (baseFare, nightShiftCharge, waitingChargeInfo, fareParametersDetails) = processFarePolicyDetails fp.farePolicyDetails
-      (partOfNightShiftCharge, notPartOfNightShiftCharge, _) = countFullFareOfParamsDetails fareParametersDetails
+      (partOfNightShiftCharge, notPartOfNightShiftCharge) = countFullFareOfParamsDetails fareParametersDetails
       fullRideCost {-without govtCharges, platformFee, waitingCharge, notPartOfNightShiftCharge and nightShift-} =
         baseFare
           + fromMaybe 0 fp.serviceCharge
@@ -260,10 +259,10 @@ calculateFareParameters params = do
                 ConstantPlatformFee charge -> fromIntegral charge
           roundToIntegral (baseFee + baseFee * platformFeeInfo'.cgst + baseFee * platformFeeInfo'.sgst)
 
-countFullFareOfParamsDetails :: DFParams.FareParametersDetails -> (Money, Money, Money)
+countFullFareOfParamsDetails :: DFParams.FareParametersDetails -> (Money, Money)
 countFullFareOfParamsDetails = \case
-  DFParams.ProgressiveDetails det -> (fromMaybe 0 det.extraKmFare, det.deadKmFare, 0) -- (partOfNightShiftCharge, notPartOfNightShiftCharge)
-  DFParams.SlabDetails det -> (0, 0, fromMaybe 0 det.platformFee)
+  DFParams.ProgressiveDetails det -> (fromMaybe 0 det.extraKmFare, det.deadKmFare) -- (partOfNightShiftCharge, notPartOfNightShiftCharge)
+  DFParams.SlabDetails det -> (0, fromMaybe 0 det.platformFee)
 
 isNightShift ::
   DFP.NightShiftBounds ->
