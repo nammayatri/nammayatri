@@ -176,6 +176,24 @@ findByTransactionId (Id tId) = do
         _ -> pure Nothing
     Nothing -> pure Nothing
 
+findByTransactionId' ::
+  (L.MonadFlow m) =>
+  Id SearchRequestSpecialZone ->
+  m (Maybe (Id SearchRequestSpecialZone))
+findByTransactionId' (Id tId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> do
+      srsz <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamSRSZ.transactionId $ Se.Eq tId]
+      case srsz of
+        Right (Just x) -> do
+          srsz' <- transformBeamSearchRequestSpecialZoneToDomain x
+          case srsz' of
+            Just val' -> pure $ Just $ Domain.id val'
+            Nothing -> pure Nothing
+        _ -> pure Nothing
+    Nothing -> pure Nothing
+
 getValidTill :: L.MonadFlow m => Id SearchRequestSpecialZone -> m (Maybe UTCTime)
 getValidTill (Id searchRequestId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
