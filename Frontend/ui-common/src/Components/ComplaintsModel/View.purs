@@ -3,7 +3,6 @@ module Components.ComplaintsModel.View
   ) where
 
 import Common.Types.App
-
 import Components.ComplaintsModel.Controller (CardData, Config)
 import Data.Maybe (fromMaybe, isJust)
 import Data.String (Pattern(..), contains, indexOf, lastIndexOf)
@@ -28,11 +27,11 @@ view config =
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
         ]
-        (map (\item -> infoComponentView item config) config.cardData)
+        (map (\item -> infoComponentView item) config.cardData)
     ]
 
-infoComponentView :: forall w. CardData -> Config -> PrestoDOM (Effect Unit) w
-infoComponentView item config=
+infoComponentView :: forall w. CardData -> PrestoDOM (Effect Unit) w
+infoComponentView item =
   linearLayout
     [ height WRAP_CONTENT
     , width $ V (getWidthFromPercent 60)
@@ -58,17 +57,6 @@ infoComponentView item config=
             , color Color.black650
             ]
           <> (FontStyle.body3 TypoGraphy)
-          <> ( if contains (Pattern "<u>") item.subTitle then
-                [ onClick
-                    ( \_ -> do
-                        _ <- openUrlInMailApp (fromMaybe "" (slice ((fromMaybe 0 $ indexOf (Pattern (">")) item.subTitle) + 1) (fromMaybe 0 $ lastIndexOf (Pattern ("<")) item.subTitle) item.subTitle))
-                        pure unit
-                    )
-                    (const unit)
-                ]
-              else
-                []
-            )
       ]
         <> if isJust item.addtionalData then
             [ textView
@@ -78,10 +66,10 @@ infoComponentView item config=
                   , color Color.black650
                   ]
                 <> (FontStyle.body3 TypoGraphy)
-                <> ( if contains (Pattern "<u>") item.subTitle then
+                <> ( if contains (Pattern "<u>") (fromMaybe "" item.addtionalData) then
                       [ onClick
                           ( \_ -> do
-                              _ <- JB.openUrlInApp config.privacyPolicyLink
+                              _ <- JB.openUrlInApp $ fromMaybe "" (slice ((fromMaybe 0 $ indexOf (Pattern (">")) (fromMaybe "" item.addtionalData)) + 1) (fromMaybe 0 $ lastIndexOf (Pattern ("<")) (fromMaybe "" item.addtionalData)) (fromMaybe "" item.addtionalData))
                               pure unit
                           )
                           (const unit)

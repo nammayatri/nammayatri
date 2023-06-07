@@ -93,7 +93,7 @@ topTextView push state =
         , lineHeight "22"
         , margin (Margin 0 40 0 32)
         ]
-    , ComplaintsModel.view (getContactUsData state)
+    , ComplaintsModel.view (ComplaintsModel.config{cardData = contactUsData state})
     , linearLayout
         [ gravity LEFT
         , width WRAP_CONTENT
@@ -239,17 +239,14 @@ privacyPolicyView state =
         []
     ]
 
-getContactUsData :: ST.AboutUsScreenState -> ComplaintsModel.Config
-getContactUsData state =
-  { cardData:
-      [ { title: (getString COMPLAINTS_GRIEVANCES)
-        , subTitle: (getString COMPLAINTS_DESCRIPTION)
-        , addtionalData: Just (getString COMPLAINTS_DESCRIPTION_ADDITIONAL)
-        }
-      , { title: (getString REGISTERED_ADDRESS)
-        , subTitle: (getString REGISTERED_ADDRESS_DESCRIPTION)
-        , addtionalData: Nothing
-        }
-      ]
-  , privacyPolicyLink: "https://docs.google.com/document/d/128VU80K5E1iz-x6QnP1R127m_lwmDO3F/edit?usp=share_link&ouid=115428839751313950285&rtpof=true&sd=true"
+contactUsData :: ST.AboutUsScreenState -> Array ComplaintsModel.CardData
+contactUsData state = [
+  { title : (getString CORPORATE_ADDRESS)
+  , subTitle : (getString CORPORATE_ADDRESS_DESCRIPTION)
+  , addtionalData : Just (getString CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL)
   }
+, { title : (getString REGISTERED_ADDRESS)
+  , subTitle : (getString REGISTERED_ADDRESS_DESCRIPTION)
+  , addtionalData : Just (getString REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL)
+  }
+]
