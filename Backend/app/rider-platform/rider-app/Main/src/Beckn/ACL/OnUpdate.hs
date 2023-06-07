@@ -81,6 +81,7 @@ parseEvent _ (OnUpdate.RideCompleted rcEvent) = do
         fare = roundToIntegral rcEvent.quote.price.value,
         totalFare = roundToIntegral rcEvent.quote.price.computed_value,
         chargeableDistance = realToFrac rcEvent.fulfillment.chargeable_distance,
+        traveledDistance = realToFrac rcEvent.fulfillment.traveled_distance,
         fareBreakups = mkOnUpdateFareBreakup <$> rcEvent.quote.breakup
       }
   where

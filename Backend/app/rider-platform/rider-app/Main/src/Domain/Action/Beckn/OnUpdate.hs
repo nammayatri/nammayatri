@@ -85,7 +85,8 @@ data OnUpdateReq
         fare :: Money,
         totalFare :: Money,
         fareBreakups :: [OnUpdateFareBreakup],
-        chargeableDistance :: HighPrecMeters
+        chargeableDistance :: HighPrecMeters,
+        traveledDistance :: HighPrecMeters
       }
   | BookingCancelledReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -265,6 +266,7 @@ onUpdate ValidatedRideAssignedReq {..} = do
             fare = Nothing,
             totalFare = Nothing,
             chargeableDistance = Nothing,
+            traveledDistance = Nothing,
             driverArrivalTime = Nothing,
             vehicleVariant = booking.vehicleVariant,
             createdAt = now,
