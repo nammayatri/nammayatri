@@ -59,7 +59,7 @@ findAllByCategoryAndLanguage (Id issueCategoryId) language = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
-      iOptions <- either (pure []) (transformBeamIssueOptionToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamIO.issueCategoryId $ Se.Eq (issueCategoryId)]
+      iOptions <- either (pure []) (transformBeamIssueOptionToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamIO.issueCategoryId $ Se.Eq issueCategoryId]
       iTranslations <- either (pure []) (QueriesIT.transformBeamIssueTranslationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamIT.language $ Se.Eq language, Se.Is BeamIT.sentence $ Se.In (DomainIO.option <$> iOptions)]]
       let dInfosWithTranslations = foldl' (getIssueOptionsWithTranslations iTranslations) [] iOptions
       pure dInfosWithTranslations
@@ -67,7 +67,7 @@ findAllByCategoryAndLanguage (Id issueCategoryId) language = do
   where
     getIssueOptionsWithTranslations iTranslations dInfosWithTranslations iOption =
       let iTranslations' = filter (\iTranslation -> iTranslation.sentence == iOption.option) iTranslations
-       in dInfosWithTranslations <> if not (null iTranslations') then ((\iTranslation'' -> (iOption, Just iTranslation'')) <$> iTranslations') else [(iOption, Nothing)]
+       in dInfosWithTranslations <> if not (null iTranslations') then (\iTranslation'' -> (iOption, Just iTranslation'')) <$> iTranslations' else [(iOption, Nothing)]
 
 -- getDriverInfoWithDL drLocs dInfosWithLocs dInfo =
 --   let drLocs' = filter (\drLoc -> drLoc.driverId == dInfo.driverId) drLocs
@@ -94,7 +94,7 @@ findByIdAndLanguage issueOptionId language = do
   where
     getIssueOptionsWithTranslations iTranslations dInfosWithTranslations iOption =
       let iTranslations' = filter (\iTranslation -> iTranslation.sentence == iOption.option) iTranslations
-       in dInfosWithTranslations <> if not (null iTranslations') then ((\iTranslation'' -> (iOption, Just iTranslation'')) <$> iTranslations') else [(iOption, Nothing)]
+       in dInfosWithTranslations <> if not (null iTranslations') then (\iTranslation'' -> (iOption, Just iTranslation'')) <$> iTranslations' else [(iOption, Nothing)]
 
     headMaybe dInfosWithTranslations' = if null dInfosWithTranslations' then Nothing else Just (head dInfosWithTranslations')
 

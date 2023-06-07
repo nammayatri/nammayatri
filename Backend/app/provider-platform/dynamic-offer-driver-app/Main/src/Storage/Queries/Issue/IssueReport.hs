@@ -45,7 +45,7 @@ findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> do
-      result <- KV.findAllWithOptionsKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamIR.status $ Se.Eq (fromJust mbStatus), Se.Is BeamIR.categoryId $ Se.Eq (fromJust (getId <$> mbCategoryId)), Se.Is BeamIR.assignee $ Se.Eq mbAssignee]] (Se.Desc BeamIR.createdAt) (Just limitVal) (Just offsetVal)
+      result <- KV.findAllWithOptionsKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamIR.status $ Se.Eq (fromJust mbStatus), Se.Is BeamIR.categoryId $ Se.Eq (getId (fromJust mbCategoryId)), Se.Is BeamIR.assignee $ Se.Eq mbAssignee]] (Se.Desc BeamIR.createdAt) (Just limitVal) (Just offsetVal)
       case result of
         Left _ -> pure []
         Right issueReport -> pure $ transformBeamIssueReportToDomain <$> issueReport

@@ -59,7 +59,7 @@ findByMerchantIdAndService (Id merchantId) serviceName = do
       result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamMSC.merchantId $ Se.Eq merchantId, Se.Is BeamMSC.serviceName $ Se.Eq serviceName]]
       case result of
         Left _ -> pure Nothing
-        Right msc -> sequence $ transformBeamMerchantServiceConfigToDomain <$> msc
+        Right msc -> mapM transformBeamMerchantServiceConfigToDomain msc
     Nothing -> pure Nothing
 
 -- FIXME this query created for backward compatibility
@@ -79,7 +79,7 @@ findOne serviceName = do
     Just dbConf' -> do
       result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamMSC.serviceName $ Se.Eq serviceName]
       case result of
-        Right msc -> sequence $ transformBeamMerchantServiceConfigToDomain <$> msc
+        Right msc -> mapM transformBeamMerchantServiceConfigToDomain msc
         Left _ -> pure Nothing
     Nothing -> pure Nothing
 
