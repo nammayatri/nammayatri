@@ -48,7 +48,9 @@ import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.SearchRequest as QSearch
 
 data BookingCancelledReq = BookingCancelledReq
   { bookingId :: Id DTB.Booking,
@@ -178,6 +180,17 @@ rideInfo merchantShortId reqRideId = do
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  estimatedDuration <- case booking.quoteId of
+    Just quoteId -> do
+      mbQuote <- runInReplica $ QQuote.findById quoteId
+      case mbQuote of
+        Just quote -> do
+          mbSearchReq <- runInReplica $ QSearch.findById quote.requestId
+          case mbSearchReq of
+            Just searchReq -> pure searchReq.estimatedRideDuration
+            Nothing -> pure Nothing
+        Nothing -> pure Nothing
+    Nothing -> pure Nothing
   merchant <- findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   unless (merchant.id == booking.merchantId) $ throwError (RideDoesNotExist rideId.getId)
   person <- runInReplica $ QP.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)
@@ -192,6 +205,11 @@ rideInfo merchantShortId reqRideId = do
         DB.OneWayDetails locationDetail -> Just $ mkCommonBookingLocation locationDetail.toLocation
         DB.DriverOfferDetails driverOfferDetail -> Just $ mkCommonBookingLocation driverOfferDetail.toLocation
         _ -> Nothing
+  let mbDistance = case booking.bookingDetails of
+        DB.OneWayDetails locationDetail -> Just $ locationDetail.distance
+        DB.DriverOfferDetails driverOfferDetail -> Just $ driverOfferDetail.distance
+        DB.OneWaySpecialZoneDetails oneWaySpecialZoneDetail -> Just $ oneWaySpecialZoneDetail.distance
+        _ -> Nothing
   let cancelledBy = castCancellationSource <$> (mbBCReason <&> (.source))
   pure
     Common.RideInfoRes
@@ -201,27 +219,30 @@ rideInfo merchantShortId reqRideId = do
         customerName = person.firstName,
         customerPhoneNo = person.unencryptedMobileNumber,
         rideOtp = ride.otp,
-        fromLocation = mkCommonBookingLocation booking.fromLocation,
-        toLocation = mbtoLocation,
+        customerPickupLocation = mkCommonBookingLocation booking.fromLocation,
+        customerDropLocation = mbtoLocation,
         driverName = ride.driverName,
         driverPhoneNo = Just ride.driverMobileNumber,
         driverRegisteredAt = ride.driverRegisteredAt,
-        vehicleNumber = ride.vehicleNumber,
+        vehicleNo = ride.vehicleNumber,
         vehicleModel = ride.vehicleModel,
         rideBookingTime = booking.createdAt,
-        driverArrivalTime = ride.driverArrivalTime,
+        actualDriverArrivalTime = ride.driverArrivalTime,
         rideStartTime = ride.rideStartTime,
         rideEndTime = ride.rideEndTime,
+        rideDistanceEstimated = mbDistance,
+        rideDistanceActual = ride.traveledDistance,
         chargeableDistance = ride.chargeableDistance,
         estimatedFare = booking.estimatedFare,
         actualFare = ride.fare,
-        rideDuration = timeDiffInMinutes <$> ride.rideEndTime <*> ride.rideStartTime,
+        estimatedRideDuration = estimatedDuration,
+        rideDuration = timeDiffInSeconds <$> ride.rideEndTime <*> ride.rideStartTime,
         cancelledTime = cancelledTime,
         cancelledBy = cancelledBy
       }
 
-timeDiffInMinutes :: UTCTime -> UTCTime -> Minutes
-timeDiffInMinutes t1 = secondsToMinutes . nominalDiffTimeToSeconds . diffUTCTime t1
+timeDiffInSeconds :: UTCTime -> UTCTime -> Seconds
+timeDiffInSeconds t1 = nominalDiffTimeToSeconds . diffUTCTime t1
 
 castCancellationSource :: DBCReason.CancellationSource -> Common.CancellationSource
 castCancellationSource = \case
