@@ -230,7 +230,7 @@ transformDomainFarePolicyToBeam FarePolicy {..} =
       BeamFP.updatedAt = updatedAt
     }
 
-transformBeamFarePolicyToDomain :: L.MonadFlow m => BeamFP.FarePolicy -> m (Domain.FarePolicy)
+transformBeamFarePolicyToDomain :: L.MonadFlow m => BeamFP.FarePolicy -> m Domain.FarePolicy
 transformBeamFarePolicyToDomain BeamFP.FarePolicyT {..} = do
   fullDEFB <- QueriesDEFB.findAll (KTI.Id id)
   let fDEFB = snd <$> fullDEFB

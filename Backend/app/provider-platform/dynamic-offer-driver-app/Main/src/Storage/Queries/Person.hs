@@ -118,8 +118,8 @@ findById (Id personId) = do
     Just dbConf' -> do
       result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamP.id $ Se.Eq personId]
       case result of
-        Right p -> traverse transformBeamPersonToDomain p
-        Left _ -> pure Nothing
+        Right (Just p) -> transformBeamPersonToDomain p
+        _ -> pure Nothing
     Nothing -> pure Nothing
 
 data FullDriver = FullDriver
@@ -191,8 +191,8 @@ getDriversList driverInfos = do
     Just dbConf' -> do
       result <- KV.findAllWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamP.id $ Se.In personsKeys]
       case result of
-        Left _ -> pure []
-        Right result' -> mapM transformBeamPersonToDomain result'
+        Right result' -> catMaybes <$> mapM transformBeamPersonToDomain result'
+        _ -> pure []
     Nothing -> pure []
   where
     personsKeys = getId <$> fetchDriverIDsFromInfo driverInfos
@@ -410,7 +410,7 @@ getDrivers' vehicles = do
       persons <- KV.findAllWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamP.id $ Se.In personKeys]
       case persons of
         Left _ -> pure []
-        Right persons' -> mapM transformBeamPersonToDomain persons'
+        Right persons' -> catMaybes <$> mapM transformBeamPersonToDomain persons'
     Nothing -> pure []
   where
     personKeys = getId <$> fetchDriverIDsFromVehicle vehicles
@@ -446,7 +446,7 @@ getDriversWithMerchID' (Id merchantId) = do
           ]
       case persons of
         Left _ -> pure []
-        Right persons' -> mapM transformBeamPersonToDomain persons'
+        Right persons' -> catMaybes <$> mapM transformBeamPersonToDomain persons'
     Nothing -> pure []
 
 getDriverQuote ::
@@ -482,8 +482,8 @@ getDriverQuote' persons = do
             [ Se.And [Se.Is BeamDQ.driverId $ Se.In personKeys, Se.Is BeamDQ.status $ Se.Eq DriverQuote.Active]
             ]
         case res of
-          Left _ -> pure []
-          Right res' -> traverse QueriesDQ.transformBeamDriverQuoteToDomain res'
+          Right res' -> catMaybes <$> traverse QueriesDQ.transformBeamDriverQuoteToDomain res'
+          _ -> pure []
 
     -- fareParam <- do
     --   res <- KV.findAllWithKVConnector
@@ -662,8 +662,8 @@ findAllDriversByIdsFirstNameAsc' (Id merchantId) driverIds = do
             Nothing
             Nothing
         case p of
-          Left _ -> pure []
-          Right x -> traverse transformBeamPersonToDomain x
+          Right x -> catMaybes <$> traverse transformBeamPersonToDomain x
+          _ -> pure []
       -- either (pure []) (transformBeamPersonToDomain <$>) <$> KV.findAllWithOptionsKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamP.role $ Se.Eq Person.DRIVER,
       --               Se.Is BeamP.id $ Se.In $ getId <$> driverIds, Se.Is BeamP.merchantId $ Se.Eq merchantId ]] (Se.Asc BeamP.firstName) Nothing Nothing
       dlList <- either (pure []) (QDL.transformBeamDriverLocationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDL.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> personList]
@@ -847,8 +847,8 @@ findByIdAndRoleAndMerchantId (Id pid) role_ (Id merchantId) = do
     Just dbConf' -> do
       result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamP.id $ Se.Eq pid, Se.Is BeamP.role $ Se.Eq role_, Se.Is BeamP.merchantId $ Se.Eq merchantId]]
       case result of
-        Right p -> traverse transformBeamPersonToDomain p
-        Left _ -> pure Nothing
+        Right (Just p) -> transformBeamPersonToDomain p
+        _ -> pure Nothing
     Nothing -> pure Nothing
 
 -- findAllByMerchantId ::
@@ -871,8 +871,8 @@ findAllByMerchantId roles (Id merchantId) = do
     Just dbConf' -> do
       result <- KV.findAllWithKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.role $ Se.In roles]]
       case result of
-        Right p -> traverse transformBeamPersonToDomain p
-        Left _ -> pure []
+        Right p -> catMaybes <$> traverse transformBeamPersonToDomain p
+        _ -> pure []
     Nothing -> pure []
 
 -- findAdminsByMerchantId :: Transactionable m => Id Merchant -> m [Person]
@@ -891,8 +891,8 @@ findAdminsByMerchantId (Id merchantId) = do
     Just dbConf' -> do
       result <- KV.findAllWithKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.role $ Se.Eq Person.ADMIN]]
       case result of
-        Right p -> traverse transformBeamPersonToDomain p
-        Left _ -> pure []
+        Right p -> catMaybes <$> traverse transformBeamPersonToDomain p
+        _ -> pure []
     Nothing -> pure []
 
 -- findByMobileNumberAndMerchant ::
@@ -928,8 +928,8 @@ findByMobileNumberAndMerchant countryCode mobileNumberHash (Id merchantId) = do
               ]
           ]
       case result of
-        Right p -> traverse transformBeamPersonToDomain p
-        Left _ -> pure Nothing
+        Right (Just p) -> transformBeamPersonToDomain p
+        _ -> pure Nothing
     Nothing -> pure Nothing
 
 -- findByIdentifierAndMerchant ::
@@ -952,8 +952,8 @@ findByIdentifierAndMerchant (Id merchantId) identifier_ = do
     Just dbConf' -> do
       result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamP.identifier $ Se.Eq $ Just identifier_, Se.Is BeamP.merchantId $ Se.Eq merchantId]]
       case result of
-        Right p -> traverse transformBeamPersonToDomain p
-        Left _ -> pure Nothing
+        Right (Just p) -> transformBeamPersonToDomain p
+        _ -> pure Nothing
     Nothing -> pure Nothing
 
 -- findByEmailAndMerchant ::
@@ -976,8 +976,8 @@ findByEmailAndMerchant (Id merchantId) email_ = do
     Just dbConf' -> do
       result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamP.email $ Se.Eq $ Just email_, Se.Is BeamP.merchantId $ Se.Eq merchantId]]
       case result of
-        Right p -> traverse transformBeamPersonToDomain p
-        Left _ -> pure Nothing
+        Right (Just p) -> transformBeamPersonToDomain p
+        _ -> pure Nothing
     Nothing -> pure Nothing
 
 -- findByRoleAndMobileNumberAndMerchantId ::
@@ -1016,8 +1016,8 @@ findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumber_ (Id merch
               ]
           ]
       case result of
-        Right p -> traverse transformBeamPersonToDomain p
-        Left _ -> pure Nothing
+        Right (Just p) -> transformBeamPersonToDomain p
+        _ -> pure Nothing
     Nothing -> pure Nothing
 
 personDriverTable ::
@@ -1064,7 +1064,7 @@ findAllDriverIdExceptProvided' (Id merchantId) driverIdsToBeExcluded = do
             [Se.Is BeamP.merchantId $ Se.Eq merchantId]
         case person' of
           Left _ -> pure []
-          Right x -> traverse transformBeamPersonToDomain x
+          Right x -> catMaybes <$> traverse transformBeamPersonToDomain x
 
       infoList <-
         either (pure []) (QueriesDI.transformBeamDriverInformationToDomain <$>)
@@ -1596,7 +1596,7 @@ getNearestDriversCurrentlyOnRide' mbVariant radiusMeters (Id merchantId') mbDriv
             Nothing
         case p of
           Left _ -> pure []
-          Right x -> traverse transformBeamPersonToDomain x
+          Right x -> catMaybes <$> traverse transformBeamPersonToDomain x
 
       dlList <- findAllDriverLocations' dbCOnf' (getId . (Person.id :: PersonE e -> Id Person) <$> personList) mbDriverPositionInfoExpiry now
 
@@ -1639,8 +1639,8 @@ getNearestDriversCurrentlyOnRide' mbVariant radiusMeters (Id merchantId') mbDriv
             Mesh.meshConfig
             [Se.Is BeamDQ.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> personList]
         case diverQL of
-          Left _ -> pure []
-          Right x -> traverse QDQ.transformBeamDriverQuoteToDomain x
+          Right x -> catMaybes <$> traverse QDQ.transformBeamDriverQuoteToDomain x
+          _ -> pure []
 
       bookingList <- do
         bookingL <-
@@ -1816,39 +1816,43 @@ updateAlternateMobileNumberAndCode person = do
         [Se.Is BeamP.id (Se.Eq $ getId person.id)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-transformBeamPersonToDomain :: (L.MonadFlow m, Log m) => BeamP.Person -> m Person
+transformBeamPersonToDomain :: (L.MonadFlow m, Log m) => BeamP.Person -> m (Maybe Person)
 transformBeamPersonToDomain BeamP.PersonT {..} = do
   bundleVersion' <- forM bundleVersion readVersion
   clientVersion' <- forM clientVersion readVersion
-  pure
-    Person
-      { id = Id id,
-        firstName = firstName,
-        middleName = middleName,
-        lastName = lastName,
-        role = role,
-        gender = gender,
-        identifierType = identifierType,
-        email = email,
-        unencryptedMobileNumber = unencryptedMobileNumber,
-        mobileNumber = EncryptedHashed <$> (Encrypted <$> mobileNumberEncrypted) <*> mobileNumberHash,
-        mobileCountryCode = mobileCountryCode,
-        passwordHash = passwordHash,
-        identifier = identifier,
-        rating = rating,
-        isNew = isNew,
-        merchantId = Id merchantId,
-        deviceToken = deviceToken,
-        whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus,
-        language = language,
-        description = description,
-        createdAt = createdAt,
-        updatedAt = updatedAt,
-        bundleVersion = bundleVersion',
-        clientVersion = clientVersion',
-        unencryptedAlternateMobileNumber = unencryptedAlternateMobileNumber,
-        alternateMobileNumber = EncryptedHashed <$> (Encrypted <$> alternateMobileNumberEncrypted) <*> alternateMobileNumberHash
-      }
+  if isJust bundleVersion && isJust clientVersion
+    then
+      pure $
+        Just
+          Person
+            { id = Id id,
+              firstName = firstName,
+              middleName = middleName,
+              lastName = lastName,
+              role = role,
+              gender = gender,
+              identifierType = identifierType,
+              email = email,
+              unencryptedMobileNumber = unencryptedMobileNumber,
+              mobileNumber = EncryptedHashed <$> (Encrypted <$> mobileNumberEncrypted) <*> mobileNumberHash,
+              mobileCountryCode = mobileCountryCode,
+              passwordHash = passwordHash,
+              identifier = identifier,
+              rating = rating,
+              isNew = isNew,
+              merchantId = Id merchantId,
+              deviceToken = deviceToken,
+              whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus,
+              language = language,
+              description = description,
+              createdAt = createdAt,
+              updatedAt = updatedAt,
+              bundleVersion = bundleVersion',
+              clientVersion = clientVersion',
+              unencryptedAlternateMobileNumber = unencryptedAlternateMobileNumber,
+              alternateMobileNumber = EncryptedHashed <$> (Encrypted <$> alternateMobileNumberEncrypted) <*> alternateMobileNumberHash
+            }
+    else pure Nothing
 
 transformDomainPersonToBeam :: Person -> BeamP.Person
 transformDomainPersonToBeam Person {..} =

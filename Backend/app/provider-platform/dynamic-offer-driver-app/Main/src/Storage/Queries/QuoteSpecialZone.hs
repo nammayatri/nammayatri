@@ -94,27 +94,31 @@ findById (Id dQuoteId) = do
     Just dbCOnf' -> do
       sR <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamQSZ.id $ Se.Eq dQuoteId]
       case sR of
-        Left _ -> pure Nothing
-        Right x -> traverse transformBeamQuoteSpecialZoneToDomain x
+        Right (Just x) -> transformBeamQuoteSpecialZoneToDomain x
+        _ -> pure Nothing
     Nothing -> pure Nothing
 
-transformBeamQuoteSpecialZoneToDomain :: L.MonadFlow m => BeamQSZ.QuoteSpecialZone -> m QuoteSpecialZone
+transformBeamQuoteSpecialZoneToDomain :: L.MonadFlow m => BeamQSZ.QuoteSpecialZone -> m (Maybe QuoteSpecialZone)
 transformBeamQuoteSpecialZoneToDomain BeamQSZ.QuoteSpecialZoneT {..} = do
   fp <- BeamQFP.findById (Id fareParametersId)
-  pure
-    QuoteSpecialZone
-      { id = Id id,
-        searchRequestId = Id searchRequestId,
-        providerId = Id providerId,
-        vehicleVariant = vehicleVariant,
-        distance = distance,
-        estimatedFinishTime = estimatedFinishTime,
-        createdAt = createdAt,
-        updatedAt = updatedAt,
-        validTill = validTill,
-        estimatedFare = estimatedFare,
-        fareParams = fromJust fp -- to take a default value?
-      }
+  if isJust fp
+    then
+      pure $
+        Just
+          QuoteSpecialZone
+            { id = Id id,
+              searchRequestId = Id searchRequestId,
+              providerId = Id providerId,
+              vehicleVariant = vehicleVariant,
+              distance = distance,
+              estimatedFinishTime = estimatedFinishTime,
+              createdAt = createdAt,
+              updatedAt = updatedAt,
+              validTill = validTill,
+              estimatedFare = estimatedFare,
+              fareParams = fromJust fp -- to take a default value?
+            }
+    else pure Nothing
 
 transformDomainQuoteSpecialZoneToBeam :: QuoteSpecialZone -> BeamQSZ.QuoteSpecialZone
 transformDomainQuoteSpecialZoneToBeam QuoteSpecialZone {..} =
