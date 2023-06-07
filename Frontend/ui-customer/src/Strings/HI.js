@@ -452,9 +452,9 @@ const hindiStrings = {
   "REQUEST_RECEIVED_WE_WILL_CALL_YOU_BACK_SOON" : "अनुरोध प्राप्त हुआ है। हम जल्द ही आपसे संपर्क करेंगे",
   "CONTACT_REMOVED_SUCCESSFULLY" : "संपर्क सफलतापूर्वक निकाला गया",
   "CORPORATE_ADDRESS" : "कॉर्पोरेट पता",
-  "CORPORATE_ADDRESS_DESCRIPTION" : "Juspay Technologies Private Limited <br> Girija Building, Number 817, Ganapathi Temple Rd, 8th Block, Koramangala, Bengaluru, Karnataka 560095, India.",
-  "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL" : "Website: <u>https://nammayatri.in/</u>",
+  "CORPORATE_ADDRESS_DESCRIPTION" : "जसपे टेक्नोलॉजीज प्राइवेट लिमिटेड <br> गिरिजा बिल्डिंग, नंबर 817, गणपति मंदिर रोड, 8वां ब्लॉक, कोरमंगला, बेंगलुरु, कर्नाटक 560095, भारत।",
+  "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL" : "वेबसाइट: <u>https://nammayatri.in/</u>",
   "REGISTERED_ADDRESS" : "पंजीकृत पता",
-  "REGISTERED_ADDRESS_DESCRIPTION" : "Juspay Technologies Private Limited <br> Stallion Business Centre, No. 444, 3rd & 4th Floor, 18th Main, 6th Block, Koramangala Bengaluru, Karnataka- 560095, India.",
-  "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "Website: <u>https://nammayatri.in/</u>"
+  "REGISTERED_ADDRESS_DESCRIPTION" : "जस्पे टेक्नोलॉजीज प्राइवेट लिमिटेड <br> स्टैलियन बिजनेस सेंटर, नंबर 444, तीसरी और चौथी मंजिल, 18वीं मेन, 6वां ब्लॉक, कोरमंगला बेंगलुरु, कर्नाटक- 560095, भारत।",
+  "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "वेबसाइट: <u>https://nammayatri.in/</u>"
 }

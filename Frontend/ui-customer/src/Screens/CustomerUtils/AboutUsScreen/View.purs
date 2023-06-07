@@ -29,7 +29,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Merchant.Utils (getValueFromConfig)
 import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (<>), (==))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, text, textSize, textView, visibility, weight, width, scrollView, scrollBarY)
 import Screens.AboutUsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.CustomerUtils.AboutUsScreen.ComponentConfig (genericHeaderConfig)
 import Screens.Types as ST
@@ -55,7 +55,7 @@ view push state =
     , onBackPressed push (const BackPressed) 
     , background Color.white900
     , padding if EHC.os == "IOS" then (Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom) else (Padding 0 0 0 10)
-    , gravity CENTER
+    , gravity CENTER_HORIZONTAL
     , afterRender push (const AfterRender)
     ][  GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
       , linearLayout
@@ -63,12 +63,21 @@ view push state =
         , width MATCH_PARENT
         , background Color.greySmoke
         ][]
-      , topTextView push state
-      , linearLayout
-        [ orientation VERTICAL
-        , weight 1.0
-        ][]
-      , bottomLinksView state
+      , scrollView
+        [ width MATCH_PARENT
+        , scrollBarY false
+        ][  linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , orientation VERTICAL
+            ][ topTextView push state
+              , linearLayout
+                [ orientation VERTICAL
+                , weight 1.0
+                ][]
+              , bottomLinksView state
+              ]
+          ]
       ]
 
 --------------------------------------------------- topTextView -----------------------------------------------------
