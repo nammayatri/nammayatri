@@ -131,6 +131,13 @@ fetchAll = do
 findById :: Transactionable m => Id Driver -> m (Maybe DriverStats)
 findById = Esq.findById
 
+findById' :: L.MonadFlow m => Id Driver -> m (Maybe DriverStats)
+findById' (Id driverId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> either (pure Nothing) (transformBeamDriverStatsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDS.driverId $ Se.Eq driverId]
+    Nothing -> pure Nothing
+
 -- deleteById :: Id Driver -> SqlDB ()
 -- deleteById = Esq.deleteByKey @DriverStatsT
 
@@ -180,6 +187,43 @@ incrementTotalRidesAssigned driverId number = do
       ]
     where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
 
+findTotalRidesAssigned :: (L.MonadFlow m) => Id Driver -> m (Maybe Int)
+findTotalRidesAssigned (Id driverId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> do
+      res <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDS.driverId $ Se.Eq driverId]
+      case res of
+        Left _ -> pure Nothing
+        Right (Just x) -> do
+          let rides = transformBeamDriverStatsToDomain x
+              ans = Domain.totalRidesAssigned rides
+          pure ans
+        Right Nothing -> pure Nothing
+    Nothing -> pure Nothing
+
+incrementTotalRidesAssigned' :: (L.MonadFlow m) => Id Driver -> Int -> m (MeshResult ())
+incrementTotalRidesAssigned' (Id driverId') number = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  rideAssigned <- findTotalRidesAssigned (Id driverId')
+  case dbConf of
+    Just dbConf' ->
+      case rideAssigned of
+        Just rides -> do
+          let newRides = rides + number
+          KV.updateWoReturningWithKVConnector
+            dbConf'
+            Mesh.meshConfig
+            [Se.Set BeamDS.totalRidesAssigned (Just newRides)]
+            [Se.Is BeamDS.driverId (Se.Eq driverId')]
+        Nothing -> do
+          KV.updateWoReturningWithKVConnector
+            dbConf'
+            Mesh.meshConfig
+            [Se.Set BeamDS.totalRidesAssigned (Just number)]
+            [Se.Is BeamDS.driverId (Se.Eq driverId')]
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+
 setCancelledRidesCount :: Id Driver -> Int -> SqlDB ()
 setCancelledRidesCount driverId cancelledCount = do
   Esq.update $ \tbl -> do
@@ -188,6 +232,18 @@ setCancelledRidesCount driverId cancelledCount = do
       [ DriverStatsRidesCancelled =. val (Just cancelledCount)
       ]
     where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
+
+setCancelledRidesCount' :: (L.MonadFlow m) => Id Driver -> Int -> m (MeshResult ())
+setCancelledRidesCount' (Id driverId') cancelledCount = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        Mesh.meshConfig
+        [Se.Set BeamDS.ridesCancelled (Just cancelledCount)]
+        [Se.Is BeamDS.driverId (Se.Eq driverId')]
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 -- getDriversSortedOrder :: Transactionable m => Maybe Integer -> m [DriverStats]
 -- getDriversSortedOrder mbLimitVal =
