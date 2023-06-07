@@ -88,8 +88,8 @@ findById (Id bookingId) = do
     Just dbConf' -> do
       result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamB.id $ Se.Eq bookingId]
       case result of
-        Right result' -> traverse transformBeamBookingToDomain result'
-        Left _ -> pure Nothing
+        Right (Just result') -> transformBeamBookingToDomain result'
+        _ -> pure Nothing
     Nothing -> pure Nothing
 
 -- findBySTId :: (Transactionable m) => Id DST.SearchTry -> m (Maybe Booking)
@@ -111,8 +111,8 @@ findBySTId searchTryId = do
         Just dbCOnf' -> do
           result <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamB.quoteId $ Se.Eq $ getId quoteId]
           case result of
-            Right booking -> traverse transformBeamBookingToDomain booking
-            Left _ -> pure Nothing
+            Right (Just booking) -> transformBeamBookingToDomain booking
+            _ -> pure Nothing
         Nothing -> pure Nothing
 
 -- findBookingByDriverQuoteId' :: Transactionable m => Id DriverQuote -> DTypeBuilder m (Maybe BookingT)
@@ -200,10 +200,10 @@ findStuckBookings (Id merchantId) bookingIds now = do
               ]
           ]
       case result of
-        Left _ -> pure []
         Right booking -> do
-          bookingD <- mapM transformBeamBookingToDomain booking
-          pure $ Domain.Types.Booking.id <$> bookingD
+          bookings <- mapM transformBeamBookingToDomain booking
+          pure $ Domain.Types.Booking.id <$> catMaybes bookings
+        _ -> pure []
     Nothing -> pure []
 
 findBookingBySpecialZoneOTP :: L.MonadFlow m => Id Merchant -> Text -> UTCTime -> m (Maybe Booking)
@@ -222,10 +222,10 @@ findBookingIdBySpecialZoneOTP (Id merchantId) otpCode now = do
     Just dbConf' -> do
       result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamB.specialZoneOtpCode $ Se.Eq (Just otpCode), Se.Is BeamB.providerId $ Se.Eq merchantId, Se.Is BeamB.createdAt $ Se.LessThanOrEq otpExpiryCondition]]
       case result of
-        Right booking -> do
-          bookingId <- mapM transformBeamBookingToDomain booking
+        Right (Just booking) -> do
+          bookingId <- transformBeamBookingToDomain booking
           pure $ Domain.Types.Booking.id <$> bookingId
-        Left _ -> pure Nothing
+        _ -> pure Nothing
     Nothing -> pure Nothing
 
 cancelBookings :: L.MonadFlow m => [Id Booking] -> UTCTime -> m (MeshResult ())
@@ -261,38 +261,42 @@ findAllBookings = do
           pure $ Domain.Types.Geometry.id <$> booking
     Nothing -> pure []
 
-transformBeamBookingToDomain :: L.MonadFlow m => BeamB.Booking -> m Booking
+transformBeamBookingToDomain :: L.MonadFlow m => BeamB.Booking -> m (Maybe Booking)
 transformBeamBookingToDomain BeamB.BookingT {..} = do
   fl <- QBBL.findById (Id fromLocationId)
   tl <- QBBL.findById (Id toLocationId)
   fp <- QueriesFP.findById (Id fareParametersId)
   pUrl <- parseBaseUrl bapUri
-  pure
-    Booking
-      { id = Id id,
-        transactionId = transactionId,
-        quoteId = quoteId,
-        status = status,
-        bookingType = bookingType,
-        specialZoneOtpCode = specialZoneOtpCode,
-        providerId = Id providerId,
-        primaryExophone = primaryExophone,
-        bapId = bapId,
-        bapUri = pUrl,
-        startTime = startTime,
-        riderId = Id <$> riderId,
-        fromLocation = fromJust fl,
-        toLocation = fromJust tl,
-        vehicleVariant = vehicleVariant,
-        estimatedDistance = estimatedDistance,
-        maxEstimatedDistance = maxEstimatedDistance,
-        estimatedFare = estimatedFare,
-        estimatedDuration = estimatedDuration,
-        fareParams = fromJust fp,
-        riderName = riderName,
-        createdAt = createdAt,
-        updatedAt = updatedAt
-      }
+  if isJust fl && isJust tl && isJust fp
+    then
+      pure $
+        Just
+          Booking
+            { id = Id id,
+              transactionId = transactionId,
+              quoteId = quoteId,
+              status = status,
+              bookingType = bookingType,
+              specialZoneOtpCode = specialZoneOtpCode,
+              providerId = Id providerId,
+              primaryExophone = primaryExophone,
+              bapId = bapId,
+              bapUri = pUrl,
+              startTime = startTime,
+              riderId = Id <$> riderId,
+              fromLocation = fromJust fl,
+              toLocation = fromJust tl,
+              vehicleVariant = vehicleVariant,
+              estimatedDistance = estimatedDistance,
+              maxEstimatedDistance = maxEstimatedDistance,
+              estimatedFare = estimatedFare,
+              estimatedDuration = estimatedDuration,
+              fareParams = fromJust fp,
+              riderName = riderName,
+              createdAt = createdAt,
+              updatedAt = updatedAt
+            }
+    else pure Nothing
 
 transformDomainBookingToBeam :: Booking -> BeamB.Booking
 transformDomainBookingToBeam Booking {..} =

@@ -217,7 +217,7 @@ findAllByDriverId (Id driverId) mbLimit mbOffset mbOnlyActive mbRideStatus = do
         booking' <- KV.findAllWithOptionsKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamB.id $ Se.In $ getId . DR.bookingId <$> rides]] (Se.Desc BeamB.createdAt) Nothing Nothing
         case booking' of
           Left _ -> pure []
-          Right x -> traverse QB.transformBeamBookingToDomain x
+          Right x -> catMaybes <$> traverse QB.transformBeamBookingToDomain x
 
       let rideWithBooking = foldl' (getRideWithBooking bookings) [] rides
       pure $ take limitVal (drop offsetVal rideWithBooking)
@@ -794,7 +794,7 @@ findStuckRideItems (Id merchantId) bookingIds now = do
             ]
         case res of
           Left _ -> pure []
-          Right x -> traverse QB.transformBeamBookingToDomain x
+          Right x -> catMaybes <$> traverse QB.transformBeamBookingToDomain x
       driverInfos <- either (pure []) (QDI.transformBeamDriverInformationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamDI.driverId $ Se.In $ getId . DR.driverId <$> rides]]
       let rideBooking = foldl' (getRideWithBooking bookings) [] rides
       let rideBookingDriverInfo = foldl' (getRideWithBookingDriverInfo driverInfos) [] rideBooking
