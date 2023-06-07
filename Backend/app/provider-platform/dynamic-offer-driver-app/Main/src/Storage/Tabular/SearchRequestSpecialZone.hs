@@ -20,6 +20,7 @@
 
 module Storage.Tabular.SearchRequestSpecialZone where
 
+import qualified Domain.Types.FareProduct as FareProductD
 import qualified Domain.Types.SearchRequestSpecialZone as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
@@ -28,6 +29,8 @@ import Kernel.Utils.Common hiding (id)
 import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.SearchRequest.SearchReqLocation (SearchReqLocationT, SearchReqLocationTId, mkDomainSearchReqLocation, mkTabularSearchReqLocation)
 import Storage.Tabular.Vehicle ()
+
+derivePersistField "FareProductD.Area"
 
 mkPersist
   defaultSqlSettings
@@ -41,6 +44,7 @@ mkPersist
       providerId MerchantTId
       fromLocationId SearchReqLocationTId
       toLocationId SearchReqLocationTId
+      area FareProductD.Area
       bapId Text
       bapUri Text
       estimatedDistance Meters

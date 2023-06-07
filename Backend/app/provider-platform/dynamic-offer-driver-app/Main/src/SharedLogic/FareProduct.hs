@@ -11,7 +11,6 @@ module SharedLogic.FareProduct where
 
 import qualified Domain.Types.FareProduct as DFareProduct
 import Domain.Types.Merchant
-import Domain.Types.Vehicle.Variant (Variant (..))
 import Kernel.External.Maps (LatLong)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
@@ -23,7 +22,12 @@ import qualified Lib.Queries.SpecialLocationPriority as QSpecialLocationPriority
 import qualified Lib.Types.SpecialLocation as DSpecialLocation
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FareProduct as QFareProduct
-import Tools.Error
+
+data FareProducts = FareProducts
+  { fareProducts :: [DFareProduct.FareProduct],
+    area :: DFareProduct.Area,
+    specialLocationTag :: Maybe Text
+  }
 
 getPickupSpecialLocation ::
   (MonadFlow m, MonadReader r m, HasEsqEnv m r, EsqDBReplicaFlow m r) =>
@@ -43,59 +47,52 @@ getDropSpecialLocation merchantId dropSpecialLocation = do
   dropSpecialLocationPriority <- Esq.runInReplica $ QSpecialLocationPriority.findByMerchantIdAndCategory merchantId.getId dropSpecialLocation.category
   return (dropSpecialLocation, maybe 999 (.dropPriority) dropSpecialLocationPriority)
 
-getFareProductForVariants :: (CacheFlow m r, EsqDBFlow m r, MonadReader r m, EsqDBReplicaFlow m r) => Id Merchant -> LatLong -> LatLong -> m [DFareProduct.FareProduct]
-getFareProductForVariants merchantId fromLocationLatLong toLocationLatLong = do
+getAllFareProducts :: (CacheFlow m r, EsqDBFlow m r, MonadReader r m, EsqDBReplicaFlow m r) => Id Merchant -> LatLong -> LatLong -> m FareProducts
+getAllFareProducts merchantId fromLocationLatLong toLocationLatLong = do
   mbPickupSpecialLocation <- mapM (getPickupSpecialLocation merchantId . fst) =<< QSpecialLocation.findSpecialLocationByLatLong fromLocationLatLong
   mbDropSpecialLocation <- mapM (getDropSpecialLocation merchantId . fst) =<< QSpecialLocation.findSpecialLocationByLatLong toLocationLatLong
   case (mbPickupSpecialLocation, mbDropSpecialLocation) of
     (Just (pickupSpecialLocation, pickupPriority), Just (dropSpecialLocation, dropPriority)) ->
       if pickupPriority > dropPriority
-        then getFareProducts $ DFareProduct.Drop dropSpecialLocation.id
-        else getFareProducts $ DFareProduct.Pickup pickupSpecialLocation.id
-    (Just (pickupSpecialLocation, _), Nothing) -> getFareProducts $ DFareProduct.Pickup pickupSpecialLocation.id
-    (Nothing, Just (dropSpecialLocation, _)) -> getFareProducts $ DFareProduct.Drop dropSpecialLocation.id
-    (Nothing, Nothing) -> QFareProduct.findAllFareProductForVariants merchantId DFareProduct.Default
+        then getDropFareProductsAndSpecialLocationTag dropSpecialLocation
+        else getPickupFareProductsAndSpecialLocationTag pickupSpecialLocation
+    (Just (pickupSpecialLocation, _), Nothing) -> getPickupFareProductsAndSpecialLocationTag pickupSpecialLocation
+    (Nothing, Just (dropSpecialLocation, _)) -> getDropFareProductsAndSpecialLocationTag dropSpecialLocation
+    (Nothing, Nothing) -> getDefaultFareProducts
   where
+    getPickupFareProductsAndSpecialLocationTag pickupSpecialLocation = do
+      let area = DFareProduct.Pickup pickupSpecialLocation.id
+      fareProducts <- getFareProducts area
+      return $
+        FareProducts
+          { fareProducts,
+            area = area,
+            specialLocationTag = Just $ pickupTag pickupSpecialLocation
+          }
+    getDropFareProductsAndSpecialLocationTag dropSpecialLocation = do
+      let area = DFareProduct.Drop dropSpecialLocation.id
+      fareProducts <- getFareProducts area
+      return $
+        FareProducts
+          { fareProducts,
+            area,
+            specialLocationTag = Just $ dropTag dropSpecialLocation
+          }
+
+    getDefaultFareProducts = do
+      fareProducts <- QFareProduct.findAllFareProductForVariants merchantId DFareProduct.Default
+      return $
+        FareProducts
+          { fareProducts,
+            area = DFareProduct.Default,
+            specialLocationTag = Nothing
+          }
+
+    pickupTag specialLocation = show specialLocation.category <> " - Pickup"
+    dropTag specialLocation = show specialLocation.category <> " - Drop"
+
     getFareProducts area = do
       fareProducts <- QFareProduct.findAllFareProductForVariants merchantId area
       if null fareProducts && area /= DFareProduct.Default
         then QFareProduct.findAllFareProductForVariants merchantId DFareProduct.Default
         else return fareProducts
-
-getFareProductForVariant :: (CacheFlow m r, EsqDBFlow m r, MonadReader r m, EsqDBReplicaFlow m r) => Id Merchant -> LatLong -> LatLong -> Variant -> m DFareProduct.FareProduct
-getFareProductForVariant merchantId fromLocationLatLong toLocationLatLong vehicleVariant = do
-  mbPickupSpecialLocation <- mapM (getPickupSpecialLocation merchantId . fst) =<< QSpecialLocation.findSpecialLocationByLatLong fromLocationLatLong
-  mbDropSpecialLocation <- mapM (getDropSpecialLocation merchantId . fst) =<< QSpecialLocation.findSpecialLocationByLatLong toLocationLatLong
-  case (mbPickupSpecialLocation, mbDropSpecialLocation) of
-    (Just (pickupSpecialLocation, pickupPriority), Just (dropSpecialLocation, dropPriority)) ->
-      if pickupPriority > dropPriority
-        then getFareProduct $ DFareProduct.Drop dropSpecialLocation.id
-        else getFareProduct $ DFareProduct.Pickup pickupSpecialLocation.id
-    (Just (pickupSpecialLocation, _), Nothing) -> getFareProduct $ DFareProduct.Pickup pickupSpecialLocation.id
-    (Nothing, Just (dropSpecialLocation, _)) -> getFareProduct $ DFareProduct.Drop dropSpecialLocation.id
-    (Nothing, Nothing) -> QFareProduct.findOneFareProductForVariant merchantId DFareProduct.Default vehicleVariant >>= fromMaybeM NoFareProduct
-  where
-    getFareProduct area = do
-      mbFareProduct <- QFareProduct.findOneFareProductForVariant merchantId area vehicleVariant
-      case mbFareProduct of
-        Just fareProduct -> return fareProduct
-        Nothing ->
-          if area /= DFareProduct.Default
-            then QFareProduct.findOneFareProductForVariant merchantId DFareProduct.Default vehicleVariant >>= fromMaybeM NoFareProduct
-            else fromMaybeM NoFareProduct mbFareProduct
-
-getSpecialLocationTag :: (CacheFlow m r, EsqDBFlow m r, MonadReader r m, EsqDBReplicaFlow m r) => Id Merchant -> LatLong -> LatLong -> m (Maybe Text)
-getSpecialLocationTag merchantId fromLocationLatLong toLocationLatLong = do
-  mbPickupSpecialLocation <- mapM (getPickupSpecialLocation merchantId . fst) =<< QSpecialLocation.findSpecialLocationByLatLong fromLocationLatLong
-  mbDropSpecialLocation <- mapM (getDropSpecialLocation merchantId . fst) =<< QSpecialLocation.findSpecialLocationByLatLong toLocationLatLong
-  case (mbPickupSpecialLocation, mbDropSpecialLocation) of
-    (Just (pickupSpecialLocation, pickupPriority), Just (dropSpecialLocation, dropPriority)) ->
-      if pickupPriority > dropPriority
-        then return $ Just (dropTag dropSpecialLocation)
-        else return $ Just (pickupTag pickupSpecialLocation)
-    (Just (pickupSpecialLocation, _), Nothing) -> return $ Just (pickupTag pickupSpecialLocation)
-    (Nothing, Just (dropSpecialLocation, _)) -> return $ Just (dropTag dropSpecialLocation)
-    (Nothing, Nothing) -> return Nothing
-  where
-    pickupTag specialLocation = show specialLocation.category <> " - Pickup"
-    dropTag specialLocation = show specialLocation.category <> " - Drop"
