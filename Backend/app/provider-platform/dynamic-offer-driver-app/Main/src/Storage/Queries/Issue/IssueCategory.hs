@@ -89,6 +89,24 @@ findByIdAndLanguage (Id issueCategoryId) language = do
 
     headMaybe dInfosWithTranslations' = if null dInfosWithTranslations' then Nothing else Just (head dInfosWithTranslations')
 
+findByIdAndLanguage' :: L.MonadFlow m => Id IssueCategory -> Language -> m (Maybe (IssueCategory, Maybe IssueTranslation))
+findByIdAndLanguage' (Id issueCategoryId) language = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> do
+      iCategory <- either (pure []) (transformBeamIssueCategoryToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamIC.id $ Se.Eq issueCategoryId]
+      iTranslations <- either (pure []) (QueriesIT.transformBeamIssueTranslationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamIT.language $ Se.Eq language, Se.Is BeamIT.sentence $ Se.In (DomainIC.category <$> iCategory)]]
+      let dInfosWithTranslations' = foldl' (getIssueOptionsWithTranslations iTranslations) [] iCategory
+          dInfosWithTranslations = headMaybe dInfosWithTranslations'
+      pure dInfosWithTranslations
+    Nothing -> pure Nothing
+  where
+    getIssueOptionsWithTranslations iTranslations dInfosWithTranslations iCategory =
+      let iTranslations' = filter (\iTranslation -> iTranslation.sentence == iCategory.category) iTranslations
+       in dInfosWithTranslations <> if not (null iTranslations') then (\iTranslation'' -> (iCategory, Just iTranslation'')) <$> iTranslations' else [(iCategory, Nothing)]
+
+    headMaybe dInfosWithTranslations' = if null dInfosWithTranslations' then Nothing else Just (head dInfosWithTranslations')
+
 transformBeamIssueCategoryToDomain :: BeamIC.IssueCategory -> IssueCategory
 transformBeamIssueCategoryToDomain BeamIC.IssueCategoryT {..} = do
   IssueCategory
