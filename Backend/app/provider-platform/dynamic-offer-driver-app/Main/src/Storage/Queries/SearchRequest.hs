@@ -72,8 +72,8 @@ findById (Id searchRequestId) = do
     Just dbCOnf' -> do
       sR <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamSR.id $ Se.Eq searchRequestId]
       case sR of
-        Left _ -> pure Nothing
-        Right x -> traverse transformBeamSearchRequestToDomain x
+        Right (Just x) -> transformBeamSearchRequestToDomain x
+        _ -> pure Nothing
     Nothing -> pure Nothing
 
 -- findById' :: Transactionable m => Id SearchRequest -> m (Maybe SearchRequest)
@@ -137,11 +137,11 @@ getRequestIdfromTransactionId (Id tId) = do
     Just dbCOnf' -> do
       sr <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamSR.transactionId $ Se.Eq tId]
       case sr of
-        Left _ -> pure Nothing
-        Right x -> do
-          sr' <- traverse transformBeamSearchRequestToDomain x
+        Right (Just x) -> do
+          sr' <- transformBeamSearchRequestToDomain x
           let srId = Domain.id <$> sr'
           pure srId
+        _ -> pure Nothing
     Nothing -> pure Nothing
 
 -- getSearchRequestStatusOrValidTill ::
@@ -188,34 +188,38 @@ findByTransactionId transactionId = do
     Just dbCOnf' -> do
       sr <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamSR.transactionId $ Se.Eq transactionId]]
       case sr of
-        Left _ -> pure Nothing
-        Right x -> do
-          sr' <- traverse transformBeamSearchRequestToDomain x
+        Right (Just x) -> do
+          sr' <- transformBeamSearchRequestToDomain x
           let srId = Domain.id <$> sr'
           pure srId
+        _ -> pure Nothing
     Nothing -> pure Nothing
 
-transformBeamSearchRequestToDomain :: L.MonadFlow m => BeamSR.SearchRequest -> m SearchRequest
+transformBeamSearchRequestToDomain :: L.MonadFlow m => BeamSR.SearchRequest -> m (Maybe SearchRequest)
 transformBeamSearchRequestToDomain BeamSR.SearchRequestT {..} = do
   fl <- QSRL.findById (Id fromLocationId)
   tl <- QSRL.findById (Id toLocationId)
   pUrl <- parseBaseUrl bapUri
-  pure
-    SearchRequest
-      { id = Id id,
-        transactionId = transactionId,
-        providerId = Id providerId,
-        fromLocation = fromJust fl,
-        toLocation = fromJust tl,
-        bapId = bapId,
-        bapUri = pUrl,
-        estimatedDistance = estimatedDistance,
-        estimatedDuration = estimatedDuration,
-        customerLanguage = customerLanguage,
-        device = device,
-        createdAt = createdAt,
-        autoAssignEnabled = autoAssignEnabled
-      }
+  if isJust fl && isJust tl
+    then
+      pure $
+        Just
+          SearchRequest
+            { id = Id id,
+              transactionId = transactionId,
+              providerId = Id providerId,
+              fromLocation = fromJust fl,
+              toLocation = fromJust tl,
+              bapId = bapId,
+              bapUri = pUrl,
+              estimatedDistance = estimatedDistance,
+              estimatedDuration = estimatedDuration,
+              customerLanguage = customerLanguage,
+              device = device,
+              createdAt = createdAt,
+              autoAssignEnabled = autoAssignEnabled
+            }
+    else pure Nothing
 
 transformDomainSearchRequestToBeam :: SearchRequest -> BeamSR.SearchRequest
 transformDomainSearchRequestToBeam SearchRequest {..} =
