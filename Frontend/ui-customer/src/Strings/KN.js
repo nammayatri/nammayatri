@@ -451,5 +451,9 @@ const kannadaStrings = {
   "REGISTERED_ADDRESS" : "ನೋಂದಾಯಿಸಿದ ವಿಳಾಸ",
   "REGISTERED_ADDRESS_DESCRIPTION" : "Juspay Technologies Private Limited <br> Stallion Business Centre, No. 444, 3rd & 4th Floor, 18th Main, 6th Block, Koramangala Bengaluru, Karnataka- 560095, India.",
   "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "Website: <u>https://nammayatri.in/</u>",
-  "RECOMMENDED" : "ಶಿಫಾರಸು ಮಾಡಲಾಗಿದೆ"
+  "RECOMMENDED" : "ಶಿಫಾರಸು ಮಾಡಲಾಗಿದೆ",
+  "WE_WOULD_APPRECIATE_YOUR_FEEDBACK" : "ಖಾತೆ ಅಳಿಸುವಿಕೆಯ ಹಿಂದಿನ ನಿಮ್ಮ ತಾರ್ಕಿಕತೆಯನ್ನು ನಾವು ಪ್ರಶಂಸಿಸುತ್ತೇವೆ",
+  "REASON_FOR_DELETING_ACCOUNT" : "ಖಾತೆಯನ್ನು ಅಳಿಸಲು ಕಾರಣ*",
+  "SUBMIT_REQUEST" : "ವಿನಂತಿಯನ್ನು ಸಲ್ಲಿಸಿ",
+  "PLEASE_ENTER_A_VALID_EMAIL" : "ದಯವಿಟ್ಟು ಮಾನ್ಯವಾದ ಇಮೇಲ್ ಅನ್ನು ನಮೂದಿಸಿ"
 }

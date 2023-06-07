@@ -23,12 +23,20 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..))
+import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..), Gravity(..))
 import Screens.Types as ST
 import Styles.Colors as Color
 import Common.Types.App
 import Engineering.Helpers.Commons (os)
 import Prelude
+import Components.PrimaryEditText as PrimaryEditText
+import Engineering.Helpers.Commons as EHC
+import Data.Maybe (Maybe(..))
+import Data.String as DS
+import Components.PrimaryButton as PrimaryButton
+import Storage (getValueToLocalStore, KeyStore(..))
+import Helpers.Utils (validateEmail)
+import Screens.HelpAndSupportScreen.Controller (isEmailPresent)
 
 sourceToDestinationConfig :: ST.HelpAndSupportScreenState -> SourceToDestination.Config
 sourceToDestinationConfig state = let 
@@ -151,4 +159,142 @@ genericHeaderConfig state = let
       }
     }
   in genericHeaderConfig'
+
+deleteGenericHeaderConfig :: ST.HelpAndSupportScreenState -> GenericHeader.Config 
+deleteGenericHeaderConfig state = let 
+  config = GenericHeader.config
+  genericHeaderConfig' = config 
+    {
+      height = WRAP_CONTENT
+    , prefixImageConfig {
+        height = V 25
+      , width = V 25
+      , imageUrl = "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
+      , margin = Margin 12 12 12 12
+      } 
+    , padding = PaddingVertical 5 5
+    , textConfig {
+        text = getString DEL_ACCOUNT
+      , textSize = FontSize.a_18
+      , color = Color.black900
+      , fontStyle = FontStyle.bold LanguageStyle
+      }
+    }
+  in genericHeaderConfig'
+
+
+primaryEditTextConfigEmail :: ST.HelpAndSupportScreenState -> PrimaryEditText.Config
+primaryEditTextConfigEmail state = let
+    config = PrimaryEditText.config
+    primaryEditTextConfig' = config
+      { editText 
+        { color = Color.black800
+        , textSize = FontSize.a_14
+        , fontStyle = FontStyle.medium LanguageStyle
+        , margin = Margin 16 16 16 16
+        , placeholder = "example@xyz.com"
+        , text = if isEmailPresent FunctionCall then getValueToLocalStore USER_EMAIL else "" 
+        , enabled = not isEmailPresent FunctionCall
+        }
+      , background = Color.white900
+      , topLabel
+        { text = getString YOUR_EMAIL_ID <> "*"
+        , textSize = FontSize.a_12
+        , color = Color.black900
+        , fontStyle = FontStyle.regular LanguageStyle
+        }
+      , showErrorLabel = not validateEmail state.data.email && DS.length state.data.email > 0
+      , errorLabel
+        { text = getString PLEASE_ENTER_A_VALID_EMAIL 
+        , fontStyle = FontStyle.regular LanguageStyle 
+        , color = Color.textDanger }
+      , margin = Margin 10 32 10 0
+      } 
+    in primaryEditTextConfig'
+
+primaryEditTextConfigDescription :: ST.HelpAndSupportScreenState -> PrimaryEditText.Config
+primaryEditTextConfigDescription state = let
+    config = PrimaryEditText.config
+    primaryEditTextConfig' = config
+      { editText 
+        { color = Color.black800
+        , textSize = FontSize.a_14
+        , fontStyle = FontStyle.medium LanguageStyle
+        , margin = if EHC.os == "IOS" then Margin 10 16 10 10 else Margin 16 16 16 16
+        , singleLine = false
+        , placeholder = getString YOU_CAN_DESCRIBE_THE_ISSUE_YOU_FACED_HERE
+        , pattern = Just "[A-Za-z0-9,. ]*,300"
+        }
+      , background = Color.white900
+      , height = V 120
+      , stroke = "1," <> if DS.length state.data.description >= 300 then Color.textDanger else Color.borderColorLight
+      , topLabel
+        { text = getString REASON_FOR_DELETING_ACCOUNT
+        , textSize = FontSize.a_12
+        , color = Color.black900
+        , fontStyle = FontStyle.regular LanguageStyle
+        }  
+      , margin = Margin 10 32 10 0
+      , showErrorLabel = DS.length state.data.description >= 300
+      , errorLabel 
+        { text = getString MAX_CHAR_LIMIT_REACHED <> " 300 " <> getString OF <> " 300"
+        , fontStyle = FontStyle.regular LanguageStyle 
+        , color = Color.textDanger
+        }
+      } 
+    in primaryEditTextConfig'
+
+primaryButtonConfigSubmitRequest :: ST.HelpAndSupportScreenState -> PrimaryButton.Config
+primaryButtonConfigSubmitRequest state = let 
+    config = PrimaryButton.config
+    primaryButtonConfig' = config 
+      { textConfig
+        { text = getString SUBMIT_REQUEST
+        , color = if state.props.btnActive then Color.yellowRadler else Color.yellow800     
+        }
+      , cornerRadius = 8.0
+      , background = if state.props.btnActive then Color.black900 else Color.black500
+      , isClickable = state.props.btnActive 
+      , margin = Margin 16 0 16 38
+      , id = "ButtonDeleteAccount"
+      }
+  in primaryButtonConfig'
+
+requestDeletePopUp :: ST.HelpAndSupportScreenState -> PopUpModal.Config 
+requestDeletePopUp state = let 
+    config = PopUpModal.config
+    popUpConfig' = config {
+      primaryText { text = getString DEL_ACCOUNT },
+      secondaryText { text = getString ACCOUNT_DELETION_CONFIRMATION,
+      padding = PaddingHorizontal 36 36,
+      color = Color.black600},
+      option1 {
+        text = getString CANCEL_STR
+      , fontSize = FontSize.a_16
+      },
+      option2 {text = getString YES_DELETE_IT
+      , background = Color.red
+      , color = Color.white900
+      , strokeColor = Color.red
+      , fontSize = FontSize.a_16 }
+     
+    }
+  in popUpConfig'
+
+accountDeletedPopUp :: ST.HelpAndSupportScreenState -> PopUpModal.Config 
+accountDeletedPopUp state = let 
+    config = PopUpModal.config 
+    popUpConfig' = config {
+      primaryText{ text = getString REQUEST_SUBMITTED},
+      secondaryText{text = getString WE_WILL_DELETE_YOUR_ACCOUNT,
+      padding = PaddingHorizontal 16 16,
+      color = Color.black600},
+      option1 {
+        visibility = false
+      },
+      option2 {
+        visibility = false
+      }
+    }
+    in popUpConfig'
   

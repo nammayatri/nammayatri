@@ -22,7 +22,6 @@ initData :: MyProfileScreenState
 initData = {
     props : {
         updateProfile : false,
-        accountStatus : ACTIVE,
         genderOptionExpanded : false,
         expandEnabled : false,
         isEmailValid : true,

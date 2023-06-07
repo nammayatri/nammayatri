@@ -17,6 +17,7 @@ module Screens.HelpAndSupportScreen.ScreenData where
 
 import Screens.Types (HelpAndSupportScreenState)
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
+import Screens.Types (DeleteStatus(..))
 
 initData :: HelpAndSupportScreenState
 initData = {
@@ -36,11 +37,16 @@ initData = {
     rideId : "",
     tripId : "",
     bookingId : "",
-    faresList : []
+    faresList : [],
+    email : "",
+    description : "",
+    accountStatus : ACTIVE
   },
   props:{
     apiFailure : false
   , isCallConfirmation : false
+  , showDeleteAccountView : false
+  , btnActive : false
   }
 
 }

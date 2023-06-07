@@ -61,6 +61,7 @@ type EditTextConfig =
   , letterSpacing :: LetterSpacing
   , alpha :: Number
   , capsLock :: Boolean
+  , enabled :: Boolean
   }
 
 type TextConfig =
@@ -103,6 +104,7 @@ config = {
     , letterSpacing : PX 0.0
     , alpha : 1.0
     , capsLock : false
+    , enabled : true
     }
   , visibility : VISIBLE
   , background : Color.white900

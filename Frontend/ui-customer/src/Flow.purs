@@ -321,6 +321,7 @@ currentFlowStatus = do
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{settingSideBar{gender = Just (fromMaybe "" response.gender)}} , props {isbanner = false}})
         else pure unit
       if isJust response.email then do
+        setValueToLocalStore USER_EMAIL $ fromMaybe "" response.email
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{settingSideBar{email = Just (fromMaybe "" response.email)}}})
         else pure unit
 
@@ -1251,6 +1252,10 @@ helpAndSupportScreenFlow = do
     UPDATE_STATE updatedState -> do
       modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> updatedState)
       helpAndSupportScreenFlow
+    DELETE_USER_ACCOUNT updatedState -> do
+      _ <- Remote.sendIssueBT (Remote.makeSendIssueReq (Just updatedState.data.email) Nothing "Request To Delete Account" updatedState.data.description )
+      modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data {accountStatus = DEL_REQUESTED}})
+      helpAndSupportScreenFlow
 
 myRidesScreenFlow :: Boolean ->  FlowBT String Unit
 myRidesScreenFlow fromNavBar = do
@@ -1379,7 +1384,9 @@ myProfileScreenFlow = do
             Just gender -> modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{settingSideBar{gender = Just gender}}, props{isbanner = false}})
             _ -> pure unit
           case email of
-            Just email -> modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{settingSideBar{email = Just email}}})
+            Just email -> do 
+              setValueToLocalStore USER_EMAIL email
+              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{settingSideBar{email = Just email}}})
             _ -> pure unit
           modifyScreenState $ MyProfileScreenStateType (\myProfileScreenState ->  MyProfileScreenData.initData)
           myProfileScreenFlow
@@ -1393,12 +1400,7 @@ myProfileScreenFlow = do
             _ -> pure $ toast (getString ERROR_OCCURED)
           myProfileScreenFlow
       myProfileScreenFlow
-    DELETE_ACCOUNT updatedState -> do
-      _ <- Remote.sendIssueBT (Remote.makeSendIssueReq  (Just "nammayatri.support@juspay.in") Nothing "Request To Delete Account" ("Delete account for " <> (getValueToLocalStore MOBILE_NUMBER) <> " , name " <> updatedState.data.name) )
-      modifyScreenState $ MyProfileScreenStateType (\myProfileScreen -> myProfileScreen{props{accountStatus = DEL_REQUESTED}})
-      myProfileScreenFlow
     GO_TO_HOME_ -> do
-      modifyScreenState $ MyProfileScreenStateType (\myProfileScreen -> myProfileScreen{props{accountStatus = ACTIVE}})
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{settingSideBar{opened = SettingSideBarController.CLOSED}}})
       homeScreenFlow
 

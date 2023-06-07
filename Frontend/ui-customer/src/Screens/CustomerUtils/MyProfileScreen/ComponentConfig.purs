@@ -17,7 +17,6 @@ module Screens.CustomerUtils.MyProfileScreen.ComponentConfig where
 
 import Screens.Types as ST 
 import Components.GenericHeader as GenericHeader
-import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
 import Data.Maybe (Maybe(..), fromMaybe)
@@ -125,44 +124,6 @@ updateButtonConfig state = let
         , alpha = if state.props.isBtnEnabled then 1.0 else 0.5
         }
     in updateButtonConfig'
-
-requestDeletePopUp :: ST.MyProfileScreenState -> PopUpModal.Config 
-requestDeletePopUp state = let 
-    config = PopUpModal.config
-    popUpConfig' = config {
-      primaryText { text =(getString DEL_ACCOUNT)},
-      secondaryText { text = (getString ACCOUNT_DELETION_CONFIRMATION),
-      padding = (Padding 36 0 36 0),
-      color = Color.black600},
-      option1 {
-        text = (getString CANCEL_STR)
-      , fontSize = FontSize.a_16
-      },
-      option2 {text = (getString YES_DELETE_IT)
-      , background = Color.red
-      , color = Color.white900
-      , strokeColor = Color.red
-      , fontSize = FontSize.a_16 }
-     
-    }
-  in popUpConfig'
-
-accountDeletedPopUp :: ST.MyProfileScreenState -> PopUpModal.Config 
-accountDeletedPopUp state = let 
-    config = PopUpModal.config 
-    popUpConfig' = config {
-      primaryText{ text= (getString REQUEST_SUBMITTED)},
-      secondaryText{text = (getString WE_WILL_DELETE_YOUR_ACCOUNT),
-      padding = (Padding 16 0 16 0),
-      color = Color.black600},
-      option1 {
-        visibility = false
-      },
-      option2 {
-        visibility = false
-      }
-    }
-    in popUpConfig'
 
 listExpandingAnimationConfig :: ST.MyProfileScreenState -> AnimConfig
 listExpandingAnimationConfig state = let 

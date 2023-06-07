@@ -454,5 +454,9 @@ const bengaliStrings = {
   "YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS": "নিচের যেকোনো কারণে আপনি একটি আপডেট করা চূড়ান্ত ভাড়া দেখতে পারেন:",
   "REASON_CHANGE_IN_ROUTE_A": "1. রুটে পরিবর্তন: ",
   "REASON_CHANGE_IN_ROUTE_B": "রুট পরিবর্তনের কারণে মোট ভাড়া পরিবর্তন হতে পারে",
-  "RECOMMENDED" : "প্রস্তাবিত"
+  "RECOMMENDED" : "প্রস্তাবিত",
+  "WE_WOULD_APPRECIATE_YOUR_FEEDBACK" : "আমরা অ্যাকাউন্ট মুছে ফেলার পিছনে আপনার যুক্তির প্রশংসা করব",
+  "REASON_FOR_DELETING_ACCOUNT" : "অ্যাকাউন্ট মুছে ফেলার কারণ*",
+  "SUBMIT_REQUEST" : "অনুরোধ জমা দিন",
+  "PLEASE_ENTER_A_VALID_EMAIL" : "একটি বৈধ ইমেইল প্রবেশ করুন"
 }

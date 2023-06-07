@@ -25,19 +25,25 @@ import Components.SourceToDestination as SourceToDestination
 import Data.Array ((!!), null, filter)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe)
-import Helpers.Utils (convertUTCtoISC)
-import JBridge (showDialer)
+import Helpers.Utils (convertUTCtoISC, validateEmail)
+import JBridge (showDialer, hideKeyboardOnNavigation)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
-import Prelude (class Show, pure, bind, discard, show, unit, map, ($), (<>), (==), void)
+import Prelude (class Show, pure, bind, discard, show, unit, map, ($), (<>), (==), void, (&&), (>), (||), not)
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Resources.Constants (DecodeAddress(..), decodeAddress, getFaresList, getKmMeter)
 import Screens (ScreenName(..), getScreen)
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity)
-import Screens.Types (HelpAndSupportScreenState)
+import Screens.Types (HelpAndSupportScreenState, DeleteStatus(..))
 import Services.API (RideBookingRes(..), FareBreakupAPIEntity(..), RideAPIEntity(..), BookingLocationAPIEntity(..), RideBookingAPIDetails(..), RideBookingListRes(..))
 import Services.Config (getSupportNumber)
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
+import Components.PrimaryEditText as PrimaryEditText
+import Components.PrimaryButton as PrimaryButton
+import Data.String (length, trim)
+import Storage (getValueToLocalStore, KeyStore(..))
+import Common.Types.App (LazyCheck(..))
+import Screens.HelpAndSupportScreen.ScreenData (initData)
 
 instance showAction :: Show Action where
     show _ = ""
@@ -50,6 +56,11 @@ instance loggableAction :: Loggable Action where
         if flag then trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "backpress_in_call_confirmation"
         else trackAppEndScreen appId (getScreen HELP_AND_SUPPORT_SCREEN)
       GenericHeaderActionController act -> case act of
+        GenericHeader.PrefixImgOnClick -> do
+          trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "generic_header_action" "back_icon"
+          trackAppEndScreen appId (getScreen HELP_AND_SUPPORT_SCREEN)
+        GenericHeader.SuffixImgOnClick -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "generic_header_action" "forward_icon"
+      DeleteGenericHeaderAC act -> case act of
         GenericHeader.PrefixImgOnClick -> do
           trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "generic_header_action" "back_icon"
           trackAppEndScreen appId (getScreen HELP_AND_SUPPORT_SCREEN)
@@ -88,6 +99,36 @@ instance loggableAction :: Loggable Action where
       FAQs -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "faq_action"
       RideBookingListAPIResponseAction rideList status -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "ride_booking_list_api_response"
       CallSupport -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "call_support"
+      DeleteAccount -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "delete_account"
+      EmailEditTextAC (PrimaryEditText.TextChanged id a) -> trackAppTextInput appId (getScreen HELP_AND_SUPPORT_SCREEN) "email_edit_text_changed" "primary_edit_text"
+      DescriptionEditTextAC (PrimaryEditText.TextChanged id a) -> trackAppTextInput appId (getScreen HELP_AND_SUPPORT_SCREEN) "description_edit_text_changed" "primary_edit_text"
+      PrimaryButtonAC act -> case act of 
+        PrimaryButton.OnClick -> do
+            trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "primary_button_action" "go_to_home/submit"
+            trackAppEndScreen appId (getScreen HELP_AND_SUPPORT_SCREEN)
+        PrimaryButton.NoAction -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "primary_button" "no_action"
+      PopUpModalAction act -> case act of
+        PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "show_delete_popup_modal_action" "delete_account_cancel"
+        PopUpModal.OnButton2Click -> do
+          trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "show_delete_popup_modal_action" "delete_account_accept"
+          trackAppEndScreen appId (getScreen HELP_AND_SUPPORT_SCREEN)
+        PopUpModal.NoAction -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "show_delete_popup_modal_action" "no_action"
+        PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "show_delete_popup_modal_action" "image"
+        PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HELP_AND_SUPPORT_SCREEN) "show_delete_popup_modal_action" "primary_edit_text"
+        PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "show_delete_popup_modal_action" "countdown_updated"
+        PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "show_delete_popup_modal_action" "tip_clicked"
+        PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "show_delete_popup_modal_action" "popup_dismissed"
+      AccountDeletedModalAction act -> case act of
+        PopUpModal.OnButton1Click -> do
+          trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "delete_account_popup_modal_action" "account_deleted"
+          trackAppEndScreen appId (getScreen HELP_AND_SUPPORT_SCREEN)
+        PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "delete_account_popup_modal_action" "button_2"
+        PopUpModal.NoAction -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "delete_account_popup_modal_action" "no_action"
+        PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "delete_account_popup_modal_action" "image"
+        PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HELP_AND_SUPPORT_SCREEN) "delete_account_popup_modal_action" "primary_edit_text"
+        PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "delete_account_popup_modal_action" "countdown_updated"
+        PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "delete_account_popup_modal_action" "tip_clicked"
+        PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "delete_account_popup_modal_action" "popup_dismissed"
 
 
 data Action = BackPressed Boolean
@@ -103,6 +144,13 @@ data Action = BackPressed Boolean
             | PopupModelActionController PopUpModal.Action
             | AfterRender
             | CallSupport
+            | DeleteAccount
+            | DeleteGenericHeaderAC GenericHeader.Action
+            | EmailEditTextAC PrimaryEditText.Action 
+            | DescriptionEditTextAC PrimaryEditText.Action
+            | PrimaryButtonAC PrimaryButton.Action
+            | PopUpModalAction PopUpModal.Action
+            | AccountDeletedModalAction PopUpModal.Action
 
 data ScreenOutput = GoBack
                   | GoToSupportScreen String
@@ -110,11 +158,15 @@ data ScreenOutput = GoBack
                   | GoToMyRides
                   | GoHome
                   | UpdateState HelpAndSupportScreenState
+                  | ConfirmDeleteAccount HelpAndSupportScreenState
 
 eval :: Action -> HelpAndSupportScreenState -> Eval Action ScreenOutput HelpAndSupportScreenState
 
 eval (BackPressed flag ) state = if state.props.isCallConfirmation
   then continue state{props{isCallConfirmation = false}}
+  else if state.props.showDeleteAccountView then continue state{props {showDeleteAccountView = false}}
+  else if state.data.accountStatus == CONFIRM_REQ then continue state{data{accountStatus = ACTIVE}}
+  else if state.data.accountStatus == DEL_REQUESTED then continue state
   else exit GoBack
 
 eval ContactUs state = exit $ GoToSupportScreen state.data.bookingId
@@ -128,18 +180,20 @@ eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick )) state = c
 eval ViewRides state = exit $ GoToMyRides
 
 eval (RideBookingListAPIResponseAction rideList status) state = do
+  let email = if isEmailPresent FunctionCall then getValueToLocalStore USER_EMAIL else "" 
+      updatedState = state{data{email = email}}
   case status of
       "success" -> do
-                    if (null (rideList^._list)) then continue state {data{isNull = true}, props{apiFailure = false}}
+                    if (null (rideList^._list)) then continue updatedState {data{isNull = true}, props{apiFailure = false}}
                       else do
                         let list = myRideListTransform (rideList ^._list)
                         case (null (list)) of
-                          true -> continue state {data{isNull = true}, props{apiFailure=false}}
+                          true -> continue updatedState {data{isNull = true }, props{apiFailure=false}}
                           _    -> do
                                     let newState = (myRideListTransform (rideList ^._list))!!0
-                                    updateAndExit (fromMaybe dummyState newState) (UpdateState (fromMaybe dummyState newState))
-      "failure"   -> continue state{props{apiFailure = true}}
-      _           -> continue state
+                                    updateAndExit (fromMaybe initData newState) (UpdateState (fromMaybe initData newState))
+      "failure"   -> continue updatedState{props{apiFailure = true}}
+      _           -> continue updatedState
 
 eval (PopupModelActionController (PopUpModal.OnButton1Click)) state = continue state{props{isCallConfirmation = false}}
 
@@ -150,6 +204,22 @@ eval (PopupModelActionController (PopUpModal.OnButton2Click)) state = do
 eval (APIFailureActionController (ErrorModal.PrimaryButtonActionController PrimaryButton.OnClick)) state = exit GoBack
 
 eval (NoRidesActionController (ErrorModal.PrimaryButtonActionController PrimaryButton.OnClick)) state = exit GoHome
+
+eval (EmailEditTextAC (PrimaryEditText.TextChanged id a)) state = continue state{data {email = trim(a)},props{btnActive = length (trim(a)) > 0  && length state.data.description > 2 && validateEmail a}}
+
+eval (DescriptionEditTextAC (PrimaryEditText.TextChanged id a)) state = continue state{data {description = a},props{btnActive = length state.data.email > 0 && length a > 2 && validateEmail state.data.email}}
+
+eval DeleteAccount state = continue state {props {showDeleteAccountView = true}}
+
+eval (DeleteGenericHeaderAC(GenericHeader.PrefixImgOnClick )) state = continue state {props {showDeleteAccountView = false}}
+
+eval (PrimaryButtonAC (PrimaryButton.OnClick)) state = do 
+  _ <- pure $ hideKeyboardOnNavigation true
+  continue state{ data { accountStatus = CONFIRM_REQ} }
+
+eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state {data{ accountStatus= ACTIVE}}
+eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = exit $ ConfirmDeleteAccount state
+eval (AccountDeletedModalAction (PopUpModal.OnButton1Click)) state =  updateAndExit (state {data{accountStatus = ACTIVE}} ) $ GoHome
 
 eval _ state = continue state
 
@@ -176,40 +246,22 @@ myRideListTransform listRes = filter (\item -> (item.data.status == "COMPLETED")
           rideId : ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._id),
           tripId : ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._shortRideId),
           bookingId : ride.id,
-          faresList :  getFaresList ride.fareBreakup baseDistanceVal
+          faresList :  getFaresList ride.fareBreakup baseDistanceVal,
+          email : "",
+          description : "",
+          accountStatus : ACTIVE
           },
       props : {
         apiFailure : false
       , isCallConfirmation : false
+      , showDeleteAccountView : false
+      , btnActive : false
       }
       }) listRes)
-
-dummyState :: HelpAndSupportScreenState
-dummyState = {
-  data : {
-    date : "",
-    time : "",
-    source : "",
-    destination : "",
-    rating : 0,
-    driverName : "",
-    totalAmount : "",
-    status : "",
-    isNull : true,
-    rideStartTime : "",
-    rideEndTime : "",
-    vehicleNumber:"",
-    rideId : "",
-    tripId : "",
-    bookingId : "",
-    faresList : []
-  },
-  props:{
-    apiFailure : false
-  , isCallConfirmation : false
-  }
-}
 
 
 dummyFareBreakUp :: FareBreakupAPIEntity
 dummyFareBreakUp = FareBreakupAPIEntity{amount: 0,description: ""}
+
+isEmailPresent :: LazyCheck -> Boolean
+isEmailPresent dummy = not ( getValueToLocalStore USER_EMAIL == "__failed" || getValueToLocalStore USER_EMAIL == "(null)" )
