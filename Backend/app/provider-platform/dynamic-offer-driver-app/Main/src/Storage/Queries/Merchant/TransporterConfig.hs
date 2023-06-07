@@ -49,7 +49,7 @@ findByMerchantId (Id merchantId) = do
       result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamTC.merchantId $ Se.Eq merchantId]
       case result of
         Left _ -> pure Nothing
-        Right tc -> sequence $ transformBeamTransporterConfigToDomain <$> tc
+        Right tc -> mapM transformBeamTransporterConfigToDomain tc
     Nothing -> pure Nothing
 
 -- updateFCMConfig :: Id Merchant -> BaseUrl -> Text -> SqlDB ()
