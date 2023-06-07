@@ -68,6 +68,7 @@ data DriverPoolWithActualDistResult = DriverPoolWithActualDistResult
   { driverPoolResult :: DriverPoolResult,
     actualDistanceToPickup :: Meters,
     actualDurationToPickup :: Seconds,
+    keepHiddenForSeconds :: Seconds,
     intelligentScores :: IntelligentScores,
     isPartOfIntelligentPool :: Bool
   }

@@ -128,17 +128,17 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum = withLogTag (
             Random -> makeRandomDriverPool batchSize onlyNewDrivers
 
         makeIntelligentDriverPool batchSize merchantId onlyNewDrivers intelligentPoolConfig transporterConfig = do
-          let sortWithDriverScore' = sortWithDriverScore merchantId (Just transporterConfig) intelligentPoolConfig
+          let sortWithDriverScore' = sortWithDriverScore merchantId (Just transporterConfig) intelligentPoolConfig driverPoolCfg
           (sortedDriverPool, randomizedDriverPool) <-
-            bimapM (sortWithDriverScore' [AcceptanceRatio, CancellationRatio, AvailableTime, DriverSpeed] True) (sortWithDriverScore' [AvailableTime, DriverSpeed] False)
+            bimapM (sortWithDriverScore' [AcceptanceRatio, CancellationRatio, AvailableTime, DriverSpeed, ActualPickupDistance] True) (sortWithDriverScore' [AvailableTime, DriverSpeed, ActualPickupDistance] False)
               =<< splitDriverPoolForSorting merchantId intelligentPoolConfig.minQuotesToQualifyForIntelligentPool onlyNewDrivers
-          let sortedDriverPoolWithSilentSort = splitSilentDrivers sortedDriverPool
-          let randomizedDriverPoolWithSilentSort = splitSilentDrivers randomizedDriverPool
+          let sortedDriverPoolWithSilentSort = splitSilentDriversAndSortWithDistance sortedDriverPool
+          let randomizedDriverPoolWithSilentSort = splitSilentDriversAndSortWithDistance randomizedDriverPool
           takeDriversUsingPoolPercentage (sortedDriverPoolWithSilentSort, randomizedDriverPoolWithSilentSort) batchSize intelligentPoolConfig
 
         makeRandomDriverPool batchSize onlyNewDrivers = take batchSize <$> randomizeAndLimitSelection onlyNewDrivers
 
-    takeDriversUsingPoolPercentage :: (MonadFlow m) => ([a], [a]) -> Int -> DriverIntelligentPoolConfig -> m [a]
+    takeDriversUsingPoolPercentage :: (MonadFlow m) => ([DriverPoolWithActualDistResult], [DriverPoolWithActualDistResult]) -> Int -> DriverIntelligentPoolConfig -> m [DriverPoolWithActualDistResult]
     takeDriversUsingPoolPercentage (sortedDriverPool, randomizedDriverPool) driversCount intelligentPoolConfig = do
       let intelligentPoolPercentage = fromMaybe 50 intelligentPoolConfig.intelligentPoolPercentage
           intelligentCount = min (length sortedDriverPool) ((driversCount + 1) * intelligentPoolPercentage `div` 100)
@@ -147,11 +147,23 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum = withLogTag (
           (randomPart, restRandom) = splitAt randomCount randomizedDriverPool
           poolBatch = sortedPart <> randomPart
           driversFromRestCount = take (driversCount - length poolBatch) (restRandom <> restSorted) -- taking rest of drivers if poolBatch length is less then driverCount requried.
-          finalPoolBatch = poolBatch <> driversFromRestCount
+          filledPoolBatch = poolBatch <> driversFromRestCount
+          finalPoolBatch = addDistanceSplitConfigBasedDelaysForDriversWithinBatch filledPoolBatch
       logDebug $ "IntelligentDriverPool - SortedDriversCount " <> show (length sortedPart)
       logDebug $ "IntelligentDriverPool - RandomizedDriversCount " <> show (length randomPart)
       logDebug $ "IntelligentDriverPool - finalPoolBatch " <> show (length finalPoolBatch)
       pure finalPoolBatch
+
+    addDistanceSplitConfigBasedDelaysForDriversWithinBatch filledPoolBatch =
+      fst $
+        foldl'
+          ( \(finalBatch, restBatch) splitConfig -> do
+              let (splitToAddDelay, newRestBatch) = splitAt splitConfig.batchSplitSize restBatch
+                  splitWithDelay = map (\driverWithDistance -> driverWithDistance {keepHiddenForSeconds = splitConfig.batchSplitDelay}) splitToAddDelay
+              (finalBatch <> splitWithDelay, newRestBatch)
+          )
+          ([], filledPoolBatch)
+          driverPoolCfg.distanceBasedBatchSplit
 
     calcDriverPool radiusStep = do
       let vehicleVariant = searchTry.vehicleVariant
@@ -177,12 +189,12 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum = withLogTag (
       (batch <>)
         <$> case sortingType of
           Intelligent -> do
-            let sortWithDriverScore' = sortWithDriverScore merchantId transporterConfig intelligentPoolConfig
+            let sortWithDriverScore' = sortWithDriverScore merchantId transporterConfig intelligentPoolConfig driverPoolCfg
             (sortedDriverPool, randomizedDriverPool) <-
               bimapM (sortWithDriverScore' [AcceptanceRatio, CancellationRatio, AvailableTime, DriverSpeed] True) (sortWithDriverScore' [AvailableTime, DriverSpeed] False)
                 =<< splitDriverPoolForSorting merchantId intelligentPoolConfig.minQuotesToQualifyForIntelligentPool driversWithValidReqAmount -- snd means taking drivers who recieved less then X(config- minQuotesToQualifyForIntelligentPool) quotes
-            let sortedDriverPoolWithSilentSort = splitSilentDrivers sortedDriverPool
-            let randomizedDriverPoolWithSilentSort = splitSilentDrivers randomizedDriverPool
+            let sortedDriverPoolWithSilentSort = splitSilentDriversAndSortWithDistance sortedDriverPool
+            let randomizedDriverPoolWithSilentSort = splitSilentDriversAndSortWithDistance randomizedDriverPool
             takeDriversUsingPoolPercentage (sortedDriverPoolWithSilentSort, randomizedDriverPoolWithSilentSort) fillSize intelligentPoolConfig
           Random -> pure $ take fillSize driversWithValidReqAmount
     cacheBatch batch = do
@@ -213,9 +225,9 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum = withLogTag (
     -- util function
     bimapM fna fnb (a, b) = (,) <$> fna a <*> fnb b
 
-splitSilentDrivers :: [DriverPoolWithActualDistResult] -> [DriverPoolWithActualDistResult]
-splitSilentDrivers drivers = do
-  let (silentDrivers, activeDrivers) = DL.partition ((== Just DriverInfo.SILENT) . (.driverPoolResult.mode)) drivers
+splitSilentDriversAndSortWithDistance :: [DriverPoolWithActualDistResult] -> [DriverPoolWithActualDistResult]
+splitSilentDriversAndSortWithDistance drivers = do
+  let (silentDrivers, activeDrivers) = bimap (sortOn (.driverPoolResult.distanceToPickup)) (sortOn (.driverPoolResult.distanceToPickup)) $ DL.partition ((== Just DriverInfo.SILENT) . (.driverPoolResult.mode)) drivers
   activeDrivers <> silentDrivers
 
 getDriverPoolBatch ::
@@ -247,16 +259,18 @@ sortWithDriverScore ::
   Id Merchant ->
   Maybe TransporterConfig ->
   DriverIntelligentPoolConfig ->
+  DriverPoolConfig ->
   [IntelligentFactors] ->
   Bool ->
   [DriverPoolWithActualDistResult] ->
   m [DriverPoolWithActualDistResult]
-sortWithDriverScore _ Nothing _ _ _ dp = logInfo "Weightages not available in DB, going with random selection" *> randomizeAndLimitSelection dp
-sortWithDriverScore merchantId (Just transporterConfig) intelligentPoolConfig factorsToCalculate isPartOfIntelligentPool dp = do
+sortWithDriverScore _ Nothing _ _ _ _ dp = logInfo "Weightages not available in DB, going with random selection" *> randomizeAndLimitSelection dp
+sortWithDriverScore merchantId (Just transporterConfig) intelligentPoolConfig driverPoolCfg factorsToCalculate isPartOfIntelligentPool dp = do
   logTagInfo "Weightage config for intelligent driver pool" $ show transporterConfig
   let driverIds = map (.driverPoolResult.driverId) dp
+  let driverActualDistances = map ((.driverPoolResult.driverId) &&& (.driverPoolResult.distanceToPickup)) dp
   let cancellationScoreRelatedConfig = CancellationScoreRelatedConfig transporterConfig.popupDelayToAddAsPenalty transporterConfig.thresholdCancellationScore transporterConfig.minRidesForCancellationScore
-  calculatedScores <- mapM (fetchScore merchantId driverIds intelligentPoolConfig cancellationScoreRelatedConfig) factorsToCalculate
+  calculatedScores <- mapM (fetchScore merchantId driverActualDistances driverIds intelligentPoolConfig driverPoolCfg cancellationScoreRelatedConfig) factorsToCalculate
   let overallScore = calculateOverallScore calculatedScores
   driverPoolWithoutTie <- breakSameScoreTies $ groupByScore overallScore
   let sortedDriverPool = concatMap snd . sortOn (Down . fst) $ HM.toList driverPoolWithoutTie
@@ -270,11 +284,12 @@ sortWithDriverScore merchantId (Just transporterConfig) intelligentPoolConfig fa
                   let res :: Maybe Double = HM.lookup (getDriverId dObj) scoreMap
                   case factor of
                     AcceptanceRatio -> accIntelligentScores {acceptanceRatio = res} :: IntelligentScores
+                    ActualPickupDistance -> accIntelligentScores {actualPickupDistanceScore = res} :: IntelligentScores
                     CancellationRatio -> accIntelligentScores {cancellationRatio = res} :: IntelligentScores
                     AvailableTime -> accIntelligentScores {availableTime = res} :: IntelligentScores
                     DriverSpeed -> accIntelligentScores {driverSpeed = res} :: IntelligentScores
               )
-              (IntelligentScores Nothing Nothing Nothing Nothing 0)
+              (IntelligentScores Nothing Nothing Nothing Nothing Nothing 0)
               factorOverallScore
       addIntelligentPoolInfo cancellationScoreRelatedConfig dObj intelligentScores
     addIntelligentPoolInfo cancellationScoreRelatedConfig dObj is@IntelligentScores {..} = do
@@ -322,12 +337,14 @@ fetchScore ::
     MonadFlow m
   ) =>
   Id Merchant ->
+  [(Id Driver, Meters)] ->
   [Id Driver] ->
   DriverIntelligentPoolConfig ->
+  DriverPoolConfig ->
   CancellationScoreRelatedConfig ->
   IntelligentFactors ->
   m (HM.Map Text Double)
-fetchScore merchantId driverIds intelligentPoolConfig cancellationScoreRelatedConfig factor =
+fetchScore merchantId driverActualDistanceList driverIds intelligentPoolConfig driverPoolCfg cancellationScoreRelatedConfig factor =
   HM.fromList <$> case factor of
     AcceptanceRatio | intelligentPoolConfig.acceptanceRatioWeightage /= 0 -> do
       acceptanceRatios <- getRatios (getLatestAcceptanceRatio merchantId) driverIds
@@ -343,10 +360,12 @@ fetchScore merchantId driverIds intelligentPoolConfig cancellationScoreRelatedCo
     DriverSpeed | intelligentPoolConfig.driverSpeedWeightage /= 0 -> do
       averageSpeeds <- getRatios (getDriverAverageSpeed merchantId . cast) driverIds
       getSpeedScore (intelligentPoolConfig.driverSpeedWeightage) averageSpeeds
+    ActualPickupDistance | intelligentPoolConfig.actualPickupDistanceWeightage /= 0 -> do
+      pure $ map (bimap (.getId) ((* (fromIntegral intelligentPoolConfig.actualPickupDistanceWeightage)) . fromIntegral . flip div (fromMaybe (Meters 1) (driverPoolCfg.actualDistanceThreshold)))) driverActualDistanceList
     _ -> pure []
   where
     getSpeedScore weight driverSpeeds = pure $ map (\(driverId, driverSpeed) -> (driverId, (1 - driverSpeed / intelligentPoolConfig.speedNormalizer) * fromIntegral weight)) driverSpeeds
-    getRatios fn arr = mapM (\dId -> (dId.getId,) <$> fn dId) arr
+    getRatios fn = mapM (\dId -> (dId.getId,) <$> fn dId)
     getScoreWithWeight weight driverParamsValue = pure $ map (second (fromIntegral weight *)) driverParamsValue
 
 randomizeAndLimitSelection ::

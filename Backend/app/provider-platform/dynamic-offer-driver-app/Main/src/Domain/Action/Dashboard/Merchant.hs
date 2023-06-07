@@ -177,7 +177,8 @@ driverPoolConfigUpdate merchantShortId tripDistance req = do
                maxNumberOfBatches = maybe config.maxNumberOfBatches (.value) req.maxNumberOfBatches,
                maxParallelSearchRequests = maybe config.maxParallelSearchRequests (.value) req.maxParallelSearchRequests,
                poolSortingType = maybe config.poolSortingType (castPoolSortingType . (.value)) req.poolSortingType,
-               singleBatchProcessTime = maybe config.singleBatchProcessTime (.value) req.singleBatchProcessTime
+               singleBatchProcessTime = maybe config.singleBatchProcessTime (.value) req.singleBatchProcessTime,
+               distanceBasedBatchSplit = maybe config.distanceBasedBatchSplit (map castBatchSplitbyPickupDistance . (.value)) req.distanceBasedBatchSplit
               }
   Esq.runTransaction $ do
     CQDPC.update updConfig
@@ -189,6 +190,9 @@ castPoolSortingType :: Common.PoolSortingType -> DriverPool.PoolSortingType
 castPoolSortingType = \case
   Common.Intelligent -> DriverPool.Intelligent
   Common.Random -> DriverPool.Random
+
+castBatchSplitByPickupDistance :: Common.BatchSplitByPickupDistance -> DriverPool.BatchSplitByPickupDistance
+castBatchSplitByPickupDistance Common.BatchSplitByPickupDistance {..} = DriverPool.BatchSplitByPickupDistance {..}
 
 ---------------------------------------------------------------------
 driverPoolConfigCreate ::
@@ -221,6 +225,7 @@ buildDriverPoolConfig merchantId tripDistance Common.DriverPoolConfigCreateReq {
     DDPC.DriverPoolConfig
       { merchantId,
         poolSortingType = castPoolSortingType poolSortingType,
+        distanceBasedBatchSplit = map castBatchSplitByPickupDistance distanceBasedBatchSplit,
         updatedAt = now,
         createdAt = now,
         ..

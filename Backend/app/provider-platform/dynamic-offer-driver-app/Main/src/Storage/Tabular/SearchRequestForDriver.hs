@@ -65,9 +65,9 @@ mkPersist
       driverAvailableTime Double Maybe
       parallelSearchRequestCount Int Maybe
       driverSpeed Double Maybe
+      keepHiddenForSeconds Seconds
       mode D.DriverMode Maybe
       createdAt UTCTime
-
       Primary id
       deriving Generic
     |]
