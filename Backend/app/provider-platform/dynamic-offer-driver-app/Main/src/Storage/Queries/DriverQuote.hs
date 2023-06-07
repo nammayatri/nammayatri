@@ -187,6 +187,23 @@ findAllBySTId searchTryId = do
       pure (dQuote, farePars)
     catMaybes <$> mapM buildFullDriverQuote res
 
+findAllBySTId' :: L.MonadFlow m => Id DST.SearchTry -> m [Domain.DriverQuote]
+findAllBySTId' (Id searchTryId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> do
+      do
+        res <-
+          KV.findAllWithKVConnector
+            dbConf'
+            Mesh.meshConfig
+            [ Se.And [Se.Is BeamDQ.searchTryId $ Se.Eq searchTryId, Se.Is BeamDQ.status $ Se.Eq Domain.Active]
+            ]
+        case res of
+          Right res' -> catMaybes <$> traverse transformBeamDriverQuoteToDomain res'
+          _ -> pure []
+    Nothing -> pure []
+
 countAllBySTId :: Transactionable m => Id DST.SearchTry -> m Int32
 countAllBySTId searchTryId = do
   fmap (fromMaybe 0) $
