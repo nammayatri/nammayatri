@@ -38,9 +38,10 @@ buildEstimate ::
   Id DSR.SearchRequest ->
   UTCTime ->
   Meters ->
-  FarePolicy ->
+  Maybe Text ->
+  FullFarePolicy ->
   m DEst.Estimate
-buildEstimate searchReqId startTime dist farePolicy = do
+buildEstimate searchReqId startTime dist specialLocationTag farePolicy = do
   fareParams <-
     calculateFareParameters
       CalculateFareParametersParams
@@ -78,6 +79,7 @@ buildEstimate searchReqId startTime dist farePolicy = do
                   nightShiftEnd = nightShiftBounds.nightShiftEnd
                 },
         waitingCharges = makeWaitingCharges,
+        specialLocationTag = specialLocationTag,
         createdAt = now
       }
   where
@@ -117,7 +119,7 @@ buildEstimate searchReqId startTime dist farePolicy = do
             || breakup.title == "WAITING_OR_PICKUP_CHARGES"
             || breakup.title == "FIXED_GOVERNMENT_RATE"
 
-mkAdditionalBreakups :: (Money -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> Meters -> FarePolicy -> [breakupItem]
+mkAdditionalBreakups :: (Money -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> Meters -> FullFarePolicy -> [breakupItem]
 mkAdditionalBreakups mkPrice mkBreakupItem distance farePolicy = do
   let driverExtraFeeBounds = findDriverExtraFeeBoundsByDistance distance <$> farePolicy.driverExtraFeeBounds
   let driverMinExtraFee = driverExtraFeeBounds <&> (.minFee)

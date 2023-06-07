@@ -49,7 +49,7 @@ import qualified Lib.LocationUpdates as LocUpd
 import qualified SharedLogic.CallBAP as CallBAP
 import qualified SharedLogic.DriverLocation as DrLoc
 import qualified SharedLogic.FareCalculator as Fare
-import qualified Storage.CachedQueries.FarePolicy as QFP
+import qualified SharedLogic.FarePolicy as FarePolicy
 import qualified Storage.CachedQueries.Merchant as MerchantS
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTConf
 import qualified Storage.Queries.Booking as QRB
@@ -78,7 +78,7 @@ data ServiceHandle m = ServiceHandle
     getMerchant :: Id DM.Merchant -> m (Maybe DM.Merchant),
     endRideTransaction :: Id DP.Driver -> Id SRB.Booking -> DRide.Ride -> Maybe FareParameters -> Maybe (Id RD.RiderDetails) -> Id DM.Merchant -> m (),
     notifyCompleteToBAP :: SRB.Booking -> DRide.Ride -> Fare.FareParameters -> m (),
-    getFarePolicy :: Id DM.Merchant -> DVeh.Variant -> m (Maybe DFP.FarePolicy),
+    getFarePolicy :: Id DM.Merchant -> LatLong -> LatLong -> DVeh.Variant -> m DFP.FullFarePolicy,
     calculateFareParameters :: Fare.CalculateFareParametersParams -> m Fare.FareParameters,
     putDiffMetric :: Id DM.Merchant -> Money -> Meters -> m (),
     findDriverLoc :: Id DM.Merchant -> Id DP.Person -> m (Maybe DrLoc.DriverLocation),
@@ -101,7 +101,7 @@ buildEndRideHandle merchantId = do
         getMerchant = MerchantS.findById,
         notifyCompleteToBAP = CallBAP.sendRideCompletedUpdateToBAP,
         endRideTransaction = RideEndInt.endRideTransaction,
-        getFarePolicy = QFP.findByMerchantIdAndVariant,
+        getFarePolicy = FarePolicy.getFarePolicyForVariant,
         calculateFareParameters = Fare.calculateFareParameters,
         putDiffMetric = RideEndInt.putDiffMetric,
         findDriverLoc = DrLoc.findById,
@@ -222,7 +222,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance = do
 
   -- maybe compare only distance fare?
   let estimatedFare = Fare.fareSum booking.fareParams
-  farePolicy <- getFarePolicy merchantId booking.vehicleVariant >>= fromMaybeM (FareParametersNotFound merchantId.getId)
+  farePolicy <- getFarePolicy merchantId (LatLong booking.fromLocation.lat booking.fromLocation.lon) (LatLong booking.toLocation.lat booking.toLocation.lon) booking.vehicleVariant
   fareParams <-
     calculateFareParameters
       Fare.CalculateFareParametersParams

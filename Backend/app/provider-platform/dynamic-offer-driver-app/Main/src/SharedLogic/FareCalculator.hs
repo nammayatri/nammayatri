@@ -126,7 +126,7 @@ pureFareSum fareParams = do
     + notPartOfNightShiftCharge
 
 data CalculateFareParametersParams = CalculateFareParametersParams
-  { farePolicy :: FarePolicy,
+  { farePolicy :: FullFarePolicy,
     distance :: Meters,
     rideTime :: UTCTime,
     waitingTime :: Maybe Minutes,

@@ -28,8 +28,10 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import Environment
+import Kernel.External.Maps (LatLong (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Esqueleto.Config
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common (addUTCTime, fromMaybeM, logDebug, throwError)
@@ -39,7 +41,7 @@ import SharedLogic.Allocator
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
 import SharedLogic.DriverPool (getDriverPoolConfig)
 import SharedLogic.FareCalculator
-import qualified Storage.CachedQueries.FarePolicy as FarePolicyS
+import SharedLogic.FarePolicy
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.SearchRequest as QSR
@@ -62,7 +64,7 @@ handler :: DM.Merchant -> DSelectReq -> DEst.Estimate -> Flow ()
 handler merchant sReq estimate = do
   let merchantId = merchant.id
   searchReq <- QSR.findById estimate.requestId >>= fromMaybeM (SearchRequestNotFound estimate.requestId.getId)
-  farePolicy <- FarePolicyS.findByMerchantIdAndVariant merchant.id estimate.vehicleVariant >>= fromMaybeM NoFarePolicy
+  farePolicy <- getFarePolicyForVariant merchantId (LatLong searchReq.fromLocation.lat searchReq.fromLocation.lon) (LatLong searchReq.toLocation.lat searchReq.toLocation.lon) estimate.vehicleVariant
 
   searchTry <- createNewSearchTry farePolicy searchReq
   driverPoolConfig <- getDriverPoolConfig merchantId searchReq.estimatedDistance
@@ -83,7 +85,7 @@ handler merchant sReq estimate = do
             }
     _ -> return ()
   where
-    createNewSearchTry :: DFP.FarePolicy -> DSR.SearchRequest -> Flow DST.SearchTry
+    createNewSearchTry :: DFP.FullFarePolicy -> DSR.SearchRequest -> Flow DST.SearchTry
     createNewSearchTry farePolicy searchReq = do
       mbLastSearchTry <- QST.findLastByRequestId searchReq.id
       fareParams <-
@@ -127,6 +129,9 @@ buildSearchTry ::
   ( MonadTime m,
     MonadGuid m,
     MonadReader r m,
+    MonadFlow m,
+    MonadReader r m,
+    HasEsqEnv m r,
     HasField "searchRequestExpirationSeconds" r NominalDiffTime
   ) =>
   Id DM.Merchant ->

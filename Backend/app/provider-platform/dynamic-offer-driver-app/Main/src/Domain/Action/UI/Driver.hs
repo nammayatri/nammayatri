@@ -108,10 +108,10 @@ import qualified SharedLogic.DeleteDriver as DeleteDriverOnCheck
 import SharedLogic.DriverMode as DMode
 import SharedLogic.DriverPool as DP
 import SharedLogic.FareCalculator
+import SharedLogic.FarePolicy (getFarePolicyForVariant)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as QDriverInformation
-import qualified Storage.CachedQueries.FarePolicy as FarePolicyS (findByMerchantIdAndVariant)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
@@ -782,7 +782,7 @@ respondQuote (driverId, _) req = do
           quoteLimit <- getQuoteLimit searchReq.providerId searchReq.estimatedDistance
           quoteCount <- Esq.runInReplica $ QDrQt.countAllBySTId searchTry.id
           when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)
-          farePolicy <- FarePolicyS.findByMerchantIdAndVariant organization.id sReqFD.vehicleVariant >>= fromMaybeM NoFarePolicy
+          farePolicy <- getFarePolicyForVariant organization.id (LatLong searchReq.fromLocation.lat searchReq.fromLocation.lon) (LatLong searchReq.toLocation.lat searchReq.toLocation.lon) sReqFD.vehicleVariant
           let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance searchReq.estimatedDistance <$> farePolicy.driverExtraFeeBounds
           whenJust mbOfferedFare $ \off ->
             whenJust driverExtraFeeBounds $ \driverExtraFeeBounds' ->
@@ -853,7 +853,8 @@ respondQuote (driverId, _) req = do
             validTill = addUTCTime driverQuoteExpirationSeconds now,
             providerId = searchReq.providerId,
             estimatedFare,
-            fareParams
+            fareParams,
+            specialLocationTag = searchReq.specialLocationTag
           }
     thereAreActiveQuotes = do
       driverUnlockDelay <- asks (.driverUnlockDelay)

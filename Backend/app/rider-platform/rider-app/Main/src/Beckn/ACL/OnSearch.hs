@@ -100,8 +100,8 @@ buildEstimateOrQuoteInfo item = do
       nightShiftInfo = buildNightShiftInfo =<< item.tags
       waitingCharges = buildWaitingChargeInfo <$> item.tags
       driversLocation = fromMaybe [] $ item.tags <&> (.drivers_location)
+      specialLocationTag = item.tags >>= (.special_location_tag)
   validatePrices estimatedFare estimatedTotalFare
-
   let totalFareRange =
         DEstimate.FareRange
           { minFare = roundToIntegral item.price.minimum_value,

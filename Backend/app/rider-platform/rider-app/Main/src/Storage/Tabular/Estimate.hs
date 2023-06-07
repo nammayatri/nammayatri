@@ -63,6 +63,7 @@ mkPersist
       nightShiftEnd TimeOfDay Maybe
       status Domain.EstimateStatus
       waitingChargePerMin Money Maybe
+      specialLocationTag Text Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary id

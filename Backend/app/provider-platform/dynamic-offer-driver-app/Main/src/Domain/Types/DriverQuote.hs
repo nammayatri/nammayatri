@@ -48,6 +48,7 @@ data DriverQuote = DriverQuote
     estimatedFare :: Money,
     fareParams :: Params.FareParameters,
     providerId :: Id DMerchant.Merchant,
+    specialLocationTag :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

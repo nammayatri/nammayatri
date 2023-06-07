@@ -83,7 +83,8 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     driverLatLong :: LatLong,
     driverMinExtraFee :: Maybe Money,
     driverMaxExtraFee :: Maybe Money,
-    rideRequestPopupDelayDuration :: Seconds
+    rideRequestPopupDelayDuration :: Seconds,
+    specialLocationTag :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show, PrettyShow)
 
@@ -108,5 +109,6 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry delayDurat
           },
       driverMinExtraFee = nearbyReq.driverMinExtraFee,
       driverMaxExtraFee = nearbyReq.driverMaxExtraFee,
-      rideRequestPopupDelayDuration = delayDuration
+      rideRequestPopupDelayDuration = delayDuration,
+      specialLocationTag = searchRequest.specialLocationTag
     }

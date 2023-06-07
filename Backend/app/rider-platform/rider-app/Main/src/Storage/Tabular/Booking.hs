@@ -66,6 +66,7 @@ mkPersist
       tripTermsId STripTerms.TripTermsTId Maybe
       rentalSlabId SRentalSlab.RentalSlabTId Maybe
       merchantId SMerchant.MerchantTId
+      specialLocationTag Text Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary id

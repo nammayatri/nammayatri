@@ -92,7 +92,8 @@ data EstimateInfo = EstimateInfo
     estimateBreakupList :: [EstimateBreakupInfo],
     nightShiftInfo :: Maybe NightShiftInfo,
     waitingCharges :: Maybe WaitingChargesInfo,
-    driversLocation :: [LatLong]
+    driversLocation :: [LatLong],
+    specialLocationTag :: Maybe Text
   }
 
 data NightShiftInfo = NightShiftInfo
@@ -122,7 +123,8 @@ data QuoteInfo = QuoteInfo
     discount :: Maybe Money,
     estimatedTotalFare :: Money,
     quoteDetails :: QuoteDetails,
-    descriptions :: [Text]
+    descriptions :: [Text],
+    specialLocationTag :: Maybe Text
   }
 
 data QuoteDetails

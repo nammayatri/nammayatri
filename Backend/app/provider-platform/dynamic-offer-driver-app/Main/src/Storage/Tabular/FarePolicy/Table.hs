@@ -23,12 +23,10 @@ module Storage.Tabular.FarePolicy.Table where
 import Data.Aeson (decode)
 import Data.ByteString.Lazy (fromStrict)
 import qualified Domain.Types.FarePolicy as Domain
-import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)
-import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.Vehicle ()
 
 derivePersistField "Domain.FarePolicyType"
@@ -58,8 +56,6 @@ mkPersist
   [defaultQQ|
     FarePolicyT sql=fare_policy
       id Text
-      merchantId MerchantTId
-      vehicleVariant Variant.Variant
 
       farePolicyType Domain.FarePolicyType
 
@@ -72,6 +68,8 @@ mkPersist
       minAllowedTripDistance Meters Maybe
 
       govtCharges Double Maybe
+
+      description Text Maybe
 
       createdAt UTCTime
       updatedAt UTCTime

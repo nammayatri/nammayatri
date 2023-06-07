@@ -33,6 +33,7 @@ data SearchRequest = SearchRequest
     bapUri :: BaseUrl,
     estimatedDistance :: Meters,
     estimatedDuration :: Seconds,
+    specialLocationTag :: Maybe Text,
     autoAssignEnabled :: Bool,
     device :: Maybe Text,
     customerLanguage :: Maybe Maps.Language,
