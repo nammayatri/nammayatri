@@ -152,8 +152,12 @@ foreign import storeCallBackMessageUpdated :: forall action. (action -> Effect U
 foreign import sendMessage :: String -> Unit
 foreign import scrollToBottom :: String -> Effect Unit
 foreign import metaLogEvent :: String -> Unit
+foreign import setCleverTapUserData :: String -> String -> Unit
+foreign import setCleverTapUserProp :: forall a. String -> a -> Unit
+foreign import cleverTapCustomEvent :: String -> Unit 
 foreign import firebaseLogEvent :: String -> Unit
 foreign import firebaseLogEventWithParams :: String -> String -> String -> Effect Unit
+foreign import cleverTapCustomEventWithParams :: String -> String -> String -> Effect Unit
 foreign import firebaseLogEventWithTwoParams :: String -> String -> String -> String -> String -> Effect Unit
 foreign import firebaseScreenNameLog :: String  -> Effect Unit
 foreign import firebaseUserID :: String  -> Effect Unit
@@ -258,6 +262,8 @@ showLoader str = liftFlow (showLoaderImpl str)
 
 -- showQrCode :: String -> String -> Effect Unit
 -- showQrCode id str = showQrCodeImpl id str
+ 
+
 
 addMarker :: String -> Number -> Number -> Int -> Number -> Number -> Effect Boolean
 addMarker title lat lng markerSize anchorV anchorV1 = (addMarkerImpl title lat lng markerSize anchorV anchorV1)

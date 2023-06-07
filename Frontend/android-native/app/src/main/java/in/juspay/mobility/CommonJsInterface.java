@@ -109,6 +109,8 @@ import androidx.work.PeriodicWorkRequest;
 import androidx.work.WorkManager;
 
 import com.airbnb.lottie.LottieAnimationView;
+import com.bumptech.glide.signature.ObjectKey;
+import com.clevertap.android.sdk.CleverTapAPI;
 import com.facebook.appevents.AppEventsConstants;
 import com.google.android.gms.ads.identifier.AdvertisingIdClient;
 import com.google.android.gms.common.api.ApiException;
@@ -1416,6 +1418,50 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         } catch (Exception e) {
             Log.e(LOG_TAG, "Error logging meta event : " + e);
         }
+    }
+    CleverTapAPI clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(context);
+    boolean isCleverTapInstanceCreated = true;
+    @JavascriptInterface
+    public void setCleverTapUserData(String key, String value){
+        HashMap<String, Object> profileUpdate = new HashMap<String, Object>();
+        try {
+            System.out.println("it's entered "+key+value);
+            profileUpdate.put(key,value);
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "Error sending user data: " + e);
+        }
+
+        clevertapDefaultInstance.onUserLogin(profileUpdate);
+        if (isCleverTapInstanceCreated) {
+            String fcmRegId = FirebaseAnalytics.getInstance(context).getFirebaseInstanceId();
+            clevertapDefaultInstance.pushFcmRegistrationId(fcmRegId, true);
+        }
+    }
+
+    @JavascriptInterface
+    public void setCleverTapUserProp (String key, Object value){
+        HashMap<String, Object> profileUpdate = new HashMap<String, Object>();
+        try {
+            System.out.println("it's entered "+key+ value);
+            profileUpdate.put(key,value);
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "Error sending user data: " + e);
+        }
+
+        clevertapDefaultInstance.pushProfile(profileUpdate);
+    }
+
+
+    @JavascriptInterface
+    public void cleverTapCustomEvent(String event){
+        clevertapDefaultInstance.pushEvent(event);
+    }
+
+    @JavascriptInterface
+    public void cleverTapCustomEventWithParams(String event, String paramKey, String paramValue){
+        HashMap<String, Object> mapCustomEvent = new HashMap<String, Object>();
+        mapCustomEvent.put(paramKey,paramValue);
+        clevertapDefaultInstance.pushEvent(event,mapCustomEvent);
     }
 
     @JavascriptInterface

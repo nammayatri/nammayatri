@@ -75,6 +75,8 @@ import androidx.core.location.LocationManagerCompat;
 import androidx.work.WorkManager;
 
 import com.airbnb.lottie.LottieAnimationView;
+import com.clevertap.android.sdk.ActivityLifecycleCallback;
+import com.clevertap.android.sdk.CleverTapAPI;
 import com.google.android.gms.ads.identifier.AdvertisingIdClient;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
@@ -311,6 +313,7 @@ public class MainActivity extends AppCompatActivity {
         widgetService = new Intent(MainActivity.this, WidgetService.class);
         new GetGAIDTask().execute();
         sharedPref.edit().putString(getResources().getString(R.string.ACTIVITY_STATUS),"onCreate").apply();
+
         // if(key.equals("becknuser")){
         //     //            FacebookSdk.sdkInitialize(getApplicationContext());
         //     //            AppEventsLogger.activateApp(getApplication());

@@ -6,6 +6,7 @@ apply plugin: 'com.google.gms.google-services'
 apply plugin: 'com.google.firebase.crashlytics'
 // Apply the Performance Monitoring plugin
 apply plugin: 'com.google.firebase.firebase-perf'
+apply plugin: 'com.google.gms.google-services'
 
 static InetAddress getLocalAddress() throws SocketException {
     List<NetworkInterface> ifaces = Collections.list(NetworkInterface.getNetworkInterfaces())
@@ -40,13 +41,13 @@ repositories {
 }
 
 android {
-    compileSdkVersion 31
+    compileSdkVersion 33
     buildToolsVersion "30.0.3"
     namespace "in.juspay.mobility"
 
     defaultConfig {
         minSdkVersion 23
-        targetSdkVersion 31
+        targetSdkVersion 33
         versionCode 100
         versionName "1.2.9"
         multiDexEnabled true
@@ -246,6 +247,13 @@ dependencies {
     implementation 'com.pierfrancescosoffritti.androidyoutubeplayer:core:11.1.0'
     implementation 'com.facebook.android:facebook-android-sdk:14.0.0'
     api 'com.theartofdev.edmodo:android-image-cropper:2.8.+'
+    implementation 'androidx.core:core:1.4.0'
+
+    implementation 'com.clevertap.android:clevertap-android-sdk:5.0.0' // checkout the latest sdk version at https://github.com/CleverTap/clevertap-android-sdk/blob/master/README.md#-installation
+    implementation 'com.google.firebase:firebase-messaging:23.0.6'
+    //Mandatory for CleverTap Android SDK v3.6.4 and above add the following -
+    implementation 'com.android.installreferrer:installreferrer:2.2'
+
 }
 
 def tmpSource        = "/tmp/juspay"

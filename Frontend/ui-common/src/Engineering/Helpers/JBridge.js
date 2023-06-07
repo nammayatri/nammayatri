@@ -847,6 +847,46 @@ export const metaLogEvent = function (event) {
   }
 }
 
+export const setCleverTapUserData = function (key) {
+  return function (value) {
+        console.log("setCleverTapUserData called in js 1");
+        if(window.JBridge.setCleverTapUserData){
+            console.log("setCleverTapUserData called in js 2");
+            window.JBridge.setCleverTapUserData(key, value);
+        }
+  };
+ };
+ 
+ export const setCleverTapUserProp = function (key) {
+   return function (value) {
+         console.log("setCleverTapUserProp called in js 1");
+         if(window.JBridge.setCleverTapUserProp){
+             console.log("setCleverTapUserData called in js 2");
+             window.JBridge.setCleverTapUserProp(key, value);
+         }
+   };
+  };
+
+export const cleverTapCustomEvent = function(event){
+    if (window.JBridge.cleverTapCustomEvent){
+      window.JBridge.cleverTapCustomEvent(event);
+    }
+}
+
+
+export const cleverTapCustomEventWithParams = function (event) {
+  return function (paramKey) {
+    return function (paramValue) {
+      return function () {
+        if(window.JBridge.cleverTapCustomEventWithParams){
+            window.JBridge.cleverTapCustomEventWithParams(event, paramKey,paramValue);
+        }
+    };
+  };
+ };
+};
+
+
 export const hideKeyboardOnNavigation = function (permission) {
   window.JBridge.hideKeyboardOnNavigation(permission);
 };

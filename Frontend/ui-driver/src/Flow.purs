@@ -34,7 +34,7 @@ import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (liftFlow, getNewIDWithTag, bundleVersion, os, getExpiryTime,stringToVersion)
 import Foreign.Class (class Encode, encode, decode)
 import Helpers.Utils (getCurrentUTC, hideSplash, getTime, convertUTCtoISC, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions)
-import JBridge (drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, loaderText, openNavigation, removeAllPolylines, removeMarker, showMarker, startLocationPollingAPI, stopLocationPollingAPI, toast, toggleLoader, generateSessionId, stopChatListenerService, hideKeyboardOnNavigation, metaLogEvent)
+import JBridge (drawRoute, factoryResetApp, firebaseLogEvent,setCleverTapUserData, firebaseUserID, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, loaderText, openNavigation, removeAllPolylines, removeMarker, showMarker, startLocationPollingAPI, stopLocationPollingAPI, toast, toggleLoader, generateSessionId, stopChatListenerService, hideKeyboardOnNavigation, metaLogEvent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, discard, pure, unit, unless, negate,void, when, ($), (==), (/=), (&&), (||), (/), when, (+), show, (>), not, (<), (*), (-), (<=), (<$>))
@@ -153,6 +153,7 @@ enterOTPFlow = do
       _ <- pure $ metaLogEvent "ny_driver_verify_otp"
       let driverId = ((resp.person)^. _id)
       _ <- lift $ lift $ setLogField "driver_id" $ encode (driverId)
+      let _ = setCleverTapUserData "Identity" driverId 
       setValueToLocalStore DRIVER_ID driverId
       setValueToLocalStore REGISTERATION_TOKEN resp.token -- add from response
       void $ lift $ lift $ toggleLoader false
@@ -1057,6 +1058,7 @@ homeScreenFlow = do
   let (GetDriverInfoResp getDriverInfoResp) = getDriverInfoResp
   let (Vehicle linkedVehicle) = (fromMaybe dummyVehicleObject getDriverInfoResp.linkedVehicle)
   setValueToLocalStore USER_NAME getDriverInfoResp.firstName
+  let _ = setCleverTapUserData getDriverInfoResp.firstName
   _ <- pure $ spy "response for mode zxc" getDriverInfoResp
   case getDriverInfoResp.mode of
     Just currentMode -> case currentMode of
